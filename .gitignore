@@ -1,0 +1,47 @@
+# IDE and Editor files
+.vscode/
+.vs/
+.idea/
+*.code-workspace
+*.sublime-*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Research and development (local only)
+.research/
+
+# Build and release artifacts
+*.zip
+dist/
+build/
+release/
+*.bak
+*.tmp
+
+# Logs and debugging
+*.log
+debug.txt
+error.txt
+
+# Personal notes and workspace
+TODO.txt
+NOTES.txt
+*.local.*
+
+# Git related
+*.orig
+*.rej
+
+# Temporary files
+*~
+*.swp
+*.swo
+.*.swp
