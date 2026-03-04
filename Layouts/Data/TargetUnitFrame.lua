@@ -240,10 +240,10 @@ ns.RegisterConfig("TargetFrame", {
 		-- Health Bar
 		-----------------------------------------
 		HealthBarSize = { 40, 36 },
-		HealthBarPosition = { "TOPRIGHT", -136, -64 },
+		HealthBarPosition = { "TOPRIGHT", -137, -66 },
 		HealthBarTexture = GetMedia("hp_critter_bar"),
 		HealthBarColor = { Colors.health[1], Colors.health[2], Colors.health[3] },
-		HealthBarOrientation = "RIGHT",
+		HealthBarOrientation = "LEFT",
 		-- Per-style fake fill alignment override (used by target health lab settings).
 		HealthLabFakeOffsetX = 0,
 		HealthLabFakeOffsetY = 0,
@@ -281,9 +281,9 @@ ns.RegisterConfig("TargetFrame", {
 		-- Health Bar
 		-----------------------------------------
 		HealthBarSize = { 385, 37 },
-		HealthBarPosition = { "TOPRIGHT", -144, -66 },
-		HealthBarTexture = GetMedia("hp_cap_bar"),
-		HealthBarOrientation = "RIGHT",
+		HealthBarPosition = { "TOPRIGHT", -140, -66 },
+		HealthBarTexture = GetMedia("hp_lowmid_bar"),
+		HealthBarOrientation = "LEFT",
 		HealthBarSparkMap = barSparkMap,
 		HealthBackdropSize = { 716, 188 },
 		HealthBackdropPosition = { "TOPRIGHT", 24.5, 8.5 },
@@ -313,9 +313,9 @@ ns.RegisterConfig("TargetFrame", {
 		-- Health Bar
 		-----------------------------------------
 		HealthBarSize = { 385, 37 },
-		HealthBarPosition = { "TOPRIGHT", -144, -66 },
-		HealthBarTexture = GetMedia("hp_cap_bar"),
-		HealthBarOrientation = "RIGHT",
+		HealthBarPosition = { "TOPRIGHT", -140, -66 },
+		HealthBarTexture = GetMedia("hp_lowmid_bar"),
+		HealthBarOrientation = "LEFT",
 		HealthBarSparkMap = barSparkMap,
 		HealthBackdropSize = { 716, 188 },
 		HealthBackdropPosition = { "TOPRIGHT", 24.5, 7.5 },
@@ -345,9 +345,9 @@ ns.RegisterConfig("TargetFrame", {
 		-- Health Bar
 		-----------------------------------------
 		HealthBarSize = { 385, 37 },
-		HealthBarPosition = { "TOPRIGHT", -144, -66 },
+		HealthBarPosition = { "TOPRIGHT", -140, -66 },
 		HealthBarTexture = GetMedia("hp_cap_bar"),
-		HealthBarOrientation = "RIGHT",
+		HealthBarOrientation = "LEFT",
 		HealthBarSparkMap = barSparkMap,
 		HealthBackdropSize = { 716, 188 },
 		HealthBackdropPosition = { "TOPRIGHT", 23.5, 8.5 },
@@ -379,7 +379,7 @@ ns.RegisterConfig("TargetFrame", {
 		HealthBarSize = { 533, 40 },
 		HealthBarPosition = { "TOPRIGHT", -140, -66 },
 		HealthBarTexture = GetMedia("hp_boss_bar"),
-		HealthBarOrientation = "RIGHT",
+		HealthBarOrientation = "LEFT",
 		-- Per-style fake fill alignment override (used by target health lab settings).
 		HealthLabFakeOffsetX = 0,
 		HealthLabFakeOffsetY = 0,
