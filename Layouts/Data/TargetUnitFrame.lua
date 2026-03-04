@@ -102,7 +102,7 @@ ns.RegisterConfig("TargetFrame", {
 	PowerBarTexture = GetMedia("power_crystal_small_front"),
 	PowerBarSparkTexture = GetMedia("blank"),
 	PowerBarOrientation = "UP",
-	PowerBackdropSize = { 80, 80 },
+	PowerBackdropSize = { 90, 90 },
 	PowerBackdropPosition = { "CENTER", 0, 0 },
 	PowerBackdropTexture = GetMedia("power_crystal_small_back"),
 	PowerBackdropColor = { 1, 1, 1, .85 },
