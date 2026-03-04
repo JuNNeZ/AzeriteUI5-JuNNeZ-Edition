@@ -97,7 +97,7 @@ ns.RegisterConfig("TargetFrame", {
 
 	-- Power Crystal
 	PowerBarPosition = { "TOPRIGHT", 8, -58 }, -- "CENTER", 188, -51
-	PowerBarSize = { 83, 83 },
+	PowerBarSize = { 90, 90 },
 	PowerBarAlpha = .75,
 	PowerBarTexture = GetMedia("power_crystal_small_front"),
 	PowerBarSparkTexture = GetMedia("blank"),
