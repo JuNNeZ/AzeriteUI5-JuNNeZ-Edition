@@ -672,6 +672,21 @@ local NamePlate_PostUpdateHoverElements = function(self)
 			pcall(self.Name.UpdateTag, self.Name)
 		end
 
+		-- Fallback: if the tag returned empty (secret value filtered out),
+		-- try setting the name directly via SetText which handles secrets.
+		-- GetText() returns a secret if the fontstring has a secret text aspect,
+		-- so we must use issecretvalue() before comparing with == to avoid errors.
+		if (self.Name and self.unit) then
+			local nameText = self.Name:GetText()
+			local nameIsEmpty = (type(nameText) ~= "string") or (not issecretvalue(nameText) and nameText == "")
+			if (nameIsEmpty) then
+				local rawName = UnitName(self.unit)
+				if (type(rawName) == "string") then
+					self.Name:SetText(rawName)
+				end
+			end
+		end
+
 		if (self.isMouseOver or self.isTarget or self.isSoftTarget or self.inCombat or showHostileName) then
 			if (self.isTarget) then
 				self.Health.Value:Hide()
@@ -933,8 +948,6 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 	if (issecretvalue and issecretvalue(canAssist)) then
 		canAssist = nil
 	end
-	self.canAttack = (canAttack == true)
-	self.canAssist = (canAssist == true)
 	if (issecretvalue and issecretvalue(isPlayerUnit)) then
 		isPlayerUnit = false
 	end
@@ -953,6 +966,19 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 	if (issecretvalue and issecretvalue(reaction)) then
 		reaction = nil
 	end
+
+	-- When canAttack/canAssist are secret (nil after guard), use UnitReaction as fallback.
+	-- UnitReaction: 1=Hated..4=Neutral..8=Exalted; <= 4 means hostile/unfriendly.
+	if (canAttack == nil and canAssist == nil and type(reaction) == "number") then
+		if (reaction <= 4) then
+			canAttack = true
+		elseif (reaction >= 5) then
+			canAssist = true
+		end
+	end
+
+	self.canAttack = (canAttack == true)
+	self.canAssist = (canAssist == true)
 
 	local guidLooksLikeObject = (guidType == "GameObject") or (guidType == "AreaTrigger")
 	local passiveWorldObjectLike = ((canAttack == false) and (canAssist == false) and (not isPlayerUnit) and (not playerControlled))

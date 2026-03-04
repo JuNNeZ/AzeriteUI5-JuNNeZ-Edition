@@ -1270,15 +1270,44 @@ Methods[prefix("*:Name")] = function(unit, realUnit, ...)
 	local guid = unitGUID or realUnitGUID
 	local levelUnit = unitName and unit or realUnit or unit
 
-	if (name and issecretvalue and issecretvalue(name)) then
-		return name
+	-- If no non-secret name was found, try raw UnitName.
+	-- Secret strings can be passed directly to widget SetFormattedText/SetText.
+	-- oUF's tag wrapper (issecretvalue check) will handle secret returns.
+	if (not name) then
+		local rawUnit = (type(unit) == "string") and unit or nil
+		local rawRealUnit = (type(realUnit) == "string") and realUnit or nil
+		if (rawUnit) then
+			local rawName = UnitName(rawUnit)
+			if (type(rawName) == "string") then
+				-- Cache what we can for future lookups
+				if (frame and guid and not issecretvalue(rawName)) then
+					frame.__AzeriteUI_LastSafeName = rawName
+					frame.__AzeriteUI_LastSafeNameGUID = guid
+				end
+				return rawName
+			end
+		end
+		if (rawRealUnit) then
+			local rawName = UnitName(rawRealUnit)
+			if (type(rawName) == "string") then
+				if (frame and guid and not issecretvalue(rawName)) then
+					frame.__AzeriteUI_LastSafeName = rawName
+					frame.__AzeriteUI_LastSafeNameGUID = guid
+				end
+				return rawName
+			end
+		end
+		-- Last resort: use cached name if GUID matches
+		if (frame and frame.__AzeriteUI_LastSafeName and guid and frame.__AzeriteUI_LastSafeNameGUID == guid) then
+			name = frame.__AzeriteUI_LastSafeName
+		else
+			return ""
+		end
 	end
 
 	if (name and frame and guid) then
 		frame.__AzeriteUI_LastSafeName = name
 		frame.__AzeriteUI_LastSafeNameGUID = guid
-	elseif ((not name) and frame and frame.__AzeriteUI_LastSafeName and guid and frame.__AzeriteUI_LastSafeNameGUID == guid) then
-		name = frame.__AzeriteUI_LastSafeName
 	elseif (frame and frame.__AzeriteUI_LastSafeName and (not guid)) then
 		frame.__AzeriteUI_LastSafeName = nil
 		frame.__AzeriteUI_LastSafeNameGUID = nil

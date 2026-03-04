@@ -1642,22 +1642,46 @@ local TargetIndicator_Update = function(self, event, unit, ...)
 	unit = unit or self.unit
 
 	local target = unit .. "target"
-	if (not UnitExists(target) or UnitIsUnit(unit, "player")) then
+	-- Guard UnitExists/UnitIsUnit against secret returns
+	local targetExists = UnitExists(target)
+	if (issecretvalue and issecretvalue(targetExists)) then targetExists = true end
+	local isPlayerUnit = UnitIsUnit(unit, "player")
+	if (issecretvalue and issecretvalue(isPlayerUnit)) then isPlayerUnit = false end
+	if (not targetExists or isPlayerUnit) then
 		return element:Hide()
 	end
 
-	if (UnitCanAttack("player", unit)) then
-		if (UnitIsUnit(target, "player")) then
+	local canAttack = UnitCanAttack("player", unit)
+	if (issecretvalue and issecretvalue(canAttack)) then
+		-- Fallback: use UnitReaction to determine hostility
+		local reaction = UnitReaction("player", unit)
+		if (type(reaction) == "number" and reaction <= 4) then
+			canAttack = true
+		else
+			canAttack = false
+		end
+	end
+
+	if (canAttack) then
+		local targetsPlayer = UnitIsUnit(target, "player")
+		if (issecretvalue and issecretvalue(targetsPlayer)) then targetsPlayer = false end
+		local targetsPet = UnitIsUnit(target, "pet")
+		if (issecretvalue and issecretvalue(targetsPet)) then targetsPet = false end
+		if (targetsPlayer) then
 			element:SetTexture(element.enemyTexture)
-		elseif (UnitIsUnit(target, "pet")) then
+		elseif (targetsPet) then
 			element:SetTexture(element.petTexture)
 		else
 			return element:Hide()
 		end
-	elseif (UnitIsUnit(target, "player")) then
-		element:SetTexture(element.friendTexture)
 	else
-		return element:Hide()
+		local targetsPlayer = UnitIsUnit(target, "player")
+		if (issecretvalue and issecretvalue(targetsPlayer)) then targetsPlayer = false end
+		if (targetsPlayer) then
+			element:SetTexture(element.friendTexture)
+		else
+			return element:Hide()
+		end
 	end
 
 	element:Show()
@@ -2172,7 +2196,22 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 			self.Castbar.__AzeriteUI_TexturePercent = nil
 		end
 		if (self.Name and self.Name.UpdateTag) then
-			self.Name:UpdateTag()
+			-- pcall: tag may return a secret, which can propagate through oUF wrapper
+			pcall(self.Name.UpdateTag, self.Name)
+		end
+		-- Fallback: if the tag returned empty (secret value filtered out),
+		-- try setting the name directly via SetText which handles secrets.
+		-- GetText() returns a secret if the fontstring has a secret text aspect,
+		-- so we must use issecretvalue() before comparing with == to avoid errors.
+		if (self.Name and self.unit) then
+			local nameText = self.Name:GetText()
+			local nameIsEmpty = (type(nameText) ~= "string") or (not issecretvalue(nameText) and nameText == "")
+			if (nameIsEmpty) then
+				local rawName = UnitName(self.unit)
+				if (type(rawName) == "string") then
+					self.Name:SetText(rawName)
+				end
+			end
 		end
 		if (self.Health and self.Health.Value and self.Health.Value.UpdateTag) then
 			self.Health.Value:UpdateTag()
