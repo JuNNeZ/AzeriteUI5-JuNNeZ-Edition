@@ -2105,20 +2105,6 @@ local UnitFrame_UpdateTextures = function(self)
 		SetPointWithAnchorAndOffset(powerBackdrop, powerBackdropPosition, powerBackdropOffsetX, powerBackdropOffsetY, powerBackdropAnchorFrame)
 		powerBackdrop:SetSize((powerBackdropSize and powerBackdropSize[1] or 0) * powerBackdropScaleX, (powerBackdropSize and powerBackdropSize[2] or 0) * powerBackdropScaleY)
 		powerBackdrop:SetDrawLayer("BACKGROUND", ClampTargetPowerLayer(-2 + powerBarArtLayer, -2))
-		
-		-- Also update the backdrop group container size to prevent SetAllPoints anchoring issues
-		if (powerBackdrop.GetParent) then
-			local group = powerBackdrop:GetParent()
-			if (group and group.SetSize) then
-				group:SetSize((powerBackdropSize and powerBackdropSize[1] or 0) * powerBackdropScaleX, (powerBackdropSize and powerBackdropSize[2] or 0) * powerBackdropScaleY)
-				-- Position group to follow power bar
-				if (group.ClearAllPoints) then
-					group:ClearAllPoints()
-					local powerAnchorFrame = ResolveTargetPowerAnchorFrame(self, powerBarAnchorFrameKey) or self
-					SetPointWithAnchorAndOffset(group, powerBarPosition, powerBarOffsetX, powerBarOffsetY, powerAnchorFrame)
-				end
-			end
-		end
 	end
 
 	local powerValue = self.Power and self.Power.Value
@@ -2604,9 +2590,7 @@ local style = function(self, unit, id)
 	self.Power.UpdateColor = Power_UpdateColor
 
 	local powerBackdropGroup = CreateFrame("Frame", nil, self)
-	-- Don't use SetAllPoints - backdrop should be independent of power bar size
-	-- Position will be set dynamically in the update function
-	powerBackdropGroup:SetSize(unpack(db.PowerBackdropSize))
+	powerBackdropGroup:SetAllPoints(power)
 	powerBackdropGroup:SetFrameLevel(power:GetFrameLevel())
 
 	local powerBackdrop = powerBackdropGroup:CreateTexture(nil, "BACKGROUND", nil, -2)
