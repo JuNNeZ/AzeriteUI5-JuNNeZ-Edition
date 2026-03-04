@@ -42,6 +42,11 @@ ns.SETTINGS_VERSION = ns.WoW11 and 25 or 22 -- use client dependant settings ver
 -- Tinkerers rejoyce!
 _G[Addon] = ns
 
+-- Keep legacy global name for XML/scripts and third-party compatibility.
+-- The addon folder/project can be renamed, but many internal templates and
+-- external integrations still reference the historic AzeriteUI global key.
+_G["AzeriteUI"] = ns
+
 -- Lua API
 local next = next
 local select = select

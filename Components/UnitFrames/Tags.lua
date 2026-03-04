@@ -178,7 +178,23 @@ local SafeUnitName = function(unit)
 		local ok, altName = pcall(_G.GetUnitName, unit, false)
 		-- Reject secret values; these must never be used in addon logic
 		if (ok and issecretvalue and issecretvalue(altName)) then
-			return nil
+			altName = nil
+		end
+		if (ok and type(altName) == "string" and altName ~= "") then
+			return altName
+		end
+		ok, altName = pcall(_G.GetUnitName, unit, true)
+		if (ok and issecretvalue and issecretvalue(altName)) then
+			altName = nil
+		end
+		if (ok and type(altName) == "string" and altName ~= "") then
+			return altName
+		end
+	end
+	if (_G.UnitNameUnmodified) then
+		local ok, altName = pcall(_G.UnitNameUnmodified, unit)
+		if (ok and issecretvalue and issecretvalue(altName)) then
+			altName = nil
 		end
 		if (ok and type(altName) == "string" and altName ~= "") then
 			return altName

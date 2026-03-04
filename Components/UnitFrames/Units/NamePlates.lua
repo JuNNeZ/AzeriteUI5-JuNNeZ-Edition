@@ -928,13 +928,13 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 	local guidType = GetGuidType(unit)
 	local _, npcID = GetGuidAndNpcID(unit)
 	if (issecretvalue and issecretvalue(canAttack)) then
-		canAttack = false
+		canAttack = nil
 	end
 	if (issecretvalue and issecretvalue(canAssist)) then
-		canAssist = false
+		canAssist = nil
 	end
-	self.canAttack = canAttack
-	self.canAssist = canAssist
+	self.canAttack = (canAttack == true)
+	self.canAssist = (canAssist == true)
 	if (issecretvalue and issecretvalue(isPlayerUnit)) then
 		isPlayerUnit = false
 	end
@@ -955,13 +955,13 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 	end
 
 	local guidLooksLikeObject = (guidType == "GameObject") or (guidType == "AreaTrigger")
-	local passiveWorldObjectLike = ((not canAttack) and (not canAssist) and (not isPlayerUnit) and (not playerControlled))
+	local passiveWorldObjectLike = ((canAttack == false) and (canAssist == false) and (not isPlayerUnit) and (not playerControlled))
 	local isCompanionLikeGuidType = (guidType == "Pet") or (guidType == "Creature") or (guidType == "Vehicle")
 	local forceShowFriendlyNPC = (type(npcID) == "string") and AlwaysShowFriendlyNPCByID[npcID] and true or false
 	local forceHideObjectLikeNPC = (type(npcID) == "string") and AlwaysHideObjectLikeNPCByID[npcID] and true or false
 	local suppressObjectLikeNPCByID = forceHideObjectLikeNPC and (not forceShowFriendlyNPC) and true or false
 	self.isObjectPlate = (guidLooksLikeObject or suppressObjectLikeNPCByID or (self.nameplateShowsWidgetsOnly and passiveWorldObjectLike and (not isCompanionLikeGuidType)) or (passiveWorldObjectLike and guidType == nil)) and true or nil
-	self.isFriendlyAssistableNPC = (not self.isObjectPlate) and (not isPlayerUnit) and (not canAttack) and ((canAssist == true) or forceShowFriendlyNPC) and (not playerControlled)
+	self.isFriendlyAssistableNPC = (not self.isObjectPlate) and (not isPlayerUnit) and (canAttack ~= true) and ((canAssist == true) or forceShowFriendlyNPC) and (not playerControlled)
 
 	local db = ns.GetConfig("NamePlates")
 	local healthLab = GetNamePlateHealthLabSettings(db)
