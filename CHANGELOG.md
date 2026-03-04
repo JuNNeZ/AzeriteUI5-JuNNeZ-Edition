@@ -3,6 +3,14 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.218-JuNNeZ (TBD)
+
+### Game Version Support
+- **Added WoW 12.0.1 support** — Now targets and is compatible with Midnight patch 12.0.1 (120001) and 12.0.0 (120000).
+
+### Bug Fixes
+- **Fixed ExplorerMode crash** — "attempt to perform arithmetic on local 'min' (a secret number value)" error when checking player mana power. Added secret value guards to prevent arithmetic on WoW 12+ secure values.
+
 ## 5.2.217-JuNNeZ (2026-03-04)
 
 ### Breaking Changes

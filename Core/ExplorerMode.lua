@@ -432,6 +432,10 @@ ExplorerMode.CheckPower = function(self)
 	if (powerType == "MANA") then
 		local min = UnitPower("player", POWER_TYPE_MANA) or 0
 		local max = UnitPowerMax("player", POWER_TYPE_MANA) or 0
+		-- Guard against secret values (WoW 12+)
+		if issecretvalue(min) or issecretvalue(max) then
+			min = 0
+		end
 		if (max > 0) and (min/max < self.db.profile.fadeThresholdMana) then
 			self.lowPower = true
 			return
@@ -447,6 +451,10 @@ ExplorerMode.CheckPower = function(self)
 		if (playerClass == "DRUID") then
 			local min = UnitPower("player", POWER_TYPE_MANA) or 0
 			local max = UnitPowerMax("player", POWER_TYPE_MANA) or 0
+			-- Guard against secret values (WoW 12+)
+			if issecretvalue(min) or issecretvalue(max) then
+				min = 0
+			end
 			if (max > 0) and (min/max < self.db.profile.fadeThresholdManaInForms) then
 				self.lowPower = true
 				return
