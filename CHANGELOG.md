@@ -3,6 +3,15 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.213-JuNNeZ (TBD)
+
+### Bug Fixes (WoW 12 Secret Value Compatibility)
+- **Fixed ToT frame crash** — "attempt to compare local 'shouldHide' (a secret boolean value)" error when selecting targets in instances. Added secret value sanitization to prevent comparison errors.
+- **Fixed nameplate crash** — "attempt to compare local 'unit' (a secret string value)" error during PLAYER_SOFT_INTERACT_CHANGED and other events. Added secret value check at event handler entry.
+- **Fixed player power crystal sizing** — Power statusbar now matches backdrop asset dimensions (196x196) with proper anchor compensation to preserve visual attachment.
+- **Fixed threat overlay alignment** — Adjusted threat case Y-offset (+28px) and corrected threat glow sizing to use backdrop scales.
+- **Fixed actionbar enable toggle** — Toggling actionbar enable in options now shows/hides bars immediately without requiring `/reload`.
+
 ## 5.2.216-JuNNeZ (2026-03-03)
 
 ### Demon Hunter Devourer — Soul Fragments Display

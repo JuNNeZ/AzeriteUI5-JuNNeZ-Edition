@@ -1,0 +1,39 @@
+package-as: AzeriteUI
+
+enable-nolib-creation: no
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  # Development files
+  - .github
+  - .vscode
+  - .research
+  - .editorconfig
+  - .gitignore
+  - .gitattributes
+  
+  # Development documentation
+  - AGENTS.md
+  - FixLog.md
+  - FixLog_Archive_*.md
+  - VERSION_CHECKLIST.md
+  - Docs
+  
+  # Build scripts
+  - build-release.ps1
+  - "*.ps1"
+  
+  # IDE files
+  - "*.code-workspace"
+  - "*.sublime-*"
+  
+  # Temporary files
+  - "*.bak"
+  - "*.tmp"
+  - "*.log"
+
+move-folders:
+  AzeriteUI/AzeriteUI: AzeriteUI

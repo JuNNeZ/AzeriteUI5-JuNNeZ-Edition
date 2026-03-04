@@ -4,7 +4,11 @@
 .idea/
 *.code-workspace
 *.sublime-*
-.github/
+
+# GitHub files (except workflows)
+.github/copilot-instructions.md
+.github/prompts/
+.github/dependabot.yml
 
 # OS generated files
 .DS_Store

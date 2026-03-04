@@ -1043,6 +1043,11 @@ local NamePlate_OnHide = function(self)
 end
 
 local NamePlate_OnEvent = function(self, event, unit, ...)
+	-- WoW 12 secret-value safety: unit can be secret in some events
+	if (issecretvalue(unit)) then
+		unit = nil -- Fall back to self.unit
+	end
+	
 	if (unit and unit ~= self.unit) then return end
 
 	unit = unit or self.unit
