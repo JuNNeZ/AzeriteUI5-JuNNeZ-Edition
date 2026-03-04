@@ -1576,15 +1576,15 @@ local UnitFrame_UpdateTextures = function(self)
 	local ptex
 	local powerAnchorFrame = ResolvePowerAnchorFrame(powerBarAnchorFrameKey, power)
 	local legacyPowerWidth, legacyPowerHeight = ScaleSize(db.PowerBarSize, powerBarScaleX, powerBarScaleY)
-	local backdropWidth, backdropHeight = ScaleSize(db.PowerBackdropSize, powerBackdropScaleX, powerBackdropScaleY)
-	local powerDeltaWidth = backdropWidth - legacyPowerWidth
-	local powerDeltaHeight = backdropHeight - legacyPowerHeight
+	local powerWidth, powerHeight = ScaleSize((db.PowerBackdropSize or db.PowerBarSize), powerBackdropScaleX, powerBackdropScaleY)
+	local powerDeltaWidth = powerWidth - legacyPowerWidth
+	local powerDeltaHeight = powerHeight - legacyPowerHeight
 	local powerAnchorPoint = GetAnchorPointToken(db.PowerBarPosition)
 	local powerAnchorHorizontal, powerAnchorVertical = GetPointFactors(powerAnchorPoint)
 	local powerCenterShiftX = (-powerAnchorHorizontal) * (powerDeltaWidth * .5)
 	local powerCenterShiftY = (-powerAnchorVertical) * (powerDeltaHeight * .5)
 	SetPointWithOffset(power, db.PowerBarPosition, powerBarOffsetX - powerCenterShiftX, powerBarOffsetY - powerCenterShiftY, powerAnchorFrame)
-	power:SetSize(legacyPowerWidth, legacyPowerHeight)
+	power:SetSize(powerWidth, powerHeight)
 	-- WoW 12.0: Cache texture to prevent flickering
 	local powerTexture = (PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and db.PowerBarTextureWrath or db.PowerBarTexture
 	if (power._cachedTexture ~= powerTexture) then
@@ -1624,20 +1624,11 @@ local UnitFrame_UpdateTextures = function(self)
 	powerBackdrop:ClearAllPoints()
 	local powerBackdropAnchorFrame = ResolvePowerAnchorFrame(powerBackdropAnchorFrameKey, power)
 	SetPointWithOffset(powerBackdrop, db.PowerBackdropPosition, powerBackdropOffsetX, powerBackdropOffsetY, powerBackdropAnchorFrame)
-	powerBackdrop:SetSize(backdropWidth, backdropHeight)
+	local powerBackdropWidth, powerBackdropHeight = ScaleSize(db.PowerBackdropSize, powerBackdropScaleX, powerBackdropScaleY)
+	powerBackdrop:SetSize(powerBackdropWidth, powerBackdropHeight)
 	powerBackdrop:SetTexture((PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and db.PowerBackdropTextureWrath or db.PowerBackdropTexture)
 	powerBackdrop:SetVertexColor(1, 1, 1, 1)
 	SafeSetDrawLayer(powerBackdrop, "BACKGROUND", -2 + powerBarArtLayer, -2)
-
-	-- Position backdrop group independently to prevent parent-child resizing issues
-	if (self.Power.BackdropGroup) then
-		local group = self.Power.BackdropGroup
-		group:ClearAllPoints()
-		-- Position group to match backdrop texture position
-		local groupAnchorFrame = powerBackdropAnchorFrame or power
-		SetPointWithOffset(group, db.PowerBackdropPosition, powerBackdropOffsetX, powerBackdropOffsetY, groupAnchorFrame)
-		group:SetSize(backdropWidth, backdropHeight)
-	end
 
 	local powerCase = self.Power.Case
 	powerCase:ClearAllPoints()
@@ -2022,7 +2013,7 @@ local style = function(self, unit)
 	local power = CreateFrame("StatusBar", nil, self)
 	power:SetFrameLevel(self:GetFrameLevel() - 2)
 	local powerPos = db.PowerBarPosition or { "CENTER", 0, 0 }
-	local powerSize = db.PowerBarSize or { 80, 80 }
+	local powerSize = db.PowerBackdropSize or db.PowerBarSize or { 80, 80 }
 	power:SetPoint(unpack(powerPos))
 	power:SetSize(unpack(powerSize))
 	power:SetStatusBarTexture(db.PowerBarTexture)
@@ -2061,14 +2052,10 @@ local style = function(self, unit)
 	self.Power.PostUpdate = Power_UpdateVisibility
 	self.Power.PostUpdateColor = not (PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and Power_PostUpdateColor
 
-	local powerBackdropGroup = CreateFrame("Frame", nil, self)
-	powerBackdropGroup:SetFrameLevel(power:GetFrameLevel() - 1)
-
-	local powerBackdrop = powerBackdropGroup:CreateTexture(nil, "BACKGROUND", nil, -2)
+	local powerBackdrop = power:CreateTexture(nil, "BACKGROUND", nil, -2)
 	local powerCase = power:CreateTexture(nil, "ARTWORK", nil, 2)
 
 	self.Power.Backdrop = powerBackdrop
-	self.Power.BackdropGroup = powerBackdropGroup
 	self.Power.Case = powerCase
 
 	-- Power Value
