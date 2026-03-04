@@ -228,7 +228,7 @@ ns.RegisterConfig("PlayerFrame", {
 		PowerBarSparkMap = crystalSparkMap,
 
 		PowerBackdropSize = { 196, 196 },
-		PowerBackdropPosition = { "CENTER", 0, 0 },
+		PowerBackdropPosition = { "CENTER", 0, -9 },
 		PowerBackdropTexture = GetMedia("power_crystal_back"),
 		PowerBackdropTextureWrath = GetMedia("power-crystal-ice-back"),
 

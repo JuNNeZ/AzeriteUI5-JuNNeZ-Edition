@@ -1576,15 +1576,15 @@ local UnitFrame_UpdateTextures = function(self)
 	local ptex
 	local powerAnchorFrame = ResolvePowerAnchorFrame(powerBarAnchorFrameKey, power)
 	local legacyPowerWidth, legacyPowerHeight = ScaleSize(db.PowerBarSize, powerBarScaleX, powerBarScaleY)
-	local powerWidth, powerHeight = ScaleSize((db.PowerBackdropSize or db.PowerBarSize), powerBackdropScaleX, powerBackdropScaleY)
-	local powerDeltaWidth = powerWidth - legacyPowerWidth
-	local powerDeltaHeight = powerHeight - legacyPowerHeight
+	local backdropWidth, backdropHeight = ScaleSize((db.PowerBackdropSize or db.PowerBarSize), powerBackdropScaleX, powerBackdropScaleY)
+	local powerDeltaWidth = backdropWidth - legacyPowerWidth
+	local powerDeltaHeight = backdropHeight - legacyPowerHeight
 	local powerAnchorPoint = GetAnchorPointToken(db.PowerBarPosition)
 	local powerAnchorHorizontal, powerAnchorVertical = GetPointFactors(powerAnchorPoint)
 	local powerCenterShiftX = (-powerAnchorHorizontal) * (powerDeltaWidth * .5)
 	local powerCenterShiftY = (-powerAnchorVertical) * (powerDeltaHeight * .5)
 	SetPointWithOffset(power, db.PowerBarPosition, powerBarOffsetX - powerCenterShiftX, powerBarOffsetY - powerCenterShiftY, powerAnchorFrame)
-	power:SetSize(powerWidth, powerHeight)
+	power:SetSize(legacyPowerWidth, legacyPowerHeight)
 	-- WoW 12.0: Cache texture to prevent flickering
 	local powerTexture = (PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and db.PowerBarTextureWrath or db.PowerBarTexture
 	if (power._cachedTexture ~= powerTexture) then
@@ -2013,7 +2013,7 @@ local style = function(self, unit)
 	local power = CreateFrame("StatusBar", nil, self)
 	power:SetFrameLevel(self:GetFrameLevel() - 2)
 	local powerPos = db.PowerBarPosition or { "CENTER", 0, 0 }
-	local powerSize = db.PowerBackdropSize or db.PowerBarSize or { 80, 80 }
+	local powerSize = db.PowerBarSize or { 80, 80 }
 	power:SetPoint(unpack(powerPos))
 	power:SetSize(unpack(powerSize))
 	power:SetStatusBarTexture(db.PowerBarTexture)
