@@ -26,6 +26,7 @@ VERSION_CHECKLIST.md
 Docs/
 
 # Build and release artifacts
+*.ps1
 *.zip
 dist/
 build/
