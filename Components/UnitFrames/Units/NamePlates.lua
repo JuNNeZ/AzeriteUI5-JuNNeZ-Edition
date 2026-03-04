@@ -603,10 +603,7 @@ local NamePlate_PostUpdatePositions = function(self)
 
 	-- The PRD has neither name nor auras.
 	if (not self.isPRD) then
-		local showHostileName = (self.canAttack == true) and (not self.isObjectPlate)
-		local showFriendlyTargetName = self.isTarget and (self.canAttack == false) and (self.canAssist == true)
-		local showFriendlyAssistName = self.isFriendlyAssistableNPC and true or false
-		local hasName = NamePlatesMod.db.profile.showNameAlways or showHostileName or showFriendlyTargetName or showFriendlyAssistName or (not self.isTarget and (self.isMouseOver or self.isSoftTarget or self.inCombat)) or false
+		local hasName = NamePlatesMod.db.profile.showNameAlways or (not self.isTarget and (self.isMouseOver or self.isSoftTarget or self.inCombat)) or false
 		local nameOffset = hasName and (select(2, name:GetFont()) + auras.spacing) or 0
 
 		if (hasName ~= auras.usingNameOffset or auras.usingNameOffset == nil) then
@@ -661,10 +658,7 @@ local NamePlate_PostUpdateHoverElements = function(self)
 		self.Health.Value:Hide()
 		self.Name:Hide()
 	else
-		local showHostileName = (self.canAttack == true) and (not self.isObjectPlate)
 		local showNameAlways = NamePlatesMod.db.profile.showNameAlways
-		local showFriendlyTargetName = self.isTarget and (self.canAttack == false) and (self.canAssist == true)
-		local showFriendlyAssistName = self.isFriendlyAssistableNPC and true or false
 
 		-- Force tag update to ensure name is always current
 		-- This is critical for dungeons where events may not fire reliably
@@ -687,10 +681,10 @@ local NamePlate_PostUpdateHoverElements = function(self)
 			end
 		end
 
-		if (self.isMouseOver or self.isTarget or self.isSoftTarget or self.inCombat or showHostileName) then
+		if (self.isMouseOver or self.isTarget or self.isSoftTarget or self.inCombat) then
 			if (self.isTarget) then
 				self.Health.Value:Hide()
-				if (showNameAlways or showHostileName or showFriendlyTargetName or showFriendlyAssistName) then
+				if (showNameAlways) then
 					self.Name:Show()
 				else
 					self.Name:Hide()
@@ -705,16 +699,12 @@ local NamePlate_PostUpdateHoverElements = function(self)
 				self.Name:Show()
 			end
 		else
-			if (showNameAlways or showHostileName or showFriendlyAssistName) then
+			if (showNameAlways) then
 				self.Name:Show()
 			else
 				self.Name:Hide()
 			end
-			if (showHostileName and self.Castbar and not (self.Castbar.casting or self.Castbar.channeling or self.Castbar.empowering)) then
-				self.Health.Value:Show()
-			else
-				self.Health.Value:Hide()
-			end
+			self.Health.Value:Hide()
 		end
 	end
 end
