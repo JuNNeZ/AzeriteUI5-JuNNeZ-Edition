@@ -705,9 +705,7 @@ local NamePlate_PostUpdateHoverElements = function(self)
 				self.Name:Show()
 			end
 		else
-			-- Always show names for hostile units, even when not mousing over
-			-- This ensures dungeon enemies show their names
-			if (showNameAlways or showHostileName or showFriendlyAssistName or (self.canAttack == true)) then
+			if (showNameAlways or showHostileName or showFriendlyAssistName) then
 				self.Name:Show()
 			else
 				self.Name:Hide()
