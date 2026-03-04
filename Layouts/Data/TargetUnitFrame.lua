@@ -97,12 +97,12 @@ ns.RegisterConfig("TargetFrame", {
 
 	-- Power Crystal
 	PowerBarPosition = { "TOPRIGHT", 8, -58 }, -- "CENTER", 188, -51
-	PowerBarSize = { 90, 90 },
+	PowerBarSize = { 80, 80 },
 	PowerBarAlpha = .75,
 	PowerBarTexture = GetMedia("power_crystal_small_front"),
 	PowerBarSparkTexture = GetMedia("blank"),
 	PowerBarOrientation = "UP",
-	PowerBackdropSize = { 90, 90 },
+	PowerBackdropSize = { 80, 80 },
 	PowerBackdropPosition = { "CENTER", 0, 0 },
 	PowerBackdropTexture = GetMedia("power_crystal_small_back"),
 	PowerBackdropColor = { 1, 1, 1, .85 },
