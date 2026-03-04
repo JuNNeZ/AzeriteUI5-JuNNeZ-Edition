@@ -1,4 +1,4 @@
-## Interface: 120000
+## Interface: 120001, 120000
 ## IconTexture: Interface\Addons\AzeriteUI5_JuNNeZ_Edition\Assets\power-crystal-ice-icon.tga
 
 ## Title: |cff4488bbAzerite|r |cfffafafaUI|r |cffcccccc5.2|r |cff00ff00JuNNeZ Edition|r
