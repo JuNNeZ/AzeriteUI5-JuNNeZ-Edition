@@ -87,7 +87,13 @@ if (tocversion >= 100200) or (tocversion >= 40400 and tocversion < 50000) then
 				if type(texture) == "string" then
 					texture = _G[texture]
 				end
-				original_SetPortraitToTexture(texture, asset)
+				if type(texture) == "table" and texture.SetTexture then
+					if original_SetPortraitToTexture then
+						original_SetPortraitToTexture(texture, asset)
+					else
+						texture:SetTexture(asset)
+					end
+				end
 			end
 		end
 	} do
