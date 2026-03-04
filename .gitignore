@@ -4,6 +4,7 @@
 .idea/
 *.code-workspace
 *.sublime-*
+.github/
 
 # OS generated files
 .DS_Store
