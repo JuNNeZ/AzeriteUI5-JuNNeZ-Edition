@@ -18,6 +18,13 @@ Desktop.ini
 # Research and development (local only)
 .research/
 
+# Development documentation (internal only)
+AGENTS.md
+FixLog.md
+FixLog_Archive_*.md
+VERSION_CHECKLIST.md
+Docs/
+
 # Build and release artifacts
 *.zip
 dist/
