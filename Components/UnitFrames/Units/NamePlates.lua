@@ -1558,7 +1558,7 @@ local callback = function(self, event, unit)
 		end
 		--]]
 
-		self.isPRD = UnitIsUnit(unit, "player")
+		self.isPRD = SafeUnitMatches(unit, "player")
 
 		if (self.WidgetContainer) then
 			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
@@ -1651,14 +1651,14 @@ local MOUSEOVER
 local checkMouseOver = function()
 	if (UnitExists("mouseover")) then
 		if (MOUSEOVER) then
-			if (UnitIsUnit(MOUSEOVER.unit, "mouseover")) then
+			if (SafeUnitMatches(MOUSEOVER.unit, "mouseover")) then
 				return
 			end
 			NamePlate_OnLeave(MOUSEOVER)
 			MOUSEOVER = nil
 		end
 		for frame in next,ns.ActiveNamePlates do
-			if (UnitIsUnit(frame.unit, "mouseover")) then
+			if (SafeUnitMatches(frame.unit, "mouseover")) then
 				MOUSEOVER = frame
 				return NamePlate_OnEnter(MOUSEOVER)
 			end
@@ -1677,7 +1677,7 @@ local checkSoftTarget = function()
 			if (UnitIsDead("softenemy")) then
 				EnemyDead = true
 			end
-			if ((UnitIsUnit(SOFTTARGET.unit, "softenemy") and not EnemyDead) or UnitIsUnit(SOFTTARGET.unit, "softinteract")) then
+			if ((SafeUnitMatches(SOFTTARGET.unit, "softenemy") and not EnemyDead) or SafeUnitMatches(SOFTTARGET.unit, "softinteract")) then
 				return
 			end
 			SoftNamePlate_OnLeave(SOFTTARGET)
@@ -1688,7 +1688,7 @@ local checkSoftTarget = function()
 			if (UnitIsDead("softenemy")) then
 				EnemyDead = true
 			end
-			if ((UnitIsUnit(frame.unit, "softenemy") and not EnemyDead) or UnitIsUnit(frame.unit, "softinteract")) then
+			if ((SafeUnitMatches(frame.unit, "softenemy") and not EnemyDead) or SafeUnitMatches(frame.unit, "softinteract")) then
 				SOFTTARGET = frame
 				return SoftNamePlate_OnEnter(SOFTTARGET)
 			end
