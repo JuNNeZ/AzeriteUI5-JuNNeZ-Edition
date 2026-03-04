@@ -219,7 +219,7 @@ ns.RegisterConfig("PlayerFrame", {
 
 		-- Power Crystal
 		-----------------------------------------
-		PowerBarSize = { 120, 140 },
+	PowerBarSize = { 135, 155 },
 		PowerBarPosition = { "BOTTOMLEFT", 20, 38 },
 		PowerBarTexture = GetMedia("power_crystal_front"),
 		PowerBarTextureWrath = GetMedia("power-crystal-ice-front"),
@@ -297,7 +297,7 @@ ns.RegisterConfig("PlayerFrame", {
 
 		-- Power Crystal
 		-----------------------------------------
-		PowerBarSize = { 120, 140 },
+		PowerBarSize = { 135, 155 },
 		PowerBarPosition = { "BOTTOMLEFT", 20, 38 },
 		PowerBarTexture = GetMedia("power_crystal_front"),
 		PowerBarTextureWrath = GetMedia("power-crystal-ice-front"),
@@ -375,7 +375,7 @@ ns.RegisterConfig("PlayerFrame", {
 
 		-- Power Crystal
 		-----------------------------------------
-		PowerBarSize = { 120, 140 },
+		PowerBarSize = { 135, 155 },
 		PowerBarPosition = { "BOTTOMLEFT", 20, 38 },
 		PowerBarTexture = GetMedia("power_crystal_front"),
 		PowerBarTextureWrath = GetMedia("power-crystal-ice-front"),
