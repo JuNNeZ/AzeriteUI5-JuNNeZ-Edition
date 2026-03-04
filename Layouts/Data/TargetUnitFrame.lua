@@ -240,7 +240,7 @@ ns.RegisterConfig("TargetFrame", {
 		-- Health Bar
 		-----------------------------------------
 		HealthBarSize = { 40, 36 },
-		HealthBarPosition = { "TOPRIGHT", -137, -66 },
+		HealthBarPosition = { "TOPRIGHT", -137, -63 },
 		HealthBarTexture = GetMedia("hp_critter_bar"),
 		HealthBarColor = { Colors.health[1], Colors.health[2], Colors.health[3] },
 		HealthBarOrientation = "LEFT",
