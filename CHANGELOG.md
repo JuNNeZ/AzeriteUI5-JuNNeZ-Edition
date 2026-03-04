@@ -3,14 +3,21 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
-## 5.2.213-JuNNeZ (TBD)
+## 5.2.217-JuNNeZ (2026-03-04)
 
-### Bug Fixes (WoW 12 Secret Value Compatibility)
-- **Fixed ToT frame crash** — "attempt to compare local 'shouldHide' (a secret boolean value)" error when selecting targets in instances. Added secret value sanitization to prevent comparison errors.
-- **Fixed nameplate crash** — "attempt to compare local 'unit' (a secret string value)" error during PLAYER_SOFT_INTERACT_CHANGED and other events. Added secret value check at event handler entry.
-- **Fixed player power crystal sizing** — Power statusbar now matches backdrop asset dimensions (196x196) with proper anchor compensation to preserve visual attachment.
-- **Fixed threat overlay alignment** — Adjusted threat case Y-offset (+28px) and corrected threat glow sizing to use backdrop scales.
-- **Fixed actionbar enable toggle** — Toggling actionbar enable in options now shows/hides bars immediately without requiring `/reload`.
+### Breaking Changes
+- **Removed Classic/Vanilla support** — Dropped `AzeriteUI5_JuNNeZ_Edition_Vanilla.toc` and Classic Era compatibility. This edition now targets Retail (Midnight/WoW 12+) only. Classic WoW code removal will follow in future versions.
+
+### CurseForge & Packaging Configuration
+- **Added JuNNeZ Edition CurseForge project ID** — Now uses project ID `1477618` to prevent conflicts with original AzeriteUI (ID: 298648).
+- **Removed original AzeriteUI identifiers** — Removed original project IDs (`X-Curse-Project-ID: 298648` and `X-Wago-ID: R4N2PZKL`) from both TOC files.
+- **Updated addon folder references** — All IconTexture paths now correctly reference `AzeriteUI5_JuNNeZ_Edition` folder name instead of generic `AzeriteUI`.
+- **Added edition attribution** — TOC files now include `X-Edition: JuNNeZ Fan Edition - Not affiliated with original AzeriteUI` to clearly identify this as a fan project.
+- **Fixed package configuration** — Updated build script and `.pkgmeta` to use correct addon name and removed invalid folder move directives.
+- **Improved multi-version support** — GitHub Actions workflow now auto-detects all game versions (Retail, Cata Classic, Classic Era) instead of forcing retail-only.
+
+### Bug Fixes
+- **Fixed nameplate unit names in dungeons** — Hostile enemy names now display on nameplates in dungeon/instance content. Previously, names were only visible when mousing over or in active combat due to overly restrictive visibility logic.
 
 ## 5.2.216-JuNNeZ (2026-03-03)
 

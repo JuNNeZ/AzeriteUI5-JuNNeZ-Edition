@@ -1,4 +1,4 @@
-package-as: AzeriteUI
+package-as: AzeriteUI-JuNNeZ-Edition
 
 enable-nolib-creation: no
 
@@ -34,6 +34,3 @@ ignore:
   - "*.bak"
   - "*.tmp"
   - "*.log"
-
-move-folders:
-  AzeriteUI/AzeriteUI: AzeriteUI

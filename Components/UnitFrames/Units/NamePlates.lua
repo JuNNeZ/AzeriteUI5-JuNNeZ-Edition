@@ -666,8 +666,10 @@ local NamePlate_PostUpdateHoverElements = function(self)
 		local showFriendlyTargetName = self.isTarget and (self.canAttack == false) and (self.canAssist == true)
 		local showFriendlyAssistName = self.isFriendlyAssistableNPC and true or false
 
+		-- Force tag update to ensure name is always current
+		-- This is critical for dungeons where events may not fire reliably
 		if (self.Name and self.Name.UpdateTag) then
-			self.Name:UpdateTag()
+			pcall(self.Name.UpdateTag, self.Name)
 		end
 
 		if (self.isMouseOver or self.isTarget or self.isSoftTarget or self.inCombat or showHostileName) then
@@ -688,7 +690,9 @@ local NamePlate_PostUpdateHoverElements = function(self)
 				self.Name:Show()
 			end
 		else
-			if (showNameAlways or showHostileName or showFriendlyAssistName) then
+			-- Always show names for hostile units, even when not mousing over
+			-- This ensures dungeon enemies show their names
+			if (showNameAlways or showHostileName or showFriendlyAssistName or (self.canAttack == true)) then
 				self.Name:Show()
 			else
 				self.Name:Hide()

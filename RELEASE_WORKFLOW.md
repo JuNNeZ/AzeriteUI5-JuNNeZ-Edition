@@ -66,7 +66,7 @@ Controls what gets included/excluded in the release package:
 Used as the release description on CurseForge and Wago. **Keep it updated!**
 
 ### TOC Files
-Version numbers in `AzeriteUI.toc` and `AzeriteUI_Vanilla.toc` — update before each release.
+Version numbers in `AzeriteUI5_JuNNeZ_Edition.toc` — update before each release.
 
 ## Version Numbering
 
@@ -79,8 +79,7 @@ Follow semantic versioning with JuNNeZ suffix:
 
 Before pushing a tag:
 
-- [ ] Update version in `AzeriteUI.toc`
-- [ ] Update version in `AzeriteUI_Vanilla.toc`
+- [ ] Update version in `AzeriteUI5_JuNNeZ_Edition.toc`
 - [ ] Update `CHANGELOG.md` with changes since last release (delta only!)
 - [ ] Test in-game with `/reload`
 - [ ] Commit all changes
