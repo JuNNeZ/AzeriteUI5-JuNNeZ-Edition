@@ -1,0 +1,27 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+
+	<!-- Compatibility -->
+	<Script file="Compatibility\HideBlizzard.lua"/>
+	<Script file="Compatibility\HideBlizzardClassic.lua"/>
+	<Script file="Compatibility\HandleBartender.lua"/>
+	<Script file="Compatibility\HandleConsolePort.lua"/>
+
+	<!-- Bar & Button Prototypes -->
+	<Script file="Prototypes\Bar.lua"/>
+	<Script file="Prototypes\ButtonBar.lua"/>
+	<Script file="Prototypes\ActionBar.lua"/>
+	<Script file="Prototypes\ActionButton.lua"/>
+	<Script file="Prototypes\PetButton.lua"/>
+	<Script file="Prototypes\StanceButton.lua"/>
+
+	<!-- Elements -->
+	<Script file="Elements\ActionBars.lua"/>
+	<Script file="Elements\PetBar.lua"/>
+	<Script file="Elements\StanceBar.lua"/>
+	<Script file="Elements\StatusBars.lua"/>
+	<Script file="Elements\ExtraButtons.lua"/>
+	<Script file="Elements\VehicleExit.lua"/>
+	<Script file="Elements\MicroMenu.lua"/>
+	<Script file="Elements\EncounterBar.lua"/>
+
+</Ui>

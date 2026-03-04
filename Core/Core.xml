@@ -1,0 +1,50 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+
+	<!-- Data -->
+	<Script file="Common\Constants.lua"/>
+	<Script file="Common\Colors.lua"/>
+
+	<!--
+		API
+		* Can rely on anything in the data folder.
+		* Should not cross-reference API files.
+	-->
+	<Script file="API\Abbreviations.lua"/>
+	<Script file="API\Addons.lua"/>
+	<Script file="API\Assets.lua"/>
+	<Script file="API\Colors.lua"/>
+	<Script file="API\Frames.lua"/>
+	<Script file="API\Positions.lua"/>
+	<Script file="API\Scale.lua"/>
+	<Script file="API\Tables.lua"/>
+	<Script file="API\SecretValues.lua"/>
+	<Script file="API\Time.lua"/>
+
+	<!--
+		Widgets
+		* Can rely on assets, data and global API.
+		* Must support Widget cross-referencing,
+		  so don't define Widget upvalues at loading!
+	-->
+	<Script file="Widgets\Cooldowns.lua"/>
+	<Script file="Widgets\Popups.lua"/>
+
+	<!-- SharedMedia -->
+	<Script file="SharedMedia.lua"/>
+
+	<!-- Core -->
+	<Script file="Core.lua"/>
+	<Script file="ModulePrototype.lua"/>
+	<!--<Script file="EditMode.lua"/>-->
+	<!--<Script file="EditModePresets.lua"/>-->
+	<Script file="MovableFrameManager.lua"/>
+	<Script file="MovableFrameModulePrototype.lua"/>
+	<Script file="FixBlizzardBugs.lua"/>
+	<Script file="FixBlizzardBugsWow12.lua"/>
+	<Script file="FixFlavorDifferences.lua"/>
+	<Script file="ExplorerMode.lua"/>
+	<Script file="Development.lua"/>
+	<Script file="Debugging.lua"/>
+	<Script file="Experimental.lua"/>
+
+</Ui>

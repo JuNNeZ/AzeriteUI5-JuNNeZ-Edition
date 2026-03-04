@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "wow-api": {
+      "command": "node",
+      "args": [
+        "C:\\Program Files (x86)\\World of Warcraft\\_retail_\\Interface\\AddOns\\AzeriteUI\\.research\\tools\\wow-api-mcp\\node_modules\\wow-api-mcp\\src\\index.mjs"
+      ],
+      "env": {
+        "WOW_API_EXT_PATH": "C:\\Users\\Jonas\\.vscode\\extensions\\ketho.wow-api-0.22.3"
+      }
+    }
+  }
+}

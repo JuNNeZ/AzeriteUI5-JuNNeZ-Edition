@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "septh.wow-bundle",
+        "ketho.wow-api",
+        "stanzilla.vscode-wow-toc",
+        "sumneko.lua",
+        "johnnymorganz.stylua",
+        "actboy168.lua-debug"
+    ]
+}

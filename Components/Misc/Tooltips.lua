@@ -1,0 +1,1038 @@
+--[[
+
+	The MIT License (MIT)
+
+	Copyright (c) 2024 Lars Norberg
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+
+--]]
+local _, ns = ...
+
+local L = LibStub("AceLocale-3.0"):GetLocale((...))
+local ID_LABEL = L and L["ID"] or "ID"
+
+local Tooltips = ns:NewModule("Tooltips", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0")
+-- Internal registration guards
+local PostCallRegistered = {}
+-- Theme/feature caches
+Tooltips._cachedThemeKey = nil
+Tooltips._cachedThemeData = nil
+Tooltips._consolePortActive = nil
+Tooltips._stylingActive = nil
+Tooltips._originalHighlightSystem = nil
+Tooltips._originalClearHighlight = nil
+
+function Tooltips:GetTheme()
+	local key = self.db and self.db.profile and self.db.profile.theme or "Classic"
+	if key ~= self._cachedThemeKey then
+		local cfgRoot = ns.GetConfig and ns.GetConfig("Tooltips")
+		local themes = cfgRoot and cfgRoot.themes
+		self._cachedThemeData = themes and themes[key] or nil
+		self._cachedThemeKey = key
+	end
+	return self._cachedThemeData
+end
+
+-- Lua API
+local _G = _G
+local ipairs = ipairs
+local next = next
+local rawget = rawget
+local rawset = rawset
+local select = select
+local setmetatable = setmetatable
+local string_find = string.find
+local string_format = string.format
+local string_match = string.match
+local tonumber = tonumber
+local unpack = unpack
+local GetTime = GetTime
+
+-- GLOBALS: C_UnitAuras, CreateFrame, GetMouseFocus, hooksecurefunc
+-- GLOBALS: GameTooltip, GameTooltipTextLeft1, GameTooltipStatusBar, UIParent
+-- GLOBALS: UnitAura, UnitClass, UnitExists, UnitEffectiveLevel, UnitHealth, UnitHealthMax, UnitName, UnitRealmRelationship, UnitIsDeadOrGhost, UnitIsPlayer
+-- GLOBALS: LE_REALM_RELATION_COALESCED, LE_REALM_RELATION_VIRTUAL, FOREIGN_SERVER_LABEL, INTERACTIVE_SERVER_LABEL
+-- GLOGALS: NarciGameTooltip
+
+-- Addon API
+local Colors = ns.Colors
+local AbbreviateNumber = ns.API.AbbreviateNumber
+local AbbreviateNumberBalanced = ns.API.AbbreviateNumberBalanced
+local GetFont = ns.API.GetFont
+local GetMedia = ns.API.GetMedia
+local GetUnitColor = ns.API.GetUnitColor
+local UIHider = ns.Hider
+
+local IsSafeUnitToken = function(unit)
+	if (type(unit) ~= "string") then
+		return
+	end
+	if (type(issecretvalue) == "function") and issecretvalue(unit) then
+		return
+	end
+	return true
+end
+
+local IsSecretValue = function(value)
+	return (type(issecretvalue) == "function") and issecretvalue(value)
+end
+
+local SafeBooleanValue = function(value)
+	if (IsSecretValue(value)) then
+		return nil
+	end
+	return value and true or false
+end
+
+function Tooltips:UpdateConsolePortState()
+	local active = false
+	if (ns.API and ns.API.IsAddOnEnabled) then
+		if (ns.API.IsAddOnEnabled("ConsolePort") or ns.API.IsAddOnEnabled("ConsolePort_Bar")) then
+			active = true
+		end
+	end
+	if (self._consolePortActive ~= active) then
+		self._consolePortActive = active
+		return true
+	end
+end
+
+function Tooltips:IsConsolePortActive()
+	if (self._consolePortActive == nil) then
+		self:UpdateConsolePortState()
+	end
+	return self._consolePortActive
+end
+
+function Tooltips:IsDisabled()
+	return self.db and (self.db.profile.disableAzeriteUITooltips or self:IsConsolePortActive())
+end
+
+function Tooltips:EnsureHighlightCache()
+	if (self._originalHighlightSystem and self._originalClearHighlight) then
+		return
+	end
+	if (GameTooltipDefaultContainer) then
+		self._originalHighlightSystem = self._originalHighlightSystem or GameTooltipDefaultContainer.HighlightSystem
+		self._originalClearHighlight = self._originalClearHighlight or GameTooltipDefaultContainer.ClearHighlight
+	end
+end
+
+function Tooltips:RestoreHighlightState()
+	if (not GameTooltipDefaultContainer) then
+		return
+	end
+	if (self._originalHighlightSystem) then
+		GameTooltipDefaultContainer.HighlightSystem = self._originalHighlightSystem
+	end
+	if (self._originalClearHighlight) then
+		GameTooltipDefaultContainer.ClearHighlight = self._originalClearHighlight
+	end
+end
+
+function Tooltips:ApplyHighlightOverride()
+	if (not GameTooltipDefaultContainer) then
+		return
+	end
+	self:EnsureHighlightCache()
+	if (self:IsConsolePortActive()) then
+		self:RestoreHighlightState()
+	else
+		GameTooltipDefaultContainer.HighlightSystem = ns.Noop
+		GameTooltipDefaultContainer.ClearHighlight = ns.Noop
+	end
+end
+
+-- Detect unit tooltips anchored to nameplates (Retail/Cata only)
+function Tooltips:IsNameplateUnitTooltip(tooltip)
+	if (not tooltip) or tooltip:IsForbidden() then return false end
+	if (not C_NamePlate) or (not C_NamePlate.GetNamePlateForUnit) then return false end
+	if (not tooltip.GetUnit) then return false end
+	local _, unit = tooltip:GetUnit()
+	if (not unit) then return false end
+	local plate = C_NamePlate.GetNamePlateForUnit(unit)
+	return plate and true or false
+end
+
+local Backdrops = setmetatable({}, { __index = function(t,k)
+	local bg = CreateFrame("Frame", nil, k, ns.BackdropTemplate)
+	bg:SetAllPoints()
+	bg:SetFrameLevel(k:GetFrameLevel())
+	-- Hook into tooltip framelevel changes.
+	-- Might help with some of the conflicts experienced with Silverdragon and Raider.IO
+	hooksecurefunc(k, "SetFrameLevel", function(self) bg:SetFrameLevel(self:GetFrameLevel()) end)
+	rawset(t,k,bg)
+	return bg
+end })
+
+local TooltipBackdropSignature = setmetatable({}, { __mode = "k" })
+local TooltipBackdropLastUpdate = setmetatable({}, { __mode = "k" })
+local StatusBarThemeSignature = setmetatable({}, { __mode = "k" })
+local StatusBarText = setmetatable({}, { __mode = "k" })
+
+local GetTooltipStatusBar = function()
+	if (GameTooltipStatusBar) then
+		return GameTooltipStatusBar
+	end
+	if (GameTooltip and GameTooltip.StatusBar) then
+		return GameTooltip.StatusBar
+	end
+end
+
+local GetStatusBarText = function(bar, valuePosition, valueFont, valueColor)
+	if (not bar) then return end
+	local text = StatusBarText[bar]
+	if (not text) then
+		text = bar:CreateFontString(nil, "OVERLAY")
+		StatusBarText[bar] = text
+	end
+	if (valuePosition) then text:SetPoint(unpack(valuePosition)) end
+	if (valueFont) then text:SetFontObject(valueFont) end
+	if (valueColor) then text:SetTextColor(unpack(valueColor)) end
+	return text
+end
+
+local RestoreBlizzardTooltipBackdrop = function(tooltip)
+	if (not tooltip) or tooltip:IsForbidden() then
+		return
+	end
+	local secretBackdrop = rawget(Backdrops, tooltip)
+	if (secretBackdrop and secretBackdrop.Hide) then
+		secretBackdrop:Hide()
+	end
+	TooltipBackdropSignature[tooltip] = nil
+	TooltipBackdropLastUpdate[tooltip] = nil
+	tooltip:EnableDrawLayer("BACKGROUND")
+	tooltip:EnableDrawLayer("BORDER")
+	if (tooltip.NineSlice and tooltip.NineSlice.GetParent and tooltip.NineSlice:GetParent() == UIHider) then
+		tooltip.NineSlice:SetParent(tooltip)
+		tooltip.NineSlice:SetAlpha(1)
+	end
+end
+
+local defaults = { profile = ns:Merge({
+	theme = "Classic",
+	showItemID = false,
+	showSpellID = false,
+	showGuildName = false,
+	-- New: allow users to completely disable AzeriteUI tooltip styling
+	disableAzeriteUITooltips = false,
+	-- Optional: make unit tooltips transparent when anchored to nameplates
+	nameplateUnitTransparency = false,
+	anchor = true,
+	anchorToCursor = false,
+	hideInCombat = false,
+	hideActionBarTooltipsInCombat = true,
+	hideUnitFrameTooltipsInCombat = true
+}, ns.MovableModulePrototype.defaults) }
+
+-- Generate module defaults on the fly
+-- to recalculate default values relying on
+-- changing factors like user interface scale.
+Tooltips.GenerateDefaults = function(self)
+	defaults.profile.savedPosition = {
+		scale = ns.API.GetEffectiveScale(),
+		[1] = "BOTTOMRIGHT",
+		[2] = -319 * ns.API.GetEffectiveScale(),
+		[3] = 166 * ns.API.GetEffectiveScale()
+	}
+	return defaults
+end
+
+Tooltips.UpdateBackdropTheme = function(self, tooltip)
+	if (self:IsDisabled()) then return end
+	if (not tooltip) or (tooltip.IsEmbedded) or (tooltip:IsForbidden()) then return end
+	local hasSecretValues = (type(issecretvalue) == "function")
+	if (hasSecretValues) then
+		-- WoW12 secret-value safety:
+		-- keep Blizzard tooltip backdrop path intact and avoid all AzeriteUI
+		-- backdrop mutations on secure tooltip frames.
+		RestoreBlizzardTooltipBackdrop(tooltip)
+		return
+	end
+
+	-- Build a simple signature so we can skip redundant work (vendor/item tooltips spam updates).
+	local themeKey = self.db and self.db.profile and self.db.profile.theme or "?"
+	local isPlate = false
+	local wantsTransparency = false
+	if (self.db and self.db.profile.nameplateUnitTransparency and not self:IsConsolePortActive()) then
+		isPlate = self:IsNameplateUnitTooltip(tooltip)
+		wantsTransparency = isPlate
+	end
+	local signature = themeKey .. ':' .. (wantsTransparency and 'T' or 'N')
+
+	local backdropFrame = rawget(Backdrops, tooltip)
+	if (TooltipBackdropSignature[tooltip] == signature and backdropFrame) then
+		-- Ensure Blizzard's own visuals stay hidden even if another addon reattached them.
+		if (tooltip.NineSlice and tooltip.NineSlice.GetParent and tooltip.NineSlice:GetParent() ~= UIHider) then
+			tooltip.NineSlice:SetParent(UIHider)
+		end
+		if (not backdropFrame:IsShown()) then
+			backdropFrame:Show()
+		end
+
+		-- While merchant windows are open Blizzard will spam SharedTooltip_SetBackdropStyle();
+		-- if nothing changed there's no need to keep doing work here.
+		if (MerchantFrame and MerchantFrame:IsShown()) then
+			return
+		end
+
+		local now = GetTime()
+		if (TooltipBackdropLastUpdate[tooltip] and (now - TooltipBackdropLastUpdate[tooltip]) < .02) then
+			return
+		end
+		TooltipBackdropLastUpdate[tooltip] = now
+		return
+	end
+	TooltipBackdropLastUpdate[tooltip] = GetTime()
+
+	-- Only do this once.
+	if (not backdropFrame) then
+		tooltip:DisableDrawLayer("BACKGROUND")
+		tooltip:DisableDrawLayer("BORDER")
+
+		-- Don't want or need the extra padding here,
+		-- as our current borders do not require them.
+		if (NarciGameTooltip and tooltip == NarciGameTooltip) then
+
+			-- Note that the WorldMap uses this to fit extra embedded stuff in,
+			-- so we can't randomly just remove it from all tooltips, or stuff will break.
+			-- Currently the only one we know of that needs tweaking, is the aforementioned.
+			if (tooltip.SetPadding) then
+				tooltip:SetPadding(0, 0, 0, 0)
+
+				if (not self:IsHooked(tooltip, "SetPadding")) then
+					-- Use a local copy to avoid hook looping.
+					local setPadding = tooltip.SetPadding
+
+					self:SecureHook(tooltip, "SetPadding", function(self, ...)
+						--local padding = 0
+						--for i = 1, select("#", ...) do
+						--	padding = padding + tonumber((select(i, ...))) or 0
+						--end
+						--if (padding < .1) then
+						--	return
+						--end
+						setPadding(self, 0, 0, 0, 0)
+					end)
+				end
+			end
+		end
+
+		-- Glorious 9.1.5 crap
+		-- They decided to move the entire backdrop into its own hashed frame.
+		-- We like this, because it makes it easier to kill. Kill. Kill. Kill. Kill.
+		if (tooltip.NineSlice) then
+			tooltip.NineSlice:SetParent(UIHider)
+		end
+
+		-- Textures in the combat pet tooltips
+		for _,texName in ipairs({
+			"BorderTopLeft",
+			"BorderTopRight",
+			"BorderBottomRight",
+			"BorderBottomLeft",
+			"BorderTop",
+			"BorderRight",
+			"BorderBottom",
+			"BorderLeft",
+			"Background"
+		}) do
+			local region = self[texName]
+			if (region) then
+				region:SetTexture(nil)
+				local drawLayer = region:GetDrawLayer()
+				if (drawLayer) then
+					tooltip:DisableDrawLayer(drawLayer)
+				end
+			end
+		end
+
+		-- Region names sourced from SharedXML\NineSlice.lua
+		-- *Majority of this, if not all, was moved into frame.NineSlice in 9.1.5
+		for _,pieceName in ipairs({
+			"TopLeftCorner",
+			"TopRightCorner",
+			"BottomLeftCorner",
+			"BottomRightCorner",
+			"TopEdge",
+			"BottomEdge",
+			"LeftEdge",
+			"RightEdge",
+			"Center"
+		}) do
+			local region = tooltip[pieceName]
+			if (region) then
+				region:SetTexture(nil)
+				local drawLayer = region:GetDrawLayer()
+				if (drawLayer) then
+					tooltip:DisableDrawLayer(drawLayer)
+				end
+			end
+		end
+	end
+
+	local themeData = self:GetTheme()
+	if (not themeData or not themeData.backdropStyle) then return end
+	local db = themeData.backdropStyle
+
+	-- Store some values locally for faster updates.
+	local backdrop = Backdrops[tooltip]
+	backdrop.offsetLeft = db.offsetLeft
+	backdrop.offsetRight = db.offsetRight
+	backdrop.offsetTop = db.offsetTop
+	backdrop.offsetBottom = db.offsetBottom
+	backdrop.offsetBar = db.offsetBar
+	backdrop.offsetBarBottom = db.offsetBarBottom
+
+	-- Ensure Blizzard visuals are suppressed even after a disable/enable cycle.
+	tooltip:DisableDrawLayer("BACKGROUND")
+	tooltip:DisableDrawLayer("BORDER")
+	if (tooltip.NineSlice and tooltip.NineSlice.GetParent and tooltip.NineSlice:GetParent() ~= UIHider) then
+		tooltip.NineSlice:SetParent(UIHider)
+	end
+
+	-- Setup the backdrop theme.
+	backdrop:SetBackdrop(nil)
+	backdrop:SetBackdrop(db.backdrop)
+	backdrop:ClearAllPoints()
+	backdrop:SetPoint("LEFT", backdrop.offsetLeft, 0)
+	backdrop:SetPoint("RIGHT", backdrop.offsetRight, 0)
+	backdrop:SetPoint("TOP", 0, backdrop.offsetTop)
+	backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom)
+	backdrop:SetBackdropColor(unpack(db.backdropColor))
+	backdrop:SetBackdropBorderColor(unpack(db.backdropBorderColor))
+
+	-- Make sure our backdrop is visible after a previous disable restored Blizzard skin
+	if (not backdrop:IsShown()) then
+		backdrop:Show()
+	end
+
+	-- Optional: nameplate-only transparency for unit tooltips (skip when ConsolePort is active)
+	if (wantsTransparency and isPlate) then
+		local r, g, b = db.backdropColor[1], db.backdropColor[2], db.backdropColor[3]
+		local br, bg, bb = db.backdropBorderColor[1], db.backdropBorderColor[2], db.backdropBorderColor[3]
+		backdrop:SetBackdropColor(r or 0, g or 0, b or 0, 0)
+		backdrop:SetBackdropBorderColor(br or 0, bg or 0, bb or 0, 0)
+	end
+
+	TooltipBackdropSignature[tooltip] = signature
+
+end
+
+Tooltips.UpdateStatusBarTheme = function(self)
+	if (self:IsDisabled()) then return end
+
+	local themeData = self:GetTheme()
+	if (not themeData or not themeData.barStyle) then return end
+	local db = themeData.barStyle
+	local bar = GetTooltipStatusBar()
+	if (not bar) then return end
+	local sig = (self._cachedThemeKey or '?') .. ':' .. (db.texture or '?') .. ':' .. (db.height or '?') .. ':' .. (db.offsetLeft or 0) .. ':' .. (db.offsetRight or 0)
+	if (StatusBarThemeSignature[bar] == sig) then return end
+	bar:SetStatusBarTexture(db.texture)
+	bar:ClearAllPoints()
+	bar:SetPoint("BOTTOMLEFT", bar:GetParent(), "BOTTOMLEFT", db.offsetLeft, db.offsetBottom)
+	bar:SetPoint("BOTTOMRIGHT", bar:GetParent(), "BOTTOMRIGHT", -db.offsetRight, db.offsetBottom)
+	bar:SetHeight(db.height)
+
+	if (not self:IsHooked(bar, "OnShow")) then
+		bar:HookScript("OnShow", function(self)
+			local tooltip = self:GetParent()
+			if (tooltip) then
+				local backdrop = rawget(Backdrops, tooltip)
+				if (backdrop) then
+					backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom + backdrop.offsetBarBottom)
+					Tooltips:OnValueChanged() -- Force an update to the bar's health value and color.
+				end
+			end
+		end)
+	end
+
+	if (not self:IsHooked(bar, "OnHide")) then
+		bar:HookScript("OnHide", function(self)
+			local tooltip = self:GetParent()
+			if (tooltip) then
+				local backdrop = rawget(Backdrops, tooltip)
+				if (backdrop) then
+					backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom)
+				end
+			end
+		end)
+	end
+
+	GetStatusBarText(bar, db.valuePosition, db.valueFont, db.valueColor)
+	StatusBarThemeSignature[bar] = sig
+
+end
+
+Tooltips.UpdateTooltipThemes = function(self, event, ...)
+	if (self:IsDisabled()) then return end
+	if (event == "PLAYER_ENTERING_WORLD") then
+		self:UnregisterEvent("PLAYER_ENTERING_WORLD", "UpdateTooltipThemes")
+	end
+
+	for _,tooltip in next,{
+		_G.ItemRefTooltip,
+		_G.ItemRefShoppingTooltip1,
+		_G.ItemRefShoppingTooltip2,
+		_G.FriendsTooltip,
+		_G.WarCampaignTooltip,
+		_G.EmbeddedItemTooltip,
+		_G.ReputationParagonTooltip,
+		_G.GameTooltip,
+		_G.ShoppingTooltip1,
+		_G.ShoppingTooltip2,
+		_G.QuickKeybindTooltip,
+		_G.QuestScrollFrame and _G.QuestScrollFrame.StoryTooltip,
+		_G.QuestScrollFrame and _G.QuestScrollFrame.CampaignTooltip,
+		_G.NarciGameTooltip
+	} do
+		self:UpdateBackdropTheme(tooltip)
+	end
+
+	self:UpdateStatusBarTheme()
+end
+
+Tooltips.SetHealthValue = function(self, unit)
+	if (self:IsDisabled()) then return end
+	local safeUnit = IsSafeUnitToken(unit) and unit or nil
+	local bar = GetTooltipStatusBar()
+	if (not bar) then return end
+
+	-- It could be a wall or gate that does not count as a unit,
+	-- so we need to check for the existence as well as it's alive status.
+	local unitExists = safeUnit and SafeBooleanValue(UnitExists(safeUnit))
+	local unitIsDead = unitExists and SafeBooleanValue(UnitIsDeadOrGhost(safeUnit))
+	if (unitExists and unitIsDead) then
+		if (bar:IsShown()) then
+			bar:Hide()
+		end
+	else
+
+		local msg, min, max
+
+		if (safeUnit and unitExists) then
+			local min, max = UnitHealth(safeUnit), UnitHealthMax(safeUnit)
+			-- Check if values are secret before comparison
+			if (IsSecretValue(min) or IsSecretValue(max)) then
+				-- Can't display secret values
+				return
+			end
+			if (type(min) == "number" and type(max) == "number") then
+				if (min == max) then
+					msg = string_format("%s", AbbreviateNumberBalanced(min))
+				else
+					msg = string_format("%s / %s", AbbreviateNumber(min), AbbreviateNumber(max))
+				end
+			end
+		else
+			local min,_,max = bar:GetValue(), bar:GetMinMaxValues()
+			-- Check if values are secret
+			if (IsSecretValue(min) or IsSecretValue(max)) then
+				return
+			end
+			if (max > 100) then
+				if (min == max) then
+					msg = string_format("%s", AbbreviateNumberBalanced(min))
+				else
+					msg = string_format("%s / %s", AbbreviateNumber(min), AbbreviateNumber(max))
+				end
+			else
+				msg = string_format("%.0f%%", min/max*100)
+			end
+			--msg = NOT_APPLICABLE
+		end
+
+		local text = GetStatusBarText(bar)
+		if (not text) then return end
+		text:SetText(msg)
+
+		if (not text:IsShown()) then
+			text:Show()
+		end
+
+		if (not bar:IsShown()) then
+			bar:Show()
+		end
+	end
+end
+
+Tooltips.SetStatusBarColor = function(self, unit)
+	if (self:IsDisabled()) then return end
+	local color = IsSafeUnitToken(unit) and GetUnitColor(unit)
+	if (color) then
+		GameTooltip.StatusBar:SetStatusBarColor(color[1], color[2], color[3])
+	else
+		local r, g, b = GameTooltipTextLeft1:GetTextColor()
+		GameTooltip.StatusBar:SetStatusBarColor(r, g, b)
+	end
+end
+
+Tooltips.OnValueChanged = function(self)
+	if (self:IsDisabled()) then return end
+	if (not GameTooltip or not GameTooltip.StatusBar or not GameTooltip.StatusBar.GetParent) then return end
+	local unit
+	local parent = GameTooltip.StatusBar:GetParent()
+	if (parent and parent.GetUnit) then
+		unit = select(2, parent:GetUnit())
+	end
+
+	if (not unit) then
+		-- Removed in 11.0.0.
+		local GMF = GetMouseFocus and GetMouseFocus()
+		if (GMF and GMF.GetAttribute and GMF:GetAttribute("unit")) then
+			unit = GMF:GetAttribute("unit")
+		end
+	end
+
+	if (not IsSafeUnitToken(unit)) then
+		unit = nil
+	end
+
+	--if (not unit) then
+	--	if (GameTooltip.StatusBar:IsShown()) then
+	--		GameTooltip.StatusBar:Hide()
+	--	end
+	--	return
+	--end
+
+	self:SetHealthValue(unit)
+	self:SetStatusBarColor(unit)
+end
+
+Tooltips.OnTooltipCleared = function(self, tooltip)
+	if (self:IsDisabled()) then return end
+	if (not tooltip) or (tooltip:IsForbidden()) then return end
+	if (GameTooltip.StatusBar:IsShown()) then
+		GameTooltip.StatusBar:Hide()
+	end
+end
+
+Tooltips.OnTooltipSetSpell = function(self, tooltip, data)
+	if (self:IsDisabled()) then return end
+	if (not self.db.profile.showSpellID) then return end
+
+	if (not tooltip) or (tooltip:IsForbidden()) then return end
+
+	local id = (data and data.id) or (tooltip.GetSpell and select(2, tooltip:GetSpell()))
+	if (not id) then return end
+
+	local idLine = string_format("|cFFCA3C3C%s|r %d", ID_LABEL, id)
+
+	-- talent tooltips gets set twice, so let's avoid double ids
+	for i = 3, tooltip:NumLines() do
+		local line = _G[string_format("GameTooltipTextLeft%d", i)]
+		local text = line and line:GetText()
+		if (text and string_find(text, idLine)) then
+			return
+		end
+	end
+
+	tooltip:AddLine(" ")
+	tooltip:AddLine(idLine)
+	tooltip:Show()
+end
+
+Tooltips.OnTooltipSetItem = function(self, tooltip, data)
+	if (self:IsDisabled()) then return end
+	if (not self.db.profile.showItemID) then return end
+
+	if (not tooltip) or (tooltip:IsForbidden()) then return end
+
+	local itemID
+
+	if (tooltip.GetItem) then -- Some tooltips don't have this func. Example - compare tooltip
+		local _, link = tooltip:GetItem()
+		if (link) then
+			itemID = string_format("|cFFCA3C3C%s|r %s", ID_LABEL, (data and data.id) or string_match(link, ":(%w+)"))
+		end
+	else
+		local id = data and data.id
+		if (id) then
+			itemID = string_format("|cFFCA3C3C%s|r %s", ID_LABEL, id)
+		end
+	end
+
+	if (itemID) then
+		tooltip:AddLine(" ")
+		tooltip:AddLine(itemID)
+		tooltip:Show()
+	end
+
+end
+
+Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
+	if (self:IsDisabled()) then return end
+	if (not tooltip) or (tooltip:IsForbidden()) then return end
+
+	local unit
+	if (tooltip.GetUnit) then
+		_, unit = tooltip:GetUnit()
+	end
+	if not unit then
+		local GMF = GetMouseFocus and GetMouseFocus()
+		local focusUnit = GMF and GMF.GetAttribute and GMF:GetAttribute("unit")
+		if focusUnit then unit = focusUnit end
+		if (not IsSafeUnitToken(unit)) then
+			return
+		end
+		local unitExists = SafeBooleanValue(UnitExists(unit))
+		if (not unitExists) then
+			return
+		end
+	end
+
+	local color = GetUnitColor(unit)
+	if (color) then
+
+		local unitName, unitRealm = UnitName(unit)
+		if (IsSecretValue(unitName)) then unitName = nil end
+		if (IsSecretValue(unitRealm)) then unitRealm = nil end
+		unitName = unitName or _G.UNKNOWN
+		local displayName = color.colorCode..unitName.."|r"
+		local gray = Colors.quest.gray.colorCode
+		local levelText
+
+		local isPlayer = UnitIsPlayer(unit)
+		isPlayer = SafeBooleanValue(isPlayer)
+		if (isPlayer) then
+			if (unitRealm and unitRealm ~= "") then
+				local relationship = UnitRealmRelationship(unit)
+				if (IsSecretValue(relationship)) then
+					relationship = nil
+				end
+				if (relationship == _G.LE_REALM_RELATION_COALESCED) then
+					displayName = displayName ..gray.. _G.FOREIGN_SERVER_LABEL .."|r"
+
+				elseif (relationship == _G.LE_REALM_RELATION_VIRTUAL) then
+					displayName = displayName ..gray..  _G.INTERACTIVE_SERVER_LABEL .."|r"
+				end
+			end
+			local isAFK = UnitIsAFK(unit)
+			isAFK = SafeBooleanValue(isAFK)
+			if (isAFK) then
+				displayName = displayName ..gray.. " <" .. _G.AFK ..">|r"
+			end
+		end
+
+		if (levelText) then
+			_G.GameTooltipTextLeft1:SetText(levelText .. gray .. ": |r" .. displayName)
+		else
+			_G.GameTooltipTextLeft1:SetText(displayName)
+		end
+
+	end
+
+end
+
+Tooltips.OnCompareItemShow = function(self, tooltip)
+	if (self:IsDisabled()) then return end
+	if (not tooltip) or (tooltip:IsForbidden()) then return end
+	local frameLevel = GameTooltip:GetFrameLevel()
+	for i = 1, 2 do
+		local tooltip = _G["ShoppingTooltip"..i]
+		if (tooltip:IsShown()) then
+			if (frameLevel == tooltip:GetFrameLevel()) then
+				tooltip:SetFrameLevel(i+1)
+			end
+		end
+	end
+end
+
+Tooltips.SetUnitAura = function(self, tooltip, unit, index, filter)
+	if (self:IsDisabled()) then return end
+	if (not self.db.profile.showSpellID) then return end
+
+	if (not tooltip) or (tooltip:IsForbidden()) then return end
+	if (not IsSafeUnitToken(unit)) then return end
+
+	if (C_Secrets and C_Secrets.ShouldUnitAuraIndexBeSecret) then
+		local isAuraSecret = SafeBooleanValue(C_Secrets.ShouldUnitAuraIndexBeSecret(unit, index, filter))
+		if (isAuraSecret) then
+			return
+		end
+	end
+
+	local name, _, _, _, _, _, source, _, _, spellID = UnitAura(unit, index, filter)
+	if (IsSecretValue(name)) then name = nil end
+	if (IsSecretValue(source)) then source = nil end
+	if (IsSecretValue(spellID)) then spellID = nil end
+	if (not name) then return end
+	if (not spellID) then return end
+
+	if (source) then
+		local _, class = UnitClass(source)
+		local color = Colors.class[class or "PRIEST"]
+		local sourceName = UnitName(source)
+		if (IsSecretValue(sourceName)) then sourceName = nil end
+		tooltip:AddLine(" ")
+	tooltip:AddDoubleLine(string_format("|cFFCA3C3C%s|r %s", ID_LABEL, spellID), string_format("%s%s|r", color.colorCode, sourceName or UNKNOWN))
+	else
+		tooltip:AddLine(" ")
+	tooltip:AddLine(string_format("|cFFCA3C3C%s|r %s", ID_LABEL, spellID))
+	end
+
+	tooltip:Show()
+end
+
+Tooltips.SetUnitAuraInstanceID = function(self, tooltip, unit, auraInstanceID)
+	if (self:IsDisabled()) then return end
+	if (not self.db.profile.showSpellID) then return end
+	if (not IsSafeUnitToken(unit)) then return end
+
+	if (C_Secrets and C_Secrets.ShouldUnitAuraInstanceBeSecret) then
+		local isAuraSecret = SafeBooleanValue(C_Secrets.ShouldUnitAuraInstanceBeSecret(unit, auraInstanceID))
+		if (isAuraSecret) then
+			return
+		end
+	end
+
+	local data = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID)
+	if (not data) then return end
+	if (IsSecretValue(data.name) or (not data.name)) then return end
+	if (IsSecretValue(data.spellId) or (not data.spellId)) then return end
+
+	local sourceUnit = data.sourceUnit
+	if (IsSecretValue(sourceUnit)) then
+		sourceUnit = nil
+	end
+
+	if (sourceUnit) then
+		local _, class = UnitClass(sourceUnit)
+		local color = Colors.class[class or "PRIEST"]
+		local sourceName = UnitName(sourceUnit)
+		if (IsSecretValue(sourceName)) then sourceName = nil end
+		tooltip:AddLine(" ")
+	tooltip:AddDoubleLine(string_format("|cFFCA3C3C%s|r %s", ID_LABEL, data.spellId), string_format("%s%s|r", color.colorCode, sourceName or UNKNOWN))
+	else
+		tooltip:AddLine(" ")
+	tooltip:AddLine(string_format("|cFFCA3C3C%s|r %s", ID_LABEL, data.spellId))
+	end
+
+	tooltip:Show()
+end
+
+
+Tooltips.SetDefaultAnchor = function(self, tooltip, parent)
+	if (self:IsDisabled()) then return end
+	if (self:IsConsolePortActive()) then return end -- Let ConsolePort manage tooltip anchors
+	if (not tooltip) or (tooltip:IsForbidden()) then return end
+	if (not self.db.profile.anchor) then return end
+
+	local config = self.db.profile.savedPosition
+
+	if (self.db.profile.anchorToCursor) then
+
+		tooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
+		tooltip:SetScale(config.scale)
+
+	else
+
+		local x = string_find(config[1], "LEFT") and 10 or string_find(config[1], "RIGHT") and -10 or 0
+		local y = string_find(config[1], "TOP") and -18 or string_find(config[1], "BOTTOM") and 18 or 0
+
+		tooltip:SetOwner(parent, "ANCHOR_NONE")
+		tooltip:SetScale(config.scale)
+		tooltip:ClearAllPoints()
+		tooltip:SetPoint(config[1], UIParent, config[1], (config[2] + x)/config.scale, (config[3] + y)/config.scale)
+	end
+
+end
+
+Tooltips.SetHooks = function(self)
+	if (self:IsDisabled()) then return end
+	local hasSecretValues = (type(issecretvalue) == "function")
+
+	if (not hasSecretValues and not self:IsHooked("SharedTooltip_SetBackdropStyle")) then
+		self:SecureHook("SharedTooltip_SetBackdropStyle", "UpdateBackdropTheme")
+	end
+	if (not self:IsHooked("GameTooltip_UnitColor")) then
+		self:SecureHook("GameTooltip_UnitColor", "SetStatusBarColor")
+	end
+	if (not self:IsHooked("GameTooltip_ShowCompareItem")) then
+		self:SecureHook("GameTooltip_ShowCompareItem", "OnCompareItemShow")
+	end
+	-- Don't override tooltip anchoring when ConsolePort is active
+	if (not self:IsConsolePortActive()) then
+		if (not self:IsHooked("GameTooltip_SetDefaultAnchor")) then
+			self:SecureHook("GameTooltip_SetDefaultAnchor", "SetDefaultAnchor")
+		end
+	end
+
+	if (TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType) then
+		if (self.db.profile.showSpellID and Enum.TooltipDataType.Spell and not PostCallRegistered.Spell) then
+			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Spell, function(tooltip, ...) self:OnTooltipSetSpell(tooltip, ...) end)
+			PostCallRegistered.Spell = true
+		end
+		if (self.db.profile.showItemID and Enum.TooltipDataType.Item and not PostCallRegistered.Item) then
+			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, ...) self:OnTooltipSetItem(tooltip, ...) end)
+			PostCallRegistered.Item = true
+		end
+		if (not PostCallRegistered.Unit and Enum.TooltipDataType.Unit) then
+			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, ...) self:OnTooltipSetUnit(tooltip, ...) end)
+			PostCallRegistered.Unit = true
+		end
+	else
+		if (GameTooltip) then
+			if (self.db.profile.showSpellID and not self:IsHooked(GameTooltip, "OnTooltipSetSpell")) then
+				self:SecureHookScript(GameTooltip, "OnTooltipSetSpell", "OnTooltipSetSpell")
+			end
+			if (self.db.profile.showItemID and not self:IsHooked(GameTooltip, "OnTooltipSetItem")) then
+				self:SecureHookScript(GameTooltip, "OnTooltipSetItem", "OnTooltipSetItem")
+			end
+			if (not self:IsHooked(GameTooltip, "OnTooltipSetUnit")) then self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "OnTooltipSetUnit") end
+		end
+	end
+
+	if (GameTooltip) then
+		if (not self:IsHooked(GameTooltip, "SetUnitAura")) then self:SecureHook(GameTooltip, "SetUnitAura", "SetUnitAura") end
+		if (not self:IsHooked(GameTooltip, "SetUnitBuff")) then self:SecureHook(GameTooltip, "SetUnitBuff", "SetUnitAura") end
+		if (not self:IsHooked(GameTooltip, "SetUnitDebuff")) then self:SecureHook(GameTooltip, "SetUnitDebuff", "SetUnitAura") end
+		if (ns.WoW10) then
+			if (not self:IsHooked(GameTooltip, "SetUnitBuffByAuraInstanceID")) then self:SecureHook(GameTooltip, "SetUnitBuffByAuraInstanceID", "SetUnitAuraInstanceID") end
+			if (not self:IsHooked(GameTooltip, "SetUnitDebuffByAuraInstanceID")) then self:SecureHook(GameTooltip, "SetUnitDebuffByAuraInstanceID", "SetUnitAuraInstanceID") end
+		end
+		if (not self:IsHooked(GameTooltip, "OnTooltipCleared")) then self:SecureHookScript(GameTooltip, "OnTooltipCleared", "OnTooltipCleared") end
+		if (GameTooltip.StatusBar and not self:IsHooked(GameTooltip.StatusBar, "OnValueChanged")) then self:SecureHookScript(GameTooltip.StatusBar, "OnValueChanged", "OnValueChanged") end
+	end
+
+end
+
+Tooltips.UpdateAnchor = function(self)
+	local config = self.db.profile.savedPosition
+
+	self.anchor:SetSize(250, 120)
+	self.anchor:SetScale(config.scale)
+	self.anchor:ClearAllPoints()
+	self.anchor:SetPoint(config[1], UIParent, config[1], config[2], config[3])
+end
+
+Tooltips.UpdateSettings = function(self)
+	local disabled = self:IsDisabled()
+	if (disabled) then
+		if (self._stylingActive ~= false) then
+			if (self.RemoveHooks) then self:RemoveHooks() end
+
+			for _,tt in next,{
+				_G.GameTooltip,
+				_G.ShoppingTooltip1,
+				_G.ShoppingTooltip2,
+				_G.ItemRefTooltip,
+				_G.ItemRefShoppingTooltip1,
+				_G.ItemRefShoppingTooltip2,
+				_G.FriendsTooltip,
+				_G.WarCampaignTooltip,
+				_G.EmbeddedItemTooltip,
+				_G.ReputationParagonTooltip,
+				_G.QuickKeybindTooltip,
+				_G.QuestScrollFrame and _G.QuestScrollFrame.StoryTooltip,
+				_G.QuestScrollFrame and _G.QuestScrollFrame.CampaignTooltip,
+				_G.NarciGameTooltip
+			} do
+				if (tt and not tt:IsForbidden()) then
+					if (tt.NineSlice and tt.NineSlice.GetParent and tt.NineSlice:GetParent() == UIHider) then
+						tt.NineSlice:SetParent(tt)
+						tt.NineSlice:SetAlpha(1)
+					end
+					tt:EnableDrawLayer("BACKGROUND")
+					tt:EnableDrawLayer("BORDER")
+					local backdrop = rawget(Backdrops, tt)
+					if (backdrop) then backdrop:Hide() end
+				end
+			end
+
+			local gtt = _G.GameTooltip
+			local bar = _G.GameTooltipStatusBar
+			if (gtt and bar) then
+				bar:ClearAllPoints()
+				bar:SetPoint("TOPLEFT", gtt, "BOTTOMLEFT", 0, 0)
+				bar:SetPoint("TOPRIGHT", gtt, "BOTTOMRIGHT", 0, 0)
+				bar:SetHeight(8)
+				bar:SetStatusBarTexture("Interface/TargetingFrame/UI-StatusBar")
+				local text = StatusBarText[bar]
+				if (text) then text:Hide() end
+			end
+
+			self:RestoreHighlightState()
+			self._stylingActive = false
+		end
+		return
+	end
+
+	if (ns.WoW10) then
+		self:ApplyHighlightOverride()
+	end
+
+	self._stylingActive = true
+	self:SetHooks()
+	self:UpdateTooltipThemes()
+end
+
+Tooltips.PostUpdatePositionAndScale = function(self)
+	if (self:IsDisabled()) then return end
+	GameTooltip:SetScale(self.db.profile.savedPosition.scale * ns.API.GetEffectiveScale())
+end
+
+Tooltips.OnEnable = function(self)
+	self:EnsureHighlightCache()
+	self:UpdateConsolePortState()
+
+	self:CreateAnchor(L["Tooltips"])
+
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateTooltipThemes")
+	self:RegisterEvent("ADDON_LOADED", "OnAddonLoaded")
+
+	self:UpdateSettings()
+
+	ns.MovableModulePrototype.OnEnable(self)
+end
+
+Tooltips.OnAddonLoaded = function(self, event, addon)
+	if (addon == "ConsolePort" or addon == "ConsolePort_Bar") then
+		if (self:UpdateConsolePortState()) then
+			self:UpdateSettings()
+		end
+	end
+end
+
+	-- Try to unhook our hooks when disabling styling
+	Tooltips.RemoveHooks = function(self)
+		-- Global functions
+		if (self:IsHooked("SharedTooltip_SetBackdropStyle")) then self:Unhook("SharedTooltip_SetBackdropStyle") end
+		if (self:IsHooked("GameTooltip_UnitColor")) then self:Unhook("GameTooltip_UnitColor") end
+		if (self:IsHooked("GameTooltip_ShowCompareItem")) then self:Unhook("GameTooltip_ShowCompareItem") end
+		if (self:IsHooked("GameTooltip_SetDefaultAnchor")) then self:Unhook("GameTooltip_SetDefaultAnchor") end
+
+		-- GameTooltip methods
+		if (_G.GameTooltip) then
+			local gtt = _G.GameTooltip
+			if (self:IsHooked(gtt, "SetUnitAura")) then self:Unhook(gtt, "SetUnitAura") end
+			if (self:IsHooked(gtt, "SetUnitBuff")) then self:Unhook(gtt, "SetUnitBuff") end
+			if (self:IsHooked(gtt, "SetUnitDebuff")) then self:Unhook(gtt, "SetUnitDebuff") end
+			if (ns.WoW10) then
+				if (self:IsHooked(gtt, "SetUnitBuffByAuraInstanceID")) then self:Unhook(gtt, "SetUnitBuffByAuraInstanceID") end
+				if (self:IsHooked(gtt, "SetUnitDebuffByAuraInstanceID")) then self:Unhook(gtt, "SetUnitDebuffByAuraInstanceID") end
+			end
+			-- Script hooks (use Unhook for scripts with AceHook)
+			if (self:IsHooked(gtt, "OnTooltipCleared")) then self:Unhook(gtt, "OnTooltipCleared") end
+			if (gtt.StatusBar and self:IsHooked(gtt.StatusBar, "OnValueChanged")) then self:Unhook(gtt.StatusBar, "OnValueChanged") end
+		end
+	end

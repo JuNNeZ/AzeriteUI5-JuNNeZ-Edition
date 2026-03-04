@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../AzeriteUI_Stock"
+		}
+	],
+	"settings": {
+		"stylua.targetReleaseVersion": "latest"
+	}
+}
