@@ -2,7 +2,6 @@
 
 	<Script file="LibStub\LibStub.lua"/>
 	<Include file="CallbackHandler-1.0\CallbackHandler-1.0.xml"/>
-	<!--@non-debug@-->
 	<Include file="TaintLess\TaintLess.xml"/>
 	<Include file="AceAddon-3.0\AceAddon-3.0.xml"/>
 	<Include file="AceDB-3.0\AceDB-3.0.xml"/>
@@ -19,7 +18,6 @@
 	<Include file="LibSharedMedia-3.0\lib.xml"/>
 	<Include file="LibUIDropDownMenu\LibUIDropDownMenu.xml"/>
 	<Script file="LibMoreEvents-1.0\LibMoreEvents-1.0.lua"/>
-	<!--@end-non-debug@-->
 	<Include file="UTF8\utf8.xml"/>
 	<Include file="LibKeyBound-1.0\lib.xml"/>
 	<Script file="LibDeflate\LibDeflate.lua"/>
