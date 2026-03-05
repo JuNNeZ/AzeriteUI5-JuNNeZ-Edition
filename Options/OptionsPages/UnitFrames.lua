@@ -370,6 +370,19 @@ local GenerateOptions = function()
 			end,
 			get = function(info) return getoption(info, "powerBarArtLayer") or 0 end
 		}
+		suboptions.args.powerBarTexCoordAdjust = {
+			name = "Crystal Crop Adjust",
+			desc = "Fine-tune crystal appearance. Negative = bigger, Positive = smaller. Default is 0.",
+			order = 508,
+			type = "range",
+			width = "full",
+			min = -50, max = 50, step = 1,
+			hidden = isdisabled,
+			set = function(info, val)
+				setoption(info, "powerBarTexCoordAdjust", val)
+			end,
+			get = function(info) return getoption(info, "powerBarTexCoordAdjust") or 0 end
+		}
 		suboptions.args.powerBackdropScaleX = {
 			name = "Backdrop Width (%)",
 			desc = "Adjust power backdrop width.",
@@ -564,16 +577,16 @@ local GenerateOptions = function()
 			width = "full",
 			hidden = isdisabled,
 			func = function(info)
-				setoption(info, "powerBarOffsetX", 0, true)
-				setoption(info, "powerBarOffsetY", 0, true)
+				setoption(info, "powerBarOffsetX", -76, true)
+				setoption(info, "powerBarOffsetY", -49, true)
 				setoption(info, "powerBackdropOffsetX", 0, true)
 				setoption(info, "powerBackdropOffsetY", 0, true)
 				setoption(info, "powerCaseOffsetX", 0, true)
-				setoption(info, "powerCaseOffsetY", 0, true)
-				setoption(info, "powerThreatBarOffsetX", 0, true)
-				setoption(info, "powerThreatBarOffsetY", 0, true)
+				setoption(info, "powerCaseOffsetY", 50, true)
+				setoption(info, "powerThreatBarOffsetX", 76, true)
+				setoption(info, "powerThreatBarOffsetY", 52, true)
 				setoption(info, "powerThreatCaseOffsetX", 0, true)
-				setoption(info, "powerThreatCaseOffsetY", 0, true)
+				setoption(info, "powerThreatCaseOffsetY", -34, true)
 				setoption(info, "powerBarBaseOffsetX", 0, true)
 				setoption(info, "powerBarBaseOffsetY", 0, true)
 				setoption(info, "powerCaseBaseOffsetX", 0, true)
@@ -639,10 +652,13 @@ local GenerateOptions = function()
 				setoption(info, "powerCaseOffsetY", 0, true)
 				setoption(info, "powerBackdropOffsetX", 0, true)
 				setoption(info, "powerBackdropOffsetY", 0, true)
-				setoption(info, "powerThreatBarOffsetX", 0, true)
-				setoption(info, "powerThreatBarOffsetY", 0, true)
+				setoption(info, "powerBarOffsetX", -76, true)
+				setoption(info, "powerBarOffsetY", -49, true)
+				setoption(info, "powerCaseOffsetY", 50, true)
+				setoption(info, "powerThreatBarOffsetX", 76, true)
+				setoption(info, "powerThreatBarOffsetY", 52, true)
 				setoption(info, "powerThreatCaseOffsetX", 0, true)
-				setoption(info, "powerThreatCaseOffsetY", 0, true)
+				setoption(info, "powerThreatCaseOffsetY", -34, true)
 				setoption(info, "powerBarScale", 1, true)
 				setoption(info, "powerBarScaleX", 1, true)
 				setoption(info, "powerBarScaleY", 1, true)
@@ -1706,3 +1722,4 @@ local GenerateOptions = function()
 end
 
 Options:AddGroup(L["Unit Frames"], GenerateOptions, -8000)
+

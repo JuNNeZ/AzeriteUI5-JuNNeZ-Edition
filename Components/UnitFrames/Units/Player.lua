@@ -91,16 +91,16 @@ local defaults = { profile = ns:Merge({
 	powerThreatCaseScaleX = 1,
 	powerThreatCaseScaleY = 1,
 	powerBarArtLayer = 0,
-	powerBarOffsetX = 0,
-	powerBarOffsetY = 0,
+	powerBarOffsetX = -76,
+	powerBarOffsetY = -49,
 	powerBackdropOffsetX = 0,
 	powerBackdropOffsetY = 0,
 	powerCaseOffsetX = 0,
-	powerCaseOffsetY = 0,
-	powerThreatBarOffsetX = 0,
-	powerThreatBarOffsetY = 0,
+	powerCaseOffsetY = 50,
+	powerThreatBarOffsetX = 76,
+	powerThreatBarOffsetY = 52,
 	powerThreatCaseOffsetX = 0,
-	powerThreatCaseOffsetY = 0,
+	powerThreatCaseOffsetY = -34,
 	powerBarAnchorFrame = "FRAME",
 	powerBackdropAnchorFrame = "POWER",
 	powerCaseAnchorFrame = "POWER",
@@ -1367,6 +1367,26 @@ local PvPIndicator_Override = function(self, event, unit)
 
 end
 
+-- Helper to adjust TexCoord based on profile setting
+local GetAdjustedTexCoord = function(baseTexCoord, adjustment)
+	if (not baseTexCoord or not adjustment or adjustment == 0) then
+		return baseTexCoord
+	end
+	-- baseTexCoord is {left, right, top, bottom} in normalized 0-1 coords
+	-- Convert to pixel space (0-255) for easier math
+	local left = math.floor(baseTexCoord[1] * 255 + 0.5)
+	local right = math.floor(baseTexCoord[2] * 255 + 0.5)
+	local top = math.floor(baseTexCoord[3] * 255 + 0.5)
+	local bottom = math.floor(baseTexCoord[4] * 255 + 0.5)
+	-- Apply adjustment to margins
+	left = math.max(0, left + adjustment)
+	right = math.min(255, right - adjustment)
+	top = math.max(0, top + adjustment)
+	bottom = math.min(255, bottom - adjustment)
+	-- Convert back to 0-1 range
+	return { left / 255, right / 255, top / 255, bottom / 255 }
+end
+
 -- Update player frame based on player level.
 local UnitFrame_UpdateTextures = function(self)
 	local playerLevel = playerLevel or UnitLevel("player")
@@ -1374,6 +1394,19 @@ local UnitFrame_UpdateTextures = function(self)
 	local config = ns.GetConfig("PlayerFrame")
 	local db = config[key]
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or nil
+
+	local ResolvePowerAnchorFrame = function(frameKey, power)
+		if (frameKey == "POWER") then
+			return power
+		elseif (frameKey == "POWER_BACKDROP") then
+			return power and power.Backdrop
+		elseif (frameKey == "POWER_CASE") then
+			return power and power.Case
+		elseif (frameKey == "HEALTH") then
+			return self.Health
+		end
+		return self
+	end
 	local powerBarOffsetX = ((profile and tonumber(profile.powerBarBaseOffsetX)) or 0) + ((profile and tonumber(profile.powerBarOffsetX)) or 0)
 	local powerBarOffsetY = ((profile and tonumber(profile.powerBarBaseOffsetY)) or 0) + ((profile and tonumber(profile.powerBarOffsetY)) or 0)
 	local powerCaseOffsetX = ((profile and tonumber(profile.powerCaseBaseOffsetX)) or 0) + ((profile and tonumber(profile.powerCaseOffsetX)) or 0)
@@ -1502,17 +1535,23 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 		return horizontal, vertical
 	end
-	local ResolvePowerAnchorFrame = function(frameKey, power)
-		if (frameKey == "POWER") then
-			return power
-		elseif (frameKey == "POWER_BACKDROP") then
-			return power and power.Backdrop
-		elseif (frameKey == "POWER_CASE") then
-			return power and power.Case
-		elseif (frameKey == "HEALTH") then
-			return self.Health
+	local GetAdjustedTexCoord = function(baseTexCoord, adjustment)
+		if (not baseTexCoord or not adjustment or adjustment == 0) then
+			return baseTexCoord
 		end
-		return self
+		-- baseTexCoord is {left, right, top, bottom} in normalized 0-1 coords
+		-- Convert to pixel space (0-255) for easier math
+		local left = math.floor(baseTexCoord[1] * 255 + 0.5)
+		local right = math.floor(baseTexCoord[2] * 255 + 0.5)
+		local top = math.floor(baseTexCoord[3] * 255 + 0.5)
+		local bottom = math.floor(baseTexCoord[4] * 255 + 0.5)
+		-- Apply adjustment to margins
+		left = math.max(0, left + adjustment)
+		right = math.min(255, right - adjustment)
+		top = math.max(0, top + adjustment)
+		bottom = math.min(255, bottom - adjustment)
+		-- Convert back to 0-1 range
+		return { left / 255, right / 255, top / 255, bottom / 255 }
 	end
 
 	local health = self.Health
@@ -1584,7 +1623,7 @@ local UnitFrame_UpdateTextures = function(self)
 	local powerCenterShiftX = (-powerAnchorHorizontal) * (powerDeltaWidth * .5)
 	local powerCenterShiftY = (-powerAnchorVertical) * (powerDeltaHeight * .5)
 	SetPointWithOffset(power, db.PowerBarPosition, powerBarOffsetX - powerCenterShiftX, powerBarOffsetY - powerCenterShiftY, powerAnchorFrame)
-	power:SetSize(powerWidth, powerHeight)
+	power:SetSize(legacyPowerWidth, legacyPowerHeight)
 	-- WoW 12.0: Cache texture to prevent flickering
 	local powerTexture = (PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and db.PowerBarTextureWrath or db.PowerBarTexture
 	if (power._cachedTexture ~= powerTexture) then
@@ -1600,7 +1639,9 @@ local UnitFrame_UpdateTextures = function(self)
 	-- StatusBar itself has no SetTexCoord; apply to its texture if present.
 	ptex = power:GetStatusBarTexture()
 	if (ptex and ptex.SetTexCoord and db.PowerBarTexCoord) then
-		ptex:SetTexCoord(unpack(db.PowerBarTexCoord))
+		local texCoordAdjust = (profile and tonumber(profile.powerBarTexCoordAdjust)) or 0
+		local adjustedCoord = GetAdjustedTexCoord(db.PowerBarTexCoord, texCoordAdjust)
+		ptex:SetTexCoord(unpack(adjustedCoord))
 	end
 	if (ptex and ptex.SetDrawLayer) then
 		SafeSetDrawLayer(ptex, "ARTWORK", 0 + powerBarArtLayer, 0)
@@ -2013,13 +2054,15 @@ local style = function(self, unit)
 	local power = CreateFrame("StatusBar", nil, self)
 	power:SetFrameLevel(self:GetFrameLevel() - 2)
 	local powerPos = db.PowerBarPosition or { "CENTER", 0, 0 }
-	local powerSize = db.PowerBackdropSize or db.PowerBarSize or { 80, 80 }
+	local powerSize = db.PowerBarSize or { 80, 80 }
 	power:SetPoint(unpack(powerPos))
 	power:SetSize(unpack(powerSize))
 	power:SetStatusBarTexture(db.PowerBarTexture)
 	local ptex = power:GetStatusBarTexture()
 	if ptex and ptex.SetTexCoord and db.PowerBarTexCoord then
-		ptex:SetTexCoord(unpack(db.PowerBarTexCoord))
+		local texCoordAdjust = (PlayerFrameMod.db.profile and tonumber(PlayerFrameMod.db.profile.powerBarTexCoordAdjust)) or 0
+		local adjustedCoord = GetAdjustedTexCoord(db.PowerBarTexCoord, texCoordAdjust)
+		ptex:SetTexCoord(unpack(adjustedCoord))
 	end
 	-- Native StatusBar: use vertical for crystal; flip texcoords when needed
 	if (db.PowerBarOrientation == "DOWN") then

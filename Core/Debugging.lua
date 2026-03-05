@@ -614,9 +614,9 @@ end
 
 local function SafeCall(obj, method, ...)
 	if (obj and obj[method]) then
-		local ok, a, b, c, d = pcall(obj[method], obj, ...)
+		local ok, a, b, c, d, e = pcall(obj[method], obj, ...)
 		if (ok) then
-			return a, b, c, d
+			return a, b, c, d, e
 		end
 	end
 	return nil
