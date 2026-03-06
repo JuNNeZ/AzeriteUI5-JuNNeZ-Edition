@@ -3,6 +3,14 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.227-JuNNeZ (2026-03-06)
+
+### Fixes
+- Fixed player power crystal current-value text update regression:
+  - Restored live player power value formatter behavior to match the known-good `e53811f` path.
+  - Added explicit `self.Power:ForceUpdate()` on player power-related unit events so value text refresh stays in sync with the crystal bar.
+- Hardened zero-value display handling for power tags/target power text so empty values clear cleanly instead of leaving stale text.
+
 ## 5.2.226-JuNNeZ (2026-03-06)
 
 ### Fixes

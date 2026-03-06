@@ -482,6 +482,19 @@ local SafePowerValueText = function(value)
 	if (value == nil) then
 		return nil
 	end
+	if (issecretvalue and issecretvalue(value)) then
+		return nil
+	end
+	if (type(value) == "number") then
+		if (value <= 0) then
+			return nil
+		end
+	elseif (type(value) == "string") then
+		local numeric = tonumber(value)
+		if (numeric and numeric <= 0) then
+			return nil
+		end
+	end
 	if (type(AbbreviateNumbers) == "function") then
 		local ok, formatted = pcall(AbbreviateNumbers, value)
 		if (ok and formatted ~= nil) then
@@ -509,10 +522,17 @@ local SafePowerValueFullText = function(value)
 		if (issecretvalue and issecretvalue(value)) then
 			return nil
 		end
+		if (value <= 0) then
+			return nil
+		end
 		return tostring(value)
 	end
 	if (type(value) == "string" and value ~= "") then
 		if (issecretvalue and issecretvalue(value)) then
+			return nil
+		end
+		local numeric = tonumber(value)
+		if (numeric and numeric <= 0) then
 			return nil
 		end
 		return value

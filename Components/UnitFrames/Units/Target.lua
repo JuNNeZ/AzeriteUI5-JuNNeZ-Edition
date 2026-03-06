@@ -1403,6 +1403,14 @@ local GetFormattedTargetPowerValue = function(element, useFull)
 	end
 
 	local rawCur = UnitPower(unit, displayType)
+	if (type(rawCur) == "number") then
+		if (issecretvalue and issecretvalue(rawCur)) then
+			return nil
+		end
+		if (rawCur <= 0) then
+			return nil
+		end
+	end
 	local formatter = useFull and BreakUpLargeNumbers or AbbreviateNumbers
 	if (type(formatter) == "function") then
 		local ok, formatted = pcall(formatter, rawCur)
@@ -1433,6 +1441,14 @@ local GetTargetRawPowerPercent = function(element)
 			end
 		end
 	end)
+	if (type(percent) == "number") then
+		if (issecretvalue and issecretvalue(percent)) then
+			return nil
+		end
+		if (percent <= 0) then
+			return nil
+		end
+	end
 	return percent
 end
 
@@ -1452,27 +1468,40 @@ local UpdateTargetPowerValueText = function(frame)
 	local shortText = GetFormattedTargetPowerValue(element, false)
 	local fullText = GetFormattedTargetPowerValue(element, true)
 	local rawPercent = GetTargetRawPowerPercent(element)
+	local hasValue = false
 
 	if (formatMode == "percent") then
 		if (rawPercent ~= nil and powerValue.SetFormattedText) then
 			pcall(powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
+			hasValue = true
 		end
 	elseif (formatMode == "full") then
 		if (fullText ~= nil and powerValue.SetFormattedText) then
 			pcall(powerValue.SetFormattedText, powerValue, "%s", fullText)
+			hasValue = true
 		end
 	elseif (formatMode == "shortpercent") then
 		if (shortText ~= nil and rawPercent ~= nil and powerValue.SetFormattedText) then
 			pcall(powerValue.SetFormattedText, powerValue, "%s |cff888888(|r%d%%|cff888888)|r", shortText, rawPercent)
+			hasValue = true
 		elseif (shortText ~= nil and powerValue.SetFormattedText) then
 			pcall(powerValue.SetFormattedText, powerValue, "%s", shortText)
+			hasValue = true
 		elseif (rawPercent ~= nil and powerValue.SetFormattedText) then
 			pcall(powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
+			hasValue = true
 		end
 	else
 		if (shortText ~= nil and powerValue.SetFormattedText) then
 			pcall(powerValue.SetFormattedText, powerValue, "%s", shortText)
+			hasValue = true
 		end
+	end
+	if (not hasValue and powerValue.SetText) then
+		pcall(powerValue.SetText, powerValue, "")
+	end
+	if (powerValue.SetAlpha) then
+		powerValue:SetAlpha(hasValue and 1 or 0)
 	end
 end
 

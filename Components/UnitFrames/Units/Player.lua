@@ -2225,6 +2225,9 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 
 	elseif (event == "UNIT_POWER_FREQUENT" or event == "UNIT_POWER_UPDATE" or event == "UNIT_MAXPOWER" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_ENTERED_VEHICLE" or event == "UNIT_EXITED_VEHICLE") then
 		if (IsPlayerPowerUnit(unit) or IsPlayerPowerUnit(self.unit)) then
+			if (self.Power and self.Power.ForceUpdate) then
+				self.Power:ForceUpdate()
+			end
 			RefreshManaOrb(self, event, unit or GetPlayerPowerUnit(self))
 		end
 
