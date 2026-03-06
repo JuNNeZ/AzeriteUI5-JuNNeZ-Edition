@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -286,8 +286,35 @@ local IsZeroLikeText = function(value)
 	if (type(value) ~= "string") then
 		return false
 	end
-	local trimmed = value:gsub("%s+", "")
-	local lowered = trimmed:lower()
+	if (issecretvalue) then
+		local okSecret, isSecret = pcall(issecretvalue, value)
+		if (okSecret and isSecret) then
+			return false
+		end
+		if (not okSecret) then
+			return false
+		end
+	end
+	local okPlain, plain = pcall(string_gsub, value, "|c%x%x%x%x%x%x%x%x", "")
+	if (not okPlain or type(plain) ~= "string") then
+		return false
+	end
+	local okUnwrap, unwrapped = pcall(string_gsub, plain, "|r", "")
+	if (okUnwrap and type(unwrapped) == "string") then
+		plain = unwrapped
+	end
+	local okTrim, trimmed = pcall(string.gsub, plain, "%s+", "")
+	if (not okTrim or type(trimmed) ~= "string") then
+		return false
+	end
+	local okParen, noParen = pcall(string_gsub, trimmed, "[%(%)]", "")
+	if (okParen and type(noParen) == "string") then
+		trimmed = noParen
+	end
+	local okLower, lowered = pcall(string.lower, trimmed)
+	if (not okLower or type(lowered) ~= "string") then
+		return false
+	end
 	if (lowered == "<secret>" or lowered == "secret" or lowered == "?" or lowered == "nil") then
 		return true
 	end
@@ -396,9 +423,7 @@ local SafeAbsorbValueText = function(absorb)
 				end
 			end
 		end
-		-- Stable WoW12 behavior:
-		-- return secret payload as-is and let oUF SetFormattedText handle it.
-		-- Avoid Lua-side concatenation/coercion here.
+		-- Fallback to direct secret payload; oUF tag rendering can pass this safely.
 		return absorb, true
 	end
 	if (absorb == nil) then
@@ -904,6 +929,7 @@ if (ns.IsRetail) then
 			local hasAbsorbValue = false
 			local sourceUsed = nil
 			local cacheAbsorb = frameHealth and frameHealth.safeAbsorb or nil
+			local cacheKnownZero = frameHealth and frameHealth.safeAbsorbKnownZero or false
 			local calcAbsorb = nil
 			local calcSource = nil
 			local totalAbsorb = nil
@@ -914,16 +940,18 @@ if (ns.IsRetail) then
 				absorbValue, hasAbsorbValue = ResolveAbsorbValue(cacheAbsorb)
 				if (hasAbsorbValue) then
 					sourceUsed = "cache"
+				elseif (cacheKnownZero) then
+					sourceUsed = "cache-zero"
 				end
 			end
-			if ((not hasAbsorbValue) and frame) then
+			if ((not hasAbsorbValue) and frame and (not cacheKnownZero)) then
 				calcAbsorb, calcSource = GetAbsorbFromCalculator(frame, unit)
 				absorbValue, hasAbsorbValue = ResolveAbsorbValue(calcAbsorb)
 				if (hasAbsorbValue) then
 					sourceUsed = calcSource or "calculator"
 				end
 			end
-			if ((not hasAbsorbValue) and UnitGetTotalAbsorbs) then
+			if ((not hasAbsorbValue) and UnitGetTotalAbsorbs and (not cacheKnownZero)) then
 				totalAbsorb = UnitGetTotalAbsorbs(unit)
 				absorbValue, hasAbsorbValue = ResolveAbsorbValue(totalAbsorb)
 				if (hasAbsorbValue) then
@@ -947,6 +975,12 @@ if (ns.IsRetail) then
 			-- do not force fallback "0" when absorb is unresolved/secret.
 			-- Returning nil hides absorb text until a usable payload arrives.
 			if (hasAbsorbValue) then
+				if (type(absorbValue) == "number" and (not (issecretvalue and issecretvalue(absorbValue))) and absorbValue <= 0) then
+					return nil
+				end
+				if (type(absorbValue) == "string" and IsZeroLikeText(absorbValue)) then
+					return nil
+				end
 				local wrapPrefix = c_gray.." ("..r..c_normal
 				local wrapSuffix = r..c_gray..")"..r
 				if (C_StringUtil and C_StringUtil.WrapString) then

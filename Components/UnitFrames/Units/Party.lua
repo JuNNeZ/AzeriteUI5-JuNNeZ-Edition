@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -186,7 +186,8 @@ local HealPredict_PostUpdate = function(element, unit, myIncomingHeal, otherInco
 	otherIncomingHeal = tonumber(otherIncomingHeal) or 0
 	healAbsorb = tonumber(healAbsorb) or 0
 	curHealth = tonumber(curHealth) or 0
-	maxHealth = tonumber(maxHealth) or 1	if (ns.API.ShouldSkipPrediction(element, myIncomingHeal, otherIncomingHeal, absorb, healAbsorb, hasOverAbsorb, hasOverHealAbsorb, curHealth, maxHealth)) then
+	maxHealth = tonumber(maxHealth) or 1
+	if (ns.API.ShouldSkipPrediction(element, myIncomingHeal, otherIncomingHeal, absorb, healAbsorb, hasOverAbsorb, hasOverHealAbsorb, curHealth, maxHealth)) then
 		return
 	end
 
@@ -774,7 +775,7 @@ local style = function(self, unit)
 	auras.sortDirection = db.AurasSortDirection
 	auras.reanchorIfVisibleChanged = true
 	auras.CreateButton = ns.AuraStyles.CreateButton
-	auras.PostUpdateButton = ns.AuraStyles.TargetPostUpdateButton
+	auras.PostUpdateButton = ns.AuraStyles.PartyPostUpdateButton
 	auras.CustomFilter = ns.AuraFilters.PartyAuraFilter -- classic
 	auras.FilterAura = ns.AuraFilters.PartyAuraFilter -- retail
 

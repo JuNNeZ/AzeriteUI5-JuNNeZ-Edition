@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ local PlayerFrameMod = ns:NewModule("PlayerFrame", ns.UnitFrameModule, "LibMoreE
 local AbbreviateNumbers = AbbreviateNumbers
 local BreakUpLargeNumbers = BreakUpLargeNumbers
 local math_floor = math.floor
+local math_max = math.max
 local next = next
 local string_gsub = string.gsub
 local tonumber = tonumber
@@ -66,7 +67,11 @@ local ORB_DYNAMIC_CLASS_ALLOW = {
 local HidePlayerNativePowerVisuals
 local ShowPlayerNativePowerVisuals
 local UpdatePlayerFakePowerFill
+local UpdatePlayerPowerSpark
 local ShouldShowPlayerPowerValue
+
+local POWER_CRYSTAL_BASELINE_OFFSET_X = -37
+local POWER_CRYSTAL_BASELINE_OFFSET_Y = -28
 
 local defaults = { profile = ns:Merge({
 	useClassColor = false,
@@ -77,6 +82,7 @@ local defaults = { profile = ns:Merge({
 	PowerValueFormat = "short",
 	powerValueTextScale = 100,
 	powerOrbMode = "orbV2",
+	crystalOrbColorMode = "default",
 	aurasBelowFrame = false,
 	useWrathCrystal = ns.IsCata,
 	powerBarScale = 1,
@@ -91,28 +97,26 @@ local defaults = { profile = ns:Merge({
 	powerThreatCaseScaleX = 1,
 	powerThreatCaseScaleY = 1,
 	powerBarArtLayer = 0,
-	powerBarOffsetX = -76,
-	powerBarOffsetY = -49,
-	powerBackdropOffsetX = 0,
-	powerBackdropOffsetY = 0,
+	powerBarOffsetX = 0,
+	powerBarOffsetY = 0,
 	powerCaseOffsetX = 0,
-	powerCaseOffsetY = 50,
-	powerThreatBarOffsetX = 76,
-	powerThreatBarOffsetY = 52,
+	powerCaseOffsetY = 0,
+	powerThreatBarOffsetX = 0,
+	powerThreatBarOffsetY = 0,
 	powerThreatCaseOffsetX = 0,
-	powerThreatCaseOffsetY = -34,
+	powerThreatCaseOffsetY = 0,
 	powerBarAnchorFrame = "FRAME",
-	powerBackdropAnchorFrame = "POWER",
 	powerCaseAnchorFrame = "POWER",
 	powerThreatBarAnchorFrame = "POWER",
 	powerThreatCaseAnchorFrame = "POWER",
 	powerBarBaseScaleX = 1,
 	powerBarBaseScaleY = 1,
-	powerBarBaseOffsetX = 0,
-	powerBarBaseOffsetY = 0,
+	powerBarBaseOffsetX = POWER_CRYSTAL_BASELINE_OFFSET_X,
+	powerBarBaseOffsetY = POWER_CRYSTAL_BASELINE_OFFSET_Y,
 	powerCaseBaseOffsetX = 0,
 	powerCaseBaseOffsetY = 0,
-	powerOffsetZeroMigrated = true
+	powerOffsetZeroMigrated = true,
+	powerCrystalBaselineApplied = true
 }, ns.MovableModulePrototype.defaults) }
 
 -- Generate module defaults on the fly
@@ -134,6 +138,25 @@ end
 local prefix = function(msg)
 	return string_gsub(msg, "*", ns.Prefix)
 end
+
+local STOCK_POWER_CRYSTAL_LAYOUT = {
+	frameLevelOffset = -2,
+	barPointKey = "PowerBarPosition",
+	barSizeKey = "PowerBarSize",
+	barTexCoordKey = "PowerBarTexCoord",
+	barOrientationKey = "PowerBarOrientation",
+	backdropSizeKey = "PowerBackdropSize"
+}
+
+local CURRENT_POWER_CRYSTAL_LAYOUT = {
+	frameLevelOffset = -2,
+	barPointKey = "PowerBarPosition",
+	barSizeKey = "PowerBackdropSize",
+	barTexCoordKey = "PowerBarTexCoord",
+	barOrientationKey = "PowerBarOrientation",
+	backdropPoint = { "CENTER", 0, 0 },
+	backdropSizeKey = "PowerBackdropSize"
+}
 
 local ShouldDebugAbsorbUnit = function(unit)
 	if (not ns.API or not ns.API.DEBUG_HEALTH_CHAT) then
@@ -176,6 +199,107 @@ end
 
 -- Element Callbacks
 --------------------------------------------
+local ClampSparkPercent = function(value)
+	if (type(value) ~= "number") or (issecretvalue and issecretvalue(value)) then
+		return nil
+	end
+	if (value > 1 and value <= 100) then
+		value = value / 100
+	end
+	if (value < 0) then
+		value = 0
+	elseif (value > 1) then
+		value = 1
+	end
+	return value
+end
+
+local GetBarSparkPercent = function(element)
+	if (not element) then
+		return nil
+	end
+	local percent = ClampSparkPercent(element.safePercent)
+	if (percent ~= nil) then
+		return percent
+	end
+	if (element.GetSecretPercent) then
+		local ok, value = pcall(element.GetSecretPercent, element)
+		if (ok) then
+			percent = ClampSparkPercent(value)
+			if (percent ~= nil) then
+				return percent
+			end
+		end
+	end
+	return ClampSparkPercent(element.__AzeriteUI_MirrorPercent) or ClampSparkPercent(element.__AzeriteUI_TexturePercent)
+end
+
+local UpdateBarSparkSize = function(element)
+	local spark = element and element.Spark
+	if (not spark) then
+		return
+	end
+	local growth = (element.GetGrowth and element:GetGrowth()) or element.__AzeriteUI_Growth or "RIGHT"
+	local width = element.GetWidth and element:GetWidth() or 0
+	local height = element.GetHeight and element:GetHeight() or 0
+	if (type(width) ~= "number" or type(height) ~= "number"
+		or width <= 0 or height <= 0
+		or (issecretvalue and (issecretvalue(width) or issecretvalue(height)))) then
+		spark:Hide()
+		return
+	end
+	if (growth == "UP" or growth == "DOWN") then
+		spark:SetSize(math_max(8, width - 4), 12)
+	else
+		spark:SetSize(12, math_max(8, height - 2))
+	end
+end
+
+local UpdateBarSpark = function(element, percentOverride)
+	local spark = element and element.Spark
+	if (not spark) then
+		return
+	end
+	local percent = ClampSparkPercent(percentOverride)
+	if (percent == nil) then
+		percent = GetBarSparkPercent(element)
+	end
+	if (type(percent) ~= "number" or percent <= 0 or percent >= 1 or not element:IsShown()) then
+		spark:Hide()
+		return
+	end
+	local growth = (element.GetGrowth and element:GetGrowth()) or element.__AzeriteUI_Growth or "RIGHT"
+	local reverseFill = element.GetReverseFill and element:GetReverseFill()
+	if (reverseFill) then
+		if (growth == "RIGHT") then
+			growth = "LEFT"
+		elseif (growth == "LEFT") then
+			growth = "RIGHT"
+		elseif (growth == "UP") then
+			growth = "DOWN"
+		elseif (growth == "DOWN") then
+			growth = "UP"
+		end
+	end
+	local width = element:GetWidth()
+	local height = element:GetHeight()
+	if (type(width) ~= "number" or type(height) ~= "number"
+		or width <= 0 or height <= 0
+		or (issecretvalue and (issecretvalue(width) or issecretvalue(height)))) then
+		spark:Hide()
+		return
+	end
+	spark:ClearAllPoints()
+	if (growth == "UP" or growth == "DOWN") then
+		local y = height * ((growth == "DOWN") and (1 - percent) or percent)
+		spark:SetPoint("CENTER", element, "BOTTOM", 0, y)
+	else
+		local x = width * ((growth == "LEFT") and (1 - percent) or percent)
+		spark:SetPoint("CENTER", element, "LEFT", x, 0)
+	end
+	spark:Show()
+end
+
 -- Forceupdate health prediction on health updates,
 -- to assure our smoothed elements are properly aligned.
 local Health_PostUpdate = function(element, unit, cur, max)
@@ -183,6 +307,7 @@ local Health_PostUpdate = function(element, unit, cur, max)
 	if (predict) then
 		predict:ForceUpdate()
 	end
+	UpdateBarSpark(element)
 end
 
 -- Update the health preview color on health color updates.
@@ -200,6 +325,7 @@ local Health_PostUpdateColor = function(element, unit, colorOrR, g, b)
 	if (type(r) == "number" and type(g) == "number" and type(b) == "number") then
 		preview:SetStatusBarColor(r * .9, g * .9, b * .9)
 	end
+	UpdateBarSpark(element)
 end
 
 -- Align our custom health prediction texture
@@ -289,6 +415,25 @@ local HidePlayerAbsorbBarVisual = function(absorbBar)
 	end
 end
 
+local GetSafeStatusBarValue = function(bar)
+	if (not bar) then
+		return nil, false
+	end
+	local value
+	if (bar.GetValue) then
+		pcall(function()
+			value = bar:GetValue()
+		end)
+	end
+	if (type(value) ~= "number" or (issecretvalue and issecretvalue(value))) then
+		value = bar.safeCur or bar.cur or bar.safeBarValue
+	end
+	if (type(value) ~= "number" or (issecretvalue and issecretvalue(value))) then
+		return nil, false
+	end
+	return value, true
+end
+
 local UpdatePlayerAbsorbState = function(element, unit, absorb, maxHealth)
 	if (not element) then
 		return
@@ -300,37 +445,63 @@ local UpdatePlayerAbsorbState = function(element, unit, absorb, maxHealth)
 		local ownerHealth = element.__owner and element.__owner.Health
 		if (ownerHealth) then
 			ownerHealth.safeAbsorb = value
+			ownerHealth.safeAbsorbKnownZero = false
+		end
+	end
+	local SetOwnerSafeAbsorbKnownZero = function()
+		local ownerHealth = element.__owner and element.__owner.Health
+		if (ownerHealth) then
+			ownerHealth.safeAbsorb = nil
+			ownerHealth.safeAbsorbKnownZero = true
 		end
 	end
 	local resolvedAbsorb = nil
 	local hasKnownZero = false
+	local barAbsorb = nil
+	local hasBarAbsorb = false
 	local apiTotalAbsorb = nil
-	local calcAbsorb = GetAbsorbFromPredictionValues(element)
-	if (calcAbsorb == nil) then
-		calcAbsorb = GetSafeDamageAbsorbFromCalculator(element, unit)
-	end
-	if (type(calcAbsorb) == "number" and (not issecretvalue or not issecretvalue(calcAbsorb))) then
-		if (calcAbsorb > 0) then
-			resolvedAbsorb = calcAbsorb
-		else
-			hasKnownZero = true
-		end
-	elseif (absorb ~= nil) then
-		if (type(absorb) == "number" and (not issecretvalue or not issecretvalue(absorb))) then
-			if (absorb > 0) then
-				resolvedAbsorb = absorb
+	local calcAbsorb = nil
+	if (element.absorbBar) then
+		barAbsorb, hasBarAbsorb = GetSafeStatusBarValue(element.absorbBar)
+		if (hasBarAbsorb) then
+			if (barAbsorb > 0) then
+				resolvedAbsorb = barAbsorb
 			else
+				-- Hidden absorb visuals are forced to zero; don't let that block
+				-- calculator/API fallbacks used for tag display.
+				hasBarAbsorb = false
 				hasKnownZero = true
 			end
 		end
 	end
-	if (resolvedAbsorb == nil and UnitGetTotalAbsorbs) then
-		apiTotalAbsorb = UnitGetTotalAbsorbs(unit)
-		if (type(apiTotalAbsorb) == "number" and (not issecretvalue or not issecretvalue(apiTotalAbsorb))) then
-			if (apiTotalAbsorb > 0) then
-				resolvedAbsorb = apiTotalAbsorb
+	if (not hasBarAbsorb) then
+		calcAbsorb = GetAbsorbFromPredictionValues(element)
+		if (calcAbsorb == nil) then
+			calcAbsorb = GetSafeDamageAbsorbFromCalculator(element, unit)
+		end
+		if (type(calcAbsorb) == "number" and (not issecretvalue or not issecretvalue(calcAbsorb))) then
+			if (calcAbsorb > 0) then
+				resolvedAbsorb = calcAbsorb
 			else
 				hasKnownZero = true
+			end
+		elseif (absorb ~= nil) then
+			if (type(absorb) == "number" and (not issecretvalue or not issecretvalue(absorb))) then
+				if (absorb > 0) then
+					resolvedAbsorb = absorb
+				else
+					hasKnownZero = true
+				end
+			end
+		end
+		if (resolvedAbsorb == nil and UnitGetTotalAbsorbs) then
+			apiTotalAbsorb = UnitGetTotalAbsorbs(unit)
+			if (type(apiTotalAbsorb) == "number" and (not issecretvalue or not issecretvalue(apiTotalAbsorb))) then
+				if (apiTotalAbsorb > 0) then
+					resolvedAbsorb = apiTotalAbsorb
+				else
+					hasKnownZero = true
+				end
 			end
 		end
 	end
@@ -341,7 +512,7 @@ local UpdatePlayerAbsorbState = function(element, unit, absorb, maxHealth)
 			SetOwnerSafeAbsorb(nil)
 		end
 	elseif (hasKnownZero) then
-		SetOwnerSafeAbsorb(nil)
+		SetOwnerSafeAbsorbKnownZero()
 	else
 		-- No reliable source for this update, clear to avoid stale values.
 		SetOwnerSafeAbsorb(nil)
@@ -349,8 +520,10 @@ local UpdatePlayerAbsorbState = function(element, unit, absorb, maxHealth)
 	local owner = element.__owner
 	local ownerHealth = owner and owner.Health
 	EmitAbsorbStateDebug(owner, unit,
-		"State(Player) unit=%s calc=%s callback=%s apiTotal=%s resolved=%s knownZero=%s finalSafe=%s",
+		"State(Player) unit=%s bar=%s barSample=%s calc=%s callback=%s apiTotal=%s resolved=%s knownZero=%s finalSafe=%s",
 		unit,
+		barAbsorb,
+		hasBarAbsorb and true or false,
 		calcAbsorb,
 		absorb,
 		apiTotalAbsorb,
@@ -361,7 +534,7 @@ end
 
 local HealPredict_PostUpdate = function(element, unit, myIncomingHeal, otherIncomingHeal, absorb, healAbsorb, hasOverAbsorb, hasOverHealAbsorb, curHealth, maxHealth)
 	UpdatePlayerAbsorbState(element, unit, absorb, maxHealth)
-	if (_G.__AzeriteUI_DISABLE_HEALTH_PREDICTION) then
+	if (_G and _G.__AzeriteUI_DISABLE_HEALTH_PREDICTION) then
 		ns.API.HidePrediction(element)
 		return
 	end
@@ -867,6 +1040,10 @@ local UpdatePlayerElementValueText = function(element)
 	else
 		element.Value:SetText(valueText or "")
 	end
+	if (element.Value.SetAlpha) then
+		local hasValue = (valueText ~= nil and valueText ~= "")
+		element.Value:SetAlpha(hasValue and 1 or 0)
+	end
 end
 
 local UpdateManaOrbVisibility = function(frame, unit)
@@ -1037,12 +1214,118 @@ local Power_UpdateVisibility = function(element, unit, cur, min, max)
 	UpdateManaOrbVisibility(owner, unit)
 end
 
--- Use custom colors for our power crystal. Does not apply to the Wrath crystal.
+-- Keep colors power-token driven so class widgets (like Paladin Holy Power pips)
+-- remain visually distinct from the main power crystal.
+local POWER_CRYSTAL_TOKEN_ALIASES = {
+	HOLY_POWER = "MANA",
+	ARCANE_CHARGES = "MANA",
+	ESSENCE = "MANA",
+	COMBO_POINTS = "ENERGY",
+	CHI = "ENERGY",
+	PAIN = "FURY",
+	SOUL_SHARDS = "FURY",
+	RUNES = "RUNIC_POWER"
+}
+local POWER_CRYSTAL_ENHANCED_COLORS = {
+	ENERGY = {  36/255, 214/255, 176/255 },
+	FOCUS = { 118/255, 172/255, 255/255 },
+	LUNAR_POWER = { 118/255, 172/255, 255/255 },
+	MAELSTROM = { 102/255, 191/255, 255/255 },
+	RUNIC_POWER = { 112/255, 172/255, 255/255 },
+	FURY = { 172/255, 118/255, 255/255 },
+	INSANITY = { 172/255, 118/255, 255/255 },
+	PAIN = { 172/255, 118/255, 255/255 },
+	RAGE = { 214/255, 120/255, 84/255 },
+	MANA = {  96/255, 140/255, 255/255 }
+}
+
+local POWER_CRYSTAL_DEFAULT_COLOR = {116/255, 156/255, 255/255}
+
+local ResolvePlayerPowerToken = function(element, unit)
+	if (type(unit) ~= "string" or unit == "") then
+		local owner = element and element.__owner
+		local ownerUnit = owner and owner.unit
+		if (IsPlayerPowerUnit(ownerUnit)) then
+			unit = ownerUnit
+		else
+			unit = "player"
+		end
+	end
+	local _, token = UnitPowerType(unit, element and element.displayType)
+	if (type(token) ~= "string" or token == "") then
+		token = "MANA"
+	end
+	return POWER_CRYSTAL_TOKEN_ALIASES[token] or token
+end
+
+local ResolvePlayerPowerColorFromTable = function(colorTable, token, fallbackColor)
+	if (type(colorTable) ~= "table") then
+		return fallbackColor or POWER_CRYSTAL_DEFAULT_COLOR
+	end
+	local color = colorTable[token] or colorTable.MANA or colorTable.FOCUS
+	if (type(color) ~= "table"
+		or type(color[1]) ~= "number"
+		or type(color[2]) ~= "number"
+		or type(color[3]) ~= "number") then
+		return fallbackColor or POWER_CRYSTAL_DEFAULT_COLOR
+	end
+	return color
+end
+
+local ResolvePlayerPowerDefaultColor = function(config, token)
+	return ResolvePlayerPowerColorFromTable(config and config.PowerBarColors, token, POWER_CRYSTAL_DEFAULT_COLOR)
+end
+
+local ResolvePlayerPowerBaseColor = function(config, profile, token)
+	local defaultColor = ResolvePlayerPowerDefaultColor(config, token)
+	local colorMode = profile and profile.crystalOrbColorMode or "default"
+	if (colorMode == "enhanced" or colorMode == "new" or colorMode == "class") then
+		return ResolvePlayerPowerColorFromTable(POWER_CRYSTAL_ENHANCED_COLORS, token, defaultColor)
+	end
+	return defaultColor
+end
+
+UpdatePlayerPowerSpark = function(power)
+	local spark = power and power.Spark
+	if (not spark) then
+		return
+	end
+	local percent = ClampSparkPercent(power.__AzeriteUI_PowerFakePercent)
+	if (percent == nil) then
+		percent = ClampSparkPercent(power.safePercent)
+	end
+	if (type(percent) ~= "number" or percent <= 0 or percent >= 1 or not power:IsShown()) then
+		spark:Hide()
+		return
+	end
+	local width = power.GetWidth and power:GetWidth() or 0
+	local height = power.GetHeight and power:GetHeight() or 0
+	if (type(width) ~= "number" or type(height) ~= "number"
+		or width <= 0 or height <= 0
+		or (issecretvalue and (issecretvalue(width) or issecretvalue(height)))) then
+		spark:Hide()
+		return
+	end
+	local orientation = power.__AzeriteUI_PowerFakeOrientation or "UP"
+	local reverseFill = power.__AzeriteUI_PowerFakeReverse and true or false
+	spark:ClearAllPoints()
+	if (orientation == "LEFT" or orientation == "RIGHT") then
+		local fillFromRight = ((orientation == "LEFT") and (not reverseFill)) or ((orientation ~= "LEFT") and reverseFill)
+		local x = width * (fillFromRight and (1 - percent) or percent)
+		spark:SetPoint("CENTER", power, "LEFT", x, 0)
+	else
+		local fillFromTop = ((orientation == "DOWN") and (not reverseFill)) or ((orientation ~= "DOWN") and reverseFill)
+		local y = height * (fillFromTop and (1 - percent) or percent)
+		spark:SetPoint("CENTER", power, "BOTTOM", 0, y)
+	end
+	spark:Show()
+end
+
 local Power_PostUpdateColor = function(element, unit, r, g, b)
 	local config = ns.GetConfig("PlayerFrame")
-
-	local _, pToken = UnitPowerType(unit)
-	local color = pToken and config.PowerBarColors[pToken]
+	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
+	local token = ResolvePlayerPowerToken(element, unit)
+	local color = ResolvePlayerPowerBaseColor(config, profile, token)
 	if (color) then
 		element:SetStatusBarColor(color[1], color[2], color[3])
 	end
@@ -1095,6 +1378,7 @@ ShowPlayerNativePowerVisuals = function(power)
 	end
 end
 
+
 UpdatePlayerFakePowerFill = function(power, value)
 	if (not power) then
 		return false
@@ -1123,6 +1407,7 @@ UpdatePlayerFakePowerFill = function(power, value)
 		currentValue = power.safeCur
 	end
 	if (not IsSafeNumber(minValue) or not IsSafeNumber(maxValue) or maxValue <= minValue or not IsSafeNumber(currentValue)) then
+		power.__AzeriteUI_PowerFakePercent = nil
 		fakeFill:Hide()
 		return false
 	end
@@ -1134,25 +1419,44 @@ UpdatePlayerFakePowerFill = function(power, value)
 		percent = 1
 	end
 	if (percent <= 0) then
+		power.__AzeriteUI_PowerFakePercent = 0
 		fakeFill:Hide()
 		return false
 	end
+	power.__AzeriteUI_PowerFakePercent = percent
 
+	-- Match the native power crystal base color.
+	local config = ns.GetConfig("PlayerFrame")
+	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
+	local token = ResolvePlayerPowerToken(power)
+	local baseColor = ResolvePlayerPowerBaseColor(config, profile, token)
+	fakeFill:SetVertexColor(baseColor[1], baseColor[2], baseColor[3], 1)
+
+	local nativeTexture = power.GetStatusBarTexture and power:GetStatusBarTexture()
+	if (nativeTexture and nativeTexture.GetTexture and fakeFill.SetTexture) then
+		local texturePath = nativeTexture:GetTexture()
+		if (texturePath) then
+			fakeFill:SetTexture(texturePath)
+		end
+	end
+
+	fakeFill:ClearAllPoints()
+	fakeFill:SetTexCoord(power.__AzeriteUI_PowerFakeTexLeft or 0, power.__AzeriteUI_PowerFakeTexRight or 1, power.__AzeriteUI_PowerFakeTexTop or 0, power.__AzeriteUI_PowerFakeTexBottom or 1)
 	local orientation = power.__AzeriteUI_PowerFakeOrientation or "UP"
 	local reverseFill = power.__AzeriteUI_PowerFakeReverse and true or false
 	local width = power.__AzeriteUI_PowerFakeWidth
 	local height = power.__AzeriteUI_PowerFakeHeight
-	local texLeft = power.__AzeriteUI_PowerFakeTexLeft or 0
-	local texRight = power.__AzeriteUI_PowerFakeTexRight or 1
-	local texTop = power.__AzeriteUI_PowerFakeTexTop or 0
-	local texBottom = power.__AzeriteUI_PowerFakeTexBottom or 1
-	if (not IsSafeNumber(width) or width <= 0 or not IsSafeNumber(height) or height <= 0) then
+	if (not IsSafeNumber(width)) then
+		width = power.GetWidth and power:GetWidth() or 0
+	end
+	if (not IsSafeNumber(height)) then
+		height = power.GetHeight and power:GetHeight() or 0
+	end
+	if (not IsSafeNumber(width) or not IsSafeNumber(height) or width <= 0 or height <= 0) then
+		power.__AzeriteUI_PowerFakePercent = nil
 		fakeFill:Hide()
 		return false
 	end
-
-	fakeFill:ClearAllPoints()
-	fakeFill:SetTexCoord(texLeft, texRight, texTop, texBottom)
 	if (orientation == "LEFT" or orientation == "RIGHT") then
 		local fillFromRight = ((orientation == "LEFT") and (not reverseFill)) or ((orientation ~= "LEFT") and reverseFill)
 		local inset = (1 - percent) * width
@@ -1309,6 +1613,7 @@ local Cast_PostCastInterruptible = function(element, unit)
 	else
 		element.Text:SetTextColor(unpack(element.Text.color))
 	end
+	UpdateBarSpark(element)
 end
 
 -- Toggle cast info and health info when castbar is visible.
@@ -1327,6 +1632,7 @@ local Cast_UpdateTexts = function(element)
 		element.Time:Hide()
 		health.Value:Show()
 	end
+	UpdateBarSpark(element)
 end
 
 -- Trigger PvPIndicator post update when combat status is toggled.
@@ -1411,8 +1717,6 @@ local UnitFrame_UpdateTextures = function(self)
 	local powerBarOffsetY = ((profile and tonumber(profile.powerBarBaseOffsetY)) or 0) + ((profile and tonumber(profile.powerBarOffsetY)) or 0)
 	local powerCaseOffsetX = ((profile and tonumber(profile.powerCaseBaseOffsetX)) or 0) + ((profile and tonumber(profile.powerCaseOffsetX)) or 0)
 	local powerCaseOffsetY = ((profile and tonumber(profile.powerCaseBaseOffsetY)) or 0) + ((profile and tonumber(profile.powerCaseOffsetY)) or 0)
-	local powerBackdropOffsetX = (profile and tonumber(profile.powerBackdropOffsetX)) or 0
-	local powerBackdropOffsetY = (profile and tonumber(profile.powerBackdropOffsetY)) or 0
 	local powerThreatBarOffsetX = (profile and tonumber(profile.powerThreatBarOffsetX)) or 0
 	local powerThreatBarOffsetY = (profile and tonumber(profile.powerThreatBarOffsetY)) or 0
 	local powerThreatCaseOffsetX = (profile and tonumber(profile.powerThreatCaseOffsetX)) or 0
@@ -1429,7 +1733,6 @@ local UnitFrame_UpdateTextures = function(self)
 	local powerThreatCaseScaleX = (profile and tonumber(profile.powerThreatCaseScaleX)) or 1
 	local powerThreatCaseScaleY = (profile and tonumber(profile.powerThreatCaseScaleY)) or 1
 	local powerBarAnchorFrameKey = (profile and profile.powerBarAnchorFrame) or "FRAME"
-	local powerBackdropAnchorFrameKey = (profile and profile.powerBackdropAnchorFrame) or "POWER"
 	local powerCaseAnchorFrameKey = (profile and profile.powerCaseAnchorFrame) or "POWER"
 	local powerThreatBarAnchorFrameKey = (profile and profile.powerThreatBarAnchorFrame) or "POWER"
 	local powerThreatCaseAnchorFrameKey = (profile and profile.powerThreatCaseAnchorFrame) or "POWER"
@@ -1569,6 +1872,8 @@ local UnitFrame_UpdateTextures = function(self)
 
 	health:SetOrientation(db.HealthBarOrientation)
 	health:SetSparkMap(db.HealthBarSparkMap)
+	UpdateBarSparkSize(health)
+	UpdateBarSpark(health)
 
 	local healthPreview = self.Health.Preview
 	if (healthPreview._cachedTexture ~= db.HealthBarTexture) then
@@ -1614,16 +1919,20 @@ local UnitFrame_UpdateTextures = function(self)
 	power:ClearAllPoints()
 	local ptex
 	local powerAnchorFrame = ResolvePowerAnchorFrame(powerBarAnchorFrameKey, power)
-	local legacyPowerWidth, legacyPowerHeight = ScaleSize(db.PowerBarSize, powerBarScaleX, powerBarScaleY)
-	local powerWidth, powerHeight = ScaleSize((db.PowerBackdropSize or db.PowerBarSize), powerBackdropScaleX, powerBackdropScaleY)
-	local powerDeltaWidth = powerWidth - legacyPowerWidth
-	local powerDeltaHeight = powerHeight - legacyPowerHeight
-	local powerAnchorPoint = GetAnchorPointToken(db.PowerBarPosition)
-	local powerAnchorHorizontal, powerAnchorVertical = GetPointFactors(powerAnchorPoint)
-	local powerCenterShiftX = (-powerAnchorHorizontal) * (powerDeltaWidth * .5)
-	local powerCenterShiftY = (-powerAnchorVertical) * (powerDeltaHeight * .5)
-	SetPointWithOffset(power, db.PowerBarPosition, powerBarOffsetX - powerCenterShiftX, powerBarOffsetY - powerCenterShiftY, powerAnchorFrame)
-	power:SetSize(legacyPowerWidth, legacyPowerHeight)
+	local powerBarPoint = db[CURRENT_POWER_CRYSTAL_LAYOUT.barPointKey] or db[STOCK_POWER_CRYSTAL_LAYOUT.barPointKey]
+	local legacyPowerSize = db[STOCK_POWER_CRYSTAL_LAYOUT.barSizeKey] or db.PowerBarSize
+	local legacyPowerWidth, legacyPowerHeight = ScaleSize(legacyPowerSize, powerBarScaleX, powerBarScaleY)
+	legacyPowerWidth = math_floor(legacyPowerWidth + .5)
+	legacyPowerHeight = math_floor(legacyPowerHeight + .5)
+	local powerBackdropSize = db[CURRENT_POWER_CRYSTAL_LAYOUT.backdropSizeKey] or db[STOCK_POWER_CRYSTAL_LAYOUT.backdropSizeKey]
+	local powerBackdropWidth, powerBackdropHeight = ScaleSize(powerBackdropSize, powerBackdropScaleX, powerBackdropScaleY)
+	powerBackdropWidth = math_floor(powerBackdropWidth + .5)
+	powerBackdropHeight = math_floor(powerBackdropHeight + .5)
+	local powerDeltaWidth = powerBackdropWidth - legacyPowerWidth
+	local powerDeltaHeight = powerBackdropHeight - legacyPowerHeight
+	-- Keep crystal fill and backdrop perfectly locked: power bar follows backdrop anchor/size.
+	SetPointWithOffset(power, powerBarPoint, powerBarOffsetX, powerBarOffsetY, powerAnchorFrame)
+	power:SetSize(powerBackdropWidth, powerBackdropHeight)
 	-- WoW 12.0: Cache texture to prevent flickering
 	local powerTexture = (PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and db.PowerBarTextureWrath or db.PowerBarTexture
 	if (power._cachedTexture ~= powerTexture) then
@@ -1638,11 +1947,34 @@ local UnitFrame_UpdateTextures = function(self)
 	end
 	-- StatusBar itself has no SetTexCoord; apply to its texture if present.
 	ptex = power:GetStatusBarTexture()
-	if (ptex and ptex.SetTexCoord and db.PowerBarTexCoord) then
+	local powerTexCoord = db[CURRENT_POWER_CRYSTAL_LAYOUT.barTexCoordKey] or db[STOCK_POWER_CRYSTAL_LAYOUT.barTexCoordKey]
+	local adjustedCoord = powerTexCoord
+	if (powerTexCoord) then
 		local texCoordAdjust = (profile and tonumber(profile.powerBarTexCoordAdjust)) or 0
-		local adjustedCoord = GetAdjustedTexCoord(db.PowerBarTexCoord, texCoordAdjust)
+		adjustedCoord = GetAdjustedTexCoord(powerTexCoord, texCoordAdjust)
+	end
+	if (ptex and ptex.SetTexCoord and adjustedCoord) then
 		ptex:SetTexCoord(unpack(adjustedCoord))
 	end
+	if (type(adjustedCoord) == "table") then
+		power.__AzeriteUI_PowerFakeTexLeft = adjustedCoord[1]
+		power.__AzeriteUI_PowerFakeTexRight = adjustedCoord[2]
+		power.__AzeriteUI_PowerFakeTexTop = adjustedCoord[3]
+		power.__AzeriteUI_PowerFakeTexBottom = adjustedCoord[4]
+	elseif (ptex and ptex.GetTexCoord) then
+		local left, right, top, bottom = ptex:GetTexCoord()
+		power.__AzeriteUI_PowerFakeTexLeft = left
+		power.__AzeriteUI_PowerFakeTexRight = right
+		power.__AzeriteUI_PowerFakeTexTop = top
+		power.__AzeriteUI_PowerFakeTexBottom = bottom
+	end
+	power.__AzeriteUI_PowerFakeOrientation = db[CURRENT_POWER_CRYSTAL_LAYOUT.barOrientationKey] or db[STOCK_POWER_CRYSTAL_LAYOUT.barOrientationKey] or "UP"
+	power.__AzeriteUI_PowerFakeReverse = false
+	power.__AzeriteUI_PowerFakeWidth = powerBackdropWidth
+	power.__AzeriteUI_PowerFakeHeight = powerBackdropHeight
+	power.__AzeriteUI_PowerFakeMin = power.safeMin
+	power.__AzeriteUI_PowerFakeMax = power.safeMax
+	power.__AzeriteUI_PowerFakeValue = power.safeCur
 	if (ptex and ptex.SetDrawLayer) then
 		SafeSetDrawLayer(ptex, "ARTWORK", 0 + powerBarArtLayer, 0)
 	end
@@ -1663,9 +1995,8 @@ local UnitFrame_UpdateTextures = function(self)
 
 	local powerBackdrop = self.Power.Backdrop
 	powerBackdrop:ClearAllPoints()
-	local powerBackdropAnchorFrame = ResolvePowerAnchorFrame(powerBackdropAnchorFrameKey, power)
-	SetPointWithOffset(powerBackdrop, db.PowerBackdropPosition, powerBackdropOffsetX, powerBackdropOffsetY, powerBackdropAnchorFrame)
-	local powerBackdropWidth, powerBackdropHeight = ScaleSize(db.PowerBackdropSize, powerBackdropScaleX, powerBackdropScaleY)
+	local powerBackdropAnchorFrame = power
+	SetPointWithOffset(powerBackdrop, CURRENT_POWER_CRYSTAL_LAYOUT.backdropPoint, 0, 0, powerBackdropAnchorFrame)
 	powerBackdrop:SetSize(powerBackdropWidth, powerBackdropHeight)
 	powerBackdrop:SetTexture((PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and db.PowerBackdropTextureWrath or db.PowerBackdropTexture)
 	powerBackdrop:SetVertexColor(1, 1, 1, 1)
@@ -1680,6 +2011,8 @@ local UnitFrame_UpdateTextures = function(self)
 	local powerCaseShiftY = powerCaseVertical * (powerDeltaHeight * .5)
 	SetPointWithOffset(powerCase, db.PowerBarForegroundPosition, powerCaseOffsetX - powerCaseShiftX, powerCaseOffsetY - powerCaseShiftY, powerCaseAnchorFrame)
 	local powerCaseWidth, powerCaseHeight = ScaleSize(db.PowerBarForegroundSize, powerCaseScaleX, powerCaseScaleY)
+	powerCaseWidth = math_floor(powerCaseWidth + .5)
+	powerCaseHeight = math_floor(powerCaseHeight + .5)
 	powerCase:SetSize(powerCaseWidth, powerCaseHeight)
 	powerCase:SetTexture(db.PowerBarForegroundTexture)
 	powerCase:SetVertexColor(unpack(db.PowerBarForegroundColor))
@@ -1742,6 +2075,8 @@ local UnitFrame_UpdateTextures = function(self)
 	cast:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
 	cast:SetOrientation(db.HealthBarOrientation)
 	cast:SetSparkMap(db.HealthBarSparkMap)
+	UpdateBarSparkSize(cast)
+	UpdateBarSpark(cast)
 
 	local threat = self.ThreatIndicator
 	if (threat) then
@@ -1749,29 +2084,32 @@ local UnitFrame_UpdateTextures = function(self)
 			local point = db[key.."ThreatPosition"]
 			local size = db[key.."ThreatSize"]
 			texture:ClearAllPoints()
-			if (key == "PowerBar") then
-				local threatBarAnchorFrame = ResolvePowerAnchorFrame(powerThreatBarAnchorFrameKey, power)
-				SetPointWithOffset(texture, point, powerBarOffsetX + powerThreatBarOffsetX, powerBarOffsetY + powerThreatBarOffsetY, threatBarAnchorFrame)
-				SafeSetDrawLayer(texture, "BACKGROUND", -3 + powerBarArtLayer, -3)
-			elseif (key == "PowerBackdrop") then
-				local threatCaseAnchorFrame = ResolvePowerAnchorFrame(powerThreatCaseAnchorFrameKey, power)
-				SetPointWithOffset(texture, point, powerCaseOffsetX + powerThreatCaseOffsetX, powerCaseOffsetY + powerThreatCaseOffsetY + 28, threatCaseAnchorFrame)
-				SafeSetDrawLayer(texture, "ARTWORK", 1 + powerBarArtLayer, 1)
-			else
-				texture:SetPoint(unpack(point))
+			if (point) then
+				if (key == "PowerBar") then
+					local threatBarAnchorFrame = ResolvePowerAnchorFrame(powerThreatBarAnchorFrameKey, power)
+					local threatPoint = GetAnchorPointToken(point)
+					local h, v = GetPointFactors(threatPoint)
+					local shiftX = h * (powerDeltaWidth * .5)
+					local shiftY = v * (powerDeltaHeight * .5)
+					SetPointWithOffset(texture, point, powerThreatBarOffsetX - shiftX, powerThreatBarOffsetY - shiftY, threatBarAnchorFrame)
+				elseif (key == "PowerBackdrop") then
+					local threatCaseAnchorFrame = ResolvePowerAnchorFrame(powerThreatCaseAnchorFrameKey, power)
+					local threatPoint = GetAnchorPointToken(point)
+					local h, v = GetPointFactors(threatPoint)
+					local shiftX = h * (powerDeltaWidth * .5)
+					local shiftY = v * (powerDeltaHeight * .5)
+					SetPointWithOffset(texture, point, powerThreatCaseOffsetX - shiftX, powerThreatCaseOffsetY - shiftY, threatCaseAnchorFrame)
+				else
+					texture:SetPoint(unpack(point))
+				end
 			end
 			if (size) then
-				if (key == "PowerBar" or key == "PowerBackdrop") then
-					local scaleX, scaleY
-					if (key == "PowerBar") then
-						-- PowerBar threat glow must use backdrop scales since power bar now uses backdrop size
-						scaleX = powerBackdropScaleX * powerThreatBarScaleX
-						scaleY = powerBackdropScaleY * powerThreatBarScaleY
-					else
-						scaleX = powerCaseScaleX * powerThreatCaseScaleX
-						scaleY = powerCaseScaleY * powerThreatCaseScaleY
-					end
-					texture:SetSize((size[1] or 0) * scaleX, (size[2] or 0) * scaleY)
+				if (key == "PowerBar") then
+					texture:SetSize(powerBackdropWidth, powerBackdropHeight)
+				elseif (key == "PowerBackdrop") then
+					local sx = powerCaseScaleX * powerThreatCaseScaleX
+					local sy = powerCaseScaleY * powerThreatCaseScaleY
+					texture:SetSize((size[1] or 0) * sx, (size[2] or 0) * sy)
 				else
 					texture:SetSize(unpack(size))
 				end
@@ -1780,12 +2118,65 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 	end
 
+	local auras = self.Auras
+	if (auras) then
+		auras:ClearAllPoints()
+		auras:SetSize(unpack(config.AurasSize))
+		auras:SetPoint(unpack(config.AurasPosition))
+	end
+
 end
 
 local NormalizePowerOffsetBaseline = function(self)
 	local profile = self and self.db and self.db.profile
 	if (not profile) then
 		return
+	end
+	-- Legacy crystal tuning was introduced for oversized assets.
+	-- Normalize those exact legacy defaults back to current baseline offsets.
+	if ((tonumber(profile.powerBarOffsetX) or 0) == -76
+		and (tonumber(profile.powerBarOffsetY) or 0) == -49
+		and (tonumber(profile.powerCaseOffsetX) or 0) == 0
+		and (tonumber(profile.powerCaseOffsetY) or 0) == 50
+		and (tonumber(profile.powerThreatBarOffsetX) or 0) == 76
+		and (tonumber(profile.powerThreatBarOffsetY) or 0) == 52
+		and (tonumber(profile.powerThreatCaseOffsetX) or 0) == 0
+		and (tonumber(profile.powerThreatCaseOffsetY) or 0) == -34
+		and (tonumber(profile.powerBarBaseOffsetX) or 0) == 0
+		and (tonumber(profile.powerBarBaseOffsetY) or 0) == 0
+		and (tonumber(profile.powerCaseBaseOffsetX) or 0) == 0
+		and (tonumber(profile.powerCaseBaseOffsetY) or 0) == 0) then
+		profile.powerBarOffsetX = 0
+		profile.powerBarOffsetY = 0
+		profile.powerCaseOffsetX = 0
+		profile.powerCaseOffsetY = 0
+		profile.powerThreatBarOffsetX = 0
+		profile.powerThreatBarOffsetY = 0
+		profile.powerThreatCaseOffsetX = 0
+		profile.powerThreatCaseOffsetY = 0
+		profile.powerBarBaseOffsetX = POWER_CRYSTAL_BASELINE_OFFSET_X
+		profile.powerBarBaseOffsetY = POWER_CRYSTAL_BASELINE_OFFSET_Y
+	end
+	if (profile.powerCaseAnchorFrame == nil) then
+		profile.powerCaseAnchorFrame = "POWER"
+	end
+	if (profile.powerThreatBarAnchorFrame == nil) then
+		profile.powerThreatBarAnchorFrame = "POWER"
+	end
+	if (profile.powerThreatCaseAnchorFrame == nil) then
+		profile.powerThreatCaseAnchorFrame = "POWER"
+	end
+	if (not profile.powerAnchorsRestoredToStock) then
+		if (profile.powerCaseAnchorFrame == "FRAME") then
+			profile.powerCaseAnchorFrame = "POWER"
+		end
+		if (profile.powerThreatBarAnchorFrame == "FRAME") then
+			profile.powerThreatBarAnchorFrame = "POWER"
+		end
+		if (profile.powerThreatCaseAnchorFrame == "FRAME") then
+			profile.powerThreatCaseAnchorFrame = "POWER"
+		end
+		profile.powerAnchorsRestoredToStock = true
 	end
 	if (profile.powerOffsetZeroMigrated == nil) then
 		profile.powerBarBaseOffsetX = (tonumber(profile.powerBarBaseOffsetX) or 0) + (tonumber(profile.powerBarOffsetX) or 0)
@@ -1797,6 +2188,17 @@ local NormalizePowerOffsetBaseline = function(self)
 		profile.powerCaseOffsetX = 0
 		profile.powerCaseOffsetY = 0
 		profile.powerOffsetZeroMigrated = true
+	end
+	if (not profile.powerCrystalBaselineApplied) then
+		local baseX = tonumber(profile.powerBarBaseOffsetX) or 0
+		local baseY = tonumber(profile.powerBarBaseOffsetY) or 0
+		local offX = tonumber(profile.powerBarOffsetX) or 0
+		local offY = tonumber(profile.powerBarOffsetY) or 0
+		if (baseX == 0 and baseY == 0 and offX == 0 and offY == 0) then
+			profile.powerBarBaseOffsetX = POWER_CRYSTAL_BASELINE_OFFSET_X
+			profile.powerBarBaseOffsetY = POWER_CRYSTAL_BASELINE_OFFSET_Y
+		end
+		profile.powerCrystalBaselineApplied = true
 	end
 end
 
@@ -1855,8 +2257,8 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 				self.Health and self.Health.safeAbsorb or nil)
 		end
 
-	elseif (event == "ENABLE_XP_GAIN") then
-		playerXPDisabled = nil
+	   elseif (event == "ENABLE_XP_GAIN") then
+		   playerXPDisabled = false
 
 	elseif (event == "DISABLE_XP_GAIN") then
 		playerXPDisabled = true
@@ -1908,6 +2310,13 @@ local style = function(self, unit)
 	self.Health.PostUpdateColor = Health_PostUpdateColor
 	ns.API.BindStatusBarValueMirror(self.Health)
 
+	local healthSpark = health:CreateTexture(nil, "OVERLAY", nil, 3)
+	healthSpark:SetTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
+	healthSpark:SetBlendMode("ADD")
+	healthSpark:SetVertexColor(1, .95, .8, .85)
+	healthSpark:Hide()
+	self.Health.Spark = healthSpark
+
 	-- DEBUG: Show what's happening with secret values (toggle with /azdebughealth)
 	local debugText = self:CreateFontString(nil, "OVERLAY")
 	debugText:SetFontObject(GameFontNormal)
@@ -1948,15 +2357,8 @@ local style = function(self, unit)
 	healPredictFrame:SetFrameLevel(health:GetFrameLevel() + 2)
 
 	local healPredict = healPredictFrame:CreateTexture(nil, "OVERLAY", nil, 1)
-	healPredict.health = health
-	healPredict.preview = healthPreview
-	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	if (Enum and Enum.UnitDamageAbsorbClampMode and Enum.UnitDamageAbsorbClampMode.MaximumHealth) then
-		self.HealthPrediction.damageAbsorbClampMode = Enum.UnitDamageAbsorbClampMode.MaximumHealth
-	end
-	self.HealthPrediction.PostUpdate = HealPredict_PostUpdate
 
 	-- Cast Overlay
 	--------------------------------------------
@@ -1966,24 +2368,36 @@ local style = function(self, unit)
 
 	self.Castbar = castbar
 
+	local castSpark = castbar:CreateTexture(nil, "OVERLAY", nil, 3)
+	castSpark:SetTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
+	castSpark:SetBlendMode("ADD")
+	castSpark:SetVertexColor(1, .95, .8, .85)
+	castSpark:Hide()
+	self.Castbar.Spark = castSpark
+
 	-- Cast Name
 	--------------------------------------------
-	local castText = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
+	local castText = healthOverlay:CreateFontString(nil, "OVERLAY")
 	castText:SetPoint(unpack(config.HealthValuePosition))
 	castText:SetFontObject(config.CastBarTextFont)
 	castText:SetTextColor(unpack(config.CastBarTextColor))
 	castText:SetJustifyH(config.HealthValueJustifyH)
 	castText:SetJustifyV(config.HealthValueJustifyV)
 	castText:Hide()
-	castText.color = config.CastBarTextColor
-	castText.colorProtected = config.CastBarTextProtectedColor
+	castText.color = config.CastBarTextColor or { 1, 1, 1, 1 }
+	castText.colorProtected = config.CastBarTextProtectedColor or castText.color
 
 	self.Castbar.Text = castText
 	self.Castbar.PostCastInterruptible = Cast_PostCastInterruptible
+	self.Castbar.PostCastStart = UpdateBarSpark
+	self.Castbar.PostCastUpdate = UpdateBarSpark
+	self.Castbar.PostCastStop = UpdateBarSpark
+	self.Castbar.PostCastFail = UpdateBarSpark
+	self.Castbar.PostCastInterrupted = UpdateBarSpark
 
 	-- Cast Time
 	--------------------------------------------
-	local castTime = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
+	local castTime = healthOverlay:CreateFontString(nil, "OVERLAY")
 	castTime:SetPoint(unpack(config.CastBarValuePosition))
 	castTime:SetFontObject(config.CastBarValueFont)
 	castTime:SetTextColor(unpack(config.CastBarTextColor))
@@ -1995,10 +2409,16 @@ local style = function(self, unit)
 
 	self.Castbar:HookScript("OnShow", Cast_UpdateTexts)
 	self.Castbar:HookScript("OnHide", Cast_UpdateTexts)
+	ns.API.AttachScriptSafe(self.Castbar, "OnValueChanged", function(source)
+		UpdateBarSpark(source)
+	end)
+	ns.API.AttachScriptSafe(self.Castbar, "OnMinMaxChanged", function(source)
+		UpdateBarSpark(source)
+	end)
 
 	-- Health Value
 	--------------------------------------------
-	local healthValue = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
+	local healthValue = healthOverlay:CreateFontString(nil, "OVERLAY")
 	healthValue:SetPoint(unpack(config.HealthValuePosition))
 	healthValue:SetFontObject(config.HealthValueFont)
 	healthValue:SetTextColor(unpack(config.HealthValueColor))
@@ -2015,7 +2435,7 @@ local style = function(self, unit)
 
 	-- Health Percentage
 	--------------------------------------------
-	local healthPerc = healthValue:GetParent():CreateFontString(nil, "OVERLAY", nil, 1)
+	local healthPerc = healthValue:GetParent():CreateFontString(nil, "OVERLAY")
 	if (config.HealthPercentagePosition) then
 		healthPerc:SetPoint(unpack(config.HealthPercentagePosition))
 	else
@@ -2046,37 +2466,34 @@ local style = function(self, unit)
 		end
 
 		--self.Health.absorbBar = absorb
-		self.HealthPrediction.absorbBar = absorb
-		self.HealthPrediction.__AzeriteUI_HideAbsorbWithPrediction = true
 	end
 
-	-- Power Crystal (plain StatusBar to avoid LibSmoothBar scaling/proxy)
-	local power = CreateFrame("StatusBar", nil, self)
-	power:SetFrameLevel(self:GetFrameLevel() - 2)
-	local powerPos = db.PowerBarPosition or { "CENTER", 0, 0 }
-	local powerSize = db.PowerBarSize or { 80, 80 }
+	-- Power Crystal
+	local power = self:CreateBar()
+	if (power.SetForceNative) then
+		power:SetForceNative(true)
+	end
+	power:SetFrameLevel(self:GetFrameLevel() + CURRENT_POWER_CRYSTAL_LAYOUT.frameLevelOffset)
+	local powerPos = db[CURRENT_POWER_CRYSTAL_LAYOUT.barPointKey] or db[STOCK_POWER_CRYSTAL_LAYOUT.barPointKey] or { "CENTER", 0, 0 }
+	local powerSize = db[CURRENT_POWER_CRYSTAL_LAYOUT.barSizeKey] or db[STOCK_POWER_CRYSTAL_LAYOUT.barSizeKey] or { 80, 80 }
 	power:SetPoint(unpack(powerPos))
 	power:SetSize(unpack(powerSize))
 	power:SetStatusBarTexture(db.PowerBarTexture)
 	local ptex = power:GetStatusBarTexture()
-	if ptex and ptex.SetTexCoord and db.PowerBarTexCoord then
+	local powerTexCoord = db[CURRENT_POWER_CRYSTAL_LAYOUT.barTexCoordKey] or db[STOCK_POWER_CRYSTAL_LAYOUT.barTexCoordKey]
+	if ptex and ptex.SetTexCoord and powerTexCoord then
 		local texCoordAdjust = (PlayerFrameMod.db.profile and tonumber(PlayerFrameMod.db.profile.powerBarTexCoordAdjust)) or 0
-		local adjustedCoord = GetAdjustedTexCoord(db.PowerBarTexCoord, texCoordAdjust)
+		local adjustedCoord = GetAdjustedTexCoord(powerTexCoord, texCoordAdjust)
 		ptex:SetTexCoord(unpack(adjustedCoord))
 	end
-	-- Native StatusBar: use vertical for crystal; flip texcoords when needed
-	if (db.PowerBarOrientation == "DOWN") then
-		power:SetOrientation("VERTICAL")
-		if ptex and ptex.SetTexCoord then ptex:SetTexCoord(0,1,1,0) end
-	else -- default UP or unspecified
-		power:SetOrientation("VERTICAL")
-		if ptex and ptex.SetTexCoord then ptex:SetTexCoord(0,1,0,1) end
-	end
+	power:SetOrientation(db[CURRENT_POWER_CRYSTAL_LAYOUT.barOrientationKey] or db[STOCK_POWER_CRYSTAL_LAYOUT.barOrientationKey] or "UP")
 	power:SetAlpha(db.PowerBarAlpha or 1)
 	power.frequentUpdates = true
 	power.displayAltPower = true
 	power.colorPower = true
-	power.smoothing = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Linear) or nil
+	power.smoothing = nil
+	power.__AzeriteUI_DisableTexturePercentMirror = true
+	power.__AzeriteUI_KeepMirrorPercentOnNoSample = true
 	-- Seed safe numeric values
 	power.safeBarMin = 0
 	power.safeBarMax = 1
@@ -2095,6 +2512,21 @@ local style = function(self, unit)
 	self.Power.PostUpdate = Power_UpdateVisibility
 	self.Power.PostUpdateColor = not (PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and Power_PostUpdateColor
 
+	local powerFakeFill = power:CreateTexture(nil, "ARTWORK", nil, 1)
+	powerFakeFill:SetAllPoints(power)
+	powerFakeFill:SetBlendMode("BLEND")
+	powerFakeFill:SetAlpha(1)
+	powerFakeFill:Hide()
+	self.Power.FakeFill = powerFakeFill
+
+	local powerSpark = power:CreateTexture(nil, "OVERLAY", nil, 3)
+	powerSpark:SetTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
+	powerSpark:SetBlendMode("ADD")
+	powerSpark:SetVertexColor(1, .9, .7, .9)
+	powerSpark:SetSize(60, 12)
+	powerSpark:Hide()
+	self.Power.Spark = powerSpark
+
 	local powerBackdrop = power:CreateTexture(nil, "BACKGROUND", nil, -2)
 	local powerCase = power:CreateTexture(nil, "ARTWORK", nil, 2)
 
@@ -2103,7 +2535,7 @@ local style = function(self, unit)
 
 	-- Power Value
 	--------------------------------------------
-	local powerValue = power:CreateFontString(nil, "OVERLAY", nil, 1)
+	local powerValue = power:CreateFontString(nil, "OVERLAY")
 	powerValue:SetPoint(unpack(config.PowerValuePosition))
 	powerValue:SetFontObject(config.PowerValueFont)
 	powerValue:SetTextColor(unpack(config.PowerValueColor))
@@ -2115,7 +2547,7 @@ local style = function(self, unit)
 
 	-- Power Percentage
 	--------------------------------------------
-	local powerPerc = power:CreateFontString(nil, "OVERLAY", nil, 1)
+	local powerPerc = power:CreateFontString(nil, "OVERLAY")
 	if (config.PowerPercentagePosition) then
 		powerPerc:SetPoint(unpack(config.PowerPercentagePosition))
 	else
@@ -2134,7 +2566,7 @@ local style = function(self, unit)
 	-- ManaText Value
 	-- *when mana isn't primary resource
 	--------------------------------------------
-	local manaText = power:CreateFontString(nil, "OVERLAY", nil, 1)
+	local manaText = power:CreateFontString(nil, "OVERLAY")
 	manaText:SetPoint(unpack(config.ManaTextPosition))
 	manaText:SetFontObject(config.ManaTextFont)
 	manaText:SetTextColor(unpack(config.ManaTextColor))
@@ -2205,7 +2637,7 @@ local style = function(self, unit)
 
 	-- Mana Orb Value
 	--------------------------------------------
-	local manaValue = manaCaseFrame:CreateFontString(nil, "OVERLAY", nil, 1)
+	local manaValue = manaCaseFrame:CreateFontString(nil, "OVERLAY")
 	manaValue:SetPoint(unpack(config.ManaValuePosition))
 	manaValue:SetFontObject(config.ManaValueFont)
 	ApplyScaledValueFont(manaValue, ClampPowerValueTextScale(PlayerFrameMod.db.profile.powerValueTextScale), true)
@@ -2218,7 +2650,7 @@ local style = function(self, unit)
 
 	-- Mana Percentage
 	--------------------------------------------
-	local manaPerc = manaCaseFrame:CreateFontString(nil, "OVERLAY", nil, 1)
+	local manaPerc = manaCaseFrame:CreateFontString(nil, "OVERLAY")
 	if (config.ManaPercentagePosition) then
 		manaPerc:SetPoint(unpack(config.ManaPercentagePosition))
 	else
@@ -2240,9 +2672,6 @@ local style = function(self, unit)
 	local feedbackText = overlay:CreateFontString(nil, "OVERLAY")
 	feedbackText:SetPoint(config.CombatFeedbackPosition[1], self[config.CombatFeedbackAnchorElement], unpack(config.CombatFeedbackPosition))
 	feedbackText:SetFontObject(config.CombatFeedbackFont)
-	feedbackText.feedbackFont = config.CombatFeedbackFont
-	feedbackText.feedbackFontLarge = config.CombatFeedbackFontLarge
-	feedbackText.feedbackFontSmall = config.CombatFeedbackFontSmall
 
 	self.CombatFeedback = feedbackText
 
@@ -2255,18 +2684,14 @@ local style = function(self, unit)
 	combatIndicator:SetVertexColor(unpack(config.CombatIndicatorColor))
 
 	self.CombatIndicator = combatIndicator
-	self.CombatIndicator.PostUpdate = CombatIndicator_PostUpdate
 
 	-- PvP Indicator
 	--------------------------------------------
 	local PvPIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, -2)
 	PvPIndicator:SetSize(unpack(config.PvPIndicatorSize))
 	PvPIndicator:SetPoint(unpack(config.PvPIndicatorPosition))
-	PvPIndicator.Alliance = config.PvPIndicatorAllianceTexture
-	PvPIndicator.Horde = config.PvPIndicatorHordeTexture
 
 	self.PvPIndicator = PvPIndicator
-	self.PvPIndicator.Override = PvPIndicator_Override
 
 	-- Threat Indicator
 	--------------------------------------------

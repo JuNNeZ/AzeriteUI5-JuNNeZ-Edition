@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -225,8 +225,6 @@ Debugging.EnsureDebugCommands = function(self)
 		return
 	end
 	self:RegisterChatCommand("azdebug", "DebugMenu")
-	self:RegisterChatCommand("azdebugtarget", "TargetDebugMenu")
-	self:RegisterChatCommand("azdebugkeys", "DebugKeysMenu")
 	self:RegisterChatCommand("junnez", "SecretJuNNeZCommand")
 	self:RegisterChatCommand("goldpaw", "SecretGoldpawCommand")
 	self.__AzeriteUI_DebugCommandsRegistered = true
@@ -546,7 +544,6 @@ Debugging.OnInitialize = function(self)
 		ns.db.global.debugPower = ns.db.global.debugPower or false
 		ns.db.global.debugPowerFilter = ns.db.global.debugPowerFilter or ""
 		ns.db.global.debugKeysVerbose = ns.db.global.debugKeysVerbose or false
-		ns.db.global.debugAssisted = ns.db.global.debugAssisted or false
 		if (not ns.db.global.debugHealthFilter or ns.db.global.debugHealthFilter == "") then
 			ns.db.global.debugHealthFilter = "Target."
 		end
@@ -571,11 +568,6 @@ Debugging.OnInitialize = function(self)
 		_G.__AzeriteUI_DEBUG_POWER = ns.db.global.debugPower
 		_G.__AzeriteUI_DEBUG_POWER_FILTER = ns.db.global.debugPowerFilter
 		_G.__AzeriteUI_DEBUG_KEYS = ns.db.global.debugKeysVerbose
-		-- Restore assisted combat debug state
-		local LAB = LibStub("LibActionButton-1.0-GE", true)
-		if LAB and LAB.SetAssistedCombatDebug then
-			LAB.SetAssistedCombatDebug(ns.db.global.debugAssisted)
-		end
 	end
 	if (ns.WoW10) then
 		self:RegisterEvent("SETTINGS_LOADED", "OnEvent")
@@ -1344,9 +1336,7 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug health [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug health filter <text>|r  (example: Target.)")
 	print("|cfff0f0f0  /azdebug healthchat [on|off|toggle]|r")
-	print("|cfff0f0f0  /azdebug bars [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug fixes [on|off|toggle]|r")
-	print("|cfff0f0f0  /azdebug assisted [on|off|toggle|status]|r")
 	print("|cfff0f0f0  /azdebug dump target|r")
 	print("|cfff0f0f0  /azdebug dump player|r")
 	print("|cfff0f0f0  /azdebug dump tot|r")
@@ -1355,19 +1345,6 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug blizzard enable|r")
 	print("|cfff0f0f0  /azdebug scale|r  (print scale status)")
 	print("|cfff0f0f0  /azdebug scale reset|r")
-	print("|cfff0f0f0  /azdebug power|r  (print bar/case offsets)")
-	print("|cfff0f0f0  /azdebug power bar <x> <y>|r")
-	print("|cfff0f0f0  /azdebug power case <x> <y>|r")
-	print("|cfff0f0f0  /azdebug power nudge <bar|case> <dx> <dy>|r")
-	print("|cfff0f0f0  /azdebug power reset|r")
-	print("|cfff0f0f0  /azdebug orb dump|r")
-	print("|cfff0f0f0  /azdebug target status|r")
-	print("|cfff0f0f0  /azdebug target refresh|r")
-	print("|cfff0f0f0  /azdebug keys <status|bindings|cooldown|holdtest>|r")
-	print("|cfff0f0f0  /azdebugkeys status|bindings|cooldown|holdtest|on|off|toggle|r")
-	print("|cfff0f0f0  /azdebugtarget|r  (toggle target debug menu)")
-	print("|cfff0f0f0  /azdebugtarget status|r")
-	print("|cfff0f0f0  /azdebugtarget dump|snapshot|refresh|secrettest|help|r")
 	print("|cfff0f0f0  /azdebug scripterrors|r")
 	print("|cfff0f0f0  /azdebug secrettest [unit]|r")
 end
@@ -1411,7 +1388,6 @@ local function UpdateDebugMenu(self)
 	end
 	frame.HealthToggle:SetChecked(ns.API.DEBUG_HEALTH and true or false)
 	frame.HealthChatToggle:SetChecked(ns.API.DEBUG_HEALTH_CHAT and true or false)
-	frame.BarsToggle:SetChecked(_G.__AzeriteUI_DEBUG_BARS and true or false)
 	frame.FixesToggle:SetChecked((ns.db and ns.db.global and ns.db.global.debugFixes) and true or false)
 	frame.FilterEdit:SetText(filter)
 end
@@ -1476,14 +1452,6 @@ Debugging.ToggleDebugMenu = function(self)
 			   local tf = ns:GetModule("TargetFrame", true)
 			   if tf and tf.Update then tf:Update() end
 		   end, "Print health/statusbar debug output to chat.")
-		   frame.BarsToggle = AddToggle("Statusbar/orb debug", function()
-			   self:ToggleBarsDebug()
-			   UpdateDebugMenu(self)
-			   local pf = ns:GetModule("PlayerFrame", true)
-			   if pf and pf.Update then pf:Update() end
-			   local tf = ns:GetModule("TargetFrame", true)
-			   if tf and tf.Update then tf:Update() end
-		   end, "Enable LibSmoothBar/LibOrb debug output.")
 		   frame.FixesToggle = AddToggle("FixBlizzardBugs debug", function()
 			   self:ToggleFixesDebug()
 			   UpdateDebugMenu(self)
@@ -1673,30 +1641,6 @@ Debugging.ToggleDebugMenu = function(self)
 		scaleReset:SetText("Reset UnitFrame Scales")
 		scaleReset:SetScript("OnClick", function()
 			ResetUnitFrameScales()
-		end)
-		y = y - 28
-
-		local targetStatusBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		targetStatusBtn:SetSize(170, 22)
-		targetStatusBtn:SetPoint("TOPLEFT", 12, y)
-		targetStatusBtn:SetText("Target Fill Status")
-		targetStatusBtn:SetScript("OnClick", function()
-			Debugging.DebugMenu(self, "target status")
-		end)
-		local targetResetBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		targetResetBtn:SetSize(170, 22)
-		targetResetBtn:SetPoint("LEFT", targetStatusBtn, "RIGHT", 12, 0)
-		targetResetBtn:SetText("Refresh Target")
-		targetResetBtn:SetScript("OnClick", function()
-			Debugging.DebugMenu(self, "target refresh")
-		end)
-		y = y - 28
-		local targetMenuBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		targetMenuBtn:SetSize(170, 22)
-		targetMenuBtn:SetPoint("TOPLEFT", 12, y)
-		targetMenuBtn:SetText("Open Target Debug Menu")
-		targetMenuBtn:SetScript("OnClick", function()
-			self:ToggleTargetDebugMenu()
 		end)
 		y = y - 28
 
@@ -1904,12 +1848,6 @@ Debugging.DebugMenu = function(self, input)
 		print("|cfff0f0f0  healthchat:", ns.API.DEBUG_HEALTH_CHAT and "ON" or "OFF")
 		print("|cfff0f0f0  bars:", (_G.__AzeriteUI_DEBUG_BARS and "ON" or "OFF"))
 		print("|cfff0f0f0  fixes:", (ns.db and ns.db.global and ns.db.global.debugFixes) and "ON" or "OFF")
-		local LAB = LibStub("LibActionButton-1.0-GE", true)
-		if LAB and LAB.GetAssistedCombatDebug then
-			print("|cfff0f0f0  assisted:", LAB.GetAssistedCombatDebug() and "ON" or "OFF")
-		end
-		print("|cff33ff99", "AzeriteUI target fill debug:")
-		PrintTargetFillDebugStatus()
 		return
 	end
 	if (cmd == "health") then
@@ -1983,49 +1921,6 @@ Debugging.DebugMenu = function(self, input)
 		end
 		return
 	end
-	if (cmd == "assisted") then
-		local LAB = LibStub("LibActionButton-1.0-GE", true)
-		if not LAB then
-			print("|cffff0000[AzeriteUI]|r LibActionButton-1.0-GE not found")
-			return
-		end
-		local sub = rest:match("^(%S+)")
-		if sub and sub:lower() == "status" then
-			local isAvailable, nextSpellID = LAB.GetAssistedCombatStatus()
-			local debugEnabled = LAB.GetAssistedCombatDebug()
-			print("|cff33ff99", "AzeriteUI Assisted Combat Status:")
-			print("|cfff0f0f0  Debug:", debugEnabled and "ON" or "OFF")
-			print("|cfff0f0f0  Available:", isAvailable and "YES" or "NO")
-			print("|cfff0f0f0  Next spell ID:", nextSpellID or "none")
-			if not isAvailable then
-				local isAvailableResult, failureReason = C_AssistedCombat and C_AssistedCombat.IsAvailable and C_AssistedCombat.IsAvailable()
-				if failureReason then
-					print("|cfff0f0f0  Reason:", failureReason)
-				end
-			end
-			return
-		end
-		local mode = ParseOnOffToggle(sub)
-		if (not mode) then
-			return PrintDebugHelp()
-		end
-		local newState = SetDebugFlag(LAB.GetAssistedCombatDebug(), mode)
-		LAB.SetAssistedCombatDebug(newState)
-		if (ns.db and ns.db.global) then
-			ns.db.global.debugAssisted = newState
-		end
-		print("|cff33ff99", "AzeriteUI Assisted Combat debug:", newState and "ON" or "OFF")
-		if newState then
-			print("|cff33ff99", "Tip:", "Watch for assisted combat messages in chat.")
-		end
-		return
-	end
-	if (cmd == "target") then
-		return self:TargetDebugMenu(rest)
-	end
-	if (cmd == "keys") then
-		return self:DebugKeysMenu(rest)
-	end
 	if (cmd == "dump") then
 		local sub = rest:match("^(%S+)")
 		if (sub and sub:lower() == "target") then
@@ -2068,75 +1963,6 @@ Debugging.DebugMenu = function(self, input)
 		end
 		return PrintScaleStatus()
 	end
-	if (cmd == "power") then
-		local sub, args = rest:match("^(%S+)%s*(.-)$")
-		sub = sub and sub:lower() or ""
-
-		local mod, profile = GetPlayerPowerOffsetProfile()
-		if (not profile) then
-			print("|cff33ff99", "AzeriteUI power offsets:", "PlayerFrame module not available")
-			return
-		end
-		if (sub == "" or sub == "status") then
-			return PrintPlayerPowerOffsets()
-		end
-		if (sub == "reset") then
-			profile.powerBarOffsetX = 0
-			profile.powerBarOffsetY = 0
-			profile.powerCaseOffsetX = 0
-			profile.powerCaseOffsetY = 0
-			ApplyPlayerPowerOffsets()
-			print("|cff33ff99", "AzeriteUI player power offsets reset.")
-			return PrintPlayerPowerOffsets()
-		end
-		if (sub == "bar" or sub == "case") then
-			local xText, yText = args:match("^([%-+]?[%d%.]+)%s+([%-+]?[%d%.]+)$")
-			local x = tonumber(xText)
-			local y = tonumber(yText)
-			if (not x or not y) then
-				return PrintDebugHelp()
-			end
-			if (sub == "bar") then
-				profile.powerBarOffsetX = x
-				profile.powerBarOffsetY = y
-			else
-				profile.powerCaseOffsetX = x
-				profile.powerCaseOffsetY = y
-			end
-			ApplyPlayerPowerOffsets()
-			return PrintPlayerPowerOffsets()
-		end
-		if (sub == "nudge") then
-			local target, dxText, dyText = args:match("^(%S+)%s+([%-+]?[%d%.]+)%s+([%-+]?[%d%.]+)$")
-			target = target and target:lower() or nil
-			local dx = tonumber(dxText)
-			local dy = tonumber(dyText)
-			if ((target ~= "bar" and target ~= "case") or not dx or not dy) then
-				return PrintDebugHelp()
-			end
-			if (target == "bar") then
-				profile.powerBarOffsetX = profile.powerBarOffsetX + dx
-				profile.powerBarOffsetY = profile.powerBarOffsetY + dy
-			else
-				profile.powerCaseOffsetX = profile.powerCaseOffsetX + dx
-				profile.powerCaseOffsetY = profile.powerCaseOffsetY + dy
-			end
-			ApplyPlayerPowerOffsets()
-			return PrintPlayerPowerOffsets()
-		end
-		if (mod) then
-			PrintPlayerPowerOffsets()
-		end
-		return PrintDebugHelp()
-	end
-    if (cmd == "orb") then
-        local sub = rest:match("^(%S+)")
-        sub = sub and sub:lower() or "dump"
-        if (sub == "dump" or sub == "status") then
-            return PrintPlayerOrbDebug()
-        end
-        return PrintDebugHelp()
-    end
 	if (cmd == "scripterrors") then
 		self:EnableScriptErrors()
 		print("|cff33ff99", "AzeriteUI script errors:", "ENABLED (CVar scriptErrors=1)")

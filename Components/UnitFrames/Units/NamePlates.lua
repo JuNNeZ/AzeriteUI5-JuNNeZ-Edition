@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -110,6 +110,8 @@ local SafeUnitMatches = function(unit, otherUnit)
 	local match = UnitIsUnit(unit, otherUnit)
 	if (type(match) == "boolean" and not IsSecretValue(match)) then
 		return match
+	elseif (type(match) == "number" and not IsSecretValue(match)) then
+		return match ~= 0
 	end
 	local guidA = SafeUnitGUID(unit)
 	local guidB = SafeUnitGUID(otherUnit)
@@ -603,7 +605,7 @@ local NamePlate_PostUpdatePositions = function(self)
 
 	-- The PRD has neither name nor auras.
 	if (not self.isPRD) then
-		local hasName = NamePlatesMod.db.profile.showNameAlways or (not self.isTarget and (self.isMouseOver or self.isSoftTarget or self.inCombat)) or false
+		local hasName = NamePlatesMod.db.profile.showNameAlways or (self.isMouseOver or self.isSoftTarget or self.isTarget or self.inCombat) or false
 		local nameOffset = hasName and (select(2, name:GetFont()) + auras.spacing) or 0
 
 		if (hasName ~= auras.usingNameOffset or auras.usingNameOffset == nil) then
@@ -682,22 +684,13 @@ local NamePlate_PostUpdateHoverElements = function(self)
 		end
 
 		if (self.isMouseOver or self.isTarget or self.isSoftTarget or self.inCombat) then
-			if (self.isTarget) then
+			local castbar = self.Castbar
+			if (castbar and (castbar.casting or castbar.channeling or castbar.empowering)) then
 				self.Health.Value:Hide()
-				if (showNameAlways) then
-					self.Name:Show()
-				else
-					self.Name:Hide()
-				end
 			else
-				local castbar = self.Castbar
-				if (castbar.casting or castbar.channeling or castbar.empowering) then
-					self.Health.Value:Hide()
-				else
-					self.Health.Value:Show()
-				end
-				self.Name:Show()
+				self.Health.Value:Show()
 			end
+			self.Name:Show()
 		else
 			if (showNameAlways) then
 				self.Name:Show()

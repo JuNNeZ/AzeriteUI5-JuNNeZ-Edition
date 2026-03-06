@@ -3,6 +3,20 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.224-JuNNeZ (2026-03-06)
+
+### Fixes
+- Improved mount-to-combat actionbar transition refresh so cooldown/swipe rendering starts correctly when entering combat from a mounted actionbar state.
+- Fixed assisted-highlight option handling so recommendation highlights respect WoW assisted combat highlight toggle state.
+- Fixed player absorb display path so hidden absorb bar zero values no longer block valid absorb fallbacks.
+- Improved action button handling for morph/replacement spells by resolving effective action spell IDs and forcing action-slot refreshes on cast/charge updates.
+- Fixed crystal/orb color source selection so `Default` and `Enhanced Colors` resolve consistently from the selected mode.
+- Improved MaxDps compatibility for interrupt recommendations by preserving native MaxDps alpha-driven overlay behavior on Azerite LAB buttons.
+
+### Known Not Working
+- Charges not going down in some cases.
+- Morphing spells do not always show cooldown during morph transitions (example: Wake of Ashes -> Hammer of Light -> Wake of Ashes).
+
 ## 5.2.218-JuNNeZ (2026-03-05)
 
 ### Game Version Support

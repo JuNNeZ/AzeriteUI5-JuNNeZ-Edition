@@ -1,6 +1,6 @@
 --[[
 The MIT License (MIT)
-Copyright (c) 2025
+Copyright (c) 2026
 ]]
 local _, ns = ...
 local L = LibStub("AceLocale-3.0"):GetLocale((...))

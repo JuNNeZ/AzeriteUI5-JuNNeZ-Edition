@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ]]
 
 local MAJOR_VERSION = "LibActionButton-1.0-GE"
-local MINOR_VERSION = 147 -- 147: assisted highlight performance guard for BG combat
+local MINOR_VERSION = 151 -- 151: MaxDps interrupt glow compatibility (respect non-interruptible casts)
 
 if not LibStub then error(MAJOR_VERSION .. " requires LibStub.") end
 local lib, oldversion = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION)
@@ -75,6 +75,55 @@ local function IsChargeDebugEnabled()
 	return ChargeCooldownDebug or (DebugMode and true or false)
 end
 
+local function HasAssistedCombatActionButtons()
+	if not (C_ActionBar and C_ActionBar.HasAssistedCombatActionButtons) then
+		return false
+	end
+	local ok, hasButtons = pcall(C_ActionBar.HasAssistedCombatActionButtons)
+	if not ok then
+		return false
+	end
+	if type(hasButtons) == "boolean" then
+		if issecretvalue and issecretvalue(hasButtons) then
+			return false
+		end
+		return hasButtons
+	end
+	if IsSafeNumber(hasButtons) then
+		return hasButtons ~= 0
+	end
+	return false
+end
+
+local function IsAssistedCombatActionSlot(slotID)
+	if not IsSafeNumber(slotID) then
+		return false
+	end
+	if not (C_ActionBar and C_ActionBar.IsAssistedCombatAction) then
+		return false
+	end
+	local ok, isAssisted = pcall(C_ActionBar.IsAssistedCombatAction, slotID)
+	if not ok then
+		return false
+	end
+	if type(isAssisted) == "boolean" then
+		if issecretvalue and issecretvalue(isAssisted) then
+			return false
+		end
+		return isAssisted
+	end
+	if IsSafeNumber(isAssisted) then
+		return isAssisted ~= 0
+	end
+	return false
+end
+
+local function ButtonCanShowAssistedHighlight(button)
+	return button
+		and button._state_type == "action"
+		and IsAssistedCombatActionSlot(button._state_action)
+end
+
 local function GetAssistedHighlightRGB()
 	-- Return RGB values for assisted combat highlight based on configured color
 	if AssistedHighlightColor == "blue" then
@@ -104,6 +153,26 @@ local function GetAssistedNextSpellID()
 	end
 
 	local now = GetTime()
+	local assistedHighlightEnabled = nil
+	if C_CVar and C_CVar.GetCVarBool then
+		assistedHighlightEnabled = C_CVar.GetCVarBool("assistedCombatHighlight")
+	elseif GetCVarBool then
+		assistedHighlightEnabled = GetCVarBool("assistedCombatHighlight")
+	end
+	if assistedHighlightEnabled == false then
+		AssistedCombatAvailable = false
+		AssistedNextSpellID = nil
+		AssistedNextSpellIDLastUpdate = now
+		AssistedUnavailableUntil = now + .2
+		return nil
+	end
+	if not HasAssistedCombatActionButtons() then
+		AssistedCombatAvailable = false
+		AssistedNextSpellID = nil
+		AssistedNextSpellIDLastUpdate = now
+		AssistedUnavailableUntil = now + .2
+		return nil
+	end
 	if (now < AssistedUnavailableUntil) then
 		return nil
 	end
@@ -1746,8 +1815,8 @@ function InitializeEventHandler()
 	lib.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	lib.eventFrame:RegisterEvent("ACTIONBAR_SHOWGRID")
 	lib.eventFrame:RegisterEvent("ACTIONBAR_HIDEGRID")
-	--lib.eventFrame:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
-	--lib.eventFrame:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
+	lib.eventFrame:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
+	lib.eventFrame:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
 	lib.eventFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 	lib.eventFrame:RegisterEvent("CVAR_UPDATE")
 	lib.eventFrame:RegisterEvent("UPDATE_BINDINGS")
@@ -1810,9 +1879,10 @@ function InitializeEventHandler()
 	lib.eventFrame:RegisterEvent("PLAYER_UPDATE_RESTING")
 	if (C_AssistedCombat and C_AssistedCombat.GetNextCastSpell) then
 		lib.eventFrame:RegisterEvent("ASSISTED_COMBAT_ACTION_SPELL_CAST")
-		-- Also listen for any player spell cast to update highlight even if player ignores suggestion
-		lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 	end
+	-- Keep spellcast refresh active even when assisted highlights are unavailable;
+	-- this ensures charge/cooldown displays react immediately in combat.
+	lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 
 	if IsAddOnLoaded("MaxDps") then
 		InitializeMaxDpsIntegration()
@@ -1845,12 +1915,24 @@ function InitializeMaxDpsIntegration()
 	end
 
 	local function UpdateButtonGlowEvents(self)
-		if self.db.global.disableButtonGlow then
+		local disableGlow = self and self.db and self.db.global and self.db.global.disableButtonGlow
+		if disableGlow then
 			lib.eventFrame:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
 			lib.eventFrame:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
 		else
 			lib.eventFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
 			lib.eventFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
+		end
+	end
+
+	local function RequestMaxDpsButtonRefetch(self)
+		if type(self) ~= "table" then
+			return
+		end
+		if type(self.ButtonFetch) == "function" then
+			pcall(self.ButtonFetch, self, "LIBACTIONBUTTON_READY")
+		elseif type(self.Fetch) == "function" then
+			pcall(self.Fetch, self, "LIBACTIONBUTTON_READY")
 		end
 	end
 
@@ -1861,10 +1943,18 @@ function InitializeMaxDpsIntegration()
 		UpdateButtonGlowEvents(self, ...)
 	end
 
-	local function Glow(self, button, id, texture, type, color)
+	local function Glow(self, button, id, texture, type, color, alpha)
 		-- Use original method for buttons from other LABs.
 		if not ButtonRegistry[button] then
-			return MaxDps_Glow(self, button, id, texture, type, color)
+			return MaxDps_Glow(self, button, id, texture, type, color, alpha)
+		end
+
+		-- MaxDps interrupt handling adjusts overlay alpha after glow creation.
+		-- Preserve native MaxDps overlay path for alpha-driven glows so
+		-- non-interruptible casts can hide interrupt recommendations correctly.
+		if alpha ~= nil then
+			button._maxDpsGlowActive = nil
+			return MaxDps_Glow(self, button, id, texture, type, color, alpha)
 		end
 
 		if color then
@@ -1877,6 +1967,7 @@ function InitializeMaxDpsIntegration()
 			button:SetSpellActivationColor(249/255, 188/255, 65/255)
 		end
 
+		button._maxDpsGlowActive = true
 		button:ShowSpellActivation()
 
 		UpdateOverlayGlow(button)
@@ -1888,6 +1979,9 @@ function InitializeMaxDpsIntegration()
 			return MaxDps_HideGlow(self, button, id)
 		end
 
+		-- Clear any MaxDps-native overlay state first (interrupt/cooldown path).
+		MaxDps_HideGlow(self, button, id)
+		button._maxDpsGlowActive = nil
 		button:HideSpellActivation()
 
 		UpdateOverlayGlow(button)
@@ -1901,10 +1995,114 @@ function InitializeMaxDpsIntegration()
 	MaxDps:RegisterLibActionButton(MAJOR_VERSION)
 
 	UpdateButtonGlowEvents(MaxDps)
+	RequestMaxDpsButtonRefetch(MaxDps)
+end
+
+local ResolveOverrideSpellID = function(spellID)
+	if not IsSafeNumber(spellID) or spellID <= 0 then
+		return nil
+	end
+	if not (C_Spell and C_Spell.GetOverrideSpell) then
+		return spellID
+	end
+	local resolvedSpellID = spellID
+	local seen = {}
+	for _ = 1, 5 do
+		if seen[resolvedSpellID] then
+			break
+		end
+		seen[resolvedSpellID] = true
+		local ok, overrideSpellID = pcall(C_Spell.GetOverrideSpell, resolvedSpellID)
+		if not ok or not IsSafeNumber(overrideSpellID) or overrideSpellID <= 0 or overrideSpellID == resolvedSpellID then
+			break
+		end
+		resolvedSpellID = overrideSpellID
+	end
+	return resolvedSpellID
+end
+
+local ResolveActionSpellID = function(actionSlot, fallbackSpellID)
+	local spellID = fallbackSpellID
+	if C_ActionBar and C_ActionBar.GetSpell and IsSafeNumber(actionSlot) and actionSlot > 0 then
+		local ok, actionSpellID = pcall(C_ActionBar.GetSpell, actionSlot)
+		if ok and IsSafeNumber(actionSpellID) and actionSpellID > 0 then
+			spellID = actionSpellID
+		end
+	end
+	if not IsSafeNumber(spellID) or spellID <= 0 then
+		return nil
+	end
+	return ResolveOverrideSpellID(spellID) or spellID
+end
+
+local ShouldSuppressButtonCooldownVisuals = function(button)
+	if not button then
+		return true
+	end
+	if not button:IsShown() then
+		return true
+	end
+	if button.GetEffectiveAlpha and button:GetEffectiveAlpha() <= 0.01 then
+		return true
+	end
+	if button.GetAttribute and button:GetAttribute("statehidden") then
+		return true
+	end
+	local parent = button:GetParent()
+	if parent and parent.GetAttribute and parent:GetAttribute("userhidden") then
+		return true
+	end
+	if button.GetAttribute and button:GetAttribute("forcedhidden") then
+		return true
+	end
+	return false
+end
+
+local ClearButtonCooldownVisuals = function(button)
+	if not button then
+		return
+	end
+	if button.cooldown then
+		if button.cooldown.SetCooldown then
+			button.cooldown:SetCooldown(0, 0)
+		end
+		button.cooldown:Hide()
+	end
+	if button.lossOfControlCooldown then
+		if button.lossOfControlCooldown.SetCooldown then
+			button.lossOfControlCooldown:SetCooldown(0, 0)
+		end
+		button.lossOfControlCooldown:Hide()
+	end
+	if button.chargeCooldown then
+		EndChargeCooldown(button.chargeCooldown)
+	end
 end
 --[[ GE Custom End ]]--
 
 local _lastFormUpdate = GetTime()
+local function RefreshActiveButtonCooldownsAndCounts()
+	for button in next, ActiveButtons do
+		UpdateCount(button)
+		UpdateCooldown(button)
+		if GameTooltip_GetOwnerForbidden() == button then
+			UpdateTooltip(button)
+		end
+	end
+end
+
+local function ForceUpdateActionSlots()
+	if not (C_ActionBar and C_ActionBar.ForceUpdateAction) then
+		return
+	end
+	for button in next, ActionButtons do
+		local actionSlot = button and button._state_action
+		if IsSafeNumber(actionSlot) and actionSlot > 0 then
+			pcall(C_ActionBar.ForceUpdateAction, actionSlot)
+		end
+	end
+end
+
 function OnEvent(frame, event, arg1, ...)
 	if event == "PLAYER_LOGIN" then
 		if UseCustomFlyout then
@@ -1914,6 +2112,13 @@ function OnEvent(frame, event, arg1, ...)
 		local cvarName = type(arg1) == "string" and str_lower(arg1) or nil
 		if cvarName == "countdownforcooldowns" then
 			ForAllButtons(UpdateCooldownNumberHidden)
+		elseif cvarName and cvarName:find("assisted", 1, true) then
+			AssistedNextSpellID = nil
+			AssistedNextSpellIDLastUpdate = 0
+			local assistedSpellID = GetAssistedNextSpellID()
+			for button in next, ActiveButtons do
+				UpdateSpellHighlight(button, assistedSpellID)
+			end
 		end
 	elseif event == "SPELLS_CHANGED" or event == "SPELL_FLYOUT_UPDATE" then
 		if UseCustomFlyout then
@@ -1960,7 +2165,9 @@ function OnEvent(frame, event, arg1, ...)
 			--[[ GE Custom End ]]--
 		end
 	elseif event == "ACTIONBAR_PAGE_CHANGED" or event == "UPDATE_BONUS_ACTIONBAR" then
-		-- TODO: Are these even needed?
+		-- Mount/vehicle/override transitions can change button action mapping
+		-- before cooldown events arrive. Force a full button refresh.
+		ForAllButtons(Update)
 	elseif event == "ACTIONBAR_SHOWGRID" then
 		ShowGrid()
 	elseif event == "ACTIONBAR_HIDEGRID" then
@@ -1984,9 +2191,9 @@ function OnEvent(frame, event, arg1, ...)
 			UpdateUsable(button)
 		end
 	elseif event == "PLAYER_MOUNT_DISPLAY_CHANGED" then
-		for button in next, ActiveButtons do
-			UpdateUsable(button)
-		end
+		-- Mount transitions can leave cooldown visuals stale until the next
+		-- explicit cooldown event; force a full refresh now.
+		ForAllButtons(Update)
 	elseif event == "ACTIONBAR_UPDATE_COOLDOWN" then
 		-- Combat-critical trigger for slot-based action cooldown refresh.
 		-- Do not remove/throttle without a replacement refresh path.
@@ -2015,16 +2222,20 @@ function OnEvent(frame, event, arg1, ...)
 			UpdateSpellHighlight(button, assistedSpellID)
 		end
 	elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg1 == "player" then
-		if AssistedCombatDebug then
-			local castGUID, spellID = ...
-			local spellName = GetSafeSpellName(spellID)
-			print("|cff00ffff[LAB]|r Player cast spell, refreshing assisted highlights:", tostring(spellID), spellName and ("("..spellName..")") or "", tostring(castGUID))
-		end
-		AssistedNextSpellID = nil
-		AssistedNextSpellIDLastUpdate = 0
-		local assistedSpellID = GetAssistedNextSpellID()
-		for button in next, ActiveButtons do
-			UpdateSpellHighlight(button, assistedSpellID)
+		local castGUID, spellID, spellName = ...
+		ForceUpdateActionSlots()
+		RefreshActiveButtonCooldownsAndCounts()
+		if C_AssistedCombat and C_AssistedCombat.GetNextCastSpell then
+			if AssistedCombatDebug then
+				spellName = spellName or GetSafeSpellName(spellID)
+				print("|cff00ffff[LAB]|r Player cast spell, refreshing assisted highlights:", tostring(spellID), spellName and ("("..spellName..")") or "", tostring(castGUID))
+			end
+			AssistedNextSpellID = nil
+			AssistedNextSpellIDLastUpdate = 0
+			local assistedSpellID = GetAssistedNextSpellID()
+			for button in next, ActiveButtons do
+				UpdateSpellHighlight(button, assistedSpellID)
+			end
 		end
 	elseif event == "BAG_UPDATE_COOLDOWN" then
 		for button in next, ActiveButtons do
@@ -2126,6 +2337,7 @@ function OnEvent(frame, event, arg1, ...)
 			end
 		end
 	elseif event == "SPELL_UPDATE_CHARGES" then
+		ForceUpdateActionSlots()
 		ForAllButtons(UpdateCount, true)
 		ForAllButtons(UpdateCooldown, true)
 	elseif event == "UPDATE_SUMMONPETS_ACTION" then
@@ -2145,10 +2357,24 @@ function OnEvent(frame, event, arg1, ...)
 	--[[ GE Custom Start ]]--
 	elseif event == "PLAYER_REGEN_DISABLED" then
 		lib.incombat = true
-		ForAllButtons(UpdateUsable)
+		-- Combat entry can happen directly from mounted state. Refresh full button
+		-- state so cooldown swipes are active immediately in combat.
+		ForAllButtons(Update)
+		RefreshActiveButtonCooldownsAndCounts()
+		if C_Timer and C_Timer.After then
+			C_Timer.After(.05, function()
+				ForAllButtons(Update)
+				RefreshActiveButtonCooldownsAndCounts()
+			end)
+			C_Timer.After(.20, function()
+				ForAllButtons(Update)
+				RefreshActiveButtonCooldownsAndCounts()
+			end)
+		end
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		lib.incombat = false
 		ForAllButtons(UpdateUsable)
+		RefreshActiveButtonCooldownsAndCounts()
 	elseif event == "PLAYER_UPDATE_RESTING" then
 		lib.isresting = IsResting()
 		ForAllButtons(UpdateUsable)
@@ -2719,6 +2945,11 @@ local function OnCooldownDone(self)
 end
 
 function UpdateCooldown(self)
+	if ShouldSuppressButtonCooldownVisuals(self) then
+		ClearButtonCooldownVisuals(self)
+		return
+	end
+
 	local cache = GetButtonSafeCache(self)
 	local locStart, locDuration
 	local start, duration, enable, modRate
@@ -2901,6 +3132,15 @@ function UpdateCooldown(self)
 		chargeInfo.cooldownDuration = SafeChargeInfoNumber(chargeInfo, chargeDuration, "cooldownDuration", "chargeDuration", "duration")
 		chargeInfo.chargeModRate = SafeChargeInfoNumber(chargeInfo, chargeModRate, "chargeModRate", "modRate", "rechargeModRate")
 
+		local spellChargeInfo
+		local spellIDForCharges = self:GetSpellId()
+		if IsSafeNumber(spellIDForCharges) then
+			spellChargeInfo = GetSpellChargeInfo(spellIDForCharges)
+		end
+		if HasActiveChargeRecharge(spellChargeInfo) and not HasActiveChargeRecharge(chargeInfo) then
+			chargeInfo = NormalizeChargeInfo(spellChargeInfo)
+		end
+
 		if not IsSafeNumber(chargeInfo.currentCharges) then
 			chargeInfo.currentCharges = IsSafeNumber(cache.charges) and cache.charges or 0
 		end
@@ -2930,6 +3170,28 @@ function UpdateCooldown(self)
 		end
 		if IsSafeNumber(chargeInfo.chargeModRate) then
 			cache.chargeModRate = chargeInfo.chargeModRate
+		end
+
+		local cacheChargeInfo
+		local now = GetTime()
+		if IsSafeNumber(cache.charges)
+			and IsSafeNumber(cache.maxCharges)
+			and IsSafeNumber(cache.chargeStart)
+			and IsSafeNumber(cache.chargeDuration)
+			and IsSafeNumber(now)
+			and ((cache.chargeStart + cache.chargeDuration) > now) then
+			cacheChargeInfo = {
+				currentCharges = cache.charges,
+				maxCharges = cache.maxCharges,
+				cooldownStartTime = cache.chargeStart,
+				cooldownDuration = cache.chargeDuration,
+				chargeModRate = IsSafeNumber(cache.chargeModRate) and cache.chargeModRate or 1
+			}
+		end
+		if HasActiveChargeRecharge(cacheChargeInfo)
+			and not HasActiveChargeRecharge(chargeInfo)
+			and not HasActiveChargeRecharge(spellChargeInfo) then
+			chargeInfo = cacheChargeInfo
 		end
 
 		local locModRate = cooldownInfo.modRate
@@ -2994,25 +3256,24 @@ function UpdateCooldown(self)
 			self.chargeCooldown:SetDrawEdge(false)
 		end
 		if hasChargeCooldown then
-			if self.chargeCooldown and not self.chargeCooldown:IsShown() then
-				if IsChargeDebugEnabled() then print("|cffffa500[LAB CHARGE]|r Action button show charge: " .. (self:GetName() or "?") .. " start=" .. (chargeInfo.cooldownStartTime or "nil") .. " dur=" .. (chargeInfo.cooldownDuration or "nil")) end
+			if self.chargeCooldown then
+				if IsChargeDebugEnabled() and not self.chargeCooldown:IsShown() then print("|cffffa500[LAB CHARGE]|r Action button show charge: " .. (self:GetName() or "?") .. " start=" .. (chargeInfo.cooldownStartTime or "nil") .. " dur=" .. (chargeInfo.cooldownDuration or "nil")) end
 				CooldownFrame_Set(self.chargeCooldown, chargeInfo.cooldownStartTime, chargeInfo.cooldownDuration, true, true, chargeInfo.chargeModRate)
 				self.chargeCooldown:Show()
 			end
 		else
-			if self.chargeCooldown then
+			local fallbackChargeInfo = spellChargeInfo
+			if not HasActiveChargeRecharge(fallbackChargeInfo) then
+				fallbackChargeInfo = nil
+			end
+			if fallbackChargeInfo then
+				if IsChargeDebugEnabled() then print("|cffffa500[LAB CHARGE]|r Spell fallback show charge: " .. (self:GetName() or "?") .. " spell=" .. tostring(spellIDForCharges) .. " start=" .. (fallbackChargeInfo.cooldownStartTime or "nil") .. " dur=" .. (fallbackChargeInfo.cooldownDuration or "nil")) end
+				EnsureChargeCooldownFrame(self)
+				CooldownFrame_Set(self.chargeCooldown, fallbackChargeInfo.cooldownStartTime, fallbackChargeInfo.cooldownDuration, true, true, fallbackChargeInfo.chargeModRate)
+				self.chargeCooldown:Show()
+			elseif self.chargeCooldown then
 				if self.chargeCooldown:IsShown() and IsChargeDebugEnabled() then print("|cffff6b00[LAB CHARGE]|r Action button hide charge: " .. (self:GetName() or "?") .. " (hasChargeCooldown=false)") end
 				EndChargeCooldown(self.chargeCooldown)
-			end
-			local spellID = self:GetSpellId()
-			if spellID then
-				local spellChargeInfo = GetSpellChargeInfo(spellID)
-				if spellChargeInfo and HasActiveChargeRecharge(spellChargeInfo) then
-					if IsChargeDebugEnabled() then print("|cffffa500[LAB CHARGE]|r Spell fallback show charge: " .. (self:GetName() or "?") .. " spell=" .. spellID .. " start=" .. (spellChargeInfo.cooldownStartTime or "nil") .. " dur=" .. (spellChargeInfo.cooldownDuration or "nil")) end
-					EnsureChargeCooldownFrame(self)
-					CooldownFrame_Set(self.chargeCooldown, spellChargeInfo.cooldownStartTime, spellChargeInfo.cooldownDuration, true, true, spellChargeInfo.chargeModRate)
-					self.chargeCooldown:Show()
-				end
 			end
 		end
 		return
@@ -3394,6 +3655,7 @@ function UpdateSpellHighlight(self, assistedSpellID)
 	local shown = false
 	local assistedShown = false
 	local lastState = self._spellHighlightState
+	local maxDpsGlowActive = self._maxDpsGlowActive and true or false
 
 	local highlightType, id = lib.ON_BAR_HIGHLIGHT_MARK_TYPE, lib.ON_BAR_HIGHLIGHT_MARK_ID
 	local spellID = self:GetSpellId()
@@ -3405,7 +3667,7 @@ function UpdateSpellHighlight(self, assistedSpellID)
 		if (assistedSpellID == nil) then
 			assistedSpellID = GetAssistedNextSpellID()
 		end
-		if assistedSpellID and assistedSpellID == spellID then
+		if assistedSpellID and assistedSpellID == spellID and ButtonCanShowAssistedHighlight(self) then
 			if AssistedCombatDebug and lastState ~= "assisted" then
 				local spellName = GetSafeSpellName(spellID)
 				print("|cffff00ff[LAB]|r Highlighting button:", spellID, spellName and ("["..spellName.."]") or "", "| Assisted:", assistedSpellID)
@@ -3422,6 +3684,13 @@ function UpdateSpellHighlight(self, assistedSpellID)
 		if actionType == "flyout" and actionId == id then
 			shown = true
 		end
+	end
+
+	-- MaxDps uses the same custom spell-activation visual path.
+	-- Don't clear that glow from assisted/blizzard highlight updates.
+	if maxDpsGlowActive and (not assistedShown) and (not shown) then
+		self._spellHighlightState = "maxdps"
+		return
 	end
 
 	-- Deduplication: only call Show/Hide methods if state changed
@@ -3652,7 +3921,8 @@ Action.GetCharges              = function(self)
 	local info = GetActionChargeInfo(self._state_action)
 	local actionType, actionID, subType = GetActionInfo(self._state_action)
 	if (actionType == "spell") or (actionType == "macro" and subType == "spell") then
-		local spellInfo = GetSpellChargeInfo(actionID)
+		local effectiveSpellID = ResolveActionSpellID(self._state_action, actionID)
+		local spellInfo = GetSpellChargeInfo(effectiveSpellID)
 		if spellInfo then
 			if HasActiveChargeRecharge(spellInfo) and not HasActiveChargeRecharge(info) then
 				info = spellInfo
@@ -3671,7 +3941,8 @@ Action.GetChargeInfo           = function(self)
 	local info = GetActionChargeInfo(self._state_action)
 	local actionType, actionID, subType = GetActionInfo(self._state_action)
 	if (actionType == "spell") or (actionType == "macro" and subType == "spell") then
-		local spellInfo = GetSpellChargeInfo(actionID)
+		local effectiveSpellID = ResolveActionSpellID(self._state_action, actionID)
+		local spellInfo = GetSpellChargeInfo(effectiveSpellID)
 		if spellInfo then
 			if HasActiveChargeRecharge(spellInfo) and not HasActiveChargeRecharge(info) then
 				return spellInfo
@@ -3721,7 +3992,8 @@ Action.GetCooldown             = function(self)
 
 	local actionType, actionID, subType = GetActionInfo(self._state_action)
 	if (actionType == "spell") or (actionType == "macro" and subType == "spell") then
-		local spellStart, spellDuration, spellEnabled, spellModRate = GetSpellCooldownTuple(actionID)
+		local effectiveSpellID = ResolveActionSpellID(self._state_action, actionID)
+		local spellStart, spellDuration, spellEnabled, spellModRate = GetSpellCooldownTuple(effectiveSpellID)
 		if HasActiveCooldownTuple(spellStart, spellDuration, spellEnabled) and not HasActiveCooldownTuple(startTime, duration, isEnabled) then
 			return spellStart, spellDuration, spellEnabled, spellModRate
 		end
@@ -3769,12 +4041,13 @@ Action.SetTooltip              = function(self) return GameTooltip:SetAction(sel
 Action.GetSpellId              = function(self)
 	local actionType, id, subType = GetActionInfo(self._state_action)
 	if actionType == "spell" then
-		return id
+		return ResolveActionSpellID(self._state_action, id) or id
 	elseif actionType == "macro" then
 		if subType == "spell" then
-			return id
+			return ResolveActionSpellID(self._state_action, id) or id
 		else
-			return (GetMacroSpell(id))
+			local macroSpellID = GetMacroSpell(id)
+			return ResolveActionSpellID(self._state_action, macroSpellID) or macroSpellID
 		end
 	end
 end

@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2022 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 	Orb System Design by Arahort
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy

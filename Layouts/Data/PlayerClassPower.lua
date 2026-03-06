@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -79,14 +79,6 @@ ns.RegisterConfig("PlayerClassPower", {
 				Size = { 14, 21 }, BackdropSize = { 82, 96 },
 				Texture = GetMedia("point_crystal"),  BackdropTexture = GetMedia("point_diamond"),
 				Rotation = toRadians(1)
-			}
-		},
-		SoulFragments = { --[[ 1 (Devourer DH normalized bar - Seasoned health bar style, full width, vertically flipped, purple) ]]
-			[1] = {
-				Position = { "TOPLEFT", 10, -40 },
-				Size = { 385, 18 }, BackdropSize = { 420, 45 },
-				Texture = GetMedia("hp_cap_bar"), BackdropTexture = GetMedia("hp_cap_case"),
-				Orientation = "RIGHT"
 			}
 		},
 		Stagger = { --[[ 3 ]]

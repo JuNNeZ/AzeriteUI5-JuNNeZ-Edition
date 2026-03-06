@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -465,11 +465,19 @@ API.BindStatusBarValueMirror = function(bar)
 				didUpdateMirrorPercent = true
 			end
 		end
-		local texturePercent = GetTexturePercentFromBar(self)
-		if (type(texturePercent) == "number") then
-			self.__AzeriteUI_MirrorPercent = texturePercent
-			self.__AzeriteUI_TexturePercent = texturePercent
-			didUpdateMirrorPercent = true
+		if (not self.__AzeriteUI_DisableTexturePercentMirror) then
+			local texturePercent = GetTexturePercentFromBar(self)
+			if (type(texturePercent) == "number") then
+				local hysteresis = self.__AzeriteUI_TexturePercentHysteresis
+				local previousTexturePercent = self.__AzeriteUI_TexturePercent
+				if (type(hysteresis) == "number" and hysteresis > 0 and type(previousTexturePercent) == "number"
+					and math_abs(texturePercent - previousTexturePercent) < hysteresis) then
+					texturePercent = previousTexturePercent
+				end
+				self.__AzeriteUI_MirrorPercent = texturePercent
+				self.__AzeriteUI_TexturePercent = texturePercent
+				didUpdateMirrorPercent = true
+			end
 		end
 		if (not didUpdateMirrorPercent) then
 			if (self.__AzeriteUI_KeepMirrorPercentOnNoSample) then

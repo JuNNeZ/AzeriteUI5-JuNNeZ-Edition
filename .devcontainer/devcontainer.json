@@ -1,0 +1,23 @@
+{
+  "name": "AzeriteUI WoW AddOn Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "septh.wow-bundle",
+        "ketho.wow-api",
+        "stanzilla.vscode-wow-toc",
+        "sumneko.lua",
+        "johnnymorganz.stylua",
+        "actboy168.lua-debug"
+      ],
+      "settings": {
+        "Lua.runtime.version": "Lua 5.1"
+      }
+    }
+  },
+  "remoteUser": "vscode",
+  "postCreateCommand": "luac -v && rg --version"
+}

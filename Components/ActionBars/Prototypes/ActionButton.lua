@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -31,11 +31,7 @@ ns.ActionButtons = {}
 ns.ActionButton = {}
 
 local onEnter = function(self)
-	-- Obey tooltip options if the tooltip module is enabled.
-	local tooltips = ns:GetModule("Tooltips", true)
-	if (tooltips and tooltips:IsEnabled() and tooltips.db.profile.hideInCombat and tooltips.db.profile.hideActionBarTooltipsInCombat and InCombatLockdown()) then
-		return
-	end
+	-- Tooltip interception disabled; use default button hover handling.
 	if (self.OnEnter) then
 		self:OnEnter()
 	end

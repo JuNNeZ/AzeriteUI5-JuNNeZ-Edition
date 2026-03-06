@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +36,7 @@ local string_gsub = string.gsub
 local type = type
 local unpack = unpack
 local math_floor = math.floor
+local math_max = math.max
 local Mixin = _G.Mixin
 local Enum = _G.Enum
 local UnitGUID = _G.UnitGUID
@@ -422,6 +423,110 @@ local ApplyTargetSimpleHealthFakeFillByPercent
 
 local HideTargetNativeHealthVisuals
 
+local ClampTargetSparkPercent = function(value)
+	if (type(value) ~= "number") or (issecretvalue and issecretvalue(value)) then
+		return nil
+	end
+	if (value > 1 and value <= 100) then
+		value = value / 100
+	end
+	if (value < 0) then
+		value = 0
+	elseif (value > 1) then
+		value = 1
+	end
+	return value
+end
+
+local GetTargetBarSparkPercent = function(element, percentOverride)
+	local percent = ClampTargetSparkPercent(percentOverride)
+	if (percent ~= nil) then
+		return percent
+	end
+	if (not element) then
+		return nil
+	end
+	percent = ClampTargetSparkPercent(element.__AzeriteUI_TargetSparkPercent)
+		or ClampTargetSparkPercent(element.__AzeriteUI_CastFakePercent)
+	if (percent ~= nil) then
+		return percent
+	end
+	if (element.GetSecretPercent) then
+		local ok, value = pcall(element.GetSecretPercent, element)
+		if (ok) then
+			percent = ClampTargetSparkPercent(value)
+			if (percent ~= nil) then
+				return percent
+			end
+		end
+	end
+	return ClampTargetSparkPercent(element.__AzeriteUI_MirrorPercent)
+		or ClampTargetSparkPercent(element.__AzeriteUI_TexturePercent)
+end
+
+local UpdateTargetBarSparkSize = function(element)
+	local spark = element and element.Spark
+	if (not spark) then
+		return
+	end
+	local growth = (element.GetGrowth and element:GetGrowth()) or element.__AzeriteUI_Growth or "RIGHT"
+	local width = element.GetWidth and element:GetWidth() or 0
+	local height = element.GetHeight and element:GetHeight() or 0
+	if (type(width) ~= "number" or type(height) ~= "number"
+		or width <= 0 or height <= 0
+		or (issecretvalue and (issecretvalue(width) or issecretvalue(height)))) then
+		spark:Hide()
+		return
+	end
+	if (growth == "UP" or growth == "DOWN") then
+		spark:SetSize(math_max(8, width - 4), 12)
+	else
+		spark:SetSize(12, math_max(8, height - 2))
+	end
+end
+
+local UpdateTargetBarSpark = function(element, percentOverride)
+	local spark = element and element.Spark
+	if (not spark) then
+		return
+	end
+	local percent = GetTargetBarSparkPercent(element, percentOverride)
+	if (type(percent) ~= "number" or percent <= 0 or percent >= 1 or not element:IsShown()) then
+		spark:Hide()
+		return
+	end
+	local growth = (element.GetGrowth and element:GetGrowth()) or element.__AzeriteUI_Growth or "RIGHT"
+	local reverseFill = element.GetReverseFill and element:GetReverseFill()
+	if (reverseFill) then
+		if (growth == "RIGHT") then
+			growth = "LEFT"
+		elseif (growth == "LEFT") then
+			growth = "RIGHT"
+		elseif (growth == "UP") then
+			growth = "DOWN"
+		elseif (growth == "DOWN") then
+			growth = "UP"
+		end
+	end
+	local width = element:GetWidth()
+	local height = element:GetHeight()
+	if (type(width) ~= "number" or type(height) ~= "number"
+		or width <= 0 or height <= 0
+		or (issecretvalue and (issecretvalue(width) or issecretvalue(height)))) then
+		spark:Hide()
+		return
+	end
+	spark:ClearAllPoints()
+	if (growth == "UP" or growth == "DOWN") then
+		local y = height * ((growth == "DOWN") and (1 - percent) or percent)
+		spark:SetPoint("CENTER", element, "BOTTOM", 0, y)
+	else
+		local x = width * ((growth == "LEFT") and (1 - percent) or percent)
+		spark:SetPoint("CENTER", element, "LEFT", x, 0)
+	end
+	spark:Show()
+end
+
 ApplyTargetSimpleHealthFakeFillByPercent = function(health, percent)
 	if (not health) then
 		return false
@@ -486,12 +591,16 @@ local UpdateTargetHealthFakeFillFromBar = function(health)
 	end
 	if (applied) then
 		health.__AzeriteUI_TargetFakeSource = source
+		health.__AzeriteUI_TargetSparkPercent = ClampTargetSparkPercent(percent)
+		UpdateTargetBarSpark(health, percent)
 		return true
 	end
 
 	health.__AzeriteUI_TargetFakeSource = "none"
+	health.__AzeriteUI_TargetSparkPercent = nil
 	fakeFill:SetTexCoord(1, 0, 0, 1)
 	fakeFill:Show()
+	UpdateTargetBarSpark(health, nil)
 	return false
 end
 
@@ -500,7 +609,9 @@ local SyncTargetHealthVisualState = function(health)
 		return false
 	end
 	HideTargetNativeHealthVisuals(health)
-	return UpdateTargetHealthFakeFillFromBar(health)
+	local updated = UpdateTargetHealthFakeFillFromBar(health)
+	UpdateTargetBarSpark(health, nil)
+	return updated
 end
 
 HideTargetNativeHealthVisuals = function(health)
@@ -659,6 +770,7 @@ local ApplyTargetNativeCastVisualFromTimer = function(cast, durationPayload, sou
 	cast.__AzeriteUI_CastCropSource = sourceTag or "timer_native"
 	cast.__AzeriteUI_CastLastExplicitPercent = nil
 	cast.__AzeriteUI_CastGenericSyncReason = nil
+	UpdateTargetBarSpark(cast, nil)
 	return true
 end
 
@@ -872,6 +984,7 @@ local UpdateTargetFakeCastFill = function(cast, explicitPercent, sourceTag)
 		if (GetTime) then
 			cast.__AzeriteUI_LastLivePercentTime = GetTime()
 		end
+		UpdateTargetBarSpark(cast, percent)
 		return true
 	end
 	return false
@@ -891,6 +1004,7 @@ local ShowTargetIdleCastFakeFill = function(cast, reason)
 		cast.__AzeriteUI_CastCropSource = reason or "pending"
 		cast.__AzeriteUI_CastLastExplicitPercent = nil
 		cast.__AzeriteUI_CastGenericSyncReason = reason
+		UpdateTargetBarSpark(cast, 0)
 	end
 	return applied
 end
@@ -905,6 +1019,7 @@ local Health_PostUpdate = function(element, unit, cur, max)
 		predict:ForceUpdate()
 	end
 	SyncTargetHealthVisualState(element)
+	UpdateTargetBarSpark(element, nil)
 end
 
 -- Update the health preview color on health color updates.
@@ -926,6 +1041,7 @@ local Health_PostUpdateColor = function(element, unit, colorOrR, g, b)
 			fakeFill:SetVertexColor(r, g, b, 1)
 		end
 	end
+	UpdateTargetBarSpark(element, nil)
 end
 
 -- Align our custom health prediction texture
@@ -1469,6 +1585,7 @@ SyncTargetCastVisualState = function(cast, explicitPercent)
 	local timerPayload = GetTargetCastTimerPayload(cast)
 	local preferTimerDriver = ShouldPreferTimerDriverForTargetCast(cast)
 	if (preferTimerDriver and ApplyTargetNativeCastVisualFromTimer(cast, timerPayload, "sync_timer_native")) then
+		UpdateTargetBarSpark(cast, nil)
 		return true
 	end
 	local resolvedPercent, resolvedSource = ResolveTargetCastPercent(cast, explicitPercent, timerPayload)
@@ -1476,11 +1593,13 @@ SyncTargetCastVisualState = function(cast, explicitPercent)
 	if (not updated) then
 		ShowTargetIdleCastFakeFill(cast, resolvedSource)
 	end
+	UpdateTargetBarSpark(cast, resolvedPercent)
 	return updated
 end
 
 local Cast_PostUpdateVisual = function(element, unit)
 	HideTargetNativeCastVisuals(element)
+	UpdateTargetBarSpark(element, nil)
 end
 
 local GetTargetCastRemainingFromPayload = function(durationPayload)
@@ -1931,6 +2050,8 @@ local UnitFrame_UpdateTextures = function(self)
 		health:SetSparkMap(db.HealthBarSparkMap)
 		health._cachedSparkMap = db.HealthBarSparkMap
 	end
+	UpdateTargetBarSparkSize(health)
+	UpdateTargetBarSpark(health, nil)
 	if (health._cachedFlipped ~= false) then
 		health:SetFlippedHorizontally(false)
 		health._cachedFlipped = false
@@ -2066,6 +2187,8 @@ local UnitFrame_UpdateTextures = function(self)
 		cast:SetReverseFill(shouldReverseTargetCastFill)
 	end
 	cast:SetSparkMap(db.HealthBarSparkMap)
+	UpdateTargetBarSparkSize(cast)
+	UpdateTargetBarSpark(cast, nil)
 	cast:SetFlippedHorizontally(false)
 	cast:SetTexCoord(GetTargetFillTexCoords(nil))
 	if (castFakeFill and castFakeFill.SetTexCoord) then
@@ -2291,6 +2414,13 @@ local style = function(self, unit, id)
 	self.Health.__AzeriteUI_UseProductionNativeFill = true
 	self.Health.__AzeriteUI_KeepMirrorPercentOnNoSample = false
 
+	local healthSpark = health:CreateTexture(nil, "OVERLAY", nil, 3)
+	healthSpark:SetTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
+	healthSpark:SetBlendMode("ADD")
+	healthSpark:SetVertexColor(1, .95, .8, .85)
+	healthSpark:Hide()
+	self.Health.Spark = healthSpark
+
 	local healthFakeFill = health:CreateTexture(nil, "ARTWORK", nil, 1)
 	healthFakeFill:SetAllPoints(health)
 	healthFakeFill:SetBlendMode("BLEND")
@@ -2353,6 +2483,13 @@ local style = function(self, unit, id)
 	self.Castbar.__AzeriteUI_KeepMirrorPercentOnNoSample = false
 	ns.API.BindStatusBarValueMirror(self.Castbar)
 
+	local castSpark = castbar:CreateTexture(nil, "OVERLAY", nil, 3)
+	castSpark:SetTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
+	castSpark:SetBlendMode("ADD")
+	castSpark:SetVertexColor(1, .95, .8, .85)
+	castSpark:Hide()
+	self.Castbar.Spark = castSpark
+
 	local castFakeFill = castbar:CreateTexture(nil, "ARTWORK", nil, 1)
 	castFakeFill:SetAllPoints(castbar)
 	castFakeFill:SetBlendMode("BLEND")
@@ -2362,12 +2499,14 @@ local style = function(self, unit, id)
 	ns.API.AttachScriptSafe(castbar, "OnMinMaxChanged", function(source, minValue, maxValue)
 		HideTargetNativeCastVisuals(source)
 		source.__AzeriteUI_CastGenericSyncReason = "OnMinMaxChanged"
+		UpdateTargetBarSpark(source, nil)
 	end)
 	ns.API.AttachScriptSafe(castbar, "OnValueChanged", function(source, value)
 		HideTargetNativeCastVisuals(source)
 		source.__AzeriteUI_CastGenericSyncReason = "OnValueChanged"
 		local timerPayload = GetTargetCastTimerPayload(source)
 		UpdateTargetLiveCastFakeFill(source, timerPayload)
+		UpdateTargetBarSpark(source, nil)
 	end)
 	ns.API.AttachScriptSafe(castbar, "OnShow", function(source)
 		source.__AzeriteUI_LastFakePercent = nil
@@ -2377,6 +2516,7 @@ local style = function(self, unit, id)
 		source.__AzeriteUI_CastGenericSyncReason = "OnShow"
 		HideTargetNativeCastVisuals(source)
 		SyncTargetCastVisualState(source)
+		UpdateTargetBarSpark(source, nil)
 	end)
 	ns.API.AttachScriptSafe(castbar, "OnUpdate", function(source, elapsed)
 		if (not source:IsShown()) then
@@ -2400,6 +2540,9 @@ local style = function(self, unit, id)
 		HideTargetNativeCastVisuals(source)
 		if (source.FakeFill and source.FakeFill.Hide) then
 			source.FakeFill:Hide()
+		end
+		if (source.Spark and source.Spark.Hide) then
+			source.Spark:Hide()
 		end
 	end)
 

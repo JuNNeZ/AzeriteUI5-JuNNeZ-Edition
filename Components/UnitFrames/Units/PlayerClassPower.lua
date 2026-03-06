@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -121,9 +121,15 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		return
 	end
 
-	-- Store original soul fragments value before conversion for display
+
+	-- Paladins should never display above 5 holy power points in this layout.
+	if (playerClass == "PALADIN") then
+		max = 5
+		if cur > max then cur = max end
+	end
+
+	-- Store original soul fragments value before conversion for display logic.
 	local origCur = cur
-	local origMax = max
 
 	-- Requested behavior: only show class power while at least one point is active.
 	if (type(cur) ~= "number" or cur <= 0) then
@@ -133,7 +139,6 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 	-- Soul Fragments special handling: convert normalized value (0-1 = 0-50 stacks) to 1-10 point display (every 5 stacks = 1 point)
 	if (powerType == "SOUL_FRAGMENTS" and max == 1) then
 		origCur = math.floor(cur * 50)  -- Store actual soul fragment count (0-50)
-		origMax = 50
 		cur = math.ceil(cur * 10)  -- Normalized 0-1 value maps to 0-10 points (1 point = 5 stacks)
 		max = 10
 	end
@@ -175,6 +180,21 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 	end
 	if (not element:IsShown()) then
 		element:Show()
+	end
+
+	local visiblePointCap = (style == "SoulFragmentsPoints") and 5 or max
+	if (type(visiblePointCap) ~= "number") then
+		visiblePointCap = 0
+	end
+	for i = 1, #element do
+		local point = element[i]
+		if (point) then
+			if (i <= visiblePointCap) then
+				point:Show()
+			else
+				point:Hide()
+			end
+		end
 	end
 
 	for i = 1, #element do
@@ -298,28 +318,11 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 						point:SetAlpha((i <= (cur - 5)) and 1.0 or 0.3)
 					end
 				end
-			-- Special handling for single normalized bars (Devourer soul fragments)
-			-- Always show the bar filling, don't fade it out of combat
-			elseif (style == "SoulFragments") then
-				point:SetAlpha((value > 0) and 1 or 0.5)
 			elseif (element.inCombat) then
 				point:SetAlpha((cur == max) and 1 or (value < pmax) and .5 or 1)
 			else
 				point:SetAlpha((cur == max) and 0 or (value < pmax) and .5 or 1)
 			end
-		end
-	end
-
-	-- Update soul fragments value display on last point (point 5) at full brightness
-	if (style == "SoulFragmentsPoints" and element.valueText and element[5]) then
-		-- Only show value text if the toggle is enabled (default true)
-		if (db.showSoulFragmentsValue ~= false) then
-			element.valueText:SetText(origCur)
-			element.valueText:SetAlpha(1.0)  -- Always full brightness
-			element.valueText:SetPoint("CENTER", element[5], "CENTER", -20, 18)  -- Top-left of point 5
-			element.valueText:Show()  -- Ensure it's visible
-		else
-			element.valueText:Hide()
 		end
 	end
 
@@ -354,12 +357,8 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 						point:SetOrientation(info.Orientation)
 					end
 
-					-- Apply purple fill color for soul fragments styles
-					if (style == "SoulFragments") then
-						point:SetStatusBarColor(156/255, 116/255, 255/255) -- Purple fill
-						point.case:SetVertexColor(unpack(ns.Colors.ui)) -- Match health bar backdrop
-						point.slot:SetAlpha(0) -- Hide slot texture for health bar style
-					elseif (style == "SoulFragmentsPoints") then
+					-- Apply default purple fill for soul fragments points.
+					if (style == "SoulFragmentsPoints") then
 						-- Note: actual color is set dynamically in PostUpdate based on displayMode setting
 						-- This is just the default fallback (will be overridden)
 						point:SetStatusBarColor(156/255, 116/255, 255/255) -- Default purple fill
@@ -372,8 +371,12 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 					point.slot:SetTexture(info.Texture)
 					point.slot:SetRotation(rotation)
 
-					-- Ensure point is shown
-					point:Show()
+					-- Keep cap enforcement even on style changes (e.g. Paladin should stay at 5).
+					if (i <= visiblePointCap) then
+						point:Show()
+					else
+						point:Hide()
+					end
 				end
 			end
 
@@ -387,39 +390,6 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		element.style = style
 	end
 
-
-	-- Apply texture customization for soul fragments (runs every update for live customization)
-	if (style == "SoulFragments") then
-		-- Texture operations are not protected, apply even during edit mode
-		for i = 1, #element do
-			local point = element[i]
-			if (point and point:IsShown()) then
-				local tex = point:GetStatusBarTexture()
-				local backdropTex = point.case
-				
-				-- Apply rotation
-				local rotation_deg = db.soulFragmentsBarRotation or 0
-				local rotation_rad = (rotation_deg / 360) * (2 * math.pi)
-				tex:SetRotation(rotation_rad)
-				backdropTex:SetRotation(rotation_rad)
-				
-				-- Apply texture coordinate flipping
-				local flipH = db.soulFragmentsBarFlipHorizontal or false
-				local flipV = db.soulFragmentsBarFlipVertical or false
-				local left, right, top, bottom = 0, 1, 0, 1
-				if (flipH) then left, right = 1, 0 end
-				if (flipV) then top, bottom = 1, 0 end
-				tex:SetTexCoord(left, right, top, bottom)
-				backdropTex:SetTexCoord(left, right, top, bottom)
-				
-				-- Apply tiling
-				tex:SetHorizTile(db.soulFragmentsBarTileHorizontal or false)
-				tex:SetVertTile(db.soulFragmentsBarTileVertical or false)
-				backdropTex:SetHorizTile(db.soulFragmentsBarTileHorizontal or false)
-				backdropTex:SetVertTile(db.soulFragmentsBarTileVertical or false)
-			end
-		end
-	end
 
 end
 
@@ -567,16 +537,6 @@ local style = function(self, unit)
 		goldenGlow:Hide()
 		classpower.goldenGlow = goldenGlow
 		
-		-- Create text label for soul fragments value display (parented to UIParent for absolute visibility)
-		local valueText = UIParent:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
-		valueText:SetTextColor(156/255, 116/255, 255/255)  -- Purple
-		valueText:SetText("")
-		valueText:Hide()  -- Hidden until PostUpdate positions it on point 5
-		valueText:SetScale(1.2)  -- Small scale to fit inside point
-		valueText:SetShadowColor(0, 0, 0, 1)  -- Black shadow for contrast
-		valueText:SetShadowOffset(1, -1)
-		classpower.valueText = valueText
-
 		self.ClassPower = classpower
 		self.ClassPower.PostUpdate = ClassPower_PostUpdate
 		self.ClassPower.PostUpdateColor = ClassPower_PostUpdateColor

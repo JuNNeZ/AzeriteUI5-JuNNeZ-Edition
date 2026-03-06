@@ -39,6 +39,25 @@ A: This is a personal fan project. For official AzeriteUI support, join Goldpaws
 
 ---
 
+## GitHub Cloud Dev Environment
+
+This repository now includes a GitHub Codespaces dev container:
+- `.devcontainer/devcontainer.json`
+- `.devcontainer/Dockerfile`
+
+### Start in Codespaces
+1. Open the repository on GitHub.
+2. Click `Code` -> `Codespaces` -> `Create codespace on main`.
+3. Wait for container build to finish.
+
+The container installs:
+- Lua 5.1 (`lua`, `luac`)
+- `luarocks`
+- `ripgrep`
+- Recommended WoW/Lua VS Code extensions used in this project
+
+---
+
 ## Credits & Original Author
 
 **AzeriteUI** is created and maintained by **GoldpawsStuff**

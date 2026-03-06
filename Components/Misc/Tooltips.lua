@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -122,7 +122,8 @@ function Tooltips:IsConsolePortActive()
 end
 
 function Tooltips:IsDisabled()
-	return self.db and (self.db.profile.disableAzeriteUITooltips or self:IsConsolePortActive())
+	-- Tooltip overrides are intentionally disabled for this branch.
+	return true
 end
 
 function Tooltips:EnsureHighlightCache()

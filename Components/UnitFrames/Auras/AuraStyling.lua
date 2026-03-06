@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -270,6 +270,43 @@ ns.AuraStyles.TargetPostUpdateButton = function(element, button, unit, data, pos
 		button.Icon:SetVertexColor(.6, .6, .6)
 	end
 
+end
+
+ns.AuraStyles.PartyPostUpdateButton = function(element, button, unit, data, position)
+	local function SafeBool(v)
+		if (issecretvalue and issecretvalue(v)) then return false end
+		return not not v
+	end
+	local function SafeKey(v)
+		if (issecretvalue and issecretvalue(v)) then return nil end
+		return v
+	end
+
+	local isHarmful = button.isHarmful or button.isDebuff or SafeBool(data.isHarmful)
+	local color
+	if (isHarmful and element.showDebuffType) or ((not isHarmful) and element.showBuffType) or (element.showType) then
+		local dispelName = SafeKey(data.dispelName)
+		color = (dispelName and Colors.debuff[dispelName]) or Colors.debuff.none
+	else
+		color = Colors.verydarkgray
+	end
+	if (color) then
+		button.Border:SetBackdropBorderColor(color[1], color[2], color[3])
+	end
+
+	local isPlayerAura = SafeBool(data.isPlayerAura)
+	local canApplyAura = SafeBool(data.canApplyAura)
+	local spellId = SafeKey(data.spellId)
+	if (isHarmful) or (spellId and Spells[spellId]) or (isPlayerAura and canApplyAura) then
+		button.Icon:SetDesaturated(false)
+		button.Icon:SetVertexColor(1, 1, 1)
+	elseif (isPlayerAura) then
+		button.Icon:SetDesaturated(false)
+		button.Icon:SetVertexColor(.65, .65, .65)
+	else
+		button.Icon:SetDesaturated(true)
+		button.Icon:SetVertexColor(.6, .6, .6)
+	end
 end
 
 ns.AuraStyles.NameplatePostUpdateButton = function(element, button, unit, data, position)

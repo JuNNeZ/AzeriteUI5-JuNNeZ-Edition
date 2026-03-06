@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -234,28 +234,76 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 	button.noDuration = duration == 0
 	button.isPlayer = GetIsPlayerAura(unit, data)
 	button.spellID = SafeKey(data.spellId)
+	local applications = SafeNumber(data.applications, 0)
+	local canApplyAura = SafeBool(data.canApplyAura)
+	local isHarmful = GetIsHarmful(unit, data)
+	local isImportant = IsImportantAura(unit, data, isHarmful)
+	local auraInstanceID = data and data.auraInstanceID
+	local durationSecret = IsSecret and IsSecret(data.duration)
+	local applicationsSecret = IsSecret and IsSecret(data.applications)
+	local hasExpiration = expiration ~= nil
+
+	local harmfulRaid = false
+	local harmfulRaidDispellable = false
+	local helpfulPlayerRaid = false
+	local helpfulExternal = false
+	local helpfulRaidCombat = false
+	if (auraInstanceID) then
+		harmfulRaid = SafeIsAuraFilteredOut(unit, auraInstanceID, "HARMFUL|RAID") == false
+		harmfulRaidDispellable = SafeIsAuraFilteredOut(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE") == false
+		helpfulPlayerRaid = SafeIsAuraFilteredOut(unit, auraInstanceID, "HELPFUL|PLAYER|RAID") == false
+		helpfulExternal = SafeIsAuraFilteredOut(unit, auraInstanceID, "HELPFUL|EXTERNAL_DEFENSIVE") == false
+		helpfulRaidCombat = HasAuraToken(unit, auraInstanceID, "HELPFUL", "RAID_IN_COMBAT")
+	end
 
 	-- Hide blacklisted auras.
 	if (button.spellID and Hidden[button.spellID]) then
 		return
 	end
 
-	local sourceUnit = SafeKey(data.sourceUnit)
-	if (type(sourceUnit) == "string" and type(unit) == "string" and sourceUnit == unit) then
-		return
-	elseif (SafeBool(data.isBossDebuff)) then
+	-- Show whitelisted auras.
+	if (button.spellID and Spells[button.spellID]) then
 		return true
-	elseif (button.noDuration) then
-		return
-	else
-		if (SafeBool(data.isNameplateOnly) or SafeBool(data.nameplateShowAll) or (SafeBool(data.nameplateShowPersonal) and button.isPlayer)) then
-			return true
-		else
-			if (not SafeBool(data.isHarmful) and button.isPlayer and SafeBool(data.canApplyAura)) then
-				return (button.timeLeft and button.timeLeft < 31) or (SafeNumber(data.applications, 0) > 1)
-			end
-		end
 	end
+
+	if (SafeBool(data.isBossDebuff)) then
+		return true
+	end
+
+	if (durationSecret or applicationsSecret) then
+		if (isHarmful) then
+			return harmfulRaid or harmfulRaidDispellable or isImportant or hasExpiration
+		end
+		return helpfulPlayerRaid or helpfulExternal or helpfulRaidCombat or isImportant or (hasExpiration and button.isPlayer)
+	end
+
+	if (isHarmful) then
+		if (harmfulRaid or harmfulRaidDispellable or isImportant) then
+			return true
+		end
+		if (button.isPlayer or canApplyAura) then
+			return (not button.noDuration and duration <= 301) or (applications > 1)
+		end
+		return false
+	end
+
+	local sourceUnit = SafeKey(data.sourceUnit)
+	local isSelfCastOnUnit = (type(sourceUnit) == "string" and type(unit) == "string" and sourceUnit == unit)
+	if (isSelfCastOnUnit and not (helpfulPlayerRaid or helpfulExternal or helpfulRaidCombat or isImportant)) then
+		return false
+	end
+
+	if (helpfulPlayerRaid or helpfulExternal or helpfulRaidCombat or isImportant) then
+		return true
+	end
+
+	if (button.isPlayer and canApplyAura) then
+		return ((not button.noDuration and duration < 61)
+			or (button.timeLeft and button.timeLeft > 0 and button.timeLeft < 31)
+			or (applications > 1))
+	end
+
+	return false
 end
 
 ns.AuraFilters.NameplateAuraFilter = function(button, unit, data)

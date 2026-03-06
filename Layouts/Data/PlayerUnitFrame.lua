@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Lars Norberg
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -219,7 +219,7 @@ ns.RegisterConfig("PlayerFrame", {
 
 		-- Power Crystal
 		-----------------------------------------
-		PowerBarSize = { 231, 223 },
+		PowerBarSize = { 120, 140 },
 		PowerBarPosition = { "BOTTOMLEFT", 20, 38 },
 		PowerBarTexture = GetMedia("power_crystal_front"),
 		PowerBarTextureWrath = GetMedia("power-crystal-ice-front"),
@@ -227,23 +227,23 @@ ns.RegisterConfig("PlayerFrame", {
 		PowerBarOrientation = "UP",
 		PowerBarSparkMap = crystalSparkMap,
 
-		PowerBackdropSize = { 208, 210 },
+		PowerBackdropSize = { 196, 196 },
 		PowerBackdropPosition = { "CENTER", 0, 0 },
 		PowerBackdropTexture = GetMedia("power_crystal_back"),
 		PowerBackdropTextureWrath = GetMedia("power-crystal-ice-back"),
 
-		PowerBarForegroundSize = { 218, 104 },
-		PowerBarForegroundPosition = { "BOTTOM", 8, -54 },
+		PowerBarForegroundSize = { 198,98 },
+		PowerBarForegroundPosition = { "BOTTOM", 7, -51 },
 		PowerBarForegroundTexture = GetMedia("pw_crystal_case_low"),
 		PowerBarForegroundColor = { Colors.ui[1], Colors.ui[2], Colors.ui[3] },
 
 		-- Power Crystal Threat
-		PowerBarThreatSize = { 208, 210 },
+		PowerBarThreatSize = { 196, 196 },
 		PowerBarThreatPosition = { "CENTER", 0, 1 },
 		PowerBarThreatTexture = GetMedia("power_crystal_glow"),
 
-		PowerBackdropThreatSize = { 218, 104 },
-		PowerBackdropThreatPosition = { "BOTTOM", 8, -54 },
+		PowerBackdropThreatSize = { 198,98 },
+		PowerBackdropThreatPosition = { "BOTTOM", 7, -51 },
 		PowerBackdropThreatTexture = GetMedia("pw_crystal_case_glow"),
 
 		-- Mana Orb
@@ -297,7 +297,7 @@ ns.RegisterConfig("PlayerFrame", {
 
 		-- Power Crystal
 		-----------------------------------------
-		PowerBarSize = { 231, 223 },
+		PowerBarSize = { 120, 140 },
 		PowerBarPosition = { "BOTTOMLEFT", 20, 38 },
 		PowerBarTexture = GetMedia("power_crystal_front"),
 		PowerBarTextureWrath = GetMedia("power-crystal-ice-front"),
@@ -305,23 +305,23 @@ ns.RegisterConfig("PlayerFrame", {
 		PowerBarOrientation = "UP",
 		PowerBarSparkMap = crystalSparkMap,
 
-		PowerBackdropSize = { 208, 210 },
+		PowerBackdropSize = { 196, 196 },
 		PowerBackdropPosition = { "CENTER", 0, 0 },
 		PowerBackdropTexture = GetMedia("power_crystal_back"),
 		PowerBackdropTextureWrath = GetMedia("power-crystal-ice-back"),
 
-		PowerBarForegroundSize = { 218, 104 },
-		PowerBarForegroundPosition = { "BOTTOM", 8, -54 },
+		PowerBarForegroundSize = { 198,98 },
+		PowerBarForegroundPosition = { "BOTTOM", 7, -51 },
 		PowerBarForegroundTexture = GetMedia("pw_crystal_case"),
 		PowerBarForegroundColor = { Colors.ui[1], Colors.ui[2], Colors.ui[3] },
 
 		-- Power Crystal Threat
-		PowerBarThreatSize = { 208, 210 },
+		PowerBarThreatSize = { 196, 196 },
 		PowerBarThreatPosition = { "CENTER", 0, 1 },
 		PowerBarThreatTexture = GetMedia("power_crystal_glow"),
 
-		PowerBackdropThreatSize = { 218, 104 },
-		PowerBackdropThreatPosition = { "BOTTOM", 8, -54 },
+		PowerBackdropThreatSize = { 198,98 },
+		PowerBackdropThreatPosition = { "BOTTOM", 7, -51 },
 		PowerBackdropThreatTexture = GetMedia("pw_crystal_case_glow"),
 
 		-- Mana Orb
@@ -375,7 +375,7 @@ ns.RegisterConfig("PlayerFrame", {
 
 		-- Power Crystal
 		-----------------------------------------
-		PowerBarSize = { 231, 223 },
+		PowerBarSize = { 120, 140 },
 		PowerBarPosition = { "BOTTOMLEFT", 20, 38 },
 		PowerBarTexture = GetMedia("power_crystal_front"),
 		PowerBarTextureWrath = GetMedia("power-crystal-ice-front"),
@@ -383,23 +383,23 @@ ns.RegisterConfig("PlayerFrame", {
 		PowerBarOrientation = "UP",
 		PowerBarSparkMap = crystalSparkMap,
 
-		PowerBackdropSize = { 208, 210 },
+		PowerBackdropSize = { 196, 196 },
 		PowerBackdropPosition = { "CENTER", 0, 0 },
 		PowerBackdropTexture = GetMedia("power_crystal_back"),
 		PowerBackdropTextureWrath = GetMedia("power-crystal-ice-back"),
 
-		PowerBarForegroundSize = { 218, 104 },
-		PowerBarForegroundPosition = { "BOTTOM", 8, -54 },
+		PowerBarForegroundSize = { 198,98 },
+		PowerBarForegroundPosition = { "BOTTOM", 7, -51 },
 		PowerBarForegroundTexture = GetMedia("pw_crystal_case"),
 		PowerBarForegroundColor = { Colors.ui[1], Colors.ui[2], Colors.ui[3] },
 
 		-- Power Crystal Threat
-		PowerBarThreatSize = { 208, 210 },
+		PowerBarThreatSize = { 196, 196 },
 		PowerBarThreatPosition = { "CENTER", 0, 1 },
 		PowerBarThreatTexture = GetMedia("power_crystal_glow"),
 
-		PowerBackdropThreatSize = { 218, 104 },
-		PowerBackdropThreatPosition = { "BOTTOM", 8, -54 },
+		PowerBackdropThreatSize = { 198,98 },
+		PowerBackdropThreatPosition = { "BOTTOM", 7, -51 },
 		PowerBackdropThreatTexture = GetMedia("pw_crystal_case_glow"),
 
 		-- Mana Orb
