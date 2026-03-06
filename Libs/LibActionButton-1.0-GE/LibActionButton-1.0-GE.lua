@@ -59,6 +59,10 @@ local SpellVFX_CastingAnim_OnHide, SpellVFX_CastingAnim_Finish_OnFinished
 
 local UseCustomFlyout = FlyoutButtonMixin and not ActionButton_UpdateFlyout -- Enable custom flyouts
 
+local function IsSafeNumber(value)
+	return type(value) == "number" and not (issecretvalue and issecretvalue(value))
+end
+
 -- GLOBALS: C_Item, C_Spell, C_ToyBox, UIParent
 -- GLOBALS: CooldownFrame_Clear, ClearActionButtonCooldowns, ClearCursor, CooldownFrame_Set, CreateFrame
 -- GLOBALS: FlyoutButtonMixin, FlyoutHasSpell, GameTooltip, GetActionCharges, GetActionCooldown, GetActionInfo
@@ -2344,11 +2348,43 @@ function UpdateUsable(self, isUsable, notEnoughMana)
 end
 
 function UpdateCount(self)
+	local cache = self.__LABCountCache
+	if not cache then
+		cache = {}
+		self.__LABCountCache = cache
+	end
+
 	if self.config.hideElements.count or not self:HasAction() then
+		cache.count = nil
+		cache.charges = nil
+		cache.maxCharges = nil
 		self.Count:SetText("")
 		return
 	end
 
+	if self:IsConsumableOrStackable() then
+		local count = self:GetCount()
+		if IsSafeNumber(count) then
+			cache.count = count
+		else
+			count = cache.count
+		end
+
+		if not IsSafeNumber(count) then
+			self.Count:SetText("")
+			return
+		end
+
+		if count > (self.maxDisplayCount or 9999) then
+			self.Count:SetText("*")
+		else
+			self.Count:SetText(count > 1 and count or "")
+		end
+		return
+	end
+
+	-- Keep the original action/spell display-count path for charge-based spells.
+	-- This uses Action.GetDisplayCount (C_ActionBar.GetActionDisplayCount) when available.
 	self.Count:SetText(self:GetDisplayCount())
 end
 
@@ -2982,6 +3018,9 @@ Generic.GetPassiveCooldownSpellID = function(self) return nil end
 Generic.GetDisplayCount          = function(self)
 	if self:IsConsumableOrStackable() then
 		local count = self:GetCount()
+		if (issecretvalue and issecretvalue(count)) or type(count) ~= "number" then
+			return ""
+		end
 		if count > (self.maxDisplayCount or 9999) then
 			return "*"
 		else
@@ -2989,7 +3028,8 @@ Generic.GetDisplayCount          = function(self)
 		end
 	else
 		local charges, maxCharges, _chargeStart, _chargeDuration = self:GetCharges()
-		if charges and maxCharges and maxCharges > 1 then
+		local chargesAreSecret = issecretvalue and (issecretvalue(charges) or issecretvalue(maxCharges))
+		if (not chargesAreSecret) and type(charges) == "number" and type(maxCharges) == "number" and maxCharges > 1 then
 			return charges
 		end
 	end
@@ -3025,9 +3065,25 @@ if WoWMidnight then
 end
 
 local GetActionChargeInfoFallback
+local function NormalizeChargeInfo(info)
+	if type(info) ~= "table" then
+		return info
+	end
+	return {
+		currentCharges = info.currentCharges or info.charges or info.numCharges,
+		maxCharges = info.maxCharges or info.maxCharge or info.totalCharges,
+		cooldownStartTime = info.cooldownStartTime or info.chargeStartTime or info.startTime,
+		cooldownDuration = info.cooldownDuration or info.chargeDuration or info.duration,
+		chargeModRate = info.chargeModRate or info.modRate or info.rechargeModRate
+	}
+end
+
 if GetActionCharges then
 	GetActionChargeInfoFallback = function(action)
 		local currentCharges, maxCharges, cooldownStart, cooldownDuration, chargeModRate = GetActionCharges(action)
+		if type(currentCharges) == "table" then
+			return NormalizeChargeInfo(currentCharges)
+		end
 		return {
 			currentCharges = currentCharges,
 			maxCharges = maxCharges,
@@ -3056,13 +3112,156 @@ else
 end
 
 local GetActionCooldownInfo = C_ActionBar and C_ActionBar.GetActionCooldown or GetActionCooldownInfoFallback
-local GetActionChargeInfo = C_ActionBar and C_ActionBar.GetActionCharges or GetActionChargeInfoFallback
+local GetActionChargeInfo = function(action)
+	if C_ActionBar and C_ActionBar.GetActionCharges then
+		local result = C_ActionBar.GetActionCharges(action)
+		if result then
+			return NormalizeChargeInfo(result)
+		end
+	end
+	return GetActionChargeInfoFallback(action)
+end
+
+local function GetSpellChargeInfo(spellID)
+	if not spellID then
+		return nil
+	end
+
+	if C_Spell and C_Spell.GetSpellCharges then
+		local info = C_Spell.GetSpellCharges(spellID)
+		if info then
+			return NormalizeChargeInfo(info)
+		end
+	elseif GetSpellCharges then
+		local currentCharges, maxCharges, cooldownStartTime, cooldownDuration, chargeModRate = GetSpellCharges(spellID)
+		if type(currentCharges) == "table" then
+			return NormalizeChargeInfo(currentCharges)
+		end
+		if currentCharges ~= nil then
+			return {
+				currentCharges = currentCharges,
+				maxCharges = maxCharges,
+				cooldownStartTime = cooldownStartTime,
+				cooldownDuration = cooldownDuration,
+				chargeModRate = chargeModRate
+			}
+		end
+	end
+end
+
+local ResolveOverrideSpellID = function(spellID)
+	if not IsSafeNumber(spellID) or spellID <= 0 then
+		return nil
+	end
+	if not (C_Spell and C_Spell.GetOverrideSpell) then
+		return spellID
+	end
+	local resolvedSpellID = spellID
+	local seen = {}
+	for _ = 1, 5 do
+		if seen[resolvedSpellID] then
+			break
+		end
+		seen[resolvedSpellID] = true
+		local ok, overrideSpellID = pcall(C_Spell.GetOverrideSpell, resolvedSpellID)
+		if not ok or not IsSafeNumber(overrideSpellID) or overrideSpellID <= 0 or overrideSpellID == resolvedSpellID then
+			break
+		end
+		resolvedSpellID = overrideSpellID
+	end
+	return resolvedSpellID
+end
+
+local ResolveActionSpellID = function(actionSlot, fallbackSpellID)
+	local spellID = fallbackSpellID
+	if C_ActionBar and C_ActionBar.GetSpell and IsSafeNumber(actionSlot) and actionSlot > 0 then
+		local ok, actionSpellID = pcall(C_ActionBar.GetSpell, actionSlot)
+		if ok and IsSafeNumber(actionSpellID) and actionSpellID > 0 then
+			spellID = actionSpellID
+		end
+	end
+	if not IsSafeNumber(spellID) or spellID <= 0 then
+		return nil
+	end
+	return ResolveOverrideSpellID(spellID) or spellID
+end
+
+local function HasActiveChargeRecharge(info)
+	if type(info) ~= "table" then
+		return false
+	end
+
+	local currentCharges = info.currentCharges
+	local maxCharges = info.maxCharges
+	local cooldownStartTime = info.cooldownStartTime
+	local cooldownDuration = info.cooldownDuration
+
+	return IsSafeNumber(currentCharges)
+		and IsSafeNumber(maxCharges)
+		and maxCharges > 1
+		and currentCharges < maxCharges
+		and IsSafeNumber(cooldownStartTime)
+		and IsSafeNumber(cooldownDuration)
+		and cooldownStartTime > 0
+		and cooldownDuration > 0
+end
 
 Action.HasAction                = function(self) return HasAction(self._state_action) end
 Action.GetActionText            = function(self) return GetActionText(self._state_action) end
 Action.GetTexture               = function(self) return GetActionTexture(self._state_action) end
-Action.GetCount                 = function(self) return GetActionCount(self._state_action) end
-Action.GetChargeInfo            = function(self) return GetActionChargeInfo(self._state_action) end
+Action.GetCount                 = function(self)
+	local count = GetActionCount(self._state_action)
+	if type(count) == "number" and count > 0 then
+		return count
+	end
+
+	local actionType, actionID, subType = GetActionInfo(self._state_action)
+	if (actionType == "item") or (actionType == "macro" and subType == "item") then
+		if C_Item and C_Item.GetItemCount then
+			local itemCount = C_Item.GetItemCount(actionID, nil, true)
+			if type(itemCount) == "number" then
+				return itemCount
+			end
+		elseif GetItemCount then
+			local itemCount = GetItemCount(actionID, nil, true)
+			if type(itemCount) == "number" then
+				return itemCount
+			end
+		end
+	end
+
+	if type(count) == "number" then
+		return count
+	end
+	return 0
+end
+Action.GetChargeInfo            = function(self)
+	local actionInfo = GetActionChargeInfo(self._state_action)
+
+	local actionType, actionID, subType = GetActionInfo(self._state_action)
+	local spellID
+	if actionType == "spell" then
+		spellID = ResolveActionSpellID(self._state_action, actionID)
+	elseif actionType == "macro" and subType == "spell" then
+		spellID = ResolveActionSpellID(self._state_action, actionID)
+	end
+
+	local spellInfo = GetSpellChargeInfo(spellID)
+	if spellInfo then
+		if HasActiveChargeRecharge(spellInfo) and not HasActiveChargeRecharge(actionInfo) then
+			return spellInfo
+		end
+
+		if type(actionInfo) ~= "table"
+			or (not IsSafeNumber(actionInfo.currentCharges))
+			or (not IsSafeNumber(actionInfo.maxCharges))
+		then
+			return spellInfo
+		end
+	end
+
+	return actionInfo
+end
 Action.GetCooldownInfo          = function(self) return GetActionCooldownInfo(self._state_action) end
 Action.GetLossOfControlCooldown = function(self) return GetActionLossOfControlCooldown(self._state_action) end
 Action.IsAttack                 = function(self) return IsAttackAction(self._state_action) end
@@ -3093,12 +3292,15 @@ end
 -- legacy cooldown functions, avoiding table creation on game versions that still have the old API
 -- LAB does not call these, but external things might
 Action.GetCharges = function(self)
+	local charge = self:GetChargeInfo()
+	if charge and IsSafeNumber(charge.currentCharges) and IsSafeNumber(charge.maxCharges) then
+		return charge.currentCharges, charge.maxCharges, charge.cooldownStartTime, charge.cooldownDuration, charge.chargeModRate
+	end
+
 	if GetActionCharges then
-		return GetActionCharges(self._state_action)
-	else
-		local charge = self:GetChargeInfo()
-		if charge then
-			return charge.currentCharges, charge.maxCharges, charge.cooldownStartTime, charge.cooldownDuration, charge.chargeModRate
+		local currentCharges, maxCharges, cooldownStartTime, cooldownDuration, chargeModRate = GetActionCharges(self._state_action)
+		if IsSafeNumber(currentCharges) and IsSafeNumber(maxCharges) then
+			return currentCharges, maxCharges, cooldownStartTime, cooldownDuration, chargeModRate
 		end
 	end
 end

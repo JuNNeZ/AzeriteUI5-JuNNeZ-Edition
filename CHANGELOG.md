@@ -3,6 +3,17 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.226-JuNNeZ (2026-03-06)
+
+### Fixes
+- Action button count display split restored to preserve spell charge updates while keeping item stack customization:
+  - Consumable/item counts still use custom display (`>1` shown, `1` hidden, `*` over max display count).
+  - Non-consumable/spell charge display now uses the original action display-count path again so spell charges update correctly.
+- LAB charge payload handling hardened:
+  - Added charge-info normalization wrapper for action/spell charge payload variants.
+  - Reintroduced action-slot spell resolution (`C_ActionBar.GetSpell` + override chain) for charge lookups.
+  - Added secret-safe guards to avoid secret-value comparison errors in count/charge paths.
+
 ## 5.2.224-JuNNeZ (2026-03-06)
 
 ### Fixes
