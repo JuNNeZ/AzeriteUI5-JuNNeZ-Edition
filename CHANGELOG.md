@@ -3,6 +3,13 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.228-JuNNeZ (2026-03-06)
+
+### Fixes
+- Fixed startup banner crash from Major Faction unlock toast when re-anchoring top banners:
+  - Added nil-frame guard in `Banners.TopBannerManager_Show`.
+  - Prevented `frame:PlayBanner(data)` replay when `data` is nil.
+
 ## 5.2.227-JuNNeZ (2026-03-06)
 
 ### Fixes

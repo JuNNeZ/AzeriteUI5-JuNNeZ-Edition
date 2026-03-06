@@ -77,6 +77,7 @@ Banners.GenerateDefaults = function(self)
 end
 
 Banners.TopBannerManager_Show = function(self, frame, data, isExclusiveQueued)
+	if (not frame) then return end
 	if (self.banners[frame]) then return end
 
 	local isCurrent = TopBannerMgr.currentBanner and TopBannerMgr.currentBanner.frame == frame
@@ -89,7 +90,9 @@ Banners.TopBannerManager_Show = function(self, frame, data, isExclusiveQueued)
 
 	self.banners[frame] = true
 
-	if (isCurrent) then
+	-- Some toasts (notably MajorFactionUnlockToast) can hit this path with nil data
+	-- during startup when we re-anchor existing banners.
+	if (isCurrent and data ~= nil) then
 		frame:PlayBanner(data)
 	end
 
