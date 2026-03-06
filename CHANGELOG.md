@@ -6,16 +6,24 @@ Do not repeat older items from prior versions in newer entries.
 ## 5.2.224-JuNNeZ (2026-03-06)
 
 ### Fixes
-- Improved mount-to-combat actionbar transition refresh so cooldown/swipe rendering starts correctly when entering combat from a mounted actionbar state.
-- Fixed assisted-highlight option handling so recommendation highlights respect WoW assisted combat highlight toggle state.
-- Fixed player absorb display path so hidden absorb bar zero values no longer block valid absorb fallbacks.
-- Improved action button handling for morph/replacement spells by resolving effective action spell IDs and forcing action-slot refreshes on cast/charge updates.
-- Fixed crystal/orb color source selection so `Default` and `Enhanced Colors` resolve consistently from the selected mode.
-- Improved MaxDps compatibility for interrupt recommendations by preserving native MaxDps alpha-driven overlay behavior on Azerite LAB buttons.
 
 ### Known Not Working
-- Charges not going down in some cases.
-- Morphing spells do not always show cooldown during morph transitions (example: Wake of Ashes -> Hammer of Light -> Wake of Ashes).
+
+## 5.2.225-JuNNeZ (2026-03-06)
+
+### Fixes
+- Secret-value bug fix: Defensive check for secret value 'max' before comparison/arithmetic in Player.lua. Prevents taint crash on WoW 12+ secret values.
+- Removed deprecated power/threat debug surfaces from `/azdebug` menu path.
+- Player power crystal color/overlay cleanup: re-added `crystalOrbAccent` toggle, kept only `default`/`class` color source behavior, switched default crystal color back to stock blue base, changed accent handling to gold overlay pass.
+- Removed target Power Crystal Lab options from UnitFrame settings.
+- Power crystal stability/spark follow-up: added mirror-percent texture sampling opt-out flag, enabled for player crystal, pixel-aligned crystal sizing, restored visible crystal spark texture update path.
+- Player crystal fakefill/overlay correction: added dedicated player power `FakeFill` texture, now drives crystal spark/overlay from fakefill percent, accent overlay anchors to fakefill/native texture bounds.
+
+### Files Modified
+- Components/UnitFrames/Units/Player.lua
+- Core/Debugging.lua
+- Options/OptionsPages/UnitFrames.lua
+- Components/UnitFrames/Functions.lua
 
 ## 5.2.218-JuNNeZ (2026-03-05)
 

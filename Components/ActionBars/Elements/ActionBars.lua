@@ -260,8 +260,15 @@ local style = function(self)
 	self.icon:SetSize(unpack(db.ButtonIconSize))
 	self.icon:SetMask(m)
 
-	-- Some crap WoW10 border I can't figure out how to remove right now.
-	--self:DisableDrawLayer("ARTWORK")
+	-- Keep default/LAB normal border textures hidden.
+	-- The swapped LAB can re-apply normal atlases during updates.
+	if (self.NormalTexture) then
+		self.NormalTexture:SetTexture(nil)
+		if (self.NormalTexture.SetAtlas) then
+			self.NormalTexture:SetAtlas(nil)
+		end
+		self.NormalTexture:Hide()
+	end
 
 	self:GetPushedTexture():SetTexture(m)
 	self:GetPushedTexture():SetVertexColor(1, 1, 1, .2)
@@ -390,6 +397,30 @@ local style = function(self)
 	hooksecurefunc(self.cooldown, "SetDrawEdge", function(c,h) if h then c:SetDrawEdge(false) end end)
 	hooksecurefunc(self.cooldown, "SetHideCountdownNumbers", function(c,h) if h then c:SetHideCountdownNumbers(false) end end)
 	hooksecurefunc(self.cooldown, "SetCooldown", function(c) c:SetAlpha(.75) end)
+	hooksecurefunc(self, "SetNormalTexture", function(button, texture)
+		if (texture and texture ~= "") then
+			local normalTexture = button:GetNormalTexture()
+			if (normalTexture) then
+				normalTexture:SetTexture(nil)
+				if (normalTexture.SetAtlas) then
+					normalTexture:SetAtlas(nil)
+				end
+				normalTexture:Hide()
+			end
+		end
+	end)
+	hooksecurefunc(self, "SetNormalAtlas", function(button, atlas)
+		if (atlas and atlas ~= "") then
+			local normalTexture = button:GetNormalTexture()
+			if (normalTexture) then
+				normalTexture:SetTexture(nil)
+				if (normalTexture.SetAtlas) then
+					normalTexture:SetAtlas(nil)
+				end
+				normalTexture:Hide()
+			end
+		end
+	end)
 
 	local buttonConfig = self.config or {}
 
