@@ -3,6 +3,13 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.234-JuNNeZ (2026-03-07)
+
+### Fixes
+- Player Alternate devmode gating follow-up:
+  - Devmode is now required to enable Player Alternate from options, but no longer required to keep it active at runtime.
+  - Turning devmode off no longer force-disables/hides an already-enabled Player Alternate frame.
+
 ## 5.2.233-JuNNeZ (2026-03-07)
 
 ### Fixes

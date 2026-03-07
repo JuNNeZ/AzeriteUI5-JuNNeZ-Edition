@@ -1201,7 +1201,8 @@ PlayerFrameAltMod.UpdateEnabled = function(self)
 
 	local unitframe, anchor = self:GetUnitFrameOrHeader(), self:GetAnchor()
 	if (unitframe) then
-		local shouldEnable = (self.db and self.db.profile and self.db.profile.enabled) and (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+		-- Dev mode should gate discoverability/toggling, not runtime visibility.
+		local shouldEnable = (self.db and self.db.profile and self.db.profile.enabled) and true or false
 		local method = shouldEnable and (unitframe.OverrideEnable or unitframe.Enable) or (unitframe.OverrideDisable or unitframe.Disable)
 		if (method) then
 			method(unitframe)
