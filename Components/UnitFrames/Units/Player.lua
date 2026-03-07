@@ -2313,12 +2313,7 @@ local style = function(self, unit)
 	self.Health.PostUpdateColor = Health_PostUpdateColor
 	ns.API.BindStatusBarValueMirror(self.Health)
 
-	local healthSpark = health:CreateTexture(nil, "OVERLAY", nil, 3)
-	healthSpark:SetTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
-	healthSpark:SetBlendMode("ADD")
-	healthSpark:SetVertexColor(1, .95, .8, .85)
-	healthSpark:Hide()
-	self.Health.Spark = healthSpark
+	self.Health.Spark = nil
 
 	-- DEBUG: Show what's happening with secret values (toggle with /azdebughealth)
 	local debugText = self:CreateFontString(nil, "OVERLAY")

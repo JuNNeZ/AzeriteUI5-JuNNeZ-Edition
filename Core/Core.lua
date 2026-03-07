@@ -36,6 +36,19 @@ ns.callbacks = LibStub("CallbackHandler-1.0"):New(ns, nil, nil, false)
 ns.Hider = CreateFrame("Frame"); ns.Hider:Hide()
 ns.Noop = function() end
 
+-- Compatibility alias:
+-- external addons (for example AzUI_Color_Picker) may call AceAddon:GetAddon("AzeriteUI")
+-- even when this edition is loaded under a different addon name.
+do
+	local AceAddon = LibStub("AceAddon-3.0", true)
+	if (AceAddon and AceAddon.addons and Addon ~= "AzeriteUI") then
+		local existing = AceAddon.addons["AzeriteUI"]
+		if (existing == nil or existing == ns) then
+			AceAddon.addons["AzeriteUI"] = ns
+		end
+	end
+end
+
 -- Increasing this number forces a full settings reset.
 ns.SETTINGS_VERSION = ns.WoW11 and 25 or 22 -- use client dependant settings version to avoid resets in unaffected builds.
 

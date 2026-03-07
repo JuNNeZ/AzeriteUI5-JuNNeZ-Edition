@@ -2557,6 +2557,46 @@ if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) 
 	end)
 end
 
+local function ApplyWoW12TooltipMoneyGuards()
+	if (_G.SetTooltipMoney and not _G.__AzeriteUI_WoW12_SetTooltipMoneySafeWrapped) then
+		_G.__AzeriteUI_WoW12_SetTooltipMoneySafeWrapped = true
+		local original = _G.SetTooltipMoney
+		_G.SetTooltipMoney = function(frame, money, ...)
+			if (issecretvalue and issecretvalue(money)) then
+				return
+			end
+			local ok = pcall(original, frame, money, ...)
+			if (ok) then
+				return
+			end
+			local moneyFrame = frame and frame.TooltipMoneyFrame
+			if (moneyFrame and moneyFrame.Hide) then
+				moneyFrame:Hide()
+			end
+		end
+	end
+
+	if (_G.MoneyFrame_Update and not _G.__AzeriteUI_WoW12_MoneyFrameUpdateSafeWrapped) then
+		_G.__AzeriteUI_WoW12_MoneyFrameUpdateSafeWrapped = true
+		local original = _G.MoneyFrame_Update
+		_G.MoneyFrame_Update = function(frame, money, ...)
+			if (issecretvalue and (issecretvalue(money) or issecretvalue(frame))) then
+				if (frame and frame.Hide) then
+					frame:Hide()
+				end
+				return
+			end
+			local ok = pcall(original, frame, money, ...)
+			if (ok) then
+				return
+			end
+			if (frame and frame.Hide) then
+				frame:Hide()
+			end
+		end
+	end
+end
+
 
 FixBlizzardBugs.OnInitialize = function(self)
 
@@ -2578,6 +2618,7 @@ FixBlizzardBugs.OnInitialize = function(self)
 	-- Note: ns.ClientBuild is the build number (~58135), NOT the TOC version.
 	-- ns.ClientVersion is the interface/TOC number (120000+ for WoW 12).
 	if (issecretvalue or canaccesstable or (ns.ClientVersion and ns.ClientVersion >= 120000)) then
+		ApplyWoW12TooltipMoneyGuards()
 		-- IMPORTANT: Do NOT replace BackdropMixin.SetupTextureCoordinates here.
 		-- Replacing mixin methods with addon functions taints every frame that
 		-- uses BackdropMixin, which spreads "tainted by AzeriteUI" to Edit Mode

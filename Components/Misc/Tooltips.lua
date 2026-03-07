@@ -122,8 +122,7 @@ function Tooltips:IsConsolePortActive()
 end
 
 function Tooltips:IsDisabled()
-	-- Tooltip overrides are intentionally disabled for this branch.
-	return true
+	return self.db and self.db.profile and self.db.profile.disableAzeriteUITooltips
 end
 
 function Tooltips:EnsureHighlightCache()
@@ -185,6 +184,7 @@ end })
 
 local TooltipBackdropSignature = setmetatable({}, { __mode = "k" })
 local TooltipBackdropLastUpdate = setmetatable({}, { __mode = "k" })
+local TooltipDimensionCache = setmetatable({}, { __mode = "k" })
 local StatusBarThemeSignature = setmetatable({}, { __mode = "k" })
 local StatusBarText = setmetatable({}, { __mode = "k" })
 
@@ -228,6 +228,28 @@ local RestoreBlizzardTooltipBackdrop = function(tooltip)
 	end
 end
 
+local CacheTooltipDimensions = function(tooltip)
+	if (not tooltip) or tooltip:IsForbidden() then
+		return
+	end
+	local width = tooltip.GetWidth and tooltip:GetWidth() or nil
+	local height = tooltip.GetHeight and tooltip:GetHeight() or nil
+	local cached = TooltipDimensionCache[tooltip]
+	if (not cached) then
+		cached = {}
+		TooltipDimensionCache[tooltip] = cached
+	end
+	if (type(width) == "number" and not IsSecretValue(width)) then
+		cached.width = width
+	end
+	if (type(height) == "number" and not IsSecretValue(height)) then
+		cached.height = height
+	end
+	local safeWidth = (type(width) == "number" and not IsSecretValue(width)) and width or cached.width
+	local safeHeight = (type(height) == "number" and not IsSecretValue(height)) and height or cached.height
+	return safeWidth, safeHeight
+end
+
 local defaults = { profile = ns:Merge({
 	theme = "Classic",
 	showItemID = false,
@@ -262,11 +284,12 @@ Tooltips.UpdateBackdropTheme = function(self, tooltip)
 	if (not tooltip) or (tooltip.IsEmbedded) or (tooltip:IsForbidden()) then return end
 	local hasSecretValues = (type(issecretvalue) == "function")
 	if (hasSecretValues) then
-		-- WoW12 secret-value safety:
-		-- keep Blizzard tooltip backdrop path intact and avoid all AzeriteUI
-		-- backdrop mutations on secure tooltip frames.
-		RestoreBlizzardTooltipBackdrop(tooltip)
-		return
+		-- WoW12 secret-value safety: only style when tooltip dimensions are non-secret.
+		local safeWidth, safeHeight = CacheTooltipDimensions(tooltip)
+		if (type(safeWidth) ~= "number" or type(safeHeight) ~= "number") then
+			RestoreBlizzardTooltipBackdrop(tooltip)
+			return
+		end
 	end
 
 	-- Build a simple signature so we can skip redundant work (vendor/item tooltips spam updates).
@@ -411,15 +434,21 @@ Tooltips.UpdateBackdropTheme = function(self, tooltip)
 	end
 
 	-- Setup the backdrop theme.
-	backdrop:SetBackdrop(nil)
-	backdrop:SetBackdrop(db.backdrop)
-	backdrop:ClearAllPoints()
-	backdrop:SetPoint("LEFT", backdrop.offsetLeft, 0)
-	backdrop:SetPoint("RIGHT", backdrop.offsetRight, 0)
-	backdrop:SetPoint("TOP", 0, backdrop.offsetTop)
-	backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom)
-	backdrop:SetBackdropColor(unpack(db.backdropColor))
-	backdrop:SetBackdropBorderColor(unpack(db.backdropBorderColor))
+	local ok = pcall(function()
+		backdrop:SetBackdrop(nil)
+		backdrop:SetBackdrop(db.backdrop)
+		backdrop:ClearAllPoints()
+		backdrop:SetPoint("LEFT", backdrop.offsetLeft, 0)
+		backdrop:SetPoint("RIGHT", backdrop.offsetRight, 0)
+		backdrop:SetPoint("TOP", 0, backdrop.offsetTop)
+		backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom)
+		backdrop:SetBackdropColor(unpack(db.backdropColor))
+		backdrop:SetBackdropBorderColor(unpack(db.backdropBorderColor))
+	end)
+	if (not ok) then
+		RestoreBlizzardTooltipBackdrop(tooltip)
+		return
+	end
 
 	-- Make sure our backdrop is visible after a previous disable restored Blizzard skin
 	if (not backdrop:IsShown()) then
@@ -860,9 +889,8 @@ end
 
 Tooltips.SetHooks = function(self)
 	if (self:IsDisabled()) then return end
-	local hasSecretValues = (type(issecretvalue) == "function")
 
-	if (not hasSecretValues and not self:IsHooked("SharedTooltip_SetBackdropStyle")) then
+	if (not self:IsHooked("SharedTooltip_SetBackdropStyle")) then
 		self:SecureHook("SharedTooltip_SetBackdropStyle", "UpdateBackdropTheme")
 	end
 	if (not self:IsHooked("GameTooltip_UnitColor")) then

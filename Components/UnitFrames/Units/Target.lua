@@ -2443,12 +2443,7 @@ local style = function(self, unit, id)
 	self.Health.__AzeriteUI_UseProductionNativeFill = true
 	self.Health.__AzeriteUI_KeepMirrorPercentOnNoSample = false
 
-	local healthSpark = health:CreateTexture(nil, "OVERLAY", nil, 3)
-	healthSpark:SetTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
-	healthSpark:SetBlendMode("ADD")
-	healthSpark:SetVertexColor(1, .95, .8, .85)
-	healthSpark:Hide()
-	self.Health.Spark = healthSpark
+	self.Health.Spark = nil
 
 	local healthFakeFill = health:CreateTexture(nil, "ARTWORK", nil, 1)
 	healthFakeFill:SetAllPoints(health)

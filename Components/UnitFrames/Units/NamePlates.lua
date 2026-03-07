@@ -1943,8 +1943,13 @@ NamePlatesMod.HookNamePlates = function(self)
 	self.PatchBlizzardNamePlate = PatchBlizzardNamePlate
 	self.PatchBlizzardNamePlateFrame = PatchBlizzardNamePlateFrame
 	if (secretMode) then
+		-- WoW12 secret-value mode:
+		-- do not patch/mutate Blizzard nameplate unitframes at all.
+		self.PatchBlizzardNamePlate = nil
+		self.PatchBlizzardNamePlateFrame = nil
 		self.DisableBlizzardNamePlate = nil
 		self.RestoreBlizzardNamePlate = nil
+		return
 	else
 		self.DisableBlizzardNamePlate = DisableBlizzardNamePlate
 		self.RestoreBlizzardNamePlate = RestoreBlizzardNamePlate

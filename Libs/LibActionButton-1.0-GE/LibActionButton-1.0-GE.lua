@@ -398,9 +398,14 @@ function SetupSecureSnippets(button)
 				spellID = action
 			end
 
+			local pressAndHold = false
 			-- IsPressHoldReleaseSpell is on _G here not on C_Spell
 			if spellID and IsPressHoldReleaseSpell(spellID) then
-				self:SetAttribute('pressAndHoldAction', true)
+				pressAndHold = true
+			end
+			self:SetAttribute('pressAndHoldAction', pressAndHold)
+
+			if type == 'action' and pressAndHold then
 				self:SetAttribute('typerelease', 'actionrelease')
 			elseif self:GetAttribute('typerelease') then
 				self:SetAttribute('typerelease', nil)

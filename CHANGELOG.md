@@ -3,6 +3,21 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.229-JuNNeZ (2026-03-07)
+
+### Fixes
+- Reworked WoW 12 tooltip handling so AzeriteUI tooltip skin can stay enabled with secret-value safety:
+  - Kept `SharedTooltip_SetBackdropStyle` hook active.
+  - Added non-secret width/height gating + cached dimension fallback.
+  - Added protected backdrop apply fallback to Blizzard visuals on failure.
+- Added WoW 12 tooltip money guards (`SetTooltipMoney`/`MoneyFrame_Update`) and reduced tooltip-related taint paths.
+- Fixed top-right buff cancel regression by registering right-clicks on `AzeriteAuraTemplate` secure buttons.
+- Reduced secret-mode taint in nameplate/CUF paths by stopping risky Blizzard nameplate mutations.
+- Hardened compatibility portrait shim and removed forced global `SetPortraitToTexture` override to avoid secure-call taint (`SetAvatarTexture` chain).
+- Hardened action button press/hold state updates and hidden stock Blizzard button isolation to reduce `ActionButton.lua` secret-value errors.
+- Removed player/target health bar spark visuals (spark no longer rendered).
+- Added AceAddon compatibility alias so external tools expecting `AceAddon:GetAddon("AzeriteUI")` work with `AzeriteUI5_JuNNeZ_Edition` (restores AzUI health color picker integration path).
+
 ## 5.2.228-JuNNeZ (2026-03-06)
 
 ### Fixes

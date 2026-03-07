@@ -88,11 +88,13 @@ if (tocversion >= 100200) or (tocversion >= 40400 and tocversion < 50000) then
 					texture = _G[texture]
 				end
 				if type(texture) == "table" and texture.SetTexture then
-					if original_SetPortraitToTexture then
-						original_SetPortraitToTexture(texture, asset)
-					else
-						texture:SetTexture(asset)
+					if type(original_SetPortraitToTexture) == "function" then
+						local ok = pcall(original_SetPortraitToTexture, texture, asset)
+						if ok then
+							return
+						end
 					end
+					texture:SetTexture(asset)
 				end
 			end
 		end
