@@ -75,6 +75,37 @@ local function MakeSafeUpdateShownState(origFunc)
 	end
 end
 
+-- Guard GetTypeInfo, which can index forbidden Blizzard tables during
+-- spec/talent transitions after castbar taint.
+local SAFE_CASTBAR_TYPE_INFO = {
+	showCastbar = true,
+	showTradeSkills = true,
+	showShield = false,
+	showIcon = true
+}
+
+local function MakeSafeGetTypeInfo(origFunc)
+	return function(self, ...)
+		if (self and type(self) == "table" and not canaccesstable(self)) then
+			return SAFE_CASTBAR_TYPE_INFO
+		end
+		local ok, info = pcall(origFunc, self, ...)
+		if (ok and type(info) == "table" and (not canaccesstable or canaccesstable(info))) then
+			if (self and type(self) == "table") then
+				self.__AzUI_W12_LastTypeInfo = info
+			end
+			return info
+		end
+		if (self and type(self) == "table") then
+			local cached = rawget(self, "__AzUI_W12_LastTypeInfo")
+			if (type(cached) == "table" and (not canaccesstable or canaccesstable(cached))) then
+				return cached
+			end
+		end
+		return SAFE_CASTBAR_TYPE_INFO
+	end
+end
+
 -- Guard a method on a mixin table (idempotent via flag name).
 local function GuardMixin(mixin, method, wrapper, flag)
 	if (not mixin or type(mixin[method]) ~= "function" or mixin[flag]) then
@@ -98,6 +129,11 @@ local function GuardFrame(frame)
 		frame.__AzUI_W12_USS = true
 		frame.UpdateShownState = MakeSafeUpdateShownState(frame.UpdateShownState)
 	end
+	if (type(frame.GetTypeInfo) == "function"
+		and not frame.__AzUI_W12_GTI) then
+		frame.__AzUI_W12_GTI = true
+		frame.GetTypeInfo = MakeSafeGetTypeInfo(frame.GetTypeInfo)
+	end
 end
 
 -- Master apply (idempotent — safe to call many times).
@@ -111,11 +147,16 @@ local function ApplyGuards()
 		MakeSafeUpdateShownState, "__AzUI_W12_USS_CBM")
 	GuardMixin(_G.CastingBarFrameMixin, "UpdateShownState",
 		MakeSafeUpdateShownState, "__AzUI_W12_USS_CBFM")
+	GuardMixin(_G.CastingBarMixin, "GetTypeInfo",
+		MakeSafeGetTypeInfo, "__AzUI_W12_GTI_CBM")
+	GuardMixin(_G.CastingBarFrameMixin, "GetTypeInfo",
+		MakeSafeGetTypeInfo, "__AzUI_W12_GTI_CBFM")
 
 	-- Living frame instances (already created before our patch).
 	-- Mixin() copies methods at creation time, so patching the
 	-- prototype alone won't fix frames that already exist.
 	GuardFrame(_G.PlayerCastingBarFrame)
+	GuardFrame(_G.OverlayPlayerCastingBarFrame)
 	GuardFrame(_G.PetCastingBarFrame)
 
 	-- Arena castbar instances — created by Blizzard_ArenaUI.

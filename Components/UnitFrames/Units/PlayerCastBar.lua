@@ -43,6 +43,21 @@ local IsAddOnEnabled = ns.API.IsAddOnEnabled
 
 local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }
 
+local function SuppressBlizzardCastbar(frame)
+	if (not frame or frame:IsForbidden()) then
+		return
+	end
+	frame:SetAlpha(0)
+	if (not frame.__AzeriteUI_SuppressShowHooked) then
+		frame.__AzeriteUI_SuppressShowHooked = true
+		hooksecurefunc(frame, "Show", function(f)
+			if (f and not f:IsForbidden()) then
+				f:SetAlpha(0)
+			end
+		end)
+	end
+end
+
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
 -- changing factors like user interface scale.
@@ -259,18 +274,15 @@ CastBarMod.OnEnable = function(self)
 
 	if (ns.IsRetail) then
 
-		-- How the fuck do I get this out of the editmode?
 		if (PlayerCastingBarFrame and not PlayerCastingBarFrame:IsForbidden()) then
 			pcall(function()
-				PlayerCastingBarFrame:Hide()
-				PlayerCastingBarFrame:SetAlpha(0)
+				SuppressBlizzardCastbar(PlayerCastingBarFrame)
 			end)
 		end
 
 		if (PetCastingBarFrame and not PetCastingBarFrame:IsForbidden()) then
 			pcall(function()
-				PetCastingBarFrame:Hide()
-				PetCastingBarFrame:SetAlpha(0)
+				SuppressBlizzardCastbar(PetCastingBarFrame)
 			end)
 		end
 	end
