@@ -73,6 +73,12 @@ local prefix = function(msg)
 	return string_gsub(msg, "*", ns.Prefix)
 end
 
+local ApplyPlayerAlternatePowerValueAlpha = function(frame)
+	if (ns.UnitFrame and ns.UnitFrame.ApplyPowerValueAlpha) then
+		ns.UnitFrame.ApplyPowerValueAlpha(frame)
+	end
+end
+
 -- Element Callbacks
 --------------------------------------------
 -- Forceupdate health prediction on health updates,
@@ -1004,6 +1010,7 @@ local style = function(self, unit, id)
 	self:Tag(powerPerc, prefix("[*:PowerPercent]"))
 
 	self.Power.Percent = powerPerc
+	ApplyPlayerAlternatePowerValueAlpha(self)
 
 	-- CombatFeedback Text
 	--------------------------------------------
@@ -1183,6 +1190,7 @@ PlayerFrameAltMod.Update = function(self)
 	end
 
 	self.frame.Name:SetShown(self.db.profile.showName)
+	ApplyPlayerAlternatePowerValueAlpha(self.frame)
 	self.frame:PostUpdate()
 end
 

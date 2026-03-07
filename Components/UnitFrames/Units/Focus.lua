@@ -244,10 +244,15 @@ local TargetHighlight_Update = function(self, event, unit, ...)
 	if (unit and unit ~= self.unit) then return end
 
 	local element = self.TargetHighlight
+	if (not element) then
+		return
+	end
 	unit = unit or self.unit
 
-	if (UnitIsUnit(unit, "target")) then
-		element:SetVertexColor(unpack(element.colorTarget))
+	if (UnitExists(unit) and UnitIsUnit(unit, "target")) then
+		-- Focus frame highlight should use the focus tint,
+		-- not the stronger target highlight tint.
+		element:SetVertexColor(unpack(element.colorFocus or element.colorTarget))
 		element:Show()
 	else
 		element:Hide()
@@ -316,7 +321,10 @@ local style = function(self, unit)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
 	healthPreview:SetOrientation(db.HealthBarOrientation)
 	healthPreview:SetSparkTexture("")
-	healthPreview:SetAlpha(.5)
+	-- Keep preview as an internal prediction helper, but hide its own visual layer
+	-- to avoid a permanent duplicate/brightened healthbar look.
+	healthPreview:SetAlpha(0)
+	healthPreview:Hide()
 	healthPreview:DisableSmoothing(true)
 
 	self.Health.Preview = healthPreview
@@ -344,6 +352,7 @@ local style = function(self, unit)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
 	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
 	castbar:DisableSmoothing(true)
+	castbar:Hide()
 
 	self.Castbar = castbar
 
@@ -406,6 +415,7 @@ local style = function(self, unit)
 	targetHighlight:SetTexture(db.TargetHighlightTexture)
 	targetHighlight.colorTarget = db.TargetHighlightTargetColor
 	targetHighlight.colorFocus = db.TargetHighlightFocusColor
+	targetHighlight:Hide()
 
 	self.TargetHighlight = targetHighlight
 

@@ -126,6 +126,26 @@ local GenerateOptions = function()
 				hidden = isdisabled,
 				set = function(info,val) setter(info, not val) end,
 				get = function(info) return not getter(info) end
+			},
+			powerValueAlpha = {
+				name = "Power Value Alpha %",
+				desc = "Set alpha for all power value text (player, mana orb, target, and alternate player frame).",
+				order = 11,
+				type = "range", width = "full", min = 0, max = 100, step = 1,
+				hidden = isdisabled,
+				set = setter,
+				get = function(info)
+					local value = getter(info)
+					if (type(value) ~= "number") then
+						return 75
+					end
+					if (value < 0) then
+						return 0
+					elseif (value > 100) then
+						return 100
+					end
+					return math.floor(value + .5)
+				end
 			}
 		}
 	}
@@ -753,6 +773,11 @@ local GenerateOptions = function()
 				return mod and mod:GetLabel() or "Class Power"
 			end
 			suboptions.order = 210
+			suboptions.args.clickThrough = {
+				name = "Class Power Clickthrough",
+				desc = "When enabled, mouse clicks pass through class power. Disable to block right-click unit menu.",
+				order = 10.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			}
 			suboptions.args.showComboPoints = {
 				name = L["Show Combo Points"],
 				desc = L["Toggle whether to show Combo Points."],

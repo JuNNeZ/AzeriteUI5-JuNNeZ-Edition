@@ -52,11 +52,37 @@ local defaults = { profile = ns:Merge({
 	showRunes = ns.IsCata or ns.IsRetail or nil,
 	showSoulShards = ns.IsRetail or nil,
 	showStagger = ns.IsRetail or nil,
+	clickThrough = true,
 	classPointOffsets = {
 		[1] = { 0, 0 }, [2] = { 0, 0 }, [3] = { 0, 0 }, [4] = { 0, 0 }, [5] = { 0, 0 },
 		[6] = { 0, 0 }, [7] = { 0, 0 }, [8] = { 0, 0 }, [9] = { 0, 0 }, [10] = { 0, 0 }
 	}
 }, ns.MovableModulePrototype.defaults) }
+
+local ApplyClassPowerClickThrough = function(self)
+	if (not self or not self.frame) then
+		return
+	end
+
+	local classpower = self.frame.ClassPower
+	if (not classpower) then
+		return
+	end
+
+	if (not classpower.ClickBlocker) then
+		local blocker = CreateFrame("Frame", nil, classpower)
+		blocker:SetAllPoints(classpower)
+		blocker:EnableMouse(false)
+		blocker:SetFrameStrata(classpower:GetFrameStrata())
+		blocker:SetFrameLevel(classpower:GetFrameLevel() + 20)
+		blocker:SetScript("OnMouseDown", noop)
+		blocker:SetScript("OnMouseUp", noop)
+		classpower.ClickBlocker = blocker
+	end
+
+	local clickThrough = (self.db and self.db.profile and self.db.profile.clickThrough) and true or false
+	classpower.ClickBlocker:EnableMouse(not clickThrough)
+end
 
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
@@ -634,6 +660,7 @@ ClassPowerMod.Update = function(self)
 		end
 	end
 
+	ApplyClassPowerClickThrough(self)
 	self.frame.ClassPower:ForceUpdate()
 
 end
@@ -642,6 +669,7 @@ ClassPowerMod.OnEnable = function(self)
 
 	self:CreateUnitFrames()
 	self:CreateAnchor(self:GetLabel())
+	ApplyClassPowerClickThrough(self)
 
 	ns.MovableModulePrototype.OnEnable(self)
 end

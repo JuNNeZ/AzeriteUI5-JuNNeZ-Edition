@@ -119,7 +119,7 @@ ns.RegisterConfig("PlayerFrame", {
 	CombatIndicatorColor = { Colors.ui[1] *.75, Colors.ui[2] *.75, Colors.ui[3] *.75 },
 
 	-- PvP Indicator
-	PvPIndicatorPosition = { "BOTTOMLEFT", 40, -18 },
+	PvPIndicatorPosition = { "BOTTOMLEFT", 86, -18 },
 	PvPIndicatorSize = { 84, 84 },
 	PvPIndicatorAllianceTexture = GetMedia("icon_badges_alliance"),
 	PvPIndicatorHordeTexture = GetMedia("icon_badges_horde"),

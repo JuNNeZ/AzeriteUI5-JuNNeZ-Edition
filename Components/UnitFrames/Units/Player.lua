@@ -1153,6 +1153,12 @@ local ApplyPlayerPowerValueTextScale = function(frame)
 	end
 end
 
+local ApplyPlayerPowerValueAlpha = function(frame)
+	if (ns.UnitFrame and ns.UnitFrame.ApplyPowerValueAlpha) then
+		ns.UnitFrame.ApplyPowerValueAlpha(frame)
+	end
+end
+
 local UpdatePlayerPowerValueTag = function(frame)
 	if (not frame or not frame.Power or not frame.Power.Value) then
 		return
@@ -2043,6 +2049,7 @@ local UnitFrame_UpdateTextures = function(self)
 		powerPercent:SetJustifyH(config.PowerPercentageJustifyH or "CENTER")
 		powerPercent:SetJustifyV(config.PowerPercentageJustifyV or "TOP")
 	end
+	ApplyPlayerPowerValueAlpha(self)
 
 	local mana = self.ManaOrb
 	mana:ClearAllPoints()
@@ -2663,6 +2670,7 @@ local style = function(self, unit)
 	manaPerc:Hide() -- Hide mana percentage
 
 	self.ManaOrb.Percent = manaPerc
+	ApplyPlayerPowerValueAlpha(self)
 	RefreshManaOrb(self, "StyleInit", GetPlayerPowerUnit(self))
 
 	-- CombatFeedback Text
@@ -2876,6 +2884,7 @@ PlayerFrameMod.Update = function(self)
 	UpdatePlayerPowerValueTag(self.frame)
 	UpdatePlayerManaValueTag(self.frame)
 	ApplyPlayerPowerValueTextScale(self.frame)
+	ApplyPlayerPowerValueAlpha(self.frame)
 
 	self.frame.Health.colorClass = self.db.profile.useClassColor
 	self.frame.Health.colorHealth = true

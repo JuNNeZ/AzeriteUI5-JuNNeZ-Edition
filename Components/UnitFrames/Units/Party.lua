@@ -1139,27 +1139,23 @@ PartyFrameMod.DisableBlizzard = function(self)
 	-- Note: ns.ClientBuild is the build number (~58135), NOT the TOC version.
 	-- ns.ClientVersion is the interface/TOC number (120000+ for WoW 12).
 	if (ns.ClientVersion and ns.ClientVersion >= 120000) then
-		local hideFrame = function(frame)
-			if (not frame) then return end
-			if (frame.UnregisterAllEvents) then
-				frame:UnregisterAllEvents()
+		local quarantine = ns.WoW12BlizzardQuarantine
+		if (quarantine and quarantine.ApplyCompactFrames) then
+			quarantine.ApplyCompactFrames()
+		else
+			if (_G.CompactRaidFrameManager_SetSetting) then
+				_G.CompactRaidFrameManager_SetSetting("IsShown", "0")
 			end
-			if (frame.Hide) then
-				frame:Hide()
+			if (_G.PartyFrame and _G.PartyFrame.UnregisterAllEvents) then
+				_G.PartyFrame:UnregisterAllEvents()
 			end
-			if (frame.SetParent) then
-				frame:SetParent(ns.Hider)
+			if (_G.PartyFrame and _G.PartyFrame.Hide) then
+				_G.PartyFrame:Hide()
+			end
+			if (_G.PartyFrame and _G.PartyFrame.SetParent) then
+				_G.PartyFrame:SetParent(ns.Hider)
 			end
 		end
-
-		if (_G.CompactRaidFrameManager_SetSetting) then
-			_G.CompactRaidFrameManager_SetSetting("IsShown", "0")
-		end
-
-		hideFrame(_G.PartyFrame)
-		hideFrame(_G.CompactPartyFrame)
-		hideFrame(_G.CompactRaidFrameContainer)
-		hideFrame(_G.CompactRaidFrameManager)
 
 		return
 	end

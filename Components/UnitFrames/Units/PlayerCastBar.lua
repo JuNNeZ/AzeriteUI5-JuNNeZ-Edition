@@ -40,6 +40,7 @@ local unpack = unpack
 local Colors = ns.Colors
 local GetFont = ns.API.GetFont
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
+local UIHider = ns.Hider
 
 local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }
 
@@ -47,14 +48,93 @@ local function SuppressBlizzardCastbar(frame)
 	if (not frame or frame:IsForbidden()) then
 		return
 	end
-	frame:SetAlpha(0)
-	if (not frame.__AzeriteUI_SuppressShowHooked) then
-		frame.__AzeriteUI_SuppressShowHooked = true
-		hooksecurefunc(frame, "Show", function(f)
-			if (f and not f:IsForbidden()) then
-				f:SetAlpha(0)
-			end
-		end)
+	if (not frame.__AzeriteUI_OriginalParent and frame.GetParent) then
+		frame.__AzeriteUI_OriginalParent = frame:GetParent()
+	end
+	pcall(frame.SetParent, frame, UIHider or UIParent)
+	pcall(frame.UnregisterAllEvents, frame)
+	pcall(frame.SetUnit, frame, nil)
+	pcall(frame.Hide, frame)
+	pcall(frame.SetAlpha, frame, 0)
+	if (frame == PetCastingBarFrame) then
+		pcall(frame.UnregisterEvent, frame, "UNIT_PET")
+	end
+end
+
+local function RestoreBlizzardCastbar(frame, unit)
+	if (not frame or frame:IsForbidden()) then
+		return
+	end
+	local parent = frame.__AzeriteUI_OriginalParent or UIParent
+	pcall(frame.SetParent, frame, parent)
+	pcall(frame.SetAlpha, frame, 1)
+
+	local restored = false
+	if (frame == PlayerCastingBarFrame and type(frame.OnLoad) == "function") then
+		local ok = pcall(frame.OnLoad, frame)
+		restored = ok and true or false
+	elseif (frame == PetCastingBarFrame) then
+		if (type(frame.PetCastingBar_OnLoad) == "function") then
+			local ok = pcall(frame.PetCastingBar_OnLoad, frame)
+			restored = ok and true or false
+		elseif (type(_G.PetCastingBarFrame_OnLoad) == "function") then
+			local ok = pcall(_G.PetCastingBarFrame_OnLoad, frame)
+			restored = ok and true or false
+		end
+	end
+
+	if (not restored) then
+		-- Fallback restore for builds where OnLoad helpers are unavailable.
+		local castEvents = {
+			"UNIT_SPELLCAST_START",
+			"UNIT_SPELLCAST_STOP",
+			"UNIT_SPELLCAST_FAILED",
+			"UNIT_SPELLCAST_INTERRUPTED",
+			"UNIT_SPELLCAST_DELAYED",
+			"UNIT_SPELLCAST_CHANNEL_START",
+			"UNIT_SPELLCAST_CHANNEL_UPDATE",
+			"UNIT_SPELLCAST_CHANNEL_STOP",
+			"UNIT_SPELLCAST_INTERRUPTIBLE",
+			"UNIT_SPELLCAST_NOT_INTERRUPTIBLE",
+			"UNIT_SPELLCAST_EMPOWER_START",
+			"UNIT_SPELLCAST_EMPOWER_UPDATE",
+			"UNIT_SPELLCAST_EMPOWER_STOP"
+		}
+
+		for _, eventName in next, castEvents do
+			pcall(frame.RegisterUnitEvent, frame, eventName, unit)
+		end
+		pcall(frame.RegisterEvent, frame, "PLAYER_ENTERING_WORLD")
+		if (unit == "pet") then
+			pcall(frame.RegisterEvent, frame, "UNIT_PET")
+		end
+		pcall(frame.SetUnit, frame, unit)
+	end
+
+	pcall(frame.Hide, frame)
+end
+
+local function ShouldUseCustomCastbar(self)
+	return self and self.db and self.db.profile and self.db.profile.enabled and true or false
+end
+
+local function ApplyBlizzardCastbarState(self, suppress)
+	if (not ns.IsRetail) then
+		return
+	end
+	if (PlayerCastingBarFrame and not PlayerCastingBarFrame:IsForbidden()) then
+		if (suppress) then
+			SuppressBlizzardCastbar(PlayerCastingBarFrame)
+		else
+			RestoreBlizzardCastbar(PlayerCastingBarFrame, "player")
+		end
+	end
+	if (PetCastingBarFrame and not PetCastingBarFrame:IsForbidden()) then
+		if (suppress) then
+			SuppressBlizzardCastbar(PetCastingBarFrame)
+		else
+			RestoreBlizzardCastbar(PetCastingBarFrame, "pet")
+		end
 	end
 end
 
@@ -260,7 +340,9 @@ CastBarMod.UpdateVisibility = function(self, event, ...)
 	if (event == "PLAYER_REGEN_ENABLED") then
 		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "UpdateVisibility")
 	end
-	if (self.db.profile.enabled) then
+	local shouldUseCustom = ShouldUseCustomCastbar(self)
+	ApplyBlizzardCastbarState(self, shouldUseCustom)
+	if (shouldUseCustom) then
 		self.frame:Enable()
 	else
 		self.frame:Disable()
@@ -272,26 +354,12 @@ end
 
 CastBarMod.OnEnable = function(self)
 
-	if (ns.IsRetail) then
-
-		if (PlayerCastingBarFrame and not PlayerCastingBarFrame:IsForbidden()) then
-			pcall(function()
-				SuppressBlizzardCastbar(PlayerCastingBarFrame)
-			end)
-		end
-
-		if (PetCastingBarFrame and not PetCastingBarFrame:IsForbidden()) then
-			pcall(function()
-				SuppressBlizzardCastbar(PetCastingBarFrame)
-			end)
-		end
-	end
-
 	self:CreateUnitFrames()
 	self:CreateAnchor(HUD_EDIT_MODE_CAST_BAR_LABEL or SHOW_ARENA_ENEMY_CASTBAR_TEXT)
 
 	self:RegisterEvent("CVAR_UPDATE", "UpdateVisibility")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateVisibility")
+	self:UpdateVisibility("OnEnable")
 
 	ns.MovableModulePrototype.OnEnable(self)
 end
@@ -300,4 +368,8 @@ CastBarMod.OnInitialize = function(self)
 	if (IsAddOnEnabled("Quartz")) then return self:Disable() end
 
 	ns.MovableModulePrototype.OnInitialize(self)
+end
+
+CastBarMod.OnDisable = function(self)
+	ApplyBlizzardCastbarState(self, false)
 end

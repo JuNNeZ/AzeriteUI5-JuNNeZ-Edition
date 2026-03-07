@@ -90,21 +90,6 @@ local FALLBACK_ICON = 136243 -- Interface\ICONS\Trade_Engineering
 local FAILED = _G.FAILED or 'Failed'
 local INTERRUPTED = _G.INTERRUPTED or 'Interrupted'
 
-local function SuppressBlizzardCastbar(frame)
-	if(not frame or frame:IsForbidden()) then
-		return
-	end
-	frame:SetAlpha(0)
-	if(not frame.__AzeriteUI_SuppressShowHooked) then
-		frame.__AzeriteUI_SuppressShowHooked = true
-		hooksecurefunc(frame, 'Show', function(f)
-			if(f and not f:IsForbidden()) then
-				f:SetAlpha(0)
-			end
-		end)
-	end
-end
-
 local function resetAttributes(self)
 	self.castID = nil
 	self.casting = nil
@@ -672,19 +657,6 @@ local function Enable(self, unit)
 		element.Pips = element.Pips or {}
 
 		element:SetScript('OnUpdate', element.OnUpdate or onUpdate)
-
-		if(self.unit == 'player' and not (self.hasChildren or self.isChild or self.isNamePlate)) then
-			pcall(function()
-				if(PlayerCastingBarFrame) then
-					SuppressBlizzardCastbar(PlayerCastingBarFrame)
-				end
-			end)
-			pcall(function()
-				if(PetCastingBarFrame) then
-					SuppressBlizzardCastbar(PetCastingBarFrame)
-				end
-			end)
-		end
 
 		if(element:IsObjectType('StatusBar') and not element:GetStatusBarTexture()) then
 			element:SetStatusBarTexture([[Interface\TargetingFrame\UI-StatusBar]])

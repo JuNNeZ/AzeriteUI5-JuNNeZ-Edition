@@ -3,6 +3,20 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.231-JuNNeZ (2026-03-07)
+
+### Fixes
+- Aligned WoW12 Blizzard frame disable behavior with ElvUI/GW2UI/DiabolicUI/FeelUI patterns:
+  - Removed taint-prone shared Blizzard rewrites in `FixBlizzardBugsWow12` (no global castbar mixin hooks, no global aura API rewrites).
+  - Removed reusable `Show -> Hide` quarantine hooks and anonymous pool-frame quarantine.
+  - Kept deterministic disable/reparent only for explicit Blizzard party/raid/arena frame names, reducing nameplate/EditMode taint spillover.
+- Focus frame washout fix:
+  - Focus target highlight now initializes hidden and uses focus tint when shown.
+
+### Known Bugs (Under Investigation)
+- Rare Blizzard arena/compact aura defensive check can still throw a forbidden-table error in `AuraUtil.IsBigDefensive`.
+- Rare Blizzard compact party health-color update can still throw a secret-value compare error in `CompactUnitFrame_UpdateHealthColor`.
+
 ## 5.2.230-JuNNeZ (2026-03-07)
 
 ### Fixes

@@ -1403,13 +1403,14 @@ local GetFormattedTargetPowerValue = function(element, useFull)
 	end
 
 	local rawCur = UnitPower(unit, displayType)
-	if (type(rawCur) == "number") then
-		if (issecretvalue and issecretvalue(rawCur)) then
-			return nil
-		end
-		if (rawCur <= 0) then
-			return nil
-		end
+	if (type(rawCur) ~= "number" or (issecretvalue and issecretvalue(rawCur))) then
+		rawCur = element.safeCur or element.cur
+	end
+	if (type(rawCur) ~= "number" or (issecretvalue and issecretvalue(rawCur))) then
+		return nil
+	end
+	if (rawCur < 0) then
+		rawCur = 0
 	end
 	local formatter = useFull and BreakUpLargeNumbers or AbbreviateNumbers
 	if (type(formatter) == "function") then
@@ -1441,15 +1442,33 @@ local GetTargetRawPowerPercent = function(element)
 			end
 		end
 	end)
-	if (type(percent) == "number") then
-		if (issecretvalue and issecretvalue(percent)) then
-			return nil
-		end
-		if (percent <= 0) then
-			return nil
+	if (type(percent) == "number" and issecretvalue and issecretvalue(percent)) then
+		percent = nil
+	end
+	if (type(percent) ~= "number") then
+		local cur = element.safeCur or element.cur
+		local max = element.safeMax or element.max
+		if (type(cur) == "number" and type(max) == "number" and max > 0
+			and (not issecretvalue or (not issecretvalue(cur) and not issecretvalue(max)))) then
+			percent = math_floor(((cur / max) * 100) + 0.5)
 		end
 	end
+	if (type(percent) ~= "number") then
+		return nil
+	end
+	if (percent < 0) then
+		percent = 0
+	elseif (percent > 100) then
+		percent = 100
+	end
 	return percent
+end
+
+local GetTargetPowerValueAlpha = function()
+	if (ns.UnitFrame and ns.UnitFrame.GetPowerValueAlpha) then
+		return ns.UnitFrame.GetPowerValueAlpha()
+	end
+	return .75
 end
 
 local UpdateTargetPowerValueText = function(frame)
@@ -1501,7 +1520,7 @@ local UpdateTargetPowerValueText = function(frame)
 		pcall(powerValue.SetText, powerValue, "")
 	end
 	if (powerValue.SetAlpha) then
-		powerValue:SetAlpha(hasValue and 1 or 0)
+		powerValue:SetAlpha(hasValue and GetTargetPowerValueAlpha() or 0)
 	end
 end
 
@@ -1528,8 +1547,9 @@ local Power_UpdateVisibility = function(element, unit, cur, min, max)
 		element.safeMax = max
 	end
 	
-	local zeroPower = (not curIsSecret and not maxIsSecret) and (max == 0 or cur == 0)
-	if (UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit) or zeroPower) then
+	local noUsablePool = (not curIsSecret and not maxIsSecret)
+		and ((type(max) ~= "number") or (max <= 0) or (type(cur) ~= "number"))
+	if (UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit) or noUsablePool) then
 		element:Hide()
 		if (element.Backdrop) then
 			element.Backdrop:Hide()
@@ -2780,6 +2800,7 @@ local style = function(self, unit, id)
 	powerValue:SetJustifyV(db.PowerValueJustifyV)
 	powerValue:SetFontObject(db.PowerValueFont)
 	powerValue:SetTextColor(unpack(db.PowerValueColor))
+	powerValue:SetAlpha(GetTargetPowerValueAlpha())
 
 	self.Power.Value = powerValue
 	UpdateTargetPowerValueText(self)

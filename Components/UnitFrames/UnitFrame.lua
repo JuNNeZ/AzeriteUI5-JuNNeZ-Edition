@@ -41,6 +41,7 @@ local next = next
 local defaults = { profile = ns:Merge({
 	enabled = true,
 	disableAuraSorting = false,
+	powerValueAlpha = 75,
 	disableHealComm = nil -- TODO: purge it
 }, ns.MovableModulePrototype.defaults) }
 
@@ -201,6 +202,40 @@ local unitFrameDefaults = {
 ns.UnitFrames = {}
 ns.UnitFrame = {}
 ns.UnitFrame.defaults = unitFrameDefaults
+
+ns.UnitFrame.GetPowerValueAlpha = function()
+	local module = ns:GetModule("UnitFrames", true)
+	local profile = module and module.db and module.db.profile
+	local alphaPercent = profile and profile.powerValueAlpha
+	if (type(alphaPercent) ~= "number") then
+		alphaPercent = 75
+	end
+	if (alphaPercent < 0) then
+		alphaPercent = 0
+	elseif (alphaPercent > 100) then
+		alphaPercent = 100
+	end
+	return alphaPercent / 100
+end
+
+ns.UnitFrame.ApplyPowerValueAlpha = function(frame)
+	if (not frame) then
+		return
+	end
+	local alpha = ns.UnitFrame.GetPowerValueAlpha()
+	if (frame.Power and frame.Power.Value and frame.Power.Value.SetAlpha) then
+		frame.Power.Value:SetAlpha(alpha)
+	end
+	if (frame.Power and frame.Power.Percent and frame.Power.Percent.SetAlpha) then
+		frame.Power.Percent:SetAlpha(alpha)
+	end
+	if (frame.ManaOrb and frame.ManaOrb.Value and frame.ManaOrb.Value.SetAlpha) then
+		frame.ManaOrb.Value:SetAlpha(alpha)
+	end
+	if (frame.ManaOrb and frame.ManaOrb.Percent and frame.ManaOrb.Percent.SetAlpha) then
+		frame.ManaOrb.Percent:SetAlpha(alpha)
+	end
+end
 
 ns.UnitFrame.InitializeUnitFrame = function(self)
 
@@ -387,6 +422,11 @@ UnitFrameMod.UpdateSettings = function(self)
 			local classpower = frame.ClassPower
 			if (classpower and frame:IsElementEnabled("ClassPower")) then
 				classpower:ForceUpdate()
+			end
+			ns.UnitFrame.ApplyPowerValueAlpha(frame)
+			local power = frame.Power
+			if (power and power.ForceUpdate) then
+				pcall(power.ForceUpdate, power)
 			end
 		end
 	end
