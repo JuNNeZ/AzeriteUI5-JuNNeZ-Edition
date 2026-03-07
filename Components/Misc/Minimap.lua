@@ -69,6 +69,7 @@ local L_HAVE_MAIL_FROM = HAVE_MAIL_FROM -- "Unread mail from:"
 local TORGHAST_ZONE_ID = 2162
 local IN_TORGHAST = (not IsResting()) and (GetRealZoneText() == GetRealZoneText(TORGHAST_ZONE_ID))
 local mapScale = ns.WoW10 and 1 or 198/140
+local Minimap_OnMouseButton_Hook
 
 local defaults = { profile = ns:Merge({
 	enabled = true,
@@ -363,22 +364,135 @@ local Minimap_OnMouseWheel = function(self, delta)
 	end
 end
 
+local function EnsureTrackingProxy()
+	if (not ns.IsRetail) then
+		return nil
+	end
+	if (MinimapMod.trackingProxy) then
+		return MinimapMod.trackingProxy
+	end
+	if (type(Mixin) ~= "function" or type(MiniMapTrackingButtonMixin) ~= "table") then
+		return nil
+	end
+
+	local proxy = CreateFrame("DropdownButton", nil, Minimap)
+	proxy:SetFrameStrata("BACKGROUND")
+	proxy:SetFrameLevel(1)
+	proxy:SetAllPoints(Minimap)
+	proxy:SetAlpha(0)
+	proxy:EnableMouse(false)
+
+	Mixin(proxy, MiniMapTrackingButtonMixin)
+	if (proxy.OnLoad) then
+		pcall(proxy.OnLoad, proxy)
+	end
+	if (proxy.OnEvent) then
+		proxy:SetScript("OnEvent", proxy.OnEvent)
+	end
+
+	MinimapMod.trackingProxy = proxy
+	return proxy
+end
+
+local OpenTrackingContextMenu = function(anchor)
+	local trackingButton, trackingFrame
+	if (MinimapCluster) then
+		trackingFrame = MinimapCluster.Tracking or MinimapCluster.TrackingFrame
+		trackingButton = trackingFrame and (trackingFrame.Button or trackingFrame)
+	end
+	trackingButton = trackingButton or _G.MiniMapTrackingButton or _G.MiniMapTracking
+	local function IsTrackingMenuVisible(buttonObject)
+		if (buttonObject and buttonObject.menu and buttonObject.menu.IsShown and buttonObject.menu:IsShown()) then
+			return true
+		end
+		if (Menu and Menu.GetManager) then
+			local okManager, manager = pcall(Menu.GetManager)
+			if (okManager and manager and manager.GetOpenMenu) then
+				local okMenu, openMenu = pcall(manager.GetOpenMenu, manager)
+				if (okMenu and openMenu and openMenu.IsShown and openMenu:IsShown()) then
+					return true
+				end
+			end
+		end
+		local trackingDropDown = _G.MiniMapTrackingDropDown
+		if (trackingDropDown and trackingDropDown.IsShown and trackingDropDown:IsShown()) then
+			return true
+		end
+		local dropDownList = _G.DropDownList1
+		if (dropDownList and dropDownList.IsShown and dropDownList:IsShown()) then
+			return true
+		end
+		return false
+	end
+	local function OpenAndCheck(buttonObject)
+		if (not buttonObject) then
+			return false
+		end
+		if (buttonObject.OpenMenu) then
+			local ok = pcall(buttonObject.OpenMenu, buttonObject)
+			if (ok and IsTrackingMenuVisible(buttonObject)) then
+				return true
+			end
+		end
+		if (MenuUtil and MenuUtil.CreateContextMenu and buttonObject.menuGenerator) then
+			local ok = pcall(MenuUtil.CreateContextMenu, anchor or Minimap, buttonObject.menuGenerator)
+			if (ok and IsTrackingMenuVisible(buttonObject)) then
+				return true
+			end
+		end
+		if (buttonObject.OnMouseDown) then
+			local ok = pcall(buttonObject.OnMouseDown, buttonObject, "RightButton")
+			if (ok and IsTrackingMenuVisible(buttonObject)) then
+				return true
+			end
+		end
+		if (buttonObject.OnClick) then
+			local ok = pcall(buttonObject.OnClick, buttonObject, "RightButton")
+			if (ok and IsTrackingMenuVisible(buttonObject)) then
+				return true
+			end
+		end
+		if (buttonObject.Click) then
+			local ok = pcall(buttonObject.Click, buttonObject, "RightButton")
+			if (ok and IsTrackingMenuVisible(buttonObject)) then
+				return true
+			end
+		end
+		return false
+	end
+
+	if (OpenAndCheck(EnsureTrackingProxy())) then
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
+		return true
+	end
+	if (OpenAndCheck(trackingButton)) then
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
+		return true
+	end
+
+	local dropdown = _G[ns.Prefix.."MiniMapTrackingDropDown"] or _G.MiniMapTrackingDropDown
+	if (dropdown) then
+		ToggleDropDownMenu(1, nil, dropdown, "cursor")
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
+		return true
+	end
+
+	return false
+end
+
 -- Hook for RightButton only.
 -- LeftButton and MiddleButton are handled by Blizzard's original minimap click handler.
-local Minimap_OnMouseUp_Hook = function(self, button)
+Minimap_OnMouseButton_Hook = function(self, button)
 	if (button == "RightButton") then
 		if (ns.IsClassic) then
 			if (MinimapMod.ShowMinimapTrackingMenu) then
 				MinimapMod:ShowMinimapTrackingMenu()
-			end
-		elseif (ns.WoW11) then
-			if (MinimapCluster and MinimapCluster.Tracking and MinimapCluster.Tracking.Button and MinimapCluster.Tracking.Button.menuGenerator) then
-				MenuUtil.CreateContextMenu(self, MinimapCluster.Tracking.Button.menuGenerator)
+			elseif (_G.MiniMapTrackingDropDown) then
+				ToggleDropDownMenu(1, nil, _G.MiniMapTrackingDropDown, "MiniMapTracking", 8, 5)
 				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
 			end
 		else
-			ToggleDropDownMenu(1, nil, _G[ns.Prefix.."MiniMapTrackingDropDown"], "cursor")
-			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
+			OpenTrackingContextMenu(self)
 		end
 	end
 end
@@ -406,10 +520,14 @@ local Mail_OnEnter = function(self)
 	end
 
 	-- Add crafting order notifier.
-	if (ns.IsRetail) and (self.countInfos and #self.countInfos > 0) then
+	local countInfos = self.countInfos
+	if ((not countInfos) and MinimapMod and MinimapMod.mail) then
+		countInfos = MinimapMod.mail.countInfos
+	end
+	if (ns.IsRetail) and (countInfos and #countInfos > 0) then
 		GameTooltip:AddLine(" ")
 		GameTooltip:AddLine(MAILFRAME_CRAFTING_ORDERS_TOOLTIP_TITLE)
-		for _,countInfo in ipairs(mail.countInfos) do
+		for _,countInfo in ipairs(countInfos) do
 			GameTooltip:AddLine(string_format(PERSONAL_CRAFTING_ORDERS_AVAIL_FMT, countInfo.numPersonalOrders, countInfo.professionName))
 		end
 	end
@@ -700,12 +818,50 @@ MinimapMod.SetTheme = function(self, requestedTheme)
 	-- Update Blizzard element visibility.
 	for element,object in next,Objects do
 		if (new.HideElements and new.HideElements[element]) then
-			object:SetParent(UIHider)
+			-- Retail tracking must keep a live parent; parenting to UIHider can break menu open.
+			if (ns.IsRetail and element == "Tracking") then
+				local owner = ObjectOwners[element] or MinimapCluster or Minimap
+				object:SetParent(owner)
+				object:SetAlpha(0)
+				if (object.Show) then
+					object:Show()
+				end
+				local button = object.Button
+				if (button) then
+					if (button.SetAlpha) then
+						button:SetAlpha(0)
+					end
+					if (button.EnableMouse) then
+						button:EnableMouse(false)
+					end
+					if (button.Show) then
+						button:Show()
+					end
+				elseif (object.EnableMouse) then
+					object:EnableMouse(false)
+				end
+			else
+				object:SetParent(UIHider)
+			end
 			if (ObjectSnippets[element]) then
 				ObjectSnippets[element].Disable(object)
 			end
 		else
 			object:SetParent(ObjectOwners[element])
+			if (ns.IsRetail and element == "Tracking") then
+				object:SetAlpha(1)
+				local button = object.Button
+				if (button) then
+					if (button.SetAlpha) then
+						button:SetAlpha(1)
+					end
+					if (button.EnableMouse) then
+						button:EnableMouse(true)
+					end
+				elseif (object.EnableMouse) then
+					object:EnableMouse(true)
+				end
+			end
 			if (ObjectSnippets[element]) then
 				ObjectSnippets[element].Enable(object)
 				ObjectSnippets[element].Update(object)
@@ -1224,9 +1380,16 @@ MinimapMod.OnEnable = function(self)
 
 	self.frame = Minimap
 	self.frame:SetMovable(true)
+	self.frame:EnableMouse(true)
+	if (self.frame.RegisterForClicks) then
+		self.frame:RegisterForClicks("AnyUp", "AnyDown")
+	end
 	self.frame:EnableMouseWheel(true)
 	self.frame:SetScript("OnMouseWheel", Minimap_OnMouseWheel)
-	self.frame:HookScript("OnMouseUp", Minimap_OnMouseUp_Hook)
+	if (not self.__AzeriteUI_MinimapMouseUpHooked) then
+		self.frame:HookScript("OnMouseUp", Minimap_OnMouseButton_Hook)
+		self.__AzeriteUI_MinimapMouseUpHooked = true
+	end
 
 	if (ns.IsRetail) then
 		self.frame:SetArchBlobRingScalar(0)

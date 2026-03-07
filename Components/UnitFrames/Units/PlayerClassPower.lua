@@ -47,6 +47,7 @@ local defaults = { profile = ns:Merge({
 	showArcaneCharges = ns.IsRetail or nil,
 	showChi = ns.IsRetail or nil,
 	showHolyPower = ns.IsRetail or nil,
+	showMaelstrom = ns.IsRetail or nil,
 	showSoulFragments = ns.IsRetail or nil,
 	soulFragmentsDisplayMode = "gradient",
 	showRunes = ns.IsCata or ns.IsRetail or nil,
@@ -59,6 +60,30 @@ local defaults = { profile = ns:Merge({
 	}
 }, ns.MovableModulePrototype.defaults) }
 
+local SyncClassPowerClickBlocker = function(classpower, blocker)
+	if (not classpower or not blocker) then
+		return
+	end
+
+	blocker:ClearAllPoints()
+	blocker:SetPoint("CENTER", classpower, "CENTER", 0, 0)
+	local width = classpower:GetWidth() or 0
+	local height = classpower:GetHeight() or 0
+	local classpowerScale = classpower:GetEffectiveScale() or 1
+	local blockerScale = blocker:GetEffectiveScale() or 1
+	if (classpowerScale > 0 and blockerScale > 0) then
+		width = width * (classpowerScale / blockerScale)
+		height = height * (classpowerScale / blockerScale)
+	end
+	if (width > 0 and height > 0) then
+		blocker:SetSize(width, height)
+	else
+		blocker:SetAllPoints(classpower)
+	end
+	blocker:SetFrameStrata("DIALOG")
+	blocker:SetFrameLevel(math.max(10, classpower:GetFrameLevel() + 100))
+end
+
 local ApplyClassPowerClickThrough = function(self)
 	if (not self or not self.frame) then
 		return
@@ -70,18 +95,85 @@ local ApplyClassPowerClickThrough = function(self)
 	end
 
 	if (not classpower.ClickBlocker) then
-		local blocker = CreateFrame("Frame", nil, classpower)
-		blocker:SetAllPoints(classpower)
-		blocker:EnableMouse(false)
-		blocker:SetFrameStrata(classpower:GetFrameStrata())
-		blocker:SetFrameLevel(classpower:GetFrameLevel() + 20)
+		local blocker = CreateFrame("Button", nil, UIParent)
+		blocker:RegisterForClicks("AnyUp", "AnyDown")
+		blocker:SetScript("OnClick", noop)
 		blocker:SetScript("OnMouseDown", noop)
 		blocker:SetScript("OnMouseUp", noop)
+		blocker:SetToplevel(true)
+		if (blocker.SetMouseClickEnabled) then
+			blocker:SetMouseClickEnabled(true)
+		end
+		if (blocker.SetPropagateMouseClicks) then
+			blocker:SetPropagateMouseClicks(false)
+		end
+		if (blocker.SetPropagateMouseMotion) then
+			blocker:SetPropagateMouseMotion(false)
+		end
+		SyncClassPowerClickBlocker(classpower, blocker)
+		if (not classpower.__AzeriteUI_ClickBlockerHooksSet) then
+			hooksecurefunc(classpower, "SetFrameLevel", function(frame)
+				SyncClassPowerClickBlocker(frame, frame.ClickBlocker)
+			end)
+			hooksecurefunc(classpower, "SetFrameStrata", function(frame)
+				SyncClassPowerClickBlocker(frame, frame.ClickBlocker)
+			end)
+			hooksecurefunc(classpower, "SetPoint", function(frame)
+				SyncClassPowerClickBlocker(frame, frame.ClickBlocker)
+			end)
+			hooksecurefunc(classpower, "SetSize", function(frame)
+				SyncClassPowerClickBlocker(frame, frame.ClickBlocker)
+			end)
+			hooksecurefunc(classpower, "SetScale", function(frame)
+				SyncClassPowerClickBlocker(frame, frame.ClickBlocker)
+			end)
+			hooksecurefunc(classpower, "SetParent", function(frame)
+				SyncClassPowerClickBlocker(frame, frame.ClickBlocker)
+			end)
+			classpower:HookScript("OnHide", function(frame)
+				local b = frame.ClickBlocker
+				if (b) then
+					b:Hide()
+				end
+			end)
+			classpower:HookScript("OnShow", function(frame)
+				local b = frame.ClickBlocker
+				if (b and b.__AzeriteUI_BlockClicks) then
+					b:Show()
+				end
+			end)
+			classpower.__AzeriteUI_ClickBlockerHooksSet = true
+		end
+		local owner = classpower:GetParent()
+		if (owner and not classpower.__AzeriteUI_ClickBlockerOwnerHooksSet) then
+			local syncFromOwner = function()
+				SyncClassPowerClickBlocker(classpower, classpower.ClickBlocker)
+			end
+			hooksecurefunc(owner, "SetPoint", syncFromOwner)
+			hooksecurefunc(owner, "SetSize", syncFromOwner)
+			hooksecurefunc(owner, "SetScale", syncFromOwner)
+			hooksecurefunc(owner, "SetFrameLevel", syncFromOwner)
+			hooksecurefunc(owner, "SetFrameStrata", syncFromOwner)
+			owner:HookScript("OnSizeChanged", syncFromOwner)
+			owner:HookScript("OnShow", syncFromOwner)
+			classpower.__AzeriteUI_ClickBlockerOwnerHooksSet = true
+		end
 		classpower.ClickBlocker = blocker
 	end
 
-	local clickThrough = (self.db and self.db.profile and self.db.profile.clickThrough) and true or false
-	classpower.ClickBlocker:EnableMouse(not clickThrough)
+	local clickThrough = true
+	if (self.db and self.db.profile and self.db.profile.clickThrough == false) then
+		clickThrough = false
+	end
+	local blockClicks = not clickThrough
+	local blocker = classpower.ClickBlocker
+	blocker.__AzeriteUI_BlockClicks = blockClicks
+
+	blocker:EnableMouse(blockClicks)
+	if (blockClicks) then
+		SyncClassPowerClickBlocker(classpower, blocker)
+	end
+	blocker:SetShown(blockClicks and classpower:IsShown())
 end
 
 -- Generate module defaults on the fly
@@ -157,8 +249,9 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 	-- Store original soul fragments value before conversion for display logic.
 	local origCur = cur
 
-	-- Requested behavior: only show class power while at least one point is active.
-	if (type(cur) ~= "number" or cur <= 0) then
+	-- Keep maelstrom visible at zero so Enhancement doesn't look disabled.
+	local hideAtZero = (powerType ~= "MAELSTROM")
+	if (type(cur) ~= "number" or (hideAtZero and cur <= 0)) then
 		return element:Hide()
 	end
 
@@ -167,6 +260,14 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		origCur = math.floor(cur * 50)  -- Store actual soul fragment count (0-50)
 		cur = math.ceil(cur * 10)  -- Normalized 0-1 value maps to 0-10 points (1 point = 5 stacks)
 		max = 10
+	elseif (powerType == "MAELSTROM") then
+		if (type(max) ~= "number" or max < 10) then
+			max = 10
+		end
+		if (cur > 10) then
+			cur = 10
+		end
+		origCur = cur
 	end
 
 	local style
@@ -175,6 +276,9 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		style = "Runes"
 	elseif (powerType == "SOUL_FRAGMENTS") then
 		-- Devourer DH soul fragments (10-point system with numbered indicators)
+		style = "SoulFragmentsPoints"
+	elseif (powerType == "MAELSTROM") then
+		-- Enhancement shaman maelstrom weapon stacks use the same 10-point model.
 		style = "SoulFragmentsPoints"
 	elseif (max >= 6) then
 		-- Combo points with Deeper Stratagem or similar (6-7 points)
@@ -198,6 +302,7 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		if (playerClass == "MAGE" and powerType == "ARCANE_CHARGES" and not db.showArcaneCharges)
 		or (playerClass == "MONK" and powerType == "CHI" and not db.showChi)
 		or (playerClass == "PALADIN" and powerType == "HOLY_POWER" and not db.showHolyPower)
+		or (playerClass == "SHAMAN" and powerType == "MAELSTROM" and not db.showMaelstrom)
 		or (playerClass == "DEMONHUNTER" and powerType == "SOUL_FRAGMENTS" and not db.showSoulFragments)
 		or (playerClass == "WARLOCK" and powerType == "SOUL_SHARDS" and not db.showSoulShards)
 		or (powerType == "COMBO_POINTS" and not db.showComboPoints) then
@@ -228,8 +333,9 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		if (point:IsShown()) then
 			local value = point:GetValue()
 			local _, pmax = point:GetMinMaxValues()
-			-- Soul Fragments Points with configurable display modes.
+			-- 10-point resource style used by Soul Fragments and Enhancement Maelstrom.
 			if (style == "SoulFragmentsPoints") then
+				local isMaelstromStyle = (powerType == "MAELSTROM")
 				local displayMode = db.soulFragmentsDisplayMode or "gradient"
 
 				-- Backward compatibility with old saved values.
@@ -239,9 +345,9 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 					displayMode = "gradient"
 				end
 
-				local lightPurple = {220/255, 180/255, 255/255}
-				local darkPurple = {100/255, 60/255, 180/255}
-				local basePurple = {156/255, 116/255, 255/255}
+				local lightPrimary = isMaelstromStyle and {170/255, 230/255, 1} or {220/255, 180/255, 255/255}
+				local darkPrimary = isMaelstromStyle and {58/255, 122/255, 1} or {100/255, 60/255, 180/255}
+				local basePrimary = isMaelstromStyle and {116/255, 188/255, 1} or {156/255, 116/255, 255/255}
 
 				if (point.case) then
 					point.case:SetAlpha(1)
@@ -255,7 +361,7 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 						element.goldenGlow:Hide()
 					end
 
-					point:SetStatusBarColor(unpack(basePurple))
+					point:SetStatusBarColor(unpack(basePrimary))
 					if (cur <= 5) then
 						point:SetValue((i <= cur) and 1 or 0)
 						point:SetAlpha((i <= cur) and 0.5 or 0.3)
@@ -269,19 +375,21 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 						element.goldenGlow:Hide()
 					end
 
-					if (origCur <= 25) then
-						local activePoints = math.min(math.ceil(origCur / 5), 5)
-						point:SetStatusBarColor(unpack(lightPurple))
+					local phaseSwitch = isMaelstromStyle and 5 or 25
+					local pointsPerStep = isMaelstromStyle and 1 or 5
+					if (origCur <= phaseSwitch) then
+						local activePoints = math.min(math.ceil(origCur / pointsPerStep), 5)
+						point:SetStatusBarColor(unpack(lightPrimary))
 						point:SetValue((i <= activePoints) and 1 or 0)
 						point:SetAlpha((i <= activePoints) and 1.0 or 0.3)
 					else
-						local darkPoints = math.min(math.floor((origCur - 25) / 5), 5)
+						local darkPoints = math.min(math.floor((origCur - phaseSwitch) / pointsPerStep), 5)
 						point:SetValue(1)
 						point:SetAlpha(1.0)
 						if (i <= darkPoints) then
-							point:SetStatusBarColor(unpack(darkPurple))
+							point:SetStatusBarColor(unpack(darkPrimary))
 						else
-							point:SetStatusBarColor(unpack(lightPurple))
+							point:SetStatusBarColor(unpack(lightPrimary))
 						end
 					end
 
@@ -290,9 +398,9 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 						element.goldenGlow:Hide()
 					end
 
-					point:SetStatusBarColor(unpack(basePurple))
+					point:SetStatusBarColor(unpack(basePrimary))
 
-					if (cur < 5) then
+					if (cur <= 5) then
 						local activePoints = math.max(0, math.min(cur, 5))
 						local isActive = (i <= activePoints)
 						point:SetValue(isActive and 1 or 0)
@@ -306,23 +414,41 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 					else
 						local overflow = math.max(0, math.min(cur - 5, 5))
 						local isOverflowActive = (i <= overflow)
-						point:SetValue(1)
-						point:SetAlpha(isOverflowActive and 1.0 or 0.45)
-						if (point.case) then
-							point.case:SetAlpha(1.0)
-						end
-						if (point.slot) then
-							point.slot:SetAlpha(1.0)
+						if (isOverflowActive) then
+							point:SetValue(1)
+							point:SetAlpha(1.0)
+							if (point.case) then
+								point.case:SetAlpha(1.0)
+							end
+							if (point.slot) then
+								point.slot:SetAlpha(1.0)
+							end
+						else
+							-- Keep inactive overflow points clearly "off".
+							point:SetValue(0)
+							point:SetAlpha(0.1)
+							if (point.case) then
+								point.case:SetAlpha(0.35)
+							end
+							if (point.slot) then
+								point.slot:SetAlpha(0.35)
+							end
 						end
 					end
 
 				else -- "gradient"
 					local hasVoidMeta = (AuraUtil.FindAuraByName("Void Metamorphosis", "player", "HELPFUL") ~= nil)
+					local atCap = isMaelstromStyle and (cur >= 10) or (origCur >= 50)
 
 					if (element.goldenGlow) then
-						if (origCur >= 50 or hasVoidMeta) then
+						if (atCap or (not isMaelstromStyle and hasVoidMeta)) then
 							if (not element.goldenGlow:IsShown()) then
 								element.goldenGlow:Show()
+							end
+							if (isMaelstromStyle) then
+								element.goldenGlow:SetVertexColor(90/255, 210/255, 1, 0.8)
+							else
+								element.goldenGlow:SetVertexColor(1, 0.84, 0, 0.8)
 							end
 							element.goldenGlow:SetAlpha(0.4 + (math.sin(GetTime() * 3) * 0.3))
 						elseif (element.goldenGlow:IsShown()) then
@@ -331,9 +457,9 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 					end
 
 					local gradientFactor = (i - 1) / 9
-					local r = lightPurple[1] * (1 - gradientFactor) + darkPurple[1] * gradientFactor
-					local g = lightPurple[2] * (1 - gradientFactor) + darkPurple[2] * gradientFactor
-					local b = lightPurple[3] * (1 - gradientFactor) + darkPurple[3] * gradientFactor
+					local r = lightPrimary[1] * (1 - gradientFactor) + darkPrimary[1] * gradientFactor
+					local g = lightPrimary[2] * (1 - gradientFactor) + darkPrimary[2] * gradientFactor
+					local b = lightPrimary[3] * (1 - gradientFactor) + darkPrimary[3] * gradientFactor
 
 					point:SetStatusBarColor(r, g, b)
 					if (cur <= 5) then

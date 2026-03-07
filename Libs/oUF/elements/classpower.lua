@@ -195,7 +195,6 @@ elseif(playerClass == 'SHAMAN') then
 	classAuraID = SPELL_MAELSTROM_WEAPON
 	classPowerType = POWER_TYPE_MAELSTROM -- we re-use this from elemental for the colors
 	requireSpec = SPEC_SHAMAN_ENCHANCEMENT
-	requireSpell = SPELL_MAELSTROM_WEAPON_TALENT
 
 	local function GetMaelstromWeapon()
 		local auraInfo = C_UnitAuras.GetPlayerAuraBySpellID(SPELL_MAELSTROM_WEAPON)

@@ -178,8 +178,11 @@ local GenerateOptions = function()
 				local playerFrameAlt = ns:GetModule("PlayerFrameAlternate", true)
 				if (playerFrameAlt and playerFrameAlt.db and playerFrameAlt.db.profile) then
 					playerFrameAlt.db.profile.enabled = false
-					playerFrameAlt:Disable()
+					playerFrameAlt:UpdateSettings()
 				end
+			end
+			if (val and module and module.Enable and (not module:IsEnabled())) then
+				module:Enable()
 			end
 			setter(info, val)
 		end
@@ -326,21 +329,27 @@ local GenerateOptions = function()
 
 				-- Hidden if devmode isn't enabled.
 				if (not ns.db.global.enableDevelopmentMode) then return true end
-
-				-- Hidden if the main playerframe is enabled.
-				local module = ns:GetModule("PlayerFrame", true)
-				if (not module) then return end
-
-				return module.db.profile.enabled
 			end
 
 			suboptions.args.enabled.set = function(info, val)
 				if (val) then
 					local playerFrame = ns:GetModule("PlayerFrame", true)
-					if (playerFrame) then
+					if (playerFrame and playerFrame.db and playerFrame.db.profile) then
 						playerFrame.db.profile.enabled = false
-						playerFrame:Disable()
+						playerFrame:UpdateSettings()
 					end
+				else
+					local playerFrame = ns:GetModule("PlayerFrame", true)
+					if (playerFrame and playerFrame.db and playerFrame.db.profile) then
+						playerFrame.db.profile.enabled = true
+						if (playerFrame.Enable and (not playerFrame:IsEnabled())) then
+							playerFrame:Enable()
+						end
+						playerFrame:UpdateSettings()
+					end
+				end
+				if (val and module and module.Enable and (not module:IsEnabled())) then
+					module:Enable()
 				end
 				setter(info, val)
 			end
@@ -774,9 +783,17 @@ local GenerateOptions = function()
 			end
 			suboptions.order = 210
 			suboptions.args.clickThrough = {
-				name = "Class Power Clickthrough",
-				desc = "When enabled, mouse clicks pass through class power. Disable to block right-click unit menu.",
-				order = 10.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+				name = "Class Power Click-Through",
+				desc = "ON (default): clicks pass through class power to frames behind it.\nOFF: class power blocks mouse clicks in this area to prevent accidental right-click opening the player unit menu.",
+				order = 10.5, type = "toggle", width = "full", set = setter,
+				get = function(info)
+					local value = getter(info)
+					if (value == nil) then
+						return true
+					end
+					return value and true or false
+				end,
+				hidden = isdisabled
 			}
 			suboptions.args.showComboPoints = {
 				name = L["Show Combo Points"],
@@ -791,18 +808,29 @@ local GenerateOptions = function()
 				}
 				if (ns.IsRetail) then
 					suboptions.args.soulFragmentsDisplayMode = {
-						name = L["Soul Fragments Display Mode"],
-						desc = L["Choose how Soul Fragments points are displayed."],
+						name = function()
+							if (ns.PlayerClass == "SHAMAN") then
+								return "10-Point Resource Display Mode"
+							end
+							return L["Soul Fragments Display Mode"]
+						end,
+						desc = function()
+							if (ns.PlayerClass == "SHAMAN") then
+								return "Choose how Maelstrom Weapon points are displayed (same model as DH 10-point behavior)."
+							end
+							return L["Choose how Soul Fragments points are displayed."]
+						end,
 						order = 11.2, type = "select", width = "full", set = setter, get = getter,
 						values = {
 							["alpha"] = L["Alpha Mode (Dim 0-5, Bright 6-10)"],
 							["gradient"] = L["Smooth Gradient (Light to Dark + Glow)"],
-							["recolor"] = L["Two-Phase Recolor (Keep First 5, Recolor After 25)"],
+							["recolor"] = L["Two-Phase Recolor (Keep First 5, Recolor Overflow)"],
 							["stacked"] = L["Stacked 5-Point (Hide Empty, Bright Overflow from Bottom)"]
 						},
 						hidden = function(info)
 							if (isdisabled(info)) then return true end
-							if (ns.PlayerClass ~= "DEMONHUNTER") then return true end
+							local isDevMode = (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+							if (ns.PlayerClass ~= "DEMONHUNTER" and ns.PlayerClass ~= "SHAMAN" and not isDevMode) then return true end
 							return false
 						end
 					}
@@ -820,6 +848,16 @@ local GenerateOptions = function()
 						name = L["Show Holy Power (Paladin)"],
 						desc = L["Toggle whether to show Paladin Holy Power."],
 						order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+					}
+					suboptions.args.showMaelstrom = {
+						name = "Show Maelstrom Weapon (Shaman)",
+						desc = "Toggle whether to show Enhancement Shaman Maelstrom Weapon class power.",
+						order = 11, type = "toggle", width = "full", set = setter, get = getter,
+						hidden = function(info)
+							if (isdisabled(info)) then return true end
+							local isDevMode = (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+							return ns.PlayerClass ~= "SHAMAN" and not isDevMode
+						end
 					}
 					suboptions.args.showSoulShards = {
 						name = L["Show Soul Shards (Warlock)"],

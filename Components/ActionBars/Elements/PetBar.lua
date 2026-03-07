@@ -417,7 +417,7 @@ PetBar.UpdateBindings = function(self)
 					if (key and (key ~= "")) then
 
 						-- this is why we need named buttons
-						SetOverrideBindingClick(self, false, key, buttonName) -- assign the key to our own button
+						SetOverrideBindingClick(self, false, key, buttonName, "Keybind") -- assign the key to our own button
 
 					end
 				end

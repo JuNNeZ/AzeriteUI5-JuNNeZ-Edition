@@ -3,6 +3,25 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.233-JuNNeZ (2026-03-07)
+
+### Fixes
+- Action bar keybind routing follow-up:
+  - Override click bindings now use a dedicated `Keybind` button token instead of `LeftButton`.
+  - Restores shift-mod macro behavior on bar 1 while preserving dynamic paging/dragonriding action functionality.
+- Minimap tracking right-click reliability follow-up:
+  - Added robust retail tracking open chain (proxy/menu visibility checks + fallback order) while keeping tracking hidden safely.
+  - Added minimap click registration/mouse safeguards and fixed crafting-order tooltip count lookup path.
+- Player Alternate toggle behavior:
+  - Enabling/disabling Player Alternate now cleanly syncs with the main Player frame without requiring `/devmode` re-toggle workarounds.
+- Shaman class power support and visibility:
+  - Added Maelstrom toggle/visibility integration in unitframe options.
+  - Removed talent-spell gate from oUF classpower for Enhancement Maelstrom detection.
+  - Added Maelstrom to the 10-point classpower renderer path with Shaman-specific color treatment.
+- Class power click-through and visuals:
+  - Hardened click-blocker alignment/sync behavior.
+  - Fixed stacked-mode threshold and overflow dimming so 5 vs 6 points are clearly distinct.
+
 ## 5.2.232-JuNNeZ (2026-03-07)
 
 ### Fixes

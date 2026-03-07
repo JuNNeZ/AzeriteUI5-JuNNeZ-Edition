@@ -1194,9 +1194,25 @@ PlayerFrameAltMod.Update = function(self)
 	self.frame:PostUpdate()
 end
 
-PlayerFrameAltMod.PreInitialize = function(self)
-	if (not ns.db.global.enableDevelopmentMode) then
-		return self:Disable()
+PlayerFrameAltMod.UpdateEnabled = function(self)
+	if (InCombatLockdown()) then
+		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEnabledEvent")
+	end
+
+	local unitframe, anchor = self:GetUnitFrameOrHeader(), self:GetAnchor()
+	if (unitframe) then
+		local shouldEnable = (self.db and self.db.profile and self.db.profile.enabled) and (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+		local method = shouldEnable and (unitframe.OverrideEnable or unitframe.Enable) or (unitframe.OverrideDisable or unitframe.Disable)
+		if (method) then
+			method(unitframe)
+		end
+		if (anchor) then
+			if (shouldEnable) then
+				anchor:Enable()
+			else
+				anchor:Disable()
+			end
+		end
 	end
 end
 

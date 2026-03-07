@@ -394,10 +394,10 @@ ActionBar.UpdateBindings = function(self)
 					end
 					if (not assigned) then
 						-- this is why we need named buttons
-						SetOverrideBindingClick(self, false, key, buttonName) -- assign the key to our own button
+						SetOverrideBindingClick(self, false, key, buttonName, "Keybind") -- assign the key to our own button
 					end
 					button.__AzeriteUI_BindingMode = assigned and "command" or "click"
-					button.__AzeriteUI_BindingRoute = assigned and bindingAction or ("CLICK "..tostring(buttonName)..":LeftButton")
+					button.__AzeriteUI_BindingRoute = assigned and bindingAction or ("CLICK "..tostring(buttonName)..":Keybind")
 				end
 			end
 		end
