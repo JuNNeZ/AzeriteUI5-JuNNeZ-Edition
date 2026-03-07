@@ -53,6 +53,8 @@ local C_EquipmentSet_PickupEquipmentSet = C_EquipmentSet.PickupEquipmentSet
 local C_LevelLink_IsActionLocked = C_LevelLink and C_LevelLink.IsActionLocked
 local C_TransmogOutfitInfo_IsLockedOutfit = C_TransmogOutfitInfo and C_TransmogOutfitInfo.IsLockedOutfit
 local C_TransmogOutfitInfo_IsEquippedGearOutfitLocked = C_TransmogOutfitInfo and C_TransmogOutfitInfo.IsEquippedGearOutfitLocked
+local ChatEdit_GetActiveWindow = _G.ChatEdit_GetActiveWindow
+local ChatEdit_InsertLink = _G.ChatEdit_InsertLink
 
 local SpellVFX_ClearReticle, SpellVFX_ClearInterruptDisplay, SpellVFX_PlaySpellCastAnim, SpellVFX_PlayTargettingReticleAnim, SpellVFX_StopTargettingReticleAnim, SpellVFX_StopSpellCastAnim, SpellVFX_PlaySpellInterruptedAnim
 local SpellVFX_CastingAnim_OnHide, SpellVFX_CastingAnim_Finish_OnFinished
@@ -570,6 +572,11 @@ function WrapOnClick(button, unwrapheader)
 
 	-- Wrap OnClick, to catch changes to actions that are applied with a click on the button.
 	button.header:WrapScript(button, "OnClick", [[
+		if button ~= "Keybind" and IsModifiedClick("CHATLINK") then
+			self:CallMethod("HandleChatLinkClick")
+			return false
+		end
+
 		if self:GetAttribute("type") == "action" then
 			local type, action = GetActionInfo(self:GetAttribute("action"))
 
@@ -1361,6 +1368,65 @@ function Generic:PostClick(button, down)
 
 	if down and IsMouseButtonDown() then
 		self:RegisterEvent("GLOBAL_MOUSE_UP")
+	end
+end
+
+local function ResolveChatLinkSpellID(button)
+	if not button then
+		return nil
+	end
+
+	local stateType = button._state_type
+	if stateType == "spell" then
+		return button._state_action
+	end
+
+	if stateType == "action" then
+		local actionType, actionID, subType = GetActionInfo(button._state_action)
+		if actionType == "spell" then
+			return actionID
+		elseif actionType == "macro" then
+			if subType == "spell" then
+				return actionID
+			elseif GetMacroSpell then
+				return GetMacroSpell(actionID)
+			end
+		end
+	end
+
+	if stateType == "macro" and GetMacroSpell then
+		return GetMacroSpell(button._state_action)
+	end
+
+	if button.GetSpellId then
+		return button:GetSpellId()
+	end
+end
+
+function Generic:HandleChatLinkClick()
+	if not (ChatEdit_GetActiveWindow and ChatEdit_InsertLink and IsModifiedClick("CHATLINK")) then
+		return
+	end
+
+	local editBox = ChatEdit_GetActiveWindow()
+	if not editBox then
+		return
+	end
+
+	local now = GetTime()
+	if self._labLastChatLinkTime and (now - self._labLastChatLinkTime) < 0.05 then
+		return
+	end
+	self._labLastChatLinkTime = now
+
+	local spellID = ResolveChatLinkSpellID(self)
+	if not (type(spellID) == "number" and spellID > 0) then
+		return
+	end
+
+	local link = (C_Spell and C_Spell.GetSpellLink and C_Spell.GetSpellLink(spellID)) or (GetSpellLink and GetSpellLink(spellID))
+	if link then
+		ChatEdit_InsertLink(link)
 	end
 end
 

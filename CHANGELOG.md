@@ -3,6 +3,17 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.232-JuNNeZ (2026-03-07)
+
+### Fixes
+- Tooltip deep-scan stability hardening (DiabolicUI-aligned):
+  - Reworked tooltip backdrop cache to avoid `SetAllPoints()` secret-size inheritance.
+  - Wrapped tooltip backdrop mixin callbacks (`OnBackdropSizeChanged`, `ApplyBackdrop`, `SetupTextureCoordinates`) and frame-level sync in protected calls.
+  - Hardened tooltip default-anchor handling with forbidden/map-parent guards and protected placement.
+  - Guarded tooltip post-call/statusbar update paths to reduce WoW12 taint/error cascades while keeping AzeriteUI tooltip skin enabled.
+- Restored actionbar spell chat links on modified click:
+  - `Shift+Click`/`CHATLINK` on action buttons now inserts spell links into the active chat edit box again.
+
 ## 5.2.231-JuNNeZ (2026-03-07)
 
 ### Fixes

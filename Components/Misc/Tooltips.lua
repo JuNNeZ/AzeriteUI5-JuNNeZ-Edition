@@ -54,6 +54,7 @@ end
 local _G = _G
 local ipairs = ipairs
 local next = next
+local pcall = pcall
 local rawget = rawget
 local rawset = rawset
 local select = select
@@ -173,11 +174,35 @@ end
 
 local Backdrops = setmetatable({}, { __index = function(t,k)
 	local bg = CreateFrame("Frame", nil, k, ns.BackdropTemplate)
-	bg:SetAllPoints()
-	bg:SetFrameLevel(k:GetFrameLevel())
+	bg:SetPoint("TOPLEFT", k, "TOPLEFT", 0, 0)
+	bg:SetPoint("BOTTOMRIGHT", k, "BOTTOMRIGHT", 0, 0)
+	pcall(function() bg:SetFrameLevel(k:GetFrameLevel()) end)
+
+	-- WoW12: BackdropTemplate callbacks can receive secret dimensions.
+	if (bg.OnBackdropSizeChanged) then
+		local originalOnBackdropSizeChanged = bg.OnBackdropSizeChanged
+		bg.OnBackdropSizeChanged = function(self, ...)
+			pcall(originalOnBackdropSizeChanged, self, ...)
+		end
+	end
+	if (bg.ApplyBackdrop) then
+		local originalApplyBackdrop = bg.ApplyBackdrop
+		bg.ApplyBackdrop = function(self, ...)
+			pcall(originalApplyBackdrop, self, ...)
+		end
+	end
+	if (bg.SetupTextureCoordinates) then
+		local originalSetupTextureCoordinates = bg.SetupTextureCoordinates
+		bg.SetupTextureCoordinates = function(self, ...)
+			pcall(originalSetupTextureCoordinates, self, ...)
+		end
+	end
+
 	-- Hook into tooltip framelevel changes.
 	-- Might help with some of the conflicts experienced with Silverdragon and Raider.IO
-	hooksecurefunc(k, "SetFrameLevel", function(self) bg:SetFrameLevel(self:GetFrameLevel()) end)
+	hooksecurefunc(k, "SetFrameLevel", function(self)
+		pcall(function() bg:SetFrameLevel(self:GetFrameLevel()) end)
+	end)
 	rawset(t,k,bg)
 	return bg
 end })
@@ -379,7 +404,7 @@ Tooltips.UpdateBackdropTheme = function(self, tooltip)
 			"BorderLeft",
 			"Background"
 		}) do
-			local region = self[texName]
+			local region = tooltip[texName]
 			if (region) then
 				region:SetTexture(nil)
 				local drawLayer = region:GetDrawLayer()
@@ -477,11 +502,18 @@ Tooltips.UpdateStatusBarTheme = function(self)
 	if (not bar) then return end
 	local sig = (self._cachedThemeKey or '?') .. ':' .. (db.texture or '?') .. ':' .. (db.height or '?') .. ':' .. (db.offsetLeft or 0) .. ':' .. (db.offsetRight or 0)
 	if (StatusBarThemeSignature[bar] == sig) then return end
-	bar:SetStatusBarTexture(db.texture)
-	bar:ClearAllPoints()
-	bar:SetPoint("BOTTOMLEFT", bar:GetParent(), "BOTTOMLEFT", db.offsetLeft, db.offsetBottom)
-	bar:SetPoint("BOTTOMRIGHT", bar:GetParent(), "BOTTOMRIGHT", -db.offsetRight, db.offsetBottom)
-	bar:SetHeight(db.height)
+	local texture = (type(db.texture) == "string" and db.texture ~= "") and db.texture or "Interface/TargetingFrame/UI-StatusBar"
+	local ok = pcall(function()
+		bar:SetStatusBarTexture(texture)
+		bar:ClearAllPoints()
+		bar:SetPoint("BOTTOMLEFT", bar:GetParent(), "BOTTOMLEFT", db.offsetLeft, db.offsetBottom)
+		bar:SetPoint("BOTTOMRIGHT", bar:GetParent(), "BOTTOMRIGHT", -db.offsetRight, db.offsetBottom)
+		bar:SetHeight(db.height)
+	end)
+	if (not ok) then
+		StatusBarThemeSignature[bar] = nil
+		return
+	end
 
 	if (not self:IsHooked(bar, "OnShow")) then
 		bar:HookScript("OnShow", function(self)
@@ -489,8 +521,10 @@ Tooltips.UpdateStatusBarTheme = function(self)
 			if (tooltip) then
 				local backdrop = rawget(Backdrops, tooltip)
 				if (backdrop) then
-					backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom + backdrop.offsetBarBottom)
-					Tooltips:OnValueChanged() -- Force an update to the bar's health value and color.
+					pcall(function()
+						backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom + backdrop.offsetBarBottom)
+					end)
+					pcall(Tooltips.OnValueChanged, Tooltips) -- Force an update to the bar's health value and color.
 				end
 			end
 		end)
@@ -502,7 +536,9 @@ Tooltips.UpdateStatusBarTheme = function(self)
 			if (tooltip) then
 				local backdrop = rawget(Backdrops, tooltip)
 				if (backdrop) then
-					backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom)
+					pcall(function()
+						backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom)
+					end)
 				end
 			end
 		end)
@@ -607,12 +643,14 @@ end
 
 Tooltips.SetStatusBarColor = function(self, unit)
 	if (self:IsDisabled()) then return end
+	local bar = GetTooltipStatusBar()
+	if (not bar) then return end
 	local color = IsSafeUnitToken(unit) and GetUnitColor(unit)
 	if (color) then
-		GameTooltip.StatusBar:SetStatusBarColor(color[1], color[2], color[3])
+		pcall(bar.SetStatusBarColor, bar, color[1], color[2], color[3])
 	else
 		local r, g, b = GameTooltipTextLeft1:GetTextColor()
-		GameTooltip.StatusBar:SetStatusBarColor(r, g, b)
+		pcall(bar.SetStatusBarColor, bar, r, g, b)
 	end
 end
 
@@ -651,8 +689,9 @@ end
 Tooltips.OnTooltipCleared = function(self, tooltip)
 	if (self:IsDisabled()) then return end
 	if (not tooltip) or (tooltip:IsForbidden()) then return end
-	if (GameTooltip.StatusBar:IsShown()) then
-		GameTooltip.StatusBar:Hide()
+	local bar = GetTooltipStatusBar()
+	if (bar and bar:IsShown()) then
+		pcall(bar.Hide, bar)
 	end
 end
 
@@ -866,23 +905,40 @@ Tooltips.SetDefaultAnchor = function(self, tooltip, parent)
 	if (self:IsConsolePortActive()) then return end -- Let ConsolePort manage tooltip anchors
 	if (not tooltip) or (tooltip:IsForbidden()) then return end
 	if (not self.db.profile.anchor) then return end
+	if (parent and type(parent.IsForbidden) == "function" and parent:IsForbidden()) then return end
+	if (parent and parent.GetName) then
+		local parentName = parent:GetName()
+		if (parentName and (string_find(parentName, "MapCanvas") or string_find(parentName, "WorldMap") or string_find(parentName, "AreaPOI"))) then
+			return
+		end
+	end
 
 	local config = self.db.profile.savedPosition
+	local ok = pcall(function()
+		local scale = tonumber(config.scale) or 1
+		if (scale <= 0) then
+			scale = 1
+		end
+		local anchorPoint = (type(config[1]) == "string" and config[1]) or "BOTTOMRIGHT"
 
-	if (self.db.profile.anchorToCursor) then
+		if (self.db.profile.anchorToCursor) then
 
-		tooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
-		tooltip:SetScale(config.scale)
+			tooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
+			tooltip:SetScale(scale)
 
-	else
+		else
 
-		local x = string_find(config[1], "LEFT") and 10 or string_find(config[1], "RIGHT") and -10 or 0
-		local y = string_find(config[1], "TOP") and -18 or string_find(config[1], "BOTTOM") and 18 or 0
+			local x = string_find(anchorPoint, "LEFT") and 10 or string_find(anchorPoint, "RIGHT") and -10 or 0
+			local y = string_find(anchorPoint, "TOP") and -18 or string_find(anchorPoint, "BOTTOM") and 18 or 0
 
-		tooltip:SetOwner(parent, "ANCHOR_NONE")
-		tooltip:SetScale(config.scale)
-		tooltip:ClearAllPoints()
-		tooltip:SetPoint(config[1], UIParent, config[1], (config[2] + x)/config.scale, (config[3] + y)/config.scale)
+			tooltip:SetOwner(parent or UIParent, "ANCHOR_NONE")
+			tooltip:SetScale(scale)
+			tooltip:ClearAllPoints()
+			tooltip:SetPoint(anchorPoint, UIParent, anchorPoint, ((config[2] or 0) + x)/scale, ((config[3] or 0) + y)/scale)
+		end
+	end)
+	if (not ok) then
+		return
 	end
 
 end
@@ -908,15 +964,21 @@ Tooltips.SetHooks = function(self)
 
 	if (TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType) then
 		if (self.db.profile.showSpellID and Enum.TooltipDataType.Spell and not PostCallRegistered.Spell) then
-			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Spell, function(tooltip, ...) self:OnTooltipSetSpell(tooltip, ...) end)
+			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Spell, function(tooltip, ...)
+				pcall(self.OnTooltipSetSpell, self, tooltip, ...)
+			end)
 			PostCallRegistered.Spell = true
 		end
 		if (self.db.profile.showItemID and Enum.TooltipDataType.Item and not PostCallRegistered.Item) then
-			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, ...) self:OnTooltipSetItem(tooltip, ...) end)
+			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, ...)
+				pcall(self.OnTooltipSetItem, self, tooltip, ...)
+			end)
 			PostCallRegistered.Item = true
 		end
 		if (not PostCallRegistered.Unit and Enum.TooltipDataType.Unit) then
-			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, ...) self:OnTooltipSetUnit(tooltip, ...) end)
+			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, ...)
+				pcall(self.OnTooltipSetUnit, self, tooltip, ...)
+			end)
 			PostCallRegistered.Unit = true
 		end
 	else
