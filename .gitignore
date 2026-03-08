@@ -38,6 +38,8 @@ build/
 release/
 *.bak
 *.tmp
+build-release.ps1
+RELEASE_WORKFLOW.md
 
 # Logs and debugging
 *.log
