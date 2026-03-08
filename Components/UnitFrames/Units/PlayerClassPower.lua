@@ -31,6 +31,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local ClassPowerMod = ns:NewModule("PlayerClassPowerFrame", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
 -- Lua API
+local math_floor = math.floor
 local next = next
 local type = type
 local unpack = unpack
@@ -41,6 +42,9 @@ local noop = ns.Noop
 
 -- Constants
 local playerClass = ns.PlayerClass
+local SPEC_SHAMAN_ELEMENTAL = _G.SPEC_SHAMAN_ELEMENTAL or 1
+local POWER_TYPE_MANA = (Enum and Enum.PowerType and Enum.PowerType.Mana) or 0
+local POWER_TYPE_MAELSTROM = (Enum and Enum.PowerType and Enum.PowerType.Maelstrom) or 11
 
 local defaults = { profile = ns:Merge({
 	showComboPoints = true,
@@ -53,12 +57,268 @@ local defaults = { profile = ns:Merge({
 	showRunes = ns.IsCata or ns.IsRetail or nil,
 	showSoulShards = ns.IsRetail or nil,
 	showStagger = ns.IsRetail or nil,
+	enableElementalMaelstromDisplay = false,
+	elementalMaelstromDisplayMode = "crystal_spec",
+	elementalSwapBarAnchorMigrated = false,
 	clickThrough = true,
 	classPointOffsets = {
 		[1] = { 0, 0 }, [2] = { 0, 0 }, [3] = { 0, 0 }, [4] = { 0, 0 }, [5] = { 0, 0 },
 		[6] = { 0, 0 }, [7] = { 0, 0 }, [8] = { 0, 0 }, [9] = { 0, 0 }, [10] = { 0, 0 }
 	}
 }, ns.MovableModulePrototype.defaults) }
+
+local GetElementalMaelstromDisplayMode = function(db)
+	if (not db) then
+		return "crystal_spec"
+	end
+	local mode = db.elementalMaelstromDisplayMode
+	if (mode == "crystal_mana" or mode == "classpower") then
+		return "crystal_mana"
+	end
+	return "crystal_spec"
+end
+
+local ShouldUseElementalSwapBar = function(db)
+	if (not ns.IsRetail or playerClass ~= "SHAMAN") then
+		return false
+	end
+	local currentSpec = (GetSpecialization and GetSpecialization()) or nil
+	if (currentSpec == nil) then
+		return true
+	end
+	if (currentSpec ~= SPEC_SHAMAN_ELEMENTAL) then
+		return false
+	end
+	return true
+end
+
+local GetElementalSwapBarPowerType = function(db)
+	local mode = GetElementalMaelstromDisplayMode(db)
+	if (mode == "crystal_mana") then
+		return POWER_TYPE_MAELSTROM
+	end
+	return POWER_TYPE_MANA
+end
+
+local ShouldShowElementalSwapBarValue = function()
+	local playerFrameMod = ns:GetModule("PlayerFrame", true)
+	local profile = playerFrameMod and playerFrameMod.db and playerFrameMod.db.profile
+	return (not profile) or (profile.showPowerValue ~= false)
+end
+
+local ParseElementalDisplayNumber = function(text)
+	if (type(text) ~= "string") then
+		return nil
+	end
+	local ok, parsed = pcall(function()
+		text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("%s+", "")
+		if (text == "") then
+			return nil
+		end
+		local multiplier = 1
+		local suffix = text:sub(-1):lower()
+		if (suffix == "k") then
+			multiplier = 1000
+			text = text:sub(1, -2)
+		elseif (suffix == "m") then
+			multiplier = 1000000
+			text = text:sub(1, -2)
+		elseif (suffix == "b") then
+			multiplier = 1000000000
+			text = text:sub(1, -2)
+		elseif (suffix == "t") then
+			multiplier = 1000000000000
+			text = text:sub(1, -2)
+		end
+		text = text:gsub(",", "")
+		local numeric = tonumber(text)
+		if (type(numeric) ~= "number") then
+			return nil
+		end
+		return numeric * multiplier
+	end)
+	if (ok and type(parsed) == "number") then
+		return parsed
+	end
+	return nil
+end
+
+local GetElementalRawPowerPercent = function(unit, displayType)
+	local percent = nil
+	pcall(function()
+		if (UnitPowerPercent) then
+			if (CurveConstants and CurveConstants.ScaleTo100) then
+				percent = UnitPowerPercent(unit, displayType, true, CurveConstants.ScaleTo100)
+			else
+				percent = UnitPowerPercent(unit, displayType)
+			end
+		end
+	end)
+	return percent
+end
+
+local GetElementalFormattedPowerValue = function(unit, displayType, useFull)
+	local rawCur = UnitPower(unit, displayType)
+	local formatter = useFull and BreakUpLargeNumbers or AbbreviateNumbers
+	if (type(formatter) == "function") then
+		local ok, formatted = pcall(formatter, rawCur)
+		if (ok and formatted ~= nil) then
+			local text = tostring(formatted)
+			local parsed = ParseElementalDisplayNumber(text)
+			if (type(parsed) == "number") then
+				return text, parsed
+			end
+			if (type(rawCur) == "number" and (not issecretvalue or not issecretvalue(rawCur))) then
+				return text, rawCur
+			end
+			return text, nil
+		end
+	end
+	return nil, nil
+end
+
+local FormatElementalSwapBarShortValue = function(value)
+	if (type(value) ~= "number") then
+		return nil
+	end
+	local rounded = math_floor(value + .5)
+	if (type(AbbreviateNumbers) == "function") then
+		local ok, formatted = pcall(AbbreviateNumbers, rounded)
+		if (ok and formatted ~= nil) then
+			return tostring(formatted)
+		end
+	end
+	return tostring(rounded)
+end
+
+local ElementalSwapBar_PostUpdate = function(element, unit)
+	if (not element) then
+		return
+	end
+	local db = ClassPowerMod and ClassPowerMod.db and ClassPowerMod.db.profile
+	if (not ShouldUseElementalSwapBar(db)) then
+		element.__AzeriteUI_KeepValueVisible = false
+		if (element.Value) then
+			element.Value:SetText("")
+			element.Value:Hide()
+		end
+		return element:Hide()
+	end
+
+	local powerType = element.displayType
+	if (type(powerType) ~= "number") then
+		powerType = GetElementalSwapBarPowerType(db)
+	end
+
+	local _, token = UnitPowerType(unit or "player", powerType)
+	if (type(token) ~= "string" or token == "") then
+		token = (powerType == POWER_TYPE_MAELSTROM) and "MAELSTROM" or "MANA"
+	end
+
+	local playerFrameConfig = ns.GetConfig("PlayerFrame")
+	local colors = playerFrameConfig and playerFrameConfig.PowerOrbColors
+	local color = colors and colors[token]
+	if (type(color) ~= "table") then
+		color = colors and colors.MANA
+	end
+	if (type(color) == "table") then
+		element:SetStatusBarColor(color[1] or 1, color[2] or 1, color[3] or 1, color[4] or 1)
+	end
+
+	if (element.Value) then
+		local showValue = ShouldShowElementalSwapBarValue()
+		element.__AzeriteUI_KeepValueVisible = showValue
+		if (showValue) then
+			element.Value:Show()
+		else
+			element.Value:Hide()
+		end
+		local value = element.safeCur or element.cur
+		local formatMode = "short"
+		local playerFrameMod = ns:GetModule("PlayerFrame", true)
+		local playerProfile = playerFrameMod and playerFrameMod.db and playerFrameMod.db.profile
+		if (playerProfile and type(playerProfile.PowerValueFormat) == "string") then
+			formatMode = playerProfile.PowerValueFormat
+		end
+		local rawShortText = select(1, GetElementalFormattedPowerValue(unit or "player", powerType, false))
+		local rawFullText, rawFullValue = GetElementalFormattedPowerValue(unit or "player", powerType, true)
+		local rawPercent = GetElementalRawPowerPercent(unit or "player", powerType)
+		local safeRawPercent = (type(rawPercent) == "number" and (not issecretvalue or not issecretvalue(rawPercent))) and rawPercent or nil
+		local safeRawValue = (type(rawFullValue) == "number" and (not issecretvalue or not issecretvalue(rawFullValue))) and rawFullValue or nil
+		element.__AzeriteUI_DisplayPercent = safeRawPercent
+		element.__AzeriteUI_DisplayCur = safeRawValue
+
+		local usedRaw = false
+		if (showValue) then
+			if (formatMode == "percent") then
+				if (rawPercent ~= nil and element.Value.SetFormattedText) then
+					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
+				end
+			elseif (formatMode == "full") then
+				if (rawFullText ~= nil and element.Value.SetFormattedText) then
+					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%s", rawFullText)
+				end
+			elseif (formatMode == "shortpercent") then
+				if (rawShortText ~= nil and rawPercent ~= nil and element.Value.SetFormattedText) then
+					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%s |cff888888(|r%d%%|cff888888)|r", rawShortText, rawPercent)
+				elseif (rawShortText ~= nil and element.Value.SetFormattedText) then
+					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%s", rawShortText)
+				elseif (rawPercent ~= nil and element.Value.SetFormattedText) then
+					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
+				end
+			else
+				if (rawShortText ~= nil and element.Value.SetFormattedText) then
+					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%s", rawShortText)
+				end
+			end
+		end
+		if (usedRaw) then
+			if (element.Value.SetAlpha) then
+				element.Value:SetAlpha(1)
+			end
+			if (type(safeRawPercent) == "number") then
+				element.safePercent = safeRawPercent
+			end
+			if (type(safeRawValue) == "number") then
+				element.safeCur = safeRawValue
+			end
+		elseif (type(value) == "number" and (not issecretvalue or not issecretvalue(value))) then
+			local valueText
+			if (formatMode == "percent") then
+				local percent = element.safePercent
+				if (type(percent) == "number") then
+					valueText = string.format("%d%%", math_floor(percent + .5))
+				end
+			elseif (formatMode == "full") then
+				local max = element.safeMax or element.max
+				local valueFull = (type(BreakUpLargeNumbers) == "function") and BreakUpLargeNumbers(math_floor(value + .5)) or tostring(math_floor(value + .5))
+				if (type(max) == "number") then
+					local maxFull = (type(BreakUpLargeNumbers) == "function") and BreakUpLargeNumbers(math_floor(max + .5)) or tostring(math_floor(max + .5))
+					valueText = valueFull .. " |cff888888/|r " .. maxFull
+				else
+					valueText = valueFull
+				end
+			elseif (formatMode == "shortpercent") then
+				local short = FormatElementalSwapBarShortValue(value)
+				local percent = element.safePercent
+				if (short and type(percent) == "number") then
+					valueText = short .. " |cff888888(|r" .. string.format("%d%%", math_floor(percent + .5)) .. "|cff888888)|r"
+				else
+					valueText = short
+				end
+			else
+				valueText = FormatElementalSwapBarShortValue(value)
+			end
+			element.Value:SetText(valueText or "")
+		else
+			element.Value:SetText("")
+		end
+	end
+
+	if (not element:IsShown()) then
+		element:Show()
+	end
+end
 
 local SyncClassPowerClickBlocker = function(classpower, blocker)
 	if (not classpower or not blocker) then
@@ -180,11 +440,18 @@ end
 -- to recalculate default values relying on
 -- changing factors like user interface scale.
 ClassPowerMod.GenerateDefaults = function(self)
+	local x = -223 * ns.API.GetEffectiveScale()
+	local y = -84 * ns.API.GetEffectiveScale()
+	if (ns.IsRetail and playerClass == "SHAMAN") then
+		-- Default near the top-right of the player health bar; still movable through /lock.
+		x = 375 * ns.API.GetEffectiveScale()
+		y = 130 * ns.API.GetEffectiveScale()
+	end
 	defaults.profile.savedPosition = {
 		scale = ns.API.GetEffectiveScale(),
-		[1] = "CENTER",
-		[2] = -223 * ns.API.GetEffectiveScale(),
-		[3] = -84 * ns.API.GetEffectiveScale()
+		[1] = "BOTTOMLEFT",
+		[2] = x,
+		[3] = y
 	}
 	return defaults
 end
@@ -235,8 +502,27 @@ end
 -- Update classpower layout and textures.
 -- *also used for one-time setup of stagger and runes.
 local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerType)
-	if (not cur or not max) then
-		return
+	local isMaelstrom = (powerType == "MAELSTROM")
+	if (isMaelstrom) then
+		-- ElvUI-style secret-safe behavior:
+		-- keep classpower visible and reuse last safe values when payload is unreadable.
+		if (type(max) ~= "number") then
+			max = element.__AzeriteUI_LastSafeMax or 10
+		end
+		if (type(cur) ~= "number") then
+			cur = element.__AzeriteUI_LastSafeCur or 0
+		end
+	else
+		if (type(cur) ~= "number" or type(max) ~= "number") then
+			return
+		end
+	end
+
+	if (type(cur) == "number") then
+		element.__AzeriteUI_LastSafeCur = cur
+	end
+	if (type(max) == "number") then
+		element.__AzeriteUI_LastSafeMax = max
 	end
 
 
@@ -261,11 +547,24 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		cur = math.ceil(cur * 10)  -- Normalized 0-1 value maps to 0-10 points (1 point = 5 stacks)
 		max = 10
 	elseif (powerType == "MAELSTROM") then
-		if (type(max) ~= "number" or max < 10) then
+		if (type(max) ~= "number" or max <= 0) then
 			max = 10
 		end
-		if (cur > 10) then
-			cur = 10
+		-- Enhancement uses 0-10 aura stacks; Elemental can expose higher max (for example 0-100).
+		-- Normalize both to the shared 10-point renderer.
+		if (max > 10) then
+			cur = math.ceil((cur / max) * 10)
+			max = 10
+		else
+			if (max < 10) then
+				max = 10
+			end
+			if (cur > 10) then
+				cur = 10
+			end
+		end
+		if (cur < 0) then
+			cur = 0
 		end
 		origCur = cur
 	end
@@ -297,6 +596,13 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 	end
 
 	local db = ClassPowerMod.db.profile
+	local currentSpec = (ns.IsRetail and GetSpecialization and GetSpecialization()) or nil
+	if (ns.IsRetail and playerClass == "SHAMAN" and powerType == "MAELSTROM" and currentSpec == SPEC_SHAMAN_ELEMENTAL) then
+		-- Elemental now uses a secondary bar instead of class plates.
+		if (ShouldUseElementalSwapBar(db)) then
+			return element:Hide()
+		end
+	end
 
 	if (ns.IsRetail) then
 		if (playerClass == "MAGE" and powerType == "ARCANE_CHARGES" and not db.showArcaneCharges)
@@ -348,6 +654,20 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 				local lightPrimary = isMaelstromStyle and {170/255, 230/255, 1} or {220/255, 180/255, 255/255}
 				local darkPrimary = isMaelstromStyle and {58/255, 122/255, 1} or {100/255, 60/255, 180/255}
 				local basePrimary = isMaelstromStyle and {116/255, 188/255, 1} or {156/255, 116/255, 255/255}
+				local maelstromPhaseValue
+				local maelstromFill
+				if (isMaelstromStyle) then
+					maelstromPhaseValue = (type(cur) == "number") and cur or 0
+					if (maelstromPhaseValue > 5) then
+						maelstromPhaseValue = maelstromPhaseValue - 5
+					end
+					maelstromFill = maelstromPhaseValue - (i - 1)
+					if (maelstromFill < 0) then
+						maelstromFill = 0
+					elseif (maelstromFill > 1) then
+						maelstromFill = 1
+					end
+				end
 
 				if (point.case) then
 					point.case:SetAlpha(1)
@@ -362,7 +682,11 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 					end
 
 					point:SetStatusBarColor(unpack(basePrimary))
-					if (cur <= 5) then
+					if (isMaelstromStyle) then
+						local activeAlpha = (cur <= 5) and 0.5 or 1.0
+						point:SetValue(maelstromFill)
+						point:SetAlpha((maelstromFill > 0) and (0.3 + ((activeAlpha - 0.3) * maelstromFill)) or 0.3)
+					elseif (cur <= 5) then
 						point:SetValue((i <= cur) and 1 or 0)
 						point:SetAlpha((i <= cur) and 0.5 or 0.3)
 					else
@@ -377,7 +701,16 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 
 					local phaseSwitch = isMaelstromStyle and 5 or 25
 					local pointsPerStep = isMaelstromStyle and 1 or 5
-					if (origCur <= phaseSwitch) then
+					if (isMaelstromStyle) then
+						local darkPoints = math.min(math.max(cur - 5, 0), 5)
+						if (i <= math.floor(darkPoints)) then
+							point:SetStatusBarColor(unpack(darkPrimary))
+						else
+							point:SetStatusBarColor(unpack(lightPrimary))
+						end
+						point:SetValue(maelstromFill)
+						point:SetAlpha((maelstromFill > 0) and (0.3 + (0.7 * maelstromFill)) or 0.3)
+					elseif (origCur <= phaseSwitch) then
 						local activePoints = math.min(math.ceil(origCur / pointsPerStep), 5)
 						point:SetStatusBarColor(unpack(lightPrimary))
 						point:SetValue((i <= activePoints) and 1 or 0)
@@ -400,7 +733,27 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 
 					point:SetStatusBarColor(unpack(basePrimary))
 
-					if (cur <= 5) then
+					if (isMaelstromStyle) then
+						if (maelstromFill > 0) then
+							point:SetValue(maelstromFill)
+							point:SetAlpha(0.2 + (0.8 * maelstromFill))
+							if (point.case) then
+								point.case:SetAlpha(0.2 + (0.8 * maelstromFill))
+							end
+							if (point.slot) then
+								point.slot:SetAlpha(0.2 + (0.8 * maelstromFill))
+							end
+						else
+							point:SetValue(0)
+							point:SetAlpha(0.1)
+							if (point.case) then
+								point.case:SetAlpha(0.35)
+							end
+							if (point.slot) then
+								point.slot:SetAlpha(0.35)
+							end
+						end
+					elseif (cur <= 5) then
 						local activePoints = math.max(0, math.min(cur, 5))
 						local isActive = (i <= activePoints)
 						point:SetValue(isActive and 1 or 0)
@@ -462,7 +815,10 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 					local b = lightPrimary[3] * (1 - gradientFactor) + darkPrimary[3] * gradientFactor
 
 					point:SetStatusBarColor(r, g, b)
-					if (cur <= 5) then
+					if (isMaelstromStyle) then
+						point:SetValue(maelstromFill)
+						point:SetAlpha((maelstromFill > 0) and (0.3 + (0.7 * maelstromFill)) or 0.3)
+					elseif (cur <= 5) then
 						point:SetValue((i <= cur) and 1 or 0)
 						point:SetAlpha((i <= cur) and 1.0 or 0.3)
 					else
@@ -629,6 +985,10 @@ local UnitFrame_OnEvent = function(self, event, ...)
 			classpower.inCombat = true
 			classpower:ForceUpdate()
 		end
+		local power = self.Power
+		if (power and power.ForceUpdate) then
+			power:ForceUpdate()
+		end
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		local runes = self.Runes
 		if (runes and runes.inCombat) then
@@ -644,6 +1004,10 @@ local UnitFrame_OnEvent = function(self, event, ...)
 		if (classpower and classpower.inCombat) then
 			classpower.inCombat = false
 			classpower:ForceUpdate()
+		end
+		local power = self.Power
+		if (power and power.ForceUpdate) then
+			power:ForceUpdate()
 		end
 	end
 end
@@ -692,6 +1056,50 @@ local style = function(self, unit)
 		self.ClassPower = classpower
 		self.ClassPower.PostUpdate = ClassPower_PostUpdate
 		self.ClassPower.PostUpdateColor = ClassPower_PostUpdateColor
+
+		-- Elemental Shaman Secondary Resource Bar
+		--------------------------------------------
+		if (ns.IsRetail and playerClass == "SHAMAN") then
+			local petConfig = ns.GetConfig("PetFrame")
+			local elementalBar = self:CreateBar()
+			elementalBar:SetFrameLevel(self:GetFrameLevel() + 2)
+			elementalBar:SetPoint("CENTER", self, "CENTER", 0, 0)
+			elementalBar:SetSize(unpack((petConfig and petConfig.HealthBarSize) or { 112, 11 }))
+			elementalBar:SetStatusBarTexture((petConfig and petConfig.HealthBarTexture) or [[Interface\TargetingFrame\UI-StatusBar]])
+			elementalBar:SetOrientation((petConfig and petConfig.HealthBarOrientation) or "RIGHT")
+			if (elementalBar.SetSparkMap and petConfig and petConfig.HealthBarSparkMap) then
+				elementalBar:SetSparkMap(petConfig.HealthBarSparkMap)
+			end
+			elementalBar.displayAltPower = true
+			elementalBar.GetDisplayPower = function(element)
+				local profile = ClassPowerMod and ClassPowerMod.db and ClassPowerMod.db.profile
+				return GetElementalSwapBarPowerType(profile), 0
+			end
+			elementalBar.Override = ns.API.UpdatePower
+			elementalBar.PostUpdate = ElementalSwapBar_PostUpdate
+			ns.API.BindStatusBarValueMirror(elementalBar)
+
+			local powerValue = elementalBar:CreateFontString(nil, "OVERLAY", nil, 1)
+			powerValue:SetPoint("CENTER", elementalBar, "CENTER", 0, 0)
+			powerValue:SetFontObject((petConfig and petConfig.HealthValueFont) or GameFontNormalSmall)
+			local valueColor = (petConfig and petConfig.HealthValueColor) or { 1, 1, 1, .75 }
+			powerValue:SetTextColor(valueColor[1] or 1, valueColor[2] or 1, valueColor[3] or 1, valueColor[4] or .75)
+			powerValue:SetJustifyH((petConfig and petConfig.HealthValueJustifyH) or "CENTER")
+			powerValue:SetJustifyV((petConfig and petConfig.HealthValueJustifyV) or "MIDDLE")
+			elementalBar.Value = powerValue
+			elementalBar.__AzeriteUI_KeepValueVisible = ShouldShowElementalSwapBarValue()
+
+			local elementalBackdrop = elementalBar:CreateTexture(nil, "BACKGROUND", nil, -1)
+			elementalBackdrop:SetPoint(unpack((petConfig and petConfig.HealthBackdropPosition) or { "CENTER", 1, -2 }))
+			elementalBackdrop:SetSize(unpack((petConfig and petConfig.HealthBackdropSize) or { 193, 93 }))
+			elementalBackdrop:SetTexture((petConfig and petConfig.HealthBackdropTexture) or [[Interface\TargetingFrame\UI-StatusBar]])
+			local bdColor = (petConfig and petConfig.HealthBackdropColor) or { .5, .5, .5, 1 }
+			elementalBackdrop:SetVertexColor(bdColor[1] or .5, bdColor[2] or .5, bdColor[3] or .5, bdColor[4] or 1)
+			elementalBar.Backdrop = elementalBackdrop
+
+			self.Power = elementalBar
+			self.Power:Hide()
+		end
 
 		-- Monk Stagger
 		--------------------------------------------
@@ -766,7 +1174,28 @@ ClassPowerMod.PostUpdateAnchor = function(self)
 	self.anchor:SetTitle(self:GetLabel())
 end
 
+ClassPowerMod.OnDeferredUpdateEvent = function(self, event)
+	if (event ~= "PLAYER_REGEN_ENABLED") then
+		return
+	end
+	if (InCombatLockdown()) then
+		return
+	end
+	self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnDeferredUpdateEvent")
+	self.__AzeriteUI_PendingSettingsUpdate = nil
+	self:UpdateSettings()
+end
+
 ClassPowerMod.Update = function(self)
+	if (InCombatLockdown()) then
+		self.__AzeriteUI_PendingSettingsUpdate = true
+		self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnDeferredUpdateEvent")
+		return
+	end
+	if (self.__AzeriteUI_PendingSettingsUpdate) then
+		self.__AzeriteUI_PendingSettingsUpdate = nil
+		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnDeferredUpdateEvent")
+	end
 
 	if (ns.IsCata or ns.IsRetail) and (playerClass == "DEATHKNIGHT") then
 		if (self.db.profile.showRunes) then
@@ -786,8 +1215,57 @@ ClassPowerMod.Update = function(self)
 		end
 	end
 
+	local useElementalSwapBar = ShouldUseElementalSwapBar(self.db.profile)
+	if (useElementalSwapBar and self.db.profile and not self.db.profile.elementalSwapBarAnchorMigrated) then
+		local scale = ns.API.GetEffectiveScale()
+		local pos = self.db.profile.savedPosition
+		if (pos) then
+			pos[1] = "BOTTOMLEFT"
+			pos[2] = 375 * scale
+			pos[3] = 130 * scale
+		end
+		self.db.profile.elementalSwapBarAnchorMigrated = true
+		self:UpdatePositionAndScale()
+	end
+	if (ns.IsRetail and playerClass == "SHAMAN" and self.frame) then
+		local classPowerConfig = ns.GetConfig("PlayerClassPower")
+		local petConfig = ns.GetConfig("PetFrame")
+		if (useElementalSwapBar) then
+			self.frame:SetSize(unpack((petConfig and petConfig.HealthBackdropSize) or { 193, 93 }))
+		else
+			self.frame:SetSize(unpack((classPowerConfig and classPowerConfig.ClassPowerFrameSize) or { 124, 168 }))
+		end
+	end
+	if (ns.IsRetail and playerClass == "SHAMAN" and self.frame.Power) then
+		-- Keep Power element enabled for shaman and gate actual visibility in PostUpdate.
+		self.frame:Show()
+		self.frame:EnableElement("Power")
+		self.frame.Power:ForceUpdate()
+		self.frame.Power:Show()
+
+		if (useElementalSwapBar) then
+			self.frame:DisableElement("ClassPower")
+		else
+			self.frame:EnableElement("ClassPower")
+			self.frame.ClassPower:ForceUpdate()
+		end
+	else
+		self.frame:DisableElement("Power")
+		self.frame:EnableElement("ClassPower")
+		self.frame.ClassPower:ForceUpdate()
+	end
+
 	ApplyClassPowerClickThrough(self)
-	self.frame.ClassPower:ForceUpdate()
+	if (ns.IsRetail and playerClass == "SHAMAN") then
+		local playerFrameMod = ns:GetModule("PlayerFrame", true)
+		local playerFrame = playerFrameMod and playerFrameMod.frame
+		if (playerFrame and playerFrame.Power and playerFrame.Power.ForceUpdate) then
+			playerFrame.Power:ForceUpdate()
+		end
+		if (playerFrame and playerFrame.ManaOrb and playerFrame.ManaOrb.ForceUpdate) then
+			playerFrame.ManaOrb:ForceUpdate()
+		end
+	end
 
 end
 
@@ -796,6 +1274,12 @@ ClassPowerMod.OnEnable = function(self)
 	self:CreateUnitFrames()
 	self:CreateAnchor(self:GetLabel())
 	ApplyClassPowerClickThrough(self)
+
+	if (ns.IsRetail and playerClass == "SHAMAN") then
+		self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateSettings")
+		self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED", "UpdateSettings")
+		self:RegisterEvent("TRAIT_CONFIG_UPDATED", "UpdateSettings")
+	end
 
 	ns.MovableModulePrototype.OnEnable(self)
 end

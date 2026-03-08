@@ -48,6 +48,7 @@ local playerClass = UnitClassBase('player')
 local SPEC_DEMONHUNTER_DEVOURER = _G.SPEC_DEMONHUNTER_DEVOURER or 3
 local SPEC_MAGE_ARCANE = _G.SPEC_MAGE_ARCANE or 1
 local SPEC_MONK_WINDWALKER = _G.SPEC_MONK_WINDWALKER or 3
+local SPEC_SHAMAN_ELEMENTAL = _G.SPEC_SHAMAN_ELEMENTAL or 1
 local SPEC_SHAMAN_ENCHANCEMENT = 2
 local SPEC_WARLOCK_DESTRUCTION = _G.SPEC_WARLOCK_DESTRUCTION or 3
 
@@ -57,6 +58,7 @@ local POWER_ID_COMBO_POINTS = Enum.PowerType.ComboPoints or 4
 local POWER_ID_ENERGY = Enum.PowerType.Energy or 3
 local POWER_ID_ESSENCE = Enum.PowerType.Essence or 19
 local POWER_ID_HOLY_POWER = Enum.PowerType.HolyPower or 9
+local POWER_ID_MAELSTROM = Enum.PowerType.Maelstrom or 11
 local POWER_ID_SOUL_SHARDS = Enum.PowerType.SoulShards or 7
 
 local POWER_TYPE_ARCANE_CHARGES = 'ARCANE_CHARGES'
@@ -80,6 +82,7 @@ local SOUL_FRAGMENTS_META_INDEX = 2
 
 local ClassPowerEnable, ClassPowerDisable
 local GetPower, GetPowerMax, GetPowerColor, GetPowerUpdaters
+local IsSecretValue = issecretvalue
 
 -- holds class-specific information for enablement toggles
 local classPowerID, classPowerType, classAuraID
@@ -192,25 +195,93 @@ elseif(playerClass == 'ROGUE') then
 		return GetComboPoints, GetComboPointsMax, GetGenericPowerColor
 	end
 elseif(playerClass == 'SHAMAN') then
+	classPowerID = POWER_ID_MAELSTROM
 	classAuraID = SPELL_MAELSTROM_WEAPON
 	classPowerType = POWER_TYPE_MAELSTROM -- we re-use this from elemental for the colors
-	requireSpec = SPEC_SHAMAN_ENCHANCEMENT
 
 	local function GetMaelstromWeapon()
 		local auraInfo = C_UnitAuras.GetPlayerAuraBySpellID(SPELL_MAELSTROM_WEAPON)
 		if(auraInfo) then
-			return auraInfo.applications
+			local applications = auraInfo.applications
+			if(type(applications) == 'number') then
+				return applications
+			end
+		end
+		-- Fallback: when aura payload is unreadable/secret in combat, read the maelstrom power pool.
+		local powerValue = UnitPower('player', POWER_ID_MAELSTROM)
+		local powerMax = UnitPowerMax('player', POWER_ID_MAELSTROM)
+		if(type(powerValue) == 'number' and (not IsSecretValue or not IsSecretValue(powerValue))) then
+			if(type(powerMax) == 'number' and powerMax > 0 and (not IsSecretValue or not IsSecretValue(powerMax)) and powerMax > 10) then
+				return math.ceil((powerValue / powerMax) * 10)
+			end
+			return powerValue
 		end
 
 		return 0
 	end
 
 	local function GetMaelstromWeaponMax()
-		return C_Spell.GetSpellMaxCumulativeAuraApplications(SPELL_MAELSTROM_WEAPON)
+		local maxStacks = C_Spell.GetSpellMaxCumulativeAuraApplications(SPELL_MAELSTROM_WEAPON)
+		if(type(maxStacks) == 'number' and maxStacks > 0) then
+			return maxStacks
+		end
+		local powerMax = UnitPowerMax('player', POWER_ID_MAELSTROM)
+		if(type(powerMax) == 'number' and powerMax > 0 and (not IsSecretValue or not IsSecretValue(powerMax))) then
+			return (powerMax > 10) and 10 or powerMax
+		end
+		return 10
+	end
+
+	local function GetElementalMaelstromPoints(unit)
+		local curPower = UnitPower(unit, POWER_ID_MAELSTROM)
+		local maxPower = UnitPowerMax(unit, POWER_ID_MAELSTROM)
+		local curIsSafe = (type(curPower) == 'number') and (not IsSecretValue or not IsSecretValue(curPower))
+		local maxIsSafe = (type(maxPower) == 'number') and (not IsSecretValue or not IsSecretValue(maxPower)) and maxPower > 0
+		local points
+		if(curIsSafe and maxIsSafe) then
+			points = math.ceil((curPower / maxPower) * 10)
+		else
+			local percent
+			if(UnitPowerPercent) then
+				pcall(function()
+					if(CurveConstants and CurveConstants.ScaleTo100) then
+						percent = UnitPowerPercent(unit, POWER_ID_MAELSTROM, true, CurveConstants.ScaleTo100)
+					else
+						percent = UnitPowerPercent(unit, POWER_ID_MAELSTROM)
+					end
+				end)
+			end
+			if(type(percent) == 'number' and (not IsSecretValue or not IsSecretValue(percent))) then
+				if(percent >= 0 and percent <= 1) then
+					percent = percent * 100
+				end
+				points = math.ceil((percent / 100) * 10)
+			else
+				-- Let updater keep the previous safe point count when API payload is unreadable.
+				points = nil
+			end
+		end
+		if(type(points) ~= 'number') then
+			return nil
+		end
+		if(points < 0) then
+			return 0
+		elseif(points > 10) then
+			return 10
+		end
+		return points
+	end
+
+	local function GetElementalMaelstromPointsMax()
+		return 10
 	end
 
 	GetPowerUpdaters = function()
-		return GetMaelstromWeapon, GetMaelstromWeaponMax, GetGenericPowerColor
+		local spec = C_SpecializationInfo.GetSpecialization()
+		if(spec == SPEC_SHAMAN_ENCHANCEMENT) then
+			return GetMaelstromWeapon, GetMaelstromWeaponMax, GetGenericPowerColor
+		end
+		return GetElementalMaelstromPoints, GetElementalMaelstromPointsMax, GetGenericPowerColor
 	end
 elseif(playerClass == 'WARLOCK') then
 	classPowerID = POWER_ID_SOUL_SHARDS
@@ -278,8 +349,17 @@ local function Update(self, event, unit, powerType)
 	elseif(event == 'UNIT_AURA' or event == 'UNIT_POWER_POINT_CHARGE') then
 		-- fake the power type for events that don't provide any
 		powerType = classPowerType
+	elseif(playerClass == 'SHAMAN' and (event == 'UNIT_POWER_UPDATE' or event == 'UNIT_MAXPOWER')) then
+		-- Enhancement can route stack data via power updates depending on build/API payload.
+		powerType = classPowerType
 	elseif(not powerType or powerType ~= classPowerType) then
-		return
+		-- Elemental Maelstrom can report non-maelstrom power updates depending on API path/build.
+		-- Keep updates flowing for shaman classpower; updater itself resolves the active source.
+		if(playerClass == 'SHAMAN' and C_SpecializationInfo.GetSpecialization() == SPEC_SHAMAN_ELEMENTAL) then
+			powerType = classPowerType
+		else
+			return
+		end
 	end
 
 	local element = self.ClassPower
@@ -299,7 +379,19 @@ local function Update(self, event, unit, powerType)
 		cur, chargedPoints = GetPower(unit)
 		max = GetPowerMax(unit)
 
-		hasMaxChanged = max ~= element.__max
+		local prevMax = element.__max
+		if(type(prevMax) ~= 'number') then
+			prevMax = 0
+			element.__max = 0
+		end
+		local hasSafeMax = (type(max) == 'number') and (not IsSecretValue or not IsSecretValue(max))
+		if(not hasSafeMax) then
+			max = prevMax
+		elseif(max < 0) then
+			max = 0
+		end
+
+		hasMaxChanged = max ~= prevMax
 		if(hasMaxChanged) then
 			for i = 1, #element do
 				element[i]:SetShown(i <= max)
@@ -312,7 +404,17 @@ local function Update(self, event, unit, powerType)
 			element.__max = max
 		end
 
-		local hasCurChanged = cur ~= element.__cur
+		local prevCur = element.__cur
+		if(type(prevCur) ~= 'number') then
+			prevCur = 0
+			element.__cur = 0
+		end
+		local hasSafeCur = (type(cur) == 'number') and (not IsSecretValue or not IsSecretValue(cur))
+		if(not hasSafeCur) then
+			cur = prevCur
+		end
+
+		local hasCurChanged = cur ~= prevCur
 		if(hasCurChanged) then
 			local numActive = cur + 0.9
 			for i = 1, max do
@@ -362,6 +464,16 @@ local function Visibility(self, event, unit)
 
 		if(PlayerVehicleHasComboPoints()) then
 			powerType = POWER_TYPE_COMBO_POINTS
+		end
+	elseif(playerClass == 'SHAMAN') then
+		local spec = C_SpecializationInfo.GetSpecialization()
+		if(spec == SPEC_SHAMAN_ENCHANCEMENT) then
+			isAuraPower = true
+			powerType = classPowerType
+			unit = 'player'
+		elseif(spec == SPEC_SHAMAN_ELEMENTAL) then
+			powerType = classPowerType
+			unit = 'player'
 		end
 	elseif(classAuraID) then
 		if(not requireSpec or requireSpec == C_SpecializationInfo.GetSpecialization()) then
@@ -439,6 +551,10 @@ do
 	function ClassPowerEnable(self, registerAuraEvents)
 		if(registerAuraEvents) then
 			self:RegisterEvent('UNIT_AURA', Path)
+			if(playerClass == 'SHAMAN') then
+				self:RegisterEvent('UNIT_POWER_UPDATE', Path)
+				self:RegisterEvent('UNIT_MAXPOWER', Path)
+			end
 		else
 			self:RegisterEvent('UNIT_MAXPOWER', Path)
 			self:RegisterEvent('UNIT_POWER_UPDATE', Path)
@@ -485,7 +601,7 @@ local function Enable(self, unit)
 		element.__max = 0
 		element.ForceUpdate = ForceUpdate
 
-		if(requireSpec or requireSpell) then
+		if(requireSpec or requireSpell or playerClass == 'SHAMAN') then
 			self:RegisterEvent('PLAYER_LEVEL_UP', VisibilityPath, true)
 			self:RegisterEvent('TRAIT_CONFIG_UPDATED', VisibilityPath, true)
 		end

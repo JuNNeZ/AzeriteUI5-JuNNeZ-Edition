@@ -52,6 +52,7 @@ local playerClass = ns.PlayerClass
 local playerLevel = UnitLevel("player")
 local playerXPDisabled = IsXPUserDisabled()
 local SPEC_PALADIN_RETRIBUTION = SPEC_PALADIN_RETRIBUTION or 3
+local SPEC_SHAMAN_ELEMENTAL = _G.SPEC_SHAMAN_ELEMENTAL or 1
 local POWER_TYPE_MANA = (ns.IsRetail and Enum and Enum.PowerType and Enum.PowerType.Mana) or 0
 local playerIsRetribution = playerClass == "PALADIN" and (ns.IsRetail and GetSpecialization() == SPEC_PALADIN_RETRIBUTION)
 local ORB_DYNAMIC_CLASS_ALLOW = {
@@ -708,6 +709,22 @@ local ResolvePlayerPowerWidgetVisibility = function(frame, unit)
 	end
 
 	return wantsCrystal, wantsOrb
+end
+
+local GetElementalMaelstromDisplayMode = function()
+	if (not ns.IsRetail or playerClass ~= "SHAMAN") then
+		return "crystal_spec"
+	end
+	local classPowerMod = ns:GetModule("PlayerClassPowerFrame", true)
+	local profile = classPowerMod and classPowerMod.db and classPowerMod.db.profile
+	if (not profile) then
+		return "crystal_spec"
+	end
+	local mode = profile.elementalMaelstromDisplayMode
+	if (mode == "crystal_mana" or mode == "classpower") then
+		return "crystal_mana"
+	end
+	return "crystal_spec"
 end
 
 local IsPlayerPowerUnit = function(unit)
@@ -2496,6 +2513,16 @@ local style = function(self, unit)
 	power.frequentUpdates = true
 	power.displayAltPower = true
 	power.colorPower = true
+	power.GetDisplayPower = function(element)
+		local owner = element and element.__owner
+		local unitToken = GetPlayerPowerUnit(owner)
+		if (ns.IsRetail and playerClass == "SHAMAN" and GetSpecialization and GetSpecialization() == SPEC_SHAMAN_ELEMENTAL) then
+			if (GetElementalMaelstromDisplayMode() == "crystal_mana") then
+				return POWER_TYPE_MANA, 0
+			end
+		end
+		return UnitPowerType(unitToken)
+	end
 	power.smoothing = nil
 	power.__AzeriteUI_DisableTexturePercentMirror = true
 	power.__AzeriteUI_KeepMirrorPercentOnNoSample = true

@@ -70,9 +70,6 @@ local hideActionButton = function(button)
 	if (button.UnregisterAllEvents) then
 		button:UnregisterAllEvents()
 	end
-	if (button.SetAttribute and (not InCombatLockdown or not InCombatLockdown())) then
-		pcall(button.SetAttribute, button, "statehidden", true)
-	end
 
 	if (button.HideBase) then
 		button:HideBase()

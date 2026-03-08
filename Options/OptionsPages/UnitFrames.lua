@@ -820,7 +820,7 @@ local GenerateOptions = function()
 							end
 							return L["Choose how Soul Fragments points are displayed."]
 						end,
-						order = 11.2, type = "select", width = "full", set = setter, get = getter,
+						order = 99, type = "select", width = "full", set = setter, get = getter,
 						values = {
 							["alpha"] = L["Alpha Mode (Dim 0-5, Bright 6-10)"],
 							["gradient"] = L["Smooth Gradient (Light to Dark + Glow)"],
@@ -857,6 +857,34 @@ local GenerateOptions = function()
 							if (isdisabled(info)) then return true end
 							local isDevMode = (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
 							return ns.PlayerClass ~= "SHAMAN" and not isDevMode
+						end
+					}
+					suboptions.args.enableElementalMaelstromDisplay = {
+						name = "Enable Elemental Secondary Resource Bar",
+						desc = "Enable a secondary Elemental Shaman resource bar and choose crystal/bar resource split below.",
+						order = 11.05, type = "toggle", width = "full", set = setter, get = getter,
+						hidden = true
+					}
+					suboptions.args.elementalMaelstromDisplayMode = {
+						name = "Elemental Crystal/Bar Resource Split",
+						desc = "Choose which resource is shown in the Power Crystal; the other is shown in the secondary bar.",
+						order = 11.06, type = "select", width = "full", set = setter,
+						values = {
+							["crystal_spec"] = "Crystal: Maelstrom | Bar: Mana",
+							["crystal_mana"] = "Crystal: Mana | Bar: Maelstrom"
+						},
+						get = function(info)
+							local value = getoption(info, "elementalMaelstromDisplayMode")
+							if (value == "crystal_mana" or value == "classpower") then
+								return "crystal_mana"
+							end
+							return "crystal_spec"
+						end,
+						hidden = function(info)
+							if (isdisabled(info)) then return true end
+							local isDevMode = (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+							if (ns.PlayerClass ~= "SHAMAN" and not isDevMode) then return true end
+							return false
 						end
 					}
 					suboptions.args.showSoulShards = {
