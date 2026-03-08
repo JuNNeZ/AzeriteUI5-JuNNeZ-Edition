@@ -364,14 +364,25 @@ local Minimap_OnMouseWheel = function(self, delta)
 	end
 end
 
+local function GetTrackingButton()
+	local trackingFrame
+	if (MinimapCluster) then
+		trackingFrame = MinimapCluster.Tracking or MinimapCluster.TrackingFrame
+	end
+	return (trackingFrame and (trackingFrame.Button or trackingFrame))
+		or _G.MiniMapTrackingButton
+		or _G.MiniMapTracking
+end
+
 local function EnsureTrackingProxy()
 	if (not ns.IsRetail) then
 		return nil
 	end
-	if (MinimapMod.trackingProxy) then
+	if (MinimapMod.trackingProxy and MinimapMod.trackingProxy.OpenMenu) then
 		return MinimapMod.trackingProxy
 	end
-	if (type(Mixin) ~= "function" or type(MiniMapTrackingButtonMixin) ~= "table") then
+	local trackingMixin = _G.MiniMapTrackingButtonMixin or _G.MinimapTrackingDropdownMixin
+	if (type(Mixin) ~= "function" or type(trackingMixin) ~= "table") then
 		return nil
 	end
 
@@ -382,7 +393,7 @@ local function EnsureTrackingProxy()
 	proxy:SetAlpha(0)
 	proxy:EnableMouse(false)
 
-	Mixin(proxy, MiniMapTrackingButtonMixin)
+	Mixin(proxy, trackingMixin)
 	if (proxy.OnLoad) then
 		pcall(proxy.OnLoad, proxy)
 	end
@@ -395,12 +406,6 @@ local function EnsureTrackingProxy()
 end
 
 local OpenTrackingContextMenu = function(anchor)
-	local trackingButton, trackingFrame
-	if (MinimapCluster) then
-		trackingFrame = MinimapCluster.Tracking or MinimapCluster.TrackingFrame
-		trackingButton = trackingFrame and (trackingFrame.Button or trackingFrame)
-	end
-	trackingButton = trackingButton or _G.MiniMapTrackingButton or _G.MiniMapTracking
 	local function IsTrackingMenuVisible(buttonObject)
 		if (buttonObject and buttonObject.menu and buttonObject.menu.IsShown and buttonObject.menu:IsShown()) then
 			return true
@@ -424,6 +429,7 @@ local OpenTrackingContextMenu = function(anchor)
 		end
 		return false
 	end
+
 	local function OpenAndCheck(buttonObject)
 		if (not buttonObject) then
 			return false
@@ -461,20 +467,22 @@ local OpenTrackingContextMenu = function(anchor)
 		return false
 	end
 
-	if (OpenAndCheck(EnsureTrackingProxy())) then
-		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
-		return true
-	end
-	if (OpenAndCheck(trackingButton)) then
-		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
-		return true
+	if (ns.IsRetail) then
+		-- Pattern parity with ElvUI/GW2_UI:
+		-- prefer the live retail tracking button, then a mixin proxy fallback.
+		if (OpenAndCheck(EnsureTrackingProxy()) or OpenAndCheck(GetTrackingButton())) then
+			return true
+		end
+		local okBlizzard = pcall(Minimap_OnClick, Minimap, "RightButton")
+		if (okBlizzard and IsTrackingMenuVisible()) then
+			return true
+		end
 	end
 
 	local dropdown = _G[ns.Prefix.."MiniMapTrackingDropDown"] or _G.MiniMapTrackingDropDown
 	if (dropdown) then
 		ToggleDropDownMenu(1, nil, dropdown, "cursor")
-		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
-		return true
+		return IsTrackingMenuVisible()
 	end
 
 	return false
@@ -489,8 +497,9 @@ Minimap_OnMouseButton_Hook = function(self, button)
 				MinimapMod:ShowMinimapTrackingMenu()
 			elseif (_G.MiniMapTrackingDropDown) then
 				ToggleDropDownMenu(1, nil, _G.MiniMapTrackingDropDown, "MiniMapTracking", 8, 5)
-				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
 			end
+		elseif (ns.IsRetail) then
+			OpenTrackingContextMenu(self)
 		else
 			OpenTrackingContextMenu(self)
 		end
@@ -1386,9 +1395,32 @@ MinimapMod.OnEnable = function(self)
 	end
 	self.frame:EnableMouseWheel(true)
 	self.frame:SetScript("OnMouseWheel", Minimap_OnMouseWheel)
-	if (not self.__AzeriteUI_MinimapMouseUpHooked) then
-		self.frame:HookScript("OnMouseUp", Minimap_OnMouseButton_Hook)
-		self.__AzeriteUI_MinimapMouseUpHooked = true
+
+	if (ns.IsRetail) then
+		-- Dedicated click handler frame, matching the reliable ElvUI/GW2_UI pattern:
+		-- keep left/middle passthrough, capture right-down for tracking menu.
+		if (not self.clickHandler) then
+			local clickHandler = CreateFrame("Frame", ns.Prefix.."MinimapClickHandler", self.frame)
+			clickHandler:SetAllPoints(self.frame)
+			clickHandler:SetFrameLevel(self.frame:GetFrameLevel() + 30)
+			clickHandler:EnableMouse(true)
+			if (clickHandler.SetPassThroughButtons) then
+				clickHandler:SetPassThroughButtons("LeftButton", "MiddleButton")
+			end
+			if (clickHandler.SetPropagateMouseMotion) then
+				clickHandler:SetPropagateMouseMotion(true)
+			end
+			clickHandler:SetScript("OnMouseDown", function(_, button)
+				Minimap_OnMouseButton_Hook(self.frame, button)
+			end)
+			clickHandler:SetScript("OnMouseUp", noop)
+			self.clickHandler = clickHandler
+		end
+	else
+		if (not self.__AzeriteUI_MinimapMouseUpHooked) then
+			self.frame:HookScript("OnMouseUp", Minimap_OnMouseButton_Hook)
+			self.__AzeriteUI_MinimapMouseUpHooked = true
+		end
 	end
 
 	if (ns.IsRetail) then

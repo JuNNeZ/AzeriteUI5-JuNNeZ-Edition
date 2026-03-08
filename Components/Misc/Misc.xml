@@ -9,6 +9,7 @@
 	<Script file="Durability.lua"/>
 	<!---->
 	<Script file="ErrorsFrame.lua"/>
+	<Script file="GameMenu.lua"/>
 	<Script file="Info.lua"/>
 	<Script file="Minimap.lua"/>
 	<Script file="MirrorTimers.lua"/>

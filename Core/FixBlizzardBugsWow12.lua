@@ -509,9 +509,9 @@ local function QuarantineCompactFrames()
 		return
 	end
 
-	if (_G.CompactRaidFrameManager_SetSetting) then
-		pcall(_G.CompactRaidFrameManager_SetSetting, "IsShown", "0")
-	end
+	-- Avoid CompactRaidFrameManager_SetSetting here on WoW12.
+	-- It can route into protected HideBase() during roster/EditMode refresh and
+	-- trigger ADDON_ACTION_BLOCKED (CompactRaidFrameContainer:HideBase).
 
 	if (UIParent and UIParent.UnregisterEvent) then
 		pcall(UIParent.UnregisterEvent, UIParent, "GROUP_ROSTER_UPDATE")

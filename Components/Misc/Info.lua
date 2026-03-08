@@ -254,7 +254,7 @@ Info.PrepareFrames = function(self)
 	resting:SetJustifyH("CENTER")
 	resting:SetJustifyV("MIDDLE")
 	resting:SetTextColor(unpack(db.ClockColor))
-	resting:SetText("|cff888888(|r"..L_RESTING.."|cff888888)|r")
+	resting:SetText("|TInterface\\CharacterFrame\\UI-StateIcon:14:14:0:0:64:64:0:32:0:27|t |cff888888(|r"..L_RESTING.."|cff888888)|r")
 
 	self.resting = resting
 

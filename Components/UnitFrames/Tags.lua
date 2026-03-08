@@ -282,6 +282,23 @@ local SafeValueToText = function(value)
 	return "?"
 end
 
+local HasDisplayValue = function(value)
+	if (value == nil) then
+		return false
+	end
+	if (issecretvalue and issecretvalue(value)) then
+		return true
+	end
+	local valueType = type(value)
+	if (valueType == "number") then
+		return true
+	end
+	if (valueType == "string") then
+		return SafeNonEmptyString(value)
+	end
+	return false
+end
+
 local IsZeroLikeText = function(value)
 	if (type(value) ~= "string") then
 		return false
@@ -464,6 +481,28 @@ local SafeHealthCurrentText = function(unit)
 	-- Prefer Blizzard formatter path for WoW12 secret-value compatibility.
 	if (type(AbbreviateNumbers) == "function") then
 		local ok, formatted = pcall(AbbreviateNumbers, current)
+		if (ok and formatted ~= nil) then
+			local valueType = type(formatted)
+			if (valueType == "string" or valueType == "number") then
+				return formatted
+			end
+			if (issecretvalue and issecretvalue(formatted)) then
+				return formatted
+			end
+		end
+	end
+
+	return nil
+end
+
+local SafeHealthMaxText = function(unit)
+	local maxHealth = UnitHealthMax(unit)
+	if (maxHealth == nil) then
+		return nil
+	end
+
+	if (type(AbbreviateNumbers) == "function") then
+		local ok, formatted = pcall(AbbreviateNumbers, maxHealth)
 		if (ok and formatted ~= nil) then
 			local valueType = type(formatted)
 			if (valueType == "string" or valueType == "number") then
@@ -1068,18 +1107,30 @@ Methods[prefix("*:Health")] = function(unit, realUnit, ...)
 			if percent and percent < 100 then
 				return percent
 			end
-			-- Fall back to current health
-			local healthText = SafeValueToText(health)
-			if healthText ~= "" then return healthText end
-			return "?"
+			-- Fall back to direct formatted current health (secret-safe).
+			local healthText = SafeHealthCurrentText(unit)
+			if (HasDisplayValue(healthText)) then
+				return healthText
+			end
+			healthText = SafeValueToText(health)
+			if (HasDisplayValue(healthText) and healthText ~= "?") then
+				return healthText
+			end
+			return ""
 			
 		elseif (useFull) then
-			local healthText = SafeValueToText(health)
-			local maxHealthText = SafeValueToText(maxHealth)
-			if healthText ~= "" and maxHealthText ~= "" then
+			local healthText = SafeHealthCurrentText(unit)
+			if (not HasDisplayValue(healthText)) then
+				healthText = SafeValueToText(health)
+			end
+			local maxHealthText = SafeHealthMaxText(unit)
+			if (not HasDisplayValue(maxHealthText)) then
+				maxHealthText = SafeValueToText(maxHealth)
+			end
+			if (HasDisplayValue(healthText) and HasDisplayValue(maxHealthText) and healthText ~= "?" and maxHealthText ~= "?") then
 				return healthText..c_gray.."/"..r..maxHealthText
 			end
-			return "?"
+			return ""
 			
 		else
 			local healthText = SafeValueToText(health)

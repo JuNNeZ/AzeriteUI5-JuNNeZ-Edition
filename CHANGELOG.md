@@ -3,6 +3,23 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.235-JuNNeZ (2026-03-08)
+
+### Fixes
+- Minimap tracking right-click reliability follow-up:
+  - Added dedicated retail minimap click handler overlay and improved tracking button discovery/fallback validation.
+  - Prevents false-positive "opened" paths when tracking menu is not actually shown.
+- Bossbar health text fallback cleanup:
+  - `*:Health(true)` smart/full output now prefers secret-safe formatted health values and no longer surfaces literal `?` placeholders.
+- WoW12 compact frame taint hardening:
+  - Removed compact manager `IsShown` setting write from quarantine path to avoid protected `HideBase()` taint (`ADDON_ACTION_BLOCKED`) during roster/EditMode refresh.
+
+### Added
+- New `GameMenuSkin` module:
+  - Added AzeriteUI skinning for ESC game menu frame/buttons via `Components/Misc/GameMenu.lua`.
+  - Wired module load in `Components/Misc/Misc.xml`.
+- Added resting icon prefix in info panel resting text for clearer status readability.
+
 ## 5.2.234-JuNNeZ (2026-03-07)
 
 ### Fixes
