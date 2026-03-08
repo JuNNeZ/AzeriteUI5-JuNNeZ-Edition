@@ -47,14 +47,16 @@ jobs:
           CURSE_BADGE="[![CurseForge](https://img.shields.io/badge/CurseForge-Project-orange)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)"
           CURSE_DOWNLOADS_BADGE="[![CurseForge Downloads](https://img.shields.io/badge/dynamic/json?color=orange&label=downloads&query=%24.downloads.total&url=https%3A%2F%2Fapi.cfwidget.com%2Fwow%2Faddons%2Fazeriteui-junnez-edition-wow12)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)"
 
-          sed -i "s|^\[!\[WoW Version\].*|${WOW_BADGE}|" README.md
-          sed -i "s|^\[!\[Interface\].*|${INTERFACE_BADGE}|" README.md
-          sed -i "s|^\[!\[Lua\].*|${LUA_BADGE}|" README.md
-          sed -i "s|^\[!\[Maintainer\].*|${MAINTAINER_BADGE}|" README.md
-          sed -i "s|^\[!\[Addon Version\].*|${ADDON_BADGE}|" README.md
-          sed -i "s|^\[!\[GitHub Release\].*|${RELEASE_BADGE}|" README.md
-          sed -i "s|^\[!\[CurseForge\].*|${CURSE_BADGE}|" README.md
-          sed -i "s|^\[!\[CurseForge Downloads\].*|${CURSE_DOWNLOADS_BADGE}|" README.md
+          esc() { printf '%s' "$1" | sed 's/&/\\&/g'; }
+
+          sed -i "s|^\[!\[WoW Version\].*|$(esc "${WOW_BADGE}")|" README.md
+          sed -i "s|^\[!\[Interface\].*|$(esc "${INTERFACE_BADGE}")|" README.md
+          sed -i "s|^\[!\[Lua\].*|$(esc "${LUA_BADGE}")|" README.md
+          sed -i "s|^\[!\[Maintainer\].*|$(esc "${MAINTAINER_BADGE}")|" README.md
+          sed -i "s|^\[!\[Addon Version\].*|$(esc "${ADDON_BADGE}")|" README.md
+          sed -i "s|^\[!\[GitHub Release\].*|$(esc "${RELEASE_BADGE}")|" README.md
+          sed -i "s|^\[!\[CurseForge\].*|$(esc "${CURSE_BADGE}")|" README.md
+          sed -i "s|^\[!\[CurseForge Downloads\].*|$(esc "${CURSE_DOWNLOADS_BADGE}")|" README.md
 
       - name: Commit and push changes
         shell: bash
