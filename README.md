@@ -1,5 +1,14 @@
 # AzeriteUI — JuNNeZ Edition
 
+[![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)
+[![Interface](https://img.shields.io/badge/Interface-120000-1f6feb)](#)
+[![Lua](https://img.shields.io/badge/Lua-WoW%20API%2012-2c2d72)](#)
+[![Maintainer](https://img.shields.io/badge/Maintainer-JuNNeZ-0a7d32)](https://github.com/JuNNeZ1993)
+[![Addon Version](https://img.shields.io/badge/Addon-v5.2.235--JuNNeZ--hotfix--20260308-informational)](https://github.com/JuNNeZ1993/AzeriteUI5_JuNNeZ_Edition/tags)
+[![GitHub Release](https://img.shields.io/github/v/release/JuNNeZ1993/AzeriteUI5_JuNNeZ_Edition?display_name=release)](https://github.com/JuNNeZ1993/AzeriteUI5_JuNNeZ_Edition/releases/latest)
+[![CurseForge](https://img.shields.io/badge/CurseForge-Project-orange)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)
+[![CurseForge Downloads](https://img.shields.io/badge/dynamic/json?color=orange&label=downloads&query=downloads&url=https://api.cfwidget.com/wow/addons/azeriteui-junnez-edition-wow12)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)
+
 **This is an unofficial fan-edited version of [AzeriteUI 5](https://github.com/goldpawsstuff/AzeriteUI5) by GoldpawsStuff.**
 
 This fan edition contains personal modifications, bug fixes, and experimental features not present in the official release. For the official, fully-supported version of AzeriteUI, please visit the original author's projects.
@@ -80,13 +89,12 @@ The container installs:
 ---
 
 ## Fan Edition Notes
-
-**Version:** 5.2.212-JuNNeZ
-
 This fan edition is maintained independently and includes:
 - WoW 12 secret-value compatibility fixes
 - Actionbar live-update fixes
-- Compability for WoW 12
+- Compatibility for WoW 12  (Midnight expansion) and future updates
+- Personal tweaks and experimental features
+- Additional bug fixes not present in the official release
 
 ---
 
