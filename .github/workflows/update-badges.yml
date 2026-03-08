@@ -1,0 +1,72 @@
+name: Update README Badges
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  update-badges:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Update badge lines in README
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REPO="${GITHUB_REPOSITORY}"
+          LATEST_TAG="$(git tag --sort=-v:refname | head -n 1 || true)"
+          if [ -z "${LATEST_TAG}" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+
+          # shields.io static badge path uses '-' as separators; double '-' keeps literal dashes in tag values.
+          TAG_FOR_SHIELD="${LATEST_TAG//-/--}"
+
+          WOW_BADGE="[![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)"
+          INTERFACE_BADGE="[![Interface](https://img.shields.io/badge/Interface-120000-1f6feb)](#)"
+          LUA_BADGE="[![Lua](https://img.shields.io/badge/Lua-WoW%20API%2012-2c2d72)](#)"
+          MAINTAINER_BADGE="[![Maintainer](https://img.shields.io/badge/Maintainer-JuNNeZ-0a7d32)](https://github.com/JuNNeZ)"
+          ADDON_BADGE="[![Addon Version](https://img.shields.io/badge/Addon-${TAG_FOR_SHIELD}-informational)](https://github.com/${REPO}/tags)"
+          RELEASE_BADGE="[![GitHub Release](https://img.shields.io/github/v/release/${REPO}?display_name=release)](https://github.com/${REPO}/releases/latest)"
+          CURSE_BADGE="[![CurseForge](https://img.shields.io/badge/CurseForge-Project-orange)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)"
+          CURSE_DOWNLOADS_BADGE="[![CurseForge Downloads](https://img.shields.io/badge/dynamic/json?color=orange&label=downloads&query=downloads.total&url=https://api.cfwidget.com/wow/addons/azeriteui-junnez-edition-wow12)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)"
+
+          sed -i "s|^\[!\[WoW Version\].*|${WOW_BADGE}|" README.md
+          sed -i "s|^\[!\[Interface\].*|${INTERFACE_BADGE}|" README.md
+          sed -i "s|^\[!\[Lua\].*|${LUA_BADGE}|" README.md
+          sed -i "s|^\[!\[Maintainer\].*|${MAINTAINER_BADGE}|" README.md
+          sed -i "s|^\[!\[Addon Version\].*|${ADDON_BADGE}|" README.md
+          sed -i "s|^\[!\[GitHub Release\].*|${RELEASE_BADGE}|" README.md
+          sed -i "s|^\[!\[CurseForge\].*|${CURSE_BADGE}|" README.md
+          sed -i "s|^\[!\[CurseForge Downloads\].*|${CURSE_DOWNLOADS_BADGE}|" README.md
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- README.md; then
+            echo "No README badge changes detected."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: update README badges"
+          git push origin main
