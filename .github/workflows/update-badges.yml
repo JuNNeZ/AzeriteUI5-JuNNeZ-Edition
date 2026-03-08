@@ -45,7 +45,7 @@ jobs:
           ADDON_BADGE="[![Addon Version](https://img.shields.io/badge/Addon-${TAG_FOR_SHIELD}-informational)](https://github.com/${REPO}/tags)"
           RELEASE_BADGE="[![GitHub Release](https://img.shields.io/github/v/release/${REPO}?display_name=release)](https://github.com/${REPO}/releases/latest)"
           CURSE_BADGE="[![CurseForge](https://img.shields.io/badge/CurseForge-Project-orange)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)"
-          CURSE_DOWNLOADS_BADGE="[![CurseForge Downloads](https://img.shields.io/badge/dynamic/json?color=orange&label=downloads&query=downloads.total&url=https://api.cfwidget.com/wow/addons/azeriteui-junnez-edition-wow12)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)"
+          CURSE_DOWNLOADS_BADGE="[![CurseForge Downloads](https://img.shields.io/badge/dynamic/json?color=orange&label=downloads&query=%24.downloads.total&url=https%3A%2F%2Fapi.cfwidget.com%2Fwow%2Faddons%2Fazeriteui-junnez-edition-wow12)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)"
 
           sed -i "s|^\[!\[WoW Version\].*|${WOW_BADGE}|" README.md
           sed -i "s|^\[!\[Interface\].*|${INTERFACE_BADGE}|" README.md
