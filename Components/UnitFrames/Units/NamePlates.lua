@@ -35,6 +35,7 @@ local select = select
 local strsplit = strsplit
 local string_gsub = string.gsub
 local tostring = tostring
+local tonumber = tonumber
 local unpack = unpack
 
 -- Addon API
@@ -48,8 +49,16 @@ local defaults = { profile = ns:Merge({
 	showAuras = true,
 	showAurasOnTargetOnly = false,
 	showNameAlways = false,
+	hideFriendlyPlayerHealthBar = false,
+	friendlyNameOnlyFontScale = 2.5,
+	friendlyNameOnlyTargetScale = 0.5,
 	showBlizzardWidgets = false,
-	scale = 1,
+	scale = 2,
+	friendlyScale = 1,
+	enemyScale = 1,
+	friendlyTargetScale = 1,
+	enemyTargetScale = 0.5,
+	nameplateTargetScale = 0.5,
 	healthFlipLabEnabled = false,
 	healthFlipLabDebugMode = false,
 	healthLabOrientation = "DEFAULT",
@@ -65,6 +74,21 @@ local defaults = { profile = ns:Merge({
 	healthLabCastReverseFill = false,
 	healthLabCastSetFlippedHorizontally = false
 }, ns.MovableModulePrototype.defaults) }
+local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
+local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
+local FRIENDLY_NAME_ONLY_SCALE_MULTIPLIER = 2
+local FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = 6
+local GLOBAL_NAMEPLATE_BASE_SCALE_DEFAULT = 2
+local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = 1
+local ENEMY_NAMEPLATE_SCALE_DEFAULT = 1
+local FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = 1
+local GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT = 0.5
+local GLOBAL_NAMEPLATE_UNIT_SCALE_DEFAULT = 1
+local GLOBAL_NAMEPLATE_SELECTED_SCALE_NEUTRAL = 1
+local GLOBAL_NAMEPLATE_MIN_SCALE = 1
+local GLOBAL_NAMEPLATE_MAX_SCALE = 1
+local GLOBAL_NAMEPLATE_LARGER_SCALE = 1
+local cvars
 
 -- Utility Functions
 --------------------------------------------
@@ -259,6 +283,385 @@ local GetNamePlateHealthLabSettings = function(db)
 		settings.castSetFlippedHorizontally = profile.healthLabCastSetFlippedHorizontally
 	end
 	return settings
+end
+
+local IsFriendlyPlayerNameOnlyEnabled = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return profile and profile.hideFriendlyPlayerHealthBar and true or false
+end
+
+local ShouldUseFriendlyPlayerNameOnly = function(self)
+	if (not IsFriendlyPlayerNameOnlyEnabled()) then
+		return false
+	end
+	if (not self or self.isPRD or self.isObjectPlate) then
+		return false
+	end
+	local unit = self.unit
+	if (not IsSafeUnitToken(unit)) then
+		return false
+	end
+	local isPlayer = UnitIsPlayer(unit)
+	if (IsSecretValue(isPlayer)) then
+		return false
+	end
+	if (isPlayer ~= true) then
+		return false
+	end
+
+	local canAttack = UnitCanAttack("player", unit)
+	local canAssist = UnitCanAssist("player", unit)
+	local isFriend = UnitIsFriend("player", unit)
+	local reaction = UnitReaction("player", unit)
+	if (IsSecretValue(canAttack)) then
+		canAttack = nil
+	end
+	if (IsSecretValue(canAssist)) then
+		canAssist = nil
+	end
+	if (IsSecretValue(isFriend)) then
+		isFriend = nil
+	end
+	if (IsSecretValue(reaction)) then
+		reaction = nil
+	end
+	if (canAttack == nil and canAssist == nil and isFriend == nil and type(reaction) == "number") then
+		if (reaction <= 4) then
+			canAttack = true
+		elseif (reaction >= 5) then
+			canAssist = true
+			isFriend = true
+		end
+	end
+	if (canAttack == true) then
+		return false
+	end
+	if (isFriend == true) then
+		return true
+	end
+	return canAssist == true
+end
+
+local SetNameColorForUnit = function(self, db)
+	if (not self or not self.Name) then
+		return
+	end
+	if (ShouldUseFriendlyPlayerNameOnly(self)) then
+		local unit = self.unit
+		if (IsSafeUnitToken(unit)) then
+			local _, class = UnitClass(unit)
+			if (type(class) == "string" and (not IsSecretValue(class)) and self.colors and self.colors.class and self.colors.class[class]) then
+				local color = self.colors.class[class]
+				return self.Name:SetTextColor(color[1], color[2], color[3], 1)
+			end
+		end
+	end
+	self.Name:SetTextColor(unpack(db.NameColor))
+end
+
+local GetValidatedProfileScale = function(value, default, allowZero)
+	if (type(value) ~= "number") then
+		return default
+	end
+	if (allowZero) then
+		if (value < 0) then
+			return default
+		end
+	elseif (value <= 0) then
+		return default
+	end
+	return value
+end
+
+local GetNamePlateProfileScale = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return GetValidatedProfileScale(profile and profile.scale, GLOBAL_NAMEPLATE_BASE_SCALE_DEFAULT, false)
+end
+
+local IsHostileNamePlate = function(self)
+	if (not self) then
+		return false
+	end
+	local unit = self.unit
+	if (not IsSafeUnitToken(unit)) then
+		return false
+	end
+	local canAttack = UnitCanAttack("player", unit)
+	if (not IsSecretValue(canAttack) and canAttack == true) then
+		return true
+	end
+	local reaction = UnitReaction("player", unit)
+	if (not IsSecretValue(reaction) and type(reaction) == "number" and reaction <= 4) then
+		return true
+	end
+	return false
+end
+
+local GetFriendlyNamePlateScaleSetting = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return GetValidatedProfileScale(profile and profile.friendlyScale, FRIENDLY_NAMEPLATE_SCALE_DEFAULT, false)
+end
+
+local GetEnemyNamePlateScaleSetting = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return GetValidatedProfileScale(profile and profile.enemyScale, ENEMY_NAMEPLATE_SCALE_DEFAULT, false)
+end
+
+local GetFriendlyNamePlateTargetScaleSetting = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return GetValidatedProfileScale(profile and profile.friendlyTargetScale, FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT, true)
+end
+
+local GetEnemyNamePlateTargetScaleSetting = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local scale = GetValidatedProfileScale(profile and profile.enemyTargetScale, nil, true)
+	if (scale == nil) then
+		-- Backwards compatibility with earlier target-scale key.
+		scale = GetValidatedProfileScale(profile and profile.nameplateTargetScale, GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT, true)
+	end
+	return scale
+end
+
+local GetFriendlyNameOnlyTargetScale = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return GetValidatedProfileScale(profile and profile.friendlyNameOnlyTargetScale, FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT, true)
+end
+
+local GetEffectivePlateScale = function(self)
+	local scale = ns.API.GetScale() * GetNamePlateProfileScale()
+	local isHostile = IsHostileNamePlate(self)
+
+	if (isHostile) then
+		scale = scale * GetEnemyNamePlateScaleSetting()
+	else
+		scale = scale * GetFriendlyNamePlateScaleSetting()
+	end
+
+	if (ShouldUseFriendlyPlayerNameOnly(self)) then
+		scale = scale * FRIENDLY_NAME_ONLY_SCALE_MULTIPLIER
+		if (self.isTarget) then
+			scale = scale * (1 + GetFriendlyNameOnlyTargetScale())
+		end
+	elseif (self.isTarget) then
+		if (isHostile) then
+			scale = scale * (1 + GetEnemyNamePlateTargetScaleSetting())
+		else
+			scale = scale * (1 + GetFriendlyNamePlateTargetScaleSetting())
+		end
+	end
+	return scale
+end
+
+local ApplyNamePlateScale = function(self)
+	if (self and self.SetScale) then
+		self:SetScale(GetEffectivePlateScale(self))
+	end
+end
+
+local SetCVarIfSupported = function(name, value)
+	if (not name or value == nil) then
+		return
+	end
+	local stringValue = tostring(value)
+	if (C_CVar and C_CVar.SetCVar) then
+		local ok = pcall(C_CVar.SetCVar, name, stringValue)
+		if (ok) then
+			return
+		end
+	end
+	if (type(SetCVar) == "function") then
+		pcall(SetCVar, name, stringValue)
+	end
+end
+
+local ApplyFriendlyNameOnlyCVars = function()
+	local enabled = IsFriendlyPlayerNameOnlyEnabled()
+	SetCVarIfSupported("nameplateShowOnlyNameForFriendlyPlayerUnits", enabled and "1" or "0")
+	SetCVarIfSupported("nameplateUseClassColorForFriendlyPlayerUnitNames", enabled and "1" or "0")
+	-- Keep all nameplates at stable, readable scale regardless of distance.
+	SetCVarIfSupported("nameplateMinScale", tostring(GLOBAL_NAMEPLATE_MIN_SCALE))
+	SetCVarIfSupported("nameplateMaxScale", tostring(GLOBAL_NAMEPLATE_MAX_SCALE))
+	SetCVarIfSupported("nameplateLargerScale", tostring(GLOBAL_NAMEPLATE_LARGER_SCALE))
+	-- Neutralize Blizzard target scaling; we apply target scaling ourselves per relation.
+	SetCVarIfSupported("nameplateSelectedScale", tostring(GLOBAL_NAMEPLATE_SELECTED_SCALE_NEUTRAL))
+end
+
+local RefreshActiveNamePlateScales = function()
+	for plate in next, ns.ActiveNamePlates do
+		ApplyNamePlateScale(plate)
+		if (plate.UpdateAllElements) then
+			plate:UpdateAllElements("ForceUpdate")
+		end
+	end
+end
+
+local ApplyNamePlateDriverSettings = function(self)
+	local driver = self and self.namePlateDriver
+	if (not driver) then
+		return
+	end
+	if (InCombatLockdown()) then
+		self.pendingDriverRefresh = true
+		return
+	end
+
+	local db = ns.GetConfig("NamePlates")
+	if (driver.SetSize) then
+		driver:SetSize(unpack(db.Size))
+	end
+	if (driver.SetCVars) then
+		driver:SetCVars(cvars)
+	end
+
+	self.pendingDriverRefresh = nil
+end
+
+local ApplyFriendlyNameOnlyNameAnchor = function(self, db, enabled)
+	if (not self or not self.Name) then
+		return
+	end
+	if (enabled) then
+		if (self.__AzeriteUI_NameOnlyAnchorApplied) then
+			return
+		end
+		local point, x, y = unpack(db.NamePosition or { "TOP", 0, 16 })
+		self.Name:ClearAllPoints()
+		self.Name:SetPoint(point, x, FRIENDLY_NAME_ONLY_NAME_OFFSET_Y)
+		self.__AzeriteUI_NameOnlyAnchorApplied = true
+		return
+	end
+	if (self.__AzeriteUI_NameOnlyAnchorApplied) then
+		self.Name:ClearAllPoints()
+		self.Name:SetPoint(unpack(db.NamePosition))
+		self.__AzeriteUI_NameOnlyAnchorApplied = nil
+	end
+end
+
+local ApplyFriendlyNameOnlyFontScale = function(self, enabled)
+	if (not self or not self.Name) then
+		return
+	end
+	local scale = 1
+	if (enabled) then
+		local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+		scale = GetValidatedProfileScale(profile and profile.friendlyNameOnlyFontScale, FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT, false)
+	end
+	self.Name:SetScale(scale)
+end
+
+local ApplyFriendlyNameOnlyVisualState = function(self, enabled)
+	if (not self) then
+		return
+	end
+
+	if (enabled) then
+		local db = ns.GetConfig("NamePlates")
+		ApplyFriendlyNameOnlyNameAnchor(self, db, true)
+		ApplyFriendlyNameOnlyFontScale(self, true)
+		if (self:IsElementEnabled("Auras")) then
+			self:DisableElement("Auras")
+		end
+		self:SetIgnoreParentAlpha(false)
+		if (self.Health) then
+			self.Health:SetAlpha(0)
+			self.Health:Hide()
+			local nativeTexture = self.Health:GetStatusBarTexture()
+			if (nativeTexture and nativeTexture.SetAlpha) then
+				nativeTexture:SetAlpha(0)
+			end
+			if (nativeTexture and nativeTexture.Hide) then
+				nativeTexture:Hide()
+			end
+			if (self.Health.Backdrop) then
+				self.Health.Backdrop:SetAlpha(0)
+				self.Health.Backdrop:Hide()
+			end
+			if (self.Health.Value) then
+				self.Health.Value:Hide()
+			end
+			if (self.Health.Display) then
+				self.Health.Display:SetAlpha(0)
+				self.Health.Display:Hide()
+			end
+			if (self.Health.Preview) then
+				self.Health.Preview:SetAlpha(0)
+				self.Health.Preview:Hide()
+			end
+		end
+		if (self.HealthPrediction) then
+			self.HealthPrediction:SetAlpha(0)
+			self.HealthPrediction:Hide()
+			if (self.HealthPrediction.absorbBar) then
+				self.HealthPrediction.absorbBar:SetAlpha(0)
+				self.HealthPrediction.absorbBar:Hide()
+			end
+		end
+		if (self.Castbar) then
+			self.Castbar:SetAlpha(0)
+			self.Castbar:Hide()
+			if (self.Castbar.Backdrop) then
+				self.Castbar.Backdrop:Hide()
+			end
+			if (self.Castbar.Text) then
+				self.Castbar.Text:Hide()
+			end
+		end
+		if (self.Power) then
+			self.Power:SetAlpha(0)
+			self.Power:Hide()
+			if (self.Power.Backdrop) then
+				self.Power.Backdrop:Hide()
+			end
+		end
+		if (self.TargetHighlight) then
+			self.TargetHighlight:Hide()
+		end
+		if (self.ThreatIndicator) then
+			self.ThreatIndicator:Hide()
+		end
+		if (self.Classification) then
+			self.Classification:Hide()
+		end
+		if (self.RaidTargetIndicator) then
+			self.RaidTargetIndicator:Hide()
+		end
+		if (self.Name) then
+			self.Name:Show()
+		end
+		return
+	end
+	local db = ns.GetConfig("NamePlates")
+	ApplyFriendlyNameOnlyNameAnchor(self, db, false)
+	ApplyFriendlyNameOnlyFontScale(self, false)
+
+	if (self.Health) then
+		self.Health:SetAlpha(1)
+		local nativeTexture = self.Health:GetStatusBarTexture()
+		if (nativeTexture and nativeTexture.SetAlpha) then
+			nativeTexture:SetAlpha(1)
+		end
+		if (self.Health.Backdrop) then
+			self.Health.Backdrop:SetAlpha(1)
+		end
+		if (self.Health.Preview) then
+			self.Health.Preview:SetAlpha(.5)
+		end
+	end
+	if (self.HealthPrediction) then
+		self.HealthPrediction:SetAlpha(1)
+		if (self.HealthPrediction.absorbBar) then
+			self.HealthPrediction.absorbBar:SetAlpha(1)
+		end
+	end
+	if (self.Castbar) then
+		self.Castbar:SetAlpha(1)
+		if (self.Castbar.Text) then
+			self.Castbar.Text:Show()
+		end
+	end
+	if (self.Power) then
+		self.Power:SetAlpha(self.Power.isHidden and 0 or 1)
+	end
 end
 
 -- Element Callbacks
@@ -552,6 +955,9 @@ local TargetHighlight_Update = function(self, event, unit, ...)
 	if (unit and unit ~= self.unit) then return end
 
 	local element = self.TargetHighlight
+	if (ShouldUseFriendlyPlayerNameOnly(self)) then
+		return element:Hide()
+	end
 
 	if (self.isFocus or self.isTarget) then
 		element:SetVertexColor(unpack(self.isFocus and element.colorFocus or element.colorTarget))
@@ -605,7 +1011,7 @@ local NamePlate_PostUpdatePositions = function(self)
 
 	-- The PRD has neither name nor auras.
 	if (not self.isPRD) then
-		local hasName = NamePlatesMod.db.profile.showNameAlways or (self.isMouseOver or self.isSoftTarget or self.isTarget or self.inCombat) or false
+		local hasName = ShouldUseFriendlyPlayerNameOnly(self) or NamePlatesMod.db.profile.showNameAlways or (self.isMouseOver or self.isSoftTarget or self.isTarget or self.inCombat) or false
 		local nameOffset = hasName and (select(2, name:GetFont()) + auras.spacing) or 0
 
 		if (hasName ~= auras.usingNameOffset or auras.usingNameOffset == nil) then
@@ -646,6 +1052,9 @@ local NamePlate_PostUpdatePositions = function(self)
 end
 
 local NamePlate_PostUpdateHoverElements = function(self)
+	local db = ns.GetConfig("NamePlates")
+	SetNameColorForUnit(self, db)
+
 	if (self.isObjectPlate and not self.isPRD) then
 		if (self.Name) then
 			self.Name:Hide()
@@ -660,6 +1069,14 @@ local NamePlate_PostUpdateHoverElements = function(self)
 		self.Health.Value:Hide()
 		self.Name:Hide()
 	else
+		if (ShouldUseFriendlyPlayerNameOnly(self)) then
+			self.Name:Show()
+			if (self.Health and self.Health.Value) then
+				self.Health.Value:Hide()
+			end
+			return
+		end
+
 		local showNameAlways = NamePlatesMod.db.profile.showNameAlways
 
 		-- Force tag update to ensure name is always current
@@ -731,6 +1148,7 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 
 	local db = ns.GetConfig("NamePlates")
 	local healthLab = GetNamePlateHealthLabSettings(db)
+	local showFriendlyPlayerNameOnly = ShouldUseFriendlyPlayerNameOnly(self)
 
 	if (self.isObjectPlate and not self.isPRD) then
 		if (self:IsElementEnabled("Auras")) then
@@ -767,10 +1185,20 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 	if (self:GetAlpha() == 0) then
 		self:SetAlpha(1)
 	end
-	if (self.Health and not self.Health:IsShown()) then
-		self.Health:Show()
-		if (self.Health.Backdrop) then
-			self.Health.Backdrop:Show()
+	if (showFriendlyPlayerNameOnly) then
+		ApplyFriendlyNameOnlyVisualState(self, true)
+		SetNameColorForUnit(self, db)
+		NamePlate_PostUpdatePositions(self)
+		return
+	end
+
+	ApplyFriendlyNameOnlyVisualState(self, false)
+	if (self.Health) then
+		if (not self.Health:IsShown()) then
+			self.Health:Show()
+			if (self.Health.Backdrop) then
+				self.Health.Backdrop:Show()
+			end
 		end
 	end
 	if (self.Castbar and not self.Castbar:IsShown()) then
@@ -895,6 +1323,7 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 		self.Castbar.Text:SetPoint(unpack(db.CastBarNamePosition))
 	end
 
+	SetNameColorForUnit(self, db)
 	Castbar_PostUpdate(self.Castbar)
 	NamePlate_PostUpdatePositions(self)
 end
@@ -999,6 +1428,7 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 	self.Health.Preview:SetOrientation(main)
 	if (self.HealthPrediction.absorbBar) then self.HealthPrediction.absorbBar:SetOrientation(reverse) end
 
+	ApplyNamePlateScale(self)
 	Classification_Update(self, event, unit, ...)
 	TargetHighlight_Update(self, event, unit, ...)
 	NamePlate_PostUpdateElements(self, event, unit, ...)
@@ -1065,6 +1495,7 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 
 	if (event == "PLAYER_REGEN_DISABLED") then
 		self.inCombat = true
+		ApplyNamePlateScale(self)
 
 		NamePlate_PostUpdateElements(self, event, unit, ...)
 
@@ -1072,6 +1503,7 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		self.inCombat = nil
+		ApplyNamePlateScale(self)
 
 		NamePlate_PostUpdateElements(self, event, unit, ...)
 
@@ -1079,6 +1511,7 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 
 	elseif (event == "PLAYER_TARGET_CHANGED") then
 		self.isTarget = SafeUnitMatches(unit, "target")
+		ApplyNamePlateScale(self)
 
 		Classification_Update(self, event, unit, ...)
 		TargetHighlight_Update(self, event, unit, ...)
@@ -1087,6 +1520,7 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 		return
 	elseif (event == "PLAYER_SOFT_ENEMY_CHANGED") then
 		self.isSoftEnemy = SafeUnitMatches(unit, "softenemy")
+		ApplyNamePlateScale(self)
 
 		Classification_Update(self, event, unit, ...)
 		TargetHighlight_Update(self, event, unit, ...)
@@ -1095,6 +1529,7 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 		return
 	elseif (event == "PLAYER_SOFT_INTERACT_CHANGED") then
 		self.isSoftInteract = SafeUnitMatches(unit, "softinteract")
+		ApplyNamePlateScale(self)
 
 		Classification_Update(self, event, unit, ...)
 		TargetHighlight_Update(self, event, unit, ...)
@@ -1103,6 +1538,7 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 		return
 	elseif (event == "PLAYER_FOCUS_CHANGED") then
 		self.isFocus = SafeUnitMatches(unit, "focus")
+		ApplyNamePlateScale(self)
 
 		Classification_Update(self, event, unit, ...)
 		TargetHighlight_Update(self, event, unit, ...)
@@ -1149,16 +1585,12 @@ local style = function(self, unit, id)
 
 	local db = ns.GetConfig("NamePlates")
 	local healthLab = GetNamePlateHealthLabSettings(db)
-	local profileScale = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile and NamePlatesMod.db.profile.scale or 1
-	if (type(profileScale) ~= "number") then
-		profileScale = 1
-	end
 
 	self.colors = ns.Colors
 
 	self:SetPoint("CENTER",0,0)
 	self:SetSize(unpack(db.Size))
-	self:SetScale(ns.API.GetScale() * profileScale)
+	ApplyNamePlateScale(self)
 	self:SetFrameLevel(self:GetFrameLevel() + 2)
 
 	self:SetScript("OnHide", NamePlate_OnHide)
@@ -1475,7 +1907,7 @@ local style = function(self, unit, id)
 
 end
 
-local cvars = {
+cvars = {
 	-- If these are enabled the GameTooltip will become protected,
 	-- and all sort of taints and bugs will occur.
 	-- This happens on specs that can dispel when hovering over nameplate auras.
@@ -1496,7 +1928,7 @@ local cvars = {
 
 	-- Nameplate scale
 	["nameplateGlobalScale"] = 1.1,
-	["nameplateLargerScale"] = 1,
+	["nameplateLargerScale"] = GLOBAL_NAMEPLATE_LARGER_SCALE,
 	["NamePlateHorizontalScale"] = 1,
 	["NamePlateVerticalScale"] = 1,
 
@@ -1510,9 +1942,9 @@ local cvars = {
 	-- The distance from the max distance that nameplates will reach their minimum scale.
 	["nameplateMinScaleDistance"] = 5,
 
-	["nameplateMaxScale"] = 1, -- The max scale of nameplates.
-	["nameplateMinScale"] = .6, -- The minimum scale of nameplates.
-	["nameplateSelectedScale"] = 1.1, -- Scale of targeted nameplate
+	["nameplateMaxScale"] = GLOBAL_NAMEPLATE_MAX_SCALE, -- The max scale of nameplates.
+	["nameplateMinScale"] = GLOBAL_NAMEPLATE_MIN_SCALE, -- Keep readable non-target plate scale.
+	["nameplateSelectedScale"] = GLOBAL_NAMEPLATE_SELECTED_SCALE_NEUTRAL, -- Neutralized; target scaling handled in frame math.
 
 	-- The distance from the camera that nameplates will reach their maximum alpha.
 	["nameplateMaxAlphaDistance"] = 10,
@@ -1966,14 +2398,16 @@ NamePlatesMod.HookNamePlates = function(self)
 		hooksecurefunc(NamePlateDriverFrame, "UpdateNamePlateOptions", function()
 			if (InCombatLockdown()) then return end
 			local db = ns.GetConfig("NamePlates")
-			if (C_NamePlate.SetNamePlateFriendlySize) then
+			if (C_NamePlate.SetNamePlateSize) then
+				C_NamePlate.SetNamePlateSize(unpack(db.Size))
+			elseif (C_NamePlate.SetNamePlateFriendlySize) then
 				C_NamePlate.SetNamePlateFriendlySize(unpack(db.Size))
-			end
-			if (C_NamePlate.SetNamePlateEnemySize) then
-				C_NamePlate.SetNamePlateEnemySize(unpack(db.Size))
-			end
-			if (C_NamePlate.SetNamePlateSelfSize) then
-				C_NamePlate.SetNamePlateSelfSize(unpack(db.Size))
+				if (C_NamePlate.SetNamePlateEnemySize) then
+					C_NamePlate.SetNamePlateEnemySize(unpack(db.Size))
+				end
+				if (C_NamePlate.SetNamePlateSelfSize) then
+					C_NamePlate.SetNamePlateSelfSize(unpack(db.Size))
+				end
 			end
 		end)
 	end
@@ -2005,28 +2439,22 @@ NamePlatesMod.UpdateSettings = function(self)
 	-- Check if the enabled state has changed
 	local isCurrentlyEnabled = self:IsEnabled()
 	local shouldBeEnabled = self.db.profile.enabled
-	local profileScale = self.db and self.db.profile and self.db.profile.scale or 1
-	if (type(profileScale) ~= "number") then
-		profileScale = 1
-	end
-	local effectiveScale = ns.API.GetScale() * profileScale
+	ApplyFriendlyNameOnlyCVars()
 	
 	if (isCurrentlyEnabled ~= shouldBeEnabled) then
 		-- Enabled state changed - require a UI reload
 		C_UI.Reload()
 	else
-		-- Just update existing plates
-		for plate in next,ns.ActiveNamePlates do
-			if (plate and plate.SetScale) then
-				plate:SetScale(effectiveScale)
-			end
-			NamePlate_PostUpdateElements(plate, "ForceUpdate")
-		end
+		ApplyNamePlateDriverSettings(self)
+		RefreshActiveNamePlateScales()
 	end
 end
 
 NamePlatesMod.OnEvent = function(self, event, ...)
 	if (event == "PLAYER_ENTERING_WORLD") then
+		ApplyFriendlyNameOnlyCVars()
+		ApplyNamePlateDriverSettings(self)
+		RefreshActiveNamePlateScales()
 		-- Todo:
 		-- Make this a user controllable setting.
 		local isInInstance, instanceType = IsInInstance()
@@ -2043,6 +2471,14 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 			SetCVar("nameplateMinAlpha", .4) -- The minimum alpha of nameplates.
 			SetCVar("nameplateOccludedAlphaMult", .15) -- Alpha multiplier of hidden plates
 		end
+	elseif (event == "UI_SCALE_CHANGED") then
+		ApplyNamePlateDriverSettings(self)
+		RefreshActiveNamePlateScales()
+	elseif (event == "PLAYER_REGEN_ENABLED") then
+		if (self.pendingDriverRefresh) then
+			ApplyNamePlateDriverSettings(self)
+		end
+		RefreshActiveNamePlateScales()
 	elseif (event == "NAME_PLATE_UNIT_ADDED") then
 		local unit = ...
 		if (unit == "preview") then
@@ -2080,6 +2516,7 @@ end
 NamePlatesMod.OnInitialize = function(self)
 	-- Always register the database first so options can access it
 	self.db = ns.db:RegisterNamespace("NamePlates", defaults)
+	ApplyFriendlyNameOnlyCVars()
 	
 	-- Check for conflicts with other nameplate addons
 	if (self:CheckForConflicts()) then return self:Disable() end
@@ -2103,11 +2540,14 @@ NamePlatesMod.OnEnable = function(self)
 		driver:SetCVars(cvars)
 		self.namePlateDriver = driver
 	end
+	ApplyNamePlateDriverSettings(self)
 
 	self.mouseTimer = self:ScheduleRepeatingTimer(checkMouseOver, 1/20)
 	self.softTimer = self:ScheduleRepeatingTimer(checkSoftTarget, 1/20)
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
+	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+	self:RegisterEvent("UI_SCALE_CHANGED", "OnEvent")
 	self:RegisterEvent("NAME_PLATE_UNIT_ADDED", "OnEvent")
 	self:RegisterEvent("NAME_PLATE_UNIT_REMOVED", "OnEvent")
 

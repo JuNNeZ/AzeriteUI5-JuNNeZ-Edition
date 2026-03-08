@@ -777,6 +777,31 @@ local GenerateOptions = function()
 	do
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("PlayerClassPowerFrame")
 		if (suboptions and suboptions.args) then
+			local SPEC_ARCANE = _G.SPEC_MAGE_ARCANE or 1
+			local SPEC_WINDWALKER = _G.SPEC_MONK_WINDWALKER or 3
+			local SPEC_BREWMASTER = _G.SPEC_MONK_BREWMASTER or 1
+			local SPEC_FERAL = _G.SPEC_DRUID_FERAL or 2
+			local SPEC_ENHANCEMENT = _G.SPEC_SHAMAN_ENCHANCEMENT or 2
+			local SPEC_ELEMENTAL = _G.SPEC_SHAMAN_ELEMENTAL or 1
+			local SPEC_VENGEANCE = _G.SPEC_DEMONHUNTER_VENGEANCE or 2
+
+			local IsSpecMatch = function(...)
+				local wanted = select("#", ...)
+				if (wanted == 0 or not ns.IsRetail) then
+					return true
+				end
+				local currentSpec = (GetSpecialization and GetSpecialization()) or nil
+				if (type(currentSpec) ~= "number") then
+					return false
+				end
+				for i = 1, wanted do
+					if (currentSpec == select(i, ...)) then
+						return true
+					end
+				end
+				return false
+			end
+
 			suboptions.name = function(info) 
 				local mod = ns:GetModule("PlayerClassPowerFrame", true)
 				return mod and mod:GetLabel() or "Class Power"
@@ -785,7 +810,7 @@ local GenerateOptions = function()
 			suboptions.args.clickThrough = {
 				name = "Class Power Click-Through",
 				desc = "ON (default): clicks pass through class power to frames behind it.\nOFF: class power blocks mouse clicks in this area to prevent accidental right-click opening the player unit menu.",
-				order = 10.5, type = "toggle", width = "full", set = setter,
+				order = 120, type = "toggle", width = "full", set = setter,
 				get = function(info)
 					local value = getter(info)
 					if (value == nil) then
@@ -798,13 +823,27 @@ local GenerateOptions = function()
 			suboptions.args.showComboPoints = {
 				name = L["Show Combo Points"],
 				desc = L["Toggle whether to show Combo Points."],
-				order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+				order = 96, type = "toggle", width = "full", set = setter, get = getter,
+				hidden = function(info)
+					if (isdisabled(info)) then return true end
+					if (ns.PlayerClass == "ROGUE") then
+						return false
+					end
+					if (ns.PlayerClass == "DRUID") then
+						return not IsSpecMatch(SPEC_FERAL)
+					end
+					return true
+				end
 			}
 			if (ns.IsCata or ns.IsRetail) then
 				suboptions.args.showRunes = {
 					name = L["Show Runes (Death Knight)"],
 					desc = L["Toggle whether to show Death Knight Runes."],
-					order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+					order = 97, type = "toggle", width = "full", set = setter, get = getter,
+					hidden = function(info)
+						if (isdisabled(info)) then return true end
+						return ns.PlayerClass ~= "DEATHKNIGHT"
+					end
 				}
 				if (ns.IsRetail) then
 					suboptions.args.soulFragmentsDisplayMode = {
@@ -820,7 +859,7 @@ local GenerateOptions = function()
 							end
 							return L["Choose how Soul Fragments points are displayed."]
 						end,
-						order = 99, type = "select", width = "full", set = setter, get = getter,
+						order = 95, type = "select", width = "full", set = setter, get = getter,
 						values = {
 							["alpha"] = L["Alpha Mode (Dim 0-5, Bright 6-10)"],
 							["gradient"] = L["Smooth Gradient (Light to Dark + Glow)"],
@@ -829,34 +868,52 @@ local GenerateOptions = function()
 						},
 						hidden = function(info)
 							if (isdisabled(info)) then return true end
-							local isDevMode = (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-							if (ns.PlayerClass ~= "DEMONHUNTER" and ns.PlayerClass ~= "SHAMAN" and not isDevMode) then return true end
-							return false
+							if (ns.PlayerClass == "DEMONHUNTER") then
+								return not IsSpecMatch(SPEC_VENGEANCE)
+							end
+							if (ns.PlayerClass == "SHAMAN") then
+								return not IsSpecMatch(SPEC_ENHANCEMENT)
+							end
+							return true
 						end
 					}
 					suboptions.args.showArcaneCharges = {
 						name = L["Show Arcane Charges (Mage)"],
 						desc = L["Toggle whether to show Mage Arcane Charges."],
-						order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+						order = 98, type = "toggle", width = "full", set = setter, get = getter,
+						hidden = function(info)
+							if (isdisabled(info)) then return true end
+							if (ns.PlayerClass ~= "MAGE") then return true end
+							return not IsSpecMatch(SPEC_ARCANE)
+						end
 					}
 					suboptions.args.showChi = {
 						name = L["Show Chi (Monk)"],
 						desc = L["Toggle whether to show Monk Chi."],
-						order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+						order = 99, type = "toggle", width = "full", set = setter, get = getter,
+						hidden = function(info)
+							if (isdisabled(info)) then return true end
+							if (ns.PlayerClass ~= "MONK") then return true end
+							return not IsSpecMatch(SPEC_WINDWALKER)
+						end
 					}
 					suboptions.args.showHolyPower = {
 						name = L["Show Holy Power (Paladin)"],
 						desc = L["Toggle whether to show Paladin Holy Power."],
-						order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+						order = 100, type = "toggle", width = "full", set = setter, get = getter,
+						hidden = function(info)
+							if (isdisabled(info)) then return true end
+							return ns.PlayerClass ~= "PALADIN"
+						end
 					}
 					suboptions.args.showMaelstrom = {
 						name = "Show Maelstrom Weapon (Shaman)",
 						desc = "Toggle whether to show Enhancement Shaman Maelstrom Weapon class power.",
-						order = 11, type = "toggle", width = "full", set = setter, get = getter,
+						order = 101, type = "toggle", width = "full", set = setter, get = getter,
 						hidden = function(info)
 							if (isdisabled(info)) then return true end
-							local isDevMode = (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-							return ns.PlayerClass ~= "SHAMAN" and not isDevMode
+							if (ns.PlayerClass ~= "SHAMAN") then return true end
+							return not IsSpecMatch(SPEC_ENHANCEMENT)
 						end
 					}
 					suboptions.args.enableElementalMaelstromDisplay = {
@@ -868,7 +925,7 @@ local GenerateOptions = function()
 					suboptions.args.elementalMaelstromDisplayMode = {
 						name = "Elemental Crystal/Bar Resource Split",
 						desc = "Choose which resource is shown in the Power Crystal; the other is shown in the secondary bar.",
-						order = 11.06, type = "select", width = "full", set = setter,
+						order = 102, type = "select", width = "full", set = setter,
 						values = {
 							["crystal_spec"] = "Crystal: Maelstrom | Bar: Mana",
 							["crystal_mana"] = "Crystal: Mana | Bar: Maelstrom"
@@ -882,20 +939,28 @@ local GenerateOptions = function()
 						end,
 						hidden = function(info)
 							if (isdisabled(info)) then return true end
-							local isDevMode = (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-							if (ns.PlayerClass ~= "SHAMAN" and not isDevMode) then return true end
-							return false
+							if (ns.PlayerClass ~= "SHAMAN") then return true end
+							return not IsSpecMatch(SPEC_ELEMENTAL)
 						end
 					}
 					suboptions.args.showSoulShards = {
 						name = L["Show Soul Shards (Warlock)"],
 						desc = L["Toggle whether to show Warlock Soul Shards."],
-						order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+						order = 103, type = "toggle", width = "full", set = setter, get = getter,
+						hidden = function(info)
+							if (isdisabled(info)) then return true end
+							return ns.PlayerClass ~= "WARLOCK"
+						end
 					}
 					suboptions.args.showStagger = {
 						name = L["Show Stagger (Monk)"],
 						desc = L["Toggle whether to show Monk Stagger."],
-						order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+						order = 104, type = "toggle", width = "full", set = setter, get = getter,
+						hidden = function(info)
+							if (isdisabled(info)) then return true end
+							if (ns.PlayerClass ~= "MONK") then return true end
+							return not IsSpecMatch(SPEC_BREWMASTER)
+						end
 					}
 				end
 			end

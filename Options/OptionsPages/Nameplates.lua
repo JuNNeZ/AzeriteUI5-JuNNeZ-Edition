@@ -28,6 +28,17 @@ local _, ns = ...
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local Options = ns:GetModule("Options")
+local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
+local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
+local NAMEPLATE_SCALE_DEFAULT = 2
+local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = 1
+local ENEMY_NAMEPLATE_SCALE_DEFAULT = 1
+local FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = 1
+local ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT = 0.5
+local MULTIPLIER_SLIDER_MIN = 50
+local MULTIPLIER_SLIDER_MAX = 150
+local ADDITIVE_SLIDER_MIN = 0
+local ADDITIVE_SLIDER_MAX = 200
 
 local getmodule = function()
 	return ns:GetModule("NamePlates", true)
@@ -104,17 +115,74 @@ local GenerateOptions = function()
 				set = setter,
 				get = getter
 			},
+			hideFriendlyPlayerHealthBar = {
+				name = "Hide friendly player healthbars (name only)",
+				desc = "Friendly player nameplates only show class-colored names and hide the healthbar.",
+				order = 11.5,
+				type = "toggle", width = "full",
+				hidden = isdisabled,
+				set = setter,
+				get = getter
+			},
+			friendlyNameOnlyFontScale = {
+				name = "Friendly name-only font scale",
+				desc = "Scale for friendly player names when name-only mode is enabled.",
+				order = 11.6,
+				type = "range", width = "full",
+				min = MULTIPLIER_SLIDER_MIN, max = MULTIPLIER_SLIDER_MAX, step = 1,
+				hidden = isdisabled,
+				disabled = function(info) return not getoption(info, "hideFriendlyPlayerHealthBar") end,
+				set = function(info, val)
+					local module = getmodule()
+					if (not module or not module.db) then return end
+					module.db.profile.friendlyNameOnlyFontScale = FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT * (val / 100)
+					module:UpdateSettings()
+				end,
+				get = function(info)
+					local module = getmodule()
+					if (not module or not module.db) then return 100 end
+					local scale = module.db.profile.friendlyNameOnlyFontScale
+					if (type(scale) ~= "number") then
+						scale = FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT
+					end
+					return math.floor((scale / FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT) * 100 + .5)
+				end
+			},
+			friendlyNameOnlyTargetScale = {
+				name = "Friendly target scale (%)",
+				desc = "Additional target scale for friendly name-only plates.",
+				order = 11.7,
+				type = "range", width = "full",
+				min = ADDITIVE_SLIDER_MIN, max = ADDITIVE_SLIDER_MAX, step = 1,
+				hidden = isdisabled,
+				disabled = function(info) return not getoption(info, "hideFriendlyPlayerHealthBar") end,
+				set = function(info, val)
+					local module = getmodule()
+					if (not module or not module.db) then return end
+					module.db.profile.friendlyNameOnlyTargetScale = FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT * (val / 100)
+					module:UpdateSettings()
+				end,
+				get = function(info)
+					local module = getmodule()
+					if (not module or not module.db) then return 100 end
+					local scale = module.db.profile.friendlyNameOnlyTargetScale
+					if (type(scale) ~= "number") then
+						scale = FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT
+					end
+					return math.floor((scale / FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT) * 100 + .5)
+				end
+			},
 			nameplateScale = {
 				name = "Nameplate Scale (%)",
-				desc = "Scale AzeriteUI nameplates.",
+				desc = "Global readable scale for AzeriteUI nameplates.",
 				order = 12,
 				type = "range", width = "full",
-				min = 50, max = 200, step = 1,
+				min = MULTIPLIER_SLIDER_MIN, max = MULTIPLIER_SLIDER_MAX, step = 1,
 				hidden = isdisabled,
 				set = function(info, val)
 					local module = getmodule()
 					if (not module or not module.db) then return end
-					module.db.profile.scale = val / 100
+					module.db.profile.scale = NAMEPLATE_SCALE_DEFAULT * (val / 100)
 					module:UpdateSettings()
 				end,
 				get = function(info)
@@ -122,218 +190,115 @@ local GenerateOptions = function()
 					if (not module or not module.db) then return 100 end
 					local scale = module.db.profile.scale
 					if (type(scale) ~= "number") then
-						scale = 1
+						scale = NAMEPLATE_SCALE_DEFAULT
 					end
-					return math.floor(scale * 100 + .5)
+					return math.floor((scale / NAMEPLATE_SCALE_DEFAULT) * 100 + .5)
 				end
 			},
-			healthFlipLabHeader = {
-				name = "Health Flip Lab",
-				order = 20,
-				type = "header",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
+			friendlyScale = {
+				name = "Friendly/player scale (%)",
+				desc = "Scale multiplier for friendly/player nameplates.",
+				order = 12.05,
+				type = "range", width = "full",
+				min = MULTIPLIER_SLIDER_MIN, max = MULTIPLIER_SLIDER_MAX, step = 1,
+				hidden = isdisabled,
+				set = function(info, val)
+					local module = getmodule()
+					if (not module or not module.db) then return end
+					module.db.profile.friendlyScale = FRIENDLY_NAMEPLATE_SCALE_DEFAULT * (val / 100)
+					module:UpdateSettings()
+				end,
+				get = function(info)
+					local module = getmodule()
+					if (not module or not module.db) then return 100 end
+					local scale = module.db.profile.friendlyScale
+					if (type(scale) ~= "number") then
+						scale = FRIENDLY_NAMEPLATE_SCALE_DEFAULT
 					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+					return math.floor((scale / FRIENDLY_NAMEPLATE_SCALE_DEFAULT) * 100 + .5)
 				end
 			},
-			healthFlipLabEnabled = {
-				name = "Enable Health Flip Lab",
-				order = 21,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+			enemyScale = {
+				name = "Enemy scale (%)",
+				desc = "Scale multiplier for hostile nameplates.",
+				order = 12.06,
+				type = "range", width = "full",
+				min = MULTIPLIER_SLIDER_MIN, max = MULTIPLIER_SLIDER_MAX, step = 1,
+				hidden = isdisabled,
+				set = function(info, val)
+					local module = getmodule()
+					if (not module or not module.db) then return end
+					module.db.profile.enemyScale = ENEMY_NAMEPLATE_SCALE_DEFAULT * (val / 100)
+					module:UpdateSettings()
 				end,
-				set = setter,
-				get = getter
+				get = function(info)
+					local module = getmodule()
+					if (not module or not module.db) then return 100 end
+					local scale = module.db.profile.enemyScale
+					if (type(scale) ~= "number") then
+						scale = ENEMY_NAMEPLATE_SCALE_DEFAULT
+					end
+					return math.floor((scale / ENEMY_NAMEPLATE_SCALE_DEFAULT) * 100 + .5)
+				end
 			},
-			healthLabOrientation = {
-				name = "Health Orientation Override",
-				order = 22,
-				type = "select",
-				width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+			friendlyTargetScale = {
+				name = "Friendly/player target scale (%)",
+				desc = "Additional target scale for friendly/player nameplates.",
+				order = 12.1,
+				type = "range", width = "full",
+				min = ADDITIVE_SLIDER_MIN, max = ADDITIVE_SLIDER_MAX, step = 1,
+				hidden = isdisabled,
+				set = function(info, val)
+					local module = getmodule()
+					if (not module or not module.db) then return end
+					module.db.profile.friendlyTargetScale = FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT * (val / 100)
+					module:UpdateSettings()
 				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				values = {
-					DEFAULT = "Default",
-					RIGHT = "RIGHT",
-					LEFT = "LEFT",
-					UP = "UP",
-					DOWN = "DOWN"
-				},
-				set = setter,
-				get = getter
+				get = function(info)
+					local module = getmodule()
+					if (not module or not module.db) then return 100 end
+					local scale = module.db.profile.friendlyTargetScale
+					if (type(scale) ~= "number") then
+						scale = FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT
+					end
+					return math.floor((scale / FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT) * 100 + .5)
+				end
 			},
-			healthLabReverseFill = {
-				name = "Health Reverse Fill",
-				order = 23,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+			nameplateTargetScale = {
+				name = "Enemy target scale (%)",
+				desc = "Additional target scale for hostile nameplates.",
+				order = 12.11,
+				type = "range", width = "full",
+				min = ADDITIVE_SLIDER_MIN, max = ADDITIVE_SLIDER_MAX, step = 1,
+				hidden = isdisabled,
+				set = function(info, val)
+					local module = getmodule()
+					if (not module or not module.db) then return end
+					local scale = ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT * (val / 100)
+					module.db.profile.enemyTargetScale = scale
+					module.db.profile.nameplateTargetScale = scale
+					module:UpdateSettings()
 				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
+				get = function(info)
+					local module = getmodule()
+					if (not module or not module.db) then return 100 end
+					local scale = module.db.profile.enemyTargetScale
+					if (type(scale) ~= "number") then
+						scale = module.db.profile.nameplateTargetScale
+					end
+					if (type(scale) ~= "number") then
+						scale = ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT
+					end
+					return math.floor((scale / ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT) * 100 + .5)
+				end
 			},
-			healthLabFlipTexX = {
-				name = "Health Flip TexCoord X",
-				order = 24,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			},
-			healthLabFlipTexY = {
-				name = "Health Flip TexCoord Y",
-				order = 25,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			},
-			healthLabSetFlippedHorizontally = {
-				name = "Health SetFlippedHorizontally",
-				order = 26,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			},
-			healthLabPreviewReverseFill = {
-				name = "Preview Reverse Fill",
-				order = 27,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			},
-			healthLabPreviewSetFlippedHorizontally = {
-				name = "Preview SetFlippedHorizontally",
-				order = 28,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			},
-			healthLabAbsorbUseOppositeOrientation = {
-				name = "Absorb Uses Opposite Orientation",
-				order = 29,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			},
-			healthLabAbsorbReverseFill = {
-				name = "Absorb Reverse Fill",
-				order = 30,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			},
-			healthLabAbsorbSetFlippedHorizontally = {
-				name = "Absorb SetFlippedHorizontally",
-				order = 31,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			},
-			healthLabCastReverseFill = {
-				name = "Cast Reverse Fill",
-				order = 32,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			},
-			healthLabCastSetFlippedHorizontally = {
-				name = "Cast SetFlippedHorizontally",
-				order = 33,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					if (isdisabled(info)) then
-						return true
-					end
-					return not (ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-				end,
-				disabled = function(info) return not getoption(info, "healthFlipLabEnabled") end,
-				set = setter,
-				get = getter
-			}
 		}
 	}
 
 	if (ns.IsRetail) then
 		options.args.showBlizzardWidgets = {
 			name = L["Show Blizzard widgets"],
-			order = 12,
+			order = 99,
 			type = "toggle", width = "full",
 			hidden = isdisabled,
 			set = setter,
