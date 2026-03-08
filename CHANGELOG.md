@@ -3,6 +3,24 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.2.235-JuNNeZ-hotfix-20260308 (2026-03-08)
+
+### Fixes
+- Elemental Shaman resource presentation rework:
+  - Replaced Elemental class-plate style points with a dedicated secondary resource bar using pet-bar art.
+  - Added crystal/bar split modes so the Power Crystal can show either Maelstrom or Mana while the secondary bar shows the other resource.
+  - Added live numeric value rendering on the secondary bar using the same display-read strategy as the power crystal (`short`, `full`, `percent`, `shortpercent`).
+  - Added one-time default anchor migration for the new bar placement and preserved `/lock`-moved positions across reloads.
+- Shaman power update stability:
+  - Hardened Retail and Classic oUF classpower Maelstrom handling against secret/unreadable payloads using safe fallbacks.
+  - Added/expanded Shaman power event coverage so Enhancement/Elemental updates remain responsive during combat.
+- Combat lockdown safety:
+  - Deferred Elemental display-mode geometry/element toggles until `PLAYER_REGEN_ENABLED` to prevent `ADDON_ACTION_BLOCKED` when switching mode in combat.
+- Blizzard action button taint follow-up:
+  - Removed `statehidden` attribute write from Blizzard action button hide path to reduce protected-action taint risk.
+- Unitframe options:
+  - Added Elemental crystal/bar split selector in UnitFrames options and moved the 10-point Soul Fragments display selector lower in the Class Power section.
+
 ## 5.2.235-JuNNeZ (2026-03-08)
 
 ### Fixes
