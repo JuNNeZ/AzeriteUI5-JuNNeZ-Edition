@@ -30,6 +30,19 @@ local LAB = LibStub("LibActionButton-1.0-GE")
 ns.ActionButtons = {}
 ns.ActionButton = {}
 
+local GetMouseoverCastEnabled = function()
+	if (not ns.IsRetail) then
+		return false
+	end
+	if (C_CVar and C_CVar.GetCVarBool) then
+		return C_CVar.GetCVarBool("enableMouseoverCast")
+	end
+	if (GetCVarBool) then
+		return GetCVarBool("enableMouseoverCast")
+	end
+	return false
+end
+
 local onEnter = function(self)
 	-- Tooltip interception disabled; use default button hover handling.
 	if (self.OnEnter) then
@@ -43,6 +56,13 @@ local onLeave = function(self)
 	end
 end
 
+ns.ActionButton.UpdateMouseoverCast = function(button)
+	if (not button) or (not button.SetAttribute) then
+		return
+	end
+	button:SetAttribute("checkmouseovercast", GetMouseoverCastEnabled() or nil)
+end
+
 ns.ActionButton.Create = function(id, name, header, buttonConfig)
 
 	local button = LAB:CreateButton(id, name, header, buttonConfig)
@@ -52,6 +72,7 @@ ns.ActionButton.Create = function(id, name, header, buttonConfig)
 
 	button:SetScript("OnEnter", onEnter)
 	button:SetScript("OnLeave", onLeave)
+	ns.ActionButton.UpdateMouseoverCast(button)
 
 	ns.ActionButtons[button] = true
 

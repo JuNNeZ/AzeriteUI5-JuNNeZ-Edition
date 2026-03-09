@@ -734,6 +734,7 @@ ActionBarMod.UpdateSettings = function(self, event)
 			button.config.dimWhenInactive = bar.config.dimWhenInactive
 			button.config.hideElements = bar.config.hideElements
 			button:UpdateConfig(button.config)
+			ns.ActionButton.UpdateMouseoverCast(button)
 			--button:ForceUpdate()
 		end
 	end
@@ -752,7 +753,8 @@ end
 ActionBarMod.OnCVarUpdate = function(self, event, cvarName)
 	if (not ns.WoW10) then return end
 	if (type(cvarName) ~= "string") then return end
-	if (string_lower(cvarName) ~= "actionbuttonusekeydown") then return end
+	local normalized = string_lower(cvarName)
+	if (normalized ~= "actionbuttonusekeydown" and normalized ~= "enablemouseovercast") then return end
 	self:UpdateSettings()
 end
 

@@ -102,6 +102,39 @@ local SafeBooleanValue = function(value)
 	return value and true or false
 end
 
+local SafeGetTooltipUnitToken = function(tooltip)
+	if (not tooltip) or tooltip:IsForbidden() or (not tooltip.GetUnit) then
+		return
+	end
+
+	local mouseover = SafeBooleanValue(UnitExists("mouseover")) and "mouseover" or nil
+	local _, unit = tooltip:GetUnit()
+	if (IsSafeUnitToken(unit) and SafeBooleanValue(UnitExists(unit))) then
+		return unit
+	end
+
+	local focus = GetMouseFocus and GetMouseFocus()
+	local focusUnit = focus and focus.GetAttribute and focus:GetAttribute("unit")
+	if (IsSafeUnitToken(focusUnit) and SafeBooleanValue(UnitExists(focusUnit))) then
+		return focusUnit
+	end
+
+	return mouseover
+end
+
+local SafeGetNamePlateForUnit = function(unit)
+	if (not IsSafeUnitToken(unit)) then
+		return
+	end
+	if (not C_NamePlate) or (not C_NamePlate.GetNamePlateForUnit) then
+		return
+	end
+	local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
+	if (ok) then
+		return plate
+	end
+end
+
 function Tooltips:UpdateConsolePortState()
 	local active = false
 	if (ns.API and ns.API.IsAddOnEnabled) then
@@ -164,11 +197,9 @@ end
 -- Detect unit tooltips anchored to nameplates (Retail/Cata only)
 function Tooltips:IsNameplateUnitTooltip(tooltip)
 	if (not tooltip) or tooltip:IsForbidden() then return false end
-	if (not C_NamePlate) or (not C_NamePlate.GetNamePlateForUnit) then return false end
-	if (not tooltip.GetUnit) then return false end
-	local _, unit = tooltip:GetUnit()
+	local unit = SafeGetTooltipUnitToken(tooltip)
 	if (not unit) then return false end
-	local plate = C_NamePlate.GetNamePlateForUnit(unit)
+	local plate = SafeGetNamePlateForUnit(unit)
 	return plate and true or false
 end
 

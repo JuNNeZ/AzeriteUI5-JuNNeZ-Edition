@@ -3,6 +3,17 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.1-JuNNeZ (2026-03-09)
+
+### Fixes
+- Tooltip secret-value hardening:
+  - Guarded unit-tooltip nameplate detection against secret unit tokens in arena and other restricted contexts.
+  - Added safe tooltip unit fallback and protected `C_NamePlate.GetNamePlateForUnit` lookups to stop tooltip backdrop styling errors.
+- Mouseover cast follow-up:
+  - Restored `checkmouseovercast` propagation on AzeriteUI action buttons so Blizzard mouseover-cast keyboard targeting can work again when the CVar is enabled.
+  - Added `enableMouseoverCast` CVar refresh handling for action-bar button settings.
+  - Registered AzeriteUI raid unit buttons for clicks to match secure party-frame behavior for click-cast style interaction.
+
 ## 5.3.0-JuNNeZ (2026-03-08)
 
 ### The big nameplate rework

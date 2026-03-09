@@ -2,6 +2,17 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-09
+
+- **Arena tooltip secret-unit fix (`Tooltips.lua:171`):** Reworked tooltip nameplate detection to follow the local `ElvUI`/`GW2_UI` pattern: reject secret tooltip unit tokens, fall back to safe `"mouseover"`/mouse-focus unit tokens when available, and wrap `C_NamePlate.GetNamePlateForUnit` in `pcall` so tooltip styling no longer faults in arena on secret unit arguments.
+  - **Files Modified:** `Components/Misc/Tooltips.lua`
+- **Non-library nameplate lookup hardening:** Added the same secret-unit/`pcall` guard around remaining direct `C_NamePlate.GetNamePlateForUnit(unit)` calls in our Blizzard-fix module so future castbar/aura patches do not reintroduce the same crash path from addon-side code.
+  - **Files Modified:** `Core/FixBlizzardBugs.lua`
+- **Mouseover-cast support restored for secure unitframes:** Ported the local `AzeriteUI_Stock`/older `LibActionButton-1.0-GE` `checkmouseovercast` behavior into our action-button wrapper and refresh path, following the same secure-button attribute pattern used by ElvUI. Also aligned raid unit buttons with party-frame click registration (`RegisterForClicks("AnyUp")`) so secure raid frames present a proper click-cast surface.
+  - **Files Modified:** `Components/ActionBars/Prototypes/ActionButton.lua`, `Components/ActionBars/Elements/ActionBars.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`
+- **Nameplate mouseover-cast limitation documented:** Current oUF nameplates in this addon are instantiated as `PingableUnitFrameTemplate` buttons rather than `SecureUnitButtonTemplate`, unlike party/raid frames and GW2UI's secure XML unit frames. That means keyboard mouseover-cast on custom nameplates may still depend on Blizzard's underlying nameplate click surface, and would require a larger secure-frame architecture change rather than a small patch.
+  - **Files Investigated:** `Libs/oUF/ouf.lua`, `Components/UnitFrames/Units/NamePlates.lua`
+
 ## 5.3.0-JuNNeZ (2026-03-08)
 
 **Status:** Ready for release.

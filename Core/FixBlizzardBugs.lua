@@ -914,7 +914,13 @@ if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) 
 		if (not unit or not C_NamePlate or not C_NamePlate.GetNamePlateForUnit) then
 			return
 		end
-		local plate = C_NamePlate.GetNamePlateForUnit(unit)
+		if (issecretvalue and issecretvalue(unit)) then
+			return
+		end
+		local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
+		if (not ok) then
+			return
+		end
 		local unitFrame = plate and (plate.UnitFrame or plate.unitFrame)
 		local bar = unitFrame and (unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.Castbar or unitFrame.CastingBarFrame)
 		PatchCastingBar(bar)
@@ -1815,7 +1821,13 @@ if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) 
 		if (not C_NamePlate or not C_NamePlate.GetNamePlateForUnit) then
 			return
 		end
-		local plate = C_NamePlate.GetNamePlateForUnit(unit)
+		if (issecretvalue and issecretvalue(unit)) then
+			return
+		end
+		local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
+		if (not ok) then
+			return
+		end
 		local frame = plate and (plate.UnitFrame or plate.unitFrame)
 		if (not frame) then
 			return
