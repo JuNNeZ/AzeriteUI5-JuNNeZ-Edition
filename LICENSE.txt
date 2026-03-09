@@ -1,7 +1,7 @@
 <div>
 <h3>Custom License</h3>
 <br>
-<div><strong>Copyright (c) 2023 Daniel Troconis, Lars Norberg</strong></div>
+<div><strong>Copyright (c) 2026 Daniel Troconis, Lars Norberg</strong></div>
 <br>
 <div>This document and the software here mentioned refers to any and all code of this project, but <strong>none</strong> of the artwork and media assets.</div>
 <br>
