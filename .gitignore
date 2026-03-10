@@ -49,6 +49,7 @@ error.txt
 # Personal notes and workspace
 TODO.txt
 NOTES.txt
+FEATURE_PLAN.md
 *.local.*
 
 # Git related
