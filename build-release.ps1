@@ -12,7 +12,7 @@ $DestinationBase = "C:\Users\Jonas\OneDrive\Skrivebord\azeriteui_fan_edit"
 # IMPORTANT: UPDATE VERSION BEFORE EACH RELEASE!
 # Also update version in: AzeriteUI5_JuNNeZ_Edition.toc
 # Versioning: patch (5.2.214->5.2.215), minor (5.2.x->5.3.0), major (5.x.x->6.0.0)
-$Version = "5.3.1-JuNNeZ"
+$Version = "5.3.2-JuNNeZ"
 
 $DateStamp = Get-Date -Format "dd-MM-yyyy"
 $ArchiveName = "AzeriteUI-$Version-Retail-$DateStamp.zip"

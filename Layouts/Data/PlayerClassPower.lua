@@ -31,6 +31,34 @@ local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
 
 local toRadians = function(d) return d*(math.pi/180) end
+local round = function(value)
+	if (value < 0) then
+		return math.ceil(value - .5)
+	end
+	return math.floor(value + .5)
+end
+
+-- Rogue extended combo points use a simple mirrored parabola so 1-7 follow one arc.
+local CreateRogueComboPointLayout = function(y, rotationDegrees, backdropSize, size)
+	local apexX = 58
+	local edgeX = 82
+	local mirrorY = -45
+	local edgeDistanceY = 92
+	local normalizedY = (y - mirrorY) / edgeDistanceY
+	local x = round(apexX + ((edgeX - apexX) * normalizedY * normalizedY))
+	if (type(size) == "table" and (size[1] or 0) > 13) then
+		x = x + 10
+	end
+
+	return {
+		Position = { "TOPLEFT", x, y },
+		Size = size or { 13, 13 },
+		BackdropSize = backdropSize or { 60, 60 },
+		Texture = GetMedia("point_crystal"),
+		BackdropTexture = GetMedia("point_plate"),
+		Rotation = (type(rotationDegrees) == "number") and toRadians(rotationDegrees) or nil
+	}
+end
 
 ns.RegisterConfig("PlayerClassPower", {
 
@@ -127,7 +155,7 @@ ns.RegisterConfig("PlayerClassPower", {
 				Rotation = nil
 			}
 		},
-		ComboPoints = { --[[ 7 (extends to support 7 combo points for Rogues with Deeper Stratagem) ]]
+		ComboPoints = { --[[ 5 (shared combo-point layout, preserves original 5-point finisher) ]]
 			[1] = {
 				Position = { "TOPLEFT", 82, -137 },
 				Size = { 13, 13 }, BackdropSize = { 58, 58 },
@@ -155,21 +183,18 @@ ns.RegisterConfig("PlayerClassPower", {
 			[5] = {
 				Position = { "TOPLEFT", 82, -11 },
 				Size = { 14, 21 }, BackdropSize = { 82, 96 },
-			Texture = GetMedia("point_crystal"),  BackdropTexture = GetMedia("point_plate"),
+				Texture = GetMedia("point_crystal"),  BackdropTexture = GetMedia("point_diamond"),
 				Rotation = toRadians(1)
-			},
-			[6] = {
-				Position = { "TOPLEFT", 79, -10 },
-				Size = { 13, 13 }, BackdropSize = { 60, 60 },
-				Texture = GetMedia("point_crystal"),  BackdropTexture = GetMedia("point_plate"),
-				Rotation = toRadians(-5)
-			},
-			[7] = {
-				Position = { "TOPLEFT", 82, 47 },
-				Size = { 13, 13 }, BackdropSize = { 58, 58 },
-			Texture = GetMedia("point_crystal"),  BackdropTexture = GetMedia("point_diamond"),
-				Rotation = toRadians(-6)
 			}
+		},
+		ComboPointsRogue = { --[[ 7 (Rogue-only extended combo points) ]]
+			[1] = CreateRogueComboPointLayout(-137, 6, { 58, 58 }),
+			[2] = CreateRogueComboPointLayout(-111, 5),
+			[3] = CreateRogueComboPointLayout(-79, 4),
+			[4] = CreateRogueComboPointLayout(-44, nil),
+			[5] = CreateRogueComboPointLayout(-11, -4),
+			[6] = CreateRogueComboPointLayout(21, -5),
+			[7] = CreateRogueComboPointLayout(47, -1, { 82, 96 }, { 14, 21 })
 		},
 		Chi = { --[[ 5 ]]
 			[1] = {

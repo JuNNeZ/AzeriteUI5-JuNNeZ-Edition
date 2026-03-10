@@ -57,14 +57,9 @@ local defaults = { profile = ns:Merge({
 	showRunes = ns.IsCata or ns.IsRetail or nil,
 	showSoulShards = ns.IsRetail or nil,
 	showStagger = ns.IsRetail or nil,
-	enableElementalMaelstromDisplay = false,
 	elementalMaelstromDisplayMode = "crystal_spec",
 	elementalSwapBarAnchorMigrated = false,
-	clickThrough = true,
-	classPointOffsets = {
-		[1] = { 0, 0 }, [2] = { 0, 0 }, [3] = { 0, 0 }, [4] = { 0, 0 }, [5] = { 0, 0 },
-		[6] = { 0, 0 }, [7] = { 0, 0 }, [8] = { 0, 0 }, [9] = { 0, 0 }, [10] = { 0, 0 }
-	}
+	clickThrough = true
 }, ns.MovableModulePrototype.defaults) }
 
 local GetElementalMaelstromDisplayMode = function(db)
@@ -84,7 +79,7 @@ local ShouldUseElementalSwapBar = function(db)
 	end
 	local currentSpec = (GetSpecialization and GetSpecialization()) or nil
 	if (currentSpec == nil) then
-		return true
+		return false
 	end
 	if (currentSpec ~= SPEC_SHAMAN_ELEMENTAL) then
 		return false
@@ -442,14 +437,16 @@ end
 ClassPowerMod.GenerateDefaults = function(self)
 	local x = -223 * ns.API.GetEffectiveScale()
 	local y = -84 * ns.API.GetEffectiveScale()
+	local point = "CENTER"
 	if (ns.IsRetail and playerClass == "SHAMAN") then
 		-- Default near the top-right of the player health bar; still movable through /lock.
+		point = "BOTTOMLEFT"
 		x = 375 * ns.API.GetEffectiveScale()
 		y = 130 * ns.API.GetEffectiveScale()
 	end
 	defaults.profile.savedPosition = {
 		scale = ns.API.GetEffectiveScale(),
-		[1] = "BOTTOMLEFT",
+		[1] = point,
 		[2] = x,
 		[3] = y
 	}
@@ -580,9 +577,8 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		-- Enhancement shaman maelstrom weapon stacks use the same 10-point model.
 		style = "SoulFragmentsPoints"
 	elseif (max >= 6) then
-		-- Combo points with Deeper Stratagem or similar (6-7 points)
-		-- Use ComboPoints layout which now supports up to 7
-		style = "ComboPoints"
+		-- Rogue extended combo points use a dedicated 7-point arc.
+		style = (powerType == "COMBO_POINTS" and playerClass == "ROGUE") and "ComboPointsRogue" or "ComboPoints"
 	elseif (max == 5) then
 		style = playerClass == "MONK" and "Chi" or playerClass == "WARLOCK" and "SoulShards" or "ComboPoints"
 	elseif (max == 4) then
@@ -839,7 +835,6 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		local layoutdb = ns.GetConfig("PlayerClassPower").ClassPowerLayouts[style]
 		if (layoutdb) then
 
-			local offsets = db.classPointOffsets or {}
 			-- Iterate through layout explicitly by index to ensure all points are processed in order
 			local maxPoints = (style == "SoulFragmentsPoints") and 5 or 10
 			for i = 1, maxPoints do
@@ -849,14 +844,9 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 					local rotation = info.PointRotation or 0
 					local barSize = { unpack(info.Size) }
 					local backdropSize = { unpack(info.BackdropSize) }
-					local barPos = { unpack(info.Position) }
-
-					-- Apply combo point offsets
-					local offset = offsets[i] or { 0, 0 }
-					local adjustedPos = { barPos[1], barPos[2] + (offset[1] or 0), barPos[3] + (offset[2] or 0) }
 
 					point:ClearAllPoints()
-					point:SetPoint(unpack(adjustedPos))
+					point:SetPoint(unpack(info.Position))
 					point:SetSize(unpack(barSize))
 					point:SetStatusBarTexture(info.Texture)
 
@@ -1226,6 +1216,7 @@ ClassPowerMod.Update = function(self)
 		end
 		self.db.profile.elementalSwapBarAnchorMigrated = true
 		self:UpdatePositionAndScale()
+		self:UpdateAnchor()
 	end
 	if (ns.IsRetail and playerClass == "SHAMAN" and self.frame) then
 		local classPowerConfig = ns.GetConfig("PlayerClassPower")

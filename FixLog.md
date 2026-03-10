@@ -2,6 +2,29 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-10
+
+- **Rogue combo-point layout review started:** Investigating report that 6th/7th Rogue combo points still render on the wrong arc with incorrect final backdrop behavior.
+  - **Files Targeted:** `Layouts/Data/PlayerClassPower.lua`, `Components/UnitFrames/Units/PlayerClassPower.lua`
+- **Rogue combo-point arc restored:** Fixed the `ComboPoints` layout so point 6 returns to the archived mirrored arc position (`64, 21`) instead of overlapping point 5, keeping the 6th/7th Rogue path on the intended curve. Also removed the leftover `classPointOffsets` runtime path/default so stale saved slider offsets can no longer distort combo-point placement after that experimental UI was removed.
+  - **Files Modified:** `Layouts/Data/PlayerClassPower.lua`, `Components/UnitFrames/Units/PlayerClassPower.lua`
+- **Rogue combo-point arc follow-up (math-based curve + final finisher move):** Replaced the hand-authored 7-point Rogue/Feral layout with a mirrored parabolic arc so all seven combo points follow one curve. Also moved the oversized round finisher from point 5 to point 7, leaving points 1-6 on standard plate sizing and making the final point the large round capstone.
+  - **Files Modified:** `Layouts/Data/PlayerClassPower.lua`
+- **Rogue combo-point finisher spacing follow-up:** Increased the final oversized combo-point padding/spacing so point 7 sits farther out on the arc and no longer clips point 6.
+  - **Files Modified:** `Layouts/Data/PlayerClassPower.lua`
+- **Rogue combo-point finisher spacing follow-up 2:** Added a bit more outward padding to the oversized final combo point so the 7th point clears the 6th more comfortably.
+  - **Files Modified:** `Layouts/Data/PlayerClassPower.lua`
+- **Combo-point layout gating fix:** Split the shared 5-point combo layout from the Rogue-only extended 7-point layout so Feral and other standard combo-point users keep the original 5-point finisher while Rogues alone use the extended arc at 6-7 combo points.
+  - **Files Modified:** `Layouts/Data/PlayerClassPower.lua`, `Components/UnitFrames/Units/PlayerClassPower.lua`
+- **Shaman classpower gate review started:** Re-checking local classpower visibility logic across retail/classic copies after follow-up suspicion that the per-spec gate bypasses the intended talent-known requirement.
+  - **Files Targeted:** `Libs/oUF/elements/classpower.lua`, `Libs/oUF_Classic/elements/classpower.lua`
+- **Shaman classpower talent gate restored in both oUF copies:** Updated the Shaman-specific visibility branch to honor the existing `requireSpell`/`C_SpellBook.IsSpellKnown` gate instead of enabling classpower on Enhancement spec alone. This matches the explicit spell-known gating pattern used in local peer addons such as `GW2_UI` and `ElvUI`.
+  - **Files Modified:** `Libs/oUF/elements/classpower.lua`, `Libs/oUF_Classic/elements/classpower.lua`
+- **Classpower cleanup pass started:** Reviewing the current player classpower module after report that the latest update may have broken classpower. Scope limited to dead Elemental swap-bar config/UI and pre-spec fallback behavior.
+  - **Files Targeted:** `Components/UnitFrames/Units/PlayerClassPower.lua`, `Options/OptionsPages/UnitFrames.lua`
+- **Classpower cleanup pass completed:** Removed the unused hidden `enableElementalMaelstromDisplay` option/default and changed Elemental swap-bar pre-spec fallback to stay off until specialization is known, avoiding premature classpower mode switching during early load.
+  - **Files Modified:** `Components/UnitFrames/Units/PlayerClassPower.lua`, `Options/OptionsPages/UnitFrames.lua`
+
 ## 2026-03-09
 
 - **Arena tooltip secret-unit fix (`Tooltips.lua:171`):** Reworked tooltip nameplate detection to follow the local `ElvUI`/`GW2_UI` pattern: reject secret tooltip unit tokens, fall back to safe `"mouseover"`/mouse-focus unit tokens when available, and wrap `C_NamePlate.GetNamePlateForUnit` in `pcall` so tooltip styling no longer faults in arena on secret unit arguments.
@@ -12,6 +35,12 @@
   - **Files Modified:** `Components/ActionBars/Prototypes/ActionButton.lua`, `Components/ActionBars/Elements/ActionBars.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`
 - **Nameplate mouseover-cast limitation documented:** Current oUF nameplates in this addon are instantiated as `PingableUnitFrameTemplate` buttons rather than `SecureUnitButtonTemplate`, unlike party/raid frames and GW2UI's secure XML unit frames. That means keyboard mouseover-cast on custom nameplates may still depend on Blizzard's underlying nameplate click surface, and would require a larger secure-frame architecture change rather than a small patch.
   - **Files Investigated:** `Libs/oUF/ouf.lua`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Future feature research logged (heal-predict/absorb overlays):** Reviewed local `ElvUI`, `GW2_UI`, and `Platynator` for health-bar-integrated incoming-heal / damage-absorb / heal-absorb visuals and documented the borrowable patterns in the feature docs instead of changing runtime behavior.
+  - **Files Modified:** `Docs/PeerAddons-AurasHealth.md`, `Docs/Nameplate Feature Plan.md`
+- **Future feature feasibility discussion added:** Compared peer overlay models against AzeriteUI's mirror/fake-fill/preview architecture and documented where implementation is realistic, where it conflicts with current bar rendering, and which frame types are lower-risk candidates.
+  - **Files Modified:** `Docs/PeerAddons-AurasHealth.md`, `Docs/Nameplate Feature Plan.md`
+- **Addon-wide feature comparison documented:** Mapped AzeriteUI's current feature surface from `TOC`/`Core`/`Components`/`Options`, compared it against the local `ElvUI` and `GW2_UI` module and settings surfaces, and documented practical borrowable features plus secure/hardening paths for future work.
+  - **Files Modified:** `FEATURE_PLAN.md`, `Docs/Nameplate Feature Plan.md`
 
 ## 5.3.0-JuNNeZ (2026-03-08)
 
@@ -387,6 +416,29 @@ Testing:
 2. Verify player power fill matches backdrop art dimensions
 3. Verify crystal casing/threat overlays remain attached to the same visual location
 4. Enter/leave combat and recheck alignment
+
+Status: Ready for Test
+
+[2026-03-10] Iteration: Investigate classpower anchor drift on profile reset/copy and /lock
+
+Request:
+- Check whether class power can move out of frame for some users after reinstall, profile reset/copy, or while viewing `/lock`.
+
+Investigation:
+- Traced `Components/UnitFrames/Units/PlayerClassPower.lua` through `Core/MovableFrameModulePrototype.lua`.
+- Confirmed fresh profile defaults are replayed directly from `db.profile.savedPosition` during profile copy/reset.
+- Confirmed baseline versions `5.2.212` and pre-shaman update `5.2.233` used `CENTER` for classpower defaults.
+- Current code had switched all fresh classpower defaults to `BOTTOMLEFT`, which can replay from the wrong origin for non-Shaman profiles.
+
+Applied fix:
+- Restored `CENTER` as the generated default anchor point for non-Shaman classpower profiles.
+- Kept the Shaman Elemental swap-bar path on `BOTTOMLEFT`.
+- Synced the one-time Shaman anchor migration with `/lock` by calling both `UpdatePositionAndScale()` and `UpdateAnchor()` after rewriting `savedPosition`.
+
+Testing:
+1. `/reload`
+2. Reset/copy profile with `/lock` open on a non-Shaman class and confirm classpower stays in the expected player-center position.
+3. Test Elemental Shaman once to confirm the migrated swap-bar anchor still lands near the player frame and the `/lock` anchor follows it.
 
 Status: Ready for Test
 

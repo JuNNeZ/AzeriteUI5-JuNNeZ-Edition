@@ -442,7 +442,7 @@ local function Visibility(self, event, unit)
 		end
 	elseif(playerClass == 'SHAMAN') then
 		local spec = C_SpecializationInfo.GetSpecialization()
-		if(spec == SPEC_SHAMAN_ENCHANCEMENT) then
+		if(spec == SPEC_SHAMAN_ENCHANCEMENT and (not requireSpell or C_SpellBook.IsSpellKnown(requireSpell))) then
 			isAuraPower = true
 			powerType = classPowerType
 			unit = 'player'

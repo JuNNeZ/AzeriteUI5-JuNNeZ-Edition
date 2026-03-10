@@ -3,6 +3,17 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.2-JuNNeZ (2026-03-10)
+
+### Fixes
+- Class Power stability and layout follow-up:
+  - Restored safe default anchoring for class power on fresh/reset/copied profiles so `/lock` placement stays aligned after reinstall or profile changes.
+  - Synced the Elemental Shaman one-time anchor migration with the movable `/lock` anchor state.
+  - Fixed Enhancement Shaman class power visibility gating so the configured spell-known requirement is actually honored in both retail and classic/shared oUF copies.
+  - Removed dead Elemental class power toggle/offset leftovers from runtime defaults and options.
+  - Split Rogue 6-7 combo point rendering onto a dedicated extended arc so Rogue gets the larger end-cap layout without changing Feral's original 5-point finisher presentation.
+  - Prevented pre-specialization fallback from forcing the Elemental swap-bar path before spec is known.
+
 ## 5.3.1-JuNNeZ (2026-03-09)
 
 ### Fixes

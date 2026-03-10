@@ -916,12 +916,6 @@ local GenerateOptions = function()
 							return not IsSpecMatch(SPEC_ENHANCEMENT)
 						end
 					}
-					suboptions.args.enableElementalMaelstromDisplay = {
-						name = "Enable Elemental Secondary Resource Bar",
-						desc = "Enable a secondary Elemental Shaman resource bar and choose crystal/bar resource split below.",
-						order = 11.05, type = "toggle", width = "full", set = setter, get = getter,
-						hidden = true
-					}
 					suboptions.args.elementalMaelstromDisplayMode = {
 						name = "Elemental Crystal/Bar Resource Split",
 						desc = "Choose which resource is shown in the Power Crystal; the other is shown in the secondary bar.",
