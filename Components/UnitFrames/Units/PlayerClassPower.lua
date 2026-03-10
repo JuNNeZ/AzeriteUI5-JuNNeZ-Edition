@@ -32,6 +32,7 @@ local ClassPowerMod = ns:NewModule("PlayerClassPowerFrame", ns.UnitFrameModule, 
 
 -- Lua API
 local math_floor = math.floor
+local math_abs = math.abs
 local next = next
 local type = type
 local unpack = unpack
@@ -59,6 +60,7 @@ local defaults = { profile = ns:Merge({
 	showStagger = ns.IsRetail or nil,
 	elementalMaelstromDisplayMode = "crystal_spec",
 	elementalSwapBarAnchorMigrated = false,
+	defaultAnchorHotfixMigrated = false,
 	clickThrough = true
 }, ns.MovableModulePrototype.defaults) }
 
@@ -93,6 +95,26 @@ local GetElementalSwapBarPowerType = function(db)
 		return POWER_TYPE_MAELSTROM
 	end
 	return POWER_TYPE_MANA
+end
+
+local ShouldMigratePreviousClassPowerDefault = function(profile)
+	if (not profile or playerClass == "SHAMAN") then
+		return false
+	end
+	if (profile.defaultAnchorHotfixMigrated) then
+		return false
+	end
+	local pos = profile.savedPosition
+	if (type(pos) ~= "table" or pos[1] ~= "BOTTOMLEFT") then
+		return false
+	end
+	local scale = (type(pos.scale) == "number" and pos.scale > 0) and pos.scale or ns.API.GetEffectiveScale()
+	local expectedX = -223 * scale
+	local expectedY = -84 * scale
+	return type(pos[2]) == "number"
+		and type(pos[3]) == "number"
+		and math_abs(pos[2] - expectedX) < .01
+		and math_abs(pos[3] - expectedY) < .01
 end
 
 local ShouldShowElementalSwapBarValue = function()
@@ -1203,6 +1225,14 @@ ClassPowerMod.Update = function(self)
 		else
 			self.frame:DisableElement("Stagger")
 		end
+	end
+
+	if (ShouldMigratePreviousClassPowerDefault(self.db.profile)) then
+		local pos = self.db.profile.savedPosition
+		pos[1] = "CENTER"
+		self.db.profile.defaultAnchorHotfixMigrated = true
+		self:UpdatePositionAndScale()
+		self:UpdateAnchor()
 	end
 
 	local useElementalSwapBar = ShouldUseElementalSwapBar(self.db.profile)

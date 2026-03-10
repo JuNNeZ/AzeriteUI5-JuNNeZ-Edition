@@ -419,6 +419,30 @@ Testing:
 
 Status: Ready for Test
 
+[2026-03-10] Iteration: Add one-time classpower anchor migration for previously affected installs
+
+Request:
+- Make the update move classpower back to the correct place for users who already saved the bad default from the previous release.
+
+Plan:
+- Detect only the exact old non-Shaman bad generated default anchor (`BOTTOMLEFT`, `-223`, `-84` at saved scale).
+- Rewrite that one case back to `CENTER`.
+- Leave user-moved `/lock` positions untouched.
+
+Applied fix:
+- `Components/UnitFrames/Units/PlayerClassPower.lua`
+  - Added `defaultAnchorHotfixMigrated` profile flag.
+  - Added a one-time migration helper that only matches the old bad generated non-Shaman classpower default from the previous release.
+  - Rewrites that single case from `BOTTOMLEFT` back to `CENTER` and immediately refreshes both the frame and `/lock` anchor.
+
+Testing:
+1. Update from the affected previous release with an untouched bad non-Shaman classpower position.
+2. `/reload`
+3. Confirm classpower snaps back to the intended centered location.
+4. Confirm manually moved `/lock` positions do not get overwritten.
+
+Status: Ready for Test
+
 [2026-03-10] Iteration: Investigate classpower anchor drift on profile reset/copy and /lock
 
 Request:
