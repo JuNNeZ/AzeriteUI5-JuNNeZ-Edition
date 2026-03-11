@@ -2,6 +2,14 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 5.3.3-JuNNeZ (2026-03-11)
+
+**Status:** Release candidate.
+
+### Bug Fixes In Progress
+- **Party leader-change priority debuff crash:** Normalized `oUF_PriorityDebuff` dispel entries to numeric priorities so party roster and leader updates no longer hit the boolean-vs-number compare path.
+  - **Files Modified:** `Libs/oUF_Plugins/oUF_PriorityDebuff.lua`
+
 ## 2026-03-10
 
 - **Rogue combo-point layout review started:** Investigating report that 6th/7th Rogue combo points still render on the wrong arc with incorrect final backdrop behavior.

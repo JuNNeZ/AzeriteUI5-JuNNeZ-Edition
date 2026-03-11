@@ -3,6 +3,12 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.3-JuNNeZ (2026-03-11)
+
+### Fixes
+- Party frame priority debuff stability:
+  - Normalized oUF priority-debuff dispel entries to numeric priorities so party leader and roster updates no longer hit the boolean-vs-number compare error.
+
 ## 5.3.2-JuNNeZ (2026-03-10)
 
 ### Fixes
