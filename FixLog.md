@@ -25,6 +25,20 @@
 - **Classpower cleanup pass completed:** Removed the unused hidden `enableElementalMaelstromDisplay` option/default and changed Elemental swap-bar pre-spec fallback to stay off until specialization is known, avoiding premature classpower mode switching during early load.
   - **Files Modified:** `Components/UnitFrames/Units/PlayerClassPower.lua`, `Options/OptionsPages/UnitFrames.lua`
 
+## 2026-03-11
+
+- **Party leader-change priority debuff crash investigation started:** Reviewing `oUF_PriorityDebuff` after user report of `attempt to compare number with boolean` during party leader swaps; also checking Blizzard quest portrait error and local `ElvUI`/`GW2_UI` handling for reusable guards.
+  - **Files Targeted:** `Libs/oUF_Plugins/oUF_PriorityDebuff.lua`, `Components/Misc/TrackerWoW11.lua`, `Core/FixBlizzardBugsWow12.lua`
+- **Priority debuff compare crash fixed:** Normalized resolved dispel eligibility in `oUF_PriorityDebuff` to numeric `DispellPriority` values before aura-loop comparisons, so party/raid refreshes no longer try to compare the scan priority number against raw booleans or spell-name strings.
+  - **Root Cause:** `UpdateDispelTypes()` copied spec/class entries like `Magic = true` and function results like `GetSpellInfo(...)` directly into `self.dispelTypes`, but the aura scan later expects numeric priorities at `Libs/oUF_Plugins/oUF_PriorityDebuff.lua:341`.
+  - **Peer Check:** Local `ElvUI` and `GW2_UI` installs do not contain a reusable guard for the separate Blizzard `QuestFrame_ShowQuestPortrait` measurement error; both only hook that function later to reposition `QuestModelScene`.
+  - **Files Modified:** `Libs/oUF_Plugins/oUF_PriorityDebuff.lua`
+- **Blizzard quest portrait measurement guard added:** Wrapped `QuestFrame_ShowQuestPortrait` in the WoW12 Blizzard-fix layer so the specific `Cannot perform measurement in QuestFrameModelScene` failure from objective-tracker quest opens is swallowed and falls back to hiding the portrait scene instead of throwing a Lua error.
+  - **Scope:** Narrow string-matched guard only for the known model-scene measurement failure; unrelated quest frame errors still propagate normally.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
+- **Blizzard quest portrait guard parked:** Commented the temporary `QuestFrame_ShowQuestPortrait` measurement wrapper back out pending confirmation that the fault is ours rather than a broader Blizzard / third-party tracker-skin interaction. The candidate code remains in place but inactive for quick restoration.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
+
 ## 2026-03-09
 
 - **Arena tooltip secret-unit fix (`Tooltips.lua:171`):** Reworked tooltip nameplate detection to follow the local `ElvUI`/`GW2_UI` pattern: reject secret tooltip unit tokens, fall back to safe `"mouseover"`/mouse-focus unit tokens when available, and wrap `C_NamePlate.GetNamePlateForUnit` in `pcall` so tooltip styling no longer faults in arena on secret unit arguments.

@@ -230,6 +230,59 @@ local function MakeSafeOnEvent(origFunc)
 	end
 end
 
+--[[
+local function IsQuestPortraitMeasurementError(err)
+	return (type(err) == "string"
+		and string.find(err, "Cannot perform measurement", 1, true)
+		and (string.find(err, "QuestFrameModelScene", 1, true)
+			or string.find(err, "QuestModeModelScene", 1, true)
+			or string.find(err, "QuestModelScene", 1, true)))
+end
+
+local function HideQuestPortraitFallback()
+	local scene = _G.QuestModelScene or _G.QuestFrameModelScene or _G.QuestModeModelScene
+	if (scene and scene.Hide) then
+		pcall(scene.Hide, scene)
+	end
+
+	local fallbackFrames = {
+		_G.QuestNPCModel,
+		_G.QuestNPCModelTextScrollFrame,
+		_G.QuestNPCModelNameText,
+		_G.QuestNPCModelText
+	}
+
+	for _, frame in pairs(fallbackFrames) do
+		if (frame and frame.Hide) then
+			pcall(frame.Hide, frame)
+		end
+	end
+end
+
+local function GuardQuestPortrait()
+	if (type(_G.QuestFrame_ShowQuestPortrait) ~= "function") then
+		return
+	end
+	if (_G.__AzUI_W12_QuestPortraitOriginal == _G.QuestFrame_ShowQuestPortrait) then
+		return
+	end
+
+	local original = _G.QuestFrame_ShowQuestPortrait
+	_G.__AzUI_W12_QuestPortraitOriginal = original
+	_G.QuestFrame_ShowQuestPortrait = function(...)
+		local ok, err = pcall(original, ...)
+		if (ok) then
+			return err
+		end
+		if (IsQuestPortraitMeasurementError(err)) then
+			HideQuestPortraitFallback()
+			return
+		end
+		error(err)
+	end
+end
+]]
+
 -- Guard a method on a mixin table (idempotent via flag name).
 local function GuardMixin(mixin, method, wrapper, flag)
 	if (not mixin or type(mixin[method]) ~= "function" or mixin[flag]) then
@@ -581,6 +634,7 @@ local function ApplyGuards()
 	HookCompactFrameLifecycle()
 	GuardAuraBigDefensive()
 	GuardPartyHealthFunctions()
+	-- GuardQuestPortrait()
 
 	-- Arena castbar instances — created by Blizzard_ArenaUI.
 	-- CompactArenaFrame has memberUnitFrames, each with a castBar.

@@ -438,10 +438,15 @@ local function UpdateDispelTypes(self, event, unit, ...)
 	-- for faster aura processing speed later.
 	if(dispelTypes) then
 		for dispelType,data in next,dispelTypes do
+			local resolved = data
 			if (type(data) == "function") then
-				self.dispelTypes[dispelType] = data()
-			else
-				self.dispelTypes[dispelType] = data
+				resolved = data()
+			end
+
+			if (type(resolved) == "number") then
+				self.dispelTypes[dispelType] = resolved
+			elseif (resolved) then
+				self.dispelTypes[dispelType] = DispellPriority[dispelType]
 			end
 		end
 	end
