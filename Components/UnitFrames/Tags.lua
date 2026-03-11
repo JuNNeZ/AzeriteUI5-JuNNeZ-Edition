@@ -1170,17 +1170,35 @@ Methods[prefix("*:HealthPercent")] = function(unit)
 	if (UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit)) then
 		return
 	else
+		if (UnitHealthPercent) then
+			local apiPercent
+			pcall(function()
+				if (CurveConstants and CurveConstants.ScaleTo100) then
+					apiPercent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
+				else
+					apiPercent = UnitHealthPercent(unit)
+				end
+			end)
+			if (type(apiPercent) == "number" and not (issecretvalue and issecretvalue(apiPercent))) then
+				local frame = _FRAME
+				if (frame and frame.Health) then
+					frame.Health.safePercent = apiPercent
+				end
+				return FormatPercent(apiPercent)
+			end
+		end
+
 		local frame = _FRAME
 		if (frame and frame.Health) then
+			if (type(frame.Health.safePercent) == "number") then
+				return FormatPercent(frame.Health.safePercent)
+			end
 			local healthCur = frame.Health.safeCur or frame.Health.cur
 			local healthMax = frame.Health.safeMax or frame.Health.max
 			local framePercent = SafePercent(healthCur, healthMax)
 			if (type(framePercent) == "number") then
 				frame.Health.safePercent = framePercent
 				return FormatPercent(framePercent)
-			end
-			if (type(frame.Health.safePercent) == "number") then
-				return FormatPercent(frame.Health.safePercent)
 			end
 		end
 

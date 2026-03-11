@@ -438,6 +438,21 @@ local ClampTargetSparkPercent = function(value)
 	return value
 end
 
+local NormalizeTargetDisplayPercent = function(value)
+	if (type(value) ~= "number") or (issecretvalue and issecretvalue(value)) then
+		return nil
+	end
+	if (value <= 1) then
+		value = value * 100
+	end
+	if (value < 0) then
+		value = 0
+	elseif (value > 100) then
+		value = 100
+	end
+	return value
+end
+
 local GetTargetBarSparkPercent = function(element, percentOverride)
 	local percent = ClampTargetSparkPercent(percentOverride)
 	if (percent ~= nil) then
@@ -489,6 +504,13 @@ local UpdateTargetBarSpark = function(element, percentOverride)
 	local spark = element and element.Spark
 	if (not spark) then
 		return
+	end
+	if (spark.requiresConfigKey) then
+		local config = ns.GetConfig("TargetFrame")
+		if (not config[spark.requiresConfigKey]) then
+			spark:Hide()
+			return
+		end
 	end
 	local percent = GetTargetBarSparkPercent(element, percentOverride)
 	if (type(percent) ~= "number" or percent <= 0 or percent >= 1 or not element:IsShown()) then
@@ -590,6 +612,10 @@ local UpdateTargetHealthFakeFillFromBar = function(health)
 		applied = ApplyTargetSimpleHealthFakeFillByPercent(health, nil)
 	end
 	if (applied) then
+		local displayPercent = NormalizeTargetDisplayPercent(percent)
+		if (type(displayPercent) == "number") then
+			health.safePercent = displayPercent
+		end
 		health.__AzeriteUI_TargetFakeSource = source
 		health.__AzeriteUI_TargetSparkPercent = ClampTargetSparkPercent(percent)
 		UpdateTargetBarSpark(health, percent)
@@ -1014,6 +1040,10 @@ end
 -- Forceupdate health prediction on health updates,
 -- to assure our smoothed elements are properly aligned.
 local Health_PostUpdate = function(element, unit, cur, max)
+	if (type(cur) == "number" and type(max) == "number" and max > 0
+		and (not issecretvalue or (not issecretvalue(cur) and not issecretvalue(max)))) then
+		element.safePercent = NormalizeTargetDisplayPercent((cur / max) * 100)
+	end
 	local predict = element.__owner.HealthPrediction
 	if (predict) then
 		predict:ForceUpdate()
@@ -1131,6 +1161,38 @@ local HideTargetAbsorbBarVisual = function(absorbBar)
 	end
 end
 
+local GetTargetFrameConfig = function()
+	return ns.GetConfig("TargetFrame")
+end
+
+local ResolveTargetTextAnchorFrame = function(self, key)
+	if (not self or type(key) ~= "string" or key == "") then
+		return nil
+	end
+	if (key == "HEALTHBACKDROP") then
+		return self.Health and self.Health.Backdrop
+	elseif (key == "HEALTH") then
+		return self.Health
+	elseif (key == "FRAME") then
+		return self
+	end
+end
+
+local ShouldHideTargetHealthValue = function()
+	local config = GetTargetFrameConfig()
+	return config and config.HideHealthValue
+end
+
+local ShouldHideTargetHealthAbsorb = function()
+	local config = GetTargetFrameConfig()
+	return config and config.HideHealthAbsorb
+end
+
+local ShouldKeepTargetHealthPercentVisible = function()
+	local config = GetTargetFrameConfig()
+	return config and config.KeepHealthPercentVisible
+end
+
 local UpdateTargetAbsorbState = function(element, unit, absorb, maxHealth)
 	if (not element) then
 		return
@@ -1143,6 +1205,10 @@ local UpdateTargetAbsorbState = function(element, unit, absorb, maxHealth)
 		if (ownerHealth) then
 			ownerHealth.safeAbsorb = value
 		end
+	end
+	if (ShouldHideTargetHealthAbsorb()) then
+		SetOwnerSafeAbsorb(nil)
+		return
 	end
 	local resolvedAbsorb = nil
 	local hasKnownZero = false
@@ -1465,6 +1531,19 @@ local GetTargetRawPowerPercent = function(element)
 end
 
 local GetTargetPowerValueAlpha = function()
+	local config = ns.GetConfig("TargetFrame")
+	local alpha = config and config.PowerValueAlpha
+	if (type(alpha) == "number") then
+		if (alpha > 1) then
+			alpha = alpha / 100
+		end
+		if (alpha < 0) then
+			return 0
+		elseif (alpha > 1) then
+			return 1
+		end
+		return alpha
+	end
 	if (ns.UnitFrame and ns.UnitFrame.GetPowerValueAlpha) then
 		return ns.UnitFrame.GetPowerValueAlpha()
 	end
@@ -1549,7 +1628,12 @@ local Power_UpdateVisibility = function(element, unit, cur, min, max)
 	
 	local noUsablePool = (not curIsSecret and not maxIsSecret)
 		and ((type(max) ~= "number") or (max <= 0) or (type(cur) ~= "number"))
-	if (UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit) or noUsablePool) then
+	local config = ns.GetConfig("TargetFrame")
+	local hideZeroPower = config and config.HideZeroPower
+	local zeroPower = (not curIsSecret and not maxIsSecret)
+		and (type(max) == "number") and (type(cur) == "number")
+		and (max > 0) and (cur <= 0)
+	if (UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit) or noUsablePool or (hideZeroPower and zeroPower)) then
 		element:Hide()
 		if (element.Backdrop) then
 			element.Backdrop:Hide()
@@ -1722,6 +1806,32 @@ local Cast_UpdateTexts = function(element)
 	local currentStyle = element.__owner.currentStyle
 	local healthValue = health and health.Value
 	local healthPercent = health and health.Percent
+	local hideHealthValue = ShouldHideTargetHealthValue()
+	local keepHealthPercentVisible = ShouldKeepTargetHealthPercentVisible()
+
+	if (hideHealthValue or keepHealthPercentVisible) then
+		if (element:IsShown()) then
+			element.Text:Show()
+			element.Time:Show()
+			if (healthPercent) then
+				healthPercent:Hide()
+			end
+		else
+			element.Text:Hide()
+			element.Time:Hide()
+			if (healthPercent) then
+				if (keepHealthPercentVisible) then
+					healthPercent:Show()
+				else
+					healthPercent:Hide()
+				end
+			end
+		end
+		if (healthValue) then
+			healthValue:Hide()
+		end
+		return
+	end
 
 	if (currentStyle == "Critter") then
 		element.Text:Hide()
@@ -2300,14 +2410,29 @@ local UnitFrame_UpdateTextures = function(self)
 	portraitBorder:SetTexture(db.PortraitBorderTexture)
 	portraitBorder:SetVertexColor(unpack(db.PortraitBorderColor))
 
-	if (key == "Critter") then
-		health.Value:Hide()
-		health.Percent:Hide()
+	local hideHealthValue = ShouldHideTargetHealthValue()
+	local keepHealthPercentVisible = ShouldKeepTargetHealthPercentVisible()
+	if (key == "Critter" or hideHealthValue or keepHealthPercentVisible) then
+		if (hideHealthValue) then
+			health.Value:Hide()
+		else
+			health.Value:Show()
+		end
+		if (keepHealthPercentVisible) then
+			health.Percent:Show()
+		else
+			health.Percent:Hide()
+		end
+		if (ShouldHideTargetHealthAbsorb() and self.HealthPrediction and self.HealthPrediction.absorbBar) then
+			HideTargetAbsorbBarVisual(self.HealthPrediction.absorbBar)
+		end
 		if (self:IsElementEnabled("Castbar")) then
 			cast:ForceUpdate()
 			Cast_UpdateTexts(cast)
 		end
-		self:DisableElement("Auras")
+		if (key == "Critter") then
+			self:DisableElement("Auras")
+		end
 	else
 		health.Value:Show()
 		health.Percent:Show()
@@ -2463,7 +2588,13 @@ local style = function(self, unit, id)
 	self.Health.__AzeriteUI_UseProductionNativeFill = true
 	self.Health.__AzeriteUI_KeepMirrorPercentOnNoSample = false
 
-	self.Health.Spark = nil
+	local healthSpark = health:CreateTexture(nil, "OVERLAY", nil, 3)
+	healthSpark:SetTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
+	healthSpark:SetBlendMode("ADD")
+	healthSpark:SetVertexColor(1, .95, .8, .85)
+	healthSpark.requiresConfigKey = "UseHealthSpark"
+	healthSpark:Hide()
+	self.Health.Spark = healthSpark
 
 	local healthFakeFill = health:CreateTexture(nil, "ARTWORK", nil, 1)
 	healthFakeFill:SetAllPoints(health)
@@ -2646,8 +2777,32 @@ local style = function(self, unit, id)
 
 	-- Health Percentage
 	--------------------------------------------
-	local healthPerc = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
-	healthPerc:SetPoint(unpack(db.HealthPercentagePosition))
+	local healthPercParent = healthOverlay
+	local healthPercAnchor = health
+	do
+		local targetConfig = GetTargetFrameConfig()
+		local anchorFrameKey = db.HealthPercentageAnchorFrame or (targetConfig and targetConfig.HealthPercentageAnchorFrame) or "HEALTH"
+		local anchorFrame = ResolveTargetTextAnchorFrame(self, anchorFrameKey) or health
+		if (anchorFrameKey == "HEALTHBACKDROP" and anchorFrame and anchorFrame ~= healthOverlay) then
+			local percentOverlay = CreateFrame("Frame", nil, self)
+			percentOverlay:SetAllPoints(anchorFrame)
+			percentOverlay:SetFrameLevel((health:GetFrameLevel() or self:GetFrameLevel()) + 4)
+			self.Health.PercentOverlay = percentOverlay
+			healthPercParent = percentOverlay
+			healthPercAnchor = nil
+		else
+			healthPercAnchor = anchorFrame
+		end
+	end
+	local healthPerc = healthPercParent:CreateFontString(nil, "OVERLAY", nil, 1)
+	do
+		local point = db.HealthPercentagePosition
+		if (healthPercAnchor) then
+			healthPerc:SetPoint(point[1], healthPercAnchor, point[1], point[2], point[3])
+		else
+			healthPerc:SetPoint(unpack(point))
+		end
+	end
 	healthPerc:SetFontObject(db.HealthPercentageFont)
 	healthPerc:SetTextColor(unpack(db.HealthPercentageColor))
 	healthPerc:SetJustifyH(db.HealthPercentageJustifyH)

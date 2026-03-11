@@ -430,6 +430,10 @@ ns.RegisterConfig("PlayerFrame", {
 	}
 })
 
+ns.RegisterConfigVariant("SaiyaRatt", "PlayerFrame", {
+	PvPIndicatorPosition = { "BOTTOMLEFT", 40, -18 }
+})
+
 
 
 

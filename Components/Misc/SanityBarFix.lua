@@ -22,6 +22,10 @@ local function SBFPrint(msg)
     end
 end
 
+local function ShouldSkipBlizzardAltPowerBar()
+    return ns.GetActiveConfigVariant and ns:GetActiveConfigVariant() == "SaiyaRatt"
+end
+
 -- Slash to toggle debug
 SLASH_SANITYBARFIX1 = "/sanitybarfix"
 SlashCmdList["SANITYBARFIX"] = function(msg)
@@ -56,6 +60,20 @@ local function DisableOUFAlternativePower()
 end
 
 local function RestoreAndInitPlayerPowerBarAlt()
+    if ShouldSkipBlizzardAltPowerBar() then
+        local alt = _G and _G.PlayerPowerBarAlt
+        if alt then
+            alt:UnregisterEvent("UNIT_POWER_BAR_SHOW")
+            alt:UnregisterEvent("UNIT_POWER_BAR_HIDE")
+            alt:UnregisterEvent("PLAYER_ENTERING_WORLD")
+            alt:UnregisterEvent("UNIT_POWER_UPDATE")
+            alt:UnregisterEvent("UNIT_MAXPOWER")
+            alt:Hide()
+        end
+        SBFPrint("SaiyaRatt active; skip Blizzard alt power bar restore")
+        return false
+    end
+
     local alt = _G and _G.PlayerPowerBarAlt
     if not alt then
         SBFPrint("PlayerPowerBarAlt missing")
@@ -86,6 +104,11 @@ end
 local f = CreateFrame("Frame")
 
 f:SetScript("OnEvent", function(self, event, ...)
+    if ShouldSkipBlizzardAltPowerBar() then
+        RestoreAndInitPlayerPowerBarAlt()
+        return
+    end
+
     if event == "PLAYER_LOGIN" then
         DisableOUFAlternativePower()
         -- Keep an eye out for late-created oUF objects

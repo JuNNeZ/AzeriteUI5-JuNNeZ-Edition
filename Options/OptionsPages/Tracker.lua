@@ -66,19 +66,6 @@ local GenerateOptions = function()
 				hidden = nil,
 				set = setter,
 				get = getter
-			},
-			theme = {
-				name = L["Set Tracker Theme (Experimental)"],
-				desc = L["Chooses theme for the Objectives Tracker."],
-				order = 20,
-				type = "select", style = "dropdown",
-				hidden = function(info) return getoption(info, "disableBlizzardTracker")  end,
-				values = {
-					["Azerite"] = "AzeriteUI",
-					["Blizzard"] = "Blizzard"
-				},
-				set = setter,
-				get = getter
 			}
 		}
 	}

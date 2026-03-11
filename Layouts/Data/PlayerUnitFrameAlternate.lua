@@ -333,3 +333,33 @@ ns.RegisterConfig("PlayerFrameAlternate", {
 
 	}
 })
+
+local CreateSaiyaRattPowerThreat = function(offsetX)
+	return {
+		PowerThreatSize = { 500, 150 },
+		PowerThreatPosition = { "CENTER", offsetX or 0, -27 },
+		PowerThreatTexture = GetMedia("power_bar_glow")
+	}
+end
+
+ns.RegisterConfigVariant("SaiyaRatt", "PlayerFrameAlternate", {
+	HideBlizzardAltPowerBar = true,
+	PowerBarPosition = { "CENTER", 2, -27 },
+	PowerBarSize = { 275, 25 },
+	PowerBarTexture = GetMedia("power-bar-front"),
+	PowerBarOrientation = "RIGHT",
+	PowerBackdropSize = { 500, 150 },
+	PowerBackdropTexture = GetMedia("power-bar-back"),
+	PowerBackdropColor = { 1, 1, 1, 1 },
+	PowerFrameLevelOffset = -1,
+	PortraitPosition = { "TOPLEFT", 40, -51 },
+	PortraitBackgroundPosition = { "TOPLEFT", -3, -4 },
+	PortraitShadePosition = { "TOPLEFT", 30, -38 },
+	PortraitBorderPosition = { "TOPLEFT", -10, 2 },
+	PvPIndicatorPosition = { "TOPLEFT", 90, -91 },
+	AurasPosition = { "TOPLEFT", 150, -163 },
+	AurasPositionAlternate = { "TOPLEFT", 150, 60 },
+	Novice = CreateSaiyaRattPowerThreat(0),
+	Hardened = CreateSaiyaRattPowerThreat(0),
+	Seasoned = CreateSaiyaRattPowerThreat(1)
+})

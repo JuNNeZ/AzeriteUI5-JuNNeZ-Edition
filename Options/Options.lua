@@ -181,7 +181,7 @@ Options.GenerateProfileMenu = function(self)
 					return string_format(L["Are you sure you want to delete the preset '%s'? This cannot be undone."], ns:GetProfile())
 				end,
 				disabled = function(info)
-					return ns:GetProfile() == ns:GetDefaultProfile()
+					return ns:IsBuiltinProfile(ns:GetProfile())
 				end,
 				func = function(info)
 					ns:DeleteProfile(ns:GetProfile())

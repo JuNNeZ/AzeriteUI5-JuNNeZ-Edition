@@ -79,6 +79,23 @@ local ApplyPlayerAlternatePowerValueAlpha = function(frame)
 	end
 end
 
+local GetPlayerAlternateConfig = function()
+	return ns.GetConfig("PlayerFrameAlternate")
+end
+
+local HideSaiyaRattBlizzardAltPowerBar = function()
+	local config = GetPlayerAlternateConfig()
+	if (not (config and config.HideBlizzardAltPowerBar) or not PlayerPowerBarAlt) then
+		return
+	end
+	PlayerPowerBarAlt:Hide()
+	PlayerPowerBarAlt:UnregisterEvent("UNIT_POWER_BAR_SHOW")
+	PlayerPowerBarAlt:UnregisterEvent("UNIT_POWER_BAR_HIDE")
+	PlayerPowerBarAlt:UnregisterEvent("PLAYER_ENTERING_WORLD")
+	PlayerPowerBarAlt:UnregisterEvent("UNIT_POWER_UPDATE")
+	PlayerPowerBarAlt:UnregisterEvent("UNIT_MAXPOWER")
+end
+
 -- Element Callbacks
 --------------------------------------------
 -- Forceupdate health prediction on health updates,
@@ -498,6 +515,7 @@ end
 
 -- Hide power crystal when no power exists.
 local Power_UpdateVisibility = function(element, unit, cur, min, max)
+	HideSaiyaRattBlizzardAltPowerBar()
 	-- Check if values are secret before comparison
 	if (issecretvalue and (issecretvalue(cur) or issecretvalue(max))) then
 		-- Can't determine visibility with secret values - assume visible
@@ -658,16 +676,43 @@ local UnitFrame_UpdateTextures = function(self)
 	local threat = self.ThreatIndicator
 	if (threat) then
 		for key,texture in next,threat.textures do
-			texture:ClearAllPoints()
-			texture:SetPoint(unpack(db[key.."ThreatPosition"]))
-			texture:SetSize(unpack(db[key.."ThreatSize"]))
-			texture:SetTexture(db[key.."ThreatTexture"])
+			local position = db[key.."ThreatPosition"]
+			local size = db[key.."ThreatSize"]
+			local path = db[key.."ThreatTexture"]
+			if (position and size and path) then
+				texture:ClearAllPoints()
+				texture:SetPoint(unpack(position))
+				texture:SetSize(unpack(size))
+				texture:SetTexture(path)
+				texture:Show()
+			else
+				texture:Hide()
+			end
 		end
 	end
 
 	local portraitBorder = self.Portrait.Border
 	portraitBorder:SetTexture(db.PortraitBorderTexture)
 	portraitBorder:SetVertexColor(unpack(db.PortraitBorderColor))
+	if (self.Portrait.Shade and self.Portrait.Shade.SetDrawLayer) then
+		self.Portrait.Shade:SetDrawLayer("BACKGROUND", config.PortraitShadeDrawLevel or -1)
+	end
+	if (portraitBorder.SetDrawLayer) then
+		portraitBorder:SetDrawLayer("BACKGROUND", config.PortraitBorderDrawLevel or 0)
+	end
+
+	local power = self.Power
+	power:SetFrameLevel(self:GetFrameLevel() + (config.PowerFrameLevelOffset or 5))
+	if (power.BackdropGroup) then
+		power.BackdropGroup:SetFrameLevel(power:GetFrameLevel())
+	end
+	local powerTexture = power.GetStatusBarTexture and power:GetStatusBarTexture()
+	if (powerTexture and powerTexture.SetDrawLayer) then
+		powerTexture:SetDrawLayer("ARTWORK", 0)
+	end
+	if (power.Backdrop and power.Backdrop.SetDrawLayer) then
+		power.Backdrop:SetDrawLayer("BACKGROUND", config.PowerBackdropDrawLevel or -2)
+	end
 
 	ns:Fire("UnitFrame_Target_Updated", unit, key)
 end
@@ -937,19 +982,21 @@ local style = function(self, unit, id)
 	portraitShade:SetPoint(unpack(db.PortraitShadePosition))
 	portraitShade:SetSize(unpack(db.PortraitShadeSize))
 	portraitShade:SetTexture(db.PortraitShadeTexture)
+	portraitShade:SetDrawLayer("BACKGROUND", db.PortraitShadeDrawLevel or -1)
 
 	self.Portrait.Shade = portraitShade
 
 	local portraitBorder = portraitOverlayFrame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	portraitBorder:SetPoint(unpack(db.PortraitBorderPosition))
 	portraitBorder:SetSize(unpack(db.PortraitBorderSize))
+	portraitBorder:SetDrawLayer("BACKGROUND", db.PortraitBorderDrawLevel or 0)
 
 	self.Portrait.Border = portraitBorder
 
 	-- Power Crystal
 	--------------------------------------------
 	local power = self:CreateBar()
-	power:SetFrameLevel(self:GetFrameLevel() + 5)
+	power:SetFrameLevel(self:GetFrameLevel() + (db.PowerFrameLevelOffset or 5))
 	power:SetPoint(unpack(db.PowerBarPosition))
 	power:SetSize(unpack(db.PowerBarSize))
 	power:SetSparkTexture(db.PowerBarSparkTexture)
@@ -959,6 +1006,13 @@ local style = function(self, unit, id)
 	power.frequentUpdates = true
 	power.displayAltPower = true
 	--power.colorPower = true
+	local powerTexture = power.GetStatusBarTexture and power:GetStatusBarTexture()
+	if (powerTexture and powerTexture.SetDrawLayer) then
+		powerTexture:SetDrawLayer("ARTWORK", 0)
+	end
+	if (powerTexture and powerTexture.SetTexCoord and db.PowerBarTexCoord) then
+		powerTexture:SetTexCoord(unpack(db.PowerBarTexCoord))
+	end
 
 	self.Power = power
 	self.Power.Override = ns.API.UpdatePower
@@ -969,12 +1023,17 @@ local style = function(self, unit, id)
 	local powerBackdropGroup = CreateFrame("Frame", nil, self)
 	powerBackdropGroup:SetAllPoints(power)
 	powerBackdropGroup:SetFrameLevel(power:GetFrameLevel())
+	self.Power.BackdropGroup = powerBackdropGroup
 
 	local powerBackdrop = powerBackdropGroup:CreateTexture(nil, "BACKGROUND", nil, -2)
 	powerBackdrop:SetPoint(unpack(db.PowerBackdropPosition))
 	powerBackdrop:SetSize(unpack(db.PowerBackdropSize))
 	powerBackdrop:SetTexture(db.PowerBackdropTexture)
+	if (powerBackdrop.SetTexCoord and db.PowerBackdropTexCoord) then
+		powerBackdrop:SetTexCoord(unpack(db.PowerBackdropTexCoord))
+	end
 	powerBackdrop:SetVertexColor(unpack(db.PowerBackdropColor))
+	powerBackdrop:SetDrawLayer("BACKGROUND", db.PowerBackdropDrawLevel or -2)
 
 	self.Power.Backdrop = powerBackdrop
 
@@ -1043,7 +1102,8 @@ local style = function(self, unit, id)
 
 	threatIndicator.textures = {
 		Health = threatIndicator:CreateTexture(nil, "BACKGROUND", nil, -3),
-		Portrait = portrait:CreateTexture(nil, "BACKGROUND", nil, -1)
+		Portrait = portrait:CreateTexture(nil, "BACKGROUND", nil, -1),
+		Power = threatIndicator:CreateTexture(nil, "BACKGROUND", nil, -3)
 	}
 	threatIndicator.Show = function(self)
 		self.isShown = true
@@ -1235,6 +1295,7 @@ PlayerFrameAltMod.OnEnable = function(self)
 		PlayerPowerBarAlt:UnregisterEvent("UNIT_POWER_BAR_HIDE")
 		PlayerPowerBarAlt:UnregisterEvent("PLAYER_ENTERING_WORLD")
 	end
+	HideSaiyaRattBlizzardAltPowerBar()
 
 	self:CreateUnitFrames()
 	self:CreateAnchor("PlayerFrame (Alternate)")

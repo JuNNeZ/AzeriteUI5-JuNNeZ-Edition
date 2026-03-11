@@ -35,6 +35,27 @@
 
 ## 2026-03-11
 
+- **SaiyaRatt target/alt-player visibility follow-up started:** Reviewing the built-in SaiyaRatt preset after report that target still shows full health/absorb text and alternate player still shows the legacy mana crystal alongside the new mana bar. Scope limited to preset-gated visibility/layout behavior so stock Azerite remains unchanged.
+  - **Files Targeted:** `FixLog.md`, `Layouts/Data/TargetUnitFrame.lua`, `Layouts/Data/PlayerUnitFrameAlternate.lua`, `Components/UnitFrames/Units/Target.lua`, `Components/UnitFrames/Units/PlayerAlternate.lua`
+- **SaiyaRatt target/alt-player visibility follow-up applied:** Added explicit SaiyaRatt config flags so target now hides current-health text and absorb while keeping percent visibility under the compact crystal presentation, and alternate player now suppresses the Blizzard alt-power frame plus crops the imported bar art to remove the leftover crystal presentation.
+  - **Files Modified:** `Layouts/Data/TargetUnitFrame.lua`, `Layouts/Data/PlayerUnitFrameAlternate.lua`, `Components/UnitFrames/Units/Target.lua`, `Components/UnitFrames/Units/PlayerAlternate.lua`
+- **SaiyaRatt alt-power duplicate source identified:** Confirmed the retail `SanityBarFix` helper was restoring Blizzard's `PlayerPowerBarAlt` after login/zone/power-bar events, which can reintroduce the extra playeralternate power widget even when the SaiyaRatt preset hides it in the unitframe module.
+  - **Files Targeted:** `Components/Misc/SanityBarFix.lua`, `Components/UnitFrames/Units/PlayerAlternate.lua`
+- **SaiyaRatt alt-power duplicate source gated off:** Updated the retail `SanityBarFix` restore path to bail out and hard-hide Blizzard's `PlayerPowerBarAlt` while SaiyaRatt is active, and expanded the alternate-player hide helper to unregister the extra Retail power update events as well.
+  - **Files Modified:** `Components/Misc/SanityBarFix.lua`, `Components/UnitFrames/Units/PlayerAlternate.lua`
+- **SaiyaRatt target percent anchor issue identified:** Confirmed the compact target percent text was still anchoring to the generic target health overlay instead of the compact health backdrop/crystal, so SaiyaRatt offset tweaks alone could not center the percentage inside the crystal.
+  - **Files Targeted:** `Layouts/Data/TargetUnitFrame.lua`, `Components/UnitFrames/Units/Target.lua`
+- **Target percent display cache synced to fake-fill source:** Target health now caches a normalized `safePercent` from the same health-percent/fake-fill path that drives the compact target bar, with numeric fallback from `cur/max` during health post-updates. This keeps the SaiyaRatt target percentage text aligned with the visible bar instead of stale cached health values.
+  - **Files Modified:** `Components/UnitFrames/Units/Target.lua`
+- **SaiyaRatt target percent + alt-power parity review started:** Re-checking SaiyaRatt against the desktop AzRattUI copy after report that target percent placement regressed and alternate player fell back to the old crystal-style power fill. Focus is limited to using the same percent-display priority as playerframe and removing local SaiyaRatt-only power-bar overrides that AzRattUI itself does not use.
+  - **Files Targeted:** `Components/UnitFrames/Tags.lua`, `Components/UnitFrames/Units/Target.lua`, `Layouts/Data/PlayerUnitFrameAlternate.lua`
+- **SaiyaRatt target percent priority + alt-power override cleanup applied:** Changed the shared `[*:HealthPercent]` tag to prefer a frame's cached display percent before recomputing from raw health values, moved SaiyaRatt target percent rendering onto a dedicated overlay anchored to the compact health backdrop, and removed local SaiyaRatt alternate-player texcoord/draw-level overrides that were not present in the desktop AzRattUI layout.
+  - **Files Modified:** `Components/UnitFrames/Tags.lua`, `Components/UnitFrames/Units/Target.lua`, `Layouts/Data/PlayerUnitFrameAlternate.lua`
+- **Peer target-percent review started:** Comparing local `GW2_UI`, `ElvUI`, and `Platynator` health-percent text paths after report that SaiyaRatt target still shows the wrong percentage. Goal is to match the stable peer pattern for percent display without disturbing unrelated target rendering.
+  - **Files Targeted:** `Components/UnitFrames/Tags.lua`
+- **Peer target-percent pattern applied:** Aligned `[*:HealthPercent]` with the local peer add-ons by preferring the direct Midnight health-percent API (`UnitHealthPercent(..., CurveConstants.ScaleTo100)`) before falling back to cached frame values or raw `cur/max`. This keeps target percent text sourced from the same authority used by `GW2_UI` and `Platynator`, instead of trusting unitframe cache math first.
+  - **Peer References:** `GW2_UI/Libs/Core/oUF/elements/tags.lua`, `ElvUI/Game/Shared/Tags/Tags.lua`, `Platynator/Display/HealthText.lua`
+  - **Files Modified:** `Components/UnitFrames/Tags.lua`
 - **Party leader-change priority debuff crash investigation started:** Reviewing `oUF_PriorityDebuff` after user report of `attempt to compare number with boolean` during party leader swaps; also checking Blizzard quest portrait error and local `ElvUI`/`GW2_UI` handling for reusable guards.
   - **Files Targeted:** `Libs/oUF_Plugins/oUF_PriorityDebuff.lua`, `Components/Misc/TrackerWoW11.lua`, `Core/FixBlizzardBugsWow12.lua`
 - **Priority debuff compare crash fixed:** Normalized resolved dispel eligibility in `oUF_PriorityDebuff` to numeric `DispellPriority` values before aura-loop comparisons, so party/raid refreshes no longer try to compare the scan priority number against raw booleans or spell-name strings.
@@ -46,6 +67,15 @@
   - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
 - **Blizzard quest portrait guard parked:** Commented the temporary `QuestFrame_ShowQuestPortrait` measurement wrapper back out pending confirmation that the fault is ours rather than a broader Blizzard / third-party tracker-skin interaction. The candidate code remains in place but inactive for quick restoration.
   - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
+- **Retail tracker option cleanup started:** Confirmed the retail `TrackerWoW11` path no longer applies the old Azerite/Blizzard tracker theme logic, so the retail options page should stop exposing the stale experimental theme selector.
+  - **Files Targeted:** `Options/OptionsPages/Tracker.lua`, `Components/Misc/TrackerWoW11.lua`
+- **Retail tracker theme option removed:** Dropped the stale retail tracker theme dropdown from the options UI because `TrackerWoW11` no longer consumes that setting; retail now effectively relies on Blizzard's tracker presentation plus our hide/fade helpers only.
+  - **Files Modified:** `Options/OptionsPages/Tracker.lua`
+- **SaiyaRatt built-in profile preset work started:** Reviewing current `5.3.3` profile plumbing and lifting only the verified AzRattUI visual/layout deltas needed for a selectable built-in `SaiyaRatt` preset, while keeping newer JuNNeZ shared-unitframe/minimap safety fixes intact.
+  - **Files Targeted:** `Core/Core.lua`, `Layouts/Layouts.lua`, `Options/Options.lua`, `Layouts/Data/PlayerUnitFrame.lua`, `Layouts/Data/PlayerUnitFrameAlternate.lua`, `Layouts/Data/TargetUnitFrame.lua`, `Components/UnitFrames/Units/PlayerAlternate.lua`, `Components/UnitFrames/Units/Target.lua`, `Assets/`
+- **SaiyaRatt built-in profile preset added:** Seeded a protected built-in `SaiyaRatt` profile in the existing profile menu, backed it with a profile-scoped layout variant flag, and recreated the verified AzRattUI visual deltas for standard player PvP badge placement, alternate player mana-bar art/threat/positioning, and the compact critter-style target health presentation without copying the older shared-file regressions.
+  - **Assets Imported:** `Assets/power-bar-front.tga`, `Assets/power-bar-back.tga`, `Assets/power_bar_glow.tga`, `Assets/hp_critter_case_hi.tga`
+  - **Files Modified:** `Core/Core.lua`, `Options/Options.lua`, `Layouts/Layouts.lua`, `Layouts/Data/PlayerUnitFrame.lua`, `Layouts/Data/PlayerUnitFrameAlternate.lua`, `Layouts/Data/TargetUnitFrame.lua`, `Components/UnitFrames/Units/PlayerAlternate.lua`, `Components/UnitFrames/Units/Target.lua`
 
 ## 2026-03-09
 

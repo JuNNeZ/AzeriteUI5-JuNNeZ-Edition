@@ -78,6 +78,18 @@ local defaults = {
 	}
 }
 
+local SAIYARATT_PROFILE_KEY = "SaiyaRatt"
+local BUILTIN_PROFILE_KEYS = {
+	[ns.Prefix] = true,
+	[SAIYARATT_PROFILE_KEY] = true
+}
+
+local GetSavedProfile = function(db, profileKey)
+	local sv = db and db.sv
+	local profiles = sv and sv.profiles
+	return profiles and profiles[profileKey]
+end
+
 ns.exportableSettings, ns.exportableLayouts = {}, {}
 
 -- Proxy method to avoid modules using the callback object directly
@@ -127,7 +139,7 @@ end
 
 ns.DeleteProfile = function(self, targetProfileKey)
 	local currentProfileKey = self.db:GetCurrentProfile()
-	if (targetProfileKey == "Default") then
+	if (targetProfileKey == "Default" or self:IsBuiltinProfile(targetProfileKey)) then
 		return
 	end
 	for _,profileKey in next,self:GetProfiles() do
@@ -143,6 +155,9 @@ end
 
 ns.ResetProfile = function(self)
 	self.db:ResetProfile()
+	if (self:IsSaiyaRattProfile()) then
+		self:ApplySaiyaRattPreset()
+	end
 end
 
 ns.SetProfile = function(self, newProfileKey)
@@ -164,6 +179,81 @@ end
 
 ns.GetDefaultProfile = function(self)
 	return ns.Prefix
+end
+
+ns.IsBuiltinProfile = function(self, profileKey)
+	profileKey = profileKey or self:GetProfile()
+	return BUILTIN_PROFILE_KEYS[profileKey] and true or false
+end
+
+ns.GetActiveConfigVariant = function(self)
+	local profileKey = self.db and self.db.GetCurrentProfile and self.db:GetCurrentProfile()
+	if (profileKey == SAIYARATT_PROFILE_KEY) then
+		return "SaiyaRatt"
+	end
+	local profile = self.db and self.db.profile
+	local preset = profile and profile.stylePreset
+	if (type(preset) == "string" and preset ~= "") then
+		return preset
+	end
+end
+
+ns.IsSaiyaRattProfile = function(self, profileKey)
+	if (type(profileKey) == "string" and profileKey ~= "") then
+		if (profileKey == SAIYARATT_PROFILE_KEY) then
+			return true
+		end
+		local savedProfile = GetSavedProfile(self.db, profileKey)
+		return type(savedProfile) == "table" and savedProfile.stylePreset == "SaiyaRatt"
+	end
+	return self:GetActiveConfigVariant() == "SaiyaRatt"
+end
+
+ns.ApplySaiyaRattPreset = function(self)
+	if (not self.db or not self.db.profile) then
+		return
+	end
+
+	self.db.profile.stylePreset = "SaiyaRatt"
+	self.db.profile.autoLoadEditModeLayout = true
+	self.db.profile.editModeLayout = ns.Prefix
+
+	local PlayerFrame = self:GetModule("PlayerFrame", true)
+	if (PlayerFrame and PlayerFrame.db and PlayerFrame.db.profile) then
+		PlayerFrame.db.profile.enabled = false
+	end
+
+	local PlayerFrameAlternate = self:GetModule("PlayerFrameAlternate", true)
+	if (PlayerFrameAlternate and PlayerFrameAlternate.db and PlayerFrameAlternate.db.profile) then
+		PlayerFrameAlternate.db.profile.enabled = true
+	end
+
+	local Minimap = self:GetModule("Minimap", true)
+	if (Minimap and Minimap.db and Minimap.db.profile) then
+		Minimap.db.profile.theme = "Azerite"
+	end
+end
+
+ns.EnsureBuiltinProfiles = function(self)
+	if (not self.db) then
+		return
+	end
+
+	local savedProfile = GetSavedProfile(self.db, SAIYARATT_PROFILE_KEY)
+	if (type(savedProfile) == "table" and savedProfile.stylePreset == "SaiyaRatt") then
+		return
+	end
+
+	local currentProfileKey = self.db:GetCurrentProfile()
+	local charProfileKey = self.db.char.profile
+
+	self.db:SetProfile(SAIYARATT_PROFILE_KEY)
+	self:ApplySaiyaRattPreset()
+
+	if (currentProfileKey and currentProfileKey ~= SAIYARATT_PROFILE_KEY) then
+		self.db:SetProfile(currentProfileKey)
+	end
+	self.db.char.profile = charProfileKey or currentProfileKey or self:GetDefaultProfile()
 end
 
 ns.Export = function(self, ...)
@@ -247,6 +337,7 @@ ns.RefreshConfig = function(self, event, ...)
 end
 
 ns.OnEnable = function(self)
+	self:EnsureBuiltinProfiles()
 	self.db:SetProfile(self.db.char.profile)
 end
 

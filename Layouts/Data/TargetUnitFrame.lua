@@ -415,3 +415,51 @@ ns.RegisterConfig("TargetFrame", {
 	}
 })
 
+local CreateSaiyaRattTargetStyle = function(caseTexture)
+	return {
+		HealthBarSize = { 40, 36 },
+		HealthBarPosition = { "TOPRIGHT", -137, -63 },
+		HealthBarTexture = GetMedia("hp_critter_bar"),
+		HealthBarColor = { Colors.health[1], Colors.health[2], Colors.health[3] },
+		HealthBarOrientation = "LEFT",
+		HealthLabFakeOffsetX = 0,
+		HealthLabFakeOffsetY = 0,
+		HealthLabFakeInsetLeft = 0,
+		HealthLabFakeInsetRight = 0,
+		HealthLabFakeInsetTop = 0,
+		HealthLabFakeInsetBottom = 0,
+		HealthLabFakeAnchorFrame = "HEALTH",
+		HealthBarSparkMap = tinyBarSparkMap,
+		HealthBackdropSize = { 105, 104 },
+		HealthBackdropPosition = { "TOPRIGHT", -104, -28.5 },
+		HealthBackdropTexture = GetMedia(caseTexture),
+		HealthBackdropColor = { Colors.ui[1], Colors.ui[2], Colors.ui[3] },
+		HealthAbsorbColor = { 1, 1, 1, .35 },
+		HealthCastOverlayColor = { 1, 1, 1, .35 },
+		HealthThreatSize = { 105, 104 },
+		HealthThreatPosition = { "TOPRIGHT", -104, -28.5 },
+		HealthThreatTexture = GetMedia("hp_critter_case_glow")
+	}
+end
+
+ns.RegisterConfigVariant("SaiyaRatt", "TargetFrame", {
+	HideHealthValue = true,
+	HideHealthAbsorb = true,
+	KeepHealthPercentVisible = true,
+	HealthValueColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], 0 },
+	HealthPercentageAnchorFrame = "HEALTHBACKDROP",
+	HealthPercentagePosition = { "CENTER", 0, -1 },
+	CastBarTextColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], 0 },
+	CastBarTextProtectedColor = { Colors.normal[1], Colors.normal[2], Colors.normal[3], 0 },
+	CastBarValueColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], 0 },
+	CombatFeedbackPosition = { "CENTER", 70, 0 },
+	NamePosition = { "TOPRIGHT", -10, 20 },
+	PowerValueAlpha = 1,
+	HideZeroPower = true,
+	UseHealthSpark = true,
+	Novice = CreateSaiyaRattTargetStyle("hp_critter_case"),
+	Hardened = CreateSaiyaRattTargetStyle("hp_critter_case_hi"),
+	Seasoned = CreateSaiyaRattTargetStyle("hp_critter_case_hi"),
+	Boss = CreateSaiyaRattTargetStyle("hp_critter_case_hi")
+})
+
