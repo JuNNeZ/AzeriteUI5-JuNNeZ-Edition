@@ -806,8 +806,14 @@ API.UpdateHealth = function(self, event, unit)
 	element.approxInitialized = true
 
 	-- Cache a safe percent for tag text.
-	if (unit == "target" and type(safePercent) == "number") then
-		element.safePercent = NormalizePercent100(safePercent)
+	if (unit == "target") then
+		if (type(safePercent) == "number") then
+			element.safePercent = NormalizePercent100(safePercent)
+		elseif (rawCurSafe and rawMaxSafe) then
+			element.safePercent = SafePercentFromValues(safeCur, safeMax)
+		else
+			element.safePercent = nil
+		end
 	else
 		element.safePercent = SafePercentFromValues(safeCur, safeMax) or NormalizePercent100(safePercent)
 	end

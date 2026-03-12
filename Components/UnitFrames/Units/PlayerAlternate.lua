@@ -689,6 +689,9 @@ local UnitFrame_UpdateTextures = function(self)
 				texture:Hide()
 			end
 		end
+		if (threat.isShown and threat.PostUpdate) then
+			threat:PostUpdate(threat.feedbackUnit or unit, threat.__AzeriteUI_ThreatStatus, threat.__AzeriteUI_ThreatR, threat.__AzeriteUI_ThreatG, threat.__AzeriteUI_ThreatB)
+		end
 	end
 
 	local portraitBorder = self.Portrait.Border
@@ -1118,6 +1121,10 @@ local style = function(self, unit, id)
 		end
 	end
 	threatIndicator.PostUpdate = function(self, unit, status, r, g, b)
+		self.__AzeriteUI_ThreatStatus = status
+		self.__AzeriteUI_ThreatR = r
+		self.__AzeriteUI_ThreatG = g
+		self.__AzeriteUI_ThreatB = b
 		if (self.isShown) then
 			local safeR = (type(r) == "number" and (not issecretvalue or not issecretvalue(r))) and r or 1
 			local safeG = (type(g) == "number" and (not issecretvalue or not issecretvalue(g))) and g or 0
@@ -1247,6 +1254,10 @@ PlayerFrameAltMod.Update = function(self)
 		self.frame.Castbar:ForceUpdate()
 	else
 		self.frame:DisableElement("Castbar")
+	end
+
+	if (self.frame:IsElementEnabled("Power")) then
+		self.frame.Power:ForceUpdate()
 	end
 
 	self.frame.Name:SetShown(self.db.profile.showName)

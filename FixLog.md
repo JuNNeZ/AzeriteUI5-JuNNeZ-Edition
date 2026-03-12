@@ -2,13 +2,96 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-12
+
+- **BugSack clipboard restore started:** Re-adding the missing BugSack copy-to-clipboard workflow through a local compatibility hook so retail can once again open the current formatted BugSack entry in a selectable multiline copy window.
+  - **Files Targeted:** `FixLog.md`, `Components/Misc/Misc.xml`, `Components/Misc/BugSack.lua`
+- **BugSack clipboard restore applied:** Added a new always-on misc hook that waits for `BugSack`, injects a `Copy` button into the BugSack footer, and opens a reusable multiline copy window seeded from `BugSackScrollText` so the current formatted report can be selected and copied again.
+  - **Root Cause:** The installed retail `BugSack` UI no longer exposes any built-in copy-to-clipboard control, and this addon's old post-load BugSack hook was no longer present in the current retail module list.
+  - **Verification:** `luac -p 'Components/Misc/BugSack.lua'` passed.
+  - **Files Modified:** `Components/Misc/BugSack.lua`, `Components/Misc/Misc.xml`
+- **BugSack clipboard follow-up started:** Adjusting the restored copy flow after runtime report that the popup was not surfacing above the BugSack window and that the copied payload must include the full current session rather than only the currently displayed error.
+  - **Files Targeted:** `FixLog.md`, `Components/Misc/BugSack.lua`
+- **BugSack clipboard follow-up applied:** Switched the popup payload to a full current-session export built from `BugSack:GetErrors(BugGrabber:GetSessionId())`, stripped the inline color markup for cleaner external pastes, raised the copy frame above BugSack explicitly, and added `Ctrl+C` auto-close with a chat confirmation once the copy keystroke is detected.
+  - **Root Cause:** The first restore reused the currently visible `BugSackScrollText` entry and a normal dialog strata window, so it only copied one error at a time and could still appear behind the main BugSack frame.
+  - **Verification:** `luac -p 'Components/Misc/BugSack.lua'` passed.
+  - **Files Modified:** `Components/Misc/BugSack.lua`
+
 ## 5.3.3-JuNNeZ (2026-03-11)
 
 **Status:** Release candidate.
 
 ### Bug Fixes In Progress
+- **Full embedded oUF rollback started:** Abandoning the mixed post-sync library state after repeated runtime regressions during travel/combat. Scope limited to restoring the entire pre-sync embedded library trees from `Backups/oUF_sync_20260312_191700/` for `oUF`, `oUF_Plugins`, and `oUF_Classic`, with a safety backup of the current broken state first.
+  - **Files Targeted:** `FixLog.md`, `Libs/oUF/**`, `Libs/oUF_Plugins/**`, `Libs/oUF_Classic/**`
+- **Selective oUF rollback started:** Re-checking the broad stock library sync after new regressions in `Libs/oUF/colors.lua` and `Libs/oUF/elements/healthprediction.lua`. Scope limited to restoring only the mismatched embedded oUF files from the pre-sync backup instead of reverting the entire library replacement.
+  - **Files Targeted:** `FixLog.md`, `Libs/oUF/colors.lua`, `Libs/oUF/elements/health.lua`, `Libs/oUF/elements/healthprediction.lua`, `Libs/oUF_Classic/elements/healthprediction.lua`
+- **Selective oUF compatibility restore started:** Restoring the pre-sync `oUF` files whose contracts no longer match AzeriteUI’s current runtime (`colors.lua`, `health.lua`, and health prediction in retail/classic`) after direct diff review showed the stock replacements removed secret-safe prediction handling assumptions and older color table behavior this addon still depends on.
+  - **Files Targeted:** `FixLog.md`, `Libs/oUF/colors.lua`, `Libs/oUF/elements/health.lua`, `Libs/oUF/elements/healthprediction.lua`, `Libs/oUF_Classic/elements/healthprediction.lua`
+- **Local oUF library sync started:** Backing up the current embedded `oUF`, `oUF_Plugins`, and paired `oUF_Classic` folders, then updating them from the local `AzeriteUI_Stock` addon copy so the runtime libraries match stock before any follow-up fixes.
+  - **Files Targeted:** `FixLog.md`, `Libs/oUF`, `Libs/oUF_Plugins`, `Libs/oUF_Classic`
+- **Target percent stock-tag recheck started:** Verifying the local stock target file and embedded oUF health element after user suggestion that stock may already be sourcing percent through oUF. Scope limited to confirming the source and, if valid, moving our target percent back onto a tag-driven path without reviving stale fallback math.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Tags.lua`, `Components/UnitFrames/Units/Target.lua`, `Libs/oUF/elements/health.lua`, `AzeriteUI_Stock/Components/UnitFrames/Units/Target.lua`
+- **Target percent cleanup/prune started:** Removing the failed proxy/interpolation experiment after local API and peer-addon review confirmed no readable secret-safe target percent source. Scope limited to simplifying `Target.lua` and trimming the matching debug noise so target percent only shows when we truly have a safe numeric source.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Target.lua`, `Core/Debugging.lua`
+- **Target percent API/peer-addon audit started:** Checking local WoW API docs/MCP data and neighboring addons (`GW2_UI`, `ElvUI`, `Platynator`, `AzeriteUI_Stock`) after repeated secret-target dumps still showed `api_secret` with `healthPercentText: 100%`. Scope limited to whether any local implementation exposes a readable post-widget health percent before we change the target path again.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Target.lua`, `Core/Debugging.lua`
+- **Target stale-percent cache purge started:** Removing the addon-side fallback that re-caches `100%` for target health whenever raw current health is secret and no numeric percent source is available. Scope limited to target-safe percent caching and display fallback rules.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`, `Components/UnitFrames/Units/Target.lua`
+- **Target percent deep path audit started:** Verifying whether the stuck target percentage comes from duplicate local percent logic or addon-created overlay duplication. Audit confirmed the bar and text are following separate percent-resolution paths inside our own target code, not a second tagged fontstring or a taint-driven Blizzard fallback.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Target.lua`, `Core/Debugging.lua`
+- **Target percent live-update follow-up started:** Reviewing continued report that target percent text can still lag behind the visible fake-fill bar even after source-order fixes, with current scope limited to whether the percent fontstring is refreshed on the same live statusbar sync path as the fake-fill texture.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Target.lua`
+- **Target percent pinned-at-100 investigation started:** Reviewing `/azdebug dump target` output after follow-up report that the target percent text stays at `100%` even while the visible fake-fill health bar is lower. Scope limited to the target health percent update order/source priority in `Target.lua`.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Target.lua`
+- **Target health percent nil-call investigation started:** Tracing BugSack report `attempt to call global 'UpdateTargetHealthPercentText'` from `Target.lua:1047` during target frame `Health:PostUpdate`/`ForceUpdate`. Scope limited to local function resolution in the target unitframe module.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Target.lua`
 - **Party leader-change priority debuff crash:** Normalized `oUF_PriorityDebuff` dispel entries to numeric priorities so party roster and leader updates no longer hit the boolean-vs-number compare path.
   - **Files Modified:** `Libs/oUF_Plugins/oUF_PriorityDebuff.lua`
+- **Target health percent nil-call fixed:** Forward-declared the local `UpdateTargetHealthPercentText` helper before `Health_PostUpdate` and kept the later function body assignment on that same local, so early health callbacks no longer fall through to a missing global during target frame setup/config refresh.
+  - **Root Cause:** `Health_PostUpdate` was defined before `local UpdateTargetHealthPercentText = function(...)` existed in scope, so Lua captured the global name instead of the intended local helper.
+  - **Files Modified:** `Components/UnitFrames/Units/Target.lua`
+- **Target percent pinned-at-100 fixed:** Reordered target health post-update so fake-fill/safe-percent sync runs before the percent fontstring refresh, and made the text updater prefer the already-synced visible-bar cache whenever the target fake-fill path is active.
+  - **Root Cause:** `Health_PostUpdate` updated the percent text before `SyncTargetHealthVisualState()` refreshed `health.safePercent`, while `UpdateTargetHealthPercentText()` still preferred a fresh `UnitHealthPercent(...ScaleTo100)` read that can stay stale at `100` on secret target updates.
+  - **Files Modified:** `Components/UnitFrames/Units/Target.lua`
+- **Target percent live-update follow-up fixed:** Folded the percent fontstring refresh into `SyncTargetHealthVisualState()` so the text now updates on the same `OnValueChanged`/`OnMinMaxChanged` path that already keeps the fake-fill target health bar current.
+  - **Root Cause:** The visible target fake-fill could live-update from statusbar script hooks without `Health_PostUpdate()` firing again, leaving the percent text stuck on an older cached value even after the bar itself had moved.
+  - **Files Modified:** `Components/UnitFrames/Units/Target.lua`
+- **Target percent deep path audit fixed:** Added a dedicated hidden target-health proxy statusbar to derive an addon-readable display percent from the same secret payload that drives the visible fake-fill bar, and switched the percent text to that proxy-backed cache instead of stale readable API fallbacks when raw target health is secret.
+  - **Root Cause:** The target health bar could render from a secret `UnitHealthPercent(...ZeroToOne)` payload, but our text path still relied on readable `ScaleTo100`/cached values. That split let the bar move while the text stayed pinned at an older `100%`.
+  - **Files Modified:** `Components/UnitFrames/Units/Target.lua`, `Core/Debugging.lua`
+- **Target stale-percent cache purge fixed:** Target health now clears its numeric percent cache when the live percent is unresolved/secret instead of recomputing a fake `100%` from fallback `safeCur/safeMax`, and the target percent text no longer falls back to stale cached values in that unresolved secret path.
+  - **Root Cause:** `API.UpdateHealth()` and `UpdateTargetHealthPercentText()` were still willing to reuse `safePercent` derived from fallback max-health values after the deep audit proved no readable percent existed (`displayPct nil`, `api_secret` path). That preserved a wrong `100%` even though the real live percent was not available to Lua.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `Components/UnitFrames/Units/Target.lua`
+- **Target percent API/peer-addon audit applied:** Local WoW API references and neighboring addons (`GW2_UI`, `ElvUI`, `Platynator`, `AzeriteUI_Stock`) confirmed there is no reusable secret-safe target-percent text path; peers still format `UnitHealthPercent(...ScaleTo100)` or raw `UnitHealth/UnitHealthMax` directly. Added a new target proxy probe that samples `StatusBar:GetInterpolatedValue()` before geometry fallback and expanded `/azdebug dump target` so the next dump shows whether Blizzard leaves the rendered proxy value readable after widget evaluation.
+  - **Root Cause:** The earlier proxy experiment only read back secret-prone `GetValue`/texture geometry paths, so we still had no evidence about the one remaining local widget API that might expose a readable rendered percent.
+  - **Peer Check:** `GW2_UI/core/Mixin/healthBarMixin.lua`, `GW2_UI/Libs/Core/oUF/elements/tags.lua`, `ElvUI/Game/Shared/Modules/Tooltip/Tooltip.lua`, `ElvUI/Game/Shared/Tags/Tags.lua`, `Platynator/Display/HealthText.lua`, and `AzeriteUI_Stock/Components/UnitFrames/Tags.lua` all rely on direct percent/raw-health APIs rather than a secret-safe post-widget extractor.
+  - **Files Modified:** `Components/UnitFrames/Units/Target.lua`, `Core/Debugging.lua`
+- **Target percent cleanup/prune applied:** Removed the hidden target secret-percent proxy and all proxy-specific dump fields after the next dump proved even `GetInterpolatedValue()` remained secret. The target percent text path is now intentionally minimal: use readable `UnitHealthPercent(...ScaleTo100)` when available, otherwise fall back to safe raw `cur/max` only when both raw values are readable, else clear the text and cache.
+  - **Root Cause:** The proxy/interpolation experiment added complexity without producing a readable percent; leaving it in place only made the target path harder to reason about while the UI still lied with stale cached text.
+  - **Files Modified:** `Components/UnitFrames/Units/Target.lua`, `Core/Debugging.lua`
+- **Target percent stock-tag recheck applied:** Confirmed stock target percent is tag-driven, not oUF-computed. Moved our target percent back onto a tag as well, but used a dedicated `[*:TargetHealthPercent]` method that only accepts readable `UnitHealthPercent(...ScaleTo100)` or safe raw `cur/max` from the target frame. This keeps the stock-style text update flow without reintroducing the generic stale fallback chain that previously pinned `100%`.
+  - **Root Cause:** The shared oUF health element only passes raw `cur/max` from `UnitHealth/UnitHealthMax`; stock gets percent through its tag layer. Our prior bespoke target text formatter had grown into a second logic path, while the generic `[*:HealthPercent]` tag still contained broader fallback behavior than we want for secret target health.
+  - **Files Modified:** `Components/UnitFrames/Tags.lua`, `Components/UnitFrames/Units/Target.lua`
+- **Local oUF library sync applied:** Backed up the pre-sync libraries to `Backups/oUF_sync_20260312_191700/`, then mirrored `Libs/oUF`, `Libs/oUF_Plugins`, and `Libs/oUF_Classic` from the local `AzeriteUI_Stock` addon copy. This removed local-only upstream metadata files that are not present in stock and aligned the embedded runtime library trees with the stock addon snapshot.
+  - **Verification:** `luac -p 'Libs/oUF/elements/health.lua'` passed and `luac -p 'Libs/oUF_Classic/elements/health.lua'` passed. `luac -p 'Libs/oUF_Plugins/oUF_PriorityDebuff.lua'` did not complete within the command timeout, so plugin syntax was not fully re-verified here.
+  - **Files Modified:** `Libs/oUF/**`, `Libs/oUF_Plugins/**`, `Libs/oUF_Classic/**`
+- **Selective oUF compatibility restore applied:** Restored `Libs/oUF/colors.lua`, `Libs/oUF/elements/health.lua`, `Libs/oUF/elements/healthprediction.lua`, and `Libs/oUF_Classic/elements/healthprediction.lua` from the pre-sync backup after the stock replacements introduced immediate runtime regressions. `colors.lua` had shifted to a newer color-table contract that no longer matched this addon’s runtime, while the synced `healthprediction.lua` compared incoming-heal/heal-absorb values directly and tainted on WoW 12 secret numbers.
+  - **Root Cause:** The full stock sync mixed newer `oUF` library assumptions into an addon codebase still built around the older embedded contract and secret-safe prediction behavior. That produced the `DebuffTypeColor` nil iteration crash in `colors.lua` and secret-number comparison crashes in `healthprediction.lua`.
+  - **Safety Backup:** Saved the just-synced file set being replaced to `Backups/oUF_partial_rollback_20260312_1945/` before restoring the pre-sync copies.
+  - **Verification:** Restored files match `Backups/oUF_sync_20260312_191700/` exactly for the four-file rollback set. `luac -p 'Libs/oUF/colors.lua'`, `luac -p 'Libs/oUF/elements/health.lua'`, `luac -p 'Libs/oUF/elements/healthprediction.lua'`, and `luac -p 'Libs/oUF_Classic/elements/healthprediction.lua'` all passed.
+  - **Files Modified:** `Libs/oUF/colors.lua`, `Libs/oUF/elements/health.lua`, `Libs/oUF/elements/healthprediction.lua`, `Libs/oUF_Classic/elements/healthprediction.lua`
+- **oUF colors enum guard started:** Following a new load-time crash at `Libs/oUF/colors.lua:91`, auditing the restored file against the local `oUF` bootstrap confirmed this embedded `oUF` tree does not define `oUF.Enum`. Scope limited to making `colors.lua` tolerate the older bootstrap by using stable fallback selection/dispel keys instead of assuming enum tables exist.
+  - **Files Targeted:** `FixLog.md`, `Libs/oUF/colors.lua`, `Libs/oUF/init.lua`
+- **oUF colors enum guard applied:** Added local fallback `SelectionType` and `DispelType` tables in `Libs/oUF/colors.lua` so the file no longer hard-depends on `oUF.Enum` during load. This keeps the newer color file compatible with the older local `oUF` bootstrap that only initializes `ns.oUF`/`ns.oUF.Private`.
+  - **Root Cause:** The restored/synced `colors.lua` expected `oUF.Enum.SelectionType` and `oUF.Enum.DispelType`, but the local `Libs/oUF/init.lua` does not define `oUF.Enum` at all, so load failed before any frame code ran.
+  - **Verification:** `luac -p 'Libs/oUF/colors.lua'` passed.
+  - **Files Modified:** `Libs/oUF/colors.lua`
+- **Full embedded oUF rollback applied:** Restored the entire `Libs/oUF`, `Libs/oUF_Plugins`, and `Libs/oUF_Classic` trees from `Backups/oUF_sync_20260312_191700/` after continued travel/combat regressions made the mixed post-sync state not worth salvaging. This discards the piecemeal compatibility attempts and returns the addon to the last known-good embedded library snapshot.
+  - **Root Cause:** The stock sync plus follow-up selective fixes left the embedded library layer in a mixed-contract state. Even when individual crashes were addressed, the net result was still less stable than the original bundled libraries under real gameplay conditions.
+  - **Safety Backup:** Saved the fully mixed/broken library state being discarded to `Backups/oUF_full_rollback_20260312_2005/`.
+  - **Verification:** `git diff --no-index --quiet` reports `MATCH oUF`, `MATCH oUF_Plugins`, and `MATCH oUF_Classic` against `Backups/oUF_sync_20260312_191700/`. `luac -p 'Libs/oUF/colors.lua'`, `luac -p 'Libs/oUF/elements/health.lua'`, `luac -p 'Libs/oUF/elements/healthprediction.lua'`, `luac -p 'Libs/oUF_Classic/elements/healthprediction.lua'`, and `luac -p 'Libs/oUF_Plugins/oUF_PriorityDebuff.lua'` all passed.
+  - **Files Modified:** `Libs/oUF/**`, `Libs/oUF_Plugins/**`, `Libs/oUF_Classic/**`
 
 ## 2026-03-10
 
@@ -56,6 +139,15 @@
 - **Peer target-percent pattern applied:** Aligned `[*:HealthPercent]` with the local peer add-ons by preferring the direct Midnight health-percent API (`UnitHealthPercent(..., CurveConstants.ScaleTo100)`) before falling back to cached frame values or raw `cur/max`. This keeps target percent text sourced from the same authority used by `GW2_UI` and `Platynator`, instead of trusting unitframe cache math first.
   - **Peer References:** `GW2_UI/Libs/Core/oUF/elements/tags.lua`, `ElvUI/Game/Shared/Tags/Tags.lua`, `Platynator/Display/HealthText.lua`
   - **Files Modified:** `Components/UnitFrames/Tags.lua`
+- **Target percent direct-update pass started:** Reworking target health percent to stop using the shared tag fallback chain and instead follow the same direct-update model already used by target power text. Scope limited to `Target.lua` so other unitframe percent tags stay untouched.
+  - **Files Targeted:** `Components/UnitFrames/Units/Target.lua`
+- **Target percent direct-update path applied:** Replaced the target-frame health percent tag path with a dedicated `Target.lua` updater that reads `UnitHealthPercent(..., CurveConstants.ScaleTo100)` first, then falls back to cached target health values only when needed. This makes target percent follow the same single-source update model as target power text instead of bouncing through the shared tag engine.
+  - **Peer Check:** Local `GW2_UI` and `Platynator` both source displayed target health percent directly from `UnitHealthPercent`, while our target power text already uses a dedicated updater in `Target.lua`.
+  - **Files Modified:** `Components/UnitFrames/Units/Target.lua`
+- **Playeralternate live-refresh follow-up started:** Investigating report that SaiyaRatt alternate-player sometimes needs `/reload` after profile switches and that option toggles can leave the alternate-player threat textures visible but white. Scope limited to `PlayerAlternate.lua` runtime refresh behavior.
+  - **Files Targeted:** `Components/UnitFrames/Units/PlayerAlternate.lua`
+- **Playeralternate live-refresh follow-up applied:** Forced alternate-player power to refresh during module updates so SaiyaRatt bar art appears immediately after profile/option changes, and cached/reapplied the last threat color after texture refreshes so the power threat glow no longer comes back white when toggling alternate-player options.
+  - **Files Modified:** `Components/UnitFrames/Units/PlayerAlternate.lua`
 - **Party leader-change priority debuff crash investigation started:** Reviewing `oUF_PriorityDebuff` after user report of `attempt to compare number with boolean` during party leader swaps; also checking Blizzard quest portrait error and local `ElvUI`/`GW2_UI` handling for reusable guards.
   - **Files Targeted:** `Libs/oUF_Plugins/oUF_PriorityDebuff.lua`, `Components/Misc/TrackerWoW11.lua`, `Core/FixBlizzardBugsWow12.lua`
 - **Priority debuff compare crash fixed:** Normalized resolved dispel eligibility in `oUF_PriorityDebuff` to numeric `DispellPriority` values before aura-loop comparisons, so party/raid refreshes no longer try to compare the scan priority number against raw booleans or spell-name strings.

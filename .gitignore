@@ -22,6 +22,7 @@ Desktop.ini
 
 # Research and development (local only)
 .research/
+Backups/
 
 # Development documentation (internal only)
 AGENTS.md

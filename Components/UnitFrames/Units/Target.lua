@@ -423,6 +423,8 @@ local ApplyTargetSimpleHealthFakeFillByPercent
 
 local HideTargetNativeHealthVisuals
 
+local UpdateTargetHealthPercentTag
+
 local ClampTargetSparkPercent = function(value)
 	if (type(value) ~= "number") or (issecretvalue and issecretvalue(value)) then
 		return nil
@@ -615,15 +617,20 @@ local UpdateTargetHealthFakeFillFromBar = function(health)
 		local displayPercent = NormalizeTargetDisplayPercent(percent)
 		if (type(displayPercent) == "number") then
 			health.safePercent = displayPercent
+		else
+			health.safePercent = nil
 		end
-		health.__AzeriteUI_TargetFakeSource = source
+		health.__AzeriteUI_TargetDisplayPercent = displayPercent
+		health.__AzeriteUI_TargetFakeSource = (source == "api" and type(displayPercent) ~= "number") and "api_secret" or source
 		health.__AzeriteUI_TargetSparkPercent = ClampTargetSparkPercent(percent)
 		UpdateTargetBarSpark(health, percent)
 		return true
 	end
 
 	health.__AzeriteUI_TargetFakeSource = "none"
+	health.__AzeriteUI_TargetDisplayPercent = nil
 	health.__AzeriteUI_TargetSparkPercent = nil
+	health.safePercent = nil
 	fakeFill:SetTexCoord(1, 0, 0, 1)
 	fakeFill:Show()
 	UpdateTargetBarSpark(health, nil)
@@ -636,6 +643,10 @@ local SyncTargetHealthVisualState = function(health)
 	end
 	HideTargetNativeHealthVisuals(health)
 	local updated = UpdateTargetHealthFakeFillFromBar(health)
+	local owner = health.__owner
+	if (owner) then
+		UpdateTargetHealthPercentTag(owner)
+	end
 	UpdateTargetBarSpark(health, nil)
 	return updated
 end
@@ -1040,15 +1051,16 @@ end
 -- Forceupdate health prediction on health updates,
 -- to assure our smoothed elements are properly aligned.
 local Health_PostUpdate = function(element, unit, cur, max)
-	if (type(cur) == "number" and type(max) == "number" and max > 0
+	if (element.__AzeriteUI_RawCurSafe and element.__AzeriteUI_RawMaxSafe
+		and type(cur) == "number" and type(max) == "number" and max > 0
 		and (not issecretvalue or (not issecretvalue(cur) and not issecretvalue(max)))) then
 		element.safePercent = NormalizeTargetDisplayPercent((cur / max) * 100)
 	end
+	SyncTargetHealthVisualState(element)
 	local predict = element.__owner.HealthPrediction
 	if (predict) then
 		predict:ForceUpdate()
 	end
-	SyncTargetHealthVisualState(element)
 	UpdateTargetBarSpark(element, nil)
 end
 
@@ -1550,6 +1562,15 @@ local GetTargetPowerValueAlpha = function()
 	return .75
 end
 
+UpdateTargetHealthPercentTag = function(frame)
+	if (not frame or not frame.Health or not frame.Health.Percent or not frame.Health.Percent.UpdateTag) then
+		return
+	end
+	pcall(function()
+		frame.Health.Percent:UpdateTag()
+	end)
+end
+
 local UpdateTargetPowerValueText = function(frame)
 	if (not frame or not frame.Power or not frame.Power.Value) then
 		return
@@ -1830,6 +1851,7 @@ local Cast_UpdateTexts = function(element)
 		if (healthValue) then
 			healthValue:Hide()
 		end
+		UpdateTargetHealthPercentTag(element.__owner)
 		return
 	end
 
@@ -2430,6 +2452,7 @@ local UnitFrame_UpdateTextures = function(self)
 			cast:ForceUpdate()
 			Cast_UpdateTexts(cast)
 		end
+		UpdateTargetHealthPercentTag(self)
 		if (key == "Critter") then
 			self:DisableElement("Auras")
 		end
@@ -2460,6 +2483,7 @@ local UnitFrame_PostUpdate = function(self)
 	if (self.Health and self.Health.ForceUpdate) then
 		self.Health:ForceUpdate()
 	end
+	UpdateTargetHealthPercentTag(self)
 	Classification_Update(self)
 	TargetIndicator_Update(self)
 	TargetIndicator_Start(self)
@@ -2477,8 +2501,10 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 		if (self.Health) then
 			self.Health.__AzeriteUI_LastFakePercent = nil
 			self.Health.__AzeriteUI_TargetFakeSource = nil
+			self.Health.__AzeriteUI_TargetDisplayPercent = nil
 			self.Health.__AzeriteUI_MirrorPercent = nil
 			self.Health.__AzeriteUI_TexturePercent = nil
+			self.Health.safePercent = nil
 			if (self.Health.FakeFill and self.Health.FakeFill.Hide) then
 				self.Health.FakeFill:Hide()
 			end
@@ -2513,9 +2539,7 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 		if (self.Health and self.Health.Value and self.Health.Value.UpdateTag) then
 			self.Health.Value:UpdateTag()
 		end
-		if (self.Health and self.Health.Percent and self.Health.Percent.UpdateTag) then
-			self.Health.Percent:UpdateTag()
-		end
+		UpdateTargetHealthPercentTag(self)
 		Name_PostUpdate(self)
 
 	elseif (event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_REGEN_DISABLED") then
@@ -2807,9 +2831,10 @@ local style = function(self, unit, id)
 	healthPerc:SetTextColor(unpack(db.HealthPercentageColor))
 	healthPerc:SetJustifyH(db.HealthPercentageJustifyH)
 	healthPerc:SetJustifyV(db.HealthPercentageJustifyV)
-	self:Tag(healthPerc, prefix("[*:HealthPercent]"))
+	self:Tag(healthPerc, prefix("[*:TargetHealthPercent]"))
 
 	self.Health.Percent = healthPerc
+	UpdateTargetHealthPercentTag(self)
 
 	-- Absorb Bar
 	--------------------------------------------
@@ -3137,6 +3162,7 @@ end
 
 TargetFrameMod.Update = function(self)
 	UpdateTargetPowerValueText(self.frame)
+	UpdateTargetHealthPercentTag(self.frame)
 
 	if (self.db.profile.showAuras) then
 		self.frame:EnableElement("Auras")

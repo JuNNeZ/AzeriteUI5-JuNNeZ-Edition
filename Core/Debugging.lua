@@ -1128,6 +1128,10 @@ local function DumpBar(bar, labelOverride)
 		SafePrint("|cfff0f0f0  healthFake:",
 			"source", bar.__AzeriteUI_TargetFakeSource,
 			"targetPctSource", bar.__AzeriteUI_TargetPercentSource,
+			"displayPct", bar.__AzeriteUI_TargetDisplayPercent,
+			"safePct", bar.safePercent,
+			"mirrorPct", bar.__AzeriteUI_MirrorPercent,
+			"texPct", bar.__AzeriteUI_TexturePercent,
 			"invertPct", _G.__AzeriteUI_DEBUG_TARGET_HEALTH_FORCE_INVERT,
 			"noInvertPct", _G.__AzeriteUI_DEBUG_TARGET_HEALTH_FORCE_NOINVERT,
 			"rawCurSafe", bar.__AzeriteUI_RawCurSafe,
@@ -1184,6 +1188,9 @@ local function DumpUnitBars(frame, name)
 		end
 	end
 	DumpBar(frame.Health)
+	if (frame.Health and frame.Health.Percent and frame.Health.Percent.GetText) then
+		SafePrint("|cfff0f0f0  healthPercentText:", SafeCall(frame.Health.Percent, "GetText"))
+	end
 	DumpArtTextures(frame.Health, "Health")
 	DumpBar(frame.Health and frame.Health.Preview)
 	DumpBar(frame.Castbar)

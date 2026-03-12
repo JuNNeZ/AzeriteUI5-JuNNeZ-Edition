@@ -1217,6 +1217,52 @@ Methods[prefix("*:HealthPercent")] = function(unit)
 	end
 end
 
+Events[prefix("*:TargetHealthPercent")] = Events[prefix("*:HealthPercent")]
+Methods[prefix("*:TargetHealthPercent")] = function(unit)
+	if (UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit)) then
+		return
+	end
+
+	local apiPercent
+	if (UnitHealthPercent) then
+		pcall(function()
+			if (CurveConstants and CurveConstants.ScaleTo100) then
+				apiPercent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
+			else
+				apiPercent = UnitHealthPercent(unit)
+			end
+		end)
+	end
+	if (type(apiPercent) == "number" and not (issecretvalue and issecretvalue(apiPercent))) then
+		local frame = _FRAME
+		if (frame and frame.Health) then
+			frame.Health.safePercent = apiPercent
+		end
+		return FormatPercent(apiPercent)
+	end
+
+	local frame = _FRAME
+	if (frame and SafeUnitTokenEquals(frame.unit, unit) and frame.Health) then
+		local health = frame.Health
+		if (health.__AzeriteUI_RawCurSafe and health.__AzeriteUI_RawMaxSafe) then
+			local percent = type(health.safePercent) == "number" and health.safePercent or nil
+			if (type(percent) ~= "number") then
+				local cur = health.safeCur or health.cur
+				local max = health.safeMax or health.max
+				percent = SafePercent(cur, max)
+			end
+			if (type(percent) == "number") then
+				health.safePercent = percent
+				return FormatPercent(percent)
+			end
+		else
+			health.safePercent = nil
+		end
+	end
+
+	return ""
+end
+
 Events[prefix("*:PowerPercent")] = "UNIT_POWER_FREQUENT UNIT_POWER_UPDATE UNIT_MAXPOWER UNIT_DISPLAYPOWER UNIT_POWER_BAR_SHOW UNIT_POWER_BAR_HIDE"
 Methods[prefix("*:PowerPercent")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then

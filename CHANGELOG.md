@@ -3,6 +3,12 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.5-JuNNeZ (2026-03-12)
+
+### Fixes
+- Restored the embedded `oUF`, `oUF_Plugins`, and `oUF_Classic` libraries to the pre-sync snapshot after the newer mixed library state introduced startup, travel, combat, and secret-value regressions.
+- Added local `Backups/` snapshots to `.gitignore` so operational rollback folders no longer clutter the worktree.
+
 ## 5.3.4-JuNNeZ (2026-03-11)
 
 ### Saiyaratt Exposition
