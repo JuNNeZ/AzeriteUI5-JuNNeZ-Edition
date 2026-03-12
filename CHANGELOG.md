@@ -12,7 +12,7 @@ Do not repeat older items from prior versions in newer entries.
 ## 5.3.4-JuNNeZ (2026-03-11)
 
 ### Saiyaratt Exposition
-- Added a built-in selectable `SaiyaRatt` profile preset alongside the default Azerite profile.
+- Added a built-in selectable SaiyaRatt profile preset alongside the default Azerite profile.
 - Recreated the verified SaiyaRatt player, alternate-player, and target unitframe presentation using only the referenced AzRattUI assets and layout deltas.
 - Added the required SaiyaRatt media for the alternate-player power bar and compact target presentation.
 - Gated SaiyaRatt-specific target and alternate-player behavior so the stock Azerite profile remains unchanged.
