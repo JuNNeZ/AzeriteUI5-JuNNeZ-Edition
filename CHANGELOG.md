@@ -3,7 +3,7 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
-## 5.3.7-JuNNeZ (2026-03-13)
+## 5.3.8-JuNNeZ (2026-03-13)
 
 ### Fixes
 - Restored action-bar spell proc highlights by reconnecting `LibActionButton` overlay-glow handling to AzeriteUI's custom `CustomSpellActivationAlert` texture on the main bars.

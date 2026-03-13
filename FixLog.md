@@ -63,6 +63,8 @@
   - **Root Cause:** The neutral overlay made the assisted highlight footprint too large, and the earlier attempts at tinting the base art were not reliable. For release, the stable path is the simple circular assisted highlight with one fixed color and no exposed color controls.
   - **Verification:** `luac -p 'Options/OptionsPages/ActionBars.lua'`, `luac -p 'Components/ActionBars/Elements/ActionBars.lua'`, and `luac -p 'Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua'` passed. In-game `/reload` verification pending.
   - **Files Modified:** `Options/OptionsPages/ActionBars.lua`, `Components/ActionBars/Elements/ActionBars.lua`, `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+- **Release version correction applied:** Bumped the in-repo release metadata from `5.3.7-JuNNeZ` to `5.3.8-JuNNeZ` after finalizing the assisted-highlight release state.
+  - **Files Modified:** `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `CHANGELOG.md`
 
 ## 2026-03-12
 
