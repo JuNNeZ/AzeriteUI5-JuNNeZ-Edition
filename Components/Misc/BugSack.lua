@@ -140,7 +140,18 @@ BugSackClipboard.CreateCopyWindow = function(self)
 	end)
 	editBox:SetScript("OnTextChanged", function(box)
 		local minHeight = scrollFrame:GetHeight()
-		local textHeight = box:GetStringHeight() + 24
+		local _, lineHeight = box:GetFont()
+		if (type(lineHeight) ~= "number" or lineHeight <= 0) then
+			lineHeight = 14
+		end
+		local lineCount = 1
+		if (box.GetNumLines) then
+			local okLines, value = pcall(box.GetNumLines, box)
+			if (okLines and type(value) == "number" and value > 0) then
+				lineCount = value
+			end
+		end
+		local textHeight = (lineCount * lineHeight) + 24
 		box:SetHeight(math_max(minHeight, textHeight))
 	end)
 	editBox:SetScript("OnKeyDown", function(_, key)

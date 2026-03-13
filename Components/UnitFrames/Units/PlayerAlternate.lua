@@ -673,6 +673,41 @@ local UnitFrame_UpdateTextures = function(self)
 	cast:SetOrientation(db.HealthBarOrientation)
 	cast:SetSparkMap(db.HealthBarSparkMap)
 
+	local power = self.Power
+	power:ClearAllPoints()
+	power:SetPoint(unpack(config.PowerBarPosition))
+	power:SetSize(unpack(config.PowerBarSize))
+	power:SetSparkTexture(config.PowerBarSparkTexture)
+	power:SetOrientation(config.PowerBarOrientation)
+	power:SetStatusBarTexture(config.PowerBarTexture)
+	power:SetAlpha(config.PowerBarAlpha or 1)
+
+	local powerTexture = power.GetStatusBarTexture and power:GetStatusBarTexture()
+	if (powerTexture and powerTexture.SetDrawLayer) then
+		powerTexture:SetDrawLayer("ARTWORK", 0)
+	end
+	if (powerTexture and powerTexture.SetTexCoord) then
+		if (config.PowerBarTexCoord) then
+			powerTexture:SetTexCoord(unpack(config.PowerBarTexCoord))
+		else
+			powerTexture:SetTexCoord(0, 1, 0, 1)
+		end
+	end
+
+	local powerBackdrop = power.Backdrop
+	powerBackdrop:ClearAllPoints()
+	powerBackdrop:SetPoint(unpack(config.PowerBackdropPosition))
+	powerBackdrop:SetSize(unpack(config.PowerBackdropSize))
+	powerBackdrop:SetTexture(config.PowerBackdropTexture)
+	powerBackdrop:SetVertexColor(unpack(config.PowerBackdropColor))
+	if (powerBackdrop.SetTexCoord) then
+		if (config.PowerBackdropTexCoord) then
+			powerBackdrop:SetTexCoord(unpack(config.PowerBackdropTexCoord))
+		else
+			powerBackdrop:SetTexCoord(0, 1, 0, 1)
+		end
+	end
+
 	local threat = self.ThreatIndicator
 	if (threat) then
 		for key,texture in next,threat.textures do
@@ -684,7 +719,11 @@ local UnitFrame_UpdateTextures = function(self)
 				texture:SetPoint(unpack(position))
 				texture:SetSize(unpack(size))
 				texture:SetTexture(path)
-				texture:Show()
+				if (threat.isShown) then
+					texture:Show()
+				else
+					texture:Hide()
+				end
 			else
 				texture:Hide()
 			end
@@ -704,18 +743,17 @@ local UnitFrame_UpdateTextures = function(self)
 		portraitBorder:SetDrawLayer("BACKGROUND", config.PortraitBorderDrawLevel or 0)
 	end
 
-	local power = self.Power
 	power:SetFrameLevel(self:GetFrameLevel() + (config.PowerFrameLevelOffset or 5))
 	if (power.BackdropGroup) then
 		power.BackdropGroup:SetFrameLevel(power:GetFrameLevel())
 	end
-	local powerTexture = power.GetStatusBarTexture and power:GetStatusBarTexture()
-	if (powerTexture and powerTexture.SetDrawLayer) then
-		powerTexture:SetDrawLayer("ARTWORK", 0)
-	end
 	if (power.Backdrop and power.Backdrop.SetDrawLayer) then
 		power.Backdrop:SetDrawLayer("BACKGROUND", config.PowerBackdropDrawLevel or -2)
 	end
+	Power_PostUpdateColor(power, self.unit)
+	local powerCur = power.GetValue and power:GetValue() or 0
+	local powerMin, powerMax = power.GetMinMaxValues and power:GetMinMaxValues() or 0, 0
+	Power_UpdateVisibility(power, self.unit, powerCur, powerMin, powerMax)
 
 	ns:Fire("UnitFrame_Target_Updated", unit, key)
 end

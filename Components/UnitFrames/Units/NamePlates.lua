@@ -2347,6 +2347,53 @@ NamePlatesMod.HookNamePlates = function(self)
 		end
 	end
 
+	local function HideBlizzardNamePlateVisual(unit)
+		if (not C_NamePlate or not C_NamePlate.GetNamePlateForUnit or not unit) then
+			return
+		end
+
+		local plate = C_NamePlate.GetNamePlateForUnit(unit, issecurefunc())
+		if (not plate or not plate.UnitFrame or plate.UnitFrame:IsForbidden()) then
+			return
+		end
+
+		local UF = plate.UnitFrame
+		local health = UF.healthBar or UF.healthbar or UF.HealthBar
+			or (UF.HealthBarsContainer and UF.HealthBarsContainer.healthBar)
+		if (health and health.SetAlpha) then
+			pcall(health.SetAlpha, health, 0)
+		end
+
+		if (UF.SetAlpha) then
+			pcall(UF.SetAlpha, UF, 0)
+		end
+
+		if (not hookedBlizzardUFs[UF]) then
+			hookedBlizzardUFs[UF] = true
+			local locked = false
+
+			if (UF.HookScript) then
+				UF:HookScript("OnShow", function(frame)
+					if (locked or frame:IsForbidden()) then
+						return
+					end
+					locked = true
+					frame:SetAlpha(0)
+					locked = false
+				end)
+			end
+
+			hooksecurefunc(UF, "SetAlpha", function(frame, alpha)
+				if (locked or frame:IsForbidden() or alpha == 0) then
+					return
+				end
+				locked = true
+				frame:SetAlpha(0)
+				locked = false
+			end)
+		end
+	end
+
 	local function PatchBlizzardNamePlate(unit)
 		if (not C_NamePlate or not C_NamePlate.GetNamePlateForUnit or not unit) then
 			return
@@ -2372,19 +2419,21 @@ NamePlatesMod.HookNamePlates = function(self)
 		clearClutter(plate)
 	end
 
-	self.PatchBlizzardNamePlate = PatchBlizzardNamePlate
-	self.PatchBlizzardNamePlateFrame = PatchBlizzardNamePlateFrame
 	if (secretMode) then
 		-- WoW12 secret-value mode:
-		-- do not patch/mutate Blizzard nameplate unitframes at all.
+		-- avoid addon-local Blizzard nameplate hooks during protected plate
+		-- creation. Only apply a delayed visual hide to the Blizzard plate.
 		self.PatchBlizzardNamePlate = nil
 		self.PatchBlizzardNamePlateFrame = nil
 		self.DisableBlizzardNamePlate = nil
 		self.RestoreBlizzardNamePlate = nil
-		return
+		self.HideBlizzardNamePlateVisual = HideBlizzardNamePlateVisual
 	else
+		self.PatchBlizzardNamePlate = PatchBlizzardNamePlate
+		self.PatchBlizzardNamePlateFrame = PatchBlizzardNamePlateFrame
 		self.DisableBlizzardNamePlate = DisableBlizzardNamePlate
 		self.RestoreBlizzardNamePlate = RestoreBlizzardNamePlate
+		self.HideBlizzardNamePlateVisual = nil
 	end
 
 	if (not secretMode) then
@@ -2412,7 +2461,7 @@ NamePlatesMod.HookNamePlates = function(self)
 		end)
 	end
 
-	if (NamePlateDriverFrame and NamePlateDriverFrame.OnNamePlateCreated and not self.__AzeriteUI_NamePlateCreateHooked) then
+	if (not secretMode and NamePlateDriverFrame and NamePlateDriverFrame.OnNamePlateCreated and not self.__AzeriteUI_NamePlateCreateHooked) then
 		self.__AzeriteUI_NamePlateCreateHooked = true
 		hooksecurefunc(NamePlateDriverFrame, "OnNamePlateCreated", function(_, plate)
 			if (self.PatchBlizzardNamePlateFrame) then
@@ -2420,7 +2469,15 @@ NamePlatesMod.HookNamePlates = function(self)
 			end
 		end)
 	end
-	if (_G.NamePlateUnitFrameMixin and type(_G.NamePlateUnitFrameMixin.OnUnitSet) == "function" and not self.__AzeriteUI_NamePlateUnitSetHooked) then
+	if (not secretMode and _G.NamePlateBaseMixin and type(_G.NamePlateBaseMixin.AcquireUnitFrame) == "function" and not self.__AzeriteUI_NamePlateAcquireHooked) then
+		self.__AzeriteUI_NamePlateAcquireHooked = true
+		hooksecurefunc(_G.NamePlateBaseMixin, "AcquireUnitFrame", function(plate)
+			if (plate and self.PatchBlizzardNamePlateFrame) then
+				self.PatchBlizzardNamePlateFrame(plate)
+			end
+		end)
+	end
+	if (not secretMode and _G.NamePlateUnitFrameMixin and type(_G.NamePlateUnitFrameMixin.OnUnitSet) == "function" and not self.__AzeriteUI_NamePlateUnitSetHooked) then
 		self.__AzeriteUI_NamePlateUnitSetHooked = true
 		hooksecurefunc(_G.NamePlateUnitFrameMixin, "OnUnitSet", function(UF)
 			if (UF and not (UF.IsForbidden and UF:IsForbidden())) then
@@ -2431,8 +2488,9 @@ NamePlatesMod.HookNamePlates = function(self)
 			end
 		end)
 	end
-
-	clearClutter(NamePlateDriverFrame)
+	if (not secretMode) then
+		clearClutter(NamePlateDriverFrame)
+	end
 end
 
 NamePlatesMod.UpdateSettings = function(self)
@@ -2496,6 +2554,13 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 				C_Timer.After(0, function() self.DisableBlizzardNamePlate(unit) end)
 			else
 				self.DisableBlizzardNamePlate(unit)
+			end
+		end
+		if (unit and self.HideBlizzardNamePlateVisual) then
+			if (C_Timer) then
+				C_Timer.After(0, function() self.HideBlizzardNamePlateVisual(unit) end)
+			else
+				self.HideBlizzardNamePlateVisual(unit)
 			end
 		end
 	elseif (event == "NAME_PLATE_UNIT_REMOVED") then

@@ -885,8 +885,10 @@ do
 		elseif(event == 'NAME_PLATE_UNIT_ADDED') then
 			local nameplate = C_NamePlate.GetNamePlateForUnit(unit)
 			if(not nameplate) then return end
-
-			oUF:DisableBlizzardNamePlate(nameplate)
+			
+			if(type(issecretvalue) ~= 'function') then
+				oUF:DisableBlizzardNamePlate(nameplate)
+			end
 
 			if(not nameplate.unitFrame) then
 				nameplate.style = self.style

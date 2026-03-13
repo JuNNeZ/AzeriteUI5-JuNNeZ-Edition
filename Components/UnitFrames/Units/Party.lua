@@ -1139,6 +1139,9 @@ PartyFrameMod.DisableBlizzard = function(self)
 	-- Note: ns.ClientBuild is the build number (~58135), NOT the TOC version.
 	-- ns.ClientVersion is the interface/TOC number (120000+ for WoW 12).
 	if (ns.ClientVersion and ns.ClientVersion >= 120000) then
+		if (UIParent and UIParent.UnregisterEvent) then
+			UIParent:UnregisterEvent("GROUP_ROSTER_UPDATE")
+		end
 		local quarantine = ns.WoW12BlizzardQuarantine
 		if (quarantine and quarantine.ApplyCompactFrames) then
 			quarantine.ApplyCompactFrames()

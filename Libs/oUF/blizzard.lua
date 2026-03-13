@@ -13,6 +13,40 @@ local isArenaHooked = false
 local isBossHooked = false
 local isPartyHooked = false
 
+local function isForbiddenTableError(err)
+	return type(err) == 'string' and string.find(err, 'forbidden table', 1, true) ~= nil
+end
+
+local function patchNamePlateCastbar(castbar)
+	if(not castbar or castbar.__AzeriteUI_NamePlateCastbarSafePatched) then
+		return
+	end
+
+	local function wrapMethod(methodName)
+		local original = castbar[methodName]
+		if(type(original) ~= 'function') then
+			return
+		end
+
+		castbar[methodName] = function(self, ...)
+			local ok, result = pcall(original, self, ...)
+			if(ok) then
+				return result
+			end
+
+			if(isForbiddenTableError(result)) then
+				return
+			end
+
+			error(result)
+		end
+	end
+
+	wrapMethod('StopFinishAnims')
+	wrapMethod('StopAnims')
+	castbar.__AzeriteUI_NamePlateCastbarSafePatched = true
+end
+
 local hiddenParent = CreateFrame('Frame', nil, UIParent)
 hiddenParent:SetAllPoints()
 hiddenParent:Hide()
@@ -82,6 +116,9 @@ local function handleFrame(baseName, doNotReparent, isNamePlate)
 
 		local castbar = frame.castBar or frame.spellbar or frame.CastingBarFrame
 		if(castbar) then
+			if(isNamePlate) then
+				patchNamePlateCastbar(castbar)
+			end
 			castbar:UnregisterAllEvents()
 		end
 

@@ -923,6 +923,9 @@ RaidFrame5Mod.DisableBlizzard = function(self)
 	-- WoW 12.0.0: Don't touch CompactRaidFrameManager at all - even checking if it exists loads the buggy addon
 	-- Note: ns.ClientBuild is build number (~58135), ns.ClientVersion is TOC version (120000).
 	if (ns.ClientVersion and ns.ClientVersion >= 120000) then
+		if (UIParent and UIParent.UnregisterEvent) then
+			UIParent:UnregisterEvent("GROUP_ROSTER_UPDATE")
+		end
 		local quarantine = ns.WoW12BlizzardQuarantine
 		if (quarantine and quarantine.ApplyCompactFrames) then
 			quarantine.ApplyCompactFrames()

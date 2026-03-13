@@ -2609,6 +2609,10 @@ local function ApplyWoW12TooltipMoneyGuards()
 	end
 end
 
+local function IsPassiveWoW12FixEnvironment()
+	return (issecretvalue or canaccesstable or (ns.ClientVersion and ns.ClientVersion >= 120000)) and true or false
+end
+
 
 FixBlizzardBugs.OnInitialize = function(self)
 
@@ -2629,7 +2633,7 @@ FixBlizzardBugs.OnInitialize = function(self)
 	-- Follow the UnhaltedUnitFrames approach: avoid Blizzard function rewrites.
 	-- Note: ns.ClientBuild is the build number (~58135), NOT the TOC version.
 	-- ns.ClientVersion is the interface/TOC number (120000+ for WoW 12).
-	if (issecretvalue or canaccesstable or (ns.ClientVersion and ns.ClientVersion >= 120000)) then
+	if (IsPassiveWoW12FixEnvironment()) then
 		ApplyWoW12TooltipMoneyGuards()
 		-- IMPORTANT: Do NOT replace BackdropMixin.SetupTextureCoordinates here.
 		-- Replacing mixin methods with addon functions taints every frame that
@@ -2637,8 +2641,13 @@ FixBlizzardBugs.OnInitialize = function(self)
 		-- systems (EncounterWarnings, CompactUnitFrame, SecureUtil, etc.).
 		-- The tooltip backdrop error is cosmetic; the taint cascade is not.
 		-- CastingBarFrame StopFinishAnims guard is handled by FixBlizzardBugsWow12.lua.
+		-- Everything below this return is the legacy pre-WoW12 path and does not
+		-- execute once the secret-value / forbidden-table environment is present.
 		return
 	end
+
+	-- Legacy pre-WoW12 path.
+	-- This section is intentionally unreachable on WoW12+ / secret-value builds.
 
 	-- Guard BackdropMixin.SetupTextureCoordinates against secret width/height (tooltips)
 	if (false and BackdropMixin and type(BackdropMixin.SetupTextureCoordinates) == "function" and not _G.__AzeriteUI_BackdropWrapped) then

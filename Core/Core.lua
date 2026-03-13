@@ -63,6 +63,7 @@ _G["AzeriteUI"] = ns
 -- Lua API
 local next = next
 local select = select
+local tostring = tostring
 
 local defaults = {
 	char = {
@@ -207,6 +208,43 @@ ns.IsSaiyaRattProfile = function(self, profileKey)
 		return type(savedProfile) == "table" and savedProfile.stylePreset == "SaiyaRatt"
 	end
 	return self:GetActiveConfigVariant() == "SaiyaRatt"
+end
+
+ns.SaiyaRattSlash = function(self)
+	local currentProfile = self.db and self.db.GetCurrentProfile and self.db:GetCurrentProfile() or "unknown"
+	local activeVariant = self.GetActiveConfigVariant and self:GetActiveConfigVariant() or "Azerite"
+	local isSaiyaRatt = self.IsSaiyaRattProfile and self:IsSaiyaRattProfile()
+
+	local messages = {
+		"|cffff7b00SaiyaRatt Exposition engaged.|r",
+		"|cffd8d8d8Mana crystal status:|r replaced with one unnecessarily dramatic bar.",
+		"|cffd8d8d8Target crystal status:|r percent aggressively centered.",
+		"|cffd8d8d8Threat glow status:|r hopefully visible only when the universe truly means it."
+	}
+
+	if (RaidNotice_AddMessage and RaidWarningFrame) then
+		RaidNotice_AddMessage(RaidWarningFrame, "SaiyaRatt Exposition", ChatTypeInfo["RAID_WARNING"])
+	end
+
+	if (UIErrorsFrame and UIErrorsFrame.AddMessage) then
+		UIErrorsFrame:AddMessage("Mana crystal converted. Excess delivered.", 1, .82, .2, 1)
+	end
+
+	for _,message in next,messages do
+		print(message)
+	end
+
+	print("|cffd8d8d8Profile:|r", tostring(currentProfile), "|cffd8d8d8Variant:|r", tostring(activeVariant), "|cffd8d8d8SaiyaRatt:|r", isSaiyaRatt and "YES" or "NO")
+
+	local playerAlt = self:GetModule("PlayerFrameAlternate", true)
+	if (playerAlt and playerAlt.Update and playerAlt.frame) then
+		playerAlt:Update()
+	end
+
+	local target = self:GetModule("TargetFrame", true)
+	if (target and target.Update and target.frame) then
+		target:Update()
+	end
 end
 
 ns.ApplySaiyaRattPreset = function(self)
@@ -354,4 +392,5 @@ ns.OnInitialize = function(self)
 	self.db.RegisterCallback(self, "OnProfileReset", "RefreshConfig")
 
 	self:RegisterChatCommand("resetsettings", function() self:ResetSettings() end)
+	self:RegisterChatCommand("saiyaratt", function() self:SaiyaRattSlash() end)
 end

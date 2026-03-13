@@ -26,334 +26,51 @@
 local _, ns = ...
 
 ----------------------------------------------------------------
--- WoW 12+ Blizzard Bug Guards
--- Runs at FILE SCOPE — not inside any module OnInitialize.
--- This avoids being blocked by early-returns elsewhere.
+-- WoW 12+ Blizzard frame ownership reset
+-- Keep this file narrow:
+-- * quarantine Blizzard compact party/raid/arena frames we replace
+-- * quarantine Blizzard spellbars we replace
+-- * sanitize compact aura predicates only
+-- Do NOT mutate Blizzard nameplate unitframes here.
 ----------------------------------------------------------------
 
--- Only matters when the forbidden-table system exists.
-if (not canaccesstable) then return end
-
-----------------------------------------------------------------
--- CastingBarFrame StopFinishAnims / UpdateShownState guards
-----------------------------------------------------------------
--- Problem:
---   oUF (and AzeriteUI) hides PlayerCastingBarFrame via addon
---   code, which taints the frame. When Edit Mode re-shows it,
---   Blizzard's StopFinishAnims iterates StagePips / StagePoints /
---   StageTiers without canaccesstable checks, producing:
---     "attempted to iterate a forbidden table"
---   at CastingBarFrame.lua:722.
---
--- Fix:
---   Replace StopFinishAnims (and its caller UpdateShownState) with
---   versions that pcall the originals to swallow forbidden-table
---   errors. Completely safe — worst case is a visual stage-pip
---   animation not stopping, which is cosmetic.
-----------------------------------------------------------------
-
--- Wrap an original StopFinishAnims so forbidden-table iteration
--- is caught by pcall instead of propagating to BugSack.
-local function MakeSafeStopFinishAnims(origFunc)
-	return function(self, ...)
-		if (self and type(self) == "table" and not canaccesstable(self)) then
-			return
-		end
-		local ok = pcall(origFunc, self, ...)
-		-- Swallow errors silently; they're all "forbidden table" noise.
-	end
-end
-
--- Same pattern for UpdateShownState, which can also touch
--- forbidden fields when toggling the frame visible.
-local function MakeSafeUpdateShownState(origFunc)
-	return function(self, ...)
-		if (self and type(self) == "table" and not canaccesstable(self)) then
-			return
-		end
-		local ok = pcall(origFunc, self, ...)
-	end
-end
-
--- Guard GetTypeInfo, which can index forbidden Blizzard tables during
--- spec/talent transitions after castbar taint.
-local SAFE_CASTBAR_TYPE_INFO = {
-	showCastbar = true,
-	showTradeSkills = true,
-	showShield = false,
-	showIcon = true,
-	barTexture = "Interface\\TargetingFrame\\UI-StatusBar",
-	statusBarTexture = "Interface\\TargetingFrame\\UI-StatusBar",
-	castBarTexture = "Interface\\TargetingFrame\\UI-StatusBar",
-	texture = "Interface\\TargetingFrame\\UI-StatusBar"
-}
-
-local function SafeSetCastbarTexture(frame, asset)
-	if (not frame or type(frame.SetStatusBarTexture) ~= "function") then
-		return
-	end
-	local safeAsset = asset
-	if (type(safeAsset) ~= "string" or safeAsset == "") then
-		safeAsset = SAFE_CASTBAR_TYPE_INFO.barTexture
-	end
-	local ok = pcall(frame.SetStatusBarTexture, frame, safeAsset)
-	if (not ok and safeAsset ~= SAFE_CASTBAR_TYPE_INFO.barTexture) then
-		pcall(frame.SetStatusBarTexture, frame, SAFE_CASTBAR_TYPE_INFO.barTexture)
-	end
-end
-
-local function GuardSetStatusBarTexture(frame)
-	if (not frame or type(frame) ~= "table" or frame.__AzUI_W12_SBST) then
-		return
-	end
-	if (type(frame.SetStatusBarTexture) ~= "function") then
-		return
-	end
-	frame.__AzUI_W12_SBST = true
-	local originalSetStatusBarTexture = frame.SetStatusBarTexture
-	frame.SetStatusBarTexture = function(self, asset, ...)
-		local safeAsset = asset
-		if (type(safeAsset) ~= "string" or safeAsset == "") then
-			safeAsset = SAFE_CASTBAR_TYPE_INFO.barTexture
-		end
-		local ok = pcall(originalSetStatusBarTexture, self, safeAsset, ...)
-		if (not ok and safeAsset ~= SAFE_CASTBAR_TYPE_INFO.barTexture) then
-			pcall(originalSetStatusBarTexture, self, SAFE_CASTBAR_TYPE_INFO.barTexture, ...)
-		end
-	end
-end
-
-local function NormalizeTypeInfo(info)
-	if (type(info) ~= "table" or (canaccesstable and not canaccesstable(info))) then
-		info = {}
-	end
-
-	local normalized = {}
-	for key, value in pairs(SAFE_CASTBAR_TYPE_INFO) do
-		normalized[key] = value
-	end
-	for key, value in pairs(info) do
-		normalized[key] = value
-	end
-
-	if (type(normalized.showCastbar) ~= "boolean") then
-		normalized.showCastbar = true
-	end
-	if (type(normalized.showTradeSkills) ~= "boolean") then
-		normalized.showTradeSkills = true
-	end
-	if (type(normalized.showShield) ~= "boolean") then
-		normalized.showShield = false
-	end
-	if (type(normalized.showIcon) ~= "boolean") then
-		normalized.showIcon = true
-	end
-
-	local texture = normalized.barTexture
-	if (type(texture) ~= "string" or texture == "") then
-		texture = normalized.statusBarTexture
-	end
-	if (type(texture) ~= "string" or texture == "") then
-		texture = normalized.castBarTexture
-	end
-	if (type(texture) ~= "string" or texture == "") then
-		texture = normalized.texture
-	end
-	if (type(texture) ~= "string" or texture == "") then
-		texture = SAFE_CASTBAR_TYPE_INFO.barTexture
-	end
-	normalized.barTexture = texture
-	normalized.statusBarTexture = texture
-	normalized.castBarTexture = texture
-	normalized.texture = texture
-
-	return normalized
-end
-
-local function MakeSafeGetTypeInfo(origFunc)
-	return function(self, ...)
-		if (self and type(self) == "table" and not canaccesstable(self)) then
-			return SAFE_CASTBAR_TYPE_INFO
-		end
-		local ok, info = pcall(origFunc, self, ...)
-		if (ok and type(info) == "table" and (not canaccesstable or canaccesstable(info))) then
-			info = NormalizeTypeInfo(info)
-			if (self and type(self) == "table") then
-				self.__AzUI_W12_LastTypeInfo = info
-			end
-			return info
-		end
-		if (self and type(self) == "table") then
-			local cached = rawget(self, "__AzUI_W12_LastTypeInfo")
-			if (type(cached) == "table" and (not canaccesstable or canaccesstable(cached))) then
-				return NormalizeTypeInfo(cached)
-			end
-		end
-		return SAFE_CASTBAR_TYPE_INFO
-	end
-end
-
--- Guard FinishSpell, which can receive incomplete barTypeInfo after a guarded
--- GetTypeInfo fallback and then call SetStatusBarTexture(nil).
-local function MakeSafeFinishSpell(origFunc)
-	return function(self, ...)
-		if (self and type(self) == "table" and not canaccesstable(self)) then
-			return
-		end
-		local ok = pcall(origFunc, self, ...)
-	end
-end
-
-local function MakeSafeOnEvent(origFunc)
-	return function(self, ...)
-		if (self and type(self) == "table" and not canaccesstable(self)) then
-			return
-		end
-		if (self and type(self) == "table") then
-			local barTypeInfo = SAFE_CASTBAR_TYPE_INFO
-			if (self.GetTypeInfo) then
-				local okType, info = pcall(self.GetTypeInfo, self)
-				if (okType and type(info) == "table" and (not canaccesstable or canaccesstable(info))) then
-					barTypeInfo = info
-					self.__AzUI_W12_LastTypeInfo = NormalizeTypeInfo(info)
-				else
-					local cached = rawget(self, "__AzUI_W12_LastTypeInfo")
-					if (type(cached) == "table" and (not canaccesstable or canaccesstable(cached))) then
-						barTypeInfo = cached
-					end
-				end
-			end
-			barTypeInfo = NormalizeTypeInfo(barTypeInfo)
-			SafeSetCastbarTexture(self, barTypeInfo.barTexture)
-		end
-		local ok = pcall(origFunc, self, ...)
-	end
-end
-
---[[
-local function IsQuestPortraitMeasurementError(err)
-	return (type(err) == "string"
-		and string.find(err, "Cannot perform measurement", 1, true)
-		and (string.find(err, "QuestFrameModelScene", 1, true)
-			or string.find(err, "QuestModeModelScene", 1, true)
-			or string.find(err, "QuestModelScene", 1, true)))
-end
-
-local function HideQuestPortraitFallback()
-	local scene = _G.QuestModelScene or _G.QuestFrameModelScene or _G.QuestModeModelScene
-	if (scene and scene.Hide) then
-		pcall(scene.Hide, scene)
-	end
-
-	local fallbackFrames = {
-		_G.QuestNPCModel,
-		_G.QuestNPCModelTextScrollFrame,
-		_G.QuestNPCModelNameText,
-		_G.QuestNPCModelText
-	}
-
-	for _, frame in pairs(fallbackFrames) do
-		if (frame and frame.Hide) then
-			pcall(frame.Hide, frame)
-		end
-	end
-end
-
-local function GuardQuestPortrait()
-	if (type(_G.QuestFrame_ShowQuestPortrait) ~= "function") then
-		return
-	end
-	if (_G.__AzUI_W12_QuestPortraitOriginal == _G.QuestFrame_ShowQuestPortrait) then
-		return
-	end
-
-	local original = _G.QuestFrame_ShowQuestPortrait
-	_G.__AzUI_W12_QuestPortraitOriginal = original
-	_G.QuestFrame_ShowQuestPortrait = function(...)
-		local ok, err = pcall(original, ...)
-		if (ok) then
-			return err
-		end
-		if (IsQuestPortraitMeasurementError(err)) then
-			HideQuestPortraitFallback()
-			return
-		end
-		error(err)
-	end
-end
-]]
-
--- Guard a method on a mixin table (idempotent via flag name).
-local function GuardMixin(mixin, method, wrapper, flag)
-	if (not mixin or type(mixin[method]) ~= "function" or mixin[flag]) then
-		return
-	end
-	mixin[flag] = true
-	mixin[method] = wrapper(mixin[method])
-end
-
--- Guard specific frame instances (they may have their OWN copies
--- of these methods set at creation time, separate from the mixin).
-local function GuardFrame(frame)
-	if (not frame or type(frame) ~= "table") then return end
-	if (type(frame.StopFinishAnims) == "function"
-		and not frame.__AzUI_W12_SFA) then
-		frame.__AzUI_W12_SFA = true
-		frame.StopFinishAnims = MakeSafeStopFinishAnims(frame.StopFinishAnims)
-	end
-	if (type(frame.UpdateShownState) == "function"
-		and not frame.__AzUI_W12_USS) then
-		frame.__AzUI_W12_USS = true
-		frame.UpdateShownState = MakeSafeUpdateShownState(frame.UpdateShownState)
-	end
-	if (type(frame.GetTypeInfo) == "function"
-		and not frame.__AzUI_W12_GTI) then
-		frame.__AzUI_W12_GTI = true
-		frame.GetTypeInfo = MakeSafeGetTypeInfo(frame.GetTypeInfo)
-	end
-	if (type(frame.FinishSpell) == "function"
-		and not frame.__AzUI_W12_FS) then
-		frame.__AzUI_W12_FS = true
-		frame.FinishSpell = MakeSafeFinishSpell(frame.FinishSpell)
-	end
-	if (type(frame.OnEvent) == "function"
-		and not frame.__AzUI_W12_OE) then
-		frame.__AzUI_W12_OE = true
-		frame.OnEvent = MakeSafeOnEvent(frame.OnEvent)
-		if (type(frame.SetScript) == "function") then
-			pcall(frame.SetScript, frame, "OnEvent", frame.OnEvent)
-		end
-	end
-	GuardSetStatusBarTexture(frame)
-end
-
-local function GuardCompactUnitFrameGlobals()
-	-- Intentionally no-op on WoW12:
-	-- wrapping Blizzard CompactUnitFrame globals taints secure value flow
-	-- and causes cascading secret-value errors in Edit Mode/nameplates.
+if (not canaccesstable) then
+	return
 end
 
 local MAX_PARTY_MEMBERS = _G.MEMBERS_PER_RAID_GROUP or 5
-local MAX_BOSS_CASTBARS = _G.MAX_BOSS_FRAMES or 8
+local MAX_RAID_MEMBERS = _G.MAX_RAID_MEMBERS or 40
+local MAX_BOSS_FRAMES = _G.MAX_BOSS_FRAMES or 8
 local MAX_ARENA_MEMBERS = _G.MAX_ARENA_ENEMIES or 5
+
+local COMPACT_AURA_DEFAULTS = {
+	isBossAura = false,
+	isFromPlayerOrPlayerPet = false,
+	isHelpful = false,
+	isStealable = false,
+	isRaid = false,
+	isHarmful = false,
+	canApplyAura = false,
+	canActivePlayerDispel = false,
+	isTankRoleAura = false,
+	isDPSRoleAura = false,
+	isNameplateOnly = false,
+	isHealerRoleAura = false,
+	nameplateShowPersonal = false,
+	nameplateShowAll = false,
+	duration = 0,
+	expirationTime = 0,
+	applications = 0,
+	spellId = 0,
+	auraInstanceID = 0,
+	timeMod = 1
+}
 
 local quarantineHiddenParent
 local parentLockedFrames = {}
 local pendingQuarantineFrames = {}
 local pendingReparentFrames = {}
-
-local function GetQuarantineParent()
-	if (ns and ns.Hider) then
-		return ns.Hider
-	end
-	if (quarantineHiddenParent) then
-		return quarantineHiddenParent
-	end
-	quarantineHiddenParent = CreateFrame("Frame", nil, UIParent)
-	quarantineHiddenParent:SetAllPoints(UIParent)
-	quarantineHiddenParent:Hide()
-	return quarantineHiddenParent
-end
+local PrepareCompactFrame
 
 local function IsModuleEnabled(name, defaultValue)
 	if (not ns or not ns.GetModule) then
@@ -370,8 +87,41 @@ local function IsModuleEnabled(name, defaultValue)
 	return defaultValue and true or false
 end
 
-local function IsUnitFramesActive()
+local function ShouldHandlePartyFrames()
+	return IsModuleEnabled("PartyFrames", true)
+end
+
+local function ShouldHandleRaidFrames()
+	return IsModuleEnabled("RaidFrame5", true)
+		or IsModuleEnabled("RaidFrame25", true)
+		or IsModuleEnabled("RaidFrame40", true)
+end
+
+local function ShouldHandleArenaFrames()
+	return IsModuleEnabled("ArenaFrames", true)
+end
+
+local function ShouldHandleUnitFrames()
 	return IsModuleEnabled("UnitFrames", true)
+end
+
+local function ShouldHandleCustomUnitFrames()
+	return ShouldHandleUnitFrames() and (ShouldHandlePartyFrames()
+		or ShouldHandleRaidFrames()
+		or ShouldHandleArenaFrames())
+end
+
+local function GetQuarantineParent()
+	if (ns and ns.Hider) then
+		return ns.Hider
+	end
+	if (quarantineHiddenParent) then
+		return quarantineHiddenParent
+	end
+	quarantineHiddenParent = CreateFrame("Frame", nil, UIParent)
+	quarantineHiddenParent:SetAllPoints(UIParent)
+	quarantineHiddenParent:Hide()
+	return quarantineHiddenParent
 end
 
 local function LockToHiddenParent(frame, parent)
@@ -383,7 +133,54 @@ local function LockToHiddenParent(frame, parent)
 		pendingReparentFrames[frame] = true
 		return
 	end
-	pcall(frame.SetParent, frame, hiddenParent)
+	if (frame and frame.SetParent) then
+		pcall(frame.SetParent, frame, hiddenParent)
+	end
+end
+
+local function SanitizeCompactAura(aura)
+	if (type(aura) ~= "table") then
+		return aura
+	end
+	if (issecretvalue and issecretvalue(aura)) then
+		return {}
+	end
+	if (canaccesstable and not canaccesstable(aura)) then
+		return {}
+	end
+	if (not issecretvalue) then
+		return aura
+	end
+
+	local sanitized = aura
+	local copied = false
+
+	local function EnsureCopy()
+		if (copied) then
+			return
+		end
+		local ok, copy = pcall(CopyTable, aura)
+		if (ok and type(copy) == "table") then
+			sanitized = copy
+		else
+			sanitized = {}
+		end
+		copied = true
+	end
+
+	for key, value in pairs(aura) do
+		if (issecretvalue(value)) then
+			EnsureCopy()
+			local fallback = COMPACT_AURA_DEFAULTS[key]
+			if (fallback ~= nil) then
+				sanitized[key] = fallback
+			else
+				sanitized[key] = nil
+			end
+		end
+	end
+
+	return sanitized
 end
 
 local function QuarantineSubElements(frame)
@@ -403,9 +200,8 @@ local function QuarantineSubElements(frame)
 	}
 	for _, child in pairs(children) do
 		if (child and child.UnregisterAllEvents) then
-			if (InCombatLockdown and InCombatLockdown()
-				and child.IsProtected and child:IsProtected()) then
-				-- Protected children are handled by out-of-combat reapply.
+			if (InCombatLockdown and InCombatLockdown() and child.IsProtected and child:IsProtected()) then
+				-- Protected children are handled by the out-of-combat reapply.
 			else
 				pcall(child.UnregisterAllEvents, child)
 			end
@@ -419,10 +215,7 @@ local function QuarantineFrame(frameOrName, opts)
 	if (type(frameOrName) == "string") then
 		frame = _G[frameOrName]
 	end
-	if (not frame) then
-		return
-	end
-	if (frame.IsForbidden and frame:IsForbidden()) then
+	if (not frame or (frame.IsForbidden and frame:IsForbidden())) then
 		return
 	end
 
@@ -443,6 +236,14 @@ local function QuarantineFrame(frameOrName, opts)
 	if (frame.Hide) then
 		pcall(frame.Hide, frame)
 	end
+	if (frame.HookScript and not frame.__AzUI_W12_HideOnShowHooked) then
+		frame.__AzUI_W12_HideOnShowHooked = true
+		frame:HookScript("OnShow", function(self)
+			if (self and self.Hide) then
+				pcall(self.Hide, self)
+			end
+		end)
+	end
 
 	if (not opts.skipParent and frame.SetParent) then
 		local hiddenParent = GetQuarantineParent()
@@ -454,139 +255,231 @@ local function QuarantineFrame(frameOrName, opts)
 	end
 end
 
-local function QuarantineSpellBars()
-	if (not IsUnitFramesActive()) then
+local function QuarantinePoolFrames(pool, opts)
+	if (not pool or type(pool.EnumerateActive) ~= "function") then
 		return
 	end
-
-	-- Keep parent links for Target/Focus/Boss spellbars; Blizzard code reads parent data.
-	QuarantineFrame("TargetFrameSpellBar", { skipParent = true })
-	QuarantineFrame("FocusFrameSpellBar", { skipParent = true })
-
-	for i = 1, MAX_BOSS_CASTBARS do
-		QuarantineFrame("Boss" .. i .. "TargetFrameSpellBar", { skipParent = true })
+	for frame in pool:EnumerateActive() do
+		PrepareCompactFrame(frame)
+		QuarantineFrame(frame, opts)
 	end
 end
 
-local function ShouldQuarantineCompactFrame(frame)
-	if (not frame) then
-		return false
-	end
-	if (frame.IsForbidden and frame:IsForbidden()) then
-		return false
-	end
+local function IsCompactPartyFrameName(name)
+	return name == "PartyFrame"
+		or name == "CompactPartyFrame"
+		or (type(name) == "string" and (string.match(name, "^PartyMemberFrame%d+$")
+			or string.match(name, "^CompactPartyFrameMember%d+$")
+			or string.match(name, "^CompactPartyFramePet%d+$")))
+end
 
-	local name
+local function IsCompactRaidFrameName(name)
+	return name == "CompactRaidFrameContainer"
+		or name == "CompactRaidFrameManager"
+		or (type(name) == "string" and (string.match(name, "^CompactRaidFrame%d+$")
+			or string.match(name, "^CompactRaidGroup%d+Member%d+$")))
+end
+
+local function IsCompactArenaFrameName(name)
+	return name == "CompactArenaFrame"
+		or name == "ArenaEnemyFrames"
+		or name == "ArenaPrepFrames"
+		or (type(name) == "string" and string.match(name, "^CompactArenaFrameMember%d+$"))
+end
+
+local function GetFrameName(frame)
+	if (not frame) then
+		return nil
+	end
 	if (frame.GetDebugName) then
 		local ok, value = pcall(frame.GetDebugName, frame)
 		if (ok and type(value) == "string") then
-			name = value
+			return value
 		end
 	end
-	if (not name and frame.GetName) then
+	if (frame.GetName) then
 		local ok, value = pcall(frame.GetName, frame)
 		if (ok and type(value) == "string") then
-			name = value
+			return value
 		end
 	end
-	if (not name) then
-		return false
-	end
-	if (string.find(name, "NamePlate", 1, true)) then
-		return false
-	end
+	return nil
+end
 
-	if (name == "CompactPartyFrame"
-		or name == "CompactRaidFrameContainer"
-		or name == "CompactRaidFrameManager"
-		or name == "CompactArenaFrame"
-		or name == "PartyFrame"
-		or name == "ArenaEnemyFrames"
-		or name == "ArenaPrepFrames") then
+local function ShouldQuarantineCompactFrame(frame)
+	local name = GetFrameName(frame)
+	if (not name or string.find(name, "NamePlate", 1, true)) then
+		name = nil
+	end
+	if (ShouldHandlePartyFrames() and IsCompactPartyFrameName(name)) then
 		return true
 	end
+	if (ShouldHandleRaidFrames() and IsCompactRaidFrameName(name)) then
+		return true
+	end
+	if (ShouldHandleArenaFrames() and IsCompactArenaFrameName(name)) then
+		return true
+	end
+	local unit = frame and (frame.unit or frame.displayedUnit)
+	if (type(unit) == "string") then
+		if (ShouldHandlePartyFrames()
+			and (unit == "player" or string.match(unit, "^party%d+$") or string.match(unit, "^partypet%d+$"))) then
+			return true
+		end
+		if (ShouldHandleRaidFrames()
+			and (string.match(unit, "^raid%d+$") or string.match(unit, "^raidpet%d+$") or string.match(unit, "^partypet%d+$"))) then
+			return true
+		end
+		if (ShouldHandleArenaFrames() and string.match(unit, "^arena%d+$")) then
+			return true
+		end
+	end
+	return false
+end
 
-	return (string.match(name, "^PartyMemberFrame%d+$")
-		or string.match(name, "^CompactPartyFrameMember%d+$")
-		or string.match(name, "^CompactArenaFrameMember%d+$")
-		or string.match(name, "^CompactRaidGroup%d+Member%d+$")) and true or false
+PrepareCompactFrame = function(frame)
+	if (not ShouldQuarantineCompactFrame(frame)) then
+		return
+	end
+	-- Intentionally no-op on WoW12:
+	-- writing addon-owned state onto Blizzard compact frames taints later secret-value updates.
+end
+
+local function GuardUnitAuraApis()
+	-- Intentionally no-op on WoW12:
+	-- rewriting C_UnitAuras taints Blizzard compact/nameplate code paths.
+end
+
+local function GuardPartyFrameGlobals()
+	-- Intentionally no-op on WoW12:
+	-- rewriting party/statusbar globals taints Edit Mode and hidden Blizzard party frames.
+end
+
+local function GuardCompactUnitFrameGlobals()
+	if (_G.CompactUnitFrame_UtilShouldDisplayBuff
+		and not _G.__AzUI_W12_CUFShouldDisplayBuffWrapped) then
+		_G.__AzUI_W12_CUFShouldDisplayBuffWrapped = true
+		local original = _G.CompactUnitFrame_UtilShouldDisplayBuff
+		_G.CompactUnitFrame_UtilShouldDisplayBuff = function(aura, ...)
+			return original(SanitizeCompactAura(aura), ...)
+		end
+	end
+
+	if (_G.CompactUnitFrame_UtilShouldDisplayDebuff
+		and not _G.__AzUI_W12_CUFShouldDisplayDebuffWrapped) then
+		_G.__AzUI_W12_CUFShouldDisplayDebuffWrapped = true
+		local original = _G.CompactUnitFrame_UtilShouldDisplayDebuff
+		_G.CompactUnitFrame_UtilShouldDisplayDebuff = function(aura, ...)
+			return original(SanitizeCompactAura(aura), ...)
+		end
+	end
+end
+
+local function QuarantineCompactFrames()
+	if (not ShouldHandleCustomUnitFrames()) then
+		return
+	end
+
+	if (ShouldHandlePartyFrames()) then
+		PrepareCompactFrame(_G.PartyFrame)
+		QuarantineFrame("PartyFrame", { lockParent = true })
+		if (_G.PartyFrame and _G.PartyFrame.PartyMemberFramePool) then
+			QuarantinePoolFrames(_G.PartyFrame.PartyMemberFramePool, { lockParent = true })
+		end
+		PrepareCompactFrame(_G.CompactPartyFrame)
+		QuarantineFrame("CompactPartyFrame", { lockParent = true })
+		for i = 1, MAX_PARTY_MEMBERS do
+			local partyFrame = _G["PartyMemberFrame" .. i]
+			local compactPartyFrame = _G["CompactPartyFrameMember" .. i]
+			local compactPartyPetFrame = _G["CompactPartyFramePet" .. i]
+			PrepareCompactFrame(partyFrame)
+			PrepareCompactFrame(compactPartyFrame)
+			PrepareCompactFrame(compactPartyPetFrame)
+			QuarantineFrame(partyFrame)
+			QuarantineFrame(compactPartyFrame)
+			QuarantineFrame(compactPartyPetFrame)
+		end
+	end
+
+	if (ShouldHandleRaidFrames()) then
+		PrepareCompactFrame(_G.CompactRaidFrameContainer)
+		QuarantineFrame("CompactRaidFrameContainer", { lockParent = true })
+		PrepareCompactFrame(_G.CompactRaidFrameManager)
+		QuarantineFrame("CompactRaidFrameManager", { lockParent = true })
+		for i = 1, MAX_RAID_MEMBERS do
+			local raidFrame = _G["CompactRaidFrame" .. i]
+			PrepareCompactFrame(raidFrame)
+			QuarantineFrame(raidFrame)
+		end
+	end
+
+	if (ShouldHandleArenaFrames()) then
+		PrepareCompactFrame(_G.CompactArenaFrame)
+		QuarantineFrame("CompactArenaFrame", { lockParent = true })
+		if (_G.CompactArenaFrame and type(_G.CompactArenaFrame.memberUnitFrames) == "table") then
+			for _, arenaFrame in pairs(_G.CompactArenaFrame.memberUnitFrames) do
+				PrepareCompactFrame(arenaFrame)
+				QuarantineFrame(arenaFrame, { lockParent = true })
+			end
+		end
+		for i = 1, MAX_ARENA_MEMBERS do
+			local arenaFrame = _G["CompactArenaFrameMember" .. i]
+			PrepareCompactFrame(arenaFrame)
+			QuarantineFrame(arenaFrame)
+		end
+		QuarantineFrame("ArenaEnemyFrames", { lockParent = true })
+		QuarantineFrame("ArenaPrepFrames", { lockParent = true })
+	end
+end
+
+local function QuarantineSpellBars()
+	if (not ShouldHandleCustomUnitFrames()) then
+		return
+	end
+	QuarantineFrame("TargetFrameSpellBar", { skipParent = true })
+	QuarantineFrame("FocusFrameSpellBar", { skipParent = true })
+	for i = 1, MAX_BOSS_FRAMES do
+		QuarantineFrame("Boss" .. i .. "TargetFrameSpellBar", { skipParent = true })
+	end
 end
 
 local function HookCompactFrameLifecycle()
 	if (_G.CompactUnitFrame_SetUpFrame and not _G.__AzUI_W12_CUF_SetUpFrameHooked) then
 		_G.__AzUI_W12_CUF_SetUpFrameHooked = true
 		hooksecurefunc("CompactUnitFrame_SetUpFrame", function(frame)
-			if (IsUnitFramesActive() and ShouldQuarantineCompactFrame(frame)) then
+			PrepareCompactFrame(frame)
+			if (ShouldQuarantineCompactFrame(frame)) then
 				QuarantineFrame(frame)
 			end
 		end)
 	end
+
 	if (_G.CompactUnitFrame_SetUnit and not _G.__AzUI_W12_CUF_SetUnitHooked) then
 		_G.__AzUI_W12_CUF_SetUnitHooked = true
 		hooksecurefunc("CompactUnitFrame_SetUnit", function(frame)
-			if (IsUnitFramesActive() and ShouldQuarantineCompactFrame(frame)) then
+			PrepareCompactFrame(frame)
+			if (ShouldQuarantineCompactFrame(frame)) then
 				QuarantineFrame(frame)
 			end
 		end)
 	end
+
 	if (_G.CompactRaidGroup_InitializeForGroup and not _G.__AzUI_W12_CUF_GroupInitHooked) then
 		_G.__AzUI_W12_CUF_GroupInitHooked = true
 		hooksecurefunc("CompactRaidGroup_InitializeForGroup", function(frame)
-			if (IsUnitFramesActive() and ShouldQuarantineCompactFrame(frame)) then
+			PrepareCompactFrame(frame)
+			if (ShouldQuarantineCompactFrame(frame)) then
 				QuarantineFrame(frame, { lockParent = true })
 			end
 		end)
 	end
+
 	if (_G.PartyFrame_UpdatePartyFrames and not _G.__AzUI_W12_PartyFrameUpdateHooked) then
 		_G.__AzUI_W12_PartyFrameUpdateHooked = true
 		hooksecurefunc("PartyFrame_UpdatePartyFrames", function()
-			if (IsUnitFramesActive()) then
-				QuarantineCompactFrames()
-			end
+			QuarantineCompactFrames()
 		end)
 	end
-end
-
-local function GuardAuraBigDefensive()
-	-- Intentionally no-op on WoW12:
-	-- global AuraUtil/C_UnitAuras rewrites taint Blizzard compact/nameplate paths.
-end
-
-local function GuardPartyHealthFunctions()
-	-- Intentionally no-op on WoW12:
-	-- wrapping these globals taints Blizzard party/statusbar paths.
-end
-
-local function QuarantineCompactFrames()
-	if (not IsUnitFramesActive()) then
-		return
-	end
-
-	-- Avoid CompactRaidFrameManager_SetSetting here on WoW12.
-	-- It can route into protected HideBase() during roster/EditMode refresh and
-	-- trigger ADDON_ACTION_BLOCKED (CompactRaidFrameContainer:HideBase).
-
-	if (UIParent and UIParent.UnregisterEvent) then
-		pcall(UIParent.UnregisterEvent, UIParent, "GROUP_ROSTER_UPDATE")
-	end
-
-	QuarantineFrame("PartyFrame", { lockParent = true })
-	QuarantineFrame("CompactPartyFrame", { lockParent = true })
-	for i = 1, MAX_PARTY_MEMBERS do
-		QuarantineFrame("PartyMemberFrame" .. i)
-		QuarantineFrame("CompactPartyFrameMember" .. i)
-	end
-
-	QuarantineFrame("CompactRaidFrameContainer", { lockParent = true })
-	QuarantineFrame("CompactRaidFrameManager", { lockParent = true })
-
-	QuarantineFrame("CompactArenaFrame", { lockParent = true })
-	for i = 1, MAX_ARENA_MEMBERS do
-		QuarantineFrame("CompactArenaFrameMember" .. i)
-	end
-
-	QuarantineFrame("ArenaEnemyFrames", { lockParent = true })
-	QuarantineFrame("ArenaPrepFrames", { lockParent = true })
 end
 
 local function FlushPendingQuarantineFrames()
@@ -617,75 +510,16 @@ ns.WoW12BlizzardQuarantine.ApplyCompactFrames = QuarantineCompactFrames
 ns.WoW12BlizzardQuarantine.ApplySpellBars = QuarantineSpellBars
 ns.WoW12BlizzardQuarantine.QuarantineFrame = QuarantineFrame
 
--- Master apply (idempotent — safe to call many times).
 local function ApplyGuards()
-	-- Guard explicit castbar instances only.
-	-- Avoid global mixin rewrites, which taint nameplate/shared Blizzard paths.
-	GuardFrame(_G.PlayerCastingBarFrame)
-	GuardFrame(_G.OverlayPlayerCastingBarFrame)
-	GuardFrame(_G.PetCastingBarFrame)
-	GuardFrame(_G.TargetFrameSpellBar)
-	GuardFrame(_G.FocusFrameSpellBar)
-	for i = 1, MAX_BOSS_CASTBARS do
-		GuardFrame(_G["Boss" .. i .. "TargetFrameSpellBar"])
-	end
+	GuardUnitAuraApis()
+	GuardPartyFrameGlobals()
 	GuardCompactUnitFrameGlobals()
 	ApplyBlizzardFrameQuarantine()
 	HookCompactFrameLifecycle()
-	GuardAuraBigDefensive()
-	GuardPartyHealthFunctions()
-	-- GuardQuestPortrait()
-
-	-- Arena castbar instances — created by Blizzard_ArenaUI.
-	-- CompactArenaFrame has memberUnitFrames, each with a castBar.
-	if (_G.CompactArenaFrame and type(_G.CompactArenaFrame.memberUnitFrames) == "table") then
-		for _, unitFrame in pairs(_G.CompactArenaFrame.memberUnitFrames) do
-			if (unitFrame) then
-				-- The castbar can live under various keys
-				local castBar = unitFrame.castBar or unitFrame.CastBar
-					or unitFrame.castbar or unitFrame.CastingBarFrame
-				if (castBar) then
-					GuardFrame(castBar)
-				end
-				-- Guard the unit frame itself in case it holds the methods
-				GuardFrame(unitFrame)
-			end
-		end
-	end
-
-	-- Also try direct ArenaEnemyMatchFrame* castbars if they exist
-	for i = 1, 5 do
-		local name = "ArenaEnemyMatchFrame" .. i
-		local frame = _G[name]
-		if (frame) then
-			local castBar = frame.castBar or frame.CastBar
-				or frame.castbar or frame.CastingBarFrame
-			if (castBar) then
-				GuardFrame(castBar)
-			end
-		end
-		-- Also try CompactArenaFrameMember* pattern
-		local name2 = "CompactArenaFrameMember" .. i
-		local frame2 = _G[name2]
-		if (frame2) then
-			local castBar2 = frame2.castBar or frame2.CastBar
-				or frame2.castbar or frame2.CastingBarFrame
-			if (castBar2) then
-				GuardFrame(castBar2)
-			end
-			GuardFrame(frame2)
-		end
-	end
 end
 
-----------------------------------------------------------------
--- Apply immediately (works if Blizzard_UIPanels_Game is loaded)
-----------------------------------------------------------------
 ApplyGuards()
 
-----------------------------------------------------------------
--- Deferred: catch demand-loaded Blizzard addons
-----------------------------------------------------------------
 local guardFrame = CreateFrame("Frame")
 guardFrame:RegisterEvent("ADDON_LOADED")
 guardFrame:RegisterEvent("PLAYER_LOGIN")
@@ -698,11 +532,8 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 			or addonName == "Blizzard_UnitFrame"
 			or addonName == "Blizzard_CompactRaidFrames"
 			or addonName == "Blizzard_CUFProfiles"
-			or addonName == "Blizzard_EditMode"
-			or addonName == "Blizzard_ArenaUI"
-			or addonName == "Blizzard_NamePlates") then
+			or addonName == "Blizzard_ArenaUI") then
 			ApplyGuards()
-			-- One-frame delay lets mixin copies propagate.
 			if (C_Timer) then
 				C_Timer.After(0, ApplyGuards)
 				C_Timer.After(1, ApplyGuards)
@@ -711,8 +542,7 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 	elseif (event == "PLAYER_LOGIN") then
 		ApplyGuards()
 		self:UnregisterEvent("PLAYER_LOGIN")
-	elseif (event == "PLAYER_ENTERING_WORLD"
-		or event == "GROUP_ROSTER_UPDATE") then
+	elseif (event == "PLAYER_ENTERING_WORLD" or event == "GROUP_ROSTER_UPDATE") then
 		ApplyGuards()
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		FlushPendingQuarantineFrames()
@@ -720,7 +550,6 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 	end
 end)
 
--- Belt-and-suspenders timers
 if (C_Timer) then
 	C_Timer.After(0, ApplyGuards)
 	C_Timer.After(1, ApplyGuards)

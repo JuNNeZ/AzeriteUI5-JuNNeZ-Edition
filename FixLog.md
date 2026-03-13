@@ -4,6 +4,36 @@
 
 ## 2026-03-12
 
+- **SaiyaRatt secret command started:** Adding a small always-available hidden command that does a silly profile-themed effect without mutating settings or requiring dev mode. Scope limited to `Core/Core.lua`.
+  - **Files Targeted:** `FixLog.md`, `Core/Core.lua`
+- **SaiyaRatt secret command applied:** Added a new hidden AceConsole command that fires a small in-game “SaiyaRatt Exposition” burst, prints profile/variant status, and forces the SaiyaRatt-affected target and alternate-player frames to update.
+  - **Root Cause:** There was no lightweight always-on fun command in the core addon path even though the SaiyaRatt work now has enough profile-specific behavior to make a harmless themed refresh gag useful.
+  - **Verification:** `luac -p 'Core/Core.lua'` passed.
+  - **Files Modified:** `Core/Core.lua`
+- **SaiyaRatt alternate-player live-apply/threat audit started:** Reviewing follow-up report that the SaiyaRatt `PlayerAlternate` bar art still sometimes needs `/reload` after a profile switch and that the power threat glow now remains visible/white even when no active threat exists. Scope limited to the `PlayerAlternate` runtime refresh path and threat texture visibility logic.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/PlayerAlternate.lua`
+- **SaiyaRatt alternate-player live-apply/threat audit applied:** Reapplied the alternate-player power bar geometry and textures during `UnitFrame_UpdateTextures()` so profile switches now restyle the already-spawned power widget instead of waiting for a frame recreate, and stopped the threat refresh path from force-showing every configured threat texture when no threat state is active.
+  - **Root Cause:** The SaiyaRatt bar art lived in the root `PlayerFrameAlternate` config and was only consumed during frame creation, while later live refreshes only restyled health/cast/threat style textures. At the same time, the local threat rebuild loop had drifted from AzRattUI and unconditionally called `texture:Show()` whenever a threat texture path existed, which left the power glow visible even without active threat.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/PlayerAlternate.lua'` passed.
+  - **Files Modified:** `Components/UnitFrames/Units/PlayerAlternate.lua`
+- **CompactUnitFrame secret debuff boolean crash started:** Investigating Brawl PvP BugSack report from `Blizzard_UnitFrame/Shared/CompactUnitFrame.lua:1666` (`attempt to perform boolean test on field 'isHarmful'`) while Blizzard compact aura code processes a secret-tainted aura table. Scope limited to the WoW 12 file-scope guards so we can sanitize compact aura payloads without re-enabling the older broad aura rewrites.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **CompactUnitFrame secret debuff boolean crash applied:** Added a WoW 12 file-scope compact-aura sanitizer that strips secret aura fields to safe defaults before Blizzard compact-frame buff/debuff/dispel helpers consume them, plus a narrow `CompactUnitFrame_UpdateAuras` fallback that hides compact aura widgets only when Blizzard still throws a secret-value error.
+  - **Root Cause:** `Core/FixBlizzardBugsWow12.lua` intentionally left compact-unit-frame globals untouched to avoid broad taint, but Brawl PvP still let Blizzard compact aura helpers evaluate a secret `aura.isHarmful` boolean directly. That crashed before Blizzard could finish `CompactUnitFrame_UpdateAuras`.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
+- **CompactUnitFrame aura visual regression follow-up started:** Re-checking the new WoW 12 compact-aura guard after follow-up report that auras can look vanilla after the secret-value failure path. Scope limited to reducing the wrapper surface so we guard the crashing boolean gate without overriding Blizzard’s normal aura-set/render helpers.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **CompactUnitFrame aura visual regression follow-up applied:** Removed the temporary wrappers around Blizzard compact aura `UtilSet*` render helpers and kept only the secret-safe display-gate sanitizers plus the `CompactUnitFrame_UpdateAuras` fallback. This keeps the crash guard focused on the `isHarmful` boolean check instead of altering Blizzard’s normal aura render path.
+  - **Root Cause:** The first WoW 12 compact-aura fix also wrapped Blizzard’s aura-set helpers, which was broader than the reported `isHarmful` boolean fault and risked influencing the visual/render path that decides how compact auras look after recovery.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
+- **CompactUnitFrame range/heal/nameplate follow-up started:** Investigating new current-session reports from March 12, 2026 for `CompactUnitFrame_GetRangeAlpha` secret `outOfRange`, `CompactUnitFrame_UpdateHealPrediction` secret `maxHealth`, and `Blizzard_NamePlateUnitFrame.lua:143` invalid `SetNamePlateHitTestFrame` argument during nameplate unit setup. Scope limited to adding the missing WoW 12 file-scope compact/nameplate guards without reviving the older broad secret wrappers.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **CompactUnitFrame range/heal/nameplate follow-up applied:** Added WoW 12 file-scope guards for `CompactUnitFrame_GetRangeAlpha` and `CompactUnitFrame_UpdateHealPrediction`, plus a defensive `NamePlateUnitFrameMixin:OnUnitSet()` preflight that guarantees a fallback `HitTestFrame` before Blizzard calls `SetNamePlateHitTestFrame`.
+  - **Root Cause:** The WoW 12 companion file still lacked active compact-frame guards for secret `frame.outOfRange` and secret heal-prediction math, and Blizzard nameplate unit setup could still receive a missing/invalid `HitTestFrame` during addon-tainted nameplate initialization.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
 - **BugSack clipboard restore started:** Re-adding the missing BugSack copy-to-clipboard workflow through a local compatibility hook so retail can once again open the current formatted BugSack entry in a selectable multiline copy window.
   - **Files Targeted:** `FixLog.md`, `Components/Misc/Misc.xml`, `Components/Misc/BugSack.lua`
 - **BugSack clipboard restore applied:** Added a new always-on misc hook that waits for `BugSack`, injects a `Copy` button into the BugSack footer, and opens a reusable multiline copy window seeded from `BugSackScrollText` so the current formatted report can be selected and copied again.
@@ -16,6 +46,30 @@
   - **Root Cause:** The first restore reused the currently visible `BugSackScrollText` entry and a normal dialog strata window, so it only copied one error at a time and could still appear behind the main BugSack frame.
   - **Verification:** `luac -p 'Components/Misc/BugSack.lua'` passed.
   - **Files Modified:** `Components/Misc/BugSack.lua`
+- **WoW 12 compact/nameplate taint follow-up started:** Reworking the March 12 compact/nameplate companion guards after new runtime reports showed our local wrappers still leaked on secret-number heal prediction, tainted `NamePlateUnitFrameMixin` enough to trigger `Frame:SetForbidden()`, and exposed an EditBox-only BugSack copy-window sizing bug. Scope limited to replacing the tainting nameplate method override with per-frame hooks, broadening the secret-error matcher, and hardening the local BugSack popup sizing path.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`, `Components/Misc/BugSack.lua`
+- **WoW 12 compact/nameplate taint follow-up applied:** Removed the direct `NamePlateUnitFrameMixin` override, moved compact/nameplate sanitizing onto the existing secure lifecycle hooks, broadened the secret-value error matcher so secret-number and secret-boolean compact heal/aura faults collapse quietly, prepared already-created compact frames during quarantine, and replaced the BugSack copy popup’s unsupported `EditBox:GetStringHeight()` call with font-height and line-count sizing.
+  - **Root Cause:** The prior follow-up still replaced Blizzard methods on protected/shared frame paths. That was enough to taint nameplate creation in a way that surfaced `Frame:SetForbidden()` and also left the compact heal wrapper only matching the narrower `"secret value"` text, so secret-number comparisons still escaped and rethrew. Separately, the local BugSack popup assumed a FontString sizing API that retail EditBoxes do not always expose.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` and `luac -p 'Components/Misc/BugSack.lua'` passed.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`, `Components/Misc/BugSack.lua`
+- **WoW 12 compact/nameplate range-text follow-up started:** Investigating the next current-session failures after the taint cleanup: `CompactUnitFrame_UpdateInRange` secret `unitOutOfRange`, `Blizzard_NamePlateUnitFrame.lua:143` bad `SetNamePlateHitTestFrame` argument still occurring on nameplate unit setup, and `TextStatusBar.UpdateTextStringWithValues` secret number compares from Blizzard nameplate health text. Scope limited to earlier nameplate creation hooks plus narrow compact range/health fallbacks instead of reviving shared mixin overrides.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **WoW 12 compact/nameplate range-text follow-up applied:** Added fail-closed guards for `CompactUnitFrame_UpdateInRange` and `CompactUnitFrame_UpdateHealth`, now disabling Blizzard compact range fading on secret range results and suppressing Blizzard compact health text on secret health-text updates. Also normalized nameplate unit frames from both `NamePlateDriverFrame:AcquireUnitFrame()` and `:OnNamePlateCreated()` so the plate uses its root unit frame as `HitTestFrame` before later unit assignment paths.
+  - **Root Cause:** The previous pass only sanitized the post-update `frame.outOfRange` field, but Blizzard was still throwing earlier inside `CompactUnitFrame_UpdateInRange` on a secret `unitOutOfRange` local. Nameplate hit-testing also needed to be normalized earlier than our later compact hooks, and Blizzard nameplate health bars were still allowed to run their numeric text formatter against secret values.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
+- **WoW 12 Plater/nameplate conflict follow-up started:** Rechecking the same session after stationary inn repro showed the remaining failures are now concentrated in Blizzard nameplate setup and Plater’s Midnight suppression path (`SetPoint` dependency loops, `SetNamePlateHitTestFrame`, and Plater’s `reparentedUnitFrames[self.unit]` nil-index). Scope limited to backing our companion file off nameplate-specific mutation so Plater’s own Blizzard-frame handling remains the only active nameplate suppressor.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **WoW 12 Plater/nameplate conflict follow-up applied:** Removed the companion file’s nameplate-specific frame normalization and creation hooks so it no longer rewrites Blizzard nameplate `HitTestFrame` or participates in nameplate setup/anchoring. The remaining WoW 12 companion guards now stay focused on compact party/raid/arena secret-value failures, leaving Blizzard-nameplate suppression entirely to Plater or the dedicated nameplate module.
+  - **Root Cause:** The latest BugSack dump showed the new failures were centered on Blizzard nameplate setup and Plater’s own Midnight `OnRetailNamePlateShow()` reparent path, not on compact party logic. Our added nameplate normalization was colliding with that flow and likely contributed to the `SetPoint` dependency loop, lingering hit-test failure, and Plater nil-index on `self.unit`.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
+- **WoW 12 compact global-surface reduction started:** Reframing the remaining inn/reload repro around global taint rather than encounter context. Scope limited to removing the broad `CompactUnitFrame_UpdateHealth` / `UpdateInRange` / `UpdateHealPrediction` replacements and relying on option-table/frame-state suppression for nameplates and quarantined compact frames instead.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **WoW 12 compact global-surface reduction applied:** Removed the broad WoW 12 replacements of Blizzard `CompactUnitFrame_UpdateHealth`, `CompactUnitFrame_UpdateInRange`, `CompactUnitFrame_GetRangeAlpha`, and `CompactUnitFrame_UpdateHealPrediction`. The companion file now pre-disables range fading, heal prediction, and numeric health text through frame state and option-table prep on nameplates and quarantined compact frames, while keeping the narrower compact aura guard intact.
+  - **Root Cause:** The inn/reload repro made it clear the remaining failures were not encounter-specific. The broader global `CompactUnitFrame_*` replacements were the most likely source of nameplate taint leaking into Blizzard `OnUnitSet` / `SetNamePlateHitTestFrame` and health-text paths. Reducing the override surface is safer than layering more wrappers.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`
 
 ## 5.3.3-JuNNeZ (2026-03-11)
 
@@ -562,6 +616,132 @@ Testing:
 4. Enter/leave combat and recheck alignment
 
 Status: Ready for Test
+
+[2026-03-13] Iteration: WoW 12 ownership reset started
+
+Request:
+- Stop the ongoing compact/EditMode/nameplate/castbar secret-value whack-a-mole.
+- Rebuild the WoW 12 path around explicit Blizzard frame quarantine/takeover instead of shared Blizzard function rewrites.
+
+Plan for this pass:
+- Keep `Core/FixBlizzardBugs.lua` passive on WoW 12.
+- Strip `Core/FixBlizzardBugsWow12.lua` back to:
+  - explicit compact party/raid/arena quarantine based on AzeriteUI module ownership
+  - compact aura sanitization only where still needed
+  - no nameplate mutation from the WoW 12 guard file
+  - no shared castbar/EditMode rewrites from the WoW 12 guard file
+
+Applied:
+- Replaced `Core/FixBlizzardBugsWow12.lua` with a smaller WoW 12 ownership-reset implementation.
+- Removed the file-scope castbar method guards and all nameplate-specific preparation/mutation from the WoW 12 companion file.
+- Kept only:
+  - compact aura predicate sanitization
+  - compact aura fail-closed handling on frames AzeriteUI explicitly quarantines
+  - compact party/raid/arena quarantine based on the actual AzeriteUI module ownership flags
+  - Blizzard target/focus/boss spellbar quarantine instead of castbar method rewriting
+- Left `Core/FixBlizzardBugs.lua` passive on WoW 12, so the reset path now lives almost entirely in the narrower companion file.
+
+Root cause:
+- The repeated inn `/reload` repro and the local addon comparisons showed this was not a missing single guard. The real failure mode was broad ownership overlap: AzeriteUI was still participating in Blizzard compact/nameplate/castbar lifecycle paths deeply enough to taint secret-value and protected-frame flows. Other full UIs avoid this by taking over party/raid/arena explicitly and not trying to patch shared Blizzard compact/nameplate internals into submission.
+
+Verification:
+- `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed.
+
+Files Modified:
+- `Core/FixBlizzardBugsWow12.lua`
+
+[2026-03-13] Iteration: FixBlizzardBugs WoW 12 passive-path cleanup
+
+Request:
+- Clean up `Core/FixBlizzardBugs.lua` so it is obvious the legacy lower-half fixes do not execute on WoW 12.
+
+Applied:
+- Added `IsPassiveWoW12FixEnvironment()` in `Core/FixBlizzardBugs.lua`.
+- Switched the WoW 12 early-exit in `FixBlizzardBugs.OnInitialize` to use that helper.
+- Added explicit comments documenting that the code below the early return is the legacy pre-WoW12 path and is unreachable once the secret-value / forbidden-table environment exists.
+
+Root cause:
+- The file still read as if the lower compact/EditMode/nameplate/castbar fix blocks might be live on WoW 12. They are not, but that was only obvious after tracing the early return manually, which made the file easy to misread during debugging.
+
+Verification:
+- No behavior change intended; comment/helper cleanup only.
+
+Files Modified:
+- `Core/FixBlizzardBugs.lua`
+
+[2026-03-13] Iteration: WoW 12 nameplate secret-mode GW2-style suppression started
+
+Request:
+- Follow the GW2-style frame-ownership approach more closely for AzeriteUI-owned nameplates after the remaining WoW 12 errors stayed concentrated in Blizzard nameplate unitframes (`SetNamePlateHitTestFrame`, nameplate health text, and compact heal prediction on nameplate-backed CUF frames).
+
+Plan for this pass:
+- Keep the generic WoW 12 companion file out of nameplate ownership.
+- Reuse `Components/UnitFrames/Units/NamePlates.lua` `clearClutter()` path in secret mode instead of returning early and leaving Blizzard plate internals alive.
+- Limit the secret-mode change to light Blizzard plate suppression hooks for AzeriteUI-owned nameplates only.
+
+Applied:
+- Kept `PatchBlizzardNamePlate` / `PatchBlizzardNamePlateFrame` active in secret mode so the nameplate module still suppresses Blizzard plate internals for AzeriteUI-owned nameplates.
+- Left the old `DisableBlizzardNamePlate` / `RestoreBlizzardNamePlate` reparent path disabled in secret mode.
+- Added a one-shot pass over current `C_NamePlate.GetNamePlates()` in secret mode so already-existing Blizzard plates also receive the `clearClutter()` suppression path, not just newly created ones.
+
+Root cause:
+- In WoW 12 secret mode, the nameplate module was returning early before installing its Blizzard plate suppression hooks. That left Blizzard nameplate health text, heal prediction, and hit-test setup alive underneath AzeriteUI-owned nameplates, which matches the remaining error stacks.
+
+Verification:
+- `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` passed.
+
+Files Modified:
+- `Components/UnitFrames/Units/NamePlates.lua`
+
+[2026-03-13] Iteration: WoW 12 GW2-style compact/nameplate follow-up applied
+
+Request:
+- Strengthen the GW2-style ownership approach after the first secret-mode suppression pass still left compact-party heal-prediction warnings and Blizzard nameplate `SetNamePlateHitTestFrame` failures.
+
+Applied:
+- `Core/FixBlizzardBugsWow12.lua`
+  - Added `OnShow` hide hooks to quarantined Blizzard frames so compact party/raid/arena surfaces do not reappear during later Blizzard refreshes.
+  - Added active-pool/member enumeration for Blizzard party and arena frames, matching the GW2-style “enumerate active frames and disable them too” pattern instead of only relying on named globals.
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Added a narrow `EnsureBlizzardNamePlateHitTestFrame()` helper.
+  - Applied that helper during Blizzard `OnNamePlateCreated`, `NamePlateUnitFrameMixin:OnUnitSet`, and the one-shot current-plate secret-mode pass so Blizzard gets a valid fallback hit-test frame before calling `SetNamePlateHitTestFrame`.
+
+Root cause:
+- Blizzard compact party members can still be reached through active frame pools during later profile/EditMode refreshes even after global frame quarantine, and Blizzard nameplate `OnUnitSet` was still reaching `SetNamePlateHitTestFrame` before our earlier suppression path finished hiding the plate internals.
+
+Verification:
+- `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed.
+- `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` passed.
+
+Files Modified:
+- `Core/FixBlizzardBugsWow12.lua`
+- `Components/UnitFrames/Units/NamePlates.lua`
+
+[2026-03-13] Iteration: WoW 12 GW2-style quarantine bugfix started
+
+Request:
+- Fix the new helper regression in `Core/FixBlizzardBugsWow12.lua` and re-tighten the Blizzard nameplate hit-test fallback after follow-up errors still showed compact party `outOfRange`/`maxHealth` failures plus `SetNamePlateHitTestFrame`.
+
+Plan for this pass:
+- Fix the local function ordering bug that left `PrepareCompactFrame` nil inside the new pool enumeration helper.
+- Make the secret-mode nameplate hit-test fallback unconditional so stale Blizzard child hit-test frames are replaced, not only nil/forbidden ones.
+
+Applied:
+- `Core/FixBlizzardBugsWow12.lua`
+  - Forward-declared `PrepareCompactFrame` so pooled compact-frame quarantine no longer faults on a nil global during active pool enumeration.
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Changed the secret-mode hit-test fallback to always replace `UF.HitTestFrame` with `UF` itself before Blizzard uses it.
+
+Root cause:
+- The last compact follow-up accidentally introduced a local-function ordering bug, which could abort the active pool quarantine pass and leave Blizzard compact party members alive. On the nameplate side, only replacing nil/forbidden hit-test frames was too weak because Blizzard could still keep a stale child frame that failed the native `SetNamePlateHitTestFrame` call.
+
+Verification:
+- `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed.
+- `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` passed.
+
+Files Modified:
+- `Core/FixBlizzardBugsWow12.lua`
+- `Components/UnitFrames/Units/NamePlates.lua`
 
 [2026-03-10] Iteration: Add one-time classpower anchor migration for previously affected installs
 
@@ -2543,3 +2723,484 @@ Testing:
 4. Review `Docs/Nameplate Feature Plan.md` for follow-up prioritization.
 
 Status: Ready for Test
+[2026-03-13] Iteration: WoW 12 compact range/heal fail-closed guard
+
+Request:
+- Fresh BugSack dump still showed Blizzard compact party updates reaching secret-value paths after the GW2-style ownership reset:
+  - `CompactUnitFrame.lua:1073` boolean test on secret `frame.outOfRange`
+  - previous / related `CompactUnitFrame.lua:1182` compare on secret `maxHealth`
+- Same dump also included a transient `PrepareCompactFrame` nil regression during pooled-party quarantine.
+
+Applied:
+- `Core/FixBlizzardBugsWow12.lua`
+  - Kept the `local PrepareCompactFrame` forward declaration so pooled-frame quarantine does not resolve the helper as a global.
+  - Added a narrow fail-closed wrapper for `CompactUnitFrame_GetRangeAlpha()`:
+    - only swallows secret-value errors for compact frames AzeriteUI already intends to quarantine
+    - disables range fading on that frame and returns full alpha (`1`)
+  - Added a narrow fail-closed wrapper for `CompactUnitFrame_UpdateHealPrediction()`:
+    - only swallows secret-value errors for compact frames AzeriteUI already owns/quarantines
+    - disables Blizzard heal prediction visuals on that frame
+- Left Blizzard nameplate ownership out of this file to avoid reopening the broader taint/nameplate overlap.
+
+Why:
+- This keeps the WoW 12 reset strategy intact:
+  - ownership/quarantine first
+  - only minimal fail-closed wrappers for still-leaking Blizzard compact party paths
+- It avoids reintroducing broad nameplate/EditMode/castbar mutation while addressing the two remaining compact-party crash sites directly.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce the idle/inn and group-frame case
+4. Confirm these no longer appear:
+   - `CompactUnitFrame.lua:1073` secret `outOfRange`
+   - `CompactUnitFrame.lua:1182` secret `maxHealth`
+
+[2026-03-13] Iteration: WoW 12 compact health-color + nameplate acquire follow-up
+
+Request:
+- With Plater disabled, fresh BugSack dumps still showed:
+  - `CompactUnitFrame.lua:707` secret `oldR` compare in `CompactUnitFrame_UpdateHealthColor()` on Blizzard compact party frames
+  - `CompactUnitFrame.lua:1182` secret `maxHealth` still rethrowing from AzeriteUI's narrow heal wrapper on Blizzard nameplate-backed compact frames
+  - `Blizzard_NamePlateUnitFrame.lua:143` invalid `SetNamePlateHitTestFrame` argument still occurring during Blizzard nameplate setup
+
+Applied:
+- `Core/FixBlizzardBugsWow12.lua`
+  - Added `IsBlizzardNamePlateCompactFrame()` / `ShouldFailClosedCompactSecretFrame()` so the narrow compact fail-closed wrappers can distinguish Blizzard nameplate CUF frames from party/raid/arena quarantine targets.
+  - Added a narrow fail-closed wrapper for `CompactUnitFrame_UpdateHealthColor()`:
+    - only swallows secret-value errors on AzeriteUI-owned compact frames or Blizzard nameplate compact frames
+    - applies a stable fallback health-bar color instead of letting Blizzard compare secret old RGB values
+  - Expanded the existing `CompactUnitFrame_GetRangeAlpha()` and `CompactUnitFrame_UpdateHealPrediction()` fail-closed wrappers to also cover Blizzard nameplate compact frames, with heal/text visuals disabled on secret failures.
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Added an earlier secret-mode hook on `NamePlateBaseMixin:AcquireUnitFrame()` so `HitTestFrame` is normalized before the later Blizzard `OnUnitSet()` path reaches `SetNamePlateHitTestFrame`.
+
+Why:
+- The previous fail-closed wrappers were still too narrow:
+  - party frames could still hit Blizzard health-color comparisons before quarantine fully won
+  - Blizzard nameplate compact frames were reaching the wrappers, but because they were not classified as quarantine targets the errors were rethrown
+  - the nameplate hit-test fallback needed a pre-`OnUnitSet()` seam, not only post-create and post-`OnUnitSet()` hooks
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce both:
+   - idle/party-frame setup
+   - normal nameplate creation with Plater disabled
+4. Confirm these no longer appear:
+   - `CompactUnitFrame.lua:707` secret `oldR`
+   - `CompactUnitFrame.lua:1182` secret `maxHealth`
+   - `Blizzard_NamePlateUnitFrame.lua:143` bad `SetNamePlateHitTestFrame`
+
+[2026-03-13] Iteration: WoW 12 nameplate anchor-cycle follow-up
+
+Request:
+- Fresh post-fix dump with Plater disabled removed the old secret-value crashes, but Blizzard nameplates now spammed `PixelUtil.SetPoint()` dependency-loop errors from `NamePlateUnitFrame:UpdateAnchors()` while anchoring the castbar and health container.
+
+Applied:
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Stopped calling `PatchBlizzardNamePlateFrame()` during the early secret-mode hooks:
+    - `NamePlateDriverFrame:OnNamePlateCreated()`
+    - `NamePlateBaseMixin:AcquireUnitFrame()`
+    - `NamePlateUnitFrameMixin:OnUnitSet()`
+  - In secret mode those hooks now only normalize `HitTestFrame` early enough for Blizzard’s native `SetNamePlateHitTestFrame()` path.
+  - Blizzard clutter suppression still runs later through the existing `NAME_PLATE_UNIT_ADDED` / current-plate paths, after Blizzard has finished the sensitive `ApplyFrameOptions()` / `UpdateAnchors()` setup.
+
+Why:
+- `clearClutter()` was running too early in the Blizzard nameplate lifecycle. That left Blizzard still trying to lay out castbar and health-container anchors after we had already partially neutered the same frame tree, producing the self-dependent anchor loop in `PixelUtil.SetPoint()`.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce ordinary nameplate creation with Plater still disabled
+4. Confirm `Blizzard_SharedXML/PixelUtil.lua:52` anchor-cycle errors no longer appear
+
+[2026-03-13] Iteration: WoW 12 nameplate secret-mode clutter suppression rollback
+
+Request:
+- The anchor-cycle spam persisted, which showed that even the later secret-mode `NAME_PLATE_UNIT_ADDED` / current-plate `clearClutter()` path was still perturbing Blizzard nameplate layout.
+
+Applied:
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - In WoW 12 secret mode, stopped assigning `self.PatchBlizzardNamePlate` and `self.PatchBlizzardNamePlateFrame` entirely.
+  - Secret mode now keeps only the early `HitTestFrame` normalization hooks and no longer runs `clearClutter()` on Blizzard nameplates at any stage.
+  - Non-secret / legacy path keeps the previous Blizzard clutter suppression behavior unchanged.
+
+Why:
+- The remaining errors were no longer secret-value or hit-test faults. They were pure anchor-graph errors from mutating Blizzard castbar/health subframes while Blizzard still expected to lay them out. With the compact/nameplate secret guards already moved into safer fail-closed wrappers, the nameplate module no longer needs to suppress Blizzard subframes directly in secret mode.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce ordinary nameplate creation with Plater disabled
+4. Confirm `Blizzard_SharedXML/PixelUtil.lua:52` no longer appears
+
+[2026-03-13] Iteration: WoW 12 stock-oUF nameplate disable path
+
+Request:
+- Check other installed UI addons, the API, and outside references for the remaining Blizzard nameplate anchor-cycle failure and switch to the safer pattern if one exists.
+
+Research:
+- Local addon code:
+  - `AzeriteUI_Stock/Libs/oUF/ouf.lua` hooks `NamePlateDriverFrame:AcquireUnitFrame()` to the shared oUF Blizzard-nameplate disable path.
+  - The bundled `Libs/oUF/blizzard.lua` / GW2 / Diabolic / Unhalted all rely on the shared oUF disable path, not addon-local secret-mode `HitTestFrame` hooks.
+- API:
+  - `C_NamePlateManager.SetNamePlateHitTestFrame(unitToken, hitTestFrame)` expects a `SimpleFrame`.
+  - `C_NamePlateManager.SetNamePlateHitTestInsets(type, left, right, top, bottom)` is already the hit-test API used by the oUF nameplate driver.
+- Internet:
+  - no better primary-source fix surfaced than the same stock/oUF `AcquireUnitFrame` disable pattern.
+
+Applied:
+- `Libs/oUF/ouf.lua`
+  - Added a one-time `hooksecurefunc(NamePlateDriverFrame, 'AcquireUnitFrame', self.DisableBlizzardNamePlate)` inside `oUF:SpawnNamePlates()`.
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - In WoW 12 secret mode, stopped installing the addon-local Blizzard-nameplate hook stack entirely by returning early after nulling the old patch/disable helpers.
+  - Secret mode now relies on the shared oUF layer for Blizzard nameplate disabling instead of the custom `HitTestFrame` hook stack.
+
+Why:
+- The working local UI addons converge on the shared oUF disable path.
+- `AcquireUnitFrame` is earlier and safer than the later addon-local mixin hooks, and it avoids our custom overlap with Blizzard nameplate setup/anchor code.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce ordinary nameplate creation with Plater disabled
+4. Confirm `Blizzard_SharedXML/PixelUtil.lua:52` anchor-cycle errors stop
+
+[2026-03-13] Iteration: WoW 12 minimal hit-test normalization restore
+
+Request:
+- After switching to the stock/oUF `AcquireUnitFrame` disable path, the anchor-cycle spam was gone but the original `SetNamePlateHitTestFrame` bad-argument error returned.
+
+Applied:
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Kept the shared oUF `AcquireUnitFrame` Blizzard-nameplate disable path as the only suppression path.
+  - Restored only the minimal secret-mode `HitTestFrame` normalization hooks:
+    - `NamePlateDriverFrame:OnNamePlateCreated()`
+    - `NamePlateBaseMixin:AcquireUnitFrame()`
+    - `NamePlateUnitFrameMixin:OnUnitSet()`
+    - one-shot normalization for currently existing plates
+  - Did not restore any secret-mode clutter suppression or Blizzard subframe mutation.
+
+Why:
+- The scan result narrowed it down cleanly:
+  - stock/oUF `AcquireUnitFrame` disable path fixes the anchor-loop problem
+  - the remaining `SetNamePlateHitTestFrame` error still needs the tiny `HitTestFrame` normalization layer
+  - those two pieces can coexist safely as long as we do not bring back `clearClutter()` in secret mode
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce ordinary nameplate creation with Plater disabled
+4. Confirm `Blizzard_NamePlateUnitFrame.lua:143` no longer appears
+
+[2026-03-13] Iteration: WoW 12 dedicated nameplate hit-test frame
+
+Request:
+- The minimal `HitTestFrame = UnitFrame` restore removed the bad-argument fault but reintroduced the Blizzard nameplate anchor-cycle errors. We need a `SetNamePlateHitTestFrame()`-safe frame that does not participate in the UnitFrame anchor graph.
+
+Applied:
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Changed `EnsureBlizzardNamePlateHitTestFrame()` to create and reuse a dedicated inert frame on the nameplate root (`plate.__AzeriteUI_HitTestFrame`) instead of pointing `UF.HitTestFrame` at the full `UnitFrame`.
+  - The dedicated frame is parented to the plate and `SetAllPoints(plate)`, keeping the click region alive without feeding Blizzard the same frame tree it is actively laying out.
+
+Why:
+- The scan narrowed the regression down to the frame choice, not the hook timing:
+  - `UF.HitTestFrame = UF` satisfies `SetNamePlateHitTestFrame()`
+  - but it also makes Blizzard treat the full UnitFrame tree as the hit-test target, which appears to be enough to reintroduce the castbar/healthbar anchor dependency loop
+- A separate simple frame should satisfy the API without creating that self-reference.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce ordinary nameplate creation with Plater disabled
+4. Confirm both stay gone:
+   - `Blizzard_NamePlateUnitFrame.lua:143` bad `SetNamePlateHitTestFrame`
+   - `Blizzard_SharedXML/PixelUtil.lua:52` anchor-cycle errors
+
+[2026-03-13] Iteration: WoW 12 dungeon follow-up for nameplate castbars and party frame fallbacks
+
+Request:
+- Dungeon/party repro after the nameplate hit-test fix still produced:
+  - Blizzard nameplate castbar `StopFinishAnims()` forbidden-table failures
+  - nameplate CUF `bad self` / `bad argument` errors during health/heal/aura updates
+  - Blizzard mainline party frame secret-number errors in `PartyMemberHealthCheck()` and `TextStatusBar`
+
+Applied:
+- `Libs/oUF/blizzard.lua`
+  - Added an instance-level safe wrapper for Blizzard nameplate castbar `StopFinishAnims()` / `StopAnims()` that swallows only forbidden-table failures.
+  - Applied that patch from the shared `oUF` Blizzard nameplate disable path before unregistering nameplate castbar events.
+- `Core/FixBlizzardBugsWow12.lua`
+  - Added `IsFrameAccessError()` and broadened the active CUF fail-closed wrappers so Blizzard nameplate frames suppress `bad self` / bad-argument errors, not only secret-value errors.
+  - Added a live WoW12 guard for `C_UnitAuras.GetUnitAuras()` that returns safe empty data on invalid/secret inputs or API failure.
+  - Added live WoW12 wrappers for `PartyMemberHealthCheck()` and `TextStatusBar` party health text updates so hidden Blizzard party frames fail closed instead of comparing secret values.
+  - Extended compact status-text handling to the mainline lowercase `healthbar` path and expanded heal-prediction widget hiding to cover the party-frame variants.
+
+Why:
+- The remaining nameplate errors were no longer anchor or hit-test issues. They were follow-on failures from Blizzard still touching castbar/health/aura subpaths on frames we had already disabled through the early `AcquireUnitFrame` seam.
+- The party errors were a separate gap: our active WoW12 reset handled compact-style `healthBar`, but Blizzard mainline party frames still use lowercase `healthbar` and their own `PartyMemberHealthCheck()` path.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce inside a dungeon with a party and ordinary nameplates active
+4. Confirm these stay gone:
+   - `CastingBarFrame.lua:722` attempted to iterate a forbidden table
+   - `FixBlizzardBugsWow12.lua:552` rethrow from `CompactUnitFrame_UpdateAuras`
+   - `PartyMemberFrame.lua:598` secret `unitHPMax`
+   - `TextStatusBar.lua:106` secret number compare
+   - `Blizzard_NamePlateAuras.lua:266` bad `C_UnitAuras.GetUnitAuras`
+
+[2026-03-13] Iteration: WoW 12 nameplate target/highlight follow-up and party pet quarantine
+
+Request:
+- After the dungeon follow-up, the remaining errors were:
+  - `CompactPartyFramePet#` secret `oldR` compares still falling through the compact guard
+  - Blizzard nameplate selection-highlight and health-text paths still executing on disabled plates
+  - a taint warning in `CompactUnitFrame_CheckNeedsUpdate()` after direct hit-test frame replacement on Blizzard nameplates
+
+Applied:
+- `Core/FixBlizzardBugsWow12.lua`
+  - Extended compact party quarantine matching to include `CompactPartyFramePet#`.
+  - Quarantine pass now explicitly prepares/quarantines `CompactPartyFramePet#` globals alongside the existing party member frames.
+- `Libs/oUF/blizzard.lua`
+  - Added per-instance nameplate suppression for Blizzard health text and highlight regions from the shared `oUF` disable seam.
+  - Nameplate health bars now fail closed by forcing status text off and overriding `UpdateTextDisplay()` locally instead of letting Blizzard re-enter `TextStatusBar` target-display logic on hidden plates.
+  - Nameplate selection/aggro highlight regions are now neutralized locally so Blizzard `CompactUnitFrame_UpdateSelectionHighlight()` stops calling native `Show()` / `Hide()` on problem regions.
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Changed `EnsureBlizzardNamePlateHitTestFrame()` to reuse Blizzard’s existing `UF.HitTestFrame` whenever it is valid, only falling back to the dedicated plate child frame when Blizzard does not provide a usable one.
+
+Why:
+- `CompactPartyFramePet#` was simply outside the current compact-party name matcher, so pet frames never became quarantine targets and still hit the secret `oldR` path.
+- The remaining nameplate errors were no longer castbar or aura related. They were target/highlight/text paths still running against Blizzard nameplate subregions after the shared disable seam.
+- Reusing Blizzard’s own hit-test frame where possible should reduce direct taint on the UnitFrame table while preserving the `SetNamePlateHitTestFrame()` fix.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce inside a dungeon with a party and ordinary nameplates active
+4. Confirm these stay gone:
+   - `CompactUnitFrame.lua:707` secret `oldR` on `CompactPartyFramePet#`
+   - `CompactUnitFrame.lua:910` bad self on `selectionHighlight:Hide()`
+   - `TextStatusBar.lua:166` secret `valueMax` from Blizzard nameplate health text
+   - `CompactUnitFrame.lua:233` forbidden-object taint in `CompactUnitFrame_CheckNeedsUpdate()`
+
+[2026-03-13] Iteration: WoW 12 party status-text mixin guard and compact selection follow-up
+
+Request:
+- After the nameplate target/highlight follow-up, the remaining errors were:
+  - Blizzard mainline party frames still hitting `TextStatusBar.lua:106` and `PartyMemberFrame.lua:598` on Edit Mode refresh paths
+  - `CompactRaidFrame#` pet/raid frames still rethrowing the compact heal-prediction `maxHealth` secret compare
+  - Blizzard nameplates still hitting `CompactUnitFrame_UpdateSelectionHighlight()` bad-self errors and a forbidden-object taint warning in `CompactUnitFrame_CheckNeedsUpdate()`
+
+Applied:
+- `Core/FixBlizzardBugsWow12.lua`
+  - Added `MAX_RAID_MEMBERS`, `IsForbiddenObjectError()`, and nameplate status-bar detection.
+  - Extended compact raid matching/quarantine to include `CompactRaidFrame#` and unit-token fallbacks like `partypet#` / `raid#`.
+  - Moved the status-text fail-closed guard onto the live `TextStatusBarMixin` methods, with legacy `_G.TextStatusBar` fallback only if needed.
+  - Added fail-closed wrappers for `CompactUnitFrame_UpdateSelectionHighlight()` and `CompactUnitFrame_CheckNeedsUpdate()` on Blizzard nameplate compact frames.
+  - Broadened `ADDON_LOADED` reapply coverage to include Blizzard text-status, raid, edit-mode, and nameplate modules.
+
+Why:
+- The surviving party status errors were still coming through Blizzard’s mixin-backed text update path, not the legacy `_G.TextStatusBar` table we had wrapped.
+- `CompactRaidFrame1` fell outside the current raid matcher, so raid/pet compact frames could still miss the quarantine/fail-closed surface.
+- The remaining nameplate issues were narrow shared CUF update paths, so adding targeted fail-closed wrappers was safer than reintroducing per-instance Blizzard nameplate mutations.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce with a party, Edit Mode refresh, and ordinary nameplates active
+4. Confirm these stay gone:
+   - `TextStatusBar.lua:106` secret compare on `STATUS_TEXT_PARTY`
+   - `PartyMemberFrame.lua:598` secret `unitHPMax`
+   - `CompactUnitFrame.lua:1182` secret `maxHealth` on `CompactRaidFrame#`
+   - `CompactUnitFrame.lua:910` bad self on selection highlight
+   - `CompactUnitFrame.lua:233` forbidden-object taint warning on Blizzard nameplates
+
+[2026-03-13] Iteration: WoW 12 rollback of early nameplate disable seam and party healthbar script suppression
+
+Request:
+- After the mixin/status-text follow-up, the remaining errors shifted to:
+  - Blizzard nameplate creation taint (`ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()`)
+  - Blizzard nameplate castbar/anchor failures during `ApplyFrameOptions()` / `UpdateAnchors()`
+  - Blizzard mainline party status-text and `PartyMemberHealthCheck()` secret compares still firing during Edit Mode refresh
+
+Applied:
+- `Libs/oUF/ouf.lua`
+  - Removed the early `NamePlateDriverFrame:AcquireUnitFrame()` disable hook. Shared Blizzard nameplate suppression now falls back to the later `NAME_PLATE_UNIT_ADDED` seam only.
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Removed the secret-mode local Blizzard nameplate hook stack and the now-unused hit-test normalization helper.
+  - Secret mode now avoids addon-local mutation during protected Blizzard nameplate creation.
+- `Core/FixBlizzardBugsWow12.lua`
+  - `DisableStatusBarText()` now also sets `disableMaxValue` and `statusTextDisplay = "NONE"`.
+  - Added `DisableStatusBarScripts()` / `DisableFrameStatusBarScripts()` and apply them from `PrepareCompactFrame()` so hidden Blizzard party/raid frames stop running `OnValueChanged`/`OnMinMaxChanged` health-bar scripts at all.
+
+Why:
+- The new `SetForbidden()` block points to the early Blizzard nameplate creation seam itself being tainted. Continuing to touch frames from `AcquireUnitFrame()` was no longer safe.
+- The remaining party errors were still arriving through live health-bar scripts on Blizzard frames we already intend to quarantine, so cutting those scripts off directly is safer than chasing inaccessible Blizzard text helpers.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce with a dungeon party, Edit Mode refresh, and ordinary nameplates active
+4. Confirm these stay gone:
+   - `ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()`
+   - `CastingBarFrame.lua:722` forbidden-table iteration
+   - `Blizzard_NamePlateUnitFrame.lua:659` / `:746` bad `ClearAllPoints`
+   - `TextStatusBar.lua:106` / `:166` secret compares on party health text
+   - `PartyMemberFrame.lua:598` secret `unitHPMax`
+
+[2026-03-13] Iteration: WoW 12 late nameplate rollback and live party health wrapper follow-up
+
+Request:
+- After rolling back the early nameplate seam, the remaining errors were:
+  - Blizzard party health updates still hitting `TextStatusBar.lua:106` / `:166` and `HealthBar.lua:8`
+  - Blizzard nameplate creation still showing `ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()`
+  - Blizzard nameplate compact updates still failing in `UpdateAnchors()` and `CompactUnitFrame_UpdateName()`
+
+Applied:
+- `Libs/oUF/ouf.lua`
+  - In WoW 12 secret mode, stopped calling `oUF:DisableBlizzardNamePlate()` from `NAME_PLATE_UNIT_ADDED`.
+- `Core/FixBlizzardBugsWow12.lua`
+  - Added `IsPartyHealthBar()` so live Blizzard party/pet health bars can be identified directly.
+  - Wrapped global helper functions `TextStatusBar_UpdateTextStringWithValues`, `TextStatusBar_UpdateTextString`, `UnitFrameHealthBar_Update`, `UnitFrameHealthBar_OnValueChanged`, and `HealthBar_OnValueChanged`.
+  - Party/pet health bars now fail closed by clearing status-bar scripts/text when Blizzard hits secret-value compares.
+  - Added a fail-closed wrapper for `CompactUnitFrame_UpdateName()` on Blizzard nameplate compact frames.
+
+Why:
+- The latest stacks showed Blizzard was still bypassing the mixin wrapper through global helper functions and direct unit-frame healthbar update paths.
+- Any remaining Blizzard nameplate disabling in secret mode was still enough to taint protected nameplate creation, so the safest path is to stop calling the shared disable seam there entirely and rely on the narrower global fail-closed guards.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce with a party, party pets, Edit Mode refresh, and ordinary nameplates active
+4. Confirm these stay gone:
+   - `TextStatusBar.lua:106` / `:166`
+   - `Blizzard_GameTooltip/HealthBar.lua:8`
+   - `ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()`
+   - `Blizzard_NamePlateUnitFrame.lua:659` / `:746`
+   - `CompactUnitFrame.lua:816` bad `UnitShouldDisplayName(unit)`
+
+[2026-03-13] Iteration: WoW 12 mana-bar follow-up and final secret-mode nameplate driver rollback
+
+Request:
+- After the late nameplate rollback, the remaining errors were:
+  - party mana-bar text still hitting `TextStatusBar.lua:106`
+  - party pet health-bar scripts still hitting `Blizzard_GameTooltip/HealthBar.lua:8`
+  - Blizzard nameplate creation/update still tainted enough to trip `Frame:SetForbidden()` and `UpdateAnchors():ClearAllPoints()` bad-self errors
+
+Applied:
+- `Core/FixBlizzardBugsWow12.lua`
+  - `DisableFrameStatusBarScripts()` now recursively covers nested party pet frames.
+  - Added fail-closed wrappers for `UnitFrameManaBar_UpdateType()` and `UnitFrameManaBar_Update()`.
+  - Party quarantine now also explicitly prepares/quarantines nested `PartyMemberFrame#PetFrame` objects.
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Removed the last secret-mode call to `clearClutter(NamePlateDriverFrame)`.
+
+Why:
+- The latest party error moved from health to the Blizzard mana-bar text path, so the health-only wrappers were no longer enough.
+- The remaining pet health-bar error showed that nested party pet frames were still outside the direct status-bar script suppression pass.
+- `clearClutter(NamePlateDriverFrame)` was the last unconditional Blizzard nameplate mutation still running in secret mode, making it the most likely remaining source of the protected nameplate taint/anchor fallout.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce with a party, party pets, Edit Mode refresh, and ordinary nameplates active
+4. Confirm these stay gone:
+   - `TextStatusBar.lua:106` on `UnitFrameManaBar_UpdateType`
+   - `Blizzard_GameTooltip/HealthBar.lua:8` on party pets
+   - `ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()`
+   - `Blizzard_NamePlateUnitFrame.lua:659` / `:746`
+
+[2026-03-13] Iteration: WoW 12 root-cause reset back to ownership-only compact handling
+
+Request:
+- Stop the whack-a-mole and remove the disease instead of adding more symptom wrappers.
+- The original reproducible bug was the Brawl PvP compact aura `isHarmful` secret boolean crash; the later nameplate/party/EditMode fallout started only after broad shared Blizzard rewrites were added on top.
+
+Applied:
+- `Core/FixBlizzardBugsWow12.lua`
+  - Removed the WoW 12 wrappers for:
+    - `C_UnitAuras.GetUnitAuras`
+    - `PartyMemberHealthCheck`
+    - `TextStatusBar*`
+    - `UnitFrame*HealthBar*`
+    - `UnitFrameManaBar*`
+    - `HealthBar_OnValueChanged`
+    - `CompactUnitFrame_Update*` shared globals
+  - Kept only the narrow compact aura predicate sanitizers:
+    - `CompactUnitFrame_UtilShouldDisplayBuff`
+    - `CompactUnitFrame_UtilShouldDisplayDebuff`
+  - Kept the ownership/quarantine path for Blizzard compact party/raid/arena frames and Blizzard spellbars we replace.
+  - Reduced WoW 12 `ADDON_LOADED` reapply back to compact-frame modules only.
+
+Why:
+- Replacing shared Blizzard globals was the disease. Once those shared CUF/statusbar/nameplate functions are rewritten by addon code, taint spreads into Blizzard nameplate creation, party Edit Mode refresh, and every later compact-frame update.
+- The original Brawl PvP bug was an aura-predicate issue inside Blizzard compact auras. The least invasive fix is to sanitize only that predicate surface while keeping the “ownership” model for compact party/raid/arena frames we already replace.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce the original compact Brawl/party scenario and also ordinary world nameplates
+4. Confirm both classes of regression stay gone:
+   - original `CompactUnitFrame.lua:1666` secret `isHarmful`
+   - the later nameplate/party/EditMode taint cascade (`SetForbidden`, `ClearAllPoints`, `TextStatusBar`, mana/health helpers)
+
+---
+
+[2026-03-13] Iteration: Remove residual Blizzard frame-table taint from WoW 12 compact quarantine
+
+Request:
+- Stop the remaining compact party/Edit Mode errors without reintroducing shared Blizzard wrappers.
+- The last surviving errors still pointed at Blizzard compact party heal prediction and party status text, both tainted by `AzeriteUI5_JuNNeZ_Edition`.
+
+Applied:
+- `Core/FixBlizzardBugsWow12.lua`
+  - Removed the remaining direct field writes on Blizzard compact/status bars from the WoW 12 quarantine path.
+  - `PrepareCompactFrame()` is now intentionally a no-op, with the narrow aura predicate sanitizers left intact.
+- `Components/UnitFrames/Units/Party.lua`
+  - Added WoW 12 `UIParent:UnregisterEvent("GROUP_ROSTER_UPDATE")` before applying compact quarantine.
+- `Components/UnitFrames/Units/Raid5.lua`
+  - Added the same WoW 12 `GROUP_ROSTER_UPDATE` shutdown before compact quarantine.
+- `Components/UnitFrames/Units/Raid25.lua`
+  - Added the same WoW 12 `GROUP_ROSTER_UPDATE` shutdown before compact quarantine.
+- `Components/UnitFrames/Units/Raid40.lua`
+  - Added the same WoW 12 `GROUP_ROSTER_UPDATE` shutdown before compact quarantine.
+
+Why:
+- The remaining `maxHealth` and `valueMax` stacks were still Blizzard code touching secret values on frames whose tables we had previously modified.
+- In WoW 12, even "harmless" addon-owned writes like `statusTextDisplay`, `disableMaxValue`, `outOfRange`, `inDistance`, or compact option flags can taint the Blizzard frame object enough to poison later internal secret-value compares.
+- The safer ownership model is: sanitize only the original compact aura predicate surface, and otherwise disable/quarantine Blizzard frames through methods and event shutdown, not addon-side state writes.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Reproduce with party frames, raid-style party setting/Edit Mode refresh, and compact party members active
+4. Confirm these stay gone:
+   - `CompactUnitFrame.lua:1182` secret `maxHealth`
+   - `TextStatusBar.lua:106` / `:166` secret `valueMax`
+
+[2026-03-13] Iteration: Restore secret-mode Blizzard nameplate visual hide only
+
+Request:
+- After stripping the secret-mode nameplate suppression back to zero mutation, Blizzard health bars were again visible behind the custom AzeriteUI nameplates.
+
+Applied:
+- `Components/UnitFrames/Units/NamePlates.lua`
+  - Added a new secret-mode-only `HideBlizzardNamePlateVisual(unit)` helper.
+  - It applies a delayed visual hide to the Blizzard `NamePlate.UnitFrame` by forcing `SetAlpha(0)` on the root UnitFrame and its health bar only.
+  - Added one-time `OnShow` and `SetAlpha` hooks per Blizzard UnitFrame so later Blizzard alpha updates do not make the duplicate health bar visible again.
+  - Kept the secret-mode path free of reparenting, event unregistering, clutter stripping, or other protected creation-time mutation.
+
+Why:
+- The previous rollback fixed the taint cascade by backing away from Blizzard nameplate mutation entirely, but that also removed the only remaining visual suppression layer.
+- The duplicate bar symptom only needs a visual hide. Restoring reparent/event/clutter changes would reopen the same protected nameplate creation and anchor risks we just removed.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Let ordinary nameplates appear
+4. Confirm Blizzard health bars are no longer visible behind AzeriteUI nameplates
+5. Also confirm the earlier secret-mode regressions do not return:
+   - `ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()`
+   - `Blizzard_NamePlateUnitFrame.lua:659` / `:746`
