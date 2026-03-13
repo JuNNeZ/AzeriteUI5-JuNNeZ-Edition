@@ -6,6 +6,11 @@ Do not repeat older items from prior versions in newer entries.
 ## 5.3.8-JuNNeZ (2026-03-13)
 
 ### Fixes
+- Corrected the release version metadata from `5.3.7-JuNNeZ` to `5.3.8-JuNNeZ` in the TOC, build script, and changelog after finalizing the assisted-highlight release state.
+
+## 5.3.7-JuNNeZ (2026-03-13)
+
+### Fixes
 - Restored action-bar spell proc highlights by reconnecting `LibActionButton` overlay-glow handling to AzeriteUI's custom `CustomSpellActivationAlert` texture on the main bars.
 - Added Blizzard assisted-combat highlight support to AzeriteUI action bars and kept the assisted suggestion circular on AzeriteUI buttons instead of falling back to the native square frame.
 
