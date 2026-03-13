@@ -2687,12 +2687,36 @@ function UpdateHotkeys(self)
 end
 
 function ShowOverlayGlow(self)
+	if self.customSpellActivationIsActive then
+		self.queueSpellActivationUpdate = true
+		return
+	end
+
+	self.queueSpellActivationUpdate = nil
+
+	if self.CustomSpellActivationAlert then
+		self.CustomSpellActivationAlert:Show()
+		return
+	end
+
 	if LCG then
 		LCG.ShowOverlayGlow(self)
 	end
 end
 
 function HideOverlayGlow(self)
+	if self.customSpellActivationIsActive then
+		self.queueSpellActivationUpdate = true
+		return
+	end
+
+	self.queueSpellActivationUpdate = nil
+
+	if self.CustomSpellActivationAlert then
+		self.CustomSpellActivationAlert:Hide()
+		return
+	end
+
 	if LCG then
 		LCG.HideOverlayGlow(self)
 	end
@@ -2704,10 +2728,47 @@ function UpdateOverlayGlow(self)
 		return
 	end
 
-	if spellId and IsSpellOverlayed(spellId) then
+	if (issecretvalue and issecretvalue(spellId)) then
+		spellId = nil
+	end
+
+	if spellId and IsSpellOverlayed and IsSpellOverlayed(spellId) then
 		ShowOverlayGlow(self)
 	else
 		HideOverlayGlow(self)
+	end
+end
+
+function Generic:SetSpellActivationTexture(texture)
+	if self.CustomSpellActivationAlert then
+		self.CustomSpellActivationAlert:SetTexture(texture)
+	end
+end
+
+function Generic:SetSpellActivationColor(r, g, b, a)
+	if self.CustomSpellActivationAlert then
+		self.CustomSpellActivationAlert:SetVertexColor(r, g, b, a or .75)
+	end
+end
+
+function Generic:ShowSpellActivation()
+	self.customSpellActivationIsActive = true
+	if self.CustomSpellActivationAlert then
+		self.CustomSpellActivationAlert:Show()
+	elseif LCG then
+		LCG.ShowOverlayGlow(self)
+	end
+end
+
+function Generic:HideSpellActivation()
+	self.customSpellActivationIsActive = nil
+	if self.CustomSpellActivationAlert then
+		self.CustomSpellActivationAlert:Hide()
+	elseif LCG then
+		LCG.HideOverlayGlow(self)
+	end
+	if self.queueSpellActivationUpdate then
+		UpdateOverlayGlow(self)
 	end
 end
 

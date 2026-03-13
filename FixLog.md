@@ -2,6 +2,20 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-13
+
+- **Action bar proc overlay audit started:** Investigating report that action bar buttons are not showing spell proc/activation highlights. Scope limited to the main action-bar skin and embedded `LibActionButton` proc-glow path so we can restore the existing overlay behavior without adding a second event system.
+  - **Files Targeted:** `FixLog.md`, `Components/ActionBars/Elements/ActionBars.lua`, `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+- **Action bar proc overlay audit applied:** Restored the embedded `LibActionButton` bridge that maps spell-activation overlay events onto AzeriteUI’s custom `CustomSpellActivationAlert` texture, while keeping LibCustomGlow as the fallback for buttons that do not define the custom alert.
+  - **Root Cause:** [Components/ActionBars/Elements/ActionBars.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/ActionBars/Elements/ActionBars.lua) still creates `self.CustomSpellActivationAlert`, but the active [Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua) had regressed to `LCG.ShowOverlayGlow(self)` / `LCG.HideOverlayGlow(self)` only. That bypassed the texture the action bars actually skin, so proc highlights stopped rendering on the main bars even though the library was still receiving `SPELL_ACTIVATION_OVERLAY_GLOW_SHOW` and `SPELL_ACTIVATION_OVERLAY_GLOW_HIDE`.
+  - **Verification:** `luac -p 'Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua'` passed, plus in-game `/reload` proc verification pending.
+  - **Files Modified:** `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+- **Action bar key-down options bug started:** Investigating `/az` action-bar settings BugSack errors when toggling the key-down option. Scope limited to the `ActionButtonUseKeyDown` setter in `Options/OptionsPages/ActionBars.lua`, since the runtime bars continue working and the stack points at the settings bridge rather than button behavior.
+  - **Files Targeted:** `FixLog.md`, `Options/OptionsPages/ActionBars.lua`
+- **Action bar key-down options bug remains known:** The attempted setter-path change was not sufficient; the `/az` toggle can still trip Blizzard Settings errors for `ActionButtonUseKeyDown` even though the actual action-bar runtime behavior remains fine. Reverted the speculative setter tweak so this release does not ship a claimed fix without verified in-game resolution.
+  - **Known Issue:** Toggling `Cast action keybinds on key down` in `/az` may still throw BugSack errors from Blizzard Settings (`attempt to call a nil value` / `SetValue 'ActionButtonUseKeyDown' requires 'boolean' type, not 'nil' type`) on the WoW 12 client. Treat as settings-UI noise for now, not an action-bar runtime regression.
+  - **Verification:** Attempted local code-path change was not accepted as fixed after user repro; no verified in-game fix in this iteration.
+
 ## 2026-03-12
 
 - **SaiyaRatt secret command started:** Adding a small always-available hidden command that does a silly profile-themed effect without mutating settings or requiring dev mode. Scope limited to `Core/Core.lua`.
