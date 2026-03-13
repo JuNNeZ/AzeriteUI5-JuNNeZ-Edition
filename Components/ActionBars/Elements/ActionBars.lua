@@ -73,7 +73,7 @@ local defaults = { profile = ns:Merge({
 	UseCommandBindingsForHoldCast = ns.WoW10 and true or false,
 	dimWhenResting = false,
 	dimWhenInactive = false,
-	assistedHighlightColor = "cyan", -- Color scheme for assisted combat highlights: cyan, blue, purple
+	assistedHighlightColor = "cyan", -- Color scheme for AzeriteUI's circular assisted highlight
 	hideElements = {
 		macro = true,
 		hotkey = false,
@@ -355,6 +355,25 @@ local style = function(self)
 	self.CustomSpellActivationAlert:SetTexture(db.ButtonSpellHighlightTexture)
 	self.CustomSpellActivationAlert:SetVertexColor(249/255, 188/255, 65/255, .75)
 	self.CustomSpellActivationAlert:Hide()
+
+	-- Keep assisted highlight separate from proc glow so the button can stay circular.
+	self.CustomAssistedHighlight = self.OverlayFrame:CreateTexture(nil, "ARTWORK", nil, -6)
+	self.CustomAssistedHighlight:SetSize(unpack(db.ButtonSpellHighlightSize))
+	self.CustomAssistedHighlight:SetPoint(unpack(db.ButtonSpellHighlightPosition))
+	self.CustomAssistedHighlight:SetTexture(db.ButtonSpellHighlightTexture)
+	self.CustomAssistedHighlight:SetVertexColor(.35, .85, 1, .95)
+	self.CustomAssistedHighlight:Hide()
+
+	--[[ Parked for now: neutral top color overlay made the assisted highlight too large.
+	-- Neutral color layer above the assisted base art.
+	self.CustomAssistedHighlightColor = self.OverlayFrame:CreateTexture(nil, "ARTWORK", nil, -5)
+	self.CustomAssistedHighlightColor:SetSize(unpack(db.ButtonSpellHighlightSize))
+	self.CustomAssistedHighlightColor:SetPoint(unpack(db.ButtonSpellHighlightPosition))
+	self.CustomAssistedHighlightColor:SetTexture(m)
+	self.CustomAssistedHighlightColor:SetBlendMode("ADD")
+	self.CustomAssistedHighlightColor:SetVertexColor(.35, .85, 1, .45)
+	self.CustomAssistedHighlightColor:Hide()
+	--]]
 
 	-- Cooldown Timer Text
 	self.cooldownCount = self.OverlayFrame:CreateFontString(nil, "ARTWORK", nil, 1)
@@ -746,8 +765,7 @@ ActionBarMod.UpdateSettings = function(self, event)
 	self:UpdatePositionAndScales()
 	self:UpdateAnchors()
 
-	-- Initialize assisted highlight color
-	self:UpdateAssistedHighlightColor()
+	-- self:UpdateAssistedHighlightColor()
 end
 
 ActionBarMod.OnCVarUpdate = function(self, event, cvarName)
@@ -837,23 +855,14 @@ ActionBarMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateSettings")
 	self:RegisterEvent("CVAR_UPDATE", "OnCVarUpdate")
 	self:RegisterEvent("UPDATE_BINDINGS", "UpdateBindings")
-
-	-- Listen for assisted highlight color changes from options
-	ns.RegisterCallback(self, "AssistedHighlightColor_Changed", "UpdateAssistedHighlightColor")
+	-- ns.RegisterCallback(self, "AssistedHighlightColor_Changed", "UpdateAssistedHighlightColor")
 
 	self:UpdateSettings()
 
 end
 
 ActionBarMod.UpdateAssistedHighlightColor = function(self, eventOrColor, colorScheme)
-	local selectedColor = colorScheme or eventOrColor
-	if (selectedColor ~= "cyan" and selectedColor ~= "blue" and selectedColor ~= "purple") then
-		selectedColor = self.db and self.db.profile and self.db.profile.assistedHighlightColor or "cyan"
-	end
-	local lib = LibStub(LAB_Name)
-	if lib and lib.SetAssistedHighlightColor then
-		lib:SetAssistedHighlightColor(selectedColor)
-	end
+	-- Parked for now while the assisted highlight ships with a fixed blue tint.
 end
 
 ActionBarMod.OnInitialize = function(self)

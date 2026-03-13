@@ -30,6 +30,8 @@ local KeyBound = LibStub("LibKeyBound-1.0", true)
 local CBH = LibStub("CallbackHandler-1.0")
 local LCG = LibStub("LibCustomGlow-1.0", true)
 local Masque = LibStub("Masque", true)
+local EventRegistry = _G.EventRegistry
+local AssistedCombatManager = _G.AssistedCombatManager
 
 local GetCVar = C_CVar.GetCVar
 local EnableActionRangeCheck = C_ActionBar.EnableActionRangeCheck
@@ -63,6 +65,44 @@ local UseCustomFlyout = FlyoutButtonMixin and not ActionButton_UpdateFlyout -- E
 
 local function IsSafeNumber(value)
 	return type(value) == "number" and not (issecretvalue and issecretvalue(value))
+end
+
+-- Parked for now while the circular assisted highlight ships with a fixed blue tint.
+-- local AssistedHighlightColor = lib.AssistedHighlightColor or "cyan"
+-- lib.AssistedHighlightColor = AssistedHighlightColor
+--
+-- local function GetAssistedHighlightRGBA()
+-- 	if AssistedHighlightColor == "blue" then
+-- 		return 0.15, 0.45, 1.0, .95
+-- 	elseif AssistedHighlightColor == "purple" then
+-- 		return 0.8, 0.25, 1.0, .95
+-- 	elseif AssistedHighlightColor == "green" then
+-- 		return 0.15, 1.0, 0.35, .95
+-- 	elseif AssistedHighlightColor == "red" then
+-- 		return 1.0, 0.2, 0.2, .95
+-- 	elseif AssistedHighlightColor == "white" then
+-- 		return 1.0, 1.0, 1.0, .95
+-- 	elseif AssistedHighlightColor == "pink" then
+-- 		return 1.0, 0.35, 0.75, .95
+-- 	end
+-- 	return 0.35, 0.85, 1.0, .95
+-- end
+--
+-- local function ApplyAssistedHighlightToButton(button)
+-- 	if not button then
+-- 		return
+-- 	end
+--
+-- 	local r, g, b, a = GetAssistedHighlightRGBA()
+-- 	if button.CustomAssistedHighlightColor then
+-- 		button.CustomAssistedHighlightColor:SetVertexColor(r, g, b, a * .5)
+-- 	elseif button.CustomAssistedHighlight then
+-- 		button.CustomAssistedHighlight:SetVertexColor(r, g, b, a)
+-- 	end
+-- end
+
+local function GetAssistedHighlightRGBA()
+	return 0.35, 0.85, 1.0, .95
 end
 
 -- GLOBALS: C_Item, C_Spell, C_ToyBox, UIParent
@@ -213,6 +253,8 @@ local DefaultConfig = {
 	flyoutDirection = "UP",
 	useDrawBling = true,
 	handleOverlay = true,
+	actionButtonUI = false,
+	assistedHighlight = true,
 	text = {
 		hotkey = {
 			font = {
@@ -1624,6 +1666,20 @@ function InitializeEventHandler()
 			DiscoverFlyoutSpells()
 		end
 	end
+
+	if EventRegistry and AssistedCombatManager then
+		EventRegistry:RegisterCallback("AssistedCombatManager.OnSetActionSpell", function()
+			OnEvent(lib.eventFrame, "AssistedCombatManager.OnSetActionSpell")
+		end, lib.eventFrame)
+
+		EventRegistry:RegisterCallback("AssistedCombatManager.OnAssistedHighlightSpellChange", function()
+			OnEvent(lib.eventFrame, "AssistedCombatManager.OnAssistedHighlightSpellChange")
+		end, lib.eventFrame)
+
+		EventRegistry:RegisterCallback("AssistedCombatManager.OnSetUseAssistedHighlight", function()
+			OnEvent(lib.eventFrame, "AssistedCombatManager.OnAssistedHighlightSpellChange")
+		end, lib.eventFrame)
+	end
 end
 
 function OnEvent(_, event, arg1, arg2, arg3, arg4)
@@ -1634,6 +1690,9 @@ function OnEvent(_, event, arg1, arg2, arg3, arg4)
 	elseif event == "CVAR_UPDATE" then
 		if arg1 == "assistedCombatHighlight" then
 			wipe(lib.activeAssist)
+			for button in next, ActiveButtons do
+				UpdatedAssistedHighlightFrame(button)
+			end
 		end
 	elseif event == "SPELLS_CHANGED" or event == "SPELL_FLYOUT_UPDATE" then
 		if UseCustomFlyout then
@@ -1788,15 +1847,13 @@ function OnEvent(_, event, arg1, arg2, arg3, arg4)
 
 		for button in next, ActiveButtons do
 			local spellId = button:GetSpellId()
-			if not lib.activeAssist[spellId] then
-				if spellId and spellId == arg1 then
-					ShowOverlayGlow(button)
-				else
-					if button._state_type == "action" then
-						local actionType, id = GetActionInfo(button._state_action)
-						if actionType == "flyout" and FlyoutHasSpell(id, arg1) then
-							ShowOverlayGlow(button)
-						end
+			if spellId and spellId == arg1 then
+				ShowOverlayGlow(button)
+			else
+				if button._state_type == "action" then
+					local actionType, id = GetActionInfo(button._state_action)
+					if actionType == "flyout" and FlyoutHasSpell(id, arg1) then
+						ShowOverlayGlow(button)
 					end
 				end
 			end
@@ -1806,18 +1863,26 @@ function OnEvent(_, event, arg1, arg2, arg3, arg4)
 
 		for button in next, ActiveButtons do
 			local spellId = button:GetSpellId()
-			if not lib.activeAssist[spellId] then
-				if spellId and spellId == arg1 then
-					HideOverlayGlow(button)
-				else
-					if button._state_type == "action" then
-						local actionType, id = GetActionInfo(button._state_action)
-						if actionType == "flyout" and FlyoutHasSpell(id, arg1) then
-							HideOverlayGlow(button)
-						end
+			if spellId and spellId == arg1 then
+				HideOverlayGlow(button)
+			else
+				if button._state_type == "action" then
+					local actionType, id = GetActionInfo(button._state_action)
+					if actionType == "flyout" and FlyoutHasSpell(id, arg1) then
+						HideOverlayGlow(button)
 					end
 				end
 			end
+		end
+	elseif event == "AssistedCombatManager.OnSetActionSpell" then
+		for button in next, ActiveButtons do
+			if button._state_type == "action" then
+				UpdateAssistedCombatRotationFrame(button)
+			end
+		end
+	elseif event == "AssistedCombatManager.OnAssistedHighlightSpellChange" then
+		for button in next, ActiveButtons do
+			UpdatedAssistedHighlightFrame(button)
 		end
 	elseif event == "PLAYER_EQUIPMENT_CHANGED" then
 		for button in next, ActiveButtons do
@@ -2158,7 +2223,10 @@ function Generic:UpdateAction(force)
 		self._state_action = action
 
 		-- set action attribute for action buttons
-		self.action = self._state_type == "action" and action or nil
+		self.action = self._state_type == "action" and action or 0
+		if self.config.actionButtonUI and SetActionUIButton then
+			SetActionUIButton(self, self.action, self.cooldown)
+		end
 
 		Update(self, 'UpdateAction')
 	end
@@ -2724,9 +2792,6 @@ end
 
 function UpdateOverlayGlow(self)
 	local spellId = self.config.handleOverlay and self:GetSpellId()
-	if lib.activeAssist[spellId] then
-		return
-	end
 
 	if (issecretvalue and issecretvalue(spellId)) then
 		spellId = nil
@@ -2737,6 +2802,95 @@ function UpdateOverlayGlow(self)
 	else
 		HideOverlayGlow(self)
 	end
+end
+
+function UpdateAssistedCombatRotationFrame(self)
+	if not (C_ActionBar and IsAssistedCombatAction) then
+		return
+	end
+
+	local show = self._state_type == "action" and IsAssistedCombatAction(self._state_action)
+	local frame = self.AssistedCombatRotationFrame
+	if show and not frame then
+		frame = CreateFrame("Frame", nil, self, "ActionBarButtonAssistedCombatRotationTemplate")
+		self.AssistedCombatRotationFrame = frame
+	end
+
+	if frame and frame.UpdateState then
+		frame:UpdateState()
+	end
+end
+
+function UpdatedAssistedHighlightFrame(self)
+	if not AssistedCombatManager then
+		return
+	end
+
+	local spellID = AssistedCombatManager.lastNextCastSpellID
+	if not IsSafeNumber(spellID) then
+		spellID = nil
+	end
+	local buttonSpellID = self:GetSpellId()
+	if IsSafeNumber(buttonSpellID) then
+		lib.activeAssist[buttonSpellID] = nil
+	end
+
+	local shown = self.config.actionButtonUI and self.config.assistedHighlight and spellID and buttonSpellID == spellID
+	local highlightFrame = self.AssistedCombatHighlightFrame
+
+	if shown then
+		lib.activeAssist[spellID] = true
+
+		if self.CustomAssistedHighlight then
+			self.CustomAssistedHighlight:Show()
+			-- if self.CustomAssistedHighlightColor then
+			-- 	self.CustomAssistedHighlightColor:Show()
+			-- end
+			if highlightFrame then
+				highlightFrame:Hide()
+			end
+			return
+		end
+
+		if not highlightFrame then
+			highlightFrame = CreateFrame("Frame", nil, self, "ActionBarButtonAssistedCombatHighlightTemplate")
+			self.AssistedCombatHighlightFrame = highlightFrame
+			highlightFrame:SetPoint("CENTER")
+			highlightFrame:SetFrameLevel(self:GetFrameLevel() + 10)
+			if highlightFrame.Flipbook then
+				highlightFrame.Flipbook.Anim:Play()
+				highlightFrame.Flipbook.Anim:Stop()
+			end
+		end
+
+		highlightFrame:Show()
+		if highlightFrame.Flipbook then
+			if AssistedCombatManager.affectingCombat then
+				highlightFrame.Flipbook.Anim:Play()
+			else
+				highlightFrame.Flipbook.Anim:Stop()
+			end
+		end
+	else
+		if self.CustomAssistedHighlight then
+			self.CustomAssistedHighlight:Hide()
+		end
+		-- if self.CustomAssistedHighlightColor then
+		-- 	self.CustomAssistedHighlightColor:Hide()
+		-- end
+		if highlightFrame then
+			highlightFrame:Hide()
+		end
+	end
+end
+
+lib.SetAssistedHighlightColor = function(colorScheme)
+	-- Parked for now while the assisted highlight ships with a fixed blue tint.
+	return colorScheme or "cyan"
+end
+
+lib.GetAssistedHighlightColor = function()
+	return "cyan"
 end
 
 function Generic:SetSpellActivationTexture(texture)

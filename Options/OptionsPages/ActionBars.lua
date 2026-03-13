@@ -655,38 +655,43 @@ local GenerateOptions = function()
 				set = setter,
 				get = getter
 			},
+			--[[
 			assistedHighlightHeader = {
 				name = L["Assisted Combat Highlight"],
 				order = 100,
 				type = "header"
 			},
 			assistedHighlightDesc = {
-				name = L["Choose the color for the assisted combat suggestion glow (next recommended spell)."],
+				name = L["Choose the color for AzeriteUI's circular assisted combat suggestion glow."],
 				order = 101,
 				type = "description",
 				fontSize = "medium"
 			},
 			assistedHighlightColor = {
 				name = L["Highlight Color"],
-				desc = L["Choose the color scheme for assisted combat highlights."],
+				desc = L["Choose the color scheme for AzeriteUI's circular assisted combat highlight."],
 				order = 102,
 				type = "select", style = "dropdown",
 				values = {
 					["cyan"] = L["Cyan Blue"],
 					["blue"] = L["Dark Blue"],
-					["purple"] = L["Purple"]
+					["purple"] = L["Purple"],
+					["green"] = L["Green"],
+					["red"] = L["Red"],
+					["white"] = L["White"],
+					["pink"] = L["Pink"]
 				},
 				set = function(info, val)
 					local db = getmodule().db.profile
 					db.assistedHighlightColor = val
-					-- Broadcast update so LibActionButton reapplies the color
 					ns:Fire("AssistedHighlightColor_Changed", val)
 				end,
 				get = function(info)
 					local db = getmodule().db.profile
 					return db.assistedHighlightColor or "cyan"
 				end
-			}
+			},
+			--]]
 		}
 	}
 

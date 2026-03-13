@@ -261,6 +261,8 @@ ActionBar.CreateButton = function(self, buttonConfig)
 	buttonConfig.useCommandBindingsForHoldCast = self.config.useCommandBindingsForHoldCast
 	buttonConfig.dimWhenResting = self.config.dimWhenResting
 	buttonConfig.dimWhenInactive = self.config.dimWhenInactive
+	buttonConfig.actionButtonUI = true
+	buttonConfig.assistedHighlight = true
 
 	local keyBoundTarget = string_format(BINDTEMPLATE_BY_ID[self.id], button.id)
 	button.keyBoundTarget = keyBoundTarget
