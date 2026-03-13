@@ -8,6 +8,10 @@ Do not repeat older items from prior versions in newer entries.
 ### Fixes
 - Corrected the release version metadata from `5.3.7-JuNNeZ` to `5.3.8-JuNNeZ` in the TOC, build script, and changelog after finalizing the assisted-highlight release state.
 
+### Known Issues
+- The `/az` action-bar option `Cast action keybinds on key down` can still throw Blizzard Settings BugSack noise for `ActionButtonUseKeyDown` on WoW 12. The bars themselves continue to function, but the settings-side error remains unresolved in this release.
+- Assisted highlight color customization is not ready for release yet. The circular assisted highlight currently ships in Blizzard blue while work continues on a stable multi-color version.
+
 ## 5.3.7-JuNNeZ (2026-03-13)
 
 ### Fixes
@@ -16,7 +20,6 @@ Do not repeat older items from prior versions in newer entries.
 
 ### Known Issues
 - The `/az` action-bar option `Cast action keybinds on key down` can still throw Blizzard Settings BugSack noise for `ActionButtonUseKeyDown` on WoW 12. The bars themselves continue to function, but the settings-side error remains unresolved in this release.
-- Assisted highlight color customization is not ready for release yet. The circular assisted highlight currently ships in Blizzard blue while work continues on a stable multi-color version.
 
 ## 5.3.6-JuNNeZ (2026-03-13)
 
