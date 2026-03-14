@@ -738,10 +738,6 @@ local GenerateOptions = function()
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame5"))
 		suboptions.name = L["Raid Frames"] .. " (5)"
 		suboptions.order = 160
-		suboptions.hidden = function(info)
-			local party = getmodule("PartyFrames").db.profile
-			return party.enabled and (party.useInRaid5 or party.useInRaid10 or party.useInRaid25 or party.useInRaid40)
-		end
 		suboptions.args.useRangeIndicator = {
 			name = L["Use Range Indicator"],
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],

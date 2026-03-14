@@ -47,6 +47,7 @@ local unpack = unpack
 
 -- GLOBALS: InCombatLockdown, RegisterAttributeDriver, UnregisterAttributeDriver
 -- GLOBALS: UnitGroupRolesAssigned, UnitGUID, UnitIsUnit, SetPortraitTexture
+-- GLOBALS: GetNumGroupMembers, GetRaidRosterInfo, UnitInRaid
 
 -- Addon API
 local Colors = ns.Colors
@@ -83,6 +84,51 @@ local defaults = { profile = ns:Merge({
 	columnAnchorPoint = "TOP" -- anchor point of column, columns grow opposite
 
 }, ns.MovableModulePrototype.defaults) }
+
+local validHeaderPoints = {
+	TOP = true,
+	BOTTOM = true,
+	LEFT = true,
+	RIGHT = true,
+	TOPLEFT = true,
+	TOPRIGHT = true,
+	BOTTOMLEFT = true,
+	BOTTOMRIGHT = true
+}
+
+local GetSanitizedHeaderProfile = function(profile)
+	local db = profile or defaults.profile
+	local fallback = defaults.profile
+
+	return {
+		point = (type(db.point) == "string" and validHeaderPoints[db.point] and db.point) or fallback.point or "LEFT",
+		xOffset = (type(db.xOffset) == "number" and db.xOffset) or fallback.xOffset or 0,
+		yOffset = (type(db.yOffset) == "number" and db.yOffset) or fallback.yOffset or 0,
+		unitsPerColumn = (type(db.unitsPerColumn) == "number" and db.unitsPerColumn > 0 and db.unitsPerColumn) or fallback.unitsPerColumn or 5,
+		maxColumns = (type(db.maxColumns) == "number" and db.maxColumns > 0 and db.maxColumns) or fallback.maxColumns or 1,
+		columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0,
+		columnAnchorPoint = (type(db.columnAnchorPoint) == "string" and validHeaderPoints[db.columnAnchorPoint] and db.columnAnchorPoint) or fallback.columnAnchorPoint or "TOP"
+	}
+end
+
+local GetActiveGroupFilter = function()
+	local defaultFilter = PARTY_GROUPING_ORDER
+	if (not IsInRaid() or GetNumGroupMembers() <= 0) then
+		return defaultFilter
+	end
+
+	local playerRaidIndex = UnitInRaid("player")
+	if (not playerRaidIndex) then
+		return defaultFilter
+	end
+
+	local _, _, subgroup = GetRaidRosterInfo(playerRaidIndex)
+	if (type(subgroup) == "number" and subgroup >= 1 and subgroup <= 8) then
+		return tostring(subgroup)
+	end
+
+	return defaultFilter
+end
 
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
@@ -129,12 +175,33 @@ end
 
 local getOrderedHeaderChildren = function(header)
 	local children = {}
-	for i = 1, header:GetNumChildren() do
-		local child = select(i, header:GetChildren())
-		if (child) then
-			table_insert(children, child)
+	local seen = {}
+
+	if (header and header.GetAttribute) then
+		local index = 1
+		while true do
+			local child = header:GetAttribute("child" .. index)
+			if (not child) then
+				break
+			end
+			if (not seen[child]) then
+				seen[child] = true
+				table_insert(children, child)
+			end
+			index = index + 1
 		end
 	end
+
+	if (#children == 0) then
+		for i = 1, header:GetNumChildren() do
+			local child = select(i, header:GetChildren())
+			if (child and not seen[child] and (child.unit or (child.GetAttribute and child:GetAttribute("unit")))) then
+				seen[child] = true
+				table_insert(children, child)
+			end
+		end
+	end
+
 	table_sort(children, function(a, b)
 		local aName = a:GetName() or ""
 		local bName = b:GetName() or ""
@@ -806,8 +873,7 @@ end
 local GroupHeader = {}
 
 GroupHeader.ForAll = function(self, methodOrFunc, ...)
-	for i = 1, self:GetNumChildren() do
-		local frame = select(i, self:GetChildren())
+	for _, frame in ipairs(getOrderedHeaderChildren(self)) do
 		if (type(methodOrFunc) == "string") then
 			frame[methodOrFunc](frame, ...)
 		else
@@ -874,17 +940,7 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 end
 
 PartyFrameMod.GetHeaderAttributes = function(self)
-	local profile = self.db and self.db.profile or defaults.profile
-	local db = profile or defaults.profile
-	local fallback = defaults.profile
-
-	local point = (type(db.point) == "string" and db.point ~= "" and db.point) or fallback.point or "TOP"
-	local xOffset = (type(db.xOffset) == "number" and db.xOffset) or fallback.xOffset or 0
-	local yOffset = (type(db.yOffset) == "number" and db.yOffset) or fallback.yOffset or 0
-	local unitsPerColumn = (type(db.unitsPerColumn) == "number" and db.unitsPerColumn) or fallback.unitsPerColumn or 5
-	local maxColumns = (type(db.maxColumns) == "number" and db.maxColumns) or fallback.maxColumns or 1
-	local columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0
-	local columnAnchorPoint = (type(db.columnAnchorPoint) == "string" and db.columnAnchorPoint ~= "" and db.columnAnchorPoint) or fallback.columnAnchorPoint or "LEFT"
+	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
 
 	return ns.Prefix.."Party", nil,
 	"initial-width", ns.GetConfig("PartyFrames").UnitSize[1],
@@ -899,17 +955,17 @@ PartyFrameMod.GetHeaderAttributes = function(self)
 	--'https://wowprogramming.com/docs/secure_template/Group_Headers.html
 	"sortMethod", "INDEX", -- INDEX, NAME -- Member sorting within each group
 	"sortDir", "ASC", -- ASC, DESC
-	"groupFilter", "1,2,3,4,5,6,7,8", -- Group filter
+	"groupFilter", GetActiveGroupFilter(), -- Local subgroup in raids, full party filter otherwise
 	"showSolo", TESTMODE or false, -- show while non-grouped
-	"point", point, -- Unit anchoring within each column
-	"xOffset", xOffset,
-	"yOffset", yOffset,
+	"point", db.point, -- Unit anchoring within each column
+	"xOffset", db.xOffset,
+	"yOffset", db.yOffset,
 	"groupBy", PARTY_GROUP_BY, -- fixed to stable group ordering
 	"groupingOrder", PARTY_GROUPING_ORDER,
-	"unitsPerColumn", unitsPerColumn, -- Column setup and growth
-	"maxColumns", maxColumns,
-	"columnSpacing", columnSpacing,
-	"columnAnchorPoint", columnAnchorPoint
+	"unitsPerColumn", db.unitsPerColumn, -- Column setup and growth
+	"maxColumns", db.maxColumns,
+	"columnSpacing", db.columnSpacing,
+	"columnAnchorPoint", db.columnAnchorPoint
 
 end
 
@@ -922,8 +978,7 @@ end
 
 PartyFrameMod.GetCalculatedHeaderSize = function(self, numDisplayed)
 	local config = ns.GetConfig("PartyFrames")
-	local profile = self.db and self.db.profile or defaults.profile
-	local db = profile or defaults.profile
+	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
 	local unitButtonWidth = config.UnitSize[1]
 	local unitButtonHeight = config.UnitSize[2]
 	local unitsPerColumn = db.unitsPerColumn or 5
@@ -973,7 +1028,7 @@ PartyFrameMod.ConfigureChildren = function(self)
 	local header = self:GetUnitFrameOrHeader()
 	if (not header) then return end
 
-	local db = self.db.profile
+	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
 	local config = ns.GetConfig("PartyFrames")
 	local unitWidth = config.UnitSize[1]
 	local unitHeight = config.UnitSize[2]
@@ -1047,17 +1102,8 @@ end
 PartyFrameMod.UpdateHeader = function(self)
 	local header = self:GetUnitFrameOrHeader()
 	if (not header) then return end
-	local profile = self.db and self.db.profile or defaults.profile
-	local db = profile or defaults.profile
-	local fallback = defaults.profile
+	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
 	local config = ns.GetConfig("PartyFrames")
-	local point = (type(db.point) == "string" and db.point ~= "" and db.point) or fallback.point or "TOP"
-	local columnAnchorPoint = (type(db.columnAnchorPoint) == "string" and db.columnAnchorPoint ~= "" and db.columnAnchorPoint) or fallback.columnAnchorPoint or "LEFT"
-	local xOffset = (type(db.xOffset) == "number" and db.xOffset) or fallback.xOffset or 0
-	local yOffset = (type(db.yOffset) == "number" and db.yOffset) or fallback.yOffset or 0
-	local unitsPerColumn = (type(db.unitsPerColumn) == "number" and db.unitsPerColumn) or fallback.unitsPerColumn or 5
-	local maxColumns = (type(db.maxColumns) == "number" and db.maxColumns) or fallback.maxColumns or 1
-	local columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0
 
 	if (InCombatLockdown()) then
 		self.needHeaderUpdate = true
@@ -1071,13 +1117,14 @@ PartyFrameMod.UpdateHeader = function(self)
 	header:SetAttribute("initial-height", config.UnitSize[2])
 	header:SetAttribute("groupBy", PARTY_GROUP_BY)
 	header:SetAttribute("groupingOrder", PARTY_GROUPING_ORDER)
-	header:SetAttribute("point", point)
-	header:SetAttribute("xOffset", xOffset)
-	header:SetAttribute("yOffset", yOffset)
-	header:SetAttribute("unitsPerColumn", unitsPerColumn)
-	header:SetAttribute("maxColumns", maxColumns)
-	header:SetAttribute("columnSpacing", columnSpacing)
-	header:SetAttribute("columnAnchorPoint", columnAnchorPoint)
+	header:SetAttribute("groupFilter", GetActiveGroupFilter())
+	header:SetAttribute("point", db.point)
+	header:SetAttribute("xOffset", db.xOffset)
+	header:SetAttribute("yOffset", db.yOffset)
+	header:SetAttribute("unitsPerColumn", db.unitsPerColumn)
+	header:SetAttribute("maxColumns", db.maxColumns)
+	header:SetAttribute("columnSpacing", db.columnSpacing)
+	header:SetAttribute("columnAnchorPoint", db.columnAnchorPoint)
 
 	self:GetFrame():SetSize(self:GetHeaderSize())
 	self:ConfigureChildren()
