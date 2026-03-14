@@ -92,6 +92,41 @@ local prefix = function(msg)
 	return string_gsub(msg, "*", ns.Prefix)
 end
 
+local validHeaderPoints = {
+	TOP = true,
+	BOTTOM = true,
+	LEFT = true,
+	RIGHT = true,
+	TOPLEFT = true,
+	TOPRIGHT = true,
+	BOTTOMLEFT = true,
+	BOTTOMRIGHT = true
+}
+
+local validGroupBy = {
+	GROUP = true,
+	CLASS = true,
+	ROLE = true,
+	ASSIGNEDROLE = true
+}
+
+local GetSanitizedHeaderProfile = function(profile)
+	local db = profile or defaults.profile
+	local fallback = defaults.profile
+
+	return {
+		point = (type(db.point) == "string" and validHeaderPoints[db.point] and db.point) or fallback.point or "TOP",
+		xOffset = (type(db.xOffset) == "number" and db.xOffset) or fallback.xOffset or 0,
+		yOffset = (type(db.yOffset) == "number" and db.yOffset) or fallback.yOffset or 0,
+		groupBy = (type(db.groupBy) == "string" and validGroupBy[db.groupBy] and db.groupBy) or fallback.groupBy or "GROUP",
+		groupingOrder = (type(db.groupingOrder) == "string" and db.groupingOrder ~= "" and db.groupingOrder) or fallback.groupingOrder or "1,2,3,4,5,6,7,8",
+		unitsPerColumn = (type(db.unitsPerColumn) == "number" and db.unitsPerColumn > 0 and db.unitsPerColumn) or fallback.unitsPerColumn or 5,
+		maxColumns = (type(db.maxColumns) == "number" and db.maxColumns > 0 and db.maxColumns) or fallback.maxColumns or 1,
+		columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0,
+		columnAnchorPoint = (type(db.columnAnchorPoint) == "string" and validHeaderPoints[db.columnAnchorPoint] and db.columnAnchorPoint) or fallback.columnAnchorPoint or "LEFT"
+	}
+end
+
 -- Element Callbacks
 --------------------------------------------
 -- Forceupdate health prediction on health updates,
@@ -789,7 +824,7 @@ end
 RaidFrame5Mod.GetCalculatedHeaderSize = function(self, numDisplayed)
 
 	local config = ns.GetConfig("Raid5Frames")
-	local db = self.db.profile
+	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
 
 	local header = self:GetUnitFrameOrHeader()
 	local unitButtonWidth = config.UnitSize[1]
@@ -841,7 +876,7 @@ end
 RaidFrame5Mod.ConfigureChildren = function(self)
 	if (InCombatLockdown()) then return end
 
-	local db = self.db.profile
+	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
 	local config = ns.GetConfig("Raid5Frames")
 	local header = self:GetUnitFrameOrHeader()
 	local frame = self:GetFrame()
@@ -1030,6 +1065,7 @@ end
 RaidFrame5Mod.UpdateHeader = function(self)
 	local header = self:GetUnitFrameOrHeader()
 	if (not header) then return end
+	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
 
 	if (InCombatLockdown()) then
 		self.needHeaderUpdate = true
@@ -1042,15 +1078,15 @@ RaidFrame5Mod.UpdateHeader = function(self)
 	header:UpdateVisibilityDriver()
 	header:SetAttribute("unitWidth", config.UnitSize[1])
 	header:SetAttribute("unitHeight", config.UnitSize[2])
-	header:SetAttribute("point", self.db.profile["point"])
-	header:SetAttribute("xOffset", self.db.profile["xOffset"])
-	header:SetAttribute("yOffset", self.db.profile["yOffset"])
-	header:SetAttribute("groupBy", self.db.profile["groupBy"])
-	header:SetAttribute("groupingOrder", self.db.profile["groupingOrder"])
-	header:SetAttribute("unitsPerColumn", self.db.profile["unitsPerColumn"])
-	header:SetAttribute("maxColumns", self.db.profile["maxColumns"])
-	header:SetAttribute("columnSpacing", self.db.profile["columnSpacing"])
-	header:SetAttribute("columnAnchorPoint", self.db.profile["columnAnchorPoint"])
+	header:SetAttribute("groupBy", db.groupBy)
+	header:SetAttribute("groupingOrder", db.groupingOrder)
+	header:SetAttribute("point", db.point)
+	header:SetAttribute("xOffset", db.xOffset)
+	header:SetAttribute("yOffset", db.yOffset)
+	header:SetAttribute("unitsPerColumn", db.unitsPerColumn)
+	header:SetAttribute("maxColumns", db.maxColumns)
+	header:SetAttribute("columnSpacing", db.columnSpacing)
+	header:SetAttribute("columnAnchorPoint", db.columnAnchorPoint)
 
 	self:GetFrame():SetSize(self:GetHeaderSize())
 	self:ConfigureChildren()
@@ -1060,29 +1096,30 @@ RaidFrame5Mod.UpdateHeader = function(self)
 end
 
 RaidFrame5Mod.UpdateHeaderAnchorPoint = function(self)
+	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
 	local point = "TOPLEFT"
-	if (self.db.profile.columnAnchorPoint == "LEFT") then
-		if (self.db.profile.point == "TOP") then
+	if (db.columnAnchorPoint == "LEFT") then
+		if (db.point == "TOP") then
 			point = "TOPLEFT"
-		elseif (self.db.profile.point == "BOTTOM") then
+		elseif (db.point == "BOTTOM") then
 			point = "BOTTOMLEFT"
 		end
-	elseif (self.db.profile.columnAnchorPoint == "RIGHT") then
-		if (self.db.profile.point == "TOP") then
+	elseif (db.columnAnchorPoint == "RIGHT") then
+		if (db.point == "TOP") then
 			point = "TOPRIGHT"
-		elseif (self.db.profile.point == "BOTTOM") then
+		elseif (db.point == "BOTTOM") then
 			point = "BOTTOMRIGHT"
 		end
-	elseif (self.db.profile.columnAnchorPoint == "TOP") then
-		if (self.db.profile.point == "LEFT") then
+	elseif (db.columnAnchorPoint == "TOP") then
+		if (db.point == "LEFT") then
 			point = "TOPLEFT"
-		elseif (self.db.profile.point == "RIGHT") then
+		elseif (db.point == "RIGHT") then
 			point = "TOPRIGHT"
 		end
-	elseif (self.db.profile.columnAnchorPoint == "BOTTOM") then
-		if (self.db.profile.point == "LEFT") then
+	elseif (db.columnAnchorPoint == "BOTTOM") then
+		if (db.point == "LEFT") then
 			point = "BOTTOMLEFT"
-		elseif (self.db.profile.point == "RIGHT") then
+		elseif (db.point == "RIGHT") then
 			point = "BOTTOMRIGHT"
 		end
 	end

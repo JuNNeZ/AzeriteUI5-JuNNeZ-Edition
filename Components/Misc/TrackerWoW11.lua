@@ -40,10 +40,6 @@ local defaults = { profile = ns:Merge({
 	theme = "Azerite",
 	disableBlizzardTracker = false
 
-	-- user toggles for quick hiding
-	,hideAddonText = false
-	,hideClockText = false
-
 }, ns.MovableModulePrototype.defaults) }
 
 -- Generate module defaults on the fly
@@ -201,61 +197,4 @@ Tracker.OnEnable = function(self)
 	self:PrepareFrames()
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("SETTINGS_LOADED", "OnEvent")
-
-	-- Register slash commands for quick hiding of addon/clock text
-	if (self.RegisterChatCommand) then
-		self:RegisterChatCommand("az", "ToggleAZSlash")
-	end
-
-	-- Simple Slash handlers via AceConsole fallback
-	if (self.db) then
-		-- apply persisted choices
-		if (self.db.profile.hideAddonText) then
-			local mm = ns:GetModule("Minimap")
-			if (mm and mm.addonCompartment and mm.addonCompartment.text) then
-				mm.addonCompartment.text:Hide()
-			end
-		end
-		if (self.db.profile.hideClockText) then
-			local info = ns:GetModule("Info")
-			if (info and info.time) then
-				info.time:Hide()
-			end
-		end
-	end
-end
-
-
--- Slash command implementation (very small wrapper)
-Tracker.ToggleAZSlash = function(self, input)
-	if (not input or input == "") then
-		print("AzeriteUI: Usage: /az remove addontext  OR  /az remove clocktext")
-		return
-	end
-
-	local cmd, arg = strsplit(" ", input, 2)
-	cmd = cmd and strlower(cmd) or ""
-	arg = arg and strlower(arg) or ""
-
-	if (cmd == "remove") then
-		if (arg == "addontext") then
-			self.db.profile.hideAddonText = true
-			local mm = ns:GetModule("Minimap")
-			if (mm and mm.addonCompartment and mm.addonCompartment.text) then
-				mm.addonCompartment.text:Hide()
-			end
-			print("AzeriteUI: addon text hidden (persisted)")
-			return
-		elseif (arg == "clocktext") then
-			self.db.profile.hideClockText = true
-			local info = ns:GetModule("Info")
-			if (info and info.time) then
-				info.time:Hide()
-			end
-			print("AzeriteUI: clock text hidden (persisted)")
-			return
-		end
-	end
-
-	print("AzeriteUI: unknown command. Usage: /az remove addontext  OR  /az remove clocktext")
 end

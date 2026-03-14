@@ -53,7 +53,7 @@ Options.InitializeSettingsPanel = function(self)
 	local icon = optionsFrame:CreateTexture(nil, "ARTWORK")
 	icon:SetSize(64, 64)
 	icon:SetPoint("CENTER", optionsFrame, 0, 120)
-	icon:SetTexture("Interface\\Addons\\AzeriteUI\\Assets\\power-crystal-ice-icon.tga")
+	icon:SetTexture(ns.API.GetMedia("power-crystal-ice-icon"))
 
 	-- Addon name header (big, styled like TOC title)
 	local header = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalHuge3")

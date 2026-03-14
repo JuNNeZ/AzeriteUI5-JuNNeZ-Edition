@@ -244,7 +244,7 @@ Debugging.SecretJuNNeZCommand = function(self)
 	
 	local texture = centerFrame:CreateTexture(nil, "OVERLAY")
 	texture:SetAllPoints(centerFrame)
-	texture:SetTexture("Interface\\AddOns\\AzeriteUI\\Assets\\JuNNeZKapow.tga")
+	texture:SetTexture(ns.API.GetMedia("JuNNeZKapow"))
 	texture:SetAlpha(1.0)
 	
 	-- Batman KAPOW! Zoom in effect (0.1 -> 1.8 -> 1.0)
@@ -394,7 +394,7 @@ Debugging.SecretGoldpawCommand = function(self)
 	
 	local texture = centerFrame:CreateTexture(nil, "OVERLAY")
 	texture:SetAllPoints(centerFrame)
-	texture:SetTexture("Interface\\AddOns\\AzeriteUI\\Assets\\GoldpawKapow.tga")
+	texture:SetTexture(ns.API.GetMedia("GoldpawKapow"))
 	texture:SetAlpha(1.0)
 	
 	-- Goldpaw zoom in effect (0.1 -> 1.8 -> 1.0)

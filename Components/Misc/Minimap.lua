@@ -73,7 +73,10 @@ local Minimap_OnMouseButton_Hook
 
 local defaults = { profile = ns:Merge({
 	enabled = true,
-	theme = "Azerite"
+	theme = "Azerite",
+	hideAddonText = false,
+	hideClockText = false,
+	textVisibilityMigrated = false
 }, ns.MovableModulePrototype.defaults) }
 
 MinimapMod.GetScale = function(self)
@@ -634,6 +637,46 @@ MinimapMod.UpdateMail = function(self)
 
 end
 
+MinimapMod.MigrateLegacyTextVisibilitySettings = function(self)
+	if (self.db.profile.textVisibilityMigrated) then
+		return
+	end
+
+	local tracker = ns:GetModule("Tracker", true)
+	local trackerProfile = tracker and tracker.db and tracker.db.profile
+	if (trackerProfile) then
+		if (trackerProfile.hideAddonText) then
+			self.db.profile.hideAddonText = true
+		end
+		if (trackerProfile.hideClockText) then
+			self.db.profile.hideClockText = true
+		end
+		trackerProfile.hideAddonText = nil
+		trackerProfile.hideClockText = nil
+	end
+
+	self.db.profile.textVisibilityMigrated = true
+end
+
+MinimapMod.UpdateAddonCompartmentVisibility = function(self)
+	local addonCompartment = self.addonCompartment
+	if (not addonCompartment) then
+		return
+	end
+
+	local text = addonCompartment.text or (addonCompartment.GetFontString and addonCompartment:GetFontString())
+	if (text) then
+		text:SetShown(not self.db.profile.hideAddonText)
+	end
+end
+
+MinimapMod.UpdateClockVisibility = function(self)
+	local info = ns:GetModule("Info", true)
+	if (info and info.UpdateClockVisibility) then
+		info:UpdateClockVisibility()
+	end
+end
+
 MinimapMod.UpdateTimers = function(self)
 
 	-- In Torghast, map is always locked. Weird.
@@ -1064,6 +1107,7 @@ MinimapMod.CreateCustomElements = function(self)
 			addons:SetAlpha(.5)
 
 			self.addonCompartment = addons
+			self:UpdateAddonCompartmentVisibility()
 		end
 	end
 
@@ -1222,6 +1266,8 @@ end
 
 MinimapMod.UpdateSettings = function(self)
 	if (not self.db or not self.db.profile) then return end
+	self:UpdateAddonCompartmentVisibility()
+	self:UpdateClockVisibility()
 	if (not self.db.profile.enabled) then return end
 
 	-- Just update theme and settings
@@ -1376,6 +1422,7 @@ MinimapMod.OnEnable = function(self)
 	-- Clean out deprecated settings
 	self.db.profile.useHalfClock = nil
 	self.db.profile.useServerTime = nil
+	self:MigrateLegacyTextVisibilitySettings()
 
 	self:InitializeObjectTables()
 

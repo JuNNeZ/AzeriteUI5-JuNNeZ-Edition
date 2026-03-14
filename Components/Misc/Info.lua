@@ -275,8 +275,24 @@ Info.PrepareFrames = function(self)
 	timeFrame:SetAllPoints(time)
 
 	self.time = time
+	self.timeFrame = timeFrame
 
 	self.frame = frame
+end
+
+Info.UpdateClockVisibility = function(self)
+	local time = self.time
+	if (not time) then
+		return
+	end
+
+	local minimap = ns:GetModule("Minimap", true)
+	local hideClockText = minimap and minimap.db and minimap.db.profile and minimap.db.profile.hideClockText
+	time:SetShown(not hideClockText)
+
+	if (self.timeFrame) then
+		self.timeFrame:SetShown(not hideClockText)
+	end
 end
 
 Info.UpdateClock = function(self)
@@ -404,6 +420,7 @@ end
 
 Info.UpdateSettings = function(self)
 	self:UpdateClock()
+	self:UpdateClockVisibility()
 	self:UpdatePerformance()
 	self:UpdateTimers()
 	self:UpdateZone()
@@ -421,6 +438,7 @@ Info.OnEnable = function(self)
 
 	self:PrepareFrames()
 	self:CreateAnchor(string_format("%s / %s", INFO, TIMEMANAGER_TITLE))
+	self:UpdateClockVisibility()
 
 	ns.MovableModulePrototype.OnEnable(self)
 

@@ -38,6 +38,16 @@ local isdisabled = function(info)
 	return info[#info] ~= "enabled" and not getmodule().db.profile.enabled
 end
 
+local setTextVisibility = function(key, value)
+	local module = getmodule()
+	module.db.profile[key] = value
+	if (key == "hideAddonText") then
+		module:UpdateAddonCompartmentVisibility()
+	elseif (key == "hideClockText") then
+		module:UpdateClockVisibility()
+	end
+end
+
 local GenerateOptions = function()
 	if (not getmodule()) then return end
 
@@ -76,10 +86,44 @@ local GenerateOptions = function()
 				type = "description",
 				hidden = isdisabled
 			},
+			hideAddonText = {
+				name = L["Hide AddOn Text"],
+				desc = L["Hide the custom AddOns label text next to the minimap button."],
+				order = 5,
+				type = "toggle",
+				width = "full",
+				hidden = isdisabled,
+				set = function(info, val)
+					setTextVisibility("hideAddonText", val)
+				end,
+				get = function(info)
+					return getmodule().db.profile.hideAddonText
+				end
+			},
+			hideClockText = {
+				name = L["Hide Clock Text"],
+				desc = L["Hide the AzeriteUI clock text displayed near the minimap/info area."],
+				order = 6,
+				type = "toggle",
+				width = "full",
+				hidden = isdisabled,
+				set = function(info, val)
+					setTextVisibility("hideClockText", val)
+				end,
+				get = function(info)
+					return getmodule().db.profile.hideClockText
+				end
+			},
+			space3 = {
+				name = "",
+				order = 7,
+				type = "description",
+				hidden = isdisabled
+			},
 			restoreBlizzard = {
 				name = L["Restore Blizzard Default"],
 				desc = L["Restore the default Blizzard minimap theme and positioning."],
-				order = 5,
+				order = 8,
 				type = "execute",
 				hidden = isdisabled,
 				func = function(info)
