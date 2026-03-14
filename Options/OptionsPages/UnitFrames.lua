@@ -314,6 +314,48 @@ local GenerateOptions = function()
 			desc = "Use the Ice Crystal artwork when Power Crystal style is active.",
 			order = 450, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
+		suboptions.args.pvpIndicatorHeader = {
+			name = "PvP Badge",
+			order = 500, type = "header", hidden = isdisabled
+		}
+		suboptions.args.pvpIndicatorOffsetX = {
+			name = "PvP Badge X Offset",
+			desc = "Move the player PvP badge left or right within the player frame.",
+			order = 510, type = "range", width = "full", min = -300, max = 300, step = 1,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "pvpIndicatorOffsetX")
+				if (type(value) ~= "number") then
+					return 0
+				end
+				return math.floor(value + .5)
+			end,
+			hidden = isdisabled
+		}
+		suboptions.args.pvpIndicatorOffsetY = {
+			name = "PvP Badge Y Offset",
+			desc = "Move the player PvP badge up or down within the player frame.",
+			order = 520, type = "range", width = "full", min = -200, max = 200, step = 1,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "pvpIndicatorOffsetY")
+				if (type(value) ~= "number") then
+					return 0
+				end
+				return math.floor(value + .5)
+			end,
+			hidden = isdisabled
+		}
+		suboptions.args.pvpIndicatorReset = {
+			name = "Reset PvP Badge Position",
+			desc = "Restore the player PvP badge to its centered default anchor within the player frame.",
+			order = 530, type = "execute", hidden = isdisabled,
+			func = function(info)
+				setoption(info, "pvpIndicatorOffsetX", 0, true)
+				setoption(info, "pvpIndicatorOffsetY", 0, true)
+				module:UpdateSettings()
+			end
+		}
 		options.args.player = suboptions
 	end
 

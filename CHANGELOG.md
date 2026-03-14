@@ -3,6 +3,12 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.12-JuNNeZ (2026-03-14)
+
+### Fixes
+- Restored the stock player-frame PvP badge to AzeriteUI's own Alliance/Horde media instead of leaving the override path without assigned faction textures.
+- Moved the default player-frame PvP badge anchor back onto a centered base point and added `/az -> Unit Frames -> Player -> PvP Badge` X/Y offset controls plus a reset action for local repositioning.
+
 ## 5.3.11-JuNNeZ (2026-03-14)
 
 ### Fixes

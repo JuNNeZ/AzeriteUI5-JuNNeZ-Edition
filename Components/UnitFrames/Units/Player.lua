@@ -116,6 +116,8 @@ local defaults = { profile = ns:Merge({
 	powerBarBaseOffsetY = POWER_CRYSTAL_BASELINE_OFFSET_Y,
 	powerCaseBaseOffsetX = 0,
 	powerCaseBaseOffsetY = 0,
+	pvpIndicatorOffsetX = 0,
+	pvpIndicatorOffsetY = 0,
 	powerOffsetZeroMigrated = true,
 	powerCrystalBaselineApplied = true
 }, ns.MovableModulePrototype.defaults) }
@@ -1174,6 +1176,33 @@ local ApplyPlayerPowerValueAlpha = function(frame)
 	if (ns.UnitFrame and ns.UnitFrame.ApplyPowerValueAlpha) then
 		ns.UnitFrame.ApplyPowerValueAlpha(frame)
 	end
+end
+
+local ApplyPlayerPvPIndicatorLayout = function(frame)
+	local indicator = frame and frame.PvPIndicator
+	if (not indicator) then
+		return
+	end
+
+	local config = ns.GetConfig("PlayerFrame")
+	local point = config and config.PvPIndicatorPosition
+	if (not point or not point[1]) then
+		return
+	end
+
+	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or nil
+	local offsetX = (profile and tonumber(profile.pvpIndicatorOffsetX)) or 0
+	local offsetY = (profile and tonumber(profile.pvpIndicatorOffsetY)) or 0
+
+	indicator:ClearAllPoints()
+	indicator:SetPoint(point[1], (point[2] or 0) + offsetX, (point[3] or 0) + offsetY)
+
+	if (config.PvPIndicatorSize) then
+		indicator:SetSize(unpack(config.PvPIndicatorSize))
+	end
+
+	indicator.Alliance = config.PvPIndicatorAllianceTexture
+	indicator.Horde = config.PvPIndicatorHordeTexture
 end
 
 local UpdatePlayerPowerValueTag = function(frame)
@@ -2721,10 +2750,10 @@ local style = function(self, unit)
 	-- PvP Indicator
 	--------------------------------------------
 	local PvPIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, -2)
-	PvPIndicator:SetSize(unpack(config.PvPIndicatorSize))
-	PvPIndicator:SetPoint(unpack(config.PvPIndicatorPosition))
 
 	self.PvPIndicator = PvPIndicator
+	self.PvPIndicator.Override = PvPIndicator_Override
+	ApplyPlayerPvPIndicatorLayout(self)
 
 	-- Threat Indicator
 	--------------------------------------------
@@ -2912,6 +2941,7 @@ PlayerFrameMod.Update = function(self)
 	UpdatePlayerManaValueTag(self.frame)
 	ApplyPlayerPowerValueTextScale(self.frame)
 	ApplyPlayerPowerValueAlpha(self.frame)
+	ApplyPlayerPvPIndicatorLayout(self.frame)
 
 	self.frame.Health.colorClass = self.db.profile.useClassColor
 	self.frame.Health.colorHealth = true
@@ -2941,6 +2971,9 @@ PlayerFrameMod.Update = function(self)
 	end
 
 	UpdateManaOrbVisibility(self.frame, GetPlayerPowerUnit(self.frame))
+	if (self.frame.PvPIndicator and self.frame.PvPIndicator.ForceUpdate) then
+		self.frame.PvPIndicator:ForceUpdate()
+	end
 
 	if (self.frame:IsElementEnabled("Power")) then
 		self.frame.Power:ForceUpdate()
