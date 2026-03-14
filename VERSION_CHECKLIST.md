@@ -32,13 +32,13 @@ Always append `-JuNNeZ` to version string.
 
 ## Current Version
 
-**Latest:** 5.3.12-JuNNeZ
+**Latest:** 5.3.13-JuNNeZ
 **Last Updated:** 2026-03-14
-**Next Planned:** 5.3.13-JuNNeZ (future fixes)
+**Next Planned:** 5.3.14-JuNNeZ (future fixes)
 
 ## Quick Version History
 
-- `5.3.12-JuNNeZ` (2026-03-14) — Player-frame PvP badge asset and anchor controls
+- `5.3.13-JuNNeZ` (2026-03-14) — Battleground/local-party frame visibility fix and AceShotz credit
 - `5.3.11-JuNNeZ` (2026-03-14) — Big-raid priority debuff hide/size options
 - `5.3.10-JuNNeZ` (2026-03-14) — Raid header click-taint/click-snippet correction and big-raid layout fix
 - `5.3.9-JuNNeZ` (2026-03-14) — Minimap text visibility options cleanup, raid-frame secure header hardening

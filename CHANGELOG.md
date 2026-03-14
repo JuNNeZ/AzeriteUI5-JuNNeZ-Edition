@@ -3,17 +3,21 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
-## 5.3.12-JuNNeZ (2026-03-14)
+## 5.3.13-JuNNeZ (2026-03-14)
 
 ### Fixes
-- Restored the stock player-frame PvP badge to AzeriteUI's own Alliance/Horde media instead of leaving the override path without assigned faction textures.
-- Moved the default player-frame PvP badge anchor back onto a centered base point and added `/az -> Unit Frames -> Player -> PvP Badge` X/Y offset controls plus a reset action for local repositioning.
 - Fixed battleground/local-party frame handling so the party-style header follows the player's actual raid subgroup in PvP raid contexts instead of briefly showing and then vanishing after the roster settles.
 - Corrected the party-header child reflow so PvP/battleground party members no longer collapse onto overlapping visual slots.
 - Removed the bad `/az -> Unit Frames` options-tree rule that hid `Raid Frames (5)` whenever Party Frames enabled any raid visibility toggle.
 
 ### Thanks
 - Thanks to AceShotz for finding the battleground party-frame bug and testing the fix in-game.
+
+# 5.3.12-JuNNeZ (2026-03-14)
+
+### Fixes
+- Restored the stock player-frame PvP badge to AzeriteUI's own Alliance/Horde media instead of leaving the override path without assigned faction textures.
+- Moved the default player-frame PvP badge anchor back onto a centered base point and added `/az -> Unit Frames -> Player -> PvP Badge` X/Y offset controls plus a reset action for local repositioning.
 
 ## 5.3.11-JuNNeZ (2026-03-14)
 
