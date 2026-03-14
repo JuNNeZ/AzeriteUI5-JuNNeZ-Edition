@@ -35,11 +35,18 @@ local RaidFrame25Mod = ns:NewModule("RaidFrame25", ns.UnitFrameModule, "LibMoreE
 
 -- Lua API
 local math_abs = math.abs
+local math_ceil = math.ceil
+local math_max = math.max
+local math_min = math.min
+local ipairs = ipairs
 local next = next
 local select = select
 local string_gsub = string.gsub
+local string_match = string.match
+local string_upper = string.upper
 local table_concat = table.concat
 local table_insert = table.insert
+local table_sort = table.sort
 local type = type
 local unpack = unpack
 
@@ -126,6 +133,50 @@ local GetSanitizedHeaderProfile = function(profile)
 		columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0,
 		columnAnchorPoint = (type(db.columnAnchorPoint) == "string" and validHeaderPoints[db.columnAnchorPoint] and db.columnAnchorPoint) or fallback.columnAnchorPoint or "LEFT"
 	}
+end
+
+-- Sourced from FrameXML\SecureGroupHeaders.lua.
+local getRelativePointAnchor = function(point)
+	point = string_upper(point)
+	if (point == "TOP") then
+		return "BOTTOM", 0, -1
+	elseif (point == "BOTTOM") then
+		return "TOP", 0, 1
+	elseif (point == "LEFT") then
+		return "RIGHT", 1, 0
+	elseif (point == "RIGHT") then
+		return "LEFT", -1, 0
+	elseif (point == "TOPLEFT") then
+		return "BOTTOMRIGHT", 1, -1
+	elseif (point == "TOPRIGHT") then
+		return "BOTTOMLEFT", -1, -1
+	elseif (point == "BOTTOMLEFT") then
+		return "TOPRIGHT", 1, 1
+	elseif (point == "BOTTOMRIGHT") then
+		return "TOPLEFT", -1, 1
+	end
+	return "CENTER", 0, 0
+end
+
+local getOrderedHeaderChildren = function(header)
+	local children = {}
+	for i = 1, header:GetNumChildren() do
+		local child = select(i, header:GetChildren())
+		if (child) then
+			table_insert(children, child)
+		end
+	end
+	table_sort(children, function(a, b)
+		local aName = a:GetName() or ""
+		local bName = b:GetName() or ""
+		local aIndex = tonumber(string_match(aName, "(%d+)$")) or 0
+		local bIndex = tonumber(string_match(bName, "(%d+)$")) or 0
+		if (aIndex == bIndex) then
+			return aName < bName
+		end
+		return aIndex < bIndex
+	end)
+	return children
 end
 
 -- Element Callbacks
@@ -427,7 +478,6 @@ local style = function(self, unit)
 
 	-- Apply common scripts and member values.
 	ns.UnitFrame.InitializeUnitFrame(self)
-	self:RegisterForClicks("AnyUp")
 	ns.UnitFrames[self] = true -- add to global registry
 	Units[self] = true -- add to local registry
 
@@ -833,8 +883,16 @@ RaidFrame25Mod.DisableBlizzard = function(self)
 end
 
 RaidFrame25Mod.OnEvent = function(self, event, ...)
-	if (event == "PLAYER_REGEN_ENABLED") then
+	if (event == "PLAYER_ENTERING_WORLD") then
+		if (InCombatLockdown()) then
+			self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+			return
+		end
+		self:UpdateHeader()
+		self:UpdateUnits()
+	elseif (event == "PLAYER_REGEN_ENABLED") then
 		if (InCombatLockdown()) then return end
+		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 		if (self.needHeaderUpdate) then
 			self.needHeaderUpdate = nil
 			self:UpdateHeader()
@@ -873,11 +931,127 @@ RaidFrame25Mod.GetHeaderAttributes = function(self)
 end
 
 RaidFrame25Mod.GetHeaderSize = function(self)
+	return self:GetCalculatedHeaderSize(25)
+end
+
+RaidFrame25Mod.GetCalculatedHeaderSize = function(self, numDisplayed)
 	local config = ns.GetConfig("RaidFrames")
 	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
-	return
-		config.UnitSize[1]*5 + math_abs(db.columnSpacing * 4),
-		config.UnitSize[2]*5 + math_abs(db.yOffset * 4)
+	local unitButtonWidth = config.UnitSize[1]
+	local unitButtonHeight = config.UnitSize[2]
+	local unitsPerColumn = db.unitsPerColumn or 5
+	local point = db.point or "TOP"
+	local _, xOffsetMult, yOffsetMult = getRelativePointAnchor(point)
+	local xMultiplier, yMultiplier = math_abs(xOffsetMult), math_abs(yOffsetMult)
+	local xOffset = db.xOffset or 0
+	local yOffset = db.yOffset or 0
+	local columnSpacing = db.columnSpacing or 0
+
+	local numColumns
+	if (unitsPerColumn and numDisplayed > unitsPerColumn) then
+		numColumns = math_min(math_ceil(numDisplayed/unitsPerColumn), (db.maxColumns or 1))
+	else
+		unitsPerColumn = numDisplayed
+		numColumns = 1
+	end
+
+	local _, colxMulti, colyMulti
+	if (numColumns > 1) then
+		_, colxMulti, colyMulti = getRelativePointAnchor(db.columnAnchorPoint)
+	end
+
+	local width, height
+	if (numDisplayed > 0) then
+		width = xMultiplier * (unitsPerColumn - 1) * unitButtonWidth + ((unitsPerColumn - 1) * (xOffset * xOffsetMult)) + unitButtonWidth
+		height = yMultiplier * (unitsPerColumn - 1) * unitButtonHeight + ((unitsPerColumn - 1) * (yOffset * yOffsetMult)) + unitButtonHeight
+
+		if (numColumns > 1) then
+			width = width + ((numColumns - 1) * math_abs(colxMulti) * (width + columnSpacing))
+			height = height + ((numColumns - 1) * math_abs(colyMulti) * (height + columnSpacing))
+		end
+	else
+		width = math_max(config.UnitSize[1]*5 + math_abs(db.columnSpacing * 4), 0.1)
+		height = math_max(config.UnitSize[2]*5 + math_abs(db.yOffset * 4), 0.1)
+	end
+
+	return width, height
+end
+
+RaidFrame25Mod.ConfigureChildren = function(self)
+	if (InCombatLockdown()) then return end
+
+	local header = self:GetUnitFrameOrHeader()
+	if (not header) then return end
+
+	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
+	local config = ns.GetConfig("RaidFrames")
+	local unitWidth = config.UnitSize[1]
+	local unitHeight = config.UnitSize[2]
+	local buttons = getOrderedHeaderChildren(header)
+	local numDisplayed = #buttons
+
+	if (numDisplayed == 0) then
+		header:SetSize(self:GetHeaderSize())
+		return
+	end
+
+	local point = db.point or "TOP"
+	local relativePoint, xOffsetMult, yOffsetMult = getRelativePointAnchor(point)
+	local xMultiplier, yMultiplier = math_abs(xOffsetMult), math_abs(yOffsetMult)
+	local xOffset = db.xOffset or 0
+	local yOffset = db.yOffset or 0
+	local sortDir = db.sortDir or "ASC"
+	local columnSpacing = db.columnSpacing or 0
+	local unitsPerColumn = db.unitsPerColumn or numDisplayed
+	local numColumns
+	if (unitsPerColumn and numDisplayed > unitsPerColumn) then
+		numColumns = math_min(math_ceil(numDisplayed/unitsPerColumn), (db.maxColumns or 1))
+	else
+		unitsPerColumn = numDisplayed
+		numColumns = 1
+	end
+
+	local columnAnchorPoint, columnRelPoint, colxMulti, colyMulti
+	if (numColumns > 1) then
+		columnAnchorPoint = db.columnAnchorPoint
+		columnRelPoint, colxMulti, colyMulti = getRelativePointAnchor(columnAnchorPoint)
+	end
+
+	if (sortDir == "DESC") then
+		local reversed = {}
+		for i = #buttons, 1, -1 do
+			table_insert(reversed, buttons[i])
+		end
+		buttons = reversed
+	end
+
+	local buttonNum = 0
+	local columnUnitCount = 0
+	local currentAnchor = header
+	for _, unitButton in ipairs(buttons) do
+		buttonNum = buttonNum + 1
+		columnUnitCount = columnUnitCount + 1
+		if (columnUnitCount > unitsPerColumn) then
+			columnUnitCount = 1
+		end
+
+		unitButton:SetSize(unitWidth, unitHeight)
+		unitButton:ClearAllPoints()
+		if (buttonNum == 1) then
+			unitButton:SetPoint(point, currentAnchor, point, 0, 0)
+			if (columnAnchorPoint) then
+				unitButton:SetPoint(columnAnchorPoint, currentAnchor, columnAnchorPoint, 0, 0)
+			end
+		elseif (columnUnitCount == 1 and columnAnchorPoint) then
+			local columnAnchor = buttons[buttonNum - unitsPerColumn]
+			unitButton:SetPoint(columnAnchorPoint, columnAnchor, columnRelPoint, colxMulti * columnSpacing, colyMulti * columnSpacing)
+		else
+			unitButton:SetPoint(point, currentAnchor, relativePoint, xMultiplier * xOffset, yMultiplier * yOffset)
+		end
+		currentAnchor = unitButton
+	end
+
+	header:SetSize(self:GetCalculatedHeaderSize(numDisplayed))
 end
 
 RaidFrame25Mod.UpdateHeader = function(self)
@@ -907,6 +1081,7 @@ RaidFrame25Mod.UpdateHeader = function(self)
 	header:SetAttribute("columnAnchorPoint", db.columnAnchorPoint)
 
 	self:GetFrame():SetSize(self:GetHeaderSize())
+	self:ConfigureChildren()
 
 	self:UpdateHeaderAnchorPoint() -- update where the group header is anchored to our anchorframe.
 	self:UpdateAnchor() -- the general update does this too, but we need it in case nothing but this function has been called.
@@ -994,6 +1169,7 @@ RaidFrame25Mod.CreateUnitFrames = function(self)
 	-- Should think that GROUP_ROSTER_UPDATE handled this, but it doesn't.
 	-- *Only experienced this is Wrath.But adding it as a general update anyway.
 	self:RegisterEvent("PARTY_LEADER_CHANGED", "UpdateUnits")
+	self:RegisterEvent("GROUP_ROSTER_UPDATE", "Update")
 
 end
 
@@ -1009,5 +1185,6 @@ RaidFrame25Mod.OnEnable = function(self)
 	self:CreateAnchor(RAID .. " (25)") --[[PARTYRAID_LABEL RAID_AND_PARTY]]
 
 	ns.MovableModulePrototype.OnEnable(self)
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 end
 

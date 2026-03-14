@@ -187,6 +187,14 @@ local UnitFrame_OnHide = function(self, ...)
 	end
 end
 
+local IsSecureHeaderChild = function(frame)
+	local parent = frame and frame.GetParent and frame:GetParent()
+	if (not parent or not parent.GetAttribute) then
+		return false
+	end
+	return parent:GetAttribute("initialConfigFunction") ~= nil
+end
+
 -- UnitFrame Prototype
 ---------------------------------------------------
 oUF:RegisterMetaFunction("CreateBar", UnitFrame_CreateBar)
@@ -242,7 +250,9 @@ ns.UnitFrame.InitializeUnitFrame = function(self)
 	self.isUnitFrame = true
 	self.colors = ns.Colors
 
-	self:RegisterForClicks("AnyUp")
+	if (not IsSecureHeaderChild(self)) then
+		self:RegisterForClicks("AnyUp")
+	end
 	self:SetScript("OnEnter", UnitFrame_OnEnter)
 	self:SetScript("OnLeave", UnitFrame_OnLeave)
 	self:SetScript("OnHide", UnitFrame_OnHide)

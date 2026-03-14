@@ -4,7 +4,7 @@
 
 ## 1. Determine Version Bump
 
-- **Patch fixes (bugs):** `5.3.8` → `5.3.9`
+- **Patch fixes (bugs):** `5.3.9` → `5.3.10`
 - **Minor features:** `5.2.x` → `5.3.0`
 - **Major overhauls:** `5.x.x` → `6.0.0`
 
@@ -32,12 +32,13 @@ Always append `-JuNNeZ` to version string.
 
 ## Current Version
 
-**Latest:** 5.3.9-JuNNeZ  
-**Last Updated:** 2026-03-14  
-**Next Planned:** 5.3.10-JuNNeZ (future fixes)
+**Latest:** 5.3.10-JuNNeZ
+**Last Updated:** 2026-03-14
+**Next Planned:** 5.3.11-JuNNeZ (future fixes)
 
 ## Quick Version History
 
+- `5.3.10-JuNNeZ` (2026-03-14) — Raid header click-taint/click-snippet correction and big-raid layout fix
 - `5.3.9-JuNNeZ` (2026-03-14) — Minimap text visibility options cleanup, raid-frame secure header hardening
 - `5.3.8-JuNNeZ` (2026-03-13) — Release metadata correction after assisted-highlight release cleanup
 - `5.3.7-JuNNeZ` (2026-03-13) — Action-bar proc and assisted-highlight fixes
