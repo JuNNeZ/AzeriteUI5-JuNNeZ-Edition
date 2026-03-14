@@ -3,6 +3,15 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.11-JuNNeZ (2026-03-14)
+
+### Fixes
+- Added `/az` options to hide or shrink the large priority debuff icon on retail 11-25 and 26-40 raid frames.
+- Kept the change on the visual `PriorityDebuff` element only, so the big-debuff option does not touch secure raid header attributes, visibility drivers, or protected click/layout paths.
+
+### Thanks
+- Thanks to Yarko for testing the retail large-raid changes and confirming the updated behavior in-game.
+
 ## 5.3.10-JuNNeZ (2026-03-14)
 
 ### Fixes

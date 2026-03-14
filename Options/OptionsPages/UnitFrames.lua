@@ -718,6 +718,30 @@ local GenerateOptions = function()
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],
 			order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
+		suboptions.args.showPriorityDebuff = {
+			name = "Show Big Debuff",
+			desc = "Toggle whether to show the large priority debuff icon on 11-25 raid frames.",
+			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.priorityDebuffScale = {
+			name = "Big Debuff Size %",
+			desc = "Resize the large priority debuff icon on 11-25 raid frames.",
+			order = 13, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "priorityDebuffScale")
+				if (type(value) ~= "number") then
+					return 100
+				end
+				if (value < 25) then
+					return 25
+				elseif (value > 100) then
+					return 100
+				end
+				return math.floor(value + .5)
+			end,
+			disabled = function(info) return not getoption(info, "showPriorityDebuff") end
+		}
 		options.args.raid25 = suboptions
 	end
 
@@ -730,6 +754,30 @@ local GenerateOptions = function()
 			name = L["Use Range Indicator"],
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],
 			order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.showPriorityDebuff = {
+			name = "Show Big Debuff",
+			desc = "Toggle whether to show the large priority debuff icon on 26-40 raid frames.",
+			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.priorityDebuffScale = {
+			name = "Big Debuff Size %",
+			desc = "Resize the large priority debuff icon on 26-40 raid frames.",
+			order = 13, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "priorityDebuffScale")
+				if (type(value) ~= "number") then
+					return 100
+				end
+				if (value < 25) then
+					return 25
+				elseif (value > 100) then
+					return 100
+				end
+				return math.floor(value + .5)
+			end,
+			disabled = function(info) return not getoption(info, "showPriorityDebuff") end
 		}
 		options.args.raid40 = suboptions
 	end

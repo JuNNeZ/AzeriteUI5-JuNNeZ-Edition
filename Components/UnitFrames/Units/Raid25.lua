@@ -68,6 +68,8 @@ local defaults = { profile = ns:Merge({
 	useInRaid40 = false, -- show in raid groups of 26-40 players
 
 	useRangeIndicator = true,
+	showPriorityDebuff = true,
+	priorityDebuffScale = 100,
 
 	point = "TOP", -- anchor point of unitframe, group members within column grow opposite
 	xOffset = 0, -- horizontal offset within the same column
@@ -133,6 +135,64 @@ local GetSanitizedHeaderProfile = function(profile)
 		columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0,
 		columnAnchorPoint = (type(db.columnAnchorPoint) == "string" and validHeaderPoints[db.columnAnchorPoint] and db.columnAnchorPoint) or fallback.columnAnchorPoint or "LEFT"
 	}
+end
+
+local GetPriorityDebuffSettings = function(profile)
+	local db = profile or defaults.profile
+	local fallback = defaults.profile
+	local scalePercent = (type(db.priorityDebuffScale) == "number" and db.priorityDebuffScale) or fallback.priorityDebuffScale or 100
+	if (scalePercent < 25) then
+		scalePercent = 25
+	elseif (scalePercent > 100) then
+		scalePercent = 100
+	end
+
+	return {
+		enabled = db.showPriorityDebuff ~= false,
+		scale = scalePercent / 100
+	}
+end
+
+local ApplyPriorityDebuffLayout = function(frame, profile)
+	if (not frame or not frame.PriorityDebuff) then
+		return
+	end
+
+	local settings = GetPriorityDebuffSettings(profile)
+	local priorityDebuff = frame.PriorityDebuff
+	local size = math_max(1, math.floor((40 * settings.scale) + .5))
+	local borderInset = math_max(1, math.floor((4 * settings.scale) + .5))
+	local borderEdgeSize = math_max(4, math.floor((12 * settings.scale) + .5))
+	local fontSize = math_max(8, math.floor((14 * settings.scale) + .5))
+	local countOffsetX = -math_max(1, math.floor((2 * settings.scale) + .5))
+	local countOffsetY = math_max(1, math.floor((3 * settings.scale) + .5))
+
+	priorityDebuff:SetSize(size, size)
+
+	if (priorityDebuff.icon) then
+		priorityDebuff.icon:SetSize(size, size)
+	end
+
+	if (priorityDebuff.border) then
+		priorityDebuff.border:SetBackdrop({ edgeFile = GetMedia("border-aura"), edgeSize = borderEdgeSize })
+		priorityDebuff.border:ClearAllPoints()
+		priorityDebuff.border:SetPoint("TOPLEFT", priorityDebuff, "TOPLEFT", -borderInset, borderInset)
+		priorityDebuff.border:SetPoint("BOTTOMRIGHT", priorityDebuff, "BOTTOMRIGHT", borderInset, -borderInset)
+	end
+
+	if (priorityDebuff.count) then
+		priorityDebuff.count:SetFontObject(GetFont(fontSize, true))
+		priorityDebuff.count:ClearAllPoints()
+		priorityDebuff.count:SetPoint("BOTTOMRIGHT", priorityDebuff, "BOTTOMRIGHT", countOffsetX, countOffsetY)
+	end
+
+	if (settings.enabled) then
+		if (priorityDebuff.spellID and priorityDebuff.ForceUpdate) then
+			priorityDebuff:ForceUpdate()
+		end
+	else
+		priorityDebuff:Hide()
+	end
 end
 
 -- Sourced from FrameXML\SecureGroupHeaders.lua.
@@ -458,6 +518,11 @@ end
 
 -- Update the border color of priority debuffs.
 local PriorityDebuff_PostUpdate = function(element, event, isVisible, name, icon, count, debuffType, duration, expirationTime, spellID, isBoss, isCustom)
+	local settings = GetPriorityDebuffSettings(RaidFrame25Mod.db and RaidFrame25Mod.db.profile or defaults.profile)
+	if (not settings.enabled) then
+		element:Hide()
+		return
+	end
 	if (isVisible) then
 		local color = debuffType and Colors.debuff[debuffType] or Colors.debuff.none
 		element.border:SetBackdropBorderColor(color[1], color[2], color[3])
@@ -637,6 +702,7 @@ local style = function(self, unit)
 
 	self.PriorityDebuff = priorityDebuff
 	self.PriorityDebuff.PostUpdate = PriorityDebuff_PostUpdate
+	ApplyPriorityDebuffLayout(self, RaidFrame25Mod.db and RaidFrame25Mod.db.profile or defaults.profile)
 
 	-- Absorb Bar (Retail)
 	--------------------------------------------
@@ -1123,6 +1189,7 @@ end
 RaidFrame25Mod.UpdateUnits = function(self)
 	if (not self:GetFrame()) then return end
 	for frame in next,Units do
+		ApplyPriorityDebuffLayout(frame, self.db.profile)
 		if (self.db.profile.useRangeIndicator) then
 			frame:EnableElement("Range")
 		else
