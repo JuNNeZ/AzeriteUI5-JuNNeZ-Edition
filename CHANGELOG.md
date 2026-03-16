@@ -1,7 +1,17 @@
+
 # Changelog
 
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
+
+## 5.3.14-JuNNeZ (2026-03-16)
+
+### Fixes & Changes
+- Disabled the golden glow effect for soul fragments (Demon Hunter/Enhancement Shaman) due to visual bugs; groundwork for future improvements remains in code (commented out).
+- Soul Fragments Display Mode dropdown is now always visible for all Demon Hunters, regardless of specialization.
+
+### Internal
+- Code cleanup and groundwork for future class power visual improvements.
 
 ## 5.3.13-JuNNeZ (2026-03-14)
 

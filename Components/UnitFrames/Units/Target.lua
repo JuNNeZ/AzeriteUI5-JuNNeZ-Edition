@@ -40,6 +40,7 @@ local math_max = math.max
 local Mixin = _G.Mixin
 local Enum = _G.Enum
 local UnitGUID = _G.UnitGUID
+local UnitCanAttack = _G.UnitCanAttack
 
 -- Addon API
 local Colors = ns.Colors
@@ -81,6 +82,7 @@ local defaults = { profile = ns:Merge({
 	castBarScaleX = 100,
 	castBarScaleY = 100,
 	castBarFollowHealth = false,
+	reverseEnemyCastChannelVisuals = false,
 	healthLabCastOffsetX = 0,
 	healthLabCastOffsetY = 0,
 	healthLabCastWidthScale = 100,
@@ -701,6 +703,8 @@ local HideTargetNativeCastVisuals = function(cast)
 	end
 end
 
+local GetTargetCastVisualGrowth
+
 local ApplyTargetSimpleCastFakeFillByPercent = function(cast, percent)
 	if (not cast) then
 		return false
@@ -710,13 +714,18 @@ local ApplyTargetSimpleCastFakeFillByPercent = function(cast, percent)
 		return false
 	end
 	local nativeTexture = cast.GetStatusBarTexture and cast:GetStatusBarTexture()
+	local anchorFrame = nativeTexture or cast
+	local growth = GetTargetCastVisualGrowth(cast)
 	fakeFill:ClearAllPoints()
-	if (nativeTexture) then
-		fakeFill:SetAllPoints(nativeTexture)
-	else
-		fakeFill:SetAllPoints(cast)
+	if (anchorFrame) then
+		fakeFill:SetPoint("TOP", anchorFrame, "TOP")
+		fakeFill:SetPoint("BOTTOM", anchorFrame, "BOTTOM")
 	end
 	if (percent == nil) then
+		if (anchorFrame) then
+			fakeFill:SetPoint("LEFT", anchorFrame, "LEFT")
+			fakeFill:SetPoint("RIGHT", anchorFrame, "RIGHT")
+		end
 		fakeFill:SetTexCoord(1, 0, 0, 1)
 		fakeFill:Show()
 		return true
@@ -730,7 +739,36 @@ local ApplyTargetSimpleCastFakeFillByPercent = function(cast, percent)
 		fakeFill:Hide()
 		return true
 	end
-	fakeFill:SetTexCoord(percent, 0, 0, 1)
+	local width
+	if (anchorFrame and anchorFrame.GetWidth) then
+		local anchorWidth = anchorFrame:GetWidth()
+		if (IsSafeNumber(anchorWidth) and anchorWidth > 0) then
+			width = anchorWidth
+		end
+	end
+	if ((type(width) ~= "number" or width <= 0) and cast.GetWidth) then
+		local castWidth = cast:GetWidth()
+		if (IsSafeNumber(castWidth) and castWidth > 0) then
+			width = castWidth
+		end
+	end
+	if (type(width) == "number" and width > 0) then
+		if (growth == "LEFT") then
+			fakeFill:SetPoint("RIGHT", anchorFrame, "RIGHT")
+			fakeFill:SetWidth(width * percent)
+			fakeFill:SetTexCoord(percent, 0, 0, 1)
+		else
+			fakeFill:SetPoint("LEFT", anchorFrame, "LEFT")
+			fakeFill:SetWidth(width * percent)
+			fakeFill:SetTexCoord(1, 1 - percent, 0, 1)
+		end
+	else
+		if (anchorFrame) then
+			fakeFill:SetPoint("LEFT", anchorFrame, "LEFT")
+			fakeFill:SetPoint("RIGHT", anchorFrame, "RIGHT")
+		end
+		fakeFill:SetTexCoord(percent, 0, 0, 1)
+	end
 	fakeFill:Show()
 	return true
 end
@@ -752,6 +790,30 @@ local GetTargetCastFakeAlpha = function(cast)
 		return 1
 	end
 	return configuredAlpha
+end
+
+local ShouldSwapEnemyTargetCastGrowth = function(cast)
+	if (not cast or not cast.__owner or not TargetFrameMod or not TargetFrameMod.db or not TargetFrameMod.db.profile) then
+		return false
+	end
+	if (not TargetFrameMod.db.profile.reverseEnemyCastChannelVisuals) then
+		return false
+	end
+	local unit = cast.__owner.unit
+	if (type(unit) ~= "string" or unit == "" or UnitIsUnit(unit, "player")) then
+		return false
+	end
+	return UnitCanAttack and UnitCanAttack("player", unit) and true or false
+end
+
+GetTargetCastVisualGrowth = function(cast)
+	local owner = cast and cast.__owner
+	local unit = owner and owner.unit
+	local growth = (type(unit) == "string" and unit ~= "" and UnitIsUnit(unit, "player")) and "LEFT" or "RIGHT"
+	if (ShouldSwapEnemyTargetCastGrowth(cast)) then
+		growth = (growth == "LEFT") and "RIGHT" or "LEFT"
+	end
+	return growth
 end
 
 ApplyTargetFakeCastVertexColor = function(cast)
@@ -2364,6 +2426,9 @@ local UnitFrame_UpdateTextures = function(self)
 	cast:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
 	cast:SetOrientation("HORIZONTAL")
 	local shouldReverseTargetCastFill = isSelfTarget and true or false
+	if (ShouldSwapEnemyTargetCastGrowth(cast)) then
+		shouldReverseTargetCastFill = not shouldReverseTargetCastFill
+	end
 	if (cast.SetReverseFill) then
 		cast:SetReverseFill(shouldReverseTargetCastFill)
 	end

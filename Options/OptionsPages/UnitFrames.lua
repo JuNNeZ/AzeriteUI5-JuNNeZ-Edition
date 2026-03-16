@@ -468,6 +468,19 @@ local GenerateOptions = function()
 			desc = L["Toggle whether to show overlay castbars on this unit frame."],
 			order = 25, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
+		suboptions.args.reverseEnemyCastChannelVisuals = {
+			name = "Swap Enemy Castbar Growth",
+			desc = "Swap whether hostile target castbars grow from the left or right side while keeping the same art orientation.",
+			order = 27, type = "toggle", width = "full", hidden = isdisabled,
+			set = setter,
+			get = getter,
+			disabled = function(info)
+				if (isdisabled(info)) then
+					return true
+				end
+				return not getoption(info, "showCastbar")
+			end
+		}
 		suboptions.args.showName = {
 			name = L["Show Unit Name"],
 			desc = L["Toggle whether to show the name of the unit."],
@@ -955,7 +968,7 @@ local GenerateOptions = function()
 						hidden = function(info)
 							if (isdisabled(info)) then return true end
 							if (ns.PlayerClass == "DEMONHUNTER") then
-								return not IsSpecMatch(SPEC_VENGEANCE)
+								return false
 							end
 							if (ns.PlayerClass == "SHAMAN") then
 								return not IsSpecMatch(SPEC_ENHANCEMENT)

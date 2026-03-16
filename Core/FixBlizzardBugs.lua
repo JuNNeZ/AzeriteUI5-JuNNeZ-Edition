@@ -2613,6 +2613,144 @@ local function IsPassiveWoW12FixEnvironment()
 	return (issecretvalue or canaccesstable or (ns.ClientVersion and ns.ClientVersion >= 120000)) and true or false
 end
 
+local function ApplyPlaterNamePlateAbsorbCleanup()
+	if (not (ns and ns.API and ns.API.IsAddOnEnabled and ns.API.IsAddOnEnabled("Plater"))) then
+		return
+	end
+	if (_G.__AzeriteUI_PlaterAbsorbCleanupInitialized) then
+		return
+	end
+	_G.__AzeriteUI_PlaterAbsorbCleanupInitialized = true
+
+	local function HideObject(object)
+		if (not object) then
+			return
+		end
+		if (object.SetAlpha) then
+			pcall(object.SetAlpha, object, 0)
+		end
+		if (object.Hide) then
+			pcall(object.Hide, object)
+		end
+		if (object.UnregisterAllEvents) then
+			pcall(object.UnregisterAllEvents, object)
+		end
+	end
+
+	local function LockHiddenOnShow(object)
+		if (not object or object.__AzeriteUI_PlaterAbsorbHideHooked or not object.HookScript) then
+			return
+		end
+		object.__AzeriteUI_PlaterAbsorbHideHooked = true
+		object:HookScript("OnShow", function(self)
+			HideObject(self)
+		end)
+	end
+
+	local function HideNamedChildren(frame)
+		if (not frame) then
+			return
+		end
+		for _, key in ipairs({
+			"AbsorbBar",
+			"absorbBar",
+			"TotalAbsorbBar",
+			"totalAbsorbBar",
+			"HealAbsorbBar",
+			"healAbsorbBar",
+			"ShieldBar",
+			"shieldBar"
+		}) do
+			local child = frame[key]
+			if (child) then
+				HideObject(child)
+				LockHiddenOnShow(child)
+				HideObject(child.barTexture)
+				HideObject(child.BarTexture)
+				HideObject(child.border)
+				HideObject(child.Border)
+			end
+		end
+	end
+
+	local function HideAbsorbChildrenByName(frame)
+		if (not frame or not frame.GetNumChildren) then
+			return
+		end
+		for i = 1, frame:GetNumChildren() do
+			local child = select(i, frame:GetChildren())
+			local childName = child and child.GetName and child:GetName()
+			if (type(childName) == "string"
+				and (string.find(childName, "Absorb", 1, true)
+					or string.find(childName, "Shield", 1, true))) then
+				HideObject(child)
+				LockHiddenOnShow(child)
+				HideObject(child.barTexture)
+				HideObject(child.BarTexture)
+				HideObject(child.border)
+				HideObject(child.Border)
+			end
+		end
+	end
+
+	local function HidePlaterAbsorbVisualsForPlate(plate)
+		if (not plate or not C_NamePlate or not C_NamePlate.GetNamePlateForUnit) then
+			return
+		end
+
+		local unitFrame = plate.UnitFrame or plate.unitFrame
+		if (not unitFrame) then
+			return
+		end
+
+		local plateName = plate.GetName and plate:GetName() or ""
+		local frameName = unitFrame.GetName and unitFrame:GetName() or ""
+		if ((type(plateName) ~= "string" or not string.find(plateName, "Plater", 1, true))
+			and (type(frameName) ~= "string" or not string.find(frameName, "Plater", 1, true))) then
+			return
+		end
+
+		HideNamedChildren(unitFrame)
+		HideAbsorbChildrenByName(unitFrame)
+
+		local healthBar = unitFrame.healthBar or unitFrame.HealthBar or unitFrame.healthbar
+		if (healthBar) then
+			HideNamedChildren(healthBar)
+			HideAbsorbChildrenByName(healthBar)
+		end
+	end
+
+	local cleanupFrame = CreateFrame("Frame")
+	cleanupFrame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
+	cleanupFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	cleanupFrame:RegisterEvent("ADDON_LOADED")
+	cleanupFrame:SetScript("OnEvent", function(_, event, arg1)
+		if (event == "ADDON_LOADED" and arg1 ~= "Plater") then
+			return
+		end
+		if (event == "NAME_PLATE_UNIT_ADDED") then
+			local unit = arg1
+			if (type(unit) ~= "string") then
+				return
+			end
+			local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
+			if (ok and plate) then
+				HidePlaterAbsorbVisualsForPlate(plate)
+				if (C_Timer) then
+					C_Timer.After(0, function() HidePlaterAbsorbVisualsForPlate(plate) end)
+					C_Timer.After(.1, function() HidePlaterAbsorbVisualsForPlate(plate) end)
+				end
+			end
+			return
+		end
+		if (C_NamePlate and C_NamePlate.GetNamePlates) then
+			for _, plate in pairs(C_NamePlate.GetNamePlates()) do
+				HidePlaterAbsorbVisualsForPlate(plate)
+			end
+		end
+	end)
+end
+
 
 FixBlizzardBugs.OnInitialize = function(self)
 
@@ -2635,6 +2773,7 @@ FixBlizzardBugs.OnInitialize = function(self)
 	-- ns.ClientVersion is the interface/TOC number (120000+ for WoW 12).
 	if (IsPassiveWoW12FixEnvironment()) then
 		ApplyWoW12TooltipMoneyGuards()
+		ApplyPlaterNamePlateAbsorbCleanup()
 		-- IMPORTANT: Do NOT replace BackdropMixin.SetupTextureCoordinates here.
 		-- Replacing mixin methods with addon functions taints every frame that
 		-- uses BackdropMixin, which spreads "tainted by AzeriteUI" to Edit Mode

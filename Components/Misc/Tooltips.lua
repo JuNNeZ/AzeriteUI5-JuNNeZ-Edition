@@ -188,6 +188,8 @@ function Tooltips:ApplyHighlightOverride()
 	self:EnsureHighlightCache()
 	if (self:IsConsolePortActive()) then
 		self:RestoreHighlightState()
+	elseif (ns.ClientVersion and ns.ClientVersion >= 120000) then
+		self:RestoreHighlightState()
 	else
 		GameTooltipDefaultContainer.HighlightSystem = ns.Noop
 		GameTooltipDefaultContainer.ClearHighlight = ns.Noop

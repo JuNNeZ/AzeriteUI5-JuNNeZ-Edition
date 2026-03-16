@@ -344,8 +344,8 @@ end
 
 MicroMenu.OnEnable = function(self)
 
-	-- Watch this, it is a potential source of taint in WoW11.
-	if (ns.WoW10) then
+	-- Avoid replacing Blizzard-owned methods in WoW12+; this can taint protected flows.
+	if (ns.WoW10 and (not ns.ClientVersion or ns.ClientVersion < 120000)) then
 		MicroMenuContainer.HighlightSystem = ns.Noop
 		MicroMenuContainer.ClearHighlight = ns.Noop
 	end

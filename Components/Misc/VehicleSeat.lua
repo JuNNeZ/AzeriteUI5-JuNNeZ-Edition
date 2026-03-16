@@ -79,7 +79,7 @@ end
 
 VehicleSeat.OnEnable = function(self)
 
-	if (ns.WoW10) then
+	if (ns.WoW10 and (not ns.ClientVersion or ns.ClientVersion < 120000)) then
 		VehicleSeatIndicator.HighlightSystem = ns.Noop
 		VehicleSeatIndicator.ClearHighlight = ns.Noop
 	end

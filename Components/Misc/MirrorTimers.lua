@@ -60,7 +60,7 @@ end
 MirrorTimers.PrepareFrames = function(self)
 	if (self.frame) then return end
 
-	if (ns.WoW10) then
+	if (ns.WoW10 and (not ns.ClientVersion or ns.ClientVersion < 120000)) then
 		MirrorTimerContainer.HighlightSystem = ns.Noop
 		MirrorTimerContainer.ClearHighlight = ns.Noop
 		MirrorTimerContainer:UnregisterAllEvents()

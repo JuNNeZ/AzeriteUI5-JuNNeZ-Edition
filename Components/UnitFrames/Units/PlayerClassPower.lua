@@ -811,21 +811,27 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 					local hasVoidMeta = (AuraUtil.FindAuraByName("Void Metamorphosis", "player", "HELPFUL") ~= nil)
 					local atCap = isMaelstromStyle and (cur >= 10) or (origCur >= 50)
 
-					if (element.goldenGlow) then
-						if (atCap or (not isMaelstromStyle and hasVoidMeta)) then
-							if (not element.goldenGlow:IsShown()) then
-								element.goldenGlow:Show()
-							end
-							if (isMaelstromStyle) then
-								element.goldenGlow:SetVertexColor(90/255, 210/255, 1, 0.8)
-							else
-								element.goldenGlow:SetVertexColor(1, 0.84, 0, 0.8)
-							end
-							element.goldenGlow:SetAlpha(0.4 + (math.sin(GetTime() * 3) * 0.3))
-						elseif (element.goldenGlow:IsShown()) then
-							element.goldenGlow:Hide()
-						end
-					end
+					-- Golden glow effect disabled for now
+					-- if point.goldenGlow then
+					--     if i <= cur then
+					--         if not point.goldenGlow:IsShown() then
+					--             point.goldenGlow:Show()
+					--         end
+					--         point.goldenGlow:SetBlendMode("ADD")
+					--         if isMaelstromStyle then
+					--             point.goldenGlow:SetVertexColor(90/255, 210/255, 1, 0.8)
+					--         else
+					--             point.goldenGlow:SetVertexColor(1, 0.84, 0, 0.8)
+					--         end
+					--         -- Animate alpha: grows with filled fragments
+					--         local maxGlowAlpha = 0.85
+					--         local minGlowAlpha = 0.1
+					--         local growAlpha = minGlowAlpha + (math.min(cur, 10) * 0.075)
+					--         point.goldenGlow:SetAlpha(math.min(growAlpha, maxGlowAlpha))
+					--     elseif point.goldenGlow:IsShown() then
+					--         point.goldenGlow:Hide()
+					--     end
+					-- end
 
 					local gradientFactor = (i - 1) / 9
 					local r = lightPrimary[1] * (1 - gradientFactor) + darkPrimary[1] * gradientFactor
@@ -1050,20 +1056,22 @@ local style = function(self, unit)
 		classpower:SetAllPoints(self)
 
 		local maxPoints = 10 -- for fuck's sake
+
 		for i = 1,maxPoints do
 			classpower[i] = ClassPower_CreatePoint(classpower)
+			-- Attach golden glow to each soul fragment point
+			local point = classpower[i]
+			-- Golden glow effect disabled for now
+			-- local goldenGlow = point:CreateTexture(nil, "BACKGROUND")
+			-- goldenGlow:SetSize(32, 32)
+			-- goldenGlow:SetPoint("CENTER", point, "CENTER", 0, 0)
+			-- goldenGlow:SetTexture("Interface\\GLUES\\Models\\UI_Draenei\\GenericGlow64")
+			-- goldenGlow:SetBlendMode("ADD")
+			-- goldenGlow:SetVertexColor(1, 0.84, 0, 0.8)
+			-- goldenGlow:SetAlpha(0)
+			-- goldenGlow:Hide()
+			-- point.goldenGlow = goldenGlow
 		end
-
-		-- Create golden glow texture behind all soul fragments points
-		local goldenGlow = classpower:CreateTexture(nil, "BACKGROUND")
-		goldenGlow:SetSize(160, 160)
-		goldenGlow:SetPoint("CENTER", classpower, "TOPLEFT", 82, -74)  -- Center on middle of 5-point arc
-		goldenGlow:SetTexture("Interface\\GLUES\\Models\\UI_Draenei\\GenericGlow64")
-		goldenGlow:SetBlendMode("ADD")
-		goldenGlow:SetVertexColor(1, 0.84, 0, 0.8)  -- Golden color
-		goldenGlow:SetAlpha(0)  -- Hidden by default
-		goldenGlow:Hide()
-		classpower.goldenGlow = goldenGlow
 		
 		self.ClassPower = classpower
 		self.ClassPower.PostUpdate = ClassPower_PostUpdate
