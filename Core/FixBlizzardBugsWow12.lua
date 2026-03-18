@@ -168,10 +168,10 @@ local function SanitizeCompactAura(aura)
 		copied = true
 	end
 
-	for key, value in pairs(aura) do
+	for key, fallback in pairs(COMPACT_AURA_DEFAULTS) do
+		local value = aura[key]
 		if (issecretvalue(value)) then
 			EnsureCopy()
-			local fallback = COMPACT_AURA_DEFAULTS[key]
 			if (fallback ~= nil) then
 				sanitized[key] = fallback
 			else

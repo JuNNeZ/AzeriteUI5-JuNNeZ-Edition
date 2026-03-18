@@ -57,15 +57,19 @@ local getoption = function(info,option)
 	return getmodule().db.profile[option]
 end
 
+local hasLegacyBlizzardAuraToggle = function()
+	return not (issecretvalue or (ns.ClientVersion and ns.ClientVersion >= 120000))
+end
+
 local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Aura Settings"],
+		name = "Aura Header Settings",
 		type = "group",
 		args = {
 			description = {
-				name = L["Here you can change settings related to the aura buttons appearing by default in the top right corner of the screen. None of these settings apply to the aura buttons found at the unitframes."],
+				name = "These settings control the top-right aura header. They do not affect aura rows on unit frames like Player, Target or Party.",
 				order = 1,
 				type = "description",
 				fontSize = "medium"
@@ -125,8 +129,8 @@ local GenerateOptions = function()
 				get = getter
 			},
 			ignoreTarget = {
-				name = L["Ignore current target"],
-				desc = L["Normally auras will be hidden when you have a target, as their position directly conflicts with the position of the target frame. By enabling this the auras will ignore your target and remain visible."],
+				name = L["Keep Aura Header Visible With Target"],
+				desc = L["Keep the AzeriteUI top-right aura header visible even when you have a target. Disable this if you want the header to hide while the target frame is in use."],
 				order = 22,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -134,11 +138,13 @@ local GenerateOptions = function()
 				get = getter
 			},
 			hideBlizzardAurasOnTarget = {
-				name = L["Hide Blizzard auras while targeting"],
-				desc = L["Hide Blizzard BuffFrame, DebuffFrame and temporary enchants whenever you have a target."],
+				name = L["Legacy: Hide Blizzard Auras While Targeting"],
+				desc = L["Older-client compatibility option for Blizzard BuffFrame visibility while targeting. This is not used on WoW 12, where Blizzard aura frames are already disabled for secure compatibility."],
 				order = 23,
 				type = "toggle", width = "full",
-				hidden = isdisabled,
+				hidden = function(info)
+					return isdisabled(info) or not hasLegacyBlizzardAuraToggle()
+				end,
 				set = setter,
 				get = getter
 			},
@@ -241,4 +247,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Player Auras"], GenerateOptions)
+Options:AddGroup("Aura Header", GenerateOptions)

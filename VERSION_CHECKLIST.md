@@ -32,12 +32,13 @@ Always append `-JuNNeZ` to version string.
 
 ## Current Version
 
-**Latest:** 5.3.13-JuNNeZ
-**Last Updated:** 2026-03-14
-**Next Planned:** 5.3.14-JuNNeZ (future fixes)
+**Latest:** 5.3.15-JuNNeZ
+**Last Updated:** 2026-03-18
+**Next Planned:** 5.3.16-JuNNeZ (future fixes)
 
 ## Quick Version History
 
+- `5.3.15-JuNNeZ` (2026-03-18) — WoW 12 aura/combat stability, stock-style player aura behavior, and aura/options cleanup
 - `5.3.13-JuNNeZ` (2026-03-14) — Battleground/local-party frame visibility fix and AceShotz credit
 - `5.3.11-JuNNeZ` (2026-03-14) — Big-raid priority debuff hide/size options
 - `5.3.10-JuNNeZ` (2026-03-14) — Raid header click-taint/click-snippet correction and big-raid layout fix

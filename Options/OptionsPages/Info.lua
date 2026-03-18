@@ -56,18 +56,24 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Time & Info Settings"],
+		name = "Info/Clock Settings",
 		type = "group",
 		args = {
-			header = {
+			description = {
 				order = 1,
+				type = "description",
+				name = "These settings control the info text and clock shown in AzeriteUI's top information area.",
+				fontSize = "medium"
+			},
+			header = {
+				order = 10,
 				type = "header",
 				name = L["Clock Settings"]
 			},
 			useHalfClock = {
 				name = L["24 Hour Mode"],
 				desc = string_format(L["Enable to use a 24 hour clock, disable to show a 12 hour clock with %s/%s suffixes."], TIMEMANAGER_AM, TIMEMANAGER_PM),
-				order = 10,
+				order = 20,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
 				set = function(info,val) setter(info, not val) end,
@@ -76,7 +82,7 @@ local GenerateOptions = function()
 			useServerTime = {
 				name = L["Use Local Time"],
 				desc = L["Set the clock to your computer's local time, disable to show the server time instead."],
-				order = 11,
+				order = 21,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
 				set = function(info,val) setter(info, not val) end,
@@ -92,4 +98,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Time & Info"], GenerateOptions, 10000)
+Options:AddGroup("Info/Clock", GenerateOptions, 10000)

@@ -50,174 +50,10 @@ if (ns.WoW10 and ns.ClientBuild >= 52188) then
 
 end
 
--- WoW 12.0.0+ (and any build exposing secret values): apply secret-value guards
--- Emergency safe mode: keep entire module disabled until a clean rewrite pass is ready.
+-- WoW 12 note:
+-- The old emergency full-disable block used during early WoW 12 research is no longer active.
+-- It is intentionally kept out of the live code path to make the current WoW 12 behavior easier to audit.
 if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) then
-	-- Disable for future sessions
-	if C_AddOns and C_AddOns.DisableAddOn then
-		pcall(C_AddOns.DisableAddOn, "Blizzard_CompactRaidFrames")
-		pcall(C_AddOns.DisableAddOn, "Blizzard_PersonalResourceDisplay")
-		pcall(C_AddOns.DisableAddOn, "Blizzard_EncounterWarnings")
-		pcall(C_AddOns.DisableAddOn, "Blizzard_BuffFrame")
-	elseif DisableAddOn then
-		pcall(DisableAddOn, "Blizzard_CompactRaidFrames")
-		pcall(DisableAddOn, "Blizzard_PersonalResourceDisplay")
-		pcall(DisableAddOn, "Blizzard_EncounterWarnings")
-		pcall(DisableAddOn, "Blizzard_BuffFrame")
-	end
-
-	local function ShouldDebugFixes()
-		return ns and ns.db and ns.db.global and ns.db.global.enableDevelopmentMode
-			and ns.db.global.debugFixes
-	end
-
-	local function DebugFixes(...)
-		if (ShouldDebugFixes()) then
-			print("|cff33ff99", "AzeriteUI Fixes:", ...)
-		end
-	end
-
-	local function DebugCount(key, detail)
-		local counts = ns.__AzeriteUI_DebugCounts
-		if (not counts) then
-			counts = {}
-			ns.__AzeriteUI_DebugCounts = counts
-		end
-		counts[key] = (counts[key] or 0) + 1
-		if (ShouldDebugFixes() and (counts[key] == 1 or counts[key] % 50 == 0)) then
-			if (detail ~= nil) then
-				DebugFixes(key, counts[key], detail)
-			else
-				DebugFixes(key, counts[key])
-			end
-		end
-	end
-
-	local function DisableFrame(frame)
-		if (not frame or frame.__AzeriteUI_Disabled) then
-			return
-		end
-		frame.__AzeriteUI_Disabled = true
-		pcall(function()
-			if (frame.UnregisterAllEvents) then
-				frame:UnregisterAllEvents()
-			end
-		end)
-		pcall(function()
-			if (frame.SetScript) then
-				frame:SetScript("OnEvent", Noop)
-				frame:SetScript("OnUpdate", Noop)
-			end
-		end)
-		pcall(function()
-			if (frame.Hide) then
-				frame:Hide()
-			end
-		end)
-		pcall(function()
-			if (frame.HookScript) then
-				frame:HookScript("OnShow", function(self)
-					if (self.Hide) then
-						self:Hide()
-					end
-				end)
-			end
-		end)
-	end
-
-	local function DisablePRD()
-		local function hardDisablePRD(prd)
-			if not prd then return end
-			prd:SetScript("OnEvent", nil)
-			prd:SetScript("OnUpdate", nil)
-			prd:UnregisterAllEvents()
-			prd:Hide()
-		end
-		if (_G.PersonalResourceDisplayFrame) then
-			hardDisablePRD(_G.PersonalResourceDisplayFrame)
-			DisableFrame(_G.PersonalResourceDisplayFrame)
-		end
-		if (_G.PersonalResourceDisplay) then
-			hardDisablePRD(_G.PersonalResourceDisplay)
-			DisableFrame(_G.PersonalResourceDisplay)
-		end
-	end
-
-	local function DisableEncounterWarnings()
-		local function hardDisableEW(ew)
-			if not ew then return end
-			ew.ShowWarning = Noop
-			ew.SetIsEditing = Noop
-			ew:SetScript("OnEvent", nil)
-			ew:SetScript("OnUpdate", nil)
-			ew:UnregisterAllEvents()
-			ew:Hide()
-			ew:HookScript("OnShow", function(self) self:Hide() end)
-		end
-		if (_G.EncounterWarnings) then
-			hardDisableEW(_G.EncounterWarnings)
-			DisableFrame(_G.EncounterWarnings)
-		end
-		if (_G.EncounterWarningsView) then
-			hardDisableEW(_G.EncounterWarningsView)
-			DisableFrame(_G.EncounterWarningsView)
-		end
-		if (_G.EncounterWarningsViewElementsMixin) then
-			_G.EncounterWarningsViewElementsMixin.Init = Noop
-			_G.EncounterWarningsViewElementsMixin.Reset = Noop
-		end
-	end
-
-	local function DisableLowHealthFrame()
-		if (_G.LowHealthFrame) then
-			DisableFrame(_G.LowHealthFrame)
-		end
-	end
-
-	local function DisableClassNameplateBars()
-		local driver = _G.NamePlateDriverFrame
-		if (driver and driver.classNamePlatePowerBar) then
-			driver.classNamePlatePowerBar:Hide()
-			if (driver.classNamePlatePowerBar.UnregisterAllEvents) then
-				driver.classNamePlatePowerBar:UnregisterAllEvents()
-			end
-		end
-		if (_G.ClassNameplateManaBarFrame) then
-			_G.ClassNameplateManaBarFrame:Hide()
-			if (_G.ClassNameplateManaBarFrame.UnregisterAllEvents) then
-				_G.ClassNameplateManaBarFrame:UnregisterAllEvents()
-			end
-		end
-		if (C_NamePlate and C_NamePlate.GetNamePlates) then
-			for _, plate in pairs(C_NamePlate.GetNamePlates()) do
-				local frame = plate and (plate.UnitFrame or plate.unitFrame)
-				if (frame and frame.classNamePlateMechanicFrame) then
-					frame.classNamePlateMechanicFrame:Hide()
-				end
-				if (frame and frame.classNamePlatePowerBar) then
-					frame.classNamePlatePowerBar:Hide()
-					if (frame.classNamePlatePowerBar.UnregisterAllEvents) then
-						frame.classNamePlatePowerBar:UnregisterAllEvents()
-					end
-				end
-			end
-		end
-	end
-
-	local function DisableBlizzardBuffs()
-		if (_G.BuffFrame) then
-			DisableFrame(_G.BuffFrame)
-		end
-		if (_G.DebuffFrame) then
-			DisableFrame(_G.DebuffFrame)
-		end
-		if (_G.TemporaryEnchantFrame) then
-			DisableFrame(_G.TemporaryEnchantFrame)
-		end
-	end
-
-	local function DisableBlizzardUnitFrames()
-		-- AzeriteUI supplies custom unitframes; disable Blizzard target/tot updates
 		-- to avoid WoW12 secret arithmetic in Blizzard UnitFrame code.
 		local frames = { _G.TargetFrame, _G.TargetFrameToT }
 		for _, frame in ipairs(frames) do
@@ -225,7 +61,6 @@ if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) 
 				DisableFrame(frame)
 			end
 		end
-	end
 
 	local function DisableEditModeSensitiveFrames()
 		if (true) then
@@ -1653,6 +1488,26 @@ if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) 
 			return
 		end
 		ns.__AuraSanitizeWrapped = true
+		local auraDefaults = {
+			isHarmful = false,
+			isHelpful = false,
+			isStealable = false,
+			isFromPlayerOrPlayerPet = false,
+			isPlayerAura = false,
+			isRaid = false,
+			isNameplateOnly = false,
+			nameplateShowPersonal = false,
+			nameplateShowAll = false,
+			canApplyAura = false,
+			canActivePlayerDispel = false,
+			isBossAura = false,
+			duration = 0,
+			expirationTime = 0,
+			applications = 0,
+			spellId = 0,
+			auraInstanceID = 0,
+			timeMod = 1
+		}
 
 		local function SanitizeAuraData(aura)
 			if (type(aura) ~= "table") then
@@ -1668,7 +1523,8 @@ if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) 
 				return aura
 			end
 			local needsCopy = false
-			for k,v in pairs(aura) do
+			for k, fallback in pairs(auraDefaults) do
+				local v = aura[k]
 				if issecretvalue(v) then
 					if (not needsCopy) then
 						local ok, copy = pcall(CopyTable, aura)
@@ -1680,7 +1536,7 @@ if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) 
 						needsCopy = true
 					end
 					-- Nil out secret fields so downstream comparisons/booleans are safe.
-					aura[k] = nil
+					aura[k] = fallback
 				end
 			end
 			return aura
@@ -1946,7 +1802,8 @@ if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) 
 				return a
 			end
 			local needsCopy = false
-			for k,v in pairs(a) do
+			for k, fallback in pairs(defaults) do
+				local v = a[k]
 				if issecretvalue(v) then
 					if (not needsCopy) then
 						local ok, copy = pcall(CopyTable, a)
@@ -1957,8 +1814,8 @@ if (false and (issecretvalue or (ns.ClientBuild and ns.ClientBuild >= 120000))) 
 						end
 						needsCopy = true
 					end
-					if (defaults[k] ~= nil) then
-						a[k] = defaults[k]
+					if (fallback ~= nil) then
+						a[k] = fallback
 					else
 						a[k] = nil
 					end
@@ -2785,194 +2642,13 @@ FixBlizzardBugs.OnInitialize = function(self)
 		return
 	end
 
-	-- Legacy pre-WoW12 path.
-	-- This section is intentionally unreachable on WoW12+ / secret-value builds.
-
-	-- Guard BackdropMixin.SetupTextureCoordinates against secret width/height (tooltips)
-	if (false and BackdropMixin and type(BackdropMixin.SetupTextureCoordinates) == "function" and not _G.__AzeriteUI_BackdropWrapped) then
-		_G.__AzeriteUI_BackdropWrapped = true
-		local Orig_SetupTextureCoordinates = BackdropMixin.SetupTextureCoordinates
-		BackdropMixin.SetupTextureCoordinates = function(self, ...)
-			if (issecretvalue) then
-				local width = self and self.GetWidth and self:GetWidth()
-				local height = self and self.GetHeight and self:GetHeight()
-				if ((width and issecretvalue(width)) or (height and issecretvalue(height))) then
-					return
-				end
-			end
-			return Orig_SetupTextureCoordinates(self, ...)
-		end
-	end
-
-	-- Guard raid target index APIs against secret values (nameplates)
-	if (_G.GetRaidTargetIndex and not _G.__AzeriteUI_GetRaidTargetIndexWrapped) then
-		_G.__AzeriteUI_GetRaidTargetIndexWrapped = true
-		local Orig_GetRaidTargetIndex = _G.GetRaidTargetIndex
-		_G.GetRaidTargetIndex = function(unit)
-			local index = Orig_GetRaidTargetIndex(unit)
-			if (issecretvalue and issecretvalue(index)) then
-				return nil
-			end
-			return index
-		end
-	end
-	if (_G.UnitRaidTargetIndex and not _G.__AzeriteUI_UnitRaidTargetIndexWrapped) then
-		_G.__AzeriteUI_UnitRaidTargetIndexWrapped = true
-		local Orig_UnitRaidTargetIndex = _G.UnitRaidTargetIndex
-		_G.UnitRaidTargetIndex = function(unit)
-			local index = Orig_UnitRaidTargetIndex(unit)
-			if (issecretvalue and issecretvalue(index)) then
-				return nil
-			end
-			return index
-		end
-	end
-
-	-- Guard ClassNameplateBar SetupBar against secret values (nameplate class power)
-	if (ClassNameplateBarMixin and type(ClassNameplateBarMixin.SetupBar) == "function" and not _G.__AzeriteUI_ClassNameplateBarWrapped) then
-		_G.__AzeriteUI_ClassNameplateBarWrapped = true
-		local Orig_SetupBar = ClassNameplateBarMixin.SetupBar
-		ClassNameplateBarMixin.SetupBar = function(self, ...)
-			local ok = pcall(Orig_SetupBar, self, ...)
-			if (not ok and self and self.Hide) then
-				self:Hide()
-			end
-		end
-	end
-	if (ClassNameplateManaBarFrame and type(ClassNameplateManaBarFrame.SetupBar) == "function" and not _G.__AzeriteUI_ClassNameplateManaBarWrapped) then
-		_G.__AzeriteUI_ClassNameplateManaBarWrapped = true
-		local Orig_SetupBar = ClassNameplateManaBarFrame.SetupBar
-		ClassNameplateManaBarFrame.SetupBar = function(self, ...)
-			local ok = pcall(Orig_SetupBar, self, ...)
-			if (not ok and self and self.Hide) then
-				self:Hide()
-			end
-		end
-	end
-
-	-- Guard cast-target highlight against secret booleans
-	if (_G.CastingBarMixin and type(_G.CastingBarMixin.SetIsHighlightedCastTarget) == "function"
-		and not _G.__AzeriteUI_CastingBarHighlightWrapped) then
-		_G.__AzeriteUI_CastingBarHighlightWrapped = true
-		local Orig_SetIsHighlightedCastTarget = _G.CastingBarMixin.SetIsHighlightedCastTarget
-		_G.CastingBarMixin.SetIsHighlightedCastTarget = function(self, isHighlightedCastTarget, ...)
-			if (issecretvalue and issecretvalue(isHighlightedCastTarget)) then
-				isHighlightedCastTarget = false
-			end
-			return Orig_SetIsHighlightedCastTarget(self, isHighlightedCastTarget, ...)
-		end
-	end
-
-	-- Guard CompactUnitFrame heal prediction (nameplates/party) from secret-value crashes
-	if (_G.CompactUnitFrame_UpdateHealPrediction and not _G.__AzeriteUI_CUFHealPredictionWrapped) then
-		_G.__AzeriteUI_CUFHealPredictionWrapped = true
-		local Orig_CUFHealPrediction = _G.CompactUnitFrame_UpdateHealPrediction
-		_G.CompactUnitFrame_UpdateHealPrediction = function(frame, ...)
-			local ok = pcall(Orig_CUFHealPrediction, frame, ...)
-			if (ok) then
-				return
-			end
-			if (frame and frame.myHealPrediction and frame.otherHealPrediction and frame.totalAbsorb and frame.healAbsorbBar) then
-				frame.myHealPrediction:Hide()
-				frame.otherHealPrediction:Hide()
-				frame.totalAbsorb:Hide()
-				frame.healAbsorbBar:Hide()
-			end
-		end
-	end
-
-	-- Guard TargetFrame aura update path from secret aura fields
-	if (_G.TargetFrameMixin and type(_G.TargetFrameMixin.UpdateAuras) == "function"
-		and not _G.__AzeriteUI_TargetFrameUpdateAurasWrapped) then
-		_G.__AzeriteUI_TargetFrameUpdateAurasWrapped = true
-		local Orig_TargetFrameUpdateAuras = _G.TargetFrameMixin.UpdateAuras
-		_G.TargetFrameMixin.UpdateAuras = function(self, ...)
-			local ok = pcall(Orig_TargetFrameUpdateAuras, self, ...)
-			if (ok) then
-				return
-			end
-			if (self and self.BuffFrame) then
-				self.BuffFrame:Hide()
-			end
-			if (self and self.DebuffFrame) then
-				self.DebuffFrame:Hide()
-			end
-		end
-	end
-
-	-- Guard AuraUtil.IsBigDefensive against secret or nil spellID
-	if (false and AuraUtil and AuraUtil.IsBigDefensive and not _G.__AzeriteUI_IsBigDefensiveWrapped) then
-		_G.__AzeriteUI_IsBigDefensiveWrapped = true
-		local Orig_IsBigDefensive = AuraUtil.IsBigDefensive
-		AuraUtil.IsBigDefensive = function(spellID)
-			if (not spellID or (issecretvalue and issecretvalue(spellID))) then
-				return false
-			end
-			return Orig_IsBigDefensive(spellID)
-		end
-	end
-
-	-- Guard C_UnitAuras.AuraIsBigDefensive against secret or nil spellID
-	if (false and C_UnitAuras and C_UnitAuras.AuraIsBigDefensive and not _G.__AzeriteUI_AuraIsBigDefensiveWrapped) then
-		_G.__AzeriteUI_AuraIsBigDefensiveWrapped = true
-		local Orig_AuraIsBigDefensive = C_UnitAuras.AuraIsBigDefensive
-		C_UnitAuras.AuraIsBigDefensive = function(spellID)
-			if (not spellID or (issecretvalue and issecretvalue(spellID))) then
-				return false
-			end
-			return Orig_AuraIsBigDefensive(spellID)
-		end
-	end
-
-	-- Guard CompactUnitFrame_GetRangeAlpha against secret outOfRange values
-	if (false and _G.CompactUnitFrame_GetRangeAlpha and not _G.__AzeriteUI_CompactUnitFrame_GetRangeAlphaWrapped) then
-		_G.__AzeriteUI_CompactUnitFrame_GetRangeAlphaWrapped = true
-		local Orig_GetRangeAlpha = _G.CompactUnitFrame_GetRangeAlpha
-		_G.CompactUnitFrame_GetRangeAlpha = function(frame, ...)
-			if (frame and issecretvalue and issecretvalue(frame.outOfRange)) then
-				return 1
-			end
-			return Orig_GetRangeAlpha(frame, ...)
-		end
-	end
-
-	-- Guard MajorFactionUnlockToast against nil data during initialization
-	-- Fixes: attempt to index local 'data' (a nil value) at Blizzard_MajorFactionUnlockToast.lua:41
-	local function FixMajorFactionUnlockToast()
-		if (not _G.MajorFactionUnlockMixin) then
-			return
-		end
-		
-		local OnShow = _G.MajorFactionUnlockMixin.OnShow
-		if (OnShow and not _G.__AzeriteUI_MajorFactionUnlockToastWrapped) then
-			_G.__AzeriteUI_MajorFactionUnlockToastWrapped = true
-			_G.MajorFactionUnlockMixin.OnShow = function(self, ...)
-				-- Blizzard's OnShow tries to access self.data without checking
-				if (not self.data) then
-					self:Hide()
-					return
-				end
-				return OnShow(self, ...)
-			end
-		end
-	end
-	
-	-- Try to fix immediately if addon is loaded, otherwise hook the load event
-	if (_G.MajorFactionUnlockMixin) then
-		FixMajorFactionUnlockToast()
-	else
-		-- Hook into addon loading to fix it when Blizzard_MajorFactions loads
-		local frame = CreateFrame("Frame")
-		frame:RegisterEvent("ADDON_LOADED")
-		frame:SetScript("OnEvent", function(self, event, addonName)
-			if (addonName == "Blizzard_MajorFactions") then
-				FixMajorFactionUnlockToast()
-				self:UnregisterEvent("ADDON_LOADED")
-			end
-		end)
-	end
-
-	-- NOTE: CastingBarFrame StopFinishAnims guard is now handled by
-	-- Core/FixBlizzardBugsWow12.lua (file-scope, not blocked by return).
+	-- Legacy pre-WoW12 path intentionally commented out.
+	-- The live WoW 12 path returns above and uses:
+	-- * `ApplyWoW12TooltipMoneyGuards()`
+	-- * `ApplyPlaterNamePlateAbsorbCleanup()`
+	-- * `Core/FixBlizzardBugsWow12.lua`
+	--
+	-- If pre-WoW12 support needs to be restored later, recover it from git history
+	-- instead of mixing inactive legacy guards back into the live WoW 12 audit path.
 
 end

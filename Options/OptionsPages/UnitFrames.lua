@@ -114,7 +114,7 @@ local GenerateOptions = function()
 	local isdisabled = function(info) return info[#info] ~= "enabled" and not getmodule().db.profile.enabled end
 
 	local options = {
-		name = L["UnitFrame Settings"],
+		name = "Unit Frame Settings",
 		type = "group",
 		childGroups = "tree",
 		args = {
@@ -220,6 +220,68 @@ local GenerateOptions = function()
 			name = L["Show Auras"],
 			desc = L["Toggle whether to show auras on this unit frame."],
 			order = 200, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		local playerAuraSettingsDisabled = function(info)
+			return isdisabled(info) or not getoption(info, "showAuras")
+		end
+		local playerAuraCustomSettingsDisabled = function(info)
+			return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraUseStockBehavior")
+		end
+		suboptions.args.playerAuraSettingsHeader = {
+			name = "Player Aura Settings",
+			order = 210, type = "header", hidden = isdisabled
+		}
+		suboptions.args.playerAuraSettingsDescription = {
+			name = "These settings control the small aura row on the player frame, not the main aura header in the top right.",
+			order = 211, type = "description", width = "full", hidden = isdisabled
+		}
+		suboptions.args.playerAuraUseStockBehavior = {
+			name = "Use AzeriteUI Stock Behavior",
+			desc = "Apply the original AzeriteUI behavior for the player aura row: in combat show debuffs, short buffs and stacks; out of combat show normal timed buffs, short buffs and stacks. Disable this to use the custom category toggles below.",
+			order = 211.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraSettingsDisabled
+		}
+		suboptions.args.playerAuraShowDebuffs = {
+			name = "Always Show Debuffs",
+			desc = "Show harmful effects on you. Examples: magic, poison, bleed and boss debuffs.",
+			order = 212, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowImportantAuras = {
+			name = "Show Important Buffs",
+			desc = "Show Blizzard-marked important, defensive or control-related buffs. Examples: Ice Block, Barkskin, Blessing of Sacrifice and similar externals.",
+			order = 213, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowRaidAuras = {
+			name = "Show Raid-Relevant Buffs",
+			desc = "Show raid and encounter buffs Blizzard flags as relevant. Examples: Bloodlust, Power Infusion and encounter mechanic buffs.",
+			order = 214, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowStackingAuras = {
+			name = "Show Stacking Buffs",
+			desc = "Show buffs with visible stacks. Examples: Maelstrom Weapon, Arcane Harmony and similar stack-driven buffs.",
+			order = 215, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowShortBuffsInCombat = {
+			name = "Show Short Buffs In Combat",
+			desc = "Show short temporary combat buffs while fighting. Examples: Clearcasting, Enrage, trinket procs and short class procs.",
+			order = 216, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowShortBuffsOutOfCombat = {
+			name = "Show Short Buffs Out Of Combat",
+			desc = "Keep short temporary buffs visible before combat too. Examples: pre-pull procs and brief preparation buffs.",
+			order = 217, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowLongUtilityBuffs = {
+			name = "Show Long Utility Buffs",
+			desc = "Also allow long-duration utility buffs in the player row. Examples: Sign of Battle, guild tabard reputation buffs and mounts. Usually leave this off so these stay in the main aura header only.",
+			order = 218, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
 		}
 		suboptions.args.showCastbar = {
 			name = L["Show Castbar"],

@@ -4,6 +4,20 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.15-JuNNeZ (2026-03-18)
+
+### The Aura Homeostasis
+- Reworked the retail aura handling around WoW 12 secret-value restrictions so player-frame and top-right aura behavior stays closer to AzeriteUI stock intent without combat-state disappearance.
+- Converted the top-right aura header to a safer mixed modern data path, reducing blank-icon and border-only failures when fresh auras are gained in combat.
+- Restored stock-style player-frame combat relevance as the default behavior, while keeping new player-aura filtering controls available for local tuning.
+- Fixed party/player aura settings wiring so growth and spacing options actually apply to the live aura layout.
+
+### Fixes & Changes
+- Removed forbidden aura-table iteration in the WoW 12 Blizzard-fix paths.
+- Reduced chat-related taint risk by skipping temporary chat frame styling/hooks that could bleed into Blizzard whisper handling.
+- Added clearer `/az` option grouping and labeling for aura header, unit-frame aura settings, and related UI pages.
+- Reframed the Aura Header targeting options so WoW 12 only shows the setting that is actually active.
+
 ## 5.3.14-JuNNeZ (2026-03-16)
 
 ### Fixes & Changes

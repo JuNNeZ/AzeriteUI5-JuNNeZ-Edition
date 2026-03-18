@@ -772,7 +772,9 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 
 	local driver = {}
 
-	local db = RaidFrame5Mod.db.profile
+	local profile = RaidFrame5Mod.db and RaidFrame5Mod.db.profile or defaults.profile
+	local db = profile or defaults.profile
+	local headerProfile = GetSanitizedHeaderProfile(profile)
 	if (db.enabled) then
 		table_insert(driver, "[group:party,nogroup:raid]"..(db.useInParties and "show" or "hide"))
 		table_insert(driver, "[@raid26,exists]"..(db.useInRaid40 and "show" or "hide"))
@@ -788,6 +790,16 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	UnregisterAttributeDriver(self, "state-visibility")
 	RegisterAttributeDriver(self, "state-visibility", self.visibility)
 
+	-- Restore secure layout state before any visibility writes can trigger SecureGroupHeader_Update.
+	self:SetAttribute("groupBy", headerProfile.groupBy)
+	self:SetAttribute("groupingOrder", headerProfile.groupingOrder)
+	self:SetAttribute("point", headerProfile.point)
+	self:SetAttribute("xOffset", headerProfile.xOffset)
+	self:SetAttribute("yOffset", headerProfile.yOffset)
+	self:SetAttribute("unitsPerColumn", headerProfile.unitsPerColumn)
+	self:SetAttribute("maxColumns", headerProfile.maxColumns)
+	self:SetAttribute("columnSpacing", headerProfile.columnSpacing)
+	self:SetAttribute("columnAnchorPoint", headerProfile.columnAnchorPoint)
 	self:SetAttribute("showRaid", db.useInRaid5 or db.useInRaid10 or db.useInRaid25 or db.useInRaid40)
 	self:SetAttribute("showParty", db.useInParties)
 	self:SetAttribute("showPlayer", true)

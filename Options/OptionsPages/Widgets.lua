@@ -23,13 +23,24 @@ end
 local GenerateOptions = function()
   if (not getmodule()) then return end
   local options = {
-    name = L["Widgets"],
+    name = "Top Center Widgets",
     type = "group",
     args = {
+      header = {
+        name = "Widget Visibility",
+        order = 1,
+        type = "header"
+      },
+      description = {
+        name = "These settings control the top-center encounter and zone widgets shown above the play area.",
+        order = 2,
+        type = "description",
+        fontSize = "medium"
+      },
       alwaysShow = {
         name = L["Always show Top Center Widgets"],
         desc = L["Keep the top center widgets visible even when you have a target."],
-        order = 1,
+        order = 10,
         type = "toggle", width = "full",
         set = setter,
         get = getter
@@ -37,7 +48,7 @@ local GenerateOptions = function()
       hideWithTarget = {
         name = L["Hide with Target"],
         desc = L["Hide the top center widgets whenever you have a target (disabled if Always Show is enabled)."],
-        order = 2,
+        order = 11,
         type = "toggle", width = "full",
         disabled = function(info) return getmodule().db.profile.alwaysShow end,
         set = setter,
@@ -48,4 +59,4 @@ local GenerateOptions = function()
   return options
 end
 
-Options:AddGroup(L["Widgets"], GenerateOptions, -1000)
+Options:AddGroup("Top Center Widgets", GenerateOptions, -1000)

@@ -119,6 +119,10 @@ local Tab_PostLeave = function(tab)
 	Elements[frame].isMouseOverTab = false
 end
 
+local IsTemporaryChatFrame = function(frame)
+	return frame and (frame.isTemporary or frame.isGM or frame.IsTemporary and frame:IsTemporary()) and true or false
+end
+
 -------------------------------------------------------
 -- Custom ChatFrame API
 -------------------------------------------------------
@@ -297,7 +301,7 @@ end
 -- Module API
 -------------------------------------------------------
 ChatFrames.StyleFrame = function(self, frame)
-	if (frame.isSkinned) then return end
+	if (not frame or frame.isSkinned or IsTemporaryChatFrame(frame)) then return end
 
 	if (frame:GetID() == 2) then
 		local buttonframe = CombatLogQuickButtonFrame_Custom
@@ -359,48 +363,12 @@ ChatFrames.StyleFrame = function(self, frame)
 	self:UpdateChatFading(frame)
 	self:SecureHook(frame, "SetFont", "UpdateChatFont")
 
-	-- Attempt to fix coins and chat textures not fading by double setting the alpha.
-	-- The bug seems to go away when the textures once have been set to zero alpha.
-	--hooksecurefunc(UIParent, "SetAlpha", function()
-	--	local alpha = UIParent:GetAlpha()
-	--	if (alpha < .5) then
-	--		setAlpha(frame, 0)
-	--	else
-	--		setAlpha(frame, alpha)
-	--	end
-	--end)
-
-	local fixAlpha = function()
-		if (frame.alphaTimer) then
-			frame.alphaTimer:Cancel()
-		end
-		local alpha = getAlpha(frame)
-		setAlpha(frame, 0)
-		setAlpha(frame, 1)
-		setAlpha(frame, alpha)
-	end
-
-	-- Overkill experiment to see if we can force the opacity
-	-- of chat textures to be updated right from the start.
-	-- *the bug re-occur on scrolling, as the textures are redrawn.
-	local origAddMessage = frame.AddMessage
-	frame.AddMessage = function(chatFrame, msg, r, g, b, chatID, ...)
-
-		-- call this first, otherwise the alpha changes are meaningless.
-		origAddMessage(chatFrame, msg, r, g, b, chatID, ...)
-		fixAlpha() -- call the fix the first time
-		-- schedule a timer on the next frame update
-		if (not chatFrame.alphaTimer) then
-			chatFrame.alphaTimer = C_Timer.After(0, fixAlpha)
-		end
-	end
-
 	frame.isSkinned = true
 end
 
 ChatFrames.StyleTempFrame = function(self)
 	local frame = FCF_GetCurrentChatFrame()
-	if (not frame or frame.isSkinned) then return end
+	if (not frame or frame.isSkinned or IsTemporaryChatFrame(frame)) then return end
 	self:StyleFrame(frame)
 end
 
@@ -436,7 +404,7 @@ ChatFrames.UpdateDockedChatTabs = function(self)
 	if (frame:IsMouseOver(30,0,-30,30)) then
 		for _,frameName in pairs(_G.CHAT_FRAMES) do
 			local frame = _G[frameName]
-			if (frame) then
+			if (frame and not IsTemporaryChatFrame(frame)) then
 				local _, _, _, _, _, _, shown, _, docked = FCF_GetChatWindowInfo(frame:GetID())
 				if (docked and not frame.minimized) then
 					local tabText = ChatFrame.GetTabText(frame)
@@ -455,7 +423,7 @@ ChatFrames.UpdateDockedChatTabs = function(self)
 	else
 		for _,frameName in pairs(_G.CHAT_FRAMES) do
 			local frame = _G[frameName]
-			if (frame) then
+			if (frame and not IsTemporaryChatFrame(frame)) then
 				local _, _, _, _, _, _, _, _, docked = FCF_GetChatWindowInfo(frame:GetID())
 				if (docked and not frame.minimized) then
 					local tabText = ChatFrame.GetTabText(frame)
@@ -472,7 +440,7 @@ ChatFrames.UpdateButtons = function(self, event, ...)
 	local atDock
 	for _,frameName in pairs(_G.CHAT_FRAMES) do
 		local frame = _G[frameName]
-		if (frame) then
+		if (frame and not IsTemporaryChatFrame(frame)) then
 			local _, _, _, _, _, _, shown, _, docked = FCF_GetChatWindowInfo(frame:GetID())
 			local isMouseOver
 
@@ -570,7 +538,7 @@ end
 ChatFrames.UpdateSettings = function(self)
 	for _,frameName in pairs(_G.CHAT_FRAMES) do
 		local frame = _G[frameName]
-		if (frame) then
+		if (frame and not IsTemporaryChatFrame(frame)) then
 			self:UpdateChatFading(frame)
 		end
 	end
@@ -617,7 +585,6 @@ ChatFrames.OnEvent = function(self, event, ...)
 
 			self:UpdateButtons(event, ...)
 
-			self:SecureHook("FCF_OpenTemporaryWindow", "StyleTempFrame")
 			self:SecureHook("FCFTab_UpdateAlpha", "UpdateTabAlpha")
 			self:SecureHook("FCF_DockUpdate","UpdateClutter")
 

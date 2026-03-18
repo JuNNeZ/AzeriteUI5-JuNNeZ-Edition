@@ -5,6 +5,13 @@
 
 ## 2026-03-16
 
+- **Raid secure-header consumable/click regression started:** Investigating current-session retail reports where entering raid states throws `SecureGroupHeaders.lua` nil `groupingOrder` / nil `point` errors from [Components/UnitFrames/Units/Raid25.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid25.lua), and the user then cannot click food or other consumables. Scope is limited to the raid secure-header visibility/update path in [Components/UnitFrames/Units/Raid25.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid25.lua), [Components/UnitFrames/Units/Raid5.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid5.lua), and [Components/UnitFrames/Units/Raid40.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid40.lua), because [Components/UnitFrames/Units/Party.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Party.lua) already contains the missing secure-attribute preflight pattern.
+- **Raid secure-header consumable/click regression applied:** Added a sanitized secure-header preflight to the raid 5/25/40 visibility drivers so `groupBy`, `groupingOrder`, `point`, and the rest of the layout attributes are restored before any `showRaid` / `showParty` / `showPlayer` writes can trigger Blizzard's secure header refresh.
+  - **Root Cause:** [Components/UnitFrames/Units/Raid25.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid25.lua), [Components/UnitFrames/Units/Raid5.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid5.lua), and [Components/UnitFrames/Units/Raid40.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid40.lua) still let `UpdateVisibilityDriver()` change secure visibility attributes while relying on a later `UpdateHeader()` pass to restore grouping/layout state. Blizzard's `SecureGroupHeader_Update` can run on every `SetAttribute(...)`, so the header sometimes refreshed with nil `groupingOrder` or nil `point`, faulted inside the restricted environment, and left the session tainted enough to interfere with protected item/consumable clicks.
+  - **Safety:** The fix only reorders and sanitizes existing secure header attributes on AzeriteUI-owned raid headers. It does not change click registration, item logic, or Blizzard inventory frames.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Raid25.lua'`, `luac -p 'Components/UnitFrames/Units/Raid5.lua'`, and `luac -p 'Components/UnitFrames/Units/Raid40.lua'` are required; in-game `/reload`, `/buggrabber reset`, then a raid-group retest plus food/consumable click validation are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid40.lua`, `FixLog.md`
+
 - **Soul Fragments golden glow effect disabled:** Commented out all golden glow code for Demon Hunter/Enhancement Shaman class power due to visual bugs (glow sticking, incorrect growth). Lays groundwork for future improvements.
 - **Soul Fragments Display Mode dropdown fix:** Dropdown is now always visible for all Demon Hunters, regardless of specialization.
 - **Internal:** Code cleanup and prep for future class power visual improvements.
@@ -3381,3 +3388,341 @@ Testing:
 5. Also confirm the earlier secret-mode regressions do not return:
    - `ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()`
    - `Blizzard_NamePlateUnitFrame.lua:659` / `:746`
+
+---
+
+[2026-03-18] Iteration: Combat aura visibility, chat temp-frame taint, and forbidden aura-table sanitization
+
+Request:
+- Investigate separate WoW 12 issues reported across combat aura visibility, `BN_WHISPER` chat taint, battleground/execution-time spam, and `attempted to iterate a forbidden table`.
+- Keep the fixes local: do not blanket-disable aura handling or Blizzard wrappers unless the exact path is proven unsafe.
+
+Applied:
+- `Components/UnitFrames/Auras/AuraFilters.lua`
+  - Removed the player aura combat-state branch so the same filter path is used in and out of combat.
+  - Relaxed player/party secret-timing handling so valid auras stay visible when `expirationTime`, `duration`, or `applications` become secret.
+- `Components/UnitFrames/Units/Party.lua`
+  - Added camelCase aura layout fields (`spacingX`, `spacingY`, `growthX`, `growthY`) alongside the legacy hyphenated keys so party aura direction/padding settings are actually consumed by the active oUF aura layout.
+- `Components/UnitFrames/Units/Player.lua`
+  - Added the same camelCase aura layout fields for player frame aura settings.
+- `Components/Auras/Auras.lua`
+  - Stopped hiding the entire top-right player aura button when timing values are unavailable/secret; the icon now remains visible while cooldown/timer text are disabled.
+  - Added a lightweight `0.1s` throttle to the visible-buff alpha refresh path.
+  - Added temporary combat-only aura debug prints gated by the existing aura debug flags.
+- `Components/Misc/ChatFrames.lua`
+  - Stopped styling temporary chat windows.
+  - Removed the custom `AddMessage` wrapper that ran an extra alpha-fix path for every incoming chat line.
+  - Limited the chat clutter updater to non-temporary chat frames only.
+- `Core/FixBlizzardBugsWow12.lua`
+  - Replaced `pairs(aura)` sanitization with keyed fallback sanitization using the compact aura defaults table.
+- `Core/FixBlizzardBugs.lua`
+  - Replaced remaining `pairs(aura)` secret sanitizers with keyed fallback sanitization over known aura fields only.
+
+Why:
+- The combat aura disappearance was not a single taint issue: player and party aura filters were still allowed to hide auras when timer-related fields became secret at combat boundaries.
+- The party aura direction/settings problem was a separate config wiring bug: the runtime layout consumed camelCase keys that party/player setup code never populated.
+- The `BN_WHISPER` stack and battleground chat spam were likely amplified by chat-frame mutation on temporary windows and the per-message `AddMessage` override, which touched Blizzard chat internals on every line.
+- The forbidden-table error matched the remaining aura sanitizers that still iterated Blizzard aura tables directly under WoW 12.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Verify player-frame and top-right auras stay visible when entering combat, even if cooldown text disappears for some entries.
+4. Verify party auras keep the configured growth direction and no longer drop debuffs on combat entry.
+5. Reproduce battleground chat spam and confirm these do not return:
+   - `Script from "AzeriteUI5_JuNNeZ_Edition" has exceeded its execution time limit`
+   - `attempted to iterate a forbidden table`
+6. Reproduce Battle.net whispers and confirm this does not return:
+   - `attempt to perform string conversion on a secret string value` in `SetLastTellTarget`
+7. Recheck aura-related secret stacks and confirm this does not return:
+   - `WoW11/Misc/Auras.lua:46` secret `expirationTime`
+
+Update:
+- Restored a player-frame-only combat relevance filter in `Components/UnitFrames/Auras/AuraFilters.lua`.
+- The combat branch now again trims long/irrelevant player auras, but only when timer data is safely readable.
+- Secret or missing timer fields still stay visible, so the combat disappearance regression should remain fixed.
+
+Adjustment:
+- Tightened the player-frame secret-data fallback again so only harmful or otherwise important auras survive when timing fields are secret.
+- This specifically avoids leaking utility/helpful buffs like mounts into the player-frame combat aura list.
+
+Adjustment:
+- Updated the retail player-frame filter to combine token-based relevance (`IMPORTANT`, `RAID_IN_COMBAT`, `CROWD_CONTROL`, `BIG_DEFENSIVE`, `EXTERNAL_DEFENSIVE`) with stack detection from `C_UnitAuras.GetAuraApplicationDisplayCount`.
+- Secret-data fallback now keeps harmful, important, stacked, and temporary helpful auras visible in combat, while still filtering non-temporary utility buffs like mounts.
+
+Request:
+- Tighten the retail player-frame aura filter again: generic timed utility buffs like Mana Diving Stone, Sign of Battle, and guild tabard reputation bonuses should stay in the top-right aura frame only, not in the player-frame combat aura row.
+- Investigate a second regression where top-right aura buttons keep their border and tooltip in combat, but lose icon/count/timer text.
+
+Applied:
+- `Components/UnitFrames/Auras/AuraFilters.lua`
+  - Added a retail helper for Blizzard `HELPFUL|RAID` / `HELPFUL|PLAYER|RAID` aura categories.
+  - Tightened the player-frame filter so secret helpful auras only survive if they are categorized as important/raid-relevant or have visible stacks.
+  - Reduced generic timed helpful fallback to shorter player/combat buffs instead of admitting all timed helpful auras.
+- `Components/Auras/Auras.lua`
+  - Added a retail-safe aura data resolver that reads `C_UnitAuras.GetAuraDataByIndex` alongside `UnitAura`.
+  - Rehydrates icon, count, spell texture, and display-count data from auraData/auraInstanceID when direct `UnitAura` returns secret or nil fields in combat.
+
+Why:
+- The previous player-frame fallback still admitted helpful auras merely because they had timing data, which is why non-combat utility buffs could remain in the compact combat aura row once timing fields went secret.
+- The blank top-right buttons were a separate render regression: the aura still existed, but the button renderer was clearing icon/count/timer inputs instead of rebuilding safe display fields from the modern retail aura API.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Confirm Mana Diving Stone, Sign of Battle, guild tabard rep bonuses, mounts, and similar utility buffs remain in the top-right aura frame only.
+4. Enter combat and gain fresh stacked/self-buff combat auras; confirm the player-frame row still shows combat-relevant buffs and stacks.
+5. While in combat, confirm top-right aura buttons keep their icon art and stack text instead of showing only borders/tooltips.
+
+Request:
+- Convert the retail aura logic properly instead of stacking more patch logic: keep AzeriteUI's intended behavior and look, but move the actual implementation onto modern safe aura APIs.
+- Cross-check against `AzeriteUI_Stock` for the original behavior, and use the safer retail methods already used by the other installed UIs where they fit.
+
+Applied:
+- `Components/Auras/Auras.lua`
+  - Replaced the legacy top-right aura-header display reads from `UnitAura(...)` with a single retail-native path built on `C_UnitAuras.GetAuraDataByIndex`, `C_UnitAuras.GetAuraDuration`, and `C_UnitAuras.GetAuraApplicationDisplayCount`.
+  - Moved tooltip tracking onto `auraInstanceID`, matching the modern oUF/unitframe aura path.
+  - Converted the consolidation counter update to use `auraData.shouldConsolidate` from `C_UnitAuras` instead of unpacking `UnitAura` tuples.
+  - Kept AzeriteUI's existing secure header, layout, border/icon look, bar, and short-duration fade behavior.
+- `Components/UnitFrames/Auras/AuraFilters.lua`
+  - Cleaned up the retail player-frame helper logic into named short-duration / temporary-duration helpers.
+  - Kept the current retail-safe combat relevance behavior, but removed one redundant fallback branch so the filter reads closer to stock intent.
+
+Why:
+- `AzeriteUI_Stock` used the intended display rules and look, but its retail aura code still relied on direct `UnitAura` tuple fields and addon-side timer arithmetic that became unreliable under WoW 12 secret values.
+- The other modern UIs in the AddOns folder do not try to keep those old tuple paths alive; they render from `auraInstanceID` and let Blizzard duration/count APIs drive the UI.
+- Converting AzeriteUI's actual aura header onto the same retail-native data model removes most of the patch-on-patch complexity while preserving the original behavior.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Verify top-right auras still sort, render, and fade like AzeriteUI stock, but no longer lose icon/count/timer display when entering combat.
+4. Verify player-frame auras still filter down to combat-relevant buffs/debuffs and do not pick up generic utility buffs.
+5. Verify stacked combat buffs gained during combat still appear on the player frame and in the top-right aura header.
+
+Request:
+- Follow-up regression from live testing: top-right aura buttons can still lose their icon/count display in combat, and player-frame auras can disappear entirely.
+- Tighten the implementation around those two live paths without reverting to the older broad utility-buff leakage.
+
+Applied:
+- `Components/Auras/Auras.lua`
+  - Changed the top-right aura-header resolver back to a hybrid display read: `UnitAura(...)` tuple fields are used first for immediate button rendering, with `C_UnitAuras`/`auraInstanceID` still supplying duration objects, display counts, and tooltip identity.
+  - Stopped clearing the icon texture when the current aura still resolves a name/spell but one display field drops out during combat; spell texture fallback is retained.
+- `Components/UnitFrames/Auras/AuraFilters.lua`
+  - Added a retail `HELPFUL|CANCELABLE` check and broadened the player-frame secret fallback just enough to keep non-cancelable self/combat buffs visible when timer fields are secret.
+
+Why:
+- The pure `C_UnitAuras.GetAuraDataByIndex` header conversion is cleaner on paper, but the live secure-header path still appears to lose some immediate display fields in combat on this client/build.
+- The player-frame regression showed the previous secret fallback was too strict for real combat buffs that are not consistently tagged by Blizzard as important/raid-relevant.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Enter combat and verify top-right aura icons no longer blank while borders/tooltips remain.
+4. Verify player-frame combat buffs appear again.
+5. Recheck that utility/cancelable buffs like mounts/tabard-rep style effects still stay out of the player-frame row.
+
+Adjustment:
+- `Components/Auras/Auras.lua`
+  - Matched the safer secure-header behavior seen in `FeelUI`: if the combat update path temporarily fails to resolve current aura display data, the button now keeps its last known visual state instead of being cleared to a border-only shell.
+- `Components/UnitFrames/Auras/AuraFilters.lua`
+  - Removed the display-identity requirement from the player-frame secret fallback so combat auras are not hidden just because `name`/`spellId` becomes unreadable while other aura relevance flags remain valid.
+
+Request:
+- The player-frame aura row is still too restrictive for some classes/specs, but long utility buffs like Sign of Battle, guild tabard reputation bonuses, and mounts should still stay in the main aura header by default.
+- Add a dedicated "Player Aura settings" section so the player-frame filter categories can be tuned directly from options with clear examples of what each category includes.
+
+Applied:
+- `Components/UnitFrames/Units/Player.lua`
+  - Added profile defaults for player-frame aura category toggles so the filter behavior is configurable without changing stock defaults.
+- `Components/UnitFrames/Auras/AuraFilters.lua`
+  - Replaced the remaining hardcoded player-frame aura decisions with profile-backed category gates for debuffs, important buffs, raid-relevant buffs, stacking buffs, short combat buffs, short out-of-combat buffs, and optional long utility buffs.
+  - Kept long utility buffs disabled by default so the player-frame row still prefers combat-relevant information.
+- `Options/OptionsPages/UnitFrames.lua`
+  - Added a new `Player Aura settings` section under the player frame options with toggle descriptions and concrete examples for each category.
+
+Why:
+- The live retail-safe filter had reached the point where the only way to loosen or tighten player-frame aura visibility was another code change.
+- Exposing the existing filter categories makes the row easier to tune per class/spec while preserving AzeriteUI's default intent: combat-relevant auras on the player frame, long utility buffs in the main aura header.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Open `Unit Frames -> Player` and review the new `Player Aura settings` block.
+4. Toggle categories on/off and verify the player-frame aura row updates immediately.
+5. Confirm long utility buffs still stay out of the player-frame row by default, and only appear there if `Show Long Utility Buffs` is enabled.
+
+Request:
+- Newly gained buffs can still appear as border-only buttons in the top-right aura header during combat, while tooltips still resolve on mouseover.
+- Re-check the secure-header display path against the other installed UIs and remove any remaining gating that prevents new combat auras from getting icon/count/timer payloads.
+
+Applied:
+- `Components/Auras/Auras.lua`
+  - Added a safe `C_UnitAuras.GetAuraDataByAuraInstanceID` fallback inside the top-right button resolver.
+  - Removed the hard requirement that a combat aura must expose a readable `name` before the button update is allowed to proceed.
+  - Expanded field fallback so icon, spellID, count, duration, and expiration can be recovered from either index data or instanceID data before the button is treated as unresolved.
+
+Why:
+- The previous secure-header resolver still had one retail-hostile assumption left: a newly added aura with a valid `auraInstanceID` and tooltip target could still be discarded if `name` was sanitized on that update.
+- That leaves the secure button alive but without a visual payload, which matches the live "border only, tooltip still works" symptom.
+
+Testing:
+1. `/buggrabber reset`
+2. `/reload`
+3. Gain a brand new buff in combat and verify the top-right header shows icon/count/timer instead of a border-only button.
+4. Mouse over the aura to confirm the tooltip still resolves by `auraInstanceID`.
+5. Recheck older pre-combat buffs to make sure they still update normally.
+
+Request:
+- Simplify the WoW 12 audit path in `Core/FixBlizzardBugs.lua` by commenting out code that is not enabled on WoW 12 anyway.
+- Keep the live WoW 12 path intact, but make the inactive pre-WoW12 body obvious.
+
+Applied:
+- `Core/FixBlizzardBugs.lua`
+  - Replaced the dead early WoW 12 emergency safe-mode block with a short comment explaining that it is no longer part of the live path.
+  - Replaced the unreachable legacy pre-WoW12 body after the WoW 12 early return with a short comment that points to the actual live WoW 12 path.
+
+Why:
+- The file contained large inactive sections that made it look like many old wrappers were still live on WoW 12, even though `OnInitialize` returns before that body executes.
+- Removing that dead body from the active source makes future debugging of WoW 12 issues much less ambiguous.
+
+Testing:
+1. `/reload`
+2. Confirm AzeriteUI still loads without Lua errors.
+3. Re-check the existing WoW 12 aura and combat fixes, since the live WoW 12 path itself was not changed.
+
+Request:
+- Clean up the `/az` titles, page names, and menu headers so it is clear which settings page controls which part of the UI.
+- Keep the structure intact, but make the wording cleaner and more user-friendly.
+
+Applied:
+- `Options/Options.lua`
+  - Updated the main Settings landing page subtitle, instructions, button label, and credits header.
+- `Options/OptionsPages/Auras.lua`
+  - Renamed the page/menu entry to `Aura Header` / `Aura Header Settings` and clarified that it controls the top-right aura header only.
+- `Options/OptionsPages/Chat.lua`
+  - Renamed the page/menu entry to `Chat Windows`.
+- `Options/OptionsPages/Info.lua`
+  - Renamed the page/menu entry to `Top Bar & Clock`.
+- `Options/OptionsPages/Tracker.lua`
+  - Renamed the page/menu entry to `Objectives Tracker`.
+- `Options/OptionsPages/TrackerVanilla.lua`
+  - Matched the same `Objectives Tracker` naming in Classic.
+- `Options/OptionsPages/Widgets.lua`
+  - Renamed the page/menu entry to `Top Center Widgets`.
+- `Options/OptionsPages/UnitFrames.lua`
+  - Normalized `Unit Frame Settings` spelling and `Player Aura Settings` capitalization.
+
+Why:
+- The `/az` menu mixed internal module names, generic labels, and player-facing labels.
+- These naming changes make the menu easier to scan and make it clearer which page controls the top-right aura header versus unit-frame aura rows and other UI sections.
+
+Testing:
+1. `/reload`
+2. Open `/az`
+3. Check the landing page subtitle, instructions, and button text.
+4. Check the left-side menu labels and confirm the page titles match the visible category names.
+
+Request:
+- Improve visual grouping in `/az` so related settings stay together with clearer lines between sections.
+- Rename `Top Bar & Clock` to `Info/Clock` to match the in-game wording used elsewhere.
+
+Applied:
+- `Options/OptionsPages/Info.lua`
+  - Renamed the menu/page label to `Info/Clock`.
+  - Added a short top description so the page scope is obvious before the clock settings section.
+- `Options/OptionsPages/Chat.lua`
+  - Split the page into `Fade Behavior` and `Reload Protection` sections with descriptions.
+  - Renamed the reload toggle/range labels to read more cleanly.
+- `Options/OptionsPages/Tracker.lua`
+  - Added a `Tracker Visibility` header and short description.
+- `Options/OptionsPages/TrackerVanilla.lua`
+  - Added the same tracker header/description on Classic.
+- `Options/OptionsPages/Widgets.lua`
+  - Added a `Widget Visibility` header and short description.
+
+Why:
+- Some pages still read like flat lists of toggles, even after the menu-title cleanup.
+- Adding a few small headers and descriptions makes related options feel grouped without restructuring the menu tree.
+
+Testing:
+1. `/reload`
+2. Open `/az`
+3. Check that `Info/Clock` appears in the menu instead of `Top Bar & Clock`.
+4. Open Chat Windows, Objectives Tracker, and Top Center Widgets and verify the new section headers make the pages easier to scan.
+
+Request:
+- The player-frame aura defaults should follow the standard AzeriteUI stock behavior by default, even though extra custom settings now exist.
+- Apply the stock behavior as the default behavior, not by forcing stock layout/settings elsewhere.
+
+Applied:
+- `Components/UnitFrames/Units/Player.lua`
+  - Added a new default profile flag, `playerAuraUseStockBehavior = true`.
+- `Components/UnitFrames/Auras/AuraFilters.lua`
+  - Added a stock-behavior branch for the retail player-frame aura filter:
+    - in combat: show harmful auras, buffs under 301 seconds, short-remaining buffs, and stacks
+    - out of combat: show timed buffs, short-remaining buffs, and stacks
+  - Kept WoW 12 secret-value fallback handling under that stock behavior so combat entry does not hide valid auras just because timing fields go secret.
+- `Options/OptionsPages/UnitFrames.lua`
+  - Added `Use AzeriteUI Stock Behavior` above the custom player aura toggles.
+  - Custom category toggles are disabled while stock behavior is enabled.
+
+Why:
+- The new player aura settings were useful for tuning, but the default behavior had drifted away from classic AzeriteUI expectations.
+- This restores the stock filtering intent as the default while still allowing custom behavior when needed.
+
+Testing:
+1. `/reload`
+2. Open `/az -> Unit Frames -> Player`
+3. Confirm `Use AzeriteUI Stock Behavior` is enabled by default.
+4. Verify player-frame auras behave like stock AzeriteUI again by default.
+5. Disable `Use AzeriteUI Stock Behavior` and confirm the custom category toggles become active.
+
+Request:
+- Reframe `Ignore current target` and `Hide Blizzard auras while targeting`.
+- Verify what each option actually does and stop them from reading like duplicates.
+
+Applied:
+- `Components/Auras/Auras.lua`
+  - Confirmed `ignoreTarget` only controls the AzeriteUI top-right aura header visibility driver.
+  - Documented that Blizzard aura visibility driver updates are legacy-only and intentionally skipped on WoW 12.
+- `Options/OptionsPages/Auras.lua`
+  - Renamed `Ignore current target` to `Keep Aura Header Visible With Target`.
+  - Rewrote the description so it clearly refers only to the AzeriteUI top-right aura header.
+  - Reframed `Hide Blizzard auras while targeting` as a legacy compatibility option.
+  - Hid the Blizzard option on WoW 12, where Blizzard aura frames are already disabled for secure compatibility and the option cannot do anything distinct.
+
+Why:
+- The two toggles looked like they controlled the same thing, because on WoW 12 the Blizzard-aura toggle is not an active code path.
+- Making the AzeriteUI header option explicit and hiding the inactive legacy option keeps the page honest and easier to understand.
+
+Testing:
+1. `/reload`
+2. Open `/az -> Aura Header`
+3. Confirm the AzeriteUI header option now reads `Keep Aura Header Visible With Target`.
+4. On WoW 12, confirm the Blizzard-targeting option is no longer shown.
+
+Request:
+- Prepare the current aura/combat/options fix set for release.
+- Update release metadata, changelog, tracking docs, and tag the release build.
+
+Applied:
+- `AzeriteUI5_JuNNeZ_Edition.toc`
+  - Bumped addon version from `5.3.14-JuNNeZ` to `5.3.15-JuNNeZ`.
+- `build-release.ps1`
+  - Bumped release package version to `5.3.15-JuNNeZ`.
+- `CHANGELOG.md`
+  - Added the new `5.3.15-JuNNeZ` delta-only release entry titled `The Aura Homeostasis`.
+- `VERSION_CHECKLIST.md`
+  - Updated latest/next version tracking for the new release.
+- `AGENTS.md`
+  - Updated current version tracking to reflect the new latest release.
+
+Why:
+- The aura, combat, Blizzard-compatibility, and options cleanup work is now large enough to ship as a patch release.
+- Release metadata, changelog, and internal tracking need to stay aligned before packaging, tagging, and distribution.
+
+Testing:
+1. Run `luac -p` on touched Lua files if needed.
+2. Run the release build script and verify the archive name uses `5.3.15-JuNNeZ`.
+3. `/reload` in-game and verify the aura fixes and `/az` labeling changes on the release candidate.

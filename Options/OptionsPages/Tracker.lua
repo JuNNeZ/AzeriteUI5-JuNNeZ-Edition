@@ -55,9 +55,20 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Tracker Settings"],
+		name = "Objectives Tracker Settings",
 		type = "group",
 		args = {
+			header = {
+				name = "Tracker Visibility",
+				order = 1,
+				type = "header"
+			},
+			description = {
+				name = "These settings control AzeriteUI's objectives tracker and how much of the Blizzard tracker remains visible.",
+				order = 2,
+				type = "description",
+				fontSize = "medium"
+			},
 			disableBlizzardTracker = {
 				name = L["Hide the Blizzard Tracker"],
 				desc = L["Disable the Blizzard Tracker completely."],
@@ -73,4 +84,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Tracker"], GenerateOptions)
+Options:AddGroup("Objectives Tracker", GenerateOptions)

@@ -64,7 +64,7 @@ Options.InitializeSettingsPanel = function(self)
 	-- Edition tag
 	local edition = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	edition:SetPoint("CENTER", optionsFrame, 0, 48)
-	edition:SetText(JUNNEZ_GREEN:WrapTextInColorCode("JuNNeZ Edition"))
+	edition:SetText(JUNNEZ_GREEN:WrapTextInColorCode("JuNNeZ Edition Settings"))
 
 	-- Version text
 	local version = C_AddOns.GetAddOnMetadata(Addon, "Version") or ""
@@ -75,7 +75,7 @@ Options.InitializeSettingsPanel = function(self)
 	-- Instruction text
 	local instructions = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	instructions:SetPoint("CENTER", optionsFrame, 0, -5)
-	instructions:SetText(WHITE_FONT_COLOR:WrapTextInColorCode("Access options with /az"))
+	instructions:SetText(WHITE_FONT_COLOR:WrapTextInColorCode("Open the full AzeriteUI settings menu with /az or the button below."))
 
 	-- "Open Options" button (centered, below midpoint)
 	local template = "SharedButtonLargeTemplate"
@@ -83,7 +83,7 @@ Options.InitializeSettingsPanel = function(self)
 		template = "UIPanelDynamicResizeButtonTemplate"
 	end
 	local button = CreateFrame("Button", nil, optionsFrame, template)
-	button:SetText("Open Options")
+	button:SetText("Open AzeriteUI Options")
 	DynamicResizeButton_Resize(button)
 	button:SetPoint("CENTER", optionsFrame, 0, -45)
 	button:SetScale(2)
@@ -97,7 +97,7 @@ Options.InitializeSettingsPanel = function(self)
 	-- Credits section (bottom area)
 	local creditsHeader = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	creditsHeader:SetPoint("BOTTOM", optionsFrame, "BOTTOM", 0, 80)
-	creditsHeader:SetText(AZERITE_BLUE:WrapTextInColorCode("Credits"))
+	creditsHeader:SetText(AZERITE_BLUE:WrapTextInColorCode("Credits & Maintainers"))
 
 	local credits = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	credits:SetPoint("TOP", creditsHeader, "BOTTOM", 0, -4)

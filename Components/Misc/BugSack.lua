@@ -50,7 +50,7 @@ local function StripColorMarkup(text)
 	return text
 end
 
-local function GetCurrentSessionSnapshot()
+local function GetSessionSnapshot(sessionId, label)
 	local bugSack = _G.BugSack
 	local bugGrabber = _G.BugGrabber
 	if (type(bugSack) ~= "table"
@@ -61,26 +61,73 @@ local function GetCurrentSessionSnapshot()
 		return "", 0, nil
 	end
 
-	local sessionId = bugGrabber:GetSessionId()
-	local errors = bugSack:GetErrors(sessionId)
+
+	local errors = sessionId and bugSack:GetErrors(sessionId) or bugSack:GetErrors()
 	if (type(errors) ~= "table" or #errors == 0) then
-		return "", 0, sessionId
+		return label.."\nNo errors found.", 0, sessionId
 	end
 
 	local total = #errors
-	local lines = {
-		string_format("BugSack Current Session (%d)", sessionId),
-		string_format("Errors: %d", total)
-	}
-
+	local AZERITEUI_VERSION = "5.3.14-JuNNeZ" -- keep in sync with .toc
+	local errorLines = {}
 	for index, err in ipairs(errors) do
-		lines[#lines + 1] = ""
-		lines[#lines + 1] = string_rep("-", 72)
-		lines[#lines + 1] = string_format("[%d/%d]", index, total)
-		lines[#lines + 1] = StripColorMarkup(bugSack:FormatError(err))
+		errorLines[#errorLines + 1] = ""
+		errorLines[#errorLines + 1] = string_rep("-", 72)
+		errorLines[#errorLines + 1] = string_format("Error %d of %d", index, total)
+		if type(err) == "table" then
+			if err.session then errorLines[#errorLines + 1] = "    Session: "..tostring(err.session) end
+			if err.time then errorLines[#errorLines + 1] = "    Time: "..tostring(err.time) end
+			if err.source then errorLines[#errorLines + 1] = "    Source: "..tostring(err.source) end
+			if err.index then errorLines[#errorLines + 1] = "    Index: "..tostring(err.index) end
+		end
+		local ok, formatted = pcall(bugSack.FormatError, bugSack, err)
+		if ok and type(formatted) == "string" and formatted ~= "" then
+			errorLines[#errorLines + 1] = StripColorMarkup(formatted)
+		else
+			if type(err) == "table" then
+				local t = {}
+				for k,v in pairs(err) do
+					t[#t+1] = tostring(k).."="..tostring(v)
+				end
+				errorLines[#errorLines + 1] = "    [Unformatted error table] "..table_concat(t, ", ")
+			else
+				errorLines[#errorLines + 1] = "    [Unformatted error] "..tostring(err)
+			end
+		end
 	end
 
-	return table_concat(lines, "\n"), total, sessionId
+	       local wowVersion, wowBuild, wowDate, tocVersion = GetBuildInfo()
+	       local contextLines = {
+		       string_rep("=", 80),
+		       string_format("%s (%s)", label, sessionId or "all"),
+		       string_format("Total Errors: %d", total),
+		       string_format("AzeriteUI Version: %s", AZERITEUI_VERSION),
+		       string_format("WoW Version: %s (Build %s, TOC %s, %s)", wowVersion or "?", wowBuild or "?", tocVersion or "?", wowDate or "?"),
+		       string_format("Exported: %s", date("%Y-%m-%d %H:%M:%S")),
+		       string_rep("=", 80),
+		       "\nContext Info:",
+		"  • Player: Level " .. (UnitLevel("player") or "?") .. ", Faction: " .. (UnitFactionGroup("player") or "?"),
+		"  • Zone: " .. string_format("%s / %s", GetRealZoneText() or "?", GetSubZoneText() or "?"),
+		"  • Instance: " .. (function() local inInstance, instType = IsInInstance(); if inInstance then local name, _, diff, _, _, _, id = GetInstanceInfo(); return string_format("%s (%s, %s, ID: %s)", name or "?", instType or "?", diff or "?", id or "?"); else return "None"; end end)(),
+		"  • Group: " .. string_format("%s, Raid: %s, Size: %d", IsInGroup() and "Yes" or "No", IsInRaid() and "Yes" or "No", GetNumGroupMembers()),
+		"  • Target: " .. ((UnitExists("target") and string_format("%s, Level %s %s", UnitName("target") or "?", UnitLevel("target") or "?", UnitClass("target") or "?")) or "None"),
+		"  • Combat: " .. string_format("%s, Resting: %s, Dead: %s", UnitAffectingCombat("player") and "Yes" or "No", IsResting() and "Yes" or "No", UnitIsDeadOrGhost("player") and "Yes" or "No"),
+		"  • UI: " .. string_format("Scale %.2f, Locale %s, Resolution %s", (tonumber(GetCVar("uiScale")) or 1), GetLocale(), (Display_DisplayModeDropDown and Display_DisplayModeDropDown.selectedValue) or (GetScreenWidth() .. "x" .. GetScreenHeight())),
+		"\nAddOns:",
+		"  • " .. (function() local t = {}; for i=1,GetNumAddOns() do if GetAddOnEnableState(nil,i)>0 then local n,v=GetAddOnInfo(i),GetAddOnMetadata(i,"Version"); t[#t+1]=n..(v and (" v"..v) or ""); end end return table_concat(t, ", "); end)(),
+		"\nAzeriteUI Debug:",
+		(function() local t = {}; if ns and ns.API then for k,v in pairs(ns.API) do if tostring(k):find("DEBUG") and v then t[#t+1]=k; end end end return #t>0 and ("  • "..table_concat(t, ", ")) or "  • None enabled"; end)(),
+		"\nLast Spell Cast / Combat Log:",
+		"  • "..((ns and ns.__AzeriteUI_LastSpellCast) and ("Last Spell: "..ns.__AzeriteUI_LastSpellCast) or "Last Spell: Unknown"),
+		"  • "..((ns and ns.__AzeriteUI_LastCombatLog) and ("Combat Log: "..ns.__AzeriteUI_LastCombatLog) or "Combat Log: Unknown"),
+		"\nLast UI Interaction:",
+		"  • "..((ns and ns.__AzeriteUI_LastUIInteraction) and ns.__AzeriteUI_LastUIInteraction or "Unknown"),
+		string_rep("=", 80),
+	}
+
+	   -- Discord-friendly: wrap in triple backticks with 'lua' for syntax highlighting
+	   local export = '```lua\n' .. table_concat(errorLines, "\n") .. "\n" .. table_concat(contextLines, "\n") .. '\n```'
+	   return export, total, sessionId
 end
 
 BugSackClipboard.UpdateCopyButton = function(self)
@@ -88,12 +135,7 @@ BugSackClipboard.UpdateCopyButton = function(self)
 	if (not button) then
 		return
 	end
-	local _, total = GetCurrentSessionSnapshot()
-	if (total > 0) then
-		button:Enable()
-	else
-		button:Disable()
-	end
+	button:Enable()
 end
 
 BugSackClipboard.CreateCopyWindow = function(self)
@@ -103,7 +145,7 @@ BugSackClipboard.CreateCopyWindow = function(self)
 	end
 
 	frame = CreateFrame("Frame", "AzeriteUI_BugSackCopyFrame", UIParent, "BasicFrameTemplateWithInset")
-	frame:SetSize(920, 520)
+	frame:SetSize(1100, 600)
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata("FULLSCREEN_DIALOG")
 	frame:SetClampedToScreen(true)
@@ -118,14 +160,14 @@ BugSackClipboard.CreateCopyWindow = function(self)
 
 	local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
 	scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -32)
-	scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 46)
+	scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 70)
 
 	local editBox = CreateFrame("EditBox", nil, scrollFrame)
 	editBox:SetAutoFocus(false)
 	editBox:SetMultiLine(true)
 	editBox:SetFontObject(ChatFontNormal)
 	editBox:SetTextInsets(6, 6, 6, 6)
-	editBox:SetWidth(840)
+	editBox:SetWidth(1000)
 	editBox:SetScript("OnEscapePressed", function()
 		frame:Hide()
 	end)
@@ -199,11 +241,16 @@ BugSackClipboard.CreateCopyWindow = function(self)
 	return frame
 end
 
-BugSackClipboard.ShowCopyWindow = function(self)
-	local text = GetCurrentSessionSnapshot()
-	if (text == "") then
-		print("|cff33ff99", "AzeriteUI BugSack:", "no current-session bugs available to copy.")
-		return
+BugSackClipboard.ShowCopyWindow = function(self, mode)
+	local sessionId = _G.BugGrabber and _G.BugGrabber.GetSessionId and _G.BugGrabber:GetSessionId() or nil
+	local text, total
+	if mode == "all" then
+		text, total = GetSessionSnapshot(nil, "BugSack All Errors")
+	else
+		text, total = GetSessionSnapshot(sessionId, "BugSack Current Session")
+	end
+	if (text == "" or not text) then
+		text = "No bugs found, try again later :)"
 	end
 	local frame = self:CreateCopyWindow()
 	local editBox = frame.EditBox
@@ -221,28 +268,49 @@ BugSackClipboard.InstallCopyButton = function(self)
 		return
 	end
 
+
+	-- Copy Session Button
 	local button = window.__AzeriteUI_BugSackCopyButton
 	if (not button) then
 		button = CreateFrame("Button", nil, window, "UIPanelButtonTemplate")
-		button:SetSize(170, 40)
+		button:SetSize(110, 26)
 		button:SetFrameStrata("FULLSCREEN")
-		button:SetText(GetSessionCopyLabel())
+		button:SetText("Copy Session")
 		button:SetScript("OnClick", function()
-			self:ShowCopyWindow()
+			self:ShowCopyWindow("session")
 		end)
 
 		local sendButton = _G.BugSackSendButton
 		if (sendButton) then
 			sendButton:ClearAllPoints()
-			sendButton:SetPoint("BOTTOM", window, "BOTTOM", -87, 16)
-			sendButton:SetWidth(170)
-			button:SetPoint("LEFT", sendButton, "RIGHT", 4, 0)
+			sendButton:SetPoint("BOTTOM", window, "BOTTOM", -90, 16)
+			sendButton:SetWidth(100)
+			button:SetPoint("LEFT", sendButton, "RIGHT", 6, 0)
 		else
-			button:SetPoint("BOTTOM", window, "BOTTOM", 0, 16)
+			button:SetPoint("BOTTOM", window, "BOTTOM", -60, 16)
 		end
 
 		window.__AzeriteUI_BugSackCopyButton = button
 		self.CopyButton = button
+	end
+
+	-- Copy All Button
+	local buttonAll = window.__AzeriteUI_BugSackCopyAllButton
+	if (not buttonAll) then
+		buttonAll = CreateFrame("Button", nil, window, "UIPanelButtonTemplate")
+		buttonAll:SetSize(110, 26)
+		buttonAll:SetFrameStrata("FULLSCREEN")
+		buttonAll:SetText("Copy All")
+		buttonAll:SetScript("OnClick", function()
+			self:ShowCopyWindow("all")
+		end)
+		if (button) then
+			buttonAll:SetPoint("LEFT", button, "RIGHT", 6, 0)
+		else
+			buttonAll:SetPoint("BOTTOM", window, "BOTTOM", 60, 16)
+		end
+		window.__AzeriteUI_BugSackCopyAllButton = buttonAll
+		self.CopyAllButton = buttonAll
 	end
 
 	self:UpdateCopyButton()

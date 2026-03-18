@@ -35,12 +35,14 @@ local pairs = pairs
 local select = select
 local string_lower = string.lower
 local tonumber = tonumber
+local type = type
 
 -- Addon API
 local Colors = ns.Colors
 local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
 local RegisterCooldown = ns.Widgets.RegisterCooldown
+local IsSecret = issecretvalue
 
 local defaults = { profile = ns:Merge({
 	enabled = true,
@@ -73,6 +75,165 @@ end
 -- Aura Template
 --------------------------------------------
 local Aura = {}
+
+local GetSafeAuraField = function(value)
+	if (IsSecret and IsSecret(value)) then
+		return nil
+	end
+	return value
+end
+
+local GetAuraDataByIndexSafe = function(unit, index, filter)
+	if (not C_UnitAuras or not C_UnitAuras.GetAuraDataByIndex) then
+		return nil
+	end
+	local ok, auraData = pcall(C_UnitAuras.GetAuraDataByIndex, unit, index, filter)
+	if (not ok or not auraData or (IsSecret and IsSecret(auraData))) then
+		return nil
+	end
+	return auraData
+end
+
+local GetAuraDurationObjectSafe = function(unit, auraInstanceID)
+	if (not C_UnitAuras or not C_UnitAuras.GetAuraDuration or not unit or not auraInstanceID) then
+		return nil
+	end
+	local ok, durationObject = pcall(C_UnitAuras.GetAuraDuration, unit, auraInstanceID)
+	if (not ok or (IsSecret and IsSecret(durationObject))) then
+		return nil
+	end
+	return durationObject
+end
+
+local GetAuraDataByAuraInstanceIDSafe = function(unit, auraInstanceID)
+	if (not C_UnitAuras or not C_UnitAuras.GetAuraDataByAuraInstanceID or not unit or not auraInstanceID) then
+		return nil
+	end
+	local ok, auraData = pcall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
+	if (not ok or not auraData or (IsSecret and IsSecret(auraData))) then
+		return nil
+	end
+	return auraData
+end
+
+local GetAuraDisplayCountSafe = function(unit, auraInstanceID, minCount, maxCount)
+	if (not C_UnitAuras or not C_UnitAuras.GetAuraApplicationDisplayCount or not unit or not auraInstanceID) then
+		return nil
+	end
+	local ok, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, auraInstanceID, minCount or 2, maxCount or 999)
+	if (not ok or (IsSecret and IsSecret(displayCount)) or displayCount == "") then
+		return nil
+	end
+	return displayCount
+end
+
+local ResolveRemainingTime = function(durationObject, expirationTime, cachedTimeLeft, elapsed)
+	local timeLeft
+	if (durationObject and durationObject.EvaluateRemainingTime) then
+		local ok, remaining = pcall(durationObject.EvaluateRemainingTime, durationObject)
+		if (ok and type(remaining) == "number" and (not IsSecret or not IsSecret(remaining))) then
+			timeLeft = remaining
+		end
+	end
+	if (timeLeft == nil and type(expirationTime) == "number") then
+		timeLeft = expirationTime - GetTime()
+	end
+	if (timeLeft == nil and type(cachedTimeLeft) == "number" and type(elapsed) == "number") then
+		timeLeft = cachedTimeLeft - elapsed
+	end
+	if (type(timeLeft) == "number" and timeLeft < 0) then
+		timeLeft = 0
+	end
+	return timeLeft
+end
+
+local HasVisibleAuraTimer = function(duration, expirationTime, previewRemaining)
+	if (type(duration) == "number" and duration > 0) then
+		return true
+	end
+	if (type(expirationTime) == "number" and expirationTime > GetTime()) then
+		return true
+	end
+	if (type(previewRemaining) == "number" and previewRemaining > 0) then
+		return true
+	end
+	return false
+end
+
+local ClearAuraState = function(self)
+	self.auraInstanceID = nil
+	self.auraUnit = nil
+	self.auraExpirationTime = nil
+	self.auraDurationObject = nil
+	self.auraSpellID = nil
+	self.icon:SetTexture(nil)
+	self.count:SetText("")
+	self.cd:Hide()
+	self.time:Hide()
+	if (self.fadeAnimation:IsPlaying()) then
+		self.fadeAnimation:Stop()
+	end
+	self:SetScript("OnUpdate", nil)
+	self.timeLeft = nil
+end
+
+local GetAuraButtonData = function(unit, index, filter)
+	local auraData = GetAuraDataByIndexSafe(unit, index, filter)
+	local ok, tupleName, tupleIcon, tupleCount, _, tupleDuration, tupleExpirationTime, _, _, tupleSpellID = pcall(UnitAura, unit, index, filter)
+	if (not ok) then
+		tupleName = nil
+	end
+
+	local auraInstanceID = GetSafeAuraField(auraData and auraData.auraInstanceID)
+	local auraDataByID
+	if (auraInstanceID) then
+		auraDataByID = GetAuraDataByAuraInstanceIDSafe(unit, auraInstanceID)
+	end
+	local name = GetSafeAuraField(tupleName)
+		or GetSafeAuraField(auraData and auraData.name)
+		or GetSafeAuraField(auraDataByID and auraDataByID.name)
+	local icon = GetSafeAuraField(tupleIcon)
+		or GetSafeAuraField(auraData and auraData.icon)
+		or GetSafeAuraField(auraDataByID and auraDataByID.icon)
+	local spellID = GetSafeAuraField(tupleSpellID)
+		or GetSafeAuraField(auraData and auraData.spellId)
+		or GetSafeAuraField(auraDataByID and auraDataByID.spellId)
+	local applications = GetSafeAuraField(tupleCount)
+	if (type(applications) ~= "number") then
+		applications = GetSafeAuraField(auraData and auraData.applications) or GetSafeAuraField(auraDataByID and auraDataByID.applications)
+	end
+	local duration = GetSafeAuraField(tupleDuration)
+	if (type(duration) ~= "number") then
+		duration = GetSafeAuraField(auraData and auraData.duration) or GetSafeAuraField(auraDataByID and auraDataByID.duration)
+	end
+	local expirationTime = GetSafeAuraField(tupleExpirationTime)
+	if (type(expirationTime) ~= "number") then
+		expirationTime = GetSafeAuraField(auraData and auraData.expirationTime) or GetSafeAuraField(auraDataByID and auraDataByID.expirationTime)
+	end
+
+	if ((not icon) and spellID and GetSpellTexture) then
+		local okTexture, spellTexture = pcall(GetSpellTexture, spellID)
+		if (okTexture and not (IsSecret and IsSecret(spellTexture))) then
+			icon = spellTexture
+		end
+	end
+
+	if (not auraData and not auraDataByID and not name and not icon and not spellID and not auraInstanceID) then
+		return nil
+	end
+
+	return {
+		name = name,
+		icon = icon,
+		applications = applications,
+		displayCount = GetAuraDisplayCountSafe(unit, auraInstanceID, 2, 999),
+		duration = duration,
+		expirationTime = expirationTime,
+		auraInstanceID = auraInstanceID,
+		durationObject = GetAuraDurationObjectSafe(unit, auraInstanceID),
+		spellID = spellID
+	}
+end
 
 Aura.Style = function(self)
 
@@ -147,52 +308,54 @@ end
 
 Aura.Update = function(self, index)
 	local unit = self:GetParent():GetAttribute("unit")
-	local ok, name, icon, count, _, duration, expirationTime = pcall(UnitAura, unit, index, self.filter)
-	if (not ok) then
-		name = nil
-	end
-	if (issecretvalue) then
-		if (issecretvalue(name)) then name = nil end
-		if (issecretvalue(icon)) then icon = nil end
-		if (issecretvalue(count)) then count = nil end
-		if (issecretvalue(duration)) then duration = nil end
-		if (issecretvalue(expirationTime)) then expirationTime = nil end
-		
-		-- WoW 12+: Bail out if critical timing values are secret/nil to prevent taint propagation
-		-- Even checking secret values can taint Blizzard's BuffFrame arithmetic
-		if (not name or not duration or not expirationTime) then
-			self:SetAlpha(0)
-			self.cd:Hide()
-			self.time:Hide()
-			if (self.fadeAnimation:IsPlaying()) then
-				self.fadeAnimation:Stop()
-			end
-			self:SetScript("OnUpdate", nil)
-			self.timeLeft = nil
-			return
-		end
-	end
+	local auraData = GetAuraButtonData(unit, index, self.filter)
 
-	if (name) then
+	if (auraData) then
 		self:SetAlpha(1)
-		self.icon:SetTexture(icon)
-		if (type(count) == "number" and count > 1) then
-			self.count:SetText(count)
+		self.auraUnit = unit
+		self.auraInstanceID = auraData.auraInstanceID
+		self.auraExpirationTime = auraData.expirationTime
+		self.auraDurationObject = auraData.durationObject
+		self.auraSpellID = auraData.spellID
+		if (auraData.icon) then
+			self.icon:SetTexture(auraData.icon)
+		elseif (self.auraSpellID and GetSpellTexture) then
+			local okTexture, spellTexture = pcall(GetSpellTexture, self.auraSpellID)
+			if (okTexture and spellTexture and not (IsSecret and IsSecret(spellTexture))) then
+				self.icon:SetTexture(spellTexture)
+			end
+		end
+		if (type(auraData.displayCount) == "string") then
+			self.count:SetText(auraData.displayCount)
+		elseif (type(auraData.applications) == "number" and auraData.applications > 1) then
+			self.count:SetText(auraData.applications)
 		else
 			self.count:SetText("")
 		end
 
-		if (type(duration) == "number" and duration > 0 and type(expirationTime) == "number") then
-			self.cd:SetCooldown(expirationTime - duration, duration)
+		local hasCooldown = false
+		local previewRemaining = ResolveRemainingTime(auraData.durationObject, auraData.expirationTime)
+		if (self.cd.SetAuraFallbackData) then
+			self.cd:SetAuraFallbackData(auraData.expirationTime, auraData.duration)
+		end
+		if (auraData.durationObject and self.cd.SetCooldownFromDurationObject and HasVisibleAuraTimer(auraData.duration, auraData.expirationTime, previewRemaining)) then
+			self.cd:SetCooldownFromDurationObject(auraData.durationObject)
+			hasCooldown = true
+		elseif (type(auraData.duration) == "number" and auraData.duration > 0 and type(auraData.expirationTime) == "number") then
+			self.cd:SetCooldown(auraData.expirationTime - auraData.duration, auraData.duration)
+			hasCooldown = true
+		end
+
+		if (hasCooldown) then
 			self.cd:Show()
 
-			local timeLeft = expirationTime - GetTime()
+			local timeLeft = previewRemaining
 
 			self.timeLeft = timeLeft
 			self:SetScript("OnUpdate", self.OnUpdate)
 
 			-- Fade short duration auras in and out
-			if (timeLeft < 10) then
+			if (type(timeLeft) == "number" and timeLeft < 10) then
 				if (not self.fadeAnimation:IsPlaying()) then
 					self.fadeAnimation:Play()
 				end
@@ -205,6 +368,12 @@ Aura.Update = function(self, index)
 			end
 
 		else
+			if (ns.API and ns.API.DEBUG_AURAS and InCombatLockdown and InCombatLockdown()) then
+				local filter = ns.API.DEBUG_AURA_FILTER
+				if ((not filter) or filter == "" or (type(auraData.name) == "string" and auraData.name:find(filter, 1, true))) then
+					print("|cff33ff99", "AzeriteUI aura debug:", tostring(auraData.name), "duration", tostring(auraData.duration), "expiration", tostring(auraData.expirationTime))
+				end
+			end
 			self.cd:Hide()
 			self.time:Hide()
 			if (self.fadeAnimation:IsPlaying()) then
@@ -213,16 +382,10 @@ Aura.Update = function(self, index)
 			self:SetScript("OnUpdate", nil)
 			self.timeLeft = nil
 		end
+	elseif (InCombatLockdown and InCombatLockdown()) then
+		return
 	else
-		self.icon:SetTexture(nil)
-		self.count:SetText("")
-		self.cd:Hide()
-		self.time:Hide()
-		if (self.fadeAnimation:IsPlaying()) then
-			self.fadeAnimation:Stop()
-		end
-		self:SetScript("OnUpdate", nil)
-		self.timeLeft = nil
+		ClearAuraState(self)
 	end
 
 end
@@ -269,6 +432,8 @@ Aura.UpdateTooltip = function(self)
 	if (GameTooltip:IsForbidden()) then return end
 	if (self.enchant) then
 		GameTooltip:SetInventoryItem("player", self:GetID())
+	elseif (self.auraUnit and self.auraInstanceID) then
+		GameTooltip:SetUnitAuraByAuraInstanceID(self.auraUnit, self.auraInstanceID)
 	else
 		GameTooltip:SetUnitAura(self:GetParent():GetAttribute("unit"), self:GetID(), self.filter)
 	end
@@ -286,11 +451,11 @@ Aura.OnUpdate = function(self, elapsed)
 		local expiration = select(self.enchant, GetWeaponEnchantInfo())
 		timeLeft = expiration and (expiration / 1e3) or 0
 	else
-		timeLeft = self.timeLeft - elapsed
+		timeLeft = ResolveRemainingTime(self.auraDurationObject, self.auraExpirationTime, self.timeLeft, elapsed)
 	end
 	self.timeLeft = timeLeft
 
-	if (timeLeft > 0) then
+	if (type(timeLeft) == "number" and timeLeft > 0) then
 		if (timeLeft < 10) then
 			if (not self.fadeAnimation:IsPlaying()) then
 				self.fadeAnimation:Play()
@@ -304,6 +469,8 @@ Aura.OnUpdate = function(self, elapsed)
 		end
 	else
 		self.timeLeft = nil
+		self.auraExpirationTime = nil
+		self.auraDurationObject = nil
 		self:SetScript("OnUpdate", nil)
 	end
 
@@ -597,7 +764,9 @@ local ApplyBlizzardAuraVisibilityDriver = function(self)
 		return
 	end
 	if (issecretvalue or (ns.ClientVersion and ns.ClientVersion >= 120000)) then
-		-- WoW12: avoid SecureStateDriverManager taint/blocks from dynamic driver updates.
+		-- WoW12: Blizzard aura frames are already hard-disabled for secure compatibility.
+		-- Keep the old dynamic driver path disabled here so the legacy compatibility option
+		-- does not taint or imply separate runtime behavior on Midnight clients.
 		return
 	end
 	if (InCombatLockdown()) then
@@ -650,27 +819,32 @@ end
 Auras.UpdateAuraButtonAlpha = function(self)
 	local buffs = self.buffs
 	if (not buffs) then return end
+	local time = GetTime()
+	if (self.__AzeriteUI_LastAuraAlphaUpdate and (time - self.__AzeriteUI_LastAuraAlphaUpdate) < .1) then
+		return
+	end
+	self.__AzeriteUI_LastAuraAlphaUpdate = time
 
 	local consolidateDuration = tonumber(buffs:GetAttribute("consolidateDuration")) or 30
 	local consolidateThreshold = tonumber(buffs:GetAttribute("consolidateThreshold")) or 10
 	local consolidateFraction = tonumber(buffs:GetAttribute("consolidateFraction")) or 0.1
 	local unit, filter = buffs:GetAttribute("unit"), buffs:GetAttribute("filter")
-	local slot, consolidated, time = 1, 0, GetTime()
-	local name, duration, expires, shouldConsolidate, _
+	local slot, consolidated = 1, 0
+	local name, duration, expires, shouldConsolidate
 
 	repeat
-		-- Sourced from FrameXML\SecureGroupHeaders.lua
-		local ok
-		ok, name, _, _, _, duration, expires, _, _, _, _, _, _, _, _, shouldConsolidate = pcall(UnitAura, unit, slot, filter)
-		if (not ok) then
-			break
+		local auraData = GetAuraDataByIndexSafe(unit, slot, filter)
+		if (auraData) then
+			name = GetSafeAuraField(auraData.name)
+			duration = GetSafeAuraField(auraData.duration)
+			expires = GetSafeAuraField(auraData.expirationTime)
+			shouldConsolidate = GetSafeAuraField(auraData.shouldConsolidate)
+		else
+			name = nil
 		end
 		if (name and shouldConsolidate) then
-			local secret = issecretvalue and (issecretvalue(duration) or issecretvalue(expires) or issecretvalue(shouldConsolidate))
-			if (not secret) then
-				if (not expires or duration > consolidateDuration or (expires - time >= math_max(consolidateThreshold, duration * consolidateFraction)) ) then
-					consolidated = consolidated + 1
-				end
+			if (not expires or duration > consolidateDuration or (expires - time >= math_max(consolidateThreshold, duration * consolidateFraction)) ) then
+				consolidated = consolidated + 1
 			end
 		end
 		slot = slot + 1
