@@ -7,7 +7,6 @@ Do not repeat older items from prior versions in newer entries.
 ## 5.3.16-JuNNeZ (2026-03-20)
 
 ### The Signalglass
-- Added the new `/aztest` runtime unit-frame preview flow for supported layouts, including solo preview visibility and debug-side refresh handling.
 - Expanded party-frame aura controls and stabilized harmful/dispellable debuff handling, including a frame glow so dispellable states are easier to read.
 - Split power value alpha control so player and target power text can be tuned independently.
 - Disabled the broken white absorb/heal-prediction overlay on non-player/target frames until a safer retail path is ready.
@@ -25,9 +24,10 @@ Do not repeat older items from prior versions in newer entries.
 ### Why
 - Party and raid health colors now read more clearly and behave more predictably.
 - Players can keep a simple green health baseline, switch to Blizzard palette parity, or only surface class/reaction colors when hovering a frame.
-- The release also reduces duplicate or broken overlays while improving preview/testing coverage for unit-frame layout work.
+- The release also reduces duplicate or broken overlays and improves readability across common unit-frame states.
 
 ### Internal
+- Expanded the maintainer-only `/aztest` runtime preview flow for supported unit-frame layouts.
 - Continued boss/arena reverse-fill and fake-fill groundwork against the target-frame path while narrowing remaining mismatches to the preview/test presenter instead of live target rendering.
 
 ## 5.3.15-JuNNeZ (2026-03-18)

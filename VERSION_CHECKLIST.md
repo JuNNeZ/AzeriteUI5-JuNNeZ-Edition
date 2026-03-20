@@ -20,6 +20,13 @@ Always append `-JuNNeZ` to version string.
 - [ ] `FixLog.md` — Add new version entry at top
 - [ ] `AGENTS.md` — Update "Current version tracking" section
 
+### Release Notes Checklist:
+- [ ] Changelog entry is delta-only for this version
+- [ ] Public bullets describe only player-visible/player-usable changes
+- [ ] Every public option/setting change includes its `/az` path
+- [ ] Maintainer-only tools/debug flows are moved to `Internal` or omitted
+- [ ] No raw developer bullets like `cleanup`, `prep tag`, `refactor`, or `groundwork` appear in public highlights
+
 ## 3. Build & Verify
 
 ```powershell
@@ -38,7 +45,7 @@ Always append `-JuNNeZ` to version string.
 
 ## Quick Version History
 
-- `5.3.16-JuNNeZ` (2026-03-20) — Runtime `/aztest` previews, party aura/dispellable readability work, unit-frame overlay cleanup, and release polish
+- `5.3.16-JuNNeZ` (2026-03-20) — Party/raid health color options, party aura readability work, unit-frame overlay cleanup, and Blizzard duplicate-frame fixes
 - `5.3.15-JuNNeZ` (2026-03-18) — WoW 12 aura/combat stability, stock-style player aura behavior, and aura/options cleanup
 - `5.3.13-JuNNeZ` (2026-03-14) — Battleground/local-party frame visibility fix and AceShotz credit
 - `5.3.11-JuNNeZ` (2026-03-14) — Big-raid priority debuff hide/size options
