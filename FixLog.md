@@ -3,7 +3,231 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-20
+
+- **Shared target-style health fake-fill helper started:** Moving the common target health fake-fill path into shared unitframe API and wiring target, boss, and arena through the same helper body instead of keeping three near-duplicate implementations.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`, `Components/UnitFrames/Units/Target.lua`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Shared target-style health fake-fill helper applied:** Added shared unitframe helpers for reversed-horizontal fake-fill texcoords, hidden-native health visual suppression, and `UnitHealthPercent(..., true, CurveConstants.ZeroToOne)`-driven fake-fill updates, then switched target, boss, and arena to call those same shared helpers.
+  - **Root Cause:** Boss and arena had accumulated near-copy logic from target, but even small differences in percent sourcing, fallback handling, and fake-fill application were enough to keep their health rendering from matching target exactly. The safest way to remove that drift is to make all three unit styles execute the same shared helper code.
+  - **Safety:** This only changes the health fake-fill/render path for target, boss, and arena. It does not touch their power bars, aura layouts, battleground visibility, or the current absorb/prediction rollback.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'`, `luac -p 'Components/UnitFrames/Units/Target.lua'`, `luac -p 'Components/UnitFrames/Units/Boss.lua'`, and `luac -p 'Components/UnitFrames/Units/Arena.lua'` must pass. In-game `/reload` plus direct visual comparison between target, boss, and arena health behavior is still required.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `Components/UnitFrames/Units/Target.lua`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+
+- **Boss/arena health path audit follow-up started:** Deep-comparing target, boss, arena, and the shared statusbar/update stack to identify why boss/arena still diverge visually even after the earlier fake-fill port.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Boss/arena health path audit follow-up applied:** Added the remaining target-style health setup parity pieces boss/arena were still missing at creation time: `SetForceNative(false)` on the hidden native health bar, `SetForceNative(true)` on the preview bar, reversed backdrop texcoords, and base-texcoord reset after forcing the target-style horizontal reverse-fill path.
+  - **Root Cause:** The deeper comparison showed boss/arena were still not configured the same way as target even after matching the fake-fill callback path. Target also explicitly controls LibSmoothBar native/proxy behavior via `SetForceNative`, resets cached base texcoords when forcing the reverse-fill orientation, and flips the backdrop texcoords to match the reversed health art direction.
+  - **Safety:** This remains limited to boss and arena health setup. It does not alter castbar, power, aura, or battleground visibility behavior.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Boss.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` must pass. In-game `/reload` plus direct comparison of boss/arena against target is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+
+- **Test-lab non-maintainer gating hardening started:** Closing the remaining stale-state path so saved `/aztest` globals cannot drive preview refreshes on non-`Junnez` characters even though the slash command itself is gated.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Test-lab non-maintainer gating hardening applied:** Runtime test mode now force-disables itself during enable/refresh when the current character is not `Junnez`, and any existing test previews are explicitly hidden before returning.
+  - **Root Cause:** The `/aztest` slash command and menu open path were already gated by `CanUseRuntimeTestMode()`, but `RefreshRuntimeTestPreviews()` still trusted the saved global test-mode flag. That left a stale-state edge case where a non-maintainer character could still execute preview refresh logic if `runtimeUnitTestMenuEnabled` had been left on earlier.
+  - **Safety:** This only narrows the maintainer-only test-lab path in `Core/Debugging.lua`. Non-test behavior is unchanged, and the extra guard only disables test state and hides preview frames when the current character is not allowed to use `/aztest`.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game `/reload` plus logging onto any non-`Junnez` character and confirming no test previews appear is still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Blizzard battleground flag-carrier duplicate hide started:** Extending the existing Blizzard arena-frame quarantine so the separate Blizzard battleground flag-carrier frames are hidden when AzeriteUI shows its own carrier frames.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **Blizzard battleground flag-carrier duplicate hide applied:** Added the Blizzard battleground match/carrier arena frame names to the WoW12 quarantine list so they get the same safe hide/reparent treatment as the normal Blizzard arena frames AzeriteUI already replaces.
+  - **Root Cause:** The existing WoW12 quarantine path in `Core/FixBlizzardBugsWow12.lua` only covered `CompactArenaFrame`, `ArenaEnemyFrames`, `ArenaPrepFrames`, and the standard compact arena members. Battleground flag-carrier displays use separate Blizzard `ArenaEnemyMatch*` frames, so AzeriteUI could hide the normal Blizzard arena frames and still leave the Blizzard carrier frames visible on top of AzeriteUI's own battleground carrier layout.
+  - **Safety:** This reuses the existing `QuarantineFrame()` path, which nil-checks the frame, hides it, unregisters events, reparents it to the hidden parent, and keeps it hidden on later `OnShow` calls. If a given Blizzard match frame is absent on the client build, nothing happens.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` must pass. In-game `/reload` plus entering a flag battleground and confirming only the AzeriteUI carrier frame remains visible is still required.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`, `FixLog.md`
+
+- **Test-lab tooltip unit-token fix started:** Fixing preview-frame hover errors where Blizzard tooltip code sees a preview frame with no valid `frame.unit` field even though the secure unit attribute was set.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Test-lab tooltip unit-token fix applied:** The preview interaction helper now assigns a real `frame.unit` value directly before setting the secure unit attribute, so Blizzard hover tooltip code sees a valid unit token on preview frames.
+  - **Root Cause:** The interactive preview pass only set the secure `unit` attribute on preview frames. Blizzard's tooltip hover path reads `frame.unit`, not the secure attribute table, so preview frames with a nil `frame.unit` still caused `C_TooltipInfo.GetUnit` to be called with an invalid argument.
+  - **Safety:** This remains limited to the maintainer-only `/aztest` interaction path in `Core/Debugging.lua`. The saved live unit token is restored when header-backed previews are hidden, and non-test frames are unchanged.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game `/reload` plus another hover test over `/aztest` frames are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Boss/arena target-fill parity follow-up started:** Replacing the earlier simplified boss/arena fake-fill port with the actual target-frame health fill pattern, because the simplified version still did not visually match target.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Boss/arena target-fill parity follow-up applied:** Boss and arena health now use the same `UnitHealthPercent(..., true, CurveConstants.ZeroToOne)`-driven fake-fill source and the same native/preview setup flags as target, instead of the earlier mirror/fallback approximation.
+  - **Root Cause:** The first boss/arena fake-fill pass copied the broad idea of target but not the exact code path. It sampled percent from mirror/value fallbacks instead of target's `UnitHealthPercent` path and did not mirror the same hidden native-bar setup flags, so the visual output could still diverge from target even though both used a fake texture.
+  - **Safety:** This only changes boss and arena health rendering. Castbars, power bars, and the absorb/prediction rollback remain as before.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Boss.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` must pass. In-game `/reload` plus direct visual comparison against target is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+
+- **Party options show-player ordering started:** Moving the Party Frames `Show Player` toggle to the top of the `/az` Party section so it sits directly under the enabled state and reads like a primary display choice instead of a buried secondary one.
+  - **Files Targeted:** `FixLog.md`, `Options/OptionsPages/UnitFrames.lua`
+- **Party options show-player ordering applied:** Moved the Party Frames `Show Player` toggle to the top of the Party options block so it appears immediately under the base enable/toggle area, ahead of the section headers.
+  - **Root Cause:** The Party `showPlayer` option in `Options/OptionsPages/UnitFrames.lua` had drifted down to the bottom of the Party block after the health-color and aura additions, which made a primary display choice read like a minor advanced setting.
+  - **Safety:** This is only an AceConfig ordering change in `Options/OptionsPages/UnitFrames.lua`. The saved key and runtime Party behavior are unchanged.
+  - **Verification:** `luac -p 'Options/OptionsPages/UnitFrames.lua'` passed. In-game `/reload` plus a quick `/az -> Unit Frames -> Party Frames` check are still required.
+  - **Files Modified:** `Options/OptionsPages/UnitFrames.lua`, `FixLog.md`
+
+- **Boss/arena target-style fake health fill follow-up started:** Replacing the earlier boss/arena reverse-fill workaround with the same hidden-native-health plus visible fake-fill approach used on the target frame, because the native leftward fill path is still rendering incorrectly on those unit bars.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Boss/arena target-style fake health fill follow-up applied:** Boss and arena health bars now keep the native statusbar hidden as the live data/geometry source and draw a separate visible fake fill texture on top, mirroring the target-frame health approach instead of relying on the broken old leftward fill path.
+  - **Root Cause:** The earlier boss/arena pass only converted `LEFT` growth to `HORIZONTAL` plus `SetReverseFill(true)`, but those unit bars still rendered the visible fill incorrectly. The target frame already avoids that rendering path by hiding the native health texture, reading its live statusbar geometry/value updates, and showing a separate fake texture with matching texcoord logic.
+  - **Safety:** This is scoped to boss and arena health bars only. Their absorb/prediction rollback remains intact, power bars are unchanged, and the hidden native health bar is still left in place so existing oUF updates continue driving the live values.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Boss.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` must pass. In-game `/reload` plus a visual check that boss and arena health bars now drain/fill from the same side and with the same texture behavior as target is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+
+- **Test-lab interactive preview pass started:** Enabling real hover/click interaction on `/aztest` preview frames so mouseover-driven color behavior and basic targeting can be tested without relying only on the menu's synthetic mouseover state.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Test-lab interactive preview pass applied:** Enabled mouse interaction on preview frames, let real hover override the synthetic menu mouseover state, and assigned secure click-target behavior where the preview frame supports secure attributes so `/aztest` frames can be hovered and clicked meaningfully.
+  - **Root Cause:** The test-lab preview code in `Core/Debugging.lua` explicitly disabled mouse interaction on both the spawned preview frames and the fallback preview buttons, so only the menu-driven `Mouseover State` toggle could exercise hover-only color behavior. That also prevented straightforward click targeting on preview frames even when they already carried a usable unit context.
+  - **Safety:** This stays inside the maintainer-only `/aztest` path in `Core/Debugging.lua`. The secure-header preview path restores the original unit/click attributes when the preview is hidden, and live non-test unit-frame behavior remains unchanged.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game `/reload`, `/aztest`, and a hover/click pass across Party/Raid previews are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Test-lab secure-header raid preview rework started:** Reworking the large-raid test-lab path to use the live secure header children in forced config mode, matching the local ElvUI/GW2 patterns, instead of trying to preview `Raid25` and `Raid40` as standalone unitframes.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Test-lab secure-header raid preview rework applied:** Switched the `Raid25` and `Raid40` preview defs over to a secure-header preview path that force-shows the live header children, sets their displayed unit context for previewing, and restores the real header state when the test set is hidden again.
+  - **Root Cause:** `Raid5` in this addon is a manually spawned button set, but `Raid25` and `Raid40` are real secure headers created through `oUF:SpawnHeader(...)` in `Components/UnitFrames/Units/Raid25.lua` and `Components/UnitFrames/Units/Raid40.lua`. Treating those larger raid styles as ordinary standalone unitframes in `/aztest` does not match how they are actually built. The local ElvUI and GW2_UI config-mode code both solve this by force-showing the existing secure-header children instead of trying to clone those group styles as regular frames.
+  - **Safety:** This remains inside the `Junnez`-only `/aztest` path in `Core/Debugging.lua` and restores the live header visibility/unit state when the preview is hidden. Live raid header behavior outside test mode is unchanged.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game `/reload`, `/aztest`, and checks for `Raid 10`, `Raid 20`, `Raid 25`, and `Raid 40` are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Test-lab nameplate preview fallback started:** Stopping the maintainer test-lab from probing the live `AzeriteNamePlates` style registration when the custom NamePlates module is disabled or conflict-disabled, and using the generic preview path instead.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Test-lab nameplate preview fallback applied:** Switched the maintainer nameplate preview set to use the generic preview-frame path directly instead of trying to spawn the live `AzeriteNamePlates` oUF style.
+  - **Root Cause:** The live nameplate style is only registered in `Components/UnitFrames/Units/NamePlates.lua` during `NamePlatesMod.OnEnable()`. When custom nameplates are disabled or conflict-disabled, `/aztest` was still calling `oUF:SetActiveStyle(ns.Prefix .. "NamePlates")`, which produced the `Style [AzeriteNamePlates] does not exist` error even though the test-lab only needs a visual preview.
+  - **Safety:** This only changes the maintainer-only `/aztest` nameplate preview path in `Core/Debugging.lua`. Live nameplate registration, driver behavior, and conflict handling are unchanged.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game `/reload` plus toggling the nameplate preview in `/aztest` are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Test-lab runtime helper scope fix started:** Fixing a Lua scoping regression in `Core/Debugging.lua` where early runtime-test helper closures call `GetRuntimeTestModule()` before the local function exists, causing them to resolve a nil global at runtime.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Test-lab runtime helper scope fix applied:** Forward-declared `GetRuntimeTestModule` before the earlier runtime-test helper closures and assigned the function later, so those helpers bind the intended local instead of falling through to a nil global at runtime.
+  - **Root Cause:** The earlier runtime-test helpers in `Core/Debugging.lua` reference `GetRuntimeTestModule()` before the later `local function GetRuntimeTestModule(def)` statement. In Lua, that means the earlier closures were compiled against a global name, not the later local, which is why `/aztest` blew up with `attempt to call global 'GetRuntimeTestModule'`.
+  - **Safety:** This is a pure scoping fix inside the maintainer-only test-lab code path. It does not alter preview logic, saved variables, or any live unit-frame behavior outside `/aztest`.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game `/reload` plus another `/aztest` pass are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Party/raid flat-health green follow-up started:** Fixing the live Party/Raid health-color fallback so disabling class colors actually uses a green health bar instead of inheriting AzeriteUI's red generic `Colors.health` value unless the Blizzard palette toggle happens to be enabled.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`
+- **Party/raid flat-health green follow-up applied:** Changed the Party/Raid health-color table builders so their non-class fallback uses `ns.Colors.green` explicitly, while the class/reaction palette still swaps between AzeriteUI and Blizzard colors as configured.
+  - **Root Cause:** `CreateHealthColors()` in `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, and `Components/UnitFrames/Units/Raid40.lua` copied `source.health` into the frame color table. With `useBlizzardHealthColors = false`, that meant `ns.Colors.health`, which is intentionally red in `Core/Common/Colors.lua`, not the flat green the Party/Raid option flow expects when class colors are disabled.
+  - **Safety:** This only changes the flat non-class health fallback in the Party/Raid modules. Class colors, reaction colors, mouseover-only behavior, and the Blizzard-vs-AzeriteUI class palette selection are otherwise unchanged.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Party.lua'`, `luac -p 'Components/UnitFrames/Units/Raid5.lua'`, `luac -p 'Components/UnitFrames/Units/Raid25.lua'`, and `luac -p 'Components/UnitFrames/Units/Raid40.lua'` passed. In-game `/reload` plus Party/Raid color toggle validation are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `FixLog.md`
+- **Test-lab preview reliability follow-up started:** Fixing maintainer preview regressions where group health bars use the wrong base color, fake class colors only appear after forced mouseover, auras/cast/class-power previews stay hidden behind the debug overlay, and unsupported style spawns still fail closed instead of falling back to a usable preview frame.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Test-lab preview reliability follow-up applied:** Switched the maintainer preview base health tint to the actual green palette, made party/raid fake class coloring respect each module's class-color profile flags instead of only the mouseover simulator, kept functional aura/cast/class-power widgets visible even when the debug label overlay is hidden, and added a generic fallback preview frame path when a style spawn fails so larger raid or specialized preview sets do not disappear entirely.
+  - **Root Cause:** The runtime test presenter in `Core/Debugging.lua` used `ns.Colors.health` as its non-class fallback, but that addon palette is intentionally red, not green. It also bypassed the live Party/Raid profile flags that decide whether class colors are always on, Blizzard-colored, or mouseover-only, so fake colors only looked correct once the test-lab mouseover state forced them. On top of that, the shared overlay container hid functional aura/cast/class-power widgets together with the optional debug labels, and failed style spawns still left some preview sets with nothing visible.
+  - **Safety:** This pass stays inside the `Junnez`-only `/aztest` runtime preview code in `Core/Debugging.lua`. It does not change live oUF style registrations, live Party/Raid health coloring, or any non-test-lab frame behavior.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game `/reload`, `/aztest`, and checks for green base health, immediate fake class colors, visible aura/cast/class-power widgets, and raid10/20/25/40 preview visibility are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Unit-frame options UX cleanup started:** Refactoring the `/az` Unit Frames Party/Raid option blocks into shared builders so visibility, health-color, and aura sections read more cleanly, use simpler ordering, and stop duplicating the same health-color controls in four places.
+  - **Files Targeted:** `FixLog.md`, `Options/OptionsPages/UnitFrames.lua`
+- **Unit-frame options UX cleanup applied:** Added a shared group-visibility guide, extracted a shared Party/Raid health-color option builder, reordered the Party section so health colors read before aura tuning, and replaced the fragile fractional order values with cleaner integer spacing.
+  - **Root Cause:** The `/az` Unit Frames page had become functionally correct but structurally uneven: Party/Raid duplicated the same health-color controls, used decimal order values, exposed group visibility as raw toggles without a guiding explanation, and placed Party aura tuning too close to the more fundamental health-color choices.
+  - **Safety:** This only changes the AceConfig page structure in `Options/OptionsPages/UnitFrames.lua`. It does not alter runtime frame behavior, saved variable keys, or module update paths.
+  - **Verification:** `luac -p 'Options/OptionsPages/UnitFrames.lua'` passed. In-game `/reload` and a visual pass through `/az -> Unit Frames` are still required.
+  - **Files Modified:** `Options/OptionsPages/UnitFrames.lua`, `FixLog.md`
+- **Test-lab large-raid visibility and options cleanup started:** Investigating why the maintainer preview still fails to surface the larger raid presets and tightening the Party/Raid options so the visibility copy and health-color controls are grouped more clearly.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`, `Options/OptionsPages/UnitFrames.lua`, `Components/UnitFrames/Units/Party.lua`
+- **Test-lab large-raid visibility and options cleanup applied:** Relaxed the maintainer preview bootstrap so it can prepare unit-frame styles even when the live module is not currently active, anchored inactive previews against `UIParent` instead of hidden live frames, corrected the group visibility copy, and added dedicated `Health Colors` sections to the Party/Raid option blocks.
+  - **Root Cause:** The `/aztest` preview path in `Core/Debugging.lua` only trusted already-live modules as preview anchors and style sources, which made optional frame families like the larger raid groups prone to disappearing from the test lab. At the same time, the Party/Raid options still mixed visibility and health-color controls together and repeated incorrect raid-size descriptions.
+  - **Safety:** This preview change stays inside the maintainer-only test lab. It does not alter live group visibility drivers or live unit-frame positioning. The Party default now explicitly stores `useBlizzardHealthColors = false`, which matches the existing intended behavior.
+  - **Verification:** `luac -p 'Core/Debugging.lua'`, `luac -p 'Options/OptionsPages/UnitFrames.lua'`, and `luac -p 'Components/UnitFrames/Units/Party.lua'` passed. In-game `/reload`, `/aztest`, and large-raid preset checks are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `Options/OptionsPages/UnitFrames.lua`, `Components/UnitFrames/Units/Party.lua`, `FixLog.md`
+- **Party/raid health color option hierarchy started:** Reworking the party and raid health-bar color settings so `Use Class Colors` becomes the parent toggle, with Blizzard palette and mouseover-only behavior as dependent sub-options and flat health green as the explicit fallback path.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Options/OptionsPages/UnitFrames.lua`
+- **Party/raid health color option hierarchy applied:** Added `Use Class Colors` as the master party/raid health-color toggle, moved Blizzard palette selection and mouseover-only class coloring under that path, and made flat health green the explicit fallback when class colors are disabled.
+  - **Root Cause:** The earlier party/raid color toggles were independent booleans, so the UI exposed contradictory states like "mouseover-only class color" without an obvious parent "use class colors" choice. That made the green-health path feel incidental instead of intentional.
+  - **Safety:** Existing profiles keep the old behavior because the new `useClassColors` default is `true`. Only users who turn it off will get persistent health green bars, and the Blizzard palette toggle is now ignored when class colors are disabled.
+  - **Verification:** `luac -p 'Options/OptionsPages/UnitFrames.lua'`, `luac -p 'Components/UnitFrames/Units/Party.lua'`, `luac -p 'Components/UnitFrames/Units/Raid5.lua'`, `luac -p 'Components/UnitFrames/Units/Raid25.lua'`, and `luac -p 'Components/UnitFrames/Units/Raid40.lua'` passed. In-game `/reload` plus option-combination checks are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Options/OptionsPages/UnitFrames.lua`, `FixLog.md`
+- **Party/raid mouseover-only class color started:** Adding a shared toggle for party and raid health bars so they stay flat health green until the player mouses over the unit frame, then temporarily switch to the configured class/reaction palette.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Options/OptionsPages/UnitFrames.lua`
+- **Party/raid mouseover-only class color applied:** Added `Only Show Class Color on Mouseover` to Party Frames and Raid Frames (5/25/40), and wired those modules so their health bars stay on the base health color until hovered, then switch to the configured class/reaction palette.
+  - **Root Cause:** Party and raid health bars were always running with `Health.colorClass`, `Health.colorClassPet`, and `Health.colorReaction` enabled in their style setup, so there was no profile-level way to keep them flat green except by removing class/reaction coloring entirely.
+  - **Safety:** This only changes party/raid health-bar color selection. The bars still use the existing base health color when not hovered, and the raid Blizzard-color toggle continues to decide which class/reaction palette is used once hovered.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Party.lua'`, `luac -p 'Components/UnitFrames/Units/Raid5.lua'`, `luac -p 'Components/UnitFrames/Units/Raid25.lua'`, `luac -p 'Components/UnitFrames/Units/Raid40.lua'`, and `luac -p 'Options/OptionsPages/UnitFrames.lua'` passed. In-game `/reload` plus party/raid mouseover validation is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Options/OptionsPages/UnitFrames.lua`, `FixLog.md`
+- **Maintainer unit-frame test menu started:** Replacing the narrow `/aztest` preview path with a proper `Junnez`-only test menu that can live-toggle preview coverage for all AzeriteUI-owned unit frame groups instead of only raid5/arena.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Maintainer unit-frame test menu applied:** Reworked `/aztest` into a `Junnez`-only menu and preview system that can toggle cloned test coverage for player, target, focus, pet, boss, party, raid, arena, and nameplate-style AzeriteUI frames from one place.
+  - **Root Cause:** [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua) only exposed a single boolean `/aztest` path wired to the earlier raid5/arena preview experiment, so there was no practical way to preview the rest of the unit-frame styles or selectively test individual frame groups without real group members.
+  - **Safety:** The new path is gated to `ns.PlayerName == "Junnez"` and uses separate `runtimeUnitTestMenuEnabled` / `runtimeUnitTestSets` state, leaving the older `runtimeUnitTestMode` flag forced off so the legacy raid5/arena-only hook stays dormant.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game `/reload`, `/aztest`, and live preview validation are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Maintainer unit-frame test lab expansion started:** Extending the new `Junnez`-only `/aztest` menu into a full test lab with presets, fake roster/state scenarios, layout stress toggles, nameplate variants, quick actions, and clearer chaptered UI so previewing AzeriteUI unit frames is practical instead of ad hoc.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Maintainer unit-frame test lab expansion applied:** Added the full 10-item test-lab pass to `/aztest`, including roster presets, class/role mixes, health-state scenarios, aura scenarios, cast scenarios, mouseover simulation, nameplate pack and side variants, layout stress toggles, quick actions, and a richer debug overlay in a reorganized chaptered menu.
+  - **Root Cause:** The first menu pass exposed the frame families, but it still lacked the scenario depth and menu structure needed to test realistic party/raid/nameplate states quickly. That made it cumbersome to validate layout, hover-only color behavior, aura visibility, cast states, and stress cases without manually rebuilding the same conditions over and over.
+  - **Safety:** All new preview state is still scoped to maintainer-only `ns.db.global.runtimeUnitTest*` keys in [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua). It drives addon-side cloned preview frames only and does not attempt to fabricate real Blizzard `party1`/`raid1` units.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. A static logic check also passed for the new state tables, menu sections, nameplate variant path, and layout/debug toggles. In-game `/reload`, `/aztest`, and live interaction checks are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Maintainer unit-frame test lab follow-up started:** Investigating reports that the expanded `/aztest` lab still misrenders dedicated castbars, lays out `raid20`/`raid40` incorrectly, can show stale live class colors until another scenario toggle is changed, and throws an oUF style error when nameplate previews are requested in sessions where the custom nameplate style is unavailable.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Maintainer unit-frame test lab follow-up applied:** Fixed the preview pass so raid layouts use the same point math as the real raid modules, fake class colors are reapplied after show instead of being left to live oUF class-color logic, native castbars are driven directly when a preview frame already owns one, and unsupported style previews fail closed instead of throwing noisy nameplate-style errors.
+  - **Root Cause:** [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua) used a generalized point helper with horizontal signs opposite the raid modules, relied on a one-pass post-update texture tint for fake class colors that could be overwritten by later frame updates, treated all cast previews as a generic overlay instead of using existing frame castbars, and always assumed the requested oUF style had been registered even in addon-conflict cases like custom nameplates being disabled.
+  - **Safety:** The fix stays inside the maintainer-only runtime preview code. It does not change live raid headers, live castbar modules, or nameplate behavior outside `/aztest`.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` is required again after the follow-up. In-game `/reload`, `raid20` / `raid40` preview checks, native castbar checks, and a no-error nameplate toggle check are still required.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+
 ## 2026-03-16
+
+## 2026-03-20
+
+- **Unit-frame absorb overlay rollback started:** Investigating report that the current absorb/shield overlay is covering most non-player health bars, including party, raid, pet, focus, target-of-target, arena, boss, and nameplate health bars. Scope is limited to the non-player/target unit-frame absorb wiring so the broken overlay can be disabled without touching health text, heal prediction, or the custom player/target secret-value paths.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Components/UnitFrames/Units/Pet.lua`, `Components/UnitFrames/Units/Focus.lua`, `Components/UnitFrames/Units/ToT.lua`, `Components/UnitFrames/Units/Arena.lua`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Unit-frame absorb overlay rollback applied:** Commented out the absorb-bar attachment on the affected non-player/target unit styles so oUF no longer drives those shield overlays while the visuals are broken.
+  - **Root Cause:** The affected unit styles all still create an absorb `StatusBar` and then attach it through `self.HealthPrediction.absorbBar`, for example in [Components/UnitFrames/Units/Party.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Party.lua), [Components/UnitFrames/Units/Raid5.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid5.lua), and the matching pet/focus/ToT/arena/boss/nameplate modules. That link is what lets the HealthPrediction element drive the absorb overlay across those frames.
+  - **Safety:** This rollback only disables the absorb overlay hookup for the affected unit styles. Health bars, heal prediction textures, player/target absorb handling, and secure header behavior are otherwise unchanged.
+  - **Verification:** `luac -p` on the touched Lua files is required; in-game `/reload` plus a quick pass over party, raid, pet, focus, ToT, arena/boss, and nameplate health bars is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Components/UnitFrames/Units/Pet.lua`, `Components/UnitFrames/Units/Focus.lua`, `Components/UnitFrames/Units/ToT.lua`, `Components/UnitFrames/Units/Arena.lua`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Unit-frame white prediction overlay follow-up started:** The first rollback removed absorb-bar attachment, but the reported white 10-20% alpha overlay still matches the custom heal-prediction texture path on the same unit styles. Scope remains limited to the non-player/target frames where the current prediction overlay is visually broken.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Components/UnitFrames/Units/Pet.lua`, `Components/UnitFrames/Units/Focus.lua`, `Components/UnitFrames/Units/ToT.lua`, `Components/UnitFrames/Units/Arena.lua`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Unit-frame white prediction overlay follow-up applied:** Disabled the custom `HealPredict_PostUpdate` hookup and hid the preview helper bar on the affected non-player/target unit styles, so the semi-transparent white prediction layer no longer renders over those health bars.
+  - **Root Cause:** The white overlay was not only the absorb bar. The affected modules also wire `self.HealthPrediction.PostUpdate = HealPredict_PostUpdate`, and that callback explicitly shows a textured overlay with partial alpha on incoming-heal/heal-absorb updates. Several modules also leave `self.Health.Preview` at `0.5` alpha, which can read as a pale duplicate bar underneath the main health fill.
+  - **Safety:** This follow-up only disables the visible heal-prediction/preview overlay for the affected non-player/target unit styles. Base health updates, tags, player/target special handling, and secure header logic remain unchanged.
+  - **Verification:** `luac -p` on the touched Lua files is required; in-game `/reload` plus another pass over party, raid, pet, focus, ToT, arena/boss, and nameplates is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Components/UnitFrames/Units/Pet.lua`, `Components/UnitFrames/Units/Focus.lua`, `Components/UnitFrames/Units/ToT.lua`, `Components/UnitFrames/Units/Arena.lua`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Unit-frame absorb bar hard-hide follow-up started:** The pale duplicate bar can still exist if the unhooked absorb `StatusBar` itself remains visible by default after creation. Scope remains limited to the same non-player/target unit-style absorb bar creation blocks.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Components/UnitFrames/Units/Pet.lua`, `Components/UnitFrames/Units/Focus.lua`, `Components/UnitFrames/Units/Arena.lua`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Unit-frame absorb bar hard-hide follow-up applied:** Force-hid the created absorb bars with `SetAlpha(0)` and `Hide()` in the affected non-player/target unit styles so the detached status bars cannot remain visible as a pale overlay.
+  - **Root Cause:** Commenting out the `self.HealthPrediction.absorbBar = absorb` attachment stops the prediction system from driving those bars, but the absorb `StatusBar` objects still exist at a higher frame level over health. If one of them remains visible with its texture active, it can still read as a white/washed duplicate health bar.
+  - **Safety:** This change only affects the local absorb-bar widgets in the already-targeted non-player/target unit styles. It does not change health values, tags, secure headers, or player/target special handling.
+  - **Verification:** `luac -p` on the touched Lua files is required; in-game `/reload` plus a fresh visual check of party, raid, pet, focus, arena, boss, and nameplates is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Party.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Components/UnitFrames/Units/Pet.lua`, `Components/UnitFrames/Units/Focus.lua`, `Components/UnitFrames/Units/Arena.lua`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Boss/arena reverse-fill health follow-up started:** Investigating report that boss and arena health-style overlays still grow the wrong way because those modules are relying on the older orientation path instead of the newer target-style reverse-fill setup.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Boss/arena reverse-fill health follow-up applied:** Switched boss and arena health-related bars to an explicit reverse-fill configuration when their layout requests leftward growth, matching the current target-frame fill rule instead of relying on the older orientation shorthand.
+  - **Root Cause:** [Components/UnitFrames/Units/Boss.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Boss.lua) and [Components/UnitFrames/Units/Arena.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Arena.lua) still fed `db.HealthBarOrientation` directly into health, preview, cast, and absorb bars. Their layouts use `HealthBarOrientation = "LEFT"`, but the modern target path now pins bars to a concrete axis and applies `SetReverseFill(true)` explicitly, which is more stable with the current statusbar compatibility layer.
+  - **Safety:** This change is limited to boss and arena visual fill configuration. It does not alter unit drivers, tag text, or secure header behavior.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Boss.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` are required; in-game `/reload` plus boss and arena health/cast overlay checks are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+- **Split player/target power value alpha started:** Reworking the shared power-value alpha setting so player-side power text and target-side power text can be tuned independently instead of both inheriting one Unit Frames root slider.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/UnitFrame.lua`, `Options/OptionsPages/UnitFrames.lua`
+- **Split player/target power value alpha applied:** Added separate player and target power value alpha settings, kept backward fallback to the old shared key for existing profiles, and moved the sliders into the Player and Target option groups.
+  - **Root Cause:** [Components/UnitFrames/UnitFrame.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/UnitFrame.lua) only stored one `powerValueAlpha` profile key and [Options/OptionsPages/UnitFrames.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Options/OptionsPages/UnitFrames.lua) only exposed one global slider, even though the target module already had its own local alpha lookup path.
+  - **Safety:** This change only affects power value text alpha lookup and options UI. Existing profiles still fall back to the old shared key until the new player/target values are set.
+  - **Verification:** `luac -p 'Components/UnitFrames/UnitFrame.lua'` and `luac -p 'Options/OptionsPages/UnitFrames.lua'` are required; in-game `/reload` plus player/target alpha slider checks are still required.
+  - **Files Modified:** `Components/UnitFrames/UnitFrame.lua`, `Options/OptionsPages/UnitFrames.lua`, `FixLog.md`
+
+- **Runtime unit-test forced visibility started:** Extending `/aztest` so the supported preview frames are shown while solo instead of only swapping unit tokens behind the normal party/arena visibility gates.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Runtime unit-test forced visibility applied:** `/aztest` now forces the supported preview headers visible while test mode is active, so you can preview them solo without joining a party, raid, or arena.
+  - **Root Cause:** The first `/aztest` pass only swapped the unit drivers to `player`, but [Components/UnitFrames/Units/Raid5.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid5.lua) still honored party/raid visibility conditions and [Components/UnitFrames/Units/Arena.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Arena.lua) still honored arena-instance visibility. That meant the preview units existed but stayed hidden when you were solo in the open world.
+  - **Safety:** The forced-show path is only active while `runtimeUnitTestMode` is enabled. Normal group and arena visibility returns immediately when `/aztest off` is used.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Raid5.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` are required; in-game `/aztest on` while solo should now show the preview headers.
+  - **Files Modified:** `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+- **Runtime unit-test player-name gate started:** Restricting the new `/aztest` runtime preview command to the maintainer character name so it stays available for your local testing flow without exposing another broad debug path.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **Runtime unit-test player-name gate applied:** Gated `/aztest` behind the existing `ns.PlayerName` constant so only the `Junnez` character can use the runtime unit preview command.
+  - **Root Cause:** The modifier-key test path was removed to avoid collisions, but the replacement `/aztest` command was still globally callable. Since this is a maintainer-only preview tool, the simplest stable gate is the player identity already cached in [Core/Common/Constants.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Common/Constants.lua).
+  - **Safety:** This change only blocks command entry in [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua). It does not alter raid/arena frame behavior for normal users, saved variables, or other debug commands.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` is required; in-game `/aztest status` on `Junnez` should still work, while other character names should receive the restriction message.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Runtime unit-test toggle started:** Replacing the modifier-key-at-reload unit-frame test mode with a dedicated runtime slash command so fake group/arena previews do not collide with other addons using Alt/Ctrl/Shift debug maintenance and can be toggled without `/reload`.
+  - **Files Targeted:** `FixLog.md`, `Core/Common/Constants.lua`, `Core/Debugging.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Runtime unit-test toggle applied:** Replaced the reload-time modifier-key latch with a persistent `/aztest` command that toggles AzeriteUI's unit test mode live and refreshes the supported preview modules immediately.
+  - **Root Cause:** [Core/Common/Constants.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Common/Constants.lua) only set `ns.Private.IsInTestMode` from `Alt+Ctrl+Shift` during load, so the preview path conflicted with other addons using the same maintenance chord and could not be changed without a reload.
+  - **Safety:** The runtime toggle is scoped to the existing preview consumers in [Components/UnitFrames/Units/Raid5.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid5.lua) and [Components/UnitFrames/Units/Arena.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Arena.lua). It only swaps their secure unit drivers out of combat and persists one debug flag in `ns.db.global.runtimeUnitTestMode`.
+  - **Usage:** `/aztest on`, `/aztest off`, `/aztest toggle`, `/aztest status`
+  - **Verification:** `luac -p 'Core/Common/Constants.lua'`, `luac -p 'Core/Debugging.lua'`, `luac -p 'Components/UnitFrames/Units/Raid5.lua'`, and `luac -p 'Components/UnitFrames/Units/Arena.lua'` are required; in-game `/aztest on` / `/aztest off` validation is still required.
+  - **Files Modified:** `Core/Common/Constants.lua`, `Core/Debugging.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+- **Raid frame health color source toggle started:** Adding a `/az -> Unit Frames -> Raid Frames` option so raid health bars can use either AzeriteUI's custom class/reaction colors or Blizzard's default class/reaction colors, without changing raid layout or non-health elements.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Options/OptionsPages/UnitFrames.lua`
+- **Raid frame health color source toggle applied:** Added `Use Blizzard Health Bar Colors` to the 5/25/40 raid-frame option groups and wired each raid module to swap only its health-bar class/reaction/base health color tables between AzeriteUI colors and Blizzard/oUF colors.
+  - **Root Cause:** [Components/UnitFrames/UnitFrame.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/UnitFrame.lua) initializes unit frames with `self.colors = ns.Colors`, so raid health bars always inherited AzeriteUI's custom class/reaction palette and there was no profile-level override in [Options/OptionsPages/UnitFrames.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Options/OptionsPages/UnitFrames.lua).
+  - **Safety:** The change is limited to raid-frame health color selection. Power bars, debuff styling, secure header behavior, and non-raid unit frames are unchanged because each raid frame now gets a small per-frame color table with only the health-related color groups swapped.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Raid5.lua'`, `luac -p 'Components/UnitFrames/Units/Raid25.lua'`, `luac -p 'Components/UnitFrames/Units/Raid40.lua'`, and `luac -p 'Options/OptionsPages/UnitFrames.lua'` are required; in-game `/reload` and `/az -> Unit Frames -> Raid Frames (5/25/40)` validation are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Options/OptionsPages/UnitFrames.lua`, `FixLog.md`
 
 - **Raid secure-header consumable/click regression started:** Investigating current-session retail reports where entering raid states throws `SecureGroupHeaders.lua` nil `groupingOrder` / nil `point` errors from [Components/UnitFrames/Units/Raid25.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid25.lua), and the user then cannot click food or other consumables. Scope is limited to the raid secure-header visibility/update path in [Components/UnitFrames/Units/Raid25.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid25.lua), [Components/UnitFrames/Units/Raid5.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid5.lua), and [Components/UnitFrames/Units/Raid40.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Raid40.lua), because [Components/UnitFrames/Units/Party.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Party.lua) already contains the missing secure-attribute preflight pattern.
 - **Raid secure-header consumable/click regression applied:** Added a sanitized secure-header preflight to the raid 5/25/40 visibility drivers so `groupBy`, `groupingOrder`, `point`, and the rest of the layout attributes are restored before any `showRaid` / `showParty` / `showPlayer` writes can trigger Blizzard's secure header refresh.
@@ -3726,3 +3950,53 @@ Testing:
 1. Run `luac -p` on touched Lua files if needed.
 2. Run the release build script and verify the archive name uses `5.3.15-JuNNeZ`.
 3. `/reload` in-game and verify the aura fixes and `/az` labeling changes on the release candidate.
+
+Request:
+- Add party-frame aura controls for layout, debuff sizing, and visibility rules.
+- Fix party debuffs that flicker out after briefly appearing, especially dispellable/removable debuffs.
+- Add a frame glow for dispellable debuffs so both the aura and the unit frame communicate the state.
+
+Applied:
+- Started audit of party aura logic in:
+  - `Components/UnitFrames/Units/Party.lua`
+  - `Components/UnitFrames/Auras/AuraFilters.lua`
+  - `Components/UnitFrames/Auras/AuraStyling.lua`
+  - `Options/OptionsPages/UnitFrames.lua`
+- Compared against:
+  - `GW2_UI` retail aura handling (`aurasSecret.lua`, `Units/Grid/elements/auras.lua`)
+  - `DiabolicUI3` retail aura filters
+  - `FeelUI` retail aura rendering
+- Confirmed current gaps:
+  - party aura profile layout values are not fully wired like player/target
+  - harmful dispellable debuffs can fall through when `RAID_PLAYER_DISPELLABLE` timing/classification data is unstable
+  - party frame has no dedicated dispellable-debuff glow, only aura border coloring and target highlight
+
+Why:
+- The current party aura path is still partly layout-static and under-modeled compared to the newer retail-safe player/target work.
+- Dispellable harmful auras need a more stable fallback path than timing-only checks.
+
+Testing:
+1. `/reload`
+2. Apply a dispellable debuff to a party member and confirm the debuff stays visible.
+3. Verify the party frame glow color matches the debuff type.
+4. Check new `/az -> Unit Frames -> Party Frames` aura settings update the live layout.
+
+Request:
+- Revert the target-frame helper migration after confirming the latest mismatch likely comes from the test menu preview path rather than live target rendering.
+
+Applied:
+- Reverted the recent target-only helper migration in:
+  - `Components/UnitFrames/Units/Target.lua`
+- Restored the target frame's local health fake-fill helpers for:
+  - reversed fill texcoords
+  - hidden native health visuals
+  - `UnitHealthPercent(..., true, CurveConstants.ZeroToOne)` sampling and fake-fill application
+
+Why:
+- Live testing indicates the real target frame is behaving correctly and the wrong fill is likely isolated to the `/aztest` preview presenter.
+- Reverting the target-side helper migration removes an unnecessary variable while the preview/test path is investigated.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/Target.lua'`
+2. `/reload`
+3. Compare live target behavior against `/aztest` preview behavior to confirm only the preview path still diverges.

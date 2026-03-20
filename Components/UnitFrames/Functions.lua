@@ -549,6 +549,106 @@ API.HidePrediction = function(element)
 	end
 end
 
+API.GetReversedHorizontalFillTexCoords = function(percent)
+	if (type(percent) ~= "number") then
+		return 1, 0, 0, 1
+	end
+	if (percent < 0) then
+		percent = 0
+	elseif (percent > 1) then
+		percent = 1
+	end
+	return percent, 0, 0, 1
+end
+
+API.ApplySimpleHealthFakeFillByPercent = function(health, percent)
+	if (not health) then
+		return false
+	end
+	local fakeFill = health.FakeFill
+	if (not fakeFill) then
+		return false
+	end
+	local nativeTexture = health.GetStatusBarTexture and health:GetStatusBarTexture()
+	fakeFill:ClearAllPoints()
+	if (nativeTexture) then
+		fakeFill:SetAllPoints(nativeTexture)
+	else
+		fakeFill:SetAllPoints(health)
+	end
+	fakeFill:SetTexCoord(API.GetReversedHorizontalFillTexCoords(percent))
+	if (fakeFill.SetVertexColor) then
+		local r, g, b = health:GetStatusBarColor()
+		if (type(r) == "number" and type(g) == "number" and type(b) == "number") then
+			fakeFill:SetVertexColor(r, g, b, 1)
+		else
+			fakeFill:SetVertexColor(1, 1, 1, 1)
+		end
+	end
+	if (fakeFill.SetAlpha) then
+		fakeFill:SetAlpha(1)
+	end
+	fakeFill:Show()
+	return true
+end
+
+API.HideNativeHealthVisuals = function(health)
+	if (not health) then
+		return
+	end
+	local nativeTexture = health.GetStatusBarTexture and health:GetStatusBarTexture()
+	if (nativeTexture) then
+		if (nativeTexture.SetAlpha) then
+			nativeTexture:SetAlpha(0)
+		end
+	end
+	local preview = health.Preview
+	if (preview) then
+		if (preview.SetAlpha) then
+			preview:SetAlpha(0)
+		end
+		if (preview.Hide) then
+			preview:Hide()
+		end
+		local previewTexture = preview.GetStatusBarTexture and preview:GetStatusBarTexture()
+		if (previewTexture) then
+			if (previewTexture.SetAlpha) then
+				previewTexture:SetAlpha(0)
+			end
+			if (previewTexture.Hide) then
+				previewTexture:Hide()
+			end
+		end
+	end
+end
+
+API.UpdateHealthFakeFillFromUnitPercent = function(health, fallbackUnit)
+	if (not health) then
+		return false, nil, nil, nil
+	end
+	local fakeFill = health.FakeFill
+	if (not fakeFill) then
+		return false, nil, nil, nil
+	end
+	local owner = health.__owner
+	local unit = health.unit or (owner and owner.unit) or fallbackUnit or "target"
+	local percent, source
+	if (type(UnitHealthPercent) == "function") then
+		local ok, value = pcall(UnitHealthPercent, unit, true, CurveConstants and CurveConstants.ZeroToOne or nil)
+		if (ok) then
+			percent = value
+			source = "api"
+		end
+	end
+	local applied = false
+	if (source == "api") then
+		applied = pcall(API.ApplySimpleHealthFakeFillByPercent, health, percent)
+	elseif (percent == nil) then
+		applied = API.ApplySimpleHealthFakeFillByPercent(health, nil)
+	end
+	return applied, percent, source, unit
+end
+
 local HidePowerTexts = function(element)
 	if (not element) then
 		return

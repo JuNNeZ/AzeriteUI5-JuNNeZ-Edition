@@ -4,6 +4,18 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.16-JuNNeZ (2026-03-20)
+
+### The Signalglass
+- Added the new `/aztest` runtime unit-frame preview flow for supported layouts, including solo preview visibility and debug-side refresh handling.
+- Expanded party-frame aura controls and stabilized harmful/dispellable debuff handling, including a frame glow so dispellable states are easier to read.
+- Split power value alpha control so player and target power text can be tuned independently.
+- Disabled the broken white absorb/heal-prediction overlay on non-player/target frames until a safer retail path is ready.
+- Hid duplicate Blizzard battleground carrier/arena support frames that could appear alongside AzeriteUI in current WoW 12 contexts.
+
+### Internal
+- Continued boss/arena reverse-fill and fake-fill groundwork against the target-frame path while narrowing remaining mismatches to the preview/test presenter instead of live target rendering.
+
 ## 5.3.15-JuNNeZ (2026-03-18)
 
 ### The Aura Homeostasis

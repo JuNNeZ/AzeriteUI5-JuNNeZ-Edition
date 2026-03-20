@@ -42,6 +42,8 @@ local defaults = { profile = ns:Merge({
 	enabled = true,
 	disableAuraSorting = false,
 	powerValueAlpha = 75,
+	playerPowerValueAlpha = nil,
+	targetPowerValueAlpha = nil,
 	disableHealComm = nil -- TODO: purge it
 }, ns.MovableModulePrototype.defaults) }
 
@@ -211,10 +213,18 @@ ns.UnitFrames = {}
 ns.UnitFrame = {}
 ns.UnitFrame.defaults = unitFrameDefaults
 
-ns.UnitFrame.GetPowerValueAlpha = function()
+ns.UnitFrame.GetPowerValueAlpha = function(kind)
 	local module = ns:GetModule("UnitFrames", true)
 	local profile = module and module.db and module.db.profile
-	local alphaPercent = profile and profile.powerValueAlpha
+	local alphaPercent = nil
+	if (kind == "player") then
+		alphaPercent = profile and profile.playerPowerValueAlpha
+	elseif (kind == "target") then
+		alphaPercent = profile and profile.targetPowerValueAlpha
+	end
+	if (type(alphaPercent) ~= "number") then
+		alphaPercent = profile and profile.powerValueAlpha
+	end
 	if (type(alphaPercent) ~= "number") then
 		alphaPercent = 75
 	end
@@ -226,11 +236,11 @@ ns.UnitFrame.GetPowerValueAlpha = function()
 	return alphaPercent / 100
 end
 
-ns.UnitFrame.ApplyPowerValueAlpha = function(frame)
+ns.UnitFrame.ApplyPowerValueAlpha = function(frame, kind)
 	if (not frame) then
 		return
 	end
-	local alpha = ns.UnitFrame.GetPowerValueAlpha()
+	local alpha = ns.UnitFrame.GetPowerValueAlpha(kind)
 	if (frame.Power and frame.Power.Value and frame.Power.Value.SetAlpha) then
 		frame.Power.Value:SetAlpha(alpha)
 	end

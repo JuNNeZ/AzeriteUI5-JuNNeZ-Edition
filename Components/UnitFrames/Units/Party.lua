@@ -29,8 +29,10 @@ local oUF = ns.oUF
 local PartyFrameMod = ns:NewModule("PartyFrames", ns.UnitFrameModule, "LibMoreEvents-1.0", "AceHook-3.0")
 
 -- Lua API
+local ipairs = ipairs
 local math_abs = math.abs
 local math_ceil = math.ceil
+local math_floor = math.floor
 local math_max = math.max
 local math_min = math.min
 local math_pi = math_pi
@@ -70,6 +72,25 @@ local defaults = { profile = ns:Merge({
 
 	showAuras = true,
 	showPlayer = false,
+	useClassColors = true,
+	useBlizzardHealthColors = false,
+	useClassColorOnMouseoverOnly = false,
+	AuraSize = 30,
+	AurasSpacingX = 4,
+	AurasSpacingY = 4,
+	AurasGrowthX = "RIGHT",
+	AurasGrowthY = "DOWN",
+	AurasInitialAnchor = "TOPLEFT",
+	partyAuraDebuffScale = 100,
+	partyAuraUseStockBehavior = true,
+	partyAuraShowDispellableDebuffs = true,
+	partyAuraOnlyDispellableDebuffs = false,
+	partyAuraShowBossAndImportantDebuffs = true,
+	partyAuraShowOtherDebuffs = true,
+	partyAuraShowHelpfulExternals = true,
+	partyAuraShowHelpfulRaidBuffs = true,
+	partyAuraShowHelpfulShortBuffs = true,
+	partyAuraGlowDispellableDebuffs = true,
 
 	point = "LEFT", -- anchor point of unitframe, group members within column grow opposite
 	xOffset = 0, -- horizontal offset within the same column
@@ -148,6 +169,188 @@ end
 -- Simplify the tagging process a little.
 local prefix = function(msg)
 	return string_gsub(msg, "*", ns.Prefix)
+end
+
+local GetPartyAuraProfile = function()
+	return PartyFrameMod and PartyFrameMod.db and PartyFrameMod.db.profile or defaults.profile
+end
+
+local GetPartyAuraSetting = function(profile, key, fallback)
+	if (profile and profile[key] ~= nil) then
+		return profile[key]
+	end
+	return fallback
+end
+
+local GetPartyAuraLayoutValue = function(profile, key, fallback)
+	local value = GetPartyAuraSetting(profile, key, fallback)
+	return (value ~= nil) and value or fallback
+end
+
+local GetPartyAuraPerRow = function(config)
+	local size = (config and config.AuraSize) or 30
+	local spacing = (config and config.AuraSpacing) or 4
+	local frameWidth = config and config.AurasSize and config.AurasSize[1]
+	if (type(frameWidth) ~= "number" or frameWidth <= 0) then
+		return 3
+	end
+	local denom = size + spacing
+	if (denom <= 0) then
+		return 3
+	end
+	return math_max(1, math_floor(((frameWidth + spacing) / denom) + .5))
+end
+
+local CreateHealthColors = function(useBlizzardColors)
+	local colors = {}
+	for key, value in pairs(ns.Colors) do
+		colors[key] = value
+	end
+
+	local source = useBlizzardColors and oUF.colors or ns.Colors
+	colors.health = useBlizzardColors and source.health or ns.Colors.green
+	colors.class = source.class
+	colors.reaction = source.reaction
+
+	return colors
+end
+
+local ApplyHealthColorMode = function(frame, profile)
+	if (not frame or not frame.Health) then
+		return
+	end
+
+	local health = frame.Health
+	local useClassColors = not (profile and profile.useClassColors == false)
+	local onlyOnMouseover = useClassColors and profile and profile.useClassColorOnMouseoverOnly
+	local showClassColors = useClassColors and ((not onlyOnMouseover) or frame.__AzeriteUI_HealthColorMouseOver)
+	local useBlizzardColors = useClassColors and profile and profile.useBlizzardHealthColors
+
+	frame.colors = CreateHealthColors(useBlizzardColors)
+	health.colorClass = showClassColors and true or false
+	health.colorClassPet = showClassColors and true or false
+	health.colorReaction = showClassColors and true or false
+	health.colorHealth = true
+
+	if (health.ForceUpdate) then
+		health:ForceUpdate()
+	end
+end
+
+local UpdateMouseoverHealthColor = function(frame, profile, isMouseOver)
+	frame.__AzeriteUI_HealthColorMouseOver = isMouseOver and true or false
+	ApplyHealthColorMode(frame, profile)
+end
+
+local ApplyPartyAuraLayout = function(frame)
+	if (not frame or not frame.Auras) then
+		return
+	end
+
+	local config = ns.GetConfig("PartyFrames")
+	local profile = GetPartyAuraProfile()
+	local auras = frame.Auras
+	local auraSize = GetPartyAuraLayoutValue(profile, "AuraSize", config.AuraSize or 30)
+	local spacingX = GetPartyAuraLayoutValue(profile, "AurasSpacingX", config.AurasSpacingX or config.AuraSpacing or 4)
+	local spacingY = GetPartyAuraLayoutValue(profile, "AurasSpacingY", config.AurasSpacingY or config.AuraSpacing or 4)
+	local growthX = GetPartyAuraLayoutValue(profile, "AurasGrowthX", config.AurasGrowthX or "RIGHT")
+	local growthY = GetPartyAuraLayoutValue(profile, "AurasGrowthY", config.AurasGrowthY or "DOWN")
+	local initialAnchor = GetPartyAuraLayoutValue(profile, "AurasInitialAnchor", config.AurasInitialAnchor or "TOPLEFT")
+	local perRow = GetPartyAuraPerRow(config)
+	local numTotal = config.AurasNumTotal or 6
+	local rows = math_max(1, math_ceil(numTotal / perRow))
+	local width = (perRow * auraSize) + ((perRow - 1) * spacingX)
+	local height = (rows * auraSize) + ((rows - 1) * spacingY)
+
+	auras:SetSize(width, height)
+	auras.size = auraSize
+	auras.spacing = config.AuraSpacing or 4
+	auras.numTotal = numTotal
+	auras.initialAnchor = initialAnchor
+	auras.spacingX = spacingX
+	auras.spacingY = spacingY
+	auras.growthX = growthX
+	auras.growthY = growthY
+	auras["spacing-x"] = spacingX
+	auras["spacing-y"] = spacingY
+	auras["growth-x"] = growthX
+	auras["growth-y"] = growthY
+end
+
+local GetDispellableDebuffColor = function(frame)
+	if (not frame or not frame.unit or not frame.PriorityDebuff or not frame.PriorityDebuff.dispelTypes) then
+		return nil
+	end
+
+	local bestColor
+	local bestPriority = -1
+	local bestType
+	local unit = frame.unit
+	local dispelTypes = frame.PriorityDebuff.dispelTypes
+
+	for index = 1, 40 do
+		local auraData = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and C_UnitAuras.GetAuraDataByIndex(unit, index, "HARMFUL")
+		if (not auraData) then
+			break
+		end
+
+		local auraInstanceID = auraData.auraInstanceID
+		local dispelName = (issecretvalue and issecretvalue(auraData.dispelName)) and nil or auraData.dispelName
+		local canDispelType = dispelName and dispelTypes[dispelName]
+		local isRaidPlayerDispellable = false
+		if (auraInstanceID and C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID) then
+			local ok, filtered = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
+			if (ok and not (issecretvalue and issecretvalue(filtered))) then
+				isRaidPlayerDispellable = (filtered == false)
+			end
+		end
+
+		if (canDispelType or isRaidPlayerDispellable) then
+			local priority = 0
+			if (dispelName == "Magic") then
+				priority = 4
+			elseif (dispelName == "Curse") then
+				priority = 3
+			elseif (dispelName == "Disease") then
+				priority = 2
+			elseif (dispelName == "Poison") then
+				priority = 1
+			end
+			if (priority > bestPriority) then
+				bestPriority = priority
+				bestType = dispelName
+			end
+		end
+	end
+
+	if (bestType and Colors.debuff[bestType]) then
+		bestColor = Colors.debuff[bestType]
+	end
+
+	return bestColor
+end
+
+local AuraHighlight_Update = function(self, event, unit, ...)
+	if (unit and unit ~= self.unit) then return end
+
+	local element = self.AuraHighlight
+	if (not element) then
+		return
+	end
+
+	local profile = GetPartyAuraProfile()
+	if (not GetPartyAuraSetting(profile, "partyAuraGlowDispellableDebuffs", true)) then
+		element:Hide()
+		return
+	end
+
+	local color = GetDispellableDebuffColor(self)
+	if (color) then
+		element:SetVertexColor(color[1], color[2], color[3], .95)
+		element:Show()
+	else
+		element:Hide()
+	end
 end
 
 -- Sourced from FrameXML\SecureGroupHeaders.lua.
@@ -496,6 +699,7 @@ end
 
 local UnitFrame_PostUpdate = function(self)
 	TargetHighlight_Update(self)
+	AuraHighlight_Update(self)
 end
 
 local UnitFrame_OnEvent = function(self, event, unit, ...)
@@ -542,6 +746,12 @@ local style = function(self, unit)
 	self.Health.Override = ns.API.UpdateHealth
 	self.Health.PostUpdate = Health_PostUpdate
 	self.Health.PostUpdateColor = Health_PostUpdateColor
+	self:HookScript("OnEnter", function(frame)
+		UpdateMouseoverHealthColor(frame, PartyFrameMod.db and PartyFrameMod.db.profile or defaults.profile, true)
+	end)
+	self:HookScript("OnLeave", function(frame)
+		UpdateMouseoverHealthColor(frame, PartyFrameMod.db and PartyFrameMod.db.profile or defaults.profile, false)
+	end)
 
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel())
@@ -563,7 +773,8 @@ local style = function(self, unit)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
 	healthPreview:SetOrientation(db.HealthBarOrientation)
 	healthPreview:SetSparkTexture("")
-	healthPreview:SetAlpha(.5)
+		healthPreview:SetAlpha(0)
+		healthPreview:Hide()
 	healthPreview:DisableSmoothing(true)
 
 	self.Health.Preview = healthPreview
@@ -580,7 +791,9 @@ local style = function(self, unit)
 	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	self.HealthPrediction.PostUpdate = HealPredict_PostUpdate
+	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Temporary rollback: broken white prediction overlay covers party-style health bars.
+	self.HealthPrediction:SetAlpha(0)
+	self.HealthPrediction:Hide()
 
 	-- Cast Overlay
 	--------------------------------------------
@@ -734,6 +947,8 @@ local style = function(self, unit)
 		absorb:SetStatusBarTexture(db.HealthBarTexture)
 		absorb:SetStatusBarColor(unpack(db.HealthAbsorbColor))
 		absorb:SetSparkMap(db.HealthBarSparkMap)
+		absorb:SetAlpha(0)
+		absorb:Hide()
 
 		local orientation
 		if (db.HealthBarOrientation == "UP") then
@@ -747,7 +962,7 @@ local style = function(self, unit)
 		end
 		absorb:SetOrientation(orientation)
 
-		self.HealthPrediction.absorbBar = absorb
+		-- self.HealthPrediction.absorbBar = absorb -- Temporary rollback: broken absorb overlay covers party-style health bars.
 	end
 
 	-- Readycheck
@@ -819,27 +1034,22 @@ local style = function(self, unit)
 
 	self.TargetHighlight = targetHighlight
 
+	local auraHighlight = healthOverlay:CreateTexture(nil, "BACKGROUND", nil, -3)
+	auraHighlight:SetPoint(unpack(db.TargetHighlightPosition))
+	auraHighlight:SetSize(unpack(db.TargetHighlightSize))
+	auraHighlight:SetTexture(db.TargetHighlightTexture)
+	auraHighlight:Hide()
+
+	self.AuraHighlight = auraHighlight
+
 	-- Auras
 	--------------------------------------------
 	local auras = CreateFrame("Frame", nil, self)
-	auras:SetSize(unpack(db.AurasSize))
 	auras:SetPoint(unpack(db.AurasPosition))
-	auras.size = db.AuraSize
-	auras.spacing = db.AuraSpacing
-	auras.numTotal = db.AurasNumTotal
 	auras.disableMouse = db.AurasDisableMouse
 	auras.disableCooldown = db.AurasDisableCooldown
 	auras.onlyShowPlayer = db.AurasOnlyShowPlayer
 	auras.showStealableBuffs = db.AurasShowStealableBuffs
-	auras.initialAnchor = db.AurasInitialAnchor
-	auras.spacingX = db.AurasSpacingX
-	auras.spacingY = db.AurasSpacingY
-	auras.growthX = db.AurasGrowthX
-	auras.growthY = db.AurasGrowthY
-	auras["spacing-x"] = db.AurasSpacingX
-	auras["spacing-y"] = db.AurasSpacingY
-	auras["growth-x"] = db.AurasGrowthX
-	auras["growth-y"] = db.AurasGrowthY
 	auras.tooltipAnchor = db.AurasTooltipAnchor
 	auras.sortMethod = db.AurasSortMethod
 	auras.sortDirection = db.AurasSortDirection
@@ -858,6 +1068,7 @@ local style = function(self, unit)
 	end
 
 	self.Auras = auras
+	ApplyPartyAuraLayout(self)
 
 	-- Textures need an update when frame is displayed.
 	self.PostUpdate = UnitFrame_PostUpdate
@@ -865,6 +1076,7 @@ local style = function(self, unit)
 	-- Register events to handle additional texture updates.
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", UnitFrame_OnEvent, true)
 	self:RegisterEvent("PLAYER_TARGET_CHANGED", UnitFrame_OnEvent, true)
+	self:RegisterEvent("UNIT_AURA", UnitFrame_OnEvent)
 
 	-- Fix unresponsive alpha on 3D Portrait.
 	hooksecurefunc(UIParent, "SetAlpha", function() self.Portrait:SetAlpha(self:GetEffectiveAlpha()) end)
@@ -1139,6 +1351,8 @@ end
 PartyFrameMod.UpdateUnits = function(self)
 	if (not self.frame) then return end
 	for frame in next,Units do
+		ApplyHealthColorMode(frame, self.db.profile)
+		ApplyPartyAuraLayout(frame)
 		if (self.db.profile.showAuras) then
 			frame:EnableElement("Auras")
 			frame.Auras:ForceUpdate()
@@ -1146,6 +1360,7 @@ PartyFrameMod.UpdateUnits = function(self)
 			frame:DisableElement("Auras")
 		end
 		frame:UpdateAllElements("RefreshUnit")
+		AuraHighlight_Update(frame)
 	end
 end
 
@@ -1229,6 +1444,10 @@ PartyFrameMod.CreateUnitFrames = function(self)
 	-- Embed our custom methods
 	for method,func in next,GroupHeader do
 		self.frame[method] = func
+	end
+
+	for _, frame in ipairs({ self.frame:GetChildren() }) do
+		ApplyHealthColorMode(frame, self.db and self.db.profile or defaults.profile)
 	end
 
 	-- Sometimes some elements are wrong or "get stuck" upon exiting the editmode.

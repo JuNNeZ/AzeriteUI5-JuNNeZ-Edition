@@ -283,6 +283,22 @@ ns.AuraStyles.PartyPostUpdateButton = function(element, button, unit, data, posi
 	end
 
 	local isHarmful = button.isHarmful or button.isDebuff or SafeBool(data.isHarmful)
+	local owner = element and element.__owner
+	local partyModuleProfile = nil
+	if (owner and owner.unit and ns.GetModule) then
+		local partyModule = ns:GetModule("PartyFrames", true)
+		partyModuleProfile = partyModule and partyModule.db and partyModule.db.profile or nil
+	end
+	local debuffScale = 1
+	if (partyModuleProfile and type(partyModuleProfile.partyAuraDebuffScale) == "number") then
+		debuffScale = partyModuleProfile.partyAuraDebuffScale / 100
+	end
+	if (debuffScale < .5) then
+		debuffScale = .5
+	elseif (debuffScale > 2) then
+		debuffScale = 2
+	end
+	button:SetScale(isHarmful and debuffScale or 1)
 	local color
 	if (isHarmful and element.showDebuffType) or ((not isHarmful) and element.showBuffType) or (element.showType) then
 		local dispelName = SafeKey(data.dispelName)

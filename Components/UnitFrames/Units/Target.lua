@@ -1619,7 +1619,7 @@ local GetTargetPowerValueAlpha = function()
 		return alpha
 	end
 	if (ns.UnitFrame and ns.UnitFrame.GetPowerValueAlpha) then
-		return ns.UnitFrame.GetPowerValueAlpha()
+		return ns.UnitFrame.GetPowerValueAlpha("target")
 	end
 	return .75
 end

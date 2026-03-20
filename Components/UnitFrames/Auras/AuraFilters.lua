@@ -165,6 +165,14 @@ local HasTrackedTemporaryDuration = function(button, duration, maxDuration)
 	return ((not button.noDuration) and type(duration) == "number" and duration < maxDuration) and true or false
 end
 
+local GetAuraOwnerFrame = function(button)
+	if (not button or not button.GetParent) then
+		return nil
+	end
+	local parent = button:GetParent()
+	return parent and parent.__owner or nil
+end
+
 local PlayerFrameMod
 local GetPlayerAuraProfile = function()
 	if (not PlayerFrameMod and ns.GetModule) then
@@ -174,6 +182,21 @@ local GetPlayerAuraProfile = function()
 end
 
 local GetPlayerAuraSetting = function(profile, key, fallback)
+	if (profile and profile[key] ~= nil) then
+		return profile[key] and true or false
+	end
+	return fallback and true or false
+end
+
+local PartyFrameMod
+local GetPartyAuraProfile = function()
+	if (not PartyFrameMod and ns.GetModule) then
+		PartyFrameMod = ns:GetModule("PartyFrames", true)
+	end
+	return PartyFrameMod and PartyFrameMod.db and PartyFrameMod.db.profile or nil
+end
+
+local GetPartyAuraSetting = function(profile, key, fallback)
 	if (profile and profile[key] ~= nil) then
 		return profile[key] and true or false
 	end
@@ -379,6 +402,7 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 	button.noDuration = duration == 0
 	button.isPlayer = GetIsPlayerAura(unit, data)
 	button.spellID = SafeKey(data.spellId)
+	button.dispelName = SafeKey(data.dispelName)
 	local applications = SafeNumber(data.applications, 0)
 	local canApplyAura = SafeBool(data.canApplyAura)
 	local isHarmful = GetIsHarmful(unit, data)
@@ -388,6 +412,10 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 	local expirationSecret = IsSecret and IsSecret(data.expirationTime)
 	local applicationsSecret = IsSecret and IsSecret(data.applications)
 	local hasTiming = expiration ~= nil
+	local profile = GetPartyAuraProfile()
+	local ownerFrame = GetAuraOwnerFrame(button)
+	local dispelTypes = ownerFrame and ownerFrame.PriorityDebuff and ownerFrame.PriorityDebuff.dispelTypes
+	local canDispelType = button.dispelName and dispelTypes and dispelTypes[button.dispelName]
 
 	local harmfulRaid = false
 	local harmfulRaidDispellable = false
@@ -401,6 +429,25 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 		helpfulExternal = SafeIsAuraFilteredOut(unit, auraInstanceID, "HELPFUL|EXTERNAL_DEFENSIVE") == false
 		helpfulRaidCombat = HasAuraToken(unit, auraInstanceID, "HELPFUL", "RAID_IN_COMBAT")
 	end
+
+	local isPlayerDispellable = (harmfulRaidDispellable or canDispelType) and true or false
+	button.isRaidPlayerDispellable = isPlayerDispellable
+	local hasStacks = (applications > 1) or HasDisplayedApplications(unit, data)
+	local shortHelpful = ((not button.noDuration and duration < 61) or IsShortRemainingAura(button.timeLeft) or hasStacks) and true or false
+	local showDispellableDebuffs = GetPartyAuraSetting(profile, "partyAuraShowDispellableDebuffs", true)
+	local onlyDispellableDebuffs = GetPartyAuraSetting(profile, "partyAuraOnlyDispellableDebuffs", false)
+	local showBossAndImportantDebuffs = GetPartyAuraSetting(profile, "partyAuraShowBossAndImportantDebuffs", true)
+	local showOtherDebuffs = GetPartyAuraSetting(profile, "partyAuraShowOtherDebuffs", true)
+	local showHelpfulExternals = GetPartyAuraSetting(profile, "partyAuraShowHelpfulExternals", true)
+	local showHelpfulRaidBuffs = GetPartyAuraSetting(profile, "partyAuraShowHelpfulRaidBuffs", true)
+	local showHelpfulShortBuffs = GetPartyAuraSetting(profile, "partyAuraShowHelpfulShortBuffs", true)
+	local useStockBehavior = GetPartyAuraSetting(profile, "partyAuraUseStockBehavior", true)
+	local allowDispellableDebuff = showDispellableDebuffs and isPlayerDispellable
+	local allowBossOrImportantDebuff = showBossAndImportantDebuffs and (harmfulRaid or isImportant)
+	local allowOtherDebuff = showOtherDebuffs and ((button.isPlayer or canApplyAura) and ((not button.noDuration and duration <= 301) or IsShortRemainingAura(button.timeLeft) or hasStacks))
+	local allowHelpfulExternal = showHelpfulExternals and helpfulExternal
+	local allowHelpfulRaid = showHelpfulRaidBuffs and (helpfulPlayerRaid or helpfulRaidCombat or isImportant)
+	local allowHelpfulShort = showHelpfulShortBuffs and button.isPlayer and canApplyAura and shortHelpful
 
 	-- Hide blacklisted auras.
 	if (button.spellID and Hidden[button.spellID]) then
@@ -418,38 +465,59 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 
 	if (durationSecret or expirationSecret or applicationsSecret) then
 		if (isHarmful) then
-			return harmfulRaid or harmfulRaidDispellable or isImportant or HasDisplayIdentity(button)
+			if (useStockBehavior) then
+				return isPlayerDispellable or harmfulRaid or isImportant or (button.isPlayer or canApplyAura) or HasDisplayIdentity(button)
+			end
+			if (onlyDispellableDebuffs) then
+				return allowDispellableDebuff
+			end
+			return allowDispellableDebuff or allowBossOrImportantDebuff or allowOtherDebuff
 		end
-		return helpfulPlayerRaid or helpfulExternal or helpfulRaidCombat or isImportant or (button.isPlayer and HasDisplayIdentity(button))
+		if (useStockBehavior) then
+			return helpfulPlayerRaid or helpfulExternal or helpfulRaidCombat or isImportant or (button.isPlayer and HasDisplayIdentity(button))
+		end
+		return allowHelpfulExternal or allowHelpfulRaid or allowHelpfulShort
 	end
 
 	if (isHarmful) then
-		if (harmfulRaid or harmfulRaidDispellable or isImportant) then
+		if (useStockBehavior) then
+			if (isPlayerDispellable or harmfulRaid or isImportant) then
+				return true
+			end
+			if (button.isPlayer or canApplyAura) then
+				return (not button.noDuration and duration <= 301) or hasStacks
+			end
+			return false
+		end
+		if (allowDispellableDebuff or allowBossOrImportantDebuff) then
 			return true
 		end
+		if (onlyDispellableDebuffs) then
+			return false
+		end
 		if (button.isPlayer or canApplyAura) then
-			return (not button.noDuration and duration <= 301) or (applications > 1)
+			return allowOtherDebuff
 		end
 		return false
 	end
 
 	local sourceUnit = SafeKey(data.sourceUnit)
 	local isSelfCastOnUnit = (type(sourceUnit) == "string" and type(unit) == "string" and sourceUnit == unit)
-	if (isSelfCastOnUnit and not (helpfulPlayerRaid or helpfulExternal or helpfulRaidCombat or isImportant)) then
+	if (isSelfCastOnUnit and not (helpfulPlayerRaid or helpfulExternal or helpfulRaidCombat or isImportant or allowHelpfulShort)) then
 		return false
 	end
 
-	if (helpfulPlayerRaid or helpfulExternal or helpfulRaidCombat or isImportant) then
-		return true
+	if (useStockBehavior) then
+		if (helpfulPlayerRaid or helpfulExternal or helpfulRaidCombat or isImportant) then
+			return true
+		end
+		if (button.isPlayer and canApplyAura) then
+			return shortHelpful
+		end
+		return false
 	end
 
-	if (button.isPlayer and canApplyAura) then
-		return ((not button.noDuration and duration < 61)
-			or (button.timeLeft and button.timeLeft > 0 and button.timeLeft < 31)
-			or (applications > 1))
-	end
-
-	return false
+	return allowHelpfulExternal or allowHelpfulRaid or allowHelpfulShort
 end
 
 ns.AuraFilters.NameplateAuraFilter = function(button, unit, data)

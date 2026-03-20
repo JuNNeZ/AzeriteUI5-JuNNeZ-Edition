@@ -644,13 +644,16 @@ local ApplyFriendlyNameOnlyVisualState = function(self, enabled)
 			self.Health.Backdrop:SetAlpha(1)
 		end
 		if (self.Health.Preview) then
-			self.Health.Preview:SetAlpha(.5)
+			self.Health.Preview:SetAlpha(0)
+			self.Health.Preview:Hide()
 		end
 	end
 	if (self.HealthPrediction) then
-		self.HealthPrediction:SetAlpha(1)
+		self.HealthPrediction:SetAlpha(0)
+		self.HealthPrediction:Hide()
 		if (self.HealthPrediction.absorbBar) then
-			self.HealthPrediction.absorbBar:SetAlpha(1)
+			self.HealthPrediction.absorbBar:SetAlpha(0)
+			self.HealthPrediction.absorbBar:Hide()
 		end
 	end
 	if (self.Castbar) then
@@ -1656,7 +1659,8 @@ local style = function(self, unit, id)
 	healthPreview:SetFrameLevel(health:GetFrameLevel() - 1)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
 	healthPreview:SetSparkTexture("")
-	healthPreview:SetAlpha(.5)
+	healthPreview:SetAlpha(0)
+	healthPreview:Hide()
 	healthPreview:DisableSmoothing(true)
 	healthPreview:SetOrientation(healthLab.mainOrientation)
 	healthPreview:SetTexCoord(healthLab.texLeft, healthLab.texRight, healthLab.texTop, healthLab.texBottom)
@@ -1677,7 +1681,9 @@ local style = function(self, unit, id)
 	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	self.HealthPrediction.PostUpdate = HealPredict_PostUpdate
+	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Temporary rollback: broken white prediction overlay covers nameplate health bars.
+	self.HealthPrediction:SetAlpha(0)
+	self.HealthPrediction:Hide()
 
 	-- Castbar
 	--------------------------------------------
@@ -1797,13 +1803,15 @@ local style = function(self, unit, id)
 		absorb:SetStatusBarColor(unpack(db.HealthAbsorbColor))
 		absorb:SetTexCoord(healthLab.texLeft, healthLab.texRight, healthLab.texTop, healthLab.texBottom)
 		absorb:SetSparkMap(db.HealthBarSparkMap)
+		absorb:SetAlpha(0)
+		absorb:Hide()
 		absorb:SetOrientation(healthLab.absorbOrientation)
 		if (absorb.SetReverseFill) then
 			absorb:SetReverseFill(healthLab.absorbReverseFill)
 		end
 		absorb:SetFlippedHorizontally(healthLab.absorbSetFlippedHorizontally)
 
-		self.HealthPrediction.absorbBar = absorb
+		-- self.HealthPrediction.absorbBar = absorb -- Temporary rollback: broken absorb overlay covers nameplate health bars.
 	end
 
 	-- Target Highlight

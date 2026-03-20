@@ -389,7 +389,9 @@ local style = function(self, unit)
 	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	self.HealthPrediction.PostUpdate = HealPredict_PostUpdate
+	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Temporary rollback: broken white prediction overlay covers target-of-target health bars.
+	self.HealthPrediction:SetAlpha(0)
+	self.HealthPrediction:Hide()
 
 	-- Cast Overlay (plain StatusBar)
 	local castbar = CreateFrame("StatusBar", nil, self)
@@ -460,7 +462,7 @@ local style = function(self, unit)
 			end)
 		end
 
-		self.HealthPrediction.absorbBar = absorb
+		-- self.HealthPrediction.absorbBar = absorb -- Temporary rollback: broken absorb overlay covers target-of-target health bars.
 		self.HealthPrediction.__AzeriteUI_HideAbsorbWithPrediction = true
 	end
 

@@ -40,6 +40,7 @@ local math_max = math.max
 local math_min = math.min
 local ipairs = ipairs
 local next = next
+local pairs = pairs
 local select = select
 local string_gsub = string.gsub
 local string_match = string.match
@@ -70,6 +71,9 @@ local defaults = { profile = ns:Merge({
 	useRangeIndicator = true,
 	showPriorityDebuff = true,
 	priorityDebuffScale = 100,
+	useClassColors = true,
+	useBlizzardHealthColors = false,
+	useClassColorOnMouseoverOnly = false,
 
 	point = "LEFT", -- anchor point of unitframe, group members within column grow opposite
 	xOffset = 10, -- horizontal offset within the same column
@@ -151,6 +155,48 @@ local GetPriorityDebuffSettings = function(profile)
 		enabled = db.showPriorityDebuff ~= false,
 		scale = scalePercent / 100
 	}
+end
+
+local CreateHealthColors = function(useBlizzardColors)
+	local colors = {}
+	for key, value in pairs(ns.Colors) do
+		colors[key] = value
+	end
+
+	local source = useBlizzardColors and oUF.colors or ns.Colors
+	colors.health = useBlizzardColors and source.health or ns.Colors.green
+	colors.class = source.class
+	colors.reaction = source.reaction
+
+	return colors
+end
+
+local ApplyHealthColorMode = function(frame, profile)
+	if (not frame) then
+		return
+	end
+
+	local health = frame.Health
+	local useClassColors = not (profile and profile.useClassColors == false)
+	local onlyOnMouseover = useClassColors and profile and profile.useClassColorOnMouseoverOnly
+	local showClassColors = useClassColors and ((not onlyOnMouseover) or frame.__AzeriteUI_HealthColorMouseOver)
+	local useBlizzardColors = useClassColors and profile and profile.useBlizzardHealthColors
+
+	frame.colors = CreateHealthColors(useBlizzardColors)
+	if (health) then
+		health.colorClass = showClassColors and true or false
+		health.colorClassPet = showClassColors and true or false
+		health.colorReaction = showClassColors and true or false
+		health.colorHealth = true
+		if (health.ForceUpdate) then
+			health:ForceUpdate()
+		end
+	end
+end
+
+local UpdateMouseoverHealthColor = function(frame, profile, isMouseOver)
+	frame.__AzeriteUI_HealthColorMouseOver = isMouseOver and true or false
+	ApplyHealthColorMode(frame, profile)
 end
 
 local ApplyPriorityDebuffLayout = function(frame, profile)
@@ -561,6 +607,12 @@ local style = function(self, unit)
 	self.Health.Override = ns.API.UpdateHealth
 	self.Health.PostUpdate = Health_PostUpdate
 	self.Health.PostUpdateColor = Health_PostUpdateColor
+	self:HookScript("OnEnter", function(frame)
+		UpdateMouseoverHealthColor(frame, RaidFrame40Mod.db and RaidFrame40Mod.db.profile or defaults.profile, true)
+	end)
+	self:HookScript("OnLeave", function(frame)
+		UpdateMouseoverHealthColor(frame, RaidFrame40Mod.db and RaidFrame40Mod.db.profile or defaults.profile, false)
+	end)
 
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel() - 1)
@@ -582,7 +634,8 @@ local style = function(self, unit)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
 	healthPreview:SetOrientation(db.HealthBarOrientation)
 	healthPreview:SetSparkTexture("")
-	healthPreview:SetAlpha(.5)
+		healthPreview:SetAlpha(0)
+		healthPreview:Hide()
 	healthPreview:DisableSmoothing(true)
 
 	self.Health.Preview = healthPreview
@@ -599,7 +652,9 @@ local style = function(self, unit)
 	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	self.HealthPrediction.PostUpdate = HealPredict_PostUpdate
+	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Temporary rollback: broken white prediction overlay covers raid health bars.
+	self.HealthPrediction:SetAlpha(0)
+	self.HealthPrediction:Hide()
 
 	-- Cast Overlay
 	--------------------------------------------
@@ -700,6 +755,8 @@ local style = function(self, unit)
 		absorb:SetStatusBarTexture(db.HealthBarTexture)
 		absorb:SetStatusBarColor(unpack(db.HealthAbsorbColor))
 		absorb:SetSparkMap(db.HealthBarSparkMap)
+		absorb:SetAlpha(0)
+		absorb:Hide()
 
 		local orientation
 		if (db.HealthBarOrientation == "UP") then
@@ -713,7 +770,7 @@ local style = function(self, unit)
 		end
 		absorb:SetOrientation(orientation)
 
-		self.HealthPrediction.absorbBar = absorb
+		-- self.HealthPrediction.absorbBar = absorb -- Temporary rollback: broken absorb overlay covers raid health bars.
 	end
 
 	-- Readycheck
@@ -1187,6 +1244,7 @@ end
 RaidFrame40Mod.UpdateUnits = function(self)
 	if (not self:GetFrame()) then return end
 	for frame in next,Units do
+		ApplyHealthColorMode(frame, self.db.profile)
 		ApplyPriorityDebuffLayout(frame, self.db.profile)
 		if (self.db.profile.useRangeIndicator) then
 			frame:EnableElement("Range")
@@ -1219,6 +1277,10 @@ RaidFrame40Mod.CreateUnitFrames = function(self)
 	-- Embed our custom methods
 	for method,func in next,GroupHeader do
 		self.frame.content[method] = func
+	end
+
+	for _, frame in ipairs({ self.frame.content:GetChildren() }) do
+		ApplyHealthColorMode(frame, self.db and self.db.profile or defaults.profile)
 	end
 
 	-- Sometimes some elements are wrong or "get stuck" upon exiting the editmode.

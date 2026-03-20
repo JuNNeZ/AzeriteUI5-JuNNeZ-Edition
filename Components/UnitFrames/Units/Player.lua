@@ -1182,7 +1182,7 @@ end
 
 local ApplyPlayerPowerValueAlpha = function(frame)
 	if (ns.UnitFrame and ns.UnitFrame.ApplyPowerValueAlpha) then
-		ns.UnitFrame.ApplyPowerValueAlpha(frame)
+		ns.UnitFrame.ApplyPowerValueAlpha(frame, "player")
 	end
 end
 

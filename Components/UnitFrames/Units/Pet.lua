@@ -351,7 +351,8 @@ local style = function(self, unit)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
 	healthPreview:SetOrientation(db.HealthBarOrientation)
 	healthPreview:SetSparkTexture("")
-	healthPreview:SetAlpha(.5)
+		healthPreview:SetAlpha(0)
+		healthPreview:Hide()
 	healthPreview:DisableSmoothing(true)
 
 	self.Health.Preview = healthPreview
@@ -368,7 +369,9 @@ local style = function(self, unit)
 	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	self.HealthPrediction.PostUpdate = HealPredict_PostUpdate
+	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Temporary rollback: broken white prediction overlay covers pet health bars.
+	self.HealthPrediction:SetAlpha(0)
+	self.HealthPrediction:Hide()
 
 	-- Cast Overlay
 	--------------------------------------------
@@ -438,6 +441,8 @@ local style = function(self, unit)
 		absorb:SetStatusBarTexture(db.HealthBarTexture)
 		absorb:SetStatusBarColor(unpack(db.HealthAbsorbColor))
 		absorb:SetSparkMap(db.HealthBarSparkMap)
+		absorb:SetAlpha(0)
+		absorb:Hide()
 
 		local orientation
 		if (db.HealthBarOrientation == "UP") then
@@ -451,7 +456,7 @@ local style = function(self, unit)
 		end
 		absorb:SetOrientation(orientation)
 
-		self.HealthPrediction.absorbBar = absorb
+		-- self.HealthPrediction.absorbBar = absorb -- Temporary rollback: broken absorb overlay covers pet health bars.
 	end
 
 	-- Target Highlight

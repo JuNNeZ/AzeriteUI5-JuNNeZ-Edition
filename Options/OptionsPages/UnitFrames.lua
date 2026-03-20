@@ -127,26 +127,6 @@ local GenerateOptions = function()
 				set = function(info,val) setter(info, not val) end,
 				get = function(info) return not getter(info) end
 			},
-			powerValueAlpha = {
-				name = "Power Value Alpha %",
-				desc = "Set alpha for all power value text (player, mana orb, target, and alternate player frame).",
-				order = 11,
-				type = "range", width = "full", min = 0, max = 100, step = 1,
-				hidden = isdisabled,
-				set = setter,
-				get = function(info)
-					local value = getter(info)
-					if (type(value) ~= "number") then
-						return 75
-					end
-					if (value < 0) then
-						return 0
-					elseif (value > 100) then
-						return 100
-					end
-					return math.floor(value + .5)
-				end
-			}
 		}
 	}
 
@@ -316,6 +296,36 @@ local GenerateOptions = function()
 				end
 				if (value > 200) then
 					return 200
+				end
+				return math.floor(value + .5)
+			end,
+			disabled = function(info) return not getoption(info, "showPowerValue") end
+		}
+		suboptions.args.playerPowerValueAlpha = {
+			name = "Power Value Alpha %",
+			desc = "Set alpha for player-side power value text, including the player frame, mana orb, and alternate player frame.",
+			order = 350.08, type = "range", width = "full", min = 0, max = 100, step = 1, hidden = isdisabled,
+			set = function(info, val)
+				local unitFrameModule = ns:GetModule("UnitFrames", true)
+				if (unitFrameModule and unitFrameModule.db and unitFrameModule.db.profile) then
+					unitFrameModule.db.profile.playerPowerValueAlpha = val
+				end
+				module:UpdateSettings()
+			end,
+			get = function(info)
+				local unitFrameModule = ns:GetModule("UnitFrames", true)
+				local profile = unitFrameModule and unitFrameModule.db and unitFrameModule.db.profile
+				local value = profile and profile.playerPowerValueAlpha
+				if (type(value) ~= "number") then
+					value = profile and profile.powerValueAlpha
+				end
+				if (type(value) ~= "number") then
+					return 75
+				end
+				if (value < 0) then
+					return 0
+				elseif (value > 100) then
+					return 100
 				end
 				return math.floor(value + .5)
 			end,
@@ -576,6 +586,36 @@ local GenerateOptions = function()
 			end,
 			disabled = function(info) return not getoption(info, "showPowerValue") end
 		}
+		suboptions.args.targetPowerValueAlpha = {
+			name = "Power Value Alpha %",
+			desc = "Set alpha for target power value text.",
+			order = 32.15, type = "range", width = "full", min = 0, max = 100, step = 1, hidden = isdisabled,
+			set = function(info, val)
+				local unitFrameModule = ns:GetModule("UnitFrames", true)
+				if (unitFrameModule and unitFrameModule.db and unitFrameModule.db.profile) then
+					unitFrameModule.db.profile.targetPowerValueAlpha = val
+				end
+				module:UpdateSettings()
+			end,
+			get = function(info)
+				local unitFrameModule = ns:GetModule("UnitFrames", true)
+				local profile = unitFrameModule and unitFrameModule.db and unitFrameModule.db.profile
+				local value = profile and profile.targetPowerValueAlpha
+				if (type(value) ~= "number") then
+					value = profile and profile.powerValueAlpha
+				end
+				if (type(value) ~= "number") then
+					return 75
+				end
+				if (value < 0) then
+					return 0
+				elseif (value > 100) then
+					return 100
+				end
+				return math.floor(value + .5)
+			end,
+			disabled = function(info) return not getoption(info, "showPowerValue") end
+		}
 		suboptions.args.textureHeader = {
 			name = L["Texture Variations"], order = 40, type = "header", hidden = isdisabled
 		}
@@ -758,52 +798,238 @@ local GenerateOptions = function()
 		suboptions.args.visibilityHeader = {
 			name = L["Visibility"], order = offset, type = "header", hidden = isdisabled
 		}
+		suboptions.args.visibilityDescription = {
+			name = "These toggles decide which group sizes this frame family is allowed to appear in. You can enable more than one range if you want the same frame style reused across multiple group sizes.",
+			order = offset + 1, type = "description", width = "full", hidden = isdisabled
+		}
 		suboptions.args.useInParties = {
 			name = "Show in Party (2-5)",
-			desc = "Toggle whether to show while in a non-raid group of 2-6 members.",
-			order = offset + 1, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			desc = "Toggle whether to show while in a non-raid group of 2-5 members.",
+			order = offset + 10, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.useInRaid5 = {
 			name = "Show in Raid (1-5)",
 			desc = "Toggle whether to show while in a raid group of 1-5 members.",
-			order = offset + 2, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = offset + 20, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.useInRaid10 = {
 			name = "Show in Raid (6-10)",
-			desc = "Toggle whether to show while in a raid group of 1-5 members.",
-			order = offset + 3, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			desc = "Toggle whether to show while in a raid group of 6-10 members.",
+			order = offset + 30, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.useInRaid25 = {
 			name = "Show in Raid (11-25)",
-			desc = "Toggle whether to show while in a raid group of 1-5 members.",
-			order = offset + 4, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			desc = "Toggle whether to show while in a raid group of 11-25 members.",
+			order = offset + 40, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.useInRaid40 = {
 			name = "Show in Raid (26-40)",
-			desc = "Toggle whether to show while in a raid group of 1-5 members.",
-			order = offset + 5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			desc = "Toggle whether to show while in a raid group of 26-40 members.",
+			order = offset + 50, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 
 		return suboptions, module, setter, getter, setoption, getoption, isdisabled
 	end
 
+	local AddHealthColorOptions = function(suboptions, setter, getter, getoption, isdisabled, config)
+		local disabled = function(info)
+			return isdisabled(info) or getoption(info, "useClassColors") == false
+		end
+		local order = config.order or 100
+		local scope = config.scope or "group"
+		local useClassColorsDesc
+		local useBlizzardDesc
+		local mouseoverDesc
+		local summaryDesc
+
+		if (scope == "party") then
+			useClassColorsDesc = "Use class and reaction colors on party health bars. Turn this off to keep them flat health green."
+			useBlizzardDesc = "Use Blizzard's default class and reaction palette on party health bars instead of AzeriteUI's custom colors."
+			mouseoverDesc = "Keep party health bars on flat health green until you mouse over them, then show class and reaction colors."
+			summaryDesc = "Choose whether party bars stay health green, use AzeriteUI class colors, use Blizzard class colors, or only reveal class colors on mouseover."
+		else
+			local label = config.countLabel or "raid"
+			useClassColorsDesc = "Use class and reaction colors on " .. label .. " health bars. Turn this off to keep them flat health green."
+			useBlizzardDesc = "Use Blizzard's default class and reaction colors on " .. label .. " health bars instead of AzeriteUI's custom colors."
+			mouseoverDesc = "Keep " .. label .. " health bars on flat health green until you mouse over them, then show class and reaction colors."
+			summaryDesc = "Keep raid bars health green, switch to AzeriteUI class colors, switch to Blizzard class colors, or only reveal class colors on mouseover."
+		end
+
+		suboptions.args.healthColorsHeader = {
+			name = "Health Colors", order = order, type = "header", hidden = isdisabled
+		}
+		suboptions.args.healthColorsDescription = {
+			name = summaryDesc, order = order + 1, type = "description", width = "full", hidden = isdisabled
+		}
+		suboptions.args.useClassColors = {
+			name = "Use Class Colors",
+			desc = useClassColorsDesc,
+			order = order + 10, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.useBlizzardHealthColors = {
+			name = "Use Blizzard Class Colors",
+			desc = useBlizzardDesc,
+			order = order + 20, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = disabled
+		}
+		suboptions.args.useClassColorOnMouseoverOnly = {
+			name = "Only Show Class Color on Mouseover",
+			desc = mouseoverDesc,
+			order = order + 30, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = disabled
+		}
+	end
+
 	-- Party Frames
 	do
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("PartyFrames"))
+		local partyAuraConfig = ns.GetConfig("PartyFrames") or {}
+		local partyAuraGrowthXValues = {
+			LEFT = "Left",
+			RIGHT = "Right"
+		}
+		local partyAuraGrowthYValues = {
+			UP = "Up",
+			DOWN = "Down"
+		}
 		suboptions.name = L["Party Frames"]
 		suboptions.order = 150
-		suboptions.args.elementHeader = {
-			name = L["Elements"], order = 10, type = "header", hidden = isdisabled
-		}
-		suboptions.args.showAuras = {
-			name = L["Show Auras"],
-			desc = L["Toggle whether to show auras on this unit frame."],
-			order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
-		}
 		suboptions.args.showPlayer = {
 			name = L["Show player"],
 			desc = L["Toggle whether to show the player while in a party."],
-			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 2, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.elementHeader = {
+			name = L["Elements"], order = 10, type = "header", hidden = isdisabled
+		}
+		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 20, scope = "party" })
+		suboptions.args.showAuras = {
+			name = L["Show Auras"],
+			desc = L["Toggle whether to show auras on this unit frame."],
+			order = 40, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		local partyAuraSettingsDisabled = function(info)
+			return isdisabled(info) or not getoption(info, "showAuras")
+		end
+		local partyAuraCustomSettingsDisabled = function(info)
+			return partyAuraSettingsDisabled(info) or getoption(info, "partyAuraUseStockBehavior")
+		end
+		suboptions.args.partyAuraHeader = {
+			name = "Party Aura Settings",
+			order = 50, type = "header", hidden = isdisabled
+		}
+		suboptions.args.partyAuraDescription = {
+			name = "Control which party-frame auras are shown, how they grow, and how dispellable debuffs are emphasized.",
+			order = 51, type = "description", width = "full", hidden = isdisabled
+		}
+		suboptions.args.partyAuraUseStockBehavior = {
+			name = "Use AzeriteUI Stock Behavior",
+			desc = "Keep the original party aura behavior: raid/important/dispellable debuffs stay visible, helpful externals and short player buffs are kept, and dispellable debuffs are favored.",
+			order = 60, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraSettingsDisabled
+		}
+		suboptions.args.AuraSize = {
+			name = "Aura Size",
+			desc = "Resize party aura buttons.",
+			order = 70, type = "range", width = "full", min = 18, max = 42, step = 1, hidden = isdisabled,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "AuraSize")
+				if (type(value) ~= "number") then
+					return partyAuraConfig.AuraSize or 30
+				end
+				return math.floor(value + .5)
+			end,
+			disabled = partyAuraSettingsDisabled
+		}
+		suboptions.args.partyAuraDebuffScale = {
+			name = "Debuff Size %",
+			desc = "Scale harmful party auras relative to normal buffs. Use this if you want dispellable debuffs to stand out more.",
+			order = 80, type = "range", width = "full", min = 75, max = 150, step = 1, hidden = isdisabled,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "partyAuraDebuffScale")
+				if (type(value) ~= "number") then
+					return 100
+				end
+				if (value < 75) then
+					return 75
+				elseif (value > 150) then
+					return 150
+				end
+				return math.floor(value + .5)
+			end,
+			disabled = partyAuraSettingsDisabled
+		}
+		suboptions.args.AurasGrowthX = {
+			name = "Aura Growth X",
+			desc = "Choose whether party auras grow left or right.",
+			order = 90, type = "select", width = "full", hidden = isdisabled,
+			values = partyAuraGrowthXValues,
+			set = setter,
+			get = function(info)
+				return getoption(info, "AurasGrowthX") or partyAuraConfig.AurasGrowthX or "RIGHT"
+			end,
+			disabled = partyAuraSettingsDisabled
+		}
+		suboptions.args.AurasGrowthY = {
+			name = "Aura Growth Y",
+			desc = "Choose whether party auras grow up or down.",
+			order = 100, type = "select", width = "full", hidden = isdisabled,
+			values = partyAuraGrowthYValues,
+			set = setter,
+			get = function(info)
+				return getoption(info, "AurasGrowthY") or partyAuraConfig.AurasGrowthY or "DOWN"
+			end,
+			disabled = partyAuraSettingsDisabled
+		}
+		suboptions.args.partyAuraShowDispellableDebuffs = {
+			name = "Show Dispellable Debuffs",
+			desc = "Show debuffs you can remove from party members. Examples: Magic, Curse, Disease and Poison effects your class/spec can dispel.",
+			order = 110, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraCustomSettingsDisabled
+		}
+		suboptions.args.partyAuraOnlyDispellableDebuffs = {
+			name = "Only Show Dispellable Debuffs",
+			desc = "Hide non-dispellable harmful auras from the party aura row unless they are boss or important mechanics.",
+			order = 120, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraCustomSettingsDisabled
+		}
+		suboptions.args.partyAuraShowBossAndImportantDebuffs = {
+			name = "Show Boss and Important Debuffs",
+			desc = "Keep encounter-critical or Blizzard-marked important debuffs visible even if they are not dispellable.",
+			order = 130, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraCustomSettingsDisabled
+		}
+		suboptions.args.partyAuraShowOtherDebuffs = {
+			name = "Show Other Short Debuffs",
+			desc = "Show other short harmful effects that are likely relevant in combat, even if they are not dispellable.",
+			order = 140, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraCustomSettingsDisabled
+		}
+		suboptions.args.partyAuraShowHelpfulExternals = {
+			name = "Show Helpful Externals",
+			desc = "Show helpful externals and defensive cooldowns on party members. Examples: Blessing of Sacrifice, Ironbark and Pain Suppression.",
+			order = 150, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraCustomSettingsDisabled
+		}
+		suboptions.args.partyAuraShowHelpfulRaidBuffs = {
+			name = "Show Helpful Raid Buffs",
+			desc = "Show raid-relevant or Blizzard-flagged helpful buffs on party members.",
+			order = 160, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraCustomSettingsDisabled
+		}
+		suboptions.args.partyAuraShowHelpfulShortBuffs = {
+			name = "Show Short Helpful Buffs",
+			desc = "Show short player-applied buffs with duration or stacks. Examples: Renewing Mist, Earth Shield-style maintenance buffs, and similar short upkeep effects.",
+			order = 170, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraCustomSettingsDisabled
+		}
+		suboptions.args.partyAuraGlowDispellableDebuffs = {
+			name = "Glow Frame For Dispellable Debuffs",
+			desc = "Highlight the affected party frame using the debuff type color when a removable debuff is active.",
+			order = 180, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraSettingsDisabled
 		}
 		options.args.party = suboptions
 	end
@@ -813,10 +1039,11 @@ local GenerateOptions = function()
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame5"))
 		suboptions.name = L["Raid Frames"] .. " (5)"
 		suboptions.order = 160
+		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "1-5 raid health bars" })
 		suboptions.args.useRangeIndicator = {
 			name = L["Use Range Indicator"],
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],
-			order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 50, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		options.args.raid5 = suboptions
 	end
@@ -826,20 +1053,21 @@ local GenerateOptions = function()
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame25"))
 		suboptions.name = L["Raid Frames"] .. " (25)"
 		suboptions.order = 161
+		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "6-25 raid health bars" })
 		suboptions.args.useRangeIndicator = {
 			name = L["Use Range Indicator"],
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],
-			order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 50, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showPriorityDebuff = {
 			name = "Show Big Debuff",
 			desc = "Toggle whether to show the large priority debuff icon on 11-25 raid frames.",
-			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 60, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.priorityDebuffScale = {
 			name = "Big Debuff Size %",
 			desc = "Resize the large priority debuff icon on 11-25 raid frames.",
-			order = 13, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
+			order = 70, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
 			set = setter,
 			get = function(info)
 				local value = getoption(info, "priorityDebuffScale")
@@ -863,20 +1091,21 @@ local GenerateOptions = function()
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame40"))
 		suboptions.name = L["Raid Frames"] .. " (40)"
 		suboptions.order = 162
+		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "26-40 raid health bars" })
 		suboptions.args.useRangeIndicator = {
 			name = L["Use Range Indicator"],
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],
-			order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 50, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showPriorityDebuff = {
 			name = "Show Big Debuff",
 			desc = "Toggle whether to show the large priority debuff icon on 26-40 raid frames.",
-			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 60, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.priorityDebuffScale = {
 			name = "Big Debuff Size %",
 			desc = "Resize the large priority debuff icon on 26-40 raid frames.",
-			order = 13, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
+			order = 70, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
 			set = setter,
 			get = function(info)
 				local value = getoption(info, "priorityDebuffScale")

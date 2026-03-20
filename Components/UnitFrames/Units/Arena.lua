@@ -34,7 +34,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local ArenaFrameMod = ns:NewModule("ArenaFrames", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
 -- GLOBALS: CreateFrame, InCombatLockdown, Enum
--- GLOBALS: GetNumArenaOpponentSpecs, UnitIsUnit, UnitHasVehicleUI, UnitPowerType
+-- GLOBALS: GetNumArenaOpponentSpecs, RegisterAttributeDriver, UnregisterAttributeDriver, UnitIsUnit, UnitHasVehicleUI, UnitPowerType
 
 -- Lua API
 local math_abs = math.abs
@@ -92,6 +92,31 @@ local prefix = function(msg)
 	return string_gsub(msg, "*", ns.Prefix)
 end
 
+local IsRuntimeTestMode = function()
+	return (ns.db and ns.db.global and ns.db.global.runtimeUnitTestMode) and true or false
+end
+
+local ApplyTestUnitDrivers = function(self)
+	if (InCombatLockdown()) then
+		self.needHeaderUpdate = true
+		self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+		return
+	end
+
+	local header = self:GetUnitFrameOrHeader()
+	if (not header) then
+		return
+	end
+
+	for i = 1, 5 do
+		local unitButton = header:GetAttribute("child"..i)
+		if (unitButton) then
+			UnregisterAttributeDriver(unitButton, "unit")
+			RegisterAttributeDriver(unitButton, "unit", IsRuntimeTestMode() and "player" or ("arena"..i))
+		end
+	end
+end
+
 -- Element Callbacks
 --------------------------------------------
 -- Forceupdate health prediction on health updates,
@@ -109,6 +134,85 @@ local Health_PostUpdateColor = function(element, unit, r, g, b)
 	if (preview and g) then
 		preview:SetStatusBarColor(r * .7, g * .7, b * .7)
 	end
+end
+
+local GetArenaFillTexCoords = function(percent)
+	return ns.API.GetReversedHorizontalFillTexCoords(percent)
+end
+
+local NormalizeArenaDisplayPercent = function(value)
+	if (type(value) ~= "number") then
+		return nil
+	end
+	if (value <= 1) then
+		value = value * 100
+	end
+	if (value < 0) then
+		value = 0
+	elseif (value > 100) then
+		value = 100
+	end
+	return value
+end
+
+local ApplyArenaBarFillRule = function(bar, orientation)
+	if (not bar) then
+		return
+	end
+	if (orientation == "LEFT") then
+		bar:SetOrientation("HORIZONTAL")
+		if (bar.SetReverseFill) then
+			bar:SetReverseFill(true)
+		end
+	elseif (orientation == "RIGHT") then
+		bar:SetOrientation("HORIZONTAL")
+		if (bar.SetReverseFill) then
+			bar:SetReverseFill(false)
+		end
+	elseif (orientation == "DOWN") then
+		bar:SetOrientation("VERTICAL")
+		if (bar.SetReverseFill) then
+			bar:SetReverseFill(true)
+		end
+	else
+		bar:SetOrientation("VERTICAL")
+		if (bar.SetReverseFill) then
+			bar:SetReverseFill(false)
+		end
+	end
+end
+
+local UpdateArenaHealthFakeFillFromBar = function(health)
+	if (not health) then
+		return false
+	end
+	local fakeFill = health.FakeFill
+	if (not fakeFill) then
+		return false
+	end
+	local applied, percent, source = ns.API.UpdateHealthFakeFillFromUnitPercent(health, "arena1")
+	if (applied) then
+		health.safePercent = NormalizeArenaDisplayPercent(percent)
+		health.__AzeriteUI_ArenaFakeSource = (source == "api" and type(health.safePercent) ~= "number") and "api_secret" or source
+		return true
+	end
+	health.__AzeriteUI_ArenaFakeSource = "none"
+	health.safePercent = nil
+	fakeFill:SetTexCoord(GetArenaFillTexCoords(nil))
+	fakeFill:Show()
+	return false
+end
+
+local HideArenaNativeHealthVisuals = function(health)
+	ns.API.HideNativeHealthVisuals(health)
+end
+
+local SyncArenaHealthVisualState = function(health)
+	if (not health) then
+		return false
+	end
+	HideArenaNativeHealthVisuals(health)
+	return UpdateArenaHealthFakeFillFromBar(health)
 end
 
 -- Align our custom health prediction texture
@@ -375,11 +479,22 @@ local style = function(self, unit)
 	-- Health
 	--------------------------------------------
 	local health = self:CreateBar()
+	if (health.SetForceNative) then health:SetForceNative(false) end
 	health:SetFrameLevel(health:GetFrameLevel() + 2)
 	health:SetPoint(unpack(db.HealthBarPosition))
 	health:SetSize(unpack(db.HealthBarSize))
 	health:SetStatusBarTexture(db.HealthBarTexture)
-	health:SetOrientation(db.HealthBarOrientation)
+	health:DisableSmoothing(true)
+	health.__AzeriteUI_UseProductionNativeFill = true
+	health.__AzeriteUI_KeepMirrorPercentOnNoSample = false
+	health.__AzeriteUI_UseValueMirrorTexCoord = false
+	health:SetOrientation("HORIZONTAL")
+	health:SetReverseFill(true)
+	health:SetFlippedHorizontally(false)
+	health.__AzeriteUI_BaseTexCoordLeft = nil
+	health.__AzeriteUI_BaseTexCoordRight = nil
+	health.__AzeriteUI_BaseTexCoordTop = nil
+	health.__AzeriteUI_BaseTexCoordBottom = nil
 	health:SetSparkMap(db.HealthBarSparkMap)
 	health.predictThreshold = .01
 	health.colorDisconnected = true
@@ -393,6 +508,22 @@ local style = function(self, unit)
 	self.Health.PostUpdate = Health_PostUpdate
 	self.Health.PostUpdateColor = Health_PostUpdateColor
 
+	local healthFakeFill = health:CreateTexture(nil, "ARTWORK", nil, 1)
+	healthFakeFill:SetAllPoints(health)
+	healthFakeFill:SetTexture(db.HealthBarTexture)
+	healthFakeFill:SetTexCoord(GetArenaFillTexCoords(nil))
+	healthFakeFill:SetBlendMode("BLEND")
+	healthFakeFill:SetAlpha(1)
+	healthFakeFill:SetDrawLayer("ARTWORK", 1)
+	self.Health.FakeFill = healthFakeFill
+
+	ns.API.AttachScriptSafe(health, "OnMinMaxChanged", function(source)
+		SyncArenaHealthVisualState(source)
+	end)
+	ns.API.AttachScriptSafe(health, "OnValueChanged", function(source)
+		SyncArenaHealthVisualState(source)
+	end)
+
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel() - 1)
 	healthOverlay:SetAllPoints()
@@ -404,19 +535,27 @@ local style = function(self, unit)
 	healthBackdrop:SetSize(unpack(db.HealthBackdropSize))
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 	healthBackdrop:SetVertexColor(unpack(db.HealthBackdropColor))
+	healthBackdrop:SetTexCoord(GetArenaFillTexCoords(nil))
 
 	self.Health.Backdrop = healthBackdrop
 
 	local healthPreview = self:CreateBar(nil, health)
+	if (healthPreview.SetForceNative) then healthPreview:SetForceNative(true) end
 	healthPreview:SetAllPoints(health)
 	healthPreview:SetFrameLevel(health:GetFrameLevel() - 1)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
-	healthPreview:SetOrientation(db.HealthBarOrientation)
+	healthPreview.__AzeriteUI_UseValueMirrorTexCoord = false
+	healthPreview:SetTexCoord(GetArenaFillTexCoords(nil))
+	healthPreview:SetOrientation("HORIZONTAL")
+	healthPreview:SetReverseFill(true)
+	healthPreview:SetFlippedHorizontally(false)
 	healthPreview:SetSparkTexture("")
-	healthPreview:SetAlpha(.5)
+		healthPreview:SetAlpha(0)
+		healthPreview:Hide()
 	healthPreview:DisableSmoothing(true)
 
 	self.Health.Preview = healthPreview
+	SyncArenaHealthVisualState(health)
 
 	-- Health Prediction
 	--------------------------------------------
@@ -430,7 +569,9 @@ local style = function(self, unit)
 	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	self.HealthPrediction.PostUpdate = HealPredict_PostUpdate
+	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Temporary rollback: broken white prediction overlay covers arena health bars.
+	self.HealthPrediction:SetAlpha(0)
+	self.HealthPrediction:Hide()
 
 	-- Cast Overlay
 	--------------------------------------------
@@ -439,6 +580,7 @@ local style = function(self, unit)
 	castbar:SetFrameLevel(self:GetFrameLevel() + 5)
 	castbar:SetSparkMap(db.HealthBarSparkMap)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
+	ApplyArenaBarFillRule(castbar, db.HealthBarOrientation)
 	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
 	castbar:DisableSmoothing(true)
 
@@ -556,20 +698,11 @@ local style = function(self, unit)
 		absorb:SetStatusBarTexture(db.HealthBarTexture)
 		absorb:SetStatusBarColor(unpack(db.HealthAbsorbColor))
 		absorb:SetSparkMap(db.HealthBarSparkMap)
+		absorb:SetAlpha(0)
+		absorb:Hide()
+		ApplyArenaBarFillRule(absorb, db.HealthBarOrientation == "LEFT" and "RIGHT" or db.HealthBarOrientation)
 
-		local orientation
-		if (db.HealthBarOrientation == "UP") then
-			orientation = "DOWN"
-		elseif (db.HealthBarOrientation == "DOWN") then
-			orientation = "UP"
-		elseif (db.HealthBarOrientation == "LEFT") then
-			orientation = "RIGHT"
-		else
-			orientation = "LEFT"
-		end
-		absorb:SetOrientation(orientation)
-
-		self.HealthPrediction.absorbBar = absorb
+		-- self.HealthPrediction.absorbBar = absorb -- Temporary rollback: broken absorb overlay covers arena health bars.
 	end
 
 	-- Readycheck
@@ -776,7 +909,9 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	if (InCombatLockdown()) then return end
 
 	local isInInstance, instanceType = IsInInstance()
-	if (not isInInstance or (instanceType ~= "arena" and not ArenaFrameMod.db.profile.showInBattlegrounds)) then
+	if (IsRuntimeTestMode()) then
+		self.visibility = "show"
+	elseif (not isInInstance or (instanceType ~= "arena" and not ArenaFrameMod.db.profile.showInBattlegrounds)) then
 		self.visibility = "hide"
 	else
 		self.visibility = "show"
@@ -967,12 +1102,7 @@ ArenaFrameMod.CreateUnitFrames = function(self)
 	end
 
 	for i = 1,5 do
-		local unitButton
-		if (ns.IsInTestMode) then
-			unitButton = ns.UnitFrame.Spawn("player", ns.Prefix.."UnitFrame"..name..i)
-		else
-			unitButton = ns.UnitFrame.Spawn(unit..i, ns.Prefix.."UnitFrame"..name..i)
-		end
+		local unitButton = ns.UnitFrame.Spawn(unit..i, ns.Prefix.."UnitFrame"..name..i)
 
 		unitButton:SetParent(self.frame.content)
 
@@ -983,6 +1113,8 @@ ArenaFrameMod.CreateUnitFrames = function(self)
 		self.frame.content:SetFrameRef("child"..i, unitButton)
 		self.frame.content:SetAttribute("child"..i, unitButton)
 	end
+
+	ApplyTestUnitDrivers(self)
 
 	self:UpdateHeader()
 end
@@ -1068,6 +1200,7 @@ ArenaFrameMod.UpdateUnits = function(self)
 end
 
 ArenaFrameMod.Update = function(self)
+	ApplyTestUnitDrivers(self)
 	self:UpdateHeader()
 	self:UpdateUnits()
 end

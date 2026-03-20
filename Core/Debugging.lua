@@ -29,18 +29,863 @@ local Debugging = ns:NewModule("Debugging", "LibMoreEvents-1.0", "AceConsole-3.0
 -- GLOBALS: EnableAddOn, GetAddOnInfo
 
 -- Lua API
+local ipairs = ipairs
 local next = next
 local pairs = pairs
 local print = print
 local select = select
+local tostring = tostring
+local type = type
+local math_abs = math.abs
+local math_ceil = math.ceil
+local math_max = math.max
+local math_min = math.min
 local string_format = string.format
 local string_lower = string.lower
+local string_match = string.match
 local table_insert = table.insert
+local table_sort = table.sort
 local unpack = unpack
 local PrintPlayerOrbDebug
+local UpdateTestMenu
+local GetRuntimeTestModule
+local ApplyRuntimeTestPresentation
 
 local function IsDevMode()
 	return (ns and (ns.IsDevelopment or (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)))
+end
+
+local function CanUseRuntimeTestMode()
+	return ns and ns.PlayerName == "Junnez"
+end
+
+local RUNTIME_TEST_DEFS = {
+	{ key = "player", label = "Player Frame", style = "Player", module = "PlayerFrame", count = 1, layout = "single", unit = "player" },
+	{ key = "playeralt", label = "Player Alternate", style = "PlayerAlternate", module = "PlayerFrameAlternate", count = 1, layout = "single", unit = "player" },
+	{ key = "castbar", label = "Player Castbar", style = "PlayerCastBar", module = "PlayerCastBarFrame", count = 1, layout = "single", unit = "player" },
+	{ key = "classpower", label = "Class Power", style = "PlayerClassPower", module = "PlayerClassPowerFrame", count = 1, layout = "single", unit = "player" },
+	{ key = "pet", label = "Pet Frame", style = "Pet", module = "PetFrame", count = 1, layout = "single", unit = "player" },
+	{ key = "target", label = "Target Frame", style = "Target", module = "TargetFrame", count = 1, layout = "single", unit = "player" },
+	{ key = "tot", label = "Target of Target", style = "ToT", module = "ToTFrame", count = 1, layout = "single", unit = "player" },
+	{ key = "focus", label = "Focus Frame", style = "Focus", module = "FocusFrame", count = 1, layout = "single", unit = "player" },
+	{ key = "boss", label = "Boss Frames", style = "Boss", module = "BossFrames", count = 5, layout = "boss", unit = "player", prefix = "Boss" },
+	{ key = "party", label = "Party Frames", style = "Party", module = "PartyFrames", count = 5, layout = "group", unit = "player", prefix = "Party" },
+	{ key = "raid5", label = "Raid Frames (5)", style = "Raid5", module = "RaidFrame5", count = 5, layout = "group", unit = "player", prefix = "Raid" },
+	{ key = "raid25", label = "Raid Frames (25)", style = "Raid25", module = "RaidFrame25", count = 25, layout = "group", unit = "player", prefix = "Raid", headerPreview = true },
+	{ key = "raid40", label = "Raid Frames (40)", style = "Raid40", module = "RaidFrame40", count = 40, layout = "group", unit = "player", prefix = "Raid", headerPreview = true },
+	{ key = "arena", label = "Arena Frames", style = "Arena", module = "ArenaFrames", count = 5, layout = "group", unit = "player", prefix = "Arena" },
+	{ key = "nameplates", label = "Nameplate Preview", style = "NamePlates", module = "NamePlates", count = 10, layout = "nameplates", unit = "player", prefix = "Nameplate" }
+}
+
+local RUNTIME_TEST_PRESETS = {
+	{ key = "party5", label = "Party 5", sets = { party = true }, counts = { party = 5 } },
+	{ key = "raid10", label = "Raid 10", sets = { raid25 = true }, counts = { raid25 = 10 } },
+	{ key = "raid20", label = "Raid 20", sets = { raid25 = true }, counts = { raid25 = 20 } },
+	{ key = "raid25", label = "Raid 25", sets = { raid25 = true }, counts = { raid25 = 25 } },
+	{ key = "raid40", label = "Raid 40", sets = { raid40 = true }, counts = { raid40 = 40 } },
+	{ key = "arena3", label = "Arena 3", sets = { arena = true }, counts = { arena = 3 } },
+	{ key = "arena5", label = "Arena 5", sets = { arena = true }, counts = { arena = 5 } },
+	{ key = "boss5", label = "Boss 1-5", sets = { boss = true }, counts = { boss = 5 } }
+}
+
+local RUNTIME_TEST_CLASS_DISTRIBUTIONS = {
+	{ key = "mixed", label = "Mixed" },
+	{ key = "healers", label = "All Healers" },
+	{ key = "melee", label = "Melee Heavy" },
+	{ key = "duplicates", label = "Duplicate Classes" }
+}
+
+local RUNTIME_TEST_HEALTH_SCENARIOS = {
+	{ key = "full", label = "Full Health" },
+	{ key = "mixed", label = "Mixed Damage" },
+	{ key = "critical", label = "Critical" },
+	{ key = "offline", label = "Offline" },
+	{ key = "dead", label = "Dead / Ghost" },
+	{ key = "outofrange", label = "Out of Range" },
+	{ key = "aggro", label = "Aggro" }
+}
+
+local RUNTIME_TEST_AURA_SCENARIOS = {
+	{ key = "none", label = "None" },
+	{ key = "dispel", label = "Dispellable Debuffs" },
+	{ key = "boss", label = "Boss Debuffs" },
+	{ key = "mixed", label = "Mixed Debuffs" },
+	{ key = "externals", label = "Helpful Externals" },
+	{ key = "buffs", label = "Short Buffs" },
+	{ key = "priority", label = "Priority Debuff" }
+}
+
+local RUNTIME_TEST_CAST_SCENARIOS = {
+	{ key = "none", label = "None" },
+	{ key = "enemycast", label = "Enemy Cast" },
+	{ key = "enemychannel", label = "Enemy Channel" },
+	{ key = "interruptible", label = "Interruptible" },
+	{ key = "uninterruptible", label = "Uninterruptible" },
+	{ key = "playercast", label = "Player Cast" },
+	{ key = "bosscast", label = "Boss Cast" }
+}
+
+local RUNTIME_TEST_MOUSEOVER_MODES = {
+	{ key = "none", label = "None" },
+	{ key = "first", label = "First Frame" },
+	{ key = "all", label = "All Frames" }
+}
+
+local RUNTIME_TEST_NAMEPLATE_PACKS = {
+	{ key = "one", label = "1" },
+	{ key = "five", label = "5" },
+	{ key = "ten", label = "10" }
+}
+
+local RUNTIME_TEST_NAMEPLATE_VARIANTS = {
+	{ key = "enemy", label = "Enemy" },
+	{ key = "friendly", label = "Friendly" },
+	{ key = "mixed", label = "Mixed" }
+}
+
+local function GetRuntimeTestDefinition(key)
+	for _, def in ipairs(RUNTIME_TEST_DEFS) do
+		if (def.key == key) then
+			return def
+		end
+	end
+end
+
+local function FindRuntimeTestOption(options, key)
+	for index, option in ipairs(options) do
+		if (option.key == key) then
+			return option, index
+		end
+	end
+	return options[1], 1
+end
+
+local function GetRuntimeTestOptionLabel(options, key)
+	local option = FindRuntimeTestOption(options, key)
+	return option and option.label or "Unknown"
+end
+
+local function CycleRuntimeTestOption(options, key, step)
+	local _, index = FindRuntimeTestOption(options, key)
+	local count = #options
+	index = index + (step or 1)
+	if (index > count) then
+		index = 1
+	elseif (index < 1) then
+		index = count
+	end
+	return options[index].key
+end
+
+local function EnsureRuntimeTestState()
+	if (not ns or not ns.db or not ns.db.global) then
+		return nil
+	end
+	local globalDB = ns.db.global
+	globalDB.runtimeUnitTestMode = globalDB.runtimeUnitTestMode and true or false
+	globalDB.runtimeUnitTestMenuEnabled = globalDB.runtimeUnitTestMenuEnabled and true or false
+	if (type(globalDB.runtimeUnitTestSets) ~= "table") then
+		globalDB.runtimeUnitTestSets = {}
+	end
+	if (type(globalDB.runtimeUnitTestCounts) ~= "table") then
+		globalDB.runtimeUnitTestCounts = {}
+	end
+	for _, def in ipairs(RUNTIME_TEST_DEFS) do
+		if (globalDB.runtimeUnitTestSets[def.key] == nil) then
+			globalDB.runtimeUnitTestSets[def.key] = false
+		end
+		if (type(globalDB.runtimeUnitTestCounts[def.key]) ~= "number") then
+			globalDB.runtimeUnitTestCounts[def.key] = def.count
+		end
+	end
+	globalDB.runtimeUnitTestPreset = globalDB.runtimeUnitTestPreset or RUNTIME_TEST_PRESETS[1].key
+	globalDB.runtimeUnitTestClassDistribution = globalDB.runtimeUnitTestClassDistribution or RUNTIME_TEST_CLASS_DISTRIBUTIONS[1].key
+	globalDB.runtimeUnitTestHealthScenario = globalDB.runtimeUnitTestHealthScenario or RUNTIME_TEST_HEALTH_SCENARIOS[2].key
+	globalDB.runtimeUnitTestAuraScenario = globalDB.runtimeUnitTestAuraScenario or RUNTIME_TEST_AURA_SCENARIOS[1].key
+	globalDB.runtimeUnitTestCastScenario = globalDB.runtimeUnitTestCastScenario or RUNTIME_TEST_CAST_SCENARIOS[1].key
+	globalDB.runtimeUnitTestMouseoverMode = globalDB.runtimeUnitTestMouseoverMode or RUNTIME_TEST_MOUSEOVER_MODES[1].key
+	globalDB.runtimeUnitTestNameplatePack = globalDB.runtimeUnitTestNameplatePack or RUNTIME_TEST_NAMEPLATE_PACKS[1].key
+	globalDB.runtimeUnitTestNameplateVariant = globalDB.runtimeUnitTestNameplateVariant or RUNTIME_TEST_NAMEPLATE_VARIANTS[1].key
+	globalDB.runtimeUnitTestDebugOverlay = globalDB.runtimeUnitTestDebugOverlay ~= false
+	globalDB.runtimeUnitTestShowOnlyOne = globalDB.runtimeUnitTestShowOnlyOne and true or false
+	globalDB.runtimeUnitTestHidePrimary = globalDB.runtimeUnitTestHidePrimary and true or false
+	globalDB.runtimeUnitTestCompactSpacing = globalDB.runtimeUnitTestCompactSpacing and true or false
+	globalDB.runtimeUnitTestLargeSpacing = globalDB.runtimeUnitTestLargeSpacing and true or false
+	globalDB.runtimeUnitTestMaxVisible = globalDB.runtimeUnitTestMaxVisible and true or false
+	return globalDB
+end
+
+local function IsRuntimeTestMode()
+	local globalDB = EnsureRuntimeTestState()
+	return globalDB and globalDB.runtimeUnitTestMenuEnabled and true or false
+end
+
+local function IsRuntimeTestSetEnabled(key)
+	local globalDB = EnsureRuntimeTestState()
+	return globalDB and globalDB.runtimeUnitTestSets and globalDB.runtimeUnitTestSets[key] and true or false
+end
+
+local function HasEnabledRuntimeTestSets()
+	for _, def in ipairs(RUNTIME_TEST_DEFS) do
+		if (IsRuntimeTestSetEnabled(def.key)) then
+			return true
+		end
+	end
+	return false
+end
+
+local function SetRuntimeTestSetEnabled(key, enabled)
+	local globalDB = EnsureRuntimeTestState()
+	if (globalDB and globalDB.runtimeUnitTestSets and GetRuntimeTestDefinition(key)) then
+		globalDB.runtimeUnitTestSets[key] = enabled and true or false
+	end
+end
+
+local function SetAllRuntimeTestSets(enabled)
+	for _, def in ipairs(RUNTIME_TEST_DEFS) do
+		SetRuntimeTestSetEnabled(def.key, enabled)
+	end
+end
+
+local function GetRuntimeTestStateValue(key)
+	local globalDB = EnsureRuntimeTestState()
+	return globalDB and globalDB[key]
+end
+
+local function SetRuntimeTestStateValue(key, value)
+	local globalDB = EnsureRuntimeTestState()
+	if (globalDB) then
+		globalDB[key] = value
+	end
+end
+
+local function GetRuntimeTestFrameCount(def)
+	local globalDB = EnsureRuntimeTestState()
+	if (not globalDB) then
+		return def.count
+	end
+
+	local count = globalDB.runtimeUnitTestCounts[def.key] or def.count
+	if (def.key == "nameplates") then
+		local pack = globalDB.runtimeUnitTestNameplatePack
+		if (pack == "five") then
+			count = 5
+		elseif (pack == "ten") then
+			count = 10
+		else
+			count = 1
+		end
+	end
+
+	if (globalDB.runtimeUnitTestMaxVisible) then
+		count = def.count
+	end
+	if (globalDB.runtimeUnitTestShowOnlyOne and def.count > 1) then
+		count = 1
+	end
+
+	return math_max(1, math_min(def.count, count))
+end
+
+local function GetRuntimeTestStartIndex(def)
+	local globalDB = EnsureRuntimeTestState()
+	if (not globalDB or not globalDB.runtimeUnitTestHidePrimary) then
+		return 1
+	end
+	if (globalDB.runtimeUnitTestShowOnlyOne) then
+		return 1
+	end
+	if (def.count > 1) then
+		return 2
+	end
+	return 1
+end
+
+local function ApplyRuntimeTestPreset()
+	local globalDB = EnsureRuntimeTestState()
+	if (not globalDB) then
+		return
+	end
+
+	for _, def in ipairs(RUNTIME_TEST_DEFS) do
+		globalDB.runtimeUnitTestSets[def.key] = false
+		globalDB.runtimeUnitTestCounts[def.key] = def.count
+	end
+
+	local preset = FindRuntimeTestOption(RUNTIME_TEST_PRESETS, globalDB.runtimeUnitTestPreset)
+	if (preset and preset.sets) then
+		for key, enabled in pairs(preset.sets) do
+			globalDB.runtimeUnitTestSets[key] = enabled and true or false
+		end
+	end
+	if (preset and preset.counts) then
+		for key, count in pairs(preset.counts) do
+			globalDB.runtimeUnitTestCounts[key] = count
+		end
+	end
+end
+
+local function SetRuntimeTestMode(enabled)
+	local globalDB = EnsureRuntimeTestState()
+	if (not globalDB) then
+		return
+	end
+	if (enabled and not CanUseRuntimeTestMode()) then
+		enabled = false
+	end
+	globalDB.runtimeUnitTestMenuEnabled = enabled and true or false
+	-- Keep the older raid5/arena-only test hook dormant.
+	globalDB.runtimeUnitTestMode = false
+	if (enabled and not HasEnabledRuntimeTestSets()) then
+		ApplyRuntimeTestPreset()
+	end
+	if (not enabled) then
+		globalDB.runtimeUnitTestMenuEnabled = false
+	end
+	if (Debugging and Debugging.RefreshRuntimeTestPreviews) then
+		Debugging:RefreshRuntimeTestPreviews()
+	end
+end
+
+local function GetRelativePointAnchor(point)
+	point = type(point) == "string" and point:upper() or "TOP"
+	if (point == "TOP") then
+		return "BOTTOM", 0, -1
+	elseif (point == "BOTTOM") then
+		return "TOP", 0, 1
+	elseif (point == "LEFT") then
+		return "RIGHT", 1, 0
+	elseif (point == "RIGHT") then
+		return "LEFT", -1, 0
+	elseif (point == "TOPLEFT") then
+		return "BOTTOMRIGHT", 1, -1
+	elseif (point == "TOPRIGHT") then
+		return "BOTTOMLEFT", -1, -1
+	elseif (point == "BOTTOMLEFT") then
+		return "TOPRIGHT", 1, 1
+	elseif (point == "BOTTOMRIGHT") then
+		return "TOPLEFT", -1, 1
+	end
+	return "BOTTOM", 0, -1
+end
+
+local function GetPreviewLabel(def, index)
+	if (def.count == 1) then
+		return def.label
+	end
+	return string_format("%s %d", def.prefix or def.label, index)
+end
+
+local function GetRuntimeTestMetadata(index)
+	local distribution = GetRuntimeTestStateValue("runtimeUnitTestClassDistribution")
+	local mixedClasses = { "WARRIOR", "PRIEST", "MAGE", "DRUID", "PALADIN", "ROGUE", "HUNTER", "SHAMAN", "WARLOCK", "MONK", "DEATHKNIGHT", "DEMONHUNTER", "EVOKER" }
+	local healerClasses = { "PRIEST", "DRUID", "PALADIN", "SHAMAN", "MONK", "EVOKER" }
+	local meleeClasses = { "WARRIOR", "PALADIN", "ROGUE", "DEATHKNIGHT", "DEMONHUNTER", "MONK", "SHAMAN" }
+	local duplicateClass = { "MAGE" }
+	local role = "DAMAGER"
+	local classToken = "MAGE"
+
+	if (distribution == "healers") then
+		classToken = healerClasses[((index - 1) % #healerClasses) + 1]
+		role = "HEALER"
+	elseif (distribution == "melee") then
+		classToken = meleeClasses[((index - 1) % #meleeClasses) + 1]
+		role = (index == 1) and "TANK" or "DAMAGER"
+	elseif (distribution == "duplicates") then
+		classToken = duplicateClass[1]
+		role = "DAMAGER"
+	else
+		classToken = mixedClasses[((index - 1) % #mixedClasses) + 1]
+		local roleCycle = { "TANK", "HEALER", "DAMAGER" }
+		role = roleCycle[((index - 1) % #roleCycle) + 1]
+	end
+
+	return classToken, role
+end
+
+local function GetRuntimeTestHealthState(index)
+	local scenario = GetRuntimeTestStateValue("runtimeUnitTestHealthScenario")
+	if (scenario == "full") then
+		return 100, "Ready", 1
+	elseif (scenario == "critical") then
+		return 12 + ((index - 1) % 3) * 4, "Critical", 1
+	elseif (scenario == "offline") then
+		return 0, "Offline", .4
+	elseif (scenario == "dead") then
+		return 0, "Dead", .55
+	elseif (scenario == "outofrange") then
+		return 74, "Out of Range", .45
+	elseif (scenario == "aggro") then
+		return 68, "Aggro", 1
+	end
+
+	local values = { 100, 83, 67, 49, 31, 17 }
+	local value = values[((index - 1) % #values) + 1]
+	local label = (value <= 25 and "Danger") or (value <= 50 and "Wounded") or "Stable"
+	return value, label, 1
+end
+
+local function IsRuntimeTestMouseoverActive(index)
+	local mode = GetRuntimeTestStateValue("runtimeUnitTestMouseoverMode")
+	return mode == "all" or (mode == "first" and index == 1)
+end
+
+local function GetRuntimeTestAuraData()
+	local scenario = GetRuntimeTestStateValue("runtimeUnitTestAuraScenario")
+	if (scenario == "dispel") then
+		return {
+			{ texture = "Interface\\Icons\\Spell_Holy_DispelMagic", color = { .2, .6, 1 }, label = "Magic" },
+			{ texture = "Interface\\Icons\\Spell_Nature_RemoveCurse", color = { .6, .2, 1 }, label = "Curse" },
+			{ texture = "Interface\\Icons\\Spell_Nature_NullifyPoison", color = { .2, 1, .2 }, label = "Poison" }
+		}
+	elseif (scenario == "boss") then
+		return {
+			{ texture = "Interface\\Icons\\Ability_Creature_Cursed_02", color = { 1, .2, .2 }, label = "Boss" },
+			{ texture = "Interface\\Icons\\Ability_Druid_InfectedWounds", color = { 1, .6, .1 }, label = "Major" }
+		}
+	elseif (scenario == "mixed") then
+		return {
+			{ texture = "Interface\\Icons\\Ability_Creature_Poison_05", color = { .2, 1, .2 }, label = "Poison" },
+			{ texture = "Interface\\Icons\\Spell_Shadow_CurseOfTounges", color = { .6, .2, 1 }, label = "Curse" },
+			{ texture = "Interface\\Icons\\Spell_Shadow_AbominationExplosion", color = { .8, .8, .2 }, label = "Disease" }
+		}
+	elseif (scenario == "externals") then
+		return {
+			{ texture = "Interface\\Icons\\Spell_Holy_GuardianSpirit", color = { 1, 1, 1 }, label = "GS" },
+			{ texture = "Interface\\Icons\\INV_Ability_Paladin_BlessedHands", color = { 1, .8, .2 }, label = "BoP" }
+		}
+	elseif (scenario == "buffs") then
+		return {
+			{ texture = "Interface\\Icons\\Spell_Holy_PowerWordShield", color = { .4, .8, 1 }, label = "Shield" },
+			{ texture = "Interface\\Icons\\Spell_Nature_Rejuvenation", color = { .3, 1, .3 }, label = "HoT" },
+			{ texture = "Interface\\Icons\\Spell_Holy_SealOfSacrifice", color = { 1, .9, .3 }, label = "DR" }
+		}
+	elseif (scenario == "priority") then
+		return {
+			{ texture = "Interface\\Icons\\Ability_Creature_Disease_02", color = { 1, .15, .15 }, label = "Priority" }
+		}
+	end
+	return {}
+end
+
+local function GetRuntimeTestCastData(index)
+	local scenario = GetRuntimeTestStateValue("runtimeUnitTestCastScenario")
+	if (scenario == "none") then
+		return nil
+	elseif (scenario == "enemychannel") then
+		return { label = "Enemy Channel", texture = "Interface\\Icons\\Spell_Shadow_MindFlay", progress = 28 + (index * 9), reverse = true, color = { .45, .65, 1 } }
+	elseif (scenario == "interruptible" or scenario == "interrupt") then
+		return { label = "Interruptible", texture = "Interface\\Icons\\Spell_Frost_FrostBolt02", progress = 62, reverse = false, color = { 1, .75, .2 }, notInterruptible = false }
+	elseif (scenario == "uninterruptible") then
+		return { label = "Uninterruptible", texture = "Interface\\Icons\\Spell_Shadow_ShadowBolt", progress = 62, reverse = false, color = { 1, .35, .35 }, notInterruptible = true }
+	elseif (scenario == "playercast") then
+		return { label = "Player Cast", texture = "Interface\\Icons\\Spell_Arcane_Arcane01", progress = 54, reverse = false, color = { 1, .8, .2 } }
+	elseif (scenario == "bosscast") then
+		return { label = "Boss Ability", texture = "Interface\\Icons\\Ability_BossMagmaw_MoltenTantrum", progress = 74, reverse = false, color = { 1, .25, .25 } }
+	end
+	return { label = "Enemy Cast", texture = "Interface\\Icons\\Spell_Fire_Fireball02", progress = 48 + (index * 7), reverse = false, color = { 1, .55, .2 } }
+end
+
+local function ResolveRuntimeTestColor(color, fallbackR, fallbackG, fallbackB)
+	if (type(color) == "table") then
+		if (color.r and color.g and color.b) then
+			return color.r, color.g, color.b
+		end
+		return color[1] or fallbackR, color[2] or fallbackG, color[3] or fallbackB
+	end
+	return fallbackR, fallbackG, fallbackB
+end
+
+local function GetRuntimeTestModuleProfile(def)
+	local module = GetRuntimeTestModule(def)
+	return module and module.db and module.db.profile
+end
+
+local function GetRuntimeTestClassColor(def, classToken)
+	local profile = GetRuntimeTestModuleProfile(def)
+	local useBlizzardColors = profile and profile.useBlizzardHealthColors
+	if (useBlizzardColors) then
+		local blizzClass = (ns.oUF and ns.oUF.colors and ns.oUF.colors.class and ns.oUF.colors.class[classToken]) or (ns.Colors and ns.Colors.blizzclass and ns.Colors.blizzclass[classToken])
+		return ResolveRuntimeTestColor(blizzClass, .9, .9, .9)
+	end
+	local classColor = ns.Colors and ns.Colors.class and ns.Colors.class[classToken]
+	return ResolveRuntimeTestColor(classColor, .9, .9, .9)
+end
+
+local function GetRuntimeTestHealthColorMode(def, isMouseover)
+	local profile = GetRuntimeTestModuleProfile(def)
+	local useClassColors = true
+	local mouseoverOnly = false
+	if (profile and profile.useClassColors == false) then
+		useClassColors = false
+	end
+	if (useClassColors and profile and profile.useClassColorOnMouseoverOnly) then
+		mouseoverOnly = true
+	end
+	return useClassColors and ((not mouseoverOnly) or isMouseover), mouseoverOnly
+end
+
+local function ApplyRuntimeTestBarColor(statusBar, r, g, b)
+	if (not statusBar) then
+		return
+	end
+	if (statusBar.SetStatusBarColor) then
+		statusBar:SetStatusBarColor(r, g, b, 1)
+	end
+	if (statusBar.GetStatusBarTexture) then
+		local texture = statusBar:GetStatusBarTexture()
+		if (texture and texture.SetVertexColor) then
+			texture:SetVertexColor(r, g, b, 1)
+		end
+	end
+end
+
+local function ApplyRuntimeTestCastbar(castbar, castData)
+	if (not castbar) then
+		return false
+	end
+	if (not castData) then
+		castbar:Hide()
+		return true
+	end
+
+	local progress = math_max(0, math_min(100, castData.progress or 0))
+	castbar:SetMinMaxValues(0, 100)
+	if (castbar.SetReverseFill) then
+		castbar:SetReverseFill(castData.reverse and true or false)
+	end
+	castbar.notInterruptible = castData.notInterruptible and true or false
+	castbar:SetValue(progress)
+	ApplyRuntimeTestBarColor(castbar, castData.color[1], castData.color[2], castData.color[3])
+
+	if (castbar.Text and castbar.Text.SetText) then
+		castbar.Text:SetText(castData.label)
+	end
+	if (castbar.Time and castbar.Time.SetFormattedText) then
+		castbar.Time:SetFormattedText("%.1f", math_max(0, (100 - progress) / 20))
+	end
+	if (castbar.Delay and castbar.Delay.SetText) then
+		castbar.Delay:SetText("")
+	end
+	if (castbar.SafeZone) then
+		castbar.SafeZone:Hide()
+	end
+	if (castbar.Shield and castbar.Shield.SetShown) then
+		castbar.Shield:SetShown(castData.notInterruptible and true or false)
+	end
+
+	castbar:Show()
+	return true
+end
+
+local function GetRuntimeTestNameplateVariant(index)
+	local variant = GetRuntimeTestStateValue("runtimeUnitTestNameplateVariant")
+	if (variant == "friendly") then
+		return "Friendly"
+	elseif (variant == "mixed") then
+		return (index % 2 == 0) and "Friendly" or "Enemy"
+	end
+	return "Enemy"
+end
+
+local function EnsureRuntimeTestWidgets(frame)
+	if (frame.__AzeriteUI_RuntimeTestWidgets) then
+		return frame.__AzeriteUI_RuntimeTestWidgets
+	end
+
+	local widgets = {}
+	local overlay = CreateFrame("Frame", nil, frame)
+	overlay:SetAllPoints()
+	overlay:SetFrameLevel(frame:GetFrameLevel() + 30)
+	widgets.overlay = overlay
+
+	local backdrop = overlay:CreateTexture(nil, "ARTWORK", nil, 1)
+	backdrop:SetPoint("TOPLEFT", 2, -2)
+	backdrop:SetSize(232, 30)
+	backdrop:SetColorTexture(0, 0, 0, .55)
+	widgets.backdrop = backdrop
+
+	local label = overlay:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	label:SetPoint("TOPLEFT", 8, -6)
+	label:SetWidth(220)
+	label:SetJustifyH("LEFT")
+	widgets.label = label
+
+	local state = overlay:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	state:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
+	state:SetWidth(220)
+	state:SetJustifyH("LEFT")
+	widgets.state = state
+
+	local auraFrame = CreateFrame("Frame", nil, overlay)
+	auraFrame:SetPoint("TOPRIGHT", -4, -4)
+	auraFrame:SetSize(60, 18)
+	widgets.auraFrame = auraFrame
+	widgets.auras = {}
+
+	local castbar = CreateFrame("StatusBar", nil, overlay)
+	castbar:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, -6)
+	castbar:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, -6)
+	castbar:SetHeight(10)
+	castbar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+	castbar:SetMinMaxValues(0, 100)
+	castbar:SetFrameLevel(overlay:GetFrameLevel() + 1)
+	local castBG = castbar:CreateTexture(nil, "BACKGROUND")
+	castBG:SetAllPoints()
+	castBG:SetColorTexture(.05, .05, .05, .8)
+	local castText = overlay:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	castText:SetPoint("BOTTOMLEFT", castbar, "TOPLEFT", 0, 2)
+	castText:SetJustifyH("LEFT")
+	local castIcon = overlay:CreateTexture(nil, "ARTWORK")
+	castIcon:SetPoint("RIGHT", castbar, "LEFT", -4, 0)
+	castIcon:SetSize(14, 14)
+	widgets.castbar = castbar
+	widgets.castText = castText
+	widgets.castIcon = castIcon
+
+	local classPowerFrame = CreateFrame("Frame", nil, overlay)
+	classPowerFrame:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, -24)
+	classPowerFrame:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, -24)
+	classPowerFrame:SetHeight(10)
+	widgets.classPowerFrame = classPowerFrame
+	widgets.classPowerPoints = {}
+	for pointIndex = 1,6 do
+		local point = CreateFrame("StatusBar", nil, classPowerFrame)
+		point:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+		point:SetMinMaxValues(0, 1)
+		point:SetValue(1)
+		point:SetHeight(10)
+		point:SetWidth(18)
+		if (pointIndex == 1) then
+			point:SetPoint("LEFT", classPowerFrame, "LEFT", 0, 0)
+		else
+			point:SetPoint("LEFT", widgets.classPowerPoints[pointIndex - 1], "RIGHT", 4, 0)
+		end
+		local bg = point:CreateTexture(nil, "BACKGROUND")
+		bg:SetAllPoints()
+		bg:SetColorTexture(.05, .05, .05, .8)
+		point.bg = bg
+		widgets.classPowerPoints[pointIndex] = point
+	end
+
+	frame.__AzeriteUI_RuntimeTestWidgets = widgets
+	return widgets
+end
+
+local function GetRuntimeTestFallbackSize(def)
+	if (def.key == "castbar") then
+		local config = ns.GetConfig and ns.GetConfig("PlayerCastBar")
+		local size = config and config.CastBarSize
+		return (size and size[1] or 128) + 16, (size and size[2] or 11) + 16
+	elseif (def.key == "classpower") then
+		local config = ns.GetConfig and ns.GetConfig("PlayerClassPower")
+		local size = config and config.ClassPowerFrameSize
+		return size and size[1] or 124, size and size[2] or 32
+	elseif (def.key == "party") then
+		local config = ns.GetConfig and ns.GetConfig("PartyFrames")
+		local size = config and config.UnitSize
+		return size and size[1] or 96, size and size[2] or 30
+	elseif (def.key == "raid5" or def.key == "raid25" or def.key == "raid40") then
+		local config = ns.GetConfig and ns.GetConfig("RaidFrames")
+		local size = config and config.UnitSize
+		return size and size[1] or 66, size and size[2] or 36
+	elseif (def.key == "arena" or def.key == "boss") then
+		return 112, 24
+	end
+	return 112, 24
+end
+
+local function CreateRuntimeTestFallbackFrame(def, parent)
+	local width, height = GetRuntimeTestFallbackSize(def)
+	local frame = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate")
+	frame:SetSize(width, height)
+	frame:EnableMouse(true)
+	if (ns.UnitFrame and ns.UnitFrame.InitializeUnitFrame) then
+		ns.UnitFrame.InitializeUnitFrame(frame)
+	end
+	frame:RegisterForClicks("AnyUp")
+
+	local health = CreateFrame("StatusBar", nil, frame)
+	health:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+	health:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+	health:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+	health:SetMinMaxValues(0, 100)
+	health:SetValue(100)
+	local backdrop = health:CreateTexture(nil, "BACKGROUND")
+	backdrop:SetAllPoints()
+	backdrop:SetColorTexture(.08, .08, .08, .85)
+	health.backdrop = backdrop
+	frame.Health = health
+
+	local name = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	name:SetPoint("CENTER", frame, "CENTER", 0, 0)
+	name:SetJustifyH("CENTER")
+	frame.Name = name
+
+	return frame
+end
+
+local function SetupRuntimeTestInteraction(frame, def, index)
+	if (not frame) then
+		return
+	end
+
+	frame.__AzeriteUI_RuntimeTestDef = def
+	frame.__AzeriteUI_RuntimeTestIndex = index
+	if (frame.__AzeriteUI_RuntimeTestSavedUnit == nil) then
+		frame.__AzeriteUI_RuntimeTestSavedUnit = frame.unit
+	end
+	frame.unit = frame.unit or "player"
+	frame:EnableMouse(true)
+	if (frame.RegisterForClicks) then
+		frame:RegisterForClicks("AnyUp")
+	end
+	if (frame.SetAttribute) then
+		if (frame.__AzeriteUI_RuntimeTestSavedUnitAttribute == nil and frame.GetAttribute) then
+			frame.__AzeriteUI_RuntimeTestSavedUnitAttribute = frame:GetAttribute("unit")
+		end
+		if (frame.__AzeriteUI_RuntimeTestSavedType1Attribute == nil and frame.GetAttribute) then
+			frame.__AzeriteUI_RuntimeTestSavedType1Attribute = frame:GetAttribute("*type1") or frame:GetAttribute("type1")
+		end
+		frame:SetAttribute("unit", frame.unit)
+		frame:SetAttribute("*type1", "target")
+	end
+
+	-- Keep the synthetic menu state, but let real hover override it.
+	if (not frame.__AzeriteUI_RuntimeTestInteractionHooked and frame.HookScript) then
+		frame.__AzeriteUI_RuntimeTestInteractionHooked = true
+		frame:HookScript("OnEnter", function(self)
+			self.__AzeriteUI_RuntimeTestHovered = true
+			if (IsRuntimeTestMode() and self.__AzeriteUI_RuntimeTestDef and self.__AzeriteUI_RuntimeTestIndex) then
+				ApplyRuntimeTestPresentation(self, self.__AzeriteUI_RuntimeTestDef, self.__AzeriteUI_RuntimeTestIndex)
+			end
+		end)
+		frame:HookScript("OnLeave", function(self)
+			self.__AzeriteUI_RuntimeTestHovered = nil
+			if (IsRuntimeTestMode() and self.__AzeriteUI_RuntimeTestDef and self.__AzeriteUI_RuntimeTestIndex) then
+				ApplyRuntimeTestPresentation(self, self.__AzeriteUI_RuntimeTestDef, self.__AzeriteUI_RuntimeTestIndex)
+			end
+		end)
+	end
+end
+
+ApplyRuntimeTestPresentation = function(frame, def, index)
+	local classToken, role = GetRuntimeTestMetadata(index)
+	local healthPct, stateLabel, alpha = GetRuntimeTestHealthState(index)
+	local hovered = (frame and frame.__AzeriteUI_RuntimeTestHovered) and true or IsRuntimeTestMouseoverActive(index)
+	local widgets = EnsureRuntimeTestWidgets(frame)
+	local classR, classG, classB = GetRuntimeTestClassColor(def, classToken)
+	local baseR, baseG, baseB = ResolveRuntimeTestColor(ns.Colors and ns.Colors.green, .1, .9, .1)
+	local showClassColors = GetRuntimeTestHealthColorMode(def, hovered)
+	local classLabel = (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classToken]) or classToken
+	local previewLabel = GetPreviewLabel(def, index)
+	local auraScenarioLabel = GetRuntimeTestOptionLabel(RUNTIME_TEST_AURA_SCENARIOS, GetRuntimeTestStateValue("runtimeUnitTestAuraScenario"))
+
+	if (def.key == "nameplates") then
+		local variant = GetRuntimeTestNameplateVariant(index)
+		previewLabel = string_format("%s %s", variant, previewLabel)
+		if (not hovered) then
+			if (variant == "Friendly") then
+				baseR, baseG, baseB = .2, .85, .35
+			else
+				baseR, baseG, baseB = .9, .2, .15
+			end
+		end
+	end
+
+	frame:SetAlpha(alpha or 1)
+	if (frame.Name and frame.Name.SetText) then
+		frame.Name:SetText(previewLabel)
+	end
+
+	if (frame.Health and frame.Health.SetMinMaxValues and frame.Health.SetValue) then
+		frame.Health:SetMinMaxValues(0, 100)
+		frame.Health:SetValue(healthPct)
+		frame.Health.colorClass = false
+		frame.Health.colorClassPet = false
+		frame.Health.colorReaction = false
+		frame.Health.colorHealth = false
+		if (showClassColors) then
+			ApplyRuntimeTestBarColor(frame.Health, classR, classG, classB)
+		else
+			ApplyRuntimeTestBarColor(frame.Health, baseR, baseG, baseB)
+		end
+		if (frame.Health.Preview) then
+			if (showClassColors) then
+				ApplyRuntimeTestBarColor(frame.Health.Preview, classR * .7, classG * .7, classB * .7)
+			else
+				ApplyRuntimeTestBarColor(frame.Health.Preview, baseR * .7, baseG * .7, baseB * .7)
+			end
+		end
+	end
+
+	if (widgets) then
+		local showOverlay = GetRuntimeTestStateValue("runtimeUnitTestDebugOverlay")
+		widgets.overlay:Show()
+		widgets.backdrop:SetShown(showOverlay)
+		widgets.label:SetText(string_format("%s | %s | %s", previewLabel, role, classLabel))
+		widgets.state:SetText(string_format("%s %d%% | %s", stateLabel, healthPct, auraScenarioLabel))
+		widgets.label:SetTextColor(classR, classG, classB)
+		widgets.label:SetShown(showOverlay)
+		widgets.state:SetShown(showOverlay)
+
+		local auraData = GetRuntimeTestAuraData()
+		for iconIndex = 1,3 do
+			local icon = widgets.auras[iconIndex]
+			if (not icon) then
+				icon = widgets.auraFrame:CreateTexture(nil, "ARTWORK")
+				icon:SetSize(16, 16)
+				icon:SetPoint("RIGHT", widgets.auraFrame, "RIGHT", -((iconIndex - 1) * 18), 0)
+				widgets.auras[iconIndex] = icon
+			end
+			local aura = auraData[iconIndex]
+			if (aura) then
+				icon:SetTexture(aura.texture)
+				icon:SetVertexColor(aura.color[1], aura.color[2], aura.color[3], 1)
+				icon:Show()
+			else
+				icon:Hide()
+			end
+		end
+		widgets.auraFrame:SetShown(#auraData > 0)
+
+		local castData = GetRuntimeTestCastData(index)
+		local usedNativeCastbar = ApplyRuntimeTestCastbar(frame.Castbar, castData)
+		if (castData and not usedNativeCastbar) then
+			local progress = math_max(0, math_min(100, castData.progress or 0))
+			widgets.castbar:SetMinMaxValues(0, 100)
+			if (widgets.castbar.SetReverseFill) then
+				widgets.castbar:SetReverseFill(castData.reverse and true or false)
+			end
+			widgets.castbar:SetValue(progress)
+			ApplyRuntimeTestBarColor(widgets.castbar, castData.color[1], castData.color[2], castData.color[3])
+			widgets.castText:SetText(castData.label)
+			widgets.castIcon:SetTexture(castData.texture)
+			widgets.castbar:Show()
+			widgets.castText:Show()
+			widgets.castIcon:Show()
+		else
+			widgets.castbar:Hide()
+			widgets.castText:Hide()
+			widgets.castIcon:Hide()
+		end
+
+		local showClassPower = (def.key == "classpower")
+		widgets.classPowerFrame:SetShown(showClassPower)
+		if (showClassPower) then
+			local activePoints = ((index - 1) % 5) + 1
+			for pointIndex, point in ipairs(widgets.classPowerPoints) do
+				point:SetShown(pointIndex <= 6)
+				if (pointIndex <= activePoints) then
+					point:SetValue(1)
+					ApplyRuntimeTestBarColor(point, classR, classG, classB)
+				else
+					point:SetValue(.25)
+					ApplyRuntimeTestBarColor(point, .18, .18, .18)
+				end
+			end
+		end
+	end
 end
 
 local function RefreshTargetDebugTestFrames()
@@ -59,6 +904,554 @@ local function RefreshTargetDebugTestFrames()
 	end
 	if (frame.Castbar and frame.Castbar.ForceUpdate and frame.IsElementEnabled and frame:IsElementEnabled("Castbar")) then
 		frame.Castbar:ForceUpdate()
+	end
+end
+
+GetRuntimeTestModule = function(def)
+	return ns and ns.GetModule and ns:GetModule(def.module, true)
+end
+
+local function GetRuntimeTestAnchor(def)
+	local module = GetRuntimeTestModule(def)
+	if (module and module.IsEnabled and module:IsEnabled() and module.frame) then
+		return module.frame
+	end
+	return UIParent
+end
+
+local function TryPrepareRuntimeTestModule(def, module)
+	if (not module) then
+		return false
+	end
+	if (module.frame) then
+		return true
+	end
+	if (type(module.CreateUnitFrames) ~= "function") then
+		return false
+	end
+
+	local ok = pcall(module.CreateUnitFrames, module)
+	if (not ok) then
+		return false
+	end
+
+	if (module.frame and module.frame.Hide and module.IsEnabled and not module:IsEnabled()) then
+		module.frame:Hide()
+	end
+
+	return module.frame and true or false
+end
+
+local function ForcePreviewFrameUpdate(frame, label)
+	if (not frame) then
+		return
+	end
+	frame:Show()
+	frame:SetAlpha(1)
+	if (frame.Enable) then
+		pcall(frame.Enable, frame)
+	end
+	if (frame.Update) then
+		pcall(frame.Update, frame)
+	end
+	if (frame.UpdateAllElements) then
+		pcall(frame.UpdateAllElements, frame, "RuntimeTest")
+	end
+	if (frame.PostUpdate) then
+		pcall(frame.PostUpdate, frame)
+	end
+	if (frame.Health and frame.Health.ForceUpdate) then
+		pcall(frame.Health.ForceUpdate, frame.Health)
+	end
+	if (frame.Power and frame.Power.ForceUpdate) then
+		pcall(frame.Power.ForceUpdate, frame.Power)
+	end
+	if (frame.Castbar and frame.Castbar.ForceUpdate) then
+		pcall(frame.Castbar.ForceUpdate, frame.Castbar)
+	end
+	if (frame.Auras and frame.Auras.ForceUpdate) then
+		pcall(frame.Auras.ForceUpdate, frame.Auras)
+	end
+	if (label and frame.Name and frame.Name.SetText) then
+		pcall(frame.Name.SetText, frame.Name, label)
+	end
+end
+
+local function GetOrderedRuntimeTestHeaderChildren(header)
+	local children = {}
+	local seen = {}
+
+	if (header and header.GetAttribute) then
+		for index = 1, 40 do
+			local child = header:GetAttribute("child" .. index)
+			if (not child) then
+				break
+			end
+			if (not seen[child]) then
+				seen[child] = true
+				children[#children + 1] = child
+			end
+		end
+	end
+
+	if (#children == 0 and header and header.GetNumChildren) then
+		for index = 1, header:GetNumChildren() do
+			local child = select(index, header:GetChildren())
+			if (child and not seen[child]) then
+				seen[child] = true
+				children[#children + 1] = child
+			end
+		end
+	end
+
+	table_sort(children, function(a, b)
+		local aName = a:GetName() or ""
+		local bName = b:GetName() or ""
+		local aIndex = tonumber(string_match(aName, "(%d+)$")) or 0
+		local bIndex = tonumber(string_match(bName, "(%d+)$")) or 0
+		if (aIndex == bIndex) then
+			return aName < bName
+		end
+		return aIndex < bIndex
+	end)
+
+	return children
+end
+
+local function SyncRuntimeTestHeaderPreview(preview, count)
+	if (InCombatLockdown()) then
+		return
+	end
+
+	local module = preview and preview.module
+	local header = preview and preview.header
+	if (not module or not header) then
+		return
+	end
+
+	preview.savedStartingIndex = preview.savedStartingIndex or header:GetAttribute("startingIndex")
+	preview.savedShowSolo = preview.savedShowSolo or header:GetAttribute("showSolo")
+	preview.savedShowPlayer = preview.savedShowPlayer or header:GetAttribute("showPlayer")
+	preview.savedShowParty = preview.savedShowParty or header:GetAttribute("showParty")
+	preview.savedShowRaid = preview.savedShowRaid or header:GetAttribute("showRaid")
+
+	header.forceShow = true
+	header.forceShowAuras = true
+	UnregisterAttributeDriver(header, "state-visibility")
+	RegisterAttributeDriver(header, "state-visibility", "show")
+	header:SetAttribute("showSolo", true)
+	header:SetAttribute("showPlayer", true)
+	header:SetAttribute("showParty", true)
+	header:SetAttribute("showRaid", true)
+	header:SetAttribute("startingIndex", -(count + 1))
+	header:Show()
+
+	if (module.ConfigureChildren) then
+		module:ConfigureChildren()
+	end
+
+	local frames = GetOrderedRuntimeTestHeaderChildren(header)
+	for _, frame in ipairs(frames) do
+		if (frame.__AzeriteUI_RuntimeTestSavedUnit == nil) then
+			frame.__AzeriteUI_RuntimeTestSavedUnit = frame.unit
+		end
+		frame.unit = "player"
+		SetupRuntimeTestInteraction(frame, preview.def, 1)
+		if (frame.SetAttribute) then
+			frame:SetAttribute("unit", "player")
+		end
+		UnregisterUnitWatch(frame)
+		RegisterUnitWatch(frame, true)
+		frame:Show()
+	end
+
+	preview.frames = frames
+end
+
+Debugging.GetRuntimeTestLayout = function(self, def, frames)
+	local module = GetRuntimeTestModule(def)
+	local profile = module and module.db and module.db.profile or {}
+	local first = frames and frames[1]
+	local unitWidth = first and first.GetWidth and first:GetWidth() or 100
+	local unitHeight = first and first.GetHeight and first:GetHeight() or 40
+
+	if (def.layout == "single") then
+		return {
+			point = "CENTER",
+			xOffset = 0,
+			yOffset = 0,
+			unitsPerColumn = 1,
+			maxColumns = 1,
+			columnSpacing = 0,
+			columnAnchorPoint = "LEFT",
+			width = unitWidth,
+			height = unitHeight
+		}
+	end
+
+	if (def.layout == "boss") then
+		return {
+			point = "TOP",
+			xOffset = 0,
+			yOffset = -12,
+			unitsPerColumn = def.count,
+			maxColumns = 1,
+			columnSpacing = 0,
+			columnAnchorPoint = "LEFT"
+		}
+	end
+
+	if (def.layout == "nameplates") then
+		return {
+			point = "TOP",
+			xOffset = 0,
+			yOffset = -18,
+			unitsPerColumn = 10,
+			maxColumns = 1,
+			columnSpacing = 0,
+			columnAnchorPoint = "LEFT"
+		}
+	end
+
+	local spacingScale = 1
+	if (GetRuntimeTestStateValue("runtimeUnitTestCompactSpacing")) then
+		spacingScale = .5
+	elseif (GetRuntimeTestStateValue("runtimeUnitTestLargeSpacing")) then
+		spacingScale = 1.75
+	end
+
+	return {
+		point = profile.point or (def.key == "raid40" and "LEFT" or "TOP"),
+		xOffset = (profile.xOffset or 0) * spacingScale,
+		yOffset = (profile.yOffset or ((def.key == "raid40") and 0 or -12)) * spacingScale,
+		unitsPerColumn = profile.unitsPerColumn or def.count,
+		maxColumns = profile.maxColumns or 1,
+		columnSpacing = (profile.columnSpacing or 0) * spacingScale,
+		columnAnchorPoint = profile.columnAnchorPoint or ((def.key == "raid40" or def.key == "party") and "TOP" or "LEFT")
+	}
+end
+
+Debugging.GetRuntimeTestContainerSize = function(self, def, frames, layout, count)
+	local first = frames and frames[1]
+	local unitWidth = first and first.GetWidth and first:GetWidth() or 100
+	local unitHeight = first and first.GetHeight and first:GetHeight() or 40
+	count = count or (frames and #frames) or def.count
+	local unitsPerColumn = layout.unitsPerColumn or count
+	local maxColumns = layout.maxColumns or 1
+	local point = layout.point or "TOP"
+	local xOffset = layout.xOffset or 0
+	local yOffset = layout.yOffset or 0
+	local columnSpacing = layout.columnSpacing or 0
+	local _, xOffsetMult, yOffsetMult = GetRelativePointAnchor(point)
+	local xMultiplier = math_abs(xOffsetMult)
+	local yMultiplier = math_abs(yOffsetMult)
+	local numColumns
+
+	if (unitsPerColumn and count > unitsPerColumn) then
+		numColumns = math_min(math_ceil(count / unitsPerColumn), maxColumns)
+	else
+		unitsPerColumn = count
+		numColumns = 1
+	end
+
+	local width = xMultiplier * (unitsPerColumn - 1) * unitWidth + ((unitsPerColumn - 1) * (xOffset * xOffsetMult)) + unitWidth
+	local height = yMultiplier * (unitsPerColumn - 1) * unitHeight + ((unitsPerColumn - 1) * (yOffset * yOffsetMult)) + unitHeight
+
+	if (numColumns > 1) then
+		local _, colxMulti, colyMulti = GetRelativePointAnchor(layout.columnAnchorPoint or "LEFT")
+		width = width + ((numColumns - 1) * math_abs(colxMulti) * (width + columnSpacing))
+		height = height + ((numColumns - 1) * math_abs(colyMulti) * (height + columnSpacing))
+	end
+
+	return math_max(width, unitWidth), math_max(height, unitHeight)
+end
+
+Debugging.LayoutRuntimeTestPreview = function(self, preview, frames)
+	local def = preview and preview.def
+	if (not def or not frames or #frames == 0) then
+		return
+	end
+
+	local container = preview.container
+	local anchor = GetRuntimeTestAnchor(def)
+	local layout = self:GetRuntimeTestLayout(def, frames)
+
+	container:ClearAllPoints()
+	container:SetScale(anchor and anchor.GetScale and anchor:GetScale() or 1)
+	container:SetPoint("CENTER", anchor or UIParent, "CENTER", 0, 0)
+
+	if (def.layout == "single") then
+		local frame = frames[1]
+		local width = frame:GetWidth()
+		local height = frame:GetHeight()
+		container:SetSize(math_max(width, 1), math_max(height, 1))
+		frame:ClearAllPoints()
+		frame:SetPoint("CENTER", container, "CENTER", 0, 0)
+		return
+	end
+
+	local width, height = self:GetRuntimeTestContainerSize(def, frames, layout, #frames)
+	container:SetSize(width, height)
+
+	local point = layout.point or "TOP"
+	local relativePoint, xOffsetMult, yOffsetMult = GetRelativePointAnchor(point)
+	local xMultiplier = math_abs(xOffsetMult)
+	local yMultiplier = math_abs(yOffsetMult)
+	local xOffset = layout.xOffset or 0
+	local yOffset = layout.yOffset or 0
+	local unitsPerColumn = layout.unitsPerColumn or #frames
+	local columnSpacing = layout.columnSpacing or 0
+	local columnAnchorPoint = layout.columnAnchorPoint
+	local columnRelPoint, colxMulti, colyMulti
+	if (columnAnchorPoint) then
+		columnRelPoint, colxMulti, colyMulti = GetRelativePointAnchor(columnAnchorPoint)
+	end
+
+	local currentAnchor = container
+	local columnUnitCount = 0
+
+	for buttonNum, frame in ipairs(frames) do
+		frame:ClearAllPoints()
+		columnUnitCount = columnUnitCount + 1
+
+		if (buttonNum == 1) then
+			frame:SetPoint(point, container, point, 0, 0)
+		elseif (columnUnitCount > unitsPerColumn) then
+			columnUnitCount = 1
+			local columnAnchor = frames[buttonNum - unitsPerColumn]
+			if (columnAnchorPoint and columnAnchor) then
+				frame:SetPoint(columnAnchorPoint, columnAnchor, columnRelPoint, colxMulti * columnSpacing, colyMulti * columnSpacing)
+			else
+				frame:SetPoint(point, container, point, 0, 0)
+			end
+		else
+			frame:SetPoint(point, currentAnchor, relativePoint, xMultiplier * xOffset, yMultiplier * yOffset)
+		end
+
+		currentAnchor = frame
+	end
+end
+
+Debugging.EnsureRuntimeTestPreview = function(self, def)
+	self.RuntimeTestPreviews = self.RuntimeTestPreviews or {}
+	local preview = self.RuntimeTestPreviews[def.key]
+	if (preview) then
+		return preview
+	end
+
+	local oUF = ns and ns.oUF
+	if (not oUF) then
+		return nil
+	end
+
+	local module = GetRuntimeTestModule(def)
+	if (not module) then
+		preview = {
+			def = def,
+			container = CreateFrame("Frame", nil, UIParent),
+			frames = {},
+			failed = true,
+			unsupported = true
+		}
+		preview.container:Hide()
+		self.RuntimeTestPreviews[def.key] = preview
+		return preview
+	end
+
+	TryPrepareRuntimeTestModule(def, module)
+
+	preview = {
+		def = def,
+		container = CreateFrame("Frame", nil, UIParent),
+		frames = {},
+		failed = false,
+		fallback = false
+	}
+	preview.container:SetFrameStrata("DIALOG")
+	preview.container:SetClampedToScreen(true)
+	preview.container:Hide()
+
+	if (def.headerPreview) then
+		local header = module.GetUnitFrameOrHeader and module:GetUnitFrameOrHeader() or (module.frame and module.frame.content)
+		if (header) then
+			preview.headerPreview = true
+			preview.module = module
+			preview.header = header
+			preview.container = module.frame or preview.container
+			self.RuntimeTestPreviews[def.key] = preview
+			return preview
+		end
+	end
+
+	if (def.key == "nameplates") then
+		preview.fallback = true
+		for i = 1,def.count do
+			preview.frames[#preview.frames + 1] = CreateRuntimeTestFallbackFrame(def, preview.container)
+		end
+		self.RuntimeTestPreviews[def.key] = preview
+		return preview
+	end
+
+	for i = 1,def.count do
+		local frameName = string_format("%sRuntimeTest%s%d", ns.Prefix or "AzeriteUI", def.key, i)
+		local ok, frameOrErr = pcall(function()
+			oUF:SetActiveStyle(ns.Prefix .. def.style)
+			return ns.UnitFrame.Spawn(def.unit or "player", frameName)
+		end)
+		if (ok and frameOrErr) then
+			local frame = frameOrErr
+			frame:SetParent(preview.container)
+			preview.frames[#preview.frames + 1] = frame
+		else
+			preview.failed = true
+			preview.error = frameOrErr
+			break
+		end
+	end
+
+	if (preview.failed) then
+		for _, frame in ipairs(preview.frames) do
+			frame:Hide()
+		end
+		preview.frames = {}
+		preview.failed = false
+		preview.fallback = true
+		for i = 1,def.count do
+			preview.frames[#preview.frames + 1] = CreateRuntimeTestFallbackFrame(def, preview.container)
+		end
+	end
+
+	self.RuntimeTestPreviews[def.key] = preview
+	return preview
+end
+
+Debugging.HideRuntimeTestPreview = function(self, key)
+	local preview = self.RuntimeTestPreviews and self.RuntimeTestPreviews[key]
+	if (not preview) then
+		return
+	end
+	if (preview.headerPreview) then
+		local header = preview.header
+		local module = preview.module
+		for _, frame in ipairs(preview.frames or {}) do
+			if (frame.__AzeriteUI_RuntimeTestSavedUnit ~= nil) then
+				frame.unit = frame.__AzeriteUI_RuntimeTestSavedUnit
+				frame.__AzeriteUI_RuntimeTestSavedUnit = nil
+			end
+			if (frame.SetAttribute) then
+				frame:SetAttribute("unit", frame.__AzeriteUI_RuntimeTestSavedUnitAttribute)
+				frame:SetAttribute("*type1", frame.__AzeriteUI_RuntimeTestSavedType1Attribute)
+			end
+			frame:EnableMouse(true)
+			UnregisterUnitWatch(frame)
+			RegisterUnitWatch(frame)
+		end
+		if (header) then
+			header.forceShow = nil
+			header.forceShowAuras = nil
+			if (preview.savedStartingIndex ~= nil) then
+				header:SetAttribute("startingIndex", preview.savedStartingIndex)
+			else
+				header:SetAttribute("startingIndex", 1)
+			end
+			header:SetAttribute("showSolo", preview.savedShowSolo)
+			header:SetAttribute("showPlayer", preview.savedShowPlayer)
+			header:SetAttribute("showParty", preview.savedShowParty)
+			header:SetAttribute("showRaid", preview.savedShowRaid)
+		end
+		if (module and module.UpdateHeader) then
+			module:UpdateHeader()
+		end
+		if (module and module.UpdateUnits) then
+			module:UpdateUnits()
+		end
+		return
+	end
+	for _, frame in ipairs(preview.frames) do
+		frame:Hide()
+	end
+	preview.container:Hide()
+end
+
+Debugging.RefreshRuntimeTestPreviews = function(self)
+	if (InCombatLockdown()) then
+		self.__AzeriteUI_PendingRuntimeTestRefresh = true
+		self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnDeferredRuntimeTestRefresh")
+		return
+	end
+
+	self.__AzeriteUI_PendingRuntimeTestRefresh = nil
+	self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnDeferredRuntimeTestRefresh")
+
+	if (not CanUseRuntimeTestMode()) then
+		local globalDB = EnsureRuntimeTestState()
+		if (globalDB) then
+			globalDB.runtimeUnitTestMenuEnabled = false
+			globalDB.runtimeUnitTestMode = false
+		end
+		for _, def in ipairs(RUNTIME_TEST_DEFS) do
+			self:HideRuntimeTestPreview(def.key)
+		end
+		return
+	end
+
+	for _, def in ipairs(RUNTIME_TEST_DEFS) do
+		local enabled = IsRuntimeTestMode() and IsRuntimeTestSetEnabled(def.key)
+		if (enabled) then
+			local preview = self:EnsureRuntimeTestPreview(def)
+			if (preview and not preview.failed) then
+				if (preview.headerPreview) then
+					SyncRuntimeTestHeaderPreview(preview, GetRuntimeTestFrameCount(def))
+				end
+				local visibleCount = GetRuntimeTestFrameCount(def)
+				local startIndex = GetRuntimeTestStartIndex(def)
+				local activeFrames = {}
+				for frameIndex, frame in ipairs(preview.frames) do
+					if (frameIndex >= startIndex and #activeFrames < visibleCount) then
+						activeFrames[#activeFrames + 1] = frame
+					else
+						frame:Hide()
+					end
+				end
+				if (#activeFrames > 0) then
+					if (not preview.headerPreview) then
+						self:LayoutRuntimeTestPreview(preview, activeFrames)
+					end
+					preview.container:Show()
+					for visibleIndex, frame in ipairs(activeFrames) do
+						local sourceIndex = startIndex + visibleIndex - 1
+						SetupRuntimeTestInteraction(frame, def, sourceIndex)
+						ForcePreviewFrameUpdate(frame, GetPreviewLabel(def, sourceIndex))
+						frame:Show()
+						ApplyRuntimeTestPresentation(frame, def, sourceIndex)
+						if (C_Timer) then
+							local queuedFrame = frame
+							local queuedDef = def
+							local queuedIndex = sourceIndex
+							C_Timer.After(0, function()
+								if (queuedFrame and queuedFrame:IsShown() and IsRuntimeTestMode() and IsRuntimeTestSetEnabled(queuedDef.key)) then
+									ApplyRuntimeTestPresentation(queuedFrame, queuedDef, queuedIndex)
+								end
+							end)
+						end
+					end
+				else
+					preview.container:Hide()
+				end
+			end
+		else
+			self:HideRuntimeTestPreview(def.key)
+		end
+	end
+end
+
+Debugging.OnDeferredRuntimeTestRefresh = function(self)
+	if (InCombatLockdown()) then
+		return
+	end
+	self:RefreshRuntimeTestPreviews()
+	if (self.TestFrame and self.TestFrame:IsShown()) then
+		UpdateTestMenu(self)
 	end
 end
 
@@ -225,6 +1618,7 @@ Debugging.EnsureDebugCommands = function(self)
 		return
 	end
 	self:RegisterChatCommand("azdebug", "DebugMenu")
+	self:RegisterChatCommand("aztest", "TestModeCommand")
 	self:RegisterChatCommand("junnez", "SecretJuNNeZCommand")
 	self:RegisterChatCommand("goldpaw", "SecretGoldpawCommand")
 	self.__AzeriteUI_DebugCommandsRegistered = true
@@ -531,6 +1925,8 @@ end
 Debugging.OnInitialize = function(self)
 	self:EnsureDebugCommands()
 	if (ns.db and ns.db.global) then
+		EnsureRuntimeTestState()
+		ns.db.global.runtimeUnitTestMode = false
 		ns.db.global.debugHealth = ns.db.global.debugHealth or false
 		ns.db.global.debugHealthChat = ns.db.global.debugHealthChat or false
 		ns.db.global.debugHealthPercent = ns.db.global.debugHealthPercent or false
@@ -1354,6 +2750,11 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug scale reset|r")
 	print("|cfff0f0f0  /azdebug scripterrors|r")
 	print("|cfff0f0f0  /azdebug secrettest [unit]|r")
+	print("|cfff0f0f0  /aztest|r  (toggle unit test menu, Junnez only)")
+	print("|cfff0f0f0  /aztest status|r")
+	print("|cfff0f0f0  /aztest on|off|toggle|r")
+	print("|cfff0f0f0  /aztest <set> on|off|toggle|r")
+	print("|cfff0f0f0  /aztest list|r")
 end
 
 local function ParseOnOffToggle(token)
@@ -1378,6 +2779,429 @@ local function SetDebugFlag(flag, value)
 		return false
 	end
 	return flag
+end
+
+Debugging.TestModeCommand = function(self, input)
+	if (not CanUseRuntimeTestMode()) then
+		print("|cff33ff99", "AzeriteUI /aztest:", "restricted to the maintainer character")
+		return
+	end
+
+	if (not input or input == "") then
+		return self:ToggleTestMenu()
+	end
+
+	local cmd, rest = input:match("^(%S+)%s*(.-)$")
+	cmd = cmd and cmd:lower() or "status"
+
+	if (cmd == "menu") then
+		return self:ToggleTestMenu()
+	end
+
+	if (cmd == "status") then
+		print("|cff33ff99", "AzeriteUI unit test mode:", IsRuntimeTestMode() and "ON" or "OFF")
+		print("|cfff0f0f0  preset:", GetRuntimeTestOptionLabel(RUNTIME_TEST_PRESETS, GetRuntimeTestStateValue("runtimeUnitTestPreset")))
+		print("|cfff0f0f0  nameplates:", GetRuntimeTestOptionLabel(RUNTIME_TEST_NAMEPLATE_PACKS, GetRuntimeTestStateValue("runtimeUnitTestNameplatePack")), "/", GetRuntimeTestOptionLabel(RUNTIME_TEST_NAMEPLATE_VARIANTS, GetRuntimeTestStateValue("runtimeUnitTestNameplateVariant")))
+		print("|cfff0f0f0  distribution:", GetRuntimeTestOptionLabel(RUNTIME_TEST_CLASS_DISTRIBUTIONS, GetRuntimeTestStateValue("runtimeUnitTestClassDistribution")))
+		print("|cfff0f0f0  health:", GetRuntimeTestOptionLabel(RUNTIME_TEST_HEALTH_SCENARIOS, GetRuntimeTestStateValue("runtimeUnitTestHealthScenario")))
+		print("|cfff0f0f0  auras:", GetRuntimeTestOptionLabel(RUNTIME_TEST_AURA_SCENARIOS, GetRuntimeTestStateValue("runtimeUnitTestAuraScenario")))
+		print("|cfff0f0f0  cast:", GetRuntimeTestOptionLabel(RUNTIME_TEST_CAST_SCENARIOS, GetRuntimeTestStateValue("runtimeUnitTestCastScenario")))
+		print("|cfff0f0f0  mouseover:", GetRuntimeTestOptionLabel(RUNTIME_TEST_MOUSEOVER_MODES, GetRuntimeTestStateValue("runtimeUnitTestMouseoverMode")))
+		for _, def in ipairs(RUNTIME_TEST_DEFS) do
+			local count = GetRuntimeTestFrameCount(def)
+			print("|cfff0f0f0  ", def.key .. ":", IsRuntimeTestSetEnabled(def.key) and "ON" or "OFF", "count:", count)
+		end
+		return
+	end
+
+	if (cmd == "list") then
+		print("|cff33ff99", "AzeriteUI /aztest sets:")
+		for _, def in ipairs(RUNTIME_TEST_DEFS) do
+			print("|cfff0f0f0  ", def.key, "-", def.label)
+		end
+		return
+	end
+
+	local mode = ParseOnOffToggle(cmd)
+	if (mode) then
+		SetRuntimeTestMode(SetDebugFlag(IsRuntimeTestMode(), mode))
+		print("|cff33ff99", "AzeriteUI unit test mode:", IsRuntimeTestMode() and "ON" or "OFF")
+		self:RefreshRuntimeTestPreviews()
+		return
+	end
+
+	local def = GetRuntimeTestDefinition(cmd)
+	local setMode = ParseOnOffToggle(rest)
+	if (def and setMode) then
+		SetRuntimeTestSetEnabled(def.key, SetDebugFlag(IsRuntimeTestSetEnabled(def.key), setMode))
+		if (not IsRuntimeTestMode()) then
+			SetRuntimeTestMode(true)
+		else
+			self:RefreshRuntimeTestPreviews()
+		end
+		print("|cff33ff99", "AzeriteUI unit test set:", def.label, IsRuntimeTestSetEnabled(def.key) and "ON" or "OFF")
+		return
+	end
+
+	print("|cff33ff99", "AzeriteUI /aztest commands:")
+	print("|cfff0f0f0  /aztest|r")
+	print("|cfff0f0f0  /aztest status|r")
+	print("|cfff0f0f0  /aztest on|off|toggle|r")
+	print("|cfff0f0f0  /aztest <set> on|off|toggle|r")
+	print("|cfff0f0f0  /aztest list|r")
+end
+
+UpdateTestMenu = function(self)
+	local frame = self.TestFrame
+	if (not frame) then
+		return
+	end
+	frame.MasterToggle:SetChecked(IsRuntimeTestMode())
+	for key, button in pairs(frame.SetToggles) do
+		button:SetChecked(IsRuntimeTestSetEnabled(key))
+	end
+	for _, control in ipairs(frame.CycleControls or {}) do
+		control.button:SetText(GetRuntimeTestOptionLabel(control.options, GetRuntimeTestStateValue(control.stateKey)))
+	end
+	for _, control in ipairs(frame.BoolControls or {}) do
+		control.button:SetChecked(GetRuntimeTestStateValue(control.stateKey) and true or false)
+	end
+end
+
+Debugging.ToggleTestMenu = function(self)
+	if (not CanUseRuntimeTestMode()) then
+		print("|cff33ff99", "AzeriteUI /aztest:", "restricted to the maintainer character")
+		return
+	end
+
+	local frame = self.TestFrame
+	local created = false
+	if (not frame) then
+		frame = CreateFrame("Frame", "AzeriteUI_TestMenu", UIParent, "BasicFrameTemplateWithInset")
+		frame:SetSize(660, 760)
+		frame:SetPoint("CENTER", UIParent, "CENTER", 350, 60)
+		frame:SetFrameStrata("DIALOG")
+		frame:SetClampedToScreen(true)
+		frame:SetMovable(true)
+		frame:EnableMouse(true)
+		frame:RegisterForDrag("LeftButton")
+		frame:SetScript("OnDragStart", function(f) f:StartMoving() end)
+		frame:SetScript("OnDragStop", function(f) f:StopMovingOrSizing() end)
+		frame.TitleText:SetText("AzeriteUI Unit Test Lab")
+
+		local subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+		subtitle:SetPoint("TOPLEFT", 14, -32)
+		subtitle:SetText("Maintainer-only preview lab for Junnez")
+
+		local hint = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		hint:SetPoint("TOPLEFT", 14, -50)
+		hint:SetText("Left-click cycles forward. Right-click cycles backward.")
+
+		local master = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+		master:SetPoint("TOPLEFT", 14, -72)
+		master.Text:SetText("Enable Unit Test Mode")
+		master:SetScript("OnClick", function(btn)
+			SetRuntimeTestMode(btn:GetChecked() and true or false)
+			self:RefreshRuntimeTestPreviews()
+			UpdateTestMenu(self)
+		end)
+		frame.MasterToggle = master
+
+		local scroll = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
+		scroll:SetPoint("TOPLEFT", 10, -102)
+		scroll:SetPoint("BOTTOMRIGHT", -28, 44)
+
+		local content = CreateFrame("Frame", nil, scroll)
+		content:SetSize(600, 1200)
+		scroll:SetScrollChild(content)
+
+		frame.Scroll = scroll
+		frame.ScrollChild = content
+		frame.CycleControls = {}
+		frame.BoolControls = {}
+		frame.SetToggles = {}
+
+		local y = -8
+		local function AddSectionHeader(text)
+			local band = content:CreateTexture(nil, "BACKGROUND")
+			band:SetPoint("TOPLEFT", 12, y + 6)
+			band:SetSize(564, 18)
+			band:SetColorTexture(.08, .08, .08, .75)
+
+			local line = content:CreateTexture(nil, "ARTWORK")
+			line:SetPoint("TOPLEFT", 12, y - 14)
+			line:SetPoint("TOPRIGHT", -12, y - 14)
+			line:SetHeight(1)
+			line:SetColorTexture(.35, .35, .35, .6)
+
+			local label = content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+			label:SetPoint("TOPLEFT", 18, y + 2)
+			label:SetTextColor(1, .82, .18)
+			label:SetText(text)
+			y = y - 28
+			return label
+		end
+
+		local function AddDescription(text)
+			local label = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+			label:SetPoint("TOPLEFT", 24, y)
+			label:SetWidth(548)
+			label:SetJustifyH("LEFT")
+			label:SetText(text)
+			y = y - 28
+		end
+
+		local function AddCycleRow(labelText, stateKey, options, onChange, description)
+			local label = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+			label:SetPoint("TOPLEFT", 20, y - 2)
+			label:SetWidth(214)
+			label:SetJustifyH("LEFT")
+			label:SetText(labelText)
+
+			local button = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
+			button:SetSize(230, 22)
+			button:SetPoint("TOPLEFT", 256, y)
+			button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+			button:SetScript("OnClick", function(_, mouseButton)
+				local step = mouseButton == "RightButton" and -1 or 1
+				local nextKey = CycleRuntimeTestOption(options, GetRuntimeTestStateValue(stateKey), step)
+				SetRuntimeTestStateValue(stateKey, nextKey)
+				if (onChange) then
+					onChange(nextKey)
+				end
+				self:RefreshRuntimeTestPreviews()
+				UpdateTestMenu(self)
+			end)
+			table_insert(frame.CycleControls, { button = button, stateKey = stateKey, options = options })
+			y = y - 26
+			if (description) then
+				AddDescription(description)
+			end
+		end
+
+		local function AddCheckRow(labelText, stateKey, description, onChange)
+			local button = CreateFrame("CheckButton", nil, content, "UICheckButtonTemplate")
+			button:SetPoint("TOPLEFT", 12, y)
+			button.Text:SetText(labelText)
+			button:SetScript("OnClick", function(btn)
+				SetRuntimeTestStateValue(stateKey, btn:GetChecked() and true or false)
+				if (onChange) then
+					onChange(btn:GetChecked() and true or false)
+				end
+				self:RefreshRuntimeTestPreviews()
+				UpdateTestMenu(self)
+			end)
+			table_insert(frame.BoolControls, { button = button, stateKey = stateKey })
+			y = y - 24
+			if (description) then
+				AddDescription(description)
+			end
+		end
+
+		local function AddActionRow(buttons)
+			local x = 16
+			for _, data in ipairs(buttons) do
+				local button = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
+				button:SetSize(data.width or 110, 22)
+				button:SetPoint("TOPLEFT", x, y)
+				button:SetText(data.label)
+				button:SetScript("OnClick", data.onClick)
+				x = x + (data.width or 110) + 8
+			end
+			y = y - 30
+		end
+
+		AddSectionHeader("Quick Actions")
+		AddDescription("Use presets to populate the most common testing rosters fast, then layer scenarios and stress toggles on top.")
+		AddActionRow({
+			{
+				label = "Enable All",
+				width = 100,
+				onClick = function()
+					SetAllRuntimeTestSets(true)
+					SetRuntimeTestMode(true)
+					self:RefreshRuntimeTestPreviews()
+					UpdateTestMenu(self)
+				end
+			},
+			{
+				label = "Groups Only",
+				width = 110,
+				onClick = function()
+					SetAllRuntimeTestSets(false)
+					for _, key in ipairs({ "boss", "party", "raid5", "raid25", "raid40", "arena", "nameplates" }) do
+						SetRuntimeTestSetEnabled(key, true)
+					end
+					SetRuntimeTestMode(true)
+					self:RefreshRuntimeTestPreviews()
+					UpdateTestMenu(self)
+				end
+			},
+			{
+				label = "Clear All",
+				width = 100,
+				onClick = function()
+					SetAllRuntimeTestSets(false)
+					SetRuntimeTestMode(false)
+					self:RefreshRuntimeTestPreviews()
+					UpdateTestMenu(self)
+				end
+			},
+		})
+		AddActionRow({
+			{
+				label = "Apply Preset",
+				width = 110,
+				onClick = function()
+					ApplyRuntimeTestPreset()
+					SetRuntimeTestMode(true)
+					self:RefreshRuntimeTestPreviews()
+					UpdateTestMenu(self)
+				end
+			},
+			{
+				label = "Reset State",
+				width = 110,
+				onClick = function()
+					local globalDB = EnsureRuntimeTestState()
+					if (globalDB) then
+						globalDB.runtimeUnitTestMenuEnabled = false
+						globalDB.runtimeUnitTestPreset = RUNTIME_TEST_PRESETS[1].key
+						globalDB.runtimeUnitTestClassDistribution = RUNTIME_TEST_CLASS_DISTRIBUTIONS[1].key
+						globalDB.runtimeUnitTestHealthScenario = RUNTIME_TEST_HEALTH_SCENARIOS[2].key
+						globalDB.runtimeUnitTestAuraScenario = RUNTIME_TEST_AURA_SCENARIOS[1].key
+						globalDB.runtimeUnitTestCastScenario = RUNTIME_TEST_CAST_SCENARIOS[1].key
+						globalDB.runtimeUnitTestMouseoverMode = RUNTIME_TEST_MOUSEOVER_MODES[1].key
+						globalDB.runtimeUnitTestNameplatePack = RUNTIME_TEST_NAMEPLATE_PACKS[1].key
+						globalDB.runtimeUnitTestNameplateVariant = RUNTIME_TEST_NAMEPLATE_VARIANTS[1].key
+						globalDB.runtimeUnitTestDebugOverlay = true
+						globalDB.runtimeUnitTestShowOnlyOne = false
+						globalDB.runtimeUnitTestHidePrimary = false
+						globalDB.runtimeUnitTestCompactSpacing = false
+						globalDB.runtimeUnitTestLargeSpacing = false
+						globalDB.runtimeUnitTestMaxVisible = false
+						ApplyRuntimeTestPreset()
+					end
+					self:RefreshRuntimeTestPreviews()
+					UpdateTestMenu(self)
+				end
+			},
+			{
+				label = "Reload Previews",
+				width = 120,
+				onClick = function()
+					self:RefreshRuntimeTestPreviews()
+					UpdateTestMenu(self)
+				end
+			}
+		})
+
+		AddSectionHeader("Roster Presets")
+		AddCycleRow("Roster Preset", "runtimeUnitTestPreset", RUNTIME_TEST_PRESETS, function()
+			ApplyRuntimeTestPreset()
+			SetRuntimeTestMode(true)
+		end, "Party 5, raid 10/20/25/40, arena 3/5, and boss packs. Presets reset the enabled frame groups and their visible counts.")
+		AddCycleRow("Nameplate Pack", "runtimeUnitTestNameplatePack", RUNTIME_TEST_NAMEPLATE_PACKS, function()
+		end, "Controls the number of fake nameplates shown when the nameplate preview is enabled.")
+		AddCycleRow("Nameplate Side", "runtimeUnitTestNameplateVariant", RUNTIME_TEST_NAMEPLATE_VARIANTS, function()
+		end, "Switch the nameplate preview between enemy, friendly, or mixed packs to pressure-test reaction styling.")
+
+		AddSectionHeader("Fake Data")
+		AddCycleRow("Role / Class Distribution", "runtimeUnitTestClassDistribution", RUNTIME_TEST_CLASS_DISTRIBUTIONS, nil, "Mixed, all healers, melee-heavy, or duplicate-class rosters for class-color and sorting checks.")
+		AddCycleRow("Health / State Scenario", "runtimeUnitTestHealthScenario", RUNTIME_TEST_HEALTH_SCENARIOS, nil, "Apply stable health, danger, offline, dead, out-of-range, or aggro states across the visible preview frames.")
+		AddCycleRow("Aura / Debuff Scenario", "runtimeUnitTestAuraScenario", RUNTIME_TEST_AURA_SCENARIOS, nil, "Show dispellables, boss debuffs, mixed harmful effects, or helpful externals in the preview overlay.")
+		AddCycleRow("Cast / Castbar Scenario", "runtimeUnitTestCastScenario", RUNTIME_TEST_CAST_SCENARIOS, nil, "Adds a fake castbar preview under the frame set for enemy casts, channels, locked casts, player casts, or boss abilities.")
+		AddCycleRow("Mouseover Simulation", "runtimeUnitTestMouseoverMode", RUNTIME_TEST_MOUSEOVER_MODES, nil, "Force none, the first frame, or all visible frames into a simulated mouseover state.")
+
+		AddSectionHeader("Layout Stress")
+		AddCheckRow("Show Only One Unit", "runtimeUnitTestShowOnlyOne", "Collapse multi-unit previews down to a single unit so you can inspect edge spacing and header behavior.")
+		AddCheckRow("Hide Primary Slot", "runtimeUnitTestHidePrimary", "Skip the first visible slot in multi-unit previews to mimic hidden player / missing lead slots.")
+		AddCheckRow("Compact Spacing", "runtimeUnitTestCompactSpacing", "Halves the group growth offsets and spacing to pressure-test dense layouts.")
+		AddCheckRow("Large Spacing", "runtimeUnitTestLargeSpacing", "Expands the group growth offsets and spacing to expose anchoring drift and overlap.")
+		AddCheckRow("Max Visible", "runtimeUnitTestMaxVisible", "Forces enabled multi-unit sets to show their maximum supported count instead of the preset count.")
+
+		AddSectionHeader("Frame Sets")
+		AddDescription("Mix and match the exact frame families you want active in the lab. Presets give you a starting point, but these toggles remain fully manual.")
+		local function AddSetGroup(defs)
+			for _, def in ipairs(defs) do
+				local btn = CreateFrame("CheckButton", nil, content, "UICheckButtonTemplate")
+				btn:SetPoint("TOPLEFT", 12, y)
+				btn.Text:SetText(def.label .. " (" .. def.key .. ")")
+				btn:SetScript("OnClick", function(button)
+					SetRuntimeTestSetEnabled(def.key, button:GetChecked() and true or false)
+					if (button:GetChecked() and not IsRuntimeTestMode()) then
+						SetRuntimeTestMode(true)
+					else
+						self:RefreshRuntimeTestPreviews()
+					end
+					UpdateTestMenu(self)
+				end)
+				frame.SetToggles[def.key] = btn
+				y = y - 24
+			end
+			y = y - 8
+		end
+
+		AddSectionHeader("Single Frames")
+		AddSetGroup({
+			GetRuntimeTestDefinition("player"),
+			GetRuntimeTestDefinition("playeralt"),
+			GetRuntimeTestDefinition("castbar"),
+			GetRuntimeTestDefinition("classpower"),
+			GetRuntimeTestDefinition("pet"),
+			GetRuntimeTestDefinition("target"),
+			GetRuntimeTestDefinition("tot"),
+			GetRuntimeTestDefinition("focus")
+		})
+
+		AddSectionHeader("Group Frames")
+		AddSetGroup({
+			GetRuntimeTestDefinition("boss"),
+			GetRuntimeTestDefinition("party"),
+			GetRuntimeTestDefinition("raid5"),
+			GetRuntimeTestDefinition("raid25"),
+			GetRuntimeTestDefinition("raid40"),
+			GetRuntimeTestDefinition("arena")
+		})
+
+		AddSectionHeader("Special")
+		AddSetGroup({
+			GetRuntimeTestDefinition("nameplates")
+		})
+
+		AddSectionHeader("Overlay")
+		AddCheckRow("Show Debug Overlay", "runtimeUnitTestDebugOverlay", "Displays role, class, state, health percentage, fake aura markers, and fake cast labels on the preview frames.")
+
+		local footer = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		footer:SetPoint("TOPLEFT", 16, y)
+		footer:SetWidth(560)
+		footer:SetJustifyH("LEFT")
+		footer:SetText("These previews are addon-side lab frames built from AzeriteUI styles. They are meant to test layout, colors, auras, cast visuals, spacing, and interaction logic without requiring real Blizzard roster units.")
+		y = y - 40
+		content:SetHeight(math_abs(y) + 40)
+
+		local close = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+		close:SetSize(80, 22)
+		close:SetPoint("BOTTOMRIGHT", -12, 12)
+		close:SetText("Close")
+		close:SetScript("OnClick", function() frame:Hide() end)
+
+		self.TestFrame = frame
+		created = true
+	end
+
+	if (created) then
+		UpdateTestMenu(self)
+		frame:Show()
+		return
+	end
+
+	if (frame:IsShown()) then
+		frame:Hide()
+	else
+		UpdateTestMenu(self)
+		frame:Show()
+	end
 end
 
 local function UpdateDebugMenu(self)

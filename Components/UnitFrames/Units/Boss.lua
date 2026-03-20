@@ -78,6 +78,85 @@ local Health_PostUpdateColor = function(element, unit, r, g, b)
 	end
 end
 
+local GetBossFillTexCoords = function(percent)
+	return ns.API.GetReversedHorizontalFillTexCoords(percent)
+end
+
+local NormalizeBossDisplayPercent = function(value)
+	if (type(value) ~= "number") then
+		return nil
+	end
+	if (value <= 1) then
+		value = value * 100
+	end
+	if (value < 0) then
+		value = 0
+	elseif (value > 100) then
+		value = 100
+	end
+	return value
+end
+
+local ApplyBossBarFillRule = function(bar, orientation)
+	if (not bar) then
+		return
+	end
+	if (orientation == "LEFT") then
+		bar:SetOrientation("HORIZONTAL")
+		if (bar.SetReverseFill) then
+			bar:SetReverseFill(true)
+		end
+	elseif (orientation == "RIGHT") then
+		bar:SetOrientation("HORIZONTAL")
+		if (bar.SetReverseFill) then
+			bar:SetReverseFill(false)
+		end
+	elseif (orientation == "DOWN") then
+		bar:SetOrientation("VERTICAL")
+		if (bar.SetReverseFill) then
+			bar:SetReverseFill(true)
+		end
+	else
+		bar:SetOrientation("VERTICAL")
+		if (bar.SetReverseFill) then
+			bar:SetReverseFill(false)
+		end
+	end
+end
+
+local UpdateBossHealthFakeFillFromBar = function(health)
+	if (not health) then
+		return false
+	end
+	local fakeFill = health.FakeFill
+	if (not fakeFill) then
+		return false
+	end
+	local applied, percent, source = ns.API.UpdateHealthFakeFillFromUnitPercent(health, "boss1")
+	if (applied) then
+		health.safePercent = NormalizeBossDisplayPercent(percent)
+		health.__AzeriteUI_BossFakeSource = (source == "api" and type(health.safePercent) ~= "number") and "api_secret" or source
+		return true
+	end
+	health.__AzeriteUI_BossFakeSource = "none"
+	health.safePercent = nil
+	fakeFill:SetTexCoord(GetBossFillTexCoords(nil))
+	fakeFill:Show()
+	return false
+end
+
+local HideBossNativeHealthVisuals = function(health)
+	ns.API.HideNativeHealthVisuals(health)
+end
+
+local SyncBossHealthVisualState = function(health)
+	if (not health) then
+		return false
+	end
+	HideBossNativeHealthVisuals(health)
+	return UpdateBossHealthFakeFillFromBar(health)
+end
+
 -- Align our custom health prediction texture
 -- based on the plugin's provided values.
 local HealPredict_PostUpdate = function(element, unit, myIncomingHeal, otherIncomingHeal, absorb, healAbsorb, hasOverAbsorb, hasOverHealAbsorb, curHealth, maxHealth)
@@ -296,11 +375,22 @@ local style = function(self, unit)
 	-- Health
 	--------------------------------------------
 	local health = self:CreateBar()
+	if (health.SetForceNative) then health:SetForceNative(false) end
 	health:SetFrameLevel(health:GetFrameLevel() + 2)
 	health:SetPoint(unpack(db.HealthBarPosition))
 	health:SetSize(unpack(db.HealthBarSize))
 	health:SetStatusBarTexture(db.HealthBarTexture)
-	health:SetOrientation(db.HealthBarOrientation)
+	health:DisableSmoothing(true)
+	health.__AzeriteUI_UseProductionNativeFill = true
+	health.__AzeriteUI_KeepMirrorPercentOnNoSample = false
+	health.__AzeriteUI_UseValueMirrorTexCoord = false
+	health:SetOrientation("HORIZONTAL")
+	health:SetReverseFill(true)
+	health:SetFlippedHorizontally(false)
+	health.__AzeriteUI_BaseTexCoordLeft = nil
+	health.__AzeriteUI_BaseTexCoordRight = nil
+	health.__AzeriteUI_BaseTexCoordTop = nil
+	health.__AzeriteUI_BaseTexCoordBottom = nil
 	health:SetSparkMap(db.HealthBarSparkMap)
 	health.predictThreshold = .01
 	health.colorTapping = true
@@ -311,6 +401,22 @@ local style = function(self, unit)
 	self.Health.Override = ns.API.UpdateHealth
 	self.Health.PostUpdate = Health_PostUpdate
 	self.Health.PostUpdateColor = Health_PostUpdateColor
+
+	local healthFakeFill = health:CreateTexture(nil, "ARTWORK", nil, 1)
+	healthFakeFill:SetAllPoints(health)
+	healthFakeFill:SetTexture(db.HealthBarTexture)
+	healthFakeFill:SetTexCoord(GetBossFillTexCoords(nil))
+	healthFakeFill:SetBlendMode("BLEND")
+	healthFakeFill:SetAlpha(1)
+	healthFakeFill:SetDrawLayer("ARTWORK", 1)
+	self.Health.FakeFill = healthFakeFill
+
+	ns.API.AttachScriptSafe(health, "OnMinMaxChanged", function(source)
+		SyncBossHealthVisualState(source)
+	end)
+	ns.API.AttachScriptSafe(health, "OnValueChanged", function(source)
+		SyncBossHealthVisualState(source)
+	end)
 
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel())
@@ -323,19 +429,27 @@ local style = function(self, unit)
 	healthBackdrop:SetSize(unpack(db.HealthBackdropSize))
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 	healthBackdrop:SetVertexColor(unpack(db.HealthBackdropColor))
+	healthBackdrop:SetTexCoord(GetBossFillTexCoords(nil))
 
 	self.Health.Backdrop = healthBackdrop
 
 	local healthPreview = self:CreateBar(nil, health)
+	if (healthPreview.SetForceNative) then healthPreview:SetForceNative(true) end
 	healthPreview:SetAllPoints(health)
 	healthPreview:SetFrameLevel(health:GetFrameLevel() - 1)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
-	healthPreview:SetOrientation(db.HealthBarOrientation)
+	healthPreview.__AzeriteUI_UseValueMirrorTexCoord = false
+	healthPreview:SetTexCoord(GetBossFillTexCoords(nil))
+	healthPreview:SetOrientation("HORIZONTAL")
+	healthPreview:SetReverseFill(true)
+	healthPreview:SetFlippedHorizontally(false)
 	healthPreview:SetSparkTexture("")
-	healthPreview:SetAlpha(.5)
+		healthPreview:SetAlpha(0)
+		healthPreview:Hide()
 	healthPreview:DisableSmoothing(true)
 
 	self.Health.Preview = healthPreview
+	SyncBossHealthVisualState(health)
 
 	-- Health Prediction
 	--------------------------------------------
@@ -349,7 +463,9 @@ local style = function(self, unit)
 	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	self.HealthPrediction.PostUpdate = HealPredict_PostUpdate
+	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Temporary rollback: broken white prediction overlay covers boss health bars.
+	self.HealthPrediction:SetAlpha(0)
+	self.HealthPrediction:Hide()
 
 	-- Cast Overlay
 	--------------------------------------------
@@ -358,6 +474,7 @@ local style = function(self, unit)
 	castbar:SetFrameLevel(self:GetFrameLevel() + 5)
 	castbar:SetSparkMap(db.HealthBarSparkMap)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
+	ApplyBossBarFillRule(castbar, db.HealthBarOrientation)
 	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
 	castbar:DisableSmoothing(true)
 
@@ -438,20 +555,11 @@ local style = function(self, unit)
 		absorb:SetStatusBarTexture(db.HealthBarTexture)
 		absorb:SetStatusBarColor(unpack(db.HealthAbsorbColor))
 		absorb:SetSparkMap(db.HealthBarSparkMap)
+		absorb:SetAlpha(0)
+		absorb:Hide()
+		ApplyBossBarFillRule(absorb, db.HealthBarOrientation == "LEFT" and "RIGHT" or db.HealthBarOrientation)
 
-		local orientation
-		if (db.HealthBarOrientation == "UP") then
-			orientation = "DOWN"
-		elseif (db.HealthBarOrientation == "DOWN") then
-			orientation = "UP"
-		elseif (db.HealthBarOrientation == "LEFT") then
-			orientation = "RIGHT"
-		else
-			orientation = "LEFT"
-		end
-		absorb:SetOrientation(orientation)
-
-		self.HealthPrediction.absorbBar = absorb
+		-- self.HealthPrediction.absorbBar = absorb -- Temporary rollback: broken absorb overlay covers boss health bars.
 	end
 
 	-- CombatFeedback Text

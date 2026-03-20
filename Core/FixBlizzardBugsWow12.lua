@@ -283,8 +283,13 @@ end
 local function IsCompactArenaFrameName(name)
 	return name == "CompactArenaFrame"
 		or name == "ArenaEnemyFrames"
+		or name == "ArenaEnemyFramesContainer"
+		or name == "ArenaEnemyMatchFrames"
+		or name == "ArenaEnemyMatchFramesContainer"
 		or name == "ArenaPrepFrames"
-		or (type(name) == "string" and string.match(name, "^CompactArenaFrameMember%d+$"))
+		or name == "ArenaPrepFramesContainer"
+		or (type(name) == "string" and (string.match(name, "^CompactArenaFrameMember%d+$")
+			or string.match(name, "^ArenaEnemyMatchFrame%d+$")))
 end
 
 local function GetFrameName(frame)
@@ -424,11 +429,18 @@ local function QuarantineCompactFrames()
 		end
 		for i = 1, MAX_ARENA_MEMBERS do
 			local arenaFrame = _G["CompactArenaFrameMember" .. i]
+			local arenaMatchFrame = _G["ArenaEnemyMatchFrame" .. i]
 			PrepareCompactFrame(arenaFrame)
+			PrepareCompactFrame(arenaMatchFrame)
 			QuarantineFrame(arenaFrame)
+			QuarantineFrame(arenaMatchFrame)
 		end
 		QuarantineFrame("ArenaEnemyFrames", { lockParent = true })
+		QuarantineFrame("ArenaEnemyFramesContainer", { lockParent = true })
+		QuarantineFrame("ArenaEnemyMatchFrames", { lockParent = true })
+		QuarantineFrame("ArenaEnemyMatchFramesContainer", { lockParent = true })
 		QuarantineFrame("ArenaPrepFrames", { lockParent = true })
+		QuarantineFrame("ArenaPrepFramesContainer", { lockParent = true })
 	end
 end
 

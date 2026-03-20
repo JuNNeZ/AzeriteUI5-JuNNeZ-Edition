@@ -39,6 +39,7 @@ local math_max = math.max
 local math_min = math.min
 local math_ceil = math.ceil
 local next = next
+local pairs = pairs
 local select = select
 local string_gsub = string.gsub
 local string_upper = string.upper
@@ -60,6 +61,9 @@ local defaults = { profile = ns:Merge({
 	useInRaid40 = false, -- show in raid groups of 26-40 players
 
 	useRangeIndicator = false,
+	useClassColors = true,
+	useBlizzardHealthColors = false,
+	useClassColorOnMouseoverOnly = false,
 
 	point = "TOP", -- anchor point of unitframe, group members within column grow opposite
 	xOffset = 0, -- horizontal offset within the same column
@@ -125,6 +129,91 @@ local GetSanitizedHeaderProfile = function(profile)
 		columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0,
 		columnAnchorPoint = (type(db.columnAnchorPoint) == "string" and validHeaderPoints[db.columnAnchorPoint] and db.columnAnchorPoint) or fallback.columnAnchorPoint or "LEFT"
 	}
+end
+
+local IsRuntimeTestMode = function()
+	return (ns.db and ns.db.global and ns.db.global.runtimeUnitTestMode) and true or false
+end
+
+local ApplyTestUnitDrivers = function(self)
+	if (InCombatLockdown()) then
+		self.needHeaderUpdate = true
+		self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+		return
+	end
+
+	local header = self:GetUnitFrameOrHeader()
+	if (not header) then
+		return
+	end
+
+	for i = 1, 5 do
+		local unitButton = header:GetAttribute("child"..i)
+		if (unitButton) then
+			UnregisterAttributeDriver(unitButton, "unit")
+			if (IsRuntimeTestMode()) then
+				RegisterAttributeDriver(unitButton, "unit", "player")
+			else
+				local driver = {}
+				local raidUnit, partyUnit = "raid"..i, "party"..i
+				local raidPetUnit, partyPetUnit = raidUnit.."pet", partyUnit.."pet"
+
+				if (ns.IsCata or ns.IsRetail) then
+					unitButton:SetAttribute("toggleForVehicle", nil)
+					table_insert(driver, "[vehicleui,group:raid]"..raidPetUnit)
+					table_insert(driver, "[vehicleui,nogroup:raid]"..partyPetUnit)
+				end
+
+				table_insert(driver, "[group:raid]"..raidUnit)
+				table_insert(driver, "[nogroup:raid]"..partyUnit)
+				table_insert(driver, raidUnit)
+
+				RegisterAttributeDriver(unitButton, "unit", table_concat(driver, ";"))
+			end
+		end
+	end
+end
+
+local CreateHealthColors = function(useBlizzardColors)
+	local colors = {}
+	for key, value in pairs(ns.Colors) do
+		colors[key] = value
+	end
+
+	local source = useBlizzardColors and oUF.colors or ns.Colors
+	colors.health = useBlizzardColors and source.health or ns.Colors.green
+	colors.class = source.class
+	colors.reaction = source.reaction
+
+	return colors
+end
+
+local ApplyHealthColorMode = function(frame, profile)
+	if (not frame) then
+		return
+	end
+
+	local health = frame.Health
+	local useClassColors = not (profile and profile.useClassColors == false)
+	local onlyOnMouseover = useClassColors and profile and profile.useClassColorOnMouseoverOnly
+	local showClassColors = useClassColors and ((not onlyOnMouseover) or frame.__AzeriteUI_HealthColorMouseOver)
+	local useBlizzardColors = useClassColors and profile and profile.useBlizzardHealthColors
+
+	frame.colors = CreateHealthColors(useBlizzardColors)
+	if (health) then
+		health.colorClass = showClassColors and true or false
+		health.colorClassPet = showClassColors and true or false
+		health.colorReaction = showClassColors and true or false
+		health.colorHealth = true
+		if (health.ForceUpdate) then
+			health:ForceUpdate()
+		end
+	end
+end
+
+local UpdateMouseoverHealthColor = function(frame, profile, isMouseOver)
+	frame.__AzeriteUI_HealthColorMouseOver = isMouseOver and true or false
+	ApplyHealthColorMode(frame, profile)
 end
 
 -- Element Callbacks
@@ -414,6 +503,12 @@ local style = function(self, unit)
 	self.Health.Override = ns.API.UpdateHealth
 	self.Health.PostUpdate = Health_PostUpdate
 	self.Health.PostUpdateColor = Health_PostUpdateColor
+	self:HookScript("OnEnter", function(frame)
+		UpdateMouseoverHealthColor(frame, RaidFrame5Mod.db and RaidFrame5Mod.db.profile or defaults.profile, true)
+	end)
+	self:HookScript("OnLeave", function(frame)
+		UpdateMouseoverHealthColor(frame, RaidFrame5Mod.db and RaidFrame5Mod.db.profile or defaults.profile, false)
+	end)
 
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel() - 1)
@@ -435,7 +530,8 @@ local style = function(self, unit)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
 	healthPreview:SetOrientation(db.HealthBarOrientation)
 	healthPreview:SetSparkTexture("")
-	healthPreview:SetAlpha(.5)
+		healthPreview:SetAlpha(0)
+		healthPreview:Hide()
 	healthPreview:DisableSmoothing(true)
 
 	self.Health.Preview = healthPreview
@@ -452,7 +548,9 @@ local style = function(self, unit)
 	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	self.HealthPrediction.PostUpdate = HealPredict_PostUpdate
+	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Temporary rollback: broken white prediction overlay covers raid health bars.
+	self.HealthPrediction:SetAlpha(0)
+	self.HealthPrediction:Hide()
 
 	-- Cast Overlay
 	--------------------------------------------
@@ -577,6 +675,8 @@ local style = function(self, unit)
 		absorb:SetStatusBarTexture(db.HealthBarTexture)
 		absorb:SetStatusBarColor(unpack(db.HealthAbsorbColor))
 		absorb:SetSparkMap(db.HealthBarSparkMap)
+		absorb:SetAlpha(0)
+		absorb:Hide()
 
 		local orientation
 		if (db.HealthBarOrientation == "UP") then
@@ -590,7 +690,7 @@ local style = function(self, unit)
 		end
 		absorb:SetOrientation(orientation)
 
-		self.HealthPrediction.absorbBar = absorb
+		-- self.HealthPrediction.absorbBar = absorb -- Temporary rollback: broken absorb overlay covers raid health bars.
 	end
 
 	-- Readycheck
@@ -775,7 +875,9 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	local profile = RaidFrame5Mod.db and RaidFrame5Mod.db.profile or defaults.profile
 	local db = profile or defaults.profile
 	local headerProfile = GetSanitizedHeaderProfile(profile)
-	if (db.enabled) then
+	if (db.enabled and IsRuntimeTestMode()) then
+		table_insert(driver, "show")
+	elseif (db.enabled) then
 		table_insert(driver, "[group:party,nogroup:raid]"..(db.useInParties and "show" or "hide"))
 		table_insert(driver, "[@raid26,exists]"..(db.useInRaid40 and "show" or "hide"))
 		table_insert(driver, "[@raid11,exists]"..(db.useInRaid25 and "show" or "hide"))
@@ -1015,46 +1117,21 @@ RaidFrame5Mod.CreateUnitFrames = function(self)
 
 	for i = 1,5 do
 
-		-- The real unit of the frame.
-		local realUnit = ns.IsInTestMode and "player" or unit..i
+		-- Spawn with a stable unit token; test mode is applied through drivers.
+		local realUnit = unit..i
 
 		-- Spawn our unit button and parent it to our visibility driver.
 		local unitButton = ns.UnitFrame.Spawn(realUnit, ns.Prefix.."UnitFrame"..name..i)
 		unitButton:SetParent(self.frame.content)
+		ApplyHealthColorMode(unitButton, self.db and self.db.profile or defaults.profile)
 
 		-- Reference the unitbutton on our custom header frame.
 		self.frame.content:SetFrameRef("child"..i, unitButton)
 		self.frame.content:SetAttribute("child"..i, unitButton)
 
-		-- Let's create a magic unit driver for this one.
-		local driver = {}
-
-		local raidUnit, partyUnit = unit..i, "party"..i
-		local raidPetUnit, partyPetUnit = raidUnit.."pet", partyUnit.."pet"
-
-		-- Vehicle toggling
-		if (ns.IsCata or ns.IsRetail) then
-
-			-- Don't automatically toggle for vehicles, we handle this one.
-			unitButton:SetAttribute("toggleForVehicle", nil)
-
-			-- Group type dependant unit replacements.
-			-- *Our frames should use raid units when available, party otherwise.
-			table_insert(driver, "[vehicleui,group:raid]"..raidPetUnit)
-			table_insert(driver, "[vehicleui,nogroup:raid]"..partyPetUnit)
-		end
-
-		-- Group type dependant units.
-		-- *Our frames should use raid units when available, party otherwise.
-		table_insert(driver, "[group:raid]"..raidUnit)
-		table_insert(driver, "[nogroup:raid]"..partyUnit)
-
-		-- Use a fallback unit.
-		table_insert(driver, realUnit)
-
-		-- Apply our custom unit driver.
-		RegisterAttributeDriver(unitButton, "unit", table_concat(driver, ";"))
 	end
+
+	ApplyTestUnitDrivers(self)
 
 	self:UpdateHeader()
 
@@ -1143,6 +1220,7 @@ end
 RaidFrame5Mod.UpdateUnits = function(self)
 	if (not self:GetFrame()) then return end
 	for frame in next,Units do
+		ApplyHealthColorMode(frame, self.db.profile)
 		if (self.db.profile.useRangeIndicator) then
 			frame:EnableElement("Range")
 		else
@@ -1154,6 +1232,7 @@ RaidFrame5Mod.UpdateUnits = function(self)
 end
 
 RaidFrame5Mod.Update = function(self)
+	ApplyTestUnitDrivers(self)
 	self:UpdateHeader()
 	self:UpdateUnits()
 end
