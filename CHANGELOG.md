@@ -12,6 +12,20 @@ Do not repeat older items from prior versions in newer entries.
 - Split power value alpha control so player and target power text can be tuned independently.
 - Disabled the broken white absorb/heal-prediction overlay on non-player/target frames until a safer retail path is ready.
 - Hid duplicate Blizzard battleground carrier/arena support frames that could appear alongside AzeriteUI in current WoW 12 contexts.
+- Reworked party and raid health-bar coloring so you can choose AzeriteUI class colors, Blizzard class colors, or flat health green with class color only on mouseover.
+
+### Access
+- Party health color controls: `/az -> Unit Frames -> Party Frames`
+- Raid health color controls: `/az -> Unit Frames -> Raid Frames (5/25/40)`
+- New options:
+  - `Use Class Colors`
+  - `Use Blizzard Health Bar Colors`
+  - `Only Show Class Color on Mouseover`
+
+### Why
+- Party and raid health colors now read more clearly and behave more predictably.
+- Players can keep a simple green health baseline, switch to Blizzard palette parity, or only surface class/reaction colors when hovering a frame.
+- The release also reduces duplicate or broken overlays while improving preview/testing coverage for unit-frame layout work.
 
 ### Internal
 - Continued boss/arena reverse-fill and fake-fill groundwork against the target-frame path while narrowing remaining mismatches to the preview/test presenter instead of live target rendering.
