@@ -122,11 +122,6 @@ EncounterBar.PrepareFrames = function(self)
 	self.frame = _G.EncounterBar -- UIWidgetPowerBarContainerFrame
 	if (not self.frame) then return end
 
-	if (not ns.ClientVersion or ns.ClientVersion < 120000) then
-		_G.EncounterBar.HighlightSystem = ns.Noop
-		_G.EncounterBar.ClearHighlight = ns.Noop
-	end
-
 	-- Do not hook SetPoint to avoid recursion during loading; we'll update on demand.
 	self.prepared = true
 end

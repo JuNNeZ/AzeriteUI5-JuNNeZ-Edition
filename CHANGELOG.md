@@ -4,6 +4,21 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.18-JuNNeZ (2026-03-21)
+
+### Highlights
+- Reduced a retail WoW 12 taint path by stopping AzeriteUI from writing replacement highlight handlers onto Blizzard-owned frame tables that could leak into Edit Mode, Encounter Warnings, and other secure systems.
+
+### Access
+- No new user-facing menu path. This is a stability hotfix.
+
+### Why
+- The failing stacks were inside Blizzard secure/UI systems while marked as tainted by AzeriteUI, which matched the repo’s existing warning about replacing Blizzard-owned methods in current retail.
+- This patch removes the remaining live instances of that method-replacement pattern from the affected Blizzard support-frame suppression paths.
+
+### Internal
+- Removed the live `HighlightSystem` / `ClearHighlight` replacement from Blizzard mirror timers and cleaned up the same stale pattern in the related retail support-frame modules.
+
 ## 5.3.17-JuNNeZ (2026-03-21)
 
 ### Highlights

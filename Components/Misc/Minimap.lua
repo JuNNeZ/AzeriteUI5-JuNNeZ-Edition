@@ -1426,11 +1426,6 @@ MinimapMod.OnEnable = function(self)
 
 	self:InitializeObjectTables()
 
-	if (ns.WoW10 and (not ns.ClientVersion or ns.ClientVersion < 120000)) then
-		MinimapCluster.HighlightSystem = ns.Noop
-		MinimapCluster.ClearHighlight = ns.Noop
-	end
-
 	MinimapCluster:EnableMouse(false)
 	MinimapCluster:SetFrameLevel(1)
 

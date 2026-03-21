@@ -186,14 +186,7 @@ function Tooltips:ApplyHighlightOverride()
 		return
 	end
 	self:EnsureHighlightCache()
-	if (self:IsConsolePortActive()) then
-		self:RestoreHighlightState()
-	elseif (ns.ClientVersion and ns.ClientVersion >= 120000) then
-		self:RestoreHighlightState()
-	else
-		GameTooltipDefaultContainer.HighlightSystem = ns.Noop
-		GameTooltipDefaultContainer.ClearHighlight = ns.Noop
-	end
+	self:RestoreHighlightState()
 end
 
 -- Detect unit tooltips anchored to nameplates (Retail/Cata only)
