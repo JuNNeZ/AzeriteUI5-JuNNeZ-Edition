@@ -4,23 +4,26 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
-## 5.3.17-JuNNeZ-beta1 (2026-03-21)
+## 5.3.17-JuNNeZ (2026-03-21)
 
 ### Highlights
 - Added interrupt-readiness coloring to enemy nameplate castbars so interruptible casts read more clearly when your kick is ready, unavailable, or the cast is protected.
+- Reworked AzeriteUI nameplate sizing so friendly players, friendly NPCs, enemies, soft targets, and hard targets follow clearer separate scale paths instead of sharing one oversized friendly baseline.
+- Added a dedicated Friendly NPC size control and stabilized soft-target handling so interact/soft-target plates behave more predictably without leaning on Blizzard scale mode.
 - Expanded player-frame aura-row customization with a cleaner basic/advanced split, while keeping AzeriteUI stock behavior available as the default path.
 - Reworked Party Frames aura controls so filtering, layout, and dispellable-debuff emphasis are easier to tune and read in `/az`.
 - Fixed Blizzard duplicate support frames that could still appear alongside AzeriteUI, including battleground carrier frames and the Blizzard breath bar mirror timer.
 - Improved class-power click blocking so visible Paladin Holy Power coverage matches the actual art footprint more reliably.
 
 ### Access
+- Nameplate size controls: `/az -> Nameplates -> Size`
 - Player aura row settings: `/az -> Unit Frames -> Player`
 - Party aura row settings: `/az -> Unit Frames -> Party Frames`
 - Aura header targeting options: `/az -> Aura Header`
 
 ### Why
-- The beta focuses on visual clarity and duplicate-frame cleanup in active retail WoW 12 gameplay.
-- Castbars, aura rows, party-frame aura visibility, and Blizzard frame suppression should now behave more predictably without relying on external addon workarounds.
+- This stable follow-up focuses on visual clarity and duplicate-frame cleanup in active retail WoW 12 gameplay, with extra attention on nameplate scale consistency.
+- Castbars, nameplates, aura rows, party-frame aura visibility, and Blizzard frame suppression should now behave more predictably without relying on external addon workarounds.
 
 ### Internal
 - Normalized retail aura metadata consumers so `spellId`/`spellID` registrations resolve more consistently across filtering, sorting, and styling.

@@ -51,14 +51,16 @@ local defaults = { profile = ns:Merge({
 	showNameAlways = false,
 	hideFriendlyPlayerHealthBar = false,
 	friendlyNameOnlyFontScale = 2.5,
-	friendlyNameOnlyTargetScale = 0.5,
+	friendlyNameOnlyTargetScale = false,
 	showBlizzardWidgets = false,
+	useBlizzardGlobalScale = false,
 	scale = 2,
-	friendlyScale = 1,
-	enemyScale = 1,
-	friendlyTargetScale = 1,
-	enemyTargetScale = 0.5,
-	nameplateTargetScale = 0.5,
+	friendlyScale = 1.95,
+	friendlyNPCScale = 1,
+	enemyScale = .66,
+	friendlyTargetScale = 0,
+	enemyTargetScale = 0,
+	nameplateTargetScale = 0,
 	healthFlipLabEnabled = false,
 	healthFlipLabDebugMode = false,
 	healthLabOrientation = "DEFAULT",
@@ -77,12 +79,23 @@ local defaults = { profile = ns:Merge({
 local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
 local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
 local FRIENDLY_NAME_ONLY_SCALE_MULTIPLIER = 2
+local SECONDARY_INTERRUPT_COLOR = { 170/255, 110/255, 1, 1 }
 local FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = 6
 local GLOBAL_NAMEPLATE_BASE_SCALE_DEFAULT = 2
-local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = 1
-local ENEMY_NAMEPLATE_SCALE_DEFAULT = 1
-local FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = 1
-local GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT = 0.5
+local GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT = 1.1
+local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = 1.95
+local FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT = 1
+local ENEMY_NAMEPLATE_SCALE_DEFAULT = .66
+local FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = 0
+local GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT = 0
+local LEGACY_FRIENDLY_NAMEPLATE_SCALE_DEFAULT = 1.5
+local LEGACY_ENEMY_NAMEPLATE_SCALE_DEFAULT = .66
+local LEGACY_FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = 0
+local LEGACY_GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT = .5
+local PROMOTED_FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = -.65
+local PROMOTED_GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT = .2
+local NAMEPLATE_TARGET_SCALE_MIN = -.95
+local NAMEPLATE_TARGET_SCALE_MAX = 4
 local GLOBAL_NAMEPLATE_UNIT_SCALE_DEFAULT = 1
 local GLOBAL_NAMEPLATE_SELECTED_SCALE_NEUTRAL = 1
 local GLOBAL_NAMEPLATE_MIN_SCALE = 1
@@ -373,9 +386,51 @@ local GetValidatedProfileScale = function(value, default, allowZero)
 	return value
 end
 
+local GetValidatedTargetScale = function(value, default)
+	if (type(value) ~= "number") then
+		return default
+	end
+	if (value < NAMEPLATE_TARGET_SCALE_MIN or value > NAMEPLATE_TARGET_SCALE_MAX) then
+		return default
+	end
+	return value
+end
+
 local GetNamePlateProfileScale = function()
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
 	return GetValidatedProfileScale(profile and profile.scale, GLOBAL_NAMEPLATE_BASE_SCALE_DEFAULT, false)
+end
+
+local IsUsingBlizzardGlobalScale = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return profile and profile.useBlizzardGlobalScale and true or false
+end
+
+local GetCVarStringSafe = function(name)
+	if (type(name) ~= "string" or name == "") then
+		return nil
+	end
+	if (C_CVar and C_CVar.GetCVar) then
+		local ok, value = pcall(C_CVar.GetCVar, name)
+		if (ok and type(value) == "string" and value ~= "") then
+			return value
+		end
+	end
+	if (type(GetCVar) == "function") then
+		local ok, value = pcall(GetCVar, name)
+		if (ok and type(value) == "string" and value ~= "") then
+			return value
+		end
+	end
+	return nil
+end
+
+local GetBlizzardNamePlateGlobalScale = function()
+	local value = tonumber(GetCVarStringSafe("nameplateGlobalScale"))
+	if (type(value) ~= "number" or value <= 0) then
+		return GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT
+	end
+	return value
 end
 
 local IsHostileNamePlate = function(self)
@@ -402,6 +457,11 @@ local GetFriendlyNamePlateScaleSetting = function()
 	return GetValidatedProfileScale(profile and profile.friendlyScale, FRIENDLY_NAMEPLATE_SCALE_DEFAULT, false)
 end
 
+local GetFriendlyNPCNamePlateScaleSetting = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return GetValidatedProfileScale(profile and profile.friendlyNPCScale, FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT, false)
+end
+
 local GetEnemyNamePlateScaleSetting = function()
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
 	return GetValidatedProfileScale(profile and profile.enemyScale, ENEMY_NAMEPLATE_SCALE_DEFAULT, false)
@@ -409,40 +469,53 @@ end
 
 local GetFriendlyNamePlateTargetScaleSetting = function()
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
-	return GetValidatedProfileScale(profile and profile.friendlyTargetScale, FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT, true)
+	return GetValidatedTargetScale(profile and profile.friendlyTargetScale, FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT)
 end
 
 local GetEnemyNamePlateTargetScaleSetting = function()
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
-	local scale = GetValidatedProfileScale(profile and profile.enemyTargetScale, nil, true)
+	local scale = GetValidatedTargetScale(profile and profile.enemyTargetScale, nil)
 	if (scale == nil) then
 		-- Backwards compatibility with earlier target-scale key.
-		scale = GetValidatedProfileScale(profile and profile.nameplateTargetScale, GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT, true)
+		scale = GetValidatedTargetScale(profile and profile.nameplateTargetScale, GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT)
 	end
 	return scale
 end
 
 local GetFriendlyNameOnlyTargetScale = function()
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
-	return GetValidatedProfileScale(profile and profile.friendlyNameOnlyTargetScale, FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT, true)
+	local explicitScale = GetValidatedTargetScale(profile and profile.friendlyNameOnlyTargetScale, nil)
+	if (explicitScale ~= nil) then
+		return explicitScale
+	end
+	return GetFriendlyNamePlateTargetScaleSetting()
 end
 
 local GetEffectivePlateScale = function(self)
-	local scale = ns.API.GetScale() * GetNamePlateProfileScale()
+	local scale = ns.API.GetScale()
+	if (IsUsingBlizzardGlobalScale()) then
+		scale = scale * GetBlizzardNamePlateGlobalScale()
+	else
+		scale = scale * GetNamePlateProfileScale()
+	end
 	local isHostile = IsHostileNamePlate(self)
+	local isTargetLike = (self and (self.isTarget or self.isSoftTarget)) and true or false
+	local isFriendlyNPC = self and self.isFriendlyAssistableNPC and true or false
 
 	if (isHostile) then
 		scale = scale * GetEnemyNamePlateScaleSetting()
+	elseif (isFriendlyNPC) then
+		scale = scale * GetFriendlyNPCNamePlateScaleSetting()
 	else
 		scale = scale * GetFriendlyNamePlateScaleSetting()
 	end
 
 	if (ShouldUseFriendlyPlayerNameOnly(self)) then
 		scale = scale * FRIENDLY_NAME_ONLY_SCALE_MULTIPLIER
-		if (self.isTarget) then
+		if (isTargetLike) then
 			scale = scale * (1 + GetFriendlyNameOnlyTargetScale())
 		end
-	elseif (self.isTarget) then
+	elseif (isTargetLike) then
 		if (isHostile) then
 			scale = scale * (1 + GetEnemyNamePlateTargetScaleSetting())
 		else
@@ -450,6 +523,63 @@ local GetEffectivePlateScale = function(self)
 		end
 	end
 	return scale
+end
+
+NamePlatesMod.GetDebugPlateScaleBreakdown = function(self, frame)
+	if (not frame) then
+		return nil
+	end
+
+	local isHostile = IsHostileNamePlate(frame)
+	local overallScale = IsUsingBlizzardGlobalScale() and GetBlizzardNamePlateGlobalScale() or GetNamePlateProfileScale()
+	local isFriendlyNPC = frame.isFriendlyAssistableNPC and true or false
+	local relationScale = isHostile and GetEnemyNamePlateScaleSetting()
+		or isFriendlyNPC and GetFriendlyNPCNamePlateScaleSetting()
+		or GetFriendlyNamePlateScaleSetting()
+	local targetScale = 0
+	local targetLike = (frame.isTarget or frame.isSoftTarget) and true or false
+	local friendlyNameOnly = ShouldUseFriendlyPlayerNameOnly(frame) and true or false
+
+	if (friendlyNameOnly) then
+		if (targetLike) then
+			targetScale = GetFriendlyNameOnlyTargetScale()
+		end
+	elseif (targetLike) then
+		targetScale = isHostile and GetEnemyNamePlateTargetScaleSetting() or GetFriendlyNamePlateTargetScaleSetting()
+	end
+
+	local softTargetFrame = frame.SoftTargetFrame
+	local blizzPlate = frame.blizzPlate
+	local parent = frame.GetParent and frame:GetParent() or nil
+
+	return {
+		unit = frame.unit,
+		target = frame.isTarget and true or false,
+		softTarget = frame.isSoftTarget and true or false,
+		softEnemy = frame.isSoftEnemy and true or false,
+		softInteract = frame.isSoftInteract and true or false,
+		hostile = isHostile and true or false,
+		friendlyNPC = isFriendlyNPC,
+		friendlyNameOnly = friendlyNameOnly,
+		usingBlizzardGlobalScale = IsUsingBlizzardGlobalScale(),
+		baseScale = ns.API.GetScale(),
+		overallScale = overallScale,
+		relationScale = relationScale,
+		targetScale = targetScale,
+		computedScale = GetEffectivePlateScale(frame),
+		frameScale = frame.GetScale and frame:GetScale() or nil,
+		frameEffectiveScale = frame.GetEffectiveScale and frame:GetEffectiveScale() or nil,
+		parentName = parent and parent.GetName and parent:GetName() or nil,
+		parentScale = parent and parent.GetScale and parent:GetScale() or nil,
+		parentEffectiveScale = parent and parent.GetEffectiveScale and parent:GetEffectiveScale() or nil,
+		blizzPlateScale = blizzPlate and blizzPlate.GetScale and blizzPlate:GetScale() or nil,
+		blizzPlateEffectiveScale = blizzPlate and blizzPlate.GetEffectiveScale and blizzPlate:GetEffectiveScale() or nil,
+		softTargetFrameShown = softTargetFrame and softTargetFrame.IsShown and softTargetFrame:IsShown() or false,
+		softTargetFrameScale = softTargetFrame and softTargetFrame.GetScale and softTargetFrame:GetScale() or nil,
+		softTargetFrameEffectiveScale = softTargetFrame and softTargetFrame.GetEffectiveScale and softTargetFrame:GetEffectiveScale() or nil,
+		softTargetFrameWidth = softTargetFrame and softTargetFrame.GetWidth and softTargetFrame:GetWidth() or nil,
+		softTargetFrameHeight = softTargetFrame and softTargetFrame.GetHeight and softTargetFrame:GetHeight() or nil
+	}
 end
 
 local ApplyNamePlateScale = function(self)
@@ -495,6 +625,19 @@ local RefreshActiveNamePlateScales = function()
 	end
 end
 
+local GetDriverCVars = function()
+	local values = {}
+	for key, value in next, cvars do
+		values[key] = value
+	end
+	if (IsUsingBlizzardGlobalScale()) then
+		values["nameplateGlobalScale"] = GetBlizzardNamePlateGlobalScale()
+	else
+		values["nameplateGlobalScale"] = GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT
+	end
+	return values
+end
+
 local ApplyNamePlateDriverSettings = function(self)
 	local driver = self and self.namePlateDriver
 	if (not driver) then
@@ -510,10 +653,19 @@ local ApplyNamePlateDriverSettings = function(self)
 		driver:SetSize(unpack(db.Size))
 	end
 	if (driver.SetCVars) then
-		driver:SetCVars(cvars)
+		driver:SetCVars(GetDriverCVars())
 	end
 
 	self.pendingDriverRefresh = nil
+end
+
+local RefreshNamePlateScalingState = function(self)
+	if (not self or not self.IsEnabled or not self:IsEnabled()) then
+		return
+	end
+	ApplyFriendlyNameOnlyCVars()
+	ApplyNamePlateDriverSettings(self)
+	RefreshActiveNamePlateScales()
 end
 
 local ApplyFriendlyNameOnlyNameAnchor = function(self, db, enabled)
@@ -1137,9 +1289,11 @@ local Castbar_PostUpdate = function(element, unit)
 	local textColor = db.CastBarNameColor
 	if (not element.__owner.isPRD) then
 		local state = ns.API.GetInterruptCastVisualState(element)
-		if (state == "ready") then
-			textColor = Colors.quest.yellow
-		elseif (state == "cooldown") then
+		if (state == "primary-ready") then
+			textColor = Colors.cast
+		elseif (state == "secondary-ready") then
+			textColor = SECONDARY_INTERRUPT_COLOR
+		elseif (state == "unavailable") then
 			textColor = Colors.red
 		elseif (state == "locked") then
 			textColor = Colors.gray
@@ -1362,6 +1516,7 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 	self.isTarget = SafeUnitMatches(unit, "target")
 	self.isSoftEnemy = SafeUnitMatches(unit, "softenemy")
 	self.isSoftInteract = SafeUnitMatches(unit, "softinteract")
+	self.isSoftTarget = (self.isSoftEnemy or self.isSoftInteract) and true or nil
 	self.nameplateShowsWidgetsOnly = ns.IsRetail and UnitNameplateShowsWidgetsOnly(unit)
 	local canAttack = UnitCanAttack("player", unit)
 	local canAssist = UnitCanAssist("player", unit)
@@ -1457,6 +1612,7 @@ end
 
 local SoftNamePlate_OnEnter = function(self, ...)
 	self.isSoftTarget = true
+	ApplyNamePlateScale(self)
 	if (self.OnEnter) then
 		self:OnEnter(...)
 	end
@@ -1464,6 +1620,7 @@ end
 
 local SoftNamePlate_OnLeave = function(self, ...)
 	self.isSoftTarget = nil
+	ApplyNamePlateScale(self)
 	if (self.OnLeave) then
 		self:OnLeave(...)
 	end
@@ -1541,6 +1698,7 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 		return
 	elseif (event == "PLAYER_SOFT_ENEMY_CHANGED") then
 		self.isSoftEnemy = SafeUnitMatches(unit, "softenemy")
+		self.isSoftTarget = (self.isSoftEnemy or self.isSoftInteract) and true or nil
 		ApplyNamePlateScale(self)
 
 		Classification_Update(self, event, unit, ...)
@@ -1550,6 +1708,7 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 		return
 	elseif (event == "PLAYER_SOFT_INTERACT_CHANGED") then
 		self.isSoftInteract = SafeUnitMatches(unit, "softinteract")
+		self.isSoftTarget = (self.isSoftEnemy or self.isSoftInteract) and true or nil
 		ApplyNamePlateScale(self)
 
 		Classification_Update(self, event, unit, ...)
@@ -1962,7 +2121,7 @@ cvars = {
 	["clampTargetNameplateToScreen"] = 1,
 
 	-- Nameplate scale
-	["nameplateGlobalScale"] = 1.1,
+	["nameplateGlobalScale"] = GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT,
 	["nameplateLargerScale"] = GLOBAL_NAMEPLATE_LARGER_SCALE,
 	["NamePlateHorizontalScale"] = 1,
 	["NamePlateVerticalScale"] = 1,
@@ -2133,7 +2292,7 @@ local SOFTTARGET
 local checkSoftTarget = function()
 	if (UnitExists("softenemy") or UnitExists("softinteract")) then
 		if (SOFTTARGET) then
-			local EnemyDead = true
+			local EnemyDead = false
 			if (UnitIsDead("softenemy")) then
 				EnemyDead = true
 			end
@@ -2472,6 +2631,13 @@ NamePlatesMod.HookNamePlates = function(self)
 	end
 
 	if (not secretMode) then
+		if (NamePlateDriverFrame.UpdateNamePlateSize and not self.__AzeriteUI_NamePlateSizeHooked) then
+			self.__AzeriteUI_NamePlateSizeHooked = true
+			hooksecurefunc(NamePlateDriverFrame, "UpdateNamePlateSize", function()
+				RefreshNamePlateScalingState(self)
+			end)
+		end
+
 		if (NamePlateDriverFrame.SetupClassNameplateBars) then
 			hooksecurefunc(NamePlateDriverFrame, "SetupClassNameplateBars", function(frame)
 				if (not frame or frame:IsForbidden()) then return end
@@ -2493,6 +2659,7 @@ NamePlatesMod.HookNamePlates = function(self)
 					C_NamePlate.SetNamePlateSelfSize(unpack(db.Size))
 				end
 			end
+			RefreshNamePlateScalingState(self)
 		end)
 	end
 
@@ -2567,6 +2734,12 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 	elseif (event == "UI_SCALE_CHANGED") then
 		ApplyNamePlateDriverSettings(self)
 		RefreshActiveNamePlateScales()
+	elseif (event == "CVAR_UPDATE") then
+		local name = ...
+		if (name == "nameplateGlobalScale" and IsUsingBlizzardGlobalScale()) then
+			ApplyNamePlateDriverSettings(self)
+			RefreshActiveNamePlateScales()
+		end
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		if (self.pendingDriverRefresh) then
 			ApplyNamePlateDriverSettings(self)
@@ -2616,6 +2789,42 @@ end
 NamePlatesMod.OnInitialize = function(self)
 	-- Always register the database first so options can access it
 	self.db = ns.db:RegisterNamespace("NamePlates", defaults)
+	if (self.db and self.db.profile and (not self.db.profile.nameplateScaleModelVersion or self.db.profile.nameplateScaleModelVersion < 2)) then
+		if (self.db.profile.friendlyNameOnlyTargetScale == FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT) then
+			self.db.profile.friendlyNameOnlyTargetScale = false
+		end
+		self.db.profile.nameplateScaleModelVersion = 2
+	end
+	if (self.db and self.db.profile and self.db.profile.nameplateScaleModelVersion < 3) then
+		if (self.db.profile.friendlyScale == LEGACY_FRIENDLY_NAMEPLATE_SCALE_DEFAULT) then
+			self.db.profile.friendlyScale = FRIENDLY_NAMEPLATE_SCALE_DEFAULT
+		end
+		if (self.db.profile.enemyScale == LEGACY_ENEMY_NAMEPLATE_SCALE_DEFAULT) then
+			self.db.profile.enemyScale = ENEMY_NAMEPLATE_SCALE_DEFAULT
+		end
+		if (self.db.profile.friendlyTargetScale == LEGACY_FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT) then
+			self.db.profile.friendlyTargetScale = FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT
+		end
+		if (self.db.profile.enemyTargetScale == LEGACY_GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT) then
+			self.db.profile.enemyTargetScale = GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT
+		end
+		if (self.db.profile.nameplateTargetScale == LEGACY_GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT) then
+			self.db.profile.nameplateTargetScale = GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT
+		end
+		self.db.profile.nameplateScaleModelVersion = 3
+	end
+	if (self.db and self.db.profile and self.db.profile.nameplateScaleModelVersion < 4) then
+		if (self.db.profile.friendlyTargetScale == PROMOTED_FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT) then
+			self.db.profile.friendlyTargetScale = FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT
+		end
+		if (self.db.profile.enemyTargetScale == PROMOTED_GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT) then
+			self.db.profile.enemyTargetScale = GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT
+		end
+		if (self.db.profile.nameplateTargetScale == PROMOTED_GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT) then
+			self.db.profile.nameplateTargetScale = GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT
+		end
+		self.db.profile.nameplateScaleModelVersion = 4
+	end
 	ApplyFriendlyNameOnlyCVars()
 	
 	-- Check for conflicts with other nameplate addons
@@ -2637,7 +2846,7 @@ NamePlatesMod.OnEnable = function(self)
 		driver:SetAddedCallback(callback)
 		driver:SetRemovedCallback(callback)
 		driver:SetTargetCallback(callback)
-		driver:SetCVars(cvars)
+		driver:SetCVars(GetDriverCVars())
 		self.namePlateDriver = driver
 	end
 	ApplyNamePlateDriverSettings(self)
@@ -2648,6 +2857,7 @@ NamePlatesMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("UI_SCALE_CHANGED", "OnEvent")
+	self:RegisterEvent("CVAR_UPDATE", "OnEvent")
 	self:RegisterEvent("NAME_PLATE_UNIT_ADDED", "OnEvent")
 	self:RegisterEvent("NAME_PLATE_UNIT_REMOVED", "OnEvent")
 

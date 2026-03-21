@@ -2624,6 +2624,94 @@ local function PrintScaleStatus()
 	end
 end
 
+local function GetDebugNamePlateFrame(token)
+	local unit = type(token) == "string" and token:lower() or ""
+	if (unit == "" or unit == "auto") then
+		if (UnitExists("target")) then
+			unit = "target"
+		elseif (UnitExists("softenemy")) then
+			unit = "softenemy"
+		elseif (UnitExists("softinteract")) then
+			unit = "softinteract"
+		elseif (UnitExists("mouseover")) then
+			unit = "mouseover"
+		else
+			unit = "nameplate1"
+		end
+	end
+
+	local frame = nil
+	local resolvedUnit = unit
+	if (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then
+		local plate = C_NamePlate.GetNamePlateForUnit(unit)
+		frame = plate and (plate.unitFrame or plate.UnitFrame)
+	end
+
+	if (not frame and ns.ActiveNamePlates) then
+		for plate in next, ns.ActiveNamePlates do
+			if (plate and plate.unit and SafeCall(UnitIsUnit, plate.unit, unit)) then
+				frame = plate
+				resolvedUnit = plate.unit
+				break
+			end
+		end
+	end
+
+	return frame, resolvedUnit
+end
+
+local function PrintNamePlateScaleStatus(token)
+	local mod = ns:GetModule("NamePlates", true)
+	if (not mod or not mod.GetDebugPlateScaleBreakdown) then
+		print("|cff33ff99", "AzeriteUI nameplate scale:", "NamePlates module unavailable")
+		return
+	end
+
+	local frame, resolvedUnit = GetDebugNamePlateFrame(token)
+	if (not frame) then
+		print("|cff33ff99", "AzeriteUI nameplate scale:", "no matching active plate found for", tostring(token or "auto"))
+		return
+	end
+
+	local info = mod:GetDebugPlateScaleBreakdown(frame)
+	if (not info) then
+		print("|cff33ff99", "AzeriteUI nameplate scale:", "unable to inspect plate")
+		return
+	end
+
+	print("|cff33ff99", "AzeriteUI nameplate scale:")
+	SafePrint("|cfff0f0f0  unit:", tostring(resolvedUnit), "frameUnit:", tostring(info.unit))
+	SafePrint("|cfff0f0f0  flags:",
+		"target", tostring(info.target),
+		"softTarget", tostring(info.softTarget),
+		"softEnemy", tostring(info.softEnemy),
+		"softInteract", tostring(info.softInteract),
+		"hostile", tostring(info.hostile),
+		"nameOnly", tostring(info.friendlyNameOnly))
+	SafePrint("|cfff0f0f0  scale inputs:",
+		"base", tostring(info.baseScale),
+		"overall", tostring(info.overallScale),
+		"relation", tostring(info.relationScale),
+		"targetDelta", tostring(info.targetScale),
+		"blizzardMode", tostring(info.usingBlizzardGlobalScale))
+	SafePrint("|cfff0f0f0  frame:",
+		"computed", tostring(info.computedScale),
+		"scale", tostring(info.frameScale),
+		"effective", tostring(info.frameEffectiveScale))
+	SafePrint("|cfff0f0f0  parent:",
+		"name", tostring(info.parentName),
+		"scale", tostring(info.parentScale),
+		"effective", tostring(info.parentEffectiveScale),
+		"blizzScale", tostring(info.blizzPlateScale),
+		"blizzEffective", tostring(info.blizzPlateEffectiveScale))
+	SafePrint("|cfff0f0f0  softFrame:",
+		"shown", tostring(info.softTargetFrameShown),
+		"scale", tostring(info.softTargetFrameScale),
+		"effective", tostring(info.softTargetFrameEffectiveScale),
+		"width", tostring(info.softTargetFrameWidth),
+		"height", tostring(info.softTargetFrameHeight))
+end
+
 local function ResetUnitFrameScales()
 	local desired = ns.API.GetEffectiveScale()
 	for _, mod in next, GetUnitFrameModules() do
@@ -2747,6 +2835,7 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug snapshot [unit]|r")
 	print("|cfff0f0f0  /azdebug blizzard enable|r")
 	print("|cfff0f0f0  /azdebug scale|r  (print scale status)")
+	print("|cfff0f0f0  /azdebug scale nameplates [unit]|r")
 	print("|cfff0f0f0  /azdebug scale reset|r")
 	print("|cfff0f0f0  /azdebug scripterrors|r")
 	print("|cfff0f0f0  /azdebug secrettest [unit]|r")
@@ -3788,9 +3877,14 @@ Debugging.DebugMenu = function(self, input)
 		return PrintDebugHelp()
 	end
 	if (cmd == "scale") then
-		local sub = rest:match("^(%S+)")
+		local sub, arg = rest:match("^(%S+)%s*(.-)$")
+		sub = sub and sub:lower()
 		if (sub and sub:lower() == "reset") then
 			return ResetUnitFrameScales()
+		end
+		if (sub == "nameplates" or sub == "nameplate") then
+			local token = (arg and arg ~= "") and arg or "auto"
+			return PrintNamePlateScaleStatus(token)
 		end
 		return PrintScaleStatus()
 	end

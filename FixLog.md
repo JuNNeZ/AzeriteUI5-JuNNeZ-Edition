@@ -5,6 +5,79 @@
 
 ## 2026-03-21
 
+- **Nameplate Blizzard-scale sync toggle started:** Investigating the remaining "too big or too small" feel in AzeriteUI nameplates by letting the custom frame scale optionally follow Blizzard's live nameplate global scale instead of relying only on addon-local scale math.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`
+- **Nameplate Blizzard-scale sync toggle applied:** Added a `/az -> Nameplates -> Follow Blizzard global scale` toggle that swaps the custom global baseline scale path over to Blizzard's live `nameplateGlobalScale`, refreshes active plates when that CVar changes, and disables the custom global scale slider while the Blizzard-linked mode is active.
+  - **Root Cause:** The current nameplate system already neutralizes Blizzard target scaling and then applies its own frame `SetScale(...)` math. That keeps target-size logic deterministic, but it also means the global baseline can feel slightly disconnected from Blizzard's native world/nameplate scaling, especially when comparing against stock behavior or tuning the live Blizzard slider/CVar.
+  - **Safety:** This is a narrow additive option only. Friendly/enemy and target multipliers still run through the same existing AzeriteUI relation-specific scale path, and the new mode only swaps which global baseline multiplier is used before those existing per-relation adjustments.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` and `luac -p 'Options/OptionsPages/Nameplates.lua'` passed. In-game `/reload`, toggling `/az -> Nameplates -> Follow Blizzard global scale`, and then adjusting Blizzard's own nameplate scale should confirm whether the baseline now feels closer to stock while relation/target sliders continue to work.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`, `FixLog.md`
+- **Nameplate external-addon logic audit started:** Comparing the local installed `Plater` and `Platynator` nameplate implementations against AzeriteUI's current scale/update path to pull over any safe driver-refresh logic without importing their full architecture or click-region model.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Nameplate external-addon logic audit applied:** Borrowed the safe driver-refresh pattern from the local `Plater` and `Platynator` installs by adding a shared `RefreshNamePlateScalingState()` helper and hooking Blizzard `NamePlateDriverFrame:UpdateNamePlateSize()` plus `UpdateNamePlateOptions()` so AzeriteUI reapplies its own CVars, native plate size, and active frame scale after Blizzard refreshes nameplate options.
+  - **Borrowed logic:** `Plater` explicitly hooks `NamePlateDriverFrame:UpdateNamePlateSize()` to restyle after Blizzard size updates, and `Platynator` centralizes native nameplate size / CVar reapplication in its display manager. AzeriteUI now mirrors that refresh discipline locally instead of depending only on world-entry / UI-scale / manual settings refreshes.
+  - **Not borrowed on purpose:** `Plater`'s Midnight click-space path in `Plater.lua` uses `C_NamePlateManager.SetNamePlateHitTestInsets(...)` to decouple visible art from click region, and `Platynator` also owns click-region scaling plus aggressive `NamePlateDriverFrame` event suppression/reparenting. Those patterns are too invasive for AzeriteUI's current WoW 12 path and carry higher taint/click-behavior risk than this addon should take right now.
+  - **Safety:** This keeps AzeriteUI's existing scale model intact. It only makes the module reassert that model more reliably after Blizzard's own nameplate driver updates.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` passed. In-game `/reload`, adjusting Blizzard nameplate size/scale-related settings, and then checking whether AzeriteUI plates stay in sync without drifting larger/smaller after the Blizzard update cycle are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Nameplate baseline default-tuning started:** Promoting the user-tested relation scale values into the real defaults so non-targeted plates stop starting too small and targeted plates stop starting too large, instead of requiring manual slider tuning to reach the intended baseline.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`
+- **Nameplate baseline default-tuning applied:** Changed the relation-level default baselines so new/current-reset profiles now start from the user-tested values that felt correct in practice: friendly/player scale `1.5`, enemy scale `0.66`, friendly/player target scale `0`, and enemy target scale `0.5`. Also normalized the friendly target slider so the no-bump baseline now reads as `100` instead of `0`.
+  - **Root Cause:** AzeriteUI's current all-plate scale stack was technically consistent, but the shipped relation defaults were not centered on the values that actually looked right in play. That made untargeted plates feel too small and target transitions feel too aggressive unless the user manually moved several sliders away from their nominal defaults.
+  - **Safety:** This does not add another scale path. It keeps the same existing global -> relation -> target order and only changes the default baseline constants/profile starts plus the friendly-target slider normalization around the new zero-bump default.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` and `luac -p 'Options/OptionsPages/Nameplates.lua'` passed. In-game `/reload`, profile reset or manual comparison against the prior values, and checking that the sliders now start closer to the intended feel are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`, `FixLog.md`
+- **Nameplate options UX cleanup started:** Reworking the nameplate options page so it reads like player-facing size/visibility controls instead of a flat list of implementation knobs, while keeping the new `100% = intended default` scale model intact.
+  - **Files Targeted:** `FixLog.md`, `Options/OptionsPages/Nameplates.lua`
+- **Nameplate options UX cleanup applied:** Reorganized the nameplate options into user-facing sections (`Visibility`, `Size`, `Friendly Players`, `Advanced`), renamed the sliders to read as visible outcomes instead of internal multiplier jargon, and added shared slider helpers so every size control now consistently presents `100%` as the intended default.
+  - **Root Cause:** The old flat option list mixed visibility, friendly-player special cases, overall scale, relation scale, and Blizzard integration in one continuous block. Even after the default-tuning pass, the page still read like developer internals because the labels and ordering exposed implementation details instead of the player-facing results.
+  - **Safety:** This is an options-page cleanup only. It does not rename saved keys or change the underlying runtime scale order; it only groups the controls more clearly and reuses shared slider helpers for consistent normalization.
+  - **Verification:** `luac -p 'Options/OptionsPages/Nameplates.lua'` passed. In-game `/reload` plus opening `/az -> Nameplates` is still required to confirm the new grouping/order reads cleanly and that each slider still updates the live plates as expected.
+  - **Files Modified:** `Options/OptionsPages/Nameplates.lua`, `FixLog.md`
+- **Friendly target-size fallback follow-up started:** Investigating why friendly player/NPC target sizing still feels inconsistent after the options cleanup, with suspicion on the separate friendly-player name-only target branch.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`
+- **Friendly target-size fallback follow-up applied:** Friendly player name-only plates now inherit the main friendly target-size setting by default instead of silently using a separate built-in bump, and the options text now explains that the friendly-player name-only slider is only an override when you want different behavior.
+  - **Root Cause:** `Components/UnitFrames/Units/NamePlates.lua` was sending friendly players in name-only mode through `friendlyNameOnlyTargetScale` while friendly NPCs used `friendlyTargetScale`. Because the friendly-player name-only branch still had its own old default bump, the shared `Friendly/player target size` control could feel broken or inconsistent whenever friendly player name-only mode was enabled.
+  - **Safety:** Runtime scale order is unchanged. This only changes the fallback source for friendly-player name-only target scaling and adds a one-time profile migration so old default-equal values stop forcing the legacy separate bump.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` and `luac -p 'Options/OptionsPages/Nameplates.lua'` passed. In-game `/reload`, targeting a friendly NPC and then a friendly player with name-only mode enabled, and confirming both now follow the same target-size baseline unless the override slider is intentionally changed, are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`, `FixLog.md`
+- **Nameplate/interrupt code-path audit applied:** Rechecked the live nameplate scale hooks, friendly target-size branches, and shared interrupt helper call sites, then fixed the remaining friendly-player name-only target slider mismatch so the UI setter/getter now matches the runtime inheritance model and `100%` on that override correctly restores inherited behavior.
+  - **Root Cause:** After the earlier fallback change, the friendly-player name-only override slider still wrote values using the old `0.5` additive baseline while the getter/runtime inheritance path had moved to the new `0`-baseline friendly target model. That meant the override slider could display one value while saving another semantic meaning, and there was no clean way to return to inherited behavior from the slider itself.
+  - **Safety:** This is limited to the options mapping. The nameplate runtime scale order and the interrupt helper logic remain unchanged; the override slider now simply writes `false` again at `100%` so inherited friendly target sizing works as designed.
+  - **Verification:** `luac -p 'Options/OptionsPages/Nameplates.lua'`, `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`, and earlier `luac -p 'Components/UnitFrames/Functions.lua'` all passed. In-game `/reload`, checking the friendly-player name-only target slider, and retesting enemy castbar interrupt colors are still required.
+  - **Files Modified:** `Options/OptionsPages/Nameplates.lua`, `FixLog.md`
+- **Nameplate slider-range and centered target-scale fix started:** Expanding the nameplate slider ranges and replacing the current one-sided target-scale math so values below `100%` can actually shrink target plates instead of being clamped away.
+  - **Files Targeted:** `FixLog.md`, `Options/OptionsPages/Nameplates.lua`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Nameplate slider-range and centered target-scale fix applied:** Expanded all nameplate size sliders to a much wider `1-500%` range and changed the target-size sliders to a true centered model where `100%` is the default, values below `100%` shrink on target, and values above `100%` grow on target.
+  - **Reference:** Local `Platynator` already uses broad `1-500%` sliders for its target/cast scale controls in `CustomiseDialog/Main.lua`, so AzeriteUI now follows that broader range philosophy instead of the earlier tight `50-150` / `0-200` limits.
+  - **Root Cause:** The previous target slider mapping treated `100%` as the baseline visually, but the setter for the zero-default friendly target path clamped all lower values back to `0`. Separately, the runtime target-scale validation still rejected negative values entirely, so even a corrected slider could not shrink target plates below their untargeted size.
+  - **Safety:** Runtime scale order is unchanged. This only widens the option ranges and introduces explicit bounded negative target deltas (`-0.95` minimum) so target scaling can shrink without making plates mathematically negative or blowing up.
+  - **Verification:** `luac -p 'Options/OptionsPages/Nameplates.lua'` and `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` passed. In-game `/reload`, dragging each size slider well below and above `100%`, and confirming that friendly/enemy target size now shrinks and grows both ways as expected, are still required.
+  - **Files Modified:** `Options/OptionsPages/Nameplates.lua`, `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Nameplate preferred-baseline promotion started:** Promoting the currently user-tested plate values into the actual shipped baseline so the shown positions become the new `100%` defaults instead of a custom post-install tuning set.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`
+- **Nameplate preferred-baseline promotion applied:** Updated the shipped baseline constants so AzeriteUI now treats the current preferred values as the new `100%` defaults: overall size unchanged at `100`, friendly/player size `130`, enemy size `100`, friendly/player target size `35`, and enemy target size `70` in the previous scale model now all read as the new default baseline in the current UI.
+  - **Runtime mapping:** This means the new underlying defaults are `scale = 2`, `friendlyScale = 1.95`, `enemyScale = 0.66`, `friendlyTargetScale = -0.65`, and `enemyTargetScale = 0.2` / legacy `nameplateTargetScale = 0.2`.
+  - **Safety:** This does not add or reorder scale logic. It only rebases the defaults and slider normalization constants, plus a one-time migration for profiles still sitting exactly on the prior shipped baseline so they move to the new intended `100%` positions automatically.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` and `luac -p 'Options/OptionsPages/Nameplates.lua'` passed. In-game `/reload`, opening `/az -> Nameplates -> Size`, and confirming those preferred positions now display as `100%` defaults are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`, `FixLog.md`
+
+- **Nameplate interrupt cooldown secret-number fix started:** Investigating a WoW 12 regression where the shared interrupt-visual helper compares secret cooldown numbers from `GetSpellCooldown()` and throws on nameplate cast updates.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`
+- **Nameplate interrupt cooldown secret-number fix applied:** Hardened the `GetSpellCooldown()` fallback in the shared interrupt-visual helper so secret `startTime` and `duration` values are discarded as unknown instead of being compared.
+  - **Root Cause:** `Components/UnitFrames/Functions.lua` already filtered secret booleans from `C_Spell.GetSpellCooldownDuration():IsZero()`, but the older `GetSpellCooldown()` fallback still trusted any numeric-looking `startTime` and `duration`. On WoW 12 those values can be secret numbers, and the `<= 0` check at line 153 caused the nameplate castbar update path to error repeatedly.
+  - **Safety:** This is a narrow guard in the shared interrupt helper only. When cooldown data is secret, AzeriteUI now falls back to the existing `"base"` interrupt visual instead of forcing a ready/cooldown color from unreadable data.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'` passed. In-game `/reload` plus retesting enemy nameplate casts should confirm the BugSack spam is gone and that nameplate interrupt colors still show when Blizzard exposes non-secret cooldown data.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `FixLog.md`
+
+- **Item upgrade protected-call taint started:** Investigating a fresh retail taint where confirming gear upgrades throws `[ADDON_ACTION_FORBIDDEN]` on Blizzard `UpgradeItem()` while AzeriteUI is enabled.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugs.lua`
+- **Item upgrade protected-call taint applied:** Removed the live WoW 12 `SetTooltipMoney` / `MoneyFrame_Update` global rewrites from the passive `FixBlizzardBugs` path so AzeriteUI no longer taints Blizzard shared money widgets that item-upgrade confirmation flows depend on.
+  - **Root Cause:** `Core/FixBlizzardBugs.lua` explicitly says the WoW 12 path should stay passive to avoid secure-flow taint, but it still replaced Blizzard's shared money APIs with addon closures. Item upgrade is a Blizzard money-backed confirmation flow, so once those globals were tainted the later protected `UpgradeItem()` call could be blocked and blamed on AzeriteUI.
+  - **Safety:** This is a narrow WoW 12 change in the passive fix path only. The addon keeps the Plater absorb cleanup, but stops monkeypatching Blizzard-wide money helpers. Any remaining tooltip-money fault should be fixed locally on the offending widget instead of through shared global rewrites.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugs.lua'` passed. In-game `/reload`, reopening the item-upgrade NPC, and confirming an upgrade without the `ADDON_ACTION_FORBIDDEN` popup are still required.
+  - **Files Modified:** `Core/FixBlizzardBugs.lua`, `FixLog.md`
+
 - **Mirror timer duplicate breath bar hide started:** Investigating a retail regression where Blizzard's `MirrorTimerContainer` breath bar can still appear alongside AzeriteUI's custom mirror timer bar.
   - **Files Targeted:** `FixLog.md`, `Components/Misc/MirrorTimers.lua`
 - **Mirror timer duplicate breath bar hide applied:** Hardened the mirror timer quarantine so AzeriteUI now suppresses both Blizzard mirror timer shapes (`MirrorTimerContainer` and `MirrorTimerFrame`) plus any child timer frames Blizzard may try to show again.
@@ -4181,3 +4254,173 @@ Testing:
 4. `/reload`
 5. Verify nameplate castbars still show yellow for interrupt-ready, red for interruptible but on cooldown, and gray for non-interruptible casts.
 6. Verify the target castbar no longer uses the interrupt-state palette and no longer throws the secret compare error from `Functions.lua`.
+
+2026-03-21
+
+Request:
+- Enemy nameplate castbars still read as yellow regardless of interrupt availability.
+- Nameplate castbars need a clearer interrupt-availability color model as the first step toward the broader Kickit-style feature set.
+
+Applied:
+- Extended the shared interrupt helper in `Components/UnitFrames/Functions.lua` to read both the primary and secondary interrupt spell IDs from the existing known-interrupt cache.
+- Replaced the old `ready` / `cooldown` cast state model with explicit nameplate-safe states:
+  - `primary-ready`
+  - `secondary-ready`
+  - `unavailable`
+  - `locked`
+- Assigned distinct castbar colors for those states:
+  - primary ready = green
+  - secondary ready = purple
+  - neither available = red
+  - not interruptible = gray
+- Updated `Components/UnitFrames/Units/NamePlates.lua` text coloring to follow the same states as the castbar fill color.
+
+Why:
+- The previous implementation only checked the first known interrupt spell, so it could not represent the "primary unavailable, secondary available" case at all.
+- The previous nameplate fallback color and the old `ready` color were both yellow-toned, which made enemy castbars read as "always yellow" even when the state logic was otherwise falling back.
+- Using the existing `KnownInterruptSpells[1]` / `[2]` cache keeps the first pass small and local while moving the visuals closer to the planned Kickit-style model.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Functions.lua'`
+2. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+3. `/reload`
+4. On a class with a secondary interrupt in the cache, verify enemy nameplate castbars show:
+   - green when the primary interrupt is ready
+   - purple when the primary interrupt is unavailable but the secondary is ready
+   - red when neither tracked interrupt is available
+   - gray when the cast is not interruptible
+5. Recheck a class without a secondary interrupt and verify it still falls back cleanly between green, red, and gray.
+
+2026-03-21
+
+Request:
+- Nameplate scale appears different inside delves versus open world.
+- Add a separate default baseline for delves and for open world.
+
+2026-03-21
+
+Request:
+- Soft-target and target scale still feel way out of whack.
+- Recheck the target scale defaults and the active runtime branches before adding more environment-specific presets.
+
+Applied:
+- Reset the shipped target-scale defaults in `Components/UnitFrames/Units/NamePlates.lua` back to neutral for both friendly and enemy plates.
+- Rebased the target slider normalization in `Options/OptionsPages/Nameplates.lua` so `100%` now means no extra target-size change again.
+- Added a one-time migration that only rewrites the recently promoted target defaults (`-0.65` friendly, `0.2` enemy) back to neutral, while leaving unrelated custom values alone.
+
+Why:
+- The current runtime path only scales actual targets, not soft targets. That made the promoted target defaults feel exaggerated immediately, because soft-targeted plates stayed at baseline while targeted plates jumped to a very different branch.
+- Using the recent promoted values as the internal `100%` baseline worked poorly for target sizing specifically. A target modifier reads more clearly when `100%` means "no extra target scaling" and the user moves away from there intentionally.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Options/OptionsPages/Nameplates.lua'`
+3. `/reload`
+4. Compare the same unit untargeted, soft-targeted, and targeted.
+5. Verify targeting no longer causes the large shrink/grow jump that was present before.
+6. Recheck the target sliders in `/az -> Nameplates -> Size` and confirm `100%` now behaves as true neutral target scaling.
+
+2026-03-21
+
+Request:
+- Soft-target still does not behave correctly unless Blizzard scale is enabled.
+- Changing Blizzard nameplate size while using the Blizzard-scale mode makes AzeriteUI plates drift upward instead of just feeling correctly sized.
+
+Applied:
+- In `Components/UnitFrames/Units/NamePlates.lua`, `isSoftTarget` is now derived directly from the live `softenemy` / `softinteract` matches during full updates and soft-target events.
+- Removed the redundant `ApplyNamePlateScale(self)` call from the soft-target event branches, because soft target is not part of the actual scale math.
+- Fixed the `checkSoftTarget()` timer bug where the retained soft-enemy path initialized `EnemyDead` to `true`, which made the "keep current soft target" branch fail unless the plate was a soft-interact target.
+
+Why:
+- Soft-target visibility and highlight behavior was split across two paths: event-driven `isSoftEnemy` / `isSoftInteract`, and timer-driven `isSoftTarget`.
+- The timer retention bug made the synthetic `isSoftTarget` state unreliable, so name visibility and hover-like elements could drop out even when the soft target was still valid.
+- Because the soft-target events were also calling the target-scale refresh path even though scale does not use soft-target state, the problem was easy to misread as a pure scaling issue.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. With Blizzard scale disabled, soft-target enemies and interactables in the open world.
+4. Verify names/highlights now respond consistently without needing the Blizzard-scale mode.
+5. Recheck whether Blizzard size changes are still required to make soft-target feedback visible. If that part still reproduces, the remaining issue is likely the Blizzard `SoftTargetFrame` anchor/art path rather than our synthetic soft-target state.
+
+2026-03-21
+
+Request:
+- Soft-target is still scaled too high with AzeriteUI scaling.
+- Soft-target should be the same size as a normal target.
+
+2026-03-21
+
+Request:
+- Soft-target is still way too big after the latest scaling passes.
+- Add a proper nameplate scale debug path so the live soft-target plate can be inspected instead of continuing to guess at the source.
+
+Applied:
+- Added `NamePlatesMod.GetDebugPlateScaleBreakdown(frame)` in `Components/UnitFrames/Units/NamePlates.lua`.
+- Added `/azdebug scale nameplates [unit]` in `Core/Debugging.lua`.
+- The debug dump prints:
+  - live target / soft-target flags
+  - hostile / friendly-name-only state
+  - base, overall, relation, and target-delta multipliers
+  - computed frame scale versus actual frame/parent effective scales
+  - Blizzard plate and `SoftTargetFrame` scale/size info
+
+Why:
+- The remaining soft-target issue may be in the computed plate scale, the Blizzard parent plate scale, or the Blizzard `SoftTargetFrame` child widget.
+- Adding a focused dump is the fastest way to distinguish those cases without piling on more speculative scale changes.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Core/Debugging.lua'`
+3. `/reload`
+4. Soft-target the problematic unit.
+5. Run `/azdebug scale nameplates auto`
+6. Capture the printed output so the remaining oversize source can be narrowed to the custom frame path or the Blizzard soft-target widget path.
+
+2026-03-21
+
+Request:
+- Live debug output shows the soft-interact plate itself is oversized under AzeriteUI scaling.
+- Friendly NPCs should not inherit the same large baseline as friendly players.
+
+Applied:
+- Added a separate `friendlyNPCScale` profile/default path in `Components/UnitFrames/Units/NamePlates.lua`.
+- Friendly assistable NPCs now use `friendlyNPCScale` instead of the larger `friendlyScale` player-friendly baseline.
+- Added a matching `Friendly NPC size (%)` slider to `/az -> Nameplates -> Size` in `Options/OptionsPages/Nameplates.lua`.
+- Extended the nameplate debug dump to print whether the inspected plate is being treated as a friendly NPC.
+
+Why:
+- The live dump showed the oversized soft-interact plate was not a Blizzard widget issue:
+  - `targetDelta = 0`
+  - `softFrame scale = 1`
+  - but `relation = 1.95`
+  - which produced `computed = 2.77`
+- That means the plate was simply inheriting the friendly/player baseline intended for much larger friendly-player plates.
+- Splitting friendly NPCs off from friendly players is the narrowest fix that addresses the actual source without disturbing enemy scaling or the player-name-only path.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Options/OptionsPages/Nameplates.lua'`
+3. `/reload`
+4. Soft-target the same friendly/interact NPC again.
+5. Run `/azdebug scale nameplates auto` and confirm the dump now reports `friendlyNPC = true` with a much lower `relation` multiplier.
+6. Adjust `/az -> Nameplates -> Size -> Friendly NPC size (%)` if you want that NPC baseline a bit higher or lower after the split.
+
+Applied:
+- Updated `GetEffectivePlateScale()` in `Components/UnitFrames/Units/NamePlates.lua` so soft-target uses the same target-size branch as a real target.
+- Reapplied scale immediately from the soft-target enter/leave helpers and the soft-target event handlers so the new target-like rule updates live.
+
+Reference:
+- Local `Platynator` uses the same model in `Display/Nameplate.lua`, where `isTarget` includes `UnitIsUnit("softenemy", self.unit)` and `UnitIsUnit("softfriend", self.unit)`.
+
+Why:
+- The previous pass fixed soft-target state reliability, but the actual scale math still only treated `self.isTarget` as target-sized.
+- That left soft-target in an in-between visual state: highlighted like a special target, but not scaled by the same rule as the real target branch.
+- Matching the target-size branch directly is also consistent with the user's request and with the local Platynator implementation.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Soft-target and then hard-target the same enemy/friendly unit.
+4. Verify both use the same size now.
+5. Recheck Blizzard-scale mode only after that baseline is confirmed; if there is still drift there, the remaining issue is separate from soft-target sizing itself.

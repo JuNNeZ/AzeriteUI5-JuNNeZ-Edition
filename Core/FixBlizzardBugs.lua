@@ -2629,8 +2629,12 @@ FixBlizzardBugs.OnInitialize = function(self)
 	-- Note: ns.ClientBuild is the build number (~58135), NOT the TOC version.
 	-- ns.ClientVersion is the interface/TOC number (120000+ for WoW 12).
 	if (IsPassiveWoW12FixEnvironment()) then
-		ApplyWoW12TooltipMoneyGuards()
 		ApplyPlaterNamePlateAbsorbCleanup()
+		-- IMPORTANT: keep WoW12 passive here.
+		-- Replacing SetTooltipMoney/MoneyFrame_Update taints Blizzard money widgets,
+		-- which can propagate into protected confirmation flows such as item upgrades.
+		-- If a tooltip-money crash needs another pass later, solve it with a local hook
+		-- on the specific Blizzard widget instead of rewriting the shared globals.
 		-- IMPORTANT: Do NOT replace BackdropMixin.SetupTextureCoordinates here.
 		-- Replacing mixin methods with addon functions taints every frame that
 		-- uses BackdropMixin, which spreads "tainted by AzeriteUI" to Edit Mode
@@ -2644,7 +2648,6 @@ FixBlizzardBugs.OnInitialize = function(self)
 
 	-- Legacy pre-WoW12 path intentionally commented out.
 	-- The live WoW 12 path returns above and uses:
-	-- * `ApplyWoW12TooltipMoneyGuards()`
 	-- * `ApplyPlaterNamePlateAbsorbCleanup()`
 	-- * `Core/FixBlizzardBugsWow12.lua`
 	--
