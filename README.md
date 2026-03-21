@@ -4,7 +4,7 @@
 [![Interface](https://img.shields.io/badge/Interface-120000-1f6feb)](#)
 [![Lua](https://img.shields.io/badge/Lua-WoW%20API%2012-2c2d72)](#)
 [![Maintainer](https://img.shields.io/badge/Maintainer-JuNNeZ-0a7d32)](https://github.com/JuNNeZ)
-[![Addon Version](https://img.shields.io/badge/Addon-v5.3.17--JuNNeZ--beta1-informational)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/tags)
+[![Addon Version](https://img.shields.io/badge/Addon-v5.3.17--JuNNeZ-informational)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/tags)
 [![GitHub Release](https://img.shields.io/github/v/release/JuNNeZ/AzeriteUI5-JuNNeZ-Edition?display_name=release)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/releases/latest)
 [![CurseForge](https://img.shields.io/badge/CurseForge-Project-orange)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)
 [![CurseForge Downloads](https://img.shields.io/badge/dynamic/json?color=orange&label=downloads&query=%24.downloads.total&url=https%3A%2F%2Fapi.cfwidget.com%2Fwow%2Faddons%2Fazeriteui-junnez-edition-wow12)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)
@@ -37,6 +37,13 @@ A: No. Do not install both versions simultaneously. This fan edition replaces th
 
 **Q: Where can I get support?**  
 A: This is a personal fan project. For official AzeriteUI support, join GoldpawsStuff's Discord (see below).
+
+**Q: What do the enemy nameplate interrupt colors mean?**  
+A: Enemy castbars use this legend:
+- Green = your primary interrupt is ready
+- Purple = your primary interrupt is unavailable, but a tracked secondary stop is ready
+- Red = no tracked interrupt is ready
+- Gray = the cast cannot be interrupted
 
 ---
 

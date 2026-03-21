@@ -316,7 +316,14 @@ local GenerateOptions = function()
 				type = "group",
 				inline = true,
 				hidden = function(info) return isdisabled(info) or not ns.IsRetail end,
-				args = { }
+				args = {
+					interruptLegend = {
+						name = "Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted",
+						order = 0,
+						type = "description",
+						width = "full"
+					}
+				}
 			}
 		}
 	}

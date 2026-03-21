@@ -4406,6 +4406,26 @@ Testing:
 5. Run `/azdebug scale nameplates auto` and confirm the dump now reports `friendlyNPC = true` with a much lower `relation` multiplier.
 6. Adjust `/az -> Nameplates -> Size -> Friendly NPC size (%)` if you want that NPC baseline a bit higher or lower after the split.
 
+2026-03-21
+
+Request:
+- Add a player-facing explanation for the enemy nameplate interrupt colors in the addon or CurseForge description so users know how to interpret them.
+
+Applied:
+- Added a short interrupt-color legend to `/az -> Nameplates -> Advanced` in `Options/OptionsPages/Nameplates.lua`.
+- Added the same legend to the `README.md` FAQ so it can also be reused in the CurseForge project description.
+- Updated the README addon version badge from the old beta label to `v5.3.17-JuNNeZ`.
+
+Why:
+- The color behavior is useful, but it is not self-explanatory unless players already know the internal primary/secondary interrupt logic.
+- Putting the legend in both the addon options and the public README covers in-game discovery and external project-page description without inventing a separate documentation path.
+
+Testing:
+1. `luac -p 'Options/OptionsPages/Nameplates.lua'`
+2. `/reload`
+3. Open `/az -> Nameplates -> Advanced` and confirm the interrupt legend reads clearly.
+4. Reuse the README FAQ text for the CurseForge description if you want the same explanation on the project page.
+
 Applied:
 - Updated `GetEffectivePlateScale()` in `Components/UnitFrames/Units/NamePlates.lua` so soft-target uses the same target-size branch as a real target.
 - Reapplied scale immediately from the soft-target enter/leave helpers and the soft-target event handlers so the new target-like rule updates live.
