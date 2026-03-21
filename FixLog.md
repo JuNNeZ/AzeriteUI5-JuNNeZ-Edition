@@ -5,6 +5,13 @@
 
 ## 2026-03-21
 
+- **Nameplate tight health-backdrop toggle started:** Adding an in-game option to let the health backdrop hug the actual health bar instead of extending past it as a visible black frame, while keeping the current oversized art as the default.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`
+- **Nameplate tight health-backdrop toggle applied:** Added a `/az -> Nameplates -> Size -> Fit health backdrop to health bar` toggle that keeps the current oversized decorative `nameplate_backdrop` art by default, but can snap the health backdrop to the exact health-bar bounds for users who want to remove the black-border look.
+  - **Root Cause:** The nameplate health backdrop was intentionally larger than the live health fill (`94.3158x24.8889` backdrop versus `84x14` health bar), so the backdrop art read visually like a black border around the bar instead of a subtle behind-the-bar plate.
+  - **Safety:** This is an additive profile toggle only. No texture assets or default sizes were changed; the existing look remains the default, and the alternate mode only swaps the live backdrop anchoring for the health bar.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` and `luac -p 'Options/OptionsPages/Nameplates.lua'` passed. In-game `/reload`, then toggling `/az -> Nameplates -> Size -> Fit health backdrop to health bar`, should confirm the backdrop either hugs the bar exactly or returns to the larger decorative frame.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`, `FixLog.md`
 - **Nameplate Blizzard-scale sync toggle started:** Investigating the remaining "too big or too small" feel in AzeriteUI nameplates by letting the custom frame scale optionally follow Blizzard's live nameplate global scale instead of relying only on addon-local scale math.
   - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`
 - **Nameplate Blizzard-scale sync toggle applied:** Added a `/az -> Nameplates -> Follow Blizzard global scale` toggle that swaps the custom global baseline scale path over to Blizzard's live `nameplateGlobalScale`, refreshes active plates when that CVar changes, and disables the custom global scale slider while the Blizzard-linked mode is active.

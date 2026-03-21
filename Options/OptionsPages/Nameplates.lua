@@ -226,10 +226,18 @@ local GenerateOptions = function()
 						set = SetScaledOption("scale", NAMEPLATE_SCALE_DEFAULT),
 						get = GetScaledOption("scale", NAMEPLATE_SCALE_DEFAULT)
 					},
+					tightHealthBackdrop = {
+						name = "Fit health backdrop to health bar",
+						desc = "Make the nameplate health backdrop use the same size as the health bar instead of the larger decorative frame texture.",
+						order = 3,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
 					friendlyScale = {
 						name = "Friendly/player size (%)",
 						desc = "The default size for friendly player nameplates. `100%` is the intended default.",
-						order = 3,
+						order = 4,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
 						set = SetScaledOption("friendlyScale", FRIENDLY_NAMEPLATE_SCALE_DEFAULT),
@@ -238,7 +246,7 @@ local GenerateOptions = function()
 					friendlyNPCScale = {
 						name = "Friendly NPC size (%)",
 						desc = "The default size for friendly NPC nameplates. `100%` is the intended default.",
-						order = 4,
+						order = 5,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
 						set = SetScaledOption("friendlyNPCScale", FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT),
@@ -247,7 +255,7 @@ local GenerateOptions = function()
 					enemyScale = {
 						name = "Enemy size (%)",
 						desc = "The default size for enemy nameplates. `100%` is the intended default.",
-						order = 5,
+						order = 6,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
 						set = SetScaledOption("enemyScale", ENEMY_NAMEPLATE_SCALE_DEFAULT),
@@ -256,7 +264,7 @@ local GenerateOptions = function()
 					friendlyTargetScale = {
 						name = "Friendly/player target size (%)",
 						desc = "How much larger friendly NPC plates become when targeted. Friendly player name-only plates use this too unless you set a separate override below.",
-						order = 6,
+						order = 7,
 						type = "range", width = "full",
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,
 						set = SetAdditiveTargetOption("friendlyTargetScale", FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT),
@@ -265,7 +273,7 @@ local GenerateOptions = function()
 					nameplateTargetScale = {
 						name = "Enemy target size (%)",
 						desc = "How much larger enemy plates become when targeted. `100%` is the intended default.",
-						order = 7,
+						order = 8,
 						type = "range", width = "full",
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,
 						set = SetAdditiveTargetOption("enemyTargetScale", ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT, "nameplateTargetScale"),

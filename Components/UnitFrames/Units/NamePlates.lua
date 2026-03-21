@@ -54,6 +54,7 @@ local defaults = { profile = ns:Merge({
 	friendlyNameOnlyTargetScale = false,
 	showBlizzardWidgets = false,
 	useBlizzardGlobalScale = false,
+	tightHealthBackdrop = false,
 	scale = 2,
 	friendlyScale = 1.95,
 	friendlyNPCScale = 1,
@@ -699,6 +700,20 @@ local ApplyFriendlyNameOnlyFontScale = function(self, enabled)
 		scale = GetValidatedProfileScale(profile and profile.friendlyNameOnlyFontScale, FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT, false)
 	end
 	self.Name:SetScale(scale)
+end
+
+local ApplyHealthBackdropSizing = function(self, db)
+	if (not self or not self.Health or not self.Health.Backdrop) then
+		return
+	end
+	local backdrop = self.Health.Backdrop
+	backdrop:ClearAllPoints()
+	if (NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile and NamePlatesMod.db.profile.tightHealthBackdrop) then
+		backdrop:SetAllPoints(self.Health)
+	else
+		backdrop:SetPoint(unpack(db.HealthBackdropPosition))
+		backdrop:SetSize(unpack(db.HealthBackdropSize))
+	end
 end
 
 local ApplyFriendlyNameOnlyVisualState = function(self, enabled)
@@ -1368,6 +1383,7 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 	end
 
 	ApplyFriendlyNameOnlyVisualState(self, false)
+	ApplyHealthBackdropSizing(self, db)
 	if (self.Health) then
 		if (not self.Health:IsShown()) then
 			self.Health:Show()
@@ -1816,11 +1832,10 @@ local style = function(self, unit, id)
 	ns.API.BindStatusBarValueMirror(self.Health)
 
 	local healthBackdrop = health:CreateTexture(nil, "BACKGROUND", nil, -1)
-	healthBackdrop:SetPoint(unpack(db.HealthBackdropPosition))
-	healthBackdrop:SetSize(unpack(db.HealthBackdropSize))
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 
 	self.Health.Backdrop = healthBackdrop
+	ApplyHealthBackdropSizing(self, db)
 
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel())
