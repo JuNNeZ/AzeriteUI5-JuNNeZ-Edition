@@ -60,6 +60,13 @@ local SafeKey = function(value)
 	return value
 end
 
+local GetAuraSpellID = function(data)
+	if (ns.AuraData and ns.AuraData.GetAuraSpellID) then
+		return ns.AuraData.GetAuraSpellID(data)
+	end
+	return SafeKey(data and data.spellId) or SafeKey(data and data.spellID)
+end
+
 local SafeIsAuraFilteredOut = function(unit, auraInstanceID, filter)
 	if (not C_UnitAuras or not C_UnitAuras.IsAuraFilteredOutByInstanceID) then
 		return nil
@@ -115,6 +122,35 @@ local IsImportantAura = function(unit, data, isHarmful)
 		or HasAuraToken(unit, auraInstanceID, baseFilter, "CROWD_CONTROL")
 		or HasAuraToken(unit, auraInstanceID, baseFilter, "BIG_DEFENSIVE")
 		or HasAuraToken(unit, auraInstanceID, baseFilter, "EXTERNAL_DEFENSIVE")
+end
+
+local GetImportantAuraFlags = function(unit, data, isHarmful)
+	local auraInstanceID = data and data.auraInstanceID
+	local baseFilter = isHarmful and "HARMFUL" or "HELPFUL"
+	local isStealable = SafeBool(data and data.isStealable)
+	if (not auraInstanceID) then
+		return {
+			important = isStealable,
+			raidInCombat = false,
+			crowdControl = false,
+			bigDefensive = false,
+			externalDefensive = false,
+			stealable = isStealable
+		}
+	end
+	local raidInCombat = HasAuraToken(unit, auraInstanceID, baseFilter, "RAID_IN_COMBAT")
+	local crowdControl = HasAuraToken(unit, auraInstanceID, baseFilter, "CROWD_CONTROL")
+	local bigDefensive = HasAuraToken(unit, auraInstanceID, baseFilter, "BIG_DEFENSIVE")
+	local externalDefensive = HasAuraToken(unit, auraInstanceID, baseFilter, "EXTERNAL_DEFENSIVE")
+	local important = isStealable or HasAuraToken(unit, auraInstanceID, baseFilter, "IMPORTANT")
+	return {
+		important = important or raidInCombat or crowdControl or bigDefensive or externalDefensive,
+		raidInCombat = raidInCombat,
+		crowdControl = crowdControl,
+		bigDefensive = bigDefensive,
+		externalDefensive = externalDefensive,
+		stealable = isStealable
+	}
 end
 
 local HasDisplayIdentity = function(button)
@@ -218,10 +254,11 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	button.duration = duration
 	button.noDuration = duration == 0
 	button.isPlayer = GetIsPlayerAura(unit, data)
-	button.spellID = SafeKey(data.spellId)
+	button.spellID = GetAuraSpellID(data)
 	local canApplyAura = SafeBool(data.canApplyAura)
 	local isHarmful = GetIsHarmful(unit, data)
-	local isImportant = IsImportantAura(unit, data, isHarmful)
+	local importantFlags = GetImportantAuraFlags(unit, data, isHarmful)
+	local isImportant = importantFlags.important
 	local applications = SafeNumber(data.applications, 0)
 	local hasDisplayedApplications = HasDisplayedApplications(unit, data)
 	local helpfulRaid, helpfulPlayerRaid = IsHelpfulRaidAura(unit, data)
@@ -253,23 +290,46 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	local hasStockCombatDuration = HasTrackedTemporaryDuration(button, duration, 301)
 	local showDebuffs = GetPlayerAuraSetting(profile, "playerAuraShowDebuffs", true)
 	local showImportant = GetPlayerAuraSetting(profile, "playerAuraShowImportantAuras", true)
+	local showImportantDefensives = GetPlayerAuraSetting(profile, "playerAuraShowImportantDefensives", true)
+	local showImportantExternals = GetPlayerAuraSetting(profile, "playerAuraShowImportantExternals", true)
+	local showImportantCrowdControl = GetPlayerAuraSetting(profile, "playerAuraShowImportantCrowdControl", true)
+	local showImportantStealable = GetPlayerAuraSetting(profile, "playerAuraShowImportantStealable", true)
 	local showRaid = GetPlayerAuraSetting(profile, "playerAuraShowRaidAuras", true)
+	local showRaidGeneral = GetPlayerAuraSetting(profile, "playerAuraShowRaidGeneral", true)
+	local showRaidCombat = GetPlayerAuraSetting(profile, "playerAuraShowRaidCombat", true)
 	local showStacks = GetPlayerAuraSetting(profile, "playerAuraShowStackingAuras", true)
 	local showShortBuffsInCombat = GetPlayerAuraSetting(profile, "playerAuraShowShortBuffsInCombat", true)
+	local showShortCombatPlayerBuffs = GetPlayerAuraSetting(profile, "playerAuraShowShortCombatPlayerBuffs", true)
+	local showShortCombatNonCancelable = GetPlayerAuraSetting(profile, "playerAuraShowShortCombatNonCancelable", true)
 	local showShortBuffsOutOfCombat = GetPlayerAuraSetting(profile, "playerAuraShowShortBuffsOutOfCombat", true)
+	local showShortUtilityPlayerBuffs = GetPlayerAuraSetting(profile, "playerAuraShowShortUtilityPlayerBuffs", true)
+	local showShortUtilityNonCancelable = GetPlayerAuraSetting(profile, "playerAuraShowShortUtilityNonCancelable", true)
 	local showLongUtilityBuffs = GetPlayerAuraSetting(profile, "playerAuraShowLongUtilityBuffs", false)
 	local useStockBehavior = GetPlayerAuraSetting(profile, "playerAuraUseStockBehavior", true)
+	local allowImportantDefensive = showImportantDefensives and importantFlags.bigDefensive
+	local allowImportantExternal = showImportantExternals and importantFlags.externalDefensive
+	local allowImportantControl = showImportantCrowdControl and importantFlags.crowdControl
+	local allowImportantStealable = showImportantStealable and importantFlags.stealable
+	local allowImportantBase = showImportant and (
+		importantFlags.important
+		and (allowImportantDefensive or allowImportantExternal or allowImportantControl or allowImportantStealable
+			or (not importantFlags.bigDefensive and not importantFlags.externalDefensive and not importantFlags.crowdControl and not importantFlags.stealable))
+	)
+	local allowRaidBase = showRaid and (
+		(showRaidGeneral and (helpfulRaid or helpfulPlayerRaid))
+		or (showRaidCombat and importantFlags.raidInCombat)
+	)
 	local allowHarmful = showDebuffs and isHarmful
-	local allowImportant = (not isHarmful) and showImportant and isImportant
-	local allowRaid = (not isHarmful) and showRaid and (helpfulRaid or helpfulPlayerRaid)
+	local allowImportant = (not isHarmful) and allowImportantBase
+	local allowRaid = (not isHarmful) and allowRaidBase
 	local allowStacks = showStacks and hasStacks
 	local allowShortCombatBuff = (not isHarmful)
 		and showShortBuffsInCombat
-		and (isPlayerCombatBuff or (not isCancelableHelpful))
+		and ((showShortCombatPlayerBuffs and isPlayerCombatBuff) or (showShortCombatNonCancelable and (not isCancelableHelpful)))
 		and (hasCombatDuration or isShortAura)
 	local allowShortUtilityBuff = (not isHarmful)
 		and showShortBuffsOutOfCombat
-		and (isPlayerCombatBuff or (not isCancelableHelpful))
+		and ((showShortUtilityPlayerBuffs and isPlayerCombatBuff) or (showShortUtilityNonCancelable and (not isCancelableHelpful)))
 		and (hasUtilityDuration or isShortAura)
 	local allowLongUtilityBuff = (not isHarmful)
 		and showLongUtilityBuffs
@@ -277,7 +337,10 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 		and (not isCancelableHelpful)
 	local allowSecretFallbackBuff = (not isHarmful)
 		and (allowImportant or allowRaid or allowStacks or allowLongUtilityBuff
-			or (showShortBuffsInCombat and ((button.isPlayer or canApplyAura) or (not isCancelableHelpful))))
+			or (showShortBuffsInCombat and (
+				(showShortCombatPlayerBuffs and (button.isPlayer or canApplyAura))
+				or (showShortCombatNonCancelable and (not isCancelableHelpful))
+			)))
 
 	-- Timing data can flip to secret in combat in WoW 12.
 	-- Keep combat-relevant auras visible, but do not let generic utility buffs leak in.
@@ -345,7 +408,7 @@ ns.AuraFilters.TargetAuraFilter = function(button, unit, data)
 	button.duration = duration
 	button.noDuration = duration == 0
 	button.isPlayer = GetIsPlayerAura(unit, data)
-	button.spellID = SafeKey(data.spellId)
+	button.spellID = GetAuraSpellID(data)
 	local isHarmful = GetIsHarmful(unit, data)
 	local isEnemy = UnitCanAttack("player", unit)
 	local canApplyAura = SafeBool(data.canApplyAura)
@@ -401,7 +464,7 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 	button.duration = duration
 	button.noDuration = duration == 0
 	button.isPlayer = GetIsPlayerAura(unit, data)
-	button.spellID = SafeKey(data.spellId)
+	button.spellID = GetAuraSpellID(data)
 	button.dispelName = SafeKey(data.dispelName)
 	local applications = SafeNumber(data.applications, 0)
 	local canApplyAura = SafeBool(data.canApplyAura)
@@ -539,7 +602,7 @@ ns.AuraFilters.NameplateAuraFilter = function(button, unit, data)
 	button.duration = duration
 	button.noDuration = duration == 0
 	button.isPlayer = GetIsPlayerAura(unit, data)
-	button.spellID = SafeKey(data.spellId)
+	button.spellID = GetAuraSpellID(data)
 	local isHarmful = GetIsHarmful(unit, data)
 	local canApplyAura = SafeBool(data.canApplyAura)
 	local durationSecret = IsSecret and IsSecret(data.duration)
@@ -598,7 +661,7 @@ ns.AuraFilters.ArenaAuraFilter = function(button, unit, data)
 	button.duration = duration
 	button.noDuration = duration == 0
 	button.isPlayer = SafeBool(data.isPlayerAura)
-	button.spellID = SafeKey(data.spellId)
+	button.spellID = GetAuraSpellID(data)
 
 	-- Hide blacklisted auras.
 	if (button.spellID and Hidden[button.spellID]) then

@@ -342,20 +342,48 @@ local SyncClassPowerClickBlocker = function(classpower, blocker)
 		return
 	end
 
-	blocker:ClearAllPoints()
-	blocker:SetPoint("CENTER", classpower, "CENTER", 0, 0)
-	local width = classpower:GetWidth() or 0
-	local height = classpower:GetHeight() or 0
-	local classpowerScale = classpower:GetEffectiveScale() or 1
+	local uiScale = UIParent:GetEffectiveScale() or 1
 	local blockerScale = blocker:GetEffectiveScale() or 1
-	if (classpowerScale > 0 and blockerScale > 0) then
-		width = width * (classpowerScale / blockerScale)
-		height = height * (classpowerScale / blockerScale)
+	local scaleRatio = (uiScale > 0 and blockerScale > 0) and (uiScale / blockerScale) or 1
+	local left, right, bottom, top = classpower:GetLeft(), classpower:GetRight(), classpower:GetBottom(), classpower:GetTop()
+	local minLeft, maxRight, minBottom, maxTop
+
+	local UpdateBounds = function(region)
+		if (not region or not region.IsShown or not region:IsShown()) then
+			return
+		end
+
+		local regionLeft, regionRight = region:GetLeft(), region:GetRight()
+		local regionBottom, regionTop = region:GetBottom(), region:GetTop()
+		if (type(regionLeft) == "number" and type(regionRight) == "number"
+		and type(regionBottom) == "number" and type(regionTop) == "number") then
+			minLeft = (not minLeft or regionLeft < minLeft) and regionLeft or minLeft
+			maxRight = (not maxRight or regionRight > maxRight) and regionRight or maxRight
+			minBottom = (not minBottom or regionBottom < minBottom) and regionBottom or minBottom
+			maxTop = (not maxTop or regionTop > maxTop) and regionTop or maxTop
+		end
 	end
-	if (width > 0 and height > 0) then
-		blocker:SetSize(width, height)
+
+	for i = 1, #classpower do
+		local point = classpower[i]
+		if (point and point:IsShown()) then
+			UpdateBounds(point)
+			UpdateBounds(point.case)
+			UpdateBounds(point.slot)
+		end
+	end
+
+	blocker:ClearAllPoints()
+	if (minLeft and maxRight and minBottom and maxTop) then
+		blocker:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", minLeft * scaleRatio, minBottom * scaleRatio)
+		blocker:SetSize((maxRight - minLeft) * scaleRatio, (maxTop - minBottom) * scaleRatio)
 	else
-		blocker:SetAllPoints(classpower)
+		if (type(left) == "number" and type(right) == "number" and type(bottom) == "number" and type(top) == "number") then
+			blocker:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left * scaleRatio, bottom * scaleRatio)
+			blocker:SetSize((right - left) * scaleRatio, (top - bottom) * scaleRatio)
+		else
+			blocker:SetAllPoints(classpower)
+		end
 	end
 	blocker:SetFrameStrata("DIALOG")
 	blocker:SetFrameLevel(math.max(10, classpower:GetFrameLevel() + 100))
@@ -405,6 +433,9 @@ local ApplyClassPowerClickThrough = function(self)
 				SyncClassPowerClickBlocker(frame, frame.ClickBlocker)
 			end)
 			hooksecurefunc(classpower, "SetParent", function(frame)
+				SyncClassPowerClickBlocker(frame, frame.ClickBlocker)
+			end)
+			classpower:HookScript("OnSizeChanged", function(frame)
 				SyncClassPowerClickBlocker(frame, frame.ClickBlocker)
 			end)
 			classpower:HookScript("OnHide", function(frame)
@@ -914,6 +945,10 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		end
 
 		element.style = style
+	end
+
+	if (element.ClickBlocker and element.ClickBlocker.__AzeriteUI_BlockClicks) then
+		SyncClassPowerClickBlocker(element, element.ClickBlocker)
 	end
 
 

@@ -3,6 +3,24 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-21
+
+- **Mirror timer duplicate breath bar hide started:** Investigating a retail regression where Blizzard's `MirrorTimerContainer` breath bar can still appear alongside AzeriteUI's custom mirror timer bar.
+  - **Files Targeted:** `FixLog.md`, `Components/Misc/MirrorTimers.lua`
+- **Mirror timer duplicate breath bar hide applied:** Hardened the mirror timer quarantine so AzeriteUI now suppresses both Blizzard mirror timer shapes (`MirrorTimerContainer` and `MirrorTimerFrame`) plus any child timer frames Blizzard may try to show again.
+  - **Root Cause:** `Components/Misc/MirrorTimers.lua` only hid `MirrorTimerContainer` on the old client branch and only hid `MirrorTimerFrame` on the WoW 12 branch. On the current retail client, Blizzard can still surface the container-based breath bar path, so the duplicate Blizzard breath bar remained visible next to AzeriteUI's own mirror timer.
+  - **Safety:** This stays local to the mirror timer module. It only unregisters/reparents Blizzard mirror timer frames that AzeriteUI already replaces, and adds `OnShow` re-hide guards so the Blizzard breath bar does not pop back in later.
+  - **Verification:** `luac -p 'Components/Misc/MirrorTimers.lua'` must pass. In-game `/reload` plus entering water or another mirror-timer state is still required to confirm only the AzeriteUI breath bar remains visible.
+  - **Files Modified:** `Components/Misc/MirrorTimers.lua`, `FixLog.md`
+
+- **WoW12 secret cast/aura follow-up started:** Investigating fresh BugSack regressions where the user-facing Plater `Interrupt Ready [v10]` modscript still compared secret `notInterruptible` flags from another saved copy, AzeriteUI compared a secret interrupt-ready flag in shared castbar helpers, and Decursive still reached Blizzard `AuraUtil.UnpackAuraData` with secret aura-point payloads under the active WoW 12 path.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`, `Core/FixBlizzardBugsWow12.lua`, account `WTF/Account/JUNNEZ/SavedVariables/Plater.lua`
+- **WoW12 secret cast/aura follow-up applied:** Filtered secret booleans out of the shared interrupt-ready helper before AzeriteUI compares or branches on them, added the live WoW 12 `AuraUtil.UnpackAuraData` guard in `Core/FixBlizzardBugsWow12.lua` so secret aura-point payloads bail out safely instead of crashing Decursive through Blizzard `unpack`, and patched the remaining duplicated `Interrupt Ready [v10]` `Cast Update` bodies in the account Plater SavedVariables file.
+  - **Root Cause:** The first Plater fix only hit one duplicated saved script pair, leaving another active pair still using `castbar.notInterruptible == true`. Separately, AzeriteUI's shared castbar helper still trusted `durationObject:IsZero()` to return a plain boolean even though WoW 12 can surface that result as secret, and the earlier `AuraUtil.UnpackAuraData` wrapper lived in the non-live legacy path while the active WoW 12 module never wrapped it.
+  - **Safety:** The repo changes are narrow guards only. `Components/UnitFrames/Functions.lua` now treats secret booleans from cooldown and attack checks as unknown instead of branching on them, and `Core/FixBlizzardBugsWow12.lua` only wraps `AuraUtil.UnpackAuraData` to sanitize secret/non-table payloads and return nil on unsafe unpack failures. The external Plater edit only rewrites the saved `Interrupt Ready [v10]` comparison logic to a secret-safe boolean fallback.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'` and `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed. `rg -n --fixed-strings 'castbar.notInterruptible == true or self.notInterruptible == true'` against `WTF/Account/JUNNEZ/SavedVariables/Plater.lua` returned no remaining matches. In-game `/reload` plus retesting target/nameplate casts and the earlier Decursive aura scan are still required.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `Core/FixBlizzardBugsWow12.lua`, `FixLog.md`, external `WTF/Account/JUNNEZ/SavedVariables/Plater.lua`
+
 ## 2026-03-20
 
 - **Shared target-style health fake-fill helper started:** Moving the common target health fake-fill path into shared unitframe API and wiring target, boss, and arena through the same helper body instead of keeping three near-duplicate implementations.
@@ -118,6 +136,30 @@
   - **Files Modified:** `Options/OptionsPages/UnitFrames.lua`, `FixLog.md`
 - **Test-lab large-raid visibility and options cleanup started:** Investigating why the maintainer preview still fails to surface the larger raid presets and tightening the Party/Raid options so the visibility copy and health-color controls are grouped more clearly.
   - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`, `Options/OptionsPages/UnitFrames.lua`, `Components/UnitFrames/Units/Party.lua`
+
+## 2026-03-21
+
+- **Enemy castbar interrupt-readiness coloring started:** Auditing AzeriteUI's current castbar interruptibility handling against the WoW 12 spellbook/cooldown APIs and the local comparison addons so enemy casts can reflect whether the player's interrupt is ready instead of only flipping between interruptible and protected states.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`, `Components/UnitFrames/Units/Target.lua`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Enemy castbar interrupt-readiness coloring applied:** Added shared interrupt spell discovery/cooldown helpers based on `C_SpellBook.IsSpellKnownOrInSpellBook(...)` and `C_Spell.GetSpellCooldownDuration(...)`, then wired target and nameplate enemy castbars to color as yellow when interruptible and ready, gray when uninterruptible, and red when interruptible but the player's primary interrupt is still on cooldown.
+  - **Root Cause:** AzeriteUI already sanitized `notInterruptible` for WoW 12 secret-value safety, but its enemy castbar visuals still only had a binary protected/default color model. That left no built-in readiness cue for whether the player could actually kick the cast right now, which is why the Plater-style workaround was attractive in the first place.
+  - **Safety:** The new readiness check is read-only and stays on the addon side: it only looks up the player's known interrupt spells and their cooldown duration objects, sanitizes castbar interruptibility before branching, and falls back to the existing cast colors when no known interrupt can be resolved. Player/self castbars are not recolored by this pass.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'`, `luac -p 'Components/UnitFrames/Units/Target.lua'`, and `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` must pass. In-game `/reload` plus checks against interruptible, uninterruptible, and on-cooldown enemy casts are still required.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `Components/UnitFrames/Units/Target.lua`, `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **AuraData interrupt source-of-truth follow-up started:** Removing the duplicated retail interrupt map from the castbar helper and checking the older AuraData registration path itself for stale or broken registrations.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Auras/AuraData.lua`, `Components/UnitFrames/Functions.lua`
+- **AuraData interrupt source-of-truth follow-up applied:** Fixed `AuraData.Add(...)` so hidden spell registrations write to `Hidden[spellID]` instead of `Hidden[isHidden]`, added a retail interrupt-priority table and cached known-interrupt helpers directly to `AuraData`, removed the stale `Call Felhunter` retail interrupt entry, and added Priest `Silence` to the retail interrupt list used by the castbar readiness helper.
+  - **Root Cause:** The first interrupt-readiness pass worked, but it duplicated a class interrupt map that already conceptually belonged with `AuraData`, and the existing `AuraData.Add(...)` helper had an old hidden-flag indexing bug that prevented hidden-spell registrations from ever matching the spell IDs the filters check. Keeping interrupt ownership in `AuraData` avoids drift, and fixing the hidden registration bug corrects the data layer itself instead of only the castbar consumer.
+  - **Safety:** This stays data-side and helper-side only. It does not change aura filter logic structure, and the castbar helper still falls back safely when no known interrupt is available. The retail interrupt priority now resolves from `AuraData` after spellbook load instead of a duplicate local table.
+  - **Verification:** `luac -p 'Components/UnitFrames/Auras/AuraData.lua'` and `luac -p 'Components/UnitFrames/Functions.lua'` must pass. In-game `/reload` plus another interrupt-ready/enemy-cast pass are still required.
+  - **Files Modified:** `Components/UnitFrames/Auras/AuraData.lua`, `Components/UnitFrames/Functions.lua`, `FixLog.md`
+- **Retail aura consumer normalization follow-up started:** Auditing the retail aura filter/sort/style stack for field-name drift and stale registration behavior after the data-layer fixes, to make sure `AuraData` registrations actually flow through to visible aura handling.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Auras/AuraData.lua`, `Components/UnitFrames/Auras/AuraFilters.lua`, `Components/UnitFrames/Auras/AuraSorting.lua`, `Components/UnitFrames/Auras/AuraStyling.lua`
+- **Retail aura consumer normalization follow-up applied:** Populated `SpellParents` inside `AuraData.Add(...)`, added a shared retail `GetAuraSpellID(...)` helper, and updated the retail aura filter/sort/style consumers to normalize `spellId` versus `spellID` before checking `Spells`, `Priority`, or other registered metadata.
+  - **Root Cause:** The retail consumers had accumulated a mixed-field assumption where some code read `data.spellId`, older/shared paths still used `spellID`, and `SpellParents` was declared in `AuraData` but never written. That meant valid retail registrations could still be skipped in sorting/styling if the incoming aura table used the alternate field name, and parent relationships were never recorded even when the data file provided them.
+  - **Safety:** This is a compatibility hardening pass only. It does not change the overall filter rules; it just makes the existing registered aura metadata resolve consistently across the retail data consumers.
+  - **Verification:** `luac -p 'Components/UnitFrames/Auras/AuraData.lua'`, `luac -p 'Components/UnitFrames/Auras/AuraFilters.lua'`, `luac -p 'Components/UnitFrames/Auras/AuraSorting.lua'`, and `luac -p 'Components/UnitFrames/Auras/AuraStyling.lua'` must pass. In-game `/reload` plus player/target/party/nameplate aura checks are still required.
+  - **Files Modified:** `Components/UnitFrames/Auras/AuraData.lua`, `Components/UnitFrames/Auras/AuraFilters.lua`, `Components/UnitFrames/Auras/AuraSorting.lua`, `Components/UnitFrames/Auras/AuraStyling.lua`, `FixLog.md`
 - **Test-lab large-raid visibility and options cleanup applied:** Relaxed the maintainer preview bootstrap so it can prepare unit-frame styles even when the live module is not currently active, anchored inactive previews against `UIParent` instead of hidden live frames, corrected the group visibility copy, and added dedicated `Health Colors` sections to the Party/Raid option blocks.
   - **Root Cause:** The `/aztest` preview path in `Core/Debugging.lua` only trusted already-live modules as preview anchors and style sources, which made optional frame families like the larger raid groups prone to disappearing from the test lab. At the same time, the Party/Raid options still mixed visibility and health-color controls together and repeated incorrect raid-size descriptions.
   - **Safety:** This preview change stays inside the maintainer-only test lab. It does not alter live group visibility drivers or live unit-frame positioning. The Party default now explicitly stores `useBlizzardHealthColors = false`, which matches the existing intended behavior.
@@ -4000,3 +4042,142 @@ Testing:
 1. `luac -p 'Components/UnitFrames/Units/Target.lua'`
 2. `/reload`
 3. Compare live target behavior against `/aztest` preview behavior to confirm only the preview path still diverges.
+
+Request:
+- Touch up `/az` so the options read more clearly and keep related settings grouped together.
+
+Applied:
+- Cleaned wording and section labels in:
+  - `Options/OptionsPages/Auras.lua`
+  - `Options/OptionsPages/UnitFrames.lua`
+- Reframed several labels to be more outcome-based instead of implementation-based.
+- Added clearer section headers separating:
+  - show / hide behavior
+  - layout / direction
+  - what to show
+  - display / highlighting
+
+Why:
+- The options were functional but some of the denser pages still read like maintainer settings.
+- This pass improves scanability and makes it clearer what belongs to the top-right aura header versus unit-frame aura rows.
+
+Testing:
+1. `luac -p 'Options/OptionsPages/Auras.lua'`
+2. `luac -p 'Options/OptionsPages/UnitFrames.lua'`
+3. `/reload`
+4. Open `/az` and verify the Player, Party Frames, and Aura Header pages read more cleanly.
+
+Request:
+- Keep player-frame aura settings highly customizable, but hide the deeper category toggles behind a single advanced switch so the default view stays user-friendly.
+
+Applied:
+- Added `playerAuraShowAdvancedCategories` default in:
+  - `Components/UnitFrames/Units/Player.lua`
+- Added `Show Advanced Aura Categories` in:
+  - `Options/OptionsPages/UnitFrames.lua`
+- Hid player-frame aura sub-category toggles unless:
+  - custom player aura mode is active
+  - advanced categories is enabled
+  - the relevant parent category is enabled
+
+Why:
+- The detailed player aura categories were useful, but too noisy in the default custom view.
+- This keeps the simple layer readable while still allowing deeper tuning for power users.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/Player.lua'`
+2. `luac -p 'Options/OptionsPages/UnitFrames.lua'`
+3. `/reload`
+4. Open `/az -> Unit Frames -> Player`
+5. Turn off stock behavior and verify only the broad custom toggles are shown at first.
+6. Enable `Show Advanced Aura Categories` and confirm the deeper sub-category toggles appear under the enabled parent groups.
+
+Request:
+- Clean up the Party Frames options in `/az`; the current section feels messy.
+
+Applied:
+- Reorganized the Party Frames aura block in:
+  - `Options/OptionsPages/UnitFrames.lua`
+- Separated the party aura settings into:
+  - stock/custom mode
+  - what to show
+  - layout & highlighting
+- Moved size/growth/glow controls out of the middle of the filtering toggles.
+
+Why:
+- The previous order mixed layout controls into the middle of the filter controls, which made the page harder to scan.
+- This pass keeps the same settings and behavior, but groups them by user intent.
+
+Testing:
+1. `luac -p 'Options/OptionsPages/UnitFrames.lua'`
+2. `/reload`
+3. Open `/az -> Unit Frames -> Party Frames`
+4. Confirm the aura section now reads in a cleaner order:
+   - stock/custom mode
+   - what to show
+   - layout & highlighting
+
+Request:
+- Class power click-through blocks correctly on Demon Hunter, but not reliably on Paladin.
+
+Applied:
+- Reworked the shared class-power click blocker in:
+  - `Components/UnitFrames/Units/PlayerClassPower.lua`
+- The blocker no longer sizes itself from the raw `ClassPower` frame rectangle alone.
+- It now derives its bounds from the live shown class-power points, including their larger backdrop/slot art.
+- Added a blocker resync after class-power layout updates and on class-power `OnSizeChanged`.
+
+Why:
+- Paladin Holy Power uses the shared `ComboPoints` layout, while Demon Hunter uses `SoulFragmentsPoints`.
+- The old blocker only tracked the container frame box, not the actual visible point footprint.
+- That made click blocking inconsistent across class layouts even though the click-through setting itself was shared.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/PlayerClassPower.lua'`
+2. `/reload`
+3. On a Paladin, disable `Class Power Click-Through` in `/az -> Unit Frames`.
+4. Verify the full visible Holy Power area blocks clicks.
+5. Re-enable click-through and verify clicks pass through again.
+6. Recheck Demon Hunter Soul Fragments to confirm the shared blocker still behaves correctly.
+
+Follow-up:
+- The first blocker pass still relied on relative layout bounds and did not fully fix Paladin Holy Power coverage.
+
+Applied:
+- Reworked the blocker bounds again in:
+  - `Components/UnitFrames/Units/PlayerClassPower.lua`
+- The blocker now derives its size from live screen-space bounds (`GetLeft/GetRight/GetBottom/GetTop`) of the shown class-power points and their art, then anchors directly to `UIParent`.
+
+Why:
+- The original fix still depended on relative layout coordinates.
+- Anchoring the top-level blocker from actual rendered bounds is more reliable for the Paladin Holy Power layout, which can drift from the raw container rectangle.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/PlayerClassPower.lua'`
+2. `/reload`
+3. On a Paladin, disable `Class Power Click-Through`.
+4. Verify the entire visible Holy Power cluster now blocks clicks consistently.
+5. Toggle click-through back on and recheck that clicks pass through.
+
+2026-03-21
+
+Request:
+- New interrupt-readiness castbar coloring triggered a WoW 12 secret-boolean compare in `Components/UnitFrames/Functions.lua`.
+- The user wants the new yellow/gray/red interrupt-state visuals on nameplate castbars only, not the target castbar.
+
+Applied:
+- Hardened `GetInterruptCastVisualState(...)` in `Components/UnitFrames/Functions.lua` so secret or non-boolean readiness values are discarded before addon-side comparisons.
+- Removed the injected interrupt-readiness recoloring path from `Components/UnitFrames/Units/Target.lua`.
+- Restored the target castbar's local visual handling for the native timer path while keeping the nameplate castbar interrupt-state visuals intact.
+
+Why:
+- WoW 12 secret booleans cannot be compared by addon code, even against literal `true` or `false`.
+- Target-castbar recoloring was outside the requested scope and increased the chance of secret-value regressions on a more complex frame.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Functions.lua'`
+2. `luac -p 'Components/UnitFrames/Units/Target.lua'`
+3. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+4. `/reload`
+5. Verify nameplate castbars still show yellow for interrupt-ready, red for interruptible but on cooldown, and gray for non-interruptible casts.
+6. Verify the target castbar no longer uses the interrupt-state palette and no longer throws the secret compare error from `Functions.lua`.

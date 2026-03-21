@@ -44,6 +44,47 @@ local defaults = { profile = ns:Merge({
 	growUpwards = false
 }, ns.MovableModulePrototype.defaults) }
 
+local SuppressBlizzardMirrorTimerFrame = function(frame)
+	if (not frame) or frame.__AzeriteUI_MirrorTimerSuppressed then
+		return
+	end
+
+	frame.__AzeriteUI_MirrorTimerSuppressed = true
+
+	if (frame.HighlightSystem) then
+		frame.HighlightSystem = ns.Noop
+	end
+
+	if (frame.ClearHighlight) then
+		frame.ClearHighlight = ns.Noop
+	end
+
+	frame:UnregisterAllEvents()
+	frame:SetParent(ns.Hider)
+	frame:Hide()
+	frame:HookScript("OnShow", function(self)
+		self:Hide()
+	end)
+end
+
+local SuppressBlizzardMirrorTimers = function()
+	SuppressBlizzardMirrorTimerFrame(_G.MirrorTimerContainer)
+	SuppressBlizzardMirrorTimerFrame(_G.MirrorTimerFrame)
+
+	local container = _G.MirrorTimerContainer
+	if (container and container.mirrorTimers) then
+		for _,timer in ipairs(container.mirrorTimers) do
+			SuppressBlizzardMirrorTimerFrame(timer)
+		end
+	end
+
+	for i = 1,3 do
+		SuppressBlizzardMirrorTimerFrame(_G["MirrorTimer"..i])
+	end
+
+	UIParent:UnregisterEvent("MIRROR_TIMER_START")
+end
+
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
 -- changing factors like user interface scale.
@@ -60,20 +101,7 @@ end
 MirrorTimers.PrepareFrames = function(self)
 	if (self.frame) then return end
 
-	if (ns.WoW10 and (not ns.ClientVersion or ns.ClientVersion < 120000)) then
-		MirrorTimerContainer.HighlightSystem = ns.Noop
-		MirrorTimerContainer.ClearHighlight = ns.Noop
-		MirrorTimerContainer:UnregisterAllEvents()
-		MirrorTimerContainer:SetParent(ns.Hider)
-		MirrorTimerContainer:Hide()
-	else
-		if (MirrorTimerFrame) then
-			MirrorTimerFrame:UnregisterAllEvents()
-			MirrorTimerFrame:SetParent(ns.Hider)
-			MirrorTimerFrame:Hide()
-		end
-		UIParent:UnregisterEvent("MIRROR_TIMER_START")
-	end
+	SuppressBlizzardMirrorTimers()
 
 	local config = ns.GetConfig("MirrorTimers")
 

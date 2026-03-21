@@ -119,8 +119,8 @@ local GenerateOptions = function()
 		childGroups = "tree",
 		args = {
 			disableAuraSorting = {
-				name = L["Enable Aura Sorting"],
-				desc = L["When enabled, unitframe auras will be sorted depending on time left and who cast the aura. When disabled, unitframe auras will appear in the order they were applied, like in the default user interface."],
+				name = "Prioritize Unit Frame Auras",
+				desc = "When enabled, unit-frame auras are grouped by relevance and readable timing when possible. When disabled, they stay closer to application order, like the default UI.",
 				order = 10,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -172,7 +172,7 @@ local GenerateOptions = function()
 
 
 		suboptions.args.colorHeader = {
-			name = L["Crystal/Orb Color"], order = 10, type = "header", hidden = isdisabled
+			name = "Style", order = 10, type = "header", hidden = isdisabled
 		}
 		suboptions.args.crystalOrbColorMode = {
 			name = "Crystal/Orb Color Source",
@@ -194,7 +194,7 @@ local GenerateOptions = function()
 		}
 
 		suboptions.args.elementHeader = {
-			name = L["Elements"], order = 100, type = "header", hidden = isdisabled
+			name = "Frame Elements", order = 100, type = "header", hidden = isdisabled
 		}
 		suboptions.args.showAuras = {
 			name = L["Show Auras"],
@@ -207,19 +207,45 @@ local GenerateOptions = function()
 		local playerAuraCustomSettingsDisabled = function(info)
 			return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraUseStockBehavior")
 		end
+		local playerAuraAdvancedHidden = function(info)
+			return isdisabled(info) or playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowAdvancedCategories")
+		end
+		local playerAuraImportantChildrenDisabled = function(info)
+			return playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowImportantAuras")
+		end
+		local playerAuraRaidChildrenDisabled = function(info)
+			return playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowRaidAuras")
+		end
+		local playerAuraShortCombatChildrenDisabled = function(info)
+			return playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowShortBuffsInCombat")
+		end
+		local playerAuraShortUtilityChildrenDisabled = function(info)
+			return playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowShortBuffsOutOfCombat")
+		end
 		suboptions.args.playerAuraSettingsHeader = {
-			name = "Player Aura Settings",
+			name = "Player Aura Row",
 			order = 210, type = "header", hidden = isdisabled
 		}
 		suboptions.args.playerAuraSettingsDescription = {
-			name = "These settings control the small aura row on the player frame, not the main aura header in the top right.",
+			name = "These settings control the small aura row attached to the player frame. They do not affect the main top-right aura header.",
 			order = 211, type = "description", width = "full", hidden = isdisabled
 		}
 		suboptions.args.playerAuraUseStockBehavior = {
 			name = "Use AzeriteUI Stock Behavior",
-			desc = "Apply the original AzeriteUI behavior for the player aura row: in combat show debuffs, short buffs and stacks; out of combat show normal timed buffs, short buffs and stacks. Disable this to use the custom category toggles below.",
+			desc = "Use the original AzeriteUI player-frame aura behavior. Turn this off if you want to build your own filter from the custom categories below.",
 			order = 211.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
+		}
+		suboptions.args.playerAuraWhatToShowHeader = {
+			name = "What To Show",
+			order = 211.6, type = "header", hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowAdvancedCategories = {
+			name = "Show Advanced Aura Categories",
+			desc = "Reveal the deeper sub-category toggles for custom player-frame aura filtering.",
+			order = 211.7, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
 		}
 		suboptions.args.playerAuraShowDebuffs = {
 			name = "Always Show Debuffs",
@@ -233,11 +259,47 @@ local GenerateOptions = function()
 			order = 213, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
 		}
+		suboptions.args.playerAuraShowImportantDefensives = {
+			name = "Defensive Cooldowns",
+			desc = "Examples: Ice Block, Barkskin, Survival Instincts, Shield Wall.",
+			order = 213.1, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraImportantChildrenDisabled
+		}
+		suboptions.args.playerAuraShowImportantExternals = {
+			name = "External Defensives",
+			desc = "Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon.",
+			order = 213.2, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraImportantChildrenDisabled
+		}
+		suboptions.args.playerAuraShowImportantCrowdControl = {
+			name = "Control / Immunity-Type Auras",
+			desc = "Examples: crowd-control immunity, anti-CC effects, and Blizzard-tagged control-related buffs.",
+			order = 213.3, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraImportantChildrenDisabled
+		}
+		suboptions.args.playerAuraShowImportantStealable = {
+			name = "Stealable / Priority Auras",
+			desc = "Examples: special priority buffs Blizzard marks as stealable or high-value.",
+			order = 213.4, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraImportantChildrenDisabled
+		}
 		suboptions.args.playerAuraShowRaidAuras = {
 			name = "Show Raid-Relevant Buffs",
 			desc = "Show raid and encounter buffs Blizzard flags as relevant. Examples: Bloodlust, Power Infusion and encounter mechanic buffs.",
 			order = 214, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowRaidGeneral = {
+			name = "General Raid Buffs",
+			desc = "Examples: Bloodlust, Power Infusion, encounter-assigned raid buffs.",
+			order = 214.1, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraRaidChildrenDisabled
+		}
+		suboptions.args.playerAuraShowRaidCombat = {
+			name = "Raid-In-Combat Flags",
+			desc = "Encounter or support buffs Blizzard specifically marks as relevant during combat.",
+			order = 214.2, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraRaidChildrenDisabled
 		}
 		suboptions.args.playerAuraShowStackingAuras = {
 			name = "Show Stacking Buffs",
@@ -251,17 +313,45 @@ local GenerateOptions = function()
 			order = 216, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
 		}
+		suboptions.args.playerAuraShowShortCombatPlayerBuffs = {
+			name = "Player / Self Combat Buffs",
+			desc = "Examples: your own procs, self-applied maintenance buffs, can-apply class effects.",
+			order = 216.1, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraShortCombatChildrenDisabled
+		}
+		suboptions.args.playerAuraShowShortCombatNonCancelable = {
+			name = "Non-Cancelable Combat Buffs",
+			desc = "Examples: combat-relevant temporary buffs that are not simple cancelable utility effects.",
+			order = 216.2, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraShortCombatChildrenDisabled
+		}
 		suboptions.args.playerAuraShowShortBuffsOutOfCombat = {
 			name = "Show Short Buffs Out Of Combat",
 			desc = "Keep short temporary buffs visible before combat too. Examples: pre-pull procs and brief preparation buffs.",
 			order = 217, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
 		}
+		suboptions.args.playerAuraShowShortUtilityPlayerBuffs = {
+			name = "Player / Self Temporary Buffs",
+			desc = "Examples: self buffs with duration that matter during prep or upkeep.",
+			order = 217.1, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraShortUtilityChildrenDisabled
+		}
+		suboptions.args.playerAuraShowShortUtilityNonCancelable = {
+			name = "Non-Cancelable Temporary Buffs",
+			desc = "Examples: short non-cancelable buffs that should stay visible outside combat too.",
+			order = 217.2, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
+			disabled = playerAuraShortUtilityChildrenDisabled
+		}
 		suboptions.args.playerAuraShowLongUtilityBuffs = {
 			name = "Show Long Utility Buffs",
 			desc = "Also allow long-duration utility buffs in the player row. Examples: Sign of Battle, guild tabard reputation buffs and mounts. Usually leave this off so these stay in the main aura header only.",
 			order = 218, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraLayoutHeader = {
+			name = "Display & Feedback",
+			order = 299, type = "header", hidden = isdisabled
 		}
 		suboptions.args.showCastbar = {
 			name = L["Show Castbar"],
@@ -900,7 +990,7 @@ local GenerateOptions = function()
 			order = 2, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.elementHeader = {
-			name = L["Elements"], order = 10, type = "header", hidden = isdisabled
+			name = "Frame Elements", order = 10, type = "header", hidden = isdisabled
 		}
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 20, scope = "party" })
 		suboptions.args.showAuras = {
@@ -914,74 +1004,27 @@ local GenerateOptions = function()
 		local partyAuraCustomSettingsDisabled = function(info)
 			return partyAuraSettingsDisabled(info) or getoption(info, "partyAuraUseStockBehavior")
 		end
+		local partyAuraLayoutDisabled = function(info)
+			return partyAuraSettingsDisabled(info)
+		end
 		suboptions.args.partyAuraHeader = {
-			name = "Party Aura Settings",
+			name = "Party Aura Row",
 			order = 50, type = "header", hidden = isdisabled
 		}
 		suboptions.args.partyAuraDescription = {
-			name = "Control which party-frame auras are shown, how they grow, and how dispellable debuffs are emphasized.",
+			name = "Control which auras appear on party frames, when they appear, how they grow, and how dispellable debuffs are emphasized.",
 			order = 51, type = "description", width = "full", hidden = isdisabled
 		}
 		suboptions.args.partyAuraUseStockBehavior = {
 			name = "Use AzeriteUI Stock Behavior",
-			desc = "Keep the original party aura behavior: raid/important/dispellable debuffs stay visible, helpful externals and short player buffs are kept, and dispellable debuffs are favored.",
+			desc = "Use the original AzeriteUI party-frame aura behavior. Turn this off if you want to build your own filter from the custom categories below.",
 			order = 60, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraSettingsDisabled
 		}
-		suboptions.args.AuraSize = {
-			name = "Aura Size",
-			desc = "Resize party aura buttons.",
-			order = 70, type = "range", width = "full", min = 18, max = 42, step = 1, hidden = isdisabled,
-			set = setter,
-			get = function(info)
-				local value = getoption(info, "AuraSize")
-				if (type(value) ~= "number") then
-					return partyAuraConfig.AuraSize or 30
-				end
-				return math.floor(value + .5)
-			end,
-			disabled = partyAuraSettingsDisabled
-		}
-		suboptions.args.partyAuraDebuffScale = {
-			name = "Debuff Size %",
-			desc = "Scale harmful party auras relative to normal buffs. Use this if you want dispellable debuffs to stand out more.",
-			order = 80, type = "range", width = "full", min = 75, max = 150, step = 1, hidden = isdisabled,
-			set = setter,
-			get = function(info)
-				local value = getoption(info, "partyAuraDebuffScale")
-				if (type(value) ~= "number") then
-					return 100
-				end
-				if (value < 75) then
-					return 75
-				elseif (value > 150) then
-					return 150
-				end
-				return math.floor(value + .5)
-			end,
-			disabled = partyAuraSettingsDisabled
-		}
-		suboptions.args.AurasGrowthX = {
-			name = "Aura Growth X",
-			desc = "Choose whether party auras grow left or right.",
-			order = 90, type = "select", width = "full", hidden = isdisabled,
-			values = partyAuraGrowthXValues,
-			set = setter,
-			get = function(info)
-				return getoption(info, "AurasGrowthX") or partyAuraConfig.AurasGrowthX or "RIGHT"
-			end,
-			disabled = partyAuraSettingsDisabled
-		}
-		suboptions.args.AurasGrowthY = {
-			name = "Aura Growth Y",
-			desc = "Choose whether party auras grow up or down.",
-			order = 100, type = "select", width = "full", hidden = isdisabled,
-			values = partyAuraGrowthYValues,
-			set = setter,
-			get = function(info)
-				return getoption(info, "AurasGrowthY") or partyAuraConfig.AurasGrowthY or "DOWN"
-			end,
-			disabled = partyAuraSettingsDisabled
+		suboptions.args.partyAuraWhatToShowHeader = {
+			name = "What To Show",
+			order = 61, type = "header", hidden = isdisabled,
+			disabled = partyAuraCustomSettingsDisabled
 		}
 		suboptions.args.partyAuraShowDispellableDebuffs = {
 			name = "Show Dispellable Debuffs",
@@ -1025,11 +1068,74 @@ local GenerateOptions = function()
 			order = 170, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraCustomSettingsDisabled
 		}
+		suboptions.args.partyAuraLayoutHeader = {
+			name = "Layout & Highlighting",
+			order = 180, type = "header", hidden = isdisabled
+		}
+		suboptions.args.partyAuraLayoutDescription = {
+			name = "Adjust the size and growth of party-frame auras, and how removable debuffs are emphasized.",
+			order = 181, type = "description", width = "full", hidden = isdisabled
+		}
+		suboptions.args.AuraSize = {
+			name = "Aura Size",
+			desc = "Resize party aura buttons.",
+			order = 190, type = "range", width = "full", min = 18, max = 42, step = 1, hidden = isdisabled,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "AuraSize")
+				if (type(value) ~= "number") then
+					return partyAuraConfig.AuraSize or 30
+				end
+				return math.floor(value + .5)
+			end,
+			disabled = partyAuraLayoutDisabled
+		}
+		suboptions.args.partyAuraDebuffScale = {
+			name = "Debuff Size %",
+			desc = "Scale harmful party auras relative to normal buffs. Use this if you want dispellable debuffs to stand out more.",
+			order = 200, type = "range", width = "full", min = 75, max = 150, step = 1, hidden = isdisabled,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "partyAuraDebuffScale")
+				if (type(value) ~= "number") then
+					return 100
+				end
+				if (value < 75) then
+					return 75
+				elseif (value > 150) then
+					return 150
+				end
+				return math.floor(value + .5)
+			end,
+			disabled = partyAuraLayoutDisabled
+		}
+		suboptions.args.AurasGrowthX = {
+			name = "Aura Growth X",
+			desc = "Choose whether party auras grow left or right.",
+			order = 210, type = "select", width = "full", hidden = isdisabled,
+			values = partyAuraGrowthXValues,
+			set = setter,
+			get = function(info)
+				return getoption(info, "AurasGrowthX") or partyAuraConfig.AurasGrowthX or "RIGHT"
+			end,
+			disabled = partyAuraLayoutDisabled
+		}
+		suboptions.args.AurasGrowthY = {
+			name = "Aura Growth Y",
+			desc = "Choose whether party auras grow up or down.",
+			order = 220, type = "select", width = "full", hidden = isdisabled,
+			values = partyAuraGrowthYValues,
+			set = setter,
+			get = function(info)
+				return getoption(info, "AurasGrowthY") or partyAuraConfig.AurasGrowthY or "DOWN"
+			end,
+			disabled = partyAuraLayoutDisabled
+		}
 		suboptions.args.partyAuraGlowDispellableDebuffs = {
 			name = "Glow Frame For Dispellable Debuffs",
 			desc = "Highlight the affected party frame using the debuff type color when a removable debuff is active.",
-			order = 180, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = partyAuraSettingsDisabled
+			order = 230, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = partyAuraLayoutDisabled
 		}
 		options.args.party = suboptions
 	end

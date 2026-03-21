@@ -39,6 +39,16 @@ local Spells = ns.AuraData.Spells
 local Hidden = ns.AuraData.Hidden
 local Priority = ns.AuraData.Priority
 
+local GetAuraSpellID = function(data)
+	if (ns.AuraData and ns.AuraData.GetAuraSpellID) then
+		return ns.AuraData.GetAuraSpellID(data)
+	end
+	if (issecretvalue and (issecretvalue(data and data.spellId) or issecretvalue(data and data.spellID))) then
+		return nil
+	end
+	return (data and data.spellId) or (data and data.spellID)
+end
+
 -- Local Functions
 --------------------------------------------------
 local UpdateTooltip = function(self)
@@ -200,7 +210,7 @@ ns.AuraStyles.PlayerPostUpdateButton = function(element, button, unit, data, pos
 	local isPlayerAura = SafeBool(data.isPlayerAura)
 	local canApplyAura = SafeBool(data.canApplyAura)
 	local isHarmful = SafeBool(data.isHarmful)
-	local spellId = SafeKey(data.spellId)
+	local spellId = GetAuraSpellID(data)
 	if (button.isHarmful)
 	or (nameplateShowAll or (nameplateShowPersonal and isPlayerAura))
 	or (not isHarmful and isPlayerAura and canApplyAura) or (spellId and Spells[spellId]) then
@@ -255,7 +265,7 @@ ns.AuraStyles.TargetPostUpdateButton = function(element, button, unit, data, pos
 	local isPlayerAura = SafeBool(data.isPlayerAura)
 	local canApplyAura = SafeBool(data.canApplyAura)
 	local isHarmful = SafeBool(data.isHarmful)
-	local spellId = SafeKey(data.spellId)
+	local spellId = GetAuraSpellID(data)
 	if (nameplateShowAll or (nameplateShowPersonal and isPlayerAura))
 	or (not isHarmful and isPlayerAura and canApplyAura) or (spellId and Spells[spellId]) then
 		button.Icon:SetDesaturated(false)
@@ -312,7 +322,7 @@ ns.AuraStyles.PartyPostUpdateButton = function(element, button, unit, data, posi
 
 	local isPlayerAura = SafeBool(data.isPlayerAura)
 	local canApplyAura = SafeBool(data.canApplyAura)
-	local spellId = SafeKey(data.spellId)
+	local spellId = GetAuraSpellID(data)
 	if (isHarmful) or (spellId and Spells[spellId]) or (isPlayerAura and canApplyAura) then
 		button.Icon:SetDesaturated(false)
 		button.Icon:SetVertexColor(1, 1, 1)
@@ -355,7 +365,7 @@ ns.AuraStyles.ArenaPostUpdateButton = function(element, button, unit, data, posi
 
 	-- Coloring
 	local color
-	local spellId = SafeKey(data.spellId)
+	local spellId = GetAuraSpellID(data)
 	if (button.isHarmful and element.showDebuffType) or (not button.isHarmful and element.showBuffType) or (element.showType) or (spellId and Spells[spellId]) then
 		local dispelName = SafeKey(data.dispelName)
 		color = (dispelName and Colors.debuff[dispelName]) or Colors.debuff.none

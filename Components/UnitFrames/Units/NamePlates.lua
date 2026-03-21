@@ -1134,11 +1134,29 @@ local Castbar_PostUpdate = function(element, unit)
 		notInterruptible = false
 	end
 
-	local r, g, b = unpack(notInterruptible and Colors.title or db.CastBarNameColor)
+	local textColor = db.CastBarNameColor
+	if (not element.__owner.isPRD) then
+		local state = ns.API.GetInterruptCastVisualState(element)
+		if (state == "ready") then
+			textColor = Colors.quest.yellow
+		elseif (state == "cooldown") then
+			textColor = Colors.red
+		elseif (state == "locked") then
+			textColor = Colors.gray
+		elseif (notInterruptible) then
+			textColor = Colors.gray
+		end
+	end
+
+	local r, g, b = unpack(textColor)
 	element.Text:SetTextColor(r, g, b, 1)
 
-	local r, g, b, a = unpack(element.__owner.isPRD and db.HealthCastOverlayColor or notInterruptible and Colors.tapped or db.CastBarColor)
-	element:SetStatusBarColor(r, g, b, a or 1)
+	if (element.__owner.isPRD) then
+		local prdR, prdG, prdB, prdA = unpack(db.HealthCastOverlayColor)
+		element:SetStatusBarColor(prdR, prdG, prdB, prdA or 1)
+	else
+		ns.API.ApplyInterruptCastBarColor(element, db.CastBarColor, nil, .1)
+	end
 
 	NamePlate_PostUpdateHoverElements(element.__owner)
 end
@@ -1709,6 +1727,15 @@ local style = function(self, unit, id)
 	self.Castbar.PostCastUpdate = Castbar_PostUpdate
 	self.Castbar.PostCastStop = Castbar_PostUpdate
 	self.Castbar.PostCastInterruptible = Castbar_PostUpdate
+	ns.API.AttachScriptSafe(self.Castbar, "OnUpdate", function(element, elapsed)
+		if (not element:IsShown()) then
+			return
+		end
+		if (not element.casting and not element.channeling and not element.empowering) then
+			return
+		end
+		Castbar_PostUpdate(element, element.__owner and element.__owner.unit)
+	end)
 
 	local castBackdrop = castbar:CreateTexture(nil, "BACKGROUND", nil, -1)
 	castBackdrop:SetSize(unpack(db.CastBarBackdropSize))

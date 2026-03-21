@@ -8,7 +8,7 @@
 - **Minor features:** `5.2.x` → `5.3.0`
 - **Major overhauls:** `5.x.x` → `6.0.0`
 
-Always append `-JuNNeZ` to version string.
+Always append `-JuNNeZ` to version string. Beta builds may add a suffix such as `-beta1`.
 
 ## 2. Update These Files
 
@@ -39,12 +39,13 @@ Always append `-JuNNeZ` to version string.
 
 ## Current Version
 
-**Latest:** 5.3.16-JuNNeZ
-**Last Updated:** 2026-03-20
-**Next Planned:** 5.3.17-JuNNeZ (future fixes)
+**Latest:** 5.3.17-JuNNeZ-beta1
+**Last Updated:** 2026-03-21
+**Next Planned:** 5.3.17-JuNNeZ (stable follow-up)
 
 ## Quick Version History
 
+- `5.3.17-JuNNeZ-beta1` (2026-03-21) — Beta for nameplate interrupt readiness, expanded player/party aura controls, class-power click blocking, and Blizzard duplicate-frame cleanup
 - `5.3.16-JuNNeZ` (2026-03-20) — Party/raid health color options, party aura readability work, unit-frame overlay cleanup, and Blizzard duplicate-frame fixes
 - `5.3.15-JuNNeZ` (2026-03-18) — WoW 12 aura/combat stability, stock-style player aura behavior, and aura/options cleanup
 - `5.3.13-JuNNeZ` (2026-03-14) — Battleground/local-party frame visibility fix and AceShotz credit

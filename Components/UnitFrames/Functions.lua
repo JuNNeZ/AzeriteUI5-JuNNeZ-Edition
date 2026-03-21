@@ -26,6 +26,7 @@
 local _, ns = ...
 local oUF = ns.oUF
 local API = ns.API
+local Colors = ns.Colors
 local string_format = string.format
 local math_abs = math.abs
 local POWER_TYPE_MANA = (Enum and Enum.PowerType and Enum.PowerType.Mana) or 0
@@ -120,6 +121,119 @@ end
 
 local IsSecretValue = function(value)
 	return issecretvalue and issecretvalue(value)
+end
+
+local GetPrimaryInterruptSpellID = function()
+	if (ns.AuraData and ns.AuraData.GetKnownInterruptSpells) then
+		local known = ns.AuraData.GetKnownInterruptSpells()
+		if (type(known) == "table") then
+			return known[1]
+		end
+	end
+	return nil
+end
+
+local IsPrimaryInterruptReady = function()
+	local spellID = GetPrimaryInterruptSpellID()
+	if (type(spellID) ~= "number") then
+		return nil, nil
+	end
+	if (C_Spell and C_Spell.GetSpellCooldownDuration) then
+		local okDuration, durationObject = pcall(C_Spell.GetSpellCooldownDuration, spellID)
+		if (okDuration and durationObject and durationObject.IsZero) then
+			local okIsZero, isZero = pcall(durationObject.IsZero, durationObject)
+			if (okIsZero and type(isZero) == "boolean" and (not IsSecretValue(isZero))) then
+				return isZero, spellID
+			end
+		end
+	end
+	if (GetSpellCooldown) then
+		local okCooldown, startTime, duration = pcall(GetSpellCooldown, spellID)
+		if (okCooldown and type(startTime) == "number" and type(duration) == "number") then
+			return (startTime <= 0 or duration <= 0), spellID
+		end
+	end
+	return nil, spellID
+end
+
+local ShouldUseEnemyInterruptVisuals = function(castbar)
+	local owner = castbar and castbar.__owner
+	local unit = owner and owner.unit
+	if (type(unit) ~= "string" or unit == "") then
+		return false
+	end
+	if (UnitIsUnit and UnitIsUnit(unit, "player")) then
+		return false
+	end
+	if (UnitCanAttack) then
+		local okAttack, canAttack = pcall(UnitCanAttack, "player", unit)
+		if (okAttack and type(canAttack) == "boolean" and (not IsSecretValue(canAttack))) then
+			return canAttack
+		end
+	end
+	return false
+end
+
+API.GetInterruptCastVisualState = function(castbar)
+	if (not ShouldUseEnemyInterruptVisuals(castbar)) then
+		return "base", nil
+	end
+	local notInterruptible = castbar and castbar.notInterruptible
+	if (IsSecretValue(notInterruptible) or type(notInterruptible) ~= "boolean") then
+		notInterruptible = false
+	end
+	if (notInterruptible) then
+		return "locked", nil
+	end
+	local isReady, spellID = IsPrimaryInterruptReady()
+	if (IsSecretValue(isReady) or type(isReady) ~= "boolean") then
+		isReady = nil
+	end
+	if (isReady == false) then
+		return "cooldown", spellID
+	elseif (isReady == true) then
+		return "ready", spellID
+	end
+	return "base", spellID
+end
+
+API.GetInterruptCastColor = function(castbar, fallbackColor)
+	local state, spellID = API.GetInterruptCastVisualState(castbar)
+	if (state == "ready") then
+		return Colors.quest.yellow, state, spellID
+	elseif (state == "cooldown") then
+		return Colors.red, state, spellID
+	elseif (state == "locked") then
+		return Colors.gray, state, spellID
+	end
+	return fallbackColor, state, spellID
+end
+
+API.ApplyInterruptCastBarColor = function(castbar, fallbackColor, alphaOverride, interval)
+	if (not castbar or not castbar.SetStatusBarColor) then
+		return nil
+	end
+	if (type(interval) == "number" and interval > 0) then
+		local now = (GetTimePreciseSec and GetTimePreciseSec()) or GetTime()
+		local lastUpdate = castbar.__AzeriteUI_LastInterruptColorUpdate or 0
+		if ((now - lastUpdate) < interval) then
+			return castbar.__AzeriteUI_InterruptCastState
+		end
+		castbar.__AzeriteUI_LastInterruptColorUpdate = now
+	end
+	local color, state = API.GetInterruptCastColor(castbar, fallbackColor)
+	local alpha = alphaOverride
+	if (type(alpha) ~= "number" or IsSecretValue(alpha)) then
+		alpha = (type(color) == "table" and type(color[4]) == "number" and (not IsSecretValue(color[4]))) and color[4]
+			or (type(fallbackColor) == "table" and type(fallbackColor[4]) == "number" and (not IsSecretValue(fallbackColor[4]))) and fallbackColor[4]
+			or 1
+	end
+	if (type(color) == "table" and type(color[1]) == "number" and type(color[2]) == "number" and type(color[3]) == "number") then
+		castbar:SetStatusBarColor(color[1], color[2], color[3], alpha)
+		castbar.__AzeriteUI_InterruptCastState = state
+		return state
+	end
+	return nil
 end
 
 local CanAccessValue = function(value)

@@ -380,6 +380,48 @@ local function GuardCompactUnitFrameGlobals()
 	end
 end
 
+local function GuardAuraUtilUnpack()
+	if (not AuraUtil or type(AuraUtil.UnpackAuraData) ~= "function"
+		or _G.__AzUI_W12_AuraUtilUnpackWrapped) then
+		return
+	end
+
+	_G.__AzUI_W12_AuraUtilUnpackWrapped = true
+	local original = AuraUtil.UnpackAuraData
+	local Pack = table.pack or function(...)
+		return { n = select("#", ...), ... }
+	end
+
+	AuraUtil.UnpackAuraData = function(auraData, ...)
+		if (auraData ~= nil) then
+			if (type(auraData) ~= "table") then
+				return nil
+			end
+			if (issecretvalue and issecretvalue(auraData)) then
+				return nil
+			end
+			if (canaccesstable and not canaccesstable(auraData)) then
+				return nil
+			end
+			if (issecretvalue and issecretvalue(auraData.points)) then
+				local okCopy, copy = pcall(CopyTable, auraData)
+				if (okCopy and type(copy) == "table") then
+					auraData = copy
+					auraData.points = nil
+				else
+					return nil
+				end
+			end
+		end
+
+		local results = Pack(pcall(original, auraData, ...))
+		if (results[1]) then
+			return unpack(results, 2, results.n or #results)
+		end
+		return nil
+	end
+end
+
 local function QuarantineCompactFrames()
 	if (not ShouldHandleCustomUnitFrames()) then
 		return
@@ -526,6 +568,7 @@ local function ApplyGuards()
 	GuardUnitAuraApis()
 	GuardPartyFrameGlobals()
 	GuardCompactUnitFrameGlobals()
+	GuardAuraUtilUnpack()
 	ApplyBlizzardFrameQuarantine()
 	HookCompactFrameLifecycle()
 end

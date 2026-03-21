@@ -56,6 +56,13 @@ local SafeNumber = function(value, fallback)
 	return fallback
 end
 
+local GetAuraSpellID = function(data)
+	if (ns.AuraData and ns.AuraData.GetAuraSpellID) then
+		return ns.AuraData.GetAuraSpellID(data)
+	end
+	return SafeNumber(data and data.spellId, nil) or SafeNumber(data and data.spellID, nil)
+end
+
 local Aura_Sort = function(a, b)
 
 	-- Debuffs first
@@ -66,8 +73,8 @@ local Aura_Sort = function(a, b)
 	end
 
 	-- Show priority auras first
-	local aSpell = SafeNumber(a.spellId, nil)
-	local bSpell = SafeNumber(b.spellId, nil)
+	local aSpell = GetAuraSpellID(a)
+	local bSpell = GetAuraSpellID(b)
 	local aPrio = aSpell and Priority[aSpell]
 	local bPrio = bSpell and Priority[bSpell]
 	if (aPrio ~= bPrio) then

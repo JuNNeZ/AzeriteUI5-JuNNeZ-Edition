@@ -27,7 +27,10 @@ local _, ns = ...
 
 -- Lua API
 local bit_bor = bit.bor
+local ipairs = ipairs
 local select, type = select, type
+local SPELL_BANK_PLAYER = (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player) or 0
+local SPELL_BANK_PET = (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet) or 1
 
 -- Setup Aura Environment
 ns.AuraData = {
@@ -35,6 +38,8 @@ ns.AuraData = {
 	SpellParents = {}, 		-- [spellID] = <number> (spellID of parent spell)
 	Priority = {}, 			-- [spellID] = <boolean,nil> (true/false)
 	Hidden = {}, 			-- [spellID] = <boolean,nil> (true/false)
+	InterruptPriority = {},	-- [classFile] = { spellID, ... } retail/current interrupt priority
+	KnownInterruptSpells = {}, -- cached known interrupt list for the current player
 	Flags = {
 
 		-- Crowd Control & Debuffs
@@ -89,7 +94,11 @@ ns.AuraData = {
 		end
 
 		if (isHidden) then
-			ns.AuraData.Hidden[isHidden] = true
+			ns.AuraData.Hidden[spellID] = true
+		end
+
+		if (type(spellParent) == "number") then
+			ns.AuraData.SpellParents[spellID] = spellParent
 		end
 
 		-- Add spellType bits using logical or
@@ -99,6 +108,92 @@ ns.AuraData = {
 		end
 	end
 }
+
+ns.AuraData.GetAuraSpellID = function(data)
+	if (type(data) ~= "table") then
+		return nil
+	end
+	local spellID = data.spellId
+	if (type(spellID) ~= "number" or (issecretvalue and issecretvalue(spellID))) then
+		spellID = data.spellID
+	end
+	if (type(spellID) ~= "number" or (issecretvalue and issecretvalue(spellID))) then
+		return nil
+	end
+	return spellID
+end
+
+local IsSpellKnownForInterrupt = function(spellID)
+	if (type(spellID) ~= "number") then
+		return false
+	end
+	if (C_SpellBook and C_SpellBook.IsSpellKnownOrInSpellBook) then
+		local okPlayer, knownPlayer = pcall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID, SPELL_BANK_PLAYER, true)
+		if (okPlayer and knownPlayer) then
+			return true
+		end
+		local okPet, knownPet = pcall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID, SPELL_BANK_PET, true)
+		if (okPet and knownPet) then
+			return true
+		end
+	end
+	if (C_SpellBook and C_SpellBook.IsSpellKnown) then
+		local okPlayer, knownPlayer = pcall(C_SpellBook.IsSpellKnown, spellID, SPELL_BANK_PLAYER)
+		if (okPlayer and knownPlayer) then
+			return true
+		end
+		local okPet, knownPet = pcall(C_SpellBook.IsSpellKnown, spellID, SPELL_BANK_PET)
+		if (okPet and knownPet) then
+			return true
+		end
+	end
+	if (IsSpellKnown) then
+		local okKnown, known = pcall(IsSpellKnown, spellID)
+		if (okKnown and known) then
+			return true
+		end
+	end
+	return false
+end
+
+ns.AuraData.GetInterruptPriority = function(classFile)
+	if (type(classFile) ~= "string" or classFile == "") then
+		return nil
+	end
+	return ns.AuraData.InterruptPriority[classFile]
+end
+
+ns.AuraData.RefreshKnownInterruptSpells = function(classFile)
+	local known = ns.AuraData.KnownInterruptSpells
+	for index = #known, 1, -1 do
+		known[index] = nil
+	end
+	if (type(classFile) ~= "string" or classFile == "") then
+		classFile = UnitClassBase and UnitClassBase("player")
+		if (type(classFile) ~= "string" or classFile == "") then
+			local _, fallbackClass = UnitClass("player")
+			classFile = fallbackClass
+		end
+	end
+	local priority = ns.AuraData.GetInterruptPriority(classFile)
+	if (type(priority) ~= "table") then
+		return known
+	end
+	for _, spellID in ipairs(priority) do
+		if (IsSpellKnownForInterrupt(spellID)) then
+			known[#known + 1] = spellID
+		end
+	end
+	return known
+end
+
+ns.AuraData.GetKnownInterruptSpells = function(classFile)
+	local known = ns.AuraData.KnownInterruptSpells
+	if (#known == 0) then
+		return ns.AuraData.RefreshKnownInterruptSpells(classFile)
+	end
+	return known
+end
 
 if (not ns.IsRetail) then return end
 
@@ -120,7 +215,6 @@ Add( 34914, true) 						-- Vampiric Touch
 -- Interrupts
 --------------------------------------------------
 Add( 31935, "INTERRUPT") 				-- Avenger's Shield (Paladin)
-Add(212619, "INTERRUPT") 				-- Call Felhunter (Warlock)
 Add(147362, "INTERRUPT") 				-- Counter Shot (Hunter)
 Add(  2139, "INTERRUPT") 				-- Counterspell (Mage)
 Add(183752, "INTERRUPT") 				-- Disrupt (Demon Hunter)
@@ -130,6 +224,7 @@ Add(187707, "INTERRUPT") 				-- Muzzle (Hunter)
 Add(  6552, "INTERRUPT") 				-- Pummel (Warrior)
 Add(351338, "INTERRUPT") 				-- Quell (Evoker)
 Add( 96231, "INTERRUPT") 				-- Rebuke (Paladin)
+Add( 15487, "INTERRUPT") 				-- Silence (Priest)
 Add( 91807, "INTERRUPT") 				-- Shambling Rush (Death Knight)
 Add(217824, "INTERRUPT") 				-- Shield of Virtue (Protection PvP Talent)
 Add( 93985, "INTERRUPT") 				-- Skull Bash (Feral/Guardian)
@@ -137,6 +232,34 @@ Add(116705, "INTERRUPT") 				-- Spear Hand Strike (Monk)
 Add( 19647, "INTERRUPT") 				-- Spell Lock (Warlock)
 Add(132409, "INTERRUPT") 				-- Spell Lock (Warlock)
 Add( 57994, "INTERRUPT") 				-- Wind Shear (Shaman)
+
+ns.AuraData.InterruptPriority = {
+	DEATHKNIGHT = { 47528, 91807 },
+	DEMONHUNTER = { 183752 },
+	DRUID = { 93985 },
+	EVOKER = { 351338 },
+	HUNTER = { 147362, 187707 },
+	MAGE = { 2139 },
+	MONK = { 116705 },
+	PALADIN = { 96231, 31935, 217824 },
+	PRIEST = { 15487 },
+	ROGUE = { 1766 },
+	SHAMAN = { 57994 },
+	WARLOCK = { 19647, 132409 },
+	WARRIOR = { 6552 }
+}
+
+do
+	local refreshFrame = CreateFrame("Frame")
+	refreshFrame:RegisterEvent("PLAYER_LOGIN")
+	refreshFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	refreshFrame:RegisterEvent("SPELLS_CHANGED")
+	refreshFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+	refreshFrame:RegisterUnitEvent("UNIT_PET", "player")
+	refreshFrame:SetScript("OnEvent", function()
+		ns.AuraData.RefreshKnownInterruptSpells()
+	end)
+end
 
 -- Death Knight
 --------------------------------------------------

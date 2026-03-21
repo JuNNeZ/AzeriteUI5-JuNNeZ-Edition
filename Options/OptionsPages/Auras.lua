@@ -83,21 +83,21 @@ local GenerateOptions = function()
 				get = getter
 			},
 			visibilityHeader = {
-				name = L["Visibility"],
+				name = "Show / Hide",
 				order = 3,
 				type = "header",
 				hidden = isdisabled
 			},
 			visibilityDesc = {
-				name = L["Choose when your auras will be visible."],
+				name = "Control when the top-right aura header is visible.",
 				order = 4,
 				type = "description",
 				fontSize = "medium",
 				hidden = isdisabled
 			},
 			enableAuraFading = {
-				name = L["Enable Aura Fading"],
-				desc = L["Toggle whether to enable the player aura buttons to fade out when not moused over."],
+				name = "Fade When Idle",
+				desc = "Fade the top-right aura header when you are not interacting with it.",
 				order = 10,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -105,8 +105,8 @@ local GenerateOptions = function()
 				get = getter
 			},
 			enableModifier = {
-				name = L["Enable Modifier Key"],
-				desc = L["Require a modifier key to show the auras."],
+				name = "Only Show With Modifier Key",
+				desc = "Require a modifier key to reveal the top-right aura header.",
 				order = 20,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -114,8 +114,8 @@ local GenerateOptions = function()
 				get = getter
 			},
 			modifier = {
-				name = L["Modifier Key"],
-				desc = L["Choose which modifier key to hold  down to show the aura buttons."],
+				name = "Required Modifier Key",
+				desc = "Choose which key reveals the top-right aura header.",
 				order = 21,
 				hidden = isdisabled,
 				disabled = function(info) return isdisabled(info) or not getoption(info, "enableModifier") end,
@@ -129,8 +129,8 @@ local GenerateOptions = function()
 				get = getter
 			},
 			ignoreTarget = {
-				name = L["Keep Aura Header Visible With Target"],
-				desc = L["Keep the AzeriteUI top-right aura header visible even when you have a target. Disable this if you want the header to hide while the target frame is in use."],
+				name = "Keep Visible While Targeting",
+				desc = "Keep the AzeriteUI top-right aura header visible even when you have a target. Turn this off if you want the target frame to take over that screen space.",
 				order = 22,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -149,13 +149,13 @@ local GenerateOptions = function()
 				get = getter
 			},
 			layoutHeader = {
-				name = L["Layout"],
+				name = "Layout & Direction",
 				order = 30,
 				type = "header",
 				hidden = isdisabled
 			},
 			layoutDesc = {
-				name = L["Choose how your auras are displayed."],
+				name = "Adjust the anchor, growth direction and spacing of the top-right aura header.",
 				order = 31,
 				type = "description",
 				fontSize = "medium",
@@ -225,7 +225,7 @@ local GenerateOptions = function()
 			},
 			paddingY = {
 				name = L["Vertical Padding"],
-				desc = L["Sets the horizontal padding between your aura buttons."],
+				desc = L["Sets the vertical padding between your aura buttons."],
 				order = 52,
 				type = "range", width = "full", min = 6, max = 18, step = 1,
 				hidden = isdisabled,
