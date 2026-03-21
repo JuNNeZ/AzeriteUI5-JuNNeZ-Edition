@@ -51,14 +51,6 @@ local SuppressBlizzardMirrorTimerFrame = function(frame)
 
 	frame.__AzeriteUI_MirrorTimerSuppressed = true
 
-	if (frame.HighlightSystem) then
-		frame.HighlightSystem = ns.Noop
-	end
-
-	if (frame.ClearHighlight) then
-		frame.ClearHighlight = ns.Noop
-	end
-
 	frame:UnregisterAllEvents()
 	frame:SetParent(ns.Hider)
 	frame:Hide()

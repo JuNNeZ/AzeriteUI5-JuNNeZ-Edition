@@ -4444,3 +4444,31 @@ Testing:
 3. Soft-target and then hard-target the same enemy/friendly unit.
 4. Verify both use the same size now.
 5. Recheck Blizzard-scale mode only after that baseline is confirmed; if there is still drift there, the remaining issue is separate from soft-target sizing itself.
+
+2026-03-21
+
+Request:
+- BugSack shows current-retail secret-value warnings in `Blizzard_EditMode`, `Blizzard_EncounterWarnings`, `SecureUtil`, and `Blizzard_DamageMeter`.
+- The common symptom is secure Blizzard code reporting `tainted by 'AzeriteUI5_JuNNeZ_Edition'` while comparing or doing arithmetic on secret numbers.
+
+Applied:
+- Removed the remaining direct `HighlightSystem` / `ClearHighlight` method replacement from the live Blizzard mirror-timer suppression path in `Components/Misc/MirrorTimers.lua`.
+- Removed the stale Blizzard-frame highlight-method replacement blocks from `Components/ActionBars/Elements/EncounterBar.lua`, `Components/ActionBars/Elements/MicroMenu.lua`, `Components/Misc/Minimap.lua`, and `Components/Misc/VehicleSeat.lua`.
+- Changed `Components/Misc/Tooltips.lua` so the tooltip highlight path no longer swaps `GameTooltipDefaultContainer` methods to `ns.Noop`.
+
+Why:
+- The repo already documents this exact taint class: writing addon functions onto Blizzard-owned frame tables can make later secure/secret-value code paths execute as addon-tainted, even when the eventual stack is in an unrelated system.
+- The reported failures all happen inside Blizzard-owned secure/UI systems (`EditMode`, `EncounterWarnings`, `SecureUtil`, `DamageMeter`), which is consistent with a broad taint leak rather than a bug in just one target frame path.
+- `MirrorTimers.lua` was still doing that write unconditionally, and the other retail UI modules had the same pattern preserved in stale guard branches. Removing those writes is the narrowest fix that matches the known taint mechanism.
+
+Testing:
+1. `luac -p 'Components/Misc/MirrorTimers.lua'`
+2. `luac -p 'Components/Misc/Tooltips.lua'`
+3. `luac -p 'Components/ActionBars/Elements/EncounterBar.lua'`
+4. `luac -p 'Components/ActionBars/Elements/MicroMenu.lua'`
+5. `luac -p 'Components/Misc/Minimap.lua'`
+6. `luac -p 'Components/Misc/VehicleSeat.lua'`
+7. `/reload`
+8. `/buggrabber reset`
+9. Open and close Edit Mode, then save/revert a layout once.
+10. Recheck the previous `EncounterWarnings`, `SecureUtil`, and `DamageMeter` stacks in a fresh session.
