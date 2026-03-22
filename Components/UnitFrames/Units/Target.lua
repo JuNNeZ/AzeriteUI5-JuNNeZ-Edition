@@ -1773,12 +1773,19 @@ end
 -- Toggle cast text color on protected casts.
 local SyncTargetCastVisualState
 
-local Cast_PostCastInterruptible = function(element, unit)
-	if (element.notInterruptible) then
-		element.Text:SetTextColor(unpack(element.Text.colorProtected))
-	else
-		element.Text:SetTextColor(unpack(element.Text.color))
+local Cast_RefreshInterruptVisuals = function(element)
+	if (not element or not element.Text) then
+		return
 	end
+	local textColor = ns.API.GetInterruptCastColor(element, element.Text.color)
+	if (type(textColor) == "table") then
+		element.Text:SetTextColor(unpack(textColor))
+	end
+	ns.API.ApplyInterruptCastBarColor(element, element.color or element.Text.color)
+end
+
+local Cast_PostCastInterruptible = function(element, unit)
+	ns.API.UpdateInterruptCastBarRefresh(element, Cast_RefreshInterruptVisuals, "target_interruptible")
 	SyncTargetCastVisualState(element)
 end
 
@@ -1816,6 +1823,7 @@ end
 local Cast_PostUpdateVisual = function(element, unit)
 	HideTargetNativeCastVisuals(element)
 	UpdateTargetBarSpark(element, nil)
+	ns.API.UpdateInterruptCastBarRefresh(element, Cast_RefreshInterruptVisuals, "target_postcast")
 end
 
 local GetTargetCastRemainingFromPayload = function(durationPayload)
@@ -2609,6 +2617,9 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 
 	elseif (event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_REGEN_DISABLED") then
 		self.Auras:ForceUpdate()
+		if (self.Castbar) then
+			ns.API.UpdateInterruptCastBarRefresh(self.Castbar, Cast_RefreshInterruptVisuals, event)
+		end
 
 	elseif (event == "UNIT_ABSORB_AMOUNT_CHANGED") then
 		if (unit == self.unit) then
@@ -2781,6 +2792,7 @@ local style = function(self, unit, id)
 		HideTargetNativeCastVisuals(source)
 		SyncTargetCastVisualState(source)
 		UpdateTargetBarSpark(source, nil)
+		ns.API.UpdateInterruptCastBarRefresh(source, Cast_RefreshInterruptVisuals, "target_onshow")
 	end)
 	ns.API.AttachScriptSafe(castbar, "OnUpdate", function(source, elapsed)
 		if (not source:IsShown()) then
@@ -2802,6 +2814,7 @@ local style = function(self, unit, id)
 		source.__AzeriteUI_UseNativeCastVisual = nil
 		source.__AzeriteUI_CastGenericSyncReason = "OnHide"
 		HideTargetNativeCastVisuals(source)
+		ns.API.ClearInterruptCastBarRefresh(source)
 		if (source.FakeFill and source.FakeFill.Hide) then
 			source.FakeFill:Hide()
 		end
@@ -2823,6 +2836,7 @@ local style = function(self, unit, id)
 	castText.colorProtected = db.CastBarTextProtectedColor
 
 	self.Castbar.Text = castText
+	self.Castbar.color = db.HealthCastOverlayColor
 	self.Castbar.PostCastInterruptible = Cast_PostCastInterruptible
 	self.Castbar.PostCastStart = Cast_PostUpdateVisual
 	self.Castbar.PostCastUpdate = Cast_PostUpdateVisual

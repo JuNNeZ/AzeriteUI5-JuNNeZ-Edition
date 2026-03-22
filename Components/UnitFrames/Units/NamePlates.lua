@@ -82,7 +82,6 @@ local defaults = { profile = ns:Merge({
 local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
 local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
 local FRIENDLY_NAME_ONLY_SCALE_MULTIPLIER = 2
-local SECONDARY_INTERRUPT_COLOR = { 170/255, 110/255, 1, 1 }
 local FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = 6
 local GLOBAL_NAMEPLATE_BASE_SCALE_DEFAULT = 2
 local GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT = 1.1
@@ -1442,26 +1441,14 @@ local Auras_PostUpdate = function(element, unit)
 	NamePlate_PostUpdatePositions(element.__owner)
 end
 
-local Castbar_PostUpdate = function(element, unit)
+local Castbar_RefreshInterruptVisuals = function(element)
 	local db = ns.GetConfig("NamePlates")
-	local notInterruptible = element.notInterruptible
-	if (issecretvalue and issecretvalue(notInterruptible)) then
-		notInterruptible = false
-	end
 
 	local textColor = db.CastBarNameColor
 	if (not element.__owner.isPRD) then
-		local state = ns.API.GetInterruptCastVisualState(element)
-		if (state == "primary-ready") then
-			textColor = Colors.cast
-		elseif (state == "secondary-ready") then
-			textColor = SECONDARY_INTERRUPT_COLOR
-		elseif (state == "unavailable") then
-			textColor = Colors.red
-		elseif (state == "locked") then
-			textColor = Colors.gray
-		elseif (notInterruptible) then
-			textColor = Colors.gray
+		local interruptTextColor = ns.API.GetInterruptCastColor(element, db.CastBarNameColor)
+		if (type(interruptTextColor) == "table") then
+			textColor = interruptTextColor
 		end
 	end
 
@@ -1472,10 +1459,14 @@ local Castbar_PostUpdate = function(element, unit)
 		local prdR, prdG, prdB, prdA = unpack(db.HealthCastOverlayColor)
 		element:SetStatusBarColor(prdR, prdG, prdB, prdA or 1)
 	else
-		ns.API.ApplyInterruptCastBarColor(element, db.CastBarColor, nil, .1)
+		ns.API.ApplyInterruptCastBarColor(element, db.CastBarColor)
 	end
 
 	NamePlate_PostUpdateHoverElements(element.__owner)
+end
+
+local Castbar_PostUpdate = function(element, unit)
+	ns.API.UpdateInterruptCastBarRefresh(element, Castbar_RefreshInterruptVisuals, "nameplate_postcast")
 end
 
 -- Callback that handles positions of elements
@@ -1799,6 +1790,10 @@ local NamePlate_OnHide = function(self)
 	self.isObjectPlate = nil
 	self.isFriendlyAssistableNPC = nil
 	self.nameplateShowsWidgetsOnly = nil
+	if (self.Castbar) then
+		ns.API.ClearInterruptCastBarRefresh(self.Castbar)
+		self.Castbar.__AzeriteUI_LastInterruptColorUpdate = nil
+	end
 
 	if (self.RaidTargetIndicator) then
 		self.RaidTargetIndicator:Hide()
@@ -2002,15 +1997,11 @@ local style = function(self, unit, id)
 	self.Castbar.PostCastStart = Castbar_PostUpdate
 	self.Castbar.PostCastUpdate = Castbar_PostUpdate
 	self.Castbar.PostCastStop = Castbar_PostUpdate
+	self.Castbar.PostCastFail = Castbar_PostUpdate
+	self.Castbar.PostCastInterrupted = Castbar_PostUpdate
 	self.Castbar.PostCastInterruptible = Castbar_PostUpdate
-	ns.API.AttachScriptSafe(self.Castbar, "OnUpdate", function(element, elapsed)
-		if (not element:IsShown()) then
-			return
-		end
-		if (not element.casting and not element.channeling and not element.empowering) then
-			return
-		end
-		Castbar_PostUpdate(element, element.__owner and element.__owner.unit)
+	ns.API.AttachScriptSafe(self.Castbar, "OnHide", function(element)
+		ns.API.ClearInterruptCastBarRefresh(element)
 	end)
 
 	local castBackdrop = castbar:CreateTexture(nil, "BACKGROUND", nil, -1)

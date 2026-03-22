@@ -4,6 +4,20 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.23-JuNNeZ-beta1 (2026-03-22)
+
+### Highlights
+- Fixed hostile castbar interrupt colors so target and nameplate casts keep the correct ready, unavailable, and protected colors during combat instead of falling back to the base cast color.
+
+### Access
+- No new menu path. This beta is a combat castbar hotfix for hostile target and nameplate casts.
+
+### Why
+- WoW 12 combat can return secret readiness values for interrupt cooldown and usability checks. The earlier interrupt-color pass only trusted plain Lua booleans, which let enemy castbars drop back to the base color during combat even when AzeriteUI should still show interrupt-ready state.
+
+### Internal
+- Reworked the shared interrupt readiness helper around secret-safe visual evaluation and added a shared event/ticker refresh path so target and nameplate castbars stay in sync.
+
 ## 5.3.22-JuNNeZ (2026-03-22)
 
 ### Highlights

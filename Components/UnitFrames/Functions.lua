@@ -143,17 +143,45 @@ local GetSecondaryInterruptSpellID = function()
 	return nil
 end
 
-local IsPrimaryInterruptReady = function()
-	local spellID = GetPrimaryInterruptSpellID()
+local EvaluateBooleanVisualState = function(state, falseValue, trueValue)
+	if (C_CurveUtil and C_CurveUtil.EvaluateColorValueFromBoolean) then
+		local okValue, evaluated = pcall(C_CurveUtil.EvaluateColorValueFromBoolean, state, falseValue, trueValue)
+		if (okValue and type(evaluated) == "number" and (not IsSecretValue(evaluated))) then
+			return evaluated
+		end
+	end
+	if (type(state) == "boolean" and (not IsSecretValue(state))) then
+		return state and trueValue or falseValue
+	end
+	return nil
+end
+
+local GetSpellCooldownReadyState = function(spellID)
 	if (type(spellID) ~= "number") then
-		return nil, nil
+		return nil
 	end
 	if (C_Spell and C_Spell.GetSpellCooldownDuration) then
 		local okDuration, durationObject = pcall(C_Spell.GetSpellCooldownDuration, spellID)
 		if (okDuration and durationObject and durationObject.IsZero) then
 			local okIsZero, isZero = pcall(durationObject.IsZero, durationObject)
-			if (okIsZero and type(isZero) == "boolean" and (not IsSecretValue(isZero))) then
-				return isZero, spellID
+			if (okIsZero) then
+				local readyState = EvaluateBooleanVisualState(isZero, 0, 1)
+				if (type(readyState) == "number") then
+					return readyState
+				end
+			end
+		end
+	end
+	if (C_Spell and C_Spell.GetSpellCooldown) then
+		local okCooldown, cooldownInfo = pcall(C_Spell.GetSpellCooldown, spellID)
+		if (okCooldown and type(cooldownInfo) == "table") then
+			local startTime = cooldownInfo.startTime
+			local duration = cooldownInfo.duration
+			if (type(startTime) == "number"
+				and type(duration) == "number"
+				and (not IsSecretValue(startTime))
+				and (not IsSecretValue(duration))) then
+				return (startTime <= 0 or duration <= 0) and 1 or 0
 			end
 		end
 	end
@@ -164,37 +192,61 @@ local IsPrimaryInterruptReady = function()
 			and type(duration) == "number"
 			and (not IsSecretValue(startTime))
 			and (not IsSecretValue(duration))) then
-			return (startTime <= 0 or duration <= 0), spellID
+			return (startTime <= 0 or duration <= 0) and 1 or 0
 		end
+	end
+	return nil
+end
+
+local GetSpellUsableState = function(spellID)
+	if (type(spellID) ~= "number") then
+		return nil
+	end
+	if (C_Spell and C_Spell.IsSpellUsable) then
+		local okUsable, isUsable = pcall(C_Spell.IsSpellUsable, spellID)
+		if (okUsable) then
+			local usableState = EvaluateBooleanVisualState(isUsable, 0, 1)
+			if (type(usableState) == "number") then
+				return usableState
+			end
+		end
+	end
+	if (IsUsableSpell) then
+		local okUsable, isUsable = pcall(IsUsableSpell, spellID)
+		if (okUsable) then
+			local usableState = EvaluateBooleanVisualState(isUsable, 0, 1)
+			if (type(usableState) == "number") then
+				return usableState
+			end
+		end
+	end
+	return nil
+end
+
+local GetInterruptReadyState = function(spellID)
+	if (type(spellID) ~= "number") then
+		return nil, nil
+	end
+	local cooldownState = GetSpellCooldownReadyState(spellID)
+	local usableState = GetSpellUsableState(spellID)
+	if (cooldownState == 1) then
+		if (usableState == 0) then
+			return 0, spellID
+		end
+		return 1, spellID
+	end
+	if (cooldownState == 0 or usableState == 0) then
+		return 0, spellID
 	end
 	return nil, spellID
 end
 
+local IsPrimaryInterruptReady = function()
+	return GetInterruptReadyState(GetPrimaryInterruptSpellID())
+end
+
 local IsSecondaryInterruptReady = function()
-	local spellID = GetSecondaryInterruptSpellID()
-	if (type(spellID) ~= "number") then
-		return nil, nil
-	end
-	if (C_Spell and C_Spell.GetSpellCooldownDuration) then
-		local okDuration, durationObject = pcall(C_Spell.GetSpellCooldownDuration, spellID)
-		if (okDuration and durationObject and durationObject.IsZero) then
-			local okIsZero, isZero = pcall(durationObject.IsZero, durationObject)
-			if (okIsZero and type(isZero) == "boolean" and (not IsSecretValue(isZero))) then
-				return isZero, spellID
-			end
-		end
-	end
-	if (GetSpellCooldown) then
-		local okCooldown, startTime, duration = pcall(GetSpellCooldown, spellID)
-		if (okCooldown
-			and type(startTime) == "number"
-			and type(duration) == "number"
-			and (not IsSecretValue(startTime))
-			and (not IsSecretValue(duration))) then
-			return (startTime <= 0 or duration <= 0), spellID
-		end
-	end
-	return nil, spellID
+	return GetInterruptReadyState(GetSecondaryInterruptSpellID())
 end
 
 local InterruptVisualColors = {
@@ -204,14 +256,9 @@ local InterruptVisualColors = {
 	locked = Colors.gray
 }
 
-local ShouldUseEnemyInterruptVisuals = function(castbar)
-	local owner = castbar and castbar.__owner
-	local unit = owner and owner.unit
-	if (type(unit) ~= "string" or unit == "") then
-		return false
-	end
-	if (UnitIsUnit and UnitIsUnit(unit, "player")) then
-		return false
+local IsEnemyUnitForInterruptVisuals = function(owner, unit)
+	if (owner and type(owner.canAttack) == "boolean") then
+		return owner.canAttack
 	end
 	if (UnitCanAttack) then
 		local okAttack, canAttack = pcall(UnitCanAttack, "player", unit)
@@ -219,7 +266,28 @@ local ShouldUseEnemyInterruptVisuals = function(castbar)
 			return canAttack
 		end
 	end
+	if (UnitReaction) then
+		local okReaction, reaction = pcall(UnitReaction, "player", unit)
+		if (okReaction and type(reaction) == "number" and (not IsSecretValue(reaction))) then
+			return reaction <= 4
+		end
+	end
 	return false
+end
+
+local ShouldUseEnemyInterruptVisuals = function(castbar)
+	local owner = castbar and castbar.__owner
+	if (owner and owner.isPRD) then
+		return false
+	end
+	local unit = owner and owner.unit
+	if (type(unit) ~= "string" or unit == "") then
+		return false
+	end
+	if (UnitIsUnit and UnitIsUnit(unit, "player")) then
+		return false
+	end
+	return IsEnemyUnitForInterruptVisuals(owner, unit)
 end
 
 API.GetInterruptCastVisualState = function(castbar)
@@ -234,21 +302,21 @@ API.GetInterruptCastVisualState = function(castbar)
 		return "locked", nil, nil
 	end
 	local primaryReady, primarySpellID = IsPrimaryInterruptReady()
-	if (IsSecretValue(primaryReady) or type(primaryReady) ~= "boolean") then
+	if (IsSecretValue(primaryReady) or type(primaryReady) ~= "number") then
 		primaryReady = nil
 	end
 	local secondaryReady, secondarySpellID = IsSecondaryInterruptReady()
-	if (IsSecretValue(secondaryReady) or type(secondaryReady) ~= "boolean") then
+	if (IsSecretValue(secondaryReady) or type(secondaryReady) ~= "number") then
 		secondaryReady = nil
 	end
 
-	if (primaryReady == true) then
+	if (primaryReady == 1) then
 		return "primary-ready", primarySpellID, secondarySpellID
 	end
-	if (secondaryReady == true) then
+	if (secondaryReady == 1) then
 		return "secondary-ready", primarySpellID, secondarySpellID
 	end
-	if (primaryReady == false or secondaryReady == false) then
+	if (primaryReady == 0 or secondaryReady == 0) then
 		return "unavailable", primarySpellID, secondarySpellID
 	end
 	return "base", primarySpellID, secondarySpellID
@@ -293,6 +361,119 @@ API.ApplyInterruptCastBarColor = function(castbar, fallbackColor, alphaOverride,
 		return state
 	end
 	return nil
+end
+
+local InterruptCastBarRefreshFrame = CreateFrame("Frame")
+local ActiveInterruptCastBars = setmetatable({}, { __mode = "k" })
+local ActiveInterruptCastBarCount = 0
+
+local RemoveTrackedInterruptCastBar
+local RefreshTrackedInterruptCastBars
+
+local IsInterruptCastBarActive = function(castbar)
+	if (not castbar or type(castbar.__AzeriteUI_InterruptRefreshCallback) ~= "function") then
+		return false
+	end
+	if (not castbar.IsShown or not castbar:IsShown()) then
+		return false
+	end
+	if (not castbar.casting and not castbar.channeling and not castbar.empowering) then
+		return false
+	end
+	return ShouldUseEnemyInterruptVisuals(castbar)
+end
+
+local UpdateInterruptCastBarDriver = function()
+	if (ActiveInterruptCastBarCount > 0) then
+		if (not InterruptCastBarRefreshFrame.__AzeriteUI_InterruptEventsRegistered) then
+			InterruptCastBarRefreshFrame:RegisterEvent("SPELL_UPDATE_USABLE")
+			InterruptCastBarRefreshFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
+			InterruptCastBarRefreshFrame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+			InterruptCastBarRefreshFrame.__AzeriteUI_InterruptEventsRegistered = true
+		end
+		if (not InterruptCastBarRefreshFrame.__AzeriteUI_InterruptTicker and C_Timer and C_Timer.NewTicker) then
+			InterruptCastBarRefreshFrame.__AzeriteUI_InterruptTicker = C_Timer.NewTicker(.1, function()
+				RefreshTrackedInterruptCastBars("ticker")
+			end)
+		end
+	else
+		if (InterruptCastBarRefreshFrame.__AzeriteUI_InterruptTicker) then
+			InterruptCastBarRefreshFrame.__AzeriteUI_InterruptTicker:Cancel()
+			InterruptCastBarRefreshFrame.__AzeriteUI_InterruptTicker = nil
+		end
+		if (InterruptCastBarRefreshFrame.__AzeriteUI_InterruptEventsRegistered) then
+			InterruptCastBarRefreshFrame:UnregisterEvent("SPELL_UPDATE_USABLE")
+			InterruptCastBarRefreshFrame:UnregisterEvent("SPELL_UPDATE_COOLDOWN")
+			InterruptCastBarRefreshFrame:UnregisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+			InterruptCastBarRefreshFrame.__AzeriteUI_InterruptEventsRegistered = nil
+		end
+	end
+end
+
+local AddTrackedInterruptCastBar = function(castbar)
+	if (not ActiveInterruptCastBars[castbar]) then
+		ActiveInterruptCastBars[castbar] = true
+		ActiveInterruptCastBarCount = ActiveInterruptCastBarCount + 1
+	end
+end
+
+RemoveTrackedInterruptCastBar = function(castbar)
+	if (ActiveInterruptCastBars[castbar]) then
+		ActiveInterruptCastBars[castbar] = nil
+		ActiveInterruptCastBarCount = ActiveInterruptCastBarCount - 1
+		if (ActiveInterruptCastBarCount < 0) then
+			ActiveInterruptCastBarCount = 0
+		end
+	end
+end
+
+RefreshTrackedInterruptCastBars = function(reason)
+	for castbar in pairs(ActiveInterruptCastBars) do
+		if (IsInterruptCastBarActive(castbar)) then
+			local callback = castbar.__AzeriteUI_InterruptRefreshCallback
+			if (type(callback) == "function") then
+				callback(castbar, reason)
+			end
+		else
+			RemoveTrackedInterruptCastBar(castbar)
+		end
+	end
+	UpdateInterruptCastBarDriver()
+end
+
+InterruptCastBarRefreshFrame:SetScript("OnEvent", function(_, event)
+	RefreshTrackedInterruptCastBars(event)
+end)
+
+API.UpdateInterruptCastBarRefresh = function(castbar, refreshCallback, reason)
+	if (not castbar) then
+		return nil
+	end
+	if (type(refreshCallback) == "function") then
+		castbar.__AzeriteUI_InterruptRefreshCallback = refreshCallback
+	end
+	local callback = castbar.__AzeriteUI_InterruptRefreshCallback
+	if (type(callback) == "function") then
+		callback(castbar, reason)
+	end
+	if (IsInterruptCastBarActive(castbar)) then
+		AddTrackedInterruptCastBar(castbar)
+	else
+		RemoveTrackedInterruptCastBar(castbar)
+	end
+	UpdateInterruptCastBarDriver()
+	return castbar.__AzeriteUI_InterruptCastState
+end
+
+API.ClearInterruptCastBarRefresh = function(castbar)
+	if (not castbar) then
+		return
+	end
+	RemoveTrackedInterruptCastBar(castbar)
+	UpdateInterruptCastBarDriver()
+	castbar.__AzeriteUI_InterruptRefreshCallback = nil
+	castbar.__AzeriteUI_LastInterruptColorUpdate = nil
+	castbar.__AzeriteUI_InterruptCastState = nil
 end
 
 local CanAccessValue = function(value)

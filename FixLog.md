@@ -20,6 +20,20 @@
   - **Safety:** Metadata and documentation update only. Runtime scope remains limited to the already-applied `UnitFrames.lua` health-color description fix.
   - **Verification:** `CHANGELOG.md` now begins with `## 5.3.22-JuNNeZ (2026-03-22)`, and both `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now read `5.3.22-JuNNeZ`.
   - **Files Modified:** `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `FixLog.md`
+- **In-combat interrupt-ready cast colors started:** Reworking the shared interrupt-readiness helper so hostile castbars stop collapsing back to the base color when WoW 12 combat returns secret cooldown/usability state, and wiring nameplates plus the target frame onto one shared refresh driver.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`, `Components/UnitFrames/Units/NamePlates.lua`, `Components/UnitFrames/Units/Target.lua`, `Components/UnitFrames/Auras/AuraData.lua`
+- **In-combat interrupt-ready cast colors applied:** Replaced the shared interrupt readiness path with secret-safe `C_CurveUtil.EvaluateColorValueFromBoolean(...)` evaluation over `C_Spell.GetSpellCooldownDuration(...)`/`C_Spell.IsSpellUsable(...)`, added a shared castbar refresh controller that listens for cooldown/usability events and runs a 0.1s ticker only while hostile casts are visible, rewired nameplates off their local `OnUpdate` polling, and restored the target castbar text/bar colors to the same interrupt-ready palette as nameplates.
+  - **Root Cause:** The first interrupt-color pass only trusted plain Lua booleans from cooldown checks and hostile tests. Once retail combat started returning secret values for readiness data, the helper fell back to `"base"` instead of preserving a stable ready/unavailable visual state, and the target castbar had drifted back to its older protected/default text-color path.
+  - **Safety:** This stays addon-side and read-only. The new helper never performs addon-side arithmetic or boolean branching on secret returns, keeps `AuraData` as the interrupt spell source of truth, and scopes the frequent ticker to active hostile castbars only.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'`, `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`, `luac -p 'Components/UnitFrames/Units/Target.lua'`, and `luac -p 'Components/UnitFrames/Auras/AuraData.lua'` must pass. In-game `/reload`, hostile target/nameplate cast checks in and out of combat, `/azdebug dump target`, and BugSack validation are still required.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `Components/UnitFrames/Units/NamePlates.lua`, `Components/UnitFrames/Units/Target.lua`, `FixLog.md`
+- **5.3.23 beta release prep started:** Rolling the in-combat interrupt-color hotfix into the next beta build, updating version metadata, and writing a delta-only changelog entry before commit, tag, and push.
+  - **Files Targeted:** `FixLog.md`, `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`
+- **5.3.23 beta release prep applied:** Bumped the addon/build metadata to `5.3.23-JuNNeZ-beta1` and added a new top changelog entry covering only the hostile castbar interrupt-color combat fix.
+  - **Root Cause:** The interrupt-color fix is ready for external beta coverage, but the release-bearing metadata still identified the branch as `5.3.22-JuNNeZ`. Shipping the beta without a new version/tag would blur which build contains the in-combat interrupt-color rewrite.
+  - **Safety:** Metadata and documentation update only. Runtime scope remains limited to the already-applied hostile castbar interrupt-color changes.
+  - **Verification:** `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, and `build-release.ps1` now read `5.3.23-JuNNeZ-beta1`. Git commit/tag/push are the remaining release steps.
+  - **Files Modified:** `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `FixLog.md`
 
 ## 2026-03-21
 
