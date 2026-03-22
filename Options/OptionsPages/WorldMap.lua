@@ -27,7 +27,7 @@ local GenerateOptions = function()
 		args = {
 			enabled = {
 				name = L["Enable"],
-				desc = "Toggle AzeriteUI's integrated world map styling and coordinates.",
+				desc = L["Toggle AzeriteUI's integrated world map styling and coordinates."],
 				order = 1,
 				type = "toggle",
 				width = "full",
@@ -40,13 +40,13 @@ local GenerateOptions = function()
 				end
 			},
 			credit = {
-				name = "Integration and retail version by Rui",
+				name = L["Integration and retail version by Rui"],
 				order = 100,
 				type = "description",
 				width = "full"
 			},
 			description = {
-				name = "When enabled, the world map uses the integrated Rui-style clean border, shrink-on-maximize behavior, and player/cursor coordinates.",
+				name = L["When enabled, the world map uses the integrated Rui-style clean border, shrink-on-maximize behavior, and player/cursor coordinates."],
 				order = 2,
 				type = "description",
 				hidden = isdisabled

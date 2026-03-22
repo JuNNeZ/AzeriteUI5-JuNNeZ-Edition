@@ -56,13 +56,13 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = "Info/Clock Settings",
+		name = L["Info/Clock Settings"],
 		type = "group",
 		args = {
 			description = {
 				order = 1,
 				type = "description",
-				name = "These settings control the info text and clock shown in AzeriteUI's top information area.",
+				name = L["These settings control the info text and clock shown in AzeriteUI's top information area."],
 				fontSize = "medium"
 			},
 			header = {

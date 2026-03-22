@@ -5,6 +5,13 @@
 
 ## 2026-03-21
 
+- **Localization coverage pass started:** Auditing the newer `/az` option-page work for raw user-facing strings that were never wired through `AceLocale`, then backfilling the locale tables so the recent retail options/menu additions no longer bypass localization.
+  - **Files Targeted:** `FixLog.md`, `Options/Options.lua`, `Options/OptionsPages/*.lua`, `Locale/*.lua`
+- **Localization coverage pass applied:** Converted the recent raw option-page labels/descriptions to `L[...]` lookups and appended the missing locale keys across all shipped locale files so the newer world map, nameplate, tracker, chat, aura, minimap, widget, unit-frame, and landing-page strings now participate in localization again.
+  - **Root Cause:** Several user-facing strings added over the last retail option-page updates were written directly as raw literals in the options definitions and addon landing page. Because those strings never entered `Locale/enUS.lua`, the non-English locale files had no chance to override or fall back through the normal `AceLocale` path.
+  - **Safety:** This is a localization-only sweep. It does not change option behavior, defaults, or module runtime logic; it only routes existing display text through the locale tables and adds missing keys with fallback-safe entries.
+  - **Verification:** `luac -p` passed for the touched options and locale Lua files. In-game opening `/az` and the Blizzard addon landing page in multiple locale clients should now show the newer labels through the normal locale path instead of hardcoded English literals.
+  - **Files Modified:** `Options/Options.lua`, `Options/OptionsPages/ActionBars.lua`, `Options/OptionsPages/Auras.lua`, `Options/OptionsPages/Chat.lua`, `Options/OptionsPages/ExplorerMode.lua`, `Options/OptionsPages/Info.lua`, `Options/OptionsPages/Minimap.lua`, `Options/OptionsPages/Nameplates.lua`, `Options/OptionsPages/Tracker.lua`, `Options/OptionsPages/TrackerVanilla.lua`, `Options/OptionsPages/UnitFrames.lua`, `Options/OptionsPages/Widgets.lua`, `Options/OptionsPages/WorldMap.lua`, `Locale/enUS.lua`, `Locale/deDE.lua`, `Locale/esES.lua`, `Locale/frFR.lua`, `Locale/itIT.lua`, `Locale/koKR.lua`, `Locale/ptBR.lua`, `Locale/ruRU.lua`, `Locale/zhCN.lua`, `Locale/zhTW.lua`, `FixLog.md`
 - **5.3.20 hotfix release prep started:** Rolling the post-5.3.19 world-map assert fix and Enhancement Shaman class-power white-bar fix into the next patch release, updating version metadata, and writing a delta-only top changelog entry before commit/tag/push.
   - **Files Targeted:** `FixLog.md`, `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`
 - **5.3.20 hotfix release prep applied:** Bumped the addon/build metadata to `5.3.20-JuNNeZ` and added a new top changelog entry covering only the world-map assert hotfix and the Enhancement Shaman class-power white-bar regression fix.
@@ -4745,3 +4752,36 @@ Testing:
 3. `/reload`
 4. Open `/az -> Nameplates -> Size -> Castbar vertical offset`
 5. Adjust the slider while looking at an active enemy cast and note the best value.
+
+2026-03-22
+
+Request:
+- Player alternate frame can randomly stick at a sub-100 health percent like `91%` after combat or fall damage, and Explorer Mode fade behavior then stops recovering until `/reload`.
+
+Started:
+- Rechecked the alternate-player runtime in [Components/UnitFrames/Units/PlayerAlternate.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/PlayerAlternate.lua), the shared health cache/tag path in [Components/UnitFrames/Functions.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Functions.lua) and [Components/UnitFrames/Tags.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Tags.lua), and the fade decision logic in [Core/ExplorerMode.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/ExplorerMode.lua). The current likely drift is a stale `UnitHealthPercent(...)` result being allowed to overwrite a healthier frame cache, while Explorer Mode is also checking the low-health and low-mana toggles against the wrong condition.
+
+Applied:
+- Added a shared `ResolveDisplayHealthPercent()` guard in [Components/UnitFrames/Tags.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Tags.lua) so the generic `[*:HealthPercent]` tag no longer trusts a wildly divergent `UnitHealthPercent(...ScaleTo100)` value when the live frame cache already has a safer percent. The tag now falls back to the active frame's `safeCur/safeMax` snapshot instead of re-caching the bad API percent.
+- Fixed the crossed low-health/low-mana condition in [Core/ExplorerMode.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/ExplorerMode.lua), so Explorer Mode now evaluates `fadeWithLowHealth` against health and `fadeWithLowMana` against power as intended.
+- Updated Explorer Mode health checks in [Core/ExplorerMode.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/ExplorerMode.lua) to prefer the active player-frame health cache (`PlayerFrameAlternate` first, then `PlayerFrame`) when that cache is available and numeric, instead of relying only on raw `UnitHealth/UnitHealthMax`.
+
+Why:
+- The alternate-player text path and the fade system had drifted onto two weak authorities. The shared percent tag could still overwrite a good live frame cache with a stale `UnitHealthPercent(...)` read, and Explorer Mode had its low-health/low-mana booleans wired to the opposite option keys. That combination makes the frame look and behave like it is stuck below full health until the UI cache is rebuilt by `/reload`.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Tags.lua'`
+2. `luac -p 'Core/ExplorerMode.lua'`
+3. `/reload`
+4. Use the alternate player frame, take fall/combat damage, then heal to full and confirm the health percent returns to `100%` instead of pinning at values like `91%`.
+5. With Explorer Mode enabled, verify the alternate frame fades again once fully healed and that changing the low-health threshold affects health behavior, not mana behavior.
+
+Request:
+- Update the current worktree release metadata, commit it, push it, and create a fresh tag without reusing the existing `5.3.20-JuNNeZ` marker.
+
+Applied:
+- Bumped [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1) from `5.3.20-JuNNeZ` to `5.3.21-JuNNeZ`.
+- Added a new top [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md) entry for `5.3.21-JuNNeZ (2026-03-22)` covering the alternate-player health/fade recovery fix and the newer options-page localization pass as the player-facing delta from `5.3.20-JuNNeZ`.
+
+Why:
+- `5.3.20-JuNNeZ` is already the current `HEAD` tag on `main`, so these post-release fixes need a new patch version instead of silently rewriting the old release marker.

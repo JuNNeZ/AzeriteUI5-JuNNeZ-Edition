@@ -610,8 +610,8 @@ local GenerateOptions = function()
 				end
 			},
 			useCommandBindingsForHoldCast = {
-				name = "Use Command Bindings for Hold Cast",
-				desc = "Route keybinds through Blizzard action commands first, with click-binding fallback. Recommended for press-and-hold behavior.",
+				name = L["Use Command Bindings for Hold Cast"],
+				desc = L["Route keybinds through Blizzard action commands first, with click-binding fallback. Recommended for press-and-hold behavior."],
 				order = 2.1,
 				type = "toggle", width = "full",
 				hidden = function() return not ns.WoW10 end,

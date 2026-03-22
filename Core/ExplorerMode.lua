@@ -31,6 +31,7 @@ local LFF = LibStub("LibFadingFrames-1.0")
 -- Lua API
 local next = next
 local pairs = pairs
+local type = type
 
 -- Sourced from BlizzardInterfaceResources/Resources/EnumerationTables.lua
 local POWER_TYPE_MANA = Enum.PowerType.Mana
@@ -382,8 +383,8 @@ ExplorerMode.CheckForForcedState = function(self)
 	or (self.isDragonRiding and not db.fadeInVehicles)
 	or (self.inVehicle and not db.fadeInVehicles)
 	or (self.inInstance and not db.fadeInInstances)
-	or (self.lowHealth and not db.fadeWithLowMana)
-	or (self.lowPower and not db.fadeWithLowHealth)
+	or (self.lowHealth and not db.fadeWithLowHealth)
+	or (self.lowPower and not db.fadeWithLowMana)
 	--or (self.badAura)
 	or (self.busyCursor) then
 		return true
@@ -415,8 +416,28 @@ end
 ExplorerMode.CheckHealth = function(self)
 	local min = UnitHealth("player") or 0
 	local max = UnitHealthMax("player") or 0
-	-- Check for secret values in WoW 12.0.0+
-	if issecretvalue and (issecretvalue(min) or issecretvalue(max)) then
+	local frame
+	local playerFrameAlternate = ns:GetModule("PlayerFrameAlternate", true)
+	if (playerFrameAlternate and playerFrameAlternate.IsEnabled and playerFrameAlternate:IsEnabled() and playerFrameAlternate.GetFrame) then
+		frame = playerFrameAlternate:GetFrame()
+	end
+	if (not frame) then
+		local playerFrame = ns:GetModule("PlayerFrame", true)
+		if (playerFrame and playerFrame.IsEnabled and playerFrame:IsEnabled() and playerFrame.GetFrame) then
+			frame = playerFrame:GetFrame()
+		end
+	end
+	local health = frame and frame.Health
+	local frameMin = health and (health.safeCur or health.cur)
+	local frameMax = health and (health.safeMax or health.max)
+	local frameValuesSafe = (type(frameMin) == "number")
+		and (type(frameMax) == "number")
+		and (frameMax > 0)
+		and (not issecretvalue or (not issecretvalue(frameMin) and not issecretvalue(frameMax)))
+	if (frameValuesSafe) then
+		min = frameMin
+		max = frameMax
+	elseif issecretvalue and (issecretvalue(min) or issecretvalue(max)) then
 		self.lowHealth = nil
 		return
 	end

@@ -65,11 +65,11 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = "Aura Header Settings",
+		name = L["Aura Header Settings"],
 		type = "group",
 		args = {
 			description = {
-				name = "These settings control the top-right aura header. They do not affect aura rows on unit frames like Player, Target or Party.",
+				name = L["These settings control the top-right aura header. They do not affect aura rows on unit frames like Player, Target or Party."],
 				order = 1,
 				type = "description",
 				fontSize = "medium"
@@ -83,21 +83,21 @@ local GenerateOptions = function()
 				get = getter
 			},
 			visibilityHeader = {
-				name = "Show / Hide",
+				name = L["Show / Hide"],
 				order = 3,
 				type = "header",
 				hidden = isdisabled
 			},
 			visibilityDesc = {
-				name = "Control when the top-right aura header is visible.",
+				name = L["Control when the top-right aura header is visible."],
 				order = 4,
 				type = "description",
 				fontSize = "medium",
 				hidden = isdisabled
 			},
 			enableAuraFading = {
-				name = "Fade When Idle",
-				desc = "Fade the top-right aura header when you are not interacting with it.",
+				name = L["Fade When Idle"],
+				desc = L["Fade the top-right aura header when you are not interacting with it."],
 				order = 10,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -105,8 +105,8 @@ local GenerateOptions = function()
 				get = getter
 			},
 			enableModifier = {
-				name = "Only Show With Modifier Key",
-				desc = "Require a modifier key to reveal the top-right aura header.",
+				name = L["Only Show With Modifier Key"],
+				desc = L["Require a modifier key to reveal the top-right aura header."],
 				order = 20,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -114,8 +114,8 @@ local GenerateOptions = function()
 				get = getter
 			},
 			modifier = {
-				name = "Required Modifier Key",
-				desc = "Choose which key reveals the top-right aura header.",
+				name = L["Required Modifier Key"],
+				desc = L["Choose which key reveals the top-right aura header."],
 				order = 21,
 				hidden = isdisabled,
 				disabled = function(info) return isdisabled(info) or not getoption(info, "enableModifier") end,
@@ -129,8 +129,8 @@ local GenerateOptions = function()
 				get = getter
 			},
 			ignoreTarget = {
-				name = "Keep Visible While Targeting",
-				desc = "Keep the AzeriteUI top-right aura header visible even when you have a target. Turn this off if you want the target frame to take over that screen space.",
+				name = L["Keep Visible While Targeting"],
+				desc = L["Keep the AzeriteUI top-right aura header visible even when you have a target. Turn this off if you want the target frame to take over that screen space."],
 				order = 22,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -149,13 +149,13 @@ local GenerateOptions = function()
 				get = getter
 			},
 			layoutHeader = {
-				name = "Layout & Direction",
+				name = L["Layout & Direction"],
 				order = 30,
 				type = "header",
 				hidden = isdisabled
 			},
 			layoutDesc = {
-				name = "Adjust the anchor, growth direction and spacing of the top-right aura header.",
+				name = L["Adjust the anchor, growth direction and spacing of the top-right aura header."],
 				order = 31,
 				type = "description",
 				fontSize = "medium",

@@ -851,6 +851,59 @@ local SafeUnitHealth = function(unit)
 	return cur, max
 end
 
+local GetFrameHealthPercentSnapshot = function(frame, unit)
+	if (not (frame and SafeUnitTokenEquals(frame.unit, unit) and frame.Health)) then
+		return nil, nil
+	end
+	local health = frame.Health
+	local cur = health.safeCur or health.cur
+	local max = health.safeMax or health.max
+	local percent = SafePercent(cur, max)
+	if (type(percent) == "number" and not (issecretvalue and issecretvalue(percent))) then
+		return percent, health
+	end
+	return nil, health
+end
+
+local ResolveDisplayHealthPercent = function(unit)
+	local frame = _FRAME
+	local framePercent, health = GetFrameHealthPercentSnapshot(frame, unit)
+	local apiPercent
+	if (UnitHealthPercent) then
+		pcall(function()
+			if (CurveConstants and CurveConstants.ScaleTo100) then
+				apiPercent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
+			else
+				apiPercent = UnitHealthPercent(unit)
+			end
+		end)
+	end
+	if (type(apiPercent) == "number" and not (issecretvalue and issecretvalue(apiPercent))) then
+		if (health and health.__AzeriteUI_RawCurSafe and health.__AzeriteUI_RawMaxSafe and type(framePercent) == "number") then
+			local delta = apiPercent - framePercent
+			if (delta < 0) then
+				delta = -delta
+			end
+			if (delta > 1) then
+				apiPercent = nil
+			end
+		end
+		if (type(apiPercent) == "number") then
+			if (health) then
+				health.safePercent = apiPercent
+			end
+			return apiPercent
+		end
+	end
+	if (type(framePercent) == "number") then
+		if (health) then
+			health.safePercent = framePercent
+		end
+		return framePercent
+	end
+	return nil
+end
+
 -- WoW 12.0.0: Safe power values based on frame bar values when available
 
 local SafeUnitPower = function(unit, powerType)
@@ -1170,22 +1223,9 @@ Methods[prefix("*:HealthPercent")] = function(unit)
 	if (UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit)) then
 		return
 	else
-		if (UnitHealthPercent) then
-			local apiPercent
-			pcall(function()
-				if (CurveConstants and CurveConstants.ScaleTo100) then
-					apiPercent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
-				else
-					apiPercent = UnitHealthPercent(unit)
-				end
-			end)
-			if (type(apiPercent) == "number" and not (issecretvalue and issecretvalue(apiPercent))) then
-				local frame = _FRAME
-				if (frame and frame.Health) then
-					frame.Health.safePercent = apiPercent
-				end
-				return FormatPercent(apiPercent)
-			end
+		local resolvedPercent = ResolveDisplayHealthPercent(unit)
+		if (type(resolvedPercent) == "number") then
+			return FormatPercent(resolvedPercent)
 		end
 
 		local frame = _FRAME

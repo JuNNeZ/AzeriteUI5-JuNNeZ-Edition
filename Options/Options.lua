@@ -64,18 +64,18 @@ Options.InitializeSettingsPanel = function(self)
 	-- Edition tag
 	local edition = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	edition:SetPoint("CENTER", optionsFrame, 0, 48)
-	edition:SetText(JUNNEZ_GREEN:WrapTextInColorCode("JuNNeZ Edition Settings"))
+	edition:SetText(JUNNEZ_GREEN:WrapTextInColorCode(L["JuNNeZ Edition Settings"]))
 
 	-- Version text
 	local version = C_AddOns.GetAddOnMetadata(Addon, "Version") or ""
 	local versionText = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	versionText:SetPoint("CENTER", optionsFrame, 0, 28)
-	versionText:SetText(CREDITS_GRAY:WrapTextInColorCode("Version: " .. version))
+	versionText:SetText(CREDITS_GRAY:WrapTextInColorCode(L["Version:"] .. " " .. version))
 
 	-- Instruction text
 	local instructions = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	instructions:SetPoint("CENTER", optionsFrame, 0, -5)
-	instructions:SetText(WHITE_FONT_COLOR:WrapTextInColorCode("Open the full AzeriteUI settings menu with /az or the button below."))
+	instructions:SetText(WHITE_FONT_COLOR:WrapTextInColorCode(L["Open the full AzeriteUI settings menu with /az or the button below."]))
 
 	-- "Open Options" button (centered, below midpoint)
 	local template = "SharedButtonLargeTemplate"
@@ -83,7 +83,7 @@ Options.InitializeSettingsPanel = function(self)
 		template = "UIPanelDynamicResizeButtonTemplate"
 	end
 	local button = CreateFrame("Button", nil, optionsFrame, template)
-	button:SetText("Open AzeriteUI Options")
+	button:SetText(L["Open AzeriteUI Options"])
 	DynamicResizeButton_Resize(button)
 	button:SetPoint("CENTER", optionsFrame, 0, -45)
 	button:SetScale(2)
@@ -97,18 +97,18 @@ Options.InitializeSettingsPanel = function(self)
 	-- Credits section (bottom area)
 	local creditsHeader = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	creditsHeader:SetPoint("BOTTOM", optionsFrame, "BOTTOM", 0, 80)
-	creditsHeader:SetText(AZERITE_BLUE:WrapTextInColorCode("Credits & Maintainers"))
+	creditsHeader:SetText(AZERITE_BLUE:WrapTextInColorCode(L["Credits & Maintainers"]))
 
 	local credits = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	credits:SetPoint("TOP", creditsHeader, "BOTTOM", 0, -4)
 	credits:SetJustifyH("CENTER")
 	credits:SetWidth(500)
 	credits:SetText(
-		JUNNEZ_GREEN:WrapTextInColorCode("JuNNeZ") .. CREDITS_GRAY:WrapTextInColorCode(" - Maintainer & Updates") .. "\n" ..
-		GOLDPAW_GOLD:WrapTextInColorCode("Lars Norberg (Goldpaw)") .. CREDITS_GRAY:WrapTextInColorCode(" - Original Code") .. "\n" ..
-		GOLDPAW_GOLD:WrapTextInColorCode("Daniel Troko") .. CREDITS_GRAY:WrapTextInColorCode(" - Original Design") .. "\n" ..
-		AZERITE_BLUE:WrapTextInColorCode("Arahort") .. CREDITS_GRAY:WrapTextInColorCode(" - LibOrb System") .. "\n" ..
-		AZERITE_BLUE:WrapTextInColorCode("Rui") .. CREDITS_GRAY:WrapTextInColorCode(" - MapShrinker Integration & Nameplate Optimization")
+		JUNNEZ_GREEN:WrapTextInColorCode("JuNNeZ") .. CREDITS_GRAY:WrapTextInColorCode(" - " .. L["Maintainer & Updates"]) .. "\n" ..
+		GOLDPAW_GOLD:WrapTextInColorCode("Lars Norberg (Goldpaw)") .. CREDITS_GRAY:WrapTextInColorCode(" - " .. L["Original Code"]) .. "\n" ..
+		GOLDPAW_GOLD:WrapTextInColorCode("Daniel Troko") .. CREDITS_GRAY:WrapTextInColorCode(" - " .. L["Original Design"]) .. "\n" ..
+		AZERITE_BLUE:WrapTextInColorCode("Arahort") .. CREDITS_GRAY:WrapTextInColorCode(" - " .. L["LibOrb System"]) .. "\n" ..
+		AZERITE_BLUE:WrapTextInColorCode("Rui") .. CREDITS_GRAY:WrapTextInColorCode(" - " .. L["MapShrinker Integration & Nameplate Optimization"])
 	)
 
 	-- Required callbacks for Settings canvas frames
@@ -262,16 +262,16 @@ Options.GenerateProfileMenu = function(self)
 			name = "", order = 10, type = "description"
 		}
 		options.args.export = {
-			name = "Export",
-			desc = "Expert the current settings profile to a string you can copy and share with other people.",
+			name = L["Export"],
+			desc = L["Expert the current settings profile to a string you can copy and share with other people."],
 			type = "execute",
 			order = 11,
 			disabled = function(info) return true end,
 			func = function(info) end
 		}
 		options.args.import = {
-			name = "Import",
-			desc = "Import settings from a string into the current options profile.",
+			name = L["Import"],
+			desc = L["Import settings from a string into the current options profile."],
 			type = "execute",
 			order = 12,
 			disabled = function(info) return true end,

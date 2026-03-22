@@ -57,16 +57,16 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = "Chat Window Settings",
+		name = L["Chat Window Settings"],
 		type = "group",
 		args = {
 			fadingHeader = {
-				name = "Fade Behavior",
+				name = L["Fade Behavior"],
 				order = 1,
 				type = "header"
 			},
 			fadingDesc = {
-				name = "These settings control when chat windows fade and how long they stay visible.",
+				name = L["These settings control when chat windows fade and how long they stay visible."],
 				order = 2,
 				type = "description",
 				fontSize = "medium"
@@ -98,18 +98,18 @@ local GenerateOptions = function()
 				get = getter
 			},
 			reloadHeader = {
-				name = "Reload Protection",
+				name = L["Reload Protection"],
 				order = 20,
 				type = "header"
 			},
 			reloadDesc = {
-				name = "These settings control the temporary chat clear window after login or reload.",
+				name = L["These settings control the temporary chat clear window after login or reload."],
 				order = 21,
 				type = "description",
 				fontSize = "medium"
 			},
 			clearOnReload = {
-				name = "Clear Chat On Reload",
+				name = L["Clear Chat On Reload"],
 				desc = L["Keeps the chat window clear for a period after logging in or relaoding the user interface. Note that you can still show all chat if you hold down the SHIFT key while reloading or logging in."],
 				order = 30,
 				type = "toggle", width = "full",
@@ -117,8 +117,8 @@ local GenerateOptions = function()
 				get = getter
 			},
 			timeClearing = {
-				name = "Clear Delay",
-				desc = "Set how long chat stays blocked after login or reload before messages are allowed through.",
+				name = L["Clear Delay"],
+				desc = L["Set how long chat stays blocked after login or reload before messages are allowed through."],
 				order = 31,
 				type = "range", width = "full", min = 1, max = 10, step = 1,
 				hidden = function(info) return isdisabled(info) or not getoption(info, "clearOnReload") end,

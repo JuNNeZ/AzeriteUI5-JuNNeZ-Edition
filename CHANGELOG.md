@@ -4,6 +4,23 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.21-JuNNeZ (2026-03-22)
+
+### Highlights
+- Fixed the alternate player frame getting stuck on an incorrect sub-100 health percent after recovering to full health, which could also keep Explorer Mode from fading back out until `/reload`.
+- Restored localization coverage for the newer `/az` option pages and addon landing text so recent menu additions no longer stay hardcoded in English on non-English clients.
+
+### Access
+- No new menu path. This is a follow-up hotfix release.
+
+### Why
+- The alternate-player issue came from the shared health-percent text path trusting a stale health-percent API result over the live frame cache, while Explorer Mode was also checking the low-health and low-mana toggles against the wrong condition.
+- The localization issue came from newer option-page labels and descriptions being added directly as raw strings instead of being routed through the locale tables.
+
+### Internal
+- Hardened shared `[*:HealthPercent]` resolution against divergent API reads, made Explorer Mode prefer the active player-frame health cache, and corrected the low-health/low-mana toggle wiring.
+- Routed recent options and landing-page strings through `AceLocale` and added the missing keys across the shipped locale files.
+
 ## 5.3.20-JuNNeZ (2026-03-22)
 
 ### Highlights

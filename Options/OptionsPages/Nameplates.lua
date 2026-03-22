@@ -173,37 +173,37 @@ local GenerateOptions = function()
 				get = getter
 			},
 			credit = {
-				name = "Optimization made by Rui",
+				name = L["Optimization made by Rui"],
 				order = 100,
 				type = "description",
 				width = "full"
 			},
 			visibility = {
-				name = "Visibility",
+				name = L["Visibility"],
 				order = 1,
 				type = "group",
 				inline = true,
 				hidden = isdisabled,
 				args = {
 					showNameAlways = {
-						name = "Always show names",
-						desc = "Keep unit names visible even when the plate is not hovered or targeted.",
+						name = L["Always show names"],
+						desc = L["Keep unit names visible even when the plate is not hovered or targeted."],
 						order = 1,
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter
 					},
 					showAuras = {
-						name = "Show auras",
-						desc = "Show buffs and debuffs on nameplates.",
+						name = L["Show auras"],
+						desc = L["Show buffs and debuffs on nameplates."],
 						order = 2,
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter
 					},
 					showAurasOnTargetOnly = {
-						name = "Only show auras on your target",
-						desc = "Reduce clutter by only showing nameplate auras on your current target.",
+						name = L["Only show auras on your target"],
+						desc = L["Reduce clutter by only showing nameplate auras on your current target."],
 						order = 3,
 						type = "toggle", width = "full",
 						disabled = function(info) return not getoption(info, "showAuras") end,
@@ -213,23 +213,23 @@ local GenerateOptions = function()
 				}
 			},
 			size = {
-				name = "Size",
+				name = L["Size"],
 				order = 2,
 				type = "group",
 				inline = true,
 				hidden = isdisabled,
 				args = {
 					useBlizzardGlobalScale = {
-						name = "Use Blizzard overall scale",
-						desc = "Follow Blizzard's live overall nameplate scale instead of AzeriteUI's own overall size slider.",
+						name = L["Use Blizzard overall scale"],
+						desc = L["Follow Blizzard's live overall nameplate scale instead of AzeriteUI's own overall size slider."],
 						order = 1,
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter
 					},
 					nameplateScale = {
-						name = "Overall size (%)",
-						desc = "The base size for AzeriteUI nameplates. `100%` is the intended default.",
+						name = L["Overall size (%)"],
+						desc = L["The base size for AzeriteUI nameplates. `100%` is the intended default."],
 						order = 2,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -238,8 +238,8 @@ local GenerateOptions = function()
 						get = GetScaledOption("scale", NAMEPLATE_SCALE_DEFAULT)
 					},
 					maxDistance = {
-						name = "Maximum distance",
-						desc = "How far away nameplates can appear. `40` matches the current Rui retail baseline.",
+						name = L["Maximum distance"],
+						desc = L["How far away nameplates can appear. `40` matches the current Rui retail baseline."],
 						order = 3,
 						type = "range", width = "full",
 						min = DISTANCE_SLIDER_MIN, max = DISTANCE_SLIDER_MAX, step = 1,
@@ -255,8 +255,8 @@ local GenerateOptions = function()
 						end
 					},
 					castBarOffsetY = {
-						name = "Castbar vertical offset",
-						desc = "Moves the normal nameplate castbar up or down relative to the health bar. Positive values pull it closer.",
+						name = L["Castbar vertical offset"],
+						desc = L["Moves the normal nameplate castbar up or down relative to the health bar. Positive values pull it closer."],
 						order = 3.5,
 						type = "range", width = "full",
 						min = CASTBAR_OFFSET_SLIDER_MIN, max = CASTBAR_OFFSET_SLIDER_MAX, step = 1,
@@ -264,8 +264,8 @@ local GenerateOptions = function()
 						get = getter
 					},
 					friendlyScale = {
-						name = "Friendly/player size (%)",
-						desc = "The default size for friendly player nameplates. `100%` is the intended default.",
+						name = L["Friendly/player size (%)"],
+						desc = L["The default size for friendly player nameplates. `100%` is the intended default."],
 						order = 4,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -273,8 +273,8 @@ local GenerateOptions = function()
 						get = GetScaledOption("friendlyScale", FRIENDLY_NAMEPLATE_SCALE_DEFAULT)
 					},
 					friendlyNPCScale = {
-						name = "Friendly NPC size (%)",
-						desc = "The default size for friendly NPC nameplates. `100%` is the intended default.",
+						name = L["Friendly NPC size (%)"],
+						desc = L["The default size for friendly NPC nameplates. `100%` is the intended default."],
 						order = 5,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -282,8 +282,8 @@ local GenerateOptions = function()
 						get = GetScaledOption("friendlyNPCScale", FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT)
 					},
 					enemyScale = {
-						name = "Enemy size (%)",
-						desc = "The default size for enemy nameplates. `100%` is the intended default.",
+						name = L["Enemy size (%)"],
+						desc = L["The default size for enemy nameplates. `100%` is the intended default."],
 						order = 6,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -291,8 +291,8 @@ local GenerateOptions = function()
 						get = GetScaledOption("enemyScale", ENEMY_NAMEPLATE_SCALE_DEFAULT)
 					},
 					friendlyTargetScale = {
-						name = "Friendly/player target size (%)",
-						desc = "How much larger friendly NPC plates become when targeted. Friendly player name-only plates use this too unless you set a separate override below.",
+						name = L["Friendly/player target size (%)"],
+						desc = L["How much larger friendly NPC plates become when targeted. Friendly player name-only plates use this too unless you set a separate override below."],
 						order = 7,
 						type = "range", width = "full",
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,
@@ -300,8 +300,8 @@ local GenerateOptions = function()
 						get = GetAdditiveTargetOption("friendlyTargetScale", FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT)
 					},
 					nameplateTargetScale = {
-						name = "Enemy target size (%)",
-						desc = "How much larger enemy plates become when targeted. `100%` is the intended default.",
+						name = L["Enemy target size (%)"],
+						desc = L["How much larger enemy plates become when targeted. `100%` is the intended default."],
 						order = 8,
 						type = "range", width = "full",
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,
@@ -311,23 +311,23 @@ local GenerateOptions = function()
 				}
 			},
 			friendlyPlayers = {
-				name = "Friendly Players",
+				name = L["Friendly Players"],
 				order = 3,
 				type = "group",
 				inline = true,
 				hidden = isdisabled,
 				args = {
 					hideFriendlyPlayerHealthBar = {
-						name = "Use names only for friendly players",
-						desc = "Friendly player nameplates show class-colored names and hide the health bar.",
+						name = L["Use names only for friendly players"],
+						desc = L["Friendly player nameplates show class-colored names and hide the health bar."],
 						order = 1,
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter
 					},
 					friendlyNameOnlyFontScale = {
-						name = "Friendly name size (%)",
-						desc = "Text size for friendly player name-only plates. `100%` is the intended default.",
+						name = L["Friendly name size (%)"],
+						desc = L["Text size for friendly player name-only plates. `100%` is the intended default."],
 						order = 2,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -336,8 +336,8 @@ local GenerateOptions = function()
 						get = GetScaledOption("friendlyNameOnlyFontScale", FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT)
 					},
 					friendlyNameOnlyTargetScale = {
-						name = "Friendly name target size (%)",
-						desc = "Optional override for friendly player name-only plates when targeted. Set this to `100%` to follow Friendly/player target size again.",
+						name = L["Friendly name target size (%)"],
+						desc = L["Optional override for friendly player name-only plates when targeted. Set this to `100%` to follow Friendly/player target size again."],
 						order = 3,
 						type = "range", width = "full",
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,
@@ -348,14 +348,14 @@ local GenerateOptions = function()
 				}
 			},
 			advanced = {
-				name = "Advanced",
+				name = L["Advanced"],
 				order = 4,
 				type = "group",
 				inline = true,
 				hidden = function(info) return isdisabled(info) or not ns.IsRetail end,
 				args = {
 					interruptLegend = {
-						name = "Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted",
+						name = L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"],
 						order = 0,
 						type = "description",
 						width = "full"
@@ -367,8 +367,8 @@ local GenerateOptions = function()
 
 	if (ns.IsRetail) then
 		options.args.advanced.args.showBlizzardWidgets = {
-			name = "Show Blizzard widgets",
-			desc = "Show Blizzard's encounter and objective widgets when a plate supports them.",
+			name = L["Show Blizzard widgets"],
+			desc = L["Show Blizzard's encounter and objective widgets when a plate supports them."],
 			order = 1,
 			type = "toggle", width = "full",
 			set = setter,

@@ -90,42 +90,42 @@ local GenerateOptions = function()
 				order = 9
 			},
 			explorermodedelayheader = {
-				name = "When to start Explorer Mode",
+				name = L["When to start Explorer Mode"],
 				desc = "",
 				type = "header",
 				disabled = isdisabled, hidden = isdisabled,
 				order = 10
 			},
 			explorerermodedelaydesc = {
-				name = "You can choose to have a delay before the Explorer Mode starts after loading screens.".."\n ",
+				name = L["You can choose to have a delay before the Explorer Mode starts after loading screens."].."\n ",
 				type = "description",
 				fontSize = "medium",
 				disabled = isdisabled, hidden = isdisabled,
 				order = 11
 			},
 			delayOnLogin = {
-				name = "After logging into the game",
+				name = L["After logging into the game"],
 				desc = "",
 				order = 15,
 				type = "range", width = "full", min = 0, max = 15, step = 1,
 				set = setter, get = getter, hidden = isdisabled,
 			},
 			delayOnReload = {
-				name = "After reloading the user interface",
+				name = L["After reloading the user interface"],
 				desc = "",
 				order = 16,
 				type = "range", width = "full", min = 0, max = 15, step = 1,
 				set = setter, get = getter, hidden = isdisabled,
 			},
 			delayOnZoning = {
-				name = "After other loading screens",
+				name = L["After other loading screens"],
 				desc = "",
 				order = 17,
 				type = "range", width = "full", min = 0, max = 15, step = 1,
 				set = setter, get = getter, hidden = isdisabled,
 			},
 			delayOnCombatEnd = {
-				name = "After combat ends",
+				name = L["After combat ends"],
 				desc = "",
 				order = 18,
 				type = "range", width = "full", min = 0, max = 15, step = 1,

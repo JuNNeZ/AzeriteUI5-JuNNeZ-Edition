@@ -23,16 +23,16 @@ end
 local GenerateOptions = function()
   if (not getmodule()) then return end
   local options = {
-    name = "Top Center Widgets",
+    name = L["Top Center Widgets"],
     type = "group",
     args = {
       header = {
-        name = "Widget Visibility",
+        name = L["Widget Visibility"],
         order = 1,
         type = "header"
       },
       description = {
-        name = "These settings control the top-center encounter and zone widgets shown above the play area.",
+        name = L["These settings control the top-center encounter and zone widgets shown above the play area."],
         order = 2,
         type = "description",
         fontSize = "medium"
