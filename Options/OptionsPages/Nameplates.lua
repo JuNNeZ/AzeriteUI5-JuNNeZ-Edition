@@ -31,13 +31,18 @@ local Options = ns:GetModule("Options")
 local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
 local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
 local NAMEPLATE_SCALE_DEFAULT = 2
-local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = 1.95
+local NAMEPLATE_MAX_DISTANCE_DEFAULT = 40
+local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = .8
 local FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT = 1
 local ENEMY_NAMEPLATE_SCALE_DEFAULT = .66
 local FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = 0
-local ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT = 0
+local ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT = .5
 local SCALE_SLIDER_MIN = 1
 local SCALE_SLIDER_MAX = 500
+local DISTANCE_SLIDER_MIN = 20
+local DISTANCE_SLIDER_MAX = 60
+local CASTBAR_OFFSET_SLIDER_MIN = -30
+local CASTBAR_OFFSET_SLIDER_MAX = 30
 local TARGET_SLIDER_MIN = 1
 local TARGET_SLIDER_MAX = 500
 
@@ -167,6 +172,12 @@ local GenerateOptions = function()
 				set = setter,
 				get = getter
 			},
+			credit = {
+				name = "Optimization made by Rui",
+				order = 100,
+				type = "description",
+				width = "full"
+			},
 			visibility = {
 				name = "Visibility",
 				order = 1,
@@ -226,11 +237,29 @@ local GenerateOptions = function()
 						set = SetScaledOption("scale", NAMEPLATE_SCALE_DEFAULT),
 						get = GetScaledOption("scale", NAMEPLATE_SCALE_DEFAULT)
 					},
-					tightHealthBackdrop = {
-						name = "Fit health backdrop to health bar",
-						desc = "Make the nameplate health backdrop use the same size as the health bar instead of the larger decorative frame texture.",
+					maxDistance = {
+						name = "Maximum distance",
+						desc = "How far away nameplates can appear. `40` matches the current Rui retail baseline.",
 						order = 3,
-						type = "toggle", width = "full",
+						type = "range", width = "full",
+						min = DISTANCE_SLIDER_MIN, max = DISTANCE_SLIDER_MAX, step = 1,
+						set = setter,
+						get = function(info)
+							local module = getmodule()
+							if (not module or not module.db) then return NAMEPLATE_MAX_DISTANCE_DEFAULT end
+							local value = module.db.profile.maxDistance
+							if (type(value) ~= "number") then
+								value = NAMEPLATE_MAX_DISTANCE_DEFAULT
+							end
+							return value
+						end
+					},
+					castBarOffsetY = {
+						name = "Castbar vertical offset",
+						desc = "Moves the normal nameplate castbar up or down relative to the health bar. Positive values pull it closer.",
+						order = 3.5,
+						type = "range", width = "full",
+						min = CASTBAR_OFFSET_SLIDER_MIN, max = CASTBAR_OFFSET_SLIDER_MAX, step = 1,
 						set = setter,
 						get = getter
 					},

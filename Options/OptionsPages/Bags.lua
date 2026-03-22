@@ -98,4 +98,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Bags"], GenerateOptions)
+Options:AddGroup(L["Bags"], GenerateOptions, -5000)

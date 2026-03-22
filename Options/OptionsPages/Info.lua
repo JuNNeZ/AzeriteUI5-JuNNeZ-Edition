@@ -98,4 +98,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup("Info/Clock", GenerateOptions, 10000)
+Options:AddGroup("Info Bar", GenerateOptions, -2500)

@@ -8,11 +8,11 @@
 	<Script file="OptionsPages\ExplorerMode.lua"/>
 	<Script file="OptionsPages\Info.lua"/>
 	<Script file="OptionsPages\Minimap.lua"/>
+	<Script file="OptionsPages\WorldMap.lua"/>
 	<Script file="OptionsPages\Nameplates.lua"/>
 	<Script file="OptionsPages\Widgets.lua"/>
 	<Script file="OptionsPages\Tooltips.lua"/>
 	<Script file="OptionsPages\Tracker.lua"/>
-	<Script file="OptionsPages\TrackerVanilla.lua"/>
 	<Script file="OptionsPages\UnitFrames.lua"/>
 
 </Ui>

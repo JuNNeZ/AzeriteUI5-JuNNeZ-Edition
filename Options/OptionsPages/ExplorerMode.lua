@@ -357,4 +357,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Explorer Mode"], GenerateOptions, -10000)
+Options:AddGroup(L["Explorer Mode"], GenerateOptions, 9000)

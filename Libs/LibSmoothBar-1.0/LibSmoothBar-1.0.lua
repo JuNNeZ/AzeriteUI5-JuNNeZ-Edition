@@ -535,7 +535,7 @@ local smoothingMinValue = .3 -- if a value is lower than this, we won't smoothe
 local smoothingFrequency = .5 -- default duration of smooth transitions
 local smartSmoothingDownFrequency = .15 -- duration of smooth reductions in smart mode
 local smartSmoothingUpFrequency = .75 -- duration of smooth increases in smart mode
-local smoothingLimit = 1/120 -- max updates per second
+local smoothingLimit = 1/30 -- max updates per second
 
 local OnUpdate = function(self, elapsed)
 	local data = Bars[self]

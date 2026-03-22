@@ -54,8 +54,8 @@ ns.RegisterConfig("NamePlates", {
 
 	-- Health
 	-----------------------------------------
-	HealthBarPosition = { "TOP", 0, -2 },
-	HealthBarSize = { 84, 14 },
+	HealthBarPosition = { "TOP", 0, -1 },
+	HealthBarSize = { 92, 24 },
 	HealthBarTexCoord = { 14/256, 242/256, 14/64, 50/64 },
 	HealthBarTexture = GetMedia("nameplate_bar"),
 	HealthBarSparkMap = barSparkMap,
@@ -63,10 +63,10 @@ ns.RegisterConfig("NamePlates", {
 	HealthCastOverlayColor = { 1, 1, 1, .35 },
 
 	HealthBackdropPosition = { "CENTER", 0, 0 },
-	HealthBackdropSize = { 94.315789474, 24.888888889 },
+	HealthBackdropSize = { 92, 24 },
 	HealthBackdropTexture = GetMedia("nameplate_backdrop"),
 
-	HealthValuePosition = { "TOP", 0, -18 },
+	HealthValuePosition = { "CENTER", 0, -18 },
 	HealthValueJustifyH = "CENTER",
 	HealthValueJustifyV = "MIDDLE",
 	HealthValueFont = GetFont(12,true),
@@ -74,9 +74,9 @@ ns.RegisterConfig("NamePlates", {
 
 	-- CastBar
 	-----------------------------------------
-	CastBarPosition = { "TOP", 0, -20 },
-	CastBarPositionPlayer = { "TOP", 0, -(2 + 18 + 18) },
-	CastBarSize = { 84, 14 },
+	CastBarPosition = { "TOP", 0, -1 },
+	CastBarPositionPlayer = { "TOP", 0, -(2 + 22 + 2 + 18) },
+	CastBarSize = { 92, 24 },
 	CastBarProtectedSize = { 84*.25, 14*.25 },
 	CastBarProtectedPosition = { "TOP", 0, -(20 + 14*.25/2) },
 	CastBarSparkMap = barSparkMap,
@@ -89,11 +89,11 @@ ns.RegisterConfig("NamePlates", {
 	--CastBarColor = { Colors.cast[1], Colors.cast[2], Colors.cast[3], 1 },
 
 	CastBarBackdropPosition = { "CENTER", 0, 0 },
-	CastBarBackdropSize = { 84*256/(256-28), 14*64/(64-28) },
+	CastBarBackdropSize = { 92, 24 },
 	CastBarBackdropTexture = GetMedia("nameplate_backdrop"),
 
-	CastBarNamePosition = { "TOP", 0, -18 },
-	CastBarNamePositionPlayer = { "TOP", 0, -(18 + 18) },
+	CastBarNamePosition = { "TOP", 0, -26 },
+	CastBarNamePositionPlayer = { "TOP", 0, -44 },
 	CastBarNameJustifyH = "CENTER",
 	CastBarNameJustifyV = "MIDDLE",
 	CastBarNameFont = GetFont(12, true),
@@ -166,10 +166,10 @@ ns.RegisterConfig("NamePlates", {
 	-- Threat Glow
 	-----------------------------------------
 	ThreatPosition = { "CENTER", 0, 0 },
-	ThreatSize = { 94.315789474, 24.888888889 },
+	ThreatSize = { 94, 24 },
 	ThreatTexture = GetMedia("nameplate_glow"),
 
 	-- Nameplate Widgets
 	-----------------------------------------
-	WidgetPosition = { "TOP", 0, -20 }
+	WidgetPosition = { "TOP", 0, -26 }
 })

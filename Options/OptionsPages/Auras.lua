@@ -247,4 +247,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup("Aura Header", GenerateOptions)
+Options:AddGroup("Auras", GenerateOptions, -6000)

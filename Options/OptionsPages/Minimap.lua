@@ -149,4 +149,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Minimap"], GenerateOptions)
+Options:AddGroup(L["Minimap"], GenerateOptions, -3000)

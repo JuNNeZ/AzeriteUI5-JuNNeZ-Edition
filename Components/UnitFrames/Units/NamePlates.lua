@@ -27,6 +27,7 @@ local _, ns = ...
 local oUF = ns.oUF
 
 local NamePlatesMod = ns:NewModule("NamePlates", "LibMoreEvents-1.0", "AceHook-3.0", "AceTimer-3.0")
+-- Optimization made by Rui.
 
 -- Lua API
 local math_floor = math.floor
@@ -47,20 +48,21 @@ ns.NamePlates = {}
 local defaults = { profile = ns:Merge({
 	enabled = true,
 	showAuras = true,
-	showAurasOnTargetOnly = false,
+	showAurasOnTargetOnly = true,
 	showNameAlways = false,
 	hideFriendlyPlayerHealthBar = false,
 	friendlyNameOnlyFontScale = 2.5,
 	friendlyNameOnlyTargetScale = false,
 	showBlizzardWidgets = false,
 	useBlizzardGlobalScale = false,
-	tightHealthBackdrop = false,
 	scale = 2,
-	friendlyScale = 1.95,
+	maxDistance = 40,
+	castBarOffsetY = 0,
+	friendlyScale = .8,
 	friendlyNPCScale = 1,
 	enemyScale = .66,
 	friendlyTargetScale = 0,
-	enemyTargetScale = 0,
+	enemyTargetScale = .5,
 	nameplateTargetScale = 0,
 	healthFlipLabEnabled = false,
 	healthFlipLabDebugMode = false,
@@ -84,7 +86,12 @@ local SECONDARY_INTERRUPT_COLOR = { 170/255, 110/255, 1, 1 }
 local FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = 6
 local GLOBAL_NAMEPLATE_BASE_SCALE_DEFAULT = 2
 local GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT = 1.1
-local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = 1.95
+local NAMEPLATE_MAX_DISTANCE_MIN = 20
+local NAMEPLATE_MAX_DISTANCE_MAX = 60
+local NAMEPLATE_MAX_DISTANCE_DEFAULT = 40
+local NAMEPLATE_CASTBAR_BASELINE_OFFSET = 8
+local NAMEPLATE_CASTBAR_OFFSET_DEFAULT = 0
+local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = .8
 local FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT = 1
 local ENEMY_NAMEPLATE_SCALE_DEFAULT = .66
 local FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = 0
@@ -492,6 +499,30 @@ local GetFriendlyNameOnlyTargetScale = function()
 	return GetFriendlyNamePlateTargetScaleSetting()
 end
 
+local GetNamePlateMaxDistanceSetting = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local value = profile and profile.maxDistance
+	if (type(value) ~= "number") then
+		return NAMEPLATE_MAX_DISTANCE_DEFAULT
+	end
+	if (value < NAMEPLATE_MAX_DISTANCE_MIN) then
+		return NAMEPLATE_MAX_DISTANCE_MIN
+	end
+	if (value > NAMEPLATE_MAX_DISTANCE_MAX) then
+		return NAMEPLATE_MAX_DISTANCE_MAX
+	end
+	return value
+end
+
+local GetNamePlateCastBarOffsetSetting = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local value = profile and profile.castBarOffsetY
+	if (type(value) ~= "number") then
+		return NAMEPLATE_CASTBAR_OFFSET_DEFAULT
+	end
+	return value
+end
+
 local GetEffectivePlateScale = function(self)
 	local scale = ns.API.GetScale()
 	if (IsUsingBlizzardGlobalScale()) then
@@ -524,6 +555,29 @@ local GetEffectivePlateScale = function(self)
 		end
 	end
 	return scale
+end
+
+local GetTargetLikePlateScaleMultiplier = function(self)
+	if (not self or not (self.isTarget or self.isSoftTarget)) then
+		return 1
+	end
+	if (ShouldUseFriendlyPlayerNameOnly(self)) then
+		return 1 + GetFriendlyNameOnlyTargetScale()
+	end
+	if (IsHostileNamePlate(self)) then
+		return 1 + GetEnemyNamePlateTargetScaleSetting()
+	end
+	return 1 + GetFriendlyNamePlateTargetScaleSetting()
+end
+
+local GetTargetLikeNameLift = function(self)
+	local scaleMultiplier = GetTargetLikePlateScaleMultiplier(self)
+	if (scaleMultiplier <= 1) then
+		return 0
+	end
+	local db = ns.GetConfig("NamePlates")
+	local healthBarHeight = db and db.HealthBarSize and db.HealthBarSize[2] or 0
+	return math_floor((healthBarHeight * (scaleMultiplier - 1) * .5) + .5)
 end
 
 NamePlatesMod.GetDebugPlateScaleBreakdown = function(self, frame)
@@ -605,6 +659,25 @@ local SetCVarIfSupported = function(name, value)
 	end
 end
 
+local GetCVarBoolIfSupported = function(name, defaultValue)
+	if (not name) then
+		return defaultValue
+	end
+	if (C_CVar and C_CVar.GetCVarBool) then
+		local ok, value = pcall(C_CVar.GetCVarBool, name)
+		if (ok and type(value) == "boolean") then
+			return value
+		end
+	end
+	if (type(GetCVarBool) == "function") then
+		local ok, value = pcall(GetCVarBool, name)
+		if (ok and value ~= nil) then
+			return value and true or false
+		end
+	end
+	return defaultValue
+end
+
 local ApplyFriendlyNameOnlyCVars = function()
 	local enabled = IsFriendlyPlayerNameOnlyEnabled()
 	SetCVarIfSupported("nameplateShowOnlyNameForFriendlyPlayerUnits", enabled and "1" or "0")
@@ -620,10 +693,31 @@ end
 local RefreshActiveNamePlateScales = function()
 	for plate in next, ns.ActiveNamePlates do
 		ApplyNamePlateScale(plate)
+		if (plate.PostUpdate) then
+			plate:PostUpdate("ForceUpdate", plate.unit)
+		end
 		if (plate.UpdateAllElements) then
 			plate:UpdateAllElements("ForceUpdate")
 		end
 	end
+end
+
+local AnchorStandardNamePlateCastBar = function(self)
+	if (not self or not self.Castbar or not self.Health) then
+		return
+	end
+	self.Castbar:ClearAllPoints()
+	self.Castbar:SetPoint("TOP", self.Health, "BOTTOM", 0, -1 + NAMEPLATE_CASTBAR_BASELINE_OFFSET + GetNamePlateCastBarOffsetSetting())
+end
+
+local AnchorStandardNamePlateName = function(self)
+	if (not self or not self.Name) then
+		return
+	end
+	local db = ns.GetConfig("NamePlates")
+	local point, x, y = unpack(db.NamePosition)
+	self.Name:ClearAllPoints()
+	self.Name:SetPoint(point, x, y + GetTargetLikeNameLift(self))
 end
 
 local GetDriverCVars = function()
@@ -636,6 +730,7 @@ local GetDriverCVars = function()
 	else
 		values["nameplateGlobalScale"] = GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT
 	end
+	values["nameplateMaxDistance"] = GetNamePlateMaxDistanceSetting()
 	return values
 end
 
@@ -669,6 +764,71 @@ local RefreshNamePlateScalingState = function(self)
 	RefreshActiveNamePlateScales()
 end
 
+local ShouldShowNamePlateForBlizzardVisibility = function(self)
+	if (not self or self.isPRD) then
+		return true
+	end
+
+	local showAll = GetCVarBoolIfSupported("nameplateShowAll", true)
+	if ((not showAll) and (not self.inCombat)) then
+		return false
+	end
+
+	if (IsHostileNamePlate(self)) then
+		return GetCVarBoolIfSupported("nameplateShowEnemies", true)
+	end
+
+	if (self.isFriendlyAssistableNPC) then
+		return GetCVarBoolIfSupported("nameplateShowFriends", true)
+			and GetCVarBoolIfSupported("nameplateShowFriendlyNPCs", true)
+	end
+
+	return GetCVarBoolIfSupported("nameplateShowFriends", true)
+end
+
+local ApplyHiddenNamePlateVisualState = function(self)
+	if (not self) then
+		return
+	end
+
+	self:SetIgnoreParentAlpha(false)
+	self:SetAlpha(0)
+	if (self.Name) then self.Name:Hide() end
+	if (self.Health) then
+		self.Health:Hide()
+		if (self.Health.Backdrop) then
+			self.Health.Backdrop:Hide()
+		end
+	end
+	if (self.Health and self.Health.Value) then self.Health.Value:Hide() end
+	if (self.HealthPrediction) then
+		self.HealthPrediction:SetAlpha(0)
+		self.HealthPrediction:Hide()
+		if (self.HealthPrediction.absorbBar) then
+			self.HealthPrediction.absorbBar:SetAlpha(0)
+			self.HealthPrediction.absorbBar:Hide()
+		end
+	end
+	if (self.Classification) then self.Classification:Hide() end
+	if (self.TargetHighlight) then self.TargetHighlight:Hide() end
+	if (self.ThreatIndicator) then self.ThreatIndicator:Hide() end
+	if (self.RaidTargetIndicator) then self.RaidTargetIndicator:Hide() end
+	if (self.Castbar) then
+		self.Castbar:Hide()
+		if (self.Castbar.Backdrop) then
+			self.Castbar.Backdrop:Hide()
+		end
+	end
+	if (self.WidgetContainer) then
+		self.WidgetContainer:SetIgnoreParentAlpha(false)
+		self.WidgetContainer:SetAlpha(0)
+	end
+	if (self.SoftTargetFrame) then
+		self.SoftTargetFrame:SetIgnoreParentAlpha(false)
+		self.SoftTargetFrame:SetAlpha(0)
+	end
+end
+
 local ApplyFriendlyNameOnlyNameAnchor = function(self, db, enabled)
 	if (not self or not self.Name) then
 		return
@@ -700,20 +860,6 @@ local ApplyFriendlyNameOnlyFontScale = function(self, enabled)
 		scale = GetValidatedProfileScale(profile and profile.friendlyNameOnlyFontScale, FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT, false)
 	end
 	self.Name:SetScale(scale)
-end
-
-local ApplyHealthBackdropSizing = function(self, db)
-	if (not self or not self.Health or not self.Health.Backdrop) then
-		return
-	end
-	local backdrop = self.Health.Backdrop
-	backdrop:ClearAllPoints()
-	if (NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile and NamePlatesMod.db.profile.tightHealthBackdrop) then
-		backdrop:SetAllPoints(self.Health)
-	else
-		backdrop:SetPoint(unpack(db.HealthBackdropPosition))
-		backdrop:SetSize(unpack(db.HealthBackdropSize))
-	end
 end
 
 local ApplyFriendlyNameOnlyVisualState = function(self, enabled)
@@ -1181,10 +1327,11 @@ local NamePlate_PostUpdatePositions = function(self)
 
 	-- The PRD has neither name nor auras.
 	if (not self.isPRD) then
+		AnchorStandardNamePlateName(self)
 		local hasName = ShouldUseFriendlyPlayerNameOnly(self) or NamePlatesMod.db.profile.showNameAlways or (self.isMouseOver or self.isSoftTarget or self.isTarget or self.inCombat) or false
-		local nameOffset = hasName and (select(2, name:GetFont()) + auras.spacing) or 0
+		local nameOffset = hasName and (select(2, name:GetFont()) + auras.spacing + GetTargetLikeNameLift(self)) or 0
 
-		if (hasName ~= auras.usingNameOffset or auras.usingNameOffset == nil) then
+		if (hasName ~= auras.usingNameOffset or nameOffset ~= auras.nameOffset or auras.usingNameOffset == nil) then
 			if (hasName) then
 				local point, x, y = unpack(db.AurasPosition)
 				auras:ClearAllPoints()
@@ -1204,7 +1351,7 @@ local NamePlate_PostUpdatePositions = function(self)
 
 		local numRows = (numAuras > 0) and (math_floor(numAuras / auras.numPerRow)) or 0
 
-		if (numRows ~= auras.numRows or hasName ~= auras.usingNameOffset or auras.usingNameOffset == nil) then
+		if (numRows ~= auras.numRows or hasName ~= auras.usingNameOffset or nameOffset ~= auras.nameOffset or auras.usingNameOffset == nil) then
 			if (hasName or numRows > 0) then
 				local auraOffset = (numAuras > 0) and (numRows * (auras.size + auras.spacing)) or 0
 				local point, x, y = unpack(db.RaidTargetPosition)
@@ -1218,6 +1365,7 @@ local NamePlate_PostUpdatePositions = function(self)
 
 		auras.numRows = numRows
 		auras.usingNameOffset = hasName
+		auras.nameOffset = nameOffset
 	end
 end
 
@@ -1344,36 +1492,21 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 		if (self:IsElementEnabled("Auras")) then
 			self:DisableElement("Auras")
 		end
-		self:SetIgnoreParentAlpha(false)
-		self:SetAlpha(0)
-		if (self.Name) then self.Name:Hide() end
-		if (self.Health) then
-			self.Health:Hide()
-			if (self.Health.Backdrop) then
-				self.Health.Backdrop:Hide()
-			end
-		end
-		if (self.Health and self.Health.Value) then self.Health.Value:Hide() end
-		if (self.Classification) then
-			self.Classification:Hide()
-		end
-		if (self.TargetHighlight) then
-			self.TargetHighlight:Hide()
-		end
-		if (self.RaidTargetIndicator) then
-			self.RaidTargetIndicator:Hide()
-		end
-		if (self.Castbar) then
-			self.Castbar:Hide()
-			if (self.Castbar.Backdrop) then
-				self.Castbar.Backdrop:Hide()
-			end
-		end
+		ApplyHiddenNamePlateVisualState(self)
+		return
+	end
+
+	if (not ShouldShowNamePlateForBlizzardVisibility(self)) then
+		ApplyHiddenNamePlateVisualState(self)
 		return
 	end
 
 	if (self:GetAlpha() == 0) then
 		self:SetAlpha(1)
+	end
+	if (self.SoftTargetFrame) then
+		self.SoftTargetFrame:SetIgnoreParentAlpha(true)
+		self.SoftTargetFrame:SetAlpha(1)
 	end
 	if (showFriendlyPlayerNameOnly) then
 		ApplyFriendlyNameOnlyVisualState(self, true)
@@ -1383,7 +1516,6 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 	end
 
 	ApplyFriendlyNameOnlyVisualState(self, false)
-	ApplyHealthBackdropSizing(self, db)
 	if (self.Health) then
 		if (not self.Health:IsShown()) then
 			self.Health:Show()
@@ -1478,6 +1610,7 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 		if (self.WidgetContainer) then
 			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
 				self.WidgetContainer:SetIgnoreParentAlpha(true)
+				self.WidgetContainer:SetAlpha(1)
 				self.WidgetContainer:SetParent(self)
 				self.WidgetContainer:ClearAllPoints()
 				self.WidgetContainer:SetPoint(unpack(db.WidgetPosition))
@@ -1504,8 +1637,7 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 		end
 
 		self.Castbar:SetSize(unpack(db.CastBarSize))
-		self.Castbar:ClearAllPoints()
-		self.Castbar:SetPoint(unpack(db.CastBarPosition))
+		AnchorStandardNamePlateCastBar(self)
 		self.Castbar:SetSparkMap(db.CastBarSparkMap)
 		self.Castbar:SetStatusBarTexture(db.CastBarTexture)
 		self.Castbar:SetTexCoord(healthLab.castTexLeft, healthLab.castTexRight, healthLab.castTexTop, healthLab.castTexBottom)
@@ -1746,37 +1878,6 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 	NamePlate_PostUpdate(self, event, unit, ...)
 end
 
-local NamePlate_RaidTargetIndicator_Override = function(self, event, unit)
-	local element = self.RaidTargetIndicator
-	if (not element) then
-		return
-	end
-
-	unit = unit or self.unit
-	if (not unit) or ((type(issecretvalue) == "function") and issecretvalue(unit)) or (not UnitExists(unit)) then
-		element:Hide()
-		return
-	end
-
-	if (ns.IsRetail and UnitNameplateShowsWidgetsOnly(unit)) then
-		element:Hide()
-		return
-	end
-
-	if ((not UnitIsPlayer(unit)) and (not UnitCanAttack("player", unit))) then
-		element:Hide()
-		return
-	end
-
-	local index = GetRaidTargetIndex(unit)
-	if (index) and (not ((type(issecretvalue) == "function") and issecretvalue(index))) then
-		SetRaidTargetIconTexture(element, index)
-		element:Show()
-	else
-		element:Hide()
-	end
-end
-
 local style = function(self, unit, id)
 
 	local db = ns.GetConfig("NamePlates")
@@ -1832,10 +1933,11 @@ local style = function(self, unit, id)
 	ns.API.BindStatusBarValueMirror(self.Health)
 
 	local healthBackdrop = health:CreateTexture(nil, "BACKGROUND", nil, -1)
+	healthBackdrop:SetPoint(unpack(db.HealthBackdropPosition))
+	healthBackdrop:SetSize(unpack(db.HealthBackdropSize))
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 
 	self.Health.Backdrop = healthBackdrop
-	ApplyHealthBackdropSizing(self, db)
 
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel())
@@ -1883,7 +1985,7 @@ local style = function(self, unit, id)
 	if (castbar.SetForceNative) then castbar:SetForceNative(true) end
 	castbar:SetFrameLevel(self:GetFrameLevel() + 5)
 	castbar:SetSize(unpack(db.CastBarSize))
-	castbar:SetPoint(unpack(db.CastBarPosition))
+	castbar:SetPoint("TOP", health, "BOTTOM", 0, -1)
 	castbar:SetSparkMap(db.CastBarSparkMap)
 	castbar:SetStatusBarTexture(db.CastBarTexture)
 	castbar:SetStatusBarColor(unpack(db.CastBarColor))
@@ -1924,6 +2026,9 @@ local style = function(self, unit, id)
 	castText:SetJustifyV(db.CastBarNameJustifyV)
 	castText:SetFontObject(db.CastBarNameFont)
 	castText:SetTextColor(unpack(db.CastBarNameColor))
+	if (castText.SetWordWrap) then
+		castText:SetWordWrap(false)
+	end
 
 	self.Castbar.Text = castText
 
@@ -1931,6 +2036,7 @@ local style = function(self, unit, id)
 	--------------------------------------------
 	local healthValue = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
 	healthValue:SetPoint(unpack(db.HealthValuePosition))
+	healthValue:SetWidth((db.HealthBarSize and db.HealthBarSize[1] or 92) - 8)
 	healthValue:SetFontObject(db.HealthValueFont)
 	healthValue:SetTextColor(unpack(db.HealthValueColor))
 	healthValue:SetJustifyH(db.HealthValueJustifyH)
@@ -1988,6 +2094,9 @@ local style = function(self, unit, id)
 	name:SetTextColor(unpack(db.NameColor))
 	name:SetJustifyH(db.NameJustifyH)
 	name:SetJustifyV(db.NameJustifyV)
+	if (name.SetWordWrap) then
+		name:SetWordWrap(false)
+	end
 	--self:Tag(name, prefix("[*:Name(32,nil,nil,true)]"))
 	self:Tag(name, prefix("[*:Name(24,nil,nil,nil)]")) -- maxChars, showLevel, showLevelLast, showFull
 
@@ -2034,7 +2143,6 @@ local style = function(self, unit, id)
 	raidTarget:SetSize(unpack(db.RaidTargetSize))
 	raidTarget:SetPoint(unpack(db.RaidTargetPosition))
 	raidTarget:SetTexture(db.RaidTargetTexture)
-	raidTarget.Override = NamePlate_RaidTargetIndicator_Override
 
 	self.RaidTargetIndicator = raidTarget
 
@@ -2143,7 +2251,7 @@ cvars = {
 
 	-- The max distance to show nameplates.
 	-- *this value can be set by the user, and all other values are relative to this one.
-	["nameplateMaxDistance"] = ns.IsRetail and 60 or ns.IsClassic and 20 or 41, -- Wrath and TBC have 41
+	["nameplateMaxDistance"] = ns.IsRetail and NAMEPLATE_MAX_DISTANCE_DEFAULT or ns.IsClassic and 20 or 40, -- Wrath and TBC have 41
 
 	-- The maximum distance from the camera (not char) where plates will still have max scale
 	["nameplateMaxScaleDistance"] = 10,
@@ -2725,6 +2833,13 @@ NamePlatesMod.UpdateSettings = function(self)
 	end
 end
 
+local IsVisibilityManagedCVar = function(name)
+	return name == "nameplateShowAll"
+		or name == "nameplateShowEnemies"
+		or name == "nameplateShowFriends"
+		or name == "nameplateShowFriendlyNPCs"
+end
+
 NamePlatesMod.OnEvent = function(self, event, ...)
 	if (event == "PLAYER_ENTERING_WORLD") then
 		ApplyFriendlyNameOnlyCVars()
@@ -2753,6 +2868,8 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 		local name = ...
 		if (name == "nameplateGlobalScale" and IsUsingBlizzardGlobalScale()) then
 			ApplyNamePlateDriverSettings(self)
+			RefreshActiveNamePlateScales()
+		elseif (IsVisibilityManagedCVar(name)) then
 			RefreshActiveNamePlateScales()
 		end
 	elseif (event == "PLAYER_REGEN_ENABLED") then
@@ -2839,6 +2956,45 @@ NamePlatesMod.OnInitialize = function(self)
 			self.db.profile.nameplateTargetScale = GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT
 		end
 		self.db.profile.nameplateScaleModelVersion = 4
+	end
+	if (self.db and self.db.profile and self.db.profile.nameplateScaleModelVersion < 5) then
+		if (self.db.profile.friendlyScale == 1.95) then
+			self.db.profile.friendlyScale = FRIENDLY_NAMEPLATE_SCALE_DEFAULT
+		end
+		if (self.db.profile.enemyTargetScale == 0) then
+			self.db.profile.enemyTargetScale = .5
+		end
+		self.db.profile.nameplateScaleModelVersion = 5
+	end
+	if (self.db and self.db.profile and self.db.profile.nameplateScaleModelVersion < 6) then
+		if (type(self.db.profile.maxDistance) ~= "number") then
+			self.db.profile.maxDistance = NAMEPLATE_MAX_DISTANCE_DEFAULT
+		end
+		self.db.profile.nameplateScaleModelVersion = 6
+	end
+	if (self.db and self.db.profile and self.db.profile.nameplateScaleModelVersion < 7) then
+		if (type(self.db.profile.castBarOffsetY) ~= "number") then
+			self.db.profile.castBarOffsetY = NAMEPLATE_CASTBAR_OFFSET_DEFAULT
+		end
+		self.db.profile.nameplateScaleModelVersion = 7
+	end
+	if (self.db and self.db.profile and self.db.profile.nameplateScaleModelVersion < 8) then
+		if (self.db.profile.castBarOffsetY == 0) then
+			self.db.profile.castBarOffsetY = NAMEPLATE_CASTBAR_OFFSET_DEFAULT
+		end
+		self.db.profile.nameplateScaleModelVersion = 8
+	end
+	if (self.db and self.db.profile and self.db.profile.nameplateScaleModelVersion < 9) then
+		if (self.db.profile.castBarOffsetY == 0) then
+			self.db.profile.castBarOffsetY = NAMEPLATE_CASTBAR_OFFSET_DEFAULT
+		end
+		self.db.profile.nameplateScaleModelVersion = 9
+	end
+	if (self.db and self.db.profile and self.db.profile.nameplateScaleModelVersion < 10) then
+		if (self.db.profile.castBarOffsetY == 8) then
+			self.db.profile.castBarOffsetY = 0
+		end
+		self.db.profile.nameplateScaleModelVersion = 10
 	end
 	ApplyFriendlyNameOnlyCVars()
 	

@@ -59,4 +59,4 @@ local GenerateOptions = function()
   return options
 end
 
-Options:AddGroup("Top Center Widgets", GenerateOptions, -1000)
+Options:AddGroup("Widgets", GenerateOptions, -2700)

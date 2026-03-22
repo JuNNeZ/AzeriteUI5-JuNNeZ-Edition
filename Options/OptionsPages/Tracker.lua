@@ -84,4 +84,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup("Objectives Tracker", GenerateOptions)
+Options:AddGroup("Objectives Tracker", GenerateOptions, -2800)

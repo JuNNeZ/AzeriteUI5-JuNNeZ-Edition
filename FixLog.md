@@ -5,6 +5,76 @@
 
 ## 2026-03-21
 
+- **Release metadata and tag prep started:** Renaming the new top changelog section with a Rui-themed release title and syncing the actual addon/build version files to `5.3.19-JuNNeZ` before commit/tag/push.
+  - **Files Targeted:** `FixLog.md`, `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`
+- **Release metadata and tag prep applied:** Renamed the new top changelog section to `The Rui Reverberation` and synced the addon TOC plus build script version to `5.3.19-JuNNeZ` so the worktree is ready for the release commit/tag.
+  - **Root Cause:** The release notes were already staged conceptually under `5.3.19`, but the actual version-bearing files still read `5.3.18-JuNNeZ`, and the user wanted a Rui-themed title in the changelog before shipping.
+  - **Safety:** Metadata-only change. No runtime behavior changed in this step; it only aligns visible release naming/versioning with the already-prepared code changes.
+  - **Verification:** `CHANGELOG.md` now contains `## 5.3.19-JuNNeZ (2026-03-22)` with `### The Rui Reverberation`, and both `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now read `5.3.19-JuNNeZ`.
+  - **Files Modified:** `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `FixLog.md`
+- **Nameplate castbar baseline-anchor correction started:** Rebasing the normal castbar so the requested `+8` is part of the built-in anchor baseline itself, with the profile slider returning to an additive adjustment around that corrected baseline instead of storing the baseline value.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Nameplate castbar baseline-anchor correction applied:** Moved the normal castbar's `+8` closer position into the built-in anchor math itself, restored the profile offset default back to `0`, and added a one-time migration to convert saved `8` offsets from the earlier temporary approach back to neutral slider state.
+  - **Root Cause:** The previous fix treated the requested `+8` as if it were a saved default offset. That was the wrong layer. The baseline anchor itself needed to move up by `8`, with the slider staying as an adjustment around that new baseline.
+  - **Safety:** The normal castbar still uses the same isolated `AnchorStandardNamePlateCastBar()` helper and keeps the live slider. This only rebases what `0` means for that slider and migrates old profile values that were storing the baseline directly.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` passed. In-game `/reload`, leaving `/az -> Nameplates -> Size -> Castbar vertical offset` at `0`, and confirming the castbar now sits at the same corrected position you previously got by setting it to `8` are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Nameplate castbar offset migration follow-up started:** Adding one more narrow migration pass so existing profiles that missed the earlier `+8` standard castbar baseline update no longer stay stuck on the old `0` offset.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Nameplate castbar offset migration follow-up applied:** Added a second one-time profile migration pass so saved profiles still carrying the old `0` normal-castbar offset are promoted to the shipped `+8` baseline on load.
+  - **Root Cause:** The anchor math was already correct when the slider was manually set to `8`, which means the remaining drift was profile state, not placement code. Some saved profiles had already moved past the earlier migration boundary while still retaining the old `0` value.
+  - **Safety:** This does not change the live anchor formula or remove slider control. It only adds another versioned `0 -> 8` promotion pass for stale profiles that missed the previous baseline update.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` passed. In-game `/reload`, without touching the slider, should now show the standard nameplate castbar at the same position you previously got by manually setting the slider to `8`.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Release changelog follow-up started:** Updating the top release notes so the pending post-5.3.18 entry clearly documents the Rui/RUEM integration scope, the local branch behaviors intentionally kept instead of overwritten, and the stock-alignment/nameplate follow-ups added afterward.
+  - **Files Targeted:** `FixLog.md`, `CHANGELOG.md`
+- **Release changelog follow-up applied:** Added a new top release entry in `CHANGELOG.md` for `5.3.19-JuNNeZ (2026-03-22)` that documents the Rui/RUEM retail merge as a player-facing delta: what was imported from Rui, what newer branch behavior was intentionally kept, and what local follow-up changes were layered on afterward.
+  - **Root Cause:** The pending release notes did not yet explain the Rui-driven retail world-map/nameplate merge clearly enough for players or maintainers. The user specifically wanted the changelog to distinguish imported patch content from preserved local behavior and later follow-up tuning/fixes.
+  - **Safety:** Documentation-only change. No runtime code, settings, or release metadata files were changed here beyond the changelog text.
+  - **Verification:** Read the new top section in `CHANGELOG.md` and confirm it stays delta-only, includes `Highlights`, `Access`, `Why`, `Internal`, and `Thanks`, and explicitly separates `Imported from Rui`, `Kept from this branch`, and `Changed locally after import`.
+  - **Files Modified:** `CHANGELOG.md`, `FixLog.md`
+- **Options credits-order correction started:** Reordering the top-level `Credits & Maintainers` list so Rui appears below Arahort on the addon landing page without changing the already-corrected wording.
+  - **Files Targeted:** `FixLog.md`, `Options/Options.lua`
+- **Options credits-order correction applied:** Moved Rui's top-level credit line to sit directly below Arahort in the Blizzard Settings landing-page `Credits & Maintainers` list.
+  - **Root Cause:** The earlier credits addition had the right wording but the wrong placement in the visible maintainer list.
+  - **Safety:** Text-order change only. No settings behavior or saved data changed.
+  - **Verification:** `luac -p 'Options/Options.lua'` passed. In-game opening the addon landing page and checking the order under `Credits & Maintainers` is still required.
+  - **Files Modified:** `Options/Options.lua`, `FixLog.md`
+- **Options credits-wording correction started:** Narrowing Rui's top-level credits-list wording so it matches the actual attributed work areas instead of implying the broader retail integration work belonged to him.
+  - **Files Targeted:** `FixLog.md`, `Options/Options.lua`
+- **Options credits-wording correction applied:** Changed Rui's main `Credits & Maintainers` line to `MapShrinker Integration & Nameplate Optimization` so the top-level addon credits now match the intended attribution split.
+  - **Root Cause:** The earlier top-level credits addition used `Retail Integration & Optimization`, which overstated Rui's credited scope on the landing page and conflicted with the intended split of work attribution.
+  - **Safety:** Text-only change. No settings behavior, layout logic, or saved variables were changed.
+  - **Verification:** `luac -p 'Options/Options.lua'` passed. In-game opening the addon landing page in Blizzard Settings and checking Rui's line is still required.
+  - **Files Modified:** `Options/Options.lua`, `FixLog.md`
+- **Options credits-list follow-up started:** Adding Rui to the Blizzard addon-settings `Credits & Maintainers` list so the retail/nameplate and world map integration credit also appears on the main addon options landing page.
+  - **Files Targeted:** `FixLog.md`, `Options/Options.lua`
+- **Options credits-list follow-up applied:** Added Rui to the main Blizzard addon-settings `Credits & Maintainers` list on the addon landing page, with the same retail integration/optimization credit trail already used in the module options.
+  - **Root Cause:** Rui had been credited inside the nameplate and world map option pages, but the main `Options/Options.lua` landing page credit block still omitted him, so the top-level addon credits list was inconsistent with the integrated patch attribution elsewhere in the UI.
+  - **Safety:** This is a display-text change only. It does not alter category registration, settings behavior, or any saved variables.
+  - **Verification:** `luac -p 'Options/Options.lua'` passed. In-game opening the addon landing page in Blizzard Settings and checking the `Credits & Maintainers` list for the new Rui line is still required.
+  - **Files Modified:** `Options/Options.lua`, `FixLog.md`
+- **Nameplate castbar baseline-offset follow-up started:** Correcting the missed standard-nameplate castbar baseline so the earlier requested `+8` upward shift is actually shipped as the default instead of only being possible through the slider.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`
+- **Nameplate castbar baseline-offset follow-up applied:** Changed the standard-nameplate castbar offset default from `0` to `8`, added a one-time profile migration so untouched older profiles still on the old `0` default are promoted to `8`, and corrected the slider help text to match the actual anchor math.
+  - **Root Cause:** The castbar offset slider had been added, but the runtime default in `Components/UnitFrames/Units/NamePlates.lua` was still `0`. That meant the requested `+8` closer baseline never shipped unless the user manually adjusted the slider, and the options description also described the sign backwards.
+  - **Safety:** This does not change the anchor formula or remove the tuning slider. It only rebases the default to the intended `+8` and migrates profiles that were still sitting exactly on the previous shipped default, while preserving any user-tuned nonzero offset.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` and `luac -p 'Options/OptionsPages/Nameplates.lua'` passed. In-game `/reload`, checking a normal nameplate cast without moving the slider, and confirming the castbar now starts 8 units closer to the health bar are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`, `FixLog.md`
+- **Nameplate raid-marker visibility follow-up started:** Investigating why raid target markers are missing on normal nameplates; current suspicion is the custom `RaidTargetIndicator` override in the retail nameplate module, because stock leaves the embedded `oUF` element unmodified and only gates object/widget-only plates.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Nameplate raid-marker visibility follow-up applied:** Removed the custom retail nameplate `RaidTargetIndicator` override so normal nameplates now fall back to the stock `oUF` raid-marker element again, while keeping the existing AzeriteUI enable/disable gating for PRD and object/widget-only plates.
+  - **Root Cause:** This branch had diverged from stock by overriding `RaidTargetIndicator` in `Components/UnitFrames/Units/NamePlates.lua` and adding extra retail-specific hide conditions. Stock does not do that. The custom override was stricter than the embedded `oUF` element and could suppress valid raid markers on normal plates even when the element was enabled.
+  - **Safety:** This does not change the marker art, size, or positioning. It only removes the custom override so the embedded `oUF` handler once again owns `RAID_TARGET_UPDATE` and `GetRaidTargetIndex(...)` resolution, which matches `AzeriteUI_Stock`.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` passed. In-game `/reload`, marking hostile and friendly units with raid icons, and confirming the icons show on both targeted and untargeted non-object nameplates are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Nameplate stock-alignment follow-up started:** Applying the two stock-derived minimal fixes from the nameplate audit: lift targeted/soft-target names and reserved spacing so enlarged plates stop colliding with creature names, and move cast spell text back below the castbar with stock-like unclipped layout so vertical offset tuning stops cropping it.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`, `Layouts/Data/NamePlates.lua`
+- **Nameplate stock-alignment follow-up applied:** Lifted targeted/soft-target name anchors and reserved name spacing by the extra height introduced from target-scale growth, restored stock-like single-line unclipped creature/cast text behavior, and moved cast spell text back below the castbar with the requested `+8` extra vertical offset for the taller Rui bar sizes.
+  - **Root Cause:** The current branch had two separate drifts from stock. First, creature names were hard-width constrained in `Components/UnitFrames/Units/NamePlates.lua`, so longer NPC names could wrap to a second line and then collide with the enlarged targeted healthbar while the reserved aura/raid-target offset still only accounted for the base font height. Second, cast spell names were still forced inside the castbar and clipped to a fixed bar-width text box, which made the tighter Rui layout and later vertical tuning crop text more easily than stock.
+  - **Safety:** This keeps the existing Rui bar sizes, target-scale model, and castbar offset slider. The fix is limited to text anchoring and clipping behavior: targeted plates now lift only their name anchor/spacing when the target multiplier is above `1`, and cast/name fontstrings now follow stock-style single-line unclipped placement instead of forcing bar-width wrapping.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` and `luac -p 'Layouts/Data/NamePlates.lua'` passed. In-game `/reload`, targeting long-named creatures, checking that names stay above the enlarged healthbar without wrapping into it, and confirming cast spell names now render below the castbar without clipping are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `Layouts/Data/NamePlates.lua`, `FixLog.md`
 - **Nameplate tight health-backdrop toggle started:** Adding an in-game option to let the health backdrop hug the actual health bar instead of extending past it as a visible black frame, while keeping the current oversized art as the default.
   - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`
 - **Nameplate tight health-backdrop toggle applied:** Added a `/az -> Nameplates -> Size -> Fit health backdrop to health bar` toggle that keeps the current oversized decorative `nameplate_backdrop` art by default, but can snap the health backdrop to the exact health-bar bounds for users who want to remove the black-border look.
@@ -4479,3 +4549,178 @@ Testing:
 8. `/buggrabber reset`
 9. Open and close Edit Mode, then save/revert a layout once.
 10. Recheck the previous `EncounterWarnings`, `SecureUtil`, and `DamageMeter` stacks in a fresh session.
+ 
+2026-03-22
+ 
+Request:
+- Integrate the matching retail-safe RUEM patch set from `C:\Users\Jonas\OneDrive\Skrivebord\AzeriteUI5_JuNNeZ_Edition_RUEM` into this branch and credit Rui for the imported work.
+ 
+Started:
+- Compared the current tree against the RUEM copy and narrowed the requested patch set to retail nameplate defaults/layout, retail-only load-list cleanup, `LibSmoothBar` throttle, and the new world map module plus its required border asset.
+- Confirmed the RUEM copy is older than this branch in at least one runtime path: this branch already uses `1/20` mouseover and soft-target timers in `Components/UnitFrames/Units/NamePlates.lua`, while RUEM still has `1/12`, so that faster polling reduction will be kept as-is instead of overwritten.
+- Confirmed the requested target-frame Lua diff does not need a direct port here; `Components/UnitFrames/Units/Target.lua` reduced to line-ending noise against RUEM, so any matching target-frame behavior already present locally will be preserved.
+- Credit note: Rui / the RUEM patch set is the source reference for the imported retail layout and world-map behavior in this iteration.
+
+Applied:
+- Imported Rui's RUEM retail nameplate pass into `Components/UnitFrames/Units/NamePlates.lua`, `Layouts/Data/NamePlates.lua`, and `Options/OptionsPages/Nameplates.lua`: default overall scale now starts from `1`, friendly/player scale from `0.8`, enemy target scale from `0.5`, target-only auras are the new default, the old decorative health-backdrop toggle was removed, and the live nameplate layout now uses the tighter 92x24 health/cast proportions from RUEM.
+- Added a narrow nameplate profile migration (`nameplateScaleModelVersion = 5`) so existing profiles still sitting exactly on the older saved default values move to the new RUEM baseline without disturbing obviously customized values.
+- Kept the branch's newer `1/20` mouseover and soft-target timers instead of importing RUEM's older `1/12` values.
+- Lowered retail `nameplateMaxDistance` from `60` to `40` and kept the existing target/highlight logic intact.
+- Reduced `LibSmoothBar` updates from `1/120` to `1/30`.
+- Removed the retail-only dead loads for Classic/Wrath/Cata aura helpers, `TrackerVanilla`, `TrackerWrath`, `HideBlizzardClassic`, and the stale `OptionsPages/TrackerVanilla.lua` reference.
+- Added `Components/Misc/WorldMap.lua` plus `Assets/better-blizzard-border-small-alternate.tga` and wired the module into `Components/Misc/Misc.xml`.
+- Credit: the imported retail layout/world-map pass came from Rui's RUEM patch set; the new world-map module file carries that attribution inline as well.
+
+Why:
+- The RUEM patch set mostly targets retail presentation and retail-only load waste, and those parts were safe to carry over to this branch.
+- A few RUEM paths were older than current local work, so this import intentionally merged behavior instead of mirroring the external tree byte-for-byte.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Layouts/Data/NamePlates.lua'`
+3. `luac -p 'Options/OptionsPages/Nameplates.lua'`
+4. `luac -p 'Components/Misc/WorldMap.lua'`
+5. `luac -p 'Libs/LibSmoothBar-1.0/LibSmoothBar-1.0.lua'`
+6. `/reload`
+7. Check targeted and non-targeted retail nameplates for the new size baseline, target-only aura visibility, and the preserved `1/20` hover/soft-target responsiveness.
+8. Open the world map in minimized and maximized states and confirm the new border plus player/cursor coordinates appear without taint or layout breakage.
+
+Follow-up:
+- Added a player-facing nameplate max-distance slider (`20` to `60`) instead of hard-locking the RUEM retail distance at `40`.
+- Added a player-facing world-map toggle, default `on`, and reworked the integrated map module so disabling it restores the Blizzard map state instead of leaving the RUEM styling partially applied.
+- Rechecked the RUEM port against the actual source files and corrected one earlier overreach: the local port no longer forces the overall nameplate profile scale to `1`. Rui's actual `Components/UnitFrames/Units/NamePlates.lua` still keeps `scale = 2`; the retail look change comes from the tighter layout plus relation defaults, not from a global-scale default drop in that file.
+- Verified `LibSmoothBar` is still live in this repo, but not as broadly as older AzeriteUI code: the main unit-frame `CreateBar()` path in `Components/UnitFrames/UnitFrame.lua` now uses native statusbars with compatibility shims, while `LibSmoothBar` is still directly used by `Components/Auras/Auras.lua` aura timer bars and `Components/Misc/MirrorTimers.lua` mirror timers.
+
+Follow-up testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Options/OptionsPages/Nameplates.lua'`
+3. `luac -p 'Components/Misc/WorldMap.lua'`
+4. `luac -p 'Options/OptionsPages/WorldMap.lua'`
+5. `/reload`
+6. Check `/az -> Nameplates -> Size -> Maximum distance` across `20`, `40`, and `60`.
+7. Toggle `/az -> World Map` off and back on while the map is minimized and maximized, and confirm both the Rui-styled and Blizzard states restore cleanly.
+
+2026-03-22
+
+Request:
+- Add explicit Rui credits to the Nameplates and World Map option modules.
+- Make AzeriteUI nameplates follow Blizzard's live nameplate-visibility CVars instead of only applying Azerite styling on top of whatever is already active.
+
+Started:
+- Checked the local `DiabolicUI3` and `ElvUI` implementations before changing runtime behavior. The common safe pattern is to leave visibility ownership to Blizzard CVars and only layer addon styling on top.
+- Confirmed this repo's `Components/UnitFrames/Units/NamePlates.lua` already avoids writing the visibility CVars directly, but it only refreshed custom plate visuals for scale changes; it did not explicitly re-evaluate live active plates when Blizzard visibility CVars changed.
+- Narrowed the runtime change to the general Blizzard visibility path first: hostile plates will follow `nameplateShowEnemies`, friendly-player plates will follow `nameplateShowFriends`, and friendly NPC plates will additionally respect `nameplateShowFriendlyNPCs`.
+
+Applied:
+- Added Rui credits in the player-facing option pages: `Options/OptionsPages/Nameplates.lua` now shows `Optimization made by Rui`, and `Options/OptionsPages/WorldMap.lua` now shows `Integration and retail version by Rui`.
+- Added a matching inline credit in `Components/UnitFrames/Units/NamePlates.lua`.
+- Added safe CVar readers plus a live visibility gate in `Components/UnitFrames/Units/NamePlates.lua` so active AzeriteUI nameplates now hide or reappear immediately when Blizzard visibility CVars change, instead of waiting for a plate respawn or only reacting to size/scale refresh paths.
+- Hooked the existing `CVAR_UPDATE` handler to refresh active plates for `nameplateShowAll`, `nameplateShowEnemies`, `nameplateShowFriends`, and `nameplateShowFriendlyNPCs`.
+
+Why:
+- This keeps AzeriteUI on the same ownership boundary used by the local DiabolicUI and ElvUI references: Blizzard decides whether the plate should exist visually, AzeriteUI decides how it should look.
+- The change is intentionally narrow. It does not add a second visibility system or overwrite Blizzard's toggles; it just makes already-active custom plates honor those toggles immediately.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Options/OptionsPages/Nameplates.lua'`
+3. `luac -p 'Options/OptionsPages/WorldMap.lua'`
+4. `/reload`
+5. Toggle Blizzard enemy and friendly nameplates on/off and confirm AzeriteUI plates now hide/show with the same CVars.
+6. Check `/az -> Nameplates` for the `Optimization made by Rui` credit.
+7. Check `/az -> World Map` for the `Integration and retail version by Rui` credit.
+
+2026-03-22
+
+Request:
+- Clean up the `/az` options categories, subcategory naming, and ordering.
+- Fix the nameplate text-anchor regression from the Rui layout pass where cast text and related plate text no longer sit centered inside the tighter bars.
+
+Started:
+- Checked `Options/Options.lua` and all `Options:AddGroup(...)` registrations. The current tree is being sorted by numeric priority and then displayed name, which is why internal labels like `Aura Header`, `Chat Windows`, `Info/Clock`, and `Top Center Widgets` leak directly into the player-facing menu and why several pages fall back into a mixed alphabetical bucket.
+- Rechecked `Layouts/Data/NamePlates.lua` against the external RUEM copy. The imported layout data does in fact anchor `NamePosition` and `CastBarNamePosition` above the bars, so the current visuals match the source file but not the intended centered-in-bar presentation requested here.
+- Narrowed the runtime fix so the tighter 92x24 bars keep the cleaner layout while moving visible text back into the bar body and removing the extra aura/raid-target offset that only made sense when the target name sat above the plate.
+
+Applied:
+- Normalized the top-level `/az` tree names and priorities so the feature order is now intentional instead of falling back to mixed alphabetical sort buckets. Renamed the player-facing categories from `Aura Header` to `Auras`, `Chat Windows` to `Chat`, `Top Center Widgets` to `Widgets`, and `Info/Clock` to `Info Bar`.
+- Assigned explicit priorities to the remaining default-sort pages so the `/az` tree now groups as: `Action Bars`, `Unit Frames`, `Nameplates`, `Auras`, `Bags`, `Chat`, `Minimap`, `World Map`, `Objectives Tracker`, `Widgets`, `Tooltips`, `Info Bar`, with `Explorer Mode` moved to the end as the advanced/sidecar page.
+- Moved the Rui credit descriptions to the bottom of the Nameplates and World Map option pages so they stop interrupting the actual settings sections.
+- Changed the live nameplate layout so target names and cast text are centered inside the tighter bars again: `Layouts/Data/NamePlates.lua` now centers `NamePosition`, `CastBarNamePosition`, and `CastBarNamePositionPlayer`, while `Components/UnitFrames/Units/NamePlates.lua` now gives the name, cast text, and HP value explicit widths tied to the bar widths for stable centering.
+- Updated `NamePlate_PostUpdatePositions()` so auras and raid markers no longer reserve extra vertical space for the target name when the name now lives inside the health bar.
+
+Why:
+- The options issue was mostly naming and priority hygiene, not a framework bug. Giving every major page a player-facing label and explicit sort priority is the smallest fix that makes the `/az` tree read cleanly.
+- The text-anchor regression came directly from the imported nameplate layout values. Restoring centered-in-bar anchors while keeping the tighter 92x24 bar sizes preserves the intended cleaner look without undoing the rest of the Rui layout pass.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Layouts/Data/NamePlates.lua'`
+3. `luac -p 'Options/OptionsPages/Auras.lua'`
+4. `luac -p 'Options/OptionsPages/Bags.lua'`
+5. `luac -p 'Options/OptionsPages/Chat.lua'`
+6. `luac -p 'Options/OptionsPages/Minimap.lua'`
+7. `luac -p 'Options/OptionsPages/WorldMap.lua'`
+8. `luac -p 'Options/OptionsPages/Tracker.lua'`
+9. `luac -p 'Options/OptionsPages/Widgets.lua'`
+10. `luac -p 'Options/OptionsPages/Tooltips.lua'`
+11. `luac -p 'Options/OptionsPages/Info.lua'`
+12. `luac -p 'Options/OptionsPages/ExplorerMode.lua'`
+13. `luac -p 'Options/OptionsPages/Nameplates.lua'`
+14. `/reload`
+15. Open `/az` and verify the cleaned top-level order and renamed pages.
+16. Trigger a nameplate cast and verify the cast text sits centered inside the cast bar again.
+17. Hover or target a unit and verify the target name appears centered inside the health bar while HP value still sits below the bar when shown.
+
+2026-03-22
+
+Request:
+- Keep nameplate names above the health bar with the old reserved spacing.
+- Deep-dive the Blizzard nameplate visibility follow-through and fix the castbar so it anchors directly under the health bar.
+
+Started:
+- Rechecked the full custom-nameplate runtime instead of only the layout data. The previous visibility pass was incomplete in three places: it dropped `nameplateShowAll` from the live visibility decision, it refreshed active plates through a scale-oriented helper that did not explicitly force the full plate post-update path first, and it left some Blizzard-owned child visuals like `SoftTargetFrame` and `WidgetContainer` in ignore-parent-alpha mode where they could remain visible even while the main custom plate alpha was forced to `0`.
+- Rechecked the castbar placement path. The current non-PRD castbar was still being positioned from the root plate frame using `db.CastBarPosition`, not anchored off `self.Health`, so the tighter Rui layout made the gap below the health bar visibly wrong even though the numeric offset had not changed.
+
+Applied:
+- Restored `Layouts/Data/NamePlates.lua` so the unit name is back above the health bar (`NamePosition = { "TOP", 0, 16 }`) and the standard nameplate castbar baseline is again the tight one-pixel-under placement expected by the old layout.
+- Restored the aura and raid-target reserved-name offset in `NamePlate_PostUpdatePositions()` so showing the target name above the bar once again pushes the surrounding elements upward correctly.
+- Added an explicit `AnchorStandardNamePlateCastBar()` helper in `Components/UnitFrames/Units/NamePlates.lua` and switched the normal nameplate castbar to anchor from `self.Health` instead of the plate root. The cast text remains centered inside the bar.
+- Strengthened the Blizzard visibility sync in `Components/UnitFrames/Units/NamePlates.lua`: the live visibility gate now respects `nameplateShowAll` again in addition to `nameplateShowEnemies`, `nameplateShowFriends`, and `nameplateShowFriendlyNPCs`, and active plates now run their `PostUpdate` path before the generic `UpdateAllElements()` refresh when those settings change.
+- Added hidden/visible-state handling for `SoftTargetFrame` and `WidgetContainer` so those Blizzard child visuals no longer stay visible through ignore-parent-alpha when the plate itself is supposed to be hidden by Blizzard visibility settings.
+
+Why:
+- The real visibility mismatch was not just one missing CVar check. The custom plate body was being hidden, but some attached Blizzard child visuals could still escape that hide path, and the active-plate refresh path was not forcing the full state recomputation strongly enough.
+- Anchoring the castbar from the health bar instead of the root plate is the stable fix. It keeps the castbar visually welded just under the health bar regardless of future plate height/name-offset tweaks.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Layouts/Data/NamePlates.lua'`
+3. `/reload`
+4. Toggle Blizzard nameplates between always-on and combat-only, then confirm AzeriteUI plates follow the same visibility state.
+5. Toggle Blizzard enemy and friendly nameplates off and on, and confirm both the custom plate body and attached soft-target/widget visuals disappear and return together.
+6. Trigger a cast on a normal nameplate and confirm the castbar sits directly under the health bar with the cast text centered inside it.
+7. Hover or target a unit and confirm the unit name is back above the health bar and the aura/raid-target spacing reserves room for it again.
+
+2026-03-22
+
+Request:
+- Add an in-game slider so the normal nameplate castbar vertical offset can be tuned live instead of hardcoding another guess.
+
+Started:
+- Rechecked the current standard-castbar anchor path in `Components/UnitFrames/Units/NamePlates.lua`. The normal plate path is already isolated through `AnchorStandardNamePlateCastBar()`, which makes this a good narrow change: add a profile-backed offset there and surface it in `Options/OptionsPages/Nameplates.lua`.
+
+Applied:
+- Added a new profile-backed `castBarOffsetY` setting to `Components/UnitFrames/Units/NamePlates.lua`.
+- Routed the standard non-PRD castbar anchor through that setting so the castbar now keeps the existing health-bar-relative anchor but can be nudged live in-game without touching layout files.
+- Added `/az -> Nameplates -> Size -> Castbar vertical offset` in `Options/OptionsPages/Nameplates.lua` with a `-30` to `30` range. Negative values pull the castbar closer to the health bar.
+- Added a small migration step so older profiles missing the new setting initialize cleanly to `0`.
+
+Why:
+- The bar is close enough now that the remaining error is tuning, not structure. A live slider is the right tool here because it lets the anchor be dialed in against the actual in-game render instead of more blind code-side guesswork.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Options/OptionsPages/Nameplates.lua'`
+3. `/reload`
+4. Open `/az -> Nameplates -> Size -> Castbar vertical offset`
+5. Adjust the slider while looking at an active enemy cast and note the best value.

@@ -196,4 +196,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Tooltips"], GenerateOptions)
+Options:AddGroup(L["Tooltips"], GenerateOptions, -2600)

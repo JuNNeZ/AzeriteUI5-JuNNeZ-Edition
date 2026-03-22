@@ -4,6 +4,32 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.19-JuNNeZ (2026-03-22)
+
+### The Rui Reverberation
+- Integrated Rui's retail `MapShrinker` world map pass into AzeriteUI, including the integrated border look, player/cursor coordinates, and a player-facing `/az -> World Map` enable toggle that defaults on.
+- Brought over Rui's retail nameplate optimization pass with the tighter health/cast presentation, restored target highlight, target-only aura support, and retail cleanup of dead load-list paths.
+- Added player-facing controls around the imported nameplate changes instead of hard-locking them: `/az -> Nameplates -> Size -> Maximum distance` now supports `20` to `60`, `/az -> Nameplates -> Size -> Castbar vertical offset` tunes the normal castbar anchor, and target-only auras remain toggleable under `/az -> Nameplates -> Visibility`.
+- Fixed the main follow-up regressions from the import so raid markers show again, castbars start closer to the health bar by default, and long creature/cast names behave more like stock instead of clipping/wrapping into the tighter bars.
+
+### Access
+- Nameplate visibility and aura options: `/az -> Nameplates -> Visibility`
+- Nameplate size, distance, and castbar offset: `/az -> Nameplates -> Size`
+- World map toggle: `/az -> World Map`
+- Rui credit on the addon landing page: `Blizzard Settings -> AzeriteUI -> Credits & Maintainers`
+
+### Why
+- Rui's retail patch set cleaned up the world map and nameplate presentation for retail, but this branch already had newer behavior in a few runtime paths and also needed player-facing controls where Rui's copy used fixed retail defaults.
+- This follow-up keeps the imported retail look/performance wins while preserving the branch's newer pieces and tightening the imported visuals back toward AzeriteUI stock behavior where the Rui layout exposed clipping or visibility regressions.
+
+### Internal
+- Imported from Rui: `MapShrinker` world map integration, tighter retail nameplate health/cast proportions, restored target highlight, target-only aura baseline, retail-only file-load cleanup, and the `LibSmoothBar` throttle reduction.
+- Kept from this branch: the newer `1/20` mouseover/soft-target timers instead of Rui's older `1/12`, the existing target-frame path that did not need a direct RUEM Lua port, and the branch-owned nameplate baseline where Rui's actual source did not require forcing global profile scale to `1`.
+- Changed locally after import: the hard `40` nameplate distance became a slider, the world map became toggleable, AzeriteUI nameplates were made to follow Blizzard visibility CVars more closely, the standard castbar got a shipped `+8` closer baseline plus a live offset slider, the raid-marker stock `oUF` path was restored, and Rui's credits were added in the relevant options pages and top-level credits list.
+
+### Thanks
+- Thanks to Rui for the `MapShrinker` integration and nameplate optimization work that this retail merge was based on.
+
 ## 5.3.18-JuNNeZ (2026-03-21)
 
 ### Highlights

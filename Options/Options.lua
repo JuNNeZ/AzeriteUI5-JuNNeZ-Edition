@@ -107,7 +107,8 @@ Options.InitializeSettingsPanel = function(self)
 		JUNNEZ_GREEN:WrapTextInColorCode("JuNNeZ") .. CREDITS_GRAY:WrapTextInColorCode(" - Maintainer & Updates") .. "\n" ..
 		GOLDPAW_GOLD:WrapTextInColorCode("Lars Norberg (Goldpaw)") .. CREDITS_GRAY:WrapTextInColorCode(" - Original Code") .. "\n" ..
 		GOLDPAW_GOLD:WrapTextInColorCode("Daniel Troko") .. CREDITS_GRAY:WrapTextInColorCode(" - Original Design") .. "\n" ..
-		AZERITE_BLUE:WrapTextInColorCode("Arahort") .. CREDITS_GRAY:WrapTextInColorCode(" - LibOrb System")
+		AZERITE_BLUE:WrapTextInColorCode("Arahort") .. CREDITS_GRAY:WrapTextInColorCode(" - LibOrb System") .. "\n" ..
+		AZERITE_BLUE:WrapTextInColorCode("Rui") .. CREDITS_GRAY:WrapTextInColorCode(" - MapShrinker Integration & Nameplate Optimization")
 	)
 
 	-- Required callbacks for Settings canvas frames

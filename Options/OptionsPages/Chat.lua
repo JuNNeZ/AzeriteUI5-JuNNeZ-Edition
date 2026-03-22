@@ -131,4 +131,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup("Chat Windows", GenerateOptions)
+Options:AddGroup("Chat", GenerateOptions, -4000)

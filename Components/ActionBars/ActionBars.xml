@@ -2,7 +2,6 @@
 
 	<!-- Compatibility -->
 	<Script file="Compatibility\HideBlizzard.lua"/>
-	<Script file="Compatibility\HideBlizzardClassic.lua"/>
 	<Script file="Compatibility\HandleBartender.lua"/>
 	<Script file="Compatibility\HandleConsolePort.lua"/>
 
