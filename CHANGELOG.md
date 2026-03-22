@@ -4,6 +4,20 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.22-JuNNeZ (2026-03-22)
+
+### Highlights
+- Fixed a `/az` options crash that could block the raid-frame health-color settings pages from opening after the recent localization update.
+
+### Access
+- Open `/az -> Unit Frames -> Raid Frames (5/25/40)` and the health-color section should load normally again.
+
+### Why
+- The health-color options helper assigned its localized descriptions into the wrong local-variable names, leaving AceConfig with a `nil` description field when those raid-frame pages were built.
+
+### Internal
+- Corrected the `Desc`/`desc` local-variable mismatch in `Options/OptionsPages/UnitFrames.lua` so the existing localized health-color descriptions are passed through correctly.
+
 ## 5.3.21-JuNNeZ (2026-03-22)
 
 ### Highlights

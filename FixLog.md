@@ -3,6 +3,24 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-22
+
+- **Unit-frame health-color locale regression started:** Investigating the post-localization `/az` crash where `AceConfigRegistry-3.0` now rejects `Unit Frames -> raid5 -> healthColorsDescription.name` as `nil`.
+  - **Files Targeted:** `FixLog.md`, `Options/OptionsPages/UnitFrames.lua`
+- **Unit-frame health-color locale regression applied:** Fixed the `AddHealthColorOptions()` local-description assignments so the `raid5`/`raid25`/`raid40` health-color description rows now populate real strings again instead of feeding `nil` into AceConfig.
+  - **Root Cause:** The recent localization pass left a casing typo in `Options/OptionsPages/UnitFrames.lua`: the helper declared `useClassColorsDesc`, `useBlizzardDesc`, `mouseoverDesc`, and `summaryDesc`, but assigned the values into lowercase variants (`useClassColorsdesc`, `useBlizzarddesc`, `mouseoverdesc`, `summarydesc`). AceConfig later read the correctly-cased locals, which stayed `nil`, and aborted while opening `/az`.
+  - **Safety:** Narrow options-only fix. No saved variables, runtime unit-frame behavior, or locale-table contents were changed; this only restores the already-intended description strings for the health-color toggles.
+  - **Verification:** `luac -p 'Options/OptionsPages/UnitFrames.lua'` passed, and no lowercase typo variants remain in the file. In-game `/reload` plus reopening `/az -> Unit Frames -> Raid Frames (5/25/40)` should confirm the options page opens without the AceConfig validation error.
+  - **Note:** The separate `Blizzard_SharedXMLBase/MathUtil.lua` secret-number stack tainted by `DialogueUI` was not traced to this locale regression and was not changed in this pass.
+  - **Files Modified:** `Options/OptionsPages/UnitFrames.lua`, `FixLog.md`
+- **5.3.22 hotfix release prep started:** Rolling the raid-frame health-color options crash fix into the next patch release, syncing version metadata, and adding a delta-only changelog entry before commit/tag/push.
+  - **Files Targeted:** `FixLog.md`, `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`
+- **5.3.22 hotfix release prep applied:** Bumped the addon/build metadata to `5.3.22-JuNNeZ` and added a new top changelog entry covering only the raid-frame health-color AceConfig crash fix.
+  - **Root Cause:** The options hotfix was applied locally, but the release-bearing metadata and player-facing changelog still pointed at `5.3.21-JuNNeZ`. Tagging without a new patch version would blur which build contains the post-localization options-page fix.
+  - **Safety:** Metadata and documentation update only. Runtime scope remains limited to the already-applied `UnitFrames.lua` health-color description fix.
+  - **Verification:** `CHANGELOG.md` now begins with `## 5.3.22-JuNNeZ (2026-03-22)`, and both `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now read `5.3.22-JuNNeZ`.
+  - **Files Modified:** `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `FixLog.md`
+
 ## 2026-03-21
 
 - **Localization coverage pass started:** Auditing the newer `/az` option-page work for raw user-facing strings that were never wired through `AceLocale`, then backfilling the locale tables so the recent retail options/menu additions no longer bypass localization.
