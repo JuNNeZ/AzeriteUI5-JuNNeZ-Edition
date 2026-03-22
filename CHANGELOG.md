@@ -4,6 +4,22 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.20-JuNNeZ (2026-03-22)
+
+### Highlights
+- Fixed a retail world map setup error that could trigger a Blizzard assertion when AzeriteUI restored map state while the map was not actually maximized.
+- Fixed the Enhancement Shaman class-power regression where a large white secondary bar could appear beside the Maelstrom crystal, especially after login or while out of combat.
+
+### Access
+- No new menu path. This is a hotfix release.
+
+### Why
+- Both issues came from recent retail follow-up work: one in the integrated world map module's maximize-state handling, and one in the shared Shaman class-power path where the Elemental swap bar was still being kept alive outside Elemental.
+
+### Internal
+- Guarded world-map maximize-size calls so Blizzard maximized-only sizing logic only runs while the map is actually maximized.
+- Limited the retail Shaman secondary `Power` bar to Elemental swap-bar mode and now explicitly hide/clean it for Enhancement and other non-Elemental Shaman states.
+
 ## 5.3.19-JuNNeZ (2026-03-22)
 
 ### The Rui Reverberation

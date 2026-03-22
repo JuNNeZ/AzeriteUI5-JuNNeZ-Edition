@@ -143,6 +143,9 @@ local WorldMapFrame_UpdateMaximizedSize = function()
 	if (not IsWorldMapEnabled()) then
 		return
 	end
+	if (not WorldMapFrame:IsMaximized()) then
+		return
+	end
 	local width, height = WorldMapFrame:GetSize()
 	local scale = CalculateScale()
 	local magicNumber = (1 - scale) * 100
@@ -272,7 +275,7 @@ local RestoreBlizzardState = function(self)
 		WorldMapFrameButton:Show()
 	end
 	ApplyOverlayFrameState(self, false)
-	if (WorldMapFrame.UpdateMaximizedSize) then
+	if (WorldMapFrame.UpdateMaximizedSize and WorldMapFrame:IsMaximized()) then
 		WorldMapFrame:UpdateMaximizedSize()
 	end
 	if (WorldMapFrame.SynchronizeDisplayState) then

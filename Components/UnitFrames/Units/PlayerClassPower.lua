@@ -337,6 +337,18 @@ local ElementalSwapBar_PostUpdate = function(element, unit)
 	end
 end
 
+local HideElementalSwapBar = function(element)
+	if (not element) then
+		return
+	end
+	element.__AzeriteUI_KeepValueVisible = false
+	if (element.Value) then
+		element.Value:SetText("")
+		element.Value:Hide()
+	end
+	element:Hide()
+end
+
 local SyncClassPowerClickBlocker = function(classpower, blocker)
 	if (not classpower or not blocker) then
 		return
@@ -1039,7 +1051,7 @@ local UnitFrame_OnEvent = function(self, event, ...)
 			classpower:ForceUpdate()
 		end
 		local power = self.Power
-		if (power and power.ForceUpdate) then
+		if (power and power.ForceUpdate and ShouldUseElementalSwapBar(ClassPowerMod and ClassPowerMod.db and ClassPowerMod.db.profile)) then
 			power:ForceUpdate()
 		end
 	elseif (event == "PLAYER_REGEN_ENABLED") then
@@ -1059,7 +1071,7 @@ local UnitFrame_OnEvent = function(self, event, ...)
 			classpower:ForceUpdate()
 		end
 		local power = self.Power
-		if (power and power.ForceUpdate) then
+		if (power and power.ForceUpdate and ShouldUseElementalSwapBar(ClassPowerMod and ClassPowerMod.db and ClassPowerMod.db.profile)) then
 			power:ForceUpdate()
 		end
 	end
@@ -1301,19 +1313,20 @@ ClassPowerMod.Update = function(self)
 		end
 	end
 	if (ns.IsRetail and playerClass == "SHAMAN" and self.frame.Power) then
-		-- Keep Power element enabled for shaman and gate actual visibility in PostUpdate.
-		self.frame:Show()
-		self.frame:EnableElement("Power")
-		self.frame.Power:ForceUpdate()
-		self.frame.Power:Show()
-
 		if (useElementalSwapBar) then
+			self.frame:Show()
+			self.frame:EnableElement("Power")
+			self.frame.Power:ForceUpdate()
+			self.frame.Power:Show()
 			self.frame:DisableElement("ClassPower")
 		else
+			HideElementalSwapBar(self.frame.Power)
+			self.frame:DisableElement("Power")
 			self.frame:EnableElement("ClassPower")
 			self.frame.ClassPower:ForceUpdate()
 		end
 	else
+		HideElementalSwapBar(self.frame and self.frame.Power)
 		self.frame:DisableElement("Power")
 		self.frame:EnableElement("ClassPower")
 		self.frame.ClassPower:ForceUpdate()

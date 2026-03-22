@@ -5,6 +5,27 @@
 
 ## 2026-03-21
 
+- **5.3.20 hotfix release prep started:** Rolling the post-5.3.19 world-map assert fix and Enhancement Shaman class-power white-bar fix into the next patch release, updating version metadata, and writing a delta-only top changelog entry before commit/tag/push.
+  - **Files Targeted:** `FixLog.md`, `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`
+- **5.3.20 hotfix release prep applied:** Bumped the addon/build metadata to `5.3.20-JuNNeZ` and added a new top changelog entry covering only the world-map assert hotfix and the Enhancement Shaman class-power white-bar regression fix.
+  - **Root Cause:** The post-release fixes were already in the worktree, but the public metadata and changelog were still at `5.3.19-JuNNeZ`. Shipping them without a new patch version would leave the release state and player-facing notes out of sync.
+  - **Safety:** Release metadata and documentation only. Runtime scope remains limited to the already-applied world map and Shaman fixes.
+  - **Verification:** `CHANGELOG.md` now begins with `## 5.3.20-JuNNeZ (2026-03-22)`, and both `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now read `5.3.20-JuNNeZ`.
+  - **Files Modified:** `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `FixLog.md`
+- **Enhancement Shaman class-power white-bar regression started:** Investigating the new white horizontal bar appearing beside the Enhancement Maelstrom crystal, mostly out of combat or after relog, after the recent retail Shaman class-power changes.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/PlayerClassPower.lua`
+- **Enhancement Shaman class-power white-bar regression applied:** Limited the retail Shaman secondary `Power` bar to Elemental swap-bar mode only, and now explicitly hides/cleans it for Enhancement and other non-Elemental Shaman states so the stale white bar art no longer lingers beside the Maelstrom crystal.
+  - **Root Cause:** `Components/UnitFrames/Units/PlayerClassPower.lua` created the Elemental-style secondary `Power` bar for all retail Shamans, then `ClassPowerMod.Update()` kept enabling and showing that `Power` element even when `ShouldUseElementalSwapBar(...)` was false. That left the swap-bar frame and its backdrop able to appear on Enhancement, especially on out-of-combat/login state transitions.
+  - **Safety:** Narrow Shaman-only visibility fix. It does not change Enhancement Maelstrom layout logic, Elemental swap-bar rendering, or the shared player mana/power frame code. It only stops the secondary Elemental swap bar from being kept live when the current spec should be using normal class power.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/PlayerClassPower.lua'` passed. In-game `/reload`, logging in and toggling combat on Enhancement, and confirming the white bar no longer appears while Elemental still shows the intended swap bar are still required.
+  - **Files Modified:** `Components/UnitFrames/Units/PlayerClassPower.lua`, `FixLog.md`
+- **World map maximize-assert fix started:** Investigating the new retail world-map assertion on module setup/disable; current evidence points to AzeriteUI calling Blizzard `UpdateMaximizedSize()` from `RestoreBlizzardState()` even when the map is not maximized.
+  - **Files Targeted:** `FixLog.md`, `Components/Misc/WorldMap.lua`
+- **World map maximize-assert fix applied:** Guarded both the AzeriteUI maximize-size helper and the Blizzard-state restore path so `UpdateMaximizedSize()` is only touched while the world map is actually maximized.
+  - **Root Cause:** Your stack was the decisive clue: `Components/Misc/WorldMap.lua:276` in `RestoreBlizzardState()` called Blizzard `UpdateMaximizedSize()` during the disabled/restore path, and Blizzard now asserts if that function runs outside a maximized world-map state.
+  - **Safety:** This is a narrow state guard only. It does not change the styled maximized resize math itself; it simply stops AzeriteUI from asking Blizzard to run maximized-only sizing logic while minimized/restoring.
+  - **Verification:** `luac -p 'Components/Misc/WorldMap.lua'` passed. In-game `/reload`, logging in with the World Map module enabled and disabled, and toggling the map between minimized/maximized should confirm the assertion no longer fires.
+  - **Files Modified:** `Components/Misc/WorldMap.lua`, `FixLog.md`
 - **Release metadata and tag prep started:** Renaming the new top changelog section with a Rui-themed release title and syncing the actual addon/build version files to `5.3.19-JuNNeZ` before commit/tag/push.
   - **Files Targeted:** `FixLog.md`, `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`
 - **Release metadata and tag prep applied:** Renamed the new top changelog section to `The Rui Reverberation` and synced the addon TOC plus build script version to `5.3.19-JuNNeZ` so the worktree is ready for the release commit/tag.
