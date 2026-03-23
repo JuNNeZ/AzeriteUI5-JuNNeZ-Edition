@@ -3,6 +3,77 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-23
+
+- **5.3.23 beta2 checkpoint release prep started:** Capturing the current interruptible-castbar investigation in a new beta tag, updating version metadata, and explicitly marking the hostile interruptible castbar path as WIP before Wednesday's follow-up.
+  - **Files Targeted:** `FixLog.md`, `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`
+- **Nameplate castbar paint follow-up started:** The shared interrupt resolver is returning `unavailable` on live Ret Paladin tests, so the remaining yellow-nameplate bug is being treated as a paint/overwrite issue in the nameplate castbar path rather than an interrupt-state issue.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Nameplate castbar paint follow-up applied:** Changed the hostile nameplate castbar refresh path to apply the resolved interrupt color directly to the castbar and its live statusbar texture instead of relying on the generic helper alone.
+  - **Root Cause:** Live debug showed `spell=96231 cooldown=0 state=unavailable canAttack=true`, which means the resolver was already producing the correct non-base state while the visible nameplate bar still stayed yellow. That points to the nameplate bar color being overwritten or not propagated to the texture in the final paint path.
+  - **Safety:** This is isolated to enemy nameplate castbar painting. It does not change interrupt resolution, target castbars, or the retail aura data source.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` must pass. In-game `/reload`, then a hostile cast with `Rebuke` on cooldown, should now show the unavailable color on the nameplate bar instead of yellow.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Interrupt resolver debug trace started:** Adding one narrow live trace to the shared interrupt-state helper so the next hostile cast test shows whether the yellow fallback is caused by known-spell discovery, cooldown-readiness, or the hostile-cast branch itself.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`
+- **Interrupt resolver debug trace applied:** Added temporary `API.DebugPrintf(...)` logging around the shared hostile-cast resolver so `/azdebug healthchat on` can report the unit, class/spec, chosen interrupt spell, cooldown-ready result, and final visual state for each castbar evaluation.
+  - **Root Cause:** After matching the live Platynator interrupt IDs, the remaining failure is almost certainly in runtime state resolution rather than source data. The next hostile-cast test needs direct evidence of which branch still returns `"base"`.
+  - **Safety:** Debug-only instrumentation gated behind the existing chat debug toggle. No castbar behavior changes in this step.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'` must pass. In-game, enable `/azdebug healthchat on`, trigger one hostile cast on Ret Paladin, and read the `Interrupt~2~...` line for `spell=`, `cooldown=`, and `state=`.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `FixLog.md`
+- **Live Platynator parity follow-up started:** Ret Paladin is still falling back to yellow, so the interrupt source-of-truth is being aligned to the exact retail interrupt map shipped by the installed Platynator addon.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Auras/AuraData.lua`
+- **Live Platynator parity follow-up applied:** Replaced the current retail interrupt table with the same class-level ordering used by the installed Platynator addon, including Paladin `{96231, 31935}` and the flat retail list shape Platynator resolves through `C_SpellBook.IsSpellKnownOrInSpellBook(...)`.
+  - **Root Cause:** The earlier AzeriteUI table had diverged from the live addon the user was validating against, especially on class/spec gating and ordering. For Ret Paladin, that meant our local truth could still disagree with the live addon even after the resolver had been simplified.
+  - **Safety:** This narrows the interrupt source-of-truth to match the live addon behavior the user is already trusting. It does not change the nameplate paint path itself; it only changes which interrupt IDs feed that path.
+  - **Verification:** `luac -p 'Components/UnitFrames/Auras/AuraData.lua'` must pass. In-game `/reload` on Retribution Paladin, then checking a hostile cast with `Rebuke` known and off cooldown, should confirm the bar leaves the yellow base path if interrupt discovery was the remaining mismatch.
+  - **Files Modified:** `Components/UnitFrames/Auras/AuraData.lua`, `FixLog.md`
+- **Platynator-style interrupt resolver simplification started:** Replacing the broader primary/secondary/cached interrupt color branch with the simpler single-priority interrupt method used by Platynator so hostile castbars stop collapsing into the yellow base path.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Auras/AuraData.lua`, `Components/UnitFrames/Functions.lua`
+- **Platynator-style interrupt resolver simplification applied:** Collapsed the retail interrupt-ready color logic down to one known priority interrupt spell discovered from the class/spec list and evaluated directly through the secret-safe cooldown APIs. Removed the extra secondary-state and sticky fallback behavior from the live castbar resolver so the hostile castbar now either shows ready, unavailable, locked, or base from a single stable signal.
+  - **Root Cause:** The wider resolver introduced too many failure points at once: spec split, secondary spell pools, and cooldown fallback smoothing. With the nameplate still falling back to yellow, the fastest safe path was to match the simpler Platynator model that only needs one known interrupt spell and one cooldown-ready check.
+  - **Safety:** This is a deliberate scope reduction for stability. It preserves the core hostile-cast visuals while temporarily dropping the secondary-ready branch from the live resolver until the primary path is verified stable again.
+  - **Verification:** `luac -p 'Components/UnitFrames/Auras/AuraData.lua'` and `luac -p 'Components/UnitFrames/Functions.lua'` must pass. In-game `/reload`, then checking a hostile cast with your known kick both ready and on cooldown, should confirm the bar leaves the yellow base path and flips between green and red correctly.
+  - **Files Modified:** `Components/UnitFrames/Auras/AuraData.lua`, `Components/UnitFrames/Functions.lua`, `FixLog.md`
+- **Interrupt known-spell detection follow-up started:** Narrowing the hostile-castbar regression to the retail spellbook lookup path, since empty known-interrupt lists would force nameplates to stay on the yellow base cast color.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Auras/AuraData.lua`
+- **Interrupt known-spell detection follow-up applied:** Simplified the retail known-spell check to match the safer Platynator-style pattern: player lookup through `C_SpellBook.IsSpellKnownOrInSpellBook(spellID)` and pet lookup through the explicit pet bank only, instead of the earlier multi-argument variant.
+  - **Root Cause:** The stricter spellbook call shape could fail to recognize valid player interrupts, which left the primary/secondary interrupt pools empty. Once that happened, the shared castbar state resolver had no spell data to work from and fell back to the normal yellow nameplate cast color every time.
+  - **Safety:** This only changes interrupt spell discovery. It does not alter castbar paint rules, secret-safe cooldown evaluation, or the underlying retail aura filter tables.
+  - **Verification:** `luac -p 'Components/UnitFrames/Auras/AuraData.lua'` must pass. In-game `/reload`, then checking any hostile cast while your kick is known should confirm the nameplate no longer stays on the base yellow path.
+  - **Files Modified:** `Components/UnitFrames/Auras/AuraData.lua`, `FixLog.md`
+- **Interrupt cooldown-cache follow-up started:** Investigating the new report that hostile castbars now stay green even when the tracked interrupt should no longer be ready.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`
+- **Interrupt cooldown-cache follow-up applied:** Changed the shared interrupt cooldown fallback from a sticky cached state to a short-lived bridge cache so transient secret-value reads can still preserve color continuity without pinning enemy casts in the ready/green state for whole cooldown windows.
+  - **Root Cause:** The previous follow-up cached the last safe interrupt cooldown result indefinitely. When the API later stopped returning a readable combat-time state, the resolver could keep reusing an old `ready` result and leave hostile casts green long after the interrupt had actually gone on cooldown.
+  - **Safety:** This keeps the anti-flicker fallback, but only for a very short interval. If the API cannot confirm the state again quickly, the shared helper drops back out of the cached result instead of trusting stale readiness forever.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'` must pass. In-game `/reload`, putting the main interrupt on cooldown during a hostile cast, and confirming the castbar leaves green within a fraction of a second are still required.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `FixLog.md`
+- **Interrupt color/spec-table follow-up started:** Reworking the hostile castbar interrupt model so nameplates stop falling back to the yellow base state, and replacing the old class-only “first two interrupts” list with spec-aware primary and secondary cast-stopper pools.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Auras/AuraData.lua`, `Components/UnitFrames/Functions.lua`
+- **Interrupt color/spec-table follow-up applied:** Replaced the class-only interrupt cache with spec-aware primary and secondary spell pools, switched the shared castbar resolver to evaluate whole primary/secondary lists instead of assuming the first two known spells cover every class, corrected cast-spell IDs used for readiness lookups such as Druid `Skull Bash`/`Solar Beam` and Shaman `Capacitor Totem`, and added a per-spell cooldown-state cache so secret/unknown reads stop collapsing active enemy casts back to the yellow base state.
+  - **Root Cause:** The first beta pass still treated interrupt readiness like a flat two-slot list. That broke spec-restricted classes, missed fallback cast-stoppers entirely for many specs, and let hostile nameplates drift back to `"base"` whenever WoW's cooldown API did not return a directly usable state on that tick.
+  - **Safety:** The visual legend is unchanged: primary-ready stays green, secondary-ready stays purple, unavailable stays red, locked stays gray, and base stays the normal cast color. This only narrows which spells feed those states and keeps the last safe cooldown state when retail returns an unreadable value mid-combat.
+  - **Verification:** `luac -p 'Components/UnitFrames/Auras/AuraData.lua'` and `luac -p 'Components/UnitFrames/Functions.lua'` must pass. In-game `/reload`, testing interruptible hostile target/nameplate casts on specs with and without a primary kick, and checking that fallback stuns/silences now produce the secondary color are still required.
+  - **Files Modified:** `Components/UnitFrames/Auras/AuraData.lua`, `Components/UnitFrames/Functions.lua`, `FixLog.md`
+- **AuraData retail cleanup applied:** Removed the now-dead combined interrupt cache/getter after the split to explicit primary and secondary interrupt pools, keeping the retail aura-classification tables intact because the aura filter, sort, and styling modules still consume them directly.
+  - **Root Cause:** After the spec-aware interrupt split, `KnownInterruptSpells` and `GetKnownInterruptSpells()` were no longer read anywhere in the retail path. Keeping that combined cache only duplicated state without driving any current behavior.
+  - **Safety:** This does not remove the retail `AuraData` tables themselves. `AuraFilters.lua`, `AuraSorting.lua`, and `AuraStyling.lua` still rely on `Spells`, `Priority`, and `Hidden`, so only the provably-unused interrupt cache layer was trimmed.
+  - **Verification:** `rg` no longer finds retail consumers of `KnownInterruptSpells`/`GetKnownInterruptSpells`, and `luac -p 'Components/UnitFrames/Auras/AuraData.lua'` still passes.
+  - **Files Modified:** `Components/UnitFrames/Auras/AuraData.lua`, `FixLog.md`
+- **Interrupt-color beta follow-up started:** Investigating the new report that hostile castbars stay red even when the player can still successfully interrupt the cast.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`
+- **Interrupt-color beta follow-up applied:** Removed spell-usability gating from the shared interrupt-ready state so hostile castbars now key their ready/unavailable colors off interrupt cooldown readiness again instead of treating targeting/reactive usability as a hard “unavailable” result.
+  - **Root Cause:** The beta pass folded `C_Spell.IsSpellUsable(...)` into the main ready-state decision. For interrupts, that API is broader than cooldown readiness and can return false for target/reactive reasons even while the kick is actually off cooldown, which made nameplate and target castbars stick on red despite successful interrupts.
+  - **Safety:** This narrows the logic back to the actual player-facing meaning of the color legend: ready if the tracked interrupt is off cooldown, unavailable if it is on cooldown, locked if the enemy cast itself is protected. The shared refresh driver and secret-safe cooldown handling are unchanged.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'` must pass. In-game `/reload` plus a hostile cast test where the interrupt is ready should now show the ready color instead of red.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `FixLog.md`
+- **5.3.23 beta2 checkpoint release prep applied:** Bumped the addon/build metadata to `5.3.23-JuNNeZ-beta2` and added a delta-only changelog entry that marks the hostile interruptible castbar rewrite as an unfinished beta checkpoint rather than a completed fix.
+  - **Root Cause:** The current interruptible castbar work is still unstable in combat and should not be presented like a finished hostile-castbar fix, but the branch needs a clean tagged checkpoint before work resumes.
+  - **Safety:** Metadata and changelog update only. Runtime scope remains limited to the already-applied interrupt castbar WIP changes in `AuraData.lua`, `Functions.lua`, and `NamePlates.lua`.
+  - **Verification:** `CHANGELOG.md` now begins with `## 5.3.23-JuNNeZ-beta2 (2026-03-23)`, and both `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now read `5.3.23-JuNNeZ-beta2`.
+  - **Files Modified:** `CHANGELOG.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `FixLog.md`
+
 ## 2026-03-22
 
 - **Unit-frame health-color locale regression started:** Investigating the post-localization `/az` crash where `AceConfigRegistry-3.0` now rejects `Unit Frames -> raid5 -> healthColorsDescription.name` as `nil`.

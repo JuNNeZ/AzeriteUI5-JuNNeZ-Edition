@@ -133,14 +133,25 @@ local GetPrimaryInterruptSpellID = function()
 	return nil
 end
 
-local GetSecondaryInterruptSpellID = function()
-	if (ns.AuraData and ns.AuraData.GetKnownInterruptSpells) then
-		local known = ns.AuraData.GetKnownInterruptSpells()
-		if (type(known) == "table") then
-			return known[2]
-		end
+local EmitInterruptDebug = function(castbar, reason, spellID, cooldownState, finalState)
+	if (not API.DEBUG_HEALTH_CHAT) then
+		return
 	end
-	return nil
+	local owner = castbar and castbar.__owner
+	local unit = owner and owner.unit or "nil"
+	local classFile = UnitClassBase and UnitClassBase("player") or select(2, UnitClass("player"))
+	local specIndex = (type(GetSpecialization) == "function") and GetSpecialization() or nil
+	API.DebugPrintf("Interrupt", 2,
+		"reason=%s unit=%s class=%s spec=%s spell=%s cooldown=%s state=%s canAttack=%s notInterruptible=%s",
+		tostring(reason),
+		tostring(unit),
+		tostring(classFile),
+		tostring(specIndex),
+		tostring(spellID),
+		tostring(cooldownState),
+		tostring(finalState),
+		tostring(owner and owner.canAttack),
+		tostring(castbar and castbar.notInterruptible))
 end
 
 local EvaluateBooleanVisualState = function(state, falseValue, trueValue)
@@ -198,60 +209,23 @@ local GetSpellCooldownReadyState = function(spellID)
 	return nil
 end
 
-local GetSpellUsableState = function(spellID)
-	if (type(spellID) ~= "number") then
-		return nil
-	end
-	if (C_Spell and C_Spell.IsSpellUsable) then
-		local okUsable, isUsable = pcall(C_Spell.IsSpellUsable, spellID)
-		if (okUsable) then
-			local usableState = EvaluateBooleanVisualState(isUsable, 0, 1)
-			if (type(usableState) == "number") then
-				return usableState
-			end
-		end
-	end
-	if (IsUsableSpell) then
-		local okUsable, isUsable = pcall(IsUsableSpell, spellID)
-		if (okUsable) then
-			local usableState = EvaluateBooleanVisualState(isUsable, 0, 1)
-			if (type(usableState) == "number") then
-				return usableState
-			end
-		end
-	end
-	return nil
-end
-
-local GetInterruptReadyState = function(spellID)
+local GetPrimaryInterruptReadyState = function()
+	local spellID = GetPrimaryInterruptSpellID()
 	if (type(spellID) ~= "number") then
 		return nil, nil
 	end
 	local cooldownState = GetSpellCooldownReadyState(spellID)
-	local usableState = GetSpellUsableState(spellID)
 	if (cooldownState == 1) then
-		if (usableState == 0) then
-			return 0, spellID
-		end
 		return 1, spellID
 	end
-	if (cooldownState == 0 or usableState == 0) then
+	if (cooldownState == 0) then
 		return 0, spellID
 	end
 	return nil, spellID
 end
 
-local IsPrimaryInterruptReady = function()
-	return GetInterruptReadyState(GetPrimaryInterruptSpellID())
-end
-
-local IsSecondaryInterruptReady = function()
-	return GetInterruptReadyState(GetSecondaryInterruptSpellID())
-end
-
 local InterruptVisualColors = {
 	primaryReady = Colors.cast,
-	secondaryReady = { 170/255, 110/255, 1, 1 },
 	unavailable = Colors.red,
 	locked = Colors.gray
 }
@@ -292,6 +266,7 @@ end
 
 API.GetInterruptCastVisualState = function(castbar)
 	if (not ShouldUseEnemyInterruptVisuals(castbar)) then
+		EmitInterruptDebug(castbar, "not_enemy", nil, nil, "base")
 		return "base", nil, nil
 	end
 	local notInterruptible = castbar and castbar.notInterruptible
@@ -299,35 +274,30 @@ API.GetInterruptCastVisualState = function(castbar)
 		notInterruptible = false
 	end
 	if (notInterruptible) then
+		EmitInterruptDebug(castbar, "locked", nil, nil, "locked")
 		return "locked", nil, nil
 	end
-	local primaryReady, primarySpellID = IsPrimaryInterruptReady()
+	local primaryReady, primarySpellID = GetPrimaryInterruptReadyState()
 	if (IsSecretValue(primaryReady) or type(primaryReady) ~= "number") then
 		primaryReady = nil
 	end
-	local secondaryReady, secondarySpellID = IsSecondaryInterruptReady()
-	if (IsSecretValue(secondaryReady) or type(secondaryReady) ~= "number") then
-		secondaryReady = nil
-	end
 
 	if (primaryReady == 1) then
-		return "primary-ready", primarySpellID, secondarySpellID
+		EmitInterruptDebug(castbar, "ready", primarySpellID, primaryReady, "primary-ready")
+		return "primary-ready", primarySpellID, nil
 	end
-	if (secondaryReady == 1) then
-		return "secondary-ready", primarySpellID, secondarySpellID
+	if (primaryReady == 0) then
+		EmitInterruptDebug(castbar, "cooldown", primarySpellID, primaryReady, "unavailable")
+		return "unavailable", primarySpellID, nil
 	end
-	if (primaryReady == 0 or secondaryReady == 0) then
-		return "unavailable", primarySpellID, secondarySpellID
-	end
-	return "base", primarySpellID, secondarySpellID
+	EmitInterruptDebug(castbar, "unknown", primarySpellID, primaryReady, "base")
+	return "base", primarySpellID, nil
 end
 
 API.GetInterruptCastColor = function(castbar, fallbackColor)
 	local state, primarySpellID, secondarySpellID = API.GetInterruptCastVisualState(castbar)
 	if (state == "primary-ready") then
 		return InterruptVisualColors.primaryReady, state, primarySpellID, secondarySpellID
-	elseif (state == "secondary-ready") then
-		return InterruptVisualColors.secondaryReady, state, primarySpellID, secondarySpellID
 	elseif (state == "unavailable") then
 		return InterruptVisualColors.unavailable, state, primarySpellID, secondarySpellID
 	elseif (state == "locked") then

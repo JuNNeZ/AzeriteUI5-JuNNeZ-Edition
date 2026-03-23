@@ -27,7 +27,6 @@ local _, ns = ...
 
 -- Lua API
 local bit_bor = bit.bor
-local ipairs = ipairs
 local select, type = select, type
 local SPELL_BANK_PLAYER = (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player) or 0
 local SPELL_BANK_PET = (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet) or 1
@@ -38,7 +37,7 @@ ns.AuraData = {
 	SpellParents = {}, 		-- [spellID] = <number> (spellID of parent spell)
 	Priority = {}, 			-- [spellID] = <boolean,nil> (true/false)
 	Hidden = {}, 			-- [spellID] = <boolean,nil> (true/false)
-	InterruptPriority = {},	-- [classFile] = { spellID, ... } retail/current interrupt priority
+	InterruptPriority = {},	-- [classFile] = { [specIndex] = { spellID, ... }, ALL = { spellID, ... } } retail/current interrupt priority
 	KnownInterruptSpells = {}, -- cached known interrupt list for the current player
 	Flags = {
 
@@ -128,11 +127,11 @@ local IsSpellKnownForInterrupt = function(spellID)
 		return false
 	end
 	if (C_SpellBook and C_SpellBook.IsSpellKnownOrInSpellBook) then
-		local okPlayer, knownPlayer = pcall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID, SPELL_BANK_PLAYER, true)
+		local okPlayer, knownPlayer = pcall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID)
 		if (okPlayer and knownPlayer) then
 			return true
 		end
-		local okPet, knownPet = pcall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID, SPELL_BANK_PET, true)
+		local okPet, knownPet = pcall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID, SPELL_BANK_PET)
 		if (okPet and knownPet) then
 			return true
 		end
@@ -156,30 +155,85 @@ local IsSpellKnownForInterrupt = function(spellID)
 	return false
 end
 
-ns.AuraData.GetInterruptPriority = function(classFile)
+local GetPlayerInterruptClassFile = function()
+	local classFile = UnitClassBase and UnitClassBase("player")
+	if (type(classFile) ~= "string" or classFile == "") then
+		local _, fallbackClass = UnitClass("player")
+		classFile = fallbackClass
+	end
+	return classFile
+end
+
+local GetPlayerInterruptSpecialization = function()
+	if (type(GetSpecialization) ~= "function") then
+		return nil
+	end
+	local specializationIndex = GetSpecialization()
+	if (type(specializationIndex) ~= "number" or specializationIndex < 1) then
+		return nil
+	end
+	return specializationIndex
+end
+
+local BuildInterruptPriority = function(prioritySet, classFile, specializationIndex)
 	if (type(classFile) ~= "string" or classFile == "") then
 		return nil
 	end
-	return ns.AuraData.InterruptPriority[classFile]
+	local priority = prioritySet[classFile]
+	if (type(priority) ~= "table") then
+		return nil
+	end
+	if (#priority > 0) then
+		return priority
+	end
+	local resolved = {}
+	if (type(specializationIndex) == "number") then
+		local specPriority = priority[specializationIndex]
+		if (type(specPriority) == "table") then
+			for index = 1, #specPriority do
+				resolved[#resolved + 1] = specPriority[index]
+			end
+		end
+	end
+	local sharedPriority = priority.ALL
+	if (type(sharedPriority) == "table") then
+		for index = 1, #sharedPriority do
+			resolved[#resolved + 1] = sharedPriority[index]
+		end
+	end
+	if (#resolved == 0) then
+		return nil
+	end
+	return resolved
 end
 
-ns.AuraData.RefreshKnownInterruptSpells = function(classFile)
+ns.AuraData.GetInterruptPriority = function(classFile, specializationIndex)
+	if (type(classFile) ~= "string" or classFile == "") then
+		classFile = GetPlayerInterruptClassFile()
+	end
+	if (type(specializationIndex) ~= "number") then
+		specializationIndex = GetPlayerInterruptSpecialization()
+	end
+	return BuildInterruptPriority(ns.AuraData.InterruptPriority, classFile, specializationIndex)
+end
+
+ns.AuraData.RefreshKnownInterruptSpells = function(classFile, specializationIndex)
 	local known = ns.AuraData.KnownInterruptSpells
 	for index = #known, 1, -1 do
 		known[index] = nil
 	end
 	if (type(classFile) ~= "string" or classFile == "") then
-		classFile = UnitClassBase and UnitClassBase("player")
-		if (type(classFile) ~= "string" or classFile == "") then
-			local _, fallbackClass = UnitClass("player")
-			classFile = fallbackClass
-		end
+		classFile = GetPlayerInterruptClassFile()
 	end
-	local priority = ns.AuraData.GetInterruptPriority(classFile)
+	if (type(specializationIndex) ~= "number") then
+		specializationIndex = GetPlayerInterruptSpecialization()
+	end
+	local priority = ns.AuraData.GetInterruptPriority(classFile, specializationIndex)
 	if (type(priority) ~= "table") then
 		return known
 	end
-	for _, spellID in ipairs(priority) do
+	for index = 1, #priority do
+		local spellID = priority[index]
 		if (IsSpellKnownForInterrupt(spellID)) then
 			known[#known + 1] = spellID
 		end
@@ -187,10 +241,10 @@ ns.AuraData.RefreshKnownInterruptSpells = function(classFile)
 	return known
 end
 
-ns.AuraData.GetKnownInterruptSpells = function(classFile)
+ns.AuraData.GetKnownInterruptSpells = function(classFile, specializationIndex)
 	local known = ns.AuraData.KnownInterruptSpells
 	if (#known == 0) then
-		return ns.AuraData.RefreshKnownInterruptSpells(classFile)
+		return ns.AuraData.RefreshKnownInterruptSpells(classFile, specializationIndex)
 	end
 	return known
 end
@@ -227,26 +281,54 @@ Add( 96231, "INTERRUPT") 				-- Rebuke (Paladin)
 Add( 15487, "INTERRUPT") 				-- Silence (Priest)
 Add( 91807, "INTERRUPT") 				-- Shambling Rush (Death Knight)
 Add(217824, "INTERRUPT") 				-- Shield of Virtue (Protection PvP Talent)
-Add( 93985, "INTERRUPT") 				-- Skull Bash (Feral/Guardian)
+Add(106839, "INTERRUPT") 				-- Skull Bash (Feral/Guardian)
 Add(116705, "INTERRUPT") 				-- Spear Hand Strike (Monk)
 Add( 19647, "INTERRUPT") 				-- Spell Lock (Warlock)
+Add(119910, "INTERRUPT") 				-- Spell Lock (Warlock)
 Add(132409, "INTERRUPT") 				-- Spell Lock (Warlock)
+Add(212619, "INTERRUPT") 				-- Call Felhunter (Warlock PvP Talent)
 Add( 57994, "INTERRUPT") 				-- Wind Shear (Shaman)
 
 ns.AuraData.InterruptPriority = {
-	DEATHKNIGHT = { 47528, 91807 },
-	DEMONHUNTER = { 183752 },
-	DRUID = { 93985 },
-	EVOKER = { 351338 },
-	HUNTER = { 147362, 187707 },
-	MAGE = { 2139 },
-	MONK = { 116705 },
-	PALADIN = { 96231, 31935, 217824 },
-	PRIEST = { 15487 },
-	ROGUE = { 1766 },
-	SHAMAN = { 57994 },
-	WARLOCK = { 19647, 132409 },
-	WARRIOR = { 6552 }
+	DEATHKNIGHT = {
+		ALL = { 47528 }
+	},
+	DEMONHUNTER = {
+		ALL = { 183752 }
+	},
+	DRUID = {
+		ALL = { 38675, 78675, 106839 }
+	},
+	EVOKER = {
+		ALL = { 351338 }
+	},
+	HUNTER = {
+		ALL = { 147362, 187707 }
+	},
+	MAGE = {
+		ALL = { 2139 }
+	},
+	MONK = {
+		ALL = { 116705 }
+	},
+	PALADIN = {
+		ALL = { 96231, 31935 }
+	},
+	PRIEST = {
+		ALL = { 15487 }
+	},
+	ROGUE = {
+		ALL = { 1766 }
+	},
+	SHAMAN = {
+		ALL = { 57994 }
+	},
+	WARLOCK = {
+		ALL = { 89766, 119910 }
+	},
+	WARRIOR = {
+		ALL = { 6552 }
+	}
 }
 
 do

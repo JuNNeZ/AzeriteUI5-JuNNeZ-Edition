@@ -1445,10 +1445,15 @@ local Castbar_RefreshInterruptVisuals = function(element)
 	local db = ns.GetConfig("NamePlates")
 
 	local textColor = db.CastBarNameColor
+	local barColor = db.CastBarColor
 	if (not element.__owner.isPRD) then
-		local interruptTextColor = ns.API.GetInterruptCastColor(element, db.CastBarNameColor)
+		local interruptTextColor, state = ns.API.GetInterruptCastColor(element, db.CastBarNameColor)
 		if (type(interruptTextColor) == "table") then
 			textColor = interruptTextColor
+		end
+		local interruptBarColor = ns.API.GetInterruptCastColor(element, db.CastBarColor)
+		if (type(interruptBarColor) == "table") then
+			barColor = interruptBarColor
 		end
 	end
 
@@ -1459,7 +1464,12 @@ local Castbar_RefreshInterruptVisuals = function(element)
 		local prdR, prdG, prdB, prdA = unpack(db.HealthCastOverlayColor)
 		element:SetStatusBarColor(prdR, prdG, prdB, prdA or 1)
 	else
-		ns.API.ApplyInterruptCastBarColor(element, db.CastBarColor)
+		local barR, barG, barB, barA = unpack(barColor)
+		element:SetStatusBarColor(barR, barG, barB, barA or 1)
+		local texture = element.GetStatusBarTexture and element:GetStatusBarTexture()
+		if (texture and texture.SetVertexColor) then
+			texture:SetVertexColor(barR, barG, barB, barA or 1)
+		end
 	end
 
 	NamePlate_PostUpdateHoverElements(element.__owner)
