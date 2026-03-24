@@ -4,33 +4,18 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
-## 5.3.23-JuNNeZ-beta2 (2026-03-23)
+## 5.3.23-JuNNeZ (2026-03-24)
 
 ### Highlights
-- Added a development checkpoint for the hostile interruptible castbar rewrite so testing can continue from a tagged beta build.
+- Fixed a recurring `/az` options crash that could block the raid-frame and party health-color settings pages from opening when a locale lookup returned no value.
+- Improved hostile interruptible castbar colors so target and nameplate casts show ready, unavailable, and protected states during combat (work-in-progress, may still fall back under some conditions).
 
 ### Access
-- No new menu path. This beta is a work-in-progress checkpoint and the interruptible hostile castbar colors are not reliable yet.
-
-### Why
-- The current interruptible castbar work still hits unstable combat-time cooldown and interruptibility reads, so the hostile castbar can fall back to the wrong color while the rewrite is in progress.
+- Open `/az -> Unit Frames -> Raid Frames (5/25/40)` or `/az -> Unit Frames -> Party` — health-color sections now open reliably again.
 
 ### Internal
-- Synced AzeriteUI's interrupt source data to the live Platynator map, simplified the resolver to a single priority interrupt, added temporary debug tracing, and left the hostile interruptible castbar path marked as WIP for the next follow-up pass.
-
-## 5.3.23-JuNNeZ-beta1 (2026-03-22)
-
-### Highlights
-- Fixed hostile castbar interrupt colors so target and nameplate casts keep the correct ready, unavailable, and protected colors during combat instead of falling back to the base cast color.
-
-### Access
-- No new menu path. This beta is a combat castbar hotfix for hostile target and nameplate casts.
-
-### Why
-- WoW 12 combat can return secret readiness values for interrupt cooldown and usability checks. The earlier interrupt-color pass only trusted plain Lua booleans, which let enemy castbars drop back to the base color during combat even when AzeriteUI should still show interrupt-ready state.
-
-### Internal
-- Reworked the shared interrupt readiness helper around secret-safe visual evaluation and added a shared event/ticker refresh path so target and nameplate castbars stay in sync.
+- Hardened `AddHealthColorOptions()` to fall back to embedded English text when locale keys are missing.
+- Reworked the shared interrupt resolver with spec-aware primary/secondary pools and secret-safe cooldown evaluation.
 
 ## 5.3.22-JuNNeZ (2026-03-22)
 

@@ -922,6 +922,9 @@ local GenerateOptions = function()
 	end
 
 	local AddHealthColorOptions = function(suboptions, setter, getter, getoption, isdisabled, config)
+		local GetLocalizedText = function(text)
+			return rawget(L, text) or text
+		end
 		local disabled = function(info)
 			return isdisabled(info) or getoption(info, "useClassColors") == false
 		end
@@ -933,16 +936,16 @@ local GenerateOptions = function()
 		local summaryDesc
 
 		if (scope == "party") then
-			useClassColorsDesc = L["Use class and reaction colors on party health bars. Turn this off to keep them flat health green."]
-			useBlizzardDesc = L["Use Blizzard's default class and reaction palette on party health bars instead of AzeriteUI's custom colors."]
-			mouseoverDesc = L["Keep party health bars on flat health green until you mouse over them, then show class and reaction colors."]
-			summaryDesc = L["Choose whether party bars stay health green, use AzeriteUI class colors, use Blizzard class colors, or only reveal class colors on mouseover."]
+			useClassColorsDesc = GetLocalizedText("Use class and reaction colors on party health bars. Turn this off to keep them flat health green.")
+			useBlizzardDesc = GetLocalizedText("Use Blizzard's default class and reaction palette on party health bars instead of AzeriteUI's custom colors.")
+			mouseoverDesc = GetLocalizedText("Keep party health bars on flat health green until you mouse over them, then show class and reaction colors.")
+			summaryDesc = GetLocalizedText("Choose whether party bars stay health green, use AzeriteUI class colors, use Blizzard class colors, or only reveal class colors on mouseover.")
 		else
 			local label = config.countLabel or "raid"
-			useClassColorsDesc = L["Use class and reaction colors on "] .. label .. " health bars. Turn this off to keep them flat health green."
-			useBlizzardDesc = L["Use Blizzard's default class and reaction colors on "] .. label .. " health bars instead of AzeriteUI's custom colors."
-			mouseoverDesc = L["Keep "] .. label .. " health bars on flat health green until you mouse over them, then show class and reaction colors."
-			summaryDesc = L["Keep raid bars health green, switch to AzeriteUI class colors, switch to Blizzard class colors, or only reveal class colors on mouseover."]
+			useClassColorsDesc = GetLocalizedText("Use class and reaction colors on ") .. label .. " health bars. Turn this off to keep them flat health green."
+			useBlizzardDesc = GetLocalizedText("Use Blizzard's default class and reaction colors on ") .. label .. " health bars instead of AzeriteUI's custom colors."
+			mouseoverDesc = GetLocalizedText("Keep ") .. label .. " health bars on flat health green until you mouse over them, then show class and reaction colors."
+			summaryDesc = GetLocalizedText("Keep raid bars health green, switch to AzeriteUI class colors, switch to Blizzard class colors, or only reveal class colors on mouseover.")
 		end
 
 		suboptions.args.healthColorsHeader = {

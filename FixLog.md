@@ -3,6 +3,18 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-24
+
+- **5.3.23 stable release prep applied:** Bumped the addon/build metadata from `5.3.23-JuNNeZ-beta2` to `5.3.23-JuNNeZ`, updated the changelog to a delta-only stable entry covering the options crash hardening and the interrupt castbar rewrite, and collapsed the two beta changelog entries into a single stable release section.
+  - **Files Modified:** `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `CHANGELOG.md`, `FixLog.md`
+- **Recurring unit-frame health-color options crash started:** Verifying the fresh `AceConfigRegistry-3.0` report that `/az -> Unit Frames -> Raid Frames (5)` is again resolving `healthColorsDescription.name` as `nil` despite the March 22 hotfix.
+  - **Files Targeted:** `FixLog.md`, `Options/OptionsPages/UnitFrames.lua`
+- **Recurring unit-frame health-color options crash applied:** Hardened the health-color description builder so the raid and party option rows now fall back to their embedded English text whenever a locale lookup does not return a value, preventing AceConfig from receiving `nil` for `healthColorsDescription.name`.
+  - **Root Cause:** The original March 22 fix removed the lowercase-local typo, but this options path still depended on strict `L[...]` lookups for computed description text. If the active locale table did not expose one of those keys at runtime, the helper could still bubble `nil` into AceConfig even though the option structure itself was otherwise valid.
+  - **Safety:** Narrow options-only hardening in `AddHealthColorOptions()`. No saved variables, unit-frame runtime behavior, or unrelated option groups were changed.
+  - **Verification:** `luac -p 'Options/OptionsPages/UnitFrames.lua'` passed. In-game `/reload`, then reopening `/az -> Unit Frames -> Raid Frames (5/25/40)` should confirm the page opens without the AceConfig validation error.
+  - **Files Modified:** `Options/OptionsPages/UnitFrames.lua`, `FixLog.md`
+
 ## 2026-03-23
 
 - **5.3.23 beta2 checkpoint release prep started:** Capturing the current interruptible-castbar investigation in a new beta tag, updating version metadata, and explicitly marking the hostile interruptible castbar path as WIP before Wednesday's follow-up.
