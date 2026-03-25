@@ -4,6 +4,16 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.24-JuNNeZ (2026-03-25)
+
+### Highlights
+- Fixed action button cooldowns throwing "Secret values are only allowed during untainted execution" errors in WoW 12.0.1, which caused 100+ errors per session during normal play.
+- Fixed BugSack copy-session snapshot showing a stale hardcoded AzeriteUI version instead of the actual running version.
+
+### Internal
+- `LibActionButton-1.0-GE`: On WoW 12.0+, `UpdateCooldown` now uses `C_ActionBar.GetActionCooldownDuration` + `SetCooldownFromDurationObject` for action buttons, bypassing the secret-value taint restriction entirely. Falls back to `ActionButton_ApplyCooldown` on older API, and adds `IsSafeNumber` guards on the legacy path.
+- `BugSack.lua`: Replace hardcoded `AZERITEUI_VERSION` string with a live `C_AddOns.GetAddOnMetadata` lookup so the exported version always matches the running TOC.
+
 ## 5.3.23-JuNNeZ (2026-03-24)
 
 ### Highlights

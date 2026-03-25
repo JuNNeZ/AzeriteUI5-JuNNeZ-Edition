@@ -23,7 +23,7 @@
 	SOFTWARE.
 
 --]]
-local _, ns = ...
+local Addon, ns = ...
 
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
@@ -68,7 +68,7 @@ local function GetSessionSnapshot(sessionId, label)
 	end
 
 	local total = #errors
-	local AZERITEUI_VERSION = "5.3.14-JuNNeZ" -- keep in sync with .toc
+	local AZERITEUI_VERSION = C_AddOns.GetAddOnMetadata(Addon, "Version") or "unknown"
 	local errorLines = {}
 	for index, err in ipairs(errors) do
 		errorLines[#errorLines + 1] = ""

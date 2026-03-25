@@ -2576,6 +2576,8 @@ local function OnCooldownDone(self, requireCooldownUpdate)
 	end
 end
 
+local HAS_DURATION_OBJECT_API = C_ActionBar and C_ActionBar.GetActionCooldownDuration ~= nil
+
 local defaultCooldownInfo = { startTime = 0; duration = 0; isEnabled = false; modRate = 0 }
 local defaultChargeInfo = { currentCharges = 0; maxCharges = 0; cooldownStartTime = 0; cooldownDuration = 0; chargeModRate = 0 }
 local defaultLossOfControlInfo = { startTime = 0; duration = 0; modRate = 0 }
@@ -2633,8 +2635,27 @@ function UpdateCooldown(self)
 		chargeInfo = defaultChargeInfo
 	end
 
-	-- 12.0 helper function
-	if ActionButton_ApplyCooldown then
+	-- 12.0+ duration object API avoids passing secret values through tainted code
+	if HAS_DURATION_OBJECT_API and self._state_type == "action" then
+		local action = self._state_action
+		local cooldownDuration = C_ActionBar.GetActionCooldownDuration(action)
+		local chargeDuration = C_ActionBar.GetActionChargeCooldownDuration and C_ActionBar.GetActionChargeCooldownDuration(action)
+		local locDuration = C_ActionBar.GetActionLossOfControlCooldownDuration and C_ActionBar.GetActionLossOfControlCooldownDuration(action)
+
+		if cooldownDuration then
+			self.cooldown:SetCooldownFromDurationObject(cooldownDuration)
+		end
+		if self.chargeCooldown and chargeDuration then
+			self.chargeCooldown:SetCooldownFromDurationObject(chargeDuration)
+		elseif self.chargeCooldown then
+			ClearChargeCooldown(self)
+		end
+		if self.lossOfControlCooldown and locDuration then
+			self.lossOfControlCooldown:SetCooldownFromDurationObject(locDuration)
+		end
+
+		lib.callbacks:Fire("OnCooldownUpdate", self, nil, nil, nil, cooldownInfo, chargeInfo, lossOfControlInfo)
+	elseif ActionButton_ApplyCooldown then
 		ActionButton_ApplyCooldown(self.cooldown, cooldownInfo, self.chargeCooldown, chargeInfo, self.lossOfControlCooldown, lossOfControlInfo)
 
 		lib.callbacks:Fire("OnCooldownUpdate", self, nil, nil, nil, cooldownInfo, chargeInfo, lossOfControlInfo)
@@ -2643,8 +2664,8 @@ function UpdateCooldown(self)
 		local start, duration, enable, modRate = cooldownInfo.startTime, cooldownInfo.duration, cooldownInfo.isEnabled, cooldownInfo.modRate
 		local charges, maxCharges, chargeStart, chargeDuration, chargeModRate = chargeInfo.currentCharges, chargeInfo.maxCharges, chargeInfo.cooldownStartTime, chargeInfo.cooldownDuration, chargeInfo.chargeModRate
 
-		local hasLocCooldown = locStart and locDuration and locStart > 0 and locDuration > 0
-		local hasCooldown = enable and start and duration and start > 0 and duration > 0
+		local hasLocCooldown = IsSafeNumber(locStart) and IsSafeNumber(locDuration) and locStart > 0 and locDuration > 0
+		local hasCooldown = enable and IsSafeNumber(start) and IsSafeNumber(duration) and start > 0 and duration > 0
 		if hasLocCooldown and ((not hasCooldown) or ((locStart + locDuration) > (start + duration))) then
 			if self.cooldown.currentCooldownType ~= _G.COOLDOWN_TYPE_LOSS_OF_CONTROL then
 				self.cooldown.currentCooldownType = _G.COOLDOWN_TYPE_LOSS_OF_CONTROL

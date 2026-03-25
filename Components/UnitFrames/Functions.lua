@@ -154,34 +154,9 @@ local EmitInterruptDebug = function(castbar, reason, spellID, cooldownState, fin
 		tostring(castbar and castbar.notInterruptible))
 end
 
-local EvaluateBooleanVisualState = function(state, falseValue, trueValue)
-	if (C_CurveUtil and C_CurveUtil.EvaluateColorValueFromBoolean) then
-		local okValue, evaluated = pcall(C_CurveUtil.EvaluateColorValueFromBoolean, state, falseValue, trueValue)
-		if (okValue and type(evaluated) == "number" and (not IsSecretValue(evaluated))) then
-			return evaluated
-		end
-	end
-	if (type(state) == "boolean" and (not IsSecretValue(state))) then
-		return state and trueValue or falseValue
-	end
-	return nil
-end
-
 local GetSpellCooldownReadyState = function(spellID)
 	if (type(spellID) ~= "number") then
 		return nil
-	end
-	if (C_Spell and C_Spell.GetSpellCooldownDuration) then
-		local okDuration, durationObject = pcall(C_Spell.GetSpellCooldownDuration, spellID)
-		if (okDuration and durationObject and durationObject.IsZero) then
-			local okIsZero, isZero = pcall(durationObject.IsZero, durationObject)
-			if (okIsZero) then
-				local readyState = EvaluateBooleanVisualState(isZero, 0, 1)
-				if (type(readyState) == "number") then
-					return readyState
-				end
-			end
-		end
 	end
 	if (C_Spell and C_Spell.GetSpellCooldown) then
 		local okCooldown, cooldownInfo = pcall(C_Spell.GetSpellCooldown, spellID)
@@ -225,7 +200,7 @@ local GetPrimaryInterruptReadyState = function()
 end
 
 local InterruptVisualColors = {
-	primaryReady = Colors.cast,
+	primaryReady = { 1, .82, 0 },
 	unavailable = Colors.red,
 	locked = Colors.gray
 }
