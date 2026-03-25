@@ -85,10 +85,28 @@ A default texture will be applied to the StatusBar and Texture widgets if they d
 
 local _, ns = ...
 local oUF = ns.oUF
+local API = ns.API
 
 local FALLBACK_ICON = 136243 -- Interface\ICONS\Trade_Engineering
 local FAILED = _G.FAILED or 'Failed'
 local INTERRUPTED = _G.INTERRUPTED or 'Interrupted'
+
+local function NormalizeNotInterruptible(element, value)
+	if(API and API.SafeBool) then
+		return API.SafeBool(value, element, '__AzeriteUI_NotInterruptible', false)
+	end
+
+	if(type(value) == 'boolean' and not (issecretvalue and issecretvalue(value))) then
+		element.__AzeriteUI_NotInterruptible = value
+		return value
+	end
+
+	if(type(element.__AzeriteUI_NotInterruptible) == 'boolean') then
+		return element.__AzeriteUI_NotInterruptible
+	end
+
+	return false
+end
 
 local function resetAttributes(self)
 	self.castID = nil
@@ -96,6 +114,7 @@ local function resetAttributes(self)
 	self.channeling = nil
 	self.empowering = nil
 	self.notInterruptible = nil
+	self.__AzeriteUI_NotInterruptible = nil
 	self.spellID = nil
 	self.spellName = nil
 
@@ -204,13 +223,17 @@ local function CastStart(self, event, unit)
 	end
 
 	local direction, duration = Enum.StatusBarTimerDirection.ElapsedTime
-	local name, text, texture, startTime, endTime, isTradeSkill, _, notInterruptible, spellID, castID = UnitCastingInfo(unit)
+	local castGUID, castBarID
+	local name, text, texture, startTime, endTime, isTradeSkill, _, notInterruptible, spellID
+	name, text, texture, startTime, endTime, isTradeSkill, castGUID, notInterruptible, spellID, castBarID = UnitCastingInfo(unit)
+	local castID = castBarID or castGUID
 	if(name) then
 		element.casting = true
 		duration = UnitCastingDuration(unit)
 	else
 		local isEmpowered
-		name, text, texture, startTime, endTime, isTradeSkill, notInterruptible, spellID, isEmpowered, _, castID = UnitChannelInfo(unit)
+		name, text, texture, startTime, endTime, isTradeSkill, notInterruptible, spellID, isEmpowered, _, castBarID = UnitChannelInfo(unit)
+		castID = castBarID
 		if(isEmpowered) then
 			element.empowering = true
 			duration = UnitEmpoweredChannelDuration(unit)
@@ -232,7 +255,7 @@ local function CastStart(self, event, unit)
 	end
 
 	element.delay = 0
-	element.notInterruptible = notInterruptible
+	element.notInterruptible = NormalizeNotInterruptible(element, notInterruptible)
 	element.holdTime = 0
 	element.castID = castID
 	element.spellID = spellID
@@ -257,7 +280,8 @@ local function CastStart(self, event, unit)
 	end
 
 	if(element.Icon) then element.Icon:SetTexture(texture or FALLBACK_ICON) end
-	if(element.Shield) then element.Shield:SetAlphaFromBoolean(notInterruptible, 1, 0) end
+	-- Temporary: disable shield-driven interrupt visuals while isolating cast payload behavior.
+	-- if(element.Shield) then element.Shield:SetAlphaFromBoolean(element.notInterruptible, 1, 0) end
 	if(element.Spark) then element.Spark:Show() end
 	if(element.Text) then element.Text:SetText(text) end
 	if(element.Time) then element.Time:SetText() end
@@ -499,9 +523,10 @@ local function CastInterruptible(self, event, unit)
 	if(not element:IsShown()) then return end
 	-- ISSUE: we can't verify if this is for an active cast/channel/empower without castID
 
-	element.notInterruptible = event == 'UNIT_SPELLCAST_NOT_INTERRUPTIBLE'
+	element.notInterruptible = NormalizeNotInterruptible(element, event == 'UNIT_SPELLCAST_NOT_INTERRUPTIBLE')
 
-	if(element.Shield) then element.Shield:SetAlphaFromBoolean(element.notInterruptible, 1, 0) end
+	-- Temporary: disable shield-driven interrupt visuals while isolating cast payload behavior.
+	-- if(element.Shield) then element.Shield:SetAlphaFromBoolean(element.notInterruptible, 1, 0) end
 
 	--[[ Callback: Castbar:PostCastInterruptible(unit)
 	Called after the element has been updated when a spell cast has become interruptible or uninterruptible.

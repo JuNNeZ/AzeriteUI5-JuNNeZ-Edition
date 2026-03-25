@@ -422,6 +422,53 @@ local function GuardAuraUtilUnpack()
 	end
 end
 
+local function IsSecretWidgetTooltipError(err)
+	if (type(err) ~= "string") then
+		return false
+	end
+	if (not string.find(err, "secret", 1, true)) then
+		return false
+	end
+	return string.find(err, "Blizzard_UIWidget", 1, true)
+		or string.find(err, "UIWidgetTemplateTextWithState", 1, true)
+		or string.find(err, "UIWidgetManager", 1, true)
+end
+
+local function GuardTooltipWidgetSets()
+	if (type(_G.GameTooltip_AddWidgetSet) ~= "function"
+		or _G.__AzUI_W12_GameTooltipAddWidgetSetWrapped) then
+		return
+	end
+
+	_G.__AzUI_W12_GameTooltipAddWidgetSetWrapped = true
+	local original = _G.GameTooltip_AddWidgetSet
+	local Pack = table.pack or function(...)
+		return { n = select("#", ...), ... }
+	end
+
+	_G.GameTooltip_AddWidgetSet = function(...)
+		local results = Pack(pcall(original, ...))
+		if (results[1]) then
+			return unpack(results, 2, results.n or #results)
+		end
+
+		local err = results[2]
+		if (not IsSecretWidgetTooltipError(err)) then
+			error(err, 0)
+		end
+
+		local tooltip = select(1, ...)
+		local widgetContainer = tooltip and tooltip.widgetContainer
+		if (widgetContainer and widgetContainer.Hide) then
+			pcall(widgetContainer.Hide, widgetContainer)
+		end
+		if (tooltip and tooltip.Layout and tooltip.NineSlice and tooltip.NineSlice.Hide) then
+			tooltip:Layout()
+		end
+		return nil
+	end
+end
+
 local function QuarantineCompactFrames()
 	if (not ShouldHandleCustomUnitFrames()) then
 		return
@@ -569,6 +616,7 @@ local function ApplyGuards()
 	GuardPartyFrameGlobals()
 	GuardCompactUnitFrameGlobals()
 	GuardAuraUtilUnpack()
+	GuardTooltipWidgetSets()
 	ApplyBlizzardFrameQuarantine()
 	HookCompactFrameLifecycle()
 end
@@ -587,7 +635,9 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 			or addonName == "Blizzard_UnitFrame"
 			or addonName == "Blizzard_CompactRaidFrames"
 			or addonName == "Blizzard_CUFProfiles"
-			or addonName == "Blizzard_ArenaUI") then
+			or addonName == "Blizzard_ArenaUI"
+			or addonName == "Blizzard_GameTooltip"
+			or addonName == "Blizzard_UIWidgets") then
 			ApplyGuards()
 			if (C_Timer) then
 				C_Timer.After(0, ApplyGuards)

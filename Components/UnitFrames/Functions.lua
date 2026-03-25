@@ -142,7 +142,7 @@ local EmitInterruptDebug = function(castbar, reason, spellID, cooldownState, fin
 	local classFile = UnitClassBase and UnitClassBase("player") or select(2, UnitClass("player"))
 	local specIndex = (type(GetSpecialization) == "function") and GetSpecialization() or nil
 	API.DebugPrintf("Interrupt", 2,
-		"reason=%s unit=%s class=%s spec=%s spell=%s cooldown=%s state=%s canAttack=%s notInterruptible=%s",
+		"reason=%s unit=%s class=%s spec=%s spell=%s cooldown=%s state=%s canAttack=%s notInterruptible=%s shieldShown=%s shieldAlpha=%s",
 		tostring(reason),
 		tostring(unit),
 		tostring(classFile),
@@ -151,12 +151,51 @@ local EmitInterruptDebug = function(castbar, reason, spellID, cooldownState, fin
 		tostring(cooldownState),
 		tostring(finalState),
 		tostring(owner and owner.canAttack),
-		tostring(castbar and castbar.notInterruptible))
+		tostring(castbar and castbar.notInterruptible),
+		tostring(castbar and castbar.Shield and castbar.Shield.IsShown and castbar.Shield:IsShown()),
+		tostring(castbar and castbar.Shield and castbar.Shield.GetAlpha and castbar.Shield:GetAlpha()))
+end
+
+local ResolveInterruptSpellID = function(spellID)
+	if (type(spellID) ~= "number" or spellID <= 0) then
+		return nil
+	end
+	if (C_Spell and C_Spell.GetOverrideSpell) then
+		local resolvedSpellID = spellID
+		local seen = {}
+		for _ = 1, 5 do
+			if (seen[resolvedSpellID]) then
+				break
+			end
+			seen[resolvedSpellID] = true
+			local okOverride, overrideSpellID = pcall(C_Spell.GetOverrideSpell, resolvedSpellID)
+			if (not okOverride
+				or type(overrideSpellID) ~= "number"
+				or IsSecretValue(overrideSpellID)
+				or overrideSpellID <= 0
+				or overrideSpellID == resolvedSpellID) then
+				break
+			end
+			resolvedSpellID = overrideSpellID
+		end
+		return resolvedSpellID
+	end
+	return spellID
 end
 
 local GetSpellCooldownReadyState = function(spellID)
 	if (type(spellID) ~= "number") then
 		return nil
+	end
+	spellID = ResolveInterruptSpellID(spellID) or spellID
+	if (C_Spell and C_Spell.GetSpellCooldownDuration) then
+		local okDuration, durationObject = pcall(C_Spell.GetSpellCooldownDuration, spellID)
+		if (okDuration and durationObject and durationObject.IsZero) then
+			local okZero, isZero = pcall(durationObject.IsZero, durationObject)
+			if (okZero and type(isZero) == "boolean" and (not IsSecretValue(isZero))) then
+				return isZero and 1 or 0
+			end
+		end
 	end
 	if (C_Spell and C_Spell.GetSpellCooldown) then
 		local okCooldown, cooldownInfo = pcall(C_Spell.GetSpellCooldown, spellID)
@@ -199,6 +238,20 @@ local GetPrimaryInterruptReadyState = function()
 	return nil, spellID
 end
 
+local IsCastMarkedNotInterruptible = function(castbar)
+	local notInterruptible = castbar and castbar.notInterruptible
+	if (type(notInterruptible) == "boolean" and (not IsSecretValue(notInterruptible))) then
+		return notInterruptible
+	end
+
+	local cachedNotInterruptible = castbar and castbar.__AzeriteUI_NotInterruptible
+	if (type(cachedNotInterruptible) == "boolean" and (not IsSecretValue(cachedNotInterruptible))) then
+		return cachedNotInterruptible
+	end
+
+	return false
+end
+
 local InterruptVisualColors = {
 	primaryReady = { 1, .82, 0 },
 	unavailable = Colors.red,
@@ -206,8 +259,14 @@ local InterruptVisualColors = {
 }
 
 local IsEnemyUnitForInterruptVisuals = function(owner, unit)
-	if (owner and type(owner.canAttack) == "boolean") then
-		return owner.canAttack
+	if (owner and owner.isObjectPlate) then
+		return false
+	end
+	if (owner and owner.isFriendlyAssistableNPC) then
+		return false
+	end
+	if (owner and owner.canAttack == true) then
+		return true
 	end
 	if (UnitCanAttack) then
 		local okAttack, canAttack = pcall(UnitCanAttack, "player", unit)
@@ -220,6 +279,9 @@ local IsEnemyUnitForInterruptVisuals = function(owner, unit)
 		if (okReaction and type(reaction) == "number" and (not IsSecretValue(reaction))) then
 			return reaction <= 4
 		end
+	end
+	if (owner and owner.canAttack == false) then
+		return false
 	end
 	return false
 end
@@ -240,45 +302,46 @@ local ShouldUseEnemyInterruptVisuals = function(castbar)
 end
 
 API.GetInterruptCastVisualState = function(castbar)
+	local isActiveCast = castbar and (castbar.casting or castbar.channeling or castbar.empowering)
+	if (not isActiveCast) then
+		EmitInterruptDebug(castbar, "inactive", nil, nil, "base")
+		return "base"
+	end
 	if (not ShouldUseEnemyInterruptVisuals(castbar)) then
 		EmitInterruptDebug(castbar, "not_enemy", nil, nil, "base")
-		return "base", nil, nil
+		return "base"
 	end
-	local notInterruptible = castbar and castbar.notInterruptible
-	if (IsSecretValue(notInterruptible) or type(notInterruptible) ~= "boolean") then
-		notInterruptible = false
-	end
+	local notInterruptible = IsCastMarkedNotInterruptible(castbar)
 	if (notInterruptible) then
 		EmitInterruptDebug(castbar, "locked", nil, nil, "locked")
-		return "locked", nil, nil
+		return "locked"
 	end
 	local primaryReady, primarySpellID = GetPrimaryInterruptReadyState()
 	if (IsSecretValue(primaryReady) or type(primaryReady) ~= "number") then
 		primaryReady = nil
 	end
-
-	if (primaryReady == 1) then
-		EmitInterruptDebug(castbar, "ready", primarySpellID, primaryReady, "primary-ready")
-		return "primary-ready", primarySpellID, nil
-	end
 	if (primaryReady == 0) then
 		EmitInterruptDebug(castbar, "cooldown", primarySpellID, primaryReady, "unavailable")
-		return "unavailable", primarySpellID, nil
+		return "unavailable"
 	end
-	EmitInterruptDebug(castbar, "unknown", primarySpellID, primaryReady, "base")
-	return "base", primarySpellID, nil
+	if (primaryReady == 1) then
+		EmitInterruptDebug(castbar, "ready", primarySpellID, primaryReady, "primary-ready")
+		return "primary-ready"
+	end
+	EmitInterruptDebug(castbar, "unknown", primarySpellID, primaryReady, "unavailable")
+	return "unavailable"
 end
 
 API.GetInterruptCastColor = function(castbar, fallbackColor)
-	local state, primarySpellID, secondarySpellID = API.GetInterruptCastVisualState(castbar)
+	local state = API.GetInterruptCastVisualState(castbar)
 	if (state == "primary-ready") then
-		return InterruptVisualColors.primaryReady, state, primarySpellID, secondarySpellID
+		return InterruptVisualColors.primaryReady, state
 	elseif (state == "unavailable") then
-		return InterruptVisualColors.unavailable, state, primarySpellID, secondarySpellID
+		return InterruptVisualColors.unavailable, state
 	elseif (state == "locked") then
-		return InterruptVisualColors.locked, state, primarySpellID, secondarySpellID
+		return InterruptVisualColors.locked, state
 	end
-	return fallbackColor, state, primarySpellID, secondarySpellID
+	return fallbackColor, state
 end
 
 API.ApplyInterruptCastBarColor = function(castbar, fallbackColor, alphaOverride, interval)
@@ -331,9 +394,9 @@ end
 local UpdateInterruptCastBarDriver = function()
 	if (ActiveInterruptCastBarCount > 0) then
 		if (not InterruptCastBarRefreshFrame.__AzeriteUI_InterruptEventsRegistered) then
-			InterruptCastBarRefreshFrame:RegisterEvent("SPELL_UPDATE_USABLE")
 			InterruptCastBarRefreshFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
 			InterruptCastBarRefreshFrame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+			InterruptCastBarRefreshFrame:RegisterEvent("SPELL_UPDATE_CHARGES")
 			InterruptCastBarRefreshFrame.__AzeriteUI_InterruptEventsRegistered = true
 		end
 		if (not InterruptCastBarRefreshFrame.__AzeriteUI_InterruptTicker and C_Timer and C_Timer.NewTicker) then
@@ -347,9 +410,9 @@ local UpdateInterruptCastBarDriver = function()
 			InterruptCastBarRefreshFrame.__AzeriteUI_InterruptTicker = nil
 		end
 		if (InterruptCastBarRefreshFrame.__AzeriteUI_InterruptEventsRegistered) then
-			InterruptCastBarRefreshFrame:UnregisterEvent("SPELL_UPDATE_USABLE")
 			InterruptCastBarRefreshFrame:UnregisterEvent("SPELL_UPDATE_COOLDOWN")
 			InterruptCastBarRefreshFrame:UnregisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+			InterruptCastBarRefreshFrame:UnregisterEvent("SPELL_UPDATE_CHARGES")
 			InterruptCastBarRefreshFrame.__AzeriteUI_InterruptEventsRegistered = nil
 		end
 	end

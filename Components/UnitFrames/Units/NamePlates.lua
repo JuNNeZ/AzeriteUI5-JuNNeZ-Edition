@@ -1446,12 +1446,10 @@ local Castbar_RefreshInterruptVisuals = function(element)
 
 	local textColor = db.CastBarNameColor
 	local barColor = db.CastBarColor
+	local interruptState = "base"
 	if (not element.__owner.isPRD) then
-		local interruptTextColor, state = ns.API.GetInterruptCastColor(element, db.CastBarNameColor)
-		if (type(interruptTextColor) == "table") then
-			textColor = interruptTextColor
-		end
-		local interruptBarColor = ns.API.GetInterruptCastColor(element, db.CastBarColor)
+		local interruptBarColor
+		interruptBarColor, interruptState = ns.API.GetInterruptCastColor(element, db.CastBarColor)
 		if (type(interruptBarColor) == "table") then
 			barColor = interruptBarColor
 		end
@@ -1472,11 +1470,43 @@ local Castbar_RefreshInterruptVisuals = function(element)
 		end
 	end
 
+	local interruptMarker = element.InterruptMarker
+	if (interruptMarker) then
+		if (element.__owner.isPRD or interruptState == "base" or interruptState == "locked") then
+			interruptMarker:Hide()
+		else
+			interruptMarker:SetAlpha(interruptState == "primary-ready" and 1 or .45)
+			interruptMarker:Show()
+		end
+	end
+
 	NamePlate_PostUpdateHoverElements(element.__owner)
 end
 
 local Castbar_PostUpdate = function(element, unit)
 	ns.API.UpdateInterruptCastBarRefresh(element, Castbar_RefreshInterruptVisuals, "nameplate_postcast")
+end
+
+local Castbar_PostFail = function(element, _)
+	ns.API.ClearInterruptCastBarRefresh(element)
+	if (element.InterruptMarker) then
+		element.InterruptMarker:Hide()
+	end
+	local r, g, b = Colors.red[1], Colors.red[2], Colors.red[3]
+	if (element.Text) then
+		element.Text:SetTextColor(r, g, b, 1)
+	end
+	element:SetStatusBarColor(r, g, b, 1)
+	local texture = element.GetStatusBarTexture and element:GetStatusBarTexture()
+	if (texture and texture.SetVertexColor) then
+		texture:SetVertexColor(r, g, b, 1)
+	end
+	NamePlate_PostUpdateHoverElements(element.__owner)
+end
+
+local Castbar_PostStop = function(element, _)
+	ns.API.ClearInterruptCastBarRefresh(element)
+	Castbar_PostUpdate(element, _)
 end
 
 -- Callback that handles positions of elements
@@ -2006,12 +2036,15 @@ local style = function(self, unit, id)
 	self.Castbar = castbar
 	self.Castbar.PostCastStart = Castbar_PostUpdate
 	self.Castbar.PostCastUpdate = Castbar_PostUpdate
-	self.Castbar.PostCastStop = Castbar_PostUpdate
-	self.Castbar.PostCastFail = Castbar_PostUpdate
-	self.Castbar.PostCastInterrupted = Castbar_PostUpdate
+	self.Castbar.PostCastStop = Castbar_PostStop
+	self.Castbar.PostCastFail = Castbar_PostFail
+	self.Castbar.PostCastInterrupted = Castbar_PostFail
 	self.Castbar.PostCastInterruptible = Castbar_PostUpdate
 	ns.API.AttachScriptSafe(self.Castbar, "OnHide", function(element)
 		ns.API.ClearInterruptCastBarRefresh(element)
+		if (element.InterruptMarker) then
+			element.InterruptMarker:Hide()
+		end
 	end)
 
 	local castBackdrop = castbar:CreateTexture(nil, "BACKGROUND", nil, -1)
@@ -2032,6 +2065,14 @@ local style = function(self, unit, id)
 	end
 
 	self.Castbar.Text = castText
+
+	local interruptMarker = castbar:CreateTexture(nil, "OVERLAY", nil, 2)
+	interruptMarker:SetSize(14, 14)
+	interruptMarker:SetPoint("LEFT", castbar, "RIGHT", 4, 0)
+	interruptMarker:SetTexture(ns.API.GetMedia("grouprole-icons-tank"))
+	interruptMarker:Hide()
+
+	self.Castbar.InterruptMarker = interruptMarker
 
 	-- Health Value
 	--------------------------------------------

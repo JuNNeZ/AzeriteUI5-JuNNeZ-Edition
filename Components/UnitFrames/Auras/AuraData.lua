@@ -297,7 +297,7 @@ ns.AuraData.InterruptPriority = {
 		ALL = { 183752 }
 	},
 	DRUID = {
-		ALL = { 38675, 78675, 106839 }
+		ALL = { 106839, 78675 }
 	},
 	EVOKER = {
 		ALL = { 351338 }
@@ -324,7 +324,7 @@ ns.AuraData.InterruptPriority = {
 		ALL = { 57994 }
 	},
 	WARLOCK = {
-		ALL = { 89766, 119910 }
+		ALL = { 132409, 119910 }
 	},
 	WARRIOR = {
 		ALL = { 6552 }

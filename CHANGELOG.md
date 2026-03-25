@@ -4,6 +4,21 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.25-JuNNeZ (2026-03-25)
+
+### Highlights
+- Fixed a retail tooltip/widget crash that could throw `Blizzard_UIWidgetTemplateTextWithState.lua:35` errors when Blizzard tooltip widgets hit WoW 12 secret-value text sizing.
+- Enemy nameplate interrupt castbars are now partially working again, with clearer interrupt-ready and interrupt-on-cooldown visuals plus a right-side interrupt marker.
+- Interrupt castbars are still work-in-progress.
+- Known issue: some non-interruptible enemy casts can still show yellow as if they were interruptible.
+
+### Access
+- No new menu path. This release combines a tooltip crash fix with a WIP hostile nameplate castbar follow-up.
+
+### Internal
+- Added a narrow tooltip-widget fail-closed guard for the Blizzard secret-value text-height crash path on WoW 12.
+- Simplified the hostile interrupt visual resolver back toward a Platynator-style state model and isolated the live cast payload while the remaining non-interruptible-state bug is still under investigation.
+
 ## 5.3.24-JuNNeZ (2026-03-25)
 
 ### Highlights
