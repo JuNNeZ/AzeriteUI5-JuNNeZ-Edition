@@ -4,6 +4,25 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.26-JuNNeZ (2026-03-26)
+
+### Highlights
+- Removed the unused Classic/Cata/Wrath tracker, aura, and library baggage from this retail-only edition to keep the shipped addon focused on WoW 12.
+- Hardened retail aura handling again so nil/late aura payloads do not crash AzeriteUI aura widgets, and Blizzard buff-frame updates are no longer forced through the WoW 12 secret-value `expirationTime` path before being hidden.
+- Continued the active retail follow-up on nameplate interrupt visuals, health-percentage caching, and reverse-fill bar behavior.
+
+### Access
+- Added `/azdebug nameplates [unit]` as a targeted debug helper for the current nameplate interrupt-state investigation.
+
+### Known Not Working
+- `GetInterruptCastVisualState` / `Castbar_RefreshInterruptVisuals`: some protected enemy nameplate casts can still show yellow instead of grey.
+- `ResolveDisplayHealthPercent`: some unitframe health percentages can still stick at `100%` or another stale snapshot like `91%`.
+- Target castbar reverse-fill path: right-to-left cast fill still needs a dedicated fake-fill solution instead of the current native reverse-fill behavior.
+- Boss/Arena reverse-fill path: fake-fill and native `SetReverseFill(true)` are still fighting each other and can make bars look like they fill from the wrong side.
+
+### Internal
+- The retail cleanup deletes the unused Classic compatibility payloads listed in `TODO.md`, including dead tracker variants, non-retail aura datasets, and `oUF_Classic`/Classic-only support libs that are not loaded by the retail XML path.
+
 ## 5.3.25-JuNNeZ (2026-03-25)
 
 ### Highlights

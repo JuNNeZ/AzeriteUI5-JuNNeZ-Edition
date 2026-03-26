@@ -66,6 +66,31 @@
 - **5.3.25 full release finalization applied:** Updated the `5.3.25-JuNNeZ` release notes to lead with the tooltip/widget crash fix while still clearly marking the interrupt castbar work as WIP with the known non-interruptible yellow-state issue.
   - **Files Modified:** `FixLog.md`, `CHANGELOG.md`
 
+## 2026-03-26
+
+- **5.3.26 release prep started:** Cutting the next retail patch release for the current worktree, including the retail-only cleanup pass and a shortened TODO-based summary of the still-not-working function paths in the public changelog.
+  - **Files Targeted:** `FixLog.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `CHANGELOG.md`
+- **Aura slot nil/secret follow-up started:** Investigating fresh WoW 12 aura regressions where `Libs/oUF/elements/auras.lua` still assumes every slot lookup returns data and `Components/Auras/Auras.lua` still touches Blizzard `BuffFrame:Update*()` before hiding the frame, producing both addon-side nil indexing and Blizzard secret-value arithmetic on `expirationTime`.
+  - **Files Targeted:** `FixLog.md`, `Libs/oUF/elements/auras.lua`, `Components/Auras/Auras.lua`
+- **Aura slot nil/secret follow-up applied:** Hardened the shared oUF aura collector against nil/filtered slot payloads and stopped the standalone aura module from forcing Blizzard buff-frame updates on WoW 12 before the frames are hidden.
+  - **Root Cause:** The new retail aura path can legally return a slot token whose `C_UnitAuras.GetAuraDataBySlot(...)` or `...GetAuraDataByAuraInstanceID(...)` payload is `nil` by the time addon code reads it. `Libs/oUF/elements/auras.lua` still indexed `data.auraInstanceID` unconditionally in the full-update and incremental debuff paths, which then cascaded into missing `sortedDebuffs` state on later updates. Separately, `Components/Auras/Auras.lua` called `BuffFrame:Update()`, `:UpdateAuras()`, and `:UpdatePlayerBuffs()` even on WoW 12 builds where Blizzard still performs arithmetic on secret `expirationTime` values during those updates.
+  - **Safety:** Scope stays narrow. The oUF change only skips missing aura payloads, prunes stale active IDs, and guarantees the sorted aura tables exist before size math runs. The Blizzard aura change does not alter pre-WoW12 behavior; it only bypasses the known-taint pre-hide update calls on secret-value clients before the frames are reparented to `ns.Hider`.
+  - **Verification:** `luac -p 'Libs/oUF/elements/auras.lua'` and `luac -p 'Components/Auras/Auras.lua'` passed. In-game `/reload`, then reproduce the previous player/party aura states that showed `data = nil`, `sortedDebuffs = nil`, or `Blizzard_BuffFrame/BuffFrame.lua:644`. AzeriteUI aura widgets should continue updating without BugSack spam, and Blizzard buff-frame `expirationTime` secret-value errors should stop when the custom aura module disables Blizzard auras.
+- **5.3.26 release prep applied:** Bumped the release metadata to `5.3.26-JuNNeZ` and added a compact changelog summary of the remaining TODO items so the tag documents the still-broken function paths without copying the full maintainer investigation notes.
+  - **Files Modified:** `FixLog.md`, `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, `CHANGELOG.md`
+- **Nameplate non-interruptible yellow follow-up started:** Using `TODO.md` as the current root-cause note and narrowing the next fix pass to the shared interrupt resolver path where nameplate `canAttack` can still short-circuit protected casts back to the base yellow color before the locked/gray state is considered.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`
+- **Nameplate non-interruptible yellow follow-up applied:** Added a narrow nameplate-only pre-enemy-gate lock path so active nameplate casts with a live/cached `notInterruptible` flag now resolve to `locked` before a stale or missing `owner.canAttack` value can drop them back to the base yellow state.
+  - **Root Cause:** `TODO.md` matched the live code path: `GetInterruptCastVisualState()` was still calling `ShouldUseEnemyInterruptVisuals()` before checking `IsCastMarkedNotInterruptible()`. When `UNIT_SPELLCAST_NOT_INTERRUPTIBLE` refreshed the castbar before the owner's hostile state had stabilized, the shared resolver returned `base` early and never reached the gray locked branch.
+  - **Safety:** Scope stays intentionally narrow to nameplate units only. The new early locked path only applies to active `nameplateN` castbars and still excludes PRD, so target-frame and other shared interrupt-color consumers do not inherit a broader friendly/non-friendly behavior change.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'` passed. In-game `/reload`, then test one hostile non-interruptible nameplate cast that previously stayed yellow. It should now log `reason=locked_nameplate ... state=locked` and paint gray even if the owner's `canAttack` value is late or unset on that callback tick.
+- **Nameplate interrupt shield/gray follow-up started:** Restoring a direct cast API fallback for `notInterruptible` and adding an explicit nameplate shield widget so protected casts can show the requested grey-plus-shield presentation instead of relying only on the interruptible marker path.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Nameplate interrupt shield/gray follow-up applied:** Added a direct `UnitCastingInfo` / `UnitChannelInfo` fallback probe for `notInterruptible`, expanded the interrupt debug line to print that probed result, and gave enemy nameplate castbars a real shield texture that now shows only for the locked/grey state while the tank marker remains exclusive to interruptible states.
+  - **Root Cause:** The latest live trace still showed `notInterruptible=false` and `shieldShown=nil`, which means two separate problems remained: the shared resolver had no second source to verify the current cast payload, and the nameplate castbar still did not own any shield widget to display even if the state flipped to `locked`.
+  - **Safety:** Scope stays local to the hostile interrupt visual path. The new probe only reads the current unit cast/channel APIs when the cached castbar booleans are unreadable or falsey, and the shield widget is local to the nameplate castbar so target/player castbars are not restyled by this pass.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'` and `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` must pass. In-game `/reload`, then re-test a protected hostile cast. The debug output should now report `probedNotInterruptible=true` if the cast APIs expose protection, and a locked cast should show grey with the shield instead of the right-side tank marker.
+
 ## 2026-03-24
 
 - **5.3.23 stable release prep applied:** Bumped the addon/build metadata from `5.3.23-JuNNeZ-beta2` to `5.3.23-JuNNeZ`, updated the changelog to a delta-only stable entry covering the options crash hardening and the interrupt castbar rewrite, and collapsed the two beta changelog entries into a single stable release section.
@@ -4955,6 +4980,99 @@ Testing:
 5. With Explorer Mode enabled, verify the alternate frame fades again once fully healed and that changing the low-health threshold affects health behavior, not mana behavior.
 
 Request:
+- Nameplate castbars still do not go grey/show shield for protected casts. Simplify the interrupt resolver instead of layering more cache/fallback logic.
+
+Started:
+- Compared AzeriteUI's shared interrupt resolver in [Components/UnitFrames/Functions.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Functions.lua) against the local Platynator implementation in `Display/Colors.lua` and `Display/CastBar.lua`. Platynator is narrower: it trusts the live cast `notInterruptible` flag from `UnitCastingInfo`/`UnitChannelInfo`, applies a locked color only when that flag is true, and otherwise just resolves interrupt-ready vs not-ready. AzeriteUI's extra nameplate-specific probing/caching branch is not producing a true locked state in current logs, so the next pass is to reduce the nameplate path to that simpler model.
+
+Applied:
+- Added a dedicated simple nameplate interrupt resolver in [Components/UnitFrames/Functions.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Functions.lua) that mirrors the Platynator model: read `castbar.notInterruptible` first, then directly probe `UnitCastingInfo(unit)` / `UnitChannelInfo(unit)` only for the live `notInterruptible` flag, and only return the grey `locked` state when that flag is explicitly `true`.
+- Switched [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) to use that nameplate-only simple resolver instead of the broader shared interrupt color path. Shield visibility remains tied only to `locked`, and the interrupt marker remains tied only to the interruptible states.
+
+Why:
+- The current logs show the nameplate cast source never resolves to `notInterruptible=true`, so extra cache-based nameplate branches are only adding ambiguity without producing the missing grey/shield transition. This pass narrows the nameplate behavior to the same direct rule set used by Platynator: live cast flag controls `locked`, interrupt cooldown controls ready vs unavailable, nothing else.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Functions.lua'`
+2. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+3. `/reload`
+4. Test one clearly interruptible cast and confirm the nameplate still goes yellow when your interrupt is ready and red when it is not.
+5. Test one clearly protected cast and confirm the debug line changes from `ready_simple` / `unknown_simple` to `locked_simple`, with `notInterruptible=true` or `probedNotInterruptible=true`, and that the nameplate shows the shield and grey castbar together.
+
+Request:
+- Make the nameplate interrupt handling as close to Platynator 1:1 as possible, because the simplified shared resolver still does not produce a grey protected castbar.
+
+Applied:
+- Replaced the nameplate interrupt decision in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) with a local Platynator-style flow instead of calling the shared interrupt color resolver. The local path now:
+- reads `element.notInterruptible` first
+- falls back directly to `UnitCastingInfo(unit)` / `UnitChannelInfo(unit)` for the live `notInterruptible` flag
+- returns grey `locked` only when that flag is explicitly `true`
+- checks all known interrupt spells from [Components/UnitFrames/Auras/AuraData.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Auras/AuraData.lua) and marks the cast yellow when any interrupt is ready, red when at least one cooldown state is known and none are ready
+- otherwise leaves the castbar on the base color, which is closer to Platynator than forcing an inferred red state
+- Kept debug output in that same local nameplate path using `platy_*` reasons so the next log shows whether the cast is actually arriving as `platy_locked`, `platy_ready`, `platy_unavailable`, or only `platy_no_flag`.
+
+Why:
+- The remaining mismatch is no longer about shields or marker rendering. The logs show the underlying protected-cast signal is still not arriving as `true`, so the most honest comparison is to match Platynator's own structure as directly as possible and observe the raw result from the live cast APIs without extra shared AzeriteUI interpretation.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Test an interruptible cast and confirm the nameplate still logs `platy_ready` or `platy_unavailable` and shows marker/yellow-or-red as expected.
+4. Test a protected cast and confirm whether the debug now ever reaches `platy_locked`.
+5. If it still does not, the useful evidence is the exact `platy_*` reason plus the `notInterruptible`/`probedNotInterruptible` values, because at that point AzeriteUI is following the same direct source pattern as Platynator.
+
+Request:
+- The shield should only show for non-interruptible casts, and the latest logs still never produce a locked nameplate state.
+
+Started:
+- Rechecked the latest `platy_*` logs. The shield behavior itself is already correct: every sampled nameplate line shows `shieldShown=false`, which means the custom shield texture in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) is only hidden because the cast source still resolves as interruptible. The next useful trace point is the oUF castbar event layer in [Libs/oUF/elements/castbar.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Libs/oUF/elements/castbar.lua): whether the raw `UnitCastingInfo`/`UnitChannelInfo` payload or the `UNIT_SPELLCAST_NOT_INTERRUPTIBLE` event ever reaches the nameplate castbar with a true protected flag.
+
+Applied:
+- Added raw interrupt debug in [Libs/oUF/elements/castbar.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Libs/oUF/elements/castbar.lua) at the two points that matter for protected-cast state:
+- `reason=start` logs the raw `notInterruptible` value coming from `UnitCastingInfo(unit)` / `UnitChannelInfo(unit)` when the castbar is initialized
+- `reason=toggle` logs the raw boolean implied by `UNIT_SPELLCAST_INTERRUPTIBLE` / `UNIT_SPELLCAST_NOT_INTERRUPTIBLE`
+- Both lines log under the `InterruptRaw` category and include the castbar unit, owner unit, normalized castbar state, cast ID, spell ID, and current shield visibility.
+
+Why:
+- The current nameplate logs already prove the shield only shows for the locked state. The unanswered question is lower-level: does Blizzard ever deliver a protected-cast flag or protected-cast event for the nameplate cast at all. These raw oUF traces answer that without changing the visuals again.
+
+Testing:
+1. `luac -p 'Libs/oUF/elements/castbar.lua'`
+2. `/reload`
+3. Reproduce the same cast and capture both `Interrupt` and `InterruptRaw` lines.
+4. The key lines are:
+5. `InterruptRaw reason=start ... rawNotInterruptible=...`
+6. `InterruptRaw reason=toggle event=UNIT_SPELLCAST_NOT_INTERRUPTIBLE ... rawNotInterruptible=true`
+7. If neither ever appears with `true`, then the client is not flagging that cast as protected through the nameplate castbar event path, and the shield staying hidden is correct for the data we receive.
+
+Request:
+- Clean this up and fix it by matching the dedicated interruptibility watcher structure used by Platynator and Plater.
+
+Applied:
+- Added a dedicated nameplate castbar interrupt watcher in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua). The watcher registers the same unit spellcast events both addons rely on:
+- `UNIT_SPELLCAST_START`
+- `UNIT_SPELLCAST_STOP`
+- `UNIT_SPELLCAST_CHANNEL_START`
+- `UNIT_SPELLCAST_CHANNEL_STOP`
+- `UNIT_SPELLCAST_INTERRUPTED`
+- `UNIT_SPELLCAST_FAILED`
+- `UNIT_SPELLCAST_INTERRUPTIBLE`
+- `UNIT_SPELLCAST_NOT_INTERRUPTIBLE`
+- The watcher now keeps a direct `__AzeriteUI_DirectLocked` state on the castbar and refreshes visuals from that state, instead of relying only on the castbar refresh path to rediscover the protected flag.
+- Updated the existing nameplate interruptibility query so the direct watcher state is consumed first, then the normal cast API probe path is used as fallback.
+- Wired watcher registration/unregistration into nameplate unit updates and castbar hide cleanup so recycled `nameplateN` frames do not keep stale protected-cast state.
+
+Why:
+- This mirrors the actual structure used by both Platynator and Plater more closely than the previous color-only path. Those addons keep a dedicated event-driven interruptibility state and then let their visuals consume that state. AzeriteUI now does the same for nameplates.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Test one clearly interruptible cast and confirm the shield stays hidden.
+4. Test one non-interruptible cast and confirm the watcher now flips the nameplate into the grey `locked` state with the shield shown.
+5. If it still fails, capture the next `Interrupt` lines and specifically look for whether the watcher-driven state still never leaves `notInterruptible=false`, because that would mean Blizzard is not firing the protected-cast event for that unit on this client path.
+
+Request:
 - Update the current worktree release metadata, commit it, push it, and create a fresh tag without reusing the existing `5.3.20-JuNNeZ` marker.
 
 Applied:
@@ -4963,3 +5081,120 @@ Applied:
 
 Why:
 - `5.3.20-JuNNeZ` is already the current `HEAD` tag on `main`, so these post-release fixes need a new patch version instead of silently rewriting the old release marker.
+
+Request:
+- Do a deep hard check on the nameplate non-interruptible path and fix it even if that requires a cleaner dedicated watcher structure.
+
+Started:
+- Re-read the full AzeriteUI nameplate interrupt flow in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua), the shared interrupt helpers in [Components/UnitFrames/Functions.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Functions.lua), and the oUF castbar event path in [Libs/oUF/elements/castbar.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Libs/oUF/elements/castbar.lua).
+- Re-checked the installed reference implementations in Platynator and Plater. The important structural difference is not a hidden spell database: both addons keep their interruptibility watcher registered to the nameplate unit itself, while the current AzeriteUI watcher was still being reset through castbar visibility/post-update churn.
+- Identified two concrete risks in the current AzeriteUI watcher path:
+- it always unregistered and re-registered on the same `nameplateN` unit, which can drop the `UNIT_SPELLCAST_NOT_INTERRUPTIBLE` transition during the same event pass
+- it was tied to castbar hide cleanup, unlike Platynator/Plater where the watcher remains attached to the unit as long as the nameplate owns that unit
+
+Applied:
+- Reworked the nameplate interrupt watcher in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) so it behaves like a persistent unit watcher instead of a castbar-lifetime watcher.
+- The watcher now stores its own `__AzeriteUI_WatchedUnit` and only re-registers when the actual unit token changes. Repeated post-update calls on the same `nameplateN` no longer clear the direct locked state.
+- The watcher is now parented to the nameplate frame and stored on `self.InterruptWatcher`, while the castbar keeps only a reference. Castbar `OnHide` no longer tears the watcher down; only nameplate unit changes or nameplate hide clear it.
+- The direct locked state is now stored on the watcher first and mirrored onto the castbar for compatibility, so a received `UNIT_SPELLCAST_NOT_INTERRUPTIBLE` event is preserved until an explicit stop/fail/interruptible transition clears it.
+
+Why:
+- This matches the actual ownership model used by Platynator's `CannotInterruptMarker` and Plater's castbar core more closely than the previous attempt. The goal is to stop losing the protected-cast transition during same-unit refreshes and castbar hide/show churn.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Find one cast that Plater or Platynator shows as non-interruptible.
+4. Confirm AzeriteUI now turns that nameplate castbar grey and shows the shield only for that cast.
+5. If it still fails, capture the next `Interrupt` lines. The key question after this patch is whether the watcher ever reports a locked state on the same cast that Plater handles correctly.
+
+Request:
+- Follow up on the next live test after the persistent watcher rewrite. The new log still showed no grey and BugSack reported a watcher runtime error in `NamePlates.lua`.
+
+Applied:
+- Fixed the watcher callback ordering bug in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) by moving the `Castbar_RefreshInterruptVisuals` local forward declaration above `NamePlate_InterruptWatcherOnEvent`, so the watcher no longer resolves that call as a missing global at runtime.
+- Added a focused `Interrupt` debug line in the watcher event handler that prints `watcherEvent`, watched unit, watcher locked state, mirrored element locked state, castbar flag, and cast/channel state. This uses the same debug category the user is already exporting, so the next `/reload` will show whether the direct watcher ever flips to `true`.
+
+Why:
+- The current failure is no longer theoretical. BugSack showed `attempt to call global 'Castbar_RefreshInterruptVisuals' (a nil value)` from the watcher on `UNIT_SPELLCAST_START`, which means the new direct watcher path was aborting before it could fully drive the visual update.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Reproduce the same cast again.
+4. Check the `Interrupt` lines for `watcherEvent=...` entries and confirm whether `watcherLocked=true` ever appears.
+5. If `watcherLocked` stays `false` or `nil` on a cast that Plater shows as protected, the next fix needs to target the raw event/state source rather than the visual layer.
+
+Request:
+- Follow up after the watcher debug pass. The new logs show the watcher is active, but it only ever sees `watcherLocked=false` on `UNIT_SPELLCAST_START`, and the temporary shield asset should be removed.
+
+Applied:
+- Removed the temporary nameplate shield texture from [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua). The castbar now goes back to the original marker-only presentation while this protected-cast source issue is still unresolved.
+- Added a targeted debug command in [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua): `/azdebug nameplates [unit]`.
+- The new command prints the live active nameplate cast state from the current frame and raw Blizzard cast APIs in one line: current unit token, shown/casting/channeling state, raw `UnitCastingInfo` or `UnitChannelInfo` spell and `notInterruptible` flag, castbar flag, watcher locked state, and watched unit token.
+
+Why:
+- The latest log answered the watcher question: the direct watcher path is functioning, but the source it sees is still `false`. A targeted on-demand dump is now more useful than extra passive chat spam, because it lets the next test sample the exact active nameplate state mid-cast.
+
+Testing:
+1. `luac -p 'Core/Debugging.lua'`
+2. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+3. `/reload`
+4. Start the same problematic cast and run `/azdebug nameplates nameplate1` while it is active.
+5. Compare the printed `rawNotInterruptible`, `castbarFlag`, and `watcherLocked` values against what Plater shows at the same time.
+
+Request:
+- Follow up after the first `/azdebug nameplates nameplate1` run crashed during an active cast.
+
+Applied:
+- Hardened the new `/azdebug nameplates [unit]` handler in [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua) against WoW 12 secret values.
+- The command no longer compares cast/channel names directly against `""` unless they are confirmed non-secret, and all printed fields now pass through a secret-safe formatter that renders secret payloads as `<secret>` instead of touching them in addon logic.
+
+Why:
+- BugSack showed the first implementation tripped on `castName ~= ""` while `castName` was a secret string value. That made the diagnostic command itself unsafe exactly when it was needed most: during an active cast.
+
+Testing:
+1. `luac -p 'Core/Debugging.lua'`
+2. `/reload`
+3. Start the problematic cast again.
+4. Run `/azdebug nameplates nameplate1` while the cast is active.
+5. Confirm the command now prints a safe line instead of throwing, even if `rawName` is reported as `<secret>`.
+
+Request:
+- Follow up after the secret-safe debug sample showed the live cast payload is still secret while active.
+
+Applied:
+- Added a Blizzard castbar fallback in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua). After the direct AzeriteUI cast/channel probes, the nameplate interrupt resolver now also checks the hidden Blizzard nameplate castbar for safe non-secret `showShield`, `notInterruptible`, or shield visibility state.
+- Stopped unregistering the hidden Blizzard nameplate castbar events in the Blizzard-plate suppression path so that fallback castbar can continue updating its own internal interruptibility state while remaining visually hidden.
+- Expanded `/azdebug nameplates [unit]` in [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua) to print `blizzShowShield`, `blizzNotInterruptible`, and `blizzShieldShown` alongside the addon-side watcher and raw cast payload fields.
+
+Why:
+- The first successful dump proved the active cast payload is secret-heavy: even `rawNotInterruptible` arrives as `<secret>`. If Plater still renders the cast correctly, the most likely remaining useful source is Blizzard's own nameplate castbar state after its internal event handling, not the raw unit cast payload exposed to our addon logic.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Core/Debugging.lua'`
+3. `/reload`
+4. Trigger the same cast and run `/azdebug nameplates nameplate1` while it is active.
+5. Capture whether any of `blizzShowShield`, `blizzNotInterruptible`, or `blizzShieldShown` become `true`.
+
+Request:
+- Follow up after the Blizzard fallback debug sample.
+
+Applied:
+- Changed the nameplate protected-cast probe in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) so a local `false` from AzeriteUI's castbar state is no longer treated as final.
+- The resolver now treats `false` as provisional, keeps checking the remaining sources, and lets any later `true` win. This includes the hidden Blizzard nameplate castbar fallback fields such as `showShield`.
+- Applied the same rule to the direct watcher state reader so `watcherLocked=false` does not block a later Blizzard-side `true`.
+
+Why:
+- The latest `/azdebug nameplates nameplate1` output showed the exact mismatch:
+- addon-side state stayed `castbarFlag=false watcherLocked=false elementLocked=false`
+- Blizzard-side state reported `blizzShowShield=true`
+- That meant the fallback source already had the correct protected state, but the resolver never got there because it returned too early on the first safe `false`.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Trigger the same cast again.
+4. Confirm the nameplate now goes grey.
+5. If needed, rerun `/azdebug nameplates nameplate1` and verify the final display matches the Blizzard-side `blizzShowShield=true` state.

@@ -108,6 +108,27 @@ local function NormalizeNotInterruptible(element, value)
 	return false
 end
 
+local function EmitInterruptEventDebug(element, reason, eventName, unit, rawNotInterruptible)
+	if(not API or not API.DEBUG_HEALTH_CHAT or not API.DebugPrintf) then
+		return
+	end
+
+	local owner = element and element.__owner
+	local shield = element and element.Shield
+	API.DebugPrintf('InterruptRaw', 2,
+		'reason=%s event=%s unit=%s ownerUnit=%s rawNotInterruptible=%s normalized=%s shown=%s castID=%s spellID=%s shieldShown=%s',
+		tostring(reason),
+		tostring(eventName),
+		tostring(unit),
+		tostring(owner and owner.unit),
+		tostring(rawNotInterruptible),
+		tostring(element and element.notInterruptible),
+		tostring(element and element.IsShown and element:IsShown()),
+		tostring(element and element.castID),
+		tostring(element and element.spellID),
+		tostring(shield and shield.IsShown and shield:IsShown()))
+end
+
 local function resetAttributes(self)
 	self.castID = nil
 	self.casting = nil
@@ -260,6 +281,7 @@ local function CastStart(self, event, unit)
 	element.castID = castID
 	element.spellID = spellID
 	element.spellName = text
+	EmitInterruptEventDebug(element, 'start', event, unit, notInterruptible)
 
 	if(unit == 'player') then
 		-- we can only read these variables for players
@@ -524,6 +546,7 @@ local function CastInterruptible(self, event, unit)
 	-- ISSUE: we can't verify if this is for an active cast/channel/empower without castID
 
 	element.notInterruptible = NormalizeNotInterruptible(element, event == 'UNIT_SPELLCAST_NOT_INTERRUPTIBLE')
+	EmitInterruptEventDebug(element, 'toggle', event, unit, event == 'UNIT_SPELLCAST_NOT_INTERRUPTIBLE')
 
 	-- Temporary: disable shield-driven interrupt visuals while isolating cast payload behavior.
 	-- if(element.Shield) then element.Shield:SetAlphaFromBoolean(element.notInterruptible, 1, 0) end

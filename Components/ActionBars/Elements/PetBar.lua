@@ -124,12 +124,6 @@ local style = function(button)
 		if (button[i] and button[i].Stop) then button[i]:Stop() elseif button[i] then button[i]:SetParent(UIHider) end
 	end
 
-	-- Wrath overwrites the default texture
-	-- CATA: check if this exists there
-	if (ns.IsCata) then
-		button.AutoCastable = _G[button:GetName().."AutoCastable"]
-		button.AutoCastShine = _G[button:GetName().."Shine"]
-	end
 
 	local m = db.ButtonMaskTexture
 	local b = "" -- GetMedia("blank")
@@ -455,17 +449,8 @@ PetBar.UpdateVisibilityDriver = function(self)
 
 		visdriver = "[petbattle]hide;"
 
-		if (ns.IsClassic) then
-			visdriver = visdriver.."[@pet,exists]show;"
-
-		elseif (ns.IsCata) then
-			-- UNTESTED!
-			visdriver = visdriver.."[@pet,exists,nopossessbar,nooverridebar,noshapeshift,novehicleui]show;"
-
-		elseif (ns.IsRetail) then
-			-- Experimental change to avoid duplicate bars on some world quests.
-			visdriver = visdriver.."[@pet,exists,nopossessbar,nooverridebar,noshapeshift,novehicleui]show;"
-		end
+		-- Experimental change to avoid duplicate bars on some world quests.
+		visdriver = visdriver.."[@pet,exists,nopossessbar,nooverridebar,noshapeshift,novehicleui]show;"
 
 		visdriver = visdriver.."hide"
 	end

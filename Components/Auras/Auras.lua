@@ -715,7 +715,7 @@ end
 Auras.DisableBlizzard = function(self)
 
 	-- Not present in Wrath
-	if (BuffFrame.Update) then
+	if (BuffFrame.Update and not (issecretvalue or (ns.ClientVersion and ns.ClientVersion >= 120000))) then
 		BuffFrame:Update()
 		BuffFrame:UpdateAuras()
 		BuffFrame:UpdatePlayerBuffs()

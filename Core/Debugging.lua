@@ -2832,6 +2832,7 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug dump player|r")
 	print("|cfff0f0f0  /azdebug dump tot|r")
 	print("|cfff0f0f0  /azdebug dump all|r")
+	print("|cfff0f0f0  /azdebug nameplates [unit]|r")
 	print("|cfff0f0f0  /azdebug snapshot [unit]|r")
 	print("|cfff0f0f0  /azdebug blizzard enable|r")
 	print("|cfff0f0f0  /azdebug scale|r  (print scale status)")
@@ -2844,6 +2845,97 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /aztest on|off|toggle|r")
 	print("|cfff0f0f0  /aztest <set> on|off|toggle|r")
 	print("|cfff0f0f0  /aztest list|r")
+end
+
+local function PrintNamePlateCastDebug(token)
+	token = type(token) == "string" and token:lower() or nil
+	if (token == "" or token == "all") then
+		token = nil
+	end
+
+	local function IsSecretDebugValue(value)
+		return (type(issecretvalue) == "function" and issecretvalue(value)) and true or false
+	end
+
+	local function SafeDebugString(value)
+		if (IsSecretDebugValue(value)) then
+			return "<secret>"
+		end
+		return tostring(value)
+	end
+
+	print("|cff33ff99", "AzeriteUI nameplate cast debug:")
+	local found = false
+	for frame in next, ns.ActiveNamePlates do
+		local unit = frame and frame.unit
+		if (type(unit) == "string" and ((not token) or unit:lower() == token)) then
+			found = true
+			local castbar = frame.Castbar
+			local watcher = frame.InterruptWatcher or (castbar and castbar.InterruptWatcher)
+			local castName, _, _, _, _, _, castID, castNotInterruptible, castSpellID = UnitCastingInfo(unit)
+			local channelName, _, _, _, _, _, channelNotInterruptible, channelSpellID = UnitChannelInfo(unit)
+			local blizzPlate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit, issecurefunc and issecurefunc())
+			local blizzUF = blizzPlate and (blizzPlate.UnitFrame or blizzPlate.unitFrame)
+			local blizzCastbar = blizzUF and (blizzUF.castBar or blizzUF.CastBar or blizzUF.castbar or blizzUF.Castbar or blizzUF.CastingBarFrame)
+			local blizzShowShield = blizzCastbar and blizzCastbar.showShield
+			local blizzNotInterruptible = blizzCastbar and blizzCastbar.notInterruptible
+			local blizzShield = blizzCastbar and (blizzCastbar.Shield or blizzCastbar.IconShield or blizzCastbar.BorderShield)
+			local blizzShieldShown = nil
+			if (blizzShield and blizzShield.IsShown) then
+				local okShown, shown = pcall(blizzShield.IsShown, blizzShield)
+				if (okShown) then
+					blizzShieldShown = shown
+				end
+			end
+			local rawSource = "none"
+			local rawName = nil
+			local rawSpellID = nil
+			local rawNotInterruptible = nil
+			if (type(castName) == "string" and (not IsSecretDebugValue(castName)) and castName ~= "") then
+				rawSource = "cast"
+				rawName = castName
+				rawSpellID = castSpellID
+				rawNotInterruptible = castNotInterruptible
+			elseif (type(channelName) == "string" and (not IsSecretDebugValue(channelName)) and channelName ~= "") then
+				rawSource = "channel"
+				rawName = channelName
+				rawSpellID = channelSpellID
+				rawNotInterruptible = channelNotInterruptible
+			elseif (type(castName) == "string" and IsSecretDebugValue(castName)) then
+				rawSource = "cast"
+				rawName = castName
+				rawSpellID = castSpellID
+				rawNotInterruptible = castNotInterruptible
+			elseif (type(channelName) == "string" and IsSecretDebugValue(channelName)) then
+				rawSource = "channel"
+				rawName = channelName
+				rawSpellID = channelSpellID
+				rawNotInterruptible = channelNotInterruptible
+			end
+			print("|cfff0f0f0", string_format(
+				"%s shown=%s canAttack=%s casting=%s channeling=%s spell=%s castID=%s source=%s rawName=%s rawNotInterruptible=%s castbarFlag=%s watcherLocked=%s elementLocked=%s watched=%s blizzShowShield=%s blizzNotInterruptible=%s blizzShieldShown=%s",
+				unit,
+				SafeDebugString(frame and frame.IsShown and frame:IsShown()),
+				SafeDebugString(frame and frame.canAttack),
+				SafeDebugString(castbar and castbar.casting),
+				SafeDebugString(castbar and castbar.channeling),
+				SafeDebugString(rawSpellID),
+				SafeDebugString(castID),
+				SafeDebugString(rawSource),
+				SafeDebugString(rawName),
+				SafeDebugString(rawNotInterruptible),
+				SafeDebugString(castbar and castbar.notInterruptible),
+				SafeDebugString(watcher and watcher.__AzeriteUI_DirectLocked),
+				SafeDebugString(castbar and castbar.__AzeriteUI_DirectLocked),
+				SafeDebugString(watcher and watcher.__AzeriteUI_WatchedUnit),
+				SafeDebugString(blizzShowShield),
+				SafeDebugString(blizzNotInterruptible),
+				SafeDebugString(blizzShieldShown)))
+		end
+	end
+	if (not found) then
+		print("|cfff0f0f0", token and ("no active nameplate matched " .. token) or "no active nameplates")
+	end
 end
 
 local function ParseOnOffToggle(token)
@@ -3864,6 +3956,10 @@ Debugging.DebugMenu = function(self, input)
 			return DumpUnitBars(totFrame and totFrame.frame, "ToTFrame")
 		end
 		return PrintDebugHelp()
+	end
+	if (cmd == "nameplates" or cmd == "nameplate") then
+		local unit = rest:match("^(%S+)")
+		return PrintNamePlateCastDebug(unit)
 	end
 	if (cmd == "snapshot") then
 		local unit = rest:match("^(%S+)")

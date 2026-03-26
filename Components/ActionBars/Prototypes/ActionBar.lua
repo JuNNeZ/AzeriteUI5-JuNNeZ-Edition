@@ -243,8 +243,7 @@ ActionBar.CreateButton = function(self, buttonConfig)
 	button:SetAttribute("statehidden", nil)
 	button:UpdateAction()
 
-	-- Add in a vehicle exit button at slot 7 for Wrath and Retail. CATA: check
-	if ((ns.IsCata or ns.IsRetail) and (self.id == 1 and button.id == 7)) then
+	if (self.id == 1 and button.id == 7) then
 		button:SetState(16, "custom", exitButton)
 		button:SetState(17, "custom", exitButton)
 		button:SetState(18, "custom", exitButton)
@@ -421,21 +420,7 @@ ActionBar.UpdateStateDriver = function(self)
 			statedriver = statedriver .. "; [bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9"
 
 		elseif (playerClass == "ROGUE") then
-			if (ns.IsCata) then
-				statedriver = statedriver .. "; [bonusbar:1] 7 [bonusbar:2] 8" -- Shadowdance
-			else
-				statedriver = statedriver .. "; [bonusbar:1] 7"
-			end
-
-		elseif ((ns.IsCata) and playerClass == "PRIEST") then
-			statedriver = statedriver .. "; [bonusbar:1] 7" -- Shadowform
-
-		elseif (playerClass == "WARRIOR") then
-			if (ns.IsCata) then
-				statedriver = statedriver .. "; [bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9"
-			elseif (ns.IsClassic) then
-				statedriver = statedriver .. "; [bonusbar:1] 7; [bonusbar:2] 8"
-			end
+			statedriver = statedriver .. "; [bonusbar:1] 7"
 		end
 
 		statedriver = statedriver .. "; 1"

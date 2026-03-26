@@ -50,13 +50,11 @@ local ExitButton_OnEnter = function(self)
 		GameTooltip:AddLine(TAXI_CANCEL_DESCRIPTION, unpack(Colors.green))
 	elseif (IsMounted()) then
 		GameTooltip:AddLine(BINDING_NAME_DISMOUNT)
-	elseif (not ns.IsClassic) then
-		if (IsPossessBarVisible() and PetCanBeDismissed()) then
-			GameTooltip:AddLine(PET_DISMISS)
-			GameTooltip:AddLine(NEWBIE_TOOLTIP_UNIT_PET_DISMISS, unpack(Colors.green))
-		else
-			GameTooltip:AddLine(BINDING_NAME_VEHICLEEXIT)
-		end
+	elseif (IsPossessBarVisible() and PetCanBeDismissed()) then
+		GameTooltip:AddLine(PET_DISMISS)
+		GameTooltip:AddLine(NEWBIE_TOOLTIP_UNIT_PET_DISMISS, unpack(Colors.green))
+	else
+		GameTooltip:AddLine(BINDING_NAME_VEHICLEEXIT)
 	end
 	GameTooltip:Show()
 end
@@ -69,7 +67,7 @@ end
 local ExitButton_PostClick = function(self, button)
 	if (UnitOnTaxi("player") and (not InCombatLockdown())) then
 		TaxiRequestEarlyLanding()
-	elseif (not ns.IsClassic and IsPossessBarVisible() and PetCanBeDismissed()) then
+	elseif (IsPossessBarVisible() and PetCanBeDismissed()) then
 		PetDismiss()
 	end
 end
@@ -83,15 +81,9 @@ VehicleExit.UpdateScale = function(self)
 		local config = ns.GetConfig("VehicleExitButton")
 		local point, anchor, rpoint, x, y = unpack(config.VehicleExitButtonPosition)
 
-		if (ns.IsRetail) then
-			self.Button:SetScale(Minimap:GetScale())
-			self.Button:ClearAllPoints()
-			self.Button:SetPoint(point, anchor, rpoint, x, y)
-		else
-			self.Button:SetScale(Minimap:GetScale() * 768/1080)
-			self.Button:ClearAllPoints()
-			self.Button:SetPoint(point, anchor, rpoint, x, y)
-		end
+		self.Button:SetScale(Minimap:GetScale())
+		self.Button:ClearAllPoints()
+		self.Button:SetPoint(point, anchor, rpoint, x, y)
 
 	end
 end
@@ -130,17 +122,9 @@ VehicleExit.OnEnable = function(self)
 
 	self.Button = button
 
-	if (ns.IsClassic) then
-		button:SetAttribute("macrotext", "/dismount [mounted]\n")
-		RegisterStateDriver(button, "visibility", "[mounted]show;hide")
-	elseif (ns.IsCata) then -- CATA: check this
-		button:SetAttribute("macrotext", "/dismount [mounted]\n/run if CanExitVehicle() then VehicleExit() end")
-		RegisterStateDriver(button, "visibility", "[@vehicle,canexitvehicle][possessbar][mounted]show;hide")
-	else
-		button:SetAttribute("macrotext", "/leavevehicle [@vehicle,exists,canexitvehicle]\n/dismount [mounted]")
-		button:RegisterForClicks("AnyUp", "AnyDown") -- required in 10.0.0
-		RegisterStateDriver(button, "visibility", "[@vehicle,exists,canexitvehicle][possessbar][mounted]show;hide")
-	end
+	button:SetAttribute("macrotext", "/leavevehicle [@vehicle,exists,canexitvehicle]\n/dismount [mounted]")
+	button:RegisterForClicks("AnyUp", "AnyDown")
+	RegisterStateDriver(button, "visibility", "[@vehicle,exists,canexitvehicle][possessbar][mounted]show;hide")
 
 	local texture = button:CreateTexture(nil, "ARTWORK", nil, 1)
 	texture:SetPoint(unpack(config.VehicleExitButtonTexturePosition))

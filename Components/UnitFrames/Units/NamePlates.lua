@@ -1441,7 +1441,335 @@ local Auras_PostUpdate = function(element, unit)
 	NamePlate_PostUpdatePositions(element.__owner)
 end
 
-local Castbar_RefreshInterruptVisuals = function(element)
+local NamePlateInterruptColors = {
+	ready = { 1, .82, 0 },
+	notReady = Colors.red,
+	locked = Colors.gray
+}
+
+local Castbar_RefreshInterruptVisuals
+
+local NamePlate_StoreDirectInterruptState = function(element, watcher, value)
+	if (watcher) then
+		watcher.__AzeriteUI_DirectLocked = value
+	end
+	if (element) then
+		element.__AzeriteUI_DirectLocked = value
+	end
+end
+
+local NamePlate_ProbeUnitNotInterruptible = function(unit, element)
+	local sawFalse = false
+	local notInterruptible = element and element.notInterruptible
+	if (type(notInterruptible) == "boolean" and (not IsSecretValue(notInterruptible))) then
+		if (notInterruptible) then
+			return true
+		end
+		sawFalse = true
+	end
+
+	if (UnitCastingInfo) then
+		local okCast, _, _, _, _, _, _, castNotInterruptible = pcall(UnitCastingInfo, unit)
+		if (okCast and type(castNotInterruptible) == "boolean" and (not IsSecretValue(castNotInterruptible))) then
+			if (castNotInterruptible) then
+				return true
+			end
+			sawFalse = true
+		end
+	end
+
+	if (UnitChannelInfo) then
+		local okChannel, _, _, _, _, _, channelNotInterruptible = pcall(UnitChannelInfo, unit)
+		if (okChannel and type(channelNotInterruptible) == "boolean" and (not IsSecretValue(channelNotInterruptible))) then
+			if (channelNotInterruptible) then
+				return true
+			end
+			sawFalse = true
+		end
+	end
+
+	if (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then
+		local okPlate, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit, issecurefunc and issecurefunc())
+		local UF = okPlate and plate and (plate.UnitFrame or plate.unitFrame)
+		local blizzardCastbar = UF and (UF.castBar or UF.CastBar or UF.castbar or UF.Castbar or UF.CastingBarFrame)
+		if (blizzardCastbar) then
+			local showShield = blizzardCastbar.showShield
+			if (type(showShield) == "boolean" and (not IsSecretValue(showShield))) then
+				if (showShield) then
+					return true
+				end
+				sawFalse = true
+			end
+			local blizzardLocked = blizzardCastbar.notInterruptible
+			if (type(blizzardLocked) == "boolean" and (not IsSecretValue(blizzardLocked))) then
+				if (blizzardLocked) then
+					return true
+				end
+				sawFalse = true
+			end
+			local shield = blizzardCastbar.Shield or blizzardCastbar.IconShield or blizzardCastbar.BorderShield
+			if (shield and shield.IsShown) then
+				local okShown, shown = pcall(shield.IsShown, shield)
+				if (okShown and type(shown) == "boolean" and (not IsSecretValue(shown))) then
+					if (shown) then
+						return true
+					end
+					sawFalse = true
+				end
+			end
+		end
+	end
+
+	return sawFalse and false or nil
+end
+
+local NamePlate_GetDirectNotInterruptible = function(element)
+	local sawFalse = false
+	local owner = element and element.__owner
+	local watcher = owner and owner.InterruptWatcher
+	local directLocked = watcher and watcher.__AzeriteUI_DirectLocked
+	if (type(directLocked) == "boolean") then
+		if (directLocked) then
+			return true
+		end
+		sawFalse = true
+	end
+
+	directLocked = element and element.__AzeriteUI_DirectLocked
+	if (type(directLocked) == "boolean") then
+		if (directLocked) then
+			return true
+		end
+		sawFalse = true
+	end
+
+	local unit = (watcher and watcher.__AzeriteUI_WatchedUnit) or (owner and owner.unit)
+	if (type(unit) ~= "string" or unit == "") then
+		return sawFalse and false or nil
+	end
+
+	local probed = NamePlate_ProbeUnitNotInterruptible(unit, element)
+	if (probed ~= nil) then
+		return probed
+	end
+
+	return sawFalse and false or nil
+end
+
+local NamePlate_ApplyDirectInterruptState = function(element, eventName, unit)
+	local owner = element and element.__owner
+	local watcher = owner and owner.InterruptWatcher
+	unit = unit or (watcher and watcher.__AzeriteUI_WatchedUnit) or (owner and owner.unit)
+	if (type(unit) ~= "string" or unit == "") then
+		NamePlate_StoreDirectInterruptState(element, watcher, nil)
+		return
+	end
+
+	if (eventName == "UNIT_SPELLCAST_NOT_INTERRUPTIBLE") then
+		NamePlate_StoreDirectInterruptState(element, watcher, true)
+		return
+	elseif (eventName == "UNIT_SPELLCAST_INTERRUPTIBLE") then
+		NamePlate_StoreDirectInterruptState(element, watcher, false)
+		return
+	elseif (eventName == "UNIT_SPELLCAST_STOP"
+		or eventName == "UNIT_SPELLCAST_CHANNEL_STOP"
+		or eventName == "UNIT_SPELLCAST_INTERRUPTED"
+		or eventName == "UNIT_SPELLCAST_FAILED") then
+		NamePlate_StoreDirectInterruptState(element, watcher, nil)
+		return
+	end
+
+	NamePlate_StoreDirectInterruptState(element, watcher, NamePlate_ProbeUnitNotInterruptible(unit, element))
+end
+
+local NamePlate_InterruptWatcherOnEvent = function(self, eventName, unit)
+	local element = self.__castbar
+	if (not element) then
+		return
+	end
+	if (type(self.__AzeriteUI_WatchedUnit) == "string" and self.__AzeriteUI_WatchedUnit ~= "" and unit and unit ~= self.__AzeriteUI_WatchedUnit) then
+		return
+	end
+	NamePlate_ApplyDirectInterruptState(element, eventName, self.__AzeriteUI_WatchedUnit or unit)
+	if (ns.API and ns.API.DEBUG_HEALTH_CHAT and ns.API.DebugPrintf) then
+		ns.API.DebugPrintf("Interrupt", 2,
+			"watcherEvent=%s unit=%s watched=%s watcherLocked=%s elementLocked=%s castbarFlag=%s casting=%s channeling=%s",
+			tostring(eventName),
+			tostring(unit),
+			tostring(self.__AzeriteUI_WatchedUnit),
+			tostring(self.__AzeriteUI_DirectLocked),
+			tostring(element.__AzeriteUI_DirectLocked),
+			tostring(element.notInterruptible),
+			tostring(element.casting),
+			tostring(element.channeling))
+	end
+	Castbar_RefreshInterruptVisuals(element)
+end
+
+local NamePlate_SetInterruptWatcherUnit = function(element, unit)
+	local owner = element and element.__owner
+	local watcher = owner and owner.InterruptWatcher
+	local guid = nil
+	if (type(unit) == "string" and unit ~= "") then
+		guid = UnitGUID(unit)
+		if (issecretvalue and issecretvalue(guid)) then
+			guid = nil
+		end
+	end
+	if (not watcher) then
+		return
+	end
+
+	if (watcher.__AzeriteUI_WatchedUnit == unit and watcher.__AzeriteUI_WatchedGUID == guid) then
+		return
+	end
+
+	watcher:UnregisterAllEvents()
+	watcher.__AzeriteUI_WatchedUnit = nil
+	watcher.__AzeriteUI_WatchedGUID = nil
+	NamePlate_StoreDirectInterruptState(element, watcher, nil)
+
+	if (type(unit) ~= "string" or unit == "") then
+		return
+	end
+
+	watcher.__AzeriteUI_WatchedUnit = unit
+	watcher.__AzeriteUI_WatchedGUID = guid
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_START", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_STOP", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTIBLE", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE", unit)
+
+	NamePlate_ApplyDirectInterruptState(element, nil, unit)
+end
+
+local NamePlate_IsInterruptSpellReady = function(spellID)
+	if (type(spellID) ~= "number" or spellID <= 0) then
+		return nil
+	end
+
+	if (C_Spell and C_Spell.GetSpellCooldownDuration) then
+		local okDuration, durationObject = pcall(C_Spell.GetSpellCooldownDuration, spellID)
+		if (okDuration and durationObject and durationObject.IsZero) then
+			local okZero, isZero = pcall(durationObject.IsZero, durationObject)
+			if (okZero and type(isZero) == "boolean" and (not IsSecretValue(isZero))) then
+				return isZero
+			end
+		end
+	end
+
+	if (C_Spell and C_Spell.GetSpellCooldown) then
+		local okCooldown, cooldownInfo = pcall(C_Spell.GetSpellCooldown, spellID)
+		if (okCooldown and type(cooldownInfo) == "table") then
+			local startTime = cooldownInfo.startTime
+			local duration = cooldownInfo.duration
+			if (type(startTime) == "number"
+				and type(duration) == "number"
+				and (not IsSecretValue(startTime))
+				and (not IsSecretValue(duration))) then
+				return (startTime <= 0 or duration <= 0)
+			end
+		end
+	end
+
+	if (GetSpellCooldown) then
+		local okCooldown, startTime, duration = pcall(GetSpellCooldown, spellID)
+		if (okCooldown
+			and type(startTime) == "number"
+			and type(duration) == "number"
+			and (not IsSecretValue(startTime))
+			and (not IsSecretValue(duration))) then
+			return (startTime <= 0 or duration <= 0)
+		end
+	end
+
+	return nil
+end
+
+local NamePlate_EmitInterruptDebug = function(element, reason, finalState, notInterruptible, interruptSpellID, interruptReady)
+	if (not ns.API or not ns.API.DEBUG_HEALTH_CHAT or not ns.API.DebugPrintf) then
+		return
+	end
+	local owner = element and element.__owner
+	ns.API.DebugPrintf("Interrupt", 2,
+		"reason=%s unit=%s class=%s spec=%s spell=%s cooldown=%s state=%s canAttack=%s notInterruptible=%s probedNotInterruptible=%s shieldShown=%s shieldAlpha=%s",
+		tostring(reason),
+		tostring(owner and owner.unit),
+		tostring(UnitClassBase and UnitClassBase("player") or select(2, UnitClass("player"))),
+		tostring((type(GetSpecialization) == "function") and GetSpecialization() or nil),
+		tostring(interruptSpellID),
+		tostring(interruptReady),
+		tostring(finalState),
+		tostring(owner and owner.canAttack),
+		tostring(element and element.notInterruptible),
+		tostring(notInterruptible),
+		tostring(element and element.Shield and element.Shield.IsShown and element.Shield:IsShown()),
+		tostring(element and element.Shield and element.Shield.GetAlpha and element.Shield:GetAlpha()))
+end
+
+local NamePlate_GetPlatynatorInterruptState = function(element)
+	local owner = element and element.__owner
+	if (not element or not owner or owner.isPRD) then
+		NamePlate_EmitInterruptDebug(element, "platy_base", "base", nil, nil, nil)
+		return "base", nil
+	end
+
+	if (not (element.casting or element.channeling or element.empowering)) then
+		NamePlate_EmitInterruptDebug(element, "platy_inactive", "base", nil, nil, nil)
+		return "base", nil
+	end
+
+	if (owner.canAttack ~= true) then
+		NamePlate_EmitInterruptDebug(element, "platy_not_enemy", "base", nil, nil, nil)
+		return "base", nil
+	end
+
+	local notInterruptible = NamePlate_GetDirectNotInterruptible(element)
+	if (notInterruptible == true) then
+		NamePlate_EmitInterruptDebug(element, "platy_locked", "locked", notInterruptible, nil, nil)
+		return "locked", NamePlateInterruptColors.locked
+	end
+
+	if (notInterruptible ~= false) then
+		NamePlate_EmitInterruptDebug(element, "platy_no_flag", "base", notInterruptible, nil, nil)
+		return "base", nil
+	end
+
+	local knownInterrupts = ns.AuraData and ns.AuraData.GetKnownInterruptSpells and ns.AuraData.GetKnownInterruptSpells() or nil
+	if (type(knownInterrupts) ~= "table" or #knownInterrupts == 0) then
+		NamePlate_EmitInterruptDebug(element, "platy_no_interrupts", "base", notInterruptible, nil, nil)
+		return "base", nil
+	end
+
+	local sawCooldown = false
+	local lastSpellID
+	for index = 1, #knownInterrupts do
+		local spellID = knownInterrupts[index]
+		local ready = NamePlate_IsInterruptSpellReady(spellID)
+		if (ready ~= nil) then
+			sawCooldown = true
+			lastSpellID = spellID
+			if (ready) then
+				NamePlate_EmitInterruptDebug(element, "platy_ready", "primary-ready", notInterruptible, spellID, 1)
+				return "primary-ready", NamePlateInterruptColors.ready
+			end
+		end
+	end
+
+	if (sawCooldown) then
+		NamePlate_EmitInterruptDebug(element, "platy_unavailable", "unavailable", notInterruptible, lastSpellID, 0)
+		return "unavailable", NamePlateInterruptColors.notReady
+	end
+
+	NamePlate_EmitInterruptDebug(element, "platy_unknown", "base", notInterruptible, lastSpellID, nil)
+	return "base", nil
+end
+
+Castbar_RefreshInterruptVisuals = function(element)
 	local db = ns.GetConfig("NamePlates")
 
 	local textColor = db.CastBarNameColor
@@ -1449,7 +1777,7 @@ local Castbar_RefreshInterruptVisuals = function(element)
 	local interruptState = "base"
 	if (not element.__owner.isPRD) then
 		local interruptBarColor
-		interruptBarColor, interruptState = ns.API.GetInterruptCastColor(element, db.CastBarColor)
+		interruptState, interruptBarColor = NamePlate_GetPlatynatorInterruptState(element)
 		if (type(interruptBarColor) == "table") then
 			barColor = interruptBarColor
 		end
@@ -1484,10 +1812,12 @@ local Castbar_RefreshInterruptVisuals = function(element)
 end
 
 local Castbar_PostUpdate = function(element, unit)
+	NamePlate_SetInterruptWatcherUnit(element, unit or (element.__owner and element.__owner.unit))
 	ns.API.UpdateInterruptCastBarRefresh(element, Castbar_RefreshInterruptVisuals, "nameplate_postcast")
 end
 
 local Castbar_PostFail = function(element, _)
+	NamePlate_ApplyDirectInterruptState(element, "UNIT_SPELLCAST_FAILED")
 	ns.API.ClearInterruptCastBarRefresh(element)
 	if (element.InterruptMarker) then
 		element.InterruptMarker:Hide()
@@ -1505,6 +1835,7 @@ local Castbar_PostFail = function(element, _)
 end
 
 local Castbar_PostStop = function(element, _)
+	NamePlate_ApplyDirectInterruptState(element, "UNIT_SPELLCAST_STOP")
 	ns.API.ClearInterruptCastBarRefresh(element)
 	Castbar_PostUpdate(element, _)
 end
@@ -1688,6 +2019,9 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 	if (unit and unit ~= self.unit) then return end
 
 	unit = unit or self.unit
+	if (self.Castbar) then
+		NamePlate_SetInterruptWatcherUnit(self.Castbar, unit)
+	end
 
 	self.inCombat = InCombatLockdown()
 	
@@ -1833,6 +2167,7 @@ local NamePlate_OnHide = function(self)
 	if (self.Castbar) then
 		ns.API.ClearInterruptCastBarRefresh(self.Castbar)
 		self.Castbar.__AzeriteUI_LastInterruptColorUpdate = nil
+		NamePlate_SetInterruptWatcherUnit(self.Castbar, nil)
 	end
 
 	if (self.RaidTargetIndicator) then
@@ -2072,7 +2407,14 @@ local style = function(self, unit, id)
 	interruptMarker:SetTexture(ns.API.GetMedia("grouprole-icons-tank"))
 	interruptMarker:Hide()
 
+	local interruptWatcher = CreateFrame("Frame", nil, self)
+	interruptWatcher.__owner = self
+	interruptWatcher.__castbar = castbar
+	interruptWatcher:SetScript("OnEvent", NamePlate_InterruptWatcherOnEvent)
+
 	self.Castbar.InterruptMarker = interruptMarker
+	self.Castbar.InterruptWatcher = interruptWatcher
+	self.InterruptWatcher = interruptWatcher
 
 	-- Health Value
 	--------------------------------------------
@@ -2565,10 +2907,6 @@ NamePlatesMod.HookNamePlates = function(self)
 		if (UF.SetAlpha) then
 			UF:SetAlpha(0)
 		end
-		if (UF.castBar and UF.castBar.UnregisterAllEvents) then
-			UF.castBar:UnregisterAllEvents()
-		end
-
 		local auraFrame = UF.AurasFrame
 		if (auraFrame) then
 			if (auraFrame.UnregisterAllEvents) then

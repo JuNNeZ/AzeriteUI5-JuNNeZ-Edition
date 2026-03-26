@@ -68,7 +68,7 @@ local L_HAVE_MAIL_FROM = HAVE_MAIL_FROM -- "Unread mail from:"
 -- Constants
 local TORGHAST_ZONE_ID = 2162
 local IN_TORGHAST = (not IsResting()) and (GetRealZoneText() == GetRealZoneText(TORGHAST_ZONE_ID))
-local mapScale = ns.WoW10 and 1 or 198/140
+local mapScale = 1
 local Minimap_OnMouseButton_Hook
 
 local defaults = { profile = ns:Merge({
@@ -90,8 +90,8 @@ MinimapMod.GenerateDefaults = function(self)
 	defaults.profile.savedPosition = {
 		scale = mapScale * ns.API.GetEffectiveScale(),
 		[1] = "BOTTOMRIGHT",
-		[2] = -(40 - ((ns.IsCata or ns.IsClassic) and 10 or 0)) * (mapScale * ns.API.GetEffectiveScale()),
-		[3] = (40 - ((ns.IsCata or ns.IsClassic) and 10 or 0)) * (mapScale * ns.API.GetEffectiveScale())
+		[2] = -40 * (mapScale * ns.API.GetEffectiveScale()),
+		[3] = 40 * (mapScale * ns.API.GetEffectiveScale())
 	}
 	return defaults
 end
@@ -139,24 +139,10 @@ local ObjectSnippets = {
 	},
 	Eye = {
 		Enable = function(object)
-			if (ns.IsClassic) then
-
-			elseif (ns.IsCata) then
-				object:SetFrameLevel(object:GetParent():GetFrameLevel() + 2)
-			elseif (ns.IsRetail) then
-			end
 		end,
 		Disable = function(object)
-			if (ns.IsClassic) then
-			elseif (ns.IsCata) then
-			elseif (ns.IsRetail) then
-			end
 		end,
 		Update = function(object)
-			if (ns.IsClassic) then
-			elseif (ns.IsCata) then
-			elseif (ns.IsRetail) then
-			end
 		end
 	},
 	--EyeClassicPvP = {
@@ -186,60 +172,24 @@ local ObjectSnippets = {
 	------------------------------------------
 	AzeriteEye = {
 		Enable = function(object)
-			if (ns.IsClassic) then
-				LFGMinimapFrame:SetParent(Minimap)
-				LFGMinimapFrame:SetFrameLevel(100)
-				LFGMinimapFrame:ClearAllPoints()
-				LFGMinimapFrame:SetPoint("BOTTOMLEFT", Minimap, 4, 2)
-				LFGMinimapFrame:SetHitRectInsets(-8, -8, -8, -8)
-				LFGMinimapFrameBorder:Hide()
-				LFGMinimapFrameIconTexture:Hide()
-			elseif (ns.IsCata) then
-				MiniMapLFGFrame:SetParent(Minimap)
-				MiniMapLFGFrame:SetFrameLevel(100)
-				MiniMapLFGFrame:ClearAllPoints()
-				MiniMapLFGFrame:SetPoint("TOPRIGHT", Minimap, -4, -2)
-				MiniMapLFGFrame:SetHitRectInsets(-8, -8, -8, -8)
-				MiniMapLFGFrameBorder:Hide()
-				MiniMapLFGFrameIcon:Hide()
-			elseif (ns.IsRetail) then
-				QueueStatusButton:SetParent(Minimap)
-				QueueStatusButton:SetFrameLevel(100)
-				QueueStatusButton:ClearAllPoints()
-				QueueStatusButton:SetPoint("CENTER", Minimap, "CENTER", 82, 82)
-				QueueStatusButton:SetHitRectInsets(-8, -8, -8, -8)
-				QueueStatusButton.Eye:SetParent(UIHider)
-				QueueStatusButton.Highlight:SetParent(UIHider)
-			end
+			QueueStatusButton:SetParent(Minimap)
+			QueueStatusButton:SetFrameLevel(100)
+			QueueStatusButton:ClearAllPoints()
+			QueueStatusButton:SetPoint("CENTER", Minimap, "CENTER", 82, 82)
+			QueueStatusButton:SetHitRectInsets(-8, -8, -8, -8)
+			QueueStatusButton.Eye:SetParent(UIHider)
+			QueueStatusButton.Highlight:SetParent(UIHider)
 		end,
 		Disable = function(object)
-			if (ns.IsClassic) then
-				LFGMinimapFrame:SetParent(_G[ObjectOwners.Eye])
-				LFGMinimapFrame:SetFrameLevel(MinimapBackdrop:GetFrameLevel() + 2)
-				LFGMinimapFrame:ClearAllPoints()
-				LFGMinimapFrame:SetPoint("TOPLEFT", 33, -4)
-				LFGMinimapFrame:SetHitRectInsets(0, 0, 0, 0)
-				LFGMinimapFrameBorder:Show()
-				LFGMinimapFrameIconTexture:Show()
-			elseif (ns.IsCata) then
-				MiniMapLFGFrame:SetParent(_G[ObjectOwners.Eye])
-				MiniMapLFGFrame:SetFrameLevel(MinimapBackdrop:GetFrameLevel() + 2)
-				MiniMapLFGFrame:ClearAllPoints()
-				MiniMapLFGFrame:SetPoint("TOPLEFT", 25, -100)
-				MiniMapLFGFrame:SetHitRectInsets(0, 0, 0, 0)
-				MiniMapLFGFrameBorder:Show()
-				MiniMapLFGFrameIcon:Show()
-			elseif (ns.IsRetail) then
-				QueueStatusButton:SetParent(_G[ObjectOwners.Eye])
-				QueueStatusButton:SetFrameLevel(_G[ObjectOwners.Eye]:GetFrameLevel() + 1)
-				QueueStatusButton:ClearQueueStatus()
-				QueueStatusButton:ClearAllPoints()
-				QueueStatusButton:SetPoint("BOTTOMLEFT", -45, 4)
-				QueueStatusButton:SetHitRectInsets(0, 0, 0, 0)
-				QueueStatusButton.Highlight:SetParent(QueueStatusButton)
-				QueueStatusButton.Eye:SetParent(QueueStatusButton)
-				QueueStatusButton.Eye:SetFrameLevel(QueueStatusButton:GetFrameLevel() - 1)
-			end
+			QueueStatusButton:SetParent(_G[ObjectOwners.Eye])
+			QueueStatusButton:SetFrameLevel(_G[ObjectOwners.Eye]:GetFrameLevel() + 1)
+			QueueStatusButton:ClearQueueStatus()
+			QueueStatusButton:ClearAllPoints()
+			QueueStatusButton:SetPoint("BOTTOMLEFT", -45, 4)
+			QueueStatusButton:SetHitRectInsets(0, 0, 0, 0)
+			QueueStatusButton.Highlight:SetParent(QueueStatusButton)
+			QueueStatusButton.Eye:SetParent(QueueStatusButton)
+			QueueStatusButton.Eye:SetFrameLevel(QueueStatusButton:GetFrameLevel() - 1)
 		end,
 		Update = function(object)
 		end
@@ -378,9 +328,6 @@ local function GetTrackingButton()
 end
 
 local function EnsureTrackingProxy()
-	if (not ns.IsRetail) then
-		return nil
-	end
 	if (MinimapMod.trackingProxy and MinimapMod.trackingProxy.OpenMenu) then
 		return MinimapMod.trackingProxy
 	end
@@ -470,16 +417,14 @@ local OpenTrackingContextMenu = function(anchor)
 		return false
 	end
 
-	if (ns.IsRetail) then
-		-- Pattern parity with ElvUI/GW2_UI:
-		-- prefer the live retail tracking button, then a mixin proxy fallback.
-		if (OpenAndCheck(EnsureTrackingProxy()) or OpenAndCheck(GetTrackingButton())) then
-			return true
-		end
-		local okBlizzard = pcall(Minimap_OnClick, Minimap, "RightButton")
-		if (okBlizzard and IsTrackingMenuVisible()) then
-			return true
-		end
+	-- Pattern parity with ElvUI/GW2_UI:
+	-- prefer the live retail tracking button, then a mixin proxy fallback.
+	if (OpenAndCheck(EnsureTrackingProxy()) or OpenAndCheck(GetTrackingButton())) then
+		return true
+	end
+	local okBlizzard = pcall(Minimap_OnClick, Minimap, "RightButton")
+	if (okBlizzard and IsTrackingMenuVisible()) then
+		return true
 	end
 
 	local dropdown = _G[ns.Prefix.."MiniMapTrackingDropDown"] or _G.MiniMapTrackingDropDown
@@ -495,17 +440,7 @@ end
 -- LeftButton and MiddleButton are handled by Blizzard's original minimap click handler.
 Minimap_OnMouseButton_Hook = function(self, button)
 	if (button == "RightButton") then
-		if (ns.IsClassic) then
-			if (MinimapMod.ShowMinimapTrackingMenu) then
-				MinimapMod:ShowMinimapTrackingMenu()
-			elseif (_G.MiniMapTrackingDropDown) then
-				ToggleDropDownMenu(1, nil, _G.MiniMapTrackingDropDown, "MiniMapTracking", 8, 5)
-			end
-		elseif (ns.IsRetail) then
-			OpenTrackingContextMenu(self)
-		else
-			OpenTrackingContextMenu(self)
-		end
+		OpenTrackingContextMenu(self)
 	end
 end
 
@@ -536,7 +471,7 @@ local Mail_OnEnter = function(self)
 	if ((not countInfos) and MinimapMod and MinimapMod.mail) then
 		countInfos = MinimapMod.mail.countInfos
 	end
-	if (ns.IsRetail) and (countInfos and #countInfos > 0) then
+	if (countInfos and #countInfos > 0) then
 		GameTooltip:AddLine(" ")
 		GameTooltip:AddLine(MAILFRAME_CRAFTING_ORDERS_TOOLTIP_TITLE)
 		for _,countInfo in ipairs(countInfos) do
@@ -594,26 +529,24 @@ MinimapMod.UpdateMail = function(self)
 	local hasMail = HasNewMail()
 	local hasCraftingOrder
 
-	if (ns.IsRetail) then
-		mail.countInfos = C_CraftingOrders.GetPersonalOrdersInfo()
-		hasCraftingOrder = mail.countInfos and #mail.countInfos > 0
+	mail.countInfos = C_CraftingOrders.GetPersonalOrdersInfo()
+	hasCraftingOrder = mail.countInfos and #mail.countInfos > 0
 
-		local mailText = ""
+	local mailText = ""
 
-		if (hasCraftingOrder) then
-			mailText = mailText .. string_format("%s |cff888888(|r"..Colors.normal.colorCode..#mail.countInfos.."|r|cff888888)|r", PROFESSIONS_CRAFTING, L_MAIL, #mail.countInfos)
-		end
-
-		if (hasMail) then
-			if (hasCraftingOrder) then
-				mailText = string_format("%s %s", L_NEW, L_MAIL) .. "|n" .. mailText
-			else
-				mailText = string_format("%s %s", L_NEW, L_MAIL)
-			end
-		end
-
-		mail:SetText(mailText)
+	if (hasCraftingOrder) then
+		mailText = mailText .. string_format("%s |cff888888(|r"..Colors.normal.colorCode..#mail.countInfos.."|r|cff888888)|r", PROFESSIONS_CRAFTING, L_MAIL, #mail.countInfos)
 	end
+
+	if (hasMail) then
+		if (hasCraftingOrder) then
+			mailText = string_format("%s %s", L_NEW, L_MAIL) .. "|n" .. mailText
+		else
+			mailText = string_format("%s %s", L_NEW, L_MAIL)
+		end
+	end
+
+	mail:SetText(mailText)
 
 	if (hasMail or hasCraftingOrder) then
 		mail:Show()
@@ -828,9 +761,6 @@ end
 MinimapMod.SetMinimapTheme = function(self, input)
 	if (InCombatLockdown()) then return end
 	local theme = self:GetArgs(string_lower(input))
-	if (not ns.IsRetail and theme == "blizzard") then
-		theme = "azerite"
-	end
 	self:SetTheme(theme)
 end
 
@@ -871,7 +801,7 @@ MinimapMod.SetTheme = function(self, requestedTheme)
 	for element,object in next,Objects do
 		if (new.HideElements and new.HideElements[element]) then
 			-- Retail tracking must keep a live parent; parenting to UIHider can break menu open.
-			if (ns.IsRetail and element == "Tracking") then
+			if (element == "Tracking") then
 				local owner = ObjectOwners[element] or MinimapCluster or Minimap
 				object:SetParent(owner)
 				object:SetAlpha(0)
@@ -900,7 +830,7 @@ MinimapMod.SetTheme = function(self, requestedTheme)
 			end
 		else
 			object:SetParent(ObjectOwners[element])
-			if (ns.IsRetail and element == "Tracking") then
+			if (element == "Tracking") then
 				object:SetAlpha(1)
 				local button = object.Button
 				if (button) then
@@ -1064,7 +994,7 @@ MinimapMod.CreateCustomElements = function(self)
 	self.mail = mail
 
 	-- Addon Compartment
-	if (ns.IsRetail) then
+	do
 		local addonCompartment = self.Objects.Addons
 		if (addonCompartment) then
 			local addons = CreateFrame("DropdownButton", nil, Minimap)
@@ -1111,74 +1041,6 @@ MinimapMod.CreateCustomElements = function(self)
 		end
 	end
 
-	local dropdown = nil
-
-	-- This is broken?
-	if (true) then
-
-		--if (not ns.WoW11) then
-		--	dropdown = LibDD:Create_UIDropDownMenu(ns.Prefix.."MiniMapTrackingDropDown", UIParent)
-		--	dropdown:SetID(1)
-		--	dropdown:SetClampedToScreen(true)
-		--	dropdown:Hide()
-		--	dropdown.noResize = true
-		--	self.dropdown = dropdown
-		--end
-
-		if (ns.IsClassic) then
-
-			--[[--
-			self.ShowMinimapTrackingMenu = function(self)
-				local hasTracking
-				local trackingMenu = { { text = TRACKING or "Select Tracking", isTitle = true, notCheckable = true } }
-				for _,spellID in ipairs({
-					1494, --Track Beasts
-					19883, --Track Humanoids
-					19884, --Track Undead
-					19885, --Track Hidden
-					19880, --Track Elementals
-					19878, --Track Demons
-					19882, --Track Giants
-					19879, --Track Dragonkin
-						5225, --Track Humanoids: Druid
-						5500, --Sense Demons
-						5502, --Sense Undead
-						2383, --Find Herbs
-						2580, --Find Minerals
-						2481  --Find Treasure
-				}) do
-					if (IsPlayerSpell(spellID)) then
-						hasTracking = true
-						local tracking = GetTrackingTexture()
-						local spellName = GetSpellInfo(spellID)
-						local spellTexture = GetSpellTexture(spellID)
-						table_insert(trackingMenu, {
-							text = spellName,
-							icon = spellTexture,
-							checked = tracking == spellTexture,
-							func = function() CastSpellByID(spellID) end,
-
-						})
-					end
-				end
-				if (hasTracking) then
-					table_insert(trackingMenu, {
-						text = OBJECTIVES_STOP_TRACKING,
-						notCheckable = true,
-						func = function() CancelTrackingBuff() end
-					})
-					EasyMenu(trackingMenu, dropdown, "cursor", 0 , 0, "MENU")
-					PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON, "SFX")
-				end
-			end
-			--]]--
-		elseif (not ns.WoW11) then
-			--if (MiniMapTrackingDropDown_Initialize) then
-			--	LibDD:UIDropDownMenu_Initialize(dropdown, MiniMapTrackingDropDown_Initialize, "MENU")
-			--end
-		end
-
-	end
 
 	self:UpdateCustomElements()
 	self.CreateCustomElements = noop
@@ -1197,9 +1059,7 @@ MinimapMod.PostUpdatePositionAndScale = function(self)
 	self.widgetFrame:SetScale(ns.API.GetEffectiveScale() / config.scale)
 	self:UpdateCustomElements()
 
-	if (ns.IsRetail) then
-		MinimapCluster.MinimapContainer:SetScale(1)
-	end
+	MinimapCluster.MinimapContainer:SetScale(1)
 
 	-- TODO: Figure out all the elements I should rescale.
 	for name in next,{
@@ -1286,78 +1146,37 @@ MinimapMod.InitializeObjectTables = function(self)
 
 	-- Minimap objects available for restyling.
 	----------------------------------------------------
-	if (ns.WoW10) then
-		Objects.Addons = AddonCompartmentFrame
-		Objects.BorderTop = MinimapCluster.BorderTop
-		Objects.Calendar = GameTimeFrame
-		Objects.Clock = TimeManagerClockButton
-		Objects.Compass = MinimapCompassTexture
-		Objects.Crafting = MinimapCluster.IndicatorFrame.CraftingOrderFrame
-		Objects.Difficulty = MinimapCluster.InstanceDifficulty
-		Objects.Expansion = ExpansionLandingPageMinimapButton
-		Objects.Eye = QueueStatusButton
-		Objects.Mail = MinimapCluster.IndicatorFrame.MailFrame
-		Objects.Tracking = MinimapCluster.TrackingFrame
-		--Objects.Tracking = MinimapCluster.Tracking
-		Objects.Zone = MinimapCluster.ZoneTextButton
-		Objects.ZoomIn = Minimap.ZoomIn
-		Objects.ZoomOut = Minimap.ZoomOut
-	end
-
-	-- CATA: check
-	if (ns.IsCata) then
-		Objects.BorderTop = MinimapBorderTop
-		Objects.BorderClassic = MinimapBorder
-		Objects.Calendar = GameTimeFrame
-		Objects.Clock = TimeManagerClockButton
-		Objects.Compass = MinimapCompassTexture
-		Objects.Difficulty = MiniMapInstanceDifficulty
-		Objects.Eye = LFGMinimapFrame or MiniMapLFGFrame
-		Objects.EyeClassicPvP = LFGMinimapFrame or MiniMapBattlefieldFrame
-		Objects.Mail = MiniMapMailFrame
-		Objects.Tracking = MiniMapTracking
-		Objects.Zone = MinimapZoneTextButton
-		Objects.ZoomIn = MinimapZoomIn
-		Objects.ZoomOut = MinimapZoomOut
-		Objects.WorldMap = MiniMapWorldMapButton
-	end
-
-	if (ns.IsClassic) then
-		Objects.BorderTop = MinimapBorderTop
-		Objects.BorderClassic = MinimapBorder
-		Objects.Calendar = GameTimeFrame
-		Objects.Clock = TimeManagerClockButton
-		Objects.Compass = MinimapCompassTexture
-		Objects.Difficulty = MiniMapInstanceDifficulty
-		Objects.Eye = LFGMinimapFrame -- MinimapBackdrop
-		--Objects.EyeClassicPvP = LFGMinimapFrame or MiniMapBattlefieldFrame
-		Objects.Mail = MiniMapMailFrame
-		Objects.ToggleButton = MinimapToggleButton
-		Objects.Tracking = MiniMapTrackingFrame
-		Objects.Zone = MinimapZoneTextButton
-		Objects.ZoomIn = MinimapZoomIn
-		Objects.ZoomOut = MinimapZoomOut
-		Objects.WorldMap = MiniMapWorldMapButton
-	end
+	Objects.Addons = AddonCompartmentFrame
+	Objects.BorderTop = MinimapCluster.BorderTop
+	Objects.Calendar = GameTimeFrame
+	Objects.Clock = TimeManagerClockButton
+	Objects.Compass = MinimapCompassTexture
+	Objects.Crafting = MinimapCluster.IndicatorFrame.CraftingOrderFrame
+	Objects.Difficulty = MinimapCluster.InstanceDifficulty
+	Objects.Expansion = ExpansionLandingPageMinimapButton
+	Objects.Eye = QueueStatusButton
+	Objects.Mail = MinimapCluster.IndicatorFrame.MailFrame
+	Objects.Tracking = MinimapCluster.TrackingFrame
+	Objects.Zone = MinimapCluster.ZoneTextButton
+	Objects.ZoomIn = Minimap.ZoomIn
+	Objects.ZoomOut = Minimap.ZoomOut
 
 	-- Object parents when using blizzard theme.
 	----------------------------------------------------
-	if (ns.WoW10) then
-		ObjectOwners.Addons = MinimapCluster
-		ObjectOwners.BorderTop = MinimapCluster
-		ObjectOwners.Calendar = MinimapCluster
-		ObjectOwners.Clock = MinimapCluster
-		ObjectOwners.Compass = MinimapBackdrop
-		ObjectOwners.Crafting = MinimapCluster.IndicatorFrame
-		ObjectOwners.Difficulty = MinimapCluster
-		ObjectOwners.Expansion = MinimapBackdrop
-		ObjectOwners.Eye = MicroButtonAndBagsBar
-		ObjectOwners.Mail = MinimapCluster.IndicatorFrame
-		ObjectOwners.Tracking = MinimapCluster
-		ObjectOwners.Zone = MinimapCluster
-		ObjectOwners.ZoomIn = Minimap
-		ObjectOwners.ZoomOut = Minimap
-	end
+	ObjectOwners.Addons = MinimapCluster
+	ObjectOwners.BorderTop = MinimapCluster
+	ObjectOwners.Calendar = MinimapCluster
+	ObjectOwners.Clock = MinimapCluster
+	ObjectOwners.Compass = MinimapBackdrop
+	ObjectOwners.Crafting = MinimapCluster.IndicatorFrame
+	ObjectOwners.Difficulty = MinimapCluster
+	ObjectOwners.Expansion = MinimapBackdrop
+	ObjectOwners.Eye = MicroButtonAndBagsBar
+	ObjectOwners.Mail = MinimapCluster.IndicatorFrame
+	ObjectOwners.Tracking = MinimapCluster
+	ObjectOwners.Zone = MinimapCluster
+	ObjectOwners.ZoomIn = Minimap
+	ObjectOwners.ZoomOut = Minimap
 
 	--[[--
 
@@ -1415,10 +1234,6 @@ end
 MinimapMod.OnEnable = function(self)
 	LoadAddOn("Blizzard_TimeManager")
 
-	if (ns.IsClassic) then
-		LoadAddOn("Blizzard_GroupFinder_VanillaStyle")
-	end
-
 	-- Clean out deprecated settings
 	self.db.profile.useHalfClock = nil
 	self.db.profile.useServerTime = nil
@@ -1438,37 +1253,28 @@ MinimapMod.OnEnable = function(self)
 	self.frame:EnableMouseWheel(true)
 	self.frame:SetScript("OnMouseWheel", Minimap_OnMouseWheel)
 
-	if (ns.IsRetail) then
-		-- Dedicated click handler frame, matching the reliable ElvUI/GW2_UI pattern:
-		-- keep left/middle passthrough, capture right-down for tracking menu.
-		if (not self.clickHandler) then
-			local clickHandler = CreateFrame("Frame", ns.Prefix.."MinimapClickHandler", self.frame)
-			clickHandler:SetAllPoints(self.frame)
-			clickHandler:SetFrameLevel(self.frame:GetFrameLevel() + 30)
-			clickHandler:EnableMouse(true)
-			if (clickHandler.SetPassThroughButtons) then
-				clickHandler:SetPassThroughButtons("LeftButton", "MiddleButton")
-			end
-			if (clickHandler.SetPropagateMouseMotion) then
-				clickHandler:SetPropagateMouseMotion(true)
-			end
-			clickHandler:SetScript("OnMouseDown", function(_, button)
-				Minimap_OnMouseButton_Hook(self.frame, button)
-			end)
-			clickHandler:SetScript("OnMouseUp", noop)
-			self.clickHandler = clickHandler
+	-- Dedicated click handler frame, matching the reliable ElvUI/GW2_UI pattern:
+	-- keep left/middle passthrough, capture right-down for tracking menu.
+	if (not self.clickHandler) then
+		local clickHandler = CreateFrame("Frame", ns.Prefix.."MinimapClickHandler", self.frame)
+		clickHandler:SetAllPoints(self.frame)
+		clickHandler:SetFrameLevel(self.frame:GetFrameLevel() + 30)
+		clickHandler:EnableMouse(true)
+		if (clickHandler.SetPassThroughButtons) then
+			clickHandler:SetPassThroughButtons("LeftButton", "MiddleButton")
 		end
-	else
-		if (not self.__AzeriteUI_MinimapMouseUpHooked) then
-			self.frame:HookScript("OnMouseUp", Minimap_OnMouseButton_Hook)
-			self.__AzeriteUI_MinimapMouseUpHooked = true
+		if (clickHandler.SetPropagateMouseMotion) then
+			clickHandler:SetPropagateMouseMotion(true)
 		end
+		clickHandler:SetScript("OnMouseDown", function(_, button)
+			Minimap_OnMouseButton_Hook(self.frame, button)
+		end)
+		clickHandler:SetScript("OnMouseUp", noop)
+		self.clickHandler = clickHandler
 	end
 
-	if (ns.IsRetail) then
-		self.frame:SetArchBlobRingScalar(0)
-		self.frame:SetQuestBlobRingScalar(0)
-	end
+	self.frame:SetArchBlobRingScalar(0)
+	self.frame:SetQuestBlobRingScalar(0)
 
 	self:CreateCustomElements()
 	self:CreateAnchor(MINIMAP_LABEL):SetDefaultScale(mapScale * ns.API.GetEffectiveScale())
@@ -1481,9 +1287,7 @@ MinimapMod.OnEnable = function(self)
 	self:RegisterEvent("UPDATE_PENDING_MAIL", "UpdateMail")
 	self:RegisterEvent("VARIABLES_LOADED", "OnEvent")
 
-	if (ns.WoW10) then
-		self:RegisterEvent("CRAFTINGORDERS_UPDATE_PERSONAL_ORDER_COUNTS", "UpdateMail")
-	end
+	self:RegisterEvent("CRAFTINGORDERS_UPDATE_PERSONAL_ORDER_COUNTS", "UpdateMail")
 
 	self:RegisterChatCommand("setminimaptheme", "SetMinimapTheme")
 

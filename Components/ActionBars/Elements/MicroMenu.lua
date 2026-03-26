@@ -50,38 +50,6 @@ MicroMenu.SpawnButtons = function(self)
 		MainMenuMicroButton = MAINMENU_BUTTON
 	}
 
-	-- Cata Classic
-	if (ns.IsCata) then
-		labels = {
-			CharacterMicroButton = CHARACTER_BUTTON,
-			SpellbookMicroButton = SPELLBOOK_ABILITIES_BUTTON,
-			TalentMicroButton = TALENTS_BUTTON,
-			AchievementMicroButton = ACHIEVEMENT_BUTTON,
-			QuestLogMicroButton = QUESTLOG_BUTTON,
-			SocialsMicroButton = SOCIALS,
-			PVPMicroButton = PLAYER_V_PLAYER,
-			LFGMicroButton = LFG_BUTTON,
-			MainMenuMicroButton = MAINMENU_BUTTON,
-			HelpMicroButton = HELP_BUTTON
-		}
-	end
-
-	-- Classic Era
-	if (ns.IsClassic) then
-		labels = {
-			CharacterMicroButton = CHARACTER_BUTTON,
-			SpellbookMicroButton = SPELLBOOK_ABILITIES_BUTTON,
-			TalentMicroButton = TALENTS,
-			QuestLogMicroButton = QUESTLOG_BUTTON,
-			SocialsMicroButton = SOCIAL_BUTTON,
-			WorldMapMicroButton = WORLDMAP_BUTTON,
-			LFGMicroButton = LFG_BUTTON,
-			MainMenuMicroButton = MAINMENU_BUTTON,
-			HelpMicroButton = HELP_BUTTON
-		}
-	end
-
-	-- Retail
 	local buttons = {
 		CharacterMicroButton,
 		ProfessionMicroButton,
@@ -97,36 +65,6 @@ MicroMenu.SpawnButtons = function(self)
 		StoreMicroButton,
 		MainMenuMicroButton
 	}
-
-	-- Wrath Classic
-	if (ns.IsCata) then
-		buttons = {
-			CharacterMicroButton,
-			SpellbookMicroButton,
-			TalentMicroButton,
-			AchievementMicroButton,
-			QuestLogMicroButton,
-			SocialsMicroButton,
-			PVPMicroButton,
-			LFGMicroButton,
-			MainMenuMicroButton,
-			HelpMicroButton
-		}
-	end
-
-	-- Classic
-	if (ns.IsClassic) then
-		buttons = {
-			CharacterMicroButton,
-			SpellbookMicroButton,
-			TalentMicroButton,
-			QuestLogMicroButton,
-			SocialsMicroButton,
-			WorldMapMicroButton,
-			MainMenuMicroButton,
-			HelpMicroButton
-		}
-	end
 
 	self.buttons = {}
 
@@ -191,18 +129,6 @@ MicroMenu.SpawnButtons = function(self)
 						PlaySound(SOUNDKIT.IG_MAINMENU_QUIT)
 						HideUIPanel(GameMenuFrame)
 					end
-				end)
-			elseif (ns.IsCata and microButton == PVPMicroButton) then
-				button.nocombat = true
-				button:SetScript("OnClick", function(self)
-					if (InCombatLockdown()) then return end
-					TogglePVPFrame()
-				end)
-			elseif (ns.IsCata and microButton == LFGMicroButton) then
-				button.nocombat = true
-				button:SetScript("OnClick", function(self)
-					if (InCombatLockdown()) then return end
-					PVEFrame_ToggleFrame()
 				end)
 			else
 				button:SetAttribute("type", "macro")
