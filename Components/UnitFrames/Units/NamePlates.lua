@@ -785,6 +785,61 @@ local ShouldShowNamePlateForBlizzardVisibility = function(self)
 	return GetCVarBoolIfSupported("nameplateShowFriends", true)
 end
 
+local ShouldShowObjectPlateOverlay = function(self)
+	if (not self or not self.isObjectPlate or self.isPRD) then
+		return false
+	end
+	return (self.isSoftTarget or self.isMouseOver or self.isTarget) and true or false
+end
+
+local ApplyObjectPlateVisualState = function(self)
+	if (not self) then
+		return
+	end
+
+	self:SetIgnoreParentAlpha((self.isSoftTarget and not self.isTarget) and true or false)
+	self:SetAlpha(1)
+	if (self.Name) then
+		self.Name:Show()
+	end
+	if (self.Health) then
+		self.Health:SetAlpha(0)
+		self.Health:Hide()
+		if (self.Health.Backdrop) then
+			self.Health.Backdrop:Hide()
+		end
+	end
+	if (self.Health and self.Health.Value) then
+		self.Health.Value:Hide()
+	end
+	if (self.HealthPrediction) then
+		self.HealthPrediction:SetAlpha(0)
+		self.HealthPrediction:Hide()
+		if (self.HealthPrediction.absorbBar) then
+			self.HealthPrediction.absorbBar:SetAlpha(0)
+			self.HealthPrediction.absorbBar:Hide()
+		end
+	end
+	if (self.Classification) then self.Classification:Hide() end
+	if (self.ThreatIndicator) then self.ThreatIndicator:Hide() end
+	if (self.RaidTargetIndicator) then self.RaidTargetIndicator:Hide() end
+	if (self.Castbar) then
+		self.Castbar:SetAlpha(0)
+		self.Castbar:Hide()
+		if (self.Castbar.Backdrop) then
+			self.Castbar.Backdrop:Hide()
+		end
+	end
+	if (self.WidgetContainer) then
+		self.WidgetContainer:SetIgnoreParentAlpha(false)
+		self.WidgetContainer:SetAlpha(0)
+	end
+	if (self.SoftTargetFrame) then
+		self.SoftTargetFrame:SetIgnoreParentAlpha(true)
+		self.SoftTargetFrame:SetAlpha(1)
+	end
+end
+
 local ApplyHiddenNamePlateVisualState = function(self)
 	if (not self) then
 		return
@@ -1373,7 +1428,24 @@ local NamePlate_PostUpdateHoverElements = function(self)
 	SetNameColorForUnit(self, db)
 
 	if (self.isObjectPlate and not self.isPRD) then
-		if (self.Name) then
+		if (ShouldShowObjectPlateOverlay(self)) then
+			if (self.Name and self.Name.UpdateTag) then
+				pcall(self.Name.UpdateTag, self.Name)
+			end
+			if (self.Name and self.unit) then
+				local nameText = self.Name:GetText()
+				local nameIsEmpty = (type(nameText) ~= "string") or (not issecretvalue(nameText) and nameText == "")
+				if (nameIsEmpty) then
+					local rawName = UnitName(self.unit)
+					if (type(rawName) == "string") then
+						self.Name:SetText(rawName)
+					end
+				end
+			end
+			if (self.Name) then
+				self.Name:Show()
+			end
+		elseif (self.Name) then
 			self.Name:Hide()
 		end
 		if (self.Health and self.Health.Value) then
@@ -1854,7 +1926,12 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 		if (self:IsElementEnabled("Auras")) then
 			self:DisableElement("Auras")
 		end
-		ApplyHiddenNamePlateVisualState(self)
+		if (ShouldShowObjectPlateOverlay(self)) then
+			ApplyObjectPlateVisualState(self)
+			NamePlate_PostUpdateHoverElements(self)
+		else
+			ApplyHiddenNamePlateVisualState(self)
+		end
 		return
 	end
 

@@ -4,6 +4,17 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.28-JuNNeZ (2026-03-27)
+
+### Highlights
+- Restored soft-target icons and names for interactable world objects such as mining nodes, herbs, chairs, and similar object-like nameplates.
+
+### Access
+- No new menu path. Soft-target an interactable object in the world and its icon/name should appear again.
+
+### Internal
+- The retail nameplate object-plate path now keeps a minimal visible overlay while the plate is soft-targeted, hovered, or hard-targeted instead of forcing the entire plate and `SoftTargetFrame` alpha to zero.
+
 ## 5.3.27-JuNNeZ (2026-03-27)
 
 ### Highlights
