@@ -4,6 +4,18 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.27-JuNNeZ (2026-03-27)
+
+### Highlights
+- Fixed another WoW 12 Blizzard widget crash that could still throw `Blizzard_UIWidgetTemplateTextWithState.lua:35` when delve, map, or tooltip text/state widgets exposed secret text sizing values.
+- Broadened the existing tooltip widget protection so related Blizzard secret-value geometry errors from shared tooltip layout code are also suppressed instead of surfacing as Lua errors.
+
+### Access
+- No new menu path. This is a stability patch for Blizzard-owned widget/tooltip rendering on retail WoW 12.
+
+### Internal
+- Extended the fail-closed widget guard in `Core/FixBlizzardBugsWow12.lua` from `GameTooltip_AddWidgetSet(...)` to the live text-with-state and widget-manager registration paths, hiding the failed widget/container on confirmed secret-value errors.
+
 ## 5.3.26-JuNNeZ (2026-03-26)
 
 ### Highlights

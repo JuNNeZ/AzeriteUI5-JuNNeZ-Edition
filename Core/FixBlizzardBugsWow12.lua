@@ -432,6 +432,93 @@ local function IsSecretWidgetTooltipError(err)
 	return string.find(err, "Blizzard_UIWidget", 1, true)
 		or string.find(err, "UIWidgetTemplateTextWithState", 1, true)
 		or string.find(err, "UIWidgetManager", 1, true)
+		or string.find(err, "SharedTooltipTemplates", 1, true)
+		or string.find(err, "FrameUtil", 1, true)
+end
+
+local function HideSecretWidgetTarget(target)
+	if (not target) then
+		return false
+	end
+	if (target.Hide) then
+		pcall(target.Hide, target)
+	end
+	if (target.widgetContainer and target.widgetContainer.Hide) then
+		pcall(target.widgetContainer.Hide, target.widgetContainer)
+	end
+	return true
+end
+
+local function HideSecretWidgetTargets(...)
+	local hidden = false
+	for i = 1, select("#", ...) do
+		local value = select(i, ...)
+		local valueType = type(value)
+		if (valueType == "table" or valueType == "userdata") then
+			if (value.widgetContainer and value.widgetContainer.Hide) then
+				hidden = HideSecretWidgetTarget(value) or hidden
+			elseif (value.widgetFrames and value.Hide) then
+				hidden = HideSecretWidgetTarget(value) or hidden
+			elseif (value.widgetType and value.Hide) then
+				hidden = HideSecretWidgetTarget(value) or hidden
+			end
+		end
+	end
+	return hidden
+end
+
+local function HandleSecretWidgetError(err, ...)
+	if (not IsSecretWidgetTooltipError(err)) then
+		error(err, 0)
+	end
+	HideSecretWidgetTargets(...)
+	return nil
+end
+
+local function GuardWidgetTextWithStateSetup()
+	if (type(_G.UIWidgetTemplateTextWithStateMixin) ~= "table"
+		or type(_G.UIWidgetTemplateTextWithStateMixin.Setup) ~= "function"
+		or _G.__AzUI_W12_UIWidgetTextWithStateSetupWrapped) then
+		return
+	end
+
+	_G.__AzUI_W12_UIWidgetTextWithStateSetupWrapped = true
+	local mixin = _G.UIWidgetTemplateTextWithStateMixin
+	local original = mixin.Setup
+	local Pack = table.pack or function(...)
+		return { n = select("#", ...), ... }
+	end
+
+	mixin.Setup = function(...)
+		local results = Pack(pcall(original, ...))
+		if (results[1]) then
+			return unpack(results, 2, results.n or #results)
+		end
+		return HandleSecretWidgetError(results[2], ...)
+	end
+end
+
+local function GuardWidgetManagerRegister()
+	if (type(_G.UIWidgetManagerMixin) ~= "table"
+		or type(_G.UIWidgetManagerMixin.RegisterForWidgetSet) ~= "function"
+		or _G.__AzUI_W12_UIWidgetManagerRegisterWrapped) then
+		return
+	end
+
+	_G.__AzUI_W12_UIWidgetManagerRegisterWrapped = true
+	local mixin = _G.UIWidgetManagerMixin
+	local original = mixin.RegisterForWidgetSet
+	local Pack = table.pack or function(...)
+		return { n = select("#", ...), ... }
+	end
+
+	mixin.RegisterForWidgetSet = function(...)
+		local results = Pack(pcall(original, ...))
+		if (results[1]) then
+			return unpack(results, 2, results.n or #results)
+		end
+		return HandleSecretWidgetError(results[2], ...)
+	end
 end
 
 local function GuardTooltipWidgetSets()
@@ -453,19 +540,15 @@ local function GuardTooltipWidgetSets()
 		end
 
 		local err = results[2]
-		if (not IsSecretWidgetTooltipError(err)) then
-			error(err, 0)
-		end
-
 		local tooltip = select(1, ...)
-		local widgetContainer = tooltip and tooltip.widgetContainer
-		if (widgetContainer and widgetContainer.Hide) then
-			pcall(widgetContainer.Hide, widgetContainer)
+		if (tooltip) then
+			HideSecretWidgetTarget(tooltip)
 		end
-		if (tooltip and tooltip.Layout and tooltip.NineSlice and tooltip.NineSlice.Hide) then
+		if (IsSecretWidgetTooltipError(err)
+			and tooltip and tooltip.Layout and tooltip.NineSlice and tooltip.NineSlice.Hide) then
 			tooltip:Layout()
 		end
-		return nil
+		return HandleSecretWidgetError(err, ...)
 	end
 end
 
@@ -616,6 +699,8 @@ local function ApplyGuards()
 	GuardPartyFrameGlobals()
 	GuardCompactUnitFrameGlobals()
 	GuardAuraUtilUnpack()
+	GuardWidgetTextWithStateSetup()
+	GuardWidgetManagerRegister()
 	GuardTooltipWidgetSets()
 	ApplyBlizzardFrameQuarantine()
 	HookCompactFrameLifecycle()
