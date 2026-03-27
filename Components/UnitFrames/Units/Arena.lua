@@ -140,6 +140,10 @@ local GetArenaFillTexCoords = function(percent)
 	return ns.API.GetReversedHorizontalFillTexCoords(percent)
 end
 
+local GetArenaNativeFillTexCoords = function()
+	return 0, 1, 0, 1
+end
+
 local NormalizeArenaDisplayPercent = function(value)
 	if (type(value) ~= "number") then
 		return nil
@@ -479,17 +483,18 @@ local style = function(self, unit)
 	-- Health
 	--------------------------------------------
 	local health = self:CreateBar()
-	if (health.SetForceNative) then health:SetForceNative(false) end
+	if (health.SetForceNative) then health:SetForceNative(true) end
 	health:SetFrameLevel(health:GetFrameLevel() + 2)
 	health:SetPoint(unpack(db.HealthBarPosition))
 	health:SetSize(unpack(db.HealthBarSize))
 	health:SetStatusBarTexture(db.HealthBarTexture)
+	health:SetTexCoord(GetArenaNativeFillTexCoords())
 	health:DisableSmoothing(true)
 	health.__AzeriteUI_UseProductionNativeFill = true
 	health.__AzeriteUI_KeepMirrorPercentOnNoSample = false
 	health.__AzeriteUI_UseValueMirrorTexCoord = false
 	health:SetOrientation("HORIZONTAL")
-	health:SetReverseFill(true)
+	health:SetReverseFill(false)
 	health:SetFlippedHorizontally(false)
 	health.__AzeriteUI_BaseTexCoordLeft = nil
 	health.__AzeriteUI_BaseTexCoordRight = nil
@@ -507,22 +512,6 @@ local style = function(self, unit)
 	self.Health.Override = ns.API.UpdateHealth
 	self.Health.PostUpdate = Health_PostUpdate
 	self.Health.PostUpdateColor = Health_PostUpdateColor
-
-	local healthFakeFill = health:CreateTexture(nil, "ARTWORK", nil, 1)
-	healthFakeFill:SetAllPoints(health)
-	healthFakeFill:SetTexture(db.HealthBarTexture)
-	healthFakeFill:SetTexCoord(GetArenaFillTexCoords(nil))
-	healthFakeFill:SetBlendMode("BLEND")
-	healthFakeFill:SetAlpha(1)
-	healthFakeFill:SetDrawLayer("ARTWORK", 1)
-	self.Health.FakeFill = healthFakeFill
-
-	ns.API.AttachScriptSafe(health, "OnMinMaxChanged", function(source)
-		SyncArenaHealthVisualState(source)
-	end)
-	ns.API.AttachScriptSafe(health, "OnValueChanged", function(source)
-		SyncArenaHealthVisualState(source)
-	end)
 
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel() - 1)
@@ -545,9 +534,9 @@ local style = function(self, unit)
 	healthPreview:SetFrameLevel(health:GetFrameLevel() - 1)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
 	healthPreview.__AzeriteUI_UseValueMirrorTexCoord = false
-	healthPreview:SetTexCoord(GetArenaFillTexCoords(nil))
+	healthPreview:SetTexCoord(GetArenaNativeFillTexCoords())
 	healthPreview:SetOrientation("HORIZONTAL")
-	healthPreview:SetReverseFill(true)
+	healthPreview:SetReverseFill(false)
 	healthPreview:SetFlippedHorizontally(false)
 	healthPreview:SetSparkTexture("")
 		healthPreview:SetAlpha(0)
@@ -555,7 +544,6 @@ local style = function(self, unit)
 	healthPreview:DisableSmoothing(true)
 
 	self.Health.Preview = healthPreview
-	SyncArenaHealthVisualState(health)
 
 	-- Health Prediction
 	--------------------------------------------

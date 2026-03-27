@@ -193,6 +193,25 @@ local GenerateOptions = function()
 						set = setter,
 						get = getter
 					},
+					healthValuePlacement = {
+						name = L["Health text placement"],
+						desc = L["Choose whether nameplate health text sits below the bar, inside the bar, or only moves inside while you are in combat."],
+						order = 1.5,
+						type = "select", width = "full",
+						values = {
+							["below"] = L["Below the bar"],
+							["inside"] = L["Inside the bar"],
+							["inside-combat"] = L["Inside in combat"]
+						},
+						set = setter,
+						get = function(info)
+							local value = getter(info)
+							if (value ~= "inside" and value ~= "inside-combat") then
+								return "below"
+							end
+							return value
+						end
+					},
 					showAuras = {
 						name = L["Show auras"],
 						desc = L["Show buffs and debuffs on nameplates."],

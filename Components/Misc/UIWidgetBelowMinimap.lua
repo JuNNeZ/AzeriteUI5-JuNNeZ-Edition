@@ -71,8 +71,12 @@ UIWidgetBelowMinimap.PrepareFrames = function(self)
 	contents:SetParent(UIParent)
 	contents:SetFrameStrata("BACKGROUND")
 
-	-- Hack to prevent UIWidgetBelowMinimapContainerFrame moving in UIParent.lua#2987
-	contents.GetNumWidgetsShowing = function() return 0 end
+	-- Do NOT override GetNumWidgetsShowing on the Blizzard container frame.
+	-- Writing an addon closure onto a Blizzard UIWidget container taints it in WoW12,
+	-- causing "attempt to perform arithmetic on a secret number value" in
+	-- Blizzard_UIWidgetTemplateBase:Setup when widgetWidth/widgetHeight are read back.
+	-- Instead, the SetPoint SecureHook below re-anchors the container whenever
+	-- UIParent_ManageFramePositions (UIParent.lua) moves it.
 	contents:SetFrameStrata("BACKGROUND")
 
 	self.frame = frame

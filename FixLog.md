@@ -3,6 +3,138 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-27 (continued)
+
+- **WoW12 widget secret follow-up started:** Fixing the two current-session AzeriteUI-owned UIWidget crashes where Blizzard item/vignette widget setup still escapes the existing secret-widget wrappers and rethrows from `Core/FixBlizzardBugsWow12.lua`.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **WoW12 widget secret follow-up applied:** Broadened the shared secret-widget error filter to catch current WoW 12 uppercase `Secret` argument errors plus the newer `UIWidgetTemplateBase`, `UIWidgetTemplateItemDisplay`, and `VignetteDataProvider` call paths, and wrapped `UIWidgetTemplateItemDisplayMixin.Setup()` so failing item widgets now fail closed like the earlier text/state widgets.
+  - **Root Cause:** [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua) only matched lowercase `"secret"` errors and only wrapped `UIWidgetTemplateTextWithStateMixin.Setup()`. Your current AzeriteUI stacks show two newer variants: `Blizzard_UIWidgetTemplateBase.lua:1638` reached through `Blizzard_UIWidgetTemplateItemDisplay.lua`, and `Blizzard_UIWidgetTemplateTextWithState.lua:31` reached through `Blizzard_SharedMapDataProviders/VignetteDataProvider.lua`. The uppercase `"Secret values are only allowed..."` message bypassed the case-sensitive filter, and the item-display path had no setup wrapper at all, so both errors were rethrown from `HandleSecretWidgetError(...)`.
+  - **Safety:** Scope stays inside the existing WoW 12 widget guard file. AzeriteUI still only suppresses confirmed secret-value widget failures and hides the offending widget/container instead of rewriting Blizzard widget layout logic globally.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed. In-game `/reload`, then re-open the vignette/map tooltip and the item-display widget source that previously triggered `Blizzard_UIWidgetTemplateTextWithState.lua:31` and `Blizzard_UIWidgetTemplateBase.lua:1638`. The rest of the tooltip/widget area should continue rendering, with only the offending Blizzard widget block omitted if its payload is still secret.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`, `FixLog.md`
+- **Compact party-frame taint follow-up started:** Investigating a fresh `ADDON_ACTION_BLOCKED` report where AzeriteUI's WoW 12 compact-raid-manager helper still enters Blizzard's protected compact-party visibility path and trips `CompactPartyFrame:SetShown()`.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **Compact party-frame taint follow-up applied:** Stopped driving the Blizzard compact raid manager through `CompactRaidFrameManager_SetSetting("IsShown", ...)` on WoW 12 and now quarantine-hide the manager bar by reparenting it offscreen when the Blizzard raid bar option is disabled.
+  - **Root Cause:** [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua) still called `CompactRaidFrameManager_SetSetting("IsShown", ...)` inside `ApplyCompactRaidManagerVisibility()`. Your BugGrabber stack shows that helper flowing into Blizzard's compact-frame visibility update path, which then reached protected `CompactPartyFrame:SetShown()` and produced `ADDON_ACTION_BLOCKED`.
+  - **Safety:** The change is narrower than the previous behavior. When the Blizzard raid utility bar is disabled, AzeriteUI now only unregisters manager events and reparents the manager to the existing quarantine hider. It no longer asks Blizzard to recompute compact-frame visibility from addon code. The enabled path remains non-invasive, so turning the bar back on after it was already hidden in-session may still require `/reload`, as the existing option text already documents.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed. In-game `/reload`, reproduce the previous group/party visibility scenario, and confirm BugSack no longer reports `CompactPartyFrame:SetShown()` from AzeriteUI. Then toggle `/az -> Unit Frames -> Show Blizzard Raid Bar` off and verify the Blizzard ready-check/world-marker bar stays hidden without taint.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`, `FixLog.md`
+- **/azdebug tooltip/layout follow-up started:** Fixing the new debug-menu tooltip helper and loosening the lower control spacing after live testing surfaced a `GameTooltip:SetText(...)` signature error and overlapping buttons.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **/azdebug tooltip/layout follow-up applied:** Switched the shared button tooltip helper over to `GameTooltip:AddLine(..., wrap=true)` and increased the debug-menu frame/lower panel spacing so the newer inspect/key controls no longer trip the tooltip API or collide with each other.
+  - **Root Cause:** [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua) used `GameTooltip:SetText(text, 1, 1, 1, true)` inside the shared button-hover helper. On this client build that fifth argument is invalid, which caused the BugSack error on hover. The same lower section had also become too compressed after the extra inspect/key controls were added, which made several buttons crowd each other visually.
+  - **Safety:** The change only touches the debug popup helper and layout metrics. Command behavior is unchanged.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game, hovering the new debug buttons should no longer throw the tooltip API error, and the lower inspect/key controls should have visible separation.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **/azdebug full command coverage started:** Expanding the refreshed `/azdebug` popup so it exposes the full `/azdebug` command set instead of only the older health/dump subset.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **/azdebug full command coverage applied:** Extended the popup to cover the remaining `/azdebug` commands, including `bars`, `nameplates`, `snapshot`, `scale nameplates`, and the `/azdebug keys ...` sub-surface, and fixed the missing `azdebugkeys`/`azdebugtarget` slash registrations plus the missing `/azdebug keys` route.
+  - **Root Cause:** [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua) had drifted out of sync in three places: the popup only covered a subset of commands, the help text omitted some live commands like `bars`, and the file claimed `/azdebug keys <subcommand>` and `/azdebugkeys` existed even though the main parser never routed `keys` and the extra slash commands were not registered.
+  - **Safety:** The change stays inside the existing debug module. It adds UI affordances and restores missing command registration/routing without touching gameplay modules or changing the underlying debug handlers themselves.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game, `/azdebug` should now expose buttons for every `/azdebug` path, `/azdebug keys status` should work through both the chat command and the popup, and `/azdebugkeys` plus `/azdebugtarget` should now register as direct slash commands.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+- **Raid utility-bar solo force-show started:** Adding a dev-only debug command to force-show the Blizzard ready-check/world-marker bar for solo testing outside normal raid visibility rules.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`, `Core/FixBlizzardBugsWow12.lua`
+- **Raid utility-bar solo force-show applied:** Added `/azdebug raidbar status|on|off|toggle` and let the WoW 12 Blizzard raid-manager helper honor that dev-only force-show flag before the normal `/az` option.
+  - **Root Cause:** The new player-facing `/az -> Unit Frames -> Show Blizzard Raid Bar` setting only exposes the Blizzard raid utility bar when Blizzard itself still considers the manager eligible to show. That is correct for normal play, but it still leaves no maintainer-side way to bring the bar up while solo or outside raid visibility rules for quick ready-check / world-marker testing.
+  - **Safety:** The override is gated behind dev mode and the `/azdebug` command surface. Normal players still follow the saved `/az` toggle and Blizzard's own visibility rules. The force-show path only short-circuits `ShouldShowBlizzardRaidBar()` while the debug flag is enabled.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` and `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed. In-game, enable dev mode, run `/azdebug raidbar on`, then `/reload` if needed, and verify the Blizzard raid utility bar can be shown while solo. Run `/azdebug raidbar off` to return to the normal `/az` + Blizzard behavior.
+  - **Files Modified:** `Core/Debugging.lua`, `Core/FixBlizzardBugsWow12.lua`, `FixLog.md`
+- **/azdebug menu raidbar controls started:** Refreshing the `/azdebug` popup with dedicated raidbar buttons and a cleaner grouped layout now that the solo force-show command exists.
+  - **Files Targeted:** `FixLog.md`, `Core/Debugging.lua`
+- **/azdebug menu raidbar controls applied:** Rebuilt the `/azdebug` popup into grouped panels for flags, raid utility-bar controls, dumps/repairs, and utilities, and added live raidbar status plus `Force On`, `Force Off`, `Toggle`, and `Print Status` buttons for the new solo force-show path.
+  - **Root Cause:** [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua) still used a narrow single-column popup that buried newer controls in chat commands only. Once the solo raidbar override existed, the `/azdebug` window needed first-class buttons and clearer grouping so maintainers could use it without memorizing the subcommand string every time.
+  - **Safety:** The menu refresh keeps the existing handlers and debug commands intact. It only rearranges the popup UI, adds status text, and surfaces the already-implemented raidbar debug actions through buttons.
+  - **Verification:** `luac -p 'Core/Debugging.lua'` passed. In-game `/azdebug` should now open the refreshed panel, show the raidbar status text, and let you trigger the same raidbar debug actions from buttons as from `/azdebug raidbar ...`.
+  - **Files Modified:** `Core/Debugging.lua`, `FixLog.md`
+
+- **Blizzard raid utility-bar toggle started:** Adding a player-facing `/az` option for the Blizzard raid utility bar that carries ready check and ground/world marker buttons.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/UnitFrame.lua`, `Options/OptionsPages/UnitFrames.lua`, `Core/FixBlizzardBugsWow12.lua`, `Locale/enUS.lua`
+- **Blizzard raid utility-bar toggle applied:** Added `/az -> Unit Frames -> Show Blizzard Raid Bar` and changed the WoW 12 compact-raid-manager handling so AzeriteUI still quarantines Blizzard raid frames while leaving the ready-check/world-marker utility bar toggleable.
+  - **Root Cause:** [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua) treated `CompactRaidFrameManager` the same as the Blizzard raid-frame container and fully quarantined it. That removed the leader-options utility bar along with the frames, so there was no player-facing way to keep AzeriteUI raid frames while still using Blizzard's ready-check and world-marker controls.
+  - **Safety:** The change stays narrow to the Blizzard raid manager. AzeriteUI still quarantines `CompactRaidFrameContainer` and the compact raid unit frames themselves; only the manager bar now follows the new `UnitFrames.showBlizzardRaidBar` setting instead of being force-quarantined.
+  - **Verification:** `luac -p 'Components/UnitFrames/UnitFrame.lua'`, `luac -p 'Options/OptionsPages/UnitFrames.lua'`, `luac -p 'Core/FixBlizzardBugsWow12.lua'`, and `luac -p 'Locale/enUS.lua'` passed. In-game `/reload`, then open `/az -> Unit Frames`, toggle `Show Blizzard Raid Bar`, and verify the Blizzard raid utility bar with ready check and ground markers hides/shows as expected in group content. If you enable it after it was already hidden earlier in the session, `/reload` is still the safe path.
+  - **Files Modified:** `Components/UnitFrames/UnitFrame.lua`, `Options/OptionsPages/UnitFrames.lua`, `Core/FixBlizzardBugsWow12.lua`, `Locale/enUS.lua`, `FixLog.md`
+
+- **Object soft-target name/icon follow-up started:** Investigating report that mining nodes, chairs, and similar world interactables no longer show their soft-target icon or nameplate name.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/NamePlates.lua`
+- **Object soft-target name/icon follow-up applied:** Object-like interactable plates now stay hidden by default, but they no longer get fully zeroed out while soft-targeted, hovered, or hard-targeted, so mining nodes, chairs, and similar interactables can show their soft-target icon and name again without restoring full health/cast visuals.
+  - **Root Cause:** [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) classified world interactables as `self.isObjectPlate` and then unconditionally routed them through `ApplyHiddenNamePlateVisualState()`. That helper sets the entire plate alpha to `0`, hides the name, and sets `SoftTargetFrame` alpha to `0`, so the later soft-target and hover logic never had a visible frame left to display.
+  - **Safety:** The change stays local to the object-plate branch in the retail nameplate unit style. Normal hostile/friendly unit plates are unchanged, and object plates still suppress health bars, castbars, raid markers, threat, and widget-only clutter unless the plate is actively being interacted with.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/NamePlates.lua'` passed. In-game `/reload`, then soft-target or mouse over a mining node, chair, herb, or similar interactable. The Blizzard soft-target icon and the object name should now appear again, while the plate should still stay minimal and hidden when not interacted with.
+  - **Files Modified:** `Components/UnitFrames/Units/NamePlates.lua`, `FixLog.md`
+- **Widget manager secret-text follow-up started:** Extending the earlier tooltip-only UIWidget guard after a fresh `Blizzard_UIWidgetTemplateTextWithState.lua:35` report showed the same secret `textHeight` arithmetic still escaping through `Blizzard_UIWidgetManager.lua`.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
+- **Widget manager secret-text follow-up applied:** Added shared secret-widget error handling around `UIWidgetTemplateTextWithStateMixin.Setup`, `UIWidgetManagerMixin.RegisterForWidgetSet`, and the existing `GameTooltip_AddWidgetSet(...)` wrapper so Blizzard text/state widgets now fail closed by hiding the offending widget or container instead of aborting the widget update.
+  - **Root Cause:** [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua) previously only wrapped `GameTooltip_AddWidgetSet(...)`. Your latest stack still terminates in `Blizzard_UIWidgetTemplateTextWithState.lua:35` and `Blizzard_UIWidgetManager.lua`, which means at least one live widget-registration path was bypassing that tooltip-only entry point and still letting Blizzard do arithmetic on a secret `textHeight`.
+  - **Safety:** The new wrappers still only suppress errors whose text includes both `secret` and the Blizzard widget file identifiers already used by the earlier fix. On those confirmed-secret failures, the code hides the specific widget frame or widget container and returns without rewriting unrelated widget logic.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` is required; in-game `/reload`, then re-open the delve/map tooltip or any widget source that previously threw `Blizzard_UIWidgetTemplateTextWithState.lua:35`. The tooltip/widget region should continue rendering without BugSack surfacing this secret `textHeight` arithmetic error.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`, `FixLog.md`
+- **Tooltip widget secret-value filter broadened:** Extended `IsSecretWidgetTooltipError` in `Core/FixBlizzardBugsWow12.lua` to also suppress taint errors originating from `SharedTooltipTemplates` and `FrameUtil`, which were falling through the existing filter and being rethrown as visible BugSack errors.
+  - **Root Cause:** The existing `GameTooltip_AddWidgetSet` wrapper already caught `Blizzard_UIWidget*` taint errors from `UIWidgetTemplateTextWithState` and `UIWidgetManager`, but user reports showed two additional Blizzard files — `Blizzard_SharedXML/SharedTooltipTemplates.lua` (lines 202, 213) and `Blizzard_SharedXMLBase/FrameUtil.lua` (line 211) — also returning tainted geometry values (`frameWidth`, `frameLeft`) through the same tooltip widget path. Because their error strings didn't match the existing patterns they weren't being caught.
+  - **Safety:** The filter only acts inside our `GameTooltip_AddWidgetSet` pcall wrapper on errors already confirmed to contain the word "secret". Adding `SharedTooltipTemplates` and `FrameUtil` to the suppression list does not change behavior for any other code path.
+  - **Verification:** `/reload` and hover over a map POI or delve tooltip with UIWidgets active.
+  - **Files Modified:** `Core/FixBlizzardBugsWow12.lua`, `FixLog.md`
+- **Boss power-bar anchor follow-up started:** Investigating report that boss mana/power bars are still sitting in the middle of the frame instead of along the bottom edge.
+  - **Files Targeted:** `FixLog.md`, `Layouts/Data/BossUnitFrames.lua`
+- **Boss power-bar anchor follow-up applied:** Moved the boss power bar and its backdrop anchor from `CENTER` to `BOTTOM` so the thin mana strip sits along the bottom edge of the boss frame instead of through the middle.
+  - **Root Cause:** [Layouts/Data/BossUnitFrames.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Layouts/Data/BossUnitFrames.lua) still defined both `PowerBarPosition` and `PowerBackdropPosition` as centered anchors. [Components/UnitFrames/Units/Boss.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Boss.lua) applies those positions directly, so the boss power strip was being placed in the middle exactly as configured.
+  - **Safety:** This only changes the boss-frame layout anchor for the power strip and its backdrop. Arena, health bars, castbars, tags, and secure header logic are unchanged.
+  - **Verification:** `luac -p 'Layouts/Data/BossUnitFrames.lua'` is required; in-game `/reload` plus a boss-frame power-bar check is still required.
+  - **Files Modified:** `Layouts/Data/BossUnitFrames.lua`, `FixLog.md`
+- **Boss power-bar bottom-offset follow-up started:** Nudging the boss mana strip closer to the frame edge after live testing showed the first bottom anchor still sat too far inside the frame and looked like a dent/notch in the art.
+  - **Files Targeted:** `FixLog.md`, `Layouts/Data/BossUnitFrames.lua`
+- **Boss power-bar bottom-offset follow-up applied:** Reduced the boss power bar and backdrop bottom offset so the mana strip sits closer to the outer bottom lip instead of floating inside the frame body.
+  - **Root Cause:** The first bottom-anchor pass moved the boss power bar off the exact center, but `y = 6` still placed both the bar and its 3px backdrop high enough inside the frame art that the strip read visually as a recessed cutout. Lowering that offset keeps the same bottom anchor while moving the strip onto the intended lower edge.
+  - **Safety:** Layout-only tweak for boss power bar placement. Health, arena, castbars, and secure logic are unchanged.
+  - **Verification:** `luac -p 'Layouts/Data/BossUnitFrames.lua'` is required; in-game `/reload` plus another boss-frame mana-bar visual check is still required.
+  - **Files Modified:** `Layouts/Data/BossUnitFrames.lua`, `FixLog.md`
+
+## 2026-03-27
+
+- **Boss/arena fake-fill conflict follow-up started:** Using the active `TODO.md` note to audit whether boss and arena health bars are still letting the hidden native statusbar direction fight the visible fake-fill overlay.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Boss/arena fake-fill conflict follow-up applied:** Boss and arena health bars no longer force reverse-fill on the hidden native health bars or their hidden preview bars, leaving the visible right-to-left health presentation to the fake-fill overlay path.
+  - **Root Cause:** [Components/UnitFrames/Units/Boss.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Boss.lua) and [Components/UnitFrames/Units/Arena.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Arena.lua) still configured the hidden native health bars with `SetReverseFill(true)` while also rendering a reversed fake-fill overlay on top. That kept two direction systems active on the same health path and matched the remaining wrong-end "being eaten" behavior described in `TODO.md`.
+  - **Safety:** Scope is limited to the local boss/arena health and health-preview setup. Castbars, absorbs, tags, secure headers, and other unit styles are unchanged.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Boss.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` passed. In-game `/reload` plus a visual boss/arena health check is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+- **Boss/arena fake-fill geometry rollback started:** Re-checking the boss/arena health path against target after live testing showed the previous rollback made the bars scale/shrink incorrectly and visually doubled the health layers.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Boss/arena fake-fill geometry rollback applied:** Restored `SetReverseFill(true)` on the hidden native boss/arena health bars and their hidden preview bars so the fake-fill overlay once again inherits the same reversed native texture geometry as target.
+  - **Root Cause:** The shared fake-fill helper in [Components/UnitFrames/Functions.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Functions.lua) anchors boss/arena `FakeFill` to `health:GetStatusBarTexture()`. Changing those hidden native bars to `SetReverseFill(false)` changed the geometry the fake fill inherited, which made the health layer look like it was scaling instead of cropping and made the health stack read as multiple overlapping bars.
+  - **Safety:** This rollback only restores boss/arena health and preview reverse-fill parity with the existing target-frame path. No castbar, absorb, tag, or secure-header logic changed.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Boss.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` are required; in-game `/reload` plus another boss/arena visual pass is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+- **Hidden native health display suppression started:** Following the screenshot report of duplicated boss/arena health layers, auditing whether the shared hidden-native helper is still leaving an attached `Health.Display` layer visible even after the native texture is hidden.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Functions.lua`
+- **Hidden native health display suppression applied:** Extended the shared hidden-native health helper to also zero and hide `health.Display` and its texture when present, alongside the native statusbar texture and preview texture.
+  - **Root Cause:** [Components/UnitFrames/Functions.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Functions.lua) already hides the main native health texture and preview for fake-fill-driven bars, but the shared update path can still force-show `element.Display` when that extra display layer exists. The screenshot symptom of multiple boss/arena bars matches a live `Display` layer rendering under or over the fake fill even though the base native texture is hidden.
+  - **Safety:** Scope is limited to fake-fill consumers that call `API.HideNativeHealthVisuals(...)`. Visible native-bar unit styles do not use this helper, so normal health rendering paths stay unchanged.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'` is required; in-game `/reload` plus another boss/arena visual check is still required.
+  - **Files Modified:** `Components/UnitFrames/Functions.lua`, `FixLog.md`
+- **Boss/arena native-health rollback started:** Replacing the boss/arena fake-fill health path with the simpler native statusbar path used by nameplates after repeated live reports that the fake-fill stack still scales incorrectly and shows multiple layers.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Boss/arena native-health rollback applied:** Boss and arena health bars now use native forced statusbar rendering with direct texcoord/orientation/reverse-fill setup, and no longer create or drive a separate fake-fill texture for health.
+  - **Root Cause:** [Components/UnitFrames/Units/Boss.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Boss.lua) and [Components/UnitFrames/Units/Arena.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Arena.lua) had diverged into a target-style hidden-native/fake-fill health path, while [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) keeps health on the simpler native statusbar path. Returning boss/arena to the native path removes the extra fake-fill layer and the hidden-native synchronization complexity that kept producing the scaling/duplicate-bar behavior.
+  - **Safety:** This change is local to boss/arena health-bar creation. Castbars, power bars, absorb bars, tags, and secure headers are unchanged.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Boss.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` are required; in-game `/reload` plus boss/arena health validation is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+- **Boss/arena native texcoord follow-up started:** Re-checking the native rollback after live testing showed the bars still looked skewed, which suggests the old reversed fake-fill texcoords are still being applied on top of native reverse-fill.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Boss/arena native texcoord follow-up applied:** Switched the native boss/arena health bars and health preview bars back to normal texcoords while keeping `SetReverseFill(true)` for the leftward fill direction.
+  - **Root Cause:** The native rollback left [Components/UnitFrames/Units/Boss.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Boss.lua) and [Components/UnitFrames/Units/Arena.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/Arena.lua) using `Get*FillTexCoords(...)`, which returns the reversed crop coords from the older fake-fill path. On a native statusbar that meant texcoords and `SetReverseFill(true)` were both participating in horizontal reversal, producing the remaining skewed/weird health presentation.
+  - **Safety:** Scope is limited to native health/preview texcoords on boss and arena. Backdrop art, castbars, absorbs, tags, and secure headers are unchanged.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Boss.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` are required; in-game `/reload` plus another boss/arena health check is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+- **Boss/arena left-anchor reverse-fill probe started:** Testing whether the remaining skewed native health presentation is simply the bar anchoring from the wrong side after the native rollback.
+  - **Files Targeted:** `FixLog.md`, `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`
+- **Boss/arena left-anchor reverse-fill probe applied:** Disabled reverse-fill on the native boss/arena health bars and health preview bars so the native statusbar texture stays anchored from the left while using the normalized texcoords.
+  - **Root Cause:** After the native rollback and texcoord cleanup, the remaining visual symptom still looked like the live fill chunk was pinned to the wrong side of the bar. With normal native texcoords already restored, `SetReverseFill(true)` was the remaining control deciding which edge the native health texture anchored to, so this probe flips that anchor without reintroducing the old fake-fill path.
+  - **Safety:** Scope is limited to boss/arena health and health-preview reverse-fill on the native path. Backdrop art, castbars, absorbs, tags, and secure headers are unchanged.
+  - **Verification:** `luac -p 'Components/UnitFrames/Units/Boss.lua'` and `luac -p 'Components/UnitFrames/Units/Arena.lua'` are required; in-game `/reload` plus another boss/arena health check is still required.
+  - **Files Modified:** `Components/UnitFrames/Units/Boss.lua`, `Components/UnitFrames/Units/Arena.lua`, `FixLog.md`
+
 ## 2026-03-25
 
 - **5.3.25 WIP release prep started:** Packaging the current interrupt-castbar follow-up as a clearly marked work-in-progress release, with the player-facing changelog calling out that the new hostile nameplate interrupt visuals semi-work but some non-interruptible casts still show yellow as though they can be interrupted.
@@ -5198,3 +5330,305 @@ Testing:
 3. Trigger the same cast again.
 4. Confirm the nameplate now goes grey.
 5. If needed, rerun `/azdebug nameplates nameplate1` and verify the final display matches the Blizzard-side `blizzShowShield=true` state.
+
+Request:
+- Follow up after the first Blizzard fallback pass regressed ordinary casts to grey.
+
+Applied:
+- Narrowed the Blizzard fallback in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) so it no longer treats `blizzShowShield` as a protected-cast signal.
+- The fallback now only trusts Blizzard-side runtime state that is closer to the actual rendered shield outcome: `notInterruptible`, non-secret shield visibility, or a non-zero shield alpha.
+- Expanded `/azdebug nameplates [unit]` in [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua) to print `blizzShieldAlpha` so the next sample can distinguish a static config bit from a live rendered shield state.
+
+Why:
+- `blizzShowShield` turned out to be too broad. The regression where interruptible casts also started grey strongly suggests that field is a static castbar capability/config flag, not the live non-interruptible state we need.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Core/Debugging.lua'`
+3. `/reload`
+4. Check that ordinary interruptible casts are no longer grey by default.
+5. On the problematic cast, rerun `/azdebug nameplates nameplate1` and capture `blizzNotInterruptible`, `blizzShieldShown`, and `blizzShieldAlpha`.
+
+Request:
+- Follow up after the next protected-cast sample still showed stale Blizzard shield state on an inactive frame.
+
+Applied:
+- Tightened the Blizzard fallback in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) so hidden Blizzard castbar fields only participate while that Blizzard castbar is actively casting, channeling, or empowering.
+- Left the direct watcher path intact, so active protected casts can still resolve through `watcherLocked` / `elementLocked` and the Blizzard fallback can still confirm live shield state during the cast itself.
+
+Why:
+- The latest logs showed two different truths at once:
+- during the active cast, AzeriteUI now reached `reason=platy_locked ... probedNotInterruptible=true`, which means the protected-cast path is finally resolving correctly
+- after the cast ended, `/azdebug nameplates nameplate1` still reported `watcherLocked=true elementLocked=true blizzShowShield=true blizzShieldAlpha=1` with no active cast, which means the hidden Blizzard fallback state could linger and keep influencing later visual decisions
+- Gating the Blizzard fallback behind live Blizzard cast activity prevents stale shield state from leaking into inactive or ordinary casts.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Verify a normal interruptible cast does not start grey.
+4. Reproduce the protected cast and confirm it still resolves through `reason=platy_locked`.
+5. If anything still looks wrong, rerun `/azdebug nameplates nameplate1` during the active cast and once again after it ends.
+
+Request:
+- Follow up after a live test showed protected casts still rendering as yellow until an interrupt attempt, and target-frame protected casts staying yellow/red instead of grey.
+
+Applied:
+- Updated the shared interrupt resolver in [Components/UnitFrames/Functions.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Functions.lua) so `false` is no longer treated as final unless AzeriteUI has an explicit safe interruptible result.
+- Added an active-Blizzard-castbar fallback for shared unit-frame interrupt visuals, covering target/focus and nameplate Blizzard castbars through the same helper pattern used by the newer nameplate work.
+- Changed the shared visual-state functions so protected-state `nil` now resolves to `base` instead of falling through to yellow/red cooldown colors. Yellow/red now only appear after an explicit interruptible `false`.
+
+Why:
+- The latest behavior showed the castbars were still using interrupt-ready visuals while the protected/non-interruptible state was effectively unknown at cast start.
+- That is the same failure mode the nameplate-specific resolver already stopped doing: unknown should remain neutral, not advertise the player's interrupt as usable.
+- By aligning the shared helper with the safer nameplate semantics and adding the live Blizzard castbar probe, target-frame and other shared castbars can promote to grey when a protected cast is actually detected instead of defaulting to yellow/red.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Functions.lua'`
+2. `/reload`
+3. Verify a protected cast on the target frame no longer starts yellow/red by default.
+4. Verify a normal interruptible cast still uses yellow/red based on interrupt readiness.
+5. Verify the protected nameplate cast no longer waits for an interrupt attempt before turning grey.
+
+Request:
+- Follow up after target-frame behavior improved but the nameplate castbar still appeared to inherit the previous spell color.
+
+Applied:
+- Added `NamePlate_ResetCastbarVisuals()` in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) to force the visible nameplate castbar back to its configured neutral text color, neutral bar color, and hidden interrupt marker.
+- Called that reset both before each nameplate interrupt-visual refresh and again on castbar hide, so a new cast no longer starts from the previous cast's texture tint.
+
+Why:
+- The resolver could already be correct while the nameplate still looked wrong if the visible statusbar texture kept the prior cast's vertex color until the next refresh landed.
+- Unlike the target-frame path, the nameplate renderer writes directly to the statusbar texture every refresh, so it needed an explicit neutral reset to prevent inherited yellow/red/grey tint from leaking across casts.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Watch two different enemy casts in sequence and confirm the second nameplate castbar starts from neutral rather than the first cast's color.
+4. Verify a protected cast can still turn grey after the reset.
+
+Request:
+- Follow up after a live test showed nameplate castbars still changing color when the player targeted a different mob.
+
+Applied:
+- Stopped [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) from re-running `Castbar_PostUpdate()` during `PLAYER_TARGET_CHANGED`, `PLAYER_SOFT_ENEMY_CHANGED`, and `PLAYER_SOFT_INTERACT_CHANGED`.
+- Those events still update scale/highlight/layout, but they no longer force an interrupt-visual refresh on unrelated active castbars.
+
+Why:
+- The latest symptom was classic cross-event contamination: a casting nameplate looked correct until the player targeted another enemy, at which point the active castbar could flip grey even though its own cast state had not changed.
+- Target/soft-target transitions are layout/highlight events, not cast-state changes, so they should not be re-driving the castbar interrupt-color path for every visible nameplate.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Let one mob cast, then target a different mob while the first cast is still active.
+4. Confirm the first mob's nameplate castbar no longer changes color purely because your target changed.
+
+Request:
+- Follow up after live testing showed nameplate castbars still mixing up protected casts, interruptible casts, and stun-only stop cases.
+
+Applied:
+- Narrowed the nameplate interrupt-ready branch in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) so yellow/red is driven only by the player's primary interrupt spell, not the full known interrupt list.
+- This removes stun/CC abilities such as Paladin `Hammer of Justice` from the nameplate yellow/red decision path.
+
+Why:
+- The previous nameplate resolver iterated every known interrupt spell for the player spec. For Paladin that included both `Rebuke` and `Hammer of Justice`, which meant a cast that could only be stopped by stun could still show yellow simply because the stun was ready.
+- The target/shared interrupt path already treats the primary kick as the relevant yellow/red signal, so this change brings the nameplate path back in line with that model.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Verify a stun-only stoppable cast no longer turns yellow just because the stun is ready.
+4. Verify a normal interruptible cast still uses yellow/red based on the primary kick cooldown.
+
+Request:
+- Tighten and simplify the nameplate castbar resolver after repeated reports that grey and yellow were still being mixed by overlapping old logic.
+
+Applied:
+- Simplified the nameplate protected-cast probe in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) so fallback probe sources now only contribute positive protected evidence (`true`) and no longer contribute interruptible evidence (`false`).
+- Kept yellow/red exclusively behind the explicit watcher state: nameplates now only enter the interruptible branch when `UNIT_SPELLCAST_INTERRUPTIBLE` has explicitly driven the direct watcher state to `false`.
+- Left protected grey available from explicit watcher `true` and from positive live probe signals (safe API `true`, active Blizzard shield visibility, active Blizzard shield alpha, active Blizzard castbar `notInterruptible`).
+
+Why:
+- The previous resolver still mixed strong and weak signals together. Several sources can legitimately default to `false` or unknown under WoW 12 secret-value rules, but that does not mean the cast is safely interruptible.
+- Treating those fallback `false` values as real interruptible evidence let yellow/red compete with grey and caused the unstable color switching the user kept seeing.
+- The stricter resolver reduces the state machine to:
+- explicit protected evidence => grey
+- explicit interruptible watcher event => yellow/red
+- everything else => neutral/base
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Verify a protected cast stays neutral or turns grey, but does not drift into yellow without an explicit interruptible event.
+4. Verify a clearly interruptible cast still reaches yellow/red once the direct watcher marks it interruptible.
+
+Request:
+- Follow up after interruptible nameplate casts were still showing grey.
+
+Applied:
+- Removed Blizzard shield visibility and shield alpha from the nameplate protected-cast probe in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua).
+- The nameplate grey state now only trusts explicit protected booleans: AzeriteUI's own safe `notInterruptible` booleans, safe cast/channel `notInterruptible=true`, watcher `true`, or Blizzard castbar `notInterruptible=true`.
+
+Why:
+- The repeated grey-on-interruptible reports strongly suggest Blizzard shield presentation state was still too broad or too stale for this use case.
+- Shield visibility/alpha are rendering details, not stable classification signals. Using them as protected evidence kept causing false grey states.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Verify an ordinary interruptible cast no longer shows grey on the nameplate.
+4. Verify a protected cast still turns grey if the game exposes an explicit protected boolean.
+
+Request:
+- Strip the nameplate castbar interrupt logic down further after grey/yellow mixups still persisted.
+
+Applied:
+- Removed all remaining probe-driven classification from the nameplate interrupt resolver in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua).
+- Nameplate interrupt state is now watcher-driven only:
+- `UNIT_SPELLCAST_NOT_INTERRUPTIBLE` => protected/grey
+- `UNIT_SPELLCAST_INTERRUPTIBLE` => interruptible/yellow-red
+- cast stop/fail/interrupted/channel stop => clear to neutral
+- cast start/channel start with no explicit interruptibility event => neutral
+
+Why:
+- The previous hybrid model still let old probe logic and fallback signals interfere with explicit event state.
+- A minimal event-driven state machine is easier to reason about and avoids mixing secret-value fallbacks, Blizzard presentation state, and speculative cast API reads into the nameplate color path.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Verify interruptible casts only become yellow/red after an explicit interruptible event.
+4. Verify protected casts only become grey after an explicit non-interruptible event.
+5. Verify casts without either event remain neutral instead of drifting between grey and yellow.
+
+Request:
+- Simplify the nameplate logic even further after protected casts still showed yellow.
+
+Applied:
+- Removed yellow/red interrupt-readiness coloring from the nameplate interrupt branch in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua).
+- The nameplate interrupt visuals are now binary:
+- explicit `UNIT_SPELLCAST_NOT_INTERRUPTIBLE` watcher state => grey
+- everything else => normal/base castbar color
+
+Why:
+- The remaining yellow branch was still dependent on the game providing a clean interruptible classification event, and repeated tests showed that path was still too noisy for reliable nameplate coloring.
+- A binary nameplate model is materially easier to trust than a three-state model when the underlying interruptibility signals are inconsistent.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Verify a protected cast only changes away from base if it is explicitly marked non-interruptible.
+4. Verify ordinary casts stay on the normal castbar color instead of flipping between yellow and grey.
+
+Request:
+- Remove the nameplate interrupt logic entirely and roll the castbar back to a plain stock-style castbar after continued grey/yellow mixups.
+
+Applied:
+- Removed the nameplate interrupt-state resolver, watcher frame, interrupt marker, and refresh wiring from [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua).
+- Simplified the nameplate castbar callbacks to plain visual behavior only:
+- start/update => base nameplate castbar colors
+- stop/hide => reset to base colors
+- fail/interrupted => red
+- Removed the old nameplate interrupt debug fields from `/azdebug nameplates` in [Core/Debugging.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/Debugging.lua) so the command matches the simpler castbar path.
+
+Why:
+- The nameplate interrupt path had accumulated multiple overlapping sources and refresh hooks, and the resulting state was still inconsistent in live testing.
+- Rolling the nameplate castbar back to a plain castbar removes the cross-wiring instead of trying to patch one more edge case on top of it.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Core/Debugging.lua'`
+3. `/reload`
+4. Verify ordinary and protected nameplate casts now use the same base castbar color during casts.
+5. Verify failed/interrupted nameplate casts still turn red.
+6. Run `/azdebug nameplates [unit]` and confirm it now only reports the raw cast payload plus the castbar's own active flags.
+
+Request:
+- Re-add only grey for non-interruptible nameplate casts, but read it directly from oUF's `element.notInterruptible` instead of restoring the deleted watcher/resolver logic.
+
+Applied:
+- Updated [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) so the plain nameplate castbar refresh now paints the bar grey when:
+- the castbar is actively casting/channeling/empowering
+- the plate is not a PRD plate
+- oUF has already set `element.notInterruptible == true`
+- Re-enabled `PostCastInterruptible` for nameplates only as a plain refresh callback, so oUF toggle events can recolor the existing castbar without restoring the old custom interrupt watcher system.
+
+Why:
+- This keeps the simplified nameplate path intact while using the single built-in oUF interruptibility field that already exists on the castbar element.
+- It avoids bringing back the deleted multi-source resolver and only reacts to oUF's own live cast state.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Verify a normal interruptible nameplate cast stays on the base castbar color.
+4. Verify a non-interruptible nameplate cast turns grey if oUF sets `element.notInterruptible`.
+5. Verify failed/interrupted casts still turn red.
+
+Request:
+- Align AzeriteUI's nameplate interrupt handling with the simpler ElvUI/Diabolic oUF pattern after comparing the other UIs.
+
+Applied:
+- Tightened [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) to the Diabolic callback model:
+- `Castbar_UpdateInterruptible` now only switches between the normal castbar color and the non-interruptible grey using `element.notInterruptible`
+- it no longer does a full visual reset before recoloring
+- Rewired nameplate callbacks to the Diabolic shape:
+- `PostCastStart = Castbar_UpdateInterruptible`
+- `PostCastInterruptible = Castbar_UpdateInterruptible`
+- Removed the extra `PostCastUpdate` and `PostCastStop` interrupt refresh path from the castbar wiring.
+- Kept AzeriteUI's separate fail/interrupted red path and hide reset so the addon still uses its own art/style outside the interrupt-color branch.
+
+Why:
+- Diabolic's interrupt logic is just a two-state color switch on `element.notInterruptible`, wired only through cast start and interruptibility toggle callbacks.
+- This removes the last remaining non-Diabolic callback path from AzeriteUI's nameplate interrupt handling while preserving AzeriteUI's own colors and fail/reset styling.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/reload`
+3. Verify an interruptible enemy nameplate cast stays on the base castbar color.
+4. Verify a non-interruptible enemy nameplate cast goes grey on start or when oUF fires `PostCastInterruptible`.
+5. Verify failed/interrupted casts still go red.
+
+Request:
+- Add a nameplate option to show health text inside the health bar, below it, or only move it inside while in combat.
+
+Applied:
+- Added `healthValuePlacement` to the nameplate profile defaults in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua).
+- Added a dedicated health-value anchor helper in [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua) that switches between:
+- `below`
+- `inside`
+- `inside-combat`
+- Added `HealthValuePositionInside` to [Layouts/Data/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Layouts/Data/NamePlates.lua) so the inside placement has an explicit layout anchor instead of a hardcoded patch point.
+- Added a visible select control to [Options/OptionsPages/Nameplates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Options/OptionsPages/Nameplates.lua) under `Visibility` with labels:
+- `Below the bar`
+- `Inside the bar`
+- `Inside in combat`
+
+Why:
+- The old nameplate health text position was fixed in layout data and could not adapt to combat state or user preference.
+- This keeps the implementation local to nameplates, reuses the existing refresh path, and avoids adding one-off anchor changes in multiple places.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `luac -p 'Options/OptionsPages/Nameplates.lua'`
+3. `/reload`
+4. Open `AzeriteUI -> Nameplates -> Visibility -> Health text placement`
+5. Verify `Below the bar` uses the old look.
+6. Verify `Inside the bar` centers the health text inside the health bar.
+7. Verify `Inside in combat` uses the inside position while in combat and the below position otherwise.
+
+Request:
+- Prepare the current interrupt/nameplate/widget follow-up as the next WIP release and align the release metadata for commit/tag/push.
+
+Applied:
+- Added the new `5.3.29-JuNNeZ` release entry to [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md) with the title `The Interrupt Conumdrum`.
+- Marked the changelog entry as still work-in-progress so the interrupt follow-up is described honestly.
+- Bumped the retail version string to `5.3.29-JuNNeZ` in [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1).
+
+Why:
+- The worktree already contains the interrupt/nameplate/debug/widget changes intended for the next patch release, so the release metadata needs to match that state before commit/tag/push.
+- The interrupt work is not fully settled yet, so the public note should explicitly say it is still WIP instead of presenting it as finished.
+
+Testing:
+1. Confirm [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md) has a new top entry for `5.3.29-JuNNeZ`.
+2. Confirm [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1) both report `5.3.29-JuNNeZ`.
+3. `/reload`

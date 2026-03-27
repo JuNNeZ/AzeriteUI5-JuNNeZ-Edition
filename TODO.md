@@ -2,40 +2,16 @@
 
 ---
 
-## 1. Nameplate Castbar Interrupt: Non-Interruptible Shows as Yellow Instead of Grey
+## 1. Nameplate Castbar Interrupt Colors
 
-**Expected behavior:**
-- Yellow — interrupt is ready (`primary-ready`)
-- Red — interrupt is on cooldown (`unavailable`)
-- Grey — cast is non-interruptible / protected (`locked`)
+Superseded.
 
-**Current behavior:** Non-interruptible casts show yellow instead of grey on nameplates.
+The old nameplate-specific interrupt color path was removed from [NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua). Nameplates now use a plain castbar model:
+- base color while casting
+- red on failed/interrupted
+- no yellow/grey interrupt-state coloring on nameplates
 
-**Root cause:**
-
-The nameplate castbar color logic lives in `Castbar_RefreshInterruptVisuals` at [NamePlates.lua:1444-1484](Components/UnitFrames/Units/NamePlates.lua#L1444-L1484). It calls `API.GetInterruptCastColor()` which routes through `API.GetInterruptCastVisualState()` at [Functions.lua:304-333](Components/UnitFrames/Functions.lua#L304-L333).
-
-The three colors are defined at [Functions.lua:255-259](Components/UnitFrames/Functions.lua#L255-L259):
-
-```lua
-local InterruptVisualColors = {
-    primaryReady = { 1, .82, 0 },   -- yellow
-    unavailable  = Colors.red,       -- red
-    locked       = Colors.gray       -- grey
-}
-```
-
-`GetInterruptCastVisualState` checks `ShouldUseEnemyInterruptVisuals()` at [Functions.lua:289-302](Components/UnitFrames/Functions.lua#L289-L302) before doing anything else. If this returns `false`, the function returns `"base"` immediately — which falls back to the default castbar color (yellow), bypassing the `locked` → grey path entirely.
-
-`ShouldUseEnemyInterruptVisuals` calls `IsEnemyUnitForInterruptVisuals` at [Functions.lua:261-287](Components/UnitFrames/Functions.lua#L261-L287), which checks `owner.canAttack`. If `canAttack` is not yet set or resolves as `false`/`nil` on the nameplate owner at the time `UNIT_SPELLCAST_NOT_INTERRUPTIBLE` fires, the whole state machine short-circuits to `"base"` and the bar stays yellow.
-
-The `PostCastInterruptible` callback is wired at [NamePlates.lua:2042](Components/UnitFrames/Units/NamePlates.lua#L2042) as `Castbar_PostUpdate`, which immediately calls `UpdateInterruptCastBarRefresh` → `Castbar_RefreshInterruptVisuals`. The callback fires correctly — it's the `canAttack` gate that prevents reaching `IsCastMarkedNotInterruptible`.
-
-**Fix suggestion:**
-
-Add a debug print inside `Castbar_RefreshInterruptVisuals` to log `interruptState` and `element.__owner.canAttack` when `element.notInterruptible` is true. If `canAttack` is `nil` or `false` at that point, the fix is to ensure the nameplate owner's `canAttack` flag is set before the cast starts, or to add a fallback in `IsEnemyUnitForInterruptVisuals` — e.g. also check `element.notInterruptible` directly as a hint that this is an enemy cast (since friendlies can't be interrupted anyway).
-
-Alternatively, `IsCastMarkedNotInterruptible` at [Functions.lua:241-254](Components/UnitFrames/Functions.lua#L241-L254) could be checked *before* the `ShouldUseEnemyInterruptVisuals` gate, so that `locked` is always returned for genuinely non-interruptible casts regardless of the enemy check.
+Any future interrupt-color work should start from the current plain castbar path instead of reviving the deleted watcher/resolver stack.
 
 ---
 

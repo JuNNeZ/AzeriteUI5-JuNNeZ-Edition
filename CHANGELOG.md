@@ -4,6 +4,24 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.29-JuNNeZ (2026-03-27)
+
+### The Interrupt Conumdrum
+- Continued the retail interrupt-state cleanup for unitframes and nameplates, but this pass is still work-in-progress.
+- Nameplate health text can now sit below the bar, inside the bar, or move inside only while you are in combat.
+- Added an optional Blizzard raid utility bar toggle in `/az -> Unit Frames` for ready check and world marker access.
+- Hardened another WoW 12 Blizzard widget path and removed a taint-prone minimap widget override that could still feed secret-value widget errors.
+- Boss and arena health bars were pushed back toward a plain native fill path while the reverse-fill follow-up continues.
+
+### Access
+- Nameplate health text placement: `/az -> Nameplates -> Visibility`
+- Blizzard raid utility bar: `/az -> Unit Frames`
+
+### Internal
+- WIP interrupt follow-up: nameplates now use the simpler plain/oUF interrupt path again while the shared interrupt probe also learns from the live Blizzard castbar lock state.
+- Added broader `/azdebug` tooling for keys, target fill inspection, and solo raidbar testing.
+- Expanded the retail widget fail-closed guards to cover additional item-display/minimap-widget secret-value paths.
+
 ## 5.3.28-JuNNeZ (2026-03-27)
 
 ### Highlights

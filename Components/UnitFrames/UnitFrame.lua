@@ -41,6 +41,7 @@ local next = next
 local defaults = { profile = ns:Merge({
 	enabled = true,
 	disableAuraSorting = false,
+	showBlizzardRaidBar = false,
 	powerValueAlpha = 75,
 	playerPowerValueAlpha = nil,
 	targetPowerValueAlpha = nil,

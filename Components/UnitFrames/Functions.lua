@@ -239,21 +239,101 @@ local GetPrimaryInterruptReadyState = function()
 	return nil, spellID
 end
 
+local GetBlizzardCastbarForUnit = function(unit)
+	if (type(unit) ~= "string" or unit == "") then
+		return nil
+	end
+
+	if (unit:match("^nameplate%d+$")) then
+		if (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then
+			local okPlate, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit, issecurefunc and issecurefunc())
+			local unitFrame = okPlate and plate and (plate.UnitFrame or plate.unitFrame)
+			return unitFrame and (unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.Castbar or unitFrame.CastingBarFrame)
+		end
+		return nil
+	end
+
+	if (unit == "target") then
+		local targetFrame = _G.TargetFrame
+		return _G.TargetFrameSpellBar
+			or (targetFrame and (targetFrame.spellbar or targetFrame.SpellBar or targetFrame.castBar or targetFrame.CastBar or targetFrame.CastingBarFrame))
+	end
+
+	if (unit == "focus") then
+		local focusFrame = _G.FocusFrame
+		return _G.FocusFrameSpellBar
+			or (focusFrame and (focusFrame.spellbar or focusFrame.SpellBar or focusFrame.castBar or focusFrame.CastBar or focusFrame.CastingBarFrame))
+	end
+
+	return nil
+end
+
+local ProbeBlizzardCastbarNotInterruptible = function(unit)
+	local blizzardCastbar = GetBlizzardCastbarForUnit(unit)
+	local blizzardActive = blizzardCastbar and (blizzardCastbar.casting or blizzardCastbar.channeling or blizzardCastbar.empowering)
+	local sawFalse = false
+	if (not blizzardCastbar or not blizzardActive) then
+		return nil
+	end
+
+	local blizzardLocked = blizzardCastbar.notInterruptible
+	if (type(blizzardLocked) == "boolean" and (not IsSecretValue(blizzardLocked))) then
+		if (blizzardLocked) then
+			return true
+		end
+		sawFalse = true
+	end
+
+	local shield = blizzardCastbar.Shield or blizzardCastbar.IconShield or blizzardCastbar.BorderShield
+	if (shield and shield.IsShown) then
+		local okShown, shown = pcall(shield.IsShown, shield)
+		if (okShown and type(shown) == "boolean" and (not IsSecretValue(shown))) then
+			if (shown) then
+				return true
+			end
+			sawFalse = true
+		end
+	end
+
+	if (shield and shield.GetAlpha) then
+		local okAlpha, alpha = pcall(shield.GetAlpha, shield)
+		if (okAlpha and type(alpha) == "number" and (not IsSecretValue(alpha))) then
+			if (alpha > .05) then
+				return true
+			end
+			sawFalse = true
+		end
+	end
+
+	if (sawFalse) then
+		return false
+	end
+
+	return nil
+end
+
 local IsCastMarkedNotInterruptible = function(castbar)
+	local sawFalse = false
 	local notInterruptible = castbar and castbar.notInterruptible
 	if (type(notInterruptible) == "boolean" and (not IsSecretValue(notInterruptible))) then
-		if (castbar) then
-			castbar.__AzeriteUI_ProbedNotInterruptible = notInterruptible
+		if (notInterruptible) then
+			if (castbar) then
+				castbar.__AzeriteUI_ProbedNotInterruptible = true
+			end
+			return true
 		end
-		return notInterruptible
+		sawFalse = true
 	end
 
 	local cachedNotInterruptible = castbar and castbar.__AzeriteUI_NotInterruptible
 	if (type(cachedNotInterruptible) == "boolean" and (not IsSecretValue(cachedNotInterruptible))) then
-		if (castbar) then
-			castbar.__AzeriteUI_ProbedNotInterruptible = cachedNotInterruptible
+		if (cachedNotInterruptible) then
+			if (castbar) then
+				castbar.__AzeriteUI_ProbedNotInterruptible = true
+			end
+			return true
 		end
-		return cachedNotInterruptible
+		sawFalse = true
 	end
 
 	local owner = castbar and castbar.__owner
@@ -273,58 +353,43 @@ local IsCastMarkedNotInterruptible = function(castbar)
 			end
 		end
 		if (type(castNotInterruptible) == "boolean") then
+			if (castNotInterruptible) then
+				if (castbar) then
+					castbar.__AzeriteUI_ProbedNotInterruptible = true
+					castbar.__AzeriteUI_NotInterruptible = true
+				end
+				return true
+			end
+			sawFalse = true
 			if (castbar) then
-				castbar.__AzeriteUI_ProbedNotInterruptible = castNotInterruptible
-				castbar.__AzeriteUI_NotInterruptible = castNotInterruptible
+				castbar.__AzeriteUI_NotInterruptible = false
 			end
-			return castNotInterruptible
+		end
+
+		local blizzardLocked = ProbeBlizzardCastbarNotInterruptible(unit)
+		if (blizzardLocked == true) then
+			if (castbar) then
+				castbar.__AzeriteUI_ProbedNotInterruptible = true
+			end
+			return true
+		elseif (blizzardLocked == false) then
+			sawFalse = true
 		end
 	end
 
 	if (castbar) then
-		castbar.__AzeriteUI_ProbedNotInterruptible = nil
+		castbar.__AzeriteUI_ProbedNotInterruptible = sawFalse and false or nil
 	end
 
-	return false
-end
-
-local GetSimpleDirectCastNotInterruptible = function(castbar)
-	local notInterruptible = castbar and castbar.notInterruptible
-	if (type(notInterruptible) == "boolean" and (not IsSecretValue(notInterruptible))) then
-		if (castbar) then
-			castbar.__AzeriteUI_ProbedNotInterruptible = notInterruptible
-		end
-		return notInterruptible
-	end
-
-	local owner = castbar and castbar.__owner
-	local unit = owner and owner.unit
-	if (type(unit) == "string" and unit ~= "") then
-		if (UnitCastingInfo) then
-			local okCasting, _, _, _, _, _, _, castNotInterruptible = pcall(UnitCastingInfo, unit)
-			if (okCasting and type(castNotInterruptible) == "boolean" and (not IsSecretValue(castNotInterruptible))) then
-				if (castbar) then
-					castbar.__AzeriteUI_ProbedNotInterruptible = castNotInterruptible
-				end
-				return castNotInterruptible
-			end
-		end
-		if (UnitChannelInfo) then
-			local okChannel, _, _, _, _, _, channelNotInterruptible = pcall(UnitChannelInfo, unit)
-			if (okChannel and type(channelNotInterruptible) == "boolean" and (not IsSecretValue(channelNotInterruptible))) then
-				if (castbar) then
-					castbar.__AzeriteUI_ProbedNotInterruptible = channelNotInterruptible
-				end
-				return channelNotInterruptible
-			end
-		end
-	end
-
-	if (castbar) then
-		castbar.__AzeriteUI_ProbedNotInterruptible = nil
+	if (sawFalse) then
+		return false
 	end
 
 	return nil
+end
+
+local GetSimpleDirectCastNotInterruptible = function(castbar)
+	return IsCastMarkedNotInterruptible(castbar)
 end
 
 local InterruptVisualColors = {
@@ -406,6 +471,10 @@ API.GetSimpleNameplateInterruptCastVisualState = function(castbar)
 		EmitInterruptDebug(castbar, "locked_simple", nil, nil, "locked")
 		return "locked"
 	end
+	if (notInterruptible ~= false) then
+		EmitInterruptDebug(castbar, "no_flag_simple", nil, nil, "base")
+		return "base"
+	end
 
 	local primaryReady, primarySpellID = GetPrimaryInterruptReadyState()
 	if (IsSecretValue(primaryReady) or type(primaryReady) ~= "number") then
@@ -450,9 +519,13 @@ API.GetInterruptCastVisualState = function(castbar)
 		return "base"
 	end
 	local notInterruptible = IsCastMarkedNotInterruptible(castbar)
-	if (notInterruptible) then
+	if (notInterruptible == true) then
 		EmitInterruptDebug(castbar, "locked", nil, nil, "locked")
 		return "locked"
+	end
+	if (notInterruptible ~= false) then
+		EmitInterruptDebug(castbar, "no_flag", nil, nil, "base")
+		return "base"
 	end
 	local primaryReady, primarySpellID = GetPrimaryInterruptReadyState()
 	if (IsSecretValue(primaryReady) or type(primaryReady) ~= "number") then
@@ -1117,6 +1190,24 @@ API.HideNativeHealthVisuals = function(health)
 			end
 			if (previewTexture.Hide) then
 				previewTexture:Hide()
+			end
+		end
+	end
+	local display = health.Display
+	if (display) then
+		if (display.SetAlpha) then
+			display:SetAlpha(0)
+		end
+		if (display.Hide) then
+			display:Hide()
+		end
+		local displayTexture = display.GetStatusBarTexture and display:GetStatusBarTexture()
+		if (displayTexture) then
+			if (displayTexture.SetAlpha) then
+				displayTexture:SetAlpha(0)
+			end
+			if (displayTexture.Hide) then
+				displayTexture:Hide()
 			end
 		end
 	end

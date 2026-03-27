@@ -87,6 +87,25 @@ local function IsModuleEnabled(name, defaultValue)
 	return defaultValue and true or false
 end
 
+local function GetModuleProfileValue(name, key, defaultValue)
+	if (not ns or not ns.GetModule) then
+		return defaultValue
+	end
+	local ok, module = pcall(ns.GetModule, ns, name, true)
+	if (not ok or not module) then
+		return defaultValue
+	end
+	local profile = module.db and module.db.profile
+	if (type(profile) ~= "table") then
+		return defaultValue
+	end
+	local value = profile[key]
+	if (value == nil) then
+		return defaultValue
+	end
+	return value
+end
+
 local function ShouldHandlePartyFrames()
 	return IsModuleEnabled("PartyFrames", true)
 end
@@ -95,6 +114,14 @@ local function ShouldHandleRaidFrames()
 	return IsModuleEnabled("RaidFrame5", true)
 		or IsModuleEnabled("RaidFrame25", true)
 		or IsModuleEnabled("RaidFrame40", true)
+end
+
+local function ShouldShowBlizzardRaidBar()
+	if (ns and (ns.IsDevelopment or (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode))
+		and ns.db and ns.db.global and ns.db.global.debugForceBlizzardRaidBar) then
+		return true
+	end
+	return ShouldHandleRaidFrames() and GetModuleProfileValue("UnitFrames", "showBlizzardRaidBar", false) and true or false
 end
 
 local function ShouldHandleArenaFrames()
@@ -316,6 +343,9 @@ local function ShouldQuarantineCompactFrame(frame)
 	if (not name or string.find(name, "NamePlate", 1, true)) then
 		name = nil
 	end
+	if (name == "CompactRaidFrameManager") then
+		return false
+	end
 	if (ShouldHandlePartyFrames() and IsCompactPartyFrameName(name)) then
 		return true
 	end
@@ -340,6 +370,26 @@ local function ShouldQuarantineCompactFrame(frame)
 		end
 	end
 	return false
+end
+
+local function ApplyCompactRaidManagerVisibility()
+	local manager = _G.CompactRaidFrameManager
+	if (not manager or (manager.IsForbidden and manager:IsForbidden())) then
+		return
+	end
+	if (ShouldShowBlizzardRaidBar()) then
+		return
+	end
+
+	if (manager.UnregisterAllEvents) then
+		pcall(manager.UnregisterAllEvents, manager)
+	end
+	if (manager.ClearAllPoints) then
+		pcall(manager.ClearAllPoints, manager)
+	end
+	if (manager.SetParent) then
+		pcall(manager.SetParent, manager, GetQuarantineParent())
+	end
 end
 
 PrepareCompactFrame = function(frame)
@@ -426,14 +476,18 @@ local function IsSecretWidgetTooltipError(err)
 	if (type(err) ~= "string") then
 		return false
 	end
-	if (not string.find(err, "secret", 1, true)) then
+	local lowered = string.lower(err)
+	if (not string.find(lowered, "secret", 1, true)) then
 		return false
 	end
-	return string.find(err, "Blizzard_UIWidget", 1, true)
-		or string.find(err, "UIWidgetTemplateTextWithState", 1, true)
-		or string.find(err, "UIWidgetManager", 1, true)
-		or string.find(err, "SharedTooltipTemplates", 1, true)
-		or string.find(err, "FrameUtil", 1, true)
+	return string.find(lowered, "blizzard_uiwidget", 1, true)
+		or string.find(lowered, "uiwidgettemplatetextwithstate", 1, true)
+		or string.find(lowered, "uiwidgettemplatebase", 1, true)
+		or string.find(lowered, "uiwidgettemplateitemdisplay", 1, true)
+		or string.find(lowered, "uiwidgetmanager", 1, true)
+		or string.find(lowered, "sharedtooltiptemplates", 1, true)
+		or string.find(lowered, "frameutil", 1, true)
+		or string.find(lowered, "vignettedataprovider", 1, true)
 end
 
 local function HideSecretWidgetTarget(target)
@@ -484,6 +538,29 @@ local function GuardWidgetTextWithStateSetup()
 
 	_G.__AzUI_W12_UIWidgetTextWithStateSetupWrapped = true
 	local mixin = _G.UIWidgetTemplateTextWithStateMixin
+	local original = mixin.Setup
+	local Pack = table.pack or function(...)
+		return { n = select("#", ...), ... }
+	end
+
+	mixin.Setup = function(...)
+		local results = Pack(pcall(original, ...))
+		if (results[1]) then
+			return unpack(results, 2, results.n or #results)
+		end
+		return HandleSecretWidgetError(results[2], ...)
+	end
+end
+
+local function GuardWidgetItemDisplaySetup()
+	if (type(_G.UIWidgetTemplateItemDisplayMixin) ~= "table"
+		or type(_G.UIWidgetTemplateItemDisplayMixin.Setup) ~= "function"
+		or _G.__AzUI_W12_UIWidgetItemDisplaySetupWrapped) then
+		return
+	end
+
+	_G.__AzUI_W12_UIWidgetItemDisplaySetupWrapped = true
+	local mixin = _G.UIWidgetTemplateItemDisplayMixin
 	local original = mixin.Setup
 	local Pack = table.pack or function(...)
 		return { n = select("#", ...), ... }
@@ -581,8 +658,7 @@ local function QuarantineCompactFrames()
 	if (ShouldHandleRaidFrames()) then
 		PrepareCompactFrame(_G.CompactRaidFrameContainer)
 		QuarantineFrame("CompactRaidFrameContainer", { lockParent = true })
-		PrepareCompactFrame(_G.CompactRaidFrameManager)
-		QuarantineFrame("CompactRaidFrameManager", { lockParent = true })
+		ApplyCompactRaidManagerVisibility()
 		for i = 1, MAX_RAID_MEMBERS do
 			local raidFrame = _G["CompactRaidFrame" .. i]
 			PrepareCompactFrame(raidFrame)
@@ -700,6 +776,7 @@ local function ApplyGuards()
 	GuardCompactUnitFrameGlobals()
 	GuardAuraUtilUnpack()
 	GuardWidgetTextWithStateSetup()
+	GuardWidgetItemDisplaySetup()
 	GuardWidgetManagerRegister()
 	GuardTooltipWidgetSets()
 	ApplyBlizzardFrameQuarantine()

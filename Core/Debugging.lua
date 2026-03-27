@@ -1618,6 +1618,8 @@ Debugging.EnsureDebugCommands = function(self)
 		return
 	end
 	self:RegisterChatCommand("azdebug", "DebugMenu")
+	self:RegisterChatCommand("azdebugkeys", "DebugKeysMenu")
+	self:RegisterChatCommand("azdebugtarget", "TargetDebugMenu")
 	self:RegisterChatCommand("aztest", "TestModeCommand")
 	self:RegisterChatCommand("junnez", "SecretJuNNeZCommand")
 	self:RegisterChatCommand("goldpaw", "SecretGoldpawCommand")
@@ -1931,6 +1933,7 @@ Debugging.OnInitialize = function(self)
 		ns.db.global.debugHealthChat = ns.db.global.debugHealthChat or false
 		ns.db.global.debugHealthPercent = ns.db.global.debugHealthPercent or false
 		ns.db.global.debugBars = ns.db.global.debugBars or false
+		ns.db.global.debugForceBlizzardRaidBar = ns.db.global.debugForceBlizzardRaidBar or false
 		ns.db.global.debugFixes = ns.db.global.debugFixes or false
 		ns.db.global.debugAuras = ns.db.global.debugAuras or false
 		ns.db.global.debugAurasFilter = ns.db.global.debugAurasFilter or ""
@@ -2827,6 +2830,7 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug health [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug health filter <text>|r  (example: Target.)")
 	print("|cfff0f0f0  /azdebug healthchat [on|off|toggle]|r")
+	print("|cfff0f0f0  /azdebug bars [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug fixes [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug dump target|r")
 	print("|cfff0f0f0  /azdebug dump player|r")
@@ -2838,6 +2842,9 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug scale|r  (print scale status)")
 	print("|cfff0f0f0  /azdebug scale nameplates [unit]|r")
 	print("|cfff0f0f0  /azdebug scale reset|r")
+	print("|cfff0f0f0  /azdebug keys <subcommand>|r")
+	print("|cfff0f0f0  /azdebug raidbar status|r")
+	print("|cfff0f0f0  /azdebug raidbar [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug scripterrors|r")
 	print("|cfff0f0f0  /azdebug secrettest [unit]|r")
 	print("|cfff0f0f0  /aztest|r  (toggle unit test menu, Junnez only)")
@@ -2871,22 +2878,8 @@ local function PrintNamePlateCastDebug(token)
 		if (type(unit) == "string" and ((not token) or unit:lower() == token)) then
 			found = true
 			local castbar = frame.Castbar
-			local watcher = frame.InterruptWatcher or (castbar and castbar.InterruptWatcher)
 			local castName, _, _, _, _, _, castID, castNotInterruptible, castSpellID = UnitCastingInfo(unit)
 			local channelName, _, _, _, _, _, channelNotInterruptible, channelSpellID = UnitChannelInfo(unit)
-			local blizzPlate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit, issecurefunc and issecurefunc())
-			local blizzUF = blizzPlate and (blizzPlate.UnitFrame or blizzPlate.unitFrame)
-			local blizzCastbar = blizzUF and (blizzUF.castBar or blizzUF.CastBar or blizzUF.castbar or blizzUF.Castbar or blizzUF.CastingBarFrame)
-			local blizzShowShield = blizzCastbar and blizzCastbar.showShield
-			local blizzNotInterruptible = blizzCastbar and blizzCastbar.notInterruptible
-			local blizzShield = blizzCastbar and (blizzCastbar.Shield or blizzCastbar.IconShield or blizzCastbar.BorderShield)
-			local blizzShieldShown = nil
-			if (blizzShield and blizzShield.IsShown) then
-				local okShown, shown = pcall(blizzShield.IsShown, blizzShield)
-				if (okShown) then
-					blizzShieldShown = shown
-				end
-			end
 			local rawSource = "none"
 			local rawName = nil
 			local rawSpellID = nil
@@ -2913,7 +2906,7 @@ local function PrintNamePlateCastDebug(token)
 				rawNotInterruptible = channelNotInterruptible
 			end
 			print("|cfff0f0f0", string_format(
-				"%s shown=%s canAttack=%s casting=%s channeling=%s spell=%s castID=%s source=%s rawName=%s rawNotInterruptible=%s castbarFlag=%s watcherLocked=%s elementLocked=%s watched=%s blizzShowShield=%s blizzNotInterruptible=%s blizzShieldShown=%s",
+				"%s shown=%s canAttack=%s casting=%s channeling=%s spell=%s castID=%s source=%s rawName=%s rawNotInterruptible=%s castbarFlag=%s",
 				unit,
 				SafeDebugString(frame and frame.IsShown and frame:IsShown()),
 				SafeDebugString(frame and frame.canAttack),
@@ -2924,13 +2917,7 @@ local function PrintNamePlateCastDebug(token)
 				SafeDebugString(rawSource),
 				SafeDebugString(rawName),
 				SafeDebugString(rawNotInterruptible),
-				SafeDebugString(castbar and castbar.notInterruptible),
-				SafeDebugString(watcher and watcher.__AzeriteUI_DirectLocked),
-				SafeDebugString(castbar and castbar.__AzeriteUI_DirectLocked),
-				SafeDebugString(watcher and watcher.__AzeriteUI_WatchedUnit),
-				SafeDebugString(blizzShowShield),
-				SafeDebugString(blizzNotInterruptible),
-				SafeDebugString(blizzShieldShown)))
+				SafeDebugString(castbar and castbar.notInterruptible)))
 		end
 	end
 	if (not found) then
@@ -3400,8 +3387,28 @@ local function UpdateDebugMenu(self)
 	end
 	frame.HealthToggle:SetChecked(ns.API.DEBUG_HEALTH and true or false)
 	frame.HealthChatToggle:SetChecked(ns.API.DEBUG_HEALTH_CHAT and true or false)
+	if (frame.BarsToggle) then
+		frame.BarsToggle:SetChecked(_G.__AzeriteUI_DEBUG_BARS and true or false)
+	end
 	frame.FixesToggle:SetChecked((ns.db and ns.db.global and ns.db.global.debugFixes) and true or false)
+	if (frame.KeyVerboseToggle) then
+		frame.KeyVerboseToggle:SetChecked((ns.db and ns.db.global and ns.db.global.debugKeysVerbose) and true or false)
+	end
 	frame.FilterEdit:SetText(filter)
+	if (frame.RaidBarStatus) then
+		local forced = (ns.db and ns.db.global and ns.db.global.debugForceBlizzardRaidBar) and true or false
+		local setting = (ns:GetModule("UnitFrames", true) and ns:GetModule("UnitFrames", true).db and ns:GetModule("UnitFrames", true).db.profile and ns:GetModule("UnitFrames", true).db.profile.showBlizzardRaidBar) and true or false
+		local devMode = IsDevMode()
+		frame.RaidBarStatus:SetText(string_format("Saved /az toggle: %s    Solo force-show: %s", setting and "|cff70ff70ON|r" or "|cffff7070OFF|r", forced and "|cff70ff70ON|r" or "|cffff7070OFF|r"))
+		if (frame.RaidBarHint) then
+			frame.RaidBarHint:SetText(devMode and "Use the buttons below for solo testing. /reload is still the safe refresh if Blizzard hid the bar earlier this session." or "Enable Dev Mode to use the solo force-show controls.")
+		end
+		if (frame.RaidBarOnButton and frame.RaidBarOffButton and frame.RaidBarToggleButton) then
+			frame.RaidBarOnButton:SetEnabled(devMode)
+			frame.RaidBarOffButton:SetEnabled(devMode)
+			frame.RaidBarToggleButton:SetEnabled(devMode)
+		end
+	end
 end
 
 Debugging.ToggleDebugMenu = function(self)
@@ -3409,8 +3416,8 @@ Debugging.ToggleDebugMenu = function(self)
 	local created = false
 	if (not frame) then
 		frame = CreateFrame("Frame", "AzeriteUI_DebugMenu", UIParent, "BasicFrameTemplateWithInset")
-		frame:SetSize(460, 480)
-		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 140)
+		frame:SetSize(620, 840)
+		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 110)
 		frame:SetFrameStrata("DIALOG")
 		frame:SetClampedToScreen(true)
 		frame:SetMovable(true)
@@ -3419,70 +3426,128 @@ Debugging.ToggleDebugMenu = function(self)
 		frame:SetScript("OnDragStart", function(f) f:StartMoving() end)
 		frame:SetScript("OnDragStop", function(f) f:StopMovingOrSizing() end)
 		frame.TitleText:SetText("AzeriteUI Debug")
-
-		local y = -32
-		local function AddHeader(text)
-			local label = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-			label:SetPoint("TOPLEFT", 12, y)
-			label:SetText(text)
-			y = y - 22
-			return label
+		if (frame.NineSlice and frame.NineSlice.SetVertexColor) then
+			frame.NineSlice:SetVertexColor(.78, .82, .90)
+		end
+		if (frame.Bg) then
+			frame.Bg:SetColorTexture(.04, .05, .07, .96)
+		end
+		if (frame.Inset and frame.Inset.Bg) then
+			frame.Inset.Bg:SetColorTexture(.07, .08, .11, .92)
 		end
 
-		local function AddToggle(label, onClick, tooltip)
-			local btn = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-			btn:SetPoint("TOPLEFT", 12, y)
+		local subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		subtitle:SetPoint("TOPLEFT", 16, -34)
+		subtitle:SetText("Focused debug controls for health, dumps, utilities, and the Blizzard raid utility bar.")
+
+		local function CreatePanel(parent, title, point, relPoint, x, y, width, height)
+			local panel = CreateFrame("Frame", nil, parent, BackdropTemplateMixin and "BackdropTemplate")
+			panel:SetPoint(point, parent, relPoint, x, y)
+			panel:SetSize(width, height)
+			if (panel.SetBackdrop) then
+				panel:SetBackdrop({
+					bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+					edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+					tile = true,
+					tileSize = 8,
+					edgeSize = 8,
+					insets = { left = 2, right = 2, top = 2, bottom = 2 }
+				})
+				panel:SetBackdropColor(.09, .10, .14, .92)
+				panel:SetBackdropBorderColor(.22, .26, .34, .95)
+			end
+			local label = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+			label:SetPoint("TOPLEFT", 12, -10)
+			label:SetText(title)
+			local accent = panel:CreateTexture(nil, "ARTWORK")
+			accent:SetPoint("TOPLEFT", 12, -32)
+			accent:SetPoint("TOPRIGHT", -12, -32)
+			accent:SetHeight(1)
+			accent:SetColorTexture(.26, .52, .84, .65)
+			return panel
+		end
+
+		local function AddTooltip(widget, text)
+			if (not text) then
+				return
+			end
+			widget:SetScript("OnEnter", function(control)
+				GameTooltip:SetOwner(control, "ANCHOR_RIGHT")
+				GameTooltip:ClearLines()
+				GameTooltip:AddLine(text, 1, 1, 1, true)
+				GameTooltip:Show()
+			end)
+			widget:SetScript("OnLeave", function()
+				GameTooltip:Hide()
+			end)
+		end
+
+		local function AddCheckButton(parent, label, x, y, onClick, tooltip)
+			local btn = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
+			btn:SetPoint("TOPLEFT", x, y)
 			btn.text:SetText(label)
 			btn:SetScript("OnClick", onClick)
-			if (tooltip) then
-				btn:SetScript("OnEnter", function(self)
-					GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-					GameTooltip:SetText(tooltip, 1, 1, 1)
-					GameTooltip:Show()
-				end)
-				btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-			end
-			y = y - 24
+			AddTooltip(btn, tooltip)
 			return btn
 		end
 
-		AddHeader("Toggles")
+		local function AddButton(parent, text, width, x, y, onClick, tooltip)
+			local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+			btn:SetSize(width, 24)
+			btn:SetPoint("TOPLEFT", x, y)
+			btn:SetText(text)
+			btn:SetScript("OnClick", onClick)
+			AddTooltip(btn, tooltip)
+			return btn
+		end
 
-		   frame.HealthToggle = AddToggle("Health debug", function()
-			   self:ToggleHealthDebug()
-			   UpdateDebugMenu(self)
-			   local pf = ns:GetModule("PlayerFrame", true)
-			   if pf and pf.Update then pf:Update() end
-			   local tf = ns:GetModule("TargetFrame", true)
-			   if tf and tf.Update then tf:Update() end
-		   end, "Show health debug overlay text on unitframes.")
-		   frame.HealthChatToggle = AddToggle("Health debug chat", function()
-			   self:ToggleHealthDebugChat()
-			   UpdateDebugMenu(self)
-			   local pf = ns:GetModule("PlayerFrame", true)
-			   if pf and pf.Update then pf:Update() end
-			   local tf = ns:GetModule("TargetFrame", true)
-			   if tf and tf.Update then tf:Update() end
-		   end, "Print health/statusbar debug output to chat.")
-		   frame.FixesToggle = AddToggle("FixBlizzardBugs debug", function()
-			   self:ToggleFixesDebug()
-			   UpdateDebugMenu(self)
-			   local pf = ns:GetModule("PlayerFrame", true)
-			   if pf and pf.Update then pf:Update() end
-			   local tf = ns:GetModule("TargetFrame", true)
-			   if tf and tf.Update then tf:Update() end
-		   end, "Enable FixBlizzardBugs debug counters in chat.")
+		local leftPanel = CreatePanel(frame, "Flags", "TOPLEFT", "TOPLEFT", 12, -58, 286, 216)
+		local rightPanel = CreatePanel(frame, "Raid Utility Bar", "TOPRIGHT", "TOPRIGHT", -12, -58, 310, 216)
+		local lowerLeftPanel = CreatePanel(frame, "Dumps & Repairs", "TOPLEFT", "TOPLEFT", 12, -282, 286, 200)
+		local lowerRightPanel = CreatePanel(frame, "Utilities", "TOPRIGHT", "TOPRIGHT", -12, -282, 310, 200)
+		local bottomPanel = CreatePanel(frame, "Inspect & Snapshots", "TOPLEFT", "TOPLEFT", 12, -490, 596, 250)
 
-		y = y - 6
+		frame.HealthToggle = AddCheckButton(leftPanel, "Health debug", 12, -44, function()
+			self:ToggleHealthDebug()
+			UpdateDebugMenu(self)
+			local pf = ns:GetModule("PlayerFrame", true)
+			if pf and pf.Update then pf:Update() end
+			local tf = ns:GetModule("TargetFrame", true)
+			if tf and tf.Update then tf:Update() end
+		end, "Show health debug overlay text on unitframes.")
+		frame.HealthChatToggle = AddCheckButton(leftPanel, "Health debug chat", 12, -70, function()
+			self:ToggleHealthDebugChat()
+			UpdateDebugMenu(self)
+			local pf = ns:GetModule("PlayerFrame", true)
+			if pf and pf.Update then pf:Update() end
+			local tf = ns:GetModule("TargetFrame", true)
+			if tf and tf.Update then tf:Update() end
+		end, "Print health/statusbar debug output to chat.")
+		frame.BarsToggle = AddCheckButton(leftPanel, "Statusbar/orb debug", 12, -96, function()
+			self:ToggleBarsDebug()
+			UpdateDebugMenu(self)
+		end, "Enable verbose bar/orb debug output in chat.")
+		frame.FixesToggle = AddCheckButton(leftPanel, "FixBlizzardBugs debug", 12, -122, function()
+			self:ToggleFixesDebug()
+			UpdateDebugMenu(self)
+			local pf = ns:GetModule("PlayerFrame", true)
+			if pf and pf.Update then pf:Update() end
+			local tf = ns:GetModule("TargetFrame", true)
+			if tf and tf.Update then tf:Update() end
+		end, "Enable FixBlizzardBugs debug counters in chat.")
 
-		AddHeader("Health Filter")
-		local filterLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		filterLabel:SetPoint("TOPLEFT", 12, y - 4)
-		filterLabel:SetText("Prefix filter:")
+		local filterTitle = leftPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		filterTitle:SetPoint("TOPLEFT", 12, -158)
+		filterTitle:SetText("Health filter prefix")
+		local filterDesc = leftPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		filterDesc:SetPoint("TOPLEFT", 12, -174)
+		filterDesc:SetWidth(248)
+		filterDesc:SetJustifyH("LEFT")
+		filterDesc:SetText("Restrict health debug output to frame names that begin with this text.")
 
-		frame.FilterEdit = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
-		frame.FilterEdit:SetSize(200, 20)
-		frame.FilterEdit:SetPoint("LEFT", filterLabel, "RIGHT", 8, 0)
+		frame.FilterEdit = CreateFrame("EditBox", nil, leftPanel, "InputBoxTemplate")
+		frame.FilterEdit:SetSize(134, 20)
+		frame.FilterEdit:SetPoint("TOPLEFT", 12, -196)
 		frame.FilterEdit:SetAutoFocus(false)
 		local currentFilter = ns.API.DEBUG_HEALTH_FILTER
 		if (not currentFilter or currentFilter == "") then
@@ -3500,11 +3565,7 @@ Debugging.ToggleDebugMenu = function(self)
 			end
 			edit:ClearFocus()
 		end)
-		local filterApply = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		filterApply:SetSize(70, 20)
-		filterApply:SetPoint("LEFT", frame.FilterEdit, "RIGHT", 6, 0)
-		filterApply:SetText("Set")
-		filterApply:SetScript("OnClick", function()
+		AddButton(leftPanel, "Set", 54, 154, -196, function()
 			local text = frame.FilterEdit:GetText()
 			if (not text or text == "") then
 				text = "Target."
@@ -3515,11 +3576,7 @@ Debugging.ToggleDebugMenu = function(self)
 			end
 			frame.FilterEdit:SetText(text)
 		end)
-		local filterReset = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		filterReset:SetSize(70, 20)
-		filterReset:SetPoint("LEFT", filterApply, "RIGHT", 6, 0)
-		filterReset:SetText("Reset")
-		filterReset:SetScript("OnClick", function()
+		AddButton(leftPanel, "Reset", 62, 214, -196, function()
 			local text = "Target."
 			ns.API.DEBUG_HEALTH_FILTER = text
 			if (ns.db and ns.db.global) then
@@ -3527,155 +3584,228 @@ Debugging.ToggleDebugMenu = function(self)
 			end
 			frame.FilterEdit:SetText(text)
 		end)
-		y = y - 34
 
-		AddHeader("Dumps")
-		local dumpTarget = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		dumpTarget:SetSize(130, 22)
-		dumpTarget:SetPoint("TOPLEFT", 12, y)
-		dumpTarget:SetText("Dump Target Bars")
-		dumpTarget:SetScript("OnClick", function()
+		local raidLead = rightPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		raidLead:SetPoint("TOPLEFT", 12, -44)
+		raidLead:SetWidth(286)
+		raidLead:SetJustifyH("LEFT")
+		raidLead:SetText("The saved /az toggle controls the normal Blizzard raid utility bar behavior. The controls below add a dev-only solo force-show override for testing ready check and world markers.")
+		frame.RaidBarStatus = rightPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		frame.RaidBarStatus:SetPoint("TOPLEFT", 12, -88)
+		frame.RaidBarStatus:SetWidth(286)
+		frame.RaidBarStatus:SetJustifyH("LEFT")
+		frame.RaidBarHint = rightPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		frame.RaidBarHint:SetPoint("TOPLEFT", 12, -110)
+		frame.RaidBarHint:SetWidth(286)
+		frame.RaidBarHint:SetJustifyH("LEFT")
+		frame.RaidBarOnButton = AddButton(rightPanel, "Force On", 84, 12, -148, function()
+			self:DebugMenu("raidbar on")
+			UpdateDebugMenu(self)
+		end, "Dev-only: force-show the Blizzard raid utility bar even while solo.")
+		frame.RaidBarOffButton = AddButton(rightPanel, "Force Off", 84, 104, -148, function()
+			self:DebugMenu("raidbar off")
+			UpdateDebugMenu(self)
+		end, "Disable the solo force-show override and return to normal behavior.")
+		frame.RaidBarToggleButton = AddButton(rightPanel, "Toggle", 84, 196, -148, function()
+			self:DebugMenu("raidbar toggle")
+			UpdateDebugMenu(self)
+		end, "Flip the solo force-show override.")
+		AddButton(rightPanel, "Print Status", 104, 12, -178, function()
+			self:DebugMenu("raidbar status")
+		end, "Print the raidbar force-show state to chat.")
+		AddButton(rightPanel, "Open /az", 84, 124, -178, function()
+			local options = ns:GetModule("Options", true)
+			if (options and options.OpenOptionsMenu) then
+				options:OpenOptionsMenu()
+			end
+		end, "Open the main AzeriteUI options menu.")
+
+		local dumpTarget = AddButton(lowerLeftPanel, "Dump Target Bars", 122, 12, -44, function()
 			local targetFrame = ns:GetModule("TargetFrame", true)
 			DumpUnitBars(targetFrame and targetFrame.frame, "TargetFrame")
 		end)
-
-		local dumpPlayer = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		dumpPlayer:SetSize(130, 22)
-		dumpPlayer:SetPoint("LEFT", dumpTarget, "RIGHT", 12, 0)
-		dumpPlayer:SetText("Dump Player Bars")
-		dumpPlayer:SetScript("OnClick", function()
+		local dumpPlayer = AddButton(lowerLeftPanel, "Dump Player Bars", 122, 146, -44, function()
 			local playerFrame = ns:GetModule("PlayerFrame", true)
 			DumpUnitBars(playerFrame and playerFrame.frame, "PlayerFrame")
 		end)
-		local dumpToT = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		dumpToT:SetSize(130, 22)
-		dumpToT:SetPoint("LEFT", dumpPlayer, "RIGHT", 12, 0)
-		dumpToT:SetText("Dump ToT Bars")
-		dumpToT:SetScript("OnClick", function()
+		local dumpToT = AddButton(lowerLeftPanel, "Dump ToT Bars", 122, 12, -74, function()
 			local totFrame = ns:GetModule("ToTFrame", true)
 			DumpUnitBars(totFrame and totFrame.frame, "ToTFrame")
 		end)
-		   y = y - 28
+		local dumpAll = AddButton(lowerLeftPanel, "Dump All Bars", 122, 146, -74, function()
+			local targetFrame = ns:GetModule("TargetFrame", true)
+			local playerFrame = ns:GetModule("PlayerFrame", true)
+			local totFrame = ns:GetModule("ToTFrame", true)
+			DumpUnitBars(targetFrame and targetFrame.frame, "TargetFrame")
+			DumpUnitBars(playerFrame and playerFrame.frame, "PlayerFrame")
+			DumpUnitBars(totFrame and totFrame.frame, "ToTFrame")
+		end)
+		local dumpHint = lowerLeftPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		dumpHint:SetPoint("TOPLEFT", 12, -108)
+		dumpHint:SetWidth(258)
+		dumpHint:SetJustifyH("LEFT")
+		dumpHint:SetText("Repair buttons reattach the movement modules for health and castbar handles if a live frame lost them during testing.")
 
-		   local dumpAll = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		   dumpAll:SetSize(130, 22)
-		   dumpAll:SetPoint("TOPLEFT", 12, y)
-		   dumpAll:SetText("Dump All Bars")
-		   dumpAll:SetScript("OnClick", function()
-			   local targetFrame = ns:GetModule("TargetFrame", true)
-			   local playerFrame = ns:GetModule("PlayerFrame", true)
-			   local totFrame = ns:GetModule("ToTFrame", true)
-			   DumpUnitBars(targetFrame and targetFrame.frame, "TargetFrame")
-			   DumpUnitBars(playerFrame and playerFrame.frame, "PlayerFrame")
-			   DumpUnitBars(totFrame and totFrame.frame, "ToTFrame")
-		   end)
+		local function ReattachMovementModules(unit)
+			local mod = ns:GetModule(unit, true)
+			if (mod and mod.frame) then
+				if (mod.frame.Health and mod.frame.Health.AttachMovementModule) then
+					mod.frame.Health:AttachMovementModule()
+					print("|cff33ff99", unit .. " Healthbar movement module reattached.")
+				end
+				if (mod.frame.Castbar and mod.frame.Castbar.AttachMovementModule) then
+					mod.frame.Castbar:AttachMovementModule()
+					print("|cff33ff99", unit .. " Castbar movement module reattached.")
+				end
+			else
+				print("|cff33ff99", unit .. " frame not found.")
+			end
+		end
+		AddButton(lowerLeftPanel, "Reattach Player Bars", 122, 12, -144, function()
+			ReattachMovementModules("PlayerFrame")
+		end)
+		AddButton(lowerLeftPanel, "Reattach Target Bars", 122, 146, -144, function()
+			ReattachMovementModules("TargetFrame")
+		end)
 
-		   y = y - 32
-
-		   -- Reattach movement modules for healthbar and castbar
-		   local function ReattachMovementModules(unit)
-			   local mod = ns:GetModule(unit, true)
-			   if mod and mod.frame then
-				   if mod.frame.Health and mod.frame.Health.AttachMovementModule then
-					   mod.frame.Health:AttachMovementModule()
-					   print("|cff33ff99", unit .. " Healthbar movement module reattached.")
-				   end
-				   if mod.frame.Castbar and mod.frame.Castbar.AttachMovementModule then
-					   mod.frame.Castbar:AttachMovementModule()
-					   print("|cff33ff99", unit .. " Castbar movement module reattached.")
-				   end
-			   else
-				   print("|cff33ff99", unit .. " frame not found.")
-			   end
-		   end
-
-		   local reattachPlayerBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		   reattachPlayerBtn:SetSize(170, 22)
-		   reattachPlayerBtn:SetPoint("TOPLEFT", 12, y)
-		   reattachPlayerBtn:SetText("Reattach PlayerFrame Bars")
-		   reattachPlayerBtn:SetScript("OnClick", function()
-			   ReattachMovementModules("PlayerFrame")
-		   end)
-
-		   local reattachTargetBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		   reattachTargetBtn:SetSize(170, 22)
-		   reattachTargetBtn:SetPoint("LEFT", reattachPlayerBtn, "RIGHT", 12, 0)
-		   reattachTargetBtn:SetText("Reattach TargetFrame Bars")
-		   reattachTargetBtn:SetScript("OnClick", function()
-			   ReattachMovementModules("TargetFrame")
-		   end)
-
-		   y = y - 28
-		AddHeader("Utilities")
-		local statusBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		statusBtn:SetSize(130, 22)
-		statusBtn:SetPoint("TOPLEFT", 12, y)
-		statusBtn:SetText("Print Status")
-		statusBtn:SetScript("OnClick", function()
+		AddButton(lowerRightPanel, "Print Status", 96, 12, -44, function()
 			Debugging.DebugMenu(self, "status")
 		end)
-		local enableBlizz = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		enableBlizz:SetSize(150, 22)
-		enableBlizz:SetPoint("LEFT", statusBtn, "RIGHT", 12, 0)
-		enableBlizz:SetText("Enable Blizzard AddOns")
-		enableBlizz:SetScript("OnClick", function()
-			self:EnableBlizzardAddOns()
-		end)
-		y = y - 28
-
-		local helpBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		helpBtn:SetSize(70, 22)
-		helpBtn:SetPoint("TOPLEFT", 12, y)
-		helpBtn:SetText("Help")
-		helpBtn:SetScript("OnClick", function()
+		AddButton(lowerRightPanel, "Help", 70, 116, -44, function()
 			PrintDebugHelp()
 		end)
-		local errorsBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		errorsBtn:SetSize(140, 22)
-		errorsBtn:SetPoint("LEFT", helpBtn, "RIGHT", 12, 0)
-		errorsBtn:SetText("Enable Script Errors")
-		errorsBtn:SetScript("OnClick", function()
+		AddButton(lowerRightPanel, "Enable Blizzard AddOns", 152, 146, -44, function()
+			self:EnableBlizzardAddOns()
+		end)
+		AddButton(lowerRightPanel, "Enable Script Errors", 152, 12, -74, function()
 			self:EnableScriptErrors()
 			print("|cff33ff99", "AzeriteUI script errors:", "ENABLED (CVar scriptErrors=1)")
 		end)
-		y = y - 28
-
-		local scaleStatus = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		scaleStatus:SetSize(120, 22)
-		scaleStatus:SetPoint("TOPLEFT", 12, y)
-		scaleStatus:SetText("Scale Status")
-		scaleStatus:SetScript("OnClick", function()
+		AddButton(lowerRightPanel, "Scale Status", 96, 172, -74, function()
 			PrintScaleStatus()
 		end)
-		local scaleReset = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		scaleReset:SetSize(180, 22)
-		scaleReset:SetPoint("LEFT", scaleStatus, "RIGHT", 12, 0)
-		scaleReset:SetText("Reset UnitFrame Scales")
-		scaleReset:SetScript("OnClick", function()
+		AddButton(lowerRightPanel, "Reset UnitFrame Scales", 152, 12, -104, function()
 			ResetUnitFrameScales()
 		end)
-		y = y - 28
 
-		local secretLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		secretLabel:SetPoint("TOPLEFT", 12, y - 4)
-		secretLabel:SetText("Secret test unit:")
-		frame.SecretEdit = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
+		local secretLabel = lowerRightPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		secretLabel:SetPoint("TOPLEFT", 12, -146)
+		secretLabel:SetText("Secret test unit")
+		frame.SecretEdit = CreateFrame("EditBox", nil, lowerRightPanel, "InputBoxTemplate")
 		frame.SecretEdit:SetSize(120, 20)
-		frame.SecretEdit:SetPoint("LEFT", secretLabel, "RIGHT", 8, 0)
+		frame.SecretEdit:SetPoint("TOPLEFT", 12, -166)
 		frame.SecretEdit:SetAutoFocus(false)
 		frame.SecretEdit:SetText("player")
-		local secretRun = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		secretRun:SetSize(90, 20)
-		secretRun:SetPoint("LEFT", frame.SecretEdit, "RIGHT", 6, 0)
-		secretRun:SetText("Run")
-		secretRun:SetScript("OnClick", function()
+		AddButton(lowerRightPanel, "Run Secret Test", 120, 140, -164, function()
 			local unit = frame.SecretEdit:GetText()
 			self:SecretValueTest(unit)
 		end)
-		y = y - 24
+
+		local inspectLead = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		inspectLead:SetPoint("TOPLEFT", 12, -42)
+		inspectLead:SetWidth(572)
+		inspectLead:SetJustifyH("LEFT")
+		inspectLead:SetText("These controls cover the remaining /azdebug inspection commands that need a unit token or a focused one-shot action.")
+
+		local nameplateLabel = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		nameplateLabel:SetPoint("TOPLEFT", 12, -68)
+		nameplateLabel:SetText("Nameplate unit")
+		frame.NameplateUnitEdit = CreateFrame("EditBox", nil, bottomPanel, "InputBoxTemplate")
+		frame.NameplateUnitEdit:SetSize(110, 20)
+		frame.NameplateUnitEdit:SetPoint("LEFT", nameplateLabel, "RIGHT", 10, 0)
+		frame.NameplateUnitEdit:SetAutoFocus(false)
+		frame.NameplateUnitEdit:SetText("auto")
+		AddButton(bottomPanel, "Cast Debug", 96, 252, -66, function()
+			local token = frame.NameplateUnitEdit:GetText()
+			if (not token or token == "" or token:lower() == "auto") then
+				self:DebugMenu("nameplates")
+			else
+				self:DebugMenu("nameplates " .. token)
+			end
+		end, "Run /azdebug nameplates [unit]. Use auto or leave blank to inspect all active nameplates.")
+		AddButton(bottomPanel, "Scale Debug", 96, 356, -66, function()
+			local token = frame.NameplateUnitEdit:GetText()
+			if (not token or token == "") then
+				token = "auto"
+			end
+			self:DebugMenu("scale nameplates " .. token)
+		end, "Run /azdebug scale nameplates [unit].")
+
+		local snapshotLabel = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		snapshotLabel:SetPoint("TOPLEFT", 12, -98)
+		snapshotLabel:SetText("Snapshot unit")
+		frame.SnapshotUnitEdit = CreateFrame("EditBox", nil, bottomPanel, "InputBoxTemplate")
+		frame.SnapshotUnitEdit:SetSize(110, 20)
+		frame.SnapshotUnitEdit:SetPoint("LEFT", snapshotLabel, "RIGHT", 18, 0)
+		frame.SnapshotUnitEdit:SetAutoFocus(false)
+		frame.SnapshotUnitEdit:SetText("target")
+		AddButton(bottomPanel, "Snapshot", 96, 252, -96, function()
+			local unit = frame.SnapshotUnitEdit:GetText()
+			if (not unit or unit == "") then
+				unit = "target"
+			end
+			self:DebugMenu("snapshot " .. unit)
+		end, "Run /azdebug snapshot [unit].")
+		AddButton(bottomPanel, "Target Debug Menu", 130, 356, -96, function()
+			self:ToggleTargetDebugMenu()
+		end, "Open the dedicated target fill debug popup.")
+		AddButton(bottomPanel, "Nameplate Scale Auto", 130, 448, -66, function()
+			self:DebugMenu("scale nameplates auto")
+		end, "Run /azdebug scale nameplates auto.")
+		AddButton(bottomPanel, "All Nameplates", 130, 448, -96, function()
+			self:DebugMenu("nameplates")
+		end, "Run /azdebug nameplates with no unit filter.")
+
+		local keyLead = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		keyLead:SetPoint("TOPLEFT", 12, -144)
+		keyLead:SetText("Key debug")
+		frame.KeyVerboseToggle = AddCheckButton(bottomPanel, "Verbose", 86, -140, function()
+			self:DebugKeysMenu("toggle")
+			UpdateDebugMenu(self)
+		end, "Toggle /azdebug keys verbose output.")
+		AddButton(bottomPanel, "Status", 84, 180, -138, function()
+			self:DebugKeysMenu("status")
+		end, "Run /azdebug keys status.")
+		AddButton(bottomPanel, "Bindings", 84, 272, -138, function()
+			self:DebugKeysMenu("bindings")
+		end, "Run /azdebug keys bindings.")
+
+		local keyButtonLabel = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		keyButtonLabel:SetPoint("TOPLEFT", 12, -184)
+		keyButtonLabel:SetText("Button")
+		frame.KeyButtonEdit = CreateFrame("EditBox", nil, bottomPanel, "InputBoxTemplate")
+		frame.KeyButtonEdit:SetSize(106, 20)
+		frame.KeyButtonEdit:SetPoint("LEFT", keyButtonLabel, "RIGHT", 8, 0)
+		frame.KeyButtonEdit:SetAutoFocus(false)
+		frame.KeyButtonEdit:SetText("")
+		AddButton(bottomPanel, "Cooldown", 84, 180, -182, function()
+			local buttonName = frame.KeyButtonEdit:GetText()
+			if (buttonName and buttonName ~= "") then
+				self:DebugKeysMenu("cooldown " .. buttonName)
+			else
+				self:DebugKeysMenu("cooldown")
+			end
+		end, "Run /azdebug keys cooldown [buttonName].")
+
+		local holdLabel = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		holdLabel:SetPoint("TOPLEFT", 280, -184)
+		holdLabel:SetText("SpellID")
+		frame.HoldSpellEdit = CreateFrame("EditBox", nil, bottomPanel, "InputBoxTemplate")
+		frame.HoldSpellEdit:SetSize(88, 20)
+		frame.HoldSpellEdit:SetPoint("LEFT", holdLabel, "RIGHT", 8, 0)
+		frame.HoldSpellEdit:SetAutoFocus(false)
+		frame.HoldSpellEdit:SetText("")
+		AddButton(bottomPanel, "Hold Test", 84, 468, -182, function()
+			local spellID = frame.HoldSpellEdit:GetText()
+			if (spellID and spellID ~= "") then
+				self:DebugKeysMenu("holdtest " .. spellID)
+			else
+				self:DebugKeysMenu("holdtest")
+			end
+		end, "Run /azdebug keys holdtest [spellID].")
 
 		local close = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		close:SetSize(80, 22)
+		close:SetSize(88, 24)
 		close:SetPoint("BOTTOMRIGHT", -12, 12)
 		close:SetText("Close")
 		close:SetScript("OnClick", function() frame:Hide() end)
@@ -3859,8 +3989,35 @@ Debugging.DebugMenu = function(self, input)
 		print("|cfff0f0f0  health:", ns.API.DEBUG_HEALTH and "ON" or "OFF", "filter:", filter)
 		print("|cfff0f0f0  healthchat:", ns.API.DEBUG_HEALTH_CHAT and "ON" or "OFF")
 		print("|cfff0f0f0  bars:", (_G.__AzeriteUI_DEBUG_BARS and "ON" or "OFF"))
+		print("|cfff0f0f0  raidbar force:", (ns.db and ns.db.global and ns.db.global.debugForceBlizzardRaidBar) and "ON" or "OFF")
 		print("|cfff0f0f0  fixes:", (ns.db and ns.db.global and ns.db.global.debugFixes) and "ON" or "OFF")
 		return
+	end
+	if (cmd == "raidbar") then
+		if (not IsDevMode()) then
+			print("|cff33ff99", "AzeriteUI /azdebug raidbar:", "Dev mode is required for solo force-show.")
+			return
+		end
+		if (rest == nil or rest == "" or rest == "status") then
+			print("|cff33ff99", "AzeriteUI debug raidbar force:", (ns.db and ns.db.global and ns.db.global.debugForceBlizzardRaidBar) and "ON" or "OFF")
+			return
+		end
+		local mode = ParseOnOffToggle(rest)
+		if (not mode) then
+			return PrintDebugHelp()
+		end
+		if (ns.db and ns.db.global) then
+			ns.db.global.debugForceBlizzardRaidBar = SetDebugFlag(ns.db.global.debugForceBlizzardRaidBar, mode)
+		end
+		if (ns.WoW12BlizzardQuarantine and ns.WoW12BlizzardQuarantine.ApplyCompactFrames) then
+			ns.WoW12BlizzardQuarantine.ApplyCompactFrames()
+		end
+		print("|cff33ff99", "AzeriteUI debug raidbar force:", (ns.db and ns.db.global and ns.db.global.debugForceBlizzardRaidBar) and "ON" or "OFF")
+		print("|cff33ff99", "Tip:", "Use /reload if Blizzard already hid the bar earlier this session.")
+		return
+	end
+	if (cmd == "keys") then
+		return self:DebugKeysMenu(rest)
 	end
 	if (cmd == "health") then
 		local sub, arg = rest:match("^(%S+)%s*(.-)$")

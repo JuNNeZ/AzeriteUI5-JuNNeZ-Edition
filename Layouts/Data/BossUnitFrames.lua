@@ -77,12 +77,12 @@ ns.RegisterConfig("BossFrames", {
 
 	-- Power
 	-----------------------------------------
-	PowerBarPosition = { "CENTER", 0, -1.5 },
+	PowerBarPosition = { "BOTTOM", 0, 2 },
 	PowerBarSize = { 104, 1 },
 	PowerBarTexture = [[Interface\ChatFrame\ChatFrameBackground]],
 	PowerBarOrientation = "LEFT",
 	PowerBackdropSize = { 74, 3 },
-	PowerBackdropPosition = { "CENTER", 0, 0 },
+	PowerBackdropPosition = { "BOTTOM", 0, 2 },
 	PowerBackdropTexture = [[Interface\ChatFrame\ChatFrameBackground]],
 	PowerBackdropColor = { 0, 0, 0, .75 },
 

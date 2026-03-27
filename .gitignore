@@ -52,6 +52,7 @@ TODO.txt
 NOTES.txt
 FEATURE_PLAN.md
 *.local.*
+.mcp.json
 
 # Git related
 *.orig

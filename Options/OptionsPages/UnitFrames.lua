@@ -127,6 +127,23 @@ local GenerateOptions = function()
 				set = function(info,val) setter(info, not val) end,
 				get = function(info) return not getter(info) end
 			},
+			showBlizzardRaidBar = {
+				name = L["Show Blizzard Raid Bar"],
+				desc = L["Show the Blizzard raid utility bar with ready check and ground/world marker buttons. If the bar was already hidden earlier this session, use /reload after enabling it."],
+				order = 20,
+				type = "toggle", width = "full",
+				hidden = isdisabled,
+				set = function(info, val)
+					getmodule().db.profile.showBlizzardRaidBar = val
+					getmodule():UpdateSettings()
+					if (ns.WoW12BlizzardQuarantine and ns.WoW12BlizzardQuarantine.ApplyCompactFrames) then
+						ns.WoW12BlizzardQuarantine.ApplyCompactFrames()
+					end
+				end,
+				get = function(info)
+					return getmodule().db.profile.showBlizzardRaidBar
+				end
+			}
 		}
 	}
 

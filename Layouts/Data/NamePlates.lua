@@ -67,6 +67,7 @@ ns.RegisterConfig("NamePlates", {
 	HealthBackdropTexture = GetMedia("nameplate_backdrop"),
 
 	HealthValuePosition = { "CENTER", 0, -18 },
+	HealthValuePositionInside = { "CENTER", 0, 0 },
 	HealthValueJustifyH = "CENTER",
 	HealthValueJustifyV = "MIDDLE",
 	HealthValueFont = GetFont(12,true),
