@@ -5,6 +5,8 @@
 
 ## 2026-03-27 (continued)
 
+- **Compact raid-manager protected-anchor follow-up started:** Investigating the fresh `ADDON_ACTION_BLOCKED` report where AzeriteUI still mutates `CompactRaidFrameManager` anchors directly from the WoW 12 quarantine helper and trips a protected `UNKNOWN()` call.
+  - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
 - **WoW12 widget secret follow-up started:** Fixing the two current-session AzeriteUI-owned UIWidget crashes where Blizzard item/vignette widget setup still escapes the existing secret-widget wrappers and rethrows from `Core/FixBlizzardBugsWow12.lua`.
   - **Files Targeted:** `FixLog.md`, `Core/FixBlizzardBugsWow12.lua`
 - **WoW12 widget secret follow-up applied:** Broadened the shared secret-widget error filter to catch current WoW 12 uppercase `Secret` argument errors plus the newer `UIWidgetTemplateBase`, `UIWidgetTemplateItemDisplay`, and `VignetteDataProvider` call paths, and wrapped `UIWidgetTemplateItemDisplayMixin.Setup()` so failing item widgets now fail closed like the earlier text/state widgets.

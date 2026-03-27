@@ -4,6 +4,17 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.30-JuNNeZ (2026-03-27)
+
+### Highlights
+- Fixed a WoW 12 compact raid-manager taint that could still trigger `ADDON_ACTION_BLOCKED` with protected `UNKNOWN()` calls when AzeriteUI hid the Blizzard raid utility bar.
+
+### Access
+- No new menu path. This is a retail hotfix for the existing `/az -> Unit Frames -> Show Blizzard Raid Bar` toggle.
+
+### Internal
+- `Core/FixBlizzardBugsWow12.lua`: stopped mutating `CompactRaidFrameManager` anchors and parent from the WoW 12 quarantine helper, and now suppresses the disabled manager bar through alpha/mouse handling instead.
+
 ## 5.3.29-JuNNeZ (2026-03-27)
 
 ### The Interrupt Conumdrum
