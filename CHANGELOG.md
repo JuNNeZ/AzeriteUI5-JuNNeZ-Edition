@@ -4,6 +4,13 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.33-JuNNeZ (2026-03-28)
+
+### Localization
+
+- Full translation pass across all nine shipped locale files (deDE, esES, frFR, itIT, koKR, ptBR, ruRU, zhCN, zhTW): every previously untranslated string now has a proper translation.
+- Added the missing Soul Fragments display-mode strings (Demon Hunter Devourer toggle, count toggle, display-mode selector, and all four mode options) to all non-English locales.
+
 ## 5.3.32-JuNNeZ (2026-03-28)
 
 ### The big castbar gimmick update
