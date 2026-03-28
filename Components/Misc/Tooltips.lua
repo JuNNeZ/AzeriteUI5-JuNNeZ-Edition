@@ -235,7 +235,6 @@ end })
 
 local TooltipBackdropSignature = setmetatable({}, { __mode = "k" })
 local TooltipBackdropLastUpdate = setmetatable({}, { __mode = "k" })
-local TooltipDimensionCache = setmetatable({}, { __mode = "k" })
 local StatusBarThemeSignature = setmetatable({}, { __mode = "k" })
 local StatusBarText = setmetatable({}, { __mode = "k" })
 
@@ -279,27 +278,6 @@ local RestoreBlizzardTooltipBackdrop = function(tooltip)
 	end
 end
 
-local CacheTooltipDimensions = function(tooltip)
-	if (not tooltip) or tooltip:IsForbidden() then
-		return
-	end
-	local width = tooltip.GetWidth and tooltip:GetWidth() or nil
-	local height = tooltip.GetHeight and tooltip:GetHeight() or nil
-	local cached = TooltipDimensionCache[tooltip]
-	if (not cached) then
-		cached = {}
-		TooltipDimensionCache[tooltip] = cached
-	end
-	if (type(width) == "number" and not IsSecretValue(width)) then
-		cached.width = width
-	end
-	if (type(height) == "number" and not IsSecretValue(height)) then
-		cached.height = height
-	end
-	local safeWidth = (type(width) == "number" and not IsSecretValue(width)) and width or cached.width
-	local safeHeight = (type(height) == "number" and not IsSecretValue(height)) and height or cached.height
-	return safeWidth, safeHeight
-end
 
 local defaults = { profile = ns:Merge({
 	theme = "Classic",
@@ -333,14 +311,12 @@ end
 Tooltips.UpdateBackdropTheme = function(self, tooltip)
 	if (self:IsDisabled()) then return end
 	if (not tooltip) or (tooltip.IsEmbedded) or (tooltip:IsForbidden()) then return end
-	local hasSecretValues = (type(issecretvalue) == "function")
-	if (hasSecretValues) then
-		-- WoW12 secret-value safety: only style when tooltip dimensions are non-secret.
-		local safeWidth, safeHeight = CacheTooltipDimensions(tooltip)
-		if (type(safeWidth) ~= "number" or type(safeHeight) ~= "number") then
-			RestoreBlizzardTooltipBackdrop(tooltip)
-			return
-		end
+	-- WoW12: dimension guard in FixBlizzardBugsWow12 ensures GetWidth/GetHeight
+	-- always return clean values, but skip styling if the tooltip has zero size
+	-- (e.g. not yet laid out).
+	local width = tooltip.GetWidth and tooltip:GetWidth() or 0
+	if (width <= 0) then
+		return
 	end
 
 	-- Build a simple signature so we can skip redundant work (vendor/item tooltips spam updates).

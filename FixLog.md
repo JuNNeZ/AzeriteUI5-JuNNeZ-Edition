@@ -5,6 +5,14 @@
 
 ## 2026-03-28
 
+- **5.3.35 release prep started:** Rolling the new tooltip dimension guard and tooltip module cleanup into the next patch release.
+  - **Why:** `v5.3.34-JuNNeZ` is already tagged on the current release commit, but the worktree now contains a newer tooltip stability pass: the WoW 12 tooltip dimension fix moved from call-site wrappers to a single frame-level `GetWidth`/`GetHeight`/`GetSize` guard, and the tooltip styling module no longer needs its own redundant dimension cache. That needs a new delta-only release boundary instead of silently reusing `5.3.34-JuNNeZ`.
+
+- **5.3.35 release prep applied:** Bumped the release metadata to `5.3.35-JuNNeZ` and added a delta-only top changelog entry for the tooltip dimension guard release.
+  - **What changed:** `CHANGELOG.md` now begins with `## 5.3.35-JuNNeZ (2026-03-28)` covering the new source-level tooltip dimension guard in `Core/FixBlizzardBugsWow12.lua` plus the related cleanup in `Components/Misc/Tooltips.lua`. `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now both report `5.3.35-JuNNeZ`.
+  - **Why:** This gives the new guard-based tooltip fix its own release marker, keeps the changelog delta-only, and prevents tagging a second distinct tooltip hotfix as `v5.3.34-JuNNeZ`.
+  - **Verification:** `rg -n "5\\.3\\.35-JuNNeZ|## 5\\.3\\.35-JuNNeZ" CHANGELOG.md AzeriteUI5_JuNNeZ_Edition.toc build-release.ps1 FixLog.md` should match the new release state.
+
 - **5.3.34 release prep started:** Rolling the WoW 12 tooltip widget/money fixes and the protected raid-manager cleanup into the next patch release.
   - **Why:** The current work since `5.3.33-JuNNeZ` is a small player-facing hotfix bundle: tooltip sell-price errors were still surfacing on loot, shopping, and standard item tooltips; Area POI item widgets still needed stricter fail-closed cleanup; and one Blizzard raid-manager workaround was still noisy enough to raise a protected-action warning. These are patch-level release fixes, not just maintainer-only notes.
 

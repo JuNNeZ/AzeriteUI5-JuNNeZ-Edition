@@ -806,6 +806,96 @@ local function GuardWidgetManagerRegister()
 	end
 end
 
+----------------------------------------------------------------
+-- Tooltip dimension guard (Option 3 approach)
+-- Instead of wrapping every Blizzard function that reads
+-- tooltip dimensions, we hook GetWidth/GetHeight/GetSize on
+-- tooltip frames so they always return clean (non-secret)
+-- values. When the real value is tainted we return the last
+-- known good value, preventing the entire class of
+-- "secret number frameWidth/frameHeight" errors at the source.
+----------------------------------------------------------------
+local tooltipDimensionCache = setmetatable({}, { __mode = "k" })
+
+local function GetCachedDimensions(tooltip)
+	local cache = tooltipDimensionCache[tooltip]
+	if (not cache) then
+		cache = { width = 0, height = 0 }
+		tooltipDimensionCache[tooltip] = cache
+	end
+	return cache
+end
+
+local function SafeGetWidth(tooltip, originalGetWidth)
+	local ok, width = pcall(originalGetWidth, tooltip)
+	local cache = GetCachedDimensions(tooltip)
+	if (ok and type(width) == "number" and (not issecretvalue or not issecretvalue(width))) then
+		cache.width = width
+		return width
+	end
+	return cache.width
+end
+
+local function SafeGetHeight(tooltip, originalGetHeight)
+	local ok, height = pcall(originalGetHeight, tooltip)
+	local cache = GetCachedDimensions(tooltip)
+	if (ok and type(height) == "number" and (not issecretvalue or not issecretvalue(height))) then
+		cache.height = height
+		return height
+	end
+	return cache.height
+end
+
+local function GuardTooltipFrameDimensions(tooltip)
+	if (not tooltip or tooltip.__AzUI_W12_DimensionGuarded) then
+		return
+	end
+	tooltip.__AzUI_W12_DimensionGuarded = true
+
+	local originalGetWidth = tooltip.GetWidth
+	local originalGetHeight = tooltip.GetHeight
+	local originalGetSize = tooltip.GetSize
+
+	if (type(originalGetWidth) == "function") then
+		tooltip.GetWidth = function(self)
+			return SafeGetWidth(self, originalGetWidth)
+		end
+	end
+
+	if (type(originalGetHeight) == "function") then
+		tooltip.GetHeight = function(self)
+			return SafeGetHeight(self, originalGetHeight)
+		end
+	end
+
+	if (type(originalGetSize) == "function") then
+		tooltip.GetSize = function(self)
+			return SafeGetWidth(self, originalGetWidth), SafeGetHeight(self, originalGetHeight)
+		end
+	end
+end
+
+local function GuardTooltipDimensions()
+	-- Guard the primary tooltips that our addon styles
+	local tooltips = {
+		_G.GameTooltip,
+		_G.ItemRefTooltip,
+		_G.ItemRefShoppingTooltip1,
+		_G.ItemRefShoppingTooltip2,
+		_G.EmbeddedItemTooltip,
+		_G.ShoppingTooltip1,
+		_G.ShoppingTooltip2,
+		_G.GameNoHeaderTooltip,
+		_G.GameSmallHeaderTooltip,
+	}
+
+	for _, tooltip in ipairs(tooltips) do
+		if (tooltip and (not tooltip.IsForbidden or not tooltip:IsForbidden())) then
+			GuardTooltipFrameDimensions(tooltip)
+		end
+	end
+end
+
 local function GuardTooltipWidgetSets()
 	if (type(_G.GameTooltip_AddWidgetSet) ~= "function"
 		or _G.__AzUI_W12_GameTooltipAddWidgetSetWrapped) then
@@ -1113,6 +1203,7 @@ local function ApplyGuards()
 	GuardWidgetTextWithStateSetup()
 	GuardWidgetItemDisplaySetup()
 	GuardWidgetManagerRegister()
+	GuardTooltipDimensions()
 	GuardTooltipWidgetSets()
 	GuardTooltipMoneyAdders()
 	ApplyBlizzardFrameQuarantine()

@@ -4,6 +4,23 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.35-JuNNeZ (2026-03-28)
+
+### Highlights
+
+- Fixed a broader Retail WoW 12 tooltip secret-number crash path by guarding tooltip width and height reads at the tooltip frame itself, so Blizzard tooltip layout code now falls back to the last known clean dimensions instead of erroring.
+- Simplified AzeriteUI's tooltip styling follow-up now that tooltip dimension caching is handled centrally at the Blizzard guard layer.
+
+### Access
+
+- No new menu path. This is a retail tooltip stability hotfix for Blizzard-owned tooltip layout and widget rendering.
+
+### Internal
+
+- `Core/FixBlizzardBugsWow12.lua`: added `GuardTooltipDimensions()` to hook `GetWidth`, `GetHeight`, and `GetSize` on live tooltip instances such as `GameTooltip`, `ItemRefTooltip`, `ShoppingTooltip1/2`, and related Blizzard tooltip frames, returning the last known good cached dimension when Blizzard exposes a secret/tainted number.
+- `Core/FixBlizzardBugsWow12.lua`: removed the older `GuardTooltipInsertFrame` / `IsSecretTooltipInsertFrameError` whack-a-mole path in favor of the single dimension-guard interception point that protects current and future Blizzard tooltip readers.
+- `Components/Misc/Tooltips.lua`: removed the redundant `TooltipDimensionCache` / `CacheTooltipDimensions()` helper path and simplified `UpdateBackdropTheme()` so it only sanity-checks `tooltip:GetWidth() > 0` before styling.
+
 ## 5.3.34-JuNNeZ (2026-03-28)
 
 ### Highlights
