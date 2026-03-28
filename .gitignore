@@ -53,6 +53,8 @@ NOTES.txt
 FEATURE_PLAN.md
 *.local.*
 .mcp.json
+.agents/
+.claude/
 
 # Git related
 *.orig
