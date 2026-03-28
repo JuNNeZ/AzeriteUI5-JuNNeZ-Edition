@@ -5,6 +5,14 @@
 
 ## 2026-03-28
 
+- **WoW12 tooltip money/load-order and raid-manager follow-up started:** Narrowing the just-shipped hotfix after live retest showed one protected Blizzard raid-manager call from AzeriteUI and repeated tooltip money crashes still bypassing the intended `MoneyFrame_Update(...)` guard.
+  - **Why:** The fresh `ADDON_ACTION_BLOCKED` stack points directly at `ApplyCompactRaidManagerVisibility()` in `Core/FixBlizzardBugsWow12.lua`, where AzeriteUI still calls Blizzard raid-manager methods like `EnableMouse(false)` and `UnregisterAllEvents()`. The new `MoneyFrame.lua:307/340` stacks still terminate in Blizzard `MoneyFrame_Update(...)` without showing AzeriteUI's wrapper frame, which strongly suggests the tooltip-money wrapper was simply not installed yet when `Blizzard_MoneyFrame` loaded.
+
+- **WoW12 tooltip money/load-order and raid-manager follow-up applied:** Removed the protected raid-manager state calls and made the tooltip money guard reapply when `Blizzard_MoneyFrame` loads.
+  - **What changed:** `ApplyCompactRaidManagerVisibility()` in `Core/FixBlizzardBugsWow12.lua` now stays alpha-only and no longer calls `EnableMouse(false)` or `UnregisterAllEvents()` on `CompactRaidFrameManager`. The same file's `ADDON_LOADED` reapply list now includes `Blizzard_MoneyFrame`, so `GuardTooltipMoneyAdders()` can install the tooltip-owned `MoneyFrame_Update(...)` wrapper after Blizzard's shared money code is actually present.
+  - **Why:** `pcall(...)` does not make protected Blizzard method calls safe, so AzeriteUI had to stop touching the raid manager's secure event/mouse state directly. The money fix also needed the right load-order hook; otherwise the new wrapper existed in source but never actually wrapped Blizzard's runtime function on clients where `Blizzard_MoneyFrame` loaded later.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed. In-game `/reload`, then verify BugSack no longer reports the `ADDON_ACTION_BLOCKED` call from `Core/FixBlizzardBugsWow12.lua:540`, and retest loot, shopping, and normal item tooltips that previously threw `MoneyFrame.lua:307/340`.
+
 - **WoW12 tooltip widget/money follow-up started:** Tightening the current secret-value guards in `Core/FixBlizzardBugsWow12.lua` after fresh BugSack reports showed one Blizzard item-display widget path and one tooltip money-frame path still escaping the earlier wrappers.
   - **Why:** The latest session still shows `Blizzard_UIWidgetTemplateBase.lua:1638` from Area POI item-display widgets plus repeated `Blizzard_MoneyFrame/Mainline/MoneyFrame.lua:307/340/370` tooltip crashes. The money stacks now prove there are two entry paths: Blizzard's normal `GameTooltip_OnTooltipAddMoney(...)` path and direct tooltip `MoneyFrame_Update(...)` calls reached through Auctionator pricing tooltips. The Auctionator nil-function errors are separate addon bugs, but AzeriteUI still owns the WoW 12 secret-money taint/fail-closed work.
 

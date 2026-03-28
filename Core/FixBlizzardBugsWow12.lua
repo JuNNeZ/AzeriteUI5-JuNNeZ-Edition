@@ -536,20 +536,11 @@ local function ApplyCompactRaidManagerVisibility()
 	if (manager.SetAlpha) then
 		pcall(manager.SetAlpha, manager, 0)
 	end
-	if (manager.EnableMouse) then
-		pcall(manager.EnableMouse, manager, false)
-	end
-	if (manager.UnregisterAllEvents) then
-		pcall(manager.UnregisterAllEvents, manager)
-	end
 	if (manager.HookScript and not manager.__AzUI_W12_SuppressOnShowHooked) then
 		manager.__AzUI_W12_SuppressOnShowHooked = true
 		manager:HookScript("OnShow", function(self)
 			if (self.SetAlpha) then
 				pcall(self.SetAlpha, self, 0)
-			end
-			if (self.EnableMouse) then
-				pcall(self.EnableMouse, self, false)
 			end
 		end)
 	end
@@ -1145,6 +1136,7 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 			or addonName == "Blizzard_ArenaUI"
 			or addonName == "Blizzard_EditMode"
 			or addonName == "Blizzard_GameTooltip"
+			or addonName == "Blizzard_MoneyFrame"
 			or addonName == "Blizzard_UIWidgets") then
 			ApplyGuards()
 			if (C_Timer) then
