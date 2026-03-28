@@ -5,6 +5,14 @@
 
 ## 2026-03-28
 
+- **5.3.34 release prep started:** Rolling the WoW 12 tooltip widget/money fixes and the protected raid-manager cleanup into the next patch release.
+  - **Why:** The current work since `5.3.33-JuNNeZ` is a small player-facing hotfix bundle: tooltip sell-price errors were still surfacing on loot, shopping, and standard item tooltips; Area POI item widgets still needed stricter fail-closed cleanup; and one Blizzard raid-manager workaround was still noisy enough to raise a protected-action warning. These are patch-level release fixes, not just maintainer-only notes.
+
+- **5.3.34 release prep applied:** Bumped the release metadata to `5.3.34-JuNNeZ` and added a delta-only top changelog entry for the tooltip/widget hotfixes.
+  - **What changed:** `CHANGELOG.md` now begins with `## 5.3.34-JuNNeZ (2026-03-28)` covering the WoW 12 tooltip money crash fix, the stricter tooltip item-widget fallback, and the protected raid-manager cleanup. `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now both report `5.3.34-JuNNeZ`.
+  - **Why:** This gives the tooltip/widget fixes a clean release boundary instead of leaving them split between ad-hoc hotfix tags and unreleased local version drift.
+  - **Verification:** `rg -n "5\\.3\\.34-JuNNeZ|## 5\\.3\\.34-JuNNeZ" CHANGELOG.md AzeriteUI5_JuNNeZ_Edition.toc build-release.ps1 FixLog.md` should match the new release state.
+
 - **WoW12 tooltip money/load-order and raid-manager follow-up started:** Narrowing the just-shipped hotfix after live retest showed one protected Blizzard raid-manager call from AzeriteUI and repeated tooltip money crashes still bypassing the intended `MoneyFrame_Update(...)` guard.
   - **Why:** The fresh `ADDON_ACTION_BLOCKED` stack points directly at `ApplyCompactRaidManagerVisibility()` in `Core/FixBlizzardBugsWow12.lua`, where AzeriteUI still calls Blizzard raid-manager methods like `EnableMouse(false)` and `UnregisterAllEvents()`. The new `MoneyFrame.lua:307/340` stacks still terminate in Blizzard `MoneyFrame_Update(...)` without showing AzeriteUI's wrapper frame, which strongly suggests the tooltip-money wrapper was simply not installed yet when `Blizzard_MoneyFrame` loaded.
 

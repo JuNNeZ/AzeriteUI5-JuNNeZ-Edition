@@ -4,6 +4,14 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.34-JuNNeZ (2026-03-28)
+
+### Highlights
+
+- Fixed Blizzard tooltip sell-price crashes on Retail WoW 12 where some loot, compare, and item tooltips could error instead of showing their money line.
+- Hardened the Blizzard item-widget fallback so broken Area POI and embedded item-display tooltip widgets fail closed instead of surfacing secret-value errors.
+- Removed the raid-manager hotfix path that could trigger a protected-action warning in grouped play.
+
 ## 5.3.33-JuNNeZ (2026-03-28)
 
 ### Localization
