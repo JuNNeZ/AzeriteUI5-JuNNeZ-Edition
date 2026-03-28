@@ -38,6 +38,10 @@ if (not canaccesstable) then
 	return
 end
 
+local Pack = table.pack or function(...)
+	return { n = select("#", ...), ... }
+end
+
 local MAX_PARTY_MEMBERS = _G.MEMBERS_PER_RAID_GROUP or 5
 local MAX_RAID_MEMBERS = _G.MAX_RAID_MEMBERS or 40
 local MAX_BOSS_FRAMES = _G.MAX_BOSS_FRAMES or 8
@@ -79,25 +83,8 @@ local SAFE_CASTBAR_TYPE_INFO = {
 	finishAnim = "StandardFinish"
 }
 
-local function MakeSafeStopFinishAnims(origFunc)
-	return function(self, ...)
-		if (self and type(self) == "table" and not canaccesstable(self)) then
-			return
-		end
-		pcall(origFunc, self, ...)
-	end
-end
-
-local function MakeSafeCastbarVisualMethod(origFunc)
-	return function(self, ...)
-		if (self and type(self) == "table" and not canaccesstable(self)) then
-			return
-		end
-		pcall(origFunc, self, ...)
-	end
-end
-
-local function MakeSafeUpdateShownState(origFunc)
+-- Generic wrapper: silently bail when the frame is inaccessible, pcall otherwise.
+local function MakeSafeVoidMethod(origFunc)
 	return function(self, ...)
 		if (self and type(self) == "table" and not canaccesstable(self)) then
 			return
@@ -128,69 +115,46 @@ local function MakeSafeGetTypeInfo(origFunc)
 	end
 end
 
-local function GuardCastingBarMixinMethod(mixin, method, wrapper, flag)
-	if (not mixin or type(mixin[method]) ~= "function" or mixin[flag]) then
-		return
-	end
-	mixin[flag] = true
-	mixin[method] = wrapper(mixin[method])
-end
+-- Table-driven castbar method guards: each entry is { method, wrapper }.
+-- MakeSafeVoidMethod is used for fire-and-forget visual methods;
+-- MakeSafeGetTypeInfo is used for the one method that returns a value.
+local CASTBAR_GUARDS = {
+	{ "StopFinishAnims",  MakeSafeVoidMethod },
+	{ "HideSpark",        MakeSafeVoidMethod },
+	{ "ShowSpark",        MakeSafeVoidMethod },
+	{ "PlayFinishAnim",   MakeSafeVoidMethod },
+	{ "UpdateShownState", MakeSafeVoidMethod },
+	{ "GetTypeInfo",      MakeSafeGetTypeInfo },
+}
 
 local function GuardCastingBarFrame(frame)
 	if (not frame or type(frame) ~= "table") then
 		return
 	end
-	if (type(frame.StopFinishAnims) == "function" and not frame.__AzUI_W12_SFA) then
-		frame.__AzUI_W12_SFA = true
-		frame.StopFinishAnims = MakeSafeStopFinishAnims(frame.StopFinishAnims)
-	end
-	if (type(frame.HideSpark) == "function" and not frame.__AzUI_W12_HS) then
-		frame.__AzUI_W12_HS = true
-		frame.HideSpark = MakeSafeCastbarVisualMethod(frame.HideSpark)
-	end
-	if (type(frame.ShowSpark) == "function" and not frame.__AzUI_W12_SS) then
-		frame.__AzUI_W12_SS = true
-		frame.ShowSpark = MakeSafeCastbarVisualMethod(frame.ShowSpark)
-	end
-	if (type(frame.PlayFinishAnim) == "function" and not frame.__AzUI_W12_PFA) then
-		frame.__AzUI_W12_PFA = true
-		frame.PlayFinishAnim = MakeSafeCastbarVisualMethod(frame.PlayFinishAnim)
-	end
-	if (type(frame.UpdateShownState) == "function" and not frame.__AzUI_W12_USS) then
-		frame.__AzUI_W12_USS = true
-		frame.UpdateShownState = MakeSafeUpdateShownState(frame.UpdateShownState)
-	end
-	if (type(frame.GetTypeInfo) == "function" and not frame.__AzUI_W12_GTI) then
-		frame.__AzUI_W12_GTI = true
-		frame.GetTypeInfo = MakeSafeGetTypeInfo(frame.GetTypeInfo)
+	for _, guard in ipairs(CASTBAR_GUARDS) do
+		local method, wrapper = guard[1], guard[2]
+		local flag = "__AzUI_W12_CB_" .. method
+		if (type(frame[method]) == "function" and not frame[flag]) then
+			frame[flag] = true
+			frame[method] = wrapper(frame[method])
+		end
 	end
 end
 
 local function ApplyCastingBarGuards()
-	GuardCastingBarMixinMethod(_G.CastingBarMixin, "StopFinishAnims",
-		MakeSafeStopFinishAnims, "__AzUI_W12_SFA_CBM")
-	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "StopFinishAnims",
-		MakeSafeStopFinishAnims, "__AzUI_W12_SFA_CBFM")
-	GuardCastingBarMixinMethod(_G.CastingBarMixin, "HideSpark",
-		MakeSafeCastbarVisualMethod, "__AzUI_W12_HS_CBM")
-	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "HideSpark",
-		MakeSafeCastbarVisualMethod, "__AzUI_W12_HS_CBFM")
-	GuardCastingBarMixinMethod(_G.CastingBarMixin, "ShowSpark",
-		MakeSafeCastbarVisualMethod, "__AzUI_W12_SS_CBM")
-	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "ShowSpark",
-		MakeSafeCastbarVisualMethod, "__AzUI_W12_SS_CBFM")
-	GuardCastingBarMixinMethod(_G.CastingBarMixin, "PlayFinishAnim",
-		MakeSafeCastbarVisualMethod, "__AzUI_W12_PFA_CBM")
-	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "PlayFinishAnim",
-		MakeSafeCastbarVisualMethod, "__AzUI_W12_PFA_CBFM")
-	GuardCastingBarMixinMethod(_G.CastingBarMixin, "UpdateShownState",
-		MakeSafeUpdateShownState, "__AzUI_W12_USS_CBM")
-	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "UpdateShownState",
-		MakeSafeUpdateShownState, "__AzUI_W12_USS_CBFM")
-	GuardCastingBarMixinMethod(_G.CastingBarMixin, "GetTypeInfo",
-		MakeSafeGetTypeInfo, "__AzUI_W12_GTI_CBM")
-	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "GetTypeInfo",
-		MakeSafeGetTypeInfo, "__AzUI_W12_GTI_CBFM")
+	-- Guard both mixin tables so newly created castbars inherit the wraps.
+	for _, mixin in ipairs({ _G.CastingBarMixin, _G.CastingBarFrameMixin }) do
+		if (mixin) then
+			for _, guard in ipairs(CASTBAR_GUARDS) do
+				local method, wrapper = guard[1], guard[2]
+				local flag = "__AzUI_W12_CB_" .. method
+				if (type(mixin[method]) == "function" and not mixin[flag]) then
+					mixin[flag] = true
+					mixin[method] = wrapper(mixin[method])
+				end
+			end
+		end
+	end
 
 	GuardCastingBarFrame(_G.PlayerCastingBarFrame)
 	GuardCastingBarFrame(_G.OverlayPlayerCastingBarFrame)
@@ -288,6 +252,25 @@ local function ShouldHandleCustomUnitFrames()
 	return ShouldHandleUnitFrames() and (ShouldHandlePartyFrames()
 		or ShouldHandleRaidFrames()
 		or ShouldHandleArenaFrames())
+end
+
+local function NormalizeBoolean(value)
+	if (type(value) == "boolean") then
+		return value
+	end
+	if (type(value) == "number") then
+		return value ~= 0
+	end
+	if (type(value) == "string") then
+		local lowered = string.lower(value)
+		if (lowered == "1" or lowered == "true") then
+			return true
+		end
+		if (lowered == "0" or lowered == "false") then
+			return false
+		end
+	end
+	return nil
 end
 
 local function GetQuarantineParent()
@@ -546,6 +529,112 @@ local function ApplyCompactRaidManagerVisibility()
 	end
 end
 
+local function GetRaidModule(name)
+	if (not ns or not ns.GetModule) then
+		return nil
+	end
+	local ok, module = pcall(ns.GetModule, ns, name, true)
+	if (ok) then
+		return module
+	end
+	return nil
+end
+
+local function GetCompactRaidHiddenMode()
+	if (not ShouldShowBlizzardRaidBar()) then
+		return false
+	end
+
+	local toggle = _G.CompactRaidFrameManagerDisplayFrameHiddenModeToggle
+	if (toggle and type(toggle.GetChecked) == "function") then
+		local ok, checked = pcall(toggle.GetChecked, toggle)
+		checked = ok and NormalizeBoolean(checked) or nil
+		if (checked ~= nil) then
+			return checked
+		end
+	end
+
+	local manager = _G.CompactRaidFrameManager
+	local displayFrame = manager and (manager.displayFrame or _G.CompactRaidFrameManagerDisplayFrame)
+	if (displayFrame) then
+		for _, key in ipairs({ "hiddenMode", "isHiddenMode", "hidden" }) do
+			local value = NormalizeBoolean(displayFrame[key])
+			if (value ~= nil) then
+				return value
+			end
+		end
+	end
+
+	local getter = _G.CompactRaidFrameManager_GetSetting or (manager and manager.GetSetting)
+	if (type(getter) == "function") then
+		for _, key in ipairs({ "HiddenMode", "IsHidden", "hideGroups" }) do
+			local ok, value
+			if (getter == _G.CompactRaidFrameManager_GetSetting) then
+				ok, value = pcall(getter, key)
+			else
+				ok, value = pcall(getter, manager, key)
+			end
+			value = ok and NormalizeBoolean(value) or nil
+			if (value ~= nil) then
+				return value
+			end
+		end
+	end
+
+	return false
+end
+
+local function ApplyAzeriteRaidGroupVisibility()
+	local alpha = GetCompactRaidHiddenMode() and 0 or 1
+	for _, moduleName in ipairs({ "RaidFrame5", "RaidFrame25", "RaidFrame40" }) do
+		local module = GetRaidModule(moduleName)
+		local frame = module and module.GetFrame and module:GetFrame()
+		if (frame and frame.SetAlpha) then
+			pcall(frame.SetAlpha, frame, alpha)
+		end
+	end
+end
+
+local function HookRaidManagerHiddenMode()
+	local toggle = _G.CompactRaidFrameManagerDisplayFrameHiddenModeToggle
+	if (toggle and toggle.HookScript and not toggle.__AzUI_W12_HiddenModeHooked) then
+		toggle.__AzUI_W12_HiddenModeHooked = true
+		toggle:HookScript("OnClick", function()
+			if (C_Timer) then
+				C_Timer.After(0, ApplyAzeriteRaidGroupVisibility)
+			else
+				ApplyAzeriteRaidGroupVisibility()
+			end
+		end)
+	end
+
+	local manager = _G.CompactRaidFrameManager
+	if (manager and manager.HookScript and not manager.__AzUI_W12_HiddenModeOnShowHooked) then
+		manager.__AzUI_W12_HiddenModeOnShowHooked = true
+		manager:HookScript("OnShow", function()
+			if (C_Timer) then
+				C_Timer.After(0, ApplyAzeriteRaidGroupVisibility)
+			else
+				ApplyAzeriteRaidGroupVisibility()
+			end
+		end)
+	end
+
+	if (type(_G.CompactRaidFrameManager_SetSetting) == "function" and not _G.__AzUI_W12_HiddenModeSettingHooked) then
+		_G.__AzUI_W12_HiddenModeSettingHooked = true
+		hooksecurefunc("CompactRaidFrameManager_SetSetting", function(setting)
+			local key = type(setting) == "string" and string.lower(setting) or nil
+			if (key == "hiddenmode" or key == "ishidden" or key == "hidegroups") then
+				if (C_Timer) then
+					C_Timer.After(0, ApplyAzeriteRaidGroupVisibility)
+				else
+					ApplyAzeriteRaidGroupVisibility()
+				end
+			end
+		end)
+	end
+end
+
 PrepareCompactFrame = function(frame)
 	if (not ShouldQuarantineCompactFrame(frame)) then
 		return
@@ -592,9 +681,6 @@ local function GuardAuraUtilUnpack()
 
 	_G.__AzUI_W12_AuraUtilUnpackWrapped = true
 	local original = AuraUtil.UnpackAuraData
-	local Pack = table.pack or function(...)
-		return { n = select("#", ...), ... }
-	end
 
 	AuraUtil.UnpackAuraData = function(auraData, ...)
 		if (auraData ~= nil) then
@@ -644,57 +730,28 @@ local function IsSecretWidgetTooltipError(err)
 		or string.find(lowered, "vignettedataprovider", 1, true)
 end
 
+-- Clear widget-related state fields on an object to prevent further tainted updates.
+local function SilenceWidgetObject(obj)
+	if (not obj) then
+		return
+	end
+	if (obj.waitingForData ~= nil) then obj.waitingForData = false end
+	if (obj.updateTooltipTimer ~= nil) then obj.updateTooltipTimer = 0 end
+	if (obj.processingInfo ~= nil) then obj.processingInfo = nil end
+	if (obj.infoList ~= nil) then obj.infoList = nil end
+	if (obj.supportsDataRefresh ~= nil) then obj.supportsDataRefresh = false end
+	if (obj.disableTooltip ~= nil) then obj.disableTooltip = true end
+	if (obj.tooltipEnabled ~= nil) then obj.tooltipEnabled = false end
+	if (obj.Hide) then pcall(obj.Hide, obj) end
+end
+
 local function HideSecretWidgetTarget(target)
 	if (not target) then
 		return false
 	end
-	if (target.waitingForData ~= nil) then
-		target.waitingForData = false
-	end
-	if (target.updateTooltipTimer ~= nil) then
-		target.updateTooltipTimer = 0
-	end
-	if (target.processingInfo ~= nil) then
-		target.processingInfo = nil
-	end
-	if (target.infoList ~= nil) then
-		target.infoList = nil
-	end
-	if (target.supportsDataRefresh ~= nil) then
-		target.supportsDataRefresh = false
-	end
-	if (target.Tooltip and target.Tooltip.Hide) then
-		if (target.Tooltip.waitingForData ~= nil) then
-			target.Tooltip.waitingForData = false
-		end
-		if (target.Tooltip.updateTooltipTimer ~= nil) then
-			target.Tooltip.updateTooltipTimer = 0
-		end
-		if (target.Tooltip.processingInfo ~= nil) then
-			target.Tooltip.processingInfo = nil
-		end
-		if (target.Tooltip.infoList ~= nil) then
-			target.Tooltip.infoList = nil
-		end
-		if (target.Tooltip.supportsDataRefresh ~= nil) then
-			target.Tooltip.supportsDataRefresh = false
-		end
-		if (target.Tooltip.disableTooltip ~= nil) then
-			target.Tooltip.disableTooltip = true
-		end
-		if (target.Tooltip.tooltipEnabled ~= nil) then
-			target.Tooltip.tooltipEnabled = false
-		end
-		pcall(target.Tooltip.Hide, target.Tooltip)
-	end
-	if (target.Hide) then
-		pcall(target.Hide, target)
-	end
-	if (target.disableTooltip ~= nil) then
-		target.disableTooltip = true
-	end
-	if (target.tooltipEnabled ~= nil) then
-		target.tooltipEnabled = false
+	SilenceWidgetObject(target)
+	if (target.Tooltip) then
+		SilenceWidgetObject(target.Tooltip)
 	end
 	if (target.widgetContainer) then
 		if (target.widgetContainer.disableWidgetTooltips ~= nil) then
@@ -703,9 +760,6 @@ local function HideSecretWidgetTarget(target)
 		if (target.widgetContainer.Hide) then
 			pcall(target.widgetContainer.Hide, target.widgetContainer)
 		end
-	end
-	if (target.widgetContainer and target.widgetContainer.Hide) then
-		pcall(target.widgetContainer.Hide, target.widgetContainer)
 	end
 	return true
 end
@@ -716,12 +770,7 @@ local function HideSecretWidgetTargets(...)
 		local value = select(i, ...)
 		local valueType = type(value)
 		if (valueType == "table" or valueType == "userdata") then
-			if ((value.Tooltip and value.Tooltip.Hide)
-				or (value.widgetContainer and value.widgetContainer.Hide)) then
-				hidden = HideSecretWidgetTarget(value) or hidden
-			elseif (value.widgetFrames and value.Hide) then
-				hidden = HideSecretWidgetTarget(value) or hidden
-			elseif (value.widgetType and value.Hide) then
+			if (value.Tooltip or value.widgetContainer or value.widgetFrames or value.widgetType) then
 				hidden = HideSecretWidgetTarget(value) or hidden
 			end
 		end
@@ -737,21 +786,15 @@ local function HandleSecretWidgetError(err, ...)
 	return nil
 end
 
-local function GuardWidgetTextWithStateSetup()
-	if (type(_G.UIWidgetTemplateTextWithStateMixin) ~= "table"
-		or type(_G.UIWidgetTemplateTextWithStateMixin.Setup) ~= "function"
-		or _G.__AzUI_W12_UIWidgetTextWithStateSetupWrapped) then
+-- Generic mixin method guard: wraps mixin[method] with pcall + secret-error recovery.
+local function GuardWidgetMixinMethod(mixinName, method, flagName)
+	local mixin = _G[mixinName]
+	if (type(mixin) ~= "table" or type(mixin[method]) ~= "function" or _G[flagName]) then
 		return
 	end
-
-	_G.__AzUI_W12_UIWidgetTextWithStateSetupWrapped = true
-	local mixin = _G.UIWidgetTemplateTextWithStateMixin
-	local original = mixin.Setup
-	local Pack = table.pack or function(...)
-		return { n = select("#", ...), ... }
-	end
-
-	mixin.Setup = function(...)
+	_G[flagName] = true
+	local original = mixin[method]
+	mixin[method] = function(...)
 		local results = Pack(pcall(original, ...))
 		if (results[1]) then
 			return unpack(results, 2, results.n or #results)
@@ -760,50 +803,13 @@ local function GuardWidgetTextWithStateSetup()
 	end
 end
 
-local function GuardWidgetItemDisplaySetup()
-	if (type(_G.UIWidgetTemplateItemDisplayMixin) ~= "table"
-		or type(_G.UIWidgetTemplateItemDisplayMixin.Setup) ~= "function"
-		or _G.__AzUI_W12_UIWidgetItemDisplaySetupWrapped) then
-		return
-	end
-
-	_G.__AzUI_W12_UIWidgetItemDisplaySetupWrapped = true
-	local mixin = _G.UIWidgetTemplateItemDisplayMixin
-	local original = mixin.Setup
-	local Pack = table.pack or function(...)
-		return { n = select("#", ...), ... }
-	end
-
-	mixin.Setup = function(...)
-		local results = Pack(pcall(original, ...))
-		if (results[1]) then
-			return unpack(results, 2, results.n or #results)
-		end
-		return HandleSecretWidgetError(results[2], ...)
-	end
-end
-
-local function GuardWidgetManagerRegister()
-	if (type(_G.UIWidgetManagerMixin) ~= "table"
-		or type(_G.UIWidgetManagerMixin.RegisterForWidgetSet) ~= "function"
-		or _G.__AzUI_W12_UIWidgetManagerRegisterWrapped) then
-		return
-	end
-
-	_G.__AzUI_W12_UIWidgetManagerRegisterWrapped = true
-	local mixin = _G.UIWidgetManagerMixin
-	local original = mixin.RegisterForWidgetSet
-	local Pack = table.pack or function(...)
-		return { n = select("#", ...), ... }
-	end
-
-	mixin.RegisterForWidgetSet = function(...)
-		local results = Pack(pcall(original, ...))
-		if (results[1]) then
-			return unpack(results, 2, results.n or #results)
-		end
-		return HandleSecretWidgetError(results[2], ...)
-	end
+local function GuardWidgetSetups()
+	GuardWidgetMixinMethod("UIWidgetTemplateTextWithStateMixin", "Setup",
+		"__AzUI_W12_UIWidgetTextWithStateSetupWrapped")
+	GuardWidgetMixinMethod("UIWidgetTemplateItemDisplayMixin", "Setup",
+		"__AzUI_W12_UIWidgetItemDisplaySetupWrapped")
+	GuardWidgetMixinMethod("UIWidgetManagerMixin", "RegisterForWidgetSet",
+		"__AzUI_W12_UIWidgetManagerRegisterWrapped")
 end
 
 ----------------------------------------------------------------
@@ -947,6 +953,32 @@ local function GuardTooltipDimensions()
 	end
 end
 
+----------------------------------------------------------------
+-- Backdrop SetupTextureCoordinates guard
+-- WoW 12 secret values break BackdropTemplateMixin.SetupTextureCoordinates
+-- when frame dimensions are tainted. Both ElvUI and GW2_UI replace
+-- this method to skip when GetSize returns secret values.
+-- We do the same: check dimensions before calling the original.
+----------------------------------------------------------------
+local function GuardBackdropSetupTextureCoordinates()
+	if (not _G.BackdropTemplateMixin
+		or type(_G.BackdropTemplateMixin.SetupTextureCoordinates) ~= "function"
+		or _G.__AzUI_W12_BackdropSetupTexCoordsWrapped) then
+		return
+	end
+	_G.__AzUI_W12_BackdropSetupTexCoordsWrapped = true
+	local original = _G.BackdropTemplateMixin.SetupTextureCoordinates
+	_G.BackdropTemplateMixin.SetupTextureCoordinates = function(self, ...)
+		if (self and self.GetSize) then
+			local width, height = self:GetSize()
+			if (issecretvalue and (issecretvalue(width) or issecretvalue(height))) then
+				return
+			end
+		end
+		return original(self, ...)
+	end
+end
+
 local function GuardTooltipWidgetSets()
 	if (type(_G.GameTooltip_AddWidgetSet) ~= "function"
 		or _G.__AzUI_W12_GameTooltipAddWidgetSetWrapped) then
@@ -955,9 +987,6 @@ local function GuardTooltipWidgetSets()
 
 	_G.__AzUI_W12_GameTooltipAddWidgetSetWrapped = true
 	local original = _G.GameTooltip_AddWidgetSet
-	local Pack = table.pack or function(...)
-		return { n = select("#", ...), ... }
-	end
 
 	_G.GameTooltip_AddWidgetSet = function(...)
 		local results = Pack(pcall(original, ...))
@@ -1048,9 +1077,6 @@ local function HideTooltipMoneyFrames(tooltip)
 end
 
 local function GuardTooltipMoneyAdders()
-	local Pack = table.pack or function(...)
-		return { n = select("#", ...), ... }
-	end
 
 	local function WrapTooltipMoneyAdder(globalName, flagName)
 		local original = _G[globalName]
@@ -1242,6 +1268,7 @@ end
 ns.WoW12BlizzardQuarantine = ns.WoW12BlizzardQuarantine or {}
 ns.WoW12BlizzardQuarantine.Apply = ApplyBlizzardFrameQuarantine
 ns.WoW12BlizzardQuarantine.ApplyCompactFrames = QuarantineCompactFrames
+ns.WoW12BlizzardQuarantine.ApplyRaidGroupVisibility = ApplyAzeriteRaidGroupVisibility
 ns.WoW12BlizzardQuarantine.ApplySpellBars = QuarantineSpellBars
 ns.WoW12BlizzardQuarantine.QuarantineFrame = QuarantineFrame
 
@@ -1251,13 +1278,14 @@ local function ApplyGuards()
 	GuardPartyFrameGlobals()
 	GuardCompactUnitFrameGlobals()
 	GuardAuraUtilUnpack()
-	GuardWidgetTextWithStateSetup()
-	GuardWidgetItemDisplaySetup()
-	GuardWidgetManagerRegister()
+	GuardWidgetSetups()
+	GuardBackdropSetupTextureCoordinates()
 	GuardTooltipDimensions()
 	GuardTooltipWidgetSets()
 	GuardTooltipMoneyAdders()
 	ApplyBlizzardFrameQuarantine()
+	HookRaidManagerHiddenMode()
+	ApplyAzeriteRaidGroupVisibility()
 	HookCompactFrameLifecycle()
 end
 

@@ -5,6 +5,14 @@
 
 ## 2026-03-28
 
+- **Blizzard raid-bar Hide Groups follow-up started:** Wiring the Blizzard raid utility bar's `Hide Groups` toggle into AzeriteUI's own raid headers.
+  - **Why:** AzeriteUI already quarantines Blizzard compact raid frames in `Core/FixBlizzardBugsWow12.lua` and renders raid groups through `RaidFrame5`, `RaidFrame25`, and `RaidFrame40` instead. That leaves the Blizzard raid utility bar visible when `/az -> Unit Frames -> Show Blizzard Raid Bar` is enabled, but its built-in `Hide Groups` toggle still only targets Blizzard compact frames, so in AzeriteUI raids it appears to do nothing.
+
+- **Blizzard raid-bar Hide Groups follow-up applied:** Mirrored Blizzard's raid-manager hidden-mode toggle onto AzeriteUI's raid headers.
+  - **What changed:** `Core/FixBlizzardBugsWow12.lua` now reads the hidden-mode state from `CompactRaidFrameManagerDisplayFrameHiddenModeToggle` when available, falls back to live manager/display settings when possible, and applies that state to AzeriteUI's `RaidFrame5`, `RaidFrame25`, and `RaidFrame40` root frames by alpha instead of touching Blizzard compact raid frames. The same file also now hooks the Blizzard hidden-mode toggle/button path and reapplies the mirror on raid-manager show and normal guard refreshes.
+  - **Why:** The Blizzard raid utility bar remained useful for ready checks and world markers, but its `Hide Groups` control had become disconnected once AzeriteUI stopped using Blizzard's compact raid container. Mirroring the toggle onto AzeriteUI-owned raid headers restores the expected player-facing behavior without moving the problem into `Libs/oUF` or mutating Blizzard's protected raid-frame ownership again.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed. In-game `/reload`, join a raid with `/az -> Unit Frames -> Show Blizzard Raid Bar` enabled, then click the Blizzard raid-bar `Hide Groups` toggle and confirm the active AzeriteUI raid frame layout fades out/in with the button while the ready-check/world-marker utility bar itself remains usable.
+
 - **5.3.35 release prep started:** Rolling the new tooltip dimension guard and tooltip module cleanup into the next patch release.
   - **Why:** `v5.3.34-JuNNeZ` is already tagged on the current release commit, but the worktree now contains a newer tooltip stability pass: the WoW 12 tooltip dimension fix moved from call-site wrappers to a single frame-level `GetWidth`/`GetHeight`/`GetSize` guard, and the tooltip styling module no longer needs its own redundant dimension cache. That needs a new delta-only release boundary instead of silently reusing `5.3.34-JuNNeZ`.
 

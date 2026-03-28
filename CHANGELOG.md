@@ -4,6 +4,27 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.37-JuNNeZ (2026-03-28)
+
+### Highlights
+
+- Refactored WoW 12 Blizzard bug guards for clarity and reduced code duplication (~100 lines removed).
+- Added `BackdropTemplateMixin.SetupTextureCoordinates` guard (adopted from ElvUI/GW2_UI) to prevent secret-value crashes in backdrop rendering across all frames.
+- Wired Blizzard raid-bar "Hide Groups" toggle into AzeriteUI's own raid headers so it works when using custom raid frames.
+
+### Access
+
+- No new menu path. Internal refactor and stability improvements.
+
+### Internal
+
+- `Core/FixBlizzardBugsWow12.lua`: hoisted `Pack` to file scope (was redefined 6 times locally).
+- `Core/FixBlizzardBugsWow12.lua`: consolidated three identical castbar wrapper factories (`MakeSafeStopFinishAnims`, `MakeSafeCastbarVisualMethod`, `MakeSafeUpdateShownState`) into a single `MakeSafeVoidMethod`; replaced per-method flag blocks with a table-driven `CASTBAR_GUARDS` loop.
+- `Core/FixBlizzardBugsWow12.lua`: consolidated three identical widget Setup guards into a single `GuardWidgetMixinMethod` factory called from `GuardWidgetSetups()`.
+- `Core/FixBlizzardBugsWow12.lua`: extracted `SilenceWidgetObject` helper to deduplicate field-clearing logic in `HideSecretWidgetTarget` (removed duplicated `widgetContainer.Hide` block).
+- `Core/FixBlizzardBugsWow12.lua`: added `GuardBackdropSetupTextureCoordinates()` — skips `BackdropTemplateMixin.SetupTextureCoordinates` when frame dimensions are tainted, matching the approach used by ElvUI and GW2_UI.
+- `Core/FixBlizzardBugsWow12.lua`: added raid-manager hidden-mode mirror (`ApplyAzeriteRaidGroupVisibility`, `HookRaidManagerHiddenMode`) so the Blizzard raid-bar "Hide Groups" toggle controls AzeriteUI raid headers by alpha.
+
 ## 5.3.36-JuNNeZ (2026-03-28)
 
 ### Highlights
