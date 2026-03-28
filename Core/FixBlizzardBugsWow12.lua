@@ -657,7 +657,43 @@ local function HideSecretWidgetTarget(target)
 	if (not target) then
 		return false
 	end
+	if (target.waitingForData ~= nil) then
+		target.waitingForData = false
+	end
+	if (target.updateTooltipTimer ~= nil) then
+		target.updateTooltipTimer = 0
+	end
+	if (target.processingInfo ~= nil) then
+		target.processingInfo = nil
+	end
+	if (target.infoList ~= nil) then
+		target.infoList = nil
+	end
+	if (target.supportsDataRefresh ~= nil) then
+		target.supportsDataRefresh = false
+	end
 	if (target.Tooltip and target.Tooltip.Hide) then
+		if (target.Tooltip.waitingForData ~= nil) then
+			target.Tooltip.waitingForData = false
+		end
+		if (target.Tooltip.updateTooltipTimer ~= nil) then
+			target.Tooltip.updateTooltipTimer = 0
+		end
+		if (target.Tooltip.processingInfo ~= nil) then
+			target.Tooltip.processingInfo = nil
+		end
+		if (target.Tooltip.infoList ~= nil) then
+			target.Tooltip.infoList = nil
+		end
+		if (target.Tooltip.supportsDataRefresh ~= nil) then
+			target.Tooltip.supportsDataRefresh = false
+		end
+		if (target.Tooltip.disableTooltip ~= nil) then
+			target.Tooltip.disableTooltip = true
+		end
+		if (target.Tooltip.tooltipEnabled ~= nil) then
+			target.Tooltip.tooltipEnabled = false
+		end
 		pcall(target.Tooltip.Hide, target.Tooltip)
 	end
 	if (target.Hide) then
@@ -819,6 +855,37 @@ local function IsSecretTooltipMoneyError(err)
 		or string.find(lowered, "tooltipaddmoney", 1, true)
 end
 
+local function IsTooltipOwnedMoneyFrame(frame)
+	if (not frame) then
+		return false
+	end
+	local name = frame.GetName and frame:GetName()
+	if (type(name) == "string") then
+		if (string.find(name, "GameTooltipMoneyFrame", 1, true)
+			or string.find(name, "EmbeddedItemTooltipMoneyFrame", 1, true)
+			or string.find(name, "ItemRefTooltipMoneyFrame", 1, true)
+			or string.find(name, "ShoppingTooltip%d*MoneyFrame", 1)) then
+			return true
+		end
+	end
+	local parent = frame.GetParent and frame:GetParent()
+	if (parent) then
+		local parentName = parent.GetName and parent:GetName()
+		if (type(parentName) == "string") then
+			if (string.find(parentName, "GameTooltip", 1, true)
+				or string.find(parentName, "EmbeddedItemTooltip", 1, true)
+				or string.find(parentName, "ItemRefTooltip", 1, true)
+				or string.find(parentName, "ShoppingTooltip", 1, true)) then
+				return true
+			end
+		end
+		if (parent.TooltipMoneyFrame == frame) then
+			return true
+		end
+	end
+	return false
+end
+
 local function HideTooltipMoneyFrames(tooltip)
 	if (not tooltip) then
 		return
@@ -874,6 +941,35 @@ local function GuardTooltipMoneyAdders()
 
 	WrapTooltipMoneyAdder("GameTooltip_OnTooltipAddMoney", "__AzUI_W12_GameTooltipOnTooltipAddMoneyWrapped")
 	WrapTooltipMoneyAdder("EmbeddedItemTooltip_OnTooltipAddMoney", "__AzUI_W12_EmbeddedItemTooltipOnTooltipAddMoneyWrapped")
+
+	if (type(_G.MoneyFrame_Update) == "function" and not _G.__AzUI_W12_MoneyFrameUpdateTooltipWrapped) then
+		_G.__AzUI_W12_MoneyFrameUpdateTooltipWrapped = true
+		local original = _G.MoneyFrame_Update
+		_G.MoneyFrame_Update = function(frame, money, ...)
+			if (not IsTooltipOwnedMoneyFrame(frame)) then
+				return original(frame, money, ...)
+			end
+			if (issecretvalue and (issecretvalue(money) or issecretvalue(frame))) then
+				HideTooltipMoneyFrames(frame and frame.GetParent and frame:GetParent() or nil)
+				if (frame and frame.Hide) then
+					pcall(frame.Hide, frame)
+				end
+				return
+			end
+			local results = Pack(pcall(original, frame, money, ...))
+			if (results[1]) then
+				return unpack(results, 2, results.n or #results)
+			end
+			if (not IsSecretTooltipMoneyError(results[2])) then
+				error(results[2], 0)
+			end
+			HideTooltipMoneyFrames(frame and frame.GetParent and frame:GetParent() or nil)
+			if (frame and frame.Hide) then
+				pcall(frame.Hide, frame)
+			end
+			return nil
+		end
+	end
 end
 
 local function QuarantineCompactFrames()
