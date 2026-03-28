@@ -4,6 +4,22 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.36-JuNNeZ (2026-03-28)
+
+### Highlights
+
+- Expanded tooltip geometry guard to cover all position/size methods (GetLeft, GetRight, GetTop, GetBottom, GetCenter, GetRect, GetScale), fixing shopping-tooltip comparison crashes caused by tainted position values.
+- Added embedded widget tooltips (UIWidgetBaseItemEmbeddedTooltip) to the geometry guard, fixing secret-value errors in Blizzard's UIWidgetTemplateItemDisplay code.
+
+### Access
+
+- No new menu path. This is a retail tooltip stability hotfix for Blizzard-owned tooltip layout and widget rendering.
+
+### Internal
+
+- `Core/FixBlizzardBugsWow12.lua`: expanded `GuardTooltipFrameGeometry` from dimension-only (GetWidth/GetHeight/GetSize) to full geometry coverage (+ GetLeft, GetRight, GetTop, GetBottom, GetCenter, GetRect, GetScale) using a generic `MakeSafeSingleGetter` pattern.
+- `Core/FixBlizzardBugsWow12.lua`: added `UIWidgetBaseItemEmbeddedTooltip1`–`10` to the guard list to cover dynamically created embedded item tooltips.
+
 ## 5.3.35-JuNNeZ (2026-03-28)
 
 ### Highlights

@@ -807,70 +807,111 @@ local function GuardWidgetManagerRegister()
 end
 
 ----------------------------------------------------------------
--- Tooltip dimension guard (Option 3 approach)
--- Instead of wrapping every Blizzard function that reads
--- tooltip dimensions, we hook GetWidth/GetHeight/GetSize on
--- tooltip frames so they always return clean (non-secret)
--- values. When the real value is tainted we return the last
--- known good value, preventing the entire class of
--- "secret number frameWidth/frameHeight" errors at the source.
+-- Tooltip geometry guard
+-- Our tooltip styling (SetScale, SetPoint, SetBackdrop) taints
+-- the frame, causing all geometry methods to return secret
+-- values. Instead of wrapping every Blizzard consumer, we hook
+-- the geometry methods themselves on tooltip frames so they
+-- always return clean (non-secret) values. When the real value
+-- is tainted we return the last known good cached value.
+-- This covers: GetWidth, GetHeight, GetSize, GetLeft, GetRight,
+-- GetTop, GetBottom, GetCenter, GetRect, GetScale.
 ----------------------------------------------------------------
-local tooltipDimensionCache = setmetatable({}, { __mode = "k" })
+local tooltipGeometryCache = setmetatable({}, { __mode = "k" })
 
-local function GetCachedDimensions(tooltip)
-	local cache = tooltipDimensionCache[tooltip]
+local function GetGeometryCache(tooltip)
+	local cache = tooltipGeometryCache[tooltip]
 	if (not cache) then
-		cache = { width = 0, height = 0 }
-		tooltipDimensionCache[tooltip] = cache
+		cache = {}
+		tooltipGeometryCache[tooltip] = cache
 	end
 	return cache
 end
 
-local function SafeGetWidth(tooltip, originalGetWidth)
-	local ok, width = pcall(originalGetWidth, tooltip)
-	local cache = GetCachedDimensions(tooltip)
-	if (ok and type(width) == "number" and (not issecretvalue or not issecretvalue(width))) then
-		cache.width = width
-		return width
-	end
-	return cache.width
+local function IsCleanValue(value)
+	return type(value) == "number" and (not issecretvalue or not issecretvalue(value))
 end
 
-local function SafeGetHeight(tooltip, originalGetHeight)
-	local ok, height = pcall(originalGetHeight, tooltip)
-	local cache = GetCachedDimensions(tooltip)
-	if (ok and type(height) == "number" and (not issecretvalue or not issecretvalue(height))) then
-		cache.height = height
-		return height
+-- Generic single-value guard: wraps a method that returns one number.
+local function MakeSafeSingleGetter(originalFn, cacheKey, fallback)
+	return function(self)
+		local ok, value = pcall(originalFn, self)
+		local cache = GetGeometryCache(self)
+		if (ok and IsCleanValue(value)) then
+			cache[cacheKey] = value
+			return value
+		end
+		local cached = cache[cacheKey]
+		if (cached ~= nil) then
+			return cached
+		end
+		return fallback
 	end
-	return cache.height
 end
 
-local function GuardTooltipFrameDimensions(tooltip)
-	if (not tooltip or tooltip.__AzUI_W12_DimensionGuarded) then
+local function GuardTooltipFrameGeometry(tooltip)
+	if (not tooltip or tooltip.__AzUI_W12_GeometryGuarded) then
 		return
 	end
-	tooltip.__AzUI_W12_DimensionGuarded = true
+	tooltip.__AzUI_W12_GeometryGuarded = true
 
-	local originalGetWidth = tooltip.GetWidth
-	local originalGetHeight = tooltip.GetHeight
-	local originalGetSize = tooltip.GetSize
+	-- Single-value getters
+	local singleGetters = {
+		{ method = "GetWidth",  key = "width",  fallback = 0 },
+		{ method = "GetHeight", key = "height", fallback = 0 },
+		{ method = "GetLeft",   key = "left",   fallback = nil },
+		{ method = "GetRight",  key = "right",  fallback = nil },
+		{ method = "GetTop",    key = "top",    fallback = nil },
+		{ method = "GetBottom", key = "bottom",  fallback = nil },
+		{ method = "GetScale",  key = "scale",  fallback = 1 },
+	}
 
-	if (type(originalGetWidth) == "function") then
-		tooltip.GetWidth = function(self)
-			return SafeGetWidth(self, originalGetWidth)
+	for _, info in ipairs(singleGetters) do
+		local original = tooltip[info.method]
+		if (type(original) == "function") then
+			tooltip[info.method] = MakeSafeSingleGetter(original, info.key, info.fallback)
 		end
 	end
 
-	if (type(originalGetHeight) == "function") then
-		tooltip.GetHeight = function(self)
-			return SafeGetHeight(self, originalGetHeight)
-		end
-	end
-
-	if (type(originalGetSize) == "function") then
+	-- GetSize -> (width, height)
+	local origGetSize = tooltip.GetSize
+	local origGetWidth = tooltip.GetWidth
+	local origGetHeight = tooltip.GetHeight
+	if (type(origGetSize) == "function") then
 		tooltip.GetSize = function(self)
-			return SafeGetWidth(self, originalGetWidth), SafeGetHeight(self, originalGetHeight)
+			return origGetWidth(self), origGetHeight(self)
+		end
+	end
+
+	-- GetCenter -> (x, y)
+	local origGetCenter = tooltip.GetCenter
+	if (type(origGetCenter) == "function") then
+		tooltip.GetCenter = function(self)
+			local ok, x, y = pcall(origGetCenter, self)
+			local cache = GetGeometryCache(self)
+			if (ok and IsCleanValue(x) and IsCleanValue(y)) then
+				cache.centerX = x
+				cache.centerY = y
+				return x, y
+			end
+			return cache.centerX or 0, cache.centerY or 0
+		end
+	end
+
+	-- GetRect -> (left, bottom, width, height)
+	local origGetRect = tooltip.GetRect
+	if (type(origGetRect) == "function") then
+		tooltip.GetRect = function(self)
+			local ok, l, b, w, h = pcall(origGetRect, self)
+			local cache = GetGeometryCache(self)
+			if (ok and IsCleanValue(l) and IsCleanValue(b) and IsCleanValue(w) and IsCleanValue(h)) then
+				cache.left = l
+				cache.bottom = b
+				cache.width = w
+				cache.height = h
+				return l, b, w, h
+			end
+			return cache.left or 0, cache.bottom or 0, cache.width or 0, cache.height or 0
 		end
 	end
 end
@@ -891,7 +932,17 @@ local function GuardTooltipDimensions()
 
 	for _, tooltip in ipairs(tooltips) do
 		if (tooltip and (not tooltip.IsForbidden or not tooltip:IsForbidden())) then
-			GuardTooltipFrameDimensions(tooltip)
+			GuardTooltipFrameGeometry(tooltip)
+		end
+	end
+
+	-- Guard embedded widget tooltips (UIWidgetBaseItemEmbeddedTooltip1, etc.)
+	-- These are created dynamically by UIWidgetTemplateItemDisplay and can
+	-- inherit taint from the parent tooltip when doing arithmetic on dimensions.
+	for i = 1, 10 do
+		local embedded = _G["UIWidgetBaseItemEmbeddedTooltip" .. i]
+		if (embedded and (not embedded.IsForbidden or not embedded:IsForbidden())) then
+			GuardTooltipFrameGeometry(embedded)
 		end
 	end
 end
