@@ -4,6 +4,20 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.40-JuNNeZ (2026-03-28)
+
+### Highlights
+
+- Fixed UI widget item display crashes caused by secret-value taint propagating through embedded tooltip dimensions and money frame button geometry.
+- Fixed `SetTooltipMoney` layout crash when tooltip money frame button `GetWidth`/`GetHeight` returned tainted values.
+
+### Internal
+
+- `Core/FixBlizzardBugsWow12.lua`: replaced generic `UIWidgetTemplateItemDisplayMixin.Setup` pcall wrapper with a specialized `GuardItemDisplaySetup` that guards `self.Item.Tooltip` geometry just-in-time before the base `Setup` runs, preventing arithmetic-on-secret-number crashes in `Blizzard_UIWidgetTemplateBase.lua`.
+- `Core/FixBlizzardBugsWow12.lua`: added `GuardWidgetFrameSetters` — hooks `SetWidth`/`SetHeight`/`SetSize` on widget frames to silently bail when given secret values, preventing `SetWidth` errors inside Blizzard's `ContinuableContainer` xpcall that BugSack captures.
+- `Core/FixBlizzardBugsWow12.lua`: added `GuardMoneyFrameGeometry` — guards tooltip money frames and their Gold/Silver/Copper button children so layout arithmetic uses clean cached dimensions.
+- `Core/FixBlizzardBugsWow12.lua`: wrapped `SetTooltipMoney` to guard money frame geometry before and after the layout call, and bail on secret money values.
+
 ## 5.3.39-JuNNeZ (2026-03-28)
 
 ### Highlights

@@ -803,15 +803,6 @@ local function GuardWidgetMixinMethod(mixinName, method, flagName)
 	end
 end
 
-local function GuardWidgetSetups()
-	GuardWidgetMixinMethod("UIWidgetTemplateTextWithStateMixin", "Setup",
-		"__AzUI_W12_UIWidgetTextWithStateSetupWrapped")
-	GuardWidgetMixinMethod("UIWidgetTemplateItemDisplayMixin", "Setup",
-		"__AzUI_W12_UIWidgetItemDisplaySetupWrapped")
-	GuardWidgetMixinMethod("UIWidgetManagerMixin", "RegisterForWidgetSet",
-		"__AzUI_W12_UIWidgetManagerRegisterWrapped")
-end
-
 ----------------------------------------------------------------
 -- Tooltip geometry guard
 -- Our tooltip styling (SetScale, SetPoint, SetBackdrop) taints
@@ -951,6 +942,82 @@ local function GuardTooltipDimensions()
 			GuardTooltipFrameGeometry(embedded)
 		end
 	end
+
+end
+
+-- Specialized guard for UIWidgetTemplateItemDisplayMixin.Setup:
+-- The embedded tooltip (self.Item.Tooltip) is created dynamically and may
+-- not exist when GuardTooltipDimensions() first runs. We guard its geometry
+-- just-in-time before calling the original Setup so that GetWidth/GetHeight
+-- never return secret values during the base Setup's dimension arithmetic.
+local function GuardItemDisplaySetup()
+	local mixin = _G["UIWidgetTemplateItemDisplayMixin"]
+	if (type(mixin) ~= "table" or type(mixin.Setup) ~= "function"
+		or _G.__AzUI_W12_UIWidgetItemDisplaySetupWrapped) then
+		return
+	end
+	_G.__AzUI_W12_UIWidgetItemDisplaySetupWrapped = true
+	local original = mixin.Setup
+	-- Guard SetWidth/SetHeight on a widget frame so tainted values
+	-- from the base Setup's return don't error inside Blizzard's
+	-- ContinuableContainer xpcall (which reports to BugSack before
+	-- our outer pcall can catch it).
+	local function GuardWidgetFrameSetters(frame)
+		if (not frame or frame.__AzUI_W12_SettersGuarded) then
+			return
+		end
+		frame.__AzUI_W12_SettersGuarded = true
+		local origSetWidth = frame.SetWidth
+		if (type(origSetWidth) == "function") then
+			frame.SetWidth = function(self, w, ...)
+				if (issecretvalue and issecretvalue(w)) then return end
+				return origSetWidth(self, w, ...)
+			end
+		end
+		local origSetHeight = frame.SetHeight
+		if (type(origSetHeight) == "function") then
+			frame.SetHeight = function(self, h, ...)
+				if (issecretvalue and issecretvalue(h)) then return end
+				return origSetHeight(self, h, ...)
+			end
+		end
+		local origSetSize = frame.SetSize
+		if (type(origSetSize) == "function") then
+			frame.SetSize = function(self, w, h, ...)
+				if (issecretvalue and (issecretvalue(w) or issecretvalue(h))) then return end
+				return origSetSize(self, w, h, ...)
+			end
+		end
+	end
+
+	mixin.Setup = function(self, ...)
+		-- Guard the embedded tooltip before Setup does arithmetic on its dimensions
+		if (self and type(self) == "table") then
+			-- Guard the widget frame's setters against tainted dimensions
+			GuardWidgetFrameSetters(self)
+			local item = self.Item
+			if (item and type(item) == "table") then
+				local tooltip = item.Tooltip
+				if (tooltip and not tooltip.__AzUI_W12_GeometryGuarded
+					and (not tooltip.IsForbidden or not tooltip:IsForbidden())) then
+					GuardTooltipFrameGeometry(tooltip)
+				end
+			end
+		end
+		local results = Pack(pcall(original, self, ...))
+		if (results[1]) then
+			return unpack(results, 2, results.n or #results)
+		end
+		return HandleSecretWidgetError(results[2], self, ...)
+	end
+end
+
+local function GuardWidgetSetups()
+	GuardWidgetMixinMethod("UIWidgetTemplateTextWithStateMixin", "Setup",
+		"__AzUI_W12_UIWidgetTextWithStateSetupWrapped")
+	GuardItemDisplaySetup()
+	GuardWidgetMixinMethod("UIWidgetManagerMixin", "RegisterForWidgetSet",
+		"__AzUI_W12_UIWidgetManagerRegisterWrapped")
 end
 
 ----------------------------------------------------------------
@@ -1016,6 +1083,24 @@ local function IsSecretTooltipMoneyError(err)
 		or string.find(lowered, "tooltipaddmoney", 1, true)
 end
 
+-- Guard a money frame and its Gold/Silver/Copper button children
+-- so that layout arithmetic on GetWidth/GetHeight returns clean values.
+local function GuardMoneyFrameGeometry(frame)
+	if (not frame or frame.__AzUI_W12_GeometryGuarded) then
+		return
+	end
+	GuardTooltipFrameGeometry(frame)
+	local frameName = frame.GetName and frame:GetName()
+	if (type(frameName) == "string") then
+		for _, suffix in next, { "GoldButton", "SilverButton", "CopperButton" } do
+			local button = _G[frameName .. suffix]
+			if (button and not button.__AzUI_W12_GeometryGuarded) then
+				GuardTooltipFrameGeometry(button)
+			end
+		end
+	end
+end
+
 local function IsTooltipOwnedMoneyFrame(frame)
 	if (not frame) then
 		return false
@@ -1078,6 +1163,21 @@ end
 
 local function GuardTooltipMoneyAdders()
 
+	-- Guard existing tooltip money frames and their button children.
+	-- These inherit taint from the parent tooltip and their GetWidth/GetHeight
+	-- values are used in layout arithmetic inside SetTooltipMoney.
+	for _, tooltipName in next, {
+		"GameTooltip", "ItemRefTooltip", "EmbeddedItemTooltip",
+		"ShoppingTooltip1", "ShoppingTooltip2",
+	} do
+		for i = 1, 5 do
+			local mf = _G[tooltipName .. "MoneyFrame" .. i]
+			if (mf) then
+				GuardMoneyFrameGeometry(mf)
+			end
+		end
+	end
+
 	local function WrapTooltipMoneyAdder(globalName, flagName)
 		local original = _G[globalName]
 		if (type(original) ~= "function" or _G[flagName]) then
@@ -1114,6 +1214,9 @@ local function GuardTooltipMoneyAdders()
 				end
 				return
 			end
+			-- Guard the money frame and its button children so layout
+			-- arithmetic on GetWidth/GetHeight doesn't hit secret values.
+			GuardMoneyFrameGeometry(frame)
 			local results = Pack(pcall(original, frame, money, ...))
 			if (results[1]) then
 				return unpack(results, 2, results.n or #results)
@@ -1125,6 +1228,58 @@ local function GuardTooltipMoneyAdders()
 			if (frame and frame.Hide) then
 				pcall(frame.Hide, frame)
 			end
+			return nil
+		end
+	end
+
+	-- Also wrap SetTooltipMoney — its internal layout path does arithmetic
+	-- on button GetWidth/GetHeight which can be tainted, and this path
+	-- does not go through MoneyFrame_Update.
+	if (type(_G.SetTooltipMoney) == "function" and not _G.__AzUI_W12_SetTooltipMoneyWrapped) then
+		_G.__AzUI_W12_SetTooltipMoneyWrapped = true
+		local origSetTooltipMoney = _G.SetTooltipMoney
+		_G.SetTooltipMoney = function(tooltip, money, ...)
+			-- Guard any existing money frames before the layout runs
+			if (tooltip) then
+				local tooltipName = tooltip.GetName and tooltip:GetName()
+				if (type(tooltipName) == "string") then
+					local numMoney = tooltip.numMoneyFrames
+					if (type(numMoney) == "number") then
+						for i = 1, numMoney do
+							local mf = _G[tooltipName .. "MoneyFrame" .. i]
+							if (mf) then
+								GuardMoneyFrameGeometry(mf)
+							end
+						end
+					end
+				end
+			end
+			if (issecretvalue and issecretvalue(money)) then
+				return
+			end
+			local results = Pack(pcall(origSetTooltipMoney, tooltip, money, ...))
+			if (results[1]) then
+				-- Guard any newly created money frames after the call
+				if (tooltip) then
+					local tooltipName = tooltip.GetName and tooltip:GetName()
+					if (type(tooltipName) == "string") then
+						local numMoney = tooltip.numMoneyFrames
+						if (type(numMoney) == "number") then
+							for i = 1, numMoney do
+								local mf = _G[tooltipName .. "MoneyFrame" .. i]
+								if (mf) then
+									GuardMoneyFrameGeometry(mf)
+								end
+							end
+						end
+					end
+				end
+				return unpack(results, 2, results.n or #results)
+			end
+			if (not IsSecretTooltipMoneyError(results[2])) then
+				error(results[2], 0)
+			end
+			HideTooltipMoneyFrames(tooltip)
 			return nil
 		end
 	end
