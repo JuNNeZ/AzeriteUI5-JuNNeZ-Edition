@@ -4,6 +4,18 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.31-JuNNeZ (2026-03-28)
+
+### Highlights
+- Fixed another WoW 12 Blizzard player castbar regression where the hidden Blizzard castbar could still throw forbidden-table and invalid texture errors while AzeriteUI's custom player castbar was active.
+
+### Access
+- No new menu path. This is a retail stability hotfix for the existing AzeriteUI player castbar replacement.
+
+### Internal
+- `Core/FixBlizzardBugsWow12.lua`: restored and expanded the WoW 12 castbar fail-closed guards for `GetTypeInfo`, finish/spark visual helpers, and live `OverlayPlayerCastingBarFrame` instances.
+- `Components/UnitFrames/Units/PlayerCastBar.lua`: reverted Blizzard player/pet castbar suppression back to alpha-only hiding so Blizzard keeps its internal event/unit state intact.
+
 ## 5.3.30-JuNNeZ (2026-03-27)
 
 ### Highlights

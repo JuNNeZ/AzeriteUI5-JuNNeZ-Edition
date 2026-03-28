@@ -71,6 +71,158 @@ local parentLockedFrames = {}
 local pendingQuarantineFrames = {}
 local pendingReparentFrames = {}
 local PrepareCompactFrame
+local SAFE_CASTBAR_TYPE_INFO = {
+	filling = "ui-castingbar-filling-standard",
+	full = "ui-castingbar-full-standard",
+	glow = "ui-castingbar-full-glow-standard",
+	sparkFx = "StandardGlow",
+	finishAnim = "StandardFinish"
+}
+
+local function MakeSafeStopFinishAnims(origFunc)
+	return function(self, ...)
+		if (self and type(self) == "table" and not canaccesstable(self)) then
+			return
+		end
+		pcall(origFunc, self, ...)
+	end
+end
+
+local function MakeSafeCastbarVisualMethod(origFunc)
+	return function(self, ...)
+		if (self and type(self) == "table" and not canaccesstable(self)) then
+			return
+		end
+		pcall(origFunc, self, ...)
+	end
+end
+
+local function MakeSafeUpdateShownState(origFunc)
+	return function(self, ...)
+		if (self and type(self) == "table" and not canaccesstable(self)) then
+			return
+		end
+		pcall(origFunc, self, ...)
+	end
+end
+
+local function MakeSafeGetTypeInfo(origFunc)
+	return function(self, ...)
+		if (self and type(self) == "table" and not canaccesstable(self)) then
+			return SAFE_CASTBAR_TYPE_INFO
+		end
+		local ok, info = pcall(origFunc, self, ...)
+		if (ok and type(info) == "table" and (not canaccesstable or canaccesstable(info))) then
+			if (self and type(self) == "table") then
+				self.__AzUI_W12_LastTypeInfo = info
+			end
+			return info
+		end
+		if (self and type(self) == "table") then
+			local cached = rawget(self, "__AzUI_W12_LastTypeInfo")
+			if (type(cached) == "table" and (not canaccesstable or canaccesstable(cached))) then
+				return cached
+			end
+		end
+		return SAFE_CASTBAR_TYPE_INFO
+	end
+end
+
+local function GuardCastingBarMixinMethod(mixin, method, wrapper, flag)
+	if (not mixin or type(mixin[method]) ~= "function" or mixin[flag]) then
+		return
+	end
+	mixin[flag] = true
+	mixin[method] = wrapper(mixin[method])
+end
+
+local function GuardCastingBarFrame(frame)
+	if (not frame or type(frame) ~= "table") then
+		return
+	end
+	if (type(frame.StopFinishAnims) == "function" and not frame.__AzUI_W12_SFA) then
+		frame.__AzUI_W12_SFA = true
+		frame.StopFinishAnims = MakeSafeStopFinishAnims(frame.StopFinishAnims)
+	end
+	if (type(frame.HideSpark) == "function" and not frame.__AzUI_W12_HS) then
+		frame.__AzUI_W12_HS = true
+		frame.HideSpark = MakeSafeCastbarVisualMethod(frame.HideSpark)
+	end
+	if (type(frame.ShowSpark) == "function" and not frame.__AzUI_W12_SS) then
+		frame.__AzUI_W12_SS = true
+		frame.ShowSpark = MakeSafeCastbarVisualMethod(frame.ShowSpark)
+	end
+	if (type(frame.PlayFinishAnim) == "function" and not frame.__AzUI_W12_PFA) then
+		frame.__AzUI_W12_PFA = true
+		frame.PlayFinishAnim = MakeSafeCastbarVisualMethod(frame.PlayFinishAnim)
+	end
+	if (type(frame.UpdateShownState) == "function" and not frame.__AzUI_W12_USS) then
+		frame.__AzUI_W12_USS = true
+		frame.UpdateShownState = MakeSafeUpdateShownState(frame.UpdateShownState)
+	end
+	if (type(frame.GetTypeInfo) == "function" and not frame.__AzUI_W12_GTI) then
+		frame.__AzUI_W12_GTI = true
+		frame.GetTypeInfo = MakeSafeGetTypeInfo(frame.GetTypeInfo)
+	end
+end
+
+local function ApplyCastingBarGuards()
+	GuardCastingBarMixinMethod(_G.CastingBarMixin, "StopFinishAnims",
+		MakeSafeStopFinishAnims, "__AzUI_W12_SFA_CBM")
+	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "StopFinishAnims",
+		MakeSafeStopFinishAnims, "__AzUI_W12_SFA_CBFM")
+	GuardCastingBarMixinMethod(_G.CastingBarMixin, "HideSpark",
+		MakeSafeCastbarVisualMethod, "__AzUI_W12_HS_CBM")
+	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "HideSpark",
+		MakeSafeCastbarVisualMethod, "__AzUI_W12_HS_CBFM")
+	GuardCastingBarMixinMethod(_G.CastingBarMixin, "ShowSpark",
+		MakeSafeCastbarVisualMethod, "__AzUI_W12_SS_CBM")
+	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "ShowSpark",
+		MakeSafeCastbarVisualMethod, "__AzUI_W12_SS_CBFM")
+	GuardCastingBarMixinMethod(_G.CastingBarMixin, "PlayFinishAnim",
+		MakeSafeCastbarVisualMethod, "__AzUI_W12_PFA_CBM")
+	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "PlayFinishAnim",
+		MakeSafeCastbarVisualMethod, "__AzUI_W12_PFA_CBFM")
+	GuardCastingBarMixinMethod(_G.CastingBarMixin, "UpdateShownState",
+		MakeSafeUpdateShownState, "__AzUI_W12_USS_CBM")
+	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "UpdateShownState",
+		MakeSafeUpdateShownState, "__AzUI_W12_USS_CBFM")
+	GuardCastingBarMixinMethod(_G.CastingBarMixin, "GetTypeInfo",
+		MakeSafeGetTypeInfo, "__AzUI_W12_GTI_CBM")
+	GuardCastingBarMixinMethod(_G.CastingBarFrameMixin, "GetTypeInfo",
+		MakeSafeGetTypeInfo, "__AzUI_W12_GTI_CBFM")
+
+	GuardCastingBarFrame(_G.PlayerCastingBarFrame)
+	GuardCastingBarFrame(_G.OverlayPlayerCastingBarFrame)
+	GuardCastingBarFrame(_G.PetCastingBarFrame)
+	GuardCastingBarFrame(_G.TargetFrameSpellBar)
+	GuardCastingBarFrame(_G.FocusFrameSpellBar)
+
+	for i = 1, MAX_BOSS_FRAMES do
+		GuardCastingBarFrame(_G["Boss" .. i .. "TargetFrameSpellBar"])
+	end
+
+	if (_G.CompactArenaFrame and type(_G.CompactArenaFrame.memberUnitFrames) == "table") then
+		for _, unitFrame in pairs(_G.CompactArenaFrame.memberUnitFrames) do
+			if (unitFrame) then
+				GuardCastingBarFrame(unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.CastingBarFrame)
+				GuardCastingBarFrame(unitFrame)
+			end
+		end
+	end
+
+	for i = 1, MAX_ARENA_MEMBERS do
+		local arenaFrame = _G["ArenaEnemyMatchFrame" .. i]
+		if (arenaFrame) then
+			GuardCastingBarFrame(arenaFrame.castBar or arenaFrame.CastBar or arenaFrame.castbar or arenaFrame.CastingBarFrame)
+		end
+		local compactArenaFrame = _G["CompactArenaFrameMember" .. i]
+		if (compactArenaFrame) then
+			GuardCastingBarFrame(compactArenaFrame.castBar or compactArenaFrame.CastBar or compactArenaFrame.castbar or compactArenaFrame.CastingBarFrame)
+			GuardCastingBarFrame(compactArenaFrame)
+		end
+	end
+end
 
 local function IsModuleEnabled(name, defaultValue)
 	if (not ns or not ns.GetModule) then
@@ -505,8 +657,25 @@ local function HideSecretWidgetTarget(target)
 	if (not target) then
 		return false
 	end
+	if (target.Tooltip and target.Tooltip.Hide) then
+		pcall(target.Tooltip.Hide, target.Tooltip)
+	end
 	if (target.Hide) then
 		pcall(target.Hide, target)
+	end
+	if (target.disableTooltip ~= nil) then
+		target.disableTooltip = true
+	end
+	if (target.tooltipEnabled ~= nil) then
+		target.tooltipEnabled = false
+	end
+	if (target.widgetContainer) then
+		if (target.widgetContainer.disableWidgetTooltips ~= nil) then
+			target.widgetContainer.disableWidgetTooltips = true
+		end
+		if (target.widgetContainer.Hide) then
+			pcall(target.widgetContainer.Hide, target.widgetContainer)
+		end
 	end
 	if (target.widgetContainer and target.widgetContainer.Hide) then
 		pcall(target.widgetContainer.Hide, target.widgetContainer)
@@ -520,7 +689,8 @@ local function HideSecretWidgetTargets(...)
 		local value = select(i, ...)
 		local valueType = type(value)
 		if (valueType == "table" or valueType == "userdata") then
-			if (value.widgetContainer and value.widgetContainer.Hide) then
+			if ((value.Tooltip and value.Tooltip.Hide)
+				or (value.widgetContainer and value.widgetContainer.Hide)) then
 				hidden = HideSecretWidgetTarget(value) or hidden
 			elseif (value.widgetFrames and value.Hide) then
 				hidden = HideSecretWidgetTarget(value) or hidden
@@ -631,10 +801,6 @@ local function GuardTooltipWidgetSets()
 		local tooltip = select(1, ...)
 		if (tooltip) then
 			HideSecretWidgetTarget(tooltip)
-		end
-		if (IsSecretWidgetTooltipError(err)
-			and tooltip and tooltip.Layout and tooltip.NineSlice and tooltip.NineSlice.Hide) then
-			tooltip:Layout()
 		end
 		return HandleSecretWidgetError(err, ...)
 	end
@@ -782,6 +948,7 @@ ns.WoW12BlizzardQuarantine.ApplySpellBars = QuarantineSpellBars
 ns.WoW12BlizzardQuarantine.QuarantineFrame = QuarantineFrame
 
 local function ApplyGuards()
+	ApplyCastingBarGuards()
 	GuardUnitAuraApis()
 	GuardPartyFrameGlobals()
 	GuardCompactUnitFrameGlobals()
@@ -809,6 +976,7 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 			or addonName == "Blizzard_CompactRaidFrames"
 			or addonName == "Blizzard_CUFProfiles"
 			or addonName == "Blizzard_ArenaUI"
+			or addonName == "Blizzard_EditMode"
 			or addonName == "Blizzard_GameTooltip"
 			or addonName == "Blizzard_UIWidgets") then
 			ApplyGuards()

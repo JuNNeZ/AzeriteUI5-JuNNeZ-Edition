@@ -40,7 +40,6 @@ local unpack = unpack
 local Colors = ns.Colors
 local GetFont = ns.API.GetFont
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
-local UIHider = ns.Hider
 
 local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }
 
@@ -48,16 +47,15 @@ local function SuppressBlizzardCastbar(frame)
 	if (not frame or frame:IsForbidden()) then
 		return
 	end
-	if (not frame.__AzeriteUI_OriginalParent and frame.GetParent) then
-		frame.__AzeriteUI_OriginalParent = frame:GetParent()
-	end
-	pcall(frame.SetParent, frame, UIHider or UIParent)
-	pcall(frame.UnregisterAllEvents, frame)
-	pcall(frame.SetUnit, frame, nil)
-	pcall(frame.Hide, frame)
+	frame.__AzeriteUI_Suppressed = true
 	pcall(frame.SetAlpha, frame, 0)
-	if (frame == PetCastingBarFrame) then
-		pcall(frame.UnregisterEvent, frame, "UNIT_PET")
+	if (not frame.__AzeriteUI_SuppressShowHooked) then
+		frame.__AzeriteUI_SuppressShowHooked = true
+		hooksecurefunc(frame, "Show", function(currentFrame)
+			if (currentFrame and not currentFrame:IsForbidden() and currentFrame.__AzeriteUI_Suppressed) then
+				currentFrame:SetAlpha(0)
+			end
+		end)
 	end
 end
 
@@ -65,53 +63,8 @@ local function RestoreBlizzardCastbar(frame, unit)
 	if (not frame or frame:IsForbidden()) then
 		return
 	end
-	local parent = frame.__AzeriteUI_OriginalParent or UIParent
-	pcall(frame.SetParent, frame, parent)
+	frame.__AzeriteUI_Suppressed = nil
 	pcall(frame.SetAlpha, frame, 1)
-
-	local restored = false
-	if (frame == PlayerCastingBarFrame and type(frame.OnLoad) == "function") then
-		local ok = pcall(frame.OnLoad, frame)
-		restored = ok and true or false
-	elseif (frame == PetCastingBarFrame) then
-		if (type(frame.PetCastingBar_OnLoad) == "function") then
-			local ok = pcall(frame.PetCastingBar_OnLoad, frame)
-			restored = ok and true or false
-		elseif (type(_G.PetCastingBarFrame_OnLoad) == "function") then
-			local ok = pcall(_G.PetCastingBarFrame_OnLoad, frame)
-			restored = ok and true or false
-		end
-	end
-
-	if (not restored) then
-		-- Fallback restore for builds where OnLoad helpers are unavailable.
-		local castEvents = {
-			"UNIT_SPELLCAST_START",
-			"UNIT_SPELLCAST_STOP",
-			"UNIT_SPELLCAST_FAILED",
-			"UNIT_SPELLCAST_INTERRUPTED",
-			"UNIT_SPELLCAST_DELAYED",
-			"UNIT_SPELLCAST_CHANNEL_START",
-			"UNIT_SPELLCAST_CHANNEL_UPDATE",
-			"UNIT_SPELLCAST_CHANNEL_STOP",
-			"UNIT_SPELLCAST_INTERRUPTIBLE",
-			"UNIT_SPELLCAST_NOT_INTERRUPTIBLE",
-			"UNIT_SPELLCAST_EMPOWER_START",
-			"UNIT_SPELLCAST_EMPOWER_UPDATE",
-			"UNIT_SPELLCAST_EMPOWER_STOP"
-		}
-
-		for _, eventName in next, castEvents do
-			pcall(frame.RegisterUnitEvent, frame, eventName, unit)
-		end
-		pcall(frame.RegisterEvent, frame, "PLAYER_ENTERING_WORLD")
-		if (unit == "pet") then
-			pcall(frame.RegisterEvent, frame, "UNIT_PET")
-		end
-		pcall(frame.SetUnit, frame, unit)
-	end
-
-	pcall(frame.Hide, frame)
 end
 
 local function ShouldUseCustomCastbar(self)
