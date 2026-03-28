@@ -123,6 +123,38 @@ local IsSecretValue = function(value)
 	return issecretvalue and issecretvalue(value)
 end
 
+API.SafeUnitIsUnit = API.SafeUnitIsUnit or function(unit, otherUnit)
+	if (type(unit) ~= "string" or unit == "" or IsSecretValue(unit)) then
+		return false
+	end
+	if (type(otherUnit) ~= "string" or otherUnit == "" or IsSecretValue(otherUnit)) then
+		return false
+	end
+
+	if (type(UnitIsUnit) == "function") then
+		local okMatch, match = pcall(UnitIsUnit, unit, otherUnit)
+		if (okMatch) then
+			if (type(match) == "boolean" and (not IsSecretValue(match))) then
+				return match
+			elseif (type(match) == "number" and (not IsSecretValue(match))) then
+				return match ~= 0
+			end
+		end
+	end
+
+	if (type(UnitGUID) == "function") then
+		local okGuidA, guidA = pcall(UnitGUID, unit)
+		local okGuidB, guidB = pcall(UnitGUID, otherUnit)
+		if (okGuidA and okGuidB
+			and type(guidA) == "string" and guidA ~= "" and (not IsSecretValue(guidA))
+			and type(guidB) == "string" and guidB ~= "" and (not IsSecretValue(guidB))) then
+			return guidA == guidB
+		end
+	end
+
+	return false
+end
+
 local GetPrimaryInterruptSpellID = function()
 	if (ns.AuraData and ns.AuraData.GetKnownInterruptSpells) then
 		local known = ns.AuraData.GetKnownInterruptSpells()
@@ -437,7 +469,7 @@ local ShouldUseEnemyInterruptVisuals = function(castbar)
 	if (type(unit) ~= "string" or unit == "") then
 		return false
 	end
-	if (UnitIsUnit and UnitIsUnit(unit, "player")) then
+	if (API.SafeUnitIsUnit(unit, "player")) then
 		return false
 	end
 	return IsEnemyUnitForInterruptVisuals(owner, unit)

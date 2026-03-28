@@ -5,6 +5,22 @@
 
 ## 2026-03-28
 
+- **5.3.39 release prep started:** Rolling the 12.0.5 `UnitIsUnit(...)` pre-guard into the next patch release and bringing the versioned release files back into sync.
+  - **Why:** The worktree now contains a player-facing compatibility hardening for target and target-of-target behavior, and the release metadata had drifted out of sync: `AzeriteUI5_JuNNeZ_Edition.toc` was already at `5.3.38-JuNNeZ`, while `build-release.ps1` was still left on `5.3.35-JuNNeZ`. A fresh patch release keeps the repo state consistent before commit/tag/push.
+
+- **12.0.5 PTR UnitIsUnit pre-guard started:** Hardening AzeriteUI's remaining risky `UnitIsUnit(...)` paths before Blizzard's compound-token restrictions land on live.
+  - **Why:** Blizzard's 12.0.5 PTR notes say several `UnitIsUnit(...)` comparisons involving compound units like `targettarget` and `focustarget` will stop being permitted and instead return `nil`. AzeriteUI already has local secret-safe handling in some nameplate/ToT paths, but target-frame logic still contains a few raw `UnitIsUnit(...)` checks that could silently flip behavior once PTR rule changes ship.
+
+- **12.0.5 PTR UnitIsUnit pre-guard applied:** Added a shared safe comparer and moved the risky target/ToT checks onto it.
+  - **What changed:** `Components/UnitFrames/Functions.lua` now exports `ns.API.SafeUnitIsUnit(unit, otherUnit)`, which wraps `UnitIsUnit(...)` in `pcall`, accepts normal boolean/number returns, rejects secret/unreadable results, and falls back to readable `UnitGUID(...)` equality when Blizzard declines the direct compare. `Components/UnitFrames/Units/Target.lua` now uses that helper for self-target checks, target-of-target width logic, timer-driver selection, and target-indicator player/pet targeting checks. `Components/UnitFrames/Units/ToT.lua` now uses the same helper for focus highlighting and the hide-when-targeting-player/self logic.
+  - **Why:** This is safe to ship before the Blizzard change because successful live `UnitIsUnit(...)` calls still win first. The GUID fallback only activates when the compare is unavailable, secret, or otherwise unreadable, which is the failure mode Blizzard described for compound/secret tokens.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'`, `luac -p 'Components/UnitFrames/Units/Target.lua'`, and `luac -p 'Components/UnitFrames/Units/ToT.lua'` all passed. In-game `/reload`, then verify target self-detection, targettarget width switching, ToT hide/show, and focus highlight still behave normally on current live.
+
+- **5.3.39 release prep applied:** Bumped the release metadata to `5.3.39-JuNNeZ` and added a delta-only changelog entry for the `UnitIsUnit(...)` compatibility guard.
+  - **What changed:** `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now both report `5.3.39-JuNNeZ`. `CHANGELOG.md` now includes a top release entry describing the target/ToT compatibility hardening ahead of Blizzard's 12.0.5 `UnitIsUnit(...)` restrictions.
+  - **Why:** This gives the compatibility patch a clean release boundary and prevents another tag from being cut against mismatched version files.
+  - **Verification:** `rg -n "5\\.3\\.39-JuNNeZ|## 5\\.3\\.39-JuNNeZ" CHANGELOG.md AzeriteUI5_JuNNeZ_Edition.toc build-release.ps1 FixLog.md` should match the new release state before commit/tag/push.
+
 - **Blizzard raid-bar Hide Groups follow-up started:** Wiring the Blizzard raid utility bar's `Hide Groups` toggle into AzeriteUI's own raid headers.
   - **Why:** AzeriteUI already quarantines Blizzard compact raid frames in `Core/FixBlizzardBugsWow12.lua` and renders raid groups through `RaidFrame5`, `RaidFrame25`, and `RaidFrame40` instead. That leaves the Blizzard raid utility bar visible when `/az -> Unit Frames -> Show Blizzard Raid Bar` is enabled, but its built-in `Hide Groups` toggle still only targets Blizzard compact frames, so in AzeriteUI raids it appears to do nothing.
 

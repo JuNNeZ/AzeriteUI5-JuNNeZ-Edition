@@ -4,6 +4,18 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.39-JuNNeZ (2026-03-28)
+
+### Highlights
+
+- Hardened AzeriteUI's target and target-of-target unit comparisons ahead of Blizzard's 12.0.5 `UnitIsUnit(...)` restrictions, reducing the risk of broken target indicators, self-target detection, or ToT hide/show behavior when compound tokens stop comparing directly.
+
+### Internal
+
+- `Components/UnitFrames/Functions.lua`: added `ns.API.SafeUnitIsUnit(...)` with `pcall` wrapping and readable `UnitGUID(...)` fallback for secret/unavailable unit-token comparisons.
+- `Components/UnitFrames/Units/Target.lua`: moved risky `targettarget`, self-target, and target-indicator `UnitIsUnit(...)` checks onto the shared safe helper.
+- `Components/UnitFrames/Units/ToT.lua`: moved ToT focus and hide-when-targeting comparisons onto the shared safe helper.
+
 ## 5.3.38-JuNNeZ (2026-03-28)
 
 ### Highlights

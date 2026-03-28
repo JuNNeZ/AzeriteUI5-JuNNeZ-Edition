@@ -257,7 +257,7 @@ local TargetHighlight_Update = function(self, event, unit, ...)
 	local element = self.TargetHighlight
 	unit = unit or self.unit
 
-	if (UnitIsUnit(unit, "focus")) then
+	if (ns.API.SafeUnitIsUnit(unit, "focus")) then
 		element:SetVertexColor(unpack(element.colorFocus))
 		element:Show()
 	else
@@ -272,8 +272,8 @@ local Unitframe_PostUpdateAlpha = function(self, event, unit, ...)
 	unit = unit or self.unit
 
 	local shouldHide = ((event == "UnitFrame_Target_Updated") and (... == "Critter"))
-		or (ToTFrameMod.db.profile.hideWhenTargetingPlayer and UnitIsUnit(unit, "player"))
-		or (ToTFrameMod.db.profile.hideWhenTargetingSelf and UnitIsUnit(unit, unit.."target"))
+		or (ToTFrameMod.db.profile.hideWhenTargetingPlayer and ns.API.SafeUnitIsUnit(unit, "player"))
+		or (ToTFrameMod.db.profile.hideWhenTargetingSelf and ns.API.SafeUnitIsUnit(unit, unit.."target"))
 
 	-- WoW 12 secret-value safety: UnitIsUnit can return secret booleans
 	if (issecretvalue(shouldHide)) then

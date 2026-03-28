@@ -800,7 +800,7 @@ end
 GetTargetCastVisualGrowth = function(cast)
 	local owner = cast and cast.__owner
 	local unit = owner and owner.unit
-	return (type(unit) == "string" and unit ~= "" and UnitIsUnit(unit, "player")) and "LEFT" or "RIGHT"
+	return (type(unit) == "string" and unit ~= "" and ns.API.SafeUnitIsUnit(unit, "player")) and "LEFT" or "RIGHT"
 end
 
 local GetTargetVisibleCastColor = function(cast)
@@ -885,7 +885,7 @@ local ShouldPreferTimerDriverForTargetCast = function(cast)
 		return true
 	end
 	-- Self target historically behaved best on explicit/duration percent path.
-	if (UnitIsUnit(unit, "player")) then
+	if (ns.API.SafeUnitIsUnit(unit, "player")) then
 		return false
 	end
 	return true
@@ -2025,7 +2025,9 @@ local Name_PostUpdate = function(self)
 	local name = self.Name
 	if (not name) then return end
 
-	if (UnitExists("targettarget") and not UnitIsUnit("targettarget", "target") and not UnitIsUnit("targettarget","player")) then
+	if (UnitExists("targettarget")
+		and not ns.API.SafeUnitIsUnit("targettarget", "target")
+		and not ns.API.SafeUnitIsUnit("targettarget", "player")) then
 		if (not name.usingSmallWidth) then
 			name.usingSmallWidth = true
 			self:Untag(name)
@@ -2052,8 +2054,7 @@ local TargetIndicator_Update = function(self, event, unit, ...)
 	-- Guard UnitExists/UnitIsUnit against secret returns
 	local targetExists = UnitExists(target)
 	if (issecretvalue and issecretvalue(targetExists)) then targetExists = true end
-	local isPlayerUnit = UnitIsUnit(unit, "player")
-	if (issecretvalue and issecretvalue(isPlayerUnit)) then isPlayerUnit = false end
+	local isPlayerUnit = ns.API.SafeUnitIsUnit(unit, "player")
 	if (not targetExists or isPlayerUnit) then
 		return element:Hide()
 	end
@@ -2070,10 +2071,8 @@ local TargetIndicator_Update = function(self, event, unit, ...)
 	end
 
 	if (canAttack) then
-		local targetsPlayer = UnitIsUnit(target, "player")
-		if (issecretvalue and issecretvalue(targetsPlayer)) then targetsPlayer = false end
-		local targetsPet = UnitIsUnit(target, "pet")
-		if (issecretvalue and issecretvalue(targetsPet)) then targetsPet = false end
+		local targetsPlayer = ns.API.SafeUnitIsUnit(target, "player")
+		local targetsPet = ns.API.SafeUnitIsUnit(target, "pet")
 		if (targetsPlayer) then
 			element:SetTexture(element.enemyTexture)
 		elseif (targetsPet) then
@@ -2082,8 +2081,7 @@ local TargetIndicator_Update = function(self, event, unit, ...)
 			return element:Hide()
 		end
 	else
-		local targetsPlayer = UnitIsUnit(target, "player")
-		if (issecretvalue and issecretvalue(targetsPlayer)) then targetsPlayer = false end
+		local targetsPlayer = ns.API.SafeUnitIsUnit(target, "player")
 		if (targetsPlayer) then
 			element:SetTexture(element.friendTexture)
 		else
@@ -2156,7 +2154,7 @@ local UnitFrame_UpdateTextures = function(self)
 	end
 
 	local currentStyle = self.currentStyle
-	local level = UnitIsUnit(unit, "player") and playerLevel or UnitEffectiveLevel(unit)
+	local level = ns.API.SafeUnitIsUnit(unit, "player") and playerLevel or UnitEffectiveLevel(unit)
 	local unitGUID = UnitGUID(unit)
 	local cachedGUID = self.__AzeriteUI_TargetGUID
 	local guidIsSecret = false
@@ -2441,7 +2439,7 @@ local UnitFrame_UpdateTextures = function(self)
 	if (cast.GetFrameLevel and health.GetFrameLevel and cast:GetFrameLevel() <= health:GetFrameLevel()) then
 		cast:SetFrameLevel(health:GetFrameLevel() + 2)
 	end
-	local isSelfTarget = UnitIsUnit(unit, "player")
+	local isSelfTarget = ns.API.SafeUnitIsUnit(unit, "player")
 	local castBarTexture = db.HealthBarTexture
 	if (not isSelfTarget and ns.API and ns.API.GetMedia) then
 		local mirroredTexture = ns.API.GetMedia("hp_cap_bar_mirror")
