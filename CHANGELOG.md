@@ -4,6 +4,18 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.38-JuNNeZ (2026-03-28)
+
+### Highlights
+
+- Fixed Blizzard's `PlayerCastingBarFrame` interrupt/glow animations flashing through even when the frame is suppressed by AzeriteUI.
+
+### Internal
+
+- `Components/UnitFrames/Units/PlayerCastBar.lua`: added `StopBlizzardCastbarAnims()` — stops all Blizzard castbar animation groups (`InterruptShakeAnim`, `InterruptGlowAnim`, `InterruptSparkAnim`, `HoldFadeOutAnim`, etc.) and hides glow/flash textures whenever the suppressed castbar tries to show.
+- `Components/UnitFrames/Units/PlayerCastBar.lua`: hooked `PlayInterruptAnims` in addition to existing method hooks so interrupt effects are caught immediately.
+- `Components/UnitFrames/Units/PlayerCastBar.lua`: stubbed out custom interrupt glow/shake callbacks (commented out, pending custom glow asset).
+
 ## 5.3.37-JuNNeZ (2026-03-28)
 
 ### Highlights

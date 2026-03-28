@@ -43,9 +43,38 @@ local IsAddOnEnabled = ns.API.IsAddOnEnabled
 
 local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }
 
+-- Stop all Blizzard castbar animation groups to prevent interrupt/finish
+-- effects from playing invisibly (or flashing before alpha hooks fire).
+local function StopBlizzardCastbarAnims(frame)
+	if (not frame or frame:IsForbidden()) then
+		return
+	end
+	for _, key in next, {
+		"InterruptShakeAnim", "InterruptGlowAnim", "InterruptSparkAnim",
+		"HoldFadeOutAnim", "FadeOutAnim", "FlashAnim", "FlashLoopingAnim",
+		"StandardFinish", "StandardGlow"
+	} do
+		local anim = frame[key]
+		if (anim and type(anim.Stop) == "function") then
+			pcall(anim.Stop, anim)
+		end
+	end
+	-- Hide glow/flash child textures
+	for _, key in next, { "InterruptGlow", "Flash", "Shine" } do
+		local tex = frame[key]
+		if (tex and type(tex.SetAlpha) == "function") then
+			pcall(tex.SetAlpha, tex, 0)
+		end
+		if (tex and type(tex.Hide) == "function") then
+			pcall(tex.Hide, tex)
+		end
+	end
+end
+
 local function ApplySuppressedBlizzardCastbarAlpha(frame)
 	if (frame and not frame:IsForbidden() and frame.__AzeriteUI_Suppressed) then
 		frame:SetAlpha(0)
+		StopBlizzardCastbarAnims(frame)
 	end
 end
 
@@ -67,7 +96,8 @@ local function SuppressBlizzardCastbar(frame)
 			"OnEvent",
 			"FinishSpell",
 			"HandleInterruptOrSpellFailed",
-			"PlayFinishAnim"
+			"PlayFinishAnim",
+			"PlayInterruptAnims"
 		} do
 			if (type(frame[methodName]) == "function") then
 				hooksecurefunc(frame, methodName, ApplySuppressedBlizzardCastbarAlpha)
@@ -182,6 +212,93 @@ local Cast_CustomTimeText = function(element, duration)
 	element.Delay:SetText()
 end
 
+-- TODO: Interrupt/fail animation callbacks.
+-- Commented out until we have a custom glow asset that fits
+-- the AzeriteUI art style. The Blizzard atlas doesn't look
+-- right at our castbar's scale/shape.
+--[[
+local Cast_PlayInterruptAnims = function(element)
+	local glow = element.InterruptGlow
+	if (glow) then
+		glow:SetAlpha(1)
+		glow:Show()
+		local glowAnim = element.InterruptGlowAnim
+		if (glowAnim) then
+			glowAnim:Stop()
+			glowAnim:Play()
+		end
+	end
+	local shakeAnim = element.InterruptShakeAnim
+	if (shakeAnim and tonumber(GetCVar("ShakeStrengthUI") or "0") > 0) then
+		shakeAnim:Stop()
+		shakeAnim:Play()
+	end
+end
+
+local Cast_StopInterruptAnims = function(element)
+	if (element.InterruptGlowAnim) then element.InterruptGlowAnim:Stop() end
+	if (element.InterruptShakeAnim) then element.InterruptShakeAnim:Stop() end
+	if (element.InterruptGlow) then
+		element.InterruptGlow:SetAlpha(0)
+		element.InterruptGlow:Hide()
+	end
+end
+
+local Cast_PostCastInterrupted = function(element, unit, interruptedBy)
+	element:SetStatusBarColor(unpack(Colors.red))
+	element.Backdrop:Show()
+	Cast_PlayInterruptAnims(element)
+end
+
+local Cast_PostCastFail = function(element, unit)
+	element:SetStatusBarColor(unpack(Colors.red))
+	element.Backdrop:Show()
+	local glow = element.InterruptGlow
+	if (glow) then
+		glow:SetAlpha(1)
+		glow:Show()
+		local glowAnim = element.InterruptGlowAnim
+		if (glowAnim) then
+			glowAnim:Stop()
+			glowAnim:Play()
+		end
+	end
+end
+
+local Cast_PostCastStart = function(element, unit)
+	Cast_StopInterruptAnims(element)
+	if (element.notInterruptible) then
+		element.Backdrop:Hide()
+		element:SetStatusBarColor(unpack(Colors.red))
+	else
+		element.Backdrop:Show()
+		element:SetStatusBarColor(unpack(Colors.cast))
+	end
+	local durationMax = Cast_GetMaxDuration(element)
+	if (not durationMax or durationMax <= 0) then
+		element.SafeZone:Hide()
+		return
+	end
+	local ratio = (select(4, GetNetStats()) / 1000) / durationMax
+	if (ratio > 1) then ratio = 1 end
+	if (ratio > .05) then
+		local width, height = element:GetSize()
+		element.SafeZone:SetSize(width * ratio, height)
+		element.SafeZone:ClearAllPoints()
+		if (element.channeling) then
+			element.SafeZone:SetPoint("LEFT")
+			element.SafeZone:SetTexCoord(0, ratio, 0, 1)
+		else
+			element.SafeZone:SetPoint("RIGHT")
+			element.SafeZone:SetTexCoord(1-ratio, 1, 0, 1)
+		end
+		element.SafeZone:Show()
+	else
+		element.SafeZone:Hide()
+	end
+end
+--]]
+
 -- Update cast bar color and backdrop to indicate protected casts.
 -- *Note that the shield icon works as an alternate backdrop here,
 --  which is why we're hiding the regular backdrop on protected casts.
@@ -287,11 +404,82 @@ local style = function(self, unit)
 	castDelay:SetJustifyV("MIDDLE")
 	cast.Delay = castDelay
 
+	-- TODO: Interrupt glow/shake animations.
+	-- Commented out until we have a custom glow asset that fits
+	-- the AzeriteUI art style. The Blizzard atlas doesn't look
+	-- right at our castbar's scale/shape.
+	--[[
+	local interruptGlow = cast:CreateTexture(nil, "OVERLAY", nil, 7)
+	interruptGlow:SetPoint("CENTER", cast, "CENTER", 0, 0)
+	interruptGlow:SetSize(db.CastBarBackgroundSize[1] * 1.4, db.CastBarBackgroundSize[2] * 1.4)
+	interruptGlow:SetBlendMode("ADD")
+	interruptGlow:SetAlpha(0)
+	interruptGlow:Hide()
+	if (interruptGlow.SetAtlas) then
+		local ok = pcall(interruptGlow.SetAtlas, interruptGlow, "cast_interrupt_outerglow")
+		if (not ok) then
+			interruptGlow:SetTexture(db.CastBarBackgroundTexture)
+			interruptGlow:SetVertexColor(1, 0.2, 0.1, 1)
+		end
+	else
+		interruptGlow:SetTexture(db.CastBarBackgroundTexture)
+		interruptGlow:SetVertexColor(1, 0.2, 0.1, 1)
+	end
+	cast.InterruptGlow = interruptGlow
+
+	local glowState = { active = false, elapsed = 0, duration = 1.0 }
+	cast.InterruptGlowState = glowState
+	cast.InterruptGlowAnim = {
+		Play = function()
+			glowState.active = true
+			glowState.elapsed = 0
+			interruptGlow:SetAlpha(1)
+			interruptGlow:Show()
+		end,
+		Stop = function()
+			glowState.active = false
+			glowState.elapsed = 0
+			interruptGlow:SetAlpha(0)
+			interruptGlow:Hide()
+		end,
+	}
+	cast:HookScript("OnUpdate", function(_, elapsed)
+		if (not glowState.active) then return end
+		glowState.elapsed = glowState.elapsed + elapsed
+		local progress = glowState.elapsed / glowState.duration
+		if (progress >= 1) then
+			glowState.active = false
+			interruptGlow:SetAlpha(0)
+			interruptGlow:Hide()
+		else
+			interruptGlow:SetAlpha(1 - progress)
+		end
+	end)
+
+	local shakeAnim = cast:CreateAnimationGroup()
+	local shakeOffsets = {
+		{ 0, 0, 0.1 },
+		{ -1, 1, 0.05 },
+		{ 1, -2, 0.05 },
+		{ 1, 2, 0.05 },
+		{ -1, -1, 0.05 },
+	}
+	for i, info in ipairs(shakeOffsets) do
+		local trans = shakeAnim:CreateAnimation("Translation")
+		trans:SetOffset(info[1], info[2])
+		trans:SetDuration(info[3])
+		trans:SetOrder(i)
+		trans:SetSmoothing("NONE")
+	end
+	cast.InterruptShakeAnim = shakeAnim
+	--]]
+
 	cast.CustomDelayText = Cast_CustomDelayText
 	cast.CustomTimeText = Cast_CustomTimeText
 	cast.PostCastInterruptible = Cast_Update
 	cast.PostCastStart = Cast_Update
-	--cast.PostCastStop = Cast_Update -- needed?
+	--cast.PostCastInterrupted = Cast_PostCastInterrupted -- TODO: needs custom glow asset
+	--cast.PostCastFail = Cast_PostCastFail -- TODO: needs custom glow asset
 
 	self.Castbar = cast
 
