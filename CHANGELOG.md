@@ -4,6 +4,23 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.32-JuNNeZ (2026-03-28)
+
+### The big castbar gimmick update
+- Enemy nameplate castbars now use the rebuilt interrupt-color path again, with yellow when your main interrupt is ready, red when it is unavailable, and gray for protected casts.
+- Added a shared Unit Frames option to color supported enemy cast spell names by interrupt/protected state, while keeping spell names stable by default if you prefer plain text.
+- Cleaned up the target castbar options: the dead reverse-growth toggle is gone, and the temporary full-bar target interrupt tint option is hidden until the target protected-cast path is reliable again.
+- Updated the castbar option text and interrupt legend translations across all shipped locale files.
+
+### Access
+- Cast spell text coloring: `/az -> Unit Frames -> Color Cast Spell Text By State`
+- Enemy castbar interrupt legend: `/az -> Nameplates`
+- Target full-bar interrupt tint: temporarily disabled while the target follow-up continues
+
+### Internal
+- Added the AzeriteUI-owned `NameplateInterruptDB.lua` fallback helper and seeded it from existing Plater interruptible-spell data when available, without requiring Plater to remain installed.
+- Expanded `/azdebug nameplates` for the interrupt-state investigation and kept the TODO/FixLog notes aligned with the current castbar state.
+
 ## 5.3.31-JuNNeZ (2026-03-28)
 
 ### Highlights

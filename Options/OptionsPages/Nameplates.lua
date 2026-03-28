@@ -374,7 +374,7 @@ local GenerateOptions = function()
 				hidden = function(info) return isdisabled(info) or not ns.IsRetail end,
 				args = {
 					interruptLegend = {
-						name = L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"],
+						name = L["Enemy castbar interrupt colors:\nYellow = primary interrupt ready\nRed = primary interrupt unavailable\nGray = cast cannot be interrupted"],
 						order = 0,
 						type = "description",
 						width = "full"

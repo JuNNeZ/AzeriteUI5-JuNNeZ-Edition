@@ -66,6 +66,7 @@ L["Click the button below to reset the currently selected EditMode preset to pos
 L["Clock Settings"] = true
 L["Coloring"] = true
 L["Color by Class"] = true
+L["Color Cast Spell Text By State"] = "Colorear texto del hechizo según el estado"
 L["Combo Points"] = "Puntos de combo"
 L["Control where the tooltips appear when put in the default position. Disable to let blizzard or other addons handle this."] = true
 L["Copy"] = "Copiar"
@@ -353,7 +354,10 @@ L["Display & Feedback"] = true
 L["Duplicate"] = true
 L["Elemental Crystal/Bar Resource Split"] = true
 L["Encounter or support buffs Blizzard specifically marks as relevant during combat."] = true
-L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"] = true
+L["Tint supported cast spell names by interrupt/protected state. Disable to keep spell names on their normal text color."] = "Colorea los nombres de hechizos compatibles según su estado de interrupción/protección. Desactívalo para mantener los nombres con su color de texto normal."
+L["Color Entire Target Castbar By State"] = "Colorear toda la barra de lanzamiento del objetivo según el estado"
+L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."] = "Colorea toda la barra de lanzamiento del objetivo según su estado de interrupción/protección. Desactívalo para que la barra conserve su color normal mientras el texto del hechizo sigue el ajuste compartido de Marcos de unidad."
+L["Enemy castbar interrupt colors:\nYellow = primary interrupt ready\nRed = primary interrupt unavailable\nGray = cast cannot be interrupted"] = "Colores de interrupción de barras de lanzamiento enemigas:\nAmarillo = interrupción principal lista\nRojo = interrupción principal no disponible\nGris = el lanzamiento no se puede interrumpir"
 L["Enemy size (%)"] = true
 L["Enemy target size (%)"] = true
 L["Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon."] = true

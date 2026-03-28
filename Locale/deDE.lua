@@ -66,6 +66,7 @@ L["Click the button below to reset the currently selected EditMode preset to pos
 L["Clock Settings"] = true
 L["Coloring"] = true
 L["Color by Class"] = true
+L["Color Cast Spell Text By State"] = "Zaubertext nach Status einfärben"
 L["Combo Points"] = "Combopunkte"
 L["Control where the tooltips appear when put in the default position. Disable to let blizzard or other addons handle this."] = true
 L["Copy"] = "Kopieren"
@@ -353,7 +354,10 @@ L["Display & Feedback"] = true
 L["Duplicate"] = true
 L["Elemental Crystal/Bar Resource Split"] = true
 L["Encounter or support buffs Blizzard specifically marks as relevant during combat."] = true
-L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"] = true
+L["Tint supported cast spell names by interrupt/protected state. Disable to keep spell names on their normal text color."] = "Färbt unterstützte Zaubernamen je nach Unterbrechungs-/Schutzstatus ein. Deaktivieren, um Zaubernamen in ihrer normalen Textfarbe zu belassen."
+L["Color Entire Target Castbar By State"] = "Gesamten Ziel-Zauberbalken nach Status einfärben"
+L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."] = "Färbt den gesamten Ziel-Zauberbalken nach Unterbrechungs-/Schutzstatus ein. Deaktivieren, damit der Balken seine normale Zauberfarbe behält, während der Zaubertext der gemeinsamen Unit-Frames-Einstellung folgt."
+L["Enemy castbar interrupt colors:\nYellow = primary interrupt ready\nRed = primary interrupt unavailable\nGray = cast cannot be interrupted"] = "Unterbrechungsfarben feindlicher Zauberbalken:\nGelb = primäre Unterbrechung bereit\nRot = primäre Unterbrechung nicht verfügbar\nGrau = Zauber kann nicht unterbrochen werden"
 L["Enemy size (%)"] = true
 L["Enemy target size (%)"] = true
 L["Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon."] = true

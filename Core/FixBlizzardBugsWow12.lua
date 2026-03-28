@@ -806,6 +806,76 @@ local function GuardTooltipWidgetSets()
 	end
 end
 
+local function IsSecretTooltipMoneyError(err)
+	if (type(err) ~= "string") then
+		return false
+	end
+	local lowered = string.lower(err)
+	if (not string.find(lowered, "secret", 1, true)) then
+		return false
+	end
+	return string.find(lowered, "moneyframe", 1, true)
+		or string.find(lowered, "settooltipmoney", 1, true)
+		or string.find(lowered, "tooltipaddmoney", 1, true)
+end
+
+local function HideTooltipMoneyFrames(tooltip)
+	if (not tooltip) then
+		return
+	end
+	local moneyFrame = tooltip.TooltipMoneyFrame
+	if (moneyFrame and moneyFrame.Hide) then
+		pcall(moneyFrame.Hide, moneyFrame)
+	end
+	local tooltipName = tooltip.GetName and tooltip:GetName()
+	local numMoneyFrames = tooltip.numMoneyFrames
+	if (type(numMoneyFrames) == "number" and numMoneyFrames > 0 and type(tooltipName) == "string") then
+		for i = 1, numMoneyFrames do
+			local frame = _G[tooltipName .. "MoneyFrame" .. i]
+			if (frame and frame.Hide) then
+				pcall(frame.Hide, frame)
+			end
+		end
+	end
+	if (tooltip.shownMoneyFrames ~= nil) then
+		tooltip.shownMoneyFrames = 0
+	end
+	if (tooltip.numMoneyFrames ~= nil) then
+		tooltip.numMoneyFrames = 0
+	end
+	if (tooltip.hasMoney ~= nil) then
+		tooltip.hasMoney = nil
+	end
+end
+
+local function GuardTooltipMoneyAdders()
+	local Pack = table.pack or function(...)
+		return { n = select("#", ...), ... }
+	end
+
+	local function WrapTooltipMoneyAdder(globalName, flagName)
+		local original = _G[globalName]
+		if (type(original) ~= "function" or _G[flagName]) then
+			return
+		end
+		_G[flagName] = true
+		_G[globalName] = function(...)
+			local results = Pack(pcall(original, ...))
+			if (results[1]) then
+				return unpack(results, 2, results.n or #results)
+			end
+			if (not IsSecretTooltipMoneyError(results[2])) then
+				error(results[2], 0)
+			end
+			HideTooltipMoneyFrames(select(1, ...))
+			return nil
+		end
+	end
+
+	WrapTooltipMoneyAdder("GameTooltip_OnTooltipAddMoney", "__AzUI_W12_GameTooltipOnTooltipAddMoneyWrapped")
+	WrapTooltipMoneyAdder("EmbeddedItemTooltip_OnTooltipAddMoney", "__AzUI_W12_EmbeddedItemTooltipOnTooltipAddMoneyWrapped")
+end
+
 local function QuarantineCompactFrames()
 	if (not ShouldHandleCustomUnitFrames()) then
 		return
@@ -957,6 +1027,7 @@ local function ApplyGuards()
 	GuardWidgetItemDisplaySetup()
 	GuardWidgetManagerRegister()
 	GuardTooltipWidgetSets()
+	GuardTooltipMoneyAdders()
 	ApplyBlizzardFrameQuarantine()
 	HookCompactFrameLifecycle()
 end

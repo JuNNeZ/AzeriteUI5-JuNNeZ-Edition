@@ -143,6 +143,15 @@ local GenerateOptions = function()
 				get = function(info)
 					return getmodule().db.profile.showBlizzardRaidBar
 				end
+			},
+			colorCastSpellTextByState = {
+				name = L["Color Cast Spell Text By State"],
+				desc = L["Tint supported cast spell names by interrupt/protected state. Disable to keep spell names on their normal text color."],
+				order = 30,
+				type = "toggle", width = "full",
+				hidden = isdisabled,
+				set = setter,
+				get = getter
 			}
 		}
 	}
@@ -647,10 +656,13 @@ local GenerateOptions = function()
 			desc = L["Toggle whether to show overlay castbars on this unit frame."],
 			order = 25, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
-		suboptions.args.reverseEnemyCastChannelVisuals = {
-			name = L["Swap Enemy Castbar Growth"],
-			desc = L["Swap whether hostile target castbars grow from the left or right side while keeping the same art orientation."],
-			order = 27, type = "toggle", width = "full", hidden = isdisabled,
+		suboptions.args.colorCastBarByInterruptState = {
+			name = L["Color Entire Target Castbar By State"],
+			desc = L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."],
+			order = 26, type = "toggle", width = "full",
+			hidden = function(info)
+				return true
+			end,
 			set = setter,
 			get = getter,
 			disabled = function(info)

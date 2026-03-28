@@ -2,6 +2,7 @@
 
 	<Script file="UnitFrame.lua"/>
 	<Script file="Functions.lua"/>
+	<Script file="NameplateInterruptDB.lua"/>
 	<Script file="Tags.lua"/>
 
 	<Script file="Auras\AuraData.lua"/>

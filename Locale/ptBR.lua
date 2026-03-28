@@ -66,6 +66,7 @@ L["Click the button below to reset the currently selected EditMode preset to pos
 L["Clock Settings"] = true
 L["Coloring"] = true
 L["Color by Class"] = true
+L["Color Cast Spell Text By State"] = "Colorir texto da magia pelo estado"
 L["Combo Points"] = "Pontos de Combo"
 L["Control where the tooltips appear when put in the default position. Disable to let blizzard or other addons handle this."] = true
 L["Copy"] = "Copiar"
@@ -350,7 +351,10 @@ L["Display & Feedback"] = true
 L["Duplicate"] = true
 L["Elemental Crystal/Bar Resource Split"] = true
 L["Encounter or support buffs Blizzard specifically marks as relevant during combat."] = true
-L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"] = true
+L["Tint supported cast spell names by interrupt/protected state. Disable to keep spell names on their normal text color."] = "Colora os nomes de magias compatíveis de acordo com o estado de interrupção/proteção. Desative para manter os nomes na cor normal do texto."
+L["Color Entire Target Castbar By State"] = "Colorir toda a barra de lançamento do alvo pelo estado"
+L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."] = "Colora toda a barra de lançamento do alvo de acordo com o estado de interrupção/proteção. Desative para manter a barra com a cor normal enquanto o texto da magia segue a configuração compartilhada de Quadros de Unidade."
+L["Enemy castbar interrupt colors:\nYellow = primary interrupt ready\nRed = primary interrupt unavailable\nGray = cast cannot be interrupted"] = "Cores de interrupção da barra de lançamento inimiga:\nAmarelo = interrupção principal pronta\nVermelho = interrupção principal indisponível\nCinza = a magia não pode ser interrompida"
 L["Enemy size (%)"] = true
 L["Enemy target size (%)"] = true
 L["Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon."] = true

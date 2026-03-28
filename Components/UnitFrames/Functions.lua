@@ -341,14 +341,16 @@ local IsCastMarkedNotInterruptible = function(castbar)
 	if (type(unit) == "string" and unit ~= "") then
 		local castNotInterruptible
 		if (UnitCastingInfo) then
-			local okCasting, _, _, _, _, _, _, probedNotInterruptible = pcall(UnitCastingInfo, unit)
-			if (okCasting and type(probedNotInterruptible) == "boolean" and (not IsSecretValue(probedNotInterruptible))) then
+			local castResult = { pcall(UnitCastingInfo, unit) }
+			local probedNotInterruptible = castResult[9]
+			if (castResult[1] and type(probedNotInterruptible) == "boolean" and (not IsSecretValue(probedNotInterruptible))) then
 				castNotInterruptible = probedNotInterruptible
 			end
 		end
 		if (castNotInterruptible == nil and UnitChannelInfo) then
-			local okChannel, _, _, _, _, _, probedNotInterruptible = pcall(UnitChannelInfo, unit)
-			if (okChannel and type(probedNotInterruptible) == "boolean" and (not IsSecretValue(probedNotInterruptible))) then
+			local channelResult = { pcall(UnitChannelInfo, unit) }
+			local probedNotInterruptible = channelResult[8]
+			if (channelResult[1] and type(probedNotInterruptible) == "boolean" and (not IsSecretValue(probedNotInterruptible))) then
 				castNotInterruptible = probedNotInterruptible
 			end
 		end

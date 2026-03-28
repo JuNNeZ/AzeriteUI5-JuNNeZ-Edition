@@ -66,6 +66,7 @@ L["Click the button below to reset the currently selected EditMode preset to pos
 L["Clock Settings"] = true
 L["Coloring"] = true
 L["Color by Class"] = true
+L["Color Cast Spell Text By State"] = "Colorer le texte du sort selon l’état"
 L["Combo Points"] = "Points de combo"
 L["Control where the tooltips appear when put in the default position. Disable to let blizzard or other addons handle this."] = true
 L["Copy"] = "Copier"
@@ -353,7 +354,10 @@ L["Display & Feedback"] = true
 L["Duplicate"] = true
 L["Elemental Crystal/Bar Resource Split"] = true
 L["Encounter or support buffs Blizzard specifically marks as relevant during combat."] = true
-L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"] = true
+L["Tint supported cast spell names by interrupt/protected state. Disable to keep spell names on their normal text color."] = "Colore les noms des sorts pris en charge selon leur état interrompable/protégé. Désactivez pour conserver la couleur normale du texte des sorts."
+L["Color Entire Target Castbar By State"] = "Colorer toute la barre d’incantation de la cible selon l’état"
+L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."] = "Colore toute la barre d’incantation de la cible selon son état interrompable/protégé. Désactivez pour conserver la couleur normale de la barre pendant que le texte du sort suit le réglage partagé des cadres d’unité."
+L["Enemy castbar interrupt colors:\nYellow = primary interrupt ready\nRed = primary interrupt unavailable\nGray = cast cannot be interrupted"] = "Couleurs d’interruption des barres d’incantation ennemies :\nJaune = interruption principale prête\nRouge = interruption principale indisponible\nGris = le sort ne peut pas être interrompu"
 L["Enemy size (%)"] = true
 L["Enemy target size (%)"] = true
 L["Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon."] = true

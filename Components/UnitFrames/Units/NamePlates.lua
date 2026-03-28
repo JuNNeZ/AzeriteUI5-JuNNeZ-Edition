@@ -30,6 +30,7 @@ local NamePlatesMod = ns:NewModule("NamePlates", "LibMoreEvents-1.0", "AceHook-3
 -- Optimization made by Rui.
 
 -- Lua API
+local math_abs = math.abs
 local math_floor = math.floor
 local next = next
 local select = select
@@ -120,6 +121,80 @@ end
 
 local IsSecretValue = function(value)
 	return (type(issecretvalue) == "function" and issecretvalue(value)) and true or false
+end
+
+local UpdateNamePlateWidgetContainer = function(self, shouldShow)
+	local container = self and self.WidgetContainer
+	if (not container) then
+		return
+	end
+
+	-- WoW 12 secret-value safety:
+	-- do not reparent or reanchor Blizzard's nameplate widget container.
+	-- Writing addon-owned layout state onto this frame taints later widget
+	-- layout passes, which can rethrow from Blizzard_SharedXML/LayoutFrame.
+	if (shouldShow) then
+		if (container.SetIgnoreParentAlpha) then
+			container:SetIgnoreParentAlpha(false)
+		end
+		if (container.SetAlpha) then
+			container:SetAlpha(1)
+		end
+		if (container.Show) then
+			container:Show()
+		end
+	else
+		if (container.SetIgnoreParentAlpha) then
+			container:SetIgnoreParentAlpha(false)
+		end
+		if (container.Hide) then
+			container:Hide()
+		end
+	end
+end
+
+local GetNamePlateWidgetLift = function(self)
+	if (not self or self.isPRD or self.isObjectPlate or self.isPlayerUnit) then
+		return 0
+	end
+	if (not (NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile and NamePlatesMod.db.profile.showBlizzardWidgets)) then
+		return 0
+	end
+
+	local container = self.WidgetContainer
+	if (not container or not container.IsShown or not container:IsShown()) then
+		return 0
+	end
+
+	local numWidgetsShowing = container.numWidgetsShowing
+	if (numWidgetsShowing == nil) then
+		numWidgetsShowing = container.shownWidgetCount
+	end
+	if (IsSecretValue(numWidgetsShowing)) then
+		return 0
+	end
+	if (type(numWidgetsShowing) ~= "number" or numWidgetsShowing <= 0) then
+		return 0
+	end
+
+	local db = ns.GetConfig("NamePlates")
+	local widgetPosition = db and db.WidgetPosition
+	local widgetOffsetY = widgetPosition and widgetPosition[3]
+	if (type(widgetOffsetY) ~= "number") then
+		return 0
+	end
+
+	return math_abs(widgetOffsetY)
+end
+
+local AnchorStandardNamePlateHealthBar = function(self)
+	if (not self or not self.Health) then
+		return
+	end
+	local db = ns.GetConfig("NamePlates")
+	local point, x, y = unpack(db.HealthBarPosition)
+	self.Health:ClearAllPoints()
+	self.Health:SetPoint(point, x, y + GetNamePlateWidgetLift(self))
 end
 
 local IsSafeUnitToken = function(unit)
@@ -717,7 +792,7 @@ local AnchorStandardNamePlateName = function(self)
 	local db = ns.GetConfig("NamePlates")
 	local point, x, y = unpack(db.NamePosition)
 	self.Name:ClearAllPoints()
-	self.Name:SetPoint(point, x, y + GetTargetLikeNameLift(self))
+	self.Name:SetPoint(point, x, y + GetTargetLikeNameLift(self) + GetNamePlateWidgetLift(self))
 end
 
 local GetDriverCVars = function()
@@ -1382,9 +1457,10 @@ local NamePlate_PostUpdatePositions = function(self)
 
 	-- The PRD has neither name nor auras.
 	if (not self.isPRD) then
+		AnchorStandardNamePlateHealthBar(self)
 		AnchorStandardNamePlateName(self)
 		local hasName = ShouldUseFriendlyPlayerNameOnly(self) or NamePlatesMod.db.profile.showNameAlways or (self.isMouseOver or self.isSoftTarget or self.isTarget or self.inCombat) or false
-		local nameOffset = hasName and (select(2, name:GetFont()) + auras.spacing + GetTargetLikeNameLift(self)) or 0
+		local nameOffset = hasName and (select(2, name:GetFont()) + auras.spacing + GetTargetLikeNameLift(self) + GetNamePlateWidgetLift(self)) or 0
 
 		if (hasName ~= auras.usingNameOffset or nameOffset ~= auras.nameOffset or auras.usingNameOffset == nil) then
 			if (hasName) then
@@ -1563,6 +1639,10 @@ local NamePlate_ResetCastbarVisuals = function(element)
 
 end
 
+local ShouldColorNameplateSpellTextByState = function()
+	return ns.UnitFrame and ns.UnitFrame.ShouldColorCastSpellTextByState and ns.UnitFrame.ShouldColorCastSpellTextByState() or false
+end
+
 local NamePlate_SetCastbarColor = function(element, color)
 	if (not element or type(color) ~= "table") then
 		return
@@ -1576,20 +1656,530 @@ local NamePlate_SetCastbarColor = function(element, color)
 	end
 end
 
-local Castbar_UpdateInterruptible = function(element, unit)
-	if (element.notInterruptible) then
-		NamePlate_SetCastbarColor(element, Colors.gray)
-	else
-		local db = ns.GetConfig("NamePlates")
-		NamePlate_SetCastbarColor(element, db and db.CastBarColor or nil)
+local NamePlate_CreateColorObject = function(color)
+	if (type(CreateColor) ~= "function" or type(color) ~= "table") then
+		return nil
 	end
+
+	return CreateColor(color[1] or 1, color[2] or 1, color[3] or 1, color[4] or 1)
+end
+
+local NamePlate_GetLiveNotInterruptible = function(element)
+	local owner = element and element.__owner
+	local unit = owner and owner.unit
+	if (type(unit) ~= "string" or unit == "") then
+		return nil
+	end
+
+	if (element and element.casting and UnitCastingInfo) then
+		local castResult = { pcall(UnitCastingInfo, unit) }
+		if (castResult[1]) then
+			return castResult[9]
+		end
+	end
+
+	if (element and element.channeling and UnitChannelInfo) then
+		local channelResult = { pcall(UnitChannelInfo, unit) }
+		if (channelResult[1]) then
+			return channelResult[8]
+		end
+	end
+
+	return nil
+end
+
+local NamePlate_ApplyLiveInterruptTextureColor = function(element, liveNotInterruptible, protectedColor, nextColor)
+	local texture = element and element.GetStatusBarTexture and element:GetStatusBarTexture()
+	if (not texture or type(texture.SetVertexColorFromBoolean) ~= "function") then
+		return false
+	end
+
+	if (liveNotInterruptible == nil) then
+		return false
+	end
+	if ((not IsSecretValue(liveNotInterruptible)) and type(liveNotInterruptible) ~= "boolean") then
+		return false
+	end
+
+	local protectedColorObject = NamePlate_CreateColorObject(protectedColor)
+	local nextColorObject = NamePlate_CreateColorObject(nextColor)
+	if (not protectedColorObject or not nextColorObject) then
+		return false
+	end
+
+	texture:SetVertexColorFromBoolean(liveNotInterruptible, protectedColorObject, nextColorObject)
+	return true
+end
+
+local NamePlate_ClearInterruptState = function(element)
+	if (not element) then
+		return
+	end
+	element.__AzeriteUI_NotInterruptible = nil
+	element.__AzeriteUI_ProbedNotInterruptible = nil
+	element.__AzeriteUI_InterruptCastState = nil
+	element.__AzeriteUI_LastInterruptColorUpdate = nil
+	element.__AzeriteUI_EventNotInterruptible = nil
+end
+
+local Castbar_RefreshInterruptVisuals
+local NamePlate_UpdateInterruptWatcher
+
+local NamePlate_GetInterruptInfo
+do
+	local interruptListenerFrame
+	local interruptInfoResolver
+
+	local DetermineInterruptInfoResolver = function()
+		local playerClass = select(3, UnitClass("player"))
+
+		if (playerClass == 1) then -- Warrior
+			return function()
+				return { id = 6552, cooldown = 15 }
+			end
+		elseif (playerClass == 2) then -- Paladin
+			return function()
+				local specID = PlayerUtil and PlayerUtil.GetCurrentSpecID and PlayerUtil.GetCurrentSpecID() or nil
+				local hasRebuke = (specID ~= 65) and C_SpellBook and C_SpellBook.IsSpellKnown and C_SpellBook.IsSpellKnown(96231)
+				if (not hasRebuke) then
+					return nil
+				end
+				return { id = 96231, cooldown = 15 }
+			end
+		elseif (playerClass == 3) then -- Hunter
+			return function()
+				local specID = PlayerUtil and PlayerUtil.GetCurrentSpecID and PlayerUtil.GetCurrentSpecID() or nil
+				local spellID = (specID == 255) and 187707 or 147362
+				if (not C_SpellBook or not C_SpellBook.IsSpellKnown or not C_SpellBook.IsSpellKnown(spellID)) then
+					return nil
+				end
+				return { id = spellID, cooldown = (specID == 255) and 15 or 24 }
+			end
+		elseif (playerClass == 4) then -- Rogue
+			return function()
+				return { id = 1766, cooldown = 15 }
+			end
+		elseif (playerClass == 5) then -- Priest
+			return function()
+				local specID = PlayerUtil and PlayerUtil.GetCurrentSpecID and PlayerUtil.GetCurrentSpecID() or nil
+				if (specID ~= 258 or not C_SpellBook or not C_SpellBook.IsSpellKnown or not C_SpellBook.IsSpellKnown(15487)) then
+					return nil
+				end
+				return { id = 15487, cooldown = 45 }
+			end
+		elseif (playerClass == 6) then -- Death Knight
+			return function()
+				if (not C_SpellBook or not C_SpellBook.IsSpellKnown or not C_SpellBook.IsSpellKnown(47528)) then
+					return nil
+				end
+				return { id = 47528, cooldown = 15 }
+			end
+		elseif (playerClass == 7) then -- Shaman
+			return function()
+				if (not C_SpellBook or not C_SpellBook.IsSpellKnown or not C_SpellBook.IsSpellKnown(57994)) then
+					return nil
+				end
+				local specID = PlayerUtil and PlayerUtil.GetCurrentSpecID and PlayerUtil.GetCurrentSpecID() or nil
+				return { id = 57994, cooldown = (specID == 264) and 30 or 12 }
+			end
+		elseif (playerClass == 8) then -- Mage
+			return function()
+				local hasQuickWitted = C_SpellBook and C_SpellBook.IsSpellKnown and C_SpellBook.IsSpellKnown(382297)
+				return { id = 2139, cooldown = hasQuickWitted and 20 or 25 }
+			end
+		elseif (playerClass == 9) then -- Warlock
+			return function()
+				if (C_SpellBook and C_SpellBook.IsSpellKnown and Enum and Enum.SpellBookSpellBank) then
+					if (C_SpellBook.IsSpellKnown(89766, Enum.SpellBookSpellBank.Pet)) then
+						return { id = 89766, cooldown = 30 }
+					end
+					if (C_SpellBook.IsSpellKnown(19647, Enum.SpellBookSpellBank.Pet)) then
+						return { id = 19647, cooldown = 24 }
+					end
+				end
+				if (C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID and C_SpellBook and C_SpellBook.IsSpellKnownOrInSpellBook) then
+					if (C_UnitAuras.GetPlayerAuraBySpellID(196099) ~= nil and C_SpellBook.IsSpellKnownOrInSpellBook(132409)) then
+						return { id = 132409, cooldown = 24 }
+					end
+				end
+				return nil
+			end
+		elseif (playerClass == 10) then -- Monk
+			return function()
+				local specID = PlayerUtil and PlayerUtil.GetCurrentSpecID and PlayerUtil.GetCurrentSpecID() or nil
+				if (specID == 270 or not C_SpellBook or not C_SpellBook.IsSpellKnown or not C_SpellBook.IsSpellKnown(116705)) then
+					return nil
+				end
+				return { id = 116705, cooldown = 15 }
+			end
+		elseif (playerClass == 11) then -- Druid
+			return function()
+				local specID = PlayerUtil and PlayerUtil.GetCurrentSpecID and PlayerUtil.GetCurrentSpecID() or nil
+				if (specID == 105) then
+					return nil
+				end
+				local spellID = (specID == 102) and 78675 or 106839
+				if (not C_SpellBook or not C_SpellBook.IsSpellKnown or not C_SpellBook.IsSpellKnown(spellID)) then
+					return nil
+				end
+				return { id = spellID, cooldown = (specID == 102) and 60 or 15 }
+			end
+		elseif (playerClass == 12) then -- Demon Hunter
+			return function()
+				if (not C_SpellBook or not C_SpellBook.IsSpellKnown or not C_SpellBook.IsSpellKnown(183752)) then
+					return nil
+				end
+				return { id = 183752, cooldown = 15 }
+			end
+		elseif (playerClass == 13) then -- Evoker
+			return function()
+				local specID = PlayerUtil and PlayerUtil.GetCurrentSpecID and PlayerUtil.GetCurrentSpecID() or nil
+				if (specID == 1468 or not C_SpellBook or not C_SpellBook.IsSpellKnown or not C_SpellBook.IsSpellKnown(351338)) then
+					return nil
+				end
+				local hasInterwovenThreads = (specID == 1473) and C_SpellBook.IsSpellKnown(412713)
+				return { id = 351338, cooldown = hasInterwovenThreads and 18 or 20 }
+			end
+		end
+
+		return function()
+			return nil
+		end
+	end
+
+	local GetSpellCooldownEndTime = function(spellID)
+		if (type(spellID) ~= "number" or spellID <= 0) then
+			return nil
+		end
+
+		if (C_Spell and C_Spell.GetSpellCooldown) then
+			local okInfo, cooldownInfo = pcall(C_Spell.GetSpellCooldown, spellID)
+			if (okInfo and type(cooldownInfo) == "table") then
+				local startTime = cooldownInfo.startTime
+				local duration = cooldownInfo.duration
+				if (type(startTime) == "number" and type(duration) == "number"
+					and (not IsSecretValue(startTime)) and (not IsSecretValue(duration))
+					and startTime > 0 and duration > 0) then
+					return startTime + duration
+				end
+			end
+		end
+
+		if (GetSpellCooldown) then
+			local okCooldown, startTime, duration = pcall(GetSpellCooldown, spellID)
+			if (okCooldown
+				and type(startTime) == "number"
+				and type(duration) == "number"
+				and (not IsSecretValue(startTime))
+				and (not IsSecretValue(duration))
+				and startTime > 0
+				and duration > 0) then
+				return startTime + duration
+			end
+		end
+
+		return nil
+	end
+
+	local EnsureInterruptListenerFrame = function()
+		if (interruptListenerFrame) then
+			return interruptListenerFrame
+		end
+
+		interruptInfoResolver = DetermineInterruptInfoResolver()
+		interruptListenerFrame = CreateFrame("Frame")
+		interruptListenerFrame.lastInterrupt = 0
+		interruptListenerFrame.nextInterruptAvailableAt = 0
+		interruptListenerFrame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
+		interruptListenerFrame:RegisterUnitEvent("PLAYER_SPECIALIZATION_CHANGED", "player")
+		interruptListenerFrame:RegisterEvent("TRAIT_CONFIG_UPDATED")
+		interruptListenerFrame:RegisterEvent("PLAYER_LOGIN")
+		interruptListenerFrame:SetScript("OnEvent", function(self, event, unit, _, spellID)
+			if (event == "UNIT_SPELLCAST_SUCCEEDED") then
+				if (unit ~= "player") then
+					return
+				end
+
+				local interruptInfo = interruptInfoResolver and interruptInfoResolver() or nil
+				if (type(interruptInfo) ~= "table" or type(interruptInfo.id) ~= "number" or spellID ~= interruptInfo.id) then
+					return
+				end
+
+				local now = GetTime()
+				self.lastInterrupt = now
+				self.nextInterruptAvailableAt = now + (interruptInfo.cooldown or 0)
+				return
+			end
+
+			interruptInfoResolver = DetermineInterruptInfoResolver()
+			local interruptInfo = interruptInfoResolver and interruptInfoResolver() or nil
+			local cooldownEndTime = interruptInfo and GetSpellCooldownEndTime(interruptInfo.id) or 0
+			self.nextInterruptAvailableAt = cooldownEndTime or 0
+			if (self.nextInterruptAvailableAt <= GetTime()) then
+				self.lastInterrupt = 0
+				self.nextInterruptAvailableAt = 0
+			end
+		end)
+
+		return interruptListenerFrame
+	end
+
+	NamePlate_GetInterruptInfo = function()
+		local listener = EnsureInterruptListenerFrame()
+		local interruptInfo = interruptInfoResolver and interruptInfoResolver() or nil
+		if (type(interruptInfo) ~= "table" or type(interruptInfo.id) ~= "number") then
+			return nil
+		end
+
+		local now = GetTime()
+		local cooldownEndTime = GetSpellCooldownEndTime(interruptInfo.id)
+		local nextInterruptAvailableAt = listener and listener.nextInterruptAvailableAt or 0
+		if (type(cooldownEndTime) == "number" and cooldownEndTime > nextInterruptAvailableAt) then
+			nextInterruptAvailableAt = cooldownEndTime
+			if (listener) then
+				listener.nextInterruptAvailableAt = cooldownEndTime
+			end
+		end
+
+		return {
+			id = interruptInfo.id,
+			ready = not (type(nextInterruptAvailableAt) == "number" and nextInterruptAvailableAt > now),
+			nextInterruptAvailableAt = nextInterruptAvailableAt
+		}
+	end
+end
+
+local NamePlate_HandleInterruptWatcherEvent = function(self, event, unit)
+	local watchedUnit = self and self.__AzeriteUI_WatchedUnit
+	if (type(unit) ~= "string" or unit ~= watchedUnit) then
+		return
+	end
+
+	local element = self.__castbar
+	if (not element) then
+		return
+	end
+
+	if (event == "UNIT_SPELLCAST_NOT_INTERRUPTIBLE") then
+		element.__AzeriteUI_EventNotInterruptible = true
+	elseif (event == "UNIT_SPELLCAST_INTERRUPTIBLE") then
+		element.__AzeriteUI_EventNotInterruptible = false
+	elseif (event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START") then
+		element.__AzeriteUI_EventNotInterruptible = nil
+	elseif (event == "UNIT_SPELLCAST_STOP" or event == "UNIT_SPELLCAST_CHANNEL_STOP" or event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_FAILED") then
+		element.__AzeriteUI_EventNotInterruptible = nil
+	end
+
+	ns.API.UpdateInterruptCastBarRefresh(element, Castbar_RefreshInterruptVisuals, event)
+end
+
+local NamePlate_ClearInterruptWatcher = function(element)
+	local watcher = element and element.InterruptWatcher
+	if (not watcher) then
+		return
+	end
+
+	watcher:UnregisterAllEvents()
+	watcher.__AzeriteUI_WatchedUnit = nil
+end
+
+NamePlate_UpdateInterruptWatcher = function(element, unit)
+	if (not element or type(unit) ~= "string" or unit == "" or not unit:match("^nameplate%d+$")) then
+		NamePlate_ClearInterruptWatcher(element)
+		return
+	end
+
+	local watcher = element.InterruptWatcher
+	if (not watcher) then
+		watcher = CreateFrame("Frame")
+		watcher.__castbar = element
+		watcher:SetScript("OnEvent", NamePlate_HandleInterruptWatcherEvent)
+		element.InterruptWatcher = watcher
+	end
+
+	if (watcher.__AzeriteUI_WatchedUnit == unit) then
+		return
+	end
+
+	watcher:UnregisterAllEvents()
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_START", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_STOP", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTIBLE", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", unit)
+	watcher:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", unit)
+	watcher.__AzeriteUI_WatchedUnit = unit
+end
+
+local NamePlate_GetRawNotInterruptible = function(element)
+	local owner = element and element.__owner
+	local unit = owner and owner.unit
+	if (type(unit) ~= "string" or unit == "") then
+		return nil, false
+	end
+
+	local rawNotInterruptible
+	local sawSecretRaw = false
+	if (UnitCastingInfo) then
+		local castResult = { pcall(UnitCastingInfo, unit) }
+		local okCast = castResult[1]
+		local castNotInterruptible = castResult[9]
+		if (okCast and type(castNotInterruptible) == "boolean") then
+			if (IsSecretValue(castNotInterruptible)) then
+				sawSecretRaw = true
+			else
+				rawNotInterruptible = castNotInterruptible
+			end
+		end
+	end
+
+	if (rawNotInterruptible == nil and UnitChannelInfo) then
+		local channelResult = { pcall(UnitChannelInfo, unit) }
+		local okChannel = channelResult[1]
+		local channelNotInterruptible = channelResult[8]
+		if (okChannel and type(channelNotInterruptible) == "boolean") then
+			if (IsSecretValue(channelNotInterruptible)) then
+				sawSecretRaw = true
+			else
+				rawNotInterruptible = channelNotInterruptible
+			end
+		end
+	end
+
+	if (type(rawNotInterruptible) == "boolean") then
+		return rawNotInterruptible, sawSecretRaw
+	end
+
+	local castbarFlag = element and element.notInterruptible
+	if ((not sawSecretRaw) and type(castbarFlag) == "boolean" and (not IsSecretValue(castbarFlag))) then
+		return castbarFlag, false
+	end
+
+	return nil, sawSecretRaw
+end
+
+local NamePlate_GetBlizzardProtectedFallback = function(element)
+	local owner = element and element.__owner
+	local unit = owner and owner.unit
+	if (type(unit) ~= "string" or unit == "" or not unit:match("^nameplate%d+$")) then
+		return nil
+	end
+	if (not C_NamePlate or not C_NamePlate.GetNamePlateForUnit) then
+		return nil
+	end
+
+	local okPlate, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit, issecurefunc and issecurefunc())
+	local unitFrame = okPlate and plate and (plate.UnitFrame or plate.unitFrame)
+	local blizzardCastbar = unitFrame and (unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.Castbar or unitFrame.CastingBarFrame)
+	local active = blizzardCastbar and (blizzardCastbar.casting or blizzardCastbar.channeling or blizzardCastbar.empowering)
+	if (not blizzardCastbar or not active) then
+		return nil
+	end
+
+	local blizzardLocked = blizzardCastbar.notInterruptible
+	if (type(blizzardLocked) == "boolean" and (not IsSecretValue(blizzardLocked)) and blizzardLocked) then
+		return true
+	end
+
+	return nil
+end
+
+local Castbar_RefreshInterruptVisuals = function(element)
+	if (not element) then
+		return
+	end
+
+	local db = ns.GetConfig("NamePlates")
+	local baseBarColor = db and db.CastBarColor or nil
+	local baseTextColor = db and db.CastBarNameColor or nil
+
+	NamePlate_ResetCastbarVisuals(element)
+
+	local color, state
+	local rawNotInterruptible, hasSecretRaw = NamePlate_GetRawNotInterruptible(element)
+	local eventNotInterruptible = element.__AzeriteUI_EventNotInterruptible
+	local blizzardProtected = NamePlate_GetBlizzardProtectedFallback(element)
+	local liveNotInterruptible = NamePlate_GetLiveNotInterruptible(element)
+	local dbState = nil
+	if ((eventNotInterruptible == nil and rawNotInterruptible == nil and blizzardProtected ~= true) or hasSecretRaw) and ns.NameplateInterruptDB and ns.NameplateInterruptDB.GetFallbackStateForCastbar then
+		dbState = ns.NameplateInterruptDB.GetFallbackStateForCastbar(element)
+	end
+
+	local interruptInfo = NamePlate_GetInterruptInfo()
+	if (interruptInfo and interruptInfo.ready == false) then
+		color = Colors.red
+		state = "unavailable"
+	elseif (interruptInfo and interruptInfo.ready == true) then
+		color = { 1, .82, 0, 1 }
+		state = "primary-ready"
+	else
+		color = baseBarColor
+		state = "base"
+	end
+
+	if (dbState == "protected" or eventNotInterruptible == true or rawNotInterruptible == true or blizzardProtected == true) then
+		state = "locked"
+	elseif (dbState == "interruptible" or eventNotInterruptible == false or (rawNotInterruptible == false and (not hasSecretRaw))) then
+		-- Keep the active red/yellow/base state chosen above.
+	end
+
+	if (type(color) == "table") then
+		NamePlate_SetCastbarColor(element, color)
+	end
+
+	if (state == "locked") then
+		NamePlate_SetCastbarColor(element, Colors.gray)
+	elseif (type(color) == "table") then
+		NamePlate_ApplyLiveInterruptTextureColor(element, liveNotInterruptible, Colors.gray, color)
+	end
+
+	if (element.Text) then
+		local textColor = baseTextColor
+		if (ShouldColorNameplateSpellTextByState()) then
+			if (state == "locked") then
+				textColor = Colors.gray
+			elseif (state == "unavailable") then
+				textColor = Colors.red
+			elseif (state == "primary-ready") then
+				textColor = { 1, .82, 0, 1 }
+			end
+		end
+		if (type(textColor) == "table") then
+			element.Text:SetTextColor(textColor[1], textColor[2], textColor[3], textColor[4] or 1)
+		end
+	end
+end
+
+local Castbar_PostCastVisual = function(element, unit)
+	element.__AzeriteUI_InterruptCastState = nil
+	element.__AzeriteUI_LastInterruptColorUpdate = nil
+	NamePlate_UpdateInterruptWatcher(element, unit or (element.__owner and element.__owner.unit))
+	ns.API.UpdateInterruptCastBarRefresh(element, Castbar_RefreshInterruptVisuals, "nameplate_postcast")
+	NamePlate_PostUpdateHoverElements(element.__owner)
+end
+
+local Castbar_PostCastUpdate = function(element, unit)
+	NamePlate_UpdateInterruptWatcher(element, unit or (element.__owner and element.__owner.unit))
+	ns.API.UpdateInterruptCastBarRefresh(element, Castbar_RefreshInterruptVisuals, "nameplate_update")
+	NamePlate_PostUpdateHoverElements(element.__owner)
 end
 
 local Castbar_PostUpdate = function(element, unit)
 	NamePlate_PostUpdateHoverElements(element.__owner)
 end
 
+local Castbar_PostStop = function(element, unit)
+	ns.API.ClearInterruptCastBarRefresh(element)
+	NamePlate_ClearInterruptState(element)
+	NamePlate_ResetCastbarVisuals(element)
+	NamePlate_PostUpdateHoverElements(element.__owner)
+end
+
 local Castbar_PostFail = function(element, _)
+	ns.API.ClearInterruptCastBarRefresh(element)
+	NamePlate_ClearInterruptState(element)
 	local r, g, b = Colors.red[1], Colors.red[2], Colors.red[3]
 	if (element.Text) then
 		element.Text:SetTextColor(r, g, b, 1)
@@ -1600,10 +2190,6 @@ local Castbar_PostFail = function(element, _)
 		texture:SetVertexColor(r, g, b, 1)
 	end
 	NamePlate_PostUpdateHoverElements(element.__owner)
-end
-
-local Castbar_PostStop = function(element, _)
-	NamePlate_ResetCastbarVisuals(element)
 end
 
 -- Callback that handles positions of elements
@@ -1742,11 +2328,7 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 
 		if (self.WidgetContainer) then
 			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
-				self.WidgetContainer:SetIgnoreParentAlpha(true)
-				self.WidgetContainer:SetAlpha(1)
-				self.WidgetContainer:SetParent(self)
-				self.WidgetContainer:ClearAllPoints()
-				self.WidgetContainer:SetPoint(unpack(db.WidgetPosition))
+				UpdateNamePlateWidgetContainer(self, true)
 
 				local widgetFrames = self.WidgetContainer.widgetFrames
 
@@ -1758,7 +2340,7 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 					end
 				end
 			else
-				self.WidgetContainer:SetParent(ns.Hider)
+				UpdateNamePlateWidgetContainer(self, false)
 			end
 		end
 
@@ -1792,6 +2374,9 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 	if (unit and unit ~= self.unit) then return end
 
 	unit = unit or self.unit
+	if (self.Castbar) then
+		NamePlate_UpdateInterruptWatcher(self.Castbar, unit)
+	end
 
 	self.inCombat = InCombatLockdown()
 	
@@ -1848,6 +2433,7 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 
 	self.canAttack = (canAttack == true)
 	self.canAssist = (canAssist == true)
+	self.isPlayerUnit = isPlayerUnit and true or nil
 
 	local guidLooksLikeObject = (guidType == "GameObject") or (guidType == "AreaTrigger")
 	local passiveWorldObjectLike = ((canAttack == false) and (canAssist == false) and (not isPlayerUnit) and (not playerControlled))
@@ -1931,10 +2517,14 @@ local NamePlate_OnHide = function(self)
 	self.isSoftInteract = nil
 	self.canAttack = nil
 	self.canAssist = nil
+	self.isPlayerUnit = nil
 	self.isObjectPlate = nil
 	self.isFriendlyAssistableNPC = nil
 	self.nameplateShowsWidgetsOnly = nil
 	if (self.Castbar) then
+		ns.API.ClearInterruptCastBarRefresh(self.Castbar)
+		NamePlate_ClearInterruptState(self.Castbar)
+		NamePlate_ClearInterruptWatcher(self.Castbar)
 		NamePlate_ResetCastbarVisuals(self.Castbar)
 	end
 
@@ -2137,11 +2727,15 @@ local style = function(self, unit, id)
 	castbar.timeToHold = db.CastBarTimeToHoldFailed
 
 	self.Castbar = castbar
-	self.Castbar.PostCastStart = Castbar_UpdateInterruptible
+	self.Castbar.PostCastStart = Castbar_PostCastVisual
+	self.Castbar.PostCastUpdate = Castbar_PostCastUpdate
+	self.Castbar.PostCastStop = Castbar_PostStop
 	self.Castbar.PostCastFail = Castbar_PostFail
 	self.Castbar.PostCastInterrupted = Castbar_PostFail
-	self.Castbar.PostCastInterruptible = Castbar_UpdateInterruptible
+	self.Castbar.PostCastInterruptible = Castbar_PostCastVisual
 	ns.API.AttachScriptSafe(self.Castbar, "OnHide", function(element)
+		ns.API.ClearInterruptCastBarRefresh(element)
+		NamePlate_ClearInterruptState(element)
 		NamePlate_ResetCastbarVisuals(element)
 	end)
 
@@ -2437,12 +3031,7 @@ local callback = function(self, event, unit)
 
 		if (self.WidgetContainer) then
 			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
-				local db = ns.GetConfig("NamePlates")
-
-				self.WidgetContainer:SetIgnoreParentAlpha(true)
-				self.WidgetContainer:SetParent(self)
-				self.WidgetContainer:ClearAllPoints()
-				self.WidgetContainer:SetPoint(unpack(db.WidgetPosition))
+				UpdateNamePlateWidgetContainer(self, true)
 
 				local widgetFrames = self.WidgetContainer.widgetFrames
 
@@ -2454,7 +3043,7 @@ local callback = function(self, event, unit)
 					end
 				end
 			else
-				self.WidgetContainer:SetParent(ns.Hider)
+				UpdateNamePlateWidgetContainer(self, false)
 			end
 		end
 
@@ -2482,11 +3071,9 @@ local callback = function(self, event, unit)
 
 		if (self.WidgetContainer) then
 			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
-				self.WidgetContainer:SetIgnoreParentAlpha(false)
-				if (self.blizzPlate) then
-					self.WidgetContainer:SetParent(self.blizzPlate)
-					self.WidgetContainer:ClearAllPoints()
-				end
+				UpdateNamePlateWidgetContainer(self, true)
+			else
+				UpdateNamePlateWidgetContainer(self, false)
 			end
 		end
 
@@ -3139,6 +3726,10 @@ NamePlatesMod.OnInitialize = function(self)
 end
 
 NamePlatesMod.OnEnable = function(self)
+	if (ns.NameplateInterruptDB and ns.NameplateInterruptDB.SeedFromPlater) then
+		ns.NameplateInterruptDB.SeedFromPlater()
+	end
+
 	oUF:RegisterStyle(ns.Prefix.."NamePlates", style)
 	oUF:SetActiveStyle(ns.Prefix.."NamePlates")
 	local driver = oUF:SpawnNamePlates(ns.Prefix)

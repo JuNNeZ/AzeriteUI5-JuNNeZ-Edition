@@ -67,6 +67,7 @@ L["Click the button below to reset the currently selected EditMode preset to pos
 L["Clock Settings"] = "时钟设置"
 L["Coloring"] = true
 L["Color by Class"] = true
+L["Color Cast Spell Text By State"] = "根据状态为法术名称着色"
 L["Combo Points"] = "连击点数"
 L["Control where the tooltips appear when put in the default position. Disable to let blizzard or other addons handle this."] = "控制工具提示位置，禁用此项将由暴雪或其他插件控制。"
 L["Copy"] = "复制"
@@ -354,7 +355,10 @@ L["Display & Feedback"] = true
 L["Duplicate"] = true
 L["Elemental Crystal/Bar Resource Split"] = true
 L["Encounter or support buffs Blizzard specifically marks as relevant during combat."] = true
-L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"] = true
+L["Tint supported cast spell names by interrupt/protected state. Disable to keep spell names on their normal text color."] = "根据可打断/受保护状态为支持的法术名称着色。禁用后，法术名称将保持默认文字颜色。"
+L["Color Entire Target Castbar By State"] = "根据状态为目标施法条整体着色"
+L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."] = "根据可打断/受保护状态为整个目标施法条着色。禁用后，施法条保持普通施法颜色，而法术文字遵循共享的单位框体设置。"
+L["Enemy castbar interrupt colors:\nYellow = primary interrupt ready\nRed = primary interrupt unavailable\nGray = cast cannot be interrupted"] = "敌方施法条打断颜色：\n黄色 = 主要打断技能就绪\n红色 = 主要打断技能不可用\n灰色 = 该法术无法被打断"
 L["Enemy size (%)"] = true
 L["Enemy target size (%)"] = true
 L["Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon."] = true

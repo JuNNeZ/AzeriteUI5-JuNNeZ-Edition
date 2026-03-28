@@ -4,14 +4,24 @@
 
 ## 1. Nameplate Castbar Interrupt Colors
 
-Superseded.
+Partially resolved.
 
-The old nameplate-specific interrupt color path was removed from [NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua). Nameplates now use a plain castbar model:
-- base color while casting
+The old watcher/resolver stack is still gone, but nameplates no longer use the plain base-only castbar model.
+
+Current state in [Components/UnitFrames/Units/NamePlates.lua](Components/UnitFrames/Units/NamePlates.lua):
+- yellow when the primary interrupt is ready
+- red when the primary interrupt is unavailable
+- gray for protected/non-interruptible casts
+- base color when the interrupt state is unknown
 - red on failed/interrupted
-- no yellow/grey interrupt-state coloring on nameplates
 
-Any future interrupt-color work should start from the current plain castbar path instead of reviving the deleted watcher/resolver stack.
+This now works through the current nameplate-local interrupt path plus the spell fallback helper in [Components/UnitFrames/NameplateInterruptDB.lua](Components/UnitFrames/NameplateInterruptDB.lua), not through the old deleted watcher stack.
+
+Related current limitation:
+- the target frame full-bar interrupt tint is temporarily disabled, because protected target casts can still show the wrong yellow state
+- the target castbar currently stays on its normal base color until that path is rebuilt cleanly
+
+Any future interrupt-color work should start from the current nameplate-local path and the owned spell fallback system, not by reviving the deleted monolithic resolver experiments.
 
 ---
 
@@ -177,3 +187,202 @@ These are in loaded files but the conditions can **never be true** on WoW 12 ret
 - [Components/ActionBars/Compatibility/HideBlizzardClassic.lua](Components/ActionBars/Compatibility/HideBlizzardClassic.lua) — referenced in [ActionBars.xml](Components/ActionBars/ActionBars.xml)? Verify. If not loaded, delete.
 - [Components/ActionBars/Compatibility/HandleBartender.lua](Components/ActionBars/Compatibility/HandleBartender.lua) — loaded, but only useful if Bartender4 is installed. Harmless if Bartender4 is absent, but adds load overhead.
 - [Components/ActionBars/Compatibility/HandleConsolePort.lua](Components/ActionBars/Compatibility/HandleConsolePort.lua) — same as above for ConsolePort.
+
+---
+
+## 6. Moot `IsRetail` / `WoW12` Version Checks in Active Files
+
+The addon is retail-only (TOC `120100`). Both `ns.IsRetail` (version >= 100000) and `WoW12` (build >= 120000) are **always true**. Every `if (IsRetail)` wrapper is redundant, every `else` branch is dead, and every `if (not IsRetail) then return end` guard is a no-op.
+
+**Cleanup approach:** Remove the version variables and `GetBuildInfo()` calls, unwrap the true branches (keep the body), delete the dead else branches entirely.
+
+---
+
+### 6a. Root Version Definitions
+
+| File | Lines | What to remove |
+| --- | --- | --- |
+| [Constants.lua](Core/Common/Constants.lua#L66) | 66–72 | `IsRetail`, `IsClassic`, `IsTBC`, `IsWrath`, `IsCata`, `WoW10`, `WoW11` flag definitions |
+| [Private.lua](static/Private/Private.lua#L9) | 9–12 | `clientVersion`, `ns.IsRetail`, `clientBuild`, `ns.WoW12` definitions and `GetBuildInfo()` calls |
+
+---
+
+### 6b. `IsRetail` / `IsClassic` / `IsCata` Dead Branches (Full Inventory)
+
+**Early-return guards (no-op on retail — remove the guard line):**
+
+| File | Line | Guard |
+| --- | --- | --- |
+| [WorldMap.lua](Components/Misc/WorldMap.lua#L11) | 11 | `if (not ns.IsRetail) then return end` |
+| [Banners.lua](Components/Misc/Banners.lua#L28) | 28 | `if (not ns.IsRetail) then return end` |
+| [ExtraButtons.lua](Components/ActionBars/Elements/ExtraButtons.lua#L27) | 27 | `if (not ns.IsRetail) then return end` |
+| [Tracker.lua](Options/OptionsPages/Tracker.lua#L28) | 28 | `if (not ns.IsRetail) then return end` |
+| [AuraStyling.lua](Components/UnitFrames/Auras/AuraStyling.lua#L28) | 28 | `if (not ns.IsRetail) then return end` |
+| [AuraFilters.lua](Components/UnitFrames/Auras/AuraFilters.lua#L28) | 28 | `if (not ns.IsRetail) then return end` |
+| [AuraSorting.lua](Components/UnitFrames/Auras/AuraSorting.lua#L28) | 28 | `if (not ns.IsRetail) then return end` |
+| [AuraData.lua](Components/UnitFrames/Auras/AuraData.lua#L252) | 252 | `if (not ns.IsRetail) then return end` |
+| [ObjectiveTracker.lua](Components/Blizzard/ObjectiveTracker.lua#L18) | 27–38 | `if (not IsRetail) then return end` |
+| [FloaterBars.lua](Components/Blizzard/FloaterBars.lua#L19) | 30 | `if (IsRetail) then return end` — **entire module body is dead** |
+
+**Early-return guards (always-false conditions — entire module body is dead on retail):**
+
+| File | Line | Guard |
+| --- | --- | --- |
+| [TrackerVanilla.lua](Options/OptionsPages/TrackerVanilla.lua#L28) | 28 | `if (not ns.IsClassic) then return end` — entire module dead |
+| [HideBlizzardClassic.lua](Components/ActionBars/Compatibility/HideBlizzardClassic.lua#L27) | 27 | `if (not ns.IsClassic) then return end` — entire module dead |
+| [Focus.lua](Components/UnitFrames/Units/Focus.lua#L27) | 27 | `if (ns.IsClassic) then return end` — guard is no-op |
+| [Arena.lua](Components/UnitFrames/Units/Arena.lua#L28) | 28 | `if (ns.IsClassic) then return end` — guard is no-op |
+| [ArcheologyBar.lua](Components/Misc/ArcheologyBar.lua#L28) | 28 | `if (ns.IsClassic or ns.IsCata) then return end` — guard is no-op |
+
+**Inline `ns.IsRetail` checks (always true — unwrap / simplify):**
+
+| File | Lines | Pattern |
+| --- | --- | --- |
+| [ActionBars.lua](Components/ActionBars/ActionBars.lua#L41) | 41, 47–58, 367–398, 575–580, 714–716 | `local IsRetail` + ternaries + `if (IsRetail)` blocks |
+| [Blizzard.lua](Components/Blizzard/Blizzard.lua#L21) | 21, 33–113 | `local IsRetail` + multiple blocks |
+| [Minimap.lua](Components/Blizzard/Minimap.lua#L19) | 19, 87–105 | `local IsRetail` + multiple blocks |
+| [Tooltips.lua](Components/Blizzard/Tooltips.lua#L16) | 16, 33–36 | `local IsRetail` + conditional |
+| [UnitFrames.lua](Components/UnitFrames/UnitFrames.lua#L29) | 29, 74–131 | `local IsRetail` + aura filter conditionals |
+| [NamePlates.lua](Components/UnitFrames/Units/NamePlates.lua#L26) | 26, 1401, 1811, 2248, 2395 | `local IsRetail` + multiple inline checks |
+| [Player.lua](Components/UnitFrames/Units/Player.lua) | 56–57, 107, 736, 1727, 2287, 2293, 2497, 2526, 2567, 2889 | `ns.IsRetail` in ternaries, `ns.IsCata` in config |
+| [PlayerAlternate.lua](Components/UnitFrames/Units/PlayerAlternate.lua) | 608, 957, 981, 1222 | `ns.IsRetail` inline checks |
+| [PlayerClassPower.lua](Components/UnitFrames/Units/PlayerClassPower.lua) | 52–60, 79, 506, 660–661, 668 | `ns.IsRetail` / `ns.IsCata` in class power config |
+| [PlayerCastBar.lua](Components/UnitFrames/Units/PlayerCastBar.lua#L122) | 122 | `if (not ns.IsRetail) then` — dead branch |
+| [Boss.lua](Components/UnitFrames/Units/Boss.lua#L539) | 539 | `if (ns.IsRetail) then` — unwrap |
+| [Arena.lua](Components/UnitFrames/Units/Arena.lua#L682) | 682 | `if (ns.IsRetail) then` — unwrap |
+| [Focus.lua](Components/UnitFrames/Units/Focus.lua#L389) | 389 | `if (ns.IsRetail) then` — unwrap |
+| [Pet.lua](Components/UnitFrames/Units/Pet.lua) | 35, 398 | `ns.IsClassic` (always false), `ns.IsRetail` (always true) |
+| [ToT.lua](Components/UnitFrames/Units/ToT.lua#L435) | 435 | `if (ns.IsRetail) then` — unwrap |
+| [Party.lua](Components/UnitFrames/Units/Party.lua#L943) | 943 | `if (ns.IsRetail) then` — unwrap |
+| [Raid25.lua](Components/UnitFrames/Units/Raid25.lua#L764) | 764 | `if (ns.IsRetail) then` — unwrap |
+| [Tags.lua](Components/UnitFrames/Tags.lua#L1032) | 1032 | `if (ns.IsRetail) then` — unwrap |
+| [Auras.lua](Components/Auras/Auras.lua#L503) | 503 | `self.isRetail = ns.IsRetail` — always true |
+| [AlertFrames.lua](Components/Misc/AlertFrames.lua#L207) | 207 | `if (not ns.IsRetail) then` — dead branch |
+| [Durability.lua](Components/Misc/Durability.lua#L275) | 275 | `not ns.IsRetail` in expression — always false |
+| [ChatFrames.lua](Components/Misc/ChatFrames.lua) | 475, 507 | `ns.IsRetail` checks |
+| [PetButton.lua](Components/ActionBars/Prototypes/PetButton.lua#L98) | 98 | `if (ns.IsRetail) then` — unwrap |
+| [Minimap.lua](Components/Misc/Minimap.lua) | 1184, 1202 | `ns.IsCata` / `ns.IsClassic` — dead branches |
+| [Options.lua](Options/Options.lua#L367) | 367 | `if (ns.IsRetail)` — always true |
+| [ExplorerMode.lua](Options/OptionsPages/ExplorerMode.lua) | 266, 273, 333 | `ns.IsRetail or ns.IsCata` — always true |
+| [ActionBars.lua](Options/OptionsPages/ActionBars.lua#L698) | 698 | `ns.IsRetail and 8 or 5` — always 8 |
+| [Nameplates.lua](Options/OptionsPages/Nameplates.lua) | 374, 387 | `ns.IsRetail` checks |
+| [UnitFrames.lua](Options/OptionsPages/UnitFrames.lua) | 892, 1262, 1306, 1354, 1364 | `ns.IsClassic` / `ns.IsRetail` / `ns.IsCata` |
+| [ExplorerMode.lua](Core/ExplorerMode.lua) | 634, 728, 762 | `ns.IsRetail or ns.IsCata` — always true |
+| [Colors.lua](Core/API/Colors.lua#L110) | 110 | `ns.IsClassic or ns.IsCata` — always false |
+| [FixFlavorDifferences.lua](Core/FixFlavorDifferences.lua#L132) | 132 | `ns.IsClassic` — always false |
+| [MovableFrameManager.lua](Core/MovableFrameManager.lua#L431) | 431 | `ns.IsCata or ns.IsRetail` — always true |
+
+**`ns.ClientVersion >= 120000` checks (always true on WoW 12 — unwrap):**
+
+| File | Lines | Pattern |
+| --- | --- | --- |
+| [Auras.lua](Components/Auras/Auras.lua) | 547, 718, 766 | `issecretvalue or (ns.ClientVersion >= 120000)` — always true |
+| [Auras.lua](Options/OptionsPages/Auras.lua#L61) | 61 | Same pattern, return value always known |
+| [Party.lua](Components/UnitFrames/Units/Party.lua#L1406) | 1406 | `ns.ClientVersion >= 120000` — always true |
+| [Raid5.lua](Components/UnitFrames/Units/Raid5.lua#L1074) | 1074 | `ns.ClientVersion >= 120000` — always true |
+| [Raid25.lua](Components/UnitFrames/Units/Raid25.lua#L995) | 995 | `ns.ClientVersion >= 120000` — always true |
+| [Raid40.lua](Components/UnitFrames/Units/Raid40.lua#L981) | 981 | `ns.ClientVersion >= 120000` — always true |
+| [FixBlizzardBugs.lua](Core/FixBlizzardBugs.lua) | 56, 2470 | `ns.ClientBuild >= 120000` / `ns.ClientVersion >= 120000` |
+
+---
+
+### 6c. `WoW12` Dead Branches
+
+| File | Lines | Dead pattern |
+| --- | --- | --- |
+| [Colors.lua](static/Private/Colors.lua#L11) | 11–21 | `GetBuildInfo()` + `WoW12` + ternary fallback colors (non-WoW12 values dead) |
+| [Defaults.lua](static/Private/Defaults.lua#L11) | 11–25 | `GetBuildInfo()` + `WoW12` + `Defaults[1] = WoW12 and 7 or 6` (the `6` is dead) |
+| [ActionBars.lua](Components/ActionBars/ActionBars.lua#L38) | 38–40, 112–116, 355–363, 1054–1124 | `GetBuildInfo()` + `WoW12` + multiple `if/else` blocks (else branches dead) |
+| [Blizzard.lua](Components/Blizzard/Blizzard.lua#L18) | 18–20, 47–51 | `GetBuildInfo()` + `WoW12` + StatusTrackingBarManager block |
+| [FloaterBars.lua](Components/Blizzard/FloaterBars.lua#L16) | 16–18, 90–96 | `GetBuildInfo()` + `WoW12` + hooks (doubly dead — after IsRetail early return) |
+| [Minimap.lua](Components/Blizzard/Minimap.lua#L16) | 16–18, 207–214 | `GetBuildInfo()` + `WoW12` + compass/backdrop alpha |
+| [ObjectiveTracker.lua](Components/Blizzard/ObjectiveTracker.lua#L15) | 15–17, 41–59 | `GetBuildInfo()` + `WoW12` + tracker code |
+| [Tooltips.lua](Components/Blizzard/Tooltips.lua#L13) | 13–15, 53–84 | `GetBuildInfo()` + `WoW12` + tooltip data blocks |
+| [UnitFrames.lua](Components/UnitFrames/UnitFrames.lua#L26) | 26–28, 74–131 | `GetBuildInfo()` + `WoW12` + aura filter blocks with dead else |
+| [NamePlates.lua](Components/UnitFrames/Units/NamePlates.lua#L24) | 24–25, 151–159, 339–346 | `GetBuildInfo()` + `WoW12` + nameplate styling/config blocks |
+
+---
+
+### 6d. Special Case: FloaterBars.lua Is Entirely Dead on Retail
+
+[FloaterBars.lua](Components/Blizzard/FloaterBars.lua#L30) has `if (IsRetail) then return end` at line 30. On retail, the module's `OnInitialize` returns immediately — **everything after line 30 is unreachable**. The entire file body (UpdateBars, SecureHooks, etc.) is dead code. Consider gutting the file or removing it from [Blizzard.xml](Components/Blizzard/) if nothing loads after the early return.
+
+---
+
+### 6e. `ns.WoW11` Redundant Guards & Dead Modules
+
+`ns.WoW11` (version >= 110000) is always true on WoW 12 retail. All `if (not ns.WoW11) then return end` guards are no-ops (harmless but redundant). However, two modules use `ns.WoW11` in a way that makes them **entirely dead**:
+
+**Dead modules** (condition `not ns.WoW10 or ns.WoW11` always returns on WoW12):
+
+| File | Line | Effect |
+| --- | --- | --- |
+| [EditMode.lua](Core/EditMode.lua#L29) | 29 | `if (not ns.WoW10 or ns.WoW11) then return end` — entire module dead |
+| [EditModePresets.lua](Core/EditModePresets.lua#L29) | 29 | `if (not ns.WoW10 or ns.WoW11) then return end` — entire module dead |
+
+**Redundant `ns.WoW11` guards** (no-op on WoW12, could be removed):
+
+| File | Line | Pattern |
+| --- | --- | --- |
+| [Core.lua](Core/Core.lua#L53) | 53 | `ns.SETTINGS_VERSION = ns.WoW11 and 25 or 22` — the `22` is dead |
+| [Auras.lua](Components/Auras/Auras.lua#L747) | 747, 959 | `if (ns.WoW11 and ...)` — always true, unwrap |
+| [AlertFrames.lua](Components/Misc/AlertFrames.lua#L123) | 123 | `ns.WoW11` in condition — always true |
+| [SanityBarFix.lua](Components/Misc/SanityBarFix.lua#L15) | 15 | `if (not ns or not ns.WoW11) then return end` — no-op guard |
+| [TrackerWoW11.lua](Components/Misc/TrackerWoW11.lua#L28) | 28 | `if (not ns.WoW11) then return end` — no-op guard |
+| All 15 files in [WoW11/](WoW11/) | 28 | `if (not ns.WoW11) then return end` — no-op guard in every file |
+
+---
+
+### 6f. `ns.WoW10` Permanently-True Guards (Low Priority)
+
+`ns.WoW10` (version >= 100000) is always true on WoW 12, making `if (not ns.WoW10)` early-returns dead. These are harmless but could be cleaned up:
+
+| File | Lines | Dead pattern |
+| --- | --- | --- |
+| [EncounterBar.lua](Components/ActionBars/Elements/EncounterBar.lua#L28) | 28 | `if (not ns.WoW10)` early return |
+| [ActionBars.lua](Components/ActionBars/Elements/ActionBars.lua#L772) | 772 | `if (not ns.WoW10)` early return |
+
+---
+
+### 6g. Version Constants & Compatibility Polyfills (Root Definitions)
+
+[Constants.lua](Core/Common/Constants.lua#L66) defines all version flags. On WoW 12 retail:
+
+| Flag | Value | Status |
+| --- | --- | --- |
+| `ns.Private.IsRetail` | `true` | Always true — moot |
+| `ns.Private.IsClassic` | `false` | Always false — moot |
+| `ns.Private.IsTBC` | `false` | Always false — moot |
+| `ns.Private.IsWrath` | `false` | Always false — moot |
+| `ns.Private.IsCata` | `false` | Always false — moot |
+| `ns.Private.WoW10` | `true` | Always true — moot |
+| `ns.Private.WoW11` | `true` | Always true — moot |
+
+[Compatibility.lua](Core/Compatibility.lua#L54) has API polyfills gated by `tocversion >= 40400 and tocversion < 50000` (Cata range). On WoW 12, `tocversion` is 120100 — the Cata conditions are always false. The `tocversion >= 100100` / `100200` / `100205` conditions are always true. All polyfills could be simplified to unconditional or removed if the APIs they shim are already present.
+
+**Note:** Section 6h was merged into 6b above (all `IsRetail`/`IsClassic`/`IsCata` items now in one place).
+
+---
+
+### 6i. Misc Dead Weight (Files & Directories)
+
+**Backup/merge-conflict files (never loaded):**
+
+| Path | Description |
+| --- | --- |
+| [LibActionButton-1.0-GE.backup-ours-20260306.lua](Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.backup-ours-20260306.lua) | Git merge conflict backup — safe to delete |
+| [Backups/](Backups/) | Development backup directories (oUF rollback/sync snapshots) — not loaded by anything |
+| [.research/](.research/) | External addon copies for comparison — not loaded by anything |
+
+**Disabled-in-XML modules (commented out in [Core.xml](Core/Core.xml#L38)):**
+
+| File | Status |
+| --- | --- |
+| [EditMode.lua](Core/EditMode.lua) | Commented out in XML **and** has dead early-return (see 6e) — doubly dead |
+| [EditModePresets.lua](Core/EditModePresets.lua) | Commented out in XML **and** has dead early-return (see 6e) — doubly dead |
+
+**Dead branch in library:**
+
+| File | Line | Pattern |
+| --- | --- | --- |
+| [LibSmoothBar-1.0.lua](Libs/LibSmoothBar-1.0/LibSmoothBar-1.0.lua#L299) | 299–301 | `if false then` — hardcoded dead branch |

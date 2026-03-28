@@ -42,6 +42,7 @@ local defaults = { profile = ns:Merge({
 	enabled = true,
 	disableAuraSorting = false,
 	showBlizzardRaidBar = false,
+	colorCastSpellTextByState = false,
 	powerValueAlpha = 75,
 	playerPowerValueAlpha = nil,
 	targetPowerValueAlpha = nil,
@@ -213,6 +214,12 @@ local unitFrameDefaults = {
 ns.UnitFrames = {}
 ns.UnitFrame = {}
 ns.UnitFrame.defaults = unitFrameDefaults
+
+ns.UnitFrame.ShouldColorCastSpellTextByState = function()
+	local module = ns:GetModule("UnitFrames", true)
+	local profile = module and module.db and module.db.profile
+	return profile and profile.colorCastSpellTextByState == true or false
+end
 
 ns.UnitFrame.GetPowerValueAlpha = function(kind)
 	local module = ns:GetModule("UnitFrames", true)
@@ -449,6 +456,24 @@ UnitFrameMod.UpdateSettings = function(self)
 			if (power and power.ForceUpdate) then
 				pcall(power.ForceUpdate, power)
 			end
+		end
+	end
+
+	local RefreshCastbar = function(castbar)
+		if (castbar and type(castbar.__AzeriteUI_InterruptRefreshCallback) == "function") then
+			ns.API.UpdateInterruptCastBarRefresh(castbar, nil, "unitframes_settings")
+		end
+	end
+
+	if (ns.UnitFrames) then
+		for frame in next,ns.UnitFrames do
+			RefreshCastbar(frame.Castbar)
+		end
+	end
+
+	if (ns.NamePlates) then
+		for frame in next,ns.NamePlates do
+			RefreshCastbar(frame.Castbar)
 		end
 	end
 

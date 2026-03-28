@@ -2884,6 +2884,8 @@ local function PrintNamePlateCastDebug(token)
 			local rawName = nil
 			local rawSpellID = nil
 			local rawNotInterruptible = nil
+			local eventNotInterruptible = castbar and castbar.__AzeriteUI_EventNotInterruptible
+			local blizzProtected = nil
 			if (type(castName) == "string" and (not IsSecretDebugValue(castName)) and castName ~= "") then
 				rawSource = "cast"
 				rawName = castName
@@ -2905,8 +2907,22 @@ local function PrintNamePlateCastDebug(token)
 				rawSpellID = channelSpellID
 				rawNotInterruptible = channelNotInterruptible
 			end
+
+			if (ns and ns.ActiveNamePlates and frame and frame.unit and C_NamePlate and C_NamePlate.GetNamePlateForUnit) then
+				local okPlate, plate = pcall(C_NamePlate.GetNamePlateForUnit, frame.unit, issecurefunc and issecurefunc())
+				local unitFrame = okPlate and plate and (plate.UnitFrame or plate.unitFrame)
+				local blizzardCastbar = unitFrame and (unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.Castbar or unitFrame.CastingBarFrame)
+				local blizzardActive = blizzardCastbar and (blizzardCastbar.casting or blizzardCastbar.channeling or blizzardCastbar.empowering)
+				local blizzardLocked = blizzardCastbar and blizzardCastbar.notInterruptible
+				if (blizzardActive and type(blizzardLocked) == "boolean" and (not IsSecretDebugValue(blizzardLocked)) and blizzardLocked) then
+					blizzProtected = true
+				else
+					blizzProtected = false
+				end
+			end
+
 			print("|cfff0f0f0", string_format(
-				"%s shown=%s canAttack=%s casting=%s channeling=%s spell=%s castID=%s source=%s rawName=%s rawNotInterruptible=%s castbarFlag=%s",
+				"%s shown=%s canAttack=%s casting=%s channeling=%s spell=%s castID=%s source=%s rawName=%s rawNotInterruptible=%s castbarFlag=%s eventFlag=%s blizzProtected=%s",
 				unit,
 				SafeDebugString(frame and frame.IsShown and frame:IsShown()),
 				SafeDebugString(frame and frame.canAttack),
@@ -2917,7 +2933,9 @@ local function PrintNamePlateCastDebug(token)
 				SafeDebugString(rawSource),
 				SafeDebugString(rawName),
 				SafeDebugString(rawNotInterruptible),
-				SafeDebugString(castbar and castbar.notInterruptible)))
+				SafeDebugString(castbar and castbar.notInterruptible),
+				SafeDebugString(eventNotInterruptible),
+				SafeDebugString(blizzProtected)))
 		end
 	end
 	if (not found) then

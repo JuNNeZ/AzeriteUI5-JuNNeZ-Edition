@@ -66,6 +66,7 @@ L["Click the button below to reset the currently selected EditMode preset to pos
 L["Clock Settings"] = true
 L["Coloring"] = true
 L["Color by Class"] = true
+L["Color Cast Spell Text By State"] = "상태에 따라 시전 이름 색상 변경"
 L["Combo Points"] = "연계 점수"
 L["Control where the tooltips appear when put in the default position. Disable to let blizzard or other addons handle this."] = true
 L["Copy"] = "복사"
@@ -353,7 +354,10 @@ L["Display & Feedback"] = true
 L["Duplicate"] = true
 L["Elemental Crystal/Bar Resource Split"] = true
 L["Encounter or support buffs Blizzard specifically marks as relevant during combat."] = true
-L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"] = true
+L["Tint supported cast spell names by interrupt/protected state. Disable to keep spell names on their normal text color."] = "지원되는 주문 이름을 차단 가능/보호 상태에 따라 색칠합니다. 비활성화하면 주문 이름이 기본 글자색을 유지합니다."
+L["Color Entire Target Castbar By State"] = "상태에 따라 대상 시전바 전체 색상 변경"
+L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."] = "대상 시전바 전체를 차단 가능/보호 상태에 따라 색칠합니다. 비활성화하면 주문 이름은 공용 유닛 프레임 설정을 따르고, 바는 기본 시전 색상을 유지합니다."
+L["Enemy castbar interrupt colors:\nYellow = primary interrupt ready\nRed = primary interrupt unavailable\nGray = cast cannot be interrupted"] = "적 시전바 차단 색상:\n노랑 = 주 차단기 준비됨\n빨강 = 주 차단기 사용 불가\n회색 = 차단할 수 없는 시전"
 L["Enemy size (%)"] = true
 L["Enemy target size (%)"] = true
 L["Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon."] = true

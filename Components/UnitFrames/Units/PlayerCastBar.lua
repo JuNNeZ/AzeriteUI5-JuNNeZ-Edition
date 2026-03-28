@@ -28,7 +28,7 @@ local oUF = ns.oUF
 
 local CastBarMod = ns:NewModule("PlayerCastBarFrame", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
--- GLOBALS: GetNetStats, PlayerCastingBarFrame, PetCastingBarFrame
+-- GLOBALS: GetNetStats, OverlayPlayerCastingBarFrame, PlayerCastingBarFrame, PetCastingBarFrame
 
 -- Lua API
 local next = next
@@ -43,19 +43,36 @@ local IsAddOnEnabled = ns.API.IsAddOnEnabled
 
 local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }
 
+local function ApplySuppressedBlizzardCastbarAlpha(frame)
+	if (frame and not frame:IsForbidden() and frame.__AzeriteUI_Suppressed) then
+		frame:SetAlpha(0)
+	end
+end
+
 local function SuppressBlizzardCastbar(frame)
 	if (not frame or frame:IsForbidden()) then
 		return
 	end
 	frame.__AzeriteUI_Suppressed = true
-	pcall(frame.SetAlpha, frame, 0)
-	if (not frame.__AzeriteUI_SuppressShowHooked) then
-		frame.__AzeriteUI_SuppressShowHooked = true
-		hooksecurefunc(frame, "Show", function(currentFrame)
-			if (currentFrame and not currentFrame:IsForbidden() and currentFrame.__AzeriteUI_Suppressed) then
-				currentFrame:SetAlpha(0)
+	ApplySuppressedBlizzardCastbarAlpha(frame)
+	if (not frame.__AzeriteUI_SuppressHooksAttached) then
+		frame.__AzeriteUI_SuppressHooksAttached = true
+		if (frame.HookScript) then
+			frame:HookScript("OnShow", ApplySuppressedBlizzardCastbarAlpha)
+		end
+		if (type(frame.Show) == "function") then
+			hooksecurefunc(frame, "Show", ApplySuppressedBlizzardCastbarAlpha)
+		end
+		for _, methodName in next, {
+			"OnEvent",
+			"FinishSpell",
+			"HandleInterruptOrSpellFailed",
+			"PlayFinishAnim"
+		} do
+			if (type(frame[methodName]) == "function") then
+				hooksecurefunc(frame, methodName, ApplySuppressedBlizzardCastbarAlpha)
 			end
-		end)
+		end
 	end
 end
 
@@ -74,6 +91,13 @@ end
 local function ApplyBlizzardCastbarState(self, suppress)
 	if (not ns.IsRetail) then
 		return
+	end
+	if (OverlayPlayerCastingBarFrame and not OverlayPlayerCastingBarFrame:IsForbidden()) then
+		if (suppress) then
+			SuppressBlizzardCastbar(OverlayPlayerCastingBarFrame)
+		else
+			RestoreBlizzardCastbar(OverlayPlayerCastingBarFrame, "player")
+		end
 	end
 	if (PlayerCastingBarFrame and not PlayerCastingBarFrame:IsForbidden()) then
 		if (suppress) then

@@ -66,6 +66,7 @@ L["Click the button below to reset the currently selected EditMode preset to pos
 L["Clock Settings"] = true
 L["Coloring"] = true
 L["Color by Class"] = true
+L["Color Cast Spell Text By State"] = "Окрашивать текст заклинания по состоянию"
 L["Combo Points"] = "Длина серии приемов"
 L["Control where the tooltips appear when put in the default position. Disable to let blizzard or other addons handle this."] = true
 L["Copy"] = "Скопировать"
@@ -353,7 +354,10 @@ L["Display & Feedback"] = true
 L["Duplicate"] = true
 L["Elemental Crystal/Bar Resource Split"] = true
 L["Encounter or support buffs Blizzard specifically marks as relevant during combat."] = true
-L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"] = true
+L["Tint supported cast spell names by interrupt/protected state. Disable to keep spell names on their normal text color."] = "Окрашивает названия поддерживаемых заклинаний по состоянию прерываемости/защиты. Отключите, чтобы сохранить обычный цвет текста заклинаний."
+L["Color Entire Target Castbar By State"] = "Окрашивать всю полосу заклинания цели по состоянию"
+L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."] = "Окрашивает всю полосу заклинания цели по состоянию прерываемости/защиты. Отключите, чтобы полоса сохраняла обычный цвет, а текст заклинания следовал общей настройке рамок юнитов."
+L["Enemy castbar interrupt colors:\nYellow = primary interrupt ready\nRed = primary interrupt unavailable\nGray = cast cannot be interrupted"] = "Цвета прерывания вражеской полосы заклинания:\nЖёлтый = основное прерывание готово\nКрасный = основное прерывание недоступно\nСерый = заклинание нельзя прервать"
 L["Enemy size (%)"] = true
 L["Enemy target size (%)"] = true
 L["Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon."] = true

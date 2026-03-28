@@ -82,7 +82,7 @@ local defaults = { profile = ns:Merge({
 	castBarScaleX = 100,
 	castBarScaleY = 100,
 	castBarFollowHealth = false,
-	reverseEnemyCastChannelVisuals = false,
+	colorCastBarByInterruptState = true,
 	healthLabCastOffsetX = 0,
 	healthLabCastOffsetY = 0,
 	healthLabCastWidthScale = 100,
@@ -792,28 +792,39 @@ local GetTargetCastFakeAlpha = function(cast)
 	return configuredAlpha
 end
 
-local ShouldSwapEnemyTargetCastGrowth = function(cast)
-	if (not cast or not cast.__owner or not TargetFrameMod or not TargetFrameMod.db or not TargetFrameMod.db.profile) then
-		return false
-	end
-	if (not TargetFrameMod.db.profile.reverseEnemyCastChannelVisuals) then
-		return false
-	end
-	local unit = cast.__owner.unit
-	if (type(unit) ~= "string" or unit == "" or UnitIsUnit(unit, "player")) then
-		return false
-	end
-	return UnitCanAttack and UnitCanAttack("player", unit) and true or false
+local IsTargetCastBarInterruptColorEnabled = function()
+	local profile = TargetFrameMod and TargetFrameMod.db and TargetFrameMod.db.profile
+	return not (profile and profile.colorCastBarByInterruptState == false)
 end
 
 GetTargetCastVisualGrowth = function(cast)
 	local owner = cast and cast.__owner
 	local unit = owner and owner.unit
-	local growth = (type(unit) == "string" and unit ~= "" and UnitIsUnit(unit, "player")) and "LEFT" or "RIGHT"
-	if (ShouldSwapEnemyTargetCastGrowth(cast)) then
-		growth = (growth == "LEFT") and "RIGHT" or "LEFT"
+	return (type(unit) == "string" and unit ~= "" and UnitIsUnit(unit, "player")) and "LEFT" or "RIGHT"
+end
+
+local GetTargetVisibleCastColor = function(cast)
+	local alpha = GetTargetCastFakeAlpha(cast)
+	local r, g, b = 1, 1, 1
+	if (cast and cast.GetStatusBarColor) then
+		local currentR, currentG, currentB = cast:GetStatusBarColor()
+		if (type(currentR) == "number" and type(currentG) == "number" and type(currentB) == "number") then
+			r, g, b = currentR, currentG, currentB
+		end
 	end
-	return growth
+	return r, g, b, alpha
+end
+
+local ApplyTargetNativeCastVertexColor = function(cast)
+	if (not cast) then
+		return
+	end
+	local r, g, b, alpha = GetTargetVisibleCastColor(cast)
+	cast:SetStatusBarColor(r, g, b, alpha)
+	local nativeTexture = cast.GetStatusBarTexture and cast:GetStatusBarTexture()
+	if (nativeTexture and nativeTexture.SetVertexColor) then
+		nativeTexture:SetVertexColor(r, g, b, alpha)
+	end
 end
 
 ApplyTargetFakeCastVertexColor = function(cast)
@@ -824,15 +835,8 @@ ApplyTargetFakeCastVertexColor = function(cast)
 	if (not fakeFill or not fakeFill.SetVertexColor) then
 		return
 	end
-	local alpha = GetTargetCastFakeAlpha(cast)
-	if (cast.GetStatusBarColor) then
-		local r, g, b = cast:GetStatusBarColor()
-		if (type(r) == "number" and type(g) == "number" and type(b) == "number") then
-			fakeFill:SetVertexColor(r, g, b, alpha)
-			return
-		end
-	end
-	fakeFill:SetVertexColor(1, 1, 1, alpha)
+	local r, g, b, alpha = GetTargetVisibleCastColor(cast)
+	fakeFill:SetVertexColor(r, g, b, alpha)
 end
 
 local ApplyTargetNativeCastVisualFromTimer = function(cast, durationPayload, sourceTag)
@@ -858,8 +862,7 @@ local ApplyTargetNativeCastVisualFromTimer = function(cast, durationPayload, sou
 	if (nativeTexture and nativeTexture.Show) then
 		nativeTexture:Show()
 	end
-	local alpha = GetTargetCastFakeAlpha(cast)
-	cast:SetStatusBarColor(1, 1, 1, alpha)
+	ApplyTargetNativeCastVertexColor(cast)
 	if (cast.FakeFill and cast.FakeFill.Hide) then
 		cast.FakeFill:Hide()
 	end
@@ -1770,18 +1773,52 @@ local Portrait_PostUpdate = function(element, unit, hasStateChanged)
 	end
 end
 
--- Toggle cast text color on protected casts.
+-- Toggle cast text and castbar interrupt coloring.
 local SyncTargetCastVisualState
+local ShouldColorTargetSpellTextByState = function()
+	return ns.UnitFrame and ns.UnitFrame.ShouldColorCastSpellTextByState and ns.UnitFrame.ShouldColorCastSpellTextByState() or false
+end
+
+local ShouldColorTargetCastBarByInterruptState = function()
+	-- Temporarily disabled: target protected-cast state is still unreliable.
+	return false
+end
+
+local SetTargetCastBaseColor = function(element, color)
+	if (not element or type(color) ~= "table") then
+		return
+	end
+	element:SetStatusBarColor(color[1], color[2], color[3], color[4] or 1)
+	element.__AzeriteUI_InterruptCastState = "base"
+end
 
 local Cast_RefreshInterruptVisuals = function(element)
 	if (not element or not element.Text) then
 		return
 	end
-	local textColor = ns.API.GetInterruptCastColor(element, element.Text.color)
-	if (type(textColor) == "table") then
-		element.Text:SetTextColor(unpack(textColor))
+
+	local baseTextColor = element.Text.color
+	if (type(baseTextColor) == "table") then
+		if (ShouldColorTargetSpellTextByState()) then
+			local textColor = ns.API.GetInterruptCastColor(element, baseTextColor)
+			if (type(textColor) == "table") then
+				element.Text:SetTextColor(unpack(textColor))
+			end
+		else
+			element.Text:SetTextColor(unpack(baseTextColor))
+		end
 	end
-	ns.API.ApplyInterruptCastBarColor(element, element.color or element.Text.color)
+
+	local baseBarColor = element.color or baseTextColor
+	if (type(baseBarColor) == "table") then
+		if (ShouldColorTargetCastBarByInterruptState()) then
+			ns.API.ApplyInterruptCastBarColor(element, baseBarColor)
+		else
+			SetTargetCastBaseColor(element, baseBarColor)
+		end
+		ApplyTargetNativeCastVertexColor(element)
+		ApplyTargetFakeCastVertexColor(element)
+	end
 end
 
 local Cast_PostCastInterruptible = function(element, unit)
@@ -2434,9 +2471,6 @@ local UnitFrame_UpdateTextures = function(self)
 	cast:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
 	cast:SetOrientation("HORIZONTAL")
 	local shouldReverseTargetCastFill = isSelfTarget and true or false
-	if (ShouldSwapEnemyTargetCastGrowth(cast)) then
-		shouldReverseTargetCastFill = not shouldReverseTargetCastFill
-	end
 	if (cast.SetReverseFill) then
 		cast:SetReverseFill(shouldReverseTargetCastFill)
 	end
@@ -3253,6 +3287,7 @@ TargetFrameMod.Update = function(self)
 	if (self.db.profile.showCastbar) then
 		self.frame:EnableElement("Castbar")
 		self.frame.Castbar:ForceUpdate()
+		ns.API.UpdateInterruptCastBarRefresh(self.frame.Castbar, Cast_RefreshInterruptVisuals, "target_settings")
 	else
 		self.frame:DisableElement("Castbar")
 	end

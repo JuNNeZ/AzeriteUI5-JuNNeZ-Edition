@@ -66,6 +66,7 @@ L["Click the button below to reset the currently selected EditMode preset to pos
 L["Clock Settings"] = true
 L["Coloring"] = true
 L["Color by Class"] = true
+L["Color Cast Spell Text By State"] = "Colora il testo dell’incantesimo in base allo stato"
 L["Combo Points"] = "Punti combo"
 L["Control where the tooltips appear when put in the default position. Disable to let blizzard or other addons handle this."] = true
 L["Copy"] = "Copia"
@@ -353,7 +354,10 @@ L["Display & Feedback"] = true
 L["Duplicate"] = true
 L["Elemental Crystal/Bar Resource Split"] = true
 L["Encounter or support buffs Blizzard specifically marks as relevant during combat."] = true
-L["Enemy castbar interrupt colors:\nGreen = primary interrupt ready\nPurple = primary unavailable, secondary ready\nRed = no tracked interrupt ready\nGray = cast cannot be interrupted"] = true
+L["Tint supported cast spell names by interrupt/protected state. Disable to keep spell names on their normal text color."] = "Colora i nomi degli incantesimi supportati in base allo stato interrompibile/protetto. Disattiva per mantenere il colore normale del testo."
+L["Color Entire Target Castbar By State"] = "Colora l’intera barra di lancio del bersaglio in base allo stato"
+L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."] = "Colora l’intera barra di lancio del bersaglio in base allo stato interrompibile/protetto. Disattiva per mantenere il colore normale della barra mentre il testo dell’incantesimo segue l’impostazione condivisa delle unit frame."
+L["Enemy castbar interrupt colors:\nYellow = primary interrupt ready\nRed = primary interrupt unavailable\nGray = cast cannot be interrupted"] = "Colori di interruzione delle barre di lancio nemiche:\nGiallo = interruzione primaria pronta\nRosso = interruzione primaria non disponibile\nGrigio = il lancio non può essere interrotto"
 L["Enemy size (%)"] = true
 L["Enemy target size (%)"] = true
 L["Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon."] = true
