@@ -1027,13 +1027,20 @@ local function GuardItemDisplaySetup()
 		if (self and type(self) == "table") then
 			-- Guard the widget frame's setters against tainted dimensions
 			GuardWidgetFrameSetters(self)
-			local item = self.Item
-			if (item and type(item) == "table") then
-				local tooltip = item.Tooltip
-				if (tooltip and not tooltip.__AzUI_W12_GeometryGuarded
-					and (not tooltip.IsForbidden or not tooltip:IsForbidden())) then
-					GuardTooltipFrameGeometry(tooltip)
+			GuardTooltipFrameGeometry(self)
+			if (self.widgetContainer and type(self.widgetContainer) == "table") then
+				GuardTooltipFrameGeometry(self.widgetContainer)
+			end
+			local tooltip = self.Tooltip
+			if (not tooltip) then
+				local item = self.Item
+				if (item and type(item) == "table") then
+					tooltip = item.Tooltip
 				end
+			end
+			if (tooltip and not tooltip.__AzUI_W12_GeometryGuarded
+				and (not tooltip.IsForbidden or not tooltip:IsForbidden())) then
+				GuardTooltipFrameGeometry(tooltip)
 			end
 		end
 		local results = Pack(pcall(original, self, ...))
@@ -1099,6 +1106,33 @@ local function GuardTooltipWidgetSets()
 			HideSecretWidgetTarget(tooltip)
 		end
 		return HandleSecretWidgetError(err, ...)
+	end
+end
+
+local function GuardTooltipInsertedFrames()
+	if (type(_G.GameTooltip_InsertFrame) ~= "function"
+		or _G.__AzUI_W12_GameTooltipInsertFrameWrapped) then
+		return
+	end
+
+	_G.__AzUI_W12_GameTooltipInsertFrameWrapped = true
+	local original = _G.GameTooltip_InsertFrame
+
+	_G.GameTooltip_InsertFrame = function(tooltipFrame, frame, ...)
+		if (tooltipFrame and (not tooltipFrame.IsForbidden or not tooltipFrame:IsForbidden())) then
+			GuardTooltipFrameGeometry(tooltipFrame)
+		end
+		if (frame and type(frame) == "table") then
+			if (not frame.IsForbidden or not frame:IsForbidden()) then
+				GuardTooltipFrameGeometry(frame)
+			end
+			local bar = frame.Bar or frame.StatusBar
+			if (bar and type(bar) == "table"
+				and (not bar.IsForbidden or not bar:IsForbidden())) then
+				GuardTooltipFrameGeometry(bar)
+			end
+		end
+		return original(tooltipFrame, frame, ...)
 	end
 end
 
@@ -1469,6 +1503,7 @@ local function ApplyGuards()
 	GuardBackdropSetupTextureCoordinates()
 	GuardTooltipDimensions()
 	GuardTooltipWidgetSets()
+	GuardTooltipInsertedFrames()
 	GuardTooltipMoneyAdders()
 	ApplyBlizzardFrameQuarantine()
 	HookRaidManagerHiddenMode()

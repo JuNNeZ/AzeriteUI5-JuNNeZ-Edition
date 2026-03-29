@@ -4,6 +4,19 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+
+## 5.3.43-JuNNeZ (2026-03-29)
+
+### Highlights
+
+- Fixed WoW 12 tooltip widget and inserted-frame geometry taint: guards now protect both the widget frame and all embedded tooltips/containers before Blizzard does any width/height arithmetic, preventing secret-value crashes.
+- Added pre-guard for `GameTooltip_InsertFrame` to ensure inserted frames and their bars/statusbars are geometry-guarded, eliminating secret-value stacks in Blizzard tooltip layout.
+
+### Internal
+
+- `Core/FixBlizzardBugsWow12.lua`: `GuardItemDisplaySetup()` now guards the widget frame, its `widgetContainer`, and both `self.Tooltip` and `self.Item.Tooltip`.
+- `Core/FixBlizzardBugsWow12.lua`: added `GuardTooltipInsertedFrames()` to pre-guard all frames and bars passed to `GameTooltip_InsertFrame`.
+
 ## 5.3.42-JuNNeZ (2026-03-29)
 
 ### Highlights

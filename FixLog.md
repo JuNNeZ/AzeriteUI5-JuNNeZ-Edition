@@ -6388,3 +6388,26 @@ Testing:
 2. `/buggrabber reset`
 3. `/reload`
 4. Soft-target a hostile or interactable unit and verify the icon appears above the AzeriteUI nameplate again.
+
+[2026-03-29] Iteration: WoW 12 tooltip widget and inserted-frame geometry follow-up
+
+Request:
+- Investigate fresh WoW 12 secret-value tooltip/widget stacks from:
+  - `Blizzard_UIWidgetTemplateBase.lua:1638` during item-display `Setup`
+  - `SharedTooltipTemplates.lua:213` during `GameTooltip_InsertFrame`
+
+Applied:
+- [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua)
+  - `GuardItemDisplaySetup()` now guards the live widget frame itself, its `widgetContainer`, and the actual embedded tooltip from either `self.Tooltip` or `self.Item.Tooltip` before Blizzard widget setup does any width/height arithmetic.
+  - Added `GuardTooltipInsertedFrames()` to pre-guard `GameTooltip_InsertFrame(...)` inputs, including the inserted frame and its common `Bar` / `StatusBar` child, so Blizzard tooltip layout reads clean geometry instead of secret widths.
+
+Why:
+- The item-display guard was only checking `self.Item.Tooltip`, but the live stack shows the embedded tooltip on `self.Tooltip`, so the current setup path could still do arithmetic on secret tooltip geometry.
+- `GameTooltip_InsertFrame(...)` was still reading geometry from inserted progress-bar frames that inherit tooltip taint, so guarding only the parent `GameTooltip` was not enough.
+
+Testing:
+1. `luac -p 'Core/FixBlizzardBugsWow12.lua'`
+2. `/buggrabber reset`
+3. `/reload`
+4. Re-hover the world-map quest/progress tooltip path and the item-display widget path that produced the two stacks.
+5. Confirm `Blizzard_UIWidgetTemplateBase.lua:1638` and `SharedTooltipTemplates.lua:213` stay gone.
