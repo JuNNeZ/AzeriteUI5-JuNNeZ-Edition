@@ -1,17 +1,3 @@
--- Actively restore the Blizzard raid bar if the user enables the option
--- Minimal Show/Hide logic for Blizzard raid bar
-local function SetBlizzardRaidBarVisible(visible)
-	local manager = _G.CompactRaidFrameManager
-	if manager and manager.SetParent and manager.Show and manager.Hide and manager.SetAlpha then
-		pcall(manager.SetParent, manager, UIParent)
-		if visible then
-			pcall(manager.Show, manager)
-			pcall(manager.SetAlpha, manager, 1)
-		else
-			pcall(manager.Hide, manager)
-		end
-	end
-end
 --[[
 
 	The MIT License (MIT)
@@ -51,6 +37,52 @@ local _, ns = ...
 if (not canaccesstable) then
 	return
 end
+
+-- Minimal Show/Hide logic for Blizzard raid bar
+local pendingRaidBarVisible = nil
+
+local function SetBlizzardRaidBarVisible(visible)
+	local manager = _G.CompactRaidFrameManager
+	if (not manager or not manager.SetParent or not manager.Show or not manager.Hide or not manager.SetAlpha) then
+		return
+	end
+	if (InCombatLockdown and InCombatLockdown()) then
+		pendingRaidBarVisible = visible
+		return
+	end
+	pendingRaidBarVisible = nil
+	pcall(manager.SetParent, manager, UIParent)
+	if visible then
+		pcall(manager.Show, manager)
+		pcall(manager.SetAlpha, manager, 1)
+	else
+		pcall(manager.Hide, manager)
+	end
+end
+
+local function ShouldShowBlizzardRaidBar()
+	-- Read toggle from UnitFrames module profile (matches what the options UI writes)
+	local enabled = nil
+	if ns.GetModuleProfileValue then
+		enabled = ns.GetModuleProfileValue("UnitFrames", "showBlizzardRaidBar", nil)
+	end
+	if (enabled == nil) and ns.GetModule then
+		local ok, unitFrames = pcall(ns.GetModule, ns, "UnitFrames", true)
+		if ok and unitFrames and unitFrames.db and unitFrames.db.profile then
+			enabled = unitFrames.db.profile.showBlizzardRaidBar
+		end
+	end
+	-- Only show when toggle is on AND in a party or raid (stock behavior)
+	if (not enabled) then
+		return false
+	end
+	return (IsInGroup() or IsInRaid()) and true or false
+end
+
+-- Export for options UI
+ns.WoW12BlizzardQuarantine = ns.WoW12BlizzardQuarantine or {}
+ns.WoW12BlizzardQuarantine.SetBlizzardRaidBarVisible = SetBlizzardRaidBarVisible
+ns.WoW12BlizzardQuarantine.ShouldShowBlizzardRaidBar = ShouldShowBlizzardRaidBar
 
 local Pack = table.pack or function(...)
 	return { n = select("#", ...), ... }
@@ -137,6 +169,7 @@ local CASTBAR_GUARDS = {
 	{ "HideSpark",        MakeSafeVoidMethod },
 	{ "ShowSpark",        MakeSafeVoidMethod },
 	{ "PlayFinishAnim",   MakeSafeVoidMethod },
+	{ "PlayFadeAnim",     MakeSafeVoidMethod },
 	{ "UpdateShownState", MakeSafeVoidMethod },
 	{ "GetTypeInfo",      MakeSafeGetTypeInfo },
 }
@@ -228,25 +261,6 @@ local function IsModuleEnabled(name, defaultValue)
 	return defaultValue and true or false
 end
 
-local function GetModuleProfileValue(name, key, defaultValue)
-	if (not ns or not ns.GetModule) then
-		return defaultValue
-	end
-	local ok, module = pcall(ns.GetModule, ns, name, true)
-	if (not ok or not module) then
-		return defaultValue
-	end
-	local profile = module.db and module.db.profile
-	if (type(profile) ~= "table") then
-		return defaultValue
-	end
-	local value = profile[key]
-	if (value == nil) then
-		return defaultValue
-	end
-	return value
-end
-
 local function ShouldHandlePartyFrames()
 	return IsModuleEnabled("PartyFrames", true)
 end
@@ -257,24 +271,6 @@ local function ShouldHandleRaidFrames()
 		or IsModuleEnabled("RaidFrame40", true)
 end
 
--- Returns true if the Blizzard raid utility bar should be shown.
--- Dev force (debugForceBlizzardRaidBar) always wins if dev mode is enabled, regardless of group state.
--- Returns true if the Blizzard raid utility bar should be shown.
--- Dev force (debugForceBlizzardRaidBar) always wins if enabled, regardless of group state.
--- The /az UnitFrames option works for all users: if enabled and in a party or raid, show the bar.
-local function ShouldShowBlizzardRaidBar()
-	if (ns and (ns.IsDevelopment or (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode))
-		and ns.db and ns.db.global and ns.db.global.debugForceBlizzardRaidBar) then
-		return true -- Dev force: always show, even solo
-	end
-	-- Show for all users if the option is enabled and in a party or raid
-	if GetModuleProfileValue("UnitFrames", "showBlizzardRaidBar", false) then
-		if (IsInGroup() or IsInRaid()) then
-			return true
-		end
-	end
-	return false
-end
 
 local function ShouldHandleArenaFrames()
 	return IsModuleEnabled("ArenaFrames", true)
@@ -543,27 +539,6 @@ local function ShouldQuarantineCompactFrame(frame)
 	return false
 end
 
-local function ApplyCompactRaidManagerVisibility()
-	local manager = _G.CompactRaidFrameManager
-	if (not manager or (manager.IsForbidden and manager:IsForbidden())) then
-		return
-	end
-	if (ShouldShowBlizzardRaidBar()) then
-		return
-	end
-
-	if (manager.SetAlpha) then
-		pcall(manager.SetAlpha, manager, 0)
-	end
-	if (manager.HookScript and not manager.__AzUI_W12_SuppressOnShowHooked) then
-		manager.__AzUI_W12_SuppressOnShowHooked = true
-		manager:HookScript("OnShow", function(self)
-			if (self.SetAlpha) then
-				pcall(self.SetAlpha, self, 0)
-			end
-		end)
-	end
-end
 
 local function GetRaidModule(name)
 	if (not ns or not ns.GetModule) then
@@ -1589,6 +1564,9 @@ guardFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 guardFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 guardFrame:SetScript("OnEvent", function(self, event, addonName)
 	if (event == "ADDON_LOADED") then
+		if (addonName == "AzeriteUI5_JuNNeZ_Edition") then
+			SetBlizzardRaidBarVisible(ShouldShowBlizzardRaidBar())
+		end
 		if (addonName == "Blizzard_UIPanels_Game"
 			or addonName == "Blizzard_UnitFrame"
 			or addonName == "Blizzard_CompactRaidFrames"
@@ -1614,12 +1592,17 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 		end
 	elseif (event == "PLAYER_LOGIN") then
 		ApplyGuards()
+		SetBlizzardRaidBarVisible(ShouldShowBlizzardRaidBar())
 		self:UnregisterEvent("PLAYER_LOGIN")
 	elseif (event == "PLAYER_ENTERING_WORLD" or event == "GROUP_ROSTER_UPDATE") then
 		ApplyGuards()
+		SetBlizzardRaidBarVisible(ShouldShowBlizzardRaidBar())
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		FlushPendingQuarantineFrames()
 		ApplyGuards()
+		if (pendingRaidBarVisible ~= nil) then
+			SetBlizzardRaidBarVisible(pendingRaidBarVisible)
+		end
 	end
 end)
 

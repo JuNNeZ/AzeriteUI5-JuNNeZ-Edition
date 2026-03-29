@@ -28,27 +28,10 @@ if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local BlizzardABDisabler = ns:NewModule("BlizzardABDisabler", "LibMoreEvents-1.0", "AceHook-3.0")
 
-local purgeKey = function(t, k)
-	t[k] = nil
-	local c = 42
-	repeat
-		if t[c] == nil then
-			t[c] = nil
-		end
-		c = c + 1
-	until issecurevariable(t, k)
-end
-
 local hideActionBarFrame = function(frame, clearEvents)
 	if (frame) then
 		if (clearEvents) then
 			frame:UnregisterAllEvents()
-		end
-
-		-- Remove some EditMode hooks
-		if (frame.system) then
-			-- Purge the show state to avoid any taint concerns
-			purgeKey(frame, "isShownExternal")
 		end
 
 		-- EditMode overrides the Hide function, avoid calling it as it can taint
@@ -75,6 +58,12 @@ local hideActionButton = function(button)
 		button:Hide()
 	end
 	button:SetParent(ns.Hider)
+
+	-- Clear script handlers so Blizzard internal code paths
+	-- (e.g. UpdateAction -> UpdateShownButtons -> SetShown)
+	-- cannot re-trigger on reparented buttons and cause taint.
+	button:SetScript("OnEvent", nil)
+	button:SetScript("OnUpdate", nil)
 end
 
 BlizzardABDisabler.NPE_LoadUI = function(self)
@@ -114,6 +103,20 @@ BlizzardABDisabler.HideBlizzard = function(self)
 		if (MainActionBar.EndCaps.RightEndCap) then
 			MainActionBar.EndCaps.RightEndCap:Hide()
 			MainActionBar.EndCaps.RightEndCap:SetParent(ns.Hider)
+		end
+	end
+
+	-- Neuter UpdateShownButtons on hidden bars so Blizzard code
+	-- cannot call SetShown() on reparented buttons (taint fix).
+	local hiddenBars = {
+		_G.MainMenuBar, _G.MainActionBar,
+		_G.MultiBarBottomLeft, _G.MultiBarBottomRight,
+		_G.MultiBarLeft, _G.MultiBarRight,
+		_G.MultiBar5, _G.MultiBar6, _G.MultiBar7,
+	}
+	for _, bar in ipairs(hiddenBars) do
+		if (bar and bar.UpdateShownButtons) then
+			bar.UpdateShownButtons = function() end
 		end
 	end
 
