@@ -3380,6 +3380,13 @@ NamePlatesMod.HookNamePlates = function(self)
 		end
 	end
 
+	-- Child frames on Blizzard nameplates that may use SetIgnoreParentAlpha
+	-- and therefore remain visible even when the UnitFrame is alpha 0.
+	local blizzPlateHideKeys = {
+		"RaidTargetFrame", "ClassificationFrame",
+		"PlayerLevelDiffFrame",
+	}
+
 	local function HideBlizzardNamePlateVisual(unit)
 		if (not C_NamePlate or not C_NamePlate.GetNamePlateForUnit or not unit) then
 			return
@@ -3401,6 +3408,18 @@ NamePlatesMod.HookNamePlates = function(self)
 			pcall(UF.SetAlpha, UF, 0)
 		end
 
+		-- Explicitly hide child frames that may have SetIgnoreParentAlpha(true),
+		-- which would make them visible even when the UnitFrame is alpha 0.
+		for _, key in ipairs(blizzPlateHideKeys) do
+			local child = UF[key]
+			if (child and child.SetAlpha) then
+				pcall(child.SetAlpha, child, 0)
+				if (child.Hide) then
+					pcall(child.Hide, child)
+				end
+			end
+		end
+
 		if (not hookedBlizzardUFs[UF]) then
 			hookedBlizzardUFs[UF] = true
 			local locked = false
@@ -3412,6 +3431,13 @@ NamePlatesMod.HookNamePlates = function(self)
 					end
 					locked = true
 					frame:SetAlpha(0)
+					-- Re-hide child frames that ignore parent alpha
+					for _, key in ipairs(blizzPlateHideKeys) do
+						local child = frame[key]
+						if (child and child.Hide) then
+							pcall(child.Hide, child)
+						end
+					end
 					locked = false
 				end)
 			end

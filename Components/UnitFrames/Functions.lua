@@ -145,10 +145,14 @@ API.SafeUnitIsUnit = API.SafeUnitIsUnit or function(unit, otherUnit)
 	if (type(UnitGUID) == "function") then
 		local okGuidA, guidA = pcall(UnitGUID, unit)
 		local okGuidB, guidB = pcall(UnitGUID, otherUnit)
-		local guidAReadable = okGuidA and type(guidA) == "string" and (not IsSecretValue(guidA)) and guidA ~= ""
-		local guidBReadable = okGuidB and type(guidB) == "string" and (not IsSecretValue(guidB)) and guidB ~= ""
-		if (guidAReadable and guidBReadable) then
-			return guidA == guidB
+		if (okGuidA and okGuidB and type(guidA) == "string" and type(guidB) == "string") then
+			-- Wrap comparison in pcall: even after IsSecretValue checks,
+			-- the comparison itself can fail if the value was tainted
+			-- between the check and the comparison (race with securecall).
+			local okCmp, result = pcall(function() return guidA == guidB end)
+			if (okCmp) then
+				return result
+			end
 		end
 	end
 

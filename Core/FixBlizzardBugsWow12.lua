@@ -186,6 +186,17 @@ local function ApplyCastingBarGuards()
 			GuardCastingBarFrame(compactArenaFrame)
 		end
 	end
+
+	-- Hook CastingBarFrame_SetUnit (the global) to guard nameplate castbars.
+	if (type(_G.CastingBarFrame_SetUnit) == "function"
+		and not _G.__AzUI_W12_CastBarSetUnitHooked) then
+		_G.__AzUI_W12_CastBarSetUnitHooked = true
+		hooksecurefunc("CastingBarFrame_SetUnit", function(castBar)
+			if (castBar) then
+				GuardCastingBarFrame(castBar)
+			end
+		end)
+	end
 end
 
 local function IsModuleEnabled(name, defaultValue)
@@ -481,9 +492,9 @@ local function ShouldQuarantineCompactFrame(frame)
 	if (name == "CompactRaidFrameManager") then
 		return false
 	end
-	if (ShouldHandlePartyFrames() and IsCompactPartyFrameName(name)) then
-		return true
-	end
+	-- if (ShouldHandlePartyFrames() and IsCompactPartyFrameName(name)) then
+	-- 	return true
+	-- end
 	if (ShouldHandleRaidFrames() and IsCompactRaidFrameName(name)) then
 		return true
 	end
@@ -671,6 +682,27 @@ local function GuardCompactUnitFrameGlobals()
 			return original(SanitizeCompactAura(aura), ...)
 		end
 	end
+end
+
+----------------------------------------------------------------
+-- Nameplate guard
+-- Our tooltip/backdrop styling taints the execution context.
+-- When Blizzard nameplate code runs in this tainted context,
+-- API calls like SetNamePlateHitTestFrame, C_UnitAuras, and
+-- TextStatusBar comparisons fail with secret/forbidden errors.
+-- We hook at the top-level entry points to pcall the entire
+-- nameplate setup, and guard specific problem functions.
+----------------------------------------------------------------
+local function GuardNameplateFunctions()
+	-- Intentionally no-op on WoW12:
+	-- avoid pcall-replacing Blizzard nameplate / EditMode / party globals,
+	-- because that makes AzeriteUI the caller and taint cascades outward.
+end
+
+local function GuardAuraUtilForEachAura()
+	-- Intentionally no-op on WoW12:
+	-- keep AuraUtil.ForEachAura caller identity untouched and sanitize
+	-- downstream aura consumers instead.
 end
 
 local function GuardAuraUtilUnpack()
@@ -1462,7 +1494,15 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 			or addonName == "Blizzard_EditMode"
 			or addonName == "Blizzard_GameTooltip"
 			or addonName == "Blizzard_MoneyFrame"
-			or addonName == "Blizzard_UIWidgets") then
+			or addonName == "Blizzard_UIWidgets"
+			or addonName == "Blizzard_NamePlates"
+			or addonName == "Blizzard_TextStatusBar"
+			or addonName == "Blizzard_FrameXMLUtil"
+			or addonName == "Blizzard_PersonalResourceDisplay"
+			or addonName == "Blizzard_EncounterWarnings"
+			or addonName == "Blizzard_RaidFrame"
+			or addonName == "Blizzard_DamageMeter"
+			or addonName == "Blizzard_ActionBar") then
 			ApplyGuards()
 			if (C_Timer) then
 				C_Timer.After(0, ApplyGuards)

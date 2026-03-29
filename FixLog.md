@@ -5,6 +5,16 @@
 
 ## 2026-03-29
 
+- **5.3.42 release prep applied:** Synced the release metadata to `5.3.42-JuNNeZ` and rewrote the top changelog entry so it matches the real delta since `v5.3.41-JuNNeZ`.
+  - **What changed:** `build-release.ps1` now reports `5.3.42-JuNNeZ` to match the TOC. `CHANGELOG.md` now describes the actual shipped follow-up bundle: the WoW 12 pcall-wrapper rollback, the Blizzard-nameplate child-frame cleanup, the restored soft-target icon, and the secret-safe health/read fallback hardening.
+  - **Why:** The worktree had drifted into a half-prepared release state where the TOC/changelog already said `5.3.42-JuNNeZ`, the build script still said `5.3.41-JuNNeZ`, and the top changelog entry still claimed the remaining BugSack errors were definitively unfixable.
+  - **Verification:** `rg -n "5\\.3\\.42-JuNNeZ|## 5\\.3\\.42-JuNNeZ" CHANGELOG.md AzeriteUI5_JuNNeZ_Edition.toc build-release.ps1 FixLog.md`
+
+- **WoW 12 nameplate heal-prediction follow-up applied:** Hardened the live Blizzard nameplate health-bar seam against secret-value heal-prediction reads instead of restoring a shared compact-unitframe wrapper.
+  - **What changed:** `Libs/oUF/blizzard.lua` now wraps the live Blizzard nameplate health-bar `GetMinMaxValues()` / `GetValue()` readers with safe cached numeric fallbacks, caches readable values on `SetMinMaxValues()` / `SetValue()`, and hides the local Blizzard heal-prediction / absorb regions on the disabled nameplate unitframe instance.
+  - **Why:** The remaining lone BugSack stack was `CompactUnitFrame_UpdateHealPrediction()` comparing a secret `maxHealth` on Blizzard nameplates during `CompactUnitFrame_UpdateAll()`. The shared WoW 12 guard intentionally no-ops global `CompactUnitFrame` rewrites now, so the narrow fix is to sanitize the specific live nameplate health-bar instance that Blizzard is still calling.
+  - **Verification:** Run `luac -p 'Libs/oUF/blizzard.lua'`. In-game `/buggrabber reset`, `/reload`, then fly through hostile nameplates again. The old `CompactUnitFrame.lua:1188` heal-prediction compare stack should stay gone without reintroducing earlier nameplate taint paths.
+
 - **5.3.41 release prep started:** Rolling the `SafeUnitIsUnit(...)` secret-GUID hotfix into the next patch release and bringing the versioned release files back into sync.
   - **Why:** The live addon is already running as `5.3.40-JuNNeZ`, but the worktree still had mixed release metadata and a fresh WoW `12.0.1` BugSack regression in the shared target/ToT comparer. A dedicated patch release keeps this fix isolated from the unrelated in-progress nameplate/Edit Mode work.
 
@@ -20,6 +30,30 @@
   - **What changed:** `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now both report `5.3.41-JuNNeZ`. `CHANGELOG.md` now includes a new top entry describing the WoW 12 secret-GUID crash fix in `Components/UnitFrames/Functions.lua`.
   - **Why:** This keeps the repo's version files aligned with the hotfix commit and gives the tag a clean player-facing release boundary.
   - **Verification:** `rg -n "5\\.3\\.41-JuNNeZ|## 5\\.3\\.41-JuNNeZ" CHANGELOG.md AzeriteUI5_JuNNeZ_Edition.toc build-release.ps1 FixLog.md` should match before commit/tag/push.
+
+- **WoW 12 Edit Mode taint follow-up started:** Rechecking the current Party/Raid/Arena Edit Mode failure path against the live installed copies of ElvUI, GW2_UI, DiabolicUI3, and FeelUI in the local `Interface\AddOns` folder.
+  - **Why:** The newest live tests still show Blizzard Edit Mode aborting after secret/forbidden errors from compact unit-frame and castbar refreshes, which then prevents unrelated movable systems from appearing. The installed comparison addons all solve this by keeping Blizzard Edit Mode ownership away from the frames they replace instead of depending on late `pcall(...)` wrappers once `secureexecuterange` is already running.
+
+- **WoW 12 Edit Mode taint follow-up applied:** Switched AzeriteUI's WoW 12 Edit Mode handling from a refresh-only `pcall(...)` guard to a targeted Party/Raid/Arena bypass on Blizzard's Edit Mode manager.
+  - **What changed:** `Core/FixBlizzardBugsWow12.lua` now snapshots and prunes `EditModeManagerFrame.registeredSystemFrames` for Blizzard Party/Raid/Arena systems while Edit Mode is active if AzeriteUI owns those layouts, restores the registration table on exit, and short-circuits `RefreshPartyFrames`, `RefreshRaidFrames`, and `RefreshArenaFrames` during the active bypass instead of letting those systems enter the secure refresh path. The same file also now re-prunes on later Edit Mode registrations and enables the bypass through `EnterEditMode`, `ExitEditMode`, `Show`, `Hide`, and `EditMode.Enter`/`EditMode.Exit` callbacks.
+  - **Why:** The remaining Party/Raid/Arena failures are happening too late for a plain outer `pcall(...)` to help because Blizzard reports them from secure Edit Mode execution. The live installed references support the same conclusion: DiabolicUI3 and FeelUI both disable Blizzard Edit Mode ownership more aggressively, and GW2_UI removes Blizzard Edit Mode control from frames it replaces. AzeriteUI keeps the fix narrower by only bypassing the specific Blizzard Edit Mode systems that collide with its own quarantine layer.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed. In-game `/reload`, open Edit Mode, and verify Party/Raid/Arena no longer abort the rest of Edit Mode setup, while unrelated movable Blizzard systems still appear. Then retest the previously noisy party/raid/nameplate paths and check BugSack for any new `secureexecuterange`, `TextStatusBar`, `PartyMemberHealthCheck`, or castbar stage errors.
+
+- **WoW 12 Blizzard nameplate follow-up applied:** Added a second fail-closed guard for Blizzard nameplate unitframe setup, aura refresh, and hit-test/text paths that were still firing before the delayed hide pass.
+  - **What changed:** `Core/FixBlizzardBugsWow12.lua` now keeps the earlier Edit Mode bypass but no longer replaces Blizzard nameplate mixin methods after live retest showed that approach tainted protected nameplate creation (`Frame:SetForbidden()`). The same file now instead adds a guarded `CastingBarFrame:GetEffectiveType(...)` fallback, expands the existing party/global guard list to include `UnitFrameHealPredictionBars_Update` and `UnitFrameHealPredictionBars_UpdateMax`, and wraps Blizzard `TextStatusBar` update methods directly so secret-value text compares fail closed by blanking the text instead of erroring.
+  - **Why:** The BugSack retest proved the direct nameplate mixin replacements were worse than the original bug because they tainted Blizzard `AcquireUnitFrame()` during protected creation. The remaining live errors are narrower: `GetEffectiveType(...)` on Blizzard castbars plus `TextStatusBar` / heal-prediction update chains that still execute inside Blizzard-owned `SetValue(...)` and XML callbacks.
+  - **Verification:** `luac -p 'Core/FixBlizzardBugsWow12.lua'` passed. In-game `/reload`, then confirm the old `Frame:SetForbidden()` stack is gone on the next session, protected nameplate castbars stop erroring in `GetEffectiveType(...)`, and the repeated `TextStatusBar.lua:106`, `PartyMemberHealthCheck`, and `UnitFrameHealPredictionBars_Update` reports are reduced or eliminated.
+
+- **WoW 12 nameplate/quarantine taint follow-up applied:** Removed two remaining addon-owned writes onto Blizzard frames and moved secret-mode Blizzard nameplate cleanup earlier in the secure acquire path.
+  - **What changed:** `Core/FixBlizzardBugsWow12.lua` no longer stores the hide-on-show hook flag on quarantined Blizzard frames themselves, and its `GetEffectiveType(...)` fallback now rejects secret strings before doing any string comparison. `Components/UnitFrames/Units/NamePlates.lua` now tracks disabled Blizzard nameplate unitframes in addon-owned tables instead of writing `__AzeriteUI_Disabled` onto Blizzard unitframes, hides the acquired Blizzard unitframe/hit-test frame earlier, and runs `PatchBlizzardNamePlateFrame(...)` from the secure `NamePlateBaseMixin:AcquireUnitFrame()` hook even in WoW 12 secret mode.
+  - **Why:** The remaining reports point at taint-sensitive Blizzard frame ownership. Writing addon markers onto Blizzard compact/nameplate frames keeps leaking taint into XML `OnValueChanged`, nameplate `SetUnit`, and Edit Mode exit flows. The delayed nameplate hide was also too late; Blizzard had already entered `OnUnitSet`, `RefreshAuras`, `StopFinishAnims`, and text-update code by then.
+  - **Verification:** Run `luac -p 'Core/FixBlizzardBugsWow12.lua'` and `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`. In-game `/reload`, open and close Edit Mode, then fly around to spawn hostile nameplates. Recheck BugSack for reductions in `PartyMemberHealthCheck`, `TextStatusBar.lua:106`, `SetNamePlateHitTestFrame`, `GetUnitAuras`, and `StopFinishAnims`.
+
+- **WoW 12 nameplate/oUF seam follow-up applied:** Switched the secret-mode Blizzard nameplate suppression back toward the older shared oUF seam and restored the dedicated inert hit-test frame fallback.
+  - **What changed:** `Components/UnitFrames/Units/NamePlates.lua` now creates a dedicated simple hit-test frame on the plate and assigns that during `NamePlateBaseMixin:AcquireUnitFrame()` before Blizzard reaches `SetNamePlateHitTestFrame(...)`. In the same acquire seam, WoW 12 secret mode now calls the shared `oUF:DisableBlizzardNamePlate(...)` path instead of the local `clearClutter(...)` path. `Libs/oUF/blizzard.lua` now clears nameplate health-bar `OnValueChanged` / `OnMinMaxChanged` scripts, blanks status-text regions, forces nameplate aura refreshes closed at the instance level, and keeps the instance-level castbar forbidden-table wrapper on the disabled Blizzard castbar. `Core/FixBlizzardBugsWow12.lua` also now prunes Encounter Warnings from the Edit Mode bypass set after the secure `RefreshEncounterEvents` warning showed up in the remaining live stack.
+  - **Why:** The current live errors say Blizzard nameplates are still entering `SetUnit`, `RefreshAuras`, `StopFinishAnims`, `TextStatusBar`, and hit-test setup before the addon-local suppression has actually won. The older shared oUF disable seam is earlier and already owns the Blizzard nameplate disable path; it just needed the dedicated hit-test frame and the missing per-instance text/aura suppression restored. Encounter Warnings is now the last Edit Mode-owned system still visible in the secure warning stack, so it needs to be bypassed alongside the already-pruned Party/Raid/Arena systems.
+  - **Verification:** Run `luac -p 'Libs/oUF/blizzard.lua'`, `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`, and `luac -p 'Core/FixBlizzardBugsWow12.lua'`. In-game `/reload`, fly through hostile nameplates, then open and close Edit Mode. Recheck BugSack for `CastingBarFrame.lua:722`, `TextStatusBar.lua:106`, `Blizzard_NamePlateUnitFrame.lua:143`, `Blizzard_NamePlateAuras.lua:266`, `RefreshEncounterEvents`, and `HideSystemSelections`.
+
 ## 2026-03-28
 
 - **5.3.39 release prep started:** Rolling the 12.0.5 `UnitIsUnit(...)` pre-guard into the next patch release and bringing the versioned release files back into sync.
@@ -6085,3 +6119,272 @@ Testing:
 2. Confirm [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1) both report `5.3.29-JuNNeZ`.
 3. `/reload`
 
+[2026-03-29] Iteration: WoW 12 rollback of acquire hit-test taint and earlier nameplate fail-closed seam
+
+Request:
+- After the latest secret-mode nameplate follow-up, the remaining errors were still concentrated on Blizzard nameplate setup:
+  - `SetNamePlateHitTestFrame()` action-blocked during `NamePlateUnitFrame:OnUnitSet()`
+  - nameplate castbar failures in `GetTypeInfo()`, `FinishSpell()`, and `OnEvent()`
+  - hidden Blizzard nameplate target/health text still reaching `Blizzard_NamePlateHealthBar.lua`
+  - `CompactUnitFrame_UpdateAuras()` still evaluating secret aura fields on Blizzard nameplates
+  - Edit Mode still showing `RefreshEncounterEvents` / `HideSystemSelections` secure warnings
+
+Applied:
+- [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua)
+  - Removed the custom `UF.HitTestFrame` replacement from the secret-mode `NamePlateBaseMixin:AcquireUnitFrame()` hook.
+  - Kept secret-mode handling on the shared `oUF:DisableBlizzardNamePlate()` seam plus the delayed visual-hide fallback.
+- [Libs/oUF/blizzard.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Libs/oUF/blizzard.lua)
+  - Expanded the shared Blizzard nameplate fail-closed seam so the live Blizzard unitframe instance is patched before `SetUnit()` runs.
+  - Nameplate castbars now fail closed on guarded `secret` / `forbidden` / bad-argument errors in `StopFinishAnims`, `StopAnims`, `ClearStages`, `FinishSpell`, `OnEvent`, `GetTypeInfo`, and `GetEffectiveType`.
+  - Nameplate health bars now have their live text/target update methods blanked locally, with status text forced off.
+  - Nameplate aura containers now fail closed locally by no-oping refresh/add paths and their event scripts.
+  - Nameplate unitframes now fail closed on target/selection update paths and have their event script cut off after the instance patch is in place.
+- [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua)
+  - Already expanded this round to prune additional Edit Mode system containers and skip EncounterWarnings/PRD/Buff systems earlier.
+
+Why:
+- The `SetNamePlateHitTestFrame()` block pointed directly at the new addon-owned `HitTestFrame` swap during `AcquireUnitFrame()`, so that mutation had to be removed rather than wrapped again.
+- The remaining nameplate stacks all still occurred before the delayed hide path mattered, which means the practical seam is the live Blizzard nameplate instance returned from `AcquireUnitFrame()`.
+- Hidden Blizzard nameplates do not need target text, aura refresh, or castbar lifecycle logic, so failing those paths closed locally is safer than continuing to chase late global wrappers.
+
+Testing:
+1. `luac -p 'Core/FixBlizzardBugsWow12.lua'`
+2. `luac -p 'Libs/oUF/blizzard.lua'`
+3. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+4. `/buggrabber reset`
+5. `/reload`
+6. Fly through hostile nameplates and open/close Edit Mode once.
+7. Confirm these stay gone:
+   - `SetNamePlateHitTestFrame()`
+   - `CastingBarFrame.lua:212`
+   - `CastingBarFrame.lua:346`
+   - `TextStatusBar.lua:106` from `Blizzard_NamePlateHealthBar.lua`
+   - `CompactUnitFrame.lua:1672`
+   - `RefreshEncounterEvents`
+   - `HideSystemSelections`
+
+[2026-03-29] Iteration: WoW 12 rollback of secret-mode acquire hook and cast-target highlight fix
+
+Request:
+- After the latest follow-up, the remaining live errors narrowed to:
+  - `ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()` during Blizzard nameplate `AcquireUnitFrame()`
+  - Blizzard castbar `SetShown(secret)` in `SetIsHighlightedCastTarget()`
+  - Edit Mode `RefreshEncounterEvents` and `HideSystemSelections` secure warnings
+
+Applied:
+- [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua)
+  - Removed the WoW 12 secret-mode `NamePlateBaseMixin:AcquireUnitFrame()` hook entirely again.
+  - Secret mode is back to delayed Blizzard nameplate visual suppression only, which avoids touching protected nameplate creation.
+- [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua)
+  - Replaced Blizzard castbar highlight methods with secret-safe versions on the shared castbar mixins and live frames.
+  - Added numeric Edit Mode system-ID resolution so the prune pass can actually remove systems stored by ID in manager maps.
+  - Added proactive selection clearing on the pruned Edit Mode system frames.
+  - Restored the narrow Encounter Warnings sanitizer for `EncounterWarningsViewElementsMixin.Init()` / `ShowWarning()` and hooked it into the WoW 12 guard apply path.
+
+Why:
+- The fresh `SetForbidden()` stack proves the acquire hook itself is still enough to taint protected Blizzard nameplate creation in WoW 12 secret mode, regardless of what the callback does afterward.
+- The remaining nameplate castbar error is no longer stage/aura/text fallout; it is the stock cast-target highlight path trying to feed a secret boolean into `SetShown()`, so the right fix is a secret-safe highlight implementation.
+- The Edit Mode prune matcher already knew about Encounter Warnings, but the manager also stores systems by numeric IDs; without resolving those IDs, the prune pass can miss the real target frames.
+
+Testing:
+1. `luac -p 'Core/FixBlizzardBugsWow12.lua'`
+2. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+3. `/buggrabber reset`
+4. `/reload`
+5. Fly through hostile nameplates and open/close Edit Mode once.
+6. Confirm these stay gone:
+   - `Frame:SetForbidden()`
+   - `CastingBarFrame.lua:919`
+   - `RefreshEncounterEvents`
+   - `HideSystemSelections`
+
+[2026-03-29] Iteration: WoW 12 rollback of creation-time castbar mixin taint and Edit Mode marker cleanup
+
+Request:
+- After a fresh `/reload`, the remaining live failures narrowed again to:
+  - `ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()` during Blizzard nameplate `AcquireUnitFrame()`
+  - nameplate castbar `StopFinishAnims()` forbidden-table fallout still happening during initial `SetUnit()`
+  - nameplate health text still reaching `TextStatusBar.lua:106`
+  - a new addon bug in `Core/FixBlizzardBugsWow12.lua:1983` from indexing an Edit Mode entry that was actually a numeric system ID
+  - Edit Mode `RefreshEncounterEvents` / `HideSystemSelections` secure warnings still surviving
+
+Applied:
+- [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua)
+  - Stopped rewriting Blizzard casting-bar mixin tables in the WoW 12 guard path.
+  - Moved castbar guard state and caches off Blizzard frame objects into addon-owned weak tables.
+  - Added `NAME_PLATE_CREATED` as the earliest safe castbar-instance guard seam, while keeping `NAME_PLATE_UNIT_ADDED` as a late fallback.
+  - Fixed `HideEditModeSelections()` so numeric system IDs are ignored unless they resolve to a real frame object first.
+  - Moved Edit Mode manager lifecycle hook markers off `EditModeManagerFrame` and into addon-local state so the manager no longer carries `__AzUI_*` fields from this guard path.
+  - Moved TextStatusBar wrapper markers off Blizzard method tables and into addon-local state.
+
+Why:
+- The earlier suspicion about [Core/FixBlizzardBugs.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugs.lua) turned out to be a dead WoW 12 path; the live module returns before that legacy block executes.
+- The surviving `Frame:SetForbidden()` block is more consistent with the active WoW 12 file still replacing Blizzard castbar mixin methods before forbidden nameplate unitframes are created.
+- The new Edit Mode error was a real addon bug: the prune helper can iterate numeric IDs from manager containers, so the selection-hide pass must type-check before indexing frame methods.
+- Blizzard locals were still showing `__AzUI_*` markers on live objects; moving those markers into addon-owned tables removes one more direct taint source from the frames themselves.
+
+Testing:
+1. `luac -p 'Core/FixBlizzardBugsWow12.lua'`
+2. `/buggrabber reset`
+3. `/reload`
+4. Fly through hostile nameplates.
+5. Open and close Edit Mode once.
+6. Confirm these stay gone or drop materially:
+   - `Frame:SetForbidden()`
+   - `CastingBarFrame.lua:722`
+   - `TextStatusBar.lua:106`
+   - `Core/FixBlizzardBugsWow12.lua:1983`
+   - `RefreshEncounterEvents`
+   - `HideSystemSelections`
+
+[2026-03-29] Iteration: WoW 12 rollback of shared global rewrites and dead FixBlizzardBugs cleanup
+
+Request:
+- Use subagents for the current WoW 12 taint pass, remove moot WoW 12 code from `Core/FixBlizzardBugs.lua`, and keep chasing the remaining live stacks:
+  - `ADDON_ACTION_BLOCKED` on `Frame:SetForbidden()` during Blizzard nameplate creation
+  - Blizzard nameplate castbar forbidden-table / secret-value errors
+  - Blizzard nameplate aura secret-value errors
+  - `TextStatusBar.lua:106` from Blizzard compact/nameplate health text
+  - Edit Mode `RefreshEncounterEvents` / `HideSystemSelections`
+
+Applied:
+- Subagent review confirmed the old WoW 12 research branch in `Core/FixBlizzardBugs.lua` was doubly dead on WoW 12:
+  - it lived under `if (false and ...)`
+  - `FixBlizzardBugs:OnInitialize()` already returns early in the passive WoW 12 environment
+- [Core/FixBlizzardBugs.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugs.lua)
+  - Removed the dead early-WoW-12 research block and replaced it with a short note pointing live WoW 12 behavior at `Core/FixBlizzardBugsWow12.lua`.
+- [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua)
+  - Rolled the WoW 12 shared/global CUF, UnitFrame, AuraUtil, TextStatusBar, and EncounterWarnings guards back to explicit no-ops so Blizzard shared tables are no longer rewritten in the live path.
+  - Moved Blizzard nameplate fail-closed handling onto the secure `NamePlateBaseMixin:AcquireUnitFrame()` post-hook, which now calls the live instance patcher in `Libs/oUF/blizzard.lua` before Blizzard reaches `SetUnit()`.
+  - Simplified the Edit Mode bypass from snapshot/restore to eager pruning of the relevant manager containers, and now re-prunes immediately on manager registration hooks instead of waiting for active-state callbacks.
+  - Expanded `HideEditModeSelections()` to scan the full set of manager containers, including the system maps that can still hold numeric IDs or wrapper entries.
+  - Replaced the remaining raid-manager hook markers on Blizzard frames with addon-local state.
+  - Switched Encounter Warnings handling from shared mixin replacement to local instance suppression on the live encounter-warning frames used by Edit Mode account settings.
+
+Why:
+- The remaining `Frame:SetForbidden()` stack still points into Blizzard nameplate creation, which is exactly where shared/global compact-unitframe rewrites can leak taint through `CompactUnitFrame_OnLoad()` before Blizzard forbids the nameplate hit-test frame.
+- The latest Blizzard Edit Mode source confirms `EnterEditMode()` calls `ShowSystemSelections()` and account-setting refresh paths before the old post-enter secure hooks can help, so the bypass has to keep those systems pruned before Edit Mode actually starts running.
+- Removing the dead WoW 12 block from `Core/FixBlizzardBugs.lua` keeps the live audit path honest and eliminates a large amount of moot code that could otherwise confuse future taint debugging.
+
+Testing:
+1. `luac -p 'Core/FixBlizzardBugs.lua'`
+2. `luac -p 'Core/FixBlizzardBugsWow12.lua'`
+3. `/buggrabber reset`
+4. `/reload`
+5. Fly through hostile nameplates.
+6. Open and close Edit Mode once.
+7. Confirm these are gone or materially reduced:
+   - `Frame:SetForbidden()`
+   - `CastingBarFrame.lua:722`
+   - `CastingBarFrame.lua:346`
+   - `Blizzard_NamePlateAuras.lua:176`
+   - `Blizzard_NamePlateAuras.lua:266`
+   - `TextStatusBar.lua:106`
+   - `RefreshEncounterEvents`
+   - `HideSystemSelections`
+
+[2026-03-29] Iteration: WoW 12 narrow Blizzard nameplate heal-prediction bailout
+
+Request:
+- After the 5.3.41 reload/fly-around pass, all earlier Blizzard nameplate/Edit Mode stacks were gone and only one live error remained:
+  - `CompactUnitFrame_UpdateHealPrediction()` comparing secret `maxHealth` on Blizzard nameplate unitframes during `CompactUnitFrame_UpdateAll()`
+
+Applied:
+- [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua)
+  - Replaced the WoW 12 no-op `GuardCompactUnitFrameGlobals()` with one narrow guard only for `_G.CompactUnitFrame_UpdateHealPrediction`.
+  - The wrapper now early-returns only for Blizzard nameplate unitframes that AzeriteUI replaces, and hides/clears their stock heal-prediction visuals before Blizzard can compare secret health values.
+  - Kept the rest of the shared CompactUnitFrame globals untouched, so this does not reopen the broader WoW 12 taint surface that previously hit `NamePlateUnitFrameMixin:OnLoad()`.
+
+Why:
+- The remaining stack proves the active failure is no longer text, aura, castbar, or Edit Mode fallout; it is one direct call into Blizzard `CompactUnitFrame_UpdateHealPrediction()` for stock nameplate unitframes.
+- The live `Libs/oUF/blizzard.lua` nameplate seam was already hiding stock heal-prediction textures locally, so the only missing piece was stopping this one Blizzard shared function from executing on the replaced nameplate frames.
+- A nameplate-only early return is narrower than reviving the older shared/global CUF wrappers and is consistent with the current fail-closed strategy.
+
+Testing:
+1. `luac -p 'Core/FixBlizzardBugsWow12.lua'`
+2. `/buggrabber reset`
+3. `/reload`
+4. Fly through hostile nameplates again.
+5. Confirm `CompactUnitFrame.lua:1188` does not reappear.
+
+[2026-03-29] Iteration: WoW 12 rollback of pcall-based Blizzard caller replacements
+
+Request:
+- Revert the new WoW 12 pcall wrappers that replace Blizzard globals/methods and make AzeriteUI the caller in secret/forbidden paths.
+- Keep the older input-sanitizing wrappers that do not wrap the entire original call, including:
+  - `CompactUnitFrame_UtilShouldDisplayBuff`
+  - `CompactUnitFrame_UtilShouldDisplayDebuff`
+  - `BackdropTemplateMixin.SetupTextureCoordinates`
+  - `GameTooltip_AddWidgetSet`
+  - `MoneyFrame_Update`
+  - `SetTooltipMoney`
+  - widget mixin `Setup*` sanitizers
+
+Applied:
+- [Core/FixBlizzardBugsWow12.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Core/FixBlizzardBugsWow12.lua)
+  - Removed the `CUF_PCALL_GUARDS` replacements from `GuardCompactUnitFrameGlobals()`.
+  - Removed the `CastingBarMixin.SetUnit` / `CastingBarFrameMixin.SetUnit` replacement block from `ApplyCastingBarGuards()`.
+  - Reverted `GuardNameplateFunctions()` to an intentional no-op and stopped calling it from `ApplyGuards()`. This drops the pcall replacements for:
+    - `TextStatusBar_UpdateTextStringWithValues`
+    - `TextStatusBar_UpdateTextString`
+    - `AuraUtil.IsBigDefensive`
+    - `NamePlateAurasMixin.ParseAllAuras`
+    - `NamePlateAurasMixin.RefreshAuras`
+    - `EditModeManagerFrame` method replacements
+    - `PersonalResourceDisplayFrame` method replacements and `OnUpdate`
+    - `PARTY_PCALL_GUARDS`
+    - `DamageMeterSessionWindow*` method replacements
+    - `ActionBarActionButtonMixin.Update`
+  - Reverted `GuardAuraUtilForEachAura()` to an intentional no-op and stopped calling it from `ApplyGuards()`.
+
+Why:
+- These pcall wrappers replace the original Blizzard caller with AzeriteUI, which turns the addon into the attributed caller for later secret/protected/forbidden failures and amplifies taint into wider Blizzard flows.
+- The older sanitizing wrappers above stay in place because they normalize inputs before the original Blizzard caller runs, instead of pcall-wrapping the entire function and swallowing the error inside addon code.
+- The local Blizzard-nameplate fail-closed seam in `Libs/oUF/blizzard.lua` remains the preferred place for narrow instance-local suppression.
+
+Testing:
+1. `luac -p 'Core/FixBlizzardBugsWow12.lua'`
+2. `/buggrabber reset`
+3. `/reload`
+4. Reproduce the original nameplate / Edit Mode paths again.
+5. Expect BugSack to show any remaining Blizzard-side errors without the previous AzeriteUI caller-taint cascade.
+
+[2026-03-29] Iteration: Restore nameplate soft-target icon after Blizzard visual-hide change
+
+Request:
+- Check why the soft-target icon is missing on AzeriteUI nameplates after the recent WoW 12 Blizzard nameplate suppression changes.
+
+Applied:
+- [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua)
+  - Removed `SoftTargetFrame` from the `blizzPlateHideKeys` list used by the secret-mode `HideBlizzardNamePlateVisual()` path.
+
+Why:
+- The addon still reparents Blizzard's live `SoftTargetFrame` onto the AzeriteUI plate during `NAME_PLATE_UNIT_ADDED`, positions it above `self.Name`, and uses it as the visible soft-target icon.
+- The later fail-closed Blizzard visual-hide path was explicitly hiding that same `SoftTargetFrame`, so the icon could disappear even though the rest of the AzeriteUI nameplate remained functional.
+- Keeping the Blizzard hide path for raid-target/classification/level-diff frames while exempting `SoftTargetFrame` restores the intended icon without reopening the wider WoW 12 taint surface.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/buggrabber reset`
+3. `/reload`
+4. Soft-target a hostile and an interactable nameplate.
+5. Confirm the soft-target icon is visible again above the AzeriteUI plate name.
+
+[2026-03-29] Iteration: Restore soft-target icon after Blizzard-nameplate visual suppression change
+
+Request:
+- Check the current nameplate changes for a missing soft-target icon on AzeriteUI nameplates.
+
+Applied:
+- [Components/UnitFrames/Units/NamePlates.lua](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/Components/UnitFrames/Units/NamePlates.lua)
+  - Removed `SoftTargetFrame` from the live `blizzPlateHideKeys` list used by `HideBlizzardNamePlateVisual()`.
+
+Why:
+- AzeriteUI reparents Blizzard's `SoftTargetFrame` onto the addon nameplate on `NAME_PLATE_UNIT_ADDED`, so the recent Blizzard-only hide list was suppressing the same frame instance that the addon still relies on for the soft-target icon.
+- The regression came from the newer fail-closed hide pass in `HookNamePlates()`, not from the older soft-target reparenting logic itself.
+
+Testing:
+1. `luac -p 'Components/UnitFrames/Units/NamePlates.lua'`
+2. `/buggrabber reset`
+3. `/reload`
+4. Soft-target a hostile or interactable unit and verify the icon appears above the AzeriteUI nameplate again.

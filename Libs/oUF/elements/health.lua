@@ -210,7 +210,13 @@ local function Update(self, event, unit)
 		element:PreUpdate(unit)
 	end
 
-	local cur, max = UnitHealth(unit), UnitHealthMax(unit)
+	local cur, max
+	if (ns.API and ns.API.SafeUnitHealth) then
+		cur, max = ns.API.SafeUnitHealth(unit)
+	else
+		cur, max = UnitHealth(unit), UnitHealthMax(unit)
+	end
+	
 	element:SetMinMaxValues(0, max)
 
 	if(UnitIsConnected(unit)) then
