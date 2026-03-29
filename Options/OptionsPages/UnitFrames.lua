@@ -136,8 +136,16 @@ local GenerateOptions = function()
 				set = function(info, val)
 					getmodule().db.profile.showBlizzardRaidBar = val
 					getmodule():UpdateSettings()
-					if (ns.WoW12BlizzardQuarantine and ns.WoW12BlizzardQuarantine.ApplyCompactFrames) then
-						ns.WoW12BlizzardQuarantine.ApplyCompactFrames()
+					if _G.CompactRaidFrameManager and _G.CompactRaidFrameManager.SetParent and _G.CompactRaidFrameManager.Show and _G.CompactRaidFrameManager.Hide then
+						if val then
+							_G.CompactRaidFrameManager:SetParent(UIParent)
+							_G.CompactRaidFrameManager:Show()
+							if _G.CompactRaidFrameManager.SetAlpha then
+								_G.CompactRaidFrameManager:SetAlpha(1)
+							end
+						else
+							_G.CompactRaidFrameManager:Hide()
+						end
 					end
 				end,
 				get = function(info)

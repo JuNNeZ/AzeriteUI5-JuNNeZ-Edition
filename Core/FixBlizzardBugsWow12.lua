@@ -1,10 +1,15 @@
 -- Actively restore the Blizzard raid bar if the user enables the option
-local function RestoreBlizzardRaidBar()
+-- Minimal Show/Hide logic for Blizzard raid bar
+local function SetBlizzardRaidBarVisible(visible)
 	local manager = _G.CompactRaidFrameManager
-	if manager and manager.SetParent and manager.Show and manager.SetAlpha then
+	if manager and manager.SetParent and manager.Show and manager.Hide and manager.SetAlpha then
 		pcall(manager.SetParent, manager, UIParent)
-		pcall(manager.Show, manager)
-		pcall(manager.SetAlpha, manager, 1)
+		if visible then
+			pcall(manager.Show, manager)
+			pcall(manager.SetAlpha, manager, 1)
+		else
+			pcall(manager.Hide, manager)
+		end
 	end
 end
 --[[
@@ -1443,11 +1448,7 @@ local function QuarantineCompactFrames()
 	if (ShouldHandleRaidFrames()) then
 		PrepareCompactFrame(_G.CompactRaidFrameContainer)
 		QuarantineFrame("CompactRaidFrameContainer", { lockParent = true })
-		if ShouldShowBlizzardRaidBar() then
-			RestoreBlizzardRaidBar()
-		else
-			ApplyCompactRaidManagerVisibility()
-		end
+		SetBlizzardRaidBarVisible(ShouldShowBlizzardRaidBar())
 		for i = 1, MAX_RAID_MEMBERS do
 			local raidFrame = _G["CompactRaidFrame" .. i]
 			PrepareCompactFrame(raidFrame)

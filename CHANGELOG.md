@@ -825,3 +825,13 @@ Do not repeat older items from prior versions in newer entries.
 
 ### Known issue (deferred)
 - Charge tracking for some spells (for example Divine Steed and Judgment) still needs additional WoW12 investigation and is deferred to the next build.
+## 5.3.44-JuNNeZ (2026-03-29)
+
+### Highlights
+
+- Added a minimal, reliable toggle for the Blizzard raid utility bar: `/az -> Unit Frames -> Show Blizzard Raid Bar` now instantly shows or hides the Blizzard raid bar in party/raid using only Show/Hide (no quarantine or event unregistration).
+- Toggle is reload-safe and does not interfere with Blizzard or AzeriteUI raid frames.
+
+### Internal
+
+- `Core/FixBlizzardBugsWow12.lua`, `Options/OptionsPages/UnitFrames.lua`: replaced previous quarantine/toggle logic with a direct Show/Hide implementation for the Blizzard raid bar toggle.

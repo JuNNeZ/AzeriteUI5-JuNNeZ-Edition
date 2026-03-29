@@ -1,4 +1,11 @@
 
+## 2026-03-29
+
+- **5.3.44 release prep/finalization:**
+  - **What changed:** Added a minimal, reliable Show/Hide toggle for the Blizzard raid utility bar. The toggle in `/az -> Unit Frames` now directly shows or hides the Blizzard raid bar without any quarantine or event unregistration logic. This is reload-safe and does not interfere with Blizzard or AzeriteUI raid frames.
+  - **Why:** Previous toggle attempts were either unreliable or too invasive. This approach is the smallest, most robust fix for user-facing control of the Blizzard raid bar.
+  - **Verification:** `/reload`, then toggle the option in `/az -> Unit Frames`. The Blizzard raid bar should appear/disappear instantly in party/raid. No taint or quarantine side effects observed. All other raid/party/arena logic remains unchanged.
+
 # FixLog — AzeriteUI JuNNeZ Edition
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
