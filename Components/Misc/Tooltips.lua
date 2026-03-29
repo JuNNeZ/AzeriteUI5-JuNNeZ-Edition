@@ -315,6 +315,9 @@ Tooltips.UpdateBackdropTheme = function(self, tooltip)
 	-- always return clean values, but skip styling if the tooltip has zero size
 	-- (e.g. not yet laid out).
 	local width = tooltip.GetWidth and tooltip:GetWidth() or 0
+	if issecretvalue and issecretvalue(width) then
+		width = 0
+	end
 	if (width <= 0) then
 		return
 	end

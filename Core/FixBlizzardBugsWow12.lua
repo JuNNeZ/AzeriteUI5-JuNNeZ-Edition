@@ -884,6 +884,21 @@ local function GuardTooltipFrameGeometry(tooltip)
 	end
 	tooltip.__AzUI_W12_GeometryGuarded = true
 
+	-- Debug toggle (set true to print taint info)
+	local DEBUG_GEOMETRY = false
+
+	-- Helper to forcibly sanitize and reset secret values
+	local function SanitizeField(obj, field, fallback)
+		if not obj or not field then return end
+		local ok, val = pcall(function() return obj[field] end)
+		if ok and issecretvalue and issecretvalue(val) then
+			if DEBUG_GEOMETRY then
+				print("[AzeriteUI] Geometry taint:", obj.GetName and obj:GetName() or tostring(obj), field, "-> secret, resetting to fallback", fallback)
+			end
+			pcall(function() obj[field] = fallback end)
+		end
+	end
+
 	-- Single-value getters
 	local singleGetters = {
 		{ method = "GetWidth",  key = "width",  fallback = 0 },
@@ -900,6 +915,8 @@ local function GuardTooltipFrameGeometry(tooltip)
 		if (type(original) == "function") then
 			tooltip[info.method] = MakeSafeSingleGetter(original, info.key, info.fallback)
 		end
+		-- Forcibly sanitize the field if it exists and is secret
+		SanitizeField(tooltip, info.key, info.fallback)
 	end
 
 	-- GetSize -> (width, height)
@@ -924,6 +941,32 @@ local function GuardTooltipFrameGeometry(tooltip)
 				return x, y
 			end
 			return cache.centerX or 0, cache.centerY or 0
+		end
+
+		-- Recursively guard children (if any)
+		if tooltip.GetChildren then
+			local children = { pcall(tooltip.GetChildren, tooltip) }
+			if children[1] then
+				for i = 2, #children do
+					local child = children[i]
+					if type(child) == "table" and not child.__AzUI_W12_GeometryGuarded then
+						GuardTooltipFrameGeometry(child)
+					end
+				end
+			end
+		end
+
+		-- Recursively guard regions (textures, fontstrings, etc.)
+		if tooltip.GetRegions then
+			local regions = { pcall(tooltip.GetRegions, tooltip) }
+			if regions[1] then
+				for i = 2, #regions do
+					local region = regions[i]
+					if type(region) == "table" and not region.__AzUI_W12_GeometryGuarded then
+						GuardTooltipFrameGeometry(region)
+					end
+				end
+			end
 		end
 	end
 
