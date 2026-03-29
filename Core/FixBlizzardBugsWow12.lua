@@ -1,3 +1,12 @@
+-- Actively restore the Blizzard raid bar if the user enables the option
+local function RestoreBlizzardRaidBar()
+	local manager = _G.CompactRaidFrameManager
+	if manager and manager.SetParent and manager.Show and manager.SetAlpha then
+		pcall(manager.SetParent, manager, UIParent)
+		pcall(manager.Show, manager)
+		pcall(manager.SetAlpha, manager, 1)
+	end
+end
 --[[
 
 	The MIT License (MIT)
@@ -243,12 +252,23 @@ local function ShouldHandleRaidFrames()
 		or IsModuleEnabled("RaidFrame40", true)
 end
 
+-- Returns true if the Blizzard raid utility bar should be shown.
+-- Dev force (debugForceBlizzardRaidBar) always wins if dev mode is enabled, regardless of group state.
+-- Returns true if the Blizzard raid utility bar should be shown.
+-- Dev force (debugForceBlizzardRaidBar) always wins if enabled, regardless of group state.
+-- The /az UnitFrames option works for all users: if enabled and in a party or raid, show the bar.
 local function ShouldShowBlizzardRaidBar()
 	if (ns and (ns.IsDevelopment or (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode))
 		and ns.db and ns.db.global and ns.db.global.debugForceBlizzardRaidBar) then
-		return true
+		return true -- Dev force: always show, even solo
 	end
-	return ShouldHandleRaidFrames() and GetModuleProfileValue("UnitFrames", "showBlizzardRaidBar", false) and true or false
+	-- Show for all users if the option is enabled and in a party or raid
+	if GetModuleProfileValue("UnitFrames", "showBlizzardRaidBar", false) then
+		if (IsInGroup() or IsInRaid()) then
+			return true
+		end
+	end
+	return false
 end
 
 local function ShouldHandleArenaFrames()
@@ -1423,7 +1443,11 @@ local function QuarantineCompactFrames()
 	if (ShouldHandleRaidFrames()) then
 		PrepareCompactFrame(_G.CompactRaidFrameContainer)
 		QuarantineFrame("CompactRaidFrameContainer", { lockParent = true })
-		ApplyCompactRaidManagerVisibility()
+		if ShouldShowBlizzardRaidBar() then
+			RestoreBlizzardRaidBar()
+		else
+			ApplyCompactRaidManagerVisibility()
+		end
 		for i = 1, MAX_RAID_MEMBERS do
 			local raidFrame = _G["CompactRaidFrame" .. i]
 			PrepareCompactFrame(raidFrame)
