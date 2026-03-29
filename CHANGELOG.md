@@ -5,6 +5,22 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.45-JuNNeZ (2026-03-29)
+
+### Highlights
+
+- Fixed `ADDON_ACTION_FORBIDDEN` taint error blocking `UpgradeItem()` when confirming item upgrades. The `purgeKey()` function in HideBlizzard.lua was brute-force modifying Blizzard action bar frame tables to clear `isShownExternal`, which tainted the secure execution path through StaticPopup into the Item Upgrade UI.
+- Improved Blizzard raid bar toggle reliability: the Show/Hide toggle in `/az -> Unit Frames` now uses a minimal, combat-safe Show/Hide approach instead of quarantine-based visibility. The bar restores instantly when the option is enabled in party/raid.
+- Added `PlayFadeAnim` to the castbar guard list to prevent a new WoW 12 taint path.
+- Neutered `UpdateShownButtons` on hidden Blizzard action bars to prevent `SetShown()` taint on reparented buttons.
+- Cleared `OnEvent`/`OnUpdate` scripts on hidden Blizzard action buttons to stop residual Blizzard update paths from causing taint.
+
+### Internal
+
+- `Components/ActionBars/Compatibility/HideBlizzard.lua`: removed `purgeKey()` and its `isShownExternal` purge call entirely. Added script clearing for hidden buttons and `UpdateShownButtons` neutering for hidden bars.
+- `Core/FixBlizzardBugsWow12.lua`: replaced quarantine-based raid bar visibility with a minimal `SetBlizzardRaidBarVisible()` / `ShouldShowBlizzardRaidBar()` pair. Removed `ApplyCompactRaidManagerVisibility()` and `GetModuleProfileValue()`. Added `PlayFadeAnim` castbar guard.
+- `Options/OptionsPages/UnitFrames.lua`: updated raid bar toggle setter to call the new `SetBlizzardRaidBarVisible()` API directly.
+
 ## 5.3.43-JuNNeZ (2026-03-29)
 
 ### Highlights

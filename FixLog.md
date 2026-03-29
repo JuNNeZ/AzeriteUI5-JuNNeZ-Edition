@@ -1,6 +1,11 @@
 
 ## 2026-03-29
 
+- **5.3.45 release — UpgradeItem taint fix and raid bar toggle improvements:**
+  - **What changed:** Removed the `purgeKey()` function from `HideBlizzard.lua` that was brute-force modifying Blizzard action bar frame tables (setting `t[k] = nil` and writing arbitrary numeric indices until `issecurevariable()` passed). This was the root cause of `ADDON_ACTION_FORBIDDEN` errors when confirming item upgrades via `UpgradeItem()`. Also improved the Blizzard raid bar toggle to use a minimal combat-safe Show/Hide approach, added `PlayFadeAnim` to castbar guards, neutered `UpdateShownButtons` on hidden bars, and cleared scripts on hidden action buttons.
+  - **Why:** The `purgeKey()` function introduced execution taint into Blizzard frame state. When the StaticPopup system later executed the `UpgradeItem()` protected function through `Blizzard_ItemUpgradeUI -> GameDialogDefs -> StaticPopup`, the tainted environment caused WoW to attribute the protected call to the addon and block it.
+  - **Verification:** `/reload`, then attempt an item upgrade via the Blizzard Item Upgrade UI. The confirmation dialog should complete without `ADDON_ACTION_FORBIDDEN` errors. Check BugSack for any new taint stacks.
+
 - **5.3.44 release prep/finalization:**
   - **What changed:** Added a minimal, reliable Show/Hide toggle for the Blizzard raid utility bar. The toggle in `/az -> Unit Frames` now directly shows or hides the Blizzard raid bar without any quarantine or event unregistration logic. This is reload-safe and does not interfere with Blizzard or AzeriteUI raid frames.
   - **Why:** Previous toggle attempts were either unreliable or too invasive. This approach is the smallest, most robust fix for user-facing control of the Blizzard raid bar.
