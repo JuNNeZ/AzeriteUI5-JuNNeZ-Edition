@@ -4,6 +4,22 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.42-JuNNeZ (2026-03-29)
+
+### Highlights
+
+- Reduced WoW 12 nameplate and Blizzard-frame taint fallout by backing out invasive pcall-based Blizzard caller replacements that were making AzeriteUI the attributed caller in secret and protected paths.
+- Fixed Blizzard raid target icons, classification markers, and level-difference badges bleeding through AzeriteUI nameplates when Blizzard child frames ignored parent alpha.
+- Restored the soft-target icon above AzeriteUI nameplates after the newer Blizzard visual-hide pass started hiding the shared `SoftTargetFrame`.
+- Hardened lingering secret-value health and heal-prediction reads used by Blizzard-backed nameplate updates.
+
+### Internal
+
+- `Core/FixBlizzardBugsWow12.lua`: reverted the broad WoW 12 pcall-based caller replacements and kept the narrower sanitizers and post-hooks.
+- `Core/FixBlizzardBugs.lua`: removed the dead WoW 12 research block so the live Retail 12 path is clearly isolated in the companion file.
+- `Components/UnitFrames/Units/NamePlates.lua`: added the Blizzard-child hide pass for raid target/classification/level-diff visuals while exempting the shared `SoftTargetFrame`.
+- `Components/UnitFrames/Functions.lua` and `Libs/oUF/elements/health.lua`: hardened the secret-safe unit comparison and health read fallbacks used by target and nameplate updates.
+
 ## 5.3.41-JuNNeZ (2026-03-29)
 
 ### Highlights
