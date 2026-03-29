@@ -4,6 +4,18 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.41-JuNNeZ (2026-03-29)
+
+### Highlights
+
+- Fixed the WoW 12 target and target-of-target comparison crash that could spam BugSack when Blizzard returned secret GUID values for compound unit tokens.
+- Kept target-of-target hide/show and focus highlight logic on the same shared helper, but made its GUID fallback fail closed instead of comparing unreadable secret strings.
+
+### Internal
+
+- `Components/UnitFrames/Functions.lua`: reordered `ns.API.SafeUnitIsUnit(...)` so `issecretvalue(...)` guards run before any empty-string or GUID equality compare in the `UnitGUID(...)` fallback.
+- `FixLog.md`: recorded the WoW 12 secret-GUID regression and the `5.3.41-JuNNeZ` hotfix prep.
+
 ## 5.3.40-JuNNeZ (2026-03-28)
 
 ### Highlights

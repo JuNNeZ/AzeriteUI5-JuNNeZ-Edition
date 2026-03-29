@@ -3,6 +3,23 @@
 
 **Archive Note:** Historical entries from project inception through 2026-03-03 have been archived to `FixLog_Archive_20260303.md` (14,673 lines). This fresh log starts with version 5.2.216-JuNNeZ as the baseline.
 
+## 2026-03-29
+
+- **5.3.41 release prep started:** Rolling the `SafeUnitIsUnit(...)` secret-GUID hotfix into the next patch release and bringing the versioned release files back into sync.
+  - **Why:** The live addon is already running as `5.3.40-JuNNeZ`, but the worktree still had mixed release metadata and a fresh WoW `12.0.1` BugSack regression in the shared target/ToT comparer. A dedicated patch release keeps this fix isolated from the unrelated in-progress nameplate/Edit Mode work.
+
+- **WoW 12 SafeUnitIsUnit secret GUID regression started:** Investigating fresh BugSack reports from target-of-target updates where the shared `ns.API.SafeUnitIsUnit(...)` fallback is erroring inside `Components/UnitFrames/Functions.lua`.
+  - **Why:** The live `12.0.1` stacks show the helper still doing `guid ~= ""` on compound-unit `UnitGUID(...)` returns before it asks `issecretvalue(guid)`, so the defensive GUID fallback is now tripping the very secret-string compare it was meant to avoid.
+
+- **WoW 12 SafeUnitIsUnit secret GUID regression applied:** Reordered the shared helper's string guards so secret unit tokens and secret GUID fallbacks are rejected before any empty-string or equality compare runs.
+  - **What changed:** `Components/UnitFrames/Functions.lua` now checks `issecretvalue(...)` before `unit == ""` / `otherUnit == ""` in `ns.API.SafeUnitIsUnit(...)`, and the `UnitGUID(...)` fallback now resolves `guidAReadable` / `guidBReadable` first before evaluating `guid ~= ""` or `guidA == guidB`.
+  - **Why:** The direct `UnitIsUnit(...)` path was already guarded, but the fallback still evaluated string compares in the wrong order. On WoW `12.0.1`, compound tokens like `targettarget` and `targettargettarget` can now hand back secret GUID strings, so the old `guid ~= ""` guard itself caused the BugSack error.
+  - **Verification:** `luac -p 'Components/UnitFrames/Functions.lua'` passed. In-game `/reload`, then retest target-of-target hide/show and focus highlight updates with BugSack reset first. The old `Functions.lua:149` / `Functions.lua:150` secret-string compare errors should stay gone while `targettarget` and `targettargettarget` still update normally.
+
+- **5.3.41 release prep applied:** Bumped the release metadata to `5.3.41-JuNNeZ` and added a delta-only changelog entry for the shared target/ToT comparer hotfix.
+  - **What changed:** `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` now both report `5.3.41-JuNNeZ`. `CHANGELOG.md` now includes a new top entry describing the WoW 12 secret-GUID crash fix in `Components/UnitFrames/Functions.lua`.
+  - **Why:** This keeps the repo's version files aligned with the hotfix commit and gives the tag a clean player-facing release boundary.
+  - **Verification:** `rg -n "5\\.3\\.41-JuNNeZ|## 5\\.3\\.41-JuNNeZ" CHANGELOG.md AzeriteUI5_JuNNeZ_Edition.toc build-release.ps1 FixLog.md` should match before commit/tag/push.
 ## 2026-03-28
 
 - **5.3.39 release prep started:** Rolling the 12.0.5 `UnitIsUnit(...)` pre-guard into the next patch release and bringing the versioned release files back into sync.
@@ -6067,3 +6084,4 @@ Testing:
 1. Confirm [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md) has a new top entry for `5.3.29-JuNNeZ`.
 2. Confirm [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1) both report `5.3.29-JuNNeZ`.
 3. `/reload`
+

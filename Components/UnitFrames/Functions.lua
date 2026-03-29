@@ -124,10 +124,10 @@ local IsSecretValue = function(value)
 end
 
 API.SafeUnitIsUnit = API.SafeUnitIsUnit or function(unit, otherUnit)
-	if (type(unit) ~= "string" or unit == "" or IsSecretValue(unit)) then
+	if (type(unit) ~= "string" or IsSecretValue(unit) or unit == "") then
 		return false
 	end
-	if (type(otherUnit) ~= "string" or otherUnit == "" or IsSecretValue(otherUnit)) then
+	if (type(otherUnit) ~= "string" or IsSecretValue(otherUnit) or otherUnit == "") then
 		return false
 	end
 
@@ -145,9 +145,9 @@ API.SafeUnitIsUnit = API.SafeUnitIsUnit or function(unit, otherUnit)
 	if (type(UnitGUID) == "function") then
 		local okGuidA, guidA = pcall(UnitGUID, unit)
 		local okGuidB, guidB = pcall(UnitGUID, otherUnit)
-		if (okGuidA and okGuidB
-			and type(guidA) == "string" and guidA ~= "" and (not IsSecretValue(guidA))
-			and type(guidB) == "string" and guidB ~= "" and (not IsSecretValue(guidB))) then
+		local guidAReadable = okGuidA and type(guidA) == "string" and (not IsSecretValue(guidA)) and guidA ~= ""
+		local guidBReadable = okGuidB and type(guidB) == "string" and (not IsSecretValue(guidB)) and guidB ~= ""
+		if (guidAReadable and guidBReadable) then
 			return guidA == guidB
 		end
 	end
