@@ -5,6 +5,29 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.46-JuNNeZ (2026-03-31)
+
+### Highlights
+
+- Consolidated the addon to retail-only (WoW 12 / Midnight). Removed all Classic, Cata, and multi-version branching — the addon now targets retail exclusively, resulting in cleaner code and smaller file size.
+- Fixed WoW 12 secret-value taint crash in Blizzard compact party/raid frame health color updates. The quarantine system no longer writes tracking flags directly onto Blizzard frame objects, preventing taint propagation into `CompactUnitFrame_UpdateHealthColor`.
+- Fixed WoW 12 secret-value taint crash when hovering action bar trinkets/items with sell prices. Removed the insecure OnEnter/OnLeave script wrapper that was tainting the tooltip data pipeline, and re-enabled the tooltip money frame geometry guards.
+- Fixed WoW 12 secret-value taint crash in Blizzard `LayoutFrame` widget layout. Removed the addon-level pcall wrapping of `RegisterForWidgetSet`/`UnregisterForWidgetSet` that was tainting all layout offset values during widget registration.
+- Moved all Blizzard frame guard flags (`__AzUI_W12_*`) to weak-keyed side tables instead of writing them onto Blizzard frame objects, preventing WoW 12 taint propagation.
+- Merged the WoW 12 bugfix module (`FixBlizzardBugsWow12.lua`) into the main `FixBlizzardBugs.lua` — single file for all Blizzard frame resilience work.
+- Hardened BugSack integration with pcall-wrapped API calls to prevent cascading errors during error capture.
+- Libraries updated for retail-only: LibActionButton-1.0-GE, LibFadingFrames, oUF, AceGUI ColorPicker all stripped of multi-version conditionals.
+
+### Internal
+
+- Deleted retail-irrelevant files: `HideBlizzardClassic.lua`, `EditMode.lua`, `EditModePresets.lua`, `FixBlizzardBugsWow12.lua`, `FixFlavorDifferences.lua`, `FontStyles_Classic.xml`, `TrackerVanilla.lua`, LAB backup file.
+- `Core/Common/Constants.lua`: hardcoded `IsRetail=true`, `WoW10=true`, `WoW11=true`; removed `WOW_PROJECT_ID` detection.
+- `Core/FixBlizzardBugs.lua`: merged all WoW 12 quarantine, castbar guard, compact aura, raid bar, tooltip geometry, and widget guard logic from the deleted companion file. Added `quarantineHooked` side table. Uncommented `GuardTooltipMoneyAdders` body. Removed `RegisterForWidgetSet`/`UnregisterForWidgetSet` mixin wrapping.
+- `Components/ActionBars/Prototypes/ActionButton.lua`: removed insecure OnEnter/OnLeave wrapper; LAB's default secure handlers are now used directly.
+- `Core/Compatibility.lua`: added `SafeUnpackAuraData()` with secret-value fallback handling.
+- `Components/UnitFrames/Units/PlayerClassPower.lua`: simplified rune handling to retail-only logic.
+- `Core/ExplorerMode.lua`, `Options/OptionsPages/ExplorerMode.lua`, `Options/OptionsPages/UnitFrames.lua`: removed version guards; all options unconditionally enabled.
+
 ## 5.3.45-JuNNeZ (2026-03-29)
 
 ### Highlights

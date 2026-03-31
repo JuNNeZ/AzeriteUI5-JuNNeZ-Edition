@@ -35,13 +35,9 @@
 	<!-- Core -->
 	<Script file="Core.lua"/>
 	<Script file="ModulePrototype.lua"/>
-	<!--<Script file="EditMode.lua"/>-->
-	<!--<Script file="EditModePresets.lua"/>-->
 	<Script file="MovableFrameManager.lua"/>
 	<Script file="MovableFrameModulePrototype.lua"/>
 	<Script file="FixBlizzardBugs.lua"/>
-	<Script file="FixBlizzardBugsWow12.lua"/>
-	<Script file="FixFlavorDifferences.lua"/>
 	<Script file="ExplorerMode.lua"/>
 	<Script file="Development.lua"/>
 	<Script file="Debugging.lua"/>

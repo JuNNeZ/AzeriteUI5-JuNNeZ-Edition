@@ -90,14 +90,7 @@ local tonumber = tonumber
 local unpack = unpack
 
 -- Game flavor constants
-local patch, build, date, version = GetBuildInfo()
-local isRetail = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
-local isClassic = (WOW_PROJECT_ID == WOW_PROJECT_CLASSIC)
-local isTBC = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
-local isWrath = (WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC)
---local isCata = WOW_PROJECT_ID == (WOW_PROJECT_CATA_CLASSIC or 99) -- NYI in first build
-local isCata = (version >= 40400) and (version < 50000)
-local WoW10 = version >= 100000
+local isRetail = true
 
 -- Frame Metamethods
 local setAlpha = getmetatable(CreateFrame("Frame")).__index.SetAlpha
@@ -213,7 +206,7 @@ local updateTargetAlpha = function(frame)
 
 		elseif (frameType == "actionbutton") then
 			if (lib.flyoutShown)
-			or (lib.inCombat and not(frame.header and frame.header.config and frame.header.config.fadeInCombat)) or (lib.gridCounter > 0 and not frame.ignoreGridCounterOnHover and (lib.cursorType ~= "petaction" or isRetail))
+			or (lib.inCombat and not(frame.header and frame.header.config and frame.header.config.fadeInCombat)) or (lib.gridCounter > 0 and not frame.ignoreGridCounterOnHover)
 			then
 				forceShow = true
 			end
@@ -324,7 +317,7 @@ lib.RegisterFrameForFading = function(_, frame, fadeGroup, ...)
 
 		-- Keep track of the flyout handlers.
 		if (not lib.flyoutHandler) then
-			local flyoutHandler = WoW10 and LAB10GEFlyoutHandlerFrame or SpellFlyout
+			local flyoutHandler = LAB10GEFlyoutHandlerFrame
 			if (flyoutHandler) then
 				lib:HookScript(flyoutHandler, "OnShow", "UpdateFlyout")
 				lib:HookScript(flyoutHandler, "OnHide", "UpdateFlyout")
@@ -487,10 +480,7 @@ lib.OnEvent = function(self, event, ...)
 		if (lib.petGridCounter > 0) then
 			lib.petGridCounter = lib.petGridCounter - 1
 		end
-		if (isClassic and lib.gridCounter > 0) then
-			lib.gridCounter = lib.gridCounter - 1
-		end
-		if (lib.petGridCounter == 0 or (isClassic and lib.gridCounter == 0)) then
+		if (lib.petGridCounter == 0) then
 			lib:UpdateTargetAlphas()
 		end
 		return

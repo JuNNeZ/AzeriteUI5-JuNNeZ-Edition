@@ -25,8 +25,6 @@
 --]]
 local _, ns = ...
 
-if (ns.IsClassic or ns.IsCata) then return end
-
 local ArcheologyBar = ns:NewModule("ArcheologyBar", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0")
 
 local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }

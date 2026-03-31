@@ -24,8 +24,6 @@
 
 --]]
 local _, ns = ...
-if (ns.IsClassic) then return end
-
 local oUF = ns.oUF
 
 local FocusFrameMod = ns:NewModule("FocusFrame", ns.UnitFrameModule, "LibMoreEvents-1.0")

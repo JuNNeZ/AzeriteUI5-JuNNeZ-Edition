@@ -50,7 +50,7 @@ do
 end
 
 -- Increasing this number forces a full settings reset.
-ns.SETTINGS_VERSION = ns.WoW11 and 25 or 22 -- use client dependant settings version to avoid resets in unaffected builds.
+ns.SETTINGS_VERSION = 25 -- retail-only build, no client-dependent branching needed.
 
 -- Tinkerers rejoyce!
 _G[Addon] = ns

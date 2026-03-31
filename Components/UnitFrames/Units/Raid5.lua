@@ -158,11 +158,9 @@ local ApplyTestUnitDrivers = function(self)
 				local raidUnit, partyUnit = "raid"..i, "party"..i
 				local raidPetUnit, partyPetUnit = raidUnit.."pet", partyUnit.."pet"
 
-				if (ns.IsCata or ns.IsRetail) then
-					unitButton:SetAttribute("toggleForVehicle", nil)
-					table_insert(driver, "[vehicleui,group:raid]"..raidPetUnit)
-					table_insert(driver, "[vehicleui,nogroup:raid]"..partyPetUnit)
-				end
+				unitButton:SetAttribute("toggleForVehicle", nil)
+				table_insert(driver, "[vehicleui,group:raid]"..raidPetUnit)
+				table_insert(driver, "[vehicleui,nogroup:raid]"..partyPetUnit)
 
 				table_insert(driver, "[group:raid]"..raidUnit)
 				table_insert(driver, "[nogroup:raid]"..partyUnit)

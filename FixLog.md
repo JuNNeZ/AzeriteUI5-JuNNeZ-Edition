@@ -1,4 +1,14 @@
 
+## 2026-03-31
+
+- **5.3.46 release — Retail-only consolidation + 3 WoW 12 secret-value taint fixes:**
+  - **What changed:** Consolidated addon to retail-only (removed all Classic/Cata multi-version branching). Merged `FixBlizzardBugsWow12.lua` into `FixBlizzardBugs.lua`. Fixed 3 WoW 12 secret-value taint crashes:
+    1. CompactUnitFrame health color compare: `QuarantineFrame()` was writing `__AzUI_W12_HideOnShowHooked` directly onto Blizzard frames — moved to `quarantineHooked` weak side table.
+    2. MoneyFrame tooltip arithmetic: Action button OnEnter wrapper was calling secure LAB code from insecure context — removed wrapper. Also uncommented `GuardTooltipMoneyAdders()` body to re-enable money frame geometry guards and pcall wrapping.
+    3. LayoutFrame widget layout compare: `GuardWidgetMixinMethod` was replacing `RegisterForWidgetSet`/`UnregisterForWidgetSet` with addon pcall wrappers, tainting all layout offset values — removed those wraps. Moved `__AzUI_W12_GeometryGuarded`/`__AzUI_W12_SettersGuarded` to `tooltipGeometryCache` side table.
+  - **Why:** Writing addon-owned fields onto Blizzard frame objects taints them in WoW 12. Calling secure code from addon context taints all values in the call chain. Replacing mixin methods with addon wrappers taints all properties set during execution.
+  - **Verification:** `/reload`, test: (1) enter party/raid — no health color taint in BugSack, (2) hover action bar trinkets in combat — no MoneyFrame arithmetic error, (3) hover area POIs on world map then move away — no LayoutFrame compare error. Check BugSack for new stacks.
+
 ## 2026-03-29
 
 - **5.3.45 release — UpgradeItem taint fix and raid bar toggle improvements:**

@@ -105,6 +105,59 @@ if (tocversion >= 100200) or (tocversion >= 40400 and tocversion < 50000) then
 	end
 end
 
+-- Safe aura unpacker: tries AuraUtil.UnpackAuraData first, falls back
+-- to direct field extraction when the secret-value wrapper returns nil.
+-- This prevents addons like Decursive from losing debuff data when our
+-- GuardAuraUtilUnpack wrapper rejects auras with secret fields.
+do
+	local issecretvalue = _G.issecretvalue
+	local select = _G.select
+	local Pack = function(...)
+		return { n = select("#", ...), ... }
+	end
+	ns.SafeUnpackAuraData = function(auraData)
+		-- Try the (possibly wrapped) AuraUtil.UnpackAuraData first.
+		if (AuraUtil and AuraUtil.UnpackAuraData) then
+			local results = Pack(pcall(AuraUtil.UnpackAuraData, auraData))
+			if (results[1] and results[2] ~= nil) then
+				return unpack(results, 2, results.n)
+			end
+		end
+		-- Fallback: extract fields directly, omitting secret points entirely.
+		-- Secret values are truthy but fail type()/unpack(), so we must
+		-- guard with issecretvalue before touching auraData.points.
+		local safePoints
+		if (issecretvalue) then
+			local ok, pts = pcall(function() return auraData.points end)
+			if (ok and not issecretvalue(pts) and type(pts) == "table") then
+				safePoints = pts
+			end
+		else
+			local ok, pts = pcall(function()
+				local p = auraData.points
+				if (type(p) == "table") then return p end
+			end)
+			if (ok and pts) then
+				safePoints = pts
+			end
+		end
+		if (safePoints) then
+			return auraData.name, auraData.icon, auraData.applications,
+				auraData.dispelName, auraData.duration, auraData.expirationTime,
+				auraData.sourceUnit, auraData.isStealable, auraData.nameplateShowPersonal,
+				auraData.spellId, auraData.canApplyAura, auraData.isBossAura,
+				auraData.isFromPlayerOrPlayerPet, auraData.nameplateShowAll,
+				auraData.timeMod, unpack(safePoints)
+		end
+		return auraData.name, auraData.icon, auraData.applications,
+			auraData.dispelName, auraData.duration, auraData.expirationTime,
+			auraData.sourceUnit, auraData.isStealable, auraData.nameplateShowPersonal,
+			auraData.spellId, auraData.canApplyAura, auraData.isBossAura,
+			auraData.isFromPlayerOrPlayerPet, auraData.nameplateShowAll,
+			auraData.timeMod
+	end
+end
+
 -- Deprecated in 10.2.5
 if (tocversion >= 100205) or (tocversion >= 40400 and tocversion < 50000) then
 	for method,func in next,{
@@ -135,35 +188,23 @@ if (tocversion >= 100205) or (tocversion >= 40400 and tocversion < 50000) then
 		end,
 		UnitAura = function(unitToken, index, filter)
 			local auraData = C_UnitAuras.GetAuraDataByIndex(unitToken, index, filter)
-			if not auraData then
-				return nil
-			end
-
-			return AuraUtil.UnpackAuraData(auraData)
+			if not auraData then return nil end
+			return ns.SafeUnpackAuraData(auraData)
 		end,
 		UnitBuff = function(unitToken, index, filter)
 			local auraData = C_UnitAuras.GetBuffDataByIndex(unitToken, index, filter)
-			if not auraData then
-				return nil
-			end
-
-			return AuraUtil.UnpackAuraData(auraData)
+			if not auraData then return nil end
+			return ns.SafeUnpackAuraData(auraData)
 		end,
 		UnitDebuff = function(unitToken, index, filter)
 			local auraData = C_UnitAuras.GetDebuffDataByIndex(unitToken, index, filter)
-			if not auraData then
-				return nil
-			end
-
-			return AuraUtil.UnpackAuraData(auraData)
+			if not auraData then return nil end
+			return ns.SafeUnpackAuraData(auraData)
 		end,
 		UnitAuraBySlot = function(unitToken, index)
 			local auraData = C_UnitAuras.GetAuraDataBySlot(unitToken, index)
-			if not auraData then
-				return nil
-			end
-
-			return AuraUtil.UnpackAuraData(auraData)
+			if not auraData then return nil end
+			return ns.SafeUnpackAuraData(auraData)
 		end,
 		UnitAuraSlots = C_UnitAuras.GetAuraSlots
 	} do

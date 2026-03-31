@@ -104,7 +104,7 @@ local defaults = { profile = ns:Merge({
 	powerOrbMode = "orbV2",
 	crystalOrbColorMode = "default",
 	aurasBelowFrame = false,
-	useWrathCrystal = ns.IsCata,
+	useWrathCrystal = false,
 	powerBarScale = 1,
 	powerBarScaleX = 1,
 	powerBarScaleY = 1,

@@ -55,7 +55,7 @@ local defaults = { profile = ns:Merge({
 	showMaelstrom = ns.IsRetail or nil,
 	showSoulFragments = ns.IsRetail or nil,
 	soulFragmentsDisplayMode = "gradient",
-	showRunes = ns.IsCata or ns.IsRetail or nil,
+	showRunes = true,
 	showSoulShards = ns.IsRetail or nil,
 	showStagger = ns.IsRetail or nil,
 	elementalMaelstromDisplayMode = "crystal_spec",
@@ -985,16 +985,10 @@ local Runes_PostUpdateColor = function(element, r, g, b, color, rune)
 	if (rune) then
 		rune:SetStatusBarColor(r, g, b)
 	else
-		if (not ns.IsCata) then
-			color = element.__owner.colors.power.RUNES
-			r, g, b = color[1], color[2], color[3]
-		end
+		color = element.__owner.colors.power.RUNES
+		r, g, b = color[1], color[2], color[3]
 		for i = 1, #element do
 			local rune = element[i]
-			if (ns.IsCata) then
-				color = element.__owner.colors.runes[rune.runeType]
-				r, g, b = color[1], color[2], color[3]
-			end
 			rune:SetStatusBarColor(r, g, b)
 		end
 	end
@@ -1232,7 +1226,7 @@ ClassPowerMod.CreateUnitFrames = function(self)
 end
 
 ClassPowerMod.GetLabel = function(self)
-	return ns.IsClassic and L["Combo Points"] or L["Class Power"]
+	return L["Class Power"]
 end
 
 ClassPowerMod.PostUpdateAnchor = function(self)
@@ -1264,7 +1258,7 @@ ClassPowerMod.Update = function(self)
 		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnDeferredUpdateEvent")
 	end
 
-	if (ns.IsCata or ns.IsRetail) and (playerClass == "DEATHKNIGHT") then
+	if (playerClass == "DEATHKNIGHT") then
 		if (self.db.profile.showRunes) then
 			self.frame:EnableElement("Runes")
 			self.frame.Runes:ForceUpdate()

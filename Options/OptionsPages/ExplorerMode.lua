@@ -263,20 +263,20 @@ local GenerateOptions = function()
 				hidden = isdisabled,
 				order = 46
 			},
-			fadeWithFocusTarget = (ns.IsRetail or ns.IsCata) and {
+			fadeWithFocusTarget = {
 				name = L["While having a focus target"],
 				desc = "",
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 50
-			} or nil,
-			fadeInVehicles = (ns.IsRetail or ns.IsCata) and {
+			},
+			fadeInVehicles = {
 				name = L["While having any sort of replacement actionbar"],
 				desc = L["Exits Explorer Mode when in vehicles, when possessing a unit or any other situation that would replace your character's action bar with a temporary one."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 55
-			} or nil,
+			},
 			elementsspacer = {
 				name = "\n ", type = "description", fontSize = "medium", hidden = isdisabled,
 				order = 99
@@ -330,13 +330,13 @@ local GenerateOptions = function()
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 141
 			},
-			fadeFocusFrame = (ns.IsRetail or ns.IsCata) and {
+			fadeFocusFrame = {
 				name = L["Fade Focus unit frame"],
 				desc = "",
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 142
-			} or nil,
+			},
 			fadeTracker = {
 				name = L["Fade Objectives Tracker"],
 				desc = "",

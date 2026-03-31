@@ -14,17 +14,10 @@ local type, error, tostring, tonumber, assert, select = type, error, tostring, t
 local setmetatable, wipe, unpack, pairs, ipairs, next, pcall = setmetatable, wipe, unpack, pairs, ipairs, next, pcall
 local hooksecurefunc, strmatch, format, tinsert, tremove = hooksecurefunc, strmatch, format, tinsert, tremove
 
-local _, _, _, wowtoc = GetBuildInfo()
+local WoWRetail = true
+local WoWMidnight = true
 
-local WoWBCC = wowtoc >= 20000 and wowtoc < 30000
-local WoWRetail = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
-local WoWClassic = (WOW_PROJECT_ID == WOW_PROJECT_CLASSIC)
-local WoWWrath = (WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC)
-local WoWCata = (WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC)
-local WoWMists = (WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC)
-local WoWMidnight = wowtoc >= 120000
-
-local DisableOverlayGlow = WoWClassic or WoWBCC or WoWWrath
+local DisableOverlayGlow = false
 
 local KeyBound = LibStub("LibKeyBound-1.0", true)
 local CBH = LibStub("CallbackHandler-1.0")
@@ -330,11 +323,7 @@ function lib:CreateButton(id, name, header, config)
 	local button = setmetatable(CreateFrame("CheckButton", name, header, "ActionButtonTemplate, SecureActionButtonTemplate"), Generic_MT)
 	button:RegisterForDrag("LeftButton", "RightButton")
 
-	if WoWRetail or WoWBCC then
-		button:RegisterForClicks("AnyDown", "AnyUp")
-	else
-		button:RegisterForClicks("AnyUp")
-	end
+	button:RegisterForClicks("AnyDown", "AnyUp")
 
 	button.cooldown:SetSwipeColor(0, 0, 0, 0.8)
 	button.cooldown:SetFrameStrata(button:GetFrameStrata())
@@ -1551,9 +1540,7 @@ function Generic:UpdateConfig(config)
 	self:SetAttribute('flyoutDirection', self.config.flyoutDirection)
 	self:SetAttribute('useOnKeyDown', self.config.clickOnDown)
 
-	if not (WoWRetail or WoWBCC) then
-		self:RegisterForClicks(self.config.clickOnDown and "AnyDown" or "AnyUp")
-	end
+
 end
 
 -----------------------------------------------------------
@@ -1604,36 +1591,20 @@ function InitializeEventHandler()
 	lib.eventFrame:RegisterEvent("SPELL_UPDATE_CHARGES")
 	lib.eventFrame:RegisterEvent("SPELL_UPDATE_ICON")
 
-	if WoWBCC or WoWMidnight then
-		lib.eventFrame:RegisterEvent("LEARNED_SPELL_IN_SKILL_LINE")
-	else
-		lib.eventFrame:RegisterEvent("LEARNED_SPELL_IN_TAB")
-	end
+	lib.eventFrame:RegisterEvent("LEARNED_SPELL_IN_SKILL_LINE")
 
-	if not WoWClassic and not WoWBCC then
-		if WoWRetail then
-			lib.eventFrame:RegisterEvent("ARCHAEOLOGY_CLOSED")
-			lib.eventFrame:RegisterEvent("UPDATE_SUMMONPETS_ACTION")
-			lib.eventFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
-			lib.eventFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
-		end
+	lib.eventFrame:RegisterEvent("ARCHAEOLOGY_CLOSED")
+	lib.eventFrame:RegisterEvent("UPDATE_SUMMONPETS_ACTION")
+	lib.eventFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
+	lib.eventFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
 
-		lib.eventFrame:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
-		lib.eventFrame:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
-		lib.eventFrame:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR")
-	end
+	lib.eventFrame:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
+	lib.eventFrame:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
+	lib.eventFrame:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR")
 
-	if WoWRetail then
-		lib.eventFrame:RegisterEvent("SPELLS_CHANGED")
-		lib.eventFrame:RegisterEvent("ACTION_USABLE_CHANGED")
-		lib.eventFrame:RegisterEvent("ACTION_RANGE_CHECK_UPDATE")
-	else
-		lib.eventFrame:RegisterUnitEvent("UNIT_AURA", "target")
-		lib.eventFrame:RegisterUnitEvent("UNIT_FACTION", "target")
-
-		lib.eventFrame:RegisterEvent("ACTIONBAR_UPDATE_USABLE")
-		lib.eventFrame:RegisterEvent("PET_BAR_HIDEGRID") -- Needed for classics show grid.. ACTIONBAR_SHOWGRID fires with PET_BAR_SHOWGRID but ACTIONBAR_HIDEGRID doesn't fire with PET_BAR_HIDEGRID
-	end
+	lib.eventFrame:RegisterEvent("SPELLS_CHANGED")
+	lib.eventFrame:RegisterEvent("ACTION_USABLE_CHANGED")
+	lib.eventFrame:RegisterEvent("ACTION_RANGE_CHECK_UPDATE")
 
 	-- With those two, do we still need the ACTIONBAR equivalents of them?
 	lib.eventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
@@ -3639,20 +3610,7 @@ Action.GetPassiveCooldownSpellID = function(self)
 	end
 end
 
--- Classic overrides for item count breakage
-if WoWClassic then
-	-- if the library is present, simply use it to override action counts
-	local LibClassicSpellActionCount = LibStub("LibClassicSpellActionCount-1.0", true)
-	if LibClassicSpellActionCount then
-		Action.GetCount = function(self)
-			return LibClassicSpellActionCount:GetActionCount(self._state_action)
-		end
-	else -- if we don't have the library, only show count for items, like the default UI
-		Action.IsConsumableOrStackable = function(self)
-			return IsConsumableAction(self._state_action) or IsStackableAction(self._state_action) or (not IsItemAction(self._state_action) and GetActionCount(self._state_action) > 0)
-		end
-	end
-end
+
 
 if not WoWRetail then
 	-- disable loss of control cooldown on classic

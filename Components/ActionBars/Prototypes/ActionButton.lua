@@ -43,19 +43,6 @@ local GetMouseoverCastEnabled = function()
 	return false
 end
 
-local onEnter = function(self)
-	-- Tooltip interception disabled; use default button hover handling.
-	if (self.OnEnter) then
-		self:OnEnter()
-	end
-end
-
-local onLeave = function(self)
-	if (self.OnLeave) then
-		self:OnLeave()
-	end
-end
-
 ns.ActionButton.UpdateMouseoverCast = function(button)
 	if (not button) or (not button.SetAttribute) then
 		return
@@ -67,11 +54,10 @@ ns.ActionButton.Create = function(id, name, header, buttonConfig)
 
 	local button = LAB:CreateButton(id, name, header, buttonConfig)
 
-	button.OnEnter = button:GetScript("OnEnter")
-	button.OnLeave = button:GetScript("OnLeave")
-
-	button:SetScript("OnEnter", onEnter)
-	button:SetScript("OnLeave", onLeave)
+	-- WoW 12: Do NOT replace the secure OnEnter/OnLeave scripts with
+	-- insecure wrappers. Calling secure tooltip code from addon context
+	-- taints action values, crashing Blizzard MoneyFrame arithmetic.
+	-- LAB's default handlers are sufficient.
 	ns.ActionButton.UpdateMouseoverCast(button)
 
 	ns.ActionButtons[button] = true

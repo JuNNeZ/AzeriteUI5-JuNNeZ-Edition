@@ -905,7 +905,7 @@ local GenerateOptions = function()
 	end
 
 	-- Focus Target
-	if (not ns.IsClassic) then
+	do
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("FocusFrame")
 		suboptions.name = L["Focus"]
 		suboptions.order = 140
@@ -1275,7 +1275,7 @@ local GenerateOptions = function()
 	end
 
 	-- Arena Enemy Frames
-	if (not ns.IsClassic) then
+	do
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("ArenaFrames")
 		suboptions.name = L["Arena Enemy Frames"]
 		suboptions.order = 180
@@ -1367,7 +1367,7 @@ local GenerateOptions = function()
 					return true
 				end
 			}
-			if (ns.IsCata or ns.IsRetail) then
+			do
 				suboptions.args.showRunes = {
 					name = L["Show Runes (Death Knight)"],
 					desc = L["Toggle whether to show Death Knight Runes."],

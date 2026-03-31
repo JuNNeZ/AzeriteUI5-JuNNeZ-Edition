@@ -1199,24 +1199,6 @@ MinimapMod.InitializeObjectTables = function(self)
 		ObjectOwners.WorldMap = MinimapBackdrop
 	end
 
-	if (ns.IsClassic) then
-		ObjectOwners.BorderTop = MinimapCluster
-		ObjectOwners.BorderClassic = MinimapBackdrop
-		ObjectOwners.Calendar = MinimapCluster
-		ObjectOwners.Clock = MinimapCluster
-		ObjectOwners.Compass = MinimapBackdrop
-		ObjectOwners.Difficulty = MinimapCluster
-		ObjectOwners.Expansion = MinimapBackdrop
-		ObjectOwners.Eye = MinimapBackdrop
-		ObjectOwners.EyeClassicPvP = Minimap
-		ObjectOwners.Mail = Minimap
-		ObjectOwners.ToggleButton = MinimapCluster
-		ObjectOwners.Tracking = Minimap
-		ObjectOwners.Zone = MinimapCluster
-		ObjectOwners.ZoomIn = Minimap
-		ObjectOwners.ZoomOut = Minimap
-		ObjectOwners.WorldMap = MinimapBackdrop
-	end
 
 	--]]--
 

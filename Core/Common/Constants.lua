@@ -32,7 +32,6 @@ local string_split = string.split
 local tonumber = tonumber
 
 -- GLOBALS: GetBuildInfo, GetRealmName, UnitClass, UnitNameUnmodified
--- GLOBALS: WOW_PROJECT_ID, WOW_PROJECT_MAINLINE, WOW_PROJECT_WRATH_CLASSIC, WOW_PROJECT_CLASSIC, WOW_PROJECT_BURNING_CRUSADE_CLASSIC
 
 -- Addon version
 ------------------------------------------------------
@@ -62,14 +61,10 @@ ns.Private.ClientMinor = tonumber(minor)
 ns.Private.ClientMicro = tonumber(micro)
 ns.Private.ClientBuild = tonumber(build)
 
--- Simple flags for client version checks
-ns.Private.IsRetail = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
-ns.Private.IsClassic = (WOW_PROJECT_ID == WOW_PROJECT_CLASSIC)
-ns.Private.IsTBC = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
-ns.Private.IsWrath = (WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC)
-ns.Private.IsCata = (version >= 40400) and (version < 50000)
-ns.Private.WoW10 = version >= 100000
-ns.Private.WoW11 = version >= 110000
+-- Simple flags for client version checks (retail-only build)
+ns.Private.IsRetail = true
+ns.Private.WoW10 = true
+ns.Private.WoW11 = true
 
 -- Developer Mode constants
 ------------------------------------------------------
