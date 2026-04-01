@@ -5,6 +5,28 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.48-JuNNeZ (2026-04-01)
+
+### Highlights
+
+- Fixed recurring WoW 12 Edit Mode taint on repeated open/close loops while solo. Compact party/arena preview frames are no longer touched by AzeriteUI quarantine paths unless the relevant live group context is active.
+- Fixed Blizzard castbar forbidden-table errors during Edit Mode arena refresh by removing AzeriteUI castbar method/mixin mutation guards and keeping castbar handling non-invasive.
+- Fixed Edit Mode exit protected-call attribution (`ClearTarget()`) by rolling back EditMode manager registration-table mutation in the guard layer.
+- Fixed follower/story raid 25-man frame compaction where layout could collapse into one column when profile fallback state was incomplete; Raid25 now uses a safe multi-column fallback.
+
+### Access
+
+- Reproduce Edit Mode fix: open `/az` settings as usual, then open/close Blizzard Edit Mode repeatedly while solo.
+- Raid frame behavior: verify in follower/story raid encounters that 25-man layout keeps expected multi-column spacing.
+
+### Internal
+
+- `Core/FixBlizzardBugs.lua`: context-aware quarantine gating for party/raid/arena preview safety in solo Edit Mode.
+- `Core/FixBlizzardBugs.lua`: castbar guard layer converted to no-op to avoid taint-prone Blizzard castbar mutation.
+- `Core/FixBlizzardBugs.lua`: EditMode manager registration-table bypass logic disabled after protected-call attribution regression.
+- `Components/UnitFrames/Units/Raid25.lua`: hardened `maxColumns` fallback in both header size and child layout calculations.
+
+
 ## 5.3.47-JuNNeZ (2026-04-01) — Tenebric Vital-State Decryption Protocol
 
 ### Highlights

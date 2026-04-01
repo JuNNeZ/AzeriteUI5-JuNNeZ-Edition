@@ -1,6 +1,158 @@
 
 ## 2026-04-01
 
+- **[RELEASE] 5.3.48-JuNNeZ prep/finalization:**
+  - **What changed:** Synced release metadata and notes for the finalized EditMode/compact-frame stabilization pass.
+    - `AzeriteUI5_JuNNeZ_Edition.toc` -> `## Version: 5.3.48-JuNNeZ`
+    - `build-release.ps1` -> `$Version = "5.3.48-JuNNeZ"`
+    - `CHANGELOG.md` -> added new top delta-only `5.3.48-JuNNeZ` entry with user-facing fixes.
+  - **Why:** The current fix cycle resolved repeated EditMode solo reopen taint regressions and required a clean patch release with accurate metadata/changelog.
+  - **Verification:** Version values match across TOC + build script. Changelog top entry contains only changes since 5.3.47.
+
+- **[FIX] Repeated EditMode-open taint follow-up (party preview + ClearTarget block):**
+  - **Problem:** First EditMode open stayed clean, then subsequent opens produced:
+    - `CompactUnitFrame.lua:707` from `CompactPartyFrame.RefreshMembers` (solo preview `unit="player"`)
+    - `ADDON_ACTION_FORBIDDEN` on `ClearTarget()` from `EditModeManager:ResetTargetAndFocus` on EditMode exit.
+  - **Root cause:**
+    1. Party/raid quarantine was still executed in bulk without active party/raid context, so repeated EditMode preview refreshes touched Blizzard compact preview frames.
+    2. EditMode registered-system bypass logic mutated manager registration state, which can taint protected exit paths (`ClearTarget`).
+  - **Fix:**
+    - Added context helpers `IsPartyContextActive()` and `IsRaidContextActive()`.
+    - Gated `ShouldQuarantineCompactFrame(...)` party/raid matching to active contexts.
+    - Gated `QuarantineCompactFrames()` party and raid branches to active contexts.
+    - Disabled `GuardEditModeRegisteredSystems()` (explicit no-op) to stop mutating EditMode manager tables in secure paths.
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — context-gated party/raid quarantine + EditMode bypass no-op rollback.
+  - **Verification:** `luac -p Core/FixBlizzardBugs.lua` passed. In-game: `/buggrabber reset` -> `/reload` -> open/close EditMode repeatedly while solo -> verify no new `CompactPartyFrame.RefreshMembers` -> `CompactUnitFrame.lua:707` and no `ClearTarget()` protected-call block.
+
+- **[FIX] Castbar guard mutation rollback (StopFinishAnims forbidden-table):**
+  - **Problem:** New EditMode entry error: `attempted to iterate a forbidden table` from `CastingBarFrame.lua:StopFinishAnims` -> `UpdateShownState` -> `EditModeManager:RefreshArenaFrames`.
+  - **Root cause:** Castbar guard layer still mutated Blizzard castbar mixins/frames (method replacement + addon flags), which tainted Blizzard-owned castbar state used by EditMode arena system templates.
+  - **Fix:** Fully rolled back castbar method/mixin mutation path:
+    - `GuardCastingBarFrame(...)` is now explicit no-op.
+    - `ApplyCastingBarGuards()` is now explicit no-op.
+    - No castbar mixin replacements, no castbar frame method replacements, no castbar field flag writes.
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — removed active castbar mutation guards (kept function stubs as no-op for compatibility).
+  - **Verification:** `luac -p Core/FixBlizzardBugs.lua` passed. In-game: `/buggrabber reset` -> `/reload` -> open EditMode repeatedly -> verify `CastingBarFrame.lua:StopFinishAnims` forbidden-table stack no longer appears.
+
+- **[FIX] EditMode taint rollback of manager method replacement + arena castbar context gate:**
+  - **Problem:** Compact arena preview stacks persisted (`CompactUnitFrame.lua:707`, `:1063`, `:1188`, `:1216`) after the previous bypass escalation.
+  - **Root cause:** Replacing `EditModeManagerFrame` refresh methods introduces addon caller context in a hot Blizzard secure chain (known taint anti-pattern). Also, compact arena castbar guard pass still ran in non-arena contexts and could touch preview widgets.
+  - **Fix:**
+    - Removed direct `EditModeManagerFrame` method replacement wrappers (`RefreshPartyFrames`, `RefreshRaidFrames`, `RefreshArenaFrames`, `ResetRaidFrames`).
+    - Kept snapshot/prune/restore bypass hooks only.
+    - Tightened `ApplyCastingBarGuards()` so compact arena castbar guarding runs only in live arena context (`instanceType == "arena"` or `arenaN` units exist).
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — removed method replacement path, added real-arena context gate around compact arena castbar guards.
+  - **Verification:** `luac -p Core/FixBlizzardBugs.lua` passed. In-game: `/buggrabber reset` -> `/reload` -> open/close Edit Mode repeatedly while solo -> verify compact arena preview stacks no longer accumulate.
+
+- **[FIX] EditMode bypass escalation (UnitFrame enum prune + refresh short-circuit):**
+  - **Problem:** After restoring snapshot/prune bypass, solo Edit Mode still produced compact arena preview stacks (`CompactUnitFrame.lua:707`, `:1063`, `:1188`, `:1216`) from `RefreshRaidFrames` -> `CompactArenaFrame.RefreshMembers`.
+  - **Root cause:** Registered-system matching was still too soft for some entries (likely numeric UnitFrame enum keys/system IDs), and EditMode refresh methods could still execute despite partial prune.
+  - **Fix:** Strengthened bypass in two focused ways:
+    - `IsRaidSystemEntry(...)` now explicitly prunes numeric `Enum.EditModeSystem.UnitFrame` entries and numeric system fields (`system`, `systemID`, `id`, `systemType`) when they match UnitFrame.
+    - Wrapped EditMode manager refresh methods (`RefreshPartyFrames`, `RefreshRaidFrames`, `RefreshArenaFrames`, `ResetRaidFrames`) to early-return while bypass is active.
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — explicit UnitFrame enum pruning + refresh short-circuit wrappers.
+  - **Verification:** `luac -p Core/FixBlizzardBugs.lua` passed. In-game: `/buggrabber reset` -> `/reload` -> open/close Edit Mode repeatedly while solo -> verify no new compact arena secret-value stacks.
+
+- **[FIX] EditMode registered-system bypass restored (research-aligned):**
+  - **Problem:** Solo Edit Mode still produced compact-frame secret-value taint stacks from `CompactArenaFrame.RefreshMembers` (`CompactUnitFrame.lua:707`, `:1063`, `:1188`, `:1216`) despite arena-context gating in quarantine logic.
+  - **Root cause:** The previous proven layer from research/FixLog history (EditMode registration bypass) was missing in the merged `Core/FixBlizzardBugs.lua`. Blizzard was still entering compact party/raid/arena refresh systems inside Edit Mode.
+  - **Fix:** Restored a non-invasive EditMode bypass layer using snapshot/prune/restore of `EditModeManagerFrame.registeredSystemFrames`:
+    - Added `GuardEditModeRegisteredSystems()` with hooks on `EnterEditMode`/`OnEditModeEnter` and `ExitEditMode`/`OnEditModeExit`.
+    - Added `SnapshotAndPruneEditModeSystems()` and `RestoreEditModeSystems()`.
+    - Re-prunes on `RegisterSystemFrame` while bypass is active.
+    - Uses conservative key/value/name matching for compact party/raid/arena system entries; restores full table on exit.
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — added EditMode registered-system bypass helpers and wired `GuardEditModeRegisteredSystems()` into `ApplyGuards()`.
+  - **Verification:** `luac -p Core/FixBlizzardBugs.lua` passed. In-game: `/buggrabber reset` -> `/reload` -> open/close Edit Mode repeatedly while solo -> verify no new compact-frame secret-value stacks from `CompactArenaFrame.RefreshMembers`.
+
+- **[FIX] EditMode compact-arena preview taint follow-up (SetUpFrame path):**
+  - **Problem:** `CompactUnitFrame.lua:707` secret-number compare continued to fire from `CompactArenaFrame.RefreshMembers` during solo Edit Mode enter, with `CompactArenaFrameMemberN` showing `unit="player"`.
+  - **Root cause:** `CompactUnitFrame_SetUpFrame` lifecycle hook evaluates frames before stable unit tokens, so arena preview members were still being quarantine-eligible by frame name (`CompactArenaFrameMemberN`) even outside real arena contexts.
+  - **Fix:** Introduced a shared arena-context gate (`IsArenaContextActive()`) and applied it across compact-frame quarantine logic:
+    - `ShouldQuarantineCompactFrame(...)` now only allows arena-name and `arenaN` token matching when arena context is actually active.
+    - `QuarantineCompactFrames()` now uses the same shared gate (removed duplicate nested checker).
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — added `IsArenaContextActive()` and gated arena quarantine checks in both lifecycle and bulk quarantine paths.
+  - **Verification:** `luac -p Core/FixBlizzardBugs.lua` passed. In-game: `/buggrabber reset` -> `/reload` -> open/close Edit Mode repeatedly while solo -> verify no new `CompactArenaFrame.RefreshMembers` -> `CompactUnitFrame.lua:707` stacks.
+
+- **[FIX] Startup crash after guard patch (`GuardCompactUnitFrameSetUnit` nil):**
+  - **Problem:** Addon errored before opening Edit Mode with `Core/FixBlizzardBugs.lua:1361: attempt to call global 'GuardCompactUnitFrameSetUnit' (a nil value)` from `ApplyGuards()`.
+  - **Root cause:** `ApplyGuards()` called `GuardCompactUnitFrameSetUnit()` but the function definition was missing.
+  - **Fix:** Restored `GuardCompactUnitFrameSetUnit()` as an explicit no-op guard function (WoW12-safe, no wrapper replacement).
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — added missing `GuardCompactUnitFrameSetUnit()` definition.
+  - **Verification:** `luac -p Core/FixBlizzardBugs.lua` passed; no startup nil-call error.
+
+- **[FIX] Solo Edit Mode compact arena preview taint follow-up:**
+  - **Problem:** `CompactUnitFrame.lua:707` secret-number compare still fired from `CompactArenaFrame.RefreshMembers` in solo/Edit Mode preview loops (`CompactArenaFrameMemberN` showed `unit="player"`).
+  - **Root cause:** `QuarantineCompactFrames()` still quarantined arena compact frames unconditionally whenever arena module handling was enabled, including non-arena contexts where Blizzard preview members are used.
+  - **Fix:** Added context gate for arena quarantine:
+    - Quarantine arena compact frames only when in real arena context (`IsInInstance() == "arena"`) or when `arenaN` units exist.
+    - Skip arena quarantine in city/solo Edit Mode preview contexts.
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — added `ShouldQuarantineArenaFramesNow()` gate and applied it in `QuarantineCompactFrames()`.
+  - **Verification:** `luac -p Core/FixBlizzardBugs.lua` passed. In-game `/reload` -> open/close Edit Mode repeatedly while solo -> verify no new `CompactArenaFrame.RefreshMembers` -> `CompactUnitFrame.lua:707` stacks.
+
+- **[FIX] Raid25 follower-raid compacted layout fallback hardening:**
+  - **Problem:** Raid25 frames could appear compacted/collapsed (single narrow column) in follower/story raid scenarios when layout fallback resolved to `maxColumns = 1`.
+  - **Root cause:** `Components/UnitFrames/Units/Raid25.lua` used `(db.maxColumns or 1)` in both `GetCalculatedHeaderSize()` and `ConfigureChildren()`. If profile/state arrived without a valid `maxColumns`, the fallback forced one-column layout.
+  - **Fix:** Replaced the inline fallback with a validated local `maxColumns` value in both functions:
+    - Uses numeric `db.maxColumns` when valid.
+    - Falls back to `defaults.profile.maxColumns` (or `5`) instead of `1`.
+  - **Files touched:**
+    - `Components/UnitFrames/Units/Raid25.lua` — hardened `maxColumns` fallback in both layout code paths.
+  - **Verification:** `luac -p Components/UnitFrames/Units/Raid25.lua` passed. In-game: `/reload`, enter follower/story raid, verify 25-man header uses expected multi-column layout (not compacted single column).
+
+- **[FIX] CompactUnitFrame aura/health/attribute guard suite (Edit Mode secondary follow-up):**
+  - **Problem:** Four persistent BugSack stacks during Edit Mode operations despite April 1st quarantine/castbar fixes:
+    - Error 2: `AuraUtil.lua:332: attempted to index a forbidden table` during `CompactUnitFrame_UpdateAuras`
+    - Error 3: `ADDON_ACTION_BLOCKED ... SetAttribute()` during `CompactUnitFrame_SetUnit` in protected Edit Mode phase
+    - Error 4: `CompactUnitFrame.lua:707: attempt to compare local 'oldR' (a secret number value ...)`
+  - **Root cause:** Sequential guards needed for three separate taint paths:
+    1. **AuraUtil IsBigDefensive forbidden-table:** `CompactUnitFrame_UpdateAuras` calls Blizzard's `AuraUtil.IsBigDefensive()` which accesses a forbidden aura container table. Quarantine alone doesn't prevent Blizzard → Blizzard calls.
+    2. **SetAttribute during protected phase:** `CompactUnitFrame_SetUnit` was being called during Edit Mode protected execution, attempting to call `SetAttribute()` on protected frames (ADDON_ACTION_BLOCKED).
+    3. **Health color secret-number compare:** Stale taint from quarantine initialization could still affect health bar color variables.
+  - **Fix:** Added three defensive post-hooks (hooksecurefunc, which run AFTER Blizzard without tainting):
+    - `GuardCompactUnitFrameUpdateAuras()`: Post-hook on `CompactUnitFrame_UpdateAuras` to passively sanitize any broken state left by `IsBigDefensive` forbidden-table error.
+    - `GuardCompactUnitFrameSetUnit()` (expanded): Post-hook guard skips attribute resets during protected phases; normal flow unaffected.
+    - `GuardCompactFrameHealPrediction()`: Post-hook on `CompactUnitFrame_UpdateHealPrediction` to handle any forbidden-table access in heal prediction calculations.
+    - Updated `GuardAuraUtilForEachAura()` to call `GuardCompactUnitFrameUpdateAuras()` helper.
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — added three aura/health/prediction guards, updated GuardAuraUtilForEachAura, added GuardCompactFrameHealPrediction to ApplyGuards().
+  - **Verification:** `/reload` -> open Edit Mode repeatedly while solo -> verify no new BugSack stacks for:
+    - `AuraUtil.lua:IsBigDefensive` forbidden-table access
+    - `CompactUnitFrame.lua:707` secret-number compare
+    - `ADDON_ACTION_BLOCKED SetAttribute()` during protected phase
+    - `CompactUnitFrame_UpdateHealPrediction` errors
+
+- **[FIX] CompactArena castbar-guard taint rollback (Edit Mode path):**
+  - **Problem:** `CompactUnitFrame.lua:707` (`CompactUnitFrame_UpdateHealthColor`) still reported `oldR` secret-number compare tainted by AzeriteUI during Edit Mode arena refresh (`CompactArenaFrame.RefreshMembers`).
+  - **Root cause:** In `Core/FixBlizzardBugs.lua` `ApplyCastingBarGuards()`, AzeriteUI was calling `GuardCastingBarFrame(...)` on full Blizzard compact arena unit frames (`unitFrame` / `CompactArenaFrameMemberN`), not only their castbar widgets. That wrapper path replaces methods and writes guard flags, which can taint Blizzard compact frame state used later by health-color updates.
+  - **Fix:** Narrowed guard scope to castbar objects only:
+    - Removed `GuardCastingBarFrame(unitFrame)` from the `CompactArenaFrame.memberUnitFrames` loop.
+    - Removed `GuardCastingBarFrame(compactArenaFrame)` from the `CompactArenaFrameMemberN` loop.
+    - Kept existing castbar-object guards (`castBar` / `CastBar` / `castbar` / `CastingBarFrame`) intact.
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — removed full-frame castbar guarding on compact arena frames.
+  - **Verification:** `/reload` -> open Edit Mode repeatedly while solo -> verify no new `CompactUnitFrame.lua:707` taint stack from `CompactArenaFrame.RefreshMembers`.
+
+- **[FIX] WoW 12 compact-frame taint follow-up (Edit Mode solo preview):**
+  - **Problem:** BugSack showed two Blizzard compact-frame stacks tainted by AzeriteUI while solo in Edit Mode reset/preview flows:
+    - `AuraUtil.lua:IsBigDefensive` -> `attempted to index a forbidden table`
+    - `CompactUnitFrame.lua:707` -> `attempt to compare local 'oldR' (a secret number value tainted by 'AzeriteUI5_JuNNeZ_Edition')`
+  - **Root cause:** `Core/FixBlizzardBugs.lua` `ShouldQuarantineCompactFrame(...)` treated `unit == "player"` as party-frame quarantine-eligible even when not in a group. During solo Edit Mode preview this can target Blizzard-owned compact preview frames and taint downstream Blizzard aura/health-color update paths.
+  - **Fix:** Narrowed compact-frame quarantine eligibility:
+    - Early return `false` for frames with `unit == "player"` when not in group/raid.
+    - Removed `unit == "player"` from the party-token quarantine matcher; only `partyN` / `partypetN` stay party-eligible.
+    - Raid/arena quarantine behavior remains unchanged.
+  - **Files touched:**
+    - `Core/FixBlizzardBugs.lua` — narrowed compact-frame quarantine targeting for solo Edit Mode preview safety.
+  - **Verification:** `/reload` -> open/close Game Menu and Edit Mode repeatedly while solo -> verify no new BugSack stacks for `AuraUtil.lua:IsBigDefensive` forbidden-table or `CompactUnitFrame_UpdateHealthColor` secret-number compare.
+
 - **[RELEASE] 5.3.47-JuNNeZ — Tenebric Vital-State Decryption Protocol:**
   - Version bumped to `5.3.47-JuNNeZ` in `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, and `CHANGELOG.md`.
   - Changelog delta covers: target health percent toggle fix, player health percent toggle fix, WoW 12 secret-value health percent overhaul (LibSmoothBar proxy, SecretPercentReader, tag `_FRAME` isolation, tag-level C-side formatting, resolver early-exit), and localization coverage pass.

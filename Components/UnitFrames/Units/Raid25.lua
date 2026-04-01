@@ -1081,10 +1081,11 @@ RaidFrame25Mod.GetCalculatedHeaderSize = function(self, numDisplayed)
 	local xOffset = db.xOffset or 0
 	local yOffset = db.yOffset or 0
 	local columnSpacing = db.columnSpacing or 0
+	local maxColumns = (type(db.maxColumns) == "number" and db.maxColumns > 0 and db.maxColumns) or defaults.profile.maxColumns or 5
 
 	local numColumns
 	if (unitsPerColumn and numDisplayed > unitsPerColumn) then
-		numColumns = math_min(math_ceil(numDisplayed/unitsPerColumn), (db.maxColumns or 1))
+		numColumns = math_min(math_ceil(numDisplayed/unitsPerColumn), maxColumns)
 	else
 		unitsPerColumn = numDisplayed
 		numColumns = 1
@@ -1138,9 +1139,10 @@ RaidFrame25Mod.ConfigureChildren = function(self)
 	local sortDir = db.sortDir or "ASC"
 	local columnSpacing = db.columnSpacing or 0
 	local unitsPerColumn = db.unitsPerColumn or numDisplayed
+	local maxColumns = (type(db.maxColumns) == "number" and db.maxColumns > 0 and db.maxColumns) or defaults.profile.maxColumns or 5
 	local numColumns
 	if (unitsPerColumn and numDisplayed > unitsPerColumn) then
-		numColumns = math_min(math_ceil(numDisplayed/unitsPerColumn), (db.maxColumns or 1))
+		numColumns = math_min(math_ceil(numDisplayed/unitsPerColumn), maxColumns)
 	else
 		unitsPerColumn = numDisplayed
 		numColumns = 1

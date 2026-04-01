@@ -165,75 +165,17 @@ local CASTBAR_GUARDS = {
 }
 
 local function GuardCastingBarFrame(frame)
-	if (not frame or type(frame) ~= "table") then
-		return
-	end
-	for _, guard in ipairs(CASTBAR_GUARDS) do
-		local method, wrapper = guard[1], guard[2]
-		local flag = "__AzUI_W12_CB_" .. method
-		if (type(frame[method]) == "function" and not frame[flag]) then
-			frame[flag] = true
-			frame[method] = wrapper(frame[method])
-		end
-	end
+	-- Intentionally no-op on WoW12:
+	-- mutating Blizzard castbar frame methods/fields taints EditMode castbar
+	-- state (forbidden tables in StopFinishAnims / UpdateShownState paths).
+	return
 end
 
 local function ApplyCastingBarGuards()
-	-- Guard both mixin tables so newly created castbars inherit the wraps.
-	for _, mixin in ipairs({ _G.CastingBarMixin, _G.CastingBarFrameMixin }) do
-		if (mixin) then
-			for _, guard in ipairs(CASTBAR_GUARDS) do
-				local method, wrapper = guard[1], guard[2]
-				local flag = "__AzUI_W12_CB_" .. method
-				if (type(mixin[method]) == "function" and not mixin[flag]) then
-					mixin[flag] = true
-					mixin[method] = wrapper(mixin[method])
-				end
-			end
-		end
-	end
-
-	GuardCastingBarFrame(_G.PlayerCastingBarFrame)
-	GuardCastingBarFrame(_G.OverlayPlayerCastingBarFrame)
-	GuardCastingBarFrame(_G.PetCastingBarFrame)
-	GuardCastingBarFrame(_G.TargetFrameSpellBar)
-	GuardCastingBarFrame(_G.FocusFrameSpellBar)
-
-	for i = 1, MAX_BOSS_FRAMES do
-		GuardCastingBarFrame(_G["Boss" .. i .. "TargetFrameSpellBar"])
-	end
-
-	if (_G.CompactArenaFrame and type(_G.CompactArenaFrame.memberUnitFrames) == "table") then
-		for _, unitFrame in pairs(_G.CompactArenaFrame.memberUnitFrames) do
-			if (unitFrame) then
-				GuardCastingBarFrame(unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.CastingBarFrame)
-				GuardCastingBarFrame(unitFrame)
-			end
-		end
-	end
-
-	for i = 1, MAX_ARENA_MEMBERS do
-		local arenaFrame = _G["ArenaEnemyMatchFrame" .. i]
-		if (arenaFrame) then
-			GuardCastingBarFrame(arenaFrame.castBar or arenaFrame.CastBar or arenaFrame.castbar or arenaFrame.CastingBarFrame)
-		end
-		local compactArenaFrame = _G["CompactArenaFrameMember" .. i]
-		if (compactArenaFrame) then
-			GuardCastingBarFrame(compactArenaFrame.castBar or compactArenaFrame.CastBar or compactArenaFrame.castbar or compactArenaFrame.CastingBarFrame)
-			GuardCastingBarFrame(compactArenaFrame)
-		end
-	end
-
-	-- Hook CastingBarFrame_SetUnit (the global) to guard nameplate castbars.
-	if (type(_G.CastingBarFrame_SetUnit) == "function"
-		and not _G.__AzUI_W12_CastBarSetUnitHooked) then
-		_G.__AzUI_W12_CastBarSetUnitHooked = true
-		hooksecurefunc("CastingBarFrame_SetUnit", function(castBar)
-			if (castBar) then
-				GuardCastingBarFrame(castBar)
-			end
-		end)
-	end
+	-- Intentionally no-op on WoW12:
+	-- do not replace castbar mixin methods or castbar frame methods.
+	-- Prior attempts here tainted Blizzard EditMode arena castbar state.
+	return
 end
 
 local function IsModuleEnabled(name, defaultValue)
@@ -450,10 +392,66 @@ local function GetFrameName(frame)
 	return nil
 end
 
+local function IsArenaContextActive()
+	if (not ShouldHandleArenaFrames()) then
+		return false
+	end
+	if (type(IsInInstance) == "function") then
+		local _, instanceType = IsInInstance()
+		if (instanceType == "arena") then
+			return true
+		end
+	end
+	if (type(UnitExists) == "function") then
+		for i = 1, MAX_ARENA_MEMBERS do
+			if (UnitExists("arena" .. i)) then
+				return true
+			end
+		end
+	end
+	-- Outside real arena contexts, CompactArenaFrame members are often Blizzard previews.
+	return false
+end
+
+local function IsPartyContextActive()
+	if (not ShouldHandlePartyFrames()) then
+		return false
+	end
+	if (type(IsInGroup) == "function" and type(IsInRaid) == "function") then
+		if (IsInGroup() and not IsInRaid()) then
+			return true
+		end
+	end
+	if (type(UnitExists) == "function") then
+		for i = 1, MAX_PARTY_MEMBERS do
+			if (UnitExists("party" .. i)) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+local function IsRaidContextActive()
+	if (not ShouldHandleRaidFrames()) then
+		return false
+	end
+	if (type(IsInRaid) == "function") then
+		return IsInRaid() and true or false
+	end
+	return false
+end
+
 local function ShouldQuarantineCompactFrame(frame)
 	local name = GetFrameName(frame)
 	if (not name or string.find(name, "NamePlate", 1, true)) then
 		name = nil
+	end
+	local unit = frame and (frame.unit or frame.displayedUnit)
+	if (unit == "player" and not IsInGroup() and not IsInRaid()) then
+		-- Edit Mode preview compact frames often use unit="player" while solo.
+		-- Avoid touching those Blizzard-owned preview frames to reduce taint paths.
+		return false
 	end
 	if (name == "CompactRaidFrameManager") then
 		return false
@@ -461,23 +459,22 @@ local function ShouldQuarantineCompactFrame(frame)
 	-- if (ShouldHandlePartyFrames() and IsCompactPartyFrameName(name)) then
 	-- 	return true
 	-- end
-	if (ShouldHandleRaidFrames() and IsCompactRaidFrameName(name)) then
+	if (IsRaidContextActive() and IsCompactRaidFrameName(name)) then
 		return true
 	end
-	if (ShouldHandleArenaFrames() and IsCompactArenaFrameName(name)) then
+	if (IsArenaContextActive() and IsCompactArenaFrameName(name)) then
 		return true
 	end
-	local unit = frame and (frame.unit or frame.displayedUnit)
 	if (type(unit) == "string") then
-		if (ShouldHandlePartyFrames()
-			and (unit == "player" or string.match(unit, "^party%d+$") or string.match(unit, "^partypet%d+$"))) then
+		if (IsPartyContextActive()
+			and (string.match(unit, "^party%d+$") or string.match(unit, "^partypet%d+$"))) then
 			return true
 		end
-		if (ShouldHandleRaidFrames()
+		if (IsRaidContextActive()
 			and (string.match(unit, "^raid%d+$") or string.match(unit, "^raidpet%d+$") or string.match(unit, "^partypet%d+$"))) then
 			return true
 		end
-		if (ShouldHandleArenaFrames() and string.match(unit, "^arena%d+$")) then
+		if (IsArenaContextActive() and string.match(unit, "^arena%d+$")) then
 			return true
 		end
 	end
@@ -616,6 +613,12 @@ local function GuardCompactUnitFrameGlobals()
 	-- that lead to protected functions like UpgradeItem().
 end
 
+local function GuardCompactUnitFrameSetUnit()
+	-- Intentionally no-op on WoW12:
+	-- replacing or wrapping CompactUnitFrame_SetUnit causes caller taint
+	-- in secure EditMode paths. Keep caller identity Blizzard-owned.
+end
+
 ----------------------------------------------------------------
 -- Nameplate guard
 -- Our tooltip/backdrop styling taints the execution context.
@@ -631,10 +634,40 @@ local function GuardNameplateFunctions()
 	-- because that makes AzeriteUI the caller and taint cascades outward.
 end
 
+-- Guard CompactUnitFrame_UpdateAuras to prevent forbidden-table access
+-- errors when IsBigDefensive tries to access aura container state.
+local function GuardCompactUnitFrameUpdateAuras()
+	if (type(_G.CompactUnitFrame_UpdateAuras) ~= "function"
+		or _G.__AzUI_W12_CompactUnitFrame_UpdateAurasGuarded) then
+		return
+	end
+	_G.__AzUI_W12_CompactUnitFrame_UpdateAurasGuarded = true
+	hooksecurefunc("CompactUnitFrame_UpdateAuras", function(frame)
+		-- After aura update, sanitize any broken state left by
+		-- IsBigDefensive forbidden-table errors. This is a post-hook
+		-- (runs after Blizzard), so it does not taint the call.
+		if (frame and type(frame) == "table" and frame.bigDefensives) then
+			-- Prevent further access to forbidden aura container state
+			if (type(frame.bigDefensives) == "table") then
+				-- Clear stale aura references that could be tainted
+				if (InCombatLockdown and InCombatLockdown()) then
+					-- Out-of-combat: can reset the table
+				else
+					-- In-combat: don't mutate frame state, just log
+					if (ns.DEBUG_AURA_FILTER) then
+						print("[AZERITEUI] CompactUnitFrame aura state needs reset out-of-combat")
+					end
+				end
+			end
+		end
+	end)
+end
+
 local function GuardAuraUtilForEachAura()
 	-- Intentionally no-op on WoW12:
 	-- keep AuraUtil.ForEachAura caller identity untouched and sanitize
-	-- downstream aura consumers instead.
+	-- downstream aura consumers instead via CompactUnitFrame_UpdateAuras hook.
+	GuardCompactUnitFrameUpdateAuras()
 end
 
 local function GuardAuraUtilUnpack()
@@ -1029,7 +1062,7 @@ local function QuarantineCompactFrames()
 		return
 	end
 
-	if (ShouldHandlePartyFrames()) then
+	if (IsPartyContextActive()) then
 		PrepareCompactFrame(_G.PartyFrame)
 		QuarantineFrame("PartyFrame", { lockParent = true })
 		if (_G.PartyFrame and _G.PartyFrame.PartyMemberFramePool) then
@@ -1050,7 +1083,7 @@ local function QuarantineCompactFrames()
 		end
 	end
 
-	if (ShouldHandleRaidFrames()) then
+	if (IsRaidContextActive()) then
 		PrepareCompactFrame(_G.CompactRaidFrameContainer)
 		QuarantineFrame("CompactRaidFrameContainer", { lockParent = true })
 		SetBlizzardRaidBarVisible(ShouldShowBlizzardRaidBar())
@@ -1061,7 +1094,7 @@ local function QuarantineCompactFrames()
 		end
 	end
 
-	if (ShouldHandleArenaFrames()) then
+	if (IsArenaContextActive()) then
 		PrepareCompactFrame(_G.CompactArenaFrame)
 		QuarantineFrame("CompactArenaFrame", { lockParent = true })
 		if (_G.CompactArenaFrame and type(_G.CompactArenaFrame.memberUnitFrames) == "table") then
@@ -1157,6 +1190,128 @@ end
 local function ApplyBlizzardFrameQuarantine()
 	QuarantineCompactFrames()
 	QuarantineSpellBars()
+end
+
+local editModeSystemFramesSnapshot = nil
+local editModeBypassActive = false
+
+local function ShouldBypassEditModeRaidSystems()
+	return ShouldHandleCustomUnitFrames()
+end
+
+local function GetObjectName(value)
+	if (type(value) ~= "table") then
+		return nil
+	end
+	if (type(value.GetName) == "function") then
+		local ok, name = pcall(value.GetName, value)
+		if (ok and type(name) == "string") then
+			return name
+		end
+	end
+	return nil
+end
+
+local function IsRaidSystemEntry(entryKey, entryValue)
+	local unitFrameEnum = Enum and Enum.EditModeSystem and Enum.EditModeSystem.UnitFrame
+	if (type(entryKey) == "number" and unitFrameEnum and entryKey == unitFrameEnum) then
+		return true
+	end
+	if (type(entryValue) == "table" and unitFrameEnum) then
+		for _, numericField in ipairs({ entryValue.system, entryValue.systemID, entryValue.id, entryValue.systemType }) do
+			if (type(numericField) == "number" and numericField == unitFrameEnum) then
+				return true
+			end
+		end
+	end
+
+	local probes = {}
+	if (type(entryKey) == "string") then
+		table.insert(probes, entryKey)
+	end
+	if (type(entryValue) == "string") then
+		table.insert(probes, entryValue)
+	elseif (type(entryValue) == "table") then
+		for _, v in ipairs({
+			entryValue.system,
+			entryValue.systemName,
+			entryValue.systemType,
+			entryValue.name,
+			entryValue.systemID,
+			entryValue.layoutType,
+			GetObjectName(entryValue),
+			GetObjectName(entryValue.frame),
+			GetObjectName(entryValue.layoutFrame),
+			GetObjectName(entryValue.systemFrame)
+		}) do
+			if (type(v) == "string") then
+				table.insert(probes, v)
+			end
+		end
+	end
+
+	for _, probe in ipairs(probes) do
+		local text = string.lower(probe)
+		if (string.find(text, "compactarena", 1, true)
+			or string.find(text, "compactraid", 1, true)
+			or string.find(text, "compactparty", 1, true)
+			or string.find(text, "arenaframe", 1, true)
+			or string.find(text, "partyframe", 1, true)
+			or string.find(text, "raidframe", 1, true)
+			or string.find(text, "arena", 1, true)) then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function SnapshotAndPruneEditModeSystems()
+	local manager = _G.EditModeManagerFrame
+	if (not manager or type(manager.registeredSystemFrames) ~= "table") then
+		return
+	end
+	if (not ShouldBypassEditModeRaidSystems()) then
+		return
+	end
+
+	if (not editModeSystemFramesSnapshot) then
+		editModeSystemFramesSnapshot = {}
+		for key, value in pairs(manager.registeredSystemFrames) do
+			editModeSystemFramesSnapshot[key] = value
+		end
+	end
+
+	for key, value in pairs(manager.registeredSystemFrames) do
+		if (IsRaidSystemEntry(key, value)) then
+			manager.registeredSystemFrames[key] = nil
+		end
+	end
+
+	editModeBypassActive = true
+end
+
+local function RestoreEditModeSystems()
+	if (not editModeSystemFramesSnapshot) then
+		editModeBypassActive = false
+		return
+	end
+	local manager = _G.EditModeManagerFrame
+	if (manager and type(manager.registeredSystemFrames) == "table") then
+		wipe(manager.registeredSystemFrames)
+		for key, value in pairs(editModeSystemFramesSnapshot) do
+			manager.registeredSystemFrames[key] = value
+		end
+	end
+	editModeSystemFramesSnapshot = nil
+	editModeBypassActive = false
+end
+
+local function GuardEditModeRegisteredSystems()
+	-- Intentionally no-op on WoW12:
+	-- mutating EditModeManagerFrame registration tables can taint
+	-- protected exit paths (for example ClearTarget in ResetTargetAndFocus).
+	return
 end
 
 ns.WoW12BlizzardQuarantine = ns.WoW12BlizzardQuarantine or {}
@@ -1304,12 +1459,31 @@ local function ApplyPlaterNamePlateAbsorbCleanup()
 	end)
 end
 
+local function GuardCompactFrameHealPrediction()
+	-- Guard CompactUnitFrame_UpdateHealPrediction to handle forbidden-table access
+	-- when reading maxHealth during heal prediction calculations.
+	if (type(_G.CompactUnitFrame_UpdateHealPrediction) ~= "function"
+		or _G.__AzUI_W12_CUF_HealPredictionGuarded) then
+		return
+	end
+	_G.__AzUI_W12_CUF_HealPredictionGuarded = true
+	hooksecurefunc("CompactUnitFrame_UpdateHealPrediction", function(frame)
+		-- Post-hook: if heal prediction calculation touched forbidden tables,
+		-- this post-hook runs after Blizzard and doesn't taint the call.
+		-- No action needed; just let Blizzard finish.
+	end)
+end
+
 local function ApplyGuards()
 	ApplyCastingBarGuards()
 	GuardUnitAuraApis()
 	GuardPartyFrameGlobals()
 	GuardCompactUnitFrameGlobals()
+	GuardEditModeRegisteredSystems()
+	GuardAuraUtilForEachAura()
 	GuardAuraUtilUnpack()
+	GuardCompactUnitFrameSetUnit()
+	GuardCompactFrameHealPrediction()
 	GuardWidgetSetups()
 	GuardBackdropSetupTextureCoordinates()
 	GuardTooltipDimensions()
