@@ -12,13 +12,16 @@ Do not repeat older items from prior versions in newer entries.
 - Fixed health percent display on WoW 12 / Midnight for both player and target frames. A chain of secret-value restrictions meant health data could not be read through normal Lua paths. The fix introduces a C-side tag formatting path that passes secret values directly to oUF's rendering pipeline, bypassing Lua arithmetic entirely.
 - Fixed LibSmoothBar proxy bar receiving a coerced (wrong) min/max range, which caused health percent to permanently show 100%. Proxy bars now receive the original secret min/max and value so the C-side fill is computed correctly.
 - Fixed the tag `_FRAME` context not reaching helper functions in `Tags.lua`. oUF injects `_FRAME` into tag method environments via `setfenv`, but module-scoped helpers retained `_G` where `_FRAME` is never set. All frame-cache fallbacks were silently skipping, causing empty percent text. A relay variable now bridges the oUF environment into module scope.
+- Hardened Blizzard player/pet castbar suppression to stay non-invasive and stable on WoW 12. Suppressed castbars now re-apply alpha hiding after Blizzard visibility/alpha updates (`Show`, `SetShown`, `SetAlpha`) without unregistering events, clearing units, or reparenting.
+- Refactored tooltip/widget/money frame safety guards from invasive function replacement to passive `hooksecurefunc` cache hooks. This keeps Blizzard execution paths secure while still giving AzeriteUI clean geometry fallbacks for tooltip rendering and money-line layout.
 - Fixed the Show Health Percent toggle for the **target frame** in `/az` → Unit Frame Settings → Target. The toggle was writing to the AceDB profile but the visibility check was reading from the layout config — a completely separate data store. The check now reads from the profile first, with layout config as fallback.
-- Fixed the Show Health Percent toggle for the **player frame** — percent now respects the on/off setting and hides correctly when the castbar is visible.
+- Fixed the Show Health Percent toggle for the **player** and **player alternate** frames — percent now respects the on/off setting and hides correctly when castbar text is active.
 - Completed a localization coverage pass for all `/az` menu options across all 10 supported languages (enUS, deDE, esES, frFR, itIT, koKR, ptBR, ruRU, zhCN, zhTW). No menu label should fall back to English in any client language.
 
 ### Access
 
 - Player health percent: `/az` → Unit Frame Settings → Player → Show Health Percent
+- Player alternate health percent: `/az` → Unit Frame Settings → Player Alternate → Show Health Percent
 - Target health percent: `/az` → Unit Frame Settings → Target → Show Health Percent
 
 ### Internal
@@ -27,8 +30,10 @@ Do not repeat older items from prior versions in newer entries.
 - `Components/UnitFrames/Functions.lua`: new `SecretPercentReader` hidden StatusBar utility (reads geometry ratio after C-side fills); fixed `GetSafeHealthFromCalculator` `elseif` that prevented `EvaluateCurrentHealthPercent` from ever running; removed stale `ProbeSafePercentAPI` / `GetSecretPercentFromBar` fallbacks; unified target/non-target post-write percent paths; removed race-prone `SetFormattedText` override.
 - `Libs/LibSmoothBar-1.0/LibSmoothBar-1.0.lua`: `SetMinMaxValues`, `SetValue`, and `Update` now preserve and use original (possibly secret) raw min/max values so the proxy bar receives correct fill data.
 - `Components/UnitFrames/Units/Target.lua`: `ShouldShowTargetHealthPercent()` reads from `TargetFrameMod.db.profile` first; `healthLabSignature` cache key includes `showHealthPercent` and `showName` to bust the fast-path cache when toggle changes.
-- `Components/UnitFrames/Units/Player.lua`: added `showHealthPercent` profile default; added `ShouldShowPlayerHealthPercent()` and `UpdatePlayerHealthPercentVisibility()`; castbar toggle now also hides/shows the percent text.
-- `Core/FixBlizzardBugs.lua`: removed unused `SanitizeCompactAura`, `COMPACT_AURA_DEFAULTS`, and `Pack` helpers; retains all active retail WoW 12 quarantine and guard logic.
+- `Components/UnitFrames/Units/Player.lua`, `Components/UnitFrames/Units/PlayerAlternate.lua`, `Layouts/Data/PlayerUnitFrame.lua`, and `Options/OptionsPages/UnitFrames.lua`: added/connected `showHealthPercent` profile support for Player Alternate and updated health-percent anchor/visibility behavior to match player/target toggle expectations.
+- `Components/UnitFrames/Units/PlayerCastBar.lua`: strengthened suppression hooks so Blizzard castbar alpha cannot pop back during animation/state updates while suppression is active.
+- `Core/FixBlizzardBugs.lua` and `Components/Misc/Tooltips.lua`: migrated WoW 12 tooltip/widget/money guards toward passive hook-based geometry caching (`ns.GetSafeGeometry` / `ns.GetSafeWidth`) instead of insecure global method replacement; removed taint-prone wrapper paths (`CompactUnitFrame_UtilShouldDisplay*`, `AuraUtil.UnpackAuraData`, widget mixin method replacement), reducing risk of protected-call fallout such as `UpgradeItem()` attribution.
+- Repo maintenance in the same release window: synced `.gitignore`/`.pkgmeta`, updated README badges, and removed stale internal release checklist/TODO files.
 - Deleted `TODO.md` and `VERSION_CHECKLIST.md` (internal tracking files, superseded by FixLog workflow).
 
 ## 5.3.46-JuNNeZ (2026-03-31)
