@@ -19,7 +19,6 @@ ignore:
   - AGENTS.md
   - FixLog.md
   - FixLog_Archive_*.md
-  - VERSION_CHECKLIST.md
   - Docs
   
   # Build scripts

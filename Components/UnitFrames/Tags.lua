@@ -70,6 +70,33 @@ local prefix = function(msg)
 end
 
 local SafePercent
+local _tagFrame
+local _secretPctFS
+
+-- Format a secret percent value via C-side %.0f (drops decimals, appends "%").
+-- Uses a hidden FontString because Lua string.format crashes on secret numbers.
+local FormatSecretPercent = function(pctVal)
+	if (not _secretPctFS) then
+		_secretPctFS = UIParent:CreateFontString(nil, "BACKGROUND", "GameFontNormalSmall")
+		_secretPctFS:SetAlpha(0)
+	end
+	local ok = pcall(function()
+		_secretPctFS:SetFormattedText("%.0f%%", pctVal)
+	end)
+	if (ok) then
+		local text
+		pcall(function() text = _secretPctFS:GetText() end)
+		if (text ~= nil) then
+			if (issecretvalue and issecretvalue(text)) then
+				return text
+			end
+			if (text ~= "") then
+				return text
+			end
+		end
+	end
+	return nil
+end
 
 local ShouldDebugAbsorbUnit = function(unit)
 	if (not ns.API or not ns.API.DEBUG_HEALTH_CHAT) then
@@ -711,7 +738,7 @@ end
 -- WoW 12.0.0: If UnitHealth/UnitHealthMax are secret values, fall back to oUF frame bar values.
 local SafeUnitPercent = function(unit, isPower, powerType)
 	-- Prefer frame-authoritative values first so tag text follows rendered bars.
-	local frame = _FRAME
+	local frame = _tagFrame
 	if (frame and SafeUnitTokenEquals(frame.unit, unit)) then
 		local element
 		if (isPower) then
@@ -766,7 +793,7 @@ end
 local SafeUnitHealth = function(unit)
 	local cur = UnitHealth(unit)
 	local max = UnitHealthMax(unit)
-	local frame = _FRAME
+	local frame = _tagFrame
 	local GetHealthPercentHint = function()
 		if (frame and SafeUnitTokenEquals(frame.unit, unit) and frame.Health and type(frame.Health.safePercent) == "number") then
 			return frame.Health.safePercent
@@ -852,10 +879,27 @@ local SafeUnitHealth = function(unit)
 end
 
 local GetFrameHealthPercentSnapshot = function(frame, unit)
-	if (not (frame and SafeUnitTokenEquals(frame.unit, unit) and frame.Health)) then
+	if (not (frame and frame.Health)) then
+		return nil, nil
+	end
+	local sameFrameUnit = (frame.unit == unit)
+	if ((not sameFrameUnit) and (not SafeUnitTokenEquals(frame.unit, unit))) then
 		return nil, nil
 	end
 	local health = frame.Health
+	local displayPercent = health.__AzeriteUI_TargetDisplayPercent
+	if (type(displayPercent) ~= "number") then
+		displayPercent = health.__AzeriteUI_DisplayPercent
+	end
+	if (type(displayPercent) == "number" and not (issecretvalue and issecretvalue(displayPercent))) then
+		if (displayPercent < 0) then
+			displayPercent = 0
+		elseif (displayPercent > 100) then
+			displayPercent = 100
+		end
+		health.safePercent = displayPercent
+		return displayPercent, health
+	end
 	local cur = health.safeCur or health.cur
 	local max = health.safeMax or health.max
 	local percent = SafePercent(cur, max)
@@ -866,8 +910,14 @@ local GetFrameHealthPercentSnapshot = function(frame, unit)
 end
 
 local ResolveDisplayHealthPercent = function(unit)
-	local frame = _FRAME
+	local frame = _tagFrame
 	local framePercent, health = GetFrameHealthPercentSnapshot(frame, unit)
+	if (type(framePercent) == "number") then
+		if (health) then
+			health.safePercent = framePercent
+		end
+		return framePercent
+	end
 	local apiPercent
 	if (UnitHealthPercent) then
 		pcall(function()
@@ -879,15 +929,6 @@ local ResolveDisplayHealthPercent = function(unit)
 		end)
 	end
 	if (type(apiPercent) == "number" and not (issecretvalue and issecretvalue(apiPercent))) then
-		if (health and health.__AzeriteUI_RawCurSafe and health.__AzeriteUI_RawMaxSafe and type(framePercent) == "number") then
-			local delta = apiPercent - framePercent
-			if (delta < 0) then
-				delta = -delta
-			end
-			if (delta > 1) then
-				apiPercent = nil
-			end
-		end
 		if (type(apiPercent) == "number") then
 			if (health) then
 				health.safePercent = apiPercent
@@ -904,12 +945,114 @@ local ResolveDisplayHealthPercent = function(unit)
 	return nil
 end
 
+local ResolveHealthPercentForTag = function(unit)
+	local frame = _tagFrame
+	if (frame and frame.Health) then
+		local sameFrameUnit = (frame.unit == unit)
+		if ((not sameFrameUnit) and (not SafeUnitTokenEquals(frame.unit, unit))) then
+			-- Not the same logical unit; continue with non-frame fallbacks.
+		else
+
+		-- Prefer safePercent set by UpdateHealth (most authoritative, set before UpdateTag).
+		local cachedPercent = frame.Health.safePercent
+		if (type(cachedPercent) == "number" and not (issecretvalue and issecretvalue(cachedPercent))) then
+			return cachedPercent
+		end
+
+		-- If UpdateHealth flagged raw cur as secret and set safePercent=nil,
+		-- skip stale cache/bar fallbacks — they contain defaulted values (100/100
+		-- or stale safeCur) that would produce a wrong numeric result and prevent
+		-- the tag method's C-side secret fallback from firing.
+		if (frame.Health.__AzeriteUI_RawCurSafe == false) then
+			return nil
+		end
+
+		local livePercent = GetElementLivePercent(frame.Health, false)
+		if (type(livePercent) == "number") then
+			frame.Health.safePercent = livePercent
+			return livePercent
+		end
+
+		local cachedCur = frame.Health.safeCur or frame.Health.cur
+		local cachedMax = frame.Health.safeMax or frame.Health.max
+		local cachedRatio = SafePercent(cachedCur, cachedMax)
+		if (type(cachedRatio) == "number") then
+			frame.Health.safePercent = cachedRatio
+			return cachedRatio
+		end
+		end
+	end
+
+	local directCur = UnitHealth(unit)
+	local directMax = UnitHealthMax(unit)
+	local directPercent = SafePercent(directCur, directMax)
+	if (type(directPercent) == "number") then
+		if (frame and frame.Health) then
+			frame.Health.safePercent = directPercent
+		end
+		return directPercent
+	end
+
+	return nil
+end
+
+local ResolveTargetHiddenHealthPercentForTag = function(unit)
+	local frame = _tagFrame
+	if (frame and frame.Health) then
+		local sameFrameUnit = (frame.unit == unit)
+		if (sameFrameUnit or SafeUnitTokenEquals(frame.unit, unit)) then
+			local health = frame.Health
+
+			-- Prefer safePercent set by UpdateHealth (most authoritative, set before UpdateTag).
+			if (type(health.safePercent) == "number" and not (issecretvalue and issecretvalue(health.safePercent))) then
+				return health.safePercent
+			end
+
+			-- If UpdateHealth flagged raw cur as secret, skip stale
+			-- cache/bar fallbacks so the tag's C-side secret path fires.
+			if (health.__AzeriteUI_RawCurSafe == false) then
+				return nil
+			end
+
+			local safeValue, safeMin, safeMax = GetElementSafeValueRange(health)
+			if (type(safeValue) == "number" and type(safeMax) == "number") then
+				local safePercent = SafePercent(safeValue, safeMax)
+				if (type(safePercent) == "number") then
+					health.safePercent = safePercent
+					return safePercent
+				end
+			end
+
+			local liveValue, liveMin, liveMax = GetElementLiveValueRange(health)
+			if (type(liveValue) == "number" and type(liveMax) == "number") then
+				local livePercent = SafePercent(liveValue, liveMax)
+				if (type(livePercent) == "number") then
+					health.safePercent = livePercent
+					return livePercent
+				end
+			end
+		end
+	end
+
+	local directCur = UnitHealth(unit)
+	local directMax = UnitHealthMax(unit)
+	local directPercent = SafePercent(directCur, directMax)
+	if (type(directPercent) == "number") then
+		if (frame and frame.Health) then
+			frame.Health.safePercent = directPercent
+		end
+		return directPercent
+	end
+
+	return nil
+end
+
 -- WoW 12.0.0: Safe power values based on frame bar values when available
 
 local SafeUnitPower = function(unit, powerType)
 	local cur = UnitPower(unit, powerType)
 	local max = UnitPowerMax(unit, powerType)
-	local frame = _FRAME
+	local frame = _tagFrame
 	local powerElement = nil
 	if (frame and SafeUnitTokenEquals(frame.unit, unit)) then
 		powerElement, powerType = GetFramePowerContext(frame, unit)
@@ -1035,7 +1178,8 @@ if (ns.IsRetail) then
 		if (UnitIsDeadOrGhost(unit)) then
 			return
 		else
-			local frame = _FRAME
+			_tagFrame = _FRAME
+			local frame = _tagFrame
 			local frameHealth = (frame and SafeUnitTokenEquals(frame.unit, unit)) and frame.Health or nil
 			local absorbValue = nil
 			local hasAbsorbValue = false
@@ -1220,83 +1364,69 @@ end
 
 Events[prefix("*:HealthPercent")] = "UNIT_HEALTH UNIT_MAXHEALTH PLAYER_FLAGS_CHANGED UNIT_CONNECTION"
 Methods[prefix("*:HealthPercent")] = function(unit)
+	_tagFrame = _FRAME
 	if (UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit)) then
 		return
-	else
-		local resolvedPercent = ResolveDisplayHealthPercent(unit)
-		if (type(resolvedPercent) == "number") then
-			return FormatPercent(resolvedPercent)
-		end
-
-		local frame = _FRAME
-		if (frame and frame.Health) then
-			if (type(frame.Health.safePercent) == "number") then
-				return FormatPercent(frame.Health.safePercent)
-			end
-			local healthCur = frame.Health.safeCur or frame.Health.cur
-			local healthMax = frame.Health.safeMax or frame.Health.max
-			local framePercent = SafePercent(healthCur, healthMax)
-			if (type(framePercent) == "number") then
-				frame.Health.safePercent = framePercent
-				return FormatPercent(framePercent)
-			end
-		end
-
-		local health, maxHealth = SafeUnitHealth(unit)
-		local fallback = SafePercent(health, maxHealth)
-		if (type(fallback) == "number") then
-			return FormatPercent(fallback)
-		end
-
-		local percent = SafeUnitPercent(unit, false)
-		if (type(percent) == "number") then
-			return FormatPercent(percent)
-		end
-
-		return ""
 	end
+	local percent = ResolveHealthPercentForTag(unit)
+	if (type(percent) == "number") then
+		return FormatPercent(percent)
+	end
+
+	-- WoW 12 secret-safe fallback: pass secret percent through C-side APIs.
+	-- AbbreviateNumbers converts the secret number to displayable text,
+	-- C_StringUtil.WrapString appends the "%" suffix without Lua concat.
+	if (UnitHealthPercent) then
+		local ok, pctVal = pcall(function()
+			if (CurveConstants and CurveConstants.ScaleTo100) then
+				return UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
+			else
+				return UnitHealthPercent(unit)
+			end
+		end)
+		if (ok and pctVal ~= nil) then
+			local formatted = FormatSecretPercent(pctVal)
+			if (formatted ~= nil) then
+				return formatted
+			end
+			-- Last resort: return secret value directly (no "%" suffix, may have decimals).
+			if (issecretvalue and issecretvalue(pctVal)) then
+				return pctVal
+			end
+		end
+	end
+
+	return ""
 end
 
 Events[prefix("*:TargetHealthPercent")] = Events[prefix("*:HealthPercent")]
 Methods[prefix("*:TargetHealthPercent")] = function(unit)
+	_tagFrame = _FRAME
 	if (UnitIsDeadOrGhost(unit) or not UnitIsConnected(unit)) then
 		return
 	end
+	local percent = ResolveTargetHiddenHealthPercentForTag(unit)
+	if (type(percent) == "number") then
+		return FormatPercent(percent)
+	end
 
-	local apiPercent
+	-- WoW 12 secret-safe fallback (same as *:HealthPercent above).
 	if (UnitHealthPercent) then
-		pcall(function()
+		local ok, pctVal = pcall(function()
 			if (CurveConstants and CurveConstants.ScaleTo100) then
-				apiPercent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
+				return UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
 			else
-				apiPercent = UnitHealthPercent(unit)
+				return UnitHealthPercent(unit)
 			end
 		end)
-	end
-	if (type(apiPercent) == "number" and not (issecretvalue and issecretvalue(apiPercent))) then
-		local frame = _FRAME
-		if (frame and frame.Health) then
-			frame.Health.safePercent = apiPercent
-		end
-		return FormatPercent(apiPercent)
-	end
-
-	local frame = _FRAME
-	if (frame and SafeUnitTokenEquals(frame.unit, unit) and frame.Health) then
-		local health = frame.Health
-		if (health.__AzeriteUI_RawCurSafe and health.__AzeriteUI_RawMaxSafe) then
-			local percent = type(health.safePercent) == "number" and health.safePercent or nil
-			if (type(percent) ~= "number") then
-				local cur = health.safeCur or health.cur
-				local max = health.safeMax or health.max
-				percent = SafePercent(cur, max)
+		if (ok and pctVal ~= nil) then
+			local formatted = FormatSecretPercent(pctVal)
+			if (formatted ~= nil) then
+				return formatted
 			end
-			if (type(percent) == "number") then
-				health.safePercent = percent
-				return FormatPercent(percent)
+			if (issecretvalue and issecretvalue(pctVal)) then
+				return pctVal
 			end
-		else
-			health.safePercent = nil
 		end
 	end
 
@@ -1308,7 +1438,8 @@ Methods[prefix("*:PowerPercent")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then
 		return
 	else
-		local frame = _FRAME
+		_tagFrame = _FRAME
+		local frame = _tagFrame
 		local powerElement, powerType = GetFramePowerContext(frame, unit)
 		if (powerElement) then
 			local framePercent = GetElementLivePercent(powerElement, true)
@@ -1344,7 +1475,8 @@ Methods[prefix("*:ManaPercent")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then
 		return
 	else
-		local frame = _FRAME
+		_tagFrame = _FRAME
+		local frame = _tagFrame
 		local manaElement = GetFrameManaElement(frame)
 		if (frame and manaElement) then
 			local framePercent = GetElementLivePercent(manaElement, true)
@@ -1380,7 +1512,8 @@ Methods[prefix("*:Mana")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then
 		return
 	else
-		local frame = _FRAME
+		_tagFrame = _FRAME
+		local frame = _tagFrame
 		local manaElement = GetFrameManaElement(frame)
 		if (frame and manaElement) then
 			local cachedCur = manaElement.safeCur or manaElement.cur
@@ -1400,7 +1533,8 @@ Methods[prefix("*:Mana:Full")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then
 		return
 	end
-	local frame = _FRAME
+	_tagFrame = _FRAME
+	local frame = _tagFrame
 	local manaElement = GetFrameManaElement(frame)
 	if (frame and manaElement) then
 		local safeCurText = SafePowerValueText(manaElement.safeCur or manaElement.cur)
@@ -1422,7 +1556,8 @@ Methods[prefix("*:Mana:FullNumber")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then
 		return
 	end
-	local frame = _FRAME
+	_tagFrame = _FRAME
+	local frame = _tagFrame
 	local manaElement = GetFrameManaElement(frame)
 	if (frame and manaElement) then
 		local safeCurText = SafePowerValueFullText(manaElement.safeCur or manaElement.cur)
@@ -1470,7 +1605,8 @@ end
 
 Events[prefix("*:Name")] = "UNIT_NAME_UPDATE UNIT_LEVEL PLAYER_LEVEL_UP GROUP_ROSTER_UPDATE"
 Methods[prefix("*:Name")] = function(unit, realUnit, ...)
-	local frame = _FRAME
+	_tagFrame = _FRAME
+	local frame = _tagFrame
 	local unitName = SafeUnitName(unit)
 	local realUnitName = SafeUnitName(realUnit)
 	local name = unitName or realUnitName
@@ -1568,7 +1704,8 @@ Methods[prefix("*:Power")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then
 		return
 	else
-		local frame = _FRAME
+		_tagFrame = _FRAME
+		local frame = _tagFrame
 		local powerElement, powerType = GetFramePowerContext(frame, unit)
 		if (powerElement) then
 			local cachedCur = (select(1, GetElementSafeValueRange(powerElement)))
@@ -1595,7 +1732,8 @@ Methods[prefix("*:Power:Full")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then
 		return
 	else
-		local frame = _FRAME
+		_tagFrame = _FRAME
+		local frame = _tagFrame
 		local powerElement, powerType = GetFramePowerContext(frame, unit)
 		if (powerElement) then
 			local safeCur, _, safeMax = GetElementSafeValueRange(powerElement)
@@ -1626,7 +1764,8 @@ Methods[prefix("*:Power:FullNumber")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then
 		return
 	else
-		local frame = _FRAME
+		_tagFrame = _FRAME
+		local frame = _tagFrame
 		local powerElement, powerType = GetFramePowerContext(frame, unit)
 		if (powerElement) then
 			local safeCurText = SafePowerValueFullText(select(1, GetElementSafeValueRange(powerElement)))

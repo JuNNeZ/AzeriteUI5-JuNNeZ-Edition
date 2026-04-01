@@ -388,6 +388,11 @@ local GenerateOptions = function()
 			desc = L["Toggle whether to show overlay castbars on this unit frame."],
 			order = 300, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
+		suboptions.args.showHealthPercent = {
+			name = L["Show Health Percent"],
+			desc = L["Show current health percent next to player health value text."],
+			order = 325, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		suboptions.args.showPowerValue = {
 			name = L["Show Power Text"],
 			desc = L["Show current power text on the player power widget."],
@@ -621,6 +626,11 @@ local GenerateOptions = function()
 				desc = L["Toggle whether to show overlay castbars on this unit frame."],
 				order = 250, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 			}
+			suboptions.args.showHealthPercent = {
+				name = L["Show Health Percent"],
+				desc = L["Show current health percent next to player alternate health value text."],
+				order = 275, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			}
 			suboptions.args.showName = {
 				name = L["Show Unit Name"],
 				desc = L["Toggle whether to show the name of the unit."],
@@ -680,6 +690,11 @@ local GenerateOptions = function()
 			name = L["Show Unit Name"],
 			desc = L["Toggle whether to show the name of the unit."],
 			order = 30, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.showHealthPercent = {
+			name = L["Show Health Percent"],
+			desc = L["Show current target health percent next to target health value text."],
+			order = 31, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showPowerValue = {
 			name = L["Show Power Value"],

@@ -99,37 +99,10 @@ ns.WoW12BlizzardQuarantine = ns.WoW12BlizzardQuarantine or {}
 ns.WoW12BlizzardQuarantine.SetBlizzardRaidBarVisible = SetBlizzardRaidBarVisible
 ns.WoW12BlizzardQuarantine.ShouldShowBlizzardRaidBar = ShouldShowBlizzardRaidBar
 
-local Pack = table.pack or function(...)
-	return { n = select("#", ...), ... }
-end
-
 local MAX_PARTY_MEMBERS = _G.MEMBERS_PER_RAID_GROUP or 5
 local MAX_RAID_MEMBERS = _G.MAX_RAID_MEMBERS or 40
 local MAX_BOSS_FRAMES = _G.MAX_BOSS_FRAMES or 8
 local MAX_ARENA_MEMBERS = _G.MAX_ARENA_ENEMIES or 5
-
-local COMPACT_AURA_DEFAULTS = {
-	isBossAura = false,
-	isFromPlayerOrPlayerPet = false,
-	isHelpful = false,
-	isStealable = false,
-	isRaid = false,
-	isHarmful = false,
-	canApplyAura = false,
-	canActivePlayerDispel = false,
-	isTankRoleAura = false,
-	isDPSRoleAura = false,
-	isNameplateOnly = false,
-	isHealerRoleAura = false,
-	nameplateShowPersonal = false,
-	nameplateShowAll = false,
-	duration = 0,
-	expirationTime = 0,
-	applications = 0,
-	spellId = 0,
-	auraInstanceID = 0,
-	timeMod = 1
-}
 
 local quarantineHiddenParent
 local parentLockedFrames = {}
@@ -347,51 +320,6 @@ local function LockToHiddenParent(frame, parent)
 	if (frame and frame.SetParent) then
 		pcall(frame.SetParent, frame, hiddenParent)
 	end
-end
-
-local function SanitizeCompactAura(aura)
-	if (type(aura) ~= "table") then
-		return aura
-	end
-	if (issecretvalue and issecretvalue(aura)) then
-		return {}
-	end
-	if (canaccesstable and not canaccesstable(aura)) then
-		return {}
-	end
-	if (not issecretvalue) then
-		return aura
-	end
-
-	local sanitized = aura
-	local copied = false
-
-	local function EnsureCopy()
-		if (copied) then
-			return
-		end
-		local ok, copy = pcall(CopyTable, aura)
-		if (ok and type(copy) == "table") then
-			sanitized = copy
-		else
-			sanitized = {}
-		end
-		copied = true
-	end
-
-	for key, fallback in pairs(COMPACT_AURA_DEFAULTS) do
-		local value = aura[key]
-		if (issecretvalue(value)) then
-			EnsureCopy()
-			if (fallback ~= nil) then
-				sanitized[key] = fallback
-			else
-				sanitized[key] = nil
-			end
-		end
-	end
-
-	return sanitized
 end
 
 local function QuarantineSubElements(frame)
@@ -682,23 +610,10 @@ local function GuardPartyFrameGlobals()
 end
 
 local function GuardCompactUnitFrameGlobals()
-	if (_G.CompactUnitFrame_UtilShouldDisplayBuff
-		and not _G.__AzUI_W12_CUFShouldDisplayBuffWrapped) then
-		_G.__AzUI_W12_CUFShouldDisplayBuffWrapped = true
-		local original = _G.CompactUnitFrame_UtilShouldDisplayBuff
-		_G.CompactUnitFrame_UtilShouldDisplayBuff = function(aura, ...)
-			return original(SanitizeCompactAura(aura), ...)
-		end
-	end
-
-	if (_G.CompactUnitFrame_UtilShouldDisplayDebuff
-		and not _G.__AzUI_W12_CUFShouldDisplayDebuffWrapped) then
-		_G.__AzUI_W12_CUFShouldDisplayDebuffWrapped = true
-		local original = _G.CompactUnitFrame_UtilShouldDisplayDebuff
-		_G.CompactUnitFrame_UtilShouldDisplayDebuff = function(aura, ...)
-			return original(SanitizeCompactAura(aura), ...)
-		end
-	end
+	-- Intentionally no-op on WoW12:
+	-- replacing global CompactUnitFrame_UtilShouldDisplay* with addon wrappers
+	-- taints the execution context for all callers, including secure paths
+	-- that lead to protected functions like UpgradeItem().
 end
 
 ----------------------------------------------------------------
@@ -723,146 +638,19 @@ local function GuardAuraUtilForEachAura()
 end
 
 local function GuardAuraUtilUnpack()
-	if (not AuraUtil or type(AuraUtil.UnpackAuraData) ~= "function"
-		or _G.__AzUI_W12_AuraUtilUnpackWrapped) then
-		return
-	end
-
-	_G.__AzUI_W12_AuraUtilUnpackWrapped = true
-	local original = AuraUtil.UnpackAuraData
-
-	AuraUtil.UnpackAuraData = function(auraData, ...)
-		if (auraData ~= nil) then
-			if (type(auraData) ~= "table") then
-				return nil
-			end
-			if (issecretvalue and issecretvalue(auraData)) then
-				return nil
-			end
-			if (canaccesstable and not canaccesstable(auraData)) then
-				return nil
-			end
-			if (issecretvalue and issecretvalue(auraData.points)) then
-				local okCopy, copy = pcall(CopyTable, auraData)
-				if (okCopy and type(copy) == "table") then
-					auraData = copy
-					auraData.points = nil
-				else
-					return nil
-				end
-			end
-		end
-
-		local results = Pack(pcall(original, auraData, ...))
-		if (results[1]) then
-			return unpack(results, 2, results.n or #results)
-		end
-		return nil
-	end
-end
-
-local function IsSecretWidgetTooltipError(err)
-	if (type(err) ~= "string") then
-		return false
-	end
-	local lowered = string.lower(err)
-	if (not string.find(lowered, "secret", 1, true)) then
-		return false
-	end
-	return string.find(lowered, "blizzard_uiwidget", 1, true)
-		or string.find(lowered, "uiwidgettemplatetextwithstate", 1, true)
-		or string.find(lowered, "uiwidgettemplatebase", 1, true)
-		or string.find(lowered, "uiwidgettemplateitemdisplay", 1, true)
-		or string.find(lowered, "uiwidgetmanager", 1, true)
-		or string.find(lowered, "sharedtooltiptemplates", 1, true)
-		or string.find(lowered, "frameutil", 1, true)
-		or string.find(lowered, "vignettedataprovider", 1, true)
-		or string.find(lowered, "layoutframe", 1, true)
-end
-
--- Clear widget-related state fields on an object to prevent further tainted updates.
-local function SilenceWidgetObject(obj)
-	if (not obj) then
-		return
-	end
-	if (obj.waitingForData ~= nil) then obj.waitingForData = false end
-	if (obj.updateTooltipTimer ~= nil) then obj.updateTooltipTimer = 0 end
-	if (obj.processingInfo ~= nil) then obj.processingInfo = nil end
-	if (obj.infoList ~= nil) then obj.infoList = nil end
-	if (obj.supportsDataRefresh ~= nil) then obj.supportsDataRefresh = false end
-	if (obj.disableTooltip ~= nil) then obj.disableTooltip = true end
-	if (obj.tooltipEnabled ~= nil) then obj.tooltipEnabled = false end
-	if (obj.Hide) then pcall(obj.Hide, obj) end
-end
-
-local function HideSecretWidgetTarget(target)
-	if (not target) then
-		return false
-	end
-	SilenceWidgetObject(target)
-	if (target.Tooltip) then
-		SilenceWidgetObject(target.Tooltip)
-	end
-	if (target.widgetContainer) then
-		if (target.widgetContainer.disableWidgetTooltips ~= nil) then
-			target.widgetContainer.disableWidgetTooltips = true
-		end
-		if (target.widgetContainer.Hide) then
-			pcall(target.widgetContainer.Hide, target.widgetContainer)
-		end
-	end
-	return true
-end
-
-local function HideSecretWidgetTargets(...)
-	local hidden = false
-	for i = 1, select("#", ...) do
-		local value = select(i, ...)
-		local valueType = type(value)
-		if (valueType == "table" or valueType == "userdata") then
-			if (value.Tooltip or value.widgetContainer or value.widgetFrames or value.widgetType) then
-				hidden = HideSecretWidgetTarget(value) or hidden
-			end
-		end
-	end
-	return hidden
-end
-
-local function HandleSecretWidgetError(err, ...)
-	if (not IsSecretWidgetTooltipError(err)) then
-		error(err, 0)
-	end
-	HideSecretWidgetTargets(...)
-	return nil
-end
-
--- Generic mixin method guard: wraps mixin[method] with pcall + secret-error recovery.
-local function GuardWidgetMixinMethod(mixinName, method, flagName)
-	local mixin = _G[mixinName]
-	if (type(mixin) ~= "table" or type(mixin[method]) ~= "function" or _G[flagName]) then
-		return
-	end
-	_G[flagName] = true
-	local original = mixin[method]
-	mixin[method] = function(...)
-		local results = Pack(pcall(original, ...))
-		if (results[1]) then
-			return unpack(results, 2, results.n or #results)
-		end
-		return HandleSecretWidgetError(results[2], ...)
-	end
+	-- Intentionally no-op on WoW12:
+	-- replacing AuraUtil.UnpackAuraData with an addon wrapper taints all
+	-- callers, including secure paths that lead to protected functions.
 end
 
 ----------------------------------------------------------------
--- Tooltip geometry guard
--- Our tooltip styling (SetScale, SetPoint, SetBackdrop) taints
--- the frame, causing all geometry methods to return secret
--- values. Instead of wrapping every Blizzard consumer, we hook
--- the geometry methods themselves on tooltip frames so they
--- always return clean (non-secret) values. When the real value
--- is tainted we return the last known good cached value.
--- This covers: GetWidth, GetHeight, GetSize, GetLeft, GetRight,
--- GetTop, GetBottom, GetCenter, GetRect, GetScale.
+-- Tooltip geometry cache (passive, non-tainting)
+-- Instead of replacing methods on Blizzard tooltip frames (which
+-- taints the execution context and blocks protected calls like
+-- UpgradeItem), we use hooksecurefunc to passively cache clean
+-- geometry values in a side table. Our addon code reads from
+-- the cache via ns.GetSafeGeometry(); Blizzard code is never
+-- touched and remains in a secure execution context.
 ----------------------------------------------------------------
 local tooltipGeometryCache = setmetatable({}, { __mode = "k" })
 
@@ -879,136 +667,144 @@ local function IsCleanValue(value)
 	return type(value) == "number" and (not issecretvalue or not issecretvalue(value))
 end
 
--- Generic single-value guard: wraps a method that returns one number.
-local function MakeSafeSingleGetter(originalFn, cacheKey, fallback)
-	return function(self)
-		local ok, value = pcall(originalFn, self)
+-- Hook a single-value getter to passively cache its result.
+-- Uses hooksecurefunc: runs AFTER the original, does NOT taint.
+-- Hook layout-changing methods on a frame to refresh geometry caches.
+-- This is called once per frame after all single getters are seeded.
+local function HookLayoutRefresh(frame)
+	local function RefreshCache(self)
 		local cache = GetGeometryCache(self)
-		if (ok and IsCleanValue(value)) then
-			cache[cacheKey] = value
-			return value
+		local refreshers = {
+			{ method = "GetWidth",  key = "width" },
+			{ method = "GetHeight", key = "height" },
+			{ method = "GetScale",  key = "scale" },
+		}
+		for _, r in ipairs(refreshers) do
+			if (type(self[r.method]) == "function") then
+				local ok, v = pcall(self[r.method], self)
+				if (ok and IsCleanValue(v)) then
+					cache[r.key] = v
+				end
+			end
 		end
-		local cached = cache[cacheKey]
-		if (cached ~= nil) then
-			return cached
+	end
+
+	-- Hook methods that change geometry to keep cache fresh.
+	local layoutMethods = { "SetWidth", "SetHeight", "SetSize", "SetScale" }
+	for _, m in ipairs(layoutMethods) do
+		if (type(frame[m]) == "function") then
+			hooksecurefunc(frame, m, RefreshCache)
 		end
-		return fallback
+	end
+
+	-- Also refresh on Show (frame may have been resized while hidden).
+	if (frame.HookScript) then
+		frame:HookScript("OnShow", RefreshCache)
 	end
 end
 
-local function GuardTooltipFrameGeometry(tooltip)
-	-- Track guard state in our side table, not on the frame (avoids WoW 12 taint).
-	if (not tooltip or tooltipGeometryCache[tooltip] and tooltipGeometryCache[tooltip]._guarded) then
+-- Seed all geometry caches for a frame from its current live values.
+local function SeedGeometryCache(frame)
+	if (not frame) then return end
+	local cache = GetGeometryCache(frame)
+
+	local singleGetters = {
+		{ method = "GetWidth",  key = "width" },
+		{ method = "GetHeight", key = "height" },
+		{ method = "GetLeft",   key = "left" },
+		{ method = "GetRight",  key = "right" },
+		{ method = "GetTop",    key = "top" },
+		{ method = "GetBottom", key = "bottom" },
+		{ method = "GetScale",  key = "scale" },
+	}
+	for _, info in ipairs(singleGetters) do
+		if (type(frame[info.method]) == "function") then
+			local ok, v = pcall(frame[info.method], frame)
+			if (ok and IsCleanValue(v)) then
+				cache[info.key] = v
+			end
+		end
+	end
+
+	if (type(frame.GetCenter) == "function") then
+		local ok, x, y = pcall(frame.GetCenter, frame)
+		if (ok and IsCleanValue(x) and IsCleanValue(y)) then
+			cache.centerX = x
+			cache.centerY = y
+		end
+	end
+
+	if (type(frame.GetRect) == "function") then
+		local ok, l, b, w, h = pcall(frame.GetRect, frame)
+		if (ok and IsCleanValue(l) and IsCleanValue(b) and IsCleanValue(w) and IsCleanValue(h)) then
+			cache.left = l
+			cache.bottom = b
+			cache.width = w
+			cache.height = h
+		end
+	end
+end
+
+-- Hook a frame's geometry methods to passively cache values.
+-- Does NOT replace any methods on the frame.
+local function HookTooltipGeometryCache(tooltip)
+	if (not tooltip or (tooltipGeometryCache[tooltip] and tooltipGeometryCache[tooltip]._hooked)) then
 		return
 	end
-	GetGeometryCache(tooltip)._guarded = true
+	GetGeometryCache(tooltip)._hooked = true
 
-	-- Debug toggle (set true to print taint info)
-	local DEBUG_GEOMETRY = false
+	-- Seed all cached values from live state
+	SeedGeometryCache(tooltip)
 
-	-- Helper to forcibly sanitize and reset secret values
-	local function SanitizeField(obj, field, fallback)
-		if not obj or not field then return end
-		local ok, val = pcall(function() return obj[field] end)
-		if ok and issecretvalue and issecretvalue(val) then
-			if DEBUG_GEOMETRY then
-				print("[AzeriteUI] Geometry taint:", obj.GetName and obj:GetName() or tostring(obj), field, "-> secret, resetting to fallback", fallback)
-			end
-			pcall(function() obj[field] = fallback end)
-		end
-	end
-
-	-- Single-value getters
-	local singleGetters = {
-		{ method = "GetWidth",  key = "width",  fallback = 0 },
-		{ method = "GetHeight", key = "height", fallback = 0 },
-		{ method = "GetLeft",   key = "left",   fallback = nil },
-		{ method = "GetRight",  key = "right",  fallback = nil },
-		{ method = "GetTop",    key = "top",    fallback = nil },
-		{ method = "GetBottom", key = "bottom",  fallback = nil },
-		{ method = "GetScale",  key = "scale",  fallback = 1 },
-	}
-
-	for _, info in ipairs(singleGetters) do
-		local original = tooltip[info.method]
-		if (type(original) == "function") then
-			tooltip[info.method] = MakeSafeSingleGetter(original, info.key, info.fallback)
-		end
-		-- Forcibly sanitize the field if it exists and is secret
-		SanitizeField(tooltip, info.key, info.fallback)
-	end
-
-	-- GetSize -> (width, height)
-	local origGetSize = tooltip.GetSize
-	local origGetWidth = tooltip.GetWidth
-	local origGetHeight = tooltip.GetHeight
-	if (type(origGetSize) == "function") then
-		tooltip.GetSize = function(self)
-			return origGetWidth(self), origGetHeight(self)
-		end
-	end
-
-	-- GetCenter -> (x, y)
-	local origGetCenter = tooltip.GetCenter
-	if (type(origGetCenter) == "function") then
-		tooltip.GetCenter = function(self)
-			local ok, x, y = pcall(origGetCenter, self)
-			local cache = GetGeometryCache(self)
-			if (ok and IsCleanValue(x) and IsCleanValue(y)) then
-				cache.centerX = x
-				cache.centerY = y
-				return x, y
-			end
-			return cache.centerX or 0, cache.centerY or 0
-		end
-
-		-- Recursively guard children (if any)
-		if tooltip.GetChildren then
-			local children = { pcall(tooltip.GetChildren, tooltip) }
-			if children[1] then
-				for i = 2, #children do
-					local child = children[i]
-					if type(child) == "table" then
-						GuardTooltipFrameGeometry(child)
-					end
-				end
-			end
-		end
-
-		-- Recursively guard regions (textures, fontstrings, etc.)
-		if tooltip.GetRegions then
-			local regions = { pcall(tooltip.GetRegions, tooltip) }
-			if regions[1] then
-				for i = 2, #regions do
-					local region = regions[i]
-					if type(region) == "table" then
-						GuardTooltipFrameGeometry(region)
-					end
-				end
-			end
-		end
-	end
-
-	-- GetRect -> (left, bottom, width, height)
-	local origGetRect = tooltip.GetRect
-	if (type(origGetRect) == "function") then
-		tooltip.GetRect = function(self)
-			local ok, l, b, w, h = pcall(origGetRect, self)
-			local cache = GetGeometryCache(self)
-			if (ok and IsCleanValue(l) and IsCleanValue(b) and IsCleanValue(w) and IsCleanValue(h)) then
-				cache.left = l
-				cache.bottom = b
-				cache.width = w
-				cache.height = h
-				return l, b, w, h
-			end
-			return cache.left or 0, cache.bottom or 0, cache.width or 0, cache.height or 0
-		end
-	end
+	-- Hook layout-changing methods to keep caches fresh.
+	-- These hooks run AFTER the original and do not call the
+	-- same method (avoiding infinite recursion).
+	HookLayoutRefresh(tooltip)
 end
 
+-- Public API: get a safe (non-secret) geometry value for a frame.
+-- Falls back to cached values when the live value is tainted.
+local function GetSafeGeometryValue(frame, method, cacheKey, fallback)
+	if (not frame or type(frame[method]) ~= "function") then
+		return fallback
+	end
+	local ok, val = pcall(frame[method], frame)
+	if (ok and IsCleanValue(val)) then
+		-- Also update cache while we're at it
+		local cache = GetGeometryCache(frame)
+		cache[cacheKey] = val
+		return val
+	end
+	local cache = tooltipGeometryCache[frame]
+	if (cache and cache[cacheKey] ~= nil) then
+		return cache[cacheKey]
+	end
+	return fallback
+end
+
+-- Convenience: get safe width for a frame
+local function GetSafeWidth(frame)
+	return GetSafeGeometryValue(frame, "GetWidth", "width", 0)
+end
+
+-- Convenience: get safe height for a frame
+local function GetSafeHeight(frame)
+	return GetSafeGeometryValue(frame, "GetHeight", "height", 0)
+end
+
+-- Convenience: get safe size for a frame
+local function GetSafeSize(frame)
+	return GetSafeWidth(frame), GetSafeHeight(frame)
+end
+
+-- Export safe geometry helpers for addon code
+ns.GetSafeWidth = GetSafeWidth
+ns.GetSafeHeight = GetSafeHeight
+ns.GetSafeSize = GetSafeSize
+ns.GetSafeGeometryValue = GetSafeGeometryValue
+
 local function GuardTooltipDimensions()
-	-- Guard the primary tooltips that our addon styles
+	-- Hook (not replace) geometry methods on primary tooltips
 	local tooltips = {
 		_G.GameTooltip,
 		_G.ItemRefTooltip,
@@ -1023,27 +819,21 @@ local function GuardTooltipDimensions()
 
 	for _, tooltip in ipairs(tooltips) do
 		if (tooltip and (not tooltip.IsForbidden or not tooltip:IsForbidden())) then
-			GuardTooltipFrameGeometry(tooltip)
+			HookTooltipGeometryCache(tooltip)
 		end
 	end
 
-	-- Guard embedded widget tooltips (UIWidgetBaseItemEmbeddedTooltip1, etc.)
-	-- These are created dynamically by UIWidgetTemplateItemDisplay and can
-	-- inherit taint from the parent tooltip when doing arithmetic on dimensions.
+	-- Hook embedded widget tooltips
 	for i = 1, 10 do
 		local embedded = _G["UIWidgetBaseItemEmbeddedTooltip" .. i]
 		if (embedded and (not embedded.IsForbidden or not embedded:IsForbidden())) then
-			GuardTooltipFrameGeometry(embedded)
+			HookTooltipGeometryCache(embedded)
 		end
 	end
-
 end
 
--- Specialized guard for UIWidgetTemplateItemDisplayMixin.Setup:
--- The embedded tooltip (self.Item.Tooltip) is created dynamically and may
--- not exist when GuardTooltipDimensions() first runs. We guard its geometry
--- just-in-time before calling the original Setup so that GetWidth/GetHeight
--- never return secret values during the base Setup's dimension arithmetic.
+-- Widget mixin Setup guards: use hooksecurefunc to recover from
+-- secret-value errors AFTER Setup runs, without replacing the method.
 local function GuardItemDisplaySetup()
 	local mixin = _G["UIWidgetTemplateItemDisplayMixin"]
 	if (type(mixin) ~= "table" or type(mixin.Setup) ~= "function"
@@ -1051,48 +841,13 @@ local function GuardItemDisplaySetup()
 		return
 	end
 	_G.__AzUI_W12_UIWidgetItemDisplaySetupWrapped = true
-	local original = mixin.Setup
-	-- Guard SetWidth/SetHeight on a widget frame so tainted values
-	-- from the base Setup's return don't error inside Blizzard's
-	-- ContinuableContainer xpcall (which reports to BugSack before
-	-- our outer pcall can catch it).
-	-- Track setter guard state in our geometry side table (avoids WoW 12 taint).
-	local function GuardWidgetFrameSetters(frame)
-		if (not frame) then return end
-		local cache = GetGeometryCache(frame)
-		if (cache._settersGuarded) then return end
-		cache._settersGuarded = true
-		local origSetWidth = frame.SetWidth
-		if (type(origSetWidth) == "function") then
-			frame.SetWidth = function(self, w, ...)
-				if (issecretvalue and issecretvalue(w)) then return end
-				return origSetWidth(self, w, ...)
-			end
-		end
-		local origSetHeight = frame.SetHeight
-		if (type(origSetHeight) == "function") then
-			frame.SetHeight = function(self, h, ...)
-				if (issecretvalue and issecretvalue(h)) then return end
-				return origSetHeight(self, h, ...)
-			end
-		end
-		local origSetSize = frame.SetSize
-		if (type(origSetSize) == "function") then
-			frame.SetSize = function(self, w, h, ...)
-				if (issecretvalue and (issecretvalue(w) or issecretvalue(h))) then return end
-				return origSetSize(self, w, h, ...)
-			end
-		end
-	end
-
-	mixin.Setup = function(self, ...)
-		-- Guard the embedded tooltip before Setup does arithmetic on its dimensions
+	hooksecurefunc(mixin, "Setup", function(self)
+		-- After Setup completes, hook geometry caching on any
+		-- dynamically created tooltip so our cache stays current.
 		if (self and type(self) == "table") then
-			-- Guard the widget frame's setters against tainted dimensions
-			GuardWidgetFrameSetters(self)
-			GuardTooltipFrameGeometry(self)
+			HookTooltipGeometryCache(self)
 			if (self.widgetContainer and type(self.widgetContainer) == "table") then
-				GuardTooltipFrameGeometry(self.widgetContainer)
+				HookTooltipGeometryCache(self.widgetContainer)
 			end
 			local tooltip = self.Tooltip
 			if (not tooltip) then
@@ -1102,75 +857,51 @@ local function GuardItemDisplaySetup()
 				end
 			end
 			if (tooltip and (not tooltip.IsForbidden or not tooltip:IsForbidden())) then
-				GuardTooltipFrameGeometry(tooltip)
+				HookTooltipGeometryCache(tooltip)
 			end
 		end
-		local results = Pack(pcall(original, self, ...))
-		if (results[1]) then
-			return unpack(results, 2, results.n or #results)
-		end
-		return HandleSecretWidgetError(results[2], self, ...)
-	end
+	end)
 end
 
 local function GuardWidgetSetups()
-	GuardWidgetMixinMethod("UIWidgetTemplateTextWithStateMixin", "Setup",
-		"__AzUI_W12_UIWidgetTextWithStateSetupWrapped")
+	-- WoW 12: Do NOT wrap mixin methods with addon pcall wrappers.
+	-- Replacing mixin methods taints all values set during the call,
+	-- causing LayoutFrame secret-value errors and UpgradeItem taint.
+	-- Instead, hook post-Setup to cache geometry on dynamic tooltips.
 	GuardItemDisplaySetup()
-	-- WoW 12: Do NOT wrap RegisterForWidgetSet / UnregisterForWidgetSet.
-	-- Replacing those mixin methods with addon pcall wrappers taints all
-	-- layout values (anchorXOffset, anchorYOffset, etc.) set during the
-	-- call, causing LayoutFrame secret-value compare errors in DefaultWidgetLayout.
 end
 
 ----------------------------------------------------------------
 -- Backdrop SetupTextureCoordinates guard
 -- WoW 12 secret values break BackdropTemplateMixin.SetupTextureCoordinates
--- when frame dimensions are tainted. Both ElvUI and GW2_UI replace
--- this method to skip when GetSize returns secret values.
--- We do the same: check dimensions before calling the original.
+-- when frame dimensions are tainted. We use hooksecurefunc on
+-- OnSizeChanged to keep the geometry cache fresh, rather than
+-- replacing SetupTextureCoordinates (which taints the mixin).
+-- The Blizzard error from secret dimensions is non-fatal and
+-- preferable to tainting the entire secure execution context.
 ----------------------------------------------------------------
 local function GuardBackdropSetupTextureCoordinates()
-	if (not _G.BackdropTemplateMixin
-		or type(_G.BackdropTemplateMixin.SetupTextureCoordinates) ~= "function"
-		or _G.__AzUI_W12_BackdropSetupTexCoordsWrapped) then
-		return
-	end
-	_G.__AzUI_W12_BackdropSetupTexCoordsWrapped = true
-	local original = _G.BackdropTemplateMixin.SetupTextureCoordinates
-	_G.BackdropTemplateMixin.SetupTextureCoordinates = function(self, ...)
-		if (self and self.GetSize) then
-			local width, height = self:GetSize()
-			if (issecretvalue and (issecretvalue(width) or issecretvalue(height))) then
-				return
-			end
-		end
-		return original(self, ...)
-	end
+	-- Intentionally no-op: removing the direct mixin method replacement
+	-- eliminates the taint vector. The non-fatal Blizzard error from
+	-- secret dimensions in SetupTextureCoordinates is harmless compared
+	-- to blocking UpgradeItem() and other protected functions.
 end
 
+-- Tooltip widget set / inserted frame guards: use hooksecurefunc
+-- to passively cache geometry AFTER the Blizzard call, instead of
+-- replacing the global function (which taints the execution context).
 local function GuardTooltipWidgetSets()
 	if (type(_G.GameTooltip_AddWidgetSet) ~= "function"
 		or _G.__AzUI_W12_GameTooltipAddWidgetSetWrapped) then
 		return
 	end
-
 	_G.__AzUI_W12_GameTooltipAddWidgetSetWrapped = true
-	local original = _G.GameTooltip_AddWidgetSet
-
-	_G.GameTooltip_AddWidgetSet = function(...)
-		local results = Pack(pcall(original, ...))
-		if (results[1]) then
-			return unpack(results, 2, results.n or #results)
+	hooksecurefunc("GameTooltip_AddWidgetSet", function(tooltip, ...)
+		if (tooltip and type(tooltip) == "table"
+			and (not tooltip.IsForbidden or not tooltip:IsForbidden())) then
+			HookTooltipGeometryCache(tooltip)
 		end
-
-		local err = results[2]
-		local tooltip = select(1, ...)
-		if (tooltip) then
-			HideSecretWidgetTarget(tooltip)
-		end
-		return HandleSecretWidgetError(err, ...)
-	end
+	end)
 end
 
 local function GuardTooltipInsertedFrames()
@@ -1178,54 +909,37 @@ local function GuardTooltipInsertedFrames()
 		or _G.__AzUI_W12_GameTooltipInsertFrameWrapped) then
 		return
 	end
-
 	_G.__AzUI_W12_GameTooltipInsertFrameWrapped = true
-	local original = _G.GameTooltip_InsertFrame
-
-	_G.GameTooltip_InsertFrame = function(tooltipFrame, frame, ...)
+	hooksecurefunc("GameTooltip_InsertFrame", function(tooltipFrame, frame, ...)
 		if (tooltipFrame and (not tooltipFrame.IsForbidden or not tooltipFrame:IsForbidden())) then
-			GuardTooltipFrameGeometry(tooltipFrame)
+			HookTooltipGeometryCache(tooltipFrame)
 		end
 		if (frame and type(frame) == "table") then
 			if (not frame.IsForbidden or not frame:IsForbidden()) then
-				GuardTooltipFrameGeometry(frame)
+				HookTooltipGeometryCache(frame)
 			end
 			local bar = frame.Bar or frame.StatusBar
 			if (bar and type(bar) == "table"
 				and (not bar.IsForbidden or not bar:IsForbidden())) then
-				GuardTooltipFrameGeometry(bar)
+				HookTooltipGeometryCache(bar)
 			end
 		end
-		return original(tooltipFrame, frame, ...)
-	end
+	end)
 end
 
-local function IsSecretTooltipMoneyError(err)
-	if (type(err) ~= "string") then
-		return false
-	end
-	local lowered = string.lower(err)
-	if (not string.find(lowered, "secret", 1, true)) then
-		return false
-	end
-	return string.find(lowered, "moneyframe", 1, true)
-		or string.find(lowered, "settooltipmoney", 1, true)
-		or string.find(lowered, "tooltipaddmoney", 1, true)
-end
-
--- Guard a money frame and its Gold/Silver/Copper button children
--- so that layout arithmetic on GetWidth/GetHeight returns clean values.
-local function GuardMoneyFrameGeometry(frame)
+-- Hook geometry caching on a money frame and its Gold/Silver/Copper button children.
+-- Uses passive hooksecurefunc caching, does NOT replace any methods.
+local function HookMoneyFrameGeometryCache(frame)
 	if (not frame) then return end
 	local cache = tooltipGeometryCache[frame]
-	if (cache and cache._guarded) then return end
-	GuardTooltipFrameGeometry(frame)
+	if (cache and cache._hooked) then return end
+	HookTooltipGeometryCache(frame)
 	local frameName = frame.GetName and frame:GetName()
 	if (type(frameName) == "string") then
 		for _, suffix in next, { "GoldButton", "SilverButton", "CopperButton" } do
 			local button = _G[frameName .. suffix]
 			if (button) then
-				GuardTooltipFrameGeometry(button)
+				HookTooltipGeometryCache(button)
 			end
 		end
 	end
@@ -1262,39 +976,8 @@ local function IsTooltipOwnedMoneyFrame(frame)
 	return false
 end
 
-local function HideTooltipMoneyFrames(tooltip)
-	if (not tooltip) then
-		return
-	end
-	local moneyFrame = tooltip.TooltipMoneyFrame
-	if (moneyFrame and moneyFrame.Hide) then
-		pcall(moneyFrame.Hide, moneyFrame)
-	end
-	local tooltipName = tooltip.GetName and tooltip:GetName()
-	local numMoneyFrames = tooltip.numMoneyFrames
-	if (type(numMoneyFrames) == "number" and numMoneyFrames > 0 and type(tooltipName) == "string") then
-		for i = 1, numMoneyFrames do
-			local frame = _G[tooltipName .. "MoneyFrame" .. i]
-			if (frame and frame.Hide) then
-				pcall(frame.Hide, frame)
-			end
-		end
-	end
-	if (tooltip.shownMoneyFrames ~= nil) then
-		tooltip.shownMoneyFrames = 0
-	end
-	if (tooltip.numMoneyFrames ~= nil) then
-		tooltip.numMoneyFrames = 0
-	end
-	if (tooltip.hasMoney ~= nil) then
-		tooltip.hasMoney = nil
-	end
-end
-
 local function GuardTooltipMoneyAdders()
-	-- Guard existing tooltip money frames and their button children.
-	-- These inherit taint from the parent tooltip and their GetWidth/GetHeight
-	-- values are used in layout arithmetic inside SetTooltipMoney.
+	-- Hook (not replace) geometry caching on existing tooltip money frames.
 	for _, tooltipName in next, {
 		"GameTooltip", "ItemRefTooltip", "EmbeddedItemTooltip",
 		"ShoppingTooltip1", "ShoppingTooltip2",
@@ -1302,73 +985,27 @@ local function GuardTooltipMoneyAdders()
 		for i = 1, 5 do
 			local mf = _G[tooltipName .. "MoneyFrame" .. i]
 			if (mf) then
-				GuardMoneyFrameGeometry(mf)
+				HookMoneyFrameGeometryCache(mf)
 			end
 		end
 	end
 
-	local function WrapTooltipMoneyAdder(globalName, flagName)
-		local original = _G[globalName]
-		if (type(original) ~= "function" or _G[flagName]) then
-			return
-		end
-		_G[flagName] = true
-		_G[globalName] = function(...)
-			local results = Pack(pcall(original, ...))
-			if (results[1]) then
-				return unpack(results, 2, results.n or #results)
+	-- Hook MoneyFrame_Update to passively cache geometry on tooltip money
+	-- frames AFTER the original runs. Does NOT replace the global function.
+	if (type(_G.MoneyFrame_Update) == "function" and not _G.__AzUI_W12_MoneyFrameUpdateTooltipHooked) then
+		_G.__AzUI_W12_MoneyFrameUpdateTooltipHooked = true
+		hooksecurefunc("MoneyFrame_Update", function(frame)
+			if (IsTooltipOwnedMoneyFrame(frame)) then
+				HookMoneyFrameGeometryCache(frame)
 			end
-			if (not IsSecretTooltipMoneyError(results[2])) then
-				error(results[2], 0)
-			end
-			HideTooltipMoneyFrames(select(1, ...))
-			return nil
-		end
+		end)
 	end
 
-	WrapTooltipMoneyAdder("GameTooltip_OnTooltipAddMoney", "__AzUI_W12_GameTooltipOnTooltipAddMoneyWrapped")
-	WrapTooltipMoneyAdder("EmbeddedItemTooltip_OnTooltipAddMoney", "__AzUI_W12_EmbeddedItemTooltipOnTooltipAddMoneyWrapped")
-
-	if (type(_G.MoneyFrame_Update) == "function" and not _G.__AzUI_W12_MoneyFrameUpdateTooltipWrapped) then
-		_G.__AzUI_W12_MoneyFrameUpdateTooltipWrapped = true
-		local original = _G.MoneyFrame_Update
-		_G.MoneyFrame_Update = function(frame, money, ...)
-			if (not IsTooltipOwnedMoneyFrame(frame)) then
-				return original(frame, money, ...)
-			end
-			if (issecretvalue and (issecretvalue(money) or issecretvalue(frame))) then
-				HideTooltipMoneyFrames(frame and frame.GetParent and frame:GetParent() or nil)
-				if (frame and frame.Hide) then
-					pcall(frame.Hide, frame)
-				end
-				return
-			end
-			-- Guard the money frame and its button children so layout
-			-- arithmetic on GetWidth/GetHeight doesn't hit secret values.
-			GuardMoneyFrameGeometry(frame)
-			local results = Pack(pcall(original, frame, money, ...))
-			if (results[1]) then
-				return unpack(results, 2, results.n or #results)
-			end
-			if (not IsSecretTooltipMoneyError(results[2])) then
-				error(results[2], 0)
-			end
-			HideTooltipMoneyFrames(frame and frame.GetParent and frame:GetParent() or nil)
-			if (frame and frame.Hide) then
-				pcall(frame.Hide, frame)
-			end
-			return nil
-		end
-	end
-
-	-- Also wrap SetTooltipMoney — its internal layout path does arithmetic
-	-- on button GetWidth/GetHeight which can be tainted, and this path
-	-- does not go through MoneyFrame_Update.
-	if (type(_G.SetTooltipMoney) == "function" and not _G.__AzUI_W12_SetTooltipMoneyWrapped) then
-		_G.__AzUI_W12_SetTooltipMoneyWrapped = true
-		local origSetTooltipMoney = _G.SetTooltipMoney
-		_G.SetTooltipMoney = function(tooltip, money, ...)
-			-- Guard any existing money frames before the layout runs
+	-- Hook SetTooltipMoney to passively cache geometry on any money frames
+	-- created during the call. Does NOT replace the global function.
+	if (type(_G.SetTooltipMoney) == "function" and not _G.__AzUI_W12_SetTooltipMoneyHooked) then
+		_G.__AzUI_W12_SetTooltipMoneyHooked = true
+		hooksecurefunc("SetTooltipMoney", function(tooltip)
 			if (tooltip) then
 				local tooltipName = tooltip.GetName and tooltip:GetName()
 				if (type(tooltipName) == "string") then
@@ -1377,40 +1014,13 @@ local function GuardTooltipMoneyAdders()
 						for i = 1, numMoney do
 							local mf = _G[tooltipName .. "MoneyFrame" .. i]
 							if (mf) then
-								GuardMoneyFrameGeometry(mf)
+								HookMoneyFrameGeometryCache(mf)
 							end
 						end
 					end
 				end
 			end
-			if (issecretvalue and issecretvalue(money)) then
-				return
-			end
-			local results = Pack(pcall(origSetTooltipMoney, tooltip, money, ...))
-			if (results[1]) then
-				-- Guard any newly created money frames after the call
-				if (tooltip) then
-					local tooltipName = tooltip.GetName and tooltip:GetName()
-					if (type(tooltipName) == "string") then
-						local numMoney = tooltip.numMoneyFrames
-						if (type(numMoney) == "number") then
-							for i = 1, numMoney do
-								local mf = _G[tooltipName .. "MoneyFrame" .. i]
-								if (mf) then
-									GuardMoneyFrameGeometry(mf)
-								end
-							end
-						end
-					end
-				end
-				return unpack(results, 2, results.n or #results)
-			end
-			if (not IsSecretTooltipMoneyError(results[2])) then
-				error(results[2], 0)
-			end
-			HideTooltipMoneyFrames(tooltip)
-			return nil
-		end
+		end)
 	end
 end
 

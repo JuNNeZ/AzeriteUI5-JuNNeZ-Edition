@@ -92,6 +92,23 @@ local function SuppressBlizzardCastbar(frame)
 		if (type(frame.Show) == "function") then
 			hooksecurefunc(frame, "Show", ApplySuppressedBlizzardCastbarAlpha)
 		end
+		if (type(frame.SetShown) == "function") then
+			hooksecurefunc(frame, "SetShown", function(self, shown)
+				if (shown) then
+					ApplySuppressedBlizzardCastbarAlpha(self)
+				end
+			end)
+		end
+		-- Prevent Blizzard code or animations from overriding our alpha.
+		local suppressingAlpha = false
+		hooksecurefunc(frame, "SetAlpha", function(self, alpha)
+			if (suppressingAlpha) then return end
+			if (self.__AzeriteUI_Suppressed and alpha > 0) then
+				suppressingAlpha = true
+				self:SetAlpha(0)
+				suppressingAlpha = false
+			end
+		end)
 		for _, methodName in next, {
 			"OnEvent",
 			"FinishSpell",

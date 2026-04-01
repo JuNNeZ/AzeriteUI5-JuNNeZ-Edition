@@ -52,6 +52,7 @@ local defaults = { profile = ns:Merge({
 	showAuras = true,
 	showCastbar = true,
 	showName = true,
+	showHealthPercent = true,
 	showPowerValue = true,
 	PowerValueFormat = "short",
 	aurasBelowFrame = false,
@@ -602,7 +603,41 @@ local UpdateTargetHealthFakeFillFromBar = function(health)
 	local owner = health.__owner
 	local unit = health.unit or (owner and owner.unit) or "target"
 	local percent, source
-	if (type(UnitHealthPercent) == "function") then
+	local rawCur = UnitHealth(unit)
+	local rawMax = UnitHealthMax(unit)
+	local rawCurReadable = (type(rawCur) == "number") and (not issecretvalue or not issecretvalue(rawCur))
+	local rawMaxReadable = (type(rawMax) == "number") and (not issecretvalue or not issecretvalue(rawMax))
+	if (rawCurReadable and rawMaxReadable and rawMax > 0) then
+		percent = rawCur / rawMax
+		source = "unit"
+	end
+	if (type(percent) ~= "number") then
+		pcall(function()
+			local value = health:GetValue()
+			local _, maxValue = health:GetMinMaxValues()
+			local valueReadable = (type(value) == "number") and (not issecretvalue or not issecretvalue(value))
+			local maxValueReadable = (type(maxValue) == "number") and (not issecretvalue or not issecretvalue(maxValue))
+			if (valueReadable and maxValueReadable and maxValue > 0) then
+				percent = value / maxValue
+				source = "statusbar"
+			end
+		end)
+	end
+	if (type(percent) ~= "number") then
+		local mirrorPercent = health.__AzeriteUI_MirrorPercent
+		if (type(mirrorPercent) == "number" and (not issecretvalue or not issecretvalue(mirrorPercent))) then
+			percent = mirrorPercent
+			source = "mirror"
+		end
+	end
+	if (type(percent) ~= "number") then
+		local texturePercent = health.__AzeriteUI_TexturePercent
+		if (type(texturePercent) == "number" and (not issecretvalue or not issecretvalue(texturePercent))) then
+			percent = texturePercent
+			source = "texture"
+		end
+	end
+	if (type(percent) ~= "number" and type(UnitHealthPercent) == "function") then
 		local ok, value = pcall(UnitHealthPercent, unit, true, CurveConstants and CurveConstants.ZeroToOne or nil)
 		if (ok) then
 			percent = value
@@ -610,7 +645,7 @@ local UpdateTargetHealthFakeFillFromBar = function(health)
 		end
 	end
 	local applied = false
-	if (source == "api") then
+	if (source) then
 		applied = pcall(ApplyTargetSimpleHealthFakeFillByPercent, health, percent)
 	elseif (percent == nil) then
 		applied = ApplyTargetSimpleHealthFakeFillByPercent(health, nil)
@@ -1265,9 +1300,29 @@ local ShouldHideTargetHealthAbsorb = function()
 	return config and config.HideHealthAbsorb
 end
 
+local ShouldShowTargetHealthPercent = function()
+	-- Check profile DB first (user toggle from /az menu)
+	local profile = TargetFrameMod and TargetFrameMod.db and TargetFrameMod.db.profile
+	if profile and type(profile.showHealthPercent) == "boolean" then
+		return profile.showHealthPercent
+	end
+	-- Fall back to layout config
+	local config = GetTargetFrameConfig()
+	if (not config) then
+		return true
+	end
+	if (config.HideHealthValue) then
+		return true
+	end
+	if (type(config.showHealthPercent) == "boolean") then
+		return config.showHealthPercent
+	end
+	return true
+end
+
 local ShouldKeepTargetHealthPercentVisible = function()
 	local config = GetTargetFrameConfig()
-	return config and config.KeepHealthPercentVisible
+	return config and config.KeepHealthPercentVisible and ShouldShowTargetHealthPercent()
 end
 
 local UpdateTargetAbsorbState = function(element, unit, absorb, maxHealth)
@@ -1935,28 +1990,26 @@ local Cast_UpdateTexts = function(element)
 	local healthValue = health and health.Value
 	local healthPercent = health and health.Percent
 	local hideHealthValue = ShouldHideTargetHealthValue()
+	local showHealthPercent = ShouldShowTargetHealthPercent()
 	local keepHealthPercentVisible = ShouldKeepTargetHealthPercentVisible()
 
 	if (hideHealthValue or keepHealthPercentVisible) then
 		if (element:IsShown()) then
 			element.Text:Show()
 			element.Time:Show()
-			if (healthPercent) then
-				healthPercent:Hide()
-			end
 		else
 			element.Text:Hide()
 			element.Time:Hide()
-			if (healthPercent) then
-				if (keepHealthPercentVisible) then
-					healthPercent:Show()
-				else
-					healthPercent:Hide()
-				end
-			end
 		end
 		if (healthValue) then
 			healthValue:Hide()
+		end
+		if (healthPercent) then
+			if ((not element:IsShown()) and showHealthPercent) then
+				healthPercent:Show()
+			else
+				healthPercent:Hide()
+			end
 		end
 		UpdateTargetHealthPercentTag(element.__owner)
 		return
@@ -1987,7 +2040,11 @@ local Cast_UpdateTexts = function(element)
 			healthValue:Show()
 		end
 		if (healthPercent) then
-			healthPercent:Show()
+			if (showHealthPercent) then
+				healthPercent:Show()
+			else
+				healthPercent:Hide()
+			end
 		end
 	end
 end
@@ -2256,7 +2313,9 @@ local UnitFrame_UpdateTextures = function(self)
 		tostring(powerValueOffsetX), tostring(powerValueOffsetY),
 		tostring(powerBarScaleX), tostring(powerBarScaleY),
 		tostring(powerBackdropScaleX), tostring(powerBackdropScaleY),
-		tostring(powerBarArtLayer)
+		tostring(powerBarArtLayer),
+		tostring((profile and profile.showHealthPercent) or ""),
+		tostring((profile and profile.showName) or "")
 	}, "|")
 	-- Cache fast-path must include the current target GUID.
 	-- Different units can share style/signature but still require
@@ -2538,14 +2597,15 @@ local UnitFrame_UpdateTextures = function(self)
 	portraitBorder:SetVertexColor(unpack(db.PortraitBorderColor))
 
 	local hideHealthValue = ShouldHideTargetHealthValue()
+	local showHealthPercent = ShouldShowTargetHealthPercent()
 	local keepHealthPercentVisible = ShouldKeepTargetHealthPercentVisible()
-	if (key == "Critter" or hideHealthValue or keepHealthPercentVisible) then
+	if (key == "Critter" or hideHealthValue or keepHealthPercentVisible or not showHealthPercent) then
 		if (hideHealthValue) then
 			health.Value:Hide()
 		else
 			health.Value:Show()
 		end
-		if (keepHealthPercentVisible) then
+		if (showHealthPercent) then
 			health.Percent:Show()
 		else
 			health.Percent:Hide()

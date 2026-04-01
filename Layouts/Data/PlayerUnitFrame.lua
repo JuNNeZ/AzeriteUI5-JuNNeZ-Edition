@@ -72,6 +72,13 @@ ns.RegisterConfig("PlayerFrame", {
 	HealthValueFont = GetFont(18, true),
 	HealthValueColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .5 },
 
+	-- Health Percentage Text
+	HealthPercentagePosition = { "RIGHT", -27, 4 },
+	HealthPercentageJustifyH = "RIGHT",
+	HealthPercentageJustifyV = "MIDDLE",
+	HealthPercentageFont = GetFont(18, true),
+	HealthPercentageColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .4 },
+
 	-- Mana Value Text (when mana is not primary resource)
 	ManaTextPosition = { "CENTER", 1, -34 },
 	ManaTextFont = GetFont(15, true),

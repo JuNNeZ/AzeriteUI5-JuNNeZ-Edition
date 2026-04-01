@@ -311,10 +311,9 @@ end
 Tooltips.UpdateBackdropTheme = function(self, tooltip)
 	if (self:IsDisabled()) then return end
 	if (not tooltip) or (tooltip.IsEmbedded) or (tooltip:IsForbidden()) then return end
-	-- WoW12: dimension guard in FixBlizzardBugsWow12 ensures GetWidth/GetHeight
-	-- always return clean values, but skip styling if the tooltip has zero size
-	-- (e.g. not yet laid out).
-	local width = tooltip.GetWidth and tooltip:GetWidth() or 0
+	-- WoW12: use safe geometry helper to get a clean (non-secret) width.
+	-- Skip styling if the tooltip has zero size (e.g. not yet laid out).
+	local width = ns.GetSafeWidth and ns.GetSafeWidth(tooltip) or (tooltip.GetWidth and tooltip:GetWidth() or 0)
 	if issecretvalue and issecretvalue(width) then
 		width = 0
 	end

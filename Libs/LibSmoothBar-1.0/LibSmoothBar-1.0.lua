@@ -231,11 +231,17 @@ local Update = function(self, elapsed)
 		data.safeBarMin   = min
 		data.safeBarMax   = max
 	else
-		-- If values are missing or secret, fall back to a proxy StatusBar to render safely
+		-- If values are missing or secret, fall back to a proxy StatusBar to render safely.
+		-- Also check the raw (pre-coercion) stored values: coerced display values
+		-- may hide the fact that the actual health data is entirely secret.
 		local valueIsSecret = issecretvalue and issecretvalue(value)
 		local minIsSecret = issecretvalue and issecretvalue(min)
 		local maxIsSecret = issecretvalue and issecretvalue(max)
-		if (not value or not min or not max or valueIsSecret or minIsSecret or maxIsSecret) then
+		local rawValueIsSecret = issecretvalue and issecretvalue(data.barValue)
+		local rawMinIsSecret = data.rawBarMin ~= nil and issecretvalue and issecretvalue(data.rawBarMin)
+		local rawMaxIsSecret = data.rawBarMax ~= nil and issecretvalue and issecretvalue(data.rawBarMax)
+		if (not value or not min or not max or valueIsSecret or minIsSecret or maxIsSecret
+			or rawValueIsSecret or rawMinIsSecret or rawMaxIsSecret) then
 			local proxy = data.proxy
 			if (proxy) then
 				if (ShouldDebugBar(data.statusbar) and not data.__AzeriteUI_ProxyShown) then
@@ -248,8 +254,8 @@ local Update = function(self, elapsed)
 				end
 				local proxyReverse = data.barBlizzardReverseFill
 				proxy:SetReverseFill(proxyReverse and true or false)
-				proxy:SetMinMaxValues(min or 0, max or 1)
-				proxy:SetValue(value or 0)
+				proxy:SetMinMaxValues(data.rawBarMin or min or 0, data.rawBarMax or max or 1)
+				proxy:SetValue(data.barValue or value or 0)
 				-- Match texture coordinates to custom bar rendering (flip via texcoords only)
 				local proxyTex = proxy:GetStatusBarTexture()
 				if (proxyTex and proxyTex.SetTexCoord) then
@@ -696,9 +702,12 @@ StatusBar.SetValue = function(self, value, overrideSmoothing)
 		end
 	end
 	data.barValue = value
-	-- Sync proxy for secret values
-	if (isSecret or minIsSecret or maxIsSecret) and data.proxy then
-		data.proxy:SetMinMaxValues(min or 0, max or 1)
+	-- Sync proxy with original (pre-coercion) min/max so the C-side StatusBar
+	-- computes the correct fill proportion from the secret values.
+	local rawMinIsSecret = data.rawBarMin ~= nil and issecretvalue and issecretvalue(data.rawBarMin)
+	local rawMaxIsSecret = data.rawBarMax ~= nil and issecretvalue and issecretvalue(data.rawBarMax)
+	if (isSecret or minIsSecret or maxIsSecret or rawMinIsSecret or rawMaxIsSecret) and data.proxy then
+		data.proxy:SetMinMaxValues(data.rawBarMin or min or 0, data.rawBarMax or max or 1)
 		data.proxy:SetValue(value or 0)
 		data.proxy:Show()
 	end
@@ -747,6 +756,12 @@ end
 
 StatusBar.SetMinMaxValues = function(self, min, max, overrideSmoothing)
 	local data = Bars[self]
+
+	-- Save original (possibly secret) min/max for proxy sync.
+	-- The proxy is a native Blizzard StatusBar that handles secrets in C code;
+	-- it needs the real values to compute the correct fill proportion.
+	data.rawBarMin = min
+	data.rawBarMax = max
 
 	-- Coerce nil/secret inputs to sane numbers before any comparisons
 	local function Coerce(v, fallback, default)
@@ -806,12 +821,13 @@ StatusBar.SetMinMaxValues = function(self, min, max, overrideSmoothing)
 	end
 	data.barMin = min
 	data.barMax = max
-	-- Sync proxy for secret values
+	-- Sync proxy with the ORIGINAL (pre-coercion) values when either was secret.
+	-- The proxy is a native StatusBar that handles secret values in C code.
 	if (data.proxy) then
-		local minIsSecret = issecretvalue and issecretvalue(min)
-		local maxIsSecret = issecretvalue and issecretvalue(max)
-		if (minIsSecret or maxIsSecret) then
-			data.proxy:SetMinMaxValues(min or 0, max or 1)
+		local origMinIsSecret = data.rawBarMin ~= nil and issecretvalue and issecretvalue(data.rawBarMin)
+		local origMaxIsSecret = data.rawBarMax ~= nil and issecretvalue and issecretvalue(data.rawBarMax)
+		if (origMinIsSecret or origMaxIsSecret) then
+			data.proxy:SetMinMaxValues(data.rawBarMin or 0, data.rawBarMax or 1)
 			data.proxy:Show()
 		end
 	end

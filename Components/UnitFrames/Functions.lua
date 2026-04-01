@@ -794,21 +794,29 @@ end
 local SafeUnitPercentNumber = function(unit, isPower, powerType)
 	local percent
 	if (isPower and UnitPowerPercent) then
-		pcall(function()
-			if (CurveConstants and CurveConstants.ScaleTo100) then
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			pcall(function()
 				percent = UnitPowerPercent(unit, powerType, true, CurveConstants.ScaleTo100)
-			else
+			end)
+		end
+		-- Fallback: try curveless when curve version returned secret/nil.
+		if (not IsSafeNumeric(percent)) then
+			pcall(function()
 				percent = UnitPowerPercent(unit, powerType)
-			end
-		end)
+			end)
+		end
 	elseif (not isPower and UnitHealthPercent) then
-		pcall(function()
-			if (CurveConstants and CurveConstants.ScaleTo100) then
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			pcall(function()
 				percent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
-			else
+			end)
+		end
+		-- Fallback: try curveless when curve version returned secret/nil.
+		if (not IsSafeNumeric(percent)) then
+			pcall(function()
 				percent = UnitHealthPercent(unit)
-			end
-		end)
+			end)
+		end
 	end
 	if (IsSafeNumeric(percent)) then
 		return percent
@@ -1304,6 +1312,65 @@ API.ShouldSkipPrediction = function(element, ...)
 	return false
 end
 
+local GetSafeHealthFromCalculator = function(element, unit)
+	if (not unit or not CreateUnitHealPredictionCalculator or not UnitGetDetailedHealPrediction) then
+		return nil, nil, nil
+	end
+	if (not element.__AzeriteUI_HealthCalculator) then
+		element.__AzeriteUI_HealthCalculator = CreateUnitHealPredictionCalculator()
+	end
+	local calculator = element.__AzeriteUI_HealthCalculator
+	if (not calculator) then
+		return nil, nil, nil
+	end
+
+	local okUpdate = pcall(UnitGetDetailedHealPrediction, unit, nil, calculator)
+	if (not okUpdate) then
+		okUpdate = pcall(UnitGetDetailedHealPrediction, unit, "player", calculator)
+	end
+	if (not okUpdate) then
+		return nil, nil, nil
+	end
+
+	local defaultMaxMode = Enum and Enum.UnitMaximumHealthMode and Enum.UnitMaximumHealthMode.Default
+	if (defaultMaxMode ~= nil and calculator.SetMaximumHealthMode) then
+		pcall(calculator.SetMaximumHealthMode, calculator, defaultMaxMode)
+	end
+
+	local calcCur
+	local calcMax
+	local calcPercent
+	if (calculator.GetCurrentHealth) then
+		local okCur, value = pcall(calculator.GetCurrentHealth, calculator)
+		if (okCur and type(value) == "number" and not IsSecretValue(value)) then
+			calcCur = value
+		end
+	end
+	if (calculator.GetMaximumHealth) then
+		local okMax, value = pcall(calculator.GetMaximumHealth, calculator)
+		if (okMax and type(value) == "number" and not IsSecretValue(value) and value > 0) then
+			calcMax = value
+		end
+	end
+	if (calculator.GetCurrentHealthPercent) then
+		local okPercent, value = pcall(calculator.GetCurrentHealthPercent, calculator)
+		if (okPercent and type(value) == "number" and not IsSecretValue(value)) then
+			calcPercent = NormalizePercent100(value * 100)
+		end
+	end
+	if (type(calcPercent) ~= "number" and calculator.EvaluateCurrentHealthPercent) then
+		local okPercent, value = pcall(calculator.EvaluateCurrentHealthPercent, calculator, CurveConstants and CurveConstants.ScaleTo100 or nil)
+		if (okPercent and type(value) == "number" and not IsSecretValue(value)) then
+			calcPercent = NormalizePercent100(value)
+		end
+	end
+	if (type(calcPercent) ~= "number" and type(calcCur) == "number" and type(calcMax) == "number" and calcMax > 0) then
+		calcPercent = SafePercentFromValues(calcCur, calcMax)
+	end
+
+	return calcCur, calcMax, calcPercent
+end
+
 API.GetSafeHealthForPrediction = function(element, curHealth, maxHealth)
 	local safeCur
 	local safeMax
@@ -1397,31 +1464,29 @@ API.UpdateHealth = function(self, event, unit)
 		barMin, barMax = element:GetMinMaxValues()
 	end)
 	local barMaxSafe = (IsSafeNumeric(barMax) and barMax > 0) and barMax or nil
+	local calcCur, calcMax, calcPercent
+	if ((not rawCurSafe) or (not rawMaxSafe)) then
+		calcCur, calcMax, calcPercent = GetSafeHealthFromCalculator(element, unit)
+	end
 
 	local previousSafePercent = NormalizePercent100(element.safePercent)
-	local safePercent = NormalizePercent100(SafeUnitPercentNumber(unit, false))
-	local targetPercent = nil
-	if (unit == "target") then
-		-- UnitHealthPercent can be stale/frozen for secret target updates.
-		-- Keep target health driven by mirror/native geometry unless raw values are readable.
-		if ((not rawCurSafe) or (not rawMaxSafe)) then
-			safePercent = nil
-		end
-		targetPercent = NormalizePercent100(ProbeSafePercentAPI(unit, false))
-		-- Target secret paths are bar-authoritative post-write.
-		-- Only trust probed API percent when raw values are fully safe.
-		if (rawCurSafe and rawMaxSafe and type(targetPercent) == "number") then
-			safePercent = targetPercent
-		end
+	local safePercent = nil
+	if (rawCurSafe and rawMaxSafe) then
+		safePercent = SafePercentFromValues(rawCur, rawMax)
+	elseif (type(calcPercent) == "number") then
+		safePercent = calcPercent
 	end
-	if (safePercent == nil and (not rawCurSafe)) then
-		safePercent = NormalizePercent100(GetSecretPercentFromBar(element))
+	-- API fallback (non-secret edge cases only — ScaleTo100 returns secret for most units).
+	if (safePercent == nil) then
+		safePercent = NormalizePercent100(SafeUnitPercentNumber(unit, false))
 	end
 
 	local safeMax = rawMaxSafe and rawMax
+		or ((type(calcMax) == "number" and calcMax > 0) and calcMax or nil)
 		or barMaxSafe
 		or ((type(element.safeMax) == "number" and element.safeMax > 0) and element.safeMax or 100)
 	local safeCur = rawCurSafe and rawCur
+		or ((type(calcCur) == "number") and calcCur or nil)
 		or (type(element.safeCur) == "number" and element.safeCur or safeMax)
 	local staleRawCur = false
 	if (type(safePercent) == "number" and rawCurSafe) then
@@ -1472,43 +1537,24 @@ API.UpdateHealth = function(self, event, unit)
 	end
 
 	-- WoW12 secret-value path:
-	-- after writing to the statusbar, re-read mirrored/bar percent so
-	-- text values follow what the bar actually renders.
-	if (unit == "target" and connected) then
-		local targetPercentSource = "none"
-		local targetResolvedPercent = NormalizePercent100(GetSecretPercentFromBar(element))
-		if (type(targetResolvedPercent) == "number") then
-			safePercent = targetResolvedPercent
-			safeCur = safeMax * (targetResolvedPercent / 100)
-			targetPercentSource = "mirror"
-		else
-			if (type(targetPercent) == "number") then
-				safePercent = targetPercent
-				safeCur = safeMax * (targetPercent / 100)
-				targetPercentSource = "api"
-			end
-			local targetRecomputed = SafePercentFromValues(safeCur, safeMax)
-			if (targetPercentSource == "none" and rawCurSafe and rawMaxSafe and type(targetRecomputed) == "number") then
-				safePercent = targetRecomputed
-				targetPercentSource = "minmax"
-			elseif (targetPercentSource == "none" and rawCurSafe and rawMaxSafe and type(previousSafePercent) == "number") then
-				safePercent = previousSafePercent
-				targetPercentSource = "cached"
-			end
-		end
-		element.__AzeriteUI_TargetPercentSource = targetPercentSource
-	elseif ((not rawCurSafe) and connected) then
-		local postMirrorPercent = NormalizePercent100(GetSecretPercentFromBar(element))
-		if (type(postMirrorPercent) == "number") then
-			safePercent = postMirrorPercent
-			safeCur = safeMax * (postMirrorPercent / 100)
+	-- When all health data is secret, safePercent will be nil at this point.
+	-- The actual percent text will be set via direct widget formatting below.
+	if ((not rawCurSafe) and connected) then
+		local postPercentSource = "secret"
+		if (type(safePercent) == "number") then
+			postPercentSource = "pre-write"
+		elseif (type(calcPercent) == "number") then
+			safePercent = calcPercent
+			if (type(calcCur) == "number") then safeCur = calcCur end
+			if (type(calcMax) == "number" and calcMax > 0) then safeMax = calcMax end
+			postPercentSource = "calculator"
 		end
 		if (unit == "target") then
-			element.__AzeriteUI_TargetPercentSource = nil
+			element.__AzeriteUI_TargetPercentSource = postPercentSource
 		end
 	else
 		if (unit == "target") then
-			element.__AzeriteUI_TargetPercentSource = nil
+			element.__AzeriteUI_TargetPercentSource = (rawCurSafe and rawMaxSafe) and "minmax" or nil
 		end
 	end
 
@@ -1541,14 +1587,22 @@ API.UpdateHealth = function(self, event, unit)
 		elseif (rawCurSafe and rawMaxSafe) then
 			element.safePercent = SafePercentFromValues(safeCur, safeMax)
 		else
+			-- All health data is secret; set nil so the tag resolver does not
+			-- display a stale/wrong 100%.  Direct widget text override below
+			-- will handle the actual display.
 			element.safePercent = nil
 		end
 	else
-		element.safePercent = SafePercentFromValues(safeCur, safeMax) or NormalizePercent100(safePercent)
+		if (rawCurSafe) then
+			element.safePercent = SafePercentFromValues(safeCur, safeMax) or NormalizePercent100(safePercent)
+		else
+			element.safePercent = nil
+		end
 	end
 	if (element.Percent and element.Percent.UpdateTag) then
 		pcall(function() element.Percent:UpdateTag() end)
 	end
+
 	if (element.Value and element.Value.UpdateTag) then
 		pcall(function() element.Value:UpdateTag() end)
 	end

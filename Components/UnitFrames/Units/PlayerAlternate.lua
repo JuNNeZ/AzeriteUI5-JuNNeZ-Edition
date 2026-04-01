@@ -49,6 +49,7 @@ local defaults = { profile = ns:Merge({
 	useClassColor = false,
 	showAuras = true,
 	showCastbar = true,
+	showHealthPercent = false,
 	showName = true,
 	aurasBelowFrame = false
 }, ns.MovableModulePrototype.defaults) }
@@ -81,6 +82,40 @@ end
 
 local GetPlayerAlternateConfig = function()
 	return ns.GetConfig("PlayerFrameAlternate")
+end
+
+local ShouldShowPlayerAlternateHealthPercent = function()
+	local profile = PlayerFrameAltMod and PlayerFrameAltMod.db and PlayerFrameAltMod.db.profile
+	if (profile and type(profile.showHealthPercent) == "boolean") then
+		return profile.showHealthPercent
+	end
+	return false
+end
+
+local UpdatePlayerAlternateHealthPercentVisibility = function(frame)
+	if (not frame or not frame.Health) then
+		return
+	end
+
+	local healthValue = frame.Health.Value
+	local healthPercent = frame.Health.Percent
+	if (not healthValue or not healthPercent) then
+		return
+	end
+
+	local castbar = frame.Castbar
+	if (castbar and castbar:IsShown()) then
+		healthValue:Hide()
+		healthPercent:Hide()
+		return
+	end
+
+	healthValue:Show()
+	if (ShouldShowPlayerAlternateHealthPercent()) then
+		healthPercent:Show()
+	else
+		healthPercent:Hide()
+	end
 end
 
 local HideSaiyaRattBlizzardAltPowerBar = function()
@@ -587,7 +622,11 @@ local Cast_UpdateTexts = function(element)
 		element.Text:Hide()
 		element.Time:Hide()
 		health.Value:Show()
-		health.Percent:Show()
+		if (ShouldShowPlayerAlternateHealthPercent()) then
+			health.Percent:Show()
+		else
+			health.Percent:Hide()
+		end
 	end
 end
 
@@ -1293,6 +1332,8 @@ PlayerFrameAltMod.Update = function(self)
 	else
 		self.frame:DisableElement("Castbar")
 	end
+
+	UpdatePlayerAlternateHealthPercentVisibility(self.frame)
 
 	if (self.frame:IsElementEnabled("Power")) then
 		self.frame.Power:ForceUpdate()

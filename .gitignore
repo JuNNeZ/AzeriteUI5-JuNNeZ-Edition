@@ -28,7 +28,6 @@ Backups/
 AGENTS.md
 FixLog.md
 FixLog_Archive_*.md
-VERSION_CHECKLIST.md
 Docs/
 
 # Build and release artifacts
@@ -66,4 +65,3 @@ FEATURE_PLAN.md
 *.swo
 .*.swp
 discord post.md
-plan.md

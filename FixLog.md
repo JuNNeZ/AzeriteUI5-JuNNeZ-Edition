@@ -1,4 +1,229 @@
 
+## 2026-04-01
+
+- **[RELEASE] 5.3.47-JuNNeZ — Tenebric Vital-State Decryption Protocol:**
+  - Version bumped to `5.3.47-JuNNeZ` in `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, and `CHANGELOG.md`.
+  - Changelog delta covers: target health percent toggle fix, player health percent toggle fix, WoW 12 secret-value health percent overhaul (LibSmoothBar proxy, SecretPercentReader, tag `_FRAME` isolation, tag-level C-side formatting, resolver early-exit), and localization coverage pass.
+  - Committed, pushed, and tagged `v5.3.47-JuNNeZ`.
+
+- **[FIX] Target health percent toggle in /az menu not working:**
+  - **Problem:** Toggling "Show Health Percent" for the target frame in `/az` → Unit Frame Settings → Target did nothing. The percent stayed visible (or hidden) regardless of the toggle state.
+  - **Root cause:** Config read/write path mismatch:
+    - **Write path:** The options setter writes to `module.db.profile.showHealthPercent` (AceDB profile DB)
+    - **Read path:** `ShouldShowTargetHealthPercent()` read from `ns.GetConfig("TargetFrame")` — the **layout config** table (defined in Layouts/), NOT the profile DB
+    - These are completely separate data stores. The toggle wrote to one, but visibility checked the other.
+  - **Comparison:** `PlayerFrame` correctly reads from `PlayerFrameMod.db.profile` in its equivalent `ShouldShowPlayerHealthPercent()` — this is why the player toggle worked.
+  - **Fix:** Two changes:
+    1. `ShouldShowTargetHealthPercent()` now checks `TargetFrameMod.db.profile.showHealthPercent` first (user toggle wins), then falls back to layout config for defaults.
+    2. Added `showHealthPercent` and `showName` to the `healthLabSignature` cache key in `UnitFrame_UpdateTextures`. Without this, the function's fast-path cache (`key == currentStyle and signature == old_signature and GUID == old_GUID`) would short-circuit before reaching the visibility logic — the toggle change never reached the show/hide code.
+  - **Refresh path verified:** Toggle setter → `module:UpdateSettings()` (inherited from `ns.UnitFrameModule`) → `TargetFrameMod.Update()` → `self.frame:PostUpdate()` → `UnitFrame_UpdateTextures` (signature changed → cache miss) → `ShouldShowTargetHealthPercent()` → show/hide `health.Percent`. Chain is complete.
+  - **Files touched:**
+    - `Components/UnitFrames/Units/Target.lua` — `ShouldShowTargetHealthPercent()`: added profile DB check before layout config fallback
+  - **Verification:** `/reload` → `/az` → Unit Frame Settings → Target → toggle "Show Health Percent" off → percent should disappear. Toggle on → percent should reappear. Test with a target selected.
+
+- **[FIX] Resolver early-exit when all-secret — unblocks tag secret fallback (v4):**
+  - **Problem:** After v3 added the C-side secret fallback in the tag methods, it was never reached. Both `ResolveHealthPercentForTag` and `ResolveTargetHiddenHealthPercentForTag` returned stale/wrong numeric values before giving up:
+    - **Player 91%:** `GetElementLiveValueRange` → `element:GetValue()` is secret → falls back to `element.safeCur` (stale from previous session, e.g. 91) → `SafePercent(91, 100) = 91` → tag formats "91%".
+    - **Target 100%:** Same chain → `safeCur` defaults to `safeMax` (both 100) → `SafePercent(100, 100) = 100` → tag formats "100%".
+    - In both cases, the resolver returned a valid number, so `FormatPercent` ran and the secret fallback was dead code.
+  - **Fix — Both resolvers now early-exit when all data is secret:**
+    After checking `safePercent` (nil when all-secret), both resolvers now check `element.__AzeriteUI_RawCurSafe` and `element.__AzeriteUI_RawMaxSafe` (flags set by UpdateHealth). When both are false, return nil immediately — skip all stale `safeCur/safeMax`, `GetElementLivePercent`, `SafeUnitPercent`, and `ResolveDisplayHealthPercent` fallbacks.
+    This allows the tag method's C-side secret fallback (`UnitHealthPercent` → `AbbreviateNumbers` → `C_StringUtil.WrapString`) to fire.
+  - **Also cleaned up:** Removed tail-end `ResolveDisplayHealthPercent` and `SafeUnitPercent` fallbacks from both resolvers — these had the same stale-data problem and added complexity without value when data is secret.
+  - **Files touched:**
+    - `Components/UnitFrames/Tags.lua` — `ResolveHealthPercentForTag` and `ResolveTargetHiddenHealthPercentForTag`: added `allSecret` early-exit, removed stale fallbacks
+    - `Docs/Secret Health Percent Research.md` — updated with approach #14
+  - **Verification:** `/reload` → player at full HP should show 100% (not 91%). Target any mob → percent should update with damage. If percent shows blank instead, the C-side API chain needs debugging (see research doc Test 2).
+
+- **[FIX] Secret health percent — tag-level C-side formatting (v3):**
+  - **Problem:** Previous approaches (SecretPercentReader geometry, direct SetFormattedText override after tag) all failed:
+    1. **Geometry is dead:** WoW 12 propagates secret tags to ALL StatusBar texture geometry (width, height, texcoords, anchors). User's bar dump proved: `texture size: <secret> <secret>`, `texcoord: <secret>`. No Lua-side geometry back-door exists.
+    2. **Direct override race condition:** The SetFormattedText call after `Percent:UpdateTag()` works momentarily, but oUF's OnUpdate timer (0.1s) re-runs the tag method, which returns "" (safePercent=nil), overwriting the correct text.
+  - **Fix — Tag-level secret percent via C-side APIs:**
+    Modified `*:HealthPercent` and `*:TargetHealthPercent` tag methods in Tags.lua. When `ResolveHealthPercentForTag`/`ResolveTargetHiddenHealthPercentForTag` returns nil (all data secret), the tag now:
+    1. Calls `UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)` → secret number
+    2. Passes to `AbbreviateNumbers(secretNum)` → displayable text (possibly secret string)
+    3. Wraps with `C_StringUtil.WrapString(text, "", "%")` → appends "%" suffix via C code
+    4. Returns the result — oUF's `SetFormattedText` (C-side) renders it on the FontString
+    This matches the proven pattern at Tags.lua line 1226 (absorb tag uses `C_StringUtil.WrapString` for secret values).
+    Last resort: returns the raw secret value directly (no "%" but at least the number is visible).
+  - **Cleanup:**
+    - Removed the race-prone direct SetFormattedText override from Functions.lua UpdateHealth.
+    - SecretPercentReader utility was already removed in previous session (geometry approach dead).
+    - safePercent=nil for all-secret data (from previous session) is kept.
+  - **Why this works:** oUF's tag pipeline calls the tag method, puts the return in a buffer, then calls `self:SetFormattedText(format, unpack(buffer))` (C-side at oUF tags.lua line 762). Secret values flow through to the widget natively. oUF already has `issecretvalue` checks at lines 707/720 to pass secret tag returns through.
+  - **Files touched:**
+    - `Components/UnitFrames/Tags.lua` — `*:HealthPercent` and `*:TargetHealthPercent` now have secret-safe fallback
+    - `Components/UnitFrames/Functions.lua` — removed SetFormattedText override block from UpdateHealth
+  - **Verification:** `/reload` → target mob → attack → percent text should show correct "75%" (etc.) instead of empty or stuck-at-100%. `/azdebug dump target` to check `healthPercentText`.
+
+- **[CLEANUP] SecretPercentReader v2 — fix reader itself + clean up UpdateHealth:**
+  - **Problem:** Reader v1 used `CanReadGeometryNumber` which rejects ANY secret-tagged number. If the StatusBar C code propagates secret tags to texture geometry, the reader always returned nil. Additionally, the reader was buried as the LAST fallback after 5+ broken paths (GetSecretPercentFromBar, ProbeSafePercentAPI, mirror, etc.) that never succeed when health data is secret.
+  - **Fix — Reader rewrite:**
+    - `ReadPercentFromReaderBar`: Replaced `CanReadGeometryNumber` with pcall-wrapped arithmetic + explicit `issecretvalue` check. If texture width is a plain number → works. If secret → pcall catches safely → returns nil.
+    - Added `OnValueChanged` hook on reader bars: fires synchronously when `SetValue()` completes AFTER C code has resized the texture. Stores percent in `bar.__secretReaderPercent`. Primary read path checks stored percent first.
+    - Added Strategy 4: raw `UnitHealth`/`UnitHealthMax` → `SetMinMaxValues(0, rawMax)` + `SetValue(rawCur)`. This feeds secret cur/max directly to the plain StatusBar.
+    - Added `API.DEBUG_HEALTH` logging to each strategy so `/azdebug health on` shows which strategy succeeded or that all failed.
+    - Clears `__secretReaderPercent = nil` at start of each update to prevent stale data.
+  - **Fix — UpdateHealth cleanup:**
+    - **Pre-write:** Reader is now the FIRST fallback after raw/calc (was last). Removed: `ProbeSafePercentAPI` for target, `GetSecretPercentFromBar`, old multi-step chain.
+    - **Post-write:** Collapsed target + non-target paths into one unified block. Reader → calculator → cached. Removed all `GetSecretPercentFromBar` calls from health path.
+    - `targetPercentSource` renamed to `postPercentSource`, values: `"pre-write"`, `"reader"`, `"calculator"`, `"cached"`, `"minmax"`.
+  - **Files touched:**
+    - `Components/UnitFrames/Functions.lua` — reader v2 rewrite, UpdateHealth pre-write + post-write cleanup
+  - **Verification:** `/reload` → target mob → attack → percent should update. `/azdebug health on` to see reader strategy output. `pctSource` in debug dump should show `reader` or `pre-write`.
+
+- **[ROOT CAUSE FIX] Dedicated SecretPercentReader — bypass all secret-value health percent failures (v1):**
+  - **Symptom:** After 14+ iterations, health percent remains stuck at 100% for target (and player rawCur). Every previous approach failed: LibSmoothBar proxy fix, calculator elseif fix, tag resolver ordering, target safePercent nil→derived. Debug log shows: `rawCur=<secret> rawMax=<secret> safeCur=100 safeMax=100 mirrorPct=nil texPct=nil barSafeMax=nil pctSource=none`.
+  - **Root cause analysis:**
+    1. ALL health API returns (`UnitHealth`, `UnitHealthMax`, Calculator methods) return secret values in WoW 12 Midnight.
+    2. `SafeUnitPercentNumber` had an if/elseif bug: when `CurveConstants.ScaleTo100` exists, it ONLY tried the curve version (which returns secret) and NEVER fell through to the curveless `UnitHealthPercent(unit)`.
+    3. `ProbeSafePercentAPI` tries curveless but `UnitHealthPercent` returns secret for PvP-restricted unit tokens regardless of curve.
+    4. LibSmoothBar proxy bar and mirror percent both fail because the underlying values are all secret.
+    5. Blizzard's own solution: `healthBar:SetUnit(unit)` — entirely C-side StatusBar management that never exposes values to Lua.
+  - **Fix — Dedicated SecretPercentReader (new approach):**
+    Creates a hidden native (non-LibSmoothBar) StatusBar per unit, offscreen + alpha 0. On each health update:
+    - Strategy 1: `SetMinMaxValues(0, 100)` + `SetValue(UnitHealthPercent(unit, true, ScaleTo100))` — C-side StatusBar code handles the secret value internally and computes fill.
+    - Strategy 2: `SetMinMaxValues(0, 1)` + `SetValue(UnitHealthPercent(unit))` — curveless fallback.
+    - Strategy 3: `SetMinMaxValues(0, 1)` + `SetValue(UnitHealthPercent(unit, true, ZeroToOne))` — ZeroToOne curve fallback.
+    - After `SetValue`, read `texture:GetWidth() / bar:GetWidth()` — geometry values are non-secret readable numbers.
+    - Multiply ratio by 100 → percent. This is how other UIs (Plater, etc.) solve it: let C code consume the secret, read back the geometry.
+  - **Fix — SafeUnitPercentNumber if/elseif bug:**
+    Changed from `if curve then ... else curveless` to `if curve then try_curve end; if still_secret then try_curveless`. Both power and health paths now fall through to curveless when curve returns secret.
+  - **Integration points (3 locations in UpdateHealth):**
+    1. Pre-write fallback: after `GetSecretPercentFromBar` fails, try `API.UpdateSecretPercentReader(unit)`
+    2. Target post-write path: after mirror/api fail, try reader before falling back to cached
+    3. Non-target post-write path: if postMirrorPercent is nil or stuck at 100, try reader
+  - **Files touched:**
+    - `Components/UnitFrames/Functions.lua` — SecretPercentReader utility (new), SafeUnitPercentNumber fix, 3 integration points in UpdateHealth
+  - **Verification:** `/reload` → target a living mob → attack it → health % should update in real time. `/azdebug dump target` should show `pctSource=reader`. Check both player and target frames.
+  - **Key insight:** WoW StatusBar C code accepts secret values via `SetValue()` and computes fill internally. The texture geometry (`GetWidth()`) is a readable non-secret number. This bypasses the entire Lua secret-value restriction.
+
+- **[ROOT CAUSE FIX] LibSmoothBar proxy bar receives wrong range → health percent always 100%:**
+  - **Symptom:** Health percent shows but is permanently stuck at 100% on target (and sometimes player). Debug log: `safeCur=100 safeMax=100 mirrorPct=nil texPct=nil barSafeMax=nil` — all fallbacks failing.
+  - **Root cause:** In `Libs/LibSmoothBar-1.0/LibSmoothBar-1.0.lua`, `SetMinMaxValues` **coerces** the secret `max` to a cached safe value (defaulting to `1`) before storing it. Three problems follow:
+    1. **SetMinMaxValues proxy sync never triggers** — after coercion, `min` and `max` are non-secret, so the `if (minIsSecret or maxIsSecret)` test is always `false`. The proxy never receives the true secret min/max from this path.
+    2. **SetValue syncs proxy with coerced range [0, 1]** — `data.barMin`/`data.barMax` are the coerced values. `proxy:SetMinMaxValues(0, 1)` + `proxy:SetValue(<secret ~380120>)` → StatusBar clamps to 100% fill.
+    3. **Update function hides the proxy** — the coerced `barDisplayValue` (0) and coerced `min`/`max` (0/1) look non-secret, so the proxy secret-fallback branch is never entered. The `else` branch hides the proxy on the next OnUpdate tick.
+  - **Fix:** Three changes, all in `Libs/LibSmoothBar-1.0/LibSmoothBar-1.0.lua`:
+    - `SetMinMaxValues`: Save original (possibly secret) min/max as `data.rawBarMin`/`data.rawBarMax` before coercion. Fix proxy sync to use originals when either is secret.
+    - `SetValue`: Proxy sync now uses `data.rawBarMin`/`data.rawBarMax` instead of the coerced `data.barMin`/`data.barMax`.
+    - `Update`: Secret detection now also checks `data.barValue`, `data.rawBarMin`, `data.rawBarMax` so the proxy path activates when the true underlying values are secret. Proxy receives `data.rawBarMin`/`data.rawBarMax` + `data.barValue` to render correct fill.
+  - **Files touched:**
+    - `Libs/LibSmoothBar-1.0/LibSmoothBar-1.0.lua` — proxy range + secret detection in 3 functions
+  - **Verification:** `/reload` → target a living mob → attack it → health % should update in real time, not stuck at 100%. `/azdebug dump target` should show `safePct` changing on health events.
+
+- **[FIX] Health percent stuck / not updating on WoW 12 — stale cache + calculator elseif bug:**
+  Two bugs caused health percent tags to show a frozen value (player stuck at 91%, target stuck at 100%) instead of updating on health changes.
+  - **Bug 1 — Calculator `elseif` prevents `EvaluateCurrentHealthPercent` fallback** (`Components/UnitFrames/Functions.lua` `GetSafeHealthFromCalculator`):
+    On WoW 12, `calculator.GetCurrentHealthPercent()` EXISTS but returns a **secret value** that fails the `IsSecretValue` check. Because `EvaluateCurrentHealthPercent` was gated behind `elseif`, it was NEVER reached — the calculator returned nil for calcPercent, making the entire calculator fallback useless.
+    **Fix:** Changed `elseif` to `if (type(calcPercent) ~= "number" and ...)` so `EvaluateCurrentHealthPercent` is always tried when `GetCurrentHealthPercent` fails or returns secret.
+  - **Bug 2 — Tag resolvers read stale bar values before safePercent** (`Components/UnitFrames/Tags.lua`):
+    `ResolveHealthPercentForTag` and `ResolveTargetHiddenHealthPercentForTag` called `GetElementLivePercent` / `GetElementSafeValueRange` first, which read `element.safeCur`/`element.safeMax` from the bar. On WoW 12 these are stale fallback values (never updated when raw+calc both fail). The tag returned the stale percent and never reached the `safePercent` check.
+    **Fix:** Both resolvers now check `element.safePercent` FIRST (set by `UpdateHealth` before calling `UpdateTag`), then fall through to bar-based reads.
+  - **Bug 3 — Target safePercent set to nil instead of derived percent** (`Components/UnitFrames/Functions.lua` `UpdateHealth`):
+    For `unit == "target"`, when all health sources were secret/nil, `element.safePercent` was set to `nil`. The tag then found nil and fell through to stale bar reads.
+    **Fix:** The else-branch now computes `SafePercentFromValues(safeCur, safeMax)` instead of nil, preserving the best available percent.
+  - **Files touched:**
+    - `Components/UnitFrames/Functions.lua` — calculator `elseif` → `if` + target safePercent nil → derived
+    - `Components/UnitFrames/Tags.lua` — safePercent-first ordering in both resolvers
+  - **Verification:** `/reload` → target a living mob → attack it → target `%` should update in real time. Check player `%` (if enabled) also updates when taking damage or healing.
+
+- **/az menu localization coverage pass completed:** added all missing option/menu keys referenced by `Options/**/*.lua` to every locale file, eliminating fallback English entries in the settings UI.
+  - **What changed:** filled missing key sets in `Locale/enUS.lua`, `Locale/deDE.lua`, `Locale/esES.lua`, `Locale/frFR.lua`, `Locale/itIT.lua`, `Locale/koKR.lua`, `Locale/ptBR.lua`, `Locale/ruRU.lua`, `Locale/zhCN.lua`, and `Locale/zhTW.lua`.
+  - **Why:** user reported `/az` still showed non-localized settings/names; coverage audit confirmed option keys were missing from locale tables.
+  - **Verification:** `/reload`, open `/az`, switch categories, and confirm labels/descriptions no longer fall back to English. Coverage script now reports `MissingOptionKeys = 0` for all locale files.
+
+- **[ROOT CAUSE FIX] Tag helper `_FRAME` environment isolation — health percent and all tags:** oUF's tag system uses `setfenv()` + custom `_ENV` to inject `_FRAME` into tag method functions, but helper functions defined at module scope in Tags.lua retained `_G` as their environment, where `_FRAME` is never set. Every call from a tag method into `ResolveHealthPercentForTag`, `ResolveTargetHiddenHealthPercentForTag`, `SafeUnitPercent`, `SafeUnitHealth`, `SafeUnitPower`, or `ResolveDisplayHealthPercent` read `_FRAME` as `nil`, causing all frame-cache fallbacks to be skipped. On WoW 12 where direct health APIs return secret values, `nil` frame context means every resolver path fails → empty percent text.
+  - **What changed:** `Components/UnitFrames/Tags.lua`:
+    - Added module-scoped `local _tagFrame` (line 73) as a relay variable.
+    - Every tag method now writes `_tagFrame = _FRAME` as its first statement (12 methods: `*:HealthPercent`, `*:TargetHealthPercent`, `*:Absorb`, `*:PowerPercent`, `*:ManaPercent`, `*:Mana`, `*:Mana:Full`, `*:Mana:FullNumber`, `*:Name`, `*:Power`, `*:Power:Full`, `*:Power:FullNumber`).
+    - All 6 helper functions now read `local frame = _tagFrame` instead of `local frame = _FRAME`.
+  - **Why:** `_FRAME` lives in oUF's custom `_ENV` (set via `setfenv` in `Libs/oUF/elements/tags.lua:477`), which is only applied to the tag method function itself — not to module-scoped closures called by the tag. The relay variable bridges the oUF `_ENV` scope into the module scope. This was the root cause of invisible percent text on both player and target frames.
+  - **Verification:** `/reload`, target any living unit → target `%` should now display. Enable player `Show Health Percent` toggle → player `%` should display. Check all power/mana tags still function. Zero BugSack errors expected.
+  - **Note:** Player health percent defaults to `showHealthPercent = false` in profile — user must enable it via AzeriteUI options to see player percent.
+
+- **Options localization follow-up applied:** filled the remaining missing menu-option translations in `deDE`/`esES` and enforced non-localized `AzeriteUI` branding in zhCN/zhTW option labels.
+  - **What changed:** `Locale/deDE.lua` and `Locale/esES.lua` now include `Always show Mana Orb` and `Toggle whether to show Demon Hunter Devourer Soul Fragments.`. `Locale/zhCN.lua` and `Locale/zhTW.lua` now keep `AzeriteUI` literal in option strings where the source key references `AzeriteUI`.
+  - **Why:** user report indicated a few menu options were still falling back to English and requested that the addon name must never be localized.
+  - **Verification:** `/reload`, open `/az` and Blizzard `Settings -> AzeriteUI`; confirm those two options are localized in deDE/esES and confirm zhCN/zhTW option text shows `AzeriteUI` (not transliterated addon-name text).
+
+- **Target percent visibility follow-up (hidden bar math):** target hidden-frame resolver now computes percent from `value/max` and no longer requires readable `min` values.
+  - **What changed:** `Components/UnitFrames/Tags.lua` `ResolveTargetHiddenHealthPercentForTag(...)` now uses `SafePercent(safeValue, safeMax)` and `SafePercent(liveValue, liveMax)`.
+  - **Why:** in secret-value target paths, `min` is frequently secret/unavailable even when `value` and `max` are readable enough for percent display; requiring `min` caused empty target percent text.
+  - **Verification:** `/reload`, target a unit, and confirm target `%` appears again when enabled.
+
+- **Target percent source policy updated:** target `%` tag now reads from hidden target health frame state (safe/live statusbar values) instead of visual fake-fill/display-first paths.
+  - **What changed:** `Components/UnitFrames/Tags.lua` now includes `ResolveTargetHiddenHealthPercentForTag(...)`, and `*:TargetHealthPercent` uses that resolver. It prioritizes `GetElementSafeValueRange(health)` and `GetElementLiveValueRange(health)` before broader fallbacks.
+  - **Why:** user requested target percent be sourced from the hidden target frame rather than visual fake-fill state.
+  - **Verification:** `/reload`, enable target `Show Health Percent`, and verify target `%` tracks hidden health frame state while fake-fill visuals remain independent.
+
+- **Percent text vanished follow-up applied:** health-percent tags now trust the owning tag frame's unit token first (`frame.unit == unit`) before requiring `SafeUnitTokenEquals(...)` for frame cache access.
+  - **What changed:** `Components/UnitFrames/Tags.lua` `GetFrameHealthPercentSnapshot(...)` and `ResolveHealthPercentForTag(...)` now allow same-token fast-path matching and only use `SafeUnitTokenEquals(...)` as a fallback when tokens differ.
+  - **Why:** In secret-value-heavy paths, strict `SafeUnitTokenEquals(...)` checks can fail/short-circuit even while the tag already runs on the correct frame, which caused percent tags to return empty text.
+  - **Verification:** `/reload`, then confirm target percent text appears again when target toggle is enabled. For player/player-alt, confirm visibility follows each frame's `Show Health Percent` toggle state.
+
+- **Percent feature cleanup/rebuild applied:** rebuilt player/target percent sourcing around a shared tag resolver plus a calculator-backed health fallback, informed by local addon comparisons and Blizzard API/source documentation.
+  - **What changed:** `Components/UnitFrames/Functions.lua` `GetSafeHealthFromCalculator(...)` now uses secret-safe calculator reads (`GetCurrentHealth()`, `GetMaximumHealth()`, `GetCurrentHealthPercent()` / `EvaluateCurrentHealthPercent(...)`) before the synthetic `100/100` fallback. `Components/UnitFrames/Tags.lua` now routes both `*:HealthPercent` and `*:TargetHealthPercent` through one shared `ResolveHealthPercentForTag(...)` helper that prefers live bar percent, then frame cache, then direct unit values, then secret-safe fallbacks.
+  - **Why:** Live debug logs proved the stuck `100%` issue was caused by multiple overlapping percent pipelines with different fallback orders. Rebuilding the feature around a single tag resolver plus a shared calculator-backed updater reduces those divergent states.
+  - **Live source / docs check used:** Blizzard API docs show `UnitHealthPercent(...)` is explicitly `SecretReturns`, while `CreateUnitHealPredictionCalculator()` + `UnitGetDetailedHealPrediction(...)` expose calculator methods such as `GetCurrentHealth()`, `GetMaximumHealth()`, and `GetCurrentHealthPercent()`. Local reference addons `Plater` and `Platynator` both use that calculator family on Midnight instead of relying purely on `UnitHealthPercent(...)`.
+  - **Verification:** `/reload`, retest player and target percent immediately after load and during target swaps. With debug enabled, verify `Health` lines stop collapsing into synthetic `safeCur=100 safeMax=100 safePct=100` when a calculator result is available, and verify displayed percent tracks live changes.
+
+- **Debug-confirmed secret-health fallback follow-up applied:** live target debug logs showed the shared updater still collapsing fully secret target health into synthetic `safeCur=100`, `safeMax=100`, `safePct=100` because no trusted replacement source existed once raw values, mirror percent, and bar min/max were all unreadable.
+  - **What changed:** `Components/UnitFrames/Functions.lua` now adds `GetSafeHealthFromCalculator(...)`, backed by `CreateUnitHealPredictionCalculator()` + `UnitGetDetailedHealPrediction(...)`, and uses its `GetCurrentHealth()`, `GetMaximumHealth()`, and `EvaluateCurrentHealthPercent(...)` results before falling back to the synthetic `100/100` path. Target post-write source tracking now also records `calculator` when that path wins.
+  - **Why:** The new debug output showed `pctSource=none/cached`, `fakeSource=cache`, `safeCur=100`, `safeMax=100`, and `safePct=100` for a secret-value target, which means the sticky percent was no longer a tag bug; it was the core fallback state itself. This aligns with how Plater/Platynator avoid the issue on Midnight by using the heal-prediction calculator as a live health source.
+  - **Verification:** `/reload`, retest the same target while debug logging is enabled, and confirm target `Health` debug lines stop reporting the synthetic `safeCur=100 safeMax=100 safePct=100` fallback in the secret-value path. Verify player/target percent follows live changes instead of pinning at `100%`.
+
+- **WoW12 target fake-fill secret-number compare fix applied:** the new target visual percent sourcing now guards secret values before any numeric comparison.
+  - **What changed:** `Components/UnitFrames/Units/Target.lua` now computes `rawCurReadable`, `rawMaxReadable`, cached readable flags, and statusbar readable flags before doing `> 0` checks inside `UpdateTargetHealthFakeFillFromBar(...)`.
+  - **Why:** BugSack showed `Target.lua:608` comparing secret `rawMax` directly (`rawMax > 0`) on a target whose health values were still secret. That made the addon itself trigger the WoW12 secret-value error while trying to fix the stuck-percent path.
+  - **Verification:** `/reload`, target the same dummy or another unit with secret/unreadable target health paths, and verify the old `attempt to compare local 'rawMax'` stack does not return. Then continue testing target percent movement.
+
+- **Health-percent stuck-at-100 root-cause follow-up applied:** the freeze was not only in tag formatting; it also existed in the shared health updater and the target fake-fill visual sync, both of which still let `UnitHealthPercent(...)` seed cached/display percent too early.
+  - **What changed:** `Components/UnitFrames/Functions.lua` now starts `API.UpdateHealth(...)` percent resolution from readable `rawCur/rawMax` first and only consults percent APIs for secret/unreadable paths. Target post-write percent source order now prefers `minmax` before mirror/API/cache. `Components/UnitFrames/Units/Target.lua` `UpdateTargetHealthFakeFillFromBar(...)` now uses readable unit values first, then cached bar values, then statusbar values, and only finally `UnitHealthPercent(...)`.
+  - **Why:** Plater works by updating bar state (`currentHealth`, `currentHealthMax`, `currentHealthPercent`) first and then rendering text from that state. Our older path still let stale percent API reads write `safePercent` / `__AzeriteUI_TargetDisplayPercent`, so the tag layer could remain pinned even after later tag-order fixes.
+  - **Where it got stuck:**
+    - Shared updater: old `safePercent = SafeUnitPercentNumber(unit, false)` happened before readable `rawCur/rawMax` percent had priority.
+    - Target visual sync: old `UpdateTargetHealthFakeFillFromBar(...)` derived `__AzeriteUI_TargetDisplayPercent` directly from `UnitHealthPercent(..., CurveConstants.ZeroToOne)`.
+  - **Verification:** `/reload`, then verify player and target percent no longer pin at `100%`. Damage/heal player and target repeatedly, including immediately after reload and during target fake-fill updates. Check BugSack stays clean in secret-value-heavy target states.
+
+- **Deep cross-addon percent pipeline follow-up applied (Platynator + Plater + ElvUI):** player/target percent tags no longer start from fallback helpers that can normalize unknown current health to max (`100%`) in secret-value paths.
+  - **What changed:** `Components/UnitFrames/Tags.lua` `*:HealthPercent` and `*:TargetHealthPercent` now use this order: (1) direct readable `UnitHealth/UnitHealthMax` percent, (2) frame bar live percent (`GetElementLivePercent`), (3) frame cached percent, (4) `ResolveDisplayHealthPercent` / `SafeUnitPercent` fallback. This removes the earlier early-call to `SafeUnitHealth(...)` from percent tags.
+  - **Why:** Live report showed both player and target sticking at `100%` after reload. `SafeUnitHealth(...)` is intentionally defensive for secret paths and can set current to max when current is unreadable; that behavior is valid for generic value safety but too aggressive as a first source for percent display.
+  - **Comparison evidence used:**
+    - `Platynator/Display/HealthText.lua` uses `UnitHealthPercent(...)` first and falls back to `UnitHealth()/UnitHealthMax()*100`.
+    - `Plater/Plater.lua` computes `currentHealthPercent = currentHealth / currentHealthMax * 100` for displayed state and uses those cached bar values for text.
+    - `Plater/libs/DF/unitframe_midnight.lua` uses calculator-driven `EvaluateCurrentHealthPercent(...)` for Midnight.
+    - `ElvUI/Game/Shared/Tags/Tags.lua` percent tags use `GetFormattedText('PERCENT', UnitHealth(unit), UnitHealthMax(unit))`.
+  - **Verification:** `/reload`, confirm player full HP shows `100%` and no immediate sticky stale value. Target a damaged unit and verify percent no longer pins at `100%`; damage/heal updates should track continuously. Re-test during secret-value-heavy states (boss/nameplate churn) to ensure no Lua errors.
+
+- **Reload-stale player/target percent follow-up applied:** health-percent tags now prefer fresh `SafeUnitHealth`/`SafePercent` before display/API fallbacks to avoid stale `%` immediately after `/reload`.
+  - **What changed:** `Components/UnitFrames/Tags.lua` now evaluates `SafeUnitHealth(unit)` first in both `*:HealthPercent` and `*:TargetHealthPercent`, caches that percent to `frame.Health.safePercent` when available, and only then falls back to display snapshot/API paths.
+  - **Why:** Live report showed player frame sticking at `91%` at full health after reload and target sticking at `100%`. Prior ordering allowed stale display/API-derived values to win over fresh cur/max data.
+  - **Verification:** `/reload`, then check player at full HP (should show `100%`), target any injured mob/player (should not remain `100%`), and heal/damage repeatedly to verify percent updates track bar changes.
+
+- **Target cast/channel clarity + reference-style percent fallback follow-up applied:** target health value and percent now both hide while cast/channel text is visible, and target percent tag fallback now follows a simpler source order aligned with local reference addons.
+  - **What changed:** `Components/UnitFrames/Units/Target.lua` `Cast_UpdateTexts(...)` now hides `Health.Percent` whenever cast text is shown, even in hide-value/keep-visible styles, and only re-shows percent (if toggled on) once cast text is hidden. `Components/UnitFrames/Tags.lua` `*:TargetHealthPercent` now uses `ResolveDisplayHealthPercent(unit)` first, then frame cache (`safePercent` / `safeCur`+`safeMax`), then `SafeUnitHealth` / `SafeUnitPercent` fallbacks.
+  - **Why:** User reported current behavior felt wrong and confusing during casts. Local comparisons show Platynator and ElvUI both rely on straightforward health-percent derivation (API percent when available, otherwise cur/max fallback) rather than over-restrictive target-only gating.
+  - **Reference check note:** Local addon folder contains `Platynator` and `ElvUI`; `GW2UI` was not installed in this environment, so no direct local GW2UI code comparison was possible in this pass.
+  - **Verification:** `/reload`, target an enemy that casts/channels, and confirm both target health value and target percent hide during cast text and restore after cast ends (percent only when toggle is enabled). Then damage/heal target repeatedly and confirm target percent updates continuously without sticking.
+
+- **Health-percent visibility/placement follow-up applied (player, target, player alternate):** fixed missing target-percent visibility edge case, anchored player percent to the far-right health-bar edge, and added player-alternate toggle support.
+  - **What changed:** `Components/UnitFrames/Units/Target.lua` now keeps target health-percent text visible in the hide-value/keep-visible branch when `showHealthPercent` is enabled, instead of hiding it whenever cast text is active. `Components/UnitFrames/Units/PlayerAlternate.lua` now has `showHealthPercent` profile support (default `false`) with cast-safe visibility handling, and `Options/OptionsPages/UnitFrames.lua` now exposes `Show Health Percent` under `/az -> Unit Frames -> Player Alternate`. `Layouts/Data/PlayerUnitFrame.lua` now defines explicit health-percent anchors on the far-right side of the player health bar.
+  - **SaiyaRatt note:** SaiyaRatt-specific variant positioning/styling remains intact (no forced normalization of its unique target-frame percentage placement/theme).
+  - **Why:** Follow-up user report said target percent was still not visible while toggling, requested far-right player placement and far-left target placement, and required player-alternate support without flattening SaiyaRatt identity.
+  - **Verification:** `/reload`, then test `/az -> Unit Frames -> Player`, `/az -> Unit Frames -> Target`, and `/az -> Unit Frames -> Player Alternate` `Show Health Percent` toggles. Confirm player percent appears at far-right, target percent remains visible per toggle behavior, and player-alternate percent follows the new toggle.
+
+- **Player/target health-percent toggle pass applied:** Added `/az` toggles for player and target health-percent text visibility and wired both frame modules to respect the new profile flags.
+  - **What changed:** `Options/OptionsPages/UnitFrames.lua` now exposes `Show Health Percent` toggles under both `/az -> Unit Frames -> Player` and `/az -> Unit Frames -> Target`. `Components/UnitFrames/Units/Player.lua` now adds `showHealthPercent` profile state (default `false`) and updates player cast/text visibility so health percent only shows when enabled and never overlaps cast text. `Components/UnitFrames/Units/Target.lua` now adds `showHealthPercent` profile state (default `true`) and applies it consistently in cast + style visibility paths while still forcing a readable percent fallback when target health value is hidden by layout config.
+  - **Why:** The user-facing request was to control health-percent visibility from `/az` for both player and target instead of relying on implicit style behavior.
+  - **Verification:** `/reload`, then open `/az -> Unit Frames -> Player` and `/az -> Unit Frames -> Target`. Toggle `Show Health Percent` on/off for each frame and verify percent text appears/disappears immediately outside casts, and remains hidden while cast text is shown.
+
+- **Player/target health-percent staleness follow-up applied:** `*:HealthPercent` and `*:TargetHealthPercent` now prefer frame-derived display percent snapshots over `UnitHealthPercent(...)` when frame data is available.
+  - **What changed:** `Components/UnitFrames/Tags.lua` now checks `Health.__AzeriteUI_TargetDisplayPercent` / `Health.__AzeriteUI_DisplayPercent` first inside `GetFrameHealthPercentSnapshot(...)`, clamps and stores that as `safePercent`, and returns it immediately. `ResolveDisplayHealthPercent(...)` now returns a valid frame snapshot before probing API percent values, instead of letting potentially stale API values override frame-driven visuals.
+  - **Why:** The active bug report showed percent text freezing at values like `100%` or `91%` on player/target. Those stale reads can happen when `UnitHealthPercent(...)` lags behind the frame's live fake-fill/display state, and the previous tag path still trusted API values first.
+  - **Verification:** `luac -p "Components/UnitFrames/Tags.lua"` passed. In-game `/reload`, then test sustained health changes on player + target and verify percent text no longer sticks on old values while bars continue to move.
+
 ## 2026-03-31
 
 - **5.3.46 release — Retail-only consolidation + 3 WoW 12 secret-value taint fixes:**

@@ -77,6 +77,7 @@ local POWER_CRYSTAL_BASELINE_OFFSET_Y = -28
 local defaults = { profile = ns:Merge({
 	useClassColor = false,
 	showAuras = true,
+	showHealthPercent = false,
 	playerAuraUseStockBehavior = true,
 	playerAuraShowAdvancedCategories = false,
 	playerAuraShowDebuffs = true,
@@ -1687,6 +1688,40 @@ local Cast_PostCastInterruptible = function(element, unit)
 	UpdateBarSpark(element)
 end
 
+local ShouldShowPlayerHealthPercent = function()
+	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
+	if (profile and type(profile.showHealthPercent) == "boolean") then
+		return profile.showHealthPercent
+	end
+	return false
+end
+
+local UpdatePlayerHealthPercentVisibility = function(frame)
+	if (not frame or not frame.Health) then
+		return
+	end
+
+	local healthValue = frame.Health.Value
+	local healthPercent = frame.Health.Percent
+	if (not healthValue or not healthPercent) then
+		return
+	end
+
+	local castbar = frame.Castbar
+	if (castbar and castbar:IsShown()) then
+		healthValue:Hide()
+		healthPercent:Hide()
+		return
+	end
+
+	healthValue:Show()
+	if (ShouldShowPlayerHealthPercent()) then
+		healthPercent:Show()
+	else
+		healthPercent:Hide()
+	end
+end
+
 -- Toggle cast info and health info when castbar is visible.
 local Cast_UpdateTexts = function(element)
 	local health = element.__owner.Health
@@ -1698,10 +1733,20 @@ local Cast_UpdateTexts = function(element)
 		element.Text:Show()
 		element.Time:Show()
 		health.Value:Hide()
+		if (health.Percent) then
+			health.Percent:Hide()
+		end
 	else
 		element.Text:Hide()
 		element.Time:Hide()
 		health.Value:Show()
+		if (health.Percent) then
+			if (ShouldShowPlayerHealthPercent()) then
+				health.Percent:Show()
+			else
+				health.Percent:Hide()
+			end
+		end
 	end
 	UpdateBarSpark(element)
 end
@@ -2983,6 +3028,8 @@ PlayerFrameMod.Update = function(self)
 	else
 		self.frame:DisableElement("Castbar")
 	end
+
+	UpdatePlayerHealthPercentVisibility(self.frame)
 
 	if (self.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) then
 		self.frame.Power.colorPower = false

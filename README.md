@@ -1,8 +1,8 @@
 # AzeriteUI — JuNNeZ Edition
 
 [![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)
-[![Interface](https://img.shields.io/badge/Interface-120000-1f6feb)](#)
-[![Lua](https://img.shields.io/badge/Lua-WoW%20API%2012-2c2d72)](#)
+[![Interface](https://img.shields.io/badge/Interface-120000-1f6feb)](https://worldofwarcraft.blizzard.com/)
+[![Lua](https://img.shields.io/badge/Lua-WoW%20API%2012-2c2d72)](https://worldofwarcraft.blizzard.com/)
 [![Maintainer](https://img.shields.io/badge/Maintainer-JuNNeZ-0a7d32)](https://github.com/JuNNeZ)
 [![Addon Version](https://img.shields.io/badge/Addon-v5.3.46--JuNNeZ-informational)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/tags)
 [![GitHub Release](https://img.shields.io/github/v/release/JuNNeZ/AzeriteUI5-JuNNeZ-Edition?display_name=release)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/releases/latest)
@@ -19,6 +19,7 @@ This fan edition contains personal modifications, bug fixes, and experimental fe
 
 AzeriteUI is a custom World of Warcraft user interface designed for modern WoW (Retail). This JuNNeZ Edition includes:
 
+- A retail-only WoW 12 codebase after the `5.3.46-JuNNeZ` consolidation
 - Additional bug fixes for WoW 12+ (Midnight expansion)
 - Custom tweaks and quality-of-life improvements
 - Experimental features and refinements
@@ -40,14 +41,16 @@ A: This is a personal fan project. For official AzeriteUI support, join Goldpaws
 
 **Q: What do the enemy nameplate interrupt colors mean?**  
 A: Enemy castbars use this legend:
-- Green = your primary interrupt is ready
-- Purple = your primary interrupt is unavailable, but a tracked secondary stop is ready
-- Red = no tracked interrupt is ready
+
+- Yellow = your primary interrupt is ready
+- Red = your primary interrupt is unavailable
 - Gray = the cast cannot be interrupted
+- Base color = the interrupt state is currently unknown
 
 ---
 
 ## Configuring the UI
+
 - `/azerite` — Toggles the options menu
 - `/lock` — Toggles movable frame anchors (use EditMode for default Blizzard frames)
 - `/resetsettings` — Full settings reset (emergency use only — erases all profiles)
@@ -58,15 +61,18 @@ A: Enemy castbars use this legend:
 ## GitHub Cloud Dev Environment
 
 This repository now includes a GitHub Codespaces dev container:
+
 - `.devcontainer/devcontainer.json`
 - `.devcontainer/Dockerfile`
 
 ### Start in Codespaces
+
 1. Open the repository on GitHub.
 2. Click `Code` -> `Codespaces` -> `Create codespace on main`.
 3. Wait for container build to finish.
 
 The container installs:
+
 - Lua 5.1 (`lua`, `luac`)
 - `luarocks`
 - `ripgrep`
@@ -79,10 +85,11 @@ The container installs:
 **AzeriteUI** is created and maintained by **GoldpawsStuff**
 
 ### Support me
+
 - **Patreon:** [https://www.patreon.com/JuNNeZ](https://www.patreon.com/JuNNeZ)
 
-
 ### Support the Original Author
+
 - **GitHub Sponsors:** [github.com/sponsors/goldpawsstuff](https://github.com/sponsors/goldpawsstuff)
 - **Patreon:** [patreon.com/goldpawsstuff](https://www.patreon.com/goldpawsstuff)
 - **Ko-fi:** [ko-fi.com/GoldpawsStuff](https://ko-fi.com/GoldpawsStuff)
@@ -91,15 +98,18 @@ The container installs:
 ### Connect with the Original Author
 
 - **Discord:** [discord.gg/RwcSm8V3Dy](https://discord.gg/RwcSm8V3Dy) *(Official AzeriteUI Community)*
+
 - **X (Twitter):** [@goldpawsstuff](https://x.com/goldpawsstuff)
 
 ---
 
 ## Fan Edition Notes
+
 This fan edition is maintained independently and includes:
+
 - WoW 12 secret-value compatibility fixes
 - Actionbar live-update fixes
-- Compatibility for WoW 12  (Midnight expansion) and future updates
+- Retail-only compatibility for WoW 12 (Midnight expansion) and future updates
 - Personal tweaks and experimental features
 - Additional bug fixes not present in the official release
 
