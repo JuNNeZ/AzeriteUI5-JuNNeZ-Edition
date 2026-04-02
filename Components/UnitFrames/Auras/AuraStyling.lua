@@ -49,6 +49,14 @@ local GetAuraSpellID = function(data)
 	return (data and data.spellId) or (data and data.spellID)
 end
 
+local PlayerFrameMod
+local GetPlayerAuraProfile = function()
+	if (not PlayerFrameMod and ns.GetModule) then
+		PlayerFrameMod = ns:GetModule("PlayerFrame", true)
+	end
+	return PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or nil
+end
+
 -- Local Functions
 --------------------------------------------------
 local UpdateTooltip = function(self)
@@ -205,15 +213,41 @@ ns.AuraStyles.PlayerPostUpdateButton = function(element, button, unit, data, pos
 	end
 
 	-- Icon Coloring
-	local nameplateShowAll = SafeBool(data.nameplateShowAll)
-	local nameplateShowPersonal = SafeBool(data.nameplateShowPersonal)
-	local isPlayerAura = SafeBool(data.isPlayerAura)
-	local canApplyAura = SafeBool(data.canApplyAura)
-	local isHarmful = SafeBool(data.isHarmful)
+	-- Playerframe dim/bright rules should remain stable in combat.
+	-- Prefer stable fields produced by AuraFilters over raw payload values.
+	local isPlayerAura = SafeBool(data.__AzeriteUI_isPlayerAura)
+		or ((button.isPlayer ~= nil) and (button.isPlayer and true or false))
+		or SafeBool(data.isPlayerAura)
+	local canApplyAura = SafeBool(data.__AzeriteUI_canApplyAura) or SafeBool(data.canApplyAura)
+	local isImportantAura = SafeBool(data.__AzeriteUI_isImportant)
+		or SafeBool(data.__AzeriteUI_isRaidInCombat)
+		or SafeBool(data.__AzeriteUI_isBigDefensive)
+		or SafeBool(data.__AzeriteUI_isExternalDefensive)
+		or SafeBool(data.__AzeriteUI_isCrowdControl)
+		or SafeBool(data.__AzeriteUI_isStealable)
+	local isHarmful = (button.isHarmful ~= nil) and (button.isHarmful and true or false) or SafeBool(data.isHarmful)
 	local spellId = GetAuraSpellID(data)
+	local secretHelpfulFallback = SafeBool(data.__AzeriteUI_secretHelpfulFallback)
+	local profile = GetPlayerAuraProfile()
+	local useStockBehavior = profile and profile.playerAuraUseStockBehavior
+	if (profile and profile.playerAuraAlwaysBright) then
+		button.Icon:SetDesaturated(false)
+		button.Icon:SetVertexColor(1, 1, 1)
+		return
+	end
+	if (useStockBehavior and InCombatLockdown and InCombatLockdown() and (not isHarmful)) then
+		local hasReliableSignal = isPlayerAura or canApplyAura or isImportantAura or (spellId and true or false)
+		if (secretHelpfulFallback or (isPlayerAura and not canApplyAura) or (not hasReliableSignal)) then
+			button.Icon:SetDesaturated(false)
+			button.Icon:SetVertexColor(1, 1, 1)
+			return
+		end
+	end
 	if (button.isHarmful)
-	or (nameplateShowAll or (nameplateShowPersonal and isPlayerAura))
-	or (not isHarmful and isPlayerAura and canApplyAura) or (spellId and Spells[spellId]) then
+	or secretHelpfulFallback
+	or (not isHarmful and isPlayerAura and canApplyAura)
+	or (not isHarmful and isImportantAura)
+	or (spellId and Spells[spellId]) then
 		button.Icon:SetDesaturated(false)
 		button.Icon:SetVertexColor(1, 1, 1)
 
@@ -262,9 +296,9 @@ ns.AuraStyles.TargetPostUpdateButton = function(element, button, unit, data, pos
 	-- Icon Coloring
 	local nameplateShowAll = SafeBool(data.nameplateShowAll)
 	local nameplateShowPersonal = SafeBool(data.nameplateShowPersonal)
-	local isPlayerAura = SafeBool(data.isPlayerAura)
+	local isPlayerAura = (button.isPlayer ~= nil) and (button.isPlayer and true or false) or SafeBool(data.isPlayerAura)
 	local canApplyAura = SafeBool(data.canApplyAura)
-	local isHarmful = SafeBool(data.isHarmful)
+	local isHarmful = (button.isHarmful ~= nil) and (button.isHarmful and true or false) or SafeBool(data.isHarmful)
 	local spellId = GetAuraSpellID(data)
 	if (nameplateShowAll or (nameplateShowPersonal and isPlayerAura))
 	or (not isHarmful and isPlayerAura and canApplyAura) or (spellId and Spells[spellId]) then

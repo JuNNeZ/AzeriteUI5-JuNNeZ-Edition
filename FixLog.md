@@ -1,4 +1,161 @@
 
+## 2026-04-02 — Player-row aura brightness finalization for 5.3.51
+
+- **[DECISION] Keep AzeriteUI stock-intended mixed bright/dim behavior:**
+  - Final validation snapshots confirmed that forcing all player-row helpful auras bright solved one edge case but overrode intended clutter dimming.
+  - The broad stock-mode bright exception in `AuraStyling.lua` was reverted, returning to selective mixed brightness out of combat.
+  - Combat secret windows still fail open for helpful aura visibility to avoid flicker/dropouts.
+  - Result: stock-intended behavior restored with WoW 12 stability guards kept in place.
+
+## 2026-04-02 — Post-combat aura dimming regression (player proc auras) [RESOLVED]
+
+- **[FIX] Brightening player-owned helpful auras in stock mode:**
+  - **Evidence (Problem):** Three sequential combat snapshots (before combat, during combat, after combat):
+    - Before combat: Light's Deliverance (433674) shown as dim (vertex 0.30196...)
+    - During combat: 11 helpful player auras shown as bright (vertex 1 1 1 1) with secret spell fields ✓ in-combat fallback working
+    - After combat: Light's Deliverance and Art of War (406086) revert to dim (vertex 0.30196...) despite spell IDs resolving
+  - **Root cause:** Post-combat styling bright condition `(not isHarmful and isPlayerAura and canApplyAura)` fails for player procs like Art of War. These auras have `canApplyAura = false` because they're not manually-cast abilities. The logic fell through to `elseif (isPlayerAura)` which intentionally dims buffs to 0.3.
+  - **Fix:** Added stock-mode exception to bright condition: `or (not isHarmful and isPlayerAura and useStockBehavior)` ensures all player-owned helpful auras remain bright in stock mode regardless of `canApplyAura` status. Custom mode retains strict `canApplyAura` gating for user-intended dim behavior.
+  - **Validation (Confirmed):** New snapshot sequence shows:
+    - Before combat: 1 aura (Light's Deliverance 433674) vertex 1 1 1 1 ✓
+    - During combat: 10 auras (secret fields) vertex 1 1 1 1 ✓
+    - After combat: 10 auras resolved (Avenging Wrath, Voidlust, Might of the Void, Hammer of Light, etc.) all vertex 1 1 1 1 ✓
+    - All auras remained bright throughout transition cycle. Issue resolved.
+  - **File:** `Components/UnitFrames/Auras/AuraStyling.lua` (line 250)
+
+## 2026-04-03 — Focused aura snapshot diagnostics (good vs bad capture)
+
+- **[FIX] Top-right aura header payload rehydration for combat-time incomplete aura rows:**
+  - **Evidence:** Good/bad `_debuglog` snapshots showed the top-right secure header keeping valid `auraInstanceID` values in combat while many visible buttons had `spell=nil`, `icon no`, `expires=nil`, and `timeLeft=nil`. The same buttons repopulated correctly a few seconds after combat ended.
+  - **Root cause:** `Components/Auras/Auras.lua` `GetAuraButtonData(...)` was relying on the index lookup payload alone. Under combat churn, `GetAuraDataByIndexSafe(...)` can leave key fields unavailable even when the header already has a valid `auraInstanceID`.
+  - **Fix:** Reintroduced a targeted by-instance rehydration step: once `auraInstanceID` is known, merge missing `name/icon/spellId/applications/duration/expirationTime` fields from `GetAuraDataByAuraInstanceIDSafe(...)` before updating the button.
+  - **File:** `Components/Auras/Auras.lua`
+
+- **[FOLLOW-UP] Refresh visible top-right aura buttons on `UNIT_AURA` during combat:**
+  - **Evidence:** A second `_debuglog` capture showed the same failure pattern after the payload rehydration patch: combat-time top-right buttons still held valid `auraInstanceID` values but did not repopulate spell/icon/timer fields until after combat ended.
+  - **Root cause:** Addon-level refresh of visible secure header buttons only happened on `PLAYER_ENTERING_WORLD` and post-combat recovery. During combat, `UNIT_AURA` only recalculated alpha and did not re-run `Aura.Update(...)` across visible buttons.
+  - **Fix:** Added `Auras.OnUnitAura(...)` so addon `UNIT_AURA` handling now updates alpha and queues `RefreshVisibleBuffButtons()` for `player`/`vehicle`, allowing visible top-right buttons to refresh payload in combat instead of waiting for `PLAYER_REGEN_ENABLED`.
+  - **File:** `Components/Auras/Auras.lua`
+
+- **[FOLLOW-UP] Preserve raw widget-safe aura fields for top-right header updates:**
+  - **Evidence:** Later `_debuglog` captures still showed the same in-combat split: playerframe aura icons rendered, while top-right buttons kept valid `auraInstanceID` values but lost icon/timer payload until combat ended.
+  - **Revised hypothesis:** The top-right header path was likely over-sanitizing fields that are safe to pass directly to UI widgets. The player row/oUF path keeps raw `icon` and `durationObject` payload long enough for widgets to render, while `Components/Auras/Auras.lua` was niling secret-tainted widget fields too early.
+  - **Fix:** Relaxed secret filtering for widget-facing aura payload in `Components/Auras/Auras.lua`:
+    - stopped rejecting whole aura tables returned by `GetAuraDataByIndex` / `GetAuraDataByAuraInstanceID`
+    - stopped rejecting duration objects returned by `C_UnitAuras.GetAuraDuration`
+    - preserved raw `icon` / `spellId` for widget update paths while keeping numeric fallback logic (`duration`, `expirationTime`) sanitized for arithmetic
+  - **File:** `Components/Auras/Auras.lua`
+
+- **[FOLLOW-UP] Playerframe aura alpha stability (combat snap reduction):**
+  - **Evidence:** After top-right icon recovery, `_debuglog` snapshots showed remaining visual instability on playerframe aura icons: in combat many helpful auras rendered dim (`vertex 0.3019...`) and then snapped to bright/expected states after combat.
+  - **Root cause:** `Components/UnitFrames/Auras/AuraStyling.lua` player icon color branch required `canApplyAura` for bright treatment. On WoW 12 this field can be secret/volatile in combat for player-owned buffs, causing false negatives and unnecessary dimming.
+  - **Fix:** For `unit == "player"`, treat player-owned auras as self-applicable when `canApplyAura` is unavailable/false, i.e. `canApplyAura = SafeBool(data.canApplyAura) or (unit == "player" and isPlayerAura)`.
+  - **File:** `Components/UnitFrames/Auras/AuraStyling.lua`
+
+- **[FOLLOW-UP] Playerframe alpha path hardening (remove volatile fields):**
+  - **Evidence:** Additional `_debuglog` runs still showed the same behavior after the previous change: many playerframe helpful auras remained dim in combat and only some snapped to bright out of combat (same investigation pattern persisted).
+  - **Root cause (revised):** Playerframe styling still relied on combat-volatile payload fields (`nameplateShowAll`, `nameplateShowPersonal`, and the `canApplyAura` gate in the bright branch). These are not required for playerframe intent and can flip classification across combat transitions.
+  - **Fix:** Simplified `PlayerPostUpdateButton` icon classification to stable signals only:
+    - bright when harmful, player-owned (`isPlayerAura`), or explicit whitelist (`Spells[spellId]`)
+    - removed nameplate-related and `canApplyAura` gating from playerframe bright criteria
+  - **File:** `Components/UnitFrames/Auras/AuraStyling.lua`
+
+- **[FOLLOW-UP] Restore intended playerframe dim policy with stable `canApplyAura` cache:**
+  - **Evidence:** New `_debuglog` runs after the previous hardening showed over-correction: many/most helpful player auras became bright all the time. User intent from stock behavior is mixed brightness (useful vs noise), but stable across combat refreshes.
+  - **Root cause (revised):** The prior change removed too much signal by eliminating `canApplyAura` from playerframe bright classification. We need that dimension, but not from volatile raw payload.
+  - **Fix:** Added a per-aura stable cache in `PlayerAuraFilter` keyed by `unit:auraInstanceID|spellID`:
+    - cache last non-secret `canApplyAura` value
+    - expose stable values on aura data (`data.__AzeriteUI_isPlayerAura`, `data.__AzeriteUI_canApplyAura`)
+    - updated `PlayerPostUpdateButton` to use those stable fields and restored intended bright rule:
+      - bright: harmful OR (player aura AND canApply) OR whitelist
+      - dim: player aura
+      - desaturated: other
+  - **Files:** `Components/UnitFrames/Auras/AuraFilters.lua`, `Components/UnitFrames/Auras/AuraStyling.lua`
+
+- **[DEBUG] Routed aura diagnostics to `_debuglog` (chat truncation workaround):**
+  - `Core/Debugging.lua` `aurasnapshot` output now writes via `DLAPI.DebugLog("AzeriteUI", ...)` when available, with chat fallback only if DLAPI is unavailable.
+  - `Components/UnitFrames/Auras/AuraFilters.lua` player filter decision-trace messages now also prefer `DLAPI.DebugLog`, reducing combat-debug loss from chat truncation.
+  - `/azdebug aurasnapshot ...` now prints a short confirmation in chat that the dump was written to `_debuglog`.
+  - **Files:** `Core/Debugging.lua`, `Components/UnitFrames/Auras/AuraFilters.lua`
+
+- **[FOLLOW-UP] Player aura full-brightness override in Unit Frames options:**
+  - **Issue:** Users wanted a direct in-menu option to force full-bright player aura icons with the new mixed dim/bright logic.
+  - **Fixes:**
+    - Added player setting `playerAuraAlwaysBright` (default `false`) and exposed it as **Always Show Full Brightness** in Unit Frames > Player > Player Aura Row.
+    - Updated player aura styling so when this toggle is enabled, all visible player-row aura icons render fully bright (no dim/desaturated branch).
+    - Kept `/az` chat command behavior unchanged (no extra argument routing).
+  - **Files:** `Options/OptionsPages/UnitFrames.lua`, `Components/UnitFrames/Units/Player.lua`, `Components/UnitFrames/Auras/AuraStyling.lua`, `Locale/enUS.lua`, `Options/Options.lua`
+
+- **[DEBUG] Added focused aura snapshot dump command for playerframe/top-right comparison:**
+  - Added `/azdebug aurasnapshot [player|topright|both]` to print high-signal per-button state for aura visual investigations.
+  - Dumps button visibility and alpha, icon presence/texture/alpha/desaturation/vertex color, count text, cooldown start+duration state, and tracked aura identifiers (`auraInstanceID`/spell).
+  - Includes playerframe aura element summary (`createdButtons`, visible counters, sorting mode) and top-right secure header context (header/proxy/consolidation alpha and attributes).
+  - Designed to collect side-by-side snapshots from known "good" and "bad" states during combat churn.
+  - **File:** `Core/Debugging.lua`
+
+- **[FOLLOW-UP] Player-row dimmed priority buffs + spell-id visibility in snapshot:**
+  - **Evidence:** User snapshots showed all helpful player-row auras dimmed (vertex `0.3019...`) while harmful entries remained bright. Snapshot rows often had `spell=nil` due WoW12 secret payloads, making it hard to identify specific dimmed buffs.
+  - **Fixes:**
+    - Added stable important-aura metadata export in `PlayerAuraFilter` (`__AzeriteUI_isImportant`, raid/defensive/control/stealable flags).
+    - Updated stock-mode helpful allowance to keep important helpful auras eligible even when ownership/timing fields are secret.
+    - Updated `PlayerPostUpdateButton` brightness logic to treat these stable important helpful flags as bright.
+    - Extended aura snapshot dump to resolve aura spellId/name from `auraInstanceID` via `C_UnitAuras.GetAuraDataByAuraInstanceID(...)` and print `resolvedSpell` + `name`.
+  - **Files:** `Components/UnitFrames/Auras/AuraFilters.lua`, `Components/UnitFrames/Auras/AuraStyling.lua`, `Core/Debugging.lua`
+
+- **[FOLLOW-UP] Stock combat fallback for secret helpful aura brightness:**
+  - **Evidence:** New snapshots still showed combat-time helpful player-row auras collapsing to dim (`vertex 0.3019...`) with `spell/resolvedSpell/name` all secret, while harmful auras stayed bright.
+  - **Cause:** In this state, style classification has no reliable identity signals (spellId/owner/important flags) and previously defaulted to dim.
+  - **Fix:** In stock behavior mode only, while in combat, helpful auras with no reliable signals now default to bright to avoid mass dim collapse under WoW12 secret payload conditions.
+  - **File:** `Components/UnitFrames/Auras/AuraStyling.lua`
+
+- **[FINAL ATTEMPT] Stronger stock-mode secret fallback (combat helpful aura stability):**
+  - **Evidence:** Even after earlier fallbacks, player-row helpful auras still collapsed to dim during combat when identity fields remained secret (`spell/resolvedSpell/name` unavailable).
+  - **Fixes:**
+    - In `PlayerAuraFilter` stock+secret path, added a forced helpful fallback marker (`__AzeriteUI_secretHelpfulFallback`) when aura identity is secret but instance is valid.
+    - In `PlayerPostUpdateButton`, stock-mode combat now brightens helpful auras when this marker is set, and also when aura is player-owned but `canApplyAura` is unavailable.
+    - Goal is combat stability over strict classification while fields are secret.
+  - **Files:** `Components/UnitFrames/Auras/AuraFilters.lua`, `Components/UnitFrames/Auras/AuraStyling.lua`
+
+- **Validation:** `luac -p Core/Debugging.lua`.
+
+## 2026-04-02 — Combat aura display follow-up
+
+- **[DEBUG] Added player aura filter decision tracing (combat icon/alpha investigation):**
+  - Added targeted debug instrumentation in player aura filtering to print decision transitions with explicit reason tags (`stock_secret`, `stock_combat`, `stock_utility`, `custom_secret`, `custom_combat`, `custom_utility`, `show_whitelist`, `hidden_blacklist`, `show_boss`).
+  - Output includes aura name, unit, auraInstanceID/spellID, harmful/player flags, duration and timeLeft, plus stock/custom mode.
+  - Added spam suppression keyed by `unit:auraInstanceID|spellID` so only state/reason changes print.
+  - Controlled by existing `ns.API.DEBUG_AURAS` and optional `ns.API.DEBUG_AURA_FILTER` text filter.
+  - **File:** `Components/UnitFrames/Auras/AuraFilters.lua`
+
+- **[FIX] Player aura-row dark/light inconsistency (combat vs out-of-combat):**
+  - **Symptom:** On the playerframe aura row, some buffs changed between dimmed and bright states depending on combat state and aura kind.
+  - **Comparison target:** Checked `AzeriteUI_Stock` behavior (logic shape only, no direct code copy) and confirmed intended brightness is type-driven (harmful, player-cast/helpful priority markers), not secret-payload drift.
+  - **Root cause:** `PlayerPostUpdateButton`/`TargetPostUpdateButton` icon coloring in `AuraStyling.lua` read raw payload flags (`data.isPlayerAura` / `data.isHarmful`). Under WoW 12 these can become secret/unreliable during combat, causing the same aura to flip visual category.
+  - **Fix:** Icon-color logic now prefers sanitized filter-resolved button flags (`button.isPlayer`, `button.isHarmful`) with payload fields only as fallback.
+  - **File:** `Components/UnitFrames/Auras/AuraStyling.lua`
+
+- **[FOLLOW-UP] Aura header dark/light consistency (combat vs out-of-combat):**
+  - **Problem:** Top-right aura header brightness could jump between darker and lighter states as combat auras changed consolidated-count eligibility (`shouldConsolidate`/duration thresholds), even when the consolidation pane state had not changed.
+  - **Root cause:** `UpdateAuraButtonAlpha` reduced `buffs` alpha only when `numConsolidated > 0` and consolidation UI was shown. The count is intentionally volatile under combat churn.
+  - **Fix:** Header dimming now keys off consolidation UI visibility only (`proxy:IsShown()` and `consolidation:IsShown()`), not the volatile consolidated-count value.
+  - **File:** `Components/Auras/Auras.lua`
+
+- **[FIX] oUF full-update slot race guard (Buffs/Debuffs):**
+  - **Problem:** Under heavy aura churn, `GetAuraSlots` could return a slot that became invalid before `GetAuraDataBySlot` resolved. `processData(...)` then returned nil and the full-update loop indexed `data.auraInstanceID`, aborting the update pass mid-loop.
+  - **Fix:** Added nil guards in both full-update loops so Buffs/Debuffs only index/store data when `data and data.auraInstanceID` are present.
+  - **File:** `Libs/oUF/elements/auras.lua`
+
+- **[FIX] Top-right buff icon stale/duplicate visuals during combat:**
+  - **Problem:** In `Aura.Update`, when `GetAuraButtonData` temporarily returned nil in combat, code exited early without clearing previous visual state, leaving stale icons on recycled secure header buttons.
+  - **Fix:** In combat nil-data path, call `ClearAuraState(self)` before return to fail closed (blank button) instead of preserving stale icon state.
+  - **File:** `Components/Auras/Auras.lua`
+
+- **[FOLLOW-UP] Force post-combat visible-buff refresh:**
+  - Added `QueueRefreshVisibleBuffButtons()` in `PLAYER_REGEN_ENABLED` handling to re-sync visible aura button payloads after combat churn.
+  - **File:** `Components/Auras/Auras.lua`
+
+- **Validation:** `luac -p Libs/oUF/elements/auras.lua` and `luac -p Components/Auras/Auras.lua`.
+
 ## 2026-04-02 — Release 5.3.50-JuNNeZ
 
 - **[RELEASE] 5.3.50-JuNNeZ prep/finalization:**

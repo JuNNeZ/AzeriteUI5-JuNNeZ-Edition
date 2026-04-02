@@ -88,7 +88,7 @@ local GetAuraDataByIndexSafe = function(unit, index, filter)
 		return nil
 	end
 	local ok, auraData = pcall(C_UnitAuras.GetAuraDataByIndex, unit, index, filter)
-	if (not ok or not auraData or (IsSecret and IsSecret(auraData))) then
+	if (not ok or not auraData) then
 		return nil
 	end
 	return auraData
@@ -99,7 +99,7 @@ local GetAuraDurationObjectSafe = function(unit, auraInstanceID)
 		return nil
 	end
 	local ok, durationObject = pcall(C_UnitAuras.GetAuraDuration, unit, auraInstanceID)
-	if (not ok or (IsSecret and IsSecret(durationObject))) then
+	if (not ok) then
 		return nil
 	end
 	return durationObject
@@ -110,7 +110,7 @@ local GetAuraDataByAuraInstanceIDSafe = function(unit, auraInstanceID)
 		return nil
 	end
 	local ok, auraData = pcall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
-	if (not ok or not auraData or (IsSecret and IsSecret(auraData))) then
+	if (not ok or not auraData) then
 		return nil
 	end
 	return auraData
@@ -184,16 +184,22 @@ local GetAuraButtonData = function(unit, index, filter)
 	end
 
 	local auraInstanceID = GetSafeAuraField(auraData.auraInstanceID)
-	local name = GetSafeAuraField(auraData.name)
-	local icon = GetSafeAuraField(auraData.icon)
-	local spellID = GetSafeAuraField(auraData.spellId)
+	local hydratedAuraData = auraInstanceID and GetAuraDataByAuraInstanceIDSafe(unit, auraInstanceID) or nil
+	local rawIcon = auraData.icon or (hydratedAuraData and hydratedAuraData.icon)
+	local rawSpellID = auraData.spellId or (hydratedAuraData and hydratedAuraData.spellId)
+	local name = GetSafeAuraField(auraData.name) or GetSafeAuraField(hydratedAuraData and hydratedAuraData.name)
+	local icon = rawIcon
+	local spellID = rawSpellID
 	local applications = GetSafeAuraField(auraData.applications)
+		or GetSafeAuraField(hydratedAuraData and hydratedAuraData.applications)
 	local duration = GetSafeAuraField(auraData.duration)
+		or GetSafeAuraField(hydratedAuraData and hydratedAuraData.duration)
 	local expirationTime = GetSafeAuraField(auraData.expirationTime)
+		or GetSafeAuraField(hydratedAuraData and hydratedAuraData.expirationTime)
 
 	if ((not icon) and spellID and GetSpellTexture) then
 		local okTexture, spellTexture = pcall(GetSpellTexture, spellID)
-		if (okTexture and not (IsSecret and IsSecret(spellTexture))) then
+		if (okTexture) then
 			icon = spellTexture
 		end
 	end
@@ -359,6 +365,7 @@ Aura.Update = function(self, index)
 			self.timeLeft = nil
 		end
 	elseif (InCombatLockdown and InCombatLockdown()) then
+		ClearAuraState(self)
 		return
 	else
 		ClearAuraState(self)
@@ -830,10 +837,10 @@ Auras.UpdateAuraButtonAlpha = function(self)
 	buffs.numConsolidated = consolidated
 	buffs.proxy.count:SetText(buffs.numConsolidated > 0 and buffs.numConsolidated or "")
 
-	-- If there are currently consolidated buffs and both
-	-- the proxy button and the consolidation frame are shown,
-	-- reduce the alpha of the buff window.
-	if (buffs.numConsolidated > 0 and buffs.proxy:IsShown() and buffs.consolidation:IsShown()) then
+	-- Keep brightness tied to consolidation UI state, not live aura count.
+	-- The count can fluctuate heavily between combat and out-of-combat,
+	-- which otherwise makes the header look like it randomly darkens/lightens.
+	if (buffs.proxy:IsShown() and buffs.consolidation:IsShown()) then
 		buffs:SetAlpha(.5)
 	else
 		buffs:SetAlpha(1)
@@ -858,6 +865,13 @@ Auras.QueueRefreshVisibleBuffButtons = function(self)
 		self.__AzeriteUI_AuraRefreshQueued = nil
 		self:RefreshVisibleBuffButtons()
 	end, 0)
+end
+
+Auras.OnUnitAura = function(self, event, unit)
+	self:UpdateAuraButtonAlpha()
+	if (unit == "player" or unit == "vehicle") then
+		self:QueueRefreshVisibleBuffButtons()
+	end
 end
 
 Auras.UpdateSettings = function(self)
@@ -911,6 +925,7 @@ Auras.OnEvent = function(self, event, ...)
 
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		if (InCombatLockdown()) then return end
+		self:QueueRefreshVisibleBuffButtons()
 		if (self.__AzeriteUI_AuraDriverPending) then
 			ApplyBlizzardAuraVisibilityDriver(self)
 		end
@@ -929,7 +944,7 @@ Auras.OnEnable = function(self)
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
-	self:RegisterUnitEvent("UNIT_AURA", "UpdateAuraButtonAlpha", "player", "vehicle")
+	self:RegisterUnitEvent("UNIT_AURA", "OnUnitAura", "player", "vehicle")
 
 	-- In TWW 11.0+, periodically check if BuffFrame was reparented by Edit Mode
 	if (ns.WoW11) then

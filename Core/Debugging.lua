@@ -43,6 +43,7 @@ local math_min = math.min
 local string_format = string.format
 local string_lower = string.lower
 local string_match = string.match
+local table_concat = table.concat
 local table_insert = table.insert
 local table_sort = table.sort
 local unpack = unpack
@@ -2028,10 +2029,32 @@ local function SecretSafeText(value)
 	return "<unprintable>"
 end
 
+local SafePrintTarget = "chat"
+
+local function SafePrintToDebugLog(...)
+	if (not (DLAPI and DLAPI.DebugLog)) then
+		return false
+	end
+	local args = {}
+	for i = 1, select("#", ...) do
+		args[i] = SecretSafeText(select(i, ...))
+	end
+	local payload = table_concat(args, " ")
+	local ok = pcall(DLAPI.DebugLog, "AzeriteUI", payload)
+	return ok and true or false
+end
+
 local function SafePrint(...)
 	local args = {}
 	for i = 1, select("#", ...) do
 		args[i] = SecretSafeText(select(i, ...))
+	end
+	if (SafePrintTarget == "debuglog") then
+		if (SafePrintToDebugLog(unpack(args))) then
+			return
+		end
+	elseif (SafePrintTarget == "both") then
+		SafePrintToDebugLog(unpack(args))
 	end
 	print(unpack(args))
 end
@@ -2600,6 +2623,217 @@ local function DumpUnitBars(frame, name)
 	DumpArtTextures(frame.ManaOrb, "ManaOrb")
 end
 
+local function DumpAuraButtonState(button, label)
+	if (not button) then
+		return
+	end
+
+	local icon = button.Icon or button.icon
+	local count = button.Count or button.count
+	local cooldown = button.Cooldown or button.cd
+	local auraInstanceID = button.auraInstanceID
+	local spellID = button.auraSpellID or button.spellID
+	local unit = button.GetParent and button:GetParent() and button:GetParent().__owner and button:GetParent().__owner.unit or nil
+	local resolvedSpellID
+	local resolvedName
+	if (unit and auraInstanceID and C_UnitAuras and C_UnitAuras.GetAuraDataByAuraInstanceID) then
+		local ok, auraData = pcall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
+		if (ok and auraData and not (issecretvalue and issecretvalue(auraData))) then
+			resolvedSpellID = auraData.spellId or auraData.spellID
+			resolvedName = auraData.name
+			if (not spellID) then
+				spellID = resolvedSpellID
+			end
+		end
+	end
+	local shown = SafeCall(button, "IsShown")
+	local visible = SafeCall(button, "IsVisible")
+	local alpha = SafeCall(button, "GetAlpha")
+	local width, height = SafeCall(button, "GetSize")
+	local level = SafeCall(button, "GetFrameLevel")
+	local iconTexture = icon and SafeCall(icon, "GetTexture") or nil
+	local iconAlpha = icon and SafeCall(icon, "GetAlpha") or nil
+	local iconShown = icon and SafeCall(icon, "IsShown") or nil
+	local iconDesaturated = icon and SafeCall(icon, "IsDesaturated") or nil
+	local iconR, iconG, iconB, iconA
+	if (icon) then
+		iconR, iconG, iconB, iconA = SafeCall(icon, "GetVertexColor")
+	end
+	local countText = count and SafeCall(count, "GetText") or nil
+	local countShown = count and SafeCall(count, "IsShown") or nil
+	local cdShown = cooldown and SafeCall(cooldown, "IsShown") or nil
+	local cdStart, cdDuration, cdEnabled
+	if (cooldown) then
+		cdStart, cdDuration, cdEnabled = SafeCall(cooldown, "GetCooldown")
+	end
+	local timeLeft = button.timeLeft
+	local expiration = button.auraExpirationTime or button.expirationTime
+	local duration = button.duration
+
+	SafePrint("|cfff0f0f0", label,
+		"shown", shown,
+		"visible", visible,
+		"alpha", alpha,
+		"size", width, height,
+		"level", level)
+	SafePrint("|cfff0f0f0 ", " aura:",
+		"unit", unit,
+		"instance", auraInstanceID,
+		"spell", spellID,
+		"resolvedSpell", resolvedSpellID,
+		"name", resolvedName,
+		"filter", button.filter,
+		"harmful", button.isHarmful,
+		"harmfulAura", button.isHarmfulAura,
+		"player", button.isPlayer,
+		"stealable", button.isStealable)
+	SafePrint("|cfff0f0f0 ", " visual:",
+		"icon", iconTexture and "yes" or "no",
+		"iconShown", iconShown,
+		"iconAlpha", iconAlpha,
+		"desat", iconDesaturated,
+		"vertex", iconR, iconG, iconB, iconA,
+		"count", countText,
+		"countShown", countShown)
+	SafePrint("|cfff0f0f0 ", " timing:",
+		"cdShown", cdShown,
+		"start", cdStart,
+		"duration", cdDuration,
+		"enabled", cdEnabled,
+		"storedDuration", duration,
+		"expires", expiration,
+		"timeLeft", timeLeft)
+end
+
+local function DumpSecureAuraHeaderChildren(header, label, maxChildren)
+	if (not header) then
+		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", label, "header missing")
+		return
+	end
+
+	local cap = tonumber(maxChildren) or 60
+	local dumped = 0
+	for i = 1, cap do
+		local child = SafeCall(header, "GetAttribute", "child" .. i)
+		if (not child) then
+			break
+		end
+		dumped = dumped + 1
+		DumpAuraButtonState(child, label .. "[" .. i .. "]")
+	end
+
+	SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", label, "children dumped:", dumped)
+end
+
+local function DumpPlayerAuraSnapshot()
+	local playerFrame = ns:GetModule("PlayerFrame", true)
+	local frame = playerFrame and playerFrame.frame
+	local auras = frame and frame.Auras
+	if (not auras) then
+		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "playerframe auras not found")
+		return
+	end
+
+	local maxButtons = tonumber(auras.numTotal) or tonumber(auras.createdButtons) or 40
+	if (maxButtons < 1) then
+		maxButtons = 40
+	elseif (maxButtons > 80) then
+		maxButtons = 80
+	end
+
+	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: playerframe")
+	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(), "unit", frame.unit, "maxButtons", maxButtons)
+	SafePrint("|cfff0f0f0", "element:",
+		"created", auras.createdButtons,
+		"visibleAuras", auras.visibleAuras,
+		"visibleBuffs", auras.visibleBuffs,
+		"visibleDebuffs", auras.visibleDebuffs,
+		"sorting", auras.sortMethod, auras.sortDirection)
+
+	local dumped = 0
+	for i = 1, maxButtons do
+		local button = auras[i]
+		if (button) then
+			dumped = dumped + 1
+			DumpAuraButtonState(button, "player[" .. i .. "]")
+		end
+	end
+
+	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: playerframe buttons dumped:", dumped)
+end
+
+local function DumpTopRightAuraSnapshot()
+	local module = ns:GetModule("Auras", true)
+	local buffs = module and module.buffs
+	if (not buffs) then
+		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "top-right buffs header not found")
+		return
+	end
+
+	local proxy = buffs.proxy
+	local consolidation = buffs.consolidation
+
+	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: top-right")
+	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(), "numConsolidated", buffs.numConsolidated)
+	SafePrint("|cfff0f0f0", "header:",
+		"shown", SafeCall(buffs, "IsShown"),
+		"alpha", SafeCall(buffs, "GetAlpha"),
+		"unit", SafeCall(buffs, "GetAttribute", "unit"),
+		"filter", SafeCall(buffs, "GetAttribute", "filter"),
+		"point", SafeCall(buffs, "GetAttribute", "point"),
+		"xOffset", SafeCall(buffs, "GetAttribute", "xOffset"),
+		"wrapAfter", SafeCall(buffs, "GetAttribute", "wrapAfter"))
+
+	if (proxy) then
+		SafePrint("|cfff0f0f0", "proxy:",
+			"shown", SafeCall(proxy, "IsShown"),
+			"alpha", SafeCall(proxy, "GetAlpha"),
+			"count", proxy.count and SafeCall(proxy.count, "GetText") or nil,
+			"texture", proxy.texture and SafeCall(proxy.texture, "GetTexture") or nil)
+	end
+
+	if (consolidation) then
+		SafePrint("|cfff0f0f0", "consolidation:",
+			"shown", SafeCall(consolidation, "IsShown"),
+			"alpha", SafeCall(consolidation, "GetAlpha"),
+			"point", SafeCall(consolidation, "GetAttribute", "point"),
+			"xOffset", SafeCall(consolidation, "GetAttribute", "xOffset"),
+			"wrapAfter", SafeCall(consolidation, "GetAttribute", "wrapAfter"))
+	end
+
+	DumpSecureAuraHeaderChildren(buffs, "topright.main", 80)
+	DumpSecureAuraHeaderChildren(consolidation, "topright.consolidation", 80)
+end
+
+local function DumpAuraSnapshot(scope)
+	scope = (type(scope) == "string" and scope:lower()) or "both"
+	local previousTarget = SafePrintTarget
+	SafePrintTarget = "debuglog"
+
+	local handled = true
+	if (scope == "player" or scope == "playerframe") then
+		DumpPlayerAuraSnapshot()
+	elseif (scope == "topright" or scope == "header" or scope == "buffheader") then
+		DumpTopRightAuraSnapshot()
+	elseif (scope == "both" or scope == "all" or scope == "") then
+		DumpPlayerAuraSnapshot()
+		DumpTopRightAuraSnapshot()
+	else
+		handled = false
+		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "unknown scope", tostring(scope), "(use player|topright|both)")
+	end
+
+	SafePrintTarget = previousTarget
+
+	if (handled) then
+		if (DLAPI and DLAPI.DebugLog) then
+			print("|cff33ff99", "AzeriteUI aura snapshot:", "written to _debuglog", "scope", scope)
+		else
+			print("|cff33ff99", "AzeriteUI aura snapshot:", "DLAPI unavailable, printed to chat instead")
+		end
+	end
+end
+
 local function GetUnitFrameModules()
 	local mods = {}
 	mods[#mods + 1] = ns:GetModule("PlayerFrame", true)
@@ -2836,6 +3070,7 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug dump player|r")
 	print("|cfff0f0f0  /azdebug dump tot|r")
 	print("|cfff0f0f0  /azdebug dump all|r")
+	print("|cfff0f0f0  /azdebug aurasnapshot [player|topright|both]|r")
 	print("|cfff0f0f0  /azdebug nameplates [unit]|r")
 	print("|cfff0f0f0  /azdebug snapshot [unit]|r")
 	print("|cfff0f0f0  /azdebug blizzard enable|r")
@@ -4131,6 +4366,10 @@ Debugging.DebugMenu = function(self, input)
 			return DumpUnitBars(totFrame and totFrame.frame, "ToTFrame")
 		end
 		return PrintDebugHelp()
+	end
+	if (cmd == "aurasnapshot" or cmd == "auras") then
+		local sub = rest:match("^(%S+)") or "both"
+		return DumpAuraSnapshot(sub)
 	end
 	if (cmd == "nameplates" or cmd == "nameplate") then
 		local unit = rest:match("^(%S+)")

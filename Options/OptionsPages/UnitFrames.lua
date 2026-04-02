@@ -262,8 +262,14 @@ local GenerateOptions = function()
 		}
 		suboptions.args.playerAuraUseStockBehavior = {
 			name = L["Use AzeriteUI Stock Behavior"],
-			desc = L["Use the original AzeriteUI player-frame aura behavior. Turn this off if you want to build your own filter from the custom categories below."],
+			desc = L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."],
 			order = 211.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraSettingsDisabled
+		}
+		suboptions.args.playerAuraAlwaysBright = {
+			name = L["Always Show Full Brightness"],
+			desc = L["Render all visible player-row aura icons at full brightness. Use this if you prefer no dimmed aura icons."],
+			order = 211.55, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
 		}
 		suboptions.args.playerAuraWhatToShowHeader = {

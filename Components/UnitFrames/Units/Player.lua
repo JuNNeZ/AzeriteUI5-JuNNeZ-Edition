@@ -79,6 +79,7 @@ local defaults = { profile = ns:Merge({
 	showAuras = true,
 	showHealthPercent = false,
 	playerAuraUseStockBehavior = true,
+	playerAuraAlwaysBright = false,
 	playerAuraShowAdvancedCategories = false,
 	playerAuraShowDebuffs = true,
 	playerAuraShowImportantAuras = true,

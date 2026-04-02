@@ -239,7 +239,64 @@ local GetPartyAuraSetting = function(profile, key, fallback)
 	return fallback and true or false
 end
 
+local PlayerAuraDebugState = {}
+local PlayerAuraStableState = {}
+
+local DebugPlayerAuraDecision = function(button, unit, data, decision, reason, useStockBehavior)
+	if (not (ns and ns.API and ns.API.DEBUG_AURAS)) then
+		return decision
+	end
+
+	local name = SafeKey(data and data.name)
+	local filter = ns.API.DEBUG_AURA_FILTER
+	if (type(filter) == "string" and filter ~= "") then
+		if (type(name) ~= "string" or not name:find(filter, 1, true)) then
+			return decision
+		end
+	end
+
+	local auraInstanceID = SafeKey(data and data.auraInstanceID)
+	local spellID = GetAuraSpellID(data)
+	local key = tostring(unit) .. ":" .. tostring(auraInstanceID or spellID or name or "unknown")
+	local state = tostring(decision and true or false) .. "|" .. tostring(reason)
+	if (PlayerAuraDebugState[key] == state) then
+		return decision
+	end
+	PlayerAuraDebugState[key] = state
+
+	local payload = table.concat({
+		"AzeriteUI player aura filter:",
+		tostring(name),
+		"show", tostring(decision),
+		"reason", tostring(reason),
+		"mode", useStockBehavior and "stock" or "custom",
+		"unit", tostring(unit),
+		"id", tostring(auraInstanceID),
+		"spell", tostring(spellID),
+		"harmful", tostring(button and button.isHarmful),
+		"player", tostring(button and button.isPlayer),
+		"duration", tostring(button and button.duration),
+		"timeLeft", tostring(button and button.timeLeft)
+	}, " ")
+
+	if (DLAPI and DLAPI.DebugLog) then
+		local ok = pcall(DLAPI.DebugLog, "AzeriteUI", payload)
+		if (ok) then
+			return decision
+		end
+	end
+
+	print("|cff33ff99", payload)
+
+	return decision
+end
+
 ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
+
+	local auraInstanceID = SafeKey(data.auraInstanceID)
+	local auraKey = tostring(unit) .. ":" .. tostring(auraInstanceID or GetAuraSpellID(data) or SafeKey(data.name) or "unknown")
+	local stable = PlayerAuraStableState[auraKey] or {}
+	PlayerAuraStableState[auraKey] = stable
 
 	local expiration = SafeNumber(data.expirationTime, nil)
 	local duration = SafeNumber(data.duration, 0)
@@ -255,10 +312,25 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	button.noDuration = duration == 0
 	button.isPlayer = GetIsPlayerAura(unit, data)
 	button.spellID = GetAuraSpellID(data)
-	local canApplyAura = SafeBool(data.canApplyAura)
+	local rawCanApplyAura = nil
+	if (not (IsSecret and IsSecret(data.canApplyAura))) then
+		rawCanApplyAura = data.canApplyAura and true or false
+	end
+	if (rawCanApplyAura ~= nil) then
+		stable.canApplyAura = rawCanApplyAura
+	end
+	local canApplyAura = stable.canApplyAura and true or false
+	data.__AzeriteUI_isPlayerAura = button.isPlayer and true or false
+	data.__AzeriteUI_canApplyAura = canApplyAura
 	local isHarmful = GetIsHarmful(unit, data)
 	local importantFlags = GetImportantAuraFlags(unit, data, isHarmful)
 	local isImportant = importantFlags.important
+	data.__AzeriteUI_isImportant = isImportant and true or false
+	data.__AzeriteUI_isRaidInCombat = importantFlags.raidInCombat and true or false
+	data.__AzeriteUI_isBigDefensive = importantFlags.bigDefensive and true or false
+	data.__AzeriteUI_isExternalDefensive = importantFlags.externalDefensive and true or false
+	data.__AzeriteUI_isCrowdControl = importantFlags.crowdControl and true or false
+	data.__AzeriteUI_isStealable = importantFlags.stealable and true or false
 	local applications = SafeNumber(data.applications, 0)
 	local hasDisplayedApplications = HasDisplayedApplications(unit, data)
 	local helpfulRaid, helpfulPlayerRaid = IsHelpfulRaidAura(unit, data)
@@ -267,19 +339,21 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	local expirationSecret = IsSecret and IsSecret(data.expirationTime)
 	local applicationsSecret = IsSecret and IsSecret(data.applications)
 	local profile = GetPlayerAuraProfile()
+	local useStockBehavior = GetPlayerAuraSetting(profile, "playerAuraUseStockBehavior", true)
+	data.__AzeriteUI_secretHelpfulFallback = false
 
 	-- Hide blacklisted auras.
 	if (button.spellID and Hidden[button.spellID]) then
-		return
+		return DebugPlayerAuraDecision(button, unit, data, nil, "hidden_blacklist", useStockBehavior)
 	end
 
 	-- Show whitelisted auras.
 	if (button.spellID and Spells[button.spellID]) then
-		return true
+		return DebugPlayerAuraDecision(button, unit, data, true, "show_whitelist", useStockBehavior)
 	end
 
 	if (SafeBool(data.isBossDebuff)) then
-		return true
+		return DebugPlayerAuraDecision(button, unit, data, true, "show_boss", useStockBehavior)
 	end
 
 	local hasStacks = (applications > 1) or hasDisplayedApplications
@@ -305,7 +379,6 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	local showShortUtilityPlayerBuffs = GetPlayerAuraSetting(profile, "playerAuraShowShortUtilityPlayerBuffs", true)
 	local showShortUtilityNonCancelable = GetPlayerAuraSetting(profile, "playerAuraShowShortUtilityNonCancelable", true)
 	local showLongUtilityBuffs = GetPlayerAuraSetting(profile, "playerAuraShowLongUtilityBuffs", false)
-	local useStockBehavior = GetPlayerAuraSetting(profile, "playerAuraUseStockBehavior", true)
 	local allowImportantDefensive = showImportantDefensives and importantFlags.bigDefensive
 	local allowImportantExternal = showImportantExternals and importantFlags.externalDefensive
 	local allowImportantControl = showImportantCrowdControl and importantFlags.crowdControl
@@ -347,50 +420,67 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	if (useStockBehavior) then
 		local isStockHelpful = (not isHarmful)
 		local allowStockHelpfulCombat = isStockHelpful and (
-			hasStockCombatDuration
+			isImportant
+			or importantFlags.raidInCombat
+			or importantFlags.bigDefensive
+			or importantFlags.externalDefensive
+			or importantFlags.crowdControl
+			or importantFlags.stealable
+			or hasStockCombatDuration
 			or isShortAura
 			or ((durationSecret or expirationSecret) and (button.isPlayer or canApplyAura or (not isCancelableHelpful)))
 		)
 		local allowStockHelpfulUtility = isStockHelpful and (
-			(not button.noDuration)
+			isImportant
+			or importantFlags.raidInCombat
+			or importantFlags.bigDefensive
+			or importantFlags.externalDefensive
+			or importantFlags.crowdControl
+			or importantFlags.stealable
+			or (not button.noDuration)
 			or isShortAura
 			or ((durationSecret or expirationSecret) and (button.isPlayer or canApplyAura or (not isCancelableHelpful)))
 		)
 		if (durationSecret or expirationSecret or applicationsSecret) then
-			return isHarmful
+			-- In WoW12 combat, helpful aura identity/timing can be fully secret.
+			-- For stock mode we fail open for helpful auras to avoid flicker/dropouts.
+			local forceHelpfulSecret = isStockHelpful and (auraInstanceID and true or false)
+			data.__AzeriteUI_secretHelpfulFallback = forceHelpfulSecret
+			return DebugPlayerAuraDecision(button, unit, data, isHarmful
 				or hasStacks
 				or allowStockHelpfulCombat
+				or forceHelpfulSecret, "stock_secret", useStockBehavior)
 		end
 		if (UnitAffectingCombat("player")) then
-			return isHarmful
+			return DebugPlayerAuraDecision(button, unit, data, isHarmful
 				or allowStockHelpfulCombat
-				or hasStacks
+				or hasStacks, "stock_combat", useStockBehavior)
 		end
-		return isHarmful
+		return DebugPlayerAuraDecision(button, unit, data, isHarmful
 			or allowStockHelpfulUtility
-			or hasStacks
+			or hasStacks, "stock_utility", useStockBehavior)
 	end
 
 	if (durationSecret or expirationSecret or applicationsSecret) then
-		return allowHarmful
-			or allowSecretFallbackBuff
+		return DebugPlayerAuraDecision(button, unit, data, allowHarmful
+			or allowSecretFallbackBuff, "custom_secret", useStockBehavior)
 	end
 
 	if (UnitAffectingCombat("player")) then
-		return allowHarmful
+		return DebugPlayerAuraDecision(button, unit, data, allowHarmful
 			or allowImportant
 			or allowRaid
 			or allowStacks
 			or allowShortCombatBuff
-			or allowLongUtilityBuff
+			or allowLongUtilityBuff, "custom_combat", useStockBehavior)
 	end
 
-	return allowHarmful
+	return DebugPlayerAuraDecision(button, unit, data, allowHarmful
 		or allowImportant
 		or allowRaid
 		or allowStacks
 		or allowShortUtilityBuff
-		or allowLongUtilityBuff
+		or allowLongUtilityBuff, "custom_utility", useStockBehavior)
 
 end
 

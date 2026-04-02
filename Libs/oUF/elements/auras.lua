@@ -696,10 +696,12 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			local slots = {C_UnitAuras.GetAuraSlots(unit, buffFilter)}
 			for i = 2, #slots do
 				local data = processData(buffs, unit, C_UnitAuras.GetAuraDataBySlot(unit, slots[i]), buffFilter)
-				buffs.all[data.auraInstanceID] = data
+				if(data and data.auraInstanceID) then
+					buffs.all[data.auraInstanceID] = data
 
-				if((buffs.FilterAura or FilterAura) (buffs, unit, data, buffFilter)) then
-					buffs.active[data.auraInstanceID] = true
+					if((buffs.FilterAura or FilterAura) (buffs, unit, data, buffFilter)) then
+						buffs.active[data.auraInstanceID] = true
+					end
 				end
 			end
 		else
@@ -812,10 +814,12 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			local slots = {C_UnitAuras.GetAuraSlots(unit, debuffFilter)}
 			for i = 2, #slots do
 				local data = processData(debuffs, unit, C_UnitAuras.GetAuraDataBySlot(unit, slots[i]), debuffFilter)
-				debuffs.all[data.auraInstanceID] = data
+				if(data and data.auraInstanceID) then
+					debuffs.all[data.auraInstanceID] = data
 
-				if((debuffs.FilterAura or FilterAura) (debuffs, unit, data, debuffFilter)) then
-					debuffs.active[data.auraInstanceID] = true
+					if((debuffs.FilterAura or FilterAura) (debuffs, unit, data, debuffFilter)) then
+						debuffs.active[data.auraInstanceID] = true
+					end
 				end
 			end
 		else

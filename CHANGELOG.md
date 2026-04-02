@@ -5,6 +5,30 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.51-JuNNeZ (2026-04-02) — Midnight Stocklight
+
+### Highlights
+
+- Stabilized WoW 12 player-row aura behavior around combat secret-value windows while keeping AzeriteUI stock intent: helpful auras fail open during combat secrecy to avoid flicker/dropouts, then return to mixed bright/dim classification out of combat.
+- Improved aura diagnostics for live verification by expanding `/azdebug aurasnapshot` output with best-effort spell ID/name resolution from `auraInstanceID`, making post-combat classification checks far easier to audit.
+- Added a new player-row aura option, Always Show Full Brightness, for users who prefer no dimmed icons.
+- Completed localization coverage for the new/updated player-row aura menu text across all shipped locales.
+
+### Access
+
+- Player-row stock behavior: `/az` -> Unit Frame Settings -> Player Frame -> Auras -> Use AzeriteUI Stock Behavior.
+- Force full-bright icons (optional): `/az` -> Unit Frame Settings -> Player Frame -> Auras -> Always Show Full Brightness.
+- Snapshot debug command: `/azdebug aurasnapshot player`.
+
+### Internal
+
+- `Components/UnitFrames/Auras/AuraFilters.lua`: added stable per-aura helper state and secret-window fallback signals for stock-mode player aura filtering.
+- `Components/UnitFrames/Auras/AuraStyling.lua`: hardened bright/dim decision path to use stable filter-provided signals and keep stock-intended mixed post-combat behavior.
+- `Core/Debugging.lua`: expanded aura snapshot payload with by-instance spell/name resolution and richer visual/timing diagnostics.
+- `Components/Auras/Auras.lua` and `Libs/oUF/elements/auras.lua`: additional WoW 12 aura payload guards and refresh hardening on high-churn paths.
+- `Locale/*.lua` and `Options/OptionsPages/UnitFrames.lua`: localized and exposed the new player-row brightness controls.
+
+
 ## 5.3.50-JuNNeZ (2026-04-02) — Obsidian Aura Shield
 
 ### Highlights
