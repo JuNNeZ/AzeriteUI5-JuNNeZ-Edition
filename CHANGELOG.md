@@ -5,6 +5,24 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.52-JuNNeZ (2026-04-02) — Obsidian Tooltip Spacing
+
+### Highlights
+
+- Fixed compare-item tooltip overlap in item hovers where multiple comparison tooltips could collide with the main tooltip.
+- Improved tooltip comparison placement so compare tooltips now keep stable spacing even when tooltip content expands after initial show.
+- Reduced tooltip skin side effects by limiting AzeriteUI skinning to known managed tooltip frames only.
+
+### Access
+
+- No new settings required. Hover equippable items (especially rings/trinkets) to see the compare-tooltip spacing fix.
+
+### Internal
+
+- `Components/Misc/Tooltips.lua`: added deterministic compare-tooltip stacking with theme-aware gap and post-show/resize relayout hooks.
+- `Components/Misc/Tooltips.lua`: added managed-tooltip guard for `SharedTooltip_SetBackdropStyle` path to avoid skinning unrelated tooltip-like frames.
+
+
 ## 5.3.51-JuNNeZ (2026-04-02) — Midnight Stocklight
 
 ### Highlights

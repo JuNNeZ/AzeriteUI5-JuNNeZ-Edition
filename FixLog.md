@@ -1,4 +1,36 @@
 
+## 2026-04-02 — Release 5.3.52-JuNNeZ
+
+- **[RELEASE] 5.3.52-JuNNeZ prep/finalization:**
+  - Version bumped in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
+  - `CHANGELOG.md` updated with delta-only player-facing tooltip compare-spacing entry.
+  - Release includes tooltip compare-layout hardening and managed-tooltip skin-path guard updates in `Components/Misc/Tooltips.lua`.
+
+## 2026-04-02 — Tooltip compare spacing + skin-path guard
+
+- **[FIX] Compare tooltip overlap with AzeriteUI skins:**
+  - **Evidence:** Equipped-item compare tooltips (`ShoppingTooltip1/2`) could visually overlap the hovered item tooltip once AzeriteUI's custom backdrop extended past Blizzard's default tooltip bounds.
+  - **Root cause:** `Components/Misc/Tooltips.lua` only adjusted compare-tooltip frame levels in `OnCompareItemShow`, and did so against `GameTooltip` with absolute frame levels (`i+1`). It did not re-anchor compare tooltips to account for AzeriteUI backdrop offsets/insets, so Blizzard compare placement still assumed stock visual bounds.
+  - **Fix:** Added a post-show compare-tooltip layout pass that:
+    - derives a safe horizontal gap from the active tooltip theme backdrop offsets/insets
+    - preserves the side Blizzard chose for each compare tooltip
+    - reanchors shown compare tooltips outward from the primary tooltip to keep AzeriteUI borders from colliding
+    - raises compare-tooltip frame levels relative to the primary tooltip instead of setting absolute low frame levels
+  - **File:** `Components/Misc/Tooltips.lua`
+
+- **[HARDENING] Prevent broad skin application on unrelated tooltip frames:**
+  - **Audit finding:** `SharedTooltip_SetBackdropStyle` is hooked globally, so `UpdateBackdropTheme(...)` could style any tooltip-like frame that called Blizzard's backdrop helper, not just AzeriteUI-managed tooltip frames.
+  - **Fix:** Added a managed-tooltip allowlist/pattern guard so AzeriteUI only skins the known Blizzard/Narcissus/widget tooltip frames it explicitly supports.
+  - **File:** `Components/Misc/Tooltips.lua`
+
+- **Validation:** `luac -p Components/Misc/Tooltips.lua` passed locally. In-game: `/buggrabber reset` -> `/reload` -> hover an equippable item with two compare tooltips -> verify left/right compare windows keep visible gap, no overlap, and no new tooltip taint/errors.
+
+- **[FOLLOW-UP] Deterministic compare-tooltip stack for post-show layout churn:**
+  - **Evidence:** A second screenshot still showed compare-tooltip overlap in heavy item-tooltip cases (dual compare on one side) where Blizzard/tooltip updates could reshuffle compare positions after initial `GameTooltip_ShowCompareItem` placement.
+  - **Fix:** Updated compare layout to use a deterministic one-side stack (same side as the primary tooltip edge policy), with screen-edge fallback and re-application on compare tooltip `OnShow` and `OnSizeChanged`.
+  - **Why this is taint-safe:** Only post-show script hooks and `SetPoint`/frame-level updates on tooltip frames; no secure mixin replacement or protected call wrapping.
+  - **File:** `Components/Misc/Tooltips.lua`
+
 ## 2026-04-02 — Player-row aura brightness finalization for 5.3.51
 
 - **[DECISION] Keep AzeriteUI stock-intended mixed bright/dim behavior:**

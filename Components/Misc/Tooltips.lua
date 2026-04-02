@@ -52,6 +52,8 @@ end
 
 -- Lua API
 local _G = _G
+local math_abs = math.abs
+local math_max = math.max
 local ipairs = ipairs
 local next = next
 local pcall = pcall
@@ -278,6 +280,47 @@ local RestoreBlizzardTooltipBackdrop = function(tooltip)
 	end
 end
 
+local ManagedTooltipState = setmetatable({}, { __mode = "k" })
+local CompareLayoutHooked = setmetatable({}, { __mode = "k" })
+
+local IsManagedTooltip = function(tooltip)
+	if (not tooltip) or (tooltip.IsForbidden and tooltip:IsForbidden()) then
+		return false
+	end
+
+	local cached = ManagedTooltipState[tooltip]
+	if (cached ~= nil) then
+		return cached
+	end
+
+	local managed = tooltip == _G.GameTooltip
+		or tooltip == _G.ShoppingTooltip1
+		or tooltip == _G.ShoppingTooltip2
+		or tooltip == _G.ItemRefTooltip
+		or tooltip == _G.ItemRefShoppingTooltip1
+		or tooltip == _G.ItemRefShoppingTooltip2
+		or tooltip == _G.EmbeddedItemTooltip
+		or tooltip == _G.FriendsTooltip
+		or tooltip == _G.WarCampaignTooltip
+		or tooltip == _G.ReputationParagonTooltip
+		or tooltip == _G.QuickKeybindTooltip
+		or tooltip == _G.GameNoHeaderTooltip
+		or tooltip == _G.GameSmallHeaderTooltip
+		or tooltip == (_G.QuestScrollFrame and _G.QuestScrollFrame.StoryTooltip)
+		or tooltip == (_G.QuestScrollFrame and _G.QuestScrollFrame.CampaignTooltip)
+		or tooltip == _G.NarciGameTooltip
+
+	if (not managed and tooltip.GetName) then
+		local tooltipName = tooltip:GetName()
+		if (tooltipName and string_match(tooltipName, "^UIWidgetBaseItemEmbeddedTooltip%d+$")) then
+			managed = true
+		end
+	end
+
+	ManagedTooltipState[tooltip] = managed and true or false
+	return managed
+end
+
 
 local defaults = { profile = ns:Merge({
 	theme = "Classic",
@@ -311,6 +354,7 @@ end
 Tooltips.UpdateBackdropTheme = function(self, tooltip)
 	if (self:IsDisabled()) then return end
 	if (not tooltip) or (tooltip.IsEmbedded) or (tooltip:IsForbidden()) then return end
+	if (not IsManagedTooltip(tooltip)) then return end
 	-- WoW12: use safe geometry helper to get a clean (non-secret) width.
 	-- Skip styling if the tooltip has zero size (e.g. not yet laid out).
 	local width = ns.GetSafeWidth and ns.GetSafeWidth(tooltip) or (tooltip.GetWidth and tooltip:GetWidth() or 0)
@@ -816,18 +860,163 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 
 end
 
+local GetCompareTooltips = function(tooltip)
+	if (tooltip == _G.ItemRefTooltip) then
+		return {
+			_G.ItemRefShoppingTooltip1,
+			_G.ItemRefShoppingTooltip2
+		}
+	end
+
+	return {
+		_G.ShoppingTooltip1,
+		_G.ShoppingTooltip2
+	}
+end
+
+local GetSafeFrameCenterX = function(frame)
+	if (not frame) or (frame.IsForbidden and frame:IsForbidden()) or (not frame.GetCenter) then
+		return nil
+	end
+
+	local ok, centerX = pcall(frame.GetCenter, frame)
+	if (not ok) or (type(centerX) ~= "number") or IsSecretValue(centerX) then
+		return nil
+	end
+
+	return centerX
+end
+
+local GetCompareTooltipGap = function(self)
+	local themeData = self:GetTheme()
+	local backdropStyle = themeData and themeData.backdropStyle
+	if (not backdropStyle) then
+		return 8
+	end
+
+	local edgePadding = math_max(
+		math_abs(tonumber(backdropStyle.offsetLeft) or 0),
+		math_abs(tonumber(backdropStyle.offsetRight) or 0)
+	)
+	local backdropInsets = backdropStyle.backdrop and backdropStyle.backdrop.insets
+	local insetPadding = 0
+	if (type(backdropInsets) == "table") then
+		insetPadding = math_max(
+			tonumber(backdropInsets.left) or 0,
+			tonumber(backdropInsets.right) or 0
+		)
+	end
+
+	return math_max(8, edgePadding + insetPadding)
+end
+
+local AnchorCompareTooltip = function(compareTooltip, anchorTooltip, side, gap)
+	compareTooltip:ClearAllPoints()
+	if (side == "LEFT") then
+		compareTooltip:SetPoint("TOPRIGHT", anchorTooltip, "TOPLEFT", -gap, 0)
+	else
+		compareTooltip:SetPoint("TOPLEFT", anchorTooltip, "TOPRIGHT", gap, 0)
+	end
+end
+
+local BuildVisibleCompareTooltipList = function(tooltip)
+	local compareTooltips = {}
+	for _, compareTooltip in ipairs(GetCompareTooltips(tooltip)) do
+		if (compareTooltip and compareTooltip:IsShown() and (not compareTooltip:IsForbidden())) then
+			compareTooltips[#compareTooltips + 1] = compareTooltip
+		end
+	end
+	return compareTooltips
+end
+
+local AnchorCompareTooltipStack = function(compareTooltips, anchorTooltip, side, gap)
+	local currentAnchor = anchorTooltip
+	for _, compareTooltip in ipairs(compareTooltips) do
+		AnchorCompareTooltip(compareTooltip, currentAnchor, side, gap)
+		currentAnchor = compareTooltip
+	end
+end
+
+local IsCompareTooltipStackOnScreen = function(compareTooltips)
+	local maxRight = ns.GetSafeWidth and ns.GetSafeWidth(UIParent)
+	if (type(maxRight) ~= "number" or maxRight <= 0) then
+		return true
+	end
+
+	for _, compareTooltip in ipairs(compareTooltips) do
+		local left = compareTooltip.GetLeft and compareTooltip:GetLeft()
+		local right = compareTooltip.GetRight and compareTooltip:GetRight()
+		if (type(left) ~= "number" or type(right) ~= "number") then
+			return true
+		end
+		if (left < 0 or right > maxRight) then
+			return false
+		end
+	end
+
+	return true
+end
+
+Tooltips.LayoutCompareTooltips = function(self, tooltip)
+	if (self:IsDisabled()) then return end
+	if (not tooltip) or tooltip:IsForbidden() or (not tooltip:IsShown()) then return end
+
+	local primaryCenterX = GetSafeFrameCenterX(tooltip)
+	local screenCenterX = GetSafeFrameCenterX(UIParent)
+	local gap = GetCompareTooltipGap(self)
+	local compareTooltips = BuildVisibleCompareTooltipList(tooltip)
+	if (#compareTooltips == 0) then
+		return
+	end
+
+	local preferredSide
+	if (primaryCenterX and screenCenterX) then
+		preferredSide = (primaryCenterX > screenCenterX) and "LEFT" or "RIGHT"
+	else
+		preferredSide = "RIGHT"
+	end
+
+	AnchorCompareTooltipStack(compareTooltips, tooltip, preferredSide, gap)
+	if (not IsCompareTooltipStackOnScreen(compareTooltips)) then
+		local fallbackSide = (preferredSide == "LEFT") and "RIGHT" or "LEFT"
+		AnchorCompareTooltipStack(compareTooltips, tooltip, fallbackSide, gap)
+	end
+end
+
+Tooltips.HookCompareTooltipLayoutUpdates = function(self, tooltip)
+	if (not tooltip) or tooltip:IsForbidden() then return end
+	if (CompareLayoutHooked[tooltip]) then return end
+
+	tooltip:HookScript("OnShow", function(compareTooltip)
+		local owner = compareTooltip.GetOwner and compareTooltip:GetOwner()
+		if (owner and (owner == _G.GameTooltip or owner == _G.ItemRefTooltip)) then
+			Tooltips:LayoutCompareTooltips(owner)
+		end
+	end)
+
+	tooltip:HookScript("OnSizeChanged", function(compareTooltip)
+		local owner = compareTooltip.GetOwner and compareTooltip:GetOwner()
+		if (owner and (owner == _G.GameTooltip or owner == _G.ItemRefTooltip) and compareTooltip:IsShown()) then
+			Tooltips:LayoutCompareTooltips(owner)
+		end
+	end)
+
+	CompareLayoutHooked[tooltip] = true
+end
+
 Tooltips.OnCompareItemShow = function(self, tooltip)
 	if (self:IsDisabled()) then return end
 	if (not tooltip) or (tooltip:IsForbidden()) then return end
-	local frameLevel = GameTooltip:GetFrameLevel()
-	for i = 1, 2 do
-		local tooltip = _G["ShoppingTooltip"..i]
-		if (tooltip:IsShown()) then
-			if (frameLevel == tooltip:GetFrameLevel()) then
-				tooltip:SetFrameLevel(i+1)
+	local frameLevel = tooltip:GetFrameLevel()
+	for i, compareTooltip in ipairs(GetCompareTooltips(tooltip)) do
+		if (compareTooltip and compareTooltip:IsShown() and (not compareTooltip:IsForbidden())) then
+			self:HookCompareTooltipLayoutUpdates(compareTooltip)
+			if (compareTooltip:GetFrameLevel() <= frameLevel) then
+				compareTooltip:SetFrameLevel(frameLevel + i)
 			end
 		end
 	end
+	self:LayoutCompareTooltips(tooltip)
 end
 
 Tooltips.SetUnitAura = function(self, tooltip, unit, index, filter)
