@@ -215,26 +215,22 @@ if (tocversion >= 100205) or (tocversion >= 40400 and tocversion < 50000) then
 end
 
 -- WoW 12 compatibility: some third-party addons (Decursive among them)
--- still consume UnitDebuff tuple returns and may branch on values that now
--- arrive as secret booleans. Sanitize secret tuple fields to nil so callers
--- fail closed instead of erroring on boolean/arithmetic operations.
+-- still consume UnitDebuff tuple returns. Their secret-mode dispel logic
+-- relies on receiving secret dispel fields unchanged, but branching directly
+-- on a secret auraInstanceID can error. Only sanitize auraInstanceID.
 do
-	local unpack = table.unpack or unpack
+	local unpack = _G.unpack or (table and rawget(table, "unpack"))
 	local select = select
 	local issecretvalue = _G.issecretvalue
 
-	local function SanitizeTupleSecrets(...)
+	local function SanitizeAuraInstanceIDOnly(...)
 		local count = select("#", ...)
 		if (count == 0) then
 			return
 		end
 		local values = { ... }
-		if (issecretvalue) then
-			for i = 1, count do
-				if (issecretvalue(values[i])) then
-					values[i] = nil
-				end
-			end
+		if (issecretvalue and issecretvalue(values[11])) then
+			values[11] = nil
 		end
 		return unpack(values, 1, count)
 	end
@@ -250,7 +246,7 @@ do
 		end
 		_G[wrappedFlag] = true
 		_G[methodName] = function(...)
-			return SanitizeTupleSecrets(original(...))
+			return SanitizeAuraInstanceIDOnly(original(...))
 		end
 	end
 

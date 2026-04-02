@@ -223,7 +223,8 @@ local function updateAura(element, unit, data, position)
 		end
 
 		local applied = false
-		local durationObject = C_UnitAuras.GetAuraDuration(unit, data.auraInstanceID)
+		local _okDur, durationObject = pcall(C_UnitAuras.GetAuraDuration, unit, data.auraInstanceID)
+		if(not _okDur) then durationObject = nil end
 		if(durationObject and button.Cooldown.SetCooldownFromDurationObject) then
 			button.Cooldown:SetCooldownFromDurationObject(durationObject)
 			applied = true
@@ -243,7 +244,7 @@ local function updateAura(element, unit, data, position)
 	if(button.Overlay) then
 		if(element.showType or (data.isHarmfulAura and element.showDebuffType) or (not data.isHarmfulAura and element.showBuffType)) then
 			local color = C_UnitAuras.GetAuraDispelTypeColor(unit, data.auraInstanceID, element.dispelColorCurve)
-			button.Overlay:SetVertexColor(color:GetRGBA())
+			if(color) then button.Overlay:SetVertexColor(color:GetRGBA()) end
 			button.Overlay:Show()
 		else
 			button.Overlay:Hide()
@@ -262,8 +263,8 @@ local function updateAura(element, unit, data, position)
 	if(button.Count) then
 		local minCount = element.minCount or 2
 		local maxCount = element.maxCount or 999
-		local displayCount = C_UnitAuras.GetAuraApplicationDisplayCount(unit, data.auraInstanceID, minCount, maxCount)
-		local displayCountSafe = displayCount ~= nil
+		local _okCnt, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, data.auraInstanceID, minCount, maxCount)
+		local displayCountSafe = _okCnt and displayCount ~= nil
 		local wroteCount = false
 
 		if(displayCountSafe) then
@@ -332,7 +333,8 @@ end
 local function processData(element, unit, data, filter)
 	if(not data) then return end
 
-	data.isPlayerAura = not C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, data.auraInstanceID, filter .. '|PLAYER')
+	local _ok, _filtered = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, data.auraInstanceID, filter .. '|PLAYER')
+	data.isPlayerAura = _ok and not _filtered or false
 	data.isHarmfulAura = filter == 'HARMFUL' -- "isHarmful" is a secret, use a different name
 
 	--[[ Callback: Auras:PostProcessAuraData(unit, data, filter)
@@ -703,7 +705,8 @@ local function UpdateAuras(self, event, unit, updateInfo)
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
-					if(not C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, data.auraInstanceID, buffFilter)) then
+					local _okF, _filteredOut = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, data.auraInstanceID, buffFilter)
+					if(_okF and not _filteredOut) then
 						buffs.all[data.auraInstanceID] = processData(buffs, unit, data, buffFilter)
 
 						if((buffs.FilterAura or FilterAura) (buffs, unit, data, buffFilter)) then
@@ -818,7 +821,8 @@ local function UpdateAuras(self, event, unit, updateInfo)
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
-					if(not C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, data.auraInstanceID, debuffFilter)) then
+					local _okF, _filteredOut = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, data.auraInstanceID, debuffFilter)
+					if(_okF and not _filteredOut) then
 						debuffs.all[data.auraInstanceID] = processData(debuffs, unit, data, debuffFilter)
 
 						if((debuffs.FilterAura or FilterAura) (debuffs, unit, data, debuffFilter)) then

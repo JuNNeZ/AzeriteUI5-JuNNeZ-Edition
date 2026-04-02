@@ -179,47 +179,23 @@ end
 
 local GetAuraButtonData = function(unit, index, filter)
 	local auraData = GetAuraDataByIndexSafe(unit, index, filter)
-	local ok, tupleName, tupleIcon, tupleCount, _, tupleDuration, tupleExpirationTime, _, _, tupleSpellID = pcall(UnitAura, unit, index, filter)
-	if (not ok) then
-		tupleName = nil
+	if (not auraData) then
+		return nil
 	end
 
-	local auraInstanceID = GetSafeAuraField(auraData and auraData.auraInstanceID)
-	local auraDataByID
-	if (auraInstanceID) then
-		auraDataByID = GetAuraDataByAuraInstanceIDSafe(unit, auraInstanceID)
-	end
-	local name = GetSafeAuraField(tupleName)
-		or GetSafeAuraField(auraData and auraData.name)
-		or GetSafeAuraField(auraDataByID and auraDataByID.name)
-	local icon = GetSafeAuraField(tupleIcon)
-		or GetSafeAuraField(auraData and auraData.icon)
-		or GetSafeAuraField(auraDataByID and auraDataByID.icon)
-	local spellID = GetSafeAuraField(tupleSpellID)
-		or GetSafeAuraField(auraData and auraData.spellId)
-		or GetSafeAuraField(auraDataByID and auraDataByID.spellId)
-	local applications = GetSafeAuraField(tupleCount)
-	if (type(applications) ~= "number") then
-		applications = GetSafeAuraField(auraData and auraData.applications) or GetSafeAuraField(auraDataByID and auraDataByID.applications)
-	end
-	local duration = GetSafeAuraField(tupleDuration)
-	if (type(duration) ~= "number") then
-		duration = GetSafeAuraField(auraData and auraData.duration) or GetSafeAuraField(auraDataByID and auraDataByID.duration)
-	end
-	local expirationTime = GetSafeAuraField(tupleExpirationTime)
-	if (type(expirationTime) ~= "number") then
-		expirationTime = GetSafeAuraField(auraData and auraData.expirationTime) or GetSafeAuraField(auraDataByID and auraDataByID.expirationTime)
-	end
+	local auraInstanceID = GetSafeAuraField(auraData.auraInstanceID)
+	local name = GetSafeAuraField(auraData.name)
+	local icon = GetSafeAuraField(auraData.icon)
+	local spellID = GetSafeAuraField(auraData.spellId)
+	local applications = GetSafeAuraField(auraData.applications)
+	local duration = GetSafeAuraField(auraData.duration)
+	local expirationTime = GetSafeAuraField(auraData.expirationTime)
 
 	if ((not icon) and spellID and GetSpellTexture) then
 		local okTexture, spellTexture = pcall(GetSpellTexture, spellID)
 		if (okTexture and not (IsSecret and IsSecret(spellTexture))) then
 			icon = spellTexture
 		end
-	end
-
-	if (not auraData and not auraDataByID and not name and not icon and not spellID and not auraInstanceID) then
-		return nil
 	end
 
 	return {

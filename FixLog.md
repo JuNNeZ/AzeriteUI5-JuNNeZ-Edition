@@ -1,4 +1,40 @@
 
+## 2026-04-02 — Release 5.3.50-JuNNeZ
+
+- **[RELEASE] 5.3.50-JuNNeZ prep/finalization:**
+  - Version bumped in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
+  - `CHANGELOG.md` updated with delta-only player-facing entry titled **Obsidian Aura Shield**.
+  - Release bundles the WoW 12 aura hardening pass (`Libs/oUF/elements/auras.lua`, `Components/Auras/Auras.lua`), Decursive compatibility follow-up (`Core/Compatibility.lua`), and MapCanvas tooltip anchor guard (`Components/Misc/Tooltips.lua`).
+
+## 2026-04-03 — Aura system WoW 12 defensive hardening
+
+- **[HARDENING] oUF aura element — pcall around C_UnitAuras calls, nil guard on dispel color:**
+  - **Investigation basis:** `Docs/WoW12_Aura_Handling_Research.md` code audit identified 5 unguarded WoW 12 API calls in `Libs/oUF/elements/auras.lua` that could crash the entire aura element update.
+  - **Fix 1 — `processData`:** Wrapped `C_UnitAuras.IsAuraFilteredOutByInstanceID` (player-aura detection) in pcall. Crash here would have silently killed `processData` for all element paths (Auras, Buffs, Debuffs). Default `isPlayerAura = false` on error.
+  - **Fix 2 — `updateAura` GetAuraDuration:** Wrapped `C_UnitAuras.GetAuraDuration` in pcall. On failure, `durationObject = nil` so the fallback `SetCooldown` path fires.
+  - **Fix 3 — `updateAura` GetAuraDispelTypeColor:** Added `if(color) then` guard before `color:GetRGBA()`. Was a direct nil-crash for any aura with no dispel type when `showType`/`showDebuffType`/`showBuffType` was set.
+  - **Fix 4 — `updateAura` GetAuraApplicationDisplayCount:** Wrapped in pcall. `displayCountSafe` now requires `_okCnt and displayCount ~= nil` — the previous `~= nil` test alone was not reliable for secret values.
+  - **Fix 5 — Buffs incremental `addedAuras` loop:** Wrapped bare `IsAuraFilteredOutByInstanceID` in pcall. A throw here would have aborted processing of the entire UNIT_AURA delta, losing all new buff additions.
+  - **Fix 6 — Debuffs incremental `addedAuras` loop:** Same fix applied to the Debuffs element path.
+  - **File:** `Libs/oUF/elements/auras.lua`
+
+- **[CLEANUP] Auras.lua GetAuraButtonData — removed deprecated UnitAura call and redundant GetAuraDataByAuraInstanceID:**
+  - `GetAuraButtonData` was calling 3 APIs per button: `GetAuraDataByIndex`, the deprecated `UnitAura` (returns secrets for most fields in WoW 12), and a redundant `GetAuraDataByAuraInstanceID` (returns same data as GetAuraDataByIndex for the same slot). Priority was inverted: UnitAura tuple fields were preferred over C_UnitAuras struct fields.
+  - Removed `pcall(UnitAura, ...)` and all associated tuple variables and fallback chains.
+  - Removed `GetAuraDataByAuraInstanceIDSafe` call (no value when GetAuraDataByIndex has succeeded).
+  - Single data source is now `GetAuraDataByIndexSafe → auraData`. Early return nil if auraData is nil.
+  - `luac -p` clean on both files.
+  - **File:** `Components/Auras/Auras.lua`
+  - **Test:** `/buggrabber reset` → `/reload` → gain/lose buffs and debuffs in combat. Verify aura buttons show icons, stacks, timers, and dispel overlays correctly. No BugSack errors.
+
+## 2026-04-02 — MapCanvas SetDefaultAnchor guard
+
+- **[GUARD] Strengthen tooltip anchor guard for nil-named MapCanvas pins:**
+  - **Problem:** MapCanvas pool-allocated pins (e.g. `AreaPOIEventPinTemplate`) have no frame name — `GetName()` returns nil. The existing guard in `Tooltips.SetDefaultAnchor` only checked the frame name for "MapCanvas"/"WorldMap"/"AreaPOI", so nil-named pins bypassed it. This caused `tooltip:SetOwner(pin, "ANCHOR_NONE")` to fire for world quest AreaPOI pins when the user has tooltip anchoring enabled, incorrectly hijacking the tooltip anchor. (Not the cause of the C stack overflow reported 2026-04-02, which is a pure Blizzard/third-party issue.)
+  - **Fix:** Added an `owningMap`-field check before the name check. All MapCanvas-managed pins carry `pin.owningMap` regardless of their name. If the parent has `owningMap` set, `SetDefaultAnchor` returns early.
+  - **File:** `Components/Misc/Tooltips.lua`
+  - **Test:** Hover over a world quest AreaPOI pin on the WorldMapFrame. Tooltip should anchor/display normally without AzeriteUI repositioning it.
+
 ## 2026-04-02 — Release 5.3.49-JuNNeZ
 
 - **[RELEASE] 5.3.49-JuNNeZ prep/finalization:**
@@ -7,6 +43,16 @@
   - Two WoW 12 secret-value fixes included: `Core/Compatibility.lua` (Decursive UnitDebuff tuple) and `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` (target aura cooldown overlay).
 
 ## 2026-04-02
+
+- **[FIX] Decursive dispel detection regression follow-up (combat-time classification restored):**
+  - **Problem:** After the first Decursive crash guard landed, Decursive stopped detecting dispellable debuffs in combat and only started showing them later (often after combat).
+  - **Root cause:** The WoW 12 `UnitDebuff` compatibility wrapper in `Core/Compatibility.lua` sanitized **all** secret tuple fields. Decursive depends on secret-aware tuple behavior (`TypeName`/secretMode path + curve color inference flow) for in-combat dispel classification. Over-sanitizing removed the data shape Decursive uses to classify curables.
+  - **Fix:** Narrowed the wrapper to sanitize only tuple slot 11 (`auraInstanceID`) when secret, preserving all other tuple values unchanged. This keeps the original crash fix (no secret boolean test on auraInstanceID) while restoring Decursive's dispel detection logic.
+  - **Research doc:** `Docs/Decursive Aura Compatibility Research.md` captures evidence, API notes, root-cause chain, and `/reload` validation loop.
+  - **Files touched:**
+    - `Core/Compatibility.lua` — replaced broad secret tuple sanitizer with auraInstanceID-only sanitizer.
+    - `Docs/Decursive Aura Compatibility Research.md` — added full investigation and fix design notes.
+  - **Verification:** `luac -p Core/Compatibility.lua` pending locally. In-game: `/buggrabber reset` -> `/reload` -> reproduce curable debuffs in combat -> verify immediate Decursive detection and no `Decursive.lua:555` secret-boolean stack.
 
 - **[FIX] Decursive aura scan compatibility (WoW 12 secret tuple):**
   - **Problem:** BugSack reported `Decursive.lua:555` (`GetUnitDebuffAll`) with `attempt to perform boolean test on upvalue 'auraInstanceID' (a secret boolean value ...)` while Decursive scanned unit debuffs.

@@ -5,6 +5,28 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.50-JuNNeZ (2026-04-02) — Obsidian Aura Shield
+
+### Highlights
+
+- Hardened WoW 12 aura processing to prevent edge-case script breaks under heavy aura churn. Multiple `C_UnitAuras` calls in the oUF aura element are now fail-closed with guarded fallbacks, so a single bad payload no longer interrupts the entire update pass.
+- Improved aura button data reliability by removing deprecated `UnitAura` tuple dependency in the aura component and using a single modern `C_UnitAuras` data source path per slot.
+- Restored Decursive in-combat dispel detection behavior while keeping the WoW 12 crash guard: only secret `auraInstanceID` is sanitized in the `UnitDebuff` compatibility wrapper, preserving required tuple semantics for third-party scanners.
+- Fixed tooltip anchor hijack on nil-named world map pins by adding a MapCanvas ownership guard (`owningMap`) before custom anchor handling.
+
+### Access
+
+- Aura stability verification: `/buggrabber reset` -> `/reload` -> apply/remove buffs and debuffs rapidly (solo + combat) and confirm no new aura-element stack errors.
+- World map tooltip verification: enable tooltip anchoring in `/az` settings, hover world quest/AreaPOI map pins, and verify anchor behavior remains Blizzard-normal.
+
+### Internal
+
+- `Libs/oUF/elements/auras.lua`: wrapped high-risk `C_UnitAuras` calls with guarded fallbacks and added nil-safe dispel color handling.
+- `Components/Auras/Auras.lua`: simplified `GetAuraButtonData` to modern `GetAuraDataByIndexSafe`-first flow; removed deprecated tuple path and redundant lookup.
+- `Core/Compatibility.lua`: narrowed `UnitDebuff` sanitizer to secret `auraInstanceID` slot only.
+- `Components/Misc/Tooltips.lua`: added `parent.owningMap` early-return guard in `SetDefaultAnchor`.
+
+
 ## 5.3.49-JuNNeZ (2026-04-02)
 
 ### Highlights

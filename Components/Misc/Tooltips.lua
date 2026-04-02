@@ -910,6 +910,7 @@ Tooltips.SetDefaultAnchor = function(self, tooltip, parent)
 	if (not tooltip) or (tooltip:IsForbidden()) then return end
 	if (not self.db.profile.anchor) then return end
 	if (parent and type(parent.IsForbidden) == "function" and parent:IsForbidden()) then return end
+	if (parent and parent.owningMap) then return end -- MapCanvas pool pins (nil-named) always carry owningMap
 	if (parent and parent.GetName) then
 		local parentName = parent:GetName()
 		if (parentName and (string_find(parentName, "MapCanvas") or string_find(parentName, "WorldMap") or string_find(parentName, "AreaPOI"))) then
