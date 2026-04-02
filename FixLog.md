@@ -1,4 +1,32 @@
 
+## 2026-04-02 — Release 5.3.49-JuNNeZ
+
+- **[RELEASE] 5.3.49-JuNNeZ prep/finalization:**
+  - Version bumped in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
+  - `CHANGELOG.md` updated with delta-only player-facing entry.
+  - Two WoW 12 secret-value fixes included: `Core/Compatibility.lua` (Decursive UnitDebuff tuple) and `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` (target aura cooldown overlay).
+
+## 2026-04-02
+
+- **[FIX] Decursive aura scan compatibility (WoW 12 secret tuple):**
+  - **Problem:** BugSack reported `Decursive.lua:555` (`GetUnitDebuffAll`) with `attempt to perform boolean test on upvalue 'auraInstanceID' (a secret boolean value ...)` while Decursive scanned unit debuffs.
+  - **Root cause:** Decursive consumes legacy `UnitDebuff(...)` tuple returns and then branches on the 11th return as `auraInstanceID`. On WoW 12 this slot can arrive as a secret boolean for some aura payloads, and direct boolean tests/arithmetic on secret values error.
+  - **Fix:** Added a narrow WoW 12 wrapper in `Core/Compatibility.lua` that sanitizes secret values in global `UnitDebuff` tuple returns to `nil` (fail-closed), preventing third-party callers from hard-erroring on secret booleans. This does **not** rewrite `C_UnitAuras` APIs.
+  - **Files touched:**
+    - `Core/Compatibility.lua` — added `UnitDebuff` secret-tuple sanitizer wrapper for WoW 12.
+  - **Verification:** `luac -p Core/Compatibility.lua` pending locally. In-game: `/buggrabber reset` -> `/reload` -> reproduce Decursive scan/update path (open Decursive MUF + force debuff scan) -> verify no new `Decursive.lua:555` secret-boolean error.
+
+- **[FIX] Action-button target aura cooldown secret-value follow-up:**
+  - **Problem:** BugSack reported `Blizzard_ActionBar/Shared/ActionButton.lua:847` from the embedded `LibActionButton` target-aura overlay path when `button.AuraCooldown:SetCooldown(start, duration, 1)` forwarded WoW 12 secret aura timing values into Blizzard cooldown code.
+  - **Root cause:** `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` still unpacked raw aura `duration`/`expiration` and sent them straight to a Blizzard `Cooldown` widget for target aura overlays, instead of using the safer duration-object API already used elsewhere in AzeriteUI.
+  - **Fix:** Hardened the target-aura cooldown helper to:
+    - prefer `C_UnitAuras.GetAuraDuration("target", auraInstanceID)` + `SetCooldownFromDurationObject(...)` when available
+    - keep plain numeric fallback only when `duration`, `expiration`, and derived `start` are confirmed non-secret numbers
+    - skip the overlay update entirely when timing data is secret/unreadable, failing closed instead of throwing
+  - **Files touched:**
+    - `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` — secret-safe target aura cooldown handling for `button.AuraCooldown`
+  - **Verification:** `luac -p 'Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua'` pending locally. In-game: `/buggrabber reset` -> `/reload` -> reproduce the flyout/target-aura overlay case that previously threw `ActionButton.lua:847` -> verify no new AzeriteUI cooldown error. BugSack Error 2 (Decursive) and Error 3 (Zygor tooltip money) remain third-party addon issues outside this patch.
+
 ## 2026-04-01
 
 - **[RELEASE] 5.3.48-JuNNeZ prep/finalization:**

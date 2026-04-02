@@ -5,6 +5,19 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.49-JuNNeZ (2026-04-02)
+
+### Highlights
+
+- Fixed a WoW 12 error from Decursive's aura scan (`GetUnitDebuffAll`) where secret boolean values returned by `UnitDebuff` caused hard Lua errors. A narrow sanitizer in the compatibility layer now converts secret tuple slots to `nil` before they reach third-party code.
+- Fixed a WoW 12 error in LibActionButton's target-aura cooldown overlay where secret aura timing values were forwarded directly to Blizzard's `Cooldown:SetCooldown`. The overlay now prefers the duration-object API when available and skips the update entirely when timing data is unreadable.
+
+### Internal
+
+- `Core/Compatibility.lua`: added `UnitDebuff` secret-tuple sanitizer wrapper for WoW 12 (wraps once, fails closed, leaves `C_UnitAuras` APIs untouched).
+- `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`: hardened target-aura cooldown helper to prefer `C_UnitAuras.GetAuraDuration` + `SetCooldownFromDurationObject` when available; plain numeric fallback only when values are confirmed non-secret; skips overlay update when timing is secret.
+
+
 ## 5.3.48-JuNNeZ (2026-04-01)
 
 ### Highlights

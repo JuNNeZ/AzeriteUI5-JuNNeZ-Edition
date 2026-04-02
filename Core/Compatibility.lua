@@ -214,6 +214,51 @@ if (tocversion >= 100205) or (tocversion >= 40400 and tocversion < 50000) then
 	end
 end
 
+-- WoW 12 compatibility: some third-party addons (Decursive among them)
+-- still consume UnitDebuff tuple returns and may branch on values that now
+-- arrive as secret booleans. Sanitize secret tuple fields to nil so callers
+-- fail closed instead of erroring on boolean/arithmetic operations.
+do
+	local unpack = table.unpack or unpack
+	local select = select
+	local issecretvalue = _G.issecretvalue
+
+	local function SanitizeTupleSecrets(...)
+		local count = select("#", ...)
+		if (count == 0) then
+			return
+		end
+		local values = { ... }
+		if (issecretvalue) then
+			for i = 1, count do
+				if (issecretvalue(values[i])) then
+					values[i] = nil
+				end
+			end
+		end
+		return unpack(values, 1, count)
+	end
+
+	local function WrapLegacyAuraTuple(methodName)
+		local original = _G[methodName]
+		if (type(original) ~= "function") then
+			return
+		end
+		local wrappedFlag = "__AzUI_W12_" .. methodName .. "SecretTupleWrapped"
+		if (_G[wrappedFlag]) then
+			return
+		end
+		_G[wrappedFlag] = true
+		_G[methodName] = function(...)
+			return SanitizeTupleSecrets(original(...))
+		end
+	end
+
+	if (tocversion >= 120000) then
+		WrapLegacyAuraTuple("UnitDebuff")
+	end
+end
+
 -- Deprecated in 10.x.x, removed in 11.0.0
 if (tocversion >= 110000) then
 	for method,func in next, {

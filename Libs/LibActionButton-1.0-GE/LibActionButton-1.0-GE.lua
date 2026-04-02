@@ -38,6 +38,7 @@ local GetSpellLossOfControlCooldown = C_Spell.GetSpellLossOfControlCooldown or G
 local CopyTable = CopyTable
 local UnitIsFriend = UnitIsFriend
 local UnpackAuraData = AuraUtil.UnpackAuraData
+local GetAuraDuration = C_UnitAuras.GetAuraDuration
 local GetAuraDataBySpellName = C_UnitAuras.GetAuraDataBySpellName
 local GetAuraDataByAuraInstanceID = C_UnitAuras.GetAuraDataByAuraInstanceID
 local GetPlayerAuraBySpellID = C_UnitAuras.GetPlayerAuraBySpellID
@@ -1988,6 +1989,17 @@ do
 	local current = {}
 	local auraInstances = {}
 
+		local function GetAuraDurationObjectSafe(unit, auraInstanceID)
+			if not GetAuraDuration or not unit or not IsSafeNumber(auraInstanceID) then
+				return nil
+			end
+
+			local ok, durationObject = pcall(GetAuraDuration, unit, auraInstanceID)
+			if ok and durationObject and not (issecretvalue and issecretvalue(durationObject)) then
+				return durationObject
+			end
+		end
+
 	local function CheckIsMine(sourceUnit)
 		return sourceUnit == 'player' or sourceUnit == 'pet' or sourceUnit == 'vehicle'
 	end
@@ -2006,7 +2018,15 @@ do
 		if not aura then return end
 
 		local _, _, _, _, duration, expiration = UnpackAuraData(aura)
-		local start = (duration and duration > 0) and (expiration - duration)
+			if not IsSafeNumber(duration) or duration <= 0 or not IsSafeNumber(expiration) then
+				return nil, nil, nil
+			end
+
+			local start = expiration - duration
+			if not IsSafeNumber(start) then
+				return nil, nil, nil
+			end
+
 		return start, duration, expiration
 	end
 
@@ -2026,12 +2046,21 @@ do
 		local isMine = CheckIsMine(aura.sourceUnit)
 		if not isMine then return end
 
-		local start, duration = GetTargetAuraCooldown(aura)
-		if not start then return end
+			local start, duration, expiration = GetTargetAuraCooldown(aura)
+			local durationObject = GetAuraDurationObjectSafe('target', aura.auraInstanceID)
+			if not durationObject and not start then return end
 
 		for _, button in next, buttons do
 			if not HasActiveCooldown(button) then
-				button.AuraCooldown:SetCooldown(start, duration, 1)
+					if button.AuraCooldown.SetAuraFallbackData and expiration and duration then
+						button.AuraCooldown:SetAuraFallbackData(expiration, duration)
+					end
+
+					if durationObject and button.AuraCooldown.SetCooldownFromDurationObject then
+						button.AuraCooldown:SetCooldownFromDurationObject(durationObject)
+					elseif start and duration then
+						button.AuraCooldown:SetCooldown(start, duration, 1)
+					end
 
 				current[button] = true
 
