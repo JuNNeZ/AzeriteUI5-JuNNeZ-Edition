@@ -5,6 +5,24 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.53-JuNNeZ (2026-04-03) — The Decursive Compability Anomaly
+
+### Highlights
+
+- Fixed the WoW 12 compatibility path for Decursive so in-combat dispellable detection no longer degrades into false-positive non-dispellable classifications.
+- Reworked legacy `UnitDebuff` combat sourcing to prefer Blizzard filtered aura query paths first, with guarded fallback behavior only when those APIs are unavailable.
+- Removed addon-side dispel-type coercion experiments from the final runtime path and kept a strict pass-through tuple contract with WoW 12 safety guards.
+
+### Access
+
+- No new settings required. Reload UI and test Decursive dispel detection in combat (`/reload`).
+
+### Internal
+
+- `Core/Compatibility.lua`: finalized WoW 12 Decursive compatibility flow around `UnitDebuff` sourcing, slot-11 `auraInstanceID` tuple compatibility, and guarded fallback behavior.
+- `FixLog.md` + `Docs/Decursive Aura Compatibility Research.md`: recorded full anomaly timeline, failed branches, and final resolved path.
+
+
 ## 5.3.52-JuNNeZ (2026-04-02) — Obsidian Tooltip Spacing
 
 ### Highlights

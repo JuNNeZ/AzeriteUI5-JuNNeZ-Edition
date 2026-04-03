@@ -111,6 +111,7 @@ end
 -- GuardAuraUtilUnpack wrapper rejects auras with secret fields.
 do
 	local issecretvalue = _G.issecretvalue
+	local canaccessvalue = _G.canaccessvalue
 	local select = _G.select
 	local Pack = function(...)
 		return { n = select("#", ...), ... }
@@ -158,6 +159,110 @@ do
 	end
 end
 
+do
+	local issecretvalue = _G.issecretvalue
+	local canaccessvalue = _G.canaccessvalue
+	local UnitCanAssist = _G.UnitCanAssist
+	local InCombatLockdown = _G.InCombatLockdown
+	local UnitAuras = _G.C_UnitAuras
+
+	local function IsReadableValue(value)
+		if (issecretvalue and issecretvalue(value)) then
+			return false
+		end
+		if (canaccessvalue and not canaccessvalue(value)) then
+			return false
+		end
+		return true
+	end
+
+	ns.GetLegacyUnitDebuffFilter = function(unitToken, filter)
+		if (tocversion < 120000 or filter ~= nil or not UnitCanAssist or type(unitToken) ~= "string") then
+			return filter
+		end
+		local ok, canAssist = pcall(UnitCanAssist, "player", unitToken)
+		if (ok and type(canAssist) == "boolean" and IsReadableValue(canAssist) and canAssist) then
+			if (InCombatLockdown and InCombatLockdown()) then
+				-- Last known-good combat behavior: no filter. Direct RAID_PLAYER_DISPELLABLE
+				-- can return zero on secret dispel fields during combat.
+				return filter
+			end
+			return "RAID_PLAYER_DISPELLABLE"
+		end
+		return filter
+	end
+
+	ns.ShouldUseCombatFriendlyDispellableList = function(unitToken, filter)
+		if (tocversion < 120000 or filter ~= nil or type(unitToken) ~= "string") then
+			return false
+		end
+		if (not (InCombatLockdown and InCombatLockdown())) then
+			return false
+		end
+		if (not UnitCanAssist) then
+			return false
+		end
+		local ok, canAssist = pcall(UnitCanAssist, "player", unitToken)
+		return ok and type(canAssist) == "boolean" and IsReadableValue(canAssist) and canAssist and true or false
+	end
+
+	ns.GetCombatFriendlyDispellableDebuffByIndex = function(unitToken, index)
+		if (not UnitAuras or not UnitAuras.GetUnitAuraInstanceIDs or not UnitAuras.GetAuraDataByAuraInstanceID) then
+			return nil, false
+		end
+		if (type(index) ~= "number" or index < 1) then
+			return nil, true
+		end
+
+		local attemptedFilteredQuery = false
+
+		local function TryGetAuraDataList(auraFilter)
+			if (not UnitAuras.GetUnitAuras) then
+				return nil
+			end
+			local okAuras, auraList = pcall(UnitAuras.GetUnitAuras, unitToken, auraFilter)
+			if (okAuras and type(auraList) == "table") then
+				attemptedFilteredQuery = true
+				return auraList
+			end
+			return nil
+		end
+
+		local function TryGetInstanceIDs(auraFilter)
+			local okIDs, auraInstanceIDs = pcall(UnitAuras.GetUnitAuraInstanceIDs, unitToken, auraFilter)
+			if (okIDs and type(auraInstanceIDs) == "table") then
+				attemptedFilteredQuery = true
+				return auraInstanceIDs
+			end
+			return nil
+		end
+
+		local auraDataList = TryGetAuraDataList("HARMFUL|RAID_PLAYER_DISPELLABLE") or TryGetAuraDataList("RAID_PLAYER_DISPELLABLE")
+		if (type(auraDataList) == "table") then
+			local auraData = auraDataList[index]
+			if (type(auraData) == "table") then
+				return auraData, true
+			end
+			-- Filtered query succeeded and reported no Nth aura; keep this authoritative.
+			return nil, true
+		end
+
+		local auraInstanceIDs = TryGetInstanceIDs("HARMFUL|RAID_PLAYER_DISPELLABLE") or TryGetInstanceIDs("RAID_PLAYER_DISPELLABLE")
+		if (type(auraInstanceIDs) ~= "table") then
+			return nil, attemptedFilteredQuery and true or false
+		end
+		local auraInstanceID = auraInstanceIDs[index]
+		if (type(auraInstanceID) ~= "number") then
+			return nil, true
+		end
+		local okAura, auraData = pcall(UnitAuras.GetAuraDataByAuraInstanceID, unitToken, auraInstanceID)
+		if (okAura and auraData) then
+			return auraData, true
+		end
+		return nil, false
+	end
+end
+
 -- Deprecated in 10.2.5
 if (tocversion >= 100205) or (tocversion >= 40400 and tocversion < 50000) then
 	for method,func in next,{
@@ -197,8 +302,22 @@ if (tocversion >= 100205) or (tocversion >= 40400 and tocversion < 50000) then
 			return ns.SafeUnpackAuraData(auraData)
 		end,
 		UnitDebuff = function(unitToken, index, filter)
-			local auraData = C_UnitAuras.GetDebuffDataByIndex(unitToken, index, filter)
+			local legacyFilter = ns.GetLegacyUnitDebuffFilter(unitToken, filter)
+			local auraData
+			local handledCombatFilteredQuery = false
+			if (ns.ShouldUseCombatFriendlyDispellableList(unitToken, filter)) then
+				auraData, handledCombatFilteredQuery = ns.GetCombatFriendlyDispellableDebuffByIndex(unitToken, index)
+			end
+			if (not auraData and not handledCombatFilteredQuery) then
+				auraData = C_UnitAuras.GetDebuffDataByIndex(unitToken, index, legacyFilter)
+			end
 			if not auraData then return nil end
+			if (tocversion >= 120000) then
+				local name, icon, applications, dispelName, duration, expirationTime,
+					sourceUnit, isStealable, nameplateShowPersonal, spellID = ns.SafeUnpackAuraData(auraData)
+				return name, icon, applications, dispelName, duration, expirationTime,
+					sourceUnit, isStealable, nameplateShowPersonal, spellID, auraData.auraInstanceID
+			end
 			return ns.SafeUnpackAuraData(auraData)
 		end,
 		UnitAuraBySlot = function(unitToken, index)

@@ -6,6 +6,37 @@
   - `CHANGELOG.md` updated with delta-only player-facing tooltip compare-spacing entry.
   - Release includes tooltip compare-layout hardening and managed-tooltip skin-path guard updates in `Components/Misc/Tooltips.lua`.
 
+- **[FOLLOW-UP HOTFIX] Compare-tooltip edge bounds check secret-value guard:**
+  - **Bug:** BugSack reported `Components/Misc/Tooltips.lua:952` (`attempt to compare local 'left' (a secret number value tainted by AzeriteUI5_JuNNeZ_Edition)`) from `IsCompareTooltipStackOnScreen(...)` while evaluating compare tooltip on-screen bounds.
+  - **Root cause:** The new compare-layout fallback still read `compareTooltip:GetLeft()/GetRight()` and then performed numeric `<`/`>` comparisons directly. On WoW 12 these edge values can be secret-tainted during tooltip layout churn.
+  - **Fix:** Switched compare edge reads to `ns.GetSafeGeometryValue(...)` when available, with explicit secret-value rejection fallback path. If bounds are unreadable, fail open (`true`) and skip side-flip logic instead of hard erroring.
+  - **File:** `Components/Misc/Tooltips.lua`
+
+- **[FOLLOW-UP HOTFIX] Compare tooltips intermittently collapsing onto each other:**
+  - **Bug:** User screenshot showed `ShoppingTooltip1/2` occasionally stacked at the same anchor despite initial compare layout pass.
+  - **Likely cause:** Blizzard can still adjust compare tooltip points after initial `GameTooltip_ShowCompareItem` flow (content growth/reflow), causing later overlap.
+  - **Fixes:**
+    - Added deferred next-frame compare relayout queue (`C_Timer.After(0, ...)`) to reapply spacing after Blizzard's late geometry updates.
+    - Hooked compare tooltip `OnShow` and `OnSizeChanged` to queue relayout instead of trusting immediate owner-based pass.
+    - Added safety guard in compare list builder to never include the primary tooltip itself, preventing self-anchor collapse edge cases.
+  - **File:** `Components/Misc/Tooltips.lua`
+
+- **[FOLLOW-UP HOTFIX] Flyout button cooldown secret-value crash:**
+  - **Bug:** BugSack reported `Blizzard_ActionBar/Shared/ActionButton.lua:847` from `ActionButton_ApplyCooldown` on `LABFlyoutButton1Cooldown`, with secret cooldown duration/start values reaching Blizzard cooldown code.
+  - **Root cause:** `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` only used duration-object cooldown APIs for `_state_type == "action"`. Flyout spell buttons and other non-action buttons could still fall back to `ActionButton_ApplyCooldown(...)` with secret-tainted numeric cooldown tables.
+  - **Fix:** Sanitized fallback `cooldownInfo`, `chargeInfo`, and `lossOfControlInfo` tables before `ActionButton_ApplyCooldown(...)`. Any unreadable/secret numeric values now fail closed to zero instead of being forwarded into Blizzard APIs.
+  - **File:** `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+
+- **[FOLLOW-UP HOTFIX] Exclude dropdown menu backdrops from tooltip skin classification:**
+  - **Issue:** Dungeon-area dropdown/menu backdrops could be misclassified as tooltip frames and end up with AzeriteUI tooltip styling, producing malformed menu visuals.
+  - **Fix:** Added explicit name-based exclusions for `DropDownList*`, `L_DropDownList*`, and dropdown `MenuBackdrop`/backdrop frames in tooltip management classification.
+  - **File:** `Components/Misc/Tooltips.lua`
+
+- **[FOLLOW-UP HOTFIX] Prefer taller compare tooltips over horizontal overlap:**
+  - **Issue:** Even with improved compare anchoring, some item hovers still produced visual stacking/overlap when compare tooltips expanded too wide for the available side space.
+  - **Fix:** Added a compare-only width clamp that measures available horizontal space on the selected side of the primary tooltip and wraps compare-tooltip text earlier when needed, allowing the tooltip to grow taller instead of colliding horizontally. Includes reset handling when full width is available again.
+  - **File:** `Components/Misc/Tooltips.lua`
+
 ## 2026-04-02 — Tooltip compare spacing + skin-path guard
 
 - **[FIX] Compare tooltip overlap with AzeriteUI skins:**
@@ -54,6 +85,160 @@
     - After combat: 10 auras resolved (Avenging Wrath, Voidlust, Might of the Void, Hammer of Light, etc.) all vertex 1 1 1 1 ✓
     - All auras remained bright throughout transition cycle. Issue resolved.
   - **File:** `Components/UnitFrames/Auras/AuraStyling.lua` (line 250)
+
+## 2026-04-03 — The Decursive Compability Anomaly (Final Fix)
+
+- **[FINAL] Decursive compatibility anomaly resolved for WoW 12 combat scans:**
+  - Finalized the `Core/Compatibility.lua` runtime path to retain strict legacy tuple semantics while sourcing combat dispellable data from Blizzard-filtered query paths first.
+  - Kept slot-11 (`auraInstanceID`) compatibility and secret-value safety guardrails; removed unstable addon-side type coercion from final runtime behavior.
+  - Maintained guarded fallback only when filtered APIs are unavailable/error to avoid both zero-detection regressions and non-dispellable leakage.
+  - Release target: `5.3.53-JuNNeZ`.
+  - **Files:** `Core/Compatibility.lua`, `Docs/Decursive Aura Compatibility Research.md`, `CHANGELOG.md`, release metadata files.
+
+## 2026-04-03 — Decursive compatibility Step 2.3 (GetUnitAuras filtered source)
+
+- **[FOLLOW-UP] Non-dispellable leakage persisted while poison worked:**
+  - **Root cause hypothesis:** Empty/weak instanceID filtered path still allowed too much legacy fallback, reintroducing non-dispellable combat auras.
+  - **Fix:** Strengthened combat filtered source selection in `ns.GetCombatFriendlyDispellableDebuffByIndex(...)`:
+    - Query `C_UnitAuras.GetUnitAuras(unit, "HARMFUL|RAID_PLAYER_DISPELLABLE")` first, then `"RAID_PLAYER_DISPELLABLE"`.
+    - If this filtered list query succeeds, treat empty/Nth-miss as authoritative (`handled=true`) to prevent fallback leakage.
+    - Keep instanceID query as secondary source (`GetUnitAuraInstanceIDs` + `GetAuraDataByAuraInstanceID`).
+    - Fall back to legacy path only when filtered APIs are unavailable/errored.
+  - **Result target:** preserve combat poison detection while blocking non-dispellable false positives from unfiltered fallback.
+  - **File:** `Core/Compatibility.lua`
+
+## 2026-04-03 — Decursive compatibility Step 2.2 regression fix (non-empty filtered gate)
+
+- **[REGRESSION FIX] Combat detection collapsed to zero after Step 2.1 lock:**
+  - **Symptom:** "Doesn't detect anything now; only poison out of combat."
+  - **Root cause:** Step 2.1 treated filtered instanceID query as authoritative even when it returned no usable IDs, blocking legacy fallback and causing zero in-combat detection.
+  - **Fix:** In `ns.GetCombatFriendlyDispellableDebuffByIndex(...)`:
+    - Try `GetUnitAuraInstanceIDs` with `"HARMFUL|RAID_PLAYER_DISPELLABLE"`, then `"RAID_PLAYER_DISPELLABLE"`.
+    - If result table is empty (`next(...) == nil`), return `handled=false` so caller falls back to legacy path.
+    - Keep filtered path authoritative only when usable IDs are present.
+  - **Result target:** Restore in-combat detection reliability while still preferring filtered instanceID data when available.
+  - **File:** `Core/Compatibility.lua`
+
+## 2026-04-03 — Decursive compatibility Step 2.1 hardening (filtered query lock)
+
+- **[HARDENING] Keep combat filtered path from silently falling back to unfiltered data:**
+  - **Context:** Step 2 restored expected behavior in test (`poison works`, `non-dispellable does not`).
+  - **Risk:** Previous fallback logic could still drop into unfiltered `GetDebuffDataByIndex(...)` whenever the filtered query returned nil, including normal "index out of filtered range" cases.
+  - **Fix:** `ns.GetCombatFriendlyDispellableDebuffByIndex(...)` now returns `(auraData, handled)`:
+    - `handled=true` when filtered path executed successfully (even if auraData is nil for out-of-range index).
+    - `handled=false` only when filtered API path is unavailable/errored.
+  - `UnitDebuff(...)` now falls back to legacy index path only when `handled=false`.
+  - **Result target:** Lock in filtered combat semantics and avoid reintroducing non-dispellable false positives via accidental fallback.
+  - **File:** `Core/Compatibility.lua`
+
+## 2026-04-03 — Decursive compatibility Step 2 (combat instanceID dispellable list)
+
+- **[PLAN STEP 2 IMPLEMENTED] Combat filtering source switch without type rewriting:**
+  - **Problem after Step 1:** In combat, poison detection worked but wrong magic/curses still appeared as dispellable due to nil-filter fallback.
+  - **Change:** Added combat-friendly implicit scan path in `Core/Compatibility.lua` that queries Blizzard's instanceID filter list first:
+    - `ns.ShouldUseCombatFriendlyDispellableList(unitToken, filter)` selects only WoW12 + combat + implicit filter + friendly unit scans.
+    - `ns.GetCombatFriendlyDispellableDebuffByIndex(unitToken, index)` uses `C_UnitAuras.GetUnitAuraInstanceIDs(unit, "RAID_PLAYER_DISPELLABLE")` and resolves Nth result through `GetAuraDataByAuraInstanceID`.
+    - `UnitDebuff(...)` now uses this path first, and falls back to `GetDebuffDataByIndex(..., legacyFilter)` only if unavailable.
+  - **Important:** No dispel-type cache or rewrite was reintroduced; this remains pass-through tuple semantics.
+  - **Result target:** Keep in-combat poison detection while reducing false dispellable classification of non-dispellable magic/curses.
+  - **File:** `Core/Compatibility.lua`
+
+## 2026-04-03 — Decursive compatibility Step 1 baseline (pass-through dispel semantics)
+
+- **[PLAN STEP 1 IMPLEMENTED] Remove AzeriteUI dispel-type rewriting from compatibility layer:**
+  - **Goal:** Return to a strict baseline that preserves legacy `UnitDebuff` tuple semantics for Decursive and avoids addon-side dispel-type inference in combat.
+  - **Change:** Removed `ns.ResolveReadableDispelName(...)` cache/rewrite path from `Core/Compatibility.lua`.
+  - **Kept intact:**
+    - WoW12 tuple-slot correction (`UnitDebuff` slot 11 = `auraInstanceID`).
+    - slot-11 secret sanitization wrapper (`SanitizeAuraInstanceIDOnly`).
+    - legacy filter policy (`RAID_PLAYER_DISPELLABLE` out of combat, nil in combat).
+  - **Result target:** Eliminate AzeriteUI-origin type coercion side-effects and establish a clean baseline for follow-up steps.
+  - **File:** `Core/Compatibility.lua`
+
+## 2026-04-03 — Decursive combat type fallback improvement (aura-name cache)
+
+- **[FOLLOW-UP] Combat poison detected, but magic/curse typed wrong until leaving combat:**
+  - **Observation:** After reverting to known-good combat detection path, in-combat detection returned, but some debuffs still resolved to wrong type until out of combat.
+  - **Root cause:** Existing fallback cache was keyed only by `spellID`. On WoW 12, `spellID` can be secret/unreadable in combat, so cache lookup is unavailable exactly when needed.
+  - **Fix:** Added secondary best-effort cache in `Core/Compatibility.lua`:
+    - `dispelTypeNameCache[auraName] = dispelName` when both are readable.
+    - `ns.ResolveReadableDispelName(...)` now accepts `auraName` and falls back to name-key cache when spellID-key lookup cannot be used.
+  - **Result target:** Reduce in-combat type confusion for auras with readable names even when `spellID` is secret.
+  - **Boundary:** name-based keying is fallback-only and may not cover every aura context.
+  - **File:** `Core/Compatibility.lua`
+
+## 2026-04-03 — Decursive combat sentinel rollback to known-good detection path
+
+- **[ROLLBACK] In-combat debuff detection reliability regression:**
+  - **Bug:** Combat poison detection still failed after sentinel-based `IsAuraFilteredOutByInstanceID` emulation and fail-open fallback.
+  - **Decision:** Restore the last repeatedly verified working behavior for combat scans.
+  - **Change:** Removed combat sentinel handling path and switched back to direct legacy behavior:
+    - `UnitDebuff(...)` now always reads aura data with `C_UnitAuras.GetDebuffDataByIndex(...)` using `ns.GetLegacyUnitDebuffFilter(...)` output.
+    - `ns.GetLegacyUnitDebuffFilter(...)` now returns nil in combat for friendly implicit scans (instead of sentinel token).
+  - **Result target:** Restore in-combat poison/disease detection immediately.
+  - **Tradeoff:** Combat nil-filter may allow some non-dispellable debuffs to appear until classification/caching resolves.
+  - **File:** `Core/Compatibility.lua`
+
+## 2026-04-03 — Decursive combat filter probe fail-open safety
+
+- **[HOTFIX] In-combat poison not detected after auraInstanceID filter emulation:**
+  - **Bug:** Combat compatibility path could return zero debuffs when `C_UnitAuras.IsAuraFilteredOutByInstanceID(...)` probe errored for one or more aura instance IDs.
+  - **Root cause:** `ns.GetCombatFilteredDebuffDataByIndex(...)` only counted `ok and not isFilteredOut`; probe failures were effectively treated as hard-filtered and could eliminate all matches.
+  - **Fix:** Added `hadFilterProbeError` tracking and fail-open fallback at end-of-scan: if any probe errored and no filtered match was found, return `GetDebuffDataByIndex(unit, wantedIndex)`.
+  - **Tradeoff:** This preserves in-combat detection (poison/disease) under API probe instability; if probe errors persist, some non-dispellable auras may temporarily reappear until deeper Blizzard-side behavior is pinned down.
+  - **File:** `Core/Compatibility.lua`
+
+## 2026-04-03 — Decursive in-combat curse false-positive fix (auraInstanceID filter emulation)
+
+- **[FIX] In combat, Decursive discovered curses class cannot dispel:**
+  - **Bug:** After switching to no filter in combat to restore detection, Decursive started surfacing undispellable debuffs (notably curses) during combat, while out-of-combat behavior remained correct.
+  - **Root cause:** In-combat nil-filter path enumerated all debuffs. Direct in-combat `RAID_PLAYER_DISPELLABLE` scan is unreliable with secret dispel fields, but removing filtering entirely allowed non-player-dispellable auras through.
+  - **Fix:** Added combat filter emulation in `Core/Compatibility.lua`:
+    - `ns.GetLegacyUnitDebuffFilter(...)` now returns private sentinel `__AZUI_W12_COMBAT_PLAYER_DISPELLABLE__` for friendly unit implicit scans in combat.
+    - `ns.GetCombatFilteredDebuffDataByIndex(...)` resolves that sentinel by iterating raw debuffs and applying `C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, auraInstanceID, "RAID_PLAYER_DISPELLABLE")` per aura.
+    - `UnitDebuff(...)` now pulls aura data through `ns.GetCombatFilteredDebuffDataByIndex(...)`.
+  - **Result:** In combat, only Blizzard-player-dispellable debuffs are returned to legacy `UnitDebuff` consumers; undispellable curses are filtered out while poison/disease detection remains active.
+  - **File:** `Core/Compatibility.lua`
+
+## 2026-04-03 — Decursive ResolveReadableDispelName secret spellID crash
+
+- **[FIX] Compatibility.lua:197 secret spellID comparison crash:**
+  - **Bug:** `23x Core/Compatibility.lua:197: attempt to compare local 'spellID' (a secret number value tainted by 'AzeriteUI5_JuNNeZ_Edition')`.
+  - **Root cause:** On WoW 12 `spellID` from `SafeUnpackAuraData` can itself be a secret number value. `type(spellID) == "number"` is safe, but the follow-up `spellID > 0` comparison crashes. `spellID` was also used as a table key (`dispelTypeCache[spellID]`), which would also crash on a secret value.
+  - **Fix:** Compute `safeSpellID` once at the top of `ResolveReadableDispelName`: `(type(spellID) == "number" and IsReadableValue(spellID) and spellID > 0) and spellID or nil`. All subsequent uses go through `safeSpellID` (a plain nil or safe number), so no secret value ever reaches a comparison or table index.
+  - **Pattern:** All four danger points (comparison, comparison in cache-write path, key in cache-write, key in cache-read) are covered by the single `safeSpellID` check.
+  - **File:** `Core/Compatibility.lua` (`ns.ResolveReadableDispelName`)
+
+## 2026-04-03 — Decursive in-combat type misclassification fix (spellID dispelType cache)
+
+- **[FIX] Decursive shows wrong dispel type in combat (magic for poison/disease):**
+  - **Bug:** In combat on WoW 12, `dispelName` fields are secret. Decursive enters secretMode and assigns `ReversedCureOrder[1]` (first cure type) to all detected debuffs, so curses/poisons/diseases all appear as the same type.
+  - **Root cause:** Debuff types become secret in combat, Decursive's secretMode can detect presence (via `GetAuraDispelTypeColor`) but not the actual type, and always falls back to the first configured cure type.
+  - **Fix:** Added `dispelTypeCache` (local, session-scoped `spellID → dispelType` table) inside the WoW 12 compat `do` block. `ns.ResolveReadableDispelName` now accepts `spellID` as a 4th argument:
+    - When `dispelName` is readable: caches `dispelTypeCache[spellID] = dispelName`.
+    - When `dispelName` is secret: returns `dispelTypeCache[spellID]` as a plain Lua string.
+    - Decursive receives a non-secret `TypeName` and uses it directly, never entering secretMode.
+  - **Key insight:** Debuff types are fixed per-spell (Wound Poison is always "Poison"). The cache is safe and stable.
+  - **Caveat:** Spells never seen out of combat in the same session will still fall through to secretMode until first cached. Subsequent encounters classify correctly.
+  - **File:** `Core/Compatibility.lua` (`dispelTypeCache`, `ns.ResolveReadableDispelName`, `UnitDebuff` call site)
+
+## 2026-04-03 — Decursive ResolveReadableDispelName secret string comparison crash
+
+- **[FIX] Compatibility.lua:178 secret string comparison crash:**
+  - **Bug:** `22x Core/Compatibility.lua:178: attempt to compare local 'dispelName' (a secret string value tainted by 'AzeriteUI5_JuNNeZ_Edition')`.
+  - **Root cause:** In `ns.ResolveReadableDispelName`, the `and` chain was: `type(dispelName) == "string" and dispelName ~= "" and IsReadableValue(dispelName)`. `type()` is safe on secrets, so it passed. `dispelName ~= ""` then crashed because equality/inequality operators are not safe on secret strings. `IsReadableValue` was last and never reached.
+  - **Fix:** Reordered to `type(dispelName) == "string" and IsReadableValue(dispelName) and dispelName ~= ""`. The readability guard now short-circuits before any comparison.
+  - **File:** `Core/Compatibility.lua` (`ns.ResolveReadableDispelName`, line 178 area)
+  - **Note:** Error 1 in the same BugSack export (`Blizzard_GameTooltip/Mainline/GameTooltip.lua:754` arithmetic on secret tainted by `ZygorGuidesViewer`) is unrelated — that is Zygor's taint propagating into Blizzard tooltip code, outside AzeriteUI control.
+
+## 2026-04-03 — Decursive in-combat detection fix (RAID_PLAYER_DISPELLABLE combat regression)
+
+- **[FIX] Decursive diseases/poisons not detected in combat:**
+  - **Bug:** After adding `RAID_PLAYER_DISPELLABLE` filter to `ns.GetLegacyUnitDebuffFilter`, diseases and poisons were not detected in combat (only out of combat).
+  - **Root cause:** On WoW 12, debuff types become secret values during combat. `GetDebuffDataByIndex` with `RAID_PLAYER_DISPELLABLE` filter cannot match secret type strings and returns zero results. Out of combat types are readable so the filter worked correctly.
+  - **Fix:** Added `InCombatLockdown()` guard to `ns.GetLegacyUnitDebuffFilter`. Filter is only `RAID_PLAYER_DISPELLABLE` out of combat. In combat, falls back to no filter so all debuffs are iterable. Decursive's own secretMode handles in-combat classification (a known Decursive/WoW12 limitation).
+  - **File:** `Core/Compatibility.lua` (`ns.GetLegacyUnitDebuffFilter`)
+  - **Test:** `/reload` → trigger poison/disease in combat → Decursive must show them (type may appear as first cure-order type in combat — that is Decursive's WoW 12 limitation, not AzeriteUI's).
 
 ## 2026-04-03 — Focused aura snapshot diagnostics (good vs bad capture)
 
@@ -232,6 +417,36 @@
   - Two WoW 12 secret-value fixes included: `Core/Compatibility.lua` (Decursive UnitDebuff tuple) and `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` (target aura cooldown overlay).
 
 ## 2026-04-02
+
+- **[FIX] Decursive secret-mode type confusion follow-up (probe-curve rollback + dispellable filter alignment):**
+  - **Problem:** The private probe-curve attempt added to distinguish magic/poison/disease caused `Core/Compatibility.lua:250: table index is secret` because Blizzard returned a secret-backed color object that could not be safely decoded in Lua.
+  - **Root cause:** `C_UnitAuras.GetAuraDispelTypeColor(...)` is safe as a truthy/falsey signal for Decursive, but not safe for AzeriteUI to reverse-map in Lua by indexing on derived color data. Also, legacy friendly-unit `UnitDebuff(unit, index)` scans without a filter were broader than Decursive's own Midnight fallback, surfacing debuffs Blizzard would not expose as player-dispellable.
+  - **Fix:** Rolled back the probe-curve decoding path. Added `ns.GetLegacyUnitDebuffFilter(...)` so WoW12 legacy `UnitDebuff(unit, index)` calls without an explicit filter default to `RAID_PLAYER_DISPELLABLE` on friendly/assistable units, matching Decursive's own internal fallback when `_G.UnitDebuff` is absent.
+  - **Research doc:** `Docs/Decursive Aura Compatibility Research.md` updated with the probe-curve rollback and the filter-alignment approach.
+  - **Files touched:**
+    - `Core/Compatibility.lua` — removed unsafe color-decoding behavior; default friendly-unit legacy debuff scans to `RAID_PLAYER_DISPELLABLE` on WoW12.
+    - `Docs/Decursive Aura Compatibility Research.md` — documented the rollback and safer replacement.
+  - **Verification:** `luac -p Core/Compatibility.lua` pending locally. In-game: `/buggrabber reset` -> `/reload` -> retest poison/disease vs magic on friendly units -> verify no AzeriteUI secret-color error and Decursive only flags Blizzard-reported player-dispellable debuffs.
+
+- **[FIX] Decursive secret-mode dispel type confusion follow-up (magic vs poison/disease):**
+  - **Problem:** After live detection was restored, Decursive still classified different dispel types as the same first-priority type during combat (for example poison shown as magic-style dispel recommendation).
+  - **Root cause:** On Midnight, when `dispelName` is secret, Decursive's own fallback only checks whether `GetAuraDispelTypeColor(...)` returns *some* color, then assigns the first configured cure type instead of reconstructing the actual dispel type.
+  - **Fix:** Added a private probe curve in `Core/Compatibility.lua` with unique colors for Blizzard dispel ids. AzeriteUI now queries `C_UnitAuras.GetAuraDispelTypeColor(unit, auraInstanceID, probeCurve)`, maps the returned color back to a readable dispel name (`Magic`, `Curse`, `Disease`, `Poison`, `Bleed`), and feeds that into compatibility `UnitDebuff` slot 4 when Blizzard's direct `dispelName` is unreadable.
+  - **Research doc:** `Docs/Decursive Aura Compatibility Research.md` updated with the secret-mode type confusion analysis and probe-curve solution.
+  - **Files touched:**
+    - `Core/Compatibility.lua` — added readable dispel-name resolver using a private color curve + wired it into WoW12 `UnitDebuff` compatibility returns.
+    - `Docs/Decursive Aura Compatibility Research.md` — documented the type reconstruction approach.
+  - **Verification:** `luac -p Core/Compatibility.lua` pending locally. In-game: `/buggrabber reset` -> `/reload` -> reproduce poison/disease + magic cases in combat -> verify Decursive distinguishes the actual dispel types and no longer treats all secret-mode dispels as the first cure type.
+
+- **[FIX] Decursive live in-combat detection follow-up (UnitDebuff slot-11 mapping):**
+  - **Problem:** Decursive still missed live in-combat dispellable detection even after narrowing secret sanitization.
+  - **Root cause:** AzeriteUI compatibility `UnitDebuff` returned `ns.SafeUnpackAuraData(auraData)` directly; in that tuple layout slot 11 is `canApplyAura` (boolean), while Decursive on Midnight expects slot 11 to be `auraInstanceID` for `GetAuraDispelTypeColor(...)` in secret mode.
+  - **Fix:** On WoW 12, remapped compatibility `UnitDebuff` return values explicitly to `name..spellID` (slots 1-10) plus `auraData.auraInstanceID` as slot 11. Kept the existing auraInstanceID secret-value guard wrapper behavior.
+  - **Research doc:** `Docs/Decursive Aura Compatibility Research.md` updated with tuple-slot mismatch analysis.
+  - **Files touched:**
+    - `Core/Compatibility.lua` — WoW12 `UnitDebuff` tuple mapping now exposes real auraInstanceID in slot 11.
+    - `Docs/Decursive Aura Compatibility Research.md` — added tuple-slot mismatch root-cause and expected behavior.
+  - **Verification:** `luac -p Core/Compatibility.lua` pending locally. In-game: `/buggrabber reset` -> `/reload` -> trigger dispellable debuffs in combat -> verify Decursive updates live (not only after combat) and no new `Decursive.lua:555` stack.
 
 - **[FIX] Decursive dispel detection regression follow-up (combat-time classification restored):**
   - **Problem:** After the first Decursive crash guard landed, Decursive stopped detecting dispellable debuffs in combat and only started showing them later (often after combat).
