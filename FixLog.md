@@ -1,4 +1,23 @@
 
+## 2026-04-03 — Release 5.3.55-JuNNeZ
+
+- **[RELEASE] 5.3.55-JuNNeZ prep/finalization:**
+  - Bumped version to `5.3.55-JuNNeZ` in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
+  - CHANGELOG delta entry added for compare tooltip deferred hook race fix, WowInterface CI step, and Wago ID metadata.
+  - Tagged `v5.3.55-JuNNeZ` and pushed to origin.
+
+## 2026-04-03 — Compare tooltip overlap race follow-up
+
+- **[FOLLOW-UP FIX] Late compare tooltip show could bypass relayout hooks:**
+  - **Bug:** Compare tooltips could still overlap when the secondary compare frame appeared after the initial `GameTooltip_ShowCompareItem(...)` pass.
+  - **Root cause:** `OnCompareItemShow(...)` only called `HookCompareTooltipLayoutUpdates(...)` for compare tooltips that were already shown. If one compare tooltip was hidden at that moment and appeared later, its `OnShow`/`OnSizeChanged` relayout hooks were never attached.
+  - **Fix:**
+    - `OnCompareItemShow(...)` now registers relayout hooks for all compare tooltip frames (`ShoppingTooltip1/2`, `ItemRefShoppingTooltip1/2`) regardless of current visibility.
+    - `SetHooks(...)` now pre-hooks all compare tooltip frames once during module hook setup so late show/resize events always queue relayout.
+  - **Why this should fix overlap:** Deferred relayout now always runs when any compare tooltip appears or resizes, including frames that were not visible during the first compare pass.
+  - **File:** `Components/Misc/Tooltips.lua`
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> hover equippable items repeatedly in bags and item links -> verify `ShoppingTooltip1/2` no longer collapse onto the same anchor after delayed show/reflow.
+
 ## 2026-04-02 — Release 5.3.52-JuNNeZ
 
 - **[RELEASE] 5.3.52-JuNNeZ prep/finalization:**

@@ -15,6 +15,8 @@ jobs:
     env:
       CF_API_KEY: ${{ secrets.CF_API_KEY }}
       WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      WOW_INTERFACE_TOKEN: ${{ secrets.WOW_INTERFACE_TOKEN }}
+      WOW_INTERFACE_ADDON_ID: ${{ secrets.WOW_INTERFACE_ADDON_ID }}
       GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
     
     steps:
@@ -31,3 +33,29 @@ jobs:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload to WowInterface
+        if: env.WOW_INTERFACE_TOKEN != '' && env.WOW_INTERFACE_ADDON_ID != ''
+        run: |
+          # Extract version from tag
+          VERSION=${GITHUB_REF#refs/tags/}
+          
+          # Find the packaged zip file
+          PACKAGE_ZIP=$(find . -maxdepth 1 -name "*.zip" -type f | head -1)
+          
+          if [ -z "$PACKAGE_ZIP" ]; then
+            echo "::warning::No package ZIP found for WowInterface upload"
+            exit 0
+          fi
+          
+          echo "Uploading to WowInterface: $PACKAGE_ZIP (version: $VERSION, addon ID: $WOW_INTERFACE_ADDON_ID)"
+          
+          # WowInterface upload via authenticated form submission
+          # Uses the token as Basic Auth or Bearer token depending on their API
+          curl -X POST \
+            -H "Authorization: Bearer $WOW_INTERFACE_TOKEN" \
+            -F "file=@$PACKAGE_ZIP" \
+            -F "version=$VERSION" \
+            "https://www.wowinterface.com/addons.php?action=upload&addon=$WOW_INTERFACE_ADDON_ID" \
+            --fail-with-body \
+            -v

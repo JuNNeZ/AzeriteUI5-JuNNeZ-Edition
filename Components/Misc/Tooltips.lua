@@ -1159,10 +1159,15 @@ end
 Tooltips.OnCompareItemShow = function(self, tooltip)
 	if (self:IsDisabled()) then return end
 	if (not tooltip) or (tooltip:IsForbidden()) then return end
+	local compareTooltips = GetCompareTooltips(tooltip)
 	local frameLevel = tooltip:GetFrameLevel()
-	for i, compareTooltip in ipairs(GetCompareTooltips(tooltip)) do
-		if (compareTooltip and compareTooltip:IsShown() and (not compareTooltip:IsForbidden())) then
+	for _, compareTooltip in ipairs(compareTooltips) do
+		if (compareTooltip and (not compareTooltip:IsForbidden())) then
 			self:HookCompareTooltipLayoutUpdates(compareTooltip)
+		end
+	end
+	for i, compareTooltip in ipairs(compareTooltips) do
+		if (compareTooltip and compareTooltip:IsShown() and (not compareTooltip:IsForbidden())) then
 			if (compareTooltip:GetFrameLevel() <= frameLevel) then
 				compareTooltip:SetFrameLevel(frameLevel + i)
 			end
@@ -1301,6 +1306,16 @@ Tooltips.SetHooks = function(self)
 	end
 	if (not self:IsHooked("GameTooltip_ShowCompareItem")) then
 		self:SecureHook("GameTooltip_ShowCompareItem", "OnCompareItemShow")
+	end
+	for _, compareTooltip in ipairs({
+		_G.ShoppingTooltip1,
+		_G.ShoppingTooltip2,
+		_G.ItemRefShoppingTooltip1,
+		_G.ItemRefShoppingTooltip2
+	}) do
+		if (compareTooltip) then
+			self:HookCompareTooltipLayoutUpdates(compareTooltip)
+		end
 	end
 	-- Don't override tooltip anchoring when ConsolePort is active
 	if (not self:IsConsolePortActive()) then

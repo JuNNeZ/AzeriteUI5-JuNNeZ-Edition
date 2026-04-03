@@ -5,6 +5,25 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.55-JuNNeZ (2026-04-03) — Compare Tooltip Deferred Hook
+
+### Highlights
+
+- Fixed a race condition where compare tooltips that appeared after the initial item-hover pass would not have AzeriteUI relayout hooks attached, causing them to overlap the main tooltip.
+- All four compare tooltip frames (`ShoppingTooltip1/2`, `ItemRefShoppingTooltip1/2`) now receive relayout hooks at module startup and on every subsequent compare-show event, regardless of whether they are visible at that moment.
+- Added Wago Addons tracking ID to the addon metadata so the addon can be followed directly on Wago.
+
+### Access
+
+- No new settings required. Hover equippable items in bags and item-links repeatedly to verify compare tooltips no longer collapse onto the same anchor.
+
+### Internal
+
+- `Components/Misc/Tooltips.lua`: split `OnCompareItemShow` into a hook-registration pass (all frames) followed by the frame-level adjustment pass (visible frames); added upfront `HookCompareTooltipLayoutUpdates` calls in `SetHooks`.
+- `.github/workflows/release.yml`: added optional WowInterface upload step (enabled by `WOW_INTERFACE_TOKEN` + `WOW_INTERFACE_ADDON_ID` secrets).
+- `AzeriteUI5_JuNNeZ_Edition.toc`: added `X-Wago-ID` metadata field.
+
+
 ## 5.3.54-JuNNeZ (2026-04-03) — Combined Fix
 
 ### Highlights
