@@ -25,6 +25,30 @@ WIKI_DIR="$(mktemp -d)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_DIR="${SCRIPT_DIR}/wiki"
 
+cleanup() {
+  rm -rf "${WIKI_DIR}"
+}
+trap cleanup EXIT
+
+if ! command -v git >/dev/null 2>&1; then
+  echo "Error: git is required but was not found in PATH." >&2
+  exit 1
+fi
+
+if [[ ! -d "${SOURCE_DIR}" ]]; then
+  echo "Error: source directory not found: ${SOURCE_DIR}" >&2
+  echo "Create a 'wiki/' folder next to this script and add .md files." >&2
+  exit 1
+fi
+
+shopt -s nullglob
+pages=("${SOURCE_DIR}"/*.md)
+shopt -u nullglob
+
+if [[ ${#pages[@]} -eq 0 ]]; then
+  echo "Error: no markdown pages found in ${SOURCE_DIR}" >&2
+  exit 1
+fi
 echo "==> Cloning wiki repository..."
 git clone "${WIKI_REMOTE}" "${WIKI_DIR}"
 

@@ -1,0 +1,71 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - wiki/**
+      - .github/workflows/sync-wiki.yml
+      - publish-wiki.sh
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Publish wiki pages
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -d "wiki" ]; then
+            echo "No wiki directory found; nothing to publish."
+            exit 0
+          fi
+
+          shopt -s nullglob
+          pages=(wiki/*.md)
+          shopt -u nullglob
+          if [ ${#pages[@]} -eq 0 ]; then
+            echo "No markdown files in wiki/; nothing to publish."
+            exit 0
+          fi
+
+          if [ -z "${GITHUB_TOKEN}" ]; then
+            echo "No GITHUB_TOKEN available."
+            exit 1
+          fi
+
+          wiki_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.wiki.git"
+          workdir="$(mktemp -d)"
+
+          trap 'rm -rf "$workdir"' EXIT
+
+          git clone "$wiki_url" "$workdir"
+
+          find "$workdir" -maxdepth 1 -type f -name '*.md' -delete
+          cp wiki/*.md "$workdir/"
+
+          cd "$workdir"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .
+          if git diff --cached --quiet; then
+            echo "Wiki is already up to date."
+            exit 0
+          fi
+
+          git commit -m "docs(wiki): sync from main"
+          git push origin master
