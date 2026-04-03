@@ -93,6 +93,7 @@ AzeriteUI replaces all standard unit frames with a custom, art-driven design. Ev
 
 #### Player Frame
 
+<<<<<<< HEAD
 The centerpiece of AzeriteUI — a custom-skinned health bar with Azerite-themed artwork:
 
 - **Health Bar** — a styled horizontal health bar with custom Azerite backdrop textures that evolve as your character levels up (Novice, Hardened, Seasoned, etc.), with smooth fill, absorb overlays, and threat glow
@@ -100,6 +101,15 @@ The centerpiece of AzeriteUI — a custom-skinned health bar with Azerite-themed
   - **Automatic (By Class)** — shows a Mana Orb for mana users, a Power Crystal for energy/rage/etc.
   - **Mana Orb Only** — always use the circular orb style
   - **Power Crystal Only** — always use the vertical crystal style
+=======
+The centerpiece of AzeriteUI — a unique orb-and-crystal design:
+
+- **Healthbar Crystal** — animated orb showing your current health with smooth fill
+- **Power Widget** — three display modes:
+  - **Automatic (By Class)** — shows a Mana Orb for mana users, a Power Crystal for energy/rage/etc.
+  - **Mana Orb Only** — always use the orb style
+  - **Power Crystal Only** — always use the crystal style
+>>>>>>> e975311d1c6e3b56cd13c207cc59ef15696785cb
 - **Ice Crystal Art** — optional alternate crystal artwork (Wrath-style)
 - **Crystal/Orb Color Source** — choose between default AzeriteUI power colors or enhanced token-based colors
 - **Show Health Percent** — display a percentage next to the health value
@@ -109,8 +119,11 @@ The centerpiece of AzeriteUI — a custom-skinned health bar with Azerite-themed
 - **Castbar** — overlay castbar on the player frame (can be toggled)
 - **Auras** — configurable player aura row attached to the frame (see [Player Aura Filtering](#player-aura-filtering) below)
 - **PvP Badge** — position offset (X/Y) for the PvP indicator on the player frame
+<<<<<<< HEAD
 - **Combat Indicator** — animated icon shown when in combat
 - **Threat Glow** — health bar and power widget glow when you have threat
+=======
+>>>>>>> e975311d1c6e3b56cd13c207cc59ef15696785cb
 
 #### Player Alternate Frame
 
@@ -571,6 +584,13 @@ A: You should disable AzeriteUI's nameplates (Nameplate settings > uncheck "Enab
 These addons are recognized and integrate with AzeriteUI:
 
 - **Clique** — click-casting on unit frames
+<<<<<<< HEAD
+=======
+- **LibKeyBound** — keybinding
+- **LibSharedMedia** — shared media library
+- **LibEditModeOverride** — EditMode compatibility
+- **TaintLess** — taint mitigation
+>>>>>>> e975311d1c6e3b56cd13c207cc59ef15696785cb
 - **Decursive** — dispel management (JuNNeZ compatibility patch)
 
 ### Libraries Included
