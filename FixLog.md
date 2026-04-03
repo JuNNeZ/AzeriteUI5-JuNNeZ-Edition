@@ -86,6 +86,15 @@
     - All auras remained bright throughout transition cycle. Issue resolved.
   - **File:** `Components/UnitFrames/Auras/AuraStyling.lua` (line 250)
 
+## 2026-04-03 — Release 5.3.54-JuNNeZ (Combined Fix)
+
+- **[RELEASE] 5.3.54-JuNNeZ prep/finalization:**
+  - Version bumped in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
+  - `CHANGELOG.md` updated with delta-only combined fix entry.
+  - Release includes:
+    - compare-tooltip relayout/wrap hardening and dropdown/menu managed-tooltip exclusions in `Components/Misc/Tooltips.lua`
+    - secret-safe cooldown/charge/loss-of-control payload sanitization before `ActionButton_ApplyCooldown` in `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+
 ## 2026-04-03 — The Decursive Compability Anomaly (Final Fix)
 
 - **[FINAL] Decursive compatibility anomaly resolved for WoW 12 combat scans:**

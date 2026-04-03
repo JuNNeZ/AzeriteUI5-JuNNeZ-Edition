@@ -2582,6 +2582,52 @@ local defaultCooldownInfo = { startTime = 0; duration = 0; isEnabled = false; mo
 local defaultChargeInfo = { currentCharges = 0; maxCharges = 0; cooldownStartTime = 0; cooldownDuration = 0; chargeModRate = 0 }
 local defaultLossOfControlInfo = { startTime = 0; duration = 0; modRate = 0 }
 
+local function SafeBooleanValue(value)
+	if issecretvalue and issecretvalue(value) then
+		return false
+	end
+	return value and true or false
+end
+
+local function SanitizeCooldownInfo(info)
+	if type(info) ~= "table" then
+		return defaultCooldownInfo
+	end
+
+	return {
+		startTime = IsSafeNumber(info.startTime) and info.startTime or 0,
+		duration = IsSafeNumber(info.duration) and info.duration or 0,
+		isEnabled = SafeBooleanValue(info.isEnabled),
+		modRate = IsSafeNumber(info.modRate) and info.modRate or 0
+	}
+end
+
+local function SanitizeChargeInfo(info)
+	if type(info) ~= "table" then
+		return defaultChargeInfo
+	end
+
+	return {
+		currentCharges = IsSafeNumber(info.currentCharges) and info.currentCharges or 0,
+		maxCharges = IsSafeNumber(info.maxCharges) and info.maxCharges or 0,
+		cooldownStartTime = IsSafeNumber(info.cooldownStartTime) and info.cooldownStartTime or 0,
+		cooldownDuration = IsSafeNumber(info.cooldownDuration) and info.cooldownDuration or 0,
+		chargeModRate = IsSafeNumber(info.chargeModRate) and info.chargeModRate or 0
+	}
+end
+
+local function SanitizeLossOfControlInfo(info)
+	if type(info) ~= "table" then
+		return defaultLossOfControlInfo
+	end
+
+	return {
+		startTime = IsSafeNumber(info.startTime) and info.startTime or 0,
+		duration = IsSafeNumber(info.duration) and info.duration or 0,
+		modRate = IsSafeNumber(info.modRate) and info.modRate or 0
+	}
+end
+
 function UpdateCooldown(self)
 	local chargeInfo
 	local cooldownInfo
@@ -2656,6 +2702,9 @@ function UpdateCooldown(self)
 
 		lib.callbacks:Fire("OnCooldownUpdate", self, nil, nil, nil, cooldownInfo, chargeInfo, lossOfControlInfo)
 	elseif ActionButton_ApplyCooldown then
+		cooldownInfo = SanitizeCooldownInfo(cooldownInfo)
+		chargeInfo = SanitizeChargeInfo(chargeInfo)
+		lossOfControlInfo = SanitizeLossOfControlInfo(lossOfControlInfo)
 		ActionButton_ApplyCooldown(self.cooldown, cooldownInfo, self.chargeCooldown, chargeInfo, self.lossOfControlCooldown, lossOfControlInfo)
 
 		lib.callbacks:Fire("OnCooldownUpdate", self, nil, nil, nil, cooldownInfo, chargeInfo, lossOfControlInfo)

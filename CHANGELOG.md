@@ -5,6 +5,24 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.54-JuNNeZ (2026-04-03) — Combined Fix
+
+### Highlights
+
+- Fixed compare-item tooltip relayout edge cases by hardening compare stack anchoring and adding deferred relayout handling after size/show updates.
+- Added stronger managed-tooltip filtering so dropdown/menu backdrops are excluded from AzeriteUI managed tooltip treatment.
+- Hardened `LibActionButton` cooldown payload handling by sanitizing secret/unsafe cooldown, charge, and loss-of-control fields before `ActionButton_ApplyCooldown`.
+
+### Access
+
+- No new settings required. Tooltip compare behavior and action-button cooldown overlays update automatically.
+
+### Internal
+
+- `Components/Misc/Tooltips.lua`: compare-tooltip wrap-width + relayout queue improvements and safer managed-tooltip detection.
+- `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`: cooldown/charge/loss-of-control sanitization before Blizzard cooldown application path.
+
+
 ## 5.3.53-JuNNeZ (2026-04-03) — The Decursive Compability Anomaly
 
 ### Highlights
