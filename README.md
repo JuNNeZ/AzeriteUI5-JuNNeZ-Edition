@@ -95,7 +95,7 @@ AzeriteUI replaces all standard unit frames with a custom, art-driven design. Ev
 
 The centerpiece of AzeriteUI — a unique orb-and-crystal design:
 
-- **Health Orb** — animated orb showing your current health with smooth fill
+- **Healthbar Crystal** — animated orb showing your current health with smooth fill
 - **Power Widget** — three display modes:
   - **Automatic (By Class)** — shows a Mana Orb for mana users, a Power Crystal for energy/rage/etc.
   - **Mana Orb Only** — always use the orb style
