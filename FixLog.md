@@ -1,10 +1,172 @@
 
+## 2026-04-05 — Release 5.3.56-JuNNeZ
+
+- **[RELEASE] 5.3.56-JuNNeZ prep/finalization:**
+  - Bumped version to `5.3.56-JuNNeZ` in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
+  - CHANGELOG delta entry added covering: compare tooltip oscillation/jitter/secret-value crash fixes, toy box click regression fix, party frame health text fix, party SetSize taint fix, and target aura BG performance guard.
+  - Tagged `v5.3.56-JuNNeZ` and pushed to origin.
+
+## 2026-04-05 — Tooltip full-pass refactor investigation (oscillation follow-up)
+
+- **[INVESTIGATION] Persistent tooltip instability despite prior compare/ttoybox hotfixes:**
+  - **User report:** Tooltip behavior is still unstable/"weird" in some hover flows, although toy box clicking is restored.
+  - **Audit scope:** Full tooltip code pass across addon tooltip module, aura tooltip paths, WoW API references (`C_TooltipComparison`, `C_TooltipInfo`, `GameTooltip:SetToyByItemID`), Blizzard source (`Gethe/wow-ui-source`), and repo tooltip docs.
+  - **Refactor focus:** Stabilize relayout feedback loops and repeated hover refreshes by making compare relayout hooks more deterministic and reducing redundant aura tooltip refresh work.
+
+- **[REFACTOR FIX] Compare relayout stabilization in `Components/Misc/Tooltips.lua`:**
+  - Increased self-induced relayout suppression window after wrap writes from `0.08` to `0.15` seconds.
+  - Added compare relayout cadence guard (`~0.03s`) in `QueueCompareTooltipRelayout(...)` to avoid callback floods under rapid `OnSizeChanged` storms.
+  - Added per-compare-tooltip size snapshot guard in `OnSizeChanged` hook; relayout is now skipped when width/height delta is effectively unchanged.
+  - **Expected result:** Fewer relayout feedback loops and improved convergence of compare tooltip size/placement under high refresh churn.
+
+- **[FOLLOW-UP TUNING] Sticky compare wrap width for three-tooltip ring/trinket comparisons:**
+  - **User report:** When comparing rings/trinkets with three tooltips visible, text still jittered as if the layout could not decide where to wrap.
+  - **Root cause:** Compare width prep still fed back on the current tooltip width, so near-threshold layouts could bounce between two similar wrap widths during dual-compare hover churn.
+  - **Adjustment:**
+    - Added per-compare-tooltip stable wrap-width cache.
+    - Removed current-width-driven `min(currentWidth, targetWrapWidth)` feedback from compare wrap selection.
+    - Added hysteresis: if newly computed target wrap width is within `24px` of the previous stable width, keep the previous width instead of changing wrap point.
+  - **Expected result:** Ring/trinket dual-compare layouts should keep a consistent wrap point instead of jittering between two nearby widths.
+
+- **[BUGFIX] Secret-number safe compare tooltip size snapshots:**
+  - **User report:** BugSack showed `attempt to perform arithmetic on local 'width'/'oldWidth' (a secret number value)` in compare tooltip `OnSizeChanged` handling.
+  - **Root cause:** Blizzard shopping tooltip size callbacks can deliver secret numeric geometry values; AzeriteUI was caching and subtracting them directly in the relayout delta guard.
+  - **Adjustment:** Added a local safe-number sanitizer and now only store/compare non-secret numeric width/height values in `CompareTooltipLastSize`.
+  - **Expected result:** No more secret-value arithmetic errors during compare tooltip refresh/reflow.
+
+- **[REFACTOR FIX] Aura hover-tooltip dedup in `Components/Auras/Auras.lua`:**
+  - Added deterministic aura tooltip cache key builder (`enchant`, `auraInstanceID`, or unit/index/filter fallback).
+  - `Aura.OnEnter` now skips redundant tooltip rebuilds when the same aura tooltip is already owned/shown for the same key.
+  - `Aura.UpdateTooltip` stores the active key on `GameTooltip`; `Aura.OnLeave` clears it when leaving owner.
+  - **Expected result:** Reduced repeated `SetUnitAura*` tooltip rebuild churn while hovering a stable aura, lowering oscillation pressure from repeated post-hooks/reflows.
+
+- **Local validation:**
+  - `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`
+  - `luac -p Components/Auras/Auras.lua` -> `luac-ok`
+  - **Runtime validation target:** `/buggrabber reset` -> `/reload` ->
+    - hover toys repeatedly and click toys directly (regression check)
+    - hover equippable items with dual compare near screen edges/center
+    - hover stable unit auras for repeated refresh intervals
+    - confirm no infinite grow/shrink loops and no click regression
+
+## 2026-04-05 — Battleground target aura timeout follow-up
+
+## 2026-04-05 — Tooltip refresh-loop follow-up and toy box click regression
+
+- **[INVESTIGATION] Tooltip oscillation persisted and toy box left-click became unreliable while hovered:**
+  - **User report:** Tooltip still oscillated, and direct clicking toys in the toy box no longer worked reliably.
+  - **Repo/blizzard evidence:** Blizzard toy buttons refresh their tooltip while hovered via `self.UpdateTooltip = ToySpellButton_OnEnter`, and AzeriteUI item/aura tooltip post-hooks were still appending extra ID/source lines without a duplicate guard on repeated refreshes.
+  - **Likely interaction bug:** Repeated tooltip growth during hover can move/expand the tooltip over nearby collection buttons, while any mouse-enabled custom tooltip surface risks stealing hover/click focus.
+
+- **[FIX] De-duplicated tooltip post-hook lines and hard-disabled mouse on AzeriteUI tooltip backdrop:**
+  - Added shared tooltip line-existence helper and now skip re-adding item ID, spell ID, and aura source/ID lines if they are already present on the tooltip.
+  - Explicitly disabled mouse, mouse-click, and mouse-motion handling on the custom backdrop frame created for managed tooltips.
+  - **Expected result:** Tooltip size should stop inflating on repeated hover refreshes, oscillation should reduce further, and toy box buttons should remain directly clickable while their tooltip is shown.
+  - **Local validation:** `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`.
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> hover toys repeatedly and left-click directly from the toy box -> confirm stable tooltip size and restored click behavior.
+
+- **[FIX] Avoid repeated no-op target aura border/icon restyling during heavy target churn:**
+  - **Bug:** In battlegrounds, rapidly cycling hostile targets could hit `Libs/oUF/elements/auras.lua` with `script ran too long`, with the hot path ending in `Components/UnitFrames/Auras/AuraStyling.lua:293` (`TargetPostUpdateButton` -> `SetBackdropBorderColor`).
+  - **Root cause:** The target aura update loop can legitimately restyle every visible aura button on each target/full aura refresh. AzeriteUI's target aura styling hook was reapplying the same backdrop border color, desaturation state, and vertex color every pass even when the visual state had not changed. On rapid battleground target swaps that created avoidable per-button backdrop churn inside Blizzard's backdrop code.
+  - **Fix:** Added per-button cached visual-state guards in `Components/UnitFrames/Auras/AuraStyling.lua` and routed `TargetPostUpdateButton` through them so identical border/icon states are skipped instead of reissued.
+  - **Expected result:** Target aura refreshes in battlegrounds should keep the same visual rules but spend less time inside `Backdrop:SetBackdropBorderColor`, `SetDesaturated`, and `SetVertexColor` during repeated target updates.
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> enter battleground -> spam `TargetNearestEnemy` / tab-target through crowded enemies with target auras visible -> confirm no new AzeriteUI `script ran too long` errors from `Libs/oUF/elements/auras.lua` or `Components/UnitFrames/Auras/AuraStyling.lua`.
+
+## 2026-04-05 — Compare tooltip size oscillation on mouseover
+
+- **[INVESTIGATION] Compare tooltip could enter infinite grow/shrink loop while hovered:**
+  - **User report:** Tooltip rapidly grows, shrinks, then repeats indefinitely on some mouseover states.
+  - **Likely cause:** Compare relayout `OnSizeChanged` hook can react to size changes caused by AzeriteUI's own wrap pass (`ApplyCompareTooltipWrapWidth(...)`), creating a self-reinforcing relayout cycle under geometry churn.
+  - **Likely amplifier:** Temporary unreadable/zero edge geometry could clear wrap decisions too aggressively and then reapply them on the next pass.
+
+- **[FIX] Added relayout suppression window for self-induced size changes + no transient unwrap on invalid geometry:**
+  - Added `CompareTooltipSuppressRelayoutUntil` guard table and set a short suppression window after wrap updates.
+  - `OnSizeChanged` relayout now exits early while suppression is active, preventing immediate recursive relayout caused by our own `SetWidth`/`Show` updates.
+  - `PrepareCompareTooltipWidths(...)` now keeps current wrap state when side-available width is temporarily invalid/non-positive, instead of force-clearing wraps and re-growing in the same hover cycle.
+  - **Expected result:** Compare tooltip sizing should converge quickly and stop oscillating between expanded and wrapped widths.
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> repeatedly hover equippable items (especially with dual compare windows) near screen edges and center -> confirm no infinite grow/shrink loop and no overlap regression.
+
+## 2026-04-05 — Party secure-header SetSize taint (AzeritePartyUnitButton4)
+
+- **[FIX] Removed insecure `SetSize` call from party style function during secure header updates:**
+  - **Bug:** BugSack repeatedly reported `[ADDON_ACTION_BLOCKED]` for `AzeritePartyUnitButton4:SetSize()` from `Components/UnitFrames/Units/Party.lua:714` while the secure group header was running `styleFunction`.
+  - **Root cause:** `style(self, unit)` called `self:SetSize(unpack(db.UnitSize))` on secure party unit buttons. During `SecureGroupHeader_Update`/`CallMethod('styleFunction', ...)`, this path is protected and blocks direct size mutation.
+  - **Fix:** Removed the direct style-time `self:SetSize(...)` call and rely on the existing secure header sizing path already present in this file:
+    - header attributes `initial-width` / `initial-height`
+    - `oUF-initialConfigFunction` width/height assignment
+    - post-update child sizing via `ConfigureChildren()` out of combat
+  - **Expected result:** No new AzeriteUI `ADDON_ACTION_BLOCKED` spam for `AzeritePartyUnitButton*:SetSize()` during party roster/header updates, while party frame sizing remains consistent.
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> join/leave party and convert to raid repeatedly -> confirm no new protected-call reports for `AzeritePartyUnitButton*:SetSize()`.
+
+## 2026-04-03 — Compare tooltip growth-direction overflow investigation
+
+- **[INVESTIGATION] Compare stack can still overflow side space and collapse visually near screen edge:**
+  - **User report:** Compare tooltips sometimes choose/keep a growth direction that runs out of horizontal room, causing compare windows to collapse into each other near screen boundary.
+  - **Hypothesis:** `Components/Misc/Tooltips.lua` currently wraps each compare tooltip using full side-available width, but does not budget for total stacked width (`tooltip1 + tooltip2 + gaps`) before anchoring.
+  - **Planned fix:** Make compare-width prep stack-aware and add a constrained-space fallback pass that picks the side with better room and reapplies tighter wrapping.
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> hover multiple equippable items near left/right screen edges (including dual-compare cases) -> confirm compare tooltips no longer collapse/overlap when side space is constrained.
+
+- **[FIX] Stack-aware compare width budgeting + constrained-space side fallback:**
+  - **Root cause confirmed:** Side availability helper enforced a hard floor (`math_max(220, ...)`), which could overstate available side room near screen edge and allow a bad growth choice; width wrapping was also applied per-compare tooltip without stack budgeting.
+  - **Changes in `Components/Misc/Tooltips.lua`:**
+    - Removed fake minimum side width floor in compare available-width checks; now uses true remaining space (`max(0, space)`).
+    - Added stack-aware wrap budget helper that divides side width across all visible compare tooltips plus gap budget.
+    - Updated compare wrap prep to apply this shared width budget instead of validating each compare tooltip independently.
+    - Added a third constrained-space relayout pass: choose side with greater measured room and tighten gap when both normal side passes still clip.
+  - **Expected result:** Compare tooltip growth direction should fail less often near screen boundaries, and dual-compare layouts should avoid collapsing into each other when horizontal space becomes tight.
+  - **Local validation:** `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`.
+
+## 2026-04-03 — Party-frame health smart-percent drift follow-up
+
+- **[FIX] Party health value now uses the same resolved percent path as player/target percent text:**
+  - **Bug:** Party-frame health value text could show incorrect smart-percent numbers like `99` or `97` while the unit was effectively/full health.
+  - **Root cause:** The party value text uses the shared smart health tag (`[*:Health(true,false,false,true)]`), and that smart branch derived its percent from `SafePercent(health, maxHealth)`. Those `health/maxHealth` values can lag or be reconstructed from stale frame-safe snapshots, while the dedicated percent text path already uses `ResolveHealthPercentForTag(...)` to follow the rendered bar/display percent.
+  - **Fix:** Updated `Components/UnitFrames/Tags.lua` so the smart health tag now prefers `ResolveHealthPercentForTag(unit)` before falling back to raw `SafePercent(health, maxHealth)`.
+  - **Why this should fix it:** Party smart health text now uses the same percent-resolution method as the player/target percent text, so the visible value should stay aligned with the rendered health state instead of drifting to stale `97`/`99` values.
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> join party -> watch party members at full health, after heals, and across roster updates -> verify the health value no longer flips to `97`/`99` at full health.
+
+- **[FOLLOW-UP] Prefer rendered display percent for follower-dungeon smart health text:**
+  - **Symptom:** In follower dungeons, party health value did not reliably switch into percent mode after taking damage.
+  - **Likely cause:** Some follower-party units do not populate the same cached tag-percent path consistently enough for `ResolveHealthPercentForTag(...)`, even though the rendered/display percent can still be resolved from the frame or API path.
+  - **Adjustment:** The smart `*:Health(...)` tag now prefers `ResolveDisplayHealthPercent(unit)` first, then `ResolveHealthPercentForTag(unit)`, then `SafePercent(health, maxHealth)`.
+  - **Why this should help:** Smart mode now keys off the same display-oriented percent source the frame can actually render, which is a better fit for follower-dungeon AI party members.
+
+- **[FOLLOW-UP FIX] Party frames now switch between current-health text and dedicated percent text instead of smart-tag overloading:**
+  - **Symptom:** Even after smart-tag percent-source fixes, follower-dungeon party frames still did not reliably flip to percent display when damaged.
+  - **Root cause:** The party health value fontstring was still using the overloaded smart tag (`*:Health(true,...)`), which makes the same text object decide between current value and percent. That path remained too dependent on tag-side percent resolution timing/caches for follower-party units.
+  - **Fix:** `Components/UnitFrames/Units/Party.lua` now:
+    - binds the main health value text to `*:HealthCurrent(...)`
+    - keeps the existing `*:HealthPercent` text as the dedicated percent renderer
+    - toggles visibility between the two based on actual injury state (`safeCur < safeMax` / `safePercent < 100`) after health and unit-state updates
+  - **Why this should fix it:** Party frames now use the same dedicated percent text path as the other unit-frame percent displays instead of trying to emulate it inside the smart value tag.
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> enter follower dungeon -> let followers take visible damage and recover -> verify party frames swap from current health text to `%` text while injured and back to health text at full health.
+
 ## 2026-04-03 — Release 5.3.55-JuNNeZ
 
 - **[RELEASE] 5.3.55-JuNNeZ prep/finalization:**
   - Bumped version to `5.3.55-JuNNeZ` in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
   - CHANGELOG delta entry added for compare tooltip deferred hook race fix, WowInterface CI step, and Wago ID metadata.
   - Tagged `v5.3.55-JuNNeZ` and pushed to origin.
+
+## 2026-04-03 — Compare spacing tune-down follow-up
+
+- **[FOLLOW-UP TUNING] Reduced compare gap after border-thickness patch felt too wide:**
+  - **Issue:** Post-fix compare spacing was visually too large in Azerite theme.
+  - **Adjustment:**
+    - Reduced border contribution in `GetCompareTooltipGap(...)` from `edgeSize * 0.5` to `edgeSize * 0.25`.
+    - Restored base minimum gap floor to `8`.
+    - Added a max gap cap of `22` to prevent oversized spacing on thick-border themes.
+  - **File:** `Components/Misc/Tooltips.lua`
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> hover dual-compare items and verify no overlap while keeping visually tighter compare spacing.
+
+## 2026-04-03 — Compare tooltip border-overlap spacing follow-up
+
+- **[FOLLOW-UP FIX] Increase compare gap to include tooltip border thickness:**
+  - **Bug:** Compare tooltips could still visually overlap in Azerite theme even after relayout-hook race fixes, especially with dual compare windows (`ShoppingTooltip1/2`) where decorative borders protrude beyond base tooltip bounds.
+  - **Root cause:** `GetCompareTooltipGap(...)` only used backdrop offsets + insets. It did not account for `backdrop.edgeSize`, so spacing could still be too small for thick bordered tooltip skins.
+  - **Fix:** Updated compare gap calculation to add half of `backdrop.edgeSize` to spacing budget (plus existing offsets/insets), and raised minimum gap floor to 12.
+  - **File:** `Components/Misc/Tooltips.lua`
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> hover ring/trinket style dual-compare items repeatedly -> verify compare tooltips keep a visible non-overlapping border gap in Azerite theme.
 
 ## 2026-04-03 — Compare tooltip overlap race follow-up
 

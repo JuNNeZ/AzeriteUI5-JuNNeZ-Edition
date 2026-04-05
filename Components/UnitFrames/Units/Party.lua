@@ -353,6 +353,59 @@ local AuraHighlight_Update = function(self, event, unit, ...)
 	end
 end
 
+local HasPartyDisplayText = function(value)
+	if (value == nil) then
+		return false
+	end
+	if (issecretvalue and issecretvalue(value)) then
+		return true
+	end
+	return (type(value) == "string" and value ~= "")
+end
+
+local IsPartyUnitInjured = function(frame)
+	local health = frame and frame.Health
+	if (not health) then
+		return false
+	end
+	local cur = health.safeCur or health.cur
+	local max = health.safeMax or health.max
+	if (type(cur) == "number" and type(max) == "number" and max > 0) then
+		return cur < max
+	end
+	local percent = health.safePercent
+	return (type(percent) == "number" and percent < 100) and true or false
+end
+
+local UpdatePartyHealthTextVisibility = function(frame)
+	local health = frame and frame.Health
+	if (not health) then
+		return
+	end
+	local healthValue = health.Value
+	local healthPercent = health.Percent
+	if (not healthValue or not healthPercent) then
+		return
+	end
+
+	if (healthPercent.UpdateTag) then
+		pcall(function() healthPercent:UpdateTag() end)
+	end
+
+	local percentText
+	pcall(function()
+		percentText = healthPercent:GetText()
+	end)
+
+	if (IsPartyUnitInjured(frame) and HasPartyDisplayText(percentText)) then
+		healthValue:Hide()
+		healthPercent:Show()
+	else
+		healthValue:Show()
+		healthPercent:Hide()
+	end
+end
+
 -- Sourced from FrameXML\SecureGroupHeaders.lua.
 local getRelativePointAnchor = function(point)
 	point = string_upper(point)
@@ -427,6 +480,7 @@ local Health_PostUpdate = function(element, unit, cur, max)
 	if (predict) then
 		predict:ForceUpdate()
 	end
+	UpdatePartyHealthTextVisibility(element.__owner)
 end
 
 -- Update the health preview color on health color updates.
@@ -700,6 +754,7 @@ end
 local UnitFrame_PostUpdate = function(self)
 	TargetHighlight_Update(self)
 	AuraHighlight_Update(self)
+	UpdatePartyHealthTextVisibility(self)
 end
 
 local UnitFrame_OnEvent = function(self, event, unit, ...)
@@ -709,9 +764,6 @@ end
 local style = function(self, unit)
 
 	local db = ns.GetConfig("PartyFrames")
-
-	-- Force a sane secure click area even if the header's initial sizing path misfires.
-	self:SetSize(unpack(db.UnitSize))
 
 	-- Apply common scripts and member values.
 	ns.UnitFrame.InitializeUnitFrame(self)
@@ -815,7 +867,7 @@ local style = function(self, unit)
 	healthValue:SetTextColor(unpack(db.HealthValueColor))
 	healthValue:SetJustifyH(db.HealthValueJustifyH)
 	healthValue:SetJustifyV(db.HealthValueJustifyV)
-	self:Tag(healthValue, prefix("[*:Health(true,false,false,true)]"))
+	self:Tag(healthValue, prefix("[*:HealthCurrent(false,false,false,true)]"))
 
 	self.Health.Value = healthValue
 
@@ -1077,6 +1129,8 @@ local style = function(self, unit)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", UnitFrame_OnEvent, true)
 	self:RegisterEvent("PLAYER_TARGET_CHANGED", UnitFrame_OnEvent, true)
 	self:RegisterEvent("UNIT_AURA", UnitFrame_OnEvent)
+	self:RegisterEvent("UNIT_CONNECTION", UnitFrame_OnEvent)
+	self:RegisterEvent("PLAYER_FLAGS_CHANGED", UnitFrame_OnEvent)
 
 	-- Fix unresponsive alpha on 3D Portrait.
 	hooksecurefunc(UIParent, "SetAlpha", function() self.Portrait:SetAlpha(self:GetEffectiveAlpha()) end)

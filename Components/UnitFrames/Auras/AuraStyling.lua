@@ -57,6 +57,44 @@ local GetPlayerAuraProfile = function()
 	return PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or nil
 end
 
+local SetAuraBorderColor = function(button, color)
+	if (not button or not button.Border or not color) then
+		return
+	end
+
+	local red, green, blue = color[1], color[2], color[3]
+	if (button.__AzeriteUI_AuraBorderRed == red and button.__AzeriteUI_AuraBorderGreen == green and button.__AzeriteUI_AuraBorderBlue == blue) then
+		return
+	end
+
+	button.__AzeriteUI_AuraBorderRed = red
+	button.__AzeriteUI_AuraBorderGreen = green
+	button.__AzeriteUI_AuraBorderBlue = blue
+	button.Border:SetBackdropBorderColor(red, green, blue)
+end
+
+local SetAuraIconState = function(button, desaturated, red, green, blue)
+	if (not button or not button.Icon) then
+		return
+	end
+
+	local icon = button.Icon
+	local wantsDesaturated = desaturated and true or false
+	if (button.__AzeriteUI_AuraIconDesaturated ~= wantsDesaturated) then
+		icon:SetDesaturated(wantsDesaturated)
+		button.__AzeriteUI_AuraIconDesaturated = wantsDesaturated
+	end
+
+	if (button.__AzeriteUI_AuraIconRed == red and button.__AzeriteUI_AuraIconGreen == green and button.__AzeriteUI_AuraIconBlue == blue) then
+		return
+	end
+
+	button.__AzeriteUI_AuraIconRed = red
+	button.__AzeriteUI_AuraIconGreen = green
+	button.__AzeriteUI_AuraIconBlue = blue
+	icon:SetVertexColor(red, green, blue)
+end
+
 -- Local Functions
 --------------------------------------------------
 local UpdateTooltip = function(self)
@@ -290,7 +328,7 @@ ns.AuraStyles.TargetPostUpdateButton = function(element, button, unit, data, pos
 		end
 	end
 	if (color) then
-		button.Border:SetBackdropBorderColor(color[1], color[2], color[3])
+		SetAuraBorderColor(button, color)
 	end
 
 	-- Icon Coloring
@@ -302,16 +340,13 @@ ns.AuraStyles.TargetPostUpdateButton = function(element, button, unit, data, pos
 	local spellId = GetAuraSpellID(data)
 	if (nameplateShowAll or (nameplateShowPersonal and isPlayerAura))
 	or (not isHarmful and isPlayerAura and canApplyAura) or (spellId and Spells[spellId]) then
-		button.Icon:SetDesaturated(false)
-		button.Icon:SetVertexColor(1, 1, 1)
+		SetAuraIconState(button, false, 1, 1, 1)
 
 	elseif (isPlayerAura) then
-		button.Icon:SetDesaturated(false)
-		button.Icon:SetVertexColor(.3, .3, .3)
+		SetAuraIconState(button, false, .3, .3, .3)
 
 	else
-		button.Icon:SetDesaturated(true)
-		button.Icon:SetVertexColor(.6, .6, .6)
+		SetAuraIconState(button, true, .6, .6, .6)
 	end
 
 end

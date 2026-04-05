@@ -1299,8 +1299,15 @@ Methods[prefix("*:Health")] = function(unit, realUnit, ...)
 		local health, maxHealth = SafeUnitHealth(unit)
 		
 		if (useSmart) then
-			-- Try percent first
-			local percent = SafePercent(health, maxHealth)
+			-- Prefer the rendered/display percent first so smart-value text flips
+			-- to percent for follower/party units even when direct tag caches lag.
+			local percent = ResolveDisplayHealthPercent(unit)
+			if (type(percent) ~= "number") then
+				percent = ResolveHealthPercentForTag(unit)
+			end
+			if (type(percent) ~= "number") then
+				percent = SafePercent(health, maxHealth)
+			end
 			if percent and percent < 100 then
 				return percent
 			end

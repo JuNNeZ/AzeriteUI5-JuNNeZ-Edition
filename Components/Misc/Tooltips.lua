@@ -53,7 +53,9 @@ end
 -- Lua API
 local _G = _G
 local math_abs = math.abs
+local math_floor = math.floor
 local math_max = math.max
+local math_min = math.min
 local ipairs = ipairs
 local next = next
 local pcall = pcall
@@ -102,6 +104,13 @@ local SafeBooleanValue = function(value)
 		return nil
 	end
 	return value and true or false
+end
+
+local SafeNumberValue = function(value)
+	if (IsSecretValue(value) or type(value) ~= "number") then
+		return nil
+	end
+	return value
 end
 
 local SafeGetTooltipUnitToken = function(tooltip)
@@ -204,6 +213,15 @@ local Backdrops = setmetatable({}, { __index = function(t,k)
 	local bg = CreateFrame("Frame", nil, k, ns.BackdropTemplate)
 	bg:SetPoint("TOPLEFT", k, "TOPLEFT", 0, 0)
 	bg:SetPoint("BOTTOMRIGHT", k, "BOTTOMRIGHT", 0, 0)
+	if (bg.EnableMouse) then
+		bg:EnableMouse(false)
+	end
+	if (bg.SetMouseClickEnabled) then
+		bg:SetMouseClickEnabled(false)
+	end
+	if (bg.SetMouseMotionEnabled) then
+		bg:SetMouseMotionEnabled(false)
+	end
 	pcall(function() bg:SetFrameLevel(k:GetFrameLevel()) end)
 
 	-- WoW12: BackdropTemplate callbacks can receive secret dimensions.
@@ -283,8 +301,12 @@ end
 local ManagedTooltipState = setmetatable({}, { __mode = "k" })
 local CompareLayoutHooked = setmetatable({}, { __mode = "k" })
 local CompareRelayoutQueued = false
+local CompareTooltipLastRelayoutAt = 0
 local CompareTooltipWrapState = setmetatable({}, { __mode = "k" })
+local CompareTooltipStableWrapWidth = setmetatable({}, { __mode = "k" })
 local CompareTooltipLineWidthState = setmetatable({}, { __mode = "k" })
+local CompareTooltipSuppressRelayoutUntil = setmetatable({}, { __mode = "k" })
+local CompareTooltipLastSize = setmetatable({}, { __mode = "k" })
 
 local IsManagedTooltip = function(tooltip)
 	if (not tooltip) or (tooltip.IsForbidden and tooltip:IsForbidden()) then
@@ -753,6 +775,8 @@ Tooltips.OnTooltipCleared = function(self, tooltip)
 	end
 end
 
+local TooltipHasLineText
+
 Tooltips.OnTooltipSetSpell = function(self, tooltip, data)
 	if (self:IsDisabled()) then return end
 	if (not self.db.profile.showSpellID) then return end
@@ -764,13 +788,8 @@ Tooltips.OnTooltipSetSpell = function(self, tooltip, data)
 
 	local idLine = string_format("|cFFCA3C3C%s|r %d", ID_LABEL, id)
 
-	-- talent tooltips gets set twice, so let's avoid double ids
-	for i = 3, tooltip:NumLines() do
-		local line = _G[string_format("GameTooltipTextLeft%d", i)]
-		local text = line and line:GetText()
-		if (text and string_find(text, idLine)) then
-			return
-		end
+	if (TooltipHasLineText(tooltip, idLine)) then
+		return
 	end
 
 	tooltip:AddLine(" ")
@@ -799,6 +818,9 @@ Tooltips.OnTooltipSetItem = function(self, tooltip, data)
 	end
 
 	if (itemID) then
+		if (TooltipHasLineText(tooltip, itemID)) then
+			return
+		end
 		tooltip:AddLine(" ")
 		tooltip:AddLine(itemID)
 		tooltip:Show()
@@ -908,6 +930,12 @@ local GetCompareTooltipGap = function(self)
 		math_abs(tonumber(backdropStyle.offsetLeft) or 0),
 		math_abs(tonumber(backdropStyle.offsetRight) or 0)
 	)
+	local borderPadding = 0
+	local edgeSize = backdropStyle.backdrop and tonumber(backdropStyle.backdrop.edgeSize)
+	if (edgeSize and edgeSize > 0) then
+		-- Borders can extend past the frame; include a conservative share of edge size.
+		borderPadding = edgeSize * .25
+	end
 	local backdropInsets = backdropStyle.backdrop and backdropStyle.backdrop.insets
 	local insetPadding = 0
 	if (type(backdropInsets) == "table") then
@@ -917,7 +945,8 @@ local GetCompareTooltipGap = function(self)
 		)
 	end
 
-	return math_max(8, edgePadding + insetPadding)
+	local rawGap = edgePadding + insetPadding + borderPadding
+	return math_max(8, math_min(22, rawGap))
 end
 
 local AnchorCompareTooltip = function(compareTooltip, anchorTooltip, side, gap)
@@ -951,6 +980,27 @@ local GetTooltipLinePrefix = function(tooltip)
 	return tooltip and tooltip.GetName and tooltip:GetName()
 end
 
+TooltipHasLineText = function(tooltip, text)
+	if (not tooltip) or tooltip:IsForbidden() or (not text) then
+		return false
+	end
+
+	local prefix = GetTooltipLinePrefix(tooltip)
+	if (not prefix) then
+		return false
+	end
+
+	for i = 1, (tooltip:NumLines() or 0) do
+		local leftLine = _G[prefix .. "TextLeft" .. i]
+		local rightLine = _G[prefix .. "TextRight" .. i]
+		if ((leftLine and leftLine.GetText and leftLine:GetText() == text) or (rightLine and rightLine.GetText and rightLine:GetText() == text)) then
+			return true
+		end
+	end
+
+	return false
+end
+
 local SetTooltipLineWrapWidth = function(line, width)
 	if (not line) then
 		return
@@ -980,6 +1030,9 @@ local ApplyCompareTooltipWrapWidth = function(tooltip, width)
 	end
 
 	local safeWidth = (type(width) == "number" and width > 0) and width or nil
+	if (not safeWidth) then
+		CompareTooltipStableWrapWidth[tooltip] = nil
+	end
 	local prefix = GetTooltipLinePrefix(tooltip)
 	if (not prefix) then
 		return
@@ -996,6 +1049,7 @@ local ApplyCompareTooltipWrapWidth = function(tooltip, width)
 	end
 
 	CompareTooltipWrapState[tooltip] = safeWidth
+	CompareTooltipSuppressRelayoutUntil[tooltip] = GetTime() + .15
 	tooltip:Show()
 	if (tooltip.SetMinimumWidth) then
 		tooltip:SetMinimumWidth(1)
@@ -1032,29 +1086,63 @@ local GetCompareTooltipAvailableWidth = function(anchorTooltip, side, gap)
 		if (type(leftEdge) ~= "number") then
 			return nil
 		end
-		return math_max(220, leftEdge - margin)
+		return math_max(0, leftEdge - margin)
 	else
 		local rightEdge = GetSafeFrameEdge(anchorTooltip, "GetRight", "right")
 		if (type(rightEdge) ~= "number") then
 			return nil
 		end
-		return math_max(220, screenWidth - rightEdge - margin)
+		return math_max(0, screenWidth - rightEdge - margin)
 	end
+end
+
+local GetCompareTooltipStackWrapWidth = function(compareTooltips, availableWidth, gap)
+	if (type(availableWidth) ~= "number") or (availableWidth <= 0) then
+		return nil
+	end
+
+	local compareCount = #compareTooltips
+	if (compareCount <= 0) then
+		return nil
+	end
+
+	local gapBudget = gap * compareCount
+	local perTooltipWidth = math_floor((availableWidth - gapBudget) / compareCount)
+	if (perTooltipWidth <= 0) then
+		return 120
+	end
+
+	return math_max(120, math_min(420, perTooltipWidth))
+end
+
+local ResolveStableCompareWrapWidth = function(compareTooltip, targetWrapWidth)
+	if (type(targetWrapWidth) ~= "number" or targetWrapWidth <= 0) then
+		CompareTooltipStableWrapWidth[compareTooltip] = nil
+		return nil
+	end
+
+	local previousWidth = CompareTooltipStableWrapWidth[compareTooltip]
+	if (type(previousWidth) == "number" and math_abs(previousWidth - targetWrapWidth) <= 24) then
+		return previousWidth
+	end
+
+	CompareTooltipStableWrapWidth[compareTooltip] = targetWrapWidth
+	return targetWrapWidth
 end
 
 local PrepareCompareTooltipWidths = function(compareTooltips, anchorTooltip, side, gap)
 	local availableWidth = GetCompareTooltipAvailableWidth(anchorTooltip, side, gap)
-	if (type(availableWidth) ~= "number") then
-		for _, compareTooltip in ipairs(compareTooltips) do
-			ApplyCompareTooltipWrapWidth(compareTooltip, nil)
-		end
+	if (type(availableWidth) ~= "number") or (availableWidth <= 0) then
+		-- Keep current wrap state during transient geometry churn to avoid grow/shrink loops.
 		return
 	end
 
+	local targetWrapWidth = GetCompareTooltipStackWrapWidth(compareTooltips, availableWidth, gap)
+
 	for _, compareTooltip in ipairs(compareTooltips) do
-		local currentWidth = ns.GetSafeWidth and ns.GetSafeWidth(compareTooltip)
-		if (type(currentWidth) == "number" and currentWidth > availableWidth) then
-			ApplyCompareTooltipWrapWidth(compareTooltip, availableWidth)
+		if (targetWrapWidth) then
+			local stableWidth = ResolveStableCompareWrapWidth(compareTooltip, targetWrapWidth)
+			ApplyCompareTooltipWrapWidth(compareTooltip, stableWidth)
 		else
 			ApplyCompareTooltipWrapWidth(compareTooltip, nil)
 		end
@@ -1118,14 +1206,29 @@ Tooltips.LayoutCompareTooltips = function(self, tooltip)
 		PrepareCompareTooltipWidths(compareTooltips, tooltip, fallbackSide, gap)
 		AnchorCompareTooltipStack(compareTooltips, tooltip, fallbackSide, gap)
 	end
+	if (not IsCompareTooltipStackOnScreen(compareTooltips)) then
+		local leftWidth = GetCompareTooltipAvailableWidth(tooltip, "LEFT", gap) or 0
+		local rightWidth = GetCompareTooltipAvailableWidth(tooltip, "RIGHT", gap) or 0
+		local bestSide = (leftWidth > rightWidth) and "LEFT" or "RIGHT"
+		local constrainedGap = math_max(4, math_floor(gap * .5))
+		PrepareCompareTooltipWidths(compareTooltips, tooltip, bestSide, constrainedGap)
+		AnchorCompareTooltipStack(compareTooltips, tooltip, bestSide, constrainedGap)
+	end
 end
 
 Tooltips.QueueCompareTooltipRelayout = function(self)
+	local now = GetTime()
 	if (CompareRelayoutQueued) then return end
+	if ((now - CompareTooltipLastRelayoutAt) < .03) then return end
 	CompareRelayoutQueued = true
 
 	C_Timer.After(0, function()
 		CompareRelayoutQueued = false
+		local runAt = GetTime()
+		if ((runAt - CompareTooltipLastRelayoutAt) < .03) then
+			return
+		end
+		CompareTooltipLastRelayoutAt = runAt
 
 		if (_G.GameTooltip and _G.GameTooltip:IsShown() and (not _G.GameTooltip:IsForbidden())) then
 			self:LayoutCompareTooltips(_G.GameTooltip)
@@ -1147,8 +1250,35 @@ Tooltips.HookCompareTooltipLayoutUpdates = function(self, tooltip)
 		end
 	end)
 
-	tooltip:HookScript("OnSizeChanged", function(compareTooltip)
+	tooltip:HookScript("OnSizeChanged", function(compareTooltip, width, height)
 		if (compareTooltip and compareTooltip:IsShown()) then
+			width = SafeNumberValue(width)
+			height = SafeNumberValue(height)
+
+			if (width and height) then
+				local sizeState = CompareTooltipLastSize[compareTooltip]
+				if (not sizeState) then
+					sizeState = {}
+					CompareTooltipLastSize[compareTooltip] = sizeState
+				end
+
+				local oldWidth = SafeNumberValue(sizeState.width)
+				local oldHeight = SafeNumberValue(sizeState.height)
+				sizeState.width = width
+				sizeState.height = height
+
+				if (type(oldWidth) == "number" and type(oldHeight) == "number" and math_abs(oldWidth - width) < 1 and math_abs(oldHeight - height) < 1) then
+					return
+				end
+			elseif (CompareTooltipLastSize[compareTooltip]) then
+				CompareTooltipLastSize[compareTooltip].width = nil
+				CompareTooltipLastSize[compareTooltip].height = nil
+			end
+
+			local suppressUntil = CompareTooltipSuppressRelayoutUntil[compareTooltip]
+			if (suppressUntil and suppressUntil > GetTime()) then
+				return
+			end
 			Tooltips:QueueCompareTooltipRelayout()
 		end
 	end)
@@ -1203,11 +1333,20 @@ Tooltips.SetUnitAura = function(self, tooltip, unit, index, filter)
 		local color = Colors.class[class or "PRIEST"]
 		local sourceName = UnitName(source)
 		if (IsSecretValue(sourceName)) then sourceName = nil end
+		local leftText = string_format("|cFFCA3C3C%s|r %s", ID_LABEL, spellID)
+		local rightText = string_format("%s%s|r", color.colorCode, sourceName or UNKNOWN)
+		if (TooltipHasLineText(tooltip, leftText) or TooltipHasLineText(tooltip, rightText)) then
+			return
+		end
 		tooltip:AddLine(" ")
-	tooltip:AddDoubleLine(string_format("|cFFCA3C3C%s|r %s", ID_LABEL, spellID), string_format("%s%s|r", color.colorCode, sourceName or UNKNOWN))
+	tooltip:AddDoubleLine(leftText, rightText)
 	else
+		local spellLine = string_format("|cFFCA3C3C%s|r %s", ID_LABEL, spellID)
+		if (TooltipHasLineText(tooltip, spellLine)) then
+			return
+		end
 		tooltip:AddLine(" ")
-	tooltip:AddLine(string_format("|cFFCA3C3C%s|r %s", ID_LABEL, spellID))
+	tooltip:AddLine(spellLine)
 	end
 
 	tooltip:Show()
@@ -1240,11 +1379,20 @@ Tooltips.SetUnitAuraInstanceID = function(self, tooltip, unit, auraInstanceID)
 		local color = Colors.class[class or "PRIEST"]
 		local sourceName = UnitName(sourceUnit)
 		if (IsSecretValue(sourceName)) then sourceName = nil end
+		local leftText = string_format("|cFFCA3C3C%s|r %s", ID_LABEL, data.spellId)
+		local rightText = string_format("%s%s|r", color.colorCode, sourceName or UNKNOWN)
+		if (TooltipHasLineText(tooltip, leftText) or TooltipHasLineText(tooltip, rightText)) then
+			return
+		end
 		tooltip:AddLine(" ")
-	tooltip:AddDoubleLine(string_format("|cFFCA3C3C%s|r %s", ID_LABEL, data.spellId), string_format("%s%s|r", color.colorCode, sourceName or UNKNOWN))
+	tooltip:AddDoubleLine(leftText, rightText)
 	else
+		local spellLine = string_format("|cFFCA3C3C%s|r %s", ID_LABEL, data.spellId)
+		if (TooltipHasLineText(tooltip, spellLine)) then
+			return
+		end
 		tooltip:AddLine(" ")
-	tooltip:AddLine(string_format("|cFFCA3C3C%s|r %s", ID_LABEL, data.spellId))
+	tooltip:AddLine(spellLine)
 	end
 
 	tooltip:Show()

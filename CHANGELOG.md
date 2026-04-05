@@ -5,6 +5,29 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.56-JuNNeZ (2026-04-05) — Tooltip Stability & Party Frame Fixes
+
+### Highlights
+
+- Compare tooltips for rings, trinkets, and dual-wield weapons no longer oscillate, jitter between wrap widths, or grow/shrink infinitely while hovered.
+- Toy box buttons can be clicked directly again while their tooltip is shown.
+- Fixed a WoW 12 secret-value taint crash that fired when Blizzard passed secret numeric dimensions into the compare tooltip size-change callback.
+- Party frame health text now correctly shows current health value or percent for follower-dungeon AI party members, switching dynamically based on injury state.
+- Party unit frames no longer generate `ADDON_ACTION_BLOCKED` errors for `SetSize` during party roster and header updates.
+- Target aura refresh in battlegrounds no longer causes excessive per-frame work during rapid target swaps.
+
+### Access
+
+- No new settings required. Reload UI to pick up all changes.
+
+### Internal
+
+- `Components/Misc/Tooltips.lua`: compare relayout cadence guard, size-snapshot guard, suppression window extension, sticky wrap-width hysteresis to stop near-threshold width oscillation, secret-number-safe `OnSizeChanged` size tracking, dedup for repeated tooltip post-hook lines, mouse disabled on managed-tooltip backdrop.
+- `Components/Auras/Auras.lua`: aura hover-tooltip dedup via deterministic cache key to reduce repeat `SetUnitAura*` churn.
+- `Components/UnitFrames/Auras/AuraStyling.lua`: cached visual-state guards for target aura styling to skip redundant backdrop/icon updates on rapid target swaps.
+- `Components/UnitFrames/Units/Party.lua`: removed insecure `SetSize` from secure-header style path; health display now uses dedicated `HealthCurrent`/`HealthPercent` texts with injury-state visibility toggle.
+
+
 ## 5.3.55-JuNNeZ (2026-04-03) — Compare Tooltip Deferred Hook
 
 ### Highlights

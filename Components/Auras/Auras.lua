@@ -35,6 +35,7 @@ local pairs = pairs
 local select = select
 local string_lower = string.lower
 local tonumber = tonumber
+local tostring = tostring
 local type = type
 
 -- Addon API
@@ -75,6 +76,21 @@ end
 -- Aura Template
 --------------------------------------------
 local Aura = {}
+local AURA_TOOLTIP_KEY_FIELD = "__azuiAuraTooltipKey"
+
+local BuildAuraTooltipKey = function(self)
+	if (self.enchant) then
+		return "ench:" .. tostring(self:GetID())
+	end
+
+	if (self.auraUnit and self.auraInstanceID) then
+		return "inst:" .. tostring(self.auraUnit) .. ":" .. tostring(self.auraInstanceID)
+	end
+
+	local parent = self:GetParent()
+	local unit = parent and parent.GetAttribute and parent:GetAttribute("unit") or "nil"
+	return "idx:" .. tostring(unit) .. ":" .. tostring(self:GetID()) .. ":" .. tostring(self.filter or "")
+end
 
 local GetSafeAuraField = function(value)
 	if (IsSecret and IsSecret(value)) then
@@ -411,7 +427,7 @@ Aura.UpdateTempEnchant = function(self, slot)
 
 end
 
-Aura.UpdateTooltip = function(self)
+Aura.UpdateTooltip = function(self, tooltipKey)
 	if (GameTooltip:IsForbidden()) then return end
 	if (self.enchant) then
 		GameTooltip:SetInventoryItem("player", self:GetID())
@@ -420,6 +436,7 @@ Aura.UpdateTooltip = function(self)
 	else
 		GameTooltip:SetUnitAura(self:GetParent():GetAttribute("unit"), self:GetID(), self.filter)
 	end
+	GameTooltip[AURA_TOOLTIP_KEY_FIELD] = tooltipKey or BuildAuraTooltipKey(self)
 end
 
 Aura.OnUpdate = function(self, elapsed)
@@ -462,14 +479,21 @@ end
 Aura.OnEnter = function(self)
 	if (not self:IsVisible()) then return end
 	if (GameTooltip:IsForbidden()) then return end
+	local tooltipKey = BuildAuraTooltipKey(self)
+	if (GameTooltip.GetOwner and GameTooltip:GetOwner() == self and GameTooltip[AURA_TOOLTIP_KEY_FIELD] == tooltipKey) then
+		return
+	end
 	local p = self:GetParent()
 	GameTooltip:SetOwner(self, "ANCHOR_NONE")
 	GameTooltip:SetPoint(p.tooltipPoint, self, p.tooltipAnchor, p.tooltipOffsetX, p.tooltipOffsetY)
-	self:UpdateTooltip()
+	self:UpdateTooltip(tooltipKey)
 end
 
 Aura.OnLeave = function(self)
 	if (GameTooltip:IsForbidden()) then return end
+	if (GameTooltip.GetOwner and GameTooltip:GetOwner() == self) then
+		GameTooltip[AURA_TOOLTIP_KEY_FIELD] = nil
+	end
 	GameTooltip:Hide()
 end
 
