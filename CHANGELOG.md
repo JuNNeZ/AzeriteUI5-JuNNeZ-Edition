@@ -5,6 +5,27 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.57-JuNNeZ (2026-04-05) — Tooltip Authority & UI Compatibility
+
+### Highlights
+
+- Compare-item tooltips no longer jump between positions while Shift-hovering items. AzeriteUI now delegates compare-tooltip placement fully to Blizzard's built-in comparison manager.
+- Fixed chat compatibility with BigInputBox by automatically disabling AzeriteUI chat-frame modifications when BigInputBox is enabled, reducing protected chat-send conflicts.
+- Blizzard player castbar is now hidden immediately on reload if already visible, removing the brief post-reload exposure.
+- Party frame health percentage text is now centered inside the health bar and styled consistently with the health value text.
+
+### Access
+
+- No new settings required. Reload UI to apply all changes.
+
+### Internal
+
+- `Components/Misc/Tooltips.lua`: removed addon-side compare-tooltip re-anchoring/layout pipeline and retained only modifier gating, suppression, and frame-level handling.
+- `Components/Misc/ChatFrames.lua`: added `BigInputBox` to chat-conflict disable guards.
+- `Components/UnitFrames/Units/PlayerCastBar.lua`: added immediate `Hide()` during Blizzard castbar suppression when frame is currently shown.
+- `Layouts/Data/PartyUnitFrames.lua`: added explicit health-percentage position/typography/color config for centered in-bar display.
+
+
 ## 5.3.56-JuNNeZ (2026-04-05) — Tooltip Stability & Party Frame Fixes
 
 ### Highlights

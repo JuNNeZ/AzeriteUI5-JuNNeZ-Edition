@@ -1,10 +1,289 @@
 
+## 2026-04-05 — Release 5.3.57-JuNNeZ
+
+- **[RELEASE] 5.3.57-JuNNeZ prep/finalization:**
+  - Bumped version to `5.3.57-JuNNeZ` in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
+  - Consolidated `CHANGELOG.md` with a delta-only top entry for the finalized pending fixes:
+    - compare tooltip jitter/jump elimination by delegating positioning to Blizzard `TooltipComparisonManager`
+    - BigInputBox chat conflict gating in `ChatFrames`
+    - immediate Blizzard player castbar hide on reload
+    - centered party health percentage layout settings
+  - Prepared commit/tag release checkpoint for `v5.3.57-JuNNeZ`.
+
+---
+
+## 2026-04-05 — Remove compare tooltip repositioning (delegate to Blizzard)
+
+- **[USER REPORT] Compare tooltips still jumping between positions after rebuild:**
+  - **Symptom:** Even after removing the feedback-loop system, compare tooltips still visibly jump from one position to another on Shift-hover.
+  - **Root cause (confirmed via Blizzard source):** Blizzard's `TooltipComparisonManager:AnchorShoppingTooltips()` in `TooltipComparisonManager.lua` already handles compare tooltip positioning — side selection, screen-edge sliding, and primary+secondary stacking. AzeriteUI's `LayoutCompareTooltips` then overrode that positioning 1 frame later via `C_Timer.After(0)`, creating a visible jump from Blizzard's position to AzeriteUI's position. The deferred verification at 0.15s could cause a second jump. Two independent positioning systems fighting over the same anchors with a mandatory 1-frame delay between them is structurally unfixable.
+
+- **[FIX] Removed all compare tooltip repositioning from `Components/Misc/Tooltips.lua`:**
+  - Removed `LayoutCompareTooltips` and all 16 helper functions it depended on.
+  - Removed 4 weak-key state tables (`CompareTooltipWrapState`, `CompareTooltipStableWrapWidth`, `CompareTooltipLineWidthState`, `CompareTooltipPreferredSide`).
+  - `OnCompareItemShow` now only handles: modifier-key gating (hide compare tooltips without modifier), OnShow hook registration, and frame level correction.
+  - Blizzard's `TooltipComparisonManager` is the sole positioning authority. No AzeriteUI positioning, no deferred work, no feedback loops, no jitter.
+  - Custom backdrop theming on compare tooltips is unaffected (driven by separate `SharedTooltip_SetBackdropStyle` hook).
+  - Net removal: ~400 lines of compare tooltip layout machinery across 8 iterations.
+
+---
+
+## 2026-04-05 — Compare tooltip layout system rebuild (feedback loop elimination)
+
+- **[USER REPORT] Compare tooltips still jitter, especially with >2 compare items:**
+  - **Symptom:** Despite 6 rounds of layer-on-layer guard additions (throttle gates, suppress windows, generation counters, sweep systems, idempotent anchoring), compare tooltips still visibly jittered. Worse with trinkets/rings (3+ items) than single-slot items.
+  - **Root cause:** The entire feedback architecture was inherently loop-prone. `OnSizeChanged` hook → relayout queue → layout pass → `SetPoint`/`SetWidth` → fires `OnSizeChanged` → loop. No amount of suppress windows or throttle gates could fully break this cycle because the fundamental design reacted to size changes caused by its own layout work.
+
+- **[FIX] Full rebuild of compare tooltip layout system in `Components/Misc/Tooltips.lua`:**
+  - **Architecture change:** Replaced the reactive feedback-loop system with a fire-and-verify model.
+    - **Old:** OnCompareItemShow → 5× LayoutCompareTooltips (1 direct + 1 queued + 3 sweep) + OnSizeChanged hook feeding back into queue → required 10 weak-key tables, 3-tier suppress system, generation counter, sweep delays, and throttle gate.
+    - **New:** OnCompareItemShow → 1 sync layout pass + 1 deferred verification at 0.15s. Two calls total, no feedback path.
+  - **Removed entirely:**
+    - `QueueCompareTooltipRelayout` — deferred relayout queue with 30ms gate
+    - `ScheduleCompareTooltipRelayoutSweep` — multi-pass sweep system (.05/.12/.2s timers)
+    - `OnSizeChanged` hook on compare tooltips — the primary feedback loop entry point
+    - `ResolveCompareContextTooltip` — dead helper for removed queue system
+    - 7 weak-key state tables: `CompareRelayoutQueued`, `CompareTooltipLastRelayoutAt`, `CompareTooltipSuppressRelayoutUntil`, `CompareTooltipLastSize`, `CompareTooltipLastLayoutWorkAt`
+    - Scalars: `CompareTooltipRelayoutGeneration`, `CompareTooltipRelayoutSweepDelays`
+    - All suppress window logic (pre-suppress, post-layout suppress, post-sweep quiescence, external growth guard)
+    - Layout-work throttle gate
+  - **Kept (working parts):**
+    - `CompareLayoutHooked` — duplicate hook prevention
+    - `CompareTooltipWrapState` / `CompareTooltipStableWrapWidth` / `CompareTooltipLineWidthState` — width clamping + hysteresis
+    - `CompareTooltipPreferredSide` — side-lock cache
+    - `LayoutCompareTooltips` core — overlap/on-screen check, side resolution, wrap widths, anchor stack, fallback side, constrained gap
+    - `AnchorCompareTooltip` idempotent anchoring — prevents unnecessary SetPoint calls
+    - `OnShow` hook — modifier check + without-modifier suppress only (no relayout trigger)
+  - **How verification works:** The deferred C_Timer.After(0.15) call runs `LayoutCompareTooltips` which is idempotent via the overlap/on-screen early-return and the idempotent anchoring. If external addons (ATT) added lines and changed sizes, the geometry is re-evaluated once. If nothing changed, it no-ops immediately.
+  - **Net result:** ~200 lines of feedback-loop machinery removed. Code is simpler and structurally cannot jitter because there's no re-entry path from layout output back to layout input.
+
+---
+
+## 2026-04-05 — Compare tooltip jitter on ALL items (layout-work throttle)
+
+- **[USER REPORT] Compare tooltips still jitter, even on single-item compare:**
+  - **Symptom:** After previous idempotent-anchor and post-layout-suppress fixes, compare tooltips still visibly jitter/ping-pong on shift-hover — now affecting single-slot items too, not just dual-slot.
+  - **Root cause:** `OnCompareItemShow` fires 5 `LayoutCompareTooltips` calls total: 1 direct + 1 via `QueueCompareTooltipRelayout` + 3 via `ScheduleCompareTooltipRelayoutSweep` (.05, .12, .2s). The sweep calls invoke `LayoutCompareTooltips` directly, bypassing the OnSizeChanged/OnShow suppress system entirely. Each call potentially re-anchors and re-wraps (via `PrepareCompareTooltipWidths` → `ApplyCompareTooltipWrapWidth` → `tooltip:Show()`), producing visible position/size changes as geometry settles between passes.
+
+- **[FIX] Layout-work throttle gate in `Components/Misc/Tooltips.lua`:**
+  - Added `CompareTooltipLastLayoutWorkAt` weak-key table to track when `LayoutCompareTooltips` last did actual anchoring/wrapping work per tooltip context.
+  - Added throttle gate after the overlap/on-screen early-return check: if layout work was performed within the last 0.4s, skip the current call. This collapses the 5 calls into effectively 1 pass — the first call does real work, subsequent sweep passes are no-ops.
+  - The read-only overlap/on-screen check still runs on every call (before the throttle gate), so a genuine overlap problem breaks through immediately.
+  - Timestamp recorded at end of layout work (after anchoring + wrapping + side cache).
+  - `HideCompareTooltips` clears the throttle timestamp along with side cache.
+  - Sweep quiescence (1.5s) still set by the final sweep timer callback (after the throttled `LayoutCompareTooltips` call), so OnSizeChanged suppression is unaffected.
+
+---
+
+## 2026-04-05 — Compare tooltip ping-pong / jitter deep follow-up
+
+- **[USER REPORT] Compare tooltips still ping-pong between two positions on dual-slot Shift-hover:**
+  - **Symptom:** Despite side-lock cache, compare tooltips on rings/trinkets still visually alternated between two positions.
+  - **Root cause (3 factors):**
+    1. `ApplyCompareTooltipWrapWidth` only sets a suppress window when wrap width actually changes. On subsequent sweep passes where width is already correct, no suppress is set — so `AnchorCompareTooltipStack`'s `ClearAllPoints`+`SetPoint` triggers unsuppressed `OnSizeChanged`, re-entering the relayout queue.
+    2. `OnShow` hook had no suppress check (unlike `OnSizeChanged`), allowing re-shows during active layout to bypass the suppress system.
+    3. `AnchorCompareTooltip` always performed `ClearAllPoints`+`SetPoint` even when the tooltip was already correctly anchored, generating unnecessary layout events.
+
+- **[FIX] Three-point feedback loop breaker in `Components/Misc/Tooltips.lua`:**
+  - `AnchorCompareTooltip`: now checks existing anchor (point, relativeTo, relativePoint, xOfs) before clearing/setting. If already correctly anchored, skips entirely.
+  - `LayoutCompareTooltips`: now sets a 0.5s post-layout suppress window on ALL compare tooltips after each layout pass, ensuring our own geometry changes don't cascade via OnSizeChanged.
+  - `HookCompareTooltipLayoutUpdates`: OnShow hook now respects `CompareTooltipSuppressRelayoutUntil` the same way OnSizeChanged does.
+
+---
+
+## 2026-04-05 — Shift-compare dual-slot position cycling follow-up
+
+- **[USER REPORT] Shift-hover compare on rings/trinkets cycles between two positions:**
+  - **Symptom:** Ctrl-click preview path now works, but while holding compare modifier on dual-slot items (rings/trinkets), compare tooltips can alternate between two anchor positions.
+  - **Root cause:** The compare layout path still forced relayout when overlap detection had uncertain geometry (`hasOverlay == nil`). In that uncertain state, repeated refresh passes could re-evaluate side selection and produce side/anchor ping-pong in addon-heavy tooltip stacks.
+
+- **[FIX] Stabilize side selection and fail closed on uncertain geometry in `Components/Misc/Tooltips.lua`:**
+  - Added `CompareTooltipPreferredSide` weak-key side cache per tooltip context (`GameTooltip` / `ItemRefTooltip`).
+  - Added `GetObservedCompareTooltipSide(...)` to infer current live side from safe horizontal bounds.
+  - `LayoutCompareTooltips(...)` now treats uncertain overlap (`hasOverlay == nil`) as non-action when stack is already on-screen, instead of forcing reposition.
+  - `LayoutCompareTooltips(...)` now uses side lock precedence:
+    1. cached preferred side
+    2. observed current side
+    3. center-based fallback
+  - Resolved side is persisted only when final placement is on-screen.
+  - `HideCompareTooltips(...)` now clears cached preferred side for that context, preventing stale carryover.
+  - **Expected result:** Stable compare position on Shift-hover for dual-slot items without left/right ping-pong.
+
+- **Taint safety:** No Blizzard function replacement, no secure method wrapping, no new global writes. Changes are local table state plus existing deferred layout path.
+- **Local validation:** `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`.
+- **Runtime validation target:** `/buggrabber reset` -> `/reload` -> Shift-hover ring/trinket repeatedly (bags + merchant) -> confirm compare tooltips hold one stable side/position and no periodic flip.
+
+---
+
+## 2026-04-05 — Compare tooltip no-modifier blink follow-up
+
+- **[USER REPORT] Compare tooltips blink every ~0.8 seconds on hover with no modifier held:**
+  - **Symptom:** After the protected Ctrl-click preview fix, normal item hover still causes compare tooltips to pop in and out periodically even when no compare modifier is held.
+  - **Root cause:** AzeriteUI was still hiding no-modifier compare tooltips too late in the lifecycle. Another addon or Blizzard refresh path can reshow `ShoppingTooltip1/2` periodically, and AzeriteUI only hid them later through the deferred `OnCompareItemShow` path. That allowed a visible blink before the hide landed.
+
+- **[FIX] Fail-closed no-modifier suppression on compare tooltip `OnShow`:**
+  - Added `SuppressCompareTooltipWithoutModifier(compareTooltip)` helper in `Components/Misc/Tooltips.lua`.
+  - `HookCompareTooltipLayoutUpdates(...):OnShow` now immediately suppresses and hides the compare tooltip when `IsModifiedClick("COMPAREITEMS")` is false, before any relayout queue runs.
+  - The deferred no-modifier branch in `OnCompareItemShow(...)` now also applies the same suppression helper to all compare tooltips in the context before hide.
+  - **Expected result:** No periodic no-modifier shopping-tooltip blink while hovering items. Shift-compare behavior should remain intact.
+
+- **Local validation:** `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`.
+- **Runtime validation target:** `/buggrabber reset` -> `/reload` -> hover equippable items without holding compare modifier for at least 5-10 seconds -> confirm no periodic compare blink. Then hold the compare modifier and confirm compare tooltips still appear normally.
+
+---
+
+## 2026-04-05 — Ctrl-click item preview blocked by addon follow-up
+
+- **[USER REPORT] Ctrl-click item preview/dress-up fails in bags and merchant windows with "Interaction failed because of addon":**
+  - **Symptom:** Ctrl-clicking equippable items to preview/dress them up no longer works from bags or shops. No Lua errors, but Blizzard reports a protected interaction block attributed to the addon.
+  - **Likely root cause:** `Components/Misc/Tooltips.lua` still mutated Blizzard compare-tooltip frames directly inside the `SecureHook("GameTooltip_ShowCompareItem", ...)` callback. That hook path runs in the same hot item-tooltip / modified-item-click ecosystem as Blizzard item-preview flows. Even though the hook is post-call, immediate frame mutation (`SetFrameLevel`, wrap-width changes, `SetMinimumWidth`, `Show`, reanchors) risks contaminating the protected item-click chain before it fully returns.
+
+- **[FIX] Defer compare-tooltip frame mutations out of the SecureHook tick:**
+  - `Tooltips.OnCompareItemShow(...)` now schedules all compare-tooltip setup/layout work through `C_Timer.After(0, ...)`.
+  - The SecureHook body is now effectively read-only and exits immediately after scheduling the follow-up.
+  - Deferred work still preserves the existing compare hardening: modifier gating, pre-suppress window, relayout queue, and delayed sweeps.
+  - **Expected result:** Blizzard Ctrl-click dress-up / item-preview flows can finish in an unblocked protected context, while compare tooltip placement still settles one tick later.
+
+- **Local validation:** `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`.
+- **Runtime validation target:** `/buggrabber reset` -> `/reload` -> Ctrl-click equippable items in bags and merchant windows -> confirm preview opens normally and no new protected-interaction popup appears. Then verify Shift-compare still shows compare tooltips without overlap/dance.
+
+---
+
+## 2026-04-05 — Player castbar visible on reload until edit mode toggled
+
+- **[USER REPORT] Player castbar exposes briefly on reload until entering/exiting edit mode:**
+  - **Symptom:** After `/reload`, the Blizzard player castbar frame is visible/exposed until the user enters edit mode and exits it, which then properly hides it. No Lua errors, no corruption. Part of the issue was reloading while in combat.
+  - **Root cause:** The `SuppressBlizzardCastbar` function was applying alpha=0 and registering hooks to prevent re-showing, but if the castbar frame was already visible/shown at the time suppression was applied, the frame would remain visible. The hooks would prevent NEW shows, but wouldn't address the current visible state immediately.
+
+- **[FIX] Add explicit Hide() call in `SuppressBlizzardCastbar` after alpha suppression:**
+  - Added immediate `frame:Hide()` call (via pcall) after setting `__AzeriteUI_Suppressed` flag and applying alpha.
+  - This ensures that if a castbar frame is already visible when suppression is applied, it is immediately hidden before hooks take effect.
+  - The Hide call is defensive (wrapped in pcall) to avoid taint if frame is protected.
+
+- **[VERIFIED] Fix confirmed working:**
+  - Tested `/reload` both in and out of combat.
+  - Player castbar no longer exposes on reload in either scenario.
+  - Expected result achieved: player castbar is immediately hidden on reload and stays hidden.
+
+---
+
+## 2026-04-05 — Party frame health percentage positioning fix
+
+- **[USER REPORT] Party % health always shows and is positioned outside the health bar:**
+  - **Symptom:** Party member health percentage is always displayed instead of using smart switch, and is positioned outside the health bar area to the right.
+  - **Root cause:** `HealthPercentagePosition` config was missing from `Layouts/Data/PartyUnitFrames.lua`. When not defined, the code defaults to positioning the percentage 18 pixels to the right of the health value: `{ "LEFT", healthValue, "RIGHT", 18, 0 }`. This places it outside the health bar's horizontal bounds.
+  - **Smart switch logic:** The visibility function `UpdatePartyHealthTextVisibility` correctly shows percentage when unit is injured and hides value. Behavior is correct; the positioning issue just made it obviously wrong.
+
+- **[FIX] Add explicit `HealthPercentagePosition` to party frame config:**
+  - Added `HealthPercentagePosition = { "CENTER", 0, 0 }` to `Layouts/Data/PartyUnitFrames.lua` (line 79) to position percentage at the same center point as health value, aligned with the health bar.
+  - Added companion styling settings (`HealthPercentageJustifyH`, `HealthPercentageJustifyV`, `HealthPercentageFont`, `HealthPercentageColor`) to match health value appearance.
+  - **Expected result:** When unit is injured, percentage displays inside the health bar centered, not offset to the right.
+
+- **Local validation:** `luac -p Layouts/Data/PartyUnitFrames.lua` → no syntax errors.
+- **Runtime test:** `/reload` → verify party member health percentage appears centered within health bar when injured, and switches to value display when at full health.
+
+---
+
+## 2026-04-05 — Compare tooltip AllTheThings dance follow-up
+
+- **[USER REPORT] Compare tooltip dance persists — identified AllTheThings as the likely driver:**
+  - **Symptom:** Tooltips still oscillate/dance during item comparisons. User identified AllTheThings (ATT) as forcing word-wrap expansion on the compare tooltip, which fights our width-constraint pass and triggers repeated position changes.
+  - **Root causes addressed:**
+    1. **Suppress set too late in `ApplyCompareTooltipWrapWidth`:** The `CompareTooltipSuppressRelayoutUntil` timestamp was set AFTER the `line:SetWidth()` loop. `line:SetWidth()` can fire `OnSizeChanged` synchronously on the parent tooltip, reaching the `OnSizeChanged` handler BEFORE suppress was active. Moved suppress assignment to before the loop and increased window from 0.15 s → 0.4 s.
+    2. **No guard against external frame widening:** When ATT (or any addon) calls `tooltip:SetWidth(largeValue)`, our `OnSizeChanged` handler saw width > 2 px delta and queued a relayout. That relayout re-anchored the tooltip, fighting ATT on every frame. Added explicit growth guard: if frame width exceeds our last applied wrap-width by more than 60 px, extend suppress 1.0 s and skip the relayout queue.
+    3. **No pre-suppress during `OnCompareItemShow`:** ATT's `OnShow` / `SetHyperlink` hooks fire during our initial setup before our suppress window was established. Added pre-suppress of 0.5 s on all compare tooltips at the top of `OnCompareItemShow`, before any layout starts.
+    4. **No post-sweep quiescence:** After our last deliberate sweep pass (0.20 s), no suppress was set. ATT's deferred processing (e.g. `C_Timer.After` callbacks) could fire after our sweep and re-trigger the relayout loop. After the final sweep pass, set a 1.5 s quiescence window on all compare tooltips for the context.
+
+- **[FIX] Four-point suppress hardening in `Components/Misc/Tooltips.lua`:**
+  - `ApplyCompareTooltipWrapWidth`: moved suppress before line-width loop; 0.15 s → 0.4 s.
+  - `OnSizeChanged`: external-growth guard — frame width > `CompareTooltipWrapState + 60` → suppress 1.0 s, skip queue.
+  - `OnCompareItemShow`: pre-suppress all compare tooltips 0.5 s before first layout.
+  - `ScheduleCompareTooltipRelayoutSweep`: post-final-pass quiescence 1.5 s on all compare tooltips.
+
+- **Local validation:** `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`.
+
+---
+
+## 2026-04-05 — Compare tooltip dance full-scan follow-up
+
+- **[USER REPORT] Compare tooltips still do a periodic "dance" while comparing:**
+  - **Symptom:** Intermittent reposition/jitter still appears during compare sessions even after earlier overlap and no-shift gating fixes.
+  - **Investigation scope:** Full repo scan of compare-tooltip flow (`Components/Misc/Tooltips.lua`) plus related tooltip refresh paths and Blizzard compare behavior notes.
+
+- **[ROOT-CAUSE FIX] Remove cross-context relayout race + tighten deferred modifier guard + reduce micro-jitter churn:**
+  - Replaced single global compare-relayout queue flag with per-context queue state (`GameTooltip` vs `ItemRefTooltip`) to prevent one context suppressing the other's queued relayout callback.
+  - Replaced single global relayout cadence timestamp with per-context timestamps to avoid cross-tooltip throttling drift.
+  - Deferred compare relayout callback now re-checks compare modifier before running and fail-closes by hiding compare tooltips when modifier is no longer active.
+  - Increased compare `OnSizeChanged` no-op delta threshold from `< 1` to `< 2` pixels to ignore tiny sub-pixel churn that was repeatedly re-queuing relayout under addon-heavy tooltip updates.
+  - **Expected result:** Smoother compare layout convergence with fewer position flips/jitter bursts in longer sessions and mixed tooltip contexts.
+
+- **Local validation:** `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`.
+- **Runtime validation target:** `/buggrabber reset` -> `/reload` -> long-session hover tests on rings/trinkets and normal equip items (bags + links) with `Zygor`, `Auctionator`, `Narcissus`, `ArchonTooltip` enabled -> confirm no periodic side-to-side dance and no compare persistence without modifier.
+
+## 2026-04-05 — Compare modifier enforcement follow-up (no-shift compare)
+
+- **[USER REPORT] Compare tooltips still appear without holding the compare modifier:**
+  - **Symptom:** Compare windows can show even when Shift/compare modifier is not held.
+  - **Context:** Blizzard and other addons can trigger compare through non-modifier paths (`GameTooltip_ShowCompareItem(...)`, tooltip info `compareItem = true`, or background refresh paths).
+
+- **[FIX] Enforce modifier-gated compare behavior in AzeriteUI tooltip layer:**
+  - Added strict compare-modifier gate (`IsModifiedClick("COMPAREITEMS")`) before AzeriteUI compare layout logic runs.
+  - When modifier is not active, AzeriteUI now immediately hides compare tooltip frames and skips relayout/sweep callbacks.
+  - Delayed relayout sweep callbacks now re-check modifier state before each pass and fail closed if modifier is not active.
+  - **Expected result:** No AzeriteUI-driven compare tooltip display/persistence when the compare modifier is not held.
+
+- **Local validation:** `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`.
+- **Runtime validation target:** `/buggrabber reset` -> `/reload` -> hover equippable items without holding compare modifier (no compare windows expected), then hold compare modifier (compare windows expected), release modifier (compare windows hide again).
+
+## 2026-04-05 — Compare tooltip long-session overlap recurrence follow-up
+
+- **[INVESTIGATION] Overlap can return after gameplay time despite working right after `/reload`:**
+  - **User report:** Compare tooltip overlap is intermittent and tends to reappear later in session instead of immediately after load.
+  - **Likely cause:** In multi-addon tooltip stacks, a later anchor pass can occur slightly after AzeriteUI's immediate compare relayout. If no additional `OnShow`/`OnSizeChanged` fires afterward, AzeriteUI does not get another chance to correct spacing.
+
+- **[FIX] Add short tokenized delayed compare relayout sweep after compare show:**
+  - Added bounded delayed relayout passes (`0.05`, `0.12`, `0.20` seconds) after compare display.
+  - Added generation token guard so only the latest compare context can run delayed passes (older pending timers fail closed).
+  - Kept non-invasive policy: delayed passes still run through existing overlap/on-screen checks and therefore no-op when Blizzard/addon placement is already valid.
+  - **Expected result:** Better recovery when another addon reanchors compare tooltips shortly after the initial pass, without returning to always-force anchor behavior.
+
+- **Local validation:** `luac -p Components/Misc/Tooltips.lua` -> `luac-ok`.
+- **Runtime validation target:** `/buggrabber reset` -> `/reload` -> play for several minutes with `Zygor`, `Auctionator`, `Narcissus`, `ArchonTooltip` enabled -> repeatedly hover ring/trinket and side-by-side compare items -> confirm overlap does not return over time.
+
 ## 2026-04-05 — Release 5.3.56-JuNNeZ
 
 - **[RELEASE] 5.3.56-JuNNeZ prep/finalization:**
   - Bumped version to `5.3.56-JuNNeZ` in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
   - CHANGELOG delta entry added covering: compare tooltip oscillation/jitter/secret-value crash fixes, toy box click regression fix, party frame health text fix, party SetSize taint fix, and target aura BG performance guard.
   - Tagged `v5.3.56-JuNNeZ` and pushed to origin.
+
+## 2026-04-05 — BigInputBox protected SendChatMessage conflict
+
+- **[INVESTIGATION] `ADDON_ACTION_FORBIDDEN` on chat send with BigInputBox enabled:**
+  - **User report:** `BigInputBox` triggered protected-call failure through `ChatFrameEditBox.lua:SendText()` -> `SendChatMessage`.
+  - **Context:** AzeriteUI chat module was still active in this addon stack and modifies chat frame/editbox behavior; we already keep this module disabled for other chat overhauls (`Prat-3.0`, `ls_Glass`).
+  - **Likely interaction:** Multiple chat-editbox modifiers on WoW 12 can taint caller identity on secure send paths.
+
+- **[FIX] Extend chat-addon conflict gate to include BigInputBox:**
+  - Added `BigInputBox` to the early-return conflict guard in `Components/Misc/ChatFrames.lua`.
+  - Added `BigInputBox` to `ChatFrames.OnInitialize()` disable gate so the module remains off even if load timing differs.
+  - **Expected result:** AzeriteUI no longer participates in chat editbox mutations when `BigInputBox` is active, reducing protected send taint risk.
+
+- **Local validation:** `luac -p Components/Misc/ChatFrames.lua` (run after edit).
+- **Runtime validation target:** `/buggrabber reset` -> `/reload` with BigInputBox enabled -> send chat messages in `/s`, `/p`, `/g`, and whisper -> confirm no new `ADDON_ACTION_FORBIDDEN` entries referencing `SendChatMessage`/`ChatFrameEditBox.lua`.
+
+## 2026-04-05 — Compare tooltip overlay regression follow-up (post-5.3.56)
+
+- **[INVESTIGATION] Overlay still reappears in tooltip-heavy addon stacks:**
+  - **User report:** Compare tooltip overlay/collapse can still happen again after release 5.3.56.
+  - **Context check:** Runtime stack includes multiple tooltip skin/anchor addons (`ElvUI`, `AddOnSkins`, `ConsolePort`, `ArchonTooltip`, `Auctionator`, `Narcissus`, `Zygor`), matching the high-conflict profile documented in `Docs/Tooltip Live Truth Research.md`.
+  - **Finding:** AzeriteUI compare relayout path was still always re-anchoring compare tooltips, even when Blizzard placement was already valid. In multi-addon environments this can create anchor contention and reintroduce intermittent overlay.
+
+- **[FIX] Make compare relayout intervention conditional (non-invasive default):**
+  - Added direct horizontal overlap detector for compare tooltips and primary tooltip using secret-safe geometry reads.
+  - `LayoutCompareTooltips(...)` now exits early and keeps Blizzard placement when compare tooltips are already separated and on-screen.
+  - AzeriteUI custom compare re-anchoring/wrap fallback now runs only when overlap is detected or on-screen validation fails.
+  - **Expected result:** Less addon-vs-addon anchor contention and fewer regressions where compare tooltips collapse back into each other.
 
 ## 2026-04-05 — Tooltip full-pass refactor investigation (oscillation follow-up)
 

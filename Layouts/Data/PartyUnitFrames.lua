@@ -75,6 +75,12 @@ ns.RegisterConfig("PartyFrames", {
 	HealthValueFont = GetFont(13, true),
 	HealthValueColor = { Colors.offwhite[1], Colors.offwhite[2], Colors.offwhite[3], .75 },
 
+	HealthPercentagePosition = { "CENTER", 0, 0 },
+	HealthPercentageJustifyH = "CENTER",
+	HealthPercentageJustifyV = "MIDDLE",
+	HealthPercentageFont = GetFont(13, true),
+	HealthPercentageColor = { Colors.offwhite[1], Colors.offwhite[2], Colors.offwhite[3], .75 },
+
 	-- Power
 	-----------------------------------------
 	PowerBarSize = { 72, 2 },

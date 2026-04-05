@@ -25,7 +25,11 @@
 --]]
 local _, ns = ...
 
-if (ns.API.IsAddOnEnabled("Prat-3.0") or ns.API.IsAddOnEnabled("ls_Glass")) then return end
+-- BigInputBox also replaces chat editbox behavior and can taint secure send paths
+-- when multiple chat modifiers are active. Keep AzeriteUI chat skinning out of that stack.
+if (ns.API.IsAddOnEnabled("Prat-3.0")
+	or ns.API.IsAddOnEnabled("ls_Glass")
+	or ns.API.IsAddOnEnabled("BigInputBox")) then return end
 
 local ChatFrames = ns:NewModule("ChatFrames", "LibMoreEvents-1.0", "AceHook-3.0", "AceConsole-3.0", "AceTimer-3.0")
 
@@ -617,7 +621,11 @@ ChatFrames.OnEvent = function(self, event, ...)
 end
 
 ChatFrames.OnInitialize = function(self)
-	if (ns.API.IsAddOnEnabled("Prat-3.0") or ns.API.IsAddOnEnabled("ls_Glass")) then return self:Disable() end
+	if (ns.API.IsAddOnEnabled("Prat-3.0")
+		or ns.API.IsAddOnEnabled("ls_Glass")
+		or ns.API.IsAddOnEnabled("BigInputBox")) then
+		return self:Disable()
+	end
 
 	self.db = ns.db:RegisterNamespace(self:GetName(), defaults)
 

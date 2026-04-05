@@ -84,6 +84,10 @@ local function SuppressBlizzardCastbar(frame)
 	end
 	frame.__AzeriteUI_Suppressed = true
 	ApplySuppressedBlizzardCastbarAlpha(frame)
+	-- Immediately hide frame if it's currently visible
+	if (frame:IsShown()) then
+		pcall(frame.Hide, frame)
+	end
 	if (not frame.__AzeriteUI_SuppressHooksAttached) then
 		frame.__AzeriteUI_SuppressHooksAttached = true
 		if (frame.HookScript) then
