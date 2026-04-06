@@ -571,9 +571,12 @@ local GenerateOptions = function()
 			local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("PlayerFrameAlternate")
 			if (suboptions and suboptions.args) then
 			suboptions.hidden = function(info)
-
-				-- Hidden if devmode isn't enabled.
-				if (not ns.db.global.enableDevelopmentMode) then return true end
+				-- Keep this discoverable outside devmode,
+				-- but hide while the main player frame is active.
+				local playerFrame = ns:GetModule("PlayerFrame", true)
+				if (playerFrame and playerFrame.db and playerFrame.db.profile and playerFrame.db.profile.enabled) then
+					return true
+				end
 			end
 
 			suboptions.args.enabled.set = function(info, val)

@@ -5,6 +5,23 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.58-JuNNeZ (2026-04-06) — Player Alternate Aura Toggle + Access
+
+### Highlights
+
+- Fixed Player Alternate aura placement so turning off `Auras below frame` now places the aura row above the frame instead of staying underneath.
+- Player Alternate settings are now available in normal mode; they are no longer locked behind development mode.
+
+### Access
+
+- `/az -> Unit Frames -> Player Alternate` is now visible without `/devmode` when the main Player frame is disabled.
+
+### Internal
+
+- `Layouts/Data/PlayerUnitFrameAlternate.lua`: corrected `AurasPositionAlternate` to a true above-frame anchor.
+- `Options/OptionsPages/UnitFrames.lua`: removed devmode-only hide gate for Player Alternate options and kept mutually-exclusive visibility with the main Player frame.
+
+
 ## 5.3.57-JuNNeZ (2026-04-05) — Tooltip Authority & UI Compatibility
 
 ### Highlights

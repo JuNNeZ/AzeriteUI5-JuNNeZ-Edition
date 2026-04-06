@@ -189,7 +189,7 @@ ns.RegisterConfig("PlayerFrameAlternate", {
 	AurasSortDirection = "DESCENDING",
 
 	-- Above frame
-	AurasPositionAlternate = { "TOPLEFT", 150, -126 },
+	AurasPositionAlternate = { "TOPLEFT", 150, 60 },
 	AurasSizeAlternate = { 316, 76 },
 	AurasSizeBossAlternate = { 396, 76 },
 	AuraSizeAlternate = 36,

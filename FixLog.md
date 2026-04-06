@@ -1,4 +1,21 @@
 
+## 2026-04-06 — Player Alternate aura placement + devmode gating follow-up
+
+- **[USER REPORT] Player Alternate auras stayed under frame even with 'Auras below frame' disabled, and Player Alternate controls were locked behind /devmode:**
+  - **Symptom 1:** Toggling `Auras below frame` off still kept the aura row under the alternate player frame.
+  - **Root cause 1:** `Layouts/Data/PlayerUnitFrameAlternate.lua` had `AurasPositionAlternate` using the same effective under-frame anchor as the below-frame setup (`"TOPLEFT", 150, -126`).
+  - **Fix 1:** Set `AurasPositionAlternate` to an above-frame anchor (`"TOPLEFT", 150, 60`) so the toggle now moves to a true above-frame placement.
+  - **Symptom 2:** `/az -> Unit Frames -> Player Alternate` was hidden unless development mode was enabled.
+  - **Root cause 2:** `Options/OptionsPages/UnitFrames.lua` hard-hid the Player Alternate section whenever `enableDevelopmentMode` was false.
+  - **Fix 2:** Removed devmode-only hiding for Player Alternate options. The section is now available in normal mode, but remains hidden while the main Player frame is enabled.
+
+- **Validation target:**
+  - `/reload`
+  - `/az -> Unit Frames -> Player` enable state should control whether `Player Alternate` subpage is shown.
+  - With `Player Alternate` enabled and `Show Auras` on, toggle `Auras below frame` on/off and verify the aura row switches below/above accordingly.
+
+---
+
 ## 2026-04-05 — Release 5.3.57-JuNNeZ
 
 - **[RELEASE] 5.3.57-JuNNeZ prep/finalization:**
