@@ -653,7 +653,13 @@ ActionBarMod.UpdateBarButtonCounts = function(self)
 	end
 end
 
-ActionBarMod.UpdateBindings = function(self)
+ActionBarMod.UpdateBindings = function(self, event)
+	if (InCombatLockdown()) then
+		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateBindings")
+	end
+	if (event == "PLAYER_REGEN_ENABLED") then
+		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "UpdateBindings")
+	end
 	for i,bar in next,self.bars do
 		if (bar:IsEnabled()) then
 			bar:UpdateBindings()
@@ -852,6 +858,9 @@ ActionBarMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateSettings")
 	self:RegisterEvent("CVAR_UPDATE", "OnCVarUpdate")
 	self:RegisterEvent("UPDATE_BINDINGS", "UpdateBindings")
+	self:RegisterEvent("UPDATE_BONUS_ACTIONBAR", "UpdateBindings")
+	self:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR", "UpdateBindings")
+	self:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR", "UpdateBindings")
 	-- ns.RegisterCallback(self, "AssistedHighlightColor_Changed", "UpdateAssistedHighlightColor")
 
 	self:UpdateSettings()

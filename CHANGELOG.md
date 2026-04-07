@@ -5,6 +5,24 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.59-JuNNeZ (2026-04-07) — Lock & Load: Combat-Proof Action Bar Bindings
+
+### Highlights
+
+- Action bar bindings no longer attempt to update during combat lockdown. Updates that arrive mid-combat are now queued and applied cleanly when you leave combat.
+- Bindings now refresh correctly when entering or leaving vehicles, override bars, and bonus action bars — no more stale keybinds after a mount or vehicle transition.
+- Added WoW interface build 120005 to the supported compatibility list.
+
+### Access
+
+- No new settings. The fixes apply automatically on load and after every combat/vehicle transition.
+
+### Internal
+
+- `Components/ActionBars/Elements/ActionBars.lua`: `UpdateBindings` now guards with `InCombatLockdown()`, defers via `PLAYER_REGEN_ENABLED`, and registers `UPDATE_BONUS_ACTIONBAR`, `UPDATE_OVERRIDE_ACTIONBAR`, and `UPDATE_VEHICLE_ACTIONBAR` events.
+- `AzeriteUI5_JuNNeZ_Edition.toc`: added interface version `120005`.
+
+
 ## 5.3.58-JuNNeZ (2026-04-06) — Player Alternate Aura Toggle + Access
 
 ### Highlights

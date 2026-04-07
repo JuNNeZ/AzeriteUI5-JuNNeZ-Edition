@@ -7774,3 +7774,33 @@ Testing:
 3. `/reload`
 4. Re-hover the world-map quest/progress tooltip path and the item-display widget path that produced the two stacks.
 5. Confirm `Blizzard_UIWidgetTemplateBase.lua:1638` and `SharedTooltipTemplates.lua:213` stay gone.
+
+
+[2026-04-07] Release prep: 5.3.59-JuNNeZ — Lock & Load: Combat-Proof Action Bar Bindings
+
+Changes shipped:
+- Components/ActionBars/Elements/ActionBars.lua:
+  - UpdateBindings now checks InCombatLockdown() and defers via PLAYER_REGEN_ENABLED.
+  - Registers UPDATE_BONUS_ACTIONBAR, UPDATE_OVERRIDE_ACTIONBAR, UPDATE_VEHICLE_ACTIONBAR to keep bindings current on bar transitions.
+- AzeriteUI5_JuNNeZ_Edition.toc: added interface version 120005.
+
+Files updated for release:
+- AzeriteUI5_JuNNeZ_Edition.toc (version bump + interface 120005)
+- build-release.ps1 (version bump)
+- CHANGELOG.md (delta entry)
+- FixLog.md (this entry)
+
+
+[2026-04-07] Release prep: 5.3.59-JuNNeZ — Lock & Load: Combat-Proof Action Bar Bindings
+
+Changes shipped:
+- Components/ActionBars/Elements/ActionBars.lua:
+  - UpdateBindings now checks InCombatLockdown() and defers via PLAYER_REGEN_ENABLED.
+  - Registers UPDATE_BONUS_ACTIONBAR, UPDATE_OVERRIDE_ACTIONBAR, UPDATE_VEHICLE_ACTIONBAR to keep bindings current on bar transitions.
+- AzeriteUI5_JuNNeZ_Edition.toc: added interface version 120005.
+
+Files updated for release:
+- AzeriteUI5_JuNNeZ_Edition.toc (version bump + interface 120005)
+- build-release.ps1 (version bump)
+- CHANGELOG.md (delta entry)
+- FixLog.md (this entry)
