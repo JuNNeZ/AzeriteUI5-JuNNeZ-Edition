@@ -101,12 +101,19 @@ local function ExtractColorRGB(color)
 	end
 
 	if(type(color.GetRGB) == 'function') then
-		return color:GetRGB()
+		local r, g, b = color:GetRGB()
+		if(issecretvalue and (issecretvalue(r) or issecretvalue(g) or issecretvalue(b))) then
+			return
+		end
+		return r, g, b
 	end
 
 	local r = color.r or color[1]
 	local g = color.g or color[2]
 	local b = color.b or color[3]
+	if(issecretvalue and (issecretvalue(r) or issecretvalue(g) or issecretvalue(b))) then
+		return
+	end
 	if(type(r) == 'number' and type(g) == 'number' and type(b) == 'number') then
 		return r, g, b
 	end

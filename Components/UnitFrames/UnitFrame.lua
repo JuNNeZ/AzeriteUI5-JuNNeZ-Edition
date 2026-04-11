@@ -382,34 +382,35 @@ ns.UnitFrameModule = ns:Merge({
 }, ns.MovableModulePrototype)
 
 UnitFrameMod.UpdateSettings = function(self)
+	local ApplyAuraSortSettings = function(frame, preSetPosition, sortFunction)
+		if (not frame) then
+			return
+		end
+		for _, key in next, { "Auras", "Buffs", "Debuffs" } do
+			local auras = frame[key]
+			if (auras) then
+				auras.PreSetPosition = preSetPosition -- only in classic
+				auras.SortAuras = sortFunction -- only in retail
+				if (frame:IsElementEnabled("Auras") and auras.ForceUpdate) then
+					auras:ForceUpdate()
+				end
+			end
+		end
+	end
 
 	if (self.db.profile.disableAuraSorting) then
 
 		-- Iterate through unitframes.
 		if (ns.UnitFrames) then
 			for frame in next,ns.UnitFrames do
-				local auras = frame.Auras
-				if (auras) then
-					auras.PreSetPosition = ns.AuraSorts.Alternate -- only in classic
-					auras.SortAuras = ns.AuraSorts.AlternateFuncton -- only in retail
-					if (frame:IsElementEnabled("Auras")) then
-						auras:ForceUpdate()
-					end
-				end
+				ApplyAuraSortSettings(frame, ns.AuraSorts.Alternate, ns.AuraSorts.AlternateFuncton)
 			end
 		end
 
 		-- Iterate through nameplates.
 		if (ns.NamePlates) then
 			for frame in next,ns.NamePlates do
-				local auras = frame.Auras
-				if (auras) then
-					auras.PreSetPosition = ns.AuraSorts.Alternate -- only in classic
-					auras.SortAuras = ns.AuraSorts.AlternateFuncton -- only in retail
-					if (frame:IsElementEnabled("Auras")) then
-						auras:ForceUpdate()
-					end
-				end
+				ApplyAuraSortSettings(frame, ns.AuraSorts.Alternate, ns.AuraSorts.AlternateFuncton)
 			end
 		end
 	else
@@ -417,28 +418,14 @@ UnitFrameMod.UpdateSettings = function(self)
 		-- Iterate through unitframes.
 		if (ns.UnitFrames) then
 			for frame in next,ns.UnitFrames do
-				local auras = frame.Auras
-				if (auras) then
-					auras.PreSetPosition = ns.AuraSorts.Default -- only in classic
-					auras.SortAuras = ns.AuraSorts.DefaultFunction -- only in retail
-					if (frame:IsElementEnabled("Auras")) then
-						auras:ForceUpdate()
-					end
-				end
+				ApplyAuraSortSettings(frame, ns.AuraSorts.Default, ns.AuraSorts.DefaultFunction)
 			end
 		end
 
 		-- Iterate through nameplates.
 		if (ns.NamePlates) then
 			for frame in next,ns.NamePlates do
-				local auras = frame.Auras
-				if (auras) then
-					auras.PreSetPosition = ns.AuraSorts.Default -- only in classic
-					auras.SortAuras = ns.AuraSorts.DefaultFunction -- only in retail
-					if (frame:IsElementEnabled("Auras")) then
-						auras:ForceUpdate()
-					end
-				end
+				ApplyAuraSortSettings(frame, ns.AuraSorts.Default, ns.AuraSorts.DefaultFunction)
 			end
 		end
 

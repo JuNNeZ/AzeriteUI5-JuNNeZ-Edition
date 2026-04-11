@@ -1,4 +1,302 @@
 
+## 2026-04-11 — 5.3.60-JuNNeZ release prep/finalization
+
+- Consolidated the current worktree delta for release:
+  - Player frame split debuff layer with `/lock` mover and independent aura-count controls
+  - Target aura layout refresh cleanup
+  - WoW 12 health color secret-value guard
+  - Version metadata fallback cleanup
+- Updated release/version files:
+  - `AzeriteUI5_JuNNeZ_Edition.toc` -> `5.3.60-JuNNeZ`
+  - `build-release.ps1` -> `5.3.60-JuNNeZ`
+  - `CHANGELOG.md` -> added the delta-only `5.3.60-JuNNeZ` entry
+  - `Core/Common/Constants.lua` -> fallback version string now matches the release
+- Validation target:
+  - `luac -p Components/UnitFrames/Units/Player.lua`
+  - `luac -p Components/UnitFrames/Units/Target.lua`
+  - `luac -p Components/UnitFrames/Auras/AuraFilters.lua`
+  - `luac -p Components/UnitFrames/UnitFrame.lua`
+  - `luac -p Core/Common/Constants.lua`
+  - `luac -p Libs/oUF/elements/health.lua`
+  - `luac -p Options/OptionsPages/UnitFrames.lua`
+
+---
+
+## 2026-04-10 — Player tank-debuff row follow-up (investigation)
+
+- **[USER CLARIFICATION] The tank-aura request belongs on the player frame, not target:**
+  - Goal: preserve the existing WoW 12-safe player aura filtering/sorting path, but stop important player debuffs from being crowded out by buffs in the shared player aura row.
+  - Research check: `Docs/WoW12_Aura_Handling_Research.md` says AzeriteUI already follows the correct WoW 12 model and the work should be refinement, not redesign.
+  - Implemented direction:
+    - Kept `Components/UnitFrames/Auras/AuraFilters.lua` and `Libs/oUF/elements/auras.lua` as the shared filtering/update engine.
+    - Added player profile settings for a separate player debuff row plus its own visible-cap setting.
+    - The main player aura row now becomes buff-only while the separate debuff row is enabled.
+    - The separate debuff row anchors under the player frame by default and inherits the same WoW 12-safe filter/sort path as the main player row.
+  - Files touched:
+    - `Components/UnitFrames/Units/Player.lua`
+    - `Options/OptionsPages/UnitFrames.lua`
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+    - `luac -p Options/OptionsPages/UnitFrames.lua` -> ok
+  - Runtime validation target:
+    - `/reload`
+    - `/az -> Unit Frames -> Player -> Separate Player Debuff Row`
+    - Fill the player with normal buffs, then apply fresh debuffs/tank mechanics and verify they appear in the separate row under the player frame
+    - Confirm the main player aura row no longer spends slots on debuffs while the separate row is enabled
+    - Toggle the setting back off and verify the old mixed player aura row returns
+- **[USER REPORT] No player debuffs appeared when the separate row was enabled:**
+  - Symptom: player debuffs still appeared in the mixed row when the split toggle was off, but the new separate row stayed empty when enabled.
+  - Local reference check:
+    - `Docs/WoW12_Aura_Handling_Research.md` still supports refinement of the existing oUF/token pipeline, not a new aura engine.
+    - Local installed UIs were checked for player-row patterns:
+      - `ElvUI/Game/Shared/Modules/UnitFrames/Units/Player.lua` constructs dedicated `Buffs` and `Debuffs` surfaces.
+      - `DiabolicUI3/Components/UnitFrames/Units/Player.lua` uses a dedicated player debuff surface plus a dedicated harmful-only filter.
+  - Follow-up fix:
+    - Added `ns.AuraFilters.PlayerDebuffFilter` as a dedicated player debuff-row wrapper in `Components/UnitFrames/Auras/AuraFilters.lua`.
+    - The player split debuff row in `Components/UnitFrames/Units/Player.lua` now uses `filter = "HARMFUL"` with the dedicated debuff filter, instead of reusing the mixed-row filter directly.
+    - Re-anchored the separate debuff row to the live player aura row (`self.Auras`) rather than reconstructing a position from `AurasPosition`, so the split row stays in the same visible layout surface as the buff row.
+  - Local validation:
+    - `luac -p Components/UnitFrames/Auras/AuraFilters.lua` -> ok
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+- **[USER REQUEST] Make the player split buff/debuff rows movable through `/lock`:**
+  - Goal: when `Separate Player Debuff Row` is enabled, expose both player aura rows as independent `/lock` anchors so the buff row and debuff row can be positioned separately.
+  - Implemented direction:
+    - Added player split-aura saved positions to `PlayerFrame` defaults.
+    - Added `PlayerFrame:CreateAuraAnchors()` and `PlayerFrame:UpdateAuraAnchors()` using the same `MovableFramesManager` pattern already used by the target split-aura feature.
+    - `Player Buffs` now maps to the live player aura row (`self.Auras`) while split mode is enabled.
+    - `Player Debuffs` maps to the separate harmful row (`self.Debuffs`).
+    - Both rows stay attached to the player frame by default and only become detached after they are dragged away from their default `/lock` anchor positions.
+  - Runtime validation target:
+    - `/reload`
+    - Enable `/az -> Unit Frames -> Player -> Separate Player Debuff Row`
+    - Run `/lock`
+    - Verify `Player Buffs` and `Player Debuffs` both appear as movable anchors
+    - Drag one row away and confirm the untouched row still follows the player frame
+    - Reset an anchor to default and confirm it reattaches to the player frame
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+- **[USER REQUEST] Add a player aura-count slider, keep default at 16, and clean up wrong-scope session code:**
+  - Added `playerAuraMaxShown = 16` to `Components/UnitFrames/Units/Player.lua` and exposed it in `/az -> Unit Frames -> Player -> Display & Feedback -> Auras Shown`.
+  - The main player aura row now uses the profile value instead of the static layout-only default, clamped to `1..32`.
+  - The separate player debuff row still keeps its own independent cap, clamped to `1..20`, so tank debuffs are not crowded out by the main-row setting.
+  - Removed the abandoned target split-aura experiment from `Components/UnitFrames/Units/Target.lua` and the matching target option from `Options/OptionsPages/UnitFrames.lua`, restoring target to the normal combined aura block only.
+  - Local UI comparison for future Mythic+ helpers:
+    - `ElvUI` and `GW2_UI` both expose `Private Auras` on unit or group frames; this is the strongest next candidate for high-priority personal mechanics.
+    - `GW2_UI` also prioritizes scalable dispellable/important debuffs; AzeriteUI already has some priority filtering, so a focused size/visibility boost for player or party debuffs is the other practical candidate.
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+    - `luac -p Components/UnitFrames/Units/Target.lua` -> ok
+    - `luac -p Options/OptionsPages/UnitFrames.lua` -> ok
+- **[USER REPORT] Player split aura rows do not move with their `/lock` movers:**
+  - Symptom: `Player Buffs` and `Player Debuffs` anchors appear in `/lock`, but dragging them does not visibly move the live aura rows.
+  - Root cause:
+    - The player split rows are child frames of the player unit frame, so their on-screen position can differ from their default absolute `/lock` position without being truly detached.
+    - The old detach logic only trusted the generic saved-position comparison path, which is not strict enough for split child rows that can legitimately follow a moved parent frame.
+  - Fix:
+    - Added `UpdatePlayerAuraSavedPosition(...)` in `Components/UnitFrames/Units/Player.lua`.
+    - `MFM_Dragging` on `Player Buffs` and `Player Debuffs` now forces detached positioning immediately while the mover is dragged, so the live rows follow the `/lock` overlay in real time.
+    - `MFM_PositionUpdated` still reattaches correctly when an anchor is reset to default.
+    - Documented this layout constraint in `Docs/WoW12_Aura_Handling_Research.md`.
+  - Runtime validation target:
+    - `/reload`
+    - Enable `/az -> Unit Frames -> Player -> Separate Player Debuff Row`
+    - Run `/lock`
+    - Drag `Player Buffs` and `Player Debuffs` and verify the live rows move with the movers while dragging
+    - Shift-click reset the mover to default and confirm the row snaps back to the player frame
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+- **[USER REPORT] Player split rows still shift when new debuffs appear:**
+  - Symptom: after moving the split rows, gaining a new debuff could still push the row down because the split layout retained an attached-to-player fallback.
+  - Root cause:
+    - The player split implementation still mixed two behaviors:
+      - detached `/lock` movement
+      - attached layout fallback to the player frame and buff row
+    - Aura refreshes could therefore re-enter the attached layout path and move the row when its contents changed.
+  - Fix:
+    - Changed `Components/UnitFrames/Units/Player.lua` so `Separate Player Debuff Row` now means truly detached split frames.
+    - In split mode, both `self.Auras` and `self.Debuffs` always use their saved UIParent-relative positions.
+    - Removed the attached-row fallback from split-mode aura layout refreshes.
+    - Updated the option copy and `Docs/WoW12_Aura_Handling_Research.md` to describe split mode as detached layout.
+  - Runtime validation target:
+    - `/reload`
+    - Enable `/az -> Unit Frames -> Player -> Separate Player Debuff Row`
+    - Move `Player Buffs` and `Player Debuffs` with `/lock`
+    - Gain or lose buffs/debuffs and confirm neither row jumps relative to its moved position
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+    - `luac -p Options/OptionsPages/UnitFrames.lua` -> ok
+- **[USER CLARIFICATION] Buffs should stay attached; only the player debuff row should detach:**
+  - Goal correction:
+    - Keep the main player aura row attached to the player frame.
+    - Only the separate harmful row should be independently movable in `/lock`.
+  - Fix:
+    - Reattached `self.Auras` to the normal player aura position in split mode.
+    - Kept `self.Debuffs` as the only detached split surface.
+    - Disabled the `Player Buffs` mover so `/lock` reflects the actual behavior.
+    - Updated the option copy and research note to describe “attached buffs + detached debuffs”, not “two detached frames”.
+  - Runtime validation target:
+    - `/reload`
+    - Enable `/az -> Unit Frames -> Player -> Separate Player Debuff Row`
+    - Confirm buffs stay attached to the player frame
+    - Run `/lock` and verify only the debuff row is the independently meaningful mover
+    - Gain or lose debuffs and confirm the moved debuff row does not snap back to the buff row
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+    - `luac -p Options/OptionsPages/UnitFrames.lua` -> ok
+- **[USER REPORT] Debuffs are removed from the player row but do not appear in the separate debuff row:**
+  - Root cause:
+    - The previous correction left the debuff row as a detached-only surface from the moment split mode was enabled.
+    - That means the player row stopped rendering debuffs correctly, but the separate row could still be sitting at an old/default detached location instead of starting under the live buff row.
+  - Fix:
+    - Restored an attached-by-default layout for the separate debuff row in `Components/UnitFrames/Units/Player.lua`.
+    - The debuff row now starts attached under the player buff row, and only becomes detached after the debuff mover is actually dragged.
+    - Updated the debuff mover default position to follow the live attached row, so reset/default behavior matches the visible split layout.
+    - Updated the option copy and research note to describe “attached by default, detachable after move”.
+  - Runtime validation target:
+    - `/reload`
+    - Enable `/az -> Unit Frames -> Player -> Separate Player Debuff Row`
+    - Confirm harmful auras leave the mixed player row and appear in the new debuff row
+    - Run `/lock`, move the debuff row, and confirm new debuffs continue to appear in the moved row
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+    - `luac -p Options/OptionsPages/UnitFrames.lua` -> ok
+- **[USER REPORT] The separate player debuff row still stays attached to the live aura surface and does not reliably follow `/lock`:**
+  - Symptom:
+    - The player debuff mover can be dragged, but the live debuff row still behaves like part of the player frame and can remain visually tied to the attached aura surface instead of following the mover as a truly detached row.
+  - Deep-check result:
+    - `Libs/oUF/elements/auras.lua` already updates `self.Debuffs` independently, so this is not an aura-data or filter-pipeline failure.
+    - In `Components/UnitFrames/Units/Player.lua`, the separate debuff row is still created as a child of the player frame, which means it continues inheriting player-frame scale/visibility/layout behavior even when anchored against `UIParent`.
+  - Planned fix:
+    - Move the separate player debuff container onto a true top-level layout surface and keep only the buff row attached to the player frame.
+    - Rework the detached debuff-row anchor math so `/lock` drives the live row itself, not a child frame still constrained by the player-frame render tree.
+  - Fix:
+    - Moved `self.Debuffs` in `Components/UnitFrames/Units/Player.lua` from a player-frame child to a `UIParent`-parented frame.
+    - Updated split debuff layout so the detached row uses player-frame-matched scale on the top-level surface, while the default attached state still sits visually under the live buff row.
+    - Added explicit player-frame `OnHide`/`OnShow` sync so the detached debuff row hides with the player frame and reapplies its layout cleanly when the frame is shown again.
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+- **[USER REPORT] The player split debuff row still jumps around with `/lock`, and the simpler fixed extra-row model is preferred:**
+  - Symptom:
+    - The live debuff row still does not reliably follow the `/lock` mover.
+    - Opening or closing `/lock` can move the overlay anchor down to the live debuff row instead of giving a stable editing experience.
+  - Direction change:
+    - Stop treating the separate player debuff row as an independently movable frame.
+    - Keep the main player aura row permanently glued to the player frame.
+    - Keep a dedicated extra debuff row always attached under the main player aura row, and let the split toggle only control buff/debuff filtering plus row visibility.
+  - Planned fix:
+    - Remove the player split-row `/lock` path and restore a simple attached secondary debuff surface.
+    - Update option copy and research notes so the supported behavior is explicit: split mode gives a stable second debuff row, not a detached mover.
+  - Fix:
+    - Simplified `Components/UnitFrames/Units/Player.lua` so the split debuff row is always an attached child row directly under the main player aura row.
+    - Removed the active split-row mover workflow by disabling the player split aura anchors and dropping the separate debuff-row `/lock` event handling.
+    - Split mode now only changes filtering and visibility:
+      - main player row becomes buff-only
+      - extra attached row becomes debuff-only
+  - Files touched:
+    - `Components/UnitFrames/Units/Player.lua`
+    - `Options/OptionsPages/UnitFrames.lua`
+    - `Docs/WoW12_Aura_Handling_Research.md`
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+    - `luac -p Options/OptionsPages/UnitFrames.lua` -> ok
+- **[USER CLARIFICATION] Keep the player debuff layer movable, but make the split toggle only control filtering plus visibility:**
+  - Desired behavior:
+    - Toggle off:
+      - the normal attached player aura row continues showing mixed buffs+debuffs
+      - the separate debuff layer stays hidden, but its `/lock` mover still exists so the user can place it ahead of time
+    - Toggle on:
+      - the normal attached player aura row becomes buff-only
+      - the separate debuff layer becomes visible at its saved mover position and shows debuffs only
+  - Planned fix:
+    - Restore a dedicated detached debuff layer with one stable saved `/lock` position.
+    - Remove the old attached-vs-detached fallback behavior entirely, so the debuff mover no longer re-snaps to the live row.
+  - Fix:
+    - Reintroduced the player debuff layer as a dedicated `UIParent` mover-driven surface in `Components/UnitFrames/Units/Player.lua`.
+    - The main player aura row now stays permanently attached to the player frame:
+      - split off = mixed buffs+debuffs in the main row
+      - split on = debuffs filtered out of the main row
+    - The separate debuff layer now always uses its saved `/lock` coordinates as the single source of truth, even while hidden.
+    - The `Player Debuffs` mover stays available in `/lock` whenever player auras are enabled, so the layer can be positioned before the split toggle is turned on.
+  - Root cause follow-up:
+    - `Core/MovableFrameModulePrototype.lua` only natively routes `MFM_PositionUpdated`/`MFM_Dragging` through the module anchor (`self.anchor`).
+    - Secondary anchors like `Player Debuffs` therefore need their own pre-anchor event handling, otherwise the debuff mover appears to move but its saved position is not the authoritative update path.
+    - The debuff mover also needed a locked anchor point to stop `/lock` from reinterpreting its point on every open.
+  - Follow-up fix:
+    - Added `PlayerFrameMod.PreAnchorEvent(...)` handling for the secondary debuff anchor.
+    - Forced the debuff mover to use a locked anchor point and kept it visible in `/lock` while the gameplay layer itself can remain hidden until split mode is enabled.
+  - Default placement follow-up:
+    - Changed the debuff-layer default/reset position to a `BOTTOMLEFT` anchor offset to the right of the player frame, instead of deriving it from the old top-left aura-row corner.
+    - This only affects fresh defaults or reset-to-default behavior; existing saved positions still need a one-time reset in `/lock` if they were already stored in a bad spot.
+  - `/lock` presentation follow-up:
+    - The debuff mover was still using the raw debuff-layer frame size, which could make it look too small or utility-shaped compared to the other `/lock` frames.
+    - Added a stable minimum anchor box size for the player debuff mover so the frame label renders inside it like the other movable frames.
+  - Alignment follow-up:
+    - The larger mover box made the live debuff layer look pinned toward the mover's top-left corner.
+    - Follow-up correction: removed the inset-centering workaround and tightened the mover back toward the real debuff-surface size, so the live layer and mover share the same saved origin again.
+  - Ghost-debuff follow-up:
+    - Showing the live debuff layer while `/lock` was open, even with split mode disabled, caused duplicate debuffs to appear: one in the normal mixed player row and one in the hidden-layer position.
+    - The detached debuff layer now stays hidden unless split mode is actually enabled; only the mover remains available in `/lock`.
+  - Ghost/misaligned mover follow-up:
+    - `Components/UnitFrames/Units/Player.lua` still had a second visibility path in `PlayerFrameMod.Update()` that unconditionally showed `self.frame.Debuffs` whenever split mode was enabled.
+    - That bypassed the `/lock`-safe visibility rule in `ApplyPlayerAuraLayout()`, which is why the detached debuff row could still appear outside the mover box or leave a ghost while the mover was open.
+    - Fixed by centralizing detached-row visibility behind one helper and making both layout refreshes and module updates respect it.
+  - Deep `/lock` alignment follow-up:
+    - Comparing the player debuff mover against the normal action-bar movers showed the remaining mismatch: the mover box was describing the raw aura frame edges, while the actual debuff icons were drawn flush against that frame and visually sat outside the bordered area.
+    - Reworked the detached player debuff row to use a dedicated outer holder on `UIParent`, with the oUF debuff surface inset inside that holder using the same border padding style as the mover box.
+    - The `/lock` anchor now tracks the holder size/position instead of the raw inner aura frame, and split mode keeps the live detached row visible during `/lock` so the user can position the actual debuffs against the same rectangle the mover represents.
+  - Cleanup pass:
+    - Removed leftover dead state from the abandoned movable-buff-row experiment, including unused `buffsSavedPosition` defaults and the dormant `self.buffAnchor` disable path.
+    - Removed unused helper parameters and locals from the player aura layout code so the current holder-backed debuff mover path is the only implementation left in this section.
+  - **[BUGSACK] Player debuff mover C stack overflow on login/enable:**
+    - Root cause:
+      - `PlayerFrameMod.UpdateAuraAnchors()` refreshed the secondary debuff anchor with the eventing mover methods (`SetScale` / `SetPoint`).
+      - Those methods fire `MFM_ScaleUpdated` / `MFM_PositionUpdated`, which immediately re-entered the player mover callbacks and recursively called `UpdateAuraAnchors()` again.
+    - Fix:
+      - Refreshed the debuff mover with the mover's raw non-eventing methods (`SetBaseScale` / `SetPointBase`) when syncing overlay position and size.
+    - Local validation:
+      - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+  - Files touched:
+    - `Components/UnitFrames/Units/Player.lua`
+    - `Options/OptionsPages/UnitFrames.lua`
+    - `Docs/WoW12_Aura_Handling_Research.md`
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+    - `luac -p Options/OptionsPages/UnitFrames.lua` -> ok
+
+---
+
+## 2026-04-10 — Target aura split-frame option (investigation)
+
+- **[USER REQUEST] Separate target buffs and debuffs into independent frames:**
+  - Goal: add an option so target buffs and debuffs can be split into separate aura containers and moved independently, instead of always sharing one combined target aura block.
+  - Repo check: `Libs/oUF/elements/auras.lua` in this worktree already supports `Auras`, `Buffs`, and `Debuffs` containers on the same unit frame.
+  - Research/doc check: `Docs/API Framework.md` confirms this is a safe widget/layout change path using normal frame creation and positioning, with the usual WoW 12 requirement to keep aura metadata handling on the existing secret-safe filter/style code paths.
+  - Implemented scope: first pass on the single Target unit frame, keeping the existing combined layout as the default and adding separate movable buff/debuff anchors only when the new option is enabled.
+  - Code path:
+    - Added `separateBuffsAndDebuffs` to `TargetFrame` profile defaults.
+    - Added dormant `self.Buffs` and `self.Debuffs` containers in `Components/UnitFrames/Units/Target.lua`, while preserving the existing combined `self.Auras` container.
+    - Split mode now drives the oUF element by setting the combined container to `numTotal = 0` and activating the dedicated `Buffs`/`Debuffs` containers instead.
+    - Added target-only movable anchors and saved positions for the split buff/debuff frames, using the existing `MovableFramesManager` workflow.
+    - Added `/az -> Unit Frames -> Target -> Aura Layout -> Split Buffs And Debuffs`.
+    - Updated `Components/UnitFrames/UnitFrame.lua` so global aura sort mode changes also refresh `Buffs` and `Debuffs`, not only combined `Auras`.
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Target.lua` -> ok
+    - `luac -p Components/UnitFrames/UnitFrame.lua` -> ok
+    - `luac -p Options/OptionsPages/UnitFrames.lua` -> ok
+  - Runtime validation target:
+    - `/reload`
+    - `/az -> Unit Frames -> Target -> Aura Layout -> Split Buffs And Debuffs` on
+    - `/lock` and verify `Target Buffs` and `Target Debuffs` can be selected and moved independently
+    - Target a unit with both helpful and harmful auras and verify the two split blocks populate independently
+    - Toggle the option back off and verify the legacy combined target aura block returns
+  - **[USER REPORT] Split mode showed no buffs/debuffs under the moved target frame:**
+    - Root cause: the first pass treated split rows as detached absolute anchors immediately, so when the target frame had been moved the split rows no longer followed it and could appear away from the live frame.
+    - Fix: split target buff/debuff rows now stay attached to the current target frame by default and only switch to their own absolute position after the corresponding movable aura anchor has actually been dragged.
+    - Follow-up: split anchor overlays now track the row's real on-screen position, so `/lock` starts from what the player currently sees.
+    - Local validation: `luac -p Components/UnitFrames/Units/Target.lua` -> ok
+
+---
+
 ## 2026-04-06 — Player Alternate aura placement + devmode gating follow-up
 
 - **[USER REPORT] Player Alternate auras stayed under frame even with 'Auras below frame' disabled, and Player Alternate controls were locked behind /devmode:**

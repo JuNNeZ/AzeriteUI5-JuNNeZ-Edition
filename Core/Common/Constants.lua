@@ -35,9 +35,8 @@ local tonumber = tonumber
 
 -- Addon version
 ------------------------------------------------------
--- Keyword substitution requires the packager,
--- and does not affect direct GitHub repo pulls.
-local version = "5.2.207-Release"
+-- Read from toc metadata so it always matches the installed version.
+local version = C_AddOns and C_AddOns.GetAddOnMetadata(Addon, "Version") or GetAddOnMetadata(Addon, "Version") or "5.3.60-JuNNeZ"
 if (version:find("project%-version")) then
 	version = "Development"
 end

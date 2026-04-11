@@ -389,6 +389,58 @@ local GenerateOptions = function()
 			name = L["Display & Feedback"],
 			order = 299, type = "header", hidden = isdisabled
 		}
+		suboptions.args.playerAuraMaxShown = {
+			name = L["Auras Shown"],
+			desc = L["Set how many auras can appear on the main player aura row."],
+			order = 299.025, type = "range", width = "full", min = 1, max = 32, step = 1, hidden = isdisabled,
+			disabled = playerAuraSettingsDisabled,
+			set = function(info, val)
+				setoption(info, "playerAuraMaxShown", val)
+			end,
+			get = function(info)
+				local value = getoption(info, "playerAuraMaxShown")
+				if (type(value) ~= "number") then
+					return 16
+				end
+				if (value < 1) then
+					return 1
+				end
+				if (value > 32) then
+					return 32
+				end
+				return math.floor(value + .5)
+			end
+		}
+		suboptions.args.playerAuraSeparateDebuffs = {
+			name = L["Separate Player Debuff Row"],
+			desc = L["Keep the normal player aura row attached to the frame. When enabled, harmful auras are filtered out of that row and shown in a separate movable debuff layer instead. When disabled, the debuff layer stays hidden but can still be positioned with /lock."],
+			order = 299.05, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraSettingsDisabled
+		}
+		suboptions.args.playerAuraSeparateDebuffsMax = {
+			name = L["Separate Debuffs Shown"],
+			desc = L["Set how many debuffs can appear on the separate player debuff row."],
+			order = 299.1, type = "range", width = "full", min = 1, max = 20, step = 1, hidden = isdisabled,
+			disabled = function(info)
+				return playerAuraSettingsDisabled(info) or not getoption(info, "playerAuraSeparateDebuffs")
+			end,
+			set = function(info, val)
+				setoption(info, "playerAuraSeparateDebuffsMax", val)
+			end,
+			get = function(info)
+				local value = getoption(info, "playerAuraSeparateDebuffsMax")
+				if (type(value) ~= "number") then
+					return 8
+				end
+				if (value < 1) then
+					return 1
+				end
+				if (value > 20) then
+					return 20
+				end
+				return math.floor(value + .5)
+			end
+		}
 		suboptions.args.showCastbar = {
 			name = L["Show Castbar"],
 			desc = L["Toggle whether to show overlay castbars on this unit frame."],

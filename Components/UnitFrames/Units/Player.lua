@@ -73,6 +73,10 @@ local ShouldShowPlayerPowerValue
 
 local POWER_CRYSTAL_BASELINE_OFFSET_X = -37
 local POWER_CRYSTAL_BASELINE_OFFSET_Y = -28
+local PLAYER_DEBUFF_HOLDER_PADDING_LEFT = 5
+local PLAYER_DEBUFF_HOLDER_PADDING_RIGHT = 3
+local PLAYER_DEBUFF_HOLDER_PADDING_TOP = 3
+local PLAYER_DEBUFF_HOLDER_PADDING_BOTTOM = 5
 
 local defaults = { profile = ns:Merge({
 	useClassColor = false,
@@ -98,6 +102,9 @@ local defaults = { profile = ns:Merge({
 	playerAuraShowShortUtilityPlayerBuffs = true,
 	playerAuraShowShortUtilityNonCancelable = true,
 	playerAuraShowLongUtilityBuffs = false,
+	playerAuraMaxShown = 16,
+	playerAuraSeparateDebuffs = false,
+	playerAuraSeparateDebuffsMax = 8,
 	showCastbar = true,
 	showPowerValue = true,
 	powerValueCombatDriven = false,
@@ -153,6 +160,16 @@ PlayerFrameMod.GenerateDefaults = function(self)
 		[2] = 46 * ns.API.GetEffectiveScale(),
 		[3] = 100 * ns.API.GetEffectiveScale()
 	}
+	do
+		local scale = defaults.profile.savedPosition.scale or ns.API.GetEffectiveScale()
+		defaults.profile.debuffsSavedPosition = {
+			scale = scale,
+			lockAnchorPoint = true,
+			[1] = "BOTTOMLEFT",
+			[2] = defaults.profile.savedPosition[2] + (260 * scale),
+			[3] = defaults.profile.savedPosition[3] + (48 * scale)
+		}
+	end
 	return defaults
 end
 
@@ -161,6 +178,324 @@ end
 -- Simplify the tagging process a little.
 local prefix = function(msg)
 	return string_gsub(msg, "*", ns.Prefix)
+end
+
+local GetPlayerAuraCount = function(profile, key, fallback, minimum, maximum)
+	local value = (profile and type(profile[key]) == "number") and profile[key] or fallback
+	value = math_floor((value or 1) + .5)
+	if (type(minimum) == "number" and value < minimum) then
+		value = minimum
+	elseif (type(maximum) == "number" and value > maximum) then
+		value = maximum
+	end
+	return value
+end
+
+local GetPlayerAuraAnchorSize = function(element)
+	if (not element) then
+		return 96, 24
+	end
+	local width = element:GetWidth() or 0
+	local height = element:GetHeight() or 0
+	if (width < 96) then
+		width = 96
+	end
+	if (height < 24) then
+		height = 24
+	end
+	return width, height
+end
+
+local GetPlayerDebuffHolderSize = function(element)
+	local width, height = GetPlayerAuraAnchorSize(element)
+	return width + PLAYER_DEBUFF_HOLDER_PADDING_LEFT + PLAYER_DEBUFF_HOLDER_PADDING_RIGHT, height + PLAYER_DEBUFF_HOLDER_PADDING_TOP + PLAYER_DEBUFF_HOLDER_PADDING_BOTTOM
+end
+
+local ApplyPlayerAuraAnchorPosition = function(element, savedPosition, scale)
+	if (not element or not savedPosition or not savedPosition[1]) then
+		return
+	end
+	scale = (type(scale) == "number" and scale > 0) and scale or 1
+	element:SetScale(scale)
+	element:ClearAllPoints()
+	element:SetPoint(savedPosition[1], UIParent, savedPosition[1], (savedPosition[2] or 0) / scale, (savedPosition[3] or 0) / scale)
+end
+
+local ApplyPlayerAuraAttachedPosition = function(element, anchorFrame, pointData)
+	if (not element or not anchorFrame or not pointData or not pointData[1]) then
+		return
+	end
+	element:SetScale(1)
+	element:ClearAllPoints()
+	if (type(pointData[2]) == "number" or pointData[2] == nil) then
+		element:SetPoint(pointData[1], anchorFrame, pointData[1], pointData[2] or 0, pointData[3] or 0)
+	else
+		element:SetPoint(unpack(pointData))
+	end
+end
+
+local ShouldShowPlayerDebuffLayer = function(frame, profile)
+	if (not frame or not frame.Debuffs or not profile) then
+		return false
+	end
+	if (not profile.enabled or not profile.showAuras or not profile.playerAuraSeparateDebuffs or not frame:IsShown()) then
+		return false
+	end
+	return true
+end
+
+local ApplyPlayerAuraLayout = function(frame)
+	if (not frame or not frame.Auras) then
+		return
+	end
+
+	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or {}
+	local config = ns.GetConfig("PlayerFrame") or {}
+	local auras = frame.Auras
+	local debuffs = frame.Debuffs
+	local debuffHolder = frame.DebuffHolder
+	local separateDebuffs = profile.playerAuraSeparateDebuffs and true or false
+	local auraTotal = GetPlayerAuraCount(profile, "playerAuraMaxShown", config.AurasNumTotal or 16, 1, 32)
+	local auraPoint = config.AurasPosition or { "BOTTOMLEFT", 0, 0 }
+	local scale = (profile.savedPosition and profile.savedPosition.scale) or frame:GetScale() or 1
+	local showDebuffLayer = ShouldShowPlayerDebuffLayer(frame, profile)
+
+	if (config.AurasSize and config.AurasSize[1] and config.AurasSize[2]) then
+		auras:SetSize(unpack(config.AurasSize))
+	end
+	if (separateDebuffs) then
+		auras.numBuffs = auraTotal
+		auras.numDebuffs = 0
+		auras.numTotal = auraTotal
+		ApplyPlayerAuraAttachedPosition(auras, frame, auraPoint)
+	else
+		auras.numBuffs = nil
+		auras.numDebuffs = nil
+		auras.numTotal = auraTotal
+		ApplyPlayerAuraAttachedPosition(auras, frame, auraPoint)
+	end
+
+	if (not debuffs) then
+		return
+	end
+
+	if (config.AurasSize and config.AurasSize[1] and config.AurasSize[2]) then
+		debuffs:SetSize(unpack(config.AurasSize))
+	end
+	debuffs:SetFrameStrata(frame:GetFrameStrata())
+	debuffs:SetFrameLevel((auras:GetFrameLevel() or frame:GetFrameLevel()) + 1)
+	debuffs.size = config.AuraSize
+	debuffs.spacing = config.AuraSpacing
+	debuffs.spacingX = config.AurasSpacingX
+	debuffs.spacingY = config.AurasSpacingY
+	debuffs.growthX = "RIGHT"
+	debuffs.growthY = "DOWN"
+	debuffs.initialAnchor = "TOPLEFT"
+	debuffs["spacing-x"] = config.AurasSpacingX
+	debuffs["spacing-y"] = config.AurasSpacingY
+	debuffs["growth-x"] = "RIGHT"
+	debuffs["growth-y"] = "DOWN"
+	debuffs.num = separateDebuffs and GetPlayerAuraCount(profile, "playerAuraSeparateDebuffsMax", auraTotal, 1, 20) or 0
+	debuffs:SetScale(1)
+	debuffs:ClearAllPoints()
+	if (debuffHolder) then
+		debuffHolder:SetFrameStrata(frame:GetFrameStrata())
+		debuffHolder:SetFrameLevel((auras:GetFrameLevel() or frame:GetFrameLevel()) + 1)
+		local holderWidth, holderHeight = GetPlayerDebuffHolderSize(debuffs)
+		debuffHolder:SetSize(holderWidth, holderHeight)
+		ApplyPlayerAuraAnchorPosition(debuffHolder, profile.debuffsSavedPosition, scale)
+		debuffs:SetPoint("TOPLEFT", debuffHolder, "TOPLEFT", PLAYER_DEBUFF_HOLDER_PADDING_LEFT, -PLAYER_DEBUFF_HOLDER_PADDING_TOP)
+		debuffHolder:SetShown(showDebuffLayer)
+	else
+		ApplyPlayerAuraAnchorPosition(debuffs, profile.debuffsSavedPosition, scale)
+		debuffs:SetShown(showDebuffLayer)
+	end
+end
+
+PlayerFrameMod.CreateAuraAnchors = function(self)
+	if (self.debuffAnchor) then
+		return
+	end
+	if (not self.frame or not self.frame.Debuffs) then
+		return
+	end
+
+	local manager = ns:GetModule("MovableFramesManager", true)
+	if (not manager) then
+		return
+	end
+
+	local defaultsProfile = self:GetDefaults().profile
+	local profile = self.db and self.db.profile
+	if (not profile) then
+		return
+	end
+
+	local anchor = manager:RequestAnchor()
+	local savedPosition = profile.debuffsSavedPosition
+	local defaultPosition = defaultsProfile and defaultsProfile.debuffsSavedPosition
+	anchor:SetScalable(false)
+	anchor:SetAnchorPointLocked(true)
+	anchor:SetDefaultScale((defaultPosition and defaultPosition.scale) or ns.API.GetEffectiveScale())
+	if (defaultPosition and defaultPosition[1]) then
+		anchor:SetDefaultPosition(defaultPosition[1], defaultPosition[2], defaultPosition[3])
+	end
+	do
+		local width, height = GetPlayerDebuffHolderSize(self.frame.Debuffs)
+		anchor:SetSize(width, height)
+	end
+	if (savedPosition and savedPosition[1]) then
+		anchor:SetPoint(savedPosition[1], savedPosition[2], savedPosition[3])
+	end
+	anchor:SetScale((profile.savedPosition and profile.savedPosition.scale) or ns.API.GetEffectiveScale())
+	anchor:SetTitle((HUD_EDIT_MODE_PLAYER_FRAME_LABEL or PLAYER) .. " Debuffs")
+	anchor:SetColorGroup("unitframes")
+	anchor.PreUpdate = function()
+		self:UpdateAuraAnchors()
+	end
+	self.debuffAnchor = anchor
+	self.debuffAnchor:HookScript("OnShow", function()
+		ApplyPlayerAuraLayout(self.frame)
+	end)
+	self.debuffAnchor:HookScript("OnHide", function()
+		ApplyPlayerAuraLayout(self.frame)
+	end)
+end
+
+PlayerFrameMod.UpdateAuraAnchors = function(self)
+	local profile = self.db and self.db.profile
+	local frame = self.frame
+	local debuffAnchorTarget = frame and (frame.DebuffHolder or frame.Debuffs)
+	if (not profile or not frame) then
+		return
+	end
+
+	if (not self.debuffAnchor) then
+		return
+	end
+	if (not profile.enabled or not profile.showAuras or not debuffAnchorTarget) then
+		self.debuffAnchor:Disable()
+		return
+	end
+
+	local savedPosition = profile.debuffsSavedPosition
+	local scale = (profile.savedPosition and profile.savedPosition.scale) or frame:GetScale() or 1
+	self.debuffAnchor:Enable()
+	self.debuffAnchor:SetBaseScale(scale)
+	do
+		local width, height = GetPlayerAuraAnchorSize(debuffAnchorTarget)
+		self.debuffAnchor:SetSize(width, height)
+	end
+	self.debuffAnchor:ClearAllPoints()
+	if (savedPosition and savedPosition[1]) then
+		self.debuffAnchor:SetPointBase(savedPosition[1], UIParent, savedPosition[1], savedPosition[2], savedPosition[3])
+	end
+	self.debuffAnchor:SetAnchorPointLocked(true)
+	if (savedPosition and savedPosition[1]) then
+		debuffAnchorTarget:SetScale(scale)
+		debuffAnchorTarget:ClearAllPoints()
+		debuffAnchorTarget:SetPoint(savedPosition[1], UIParent, savedPosition[1], (savedPosition[2] or 0) / scale, (savedPosition[3] or 0) / scale)
+	end
+end
+
+PlayerFrameMod.UpdateAuraDefaults = function(self)
+	local defaults = self:GetDefaults()
+	if (not defaults or not defaults.profile or not self.debuffAnchor or not defaults.profile.debuffsSavedPosition) then
+		return
+	end
+	defaults.profile.debuffsSavedPosition.scale = self.debuffAnchor:GetDefaultScale()
+	defaults.profile.debuffsSavedPosition[1], defaults.profile.debuffsSavedPosition[2], defaults.profile.debuffsSavedPosition[3] = self.debuffAnchor:GetDefaultPosition()
+	self:SetDefaults(defaults)
+end
+
+local UpdatePlayerAuraSavedPosition = function(self, anchor, point, x, y)
+	if (anchor ~= self.debuffAnchor or not self.db or not self.db.profile or not self.db.profile.debuffsSavedPosition) then
+		return false
+	end
+	local savedPosition = self.db.profile.debuffsSavedPosition
+	savedPosition.lockAnchorPoint = true
+	savedPosition[1] = point
+	savedPosition[2] = x
+	savedPosition[3] = y
+	ApplyPlayerAuraLayout(self.frame)
+	self:UpdateAuraAnchors()
+	return true
+end
+
+PlayerFrameMod.PreAnchorEvent = function(self, event, ...)
+	if (not self.frame or not self.debuffAnchor) then
+		return
+	end
+
+	if (event == "MFM_PositionUpdated") then
+		local anchor, point, x, y = ...
+		if (anchor == self.debuffAnchor) then
+			UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)
+		end
+	elseif (event == "MFM_Dragging") then
+		if (self.incombat) then
+			return
+		end
+		local anchor, point, x, y = ...
+		if (anchor == self.debuffAnchor) then
+			UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)
+		end
+	elseif (event == "MFM_AnchorShown") then
+		local anchor = ...
+		if (anchor == self.debuffAnchor) then
+			ApplyPlayerAuraLayout(self.frame)
+			self:UpdateAuraAnchors()
+		end
+	end
+end
+
+PlayerFrameMod.PostAnchorEvent = function(self, event, ...)
+	if (not self.frame) then
+		return
+	end
+
+	if (event == "PLAYER_ENTERING_WORLD" or event == "VARIABLES_LOADED" or event == "PLAYER_REGEN_ENABLED") then
+		ApplyPlayerAuraLayout(self.frame)
+		self:UpdateAuraAnchors()
+		return
+	end
+
+	if (event == "MFM_ScaleUpdated") then
+		local anchor = ...
+		if (anchor == self.anchor) then
+			ApplyPlayerAuraLayout(self.frame)
+			self:UpdateAuraAnchors()
+			return
+		end
+	end
+
+	if (event == "MFM_PositionUpdated") then
+		local anchor, point, x, y = ...
+		if (anchor == self.anchor) then
+			ApplyPlayerAuraLayout(self.frame)
+			self:UpdateAuraAnchors()
+			return
+		end
+		if (UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)) then
+			return
+		end
+	end
+
+	if (event == "MFM_Dragging") then
+		if (self.incombat) then
+			return
+		end
+		local anchor, point, x, y = ...
+		if (UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)) then
+			return
+		end
+	end
+
+	if (event == "MFM_UIScaleChanged") then
+		self:UpdateAuraDefaults()
+		ApplyPlayerAuraLayout(self.frame)
+		self:UpdateAuraAnchors()
+	end
 end
 
 local STOCK_POWER_CRYSTAL_LAYOUT = {
@@ -2236,12 +2571,7 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 	end
 
-	local auras = self.Auras
-	if (auras) then
-		auras:ClearAllPoints()
-		auras:SetSize(unpack(config.AurasSize))
-		auras:SetPoint(unpack(config.AurasPosition))
-	end
+	ApplyPlayerAuraLayout(self)
 
 end
 
@@ -2894,6 +3224,69 @@ local style = function(self, unit)
 
 	self.Auras = auras
 
+	local debuffHolder = CreateFrame("Frame", nil, UIParent)
+	debuffHolder:SetFrameStrata(self:GetFrameStrata())
+	debuffHolder:SetFrameLevel(self:GetFrameLevel() + 1)
+	do
+		local holderWidth = config.AurasSize[1] + PLAYER_DEBUFF_HOLDER_PADDING_LEFT + PLAYER_DEBUFF_HOLDER_PADDING_RIGHT
+		local holderHeight = config.AurasSize[2] + PLAYER_DEBUFF_HOLDER_PADDING_TOP + PLAYER_DEBUFF_HOLDER_PADDING_BOTTOM
+		debuffHolder:SetSize(holderWidth, holderHeight)
+	end
+	debuffHolder:Hide()
+	self.DebuffHolder = debuffHolder
+
+	local debuffs = CreateFrame("Frame", nil, debuffHolder)
+	debuffs:SetPoint("TOPLEFT", debuffHolder, "TOPLEFT", PLAYER_DEBUFF_HOLDER_PADDING_LEFT, -PLAYER_DEBUFF_HOLDER_PADDING_TOP)
+	debuffs:SetFrameStrata(self:GetFrameStrata())
+	debuffs:SetFrameLevel(self:GetFrameLevel() + 1)
+	debuffs:SetSize(unpack(config.AurasSize))
+	debuffs.size = config.AuraSize
+	debuffs.spacing = config.AuraSpacing
+	debuffs.num = 0
+	debuffs.disableMouse = config.AurasDisableMouse
+	debuffs.disableCooldown = config.AurasDisableCooldown
+	debuffs.onlyShowPlayer = config.AurasOnlyShowPlayer
+	debuffs.filter = "HARMFUL"
+	debuffs.showStealableBuffs = false
+	debuffs.showBuffType = false
+	debuffs.showDebuffType = true
+	debuffs.initialAnchor = "TOPLEFT"
+	debuffs.spacingX = config.AurasSpacingX
+	debuffs.spacingY = config.AurasSpacingY
+	debuffs.growthX = "RIGHT"
+	debuffs.growthY = "DOWN"
+	debuffs["spacing-x"] = config.AurasSpacingX
+	debuffs["spacing-y"] = config.AurasSpacingY
+	debuffs["growth-x"] = "RIGHT"
+	debuffs["growth-y"] = "DOWN"
+	debuffs.tooltipAnchor = config.AurasTooltipAnchor
+	debuffs.sortMethod = config.AurasSortMethod
+	debuffs.sortDirection = config.AurasSortDirection
+	debuffs.reanchorIfVisibleChanged = true
+	debuffs.allowCombatUpdates = true
+	debuffs.CreateButton = ns.AuraStyles.CreateButton
+	debuffs.PostUpdateButton = ns.AuraStyles.PlayerPostUpdateButton
+	debuffs.CustomFilter = ns.AuraFilters.PlayerDebuffFilter -- classic
+	debuffs.FilterAura = ns.AuraFilters.PlayerDebuffFilter -- retail
+	debuffs.PreSetPosition = ns.AuraSorts.Default -- only in classic
+	debuffs.SortAuras = ns.AuraSorts.DefaultFunction -- only in retail
+
+	self.Debuffs = debuffs
+	debuffs:Hide()
+	debuffHolder:Hide()
+
+	ApplyPlayerAuraLayout(self)
+	ns.API.AttachScriptSafe(self, "OnHide", function(owner)
+		if (owner.DebuffHolder) then
+			owner.DebuffHolder:Hide()
+		elseif (owner.Debuffs) then
+			owner.Debuffs:Hide()
+		end
+	end)
+	ns.API.AttachScriptSafe(self, "OnShow", function(owner)
+		ApplyPlayerAuraLayout(owner)
+	end)
+
 	-- Seasonal Flavors
 	--------------------------------------------
 	-- Feast of Winter Veil
@@ -3011,6 +3404,8 @@ PlayerFrameMod.Update = function(self)
 	ApplyPlayerPowerValueTextScale(self.frame)
 	ApplyPlayerPowerValueAlpha(self.frame)
 	ApplyPlayerPvPIndicatorLayout(self.frame)
+	ApplyPlayerAuraLayout(self.frame)
+	self:UpdateAuraAnchors()
 
 	self.frame.Health.colorClass = self.db.profile.useClassColor
 	self.frame.Health.colorHealth = true
@@ -3019,8 +3414,18 @@ PlayerFrameMod.Update = function(self)
 	if (self.db.profile.showAuras) then
 		self.frame:EnableElement("Auras")
 		self.frame.Auras:ForceUpdate()
+		if (self.frame.DebuffHolder) then
+			self.frame.DebuffHolder:SetShown(ShouldShowPlayerDebuffLayer(self.frame, self.db.profile))
+		elseif (self.frame.Debuffs) then
+			self.frame.Debuffs:SetShown(ShouldShowPlayerDebuffLayer(self.frame, self.db.profile))
+		end
 	else
 		self.frame:DisableElement("Auras")
+		if (self.frame.DebuffHolder) then
+			self.frame.DebuffHolder:Hide()
+		elseif (self.frame.Debuffs) then
+			self.frame.Debuffs:Hide()
+		end
 	end
 
 	if (self.db.profile.showCastbar) then
@@ -3067,6 +3472,7 @@ PlayerFrameMod.OnEnable = function(self)
 
 	self:CreateUnitFrames()
 	self:CreateAnchor(HUD_EDIT_MODE_PLAYER_FRAME_LABEL or PLAYER)
+	self:CreateAuraAnchors()
 
 	ns.MovableModulePrototype.OnEnable(self)
 end

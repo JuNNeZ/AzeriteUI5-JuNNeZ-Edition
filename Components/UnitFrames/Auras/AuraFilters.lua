@@ -484,6 +484,14 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 
 end
 
+ns.AuraFilters.PlayerDebuffFilter = function(button, unit, data)
+	local decision = ns.AuraFilters.PlayerAuraFilter(button, unit, data)
+	if (decision ~= false) then
+		return decision
+	end
+	return GetIsHarmful(unit, data)
+end
+
 ns.AuraFilters.TargetAuraFilter = function(button, unit, data)
 	local expiration = SafeNumber(data.expirationTime, nil)
 	local duration = SafeNumber(data.duration, 0)

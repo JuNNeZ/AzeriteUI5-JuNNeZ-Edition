@@ -352,14 +352,8 @@ local NormalizeTargetAuraValue = function(value, allowed, fallback)
 	return fallback
 end
 
-local ApplyTargetAuraLayout = function(frame, styleKey)
-	if (not frame or not frame.Auras) then
-		return
-	end
-
+local GetTargetAuraContainerConfig = function(profile, styleKey)
 	local config = ns.GetConfig("TargetFrame")
-	local profile = TargetFrameMod and TargetFrameMod.db and TargetFrameMod.db.profile or {}
-	local auras = frame.Auras
 	local isBossStyle = (styleKey == "Boss")
 	local auraFrameSize = isBossStyle and config.AurasSizeBoss or config.AurasSize
 	local auraNumTotal = isBossStyle and config.AurasNumTotalBoss or config.AurasNumTotal
@@ -382,27 +376,66 @@ local ApplyTargetAuraLayout = function(frame, styleKey)
 		auraMaxCols = nil
 	end
 
-	local auraGrowthX = NormalizeTargetAuraValue(profile.AurasGrowthX, TargetAuraGrowthXValues, auraGrowthXDefault)
-	local auraGrowthY = NormalizeTargetAuraValue(profile.AurasGrowthY, TargetAuraGrowthYValues, auraGrowthYDefault)
-	local auraAnchor = NormalizeTargetAuraValue(profile.AurasInitialAnchor, TargetAuraAnchorValues, auraAnchorDefault)
+	return {
+		size = auraFrameSize,
+		numTotal = auraNumTotal,
+		auraSize = auraSize,
+		spacing = auraSpacingDefault,
+		spacingX = auraSpacingX,
+		spacingY = auraSpacingY,
+		growthX = NormalizeTargetAuraValue(profile.AurasGrowthX, TargetAuraGrowthXValues, auraGrowthXDefault),
+		growthY = NormalizeTargetAuraValue(profile.AurasGrowthY, TargetAuraGrowthYValues, auraGrowthYDefault),
+		initialAnchor = NormalizeTargetAuraValue(profile.AurasInitialAnchor, TargetAuraAnchorValues, auraAnchorDefault),
+		maxCols = auraMaxCols
+	}
+end
 
-	if (auraFrameSize and auraFrameSize[1] and auraFrameSize[2]) then
-		auras:SetSize(unpack(auraFrameSize))
+local ApplyTargetAuraContainerLayout = function(element, layout, maxAuras, isBuffContainer)
+	if (not element or not layout) then
+		return
 	end
-	auras.numTotal = auraNumTotal
-	auras.size = auraSize
-	auras.spacing = auraSpacingDefault
-	auras.spacingX = auraSpacingX
-	auras.spacingY = auraSpacingY
-	auras.growthX = auraGrowthX
-	auras.growthY = auraGrowthY
-	auras.initialAnchor = auraAnchor
-	auras.maxCols = auraMaxCols
-	auras["spacing-x"] = auraSpacingX
-	auras["spacing-y"] = auraSpacingY
-	auras["growth-x"] = auraGrowthX
-	auras["growth-y"] = auraGrowthY
-	auras["max-cols"] = auraMaxCols
+	if (layout.size and layout.size[1] and layout.size[2]) then
+		element:SetSize(unpack(layout.size))
+	end
+	element.size = layout.auraSize
+	element.spacing = layout.spacing
+	element.spacingX = layout.spacingX
+	element.spacingY = layout.spacingY
+	element.growthX = layout.growthX
+	element.growthY = layout.growthY
+	element.initialAnchor = layout.initialAnchor
+	element.maxCols = layout.maxCols
+	element["spacing-x"] = layout.spacingX
+	element["spacing-y"] = layout.spacingY
+	element["growth-x"] = layout.growthX
+	element["growth-y"] = layout.growthY
+	element["max-cols"] = layout.maxCols
+	element.showBuffType = false
+	element.showDebuffType = isBuffContainer and false or true
+	if (isBuffContainer == nil) then
+		element.numTotal = maxAuras or 0
+		element.num = nil
+	else
+		element.num = maxAuras or 0
+		element.numTotal = nil
+	end
+end
+
+local ApplyTargetAuraLayout = function(frame, styleKey)
+	if (not frame or not frame.Auras) then
+		return
+	end
+
+	local profile = TargetFrameMod and TargetFrameMod.db and TargetFrameMod.db.profile or {}
+	local config = ns.GetConfig("TargetFrame") or {}
+	local layout = GetTargetAuraContainerConfig(profile, styleKey)
+	local auras = frame.Auras
+	local auraPoint = config.AurasPosition or { "TOPRIGHT", 0, 0 }
+
+	ApplyTargetAuraContainerLayout(auras, layout, layout.numTotal, nil)
+	auras:SetScale(1)
+	auras:ClearAllPoints()
+	auras:SetPoint(unpack(auraPoint))
 end
 
 local SetPointWithAnchorAndOffset = function(frame, pointData, offsetX, offsetY, anchorFrame)
@@ -3283,6 +3316,7 @@ local style = function(self, unit, id)
 	auras.SortAuras = ns.AuraSorts.DefaultFunction -- only in retail
 
 	self.Auras = auras
+
 	ApplyTargetAuraLayout(self, self.currentStyle)
 
 	-- Seasonal Flavors
@@ -3334,10 +3368,13 @@ end
 TargetFrameMod.Update = function(self)
 	UpdateTargetPowerValueText(self.frame)
 	UpdateTargetHealthPercentTag(self.frame)
+	ApplyTargetAuraLayout(self.frame, self.frame.currentStyle)
 
 	if (self.db.profile.showAuras) then
 		self.frame:EnableElement("Auras")
-		self.frame.Auras:ForceUpdate()
+		if (self.frame.Auras and self.frame.Auras.ForceUpdate) then
+			self.frame.Auras:ForceUpdate()
+		end
 	else
 		self.frame:DisableElement("Auras")
 	end

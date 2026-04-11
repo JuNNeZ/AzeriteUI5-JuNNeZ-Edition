@@ -5,6 +5,33 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.60-JuNNeZ (2026-04-11) — Player Debuff Layer + Aura Controls
+
+### Highlights
+
+- Added a new `Auras Shown` slider for the main player aura row, with the default set to 16.
+- Added a new `Separate Player Debuff Row` option that filters harmful auras out of the main player row and shows them in a separate movable debuff layer with its own cap.
+- The `Player Debuffs` `/lock` mover now uses a stable holder surface, so the live debuffs can be repositioned visually and stay aligned inside the mover box.
+- Target aura layout refresh now reapplies correctly when unit-frame aura settings change.
+- Fixed a WoW 12 secret-value safety edge case in the oUF health color path to avoid bad `GetRGB()` payloads reaching health-bar updates.
+
+### Access
+
+- Main player aura count: `/az -> Unit Frames -> Player -> Display & Feedback -> Auras Shown`
+- Split player debuff layer: `/az -> Unit Frames -> Player -> Display & Feedback -> Separate Player Debuff Row`
+- Separate debuff cap: `/az -> Unit Frames -> Player -> Display & Feedback -> Separate Debuffs Shown`
+- Debuff mover: `/lock -> Player Debuffs`
+
+### Internal
+
+- `Components/UnitFrames/Units/Player.lua`: added split player debuff holder/mover flow, independent player aura caps, and cleanup of abandoned split-buff leftovers.
+- `Components/UnitFrames/Auras/AuraFilters.lua`: added a dedicated player debuff-row filter wrapper.
+- `Components/UnitFrames/UnitFrame.lua`: sort-mode refresh now updates `Auras`, `Buffs`, and `Debuffs`.
+- `Components/UnitFrames/Units/Target.lua`: consolidated target aura container layout refresh path.
+- `Core/Common/Constants.lua`: addon version now prefers live TOC metadata instead of a stale hardcoded constant.
+- `Libs/oUF/elements/health.lua`: added secret-value guards around color extraction.
+
+
 ## 5.3.59-JuNNeZ (2026-04-07) — Lock & Load: Combat-Proof Action Bar Bindings
 
 ### Highlights
