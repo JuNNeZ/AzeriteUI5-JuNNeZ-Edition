@@ -1,4 +1,103 @@
 
+## 2026-04-15 — 5.3.61-JuNNeZ release prep/finalization
+
+- Consolidated the current worktree delta for release:
+  - Party compact-frame quarantine hardening to prevent duplicate Blizzard/Azerite party frames in race windows
+  - WoW 12.0.1 aura full-refresh fallback for compound tokens in oUF aura enumeration
+  - Target absorb prediction timeout hardening in the health-prediction path
+- Updated release/version files:
+  - `AzeriteUI5_JuNNeZ_Edition.toc` -> `5.3.61-JuNNeZ`
+  - `build-release.ps1` -> `5.3.61-JuNNeZ`
+  - `CHANGELOG.md` -> added the delta-only `5.3.61-JuNNeZ` entry
+- Validation target:
+  - `luac -p Core/FixBlizzardBugs.lua`
+  - `luac -p Libs/oUF/elements/auras.lua`
+  - `luac -p Components/UnitFrames/Units/Target.lua`
+
+---
+
+## 2026-04-15 — target heal-prediction absorb path could hit script timeout
+
+- **[USER REPORT] Target frame could throw `script ran too long` from `Target.lua:1278` during absorb-state updates:**
+  - Symptom:
+    - BugSack stack pointed to `GetAbsorbFromPredictionValues(...)` on the target health-prediction path.
+    - Trigger path was `Health_PostUpdate -> HealthPrediction:ForceUpdate -> HealPredict_PostUpdate -> UpdateTargetAbsorbState`.
+  - Root cause:
+    - The target absorb path attempted `element.values:GetPredictedValues()` each update.
+    - On Retail 12.0.1 this call can stall long enough to trip Lua's script-time limit in live target updates.
+  - Fix:
+    - `Components/UnitFrames/Units/Target.lua` now skips `GetPredictedValues()` in `GetAbsorbFromPredictionValues(...)`.
+    - The function now reads absorb via `GetDamageAbsorbs()` only, then falls back through existing callback/API paths (`absorb` callback arg, `UnitGetTotalAbsorbs(...)`) in `UpdateTargetAbsorbState(...)`.
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Target.lua` -> pending (not runnable in this environment)
+  - Runtime validation target:
+    - `/buggrabber reset`
+    - `/reload`
+    - In a party, rapidly change targets with absorb/heal-prediction activity and open/close target frame repeatedly
+    - Confirm no new `script ran too long` errors from `Components/UnitFrames/Units/Target.lua:1278`
+
+---
+
+## 2026-04-15 — party join can show both Blizzard and Azerite party frames (hardening)
+
+- **[USER REPORT] Rare case where joining a party shows both Blizzard and Azerite party frames at the same time:**
+  - Symptom:
+    - Affected users can see duplicate party frames after group joins.
+    - Reproduced by report even with multiple addon combinations, indicating a timing/order edge case rather than a simple addon conflict toggle.
+  - Root cause hypothesis:
+    - `Core/FixBlizzardBugs.lua` already quarantined party frames by unit-token detection and explicit frame passes.
+    - The compact-frame decision path had party name-based quarantine disabled in `ShouldQuarantineCompactFrame(...)`, so early setup windows where names exist before reliable unit tokens could bypass quarantine.
+    - Per-member party frame quarantine did not always lock parent reattachment, allowing some Blizzard members to reparent/show again in rare update races.
+  - Fix:
+    - Re-enabled party name-based quarantine in `ShouldQuarantineCompactFrame(...)`, gated by live party context (`IsPartyContextActive()`) to avoid touching solo Edit Mode previews.
+    - Strengthened party member quarantine calls to use `lockParent = true` for:
+      - `PartyMemberFrameN`
+      - `CompactPartyFrameMemberN`
+      - `CompactPartyFramePetN`
+    - This keeps Blizzard party members pinned to the hidden quarantine parent if Blizzard code or another addon attempts to reattach them.
+  - Local validation:
+    - `luac -p Core/FixBlizzardBugs.lua` -> ok
+  - Runtime validation target:
+    - `/buggrabber reset`
+    - `/reload`
+    - Join/leave party repeatedly (including invite accept while loading screens)
+    - Confirm only Azerite party frames are visible
+    - Toggle Edit Mode once, then rejoin a party and verify Blizzard party frames remain hidden
+
+---
+
+## 2026-04-12 — party-pet aura full-refresh crash on compound unit tokens
+
+- **[USER REPORT] Raid/party pet unit frames could crash on aura full refresh in WoW 12.0.1:**
+  - Symptom:
+    - `Libs/oUF/elements/auras.lua` called `C_UnitAuras.GetAuraSlots(unit, filter)` during a full aura rebuild.
+    - On compound unit tokens such as `party1pet`, WoW now rejects that call with:
+      - `Compound unit tokens (example: boss1targetpet) are not allowed for this call`
+    - The live stack was triggered from `AzeriteUnitFrameRaid51` while refreshing `self.Auras` for `party1pet`.
+  - Root cause:
+    - AzeriteUI's vendored `oUF` aura element still assumed the slot-enumeration API was valid for all unit tokens.
+    - WoW 12 now types `C_UnitAuras.GetAuraSlots` as `UnitTokenRestrictedForAddOns`, and live behavior rejects compound tokens even though aura-by-index lookups remain usable for the same frames.
+  - Fix:
+    - Added guarded helpers in `Libs/oUF/elements/auras.lua` for:
+      - `C_UnitAuras.GetAuraSlots`
+      - `C_UnitAuras.GetAuraDataBySlot`
+      - `C_UnitAuras.GetAuraDataByIndex`
+    - Full-refresh paths for combined `Auras`, standalone `Buffs`, and standalone `Debuffs` now:
+      - use the existing slot-based enumeration when `GetAuraSlots` succeeds
+      - fall back to a bounded `GetAuraDataByIndex(unit, index, filter)` scan when WoW rejects the token
+    - Incremental `UNIT_AURA` update handling was left unchanged.
+  - Scope note:
+    - The separate BugSack `GTFO` secret-boolean stack is third-party addon behavior and is unrelated to this AzeriteUI crash.
+  - Local validation:
+    - `luac -p Libs/oUF/elements/auras.lua` -> ok
+  - Runtime validation target:
+    - `/buggrabber reset`
+    - `/reload`
+    - Join a party with at least one pet or vehicle unit so AzeriteUI creates `partyNpet`/raid-pet aura frames
+    - Confirm the `GetAuraSlots(...)` compound-token crash does not return when those frames full-refresh
+
+---
+
 ## 2026-04-11 — 5.3.60-JuNNeZ release prep/finalization
 
 - Consolidated the current worktree delta for release:

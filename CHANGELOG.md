@@ -5,6 +5,25 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.61-JuNNeZ (2026-04-15) — Prediction Stability + Party Frame Hardening
+
+### Highlights
+
+- Fixed a target-frame timeout path where absorb prediction could trigger `script ran too long` during rapid health-prediction updates.
+- Fixed a WoW 12.0.1 crash path on party and raid pet aura full refresh by adding a safe fallback when slot enumeration rejects compound unit tokens.
+- Hardened party-frame quarantine timing so rare group-join races no longer show Blizzard party frames alongside AzeriteUI party frames.
+
+### Access
+
+- No new settings required. Reload UI to apply all fixes.
+
+### Internal
+
+- `Components/UnitFrames/Units/Target.lua`: target absorb prediction now avoids `GetPredictedValues()` in the hot path and relies on safer absorb sources.
+- `Libs/oUF/elements/auras.lua`: full aura rebuild now uses guarded slot reads with bounded index fallback for unsupported compound tokens.
+- `Core/FixBlizzardBugs.lua`: restored party-name quarantine during active party context and locked quarantine parent attachment for Blizzard party member frames.
+
+
 ## 5.3.60-JuNNeZ (2026-04-11) — Player Debuff Layer + Aura Controls
 
 ### Highlights

@@ -456,9 +456,9 @@ local function ShouldQuarantineCompactFrame(frame)
 	if (name == "CompactRaidFrameManager") then
 		return false
 	end
-	-- if (ShouldHandlePartyFrames() and IsCompactPartyFrameName(name)) then
-	-- 	return true
-	-- end
+	if (IsPartyContextActive() and IsCompactPartyFrameName(name)) then
+		return true
+	end
 	if (IsRaidContextActive() and IsCompactRaidFrameName(name)) then
 		return true
 	end
@@ -1077,9 +1077,9 @@ local function QuarantineCompactFrames()
 			PrepareCompactFrame(partyFrame)
 			PrepareCompactFrame(compactPartyFrame)
 			PrepareCompactFrame(compactPartyPetFrame)
-			QuarantineFrame(partyFrame)
-			QuarantineFrame(compactPartyFrame)
-			QuarantineFrame(compactPartyPetFrame)
+			QuarantineFrame(partyFrame, { lockParent = true })
+			QuarantineFrame(compactPartyFrame, { lockParent = true })
+			QuarantineFrame(compactPartyPetFrame, { lockParent = true })
 		end
 	end
 

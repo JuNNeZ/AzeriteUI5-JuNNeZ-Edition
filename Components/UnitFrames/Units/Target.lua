@@ -1272,15 +1272,8 @@ local GetAbsorbFromPredictionValues = function(element)
 		pcall(element.values.SetDamageAbsorbClampMode, element.values, maxClampMode)
 		element.__AzeriteUI_PredictionValuesClampModeApplied = true
 	end
-	if (element.values.GetPredictedValues) then
-		local okPredicted, predictedValues = pcall(element.values.GetPredictedValues, element.values)
-		if (okPredicted and type(predictedValues) == "table") then
-			local totalDamageAbsorbs = predictedValues.totalDamageAbsorbs
-			if (type(totalDamageAbsorbs) == "number" and (not issecretvalue or not issecretvalue(totalDamageAbsorbs))) then
-				return totalDamageAbsorbs
-			end
-		end
-	end
+	-- Retail 12.0.1 can stall in GetPredictedValues() on target prediction tables.
+	-- Use GetDamageAbsorbs() directly and let UnitGetTotalAbsorbs() handle fallback.
 	if (not element.values.GetDamageAbsorbs) then
 		return nil
 	end

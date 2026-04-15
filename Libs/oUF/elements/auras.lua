@@ -80,9 +80,54 @@ button.isHarmfulAura  - indicates if the button holds a debuff (boolean)
 
 local _, ns = ...
 local oUF = ns.oUF
+local MAX_AURA_INDEX_SCAN = 255
 
 local function IsSafeNumber(value)
 	return type(value) == 'number' and (not issecretvalue or not issecretvalue(value))
+end
+
+local function GetAuraSlotsSafe(unit, filter)
+	local results = {pcall(C_UnitAuras.GetAuraSlots, unit, filter)}
+	if(not results[1]) then
+		return nil
+	end
+	table.remove(results, 1)
+	return results
+end
+
+local function GetAuraDataBySlotSafe(unit, slot)
+	local ok, data = pcall(C_UnitAuras.GetAuraDataBySlot, unit, slot)
+	if(ok) then
+		return data
+	end
+end
+
+local function GetAuraDataByIndexSafe(unit, index, filter)
+	local ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, unit, index, filter)
+	if(ok) then
+		return data
+	end
+end
+
+local function ForEachFullAuraData(unit, filter, callback)
+	local slots = GetAuraSlotsSafe(unit, filter)
+	if(slots) then
+		for i = 2, #slots do -- #1 return is continuationToken, we don't care about it
+			local data = GetAuraDataBySlotSafe(unit, slots[i])
+			if(data) then
+				callback(data)
+			end
+		end
+		return
+	end
+
+	for index = 1, MAX_AURA_INDEX_SCAN do
+		local data = GetAuraDataByIndexSafe(unit, index, filter)
+		if(not data) then
+			break
+		end
+		callback(data)
+	end
 end
 
 local function CanMutateButtonInCombat(element, button)
@@ -412,8 +457,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			auras.activeBuffs = table.wipe(auras.activeBuffs or {})
 			buffsChanged = true
 
-			local slots = {C_UnitAuras.GetAuraSlots(unit, buffFilter)}
-			for i = 2, #slots do -- #1 return is continuationToken, we don't care about it
+			ForEachFullAuraData(unit, buffFilter, function(data)
 				--[[ Override: Auras:FilterAura(unit, data, filter)
 				Defines a custom filter that controls if the aura button should be shown.
 
@@ -426,17 +470,16 @@ local function UpdateAuras(self, event, unit, updateInfo)
 
 				* show - indicates whether the aura button should be shown (boolean)
 				--]]
-				AddAuraData(auras.allBuffs, auras.activeBuffs, auras, unit, C_UnitAuras.GetAuraDataBySlot(unit, slots[i]), buffFilter)
-			end
+				AddAuraData(auras.allBuffs, auras.activeBuffs, auras, unit, data, buffFilter)
+			end)
 
 			auras.allDebuffs = table.wipe(auras.allDebuffs or {})
 			auras.activeDebuffs = table.wipe(auras.activeDebuffs or {})
 			debuffsChanged = true
 
-			slots = {C_UnitAuras.GetAuraSlots(unit, debuffFilter)}
-			for i = 2, #slots do
-				AddAuraData(auras.allDebuffs, auras.activeDebuffs, auras, unit, C_UnitAuras.GetAuraDataBySlot(unit, slots[i]), debuffFilter)
-			end
+			ForEachFullAuraData(unit, debuffFilter, function(data)
+				AddAuraData(auras.allDebuffs, auras.activeDebuffs, auras, unit, data, debuffFilter)
+			end)
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
@@ -693,9 +736,8 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			buffs.active = table.wipe(buffs.active or {})
 			buffsChanged = true
 
-			local slots = {C_UnitAuras.GetAuraSlots(unit, buffFilter)}
-			for i = 2, #slots do
-				local data = processData(buffs, unit, C_UnitAuras.GetAuraDataBySlot(unit, slots[i]), buffFilter)
+			ForEachFullAuraData(unit, buffFilter, function(auraData)
+				local data = processData(buffs, unit, auraData, buffFilter)
 				if(data and data.auraInstanceID) then
 					buffs.all[data.auraInstanceID] = data
 
@@ -703,7 +745,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 						buffs.active[data.auraInstanceID] = true
 					end
 				end
-			end
+			end)
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
@@ -811,9 +853,8 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			debuffs.active = table.wipe(debuffs.active or {})
 			debuffsChanged = true
 
-			local slots = {C_UnitAuras.GetAuraSlots(unit, debuffFilter)}
-			for i = 2, #slots do
-				local data = processData(debuffs, unit, C_UnitAuras.GetAuraDataBySlot(unit, slots[i]), debuffFilter)
+			ForEachFullAuraData(unit, debuffFilter, function(auraData)
+				local data = processData(debuffs, unit, auraData, debuffFilter)
 				if(data and data.auraInstanceID) then
 					debuffs.all[data.auraInstanceID] = data
 
@@ -821,7 +862,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 						debuffs.active[data.auraInstanceID] = true
 					end
 				end
-			end
+			end)
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
