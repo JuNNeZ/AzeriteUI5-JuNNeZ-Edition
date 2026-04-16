@@ -210,6 +210,12 @@ end
 ActionBar.OnEvent = function(self, event, ...)
 	if (event == "ACTIONBAR_SLOT_CHANGED") then
 		self:UpdateFading()
+	elseif (event == "PLAYER_REGEN_ENABLED") then
+		self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+		if (self.__AzeriteUI_DeferredBindings) then
+			self.__AzeriteUI_DeferredBindings = nil
+			self:UpdateBindings()
+		end
 	end
 end
 
@@ -228,6 +234,9 @@ ActionBar.UpdateButtonFlags = function(self)
 		button.hasTempShapeshiftBar = self.hasTempShapeshiftBar
 		button.hasPossessBar = self.hasPossessBar
 	end
+
+	-- Re-evaluate binding route after secure page/state transitions.
+	self:UpdateBindings()
 end
 
 ActionBar.CreateButton = function(self, buttonConfig)
@@ -363,19 +372,33 @@ ActionBar.UpdateButtonLayout = function(self)
 end
 
 ActionBar.UpdateBindings = function(self)
-	if (InCombatLockdown()) then return end
+	if (InCombatLockdown()) then
+		self.__AzeriteUI_DeferredBindings = true
+		self:RegisterEvent("PLAYER_REGEN_ENABLED")
+		return
+	end
+	self.__AzeriteUI_DeferredBindings = nil
 	if (not next(self.buttons)) then return end
 
 	ClearOverrideBindings(self)
 
 	if (not self:IsEnabled()) then return end
 
+	local state = tonumber(self:GetAttribute("state")) or 0
+	local hasDynamicPageState = (self.id == 1) and (
+		state == 11 or state == 12 or state == 16 or state == 17 or state == 18
+		or self.hasVehicleBar
+		or self.hasOverrideBar
+		or self.hasTempShapeshiftBar
+		or self.hasPossessBar
+		or self.isDragonRiding
+	)
+
 	for id,button in pairs(self.buttons) do
 		local bindingAction = button.keyBoundTarget
 		if (bindingAction) then
 			local useCommandBindings = self.config.useCommandBindingsForHoldCast ~= false
 			local hasCustomVehicleState = button.state_types and button.state_types["16"] == "custom"
-			local hasDynamicPaging = (self.id == 1)
 			local buttonName = button:GetName()
 
 			-- iterate through the registered keys for the action
@@ -385,9 +408,10 @@ ActionBar.UpdateBindings = function(self)
 				local key = select(keyNumber, GetBindingKey(bindingAction))
 				if (key and (key ~= "")) then
 					local assigned = false
-					-- Bar 1 has secure paging (override/vehicle/bonus/possess) and must route through
-					-- the actual button click path to respect its live state action mapping.
-					if (useCommandBindings and (not hasCustomVehicleState) and (not hasDynamicPaging) and SetOverrideBinding) then
+					-- Prefer command bindings for hold-cast support. During active bar-1 dynamic
+					-- paging states (dragon/vehicle/override/possess), keep click routing so
+					-- temporary actionbar slots stay in sync with the secure state driver.
+					if (useCommandBindings and (not hasCustomVehicleState) and (not hasDynamicPageState) and SetOverrideBinding) then
 						local ok = pcall(SetOverrideBinding, self, false, key, bindingAction)
 						if (ok) then
 							assigned = true

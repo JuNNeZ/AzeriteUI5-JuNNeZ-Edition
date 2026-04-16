@@ -2879,6 +2879,19 @@ function UpdateAssistedCombatRotationFrame(self)
 		return
 	end
 
+	-- The Blizzard rotation template runs an OnUpdate loop that calls
+	-- C_ActionBar.ForceUpdateAction(...), which is protected and can taint when
+	-- hosted on addon-created custom action buttons. Keep assisted highlight
+	-- support, but disable this rotation frame path for AzeriteUI buttons.
+	if self.config and self.config.actionButtonUI then
+		local existing = self.AssistedCombatRotationFrame
+		if existing then
+			existing:Hide()
+			existing:SetScript("OnUpdate", nil)
+		end
+		return
+	end
+
 	local show = self._state_type == "action" and IsAssistedCombatAction(self._state_action)
 	local frame = self.AssistedCombatRotationFrame
 	if show and not frame then

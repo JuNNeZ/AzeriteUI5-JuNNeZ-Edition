@@ -5,6 +5,28 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.62-JuNNeZ (2026-04-16) — Hold-To-Cast + Dragonriding Routing
+
+### Highlights
+
+- Restored press-and-hold casting support for Single-Button Assistant flows on AzeriteUI action bars by preferring Blizzard command-binding routing in normal bar states.
+- Fixed dragonriding/vehicle transition routing so action keys use temporary mounted action slots instead of stale base-bar actions.
+- Fixed a WoW 12 `ADDON_ACTION_FORBIDDEN` regression tied to Blizzard `ForceUpdateAction()` by disabling the taint-prone assisted-rotation template path on AzeriteUI custom action buttons while keeping assisted highlight support.
+
+### Access
+
+- Action bar hold-cast route toggle: `/az -> Action Bar Settings -> Use Command Bindings for Hold Cast`
+
+### Known Limitation
+
+- If you enter combat while mounted (dragonriding/vehicle-style state) and unmount during that same combat, hold-to-cast cannot be restored mid-combat due to Blizzard secure restrictions. AzeriteUI now restores hold-to-cast automatically as soon as combat ends.
+
+### Internal
+
+- `Components/ActionBars/Prototypes/ActionBar.lua`: state-aware command/click routing, dynamic bar-state handling for dragon/vehicle/override paths, and deferred per-bar post-combat binding refresh.
+- `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`: removed assisted-rotation template usage on AzeriteUI custom action buttons to avoid protected `ForceUpdateAction()` taint.
+
+
 ## 5.3.61-JuNNeZ (2026-04-15) — Prediction Stability + Party Frame Hardening
 
 ### Highlights

@@ -1,4 +1,147 @@
 
+## 2026-04-16 — 5.3.62-JuNNeZ release prep/finalization
+
+- Consolidated the current worktree delta for release:
+  - Hold-to-cast command binding restore for normal action-bar states
+  - Dragonriding/vehicle dynamic-state key routing fix (prevent stale base-bar casts)
+  - Protected `ForceUpdateAction()` taint regression fix in assisted-rotation path
+  - Deferred post-combat bar-level rebind for mounted->combat->unmount transition chain
+- Updated release/version files:
+  - `AzeriteUI5_JuNNeZ_Edition.toc` -> `5.3.62-JuNNeZ`
+  - `build-release.ps1` -> `5.3.62-JuNNeZ`
+  - `CHANGELOG.md` -> added the delta-only `5.3.62-JuNNeZ` entry including mounted-combat hold-to-cast limitation note
+- Validation target:
+  - `luac -p Components/ActionBars/Prototypes/ActionBar.lua`
+  - `luac -p Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+
+---
+
+## 2026-04-16 — hold-cast lost after dragon unmount in combat (deferred bar rebind)
+
+- **[USER REPORT] If entering combat while mounted (dragonriding) and unmounting in combat, hold-cast stayed off:**
+  - Symptom:
+    - Normal combat entry (not mounted) kept hold-cast working.
+    - Mounted -> combat -> unmount path could leave bar 1 on click-route behavior instead of command-route hold-cast behavior.
+  - Root cause:
+    - `ActionBar.UpdateBindings()` (bar prototype path) returned immediately in combat without scheduling a guaranteed per-bar retry.
+    - During secure mounted/unmounted state transitions in combat, bar-level route recalculation could be blocked and then not reapplied at first combat end for that specific bar.
+  - Fix:
+    - Added per-bar deferred binding refresh in `Components/ActionBars/Prototypes/ActionBar.lua`:
+      - On combat lock in `UpdateBindings()`, set deferred flag and register `PLAYER_REGEN_ENABLED` on the bar.
+      - On `PLAYER_REGEN_ENABLED`, clear deferred flag and re-run `UpdateBindings()`.
+    - This guarantees bar-level routing restoration immediately after combat, including mounted->combat->unmount transition chains.
+  - Local validation:
+    - `luac -p Components/ActionBars/Prototypes/ActionBar.lua` -> pending (run in this iteration)
+  - Runtime validation target:
+    - `/buggrabber reset`
+    - `/reload`
+    - Enter dragonriding, enter combat, unmount while still in combat
+    - End combat and verify hold-cast returns without extra manual toggle/reload
+    - Confirm dragonriding actions still map correctly while mounted
+  - **Files Modified:** `Components/ActionBars/Prototypes/ActionBar.lua`
+
+---
+
+## 2026-04-16 — ForceUpdateAction protected-call taint on custom action buttons
+
+- **[USER REPORT] `ADDON_ACTION_FORBIDDEN` for protected `ForceUpdateAction()` after hold-cast/dragonflying fixes:**
+  - Symptom:
+    - BugSack reported Blizzard `ActionButton.lua` assisted-combat rotation update path calling protected `ForceUpdateAction()` and attributing the call to AzeriteUI.
+  - Root cause:
+    - Embedded LAB was creating `ActionBarButtonAssistedCombatRotationTemplate` on addon-created AzeriteUI action buttons (`config.actionButtonUI=true`).
+    - That Blizzard template has an `OnUpdate` path that calls `C_ActionBar.ForceUpdateAction(actionButton.action)`, which is protected and taint-sensitive in addon-owned frame context.
+  - Fix:
+    - Disabled assisted-rotation-template usage for AzeriteUI LAB buttons in `UpdateAssistedCombatRotationFrame(...)`.
+    - Added cleanup to hide any existing rotation frame and remove its `OnUpdate` script on those buttons.
+    - Kept assisted highlight (`OnAssistedHighlightSpellChange` path) intact.
+  - Local validation:
+    - `luac -p Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` -> pending (run in this iteration)
+  - Runtime validation target:
+    - `/buggrabber reset`
+    - `/reload`
+    - Verify SBA hold-cast still works on normal bar state
+    - Verify dragonriding still uses dragon action slots
+    - Verify no new `ADDON_ACTION_FORBIDDEN` for `ForceUpdateAction()` while using assisted combat/highlight features
+  - **Files Modified:** `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+
+---
+
+## 2026-04-16 — dragonflying binding-route follow-up (state transition ordering)
+
+- **[USER REPORT] Dragonflying still used base bar actions and SBA hold-cast remained unreliable after initial follow-up:**
+  - Symptom:
+    - Entering dragonriding could still fire base actionbar spells instead of dragonriding slots.
+    - SBA hold-cast could also remain off because binding route was not always refreshed at the exact state transition timing.
+  - Root cause:
+    - `ActionBar.UpdateBindings()` could run before secure bar-state flags fully reflected dragon/override transitions.
+    - Binding route was not explicitly re-evaluated from `UpdateButtonFlags()` after secure state changes.
+    - Dynamic state detection for bar 1 did not include all transition-relevant state numbers used in this paging path.
+  - Fix:
+    - Rebind immediately from `ActionBar.UpdateButtonFlags()` after secure state attributes are copied.
+    - Expanded dynamic state detection in `ActionBar.UpdateBindings()` to treat state `11`, `12`, `16`, `17`, and `18` (plus secure bar flags) as click-routing states for bar 1.
+    - Kept command routing for normal non-dynamic states so hold-cast support stays active where intended.
+  - Local validation:
+    - `luac -p Components/ActionBars/Prototypes/ActionBar.lua` -> pending (run in this iteration)
+  - Runtime validation target:
+    - `/buggrabber reset`
+    - `/reload`
+    - Test SBA hold-cast on normal bar 1 state (out of vehicle/dragon)
+    - Enter dragonriding and verify keys fire dragonriding slots, not base bar spells
+    - Exit dragonriding and verify hold-cast returns on normal bar 1 state
+  - **Files Modified:** `Components/ActionBars/Prototypes/ActionBar.lua`
+
+---
+
+## 2026-04-16 — dragonflying bar-state regression after hold-cast routing change
+
+- **[USER REPORT] While dragonflying, keybinds fired base bar spells instead of dragonriding actionbar spells:**
+  - Symptom:
+    - In dragonriding/vehicle-style bar states, bar 1 bindings continued to act like normal ACTIONBUTTON page 1 commands.
+    - Result was casting original actionbar abilities instead of the temporary dragonflying action slots.
+  - Root cause:
+    - The earlier hold-cast follow-up removed bar-1 dynamic paging guardrails too broadly.
+    - `ActionBar.UpdateBindings()` then kept command binding routing active during vehicle/override/dragon paging, where click-routing is needed to stay aligned with the live secure paged button state.
+  - Fix:
+    - Added a dynamic paging guard in `ActionBar.UpdateBindings()` for bar 1.
+    - During active vehicle/override/dragon-style paging (`state` 16/17/18 and related secure flags), bindings now fall back to `SetOverrideBindingClick(...)`.
+    - Outside those temporary states, command routing stays enabled for press-and-hold support.
+  - Local validation:
+    - `luac -p Components/ActionBars/Prototypes/ActionBar.lua` -> pending (run in this iteration)
+  - Runtime validation target:
+    - `/buggrabber reset`
+    - `/reload`
+    - Enter dragonriding and verify action keys trigger dragonriding bar actions
+    - Exit dragonriding and verify hold-cast behavior still works on normal bar 1 actions
+    - Verify vehicle/override transitions no longer route to stale base-bar actions
+  - **Files Modified:** `Components/ActionBars/Prototypes/ActionBar.lua`
+
+---
+
+## 2026-04-16 — press-and-hold cast follow-up (Single-Button Assistant)
+
+- **[USER REPORT] Press-and-hold casting did not fire reliably on AzeriteUI action bars (notably Single-Button Assistant flows):**
+  - Symptom:
+    - Holding a bound key did not keep triggering expected press-and-hold behavior on AzeriteUI bars even when Blizzard default bars worked.
+    - Previous binding logic forced bar 1 through click-routing, which can bypass Blizzard's command-binding path expected by hold-cast handling.
+  - Root cause:
+    - In `ActionBar.UpdateBindings()`, bar 1 (`self.id == 1`) was hard-blocked from command bindings via `hasDynamicPaging`, so it always used `SetOverrideBindingClick(..., "Keybind")` fallback.
+    - That meant the `Use Command Bindings for Hold Cast` setting did not fully apply to the primary bar where Single-Button Assistant is typically used.
+  - Fix:
+    - Removed the bar-1 dynamic-paging command-binding block.
+    - Action bars now prefer `SetOverrideBinding(...)` whenever `UseCommandBindingsForHoldCast` is enabled, while still falling back to click-binding for buttons with custom state-16 mapping (vehicle/exit custom action path).
+  - Local validation:
+    - `luac -p Components/ActionBars/Prototypes/ActionBar.lua` -> pending (tool availability depends on local environment)
+  - Runtime validation target:
+    - `/buggrabber reset`
+    - `/reload`
+    - Ensure `ActionButtonUseKeyDown` is enabled (`/console ActionButtonUseKeyDown 1`)
+    - Ensure `ActionButtonUseKeyHeldSpell` is enabled (`/console ActionButtonUseKeyHeldSpell 1`)
+    - Test hold-cast with Single-Button Assistant on bar 1 and verify repeated hold behavior
+    - Verify vehicle/override transitions still function on bar 1 (including vehicle exit button behavior)
+  - **Files Modified:** `Components/ActionBars/Prototypes/ActionBar.lua`
+
+---
+
 ## 2026-04-15 — 5.3.61-JuNNeZ release prep/finalization
 
 - Consolidated the current worktree delta for release:
