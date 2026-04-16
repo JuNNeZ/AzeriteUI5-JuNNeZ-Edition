@@ -1,4 +1,29 @@
 
+## 2026-04-16 — 5.3.63-JuNNeZ release prep/finalization
+
+- Consolidated the corrective release delta:
+  - Reverted deferred per-bar post-combat binding refresh experiment due to intermittent action bar instability reports
+  - Kept stable hold-to-cast normal-state routing and dragonriding dynamic-state routing fixes
+  - Kept protected `ForceUpdateAction()` taint fix in assisted-rotation path
+- Updated release/version files:
+  - `AzeriteUI5_JuNNeZ_Edition.toc` -> `5.3.63-JuNNeZ`
+  - `build-release.ps1` -> `5.3.63-JuNNeZ`
+  - `CHANGELOG.md` -> added the delta-only `5.3.63-JuNNeZ` entry
+- Validation target:
+  - `luac -p Components/ActionBars/Prototypes/ActionBar.lua`
+  - `luac -p Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+
+---
+
+## 2026-04-16 — rollback: deferred per-bar post-combat rebind experiment
+
+- **[FOLLOW-UP] Reverted the most recent per-bar `PLAYER_REGEN_ENABLED` deferred rebind experiment in `ActionBar.UpdateBindings()`:**
+  - **Reason:** User reported intermittent action bar instability after this change.
+  - **Rollback:** Removed bar-level deferred binding flag/event path and restored previous direct combat guard behavior in `Components/ActionBars/Prototypes/ActionBar.lua`.
+  - **Scope kept:** Earlier hold-cast routing, dragonriding dynamic-state routing, and assisted-rotation taint fix remain intact.
+
+---
+
 ## 2026-04-16 — 5.3.62-JuNNeZ release prep/finalization
 
 - Consolidated the current worktree delta for release:

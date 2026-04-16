@@ -5,6 +5,26 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.63-JuNNeZ (2026-04-16) — Action Bar Stability Follow-Up
+
+### Highlights
+
+- Reverted the experimental per-bar post-combat hold-to-cast rebinding path that could cause intermittent action bar instability.
+- Kept the core hold-to-cast and dragonriding slot-routing fixes from 5.3.62 intact.
+
+### Access
+
+- No new settings required. Reload UI to apply this stability follow-up.
+
+### Known Limitation
+
+- If you enter combat while mounted (dragonriding/vehicle-style state) and unmount during that same combat, hold-to-cast still cannot be restored mid-combat due to Blizzard secure restrictions. Hold-to-cast returns once combat ends.
+
+### Internal
+
+- `Components/ActionBars/Prototypes/ActionBar.lua`: rolled back deferred per-bar `PLAYER_REGEN_ENABLED` binding refresh experiment and restored the prior combat guard path.
+
+
 ## 5.3.62-JuNNeZ (2026-04-16) — Hold-To-Cast + Dragonriding Routing
 
 ### Highlights

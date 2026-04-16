@@ -210,12 +210,6 @@ end
 ActionBar.OnEvent = function(self, event, ...)
 	if (event == "ACTIONBAR_SLOT_CHANGED") then
 		self:UpdateFading()
-	elseif (event == "PLAYER_REGEN_ENABLED") then
-		self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-		if (self.__AzeriteUI_DeferredBindings) then
-			self.__AzeriteUI_DeferredBindings = nil
-			self:UpdateBindings()
-		end
 	end
 end
 
@@ -372,12 +366,7 @@ ActionBar.UpdateButtonLayout = function(self)
 end
 
 ActionBar.UpdateBindings = function(self)
-	if (InCombatLockdown()) then
-		self.__AzeriteUI_DeferredBindings = true
-		self:RegisterEvent("PLAYER_REGEN_ENABLED")
-		return
-	end
-	self.__AzeriteUI_DeferredBindings = nil
+	if (InCombatLockdown()) then return end
 	if (not next(self.buttons)) then return end
 
 	ClearOverrideBindings(self)
