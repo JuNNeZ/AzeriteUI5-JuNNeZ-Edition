@@ -42,12 +42,26 @@ local unpack = unpack
 
 -- GLOBALS: C_LevelLink, hooksecurefunc, InCombatLockdown, IsMounted, UnitIsDeadOrGhost
 -- GLOBALS: CreateFrame, ClearOverrideBindings, RegisterStateDriver, UnregisterStateDriver, UIParent
+-- GLOBALS: HasBonusActionBar, GetBonusBarOffset
 
 -- Addon API
 local Colors = ns.Colors
 local GetMedia = ns.API.GetMedia
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
 local RegisterCooldown = ns.Widgets.RegisterCooldown
+
+local IsDragonMountBarState = function()
+	if (not ns.IsRetail) then
+		return false
+	end
+	if (not IsMounted()) then
+		return false
+	end
+	if (not HasBonusActionBar or not GetBonusBarOffset) then
+		return false
+	end
+	return HasBonusActionBar() and (GetBonusBarOffset() == 5)
+end
 
 -- Return blizzard barID by from own bar numbers.
 local BAR_TO_ID = {
@@ -655,14 +669,36 @@ end
 
 ActionBarMod.UpdateBindings = function(self, event)
 	if (InCombatLockdown()) then
+		-- Visual-only dragon hide/show must still react in combat.
+		self:UpdateDragonVisualState()
 		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateBindings")
 	end
 	if (event == "PLAYER_REGEN_ENABLED") then
 		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "UpdateBindings")
 	end
-	for i,bar in next,self.bars do
+	-- Apply secondary bars first and primary bar last so bar 1 wins key conflicts.
+	for i = 2,#self.bars do
+		local bar = self.bars[i]
 		if (bar:IsEnabled()) then
 			bar:UpdateBindings()
+		end
+	end
+	local primaryBar = self.bars[1]
+	if (primaryBar and primaryBar:IsEnabled()) then
+		primaryBar:UpdateBindings()
+	end
+	self:UpdateDragonVisualState()
+end
+
+ActionBarMod.UpdateDragonVisualState = function(self)
+	if (not next(self.bars)) then return end
+
+	local inDragonState = IsDragonMountBarState()
+
+	for i,bar in next,self.bars do
+		if (i > 1 and bar and bar:IsEnabled()) then
+			local hideForDragon = bar.config and bar.config.visibility and (bar.config.visibility.dragon == false)
+			bar:SetAlpha((inDragonState and hideForDragon) and 0 or 1)
 		end
 	end
 end
@@ -861,6 +897,7 @@ ActionBarMod.OnEnable = function(self)
 	self:RegisterEvent("UPDATE_BONUS_ACTIONBAR", "UpdateBindings")
 	self:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR", "UpdateBindings")
 	self:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR", "UpdateBindings")
+	self:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED", "UpdateBindings")
 	-- ns.RegisterCallback(self, "AssistedHighlightColor_Changed", "UpdateAssistedHighlightColor")
 
 	self:UpdateSettings()

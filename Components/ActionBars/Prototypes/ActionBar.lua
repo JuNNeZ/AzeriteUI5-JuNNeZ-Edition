@@ -424,7 +424,7 @@ ActionBar.UpdateStateDriver = function(self)
 	-- CATA: check stances and states
 	local statedriver
 	if (self.id == 1) then
-		statedriver = "[overridebar] possess; [possessbar] possess; [shapeshift] possess; [bonusbar:5] dragon; [form,noform] 0; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6"
+		statedriver = "[overridebar] possess; [possessbar] possess; [shapeshift] possess; [mounted,bonusbar:5] dragon; [form,noform] 0; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6"
 
 		if (playerClass == "DRUID") then
 			statedriver = statedriver .. "; [bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10"
@@ -474,10 +474,12 @@ ActionBar.UpdateVisibilityDriver = function(self)
 			visdriver = visdriver.."[vehicleui]hide;"
 		end
 
-		if (config.visibility.dragon) then
-			visdriver = visdriver.."[bonusbar:5]show;"
-		else
-			visdriver = visdriver.."[bonusbar:5]hide;"
+		if (self.id == 1) then
+			if (config.visibility.dragon) then
+				visdriver = visdriver.."[mounted,bonusbar:5]show;"
+			else
+				visdriver = visdriver.."[mounted,bonusbar:5]hide;"
+			end
 		end
 
 		visdriver = visdriver.."show"

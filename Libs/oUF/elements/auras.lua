@@ -86,6 +86,7 @@ local function IsSafeNumber(value)
 	return type(value) == 'number' and (not issecretvalue or not issecretvalue(value))
 end
 
+
 local function GetAuraSlotsSafe(unit, filter)
 	local results = {pcall(C_UnitAuras.GetAuraSlots, unit, filter)}
 	if(not results[1]) then
@@ -109,16 +110,30 @@ local function GetAuraDataByIndexSafe(unit, index, filter)
 	end
 end
 
+local function IsAuraFilteredOutByInstanceIDSafe(unit, auraInstanceID, filter)
+	if(not auraInstanceID or not filter) then
+		return nil
+	end
+	local ok, filtered = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, auraInstanceID, filter)
+	if(ok) then
+		return filtered
+	end
+end
+
 local function ForEachFullAuraData(unit, filter, callback)
 	local slots = GetAuraSlotsSafe(unit, filter)
 	if(slots) then
+		local hadSlotData = false
 		for i = 2, #slots do -- #1 return is continuationToken, we don't care about it
 			local data = GetAuraDataBySlotSafe(unit, slots[i])
 			if(data) then
+				hadSlotData = true
 				callback(data)
 			end
 		end
-		return
+		if(hadSlotData) then
+			return
+		end
 	end
 
 	for index = 1, MAX_AURA_INDEX_SCAN do
@@ -309,12 +324,14 @@ local function updateAura(element, unit, data, position)
 		local minCount = element.minCount or 2
 		local maxCount = element.maxCount or 999
 		local _okCnt, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, data.auraInstanceID, minCount, maxCount)
-		local displayCountSafe = _okCnt and displayCount ~= nil
 		local wroteCount = false
 
-		if(displayCountSafe) then
-			local ok = pcall(button.Count.SetText, button.Count, displayCount)
-			wroteCount = ok and true or false
+		if(_okCnt and displayCount ~= nil) then
+			-- Pass directly to SetText. WoW 12 allows SetText(secretValue) for native display;
+			-- only comparisons or arithmetic on secret values would crash. This path handles
+			-- both safe strings and secret strings (in-combat stack counts) correctly.
+			button.Count:SetText(displayCount)
+			wroteCount = true
 		end
 
 		if(not wroteCount and IsSafeNumber(data.applications)) then
@@ -330,8 +347,6 @@ local function updateAura(element, unit, data, position)
 				wroteCount = true
 			end
 		end
-
-		-- Keep the previous stack text when all available sources are secret.
 	end
 
 	local width = element.width or element.size or 16
@@ -498,27 +513,23 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			if(updateInfo.updatedAuraInstanceIDs) then
 				for _, auraInstanceID in next, updateInfo.updatedAuraInstanceIDs do
 					if(auras.allBuffs[auraInstanceID]) then
-						auras.allBuffs[auraInstanceID] = processData(auras, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), buffFilter)
-						if(not auras.allBuffs[auraInstanceID]) then
-							auras.allBuffs[auraInstanceID] = nil
-							auras.activeBuffs[auraInstanceID] = nil
-							buffsChanged = true
+						local refreshed = processData(auras, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), buffFilter)
+						if(refreshed and refreshed.auraInstanceID) then
+							auras.allBuffs[auraInstanceID] = refreshed
 						end
-
-						-- only update if it's actually active
-						if(auras.allBuffs[auraInstanceID] and auras.activeBuffs[auraInstanceID]) then
+						-- Keep previous valid data when refresh is transiently nil (e.g. during stack increments).
+						-- Explicit removal is handled by removedAuraInstanceIDs only.
+						if(auras.activeBuffs[auraInstanceID]) then
 							auras.activeBuffs[auraInstanceID] = true
 							buffsChanged = true
 						end
 					elseif(auras.allDebuffs[auraInstanceID]) then
-						auras.allDebuffs[auraInstanceID] = processData(auras, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), debuffFilter)
-						if(not auras.allDebuffs[auraInstanceID]) then
-							auras.allDebuffs[auraInstanceID] = nil
-							auras.activeDebuffs[auraInstanceID] = nil
-							debuffsChanged = true
+						local refreshed = processData(auras, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), debuffFilter)
+						if(refreshed and refreshed.auraInstanceID) then
+							auras.allDebuffs[auraInstanceID] = refreshed
 						end
-
-						if(auras.allDebuffs[auraInstanceID] and auras.activeDebuffs[auraInstanceID]) then
+						-- Keep previous valid data when refresh is transiently nil.
+						if(auras.activeDebuffs[auraInstanceID]) then
 							auras.activeDebuffs[auraInstanceID] = true
 							debuffsChanged = true
 						end
@@ -751,9 +762,12 @@ local function UpdateAuras(self, event, unit, updateInfo)
 				for _, data in next, updateInfo.addedAuras do
 					local _okF, _filteredOut = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, data.auraInstanceID, buffFilter)
 					if(_okF and not _filteredOut) then
-						buffs.all[data.auraInstanceID] = processData(buffs, unit, data, buffFilter)
+						local processed = processData(buffs, unit, data, buffFilter)
+						if(processed and processed.auraInstanceID) then
+							buffs.all[data.auraInstanceID] = processed
+						end
 
-						if((buffs.FilterAura or FilterAura) (buffs, unit, data, buffFilter)) then
+						if(processed and (buffs.FilterAura or FilterAura) (buffs, unit, processed, buffFilter)) then
 							buffs.active[data.auraInstanceID] = true
 							buffsChanged = true
 						end
@@ -764,9 +778,15 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			if(updateInfo.updatedAuraInstanceIDs) then
 				for _, auraInstanceID in next, updateInfo.updatedAuraInstanceIDs do
 					if(buffs.all[auraInstanceID]) then
-						buffs.all[auraInstanceID] = processData(buffs, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), buffFilter)
+						local refreshed = processData(buffs, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), buffFilter)
+						if(refreshed and refreshed.auraInstanceID) then
+							buffs.all[auraInstanceID] = refreshed
+						end
 
-						if(buffs.active[auraInstanceID]) then
+						if((not refreshed) and buffs.active[auraInstanceID]) then
+							-- Keep previous valid aura data until explicit removal.
+							buffsChanged = true
+						elseif(buffs.active[auraInstanceID]) then
 							buffs.active[auraInstanceID] = true
 							buffsChanged = true
 						end
@@ -852,25 +872,56 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			debuffs.all = table.wipe(debuffs.all or {})
 			debuffs.active = table.wipe(debuffs.active or {})
 			debuffsChanged = true
+			local scannedDebuffs = 0
 
 			ForEachFullAuraData(unit, debuffFilter, function(auraData)
+				scannedDebuffs = scannedDebuffs + 1
 				local data = processData(debuffs, unit, auraData, debuffFilter)
 				if(data and data.auraInstanceID) then
 					debuffs.all[data.auraInstanceID] = data
-
 					if((debuffs.FilterAura or FilterAura) (debuffs, unit, data, debuffFilter)) then
 						debuffs.active[data.auraInstanceID] = true
 					end
 				end
 			end)
+
+			-- Retail WoW 12 edge case:
+			-- Direct full scans with "HARMFUL" can return 0 on player right after reload,
+			-- while harmful auras still exist. Fallback by scanning unfiltered indices and
+			-- re-checking each aura against HARMFUL instance filtering.
+			if(unit == 'player' and debuffFilter == 'HARMFUL' and scannedDebuffs == 0) then
+				for index = 1, MAX_AURA_INDEX_SCAN do
+					local auraData = GetAuraDataByIndexSafe(unit, index)
+					if(not auraData) then
+						break
+					end
+
+					local auraInstanceID = auraData.auraInstanceID
+					local filteredOut = IsAuraFilteredOutByInstanceIDSafe(unit, auraInstanceID, 'HARMFUL')
+					if(filteredOut == false) then
+						scannedDebuffs = scannedDebuffs + 1
+						local data = processData(debuffs, unit, auraData, debuffFilter)
+						if(data and data.auraInstanceID) then
+							debuffs.all[data.auraInstanceID] = data
+							if((debuffs.FilterAura or FilterAura) (debuffs, unit, data, debuffFilter)) then
+								debuffs.active[data.auraInstanceID] = true
+							end
+						end
+					end
+				end
+			end
+
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
 					local _okF, _filteredOut = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, data.auraInstanceID, debuffFilter)
 					if(_okF and not _filteredOut) then
-						debuffs.all[data.auraInstanceID] = processData(debuffs, unit, data, debuffFilter)
+						local processed = processData(debuffs, unit, data, debuffFilter)
+						if(processed and processed.auraInstanceID) then
+							debuffs.all[data.auraInstanceID] = processed
+						end
 
-						if((debuffs.FilterAura or FilterAura) (debuffs, unit, data, debuffFilter)) then
+						if(processed and (debuffs.FilterAura or FilterAura) (debuffs, unit, processed, debuffFilter)) then
 							debuffs.active[data.auraInstanceID] = true
 							debuffsChanged = true
 						end
@@ -881,9 +932,15 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			if(updateInfo.updatedAuraInstanceIDs) then
 				for _, auraInstanceID in next, updateInfo.updatedAuraInstanceIDs do
 					if(debuffs.all[auraInstanceID]) then
-						debuffs.all[auraInstanceID] = processData(debuffs, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), debuffFilter)
+						local refreshed = processData(debuffs, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), debuffFilter)
+						if(refreshed and refreshed.auraInstanceID) then
+							debuffs.all[auraInstanceID] = refreshed
+						end
 
-						if(debuffs.active[auraInstanceID]) then
+						if((not refreshed) and debuffs.active[auraInstanceID]) then
+							-- Keep previous valid aura data until explicit removal.
+							debuffsChanged = true
+						elseif(debuffs.active[auraInstanceID]) then
 							debuffs.active[auraInstanceID] = true
 							debuffsChanged = true
 						end
@@ -897,7 +954,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			if(updateInfo.removedAuraInstanceIDs) then
 				for _, auraInstanceID in next, updateInfo.removedAuraInstanceIDs do
 					if(debuffs.all[auraInstanceID]) then
-						debuffs.all[auraInstanceID] = nil
+
 
 						if(debuffs.active[auraInstanceID]) then
 							debuffs.active[auraInstanceID] = nil

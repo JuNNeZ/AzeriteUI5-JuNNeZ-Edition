@@ -5,6 +5,35 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.64-JuNNeZ (2026-04-17) — Aura Reliability + Dragonriding Bar Recovery
+
+### Overall
+
+- This update makes buffs, debuffs, and action bars recover more reliably during combat, reloads, and dragonriding transitions. Timers and stack counts should stay accurate, debuffs are easier to spot, and secondary action bars should no longer feel stuck after mounted combat changes.
+
+### Highlights
+
+- Fixed player aura stack counts freezing at their pre-combat value when WoW 12 returned protected combat stack data.
+- Fixed the separate player debuff row so active debuffs rebuild more reliably after `/reload`, combat transitions, and short-lived aura update gaps.
+- Fixed top-right debuffs being displaced by wrapped buff rows, and added a red debuff border so harmful effects are easier to distinguish from buffs.
+- Fixed top-right aura timer bars so they begin draining immediately, while timeless buffs no longer blink like expiring auras.
+- Fixed dragonriding and arena/mounted transition handling so secondary action bars hide only visually during dragonriding and restore more reliably after dismounting, including combat transitions.
+- Made overlapping action-bar keybinds deterministic: bar 1 now wins conflicts, which keeps dragonriding and primary action routing consistent.
+
+### Access
+
+- No new settings required. Existing player aura options remain under `/az -> Unit Frames -> Player -> Display & Feedback`.
+- Existing action bar behavior applies automatically after `/reload`.
+
+### Internal
+
+- `Components/Auras/Auras.lua`: split top-right buff/debuff rows, debuff border coloring, timer visibility cleanup, and zero-duration aura handling.
+- `Components/UnitFrames/Units/Player.lua`: detached player debuff visibility intent, reload bootstrap refresh, and safer combat-entry refresh behavior.
+- `Components/UnitFrames/Auras/AuraFilters.lua`, `Components/UnitFrames/Auras/AuraStyling.lua`, `Libs/oUF/elements/auras.lua`: player aura/debuff filtering and stack display hardening for WoW 12 protected aura data.
+- `Core/Widgets/Cooldowns.lua`: duration-object cooldown bars now use real duration ranges when safe fallback data is available.
+- `Components/ActionBars/Elements/ActionBars.lua`, `Components/ActionBars/Prototypes/ActionBar.lua`: dragonriding secondary-bar visual recovery and deterministic primary-bar binding priority.
+
+
 ## 5.3.63-JuNNeZ (2026-04-16) — Action Bar Stability Follow-Up
 
 ### Highlights

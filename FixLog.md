@@ -1,4 +1,545 @@
 
+## 2026-04-17 — 5.3.64-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta:
+  - Player aura stack counts stay live when WoW 12 exposes protected in-combat stack values.
+  - Separate player debuff row rebuilds more reliably after `/reload`, combat transitions, and transient aura refresh gaps.
+  - Top-right player debuffs have a dedicated row, red border, and stable timer behavior.
+  - Timeless top-right buffs no longer blink as expiring auras.
+  - Dragonriding/mounted combat transitions no longer leave secondary action bars feeling stuck; bars 2+ use visual-only dragon hiding and restore immediately when possible.
+  - Action-bar keybind conflicts now resolve deterministically with bar 1 taking priority.
+- Updated release/version files:
+  - `AzeriteUI5_JuNNeZ_Edition.toc` -> `5.3.64-JuNNeZ`
+  - `build-release.ps1` -> `5.3.64-JuNNeZ`
+  - `CHANGELOG.md` -> added the delta-only `5.3.64-JuNNeZ` entry with a short non-technical overview.
+- Validation target:
+  - `luac -p` on all changed Lua files.
+  - `build-release.ps1` to create the release archive.
+- Runtime validation target:
+  - `/reload`
+  - Verify top-right buffs/debuffs, detached player debuffs, aura timers/stack counts, and dragonriding/action-bar recovery.
+
+---
+
+## 2026-04-17 — Follow-up: bars 2+ stayed hidden until combat ended when entering combat mounted
+
+- **User report:** If combat starts while mounted on dragonriding mount, bars 2+ can remain hidden until combat ends.
+- **Root cause:** `ActionBarMod.UpdateBindings()` returns early in combat lockdown. The visual-only dragon restore path (`UpdateDragonVisualState`) was called only after normal binding updates, so it did not run during combat-state events.
+- **Fix applied:**
+  - `Components/ActionBars/Elements/ActionBars.lua`
+    - In combat-lockdown branch of `UpdateBindings()`, call `self:UpdateDragonVisualState()` before deferring to `PLAYER_REGEN_ENABLED`.
+- **Expected behavior:**
+  - Dragon visual hide/show for bars 2+ now updates during combat transitions.
+  - Dismounting in combat restores bars 2+ immediately instead of waiting for combat end.
+- **Test:** `/reload` -> dragon mount -> enter combat while mounted -> dismount in combat -> verify bars 2+ reappear immediately.
+
+## 2026-04-17 — Follow-up: keybind conflict priority with dragonriding vs bars 2+
+
+- **Question raised:** If the same key is bound to bar 1 (dragon/action paging) and bar 2+ slots, which key route wins?
+- **Observed behavior:** Override bindings were refreshed in table iteration order (`next(self.bars)`), which is not a guaranteed priority contract for conflict cases.
+- **Fix applied:**
+  - `Components/ActionBars/Elements/ActionBars.lua`
+    - `ActionBarMod.UpdateBindings()` now applies bars 2+ first, then bar 1 last.
+    - This makes bar 1 deterministic winner for overlapping keybind conflicts (including dragonriding paging states).
+- **Expected behavior:**
+  - If duplicate keybinds exist across bars, bar 1 route takes priority.
+  - Dragonriding actions on bar 1 no longer lose priority to secondary bar override refresh order.
+
+## 2026-04-17 — Follow-up: dragonriding should hide bars 2+ visually, not disable behavior
+
+- **User intent:** Keep bars 2+ hidden while dragonriding, but avoid the "disabled/stuck" behavior after dismount.
+- **Root cause refinement:** Secure visibility hide/show on secondary bars during dragon state transitions could leave them feeling disabled when transition state lagged.
+- **Fix applied:**
+  - `Components/ActionBars/Prototypes/ActionBar.lua`
+    - Dragon visibility state driver remains scoped to bar 1 only.
+  - `Components/ActionBars/Elements/ActionBars.lua`
+    - Added `UpdateDragonVisualState()` using a visual-only approach for bars 2+:
+      - Detect dragon mount bar state via `IsMounted()` + `HasBonusActionBar()` + `GetBonusBarOffset() == 5`.
+      - When active, bars 2+ with `visibility.dragon == false` are set to alpha 0 instead of secure-hidden.
+      - On state end, alpha returns to 1 immediately.
+    - Hooked refresh to `UpdateBindings()` and added `PLAYER_MOUNT_DISPLAY_CHANGED` event registration.
+- **Expected behavior:**
+  - During dragonriding, bars 2+ are visually hidden.
+  - After dismount, bars 2+ return without becoming stuck/disabled.
+- **Test:** `/reload` -> dragon mount -> verify bars 2+ visually hide -> dismount -> verify bars 2+ restore and remain functional.
+
+## 2026-04-17 — Follow-up: post-dragon dismount could still leave only bar 1 active
+
+- **User report:** After the first dragon/PvP fix, dismounting from dragonriding could still leave only bar 1 effectively active in some transitions, even outside PvP.
+- **Root cause refinement:** Applying dragon visibility gating to every action bar made secondary bars depend on a dragon state condition (`bonusbar:5`) that can be transition-noisy.
+- **Fix applied:**
+  - `Components/ActionBars/Prototypes/ActionBar.lua`
+    - Keep dragon state paging on bar 1 (`[mounted,bonusbar:5] dragon`).
+    - Restrict dragon visibility condition handling to bar 1 only; bars 2+ no longer hide/show based on dragon condition.
+- **Expected behavior:**
+  - Dismount transitions no longer leave bars 2+ stuck inactive/hidden.
+  - Bar 1 still receives dragon paging when dragon mount action bar is active.
+- **Test:** `/reload` -> mount dragonriding -> dismount -> verify bars 2+ remain usable/visible; repeat while entering/exiting queued PvP content.
+
+## 2026-04-17 — Arena entry from dragonriding leaves only bar 1 active
+
+- **User report:** Entering PvP/arena while mounted on a dragonriding mount, then getting converted to a normal battleground mount, could leave action bar paging in a dragon-like state where only bar 1 behaved correctly.
+- **Root cause:** `Components/ActionBars/Prototypes/ActionBar.lua` used `[bonusbar:5]` alone to trigger dragon state/visibility handling. In arena/BG mount transitions this can remain true without active dragonriding gameplay, so bars configured to hide on dragon were incorrectly hidden and paging flags stayed in the dynamic path.
+- **Fix applied:**
+  - `Components/ActionBars/Prototypes/ActionBar.lua`
+    - State driver: dragon paging now requires `[mounted,flyable,bonusbar:5]` instead of `[bonusbar:5]`.
+    - Visibility driver: dragon visibility branch now uses `[mounted,flyable,bonusbar:5]` for both show/hide checks.
+- **Expected behavior:**
+  - In arena/BG prep where mounts are normalized to non-dragon mounts, secondary bars should no longer get hidden by stale dragon conditions.
+  - Real dragonriding contexts still trigger dragon page handling.
+- **Test:** `/reload` outside arena while dragonriding (verify dragon behavior) -> queue arena/BG and zone in while mounted -> verify bars 2+ keep normal enabled behavior after mount normalization.
+
+## 2026-04-17 — Timeless top-right buffs blinking as if expiring
+
+- **Symptom:** Some buffs with no real duration started blinking like they were about to expire, especially out of combat.
+- **Root cause:** The previous combat timer hardening treated any `durationObject` as proof that an aura had a visible countdown. Some timeless buffs still expose a duration object, but it reports zero via `durationObject:IsZero()`.
+- **Fix applied:**
+  - `Components/Auras/Auras.lua` — `HasVisibleAuraTimer(...)` now checks `durationObject:IsZero()` and rejects zero-duration auras before enabling the cooldown/timer path.
+  - `Components/Auras/Auras.lua` — `Aura.OnUpdate` now explicitly hides the center time text and stops the fade animation when timing data disappears, preventing stale blink state on reused buttons.
+- **Test:** `/reload` → verify timeless buffs stay stable with no blink; verify a real timed buff/debuff still gets the under-bar and countdown behavior.
+
+## 2026-04-17 — Top-right debuff row restored below buffs; timer hardened in combat
+
+- **Follow-up:** Reverted the previous row-priority swap. Top-right buffs are again the primary row, and debuffs are again the dedicated row below them.
+- **Timer hardening:** `Components/Auras/Auras.lua` now treats a valid `durationObject` as enough to keep the cooldown active, even if the immediate readable timing fields momentarily disappear during combat. This avoids hiding debuff timers during transient WoW 12 secret-value gaps.
+- **Test:** `/reload` → verify buffs remain on the top row and debuffs remain on the bottom row; enter combat with a timed debuff and confirm the timer/bar continue without needing another reload.
+
+## 2026-04-17 — Top-right debuffs displaced by buff overflow
+
+- **Symptom:** When the top-right buff header wrapped into additional rows, the separate top-right debuff row lost its slot and got visually pushed out by buff overflow.
+- **Root cause:** `Components/Auras/Auras.lua` anchored the debuff header one row below the buff header origin. Because buffs also grow in that same vertical direction, wrapped buff rows expanded directly into the debuff row's space.
+- **Fix applied:**
+  - `Components/Auras/Auras.lua` — anchor the debuff header at the primary aura position and place the buff header one row away in the configured growth direction. Apply the same ordering in both `CreateBuffs()` and `UpdateSettings()` so reloads and option changes stay consistent.
+- **Test:** `/reload` → gain enough buffs to wrap the top-right buff header while you also have one or more debuffs → verify debuffs remain visible at the primary row and buffs continue below them.
+
+## 2026-04-17 — Top-right aura timer bar starts late
+
+- **Symptom:** The small bar under top-right aura icons stayed visually full until the last few seconds, then suddenly started shrinking.
+- **Root cause:** `Core/Widgets/Cooldowns.lua` in `Cooldown.SetCooldownFromDurationObject` always initialized attached statusbars with a `0..1` range. Aura timers using `LuaDurationObject` then wrote `timeLeft` values like `28`, `17`, `9` into a bar clamped to `1`, so the bar looked full until the remaining time got very low.
+- **Fix applied:**
+  - `Core/Widgets/Cooldowns.lua` — if fallback `duration` and computed `remaining` are available, initialize the bar with `0..duration` and set the current value to `remaining`. Keep the old `0..1` fallback only when no safe duration data exists.
+- **Test:** `/reload` → gain a timed buff or debuff in the top-right aura rows → verify the under-bar starts depleting immediately instead of waiting for the last few seconds.
+
+## 2026-04-17 — Top-right debuff frames: red border + timer
+
+- **Feature:** Debuffs in the top-right SecureAuraHeader rows (player buffs/debuffs overlay) now have a red border to distinguish them from buffs, which keep the neutral dark-gray border.
+- **Implementation:**
+  - `Components/Auras/Auras.lua` — `Aura.Update`: after count text is set, check `self.filter == "HARMFUL"` and call `self.border:SetBackdropBorderColor(Colors.debuff.none[1..3])`. Buffs continue to use `Colors.verydarkgray`.
+  - `Components/Auras/Auras.lua` — `ClearAuraState`: added `self.border:SetBackdropBorderColor(Colors.verydarkgray[1..3])` to reset border when a button is cleared/reused.
+- **Timer:** The bar + countdown text timer was already wired for all auras (via `self.cd = RegisterCooldown(bar, time)`). No timer changes needed.
+- **Test:** `/reload` → enter combat with an active debuff → verify debuff border is red; buff border stays gray.
+
+## 2026-04-17 — Stack count freezes at out-of-combat value on combat entry
+
+- **Symptom:** Light's Deliverance (and any proc aura with stacks) stops updating on combat entry; resumes correctly after combat.
+- **Root cause:** WoW 12 combat makes `GetAuraApplicationDisplayCount` return a *secret string*. Previous code guarded `issecretvalue(displayCount)` and **skipped** the secret value, then fell into the "preserve previous text" path — freezing the display at the pre-combat value.
+- **Key insight:** `SetText(secretValue)` is explicitly allowed by WoW 12. The crash restriction only applies to comparisons/arithmetic on secret values. We were skipping a perfectly usable live count.
+- **Fix applied:**
+  - `Libs/oUF/elements/auras.lua` (`button.Count` block): removed `displayCountSafe` guard, `previousCountText` preservation, and the `issecretvalue` skip. Now: if pcall succeeds and `displayCount ~= nil`, call `button.Count:SetText(displayCount)` directly — secret or not.
+  - `Components/UnitFrames/Auras/AuraStyling.lua` (`PlayerPostUpdateButton`): removed entire `GetStackText` helper + `__AzeriteUI_LastStackText` cache block. This code was fighting oUF by restoring the stale pre-combat value every update. oUF now handles stack display correctly on its own.
+- **Test:** `/reload` → stack proc aura → verify count increments in and out of combat with no crash.
+
+## 2026-04-17 (Root Fix Follow-up) — Debuff filter harmful classification fallback
+
+- **New evidence from traces:**
+  - Visibility remained stable throughout (`should=true`, holder/debuffs shown).
+  - Snapshot fields `spell/duration/timeLeft` are not reliable as root signal because they are style-populated and can be nil despite active buttons.
+  - Core remaining risk was harmful classification when secret fields are unavailable.
+
+- **Fix applied:**
+  - In `Components/UnitFrames/Auras/AuraFilters.lua`, `GetIsHarmful(unit, data)` now prioritizes `data.isHarmfulAura` (set by oUF from filter context) before secret-prone fields.
+  - This ensures the player debuff row keeps debuffs classified harmful during secret-value transitions.
+
+- **Debug quality improvements:**
+  - Reduced `PlayerDebuffTrace shownState` spam to state-change/refresh transitions only.
+  - Debuff snapshot now logs icon texture visibility (`icon`, `iconShown`) and cooldown visibility (`cdShown`) to diagnose true render state.
+  - Added deduplicated oUF lifecycle cause logs (`oUFPlayerDebuff`) for player debuffs:
+    - `added-processed`, `added-filtered`, `added-filteredout`, `updated-refreshed`, `updated-refresh-nil`, `removed`.
+
+- **Latest follow-up from new logs:**
+  - New traces showed repeated `added-filteredout` and snapshot `debuffs created 0` after reload.
+  - Added reload-only bootstrap debuff refresh pump in `Player.lua`:
+    - Runs up to 6 short retries after `PLAYER_ENTERING_WORLD`.
+    - Stops early when `Debuffs.createdButtons > 0`.
+    - Never runs in combat and aborts if separate debuffs are not intended.
+  - Added oUF full-update summary tracing (`full-summary`) to log `scanned` harmful entries vs `active` accepted entries.
+
+- **New confirmed signal from latest trace:**
+  - `oUFPlayerDebuff ... stage=full-summary scanned=0 active=0` on reload while separate debuff row is intended+shown.
+  - This confirms player `HARMFUL` full scan can be empty post-reload even when debuffs exist later.
+
+- **Fix applied (oUF debuff full-update fallback):**
+  - In `Libs/oUF/elements/auras.lua`, when `unit == "player"`, `debuffFilter == "HARMFUL"`, and full scan count is zero:
+    - Iterate unfiltered aura indices (`GetAuraDataByIndex(unit, index)`).
+    - Re-check each `auraInstanceID` with `IsAuraFilteredOutByInstanceID(..., "HARMFUL")`.
+    - Process only those returning `false` and feed normal debuff filter path.
+  - Added trace stages:
+    - `full-fallback-processed`
+    - `full-fallback-filtered`
+
+- **Additional root-cause correction (enumeration path):**
+  - `ForEachFullAuraData` returned early whenever `GetAuraSlots` succeeded, even if zero slot entries were returned.
+  - That prevented index fallback from running in slot-empty windows and produced `full-summary scanned=0` loops.
+  - Updated `ForEachFullAuraData` to only return early when at least one slot produced actual aura data; otherwise it falls through to `GetAuraDataByIndex` scanning.
+
+- **Verification (2026-04-17 17:27+):**
+  - Post-fix reload trace now shows:
+    - `oUFPlayerDebuff ... stage=full-summary scanned=1 active=1`
+    - Snapshot `debuffs ... created 1` immediately after reload
+  - This confirms the slot-empty early-return bug was the blocking path for missing reload debuffs.
+
+## 2026-04-17 (Follow-up) — Missing player stack-based helpful auras
+
+- **User report:** Some player auras (example: Light's Deliverance and stacks) were no longer showing reliably.
+- **Likely cause:** Helpful stack/proc auras can have unstable timing/applications payloads; relying only on `applications > 1` signal is too strict for some proc states.
+- **Fix applied in** `Components/UnitFrames/Auras/AuraFilters.lua`:
+  - Added `HasAnyDisplayedApplications(unit, data)` using `GetAuraApplicationDisplayCount(..., 1, 999)`.
+  - Added `allowPlayerStackSignal` for helpful player auras when any stack signal exists (`applications > 0` or display-count API signal).
+  - Included this signal in stock/custom combat, utility, and secret fallback decision branches.
+
+- **Expected result:**
+  - Stack-based helpful player proc auras should display more reliably in the player aura frame.
+
+## 2026-04-17 (Feature Follow-up) — AzeriteUI top-right debuff row below buffs
+
+- **User request:** Keep Blizzard aura frames disabled, but show debuffs inside AzeriteUI's own top-right aura frame on a dedicated row below buffs.
+- **Implemented in** `Components/Auras/Auras.lua`:
+  - Added a second secure aura header (`DebuffHeader`) using `filter = "HARMFUL"`.
+  - Anchored the debuff header below the main buff header (`TOPRIGHT` offset by one row height).
+  - Wired visibility driver to show/hide buff and debuff headers together.
+  - Updated frame sizing/layout refresh to reserve space for the dedicated debuff row.
+
+- **Expected result:**
+  - Top-right AzeriteUI aura frame now displays buffs on the main row and debuffs on their own row below.
+  - Blizzard BuffFrame/DebuffFrame remain hidden.
+
+## 2026-04-17 (Follow-up) — Player filter compliance + top-right debuff tooltip
+
+- **User request:**
+  - Playerframe auras should honor `/az -> Player` filter toggles.
+  - Top-right AzeriteUI debuff row should be mouse-overable for tooltip details.
+
+- **Fixes applied:**
+  1. `Components/UnitFrames/Auras/AuraFilters.lua`
+     - `PlayerDebuffFilter` now returns the result from `PlayerAuraFilter` whenever it is explicit (`true` or `false`).
+     - Fallback to raw harmful classification only when filter decision is `nil`.
+     - This preserves fail-open behavior for unknown states while honoring explicit toggle-driven false results.
+  2. `Components/Auras/Auras.lua`
+     - Added tooltip anchor fields to the new top-right `DebuffHeader` (`tooltipPoint`, `tooltipAnchor`, offsets).
+     - Debuff buttons now use the same tooltip anchoring path as buffs and are readable on mouse-over.
+
+## 2026-04-17 (Follow-up) — Player aura stack text not showing reliably
+
+- **User report:** Playerframe proc aura appears, but stack count is often missing (example: Light's Deliverance).
+- **Fix applied in** `Components/UnitFrames/Auras/AuraStyling.lua`:
+  - In `PlayerPostUpdateButton`, force-refresh `button.Count` from `C_UnitAuras.GetAuraApplicationDisplayCount(unit, auraInstanceID, 1, 999)`.
+  - Accept numeric and string return types, and only render stack text when the value is greater than 1.
+  - Added fallback to raw `data.applications` when display-count API is unavailable/empty.
+  - Explicitly clear count text when no stack signal exists to avoid stale values.
+
+- **Expected result:**
+  - Stack-based player auras should consistently show stack text when stacks are >1.
+
+## 2026-04-17 (Follow-up) — Player stack count flashes between 0 and live value
+
+- **Trace evidence:**
+  - `debuffs: created 0` — Light's Deliverance is in the combined `self.Auras` element, not `self.Debuffs`.
+  - All `oUFPlayerDebuff added-filteredout` entries confirm separate Debuffs row is empty (correct; stacking helpful aura not harmful).
+  - Flashing 0↔5 was happening in `self.Auras` combined element.
+
+- **Root cause confirmed in `Libs/oUF/elements/auras.lua` (Auras combined element `updatedAuraInstanceIDs` path):**
+  - When a stack increment UNIT_AURA fires and `C_UnitAuras.GetAuraDataByAuraInstanceID` returns nil transiently, the old code immediately deleted the aura from `allBuffs`/`activeBuffs` and set `buffsChanged = true`.
+  - This produced a render pass with the aura absent (stack count goes to 0), followed by re-add on the next event (stack count returns).
+  - The separate Buffs/Debuffs elements already had "keep cached data on nil refresh" protection from a previous fix, but the combined Auras element did NOT.
+
+- **Fix applied in `Libs/oUF/elements/auras.lua`:**
+  - Reworked `updatedAuraInstanceIDs` handling in the Auras combined element to match the pattern already applied to Buffs/Debuffs:
+    - Refresh with new data only when `processData` returns valid result.
+    - When refresh is nil, keep previous cached data and still mark active if it was active.
+    - Explicit removal is handled only by `removedAuraInstanceIDs`.
+
+- **Also removed from `Components/UnitFrames/Auras/AuraStyling.lua`:**
+  - Removed the per-button OnUpdate stack polling added in the previous iteration. That polling competed with oUF's own render pass and could write stale "" values between event-driven updates, worsening the flashing.
+
+- **Expected result:**
+  - Stacking player auras should now update continuously and monotonically toward trigger threshold without ever flashing to 0.
+
+---
+
+## 2026-04-17 (Root Fix) — oUF aura payload drop causing invisible debuff content
+
+- **Trace evidence:**
+  - `PlayerDebuffTrace shownState` lines stayed `should=true` and `debuffsShown=true`.
+  - Snapshot showed detached debuff buttons present but payload fields nil:
+    - `instance` valid
+    - `spell=nil`, `duration=nil`, `timeLeft=nil`
+- **Conclusion:** Visibility state was not the failing layer; aura payload caching was.
+
+- **Root cause in embedded oUF (`Libs/oUF/elements/auras.lua`):**
+  1. `addedAuras` path could set `active[auraInstanceID]=true` even when `processData(...)` returned nil.
+  2. `updatedAuraInstanceIDs` path replaced cached data with nil when `GetAuraDataByAuraInstanceID(...)` transiently returned nil.
+  3. Result: active IDs with missing payload generated empty/invisible debuff content.
+
+- **Fix applied:**
+  - Buffs and Debuffs split paths now only activate entries when processed payload is valid.
+  - Update path keeps previous valid cached payload if refreshed payload is temporarily nil.
+  - Explicit remove handling remains the authoritative deletion path.
+
+- **Expected result:**
+  - Existing long debuffs should remain rendered through reload/combat transitions.
+  - Combat-entry/combat-exit should no longer drop debuff content while visibility stays on.
+
+---
+
+## 2026-04-17 (Debug Tooling) — Added _DebugLog-backed player debuff trace command
+
+- **Reason:** Repeated regressions on reload/combat transitions required deterministic runtime traces instead of iterative guess-fixes.
+- **Added command:**
+  - `/azdebug debufftrace [on|off|toggle|status]`
+  - `/azdebug debufftrace snapshot [reason]`
+- **Implementation:**
+  - `Core/Debugging.lua`
+    - new `DumpPlayerDebuffTraceSnapshot(reason)`
+    - new `/azdebug debufftrace` parser branch
+    - persisted toggle in `ns.db.global.debugPlayerDebuffTrace`
+    - exported flags `ns.API.DEBUG_PLAYER_DEBUFF_TRACE` and `_G.__AzeriteUI_DEBUG_PLAYER_DEBUFF_TRACE`
+  - `Components/UnitFrames/Units/Player.lua`
+    - trace payload logs in:
+      - `UpdatePlayerDebuffShownState(...)`
+      - `PLAYER_ENTERING_WORLD`
+      - `PLAYER_REGEN_DISABLED`
+      - `PLAYER_REGEN_ENABLED`
+      - player frame `OnHide` / `OnShow`
+    - payloads route to `DLAPI.DebugLog("AzeriteUI", ...)` when available
+- **Expected workflow:**
+  1. `/azdebug debufftrace on`
+  2. Reproduce `/reload` and combat enter/leave transitions
+  3. `/azdebug debufftrace snapshot post-repro`
+  4. Inspect `_DebugLog` entries tagged `AzeriteUI`
+
+---
+
+## 2026-04-17 (Hotfix Follow-up 3) — Combat entry wiped debuffs; long debuffs missing after /reload
+
+- **User report:**
+  - On entering combat all debuffs disappear and do not reliably reappear on combat end.
+  - Long debuffs do not show immediately after `/reload`.
+
+- **Cross-check against installed UIs/addons:**
+  - Reviewed ElvUI, ShadowedUnitFrames, and Plater handling patterns.
+  - Common stable pattern: avoid unconditional full aura reparses on `PLAYER_REGEN_DISABLED`; rely on unit aura event flow and targeted corrective refreshes.
+
+- **Root cause refinement in AzeriteUI Player frame path:**
+  - `UnitFrame_OnEvent` was forcing `self.Auras:ForceUpdate()` on both `PLAYER_REGEN_DISABLED` and `PLAYER_REGEN_ENABLED`.
+  - Combat-entry forced reparse at unstable transition timing can drop visible debuffs.
+  - Reload also needed one deferred pass because first payload may settle next frame.
+
+- **Fix applied in** `Components/UnitFrames/Units/Player.lua`:
+  1. Split regen handlers:
+     - `PLAYER_REGEN_DISABLED`: no aura force refresh (power/orb updates only)
+     - `PLAYER_REGEN_ENABLED`: targeted aura/debuff corrective refresh and visibility sync
+  2. Added deferred next-frame (`C_Timer.After(0, ...)`) aura/debuff refresh under `PLAYER_ENTERING_WORLD`.
+  3. Added deferred next-frame debuff refresh on `PLAYER_REGEN_ENABLED` for stabilization.
+
+- **Expected behavior after fix:**
+  - Debuffs should persist through combat entry (no entry-triggered wipe).
+  - Existing long debuffs should appear immediately after `/reload`.
+  - Combat end should recover any transient mismatch via safe corrective refresh.
+
+---
+
+## 2026-04-17 (Hotfix Follow-up 2) — Missing initial aura refresh on PLAYER_ENTERING_WORLD
+
+- **User report:** Debuff still did not show on `/reload` until combat state changed.
+- **Root cause refinement:** Initial post-reload lifecycle did not guarantee a first aura/debuff rebuild before later combat-driven updates.
+- **Fix applied in** `Components/UnitFrames/Units/Player.lua`:
+  - In `UnitFrame_OnEvent` under `PLAYER_ENTERING_WORLD`, added:
+    - `self.Auras:ForceUpdate()` when available
+    - `self.Debuffs:ForceUpdate()` when available
+- **Expected result:** Pre-existing debuffs are visible immediately after `/reload`, without needing enter/leave combat.
+
+---
+
+## 2026-04-17 (Hotfix Follow-up) — Reload still dropped existing debuff until combat toggle
+
+- **User report:** Existing debuff still did not appear immediately after `/reload`; appeared only after entering/leaving combat.
+- **Root cause refinement:**
+  - `ApplyPlayerAuraLayout()` was calling `UpdatePlayerDebuffShownState(..., true)` before the guaranteed `EnableElement("Auras")` phase in `PlayerFrameMod.Update()`.
+  - That early pass could consume the hidden->shown transition while aura/debuff elements were not yet in a reliable refresh state.
+  - Later in `Update()`, holder was already shown, so transition-gated refresh did not guarantee detached debuff rebuild.
+- **Fix applied in** `Components/UnitFrames/Units/Player.lua`:
+  - Changed `ApplyPlayerAuraLayout()` back to visibility-only update: `UpdatePlayerDebuffShownState(frame)`
+  - In `PlayerFrameMod.Update()` after `self.frame.Auras:ForceUpdate()`, added explicit detached debuff refresh when intended visibility is on:
+    - `if DebuffHolder.intendedVisibility then self.frame.Debuffs:ForceUpdate() end`
+- **Expected result:** Existing debuffs render immediately after `/reload` without requiring combat-state events.
+
+---
+
+## 2026-04-17 (Hotfix) — Existing debuff disappears after /reload
+
+- **Issue:** If the player already had a debuff before `/reload`, the detached debuff row could show but the active debuff icon was missing until a later aura event.
+- **Root cause:** Visibility state could flip from hidden -> shown during reload/layout apply, but no explicit debuff element refresh ran after the holder became visible.
+- **Fix applied in** `Components/UnitFrames/Units/Player.lua`:
+  - Extended `UpdatePlayerDebuffShownState(frame)` to accept `refreshOnShow`
+  - When transitioning to shown and `refreshOnShow` is true, run `frame.Debuffs:ForceUpdate()`
+  - Updated reload/layout call sites (`ApplyPlayerAuraLayout` and `PlayerFrameMod.Update`) to call `UpdatePlayerDebuffShownState(..., true)`
+  - Kept combat-exit path (`PLAYER_REGEN_ENABLED`) on visibility-only update to avoid full transition reparse churn
+- **Expected result:** Existing debuffs persist visually through `/reload` without waiting for a new UNIT_AURA pulse.
+
+---
+
+## 2026-04-17 (Hotfix) — Missing Function Call Reference
+
+- **Issue:** Error at line 3464: `attempt to call global 'ShouldShowPlayerDebuffLayer' (a nil value)`
+- **Root cause:** Missed function call site during refactor. The Update method still referenced the old function name that was renamed to `GetPlayerDebuffShowIntent`.
+- **Fix Applied:**
+  - Replaced direct `ShouldShowPlayerDebuffLayer()` calls in Update method (lines 3464, 3466) with single `UpdatePlayerDebuffShownState(self.frame)` call
+  - This uses the new atomic pattern consistently across all visibility update paths
+- **Code location:** `Components/UnitFrames/Units/Player.lua` line 3462–3475
+- **Validation:** `luac` syntax check passed
+
+---
+
+## 2026-04-17 (Continued) — Full Architectural Refactor: Atomic UpdateShownState Pattern
+
+- **Scope:** Complete refactor of Player debuff visibility system to implement Blizzard's atomic `UpdateShownState()` pattern.
+- **Goal:** Eliminate all remaining race conditions and transient visibility glitches by separating "visibility intent" from transient frame state.
+- **Reference:** Blizzard's BuffFrame.lua (lines 340–371), PrivateAurasUI.lua, and AuraFrameEditModeMixin patterns.
+
+- **Key Changes:**
+  1. **Renamed function:** `ShouldShowPlayerDebuffLayer` → `GetPlayerDebuffShowIntent` (reflects semantic intent vs. transient state)
+  2. **New atomic function:** `UpdatePlayerDebuffShownState(frame)`
+     - Computes visibility intent from profile settings
+     - Stores intent in `debuffHolder.intendedVisibility` flag (persistent object property)
+     - Atomically compares intended vs. current state: `if shouldShow ~= debuffHolder:IsShown() then debuffHolder:SetShown(shouldShow) end`
+     - Matches Blizzard's pattern exactly (no force-updates, minimal state changes)
+  3. **Refactored `ApplyPlayerAuraLayout`:**
+     - Removed direct `SetShown()` calls with `showDebuffLayer` variable
+     - Removed profile lookup from visibility decision (moved to `GetPlayerDebuffShowIntent`)
+     - Now calls `UpdatePlayerDebuffShownState(frame)` atomically at end
+     - Preserves all layout positioning, sizing, and configuration (no behavioral change)
+  4. **Event handler optimization:**
+     - `PLAYER_ENTERING_WORLD` / `VARIABLES_LOADED`: Full layout apply (correct)
+     - `PLAYER_REGEN_ENABLED`: Now calls only `UpdatePlayerDebuffShownState` (not full layout)
+       - Prevents full aura re-parses during combat transitions with WoW 12 secret values
+       - Preserves incremental UNIT_AURA updates
+  5. **OnHide handler refinement:**
+     - Changed from transient state check (`if debuffTarget:IsShown()`) to intent check
+     - Now checks `if debuffTarget.intendedVisibility` (the persistent flag set by UpdatePlayerDebuffShownState)
+     - Only hides if intent is NOT to show (robust across transient visibility changes)
+
+- **Why This Works:**
+  - **Persistent Intent:** `intendedVisibility` flag survives transient frame hides/shows
+  - **Atomic Updates:** Never update visibility unless state actually differs (prevents cascade effects)
+  - **WoW 12 Safe:** No full re-parses on PLAYER_REGEN_DISABLED (combat transitions stay safe)
+  - **Profile Safe:** Visibility intent cached on frame object (survives profile lookup failures)
+  - **Reload Safe:** Intent recalculated from profile on every UpdatePlayerDebuffShownState call
+
+- **Testing Targets:**
+  - Pre-combat debuff persists through combat entry/exit
+  - `/reload` preserves debuff visibility setting
+  - Explorer Mode / Vehicle UI transitions don't cause unintended hides
+  - Separate debuff row disabling still works correctly
+  - Transient frame visibility changes don't impact separate debuff row
+
+- **Code Files Touched:**
+  - `Components/UnitFrames/Units/Player.lua`
+    - Global functions renamed/refactored (lines 231–265)
+    - `ApplyPlayerAuraLayout` simplified (line 246 onwards)
+    - Event handler split (line 456 onwards)
+    - OnHide handler updated (line 3311 onwards)
+
+- **Local Validation:**
+  - `luac -p Components/UnitFrames/Units/Player.lua` → syntax OK
+
+- **Next Steps:**
+  - `/reload` to apply changes
+  - Test full combat cycle with pre-applied debuff visible
+  - Verify transient hides don't suppress separate debuff row
+
+---
+
+## 2026-04-17 — Player split debuff layer disappears on combat exit (regression + multi-phase fix)
+
+- **[REGRESSION 1] Debuffs disappear when leaving combat:**
+  - Symptom: After initial fix, debuffs vanish immediately upon exiting combat.
+  - Root cause: Race condition between PLAYER_REGEN_ENABLED's ApplyPlayerAuraLayout call and the frame's OnHide script.
+
+- **[REGRESSION 2] Debuffs hide when entering combat and don't reappear:**
+  - Symptom: After first attempt to fix regression 1, debuffs hide when entering combat.
+  - Root cause: 
+    - OnHide handler was trying to access PlayerFrameMod.db.profile, but at the time OnHide fires, that reference might fail or be unavailable.
+    - Added PLAYER_REGEN_DISABLED handler to PostAnchorEvent, but this caused a new issue.
+
+- **[REGRESSION 3] Pre-combat debuffs disappear at combat entry:**
+  - Symptom: If a debuff is applied before combat, it disappears from the separate debuff row as soon as you enter combat.
+  - Root cause:
+    - Calling `ApplyPlayerAuraLayout` on `PLAYER_REGEN_DISABLED` forces a layout recalculation during combat transition.
+    - This triggers oUF to call `self.Auras:ForceUpdate()` (in the event handler at line 2682), which recalculates auras from scratch.
+    - During WoW 12 combat transitions, timing data becomes secret, and re-calculating from scratch can lose pre-combat auras.
+    - Solution: Layout changes only apply when settings or UI state actually change (user toggles option, scale changes, etc.), NOT on combat transitions.
+
+- **Final fix (complete solution):**
+  1. Removed `PLAYER_REGEN_DISABLED` from PostAnchorEvent handler (line 457):
+     - Combat entry no longer triggers layout recalculation
+     - Debuffs naturally stay in their configured state without forcing oUF to recalculate
+  2. Kept state-based OnHide handler (refined in previous regression fix):
+     - If debuffs are shown when frame hides, keep them shown
+     - Prevents transient frame visibility from hiding the separate debuff row
+     - No dependency on profile lookup → robust across state transitions
+
+- **Behavior after fix:**
+  - Pre-combat: debuff is visible ✓
+  - Enter combat: debuff stays visible (layout doesn't recalculate) ✓
+  - Exit combat: layout updates if needed (PLAYER_REGEN_ENABLED still calls ApplyPlayerAuraLayout) ✓
+  - Post-combat: debuff stays visible ✓
+  - Transient frame hides: OnHide checks visibility state, doesn't hide already-visible debuffs ✓
+
+- **Code changes:**
+  - `Components/UnitFrames/Units/Player.lua` line 457: Removed `"PLAYER_REGEN_DISABLED"` from event check
+  - Kept refined OnHide logic from previous iteration (state-based, not profile-based)
+
+- **Local validation:**
+  - `luac -p Components/UnitFrames/Units/Player.lua` -> ok (no syntax errors)
+
+- **Runtime validation target:**
+  - `/reload`
+  - Enable `/az -> Unit Frames -> Player -> Separate Player Debuff Row`
+  - Apply a debuff pre-combat (e.g., from an NPC or ability)
+  - Enter/exit combat: debuff should be visible throughout and not disappear on combat entry
+  - Test multiple enter/exit cycles and different debuff types
+  - Test with Separate Player Debuff Row **disabled**: normal aura behavior should be unchanged
+
+- **Files touched:**
+  - `Components/UnitFrames/Units/Player.lua` (reverted PLAYER_REGEN_DISABLED addition)
+
+---
+
+## 2026-04-17 — Player split debuff row intermittent combat-visibility desync (investigation)
+
+- **[USER REPORT] Separate player debuff row can hide after combat or appear combat-only intermittently:**
+  - Symptom:
+    - With `Separate Player Debuff Row` enabled, some sessions showed the detached debuff row only during combat, or it stayed hidden after leaving combat until another full refresh.
+  - Root cause:
+    - `Components/UnitFrames/Units/Player.lua` `ShouldShowPlayerDebuffLayer(...)` required `frame:IsShown()`.
+    - During combat/driver/explorer transition churn, layout refreshes can run while the player frame is transiently not shown, which forced the detached debuff layer hidden.
+    - Because the detached layer is `UIParent`-parented, this transient hide could persist until a later non-transient layout pass.
+  - Fix:
+    - Removed the transient `frame:IsShown()` gate from `ShouldShowPlayerDebuffLayer(...)`.
+    - Visibility is now controlled by stable settings (`enabled`, `showAuras`, `playerAuraSeparateDebuffs`) plus existing player-frame `OnHide`/`OnShow` sync, preventing combat-transition false negatives.
+  - Local validation:
+    - `luac -p Components/UnitFrames/Units/Player.lua` -> ok
+  - Runtime validation target:
+    - `/reload`
+    - Enable `/az -> Unit Frames -> Player -> Separate Player Debuff Row`
+    - Enter/exit combat repeatedly and verify the detached debuff row no longer gets stuck hidden post-combat
+    - If Explorer Mode or vehicle transitions are used, verify row visibility returns correctly without toggling the option
+  - Files touched:
+    - `Components/UnitFrames/Units/Player.lua`
+  - **[REGRESSIONS] See "Player split debuff layer disappears on combat exit" for multi-phase fixes covering all three follow-up bugs.**
+
+---
+
 ## 2026-04-16 — 5.3.63-JuNNeZ release prep/finalization
 
 - Consolidated the corrective release delta:

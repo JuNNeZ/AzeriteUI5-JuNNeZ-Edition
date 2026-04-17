@@ -92,6 +92,11 @@ local GetIsPlayerAura = function(unit, data)
 end
 
 local GetIsHarmful = function(unit, data)
+	-- oUF sets this from the active filter path (`filter == "HARMFUL"`).
+	-- Treat it as the strongest non-secret signal for debuff-only elements.
+	if (data and data.isHarmfulAura ~= nil) then
+		return data.isHarmfulAura and true or false
+	end
 	local auraInstanceID = data and data.auraInstanceID
 	local harmfulFiltered = SafeIsAuraFilteredOut(unit, auraInstanceID, "HARMFUL")
 	if (harmfulFiltered ~= nil) then
@@ -171,6 +176,24 @@ local HasDisplayedApplications = function(unit, data)
 	end
 	if (type(displayCount) == "number") then
 		return displayCount > 1
+	end
+	return displayCount ~= nil and displayCount ~= ""
+end
+
+local HasAnyDisplayedApplications = function(unit, data)
+	if (not C_UnitAuras or not C_UnitAuras.GetAuraApplicationDisplayCount) then
+		return false
+	end
+	local auraInstanceID = data and data.auraInstanceID
+	if (not unit or not auraInstanceID) then
+		return false
+	end
+	local ok, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, auraInstanceID, 1, 999)
+	if (not ok or (IsSecret and IsSecret(displayCount))) then
+		return false
+	end
+	if (type(displayCount) == "number") then
+		return displayCount > 0
 	end
 	return displayCount ~= nil and displayCount ~= ""
 end
@@ -333,6 +356,7 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	data.__AzeriteUI_isStealable = importantFlags.stealable and true or false
 	local applications = SafeNumber(data.applications, 0)
 	local hasDisplayedApplications = HasDisplayedApplications(unit, data)
+	local hasAnyDisplayedApplications = HasAnyDisplayedApplications(unit, data)
 	local helpfulRaid, helpfulPlayerRaid = IsHelpfulRaidAura(unit, data)
 	local isCancelableHelpful = (not isHarmful) and IsCancelableHelpfulAura(unit, data)
 	local durationSecret = IsSecret and IsSecret(data.duration)
@@ -357,6 +381,7 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	end
 
 	local hasStacks = (applications > 1) or hasDisplayedApplications
+	local hasAnyStackSignal = (applications > 0) or hasAnyDisplayedApplications
 	local isShortAura = IsShortRemainingAura(button.timeLeft)
 	local isPlayerCombatBuff = (not isHarmful) and (button.isPlayer or canApplyAura)
 	local hasCombatDuration = HasTrackedTemporaryDuration(button, duration, 181)
@@ -396,6 +421,7 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	local allowImportant = (not isHarmful) and allowImportantBase
 	local allowRaid = (not isHarmful) and allowRaidBase
 	local allowStacks = showStacks and hasStacks
+	local allowPlayerStackSignal = (not isHarmful) and button.isPlayer and hasAnyStackSignal
 	local allowShortCombatBuff = (not isHarmful)
 		and showShortBuffsInCombat
 		and ((showShortCombatPlayerBuffs and isPlayerCombatBuff) or (showShortCombatNonCancelable and (not isCancelableHelpful)))
@@ -409,7 +435,7 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 		and button.isPlayer
 		and (not isCancelableHelpful)
 	local allowSecretFallbackBuff = (not isHarmful)
-		and (allowImportant or allowRaid or allowStacks or allowLongUtilityBuff
+		and (allowImportant or allowRaid or allowStacks or allowPlayerStackSignal or allowLongUtilityBuff
 			or (showShortBuffsInCombat and (
 				(showShortCombatPlayerBuffs and (button.isPlayer or canApplyAura))
 				or (showShortCombatNonCancelable and (not isCancelableHelpful))
@@ -428,6 +454,7 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 			or importantFlags.stealable
 			or hasStockCombatDuration
 			or isShortAura
+			or allowPlayerStackSignal
 			or ((durationSecret or expirationSecret) and (button.isPlayer or canApplyAura or (not isCancelableHelpful)))
 		)
 		local allowStockHelpfulUtility = isStockHelpful and (
@@ -439,6 +466,7 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 			or importantFlags.stealable
 			or (not button.noDuration)
 			or isShortAura
+			or allowPlayerStackSignal
 			or ((durationSecret or expirationSecret) and (button.isPlayer or canApplyAura or (not isCancelableHelpful)))
 		)
 		if (durationSecret or expirationSecret or applicationsSecret) then
@@ -471,6 +499,7 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 			or allowImportant
 			or allowRaid
 			or allowStacks
+			or allowPlayerStackSignal
 			or allowShortCombatBuff
 			or allowLongUtilityBuff, "custom_combat", useStockBehavior)
 	end
@@ -479,6 +508,7 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 		or allowImportant
 		or allowRaid
 		or allowStacks
+		or allowPlayerStackSignal
 		or allowShortUtilityBuff
 		or allowLongUtilityBuff, "custom_utility", useStockBehavior)
 
@@ -486,7 +516,7 @@ end
 
 ns.AuraFilters.PlayerDebuffFilter = function(button, unit, data)
 	local decision = ns.AuraFilters.PlayerAuraFilter(button, unit, data)
-	if (decision ~= false) then
+	if (decision ~= nil) then
 		return decision
 	end
 	return GetIsHarmful(unit, data)

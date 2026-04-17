@@ -36,9 +36,12 @@ local math_floor = math.floor
 local math_max = math.max
 local next = next
 local string_gsub = string.gsub
+local string_format = string.format
 local tonumber = tonumber
+local tostring = tostring
 local type = type
 local unpack = unpack
+local C_Timer_After = C_Timer and C_Timer.After
 
 -- GLOBALS: Enum, PlayerPowerBarAlt
 -- GLOBALS: CreateFrame, GetSpecialization, IsXPUserDisabled, IsLevelAtEffectiveMaxLevel
@@ -234,14 +237,89 @@ local ApplyPlayerAuraAttachedPosition = function(element, anchorFrame, pointData
 	end
 end
 
-local ShouldShowPlayerDebuffLayer = function(frame, profile)
+-- Calculate whether the separate debuff layer SHOULD be shown based on profile.
+-- This is the "visibility intent" — what the user configured.
+local GetPlayerDebuffShowIntent = function(frame, profile)
 	if (not frame or not frame.Debuffs or not profile) then
 		return false
 	end
-	if (not profile.enabled or not profile.showAuras or not profile.playerAuraSeparateDebuffs or not frame:IsShown()) then
+	if (not profile.enabled or not profile.showAuras or not profile.playerAuraSeparateDebuffs) then
 		return false
 	end
 	return true
+end
+
+-- Atomically update debuff holder visibility to match the intent.
+-- This follows Blizzard's AuraFrameEditModeMixin.UpdateShownState() pattern:
+-- 1. Determine what SHOULD be shown (from profile)
+-- 2. Compare to current state
+-- 3. Update atomically if different
+-- 4. Don't force content updates on combat transitions
+local UpdatePlayerDebuffShownState = function(frame, refreshOnShow)
+	if (not frame or not frame.DebuffHolder) then
+		return
+	end
+
+	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or {}
+	local debuffHolder = frame.DebuffHolder
+	
+	-- Store the visibility intent on the frame for persistence across transient state changes.
+	local shouldShow = GetPlayerDebuffShowIntent(frame, profile)
+	debuffHolder.intendedVisibility = shouldShow
+	
+	-- Only update shown state if it differs from current state (atomic comparison).
+	local wasShown = debuffHolder:IsShown()
+	if shouldShow ~= wasShown then
+		debuffHolder:SetShown(shouldShow)
+		-- On reload/layout transitions, force a debuff refresh after becoming visible
+		-- so pre-existing debuffs are rebuilt immediately.
+		if (refreshOnShow and shouldShow and frame.Debuffs and frame.Debuffs.ForceUpdate) then
+			frame.Debuffs:ForceUpdate()
+		end
+	end
+end
+
+local RequestPlayerDebuffBootstrapRefresh = function(frame, reason)
+	if (not frame or not frame.Debuffs or not frame.Debuffs.ForceUpdate) then
+		return
+	end
+	if (not C_Timer_After) then
+		return
+	end
+
+	frame.__AzeriteUI_PlayerDebuffBootstrapSerial = (frame.__AzeriteUI_PlayerDebuffBootstrapSerial or 0) + 1
+	local serial = frame.__AzeriteUI_PlayerDebuffBootstrapSerial
+
+	local function Pump(attempt)
+		if (not frame or not frame.Debuffs or frame.__AzeriteUI_PlayerDebuffBootstrapSerial ~= serial) then
+			return
+		end
+		if (InCombatLockdown and InCombatLockdown()) then
+			return
+		end
+
+		local holder = frame.DebuffHolder
+		if (holder and holder.intendedVisibility == false) then
+			return
+		end
+
+		frame.Debuffs:ForceUpdate()
+
+		local created = tonumber(frame.Debuffs.createdButtons) or 0
+		if (created > 0) then
+			return
+		end
+
+		if (attempt < 6) then
+			C_Timer_After(0.25, function()
+				Pump(attempt + 1)
+			end)
+		end
+	end
+
+	C_Timer_After(0, function()
+		Pump(1)
+	end)
 end
 
 local ApplyPlayerAuraLayout = function(frame)
@@ -258,7 +336,6 @@ local ApplyPlayerAuraLayout = function(frame)
 	local auraTotal = GetPlayerAuraCount(profile, "playerAuraMaxShown", config.AurasNumTotal or 16, 1, 32)
 	local auraPoint = config.AurasPosition or { "BOTTOMLEFT", 0, 0 }
 	local scale = (profile.savedPosition and profile.savedPosition.scale) or frame:GetScale() or 1
-	local showDebuffLayer = ShouldShowPlayerDebuffLayer(frame, profile)
 
 	if (config.AurasSize and config.AurasSize[1] and config.AurasSize[2]) then
 		auras:SetSize(unpack(config.AurasSize))
@@ -305,11 +382,13 @@ local ApplyPlayerAuraLayout = function(frame)
 		debuffHolder:SetSize(holderWidth, holderHeight)
 		ApplyPlayerAuraAnchorPosition(debuffHolder, profile.debuffsSavedPosition, scale)
 		debuffs:SetPoint("TOPLEFT", debuffHolder, "TOPLEFT", PLAYER_DEBUFF_HOLDER_PADDING_LEFT, -PLAYER_DEBUFF_HOLDER_PADDING_TOP)
-		debuffHolder:SetShown(showDebuffLayer)
 	else
 		ApplyPlayerAuraAnchorPosition(debuffs, profile.debuffsSavedPosition, scale)
-		debuffs:SetShown(showDebuffLayer)
 	end
+	
+	-- Update debuff holder visibility state atomically (Blizzard pattern).
+	-- Keep this layout pass visibility-only; element refresh is handled after Auras enable.
+	UpdatePlayerDebuffShownState(frame)
 end
 
 PlayerFrameMod.CreateAuraAnchors = function(self)
@@ -454,9 +533,16 @@ PlayerFrameMod.PostAnchorEvent = function(self, event, ...)
 		return
 	end
 
-	if (event == "PLAYER_ENTERING_WORLD" or event == "VARIABLES_LOADED" or event == "PLAYER_REGEN_ENABLED") then
+	if (event == "PLAYER_ENTERING_WORLD" or event == "VARIABLES_LOADED") then
 		ApplyPlayerAuraLayout(self.frame)
 		self:UpdateAuraAnchors()
+		return
+	end
+	
+	-- On combat exit, update debuff visibility state (but don't force full layout refresh).
+	-- This preserves incremental aura updates via UNIT_AURA events during combat transitions.
+	if (event == "PLAYER_REGEN_ENABLED") then
+		UpdatePlayerDebuffShownState(self.frame)
 		return
 	end
 
@@ -2662,6 +2748,29 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 		playerLevel = UnitLevel("player")
 		playerIsRetribution = playerClass == "PALADIN" and (ns.IsRetail and GetSpecialization() == SPEC_PALADIN_RETRIBUTION)
 
+		-- Ensure existing auras/debuffs are rebuilt immediately after /reload.
+		if (self.Auras and self.Auras.ForceUpdate) then
+			self.Auras:ForceUpdate()
+		end
+		if (self.Debuffs and self.Debuffs.ForceUpdate) then
+			self.Debuffs:ForceUpdate()
+		end
+		RequestPlayerDebuffBootstrapRefresh(self, "PLAYER_ENTERING_WORLD")
+		-- Aura payloads can settle a frame later on reload; do one deferred rebuild.
+		if (C_Timer_After) then
+			C_Timer_After(0, function()
+				if (not self or not self.Auras) then
+					return
+				end
+				if (self.Auras.ForceUpdate) then
+					self.Auras:ForceUpdate()
+				end
+				if (self.Debuffs and self.Debuffs.ForceUpdate) then
+					self.Debuffs:ForceUpdate()
+				end
+			end)
+		end
+
 		self.Power:ForceUpdate()
 		RefreshManaOrb(self, event, GetPlayerPowerUnit(self))
 
@@ -2679,8 +2788,30 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 			RefreshManaOrb(self, event, unit or GetPlayerPowerUnit(self))
 		end
 
-	elseif (event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_REGEN_DISABLED") then
-		self.Auras:ForceUpdate()
+	elseif (event == "PLAYER_REGEN_ENABLED") then
+		-- Combat exit is safe for a corrective aura/debuff rebuild.
+		if (self.Auras and self.Auras.ForceUpdate) then
+			self.Auras:ForceUpdate()
+		end
+		if (self.Debuffs and self.Debuffs.ForceUpdate) then
+			self.Debuffs:ForceUpdate()
+		end
+		UpdatePlayerDebuffShownState(self)
+		if (C_Timer_After) then
+			C_Timer_After(0, function()
+				if (not self or not self.Debuffs or not self.Debuffs.ForceUpdate) then
+					return
+				end
+				self.Debuffs:ForceUpdate()
+			end)
+		end
+		if (self.Power and self.Power.ForceUpdate) then
+			self.Power:ForceUpdate()
+		end
+		RefreshManaOrb(self, event, GetPlayerPowerUnit(self))
+
+	elseif (event == "PLAYER_REGEN_DISABLED") then
+		-- Do not force aura full refresh on combat entry; UNIT_AURA should drive updates.
 		if (self.Power and self.Power.ForceUpdate) then
 			self.Power:ForceUpdate()
 		end
@@ -3277,6 +3408,19 @@ local style = function(self, unit)
 
 	ApplyPlayerAuraLayout(self)
 	ns.API.AttachScriptSafe(self, "OnHide", function(owner)
+		-- When the player frame hides, check if we should also hide the separate debuff layer.
+		-- Use the visibility intent flag (set by UpdatePlayerDebuffShownState) to decide.
+		-- If intendedVisibility is true, the debuff layer should stay visible even when the frame hides.
+		local debuffTarget = owner.DebuffHolder or owner.Debuffs
+		if (not debuffTarget) then
+			return
+		end
+		-- If debuff holder has an explicit visibility intent to be shown, don't hide it on frame hide.
+		-- This protects against transient frame visibility changes hiding the debuff row unexpectedly.
+		if (debuffTarget.intendedVisibility) then
+			return
+		end
+		-- Otherwise, ensure it's hidden when the frame hides.
 		if (owner.DebuffHolder) then
 			owner.DebuffHolder:Hide()
 		elseif (owner.Debuffs) then
@@ -3414,10 +3558,13 @@ PlayerFrameMod.Update = function(self)
 	if (self.db.profile.showAuras) then
 		self.frame:EnableElement("Auras")
 		self.frame.Auras:ForceUpdate()
-		if (self.frame.DebuffHolder) then
-			self.frame.DebuffHolder:SetShown(ShouldShowPlayerDebuffLayer(self.frame, self.db.profile))
-		elseif (self.frame.Debuffs) then
-			self.frame.Debuffs:SetShown(ShouldShowPlayerDebuffLayer(self.frame, self.db.profile))
+		-- Use atomic UpdatePlayerDebuffShownState instead of direct SetShown calls.
+		UpdatePlayerDebuffShownState(self.frame, true)
+		-- Ensure detached debuffs are rebuilt on reload/config refresh even when
+		-- visibility was already applied in an earlier layout pass.
+		if (self.frame.DebuffHolder and self.frame.DebuffHolder.intendedVisibility
+			and self.frame.Debuffs and self.frame.Debuffs.ForceUpdate) then
+			self.frame.Debuffs:ForceUpdate()
 		end
 	else
 		self.frame:DisableElement("Auras")

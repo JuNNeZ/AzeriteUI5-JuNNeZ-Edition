@@ -233,11 +233,15 @@ ns.AuraStyles.PlayerPostUpdateButton = function(element, button, unit, data, pos
 		if (issecretvalue and issecretvalue(v)) then return false end
 		return not not v
 	end
+	local function SafeNumber(v)
+		if (issecretvalue and issecretvalue(v)) then return nil end
+		if (type(v) == "number") then return v end
+		return nil
+	end
 	local function SafeKey(v)
 		if (issecretvalue and issecretvalue(v)) then return nil end
 		return v
 	end
-
 	-- Border Coloring
 	local color
 	if (button.isHarmful and element.showDebuffType) or (not button.isHarmful and element.showBuffType) or (element.showType) then

@@ -163,7 +163,16 @@ local ResolveRemainingTime = function(durationObject, expirationTime, cachedTime
 	return timeLeft
 end
 
-local HasVisibleAuraTimer = function(duration, expirationTime, previewRemaining)
+local HasVisibleAuraTimer = function(duration, expirationTime, previewRemaining, durationObject)
+	if (durationObject and durationObject.IsZero) then
+		local okZero, isZero = pcall(durationObject.IsZero, durationObject)
+		if (okZero and type(isZero) == "boolean" and (not IsSecret or not IsSecret(isZero))) then
+			if (isZero) then
+				return false
+			end
+			return true
+		end
+	end
 	if (type(duration) == "number" and duration > 0) then
 		return true
 	end
@@ -184,6 +193,7 @@ local ClearAuraState = function(self)
 	self.auraSpellID = nil
 	self.icon:SetTexture(nil)
 	self.count:SetText("")
+	self.border:SetBackdropBorderColor(Colors.verydarkgray[1], Colors.verydarkgray[2], Colors.verydarkgray[3])
 	self.cd:Hide()
 	self.time:Hide()
 	if (self.fadeAnimation:IsPlaying()) then
@@ -331,12 +341,20 @@ Aura.Update = function(self, index)
 			self.count:SetText("")
 		end
 
+		-- Color border red for debuffs, neutral for buffs.
+		if (self.filter == "HARMFUL") then
+			local borderColor = Colors.debuff.none
+			self.border:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3])
+		else
+			self.border:SetBackdropBorderColor(Colors.verydarkgray[1], Colors.verydarkgray[2], Colors.verydarkgray[3])
+		end
+
 		local hasCooldown = false
 		local previewRemaining = ResolveRemainingTime(auraData.durationObject, auraData.expirationTime)
 		if (self.cd.SetAuraFallbackData) then
 			self.cd:SetAuraFallbackData(auraData.expirationTime, auraData.duration)
 		end
-		if (auraData.durationObject and self.cd.SetCooldownFromDurationObject and HasVisibleAuraTimer(auraData.duration, auraData.expirationTime, previewRemaining)) then
+		if (auraData.durationObject and self.cd.SetCooldownFromDurationObject and HasVisibleAuraTimer(auraData.duration, auraData.expirationTime, previewRemaining, auraData.durationObject)) then
 			self.cd:SetCooldownFromDurationObject(auraData.durationObject)
 			hasCooldown = true
 		elseif (type(auraData.duration) == "number" and auraData.duration > 0 and type(auraData.expirationTime) == "number") then
@@ -471,6 +489,10 @@ Aura.OnUpdate = function(self, elapsed)
 		self.timeLeft = nil
 		self.auraExpirationTime = nil
 		self.auraDurationObject = nil
+		self.time:Hide()
+		if (self.fadeAnimation:IsPlaying()) then
+			self.fadeAnimation:Stop()
+		end
 		self:SetScript("OnUpdate", nil)
 	end
 
@@ -522,7 +544,7 @@ Auras.CreateBuffs = function(self)
 
 		local frame = CreateFrame("Frame", ns.Prefix.."BuffHeaderFrame", UIParent)
 		frame.ignoreGridCounterOnHover = true
-		frame:SetSize(config.wrapAfter * (36 + config.paddingX), (36 + config.paddingY) * math_ceil(BUFF_MAX_DISPLAY / config.wrapAfter))
+		frame:SetSize(config.wrapAfter * (36 + config.paddingX), (36 + config.paddingY) * math_ceil(BUFF_MAX_DISPLAY / config.wrapAfter) + (36 + config.paddingY))
 		frame:SetPoint(config.savedPosition[1], UIParent, config.savedPosition[1], config.savedPosition[2], config.savedPosition[3])
 		frame:SetScale(config.savedPosition.scale)
 
@@ -538,7 +560,7 @@ Auras.CreateBuffs = function(self)
 		buffs:SetAttribute("unit", "player")
 		buffs:SetFrameLevel(10)
 		buffs:SetSize(36,36)
-		buffs:SetPoint("TOPRIGHT", 0, 0)
+		buffs:SetPoint(config.anchorPoint, 0, 0)
 		buffs:SetAttribute("weaponTemplate", "AzeriteAuraTemplate")
 		buffs:SetAttribute("template", "AzeriteAuraTemplate")
 		buffs:SetAttribute("minHeight", 36)
@@ -585,6 +607,38 @@ Auras.CreateBuffs = function(self)
 		RegisterAttributeDriver(buffs, "unit", "[vehicleui] vehicle; player")
 
 		self.buffs = buffs
+
+		-- Dedicated debuff row below buffs.
+		local debuffs = CreateFrame("Frame", ns.Prefix.."DebuffHeader", frame, "SecureAuraHeaderTemplate")
+		debuffs:UnregisterEvent("UNIT_AURA")
+		debuffs:RegisterUnitEvent("UNIT_AURA", "player", "vehicle")
+		debuffs:SetAttribute("unit", "player")
+		debuffs:SetFrameLevel(10)
+		debuffs:SetSize(36, 36)
+		debuffs:SetPoint(config.anchorPoint, buffs, config.anchorPoint, 0, (36 + config.paddingY) * (config.growthY == "DOWN" and -1 or 1))
+		debuffs:SetAttribute("template", "AzeriteAuraTemplate")
+		debuffs:SetAttribute("minHeight", 36)
+		debuffs:SetAttribute("minWidth", 36)
+		debuffs:SetAttribute("point", config.anchorPoint)
+		debuffs:SetAttribute("xOffset", -(36 + config.paddingX))
+		debuffs:SetAttribute("yOffset", 0)
+		debuffs:SetAttribute("wrapAfter", config.wrapAfter)
+		debuffs:SetAttribute("wrapXOffset", 0)
+		debuffs:SetAttribute("wrapYOffset", -(36 + config.paddingY))
+		debuffs:SetAttribute("filter", "HARMFUL")
+		if (issecretvalue or (ns.ClientVersion and ns.ClientVersion >= 120000)) then
+			debuffs:SetAttribute("sortMethod", "INDEX")
+			debuffs:SetAttribute("sortDirection", "+")
+		else
+			debuffs:SetAttribute("sortMethod", "TIME")
+			debuffs:SetAttribute("sortDirection", "-")
+		end
+		debuffs.tooltipPoint = "TOPRIGHT"
+		debuffs.tooltipAnchor = "BOTTOMLEFT"
+		debuffs.tooltipOffsetX = -10
+		debuffs.tooltipOffsetY = -10
+		RegisterAttributeDriver(debuffs, "unit", "[vehicleui] vehicle; player")
+		self.debuffs = debuffs
 
 		-----------------------------------------
 		-- Consolidation
@@ -673,6 +727,7 @@ Auras.CreateBuffs = function(self)
 		-----------------------------------------
 		local visibility = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
 		visibility:SetFrameRef("buffs", buffs)
+		visibility:SetFrameRef("debuffs", debuffs)
 		visibility:SetAttribute("_onstate-vis", [[ self:RunAttribute("UpdateVisibility"); ]])
 		visibility:SetAttribute("UpdateVisibility", [[
 			local visdriver = self:GetAttribute("visdriver");
@@ -680,12 +735,14 @@ Auras.CreateBuffs = function(self)
 				return
 			end
 			local buffs = self:GetFrameRef("buffs");
+			local debuffs = self:GetFrameRef("debuffs");
 			local shouldhide = SecureCmdOptionParse(visdriver) == "hide";
-			local isshown = buffs:IsShown();
-			if (shouldhide and isshown) then
-				buffs:Hide();
-			elseif (not shouldhide and not isshown) then
-				buffs:Show();
+			if (shouldhide) then
+				if (buffs and buffs:IsShown()) then buffs:Hide(); end
+				if (debuffs and debuffs:IsShown()) then debuffs:Hide(); end
+			else
+				if (buffs and not buffs:IsShown()) then buffs:Show(); end
+				if (debuffs and not debuffs:IsShown()) then debuffs:Show(); end
 			end
 		]])
 
@@ -909,6 +966,7 @@ Auras.UpdateSettings = function(self)
 	if (not self.frame) then return end
 
 	local config = self.db.profile
+	local rowOffsetY = (36 + config.paddingY) * (config.growthY == "DOWN" and -1 or 1)
 
 	if (config.enabled and config.enableAuraFading) then
 		LFF:RegisterFrameForFading(self.frame, "playerauras")
@@ -920,19 +978,26 @@ Auras.UpdateSettings = function(self)
 		LFF:UnregisterFrameForFading(self.buffs.consolidation)
 	end
 
-	self.frame:SetSize(config.wrapAfter * 36 + (config.wrapAfter - 1) * config.paddingX, (36 + config.paddingY) * math_ceil(BUFF_MAX_DISPLAY / config.wrapAfter))
+	self.frame:SetSize(config.wrapAfter * 36 + (config.wrapAfter - 1) * config.paddingX, (36 + config.paddingY) * math_ceil(BUFF_MAX_DISPLAY / config.wrapAfter) + (36 + config.paddingY))
 
 	self.buffs:ClearAllPoints()
 	self.buffs:SetPoint(config.anchorPoint)
 	self.buffs:SetAttribute("point", config.anchorPoint)
 	self.buffs:SetAttribute("xOffset", (36 + config.paddingX) * (config.growthX == "LEFT" and -1 or 1))
 	self.buffs:SetAttribute("wrapAfter", config.wrapAfter)
-	self.buffs:SetAttribute("wrapYOffset", (36 + config.paddingY) * (config.growthY == "DOWN" and -1 or 1))
+	self.buffs:SetAttribute("wrapYOffset", rowOffsetY)
 
 	self.buffs.consolidation:SetAttribute("point", self.buffs:GetAttribute("point"))
 	self.buffs.consolidation:SetAttribute("xOffset", self.buffs:GetAttribute("xOffset"))
 	self.buffs.consolidation:SetAttribute("wrapAfter", self.buffs:GetAttribute("wrapAfter"))
 	self.buffs.consolidation:SetAttribute("wrapYOffset", self.buffs:GetAttribute("wrapYOffset"))
+
+	self.debuffs:ClearAllPoints()
+	self.debuffs:SetPoint(config.anchorPoint, self.buffs, config.anchorPoint, 0, rowOffsetY)
+	self.debuffs:SetAttribute("point", config.anchorPoint)
+	self.debuffs:SetAttribute("xOffset", self.buffs:GetAttribute("xOffset"))
+	self.debuffs:SetAttribute("wrapAfter", config.wrapAfter)
+	self.debuffs:SetAttribute("wrapYOffset", self.buffs:GetAttribute("wrapYOffset"))
 
 	self.visibility:SetAttribute("ignoreTarget", config.ignoreTarget)
 	self.visibility:SetAttribute("auramode", not config.enabled and "hide" or config.enableModifier and "modifier" or "show")

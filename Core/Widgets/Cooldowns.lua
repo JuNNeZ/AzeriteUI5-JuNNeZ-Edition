@@ -228,8 +228,13 @@ Cooldown.SetCooldownFromDurationObject = function(self, durationObject)
 	info.lastTick = GetTime()
 
 	if (info.Bar) then
-		info.Bar:SetMinMaxValues(0, 1, true)
-		info.Bar:SetValue(1, true)
+		if (IsSafeNumber(info.duration) and info.duration > 0 and IsSafeNumber(remaining) and remaining > 0) then
+			info.Bar:SetMinMaxValues(0, info.duration, true)
+			info.Bar:SetValue(remaining, true)
+		else
+			info.Bar:SetMinMaxValues(0, 1, true)
+			info.Bar:SetValue(1, true)
+		end
 	end
 	if (info.Time) then
 		if (remaining and remaining > 0) then
