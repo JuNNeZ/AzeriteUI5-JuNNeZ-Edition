@@ -1,4 +1,69 @@
 
+## 2026-04-18 — 5.3.66-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta:
+  - AzeriteUI raid frames now mirror Blizzard raid-panel subgroup filters, so hiding groups from the raid panel also hides matching AzeriteUI raid groups.
+  - The Blizzard raid-panel eye / Hide Groups state now feeds AzeriteUI's raid-frame visibility/filter mirror.
+  - Filtered raid children are ignored by the large-raid manual reflow path so hidden groups are not positioned back into view from stale unit fields.
+  - Added `/az -> Unit Frame Settings -> Player -> Show Auras -> Player Aura Row -> Show Debuffs Only` for players who want the player aura row to show only harmful effects.
+  - Added locale entries for the new debuffs-only player aura option.
+- Updated release/version files:
+  - `AzeriteUI5_JuNNeZ_Edition.toc` -> `5.3.66-JuNNeZ`
+  - `build-release.ps1` -> `5.3.66-JuNNeZ`
+  - `CHANGELOG.md` -> added the delta-only `5.3.66-JuNNeZ` entry with a non-technical overview.
+- Validation target:
+  - `luac -p` on all changed Lua files.
+  - `git diff --check`.
+  - `build-release.ps1` to create the release archive.
+- Validation completed:
+  - `luac -p` passed for `Core/FixBlizzardBugs.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Components/UnitFrames/Units/Player.lua`, `Components/UnitFrames/Auras/AuraFilters.lua`, `Options/OptionsPages/UnitFrames.lua`, and all touched locale files.
+  - `git diff --check` passed.
+  - `build-release.ps1` created `C:\Users\Jonas\OneDrive\Skrivebord\azeriteui_fan_edit\AzeriteUI-5.3.66-JuNNeZ-Retail-18-04-2026.zip` (9.97 MB).
+- Runtime validation target:
+  - `/buggrabber reset` -> `/reload`
+  - Verify Blizzard raid-panel subgroup buttons and Hide Groups eye button against AzeriteUI Raid Frames (5/25/40), including combat deferral.
+  - Verify `/az -> Unit Frame Settings -> Player -> Show Auras -> Player Aura Row -> Show Debuffs Only` with buffs, regular debuffs, boss debuffs, and blacklist behavior.
+
+## 2026-04-18 — Raid panel per-group hiding for Azerite raid frames
+
+- **User request:** Make Blizzard raid-panel group hiding affect AzeriteUI raid frames, especially hiding individual subgroups such as groups 7 and 8.
+- **Source check:**
+  - `Core/FixBlizzardBugs.lua` already mirrored the raid panel hidden-mode button, but only by alpha on the movable wrapper frame.
+  - `Components/UnitFrames/Units/Raid25.lua` and `Components/UnitFrames/Units/Raid40.lua` hardcoded secure header `groupFilter` to `1,2,3,4,5,6,7,8`, so Blizzard's per-group filter buttons could not affect AzeriteUI's large raid headers.
+  - Blizzard's current `Blizzard_CompactRaidFrameManager.lua` uses `CRF_GetFilterGroup(group)` / `CompactRaidFrameManager_ToggleGroupFilter(group)` for the raid panel subgroup buttons, and `SecureGroupHeaders.lua` accepts a comma-separated `groupFilter`.
+- **Fix applied:**
+  - Added a WoW 12 raid-panel mirror that reads Blizzard's `CRF_GetFilterGroup(1..8)` state and applies it as the AzeriteUI `RaidFrame25` / `RaidFrame40` secure header `groupFilter`.
+  - Mirrored group 1 into `RaidFrame5` visibility so the small raid header also follows the panel when its only subgroup is filtered out.
+  - Hooked `CompactRaidFrameManager_ToggleGroupFilter` so clicking group buttons in the Blizzard raid panel refreshes AzeriteUI raid headers.
+  - Queued secure group-filter changes during combat and applies them on `PLAYER_REGEN_ENABLED`.
+  - Updated the large raid header child collection to ignore secure child slots whose `unit` attribute has been cleared by filtering, preventing hidden groups from being manually reflowed back into the layout.
+  - Expanded the existing whole-panel hidden-mode alpha mirror to target the actual raid header/content as well as the wrapper frame.
+- **Verification:** `luac -p` passed for `Core/FixBlizzardBugs.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, and `Components/UnitFrames/Units/Raid40.lua`. In-game `/reload` validation is still required.
+- **Follow-up report:** Hiding groups 1 and 2 still did not work in-game. Suspected cause is the large raid manual reflow path still reading stale oUF unit fields (`button.unit` / `oUF-guessUnit`) instead of the secure header's current `unit` attribute after Blizzard subgroup filters are applied.
+- **Follow-up fix:** `Raid25` and `Raid40` now use the secure child `unit` attribute for filtered child collection and subgroup lookup, so any subgroup hidden by the raid panel can be removed from the manual sparse-group reflow. `luac -p` passed again for both files.
+- **Second follow-up report:** FrameStack showed `CompactRaidFrameManagerDisplayFrameHiddenModeToggle`, the Blizzard eye/Hide Groups button, not only the numbered subgroup buttons.
+- **Second follow-up fix:** The raid-panel mirror now treats hidden mode / `raidOptionIsShown=false` as secure `groupFilter="0"`, listens for `CVAR_UPDATE` on `raidOptionIsShown`, hooks direct subgroup button clicks as a fallback, and schedules both group-filter and visibility mirrors after panel clicks. `Raid25` and `Raid40` fallback child scans now also reject stale `child.unit` entries unless the secure `unit` attribute is still present.
+- **Second follow-up verification:** `luac -p` passed again for `Core/FixBlizzardBugs.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, and `Components/UnitFrames/Units/Raid40.lua`. In-game `/reload` validation is still required.
+- **Live source/API re-check:** Gethe `wow-ui-source` live `12.0.1.66838` still creates `displayFrame.filterOptions.filterGroupButtons`, uses `CompactRaidFrameManager_ToggleGroupFilter(group)` / `CRF_GetFilterGroup(group)` for subgroup filters, and uses `SetCVar("raidOptionIsShown", not GetCVarBool("raidOptionIsShown"))` for the eye button. `SecureGroupHeaders.lua` still documents and applies comma-separated `groupFilter`, clears filtered child `unit` attributes, and updates visible headers on attribute changes. The API MCP reports `CVAR_UPDATE` payload as `eventName, value` and the documented CVar reader as `C_CVar.GetCVarBool`, so `Core/FixBlizzardBugs.lua` now reads `raidOptionIsShown` through `C_CVar.GetCVarBool` with legacy `GetCVarBool` fallback.
+- **Third follow-up report:** The eye button now works, but FrameStack on `CompactRaidFrameManagerDisplayFrameFilterOptionsFilterGroup2` showed numbered subgroup buttons still do not hide/show matching Azerite raid groups.
+- **Third follow-up fix:** `Core/FixBlizzardBugs.lua` now prefers the actual Blizzard subgroup button `checked` state from `displayFrame.filterOptions.filterGroupButtons` when building AzeriteUI's secure `groupFilter`, falling back to `CRF_GetFilterGroup(1..8)` only before those buttons are initialized. The mirror now also calls the full `RaidFrame25` / `RaidFrame40` `UpdateHeader()` path and repeats the refresh after a short delay, so delayed Blizzard button-state updates cannot leave Azerite's secure headers on the old filter.
+- **Third follow-up verification:** `luac -p` passed for `Core/FixBlizzardBugs.lua`, `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, and `Components/UnitFrames/Units/Raid40.lua`; `git diff --check` passed for the touched raid files and log. In-game `/reload` validation is still required.
+
+## 2026-04-18 — Player aura row debuffs-only option
+
+- **User request:** Add an easy `/az` player-frame aura option so players can enable "Show Auras" but display debuffs only.
+- **Source check:**
+  - `Options/OptionsPages/UnitFrames.lua` owns the `/az -> Unit Frames -> Player` aura toggles.
+  - `Components/UnitFrames/Units/Player.lua` owns the player-frame aura profile defaults and row layout.
+  - `Components/UnitFrames/Auras/AuraFilters.lua` owns the Retail player aura filter used by the player aura row and separate debuff row.
+- **Fix target:** Add a stock/custom-mode independent player profile flag that keeps the player aura row harmful-only without forcing users through the advanced custom aura categories.
+- **Fix applied:**
+  - Added `playerAuraDebuffsOnly` to the player frame profile defaults.
+  - Added `/az -> Unit Frame Settings -> Player -> Show Auras -> Player Aura Row -> Show Debuffs Only`.
+  - The player aura filter now returns harmful-only results when this option is enabled, while still allowing boss debuffs and respecting hidden blacklist entries.
+  - Added locale entries for the new option label and tooltip.
+- **Verification:** `luac -p` passed for `Components/UnitFrames/Units/Player.lua`, `Options/OptionsPages/UnitFrames.lua`, `Components/UnitFrames/Auras/AuraFilters.lua`, and all touched locale files. In-game `/reload` validation is still required.
+
 ## 2026-04-18 — 5.3.65-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta:

@@ -41,6 +41,7 @@ local math_ceil = math.ceil
 local next = next
 local pairs = pairs
 local select = select
+local string_find = string.find
 local string_gsub = string.gsub
 local string_upper = string.upper
 local table_concat = table.concat
@@ -113,6 +114,22 @@ local validGroupBy = {
 	ROLE = true,
 	ASSIGNEDROLE = true
 }
+
+local GetActiveRaidGroupFilter = function()
+	local quarantine = ns.WoW12BlizzardQuarantine
+	if (quarantine and quarantine.GetRaidGroupFilter) then
+		return quarantine.GetRaidGroupFilter()
+	end
+	return "1,2,3,4,5,6,7,8"
+end
+
+local IsRaidGroupShown = function(group)
+	local filter = GetActiveRaidGroupFilter()
+	if (type(filter) ~= "string" or filter == "") then
+		return true
+	end
+	return string_find("," .. filter .. ",", "," .. tostring(group) .. ",", 1, true) ~= nil
+end
 
 local GetSanitizedHeaderProfile = function(profile)
 	local db = profile or defaults.profile
@@ -880,7 +897,7 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 		table_insert(driver, "[@raid26,exists]"..(db.useInRaid40 and "show" or "hide"))
 		table_insert(driver, "[@raid11,exists]"..(db.useInRaid25 and "show" or "hide"))
 		table_insert(driver, "[@raid6,exists]"..(db.useInRaid10 and "show" or "hide"))
-		table_insert(driver, "[group:raid]"..(db.useInRaid5 and "show" or "hide"))
+		table_insert(driver, "[group:raid]"..((db.useInRaid5 and IsRaidGroupShown(1)) and "show" or "hide"))
 	end
 
 	table_insert(driver, "hide")
@@ -893,6 +910,7 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	-- Restore secure layout state before any visibility writes can trigger SecureGroupHeader_Update.
 	self:SetAttribute("groupBy", headerProfile.groupBy)
 	self:SetAttribute("groupingOrder", headerProfile.groupingOrder)
+	self:SetAttribute("groupFilter", GetActiveRaidGroupFilter())
 	self:SetAttribute("point", headerProfile.point)
 	self:SetAttribute("xOffset", headerProfile.xOffset)
 	self:SetAttribute("yOffset", headerProfile.yOffset)
@@ -1167,6 +1185,7 @@ RaidFrame5Mod.UpdateHeader = function(self)
 	header:SetAttribute("unitHeight", config.UnitSize[2])
 	header:SetAttribute("groupBy", db.groupBy)
 	header:SetAttribute("groupingOrder", db.groupingOrder)
+	header:SetAttribute("groupFilter", GetActiveRaidGroupFilter())
 	header:SetAttribute("point", db.point)
 	header:SetAttribute("xOffset", db.xOffset)
 	header:SetAttribute("yOffset", db.yOffset)

@@ -364,6 +364,7 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 	local applicationsSecret = IsSecret and IsSecret(data.applications)
 	local profile = GetPlayerAuraProfile()
 	local useStockBehavior = GetPlayerAuraSetting(profile, "playerAuraUseStockBehavior", true)
+	local debuffsOnly = GetPlayerAuraSetting(profile, "playerAuraDebuffsOnly", false)
 	data.__AzeriteUI_secretHelpfulFallback = false
 
 	-- Hide blacklisted auras.
@@ -371,13 +372,17 @@ ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
 		return DebugPlayerAuraDecision(button, unit, data, nil, "hidden_blacklist", useStockBehavior)
 	end
 
+	if (SafeBool(data.isBossDebuff)) then
+		return DebugPlayerAuraDecision(button, unit, data, true, "show_boss", useStockBehavior)
+	end
+
+	if (debuffsOnly) then
+		return DebugPlayerAuraDecision(button, unit, data, isHarmful, isHarmful and "debuffs_only" or "debuffs_only_hidden", useStockBehavior)
+	end
+
 	-- Show whitelisted auras.
 	if (button.spellID and Spells[button.spellID]) then
 		return DebugPlayerAuraDecision(button, unit, data, true, "show_whitelist", useStockBehavior)
-	end
-
-	if (SafeBool(data.isBossDebuff)) then
-		return DebugPlayerAuraDecision(button, unit, data, true, "show_boss", useStockBehavior)
 	end
 
 	local hasStacks = (applications > 1) or hasDisplayedApplications

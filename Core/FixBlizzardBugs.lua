@@ -55,6 +55,7 @@ end
 
 -- Minimal Show/Hide logic for Blizzard raid bar
 local pendingRaidBarVisible = nil
+local pendingRaidGroupFilter = false
 
 local function SetBlizzardRaidBarVisible(visible)
 	local manager = _G.CompactRaidFrameManager
@@ -232,6 +233,22 @@ local function NormalizeBoolean(value)
 		end
 		if (lowered == "0" or lowered == "false") then
 			return false
+		end
+	end
+	return nil
+end
+
+local function GetCVarBoolCompat(name)
+	if (_G.C_CVar and type(_G.C_CVar.GetCVarBool) == "function") then
+		local ok, value = pcall(_G.C_CVar.GetCVarBool, name)
+		if (ok) then
+			return value
+		end
+	end
+	if (type(_G.GetCVarBool) == "function") then
+		local ok, value = pcall(_G.GetCVarBool, name)
+		if (ok) then
+			return value
 		end
 	end
 	return nil
@@ -498,7 +515,18 @@ local function GetCompactRaidHiddenMode()
 		return false
 	end
 
+	local raidOptionsShown = GetCVarBoolCompat("raidOptionIsShown")
+	if (raidOptionsShown == false) then
+		return true
+	end
+
 	local toggle = _G.CompactRaidFrameManagerDisplayFrameHiddenModeToggle
+	if (toggle) then
+		local value = NormalizeBoolean(toggle.shownMode)
+		if (value ~= nil) then
+			return value
+		end
+	end
 	if (toggle and type(toggle.GetChecked) == "function") then
 		local ok, checked = pcall(toggle.GetChecked, toggle)
 		checked = ok and NormalizeBoolean(checked) or nil
@@ -508,6 +536,13 @@ local function GetCompactRaidHiddenMode()
 	end
 
 	local manager = _G.CompactRaidFrameManager
+	local container = manager and manager.container
+	if (container) then
+		local enabled = NormalizeBoolean(container.enabled)
+		if (enabled ~= nil) then
+			return not enabled
+		end
+	end
 	local displayFrame = manager and (manager.displayFrame or _G.CompactRaidFrameManagerDisplayFrame)
 	if (displayFrame) then
 		for _, key in ipairs({ "hiddenMode", "isHiddenMode", "hidden" }) do
@@ -520,7 +555,7 @@ local function GetCompactRaidHiddenMode()
 
 	local getter = _G.CompactRaidFrameManager_GetSetting or (manager and manager.GetSetting)
 	if (type(getter) == "function") then
-		for _, key in ipairs({ "HiddenMode", "IsHidden", "hideGroups" }) do
+		for _, key in ipairs({ "IsShown", "HiddenMode", "IsHidden", "hideGroups" }) do
 			local ok, value
 			if (getter == _G.CompactRaidFrameManager_GetSetting) then
 				ok, value = pcall(getter, key)
@@ -529,6 +564,9 @@ local function GetCompactRaidHiddenMode()
 			end
 			value = ok and NormalizeBoolean(value) or nil
 			if (value ~= nil) then
+				if (key == "IsShown") then
+					return not value
+				end
 				return value
 			end
 		end
@@ -537,14 +575,129 @@ local function GetCompactRaidHiddenMode()
 	return false
 end
 
+local function GetCompactRaidFilterGroupButtons()
+	local manager = _G.CompactRaidFrameManager
+	local displayFrame = manager and (manager.displayFrame or _G.CompactRaidFrameManagerDisplayFrame)
+	local filterOptions = displayFrame and displayFrame.filterOptions
+	local buttons = filterOptions and filterOptions.filterGroupButtons
+	return (type(buttons) == "table") and buttons or nil
+end
+
+local function GetCompactRaidGroupFilterFromButtons()
+	local buttons = GetCompactRaidFilterGroupButtons()
+	if (not buttons) then
+		return nil
+	end
+
+	local groups = {}
+	local sawButtonState = false
+	for index, button in ipairs(buttons) do
+		local checked = NormalizeBoolean(button and button.checked)
+		if (checked ~= nil) then
+			sawButtonState = true
+			if (checked) then
+				local group = button.GetID and button:GetID() or index
+				if (type(group) == "number" and group >= 1 and group <= 8) then
+					table.insert(groups, tostring(group))
+				end
+			end
+		end
+	end
+
+	if (sawButtonState) then
+		return (#groups > 0) and table.concat(groups, ",") or "0"
+	end
+	return nil
+end
+
+local function GetCompactRaidGroupFilter()
+	if (GetCompactRaidHiddenMode()) then
+		return "0"
+	end
+
+	local buttonFilter = GetCompactRaidGroupFilterFromButtons()
+	if (buttonFilter) then
+		return buttonFilter
+	end
+
+	local groups = {}
+	local getFilterGroup = _G.CRF_GetFilterGroup
+
+	if (type(getFilterGroup) == "function") then
+		for i = 1, 8 do
+			local ok, enabled = pcall(getFilterGroup, i)
+			enabled = ok and NormalizeBoolean(enabled) or nil
+			if (enabled ~= false) then
+				table.insert(groups, tostring(i))
+			end
+		end
+	else
+		for i = 1, 8 do
+			table.insert(groups, tostring(i))
+		end
+	end
+
+	return (#groups > 0) and table.concat(groups, ",") or "0"
+end
+
+local function GetRaidModuleFrames(module)
+	local frame = module and module.GetFrame and module:GetFrame()
+	local header = module and module.GetUnitFrameOrHeader and module:GetUnitFrameOrHeader()
+	return frame, header
+end
+
+local function ApplyAzeriteRaidGroupFilter()
+	if (InCombatLockdown and InCombatLockdown()) then
+		pendingRaidGroupFilter = true
+		return
+	end
+
+	pendingRaidGroupFilter = false
+	local groupFilter = GetCompactRaidGroupFilter()
+	for _, moduleName in ipairs({ "RaidFrame25", "RaidFrame40" }) do
+		local module = GetRaidModule(moduleName)
+		local _, header = GetRaidModuleFrames(module)
+		if (module and module.UpdateHeader) then
+			pcall(module.UpdateHeader, module)
+		elseif (header and header.SetAttribute) then
+			pcall(header.SetAttribute, header, "groupFilter", groupFilter)
+			if (module and module.ConfigureChildren) then
+				pcall(module.ConfigureChildren, module)
+			end
+		end
+	end
+
+	local raid5Module = GetRaidModule("RaidFrame5")
+	if (raid5Module and raid5Module.UpdateHeader) then
+		pcall(raid5Module.UpdateHeader, raid5Module)
+	end
+end
+
 local function ApplyAzeriteRaidGroupVisibility()
 	local alpha = GetCompactRaidHiddenMode() and 0 or 1
 	for _, moduleName in ipairs({ "RaidFrame5", "RaidFrame25", "RaidFrame40" }) do
 		local module = GetRaidModule(moduleName)
-		local frame = module and module.GetFrame and module:GetFrame()
+		local frame, header = GetRaidModuleFrames(module)
 		if (frame and frame.SetAlpha) then
 			pcall(frame.SetAlpha, frame, alpha)
 		end
+		if (header and header ~= frame and header.SetAlpha) then
+			pcall(header.SetAlpha, header, alpha)
+		end
+	end
+end
+
+local function ScheduleAzeriteRaidPanelMirror()
+	local function ApplyRaidPanelMirror()
+		ApplyAzeriteRaidGroupFilter()
+		ApplyAzeriteRaidGroupVisibility()
+	end
+
+	if (C_Timer) then
+		C_Timer.After(0, ApplyRaidPanelMirror)
+		C_Timer.After(.1, ApplyRaidPanelMirror)
+	else
+		ApplyRaidPanelMirror()
 	end
 end
 
@@ -553,11 +706,7 @@ local function HookRaidManagerHiddenMode()
 	if (toggle and toggle.HookScript and not quarantineHooked[toggle]) then
 		quarantineHooked[toggle] = true
 		toggle:HookScript("OnClick", function()
-			if (C_Timer) then
-				C_Timer.After(0, ApplyAzeriteRaidGroupVisibility)
-			else
-				ApplyAzeriteRaidGroupVisibility()
-			end
+			ScheduleAzeriteRaidPanelMirror()
 		end)
 	end
 
@@ -565,11 +714,7 @@ local function HookRaidManagerHiddenMode()
 	if (manager and manager.HookScript and not quarantineHooked[manager]) then
 		quarantineHooked[manager] = true
 		manager:HookScript("OnShow", function()
-			if (C_Timer) then
-				C_Timer.After(0, ApplyAzeriteRaidGroupVisibility)
-			else
-				ApplyAzeriteRaidGroupVisibility()
-			end
+			ScheduleAzeriteRaidPanelMirror()
 		end)
 	end
 
@@ -577,14 +722,27 @@ local function HookRaidManagerHiddenMode()
 		_G.__AzUI_W12_HiddenModeSettingHooked = true
 		hooksecurefunc("CompactRaidFrameManager_SetSetting", function(setting)
 			local key = type(setting) == "string" and string.lower(setting) or nil
-			if (key == "hiddenmode" or key == "ishidden" or key == "hidegroups") then
-				if (C_Timer) then
-					C_Timer.After(0, ApplyAzeriteRaidGroupVisibility)
-				else
-					ApplyAzeriteRaidGroupVisibility()
-				end
+			if (key == "isshown" or key == "hiddenmode" or key == "ishidden" or key == "hidegroups") then
+				ScheduleAzeriteRaidPanelMirror()
 			end
 		end)
+	end
+
+	if (type(_G.CompactRaidFrameManager_ToggleGroupFilter) == "function" and not _G.__AzUI_W12_GroupFilterHooked) then
+		_G.__AzUI_W12_GroupFilterHooked = true
+		hooksecurefunc("CompactRaidFrameManager_ToggleGroupFilter", function()
+			ScheduleAzeriteRaidPanelMirror()
+		end)
+	end
+
+	local buttons = GetCompactRaidFilterGroupButtons()
+	if (type(buttons) == "table") then
+		for _, button in ipairs(buttons) do
+			if (button and button.HookScript and not quarantineHooked[button]) then
+				quarantineHooked[button] = true
+				button:HookScript("OnClick", ScheduleAzeriteRaidPanelMirror)
+			end
+		end
 	end
 end
 
@@ -1317,8 +1475,10 @@ end
 ns.WoW12BlizzardQuarantine = ns.WoW12BlizzardQuarantine or {}
 ns.WoW12BlizzardQuarantine.Apply = ApplyBlizzardFrameQuarantine
 ns.WoW12BlizzardQuarantine.ApplyCompactFrames = QuarantineCompactFrames
+ns.WoW12BlizzardQuarantine.ApplyRaidGroupFilter = ApplyAzeriteRaidGroupFilter
 ns.WoW12BlizzardQuarantine.ApplyRaidGroupVisibility = ApplyAzeriteRaidGroupVisibility
 ns.WoW12BlizzardQuarantine.ApplySpellBars = QuarantineSpellBars
+ns.WoW12BlizzardQuarantine.GetRaidGroupFilter = GetCompactRaidGroupFilter
 ns.WoW12BlizzardQuarantine.QuarantineFrame = QuarantineFrame
 
 local function ApplyPlaterNamePlateAbsorbCleanup()
@@ -1492,6 +1652,7 @@ local function ApplyGuards()
 	GuardTooltipMoneyAdders()
 	ApplyBlizzardFrameQuarantine()
 	HookRaidManagerHiddenMode()
+	ApplyAzeriteRaidGroupFilter()
 	ApplyAzeriteRaidGroupVisibility()
 	HookCompactFrameLifecycle()
 	ApplyPlaterNamePlateAbsorbCleanup()
@@ -1505,6 +1666,7 @@ guardFrame:RegisterEvent("PLAYER_LOGIN")
 guardFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 guardFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 guardFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+guardFrame:RegisterEvent("CVAR_UPDATE")
 guardFrame:SetScript("OnEvent", function(self, event, addonName)
 	if (event == "ADDON_LOADED") then
 		if (addonName == "AzeriteUI5_JuNNeZ_Edition") then
@@ -1540,11 +1702,18 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 	elseif (event == "PLAYER_ENTERING_WORLD" or event == "GROUP_ROSTER_UPDATE") then
 		ApplyGuards()
 		SetBlizzardRaidBarVisible(ShouldShowBlizzardRaidBar())
+	elseif (event == "CVAR_UPDATE") then
+		if (addonName == "raidOptionIsShown") then
+			ScheduleAzeriteRaidPanelMirror()
+		end
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		FlushPendingQuarantineFrames()
 		ApplyGuards()
 		if (pendingRaidBarVisible ~= nil) then
 			SetBlizzardRaidBarVisible(pendingRaidBarVisible)
+		end
+		if (pendingRaidGroupFilter) then
+			ApplyAzeriteRaidGroupFilter()
 		end
 	end
 end)

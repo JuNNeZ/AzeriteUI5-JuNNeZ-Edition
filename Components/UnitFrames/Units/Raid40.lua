@@ -125,6 +125,14 @@ local validGroupBy = {
 	ASSIGNEDROLE = true
 }
 
+local GetActiveRaidGroupFilter = function()
+	local quarantine = ns.WoW12BlizzardQuarantine
+	if (quarantine and quarantine.GetRaidGroupFilter) then
+		return quarantine.GetRaidGroupFilter()
+	end
+	return "1,2,3,4,5,6,7,8"
+end
+
 local GetRequiredRaidCapacity = function(db, fallback)
 	local source = db or defaults.profile
 	fallback = fallback or defaults.profile
@@ -284,6 +292,17 @@ local getRelativePointAnchor = function(point)
 	return "CENTER", 0, 0
 end
 
+local HasHeaderChildUnit = function(child)
+	if (not child) then
+		return false
+	end
+	local unit = child.GetAttribute and child:GetAttribute("unit")
+	if ((not unit) and not child.GetAttribute) then
+		unit = child.unit
+	end
+	return (type(unit) == "string" and unit ~= "")
+end
+
 local getOrderedHeaderChildren = function(header)
 	local children = {}
 	local seen = {}
@@ -295,7 +314,7 @@ local getOrderedHeaderChildren = function(header)
 			if (not child) then
 				break
 			end
-			if (not seen[child]) then
+			if (not seen[child] and HasHeaderChildUnit(child)) then
 				seen[child] = true
 				table_insert(children, child)
 			end
@@ -306,7 +325,7 @@ local getOrderedHeaderChildren = function(header)
 	if (#children == 0) then
 		for i = 1, header:GetNumChildren() do
 			local child = select(i, header:GetChildren())
-			if (child and not seen[child] and (child.unit or (child.GetAttribute and child:GetAttribute("unit")))) then
+			if (not seen[child] and HasHeaderChildUnit(child)) then
 				seen[child] = true
 				table_insert(children, child)
 			end
@@ -315,7 +334,7 @@ local getOrderedHeaderChildren = function(header)
 
 	for i = #children, 1, -1 do
 		local child = children[i]
-		if (not (child and child.ClearAllPoints and child.SetPoint)) then
+		if (not (child and child.ClearAllPoints and child.SetPoint and HasHeaderChildUnit(child))) then
 			table_remove(children, i)
 		end
 	end
@@ -338,7 +357,10 @@ local GetButtonRaidSubgroup = function(button)
 		return nil
 	end
 
-	local unit = button.unit or (button.GetAttribute and (button:GetAttribute("unit") or button:GetAttribute("oUF-guessUnit")))
+	local unit = button.GetAttribute and button:GetAttribute("unit")
+	if ((not unit) and not button.GetAttribute) then
+		unit = button.unit
+	end
 	if (type(unit) ~= "string") then
 		return nil
 	end
@@ -1063,6 +1085,7 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	-- Restore secure layout state before any visibility writes can trigger SecureGroupHeader_Update.
 	self:SetAttribute("groupBy", headerProfile.groupBy)
 	self:SetAttribute("groupingOrder", headerProfile.groupingOrder)
+	self:SetAttribute("groupFilter", GetActiveRaidGroupFilter())
 	self:SetAttribute("point", headerProfile.point)
 	self:SetAttribute("xOffset", headerProfile.xOffset)
 	self:SetAttribute("yOffset", headerProfile.yOffset)
@@ -1138,7 +1161,7 @@ RaidFrame40Mod.GetHeaderAttributes = function(self)
 	--'https://wowprogramming.com/docs/secure_template/Group_Headers.html
 	"sortMethod", "INDEX", -- INDEX, NAME -- Member sorting within each group
 	"sortDir", "ASC", -- ASC, DESC
-	"groupFilter", "1,2,3,4,5,6,7,8", -- Group filter
+	"groupFilter", GetActiveRaidGroupFilter(), -- Group filter
 	"showSolo", false, -- show while non-grouped
 	"point", db.point, -- Unit anchoring within each column
 	"xOffset", db.xOffset,
@@ -1299,6 +1322,7 @@ RaidFrame40Mod.UpdateHeader = function(self)
 	header:SetAttribute("initial-height", config.UnitSize[2])
 	header:SetAttribute("groupBy", db.groupBy)
 	header:SetAttribute("groupingOrder", db.groupingOrder)
+	header:SetAttribute("groupFilter", GetActiveRaidGroupFilter())
 	header:SetAttribute("point", db.point)
 	header:SetAttribute("xOffset", db.xOffset)
 	header:SetAttribute("yOffset", db.yOffset)

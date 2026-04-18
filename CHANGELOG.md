@@ -5,6 +5,32 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.66-JuNNeZ (2026-04-18) — Raid Panel Sync + Player Debuff View
+
+### Overall
+
+- This update makes AzeriteUI follow the raid panel more closely and gives players a simpler way to keep the player aura row focused on problems that need attention. If you hide raid groups with Blizzard's raid panel, AzeriteUI raid frames should now follow those choices instead of continuing to show filtered groups. If you prefer a cleaner player aura row, you can now show only harmful effects on yourself without building a custom aura filter.
+
+### Highlights
+
+- Fixed AzeriteUI raid frames so Blizzard's raid panel group buttons can hide and show matching raid subgroups.
+- Fixed the raid-panel eye / Hide Groups state so AzeriteUI raid frames can disappear with the Blizzard raid panel instead of staying visible.
+- Improved filtered raid layouts so hidden raid groups are not re-added by AzeriteUI's manual raid-frame positioning pass.
+- Added a player aura option to show debuffs only, keeping buffs out of the player aura row while preserving boss debuffs and blacklist behavior.
+- Added localized option text for the new debuffs-only player aura setting.
+
+### Access
+
+- Raid group hiding uses Blizzard's existing raid panel group buttons and Hide Groups eye button.
+- The new aura option is under `/az -> Unit Frame Settings -> Player -> Show Auras -> Player Aura Row -> Show Debuffs Only`.
+
+### Internal
+
+- `Core/FixBlizzardBugs.lua`: mirrors Blizzard raid-panel hidden/group-filter state into AzeriteUI raid headers, queues secure filter updates during combat, and refreshes after delayed Blizzard button-state changes.
+- `Components/UnitFrames/Units/Raid5.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`: consume the mirrored raid group filter and reject stale filtered child units during raid layout reflow.
+- `Components/UnitFrames/Auras/AuraFilters.lua`, `Components/UnitFrames/Units/Player.lua`, `Options/OptionsPages/UnitFrames.lua`, `Locale/*.lua`: added the player `playerAuraDebuffsOnly` profile option, filter behavior, options UI, and locale strings.
+
+
 ## 5.3.65-JuNNeZ (2026-04-18) — Raid, Pet Bar, and Mounted Bar Recovery
 
 ### Overall

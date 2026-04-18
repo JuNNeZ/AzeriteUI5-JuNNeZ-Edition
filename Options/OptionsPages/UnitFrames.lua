@@ -235,7 +235,7 @@ local GenerateOptions = function()
 			return isdisabled(info) or not getoption(info, "showAuras")
 		end
 		local playerAuraCustomSettingsDisabled = function(info)
-			return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraUseStockBehavior")
+			return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraUseStockBehavior") or getoption(info, "playerAuraDebuffsOnly")
 		end
 		local playerAuraAdvancedHidden = function(info)
 			return isdisabled(info) or playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowAdvancedCategories")
@@ -264,6 +264,12 @@ local GenerateOptions = function()
 			name = L["Use AzeriteUI Stock Behavior"],
 			desc = L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."],
 			order = 211.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraSettingsDisabled
+		}
+		suboptions.args.playerAuraDebuffsOnly = {
+			name = L["Show Debuffs Only"],
+			desc = L["Hide buffs from the player aura row and show only harmful effects on you. This works with both stock behavior and custom aura categories."],
+			order = 211.52, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
 		}
 		suboptions.args.playerAuraAlwaysBright = {
