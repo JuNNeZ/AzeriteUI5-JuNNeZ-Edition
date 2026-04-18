@@ -30,7 +30,7 @@ local RaidFrame25Mod = ns:NewModule("RaidFrame25", ns.UnitFrameModule, "LibMoreE
 
 -- GLOBALS: UIParent, Enum
 -- GLOBALS: LoadAddOn, InCombatLockdown, RegisterAttributeDriver, UnregisterAttributeDriver
--- GLOBALS: UnitGroupRolesAssigned, UnitHasVehicleUI, UnitIsUnit, UnitPowerType
+-- GLOBALS: GetRaidRosterInfo, UnitGroupRolesAssigned, UnitHasVehicleUI, UnitInRaid, UnitIsUnit, UnitPowerType
 -- GLOBALS: CompactRaidFrameContainer, CompactRaidFrameManager, CompactRaidFrameManager_SetSetting
 
 -- Lua API
@@ -47,6 +47,7 @@ local string_match = string.match
 local string_upper = string.upper
 local table_concat = table.concat
 local table_insert = table.insert
+local table_remove = table.remove
 local table_sort = table.sort
 local type = type
 local unpack = unpack
@@ -124,9 +125,28 @@ local validGroupBy = {
 	ASSIGNEDROLE = true
 }
 
+local GetRequiredRaidCapacity = function(db, fallback)
+	local source = db or defaults.profile
+	fallback = fallback or defaults.profile
+	local useInRaid40 = (source.useInRaid40 ~= nil) and source.useInRaid40 or fallback.useInRaid40
+	local useInRaid25 = (source.useInRaid25 ~= nil) and source.useInRaid25 or fallback.useInRaid25
+	local useInRaid10 = (source.useInRaid10 ~= nil) and source.useInRaid10 or fallback.useInRaid10
+	local useInRaid5 = (source.useInRaid5 ~= nil) and source.useInRaid5 or fallback.useInRaid5
+	if (useInRaid40 or useInRaid25 or useInRaid10 or useInRaid5) then
+		return 40
+	end
+	return 5
+end
+
 local GetSanitizedHeaderProfile = function(profile)
 	local db = profile or defaults.profile
 	local fallback = defaults.profile
+	local unitsPerColumn = (type(db.unitsPerColumn) == "number" and db.unitsPerColumn > 0 and db.unitsPerColumn) or fallback.unitsPerColumn or 5
+	local maxColumns = (type(db.maxColumns) == "number" and db.maxColumns > 0 and db.maxColumns) or fallback.maxColumns or 1
+	local requiredColumns = math_max(1, math_ceil(GetRequiredRaidCapacity(db, fallback) / unitsPerColumn))
+	if (maxColumns < requiredColumns) then
+		maxColumns = requiredColumns
+	end
 
 	return {
 		point = (type(db.point) == "string" and validHeaderPoints[db.point] and db.point) or fallback.point or "TOP",
@@ -134,8 +154,8 @@ local GetSanitizedHeaderProfile = function(profile)
 		yOffset = (type(db.yOffset) == "number" and db.yOffset) or fallback.yOffset or 0,
 		groupBy = (type(db.groupBy) == "string" and validGroupBy[db.groupBy] and db.groupBy) or fallback.groupBy or "GROUP",
 		groupingOrder = (type(db.groupingOrder) == "string" and db.groupingOrder ~= "" and db.groupingOrder) or fallback.groupingOrder or "1,2,3,4,5,6,7,8",
-		unitsPerColumn = (type(db.unitsPerColumn) == "number" and db.unitsPerColumn > 0 and db.unitsPerColumn) or fallback.unitsPerColumn or 5,
-		maxColumns = (type(db.maxColumns) == "number" and db.maxColumns > 0 and db.maxColumns) or fallback.maxColumns or 1,
+		unitsPerColumn = unitsPerColumn,
+		maxColumns = maxColumns,
 		columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0,
 		columnAnchorPoint = (type(db.columnAnchorPoint) == "string" and validHeaderPoints[db.columnAnchorPoint] and db.columnAnchorPoint) or fallback.columnAnchorPoint or "LEFT"
 	}
@@ -266,12 +286,40 @@ end
 
 local getOrderedHeaderChildren = function(header)
 	local children = {}
-	for i = 1, header:GetNumChildren() do
-		local child = select(i, header:GetChildren())
-		if (child) then
-			table_insert(children, child)
+	local seen = {}
+
+	if (header and header.GetAttribute) then
+		local index = 1
+		while true do
+			local child = header:GetAttribute("child" .. index)
+			if (not child) then
+				break
+			end
+			if (not seen[child]) then
+				seen[child] = true
+				table_insert(children, child)
+			end
+			index = index + 1
 		end
 	end
+
+	if (#children == 0) then
+		for i = 1, header:GetNumChildren() do
+			local child = select(i, header:GetChildren())
+			if (child and not seen[child] and (child.unit or (child.GetAttribute and child:GetAttribute("unit")))) then
+				seen[child] = true
+				table_insert(children, child)
+			end
+		end
+	end
+
+	for i = #children, 1, -1 do
+		local child = children[i]
+		if (not (child and child.ClearAllPoints and child.SetPoint)) then
+			table_remove(children, i)
+		end
+	end
+
 	table_sort(children, function(a, b)
 		local aName = a:GetName() or ""
 		local bName = b:GetName() or ""
@@ -283,6 +331,59 @@ local getOrderedHeaderChildren = function(header)
 		return aIndex < bIndex
 	end)
 	return children
+end
+
+local GetButtonRaidSubgroup = function(button)
+	if (not button) then
+		return nil
+	end
+
+	local unit = button.unit or (button.GetAttribute and (button:GetAttribute("unit") or button:GetAttribute("oUF-guessUnit")))
+	if (type(unit) ~= "string") then
+		return nil
+	end
+
+	local raidIndex = UnitInRaid and UnitInRaid(unit)
+	if (raidIndex and GetRaidRosterInfo) then
+		local _, _, subgroup = GetRaidRosterInfo(raidIndex)
+		if (type(subgroup) == "number" and subgroup >= 1 and subgroup <= 8) then
+			return subgroup
+		end
+	end
+
+	raidIndex = tonumber(string_match(unit, "^raid(%d+)$"))
+	if (raidIndex and raidIndex >= 1 and raidIndex <= 40) then
+		return math_ceil(raidIndex / 5)
+	end
+end
+
+local ConfigureSparseRaidGroups = function(self, header, buttons, db, unitWidth, unitHeight)
+	if ((db.point or "TOP") ~= "TOP" or (db.columnAnchorPoint or "LEFT") ~= "LEFT") then
+		return false
+	end
+
+	local columnSpacing = db.columnSpacing or 0
+	local yOffset = db.yOffset or 0
+	local rowStep = math_max(1, unitHeight - yOffset)
+	local columnStep = math_max(1, unitWidth + columnSpacing)
+	local groupSlots = {}
+	local maxSubgroup = 1
+
+	for _, unitButton in ipairs(buttons) do
+		local subgroup = GetButtonRaidSubgroup(unitButton)
+		if (not subgroup) then
+			return false
+		end
+		groupSlots[subgroup] = (groupSlots[subgroup] or 0) + 1
+		maxSubgroup = math_max(maxSubgroup, subgroup)
+
+		unitButton:SetSize(unitWidth, unitHeight)
+		unitButton:ClearAllPoints()
+		unitButton:SetPoint("TOPLEFT", header, "TOPLEFT", (subgroup - 1) * columnStep, -((groupSlots[subgroup] - 1) * rowStep))
+	end
+
+	header:SetSize(self:GetCalculatedHeaderSize(maxSubgroup * (db.unitsPerColumn or 5)))
+	return true
 end
 
 -- Element Callbacks
@@ -1066,7 +1167,8 @@ RaidFrame25Mod.GetHeaderAttributes = function(self)
 end
 
 RaidFrame25Mod.GetHeaderSize = function(self)
-	return self:GetCalculatedHeaderSize(25)
+	local profile = self.db and self.db.profile or defaults.profile
+	return self:GetCalculatedHeaderSize(GetRequiredRaidCapacity(profile, defaults.profile))
 end
 
 RaidFrame25Mod.GetCalculatedHeaderSize = function(self, numDisplayed)
@@ -1160,6 +1262,10 @@ RaidFrame25Mod.ConfigureChildren = function(self)
 			table_insert(reversed, buttons[i])
 		end
 		buttons = reversed
+	end
+
+	if (ConfigureSparseRaidGroups(self, header, buttons, db, unitWidth, unitHeight)) then
+		return
 	end
 
 	local buttonNum = 0

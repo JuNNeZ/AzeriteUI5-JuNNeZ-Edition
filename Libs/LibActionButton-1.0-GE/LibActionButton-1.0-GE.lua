@@ -2837,7 +2837,7 @@ function ShowOverlayGlow(self)
 		return
 	end
 
-	if LCG then
+	if LCG and type(LCG.ShowOverlayGlow) == "function" then
 		LCG.ShowOverlayGlow(self)
 	end
 end
@@ -2855,7 +2855,7 @@ function HideOverlayGlow(self)
 		return
 	end
 
-	if LCG then
+	if LCG and type(LCG.HideOverlayGlow) == "function" then
 		LCG.HideOverlayGlow(self)
 	end
 end
@@ -2992,7 +2992,7 @@ function Generic:ShowSpellActivation()
 	self.customSpellActivationIsActive = true
 	if self.CustomSpellActivationAlert then
 		self.CustomSpellActivationAlert:Show()
-	elseif LCG then
+	elseif LCG and type(LCG.ShowOverlayGlow) == "function" then
 		LCG.ShowOverlayGlow(self)
 	end
 end
@@ -3001,7 +3001,7 @@ function Generic:HideSpellActivation()
 	self.customSpellActivationIsActive = nil
 	if self.CustomSpellActivationAlert then
 		self.CustomSpellActivationAlert:Hide()
-	elseif LCG then
+	elseif LCG and type(LCG.HideOverlayGlow) == "function" then
 		LCG.HideOverlayGlow(self)
 	end
 	if self.queueSpellActivationUpdate then

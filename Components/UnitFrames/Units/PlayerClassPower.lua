@@ -1248,6 +1248,10 @@ ClassPowerMod.OnDeferredUpdateEvent = function(self, event)
 end
 
 ClassPowerMod.Update = function(self)
+	if (not self.frame or not self.db or not self.db.profile) then
+		return
+	end
+
 	if (InCombatLockdown()) then
 		self.__AzeriteUI_PendingSettingsUpdate = true
 		self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnDeferredUpdateEvent")
@@ -1321,9 +1325,15 @@ ClassPowerMod.Update = function(self)
 		end
 	else
 		HideElementalSwapBar(self.frame and self.frame.Power)
-		self.frame:DisableElement("Power")
-		self.frame:EnableElement("ClassPower")
-		self.frame.ClassPower:ForceUpdate()
+		if (self.frame.DisableElement) then
+			self.frame:DisableElement("Power")
+		end
+		if (self.frame.EnableElement) then
+			self.frame:EnableElement("ClassPower")
+		end
+		if (self.frame.ClassPower and self.frame.ClassPower.ForceUpdate) then
+			self.frame.ClassPower:ForceUpdate()
+		end
 	end
 
 	ApplyClassPowerClickThrough(self)

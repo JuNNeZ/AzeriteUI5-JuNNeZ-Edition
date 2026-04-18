@@ -574,6 +574,28 @@ PetBarMod.UpdateBindings = function(self)
 	end
 end
 
+PetBarMod.UpdatePetButtons = function(self)
+	if (not self.bar) then return end
+
+	for id,button in next,self.bar.buttons do
+		button:Update()
+	end
+
+	self.bar:UpdateFading()
+end
+
+PetBarMod.UpdatePetBarState = function(self)
+	if (not self.bar) then return end
+
+	if (InCombatLockdown()) then
+		self.needupdate = true
+	else
+		self.bar:UpdateVisibilityDriver()
+	end
+
+	self:UpdatePetButtons()
+end
+
 -- Called by the movable frame manager
 -- when defaults somehow are changed,
 -- like when the user interface scale is modified.
@@ -660,19 +682,13 @@ PetBarMod.OnEvent = function(self, event, arg1)
 		end
 
 	elseif (event == "PET_BAR_UPDATE" or (event == "UNIT_PET" and arg1 == "player") or event == "PET_UI_UPDATE" or event == "UPDATE_VEHICLE_ACTIONBAR") then
-		for id,button in next,self.bar.buttons do
-			button:Update()
-		end
+		self:UpdatePetBarState()
 
 	elseif (event == "PLAYER_CONTROL_LOST" or event == "PLAYER_CONTROL_GAINED" or event == "PLAYER_FARSIGHT_FOCUS_CHANGED" or event == "PET_BAR_UPDATE_USABLE" or event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_MOUNT_DISPLAY_CHANGED") then
-		for id,button in next,self.bar.buttons do
-			button:Update()
-		end
+		self:UpdatePetButtons()
 
 	elseif (event == "UNIT_FLAGS" or event == "UNIT_AURA") and (arg1 == "pet") then
-		for id,button in next,self.bar.buttons do
-			button:Update()
-		end
+		self:UpdatePetButtons()
 
 	elseif (event =="PET_BAR_UPDATE_COOLDOWN") then
 		for id,button in next,self.bar.buttons do
@@ -764,6 +780,7 @@ PetBarMod.OnEnable = function(self)
 	self:RegisterEvent("PET_BAR_UPDATE_USABLE", "OnEvent")
 	self:RegisterEvent("PET_BAR_SHOWGRID", "OnEvent")
 	self:RegisterEvent("PET_BAR_HIDEGRID", "OnEvent")
+	self:RegisterEvent("PET_UI_UPDATE", "OnEvent")
 	self:RegisterEvent("PLAYER_CONTROL_LOST", "OnEvent")
 	self:RegisterEvent("PLAYER_CONTROL_GAINED", "OnEvent")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")

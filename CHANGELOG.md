@@ -5,6 +5,33 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.65-JuNNeZ (2026-04-18) — Raid, Pet Bar, and Mounted Bar Recovery
+
+### Overall
+
+- This update focuses on things that could disappear, squeeze together, or fail to recover at the wrong moment. Large raid groups should lay out more naturally, hunter pet abilities should appear when the pet UI becomes ready, dragonriding transitions should leave the extra bars in a more dependable visible state, and startup conflicts with AbilityTimeline should be quieter.
+
+### Highlights
+
+- Fixed large raid frames so groups above 20 players are no longer capped or squeezed together by older saved layout values.
+- Fixed sparse raid groups so later subgroups keep their own row or column instead of sliding into earlier groups when the raid roster has gaps.
+- Fixed hunter pet ability bars not appearing reliably when pet action data arrives after the pet unit itself.
+- Improved dragonriding and bonus-bar recovery so bars 2+ are refreshed again after late mount, combat, and bonus-bar state changes.
+- Hardened startup/profile refresh handling when AbilityTimeline is enabled, reducing nil-anchor, class-power, and spell-glow crashes caused by shared library timing.
+
+### Access
+
+- No new settings required. Reload UI after updating.
+- Existing raid frame options remain under `/az -> Unit Frames -> Raid Frames (25)` and `/az -> Unit Frames -> Raid Frames (40)`.
+
+### Internal
+
+- `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`: large-raid capacity guards, secure child collection hardening, and subgroup-aware sparse roster layout.
+- `Components/ActionBars/Elements/PetBar.lua`: registered `PET_UI_UPDATE` and refreshed pet visibility/buttons when pet UI data changes.
+- `Components/ActionBars/Elements/ActionBars.lua`: modern bonus-bar source preference plus delayed visual refresh for dragonriding/bonus-bar transitions.
+- `Core/MovableFrameModulePrototype.lua`, `Components/UnitFrames/Units/PlayerClassPower.lua`, `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`: defensive startup/profile guards for AbilityTimeline/shared-library timing.
+
+
 ## 5.3.64-JuNNeZ (2026-04-17) — Aura Reliability + Dragonriding Bar Recovery
 
 ### Overall

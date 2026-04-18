@@ -184,6 +184,10 @@ Module.RefreshConfig = function(self)
 end
 
 Module.OnRefreshConfig = function(self)
+	if (not self.frame or not self.anchor or not self.db or not self.db.profile) then
+		return
+	end
+
 	if (InCombatLockdown()) then
 		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnConfigEvent")
 	end

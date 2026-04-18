@@ -1,4 +1,86 @@
 
+## 2026-04-18 — 5.3.65-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta:
+  - Large raid frames no longer cap or compact incorrectly above 20 players because saved column limits are raised to the active raid-size capacity.
+  - Sparse large-raid rosters now keep real subgroup rows/columns, so groups with roster gaps do not collapse into one visible cluster.
+  - Hunter pet ability bars now listen for pet UI readiness and refresh visibility/buttons when pet action data becomes available.
+  - Dragonriding/bonus-bar visual recovery now uses modern `C_ActionBar` helpers when available and schedules a short follow-up refresh for late Blizzard state cleanup.
+  - AbilityTimeline/shared-library timing no longer exposes AzeriteUI nil-anchor, early class-power, or missing LibCustomGlow method crashes during startup/profile refresh.
+- Updated release/version files:
+  - `AzeriteUI5_JuNNeZ_Edition.toc` -> `5.3.65-JuNNeZ`
+  - `build-release.ps1` -> `5.3.65-JuNNeZ`
+  - `CHANGELOG.md` -> added the delta-only `5.3.65-JuNNeZ` entry with a non-technical overview.
+- Validation target:
+  - `luac -p` on all changed Lua files.
+  - `build-release.ps1` to create the release archive.
+- Validation completed:
+  - `luac -p` passed for `Components/ActionBars/Elements/ActionBars.lua`, `Components/ActionBars/Elements/PetBar.lua`, `Components/UnitFrames/Units/PlayerClassPower.lua`, `Components/UnitFrames/Units/Raid25.lua`, `Components/UnitFrames/Units/Raid40.lua`, `Core/MovableFrameModulePrototype.lua`, and `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`.
+  - `build-release.ps1` created `C:\Users\Jonas\OneDrive\Skrivebord\azeriteui_fan_edit\AzeriteUI-5.3.65-JuNNeZ-Retail-18-04-2026.zip` (9.97 MB).
+- Runtime validation target:
+  - `/reload`
+  - Verify hunter pet summon/dismiss, 21+ and 26+ raid layouts, sparse raid subgroups, dragonriding mount/dismount recovery, and startup with AbilityTimeline enabled.
+
+## 2026-04-18 — Investigation: hunter pet ability bar missing
+
+- **User report:** Hunter pet "ability bar" does not show, while the warlock pet bar does show.
+- **Source check:**
+  - `Components/ActionBars/Elements/PetBar.lua` owns the AzeriteUI pet bar, secure visibility driver, and pet action event handling.
+  - `Components/ActionBars/Prototypes/PetButton.lua` owns individual pet action button updates through `GetPetActionInfo()`.
+  - WoW API data confirms `PET_UI_UPDATE` is a live event with no payload, and `GetPetActionInfo(index)` remains the pet action slot data source.
+- **Likely root cause:** The pet bar event handler already had a `PET_UI_UPDATE` branch, but the module never registered that event. If a hunter pet unit exists before its pet action UI payload is ready, the bar can stay hidden/empty until another registered event happens; warlock pets can avoid the timing path by populating earlier.
+- **Fix applied:** `Components/ActionBars/Elements/PetBar.lua` now registers `PET_UI_UPDATE`, refreshes the pet bar visibility driver on pet UI/action transitions, and refreshes fading after pet buttons gain textures.
+- **Verification:** `luac -p` passed for `Components/ActionBars/Elements/PetBar.lua`. In-game `/reload` hunter pet summon/dismiss/stable swap testing is still required.
+
+## 2026-04-18 — Follow-up: bar 1 remains active after dragon bonus-bar transitions
+
+- **User report:** Even after the previous dragonriding/action-bar recovery fixes, some transitions can still leave only bar 1 feeling active.
+- **Source check:**
+  - WoW API data exposes the modern action-bar state helpers through `C_ActionBar.HasBonusActionBar()` and `C_ActionBar.GetBonusBarOffset()`.
+  - Blizzard's live `Blizzard_ActionBar/Shared/ActionButtonUtil.lua` uses the `C_ActionBar` bonus/override/vehicle/temp-shapeshift helpers as the current action-bar state truth.
+- **Root cause target:** AzeriteUI's visual-only dragon hide still classified dragon state from loose global `IsMounted()` + `bonusbar:5` data. If that bonus-bar state lingers during addon/library timing changes or mount/zone/combat transitions, bars 2+ can stay alpha-hidden even though the secure primary bar is no longer in its dragon state.
+- **Fix target:** Keep secure paging untouched, use `C_ActionBar` helpers when available, and add a short delayed visual refresh after action-bar state events to catch late Blizzard state cleanup.
+- **Fix applied:** `Components/ActionBars/Elements/ActionBars.lua` now uses `C_ActionBar` bonus-bar helpers when available and queues a short follow-up visual refresh after action-bar state events.
+- **Verification:** `luac -p` passed for `Components/ActionBars/Elements/ActionBars.lua`. In-game dragon mount/dismount, combat-mounted dismount, and arena/BG zoning checks are still required.
+- **Follow-up:** Requiring the primary bar's secure `isdragonriding` attribute was too strict for the visual hide path and left bars 2+ visible while actually dragonriding. The hide check now again trusts confirmed mounted `bonusbar:5` state, but keeps the `C_ActionBar` source preference and delayed refresh for stale transition cleanup.
+- **Combat rescue:** `PLAYER_REGEN_DISABLED` now also runs the visual refresh path, and the in-combat non-dragon path explicitly forces enabled bars 2+ and their buttons back to alpha 1. This is visual-only and does not change secure paging or bindings during combat.
+
+## 2026-04-18 — Investigation: raid frames break above 20 players
+
+- **User report:** Raid frames break when the group goes over 20 players; requested a deep check across all raid-frame types.
+- **Initial findings:**
+  - `Components/UnitFrames/Units/Raid25.lua` owns the 6-25 / 11-25 custom secure raid header.
+  - `Components/UnitFrames/Units/Raid40.lua` owns the 26-40 custom secure raid header.
+  - `Components/UnitFrames/Units/Raid5.lua` owns five explicit `raid1`-`raid5` buttons, so it cannot safely be treated as a full large-raid header.
+  - `Components/UnitFrames/Units/Party.lua` can be shown in raid contexts, but filters to the player's subgroup through `GetActiveGroupFilter()`.
+- **Likely root cause:** `Raid25` and `Raid40` accept any positive saved `maxColumns`. With the default 5 units per column, a stale `maxColumns = 4` caps secure-header capacity at 20 units, matching the report.
+- **Fix target:** Sanitize large-raid header capacity from the active visibility range so old or incomplete saved profile values cannot cap 21+ raid members.
+- **Fix applied:**
+  - `Components/UnitFrames/Units/Raid25.lua` now derives the minimum required column count from the largest enabled raid-size range and raises too-small saved `maxColumns` values before secure header attributes are written.
+  - `Components/UnitFrames/Units/Raid40.lua` applies the same guard, covering the default 26-40 path and reused visibility ranges.
+  - Header anchor sizing now uses the active capacity instead of a fixed 25/40 constant, so reused large-raid styles reserve enough space for the enabled range.
+  - `Raid25` and `Raid40` now collect secure header children through `childN` attributes first, matching the hardened party-header path, and filter out non-unit child frames before the manual reflow pass.
+- **Screenshot follow-up:** Sparse raid groups were still laid out as a dense visible-button list. If group 5+ had members while earlier groups were not full, later groups could slide into the previous group's last visible child and appear bunched/compacted.
+- **Additional fix applied:**
+  - `Raid25` now uses real raid subgroup numbers for the default vertical-column layout, so each subgroup keeps its own column even when earlier groups are incomplete.
+  - `Raid40` now uses real raid subgroup numbers for the default horizontal-row layout, so each subgroup keeps its own row even when earlier groups are incomplete.
+  - Large raid headers now reserve secure capacity for all eight raid subgroups when used in raid contexts, allowing sparse group assignments to reach groups 6-8 without being capped by current visible count.
+- **Follow-up from user detail:** The visible "compacted into one frame/group" symptom can also happen when the reflow pass gets an incomplete or noisy child list, so the child collection hardening was added in addition to the capacity guard.
+- **Verification:** `luac -p` passed for `Components/UnitFrames/Units/Raid25.lua` and `Components/UnitFrames/Units/Raid40.lua`. In-game `/reload` and 21/25/26/40-player roster checks are still required.
+- **Runtime test target:** `/buggrabber reset` -> `/reload` -> test Raid Frames (25) at 21-25 players and Raid Frames (40) at 26+ players; also toggle `/az -> Unit Frames -> Raid Frames (25/40)` visibility ranges if reusing one style across multiple raid sizes.
+
+## 2026-04-17 — AbilityTimeline-triggered compatibility hardening
+
+- **User report:** When AbilityTimeline is enabled, BugSack attributes several AzeriteUI startup/profile-refresh errors to nil movable anchors, a nil `PlayerClassPowerFrame.frame`, and a missing `LibCustomGlow.HideOverlayGlow` method.
+- **Root cause:** AbilityTimeline embeds shared Ace3/LibCustomGlow/LibEditMode libraries and changes global library/load timing enough to expose AzeriteUI early profile-refresh assumptions during `EnsureBuiltinProfiles()` profile switches. Its own invasive `EncounterTimeline` handling and WoW 12 secret-value issues remain external-addon concerns.
+- **Fix applied:**
+  - `Core/MovableFrameModulePrototype.lua` now ignores profile refresh callbacks until movable modules have their frame, anchor, and db profile ready.
+  - `Components/UnitFrames/Units/PlayerClassPower.lua` now ignores early updates until its frame/profile exist and checks optional class-power frame methods/elements before using them.
+  - `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` now treats LibCustomGlow overlay helpers as optional methods, preserving AzeriteUI's custom spell activation alert path when present.
+- **Expected behavior:** AbilityTimeline can still load its own libraries, but AzeriteUI should no longer throw the nil `anchor` / nil `frame` startup errors or the missing `HideOverlayGlow` action-button crash.
+- **Verification:** `luac -p` passed on all changed Lua files. In-game `/reload` with only AzeriteUI, then AzeriteUI + AbilityTimeline, plus `/lock` movable-anchor checks are still required.
+- **Files Modified:** `Core/MovableFrameModulePrototype.lua`, `Components/UnitFrames/Units/PlayerClassPower.lua`, `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`, `FixLog.md`
+
 ## 2026-04-17 — 5.3.64-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta:

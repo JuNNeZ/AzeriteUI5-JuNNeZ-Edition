@@ -40,7 +40,7 @@ local string_lower = string.lower
 local tonumber = tonumber
 local unpack = unpack
 
--- GLOBALS: C_LevelLink, hooksecurefunc, InCombatLockdown, IsMounted, UnitIsDeadOrGhost
+-- GLOBALS: C_ActionBar, C_LevelLink, hooksecurefunc, InCombatLockdown, IsMounted, UnitIsDeadOrGhost
 -- GLOBALS: CreateFrame, ClearOverrideBindings, RegisterStateDriver, UnregisterStateDriver, UIParent
 -- GLOBALS: HasBonusActionBar, GetBonusBarOffset
 
@@ -50,17 +50,43 @@ local GetMedia = ns.API.GetMedia
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
 local RegisterCooldown = ns.Widgets.RegisterCooldown
 
-local IsDragonMountBarState = function()
+local HasCurrentBonusActionBar = function()
+	if (C_ActionBar and C_ActionBar.HasBonusActionBar) then
+		return C_ActionBar.HasBonusActionBar()
+	end
+	return HasBonusActionBar and HasBonusActionBar()
+end
+
+local GetCurrentBonusBarOffset = function()
+	if (C_ActionBar and C_ActionBar.GetBonusBarOffset) then
+		return C_ActionBar.GetBonusBarOffset()
+	end
+	return GetBonusBarOffset and GetBonusBarOffset()
+end
+
+local ForceBarCombatActive = function(bar)
+	bar:SetAlpha(1)
+	if (bar.buttons) then
+		for id,button in next,bar.buttons do
+			button:SetAlpha(1)
+		end
+	end
+end
+
+local IsDragonMountBarState = function(primaryBar)
 	if (not ns.IsRetail) then
 		return false
 	end
 	if (not IsMounted()) then
 		return false
 	end
-	if (not HasBonusActionBar or not GetBonusBarOffset) then
+	if (not HasCurrentBonusActionBar()) then
 		return false
 	end
-	return HasBonusActionBar() and (GetBonusBarOffset() == 5)
+	if (GetCurrentBonusBarOffset() ~= 5) then
+		return false
+	end
+	return true
 end
 
 -- Return blizzard barID by from own bar numbers.
@@ -671,6 +697,7 @@ ActionBarMod.UpdateBindings = function(self, event)
 	if (InCombatLockdown()) then
 		-- Visual-only dragon hide/show must still react in combat.
 		self:UpdateDragonVisualState()
+		self:QueueDragonVisualRefresh()
 		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateBindings")
 	end
 	if (event == "PLAYER_REGEN_ENABLED") then
@@ -688,19 +715,36 @@ ActionBarMod.UpdateBindings = function(self, event)
 		primaryBar:UpdateBindings()
 	end
 	self:UpdateDragonVisualState()
+	self:QueueDragonVisualRefresh()
 end
 
 ActionBarMod.UpdateDragonVisualState = function(self)
 	if (not next(self.bars)) then return end
 
-	local inDragonState = IsDragonMountBarState()
+	local inDragonState = IsDragonMountBarState(self.bars[1])
 
 	for i,bar in next,self.bars do
 		if (i > 1 and bar and bar:IsEnabled()) then
-			local hideForDragon = bar.config and bar.config.visibility and (bar.config.visibility.dragon == false)
-			bar:SetAlpha((inDragonState and hideForDragon) and 0 or 1)
+			if (InCombatLockdown() and not inDragonState) then
+				ForceBarCombatActive(bar)
+			else
+				local hideForDragon = bar.config and bar.config.visibility and (bar.config.visibility.dragon == false)
+				bar:SetAlpha((inDragonState and hideForDragon) and 0 or 1)
+			end
 		end
 	end
+end
+
+ActionBarMod.QueueDragonVisualRefresh = function(self)
+	if (self.__AzeriteUI_DragonVisualRefreshTimer) then
+		self:CancelTimer(self.__AzeriteUI_DragonVisualRefreshTimer)
+	end
+	self.__AzeriteUI_DragonVisualRefreshTimer = self:ScheduleTimer("OnDragonVisualRefreshTimer", .1)
+end
+
+ActionBarMod.OnDragonVisualRefreshTimer = function(self)
+	self.__AzeriteUI_DragonVisualRefreshTimer = nil
+	self:UpdateDragonVisualState()
 end
 
 -- Called by the movable frame manager
@@ -898,6 +942,7 @@ ActionBarMod.OnEnable = function(self)
 	self:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR", "UpdateBindings")
 	self:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR", "UpdateBindings")
 	self:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED", "UpdateBindings")
+	self:RegisterEvent("PLAYER_REGEN_DISABLED", "UpdateBindings")
 	-- ns.RegisterCallback(self, "AssistedHighlightColor_Changed", "UpdateAssistedHighlightColor")
 
 	self:UpdateSettings()
