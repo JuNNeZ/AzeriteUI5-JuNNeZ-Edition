@@ -86,6 +86,21 @@ local function IsSafeNumber(value)
 	return type(value) == 'number' and (not issecretvalue or not issecretvalue(value))
 end
 
+local function IsSafeKey(value)
+	return value ~= nil and (not issecretvalue or not issecretvalue(value))
+end
+
+local function SetShown(frame, shown)
+	if(not frame) then return end
+	if(shown) then
+		if(not frame:IsShown()) then
+			frame:Show()
+		end
+	elseif(frame:IsShown()) then
+		frame:Hide()
+	end
+end
+
 
 local function GetAuraSlotsSafe(unit, filter)
 	local results = {pcall(C_UnitAuras.GetAuraSlots, unit, filter)}
@@ -271,70 +286,91 @@ local function updateAura(element, unit, data, position)
 		element.createdButtons = element.createdButtons + 1
 	end
 
+	local auraInstanceID = data.auraInstanceID
+
 	-- for tooltips
-	button.auraInstanceID = data.auraInstanceID
+	button.auraInstanceID = auraInstanceID
 	button.isHarmfulAura = data.isHarmfulAura and true or false
 	button.isHarmful = button.isHarmfulAura
 	button.filter = button.isHarmfulAura and "HARMFUL" or "HELPFUL"
 
 	if(button.Cooldown and not element.disableCooldown) then
-		if(button.Cooldown.SetAuraFallbackData) then
-			button.Cooldown:SetAuraFallbackData(data.expirationTime, data.duration)
+		local expiration = IsSafeNumber(data.expirationTime) and data.expirationTime or nil
+		local duration = IsSafeNumber(data.duration) and data.duration or nil
+		local cooldownKey
+		if(IsSafeKey(auraInstanceID)) then
+			cooldownKey = tostring(auraInstanceID) .. ":" .. tostring(expiration) .. ":" .. tostring(duration)
 		end
 
-		local applied = false
-		local _okDur, durationObject = pcall(C_UnitAuras.GetAuraDuration, unit, data.auraInstanceID)
-		if(not _okDur) then durationObject = nil end
-		if(durationObject and button.Cooldown.SetCooldownFromDurationObject) then
-			button.Cooldown:SetCooldownFromDurationObject(durationObject)
-			applied = true
-		end
-		if((not applied) and button.Cooldown.SetCooldown
-			and IsSafeNumber(data.expirationTime) and IsSafeNumber(data.duration) and data.duration > 0) then
-			button.Cooldown:SetCooldown(data.expirationTime - data.duration, data.duration)
-			applied = true
-		end
-		if(applied) then
-			button.Cooldown:Show()
-		elseif(not durationObject) then
-			button.Cooldown:Hide()
+		if((not cooldownKey) or button.__AzeriteUI_CooldownKey ~= cooldownKey) then
+			if(button.Cooldown.SetAuraFallbackData) then
+				button.Cooldown:SetAuraFallbackData(expiration, duration)
+			end
+
+			local applied = false
+			local _okDur, durationObject = pcall(C_UnitAuras.GetAuraDuration, unit, auraInstanceID)
+			if(not _okDur) then durationObject = nil end
+			if(durationObject and button.Cooldown.SetCooldownFromDurationObject) then
+				button.Cooldown:SetCooldownFromDurationObject(durationObject)
+				applied = true
+			end
+			if((not applied) and button.Cooldown.SetCooldown and expiration and duration and duration > 0) then
+				button.Cooldown:SetCooldown(expiration - duration, duration)
+				applied = true
+			end
+			SetShown(button.Cooldown, applied or false)
+			button.__AzeriteUI_CooldownKey = cooldownKey
 		end
 	end
 
 	if(button.Overlay) then
 		if(element.showType or (data.isHarmfulAura and element.showDebuffType) or (not data.isHarmfulAura and element.showBuffType)) then
-			local color = C_UnitAuras.GetAuraDispelTypeColor(unit, data.auraInstanceID, element.dispelColorCurve)
+			local color = C_UnitAuras.GetAuraDispelTypeColor(unit, auraInstanceID, element.dispelColorCurve)
 			if(color) then button.Overlay:SetVertexColor(color:GetRGBA()) end
-			button.Overlay:Show()
+			SetShown(button.Overlay, true)
 		else
-			button.Overlay:Hide()
+			SetShown(button.Overlay, false)
 		end
 	end
 
 	if(button.Stealable) then
+		local alpha = 0
 		if(element.showStealableBuffs and not UnitCanCooperate('player', unit)) then
-			button.Stealable:SetAlphaFromBoolean(data.isStealable, 1, 0)
-		else
-			button.Stealable:SetAlpha(0)
+			alpha = (IsSafeKey(data.isStealable) and data.isStealable) and 1 or 0
+		end
+		if(button.__AzeriteUI_StealableAlpha ~= alpha) then
+			button.Stealable:SetAlpha(alpha)
+			button.__AzeriteUI_StealableAlpha = alpha
 		end
 	end
 
-	if(button.Icon) then button.Icon:SetTexture(data.icon) end
+	if(button.Icon and ((not IsSafeKey(data.icon)) or button.__AzeriteUI_Icon ~= data.icon)) then
+		button.Icon:SetTexture(data.icon)
+		button.__AzeriteUI_Icon = IsSafeKey(data.icon) and data.icon or nil
+	end
 	if(button.Count) then
 		local minCount = element.minCount or 2
 		local maxCount = element.maxCount or 999
-		local _okCnt, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, data.auraInstanceID, minCount, maxCount)
+		local countKey
+		if(IsSafeKey(auraInstanceID) and IsSafeKey(data.applications)) then
+			countKey = tostring(auraInstanceID) .. ":" .. tostring(data.applications) .. ":" .. tostring(minCount) .. ":" .. tostring(maxCount)
+		end
+		local skipCount = countKey and button.__AzeriteUI_CountKey == countKey
 		local wroteCount = false
 
-		if(_okCnt and displayCount ~= nil) then
-			-- Pass directly to SetText. WoW 12 allows SetText(secretValue) for native display;
-			-- only comparisons or arithmetic on secret values would crash. This path handles
-			-- both safe strings and secret strings (in-combat stack counts) correctly.
-			button.Count:SetText(displayCount)
-			wroteCount = true
+		if(not skipCount) then
+			local _okCnt, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, auraInstanceID, minCount, maxCount)
+			if(_okCnt and displayCount ~= nil) then
+				-- Pass directly to SetText. WoW 12 allows SetText(secretValue) for native display;
+				-- only comparisons or arithmetic on secret values would crash. This path handles
+				-- both safe strings and secret strings (in-combat stack counts) correctly.
+				button.Count:SetText(displayCount)
+				button.__AzeriteUI_CountKey = countKey
+				wroteCount = true
+			end
 		end
 
-		if(not wroteCount and IsSafeNumber(data.applications)) then
+		if((not wroteCount) and (not skipCount) and IsSafeNumber(data.applications)) then
 			if(data.applications >= minCount) then
 				if(data.applications > maxCount) then
 					button.Count:SetText('*')
@@ -346,6 +382,7 @@ local function updateAura(element, unit, data, position)
 				button.Count:SetText('')
 				wroteCount = true
 			end
+			button.__AzeriteUI_CountKey = countKey
 		end
 	end
 
@@ -354,9 +391,17 @@ local function updateAura(element, unit, data, position)
 	-- Avoid secure aura button protected mutations in combat.
 	-- Allow explicit opt-in for non-secure buttons.
 	if(CanMutateButtonInCombat(element, button)) then
-		button:SetSize(width, height)
-		button:EnableMouse(not element.disableMouse)
-		button:Show()
+		if(button.__AzeriteUI_Width ~= width or button.__AzeriteUI_Height ~= height) then
+			button:SetSize(width, height)
+			button.__AzeriteUI_Width = width
+			button.__AzeriteUI_Height = height
+		end
+		local enableMouse = not element.disableMouse
+		if(button.__AzeriteUI_EnableMouse ~= enableMouse) then
+			button:EnableMouse(enableMouse)
+			button.__AzeriteUI_EnableMouse = enableMouse
+		end
+		SetShown(button, true)
 	elseif(not button:IsShown()) then
 		pcall(button.Show, button)
 	end

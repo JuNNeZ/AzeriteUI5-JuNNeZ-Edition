@@ -95,6 +95,79 @@ local SetAuraIconState = function(button, desaturated, red, green, blue)
 	icon:SetVertexColor(red, green, blue)
 end
 
+local SetAuraTextureBorderColor = function(self, red, green, blue, alpha)
+	local pieces = self and self.__AzeriteUI_BorderPieces
+	if (not pieces) then
+		return
+	end
+
+	for i = 1, #pieces do
+		pieces[i]:SetVertexColor(red or 1, green or 1, blue or 1, alpha or 1)
+	end
+end
+
+local CreateAuraTextureBorder = function(aura)
+	local edgeSize = 12
+	local coordStart = 0.0625
+	local coordEnd = 1 - coordStart
+	local file = GetMedia("border-aura")
+	local border = CreateFrame("Frame", nil, aura)
+	local pieces = {}
+
+	local createPiece = function(coords)
+		local texture = border:CreateTexture(nil, "BORDER")
+		texture:SetTexture(file)
+		texture:SetTexCoord(
+			coords[1], coords[2],
+			coords[3], coords[4],
+			coords[5], coords[6],
+			coords[7], coords[8]
+		)
+		pieces[#pieces + 1] = texture
+		return texture
+	end
+
+	local topLeft = createPiece({ 0.5078125, coordStart, 0.5078125, coordEnd, 0.6171875, coordStart, 0.6171875, coordEnd })
+	topLeft:SetSize(edgeSize, edgeSize)
+	topLeft:SetPoint("TOPLEFT")
+
+	local topRight = createPiece({ 0.6328125, coordStart, 0.6328125, coordEnd, 0.7421875, coordStart, 0.7421875, coordEnd })
+	topRight:SetSize(edgeSize, edgeSize)
+	topRight:SetPoint("TOPRIGHT")
+
+	local bottomLeft = createPiece({ 0.7578125, coordStart, 0.7578125, coordEnd, 0.8671875, coordStart, 0.8671875, coordEnd })
+	bottomLeft:SetSize(edgeSize, edgeSize)
+	bottomLeft:SetPoint("BOTTOMLEFT")
+
+	local bottomRight = createPiece({ 0.8828125, coordStart, 0.8828125, coordEnd, 0.9921875, coordStart, 0.9921875, coordEnd })
+	bottomRight:SetSize(edgeSize, edgeSize)
+	bottomRight:SetPoint("BOTTOMRIGHT")
+
+	local top = createPiece({ 0.2578125, coordEnd, 0.3671875, coordEnd, 0.2578125, coordStart, 0.3671875, coordStart })
+	top:SetHeight(edgeSize)
+	top:SetPoint("TOPLEFT", topLeft, "TOPRIGHT")
+	top:SetPoint("TOPRIGHT", topRight, "TOPLEFT")
+
+	local bottom = createPiece({ 0.3828125, coordEnd, 0.4921875, coordEnd, 0.3828125, coordStart, 0.4921875, coordStart })
+	bottom:SetHeight(edgeSize)
+	bottom:SetPoint("BOTTOMLEFT", bottomLeft, "BOTTOMRIGHT")
+	bottom:SetPoint("BOTTOMRIGHT", bottomRight, "BOTTOMLEFT")
+
+	local left = createPiece({ 0.0078125, coordStart, 0.0078125, coordEnd, 0.1171875, coordStart, 0.1171875, coordEnd })
+	left:SetWidth(edgeSize)
+	left:SetPoint("TOPLEFT", topLeft, "BOTTOMLEFT")
+	left:SetPoint("BOTTOMLEFT", bottomLeft, "TOPLEFT")
+
+	local right = createPiece({ 0.1328125, coordStart, 0.1328125, coordEnd, 0.2421875, coordStart, 0.2421875, coordEnd })
+	right:SetWidth(edgeSize)
+	right:SetPoint("TOPRIGHT", topRight, "BOTTOMRIGHT")
+	right:SetPoint("BOTTOMRIGHT", bottomRight, "TOPRIGHT")
+
+	border.__AzeriteUI_BorderPieces = pieces
+	border.SetBackdropBorderColor = SetAuraTextureBorderColor
+	return border
+end
+
 -- Local Functions
 --------------------------------------------------
 local UpdateTooltip = function(self)
@@ -132,8 +205,7 @@ ns.AuraStyles.CreateButton = function(element, position)
 	icon:SetMask(GetMedia("actionbutton-mask-square"))
 	aura.Icon = icon
 
-	local border = CreateFrame("Frame", nil, aura, ns.BackdropTemplate)
-	border:SetBackdrop({ edgeFile = GetMedia("border-aura"), edgeSize = 12 })
+	local border = CreateAuraTextureBorder(aura)
 	border:SetBackdropBorderColor(Colors.verydarkgray[1], Colors.verydarkgray[2], Colors.verydarkgray[3])
 	border:SetPoint("TOPLEFT", -6, 6)
 	border:SetPoint("BOTTOMRIGHT", 6, -6)
@@ -251,7 +323,7 @@ ns.AuraStyles.PlayerPostUpdateButton = function(element, button, unit, data, pos
 		color = Colors.verydarkgray -- Colors.aura
 	end
 	if (color) then
-		button.Border:SetBackdropBorderColor(color[1], color[2], color[3])
+		SetAuraBorderColor(button, color)
 	end
 
 	-- Icon Coloring
@@ -273,15 +345,13 @@ ns.AuraStyles.PlayerPostUpdateButton = function(element, button, unit, data, pos
 	local profile = GetPlayerAuraProfile()
 	local useStockBehavior = profile and profile.playerAuraUseStockBehavior
 	if (profile and profile.playerAuraAlwaysBright) then
-		button.Icon:SetDesaturated(false)
-		button.Icon:SetVertexColor(1, 1, 1)
+		SetAuraIconState(button, false, 1, 1, 1)
 		return
 	end
 	if (useStockBehavior and InCombatLockdown and InCombatLockdown() and (not isHarmful)) then
 		local hasReliableSignal = isPlayerAura or canApplyAura or isImportantAura or (spellId and true or false)
 		if (secretHelpfulFallback or (isPlayerAura and not canApplyAura) or (not hasReliableSignal)) then
-			button.Icon:SetDesaturated(false)
-			button.Icon:SetVertexColor(1, 1, 1)
+			SetAuraIconState(button, false, 1, 1, 1)
 			return
 		end
 	end
@@ -290,16 +360,13 @@ ns.AuraStyles.PlayerPostUpdateButton = function(element, button, unit, data, pos
 	or (not isHarmful and isPlayerAura and canApplyAura)
 	or (not isHarmful and isImportantAura)
 	or (spellId and Spells[spellId]) then
-		button.Icon:SetDesaturated(false)
-		button.Icon:SetVertexColor(1, 1, 1)
+		SetAuraIconState(button, false, 1, 1, 1)
 
 	elseif (isPlayerAura) then
-		button.Icon:SetDesaturated(false)
-		button.Icon:SetVertexColor(.3, .3, .3)
+		SetAuraIconState(button, false, .3, .3, .3)
 
 	else
-		button.Icon:SetDesaturated(true)
-		button.Icon:SetVertexColor(.6, .6, .6)
+		SetAuraIconState(button, true, .6, .6, .6)
 	end
 
 end
@@ -390,7 +457,7 @@ ns.AuraStyles.PartyPostUpdateButton = function(element, button, unit, data, posi
 		color = Colors.verydarkgray
 	end
 	if (color) then
-		button.Border:SetBackdropBorderColor(color[1], color[2], color[3])
+		SetAuraBorderColor(button, color)
 	end
 
 	local isPlayerAura = SafeBool(data.isPlayerAura)
@@ -424,7 +491,7 @@ ns.AuraStyles.NameplatePostUpdateButton = function(element, button, unit, data, 
 		color = Colors.verydarkgray
 	end
 	if (color) then
-		button.Border:SetBackdropBorderColor(color[1], color[2], color[3])
+		SetAuraBorderColor(button, color)
 	end
 
 end
@@ -446,7 +513,7 @@ ns.AuraStyles.ArenaPostUpdateButton = function(element, button, unit, data, posi
 		color = Colors.verydarkgray
 	end
 	if (color) then
-		button.Border:SetBackdropBorderColor(color[1], color[2], color[3])
+		SetAuraBorderColor(button, color)
 	end
 
 end

@@ -1,4 +1,132 @@
 
+## 2026-04-22 — 5.3.67-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta from the FixLog entries since `5.3.66-JuNNeZ`:
+  - arena enemy frames not appearing after the previous update
+  - WoW 12.0.5 protected/secret tooltip unit identity errors
+  - BugSack Copy Session export crashes when target or error context contains secret values
+  - aura button `script ran too long` pressure during heavy aura churn
+  - texture-backed aura border follow-up to preserve the old border look without using the expensive backdrop creation path
+- Added a new player-facing `5.3.67-JuNNeZ` top entry to [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md).
+- Bumped the retail release version to `5.3.67-JuNNeZ` in [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1).
+- Validation target before commit/tag/push:
+  - `luac -p Components/Misc/BugSack.lua Components/Misc/Tooltips.lua Components/UnitFrames/Auras/AuraStyling.lua Components/UnitFrames/Units/Arena.lua Libs/oUF/elements/auras.lua`
+  - `git diff --check`
+  - `powershell -ExecutionPolicy Bypass -File .\build-release.ps1`
+- Local validation completed:
+  - `luac -p Components/Misc/BugSack.lua Components/Misc/Tooltips.lua Components/UnitFrames/Auras/AuraStyling.lua Components/UnitFrames/Units/Arena.lua Libs/oUF/elements/auras.lua` passed.
+  - `git diff --check` passed.
+  - `powershell -ExecutionPolicy Bypass -File .\build-release.ps1` created `C:\Users\Jonas\OneDrive\Skrivebord\azeriteui_fan_edit\AzeriteUI-5.3.67-JuNNeZ-Retail-22-04-2026.zip`.
+- Runtime `/reload` validation remains required in game for arena visibility, tooltip hover paths, BugSack export, and aura-border visuals.
+
+## 2026-04-22 — WoW 12.0.5 secret tooltip/BugSack/aura backdrop hardening
+
+- **User report:**
+  - `Blizzard_SharedXML/Backdrop.lua:218: script ran too long` while `Components/UnitFrames/Auras/AuraStyling.lua:136` created a unit-frame aura border with `SetBackdrop({ edgeFile = GetMedia("border-aura"), edgeSize = 12 })`.
+  - `Components/Misc/BugSack.lua:129: invalid value (secret) at index 13 in table for 'concat'` while exporting the BugSack current-session context, with the target context line becoming secret.
+  - `Blizzard_SharedXMLGame/Tooltip/TooltipUtil.lua:39` `UnitName(unit)` secret-token errors during `GameTooltip:SetWorldCursor()` / `ResetUnitHealth()`, with `Components/Misc/Tooltips.lua:736` calling `tooltip:GetUnit()` from the status-bar `OnValueChanged` hook.
+- **Source/API check:**
+  - Warcraft Wiki `Patch_12.0.5/API_changes` confirms `UnitName` no longer accepts secret unit tokens and documents the new 12.0.5 unit/API restriction behavior.
+  - WoW API MCP confirms `issecretvalue(value)`, `scrubsecretvalues(...)`, `UnitName(unit)`, `C_Secrets.ShouldUnitIdentityBeSecret(unit)`, `C_UnitAuras.GetAuraApplicationDisplayCount(...)`, and `C_UnitAuras.GetAuraDuration(...)`.
+  - Live Gethe `wow-ui-source` `Blizzard_SharedXML/Backdrop.lua` still routes `SetBackdrop()` through `ApplyBackdrop()` and `SetupTextureCoordinates()`, so creating many BackdropTemplate aura borders can spend time in the reported texture-coordinate loop.
+  - Local `Docs/API Framework.md` reiterates that secret values must not be used in logic, math, table keys, comparisons, or concatenation; widget setters remain the safe handoff path.
+- **Fix applied:**
+  - `Components/UnitFrames/Auras/AuraStyling.lua` now creates aura borders as texture-backed frame pieces with a small `SetBackdropBorderColor` compatibility shim instead of invoking `BackdropTemplateMixin:SetBackdrop()` for every aura button.
+  - All unit-frame aura border color paths in `AuraStyling.lua` now use the cached `SetAuraBorderColor(...)` helper, reducing repeated color writes during aura churn.
+  - `Components/Misc/BugSack.lua` now sanitizes export lines through `issecretvalue` before `table.concat`, avoids target `UnitName` when `C_Secrets.ShouldUnitIdentityBeSecret("target")` says identity is secret, and avoids concatenating secret debug/context values.
+  - `Components/Misc/Tooltips.lua` now wraps `tooltip:GetUnit()` in `pcall`, falls back to safe `mouseover` / focus unit tokens, skips custom unit-name rewriting when unit identity is secret, and no longer calls `tooltip:GetUnit()` directly from the status-bar value hook.
+- **Validation target:**
+  - `luac -p Components/UnitFrames/Auras/AuraStyling.lua Components/Misc/BugSack.lua Components/Misc/Tooltips.lua`
+  - `git diff --check -- Components/UnitFrames/Auras/AuraStyling.lua Components/Misc/BugSack.lua Components/Misc/Tooltips.lua FixLog.md`
+  - In-game: `/buggrabber reset` -> `/reload` -> enter the reported 12.0.5 scenario, hover world units/nameplates, open BugSack Copy Session, and verify no new AzeriteUI errors from `Backdrop.lua`, `BugSack.lua`, or `Tooltips.lua`.
+- **Local validation completed:**
+  - `luac -p Components/UnitFrames/Auras/AuraStyling.lua Components/Misc/BugSack.lua Components/Misc/Tooltips.lua` passed.
+  - `git diff --check -- Components/UnitFrames/Auras/AuraStyling.lua Components/Misc/BugSack.lua Components/Misc/Tooltips.lua FixLog.md` passed.
+  - Runtime `/reload` validation is still required in-game.
+- **Visual follow-up (player/target aura borders):**
+  - User screenshots showed the first texture-backed border shim stretched the full `Assets/border-aura.tga` atlas across each aura, exposing the atlas' vertical slices beside player and target auras.
+  - Confirmed `Assets/border-aura.tga` is a `256x32` atlas intended for Blizzard backdrop edge slicing, not a full-frame border texture.
+  - Replaced the single stretched texture with eight manually anchored border pieces using the same atlas UV regions from Blizzard `BackdropTemplateMixin`, preserving the old edge/corner visual without calling `SetBackdrop()`.
+  - `luac -p Components/UnitFrames/Auras/AuraStyling.lua Components/Misc/BugSack.lua Components/Misc/Tooltips.lua` passed after the visual follow-up.
+  - `git diff --check -- Components/UnitFrames/Auras/AuraStyling.lua Components/Misc/BugSack.lua Components/Misc/Tooltips.lua FixLog.md` passed after the visual follow-up.
+  - Runtime `/reload` validation should confirm player and target aura borders look normal again while the `Backdrop.lua:218` script-time path stays avoided.
+
+## 2026-04-20 — Arena frames invisible after last update
+
+- **User report:** Arena frames stopped showing after the last update; no Lua error is reported.
+- **Investigation start:**
+  - `Components/UnitFrames/Units/Arena.lua` owns the AzeriteUI arena enemy frames, creates `AzeriteArenaEnemyFrames`, and spawns `AzeriteUnitFrameArena1` through `AzeriteUnitFrameArena5`.
+  - The module already has `ArenaFrameMod.OnEvent()` branches for `ARENA_OPPONENT_UPDATE` and `PLAYER_LEAVING_WORLD`, but `OnEnable()` only registers `PLAYER_ENTERING_WORLD` and `ARENA_PREP_OPPONENT_SPECIALIZATIONS`.
+  - WoW API MCP confirms `ARENA_OPPONENT_UPDATE` still fires with payload `unitToken, updateReason`; this is the best local event to re-check arena visibility after actual opponent units appear.
+  - `Core/FixBlizzardBugs.lua` only quarantines Blizzard compact/arena frame names when real arena context is active and does not target the AzeriteUI-prefixed arena header, so the first fix target remains the AzeriteUI arena event/visibility refresh path.
+- **Cross-check against other UI/addons and interface truth:**
+  - AzeriteUI's embedded `Libs/oUF/units.lua` registers both `ARENA_PREP_OPPONENT_SPECIALIZATIONS` and `ARENA_OPPONENT_UPDATE` for `arenaN` unit frames, disables the live unit during prep, then re-enables on the live opponent update.
+  - ShadowedUnitFrames also registers both arena prep and live opponent update events and force-shows prep frames with `state-unitexists` while specs are known.
+  - GW2_UI registers `ARENA_OPPONENT_UPDATE` on each arena frame and immediately replays the prep handler when `GetNumArenaOpponentSpecs()` already has data.
+  - ElvUI uses a secure state-driver macro condition with `[@arena1,exists]` through `[@arena5,exists]` for arena-aware UI hiding, showing that unit-existence macro conditions are a maintained addon pattern.
+  - Gethe/wow-ui-source `SecureStateDriver.lua` still resolves `RegisterAttributeDriver(..., "state-visibility", values)` through `SecureCmdOptionParse()` and directly maps `show`/`hide` results to frame visibility, so a secure `[@arenaN,exists] show; ...; hide` driver is valid FrameXML-backed behavior.
+- **Fix target:** Register the arena update/leave events already handled by the module and refresh the header visibility driver when opponent units appear, while keeping aura enablement local and combat-deferred header changes intact.
+- **Fix applied:**
+  - `Components/UnitFrames/Units/Arena.lua` now registers `ARENA_OPPONENT_UPDATE`, so the existing opponent-unit handler actually runs in arena matches.
+  - The `ARENA_OPPONENT_UPDATE` path now calls `UpdateHeader()` before enabling arena auras, forcing the `AzeriteArenaEnemyFrames` visibility driver to re-evaluate after real opponent units appear. If this fires during combat, the existing `UpdateHeader()` combat guard defers the secure update to `PLAYER_REGEN_ENABLED`.
+  - The module now registers `PLAYER_LEAVING_WORLD`, matching its existing cleanup branch that disables arena auras while zoning.
+  - The arena header now uses a secure `[@arenaN,exists] show; ...; hide` visibility driver while in real arena instances, so the frame can appear when opponent unit tokens start existing even if the earlier constant `IsInInstance()` snapshot was stale. Arena prep remains forced visible while `GetNumArenaOpponentSpecs()` reports prep opponents.
+- **Verification:**
+  - `luac -p 'Components/UnitFrames/Units/Arena.lua'` passed.
+  - `git diff --check -- Components/UnitFrames/Units/Arena.lua FixLog.md` passed.
+  - In-game `/reload` validation is still required: queue arena/skirmish/Solo Shuffle, confirm `AzeriteArenaEnemyFrames` shows when opponents appear, and verify BugSack remains clean.
+
+## 2026-04-20 — TODO intake: arena frames, player crystal class color, Monk Chi cap
+
+- [ ] **Arena frames invisible after last update**
+  - **User report:** "in this last att, arena frames stopped working; there's no lua error, it just not visible"
+  - **Research:**
+    - `Components/UnitFrames/Units/Arena.lua` owns `ArenaFrames`, creates `AzeriteArenaEnemyFrames`, spawns `arena1` through `arena5`, and drives visibility with `RegisterAttributeDriver(..., "state-visibility", "show"/"hide")`.
+    - `GroupHeader.UpdateVisibilityDriver()` hides the header outside arena unless battleground support is enabled, so first runtime check should confirm `IsInInstance()` returns `instanceType == "arena"` during the failing case and that the saved `ArenaFrames.enabled` profile flag is still true.
+    - `ArenaFrameMod.OnEvent()` has an `ARENA_OPPONENT_UPDATE` branch for live opponent units, and WoW API MCP confirms the event payload is `unitToken, updateReason`, but `ArenaFrameMod.OnEnable()` currently registers only `PLAYER_ENTERING_WORLD` and `ARENA_PREP_OPPONENT_SPECIALIZATIONS`. Validate whether missing `ARENA_OPPONENT_UPDATE` registration is why no visible refresh happens when enemies appear.
+    - Recent history touched arena-adjacent state in `Components/ActionBars/Elements/ActionBars.lua` and Blizzard compact arena quarantine paths in `Core/FixBlizzardBugs.lua`, but the no-error/no-visible symptom points first at AzeriteUI's arena frame visibility driver or event registration rather than BugSack-visible Lua faults.
+  - **Likely files:** `Components/UnitFrames/Units/Arena.lua`, `Options/OptionsPages/UnitFrames.lua`, possibly `Core/FixBlizzardBugs.lua` only if Blizzard compact-frame quarantine is suppressing live arena state.
+  - **Validation target:** `/buggrabber reset` -> `/reload` -> queue skirmish/Solo Shuffle/arena -> inspect `AzeriteArenaEnemyFrames` and `AzeriteUnitFrameArena1` with FrameStack -> verify `state-visibility`, module enabled state, `arena1` unit assignment, and BugSack count.
+
+- [ ] **Player power crystal class/profession color option**
+  - **User request:** "can the player's frame energy crystal be set to the color of their profession?"
+  - **Research:**
+    - Interpreting "profession color" as class color, since `Core/Common/Colors.lua` already defines `Colors.class.MONK`, `Colors.class.ROGUE`, etc., and user-facing WoW translations often refer to class color in this wording.
+    - `Options/OptionsPages/UnitFrames.lua` currently exposes `/az -> Unit Frame Settings -> Player -> Crystal/Orb Color Source` with only `Default` and `Enhanced Colors`.
+    - `Components/UnitFrames/Units/Player.lua` defaults `crystalOrbColorMode = "default"` and `ResolvePlayerPowerBaseColor()` currently maps `enhanced`, `new`, or legacy `class` values to token-based power colors, not actual player class colors.
+    - WoW API MCP confirms `UnitClassBase("player")` returns the class filename; the repo already caches this as `ns.PlayerClass`, so a class-color mode can use addon-owned `Colors.class[ns.PlayerClass]` or Blizzard `Colors.blizzclass[ns.PlayerClass]` without reading secret unit data.
+  - **Likely files:** `Components/UnitFrames/Units/Player.lua`, `Options/OptionsPages/UnitFrames.lua`, locale files for the new option label/description if exposed publicly.
+  - **Fix target:** Add a distinct `classColor`/`class` mode that actually resolves to the player's class color, while preserving old saved `class` behavior only if compatibility requires it.
+  - **Validation target:** `/reload` on at least Monk/Rogue/Mage or profile swap if available -> toggle the new color source -> verify Power Crystal, fake fill, spark, and Mana Orb behavior stay correct.
+
+- [ ] **Windwalker Monk Chi still shows 5 points when cap is 6**
+  - **User report:** "the martial monk's energy qi points are still displayed as 5 points even though there are 6 points"
+  - **Research:**
+    - `Libs/oUF/elements/classpower.lua` uses `Enum.PowerType.Chi` for Monk, requires Windwalker spec, and sources max points from `UnitPowerMax(unit, Enum.PowerType.Chi)`. WoW API MCP confirms `UnitPowerMax(unitToken, powerType, unmodified?)` returns the current max power.
+    - `Components/UnitFrames/Units/PlayerClassPower.lua` chooses the `Chi` layout only when `max == 5`; when `max >= 6`, non-Rogue resources fall through to `ComboPoints`, so a 6-Chi Windwalker can lose the Monk-specific layout.
+    - `Layouts/Data/PlayerClassPower.lua` explicitly defines `Chi = { --[[ 5 ]] ... }` with entries `[1]` through `[5]` only, so even if `visiblePointCap` becomes 6 there is no sixth Chi point layout to show.
+    - `Docs/API Framework.md` marks `UnitPower`/`UnitPowerMax` as unit APIs that must be treated as potentially secret in WoW 12; any fix should keep using the existing safe oUF classpower path and avoid extra addon-side math on secret values.
+  - **Likely files:** `Layouts/Data/PlayerClassPower.lua`, `Components/UnitFrames/Units/PlayerClassPower.lua`, possibly `Libs/oUF/elements/classpower.lua` only if the max reader itself fails for Chi.
+  - **Fix target:** Add a Monk-specific 6-Chi layout or extend the existing `Chi` layout and update style selection so `powerType == "CHI"` uses `Chi` for max 5 or 6, with the sixth point hidden unless max is actually 6.
+  - **Validation target:** `/reload` on Windwalker with a 6-Chi build/talent -> generate/spend Chi -> verify six points appear, the sixth point fills/clears correctly, and non-Monk combo point layouts are unchanged.
+
+## 2026-04-18 — Ashran player aura row script-time guard
+
+- **User report:** In the Ashran PvP brawl on WoW `12.0.1.66838`, BugSack reported two AzeriteUI `script ran too long` errors from `Libs/oUF/elements/auras.lua` while updating `AzeriteUnitFramePlayer.AurasButton10` / `AurasButton16`. The same session also included Plater and KeyMaster errors from their own addon code paths; those are tracked as separate addon-side issues and were not patched in AzeriteUI.
+- **Source check:**
+  - `Libs/oUF/elements/auras.lua` owns the full and incremental aura update pass and the reported `Cooldown:Show()` / button mutation lines.
+  - `Components/UnitFrames/Units/Player.lua` wires the player aura row to `ns.AuraStyles.PlayerPostUpdateButton` and `ns.AuraFilters.PlayerAuraFilter`, with `allowCombatUpdates = true`.
+  - `Components/UnitFrames/Auras/AuraStyling.lua` already had cached setter helpers for aura borders/icons, but the player post-update path was still calling the raw widget setters every aura refresh.
+  - WoW API data confirms `C_UnitAuras.GetAuraDuration(...)` returns a `LuaDurationObject`, while `C_UnitAuras.GetAuraApplicationDisplayCount(...)` formats the aura stack display string.
+- **Fix applied:**
+  - Cached stable per-button aura cooldown, icon, count, size, mouse, and shown state in `Libs/oUF/elements/auras.lua`, so unchanged visible aura buttons no longer repeat the most expensive widget/API calls during dense aura churn.
+  - Kept secret-value safety by only building cache keys from non-secret values; unsafe/secret values still go through direct Blizzard widget setters instead of addon comparisons.
+  - Switched player aura styling to the existing cached border/icon setter helpers in `Components/UnitFrames/Auras/AuraStyling.lua`.
+- **Validation target:**
+  - `luac -p Libs/oUF/elements/auras.lua Components/UnitFrames/Auras/AuraStyling.lua`
+  - `git diff --check`
+  - In-game: `/buggrabber reset` -> `/reload` -> enter Ashran or another high-aura PvP setting -> verify the player aura row updates normally and no new AzeriteUI `script ran too long` errors are generated from `Libs/oUF/elements/auras.lua`.
+
 ## 2026-04-18 — 5.3.66-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta:

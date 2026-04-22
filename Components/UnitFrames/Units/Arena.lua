@@ -94,6 +94,17 @@ local IsRuntimeTestMode = function()
 	return (ns.db and ns.db.global and ns.db.global.runtimeUnitTestMode) and true or false
 end
 
+local ArenaUnitExistsVisibilityDriver = "[@arena1,exists] show; [@arena2,exists] show; [@arena3,exists] show; [@arena4,exists] show; [@arena5,exists] show; hide"
+
+local HasArenaPrepOpponents = function()
+	if (not GetNumArenaOpponentSpecs) then
+		return false
+	end
+
+	local numOpponents = GetNumArenaOpponentSpecs()
+	return (type(numOpponents) == "number" and numOpponents > 0)
+end
+
 local ApplyTestUnitDrivers = function(self)
 	if (InCombatLockdown()) then
 		self.needHeaderUpdate = true
@@ -897,6 +908,10 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	local isInInstance, instanceType = IsInInstance()
 	if (IsRuntimeTestMode()) then
 		self.visibility = "show"
+	elseif (isInInstance and instanceType == "arena" and HasArenaPrepOpponents()) then
+		self.visibility = "show"
+	elseif (isInInstance and instanceType == "arena") then
+		self.visibility = ArenaUnitExistsVisibilityDriver
 	elseif (not isInInstance or (instanceType ~= "arena" and not ArenaFrameMod.db.profile.showInBattlegrounds)) then
 		self.visibility = "hide"
 	else
@@ -1202,6 +1217,8 @@ ArenaFrameMod.OnEvent = function(self, event, ...)
 
 	elseif (event == "ARENA_OPPONENT_UPDATE") then
 
+		self:UpdateHeader()
+
 		-- Enable and forceupdate auras when the opponent unit exists.
 		local unit, updateReason = ...
 		for frame in next,Units do
@@ -1253,6 +1270,8 @@ ArenaFrameMod.OnEnable = function(self)
 	ns.MovableModulePrototype.OnEnable(self)
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
+	self:RegisterEvent("PLAYER_LEAVING_WORLD", "OnEvent")
 	self:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS", "OnEvent")
+	self:RegisterEvent("ARENA_OPPONENT_UPDATE", "OnEvent")
 end
 

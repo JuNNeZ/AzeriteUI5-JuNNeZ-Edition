@@ -113,20 +113,49 @@ local SafeNumberValue = function(value)
 	return value
 end
 
+local SafeUnitExists = function(unit)
+	if (not IsSafeUnitToken(unit)) then
+		return false
+	end
+
+	local ok, exists = pcall(UnitExists, unit)
+	if (ok) then
+		return SafeBooleanValue(exists) and true or false
+	end
+
+	return false
+end
+
+local ShouldUnitIdentityBeSecret = function(unit)
+	if (not IsSafeUnitToken(unit)) then
+		return true
+	end
+	if (not C_Secrets) or (type(C_Secrets.ShouldUnitIdentityBeSecret) ~= "function") then
+		return false
+	end
+
+	local ok, isSecret = pcall(C_Secrets.ShouldUnitIdentityBeSecret, unit)
+	if (ok) then
+		return SafeBooleanValue(isSecret) and true or false
+	end
+
+	return true
+end
+
 local SafeGetTooltipUnitToken = function(tooltip)
 	if (not tooltip) or tooltip:IsForbidden() or (not tooltip.GetUnit) then
 		return
 	end
 
-	local mouseover = SafeBooleanValue(UnitExists("mouseover")) and "mouseover" or nil
-	local _, unit = tooltip:GetUnit()
-	if (IsSafeUnitToken(unit) and SafeBooleanValue(UnitExists(unit))) then
+	local mouseover = SafeUnitExists("mouseover") and "mouseover" or nil
+	local ok, _, unit = pcall(tooltip.GetUnit, tooltip)
+	if (ok and IsSafeUnitToken(unit) and SafeUnitExists(unit)) then
 		return unit
 	end
 
 	local focus = GetMouseFocus and GetMouseFocus()
 	local focusUnit = focus and focus.GetAttribute and focus:GetAttribute("unit")
-	if (IsSafeUnitToken(focusUnit) and SafeBooleanValue(UnitExists(focusUnit))) then
+	if (IsSafeUnitToken(focusUnit) and SafeUnitExists(focusUnit)) then
 		return focusUnit
 	end
 
@@ -658,8 +687,12 @@ Tooltips.SetHealthValue = function(self, unit)
 
 	-- It could be a wall or gate that does not count as a unit,
 	-- so we need to check for the existence as well as it's alive status.
-	local unitExists = safeUnit and SafeBooleanValue(UnitExists(safeUnit))
-	local unitIsDead = unitExists and SafeBooleanValue(UnitIsDeadOrGhost(safeUnit))
+	local unitExists = safeUnit and SafeUnitExists(safeUnit)
+	local unitIsDead
+	if (unitExists) then
+		local okDead, dead = pcall(UnitIsDeadOrGhost, safeUnit)
+		unitIsDead = okDead and SafeBooleanValue(dead)
+	end
 	if (unitExists and unitIsDead) then
 		if (bar:IsShown()) then
 			bar:Hide()
@@ -669,7 +702,10 @@ Tooltips.SetHealthValue = function(self, unit)
 		local msg, min, max
 
 		if (safeUnit and unitExists) then
-			local min, max = UnitHealth(safeUnit), UnitHealthMax(safeUnit)
+			local okHealth, min = pcall(UnitHealth, safeUnit)
+			local okMaxHealth, max = pcall(UnitHealthMax, safeUnit)
+			if (not okHealth) then min = nil end
+			if (not okMaxHealth) then max = nil end
 			-- Check if values are secret before comparison
 			if (IsSecretValue(min) or IsSecretValue(max)) then
 				-- Can't display secret values
@@ -683,9 +719,16 @@ Tooltips.SetHealthValue = function(self, unit)
 				end
 			end
 		else
-			local min,_,max = bar:GetValue(), bar:GetMinMaxValues()
+			local okValue, min = pcall(bar.GetValue, bar)
+			local okRange, _, max = pcall(bar.GetMinMaxValues, bar)
+			if (not okValue) or (not okRange) then
+				return
+			end
 			-- Check if values are secret
 			if (IsSecretValue(min) or IsSecretValue(max)) then
+				return
+			end
+			if (type(min) ~= "number" or type(max) ~= "number" or max <= 0) then
 				return
 			end
 			if (max > 100) then
@@ -718,7 +761,13 @@ Tooltips.SetStatusBarColor = function(self, unit)
 	if (self:IsDisabled()) then return end
 	local bar = GetTooltipStatusBar()
 	if (not bar) then return end
-	local color = IsSafeUnitToken(unit) and GetUnitColor(unit)
+	local color
+	if (IsSafeUnitToken(unit)) then
+		local okColor, unitColor = pcall(GetUnitColor, unit)
+		if (okColor) then
+			color = unitColor
+		end
+	end
 	if (color) then
 		pcall(bar.SetStatusBarColor, bar, color[1], color[2], color[3])
 	else
@@ -730,23 +779,8 @@ end
 Tooltips.OnValueChanged = function(self)
 	if (self:IsDisabled()) then return end
 	if (not GameTooltip or not GameTooltip.StatusBar or not GameTooltip.StatusBar.GetParent) then return end
-	local unit
 	local parent = GameTooltip.StatusBar:GetParent()
-	if (parent and parent.GetUnit) then
-		unit = select(2, parent:GetUnit())
-	end
-
-	if (not unit) then
-		-- Removed in 11.0.0.
-		local GMF = GetMouseFocus and GetMouseFocus()
-		if (GMF and GMF.GetAttribute and GMF:GetAttribute("unit")) then
-			unit = GMF:GetAttribute("unit")
-		end
-	end
-
-	if (not IsSafeUnitToken(unit)) then
-		unit = nil
-	end
+	local unit = SafeGetTooltipUnitToken(parent)
 
 	--if (not unit) then
 	--	if (GameTooltip.StatusBar:IsShown()) then
@@ -825,27 +859,21 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 	if (self:IsDisabled()) then return end
 	if (not tooltip) or (tooltip:IsForbidden()) then return end
 
-	local unit
-	if (tooltip.GetUnit) then
-		_, unit = tooltip:GetUnit()
-	end
-	if not unit then
-		local GMF = GetMouseFocus and GetMouseFocus()
-		local focusUnit = GMF and GMF.GetAttribute and GMF:GetAttribute("unit")
-		if focusUnit then unit = focusUnit end
-		if (not IsSafeUnitToken(unit)) then
-			return
-		end
-		local unitExists = SafeBooleanValue(UnitExists(unit))
-		if (not unitExists) then
-			return
-		end
+	local unit = SafeGetTooltipUnitToken(tooltip)
+	if (not unit) or ShouldUnitIdentityBeSecret(unit) then
+		return
 	end
 
-	local color = GetUnitColor(unit)
+	local okColor, color = pcall(GetUnitColor, unit)
+	if (not okColor) then
+		color = nil
+	end
 	if (color) then
 
-		local unitName, unitRealm = UnitName(unit)
+		local okName, unitName, unitRealm = pcall(UnitName, unit)
+		if (not okName) then
+			return
+		end
 		if (IsSecretValue(unitName)) then unitName = nil end
 		if (IsSecretValue(unitRealm)) then unitRealm = nil end
 		unitName = unitName or _G.UNKNOWN
@@ -853,11 +881,12 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 		local gray = Colors.quest.gray.colorCode
 		local levelText
 
-		local isPlayer = UnitIsPlayer(unit)
-		isPlayer = SafeBooleanValue(isPlayer)
+		local okPlayer, isPlayer = pcall(UnitIsPlayer, unit)
+		isPlayer = okPlayer and SafeBooleanValue(isPlayer)
 		if (isPlayer) then
 			if (unitRealm and unitRealm ~= "") then
-				local relationship = UnitRealmRelationship(unit)
+				local okRelationship, relationship = pcall(UnitRealmRelationship, unit)
+				if (not okRelationship) then relationship = nil end
 				if (IsSecretValue(relationship)) then
 					relationship = nil
 				end
@@ -868,8 +897,8 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 					displayName = displayName ..gray..  _G.INTERACTIVE_SERVER_LABEL .."|r"
 				end
 			end
-			local isAFK = UnitIsAFK(unit)
-			isAFK = SafeBooleanValue(isAFK)
+			local okAFK, isAFK = pcall(UnitIsAFK, unit)
+			isAFK = okAFK and SafeBooleanValue(isAFK)
 			if (isAFK) then
 				displayName = displayName ..gray.. " <" .. _G.AFK ..">|r"
 			end
@@ -935,7 +964,7 @@ local GetTooltipLinePrefix = function(tooltip)
 end
 
 TooltipHasLineText = function(tooltip, text)
-	if (not tooltip) or tooltip:IsForbidden() or (not text) then
+	if (not tooltip) or tooltip:IsForbidden() or IsSecretValue(text) or (not text) then
 		return false
 	end
 
@@ -947,7 +976,9 @@ TooltipHasLineText = function(tooltip, text)
 	for i = 1, (tooltip:NumLines() or 0) do
 		local leftLine = _G[prefix .. "TextLeft" .. i]
 		local rightLine = _G[prefix .. "TextRight" .. i]
-		if ((leftLine and leftLine.GetText and leftLine:GetText() == text) or (rightLine and rightLine.GetText and rightLine:GetText() == text)) then
+		local leftText = leftLine and leftLine.GetText and leftLine:GetText()
+		local rightText = rightLine and rightLine.GetText and rightLine:GetText()
+		if ((not IsSecretValue(leftText) and leftText == text) or (not IsSecretValue(rightText) and rightText == text)) then
 			return true
 		end
 	end

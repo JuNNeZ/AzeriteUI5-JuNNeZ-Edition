@@ -5,6 +5,35 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.67-JuNNeZ (2026-04-22) — WoW 12.0.5 Stability + Arena Frames
+
+### Overall
+
+- This update focuses on things that could break silently or make troubleshooting harder in WoW 12.0.5. Arena enemy frames should show again when opponents appear, tooltips should stop tripping over protected unit information, BugSack exports should copy cleanly even when the current target is protected by Blizzard, and aura buttons should behave better in busy fights without losing their normal border look.
+
+### Highlights
+
+- Fixed AzeriteUI arena enemy frames not appearing reliably after the last update.
+- Fixed BugSack Copy Session exports failing when Blizzard marks the current target or captured error data as protected.
+- Fixed tooltip unit handling so world-cursor and unit tooltips avoid protected unit-name reads in WoW 12.0.5.
+- Reduced player aura update load in high-aura PvP situations, helping prevent `script ran too long` errors during heavy buff/debuff churn.
+- Restored normal-looking player, target, party, arena, and nameplate aura borders while avoiding the slower Blizzard backdrop path that could stall during aura creation.
+
+### Access
+
+- No new settings required. Reload UI after updating.
+- Arena frames use the existing AzeriteUI arena frame settings.
+- BugSack users can keep using the Copy Session / Copy All buttons as before.
+
+### Internal
+
+- `Components/UnitFrames/Units/Arena.lua`: registers live arena opponent updates and uses secure arena-unit visibility checks while inside arena instances.
+- `Components/Misc/BugSack.lua`: sanitizes secret values before export text is concatenated and avoids protected target identity reads.
+- `Components/Misc/Tooltips.lua`: adds safer tooltip-unit discovery and skips custom unit-name rewriting when Blizzard marks identity as secret.
+- `Libs/oUF/elements/auras.lua`: caches stable aura button state and avoids repeated unchanged cooldown, icon, count, mouse, and visibility writes.
+- `Components/UnitFrames/Auras/AuraStyling.lua`: replaces per-aura `SetBackdrop()` border creation with texture-backed border pieces and keeps cached border/icon styling paths.
+
+
 ## 5.3.66-JuNNeZ (2026-04-18) — Raid Panel Sync + Player Debuff View
 
 ### Overall

@@ -31,9 +31,12 @@ local BugSackClipboard = ns:NewModule("BugSackClipboard", "LibMoreEvents-1.0", "
 
 local ipairs = ipairs
 local math_max = math.max
+local pcall = pcall
 local string_format = string.format
 local string_rep = string.rep
 local table_concat = table.concat
+local tostring = tostring
+local type = type
 
 local function GetSessionCopyLabel()
 	local copyText = L["Copy"] or COPY or "Copy"
@@ -48,6 +51,84 @@ local function StripColorMarkup(text)
 	text = text:gsub("|r", "")
 	text = text:gsub("||", "|")
 	return text
+end
+
+local function IsSecretValue(value)
+	return (type(issecretvalue) == "function") and issecretvalue(value)
+end
+
+local function SafeText(value, fallback)
+	if (IsSecretValue(value) or value == nil) then
+		return fallback or "?"
+	end
+
+	local text = tostring(value)
+	if (IsSecretValue(text)) then
+		return fallback or "?"
+	end
+
+	return text
+end
+
+local function SafeConcat(lines, separator)
+	for index = 1, #lines do
+		lines[index] = SafeText(lines[index], "")
+	end
+	return table_concat(lines, separator)
+end
+
+local function AppendErrorField(lines, err, key, label)
+	local value = err[key]
+	if (IsSecretValue(value)) then
+		lines[#lines + 1] = "    " .. label .. ": <secret>"
+	elseif (value ~= nil) then
+		lines[#lines + 1] = "    " .. label .. ": " .. SafeText(value, "?")
+	end
+end
+
+local function SafeUnitExists(unit)
+	local ok, exists = pcall(UnitExists, unit)
+	if (not ok or IsSecretValue(exists)) then
+		return false
+	end
+	return exists and true or false
+end
+
+local function ShouldUnitIdentityBeSecret(unit)
+	if (not C_Secrets or type(C_Secrets.ShouldUnitIdentityBeSecret) ~= "function") then
+		return false
+	end
+
+	local ok, isSecret = pcall(C_Secrets.ShouldUnitIdentityBeSecret, unit)
+	if (not ok or IsSecretValue(isSecret)) then
+		return true
+	end
+
+	return isSecret and true or false
+end
+
+local function GetSafeTargetContext()
+	if (not SafeUnitExists("target")) then
+		return "None"
+	end
+
+	if (ShouldUnitIdentityBeSecret("target")) then
+		return "Secret target"
+	end
+
+	local okName, unitName = pcall(UnitName, "target")
+	local okLevel, unitLevel = pcall(UnitLevel, "target")
+	local okClass, unitClass = pcall(UnitClass, "target")
+	if (not okName) then unitName = nil end
+	if (not okLevel) then unitLevel = nil end
+	if (not okClass) then unitClass = nil end
+
+	return string_format(
+		"%s, Level %s %s",
+		SafeText(unitName, "?"),
+		SafeText(unitLevel, "?"),
+		SafeText(unitClass, "?")
+	)
 end
 
 local function GetSessionSnapshot(sessionId, label)
@@ -75,23 +156,23 @@ local function GetSessionSnapshot(sessionId, label)
 		errorLines[#errorLines + 1] = string_rep("-", 72)
 		errorLines[#errorLines + 1] = string_format("Error %d of %d", index, total)
 		if type(err) == "table" then
-			if err.session then errorLines[#errorLines + 1] = "    Session: "..tostring(err.session) end
-			if err.time then errorLines[#errorLines + 1] = "    Time: "..tostring(err.time) end
-			if err.source then errorLines[#errorLines + 1] = "    Source: "..tostring(err.source) end
-			if err.index then errorLines[#errorLines + 1] = "    Index: "..tostring(err.index) end
+			AppendErrorField(errorLines, err, "session", "Session")
+			AppendErrorField(errorLines, err, "time", "Time")
+			AppendErrorField(errorLines, err, "source", "Source")
+			AppendErrorField(errorLines, err, "index", "Index")
 		end
 		local ok, formatted = pcall(bugSack.FormatError, bugSack, err)
-		if ok and type(formatted) == "string" and formatted ~= "" then
+		if ok and not IsSecretValue(formatted) and type(formatted) == "string" and formatted ~= "" then
 			errorLines[#errorLines + 1] = StripColorMarkup(formatted)
 		else
 			if type(err) == "table" then
 				local t = {}
 				for k,v in pairs(err) do
-					t[#t+1] = tostring(k).."="..tostring(v)
+					t[#t+1] = SafeText(k, "<secret-key>").."="..SafeText(v, "<secret>")
 				end
 				errorLines[#errorLines + 1] = "    [Unformatted error table] "..table_concat(t, ", ")
 			else
-				errorLines[#errorLines + 1] = "    [Unformatted error] "..tostring(err)
+				errorLines[#errorLines + 1] = "    [Unformatted error] "..SafeText(err, "<secret>")
 			end
 		end
 	end
@@ -110,7 +191,7 @@ local function GetSessionSnapshot(sessionId, label)
 		"  • Zone: " .. string_format("%s / %s", GetRealZoneText() or "?", GetSubZoneText() or "?"),
 		"  • Instance: " .. (function() local ok, result = pcall(function() local inInstance, instType = IsInInstance(); if inInstance then local name, _, diff, _, _, _, id = GetInstanceInfo(); return string_format("%s (%s, %s, ID: %s)", name or "?", instType or "?", tostring(diff or "?"), tostring(id or "?")); else return "None"; end end); return ok and result or "?"; end)(),
 		"  • Group: " .. string_format("%s, Raid: %s, Size: %s", IsInGroup() and "Yes" or "No", IsInRaid() and "Yes" or "No", tostring(GetNumGroupMembers())),
-		"  • Target: " .. (function() local ok, result = pcall(function() if not UnitExists("target") then return "None"; end; return string_format("%s, Level %s %s", tostring(UnitName("target") or "?"), tostring(UnitLevel("target") or "?"), tostring(UnitClass("target") or "?")); end); return ok and result or "?"; end)(),
+		"  • Target: " .. GetSafeTargetContext(),
 		"  • Combat: " .. string_format("%s, Resting: %s, Dead: %s", UnitAffectingCombat("player") and "Yes" or "No", IsResting() and "Yes" or "No", UnitIsDeadOrGhost("player") and "Yes" or "No"),
 		"  • UI: " .. (function() local ok, result = pcall(function() return string_format("Scale %.2f, Locale %s, Resolution %s", (tonumber(GetCVar("uiScale")) or 1), GetLocale(), tostring(GetScreenWidth()) .. "x" .. tostring(GetScreenHeight())); end); return ok and result or "?"; end)(),
 		"\nAddOns:",
@@ -118,15 +199,15 @@ local function GetSessionSnapshot(sessionId, label)
 		"\nAzeriteUI Debug:",
 		(function() local t = {}; if ns and ns.API then for k,v in pairs(ns.API) do if tostring(k):find("DEBUG") and v then t[#t+1]=k; end end end return #t>0 and ("  • "..table_concat(t, ", ")) or "  • None enabled"; end)(),
 		"\nLast Spell Cast / Combat Log:",
-		"  • "..((ns and ns.__AzeriteUI_LastSpellCast) and ("Last Spell: "..ns.__AzeriteUI_LastSpellCast) or "Last Spell: Unknown"),
-		"  • "..((ns and ns.__AzeriteUI_LastCombatLog) and ("Combat Log: "..ns.__AzeriteUI_LastCombatLog) or "Combat Log: Unknown"),
+		"  • Last Spell: "..SafeText(ns and ns.__AzeriteUI_LastSpellCast, "Unknown"),
+		"  • Combat Log: "..SafeText(ns and ns.__AzeriteUI_LastCombatLog, "Unknown"),
 		"\nLast UI Interaction:",
-		"  • "..((ns and ns.__AzeriteUI_LastUIInteraction) and ns.__AzeriteUI_LastUIInteraction or "Unknown"),
+		"  • "..SafeText(ns and ns.__AzeriteUI_LastUIInteraction, "Unknown"),
 		string_rep("=", 80),
 	}
 
 	   -- Discord-friendly: wrap in triple backticks with 'lua' for syntax highlighting
-	   local export = '```lua\n' .. table_concat(errorLines, "\n") .. "\n" .. table_concat(contextLines, "\n") .. '\n```'
+	   local export = '```lua\n' .. SafeConcat(errorLines, "\n") .. "\n" .. SafeConcat(contextLines, "\n") .. '\n```'
 	   return export, total, sessionId
 end
 
