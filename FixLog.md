@@ -1,4 +1,33 @@
 
+## 2026-04-25 — Party unit right-click menu registration follow-up
+
+- **[USER REPORT] Right-clicking a friend in the party/group frame can do nothing:**
+  - Expected behavior is that AzeriteUI party unit buttons should open the normal unit popup menu on right-click.
+  - `Libs/oUF/ouf.lua` already assigned secure group-header children `*type1 = "target"` and `*type2 = "togglemenu"`, so the intended right-click action was present.
+  - Unlike standalone unit frames, the secure group-header child setup did not explicitly register the buttons for `AnyUp` clicks in the same path where `togglemenu` is assigned.
+- **Fix applied:**
+  - Added `frame:RegisterForClicks("AnyUp")` to the secure group-header initial configuration path in `Libs/oUF/ouf.lua`.
+  - This keeps left-click targeting and right-click unit menus aligned for party/raid-style group children without touching Party frame layout, aura filtering, or Blizzard-frame quarantine code.
+- **Validation target:**
+  - `luac -p Libs/oUF/ouf.lua`
+  - In-game: `/reload` -> join a party -> right-click a party member portrait/health area -> verify the normal unit menu opens. Also verify left-click targeting still works and clicking party aura icons still shows aura tooltips as before.
+- **Local validation completed:**
+  - `luac -p Libs/oUF/ouf.lua` passed.
+  - `git diff --check -- Libs/oUF/ouf.lua FixLog.md` passed with only Git's existing LF-to-CRLF working-copy warning for `Libs/oUF/ouf.lua`.
+  - Runtime `/reload` validation is still required in game.
+
+## 2026-04-25 — 5.3.69-JuNNeZ release prep
+
+- Added a new player-facing `5.3.69-JuNNeZ` top entry to [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md) for the party right-click menu safety fix.
+- Bumped the retail release version to `5.3.69-JuNNeZ` in [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1).
+- Validation target before push:
+  - `luac -p Libs/oUF/ouf.lua`
+  - `git diff --check`
+- Local validation completed:
+  - `luac -p Libs/oUF/ouf.lua` passed.
+  - `git diff --check` passed with only Git's existing LF-to-CRLF working-copy warnings for touched files.
+- Runtime `/reload` validation remains required in game for party member right-click unit menus.
+
 ## 2026-04-25 — 5.3.68-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta from the FixLog entries since `5.3.67-JuNNeZ`:

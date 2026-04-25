@@ -5,6 +5,26 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.69-JuNNeZ (2026-04-25) - Party Right-Click Menu Safety
+
+### Overall
+
+- This update tightens party-frame click handling so right-clicking party members keeps opening the normal unit menu consistently.
+
+### Highlights
+
+- Added an explicit click registration safety path for party and raid-style group unit buttons.
+- This preserves the existing left-click targeting and right-click unit-menu behavior.
+
+### Access
+
+- No new setting is required. Reload UI after updating.
+
+### Internal
+
+- `Libs/oUF/ouf.lua`: explicitly registers secure group-header unit buttons for mouse-up clicks where the right-click unit menu action is assigned.
+
+
 ## 5.3.68-JuNNeZ (2026-04-25) - Action Bar Safety + Nameplate Color Options
 
 ### Overall

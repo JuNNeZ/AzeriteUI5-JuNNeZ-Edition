@@ -598,6 +598,7 @@ do
 
 				frame:SetAttribute('*type1', 'target')
 				frame:SetAttribute('*type2', 'togglemenu')
+				frame:RegisterForClicks('AnyUp')
 				frame:SetAttribute('oUF-guessUnit', unit)
 			end
 
