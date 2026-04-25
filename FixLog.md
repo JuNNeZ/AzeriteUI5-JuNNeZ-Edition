@@ -31,13 +31,14 @@
   - Added the preset selector under `/az -> Nameplates -> Colors`.
   - Added an `AzeriteUI deep yellow` preset that keeps the low-threat/non-target combat health yellow darker than the nameplate castbar ready-interrupt yellow while leaving the remaining classic threat colors intact.
   - Added explanatory text below the dropdown clarifying that enemy health threat colors and castbar interrupt colors are separate.
+  - Added localized strings for the new threat-color dropdown, presets, and explanatory text across all bundled locale files.
 - **Validation target:**
-  - `luac -p Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua`
-  - `git diff --check -- Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua FixLog.md`
+  - `luac -p Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/*.lua`
+  - `git diff --check -- Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale FixLog.md`
   - In-game: `/reload` -> `/az -> Nameplates -> Colors -> Enemy Threat Colors` -> switch each preset near hostile mobs/nameplates and verify threat-state health colors update without colliding with castbar interrupt colors.
 - **Local validation completed:**
-  - `luac -p Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua` passed.
-  - `git diff --check -- Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua FixLog.md` passed.
+  - `luac -p Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/*.lua` passed.
+  - `git diff --check -- Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale FixLog.md` passed.
   - Runtime `/reload` validation is still required in game.
 
 ## 2026-04-24 — Dragonriding follow-up: block accidental clicks on hidden bars 2+
