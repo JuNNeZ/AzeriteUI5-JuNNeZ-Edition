@@ -1,4 +1,92 @@
 
+## 2026-04-25 — 5.3.68-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta from the FixLog entries since `5.3.67-JuNNeZ`:
+  - action, pet, and stance button lock state now uses both the legacy and lowercase secure attribute names so drag-lock behavior stays consistent with the embedded action-button library
+  - dragonriding visual hide/show for bars 2+ now refreshes through a dedicated visual helper and responds to action-page changes
+  - visually hidden dragonriding bars 2+ now get a local mouse blocker so invisible secondary bars cannot catch stray clicks while mounted
+  - enemy nameplates now have a user-facing threat color preset selector, including color-blind friendly palettes and a darker AzeriteUI yellow option
+- Added a new player-facing `5.3.68-JuNNeZ` top entry to [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md).
+- Bumped the retail release version to `5.3.68-JuNNeZ` in [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1).
+- Validation target before commit/tag/push:
+  - `luac -p Components/ActionBars/Elements/ActionBars.lua Components/ActionBars/Elements/PetBar.lua Components/ActionBars/Elements/StanceBar.lua Components/ActionBars/Prototypes/PetButton.lua Components/UnitFrames/Units/NamePlates.lua Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua`
+  - `git diff --check`
+  - `powershell -ExecutionPolicy Bypass -File .\build-release.ps1`
+- Local validation completed:
+  - `luac -p Components/ActionBars/Elements/ActionBars.lua Components/ActionBars/Elements/PetBar.lua Components/ActionBars/Elements/StanceBar.lua Components/ActionBars/Prototypes/PetButton.lua Components/UnitFrames/Units/NamePlates.lua Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua` passed.
+  - `git diff --check` passed.
+  - `powershell -ExecutionPolicy Bypass -File .\build-release.ps1` created `C:\Users\Jonas\OneDrive\Skrivebord\azeriteui_fan_edit\AzeriteUI-5.3.68-JuNNeZ-Retail-25-04-2026.zip`.
+- Runtime `/reload` validation remains required in game for drag-lock behavior, dragonriding bars 2+ click blocking/recovery, and `/az -> Nameplates -> Colors -> Enemy Threat Colors`.
+
+## 2026-04-25 — Nameplate threat color-blind preset options
+
+- **User request:** Add three color-blind friendly presets for AzeriteUI enemy nameplate threat colors so threat-state yellow does not visually blend with enemy castbar interrupt yellow.
+- **Research:**
+  - `Components/UnitFrames/Units/NamePlates.lua` colors hostile NPC health by `UnitThreatSituation("player", unit)` before falling back to class/reaction coloring.
+  - `Core/Common/Colors.lua` maps the stock threat states through reaction colors, including yellow/orange reaction values.
+  - `Options/OptionsPages/Nameplates.lua` already owns the `/az -> Nameplates` settings page and documents the separate enemy castbar interrupt yellow/red/gray legend.
+- **Fix applied:**
+  - Added a `threatColorPreset` nameplate profile option with `AzeriteUI Classic` plus three color-blind friendly presets: `Blue / Orange`, `Teal / Purple`, and `High Contrast`.
+  - Enemy NPC threat coloring now resolves through the selected preset while leaving tapped, class, reaction, and non-threat health coloring unchanged.
+  - Added the preset selector under `/az -> Nameplates -> Colors`.
+  - Added an `AzeriteUI deep yellow` preset that keeps the low-threat/non-target combat health yellow darker than the nameplate castbar ready-interrupt yellow while leaving the remaining classic threat colors intact.
+  - Added explanatory text below the dropdown clarifying that enemy health threat colors and castbar interrupt colors are separate.
+- **Validation target:**
+  - `luac -p Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua`
+  - `git diff --check -- Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua FixLog.md`
+  - In-game: `/reload` -> `/az -> Nameplates -> Colors -> Enemy Threat Colors` -> switch each preset near hostile mobs/nameplates and verify threat-state health colors update without colliding with castbar interrupt colors.
+- **Local validation completed:**
+  - `luac -p Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua` passed.
+  - `git diff --check -- Components/UnitFrames/Units/NamePlates.lua Options/OptionsPages/Nameplates.lua Locale/enUS.lua FixLog.md` passed.
+  - Runtime `/reload` validation is still required in game.
+
+## 2026-04-24 — Dragonriding follow-up: block accidental clicks on hidden bars 2+
+
+- **User request:** While on a dragonflying/dragonriding mount, bars 2+ should not be accidentally clickable while visually hidden.
+- **Scope choice:**
+  - Keep the existing hold-to-cast command-binding route on bar 1 unchanged.
+  - Keep the current visual-only dragon hide approach for bars 2+ and add click blocking locally on top of it.
+- **Research:**
+  - `Components/ActionBars/Elements/ActionBars.lua` currently hides bars 2+ for dragonriding by setting bar alpha to `0` in `UpdateDragonVisualState()`.
+  - Alpha-only hiding leaves the frames alive, so invisible secondary bars can still be interacted with if the mouse lands on them.
+  - A non-secure local blocker frame is a safer fit here than changing secure button bindings or hold-to-cast routing.
+- **Fix applied:**
+  - `Components/ActionBars/Elements/ActionBars.lua` now creates an invisible mouse blocker frame on each secondary action bar.
+  - The blocker is shown only when the bar is in the dragonriding visual-hide state, preventing accidental clicks on bars 2+ while mounted.
+  - The blocker is hidden again as soon as the bar is restored, including the in-combat non-dragon rescue path.
+- **Validation target:**
+  - `luac -p Components/ActionBars/Elements/ActionBars.lua`
+  - `git diff --check -- FixLog.md Components/ActionBars/Elements/ActionBars.lua`
+  - In-game: `/reload` -> dragon mount -> mouse over bars 2+ and confirm clicks do nothing while mounted -> dismount and confirm bars 2+ become clickable again -> verify bar 1 hold-to-cast still works.
+- **Local validation completed:**
+  - `luac -p Components/ActionBars/Elements/ActionBars.lua` passed.
+  - `git diff --check -- FixLog.md Components/ActionBars/Elements/ActionBars.lua` passed.
+  - Runtime `/reload` validation is still required in game.
+
+## 2026-04-24 — Action bar safety follow-up: secure drag-lock normalization and visual-only dragon refresh
+
+- **User request:** Apply the safe action-bar hardening ideas that do not risk the existing hold-to-cast fix.
+- **Scope choice:**
+  - Keep the command-binding / click-routing hold-to-cast logic in `Components/ActionBars/Prototypes/ActionBar.lua` unchanged for this pass.
+  - Limit code changes to low-risk action-bar safety issues already visible in the local code.
+- **Research / comparison:**
+  - AzeriteUI custom action buttons were writing the secure drag-lock attribute as `buttonLock` in `Components/ActionBars/Elements/ActionBars.lua`, `Components/ActionBars/Elements/PetBar.lua`, `Components/ActionBars/Elements/StanceBar.lua`, and `Components/ActionBars/Prototypes/PetButton.lua`.
+  - The embedded `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` secure snippets only checked lowercase `buttonlock` in drag/pickup paths, so the custom buttons and LAB were not using the same secure attribute name.
+  - Current ElvUI action-bar code keeps drag/pickup and secure button state narrower and separates more visual state from binding state; this reinforced keeping the hold-to-cast route intact while reducing avoidable local mismatch.
+- **Fix applied:**
+  - `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` now accepts either `buttonlock` or legacy `buttonLock` in its secure drag/pickup checks, preventing mixed-case attribute mismatches from leaking into odd drag/click behavior.
+  - AzeriteUI custom action, pet, and stance buttons now set both `buttonlock` and `buttonLock` for backward-compatible secure lock state.
+  - `Components/ActionBars/Elements/ActionBars.lua` now routes the dragon visual hide/show work through a dedicated `RefreshDragonVisualState()` helper and also refreshes that visual state on `ACTIONBAR_PAGE_CHANGED`, so the bars 2+ visual recovery path is not only coupled to binding rebuild calls.
+  - The existing hold-to-cast command-binding logic and dynamic page routing remain unchanged.
+- **Validation target:**
+  - `luac -p Components/ActionBars/Elements/ActionBars.lua Components/ActionBars/Elements/PetBar.lua Components/ActionBars/Elements/StanceBar.lua Components/ActionBars/Prototypes/PetButton.lua Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+  - `git diff --check -- FixLog.md Components/ActionBars/Elements/ActionBars.lua Components/ActionBars/Elements/PetBar.lua Components/ActionBars/Elements/StanceBar.lua Components/ActionBars/Prototypes/PetButton.lua Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+  - In-game: `/reload` -> test normal main-bar casts, hold-to-cast, dragonriding mount/dismount, pet bar drag/pickup, and stance swaps.
+- **Local validation completed:**
+  - `luac -p Components/ActionBars/Elements/ActionBars.lua Components/ActionBars/Elements/PetBar.lua Components/ActionBars/Elements/StanceBar.lua Components/ActionBars/Prototypes/PetButton.lua Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` passed.
+  - `git diff --check -- FixLog.md Components/ActionBars/Elements/ActionBars.lua Components/ActionBars/Elements/PetBar.lua Components/ActionBars/Elements/StanceBar.lua Components/ActionBars/Prototypes/PetButton.lua Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua` passed.
+  - Runtime `/reload` validation is still required in game.
+
 ## 2026-04-22 — 5.3.67-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta from the FixLog entries since `5.3.66-JuNNeZ`:

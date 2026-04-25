@@ -366,9 +366,45 @@ local GenerateOptions = function()
 					}
 				}
 			},
+			colors = {
+				name = L["Colors"],
+				order = 4,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					threatColorPreset = {
+						name = L["Enemy Threat Colors"],
+						desc = L["Choose a color-blind friendly preset for enemy nameplate threat colors."],
+						order = 1,
+						type = "select", width = "full",
+						values = {
+							azerite = L["AzeriteUI Classic"],
+							deepYellow = L["AzeriteUI deep yellow"],
+							blueOrange = L["Blue / Orange"],
+							tealPurple = L["Teal / Purple"],
+							highContrast = L["High Contrast"]
+						},
+						set = setter,
+						get = function(info)
+							local value = getter(info)
+							if (value == "deepYellow" or value == "blueOrange" or value == "tealPurple" or value == "highContrast") then
+								return value
+							end
+							return "azerite"
+						end
+					},
+					threatColorDescription = {
+						name = L["Enemy health threat colors are separate from castbar interrupt colors. AzeriteUI deep yellow keeps the non-target combat health yellow darker than the castbar ready-interrupt yellow."],
+						order = 2,
+						type = "description",
+						width = "full"
+					}
+				}
+			},
 			advanced = {
 				name = L["Advanced"],
-				order = 4,
+				order = 5,
 				type = "group",
 				inline = true,
 				hidden = function(info) return isdisabled(info) or not ns.IsRetail end,

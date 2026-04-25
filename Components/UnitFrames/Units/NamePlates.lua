@@ -51,6 +51,7 @@ local defaults = { profile = ns:Merge({
 	showAuras = true,
 	showAurasOnTargetOnly = true,
 	showNameAlways = false,
+	threatColorPreset = "azerite",
 	healthValuePlacement = "below",
 	hideFriendlyPlayerHealthBar = false,
 	friendlyNameOnlyFontScale = 2.5,
@@ -81,6 +82,44 @@ local defaults = { profile = ns:Merge({
 	healthLabCastReverseFill = false,
 	healthLabCastSetFlippedHorizontally = false
 }, ns.MovableModulePrototype.defaults) }
+
+local threatColorPresets = {
+	deepYellow = {
+		[0] = { 150/255, 108/255, 12/255 }
+	},
+	blueOrange = {
+		[0] = { 86/255, 180/255, 233/255 },
+		[1] = { 0/255, 114/255, 178/255 },
+		[2] = { 230/255, 159/255, 0/255 },
+		[3] = { 213/255, 94/255, 0/255 }
+	},
+	tealPurple = {
+		[0] = { 0/255, 158/255, 115/255 },
+		[1] = { 86/255, 180/255, 233/255 },
+		[2] = { 204/255, 121/255, 167/255 },
+		[3] = { 213/255, 94/255, 0/255 }
+	},
+	highContrast = {
+		[0] = { 148/255, 148/255, 148/255 },
+		[1] = { 0/255, 114/255, 178/255 },
+		[2] = { 204/255, 121/255, 167/255 },
+		[3] = { 245/255, 245/255, 245/255 }
+	}
+}
+
+local GetThreatColor = function(self, status)
+	if (type(issecretvalue) == "function" and issecretvalue(status)) then
+		return
+	end
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local preset = profile and profile.threatColorPreset
+	local palette = preset and threatColorPresets[preset]
+	if (palette and palette[status]) then
+		return palette[status]
+	end
+	return self.colors and self.colors.threat and self.colors.threat[status]
+end
+
 local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
 local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
 local FRIENDLY_NAME_ONLY_SCALE_MULTIPLIER = 2
@@ -1131,7 +1170,7 @@ local Health_UpdateColor = function(self, event, unit)
 	elseif (element.colorTapping and not UnitPlayerControlled(unit) and UnitIsTapDenied(unit)) then
 		color = self.colors.tapped
 	elseif (element.colorThreat and not UnitPlayerControlled(unit) and UnitThreatSituation("player", unit)) then
-		color =  self.colors.threat[UnitThreatSituation("player", unit)]
+		color = GetThreatColor(self, UnitThreatSituation("player", unit))
 	elseif ((element.colorClass and UnitIsPlayer(unit)
 		or (element.colorClassNPC and not UnitIsPlayer(unit))
 		or (element.colorClassPet and UnitPlayerControlled(unit) and not UnitIsPlayer(unit)))

@@ -495,7 +495,7 @@ function SetupSecureSnippets(button)
 	]])
 
 	button:SetAttribute("OnDragStart", [[
-		if (self:GetAttribute("buttonlock") and not IsModifiedClick("PICKUPACTION")) or self:GetAttribute("LABdisableDragNDrop") then return false end
+		if ((self:GetAttribute("buttonlock") or self:GetAttribute("buttonLock")) and not IsModifiedClick("PICKUPACTION")) or self:GetAttribute("LABdisableDragNDrop") then return false end
 		local state = self:GetAttribute("state")
 		local type = self:GetAttribute("type")
 		-- if the button is empty, we can't drag anything off it
@@ -631,7 +631,7 @@ function WrapOnClick(button, unwrapheader)
 
 			-- if this is a pickup click, disable on-down casting
 			-- it should get re-enabled in the post handler, or the OnDragStart handler, whichever occurs
-			if button ~= "Keybind" and ((self:GetAttribute("unlockedpreventdrag") and not self:GetAttribute("buttonlock")) or IsModifiedClick("PICKUPACTION")) and not self:GetAttribute("LABdisableDragNDrop") then
+			if button ~= "Keybind" and ((self:GetAttribute("unlockedpreventdrag") and not (self:GetAttribute("buttonlock") or self:GetAttribute("buttonLock"))) or IsModifiedClick("PICKUPACTION")) and not self:GetAttribute("LABdisableDragNDrop") then
 				local useOnkeyDown = self:GetAttribute("useOnKeyDown")
 				if useOnkeyDown ~= false then
 					self:SetAttribute("LABToggledOnDown", true)

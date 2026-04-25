@@ -91,6 +91,7 @@ ns.PetButton.Create = function(id, name, header, buttonConfig)
 	button:SetID(id)
 	button:SetAttribute("type", "pet")
 	button:SetAttribute("action", id)
+	button:SetAttribute("buttonlock", true)
 	button:SetAttribute("buttonLock", true)
 
 	button:RegisterForDrag("LeftButton", "RightButton")

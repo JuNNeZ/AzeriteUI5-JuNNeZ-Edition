@@ -5,6 +5,32 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.68-JuNNeZ (2026-04-25) - Action Bar Safety + Nameplate Color Options
+
+### Overall
+
+- This update focuses on two everyday pain points: hidden dragonriding bars should no longer catch stray clicks, and enemy nameplate threat colors are easier to tell apart from castbar interrupt colors. It also tightens action-button drag-lock handling so button locking behaves more consistently across normal action, pet, and stance buttons without changing the existing hold-to-cast route.
+
+### Highlights
+
+- Added enemy nameplate threat color presets, including color-blind friendly choices and a darker AzeriteUI yellow option.
+- Fixed invisible bars 2+ during dragonriding so they no longer catch accidental mouse clicks while hidden.
+- Improved dragonriding bar visual refresh after action-page changes so hidden secondary bars recover more reliably.
+- Made action, pet, and stance button drag-lock handling more consistent with the embedded action-button library.
+- Kept the existing bar 1 hold-to-cast behavior unchanged.
+
+### Access
+
+- Nameplate threat colors: `/az -> Nameplates -> Colors -> Enemy Threat Colors`.
+- No new action bar setting is required. Reload UI after updating.
+
+### Internal
+
+- `Components/UnitFrames/Units/NamePlates.lua`, `Options/OptionsPages/Nameplates.lua`, `Locale/enUS.lua`: added the threat color preset profile option, selector, player-facing text, and preset color resolution.
+- `Components/ActionBars/Elements/ActionBars.lua`: added dragonriding click blockers for visually hidden secondary bars and centralized dragon visual refresh.
+- `Components/ActionBars/Elements/PetBar.lua`, `Components/ActionBars/Elements/StanceBar.lua`, `Components/ActionBars/Prototypes/PetButton.lua`, `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`: normalized secure drag-lock attribute handling while preserving legacy compatibility.
+
+
 ## 5.3.67-JuNNeZ (2026-04-22) — WoW 12.0.5 Stability + Arena Frames
 
 ### Overall

@@ -128,6 +128,7 @@ local style = function(button)
 	local m = db.ButtonMaskTexture
 	local b = "" -- GetMedia("blank")
 
+	button:SetAttribute("buttonlock", true)
 	button:SetAttribute("buttonLock", true)
 	button:SetSize(unpack(db.ButtonSize))
 	button:SetHitRectInsets(unpack(db.ButtonHitRects))

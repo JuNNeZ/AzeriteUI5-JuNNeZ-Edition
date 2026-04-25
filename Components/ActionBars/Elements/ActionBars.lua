@@ -64,8 +64,20 @@ local GetCurrentBonusBarOffset = function()
 	return GetBonusBarOffset and GetBonusBarOffset()
 end
 
+local UpdateDragonClickBlocker = function(bar, shouldBlock)
+	local blocker = bar and bar.dragonClickBlocker
+	if (not blocker) then return end
+
+	if (shouldBlock) then
+		blocker:Show()
+	else
+		blocker:Hide()
+	end
+end
+
 local ForceBarCombatActive = function(bar)
 	bar:SetAlpha(1)
+	UpdateDragonClickBlocker(bar, false)
 	if (bar.buttons) then
 		for id,button in next,bar.buttons do
 			button:SetAlpha(1)
@@ -278,6 +290,7 @@ local style = function(self)
 	local m = db.ButtonMaskTexture
 	local b = "" -- GetMedia("blank")
 
+	self:SetAttribute("buttonlock", true)
 	self:SetAttribute("buttonLock", true)
 	self:SetSize(unpack(db.ButtonSize))
 	self:SetHitRectInsets(unpack(db.ButtonHitRects))
@@ -540,6 +553,18 @@ ActionBarMod.CreateBars = function(self)
 			self.buttons[button] = true
 		end
 
+		if (i > 1) then
+			local blocker = CreateFrame("Frame", nil, bar)
+			blocker:SetAllPoints(bar)
+			blocker:SetFrameStrata(bar:GetFrameStrata())
+			blocker:SetFrameLevel(bar:GetFrameLevel() + 100)
+			blocker:EnableMouse(true)
+			blocker:SetScript("OnMouseDown", function() end)
+			blocker:SetScript("OnMouseUp", function() end)
+			blocker:Hide()
+			bar.dragonClickBlocker = blocker
+		end
+
 		self.bars[i] = bar
 	end
 
@@ -696,8 +721,7 @@ end
 ActionBarMod.UpdateBindings = function(self, event)
 	if (InCombatLockdown()) then
 		-- Visual-only dragon hide/show must still react in combat.
-		self:UpdateDragonVisualState()
-		self:QueueDragonVisualRefresh()
+		self:RefreshDragonVisualState()
 		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateBindings")
 	end
 	if (event == "PLAYER_REGEN_ENABLED") then
@@ -714,6 +738,10 @@ ActionBarMod.UpdateBindings = function(self, event)
 	if (primaryBar and primaryBar:IsEnabled()) then
 		primaryBar:UpdateBindings()
 	end
+	self:RefreshDragonVisualState()
+end
+
+ActionBarMod.RefreshDragonVisualState = function(self)
 	self:UpdateDragonVisualState()
 	self:QueueDragonVisualRefresh()
 end
@@ -729,7 +757,9 @@ ActionBarMod.UpdateDragonVisualState = function(self)
 				ForceBarCombatActive(bar)
 			else
 				local hideForDragon = bar.config and bar.config.visibility and (bar.config.visibility.dragon == false)
-				bar:SetAlpha((inDragonState and hideForDragon) and 0 or 1)
+				local shouldHideForDragon = inDragonState and hideForDragon
+				bar:SetAlpha(shouldHideForDragon and 0 or 1)
+				UpdateDragonClickBlocker(bar, shouldHideForDragon)
 			end
 		end
 	end
@@ -745,6 +775,10 @@ end
 ActionBarMod.OnDragonVisualRefreshTimer = function(self)
 	self.__AzeriteUI_DragonVisualRefreshTimer = nil
 	self:UpdateDragonVisualState()
+end
+
+ActionBarMod.UpdateDragonVisuals = function(self, event)
+	self:RefreshDragonVisualState()
 end
 
 -- Called by the movable frame manager
@@ -937,6 +971,7 @@ ActionBarMod.OnEnable = function(self)
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateSettings")
 	self:RegisterEvent("CVAR_UPDATE", "OnCVarUpdate")
+	self:RegisterEvent("ACTIONBAR_PAGE_CHANGED", "UpdateDragonVisuals")
 	self:RegisterEvent("UPDATE_BINDINGS", "UpdateBindings")
 	self:RegisterEvent("UPDATE_BONUS_ACTIONBAR", "UpdateBindings")
 	self:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR", "UpdateBindings")
