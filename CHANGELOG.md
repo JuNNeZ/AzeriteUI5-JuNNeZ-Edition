@@ -5,6 +5,26 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.70-JuNNeZ (2026-04-26) - Party Frame Hotfix
+
+### Overall
+
+- This hotfix removes a bad safety call from party/raid frame setup that could break group frame creation in WoW 12.0.5.
+
+### Highlights
+
+- Fixed a `RestrictedExecution.lua` error when AzeriteUI party frames were shown or refreshed.
+- Restored the safe group-frame setup path used before `5.3.69-JuNNeZ`.
+
+### Access
+
+- No new setting is required. Reload UI after updating.
+
+### Internal
+
+- `Libs/oUF/ouf.lua`: removed `RegisterForClicks()` from the restricted secure group-header snippet because that method is not available in Blizzard's restricted execution environment.
+
+
 ## 5.3.69-JuNNeZ (2026-04-25) - Party Right-Click Menu Safety
 
 ### Overall

@@ -1,4 +1,26 @@
 
+## 2026-04-26 — 5.3.70-JuNNeZ secure party-header hotfix
+
+- **[USER REPORT] `5.3.69-JuNNeZ` can throw a secure header error when party frames refresh in WoW 12.0.5:**
+  - Stack: `Blizzard_RestrictedAddOnEnvironment/RestrictedExecution.lua:428: Call failed` from the oUF `initialConfigFunction` snippet.
+  - Root failure: `attempt to call a nil value` at the line added in `5.3.69-JuNNeZ`: `frame:RegisterForClicks("AnyUp")`.
+  - Runtime context: party of 5, non-raid, out of combat, AzeriteUI `5.3.69-JuNNeZ`, WoW `12.0.5.67186`.
+- **Root cause:**
+  - `RegisterForClicks` is not exposed inside Blizzard's restricted secure-header execution environment.
+  - The prior safety call was placed in the wrong layer. Secure group children already get `*type1 = "target"` and `*type2 = "togglemenu"` in `Libs/oUF/ouf.lua`; the bad extra call breaks the restricted snippet before styling can complete.
+- **Fix applied:**
+  - Removed `frame:RegisterForClicks("AnyUp")` from the restricted oUF group-header snippet.
+  - Bumped the hotfix version to `5.3.70-JuNNeZ` in [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1).
+  - Added a `5.3.70-JuNNeZ` player-facing hotfix entry to [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md).
+- **Validation target:**
+  - `luac -p Libs/oUF/ouf.lua`
+  - `git diff --check`
+  - In-game: `/reload` in a party, verify no `RestrictedExecution.lua` error and party frames create/update normally.
+- **Local validation completed:**
+  - `luac -p Libs/oUF/ouf.lua` passed.
+  - `git diff --check` passed with only Git's existing LF-to-CRLF working-copy warnings for touched files.
+  - Runtime `/reload` validation is still required in game.
+
 ## 2026-04-25 — Party unit right-click menu registration follow-up
 
 - **[USER REPORT] Right-clicking a friend in the party/group frame can do nothing:**
