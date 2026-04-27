@@ -299,7 +299,13 @@ ActionBar.Update = function(self)
 end
 
 ActionBar.UpdateFading = function(self)
-	if (not self:IsEnabled()) then return end
+	if (not self:IsEnabled()) then
+		LFF:UnregisterFrameForFading(self)
+		for id, button in next,self.buttons do
+			LFF:UnregisterFrameForFading(button)
+		end
+		return
+	end
 	if (not IsPlayerInWorld()) then return end
 
 	local config, buttons = self.config, self.buttons

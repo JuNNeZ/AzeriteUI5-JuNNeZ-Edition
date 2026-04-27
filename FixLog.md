@@ -1,4 +1,48 @@
 
+## 2026-04-27 — 5.3.71-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta from the FixLog entries and untagged commits since `v5.3.68-JuNNeZ`:
+  - party member right-click menus were restored without keeping the restricted setup call that broke group-frame creation in `5.3.70-JuNNeZ`
+  - party frames no longer hit the secure-header `RestrictedExecution.lua` setup error from the previous right-click safety attempt
+  - disabled AzeriteUI action bars can no longer be shown again by combat-safe visibility refreshes after the player has turned them off
+  - disabled action, pet, and stance bars are no longer registered for Explorer Mode or action-bar fading
+- Added a new player-facing `5.3.71-JuNNeZ` top entry to [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md).
+- Bumped the retail release version to `5.3.71-JuNNeZ` in [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1).
+- Validation target before commit/tag/push:
+  - `luac -p Components/ActionBars/Prototypes/Bar.lua Components/ActionBars/Prototypes/ActionBar.lua Core/ExplorerMode.lua`
+  - `git diff --check`
+  - `powershell -ExecutionPolicy Bypass -File .\build-release.ps1`
+- Local validation completed:
+  - `luac -p Components/ActionBars/Prototypes/Bar.lua Components/ActionBars/Prototypes/ActionBar.lua Core/ExplorerMode.lua` passed.
+  - `git diff --check` passed with only Git's existing LF-to-CRLF working-copy warnings for touched files.
+  - `powershell -ExecutionPolicy Bypass -File .\build-release.ps1` created `C:\Users\Jonas\OneDrive\Skrivebord\azeriteui_fan_edit\AzeriteUI-5.3.71-JuNNeZ-Retail-27-04-2026.zip`.
+- Runtime `/reload` validation remains required in game for disabled bars 2-5 during combat, mount/dismount, vehicle/bonus-bar transitions, Explorer Mode fading, and normal enabled-bar behavior.
+
+## 2026-04-27 — Disabled action bars appearing in combat follow-up
+
+- **[USER REPORT] Disabled empty action bars can randomly appear during combat and remain visible until `/reload`:**
+  - Screenshot frame stack points at AzeriteUI-owned frames, including `AzeriteActionBar4Button*`, not Blizzard `MultiBar*` frames.
+  - Reporter reproduced with other addons disabled and says the affected action bars are disabled in AzeriteUI options.
+- **Research:**
+  - `Components/ActionBars/Prototypes/ActionBar.lua` already has a secure `UpdateVisibility` snippet that checks a `userhidden` attribute before showing a bar.
+  - `Components/ActionBars/Prototypes/Bar.lua` only stores disabled state in the insecure `self.enabled` field and calls `Hide()`, but never sets the secure `userhidden` attribute.
+  - `Components/ActionBars/Prototypes/ActionBar.lua` returns early from `UpdateFading()` for disabled bars, which can leave stale fading registrations behind if a bar is later disabled.
+- **Fix target:**
+  - Persist disabled-bar intent into secure attributes so combat visibility driver updates cannot show option-disabled bars.
+  - Unregister disabled action bars from button/parent fading to avoid stale alpha state.
+- **Fix applied:**
+  - `Components/ActionBars/Prototypes/Bar.lua` now writes `userhidden` when a bar is disabled and clears it when re-enabled. The existing secure visibility snippets already honor this attribute.
+  - `Components/ActionBars/Prototypes/ActionBar.lua` now unregisters disabled action bars and their buttons from `LibFadingFrames` before returning from `UpdateFading()`.
+  - `Core/ExplorerMode.lua` now skips disabled action, pet, and stance bars when registering parent-frame Explorer Mode fading.
+- **Validation target:**
+  - `luac -p Components/ActionBars/Prototypes/Bar.lua Components/ActionBars/Prototypes/ActionBar.lua Core/ExplorerMode.lua`
+  - `git diff --check -- FixLog.md Components/ActionBars/Prototypes/Bar.lua Components/ActionBars/Prototypes/ActionBar.lua Core/ExplorerMode.lua`
+  - In-game: `/reload` with Action Bars 2-5 disabled -> enter combat, mount/dismount/vehicle/bonus-bar transitions, and verify disabled bars remain hidden while enabled bars, fading, hold-cast bindings, and dragonriding visual hiding still work.
+- **Local validation completed:**
+  - `luac -p Components/ActionBars/Prototypes/Bar.lua Components/ActionBars/Prototypes/ActionBar.lua Core/ExplorerMode.lua` passed.
+  - `git diff --check -- FixLog.md Components/ActionBars/Prototypes/Bar.lua Components/ActionBars/Prototypes/ActionBar.lua Core/ExplorerMode.lua` passed with only Git's existing LF-to-CRLF working-copy warnings for touched files.
+  - Runtime `/reload` validation is still required in game.
+
 ## 2026-04-26 — 5.3.70-JuNNeZ secure party-header hotfix
 
 - **[USER REPORT] `5.3.69-JuNNeZ` can throw a secure header error when party frames refresh in WoW 12.0.5:**

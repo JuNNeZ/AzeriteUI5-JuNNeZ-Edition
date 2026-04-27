@@ -192,8 +192,9 @@ ExplorerMode.UpdateSettings = function(self, forceRefresh)
 			-- Exempt bars that are fully set to fade
 			-- in their own actionbar settings.
 			local db = bar.config
+			local enabled = (not bar.IsEnabled) or bar:IsEnabled()
 			local fullyFaded = db.enableBarFading and db.fadeAlone and db.fadeFrom == 1
-			if (fade and not fullyFaded) then
+			if (fade and enabled and not fullyFaded) then
 
 				-- Register the bar for fading
 				LFF:RegisterFrameForFading(bar, self:GetName())
@@ -216,8 +217,9 @@ ExplorerMode.UpdateSettings = function(self, forceRefresh)
 		local petBar = PetBar.bar
 		if (petBar) then
 			local db = petBar.config
+			local enabled = (not petBar.IsEnabled) or petBar:IsEnabled()
 			local fullyFaded = db.enableBarFading and db.fadeAlone and db.fadeFrom == 1
-			if (fade and not fullyFaded) then
+			if (fade and enabled and not fullyFaded) then
 				LFF:RegisterFrameForFading(petBar, self:GetName())
 			else
 				LFF:UnregisterFrameForFading(petBar)
@@ -232,8 +234,9 @@ ExplorerMode.UpdateSettings = function(self, forceRefresh)
 		local stanceBar = StanceBar.bar
 		if (stanceBar) then
 			local db = stanceBar.config
+			local enabled = (not stanceBar.IsEnabled) or stanceBar:IsEnabled()
 			local fullyFaded = db.enableBarFading and db.fadeAlone and db.fadeFrom == 1
-			if (fade and not fullyFaded) then
+			if (fade and enabled and not fullyFaded) then
 				LFF:RegisterFrameForFading(stanceBar, self:GetName())
 			else
 				LFF:UnregisterFrameForFading(stanceBar)

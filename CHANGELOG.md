@@ -5,6 +5,32 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.71-JuNNeZ (2026-04-27) - Party Frame and Action Bar Fixes
+
+### Overall
+
+- This release cleans up two visible annoyances from the recent builds: party frames should keep working normally when groups refresh, and action bars you have turned off should stay off even during combat, mounts, vehicles, and fading updates.
+
+### Highlights
+
+- Fixed party frames so right-clicking a party member opens the normal unit menu again.
+- Fixed a party-frame setup error that could stop group frames from building correctly in WoW 12.0.5.
+- Fixed disabled AzeriteUI action bars sometimes appearing during combat and staying visible until `/reload`.
+- Disabled action bars now stay hidden through secure visibility refreshes.
+- Explorer Mode and action-bar fading now ignore disabled action, pet, and stance bars instead of bringing them back into a fade cycle.
+
+### Access
+
+- No new setting is required. Existing disabled action bars keep using your current `/az -> Action Bars` choices.
+
+### Internal
+
+- `Libs/oUF/ouf.lua`: preserved the safe party unit-menu assignment path while removing the restricted-environment call that caused the `5.3.70-JuNNeZ` hotfix.
+- `Components/ActionBars/Prototypes/Bar.lua`: disabled bars now store their hidden intent in the secure `userhidden` attribute that the action-bar visibility snippet already checks.
+- `Components/ActionBars/Prototypes/ActionBar.lua`: disabled action bars and their buttons are removed from `LibFadingFrames` before fading updates return.
+- `Core/ExplorerMode.lua`: Explorer Mode skips disabled action, pet, and stance bars when registering fading.
+
+
 ## 5.3.70-JuNNeZ (2026-04-26) - Party Frame Hotfix
 
 ### Overall

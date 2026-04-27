@@ -50,6 +50,7 @@ Bar.Enable = function(self)
 	if (InCombatLockdown()) then return end
 
 	self.enabled = true
+	self:SetAttribute("userhidden", nil)
 	self:Show()
 end
 
@@ -57,6 +58,7 @@ Bar.Disable = function(self)
 	if (InCombatLockdown()) then return end
 
 	self.enabled = false
+	self:SetAttribute("userhidden", true)
 	self:Hide()
 end
 
