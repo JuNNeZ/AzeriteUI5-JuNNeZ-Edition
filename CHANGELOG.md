@@ -5,7 +5,7 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
-## 5.3.73-JuNNeZ-beta1 (2026-05-01) - Party/Raid Right-Click Menu Fix
+## 5.3.73-JuNNeZ (2026-05-01) - Party/Raid Right-Click Menu Fix
 
 ### Highlights
 

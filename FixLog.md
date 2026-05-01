@@ -6,6 +6,12 @@
 - Fix: Added `self:RegisterForClicks("AnyUp")` after `InitializeUnitFrame` in both files.
 - Validation: `luac -p` passed. In-game `/reload` in 10-man and 40-man raid contexts.
 
+## 2026-05-01 — 5.3.73-JuNNeZ full release
+
+- Beta confirmed fixed by user. Promoted `5.3.73-JuNNeZ-beta1` → `5.3.73-JuNNeZ`.
+- Bumped version in [AzeriteUI5_JuNNeZ_Edition.toc](AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](build-release.ps1).
+- Updated [CHANGELOG.md](CHANGELOG.md) header to final version.
+
 ## 2026-05-01 — 5.3.73-JuNNeZ-beta1 release prep
 
 - Bumped version to `5.3.73-JuNNeZ-beta1` in [AzeriteUI5_JuNNeZ_Edition.toc](AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](build-release.ps1).
