@@ -5,6 +5,48 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.73-JuNNeZ-beta1 (2026-05-01) - Party/Raid Right-Click Menu Fix
+
+### Highlights
+
+- Fixed right-clicking party and group unit frames not opening the unit interaction menu (invite, inspect, set focus, trade, etc.) in parties and follower dungeons.
+- Fixed the same issue in 10-man and 40-man raids. 5-man raids were already working correctly.
+- No settings change required. Works after `/reload`.
+
+### Known Limitation
+
+- Right-clicking a **story-mode companion** (AI-controlled party member in story-mode raids/dungeons) still only opens a menu if that companion is already your current target. This is a Blizzard engine constraint, not an AzeriteUI bug — see Internal notes.
+
+### Internal
+
+#### Root Cause
+
+AzeriteUI's shared `UnitFrame.InitializeUnitFrame` deliberately skips `RegisterForClicks` for secure-group-header children (enforced by an `IsSecureHeaderChild()` guard). This is intentional — calling `RegisterForClicks` from insecure code on a protected header child is unsafe. Instead, each group-frame style function is responsible for calling `self:RegisterForClicks("AnyUp")` explicitly after `InitializeUnitFrame`.
+
+`Raid5.lua` had this call. `Party.lua`, `Raid25.lua`, and `Raid40.lua` did not. Without click registration the button never dispatched any click events, so Blizzard's secure `togglemenu` action bound to `*type2` never fired on right-click.
+
+#### Previous Failed Attempts (from FixLog and research)
+
+1. **`RegisterForClicks` inside restricted `initialConfigFunction`** (oUF snippet) — Failed with `RestrictedExecution.lua:428: Call failed`. `RegisterForClicks` is not available in Blizzard's restricted execution environment.
+2. **XML virtual template with `registerForClicks="AnyUp"`** — Produced `bad argument #1 ... self:RegisterForClicks(buttons)` at runtime. Live debug dumps already showed `leftClick true rightClick true`, confirming this was solving the wrong layer.
+3. **Force `*type2 = "menu"` with a custom `menu-function`** — Attributes applied but the menu never opened. Clique explicitly converts `menu` back to `togglemenu` because `menu` is hard-coded to mouse-up only and breaks with down-click registration. Referencing `menu-function` in restricted snippets also failed because `function` is a forbidden token in the restricted parser.
+4. **`PostClick`/`OnMouseUp` fallback calling `UnitPopup_OpenMenu` directly** — Worked for opening the menu for story-mode companions by mapping non-player `raidN` tokens to `TARGET`. However, selecting any protected item (raid markers, set focus) triggered `ADDON_ACTION_FORBIDDEN` because the open was attributed to AzeriteUI. Patching this by wrapping `UnitPopupRaidTargetButtonMixin.CanShow` broke Blizzard's normal target-frame raid-marker menu globally. Approach abandoned.
+
+#### The Fix
+
+Added `self:RegisterForClicks("AnyUp")` immediately after `ns.UnitFrame.InitializeUnitFrame(self)` in the style functions for `Party.lua`, `Raid25.lua`, and `Raid40.lua`. This is the same pattern already present in `Raid5.lua` and matches how DiabolicUI3 registers clicks globally in its shared style wrapper.
+
+#### Story-Mode Companion Limitation
+
+Blizzard's secure `togglemenu` action classifies the unit token to choose which popup to open. For `raidN` tokens it requires `UnitIsPlayer(unit) == true`. Story-mode companions are NPCs so `UnitIsPlayer` returns false. The only fallback Blizzard provides is `UnitIsUnit(unit, "target")` which maps to a `TARGET` menu — which is why targeting the companion first makes right-click work. Every oUF-based addon (live upstream oUF, DiabolicUI3, ElvUI, DiabolicUI2) hits this same wall. None have a story-mode NPC fallback. Resolution requires Blizzard to expose a secure API for opening unit menus on non-player group tokens.
+
+#### Files Changed
+- `Components/UnitFrames/Units/Party.lua` — added `self:RegisterForClicks("AnyUp")`
+- `Components/UnitFrames/Units/Raid25.lua` — added `self:RegisterForClicks("AnyUp")`
+- `Components/UnitFrames/Units/Raid40.lua` — added `self:RegisterForClicks("AnyUp")`
+
+---
+
 ## 5.3.72-JuNNeZ (2026-05-01) - Target Portrait and Stealth Bar Fixes
 
 ### Overall

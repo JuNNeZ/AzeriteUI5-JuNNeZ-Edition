@@ -1,4 +1,38 @@
 
+## 2026-05-01 — Raid25/Raid40 right-click menu fix (same root cause as Party)
+
+- [USER REPORT] Right-click on unit frames in 10-man (and 40-man) raids also opens no menu.
+- Root cause: Same as Party.lua — `Raid25.lua` and `Raid40.lua` both called `InitializeUnitFrame` without the explicit `RegisterForClicks("AnyUp")` that is needed for secure-header children. `Raid5.lua` already had it.
+- Fix: Added `self:RegisterForClicks("AnyUp")` after `InitializeUnitFrame` in both files.
+- Validation: `luac -p` passed. In-game `/reload` in 10-man and 40-man raid contexts.
+
+## 2026-05-01 — 5.3.73-JuNNeZ-beta1 release prep
+
+- Bumped version to `5.3.73-JuNNeZ-beta1` in [AzeriteUI5_JuNNeZ_Edition.toc](AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](build-release.ps1).
+- Added `5.3.73-JuNNeZ-beta1` entry to [CHANGELOG.md](CHANGELOG.md) for party right-click menu fix.
+- Validation target: `luac -p Components/UnitFrames/Units/Party.lua` + in-game `/reload` in party/follower dungeon.
+
+## 2026-05-01 — Party border right-click menu regression follow-up
+
+- **[USER REPORT] Right-click on AzeriteUI party/group border does not open unit menu unless raid frames are enabled:**
+  - Repro from report: party and follower-dungeon contexts, only AzeriteUI enabled, right-click on party unit frame/border does nothing.
+  - Enabling raid-frame display restores right-click unit menu behavior.
+  - Locale reported as Russian client; expected behavior should be locale-agnostic.
+- **Research:**
+  - `Components/UnitFrames/Units/Party.lua` style setup called `ns.UnitFrame.InitializeUnitFrame(self)` but did not explicitly call `self:RegisterForClicks("AnyUp")`.
+  - `ns.UnitFrame.InitializeUnitFrame` skips auto `RegisterForClicks` for secure-header children.
+  - Working raid-5 path in `Components/UnitFrames/Units/Raid5.lua` explicitly calls `self:RegisterForClicks("AnyUp")` after shared initialization.
+- **Fix applied:**
+  - Added `self:RegisterForClicks("AnyUp")` in party unit style setup to restore click dispatch on party secure-header unit buttons.
+  - Kept fix local to `Party.lua`; no restricted `initialConfigFunction` edits and no oUF core edits.
+- **Validation target:**
+  - `luac -p Components/UnitFrames/Units/Party.lua`
+  - In-game `/reload` loop:
+    - party (non-raid): right-click party unit portrait/health/border opens unit menu
+    - follower dungeon: right-click party unit frame opens unit menu
+    - left-click targeting still works
+    - raid-border toggle no longer required for right-click interactions
+
 ## 2026-05-01 — 5.3.72-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta from dirty worktree fixes after `v5.3.71-JuNNeZ`:
