@@ -381,7 +381,8 @@ ActionBar.UpdateBindings = function(self)
 
 	local state = tonumber(self:GetAttribute("state")) or 0
 	local hasDynamicPageState = (self.id == 1) and (
-		state == 11 or state == 12 or state == 16 or state == 17 or state == 18
+		(state >= 7 and state <= 10)
+		or state == 11 or state == 12 or state == 16 or state == 17 or state == 18
 		or self.hasVehicleBar
 		or self.hasOverrideBar
 		or self.hasTempShapeshiftBar
@@ -404,8 +405,8 @@ ActionBar.UpdateBindings = function(self)
 				if (key and (key ~= "")) then
 					local assigned = false
 					-- Prefer command bindings for hold-cast support. During active bar-1 dynamic
-					-- paging states (dragon/vehicle/override/possess), keep click routing so
-					-- temporary actionbar slots stay in sync with the secure state driver.
+					-- paging states (bonus/dragon/vehicle/override/possess), keep click routing
+					-- so temporary actionbar slots stay in sync with the secure state driver.
 					if (useCommandBindings and (not hasCustomVehicleState) and (not hasDynamicPageState) and SetOverrideBinding) then
 						local ok = pcall(SetOverrideBinding, self, false, key, bindingAction)
 						if (ok) then

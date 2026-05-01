@@ -1,4 +1,124 @@
 
+## 2026-05-01 — 5.3.72-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta from dirty worktree fixes after `v5.3.71-JuNNeZ`:
+  - rogue stealth / Shadow Dance bar-1 keybinds now route through the secure paged button so keyboard input matches mouse clicks
+  - druid and monk bonus pages use the same dynamic keybind route while active
+  - hostile target portraits now fail over from `PlayerModel:SetUnit(...)` to a safe creature-model attempt and then to the 2D portrait fallback
+  - secret target GUIDs no longer get parsed or compared in the portrait fallback path
+- Added a new player-facing `5.3.72-JuNNeZ` top entry to [CHANGELOG.md](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/CHANGELOG.md).
+- Bumped the retail release version to `5.3.72-JuNNeZ` in [AzeriteUI5_JuNNeZ_Edition.toc](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition.toc) and [build-release.ps1](c:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition/build-release.ps1).
+- Validation target before commit/tag/push:
+  - `luac -p Components/ActionBars/Prototypes/ActionBar.lua Components/UnitFrames/Units/Target.lua`
+  - `git diff --check`
+  - `powershell -ExecutionPolicy Bypass -File .\build-release.ps1`
+- Local validation completed:
+  - `luac -p Components/ActionBars/Prototypes/ActionBar.lua Components/UnitFrames/Units/Target.lua` passed.
+  - `git diff --check` passed with only Git's existing LF-to-CRLF working-copy warnings for touched files.
+  - `powershell -ExecutionPolicy Bypass -File .\build-release.ps1` created `C:\Users\Jonas\OneDrive\Skrivebord\azeriteui_fan_edit\AzeriteUI-5.3.72-JuNNeZ-Retail-01-05-2026.zip`.
+- Runtime `/reload` validation remains required in game for rogue stealth / Shadow Dance keybinds, druid/monk bonus pages, hostile target portraits inside instances, and normal target portrait fallback behavior.
+
+## 2026-05-01 — Rogue stealth bar 1 keybind regression
+
+- **[USER REPORT] Rogue stealth / Shadow Dance bar 1 keybind fired the unstealthed spell while mouse clicks still used the correct stealth action:**
+  - Repro from report: slot 1 shows `Shadowstrike` while stealthed/shadow danced, but pressing the `1` key still casts the normal bar-1 action (`Backstab`); clicking the same button with the mouse works.
+  - Scope stays local to AzeriteUI action-bar binding rebuilds.
+- **Research:**
+  - `Components/ActionBars/Prototypes/ActionBar.lua` rebuilds bar-1 override bindings in `ActionBar.UpdateBindings()`.
+  - Mouse clicks always hit the secure AzeriteUI button, so bonus-bar state `7` correctly resolves the rogue stealth page.
+  - The command-binding guard only treated dragon/vehicle/override/possess-style states as dynamic; rogue/druid/monk bonus-bar pages `7-10` were left on `SetOverrideBinding(..., "ACTIONBUTTON1")`, which can keep firing the base command while the secure button itself has paged to the stealth/stance action.
+- **Fix applied:**
+  - Bar 1 now treats bonus-bar pages `7-10` as dynamic paging states in `ActionBar.UpdateBindings()`.
+  - While bar 1 is on rogue stealth, druid form, or monk stance bonus pages, bindings now fall back to `SetOverrideBindingClick(...)` so keyboard input follows the same secure paged button state as mouse clicks.
+  - Normal base-bar states still keep command routing for hold-cast support.
+- **Validation target:**
+  - `luac -p Components/ActionBars/Prototypes/ActionBar.lua`
+  - `git diff --check -- FixLog.md Components/ActionBars/Prototypes/ActionBar.lua`
+  - In-game: `/buggrabber reset` -> `/reload` -> rogue stealth / Shadow Dance with `Shadowstrike` on slot 1 -> press `1` and confirm it now matches the mouse click action. Also verify normal non-stealth bar-1 hold-cast behavior still works.
+- **Local validation completed:**
+  - `luac -p Components/ActionBars/Prototypes/ActionBar.lua` passed.
+  - `git diff --check -- Components/ActionBars/Prototypes/ActionBar.lua` passed.
+  - `git diff --check -- FixLog.md Components/ActionBars/Prototypes/ActionBar.lua` still reports pre-existing trailing whitespace in older dirty-worktree `FixLog.md` hunks unrelated to this stealth fix.
+
+## 2026-04-29 — Enemy target portrait fallback investigation
+
+- **[USER REPORT] Enemy portraits disappear while inside instances after the newest patch:**
+  - Reported symptom points at the AzeriteUI target-frame portrait area rather than nameplate code; no separate nameplate portrait element exists locally.
+  - Current client context is WoW `12.0.5` in the TOC, and Blizzard's April 2026 official hotfix/update notes do not call out a target portrait API fix/change directly.
+- **Research:**
+  - `Components/UnitFrames/Units/Target.lua` builds the target portrait as a `PlayerModel` and updates it through `element:SetUnit(unit)`.
+  - The local fallback texture only appears when oUF marks the unit unavailable (`not UnitIsConnected(unit) or not UnitIsVisible(unit)`), so a visible enemy whose 3D model is denied or fails can leave a blank portrait.
+  - The current WoW API data exposes `PlayerModel:SetUnit(...)` as a boolean success-returning widget method and exposes `PlayerModel:CanSetUnit(unit)`, but the target portrait path ignored both.
+- **Fix target:**
+  - Keep the fix local to the AzeriteUI target frame.
+  - Reuse the existing 2D `SetPortraitTexture(...)` fallback when the 3D `PlayerModel` cannot safely use the unit.
+  - Avoid changing embedded oUF or party/raid/arena portrait behavior until runtime evidence proves the issue is broader.
+- **Fix applied:**
+  - `Components/UnitFrames/Units/Target.lua` now checks `PlayerModel:CanSetUnit(unit)` when available and wraps `PlayerModel:SetUnit(unit)` with `pcall`.
+  - If the 3D target model path is denied, errors, or explicitly returns `false`, the target frame clears the model and shows the existing 2D portrait fallback instead of leaving an empty portrait area.
+  - Removed the stale accidental `element.guid = guid` assignment from the portrait post-update path.
+- **Validation target:**
+  - `luac -p Components/UnitFrames/Units/Target.lua`
+  - `git diff --check -- FixLog.md Components/UnitFrames/Units/Target.lua`
+  - In-game: `/reload` inside a dungeon/raid, target hostile NPCs, verify the target portrait shows either the 3D model or the 2D fallback instead of going blank.
+- **Local validation completed:**
+  - `luac -p Components/UnitFrames/Units/Target.lua` passed.
+  - `git diff --check -- FixLog.md Components/UnitFrames/Units/Target.lua` passed with only Git's existing LF-to-CRLF working-copy warning for `Components/UnitFrames/Units/Target.lua`.
+  - Runtime `/reload` validation is still required in game.
+- **Runtime follow-up:**
+  - User retested and enemy portraits still did not appear in instances.
+  - Second-pass research found newer local oUF snapshots in other installed addons gate 3D portrait availability with `IsUnitModelReadyForUI(unit)`, while AzeriteUI's embedded `Libs/oUF/elements/portrait.lua` only checks `UnitIsConnected(unit)` and `UnitIsVisible(unit)`.
+  - The first fallback also created the 2D texture on the `PlayerModel` itself, which may not reliably draw over a blank model frame.
+- **Second fix target:**
+  - Keep the behavior local to the target frame.
+  - Put the 2D fallback on a sibling frame above the target `PlayerModel` but below the existing portrait shade/border overlay.
+  - Use `IsUnitModelReadyForUI(unit)` and prefer the 2D portrait for attackable targets while inside instances, where the reported failure happens.
+- **Second fix applied:**
+  - `Components/UnitFrames/Units/Target.lua` now creates the target 2D fallback texture on a sibling fallback frame anchored to the portrait model, instead of on the `PlayerModel` itself.
+  - The target portrait model path now fails closed when `IsUnitModelReadyForUI(unit)` is false, when `PlayerModel:CanSetUnit(unit)` fails, when `PlayerModel:SetUnit(unit)` errors/returns false, or when `GetDisplayInfo()` stays empty after a nil-returning model update.
+  - Attackable targets inside instances now use the 2D portrait path directly, avoiding the reported blank 3D model path.
+- **Second validation target:**
+  - `luac -p Components/UnitFrames/Units/Target.lua`
+  - `git diff --check -- FixLog.md Components/UnitFrames/Units/Target.lua`
+- **Second local validation completed:**
+  - `luac -p Components/UnitFrames/Units/Target.lua` passed.
+  - `git diff --check -- FixLog.md Components/UnitFrames/Units/Target.lua` passed with only Git's existing LF-to-CRLF working-copy warning for `Components/UnitFrames/Units/Target.lua`.
+  - Runtime `/reload` validation is still required in game.
+- **3D restoration research:**
+  - Live upstream oUF `13.4.3` (`.research/tmp/oUF-live/elements/portrait.lua`) still uses the old `UnitIsConnected(unit)` / `UnitIsVisible(unit)` gate and `PlayerModel:SetUnit(unit)`; no hostile-instance 3D restoration exists there.
+  - Local ElvUI's bundled oUF adds `IsUnitModelReadyForUI(unit)` before calling `PlayerModel:SetUnit(unit)`, which prevents bad model updates but does not restore 3D when hostile instance target models are unavailable through the unit-token path.
+  - Local GW2_UI target/party unitframes use `SetPortraitTexture(...)` 2D portraits, so it avoids the 3D failure path entirely.
+  - Local ShadowedUnitFrames still uses the old `PlayerModel:SetUnit(...)` 3D path.
+  - Immersion and Narcissus both use `PlayerModel:SetCreature(creatureID)` for NPC models, with `creatureID` parsed from `UnitGUID(...)`; this is the only local pattern that can plausibly restore a 3D NPC model when `SetUnit("target")` is denied or not ready.
+- **Third fix target:**
+  - Try the normal `PlayerModel:SetUnit(unit)` path when Blizzard says the model is ready.
+  - If that fails and the target GUID is a creature/vehicle/pet, parse the NPC ID and try `PlayerModel:SetCreature(npcID)` before falling back to 2D.
+  - Keep the 2D fallback as the fail-closed path for units that cannot be represented by creature ID or whose creature model still fails to load.
+- **Third fix applied:**
+  - `Components/UnitFrames/Units/Target.lua` now parses creature/vehicle/pet NPC IDs from target GUIDs for the portrait path.
+  - When `PlayerModel:SetUnit(unit)` is unavailable or deliberately skipped for attackable instance targets, the target portrait now tries `PlayerModel:SetCreature(creatureID)` before showing the 2D fallback.
+  - The existing 2D fallback remains active if the GUID is unavailable/secret, not a creature-like GUID, or `SetCreature(...)` errors.
+- **Third local validation completed:**
+  - `luac -p Components/UnitFrames/Units/Target.lua` passed.
+  - `git diff --check -- FixLog.md Components/UnitFrames/Units/Target.lua` passed with only Git's existing LF-to-CRLF working-copy warning for `Components/UnitFrames/Units/Target.lua`.
+  - Runtime `/reload` validation is still required in game.
+- **Fourth runtime follow-up:**
+  - User retested in `March on Quel'Danas` on WoW `12.0.5` and hit `Target.lua:1943`, where the creature-ID fallback compared a `UnitGUID("target")` result before proving it was not a secret string.
+  - The `SetCreature(...)` 3D fallback cannot safely run when Blizzard marks the target GUID secret, because extracting an NPC ID requires string operations on that GUID.
+- **Fourth fix applied:**
+  - `Components/UnitFrames/Units/Target.lua` now checks `issecretvalue(...)` through a protected helper before any GUID type, empty-string, equality, cache, or pattern operations.
+  - Secret GUIDs now skip the creature-ID 3D fallback and continue to the existing 2D portrait fallback instead of throwing a taint/secret-value error.
+  - The normal `PlayerModel:SetUnit(unit)` path now gets a chance whenever `IsUnitModelReadyForUI(unit)` says the model is ready, instead of skipping all attackable instance targets before trying 3D.
+  - The target texture-cache GUID comparison now uses the same helper so cached/current GUIDs are not compared when either side is secret.
+- **Fourth validation target:**
+  - `luac -p Components/UnitFrames/Units/Target.lua`
+  - `git diff --check -- FixLog.md Components/UnitFrames/Units/Target.lua`
+- **Fourth local validation completed:**
+  - `luac -p Components/UnitFrames/Units/Target.lua` passed.
+  - `git diff --check -- FixLog.md Components/UnitFrames/Units/Target.lua` passed with only Git's existing LF-to-CRLF working-copy warning for `Components/UnitFrames/Units/Target.lua`.
+  - Runtime `/reload` validation is still required in game.
+
+
 ## 2026-04-27 — 5.3.71-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta from the FixLog entries and untagged commits since `v5.3.68-JuNNeZ`:

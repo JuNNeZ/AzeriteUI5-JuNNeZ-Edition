@@ -32,13 +32,19 @@ local TargetFrameMod = ns:NewModule("TargetFrame", ns.UnitFrameModule, "LibMoreE
 local AbbreviateNumbers = AbbreviateNumbers
 local BreakUpLargeNumbers = BreakUpLargeNumbers
 local next = next
+local pcall = pcall
+local string_match = string.match
 local string_gsub = string.gsub
 local type = type
 local unpack = unpack
 local math_floor = math.floor
 local math_max = math.max
+local tonumber = tonumber
+local CreateFrame = _G.CreateFrame
 local Mixin = _G.Mixin
 local Enum = _G.Enum
+local IsUnitModelReadyForUI = _G.IsUnitModelReadyForUI
+local SetPortraitTexture = _G.SetPortraitTexture
 local UnitGUID = _G.UnitGUID
 local UnitCanAttack = _G.UnitCanAttack
 
@@ -1828,29 +1834,184 @@ local Power_UpdateVisibility = function(element, unit, cur, min, max)
 	end
 end
 
--- Make the portrait look better for offline or invisible units.
+local EnsureTargetPortraitFallbackTexture = function(element)
+	if (not element) then
+		return nil
+	end
+	if (not element.fallback2DFrame) then
+		local parent = element.fallbackParent or element:GetParent() or element
+		local frame = CreateFrame("Frame", nil, parent)
+		frame:SetAllPoints(element)
+		if (element.GetFrameLevel and frame.SetFrameLevel) then
+			local level = element:GetFrameLevel()
+			if (type(level) == "number") then
+				frame:SetFrameLevel(level)
+			end
+		end
+		frame:Hide()
+		element.fallback2DFrame = frame
+	end
+	if (not element.fallback2DTexture) then
+		element.fallback2DTexture = element.fallback2DFrame:CreateTexture(nil, "ARTWORK", nil, 0)
+		element.fallback2DTexture:SetDrawLayer("ARTWORK")
+		element.fallback2DTexture:SetAllPoints()
+		element.fallback2DTexture:SetTexCoord(.1, .9, .1, .9)
+	end
+	return element.fallback2DTexture
+end
+
+local ShowTargetPortraitFallback = function(element, unit)
+	if (not element) then
+		return
+	end
+	element:ClearModel()
+	element.__AzeriteUI_UsingCreaturePortrait = nil
+	local fallback = EnsureTargetPortraitFallbackTexture(element)
+	if (fallback) then
+		local ok = false
+		if (type(SetPortraitTexture) == "function") then
+			ok = pcall(SetPortraitTexture, fallback, unit)
+		end
+		if (ok) then
+			fallback:Show()
+			if (element.fallback2DFrame) then
+				element.fallback2DFrame:Show()
+			end
+			element.__AzeriteUI_Using2DPortraitFallback = true
+		else
+			fallback:Hide()
+			if (element.fallback2DFrame) then
+				element.fallback2DFrame:Hide()
+			end
+			element.__AzeriteUI_Using2DPortraitFallback = nil
+		end
+	end
+end
+
+local HideTargetPortraitFallback = function(element)
+	if (element and element.fallback2DTexture) then
+		element.fallback2DTexture:Hide()
+	end
+	if (element and element.fallback2DFrame) then
+		element.fallback2DFrame:Hide()
+	end
+	if (element) then
+		element.__AzeriteUI_Using2DPortraitFallback = nil
+	end
+end
+
+local IsTargetPortraitSecretValue = function(value)
+	if (type(issecretvalue) ~= "function") then
+		return false
+	end
+	local ok, isSecret = pcall(issecretvalue, value)
+	return ok and isSecret == true
+end
+
+local IsTargetPortraitModelReady = function(unit)
+	if (type(IsUnitModelReadyForUI) ~= "function") then
+		return true
+	end
+	local ok, isReady = pcall(IsUnitModelReadyForUI, unit)
+	if (not ok or IsTargetPortraitSecretValue(isReady)) then
+		return false
+	end
+	return isReady == true
+end
+
+local ShouldUseTargetPortraitFallback = function(unit)
+	return not IsTargetPortraitModelReady(unit)
+end
+
+local GetTargetPortraitCreatureID = function(unit)
+	if (type(UnitGUID) ~= "function" or type(unit) ~= "string" or unit == "") then
+		return nil
+	end
+	local ok, guid = pcall(UnitGUID, unit)
+	if (not ok or IsTargetPortraitSecretValue(guid) or type(guid) ~= "string" or guid == "") then
+		return nil
+	end
+	local guidType, npcID = string_match(guid, "^([^-]+)%-[^-]*%-[^-]*%-[^-]*%-[^-]*%-(%d+)")
+	if (guidType ~= "Creature" and guidType ~= "Vehicle" and guidType ~= "Pet") then
+		return nil
+	end
+	return tonumber(npcID)
+end
+
+local CanSetTargetPortraitModel = function(element, unit)
+	if (not element or type(unit) ~= "string" or unit == "") then
+		return false
+	end
+	if (ShouldUseTargetPortraitFallback(unit)) then
+		return false
+	end
+	if (type(element.CanSetUnit) == "function") then
+		local ok, canSetUnit = pcall(element.CanSetUnit, element, unit)
+		if (not ok or IsTargetPortraitSecretValue(canSetUnit) or canSetUnit == false) then
+			return false
+		end
+	end
+	return type(element.SetUnit) == "function"
+end
+
+local TrySetTargetPortraitModel = function(element, unit)
+	if (not CanSetTargetPortraitModel(element, unit)) then
+		return false
+	end
+	element:SetCamDistanceScale(element.distanceScale or 1)
+	element:SetPortraitZoom(1)
+	element:SetPosition(element.positionX or 0, element.positionY or 0, element.positionZ or 0)
+	element:SetRotation(element.rotation and element.rotation*degToRad or 0)
+	element:ClearModel()
+	local ok, success = pcall(element.SetUnit, element, unit)
+	if (not ok or success == false) then
+		element:ClearModel()
+		return false
+	end
+	if (type(element.GetDisplayInfo) == "function" and success ~= true) then
+		local okDisplay, displayID = pcall(element.GetDisplayInfo, element)
+		if (not okDisplay or IsTargetPortraitSecretValue(displayID) or type(displayID) ~= "number" or displayID <= 0) then
+			element:ClearModel()
+			return false
+		end
+	end
+	return true
+end
+
+local TrySetTargetPortraitCreatureModel = function(element, unit)
+	if (not element or type(element.SetCreature) ~= "function") then
+		return false
+	end
+	local creatureID = GetTargetPortraitCreatureID(unit)
+	if (type(creatureID) ~= "number" or creatureID <= 0) then
+		return false
+	end
+	element:SetCamDistanceScale(element.distanceScale or 1)
+	element:SetPortraitZoom(1)
+	element:SetPosition(element.positionX or 0, element.positionY or 0, element.positionZ or 0)
+	element:SetRotation(element.rotation and element.rotation*degToRad or 0)
+	element:ClearModel()
+	local ok = pcall(element.SetCreature, element, creatureID)
+	if (not ok) then
+		element:ClearModel()
+		return false
+	end
+	element.__AzeriteUI_UsingCreaturePortrait = creatureID
+	return true
+end
+
+-- Make the portrait look better for offline, invisible, or model-restricted units.
 local Portrait_PostUpdate = function(element, unit, hasStateChanged)
 	if (not element.state) then
-		element:ClearModel()
-		if (not element.fallback2DTexture) then
-			element.fallback2DTexture = element:CreateTexture()
-			element.fallback2DTexture:SetDrawLayer("ARTWORK")
-			element.fallback2DTexture:SetAllPoints()
-			element.fallback2DTexture:SetTexCoord(.1, .9, .1, .9)
-		end
-		SetPortraitTexture(element.fallback2DTexture, unit)
-		element.fallback2DTexture:Show()
+		ShowTargetPortraitFallback(element, unit)
+	elseif (TrySetTargetPortraitModel(element, unit)) then
+		HideTargetPortraitFallback(element)
+		element.__AzeriteUI_UsingCreaturePortrait = nil
+	elseif (TrySetTargetPortraitCreatureModel(element, unit)) then
+		HideTargetPortraitFallback(element)
 	else
-		if (element.fallback2DTexture) then
-			element.fallback2DTexture:Hide()
-		end
-		element:SetCamDistanceScale(element.distanceScale or 1)
-		element:SetPortraitZoom(1)
-		element:SetPosition(element.positionX or 0, element.positionY or 0, element.positionZ or 0)
-		element:SetRotation(element.rotation and element.rotation*degToRad or 0)
-		element:ClearModel()
-		element:SetUnit(unit)
-		element.guid = guid
+		element.__AzeriteUI_UsingCreaturePortrait = nil
+		ShowTargetPortraitFallback(element, unit)
 	end
 end
 
@@ -2240,12 +2401,7 @@ local UnitFrame_UpdateTextures = function(self)
 	local level = ns.API.SafeUnitIsUnit(unit, "player") and playerLevel or UnitEffectiveLevel(unit)
 	local unitGUID = UnitGUID(unit)
 	local cachedGUID = self.__AzeriteUI_TargetGUID
-	local guidIsSecret = false
-	if (type(issecretvalue) == "function") then
-		if ((type(unitGUID) == "string" and issecretvalue(unitGUID)) or (type(cachedGUID) == "string" and issecretvalue(cachedGUID))) then
-			guidIsSecret = true
-		end
-	end
+	local guidIsSecret = IsTargetPortraitSecretValue(unitGUID) or IsTargetPortraitSecretValue(cachedGUID)
 
 	local key
 	if (UnitIsPlayer(unit)) then
@@ -3067,6 +3223,7 @@ local style = function(self, unit, id)
 	portrait.positionZ = db.PortraitPositionZ
 	portrait.rotation = db.PortraitRotation
 	portrait.showFallback2D = db.PortraitShowFallback2D
+	portrait.fallbackParent = portraitFrame
 
 	self.Portrait = portrait
 	self.Portrait.PostUpdate = Portrait_PostUpdate

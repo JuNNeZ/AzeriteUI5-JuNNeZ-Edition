@@ -5,6 +5,30 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.72-JuNNeZ (2026-05-01) - Target Portrait and Stealth Bar Fixes
+
+### Overall
+
+- This release fixes two visible gameplay regressions: bar-1 keyboard binds now follow stealth/form bonus pages correctly, and hostile target portraits have safer fallback handling when WoW 12 refuses or delays the 3D model path inside instances.
+
+### Highlights
+
+- Fixed rogue stealth and Shadow Dance keybinds so pressing bar-1 keys casts the same paged action shown on the button.
+- Extended the same dynamic binding route to druid and monk bonus pages, keeping keyboard input aligned with secure action-bar paging.
+- Improved target portraits for hostile instance targets by trying the normal 3D model path, then a creature-model fallback when safe, then the 2D portrait fallback.
+- Fixed a WoW 12 secret-GUID portrait error by skipping NPC-ID parsing whenever Blizzard marks the target GUID as secret.
+- Kept normal base-bar command bindings in place for hold-cast support outside dynamic paging states.
+
+### Access
+
+- No new setting is required. Existing `/az -> Action Bars` and target-frame settings continue to apply.
+
+### Internal
+
+- `Components/ActionBars/Prototypes/ActionBar.lua`: treats bar-1 bonus pages `7-10` as dynamic paging states so override keybinds use secure click routing while those pages are active.
+- `Components/UnitFrames/Units/Target.lua`: adds protected target portrait model checks, a sibling 2D fallback frame, optional creature-ID fallback, and secret-value guards around GUID handling.
+
+
 ## 5.3.71-JuNNeZ (2026-04-27) - Party Frame and Action Bar Fixes
 
 ### Overall
