@@ -5,6 +5,22 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.75-JuNNeZ (2026-05-03) - Dragonflying Relog Keybind Recovery
+
+### Highlights
+
+- Fixed a dragonflying relog edge case where logging out mounted with the dragon bar visible could leave action-bar keybinds non-responsive after login while mouse clicks still worked.
+- Action-bar keybind routing now performs a short follow-up refresh after state transitions so late login/mount state cleanup does not leave stale binding routes.
+
+### Access
+
+- No new setting is required. Existing `/az -> Action Bars` settings continue to apply.
+
+### Internal
+
+- `Components/ActionBars/Elements/ActionBars.lua`: added a guarded deferred binding-refresh pass after standard binding rebuilds to recover from late post-login action-bar state settlement.
+
+
 ## 5.3.74-JuNNeZ (2026-05-03) - Player Crystal Class Color + Windwalker 6-Chi
 
 ### Highlights

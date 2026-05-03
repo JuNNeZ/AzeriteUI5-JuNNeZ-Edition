@@ -1,3 +1,37 @@
+## 2026-05-03 - 5.3.75-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta since `5.3.74-JuNNeZ`:
+  - dragonflying relog keybind recovery for the mounted logout/login edge case
+  - guarded deferred action-bar binding refresh after normal binding rebuilds
+- Updated release/version files:
+  - `AzeriteUI5_JuNNeZ_Edition.toc` -> `5.3.75-JuNNeZ`
+  - `build-release.ps1` -> `5.3.75-JuNNeZ`
+  - `CHANGELOG.md` -> added delta-only `5.3.75-JuNNeZ` entry
+- Local validation completed:
+  - `luac -p Components/ActionBars/Elements/ActionBars.lua` passed.
+  - `git diff --check -- Components/ActionBars/Elements/ActionBars.lua AzeriteUI5_JuNNeZ_Edition.toc build-release.ps1 CHANGELOG.md FixLog.md` passed (with existing LF/CRLF warning on `FixLog.md`).
+- Runtime `/reload` validation completed by user report for the mounted relog keybind path.
+
+## 2026-05-03 - Dragonflying relog keybind recovery follow-up
+
+- **[USER REPORT] Logging out while mounted with dragonflying bar visible could leave keyboard action-bar binds non-responsive after login while clicks still worked:**
+  - Repro from report: log out on dragonflying mount with dragon bar active -> log back in -> keybinds do not fire action-bar abilities while clicks still work.
+- **Root cause target:**
+  - `Components/ActionBars/Elements/ActionBars.lua` rebuilds overrides immediately on event, but login/mount/action-bar state can settle one tick later.
+  - When that late state cleanup happens after the initial override rebuild, keybind routing can remain stale until another strong state transition forces a rebind.
+- **Fix applied:**
+  - Added a one-shot deferred binding refresh in `Components/ActionBars/Elements/ActionBars.lua`:
+    - `ActionBarMod.UpdateBindings()` now queues a short follow-up rebuild.
+    - `ActionBarMod.OnBindingRefreshTimer()` re-runs `UpdateBindings()` with a guard event token (`AZERITEUI_DEFERRED_BINDINGS`) to avoid recursion.
+  - Secure state drivers and button paging logic remain unchanged.
+- **Validation target:**
+  - `luac -p Components/ActionBars/Elements/ActionBars.lua`
+  - In-game `/reload` loop:
+    1. Mount dragonflying and ensure dragon bar is active.
+    2. Logout while mounted and log back in.
+    3. Verify action-bar keybinds and mouse clicks both work while mounted.
+    4. Dismount without entering combat and verify keybinds stay functional.
+    5. Repeat once with combat before dismount to confirm no regression.
 
 ## 2026-05-03 — 5.3.74-JuNNeZ release prep/finalization
 

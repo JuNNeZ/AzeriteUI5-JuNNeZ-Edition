@@ -739,6 +739,21 @@ ActionBarMod.UpdateBindings = function(self, event)
 		primaryBar:UpdateBindings()
 	end
 	self:RefreshDragonVisualState()
+	if (event ~= "AZERITEUI_DEFERRED_BINDINGS") then
+		self:QueueBindingRefresh()
+	end
+end
+
+ActionBarMod.QueueBindingRefresh = function(self)
+	if (self.__AzeriteUI_BindingRefreshTimer) then
+		self:CancelTimer(self.__AzeriteUI_BindingRefreshTimer)
+	end
+	self.__AzeriteUI_BindingRefreshTimer = self:ScheduleTimer("OnBindingRefreshTimer", .1)
+end
+
+ActionBarMod.OnBindingRefreshTimer = function(self)
+	self.__AzeriteUI_BindingRefreshTimer = nil
+	self:UpdateBindings("AZERITEUI_DEFERRED_BINDINGS")
 end
 
 ActionBarMod.RefreshDragonVisualState = function(self)
