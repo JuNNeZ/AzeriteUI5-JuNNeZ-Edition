@@ -196,7 +196,7 @@ ns.RegisterConfig("PlayerClassPower", {
 			[6] = CreateRogueComboPointLayout(21, -5),
 			[7] = CreateRogueComboPointLayout(47, -1, { 82, 96 }, { 14, 21 })
 		},
-		Chi = { --[[ 5 ]]
+		Chi = { --[[ 6 ]]
 			[1] = {
 				Position = { "TOPLEFT", 82, -137 },
 				Size = { 13, 13 }, BackdropSize = { 58, 58 },
@@ -204,27 +204,33 @@ ns.RegisterConfig("PlayerClassPower", {
 				Rotation = toRadians(6)
 			},
 			[2] = {
-				Position = { "TOPLEFT", 62, -109 },
+				Position = { "TOPLEFT", 70, -111 },
 				Size = { 13, 13 }, BackdropSize = { 60, 60 },
 				Texture = GetMedia("point_crystal"),  BackdropTexture = GetMedia("point_plate"),
 				Rotation = toRadians(5)
 			},
 			[3] = {
-				Position = { "TOPLEFT", 51, -73 },
-				Size = { 39, 40  }, BackdropSize = { 80, 80 },
-				Texture = GetMedia("point_hearth"),  BackdropTexture = GetMedia("point_plate"),
-				Rotation = nil
+				Position = { "TOPLEFT", 61, -79 },
+				Size = { 12, 12 }, BackdropSize = { 56, 56 },
+				Texture = GetMedia("point_crystal"),  BackdropTexture = GetMedia("point_plate"),
+				Rotation = toRadians(-2)
 			},
 			[4] = {
-				Position = { "TOPLEFT", 64, -36 },
+				Position = { "TOPLEFT", 58, -44 },
 				Size = { 13, 13 }, BackdropSize = { 60, 60 },
 				Texture = GetMedia("point_crystal"),  BackdropTexture = GetMedia("point_plate"),
 				Rotation = nil
 			},
 			[5] = {
-				Position = { "TOPLEFT", 82, -9 },
+				Position = { "TOPLEFT", 61, -11 },
 				Size = { 13, 13 }, BackdropSize = { 60, 60 },
 				Texture = GetMedia("point_crystal"),  BackdropTexture = GetMedia("point_plate"),
+				Rotation = nil
+			},
+			[6] = {
+				Position = { "TOPLEFT", 70, 31 },
+				Size = { 39, 40  }, BackdropSize = { 80, 80 },
+				Texture = GetMedia("point_hearth"),  BackdropTexture = GetMedia("point_plate"),
 				Rotation = nil
 			}
 		},

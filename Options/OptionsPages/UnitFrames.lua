@@ -206,16 +206,20 @@ local GenerateOptions = function()
 		}
 		suboptions.args.crystalOrbColorMode = {
 			name = L["Crystal/Orb Color Source"],
-			desc = L["Choose stock AzeriteUI power colors or enhanced token-based power colors."],
+			desc = L["Choose stock AzeriteUI power colors, enhanced token-based power colors, or your class color."],
 			order = 20, type = "select", width = "full", hidden = isdisabled,
 			values = {
 				default = "Default",
-				enhanced = "Enhanced Colors"
+				enhanced = "Enhanced Colors",
+				classColor = "Class Color"
 			},
 			set = setter,
 			get = function(info)
 				local mode = getter(info)
-				if (mode == "enhanced" or mode == "new" or mode == "class") then
+				if (mode == "classColor" or mode == "class") then
+					return "classColor"
+				end
+				if (mode == "enhanced" or mode == "new") then
 					return "enhanced"
 				end
 				-- Migrate old modes (preset/custom/mana/etc) to default behavior.

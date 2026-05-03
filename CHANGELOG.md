@@ -5,6 +5,28 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.74-JuNNeZ (2026-05-03) - Player Crystal Class Color + Windwalker 6-Chi
+
+### Highlights
+
+- Added a new `Class Color` source for the player Power Crystal / Mana Orb under `/az -> Unit Frame Settings -> Player -> Crystal/Orb Color Source`.
+- Preserved saved-variable compatibility for legacy `class` color-mode values.
+- Fixed Windwalker Monk Chi display to support 6 Chi points while still showing 5 points when max Chi is 5.
+- Updated the 6-Chi visual layout to use a curved progression with the larger unique point at index 6 for clearer read order.
+
+### Access
+
+- Crystal/Orb color source: `/az -> Unit Frame Settings -> Player -> Crystal/Orb Color Source`.
+- No new setting is required for Monk Chi; the 6-point behavior applies automatically when your live max Chi is 6.
+
+### Internal
+
+- `Components/UnitFrames/Units/Player.lua`: added a dedicated `classColor` mode for player power colors and mapped legacy `class` values to it.
+- `Options/OptionsPages/UnitFrames.lua`: added `Class Color` to the player Crystal/Orb color-source dropdown.
+- `Components/UnitFrames/Units/PlayerClassPower.lua`: keeps Monk `CHI` on the `Chi` style for max 5 or 6 before generic `max >= 6` style routing.
+- `Layouts/Data/PlayerClassPower.lua`: extends `Chi` to 6 points and applies the curved point ordering/style tuning.
+
+
 ## 5.3.73-JuNNeZ (2026-05-01) - Party/Raid Right-Click Menu Fix
 
 ### Highlights

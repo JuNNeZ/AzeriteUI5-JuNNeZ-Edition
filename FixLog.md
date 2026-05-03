@@ -1,4 +1,92 @@
 
+## 2026-05-03 — 5.3.74-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta since `5.3.73-JuNNeZ`:
+  - added the player Power Crystal / Mana Orb `Class Color` source option with legacy saved-value compatibility
+  - fixed Windwalker Monk Chi to support 6 points while preserving 5-point behavior when max Chi is 5
+  - tuned 6-Chi point ordering into a curved progression and moved the large unique Chi point to index 6
+- Added a new player-facing `5.3.74-JuNNeZ` top entry to `CHANGELOG.md`.
+- Bumped release version to `5.3.74-JuNNeZ` in `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1`.
+- Local validation completed:
+  - `luac -p Components/UnitFrames/Units/Player.lua Options/OptionsPages/UnitFrames.lua Components/UnitFrames/Units/PlayerClassPower.lua Layouts/Data/PlayerClassPower.lua` passed.
+  - `git diff --check -- Components/UnitFrames/Units/Player.lua Options/OptionsPages/UnitFrames.lua Components/UnitFrames/Units/PlayerClassPower.lua Layouts/Data/PlayerClassPower.lua CHANGELOG.md AzeriteUI5_JuNNeZ_Edition.toc build-release.ps1 Docs/TODO.md` passed.
+- Runtime `/reload` validation was performed for Windwalker Chi ordering during this iteration; player crystal class-color mode still needs broad multi-class runtime spot-checking after release.
+
+## 2026-05-03 — Player power crystal class color option
+
+- **[USER REQUEST] Add a player class-color choice for the Power Crystal / Mana Orb color-source dropdown:**
+  - Request maps to the open TODO item for the player power crystal color source.
+  - Scope stays local to AzeriteUI-owned player frame settings and color resolution.
+- **Research:**
+  - `Options/OptionsPages/UnitFrames.lua` exposed `Crystal/Orb Color Source` with only `Default` and `Enhanced Colors`.
+  - `Components/UnitFrames/Units/Player.lua` treated legacy `class` exactly like `enhanced`, so saved values never resolved to the actual player class color.
+  - `Core/Common/Colors.lua` already exposes addon-owned class colors through `ns.Colors.class[playerClass]`.
+- **Fix applied:**
+  - Added a distinct `classColor` mode to the player crystal/orb color resolver in `Components/UnitFrames/Units/Player.lua`.
+  - Preserved saved-variable compatibility by treating legacy `class` as the new class-color mode.
+  - Added `Class Color` to the `/az -> Unit Frame Settings -> Player -> Crystal/Orb Color Source` dropdown and updated the option description to reflect the third mode.
+- **Validation target:**
+  - `luac -p Components/UnitFrames/Units/Player.lua Options/OptionsPages/UnitFrames.lua`
+  - In-game: `/reload` on at least one mana user and one non-mana user, switch between `Default`, `Enhanced Colors`, and `Class Color`, and verify the Power Crystal / Mana Orb, fake fill, and spark keep working.
+- **Local validation completed:**
+  - `luac -p Components/UnitFrames/Units/Player.lua Options/OptionsPages/UnitFrames.lua` passed.
+  - Runtime `/reload` validation is still required in game.
+
+## 2026-05-03 — Windwalker Monk 6-Chi display
+
+- **[USER REQUEST] Fix the Monk Chi display so Windwalker can show all 6 points:**
+  - This is the next active TODO item after the player crystal class-color option.
+  - Scope stays local to AzeriteUI's class-power style selection and layout data.
+- **Research:**
+  - `Components/UnitFrames/Units/PlayerClassPower.lua` routed all `max >= 6` resources into the generic extended-combo-point branch before Monk `CHI` could keep using the `Chi` style.
+  - `Layouts/Data/PlayerClassPower.lua` only defined five `Chi` points, so there was no sixth point to reveal even if the style stayed on `Chi`.
+  - The existing visible-point cap logic already hides extra points when the live max is lower than the layout count.
+- **Fix applied:**
+  - `Components/UnitFrames/Units/PlayerClassPower.lua` now keeps Monk `CHI` on the `Chi` style for max 5 or 6 before the generic `max >= 6` combo-point branch runs.
+  - `Layouts/Data/PlayerClassPower.lua` now defines a sixth `Chi` point so Windwalker can display 6 Chi without changing the existing 5-Chi presentation.
+  - The sixth point remains hidden automatically when the live max is only 5.
+- **Validation target:**
+  - `luac -p Components/UnitFrames/Units/PlayerClassPower.lua Layouts/Data/PlayerClassPower.lua`
+  - In-game: `/reload` on Windwalker with a 6-Chi build, generate and spend Chi, verify the sixth point appears only at max 6 and clears/fills correctly.
+- **Local validation completed:**
+  - `luac -p Components/UnitFrames/Units/PlayerClassPower.lua Layouts/Data/PlayerClassPower.lua` passed.
+  - Runtime `/reload` validation is still required in game.
+
+## 2026-05-03 — Windwalker Monk 6-Chi point-order follow-up
+
+- **[USER FEEDBACK] 6-Chi point ordering looked wrong in-game:**
+  - Screenshot feedback indicated the newly added sixth Chi point arrangement did not match the established 6-point progression style.
+- **Research:**
+  - `Layouts/Data/PlayerClassPower.lua` has one existing native 6-point class layout (`Runes`) with a proven point order.
+  - The initial Chi sixth-point extension used ad-hoc coordinates instead of matching the established 6-point progression.
+- **Fix applied:**
+  - Remapped Chi point positions `[1]` through `[6]` to mirror the existing 6-point ordering pattern used by `Runes`.
+  - Kept Chi-specific textures, sizes, and rotations unchanged.
+- **Validation target:**
+  - `luac -p Layouts/Data/PlayerClassPower.lua`
+  - In-game: `/reload` on Windwalker with 6 Chi and verify fill/spend ordering now follows the expected 1→6 spatial progression.
+- **Local validation completed:**
+  - `luac -p Layouts/Data/PlayerClassPower.lua` passed.
+  - Runtime `/reload` validation is still required in game.
+
+## 2026-05-03 — Windwalker Monk 6-Chi curve/style follow-up
+
+- **[USER FEEDBACK] Chi points still looked messy and not curved; point 6 should be the standout point, not point 3:**
+  - Requested shape reference was the cleaner curved class-power style used by Rogue/DH-like layouts.
+- **Research:**
+  - `ComboPointsRogue` in `Layouts/Data/PlayerClassPower.lua` provides the clearest existing curved progression in this addon's class-power layouts.
+  - Current Chi layout had a non-arc progression and placed the large unique hearth style on point 3 instead of point 6.
+- **Fix applied:**
+  - Remapped Chi points 1-6 onto a Rogue-like curve progression.
+  - Swapped the style payload between point 3 and point 6 so point 6 is now the largest unique hearth-style point.
+  - Kept the Monk 6-Chi cap behavior unchanged (point 6 still only appears when max Chi is 6).
+- **Validation target:**
+  - `luac -p Layouts/Data/PlayerClassPower.lua`
+  - In-game: `/reload` on Windwalker with 6 Chi, generate/spend Chi, verify curved 1→6 progression and large unique point at index 6.
+- **Local validation completed:**
+  - `luac -p Layouts/Data/PlayerClassPower.lua` passed.
+  - Runtime `/reload` validation is still required in game.
+
 ## 2026-05-01 — Raid25/Raid40 right-click menu fix (same root cause as Party)
 
 - [USER REPORT] Right-click on unit frames in 10-man (and 40-man) raids also opens no menu.

@@ -641,6 +641,8 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 	elseif (powerType == "MAELSTROM") then
 		-- Enhancement shaman maelstrom weapon stacks use the same 10-point model.
 		style = "SoulFragmentsPoints"
+	elseif (powerType == "CHI" and playerClass == "MONK" and max >= 5) then
+		style = "Chi"
 	elseif (max >= 6) then
 		-- Rogue extended combo points use a dedicated 7-point arc.
 		style = (powerType == "COMBO_POINTS" and playerClass == "ROGUE") and "ComboPointsRogue" or "ComboPoints"

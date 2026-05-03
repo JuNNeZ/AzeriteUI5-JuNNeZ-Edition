@@ -1774,7 +1774,10 @@ end
 local ResolvePlayerPowerBaseColor = function(config, profile, token)
 	local defaultColor = ResolvePlayerPowerDefaultColor(config, token)
 	local colorMode = profile and profile.crystalOrbColorMode or "default"
-	if (colorMode == "enhanced" or colorMode == "new" or colorMode == "class") then
+	if (colorMode == "classColor" or colorMode == "class") then
+		return ResolvePlayerPowerColorFromTable(Colors and Colors.class, playerClass, defaultColor)
+	end
+	if (colorMode == "enhanced" or colorMode == "new") then
 		return ResolvePlayerPowerColorFromTable(POWER_CRYSTAL_ENHANCED_COLORS, token, defaultColor)
 	end
 	return defaultColor
