@@ -1,4 +1,5 @@
 name: Sync Wiki
+run-name: "Sync wiki pages (${{ github.event_name }}: ${{ github.ref_name }})"
 
 on:
   push:
