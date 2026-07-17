@@ -148,7 +148,7 @@ ns.ActionBar.Create = function(self, id, config, name)
 
 	bar:SetAttribute("_onstate-page", [[
 
-		local hasVehicleBar, hasOverrideBar, hasTempShapeshiftBar, hasPossessBar, isDragonRiding;
+		local hasVehicleBar, hasOverrideBar, hasTempShapeshiftBar, hasPossessBar;
 
 		if (newstate == "possess" or newstate == "dragon" or newstate == "11") then
 
@@ -168,9 +168,6 @@ ns.ActionBar.Create = function(self, id, config, name)
 				newstate = GetBonusBarIndex();
 				if (GetBonusBarOffset() == 5) then
 					hasPossessBar = true;
-					if (IsMounted()) then
-						isDragonRiding = true;
-					end
 				end
 			else
 				newstate = nil;
@@ -180,7 +177,6 @@ ns.ActionBar.Create = function(self, id, config, name)
 			end
 		end
 
-		self:SetAttribute("isdragonriding", isDragonRiding);
 		self:SetAttribute("hasvehiclebar", hasVehicleBar);
 		self:SetAttribute("hasoverridebar", hasOverrideBar);
 		self:SetAttribute("hastempshapeshiftbar", hasTempShapeshiftBar);
@@ -215,14 +211,12 @@ end
 
 ActionBar.UpdateButtonFlags = function(self)
 
-	self.isDragonRiding = self:GetAttribute("isdragonriding")
 	self.hasVehicleBar = self:GetAttribute("hasvehiclebar")
 	self.hasOverrideBar = self:GetAttribute("hasoverridebar")
 	self.hasTempShapeshiftBar = self:GetAttribute("hastempshapeshiftbar")
 	self.hasPossessBar = self:GetAttribute("haspossessbar")
 
 	for id,button in next,self.buttons do
-		button.isDragonRiding = self.isDragonRiding
 		button.hasVehicleBar = self.hasVehicleBar
 		button.hasOverrideBar = self.hasOverrideBar
 		button.hasTempShapeshiftBar = self.hasTempShapeshiftBar
@@ -252,7 +246,6 @@ ActionBar.CreateButton = function(self, buttonConfig)
 		button:SetState(18, "custom", exitButton)
 	end
 
-	button.isDragonRiding = self.isDragonRiding
 	button.hasVehicleBar = self.hasVehicleBar
 	button.hasOverrideBar = self.hasOverrideBar
 	button.hasTempShapeshiftBar = self.hasTempShapeshiftBar
@@ -379,16 +372,14 @@ ActionBar.UpdateBindings = function(self)
 
 	if (not self:IsEnabled()) then return end
 
-	local state = tonumber(self:GetAttribute("state")) or 0
-	local hasDynamicPageState = (self.id == 1) and (
-		(state >= 7 and state <= 10)
-		or state == 11 or state == 12 or state == 16 or state == 17 or state == 18
-		or self.hasVehicleBar
-		or self.hasOverrideBar
-		or self.hasTempShapeshiftBar
-		or self.hasPossessBar
-		or self.isDragonRiding
-	)
+	-- Bar 1 always uses click-route so that possess/vehicle/override/dragon
+	-- state transitions work correctly even when entered in combat (where
+	-- InCombatLockdown() would block any binding refresh). Click-route chains
+	-- key → named button → button's current secure-paged action, which
+	-- _onstate-page keeps correct regardless of combat lockdown.
+	-- Hold-cast (clickOnDown) still functions through LAB's Keybind click type.
+	-- Bars 2+ are stable pages so command-route (hold-cast) is safe there.
+	local hasDynamicPageState = (self.id == 1)
 
 	for id,button in pairs(self.buttons) do
 		local bindingAction = button.keyBoundTarget
@@ -431,7 +422,7 @@ ActionBar.UpdateStateDriver = function(self)
 	-- CATA: check stances and states
 	local statedriver
 	if (self.id == 1) then
-		statedriver = "[overridebar] possess; [possessbar] possess; [shapeshift] possess; [mounted,bonusbar:5] dragon; [form,noform] 0; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6"
+		statedriver = "[overridebar] possess; [possessbar] possess; [shapeshift] possess; [bonusbar:5] dragon; [form,noform] 0; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6"
 
 		if (playerClass == "DRUID") then
 			statedriver = statedriver .. "; [bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10"
@@ -483,9 +474,9 @@ ActionBar.UpdateVisibilityDriver = function(self)
 
 		if (self.id == 1) then
 			if (config.visibility.dragon) then
-				visdriver = visdriver.."[mounted,bonusbar:5]show;"
+				visdriver = visdriver.."[bonusbar:5]show;"
 			else
-				visdriver = visdriver.."[mounted,bonusbar:5]hide;"
+				visdriver = visdriver.."[bonusbar:5]hide;"
 			end
 		end
 

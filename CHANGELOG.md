@@ -5,6 +5,26 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.76-JuNNeZ (2026-07-17) - Action Bar Skyriding and Layout Reliability
+
+### Highlights
+
+- Fixed Druid flight mode and travel form with skyriding enabled not switching bar 1 to the skyriding action bar.
+- Fixed temporary bar-1 states so keyboard binds stay aligned with the displayed actions during possess, vehicle, override, and skyriding transitions.
+- Fixed zigzag and grid action-bar layouts using unstable button iteration, which could leave button positions or refreshes inconsistent after reloads and settings updates.
+- Added retail WoW 12.0.7 interface support (`120007`).
+
+### Access
+
+- No new setting is required. Existing `/az -> Action Bars` settings continue to apply.
+
+### Internal
+
+- `Components/ActionBars/Prototypes/ActionBar.lua`: bar 1 now treats skyriding as `bonusbar:5` without requiring `mounted`, and uses the secure click-route consistently for dynamic primary-bar paging states.
+- `Components/ActionBars/Elements/ActionBars.lua`: dragon/skyriding visual-state checks now follow `bonusbar:5`, and button-count refreshes iterate deterministically.
+- `Components/ActionBars/Prototypes/ButtonBar.lua`: zigzag and grid layouts now iterate buttons in numeric order so order-dependent offsets stay stable.
+
+
 ## 5.3.75-JuNNeZ (2026-05-03) - Dragonflying Relog Keybind Recovery
 
 ### Highlights

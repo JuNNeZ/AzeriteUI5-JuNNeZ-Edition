@@ -89,9 +89,6 @@ local IsDragonMountBarState = function(primaryBar)
 	if (not ns.IsRetail) then
 		return false
 	end
-	if (not IsMounted()) then
-		return false
-	end
 	if (not HasCurrentBonusActionBar()) then
 		return false
 	end
@@ -571,10 +568,21 @@ ActionBarMod.CreateBars = function(self)
 	local petBattleController = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
 	petBattleController:SetAttribute("_onstate-petbattle", string_format([[
 		if (newstate == "petbattle") then
-			b = b or table.new();
-			b[1], b[2], b[3], b[4], b[5], b[6] = "%s", "%s", "%s", "%s", "%s", "%s";
+			local b1, b2, b3, b4, b5, b6 = "%s", "%s", "%s", "%s", "%s", "%s";
 			for i = 1,6 do
-				local button, vbutton = "CLICK "..b[i]..":LeftButton", "ACTIONBUTTON"..i
+				local buttonName = b1
+				if (i == 2) then
+					buttonName = b2
+				elseif (i == 3) then
+					buttonName = b3
+				elseif (i == 4) then
+					buttonName = b4
+				elseif (i == 5) then
+					buttonName = b5
+				elseif (i == 6) then
+					buttonName = b6
+				end
+				local button, vbutton = "CLICK "..buttonName..":LeftButton", "ACTIONBUTTON"..i
 				for k=1,select("#", GetBindingKey(button)) do
 					local key = select(k, GetBindingKey(button))
 					self:SetBinding(true, key, vbutton)
@@ -711,9 +719,11 @@ end
 
 ActionBarMod.UpdateBarButtonCounts = function(self)
 	for i,bar in next,self.bars do
-		for j,button in next,bar.buttons do
-			if j > bar.config.numbuttons then break end
-			button:ForceUpdate()
+		local numbuttons = bar.config.numbuttons
+		for j = 1, #bar.buttons do
+			if (j <= numbuttons) then
+				bar.buttons[j]:ForceUpdate()
+			end
 		end
 	end
 end

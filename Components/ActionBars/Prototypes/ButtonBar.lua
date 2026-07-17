@@ -153,7 +153,8 @@ ButtonBar.UpdateButtonLayout = function(self)
 		local point = (config.growthVertical == "UP" and "BOTTOM" or "TOP")..(config.growthHorizontal == "RIGHT" and "LEFT" or "RIGHT")
 		local offsetX, offsetY
 
-		for id,button in next,buttons do
+		for id = 1,#buttons do
+			local button = buttons[id]
 
 			local isZigZag = (id >= config.startAt) and ((config.startAt - id)%2 == 0)
 
@@ -269,7 +270,8 @@ ButtonBar.UpdateButtonLayout = function(self)
 		local point = (config.growthVertical == "UP" and "BOTTOM" or "TOP")..(config.growthHorizontal == "RIGHT" and "LEFT" or "RIGHT")
 		local offsetX, offsetY = 0,0
 
-		for id,button in next,buttons do
+		for id = 1,#buttons do
+			local button = buttons[id]
 
 			local breakpoint = (id - 1)%config.breakpoint == 0
 			local numbreaks = breakpoint and math_floor((id - 1)/config.breakpoint)

@@ -1,3 +1,130 @@
+## 2026-07-17 - 5.3.76-JuNNeZ release prep/finalization
+
+- Consolidated the pending release delta since `5.3.75-JuNNeZ`:
+  - fixed Druid flight mode / travel form not showing the skyriding action bar when `bonusbar:5` is active
+  - hardened bar-1 temporary action-bar routing so keybinds stay aligned through possess, vehicle, override, and skyriding transitions
+  - fixed unstable action-bar button iteration affecting zigzag/grid layout positioning and button refresh order
+  - added retail interface support for WoW `12.0.7` (`120007`)
+- Updated release/version files:
+  - `AzeriteUI5_JuNNeZ_Edition.toc` -> `5.3.76-JuNNeZ` and interface list `120007, 120005, 120001, 120000`
+  - `build-release.ps1` -> `5.3.76-JuNNeZ`
+  - `CHANGELOG.md` -> added delta-only `5.3.76-JuNNeZ` entry
+- Local validation target:
+  - `luac -p Components/ActionBars/Prototypes/ActionBar.lua Components/ActionBars/Elements/ActionBars.lua Components/ActionBars/Prototypes/ButtonBar.lua`
+  - `git diff --check -- Components/ActionBars/Prototypes/ActionBar.lua Components/ActionBars/Elements/ActionBars.lua Components/ActionBars/Prototypes/ButtonBar.lua AzeriteUI5_JuNNeZ_Edition.toc build-release.ps1 CHANGELOG.md FixLog.md`
+- Runtime validation:
+  - user confirmed the Druid skyriding bar path now works in game
+
+## 2026-07-17 - Druid flight mode/travel form missed dragonriding bar state
+
+- **Symptom:** Druids entering flight mode / travel form with skyriding available did not get the dragonriding action bar, while regular dragonriding mounts still worked.
+- **Root cause:** AzeriteUI gated the dragonriding page and visibility drivers on `[mounted,bonusbar:5]`. Druid flight/travel form can expose the dragonriding bonus bar (`bonusbar:5`) without satisfying the secure `mounted` condition, so the primary bar never paged into the dragon state and the visibility driver never showed it.
+- **Fix:** Removed the `mounted` requirement from the dragonriding checks so AzeriteUI now treats any retail `bonusbar:5` state as the dragonriding/skyriding action bar source. This updates both the secure primary-bar state driver and the visibility driver in `Components/ActionBars/Prototypes/ActionBar.lua`, plus the insecure visual hide/show helper in `Components/ActionBars/Elements/ActionBars.lua`.
+- **Validation target:** `luac -p Components/ActionBars/Prototypes/ActionBar.lua Components/ActionBars/Elements/ActionBars.lua`
+- **In-game test:** `/reload` -> enter Druid flight mode/travel form with skyriding enabled -> confirm bar 1 swaps to the dragonriding bar and secondary bars hide/show as configured -> dismount/cancel form -> confirm base paging returns.
+
+## 2026-05-09 - Possess keybinds broken (clicks worked, keys did not)
+
+- **Symptom:** When possessed (mind control, possess bar), clicking action buttons worked but bound keys did nothing.
+- **Root cause:** Timing + combat lockdown. Bar 1 installed command-route bindings (`ACTIONBUTTON1` → base page slot) before possess. On entering possess in combat, `InCombatLockdown()` blocked `UpdateBindings`, so command bindings stayed pointing at the base page. `_onstate-page` (secure context, unblocked by lockdown) did repage the button's action correctly, so a direct click worked — but the key-bound command fired the wrong page slot.
+- **Fix:** Changed `hasDynamicPageState` in `UpdateBindings` to be unconditionally `true` for bar 1 (`local hasDynamicPageState = (self.id == 1)`). Bar 1 now always uses click-route (`SetOverrideBindingClick`) rather than command-route. Click-route chains key → named button → button's current secure-paged action, which `_onstate-page` always keeps correct regardless of combat lockdown. Hold-cast still works through LAB's `Keybind` click type with `clickOnDown`. Bars 2–8 are stable pages so command-route (hold-cast via `SetOverrideBinding`) is still used there.
+- **Validation:** `luac -p Components/ActionBars/Prototypes/ActionBar.lua` passed.
+- **Test:** `/reload` → enter possess / vehicle / mind control → keybinds fire correct possess-bar slot.
+
+## 2026-05-09 - Dragonriding mount bar disappeared after over-simplifying secure page routing
+
+- **Regression observed:** After removing the secure `dragon` token from `Components/ActionBars/Prototypes/ActionBar.lua`, mounting up left the primary action bar with no usable page on dragonriding mount.
+- **Root cause:** The bar state driver still emits `dragon` for `[mounted,bonusbar:5]`, so the secure `_onstate-page` handler must continue to normalize that token back to a real action page via `GetBonusBarIndex()`. Dropping the token meant the handler skipped the page translation on mount.
+- **Fix:** Restored `newstate == "dragon"` in the `_onstate-page` handler. The handler now again maps dragonriding to the real bonus-bar page, while still using the shared possess/bonus-bar dynamic route policy for binding decisions.
+- **Validation:** `luac -p Components/ActionBars/Prototypes/ActionBar.lua` passed after the restoration.
+
+## 2026-05-09 - Dragonriding/possess page-path simplification
+
+- **Why this follow-up:** The earlier dragon-only secure flag and login-time priming were still too specific and could diverge from Blizzard-style possess/bonusbar handling when the player moved between dragonriding, possess, and other bonus-bar states.
+- **Change made:**
+  - `Components/ActionBars/Prototypes/ActionBar.lua` now treats dragonriding through the same secure `possess`/bonus-bar path used by DiabolicUI3, instead of a separate `dragon` page token.
+  - Removed the `isdragonriding` secure attribute/cache path from binding decisions; dynamic route selection now relies on the same bar-state flags used for other transient bars (`hasVehicleBar`, `hasOverrideBar`, `hasTempShapeshiftBar`, `hasPossessBar`).
+  - Kept dragon visual hiding/blocking in `Components/ActionBars/Elements/ActionBars.lua` driven by the insecure mount + bonusbar:5 check, so the UI can still hide secondary bars without the secure routing needing a separate dragon branch.
+- **Expected outcome:** dragonriding, possessed, vehicle, override, and temp-shapeshift transitions all share one consistent click-route policy on bar 1, which should remove the remaining route drift.
+- **Validation:** `luac -p Components/ActionBars/Prototypes/ActionBar.lua` and `luac -p Components/ActionBars/Elements/ActionBars.lua` passed after the change.
+
+## 2026-05-09 - Full actionbar code audit (five bugs fixed)
+
+### Audit scope
+All files under `Components/ActionBars/` — `Prototypes/ActionBar.lua`, `Prototypes/ButtonBar.lua`, `Prototypes/ActionButton.lua`, `Prototypes/Bar.lua`, `Elements/ActionBars.lua`, and all `Compatibility/` files — were read in full and cross-checked against the existing FixLog history.
+
+### Bug 1 — `table.new` in petBattleController restricted handler (CRITICAL, pet-battle keybinds silently broken)
+- **File:** `Components/ActionBars/Elements/ActionBars.lua`
+- **Location:** `petBattleController:SetAttribute("_onstate-petbattle", ...)` handler body
+- **Root cause:** `table.new()` is a LuaJIT extension not available in WoW's SecureHandler restricted Lua environment. The call errored silently, leaving `b = nil`, and the `b[1]..b[6] = ...` assignment also errored. Result: pet-battle keybind remapping never fired.
+- **Fix:** Replaced `table.new()` with `{}`. The restricted environment supports table constructors. `b[1..6]` are always overwritten on every petbattle entry so no `wipe` is needed.
+
+### Bug 2 — `UpdateBarButtonCounts` used `next`+`break` on hash iteration (MEDIUM, missed ForceUpdate on buttons)
+- **File:** `Components/ActionBars/Elements/ActionBars.lua`
+- **Root cause:** `for j,button in next,bar.buttons do if j > numbuttons then break end ...` — hash iteration order for integer-keyed tables is unspecified. A high-id button encountered before a lower-id button triggers early break, skipping remaining buttons.
+- **Fix:** Replaced with `for j = 1, #bar.buttons do` numeric loop. All buttons with `j <= numbuttons` get `ForceUpdate()`.
+
+### Bug 3 — `UpdateButtonLayout` used `next` for order-dependent position calculations (HIGH, wrong button positions possible)
+- **File:** `Components/ActionBars/Prototypes/ButtonBar.lua`
+- **Root cause:**
+  - **Zigzag layout:** Position is computed from a running `counter` that increments per non-zigzag button processed. If `next` visits buttons out of id-sequential order the counter diverges from expected and all zigzag-row buttons land at wrong X/Y coordinates.
+  - **Grid layout:** `offsetX` and `offsetY` are accumulated across iterations (`offsetX = offsetX + ...`). Out-of-order iteration produces wrong accumulated offsets for all subsequent buttons.
+- **Fix:** Both loops replaced with `for id = 1, #buttons do local button = buttons[id]` to guarantee sequential id-order.
+
+### Bug 4 — `self.numButtons` (capital B) fallback is live for stance-style bars (LOW, behavior preserved)
+- **File:** `Components/ActionBars/Prototypes/ButtonBar.lua`
+- **Root cause:** `StanceBar.UpdateButtonCount()` sets `self.numButtons = numStances` before calling `UpdateButtonLayout()`, so the fallback is required for stance-style layouts that size and iterate against the current stance count rather than the static configured maximum.
+- **Resolution:** Kept the `self.numButtons` fallback in `ButtonBar.UpdateButtonLayout` and limited the layout-order fix to the numeric iteration change only.
+
+### Bug 5 — Dead `state == 11` check in `hasDynamicPageState` (LOW, dead code)
+- **File:** `Components/ActionBars/Prototypes/ActionBar.lua`
+- **Root cause:** Bar-1's state driver (`[overridebar]possess; [possessbar]possess; [shapeshift]possess; [mounted,bonusbar:5]dragon; [form,noform]0; [bar:2]2…[bonusbar:1-4]7-10; 1`) never emits state 11. The `_onstate-page` secure handler can receive "11" as input but that input is also never produced by this driver. The `state == 11` branch in `hasDynamicPageState` is dead.
+- **Fix:** Removed `or state == 11` from the check.
+
+### Findings documented but not changed
+- **`hasPossessBar = true` dual-tagged with dragonriding (bonusbar:5):** `_onstate-page` sets `hasPossessBar = true` whenever `GetBonusBarOffset() == 5`, even while dragonriding. This causes both `hasPossessBar` and `isDragonRiding` to be true simultaneously when mounted. Functionally correct (click-route is applied either way), but semantically confusing. Kept as-is to avoid secure-handler changes.
+- **Triple binding rebuild in `UpdateSettings`:** `UpdateBars → bar:Update → bar:UpdateBindings` (per-bar), then `UpdateSettings → ActionBarMod.UpdateBindings` (module-level), then `QueueBindingRefresh` (0.1s deferred). Three full rebuilds per settings update. By design; safe and keeps bar-1 priority ordering correct.
+- **`button.__AzeriteUI_BindingMode` overwritten per key:** Set inside the per-key loop; overwritten for each key. Since all keys for the same button use the same route decision, the last write is always consistent. Acceptable debug annotation behaviour.
+
+### Local validation
+- `luac -p Components/ActionBars/Prototypes/ActionBar.lua` — passed
+- `luac -p Components/ActionBars/Prototypes/ButtonBar.lua` — passed
+- `luac -p Components/ActionBars/Elements/ActionBars.lua` — passed
+
+### In-game regression sweep required
+1. `/buggrabber reset`
+2. Enter a pet battle — confirm bar 1 slots 1–6 fire the correct pet-battle actions.
+3. Confirm zigzag bar 1 layout positions are correct after `/reload`.
+4. Confirm secondary bars (2–5) positions are correct (grid layout).
+5. Dragonriding relog keybind parity (from previous fix, regression check).
+6. Rogue stealth / druid / monk bonus page key parity.
+
+## 2026-05-09 - Dragonriding relog keybind mismatch — attribute-read fix
+
+- **Symptom (ongoing):** After logging out on a dragonriding mount and back in, keyboard fires the wrong action while clicking works correctly. Occurs at or shortly after login, resolves after a `/reload` or zone transition.
+- **Root cause (refined):** Two compounding timing issues:
+  1. `_onstate-page` can fire during the early login settle window when `IsMounted()` is transiently `false`, setting `isdragonriding=nil` on the secure frame. Subsequent binding rebuilds (including the deferred 0.1s timer) read the stale *insecure mirror fields* (`self.isDragonRiding`) which also reflect the nil value, so command-route bindings are installed instead of click-route.
+  2. The deferred `QueueBindingRefresh` pass calls `bar:UpdateBindings()` which was reading `self.isDragonRiding` (cached insecure field) rather than `self:GetAttribute("isdragonriding")` (the authoritative secure attribute). If `_onstate-page` re-fires with correct state after the timer, the attribute is correct but the next call to `UpdateBindings` that doesn't go through `UpdateButtonFlags` misses it.
+- **Fix A** (`Components/ActionBars/Prototypes/ActionBar.lua` — `UpdateBindings`):
+  - Changed `hasDynamicPageState` to read all five bar-state flags via `self:GetAttribute()` instead of the insecure cached fields. This makes every binding rebuild — including the deferred timer pass — always see the current attribute state, not a potentially stale insecure mirror.
+- **Fix B** (`Components/ActionBars/Elements/ActionBars.lua` — `ActionBarMod.UpdateBindings`):
+  - Before calling `primaryBar:UpdateBindings()`, check `IsDragonMountBarState(primaryBar)`. If it returns true but `isdragonriding` attribute is still unset (stale from an early-login intermediate fire), prime the attribute to `true` so Fix A's `GetAttribute` read picks it up.
+- **Invariants preserved:**
+  - Rogue/druid/monk bonus-page click routing (`state >= 7 and state <= 10`) unchanged.
+  - Vehicle, override, possess, tempshapeshift click routing unchanged.
+  - Hold-cast command-binding preference on stable base page unchanged.
+  - Disabled secondary bars' `userhidden` attribute handling unchanged.
+  - No insecure `OnEnter`/`OnLeave` wrappers added (WoW 12 taint safety maintained).
+- **Local validation:** `luac -p` passed on both files.
+- **In-game repro loop (required):**
+  1. `/buggrabber reset`
+  2. Mount dragonriding, confirm dragon bar is active.
+  3. Log out while mounted.
+  4. Log in, press bar keys immediately then after ~1s settle.
+  5. Confirm keyboard action == click action for the same button.
+  6. `/reload`, repeat 3–5 cycles.
+- **Regression sweep required:** rogue stealth page parity, druid/monk bonus pages, vehicle/override, hold-cast base bar, disabled secondary bars hidden.
+
 ## 2026-05-03 - 5.3.75-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta since `5.3.74-JuNNeZ`:
