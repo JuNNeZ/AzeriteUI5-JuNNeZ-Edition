@@ -4,6 +4,15 @@ on:
   push:
     tags:
       - '**'
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to package and publish (for example: 5.3.76-JuNNeZ)'
+        required: true
+        type: string
 
 jobs:
   release:
@@ -24,6 +33,50 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+
+      - name: Resolve release tag
+        id: release_tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+
+          if [ -z "$TAG" ]; then
+            echo "::error::Unable to resolve release tag"
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Resolved release tag: $TAG"
+
+      - name: Validate release prerequisites
+        shell: bash
+        run: |
+          FAILED=0
+
+          if [ -z "$CF_API_KEY" ]; then
+            echo "::error::Missing required repository secret: CF_API_KEY"
+            FAILED=1
+          fi
+
+          if ! grep -q '^## X-Curse-Project-ID:' AzeriteUI5_JuNNeZ_Edition.toc; then
+            echo "::error::Missing '## X-Curse-Project-ID:' metadata in AzeriteUI5_JuNNeZ_Edition.toc"
+            FAILED=1
+          fi
+
+          if [ -z "$WAGO_API_TOKEN" ]; then
+            echo "::warning::WAGO_API_TOKEN is not set; Wago upload will be skipped"
+          fi
+
+          if [ "$FAILED" -ne 0 ]; then
+            exit 1
+          fi
       
       - name: Create Package
         uses: BigWigsMods/packager@v2
@@ -37,8 +90,8 @@ jobs:
       - name: Upload to WowInterface
         if: env.WOW_INTERFACE_TOKEN != '' && env.WOW_INTERFACE_ADDON_ID != ''
         run: |
-          # Extract version from tag
-          VERSION=${GITHUB_REF#refs/tags/}
+          # Extract version from resolved release tag
+          VERSION="${{ steps.release_tag.outputs.tag }}"
           
           # Find the packaged zip file
           PACKAGE_ZIP=$(find . -maxdepth 1 -name "*.zip" -type f | head -1)
