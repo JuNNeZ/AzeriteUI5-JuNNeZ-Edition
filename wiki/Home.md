@@ -12,6 +12,7 @@ AzeriteUI 5 JuNNeZ Edition is a full UI replacement for WoW Retail (WoW 12 / Mid
 - [Explorer Mode](Explorer-Mode.md)
 - [Tooltips, Chat, Minimap, Bags](Tooltips-Chat-Minimap-Bags.md)
 - [Profiles and Reset](Profiles-and-Reset.md)
+- [WoW 12.1 Update Tracking](WoW-12.1-Update-Tracking.md)
 - [Troubleshooting](Troubleshooting.md)
 - [FAQ](FAQ.md)
 

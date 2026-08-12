@@ -92,6 +92,18 @@ local ShouldShowPlayerAlternateHealthPercent = function()
 	return false
 end
 
+local IsLevelAtEffectiveMaxLevelSafe = function(level)
+	if (_G.IsLevelAtEffectiveMaxLevel) then
+		return _G.IsLevelAtEffectiveMaxLevel(level)
+	end
+	if (_G.GameRulesUtil and _G.GameRulesUtil.IsPlayerAtEffectiveMaxLevel) then
+		return _G.GameRulesUtil.IsPlayerAtEffectiveMaxLevel()
+	end
+	local maxLevel = (_G.GetMaxLevelForLatestExpansion and _G.GetMaxLevelForLatestExpansion())
+		or (_G.GetMaxPlayerLevel and _G.GetMaxPlayerLevel())
+	return type(level) == "number" and type(maxLevel) == "number" and level >= maxLevel
+end
+
 local UpdatePlayerAlternateHealthPercentVisibility = function(frame)
 	if (not frame or not frame.Health) then
 		return
@@ -665,8 +677,9 @@ end
 
 -- Update player frame based on player level.
 local UnitFrame_UpdateTextures = function(self)
-	local playerLevel = playerLevel or UnitLevel("player")
-	local key = (playerXPDisabled or IsLevelAtEffectiveMaxLevel(playerLevel)) and "Seasoned" or playerLevel < 10 and "Novice" or "Hardened"
+	local currentPlayerLevel = UnitLevel("player") or playerLevel or 0
+	local playerXPDisabled = IsXPUserDisabled and IsXPUserDisabled()
+	local key = (playerXPDisabled or IsLevelAtEffectiveMaxLevelSafe(currentPlayerLevel)) and "Seasoned" or currentPlayerLevel < 10 and "Novice" or "Hardened"
 	local config = ns.GetConfig("PlayerFrameAlternate")
 	local db = config[key]
 
@@ -1392,4 +1405,3 @@ PlayerFrameAltMod.OnEnable = function(self)
 
 	ns.MovableModulePrototype.OnEnable(self)
 end
-

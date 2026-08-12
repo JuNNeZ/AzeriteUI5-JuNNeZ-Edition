@@ -43,6 +43,9 @@ local GetAuraDataBySpellName = C_UnitAuras.GetAuraDataBySpellName
 local GetAuraDataByAuraInstanceID = C_UnitAuras.GetAuraDataByAuraInstanceID
 local GetPlayerAuraBySpellID = C_UnitAuras.GetPlayerAuraBySpellID
 local GetActionDisplayCount = C_ActionBar.GetActionDisplayCount
+local GetActionChargeDuration = C_ActionBar.GetActionChargeDuration
+local GetActionCooldownDuration = C_ActionBar.GetActionCooldownDuration
+local GetActionLossOfControlCooldownDuration = C_ActionBar.GetActionLossOfControlCooldownDuration
 local IsEquippedGearOutfitAction = C_ActionBar.IsEquippedGearOutfitAction
 local C_Container_GetItemCooldown = C_Container.GetItemCooldown
 local C_EquipmentSet_PickupEquipmentSet = C_EquipmentSet.PickupEquipmentSet
@@ -351,6 +354,11 @@ function lib:CreateButton(id, name, header, config)
 	button:SetScript("PreClick", Generic.PreClick)
 	button:SetScript("PostClick", Generic.PostClick)
 	button:SetScript("OnEvent", Generic.OnButtonEvent)
+	button:SetScript("OnAttributeChanged", nil)
+
+	-- Retail ActionButtonTemplate now brings in mixin methods that can override
+	-- LAB's metatable methods unless we explicitly clear them.
+	button.HasAction = nil
 
 	button.id = id
 	button.header = header
@@ -2501,6 +2509,31 @@ function UpdateCount(self)
 		return
 	end
 
+	local chargeInfo = self.GetChargeInfo and self:GetChargeInfo()
+	if type(chargeInfo) == "table" then
+		local currentCharges = chargeInfo.currentCharges
+		local maxCharges = chargeInfo.maxCharges
+		if IsSafeNumber(currentCharges) then
+			cache.charges = currentCharges
+		else
+			currentCharges = cache.charges
+		end
+		if IsSafeNumber(maxCharges) then
+			cache.maxCharges = maxCharges
+		else
+			maxCharges = cache.maxCharges
+		end
+
+		if IsSafeNumber(currentCharges) and IsSafeNumber(maxCharges) and maxCharges > 1 then
+			if currentCharges > (self.maxDisplayCount or 9999) then
+				self.Count:SetText("*")
+			else
+				self.Count:SetText(currentCharges > 1 and currentCharges or "")
+			end
+			return
+		end
+	end
+
 	if self:IsConsumableOrStackable() then
 		local count = self:GetCount()
 		if IsSafeNumber(count) then
@@ -2522,9 +2555,14 @@ function UpdateCount(self)
 		return
 	end
 
-	-- Keep the original action/spell display-count path for charge-based spells.
-	-- This uses Action.GetDisplayCount (C_ActionBar.GetActionDisplayCount) when available.
-	self.Count:SetText(self:GetDisplayCount())
+	local displayCount = self.GetDisplayCount and self:GetDisplayCount()
+	if type(displayCount) == "number" and IsSafeNumber(displayCount) then
+		self.Count:SetText(displayCount > 1 and displayCount or "")
+	elseif type(displayCount) == "string" and (not issecretvalue or not issecretvalue(displayCount)) then
+		self.Count:SetText(displayCount)
+	else
+		self.Count:SetText("")
+	end
 end
 
 function ClearChargeCooldown(self)
@@ -2562,6 +2600,28 @@ local function StartChargeCooldown(parent, chargeStart, chargeDuration, chargeMo
 	if Masque and Masque.UpdateCharge then
 		Masque:UpdateCharge(parent)
 	end
+end
+
+local function ClearCooldownFrame(cooldown)
+	if not cooldown then
+		return
+	end
+	if cooldown.Clear then
+		cooldown:Clear()
+	else
+		CooldownFrame_Clear(cooldown)
+	end
+end
+
+local function SetOrClearCooldownFrame(cooldown, durationObject)
+	if not cooldown then
+		return
+	end
+	if not durationObject then
+		ClearCooldownFrame(cooldown)
+		return
+	end
+	cooldown:SetCooldownFromDurationObject(durationObject)
 end
 
 local function OnCooldownDone(self, requireCooldownUpdate)
@@ -2683,22 +2743,17 @@ function UpdateCooldown(self)
 
 	-- 12.0+ duration object API avoids passing secret values through tainted code
 	if HAS_DURATION_OBJECT_API and self._state_type == "action" then
-		local action = self._state_action
-		local cooldownDuration = C_ActionBar.GetActionCooldownDuration(action)
-		local chargeDuration = C_ActionBar.GetActionChargeCooldownDuration and C_ActionBar.GetActionChargeCooldownDuration(action)
-		local locDuration = C_ActionBar.GetActionLossOfControlCooldownDuration and C_ActionBar.GetActionLossOfControlCooldownDuration(action)
+		local cooldownDuration = self.GetCooldownDuration and self:GetCooldownDuration()
+		local chargeDuration = self.GetChargeDuration and self:GetChargeDuration()
+		local locDuration = self.GetLoCCooldownDuration and self:GetLoCCooldownDuration()
 
-		if cooldownDuration then
-			self.cooldown:SetCooldownFromDurationObject(cooldownDuration)
+		if chargeDuration and not self.chargeCooldown then
+			self.chargeCooldown = CreateChargeCooldownFrame(self)
 		end
-		if self.chargeCooldown and chargeDuration then
-			self.chargeCooldown:SetCooldownFromDurationObject(chargeDuration)
-		elseif self.chargeCooldown then
-			ClearChargeCooldown(self)
-		end
-		if self.lossOfControlCooldown and locDuration then
-			self.lossOfControlCooldown:SetCooldownFromDurationObject(locDuration)
-		end
+
+		SetOrClearCooldownFrame(self.cooldown, cooldownDuration)
+		SetOrClearCooldownFrame(self.chargeCooldown, chargeDuration)
+		SetOrClearCooldownFrame(self.lossOfControlCooldown, locDuration)
 
 		lib.callbacks:Fire("OnCooldownUpdate", self, nil, nil, nil, cooldownInfo, chargeInfo, lossOfControlInfo)
 	elseif ActionButton_ApplyCooldown then
@@ -3575,6 +3630,35 @@ local function HasActiveChargeRecharge(info)
 		and cooldownDuration > 0
 end
 
+local function ShouldPreferSpellChargeInfo(actionInfo, spellInfo)
+	if type(spellInfo) ~= "table" then
+		return false
+	end
+
+	if HasActiveChargeRecharge(spellInfo) and not HasActiveChargeRecharge(actionInfo) then
+		return true
+	end
+
+	if type(actionInfo) ~= "table"
+		or (not IsSafeNumber(actionInfo.currentCharges))
+		or (not IsSafeNumber(actionInfo.maxCharges))
+	then
+		return true
+	end
+
+	if IsSafeNumber(spellInfo.currentCharges) and IsSafeNumber(spellInfo.maxCharges) then
+		if spellInfo.maxCharges > actionInfo.maxCharges then
+			return true
+		end
+
+		if spellInfo.maxCharges == actionInfo.maxCharges and spellInfo.currentCharges < actionInfo.currentCharges then
+			return true
+		end
+	end
+
+	return false
+end
+
 Action.HasAction                = function(self) return HasAction(self._state_action) end
 Action.GetActionText            = function(self) return GetActionText(self._state_action) end
 Action.GetTexture               = function(self) return GetActionTexture(self._state_action) end
@@ -3585,14 +3669,19 @@ Action.GetCount                 = function(self)
 	end
 
 	local actionType, actionID, subType = GetActionInfo(self._state_action)
+	local itemID = actionID
+	if actionType == "macro" and subType == "item" and GetMacroItem then
+		itemID = GetMacroItem(actionID)
+	end
+
 	if (actionType == "item") or (actionType == "macro" and subType == "item") then
 		if C_Item and C_Item.GetItemCount then
-			local itemCount = C_Item.GetItemCount(actionID, nil, true)
+			local itemCount = C_Item.GetItemCount(itemID, nil, true)
 			if type(itemCount) == "number" then
 				return itemCount
 			end
 		elseif GetItemCount then
-			local itemCount = GetItemCount(actionID, nil, true)
+			local itemCount = GetItemCount(itemID, nil, true)
 			if type(itemCount) == "number" then
 				return itemCount
 			end
@@ -3616,17 +3705,8 @@ Action.GetChargeInfo            = function(self)
 	end
 
 	local spellInfo = GetSpellChargeInfo(spellID)
-	if spellInfo then
-		if HasActiveChargeRecharge(spellInfo) and not HasActiveChargeRecharge(actionInfo) then
-			return spellInfo
-		end
-
-		if type(actionInfo) ~= "table"
-			or (not IsSafeNumber(actionInfo.currentCharges))
-			or (not IsSafeNumber(actionInfo.maxCharges))
-		then
-			return spellInfo
-		end
+	if ShouldPreferSpellChargeInfo(actionInfo, spellInfo) then
+		return spellInfo
 	end
 
 	return actionInfo
@@ -3638,24 +3718,47 @@ Action.IsEquipped               = function(self) return IsEquippedAction(self._s
 Action.IsCurrentlyActive        = function(self) return IsCurrentAction(self._state_action) end
 Action.IsAutoRepeat             = function(self) return IsAutoRepeatAction(self._state_action) end
 Action.IsUsable                 = function(self) return IsUsableAction(self._state_action) end
-Action.IsConsumableOrStackable  = function(self) return IsConsumableAction(self._state_action) or IsStackableAction(self._state_action) or (not IsItemAction(self._state_action) and GetActionCount(self._state_action) > 0) end
+Action.IsConsumableOrStackable  = function(self)
+	if IsConsumableAction(self._state_action) or IsStackableAction(self._state_action) then
+		return true
+	end
+
+	local actionType, _, subType = GetActionInfo(self._state_action)
+	if actionType == "item" or (actionType == "macro" and subType == "item") then
+		return true
+	end
+
+	return not IsItemAction(self._state_action) and GetActionCount(self._state_action) > 0
+end
 Action.IsUnitInRange            = function(self, unit) return IsActionInRange(self._state_action, unit) end
 Action.SetTooltip               = function(self) return GameTooltip:SetAction(self._state_action) end
 Action.GetSpellId               = function(self)
 	local actionType, id, subType = GetActionInfo(self._state_action)
 	if actionType == "spell" then
-		return id
+		return ResolveActionSpellID(self._state_action, id)
 	elseif actionType == "macro" then
 		if subType == "spell" then
-			return id
+			return ResolveActionSpellID(self._state_action, id)
 		else
-			return (GetMacroSpell(id))
+			return ResolveOverrideSpellID(GetMacroSpell(id))
 		end
 	end
 end
 
 if GetActionDisplayCount then
-	Action.GetDisplayCount      = function(self) return GetActionDisplayCount(self._state_action) end
+	Action.GetDisplayCount      = function(self) return GetActionDisplayCount(self._state_action, self.maxDisplayCount or 9999) end
+end
+
+if GetActionChargeDuration then
+	Action.GetChargeDuration    = function(self) return GetActionChargeDuration(self._state_action) end
+end
+
+if GetActionCooldownDuration then
+	Action.GetCooldownDuration  = function(self) return GetActionCooldownDuration(self._state_action) end
+end
+
+if GetActionLossOfControlCooldownDuration then
+	Action.GetLoCCooldownDuration = function(self) return GetActionLossOfControlCooldownDuration(self._state_action) end
 end
 
 -- legacy cooldown functions, avoiding table creation on game versions that still have the old API
@@ -3851,4 +3954,3 @@ end
 if oldversion and lib.flyoutHandler then
 	UpdateFlyoutHandlerScripts()
 end
-

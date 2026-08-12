@@ -29,8 +29,38 @@ local RaidBossEmotes = ns:NewModule("RaidBossEmotes", ns.MovableModulePrototype,
 
 -- Addon API
 local GetFont = ns.API.GetFont
+local C_Timer_After = C_Timer and C_Timer.After
 
 local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }
+
+local QueuePrepareFramesRetry
+
+QueuePrepareFramesRetry = function(self)
+	if (self.prepareFramesRetryPending or not C_Timer_After) then
+		return
+	end
+	if ((self.prepareFramesRetryCount or 0) >= 5) then
+		return
+	end
+
+	self.prepareFramesRetryCount = (self.prepareFramesRetryCount or 0) + 1
+	self.prepareFramesRetryPending = true
+
+	C_Timer_After(.2, function()
+		self.prepareFramesRetryPending = nil
+		if (not self:IsEnabled()) then
+			return
+		end
+
+		self:PrepareFrames()
+		if (self.frame) then
+			self:UpdatePositionAndScale()
+			self:UpdateAnchor()
+		else
+			QueuePrepareFramesRetry(self)
+		end
+	end)
+end
 
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
@@ -49,6 +79,10 @@ RaidBossEmotes.PrepareFrames = function(self)
 	if (self.frame) then return end
 
 	self.frame = RaidBossEmoteFrame
+	if (not self.frame) then
+		QueuePrepareFramesRetry(self)
+		return
+	end
 
 	-- The RaidWarnings have a tendency to look really weird,
 	-- as the SetTextHeight method scales the text after it already
@@ -57,10 +91,13 @@ RaidBossEmotes.PrepareFrames = function(self)
 	self.frame:SetAlpha(.85)
 	self.frame:SetHeight(80)
 
-	self.frame.timings.RAID_NOTICE_MIN_HEIGHT = 26
-	self.frame.timings.RAID_NOTICE_MAX_HEIGHT = 26
-	self.frame.timings.RAID_NOTICE_SCALE_UP_TIME = 0
-	self.frame.timings.RAID_NOTICE_SCALE_DOWN_TIME = 0
+	local timings = self.frame.timings
+	if (timings) then
+		timings.RAID_NOTICE_MIN_HEIGHT = 26
+		timings.RAID_NOTICE_MAX_HEIGHT = 26
+		timings.RAID_NOTICE_SCALE_UP_TIME = 0
+		timings.RAID_NOTICE_SCALE_DOWN_TIME = 0
+	end
 
 	-- WoW 10.1.0
 	local slot1 = _G[self.frame:GetName() .. "Slot1"] or self.frame.slot1

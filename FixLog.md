@@ -1,3 +1,94 @@
+## 2026-08-12 - WoW 12.1 action button cooldown/count follow-up
+
+- **Source:** user retest after the startup visibility fixes. Bars now render immediately after reload, but cooldown swipes, charges, and item counts still do not.
+- **Root cause found in AzeriteUI's LAB fork:**
+  - the retail duration-object cooldown branch had drifted from live WoW 12.1 / ElvUI's maintained LAB fork
+  - it still referenced the wrong charge-duration API name (`GetActionChargeCooldownDuration`) instead of the live retail duration-object wrapper path
+  - the action button methods lacked the retail duration-object wrappers used by current 120100-ready implementations
+  - count rendering still depended too heavily on action-slot display/count data even when item/spell fallback data was safer
+- **Fix applied:**
+  - updated [LibActionButton-1.0-GE.lua](C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition.worktrees/wow-update-bug-fix-documentation/Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua) to expose `Action.GetCooldownDuration`, `Action.GetChargeDuration`, and `Action.GetLoCCooldownDuration` using the live retail 12.1 action duration APIs
+  - rewired the retail duration-object cooldown path to use those action wrappers and to explicitly clear cooldown frames when duration objects are absent, instead of leaving stale or never-initialized cooldown state behind
+  - made count rendering prefer safe charge data first, then item-count fallbacks, before finally using the Blizzard display-count helper when it returns a non-secret value
+  - fixed item-count fallback for macro item actions by resolving the actual macro item target before calling the item count APIs
+  - tightened `Action.IsConsumableOrStackable()` so item and macro-item buttons still render counts even when older slot-count heuristics are unreliable on 12.1
+  - removed conflicting inherited retail `ActionButtonTemplate` handlers/methods so LAB's own `HasAction()` and attribute-driven update path stay authoritative on 12.1
+  - fixed the retail cooldown wrapper locals to bind to the real `C_ActionBar` duration APIs, which restored swipe/timer updates
+  - tightened charge-source selection so spell-side charge info wins whenever it reports a lower valid current-charge count than the action-slot data, even if Blizzard hides the recharge timing fields in combat; this specifically targets stale "2 charges" displays on spells like Judgement
+  - aligned `Action.GetSpellId()` with the same resolved retail spell ID path used by charge lookup, reducing event/update mismatches for override spells
+- **Local validation completed:**
+  - `luac -p Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+  - `git diff --check -- Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`
+
+## 2026-08-12 - WoW 12.1 standalone aura frame restoration
+
+- **Source:** user report that the custom standalone aura frame was still missing after the previous stability pass.
+- **Root cause:** the player aura module still hard-bailed when `SecureAuraHeaderTemplate` was unavailable on retail 12.1, leaving only Blizzard's own aura frames visible.
+- **Fix applied:**
+  - added a retail-only manual aura-container fallback in [Components/Auras/Auras.lua](C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition.worktrees/wow-update-bug-fix-documentation/Components/Auras/Auras.lua)
+  - the fallback now builds normal aura frames and buttons when the secure header template is missing, instead of returning `false`
+  - the aura button update path now falls back to the parent frame's plain `unit`/`filter` fields when secure attributes are not available
+  - aura iteration now supports both secure-header children and the new manual button tables, so the same refresh code keeps working on retail 12.1
+  - the fallback keeps the existing Blizzard-hide/visibility plumbing and reusable aura styling, so the custom player aura frame can reappear without waiting on a full AuraContainer rewrite
+  - fixed a Lua scoping bug in the aura tooltip-key helper by reading the parent unit directly instead of calling a helper before it was in scope
+  - removed a second nil-helper dependency from the same tooltip-key path so the manual aura buttons can update without crashing on retail 12.1
+  - added an initial queued refresh on module enable so the manual aura buttons populate immediately after `/reload` instead of waiting for the first aura event
+- **Local validation completed:**
+  - `luac -p Components/Auras/Auras.lua`
+  - `git diff --check -- Components/Auras/Auras.lua`
+
+## 2026-08-12 - WoW 12.1 options and invisible action bars follow-up
+
+- **Source:** user follow-up after the `/az` checkbox/options fix. Settings panes returned, but the in-world action bars were invisible while still clickable.
+- **Findings:**
+  - `Core/Compatibility.lua` needed a WoW 12.1 shim for the legacy global `SetDesaturation(...)` helper so the embedded AceGUI checkbox widget could render the `/az` controls again.
+  - `Components/ActionBars/Prototypes/ActionBar.lua` could unregister local fading without restoring the bar/button alpha afterwards.
+  - That stale-alpha path matches the live symptom exactly: the bars still exist and still receive clicks, but they can remain visually transparent after fade state changes.
+- **Fix applied:**
+  - Added a compatibility fallback for `SetDesaturation(...)` that forwards to `texture:SetDesaturated(...)` when Blizzard no longer exposes the old global helper.
+  - Updated `ActionBar.UpdateFading()` to unregister the parent bar from fading when bar fading is disabled and to explicitly restore alpha on the bar and all buttons after fade teardown.
+  - Tightened the secondary-bar dragon/skyriding visual hide check so a transient `bonusbar:5` during reload/login no longer blanks bars 2+ before a real mount/form state exists.
+  - Added a delayed post-login action-bar button refresh so AzeriteUI rebuilds icon/cooldown/count visuals after WoW 12.1 finishes restoring action data, instead of waiting for the first spell cast.
+  - Strengthened the startup refresh further by forcing each visible action button to rebuild all secure state mappings before the delayed refresh pass, then rerunning several short startup passes while WoW 12.1 finishes hydrating action-slot state.
+  - Converted the new aura fallback to retail-only behavior: the embedded [auras.lua](C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition.worktrees/wow-update-bug-fix-documentation/Libs/oUF/elements/auras.lua) now always forces full aura refreshes, because this addon only targets retail and the WoW 12.1 secret incremental payload path is not safe for the legacy manual updater.
+  - Updated [AzeriteUI5_JuNNeZ_Edition.toc](C:/Program Files (x86)/World of Warcraft/_retail_/Interface/AddOns/AzeriteUI5_JuNNeZ_Edition.worktrees/wow-update-bug-fix-documentation/AzeriteUI5_JuNNeZ_Edition.toc) to `## Interface: 120100`.
+- **Upstream validation for borrowed patterns:**
+  - [oUF.toc](https://raw.githubusercontent.com/oUF-wow/oUF/master/oUF.toc) advertises `120100`.
+  - [ElvUI_Mainline.toc](https://raw.githubusercontent.com/tukui-org/ElvUI/main/ElvUI/ElvUI_Mainline.toc) advertises `120100`.
+  - [Bartender4.toc](https://raw.githubusercontent.com/Nevcairiel/Bartender4/master/Bartender4.toc) includes `120100`.
+  - [DiabolicUI3.toc](https://raw.githubusercontent.com/Arahort/diabolic/github/DiabolicUI3.toc) still advertises `120007`, so its code is a lower-confidence reference for 12.1-specific migration choices.
+- **Remaining limitation:** the old custom player aura header is still in temporary fallback mode on 12.1 until a later AuraContainer migration restores that feature.
+
+## 2026-08-12 - WoW 12.1 residual startup regressions follow-up
+
+- **Source:** second user BugSack export after the first 12.1 fix pass.
+- **Residual findings:**
+  - `Components/Auras/Auras.lua` still attempted to build player buff/debuff headers with `SecureAuraHeaderTemplate`.
+  - On retail `12.1.0`, multiple live addons already report that `SecureAuraHeaderTemplate` is unavailable and are migrating to `CustomAuraContainerTemplate`.
+  - The user's log still referenced the pre-patch line numbers for `RaidBossEmotes.lua`, `RaidWarnings.lua`, and `PlayerAlternate.lua`, so that test likely was not yet running the just-patched addon files from this worktree.
+- **Fix applied:**
+  - `Components/Auras/Auras.lua` now detects whether `SecureAuraHeaderTemplate` exists before building the legacy player aura headers.
+  - If the template is unavailable, AzeriteUI prints one explicit fallback notice and keeps Blizzard's player aura frames enabled instead of crashing during startup.
+  - `Components/UnitFrames/Units/PlayerAlternate.lua` now uses an internal safe helper for effective-max-level checks so it no longer depends on Blizzard preserving a specific global helper name.
+- **Intentional limitation:** this is a startup-stability fallback, not the full 12.1 player-aura migration. A later pass still needs to move the standalone player aura module to AuraContainer-based rendering if AzeriteUI wants its custom player aura header back on 12.1+.
+- **Local validation completed:**
+  - `luac -p Components/Auras/Auras.lua Components/UnitFrames/Units/PlayerAlternate.lua`
+  - `git diff --check -- Components/Auras/Auras.lua Components/UnitFrames/Units/PlayerAlternate.lua`
+
+## 2026-08-12 - WoW 12.1 startup regressions from BugSack export
+
+- **Source:** User BugSack export on retail `12.1.0` / build `69273` / TOC `120100`.
+- **AzeriteUI-owned errors addressed:**
+  - `Components/Misc/RaidBossEmotes.lua`: guarded `RaidBossEmoteFrame` setup when the frame is not ready yet during addon enable, and stopped assuming `.timings` always exists.
+  - `Components/Misc/RaidWarnings.lua`: guarded `RaidWarningFrame` setup the same way and stopped assuming `.timings` always exists.
+  - `Options/Options.lua`: switched the settings landing-page button back to the resize-compatible `UIPanelDynamicResizeButtonTemplate` path and added a safe fixed-size fallback when Blizzard's dynamic-resize padding data is unavailable.
+  - `Components/UnitFrames/Units/PlayerAlternate.lua`: stopped relying on an undeclared `playerXPDisabled` symbol and now reads live player level / XP-disabled state safely during texture refresh.
+  - `Core/Compatibility.lua`: added WoW 12.1 compatibility shims for missing effective-max-level helpers so player/target frame level-tier texture logic does not explode if Blizzard moves those helpers again.
+- **Non-AzeriteUI errors in the same export:** `MDT_Legacy`, `OPie`, and `Plater` also threw 12.1 errors, but those are external addon issues and were not modified here.
+- **Local validation completed:**
+  - `luac -p Core/Compatibility.lua Components/Misc/RaidBossEmotes.lua Components/Misc/RaidWarnings.lua Options/Options.lua Components/UnitFrames/Units/PlayerAlternate.lua`
+  - `git diff --check -- Core/Compatibility.lua Components/Misc/RaidBossEmotes.lua Components/Misc/RaidWarnings.lua Options/Options.lua Components/UnitFrames/Units/PlayerAlternate.lua`
+
 ## 2026-07-17 - 5.3.76-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta since `5.3.75-JuNNeZ`:

@@ -43,8 +43,30 @@ if (not _G.IsXPUserDisabled) then
 	_G.IsXPUserDisabled = function() return false end
 end
 
+if (not _G.IsPlayerAtEffectiveMaxLevel and _G.GameRulesUtil and _G.GameRulesUtil.IsPlayerAtEffectiveMaxLevel) then
+	_G.IsPlayerAtEffectiveMaxLevel = function()
+		return _G.GameRulesUtil.IsPlayerAtEffectiveMaxLevel()
+	end
+end
+
+if (not _G.IsLevelAtEffectiveMaxLevel) then
+	_G.IsLevelAtEffectiveMaxLevel = function(level)
+		local maxLevel = (_G.GetMaxLevelForLatestExpansion and _G.GetMaxLevelForLatestExpansion())
+			or (_G.GetMaxPlayerLevel and _G.GetMaxPlayerLevel())
+		return type(level) == "number" and type(maxLevel) == "number" and level >= maxLevel
+	end
+end
+
 if (not _G.UnitHasVehicleUI) then
 	_G.UnitHasVehicleUI = function() return false end
+end
+
+if (not _G.SetDesaturation) then
+	_G.SetDesaturation = function(texture, desaturation)
+		if (texture and texture.SetDesaturated) then
+			texture:SetDesaturated(not not desaturation)
+		end
+	end
 end
 
 if (not _G.GetTimeToWellRested) then

@@ -78,13 +78,19 @@ Options.InitializeSettingsPanel = function(self)
 	instructions:SetText(WHITE_FONT_COLOR:WrapTextInColorCode(L["Open the full AzeriteUI settings menu with /az or the button below."]))
 
 	-- "Open Options" button (centered, below midpoint)
-	local template = "SharedButtonLargeTemplate"
+	local template = "UIPanelDynamicResizeButtonTemplate"
 	if not C_XMLUtil or not C_XMLUtil.GetTemplateInfo or not C_XMLUtil.GetTemplateInfo(template) then
-		template = "UIPanelDynamicResizeButtonTemplate"
+		template = "UIPanelButtonTemplate"
 	end
 	local button = CreateFrame("Button", nil, optionsFrame, template)
 	button:SetText(L["Open AzeriteUI Options"])
-	DynamicResizeButton_Resize(button)
+	if (template == "UIPanelDynamicResizeButtonTemplate" and DynamicResizeButton_Resize and button.padding) then
+		DynamicResizeButton_Resize(button)
+	else
+		local fontString = button.Text or button:GetFontString()
+		local textWidth = (fontString and fontString.GetUnboundedStringWidth and fontString:GetUnboundedStringWidth()) or 0
+		button:SetSize(math.max(200, math.ceil(textWidth + 40)), math.max(button:GetHeight(), 22))
+	end
 	button:SetPoint("CENTER", optionsFrame, 0, -45)
 	button:SetScale(2)
 	button:SetScript("OnClick", function()

@@ -51,6 +51,13 @@ local LFF = LibStub("LibFadingFrames-1.0")
 
 local playerClass = ns.PlayerClass
 
+local RestoreFadeAlpha = function(bar)
+	bar:SetAlpha(1)
+	for id,button in next,bar.buttons do
+		button:SetAlpha(1)
+	end
+end
+
 -- Return bindaction by blizzard barID.
 local BINDTEMPLATE_BY_ID = {
 	[1] = "ACTIONBUTTON%d",
@@ -297,6 +304,7 @@ ActionBar.UpdateFading = function(self)
 		for id, button in next,self.buttons do
 			LFF:UnregisterFrameForFading(button)
 		end
+		RestoreFadeAlpha(self)
 		return
 	end
 	if (not IsPlayerInWorld()) then return end
@@ -324,12 +332,14 @@ ActionBar.UpdateFading = function(self)
 	else
 
 		-- Unregister all fading.
+		LFF:UnregisterFrameForFading(self)
 		for id, button in next,buttons do
 			LFF:UnregisterFrameForFading(buttons[id])
 			if (not button:GetTexture()) then
 				button:ForceUpdate()
 			end
 		end
+		RestoreFadeAlpha(self)
 	end
 
 end

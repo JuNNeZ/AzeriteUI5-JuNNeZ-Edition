@@ -30,9 +30,11 @@ local LFF = LibStub("LibFadingFrames-1.0")
 
 -- Lua API
 local math_ceil = math.ceil
+local math_floor = math.floor
 local math_max = math.max
 local pairs = pairs
 local select = select
+local unpack = unpack
 local string_lower = string.lower
 local tonumber = tonumber
 local tostring = tostring
@@ -44,6 +46,7 @@ local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
 local RegisterCooldown = ns.Widgets.RegisterCooldown
 local IsSecret = issecretvalue
+local HasLegacyAuraHeaderTemplate = not (C_XMLUtil and C_XMLUtil.GetTemplateInfo) or C_XMLUtil.GetTemplateInfo("SecureAuraHeaderTemplate")
 
 local defaults = { profile = ns:Merge({
 	enabled = true,
@@ -88,7 +91,7 @@ local BuildAuraTooltipKey = function(self)
 	end
 
 	local parent = self:GetParent()
-	local unit = parent and parent.GetAttribute and parent:GetAttribute("unit") or "nil"
+	local unit = (parent and parent.unit) or (parent and parent.GetAttribute and parent:GetAttribute("unit")) or "nil"
 	return "idx:" .. tostring(unit) .. ":" .. tostring(self:GetID()) .. ":" .. tostring(self.filter or "")
 end
 
@@ -97,6 +100,26 @@ local GetSafeAuraField = function(value)
 		return nil
 	end
 	return value
+end
+
+local GetAuraFrameValue = function(frame, key, fallback)
+	if (frame and frame.GetAttribute) then
+		local value = GetSafeAuraField(frame:GetAttribute(key))
+		if (value ~= nil) then
+			return value
+		end
+	end
+	if (frame and frame[key] ~= nil) then
+		local value = GetSafeAuraField(frame[key])
+		if (value ~= nil) then
+			return value
+		end
+	end
+	return fallback
+end
+
+local GetAuraFrameUnit = function(frame)
+	return GetAuraFrameValue(frame, "unit", "player")
 end
 
 local GetAuraDataByIndexSafe = function(unit, index, filter)
@@ -201,6 +224,7 @@ local ClearAuraState = function(self)
 	end
 	self:SetScript("OnUpdate", nil)
 	self.timeLeft = nil
+	self:Hide()
 end
 
 local GetAuraButtonData = function(unit, index, filter)
@@ -241,6 +265,32 @@ local GetAuraButtonData = function(unit, index, filter)
 		durationObject = GetAuraDurationObjectSafe(unit, auraInstanceID),
 		spellID = spellID
 	}
+end
+
+local LayoutAuraButtons = function(container, buttons, config)
+	if (not container or not buttons or not config) then
+		return
+	end
+
+	local size = 36
+	local paddingX = config.paddingX or 6
+	local paddingY = config.paddingY or 12
+	local wrapAfter = config.wrapAfter or 8
+	local anchorPoint = config.anchorPoint or "TOPRIGHT"
+	local growthX = (config.growthX == "LEFT" and -1) or 1
+	local growthY = (config.growthY == "DOWN" and -1) or 1
+
+	container:SetSize(wrapAfter * (size + paddingX), (size + paddingY) * math_ceil((#buttons > 0 and #buttons or BUFF_MAX_DISPLAY) / wrapAfter) + (size + paddingY))
+
+	for i = 1, #buttons do
+		local button = buttons[i]
+		if (button) then
+			local col = (i - 1) % wrapAfter
+			local row = math_floor((i - 1) / wrapAfter)
+			button:ClearAllPoints()
+			button:SetPoint(anchorPoint, container, anchorPoint, col * (size + paddingX) * growthX, row * (size + paddingY) * growthY)
+		end
+	end
 end
 
 Aura.Style = function(self)
@@ -315,11 +365,12 @@ Aura.Style = function(self)
 end
 
 Aura.Update = function(self, index)
-	local unit = self:GetParent():GetAttribute("unit")
+	local unit = GetAuraFrameUnit(self:GetParent())
 	local auraData = GetAuraButtonData(unit, index, self.filter)
 
 	if (auraData) then
 		self:SetAlpha(1)
+		self:Show()
 		self.auraUnit = unit
 		self.auraInstanceID = auraData.auraInstanceID
 		self.auraExpirationTime = auraData.expirationTime
@@ -403,6 +454,7 @@ Aura.Update = function(self, index)
 		return
 	else
 		ClearAuraState(self)
+		self:Hide()
 	end
 
 end
@@ -541,6 +593,120 @@ Auras.CreateBuffs = function(self)
 	if (not self.frame) then
 
 		local config = self.db.profile
+
+		if (not HasLegacyAuraHeaderTemplate) then
+			local frame = CreateFrame("Frame", ns.Prefix.."BuffHeaderFrame", UIParent)
+			frame.ignoreGridCounterOnHover = true
+			frame:SetSize(config.wrapAfter * (36 + config.paddingX), (36 + config.paddingY) * math_ceil(BUFF_MAX_DISPLAY / config.wrapAfter) + (36 + config.paddingY))
+			frame:SetPoint(config.savedPosition[1], UIParent, config.savedPosition[1], config.savedPosition[2], config.savedPosition[3])
+			frame:SetScale(config.savedPosition.scale)
+
+			self.frame = frame
+
+			local createButtons = function(parent, count, filter)
+				local buttons = {}
+				for i = 1, count do
+					local button = CreateFrame("Button", parent:GetName().."Button"..i, parent, "AzeriteAuraTemplate")
+					button.filter = filter
+					button:SetID(i)
+					button:Hide()
+					buttons[i] = button
+				end
+				return buttons
+			end
+
+			local buffs = CreateFrame("Frame", ns.Prefix.."BuffHeader", frame)
+			buffs.ignoreGridCounterOnHover = true
+			buffs.unit = "player"
+			buffs.filter = "HELPFUL"
+			buffs:SetAttribute("unit", "player")
+			buffs:SetAttribute("filter", "HELPFUL")
+			buffs.tooltipPoint = "TOPRIGHT"
+			buffs.tooltipAnchor = "BOTTOMLEFT"
+			buffs.tooltipOffsetX = -10
+			buffs.tooltipOffsetY = -10
+			buffs.buttons = createButtons(buffs, BUFF_MAX_DISPLAY, "HELPFUL")
+			self.buffs = buffs
+			LayoutAuraButtons(buffs, buffs.buttons, config)
+
+			local debuffs = CreateFrame("Frame", ns.Prefix.."DebuffHeader", frame)
+			debuffs.ignoreGridCounterOnHover = true
+			debuffs.unit = "player"
+			debuffs.filter = "HARMFUL"
+			debuffs:SetAttribute("unit", "player")
+			debuffs:SetAttribute("filter", "HARMFUL")
+			debuffs.tooltipPoint = "TOPRIGHT"
+			debuffs.tooltipAnchor = "BOTTOMLEFT"
+			debuffs.tooltipOffsetX = -10
+			debuffs.tooltipOffsetY = -10
+			debuffs.buttons = createButtons(debuffs, 40, "HARMFUL")
+			self.debuffs = debuffs
+			LayoutAuraButtons(debuffs, debuffs.buttons, config)
+
+			local proxy = CreateFrame("Frame", buffs:GetName().."ProxyButton", buffs)
+			proxy.ignoreGridCounterOnHover = true
+			proxy:Hide()
+			proxy.count = proxy:CreateFontString(nil, "OVERLAY")
+			proxy.count:SetFontObject(GetFont(12,true))
+			proxy.count:SetTextColor(Colors.offwhite[1], Colors.offwhite[2], Colors.offwhite[3])
+			proxy.count:SetPoint("BOTTOMRIGHT", -2, 3)
+			buffs.proxy = proxy
+
+			local consolidation = CreateFrame("Frame", buffs:GetName().."Consolidation", buffs)
+			consolidation.ignoreGridCounterOnHover = true
+			consolidation:Hide()
+			consolidation:SetSize(36, 36)
+			consolidation:SetPoint("TOPRIGHT", proxy, "TOPLEFT", -6, 0)
+			buffs.consolidation = consolidation
+
+			local visibility = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
+			visibility:SetFrameRef("buffs", buffs)
+			visibility:SetFrameRef("debuffs", debuffs)
+			visibility:SetAttribute("_onstate-vis", [[ self:RunAttribute("UpdateVisibility"); ]])
+			visibility:SetAttribute("UpdateVisibility", [[
+				local visdriver = self:GetAttribute("visdriver");
+				if (not visdriver) then
+					return
+				end
+				local buffs = self:GetFrameRef("buffs");
+				local debuffs = self:GetFrameRef("debuffs");
+				local shouldhide = SecureCmdOptionParse(visdriver) == "hide";
+				if (shouldhide) then
+					if (buffs and buffs:IsShown()) then buffs:Hide(); end
+					if (debuffs and debuffs:IsShown()) then debuffs:Hide(); end
+				else
+					if (buffs and not buffs:IsShown()) then buffs:Show(); end
+					if (debuffs and not debuffs:IsShown()) then debuffs:Show(); end
+				end
+			]])
+			visibility:SetAttribute("UpdateDriver", [[
+				local visdriver;
+				local auramode = self:GetAttribute("auramode");
+				local ignoreTarget = self:GetAttribute("ignoreTarget");
+				if (auramode == "hide") then
+					visdriver = "hide";
+				elseif (auramode == "show") then
+					if (ignoreTarget) then
+						visdriver = "[petbattle]hide;show";
+					else
+						visdriver = "[petbattle]hide;[@target,exists]hide;show";
+					end
+				elseif (auramode == "modifier") then
+					local modifierkey = self:GetAttribute("modifierkey");
+					if (ignoreTarget) then
+						visdriver = "[petbattle]hide;[mod:"..modifierkey.."]show;hide";
+					else
+						visdriver = "[petbattle]hide;[@target,exists]hide;[mod:"..modifierkey.."]show;hide";
+					end
+				end
+				self:SetAttribute("visdriver", visdriver);
+				UnregisterStateDriver(self, "vis");
+				RegisterStateDriver(self, "vis", visdriver);
+			]])
+
+			self.visibility = visibility
+			return true
+		end
 
 		local frame = CreateFrame("Frame", ns.Prefix.."BuffHeaderFrame", UIParent)
 		frame.ignoreGridCounterOnHover = true
@@ -774,6 +940,7 @@ Auras.CreateBuffs = function(self)
 
 		self.visibility = visibility
 	end
+	return true
 end
 
 Auras.DisableBlizzard = function(self)
@@ -868,16 +1035,36 @@ Auras.ForAll = function(self, method, ...)
 	if (not buffs) then
 		return
 	end
-	local child = buffs:GetAttribute("child1")
-	local i = 1
-	while (child) do
-		local func = child[method]
-		if (func) then
-			func(child, child:GetID(), ...)
+	local args = { ... }
+	local function iterate(frame)
+		if (not frame) then
+			return
 		end
-		i = i + 1
-		child = buffs:GetAttribute("child" .. i)
+		local buttons = frame.buttons
+		if (buttons) then
+			for i = 1, #buttons do
+				local child = buttons[i]
+				local func = child and child[method]
+				if (func) then
+					func(child, child:GetID(), unpack(args))
+				end
+			end
+			return
+		end
+		local child = frame:GetAttribute("child1")
+		local i = 1
+		while (child) do
+			local func = child[method]
+			if (func) then
+				func(child, child:GetID(), unpack(args))
+			end
+			i = i + 1
+			child = frame:GetAttribute("child" .. i)
+		end
 	end
+
+	iterate(self.buffs)
+	iterate(self.debuffs)
 end
 
 Auras.UpdateAuraButtonAlpha = function(self)
@@ -892,7 +1079,7 @@ Auras.UpdateAuraButtonAlpha = function(self)
 	local consolidateDuration = tonumber(buffs:GetAttribute("consolidateDuration")) or 30
 	local consolidateThreshold = tonumber(buffs:GetAttribute("consolidateThreshold")) or 10
 	local consolidateFraction = tonumber(buffs:GetAttribute("consolidateFraction")) or 0.1
-	local unit, filter = buffs:GetAttribute("unit"), buffs:GetAttribute("filter")
+	local unit, filter = GetAuraFrameUnit(buffs), GetAuraFrameValue(buffs, "filter", "HELPFUL")
 	local slot, consolidated = 1, 0
 	local name, duration, expires, shouldConsolidate
 
@@ -916,12 +1103,14 @@ Auras.UpdateAuraButtonAlpha = function(self)
 
 	-- Update count and counter.
 	buffs.numConsolidated = consolidated
-	buffs.proxy.count:SetText(buffs.numConsolidated > 0 and buffs.numConsolidated or "")
+	if (buffs.proxy and buffs.proxy.count) then
+		buffs.proxy.count:SetText(buffs.numConsolidated > 0 and buffs.numConsolidated or "")
+	end
 
 	-- Keep brightness tied to consolidation UI state, not live aura count.
 	-- The count can fluctuate heavily between combat and out-of-combat,
 	-- which otherwise makes the header look like it randomly darkens/lightens.
-	if (buffs.proxy:IsShown() and buffs.consolidation:IsShown()) then
+	if (buffs.proxy and buffs.consolidation and buffs.proxy:IsShown() and buffs.consolidation:IsShown()) then
 		buffs:SetAlpha(.5)
 	else
 		buffs:SetAlpha(1)
@@ -980,6 +1169,13 @@ Auras.UpdateSettings = function(self)
 
 	self.frame:SetSize(config.wrapAfter * 36 + (config.wrapAfter - 1) * config.paddingX, (36 + config.paddingY) * math_ceil(BUFF_MAX_DISPLAY / config.wrapAfter) + (36 + config.paddingY))
 
+	if (self.buffs and self.buffs.buttons) then
+		LayoutAuraButtons(self.buffs, self.buffs.buttons, config)
+	end
+	if (self.debuffs and self.debuffs.buttons) then
+		LayoutAuraButtons(self.debuffs, self.debuffs.buttons, config)
+	end
+
 	self.buffs:ClearAllPoints()
 	self.buffs:SetPoint(config.anchorPoint)
 	self.buffs:SetAttribute("point", config.anchorPoint)
@@ -1026,9 +1222,16 @@ Auras.OnEvent = function(self, event, ...)
 end
 
 Auras.OnEnable = function(self)
+	if (not self:CreateBuffs()) then
+		if (not self.__AzeriteUI_AuraHeaderWarned) then
+			self.__AzeriteUI_AuraHeaderWarned = true
+			print("|cff33ff99", "AzeriteUI auras:", "SecureAuraHeaderTemplate unavailable on this client; keeping Blizzard player auras enabled until the 12.1 aura-container migration lands.")
+		end
+		return
+	end
+
 	self:DisableBlizzard()
 
-	self:CreateBuffs()
 	self:CreateAnchor(AURAS)
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
@@ -1050,4 +1253,6 @@ Auras.OnEnable = function(self)
 	ns.MovableModulePrototype.OnEnable(self)
 
 	self:UpdateSettings()
+	self:QueueRefreshVisibleBuffButtons()
+	self:UpdateAuraButtonAlpha()
 end

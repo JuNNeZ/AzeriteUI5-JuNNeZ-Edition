@@ -64,6 +64,9 @@ local GetCurrentBonusBarOffset = function()
 	return GetBonusBarOffset and GetBonusBarOffset()
 end
 
+local STARTUP_BUTTON_REFRESH_DELAY = .5
+local STARTUP_BUTTON_REFRESH_ATTEMPTS = 10
+
 local UpdateDragonClickBlocker = function(bar, shouldBlock)
 	local blocker = bar and bar.dragonClickBlocker
 	if (not blocker) then return end
@@ -83,6 +86,21 @@ local ForceBarCombatActive = function(bar)
 			button:SetAlpha(1)
 		end
 	end
+
+	local HasVisibleActionbarTextures = function(self)
+		for i,bar in next,self.bars do
+			if (bar and bar.buttons and bar.config and bar.config.enabled) then
+				local numbuttons = bar.config.numbuttons or 0
+				for j = 1, numbuttons do
+					local button = bar.buttons[j]
+					if (button and button.GetTexture and button:GetTexture()) then
+						return true
+					end
+				end
+			end
+		end
+		return false
+	end
 end
 
 local IsDragonMountBarState = function(primaryBar)
@@ -95,7 +113,18 @@ local IsDragonMountBarState = function(primaryBar)
 	if (GetCurrentBonusBarOffset() ~= 5) then
 		return false
 	end
-	return true
+	if (IsMounted and IsMounted()) then
+		return true
+	end
+	if (HasTempShapeshiftActionBar and HasTempShapeshiftActionBar()) then
+		return true
+	end
+	if (playerClass == "DRUID" and GetShapeshiftForm and GetShapeshiftForm() > 0) then
+		return true
+	end
+	-- WoW 12.1 can report bonusbar:5 transiently during reload/login.
+	-- Avoid hiding secondary bars unless a real mount/form state confirms it.
+	return false
 end
 
 -- Return blizzard barID by from own bar numbers.
@@ -722,7 +751,12 @@ ActionBarMod.UpdateBarButtonCounts = function(self)
 		local numbuttons = bar.config.numbuttons
 		for j = 1, #bar.buttons do
 			if (j <= numbuttons) then
-				bar.buttons[j]:ForceUpdate()
+				local button = bar.buttons[j]
+				if (button.UpdateAllStates) then
+					button:UpdateAllStates()
+				end
+				button:ForceUpdate()
+				button:SetAlpha(1)
 			end
 		end
 	end
@@ -752,6 +786,35 @@ ActionBarMod.UpdateBindings = function(self, event)
 	if (event ~= "AZERITEUI_DEFERRED_BINDINGS") then
 		self:QueueBindingRefresh()
 	end
+end
+
+ActionBarMod.OnStartupButtonRefresh = function(self, event)
+	if (event == "PLAYER_REGEN_ENABLED") then
+		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnStartupButtonRefresh")
+	end
+	if (InCombatLockdown()) then
+		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnStartupButtonRefresh")
+	end
+
+	self:UpdateBarButtonCounts()
+	self:UpdateBars()
+	self:UpdateBindings()
+	self.__AzeriteUI_StartupButtonRefreshCount = (self.__AzeriteUI_StartupButtonRefreshCount or 0) + 1
+	if ((not HasVisibleActionbarTextures(self)) and self.__AzeriteUI_StartupButtonRefreshCount < STARTUP_BUTTON_REFRESH_ATTEMPTS) then
+		self:QueueStartupButtonRefresh()
+	end
+end
+
+ActionBarMod.QueueStartupButtonRefresh = function(self)
+	if (self.__AzeriteUI_StartupButtonRefreshTimer) then
+		self:CancelTimer(self.__AzeriteUI_StartupButtonRefreshTimer)
+	end
+	self.__AzeriteUI_StartupButtonRefreshTimer = self:ScheduleTimer("OnStartupButtonRefreshTimer", STARTUP_BUTTON_REFRESH_DELAY)
+end
+
+ActionBarMod.OnStartupButtonRefreshTimer = function(self)
+	self.__AzeriteUI_StartupButtonRefreshTimer = nil
+	self:OnStartupButtonRefresh()
 end
 
 ActionBarMod.QueueBindingRefresh = function(self)
@@ -906,6 +969,11 @@ ActionBarMod.UpdateSettings = function(self, event)
 	self:UpdateBindings()
 	self:UpdatePositionAndScales()
 	self:UpdateAnchors()
+
+	if (event == "PLAYER_ENTERING_WORLD") then
+		self.__AzeriteUI_StartupButtonRefreshCount = 0
+		self:QueueStartupButtonRefresh()
+	end
 
 	-- self:UpdateAssistedHighlightColor()
 end

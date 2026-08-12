@@ -4,6 +4,23 @@
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
+## 5.3.77-JuNNeZ (2026-08-12) - WoW 12.1 aura and action bar fixes
+
+### Highlights
+
+- Fixed action bars missing cooldown swipes, timer text, charges, and item counts after the WoW 12.1 update.
+- Restored the standalone player aura frame on retail 12.1 by replacing the retired secure aura-header path with a manual fallback.
+- Fixed retail 12.1 aura startup so the frame populates immediately after `/reload` instead of waiting for the first aura event.
+
+### Access
+
+- No new setting is required. Existing `/az -> Auras` and `/az -> Action Bars` settings continue to apply.
+
+### Internal
+
+- `Libs/LibActionButton-1.0-GE/LibActionButton-1.0-GE.lua`: updated cooldown/count resolution for retail 12.1.
+- `Components/Auras/Auras.lua`: added the retail manual aura fallback and startup refresh path.
+
 
 ## 5.3.76-JuNNeZ (2026-07-17) - Action Bar Skyriding and Layout Reliability
 
