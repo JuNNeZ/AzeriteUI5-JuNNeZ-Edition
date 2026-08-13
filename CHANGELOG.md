@@ -5,6 +5,14 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.79-JuNNeZ (2026-08-13) - Target PvP Secret-Value Hotfix
+
+### Highlights
+
+- Fixed a Retail 12.1 error that could occur while selecting or clearing targets whose PvP state was protected by Blizzard's secret-value system.
+- Target faction badges now hide safely when their source data is inaccessible, while preserving the existing badge behavior for normal, PvP, free-for-all, mercenary, elite, rare, and boss targets.
+
+
 ## 5.3.78-JuNNeZ (2026-08-13) - Retail 12.1 Native Aura and Input Hardening
 
 ### Highlights

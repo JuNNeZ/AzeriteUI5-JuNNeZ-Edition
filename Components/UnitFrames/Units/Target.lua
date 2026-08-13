@@ -2361,24 +2361,50 @@ local PvPIndicator_Override = function(self, event, unit)
 	unit = unit or self.unit
 
 	local l = UnitEffectiveLevel(unit)
-	local c = (l and l < 1) and "worldboss" or UnitClassification(unit)
+	local c = UnitClassification(unit)
+	if (not CanAccessTargetValue(l) or not CanAccessTargetValue(c)) then
+		return element:Hide()
+	end
+	if (l and l < 1) then
+		c = "worldboss"
+	end
 	if (c == "boss" or c == "worldboss" or c == "elite" or c == "rare") then
 		return element:Hide()
 	end
 
 	local status
-	local factionGroup = UnitFactionGroup(unit) or "Neutral"
+	local factionGroup = UnitFactionGroup(unit)
+	if (not CanAccessTargetValue(factionGroup)) then
+		return element:Hide()
+	end
+	factionGroup = factionGroup or "Neutral"
 	if (factionGroup ~= "Neutral") then
-		if (UnitIsPVPFreeForAll(unit)) then
-		elseif (UnitIsPVP(unit)) then
-			if (ns.IsRetail and UnitIsMercenary(unit)) then
-				if (factionGroup == "Horde") then
-					factionGroup = "Alliance"
-				elseif (factionGroup == "Alliance") then
-					factionGroup = "Horde"
-				end
+		local isFreeForAll = UnitIsPVPFreeForAll(unit)
+		if (not CanAccessTargetValue(isFreeForAll)) then
+			return element:Hide()
+		end
+		if (not isFreeForAll) then
+			local isPvP = UnitIsPVP(unit)
+			if (not CanAccessTargetValue(isPvP)) then
+				return element:Hide()
 			end
-			status = factionGroup
+			if (isPvP) then
+				local isMercenary
+				if (ns.IsRetail) then
+					isMercenary = UnitIsMercenary(unit)
+					if (not CanAccessTargetValue(isMercenary)) then
+						return element:Hide()
+					end
+				end
+				if (isMercenary) then
+					if (factionGroup == "Horde") then
+						factionGroup = "Alliance"
+					elseif (factionGroup == "Alliance") then
+						factionGroup = "Horde"
+					end
+				end
+				status = factionGroup
+			end
 		end
 	end
 

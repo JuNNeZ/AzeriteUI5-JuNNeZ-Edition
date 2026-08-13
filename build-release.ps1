@@ -12,7 +12,7 @@ $DestinationBase = "C:\Users\Jonas\OneDrive\Skrivebord\azeriteui_fan_edit"
 # IMPORTANT: UPDATE VERSION BEFORE EACH RELEASE!
 # Also update version in: AzeriteUI5_JuNNeZ_Edition.toc
 # Versioning: patch (5.2.214->5.2.215), minor (5.2.x->5.3.0), major (5.x.x->6.0.0)
-$Version = "5.3.78-JuNNeZ"
+$Version = "5.3.79-JuNNeZ"
 
 $DateStamp = Get-Date -Format "dd-MM-yyyy"
 $ArchiveName = "AzeriteUI-$Version-Retail-$DateStamp.zip"
@@ -106,9 +106,9 @@ try {
         Remove-Item -LiteralPath $resolvedPath -Recurse -Force
     }
 
-    $DevelopmentFileNames = @(".editorconfig", ".luacheckrc", ".mcp.json", ".pkgmeta")
+    $DevelopmentFileNames = @(".editorconfig", ".gitattributes", ".luacheckrc", ".mcp.json", ".pkgmeta")
     Get-ChildItem -LiteralPath $TempAddonPath -File -Recurse -Force |
-        Where-Object { $DevelopmentFileNames -contains $_.Name -or $_.Extension -eq ".md" } |
+        Where-Object { $DevelopmentFileNames -contains $_.Name -or $_.Extension -in @(".code-workspace", ".md") } |
         Remove-Item -Force
 
     Write-Host "[DONE] Files copied successfully"

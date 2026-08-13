@@ -1,3 +1,40 @@
+## 2026-08-13 - 5.3.79-JuNNeZ release preparation
+
+- **Release scope:** Package the target-frame PvP indicator secret-value fix as the next patch release.
+- **Version decision:** Advance the released `5.3.78-JuNNeZ` baseline to `5.3.79-JuNNeZ`; no existing tag will be moved or overwritten.
+- **Metadata:** Updated `AzeriteUI5_JuNNeZ_Edition.toc`, `build-release.ps1`, and `CHANGELOG.md` with the new version and delta-only player-facing notes.
+- **Verification target:** Validate the changed Lua file, TOC metadata and references, XML structure, whitespace, release archive contents, version agreement, and archive checksum before committing and tagging.
+- **Package audit follow-up:** The first 5.3.79 archive inspection found `Components/Misc/AzeriteUI.code-workspace` and `Libs/oUF/.gitattributes` inside runtime-root copies. Extended the existing temporary-tree cleanup to exclude `.code-workspace` and `.gitattributes` files, then rebuild before publication.
+- **Runtime status:** The final in-client `/reload` target-selection matrix remains a user-side verification step because the game client cannot be driven from this workspace.
+- **Repository sync:** Fetched and pruned `origin`, fetched tags, confirmed `main` is identical to `origin/main`, and confirmed no local or remote `5.3.79-JuNNeZ` tag existed before release publication.
+- **Static verification:** `luac -p 'Components/UnitFrames/Units/Target.lua'`, all 37 runtime XML parses, every TOC file reference, version agreement, and `git diff --check` passed.
+- **Release archive:** Built `AzeriteUI-5.3.79-JuNNeZ-Retail-13-08-2026.zip` with 464 entries and 10,447,344 bytes. Archive root, packaged TOC version, and development-file exclusions pass inspection. SHA-256: `F1B492E2615FBF2A1AA8C1DD9EE1687B9CF70CAC06F1650A09C4E2647D96F0DE`.
+
+## 2026-08-13 - Target PvP indicator secret-boolean crash follow-up
+
+- **Live report:** Retail 12.1.0 build 69283 produced `Target.lua:2373: attempt to perform boolean test on a secret boolean value` during `PLAYER_TARGET_CHANGED`.
+- **Captured stack:**
+
+  ```text
+  Components/UnitFrames/Units/Target.lua:2373
+    in function <Components/UnitFrames/Units/Target.lua:2357>
+  [tail call]: ?
+  Libs/oUF/ouf.lua:200: in function 'func'
+  Libs/oUF/events.lua:79
+  [tail call]: ?
+  [C]: in function 'CameraOrSelectOrMoveStop'
+  [CAMERAORSELECTORMOVE]:4
+  ```
+
+- **Captured locals:** `self=AzeriteUnitFrameTarget`, `event="PLAYER_TARGET_CHANGED"`, `unit="target"`, `element=self.PvPIndicator`, `l=90`, `c="normal"`, `status=nil`, `factionGroup="Horde"`; BugSack identified the temporary result tested at line 2373 as a secret boolean.
+- **Investigation target:** Audit every unit-derived return consumed by `PvPIndicator_Override`, then fail closed before any comparison, boolean branch, table lookup, or texture change can consume a secret value.
+- **Files targeted:** `Components/UnitFrames/Units/Target.lua`, `FixLog.md`.
+- **Applied fix:** `PvPIndicator_Override` now validates the results of `UnitEffectiveLevel`, `UnitClassification`, `UnitFactionGroup`, `UnitIsPVPFreeForAll`, `UnitIsPVP`, and Retail's `UnitIsMercenary` with the existing `CanAccessTargetValue` helper before consuming them. An inaccessible result hides the decorative badge for that update; readable values retain the prior FFA, PvP, classification, faction, and mercenary behavior.
+- **Safety:** The change is local to the AzeriteUI target-frame PvP texture override. It does not modify oUF, protected frames, events, or Blizzard functions, and does not cache or transform secret values.
+- **Static verification:** `luac -p 'Components/UnitFrames/Units/Target.lua'` and `git diff --check` passed.
+- **Runtime verification pending:** `/buggrabber reset`, `/reload`, then repeatedly acquire/clear ordinary, PvP-flagged, free-for-all, elite/rare/boss, and mercenary targets. Confirm the badge still follows the old visible rules and no new secret-value error appears during `PLAYER_TARGET_CHANGED`.
+- **Files modified:** `Components/UnitFrames/Units/Target.lua`, `FixLog.md`.
+
 ## 2026-08-13 - 5.3.78-JuNNeZ release preparation
 
 - **Release scope:** Package the completed Retail 12.1 aura, action-bar, Blizzard-frame suppression, minimap queue-status, and secret-value hardening work as the next patch release.
