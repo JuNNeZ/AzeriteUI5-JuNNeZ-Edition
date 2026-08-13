@@ -95,6 +95,34 @@ local Private = oUF.Private
 
 local unitSelectionType = Private.unitSelectionType
 
+local function IsSecretValue(value)
+	return issecretvalue and issecretvalue(value)
+end
+
+local function IsSafeTrue(value)
+	if(IsSecretValue(value)) then
+		return false
+	end
+	return value and true or false
+end
+
+local function IsSafeFalse(value)
+	if(IsSecretValue(value)) then
+		return false
+	end
+	return not value
+end
+
+local function GetSafeColorByKey(colors, key, fallback)
+	if(IsSecretValue(key)) then
+		return fallback
+	end
+	if(not colors or key == nil) then
+		return fallback
+	end
+	return colors[key] or fallback
+end
+
 local function ExtractColorRGB(color)
 	if(not color) then
 		return
@@ -122,47 +150,36 @@ end
 local function UpdateColor(self, event, unit)
 	if(not unit or self.unit ~= unit) then return end
 	local element = self.Health
+	local isConnected = UnitIsConnected(unit)
+	local isPlayerControlled = UnitPlayerControlled(unit)
+	local isPlayer = UnitIsPlayer(unit)
+	local isPartyAI = UnitInPartyIsAI(unit)
+	local isPlayerOrPartyAI = IsSafeTrue(isPlayer) or IsSafeTrue(isPartyAI)
+	local isKnownNPC = IsSafeFalse(isPlayer) and IsSafeFalse(isPartyAI)
+	local threatColor
+	if(element.colorThreat and IsSafeFalse(isPlayerControlled)) then
+		threatColor = GetSafeColorByKey(self.colors.threat, UnitThreatSituation('player', unit))
+	end
+	local useClassColor = (element.colorClass and isPlayerOrPartyAI)
+		or (element.colorClassNPC and isKnownNPC)
+		or (element.colorClassPet and IsSafeTrue(isPlayerControlled) and IsSafeFalse(isPlayer))
 
 	local color
-	if(element.colorDisconnected and not UnitIsConnected(unit)) then
+	if(element.colorDisconnected and IsSafeFalse(isConnected)) then
 		color = self.colors.disconnected
-	elseif(element.colorTapping and not UnitPlayerControlled(unit) and UnitIsTapDenied(unit)) then
+	elseif(element.colorTapping and IsSafeFalse(isPlayerControlled) and IsSafeTrue(UnitIsTapDenied(unit))) then
 		color = self.colors.tapped
-	elseif(element.colorThreat and not UnitPlayerControlled(unit) and UnitThreatSituation('player', unit)) then
-		local threat = UnitThreatSituation('player', unit)
-		if issecretvalue and issecretvalue(threat) then
-			if AzeriteUI and AzeriteUI.Debug and AzeriteUI.Debug.IsEnabled and AzeriteUI.Debug.IsEnabled("FixBlizzardBugs") then
-				print("[AzeriteUI] Skipping secret threat value as table index in Health:UpdateColor for unit:", unit)
-			end
-			color = nil
-		else
-			color = self.colors.threat[threat]
-		end
-	elseif(element.colorClass and (UnitIsPlayer(unit) or UnitInPartyIsAI(unit)))
-		or (element.colorClassNPC and not (UnitIsPlayer(unit) or UnitInPartyIsAI(unit)))
-		or (element.colorClassPet and UnitPlayerControlled(unit) and not UnitIsPlayer(unit)) then
+	elseif(threatColor) then
+		color = threatColor
+	elseif(useClassColor) then
 		local _, class = UnitClass(unit)
-		color = self.colors.class[class]
+		color = GetSafeColorByKey(self.colors.class, class, self.colors.health)
 	elseif(element.colorSelection) then
 		local selection = unitSelectionType(unit, element.considerSelectionInCombatHostile)
-		if issecretvalue and issecretvalue(selection) then
-			if AzeriteUI and AzeriteUI.Debug and AzeriteUI.Debug.IsEnabled and AzeriteUI.Debug.IsEnabled("FixBlizzardBugs") then
-				print("[AzeriteUI] Skipping secret selection value as table index in Health:UpdateColor for unit:", unit)
-			end
-			color = nil
-		else
-			color = self.colors.selection[selection]
-		end
+		color = GetSafeColorByKey(self.colors.selection, selection, self.colors.health)
 	elseif(element.colorReaction) then
 		local reaction = UnitReaction(unit, 'player')
-		if issecretvalue and issecretvalue(reaction) then
-			if AzeriteUI and AzeriteUI.Debug and AzeriteUI.Debug.IsEnabled and AzeriteUI.Debug.IsEnabled("FixBlizzardBugs") then
-				print("[AzeriteUI] Skipping secret reaction value as table index in Health:UpdateColor for unit:", unit)
-			end
-			color = nil
-		else
-			color = self.colors.reaction[reaction]
-		end
+		color = GetSafeColorByKey(self.colors.reaction, reaction, self.colors.health)
 	elseif(element.colorSmooth) then
 		local healthColor = self.colors.health
 		local curve = healthColor and type(healthColor.GetCurve) == 'function' and healthColor:GetCurve()

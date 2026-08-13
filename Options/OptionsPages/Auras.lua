@@ -34,15 +34,14 @@ local tonumber = tonumber
 local tostring = tostring
 
 local getmodule = function()
-	local module = ns:GetModule("Auras", true)
-	if (module and module:IsEnabled()) then
-		return module
-	end
+	return ns:GetModule("Auras", true)
 end
 
 local setter = function(info,val)
-	getmodule().db.profile[info[#info]] = val
-	getmodule():UpdateSettings()
+	local module = getmodule()
+	if (not module) then return end
+	module.db.profile[info[#info]] = val
+	module:UpdateSettings()
 end
 
 local getter = function(info)
@@ -55,10 +54,6 @@ end
 
 local getoption = function(info,option)
 	return getmodule().db.profile[option]
-end
-
-local hasLegacyBlizzardAuraToggle = function()
-	return not (issecretvalue or (ns.ClientVersion and ns.ClientVersion >= 120000))
 end
 
 local GenerateOptions = function()
@@ -134,17 +129,6 @@ local GenerateOptions = function()
 				order = 22,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
-				set = setter,
-				get = getter
-			},
-			hideBlizzardAurasOnTarget = {
-				name = L["Legacy: Hide Blizzard Auras While Targeting"],
-				desc = L["Older-client compatibility option for Blizzard BuffFrame visibility while targeting. This is not used on WoW 12, where Blizzard aura frames are already disabled for secure compatibility."],
-				order = 23,
-				type = "toggle", width = "full",
-				hidden = function(info)
-					return isdisabled(info) or not hasLegacyBlizzardAuraToggle()
-				end,
 				set = setter,
 				get = getter
 			},

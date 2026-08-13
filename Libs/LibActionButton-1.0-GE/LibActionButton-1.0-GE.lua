@@ -1,7 +1,7 @@
 -- License: LICENSE.txt
 
 local MAJOR_VERSION = "LibActionButton-1.0-GE"
-local MINOR_VERSION = 73 -- the real minor version is 143
+local MINOR_VERSION = 75 -- Retail duration-object and display-count modernization
 
 local LibStub = LibStub
 if not LibStub then error(MAJOR_VERSION .. " requires LibStub.") end
@@ -28,8 +28,6 @@ local AssistedCombatManager = _G.AssistedCombatManager
 
 local GetCVar = C_CVar.GetCVar
 local EnableActionRangeCheck = C_ActionBar.EnableActionRangeCheck
-local GetCooldownAuraBySpellID = C_UnitAuras.GetCooldownAuraBySpellID
-local GetItemActionOnEquipSpellID = C_ActionBar.GetItemActionOnEquipSpellID
 local IsAssistedCombatAction = C_ActionBar.IsAssistedCombatAction
 local IsConsumableSpell = C_Spell.IsConsumableSpell or IsConsumableSpell
 local IsSpellOverlayed = (C_SpellActivationOverlay and C_SpellActivationOverlay.IsSpellOverlayed) or IsSpellOverlayed
@@ -41,8 +39,11 @@ local UnpackAuraData = AuraUtil.UnpackAuraData
 local GetAuraDuration = C_UnitAuras.GetAuraDuration
 local GetAuraDataBySpellName = C_UnitAuras.GetAuraDataBySpellName
 local GetAuraDataByAuraInstanceID = C_UnitAuras.GetAuraDataByAuraInstanceID
-local GetPlayerAuraBySpellID = C_UnitAuras.GetPlayerAuraBySpellID
 local GetActionDisplayCount = C_ActionBar.GetActionDisplayCount
+local GetActionChargeDuration = C_ActionBar.GetActionChargeDuration
+local GetActionCooldownDuration = C_ActionBar.GetActionCooldownDuration
+local GetActionLossOfControlCooldownDuration = C_ActionBar.GetActionLossOfControlCooldownDuration
+local GetActionLossOfControlCooldownInfo = C_ActionBar.GetActionLossOfControlCooldownInfo or function() return nil end
 local IsEquippedGearOutfitAction = C_ActionBar.IsEquippedGearOutfitAction
 local C_Container_GetItemCooldown = C_Container.GetItemCooldown
 local C_EquipmentSet_PickupEquipmentSet = C_EquipmentSet.PickupEquipmentSet
@@ -351,6 +352,11 @@ function lib:CreateButton(id, name, header, config)
 	button:SetScript("PreClick", Generic.PreClick)
 	button:SetScript("PostClick", Generic.PostClick)
 	button:SetScript("OnEvent", Generic.OnButtonEvent)
+	button:SetScript("OnAttributeChanged", nil)
+
+	-- Retail ActionButtonTemplate now brings in mixin methods that can override
+	-- LAB's metatable methods unless we explicitly clear them.
+	button.HasAction = nil
 
 	button.id = id
 	button.header = header
@@ -2487,43 +2493,13 @@ function UpdateUsable(self, isUsable, notEnoughMana)
 end
 
 function UpdateCount(self)
-	local cache = self.__LABCountCache
-	if not cache then
-		cache = {}
-		self.__LABCountCache = cache
-	end
-
 	if self.config.hideElements.count or not self:HasAction() then
-		cache.count = nil
-		cache.charges = nil
-		cache.maxCharges = nil
 		self.Count:SetText("")
 		return
 	end
 
-	if self:IsConsumableOrStackable() then
-		local count = self:GetCount()
-		if IsSafeNumber(count) then
-			cache.count = count
-		else
-			count = cache.count
-		end
-
-		if not IsSafeNumber(count) then
-			self.Count:SetText("")
-			return
-		end
-
-		if count > (self.maxDisplayCount or 9999) then
-			self.Count:SetText("*")
-		else
-			self.Count:SetText(count > 1 and count or "")
-		end
-		return
-	end
-
-	-- Keep the original action/spell display-count path for charge-based spells.
-	-- This uses Action.GetDisplayCount (C_ActionBar.GetActionDisplayCount) when available.
+	-- The Retail display API owns spell-charge and item-stack formatting and can
+	-- safely pass secret display strings straight into the Blizzard font string.
 	self.Count:SetText(self:GetDisplayCount())
 end
 
@@ -2564,6 +2540,28 @@ local function StartChargeCooldown(parent, chargeStart, chargeDuration, chargeMo
 	end
 end
 
+local function ClearCooldownFrame(cooldown)
+	if not cooldown then
+		return
+	end
+	if cooldown.Clear then
+		cooldown:Clear()
+	else
+		CooldownFrame_Clear(cooldown)
+	end
+end
+
+local function SetOrClearCooldownFrame(cooldown, durationObject)
+	if not cooldown then
+		return
+	end
+	if not durationObject then
+		ClearCooldownFrame(cooldown)
+		return
+	end
+	cooldown:SetCooldownFromDurationObject(durationObject)
+end
+
 local function OnCooldownDone(self, requireCooldownUpdate)
 	local button = self:GetParent()
 
@@ -2576,170 +2574,28 @@ local function OnCooldownDone(self, requireCooldownUpdate)
 	end
 end
 
-local HAS_DURATION_OBJECT_API = C_ActionBar and C_ActionBar.GetActionCooldownDuration ~= nil
-
-local defaultCooldownInfo = { startTime = 0; duration = 0; isEnabled = false; modRate = 0 }
-local defaultChargeInfo = { currentCharges = 0; maxCharges = 0; cooldownStartTime = 0; cooldownDuration = 0; chargeModRate = 0 }
-local defaultLossOfControlInfo = { startTime = 0; duration = 0; modRate = 0 }
-
-local function SafeBooleanValue(value)
-	if issecretvalue and issecretvalue(value) then
-		return false
-	end
-	return value and true or false
-end
-
-local function SanitizeCooldownInfo(info)
-	if type(info) ~= "table" then
-		return defaultCooldownInfo
-	end
-
-	return {
-		startTime = IsSafeNumber(info.startTime) and info.startTime or 0,
-		duration = IsSafeNumber(info.duration) and info.duration or 0,
-		isEnabled = SafeBooleanValue(info.isEnabled),
-		modRate = IsSafeNumber(info.modRate) and info.modRate or 0
-	}
-end
-
-local function SanitizeChargeInfo(info)
-	if type(info) ~= "table" then
-		return defaultChargeInfo
-	end
-
-	return {
-		currentCharges = IsSafeNumber(info.currentCharges) and info.currentCharges or 0,
-		maxCharges = IsSafeNumber(info.maxCharges) and info.maxCharges or 0,
-		cooldownStartTime = IsSafeNumber(info.cooldownStartTime) and info.cooldownStartTime or 0,
-		cooldownDuration = IsSafeNumber(info.cooldownDuration) and info.cooldownDuration or 0,
-		chargeModRate = IsSafeNumber(info.chargeModRate) and info.chargeModRate or 0
-	}
-end
-
-local function SanitizeLossOfControlInfo(info)
-	if type(info) ~= "table" then
-		return defaultLossOfControlInfo
-	end
-
-	return {
-		startTime = IsSafeNumber(info.startTime) and info.startTime or 0,
-		duration = IsSafeNumber(info.duration) and info.duration or 0,
-		modRate = IsSafeNumber(info.modRate) and info.modRate or 0
-	}
-end
+local defaultCooldownInfo = { isActive = false }
+local defaultChargeInfo = { isActive = false }
+local defaultLossOfControlInfo = { isActive = false, shouldReplaceNormalCooldown = false }
 
 function UpdateCooldown(self)
-	local chargeInfo
-	local cooldownInfo
-	local lossOfControlInfo = {}
+	local cooldownInfo = self:GetCooldownInfo() or defaultCooldownInfo
+	local chargeInfo = self:GetChargeInfo() or defaultChargeInfo
+	local lossOfControlInfo = self:GetLoCCooldownInfo() or defaultLossOfControlInfo
+	local locShouldReplaceCooldown = lossOfControlInfo.shouldReplaceNormalCooldown and self.config.lossOfControlCooldown
+	local showLoC = lossOfControlInfo.isActive and self.config.lossOfControlCooldown
+	local showCharge = not locShouldReplaceCooldown and chargeInfo.isActive
+	local showNormal = not locShouldReplaceCooldown and cooldownInfo.isActive
 
-	local auraData
-
-	local passiveCooldownSpellID = self:GetPassiveCooldownSpellID()
-	if passiveCooldownSpellID and passiveCooldownSpellID ~= 0 then
-		auraData = GetPlayerAuraBySpellID(passiveCooldownSpellID)
+	if showCharge and not self.chargeCooldown then
+		self.chargeCooldown = CreateChargeCooldownFrame(self)
 	end
 
-	if auraData then
-		local currentTime = GetTime()
-		local timeUntilExpire = auraData.expirationTime - currentTime
-		local howMuchTimeHasPassed = auraData.duration - timeUntilExpire
+	SetOrClearCooldownFrame(self.cooldown, showNormal and self:GetCooldownDuration())
+	SetOrClearCooldownFrame(self.chargeCooldown, showCharge and self:GetChargeDuration())
+	SetOrClearCooldownFrame(self.lossOfControlCooldown, showLoC and self:GetLoCCooldownDuration())
 
-		lossOfControlInfo.startTime =  currentTime - howMuchTimeHasPassed
-		lossOfControlInfo.duration = auraData.expirationTime - currentTime
-		lossOfControlInfo.modRate = auraData.timeMod
-		cooldownInfo = {}
-		cooldownInfo.startTime = currentTime - howMuchTimeHasPassed
-		cooldownInfo.duration =  auraData.duration
-		cooldownInfo.modRate = auraData.timeMod
-		cooldownInfo.isEnabled = 1
-		chargeInfo = {}
-		chargeInfo.currentCharges = auraData.charges
-		chargeInfo.maxCharges = auraData.maxCharges
-		chargeInfo.cooldownStartTime = currentTime * 0.001
-		chargeInfo.cooldownDuration = auraData.duration * 0.001
-		chargeInfo.chargeModRate = auraData.timeMod
-	else
-		cooldownInfo = self:GetCooldownInfo() or defaultCooldownInfo
-		chargeInfo = self:GetChargeInfo() or defaultChargeInfo
-
-		local locStart, locDuration = self:GetLossOfControlCooldown()
-		lossOfControlInfo.startTime = locStart
-		lossOfControlInfo.duration = locDuration
-		lossOfControlInfo.modRate = cooldownInfo.modRate
-	end
-
-	if not self.config.lossOfControlCooldown or not lossOfControlInfo or not lossOfControlInfo.startTime or not lossOfControlInfo.duration then
-		lossOfControlInfo = defaultLossOfControlInfo
-	end
-
-	if not cooldownInfo or not cooldownInfo.startTime or not cooldownInfo.duration then
-		cooldownInfo = defaultCooldownInfo
-	end
-
-	if not chargeInfo or not chargeInfo.maxCharges or not chargeInfo.currentCharges or not chargeInfo.cooldownStartTime or not chargeInfo.cooldownDuration then
-		chargeInfo = defaultChargeInfo
-	end
-
-	-- 12.0+ duration object API avoids passing secret values through tainted code
-	if HAS_DURATION_OBJECT_API and self._state_type == "action" then
-		local action = self._state_action
-		local cooldownDuration = C_ActionBar.GetActionCooldownDuration(action)
-		local chargeDuration = C_ActionBar.GetActionChargeCooldownDuration and C_ActionBar.GetActionChargeCooldownDuration(action)
-		local locDuration = C_ActionBar.GetActionLossOfControlCooldownDuration and C_ActionBar.GetActionLossOfControlCooldownDuration(action)
-
-		if cooldownDuration then
-			self.cooldown:SetCooldownFromDurationObject(cooldownDuration)
-		end
-		if self.chargeCooldown and chargeDuration then
-			self.chargeCooldown:SetCooldownFromDurationObject(chargeDuration)
-		elseif self.chargeCooldown then
-			ClearChargeCooldown(self)
-		end
-		if self.lossOfControlCooldown and locDuration then
-			self.lossOfControlCooldown:SetCooldownFromDurationObject(locDuration)
-		end
-
-		lib.callbacks:Fire("OnCooldownUpdate", self, nil, nil, nil, cooldownInfo, chargeInfo, lossOfControlInfo)
-	elseif ActionButton_ApplyCooldown then
-		cooldownInfo = SanitizeCooldownInfo(cooldownInfo)
-		chargeInfo = SanitizeChargeInfo(chargeInfo)
-		lossOfControlInfo = SanitizeLossOfControlInfo(lossOfControlInfo)
-		ActionButton_ApplyCooldown(self.cooldown, cooldownInfo, self.chargeCooldown, chargeInfo, self.lossOfControlCooldown, lossOfControlInfo)
-
-		lib.callbacks:Fire("OnCooldownUpdate", self, nil, nil, nil, cooldownInfo, chargeInfo, lossOfControlInfo)
-	else
-		local locStart, locDuration = lossOfControlInfo.startTime, lossOfControlInfo.duration
-		local start, duration, enable, modRate = cooldownInfo.startTime, cooldownInfo.duration, cooldownInfo.isEnabled, cooldownInfo.modRate
-		local charges, maxCharges, chargeStart, chargeDuration, chargeModRate = chargeInfo.currentCharges, chargeInfo.maxCharges, chargeInfo.cooldownStartTime, chargeInfo.cooldownDuration, chargeInfo.chargeModRate
-
-		local hasLocCooldown = IsSafeNumber(locStart) and IsSafeNumber(locDuration) and locStart > 0 and locDuration > 0
-		local hasCooldown = enable and IsSafeNumber(start) and IsSafeNumber(duration) and start > 0 and duration > 0
-		if hasLocCooldown and ((not hasCooldown) or ((locStart + locDuration) > (start + duration))) then
-			if self.cooldown.currentCooldownType ~= _G.COOLDOWN_TYPE_LOSS_OF_CONTROL then
-				self.cooldown.currentCooldownType = _G.COOLDOWN_TYPE_LOSS_OF_CONTROL
-			end
-
-			CooldownFrame_Set(self.cooldown, locStart, locDuration, true, true, modRate)
-			self.cooldown:SetScript("OnCooldownDone", OnCooldownDone, false)
-			ClearChargeCooldown(self)
-		else
-			if self.cooldown.currentCooldownType ~= _G.COOLDOWN_TYPE_NORMAL then
-				self.cooldown.currentCooldownType = _G.COOLDOWN_TYPE_NORMAL
-			end
-
-			self.cooldown:SetScript("OnCooldownDone", OnCooldownDone, hasLocCooldown)
-
-			if charges and maxCharges and maxCharges > 1 and charges < maxCharges then
-				StartChargeCooldown(self, chargeStart, chargeDuration, chargeModRate)
-			else
-				ClearChargeCooldown(self)
-			end
-			CooldownFrame_Set(self.cooldown, start, duration, enable, false, modRate)
-		end
-
-		lib.callbacks:Fire("OnCooldownUpdate", self, start, duration, modRate)
-	end
+	lib.callbacks:Fire("OnCooldownUpdate", self, nil, nil, nil, cooldownInfo, chargeInfo, lossOfControlInfo)
 end
 
 function UpdateRangeTimer(self)
@@ -3361,8 +3217,11 @@ Generic.GetActionText            = function(self) return "" end
 Generic.GetTexture               = function(self) return nil end
 Generic.GetCount                 = function(self) return 0 end
 Generic.GetChargeInfo            = function(self) return nil end
+Generic.GetChargeDuration        = function(self) return nil end
 Generic.GetCooldownInfo          = function(self) return nil end
-Generic.GetLossOfControlCooldown = function(self) return 0, 0 end
+Generic.GetCooldownDuration      = function(self) return nil end
+Generic.GetLoCCooldownInfo       = function(self) return nil end
+Generic.GetLoCCooldownDuration   = function(self) return nil end
 Generic.IsAttack                 = function(self) return nil end
 Generic.IsEquipped               = function(self) return nil end
 Generic.IsCurrentlyActive        = function(self) return nil end
@@ -3382,7 +3241,6 @@ Generic.IsInRange                = function(self)
 end
 Generic.SetTooltip               = function(self) return nil end
 Generic.GetSpellId               = function(self) return nil end
-Generic.GetPassiveCooldownSpellID = function(self) return nil end
 
 Generic.GetDisplayCount          = function(self)
 	if self:IsConsumableOrStackable() then
@@ -3575,6 +3433,35 @@ local function HasActiveChargeRecharge(info)
 		and cooldownDuration > 0
 end
 
+local function ShouldPreferSpellChargeInfo(actionInfo, spellInfo)
+	if type(spellInfo) ~= "table" then
+		return false
+	end
+
+	if HasActiveChargeRecharge(spellInfo) and not HasActiveChargeRecharge(actionInfo) then
+		return true
+	end
+
+	if type(actionInfo) ~= "table"
+		or (not IsSafeNumber(actionInfo.currentCharges))
+		or (not IsSafeNumber(actionInfo.maxCharges))
+	then
+		return true
+	end
+
+	if IsSafeNumber(spellInfo.currentCharges) and IsSafeNumber(spellInfo.maxCharges) then
+		if spellInfo.maxCharges > actionInfo.maxCharges then
+			return true
+		end
+
+		if spellInfo.maxCharges == actionInfo.maxCharges and spellInfo.currentCharges < actionInfo.currentCharges then
+			return true
+		end
+	end
+
+	return false
+end
+
 Action.HasAction                = function(self) return HasAction(self._state_action) end
 Action.GetActionText            = function(self) return GetActionText(self._state_action) end
 Action.GetTexture               = function(self) return GetActionTexture(self._state_action) end
@@ -3585,14 +3472,19 @@ Action.GetCount                 = function(self)
 	end
 
 	local actionType, actionID, subType = GetActionInfo(self._state_action)
+	local itemID = actionID
+	if actionType == "macro" and subType == "item" and GetMacroItem then
+		itemID = GetMacroItem(actionID)
+	end
+
 	if (actionType == "item") or (actionType == "macro" and subType == "item") then
 		if C_Item and C_Item.GetItemCount then
-			local itemCount = C_Item.GetItemCount(actionID, nil, true)
+			local itemCount = C_Item.GetItemCount(itemID, nil, true)
 			if type(itemCount) == "number" then
 				return itemCount
 			end
 		elseif GetItemCount then
-			local itemCount = GetItemCount(actionID, nil, true)
+			local itemCount = GetItemCount(itemID, nil, true)
 			if type(itemCount) == "number" then
 				return itemCount
 			end
@@ -3616,50 +3508,62 @@ Action.GetChargeInfo            = function(self)
 	end
 
 	local spellInfo = GetSpellChargeInfo(spellID)
-	if spellInfo then
-		if HasActiveChargeRecharge(spellInfo) and not HasActiveChargeRecharge(actionInfo) then
-			return spellInfo
-		end
-
-		if type(actionInfo) ~= "table"
-			or (not IsSafeNumber(actionInfo.currentCharges))
-			or (not IsSafeNumber(actionInfo.maxCharges))
-		then
-			return spellInfo
-		end
+	if ShouldPreferSpellChargeInfo(actionInfo, spellInfo) then
+		return spellInfo
 	end
 
 	return actionInfo
 end
 Action.GetCooldownInfo          = function(self) return GetActionCooldownInfo(self._state_action) end
-Action.GetLossOfControlCooldown = function(self) return GetActionLossOfControlCooldown(self._state_action) end
+Action.GetLoCCooldownInfo       = function(self) return GetActionLossOfControlCooldownInfo(self._state_action) end
 Action.IsAttack                 = function(self) return IsAttackAction(self._state_action) end
 Action.IsEquipped               = function(self) return IsEquippedAction(self._state_action) end
 Action.IsCurrentlyActive        = function(self) return IsCurrentAction(self._state_action) end
 Action.IsAutoRepeat             = function(self) return IsAutoRepeatAction(self._state_action) end
 Action.IsUsable                 = function(self) return IsUsableAction(self._state_action) end
-Action.IsConsumableOrStackable  = function(self) return IsConsumableAction(self._state_action) or IsStackableAction(self._state_action) or (not IsItemAction(self._state_action) and GetActionCount(self._state_action) > 0) end
+Action.IsConsumableOrStackable  = function(self)
+	if IsConsumableAction(self._state_action) or IsStackableAction(self._state_action) then
+		return true
+	end
+
+	local actionType, _, subType = GetActionInfo(self._state_action)
+	if actionType == "item" or (actionType == "macro" and subType == "item") then
+		return true
+	end
+
+	return not IsItemAction(self._state_action) and GetActionCount(self._state_action) > 0
+end
 Action.IsUnitInRange            = function(self, unit) return IsActionInRange(self._state_action, unit) end
 Action.SetTooltip               = function(self) return GameTooltip:SetAction(self._state_action) end
 Action.GetSpellId               = function(self)
 	local actionType, id, subType = GetActionInfo(self._state_action)
 	if actionType == "spell" then
-		return id
+		return ResolveActionSpellID(self._state_action, id)
 	elseif actionType == "macro" then
 		if subType == "spell" then
-			return id
+			return ResolveActionSpellID(self._state_action, id)
 		else
-			return (GetMacroSpell(id))
+			return ResolveOverrideSpellID(GetMacroSpell(id))
 		end
 	end
 end
 
 if GetActionDisplayCount then
-	Action.GetDisplayCount      = function(self) return GetActionDisplayCount(self._state_action) end
+	Action.GetDisplayCount      = function(self) return GetActionDisplayCount(self._state_action, self.maxDisplayCount or 9999) end
 end
 
--- legacy cooldown functions, avoiding table creation on game versions that still have the old API
--- LAB does not call these, but external things might
+if GetActionChargeDuration then
+	Action.GetChargeDuration    = function(self) return GetActionChargeDuration(self._state_action) end
+end
+
+if GetActionCooldownDuration then
+	Action.GetCooldownDuration  = function(self) return GetActionCooldownDuration(self._state_action) end
+end
+
+if GetActionLossOfControlCooldownDuration then
+	Action.GetLoCCooldownDuration = function(self) return GetActionLossOfControlCooldownDuration(self._state_action) end
+end
+
 Action.GetCharges = function(self)
 	local charge = self:GetChargeInfo()
 	if charge and IsSafeNumber(charge.currentCharges) and IsSafeNumber(charge.maxCharges) then
@@ -3685,29 +3589,6 @@ Action.GetCooldown = function(self)
 	end
 end
 
-Action.GetPassiveCooldownSpellID = function(self)
-	local _actionType, actionID = GetActionInfo(self._state_action)
-	local onEquipPassiveSpellID
-	if actionID and GetItemActionOnEquipSpellID then
-		onEquipPassiveSpellID = GetItemActionOnEquipSpellID(self._state_action)
-	end
-	if onEquipPassiveSpellID then
-		return GetCooldownAuraBySpellID(onEquipPassiveSpellID)
-	else
-		local spellID = self:GetSpellId()
-		if spellID then
-			return GetCooldownAuraBySpellID(spellID)
-		end
-	end
-end
-
-
-
-if not WoWRetail then
-	-- disable loss of control cooldown on classic
-	Action.GetLossOfControlCooldown = function(self) return 0,0 end
-end
-
 -----------------------------------------------------------
 --- Spell Button
 Spell.HasAction                = function(self) return true end
@@ -3716,7 +3597,10 @@ Spell.GetTexture               = function(self) return C_Spell.GetSpellTexture(s
 Spell.GetCount                 = function(self) return C_Spell.GetSpellCastCount(self._state_action) end
 Spell.GetChargeInfo            = function(self) return C_Spell.GetSpellCharges(self._state_action) end
 Spell.GetCooldownInfo          = function(self) return C_Spell.GetSpellCooldown(self._state_action) end
-Spell.GetLossOfControlCooldown = function(self) return GetSpellLossOfControlCooldown(self._state_action) end
+Spell.GetLoCCooldownInfo       = function(self)
+	local getInfo = C_Spell.GetSpellLossOfControlCooldownInfo
+	return getInfo and getInfo(self._state_action) or nil
+end
 Spell.IsAttack                = function(self) return C_Spell.IsAutoAttackSpell(self._state_action) or nil end
 Spell.IsEquipped               = function(self) return nil end
 Spell.IsCurrentlyActive        = function(self) return C_Spell.IsCurrentSpell(self._state_action) end
@@ -3731,11 +3615,9 @@ if C_Spell.GetSpellDisplayCount then
 	Spell.GetDisplayCount      = function(self) return C_Spell.GetSpellDisplayCount(self._state_action) end
 end
 
-Spell.GetPassiveCooldownSpellID = function(self)
-	if self._state_action then
-		return GetCooldownAuraBySpellID(self._state_action)
-	end
-end
+Spell.GetChargeDuration      = function(self) return C_Spell.GetSpellChargeDuration(self._state_action) end
+Spell.GetCooldownDuration    = function(self) return C_Spell.GetSpellCooldownDuration(self._state_action) end
+Spell.GetLoCCooldownDuration = function(self) return C_Spell.GetSpellLossOfControlCooldownDuration(self._state_action) end
 
 -----------------------------------------------------------
 --- Item Button
@@ -3748,7 +3630,7 @@ Item.GetActionText           = function(self) return "" end
 Item.GetTexture              = function(self) return C_Item.GetItemIconByID(self._state_action) end
 Item.GetCount                = function(self) return C_Item.GetItemCount(self._state_action, nil, true) end
 Item.GetChargeInfo           = function(self) return nil end
-Item.GetCooldownInfo         = function(self) local start, duration, enable = C_Container_GetItemCooldown(getItemId(self._state_action)) return { startTime = start, duration = duration, isEnabled = enable, modRate = 1.0 } end
+Item.GetCooldownInfo         = function(self) local start, duration, enable = C_Container_GetItemCooldown(getItemId(self._state_action)) return { startTime = start, duration = duration, isEnabled = enable, modRate = 1.0, isActive = (enable and start and start > 0 and duration and duration > 0) } end
 Item.IsAttack                = function(self) return nil end
 Item.IsEquipped              = function(self) return C_Item.IsEquippedItem(self._state_action) end
 Item.IsCurrentlyActive       = function(self) return C_Item.IsCurrentItem(self._state_action) end
@@ -3758,7 +3640,17 @@ Item.IsConsumableOrStackable = function(self) return C_Item.IsConsumableItem(sel
 --Item.IsUnitInRange           = function(self, unit) return IsItemInRange(self._state_action, unit) end
 Item.SetTooltip              = function(self) return GameTooltip:SetHyperlink(self._state_action) end
 Item.GetSpellId              = function(self) return nil end
-Item.GetPassiveCooldownSpellID = function(self) return nil end
+
+Item.GetCooldownDuration = function(self)
+	local duration = C_DurationUtil.CreateDuration()
+	if not duration then return nil end
+
+	local info = self:GetCooldownInfo()
+	if info and info.isActive then
+		duration:SetTimeFromStart(info.startTime, info.duration, info.modRate)
+	end
+	return duration
+end
 
 -----------------------------------------------------------
 --- Macro Button
@@ -3778,7 +3670,6 @@ Macro.IsConsumableOrStackable = function(self) return nil end
 Macro.IsUnitInRange           = function(self, unit) return nil end
 Macro.SetTooltip              = function(self) return nil end
 Macro.GetSpellId              = function(self) return nil end
-Macro.GetPassiveCooldownSpellID = function(self) return nil end
 
 -----------------------------------------------------------
 --- Toy Button
@@ -3816,7 +3707,6 @@ Custom.IsUnitInRange           = function(self, unit) return nil end
 Custom.SetTooltip              = function(self) return GameTooltip:SetText(self._state_action.tooltip) end
 Custom.GetSpellId              = function(self) return nil end
 Custom.RunCustom               = function(self, unit, button) return self._state_action.func(self, unit, button) end
-Custom.GetPassiveCooldownSpellID = function(self) return nil end
 
 --- WoW Classic overrides
 if DisableOverlayGlow then
@@ -3851,4 +3741,3 @@ end
 if oldversion and lib.flyoutHandler then
 	UpdateFlyoutHandlerScripts()
 end
-

@@ -48,7 +48,7 @@ local unpack = unpack
 -- GLOBALS: ExpansionLandingPageMinimapButton, GarrisonLandingPageMinimapButton, MinimapZoneTextButton, MiniMapWorldMapButton, TimeManagerClockButton, QueueStatusButton
 -- GLOBALS: InCombatLockdown, IsResting, HasNewMail, PlaySound, ToggleDropDownMenu
 -- GLOBALS: MinimapZoomIn, MinimapZoomOut, Minimap_OnClick
--- GLOBALS: Minimap, MinimapBackdrop, MinimapCluster, MinimapBorder, MinimapBorderTop, MicroButtonAndBagsBar, MinimapCompassTexture, MiniMapInstanceDifficulty, MiniMapTracking
+-- GLOBALS: Minimap, MinimapBackdrop, MinimapCluster, MinimapBorder, MinimapBorderTop, MicroMenuContainer, MinimapCompassTexture, MiniMapInstanceDifficulty, MiniMapTracking
 -- GLOBALS: MenuUtil
 -- GLOBALS: SOUNDKIT, MINIMAP_LABEL, PROFESSIONS_CRAFTING
 
@@ -102,10 +102,66 @@ local CURRENT_THEME = DEFAULT_THEME
 local Elements = {}
 local Objects = {}
 local ObjectOwners = {}
+local queueStatusCustomEnabled
+local queueStatusHooksInstalled
+local queueStatusUpdating
 
 MinimapMod.Elements = Elements
 MinimapMod.Objects = Objects
 MinimapMod.ObjectOwners = ObjectOwners
+
+local UpdateQueueStatusPlacement = function(button)
+	if (not queueStatusCustomEnabled or not button or queueStatusUpdating) then return end
+
+	queueStatusUpdating = true
+	if (button:GetParent() ~= Minimap) then
+		button:SetParent(Minimap)
+	end
+	button:SetFrameLevel(100)
+	button:ClearAllPoints()
+	button:SetPoint("CENTER", Minimap, "CENTER", 82, 82)
+	button:SetHitRectInsets(-8, -8, -8, -8)
+	queueStatusUpdating = nil
+end
+
+local EnableQueueStatusPlacement = function(button)
+	if (not button) then return end
+
+	queueStatusCustomEnabled = true
+	if (not queueStatusHooksInstalled) then
+		hooksecurefunc(button, "SetParent", UpdateQueueStatusPlacement)
+		hooksecurefunc(button, "SetPoint", UpdateQueueStatusPlacement)
+		queueStatusHooksInstalled = true
+	end
+	UpdateQueueStatusPlacement(button)
+
+	if (button.Eye) then
+		button.Eye:SetParent(UIHider)
+	end
+	if (button.Highlight) then
+		button.Highlight:SetParent(UIHider)
+	end
+end
+
+local DisableQueueStatusPlacement = function(button)
+	queueStatusCustomEnabled = nil
+	if (not button) then return end
+
+	local owner = ObjectOwners.Eye or UIParent
+	button:SetParent(owner)
+	button:SetFrameLevel(owner:GetFrameLevel() + 1)
+	button:ClearQueueStatus()
+	button:ClearAllPoints()
+	button:SetPoint("BOTTOMLEFT", owner, "BOTTOMLEFT", -45, 4)
+	button:SetHitRectInsets(0, 0, 0, 0)
+	if (button.Highlight) then
+		button.Highlight:SetParent(button)
+	end
+	if (button.Eye) then
+		button.Eye:SetParent(button)
+		button.Eye:SetFrameLevel(button:GetFrameLevel() - 1)
+	end
+end
 
 -- Snippets to be run upon object toggling.
 ----------------------------------------------------
@@ -172,26 +228,13 @@ local ObjectSnippets = {
 	------------------------------------------
 	AzeriteEye = {
 		Enable = function(object)
-			QueueStatusButton:SetParent(Minimap)
-			QueueStatusButton:SetFrameLevel(100)
-			QueueStatusButton:ClearAllPoints()
-			QueueStatusButton:SetPoint("CENTER", Minimap, "CENTER", 82, 82)
-			QueueStatusButton:SetHitRectInsets(-8, -8, -8, -8)
-			QueueStatusButton.Eye:SetParent(UIHider)
-			QueueStatusButton.Highlight:SetParent(UIHider)
+			EnableQueueStatusPlacement(Objects.Eye)
 		end,
 		Disable = function(object)
-			QueueStatusButton:SetParent(_G[ObjectOwners.Eye])
-			QueueStatusButton:SetFrameLevel(_G[ObjectOwners.Eye]:GetFrameLevel() + 1)
-			QueueStatusButton:ClearQueueStatus()
-			QueueStatusButton:ClearAllPoints()
-			QueueStatusButton:SetPoint("BOTTOMLEFT", -45, 4)
-			QueueStatusButton:SetHitRectInsets(0, 0, 0, 0)
-			QueueStatusButton.Highlight:SetParent(QueueStatusButton)
-			QueueStatusButton.Eye:SetParent(QueueStatusButton)
-			QueueStatusButton.Eye:SetFrameLevel(QueueStatusButton:GetFrameLevel() - 1)
+			DisableQueueStatusPlacement(Objects.Eye)
 		end,
 		Update = function(object)
+			UpdateQueueStatusPlacement(Objects.Eye)
 		end
 	},
 	--AzeriteEyeClassicPvP = {
@@ -744,8 +787,8 @@ MinimapMod.InitializeAddon = function(self, addon)
 	end
 	local method = self["Initialize"..addon]
 	if (method) then
-		if (not IsAddOnLoaded(addon)) then
-			LoadAddOn(addon)
+		if (not C_AddOns.IsAddOnLoaded(addon)) then
+			C_AddOns.LoadAddOn(addon)
 		end
 		method(self)
 	end
@@ -1171,7 +1214,7 @@ MinimapMod.InitializeObjectTables = function(self)
 	ObjectOwners.Crafting = MinimapCluster.IndicatorFrame
 	ObjectOwners.Difficulty = MinimapCluster
 	ObjectOwners.Expansion = MinimapBackdrop
-	ObjectOwners.Eye = MicroButtonAndBagsBar
+	ObjectOwners.Eye = MicroMenuContainer
 	ObjectOwners.Mail = MinimapCluster.IndicatorFrame
 	ObjectOwners.Tracking = MinimapCluster
 	ObjectOwners.Zone = MinimapCluster
@@ -1214,7 +1257,8 @@ MinimapMod.OnEvent = function(self, event, ...)
 end
 
 MinimapMod.OnEnable = function(self)
-	LoadAddOn("Blizzard_TimeManager")
+	C_AddOns.LoadAddOn("Blizzard_TimeManager")
+	C_AddOns.LoadAddOn("Blizzard_QueueStatusFrame")
 
 	-- Clean out deprecated settings
 	self.db.profile.useHalfClock = nil

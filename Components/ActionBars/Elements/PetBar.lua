@@ -397,6 +397,7 @@ PetBar.UpdateBindings = function(self)
 	ClearOverrideBindings(self)
 
 	if (not self:IsEnabled()) then return end
+	if (ns.API.IsHouseEditorActive()) then return end
 
 	if (ns.IsRetail) then
 		for id,button in next,self.buttons do
@@ -706,7 +707,7 @@ PetBarMod.OnEvent = function(self, event, arg1)
 			button:HideGrid()
 		end
 
-	elseif (event == "UPDATE_BINDINGS") then
+	elseif (event == "UPDATE_BINDINGS") or (event == "HOUSE_EDITOR_MODE_CHANGED") then
 		self:UpdateBindings()
 	end
 end
@@ -790,6 +791,7 @@ PetBarMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("PLAYER_TARGET_CHANGED", "OnEvent")
 	self:RegisterEvent("UPDATE_BINDINGS", "OnEvent")
+	self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnEvent")
 	self:RegisterEvent("UNIT_AURA", "OnEvent")
 	self:RegisterEvent("UNIT_FLAGS", "OnEvent")
 	self:RegisterEvent("UNIT_PET", "OnEvent")

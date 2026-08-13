@@ -49,14 +49,6 @@ local GetAuraSpellID = function(data)
 	return (data and data.spellId) or (data and data.spellID)
 end
 
-local PlayerFrameMod
-local GetPlayerAuraProfile = function()
-	if (not PlayerFrameMod and ns.GetModule) then
-		PlayerFrameMod = ns:GetModule("PlayerFrame", true)
-	end
-	return PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or nil
-end
-
 local SetAuraBorderColor = function(button, color)
 	if (not button or not button.Border or not color) then
 		return
@@ -167,6 +159,11 @@ local CreateAuraTextureBorder = function(aura)
 	border.SetBackdropBorderColor = SetAuraTextureBorderColor
 	return border
 end
+
+-- Shared by the Retail custom player-aura containers. The returned frame and
+-- all of its regions are created during Blizzard's initializeFrame callback,
+-- before CustomAuraButton applies its restricted aura aspects.
+ns.AuraStyles.CreateTextureBorder = CreateAuraTextureBorder
 
 -- Local Functions
 --------------------------------------------------
@@ -296,79 +293,6 @@ ns.AuraStyles.CreateButtonWithBar = function(element, position)
 	aura.Cooldown = ns.Widgets.RegisterCooldown(aura.Cooldown, bar)
 
 	return aura
-end
-
--- Aura PostUpdates
---------------------------------------------------
-ns.AuraStyles.PlayerPostUpdateButton = function(element, button, unit, data, position)
-	local function SafeBool(v)
-		if (issecretvalue and issecretvalue(v)) then return false end
-		return not not v
-	end
-	local function SafeNumber(v)
-		if (issecretvalue and issecretvalue(v)) then return nil end
-		if (type(v) == "number") then return v end
-		return nil
-	end
-	local function SafeKey(v)
-		if (issecretvalue and issecretvalue(v)) then return nil end
-		return v
-	end
-	-- Border Coloring
-	local color
-	if (button.isHarmful and element.showDebuffType) or (not button.isHarmful and element.showBuffType) or (element.showType) then
-		local dispelName = SafeKey(data.dispelName)
-		color = (dispelName and Colors.debuff[dispelName]) or Colors.debuff.none
-	else
-		color = Colors.verydarkgray -- Colors.aura
-	end
-	if (color) then
-		SetAuraBorderColor(button, color)
-	end
-
-	-- Icon Coloring
-	-- Playerframe dim/bright rules should remain stable in combat.
-	-- Prefer stable fields produced by AuraFilters over raw payload values.
-	local isPlayerAura = SafeBool(data.__AzeriteUI_isPlayerAura)
-		or ((button.isPlayer ~= nil) and (button.isPlayer and true or false))
-		or SafeBool(data.isPlayerAura)
-	local canApplyAura = SafeBool(data.__AzeriteUI_canApplyAura) or SafeBool(data.canApplyAura)
-	local isImportantAura = SafeBool(data.__AzeriteUI_isImportant)
-		or SafeBool(data.__AzeriteUI_isRaidInCombat)
-		or SafeBool(data.__AzeriteUI_isBigDefensive)
-		or SafeBool(data.__AzeriteUI_isExternalDefensive)
-		or SafeBool(data.__AzeriteUI_isCrowdControl)
-		or SafeBool(data.__AzeriteUI_isStealable)
-	local isHarmful = (button.isHarmful ~= nil) and (button.isHarmful and true or false) or SafeBool(data.isHarmful)
-	local spellId = GetAuraSpellID(data)
-	local secretHelpfulFallback = SafeBool(data.__AzeriteUI_secretHelpfulFallback)
-	local profile = GetPlayerAuraProfile()
-	local useStockBehavior = profile and profile.playerAuraUseStockBehavior
-	if (profile and profile.playerAuraAlwaysBright) then
-		SetAuraIconState(button, false, 1, 1, 1)
-		return
-	end
-	if (useStockBehavior and InCombatLockdown and InCombatLockdown() and (not isHarmful)) then
-		local hasReliableSignal = isPlayerAura or canApplyAura or isImportantAura or (spellId and true or false)
-		if (secretHelpfulFallback or (isPlayerAura and not canApplyAura) or (not hasReliableSignal)) then
-			SetAuraIconState(button, false, 1, 1, 1)
-			return
-		end
-	end
-	if (button.isHarmful)
-	or secretHelpfulFallback
-	or (not isHarmful and isPlayerAura and canApplyAura)
-	or (not isHarmful and isImportantAura)
-	or (spellId and Spells[spellId]) then
-		SetAuraIconState(button, false, 1, 1, 1)
-
-	elseif (isPlayerAura) then
-		SetAuraIconState(button, false, .3, .3, .3)
-
-	else
-		SetAuraIconState(button, true, .6, .6, .6)
-	end
-
 end
 
 ns.AuraStyles.TargetPostUpdateButton = function(element, button, unit, data, position)

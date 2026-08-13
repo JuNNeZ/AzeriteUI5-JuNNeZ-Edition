@@ -79,6 +79,45 @@ local unitSelectionType = Private.unitSelectionType
 -- sourced from Blizzard_UnitFrame/UnitPowerBarAlt.lua
 local ALTERNATE_POWER_INDEX = Enum.PowerType.Alternate or 10
 
+local function IsSecretValue(value)
+	return issecretvalue and issecretvalue(value)
+end
+
+local function IsSafeTrue(value)
+	if(IsSecretValue(value)) then
+		return false
+	end
+	return value and true or false
+end
+
+local function IsSafeFalse(value)
+	if(IsSecretValue(value)) then
+		return false
+	end
+	return not value
+end
+
+local function GetSafeColorByKey(colors, key, fallback)
+	if(IsSecretValue(key)) then
+		return fallback
+	end
+	if(not colors or key == nil) then
+		return fallback
+	end
+	return colors[key] or fallback
+end
+
+local function ExtractColorRGB(color)
+	if(not color) then
+		return
+	end
+	local r, g, b = color:GetRGB()
+	if(IsSecretValue(r) or IsSecretValue(g) or IsSecretValue(b)) then
+		return
+	end
+	return r, g, b
+end
+
 --[[ Override: Power:GetDisplayPower(unit)
 Used to get info on the unit's alternative power, if any.
 Should return the power type index (see [Enum.PowerType.Alternate](https://warcraft.wiki.gg/wiki/Enum.PowerType))
@@ -103,31 +142,48 @@ end
 local function UpdateColor(self, event, unit)
 	if(self.unit ~= unit) then return end
 	local element = self.Power
+	local isConnected = UnitIsConnected(unit)
+	local isPlayerControlled = UnitPlayerControlled(unit)
+	local isPlayer = UnitIsPlayer(unit)
+	local isPartyAI = UnitInPartyIsAI(unit)
+	local isPlayerOrPartyAI = IsSafeTrue(isPlayer) or IsSafeTrue(isPartyAI)
+	local isKnownNPC = IsSafeFalse(isPlayer) and IsSafeFalse(isPartyAI)
+	local fallbackColor = self.colors.power.MANA
+	local threatColor
+	if(element.colorThreat and IsSafeFalse(isPlayerControlled)) then
+		threatColor = GetSafeColorByKey(self.colors.threat, UnitThreatSituation('player', unit))
+	end
+	local useClassColor = (element.colorClass and isPlayerOrPartyAI)
+		or (element.colorClassNPC and isKnownNPC)
+		or (element.colorClassPet and IsSafeTrue(isPlayerControlled) and IsSafeFalse(isPlayer))
 
 	local r, g, b, color, atlas
-	if(element.colorDisconnected and not UnitIsConnected(unit)) then
+	if(element.colorDisconnected and IsSafeFalse(isConnected)) then
 		color = self.colors.disconnected
-	elseif(element.colorTapping and not UnitPlayerControlled(unit) and UnitIsTapDenied(unit)) then
+	elseif(element.colorTapping and IsSafeFalse(isPlayerControlled) and IsSafeTrue(UnitIsTapDenied(unit))) then
 		color = self.colors.tapped
-	elseif(element.colorThreat and not UnitPlayerControlled(unit) and UnitThreatSituation('player', unit)) then
-		color =  self.colors.threat[UnitThreatSituation('player', unit)]
+	elseif(threatColor) then
+		color = threatColor
 	elseif(element.colorPower) then
-		if(element.displayType) then
-			color = self.colors.power[element.displayType]
+		local displayType = element.displayType
+		if(not IsSecretValue(displayType) and displayType ~= nil) then
+			color = GetSafeColorByKey(self.colors.power, displayType)
 		end
 
 		if(not color) then
 			local pType, pToken, altR, altG, altB = UnitPowerType(unit)
-			color = self.colors.power[pToken]
+			color = GetSafeColorByKey(self.colors.power, pToken)
 
-			if(not color and altR) then
+			local hasSafeAltColor = type(altR) == 'number' and type(altG) == 'number' and type(altB) == 'number'
+				and not IsSecretValue(altR) and not IsSecretValue(altG) and not IsSecretValue(altB)
+			if(not color and hasSafeAltColor) then
 				r, g, b = altR, altG, altB
 				if(r > 1 or g > 1 or b > 1) then
 					-- BUG: As of 7.0.3, altR, altG, altB may be in 0-1 or 0-255 range.
 					r, g, b = r / 255, g / 255, b / 255
 				end
 			else
-				color = self.colors.power[pType] or self.colors.power.MANA
+				color = GetSafeColorByKey(self.colors.power, pType, fallbackColor)
 			end
 		end
 
@@ -138,15 +194,15 @@ local function UpdateColor(self, event, unit)
 		if(element.colorPowerSmooth and color and color:GetCurve()) then
 			color = UnitPowerPercent(unit, true, color:GetCurve())
 		end
-	elseif(element.colorClass and (UnitIsPlayer(unit) or UnitInPartyIsAI(unit)))
-		or (element.colorClassNPC and not (UnitIsPlayer(unit) or UnitInPartyIsAI(unit)))
-		or (element.colorClassPet and UnitPlayerControlled(unit) and not UnitIsPlayer(unit)) then
+	elseif(useClassColor) then
 		local _, class = UnitClass(unit)
-		color = self.colors.class[class]
-	elseif(element.colorSelection and unitSelectionType(unit, element.considerSelectionInCombatHostile)) then
-		color = self.colors.selection[unitSelectionType(unit, element.considerSelectionInCombatHostile)]
-	elseif(element.colorReaction and UnitReaction(unit, 'player')) then
-		color = self.colors.reaction[UnitReaction(unit, 'player')]
+		color = GetSafeColorByKey(self.colors.class, class, fallbackColor)
+	elseif(element.colorSelection) then
+		local selection = unitSelectionType(unit, element.considerSelectionInCombatHostile)
+		color = GetSafeColorByKey(self.colors.selection, selection, fallbackColor)
+	elseif(element.colorReaction) then
+		local reaction = UnitReaction(unit, 'player')
+		color = GetSafeColorByKey(self.colors.reaction, reaction, fallbackColor)
 	end
 
 	if(atlas) then
@@ -161,7 +217,10 @@ local function UpdateColor(self, event, unit)
 		if(b) then
 			element:GetStatusBarTexture():SetVertexColor(r, g, b)
 		elseif(color) then
-			element:GetStatusBarTexture():SetVertexColor(color:GetRGB())
+			r, g, b = ExtractColorRGB(color)
+			if(b) then
+				element:GetStatusBarTexture():SetVertexColor(r, g, b)
+			end
 		end
 	end
 

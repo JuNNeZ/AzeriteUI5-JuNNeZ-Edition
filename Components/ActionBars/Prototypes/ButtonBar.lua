@@ -121,9 +121,10 @@ end
 ButtonBar.UpdateButtonConfig = function(self)
 	for id,button in next,self.buttons do
 		button.config.clickOnDown = self.config.clickOnDown
-		if (not ns.IsRetail) then
-			button:RegisterForClicks(self.config.clickOnDown and "AnyDown" or "AnyUp")
-		end
+		button:SetAttribute("useOnKeyDown", self.config.clickOnDown)
+		-- Retail ActionButtonTemplate expects both transitions to stay registered;
+		-- the secure useOnKeyDown attribute chooses which transition casts.
+		button:RegisterForClicks("AnyDown", "AnyUp")
 	end
 end
 

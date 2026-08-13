@@ -379,10 +379,11 @@ if (tocversion >= 110000) then
 	for method,func in next, {
 		GetSpellCharges = function(...)
 			local numArgs = select("#", ...)
+			local spellChargeInfo
 
 			if (numArgs == 2) then
-				local index, bookType
-				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.pet
+				local index, bookType = ...
+				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.Pet
 				spellChargeInfo = C_SpellBook.GetSpellBookItemCharges(index, spellBank)
 			else
 				local spell = select(1, ...)
@@ -402,7 +403,8 @@ if (tocversion >= 110000) then
 			local spellCooldownInfo = nil
 
 			if ((numArgs == 2)) then
-				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.pet
+				local spellOrIndex, bookType = ...
+				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.Pet
 				spellCooldownInfo = C_SpellBook.GetSpellBookItemCooldown(spellOrIndex, spellBank)
 			else
 				local spell = select(1, ...)
@@ -421,7 +423,7 @@ if (tocversion >= 110000) then
 
 			if (numArgs == 2) then
 				local index, bookType = ...
-				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.pet
+				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.Pet
 				return C_SpellBook.GetSpellBookItemCastCount(index, spellBank)
 			else
 				local spellIdentifier = select(1, ...)
@@ -433,7 +435,7 @@ if (tocversion >= 110000) then
 
 			if (numArgs == 2) then
 				local spellSlot, bookType = ...
-				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.pet
+				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.Pet
 				return C_SpellBook.GetSpellBookItemLossOfControlCooldown(spellSlot, spellBank)
 			else
 				local spellIdentifier = select(1, ...)
@@ -454,7 +456,7 @@ if (tocversion >= 110000) then
 		--
 		--	if (numArgs == 3) then
 		--		local index, bookType, unit = ...
-		--		local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.pet
+		--		local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.Pet
 		--
 		--		return C_SpellBook.IsSpellBookItemInRange(index, spellBank, unit)
 		--	else
@@ -467,7 +469,7 @@ if (tocversion >= 110000) then
 
 			if (numArgs == 2) then
 				local index, bookType = ...
-				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.pet
+				local spellBank = (bookType == "spell") and Enum.SpellBookSpellBank.Player or Enum.SpellBookSpellBank.Pet
 				return C_SpellBook.IsSpellBookItemUsable(index, spellBank)
 			else
 				local spellIdentifier = select(1, ...)

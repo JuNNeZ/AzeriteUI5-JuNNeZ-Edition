@@ -427,6 +427,7 @@ StanceBar.UpdateBindings = function(self)
 	ClearOverrideBindings(self)
 
 	if (not self:IsEnabled()) then return end
+	if (ns.API.IsHouseEditorActive()) then return end
 
 	for id,button in next,self.buttons do
 		local bindingAction = button.keyBoundTarget
@@ -646,7 +647,7 @@ StanceBarMod.OnEvent = function(self, event, ...)
 			end
 		end
 
-	elseif (event == "UPDATE_BINDINGS") then
+	elseif (event == "UPDATE_BINDINGS") or (event == "HOUSE_EDITOR_MODE_CHANGED") then
 		self:UpdateBindings()
 
 	else
@@ -734,6 +735,7 @@ StanceBarMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("UPDATE_BINDINGS", "OnEvent")
+	self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnEvent")
 	self:RegisterEvent("UPDATE_BONUS_ACTIONBAR", "OnEvent")
 	self:RegisterEvent("UPDATE_SHAPESHIFT_COOLDOWN", "OnEvent")
 	self:RegisterEvent("UPDATE_SHAPESHIFT_FORM", "OnEvent")

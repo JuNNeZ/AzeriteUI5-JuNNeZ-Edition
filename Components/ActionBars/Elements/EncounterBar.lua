@@ -25,8 +25,6 @@
 --]]
 local _, ns = ...
 
-if (not ns.WoW10) then return end
-
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local EncounterBar = ns:NewModule("EncounterBar", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0")
@@ -117,16 +115,23 @@ EncounterBar.OnPositionAndScaleChange = function(self)
 end
 
 EncounterBar.PrepareFrames = function(self)
-	if (self.prepared) then return end
+	if (self.prepared) then return true end
 
 	self.frame = _G.EncounterBar -- UIWidgetPowerBarContainerFrame
-	if (not self.frame) then return end
+	if (not self.frame) then return false end
 
 	-- Do not hook SetPoint to avoid recursion during loading; we'll update on demand.
 	self.prepared = true
+	self:UnregisterEvent("ADDON_LOADED")
+	return true
 end
 
--- No event handler needed; we position once when enabled and when the frame exists.
+EncounterBar.OnBlizzardFramesLoaded = function(self, event, addon)
+	if (event == "ADDON_LOADED" and addon ~= "Blizzard_UIWidgets") then return end
+	if (not self:PrepareFrames()) then return end
+	self:UpdatePositionAndScale()
+	self:UpdateAnchor()
+end
 
 EncounterBar.OnInitialize = function(self)
 	if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return self:Disable() end
@@ -136,21 +141,14 @@ end
 
 EncounterBar.OnEnable = function(self)
 
-	self:PrepareFrames()
+	if (not self:PrepareFrames()) then
+		self:RegisterEvent("ADDON_LOADED", "OnBlizzardFramesLoaded")
+	end
 	self:CreateAnchor(HUD_EDIT_MODE_ENCOUNTER_BAR_LABEL or "Encounter Bar", true)
 
 	ns.MovableModulePrototype.OnEnable(self)
 
 	if (self.prepared) then
-		-- If some module reparented it to our hider, restore it.
-		local parent = self.frame:GetParent()
-		if (parent == ns.Hider) then
-			self.frame:SetParent(UIParent)
-		end
-		-- Ensure it’s not alpha-hidden
-		self.frame:SetAlpha(1)
-		-- Let Blizzard drive visibility, but make sure it’s not stuck hidden
-		self.frame:Show()
 		self:UpdatePositionAndScale()
 	end
 end

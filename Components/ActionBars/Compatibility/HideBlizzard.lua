@@ -27,43 +27,124 @@ local _, ns = ...
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local BlizzardABDisabler = ns:NewModule("BlizzardABDisabler", "LibMoreEvents-1.0", "AceHook-3.0")
+local quarantinedFrames = setmetatable({}, { __mode = "k" })
+local hiddenBagControls = setmetatable({}, { __mode = "k" })
+local applyingAlpha = setmetatable({}, { __mode = "k" })
+local applyingMouse = setmetatable({}, { __mode = "k" })
+local applyingVisibility = setmetatable({}, { __mode = "k" })
 
-local hideActionBarFrame = function(frame, clearEvents)
-	if (frame) then
-		if (clearEvents) then
-			frame:UnregisterAllEvents()
-		end
+local HIDDEN_FRAME_NAMES = {
+	"MainMenuBar",
+	"MainActionBar",
+	"MultiBarBottomLeft",
+	"MultiBarBottomRight",
+	"MultiBarLeft",
+	"MultiBarRight",
+	"MultiBar5",
+	"MultiBar6",
+	"MultiBar7",
+	"BagsBar",
+	"MicroMenu",
+	"MicroMenuContainer",
+	"MicroButtonAndBagsBar",
+	"StanceBar",
+	"PossessActionBar",
+	"MultiCastActionBarFrame",
+	"PetActionBar",
+	"StatusTrackingBarManager",
+	"OverrideActionBar"
+}
 
-		-- EditMode overrides the Hide function, avoid calling it as it can taint
-		if (frame.HideBase) then
-			frame:HideBase()
-		else
-			frame:Hide()
+local MICRO_BUTTON_NAMES = {
+	"CharacterMicroButton",
+	"ProfessionMicroButton",
+	"PlayerSpellsMicroButton",
+	"QuestLogMicroButton",
+	"HousingMicroButton",
+	"QuickJoinToastButton",
+	"GuildMicroButton",
+	"LFDMicroButton",
+	"AchievementMicroButton",
+	"EJMicroButton",
+	"CollectionsMicroButton",
+	"MainMenuMicroButton",
+	"StoreMicroButton"
+}
+
+local BAG_BUTTON_NAMES = {
+	"MainMenuBarBackpackButton",
+	"BagBarExpandToggle"
+}
+
+local BLIZZARD_ACTION_BAR_ADDONS = {
+	Blizzard_ActionBar = true,
+	Blizzard_MainMenuBarBagButtons = true,
+	Blizzard_MicroMenu = true,
+	Blizzard_NewPlayerExperience = true
+}
+
+local disableMouseInput = function(frame)
+	if (not frame or applyingMouse[frame]) then return end
+
+	applyingMouse[frame] = true
+	if (frame.EnableMouse) then frame:EnableMouse(false) end
+	if (frame.SetMouseClickEnabled) then frame:SetMouseClickEnabled(false) end
+	if (frame.SetMouseMotionEnabled) then frame:SetMouseMotionEnabled(false) end
+	applyingMouse[frame] = nil
+end
+
+local quarantineFrame = function(frame)
+	if (not frame) then return end
+
+	frame:SetAlpha(0)
+	disableMouseInput(frame)
+
+	if (not quarantinedFrames[frame]) then
+		quarantinedFrames[frame] = true
+		hooksecurefunc(frame, "SetAlpha", function(self)
+			if (applyingAlpha[self]) then return end
+			applyingAlpha[self] = true
+			self:SetAlpha(0)
+			applyingAlpha[self] = nil
+		end)
+		for _, method in ipairs({ "EnableMouse", "SetMouseClickEnabled", "SetMouseMotionEnabled" }) do
+			if (frame[method]) then
+				hooksecurefunc(frame, method, disableMouseInput)
+			end
 		end
-		frame:SetParent(ns.Hider)
 	end
 end
 
-local hideActionButton = function(button)
-	if (not button) then return end
+local quarantineNamedFrames = function(frameNames)
+	for _, frameName in ipairs(frameNames) do
+		quarantineFrame(_G[frameName])
+	end
+end
 
-	-- Ensure hidden Blizzard buttons stop running update/event paths.
-	if (button.UnregisterAllEvents) then
-		button:UnregisterAllEvents()
+local suppressBagControl = function(frame)
+	if (not frame) then return end
+
+	quarantineFrame(frame)
+	if (not InCombatLockdown()) then
+		frame:Hide()
 	end
 
-	if (button.HideBase) then
-		button:HideBase()
-	else
-		button:Hide()
+	if (hiddenBagControls[frame]) then return end
+	hiddenBagControls[frame] = true
+	for _, method in ipairs({ "Show", "SetShown" }) do
+		hooksecurefunc(frame, method, function(self, shown)
+			if (applyingVisibility[self] or shown == false or InCombatLockdown()) then return end
+			applyingVisibility[self] = true
+			self:Hide()
+			applyingVisibility[self] = nil
+		end)
 	end
-	button:SetParent(ns.Hider)
+end
 
-	-- Clear script handlers so Blizzard internal code paths
-	-- (e.g. UpdateAction -> UpdateShownButtons -> SetShown)
-	-- cannot re-trigger on reparented buttons and cause taint.
-	button:SetScript("OnEvent", nil)
-	button:SetScript("OnUpdate", nil)
+local suppressNamedBagControls = function()
+	for _, frameName in ipairs(BAG_BUTTON_NAMES) do
+		suppressBagControl(_G[frameName])
+	end
 end
 
 BlizzardABDisabler.NPE_LoadUI = function(self)
@@ -83,99 +164,81 @@ end
 
 BlizzardABDisabler.HideBlizzard = function(self)
 
-	hideActionBarFrame(_G.MainMenuBar, false)
-	hideActionBarFrame(_G.MainActionBar, false) -- TWW 11.0+ replacement for MainMenuBar
-	hideActionBarFrame(_G.MultiBarBottomLeft, true)
-	hideActionBarFrame(_G.MultiBarBottomRight, true)
-	hideActionBarFrame(_G.MultiBarLeft, true)
-	hideActionBarFrame(_G.MultiBarRight, true)
-	hideActionBarFrame(_G.MultiBar5, true)
-	hideActionBarFrame(_G.MultiBar6, true)
-	hideActionBarFrame(_G.MultiBar7, true)
+	quarantineNamedFrames(HIDDEN_FRAME_NAMES)
 
 	-- In TWW 11.0+, hide the gryphons (EndCaps) on MainActionBar
 	local MainActionBar = _G.MainActionBar
 	if (MainActionBar and MainActionBar.EndCaps) then
 		if (MainActionBar.EndCaps.LeftEndCap) then
 			MainActionBar.EndCaps.LeftEndCap:Hide()
-			MainActionBar.EndCaps.LeftEndCap:SetParent(ns.Hider)
 		end
 		if (MainActionBar.EndCaps.RightEndCap) then
 			MainActionBar.EndCaps.RightEndCap:Hide()
-			MainActionBar.EndCaps.RightEndCap:SetParent(ns.Hider)
 		end
 	end
 
-	-- Neuter UpdateShownButtons on hidden bars so Blizzard code
-	-- cannot call SetShown() on reparented buttons (taint fix).
-	local hiddenBars = {
-		_G.MainMenuBar, _G.MainActionBar,
-		_G.MultiBarBottomLeft, _G.MultiBarBottomRight,
-		_G.MultiBarLeft, _G.MultiBarRight,
-		_G.MultiBar5, _G.MultiBar6, _G.MultiBar7,
-	}
-	for _, bar in ipairs(hiddenBars) do
-		if (bar and bar.UpdateShownButtons) then
-			bar.UpdateShownButtons = function() end
-		end
-	end
-
-	-- Hide MultiBar Buttons, but keep the bars alive
+	-- Keep Blizzard's secure buttons and event machinery alive, but make the
+	-- invisible buttons unable to intercept the AzeriteUI bars.
 	for i=1,12 do
-		hideActionButton(_G["ActionButton" .. i])
-		hideActionButton(_G["MultiBarBottomLeftButton" .. i])
-		hideActionButton(_G["MultiBarBottomRightButton" .. i])
-		hideActionButton(_G["MultiBarRightButton" .. i])
-		hideActionButton(_G["MultiBarLeftButton" .. i])
-		hideActionButton(_G["MultiBar5Button" .. i])
-		hideActionButton(_G["MultiBar6Button" .. i])
-		hideActionButton(_G["MultiBar7Button" .. i])
+		quarantineFrame(_G["ActionButton" .. i])
+		quarantineFrame(_G["MultiBarBottomLeftButton" .. i])
+		quarantineFrame(_G["MultiBarBottomRightButton" .. i])
+		quarantineFrame(_G["MultiBarRightButton" .. i])
+		quarantineFrame(_G["MultiBarLeftButton" .. i])
+		quarantineFrame(_G["MultiBar5Button" .. i])
+		quarantineFrame(_G["MultiBar6Button" .. i])
+		quarantineFrame(_G["MultiBar7Button" .. i])
 	end
 
-	hideActionBarFrame(_G.BagsBar, false) -- 10.0.5
-	hideActionBarFrame(_G.MicroMenu, false) -- 10.0.5
-	hideActionBarFrame(_G.MicroButtonAndBagsBar, false)
-	hideActionBarFrame(_G.StanceBar, true)
-	hideActionBarFrame(_G.PossessActionBar, true)
-	hideActionBarFrame(_G.MultiCastActionBarFrame, false)
-	hideActionBarFrame(_G.PetActionBar, true)
-	hideActionBarFrame(_G.StatusTrackingBarManager, false)
-	hideActionBarFrame(_G.OverrideActionBar, true)
-
-	-- these events drive visibility, we want the MainMenuBar to remain invisible
-	local MainMenuBar = _G.MainMenuBar
-	if MainMenuBar then
-		MainMenuBar:UnregisterEvent("PLAYER_REGEN_ENABLED")
-		MainMenuBar:UnregisterEvent("PLAYER_REGEN_DISABLED")
-		MainMenuBar:UnregisterEvent("ACTIONBAR_SHOWGRID")
-		MainMenuBar:UnregisterEvent("ACTIONBAR_HIDEGRID")
+	-- Retail's stance, micro-menu and bag buttons can render independently of
+	-- their layout containers. Quarantine the actual click targets as well.
+	for i=1,10 do
+		quarantineFrame(_G["StanceButton" .. i])
+		quarantineFrame(_G["PetActionButton" .. i])
 	end
-
-	local ActionBarController = _G.ActionBarController
-	if ActionBarController then
-		ActionBarController:UnregisterAllEvents()
-		if (ns.WoW10) then
-			ActionBarController:RegisterEvent("SETTINGS_LOADED") -- needed to update paging
-		end
-		if (ns.IsRetail) then
-			ActionBarController:RegisterEvent("UPDATE_EXTRA_ACTIONBAR") -- needed to update extrabuttons
-		end
+	for i=1,2 do
+		quarantineFrame(_G["PossessButton" .. i])
 	end
+	quarantineNamedFrames(MICRO_BUTTON_NAMES)
+	suppressNamedBagControls()
 
-	if _G.IsAddOnLoaded("Blizzard_NewPlayerExperience") then
+	if C_AddOns.IsAddOnLoaded("Blizzard_NewPlayerExperience") then
 		self:NPE_LoadUI()
-	elseif _G.NPE_LoadUI ~= nil then
+	elseif _G.NPE_LoadUI ~= nil and not self.npeHooked then
 		self:SecureHook("NPE_LoadUI")
+		self.npeHooked = true
 	end
 
-	local HideAlerts = function()
-		local HelpTip = _G.HelpTip
-		if (HelpTip) then
-			HelpTip:HideAllSystem("MicroButtons")
+	if (not self.microAlertHooked and _G.MainMenuMicroButton_ShowAlert) then
+		local HideAlerts = function()
+			local HelpTip = _G.HelpTip
+			if (HelpTip) then
+				HelpTip:HideAllSystem("MicroButtons")
+			end
 		end
+		_G.hooksecurefunc("MainMenuMicroButton_ShowAlert", HideAlerts)
+		self.microAlertHooked = true
 	end
-	_G.hooksecurefunc("MainMenuMicroButton_ShowAlert", HideAlerts)
 
+end
+
+BlizzardABDisabler.QueueHideBlizzard = function(self)
+	if (self.hideBlizzardQueued) then return end
+	self.hideBlizzardQueued = true
+	C_Timer.After(0, function()
+		self.hideBlizzardQueued = nil
+		if (self:IsEnabled()) then
+			self:HideBlizzard()
+		end
+	end)
+end
+
+BlizzardABDisabler.OnBlizzardUIReady = function(self, event, addon)
+	if (event == "ADDON_LOADED" and not BLIZZARD_ACTION_BAR_ADDONS[addon]) then
+		return
+	end
+	self:HideBlizzard()
+	self:QueueHideBlizzard()
 end
 
 BlizzardABDisabler.OnInitialize = function(self)
@@ -184,4 +247,7 @@ end
 
 BlizzardABDisabler.OnEnable = function(self)
 	self:HideBlizzard()
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnBlizzardUIReady")
+	self:RegisterEvent("ADDON_LOADED", "OnBlizzardUIReady")
+	ns.RegisterCallback(self, "Bartender_Handled", "OnBlizzardUIReady")
 end

@@ -970,8 +970,9 @@ local function ForcePreviewFrameUpdate(frame, label)
 	if (frame.Castbar and frame.Castbar.ForceUpdate) then
 		pcall(frame.Castbar.ForceUpdate, frame.Castbar)
 	end
-	if (frame.Auras and frame.Auras.ForceUpdate) then
-		pcall(frame.Auras.ForceUpdate, frame.Auras)
+	local auras = frame.PlayerAuras or frame.Auras
+	if (auras and auras.ForceUpdate) then
+		pcall(auras.ForceUpdate, auras)
 	end
 	if (label and frame.Name and frame.Name.SetText) then
 		pcall(frame.Name.SetText, frame.Name, label)
@@ -2728,34 +2729,31 @@ end
 local function DumpPlayerAuraSnapshot()
 	local playerFrame = ns:GetModule("PlayerFrame", true)
 	local frame = playerFrame and playerFrame.frame
-	local auras = frame and frame.Auras
+	local auras = frame and frame.PlayerAuras
 	if (not auras) then
 		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "playerframe auras not found")
 		return
 	end
 
-	local maxButtons = tonumber(auras.numTotal) or tonumber(auras.createdButtons) or 40
-	if (maxButtons < 1) then
-		maxButtons = 40
-	elseif (maxButtons > 80) then
-		maxButtons = 80
-	end
-
 	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: playerframe")
-	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(), "unit", frame.unit, "maxButtons", maxButtons)
-	SafePrint("|cfff0f0f0", "element:",
-		"created", auras.createdButtons,
-		"visibleAuras", auras.visibleAuras,
-		"visibleBuffs", auras.visibleBuffs,
-		"visibleDebuffs", auras.visibleDebuffs,
-		"sorting", auras.sortMethod, auras.sortDirection)
+	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(), "unit", frame.unit, "native", true)
 
 	local dumped = 0
-	for i = 1, maxButtons do
-		local button = auras[i]
-		if (button) then
-			dumped = dumped + 1
-			DumpAuraButtonState(button, "player[" .. i .. "]")
+	for _, containerInfo in ipairs({
+		{ auras.playerContainer, "player" },
+		{ auras.vehicleContainer, "vehicle" }
+	}) do
+		local container, unitLabel = containerInfo[1], containerInfo[2]
+		if (container) then
+			for _, groupKey in ipairs({ "AzeriteHelpful", "AzeriteHarmful" }) do
+				for index = 1, 40 do
+					local button = SafeCall(container, "GetAuraGroupFrame", groupKey, index)
+					if (button) then
+						dumped = dumped + 1
+						DumpAuraButtonState(button, unitLabel .. ":" .. groupKey .. "[" .. index .. "]")
+					end
+				end
+			end
 		end
 	end
 

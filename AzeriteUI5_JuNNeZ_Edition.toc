@@ -1,9 +1,9 @@
-## Interface: 120007, 120005, 120001, 120000
+## Interface: 120100
 ## IconTexture: Interface\Addons\AzeriteUI5_JuNNeZ_Edition\Assets\power-crystal-ice-icon.tga
 
 ## Title: |cff4488bbAzerite|r |cfffafafaUI|r |cffcccccc5.3|r |cff00ff00JuNNeZ Edition|r
 ## Notes: Custom user graphical interface.|n|nDesign by Daniel Troko and Lars Norberg.|nCode by Lars Norberg.|n|cff00ff00Updated and Maintained by JuNNeZ|r|n|nLibOrb System by Arahort|n|n|cff4488ffPayPal|r|cffffffff:|r |n|cffffffffwww.paypal.me/GoldpawsStuff|r|n|n|cff4488ffPatreon|r|cffffffff:|r |n|cffffffffwww.patreon.com/GoldpawsStuff|r
-## Version: 5.3.76-JuNNeZ
+## Version: 5.3.78-JuNNeZ
 ## Author: Daniel Troko, Lars Norberg, JuNNeZ
 
 ## Category-enUS: User Interface
@@ -18,6 +18,7 @@
 ## X-Edition: JuNNeZ Fan Edition - Not affiliated with original AzeriteUI
 
 ## SavedVariables: AzeriteUI5_DB
+## Dependencies: Blizzard_AuraContainer
 ## OptionalDeps: TaintLess, Ace3, Clique, LibKeyBound-1.0, LibEditModeOverride, LibSharedMedia-3.0, !LibUIDropDownMenu, LibMoreEvents-1.0
 
 # Fontstyles

@@ -836,6 +836,7 @@ local style = function(self, unit)
 	end
 
 	self.Auras = auras
+	ns.API.CreatePrivateAuras(self, self.Health, 20, 3)
 
 	-- Range Opacity
 	-----------------------------------------------------------

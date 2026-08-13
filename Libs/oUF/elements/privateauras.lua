@@ -127,8 +127,11 @@ local function Update(self)
 			unitToken = element.__owner.unit,
 			auraIndex = index,
 			parent = aura,
-			showCountdownFrame = not element.disableCooldown,
+			showCooldownFrame = not element.disableCooldown,
+			showCooldownEdge = not element.disableCooldown,
 			showCountdownNumbers = not element.disableCooldownText,
+			showDispelIcon = true,
+			isContainer = false,
 			iconInfo = {
 				iconWidth = aura:GetWidth(),
 				iconHeight = aura:GetHeight(),

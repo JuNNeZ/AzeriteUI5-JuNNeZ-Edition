@@ -29,7 +29,6 @@ local RaidWarnings = ns:NewModule("RaidWarnings", ns.MovableModulePrototype, "Li
 
 -- Addon API
 local GetFont = ns.API.GetFont
-
 local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }
 
 -- Generate module defaults on the fly
@@ -46,9 +45,13 @@ RaidWarnings.GenerateDefaults = function(self)
 end
 
 RaidWarnings.PrepareFrames = function(self)
-	if (self.frame) then return end
+	if (self.frame) then return true end
 
 	self.frame = RaidWarningFrame
+	if (not self.frame) then
+		return false
+	end
+	self:UnregisterEvent("ADDON_LOADED")
 
 	-- The RaidWarnings have a tendency to look really weird,
 	-- as the SetTextHeight method scales the text after it already
@@ -57,10 +60,13 @@ RaidWarnings.PrepareFrames = function(self)
 	self.frame:SetAlpha(.85)
 	self.frame:SetHeight(80)
 
-	self.frame.timings.RAID_NOTICE_MIN_HEIGHT = 26
-	self.frame.timings.RAID_NOTICE_MAX_HEIGHT = 26
-	self.frame.timings.RAID_NOTICE_SCALE_UP_TIME = 0
-	self.frame.timings.RAID_NOTICE_SCALE_DOWN_TIME = 0
+	local timings = self.frame.timings
+	if (timings) then
+		timings.RAID_NOTICE_MIN_HEIGHT = 26
+		timings.RAID_NOTICE_MAX_HEIGHT = 26
+		timings.RAID_NOTICE_SCALE_UP_TIME = 0
+		timings.RAID_NOTICE_SCALE_DOWN_TIME = 0
+	end
 
 	-- WoW 10.1.0
 	local slot1 = _G[self.frame:GetName() .. "Slot1"] or self.frame.slot1
@@ -68,7 +74,6 @@ RaidWarnings.PrepareFrames = function(self)
 		slot1:SetFontObject(GetFont(26, true, "Chat"))
 		slot1:SetShadowColor(0, 0, 0, .5)
 		slot1:SetWidth(760)
-		slot1.SetTextHeight = function() end
 	end
 
 	-- WoW 10.1.0
@@ -77,8 +82,15 @@ RaidWarnings.PrepareFrames = function(self)
 		slot2:SetFontObject(GetFont(26, true, "Chat"))
 		slot2:SetShadowColor(0, 0, 0, .5)
 		slot2:SetWidth(760)
-		slot2.SetTextHeight = function() end
 	end
+	return true
+end
+
+RaidWarnings.OnBlizzardFramesLoaded = function(self, event, addon)
+	if (event == "ADDON_LOADED" and addon ~= "Blizzard_RaidWarning") then return end
+	if (not self:PrepareFrames()) then return end
+	self:UpdatePositionAndScale()
+	self:UpdateAnchor()
 end
 
 RaidWarnings.UpdateAnchor = function(self)
@@ -91,7 +103,9 @@ RaidWarnings.UpdateAnchor = function(self)
 end
 
 RaidWarnings.OnEnable = function(self)
-	self:PrepareFrames()
+	if (not self:PrepareFrames()) then
+		self:RegisterEvent("ADDON_LOADED", "OnBlizzardFramesLoaded")
+	end
 	self:CreateAnchor(CHAT_MSG_RAID_WARNING)
 
 	ns.MovableModulePrototype.OnEnable(self)

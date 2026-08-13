@@ -882,6 +882,7 @@ local style = function(self, unit)
 	self.PriorityDebuff = priorityDebuff
 	self.PriorityDebuff.PostUpdate = PriorityDebuff_PostUpdate
 	ApplyPriorityDebuffLayout(self, RaidFrame25Mod.db and RaidFrame25Mod.db.profile or defaults.profile)
+	ns.API.CreatePrivateAuras(self, self.Health, 16, 3)
 
 	-- Absorb Bar (Retail)
 	--------------------------------------------

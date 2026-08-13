@@ -85,27 +85,8 @@ local defaults = { profile = ns:Merge({
 	useClassColor = false,
 	showAuras = true,
 	showHealthPercent = false,
-	playerAuraUseStockBehavior = true,
 	playerAuraDebuffsOnly = false,
-	playerAuraAlwaysBright = false,
-	playerAuraShowAdvancedCategories = false,
 	playerAuraShowDebuffs = true,
-	playerAuraShowImportantAuras = true,
-	playerAuraShowImportantDefensives = true,
-	playerAuraShowImportantExternals = true,
-	playerAuraShowImportantCrowdControl = true,
-	playerAuraShowImportantStealable = true,
-	playerAuraShowRaidAuras = true,
-	playerAuraShowRaidGeneral = true,
-	playerAuraShowRaidCombat = true,
-	playerAuraShowStackingAuras = true,
-	playerAuraShowShortBuffsInCombat = true,
-	playerAuraShowShortCombatPlayerBuffs = true,
-	playerAuraShowShortCombatNonCancelable = true,
-	playerAuraShowShortBuffsOutOfCombat = true,
-	playerAuraShowShortUtilityPlayerBuffs = true,
-	playerAuraShowShortUtilityNonCancelable = true,
-	playerAuraShowLongUtilityBuffs = false,
 	playerAuraMaxShown = 16,
 	playerAuraSeparateDebuffs = false,
 	playerAuraSeparateDebuffsMax = 8,
@@ -241,7 +222,7 @@ end
 -- Calculate whether the separate debuff layer SHOULD be shown based on profile.
 -- This is the "visibility intent" — what the user configured.
 local GetPlayerDebuffShowIntent = function(frame, profile)
-	if (not frame or not frame.Debuffs or not profile) then
+	if (not frame or not frame.PlayerDebuffs or not profile) then
 		return false
 	end
 	if (not profile.enabled or not profile.showAuras or not profile.playerAuraSeparateDebuffs) then
@@ -274,64 +255,26 @@ local UpdatePlayerDebuffShownState = function(frame, refreshOnShow)
 		debuffHolder:SetShown(shouldShow)
 		-- On reload/layout transitions, force a debuff refresh after becoming visible
 		-- so pre-existing debuffs are rebuilt immediately.
-		if (refreshOnShow and shouldShow and frame.Debuffs and frame.Debuffs.ForceUpdate) then
-			frame.Debuffs:ForceUpdate()
+		if (refreshOnShow and shouldShow and frame.PlayerDebuffs and frame.PlayerDebuffs.ForceUpdate) then
+			frame.PlayerDebuffs:ForceUpdate()
 		end
 	end
-end
-
-local RequestPlayerDebuffBootstrapRefresh = function(frame, reason)
-	if (not frame or not frame.Debuffs or not frame.Debuffs.ForceUpdate) then
-		return
-	end
-	if (not C_Timer_After) then
-		return
-	end
-
-	frame.__AzeriteUI_PlayerDebuffBootstrapSerial = (frame.__AzeriteUI_PlayerDebuffBootstrapSerial or 0) + 1
-	local serial = frame.__AzeriteUI_PlayerDebuffBootstrapSerial
-
-	local function Pump(attempt)
-		if (not frame or not frame.Debuffs or frame.__AzeriteUI_PlayerDebuffBootstrapSerial ~= serial) then
-			return
-		end
-		if (InCombatLockdown and InCombatLockdown()) then
-			return
-		end
-
-		local holder = frame.DebuffHolder
-		if (holder and holder.intendedVisibility == false) then
-			return
-		end
-
-		frame.Debuffs:ForceUpdate()
-
-		local created = tonumber(frame.Debuffs.createdButtons) or 0
-		if (created > 0) then
-			return
-		end
-
-		if (attempt < 6) then
-			C_Timer_After(0.25, function()
-				Pump(attempt + 1)
-			end)
-		end
-	end
-
-	C_Timer_After(0, function()
-		Pump(1)
-	end)
 end
 
 local ApplyPlayerAuraLayout = function(frame)
-	if (not frame or not frame.Auras) then
+	if (not frame or not frame.PlayerAuras) then
 		return
 	end
+	if (InCombatLockdown()) then
+		frame.__AzeriteUI_PlayerAuraLayoutPending = true
+		return
+	end
+	frame.__AzeriteUI_PlayerAuraLayoutPending = nil
 
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or {}
 	local config = ns.GetConfig("PlayerFrame") or {}
-	local auras = frame.Auras
-	local debuffs = frame.Debuffs
+	local auras = frame.PlayerAuras
+	local debuffs = frame.PlayerDebuffs
 	local debuffHolder = frame.DebuffHolder
 	local separateDebuffs = profile.playerAuraSeparateDebuffs and true or false
 	local auraTotal = GetPlayerAuraCount(profile, "playerAuraMaxShown", config.AurasNumTotal or 16, 1, 32)
@@ -339,41 +282,63 @@ local ApplyPlayerAuraLayout = function(frame)
 	local scale = (profile.savedPosition and profile.savedPosition.scale) or frame:GetScale() or 1
 
 	if (config.AurasSize and config.AurasSize[1] and config.AurasSize[2]) then
-		auras:SetSize(unpack(config.AurasSize))
+		local auraWidth = config.AurasSize[1]
+		local auraSize = config.AuraSize or 36
+		local spacingX = config.AurasSpacingX or config.AuraSpacing or 0
+		local spacingY = config.AurasSpacingY or config.AuraSpacing or 0
+		local columns = math.max(1, math.floor((auraWidth + spacingX) / (auraSize + spacingX)))
+		local rows = math.ceil(auraTotal / columns)
+		local auraHeight = rows * auraSize + math.max(0, rows - 1) * spacingY
+		auras:SetSize(auraWidth, auraHeight)
 	end
-	if (separateDebuffs) then
-		auras.numBuffs = auraTotal
-		auras.numDebuffs = 0
-		auras.numTotal = auraTotal
-		ApplyPlayerAuraAttachedPosition(auras, frame, auraPoint)
-	else
-		auras.numBuffs = nil
-		auras.numDebuffs = nil
-		auras.numTotal = auraTotal
-		ApplyPlayerAuraAttachedPosition(auras, frame, auraPoint)
-	end
+	ApplyPlayerAuraAttachedPosition(auras, frame, auraPoint)
+	local showBuffs = not profile.playerAuraDebuffsOnly
+	local showAttachedDebuffs = (not separateDebuffs)
+		and (profile.playerAuraDebuffsOnly or profile.playerAuraShowDebuffs ~= false)
+	local attachedBuffCount = showBuffs and auraTotal or 0
+	local attachedDebuffCount = showAttachedDebuffs and auraTotal or 0
+	auras:Configure({
+		size = config.AuraSize or 36,
+		spacingX = config.AurasSpacingX or config.AuraSpacing or 0,
+		spacingY = config.AurasSpacingY or config.AuraSpacing or 0,
+		initialAnchor = config.AurasInitialAnchor or "BOTTOMLEFT",
+		growthX = config.AurasGrowthX or "RIGHT",
+		growthY = config.AurasGrowthY or "UP",
+		maxBuffs = attachedBuffCount,
+		maxDebuffs = attachedDebuffCount
+	})
 
 	if (not debuffs) then
 		return
 	end
 
+	local separateDebuffCount = separateDebuffs and GetPlayerAuraCount(profile, "playerAuraSeparateDebuffsMax", auraTotal, 1, 20) or 0
 	if (config.AurasSize and config.AurasSize[1] and config.AurasSize[2]) then
-		debuffs:SetSize(unpack(config.AurasSize))
+		local debuffWidth = config.AurasSize[1]
+		local debuffHeight = config.AurasSize[2]
+		if (separateDebuffCount > 0) then
+			local auraSize = config.AuraSize or 36
+			local spacingX = config.AurasSpacingX or config.AuraSpacing or 0
+			local spacingY = config.AurasSpacingY or config.AuraSpacing or 0
+			local columns = math.max(1, math.floor((debuffWidth + spacingX) / (auraSize + spacingX)))
+			local rows = math.ceil(separateDebuffCount / columns)
+			debuffHeight = rows * auraSize + math.max(0, rows - 1) * spacingY
+		end
+		debuffs:SetSize(debuffWidth, debuffHeight)
 	end
 	debuffs:SetFrameStrata(frame:GetFrameStrata())
 	debuffs:SetFrameLevel((auras:GetFrameLevel() or frame:GetFrameLevel()) + 1)
-	debuffs.size = config.AuraSize
-	debuffs.spacing = config.AuraSpacing
-	debuffs.spacingX = config.AurasSpacingX
-	debuffs.spacingY = config.AurasSpacingY
-	debuffs.growthX = "RIGHT"
-	debuffs.growthY = "DOWN"
-	debuffs.initialAnchor = "TOPLEFT"
-	debuffs["spacing-x"] = config.AurasSpacingX
-	debuffs["spacing-y"] = config.AurasSpacingY
-	debuffs["growth-x"] = "RIGHT"
-	debuffs["growth-y"] = "DOWN"
-	debuffs.num = separateDebuffs and GetPlayerAuraCount(profile, "playerAuraSeparateDebuffsMax", auraTotal, 1, 20) or 0
+	debuffs:Configure({
+		size = config.AuraSize or 36,
+		spacingX = config.AurasSpacingX or config.AuraSpacing or 0,
+		spacingY = config.AurasSpacingY or config.AuraSpacing or 0,
+		initialAnchor = "TOPLEFT",
+		growthX = "RIGHT",
+		growthY = "DOWN",
+		maxBuffs = 0,
+		maxDebuffs = separateDebuffCount
+	})
+	debuffs:SetDisplayEnabled(profile.enabled and profile.showAuras and separateDebuffs)
 	debuffs:SetScale(1)
 	debuffs:ClearAllPoints()
 	if (debuffHolder) then
@@ -396,7 +361,7 @@ PlayerFrameMod.CreateAuraAnchors = function(self)
 	if (self.debuffAnchor) then
 		return
 	end
-	if (not self.frame or not self.frame.Debuffs) then
+	if (not self.frame or not self.frame.PlayerDebuffs) then
 		return
 	end
 
@@ -421,7 +386,7 @@ PlayerFrameMod.CreateAuraAnchors = function(self)
 		anchor:SetDefaultPosition(defaultPosition[1], defaultPosition[2], defaultPosition[3])
 	end
 	do
-		local width, height = GetPlayerDebuffHolderSize(self.frame.Debuffs)
+		local width, height = GetPlayerDebuffHolderSize(self.frame.PlayerDebuffs)
 		anchor:SetSize(width, height)
 	end
 	if (savedPosition and savedPosition[1]) then
@@ -445,7 +410,7 @@ end
 PlayerFrameMod.UpdateAuraAnchors = function(self)
 	local profile = self.db and self.db.profile
 	local frame = self.frame
-	local debuffAnchorTarget = frame and (frame.DebuffHolder or frame.Debuffs)
+	local debuffAnchorTarget = frame and (frame.DebuffHolder or frame.PlayerDebuffs)
 	if (not profile or not frame) then
 		return
 	end
@@ -2238,7 +2203,7 @@ end
 -- Update player frame based on player level.
 local UnitFrame_UpdateTextures = function(self)
 	local playerLevel = playerLevel or UnitLevel("player")
-	local key = (playerXPDisabled or IsLevelAtEffectiveMaxLevel(playerLevel)) and "Seasoned" or playerLevel < 10 and "Novice" or "Hardened"
+	local key = (playerXPDisabled or ns.API.IsLevelAtEffectiveMaxLevel(playerLevel)) and "Seasoned" or playerLevel < 10 and "Novice" or "Hardened"
 	local config = ns.GetConfig("PlayerFrame")
 	local db = config[key]
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or nil
@@ -2752,27 +2717,15 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 		playerLevel = UnitLevel("player")
 		playerIsRetribution = playerClass == "PALADIN" and (ns.IsRetail and GetSpecialization() == SPEC_PALADIN_RETRIBUTION)
 
-		-- Ensure existing auras/debuffs are rebuilt immediately after /reload.
-		if (self.Auras and self.Auras.ForceUpdate) then
-			self.Auras:ForceUpdate()
+		if (self.PlayerAuras) then
+			self.PlayerAuras:ApplyPendingConfiguration()
+			self.PlayerAuras:ApplyPendingShownState()
+			self.PlayerAuras:ForceUpdate()
 		end
-		if (self.Debuffs and self.Debuffs.ForceUpdate) then
-			self.Debuffs:ForceUpdate()
-		end
-		RequestPlayerDebuffBootstrapRefresh(self, "PLAYER_ENTERING_WORLD")
-		-- Aura payloads can settle a frame later on reload; do one deferred rebuild.
-		if (C_Timer_After) then
-			C_Timer_After(0, function()
-				if (not self or not self.Auras) then
-					return
-				end
-				if (self.Auras.ForceUpdate) then
-					self.Auras:ForceUpdate()
-				end
-				if (self.Debuffs and self.Debuffs.ForceUpdate) then
-					self.Debuffs:ForceUpdate()
-				end
-			end)
+		if (self.PlayerDebuffs) then
+			self.PlayerDebuffs:ApplyPendingConfiguration()
+			self.PlayerDebuffs:ApplyPendingShownState()
+			self.PlayerDebuffs:ForceUpdate()
 		end
 
 		self.Power:ForceUpdate()
@@ -2793,22 +2746,17 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 		end
 
 	elseif (event == "PLAYER_REGEN_ENABLED") then
-		-- Combat exit is safe for a corrective aura/debuff rebuild.
-		if (self.Auras and self.Auras.ForceUpdate) then
-			self.Auras:ForceUpdate()
+		ApplyPlayerAuraLayout(self)
+		if (self.PlayerAuras) then
+			self.PlayerAuras:ApplyPendingConfiguration()
+			self.PlayerAuras:ApplyPendingShownState()
+			self.PlayerAuras:SetDisplayEnabled(PlayerFrameMod.db.profile.showAuras)
 		end
-		if (self.Debuffs and self.Debuffs.ForceUpdate) then
-			self.Debuffs:ForceUpdate()
+		if (self.PlayerDebuffs) then
+			self.PlayerDebuffs:ApplyPendingConfiguration()
+			self.PlayerDebuffs:ApplyPendingShownState()
 		end
 		UpdatePlayerDebuffShownState(self)
-		if (C_Timer_After) then
-			C_Timer_After(0, function()
-				if (not self or not self.Debuffs or not self.Debuffs.ForceUpdate) then
-					return
-				end
-				self.Debuffs:ForceUpdate()
-			end)
-		end
 		if (self.Power and self.Power.ForceUpdate) then
 			self.Power:ForceUpdate()
 		end
@@ -2861,7 +2809,7 @@ local style = function(self, unit)
 	local config = ns.GetConfig("PlayerFrame")
 	-- Pick the same profile key used by UnitFrame_UpdateTextures so we have
 	-- non-nil sizing/texture data before the first PostUpdate runs.
-	local key = (playerXPDisabled or IsLevelAtEffectiveMaxLevel(playerLevel)) and "Seasoned"
+	local key = (playerXPDisabled or ns.API.IsLevelAtEffectiveMaxLevel(playerLevel)) and "Seasoned"
 		or (playerLevel < 10 and "Novice")
 		or "Hardened"
 	local db = config[key] or config.Seasoned or config.Hardened or config.Novice or config
@@ -3324,40 +3272,25 @@ local style = function(self, unit)
 
 	-- Auras
 	--------------------------------------------
-	local auras = CreateFrame("Frame", nil, self)
+	local auras = ns.PlayerAuraContainers.Create(self, {
+		width = config.AurasSize[1],
+		height = config.AurasSize[2],
+		size = config.AuraSize,
+		spacing = config.AuraSpacing,
+		spacingX = config.AurasSpacingX,
+		spacingY = config.AurasSpacingY,
+		initialAnchor = config.AurasInitialAnchor,
+		growthX = config.AurasGrowthX,
+		growthY = config.AurasGrowthY,
+		maxBuffs = config.AurasNumTotal,
+		maxDebuffs = config.AurasNumTotal,
+		disableMouse = config.AurasDisableMouse,
+		disableCooldown = config.AurasDisableCooldown,
+		tooltipAnchor = config.AurasTooltipAnchor
+	})
 	auras:SetSize(unpack(config.AurasSize))
 	auras:SetPoint(unpack(config.AurasPosition))
-	auras.size = config.AuraSize
-	auras.spacing = config.AuraSpacing
-	auras.numTotal = config.AurasNumTotal
-	auras.disableMouse = config.AurasDisableMouse
-	auras.disableCooldown = config.AurasDisableCooldown
-	auras.onlyShowPlayer = config.AurasOnlyShowPlayer
-	auras.showStealableBuffs = config.AurasShowStealableBuffs
-	auras.showBuffType = false
-	auras.showDebuffType = true
-	auras.initialAnchor = config.AurasInitialAnchor
-	auras.spacingX = config.AurasSpacingX
-	auras.spacingY = config.AurasSpacingY
-	auras.growthX = config.AurasGrowthX
-	auras.growthY = config.AurasGrowthY
-	auras["spacing-x"] = config.AurasSpacingX
-	auras["spacing-y"] = config.AurasSpacingY
-	auras["growth-x"] = config.AurasGrowthX
-	auras["growth-y"] = config.AurasGrowthY
-	auras.tooltipAnchor = config.AurasTooltipAnchor
-	auras.sortMethod = config.AurasSortMethod
-	auras.sortDirection = config.AurasSortDirection
-	auras.reanchorIfVisibleChanged = true
-	auras.allowCombatUpdates = true
-	auras.CreateButton = ns.AuraStyles.CreateButton
-	auras.PostUpdateButton = ns.AuraStyles.PlayerPostUpdateButton
-	auras.CustomFilter = ns.AuraFilters.PlayerAuraFilter -- classic
-	auras.FilterAura = ns.AuraFilters.PlayerAuraFilter -- retail
-	auras.PreSetPosition = ns.AuraSorts.Default -- only in classic
-	auras.SortAuras = ns.AuraSorts.DefaultFunction -- only in retail
-
-	self.Auras = auras
+	self.PlayerAuras = auras
 
 	local debuffHolder = CreateFrame("Frame", nil, UIParent)
 	debuffHolder:SetFrameStrata(self:GetFrameStrata())
@@ -3370,43 +3303,27 @@ local style = function(self, unit)
 	debuffHolder:Hide()
 	self.DebuffHolder = debuffHolder
 
-	local debuffs = CreateFrame("Frame", nil, debuffHolder)
+	local debuffs = ns.PlayerAuraContainers.Create(debuffHolder, {
+		width = config.AurasSize[1],
+		height = config.AurasSize[2],
+		size = config.AuraSize,
+		spacing = config.AuraSpacing,
+		spacingX = config.AurasSpacingX,
+		spacingY = config.AurasSpacingY,
+		initialAnchor = "TOPLEFT",
+		growthX = "RIGHT",
+		growthY = "DOWN",
+		maxBuffs = 0,
+		maxDebuffs = 0,
+		disableMouse = config.AurasDisableMouse,
+		disableCooldown = config.AurasDisableCooldown,
+		tooltipAnchor = config.AurasTooltipAnchor
+	})
 	debuffs:SetPoint("TOPLEFT", debuffHolder, "TOPLEFT", PLAYER_DEBUFF_HOLDER_PADDING_LEFT, -PLAYER_DEBUFF_HOLDER_PADDING_TOP)
 	debuffs:SetFrameStrata(self:GetFrameStrata())
 	debuffs:SetFrameLevel(self:GetFrameLevel() + 1)
 	debuffs:SetSize(unpack(config.AurasSize))
-	debuffs.size = config.AuraSize
-	debuffs.spacing = config.AuraSpacing
-	debuffs.num = 0
-	debuffs.disableMouse = config.AurasDisableMouse
-	debuffs.disableCooldown = config.AurasDisableCooldown
-	debuffs.onlyShowPlayer = config.AurasOnlyShowPlayer
-	debuffs.filter = "HARMFUL"
-	debuffs.showStealableBuffs = false
-	debuffs.showBuffType = false
-	debuffs.showDebuffType = true
-	debuffs.initialAnchor = "TOPLEFT"
-	debuffs.spacingX = config.AurasSpacingX
-	debuffs.spacingY = config.AurasSpacingY
-	debuffs.growthX = "RIGHT"
-	debuffs.growthY = "DOWN"
-	debuffs["spacing-x"] = config.AurasSpacingX
-	debuffs["spacing-y"] = config.AurasSpacingY
-	debuffs["growth-x"] = "RIGHT"
-	debuffs["growth-y"] = "DOWN"
-	debuffs.tooltipAnchor = config.AurasTooltipAnchor
-	debuffs.sortMethod = config.AurasSortMethod
-	debuffs.sortDirection = config.AurasSortDirection
-	debuffs.reanchorIfVisibleChanged = true
-	debuffs.allowCombatUpdates = true
-	debuffs.CreateButton = ns.AuraStyles.CreateButton
-	debuffs.PostUpdateButton = ns.AuraStyles.PlayerPostUpdateButton
-	debuffs.CustomFilter = ns.AuraFilters.PlayerDebuffFilter -- classic
-	debuffs.FilterAura = ns.AuraFilters.PlayerDebuffFilter -- retail
-	debuffs.PreSetPosition = ns.AuraSorts.Default -- only in classic
-	debuffs.SortAuras = ns.AuraSorts.DefaultFunction -- only in retail
-
-	self.Debuffs = debuffs
+	self.PlayerDebuffs = debuffs
 	debuffs:Hide()
 	debuffHolder:Hide()
 
@@ -3415,7 +3332,7 @@ local style = function(self, unit)
 		-- When the player frame hides, check if we should also hide the separate debuff layer.
 		-- Use the visibility intent flag (set by UpdatePlayerDebuffShownState) to decide.
 		-- If intendedVisibility is true, the debuff layer should stay visible even when the frame hides.
-		local debuffTarget = owner.DebuffHolder or owner.Debuffs
+		local debuffTarget = owner.DebuffHolder or owner.PlayerDebuffs
 		if (not debuffTarget) then
 			return
 		end
@@ -3427,8 +3344,8 @@ local style = function(self, unit)
 		-- Otherwise, ensure it's hidden when the frame hides.
 		if (owner.DebuffHolder) then
 			owner.DebuffHolder:Hide()
-		elseif (owner.Debuffs) then
-			owner.Debuffs:Hide()
+		elseif (owner.PlayerDebuffs) then
+			owner.PlayerDebuffs:Hide()
 		end
 	end)
 	ns.API.AttachScriptSafe(self, "OnShow", function(owner)
@@ -3560,22 +3477,23 @@ PlayerFrameMod.Update = function(self)
 	self.frame.Health:ForceUpdate()
 
 	if (self.db.profile.showAuras) then
-		self.frame:EnableElement("Auras")
-		self.frame.Auras:ForceUpdate()
+		self.frame.PlayerAuras:SetDisplayEnabled(true)
+		self.frame.PlayerAuras:ForceUpdate()
 		-- Use atomic UpdatePlayerDebuffShownState instead of direct SetShown calls.
 		UpdatePlayerDebuffShownState(self.frame, true)
-		-- Ensure detached debuffs are rebuilt on reload/config refresh even when
-		-- visibility was already applied in an earlier layout pass.
 		if (self.frame.DebuffHolder and self.frame.DebuffHolder.intendedVisibility
-			and self.frame.Debuffs and self.frame.Debuffs.ForceUpdate) then
-			self.frame.Debuffs:ForceUpdate()
+			and self.frame.PlayerDebuffs and self.frame.PlayerDebuffs.ForceUpdate) then
+			self.frame.PlayerDebuffs:ForceUpdate()
 		end
 	else
-		self.frame:DisableElement("Auras")
+		self.frame.PlayerAuras:SetDisplayEnabled(false)
+		if (self.frame.PlayerDebuffs) then
+			self.frame.PlayerDebuffs:SetDisplayEnabled(false)
+		end
 		if (self.frame.DebuffHolder) then
 			self.frame.DebuffHolder:Hide()
-		elseif (self.frame.Debuffs) then
-			self.frame.Debuffs:Hide()
+		elseif (self.frame.PlayerDebuffs) then
+			self.frame.PlayerDebuffs:Hide()
 		end
 	end
 

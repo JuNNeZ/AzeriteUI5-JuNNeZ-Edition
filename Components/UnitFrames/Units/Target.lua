@@ -2405,7 +2405,7 @@ local UnitFrame_UpdateTextures = function(self)
 
 	local key
 	if (UnitIsPlayer(unit)) then
-		key = IsLevelAtEffectiveMaxLevel(level) and "Seasoned" or level < 10 and "Novice" or "Hardened"
+		key = ns.API.IsLevelAtEffectiveMaxLevel(level) and "Seasoned" or level < 10 and "Novice" or "Hardened"
 	else
 		local unitLevel = UnitLevel(unit)
 		if ((type(issecretvalue) == "function") and issecretvalue(unitLevel)) then
@@ -2433,7 +2433,7 @@ local UnitFrame_UpdateTextures = function(self)
 		elseif (not TargetFrameMod.db.profile.useStandardCritterTexture) and ((creatureType == "Critter") or (lowHealthCritterLike and UnitCanAttack("player", unit)) or ((not ns.IsRetail) and (level == 1) and (type(unitHealthMax) == "number") and (unitHealthMax < 30))) then
 			key = "Critter"
 		else
-			key = (level < 1 or IsLevelAtEffectiveMaxLevel(level)) and "Seasoned" or level < 10 and "Novice" or "Hardened"
+			key = (level < 1 or ns.API.IsLevelAtEffectiveMaxLevel(level)) and "Seasoned" or level < 10 and "Novice" or "Hardened"
 		end
 	end
 
@@ -2929,7 +2929,10 @@ local style = function(self, unit, id)
 
 	self:SetSize(unpack(db.Size))
 	self:SetHitRectInsets(unpack(db.HitRectInsets))
-	self:SetFrameLevel(self:GetFrameLevel() + 2)
+	-- The attached player aura row occupies the player's next child level so its
+	-- native buttons remain interactive. Keep the target unit button above that
+	-- bounded layer, preserving target ownership where the two frames overlap.
+	self:SetFrameLevel(self:GetFrameLevel() + 4)
 
 	-- Overlay for icons and text
 	--------------------------------------------

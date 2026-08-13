@@ -50,6 +50,14 @@ local ActionBar_MT = { __index = ActionBar }
 local LFF = LibStub("LibFadingFrames-1.0")
 
 local playerClass = ns.PlayerClass
+local ACTION_BAR_FRAME_LEVEL = 100
+
+local RestoreFadeAlpha = function(bar)
+	bar:SetAlpha(1)
+	for id,button in next,bar.buttons do
+		button:SetAlpha(1)
+	end
+end
 
 -- Return bindaction by blizzard barID.
 local BINDTEMPLATE_BY_ID = {
@@ -123,6 +131,9 @@ ns.ActionBar.defaults = defaults
 ns.ActionBar.Create = function(self, id, config, name)
 
 	local bar = setmetatable(ns.ButtonBar:Create(id, config, name), ActionBar_MT)
+	-- Retail keeps its transparent native action buttons alive around level 52.
+	-- Keep AzeriteUI's owned secure buttons above those retained click targets.
+	bar:SetFrameLevel(ACTION_BAR_FRAME_LEVEL)
 
 	bar:SetAttribute("UpdateVisibility", [[
 		local visibility = self:GetAttribute("visibility");
@@ -230,6 +241,7 @@ end
 ActionBar.CreateButton = function(self, buttonConfig)
 
 	local button = ButtonBar.CreateButton(self, buttonConfig)
+	button:SetFrameLevel(self:GetFrameLevel() + 1)
 
 	for k = 1,18 do
 		button:SetState(k, "action", (k - 1) * NUM_ACTIONBAR_BUTTONS + button.id)
@@ -297,6 +309,7 @@ ActionBar.UpdateFading = function(self)
 		for id, button in next,self.buttons do
 			LFF:UnregisterFrameForFading(button)
 		end
+		RestoreFadeAlpha(self)
 		return
 	end
 	if (not IsPlayerInWorld()) then return end
@@ -324,12 +337,14 @@ ActionBar.UpdateFading = function(self)
 	else
 
 		-- Unregister all fading.
+		LFF:UnregisterFrameForFading(self)
 		for id, button in next,buttons do
 			LFF:UnregisterFrameForFading(buttons[id])
 			if (not button:GetTexture()) then
 				button:ForceUpdate()
 			end
 		end
+		RestoreFadeAlpha(self)
 	end
 
 end
@@ -371,6 +386,7 @@ ActionBar.UpdateBindings = function(self)
 	ClearOverrideBindings(self)
 
 	if (not self:IsEnabled()) then return end
+	if (ns.API.IsHouseEditorActive()) then return end
 
 	-- Bar 1 always uses click-route so that possess/vehicle/override/dragon
 	-- state transitions work correctly even when entered in combat (where
@@ -472,12 +488,10 @@ ActionBar.UpdateVisibilityDriver = function(self)
 			visdriver = visdriver.."[vehicleui]hide;"
 		end
 
-		if (self.id == 1) then
-			if (config.visibility.dragon) then
-				visdriver = visdriver.."[bonusbar:5]show;"
-			else
-				visdriver = visdriver.."[bonusbar:5]hide;"
-			end
+		if (config.visibility.dragon) then
+			visdriver = visdriver.."[bonusbar:5]show;"
+		else
+			visdriver = visdriver.."[bonusbar:5]hide;"
 		end
 
 		visdriver = visdriver.."show"

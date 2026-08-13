@@ -35,6 +35,26 @@ local POWER_TYPE_MANA = (Enum and Enum.PowerType and Enum.PowerType.Mana) or 0
 API.DEBUG_HEALTH = API.DEBUG_HEALTH or false
 API.DEBUG_HEALTH_CHAT = API.DEBUG_HEALTH_CHAT or false
 
+API.CreatePrivateAuras = function(owner, relativeTo, size, count)
+	local iconSize = size or 18
+	local iconCount = count or 3
+	local spacing = 2
+	local element = CreateFrame("Frame", nil, owner)
+	element:SetSize((iconSize * iconCount) + (spacing * (iconCount - 1)), iconSize)
+	element:SetPoint("CENTER", relativeTo or owner, "CENTER")
+	element.size = iconSize
+	element.num = iconCount
+	element.maxCols = iconCount
+	element.spacingX = spacing
+	element.initialAnchor = "LEFT"
+	element.growthX = "RIGHT"
+	element.disableCooldown = false
+	element.disableCooldownText = false
+	element.borderScale = .75
+	owner.PrivateAuras = element
+	return element
+end
+
 local SanitizeDebugValue = function(value)
 	if (issecretvalue and issecretvalue(value)) then
 		return "<secret>"

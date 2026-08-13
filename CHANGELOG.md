@@ -5,6 +5,49 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.3.78-JuNNeZ (2026-08-13) - Retail 12.1 Native Aura and Input Hardening
+
+### Highlights
+
+- Rebuilt player-frame auras on Blizzard's Retail 12.1 native aura containers so combat buffs, harmful effects, vehicle auras, tooltips, and right-click cancellation remain available without secret-value or taint failures.
+- Restored the intended AzeriteUI player-aura behavior: important and short temporary effects are prioritized, generic effects remain subdued, buff/debuff capacity is shared, and aura buttons no longer lose mouse input to the player or target frame.
+- Modernized the movable top-right aura header with native secure containers, a dark remaining-time bar, and the original centered red warning during the final 10 seconds.
+- Fixed AzeriteUI action-button input and state refreshes while safely suppressing invisible Blizzard action buttons; cooldowns, charges, item counts, pet/stance bindings, and Bartender handoff now use current Retail paths.
+- Kept stock action-bar furniture hidden after Blizzard load transitions, including the backpack and bag controls, while restoring the Looking for Group queue eye to its AzeriteUI minimap position.
+- Hardened unit-frame health, power, nameplate, private-aura, raid-warning, and boss-emote updates for Retail 12.1 secret values and load-on-demand frames.
+
+### Access
+
+- Player-frame aura controls: `/az -> Unit Frame Settings -> Player -> Auras`.
+- Movable top-right aura controls: `/az -> Auras`.
+- Existing `/az -> Action Bars` and `/az -> Minimap` settings continue to apply; no profile reset is required.
+
+### Internal
+
+- Player and standalone auras now use `Blizzard_AuraContainer` templates and native duration bindings; the retired Retail secure-header/manual scanner paths were removed.
+- Blizzard action bars are quarantined with alpha and mouse-input suppression instead of event removal, reparenting, or secure method replacement.
+- LibActionButton and oUF Retail paths now avoid branching, indexing, or arithmetic on secret values and prefer current duration/charge APIs.
+- Raid warning, raid boss emote, queue status, and aura-container setup now follow their Retail load-on-demand owners.
+
+
+## 5.3.77-JuNNeZ (2026-08-12) - WoW 12.1 Aura and Action Bar Fixes
+
+### Highlights
+
+- Fixed action bars missing cooldown swipes, timer text, charges, and item counts after WoW 12.1.
+- Restored the standalone player aura frame on Retail 12.1 by replacing the retired secure aura-header path with a manual fallback.
+- Fixed Retail 12.1 aura startup so the frame populates after `/reload`.
+
+### Access
+
+- Existing `/az -> Auras` and `/az -> Action Bars` settings continue to apply.
+
+### Internal
+
+- Updated LibActionButton cooldown/count handling for Retail duration objects and charge data.
+- Added the initial Retail fallback in `Components/Auras`; it is superseded by the native-container implementation in 5.3.78.
+
+
 ## 5.3.76-JuNNeZ (2026-07-17) - Action Bar Skyriding and Layout Reliability
 
 ### Highlights

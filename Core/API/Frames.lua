@@ -29,6 +29,8 @@ ns.API = API
 
 -- Lua API
 local CreateFrame = CreateFrame
+local pcall = pcall
+local type = type
 
 local CreateFrameUnscaled = function(...)
 	local frame = CreateFrame(...)
@@ -36,6 +38,29 @@ local CreateFrameUnscaled = function(...)
 	return frame
 end
 
+local IsHouseEditorActive = function()
+	local isActive = C_HouseEditor and C_HouseEditor.IsHouseEditorActive
+	if (not isActive) then
+		return false
+	end
+	local ok, active = pcall(isActive)
+	return ok and active == true
+end
+
+local IsPlayerAtEffectiveMaxLevel = function()
+	return GameRulesUtil.IsPlayerAtEffectiveMaxLevel()
+end
+
+local IsLevelAtEffectiveMaxLevel = function(level)
+	if (type(level) ~= "number") or (issecretvalue and issecretvalue(level)) then
+		return false
+	end
+	return level >= GameRulesUtil.GetEffectiveMaxLevelForPlayer()
+end
+
 -- Global API
 ---------------------------------------------------------
 API.CreateFrameUnscaled = CreateFrameUnscaled
+API.IsHouseEditorActive = IsHouseEditorActive
+API.IsPlayerAtEffectiveMaxLevel = IsPlayerAtEffectiveMaxLevel
+API.IsLevelAtEffectiveMaxLevel = IsLevelAtEffectiveMaxLevel

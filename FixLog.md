@@ -1,3 +1,165 @@
+## 2026-08-13 - 5.3.78-JuNNeZ release preparation
+
+- **Release scope:** Package the completed Retail 12.1 aura, action-bar, Blizzard-frame suppression, minimap queue-status, and secret-value hardening work as the next patch release.
+- **Version decision:** Preserve the existing remote `5.3.77-JuNNeZ` tag and advance to `5.3.78-JuNNeZ`; the existing tag points to a separate release commit and must not be moved or overwritten.
+- **Repository sync:** Fetched and pruned `origin`, fetched tags, and confirmed `main` is identical to `origin/main` before release metadata changes.
+- **Metadata:** Updated the TOC and release builder to `5.3.78-JuNNeZ`; restored the missing 5.3.77 changelog entry and added delta-only 5.3.78 player-facing notes.
+- **API cleanup:** WoW API enum lookup confirmed `Enum.SpellBookSpellBank` contains `Player` and `Pet`; corrected three remaining lowercase `.pet` references in the Retail compatibility spellbook shims.
+- **Package cleanup:** The first archive audit exposed repository-only content (`.claude`, devcontainer/MCP metadata, wiki tooling, a stray `$stamp` tree, and embedded-library Git metadata). Replaced broad source copying with an explicit runtime-root whitelist and a verified temporary-tree cleanup pass. The historically named `WoW11` directory remains included because the current Retail TOC still loads it as the delayed-start bootstrap.
+- **Embedded-library cleanup:** The second archive audit found only `Libs/oUF/utils` (upstream changelog/documentation helpers); added that exact non-runtime path to the temporary package cleanup list.
+- **Verification target:** Run Lua syntax checks for every changed Lua file, XML and TOC structural checks, `git diff --check`, release build, archive-content validation, then commit, create an annotated tag, and push `main` plus the tag.
+- **Runtime status:** The final in-client `/reload` matrix remains a user-side verification step because the game client cannot be driven from this workspace.
+- **Static verification:** All 39 changed/new Lua files pass `luac -p`; both changed XML manifests parse successfully; every TOC file reference exists; `git diff --check` passes. A repository-wide Lua pass additionally identified seven unchanged UTF-8/BOM data/locale files that stock Lua 5.1 `luac` cannot parse, so they were excluded from the changed-file release gate rather than misreported as regressions.
+- **Release archive:** Built `AzeriteUI-5.3.78-JuNNeZ-Retail-13-08-2026.zip` with 466 entries and 10,447,731 bytes. Archive root, version, runtime files, deleted-template absence, and development-file exclusions pass inspection. SHA-256: `7CB6C2B7D10E995D489EAD7AE142BCCFB7CD499C7432BF1736F946DE3E1ED9A3`.
+
+## 2026-08-13 - Reconcile native player auras with original AzeriteUI intent
+
+- **Requested follow-up:** Keep the Retail 12.1 secure/native aura pipeline, but restore the player-row behavior established by the original implementation instead of turning the row into a second unfiltered top-right aura header.
+- **Historical contract:** The attached row is interactive above the player unit button, remains a bounded child layer rather than a global/topmost surface, prioritizes harmful/priority/player effects and short remaining durations, shows combat-relevant temporary effects, retains the Azerite icon/count/timer look, and supports the existing visibility/count/separate-debuff controls.
+- **Current divergences to resolve:** unbounded `GetHighestFrameLevel(true) + 1` hit priority; raw `HELPFUL`/`HARMFUL` groups; expiration-only helpful ordering; fixed 3:1 buff/debuff capacity; and loss of priority/player/boss selection available through Retail's native candidate-filter contract.
+- **Implementation target:** Express the old intent through Blizzard's native aura processing/candidate filters and deterministic group capacity, use a bounded frame level matching the historical child relationship, and preserve native restricted buttons without addon scripts or secret-value inspection.
+- **Runtime target:** `/buggrabber reset`, `/reload`, verify aura and player tooltips, target overlap, normal and alternate frames, combat procs, boss/priority effects, long utility exclusion, harmful auras, separate debuffs, vehicle transitions and `/az` count/toggle changes.
+
+### Implementation and static verification
+
+- **Native selection policy:** Replaced the raw helpful bucket with mutually exclusive Retail candidate-filter groups: Azerite's maintained spell set first, then native boss/role auras, native personal/all-nameplate auras, and finally non-priority temporary auras with a maximum duration of 300 seconds. Hidden helpful spell IDs are excluded through the same trusted native filter contract. Harmful auras remain a complete leading group, as required by Retail's friendly-debuff secrecy policy, and use Blizzard's `UnitFrameDebuff` order.
+- **Why the groups are disjoint:** Retail 12.1's `AuraContainerAuraGroupManagerMixin` owns frames per group and does not de-duplicate an aura shared by multiple groups. Each later group therefore excludes Azerite's maintained spell set and explicitly partitions boss/role, personal-nameplate and all-nameplate booleans before the short-duration fallback.
+- **Shared capacity restored:** Attached buffs and debuffs now each feed the ordered native flow up to the configured maximum; the fixed-size clipping root enforces the original shared visible count. This removes the temporary 12-buff/4-debuff reservation, so visible debuffs consume only the slots actually needed and buffs fill the rest.
+- **Original presentation restored:** Harmful, maintained, boss/role and personal combat effects remain fully colored. Generic short effects are subdued/desaturated, matching the original distinction between actionable and background auras without inspecting live aura data in addon Lua.
+- **Hit-layer correction:** Removed `GetHighestFrameLevel(true) + 1`. The display, secure wrappers and native buttons use exactly one bounded level above the player unit button, which preserves aura tooltip input without promoting the row over every player child. The target unit button is explicitly one level above that bounded aura layer, preserving target ownership where the two frames overlap.
+- **Live-source/API evidence:** Verified against Retail 12.1 `Blizzard_CustomAuraContainer.lua`, `Blizzard_AuraContainerUtil.lua`, `Blizzard_AuraContainerGroups.lua` and `Blizzard_ManagedAuraContainer.lua`. The WoW API data confirms `C_UnitAuras.GetUnitAuraInstanceIDs` is Mainline-only and exposes native filter/sort inputs; `Frame:SetFrameLevel`, `Frame:SetClipsChildren` and the required mouse/widget methods remain current.
+- **Secret/taint boundary:** AzeriteUI performs no test, arithmetic, sorting or indexing on live aura fields. All candidate matching and duration comparisons stay inside Blizzard's native container. No `SetScript` or `HookScript` is installed on restricted aura buttons.
+- **Static verification:** `luac -p Components/UnitFrames/Auras/PlayerAuraContainers.lua`, `luac -p Components/UnitFrames/Units/Player.lua`, `luac -p Components/UnitFrames/Units/Target.lua`, and focused `git diff --check` pass.
+- **Runtime status:** `/reload` is still required for the in-client hit-order and combat-aura proof.
+
+## 2026-08-13 - Player-frame aura hit-layer follow-up
+
+- **Live retest:** Player-frame aura buttons are mouse-enabled, but hovering their visible icons opens the player unit tooltip instead of the aura tooltip.
+- **Root-cause target:** The native aura display is explicitly assigned the player frame's base frame level even though the player layout creates higher-level interactive/render children. The player unit button therefore remains the winning mouse target where the aura row overlaps its 560x180 hit rectangle.
+- **Implementation target:** Place the addon-owned aura display one level above the player's existing child hierarchy before Blizzard creates restricted aura buttons. Keep every presentation/container layer mouse-transparent and leave Blizzard's intrinsic aura scripts untouched.
+- **Runtime target:** `/buggrabber reset`, `/reload`, hover every aura slot overlapping the player frame, confirm the aura tooltip wins, then confirm empty player-frame regions still show the player tooltip and right-click cancellation still works.
+
+### Implementation and static verification
+
+- **Confirmed cause:** `PlayerAuraContainers.Create()` forced the display to `parent:GetFrameLevel()`. Both player styles raise their unit button and create overlay/health/cast children above that base, while the aura coordinates remain inside the unit frame's hit rectangle. Mouse input therefore reached the secure player unit button before the visible aura button.
+- **Fix:** The aura root now snapshots `parent:GetHighestFrameLevel(true)` before it is created and uses the next frame level. Its clip, secure visibility wrappers, native containers and restricted aura buttons inherit above that dedicated root. This applies uniformly to the standard player frame, alternate player frame, player/vehicle containers and the UIParent-owned separate debuff row.
+- **Comparison and API check:** ElvUI likewise gives unit-frame auras a dedicated raised element level. WoW API MCP confirms Retail `Frame:GetHighestFrameLevel(iterateAllChildren)` and `Frame:SetFrameLevel(frameLevel)`; no unsupported frame API was introduced.
+- **Taint boundary:** Only an AzeriteUI-owned, unrestricted root frame receives the computed level. No forbidden aura button is queried or mutated after Blizzard applies aura access restrictions, and no button script handler was added.
+- **Static verification:** `luac -p Components/UnitFrames/Auras/PlayerAuraContainers.lua` and focused `git diff --check` passed; the source scan still finds no aura-button `SetScript` or `HookScript` call.
+- **Runtime status:** `/reload` is required to prove hit-test ordering in the live client.
+
+## 2026-08-13 - Native player aura mouseover follow-up
+
+- **Live regression:** Player-frame auras render through Retail's native custom aura container, but no longer respond to mouseover, so Blizzard's intrinsic aura tooltip cannot open.
+- **Configuration evidence:** Both player layouts pass `AurasDisableMouse = false`; the missing interaction is in the native button/layer setup, not the saved option.
+- **Live-source target:** Keep Blizzard's intrinsic `AuraButton` `OnEnter`, `OnLeave`, tooltip and right-click cancellation path. Explicitly configure Retail's separate mouse-motion/click state on the aura button and make AzeriteUI's higher-level cooldown/border/clip frames mouse-transparent.
+- **Runtime target:** `/buggrabber reset`, `/reload`, verify helpful and harmful aura tooltips both out of combat and in combat, then verify right-click cancellation on a cancellable helpful aura.
+
+### Implementation and static verification
+
+- **Root cause:** The native aura migration enabled the legacy aggregate mouse flag but did not explicitly configure Retail's separate mouse-motion and mouse-click states. AzeriteUI also placed border and cooldown frames above the button without declaring those presentation layers mouse-transparent.
+- **Fix:** Added one local input-state helper. Native `CustomAuraButtonTemplate` buttons now receive matching aggregate, motion and click states from `AurasDisableMouse`; their cooldown, border, container, visibility-wrapper, clip and display layers explicitly reject mouse input.
+- **Native behavior preserved:** No `SetScript` or `HookScript` handler was added. Blizzard's intrinsic `AuraButtonPrivateMixin` still owns `OnEnter`, `OnLeave`, tooltip population and right-click aura cancellation, including secret aura data in combat.
+- **Static verification:** `luac -p Components/UnitFrames/Auras/PlayerAuraContainers.lua` and focused `git diff --check` passed; a source scan confirms the custom aura path remains free of addon button script handlers.
+- **Runtime status:** `/reload` is required to confirm tooltips and right-click cancellation under the live Retail 12.1 restricted-object path.
+
+## 2026-08-13 - Native player/vehicle aura forbidden-frame handoff follow-up
+
+- **Live error:** `SecureHandlers.lua:708: Cannot use SecureHandlers API on forbidden frames` while `PlayerAuraContainers.Create()` passes the native `CustomAuraContainerTemplate` player container to `display:SetFrameRef()`.
+- **Root-cause target:** `AddAuraGroup()` deliberately makes each custom aura container forbidden. A secure handler may manage an addon-owned wrapper, but it cannot store or operate on the forbidden container through a frame reference.
+- **Implementation target:** Remove the forbidden frame-reference relationship entirely. Give player and vehicle containers separate addon-owned secure visibility wrappers driven by complementary `[vehicleui]` visibility state drivers, while leaving Blizzard's aura containers untouched inside those wrappers.
+- **Runtime target:** `/buggrabber reset`, `/reload`, confirm both player layouts initialize, player auras appear, vehicle entry/exit switches the active native container, and no SecureHandlers/forbidden-aspect errors occur.
+
+### Implementation and static verification
+
+- **Live-source confirmation:** Retail `SecureHandlerSetFrameRef()` explicitly rejects a forbidden referenced frame. `CustomAuraContainer:AddAuraGroup()` intentionally makes the container forbidden, so the prior frame-ref bridge could never be valid even when created out of combat.
+- **Fix:** Removed `SetFrameRef`, `GetFrameRef`, the `_onstate-unit` snippet and the unit state driver from the aura display. The display is now an ordinary AzeriteUI layout frame. Separate addon-owned `SecureHandlerStateTemplate, DisableUntrustedLayoutScriptsTemplate` wrappers use complementary `[vehicleui]hide;show` and `[vehicleui]show;hide` visibility drivers, with the forbidden player/vehicle aura containers parented inside them. SecureHandlers operates only on the wrappers and never receives a custom aura container.
+- **Native pipeline preserved:** Blizzard still owns `UNIT_AURA`, secret visibility, button assignment and duration updates for both unit containers. The existing `SetEnabled`, configuration and debug paths retain direct inbound container calls and do not inspect restricted aura data.
+- **Reference comparison:** Current oUF and ElvUI likewise keep custom aura containers outside SecureHandlers frame-reference APIs; the wrapper split is AzeriteUI's vehicle-switching layer, not a replacement aura scanner.
+- **Static verification:** `luac -p Components/UnitFrames/Auras/PlayerAuraContainers.lua` passed; focused `git diff --check` passed; scans confirm no `SetFrameRef`, `GetFrameRef`, `_onstate-unit`, or state driver on the aura display remains.
+- **Runtime status:** `/reload` is required to validate normal player initialization plus a vehicle enter/exit transition in the live client.
+
+## 2026-08-13 - Retail backpack button suppression and native player-aura startup follow-up
+
+- **Live report:** Blizzard's `MainMenuBarBackpackButton` remains visible at the right edge even though AzeriteUI owns the bag/micro-menu presentation.
+- **Frame-stack evidence:** The visible frame is the Retail `MainMenuBarBackpackButton` sourced from `Blizzard_MainMenuBarBagButtons/Mainline/MainMenuBarBagButtons.xml`, anchored to `BagsBar`.
+- **Attached regression:** Native player aura creation stops in `PlayerAuraContainers.lua:125` while styling `CustomAuraButtonTemplate`, so the player aura migration also needs a narrow initialization correction before the next `/reload`.
+- **Investigation target:** Audit AzeriteUI's existing Blizzard bag-button hiding route against the live 12.1 mixins/events, then apply a non-invasive suppression that survives Blizzard layout/show refreshes. Verify the aura-button texture/mask contract against the live `CustomAuraButton` implementation and current oUF/ElvUI patterns.
+- **Runtime target:** `/buggrabber reset`, `/reload`, confirm the stock backpack icon stays hidden through login, Edit Mode, bag open/close and combat; confirm player auras initialize without the attached error.
+
+### Implementation and static verification
+
+- **Bag root cause:** Retail 12.1's `MainMenuBarBackpackMixin:SetBarExpanded()` intentionally does nothing, leaving the backpack shown regardless of the collapsed bag-bar state. The button can also render independently of a parent alpha pass. AzeriteUI's hidden-frame collection was built from live globals and iterated with `ipairs`, so the first missing global could additionally stop the parent quarantine loop before `BagsBar` was reached.
+- **Bag fix:** The generic collection now stores frame names and resolves each independently, eliminating nil holes. `MainMenuBarBackpackButton` and `BagBarExpandToggle` receive a focused visual/input suppression: immediate `Hide()`, alpha zero, mouse input disabled, and secure post-hooks that reject later `Show()`/`SetShown(true)` calls outside combat. The pass runs immediately and one frame later on the split Blizzard addon/world events, and again after AzeriteUI disables Bartender's conflicting modules. Blizzard bag events, keybindings, parents and secure attributes remain untouched.
+- **12.1 comparison:** Blizzard live `12.1.0.69273` defines the backpack as always shown; current ElvUI reparents `BagsBar` to its hidden frame and kills the expand toggle, while Bartender hides/reparents the stock bar. AzeriteUI keeps the narrower singleton suppression because it still reuses the character/reagent bag-slot buttons beside opened bags.
+- **Aura startup root cause:** `PlayerAuraContainers.lua` cached `ns.GetMedia` and `ns.GetFont`, but this repository exposes both helpers under `ns.API`; the first nil call occurred while styling the native icon. The old convenience `Texture:SetMask` method also is not a native Texture method on Blizzard's restricted custom aura texture.
+- **Aura fix:** Corrected both helper references to `ns.API` and switched the icon mask to the Retail widget contract: `Frame:CreateMaskTexture()` plus `Texture:AddMaskTexture()`. WoW API MCP confirms those native widget methods.
+- **Static verification:** `luac -p` passed for both changed Lua files; focused `git diff --check`, trailing-whitespace scanning, invalid `icon:SetMask` scanning and implementation-reference checks passed.
+- **Runtime status:** `/reload` remains required to confirm the stock backpack stays absent and native player aura creation proceeds past the attached initialization stack.
+
+## 2026-08-13 - Full Retail 12.1 player-frame aura pipeline audit (implemented; runtime verification pending)
+
+- **Live result after two filter fixes:** Combat buffs that are visible in Blizzard's secure top-right aura container still do not appear in AzeriteUI's oUF player-frame aura row.
+- **Audit scope:** Trace aura enumeration, secret-value boundaries, ownership/filter classification, sorting, button assignment, visibility, combat event delivery, and configuration refresh. Compare against the installed Retail 12.1 FrameXML, current `ketho.wow-api` definitions/MCP output, upstream oUF, ElvUI, and Bartender's ownership boundaries.
+- **Leading hypothesis to prove or reject:** The remaining failure is below `PlayerAuraFilter`; Retail's secure aura-container provider may be able to receive/display aura instances in combat that an addon-owned `UNIT_AURA` scan cannot safely enumerate or index. If confirmed, player-frame auras must move to Blizzard's Retail custom aura-container contract instead of accumulating more fail-open logic in legacy oUF enumeration.
+- **Implementation requirement:** Retail only. Remove the superseded compatibility/filter workaround from the player-frame path, retain AzeriteUI styling and `/az` settings, avoid addon script handlers on forbidden custom aura buttons, and do not branch on secret values.
+- **Runtime validation target:** `/buggrabber reset`, `/reload` with only AzeriteUI enabled, then verify pre-combat buffs, newly gained combat procs, refreshed/removed buffs, debuffs, combat entry/exit, target overlap, options toggles, and no forbidden/taint errors.
+
+### Audit result and implementation
+
+- **Root cause confirmed:** The missing combat buffs were not a remaining classification bug. The player layouts still depended on AzeriteUI's embedded legacy oUF `UNIT_AURA` scanner, while the top-right row already used Blizzard's restricted `CustomAuraContainer`. Retail can deliver and render secret combat aura state through the native provider that addon-owned enumeration cannot safely inspect.
+- **Live Interface truth:** Local `wow-ui-source` branch `live` at `eb941aad` is Retail `12.1.0.69273` (2026-08-11). `CustomAuraContainer` obtains aura IDs through its managed source, invokes addon styling before applying `DenyTaintedAccessWhenAurasAreSecret`, then owns secret visibility, duration, stack, sorting, tooltip and cancellation updates. Adding an aura group also applies `UntrustedLayoutScriptExecution`, so every container/clip dependency opts in through `DisableUntrustedLayoutScriptsTemplate`.
+- **WoW API verification:** The `ketho.wow-api` MCP reports `C_UnitAuras.GetUnitAuraInstanceIDs(unit: UnitTokenRestrictedForAddOns, filter, maxCount, sortRule, sortDirection) -> number[]`, `C_XMLUtil.GetTemplateInfo(name) -> XMLTemplateInfo`, and `UNIT_AURA(unitTarget, updateInfo)`. AzeriteUI no longer reads that event payload or aura IDs in the player-frame path.
+- **Current UI comparison:** oUF `b6d1005e` (2026-08-12, Interface 120100) deleted the old aura scanner and registers a `CustomAuraContainerTemplate` meta-element. ElvUI `554a039d` (2026-08-13, Interface 120100) creates `CustomAuraContainerTemplate, DisableUntrustedLayoutScriptsTemplate` containers and updates groups through Blizzard's inbound methods. Installed Bartender4 4.17.4 has no unit-aura renderer; its aura calls are action-button cooldown state only, so it is not an implementation source for player-frame auras.
+- **Implemented player path:** Added an AzeriteUI-owned Retail container adapter for both the normal and alternate player frames, with a declarative TOC dependency on `Blizzard_AuraContainer` so its global templates/inbound mixins exist before unit frames spawn. Each display has player and vehicle native containers, Blizzard-managed helpful/harmful groups, Azerite icon mask/border/count/cooldown styling, native dispel coloring, native tooltips and right-click buff cancellation. No script handlers are attached to custom aura buttons.
+- **Complete combat visibility policy:** The player row now accepts the native `HELPFUL` and `HARMFUL` groups instead of trying to reconstruct secret importance, ownership, duration, stack and combat predicates in Lua. Native expiration sorting keeps temporary combat effects ahead of permanent utility buffs. Attached mixed rows use a fixed 3:1 buff/debuff slot budget so the configured maximum remains a real maximum without deriving a secret live aura count; enabling the separate debuff row gives all attached slots to buffs.
+- **Legacy player cleanup:** Removed `PlayerAuraFilter`, `PlayerDebuffFilter`, `PlayerPostUpdateButton`, combat bootstrap polling, combat-boundary force scans, the alternate frame's force scans, and the unsupported advanced player filter settings/defaults. The remaining player options directly control native group counts and visibility.
+- **Forbidden-layout guard:** Container anchors and group layout changes are deferred during combat, container/button dependencies inherit the required layout template, and the clip region includes AzeriteUI's six-pixel border overhang. The display height is derived from the configured maximum, column count, icon size and spacing, so 17-32 attached auras and 9-20 separate debuffs receive enough rows without clipping.
+- **Debug update:** `/azdebug snapshot player` now enumerates the native player/vehicle helpful/harmful frame pools rather than expecting legacy indexed oUF buttons.
+- **Static verification:** `luac -p` passed for `PlayerAuraContainers.lua`, `AuraFilters.lua`, `AuraStyling.lua`, both player layout modules, unit-frame options and `Core/Debugging.lua`; `UnitFrames.xml` parsed successfully; the TOC is pinned to `120100` and declares `Blizzard_AuraContainer`; focused `git diff --check`, trailing-whitespace checks, button-script checks and legacy-player-element scans passed.
+- **Runtime status:** `/reload` is required. Retest the exact buffs that are visible in the top-right row, including buffs gained after combat begins; then test removal/refresh, debuffs, vehicle entry, target overlap, `/az` aura toggles and BugSack.
+
+## 2026-08-13 - Player combat buffs missing from the player-frame aura row
+
+- **Reported regression:** Several player-owned and combat-spell buffs do not appear on the player-frame aura row during combat.
+- **Live retest:** The first ownership-cache/nil-timing fix was insufficient. The same buffs remain absent from the player-frame row while Retail's secure top-right aura container displays them correctly.
+- **Follow-up finding:** AzeriteUI's ownership helper queries both `HELPFUL|PLAYER` and `HARMFUL|PLAYER`, then accepts either response. A helpful aura can therefore be marked conclusively non-player from the irrelevant harmful query when the helpful query is unavailable. Retail can also return safe zero timing placeholders for a genuinely expiring aura, which the filter currently mistakes for a permanent buff.
+- **Follow-up target:** Query the matching helpful/harmful player filter only, and use `C_UnitAuras.DoesAuraHaveExpirationTime` as the authoritative Retail 12.1 timed/permanent signal before applying the historical under-five-minute combat filter.
+- **Root cause:** The Retail filter already fails open when timing fields are explicitly secret, but not when WoW 12.1 temporarily omits those fields. It also loses a previously reliable player-ownership result when the `HELPFUL|PLAYER` query becomes unavailable during combat. Both cases make valid combat buffs look like irrelevant, timeless utility auras.
+- **Implemented fix:** oUF now records whether its `HELPFUL|PLAYER` ownership result was conclusive. The player filter caches conclusive ownership per aura and reuses it when the query becomes unavailable, instead of overwriting it with `false`.
+- **Missing timing fallback:** Nil `duration`/`expirationTime` fields now enter the same fail-open path as explicitly secret timing. A real helpful aura instance remains visible until Retail supplies enough data to classify it normally; readable long utility buffs still follow the existing stock filter.
+- **Static verification:** `luac -p Components/UnitFrames/Auras/AuraFilters.lua`, `luac -p Libs/oUF/elements/auras.lua`, and focused `git diff --check` passed.
+- **Runtime status:** `/reload` and live combat-proc testing are required in the 12.1 client.
+
+### 2026-08-13 live-retest follow-up implementation
+
+- **Ownership correction:** `GetIsPlayerAura` now queries only the aura's actual oUF classification (`HELPFUL|PLAYER` for buffs, `HARMFUL|PLAYER` for debuffs). An unavailable helpful ownership result can no longer be replaced by a conclusive answer from the irrelevant harmful filter.
+- **Retail duration correction:** The player filter now calls `C_UnitAuras.DoesAuraHaveExpirationTime(unit, auraInstanceID)` through a secret-safe `pcall` wrapper and caches conclusive results per aura instance. A timed combat buff remains classified as timed when its legacy `duration` and `expirationTime` payloads are zero placeholders.
+- **Historical behavior preserved:** Readable durations still use the committed stock rule (combat buffs below 301 seconds, short remaining buffs, stacks, and important/raid flags). The native predicate only supplies the missing timed/permanent distinction when Retail withholds numeric timing.
+- **Permanent-aura guard:** A conclusive native `false` keeps permanent auras on the no-duration path, so the fail-open handling does not turn every timeless utility buff into a combat aura.
+- **Static verification:** `luac -p Components/UnitFrames/Auras/AuraFilters.lua`, `luac -p Libs/oUF/elements/auras.lua`, and focused `git diff --check` passed after this follow-up.
+- **Runtime status:** `/buggrabber reset`, `/reload`, then retrigger the buffs visible in the top-right container and confirm they also remain in the player-frame aura row through combat entry/exit.
+
+## 2026-08-13 - Restore historical standalone aura timer behavior on Retail 12.1
+
+- **Requested behavior:** Match the committed standalone aura presentation: no normal duration number, a centered 18px red duration only during the final 10 seconds, and the thin remaining-time bar with its near-black track.
+- **Historical evidence:** Every recorded `Components/Auras/Auras.lua` revision from initial commit `5f56699` through release `5.3.77-JuNNeZ` (`c5dd5df`) used `Colors.red`, `GetFont(18,true)`, a centered anchor, and the absolute `timeLeft < 10` threshold.
+- **Retail-safe implementation:** The standalone cooldown's normal countdown numbers are disabled. A centered `GetFont(18,true)` `Colors.red` FontString is driven directly by a native `DurationTextBindingProperty.RemainingDuration` step curve: alpha `.85` below 10 seconds and `0` from 10 seconds upward. AzeriteUI never reads or compares the secret duration.
+- **Preserved duration bar:** The native status bar still uses `Enum.StatusBarTimerDirection.RemainingTime`, with the historical near-black track (`.05, .05, .05, .85`). Blizzard owns zero-duration handling for permanent auras.
+- **Static verification:** Retail source `12.1.0.69273` confirms `RemainingDuration = 0`; `luac -p Components/Auras/Auras.lua` and focused `git diff --check` passed.
+- **Runtime status:** `/reload` is required to verify the final-10-second transition in the live client.
+
+## 2026-08-13 - Top aura warning phase and duration-track contrast follow-up
+
+- **Superseded:** The final-10-percent/player-frame-style experiment below was replaced by the historical final-10-second behavior in the follow-up above.
+- **Reported regression:** Top aura duration text remained in its normal white/player-frame presentation during the final configured percentage, and the orange/brown duration track background reduced timer readability.
+- **Committed baseline comparison:** The last committed `Components/Auras/Auras.lua` used a separate centered red `FontString` for the warning state and a near-black duration-track background (`.05, .05, .05, .85`). The warning was toggled by addon-side `timeLeft < 10` arithmetic, which is not valid for secret aura durations in WoW 12.1.
+- **Retail-safe correction:** Blizzard's native `RemainingPercent` step curve is now bound directly to the separate centered warning text. It remains transparent above 10% and becomes bright red during the final 10%, without addon-side reads or comparisons of the secret duration. The player-frame cooldown text remains the normal phase.
+- **Contrast correction:** Restored the committed near-black duration-track background (`.05, .05, .05, .85`) instead of tinting the track with `Colors.aura`.
+- **Why this differs from the failed bridge:** The removed controller copied text and phase state through `hooksecurefunc` hooks on `FontString` setters. WoW's native `DurationTextBinding` can update the widget internally without invoking those Lua hooks, so the warning never reliably received the transition.
+- **Static verification:** `luac -p Components/Auras/Auras.lua` and focused `git diff --check` passed.
+- **Runtime status:** `/reload` is required to verify the native final-10% transition in the 12.1 client; permanent auras continue to rely on `CustomAuraButton`'s native zero-duration visibility and duration-bar handling.
+
 ## 2026-07-17 - 5.3.76-JuNNeZ release prep/finalization
 
 - Consolidated the pending release delta since `5.3.75-JuNNeZ`:
@@ -9778,3 +9940,178 @@ Files updated for release:
 - build-release.ps1 (version bump)
 - CHANGELOG.md (delta entry)
 - FixLog.md (this entry)
+## 2026-08-12 - 5.3.77 full Retail 12.1 UI modernization
+
+- **Scope:** Complete the audit follow-up against live Blizzard Interface 120100, current ElvUI, Bartender4 4.17.4, and the WoW API contracts.
+- **Auras:** Replace the removed `SecureAuraHeaderTemplate` Retail fallback with Blizzard-managed `AuraContainer` frames; preserve AzeriteUI styling and restore vehicle, temporary-enchantment, cancellation, layout, private-aura, and delta-update behavior.
+- **Action bars:** Fix startup-refresh scope defects, use authoritative secure page state, add House Editor binding suspension, update the GE LibActionButton upstream baseline, and narrow destructive Blizzard action-bar suppression.
+- **Other UI:** Remove broken/global compatibility fallbacks, harden Blizzard frame initialization for warnings/encounter widgets, and enable existing private-aura support in eligible unit layouts.
+- **Static validation target:** `luac -p` for every touched Lua file, XML parsing for touched XML, and `git diff --check`.
+- **Runtime validation target:** `/buggrabber reset` then `/reload`; verify player/vehicle auras, weapon enchants, private encounter auras, right-click cancellation, multi-row aura layout, action textures, paging, Housing, pet battle, possess/vehicle/override bars, fading, raid warnings, and encounter bars.
+- **Completed implementation:** Removed the legacy secure/manual aura path and its XML template; added native custom aura containers, player/vehicle secure switching, temporary enchants, and private-aura anchors; restored oUF incremental aura updates; updated action cooldowns to Retail duration objects; suspended bindings during House Editor; preserved Blizzard secure action-bar controllers while visually quarantining their bars; removed Bartender controller monkeypatches in favor of disabling conflicting public modules; fixed spell-book compatibility locals and enum casing; replaced removed level/desaturation globals with owned APIs/direct widget methods; and converted warning/widget startup timers to Blizzard add-on load events.
+- **Static validation:** `luac -p` passed for all 27 touched Lua files; touched XML parsed successfully; every TOC-referenced file exists; `git diff --check` passed. WoW API MCP confirmed `HOUSE_EDITOR_MODE_CHANGED`, `C_HouseEditor.IsHouseEditorActive`, duration-object cooldown APIs, private-aura registration, and `Enum.SpellBookSpellBank.Pet`.
+- **Runtime status:** A real client `/reload` cannot be executed from the repository shell; the checklist above remains mandatory before release.
+
+## 2026-08-12 - 5.3.77 live modernization regression follow-up (active)
+
+- **Observed after `/reload`:** oUF player auras repeatedly fail because `UNIT_AURA.updateInfo.isFullUpdate` is a secret boolean; Judgement charges do not decrement; action-bar buttons outside bar 1 cannot be clicked; the top aura frame no longer hides while a target exists and cannot be toggled from `/az`.
+- **Investigation target:** Restore secret-safe full-update fallback without boolean-testing secret payloads, verify Retail charge/count duration routing, inspect button hit rect/mouse state and Blizzard quarantine overlap, and reconnect native aura visibility to the saved `/az` settings.
+- **Runtime validation target:** `/buggrabber reset`, `/reload`, then verify player-frame auras, Judgement charge count/recharge, direct clicks on bars 2+, target-driven top-aura hiding, and the `/az` aura enable/visibility controls.
+
+### 2026-08-12 implementation and static verification
+
+- **oUF aura root cause:** Retail `UNIT_AURA` supplied secret `isFullUpdate` and delta-table fields. The old incremental branch performed a Lua boolean test on the secret flag. The element now detects secret payload fields with `issecretvalue()` and falls back to a public full aura scan without branching on them. Aura-filter results are also sanitized before comparisons.
+- **Judgement count root cause:** the GE fork had inserted charge-table processing ahead of Retail's display-count API. Blizzard, Bartender4, ElvUI, and current LibActionButton all route action counts through `C_ActionBar.GetActionDisplayCount`; the fork now does the same and passes its result directly to the Blizzard font string.
+- **Secondary-bar click root cause:** bars 2+ had an AzeriteUI-owned full-frame mouse blocker driven by a custom dragon-state heuristic. That blocker and its alpha/timer state machine were removed. Every bar now handles `[bonusbar:5]` through its secure visibility driver, and Retail buttons keep both `AnyDown` and `AnyUp` registered while `useOnKeyDown` selects the cast transition.
+- **Top-right aura visibility root cause:** the native aura frame was registered through a custom `vis` state snippet and the options page only returned an already-enabled Ace module. It now uses the built-in secure `visibility` driver, and `/az` edits the persistent aura module profile directly. The unused pre-Retail Blizzard-aura target option was removed.
+- **Reference verification:** compared with local live Blizzard Interface 12.1.0.69273, installed Bartender4 4.17.4 / LAB 145, installed ElvUI 15.13, and current upstream LibActionButton minor 155. WoW API MCP confirmed `UNIT_AURA`, `C_UnitAuras.IsAuraFilteredOutByInstanceID`, `C_ActionBar.GetActionDisplayCount`, `C_ActionBar.GetActionChargeDuration`, `C_Spell.GetSpellCharges`, and `C_Spell.GetSpellDisplayCount` contracts.
+- **Static verification:** `luac -p` passed for all seven Lua files changed in this follow-up; `Components/Auras/Auras.xml` parsed successfully; `git diff --check` passed.
+- **Runtime status:** repository tooling cannot execute an in-client `/reload`; the runtime checklist above remains required before release.
+
+## 2026-08-12 - 5.3.77 native aura layout taint follow-up (active)
+
+- **Observed after `/reload`:** `Frame:SetPoint()` fails with `UntrustedLayoutScriptExecution` at `Components/Auras/Auras.lua:320` while `UpdateSettings()` reanchors the Blizzard `CustomAuraContainerTemplate` debuff container relative to the buff container.
+- **Investigation target:** identify which native aura frames or layout methods become forbidden after template initialization, compare Blizzard's own container ownership/anchor flow, and keep all movable/layout changes on AzeriteUI-owned non-restricted frames.
+- **Runtime validation target:** `/buggrabber reset`, `/reload`, `/az` aura toggles/layout changes, target visibility, player/vehicle auras, temporary enchants, private auras, and combat transitions without `UntrustedLayoutScriptExecution`.
+
+### 2026-08-12 implementation and static verification
+
+- **Root cause:** `CustomAuraContainerSharedMixin:AddAuraGroup()` deliberately adds `Enum.ForbiddenAspect.UntrustedLayoutScriptExecution` to each custom container. Blizzard's live implementation explicitly documents that any addon frame anchored to such a container must inherit `DisableUntrustedLayoutScriptsTemplate` when it is created. AzeriteUI's separate private-aura row did not opt in, so anchoring it below the debuff container was rejected.
+- **Fix:** the AzeriteUI-owned private-aura row and each of its private-aura anchor children now inherit `DisableUntrustedLayoutScriptsTemplate` at creation. The native buff/debuff containers remain fully Blizzard-managed; no protected methods, parents, events, or secure container internals are overridden.
+- **Reference verification:** compared against live Blizzard Interface 12.1.0.69273 `Blizzard_CustomAuraContainer.lua`, `Blizzard_CustomAuraContainer.xml`, `Blizzard_AuraContainerFlowLayout.lua`, and `BuffFramePrivateAuraAnchorMixin`. WoW API MCP reconfirmed the `C_UnitAuras.AddPrivateAuraAnchor` and `RemovePrivateAuraAnchor` contracts.
+- **Static verification:** `luac -p Components/Auras/Auras.lua` and `git diff --check` passed.
+- **Runtime status:** an in-client `/reload` is still required to prove the forbidden-aspect relationship is accepted by the live restricted environment.
+
+## 2026-08-12 - 5.3.77 Blizzard bar leakage and aura timer-direction follow-up (active)
+
+- **Observed after `/reload`:** Blizzard stance, micro-menu, and bag controls are visible over AzeriteUI even though AzeriteUI supplies its own controls. Frame Stack identifies `StanceButton2`, `GuildMicroButton`, `MainMenuBarBackpackButton`, `MicroMenu`, `BagsBar`, and `MicroButtonAndBagsBar` from the split Retail Blizzard action-bar modules.
+- **Aura regression:** AzeriteUI's native custom-aura duration text counts down correctly, but the attached status bar fills/counts upward.
+- **Investigation target:** compare the live Blizzard split-module load/child-frame behavior and `CustomAuraButtonMixin:SetDurationBar()` contract, then quarantine the exact Blizzard-owned controls without disabling secure machinery and configure the owned aura bar for remaining-time countdown.
+- **Runtime validation target:** `/buggrabber reset`, `/reload`, then verify no Blizzard stance/micro/bag controls remain visible or mouse-active; confirm player and vehicle aura bars shrink toward zero while their text counts down; recheck action-bar clicks, Edit Mode, pet battle, possess, vehicle, and override transitions.
+
+### 2026-08-12 implementation and static verification
+
+- **Aura timer root cause:** `CustomAuraButtonMixin:SetDurationBar()` processes a duration-bar options table and passes its `direction` to `StatusBar:SetTimerDuration()`. Omitting the table selected `Enum.StatusBarTimerDirection.ElapsedTime`, so the bar filled upward while the separate duration-text binding correctly displayed remaining time. AzeriteUI now explicitly requests `RemainingTime`.
+- **Blizzard control leakage root cause:** the split Retail UI creates stance, micro-menu, and bag controls as independently rendered/clickable button frames. Parent-container alpha quarantine did not suppress those child visuals. AzeriteUI now quarantines the native stance buttons, micro buttons, backpack, and bag expand toggle directly and reapplies the pass when `Blizzard_ActionBar`, `Blizzard_MicroMenu`, or `Blizzard_MainMenuBarBagButtons` loads. Secure Blizzard events/controllers remain registered.
+- **Owned-control preservation:** character/reagent bag-slot buttons are not permanently quarantined because `Components/Misc/Containers.lua` reparents them onto AzeriteUI-managed bag frames. The native micro buttons remain usable as secure `/click` targets for AzeriteUI's custom text menu even though their Blizzard visuals and mouse hit regions are suppressed.
+- **Retail micro-menu modernization:** removed the obsolete separate `SpellbookMicroButton` / `TalentMicroButton` path, added `PlayerSpellsMicroButton` and `HousingMicroButton`, and retained both key-down and key-up registration under the Retail action-button CVar.
+- **Reference verification:** live Blizzard Interface defines native duration bars through `StatusBar:SetTimerDuration(duration, interpolation, direction)` and splits the relevant controls across `Blizzard_ActionBar`, `Blizzard_MicroMenu`, and `Blizzard_MainMenuBarBagButtons`. WoW API MCP confirmed `Enum.StatusBarTimerDirection.ElapsedTime = 0`, `RemainingTime = 1`, and the current `StatusBar:SetTimerDuration` signature. Bartender4's current Retail lists corroborated the micro and bag control names.
+- **Static verification:** `luac -p` passed for `Components/Auras/Auras.lua`, `Components/ActionBars/Compatibility/HideBlizzard.lua`, and `Components/ActionBars/Elements/MicroMenu.lua`; `git diff --check` passed.
+- **Runtime status:** the repository shell cannot execute the WoW client `/reload`; the focused live checklist above remains required.
+
+## 2026-08-12 - 5.3.77 action bar 2, cooldown text scale, and queue-eye follow-up (active)
+
+- **Observed after `/reload`:** only AzeriteUI action bar 2 remains unclickable; action-button cooldown text is duplicated/oversized over the 44px buttons; and `QueueStatusButton` (the dungeon queue eye) is detached from the intended minimap placement.
+- **Frame Stack evidence:** native `ActionButton3` and `ActionButton4` remain above AzeriteUI bar 2 despite being visually transparent; the queue eye is anchored to Blizzard's now-quarantined `MicroMenu` instead of AzeriteUI's minimap owner.
+- **Investigation target:** make native-button mouse quarantine survive Blizzard input-state refreshes, keep only AzeriteUI's owned cooldown number, and make the queue-eye minimap parent/anchor durable across Blizzard `SetParent`/`SetPoint` updates.
+- **Runtime validation target:** `/buggrabber reset`, `/reload`, click every bar-2 button with the mouse, confirm its keybindings and page remain correct, verify one fitted cooldown number per button, and queue/leave LFG while checking the eye stays at the configured minimap position.
+
+### 2026-08-12 implementation and static verification
+
+- **Action bar 2 root cause:** Retail's transparent native action buttons remained at frame level 52 above AzeriteUI bar 2 and could regain mouse input after the startup quarantine. The quarantine now securely hooks each native frame's mouse-input setters and immediately reapplies click/motion suppression without reparenting, unregistering, or disabling Blizzard's secure action machinery.
+- **Cooldown text root cause:** AzeriteUI registered its own `cooldownCount` while explicitly enabling the Cooldown widget's native countdown, producing two duration numbers on the same button. The main cooldown now keeps Blizzard's number hidden and renders only AzeriteUI's fitted font. Charge cooldown behavior remains separate.
+- **Queue-eye root cause:** the minimap skin used a one-shot parent/anchor and retained the old `MicroButtonAndBagsBar` owner. Retail 12.1 can subsequently attach `QueueStatusButton` to the split `MicroMenu`/`MicroMenuContainer` layout. AzeriteUI now loads the Retail queue module through `C_AddOns`, uses `MicroMenuContainer` as the Blizzard owner, and keeps the Azerite minimap parent/anchor stable through narrow `SetParent` and `SetPoint` hooks while that skin is enabled.
+- **Reference verification:** corrected the target to the local live Blizzard Interface 12.1.0.69273 mirror. Its Retail action-button template confirms the frame-level-500 text overlay and separate main/charge cooldown widgets; the user's 12.1 Frame Stack supplies the live queue-owner/anchor evidence. WoW API MCP confirms `Cooldown:SetHideCountdownNumbers` and `C_AddOns.LoadAddOn` on Mainline.
+- **Static verification:** `luac -p` passed for all three touched Lua files and `git diff --check` passed.
+- **Runtime status:** an in-client `/reload` is required to prove mouse input, cooldown rendering, and queue transitions in Retail's secure environment.
+
+## 2026-08-12 - 5.3.77 target-of-target secret class-color follow-up (active)
+
+- **Observed in Retail 12.1.0.69273:** `Libs/oUF/elements/health.lua:145` raises `attempted to index a table that cannot be indexed with secret keys` while updating `targettarget` in a party instance.
+- **Runtime evidence:** `UnitClass("targettarget")` returned a secret class token and the health element used it directly as `self.colors.class[class]`. The ToT health element had `colorClass`, `colorReaction`, and `colorThreat` enabled.
+- **Investigation target:** audit every health-color table lookup and neighboring oUF unit-color implementation for secret strings/numbers, then fail safely to a non-secret fallback color without testing or indexing secret metadata.
+- **Runtime validation target:** `/buggrabber reset`, `/reload`, enter a party instance, cycle targets whose target-of-target changes between players/NPCs, and confirm ToT health/class/reaction/threat coloring updates without new secret-value errors.
+
+### 2026-08-12 implementation and static verification
+
+- **Root cause:** the partial WoW 12 health-color guard sanitized threat, selection, and reaction only after some values had already participated in branch logic, and did not sanitize `UnitClass()` at all. The reported secret class filename therefore reached `self.colors.class[class]` as a forbidden table key.
+- **Shared health fix:** all unit-derived health-color predicates now fail closed when secret, and class, threat, selection, and reaction colors use a single guarded lookup. If Blizzard restricts a color key, the element uses AzeriteUI's ordinary health color instead of branching on or indexing the secret value.
+- **Related color audit:** applied the same rules to the shared Power element, including secret power tokens/types and alternative RGB values, and to AzeriteUI's nameplate-specific health-color override. Player, target, ToT, party, raid, arena, boss, and nameplate color paths now share the same safe behavior.
+- **Reference verification:** the local oUF and ElvUI baselines still perform direct unit-derived color indexing and do not account for the attached Retail 12.1 secret class token. WoW API MCP reconfirmed the `UnitClass`, `UnitThreatSituation`, `UnitReaction`, `UnitPowerType`, and `UnitSelectionType` return contracts; the live BugSack locals provide the 12.1 secrecy evidence.
+- **Static verification:** `luac -p` passed for `Libs/oUF/elements/health.lua`, `Libs/oUF/elements/power.lua`, and `Components/UnitFrames/Units/NamePlates.lua`; `git diff --check` passed.
+- **Runtime status:** an in-client `/reload` remains required to verify restricted party-instance units and nameplates under Retail's live secret-value policy.
+
+## 2026-08-12 - 5.3.77 all-action-bar native input-layer follow-up (active)
+
+- **Observed after `/reload`:** mouse clicks fail on individual buttons across AzeriteUI action bars 1, 2, and 3 rather than on bar 2 alone.
+- **Frame Stack evidence:** transparent Blizzard `ActionButton1` / `ActionButton12` frames remain at level 52 over AzeriteUI-owned buttons at levels 2-5; their positions can overlap buttons on several custom bars independently of action paging.
+- **Investigation target:** give every AzeriteUI-owned secure action bar and button an explicit, durable input/render layer above the retained Blizzard action buttons without reparenting or disabling Blizzard's secure controllers.
+- **Runtime validation target:** `/buggrabber reset`, `/reload`, then mouse-click all twelve buttons on action bars 1-8 before and during combat; verify keybindings, drag/drop, tooltips, paging, vehicle/override/possess states, cooldown text, and no newly visible Blizzard controls.
+
+### 2026-08-12 implementation and static verification
+
+- **Root cause:** AzeriteUI created each secure action bar at UIParent's default level 1 and its buttons at levels 2-5. Retail 12.1 retains transparent native action buttons at level 52, so their scattered Edit Mode positions could intercept different AzeriteUI buttons across bars 1-3 even though the Blizzard art was invisible.
+- **Fix:** the shared Retail action-bar prototype now creates every AzeriteUI bar at frame level 100 and every owned secure action button at the bar level plus one. Existing cooldown and overlay children continue deriving their levels from the owned button, keeping the entire clickable/rendered stack coherent.
+- **Taint boundary:** only AzeriteUI-owned frames are raised. Blizzard action buttons, parents, events, secure attributes, and controllers are not reparented, unregistered, or assigned new anchors/levels.
+- **Reference verification:** Retail 12.1 FrameXML keeps `ActionButtonTemplate` text overlays at level 500; the live Frame Stack shows native action buttons at level 52. ElvUI exposes explicit bar strata/levels and removes native bars; Bartender4 hides/reparents native action targets. AzeriteUI instead retains Blizzard machinery and resolves the collision on its own input layer. WoW API MCP confirms `Frame:SetFrameLevel(number)` and `Frame:GetHighestFrameLevel(iterateAllChildren)` on Mainline.
+- **Static verification:** `luac -p Components/ActionBars/Prototypes/ActionBar.lua` and `git diff --check` passed.
+- **Runtime status:** an in-client `/reload` is required to confirm all mouse targets under Retail's live secure execution.
+
+## 2026-08-12 - 5.3.77 top-aura duration fit and percentage warning follow-up (active)
+
+- **Observed after `/reload`:** top aura duration text uses an oversized centered red font, causing adjacent long-duration labels such as `20m` to overlap. The red state is permanent instead of warning only near expiration.
+- **Requested behavior:** match the player-frame aura timer presentation, keep every duration label inside its 36px aura icon, and turn red only during the final 10% of that aura's total duration.
+- **Investigation target:** use Retail 12.1's native duration-text binding and remaining-percent color curve so restricted aura durations never enter addon arithmetic or comparison logic.
+- **Runtime validation target:** `/buggrabber reset`, `/reload`, then compare top and player-frame aura labels with short and 60-minute buffs; confirm labels do not overlap and a 60-minute aura changes red at roughly 6 minutes remaining, not 20 minutes.
+
+### 2026-08-12 implementation and static verification
+
+- **Root cause:** the new top aura styling assigned a centered 18px font and permanent red vertex color to Blizzard's native duration text. Three-character minute labels could exceed the 36px icon and every duration looked urgent regardless of its percentage remaining.
+- **Fit fix:** top aura durations now use the same 14px Azerite font size and off-white base color as player-frame aura timers. The font string is constrained between 2px left/right insets at the top of its icon, limited to one non-wrapping line, and can no longer spill into adjacent aura buttons.
+- **Percentage warning:** a Retail `LuaColorCurveObject` with `Enum.LuaCurveType.Step` drives the native duration text binding from `Enum.DurationTextBindingProperty.RemainingPercent`. It is red from 0% through the final 10% and off-white above 10%; a 60-minute aura therefore warns at about 6 minutes rather than at an absolute 20-minute threshold.
+- **Secret-value safety:** Blizzard's `DurationTextBinding` evaluates the potentially restricted duration property and applies its curve directly to the FontString. AzeriteUI never reads, divides, compares, or branches on the aura duration.
+- **Reference verification:** Retail 12.1 generated API documentation defines `RemainingPercent = 1`, `DurationTextBindingColorOptions`, and `DurationTextBinding:SetTextColorCurve(curve, property)`; live `Blizzard_CustomAuraButton.lua` applies the configured curve through `SetDurationText`.
+- **Static verification:** `luac -p Components/Auras/Auras.lua` and `git diff --check` passed.
+- **Runtime status:** an in-client `/reload` is still required to confirm exact font fit and the live 10% color transition.
+
+## 2026-08-12 - 5.3.77 centered auto-fit aura warning follow-up (active)
+
+- **Observed after `/reload`:** the 14px top-left duration field clips short second labels and the remaining-percent curve does not visibly turn the final duration red.
+- **Requested behavior:** retain player-frame-style duration formatting, center the timer over the icon, allow the final warning to appear slightly larger, automatically shrink longer labels inside the icon, and use red only for the final 10%.
+- **Investigation target:** keep a single Blizzard-managed duration binding, allow its dynamic vertex color, and forward its potentially secret text directly through Retail 12.1 `FontString:SetTextToFit` without inspecting it.
+- **Runtime validation target:** `/buggrabber reset`, `/reload`, then verify minute labels and second labels remain centered and uncropped; confirm labels are off-white above 10% and visibly red at or below 10% remaining.
+
+### 2026-08-12 implementation and static verification
+
+- **Root cause:** the 14px follow-up constrained Blizzard's duration FontString to a shallow top-aligned field, which clipped glyphs vertically. The dynamic-color state was left implicit and the warning used the subdued base red, so the intended final-10% transition was not reliably visible in the client.
+- **Fit fix:** the duration field now fills the aura icon with 2px insets, stays horizontally and vertically centered, and uses the Azerite 18px font as a maximum. Retail's secret-safe `FontString:SetTextToFit` automatically reduces longer labels so they remain inside the 36px icon; short final-second labels retain the larger size.
+- **Pool/update fix:** secure post-hooks refit text assigned through `SetText` or `SetFormattedText`, and the fit is refreshed when a pooled aura button is shown. The label itself is never parsed or compared by AzeriteUI.
+- **Percentage warning:** dynamic FontString coloring is explicitly enabled and the native step curve uses bright red from 0% through 10% remaining, then the normal player-frame-style off-white color above 10%.
+- **Secret-value safety:** no addon-side duration arithmetic, threshold comparison, or text inspection was added. Potentially restricted text is passed unchanged from `GetText()` to the Retail widget fitter, while Blizzard's duration binding evaluates `RemainingPercent` and applies the color.
+- **Static verification:** `luac -p Components/Auras/Auras.lua` and focused `git diff --check` passed; only the repository's existing LF-to-CRLF notices were emitted.
+- **Runtime status:** an in-client `/reload` is required to confirm the exact centered fit and live final-10% bright-red transition.
+
+## 2026-08-12 - 5.3.77 aura auto-fit forbidden-aspect regression (fixed; runtime verification pending)
+
+- **Observed after the centered auto-fit change:** Retail 12.1.0.69273 reports `Button:SetShown(): Cannot be called with secrets due to existing script handlers` while `CustomAuraContainer:AddAuraGroup()` creates its first pooled batch in `Blizzard_AuraContainerFrameProviders.lua:79`.
+- **Runtime evidence:** the failing object is a forbidden `CustomAuraButtonTemplate` frame owned by Blizzard's aura frame provider. BugSack reports no Lua taint, but the button has acquired an addon script handler before Blizzard applies its secret visibility state.
+- **Likely regression:** `Components/Auras/Auras.lua:155` now installs an `OnShow` hook on every custom aura button to refit duration text. Retail subsequently calls `SetShown(secret)` on that same button, and the existing addon handler makes the operation forbidden. The FontString method hooks must also be reviewed before retaining any auto-fit implementation.
+- **Deferred action:** do not attempt another fix tonight. Tomorrow, remove all addon script handlers from Blizzard-managed aura buttons and redesign duration fitting around declarative FontString bounds/native binding behavior only, then recheck the 10% color transition separately.
+- **Required validation:** `/buggrabber reset`, `/reload` with only AzeriteUI enabled first; confirm aura groups initialize without the `SetShown(secret)` failure, then test pooled aura assignment/removal, vehicle transitions, target visibility, long-label fitting, and final-10% warning color.
+
+### 2026-08-13 implementation and static verification
+
+- **Confirmed root cause:** Retail's custom frame provider runs AzeriteUI's `initializeFrame` callback and then immediately calls `auraFrame:UpdateAuraDisplay()`. `CustomAuraButtonPrivateMixin:ApplyVisibility()` passes a secret boolean to `self:SetShown()`, which is forbidden after AzeriteUI's new `button:HookScript("OnShow", ...)` installed an addon script handler on that button.
+- **Fix:** removed the `OnShow` hook from every AzeriteUI custom aura button. The initializer now explicitly documents that `CustomAuraButtonTemplate` frames must remain free of addon script handlers so Blizzard can own their secret visibility state.
+- **Fitting path retained:** the duration FontString remains centered with an 18px maximum and its `SetText`/`SetFormattedText` method post-hooks forward the resulting text into `SetTextToFit`. These are FontString method hooks, not frame script handlers; Retail's generated API marks `SetTextToFit` as `AllowedWhenTainted` and propagates the Text secret aspect.
+- **Native behavior preserved:** Blizzard's `DurationTextBinding` still owns duration formatting and the final-10% color curve. No aura duration, remaining percentage, or secret visibility value enters AzeriteUI logic.
+- **Static verification:** `luac -p Components/Auras/Auras.lua` and focused `git diff --check` passed; a source scan confirms the aura component no longer calls `HookScript` or `SetScript` on its custom aura buttons.
+- **Runtime status:** `/reload` is required to confirm initial batch creation and later pooled-button reuse under the live Retail 12.1 secret-value policy.
+
+## 2026-08-13 - 5.3.77 player-style top-aura timer phase follow-up (active)
+
+- **Observed after `/reload`:** the centered top-aura duration binding still truncates labels such as `6m`, and zero-duration/permanent auras can show an empty-looking timer bar.
+- **Requested behavior:** use the player-frame aura countdown presentation normally, switch to a centered larger bright-red label only during the final 10%, and make permanent-aura bars absent or visually full.
+- **Investigation result:** player-frame auras use `CooldownFrameTemplate` with a 14px off-white countdown anchored at `TOPLEFT (-4, 4)`. Retail's custom aura button can drive a native cooldown, duration text binding, and status bar from the same stable duration object without exposing its secret values to addon logic.
+- **Implementation target:** use the native cooldown for the normal phase, use a hidden duration-binding controller to route secret-safe phase alpha into normal/final FontStrings, keep the final label centered and fitted, and give zero-duration bars a full colored track.
+- **Runtime validation target:** `/buggrabber reset`, `/reload`, then verify normal minute labels match player-frame auras, the top-left label hands off to one centered red label at 10%, permanent auras have a full track, timed bars count down, and no `SetShown(secret)` error returns.
+
+### 2026-08-13 implementation and static verification
+
+- **Normal timer:** top auras now use the same `CooldownFrameTemplate` countdown presentation as player-frame auras: Azerite 14px off-white text, `TOPLEFT (-4, 4)`, no edge/bling, transparent swipe, visible countdown numbers, and the same abbreviation threshold. Removing the constrained centered field eliminates the reported `6m` ellipsis.
+- **Final-10% handoff:** an invisible native `DurationTextBinding` controller evaluates `RemainingPercent`. Its curve encodes normal/final opacity in separate color channels; the controller's secret channel values are passed unchanged into `FontString:SetAlpha`, hiding the top-left countdown and showing one fitted 18px centered bright-red warning during the final 10%.
+- **Secret-value boundary:** `SimpleRegion:SetAlpha` and `SimpleFontString:SetTextToFit` are both documented as `AllowedWhenTainted` and propagate their respective secret aspects. AzeriteUI performs no comparison, arithmetic, boolean test, formatting, or table indexing on the secret text/percentage/alpha values.
+- **Permanent bars:** the duration bar now has a full dimmed aura-colored track. A zero-duration aura therefore looks permanently full instead of empty, while the bright native timer fill still drains over that track for timed auras.
+- **Forbidden-object safety:** the implementation uses method post-hooks only on the invisible controller FontString. It adds no `HookScript` or `SetScript` handler to `CustomAuraButtonTemplate`, preserving Blizzard's secret `SetShown` path.
+- **Static verification:** `luac -p Components/Auras/Auras.lua` and focused `git diff --check` passed.
+- **Runtime status:** `/reload` is required to verify the native cooldown/controller handoff and pooled zero-duration state in Retail 12.1.

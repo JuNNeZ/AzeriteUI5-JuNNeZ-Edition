@@ -83,12 +83,15 @@ end
 
 local GetIsPlayerAura = function(unit, data)
 	local auraInstanceID = data and data.auraInstanceID
-	local helpfulFiltered = SafeIsAuraFilteredOut(unit, auraInstanceID, "HELPFUL|PLAYER")
-	local harmfulFiltered = SafeIsAuraFilteredOut(unit, auraInstanceID, "HARMFUL|PLAYER")
-	if (helpfulFiltered ~= nil or harmfulFiltered ~= nil) then
-		return (helpfulFiltered == false) or (harmfulFiltered == false)
+	local baseFilter = (data and data.isHarmfulAura == true) and "HARMFUL" or "HELPFUL"
+	local filtered = SafeIsAuraFilteredOut(unit, auraInstanceID, baseFilter .. "|PLAYER")
+	if (filtered ~= nil) then
+		return filtered == false, true
 	end
-	return SafeBool(data and data.isPlayerAura)
+	if (data and data.__AzeriteUI_isPlayerAuraKnown) then
+		return SafeBool(data.isPlayerAura), true
+	end
+	return false, false
 end
 
 local GetIsHarmful = function(unit, data)
@@ -127,35 +130,6 @@ local IsImportantAura = function(unit, data, isHarmful)
 		or HasAuraToken(unit, auraInstanceID, baseFilter, "CROWD_CONTROL")
 		or HasAuraToken(unit, auraInstanceID, baseFilter, "BIG_DEFENSIVE")
 		or HasAuraToken(unit, auraInstanceID, baseFilter, "EXTERNAL_DEFENSIVE")
-end
-
-local GetImportantAuraFlags = function(unit, data, isHarmful)
-	local auraInstanceID = data and data.auraInstanceID
-	local baseFilter = isHarmful and "HARMFUL" or "HELPFUL"
-	local isStealable = SafeBool(data and data.isStealable)
-	if (not auraInstanceID) then
-		return {
-			important = isStealable,
-			raidInCombat = false,
-			crowdControl = false,
-			bigDefensive = false,
-			externalDefensive = false,
-			stealable = isStealable
-		}
-	end
-	local raidInCombat = HasAuraToken(unit, auraInstanceID, baseFilter, "RAID_IN_COMBAT")
-	local crowdControl = HasAuraToken(unit, auraInstanceID, baseFilter, "CROWD_CONTROL")
-	local bigDefensive = HasAuraToken(unit, auraInstanceID, baseFilter, "BIG_DEFENSIVE")
-	local externalDefensive = HasAuraToken(unit, auraInstanceID, baseFilter, "EXTERNAL_DEFENSIVE")
-	local important = isStealable or HasAuraToken(unit, auraInstanceID, baseFilter, "IMPORTANT")
-	return {
-		important = important or raidInCombat or crowdControl or bigDefensive or externalDefensive,
-		raidInCombat = raidInCombat,
-		crowdControl = crowdControl,
-		bigDefensive = bigDefensive,
-		externalDefensive = externalDefensive,
-		stealable = isStealable
-	}
 end
 
 local HasDisplayIdentity = function(button)
@@ -198,30 +172,8 @@ local HasAnyDisplayedApplications = function(unit, data)
 	return displayCount ~= nil and displayCount ~= ""
 end
 
-local IsHelpfulRaidAura = function(unit, data)
-	local auraInstanceID = data and data.auraInstanceID
-	if (not unit or not auraInstanceID) then
-		return false, false
-	end
-	local helpfulRaid = SafeIsAuraFilteredOut(unit, auraInstanceID, "HELPFUL|RAID") == false
-	local helpfulPlayerRaid = SafeIsAuraFilteredOut(unit, auraInstanceID, "HELPFUL|PLAYER|RAID") == false
-	return helpfulRaid, helpfulPlayerRaid
-end
-
-local IsCancelableHelpfulAura = function(unit, data)
-	local auraInstanceID = data and data.auraInstanceID
-	if (not unit or not auraInstanceID) then
-		return false
-	end
-	return SafeIsAuraFilteredOut(unit, auraInstanceID, "HELPFUL|CANCELABLE") == false
-end
-
 local IsShortRemainingAura = function(timeLeft)
 	return (type(timeLeft) == "number" and timeLeft > 0 and timeLeft < 31) and true or false
-end
-
-local HasTrackedTemporaryDuration = function(button, duration, maxDuration)
-	return ((not button.noDuration) and type(duration) == "number" and duration < maxDuration) and true or false
 end
 
 local GetAuraOwnerFrame = function(button)
@@ -230,21 +182,6 @@ local GetAuraOwnerFrame = function(button)
 	end
 	local parent = button:GetParent()
 	return parent and parent.__owner or nil
-end
-
-local PlayerFrameMod
-local GetPlayerAuraProfile = function()
-	if (not PlayerFrameMod and ns.GetModule) then
-		PlayerFrameMod = ns:GetModule("PlayerFrame", true)
-	end
-	return PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or nil
-end
-
-local GetPlayerAuraSetting = function(profile, key, fallback)
-	if (profile and profile[key] ~= nil) then
-		return profile[key] and true or false
-	end
-	return fallback and true or false
 end
 
 local PartyFrameMod
@@ -260,271 +197,6 @@ local GetPartyAuraSetting = function(profile, key, fallback)
 		return profile[key] and true or false
 	end
 	return fallback and true or false
-end
-
-local PlayerAuraDebugState = {}
-local PlayerAuraStableState = {}
-
-local DebugPlayerAuraDecision = function(button, unit, data, decision, reason, useStockBehavior)
-	if (not (ns and ns.API and ns.API.DEBUG_AURAS)) then
-		return decision
-	end
-
-	local name = SafeKey(data and data.name)
-	local filter = ns.API.DEBUG_AURA_FILTER
-	if (type(filter) == "string" and filter ~= "") then
-		if (type(name) ~= "string" or not name:find(filter, 1, true)) then
-			return decision
-		end
-	end
-
-	local auraInstanceID = SafeKey(data and data.auraInstanceID)
-	local spellID = GetAuraSpellID(data)
-	local key = tostring(unit) .. ":" .. tostring(auraInstanceID or spellID or name or "unknown")
-	local state = tostring(decision and true or false) .. "|" .. tostring(reason)
-	if (PlayerAuraDebugState[key] == state) then
-		return decision
-	end
-	PlayerAuraDebugState[key] = state
-
-	local payload = table.concat({
-		"AzeriteUI player aura filter:",
-		tostring(name),
-		"show", tostring(decision),
-		"reason", tostring(reason),
-		"mode", useStockBehavior and "stock" or "custom",
-		"unit", tostring(unit),
-		"id", tostring(auraInstanceID),
-		"spell", tostring(spellID),
-		"harmful", tostring(button and button.isHarmful),
-		"player", tostring(button and button.isPlayer),
-		"duration", tostring(button and button.duration),
-		"timeLeft", tostring(button and button.timeLeft)
-	}, " ")
-
-	if (DLAPI and DLAPI.DebugLog) then
-		local ok = pcall(DLAPI.DebugLog, "AzeriteUI", payload)
-		if (ok) then
-			return decision
-		end
-	end
-
-	print("|cff33ff99", payload)
-
-	return decision
-end
-
-ns.AuraFilters.PlayerAuraFilter = function(button, unit, data)
-
-	local auraInstanceID = SafeKey(data.auraInstanceID)
-	local auraKey = tostring(unit) .. ":" .. tostring(auraInstanceID or GetAuraSpellID(data) or SafeKey(data.name) or "unknown")
-	local stable = PlayerAuraStableState[auraKey] or {}
-	PlayerAuraStableState[auraKey] = stable
-
-	local expiration = SafeNumber(data.expirationTime, nil)
-	local duration = SafeNumber(data.duration, 0)
-	button.spell = SafeKey(data.name)
-	if (expiration) then
-		button.timeLeft = expiration - GetTime()
-		button.expiration = expiration
-	else
-		button.timeLeft = nil
-		button.expiration = nil
-	end
-	button.duration = duration
-	button.noDuration = duration == 0
-	button.isPlayer = GetIsPlayerAura(unit, data)
-	button.spellID = GetAuraSpellID(data)
-	local rawCanApplyAura = nil
-	if (not (IsSecret and IsSecret(data.canApplyAura))) then
-		rawCanApplyAura = data.canApplyAura and true or false
-	end
-	if (rawCanApplyAura ~= nil) then
-		stable.canApplyAura = rawCanApplyAura
-	end
-	local canApplyAura = stable.canApplyAura and true or false
-	data.__AzeriteUI_isPlayerAura = button.isPlayer and true or false
-	data.__AzeriteUI_canApplyAura = canApplyAura
-	local isHarmful = GetIsHarmful(unit, data)
-	local importantFlags = GetImportantAuraFlags(unit, data, isHarmful)
-	local isImportant = importantFlags.important
-	data.__AzeriteUI_isImportant = isImportant and true or false
-	data.__AzeriteUI_isRaidInCombat = importantFlags.raidInCombat and true or false
-	data.__AzeriteUI_isBigDefensive = importantFlags.bigDefensive and true or false
-	data.__AzeriteUI_isExternalDefensive = importantFlags.externalDefensive and true or false
-	data.__AzeriteUI_isCrowdControl = importantFlags.crowdControl and true or false
-	data.__AzeriteUI_isStealable = importantFlags.stealable and true or false
-	local applications = SafeNumber(data.applications, 0)
-	local hasDisplayedApplications = HasDisplayedApplications(unit, data)
-	local hasAnyDisplayedApplications = HasAnyDisplayedApplications(unit, data)
-	local helpfulRaid, helpfulPlayerRaid = IsHelpfulRaidAura(unit, data)
-	local isCancelableHelpful = (not isHarmful) and IsCancelableHelpfulAura(unit, data)
-	local durationSecret = IsSecret and IsSecret(data.duration)
-	local expirationSecret = IsSecret and IsSecret(data.expirationTime)
-	local applicationsSecret = IsSecret and IsSecret(data.applications)
-	local profile = GetPlayerAuraProfile()
-	local useStockBehavior = GetPlayerAuraSetting(profile, "playerAuraUseStockBehavior", true)
-	local debuffsOnly = GetPlayerAuraSetting(profile, "playerAuraDebuffsOnly", false)
-	data.__AzeriteUI_secretHelpfulFallback = false
-
-	-- Hide blacklisted auras.
-	if (button.spellID and Hidden[button.spellID]) then
-		return DebugPlayerAuraDecision(button, unit, data, nil, "hidden_blacklist", useStockBehavior)
-	end
-
-	if (SafeBool(data.isBossDebuff)) then
-		return DebugPlayerAuraDecision(button, unit, data, true, "show_boss", useStockBehavior)
-	end
-
-	if (debuffsOnly) then
-		return DebugPlayerAuraDecision(button, unit, data, isHarmful, isHarmful and "debuffs_only" or "debuffs_only_hidden", useStockBehavior)
-	end
-
-	-- Show whitelisted auras.
-	if (button.spellID and Spells[button.spellID]) then
-		return DebugPlayerAuraDecision(button, unit, data, true, "show_whitelist", useStockBehavior)
-	end
-
-	local hasStacks = (applications > 1) or hasDisplayedApplications
-	local hasAnyStackSignal = (applications > 0) or hasAnyDisplayedApplications
-	local isShortAura = IsShortRemainingAura(button.timeLeft)
-	local isPlayerCombatBuff = (not isHarmful) and (button.isPlayer or canApplyAura)
-	local hasCombatDuration = HasTrackedTemporaryDuration(button, duration, 181)
-	local hasUtilityDuration = HasTrackedTemporaryDuration(button, duration, 121)
-	local hasStockCombatDuration = HasTrackedTemporaryDuration(button, duration, 301)
-	local showDebuffs = GetPlayerAuraSetting(profile, "playerAuraShowDebuffs", true)
-	local showImportant = GetPlayerAuraSetting(profile, "playerAuraShowImportantAuras", true)
-	local showImportantDefensives = GetPlayerAuraSetting(profile, "playerAuraShowImportantDefensives", true)
-	local showImportantExternals = GetPlayerAuraSetting(profile, "playerAuraShowImportantExternals", true)
-	local showImportantCrowdControl = GetPlayerAuraSetting(profile, "playerAuraShowImportantCrowdControl", true)
-	local showImportantStealable = GetPlayerAuraSetting(profile, "playerAuraShowImportantStealable", true)
-	local showRaid = GetPlayerAuraSetting(profile, "playerAuraShowRaidAuras", true)
-	local showRaidGeneral = GetPlayerAuraSetting(profile, "playerAuraShowRaidGeneral", true)
-	local showRaidCombat = GetPlayerAuraSetting(profile, "playerAuraShowRaidCombat", true)
-	local showStacks = GetPlayerAuraSetting(profile, "playerAuraShowStackingAuras", true)
-	local showShortBuffsInCombat = GetPlayerAuraSetting(profile, "playerAuraShowShortBuffsInCombat", true)
-	local showShortCombatPlayerBuffs = GetPlayerAuraSetting(profile, "playerAuraShowShortCombatPlayerBuffs", true)
-	local showShortCombatNonCancelable = GetPlayerAuraSetting(profile, "playerAuraShowShortCombatNonCancelable", true)
-	local showShortBuffsOutOfCombat = GetPlayerAuraSetting(profile, "playerAuraShowShortBuffsOutOfCombat", true)
-	local showShortUtilityPlayerBuffs = GetPlayerAuraSetting(profile, "playerAuraShowShortUtilityPlayerBuffs", true)
-	local showShortUtilityNonCancelable = GetPlayerAuraSetting(profile, "playerAuraShowShortUtilityNonCancelable", true)
-	local showLongUtilityBuffs = GetPlayerAuraSetting(profile, "playerAuraShowLongUtilityBuffs", false)
-	local allowImportantDefensive = showImportantDefensives and importantFlags.bigDefensive
-	local allowImportantExternal = showImportantExternals and importantFlags.externalDefensive
-	local allowImportantControl = showImportantCrowdControl and importantFlags.crowdControl
-	local allowImportantStealable = showImportantStealable and importantFlags.stealable
-	local allowImportantBase = showImportant and (
-		importantFlags.important
-		and (allowImportantDefensive or allowImportantExternal or allowImportantControl or allowImportantStealable
-			or (not importantFlags.bigDefensive and not importantFlags.externalDefensive and not importantFlags.crowdControl and not importantFlags.stealable))
-	)
-	local allowRaidBase = showRaid and (
-		(showRaidGeneral and (helpfulRaid or helpfulPlayerRaid))
-		or (showRaidCombat and importantFlags.raidInCombat)
-	)
-	local allowHarmful = showDebuffs and isHarmful
-	local allowImportant = (not isHarmful) and allowImportantBase
-	local allowRaid = (not isHarmful) and allowRaidBase
-	local allowStacks = showStacks and hasStacks
-	local allowPlayerStackSignal = (not isHarmful) and button.isPlayer and hasAnyStackSignal
-	local allowShortCombatBuff = (not isHarmful)
-		and showShortBuffsInCombat
-		and ((showShortCombatPlayerBuffs and isPlayerCombatBuff) or (showShortCombatNonCancelable and (not isCancelableHelpful)))
-		and (hasCombatDuration or isShortAura)
-	local allowShortUtilityBuff = (not isHarmful)
-		and showShortBuffsOutOfCombat
-		and ((showShortUtilityPlayerBuffs and isPlayerCombatBuff) or (showShortUtilityNonCancelable and (not isCancelableHelpful)))
-		and (hasUtilityDuration or isShortAura)
-	local allowLongUtilityBuff = (not isHarmful)
-		and showLongUtilityBuffs
-		and button.isPlayer
-		and (not isCancelableHelpful)
-	local allowSecretFallbackBuff = (not isHarmful)
-		and (allowImportant or allowRaid or allowStacks or allowPlayerStackSignal or allowLongUtilityBuff
-			or (showShortBuffsInCombat and (
-				(showShortCombatPlayerBuffs and (button.isPlayer or canApplyAura))
-				or (showShortCombatNonCancelable and (not isCancelableHelpful))
-			)))
-
-	-- Timing data can flip to secret in combat in WoW 12.
-	-- Keep combat-relevant auras visible, but do not let generic utility buffs leak in.
-	if (useStockBehavior) then
-		local isStockHelpful = (not isHarmful)
-		local allowStockHelpfulCombat = isStockHelpful and (
-			isImportant
-			or importantFlags.raidInCombat
-			or importantFlags.bigDefensive
-			or importantFlags.externalDefensive
-			or importantFlags.crowdControl
-			or importantFlags.stealable
-			or hasStockCombatDuration
-			or isShortAura
-			or allowPlayerStackSignal
-			or ((durationSecret or expirationSecret) and (button.isPlayer or canApplyAura or (not isCancelableHelpful)))
-		)
-		local allowStockHelpfulUtility = isStockHelpful and (
-			isImportant
-			or importantFlags.raidInCombat
-			or importantFlags.bigDefensive
-			or importantFlags.externalDefensive
-			or importantFlags.crowdControl
-			or importantFlags.stealable
-			or (not button.noDuration)
-			or isShortAura
-			or allowPlayerStackSignal
-			or ((durationSecret or expirationSecret) and (button.isPlayer or canApplyAura or (not isCancelableHelpful)))
-		)
-		if (durationSecret or expirationSecret or applicationsSecret) then
-			-- In WoW12 combat, helpful aura identity/timing can be fully secret.
-			-- For stock mode we fail open for helpful auras to avoid flicker/dropouts.
-			local forceHelpfulSecret = isStockHelpful and (auraInstanceID and true or false)
-			data.__AzeriteUI_secretHelpfulFallback = forceHelpfulSecret
-			return DebugPlayerAuraDecision(button, unit, data, isHarmful
-				or hasStacks
-				or allowStockHelpfulCombat
-				or forceHelpfulSecret, "stock_secret", useStockBehavior)
-		end
-		if (UnitAffectingCombat("player")) then
-			return DebugPlayerAuraDecision(button, unit, data, isHarmful
-				or allowStockHelpfulCombat
-				or hasStacks, "stock_combat", useStockBehavior)
-		end
-		return DebugPlayerAuraDecision(button, unit, data, isHarmful
-			or allowStockHelpfulUtility
-			or hasStacks, "stock_utility", useStockBehavior)
-	end
-
-	if (durationSecret or expirationSecret or applicationsSecret) then
-		return DebugPlayerAuraDecision(button, unit, data, allowHarmful
-			or allowSecretFallbackBuff, "custom_secret", useStockBehavior)
-	end
-
-	if (UnitAffectingCombat("player")) then
-		return DebugPlayerAuraDecision(button, unit, data, allowHarmful
-			or allowImportant
-			or allowRaid
-			or allowStacks
-			or allowPlayerStackSignal
-			or allowShortCombatBuff
-			or allowLongUtilityBuff, "custom_combat", useStockBehavior)
-	end
-
-	return DebugPlayerAuraDecision(button, unit, data, allowHarmful
-		or allowImportant
-		or allowRaid
-		or allowStacks
-		or allowPlayerStackSignal
-		or allowShortUtilityBuff
-		or allowLongUtilityBuff, "custom_utility", useStockBehavior)
-
-end
-
-ns.AuraFilters.PlayerDebuffFilter = function(button, unit, data)
-	local decision = ns.AuraFilters.PlayerAuraFilter(button, unit, data)
-	if (decision ~= nil) then
-		return decision
-	end
-	return GetIsHarmful(unit, data)
 end
 
 ns.AuraFilters.TargetAuraFilter = function(button, unit, data)

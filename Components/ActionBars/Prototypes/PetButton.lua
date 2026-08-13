@@ -138,10 +138,16 @@ PetButton.Update = function(self)
 
 	self.isToken = isToken
 
+	if (self.spellDataLoadedCancelFunc) then
+		self.spellDataLoadedCancelFunc()
+		self.spellDataLoadedCancelFunc = nil
+	end
+
 	if (spellID) then
 		local spell = Spell:CreateFromSpellID(spellID)
 		self.spellDataLoadedCancelFunc = spell:ContinueWithCancelOnSpellLoad(function()
 			self.tooltipSubtext = spell:GetSpellSubtext()
+			self.spellDataLoadedCancelFunc = nil
 		end)
 	end
 
@@ -195,9 +201,9 @@ PetButton.Update = function(self)
 
 	if (texture) then
 		if (GetPetActionsUsable()) then
-			SetDesaturation(self.icon, nil)
+			self.icon:SetDesaturated(false)
 		else
-			SetDesaturation(self.icon, 1)
+			self.icon:SetDesaturated(true)
 		end
 		self.icon:Show()
 		self:ShowButton()

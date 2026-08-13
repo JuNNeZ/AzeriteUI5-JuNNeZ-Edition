@@ -25,25 +25,46 @@
 --]]
 local _, ns = ...
 
-local Auras = ns:NewModule("Auras", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0", "LibSmoothBar-1.0")
+if (not ns.IsRetail) then return end
+
+local Auras = ns:NewModule("Auras", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0")
 local LFF = LibStub("LibFadingFrames-1.0")
 
 -- Lua API
 local math_ceil = math.ceil
-local math_max = math.max
-local pairs = pairs
-local select = select
+local string_find = string.find
 local string_lower = string.lower
-local tonumber = tonumber
-local tostring = tostring
 local type = type
+local unpack = unpack
 
 -- Addon API
 local Colors = ns.Colors
 local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
-local RegisterCooldown = ns.Widgets.RegisterCooldown
-local IsSecret = issecretvalue
+
+local AURA_SIZE = 36
+local MAX_BUFFS = BUFF_MAX_DISPLAY or 32
+local MAX_DEBUFFS = DEBUFF_MAX_DISPLAY or 16
+local MAX_PRIVATE_AURAS = 6
+local BUFF_GROUP_KEY = "AzeriteUIPlayerBuffs"
+local DEBUFF_GROUP_KEY = "AzeriteUIPlayerDebuffs"
+local DURATION_WARNING_SECONDS = 10
+
+local warningDurationOptions
+if (C_CurveUtil and C_CurveUtil.CreateColorCurve and Enum.LuaCurveType and Enum.DurationTextBindingProperty and Enum.DurationTextBindingProperty.RemainingDuration) then
+	-- Reproduce the historical final-10-second warning without reading or
+	-- comparing the potentially secret remaining duration in addon code.
+	local warningColorCurve = C_CurveUtil.CreateColorCurve()
+	warningColorCurve:SetType(Enum.LuaCurveType.Step)
+	warningColorCurve:AddPoint(0, { r = Colors.red[1], g = Colors.red[2], b = Colors.red[3], a = .85 })
+	warningColorCurve:AddPoint(DURATION_WARNING_SECONDS, { r = Colors.red[1], g = Colors.red[2], b = Colors.red[3], a = 0 })
+	warningDurationOptions = {
+		textColor = {
+			curve = warningColorCurve,
+			property = Enum.DurationTextBindingProperty.RemainingDuration
+		}
+	}
+end
 
 local defaults = { profile = ns:Merge({
 	enabled = true,
@@ -51,7 +72,6 @@ local defaults = { profile = ns:Merge({
 	enableModifier = false,
 	modifier = "SHIFT",
 	ignoreTarget = false,
-	hideBlizzardAurasOnTarget = true,
 	anchorPoint = "TOPRIGHT",
 	growthX = "LEFT",
 	growthY = "DOWN",
@@ -60,9 +80,6 @@ local defaults = { profile = ns:Merge({
 	wrapAfter = 8
 }, ns.MovableModulePrototype.defaults) }
 
--- Generate module defaults on the fly
--- to recalculate default values relying on
--- changing factors like user interface scale.
 Auras.GenerateDefaults = function(self)
 	defaults.profile.savedPosition = {
 		scale = ns.API.GetEffectiveScale(),
@@ -73,981 +90,471 @@ Auras.GenerateDefaults = function(self)
 	return defaults
 end
 
--- Aura Template
---------------------------------------------
-local Aura = {}
-local AURA_TOOLTIP_KEY_FIELD = "__azuiAuraTooltipKey"
+local StyleAuraButton = function(button, filter)
+	button:SetSize(AURA_SIZE, AURA_SIZE)
+	button:SetTooltipAnchorPoint("ANCHOR_BOTTOMLEFT")
+	button:SetHideTooltipInCombat(false)
 
-local BuildAuraTooltipKey = function(self)
-	if (self.enchant) then
-		return "ench:" .. tostring(self:GetID())
-	end
-
-	if (self.auraUnit and self.auraInstanceID) then
-		return "inst:" .. tostring(self.auraUnit) .. ":" .. tostring(self.auraInstanceID)
-	end
-
-	local parent = self:GetParent()
-	local unit = parent and parent.GetAttribute and parent:GetAttribute("unit") or "nil"
-	return "idx:" .. tostring(unit) .. ":" .. tostring(self:GetID()) .. ":" .. tostring(self.filter or "")
-end
-
-local GetSafeAuraField = function(value)
-	if (IsSecret and IsSecret(value)) then
-		return nil
-	end
-	return value
-end
-
-local GetAuraDataByIndexSafe = function(unit, index, filter)
-	if (not C_UnitAuras or not C_UnitAuras.GetAuraDataByIndex) then
-		return nil
-	end
-	local ok, auraData = pcall(C_UnitAuras.GetAuraDataByIndex, unit, index, filter)
-	if (not ok or not auraData) then
-		return nil
-	end
-	return auraData
-end
-
-local GetAuraDurationObjectSafe = function(unit, auraInstanceID)
-	if (not C_UnitAuras or not C_UnitAuras.GetAuraDuration or not unit or not auraInstanceID) then
-		return nil
-	end
-	local ok, durationObject = pcall(C_UnitAuras.GetAuraDuration, unit, auraInstanceID)
-	if (not ok) then
-		return nil
-	end
-	return durationObject
-end
-
-local GetAuraDataByAuraInstanceIDSafe = function(unit, auraInstanceID)
-	if (not C_UnitAuras or not C_UnitAuras.GetAuraDataByAuraInstanceID or not unit or not auraInstanceID) then
-		return nil
-	end
-	local ok, auraData = pcall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
-	if (not ok or not auraData) then
-		return nil
-	end
-	return auraData
-end
-
-local GetAuraDisplayCountSafe = function(unit, auraInstanceID, minCount, maxCount)
-	if (not C_UnitAuras or not C_UnitAuras.GetAuraApplicationDisplayCount or not unit or not auraInstanceID) then
-		return nil
-	end
-	local ok, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, auraInstanceID, minCount or 2, maxCount or 999)
-	if (not ok or (IsSecret and IsSecret(displayCount)) or displayCount == "") then
-		return nil
-	end
-	return displayCount
-end
-
-local ResolveRemainingTime = function(durationObject, expirationTime, cachedTimeLeft, elapsed)
-	local timeLeft
-	if (durationObject and durationObject.EvaluateRemainingTime) then
-		local ok, remaining = pcall(durationObject.EvaluateRemainingTime, durationObject)
-		if (ok and type(remaining) == "number" and (not IsSecret or not IsSecret(remaining))) then
-			timeLeft = remaining
-		end
-	end
-	if (timeLeft == nil and type(expirationTime) == "number") then
-		timeLeft = expirationTime - GetTime()
-	end
-	if (timeLeft == nil and type(cachedTimeLeft) == "number" and type(elapsed) == "number") then
-		timeLeft = cachedTimeLeft - elapsed
-	end
-	if (type(timeLeft) == "number" and timeLeft < 0) then
-		timeLeft = 0
-	end
-	return timeLeft
-end
-
-local HasVisibleAuraTimer = function(duration, expirationTime, previewRemaining, durationObject)
-	if (durationObject and durationObject.IsZero) then
-		local okZero, isZero = pcall(durationObject.IsZero, durationObject)
-		if (okZero and type(isZero) == "boolean" and (not IsSecret or not IsSecret(isZero))) then
-			if (isZero) then
-				return false
-			end
-			return true
-		end
-	end
-	if (type(duration) == "number" and duration > 0) then
-		return true
-	end
-	if (type(expirationTime) == "number" and expirationTime > GetTime()) then
-		return true
-	end
-	if (type(previewRemaining) == "number" and previewRemaining > 0) then
-		return true
-	end
-	return false
-end
-
-local ClearAuraState = function(self)
-	self.auraInstanceID = nil
-	self.auraUnit = nil
-	self.auraExpirationTime = nil
-	self.auraDurationObject = nil
-	self.auraSpellID = nil
-	self.icon:SetTexture(nil)
-	self.count:SetText("")
-	self.border:SetBackdropBorderColor(Colors.verydarkgray[1], Colors.verydarkgray[2], Colors.verydarkgray[3])
-	self.cd:Hide()
-	self.time:Hide()
-	if (self.fadeAnimation:IsPlaying()) then
-		self.fadeAnimation:Stop()
-	end
-	self:SetScript("OnUpdate", nil)
-	self.timeLeft = nil
-end
-
-local GetAuraButtonData = function(unit, index, filter)
-	local auraData = GetAuraDataByIndexSafe(unit, index, filter)
-	if (not auraData) then
-		return nil
-	end
-
-	local auraInstanceID = GetSafeAuraField(auraData.auraInstanceID)
-	local hydratedAuraData = auraInstanceID and GetAuraDataByAuraInstanceIDSafe(unit, auraInstanceID) or nil
-	local rawIcon = auraData.icon or (hydratedAuraData and hydratedAuraData.icon)
-	local rawSpellID = auraData.spellId or (hydratedAuraData and hydratedAuraData.spellId)
-	local name = GetSafeAuraField(auraData.name) or GetSafeAuraField(hydratedAuraData and hydratedAuraData.name)
-	local icon = rawIcon
-	local spellID = rawSpellID
-	local applications = GetSafeAuraField(auraData.applications)
-		or GetSafeAuraField(hydratedAuraData and hydratedAuraData.applications)
-	local duration = GetSafeAuraField(auraData.duration)
-		or GetSafeAuraField(hydratedAuraData and hydratedAuraData.duration)
-	local expirationTime = GetSafeAuraField(auraData.expirationTime)
-		or GetSafeAuraField(hydratedAuraData and hydratedAuraData.expirationTime)
-
-	if ((not icon) and spellID and GetSpellTexture) then
-		local okTexture, spellTexture = pcall(GetSpellTexture, spellID)
-		if (okTexture) then
-			icon = spellTexture
-		end
-	end
-
-	return {
-		name = name,
-		icon = icon,
-		applications = applications,
-		displayCount = GetAuraDisplayCountSafe(unit, auraInstanceID, 2, 999),
-		duration = duration,
-		expirationTime = expirationTime,
-		auraInstanceID = auraInstanceID,
-		durationObject = GetAuraDurationObjectSafe(unit, auraInstanceID),
-		spellID = spellID
-	}
-end
-
-Aura.Style = function(self)
-
-	local contents = CreateFrame("Frame", nil, self)
-	contents:SetAllPoints(self)
-	self.contents = contents
+	local contents = CreateFrame("Frame", nil, button)
+	contents:SetAllPoints(button)
+	button.contents = contents
 
 	local icon = contents:CreateTexture(nil, "BACKGROUND", nil, 1)
 	icon:SetAllPoints()
 	icon:SetMask(GetMedia("actionbutton-mask-square"))
 	icon:SetVertexColor(.75, .75, .75)
-	self.icon = icon
+	button.icon = icon
 
-	local border = CreateFrame("Frame", nil, self.contents, ns.BackdropTemplate)
+	local border = CreateFrame("Frame", nil, contents, ns.BackdropTemplate)
 	border:SetBackdrop({ edgeFile = GetMedia("border-aura"), edgeSize = 12 })
-	border:SetBackdropBorderColor(Colors.verydarkgray[1], Colors.verydarkgray[2], Colors.verydarkgray[3])
+	if (filter == "HARMFUL") then
+		local color = Colors.debuff.none
+		border:SetBackdropBorderColor(color[1], color[2], color[3])
+	else
+		border:SetBackdropBorderColor(Colors.verydarkgray[1], Colors.verydarkgray[2], Colors.verydarkgray[3])
+	end
 	border:SetPoint("TOPLEFT", -6, 6)
 	border:SetPoint("BOTTOMRIGHT", 6, -6)
 	border:SetFrameLevel(contents:GetFrameLevel() + 2)
-	self.border = border
+	button.border = border
 
-	local count = self.border:CreateFontString(nil, "OVERLAY")
-	count:SetFontObject(GetFont(12,true))
-	count:SetTextColor(Colors.offwhite[1], Colors.offwhite[2], Colors.offwhite[3])
-	count:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -2, 3)
-	self.count = count
+	local count = border:CreateFontString(nil, "OVERLAY")
+	count:SetFontObject(GetFont(12, true))
+	count:SetTextColor(unpack(Colors.offwhite))
+	count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 3)
+	button.count = count
 
-	local overlay = CreateFrame("Frame", nil, self)
+	local overlay = CreateFrame("Frame", nil, button)
 	overlay:SetPoint("TOPLEFT", -6, 6)
 	overlay:SetPoint("BOTTOMRIGHT", 6, -6)
 	overlay:SetFrameLevel(contents:GetFrameLevel() + 3)
-	self.overlay = overlay
+	button.overlay = overlay
 
-	local time = self.overlay:CreateFontString(nil, "OVERLAY")
-	time:Hide()
-	time:SetFontObject(GetFont(18,true))
-	time:SetTextColor(Colors.red[1], Colors.red[2], Colors.red[3])
-	time:SetPoint("CENTER")
-	time:SetAlpha(.85)
-	self.time = time
+	-- Retain Blizzard's native duration carrier, but keep its countdown hidden.
+	-- The standalone aura frame historically only showed its centered warning.
+	local cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
+	cooldown:SetAllPoints(button)
+	cooldown:SetDrawEdge(false)
+	cooldown:SetDrawBling(false)
+	cooldown:SetDrawSwipe(true)
+	cooldown:SetSwipeColor(0, 0, 0, 0)
+	cooldown:SetHideCountdownNumbers(true)
+	cooldown:SetCountdownAbbrevThreshold(2)
+	cooldown:SetFrameLevel(border:GetFrameLevel() + 1)
+	button.cooldown = cooldown
 
-	local bar = Auras:CreateSmoothBar(nil, contents)
+	local warningTime = overlay:CreateFontString(nil, "OVERLAY")
+	warningTime:SetFontObject(GetFont(18, true))
+	warningTime:SetTextColor(unpack(Colors.red))
+	warningTime:SetPoint("CENTER")
+	warningTime:SetJustifyH("CENTER")
+	warningTime:SetJustifyV("MIDDLE")
+	warningTime:SetWordWrap(false)
+	warningTime:SetNonSpaceWrap(false)
+	warningTime:SetMaxLines(1)
+	warningTime:SetFixedColor(false)
+	warningTime:SetAlpha(1)
+	button.time = warningTime
+	-- Never attach script handlers to CustomAuraButtonTemplate frames. Retail
+	-- applies their visibility as a secret value and rejects SetShown(secret)
+	-- once an addon handler exists on the button.
+
+	local bar = CreateFrame("StatusBar", nil, contents)
 	bar:SetPoint("TOP", contents, "BOTTOM", 0, 0)
 	bar:SetPoint("LEFT", contents, "LEFT", 1, 0)
 	bar:SetPoint("RIGHT", contents, "RIGHT", -1, 0)
 	bar:SetHeight(4)
 	bar:SetStatusBarTexture(GetMedia("bar-small"))
-	bar:SetStatusBarColor(Colors.aura[1], Colors.aura[2], Colors.aura[3])
-	--bar:SetStatusBarColor(Colors.quest.green[1], Colors.quest.green[2], Colors.quest.green[3])
+	bar:SetStatusBarColor(unpack(Colors.aura))
 	bar.bg = bar:CreateTexture(nil, "BACKGROUND", nil, -7)
 	bar.bg:SetPoint("TOPLEFT", -1, 1)
 	bar.bg:SetPoint("BOTTOMRIGHT", 1, -1)
 	bar.bg:SetColorTexture(.05, .05, .05, .85)
-	self.bar = bar
+	button.bar = bar
 
-	local fadeAnimation = contents:CreateAnimationGroup()
-	fadeAnimation:SetLooping("BOUNCE")
-
-	local fade = fadeAnimation:CreateAnimation("Alpha")
-	fade:SetFromAlpha(1)
-	fade:SetToAlpha(.5)
-	fade:SetDuration(.6)
-	fade:SetSmoothing("IN_OUT")
-
-	self.fadeAnimation = fadeAnimation
-
-	-- Using a virtual cooldown element with the bar and timer attached,
-	-- allowing them to piggyback on oUF's cooldown updates.
-	self.cd = RegisterCooldown(bar, time)
-
+	button:SetIcon(icon)
+	button:SetApplicationCount(count)
+	button:SetDurationCooldown(cooldown)
+	button:SetDurationBar(bar, {
+		direction = Enum.StatusBarTimerDirection.RemainingTime
+	})
+	if (warningDurationOptions) then
+		button:SetDurationText(warningTime, warningDurationOptions)
+	end
+	button:SetCancelAuraButtons(filter == "HARMFUL" and nil or "RightButtonUp")
 end
 
-Aura.Update = function(self, index)
-	local unit = self:GetParent():GetAttribute("unit")
-	local auraData = GetAuraButtonData(unit, index, self.filter)
+local GetFlowDirection = function(direction, fallback)
+	local directions = AnchorUtil and AnchorUtil.FlowDirection
+	return directions and directions[direction] or fallback
+end
 
-	if (auraData) then
-		self:SetAlpha(1)
-		self.auraUnit = unit
-		self.auraInstanceID = auraData.auraInstanceID
-		self.auraExpirationTime = auraData.expirationTime
-		self.auraDurationObject = auraData.durationObject
-		self.auraSpellID = auraData.spellID
-		if (auraData.icon) then
-			self.icon:SetTexture(auraData.icon)
-		elseif (self.auraSpellID and GetSpellTexture) then
-			local okTexture, spellTexture = pcall(GetSpellTexture, self.auraSpellID)
-			if (okTexture and spellTexture and not (IsSecret and IsSecret(spellTexture))) then
-				self.icon:SetTexture(spellTexture)
-			end
+local GetSortMethod = function()
+	local methods = AuraContainerSortMethod
+	return methods and (methods.AuraInstanceIDOnly or methods.Default)
+end
+
+local GetSortDirection = function()
+	local directions = AuraContainerSortDirection
+	return directions and directions.Normal
+end
+
+local CreateAuraContainer = function(parent, name, unit, filter, groupKey, maxFrameCount)
+	local container = CreateFrame("AuraContainer", name, parent, "CustomAuraContainerTemplate, DisableUntrustedLayoutScriptsTemplate")
+	local initializeFrame = function(button)
+		StyleAuraButton(button, filter)
+	end
+
+	container.unit = unit
+	container.filter = filter
+	container.groupKey = groupKey
+	container.maxFrameCount = maxFrameCount
+	container:SetUnit(unit)
+	container:AddAuraGroup(groupKey, filter, {
+		initializeFrame = initializeFrame,
+		maxFrameCount = maxFrameCount,
+		sortMethod = GetSortMethod(),
+		sortDirection = GetSortDirection(),
+		layout = {
+			elementWidth = AURA_SIZE,
+			elementHeight = AURA_SIZE
+		}
+	})
+	return container
+end
+
+local AddItemEnchantments = function(container)
+	local slots = AuraContainerItemEnchantmentSlot
+	if (not slots) then return end
+
+	local options = {
+		initializeFrame = function(button)
+			StyleAuraButton(button, "HELPFUL")
+		end,
+		hidePermanent = false
+	}
+	if (slots.MainHand) then
+		container:AddItemEnchantment(slots.MainHand, options)
+	end
+	if (slots.OffHand) then
+		container:AddItemEnchantment(slots.OffHand, options)
+	end
+end
+
+local CreatePrivateAuraContainer = function(parent, unit)
+	-- This row is anchored to a CustomAuraContainer, which gains the
+	-- UntrustedLayoutScriptExecution forbidden aspect after AddAuraGroup().
+	-- Blizzard explicitly requires dependent addon frames to opt in at creation.
+	local container = CreateFrame("Frame", nil, parent, "DisableUntrustedLayoutScriptsTemplate")
+	container:SetSize(MAX_PRIVATE_AURAS * AURA_SIZE, AURA_SIZE)
+	container.anchors = {}
+	container.anchorIDs = {}
+
+	if (not C_UnitAuras or not C_UnitAuras.AddPrivateAuraAnchor) then
+		return container
+	end
+
+	for index = 1, MAX_PRIVATE_AURAS do
+		local anchor = CreateFrame("Frame", nil, container, "DisableUntrustedLayoutScriptsTemplate")
+		anchor:SetSize(AURA_SIZE, AURA_SIZE)
+		anchor:SetPoint("LEFT", container, "LEFT", (index - 1) * AURA_SIZE, 0)
+		container.anchors[index] = anchor
+
+		local ok, anchorID = pcall(C_UnitAuras.AddPrivateAuraAnchor, {
+			unitToken = unit,
+			auraIndex = index,
+			parent = anchor,
+			showCooldownFrame = true,
+			showCooldownEdge = false,
+			showCountdownNumbers = true,
+			showDispelIcon = true,
+			isContainer = false,
+			iconInfo = {
+				iconWidth = AURA_SIZE,
+				iconHeight = AURA_SIZE,
+				iconAnchor = {
+					point = "CENTER",
+					relativeTo = anchor,
+					relativePoint = "CENTER",
+					offsetX = 0,
+					offsetY = 0
+				}
+			}
+		})
+		if (ok and anchorID) then
+			container.anchorIDs[index] = anchorID
 		end
-		if (type(auraData.displayCount) == "string") then
-			self.count:SetText(auraData.displayCount)
-		elseif (type(auraData.applications) == "number" and auraData.applications > 1) then
-			self.count:SetText(auraData.applications)
-		else
-			self.count:SetText("")
-		end
+	end
 
-		-- Color border red for debuffs, neutral for buffs.
-		if (self.filter == "HARMFUL") then
-			local borderColor = Colors.debuff.none
-			self.border:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3])
-		else
-			self.border:SetBackdropBorderColor(Colors.verydarkgray[1], Colors.verydarkgray[2], Colors.verydarkgray[3])
-		end
+	return container
+end
 
-		local hasCooldown = false
-		local previewRemaining = ResolveRemainingTime(auraData.durationObject, auraData.expirationTime)
-		if (self.cd.SetAuraFallbackData) then
-			self.cd:SetAuraFallbackData(auraData.expirationTime, auraData.duration)
-		end
-		if (auraData.durationObject and self.cd.SetCooldownFromDurationObject and HasVisibleAuraTimer(auraData.duration, auraData.expirationTime, previewRemaining, auraData.durationObject)) then
-			self.cd:SetCooldownFromDurationObject(auraData.durationObject)
-			hasCooldown = true
-		elseif (type(auraData.duration) == "number" and auraData.duration > 0 and type(auraData.expirationTime) == "number") then
-			self.cd:SetCooldown(auraData.expirationTime - auraData.duration, auraData.duration)
-			hasCooldown = true
-		end
+local CreateUnitAuraGroup = function(self, unit, suffix)
+	local group = CreateFrame("Frame", ns.Prefix .. suffix .. "AuraGroup", self.frame, "SecureHandlerShowHideTemplate")
+	group:SetAllPoints(self.frame)
+	group.unit = unit
 
-		if (hasCooldown) then
-			self.cd:Show()
+	group.buffs = CreateAuraContainer(group, ns.Prefix .. suffix .. "BuffContainer", unit, "HELPFUL", BUFF_GROUP_KEY, MAX_BUFFS)
+	group.debuffs = CreateAuraContainer(group, ns.Prefix .. suffix .. "DebuffContainer", unit, "HARMFUL", DEBUFF_GROUP_KEY, MAX_DEBUFFS)
+	group.privateAuras = CreatePrivateAuraContainer(group, unit)
 
-			local timeLeft = previewRemaining
+	if (unit == "player") then
+		AddItemEnchantments(group.buffs)
+	end
 
-			self.timeLeft = timeLeft
-			self:SetScript("OnUpdate", self.OnUpdate)
+	self.auraUnitGroups[#self.auraUnitGroups + 1] = group
+	return group
+end
 
-			-- Fade short duration auras in and out
-			if (type(timeLeft) == "number" and timeLeft < 10) then
-				if (not self.fadeAnimation:IsPlaying()) then
-					self.fadeAnimation:Play()
-				end
-				self.time:Show()
-			else
-				if (self.fadeAnimation:IsPlaying()) then
-					self.fadeAnimation:Stop()
-				end
-				self.time:Hide()
-			end
+local GetStackPoints = function(config)
+	local horizontal = ""
+	if (string_find(config.anchorPoint, "LEFT", 1, true)) then
+		horizontal = "LEFT"
+	elseif (string_find(config.anchorPoint, "RIGHT", 1, true)) then
+		horizontal = "RIGHT"
+	end
 
-		else
-			if (ns.API and ns.API.DEBUG_AURAS and InCombatLockdown and InCombatLockdown()) then
-				local filter = ns.API.DEBUG_AURA_FILTER
-				if ((not filter) or filter == "" or (type(auraData.name) == "string" and auraData.name:find(filter, 1, true))) then
-					print("|cff33ff99", "AzeriteUI aura debug:", tostring(auraData.name), "duration", tostring(auraData.duration), "expiration", tostring(auraData.expirationTime))
-				end
-			end
-			self.cd:Hide()
-			self.time:Hide()
-			if (self.fadeAnimation:IsPlaying()) then
-				self.fadeAnimation:Stop()
-			end
-			self:SetScript("OnUpdate", nil)
-			self.timeLeft = nil
-		end
-	elseif (InCombatLockdown and InCombatLockdown()) then
-		ClearAuraState(self)
-		return
+	if (config.growthY == "DOWN") then
+		return "TOP" .. horizontal, "BOTTOM" .. horizontal, -1
 	else
-		ClearAuraState(self)
+		return "BOTTOM" .. horizontal, "TOP" .. horizontal, 1
 	end
-
 end
 
-Aura.UpdateTempEnchant = function(self, slot)
-	local enchant = (slot == 16 and 2) or 6
-	local expiration = select(enchant, GetWeaponEnchantInfo())
-	local remaining = expiration / 1e3
+local UpdateContainerLayout = function(container, config)
+	local horizontal = GetFlowDirection(config.growthX == "LEFT" and "Left" or "Right")
+	local vertical = GetFlowDirection(config.growthY == "DOWN" and "Down" or "Up")
+	local maximumLineSize = config.wrapAfter * AURA_SIZE + (config.wrapAfter - 1) * config.paddingX
+	local layout = {
+		elementSpacing = config.paddingX,
+		lineSpacing = config.paddingY,
+		groupSpacing = config.paddingX,
+		groupLineSpacing = config.paddingY,
+		elementWidth = AURA_SIZE,
+		elementHeight = AURA_SIZE
+	}
 
-	-- We can't really know the duration of temp enchants without huge lists,
-	-- so we sort of just make them up according to remaining time left.
-	-- Makes them easier to read.
-	local duration = (remaining <= 7200 and remaining > 3600) and 7200 or (remaining <= 3600 and remaining > 1800) and 3600 or (remaining <= 1800 and remaining > 600) and 1800 or 600
+	container:SetFlowLayoutAnchorPoint(config.anchorPoint)
+	container:SetFlowLayoutGrowthDirection(horizontal, vertical)
+	container:SetFlowLayoutMaximumLineSize(maximumLineSize)
+	container:SetAuraGroupLayout(container.groupKey, layout)
+	container:SetAuraGroupMaxFrameCount(container.groupKey, container.maxFrameCount)
 
-	local icon = GetInventoryItemTexture("player", slot)
-
-	if (icon) then
-		self:SetAlpha(1)
-		self.icon:SetTexture(icon)
-	else
-		-- sometimes empty temp enchants are shown
-		-- this is a bug in the secure aura headers
-		self:SetAlpha(0)
-		self.icon:SetTexture(nil)
+	if (container == container:GetParent().buffs and container.SetItemEnchantmentLayout) then
+		container:SetItemEnchantmentLayout({
+			elementSpacing = config.paddingX,
+			lineSpacing = config.paddingY,
+			groupSpacing = config.paddingX,
+			groupLineSpacing = config.paddingY,
+			elementWidth = AURA_SIZE,
+			elementHeight = AURA_SIZE
+		})
 	end
-
-	if (expiration) then
-		self.enchant = enchant
-		self.cd:SetCooldown(GetTime() + remaining - duration, duration)
-		self.cd:Show()
-		self:SetScript("OnUpdate", self.OnUpdate)
-	else
-		self.cd:Hide()
-		self.enchant = nil
-		self.timeLeft = nil
-		self:SetScript("OnUpdate", nil)
-	end
-
-	self.count:SetText("")
-
 end
 
-Aura.UpdateTooltip = function(self, tooltipKey)
-	if (GameTooltip:IsForbidden()) then return end
-	if (self.enchant) then
-		GameTooltip:SetInventoryItem("player", self:GetID())
-	elseif (self.auraUnit and self.auraInstanceID) then
-		GameTooltip:SetUnitAuraByAuraInstanceID(self.auraUnit, self.auraInstanceID)
-	else
-		GameTooltip:SetUnitAura(self:GetParent():GetAttribute("unit"), self:GetID(), self.filter)
-	end
-	GameTooltip[AURA_TOOLTIP_KEY_FIELD] = tooltipKey or BuildAuraTooltipKey(self)
+local UpdateUnitGroupLayout = function(group, config)
+	UpdateContainerLayout(group.buffs, config)
+	UpdateContainerLayout(group.debuffs, config)
+
+	local startPoint, endPoint, direction = GetStackPoints(config)
+	group.buffs:ClearAllPoints()
+	group.buffs:SetPoint(config.anchorPoint, group, config.anchorPoint)
+
+	group.debuffs:ClearAllPoints()
+	group.debuffs:SetPoint(startPoint, group.buffs, endPoint, 0, direction * config.paddingY)
+
+	group.privateAuras:ClearAllPoints()
+	group.privateAuras:SetPoint(startPoint, group.debuffs, endPoint, 0, direction * config.paddingY)
 end
 
-Aura.OnUpdate = function(self, elapsed)
-	self.elapsed = (self.elapsed or 0) - elapsed
-	if (self.elapsed > 0) then
-		return
+Auras.CreateAuras = function(self)
+	if (self.frame) then return true end
+	if (not C_XMLUtil or not C_XMLUtil.GetTemplateInfo or not C_XMLUtil.GetTemplateInfo("CustomAuraContainerTemplate")) then
+		return false
 	end
-	self.elapsed = .01
-
-	local timeLeft
-	if (self.enchant) then
-		local expiration = select(self.enchant, GetWeaponEnchantInfo())
-		timeLeft = expiration and (expiration / 1e3) or 0
-	else
-		timeLeft = ResolveRemainingTime(self.auraDurationObject, self.auraExpirationTime, self.timeLeft, elapsed)
+	if (not AuraContainerSortMethod or not AuraContainerSortDirection or not AnchorUtil or not AnchorUtil.FlowDirection) then
+		return false
 	end
-	self.timeLeft = timeLeft
 
-	if (type(timeLeft) == "number" and timeLeft > 0) then
-		if (timeLeft < 10) then
-			if (not self.fadeAnimation:IsPlaying()) then
-				self.fadeAnimation:Play()
-			end
-			self.time:Show()
+	local config = self.db.profile
+	local frame = CreateFrame("Frame", ns.Prefix .. "AuraContainerFrame", UIParent, "SecureHandlerStateTemplate")
+	frame:SetSize(config.wrapAfter * AURA_SIZE + (config.wrapAfter - 1) * config.paddingX, AURA_SIZE)
+	frame:SetPoint(config.savedPosition[1], UIParent, config.savedPosition[1], config.savedPosition[2], config.savedPosition[3])
+	frame:SetScale(config.savedPosition.scale)
+	self.frame = frame
+	self.auraUnitGroups = {}
+
+	self.playerAuras = CreateUnitAuraGroup(self, "player", "Player")
+	self.vehicleAuras = CreateUnitAuraGroup(self, "vehicle", "Vehicle")
+	self.buffs = self.playerAuras.buffs
+	self.debuffs = self.playerAuras.debuffs
+
+	frame:SetFrameRef("playerAuras", self.playerAuras)
+	frame:SetFrameRef("vehicleAuras", self.vehicleAuras)
+	frame:SetAttribute("_onstate-unit", [[
+		local playerAuras = self:GetFrameRef("playerAuras");
+		local vehicleAuras = self:GetFrameRef("vehicleAuras");
+		if (newstate == "vehicle") then
+			playerAuras:Hide();
+			vehicleAuras:Show();
 		else
-			if (self.fadeAnimation:IsPlaying()) then
-				self.fadeAnimation:Stop()
-			end
-			self.time:Hide()
+			vehicleAuras:Hide();
+			playerAuras:Show();
 		end
-	else
-		self.timeLeft = nil
-		self.auraExpirationTime = nil
-		self.auraDurationObject = nil
-		self.time:Hide()
-		if (self.fadeAnimation:IsPlaying()) then
-			self.fadeAnimation:Stop()
+	]])
+
+	RegisterStateDriver(frame, "unit", "[vehicleui]vehicle;player")
+
+	return true
+end
+
+local DisableMouseOnAuraFrame = function(frame)
+	if (not frame) then return end
+	if (frame.EnableMouse) then frame:EnableMouse(false) end
+	if (frame.SetMouseClickEnabled) then frame:SetMouseClickEnabled(false) end
+	if (frame.SetMouseMotionEnabled) then frame:SetMouseMotionEnabled(false) end
+end
+
+local SuppressBlizzardAuraFrame = function(frame)
+	if (not frame) then return end
+	frame.__AzeriteUIApplyingAlpha = true
+	frame:SetAlpha(0)
+	frame.__AzeriteUIApplyingAlpha = nil
+	DisableMouseOnAuraFrame(frame)
+
+	if (type(frame.auraFrames) == "table") then
+		for _, auraFrame in ipairs(frame.auraFrames) do
+			DisableMouseOnAuraFrame(auraFrame)
 		end
-		self:SetScript("OnUpdate", nil)
 	end
 
-end
-
-Aura.OnEnter = function(self)
-	if (not self:IsVisible()) then return end
-	if (GameTooltip:IsForbidden()) then return end
-	local tooltipKey = BuildAuraTooltipKey(self)
-	if (GameTooltip.GetOwner and GameTooltip:GetOwner() == self and GameTooltip[AURA_TOOLTIP_KEY_FIELD] == tooltipKey) then
-		return
-	end
-	local p = self:GetParent()
-	GameTooltip:SetOwner(self, "ANCHOR_NONE")
-	GameTooltip:SetPoint(p.tooltipPoint, self, p.tooltipAnchor, p.tooltipOffsetX, p.tooltipOffsetY)
-	self:UpdateTooltip(tooltipKey)
-end
-
-Aura.OnLeave = function(self)
-	if (GameTooltip:IsForbidden()) then return end
-	if (GameTooltip.GetOwner and GameTooltip:GetOwner() == self) then
-		GameTooltip[AURA_TOOLTIP_KEY_FIELD] = nil
-	end
-	GameTooltip:Hide()
-end
-
-Aura.OnAttributeChanged = function(self, attribute, value)
-	if (attribute == "index") then
-		return self:Update(value)
-	elseif(attribute == "target-slot") then
-		return self:UpdateTempEnchant(value)
-	end
-end
-
-Aura.OnInitialize = function(self)
-	self:Style()
-	self.isRetail = ns.IsRetail
-	self.filter = self:GetParent():GetAttribute("filter")
-	self.UpdateTooltip = self.UpdateTooltip
-	self:SetScript("OnEnter", self.OnEnter)
-	self:SetScript("OnLeave", self.OnLeave)
-	self:SetScript("OnAttributeChanged", self.OnAttributeChanged)
-end
-
-Auras.CreateBuffs = function(self)
-	if (not self.frame) then
-
-		local config = self.db.profile
-
-		local frame = CreateFrame("Frame", ns.Prefix.."BuffHeaderFrame", UIParent)
-		frame.ignoreGridCounterOnHover = true
-		frame:SetSize(config.wrapAfter * (36 + config.paddingX), (36 + config.paddingY) * math_ceil(BUFF_MAX_DISPLAY / config.wrapAfter) + (36 + config.paddingY))
-		frame:SetPoint(config.savedPosition[1], UIParent, config.savedPosition[1], config.savedPosition[2], config.savedPosition[3])
-		frame:SetScale(config.savedPosition.scale)
-
-		self.frame = frame
-
-		-----------------------------------------
-		-- Header
-		-----------------------------------------
-		-- The primary buff window.
-		local buffs = CreateFrame("Frame", ns.Prefix.."BuffHeader", frame, "SecureAuraHeaderTemplate")
-		buffs:UnregisterEvent("UNIT_AURA") -- blizzard registers for all units. we don't need that.
-		buffs:RegisterUnitEvent("UNIT_AURA", "player", "vehicle")
-		buffs:SetAttribute("unit", "player")
-		buffs:SetFrameLevel(10)
-		buffs:SetSize(36,36)
-		buffs:SetPoint(config.anchorPoint, 0, 0)
-		buffs:SetAttribute("weaponTemplate", "AzeriteAuraTemplate")
-		buffs:SetAttribute("template", "AzeriteAuraTemplate")
-		buffs:SetAttribute("minHeight", 36)
-		buffs:SetAttribute("minWidth", 36)
-		buffs:SetAttribute("point", config.anchorPoint)
-		buffs:SetAttribute("xOffset", -(36 + config.paddingX))
-		buffs:SetAttribute("yOffset", 0)
-		buffs:SetAttribute("wrapAfter", config.wrapAfter)
-		buffs:SetAttribute("wrapXOffset", 0)
-		buffs:SetAttribute("wrapYOffset", -(36 + config.paddingY))
-		buffs:SetAttribute("filter", "HELPFUL")
-		buffs:SetAttribute("includeWeapons", 1)
-	if (issecretvalue or (ns.ClientVersion and ns.ClientVersion >= 120000)) then
-			buffs:SetAttribute("sortMethod", "INDEX")
-			buffs:SetAttribute("sortDirection", "+")
-		else
-			buffs:SetAttribute("sortMethod", "TIME")
-			buffs:SetAttribute("sortDirection", "-")
-		end
-
-		buffs.UpdateAuraButtonAlpha = function() Auras:UpdateAuraButtonAlpha() end
-		buffs.tooltipPoint = "TOPRIGHT"
-		buffs.tooltipAnchor = "BOTTOMLEFT"
-		buffs.tooltipOffsetX = -10
-		buffs.tooltipOffsetY = -10
-
-		-- Aura slot index where the
-		-- consolidation button will appear.
-		buffs:SetAttribute("consolidateTo", -1)
-
-		-- Auras with less remaining duration than
-		-- this many seconds should not be consolidated.
-		buffs:SetAttribute("consolidateThreshold", 10) -- default 10
-
-		-- The minimum total duration an aura should
-		-- have to be considered for consolidation.
-		buffs:SetAttribute("consolidateDuration", 10) -- default 30
-
-		-- The fraction of remaining duration a buff
-		-- should still have to be eligible for consolidation.
-		buffs:SetAttribute("consolidateFraction", .1) -- default .10
-
-		-- Add a vehicle switcher
-		RegisterAttributeDriver(buffs, "unit", "[vehicleui] vehicle; player")
-
-		self.buffs = buffs
-
-		-- Dedicated debuff row below buffs.
-		local debuffs = CreateFrame("Frame", ns.Prefix.."DebuffHeader", frame, "SecureAuraHeaderTemplate")
-		debuffs:UnregisterEvent("UNIT_AURA")
-		debuffs:RegisterUnitEvent("UNIT_AURA", "player", "vehicle")
-		debuffs:SetAttribute("unit", "player")
-		debuffs:SetFrameLevel(10)
-		debuffs:SetSize(36, 36)
-		debuffs:SetPoint(config.anchorPoint, buffs, config.anchorPoint, 0, (36 + config.paddingY) * (config.growthY == "DOWN" and -1 or 1))
-		debuffs:SetAttribute("template", "AzeriteAuraTemplate")
-		debuffs:SetAttribute("minHeight", 36)
-		debuffs:SetAttribute("minWidth", 36)
-		debuffs:SetAttribute("point", config.anchorPoint)
-		debuffs:SetAttribute("xOffset", -(36 + config.paddingX))
-		debuffs:SetAttribute("yOffset", 0)
-		debuffs:SetAttribute("wrapAfter", config.wrapAfter)
-		debuffs:SetAttribute("wrapXOffset", 0)
-		debuffs:SetAttribute("wrapYOffset", -(36 + config.paddingY))
-		debuffs:SetAttribute("filter", "HARMFUL")
-		if (issecretvalue or (ns.ClientVersion and ns.ClientVersion >= 120000)) then
-			debuffs:SetAttribute("sortMethod", "INDEX")
-			debuffs:SetAttribute("sortDirection", "+")
-		else
-			debuffs:SetAttribute("sortMethod", "TIME")
-			debuffs:SetAttribute("sortDirection", "-")
-		end
-		debuffs.tooltipPoint = "TOPRIGHT"
-		debuffs.tooltipAnchor = "BOTTOMLEFT"
-		debuffs.tooltipOffsetX = -10
-		debuffs.tooltipOffsetY = -10
-		RegisterAttributeDriver(debuffs, "unit", "[vehicleui] vehicle; player")
-		self.debuffs = debuffs
-
-		-----------------------------------------
-		-- Consolidation
-		-----------------------------------------
-		-- The proxybutton appearing in the aura listing
-		-- representing the existence of consolidated auras.
-		local proxy = CreateFrame("Button", buffs:GetName().."ProxyButton", buffs, "SecureUnitButtonTemplate, SecureHandlerEnterLeaveTemplate")
-		proxy.ignoreGridCounterOnHover = true
-		proxy:Hide()
-		proxy:SetSize(36,36)
-		--proxy:SetIgnoreParentAlpha(true)
-		buffs.proxy = proxy
-
-		local texture = proxy:CreateTexture(nil, "BACKGROUND")
-		texture:SetSize(64,64)
-		texture:SetPoint("CENTER")
-		texture:SetTexture(GetMedia("chatbutton-maximize"))
-		proxy.texture = texture
-
-		local count = proxy:CreateFontString(nil, "OVERLAY")
-		count:SetFontObject(GetFont(12,true))
-		count:SetTextColor(Colors.offwhite[1], Colors.offwhite[2], Colors.offwhite[3])
-		count:SetPoint("BOTTOMRIGHT", -2, 3)
-		proxy.count = count
-
-		buffs:SetAttribute("consolidateProxy", proxy)
-
-		-- The other updates aren't called when it is hidden,
-		-- so to have the correct count when toggling through chat commands,
-		-- we need to have this extra update on each show.
-		self:SecureHookScript(proxy, "OnShow", "UpdateAuraButtonAlpha")
-		self:SecureHookScript(proxy, "OnHide", "UpdateAuraButtonAlpha")
-		self:SecureHookScript(buffs, "OnShow", "QueueRefreshVisibleBuffButtons")
-
-		-- Consolidation frame where the consolidated auras appear.
-		local consolidation = CreateFrame("Frame", buffs:GetName().."Consolidation", buffs.proxy, "SecureFrameTemplate")
-		consolidation.ignoreGridCounterOnHover = true
-		consolidation:Hide()
-		consolidation:SetIgnoreParentAlpha(true)
-		consolidation:SetSize(36, 36)
-		consolidation:SetPoint("TOPRIGHT", proxy, "TOPLEFT", -6, 0)
-		consolidation:SetAttribute("minHeight", nil)
-		consolidation:SetAttribute("minWidth", nil)
-		consolidation:SetAttribute("point", buffs:GetAttribute("point"))
-		consolidation:SetAttribute("template", buffs:GetAttribute("template"))
-		consolidation:SetAttribute("weaponTemplate", buffs:GetAttribute("weaponTemplate"))
-		consolidation:SetAttribute("xOffset", buffs:GetAttribute("xOffset"))
-		consolidation:SetAttribute("yOffset", buffs:GetAttribute("yOffset"))
-		consolidation:SetAttribute("wrapAfter", buffs:GetAttribute("wrapAfter"))
-		consolidation:SetAttribute("wrapYOffset", buffs:GetAttribute("wrapYOffset"))
-
-		consolidation.tooltipPoint = buffs.tooltipPoint
-		consolidation.tooltipAnchor = buffs.tooltipAnchor
-		consolidation.tooltipOffsetX = buffs.tooltipOffsetX
-		consolidation.tooltipOffsetY = buffs.tooltipOffsetY
-
-		buffs:SetAttribute("consolidateHeader", consolidation)
-
-		-- Add a vehicle switcher
-		RegisterAttributeDriver(consolidation, "unit", "[vehicleui] vehicle; player")
-
-		buffs.consolidation = consolidation
-
-		-- Clickbutton to toggle the consolidation window.
-		local button = CreateFrame("Button", proxy:GetName().."ClickButton", proxy, "SecureHandlerClickTemplate")
-		button:SetAllPoints()
-		button:SetFrameRef("buffs", buffs)
-		button:SetFrameRef("consolidation", consolidation)
-		button:RegisterForClicks("AnyUp")
-		button:SetAttribute("_onclick", [[
-			local consolidation = self:GetFrameRef("consolidation")
-			local buffs = self:GetFrameRef("buffs")
-			if consolidation:IsShown() then
-				consolidation:Hide()
-				buffs:CallMethod("UpdateAuraButtonAlpha")
-			else
-				consolidation:Show()
-				buffs:CallMethod("UpdateAuraButtonAlpha")
+	if (not frame.__AzeriteUIAlphaHooked) then
+		hooksecurefunc(frame, "SetAlpha", function(blizzardFrame, alpha)
+			if (alpha ~= 0 and not blizzardFrame.__AzeriteUIApplyingAlpha) then
+				blizzardFrame.__AzeriteUIApplyingAlpha = true
+				blizzardFrame:SetAlpha(0)
+				blizzardFrame.__AzeriteUIApplyingAlpha = nil
 			end
-		]])
-
-		proxy.button = button
-
-		-----------------------------------------
-		-- Visibility
-		-----------------------------------------
-		local visibility = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
-		visibility:SetFrameRef("buffs", buffs)
-		visibility:SetFrameRef("debuffs", debuffs)
-		visibility:SetAttribute("_onstate-vis", [[ self:RunAttribute("UpdateVisibility"); ]])
-		visibility:SetAttribute("UpdateVisibility", [[
-			local visdriver = self:GetAttribute("visdriver");
-			if (not visdriver) then
-				return
-			end
-			local buffs = self:GetFrameRef("buffs");
-			local debuffs = self:GetFrameRef("debuffs");
-			local shouldhide = SecureCmdOptionParse(visdriver) == "hide";
-			if (shouldhide) then
-				if (buffs and buffs:IsShown()) then buffs:Hide(); end
-				if (debuffs and debuffs:IsShown()) then debuffs:Hide(); end
-			else
-				if (buffs and not buffs:IsShown()) then buffs:Show(); end
-				if (debuffs and not debuffs:IsShown()) then debuffs:Show(); end
-			end
-		]])
-
-		visibility:SetAttribute("UpdateDriver", [[
-			local visdriver;
-			local buffs = self:GetFrameRef("buffs");
-			local auramode = self:GetAttribute("auramode");
-			local ignoreTarget = self:GetAttribute("ignoreTarget");
-			if (auramode == "hide") then
-				visdriver = "hide";
-			elseif (auramode == "show") then
-				if (ignoreTarget) then
-					visdriver = "[petbattle]hide;show";
-				else
-					visdriver = "[petbattle]hide;[@target,exists]hide;show";
-				end
-			elseif (auramode == "modifier") then
-				local modifierkey = self:GetAttribute("modifierkey");
-				if (ignoreTarget) then
-					visdriver = "[petbattle]hide;[mod:"..modifierkey.."]show;hide";
-				else
-					visdriver = "[petbattle]hide;[@target,exists]hide;[mod:"..modifierkey.."]show;hide";
-				end
-			end
-			self:SetAttribute("visdriver", visdriver);
-			UnregisterStateDriver(self, "vis");
-			RegisterStateDriver(self, "vis", visdriver);
-		]])
-
-		self.visibility = visibility
+		end)
+		frame.__AzeriteUIAlphaHooked = true
 	end
 end
 
 Auras.DisableBlizzard = function(self)
+	SuppressBlizzardAuraFrame(BuffFrame)
+	SuppressBlizzardAuraFrame(DebuffFrame)
 
-	-- Not present in Wrath
-	if (BuffFrame.Update and not (issecretvalue or (ns.ClientVersion and ns.ClientVersion >= 120000))) then
-		BuffFrame:Update()
-		BuffFrame:UpdateAuras()
-		BuffFrame:UpdatePlayerBuffs()
-	end
-
-	BuffFrame:SetScript("OnLoad", nil)
-	BuffFrame:SetScript("OnUpdate", nil)
-	BuffFrame:SetScript("OnEvent", nil)
-	BuffFrame:SetParent(ns.Hider)
-	BuffFrame:UnregisterAllEvents()
-
-	-- Not present in Wrath
-	if (DebuffFrame) then
-		DebuffFrame:SetScript("OnLoad", nil)
-		DebuffFrame:SetScript("OnUpdate", nil)
-		DebuffFrame:SetScript("OnEvent", nil)
-		DebuffFrame:SetParent(ns.Hider)
-		DebuffFrame:UnregisterAllEvents()
-	end
-
-	-- Only present in Wrath
-	if (TemporaryEnchantFrame) then
-		TemporaryEnchantFrame:SetScript("OnUpdate", nil)
-		TemporaryEnchantFrame:SetParent(ns.Hider)
-	end
-
-	-- In TWW 11.0+, Edit Mode can reparent BuffFrame back to UIParent.
-	-- We need to hook layout updates to keep it hidden.
-	if (ns.WoW11 and EditModeManagerFrame) then
-		if (not self.editModeHooked) then
-			self:SecureHook(EditModeManagerFrame, "UpdateLayoutInfo", function()
-				-- Re-hide buff frames after Edit Mode changes layout
-				BuffFrame:SetParent(ns.Hider)
-				if (DebuffFrame) then
-					DebuffFrame:SetParent(ns.Hider)
-				end
-			end)
-			self.editModeHooked = true
-		end
-	end
-
-end
-
-local ApplyBlizzardAuraVisibilityDriver = function(self)
-	if (not BuffFrame) then
-		return
-	end
-	if (issecretvalue or (ns.ClientVersion and ns.ClientVersion >= 120000)) then
-		-- WoW12: Blizzard aura frames are already hard-disabled for secure compatibility.
-		-- Keep the old dynamic driver path disabled here so the legacy compatibility option
-		-- does not taint or imply separate runtime behavior on Midnight clients.
-		return
-	end
-	if (InCombatLockdown()) then
-		self.__AzeriteUI_AuraDriverPending = true
-		return
-	end
-
-	local driver = "hide"
-	if (self.__AzeriteUI_AuraDriver == driver) then
-		return
-	end
-
-	UnregisterStateDriver(BuffFrame, "visibility")
-	RegisterStateDriver(BuffFrame, "visibility", driver)
-	if (DebuffFrame) then
-		UnregisterStateDriver(DebuffFrame, "visibility")
-		RegisterStateDriver(DebuffFrame, "visibility", driver)
-	end
-	if (TemporaryEnchantFrame) then
-		UnregisterStateDriver(TemporaryEnchantFrame, "visibility")
-		RegisterStateDriver(TemporaryEnchantFrame, "visibility", driver)
-	end
-	self.__AzeriteUI_AuraDriver = driver
-	self.__AzeriteUI_AuraDriverPending = nil
-end
-
-Auras.Embed = function(self, aura)
-	for method,func in pairs(Aura) do
-		aura[method] = func
-	end
-end
-
-Auras.ForAll = function(self, method, ...)
-	local buffs = self.buffs
-	if (not buffs) then
-		return
-	end
-	local child = buffs:GetAttribute("child1")
-	local i = 1
-	while (child) do
-		local func = child[method]
-		if (func) then
-			func(child, child:GetID(), ...)
-		end
-		i = i + 1
-		child = buffs:GetAttribute("child" .. i)
-	end
-end
-
-Auras.UpdateAuraButtonAlpha = function(self)
-	local buffs = self.buffs
-	if (not buffs) then return end
-	local time = GetTime()
-	if (self.__AzeriteUI_LastAuraAlphaUpdate and (time - self.__AzeriteUI_LastAuraAlphaUpdate) < .1) then
-		return
-	end
-	self.__AzeriteUI_LastAuraAlphaUpdate = time
-
-	local consolidateDuration = tonumber(buffs:GetAttribute("consolidateDuration")) or 30
-	local consolidateThreshold = tonumber(buffs:GetAttribute("consolidateThreshold")) or 10
-	local consolidateFraction = tonumber(buffs:GetAttribute("consolidateFraction")) or 0.1
-	local unit, filter = buffs:GetAttribute("unit"), buffs:GetAttribute("filter")
-	local slot, consolidated = 1, 0
-	local name, duration, expires, shouldConsolidate
-
-	repeat
-		local auraData = GetAuraDataByIndexSafe(unit, slot, filter)
-		if (auraData) then
-			name = GetSafeAuraField(auraData.name)
-			duration = GetSafeAuraField(auraData.duration)
-			expires = GetSafeAuraField(auraData.expirationTime)
-			shouldConsolidate = GetSafeAuraField(auraData.shouldConsolidate)
-		else
-			name = nil
-		end
-		if (name and shouldConsolidate) then
-			if (not expires or duration > consolidateDuration or (expires - time >= math_max(consolidateThreshold, duration * consolidateFraction)) ) then
-				consolidated = consolidated + 1
-			end
-		end
-		slot = slot + 1
-	until (not name)
-
-	-- Update count and counter.
-	buffs.numConsolidated = consolidated
-	buffs.proxy.count:SetText(buffs.numConsolidated > 0 and buffs.numConsolidated or "")
-
-	-- Keep brightness tied to consolidation UI state, not live aura count.
-	-- The count can fluctuate heavily between combat and out-of-combat,
-	-- which otherwise makes the header look like it randomly darkens/lightens.
-	if (buffs.proxy:IsShown() and buffs.consolidation:IsShown()) then
-		buffs:SetAlpha(.5)
-	else
-		buffs:SetAlpha(1)
-	end
-end
-
-Auras.RefreshVisibleBuffButtons = function(self)
-	local buffs = self.buffs
-	if (not buffs or not buffs:IsShown()) then
-		return
-	end
-	self:ForAll("Update")
-	self:UpdateAuraButtonAlpha()
-end
-
-Auras.QueueRefreshVisibleBuffButtons = function(self)
-	if (self.__AzeriteUI_AuraRefreshQueued) then
-		return
-	end
-	self.__AzeriteUI_AuraRefreshQueued = true
-	self:ScheduleTimer(function()
-		self.__AzeriteUI_AuraRefreshQueued = nil
-		self:RefreshVisibleBuffButtons()
-	end, 0)
-end
-
-Auras.OnUnitAura = function(self, event, unit)
-	self:UpdateAuraButtonAlpha()
-	if (unit == "player" or unit == "vehicle") then
-		self:QueueRefreshVisibleBuffButtons()
+	if (EditModeManagerFrame and not self.editModeHooked) then
+		self:SecureHook(EditModeManagerFrame, "UpdateLayoutInfo", function()
+			SuppressBlizzardAuraFrame(BuffFrame)
+			SuppressBlizzardAuraFrame(DebuffFrame)
+		end)
+		self.editModeHooked = true
 	end
 end
 
 Auras.UpdateSettings = function(self)
 	if (InCombatLockdown()) then
 		self.needupdate = true
-		self.__AzeriteUI_AuraDriverPending = true
 		return
 	end
-
-	ApplyBlizzardAuraVisibilityDriver(self)
 	if (not self.frame) then return end
 
 	local config = self.db.profile
-	local rowOffsetY = (36 + config.paddingY) * (config.growthY == "DOWN" and -1 or 1)
+	local maximumWidth = config.wrapAfter * AURA_SIZE + (config.wrapAfter - 1) * config.paddingX
+	local maximumRows = math_ceil(MAX_BUFFS / config.wrapAfter) + math_ceil(MAX_DEBUFFS / config.wrapAfter) + 1
+	self.frame:SetSize(maximumWidth, maximumRows * (AURA_SIZE + config.paddingY))
+
+	for _, group in ipairs(self.auraUnitGroups) do
+		UpdateUnitGroupLayout(group, config)
+	end
 
 	if (config.enabled and config.enableAuraFading) then
 		LFF:RegisterFrameForFading(self.frame, "playerauras")
-		LFF:RegisterFrameForFading(self.buffs.proxy, "playerauras")
-		LFF:RegisterFrameForFading(self.buffs.consolidation, "playerauras")
 	else
 		LFF:UnregisterFrameForFading(self.frame)
-		LFF:UnregisterFrameForFading(self.buffs.proxy)
-		LFF:UnregisterFrameForFading(self.buffs.consolidation)
+		self.frame:SetAlpha(1)
 	end
 
-	self.frame:SetSize(config.wrapAfter * 36 + (config.wrapAfter - 1) * config.paddingX, (36 + config.paddingY) * math_ceil(BUFF_MAX_DISPLAY / config.wrapAfter) + (36 + config.paddingY))
+	local visibility
+	if (not config.enabled) then
+		visibility = "hide"
+	elseif (config.enableModifier) then
+		local modifier = string_lower(config.modifier or "SHIFT")
+		visibility = config.ignoreTarget
+			and ("[petbattle]hide;[mod:" .. modifier .. "]show;hide")
+			or ("[petbattle]hide;[@target,exists]hide;[mod:" .. modifier .. "]show;hide")
+	else
+		visibility = config.ignoreTarget and "[petbattle]hide;show" or "[petbattle]hide;[@target,exists]hide;show"
+	end
 
-	self.buffs:ClearAllPoints()
-	self.buffs:SetPoint(config.anchorPoint)
-	self.buffs:SetAttribute("point", config.anchorPoint)
-	self.buffs:SetAttribute("xOffset", (36 + config.paddingX) * (config.growthX == "LEFT" and -1 or 1))
-	self.buffs:SetAttribute("wrapAfter", config.wrapAfter)
-	self.buffs:SetAttribute("wrapYOffset", rowOffsetY)
-
-	self.buffs.consolidation:SetAttribute("point", self.buffs:GetAttribute("point"))
-	self.buffs.consolidation:SetAttribute("xOffset", self.buffs:GetAttribute("xOffset"))
-	self.buffs.consolidation:SetAttribute("wrapAfter", self.buffs:GetAttribute("wrapAfter"))
-	self.buffs.consolidation:SetAttribute("wrapYOffset", self.buffs:GetAttribute("wrapYOffset"))
-
-	self.debuffs:ClearAllPoints()
-	self.debuffs:SetPoint(config.anchorPoint, self.buffs, config.anchorPoint, 0, rowOffsetY)
-	self.debuffs:SetAttribute("point", config.anchorPoint)
-	self.debuffs:SetAttribute("xOffset", self.buffs:GetAttribute("xOffset"))
-	self.debuffs:SetAttribute("wrapAfter", config.wrapAfter)
-	self.debuffs:SetAttribute("wrapYOffset", self.buffs:GetAttribute("wrapYOffset"))
-
-	self.visibility:SetAttribute("ignoreTarget", config.ignoreTarget)
-	self.visibility:SetAttribute("auramode", not config.enabled and "hide" or config.enableModifier and "modifier" or "show")
-	self.visibility:SetAttribute("modifierkey", string_lower(config.modifier))
-	self.visibility:Execute([[ self:RunAttribute("UpdateDriver"); ]])
-
+	-- Use the native secure visibility state instead of a custom state snippet.
+	-- This keeps target/modifier changes and the /az enabled toggle authoritative.
+	UnregisterStateDriver(self.frame, "visibility")
+	RegisterStateDriver(self.frame, "visibility", visibility)
 	self:UpdateAnchor()
 end
 
-Auras.OnEvent = function(self, event, ...)
-	if (event == "PLAYER_ENTERING_WORLD") then
-		self:ForAll("Update")
-		self:UpdateAuraButtonAlpha()
+Auras.RefreshContainers = function(self)
+	for _, group in ipairs(self.auraUnitGroups or {}) do
+		group.buffs:UpdateAllAuras()
+		group.debuffs:UpdateAllAuras()
+	end
+end
 
-	elseif (event == "PLAYER_REGEN_ENABLED") then
-		if (InCombatLockdown()) then return end
-		self:QueueRefreshVisibleBuffButtons()
-		if (self.__AzeriteUI_AuraDriverPending) then
-			ApplyBlizzardAuraVisibilityDriver(self)
+Auras.RemovePrivateAuraAnchors = function(self)
+	if (not C_UnitAuras or not C_UnitAuras.RemovePrivateAuraAnchor) then return end
+	for _, group in ipairs(self.auraUnitGroups or {}) do
+		for _, anchorID in ipairs(group.privateAuras.anchorIDs or {}) do
+			pcall(C_UnitAuras.RemovePrivateAuraAnchor, anchorID)
 		end
+		group.privateAuras.anchorIDs = {}
+	end
+end
+
+Auras.OnEvent = function(self, event)
+	if (event == "PLAYER_REGEN_ENABLED") then
+		if (InCombatLockdown()) then return end
 		if (self.needupdate) then
 			self.needupdate = nil
 			self:UpdateSettings()
 		end
+	elseif (event == "PLAYER_ENTERING_WORLD") then
+		self:RefreshContainers()
+		self:DisableBlizzard()
 	end
 end
 
-Auras.OnEnable = function(self)
+Auras.Activate = function(self)
+	if (self.activated or not self:CreateAuras()) then return false end
+	self.activated = true
+	self:UnregisterEvent("ADDON_LOADED")
+
 	self:DisableBlizzard()
-
-	self:CreateBuffs()
 	self:CreateAnchor(AURAS)
-
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
-	self:RegisterUnitEvent("UNIT_AURA", "OnUnitAura", "player", "vehicle")
-
-	-- In TWW 11.0+, periodically check if BuffFrame was reparented by Edit Mode
-	if (ns.WoW11) then
-		self.blizzardBuffWatcher = self:ScheduleRepeatingTimer(function()
-			if (BuffFrame:GetParent() ~= ns.Hider) then
-				BuffFrame:SetParent(ns.Hider)
-			end
-			if (DebuffFrame and DebuffFrame:GetParent() ~= ns.Hider) then
-				DebuffFrame:SetParent(ns.Hider)
-			end
-		end, 1) -- Check every 1 second
-	end
 
 	ns.MovableModulePrototype.OnEnable(self)
-
 	self:UpdateSettings()
+	self:RefreshContainers()
+	return true
+end
+
+Auras.OnBlizzardAuraContainerLoaded = function(self, event, addon)
+	if (addon ~= "Blizzard_AuraContainer") then return end
+	self:Activate()
+end
+
+Auras.OnEnable = function(self)
+	if (not self:Activate()) then
+		self:RegisterEvent("ADDON_LOADED", "OnBlizzardAuraContainerLoaded")
+	end
+end
+
+Auras.OnDisable = function(self)
+	self:RemovePrivateAuraAnchors()
+	if (self.frame) then
+		LFF:UnregisterFrameForFading(self.frame)
+	end
 end

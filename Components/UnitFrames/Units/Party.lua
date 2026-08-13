@@ -990,6 +990,7 @@ local style = function(self, unit)
 
 	self.PriorityDebuff = priorityDebuff
 	self.PriorityDebuff.PostUpdate = PriorityDebuff_PostUpdate
+	ns.API.CreatePrivateAuras(self, self.Health, 22, 3)
 
 	-- Absorb Bar (Retail)
 	--------------------------------------------

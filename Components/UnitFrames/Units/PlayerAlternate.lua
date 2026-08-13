@@ -665,8 +665,9 @@ end
 
 -- Update player frame based on player level.
 local UnitFrame_UpdateTextures = function(self)
-	local playerLevel = playerLevel or UnitLevel("player")
-	local key = (playerXPDisabled or IsLevelAtEffectiveMaxLevel(playerLevel)) and "Seasoned" or playerLevel < 10 and "Novice" or "Hardened"
+	local currentPlayerLevel = UnitLevel("player") or playerLevel or 0
+	local playerXPDisabled = IsXPUserDisabled and IsXPUserDisabled()
+	local key = (playerXPDisabled or ns.API.IsLevelAtEffectiveMaxLevel(currentPlayerLevel)) and "Seasoned" or currentPlayerLevel < 10 and "Novice" or "Hardened"
 	local config = ns.GetConfig("PlayerFrameAlternate")
 	local db = config[key]
 
@@ -798,49 +799,45 @@ local UnitFrame_UpdateTextures = function(self)
 end
 
 local UnitFrame_UpdateAuraPosition = function(self)
+	if (InCombatLockdown()) then
+		self.__AzeriteUI_PlayerAuraLayoutPending = true
+		return
+	end
+	self.__AzeriteUI_PlayerAuraLayoutPending = nil
+
 	local config = PlayerFrameAltMod.db.profile
 	local db = ns.GetConfig("PlayerFrameAlternate")
 
-	local auras = self.Auras
+	local auras = self.PlayerAuras
 	auras:ClearAllPoints()
 
 	if (config.aurasBelowFrame) then
 		auras:SetSize(unpack(db.AurasSize))
 		auras:SetPoint(unpack(db.AurasPosition))
-		auras.size = db.AuraSize
-		auras.spacing = db.AuraSpacing
-		auras.numTotal = db.AurasNumTotal
-		auras.disableMouse = db.AurasDisableMouse
-		auras.disableCooldown = db.AurasDisableCooldown
-		auras.onlyShowPlayer = db.AurasOnlyShowPlayer
-		auras.showStealableBuffs = db.AurasShowStealableBuffs
-		auras.initialAnchor = db.AurasInitialAnchor
-		auras["spacing-x"] = db.AurasSpacingX
-		auras["spacing-y"] = db.AurasSpacingY
-		auras["growth-x"] = db.AurasGrowthX
-		auras["growth-y"] = db.AurasGrowthY
-		auras.tooltipAnchor = db.AurasTooltipAnchor
-		auras.sortMethod = db.AurasSortMethod
-		auras.sortDirection = db.AurasSortDirection
+		auras:Configure({
+			size = db.AuraSize,
+			spacingX = db.AurasSpacingX or db.AuraSpacing or 0,
+			spacingY = db.AurasSpacingY or db.AuraSpacing or 0,
+			initialAnchor = db.AurasInitialAnchor,
+			growthX = db.AurasGrowthX,
+			growthY = db.AurasGrowthY,
+			maxBuffs = db.AurasNumTotal - math.floor(db.AurasNumTotal / 4),
+			maxDebuffs = math.floor(db.AurasNumTotal / 4)
+		})
 
 	else
 		auras:SetSize(unpack(db.AurasSizeAlternate))
 		auras:SetPoint(unpack(db.AurasPositionAlternate))
-		auras.size = db.AuraSizeAlternate
-		auras.spacing = db.AuraSpacingAlternate
-		auras.numTotal = db.AurasNumTotalAlternate
-		auras.disableMouse = db.AurasDisableMouseAlternate
-		auras.disableCooldown = db.AurasDisableCooldownAlternate
-		auras.onlyShowPlayer = db.AurasOnlyShowPlayerAlternate
-		auras.showStealableBuffs = db.AurasShowStealableBuffsAlternate
-		auras.initialAnchor = db.AurasInitialAnchorAlternate
-		auras["spacing-x"] = db.AurasSpacingXAlternate
-		auras["spacing-y"] = db.AurasSpacingYAlternate
-		auras["growth-x"] = db.AurasGrowthXAlternate
-		auras["growth-y"] = db.AurasGrowthYAlternate
-		auras.tooltipAnchor = db.AurasTooltipAnchorAlternate
-		auras.sortMethod = db.AurasSortMethodAlternate
-		auras.sortDirection = db.AurasSortDirectionAlternate
+		auras:Configure({
+			size = db.AuraSizeAlternate,
+			spacingX = db.AurasSpacingXAlternate or db.AuraSpacingAlternate or 0,
+			spacingY = db.AurasSpacingYAlternate or db.AuraSpacingAlternate or 0,
+			initialAnchor = db.AurasInitialAnchorAlternate,
+			growthX = db.AurasGrowthXAlternate,
+			growthY = db.AurasGrowthYAlternate,
+			maxBuffs = db.AurasNumTotalAlternate - math.floor(db.AurasNumTotalAlternate / 4),
+			maxDebuffs = math.floor(db.AurasNumTotalAlternate / 4)
+		})
 
 	end
 
@@ -870,9 +867,6 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 				self.Health.Value:UpdateTag()
 			end
 		end
-
-	elseif (event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_REGEN_DISABLED") then
-		self.Auras:ForceUpdate()
 
 	elseif (event == "PLAYER_LEVEL_UP") then
 		playerLevel = UnitLevel("player")
@@ -1229,16 +1223,23 @@ local style = function(self, unit, id)
 
 	-- Auras
 	--------------------------------------------
-	local auras = CreateFrame("Frame", nil, self)
-	auras.reanchorIfVisibleChanged = true
-	auras.CreateButton = ns.AuraStyles.CreateButton
-	auras.PostUpdateButton = ns.AuraStyles.PlayerPostUpdateButton
-	auras.CustomFilter = ns.AuraFilters.PlayerAuraFilter -- classic
-	auras.FilterAura = ns.AuraFilters.PlayerAuraFilter -- retail
-	auras.PreSetPosition = ns.AuraSorts.Default -- only in classic
-	auras.SortAuras = ns.AuraSorts.DefaultFunction -- only in retail
-
-	self.Auras = auras
+	local auras = ns.PlayerAuraContainers.Create(self, {
+		width = db.AurasSize[1],
+		height = db.AurasSize[2],
+		size = db.AuraSize,
+		spacing = db.AuraSpacing,
+		spacingX = db.AurasSpacingX,
+		spacingY = db.AurasSpacingY,
+		initialAnchor = db.AurasInitialAnchor,
+		growthX = db.AurasGrowthX,
+		growthY = db.AurasGrowthY,
+		maxBuffs = db.AurasNumTotal - math.floor(db.AurasNumTotal / 4),
+		maxDebuffs = math.floor(db.AurasNumTotal / 4),
+		disableMouse = db.AurasDisableMouse,
+		disableCooldown = db.AurasDisableCooldown,
+		tooltipAnchor = db.AurasTooltipAnchor
+	})
+	self.PlayerAuras = auras
 
 	-- Seasonal Flavors
 	--------------------------------------------
@@ -1320,10 +1321,10 @@ PlayerFrameAltMod.Update = function(self)
 	self.frame.Health:ForceUpdate()
 
 	if (self.db.profile.showAuras) then
-		self.frame:EnableElement("Auras")
-		self.frame.Auras:ForceUpdate()
+		self.frame.PlayerAuras:SetDisplayEnabled(true)
+		self.frame.PlayerAuras:ForceUpdate()
 	else
-		self.frame:DisableElement("Auras")
+		self.frame.PlayerAuras:SetDisplayEnabled(false)
 	end
 
 	if (self.db.profile.showCastbar) then
@@ -1392,4 +1393,3 @@ PlayerFrameAltMod.OnEnable = function(self)
 
 	ns.MovableModulePrototype.OnEnable(self)
 end
-

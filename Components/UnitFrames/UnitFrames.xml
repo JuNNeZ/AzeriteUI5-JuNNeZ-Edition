@@ -9,6 +9,7 @@
 	<Script file="Auras\AuraFilters.lua"/>
 	<Script file="Auras\AuraSorting.lua"/>
 	<Script file="Auras\AuraStyling.lua"/>
+	<Script file="Auras\PlayerAuraContainers.lua"/>
 
 	<Script file="Units\Player.lua"/>
 	<Script file="Units\PlayerAlternate.lua"/>

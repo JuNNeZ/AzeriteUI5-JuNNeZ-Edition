@@ -87,7 +87,7 @@ local function IsSafeNumber(value)
 end
 
 local function IsSafeKey(value)
-	return value ~= nil and (not issecretvalue or not issecretvalue(value))
+	return (not issecretvalue or not issecretvalue(value)) and value ~= nil
 end
 
 local function SetShown(frame, shown)
@@ -125,12 +125,22 @@ local function GetAuraDataByIndexSafe(unit, index, filter)
 	end
 end
 
+local function GetAuraDataByAuraInstanceIDSafe(unit, auraInstanceID)
+	if(not auraInstanceID) then
+		return nil
+	end
+	local ok, data = pcall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
+	if(ok) then
+		return data
+	end
+end
+
 local function IsAuraFilteredOutByInstanceIDSafe(unit, auraInstanceID, filter)
-	if(not auraInstanceID or not filter) then
+	if(not IsSafeKey(auraInstanceID) or not filter) then
 		return nil
 	end
 	local ok, filtered = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, auraInstanceID, filter)
-	if(ok) then
+	if(ok and (not issecretvalue or not issecretvalue(filtered))) then
 		return filtered
 	end
 end
@@ -438,8 +448,9 @@ end
 local function processData(element, unit, data, filter)
 	if(not data) then return end
 
-	local _ok, _filtered = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, data.auraInstanceID, filter .. '|PLAYER')
-	data.isPlayerAura = _ok and not _filtered or false
+	local filteredOut = IsAuraFilteredOutByInstanceIDSafe(unit, data.auraInstanceID, filter .. '|PLAYER')
+	data.isPlayerAura = filteredOut == false
+	data.__AzeriteUI_isPlayerAuraKnown = filteredOut ~= nil
 	data.isHarmfulAura = filter == 'HARMFUL' -- "isHarmful" is a secret, use a different name
 
 	--[[ Callback: Auras:PostProcessAuraData(unit, data, filter)
@@ -475,10 +486,33 @@ local function AddAuraData(targetAll, targetActive, element, unit, data, filter)
 	return false
 end
 
+local function RequiresFullAuraUpdate(updateInfo)
+	if(not updateInfo) then
+		return true
+	end
+
+	local isFullUpdate = updateInfo.isFullUpdate
+	if(issecretvalue and issecretvalue(isFullUpdate)) then
+		return true
+	end
+
+	if(issecretvalue) then
+		if(issecretvalue(updateInfo.addedAuras)
+			or issecretvalue(updateInfo.updatedAuraInstanceIDs)
+			or issecretvalue(updateInfo.removedAuraInstanceIDs)) then
+			return true
+		end
+	end
+
+	return isFullUpdate == true
+end
+
 local function UpdateAuras(self, event, unit, updateInfo)
 	if(self.unit ~= unit) then return end
 
-	local isFullUpdate = not updateInfo or updateInfo.isFullUpdate
+	-- Midnight can mark UNIT_AURA delta fields secret while addon execution is
+	-- tainted. Never branch on those values; rebuild from the public scan API.
+	local isFullUpdate = RequiresFullAuraUpdate(updateInfo)
 
 	local auras = self.Auras
 	if(auras) then
@@ -543,11 +577,11 @@ local function UpdateAuras(self, event, unit, updateInfo)
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
-					if(not C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, data.auraInstanceID, buffFilter)) then
+					if(IsAuraFilteredOutByInstanceIDSafe(unit, data.auraInstanceID, buffFilter) == false) then
 						if(AddAuraData(auras.allBuffs, auras.activeBuffs, auras, unit, data, buffFilter)) then
 							buffsChanged = true
 						end
-					elseif(not C_UnitAuras.IsAuraFilteredOutByInstanceID(unit, data.auraInstanceID, debuffFilter)) then
+					elseif(IsAuraFilteredOutByInstanceIDSafe(unit, data.auraInstanceID, debuffFilter) == false) then
 						if(AddAuraData(auras.allDebuffs, auras.activeDebuffs, auras, unit, data, debuffFilter)) then
 							debuffsChanged = true
 						end
@@ -558,7 +592,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			if(updateInfo.updatedAuraInstanceIDs) then
 				for _, auraInstanceID in next, updateInfo.updatedAuraInstanceIDs do
 					if(auras.allBuffs[auraInstanceID]) then
-						local refreshed = processData(auras, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), buffFilter)
+						local refreshed = processData(auras, unit, GetAuraDataByAuraInstanceIDSafe(unit, auraInstanceID), buffFilter)
 						if(refreshed and refreshed.auraInstanceID) then
 							auras.allBuffs[auraInstanceID] = refreshed
 						end
@@ -569,7 +603,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 							buffsChanged = true
 						end
 					elseif(auras.allDebuffs[auraInstanceID]) then
-						local refreshed = processData(auras, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), debuffFilter)
+						local refreshed = processData(auras, unit, GetAuraDataByAuraInstanceIDSafe(unit, auraInstanceID), debuffFilter)
 						if(refreshed and refreshed.auraInstanceID) then
 							auras.allDebuffs[auraInstanceID] = refreshed
 						end
@@ -805,8 +839,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
-					local _okF, _filteredOut = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, data.auraInstanceID, buffFilter)
-					if(_okF and not _filteredOut) then
+					if(IsAuraFilteredOutByInstanceIDSafe(unit, data.auraInstanceID, buffFilter) == false) then
 						local processed = processData(buffs, unit, data, buffFilter)
 						if(processed and processed.auraInstanceID) then
 							buffs.all[data.auraInstanceID] = processed
@@ -823,7 +856,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			if(updateInfo.updatedAuraInstanceIDs) then
 				for _, auraInstanceID in next, updateInfo.updatedAuraInstanceIDs do
 					if(buffs.all[auraInstanceID]) then
-						local refreshed = processData(buffs, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), buffFilter)
+						local refreshed = processData(buffs, unit, GetAuraDataByAuraInstanceIDSafe(unit, auraInstanceID), buffFilter)
 						if(refreshed and refreshed.auraInstanceID) then
 							buffs.all[auraInstanceID] = refreshed
 						end
@@ -959,8 +992,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
-					local _okF, _filteredOut = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, data.auraInstanceID, debuffFilter)
-					if(_okF and not _filteredOut) then
+					if(IsAuraFilteredOutByInstanceIDSafe(unit, data.auraInstanceID, debuffFilter) == false) then
 						local processed = processData(debuffs, unit, data, debuffFilter)
 						if(processed and processed.auraInstanceID) then
 							debuffs.all[data.auraInstanceID] = processed
@@ -977,7 +1009,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			if(updateInfo.updatedAuraInstanceIDs) then
 				for _, auraInstanceID in next, updateInfo.updatedAuraInstanceIDs do
 					if(debuffs.all[auraInstanceID]) then
-						local refreshed = processData(debuffs, unit, C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID), debuffFilter)
+						local refreshed = processData(debuffs, unit, GetAuraDataByAuraInstanceIDSafe(unit, auraInstanceID), debuffFilter)
 						if(refreshed and refreshed.auraInstanceID) then
 							debuffs.all[auraInstanceID] = refreshed
 						end

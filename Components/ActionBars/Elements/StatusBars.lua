@@ -499,7 +499,7 @@ StatusBars.UpdateBars = function(self, event, ...)
 		end
 	else
 
-		if (IsPlayerAtEffectiveMaxLevel() or IsXPUserDisabled()) then
+		if (ns.API.IsPlayerAtEffectiveMaxLevel() or IsXPUserDisabled()) then
 			bar.currentType = nil
 			bar:Hide()
 			bonus:Hide()

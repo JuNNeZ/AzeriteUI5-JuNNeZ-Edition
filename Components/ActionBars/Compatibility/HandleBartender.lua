@@ -30,66 +30,33 @@ if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local Bartender = ns:NewModule("Bartender", "LibMoreEvents-1.0")
 
-Bartender.HandleBagBar = function(self)
+Bartender.DisableConflictingModules = function(self)
 	local Bartender4 = _G.Bartender4
 	if not Bartender4 then return end
-	
-	local BagBarMod = Bartender4:GetModule("BagBar")
-	if (not BagBarMod) then
-		return
+
+	for _,name in ipairs({
+		"ActionBars", "PetBar", "StanceBar", "Vehicle", "ExtraActionBar",
+		"BagBar", "MicroMenu", "StatusTrackingBar", "BlizzardArt"
+	}) do
+		local module = Bartender4:GetModule(name, true)
+		if (module and module:IsEnabled()) then
+			module:Disable()
+		end
 	end
-	BagBarMod:Disable()
-	BagBarMod:UnhookAll()
-	BagBarMod.Enable = BagBarMod.Disable
 end
 
--- Disable and unhook Bartender's micro menu module
--- as this directly conflicts with our own.
-Bartender.HandleMicroMenu = function(self)
+Bartender.ReleaseBindingControllers = function(self)
 	local Bartender4 = _G.Bartender4
 	if not Bartender4 then return end
-	
-	local MicroMenuMod = Bartender4:GetModule("MicroMenu")
-	if (not MicroMenuMod) then
-		return
-	end
-	MicroMenuMod:Disable()
-	MicroMenuMod:UnhookAll()
-	MicroMenuMod.Enable = MicroMenuMod.Disable
-end
 
--- Prevent Bartender from transferring keybinds
--- to the blizzard default bars when entering petbattle,
--- as we're doing this already.
-Bartender.HandlePetBattles = function(self)
-	local Bartender4 = _G.Bartender4
-	if not Bartender4 then return end
-	
 	if (Bartender4.petBattleController) then
 		_G.UnregisterStateDriver(Bartender4.petBattleController, "petbattle")
 		Bartender4.petBattleController:Execute([[ self:ClearBindings(); ]])
 	end
-	Bartender4.RegisterPetBattleDriver = ns.Noop
-end
-
--- Prevent Bartender from transferring keybinds
--- to the blizzard default bars when entering vehicles,
--- as this will prevent our own bars from functioning.
-Bartender.HandleVehicle = function(self)
-	local Bartender4 = _G.Bartender4
-	if not Bartender4 then return end
-	local OverrideActionBar = _G.OverrideActionBar
-	
 	if (Bartender4.vehicleController) then
-		if OverrideActionBar then
-			OverrideActionBar:UnregisterAllEvents()
-			OverrideActionBar:Hide()
-			OverrideActionBar:SetParent(ns.Hider)
-		end
 		_G.UnregisterStateDriver(Bartender4.vehicleController, "vehicle")
 		Bartender4.vehicleController:Execute([[ self:ClearBindings(); ]])
 	end
-	Bartender4.RegisterPetBattleDriver = ns.Noop
 end
 
 Bartender.HandleBartender = function(self, event, addon)
@@ -107,10 +74,8 @@ Bartender.HandleBartender = function(self, event, addon)
 		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "HandleBartender")
 	end
 
-	self:HandleBagBar()
-	--self:HandleMicroMenu() -- we don't use the blizzard micro menu anymore
-	self:HandlePetBattles()
-	self:HandleVehicle()
+	self:DisableConflictingModules()
+	self:ReleaseBindingControllers()
 
 	ns.BartenderHandled = true
 

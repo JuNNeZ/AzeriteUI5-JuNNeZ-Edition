@@ -1,6 +1,5 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
 
-	<Include file="AuraTemplates.xml"/>
 	<Script file="Auras.lua"/>
 
 </Ui>

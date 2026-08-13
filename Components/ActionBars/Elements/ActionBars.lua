@@ -50,52 +50,22 @@ local GetMedia = ns.API.GetMedia
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
 local RegisterCooldown = ns.Widgets.RegisterCooldown
 
-local HasCurrentBonusActionBar = function()
-	if (C_ActionBar and C_ActionBar.HasBonusActionBar) then
-		return C_ActionBar.HasBonusActionBar()
-	end
-	return HasBonusActionBar and HasBonusActionBar()
-end
+local STARTUP_BUTTON_REFRESH_DELAY = .5
+local STARTUP_BUTTON_REFRESH_ATTEMPTS = 2
 
-local GetCurrentBonusBarOffset = function()
-	if (C_ActionBar and C_ActionBar.GetBonusBarOffset) then
-		return C_ActionBar.GetBonusBarOffset()
-	end
-	return GetBonusBarOffset and GetBonusBarOffset()
-end
-
-local UpdateDragonClickBlocker = function(bar, shouldBlock)
-	local blocker = bar and bar.dragonClickBlocker
-	if (not blocker) then return end
-
-	if (shouldBlock) then
-		blocker:Show()
-	else
-		blocker:Hide()
-	end
-end
-
-local ForceBarCombatActive = function(bar)
-	bar:SetAlpha(1)
-	UpdateDragonClickBlocker(bar, false)
-	if (bar.buttons) then
-		for id,button in next,bar.buttons do
-			button:SetAlpha(1)
+local HasVisibleActionbarTextures = function(self)
+	for _,bar in next,self.bars do
+		if (bar and bar.buttons and bar.config and bar.config.enabled) then
+			local numbuttons = bar.config.numbuttons or 0
+			for id = 1, numbuttons do
+				local button = bar.buttons[id]
+				if (button and button.GetTexture and button:GetTexture()) then
+					return true
+				end
+			end
 		end
 	end
-end
-
-local IsDragonMountBarState = function(primaryBar)
-	if (not ns.IsRetail) then
-		return false
-	end
-	if (not HasCurrentBonusActionBar()) then
-		return false
-	end
-	if (GetCurrentBonusBarOffset() ~= 5) then
-		return false
-	end
-	return true
+	return false
 end
 
 -- Return blizzard barID by from own bar numbers.
@@ -361,7 +331,9 @@ local style = function(self)
 	self.cooldown:SetDrawBling(false)
 	self.cooldown:SetEdgeTexture(b)
 	self.cooldown:SetDrawEdge(false)
-	self.cooldown:SetHideCountdownNumbers(false)
+	-- AzeriteUI owns the countdown text below. Keep Blizzard's native number
+	-- hidden so Retail does not draw a second, larger duration over it.
+	self.cooldown:SetHideCountdownNumbers(true)
 
 	self.UpdateCharge = function(self)
 		local m = db.ButtonMaskTexture
@@ -464,7 +436,7 @@ local style = function(self)
 	hooksecurefunc(self.cooldown, "SetDrawSwipe", function(c,h) if not h then c:SetDrawSwipe(true) end end)
 	hooksecurefunc(self.cooldown, "SetDrawBling", function(c,h) if h then c:SetDrawBling(false) end end)
 	hooksecurefunc(self.cooldown, "SetDrawEdge", function(c,h) if h then c:SetDrawEdge(false) end end)
-	hooksecurefunc(self.cooldown, "SetHideCountdownNumbers", function(c,h) if h then c:SetHideCountdownNumbers(false) end end)
+	hooksecurefunc(self.cooldown, "SetHideCountdownNumbers", function(c,h) if not h then c:SetHideCountdownNumbers(true) end end)
 	hooksecurefunc(self.cooldown, "SetCooldown", function(c) c:SetAlpha(.75) end)
 	hooksecurefunc(self, "SetNormalTexture", function(button, texture)
 		if (texture and texture ~= "") then
@@ -548,18 +520,6 @@ ActionBarMod.CreateBars = function(self)
 		for id,button in next,bar.buttons do
 			style(button)
 			self.buttons[button] = true
-		end
-
-		if (i > 1) then
-			local blocker = CreateFrame("Frame", nil, bar)
-			blocker:SetAllPoints(bar)
-			blocker:SetFrameStrata(bar:GetFrameStrata())
-			blocker:SetFrameLevel(bar:GetFrameLevel() + 100)
-			blocker:EnableMouse(true)
-			blocker:SetScript("OnMouseDown", function() end)
-			blocker:SetScript("OnMouseUp", function() end)
-			blocker:Hide()
-			bar.dragonClickBlocker = blocker
 		end
 
 		self.bars[i] = bar
@@ -722,7 +682,12 @@ ActionBarMod.UpdateBarButtonCounts = function(self)
 		local numbuttons = bar.config.numbuttons
 		for j = 1, #bar.buttons do
 			if (j <= numbuttons) then
-				bar.buttons[j]:ForceUpdate()
+				local button = bar.buttons[j]
+				if (button.UpdateAllStates) then
+					button:UpdateAllStates()
+				end
+				button:ForceUpdate()
+				button:SetAlpha(1)
 			end
 		end
 	end
@@ -730,12 +695,16 @@ end
 
 ActionBarMod.UpdateBindings = function(self, event)
 	if (InCombatLockdown()) then
-		-- Visual-only dragon hide/show must still react in combat.
-		self:RefreshDragonVisualState()
 		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateBindings")
 	end
 	if (event == "PLAYER_REGEN_ENABLED") then
 		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "UpdateBindings")
+	end
+	if (ns.API.IsHouseEditorActive()) then
+		for _,bar in next,self.bars do
+			ClearOverrideBindings(bar)
+		end
+		return
 	end
 	-- Apply secondary bars first and primary bar last so bar 1 wins key conflicts.
 	for i = 2,#self.bars do
@@ -748,10 +717,42 @@ ActionBarMod.UpdateBindings = function(self, event)
 	if (primaryBar and primaryBar:IsEnabled()) then
 		primaryBar:UpdateBindings()
 	end
-	self:RefreshDragonVisualState()
 	if (event ~= "AZERITEUI_DEFERRED_BINDINGS") then
 		self:QueueBindingRefresh()
 	end
+end
+
+ActionBarMod.OnHouseEditorModeChanged = function(self)
+	self:UpdateBindings("HOUSE_EDITOR_MODE_CHANGED")
+end
+
+ActionBarMod.OnStartupButtonRefresh = function(self, event)
+	if (event == "PLAYER_REGEN_ENABLED") then
+		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnStartupButtonRefresh")
+	end
+	if (InCombatLockdown()) then
+		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnStartupButtonRefresh")
+	end
+
+	self:UpdateBarButtonCounts()
+	self:UpdateBars()
+	self:UpdateBindings()
+	self.__AzeriteUI_StartupButtonRefreshCount = (self.__AzeriteUI_StartupButtonRefreshCount or 0) + 1
+	if ((not HasVisibleActionbarTextures(self)) and self.__AzeriteUI_StartupButtonRefreshCount < STARTUP_BUTTON_REFRESH_ATTEMPTS) then
+		self:QueueStartupButtonRefresh()
+	end
+end
+
+ActionBarMod.QueueStartupButtonRefresh = function(self)
+	if (self.__AzeriteUI_StartupButtonRefreshTimer) then
+		self:CancelTimer(self.__AzeriteUI_StartupButtonRefreshTimer)
+	end
+	self.__AzeriteUI_StartupButtonRefreshTimer = self:ScheduleTimer("OnStartupButtonRefreshTimer", STARTUP_BUTTON_REFRESH_DELAY)
+end
+
+ActionBarMod.OnStartupButtonRefreshTimer = function(self)
+	self.__AzeriteUI_StartupButtonRefreshTimer = nil
+	self:OnStartupButtonRefresh()
 end
 
 ActionBarMod.QueueBindingRefresh = function(self)
@@ -764,46 +765,6 @@ end
 ActionBarMod.OnBindingRefreshTimer = function(self)
 	self.__AzeriteUI_BindingRefreshTimer = nil
 	self:UpdateBindings("AZERITEUI_DEFERRED_BINDINGS")
-end
-
-ActionBarMod.RefreshDragonVisualState = function(self)
-	self:UpdateDragonVisualState()
-	self:QueueDragonVisualRefresh()
-end
-
-ActionBarMod.UpdateDragonVisualState = function(self)
-	if (not next(self.bars)) then return end
-
-	local inDragonState = IsDragonMountBarState(self.bars[1])
-
-	for i,bar in next,self.bars do
-		if (i > 1 and bar and bar:IsEnabled()) then
-			if (InCombatLockdown() and not inDragonState) then
-				ForceBarCombatActive(bar)
-			else
-				local hideForDragon = bar.config and bar.config.visibility and (bar.config.visibility.dragon == false)
-				local shouldHideForDragon = inDragonState and hideForDragon
-				bar:SetAlpha(shouldHideForDragon and 0 or 1)
-				UpdateDragonClickBlocker(bar, shouldHideForDragon)
-			end
-		end
-	end
-end
-
-ActionBarMod.QueueDragonVisualRefresh = function(self)
-	if (self.__AzeriteUI_DragonVisualRefreshTimer) then
-		self:CancelTimer(self.__AzeriteUI_DragonVisualRefreshTimer)
-	end
-	self.__AzeriteUI_DragonVisualRefreshTimer = self:ScheduleTimer("OnDragonVisualRefreshTimer", .1)
-end
-
-ActionBarMod.OnDragonVisualRefreshTimer = function(self)
-	self.__AzeriteUI_DragonVisualRefreshTimer = nil
-	self:UpdateDragonVisualState()
-end
-
-ActionBarMod.UpdateDragonVisuals = function(self, event)
-	self:RefreshDragonVisualState()
 end
 
 -- Called by the movable frame manager
@@ -907,6 +868,11 @@ ActionBarMod.UpdateSettings = function(self, event)
 	self:UpdatePositionAndScales()
 	self:UpdateAnchors()
 
+	if (event == "PLAYER_ENTERING_WORLD") then
+		self.__AzeriteUI_StartupButtonRefreshCount = 0
+		self:QueueStartupButtonRefresh()
+	end
+
 	-- self:UpdateAssistedHighlightColor()
 end
 
@@ -996,13 +962,13 @@ ActionBarMod.OnEnable = function(self)
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateSettings")
 	self:RegisterEvent("CVAR_UPDATE", "OnCVarUpdate")
-	self:RegisterEvent("ACTIONBAR_PAGE_CHANGED", "UpdateDragonVisuals")
 	self:RegisterEvent("UPDATE_BINDINGS", "UpdateBindings")
 	self:RegisterEvent("UPDATE_BONUS_ACTIONBAR", "UpdateBindings")
 	self:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR", "UpdateBindings")
 	self:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR", "UpdateBindings")
 	self:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED", "UpdateBindings")
 	self:RegisterEvent("PLAYER_REGEN_DISABLED", "UpdateBindings")
+	self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnHouseEditorModeChanged")
 	-- ns.RegisterCallback(self, "AssistedHighlightColor_Changed", "UpdateAssistedHighlightColor")
 
 	self:UpdateSettings()

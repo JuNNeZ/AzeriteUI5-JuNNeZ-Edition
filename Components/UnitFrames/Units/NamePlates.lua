@@ -162,6 +162,30 @@ local IsSecretValue = function(value)
 	return (type(issecretvalue) == "function" and issecretvalue(value)) and true or false
 end
 
+local IsSafeTrue = function(value)
+	if (IsSecretValue(value)) then
+		return false
+	end
+	return value and true or false
+end
+
+local IsSafeFalse = function(value)
+	if (IsSecretValue(value)) then
+		return false
+	end
+	return not value
+end
+
+local GetSafeColorByKey = function(colors, key, fallback)
+	if (IsSecretValue(key)) then
+		return fallback
+	end
+	if (not colors or key == nil) then
+		return fallback
+	end
+	return colors[key] or fallback
+end
+
 local UpdateNamePlateWidgetContainer = function(self, shouldShow)
 	local container = self and self.WidgetContainer
 	if (not container) then
@@ -1163,24 +1187,38 @@ end
 local Health_UpdateColor = function(self, event, unit)
 	if(not unit or self.unit ~= unit) then return end
 	local element = self.Health
+	local isConnected = UnitIsConnected(unit)
+	local isPlayerControlled = UnitPlayerControlled(unit)
+	local isPlayer = UnitIsPlayer(unit)
+	local threatColor
+	if (element.colorThreat and IsSafeFalse(isPlayerControlled)) then
+		threatColor = GetThreatColor(self, UnitThreatSituation("player", unit))
+	end
+	local classHostilityAllowed = self.isPRD
+		or not element.colorClassHostileOnly
+		or IsSafeTrue(UnitCanAttack("player", unit))
+	local useClassColor = classHostilityAllowed and (
+		(element.colorClass and IsSafeTrue(isPlayer))
+		or (element.colorClassNPC and IsSafeFalse(isPlayer))
+		or (element.colorClassPet and IsSafeTrue(isPlayerControlled) and IsSafeFalse(isPlayer))
+	)
 
 	local r, g, b, color
-	if (element.colorDisconnected and not UnitIsConnected(unit)) then
+	if (element.colorDisconnected and IsSafeFalse(isConnected)) then
 		color = self.colors.disconnected
-	elseif (element.colorTapping and not UnitPlayerControlled(unit) and UnitIsTapDenied(unit)) then
+	elseif (element.colorTapping and IsSafeFalse(isPlayerControlled) and IsSafeTrue(UnitIsTapDenied(unit))) then
 		color = self.colors.tapped
-	elseif (element.colorThreat and not UnitPlayerControlled(unit) and UnitThreatSituation("player", unit)) then
-		color = GetThreatColor(self, UnitThreatSituation("player", unit))
-	elseif ((element.colorClass and UnitIsPlayer(unit)
-		or (element.colorClassNPC and not UnitIsPlayer(unit))
-		or (element.colorClassPet and UnitPlayerControlled(unit) and not UnitIsPlayer(unit)))
-		and not (not self.isPRD and element.colorClassHostileOnly and not UnitCanAttack("player", unit))) then
+	elseif (threatColor) then
+		color = threatColor
+	elseif (useClassColor) then
 		local _, class = UnitClass(unit)
-		color = self.colors.class[class]
-	elseif (element.colorSelection and unitSelectionType(unit, element.considerSelectionInCombatHostile)) then
-		color = self.colors.selection[unitSelectionType(unit, element.considerSelectionInCombatHostile)]
-	elseif (element.colorReaction and UnitReaction(unit, "player")) then
-		color = self.colors.reaction[UnitReaction(unit, "player")]
+		color = GetSafeColorByKey(self.colors.class, class, self.colors.health)
+	elseif (element.colorSelection) then
+		local selection = unitSelectionType(unit, element.considerSelectionInCombatHostile)
+		color = GetSafeColorByKey(self.colors.selection, selection, self.colors.health)
+	elseif (element.colorReaction) then
+		local reaction = UnitReaction(unit, "player")
+		color = GetSafeColorByKey(self.colors.reaction, reaction, self.colors.health)
 	elseif (element.colorSmooth) then
 		local gradient = element.smoothGradient or (self.colors and self.colors.smooth)
 		if (type(gradient) == "table" and gradient[1]) then

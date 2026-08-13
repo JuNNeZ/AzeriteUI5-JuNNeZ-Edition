@@ -33,14 +33,13 @@ local GetMedia = ns.API.GetMedia
 
 MicroMenu.SpawnButtons = function(self)
 
-	-- Retail
 	local labels = {
 		CharacterMicroButton = CHARACTER_BUTTON,
 		ProfessionMicroButton = TRADE_SKILLS,
-		SpellbookMicroButton = SPELLBOOK_ABILITIES_BUTTON,
-		TalentMicroButton = TALENTS_BUTTON,
+		PlayerSpellsMicroButton = SPELLBOOK_ABILITIES_BUTTON,
 		AchievementMicroButton = ACHIEVEMENT_BUTTON,
 		QuestLogMicroButton = QUESTLOG_BUTTON,
+		HousingMicroButton = HOUSING_DASHBOARD or HOUSING,
 		QuickJoinToastButton = SOCIALS,
 		GuildMicroButton = LOOKINGFORGUILD,
 		LFDMicroButton = DUNGEONS_BUTTON,
@@ -53,10 +52,10 @@ MicroMenu.SpawnButtons = function(self)
 	local buttons = {
 		CharacterMicroButton,
 		ProfessionMicroButton,
-		SpellbookMicroButton,
-		TalentMicroButton,
+		PlayerSpellsMicroButton,
 		AchievementMicroButton,
 		QuestLogMicroButton,
+		HousingMicroButton,
 		QuickJoinToastButton,
 		GuildMicroButton,
 		LFDMicroButton,
@@ -90,20 +89,14 @@ MicroMenu.SpawnButtons = function(self)
 			local button = CreateFrame("Button", nil, bar, "SecureActionButtonTemplate")
 			button.ref = microButton
 
-			if (ns.WoW10) then
-				button:RegisterForClicks("AnyUp","AnyDown")
-			else
-				button:RegisterForClicks("AnyUp")
-			end
+			button:RegisterForClicks("AnyUp", "AnyDown")
 
 			if (microButton == CharacterMicroButton) then
 				button.nocombat = true
 				button:SetScript("OnClick", function(self, button, down)
 					if (InCombatLockdown()) then return end
-					if (ns.WoW10) then
-						local castondown = GetCVarBool("ActionButtonUseKeyDown")
-						if (castondown and not down) or (not castondown and down) then return end
-					end
+					local castondown = GetCVarBool("ActionButtonUseKeyDown")
+					if (castondown and not down) or (not castondown and down) then return end
 					ToggleCharacter("PaperDollFrame")
 				end)
 
@@ -111,10 +104,8 @@ MicroMenu.SpawnButtons = function(self)
 				button.nocombat = true
 				button:SetScript("OnClick", function(self, button, down)
 					if (InCombatLockdown()) then return end
-					if (ns.WoW10) then
-						local castondown = GetCVarBool("ActionButtonUseKeyDown")
-						if (castondown and not down) or (not castondown and down) then return end
-					end
+					local castondown = GetCVarBool("ActionButtonUseKeyDown")
+					if (castondown and not down) or (not castondown and down) then return end
 					if (not GameMenuFrame:IsShown()) then
 						if (not AreAllPanelsDisallowed or not AreAllPanelsDisallowed()) then
 							if (SettingsPanel and SettingsPanel:IsShown()) then
@@ -147,7 +138,7 @@ MicroMenu.SpawnButtons = function(self)
 
 			local text = button:CreateFontString(nil, "OVERLAY")
 			text:SetFontObject(GetFont(13,true))
-			text:SetText(labels[microButton:GetName()])
+			text:SetText(labels[microButton:GetName()] or microButton.tooltipText or microButton:GetName())
 			text:SetJustifyH("CENTER")
 			text:SetJustifyV("MIDDLE")
 			text:SetPoint("CENTER")

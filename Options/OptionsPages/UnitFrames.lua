@@ -238,162 +238,27 @@ local GenerateOptions = function()
 		local playerAuraSettingsDisabled = function(info)
 			return isdisabled(info) or not getoption(info, "showAuras")
 		end
-		local playerAuraCustomSettingsDisabled = function(info)
-			return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraUseStockBehavior") or getoption(info, "playerAuraDebuffsOnly")
-		end
-		local playerAuraAdvancedHidden = function(info)
-			return isdisabled(info) or playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowAdvancedCategories")
-		end
-		local playerAuraImportantChildrenDisabled = function(info)
-			return playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowImportantAuras")
-		end
-		local playerAuraRaidChildrenDisabled = function(info)
-			return playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowRaidAuras")
-		end
-		local playerAuraShortCombatChildrenDisabled = function(info)
-			return playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowShortBuffsInCombat")
-		end
-		local playerAuraShortUtilityChildrenDisabled = function(info)
-			return playerAuraCustomSettingsDisabled(info) or not getoption(info, "playerAuraShowShortBuffsOutOfCombat")
-		end
 		suboptions.args.playerAuraSettingsHeader = {
 			name = L["Player Aura Row"],
 			order = 210, type = "header", hidden = isdisabled
 		}
 		suboptions.args.playerAuraSettingsDescription = {
-			name = L["These settings control the small aura row attached to the player frame. They do not affect the main top-right aura header."],
+			name = L["These settings control the Blizzard-managed Retail aura row attached to the player frame. Temporary auras sort ahead of permanent utility buffs; the main top-right aura header is unaffected."],
 			order = 211, type = "description", width = "full", hidden = isdisabled
-		}
-		suboptions.args.playerAuraUseStockBehavior = {
-			name = L["Use AzeriteUI Stock Behavior"],
-			desc = L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."],
-			order = 211.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraSettingsDisabled
 		}
 		suboptions.args.playerAuraDebuffsOnly = {
 			name = L["Show Debuffs Only"],
-			desc = L["Hide buffs from the player aura row and show only harmful effects on you. This works with both stock behavior and custom aura categories."],
+			desc = L["Hide helpful effects from the attached player aura row and show only harmful effects on you."],
 			order = 211.52, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
 		}
-		suboptions.args.playerAuraAlwaysBright = {
-			name = L["Always Show Full Brightness"],
-			desc = L["Render all visible player-row aura icons at full brightness. Use this if you prefer no dimmed aura icons."],
-			order = 211.55, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraSettingsDisabled
-		}
-		suboptions.args.playerAuraWhatToShowHeader = {
-			name = L["What To Show"],
-			order = 211.6, type = "header", hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
-		}
-		suboptions.args.playerAuraShowAdvancedCategories = {
-			name = L["Show Advanced Aura Categories"],
-			desc = L["Reveal the deeper sub-category toggles for custom player-frame aura filtering."],
-			order = 211.7, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
-		}
 		suboptions.args.playerAuraShowDebuffs = {
-			name = L["Always Show Debuffs"],
-			desc = L["Show harmful effects on you. Examples: magic, poison, bleed and boss debuffs."],
+			name = L["Show Debuffs"],
+			desc = L["Include harmful effects in the attached row when Show Debuffs Only and Separate Player Debuff Row are disabled."],
 			order = 212, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
-		}
-		suboptions.args.playerAuraShowImportantAuras = {
-			name = L["Show Important Buffs"],
-			desc = L["Show Blizzard-marked important, defensive or control-related buffs. Examples: Ice Block, Barkskin, Blessing of Sacrifice and similar externals."],
-			order = 213, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
-		}
-		suboptions.args.playerAuraShowImportantDefensives = {
-			name = L["Defensive Cooldowns"],
-			desc = L["Examples: Ice Block, Barkskin, Survival Instincts, Shield Wall."],
-			order = 213.1, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraImportantChildrenDisabled
-		}
-		suboptions.args.playerAuraShowImportantExternals = {
-			name = L["External Defensives"],
-			desc = L["Examples: Blessing of Sacrifice, Pain Suppression, Ironbark, Life Cocoon."],
-			order = 213.2, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraImportantChildrenDisabled
-		}
-		suboptions.args.playerAuraShowImportantCrowdControl = {
-			name = L["Control / Immunity-Type Auras"],
-			desc = L["Examples: crowd-control immunity, anti-CC effects, and Blizzard-tagged control-related buffs."],
-			order = 213.3, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraImportantChildrenDisabled
-		}
-		suboptions.args.playerAuraShowImportantStealable = {
-			name = L["Stealable / Priority Auras"],
-			desc = L["Examples: special priority buffs Blizzard marks as stealable or high-value."],
-			order = 213.4, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraImportantChildrenDisabled
-		}
-		suboptions.args.playerAuraShowRaidAuras = {
-			name = L["Show Raid-Relevant Buffs"],
-			desc = L["Show raid and encounter buffs Blizzard flags as relevant. Examples: Bloodlust, Power Infusion and encounter mechanic buffs."],
-			order = 214, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
-		}
-		suboptions.args.playerAuraShowRaidGeneral = {
-			name = L["General Raid Buffs"],
-			desc = L["Examples: Bloodlust, Power Infusion, encounter-assigned raid buffs."],
-			order = 214.1, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraRaidChildrenDisabled
-		}
-		suboptions.args.playerAuraShowRaidCombat = {
-			name = L["Raid-In-Combat Flags"],
-			desc = L["Encounter or support buffs Blizzard specifically marks as relevant during combat."],
-			order = 214.2, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraRaidChildrenDisabled
-		}
-		suboptions.args.playerAuraShowStackingAuras = {
-			name = L["Show Stacking Buffs"],
-			desc = L["Show buffs with visible stacks. Examples: Maelstrom Weapon, Arcane Harmony and similar stack-driven buffs."],
-			order = 215, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
-		}
-		suboptions.args.playerAuraShowShortBuffsInCombat = {
-			name = L["Show Short Buffs In Combat"],
-			desc = L["Show short temporary combat buffs while fighting. Examples: Clearcasting, Enrage, trinket procs and short class procs."],
-			order = 216, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
-		}
-		suboptions.args.playerAuraShowShortCombatPlayerBuffs = {
-			name = L["Player / Self Combat Buffs"],
-			desc = L["Examples: your own procs, self-applied maintenance buffs, can-apply class effects."],
-			order = 216.1, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraShortCombatChildrenDisabled
-		}
-		suboptions.args.playerAuraShowShortCombatNonCancelable = {
-			name = L["Non-Cancelable Combat Buffs"],
-			desc = L["Examples: combat-relevant temporary buffs that are not simple cancelable utility effects."],
-			order = 216.2, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraShortCombatChildrenDisabled
-		}
-		suboptions.args.playerAuraShowShortBuffsOutOfCombat = {
-			name = L["Show Short Buffs Out Of Combat"],
-			desc = L["Keep short temporary buffs visible before combat too. Examples: pre-pull procs and brief preparation buffs."],
-			order = 217, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
-		}
-		suboptions.args.playerAuraShowShortUtilityPlayerBuffs = {
-			name = L["Player / Self Temporary Buffs"],
-			desc = L["Examples: self buffs with duration that matter during prep or upkeep."],
-			order = 217.1, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraShortUtilityChildrenDisabled
-		}
-		suboptions.args.playerAuraShowShortUtilityNonCancelable = {
-			name = L["Non-Cancelable Temporary Buffs"],
-			desc = L["Examples: short non-cancelable buffs that should stay visible outside combat too."],
-			order = 217.2, type = "toggle", width = "full", set = setter, get = getter, hidden = playerAuraAdvancedHidden,
-			disabled = playerAuraShortUtilityChildrenDisabled
-		}
-		suboptions.args.playerAuraShowLongUtilityBuffs = {
-			name = L["Show Long Utility Buffs"],
-			desc = L["Also allow long-duration utility buffs in the player row. Examples: Sign of Battle, guild tabard reputation buffs and mounts. Usually leave this off so these stay in the main aura header only."],
-			order = 218, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
+			disabled = function(info)
+				return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraDebuffsOnly") or getoption(info, "playerAuraSeparateDebuffs")
+			end
 		}
 		suboptions.args.playerAuraLayoutHeader = {
 			name = L["Display & Feedback"],
@@ -401,7 +266,7 @@ local GenerateOptions = function()
 		}
 		suboptions.args.playerAuraMaxShown = {
 			name = L["Auras Shown"],
-			desc = L["Set how many auras can appear on the main player aura row."],
+			desc = L["Set the maximum number of slots in the attached player aura row. When buffs and debuffs share the row, Retail-safe group budgets divide these slots between them; use the separate debuff row to devote every attached slot to buffs."],
 			order = 299.025, type = "range", width = "full", min = 1, max = 32, step = 1, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled,
 			set = function(info, val)
