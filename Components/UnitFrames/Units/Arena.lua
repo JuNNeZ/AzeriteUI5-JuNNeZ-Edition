@@ -31,19 +31,27 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local ArenaFrameMod = ns:NewModule("ArenaFrames", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
--- GLOBALS: CreateFrame, InCombatLockdown, Enum
--- GLOBALS: GetNumArenaOpponentSpecs, RegisterAttributeDriver, UnregisterAttributeDriver, UnitIsUnit, UnitHasVehicleUI, UnitPowerType
+-- GLOBALS: C_CreatureInfo, C_PvP, C_TooltipInfo, CreateFrame, InCombatLockdown, Enum, IsInInstance, IsUnitModelReadyForUI, SetPortraitTexture
+-- GLOBALS: GetArenaOpponentSpec, GetNumArenaOpponentSpecs, GetNumClasses, GetNumSpecializationsForClassID
+-- GLOBALS: GetSpecializationInfoByID, GetSpecializationInfoForClassID, RegisterAttributeDriver, UnregisterAttributeDriver
+-- GLOBALS: LOCALIZED_CLASS_NAMES_FEMALE, LOCALIZED_CLASS_NAMES_MALE
+-- GLOBALS: UnitClass, UnitFactionGroup, UnitIsConnected, UnitIsUnit, UnitIsVisible, UnitHasVehicleUI, UnitPowerType
+-- GLOBALS: canaccessvalue, issecretvalue
 
 -- Lua API
 local math_abs = math.abs
 local math_max = math.max
 local math_min = math.min
 local math_ceil = math.ceil
+local math_pi = math.pi
 local next = next
+local pcall = pcall
 local select = select
 local setmetatable = setmetatable
 local string_gsub = string.gsub
+local string_match = string.match
 local string_upper = string.upper
+local tonumber = tonumber
 local type = type
 local unpack = unpack
 
@@ -137,11 +145,312 @@ local Health_PostUpdate = function(element, unit, cur, max)
 	end
 end
 
--- Update the health preview color on health color updates.
-local Health_PostUpdateColor = function(element, unit, r, g, b)
+local IsArenaValueAccessible = function(value)
+	if (type(canaccessvalue) == "function") then
+		local ok, canAccess = pcall(canaccessvalue, value)
+		if (not ok or canAccess ~= true) then
+			return false
+		end
+	end
+	if (type(issecretvalue) == "function") then
+		local ok, isSecret = pcall(issecretvalue, value)
+		if (not ok or isSecret == true) then
+			return false
+		end
+	end
+	return true
+end
+
+local ResetArenaOpponentInfo = function(owner)
+	if (not owner) then
+		return
+	end
+	owner.__AzeriteUI_ArenaSpecID = nil
+	owner.__AzeriteUI_ArenaSpecIcon = nil
+	owner.__AzeriteUI_ArenaClassFile = nil
+end
+
+local ArenaTooltipSpecIDs
+
+local GetArenaTooltipSpecIDs = function()
+	if (ArenaTooltipSpecIDs) then
+		return ArenaTooltipSpecIDs
+	end
+
+	local lookup = {}
+	ArenaTooltipSpecIDs = lookup
+	if (type(GetNumClasses) ~= "function" or type(GetNumSpecializationsForClassID) ~= "function" or type(GetSpecializationInfoForClassID) ~= "function") then
+		return lookup
+	end
+
+	local okClasses, numClasses = pcall(GetNumClasses)
+	if (not okClasses or not IsArenaValueAccessible(numClasses) or type(numClasses) ~= "number") then
+		return lookup
+	end
+
+	local maleGender = Enum and Enum.UnitSex and Enum.UnitSex.Male
+	local femaleGender = Enum and Enum.UnitSex and Enum.UnitSex.Female
+	for classID = 1, numClasses do
+		local classFile
+		if (C_CreatureInfo and type(C_CreatureInfo.GetClassInfo) == "function") then
+			local okClass, classInfo = pcall(C_CreatureInfo.GetClassInfo, classID)
+			if (okClass and type(classInfo) == "table") then
+				local okClassFile, value = pcall(function() return classInfo.classFile end)
+				if (okClassFile and IsArenaValueAccessible(value) and type(value) == "string") then
+					classFile = value
+				end
+			end
+		end
+
+		local classMale = classFile and LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classFile]
+		local classFemale = classFile and LOCALIZED_CLASS_NAMES_FEMALE and LOCALIZED_CLASS_NAMES_FEMALE[classFile]
+		if (classMale or classFemale) then
+			local okSpecs, numSpecs = pcall(GetNumSpecializationsForClassID, classID)
+			if (okSpecs and IsArenaValueAccessible(numSpecs) and type(numSpecs) == "number") then
+				for specIndex = 1, numSpecs do
+					local function AddSpecName(gender)
+						local okSpec, specID, specName = pcall(GetSpecializationInfoForClassID, classID, specIndex, gender)
+						if (not okSpec or not IsArenaValueAccessible(specID) or not IsArenaValueAccessible(specName) or type(specID) ~= "number" or type(specName) ~= "string") then
+							return
+						end
+						if (classMale) then
+							lookup[specName.." "..classMale] = specID
+						end
+						if (classFemale) then
+							lookup[specName.." "..classFemale] = specID
+						end
+					end
+
+					AddSpecName(nil)
+					if (maleGender) then
+						AddSpecName(maleGender)
+					end
+					if (femaleGender and femaleGender ~= maleGender) then
+						AddSpecName(femaleGender)
+					end
+				end
+			end
+		end
+	end
+
+	return lookup
+end
+
+local GetArenaOpponentSpecFromTooltip = function(unit)
+	if (type(unit) ~= "string" or not C_TooltipInfo or type(C_TooltipInfo.GetUnit) ~= "function") then
+		return nil
+	end
+
+	local okTooltip, tooltipData = pcall(C_TooltipInfo.GetUnit, unit)
+	if (not okTooltip or not IsArenaValueAccessible(tooltipData) or type(tooltipData) ~= "table") then
+		return nil
+	end
+
+	local okLines, lines = pcall(function() return tooltipData.lines end)
+	if (not okLines or not IsArenaValueAccessible(lines) or type(lines) ~= "table") then
+		return nil
+	end
+
+	local okCount, lineCount = pcall(function() return #lines end)
+	if (not okCount or type(lineCount) ~= "number") then
+		return nil
+	end
+
+	local lookup = GetArenaTooltipSpecIDs()
+	for lineIndex = 1, lineCount do
+		local okText, lineText = pcall(function()
+			local line = lines[lineIndex]
+			if (type(line) == "table") then
+				return line.leftText
+			end
+		end)
+		if (okText and IsArenaValueAccessible(lineText) and type(lineText) == "string") then
+			local specID = lookup[lineText]
+			if (type(specID) == "number" and specID > 0) then
+				return specID
+			end
+		end
+	end
+
+	return nil
+end
+
+local GetArenaOpponentIndex = function(owner, unit)
+	local id = owner and tonumber(owner.id)
+	if (not id and type(unit) == "string") then
+		id = tonumber(string_match(unit, "^arena(%d+)$"))
+	end
+	return id
+end
+
+local ResolveArenaOpponentInfo = function(owner, unit, suppliedSpecID)
+	if (not owner) then
+		return nil, nil, nil
+	end
+
+	local classFile
+	if (type(UnitClass) == "function" and type(unit) == "string") then
+		local ok, _, unitClass = pcall(UnitClass, unit)
+		if (ok and IsArenaValueAccessible(unitClass) and type(unitClass) == "string" and unitClass ~= "") then
+			classFile = unitClass
+			owner.__AzeriteUI_ArenaClassFile = unitClass
+		end
+	end
+
+	local specID = suppliedSpecID
+	if (not IsArenaValueAccessible(specID) or type(specID) ~= "number" or specID <= 0) then
+		specID = nil
+		local id = GetArenaOpponentIndex(owner, unit)
+		if (id and type(GetArenaOpponentSpec) == "function") then
+			local ok, currentSpecID = pcall(GetArenaOpponentSpec, id)
+			if (ok and IsArenaValueAccessible(currentSpecID) and type(currentSpecID) == "number" and currentSpecID > 0) then
+				specID = currentSpecID
+			end
+		end
+		if (not specID) then
+			specID = GetArenaOpponentSpecFromTooltip(unit)
+		end
+	end
+
+	if (specID) then
+		owner.__AzeriteUI_ArenaSpecID = specID
+	else
+		specID = owner.__AzeriteUI_ArenaSpecID
+	end
+
+	local icon
+	if (specID and type(GetSpecializationInfoByID) == "function") then
+		local ok, _, _, _, specIcon, _, specClass = pcall(GetSpecializationInfoByID, specID)
+		if (ok) then
+			if (IsArenaValueAccessible(specIcon) and type(specIcon) == "number" and specIcon > 0) then
+				icon = specIcon
+				owner.__AzeriteUI_ArenaSpecIcon = specIcon
+			end
+			if (IsArenaValueAccessible(specClass) and type(specClass) == "string" and specClass ~= "") then
+				classFile = classFile or specClass
+				owner.__AzeriteUI_ArenaClassFile = classFile
+			end
+		end
+	end
+
+	return specID, icon or owner.__AzeriteUI_ArenaSpecIcon, classFile or owner.__AzeriteUI_ArenaClassFile
+end
+
+local GetArenaClassColor = function(element, unit, specID)
+	local owner = element and element.__owner
+	local colors = owner and owner.colors
+	if (not colors or not colors.class) then
+		return nil
+	end
+
+	local _, _, classFile = ResolveArenaOpponentInfo(owner, unit, specID)
+
+	return classFile and colors.class[classFile] or nil
+end
+
+local ApplyArenaClassColor = function(element, unit, specID)
+	local color = GetArenaClassColor(element, unit, specID)
+	if (not color or type(color.GetRGB) ~= "function") then
+		return false
+	end
+
+	local r, g, b = color:GetRGB()
+	local texture = element:GetStatusBarTexture()
+	if (texture) then
+		texture:SetVertexColor(r, g, b)
+	end
 	local preview = element.Preview
-	if (preview and g) then
+	if (preview) then
 		preview:SetStatusBarColor(r * .7, g * .7, b * .7)
+	end
+	return true
+end
+
+-- Keep class colors working for arena NPCs/bots that are not classified as ordinary players.
+local Health_PostUpdateColor = function(element, unit, color)
+	local owner = element.__owner
+	if (owner and owner.colors and color == owner.colors.disconnected) then
+		return
+	end
+	ApplyArenaClassColor(element, unit)
+end
+
+local Health_PostUpdateArenaPreparation = function(element, event, specID)
+	ApplyArenaClassColor(element, nil, specID)
+end
+
+local IsArenaMatchContext = function()
+	local _, instanceType = IsInInstance()
+	if (instanceType == "arena") then
+		return true, instanceType
+	end
+	if (C_PvP and type(C_PvP.IsMatchConsideredArena) == "function") then
+		local ok, isArenaMatch = pcall(C_PvP.IsMatchConsideredArena)
+		if (ok and IsArenaValueAccessible(isArenaMatch) and isArenaMatch == true) then
+			return true, instanceType
+		end
+	end
+	return false, instanceType
+end
+
+local SpecIcon_Override = function(self, event, unit)
+	if (event == "ARENA_OPPONENT_UPDATE" and unit ~= self.unit) then
+		return
+	end
+
+	local element = self.SpecIcon
+	if (not element or not element.icon) then
+		return
+	end
+
+	if (event == "ARENA_PREP_OPPONENT_SPECIALIZATIONS") then
+		ResetArenaOpponentInfo(self)
+	end
+
+	local isArenaMatch, instanceType = IsArenaMatchContext()
+	element.instanceType = instanceType
+	if (not isArenaMatch and not element.showFaction) then
+		element:Hide()
+		return
+	end
+
+	if (element.PreUpdate) then
+		element:PreUpdate(unit, event)
+	end
+
+	local icon, classFile
+	if (isArenaMatch) then
+		local _, resolvedIcon, resolvedClassFile = ResolveArenaOpponentInfo(self, self.unit)
+		icon, classFile = resolvedIcon, resolvedClassFile
+		if (icon) then
+			element.icon:SetTexture(icon)
+			element.icon:SetTexCoord(0, 1, 0, 1)
+		elseif (classFile) then
+			element.icon:SetAtlas("classicon-"..classFile, false)
+		else
+			element:Hide()
+			return
+		end
+	else
+		local ok, faction = pcall(UnitFactionGroup, self.unit)
+		if (not ok or not IsArenaValueAccessible(faction)) then
+			element:Hide()
+			return
+		elseif (faction == "Horde") then
+			icon = [[Interface\Icons\INV_BannerPVP_01]]
+		elseif (faction == "Alliance") then
+			icon = [[Interface\Icons\INV_BannerPVP_02]]
+		else
+			element:Hide()
+			return
+		end
+		element.icon:SetTexture(icon)
+		element.icon:SetTexCoord(0, 1, 0, 1)
+	end
+
+	element:Show()
+	if (element.PostUpdate) then
+		element:PostUpdate(event)
 	end
 end
 
@@ -408,29 +717,135 @@ local Power_PostUpdateArenaPreparation = function(element, specID)
 	element:SetAlpha(0)
 end
 
--- Make the portrait look better for offline or invisible units.
-local Portrait_PostUpdate = function(element, unit, hasStateChanged)
-	if (not element.state) then
-		element:ClearModel()
-		if (not element.fallback2DTexture) then
-			element.fallback2DTexture = element:CreateTexture()
-			element.fallback2DTexture:SetDrawLayer("ARTWORK")
-			element.fallback2DTexture:SetAllPoints()
-			element.fallback2DTexture:SetTexCoord(.1, .9, .1, .9)
+local EnsureArenaPortraitFallbackTexture = function(element)
+	if (not element) then
+		return nil
+	end
+	if (not element.fallback2DFrame) then
+		local parent = element.fallbackParent or element:GetParent() or element
+		local frame = CreateFrame("Frame", nil, parent)
+		frame:SetAllPoints(element)
+		if (element.GetFrameLevel and frame.SetFrameLevel) then
+			local level = element:GetFrameLevel()
+			if (type(level) == "number") then
+				frame:SetFrameLevel(level)
+			end
 		end
-		SetPortraitTexture(element.fallback2DTexture, unit)
-		element.fallback2DTexture:Show()
+		frame:Hide()
+		element.fallback2DFrame = frame
+	end
+	if (not element.fallback2DTexture) then
+		element.fallback2DTexture = element.fallback2DFrame:CreateTexture(nil, "ARTWORK", nil, 0)
+		element.fallback2DTexture:SetAllPoints()
+		element.fallback2DTexture:SetTexCoord(.1, .9, .1, .9)
+	end
+	return element.fallback2DTexture
+end
+
+local HideArenaPortraitFallback = function(element)
+	if (not element) then
+		return
+	end
+	if (element.fallback2DTexture) then
+		element.fallback2DTexture:Hide()
+	end
+	if (element.fallback2DFrame) then
+		element.fallback2DFrame:Hide()
+	end
+	element.__AzeriteUI_Using2DPortraitFallback = nil
+end
+
+local ShowArenaPortraitFallback = function(element, unit)
+	if (not element) then
+		return false
+	end
+	element:ClearModel()
+	local fallback = EnsureArenaPortraitFallbackTexture(element)
+	if (not fallback or type(SetPortraitTexture) ~= "function") then
+		HideArenaPortraitFallback(element)
+		return false
+	end
+
+	fallback:SetTexCoord(.1, .9, .1, .9)
+	local ok = pcall(SetPortraitTexture, fallback, unit)
+	if (not ok) then
+		HideArenaPortraitFallback(element)
+		return false
+	end
+
+	fallback:Show()
+	element.fallback2DFrame:Show()
+	element.__AzeriteUI_Using2DPortraitFallback = true
+	return true
+end
+
+local ArenaUnitFlagIsTrue = function(api, unit)
+	if (type(api) ~= "function") then
+		return false
+	end
+	local ok, value = pcall(api, unit)
+	return ok and IsArenaValueAccessible(value) and value == true
+end
+
+local TrySetArenaPortraitModel = function(element, unit)
+	if (not element or type(unit) ~= "string" or unit == "") then
+		return false
+	end
+	if (not ArenaUnitFlagIsTrue(UnitIsConnected, unit) or not ArenaUnitFlagIsTrue(UnitIsVisible, unit)) then
+		return false
+	end
+	if (type(IsUnitModelReadyForUI) == "function" and not ArenaUnitFlagIsTrue(IsUnitModelReadyForUI, unit)) then
+		return false
+	end
+	if (type(element.CanSetUnit) == "function") then
+		local ok, canSetUnit = pcall(element.CanSetUnit, element, unit)
+		if (not ok or not IsArenaValueAccessible(canSetUnit) or canSetUnit == false) then
+			return false
+		end
+	end
+	if (type(element.SetUnit) ~= "function") then
+		return false
+	end
+
+	element:SetCamDistanceScale(element.distanceScale or 1)
+	element:SetPortraitZoom(1)
+	element:SetPosition(element.positionX or 0, element.positionY or 0, element.positionZ or 0)
+	element:SetRotation(element.rotation and element.rotation*(2*math_pi)/180 or 0)
+	element:ClearModel()
+
+	local ok, success = pcall(element.SetUnit, element, unit)
+	if (not ok or not IsArenaValueAccessible(success) or success == false) then
+		element:ClearModel()
+		return false
+	end
+	if (type(element.GetDisplayInfo) == "function" and success ~= true) then
+		local okDisplay, displayID = pcall(element.GetDisplayInfo, element)
+		if (not okDisplay or not IsArenaValueAccessible(displayID) or type(displayID) ~= "number" or displayID <= 0) then
+			element:ClearModel()
+			return false
+		end
+	end
+	return true
+end
+
+-- PlayerModel:SetUnit requires declassified identity in Retail 12.1, so own the
+-- arena portrait update and fall back to a separately layered 2D portrait.
+local Portrait_Override = function(self, event, unit)
+	if (unit and unit ~= self.unit) then
+		return
+	end
+	unit = self.unit
+
+	local element = self.Portrait
+	if (not element or type(unit) ~= "string") then
+		return
+	end
+
+	element.state = ArenaUnitFlagIsTrue(UnitIsConnected, unit) and ArenaUnitFlagIsTrue(UnitIsVisible, unit)
+	if (element.state and TrySetArenaPortraitModel(element, unit)) then
+		HideArenaPortraitFallback(element)
 	else
-		if (element.fallback2DTexture) then
-			element.fallback2DTexture:Hide()
-		end
-		element:SetCamDistanceScale(element.distanceScale or 1)
-		element:SetPortraitZoom(1)
-		element:SetPosition(element.positionX or 0, element.positionY or 0, element.positionZ or 0)
-		element:SetRotation(element.rotation and element.rotation*(2*math_pi)/180 or 0)
-		element:ClearModel()
-		element:SetUnit(unit)
-		element.guid = UnitGUID(unit)
+		ShowArenaPortraitFallback(element, unit)
 	end
 end
 
@@ -521,6 +936,7 @@ local style = function(self, unit)
 	self.Health.Override = ns.API.UpdateHealth
 	self.Health.PostUpdate = Health_PostUpdate
 	self.Health.PostUpdateColor = Health_PostUpdateColor
+	self.Health.PostUpdateArenaPreparation = Health_PostUpdateArenaPreparation
 
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel() - 1)
@@ -655,9 +1071,12 @@ local style = function(self, unit)
 	portrait.positionZ = db.PortraitPositionZ
 	portrait.rotation = db.PortraitRotation
 	portrait.showFallback2D = db.PortraitShowFallback2D
+	portrait.fallbackParent = portraitFrame
+	EnsureArenaPortraitFallbackTexture(portrait)
+	HideArenaPortraitFallback(portrait)
 
 	self.Portrait = portrait
-	self.Portrait.PostUpdate = Portrait_PostUpdate
+	self.Portrait.Override = Portrait_Override
 
 	local portraitBg = portraitFrame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	portraitBg:SetPoint(unpack(db.PortraitBackgroundPosition))
@@ -768,6 +1187,7 @@ local style = function(self, unit)
 
 	self.SpecIcon = specIconFrame
 	self.SpecIcon.icon = specIcon
+	self.SpecIcon.Override = SpecIcon_Override
 
 	-- Trinket Icon
 	--------------------------------------------
@@ -1208,6 +1628,15 @@ end
 
 ArenaFrameMod.OnEvent = function(self, event, ...)
 	if (event == "ARENA_PREP_OPPONENT_SPECIALIZATIONS") then
+		for frame in next,Units do
+			HideArenaPortraitFallback(frame.Portrait)
+			ResetArenaOpponentInfo(frame)
+			ResolveArenaOpponentInfo(frame, nil)
+			if (frame.SpecIcon and frame.SpecIcon.ForceUpdate) then
+				frame.SpecIcon:ForceUpdate()
+			end
+		end
+
 		if (InCombatLockdown()) then
 			self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 			return
@@ -1219,12 +1648,24 @@ ArenaFrameMod.OnEvent = function(self, event, ...)
 
 		self:UpdateHeader()
 
-		-- Enable and forceupdate auras when the opponent unit exists.
+		-- Enable and refresh live-only elements when the opponent unit exists.
 		local unit, updateReason = ...
 		for frame in next,Units do
-			if (frame.unit == unit and not frame:IsElementEnabled("Auras")) then
-				frame:EnableElement("Auras")
-				frame.Auras:ForceUpdate()
+			if (frame.unit == unit and updateReason == "seen") then
+				if (frame.Portrait and frame.Portrait.ForceUpdate) then
+					frame.Portrait:Show()
+					frame.Portrait:ForceUpdate()
+				end
+				if (frame.Health and frame.Health.ForceUpdate) then
+					frame.Health:ForceUpdate()
+				end
+				if (frame.SpecIcon and frame.SpecIcon.ForceUpdate) then
+					frame.SpecIcon:ForceUpdate()
+				end
+				if (not frame:IsElementEnabled("Auras")) then
+					frame:EnableElement("Auras")
+					frame.Auras:ForceUpdate()
+				end
 			end
 		end
 
@@ -1238,6 +1679,7 @@ ArenaFrameMod.OnEvent = function(self, event, ...)
 		-- to avoid shuffle prep phase bugging out.
 		for frame in next,Units do
 			frame:DisableElement("Auras")
+			HideArenaPortraitFallback(frame.Portrait)
 		end
 
 		self:UpdateHeader()
@@ -1248,6 +1690,8 @@ ArenaFrameMod.OnEvent = function(self, event, ...)
 		-- to avoid shuffle prep phase bugging out.
 		for frame in next,Units do
 			frame:DisableElement("Auras")
+			HideArenaPortraitFallback(frame.Portrait)
+			ResetArenaOpponentInfo(frame)
 		end
 
 	elseif (event == "PLAYER_REGEN_ENABLED") then

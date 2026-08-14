@@ -85,8 +85,18 @@ local defaults = { profile = ns:Merge({
 	useClassColor = false,
 	showAuras = true,
 	showHealthPercent = false,
+	playerAuraUseStockBehavior = true,
 	playerAuraDebuffsOnly = false,
+	playerAuraAlwaysBright = false,
 	playerAuraShowDebuffs = true,
+	playerAuraShowImportantAuras = true,
+	playerAuraShowImportantStealable = true,
+	playerAuraShowRaidAuras = true,
+	playerAuraShowShortCombatPlayerBuffs = true,
+	playerAuraShowNameplateAuras = true,
+	playerAuraShowShortBuffsInCombat = true,
+	playerAuraShowLongUtilityBuffs = false,
+	playerAuraMaxDuration = 300,
 	playerAuraMaxShown = 16,
 	playerAuraSeparateDebuffs = false,
 	playerAuraSeparateDebuffsMax = 8,
@@ -305,7 +315,17 @@ local ApplyPlayerAuraLayout = function(frame)
 		growthX = config.AurasGrowthX or "RIGHT",
 		growthY = config.AurasGrowthY or "UP",
 		maxBuffs = attachedBuffCount,
-		maxDebuffs = attachedDebuffCount
+		maxDebuffs = attachedDebuffCount,
+		useStockBehavior = profile.playerAuraUseStockBehavior ~= false,
+		alwaysBright = profile.playerAuraAlwaysBright and true or false,
+		showPriority = profile.playerAuraShowImportantAuras ~= false,
+		showBoss = profile.playerAuraShowRaidAuras ~= false,
+		showStealable = profile.playerAuraShowImportantStealable ~= false,
+		showPersonal = profile.playerAuraShowShortCombatPlayerBuffs ~= false,
+		showNameplate = profile.playerAuraShowNameplateAuras ~= false,
+		showTemporary = profile.playerAuraShowShortBuffsInCombat ~= false,
+		showLong = profile.playerAuraShowLongUtilityBuffs and true or false,
+		maxDuration = GetPlayerAuraCount(profile, "playerAuraMaxDuration", 300, 30, 3600)
 	})
 
 	if (not debuffs) then

@@ -58,6 +58,7 @@ local defaults = { profile = ns:Merge({
 	showRunes = true,
 	showSoulShards = ns.IsRetail or nil,
 	showStagger = ns.IsRetail or nil,
+	showFullOutOfCombat = false,
 	elementalMaelstromDisplayMode = "crystal_spec",
 	elementalSwapBarAnchorMigrated = false,
 	defaultAnchorHotfixMigrated = false,
@@ -683,6 +684,7 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 	end
 
 	local visiblePointCap = (style == "SoulFragmentsPoints") and 5 or max
+	local showFullOutOfCombat = (db.showFullOutOfCombat == true)
 	if (type(visiblePointCap) ~= "number") then
 		visiblePointCap = 0
 	end
@@ -898,7 +900,7 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 			elseif (element.inCombat) then
 				point:SetAlpha((cur == max) and 1 or (value < pmax) and .5 or 1)
 			else
-				point:SetAlpha((cur == max) and 0 or (value < pmax) and .5 or 1)
+				point:SetAlpha((cur == max and not showFullOutOfCombat) and 0 or (value < pmax) and .5 or 1)
 			end
 		end
 	end
@@ -969,6 +971,8 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 end
 
 local Runes_PostUpdate = function(element, runemap, hasVehicle, allReady)
+	local db = ClassPowerMod and ClassPowerMod.db and ClassPowerMod.db.profile
+	local showFullOutOfCombat = (db and db.showFullOutOfCombat == true)
 	for i = 1, #element do
 		local rune = element[i]
 		if (rune:IsShown()) then
@@ -977,7 +981,7 @@ local Runes_PostUpdate = function(element, runemap, hasVehicle, allReady)
 			if (element.inCombat) then
 				rune:SetAlpha(allReady and 1 or (value < max) and .5 or 1)
 			else
-				rune:SetAlpha(allReady and 0 or (value < max) and .5 or 1)
+				rune:SetAlpha((allReady and not showFullOutOfCombat) and 0 or (value < max) and .5 or 1)
 			end
 		end
 	end

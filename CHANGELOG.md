@@ -5,6 +5,32 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## Unreleased
+
+
+## 5.3.80-JuNNeZ (2026-08-14) - Player Aura Controls and Arena Visibility
+
+### Highlights
+
+- Restored the player-frame aura customization that remains possible on Retail 12.1: maintained important buffs, boss/role buffs, stealable buffs, personal and player/pet buffs, nameplate-highlighted buffs, other temporary buffs, and optional long or permanent utility buffs.
+- Added working controls for full-brightness aura icons and the maximum original duration of temporary buffs, while retaining debuff-only, mixed-debuff, aura-count, and separate-debuff-row controls.
+- Custom player-aura filters now use Blizzard's native combat-safe aura groups, so the selected categories continue to work during combat and in vehicle state without inspecting protected aura data.
+- Fixed arena-opponent portraits with a reliable 2D fallback, restored class-colored health when ordinary unit data is unavailable, and replaced misleading question-mark badges with specialization or class icons when Retail exposes either value.
+- Added an option to keep full class-power displays visible out of combat, including fully recharged Death Knight runes.
+- Fixed Retail 12.1 status-ring hover errors that could leave the experience or reputation ring covering the minimap.
+- Added native translations for the restored player-aura controls and full class-power option in every supported locale.
+
+### Access
+
+- Open `/az -> Unit Frame Settings -> Player -> Player Aura Row`.
+- Disable `Use AzeriteUI Stock Behavior` to configure individual buff categories. Stock behavior, debuff controls, brightness, and display-count controls remain available directly in the same section.
+- Open `/az -> Unit Frame Settings -> Class Power` and enable `Show Full Class Power Out of Combat` to keep a capped resource visible between fights.
+
+### Known Limitation
+
+- AzeriteUI now makes a best-effort attempt to recover Training Grounds specialization icons from readable unit-tooltip text when Blizzard's normal arena specialization API returns nothing. Retail 12.1 can also protect that tooltip text; in that case AzeriteUI displays the opponent's class icon when available and otherwise hides the badge instead of showing a misleading question mark.
+
+
 ## 5.3.79-JuNNeZ (2026-08-13) - Target PvP Secret-Value Hotfix
 
 ### Highlights

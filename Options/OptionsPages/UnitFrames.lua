@@ -238,13 +238,24 @@ local GenerateOptions = function()
 		local playerAuraSettingsDisabled = function(info)
 			return isdisabled(info) or not getoption(info, "showAuras")
 		end
+		local playerAuraCustomSettingsDisabled = function(info)
+			return playerAuraSettingsDisabled(info)
+				or getoption(info, "playerAuraUseStockBehavior")
+				or getoption(info, "playerAuraDebuffsOnly")
+		end
 		suboptions.args.playerAuraSettingsHeader = {
 			name = L["Player Aura Row"],
 			order = 210, type = "header", hidden = isdisabled
 		}
 		suboptions.args.playerAuraSettingsDescription = {
-			name = L["These settings control the Blizzard-managed Retail aura row attached to the player frame. Temporary auras sort ahead of permanent utility buffs; the main top-right aura header is unaffected."],
+			name = L["These settings control the Blizzard-managed Retail aura row attached to the player frame. Custom categories use only native Retail 12.1 filters that remain safe in combat; the main top-right aura header is unaffected."],
 			order = 211, type = "description", width = "full", hidden = isdisabled
+		}
+		suboptions.args.playerAuraUseStockBehavior = {
+			name = L["Use AzeriteUI Stock Behavior"],
+			desc = L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."],
+			order = 211.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraSettingsDisabled
 		}
 		suboptions.args.playerAuraDebuffsOnly = {
 			name = L["Show Debuffs Only"],
@@ -252,12 +263,93 @@ local GenerateOptions = function()
 			order = 211.52, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
 		}
+		suboptions.args.playerAuraAlwaysBright = {
+			name = L["Always Show Full Brightness"],
+			desc = L["Render all visible player-row aura icons at full brightness. Use this if you prefer no dimmed aura icons."],
+			order = 211.55, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraSettingsDisabled
+		}
+		suboptions.args.playerAuraWhatToShowHeader = {
+			name = L["Custom Buff Categories"],
+			order = 212.5, type = "header", hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
 		suboptions.args.playerAuraShowDebuffs = {
 			name = L["Show Debuffs"],
 			desc = L["Include harmful effects in the attached row when Show Debuffs Only and Separate Player Debuff Row are disabled."],
 			order = 212, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = function(info)
 				return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraDebuffsOnly") or getoption(info, "playerAuraSeparateDebuffs")
+			end
+		}
+		suboptions.args.playerAuraShowImportantAuras = {
+			name = L["Show Important Buffs"],
+			desc = L["Show buffs from AzeriteUI's maintained priority spell list."],
+			order = 213, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowRaidAuras = {
+			name = L["Show Raid-Relevant Buffs"],
+			desc = L["Show buffs Blizzard marks as boss or role auras."],
+			order = 214, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowImportantStealable = {
+			name = L["Stealable Buffs"],
+			desc = L["Show helpful effects Blizzard marks as stealable."],
+			order = 215, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowShortCombatPlayerBuffs = {
+			name = L["Player / Self Buffs"],
+			desc = L["Show personal combat auras and remaining temporary buffs cast by you or your pet."],
+			order = 216, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowNameplateAuras = {
+			name = L["Nameplate-Highlighted Buffs"],
+			desc = L["Show helpful effects Blizzard also marks for nameplate display."],
+			order = 217, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraShowShortBuffsInCombat = {
+			name = L["Other Temporary Buffs"],
+			desc = L["Show remaining temporary buffs from other sources. This native duration filter stays consistent in and out of combat."],
+			order = 218, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = playerAuraCustomSettingsDisabled
+		}
+		suboptions.args.playerAuraMaxDuration = {
+			name = L["Maximum Temporary Duration"],
+			desc = L["Set the maximum original duration for the remaining temporary-buff group."],
+			order = 219, type = "range", width = "full", min = 30, max = 3600, step = 30, hidden = isdisabled,
+			disabled = function(info)
+				return playerAuraCustomSettingsDisabled(info)
+					or getoption(info, "playerAuraShowLongUtilityBuffs")
+					or (not getoption(info, "playerAuraShowShortCombatPlayerBuffs") and not getoption(info, "playerAuraShowShortBuffsInCombat"))
+			end,
+			set = function(info, val)
+				setoption(info, "playerAuraMaxDuration", val)
+			end,
+			get = function(info)
+				local value = getoption(info, "playerAuraMaxDuration")
+				if (type(value) ~= "number") then
+					return 300
+				end
+				if (value < 30) then
+					return 30
+				elseif (value > 3600) then
+					return 3600
+				end
+				return math.floor(value / 30 + .5) * 30
+			end
+		}
+		suboptions.args.playerAuraShowLongUtilityBuffs = {
+			name = L["Show Long Utility Buffs"],
+			desc = L["Extend the temporary-buff group to include long-duration and permanent utility buffs. Usually leave this off so those remain in the main aura header only."],
+			order = 220, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = function(info)
+				return playerAuraCustomSettingsDisabled(info)
+					or (not getoption(info, "playerAuraShowShortCombatPlayerBuffs") and not getoption(info, "playerAuraShowShortBuffsInCombat"))
 			end
 		}
 		suboptions.args.playerAuraLayoutHeader = {
@@ -1290,6 +1382,11 @@ local GenerateOptions = function()
 				return mod and mod:GetLabel() or "Class Power"
 			end
 			suboptions.order = 210
+			suboptions.args.showFullOutOfCombat = {
+				name = L["Show Full Class Power Out of Combat"],
+				desc = L["Prevent full class-power displays from fading out of combat. Zero-resource hiding and special resource presentation remain unchanged."],
+				order = 94, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			}
 			suboptions.args.clickThrough = {
 				name = L["Class Power Click-Through"],
 				desc = L["ON (default): clicks pass through class power to frames behind it.\nOFF: class power blocks mouse clicks in this area to prevent accidental right-click opening the player unit menu."],

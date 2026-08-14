@@ -36,6 +36,7 @@ local unpack = unpack
 
 local HELPFUL_PRIORITY_GROUP = "AzeriteHelpfulPriority"
 local HELPFUL_BOSS_GROUP = "AzeriteHelpfulBoss"
+local HELPFUL_STEALABLE_GROUP = "AzeriteHelpfulStealable"
 local HELPFUL_PERSONAL_GROUP = "AzeriteHelpfulPersonal"
 local HELPFUL_NAMEPLATE_GROUP = "AzeriteHelpfulNameplate"
 local HELPFUL_SHORT_GROUP = "AzeriteHelpfulShort"
@@ -43,6 +44,7 @@ local HARMFUL_GROUP = "AzeriteHarmful"
 local HELPFUL_GROUPS = {
 	HELPFUL_PRIORITY_GROUP,
 	HELPFUL_BOSS_GROUP,
+	HELPFUL_STEALABLE_GROUP,
 	HELPFUL_PERSONAL_GROUP,
 	HELPFUL_NAMEPLATE_GROUP,
 	HELPFUL_SHORT_GROUP
@@ -146,7 +148,20 @@ local function StyleDispelBorder(button, border)
 	end
 end
 
-local function StyleAuraButton(button, isHarmful, options, subdued)
+local function SetAuraButtonBrightness(button, alwaysBright)
+	local icon = button and button.Icon
+	if (not icon) then return end
+
+	local subdued = button.__AzeriteUI_Subdued and not alwaysBright
+	icon:SetDesaturated(subdued)
+	if (subdued) then
+		icon:SetVertexColor(.6, .6, .6)
+	else
+		icon:SetVertexColor(1, 1, 1)
+	end
+end
+
+local function StyleAuraButton(button, isHarmful, options, subdued, styleState)
 	local size = options.size or 36
 	button:SetSize(size, size)
 	if (options.buttonFrameLevel) then
@@ -165,10 +180,8 @@ local function StyleAuraButton(button, isHarmful, options, subdued)
 	button.Icon = icon
 	button.IconMask = iconMask
 	button:SetIcon(icon)
-	if (subdued) then
-		icon:SetDesaturated(true)
-		icon:SetVertexColor(.6, .6, .6)
-	end
+	button.__AzeriteUI_Subdued = subdued and true or false
+	SetAuraButtonBrightness(button, styleState and styleState.alwaysBright)
 
 	local border = ns.AuraStyles.CreateTextureBorder(button)
 	SetMouseInputEnabled(border, false)
@@ -210,11 +223,15 @@ local function CreateAuraContainer(parent, unit, options)
 	local initialAnchor = options.initialAnchor or "BOTTOMLEFT"
 	container:SetPoint(initialAnchor, parent, initialAnchor, GetContainerAnchorOffset(initialAnchor))
 	container:SetUnit(unit)
+	local styleState = {
+		alwaysBright = options.alwaysBright and true or false
+	}
+	container.__AzeriteUI_StyleState = styleState
 
 	local function CreateHelpfulOptions(layoutIndex, candidateFilters, subdued)
 		return {
 			initializeFrame = function(button)
-				StyleAuraButton(button, false, options, subdued)
+				StyleAuraButton(button, false, options, subdued, styleState)
 			end,
 			candidateFilters = candidateFilters,
 			maxFrameCount = 0,
@@ -235,27 +252,35 @@ local function CreateAuraContainer(parent, unit, options)
 		excludeSpellIDs = NonPriorityAuras,
 		isBossOrRoleAura = true
 	}, false)
-	local helpfulPersonalOptions = CreateHelpfulOptions(4, {
+	local helpfulStealableOptions = CreateHelpfulOptions(4, {
 		excludeSpellIDs = NonPriorityAuras,
 		isBossOrRoleAura = false,
+		isStealable = true
+	}, false)
+	local helpfulPersonalOptions = CreateHelpfulOptions(5, {
+		excludeSpellIDs = NonPriorityAuras,
+		isBossOrRoleAura = false,
+		isStealable = false,
 		nameplateShowPersonal = true
 	}, false)
-	local helpfulNameplateOptions = CreateHelpfulOptions(5, {
+	local helpfulNameplateOptions = CreateHelpfulOptions(6, {
 		excludeSpellIDs = NonPriorityAuras,
 		isBossOrRoleAura = false,
+		isStealable = false,
 		nameplateShowPersonal = false,
 		nameplateShowAll = true
 	}, false)
-	local helpfulShortOptions = CreateHelpfulOptions(6, {
+	local helpfulShortOptions = CreateHelpfulOptions(7, {
 		excludeSpellIDs = NonPriorityAuras,
 		isBossOrRoleAura = false,
+		isStealable = false,
 		nameplateShowPersonal = false,
 		nameplateShowAll = false,
 		maxDuration = PLAYER_AURA_MAX_DURATION
 	}, true)
 	local harmfulOptions = {
 		initializeFrame = function(button)
-			StyleAuraButton(button, true, options, false)
+			StyleAuraButton(button, true, options, false, styleState)
 		end,
 		candidateFilters = {
 			excludeSpellIDs = HiddenAuras
@@ -273,6 +298,7 @@ local function CreateAuraContainer(parent, unit, options)
 	container:AddAuraGroup(HARMFUL_GROUP, "HARMFUL", harmfulOptions)
 	container:AddAuraGroup(HELPFUL_PRIORITY_GROUP, "HELPFUL", helpfulPriorityOptions)
 	container:AddAuraGroup(HELPFUL_BOSS_GROUP, "HELPFUL", helpfulBossOptions)
+	container:AddAuraGroup(HELPFUL_STEALABLE_GROUP, "HELPFUL", helpfulStealableOptions)
 	container:AddAuraGroup(HELPFUL_PERSONAL_GROUP, "HELPFUL", helpfulPersonalOptions)
 	container:AddAuraGroup(HELPFUL_NAMEPLATE_GROUP, "HELPFUL", helpfulNameplateOptions)
 	container:AddAuraGroup(HELPFUL_SHORT_GROUP, "HELPFUL", helpfulShortOptions)
@@ -302,7 +328,17 @@ local function CopyConfiguration(config)
 		growthX = config.growthX,
 		growthY = config.growthY,
 		maxBuffs = config.maxBuffs,
-		maxDebuffs = config.maxDebuffs
+		maxDebuffs = config.maxDebuffs,
+		useStockBehavior = config.useStockBehavior,
+		alwaysBright = config.alwaysBright,
+		showPriority = config.showPriority,
+		showBoss = config.showBoss,
+		showStealable = config.showStealable,
+		showPersonal = config.showPersonal,
+		showNameplate = config.showNameplate,
+		showTemporary = config.showTemporary,
+		showLong = config.showLong,
+		maxDuration = config.maxDuration
 	}
 end
 
@@ -315,11 +351,63 @@ local function GetConfigurationSignature(config)
 		tostring(config.growthX),
 		tostring(config.growthY),
 		tostring(config.maxBuffs),
-		tostring(config.maxDebuffs)
+		tostring(config.maxDebuffs),
+		tostring(config.useStockBehavior),
+		tostring(config.alwaysBright),
+		tostring(config.showPriority),
+		tostring(config.showBoss),
+		tostring(config.showStealable),
+		tostring(config.showPersonal),
+		tostring(config.showNameplate),
+		tostring(config.showTemporary),
+		tostring(config.showLong),
+		tostring(config.maxDuration)
 	}, ":")
 end
 
+local function GetBoolean(value, fallback)
+	if (type(value) == "boolean") then
+		return value
+	end
+	return fallback
+end
+
+local function UpdateContainerBrightness(container, alwaysBright)
+	local styleState = container.__AzeriteUI_StyleState
+	if (styleState) then
+		styleState.alwaysBright = alwaysBright
+	end
+
+	for _, groupKey in ipairs(HELPFUL_GROUPS) do
+		local frameCount = container:GetAuraGroupFrameCount(groupKey)
+		for frameIndex = 1, frameCount do
+			SetAuraButtonBrightness(container:GetAuraGroupFrame(groupKey, frameIndex), alwaysBright)
+		end
+	end
+end
+
 local function ApplyContainerConfiguration(container, config, width)
+	local useStockBehavior = GetBoolean(config.useStockBehavior, true)
+	local showPriority = useStockBehavior or GetBoolean(config.showPriority, true)
+	local showBoss = useStockBehavior or GetBoolean(config.showBoss, true)
+	local showStealable = useStockBehavior or GetBoolean(config.showStealable, true)
+	local showPersonal = useStockBehavior or GetBoolean(config.showPersonal, true)
+	local showNameplate = useStockBehavior or GetBoolean(config.showNameplate, true)
+	local showTemporary = useStockBehavior or GetBoolean(config.showTemporary, true)
+	local showLong = (not useStockBehavior) and GetBoolean(config.showLong, false)
+	local maxDuration = type(config.maxDuration) == "number" and config.maxDuration or PLAYER_AURA_MAX_DURATION
+	local shortFilters = {
+		excludeSpellIDs = NonPriorityAuras,
+		isBossOrRoleAura = false,
+		isStealable = false,
+		nameplateShowPersonal = false,
+		nameplateShowAll = false,
+		maxDuration = showLong and nil or maxDuration
+	}
+	if (showPersonal ~= showTemporary) then
+		shortFilters.isFromPlayerOrPlayerPet = showPersonal
+	end
+
 	local horizontal = GetFlowDirection(config.growthX == "LEFT" and "Left" or "Right", config.growthX == "LEFT" and -1 or 1)
 	local vertical = GetFlowDirection(config.growthY == "DOWN" and "Down" or "Up", config.growthY == "DOWN" and -1 or 1)
 	local function CreateLayout(layoutIndex)
@@ -353,8 +441,15 @@ local function ApplyContainerConfiguration(container, config, width)
 	container:SetAuraGroupMaxFrameCount(HARMFUL_GROUP, config.maxDebuffs)
 	for layoutIndex, groupKey in ipairs(HELPFUL_GROUPS) do
 		container:SetAuraGroupLayout(groupKey, CreateLayout(layoutIndex + 1))
-		container:SetAuraGroupMaxFrameCount(groupKey, config.maxBuffs)
 	end
+	container:SetAuraGroupMaxFrameCount(HELPFUL_PRIORITY_GROUP, showPriority and config.maxBuffs or 0)
+	container:SetAuraGroupMaxFrameCount(HELPFUL_BOSS_GROUP, showBoss and config.maxBuffs or 0)
+	container:SetAuraGroupMaxFrameCount(HELPFUL_STEALABLE_GROUP, showStealable and config.maxBuffs or 0)
+	container:SetAuraGroupMaxFrameCount(HELPFUL_PERSONAL_GROUP, showPersonal and config.maxBuffs or 0)
+	container:SetAuraGroupMaxFrameCount(HELPFUL_NAMEPLATE_GROUP, showNameplate and config.maxBuffs or 0)
+	container:SetAuraGroupCandidateFilters(HELPFUL_SHORT_GROUP, shortFilters)
+	container:SetAuraGroupMaxFrameCount(HELPFUL_SHORT_GROUP, (showPersonal or showTemporary) and config.maxBuffs or 0)
+	UpdateContainerBrightness(container, GetBoolean(config.alwaysBright, false))
 end
 
 local DisplayMixin = {}
@@ -449,7 +544,17 @@ ns.PlayerAuraContainers.Create = function(parent, options)
 		growthX = options.growthX or "RIGHT",
 		growthY = options.growthY or "UP",
 		maxBuffs = options.maxBuffs or 0,
-		maxDebuffs = options.maxDebuffs or 0
+		maxDebuffs = options.maxDebuffs or 0,
+		useStockBehavior = options.useStockBehavior,
+		alwaysBright = options.alwaysBright,
+		showPriority = options.showPriority,
+		showBoss = options.showBoss,
+		showStealable = options.showStealable,
+		showPersonal = options.showPersonal,
+		showNameplate = options.showNameplate,
+		showTemporary = options.showTemporary,
+		showLong = options.showLong,
+		maxDuration = options.maxDuration
 	})
 	return display
 end

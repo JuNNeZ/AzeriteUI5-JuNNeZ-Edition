@@ -39,7 +39,7 @@ local string_format = string.format
 local type = type
 local unpack = unpack
 
--- GLOBALS: CreateFrame, MouseIsOver
+-- GLOBALS: CreateFrame
 -- GLOBALS: GameTooltip, GameTooltip_SetDefaultAnchor
 -- GLOBALS: UnitLevel, UnitSex, UnitXP, UnitXPMax
 -- GLOBALS: IsResting, IsPlayerAtEffectiveMaxLevel, IsXPUserDisabled
@@ -272,7 +272,7 @@ local Button_OnLeave = function(button)
 
 	-- Update this to avoid a flicker or delay
 	-- when moving directly from the toggle button to the ringframe.
-	button.Frame.isMouseOver = MouseIsOver(button.Frame)
+	button.Frame.isMouseOver = button.Frame:IsMouseOver()
 
 	Button_UpdateFrame(button)
 
@@ -306,7 +306,7 @@ end
 local RingFrame_OnLeave = function(frame)
 	-- Update this to avoid a flicker or delay
 	-- when moving directly from the ringframe to the toggle button.
-	frame.Button.isMouseOver = MouseIsOver(frame.Button)
+	frame.Button.isMouseOver = frame.Button:IsMouseOver()
 	frame.isMouseOver = nil
 
 	Button_UpdateFrame(frame.Button)
