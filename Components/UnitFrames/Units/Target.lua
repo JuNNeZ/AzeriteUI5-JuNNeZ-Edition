@@ -1576,15 +1576,55 @@ local HealPredict_PostUpdate = function(element, unit, myIncomingHeal, otherInco
 
 end
 
+local TARGET_POWER_TYPE_TOKENS = {
+	[0] = "MANA",
+	[1] = "RAGE",
+	[2] = "FOCUS",
+	[3] = "ENERGY",
+	[4] = "COMBO_POINTS",
+	[5] = "RUNES",
+	[6] = "RUNIC_POWER",
+	[7] = "SOUL_SHARDS",
+	[8] = "LUNAR_POWER",
+	[9] = "HOLY_POWER",
+	[10] = "ALTERNATE",
+	[11] = "MAELSTROM",
+	[12] = "CHI",
+	[13] = "INSANITY",
+	[16] = "ARCANE_CHARGES",
+	[17] = "FURY",
+	[18] = "PAIN",
+	[19] = "ESSENCE"
+}
+
+local GetTargetPowerToken = function(element, unit)
+	local powerType = element and element.displayType
+	if (type(powerType) ~= "number" or (issecretvalue and issecretvalue(powerType))) then
+		powerType = nil
+	end
+	local token = powerType and TARGET_POWER_TYPE_TOKENS[powerType]
+	if (not token) then
+		local primaryType, primaryToken = UnitPowerType(unit)
+		if (type(primaryType) == "number" and (not issecretvalue or not issecretvalue(primaryType))) then
+			powerType = primaryType
+			token = TARGET_POWER_TYPE_TOKENS[primaryType]
+		end
+		if (not token and type(primaryToken) == "string" and (not issecretvalue or not issecretvalue(primaryToken))) then
+			token = primaryToken
+		end
+	end
+	return token, powerType
+end
+
 -- Use custom colors for our power crystal. Does not apply to Wrath.
 local Power_UpdateColor = function(self, event, unit)
 	if (self.unit ~= unit) then return end
 
 	local element = self.Power
-	local _, pToken = UnitPowerType(unit)
+	local pToken, powerType = GetTargetPowerToken(element, unit)
 	if (pToken) then
 		local db = ns.GetConfig("TargetFrame")
-		local color = db.PowerBarColors[pToken] or Colors.power[pToken]
+		local color = db.PowerBarColors[pToken] or Colors.power[pToken] or (powerType and Colors.power[powerType])
 		if (color) then
 			element:SetStatusBarColor(unpack(color))
 		end
@@ -1633,20 +1673,27 @@ local GetFormattedTargetPowerValue = function(element, useFull)
 	end
 
 	local rawCur = UnitPower(unit, displayType)
-	if (type(rawCur) ~= "number" or (issecretvalue and issecretvalue(rawCur))) then
-		rawCur = element.safeCur or element.cur
-	end
-	if (type(rawCur) ~= "number" or (issecretvalue and issecretvalue(rawCur))) then
-		return nil
-	end
-	if (rawCur < 0) then
-		rawCur = 0
-	end
 	local formatter = useFull and BreakUpLargeNumbers or AbbreviateNumbers
 	if (type(formatter) == "function") then
 		local ok, formatted = pcall(formatter, rawCur)
-		if (ok and formatted ~= nil) then
-			return tostring(formatted)
+		local formattedType = type(formatted)
+		if (ok and (formattedType == "string" or formattedType == "number")) then
+			return formatted
+		end
+	end
+
+	local safeCur = element.safeCur or element.cur
+	if (type(safeCur) ~= "number" or (issecretvalue and issecretvalue(safeCur))) then
+		return nil
+	end
+	if (safeCur < 0) then
+		safeCur = 0
+	end
+	if (type(formatter) == "function") then
+		local ok, formatted = pcall(formatter, safeCur)
+		local formattedType = type(formatted)
+		if (ok and (formattedType == "string" or formattedType == "number")) then
+			return formatted
 		end
 	end
 	return nil
@@ -1673,7 +1720,7 @@ local GetTargetRawPowerPercent = function(element)
 		end
 	end)
 	if (type(percent) == "number" and issecretvalue and issecretvalue(percent)) then
-		percent = nil
+		return percent
 	end
 	if (type(percent) ~= "number") then
 		local cur = element.safeCur or element.cur
@@ -1692,6 +1739,11 @@ local GetTargetRawPowerPercent = function(element)
 		percent = 100
 	end
 	return percent
+end
+
+local HasTargetPowerDisplayValue = function(value)
+	local valueType = type(value)
+	return valueType == "string" or valueType == "number"
 end
 
 local GetTargetPowerValueAlpha = function()
@@ -1740,32 +1792,29 @@ local UpdateTargetPowerValueText = function(frame)
 	local fullText = GetFormattedTargetPowerValue(element, true)
 	local rawPercent = GetTargetRawPowerPercent(element)
 	local hasValue = false
+	local hasShortText = HasTargetPowerDisplayValue(shortText)
+	local hasFullText = HasTargetPowerDisplayValue(fullText)
+	local hasPercent = HasTargetPowerDisplayValue(rawPercent)
 
 	if (formatMode == "percent") then
-		if (rawPercent ~= nil and powerValue.SetFormattedText) then
-			pcall(powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
-			hasValue = true
+		if (hasPercent and powerValue.SetFormattedText) then
+			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
 		end
 	elseif (formatMode == "full") then
-		if (fullText ~= nil and powerValue.SetFormattedText) then
-			pcall(powerValue.SetFormattedText, powerValue, "%s", fullText)
-			hasValue = true
+		if (hasFullText and powerValue.SetFormattedText) then
+			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%s", fullText)
 		end
 	elseif (formatMode == "shortpercent") then
-		if (shortText ~= nil and rawPercent ~= nil and powerValue.SetFormattedText) then
-			pcall(powerValue.SetFormattedText, powerValue, "%s |cff888888(|r%d%%|cff888888)|r", shortText, rawPercent)
-			hasValue = true
-		elseif (shortText ~= nil and powerValue.SetFormattedText) then
-			pcall(powerValue.SetFormattedText, powerValue, "%s", shortText)
-			hasValue = true
-		elseif (rawPercent ~= nil and powerValue.SetFormattedText) then
-			pcall(powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
-			hasValue = true
+		if (hasShortText and hasPercent and powerValue.SetFormattedText) then
+			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%s |cff888888(|r%d%%|cff888888)|r", shortText, rawPercent)
+		elseif (hasShortText and powerValue.SetFormattedText) then
+			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%s", shortText)
+		elseif (hasPercent and powerValue.SetFormattedText) then
+			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
 		end
 	else
-		if (shortText ~= nil and powerValue.SetFormattedText) then
-			pcall(powerValue.SetFormattedText, powerValue, "%s", shortText)
-			hasValue = true
+		if (hasShortText and powerValue.SetFormattedText) then
+			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%s", shortText)
 		end
 	end
 	if (not hasValue and powerValue.SetText) then

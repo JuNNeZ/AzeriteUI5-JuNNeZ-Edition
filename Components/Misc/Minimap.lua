@@ -1112,7 +1112,7 @@ MinimapMod.PostUpdatePositionAndScale = function(self)
 		QueueStatusButton = true
 	} do
 		local element = _G[name]
-		if (element) then
+		if (element and (name ~= "QueueStatusButton" or not IsAddOnEnabled("Bartender4"))) then
 			element:SetScale(ns.API.GetEffectiveScale() / config.scale)
 		end
 	end
@@ -1197,7 +1197,12 @@ MinimapMod.InitializeObjectTables = function(self)
 	Objects.Crafting = MinimapCluster.IndicatorFrame.CraftingOrderFrame
 	Objects.Difficulty = MinimapCluster.InstanceDifficulty
 	Objects.Expansion = ExpansionLandingPageMinimapButton
-	Objects.Eye = QueueStatusButton
+	if (not IsAddOnEnabled("Bartender4")) then
+		Objects.Eye = QueueStatusButton
+	else
+		-- Bartender's optional QueueStatusButtonBar owns this shared button.
+		Skins.Azerite.Elements.AzeriteEye = nil
+	end
 	Objects.Mail = MinimapCluster.IndicatorFrame.MailFrame
 	Objects.Tracking = MinimapCluster.TrackingFrame
 	Objects.Zone = MinimapCluster.ZoneTextButton
@@ -1214,7 +1219,9 @@ MinimapMod.InitializeObjectTables = function(self)
 	ObjectOwners.Crafting = MinimapCluster.IndicatorFrame
 	ObjectOwners.Difficulty = MinimapCluster
 	ObjectOwners.Expansion = MinimapBackdrop
-	ObjectOwners.Eye = MicroMenuContainer
+	if (not IsAddOnEnabled("Bartender4")) then
+		ObjectOwners.Eye = MicroMenuContainer
+	end
 	ObjectOwners.Mail = MinimapCluster.IndicatorFrame
 	ObjectOwners.Tracking = MinimapCluster
 	ObjectOwners.Zone = MinimapCluster

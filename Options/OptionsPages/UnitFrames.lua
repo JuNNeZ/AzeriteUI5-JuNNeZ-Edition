@@ -509,7 +509,7 @@ local GenerateOptions = function()
 			desc = L["Choose how your player power widget is shown."],
 			order = 430, type = "select", width = "full", hidden = isdisabled,
 			values = {
-				orbV2 = "Automatic (By Class)",
+				orbV2 = "Automatic (By Resource)",
 				orbV2Always = "Mana Orb Only",
 				legacyCrystal = "Power Crystal Only"
 			},

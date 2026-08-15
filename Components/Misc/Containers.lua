@@ -44,7 +44,7 @@ end
 Containers.AquireBagButtons = function(self)
 
 	-- Don't interfere with known bag addons.
-	for _,addon in next,{ "AdiBags", "ArkInventory", "Bagnon", "Combuctor" } do
+	for _,addon in next,{ "AdiBags", "ArkInventory", "Bagnon", "Bartender4", "Combuctor" } do
 		if (ns.API.IsAddOnEnabled(addon)) then return end
 	end
 

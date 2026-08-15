@@ -30,32 +30,24 @@ if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local Bartender = ns:NewModule("Bartender", "LibMoreEvents-1.0")
 
-Bartender.DisableConflictingModules = function(self)
-	local Bartender4 = _G.Bartender4
-	if not Bartender4 then return end
+-- Bartender owns the overlapping action-bar ecosystem when enabled. AzeriteUI's
+-- independent encounter and minimap status modules intentionally remain active.
+local AZERITE_ACTION_BAR_MODULES = {
+	"BlizzardABDisabler",
+	"ActionBars",
+	"PetBar",
+	"StanceBar",
+	"MicroMenu",
+	"ExtraActionButtons",
+	"VehicleExit"
+}
 
-	for _,name in ipairs({
-		"ActionBars", "PetBar", "StanceBar", "Vehicle", "ExtraActionBar",
-		"BagBar", "MicroMenu", "StatusTrackingBar", "BlizzardArt"
-	}) do
-		local module = Bartender4:GetModule(name, true)
+Bartender.YieldActionBarOwnership = function(self)
+	for _, moduleName in ipairs(AZERITE_ACTION_BAR_MODULES) do
+		local module = ns:GetModule(moduleName, true)
 		if (module and module:IsEnabled()) then
 			module:Disable()
 		end
-	end
-end
-
-Bartender.ReleaseBindingControllers = function(self)
-	local Bartender4 = _G.Bartender4
-	if not Bartender4 then return end
-
-	if (Bartender4.petBattleController) then
-		_G.UnregisterStateDriver(Bartender4.petBattleController, "petbattle")
-		Bartender4.petBattleController:Execute([[ self:ClearBindings(); ]])
-	end
-	if (Bartender4.vehicleController) then
-		_G.UnregisterStateDriver(Bartender4.vehicleController, "vehicle")
-		Bartender4.vehicleController:Execute([[ self:ClearBindings(); ]])
 	end
 end
 
@@ -67,16 +59,6 @@ Bartender.HandleBartender = function(self, event, addon)
 		self:UnregisterEvent("ADDON_LOADED", "HandleBartender")
 	end
 
-	if (_G.InCombatLockdown()) then
-		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "HandleBartender")
-	elseif (event == "PLAYER_REGEN_ENABLED") then
-		if (_G.InCombatLockdown()) then return end
-		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "HandleBartender")
-	end
-
-	self:DisableConflictingModules()
-	self:ReleaseBindingControllers()
-
 	ns.BartenderHandled = true
 
 	ns:Fire("Bartender_Handled")
@@ -86,5 +68,6 @@ Bartender.OnInitialize = function(self)
 	if (not ns.API.IsAddOnEnabled("Bartender4")) then return self:Disable() end
 	if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return self:Disable() end
 
+	self:YieldActionBarOwnership()
 	self:HandleBartender()
 end

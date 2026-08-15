@@ -79,6 +79,17 @@ ns.RegisterConfig("PlayerFrame", {
 	HealthPercentageFont = GetFont(18, true),
 	HealthPercentageColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .4 },
 
+	-- Secondary Mana Crystal (when mana is not the displayed resource)
+	SecondaryManaBarPosition = { "TOPRIGHT", "BOTTOMLEFT", 26, 26 },
+	SecondaryManaBarSize = { 80, 80 },
+	SecondaryManaBarAlpha = .75,
+	SecondaryManaBarTexture = GetMedia("power_crystal_small_front"),
+	SecondaryManaBackdropTexture = GetMedia("power_crystal_small_back"),
+	SecondaryManaBackdropColor = { 1, 1, 1, .85 },
+	SecondaryManaValuePosition = { "CENTER", 0, -5 },
+	SecondaryManaValueFont = GetFont(14, true),
+	SecondaryManaValueColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .5 },
+
 	-- Mana Value Text (when mana is not primary resource)
 	ManaTextPosition = { "CENTER", 1, -34 },
 	ManaTextFont = GetFont(15, true),

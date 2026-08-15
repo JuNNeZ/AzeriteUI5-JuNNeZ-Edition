@@ -143,7 +143,11 @@ end
 
 local suppressNamedBagControls = function()
 	for _, frameName in ipairs(BAG_BUTTON_NAMES) do
-		suppressBagControl(_G[frameName])
+		-- Bartender reparents the native backpack button into its own bag bar.
+		-- Leave that shared button untouched when Bartender owns the bar.
+		if (frameName ~= "MainMenuBarBackpackButton" or not ns.API.IsAddOnEnabled("Bartender4")) then
+			suppressBagControl(_G[frameName])
+		end
 	end
 end
 

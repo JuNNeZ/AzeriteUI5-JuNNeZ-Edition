@@ -1,11 +1,32 @@
 
 # Changelog
 
+## A note on WoW 12.1 addon development
+
+Retail 12.1 protects more combat, aura, cooldown, and unit data as secret values. Addons can often display those values only by handing them directly to Blizzard-owned widgets instead of reading or formatting them, which is why one visual layer may keep working while related text or logic disappears; safe fixes increasingly require narrow ownership boundaries between Blizzard and other addons.
+
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
 
 
 ## Unreleased
+
+
+## 5.3.81-JuNNeZ (2026-08-15) - Power Displays, Bartender Compatibility, and Cooldown Numbers
+
+### Highlights
+
+- Player Power Style `Automatic (By Resource)` now selects the Mana Orb for Mana and the Power Crystal for Insanity and other primary resources, with corrected resource colors for Shadow Priests and other classes.
+- Added a small secondary Mana crystal at the player crystal's bottom-left. It appears while a non-Mana primary resource is active and Mana is below full, then hides again at full Mana.
+- Fixed target Power Crystal colors and Short Number, Full Number, Percent, and Short + Percent text so they follow the target's actual resource on Retail 12.1.
+- Restored numeric cooldown timers on AzeriteUI action buttons while preserving the existing cooldown sweep and charge behavior.
+- Restored complete Bartender4 coexistence: Bartender keeps ownership of its action, pet, stance, bag, micro-menu, vehicle, extra-action, status, queue, configuration, and binding systems without AzeriteUI hiding or reparenting them.
+
+### Access
+
+- Player resource routing: `/az -> Unit Frame Settings -> Player -> Player Power Style -> Automatic (By Resource)`.
+- Target resource text: `/az -> Unit Frame Settings -> Target -> Power Text Style`.
+- Bartender4 requires no AzeriteUI profile reset; enable both addons and configure its bars through `/bt` as usual.
 
 
 ## 5.3.80-JuNNeZ (2026-08-14) - Player Aura Controls and Arena Visibility

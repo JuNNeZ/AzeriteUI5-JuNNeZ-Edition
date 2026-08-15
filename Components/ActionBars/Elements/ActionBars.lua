@@ -331,9 +331,11 @@ local style = function(self)
 	self.cooldown:SetDrawBling(false)
 	self.cooldown:SetEdgeTexture(b)
 	self.cooldown:SetDrawEdge(false)
-	-- AzeriteUI owns the countdown text below. Keep Blizzard's native number
-	-- hidden so Retail does not draw a second, larger duration over it.
-	self.cooldown:SetHideCountdownNumbers(true)
+	-- Retail duration objects can remain secret to addon code while Blizzard's
+	-- cooldown widget can still render their countdown safely.
+	local nativeCooldownCount = ns.IsRetail and self.cooldown.GetCountdownFontString and self.cooldown:GetCountdownFontString()
+	local useNativeCooldownCount = nativeCooldownCount ~= nil
+	self.cooldown:SetHideCountdownNumbers(not useNativeCooldownCount)
 
 	self.UpdateCharge = function(self)
 		local m = db.ButtonMaskTexture
@@ -398,7 +400,8 @@ local style = function(self)
 	--]]
 
 	-- Cooldown Timer Text
-	self.cooldownCount = self.OverlayFrame:CreateFontString(nil, "ARTWORK", nil, 1)
+	self.cooldownCount = nativeCooldownCount or self.OverlayFrame:CreateFontString(nil, "ARTWORK", nil, 1)
+	self.cooldownCount:ClearAllPoints()
 	self.cooldownCount:SetPoint(unpack(db.ButtonCooldownCountPosition))
 	self.cooldownCount:SetFontObject(db.ButtonCooldownCountFont)
 	self.cooldownCount:SetJustifyH(db.ButtonCooldownCountJustifyH)
@@ -425,7 +428,9 @@ local style = function(self)
 	self.HotKey:SetFontObject(db.ButtonKeybindFont)
 	self.HotKey:SetTextColor(unpack(db.ButtonKeybindColor))
 
-	RegisterCooldown(self.cooldown, self.cooldownCount)
+	if (not useNativeCooldownCount) then
+		RegisterCooldown(self.cooldown, self.cooldownCount)
+	end
 
 	-- ToDo: Handle this in the back-end
 	-- Keep these hooks visual-only; they intentionally avoid touching timing state.
@@ -436,7 +441,13 @@ local style = function(self)
 	hooksecurefunc(self.cooldown, "SetDrawSwipe", function(c,h) if not h then c:SetDrawSwipe(true) end end)
 	hooksecurefunc(self.cooldown, "SetDrawBling", function(c,h) if h then c:SetDrawBling(false) end end)
 	hooksecurefunc(self.cooldown, "SetDrawEdge", function(c,h) if h then c:SetDrawEdge(false) end end)
-	hooksecurefunc(self.cooldown, "SetHideCountdownNumbers", function(c,h) if not h then c:SetHideCountdownNumbers(true) end end)
+	hooksecurefunc(self.cooldown, "SetHideCountdownNumbers", function(c,h)
+		if (useNativeCooldownCount and h) then
+			c:SetHideCountdownNumbers(false)
+		elseif (not useNativeCooldownCount and not h) then
+			c:SetHideCountdownNumbers(true)
+		end
+	end)
 	hooksecurefunc(self.cooldown, "SetCooldown", function(c) c:SetAlpha(.75) end)
 	hooksecurefunc(self, "SetNormalTexture", function(button, texture)
 		if (texture and texture ~= "") then

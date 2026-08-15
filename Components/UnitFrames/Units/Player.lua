@@ -1114,6 +1114,17 @@ local GetPlayerPowerOrbMode = function()
 	return "orbV2"
 end
 
+local GetSafePlayerPrimaryPowerType = function(unit)
+	if (type(unit) ~= "string" or unit == "") then
+		unit = "player"
+	end
+	local powerType = UnitPowerType(unit)
+	if (type(powerType) ~= "number" or (issecretvalue and issecretvalue(powerType))) then
+		return nil
+	end
+	return powerType
+end
+
 local ResolvePlayerPowerWidgetVisibility = function(frame, unit)
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
 	if (not profile) then
@@ -1132,8 +1143,16 @@ local ResolvePlayerPowerWidgetVisibility = function(frame, unit)
 			wantsOrb = true
 			wantsCrystal = false
 		else
-			-- Dynamic mode is class-based for predictable behavior.
-			wantsOrb = ORB_DYNAMIC_CLASS_ALLOW[playerClass] and true or false
+			-- Match stock AzeriteUI: mana uses the orb, non-mana primary
+			-- resources use the crystal. Retribution keeps its stock exception.
+			local powerType = GetSafePlayerPrimaryPowerType(unit)
+			if (playerIsRetribution) then
+				wantsOrb = false
+			elseif (type(powerType) == "number") then
+				wantsOrb = powerType == POWER_TYPE_MANA
+			else
+				wantsOrb = ORB_DYNAMIC_CLASS_ALLOW[playerClass] and true or false
+			end
 			wantsCrystal = not wantsOrb
 		end
 	end
@@ -1657,6 +1676,47 @@ local UpdatePlayerManaValueTag = function(frame)
 	UpdatePlayerElementValueText(frame.ManaOrb)
 end
 
+local UpdateSecondaryManaCrystal = function(frame, unit)
+	local element = frame and frame.SecondaryManaCrystal
+	if (not element) then
+		return
+	end
+
+	unit = IsPlayerPowerUnit(unit) and unit or GetPlayerPowerUnit(frame)
+	local shouldShowCrystal = ResolvePlayerPowerWidgetVisibility(frame, unit)
+	local displayedPowerType = frame.Power and frame.Power.displayType
+	if (type(displayedPowerType) ~= "number" or (issecretvalue and issecretvalue(displayedPowerType))) then
+		displayedPowerType = GetSafePlayerPrimaryPowerType(unit)
+	end
+
+	local mana = UnitPower("player", POWER_TYPE_MANA)
+	local manaMax = UnitPowerMax("player", POWER_TYPE_MANA)
+	local valuesAreSafe = type(mana) == "number"
+		and type(manaMax) == "number"
+		and (not issecretvalue or (not issecretvalue(mana) and not issecretvalue(manaMax)))
+	local show = shouldShowCrystal
+		and displayedPowerType ~= POWER_TYPE_MANA
+		and valuesAreSafe
+		and manaMax > 0
+		and mana < manaMax
+
+	if (not show) then
+		element:Hide()
+		return
+	end
+
+	local percent = math_floor((mana / manaMax) * 100)
+	element:SetMinMaxValues(0, manaMax)
+	element:SetValue(mana)
+	element.safeCur = mana
+	element.safeMax = manaMax
+	element.safePercent = percent
+	if (element.Value) then
+		element.Value:SetFormattedText("%d", percent)
+	end
+	element:Show()
+end
+
 local Power_UpdateVisibility = function(element, unit, cur, min, max)
 	local owner = element and element.__owner
 	local shouldShowCrystal = ResolvePlayerPowerWidgetVisibility(owner, unit)
@@ -1690,7 +1750,11 @@ local Power_UpdateVisibility = function(element, unit, cur, min, max)
 			element.Value:Hide()
 		end
 	end
+	if (element.ManaText) then
+		element.ManaText:Hide()
+	end
 	UpdatePlayerElementValueText(element)
+	UpdateSecondaryManaCrystal(owner, unit)
 	UpdateManaOrbVisibility(owner, unit)
 end
 
@@ -1705,6 +1769,26 @@ local POWER_CRYSTAL_TOKEN_ALIASES = {
 	PAIN = "FURY",
 	SOUL_SHARDS = "FURY",
 	RUNES = "RUNIC_POWER"
+}
+local POWER_TYPE_TOKENS = {
+	[0] = "MANA",
+	[1] = "RAGE",
+	[2] = "FOCUS",
+	[3] = "ENERGY",
+	[4] = "COMBO_POINTS",
+	[5] = "RUNES",
+	[6] = "RUNIC_POWER",
+	[7] = "SOUL_SHARDS",
+	[8] = "LUNAR_POWER",
+	[9] = "HOLY_POWER",
+	[10] = "ALTERNATE",
+	[11] = "MAELSTROM",
+	[12] = "CHI",
+	[13] = "INSANITY",
+	[16] = "ARCANE_CHARGES",
+	[17] = "FURY",
+	[18] = "PAIN",
+	[19] = "ESSENCE"
 }
 local POWER_CRYSTAL_ENHANCED_COLORS = {
 	ENERGY = {  36/255, 214/255, 176/255 },
@@ -1731,7 +1815,20 @@ local ResolvePlayerPowerToken = function(element, unit)
 			unit = "player"
 		end
 	end
-	local _, token = UnitPowerType(unit, element and element.displayType)
+	local displayType = element and element.displayType
+	if (type(displayType) ~= "number" or (issecretvalue and issecretvalue(displayType))) then
+		displayType = nil
+	end
+	local token = displayType and POWER_TYPE_TOKENS[displayType]
+	if (not token) then
+		local powerType, powerToken = UnitPowerType(unit)
+		if (type(powerType) == "number" and (not issecretvalue or not issecretvalue(powerType))) then
+			token = POWER_TYPE_TOKENS[powerType]
+		end
+		if (not token and type(powerToken) == "string" and (not issecretvalue or not issecretvalue(powerToken))) then
+			token = powerToken
+		end
+	end
 	if (type(token) ~= "string" or token == "") then
 		token = "MANA"
 	end
@@ -1989,13 +2086,8 @@ end
 
 local Mana_PostUpdate = function(element, unit, cur, min, max)
 	local config = ns.GetConfig("PlayerFrame")
-	local token = "MANA"
-	if (unit) then
-		local _, powerToken = UnitPowerType(unit, element.displayType)
-		if (type(powerToken) == "string" and powerToken ~= "") then
-			token = powerToken
-		end
-	end
+	local displayType = element and element.displayType
+	local token = (type(displayType) == "number" and (not issecretvalue or not issecretvalue(displayType)) and POWER_TYPE_TOKENS[displayType]) or "MANA"
 
 	local color = config and config.PowerOrbColors and config.PowerOrbColors[token]
 	if (type(color) ~= "table") then
@@ -3122,8 +3214,41 @@ local style = function(self, unit)
 
 	self.Power.Percent = powerPerc
 
+	-- Secondary Mana Crystal
+	-- *when mana exists but is not the displayed resource
+	--------------------------------------------
+	local secondaryMana = CreateFrame("StatusBar", nil, power)
+	secondaryMana:SetFrameLevel(power:GetFrameLevel() + 3)
+	local secondaryManaPosition = config.SecondaryManaBarPosition
+	secondaryMana:SetPoint(secondaryManaPosition[1], power, secondaryManaPosition[2], secondaryManaPosition[3], secondaryManaPosition[4])
+	secondaryMana:SetSize(unpack(config.SecondaryManaBarSize))
+	secondaryMana:SetStatusBarTexture(config.SecondaryManaBarTexture)
+	secondaryMana:SetOrientation("VERTICAL")
+	secondaryMana:SetAlpha(config.SecondaryManaBarAlpha or 1)
+	secondaryMana:SetMinMaxValues(0, 1)
+	secondaryMana:SetValue(0)
+	local secondaryManaColor = config.PowerBarColors.MANA
+	secondaryMana:SetStatusBarColor(secondaryManaColor[1], secondaryManaColor[2], secondaryManaColor[3], secondaryManaColor[4] or 1)
+	secondaryMana:EnableMouse(false)
+
+	local secondaryManaBackdrop = secondaryMana:CreateTexture(nil, "BACKGROUND", nil, -2)
+	secondaryManaBackdrop:SetAllPoints(secondaryMana)
+	secondaryManaBackdrop:SetTexture(config.SecondaryManaBackdropTexture)
+	secondaryManaBackdrop:SetVertexColor(unpack(config.SecondaryManaBackdropColor))
+	secondaryMana.Backdrop = secondaryManaBackdrop
+
+	local secondaryManaValue = secondaryMana:CreateFontString(nil, "OVERLAY")
+	secondaryManaValue:SetPoint(unpack(config.SecondaryManaValuePosition))
+	secondaryManaValue:SetFontObject(config.SecondaryManaValueFont)
+	secondaryManaValue:SetTextColor(unpack(config.SecondaryManaValueColor))
+	secondaryManaValue:SetJustifyH("CENTER")
+	secondaryManaValue:SetJustifyV("MIDDLE")
+	secondaryMana.Value = secondaryManaValue
+	secondaryMana:Hide()
+	self.SecondaryManaCrystal = secondaryMana
+
 	-- ManaText Value
-	-- *when mana isn't primary resource
+	-- *legacy internal readout retained hidden for tag compatibility
 	--------------------------------------------
 	local manaText = power:CreateFontString(nil, "OVERLAY")
 	manaText:SetPoint(unpack(config.ManaTextPosition))
@@ -3132,6 +3257,7 @@ local style = function(self, unit)
 	manaText:SetJustifyH(config.ManaTextJustifyH)
 	manaText:SetJustifyV(config.ManaTextJustifyV)
 	self:Tag(manaText, prefix("[*:ManaText:Low]"))
+	manaText:Hide()
 
 	self.Power.ManaText = manaText
 
