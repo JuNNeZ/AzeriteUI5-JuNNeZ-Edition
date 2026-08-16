@@ -12,6 +12,19 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.3.82-JuNNeZ (2026-08-16) - Secondary Mana Crystal and Options Fixes
+
+### Highlights
+
+- Fixed the small secondary Mana crystal on Retail 12.1 so it can display protected Mana values for Balance Druids, Shadow Priests, and Elemental Shamans while a non-Mana primary resource is active.
+- Added an independent mover for the secondary Mana crystal. Its position now persists separately instead of following the main player crystal.
+- Fixed `/az` pages appearing empty when another addon loaded an outdated shared AceGUI checkbox widget.
+
+### Access
+
+- Run `/lock`, then drag `Player Secondary Mana Crystal` to place the small crystal independently.
+
+
 ## 5.3.81-JuNNeZ (2026-08-15) - Power Displays, Bartender Compatibility, and Cooldown Numbers
 
 ### Highlights

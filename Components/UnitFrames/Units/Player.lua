@@ -25,6 +25,7 @@
 --]]
 local _, ns = ...
 local PlayerPowerBarAlt = _G and _G.PlayerPowerBarAlt or PlayerPowerBarAlt
+local ALT_POWER_BAR_PAIR_DISPLAY_INFO = _G and _G.ALT_POWER_BAR_PAIR_DISPLAY_INFO
 local oUF = ns.oUF
 
 local PlayerFrameMod = ns:NewModule("PlayerFrame", ns.UnitFrameModule, "LibMoreEvents-1.0")
@@ -76,6 +77,8 @@ local ShouldShowPlayerPowerValue
 
 local POWER_CRYSTAL_BASELINE_OFFSET_X = -37
 local POWER_CRYSTAL_BASELINE_OFFSET_Y = -28
+local SECONDARY_MANA_DEFAULT_OFFSET_X = -71
+local SECONDARY_MANA_DEFAULT_OFFSET_Y = -44
 local PLAYER_DEBUFF_HOLDER_PADDING_LEFT = 5
 local PLAYER_DEBUFF_HOLDER_PADDING_RIGHT = 3
 local PLAYER_DEBUFF_HOLDER_PADDING_TOP = 3
@@ -163,6 +166,13 @@ PlayerFrameMod.GenerateDefaults = function(self)
 			[1] = "BOTTOMLEFT",
 			[2] = defaults.profile.savedPosition[2] + (260 * scale),
 			[3] = defaults.profile.savedPosition[3] + (48 * scale)
+		}
+		defaults.profile.secondaryManaSavedPosition = {
+			scale = scale,
+			lockAnchorPoint = true,
+			[1] = "BOTTOMLEFT",
+			[2] = defaults.profile.savedPosition[2] + (SECONDARY_MANA_DEFAULT_OFFSET_X * scale),
+			[3] = defaults.profile.savedPosition[3] + (SECONDARY_MANA_DEFAULT_OFFSET_Y * scale)
 		}
 	end
 	return defaults
@@ -427,6 +437,94 @@ PlayerFrameMod.CreateAuraAnchors = function(self)
 	end)
 end
 
+local ApplySecondaryManaCrystalPosition = function(frame, savedPosition, scale)
+	local crystal = frame and frame.SecondaryManaCrystal
+	if (not crystal or not savedPosition or not savedPosition[1]) then
+		return
+	end
+	scale = (type(scale) == "number" and scale > 0) and scale or 1
+	crystal:SetScale(1)
+	crystal:ClearAllPoints()
+	crystal:SetPoint(savedPosition[1], UIParent, savedPosition[1], (savedPosition[2] or 0) / scale, (savedPosition[3] or 0) / scale)
+end
+
+PlayerFrameMod.CreateSecondaryManaAnchor = function(self)
+	if (self.secondaryManaAnchor or not self.frame or not self.frame.SecondaryManaCrystal) then
+		return
+	end
+
+	local manager = ns:GetModule("MovableFramesManager", true)
+	local profile = self.db and self.db.profile
+	local defaultsProfile = self:GetDefaults().profile
+	if (not manager or not profile) then
+		return
+	end
+
+	local anchor = manager:RequestAnchor()
+	local savedPosition = profile.secondaryManaSavedPosition
+	local defaultPosition = defaultsProfile and defaultsProfile.secondaryManaSavedPosition
+	local width, height = self.frame.SecondaryManaCrystal:GetSize()
+	anchor:SetScalable(false)
+	anchor:SetAnchorPointLocked(true)
+	anchor:SetDefaultScale((defaultPosition and defaultPosition.scale) or ns.API.GetEffectiveScale())
+	if (defaultPosition and defaultPosition[1]) then
+		anchor:SetDefaultPosition(defaultPosition[1], defaultPosition[2], defaultPosition[3])
+	end
+	anchor:SetSize(width, height)
+	if (savedPosition and savedPosition[1]) then
+		anchor:SetPoint(savedPosition[1], savedPosition[2], savedPosition[3])
+	end
+	anchor:SetScale((profile.savedPosition and profile.savedPosition.scale) or ns.API.GetEffectiveScale())
+	anchor:SetTitle((HUD_EDIT_MODE_PLAYER_FRAME_LABEL or PLAYER) .. " Secondary Mana Crystal")
+	anchor:SetColorGroup("unitframes")
+	anchor.PreUpdate = function()
+		self:UpdateSecondaryManaAnchor()
+	end
+	self.secondaryManaAnchor = anchor
+end
+
+PlayerFrameMod.UpdateSecondaryManaAnchor = function(self)
+	local profile = self.db and self.db.profile
+	local frame = self.frame
+	local crystal = frame and frame.SecondaryManaCrystal
+	if (not profile or not frame or not crystal) then
+		return
+	end
+
+	local savedPosition = profile.secondaryManaSavedPosition
+	local scale = (profile.savedPosition and profile.savedPosition.scale) or frame:GetScale() or 1
+	ApplySecondaryManaCrystalPosition(frame, savedPosition, scale)
+
+	local anchor = self.secondaryManaAnchor
+	if (not anchor) then
+		return
+	end
+	if (not profile.enabled) then
+		anchor:Disable()
+		return
+	end
+
+	local width, height = crystal:GetSize()
+	anchor:Enable()
+	anchor:SetScale(scale)
+	anchor:SetSize(width, height)
+	anchor:ClearAllPoints()
+	if (savedPosition and savedPosition[1]) then
+		anchor:SetPointBase(savedPosition[1], UIParent, savedPosition[1], savedPosition[2], savedPosition[3])
+	end
+	anchor:SetAnchorPointLocked(true)
+end
+
+PlayerFrameMod.UpdateSecondaryManaDefaults = function(self)
+	local defaults = self:GetDefaults()
+	if (not defaults or not defaults.profile or not self.secondaryManaAnchor or not defaults.profile.secondaryManaSavedPosition) then
+		return
+	end
+	defaults.profile.secondaryManaSavedPosition.scale = self.secondaryManaAnchor:GetDefaultScale()
+	defaults.profile.secondaryManaSavedPosition[1], defaults.profile.secondaryManaSavedPosition[2], defaults.profile.secondaryManaSavedPosition[3] = self.secondaryManaAnchor:GetDefaultPosition()
+	self:SetDefaults(defaults)
+end
+
 PlayerFrameMod.UpdateAuraAnchors = function(self)
 	local profile = self.db and self.db.profile
 	local frame = self.frame
@@ -487,14 +585,29 @@ local UpdatePlayerAuraSavedPosition = function(self, anchor, point, x, y)
 	return true
 end
 
+local UpdateSecondaryManaSavedPosition = function(self, anchor, point, x, y)
+	if (anchor ~= self.secondaryManaAnchor or not self.db or not self.db.profile or not self.db.profile.secondaryManaSavedPosition) then
+		return false
+	end
+	local savedPosition = self.db.profile.secondaryManaSavedPosition
+	savedPosition.lockAnchorPoint = true
+	savedPosition[1] = point
+	savedPosition[2] = x
+	savedPosition[3] = y
+	self:UpdateSecondaryManaAnchor()
+	return true
+end
+
 PlayerFrameMod.PreAnchorEvent = function(self, event, ...)
-	if (not self.frame or not self.debuffAnchor) then
+	if (not self.frame) then
 		return
 	end
 
 	if (event == "MFM_PositionUpdated") then
 		local anchor, point, x, y = ...
-		if (anchor == self.debuffAnchor) then
+		if (anchor == self.secondaryManaAnchor) then
+			UpdateSecondaryManaSavedPosition(self, anchor, point, x, y)
+		elseif (anchor == self.debuffAnchor) then
 			UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)
 		end
 	elseif (event == "MFM_Dragging") then
@@ -502,12 +615,16 @@ PlayerFrameMod.PreAnchorEvent = function(self, event, ...)
 			return
 		end
 		local anchor, point, x, y = ...
-		if (anchor == self.debuffAnchor) then
+		if (anchor == self.secondaryManaAnchor) then
+			UpdateSecondaryManaSavedPosition(self, anchor, point, x, y)
+		elseif (anchor == self.debuffAnchor) then
 			UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)
 		end
 	elseif (event == "MFM_AnchorShown") then
 		local anchor = ...
-		if (anchor == self.debuffAnchor) then
+		if (anchor == self.secondaryManaAnchor) then
+			self:UpdateSecondaryManaAnchor()
+		elseif (anchor == self.debuffAnchor) then
 			ApplyPlayerAuraLayout(self.frame)
 			self:UpdateAuraAnchors()
 		end
@@ -522,6 +639,7 @@ PlayerFrameMod.PostAnchorEvent = function(self, event, ...)
 	if (event == "PLAYER_ENTERING_WORLD" or event == "VARIABLES_LOADED") then
 		ApplyPlayerAuraLayout(self.frame)
 		self:UpdateAuraAnchors()
+		self:UpdateSecondaryManaAnchor()
 		return
 	end
 	
@@ -537,6 +655,7 @@ PlayerFrameMod.PostAnchorEvent = function(self, event, ...)
 		if (anchor == self.anchor) then
 			ApplyPlayerAuraLayout(self.frame)
 			self:UpdateAuraAnchors()
+			self:UpdateSecondaryManaAnchor()
 			return
 		end
 	end
@@ -551,6 +670,9 @@ PlayerFrameMod.PostAnchorEvent = function(self, event, ...)
 		if (UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)) then
 			return
 		end
+		if (UpdateSecondaryManaSavedPosition(self, anchor, point, x, y)) then
+			return
+		end
 	end
 
 	if (event == "MFM_Dragging") then
@@ -561,12 +683,17 @@ PlayerFrameMod.PostAnchorEvent = function(self, event, ...)
 		if (UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)) then
 			return
 		end
+		if (UpdateSecondaryManaSavedPosition(self, anchor, point, x, y)) then
+			return
+		end
 	end
 
 	if (event == "MFM_UIScaleChanged") then
 		self:UpdateAuraDefaults()
+		self:UpdateSecondaryManaDefaults()
 		ApplyPlayerAuraLayout(self.frame)
 		self:UpdateAuraAnchors()
+		self:UpdateSecondaryManaAnchor()
 	end
 end
 
@@ -1123,6 +1250,29 @@ local GetSafePlayerPrimaryPowerType = function(unit)
 		return nil
 	end
 	return powerType
+end
+
+local PlayerHasAdditionalManaPower = function(unit)
+	local classDisplayInfo = ALT_POWER_BAR_PAIR_DISPLAY_INFO and ALT_POWER_BAR_PAIR_DISPLAY_INFO[playerClass]
+	if (type(classDisplayInfo) ~= "table") then
+		return false
+	end
+	local primaryPowerType = GetSafePlayerPrimaryPowerType(unit)
+	local additionalPowerInfo = primaryPowerType and classDisplayInfo[primaryPowerType]
+	if (type(additionalPowerInfo) == "table") then
+		local powerType = additionalPowerInfo.powerType
+		if (type(powerType) == "number" and (not issecretvalue or not issecretvalue(powerType))) then
+			return powerType == POWER_TYPE_MANA
+		end
+		local powerName = additionalPowerInfo.powerName
+		return type(powerName) == "string"
+			and (not issecretvalue or not issecretvalue(powerName))
+			and powerName == "MANA"
+	end
+	if (type(additionalPowerInfo) == "number" and (not issecretvalue or not issecretvalue(additionalPowerInfo))) then
+		return additionalPowerInfo == POWER_TYPE_MANA
+	end
+	return additionalPowerInfo == true
 end
 
 local ResolvePlayerPowerWidgetVisibility = function(frame, unit)
@@ -1688,33 +1838,65 @@ local UpdateSecondaryManaCrystal = function(frame, unit)
 	if (type(displayedPowerType) ~= "number" or (issecretvalue and issecretvalue(displayedPowerType))) then
 		displayedPowerType = GetSafePlayerPrimaryPowerType(unit)
 	end
-
-	local mana = UnitPower("player", POWER_TYPE_MANA)
-	local manaMax = UnitPowerMax("player", POWER_TYPE_MANA)
-	local valuesAreSafe = type(mana) == "number"
-		and type(manaMax) == "number"
-		and (not issecretvalue or (not issecretvalue(mana) and not issecretvalue(manaMax)))
 	local show = shouldShowCrystal
 		and displayedPowerType ~= POWER_TYPE_MANA
-		and valuesAreSafe
-		and manaMax > 0
-		and mana < manaMax
+		and PlayerHasAdditionalManaPower(unit)
 
 	if (not show) then
 		element:Hide()
 		return
 	end
 
-	local percent = math_floor((mana / manaMax) * 100)
-	element:SetMinMaxValues(0, manaMax)
-	element:SetValue(mana)
-	element.safeCur = mana
-	element.safeMax = manaMax
-	element.safePercent = percent
-	if (element.Value) then
-		element.Value:SetFormattedText("%d", percent)
+	local mana = UnitPower("player", POWER_TYPE_MANA)
+	local manaMax = UnitPowerMax("player", POWER_TYPE_MANA)
+	local barUpdated = pcall(function()
+		element:SetMinMaxValues(0, manaMax)
+		element:SetValue(mana)
+	end)
+	if (not barUpdated) then
+		element:Hide()
+		return
 	end
+
 	element:Show()
+	local alphaUpdated = false
+	if (UnitPowerPercent and element.__AzeriteUI_VisibilityCurve) then
+		alphaUpdated = pcall(function()
+			element:SetAlpha(UnitPowerPercent("player", POWER_TYPE_MANA, true, element.__AzeriteUI_VisibilityCurve))
+		end)
+	end
+
+	local valuesAreSafe = type(mana) == "number"
+		and type(manaMax) == "number"
+		and (not issecretvalue or (not issecretvalue(mana) and not issecretvalue(manaMax)))
+	if (not alphaUpdated) then
+		local alpha = 0
+		if (valuesAreSafe and manaMax > 0 and mana < manaMax) then
+			alpha = element.__AzeriteUI_VisibleAlpha or 1
+		end
+		element:SetAlpha(alpha)
+	end
+
+	if (valuesAreSafe and manaMax > 0) then
+		local percent = math_floor((mana / manaMax) * 100)
+		element.safeCur = mana
+		element.safeMax = manaMax
+		element.safePercent = percent
+	else
+		element.safeCur = nil
+		element.safeMax = nil
+		element.safePercent = nil
+	end
+
+	if (element.Value and UnitPowerPercent) then
+		local textUpdated = pcall(function()
+			local curve = CurveConstants and CurveConstants.ScaleTo100 or nil
+			element.Value:SetFormattedText("%d", UnitPowerPercent("player", POWER_TYPE_MANA, true, curve))
+		end)
+		if (not textUpdated) then
+			element.Value:SetText("")
+		end
+	end
 end
 
 local Power_UpdateVisibility = function(element, unit, cur, min, max)
@@ -3217,14 +3399,22 @@ local style = function(self, unit)
 	-- Secondary Mana Crystal
 	-- *when mana exists but is not the displayed resource
 	--------------------------------------------
-	local secondaryMana = CreateFrame("StatusBar", nil, power)
+	local secondaryMana = CreateFrame("StatusBar", nil, self)
 	secondaryMana:SetFrameLevel(power:GetFrameLevel() + 3)
 	local secondaryManaPosition = config.SecondaryManaBarPosition
 	secondaryMana:SetPoint(secondaryManaPosition[1], power, secondaryManaPosition[2], secondaryManaPosition[3], secondaryManaPosition[4])
 	secondaryMana:SetSize(unpack(config.SecondaryManaBarSize))
 	secondaryMana:SetStatusBarTexture(config.SecondaryManaBarTexture)
 	secondaryMana:SetOrientation("VERTICAL")
-	secondaryMana:SetAlpha(config.SecondaryManaBarAlpha or 1)
+	secondaryMana.__AzeriteUI_VisibleAlpha = config.SecondaryManaBarAlpha or 1
+	secondaryMana:SetAlpha(secondaryMana.__AzeriteUI_VisibleAlpha)
+	if (UnitPowerPercent and C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType and Enum.LuaCurveType.Step) then
+		local visibilityCurve = C_CurveUtil.CreateCurve()
+		visibilityCurve:SetType(Enum.LuaCurveType.Step)
+		visibilityCurve:AddPoint(0, secondaryMana.__AzeriteUI_VisibleAlpha)
+		visibilityCurve:AddPoint(1, 0)
+		secondaryMana.__AzeriteUI_VisibilityCurve = visibilityCurve
+	end
 	secondaryMana:SetMinMaxValues(0, 1)
 	secondaryMana:SetValue(0)
 	local secondaryManaColor = config.PowerBarColors.MANA
@@ -3617,6 +3807,7 @@ PlayerFrameMod.Update = function(self)
 	ApplyPlayerPvPIndicatorLayout(self.frame)
 	ApplyPlayerAuraLayout(self.frame)
 	self:UpdateAuraAnchors()
+	self:UpdateSecondaryManaAnchor()
 
 	self.frame.Health.colorClass = self.db.profile.useClassColor
 	self.frame.Health.colorHealth = true
@@ -3688,6 +3879,7 @@ PlayerFrameMod.OnEnable = function(self)
 	self:CreateUnitFrames()
 	self:CreateAnchor(HUD_EDIT_MODE_PLAYER_FRAME_LABEL or PLAYER)
 	self:CreateAuraAnchors()
+	self:CreateSecondaryManaAnchor()
 
 	ns.MovableModulePrototype.OnEnable(self)
 end
