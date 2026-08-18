@@ -36,6 +36,12 @@ local Priority = ns.AuraData.Priority
 
 -- https://wowpedia.fandom.com/wiki/API_C_UnitAuras.GetAuraDataByAuraInstanceID
 local IsSecret = issecretvalue
+
+-- issecretvalue does not report on tables; issecrettable does. ElvUI's 12.1 oUF
+-- keeps both predicates for exactly this reason.
+local IsSecretTable = function(value)
+	return (issecrettable and issecrettable(value)) and true or false
+end
 local SafeBool = function(value)
 	if (IsSecret and IsSecret(value)) then
 		return false
@@ -134,6 +140,27 @@ end
 
 local HasDisplayIdentity = function(button)
 	return (button and (button.spellID ~= nil or button.spell ~= nil)) and true or false
+end
+
+-- WoW 12 can mark a whole aura payload secret. Every token query then returns a
+-- secret result that SafeIsAuraFilteredOut collapses to nil, and every SafeBool or
+-- SafeNumber read falls back to its neutral default, so the filter has nothing left
+-- to judge the aura by and ends up hiding it. Blizzard still displays these auras and
+-- the icon/cooldown widgets accept secret values, so fail open rather than dropping
+-- everything the moment a unit's aura data becomes restricted.
+local CannotEvaluateAura = function(unit, data, isHarmful)
+	if (not IsSecret or not data) then
+		return false
+	end
+	if (IsSecretTable(data) or IsSecret(data)) then
+		-- A wholly secret table cannot be read at all; the caller handles that case.
+		return false
+	end
+	if (not IsSecret(data.auraInstanceID)) then
+		return false
+	end
+	local baseFilter = isHarmful and "HARMFUL" or "HELPFUL"
+	return SafeIsAuraFilteredOut(unit, data.auraInstanceID, baseFilter) == nil
 end
 
 local HasDisplayedApplications = function(unit, data)
@@ -236,6 +263,10 @@ ns.AuraFilters.TargetAuraFilter = function(button, unit, data)
 		return true
 	end
 
+	if (CannotEvaluateAura(unit, data, isHarmful)) then
+		return true
+	end
+
 	if (durationSecret or applicationsSecret) then
 		if ((not isHarmful) and isEnemy and isImportant) then
 			return true
@@ -331,6 +362,10 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 		return true
 	end
 
+	if (CannotEvaluateAura(unit, data, isHarmful)) then
+		return true
+	end
+
 	if (durationSecret or expirationSecret or applicationsSecret) then
 		if (isHarmful) then
 			if (useStockBehavior) then
@@ -390,7 +425,7 @@ end
 
 ns.AuraFilters.NameplateAuraFilter = function(button, unit, data)
 	-- Guard against secret values (only when the table itself is secret)
-	if (IsSecret and IsSecret(data)) then
+	if (IsSecretTable(data) or (IsSecret and IsSecret(data))) then
 		return
 	end
 
@@ -419,6 +454,10 @@ ns.AuraFilters.NameplateAuraFilter = function(button, unit, data)
 		return
 	end
 
+	if (CannotEvaluateAura(unit, data, isHarmful)) then
+		return true
+	end
+
 	if (SafeBool(data.isBossDebuff)) then
 		return true
 	elseif (SafeBool(data.isStealable)) then
@@ -444,13 +483,14 @@ end
 
 ns.AuraFilters.ArenaAuraFilter = function(button, unit, data)
 
-	-- Guard against secret values
-	if (IsSecret and (IsSecret(data.expirationTime) or IsSecret(data.duration)
-		or IsSecret(data.isHarmful) or IsSecret(data.isPlayerAura)
-		or IsSecret(data.canApplyAura) or IsSecret(data.applications)
-		or IsSecret(data.isNameplateOnly) or IsSecret(data.nameplateShowAll)
-		or IsSecret(data.nameplateShowPersonal))) then
+	-- Every read below is sanitized, so a secret field is no longer a reason to drop
+	-- the aura. Dropping them here emptied arena aura frames for the whole match.
+	if (IsSecretTable(data) or (IsSecret and IsSecret(data))) then
 		return
+	end
+
+	if (CannotEvaluateAura(unit, data, GetIsHarmful(unit, data))) then
+		return true
 	end
 
 	local expiration = SafeNumber(data.expirationTime, nil)

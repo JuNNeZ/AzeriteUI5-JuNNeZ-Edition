@@ -464,8 +464,9 @@ function DisplayMixin:Configure(config)
 	end
 
 	local width = self:GetWidth()
-	ApplyContainerConfiguration(self.playerContainer, config, width)
-	ApplyContainerConfiguration(self.vehicleContainer, config, width)
+	for _, container in ipairs(self.containers) do
+		ApplyContainerConfiguration(container, config, width)
+	end
 	self.configurationSignature = signature
 	self.pendingConfiguration = nil
 	self:ForceUpdate()
@@ -480,8 +481,9 @@ end
 function DisplayMixin:SetDisplayEnabled(enabled)
 	enabled = enabled and true or false
 	self.displayEnabled = enabled
-	self.playerContainer:SetEnabled(enabled)
-	self.vehicleContainer:SetEnabled(enabled)
+	for _, container in ipairs(self.containers) do
+		container:SetEnabled(enabled)
+	end
 
 	if (InCombatLockdown()) then
 		self.pendingShownState = enabled
@@ -501,8 +503,32 @@ function DisplayMixin:ApplyPendingShownState()
 end
 
 function DisplayMixin:ForceUpdate()
-	self.playerContainer:UpdateAllAuras()
-	self.vehicleContainer:UpdateAllAuras()
+	for _, container in ipairs(self.containers) do
+		container:UpdateAllAuras()
+	end
+end
+
+local function BuildDisplayConfig(options)
+	return {
+		size = options.size,
+		spacingX = options.spacingX or options.spacing or 0,
+		spacingY = options.spacingY or options.spacing or 0,
+		initialAnchor = options.initialAnchor or "BOTTOMLEFT",
+		growthX = options.growthX or "RIGHT",
+		growthY = options.growthY or "UP",
+		maxBuffs = options.maxBuffs or 0,
+		maxDebuffs = options.maxDebuffs or 0,
+		useStockBehavior = options.useStockBehavior,
+		alwaysBright = options.alwaysBright,
+		showPriority = options.showPriority,
+		showBoss = options.showBoss,
+		showStealable = options.showStealable,
+		showPersonal = options.showPersonal,
+		showNameplate = options.showNameplate,
+		showTemporary = options.showTemporary,
+		showLong = options.showLong,
+		maxDuration = options.maxDuration
+	}
 end
 
 ns.PlayerAuraContainers.Create = function(parent, options)
@@ -534,27 +560,47 @@ ns.PlayerAuraContainers.Create = function(parent, options)
 	display.vehicleWrapper = CreateUnitVisibilityWrapper(clipFrame, "[vehicleui]show;hide", displayFrameLevel)
 	display.playerContainer = CreateAuraContainer(display.playerWrapper, "player", options)
 	display.vehicleContainer = CreateAuraContainer(display.vehicleWrapper, "vehicle", options)
+	display.containers = { display.playerContainer, display.vehicleContainer }
 
 	Mixin(display, DisplayMixin)
-	display:Configure({
-		size = options.size,
-		spacingX = options.spacingX or options.spacing or 0,
-		spacingY = options.spacingY or options.spacing or 0,
-		initialAnchor = options.initialAnchor or "BOTTOMLEFT",
-		growthX = options.growthX or "RIGHT",
-		growthY = options.growthY or "UP",
-		maxBuffs = options.maxBuffs or 0,
-		maxDebuffs = options.maxDebuffs or 0,
-		useStockBehavior = options.useStockBehavior,
-		alwaysBright = options.alwaysBright,
-		showPriority = options.showPriority,
-		showBoss = options.showBoss,
-		showStealable = options.showStealable,
-		showPersonal = options.showPersonal,
-		showNameplate = options.showNameplate,
-		showTemporary = options.showTemporary,
-		showLong = options.showLong,
-		maxDuration = options.maxDuration
-	})
+	display:Configure(BuildDisplayConfig(options))
+	return display
+end
+
+-- Single-unit variant of Create. The player display swaps between a player and a
+-- vehicle row behind a state driver; every other unit needs exactly one container,
+-- so this reuses all the styling, filtering and layout code without that machinery.
+-- Native containers are rendered engine side, which is the only aura path that
+-- still returns data while in combat on Retail 12.1.
+ns.PlayerAuraContainers.CreateForUnit = function(parent, unit, options)
+	if (not C_XMLUtil or not C_XMLUtil.GetTemplateInfo or not C_XMLUtil.GetTemplateInfo("CustomAuraContainerTemplate")) then
+		return nil
+	end
+	if (not AuraContainerSortMethod or not AuraContainerSortDirection or not AnchorUtil) then
+		return nil
+	end
+
+	local displayFrameLevel = parent:GetFrameLevel() + 1
+	options.buttonFrameLevel = displayFrameLevel
+
+	local display = CreateFrame("Frame", nil, parent, "DisableUntrustedLayoutScriptsTemplate")
+	SetMouseInputEnabled(display, false)
+	display:SetSize(options.width, options.height)
+	display:SetFrameLevel(displayFrameLevel)
+
+	local clipFrame = CreateFrame("Frame", nil, display, "DisableUntrustedLayoutScriptsTemplate")
+	SetMouseInputEnabled(clipFrame, false)
+	clipFrame:SetFrameLevel(display:GetFrameLevel())
+	clipFrame:SetPoint("TOPLEFT", display, "TOPLEFT", -BORDER_OVERHANG, BORDER_OVERHANG)
+	clipFrame:SetPoint("BOTTOMRIGHT", display, "BOTTOMRIGHT", BORDER_OVERHANG, -BORDER_OVERHANG)
+	clipFrame:SetClipsChildren(true)
+	display.clipFrame = clipFrame
+
+	display.container = CreateAuraContainer(clipFrame, unit, options)
+	display.containers = { display.container }
+	display.unit = unit
+
+	Mixin(display, DisplayMixin)
+	display:Configure(BuildDisplayConfig(options))
 	return display
 end

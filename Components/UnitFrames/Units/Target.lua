@@ -442,6 +442,25 @@ local ApplyTargetAuraLayout = function(frame, styleKey)
 	auras:SetScale(1)
 	auras:ClearAllPoints()
 	auras:SetPoint(unpack(auraPoint))
+
+	local native = frame.NativeAuras
+	if (native) then
+		if (layout.size and layout.size[1] and layout.size[2]) then
+			native:SetSize(unpack(layout.size))
+		end
+		native:ClearAllPoints()
+		native:SetPoint(unpack(auraPoint))
+		native:Configure({
+			size = layout.auraSize,
+			spacingX = layout.spacingX,
+			spacingY = layout.spacingY,
+			initialAnchor = layout.initialAnchor,
+			growthX = layout.growthX,
+			growthY = layout.growthY,
+			maxBuffs = layout.numTotal,
+			maxDebuffs = layout.numTotal
+		})
+	end
 end
 
 local SetPointWithAnchorAndOffset = function(frame, pointData, offsetX, offsetY, anchorFrame)
@@ -2897,6 +2916,12 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 	end
 
+	-- Blizzard's TargetFrame refreshes its container on every target change too
+	-- (TargetFrameMixin:UpdateAuras). Keep ours in step on classification changes.
+	if (self.NativeAuras) then
+		self.NativeAuras:ForceUpdate()
+	end
+
 	ns:Fire("UnitFrame_Target_Updated", unit, key)
 end
 
@@ -3545,6 +3570,36 @@ local style = function(self, unit, id)
 
 	self.Auras = auras
 
+	-- Retail 12.1 hands addon code no aura data at all while in combat, so the
+	-- scanning element above cannot populate then - measured directly: the index
+	-- scan and GetAuraSlots both return empty in combat and repopulate the moment
+	-- it ends. The native AuraContainer is rendered engine side and keeps working.
+	-- This is the path Blizzard's own TargetFrame uses (TargetFrameMixin:UpdateAuras
+	-- -> auraContainer:UpdateAllAuras) and the one the player rows here already use.
+	if (ns.PlayerAuraContainers and ns.PlayerAuraContainers.CreateForUnit) then
+		local native = ns.PlayerAuraContainers.CreateForUnit(self, unit, {
+			width = db.AurasSize[1],
+			height = db.AurasSize[2],
+			size = db.AuraSize,
+			spacing = db.AuraSpacing,
+			spacingX = db.AurasSpacingX,
+			spacingY = db.AurasSpacingY,
+			initialAnchor = db.AurasInitialAnchor,
+			growthX = db.AurasGrowthX,
+			growthY = db.AurasGrowthY,
+			maxBuffs = db.AurasNumTotal,
+			maxDebuffs = db.AurasNumTotal,
+			disableMouse = db.AurasDisableMouse,
+			disableCooldown = db.AurasDisableCooldown,
+			tooltipAnchor = db.AurasTooltipAnchor
+		})
+		if (native) then
+			native:SetSize(unpack(db.AurasSize))
+			native:SetPoint(unpack(db.AurasPosition))
+			self.NativeAuras = native
+		end
+	end
+
 	ApplyTargetAuraLayout(self, self.currentStyle)
 
 	-- Seasonal Flavors
@@ -3598,13 +3653,25 @@ TargetFrameMod.Update = function(self)
 	UpdateTargetHealthPercentTag(self.frame)
 	ApplyTargetAuraLayout(self.frame, self.frame.currentStyle)
 
+	local native = self.frame.NativeAuras
 	if (self.db.profile.showAuras) then
-		self.frame:EnableElement("Auras")
-		if (self.frame.Auras and self.frame.Auras.ForceUpdate) then
-			self.frame.Auras:ForceUpdate()
+		if (native) then
+			-- Only one of the two may draw: the scanning element would duplicate the
+			-- native row out of combat and show nothing during it.
+			self.frame:DisableElement("Auras")
+			native:SetDisplayEnabled(true)
+			native:ForceUpdate()
+		else
+			self.frame:EnableElement("Auras")
+			if (self.frame.Auras and self.frame.Auras.ForceUpdate) then
+				self.frame.Auras:ForceUpdate()
+			end
 		end
 	else
 		self.frame:DisableElement("Auras")
+		if (native) then
+			native:SetDisplayEnabled(false)
+		end
 	end
 
 	if (self.db.profile.showCastbar) then

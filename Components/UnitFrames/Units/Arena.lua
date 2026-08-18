@@ -1255,6 +1255,7 @@ local style = function(self, unit)
 	auras.sortMethod = db.AurasSortMethod
 	auras.sortDirection = db.AurasSortDirection
 	auras.reanchorIfVisibleChanged = true
+	auras.allowCombatUpdates = true
 	auras.CreateButton = ns.AuraStyles.CreateButton
 	auras.PostUpdateButton = ns.AuraStyles.ArenaPostUpdateButton
 	auras.CustomFilter = ns.AuraFilters.ArenaAuraFilter -- classic

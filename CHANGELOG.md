@@ -12,6 +12,32 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.3.83-JuNNeZ (2026-08-18) - Target Auras in Combat, Class Power Layering, and Group Frame Fixes
+
+### Highlights
+
+- Target frame buffs and debuffs now display during combat on Retail 12.1. The target aura row was still reading aura data through the old scanning path, which Retail 12.1 no longer supplies to addons while in combat; it now uses the same Blizzard-owned aura display the player rows already use.
+- The Class Power bar no longer disappears behind the player frame when dragged over the Mana Orb. It now stays above every player frame layer, matching how it already behaved over the Power Crystal.
+- Removed the invisible clickable area left by the Class Power frame. Clicking an empty Class Power region no longer targets you.
+- Top-right aura headers set to mouse-over now reliably come back. They could previously stay invisible for the rest of the session while still showing tooltips, after a reload or zone change with the cursor over them.
+- Azerite raid frames now appear in Skirmish Arena. Zoning straight into combat previously left the group frames hidden for the entire match.
+- Turning Azerite raid frames off now leaves Blizzard's raid frames working, instead of leaving you with no group frame at all.
+- Fixed two Lua errors on nameplate auras in combat that could stop aura updates for the rest of the session.
+- Party, raid, and arena auras gained during combat can now appear, instead of only ones carried in from before the pull.
+
+### Access
+
+- Class Power position: run `/lock`, then drag `Class Power`.
+- Blizzard raid frame fallback: `/az -> Unit Frame Settings -> Raid`, turn the Azerite raid frames off, then `/reload`.
+
+### Internal
+
+- Target auras migrated to `AuraContainer` via a new single-unit `ns.PlayerAuraContainers.CreateForUnit`; the oUF scanning element stays as the fallback when the native template is unavailable.
+- Secret-value handling reworked in the embedded oUF aura element: surrogate keys for secret `auraInstanceID`, non-secret sort ranks, up-front cache initialization, and `issecrettable` adopted for wholly-secret payload guards.
+- Aura filters now fail open when a payload cannot be judged, rather than silently hiding it.
+- Added `/azdebug aurasnapshot target`.
+
+
 ## 5.3.82-JuNNeZ (2026-08-16) - Secondary Mana Crystal and Options Fixes
 
 ### Highlights

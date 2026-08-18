@@ -253,7 +253,8 @@ end
 lib.OnFadeFrameLeave = function(_, frame, fadeGroup)
 	if (not HoverFrames[frame]) then return end
 
-	HoverCount[fadeGroup] = HoverCount[fadeGroup] - 1
+	local remaining = (HoverCount[fadeGroup] or 0) - 1
+	HoverCount[fadeGroup] = (remaining > 0) and remaining or 0
 	HoveredGroups[fadeGroup] = true
 	HoverFrames[frame] = nil
 end
@@ -441,8 +442,13 @@ lib.OnEvent = function(self, event, ...)
 		lib.inWorld = true
 		lib.inCombat = nil
 
+		for frame in next,HoverFrames do
+			HoverFrames[frame] = nil
+		end
+
 		for fadeGroup in next,HoverCount do
 			HoverCount[fadeGroup] = 0
+			HoveredGroups[fadeGroup] = nil
 		end
 
 	elseif (event == "PLAYER_REGEN_DISABLED") then

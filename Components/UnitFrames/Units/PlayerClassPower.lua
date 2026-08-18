@@ -497,6 +497,28 @@ local ApplyClassPowerClickThrough = function(self)
 	blocker:SetShown(blockClicks and classpower:IsShown())
 end
 
+-- ClassPower spawns as its own frame and keeps the level it was given, while the
+-- player frame stacks art well above its own: the mana orb's case sits four levels
+-- over the orb, so dragging ClassPower onto the orb buried it. The power crystal
+-- lands on the same level as ClassPower instead, which is why only the orb hid it.
+-- Keep ClassPower above every player-frame layer regardless of which it overlaps.
+local CLASSPOWER_LEVELS_ABOVE_PLAYER = 10
+
+local SyncClassPowerFrameLevel = function(self)
+	local frame = self and self.frame
+	if (not frame) then return end
+
+	-- Spawned from SecureUnitButtonTemplate, so strata/level are locked in combat.
+	if (InCombatLockdown()) then return end
+
+	local playerFrameMod = ns:GetModule("PlayerFrame", true)
+	local playerFrame = playerFrameMod and playerFrameMod.frame
+	if (not playerFrame) then return end
+
+	frame:SetFrameStrata(playerFrame:GetFrameStrata())
+	frame:SetFrameLevel(playerFrame:GetFrameLevel() + CLASSPOWER_LEVELS_ABOVE_PLAYER)
+end
+
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
 -- changing factors like user interface scale.
@@ -1101,6 +1123,7 @@ local style = function(self, unit)
 		--------------------------------------------
 		local classpower = CreateFrame("Frame", nil, self)
 		classpower:SetAllPoints(self)
+		classpower:EnableMouse(false)
 
 		local maxPoints = 10 -- for fuck's sake
 
@@ -1229,6 +1252,14 @@ ClassPowerMod.CreateUnitFrames = function(self)
 
 	self.frame = ns.UnitFrame.Spawn(unit, ns.Prefix.."UnitFrame"..name)
 	self.frame:EnableMouse(false)
+	if (self.frame.SetMouseClickEnabled) then
+		self.frame:SetMouseClickEnabled(false)
+	end
+	if (self.frame.SetMouseMotionEnabled) then
+		self.frame:SetMouseMotionEnabled(false)
+	end
+
+	SyncClassPowerFrameLevel(self)
 end
 
 ClassPowerMod.GetLabel = function(self)
@@ -1239,6 +1270,7 @@ ClassPowerMod.PostUpdateAnchor = function(self)
 	if (not self.anchor) then return end
 
 	self.anchor:SetTitle(self:GetLabel())
+	SyncClassPowerFrameLevel(self)
 end
 
 ClassPowerMod.OnDeferredUpdateEvent = function(self, event)
@@ -1343,6 +1375,7 @@ ClassPowerMod.Update = function(self)
 	end
 
 	ApplyClassPowerClickThrough(self)
+	SyncClassPowerFrameLevel(self)
 	if (ns.IsRetail and playerClass == "SHAMAN") then
 		local playerFrameMod = ns:GetModule("PlayerFrame", true)
 		local playerFrame = playerFrameMod and playerFrameMod.frame

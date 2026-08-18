@@ -2803,6 +2803,118 @@ local function DumpTopRightAuraSnapshot()
 	DumpSecureAuraHeaderChildren(consolidation, "topright.consolidation", 80)
 end
 
+-- Target-frame aura probe. Splits "target auras vanish in combat" into the three
+-- places it can actually break: the API returning nothing, the filter dropping
+-- everything, or the display/anchor pass failing to put buttons on screen.
+local function CountAuraTableEntries(t)
+	if (type(t) ~= "table") then return -1 end
+	local n = 0
+	for _ in next, t do n = n + 1 end
+	return n
+end
+
+local function CountRawUnitAuras(unit, filter)
+	local total, secretIDs, secretTables, blocked = 0, 0, 0, 0
+	if (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then
+		for index = 1, 255 do
+			local ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, unit, index, filter)
+			if (not ok) then
+				blocked = blocked + 1
+				break
+			end
+			-- A secret table is not "no aura": the aura exists, the client just will
+			-- not let addon code read it. Count it rather than treating it as the end.
+			if (issecrettable and issecrettable(data)) then
+				secretTables = secretTables + 1
+			elseif (type(data) ~= "table") then
+				break
+			else
+				total = total + 1
+				if (IsSecretValue(data.auraInstanceID)) then
+					secretIDs = secretIDs + 1
+				end
+			end
+		end
+	end
+
+	-- select("#") counts trailing nils, unlike the length operator.
+	local slots = -1
+	if (C_UnitAuras and C_UnitAuras.GetAuraSlots) then
+		local n = select("#", pcall(C_UnitAuras.GetAuraSlots, unit, filter))
+		slots = n - 2
+	end
+
+	return total, secretIDs, slots, secretTables, blocked
+end
+
+local function DumpTargetAuraSnapshot()
+	local targetMod = ns:GetModule("TargetFrame", true)
+	local frame = targetMod and targetMod.frame
+	local auras = frame and frame.Auras
+	if (not auras) then
+		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "target frame auras not found")
+		return
+	end
+
+	local unit = frame.unit or "target"
+
+	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: target")
+	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(),
+		"unit", unit,
+		"exists", UnitExists and UnitExists(unit),
+		"elementEnabled", frame.IsElementEnabled and frame:IsElementEnabled("Auras"))
+
+	local helpful, helpfulSecret, helpfulSlots, helpfulTables, helpfulBlocked = CountRawUnitAuras(unit, "HELPFUL")
+	local harmful, harmfulSecret, harmfulSlots, harmfulTables, harmfulBlocked = CountRawUnitAuras(unit, "HARMFUL")
+	SafePrint("|cfff0f0f0", " api HELPFUL:",
+		"readable", helpful, "secretIDs", helpfulSecret,
+		"secretTables", helpfulTables, "pcallFail", helpfulBlocked, "slots", helpfulSlots)
+	SafePrint("|cfff0f0f0", " api HARMFUL:",
+		"readable", harmful, "secretIDs", harmfulSecret,
+		"secretTables", harmfulTables, "pcallFail", harmfulBlocked, "slots", harmfulSlots)
+	SafePrint("|cfff0f0f0", " api env:",
+		"issecrettable", issecrettable and true or false,
+		"issecretvalue", issecretvalue and true or false,
+		"blizzBuff1", UnitBuff and select(1, pcall(UnitBuff, unit, 1)) or "n/a")
+
+	SafePrint("|cfff0f0f0", " cache:",
+		"allBuffs", CountAuraTableEntries(auras.allBuffs),
+		"activeBuffs", CountAuraTableEntries(auras.activeBuffs),
+		"allDebuffs", CountAuraTableEntries(auras.allDebuffs),
+		"activeDebuffs", CountAuraTableEntries(auras.activeDebuffs),
+		"sortedBuffs", auras.sortedBuffs and #auras.sortedBuffs or -1,
+		"sortedDebuffs", auras.sortedDebuffs and #auras.sortedDebuffs or -1)
+
+	SafePrint("|cfff0f0f0", " config:",
+		"numTotal", auras.numTotal, "numBuffs", auras.numBuffs, "numDebuffs", auras.numDebuffs,
+		"visible", auras.visibleButtons, "created", auras.createdButtons, "anchored", auras.anchoredButtons,
+		"allowCombat", auras.allowCombatUpdates, "secretAuras", auras.__AzeriteUI_HasSecretAuras)
+
+	SafePrint("|cfff0f0f0", " container:",
+		"shown", SafeCall(auras, "IsShown"), "visible", SafeCall(auras, "IsVisible"),
+		"alpha", SafeCall(auras, "GetAlpha"),
+		"w", SafeCall(auras, "GetWidth"), "h", SafeCall(auras, "GetHeight"),
+		"points", SafeCall(auras, "GetNumPoints"),
+		"frameShown", SafeCall(frame, "IsShown"), "frameAlpha", SafeCall(frame, "GetAlpha"))
+
+	local cap = auras.createdButtons or 0
+	if (cap > 8) then cap = 8 end
+	for i = 1, cap do
+		local button = auras[i]
+		if (button) then
+			local icon = button.Icon
+			SafePrint("|cfff0f0f0 ", " button" .. i,
+				"shown", SafeCall(button, "IsShown"),
+				"visible", SafeCall(button, "IsVisible"),
+				"alpha", SafeCall(button, "GetAlpha"),
+				"points", SafeCall(button, "GetNumPoints"),
+				"w", SafeCall(button, "GetWidth"),
+				"iconShown", icon and SafeCall(icon, "IsShown"),
+				"iconAlpha", icon and SafeCall(icon, "GetAlpha"))
+		end
+	end
+end
+
 local function DumpAuraSnapshot(scope)
 	scope = (type(scope) == "string" and scope:lower()) or "both"
 	local previousTarget = SafePrintTarget
@@ -2813,12 +2925,15 @@ local function DumpAuraSnapshot(scope)
 		DumpPlayerAuraSnapshot()
 	elseif (scope == "topright" or scope == "header" or scope == "buffheader") then
 		DumpTopRightAuraSnapshot()
+	elseif (scope == "target" or scope == "targetframe") then
+		DumpTargetAuraSnapshot()
 	elseif (scope == "both" or scope == "all" or scope == "") then
 		DumpPlayerAuraSnapshot()
 		DumpTopRightAuraSnapshot()
+		DumpTargetAuraSnapshot()
 	else
 		handled = false
-		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "unknown scope", tostring(scope), "(use player|topright|both)")
+		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "unknown scope", tostring(scope), "(use player|topright|target|both)")
 	end
 
 	SafePrintTarget = previousTarget
@@ -3068,7 +3183,7 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug dump player|r")
 	print("|cfff0f0f0  /azdebug dump tot|r")
 	print("|cfff0f0f0  /azdebug dump all|r")
-	print("|cfff0f0f0  /azdebug aurasnapshot [player|topright|both]|r")
+	print("|cfff0f0f0  /azdebug aurasnapshot [player|topright|target|both]|r")
 	print("|cfff0f0f0  /azdebug nameplates [unit]|r")
 	print("|cfff0f0f0  /azdebug snapshot [unit]|r")
 	print("|cfff0f0f0  /azdebug blizzard enable|r")

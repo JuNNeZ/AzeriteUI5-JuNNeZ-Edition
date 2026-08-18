@@ -10386,3 +10386,358 @@ Files updated for release:
 - **Version metadata:** Advance `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` from `5.3.81-JuNNeZ` to `5.3.82-JuNNeZ`; add a delta-only `5.3.82-JuNNeZ` changelog entry dated 2026-08-16.
 - **Release gate:** Require changed-Lua and full runtime-Lua parsing, XML/TOC path checks, version/changelog agreement, whitespace validation, archive inspection, annotated tag creation, branch/tag push, and final remote alignment verification.
 - **Runtime status:** The repository shell cannot drive WoW. Live `/reload`, `/az`, `/lock`, secondary-Mana drain/regeneration, mover persistence/reset, player-frame scaling, and BugSack checks remain required in Retail 12.1.
+
+## 2026-08-18 - Secret-value aura crash chain, mouse-over header lockout, arena group frames (active)
+
+### Reported symptoms
+
+- `Libs/oUF/elements/auras.lua:480` - "attempted to perform indexed assignment on a table that cannot be indexed with secret keys" on `nameplate7` / `HELPFUL`.
+- `Libs/oUF/elements/auras.lua:605` - "attempt to index field 'allDebuffs' (a nil value)" on the incremental `UNIT_AURA` path for the same unit.
+- Party-member auras visible out of combat, gone in combat (Private Premade Party + Show Player reproduces it).
+- Top-right aura headers configured for mouse-over never come back after a target is acquired and then cleared; the icons stay invisible while the tooltips still respond.
+- Azerite raid/group frames absent in Skirmish Arena but present in Training Grounds; disabling them did not hand the group display back to Blizzard.
+- Invisible ClassPower area acting as a self-target click region.
+
+### Root causes
+
+1. **Secret aura keys (auras.lua:480).** `AddAuraData` guarded `data.auraInstanceID` for nil only. Retail 12 hands back secret instance ids, and `targetAll[data.auraInstanceID] = data` is an illegal indexed assignment for a secret key. The same unguarded pattern existed in the separate `Buffs` and `Debuffs` element blocks, and `SortAuras` compared two `auraInstanceID` values directly, which is equally illegal once either side is secret.
+2. **`allDebuffs` nil (auras.lua:605) is downstream of (1).** In the full-update branch the buff caches were created and scanned first, and the debuff caches were only created *after* the buff scan returned. The secret-key error thrown inside the buff scan aborted `UpdateAuras` before `auras.allDebuffs` was ever assigned, so the next incremental `UNIT_AURA` indexed a nil field. The two reports are one failure chain, exactly as suspected.
+3. **Filters collapsing to hide.** Once a payload goes secret, `SafeIsAuraFilteredOut` returns nil for every token query and each `SafeBool`/`SafeNumber` read falls back to its neutral default, so every allow-condition evaluated false and the aura was hidden. `ArenaAuraFilter` was stricter still: it returned outright on any secret field, emptying arena aura frames for the whole match.
+4. **Mouse-over header lockout.** `LibFadingFrames-1.0` reset `HoverCount` to zero on `PLAYER_ENTERING_WORLD` without clearing `HoverFrames`. A frame still listed as hovered then decremented a freshly zeroed group on the next leave, pinning the count at -1. `HoverCount[group] > 0` can never be satisfied from there, so the group stayed at alpha 0 permanently - invisible, but still taking mouse input, which is why tooltips kept working.
+5. **Arena group frames.** `RaidFrame5Mod/25/40.OnEvent` deferred `PLAYER_ENTERING_WORLD` work while in combat by registering `PLAYER_REGEN_ENABLED` but never setting `self.needHeaderUpdate`. The retry handler only acts on that flag, so it unregistered itself and did nothing, and `UpdateVisibilityDriver` never ran. An arena that puts the player into combat lockdown on zone-in therefore never registered a visibility driver. `PartyFrameMod` sets the flag inside `UpdateHeader`, which is why party frames kept working in both environments.
+6. **Blizzard fallback.** The three raid modules called `DisableBlizzard()` from `OnEnable` unconditionally. `PartyFrameMod.DisableBlizzard` already returns early when its profile is disabled; the raid modules did not, so switching the Azerite raid frames off still suppressed Blizzard's and left no group frame at all.
+7. **ClassPower hitbox.** The ClassPower host is a second spawned player unit frame carrying the usual unit click handling, and the `ClassPower` element covers all of it.
+
+### Implemented fixes
+
+- `Libs/oUF/elements/auras.lua`
+  - Added `IsSecretValue`, `ResolveAuraKey`, `ResetSecretAuraTracking` and `HasSecretAuraIDs`. Secret auras now receive a private surrogate table key plus a non-secret `__AzeriteUI_SortKey` rank instead of being dropped, so they still reach the display path - `updateAura` was already secret-tolerant throughout (`IsSafeKey` cooldown keys, raw `SetTexture`, `GetAuraApplicationDisplayCount`).
+  - `SortAuras` orders by the assigned sort key, never by a raw `auraInstanceID`.
+  - A delta payload containing any secret id now forces a full rebuild, and an element holding surrogate-keyed auras requests a full rebuild on the next update, because surrogate keys cannot be matched against `updatedAuraInstanceIDs`.
+  - All six caches (`allBuffs`, `activeBuffs`, `allDebuffs`, `activeDebuffs`, `sortedBuffs`, `sortedDebuffs`) plus the `Buffs`/`Debuffs` element caches are created before any scanning runs, so an aborted scan can no longer leave a later table nil.
+  - The duplicated inline store logic in the `Buffs` and `Debuffs` blocks now routes through `AddAuraData`, giving one choke point for aura identity.
+  - `processData` rejects a wholly secret data table, and the sorted-list builders no longer `table.insert` a nil when `active` and `all` disagree.
+- `Components/UnitFrames/Auras/AuraFilters.lua`
+  - Added `CannotEvaluateAura`, which detects the state where the instance id is secret *and* the base token query yields no usable answer. All four filters fail open in that state rather than silently hiding. `ArenaAuraFilter`'s blanket secret-field rejection is replaced by that check.
+- `Libs/LibFadingFrames-1.0/LibFadingFrames-1.0.lua`
+  - `PLAYER_ENTERING_WORLD` clears `HoverFrames` and `HoveredGroups` alongside the counts, and `OnFadeFrameLeave` clamps at zero so a desync can no longer pin a group invisible.
+- `Components/UnitFrames/Units/Raid5.lua`, `Raid25.lua`, `Raid40.lua`
+  - The combat deferral sets `self.needHeaderUpdate = true`, and the retry runs `UpdateUnits()` as well so it matches the non-deferred path.
+  - `DisableBlizzard` returns early when the module's profile is disabled, matching `PartyFrameMod`.
+- `Components/UnitFrames/Units/PlayerClassPower.lua`
+  - The ClassPower element is explicitly mouse-disabled, and the host frame also clears `SetMouseClickEnabled`/`SetMouseMotionEnabled` where available.
+
+### Deliberately not changed
+
+- No `pcall` was added to mask either aura error; both are fixed at the point where the illegal operation happened.
+- No combat-specific visibility hack was added for party auras. The filters now fail open only in the state where they provably cannot judge the aura.
+- Bug 6 (secondary Mana crystal) needed no work: it was already fixed in `c1654a0` / `5.3.82-JuNNeZ`. The reporter was running `5.3.81-JuNNeZ`.
+- F12/Print Screen remains a Blizzard client issue and was not investigated.
+
+### Validation status
+
+- **Static:** `luac -p` passes on all seven changed files. `git diff --check` clean apart from the usual line-ending notices.
+- **Runtime:** The repository shell cannot drive the WoW client, so none of this is runtime-verified. Required in-game loop: `/buggrabber reset` -> `/reload` -> then
+  - hostile nameplates in and out of combat (no secret-key or nil-table errors, buffs/debuffs keep updating),
+  - party auras in combat via Private Premade Party + Show Player,
+  - acquire a target, clear it, then hover the top-right header (icons *and* tooltips return),
+  - zone into a Skirmish Arena and confirm the Azerite group frame appears,
+  - disable the Azerite raid frames, `/reload`, and confirm Blizzard's raid frames come back,
+  - `/framestack` over the empty ClassPower area and confirm no click target.
+
+### Files touched
+
+- `Libs/oUF/elements/auras.lua` - secret-safe aura identity, ordering, and cache initialization.
+- `Components/UnitFrames/Auras/AuraFilters.lua` - fail open when an aura cannot be judged.
+- `Libs/LibFadingFrames-1.0/LibFadingFrames-1.0.lua` - hover-count desync that pinned faded groups invisible.
+- `Components/UnitFrames/Units/Raid5.lua` - dead combat deferral, Blizzard fallback gate.
+- `Components/UnitFrames/Units/Raid25.lua` - dead combat deferral, Blizzard fallback gate.
+- `Components/UnitFrames/Units/Raid40.lua` - dead combat deferral, Blizzard fallback gate.
+- `Components/UnitFrames/Units/PlayerClassPower.lua` - remove invisible mouse hitbox.
+
+## 2026-08-18 - Party auras in combat and ClassPower layering (follow-up)
+
+### 1. Party/raid/arena auras still absent in combat
+
+**Verdict: AzeriteUI bug, not a Retail 12.1 limitation.**
+
+The previous iteration's filter fail-open was necessary but not sufficient. The filter now returns "show", but the button is never anchored or shown, because `Libs/oUF/elements/auras.lua` gates both `SetPosition` and the visibility half of `updateAura` behind `CanMutateButtonInCombat`:
+
+```lua
+local function CanMutateButtonInCombat(element, button)
+    if(element.allowCombatUpdates or not InCombatLockdown()) then return true end
+    if(button and button.IsProtected and not button:IsProtected()) then return true end
+    return false
+end
+```
+
+Aura buttons live under unit frames spawned from `SecureUnitButtonTemplate` (`oUF:Spawn` and the `SpawnHeader` template both use it), so in combat this returns false, `SetPosition` skips `SetPoint`, and `updateAura` falls through to `pcall(button.Show, button)` which fails silently. Any aura gained during combat therefore cannot appear.
+
+`auras.allowCombatUpdates = true` was already set on Target and NamePlates, and per the earlier FixLog entry on the player row. It was missing on Party, Raid5 and Arena - exactly the three surfaces with the reported symptom.
+
+**Cross-checks performed**
+
+- **Blizzard live source:** `Interface/AddOns/Blizzard_UnitFrame/Shared/CompactUnitFrame.lua` on the `live` branch (2407 lines) contains **no** `InCombatLockdown` and **no** `IsProtected` call anywhere. Blizzard's own party/raid frames show, hide and anchor aura art in combat without any lockdown handling.
+- **Upstream oUF:** the copy shipped in the installed ElvUI (`ElvUI_Libraries/Game/Shared/oUF/elements/auras.lua`) calls `button:SetSize`, `button:EnableMouse`, `button:Show` and `button:SetPoint` unconditionally. There is no combat guard and no `allowCombatUpdates` concept - `CanMutateButtonInCombat` is an AzeriteUI-local addition, present since the initial commit with no recorded rationale.
+- **ElvUI unit frames:** `ElvUI/Game/Shared/Modules/UnitFrames/Elements/Auras.lua` likewise has no combat or protection guard.
+- **ShadowedUnitFrames:** its only `InCombatLockdown` check in `modules/auras.lua` guards the right-click *cancel-aura* action, which genuinely is protected. Displaying an aura is not.
+- **API docs:** `IsProtected` returns `isProtected, isProtectedExplicitly`. Control restrictions propagate *upward* from a protected frame to its parents and anchor targets; an addon-created child is not the thing the restriction is aimed at, and displaying an aura is not a protected action.
+
+**Fix:** set `auras.allowCombatUpdates = true` in `Party.lua`, `Raid5.lua` and `Arena.lua`, matching Target and NamePlates.
+
+**Note for later:** with the player row, Target, NamePlates, Party, Raid5 and Arena all opting in, `CanMutateButtonInCombat` now has no callers that leave it enabled. It is effectively dead code and should be considered for removal so this class of omission cannot recur.
+
+### 2. ClassPower buried under the mana orb but not the crystal
+
+Frame levels, and the asymmetry is exact. With `L` as the shared spawn level of the two frames:
+
+- `Player.lua:3113` bumps the player frame to `L + 2`.
+- `Player.lua:3457` puts the mana orb at `playerLevel - 2` = `L`, and `Player.lua:3498` puts its case/foreground art at `orb + 4` = **`L + 4`**.
+- `Player.lua:3299` puts the power crystal at `playerLevel + frameLevelOffset` where the offset is `-2`, so the crystal lands on **`L`**.
+- The ClassPower host spawns at `L` and never bumps.
+
+So the crystal ties with ClassPower and loses on creation order, while the orb's case art sits four levels above it. That is precisely "hides behind the playerframe over the mana orb only, not the crystal version".
+
+**Fix:** `SyncClassPowerFrameLevel` in `PlayerClassPower.lua` matches the player frame's strata and sets the ClassPower host to `playerLevel + 10`, clearing the player frame's highest child (its overlay at `playerLevel + 7`). It is called from `CreateUnitFrames`, `PostUpdateAnchor` (so a drag re-applies it) and `Update` (so a player frame created later is still picked up), and it returns early in combat because the host is a `SecureUnitButtonTemplate` frame whose strata and level are locked down.
+
+### Validation status
+
+- **Static:** `luac -p` passes on all changed files.
+- **Runtime:** not verified from the repository shell. Required: `/reload`, then party auras gained *during* combat (Private Premade Party + Show Player), arena and raid5 auras in combat, and dragging ClassPower over both the mana orb and the crystal to confirm it stays on top of each.
+
+### Files touched
+
+- `Components/UnitFrames/Units/Party.lua` - `allowCombatUpdates`.
+- `Components/UnitFrames/Units/Raid5.lua` - `allowCombatUpdates`.
+- `Components/UnitFrames/Units/Arena.lua` - `allowCombatUpdates`.
+- `Components/UnitFrames/Units/PlayerClassPower.lua` - frame-level sync above the player frame.
+
+## 2026-08-18 - Corrected diagnosis: the combat aura loss is the TARGET frame on target switch
+
+### Clarified report
+
+The symptom is not the party frames. Actual repro:
+
+1. Target a party member, or self. Auras show.
+2. Enter combat. Auras still show.
+3. Switch to a **new** target while in combat. Target-frame auras vanish - both buffs and debuffs.
+
+### Diagnosis: this is the auras.lua:480 secret-key crash, seen from the UI side
+
+The trace for step 3 on the pre-fix code:
+
+1. `PLAYER_TARGET_CHANGED` reaches `UnitFrame_OnEvent`, and `UnitFrame_PostUpdate` runs the classification path, which ends in `ApplyTargetAuraLayout(self, key)` followed by `self.Auras:ForceUpdate()` (`Target.lua:2893-2898`).
+2. `ForceUpdate` runs `UpdateAuras` with `updateInfo = nil`, so `RequiresFullAuraUpdate` returns true and the element wipes its caches and rescans.
+3. The new target is an enemy in combat, so its aura payload comes back with secret fields. The first secret `auraInstanceID` hits `targetAll[data.auraInstanceID] = data` and raises "attempted to perform indexed assignment on a table that cannot be indexed with secret keys".
+4. That error unwinds the whole of `UpdateAuras` before the display half runs, so the buttons are never re-shown after the frame's target-switch hide/show cycle. Result: no auras at all, buffs and debuffs alike, until the next target that returns readable data.
+
+Step 1-2 work because a party member or the player is not an enemy: that payload is not restricted, the scan completes, and the buttons render normally. Entering combat with that target already selected is also fine, because `Target.lua:2967-2968` force-updates on `PLAYER_REGEN_DISABLED` and the same readable payload is rescanned. The failure needs a *newly acquired restricted unit*, which is exactly "switch to a new target in combat".
+
+This is the same defect as the reported `auras.lua:480` error - the crash log and the missing-aura report were the same bug seen from two angles.
+
+### Status against the current tree
+
+The 2026-08-18 secret-key work already covers this path end to end. Traced for a fully secret payload on a new target in combat:
+
+- `AddAuraData` -> `ResolveAuraKey` assigns a surrogate table key instead of raising, and records a non-secret `__AzeriteUI_SortKey`.
+- `TargetAuraFilter` -> `CannotEvaluateAura` returns true, so the aura is marked active rather than silently filtered out.
+- Sorting uses `ns.AuraSorts.DefaultFunction`, which already wraps `auraInstanceID` in `SafeNumber(..., 0)`, so no secret comparison occurs.
+- `numTotal` is 16 from `Layouts/Data/TargetUnitFrame.lua`, so `numVisible` is not clamped to zero.
+- `updateAura` mutates freely because Target sets `allowCombatUpdates = true`, and it hands the secret icon straight to `SetTexture`.
+- `TargetPostUpdateButton` only colours the button. A fully secret payload lands in its final branch and renders desaturated at 0.6 brightness - dimmed, but visible.
+
+No further code change was required for this report.
+
+### Note on the previous entry
+
+The earlier `allowCombatUpdates` change to `Party.lua`, `Raid5.lua` and `Arena.lua` was made against the misread "party frames" wording. It is being kept regardless: those three surfaces genuinely could not anchor or show an aura button acquired during combat, which is a real defect on its own, just not the one being reported here.
+
+### External confirmation of the model
+
+- Blizzard live `Blizzard_UnitFrame/Shared/CompactUnitFrame.lua` has no combat or protection guard around aura display.
+- Blizzard's 12.0 direction is that addons may alter visual presentation of restricted data but not extract logic from it. Passing a secret icon/duration to a widget is supported; using a secret as a Lua table key or comparing two of them is not. The surrogate-key approach matches that contract rather than working around it.
+
+### Validation status
+
+- **Static:** `luac -p` passes on all changed files.
+- **Runtime:** unverified from the repository shell. The decisive test is step 3 above: in combat, switch from a friendly target to a fresh hostile one and confirm both buff and debuff icons populate.
+
+## 2026-08-18 - 12.1 reference sweep and retail full-rebuild for auras
+
+### Reference validity check
+
+Only sources actually on 12.1 (`Interface: 120100`) were treated as authoritative.
+
+| Source | Interface | Usable as 12.1 reference |
+| --- | --- | --- |
+| `tukui-org/ElvUI` (GitHub, pushed 2026-08-18) | 120100 | **Yes** |
+| `DiabolicUI3` (installed, same author as AzeriteUI) | 120100 | **Yes** |
+| Blizzard `Blizzard_UnitFrame/Shared/CompactUnitFrame.lua` (`live`) | n/a | **Yes** |
+| Installed local ElvUI `v15.13` | 120005 | No - 12.0.5, superseded by the GitHub copy |
+| Installed `AzeriteUI_stock` `5.2.208-Release` | 110107 | No - pre-12.0 |
+| Installed `DiabolicUI2` `2.0.78-RC` | 100002 | No |
+| `wow-api` MCP | n/a | Not registered in this Claude Code session (Codex-only per AGENTS.md) |
+
+### What the 12.1 sources actually do
+
+- **ElvUI 12.1 has a real secret API in its oUF**: `oUF:IsSecretValue` / `NotSecretValue`, plus `oUF:IsSecretTable` / `NotSecretTable` built on **`issecrettable`**. AzeriteUI does not use `issecrettable` anywhere; `IsSecretValue(table)` is not the same predicate. Worth adopting for the wholly-secret-table guards.
+- **ElvUI sanitizes `auraInstanceID` before using it as a value** (`elements/auras.lua:196`: `oUF:NotSecretValue(aura.auraInstanceID) and aura.auraInstanceID or nil`), but still keys its own caches with the raw id in `auraskip.lua` (`unitAuraInfo[auraInstanceID] = ...`). **DiabolicUI3 does the same** (`Components/Auras/Auras.lua:782`: `cache[aura.auraInstanceID] = aura`, nil-guarded only). Both therefore carry the identical latent "cannot be indexed with secret keys" crash AzeriteUI hit at `auras.lua:480`. The surrogate-key fix in this tree is ahead of both references, not in conflict with them.
+- **ElvUI falls back from secret payload flags to Blizzard token queries** rather than to a literal: `ShouldSkipAuraFilter` uses `aura.isHelpful` when readable and `aura.auraIsHelpful` (computed via `IsAuraFilteredOutByInstanceID`) when it is secret. AzeriteUI's equivalent falls back to `filter == 'HARMFUL'`, which is weaker. Candidate follow-up.
+- **ElvUI abandoned the incremental delta path on retail.** `auraskip.lua`: `function oUF:ShouldSkipAuraUpdate(...) if oUF.isRetail then return true -- not anymore end`. On 12.1 they always rescan in full.
+- Blizzard's own `CompactUnitFrame.lua` still has no `InCombatLockdown` or `IsProtected` guard anywhere, confirming aura display is not combat-restricted for frames.
+
+### Change: always full-rebuild auras on retail
+
+`RequiresFullAuraUpdate` now returns true immediately when `oUF.isRetail`, matching ElvUI's 12.1 decision.
+
+Rationale for the reported symptom (target auras present out of combat, present when combat starts with the target already selected, gone after switching target in combat, for friendly and hostile alike): a full rebuild is correct on every path, but the incremental merge is not. A delta applied against a cache that no longer matches the unit removes entries without raising, which fails *silently* - the display simply empties. That matches a symptom with no accompanying Lua error, which is what distinguishes this report from the `auras.lua:480` crash. Removing the delta path removes the entire failure class rather than patching one route through it.
+
+Cost is a full rescan per `UNIT_AURA` per unit. ElvUI accepts exactly that cost on 12.1, and this tree already forced full rebuilds whenever secret ids appeared, so the incremental path was mostly bypassed in combat anyway.
+
+### Added: `/azdebug aurasnapshot target`
+
+The existing snapshot only covered `player` and `topright`, so nothing reported on the target frame. The new `target` scope prints, in one place, the three things that separate the remaining possibilities:
+
+- **api:** direct `GetAuraDataByIndex` count for HELPFUL/HARMFUL, how many of those have secret ids, and the `GetAuraSlots` return count.
+- **cache:** entry counts for `allBuffs` / `activeBuffs` / `allDebuffs` / `activeDebuffs` and the sorted list lengths.
+- **config / container / per-button:** `numTotal`, `visibleButtons`, `createdButtons`, `anchoredButtons`, `allowCombatUpdates`, plus container shown/alpha/size/anchor-count and the first eight buttons' shown/alpha/points/icon state.
+
+Reading it: API count 0 means the client is withholding data and only presentation can be changed. API count high with sorted lists at 0 means the filter is dropping them. Sorted lists populated with buttons not shown or the container unanchored means the display pass is at fault.
+
+### Validation status
+
+- **Static:** `luac -p` passes on all changed files.
+- **Runtime:** unverified from the repository shell. Test: `/reload`, target a friendly unit, enter combat, switch target, then `/azdebug aurasnapshot target`.
+
+### Files touched
+
+- `Libs/oUF/elements/auras.lua` - retail always-full-rebuild.
+- `Core/Debugging.lua` - `/azdebug aurasnapshot target`.
+
+## 2026-08-18 - RESOLVED (not an addon bug): the client returns no aura data to addons in combat
+
+### Measurement
+
+`/azdebug aurasnapshot target`, two independent sessions, two different unit types.
+
+Session A (friendly vehicle-GUID NPC):
+
+| State | api HELPFUL | api HARMFUL | cache | visible |
+| --- | --- | --- | --- | --- |
+| out of combat | 4 (slots 4) | 1 (slots 1) | allBuffs 4 / allDebuffs 1 | 4 |
+| **in combat** | **0 (slots 0)** | **0 (slots 0)** | **all zero** | **0** |
+| out of combat | 4 (slots 4) | 2 (slots 2) | allBuffs 4 / allDebuffs 2 | 5 |
+
+Session B (friendly **player** target, `Player-1084-05C2446C`):
+
+| State | api HELPFUL | api HARMFUL | cache | visible |
+| --- | --- | --- | --- | --- |
+| out of combat | 5 (slots 5) | 0 | allBuffs 5 | 3 |
+| **in combat** | **0 (slots 0)** | **0 (slots 0)** | **all zero** | **0** |
+| **in combat** | **0 (slots 0)** | **0 (slots 0)** | **all zero** | **0** |
+| out of combat | 13 (slots 13) | 1 (slots 1) | allBuffs 13 / allDebuffs 1 | 12 |
+
+### Conclusion
+
+`C_UnitAuras` hands **no aura data at all** to addon code while `InCombatLockdown()` is true. Not restricted values - an empty set. `secretIDs 0` and `secretAuras false` throughout, so nothing was secret; there was simply nothing returned.
+
+Everything downstream behaved correctly in every sample: caches matched the API exactly, `numTotal 16`, `allowCombat true`, container `shown true visible true alpha 1` with a valid anchor and full size, buttons hidden only because there was nothing to show, and correctly re-shown the moment combat ended. **No aura-side code change can affect this**, including all of this session's secret-key, filter and rebuild work - all of it sits downstream of an empty scan.
+
+This is open-world combat, not an instance, so the restriction is not encounter-scoped.
+
+### Supporting evidence from `/azdebug snapshot target`
+
+- Friendly **player** target, out of combat: `UnitHealth <secret>`, `UnitHealthPercent <secret>`, `UnitPower <secret>` - but `UnitHealthMax 578160 (clean)` and `UnitPowerMax 250000 (clean)`. Live values are restricted, maxima are not.
+- **Hostile** target: everything secret including `UnitGUID` itself.
+- So health/power restriction is ambient and not combat-gated, while the aura restriction *is* combat-gated and total. Two different mechanisms.
+
+### Corrections made to this session's work
+
+- The `RequiresFullAuraUpdate` retail comment previously asserted that the delta path was "exactly how target auras vanish after a target switch". That was measured false and the comment has been rewritten to cite ElvUI's 12.1 precedent only, and to record that the scan API is empty upstream of this element. The change itself is kept on that precedent; it is behaviour-neutral in combat (an empty scan and an empty delta agree) and costs a full rescan per `UNIT_AURA` out of combat.
+- An earlier reading of `frame:SetDebuffAuraSize` / `SetBuffAuraSize` in Blizzard's `CompactUnitFrame.lua` as evidence of a general engine-side aura renderer was wrong. Those belong to `PrivateAuraAnchorSettingsContainerMixin` and configure Private Aura anchors only. There is no native aura display for an addon to adopt.
+
+### Probe refinement
+
+`CountRawUnitAuras` previously broke out of the index scan on `type(data) ~= "table"`, which cannot distinguish "no auras" from "the client returned a secret table". It now uses **`issecrettable`** (the predicate ElvUI's 12.1 oUF carries and this tree otherwise lacks) to count secret tables separately, counts pcall failures separately, and reports whether `issecrettable` / `issecretvalue` exist plus what Blizzard's own `UnitBuff` returns for the same unit. The existing `slots` figure was already immune to the ambiguity because `select("#", ...)` counts secret values, and it read 0 in every in-combat sample.
+
+### Remaining options (product decision, none implemented)
+
+1. **Accept it.** Target auras are unavailable to addons in combat on 12.1. Frame behaves correctly.
+2. **Hold last-known auras through combat** instead of clearing: keep the pre-combat set on screen with cached expiry timers still ticking. Presentation-only and legal, but shows auras that may have fallen off. Needs an explicit decision because it deliberately displays possibly-wrong data.
+3. **Let Blizzard's own target frame auras show** in combat, if Blizzard's frames still display them - unstyled, and only worth pursuing after confirming they do.
+
+Option 3 depends on an unanswered question: whether Blizzard's default target frame shows auras during the same combat. That has not been observed yet.
+
+### Validation status
+
+- **Static:** `luac -p` passes on all changed files.
+- **Runtime:** the aura behaviour above is now runtime-confirmed by snapshot. The remaining unverified items are the ClassPower layering fix, the LibFadingFrames hover-count fix, and the raid-frame arena fixes.
+
+## 2026-08-18 - Target aura audit and migration to the native AuraContainer
+
+### The live truth
+
+`Blizzard_UnitFrame/Mainline/TargetFrame.lua` on the `live` branch:
+
+```lua
+function TargetFrameMixin:UpdateAuras()
+    self:ConfigureAuraContainer();
+    self:GetAuraContainer():UpdateAllAuras();
+end
+```
+
+Blizzard's own TargetFrame **no longer reads aura data in Lua at all**. There is no `C_UnitAuras` scan, no per-aura loop and no button creation. It configures an engine-side aura container widget (`SetMaxBuffs`, `SetMaxDebuffs`, `SetShowAuraCount`, `SetFlowLayoutMaximumLineSize`) and calls `UpdateAllAuras()`; the C++ side populates and renders it.
+
+That is the whole explanation for the measured behaviour. Aura data for unit frames does not enter Lua on 12.1, so an addon that scans `C_UnitAuras` gets an empty set in combat while Blizzard's frames keep displaying.
+
+### The addon was already half migrated
+
+`Components/Auras/Auras.lua` and `Components/UnitFrames/Auras/PlayerAuraContainers.lua` already build native containers:
+
+```lua
+CreateFrame("AuraContainer", name, parent, "CustomAuraContainerTemplate, DisableUntrustedLayoutScriptsTemplate")
+container:SetUnit(unit)
+container:AddAuraGroup(groupKey, filter, { initializeFrame, maxFrameCount, sortMethod, sortDirection, layout })
+```
+
+That is why the player rows and the top-right header keep working in combat and the target frame does not - the target was the only aura surface still on the oUF scanning element.
+
+Notably `AddAuraGroup` accepts `candidateFilters` with `includeSpellIDs`, `excludeSpellIDs`, `isBossOrRoleAura`, `isStealable`, `nameplateShowPersonal` and `nameplateShowAll`, evaluated engine side. Custom spell allow/deny lists therefore survive the migration; only Lua-callback filtering is lost, and that is impossible in combat on 12.1 regardless.
+
+### Scope check before migrating
+
+The user-facing target aura options in `Options/OptionsPages/UnitFrames.lua` are layout only - spacing, growth, initial anchor, max columns. There are **no** user-facing filter toggles for target auras (unlike party, which has `partyAuraShowDispellableDebuffs` and friends). So the migration breaks no saved settings.
+
+### Implemented
+
+1. `Components/UnitFrames/Auras/PlayerAuraContainers.lua`
+   - `DisplayMixin:Configure`, `SetDisplayEnabled` and `ForceUpdate` now iterate `self.containers` instead of naming `playerContainer` / `vehicleContainer`, so one display can hold any number of containers. Behaviour for the existing player/vehicle display is unchanged.
+   - Extracted `BuildDisplayConfig(options)` so both factories stay in step.
+   - Added **`ns.PlayerAuraContainers.CreateForUnit(parent, unit, options)`**: the single-unit variant, without the vehicle wrapper and state driver, reusing all existing styling, filtering, layout and the same availability gate.
+
+2. `Components/UnitFrames/Units/Target.lua`
+   - `style()` now builds a native container for the target through `CreateForUnit`, mapped from the existing `TargetFrame` config keys (the option names already match the player call site one-for-one).
+   - `ApplyTargetAuraLayout` drives the native display as well, so boss/normal size and aura-count differences reach it.
+   - `TargetFrameMod.Update` gives the native display ownership when it exists and keeps the oUF element disabled, so the two can never both draw. The oUF element remains the fallback when the native template is unavailable (non-retail, or `Blizzard_AuraContainer` not loaded).
+   - The classification path force-updates the native container, mirroring `TargetFrameMixin:UpdateAuras` on target change.
+
+### Reference cross-check
+
+- **ElvUI 12.1** (`tukui-org/ElvUI`, `Interface: 120100`) still scans `C_UnitAuras` in its oUF element and keys caches by raw `auraInstanceID`. It has not migrated unit-frame auras to the native container, so it should exhibit the same in-combat blank on target auras.
+- **DiabolicUI3** (`Interface: 120100`) likewise keys `cache[aura.auraInstanceID]` from a Lua scan.
+- Neither reference solves this; Blizzard's own source does, and this tree already had the mechanism in place for the player rows.
+
+### Validation status
+
+- **Static:** `luac -p` passes on all twelve changed Lua files.
+- **Runtime:** unverified. Test: `/reload`, target a unit, `/azdebug aurasnapshot target` before and during combat, and confirm target buffs and debuffs now render during combat. Also confirm the player rows and top-right header are unchanged, since `DisplayMixin` was refactored underneath them.
+
+## 2026-08-18 - 5.3.83-JuNNeZ release preparation
+
+- **Release boundary:** Promote the working-tree delta after tagged release `5.3.82-JuNNeZ`. Contents are this session's aura, Class Power, fading and group-frame work.
+- **Player-facing delta:** Target auras render during combat again via the native aura container; Class Power layers above the Mana Orb and no longer holds an invisible click region; mouse-over aura headers recover reliably; Skirmish Arena shows Azerite raid frames; disabling Azerite raid frames restores Blizzard's; nameplate aura errors fixed; party/raid/arena auras gained in combat can appear.
+- **Confirmed in game by the reporter:** target auras in combat, and both Class Power fixes (layering over the Mana Orb, and the invisible click region).
+- **Shipped for wider testing, not yet confirmed in game:** the top-right mouse-over header recovery, the Skirmish Arena group-frame fix, the Blizzard raid-frame fallback, and the party/raid/arena in-combat aura change.
+- **Version metadata:** `AzeriteUI5_JuNNeZ_Edition.toc` and `build-release.ps1` advanced from `5.3.82-JuNNeZ` to `5.3.83-JuNNeZ`; delta-only `5.3.83-JuNNeZ` changelog entry dated 2026-08-18.
+- **Static validation:** `luac -p` passes on all changed Lua files; `git diff --check` clean apart from line-ending notices.
+- **Runtime status:** The repository shell cannot drive the WoW client. Remaining verification is the wider-testing list above.

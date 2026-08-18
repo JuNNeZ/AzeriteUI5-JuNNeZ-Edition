@@ -90,6 +90,76 @@ local function IsSafeKey(value)
 	return (not issecretvalue or not issecretvalue(value)) and value ~= nil
 end
 
+-- WoW 12 (Midnight) can return aura payload fields as secret values. Widgets still
+-- accept them, so the aura has to keep rendering, but a secret cannot be used as a
+-- Lua table key and two secrets cannot be compared. Secret auras therefore get a
+-- private surrogate key plus an explicit sort rank, and the element is flagged so
+-- the next update rebuilds instead of trying to address them incrementally.
+local SECRET_SORT_BASE = 2 ^ 40
+local AURA_ID_LIST_FIELDS = {'updatedAuraInstanceIDs', 'removedAuraInstanceIDs'}
+
+local function IsSecretValue(value)
+	return (issecretvalue and issecretvalue(value)) and true or false
+end
+
+-- A secret *table* is its own predicate. issecretvalue does not answer this, which
+-- is why ElvUI's 12.1 oUF carries both (oUF:IsSecretValue / oUF:IsSecretTable).
+local function IsSecretTable(object)
+	return (issecrettable and issecrettable(object)) and true or false
+end
+
+local function ResolveAuraKey(element, data)
+	local auraInstanceID = data.auraInstanceID
+	if(IsSafeKey(auraInstanceID)) then
+		data.__AzeriteUI_SortKey = IsSafeNumber(auraInstanceID) and auraInstanceID or 0
+		return auraInstanceID
+	end
+
+	if(not IsSecretValue(auraInstanceID)) then
+		return nil
+	end
+
+	local counter = (element.__AzeriteUI_SecretCount or 0) + 1
+	element.__AzeriteUI_SecretCount = counter
+	element.__AzeriteUI_HasSecretAuras = true
+	data.__AzeriteUI_SortKey = SECRET_SORT_BASE + counter
+
+	return '__AzeriteUI_Secret:' .. counter
+end
+
+local function ResetSecretAuraTracking(element)
+	element.__AzeriteUI_SecretCount = 0
+	element.__AzeriteUI_HasSecretAuras = false
+end
+
+-- Secret ids cannot address the per-instance caches, so a delta payload carrying one
+-- has to be answered with a full rebuild rather than a partial merge.
+local function HasSecretAuraIDs(updateInfo)
+	if(not issecretvalue) then return false end
+
+	local added = updateInfo.addedAuras
+	if(added) then
+		for _, data in next, added do
+			if(issecretvalue(data) or issecretvalue(data.auraInstanceID)) then
+				return true
+			end
+		end
+	end
+
+	for _, field in next, AURA_ID_LIST_FIELDS do
+		local list = updateInfo[field]
+		if(list) then
+			for _, auraInstanceID in next, list do
+				if(issecretvalue(auraInstanceID)) then
+					return true
+				end
+			end
+		end
+	end
+
+	return false
+end
+
 local function SetShown(frame, shown)
 	if(not frame) then return end
 	if(shown) then
@@ -442,11 +512,17 @@ local function SortAuras(a, b)
 		return a.isPlayerAura
 	end
 
-	return a.auraInstanceID < b.auraInstanceID
+	-- auraInstanceID may be secret, and comparing secrets is illegal.
+	-- __AzeriteUI_SortKey is the non-secret rank assigned when the aura was stored.
+	local aID = a.__AzeriteUI_SortKey or (IsSafeNumber(a.auraInstanceID) and a.auraInstanceID) or 0
+	local bID = b.__AzeriteUI_SortKey or (IsSafeNumber(b.auraInstanceID) and b.auraInstanceID) or 0
+
+	return aID < bID
 end
 
 local function processData(element, unit, data, filter)
-	if(not data) then return end
+	-- A wholly secret table cannot be indexed at all, so it can never be processed.
+	if(IsSecretTable(data) or IsSecretValue(data) or not data) then return end
 
 	local filteredOut = IsAuraFilteredOutByInstanceIDSafe(unit, data.auraInstanceID, filter .. '|PLAYER')
 	data.isPlayerAura = filteredOut == false
@@ -473,13 +549,18 @@ end
 
 local function AddAuraData(targetAll, targetActive, element, unit, data, filter)
 	data = processData(element, unit, data, filter)
-	if(not data or not data.auraInstanceID) then
+	if(not data) then
 		return false
 	end
 
-	targetAll[data.auraInstanceID] = data
+	local key = ResolveAuraKey(element, data)
+	if(not key) then
+		return false
+	end
+
+	targetAll[key] = data
 	if((element.FilterAura or FilterAura) (element, unit, data, filter)) then
-		targetActive[data.auraInstanceID] = true
+		targetActive[key] = true
 		return true
 	end
 
@@ -487,6 +568,17 @@ local function AddAuraData(targetAll, targetActive, element, unit, data, filter)
 end
 
 local function RequiresFullAuraUpdate(updateInfo)
+	-- ElvUI's 12.1 oUF dropped the incremental updateInfo path on retail outright
+	-- (`ShouldSkipAuraUpdate`: `if oUF.isRetail then return true -- not anymore`).
+	-- Following that: rescan in full and let the scan API be the single source of
+	-- truth, which removes any chance of a stale delta merge desyncing the cache.
+	-- Note this is not what causes target auras to disappear in combat - runtime
+	-- snapshots show the scan API itself returns an empty set to addon code while
+	-- in combat, upstream of anything this element does.
+	if(oUF.isRetail) then
+		return true
+	end
+
 	if(not updateInfo) then
 		return true
 	end
@@ -513,6 +605,9 @@ local function UpdateAuras(self, event, unit, updateInfo)
 	-- Midnight can mark UNIT_AURA delta fields secret while addon execution is
 	-- tainted. Never branch on those values; rebuild from the public scan API.
 	local isFullUpdate = RequiresFullAuraUpdate(updateInfo)
+	if(not isFullUpdate and HasSecretAuraIDs(updateInfo)) then
+		isFullUpdate = true
+	end
 
 	local auras = self.Auras
 	if(auras) then
@@ -543,13 +638,23 @@ local function UpdateAuras(self, event, unit, updateInfo)
 		end
 
 		local numTotal = auras.numTotal or numBuffs + numDebuffs
+		-- Create every cache before any scanning runs. A scan that errors out must not
+		-- be able to leave a later table nil for the next incremental update to index.
 		auras.sortedBuffs = auras.sortedBuffs or {}
 		auras.sortedDebuffs = auras.sortedDebuffs or {}
+		auras.allBuffs = auras.allBuffs or {}
+		auras.activeBuffs = auras.activeBuffs or {}
+		auras.allDebuffs = auras.allDebuffs or {}
+		auras.activeDebuffs = auras.activeDebuffs or {}
 
 		if(isFullUpdate) then
-			auras.allBuffs = table.wipe(auras.allBuffs or {})
-			auras.activeBuffs = table.wipe(auras.activeBuffs or {})
+			ResetSecretAuraTracking(auras)
+			table.wipe(auras.allBuffs)
+			table.wipe(auras.activeBuffs)
+			table.wipe(auras.allDebuffs)
+			table.wipe(auras.activeDebuffs)
 			buffsChanged = true
+			debuffsChanged = true
 
 			ForEachFullAuraData(unit, buffFilter, function(data)
 				--[[ Override: Auras:FilterAura(unit, data, filter)
@@ -566,10 +671,6 @@ local function UpdateAuras(self, event, unit, updateInfo)
 				--]]
 				AddAuraData(auras.allBuffs, auras.activeBuffs, auras, unit, data, buffFilter)
 			end)
-
-			auras.allDebuffs = table.wipe(auras.allDebuffs or {})
-			auras.activeDebuffs = table.wipe(auras.activeDebuffs or {})
-			debuffsChanged = true
 
 			ForEachFullAuraData(unit, debuffFilter, function(data)
 				AddAuraData(auras.allDebuffs, auras.activeDebuffs, auras, unit, data, debuffFilter)
@@ -649,6 +750,12 @@ local function UpdateAuras(self, event, unit, updateInfo)
 		* buffsChanged   - indicates whether the buff info has changed (boolean)
 		* debuffsChanged - indicates whether the debuff info has changed (boolean)
 		--]]
+		-- Surrogate-keyed auras cannot be matched against a delta payload, so keep
+		-- rebuilding for as long as any are present.
+		if(auras.__AzeriteUI_HasSecretAuras) then
+			auras.needFullUpdate = true
+		end
+
 		if(auras.PostUpdateInfo) then
 			auras:PostUpdateInfo(unit, buffsChanged, debuffsChanged)
 		end
@@ -821,32 +928,25 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			buffFilter = buffFilter(buffs, unit)
 		end
 
+		-- Create every cache before any scanning runs. A scan that errors out must not
+		-- be able to leave a later table nil for the next incremental update to index.
+		buffs.all = buffs.all or {}
+		buffs.active = buffs.active or {}
+
 		if(isFullUpdate) then
-			buffs.all = table.wipe(buffs.all or {})
-			buffs.active = table.wipe(buffs.active or {})
+			ResetSecretAuraTracking(buffs)
+			table.wipe(buffs.all)
+			table.wipe(buffs.active)
 			buffsChanged = true
 
 			ForEachFullAuraData(unit, buffFilter, function(auraData)
-				local data = processData(buffs, unit, auraData, buffFilter)
-				if(data and data.auraInstanceID) then
-					buffs.all[data.auraInstanceID] = data
-
-					if((buffs.FilterAura or FilterAura) (buffs, unit, data, buffFilter)) then
-						buffs.active[data.auraInstanceID] = true
-					end
-				end
+				AddAuraData(buffs.all, buffs.active, buffs, unit, auraData, buffFilter)
 			end)
 		else
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
 					if(IsAuraFilteredOutByInstanceIDSafe(unit, data.auraInstanceID, buffFilter) == false) then
-						local processed = processData(buffs, unit, data, buffFilter)
-						if(processed and processed.auraInstanceID) then
-							buffs.all[data.auraInstanceID] = processed
-						end
-
-						if(processed and (buffs.FilterAura or FilterAura) (buffs, unit, processed, buffFilter)) then
-							buffs.active[data.auraInstanceID] = true
+						if(AddAuraData(buffs.all, buffs.active, buffs, unit, data, buffFilter)) then
 							buffsChanged = true
 						end
 					end
@@ -889,6 +989,12 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			end
 		end
 
+		-- Surrogate-keyed auras cannot be matched against a delta payload, so keep
+		-- rebuilding for as long as any are present.
+		if(buffs.__AzeriteUI_HasSecretAuras) then
+			buffs.needFullUpdate = true
+		end
+
 		if(buffs.PostUpdateInfo) then
 			buffs:PostUpdateInfo(unit, buffsChanged)
 		end
@@ -897,7 +1003,12 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			buffs.sorted = table.wipe(buffs.sorted or {})
 
 			for auraInstanceID in next, buffs.active do
-				table.insert(buffs.sorted, buffs.all[auraInstanceID])
+				local data = buffs.all[auraInstanceID]
+				if(data) then
+					table.insert(buffs.sorted, data)
+				else
+					buffs.active[auraInstanceID] = nil
+				end
 			end
 
 			table.sort(buffs.sorted, buffs.SortBuffs or buffs.SortAuras or SortAuras)
@@ -946,21 +1057,21 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			debuffFilter = debuffFilter(debuffs, unit)
 		end
 
+		-- Create every cache before any scanning runs. A scan that errors out must not
+		-- be able to leave a later table nil for the next incremental update to index.
+		debuffs.all = debuffs.all or {}
+		debuffs.active = debuffs.active or {}
+
 		if(isFullUpdate) then
-			debuffs.all = table.wipe(debuffs.all or {})
-			debuffs.active = table.wipe(debuffs.active or {})
+			ResetSecretAuraTracking(debuffs)
+			table.wipe(debuffs.all)
+			table.wipe(debuffs.active)
 			debuffsChanged = true
 			local scannedDebuffs = 0
 
 			ForEachFullAuraData(unit, debuffFilter, function(auraData)
 				scannedDebuffs = scannedDebuffs + 1
-				local data = processData(debuffs, unit, auraData, debuffFilter)
-				if(data and data.auraInstanceID) then
-					debuffs.all[data.auraInstanceID] = data
-					if((debuffs.FilterAura or FilterAura) (debuffs, unit, data, debuffFilter)) then
-						debuffs.active[data.auraInstanceID] = true
-					end
-				end
+				AddAuraData(debuffs.all, debuffs.active, debuffs, unit, auraData, debuffFilter)
 			end)
 
 			-- Retail WoW 12 edge case:
@@ -978,13 +1089,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 					local filteredOut = IsAuraFilteredOutByInstanceIDSafe(unit, auraInstanceID, 'HARMFUL')
 					if(filteredOut == false) then
 						scannedDebuffs = scannedDebuffs + 1
-						local data = processData(debuffs, unit, auraData, debuffFilter)
-						if(data and data.auraInstanceID) then
-							debuffs.all[data.auraInstanceID] = data
-							if((debuffs.FilterAura or FilterAura) (debuffs, unit, data, debuffFilter)) then
-								debuffs.active[data.auraInstanceID] = true
-							end
-						end
+						AddAuraData(debuffs.all, debuffs.active, debuffs, unit, auraData, debuffFilter)
 					end
 				end
 			end
@@ -993,13 +1098,7 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			if(updateInfo.addedAuras) then
 				for _, data in next, updateInfo.addedAuras do
 					if(IsAuraFilteredOutByInstanceIDSafe(unit, data.auraInstanceID, debuffFilter) == false) then
-						local processed = processData(debuffs, unit, data, debuffFilter)
-						if(processed and processed.auraInstanceID) then
-							debuffs.all[data.auraInstanceID] = processed
-						end
-
-						if(processed and (debuffs.FilterAura or FilterAura) (debuffs, unit, processed, debuffFilter)) then
-							debuffs.active[data.auraInstanceID] = true
+						if(AddAuraData(debuffs.all, debuffs.active, debuffs, unit, data, debuffFilter)) then
 							debuffsChanged = true
 						end
 					end
@@ -1042,6 +1141,12 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			end
 		end
 
+		-- Surrogate-keyed auras cannot be matched against a delta payload, so keep
+		-- rebuilding for as long as any are present.
+		if(debuffs.__AzeriteUI_HasSecretAuras) then
+			debuffs.needFullUpdate = true
+		end
+
 		if(debuffs.PostUpdateInfo) then
 			debuffs:PostUpdateInfo(unit, debuffsChanged)
 		end
@@ -1050,7 +1155,12 @@ local function UpdateAuras(self, event, unit, updateInfo)
 			debuffs.sorted = table.wipe(debuffs.sorted or {})
 
 			for auraInstanceID in next, debuffs.active do
-				table.insert(debuffs.sorted, debuffs.all[auraInstanceID])
+				local data = debuffs.all[auraInstanceID]
+				if(data) then
+					table.insert(debuffs.sorted, data)
+				else
+					debuffs.active[auraInstanceID] = nil
+				end
 			end
 
 			table.sort(debuffs.sorted, debuffs.SortDebuffs or debuffs.SortAuras or SortAuras)

@@ -1116,6 +1116,13 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 end
 
 RaidFrame25Mod.DisableBlizzard = function(self)
+	-- Leave Blizzard's frames alone when our replacement is switched off, otherwise
+	-- turning these frames off leaves the player with no group frame at all.
+	local profile = self.db and self.db.profile or defaults.profile
+	if (not (profile and profile.enabled)) then
+		return
+	end
+
 	-- WoW 12.0.0: Don't touch CompactRaidFrameManager at all - even checking if it exists loads the buggy addon
 	-- Note: ns.ClientBuild is build number (~58135), ns.ClientVersion is TOC version (120000).
 	if (ns.ClientVersion and ns.ClientVersion >= 120000) then
@@ -1146,6 +1153,12 @@ end
 RaidFrame25Mod.OnEvent = function(self, event, ...)
 	if (event == "PLAYER_ENTERING_WORLD") then
 		if (InCombatLockdown()) then
+			-- UpdateHeader is what registers the visibility driver, so the retry needs this
+			-- flag to have anything to do. Without it the deferral armed a retry that found
+			-- nothing pending, and the group frames stayed hidden for the rest of the
+			-- instance - which is what happens when an arena drops the player straight into
+			-- combat lockdown on zone-in.
+			self.needHeaderUpdate = true
 			self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 			return
 		end
@@ -1157,6 +1170,7 @@ RaidFrame25Mod.OnEvent = function(self, event, ...)
 		if (self.needHeaderUpdate) then
 			self.needHeaderUpdate = nil
 			self:UpdateHeader()
+			self:UpdateUnits()
 		end
 	end
 end
