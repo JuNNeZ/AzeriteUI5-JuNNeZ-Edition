@@ -19,6 +19,7 @@ ignore:
   - AGENTS.md
   - FixLog.md
   - FixLog_Archive_*.md
+  - CHANGELOG_ARCHIVE.md
   - Docs
   
   # Build scripts
