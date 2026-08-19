@@ -26,6 +26,7 @@
 local _, ns = ...
 
 -- GLOBALS: ChannelFrame
+-- GLOBALS: StaticPopupDialogs, StaticPopup_Show, ReloadUI, CANCEL
 
 -- Don't call this prior to our own addon loading,
 -- or it'll completely mess up the loading order.
@@ -1215,10 +1216,44 @@ local function GuardTooltipMoneyAdders()
 	end
 end
 
+-- Switching our group frames off cannot restore Blizzard's in the same session.
+-- The quarantine unregisters their events, and nothing records what Blizzard had
+-- registered, so there is no honest way to put them back. Everything is left
+-- untouched on the next load, so a reload is genuinely all that is needed - the
+-- player just has no way of knowing that from the options screen.
+local quarantineDidRun = false
+local reloadPromptShown = false
+
+local function PromptBlizzardFrameReload()
+	if (reloadPromptShown or not quarantineDidRun) then
+		return
+	end
+	reloadPromptShown = true
+
+	local key = "AZERITEUI_RESTORE_BLIZZARD_GROUP_FRAMES"
+	if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
+		StaticPopupDialogs[key] = {
+			text = "AzeriteUI hid Blizzard's group frames earlier this session and cannot bring them back on the fly.|n|nReload the interface to get them working again.",
+			button1 = "Reload UI",
+			button2 = CANCEL or "Cancel",
+			OnAccept = function() ReloadUI() end,
+			timeout = 0,
+			whileDead = true,
+			hideOnEscape = true,
+			preferredIndex = 3
+		}
+	end
+	if (StaticPopup_Show) then
+		StaticPopup_Show(key)
+	end
+end
+
 local function QuarantineCompactFrames()
 	if (not ShouldHandleCustomUnitFrames()) then
 		return
 	end
+
+	quarantineDidRun = true
 
 	if (IsPartyContextActive()) then
 		PrepareCompactFrame(_G.PartyFrame)
@@ -1480,6 +1515,7 @@ ns.WoW12BlizzardQuarantine.ApplyRaidGroupVisibility = ApplyAzeriteRaidGroupVisib
 ns.WoW12BlizzardQuarantine.ApplySpellBars = QuarantineSpellBars
 ns.WoW12BlizzardQuarantine.GetRaidGroupFilter = GetCompactRaidGroupFilter
 ns.WoW12BlizzardQuarantine.QuarantineFrame = QuarantineFrame
+ns.WoW12BlizzardQuarantine.PromptBlizzardFrameReload = PromptBlizzardFrameReload
 
 local function ApplyPlaterNamePlateAbsorbCleanup()
 	if (not (ns and ns.API and ns.API.IsAddOnEnabled and ns.API.IsAddOnEnabled("Plater"))) then

@@ -481,9 +481,11 @@ Auras.UpdateSettings = function(self)
 		visibility = "hide"
 	elseif (config.enableModifier) then
 		local modifier = string_lower(config.modifier or "SHIFT")
-		visibility = config.ignoreTarget
-			and ("[petbattle]hide;[mod:" .. modifier .. "]show;hide")
-			or ("[petbattle]hide;[@target,exists]hide;[mod:" .. modifier .. "]show;hide")
+		-- Holding the key is an explicit request to see the header, so it is tested
+		-- ahead of the target check rather than behind it. Ordered the other way the
+		-- key revealed nothing at all whenever a target was selected, which is most of
+		-- the time, and made the option look broken.
+		visibility = "[petbattle]hide;[mod:" .. modifier .. "]show;hide"
 	else
 		visibility = config.ignoreTarget and "[petbattle]hide;show" or "[petbattle]hide;[@target,exists]hide;show"
 	end

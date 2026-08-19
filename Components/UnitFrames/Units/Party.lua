@@ -50,6 +50,7 @@ local unpack = unpack
 -- GLOBALS: InCombatLockdown, RegisterAttributeDriver, UnregisterAttributeDriver
 -- GLOBALS: UnitGroupRolesAssigned, UnitGUID, UnitIsUnit, SetPortraitTexture
 -- GLOBALS: GetNumGroupMembers, GetRaidRosterInfo, UnitInRaid
+-- GLOBALS: GetTime, C_Timer
 
 -- Addon API
 local Colors = ns.Colors
@@ -1173,6 +1174,23 @@ GroupHeader.IsEnabled = function(self)
 	return self.enabled
 end
 
+-- Blizzard's secure group header can only create and anchor its unit buttons while
+-- out of combat, and the only things that retrigger it are OnShow, a roster event
+-- and an attribute change. A zone-in that drops the player straight into combat -
+-- which is what Skirmish Arena does - therefore leaves the header shown but empty,
+-- and once combat ends nothing in Blizzard's code rebuilds it. Bumping a private
+-- attribute fires OnAttributeChanged, which reruns SecureGroupHeader_Update.
+GroupHeader.ForceSecureUpdate = function(self)
+	if (InCombatLockdown()) then return end
+
+	-- Only real secure group headers rebuild on attribute changes. Modules that drive
+	-- their unit buttons through per-button unit drivers have no such handler, and
+	-- those buttons keep working in combat anyway.
+	if (not self:GetAttribute("initialConfigFunction")) then return end
+
+	self:SetAttribute("azeriteHeaderRefresh", GetTime())
+end
+
 GroupHeader.UpdateVisibilityDriver = function(self)
 	if (InCombatLockdown()) then return end
 
@@ -1184,11 +1202,16 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 		if (TESTMODE) then
 			table_insert(driver, "show")
 		end
-		table_insert(driver, "[group:party,nogroup:raid]"..(db.useInParties and "show" or "hide"))
+		-- Unit existence rather than [group:...]. ElvUI and GW2_UI both drive their
+		-- group headers this way, and it drops the dependency on how the group
+		-- conditional treats instance-only groups such as a solo queued Skirmish Arena,
+		-- where the player has no home party at all. The raid sizes are tested first
+		-- because your own raid subgroup also answers to the party1-4 tokens.
 		table_insert(driver, "[@raid26,exists]"..(db.useInRaid40 and "show" or "hide"))
 		table_insert(driver, "[@raid11,exists]"..(db.useInRaid25 and "show" or "hide"))
 		table_insert(driver, "[@raid6,exists]"..(db.useInRaid10 and "show" or "hide"))
-		table_insert(driver, "[group:raid]"..(db.useInRaid5 and "show" or "hide"))
+		table_insert(driver, "[@raid1,exists]"..(db.useInRaid5 and "show" or "hide"))
+		table_insert(driver, "[@party1,exists]"..(db.useInParties and "show" or "hide"))
 	end
 
 	table_insert(driver, "hide")
@@ -1398,6 +1421,7 @@ PartyFrameMod.UpdateHeader = function(self)
 	header:SetAttribute("maxColumns", db.maxColumns)
 	header:SetAttribute("columnSpacing", db.columnSpacing)
 	header:SetAttribute("columnAnchorPoint", db.columnAnchorPoint)
+	header:ForceSecureUpdate()
 
 	self:GetFrame():SetSize(self:GetHeaderSize())
 	self:ConfigureChildren()
@@ -1427,16 +1451,52 @@ PartyFrameMod.Update = function(self)
 end
 
 PartyFrameMod.OnEvent = function(self, event, ...)
+	if (event == "PLAYER_ENTERING_WORLD") then
+		if (InCombatLockdown()) then
+			-- UpdateHeader is what registers the visibility driver and rebuilds the
+			-- secure header, so the retry needs this flag to have anything to do.
+			self.needHeaderUpdate = true
+			return
+		end
+		self:UpdateHeader()
+		self:UpdateUnits()
+
+		-- Arena and battleground rosters are frequently still empty at this point,
+		-- and no further roster event arrives once they fill in during the gate phase.
+		if (C_Timer and C_Timer.After) then
+			C_Timer.After(1, function()
+				if (InCombatLockdown()) then
+					self.needHeaderUpdate = true
+					return
+				end
+				self:UpdateHeader()
+			end)
+		end
+		return
+	end
+
 	if (event ~= "PLAYER_REGEN_ENABLED") then
 		return
 	end
 	if (InCombatLockdown()) then
 		return
 	end
-	self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+
 	if (self.needHeaderUpdate) then
 		self.needHeaderUpdate = nil
 		self:UpdateHeader()
+		self:UpdateUnits()
+		return
+	end
+
+	-- Roster changes that arrived during combat could not lay the header out, and
+	-- they leave no flag behind when the header itself swallowed them. Rebuilding on
+	-- every combat drop is a handful of attribute writes and keeps combat zone-ins
+	-- from leaving an empty header behind for the rest of the instance.
+	local header = self:GetUnitFrameOrHeader()
+	if (header and header.ForceSecureUpdate) then
+		header:ForceSecureUpdate()
+		self:ConfigureChildren()
 	end
 end
 
@@ -1527,11 +1587,30 @@ PartyFrameMod.CreateUnitFrames = function(self)
 	-- is already registered for this event. Leaving this comment here while I decide.
 end
 
+PartyFrameMod.UpdateSettings = function(self)
+	ns.UnitFrameModule.UpdateSettings(self)
+
+	-- Once ours have replaced them, Blizzard's group frames stay hidden and inert for
+	-- the rest of the session - their events are gone and nothing recorded what they
+	-- were. The next load leaves them alone, so point the player at a reload instead
+	-- of letting them stare at an empty screen wondering what happened.
+	local profile = self.db and self.db.profile
+	if (profile and not profile.enabled) then
+		local quarantine = ns.WoW12BlizzardQuarantine
+		if (quarantine and quarantine.PromptBlizzardFrameReload) then
+			quarantine.PromptBlizzardFrameReload()
+		end
+	end
+end
+
 PartyFrameMod.OnEnable = function(self)
 
 	self:DisableBlizzard()
 	self:CreateUnitFrames()
 	self:CreateAnchor(PARTY)
+
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
+	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 
 	if (not self.__hookedMFMPartyAnchorSync) then
 		local manager = ns:GetModule("MovableFramesManager", true)

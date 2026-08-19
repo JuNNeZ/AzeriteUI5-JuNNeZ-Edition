@@ -129,6 +129,9 @@ local GenerateOptions = function()
 				order = 22,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
+				-- The modifier key overrides the target check outright, so this toggle has
+				-- nothing left to decide while that mode is on.
+				disabled = function(info) return isdisabled(info) or getoption(info, "enableModifier") end,
 				set = setter,
 				get = getter
 			},

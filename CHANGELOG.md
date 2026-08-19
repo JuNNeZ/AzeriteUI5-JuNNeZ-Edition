@@ -12,6 +12,32 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.3.84-JuNNeZ (2026-08-19) - Group Frames in Instanced PvP
+
+### Highlights
+
+- Party frames now appear in Skirmish Arena and other instanced PvP. The group frames decided whether you were grouped using a group-state condition rather than checking whether your party members actually exist, and that distinction matters in an instance group where you have no home party at all. All four group frame families now test for the party and raid units directly, the way the frames already tested for raid sizes.
+- Group frames recover after zoning straight into combat. Blizzard's secure group header can only lay its unit buttons out while you are out of combat, and nothing on Blizzard's side retries once combat drops. Party and raid headers now rebuild themselves when you zone in and again whenever you leave combat.
+- Fixed the `Cannot set tex coords when texture has mask` error thrown repeatedly by arena enemy frames. The specialization icon is drawn through a circular mask, and Retail 12.1 rejects tex coordinate changes on a masked texture.
+- Raid (11-25) and Raid (26-40) unit frames now receive their intended frame layering again. Both headers were being created without any of their startup configuration, which left every unit button ten frame levels lower than designed.
+- Holding the modifier key now reveals the top-right aura header even when you have a target selected. The target check previously ran first, so the key could not reveal anything for as long as something was targeted.
+- Turning the Azerite party or raid frames off now offers to reload. Blizzard's own group frames cannot be revived mid-session once they have been replaced, and a reload is what brings them back.
+
+### Access
+
+- Group sizes: `/az -> Unit Frame Settings -> Party` or `Raid`, then the `Visibility` toggles.
+- Blizzard group frame fallback: `/az -> Unit Frame Settings -> Party` or `Raid`, turn the Azerite frames off, then accept the reload prompt.
+- Aura header modifier: `/az -> Aura Header Settings -> Only Show With Modifier Key`. `Keep Visible While Targeting` is greyed out while that mode is on, because the modifier now overrides it.
+
+### Internal
+
+- Group visibility drivers moved from `[group:party,nogroup:raid]` and `[group:raid]` to `[@party1,exists]` and `[@raid1,exists]`, with the raid sizes tested ahead of the party check because a raid subgroup also answers to the `party1-4` tokens. This matches how ElvUI and GW2_UI drive their own group headers.
+- Added `GroupHeader.ForceSecureUpdate`, which bumps a private attribute to fire `OnAttributeChanged` and rerun `SecureGroupHeader_Update`. It is applied at the end of every `UpdateHeader` and on every combat drop, and is a no-op on headers that are not real secure group headers.
+- `PartyFrames` now registers `PLAYER_ENTERING_WORLD` and keeps `PLAYER_REGEN_ENABLED` registered; the raid modules no longer unregister theirs after the first recovery.
+- Fixed a stale `oUF:SpawnHeader` call shape in `Raid25` and `Raid40`. The bundled oUF no longer takes the old third `visibility` parameter, and its attribute loop exits on the first nil name, so the leftover argument was discarding every spawn attribute.
+- Added `/azdebug group`, which reports instance type, combat state, group category, roster counts, each header's live driver result via `SecureCmdOptionParse`, and every child button with its assigned unit.
+
+
 ## 5.3.83-JuNNeZ (2026-08-18) - Target Auras in Combat, Class Power Layering, and Group Frame Fixes
 
 ### Highlights

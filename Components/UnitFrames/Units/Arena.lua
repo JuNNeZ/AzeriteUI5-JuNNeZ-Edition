@@ -393,6 +393,18 @@ local IsArenaMatchContext = function()
 	return false, instanceType
 end
 
+-- Retail 12.1 throws "Cannot set tex coords when texture has mask" for any
+-- SetTexCoord call on a masked texture, and the spec icon is masked at creation.
+-- Masked textures always draw the full image anyway, so the reset is only needed
+-- on the unmasked fallback path.
+local SetSpecIconTexture = function(texture, file)
+	texture:SetTexture(file)
+	if (texture.GetNumMaskTextures and texture:GetNumMaskTextures() > 0) then
+		return
+	end
+	texture:SetTexCoord(0, 1, 0, 1)
+end
+
 local SpecIcon_Override = function(self, event, unit)
 	if (event == "ARENA_OPPONENT_UPDATE" and unit ~= self.unit) then
 		return
@@ -423,8 +435,7 @@ local SpecIcon_Override = function(self, event, unit)
 		local _, resolvedIcon, resolvedClassFile = ResolveArenaOpponentInfo(self, self.unit)
 		icon, classFile = resolvedIcon, resolvedClassFile
 		if (icon) then
-			element.icon:SetTexture(icon)
-			element.icon:SetTexCoord(0, 1, 0, 1)
+			SetSpecIconTexture(element.icon, icon)
 		elseif (classFile) then
 			element.icon:SetAtlas("classicon-"..classFile, false)
 		else
@@ -444,8 +455,7 @@ local SpecIcon_Override = function(self, event, unit)
 			element:Hide()
 			return
 		end
-		element.icon:SetTexture(icon)
-		element.icon:SetTexCoord(0, 1, 0, 1)
+		SetSpecIconTexture(element.icon, icon)
 	end
 
 	element:Show()

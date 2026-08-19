@@ -27,6 +27,8 @@ local _, ns = ...
 local Debugging = ns:NewModule("Debugging", "LibMoreEvents-1.0", "AceConsole-3.0")
 
 -- GLOBALS: EnableAddOn, GetAddOnInfo
+-- GLOBALS: IsInInstance, IsInGroup, IsInRaid, GetNumGroupMembers, GetNumSubgroupMembers
+-- GLOBALS: SecureCmdOptionParse, LE_PARTY_CATEGORY_HOME, LE_PARTY_CATEGORY_INSTANCE
 
 -- Lua API
 local ipairs = ipairs
@@ -3174,6 +3176,7 @@ local function PrintDebugHelp()
 	print("|cff33ff99", "AzeriteUI /azdebug commands:")
 	print("|cfff0f0f0  /azdebug|r  (toggle menu)")
 	print("|cfff0f0f0  /azdebug status|r")
+	print("|cfff0f0f0  /azdebug group|r  (party/raid header report)")
 	print("|cfff0f0f0  /azdebug health [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug health filter <text>|r  (example: Target.)")
 	print("|cfff0f0f0  /azdebug healthchat [on|off|toggle]|r")
@@ -4331,6 +4334,67 @@ Debugging.TargetDebugMenu = function(self, input)
 	return self:TargetDebugMenu("help")
 end
 
+-- Ground truth for "my group frames are missing here". Everything below is read
+-- straight from the live client so a report from inside the instance says which of
+-- the three possible causes it is: the state driver evaluating to hide, the secure
+-- header holding no unit buttons, or the module never having been enabled.
+Debugging.PrintGroupFrameReport = function(self)
+	local isInstance, instanceType = IsInInstance()
+	print("|cff33ff99", "AzeriteUI group frame report:")
+	print("|cfff0f0f0  instance:", tostring(isInstance), "type:", tostring(instanceType))
+	print("|cfff0f0f0  combat:", tostring(InCombatLockdown()))
+	print("|cfff0f0f0  IsInGroup:", tostring(IsInGroup()), "IsInRaid:", tostring(IsInRaid()))
+	if (LE_PARTY_CATEGORY_HOME and LE_PARTY_CATEGORY_INSTANCE) then
+		print("|cfff0f0f0  group home:", tostring(IsInGroup(LE_PARTY_CATEGORY_HOME)),
+			"instance:", tostring(IsInGroup(LE_PARTY_CATEGORY_INSTANCE)))
+	end
+	print("|cfff0f0f0  GetNumGroupMembers:", tostring(GetNumGroupMembers()),
+		"GetNumSubgroupMembers:", tostring(GetNumSubgroupMembers()))
+
+	local units = {}
+	for i = 1, 4 do
+		local unit = "party"..i
+		if (UnitExists(unit)) then
+			units[#units + 1] = unit
+		end
+	end
+	print("|cfff0f0f0  party units:", (#units > 0) and table.concat(units, ", ") or "none")
+
+	for _, name in ipairs({ "PartyFrames", "RaidFrame5", "RaidFrame25", "RaidFrame40" }) do
+		local module = ns:GetModule(name, true)
+		if (not module) then
+			print("|cfff0f0f0 ", name..":", "module missing")
+		else
+			local profile = module.db and module.db.profile
+			local header = module.GetUnitFrameOrHeader and module:GetUnitFrameOrHeader()
+			print("|cfff0f0f0 ", name..":", "moduleEnabled:", tostring(module:IsEnabled()),
+				"profileEnabled:", tostring(profile and profile.enabled))
+			if (not header) then
+				print("|cfff0f0f0     header: none")
+			else
+				local driver = header.visibility
+				local parsed = driver and SecureCmdOptionParse(driver) or "n/a"
+				print("|cfff0f0f0     shown:", tostring(header:IsShown()),
+					"visible:", tostring(header:IsVisible()),
+					"driverSays:", tostring(parsed))
+				print("|cfff0f0f0     driver:", tostring(driver))
+				print("|cfff0f0f0     showParty:", tostring(header:GetAttribute("showParty")),
+					"showRaid:", tostring(header:GetAttribute("showRaid")),
+					"showSolo:", tostring(header:GetAttribute("showSolo")),
+					"groupFilter:", tostring(header:GetAttribute("groupFilter")))
+				local index, assigned = 1, {}
+				while (header:GetAttribute("child"..index)) do
+					local child = header:GetAttribute("child"..index)
+					assigned[#assigned + 1] = string.format("%s(%s,%s)", index,
+						tostring(child:GetAttribute("unit")), tostring(child:IsShown()))
+					index = index + 1
+				end
+				print("|cfff0f0f0     buttons:", (#assigned > 0) and table.concat(assigned, " ") or "none")
+			end
+		end
+	end
+end
+
 Debugging.DebugMenu = function(self, input)
 	if (not IsDevMode()) then
 		print("|cff33ff99", "AzeriteUI /azdebug:", "Dev mode is off; limited features may apply.")
@@ -4358,6 +4422,9 @@ Debugging.DebugMenu = function(self, input)
 		print("|cfff0f0f0  raidbar force:", (ns.db and ns.db.global and ns.db.global.debugForceBlizzardRaidBar) and "ON" or "OFF")
 		print("|cfff0f0f0  fixes:", (ns.db and ns.db.global and ns.db.global.debugFixes) and "ON" or "OFF")
 		return
+	end
+	if (cmd == "group" or cmd == "groups") then
+		return self:PrintGroupFrameReport()
 	end
 	if (cmd == "raidbar") then
 		if (not IsDevMode()) then

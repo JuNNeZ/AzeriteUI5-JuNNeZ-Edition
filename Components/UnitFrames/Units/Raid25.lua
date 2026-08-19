@@ -28,7 +28,7 @@ local oUF = ns.oUF
 
 local RaidFrame25Mod = ns:NewModule("RaidFrame25", ns.UnitFrameModule, "LibMoreEvents-1.0", "AceHook-3.0")
 
--- GLOBALS: UIParent, Enum
+-- GLOBALS: UIParent, Enum, GetTime
 -- GLOBALS: LoadAddOn, InCombatLockdown, RegisterAttributeDriver, UnregisterAttributeDriver
 -- GLOBALS: GetRaidRosterInfo, UnitGroupRolesAssigned, UnitHasVehicleUI, UnitInRaid, UnitIsUnit, UnitPowerType
 -- GLOBALS: CompactRaidFrameContainer, CompactRaidFrameManager, CompactRaidFrameManager_SetSetting
@@ -1075,6 +1075,23 @@ GroupHeader.IsEnabled = function(self)
 	return self.enabled
 end
 
+-- Blizzard's secure group header can only create and anchor its unit buttons while
+-- out of combat, and the only things that retrigger it are OnShow, a roster event
+-- and an attribute change. A zone-in that drops the player straight into combat -
+-- which is what Skirmish Arena does - therefore leaves the header shown but empty,
+-- and once combat ends nothing in Blizzard's code rebuilds it. Bumping a private
+-- attribute fires OnAttributeChanged, which reruns SecureGroupHeader_Update.
+GroupHeader.ForceSecureUpdate = function(self)
+	if (InCombatLockdown()) then return end
+
+	-- Only real secure group headers rebuild on attribute changes. Modules that drive
+	-- their unit buttons through per-button unit drivers have no such handler, and
+	-- those buttons keep working in combat anyway.
+	if (not self:GetAttribute("initialConfigFunction")) then return end
+
+	self:SetAttribute("azeriteHeaderRefresh", GetTime())
+end
+
 GroupHeader.UpdateVisibilityDriver = function(self)
 	if (InCombatLockdown()) then return end
 
@@ -1084,11 +1101,16 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	local db = profile or defaults.profile
 	local headerProfile = GetSanitizedHeaderProfile(profile)
 	if (db.enabled) then
-		table_insert(driver, "[group:party,nogroup:raid]"..(db.useInParties and "show" or "hide"))
+		-- Unit existence rather than [group:...]. ElvUI and GW2_UI both drive their
+		-- group headers this way, and it drops the dependency on how the group
+		-- conditional treats instance-only groups such as a solo queued Skirmish Arena,
+		-- where the player has no home party at all. The raid sizes are tested first
+		-- because your own raid subgroup also answers to the party1-4 tokens.
 		table_insert(driver, "[@raid26,exists]"..(db.useInRaid40 and "show" or "hide"))
 		table_insert(driver, "[@raid11,exists]"..(db.useInRaid25 and "show" or "hide"))
 		table_insert(driver, "[@raid6,exists]"..(db.useInRaid10 and "show" or "hide"))
-		table_insert(driver, "[group:raid]"..(db.useInRaid5 and "show" or "hide"))
+		table_insert(driver, "[@raid1,exists]"..(db.useInRaid5 and "show" or "hide"))
+		table_insert(driver, "[@party1,exists]"..(db.useInParties and "show" or "hide"))
 	end
 
 	table_insert(driver, "hide")
@@ -1166,11 +1188,20 @@ RaidFrame25Mod.OnEvent = function(self, event, ...)
 		self:UpdateUnits()
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		if (InCombatLockdown()) then return end
-		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 		if (self.needHeaderUpdate) then
 			self.needHeaderUpdate = nil
 			self:UpdateHeader()
 			self:UpdateUnits()
+			return
+		end
+
+		-- Roster changes that arrived during combat could not lay the header out, and
+		-- they leave no flag behind when the header itself swallowed them. The event
+		-- stays registered so every combat drop gets a rebuild.
+		local header = self:GetUnitFrameOrHeader()
+		if (header and header.ForceSecureUpdate) then
+			header:ForceSecureUpdate()
+			self:ConfigureChildren()
 		end
 	end
 end
@@ -1178,7 +1209,10 @@ end
 RaidFrame25Mod.GetHeaderAttributes = function(self)
 	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
 
-	return ns.Prefix.."Raid25", nil, nil,
+	-- oUF:SpawnHeader(overrideName, template, ...). The bundled oUF dropped the
+	-- old third "visibility" parameter, and its attribute loop breaks on the first
+	-- nil name, so a stale extra nil here silently discarded every attribute below.
+	return ns.Prefix.."Raid25", nil,
 	"initial-width", ns.GetConfig("RaidFrames").UnitSize[1],
 	"initial-height", ns.GetConfig("RaidFrames").UnitSize[2],
 	"oUF-initialConfigFunction", [[
@@ -1362,6 +1396,7 @@ RaidFrame25Mod.UpdateHeader = function(self)
 	header:SetAttribute("maxColumns", db.maxColumns)
 	header:SetAttribute("columnSpacing", db.columnSpacing)
 	header:SetAttribute("columnAnchorPoint", db.columnAnchorPoint)
+	header:ForceSecureUpdate()
 
 	self:GetFrame():SetSize(self:GetHeaderSize())
 	self:ConfigureChildren()
@@ -1462,6 +1497,22 @@ RaidFrame25Mod.CreateUnitFrames = function(self)
 
 end
 
+RaidFrame25Mod.UpdateSettings = function(self)
+	ns.UnitFrameModule.UpdateSettings(self)
+
+	-- Once ours have replaced them, Blizzard's group frames stay hidden and inert for
+	-- the rest of the session - their events are gone and nothing recorded what they
+	-- were. The next load leaves them alone, so point the player at a reload instead
+	-- of letting them stare at an empty screen wondering what happened.
+	local profile = self.db and self.db.profile
+	if (profile and not profile.enabled) then
+		local quarantine = ns.WoW12BlizzardQuarantine
+		if (quarantine and quarantine.PromptBlizzardFrameReload) then
+			quarantine.PromptBlizzardFrameReload()
+		end
+	end
+end
+
 RaidFrame25Mod.OnEnable = function(self)
 	-- Don't load Blizzard_CUFProfiles or Blizzard_CompactRaidFrames in WoW 12.0.0
 	-- They have buggy secret value handling that causes errors
@@ -1475,5 +1526,6 @@ RaidFrame25Mod.OnEnable = function(self)
 
 	ns.MovableModulePrototype.OnEnable(self)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
+	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 end
 
