@@ -395,14 +395,19 @@ end
 
 -- Retail 12.1 throws "Cannot set tex coords when texture has mask" for any
 -- SetTexCoord call on a masked texture, and the spec icon is masked at creation.
--- Masked textures always draw the full image anyway, so the reset is only needed
--- on the unmasked fallback path.
+-- GetNumMaskTextures does not reliably report that mask back, so the flag we set
+-- ourselves in SetMask is what is trusted here, with a pcall as the last resort.
+-- Masked textures draw the full image anyway, so the reset only matters on the
+-- unmasked fallback path.
 local SetSpecIconTexture = function(texture, file)
 	texture:SetTexture(file)
+	if (texture.azeriteHasMask) then
+		return
+	end
 	if (texture.GetNumMaskTextures and texture:GetNumMaskTextures() > 0) then
 		return
 	end
-	texture:SetTexCoord(0, 1, 0, 1)
+	pcall(texture.SetTexCoord, texture, 0, 1, 0, 1)
 end
 
 local SpecIcon_Override = function(self, event, unit)
@@ -1194,6 +1199,7 @@ local style = function(self, unit)
 	specIcon:SetPoint(unpack(db.PvPSpecIconIconPositon))
 	specIcon:SetSize(unpack(db.PvPSpecIconIconSize))
 	specIcon:SetMask(db.PvPSpecIconIconMask)
+	specIcon.azeriteHasMask = true
 
 	self.SpecIcon = specIconFrame
 	self.SpecIcon.icon = specIcon

@@ -12,6 +12,30 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.3.85-JuNNeZ (2026-08-20) - Group Frames in Arena, Reload Prompt, and the Blizzard Party Title
+
+### Highlights
+
+- Group frames now actually appear in Arena, Solo Shuffle and Skirmish. The 5 player frames were taking their group filter from Blizzard's raid manager, which does not exist in instanced PvP and reports "no groups shown" there, so the frames were both hidden and faded out no matter what your settings said.
+- The reload prompt no longer greets you at every login. It was firing whenever a group frame module was switched off in your profile, including the settings pass that runs at login, so a permanently disabled module asked every session. It now appears only when you turn the frames off during the session, which is the case where Blizzard's own frames really are left stranded.
+- Blizzard's leftover "Party" title no longer floats over the screen when you use the Raid (1-5) frames with the Party frames turned off. Blizzard's party frames were only being hidden when the Party module itself was enabled.
+- Fixed the remaining `Cannot set tex coords when texture has mask` error from arena enemy frames. The previous guard asked the texture whether it was masked, and Retail 12.1 does not answer that reliably.
+
+### Access
+
+- Group frame visibility: `/az -> Unit Frame Settings -> Raid` or `Party`, then the `Visibility` toggles.
+- Blizzard group frame fallback: `/az -> Unit Frame Settings -> Party` or `Raid`, turn the Azerite frames off, then accept the reload prompt.
+- Group frame diagnostics: `/azdebug group`.
+
+### Internal
+
+- `Raid5` no longer consults `WoW12BlizzardQuarantine.GetRaidGroupFilter`. That filter describes which subgroups of a 10-40 player raid the compact frames draw, and it returns `"0"` whenever the raid manager is unavailable, which both wrote `groupFilter = "0"` onto the header and turned the driver's `[@raid1,exists]` clause into `hide`. The 5 player header now always uses `"1,2,3,4,5,6,7,8"`, and `IsRaidGroupShown` is gone.
+- `ApplyAzeriteRaidGroupVisibility` no longer mirrors the raid manager's hidden mode onto `RaidFrame5`, which was setting its alpha to zero in the same contexts. `RaidFrame25` and `RaidFrame40` still follow it.
+- `ShouldHandlePartyFrames` now returns true when either `PartyFrames` or `RaidFrame5` is enabled, so the party quarantine covers `PartyFrame`, `CompactPartyFrame` and their titles in a Raid5-only setup.
+- The reload prompt in each group module's `UpdateSettings` now compares `profile.enabled` against a per-module `__blizzardFrameHandoverState` and only fires on an enabled to disabled transition.
+- `SetSpecIconTexture` trusts an `azeriteHasMask` flag written where `SetMask` is called instead of `GetNumMaskTextures()`, with `pcall` around the fallback `SetTexCoord`.
+
+
 ## 5.3.84-JuNNeZ (2026-08-19) - Group Frames in Instanced PvP
 
 ### Highlights

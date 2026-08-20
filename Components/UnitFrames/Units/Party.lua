@@ -1594,8 +1594,15 @@ PartyFrameMod.UpdateSettings = function(self)
 	-- the rest of the session - their events are gone and nothing recorded what they
 	-- were. The next load leaves them alone, so point the player at a reload instead
 	-- of letting them stare at an empty screen wondering what happened.
+	-- Only a toggle made during this session leaves Blizzard's frames stranded.
+	-- Being disabled in the profile at login means they were never touched, so the
+	-- prompt has to compare against the previous state rather than the current one.
 	local profile = self.db and self.db.profile
-	if (profile and not profile.enabled) then
+	local enabled = (profile and profile.enabled) and true or false
+	local wasEnabled = self.__blizzardFrameHandoverState
+	self.__blizzardFrameHandoverState = enabled
+
+	if (wasEnabled == true and not enabled) then
 		local quarantine = ns.WoW12BlizzardQuarantine
 		if (quarantine and quarantine.PromptBlizzardFrameReload) then
 			quarantine.PromptBlizzardFrameReload()

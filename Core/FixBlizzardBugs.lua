@@ -196,7 +196,10 @@ local function IsModuleEnabled(name, defaultValue)
 end
 
 local function ShouldHandlePartyFrames()
-	return IsModuleEnabled("PartyFrames", true)
+	-- RaidFrame5 replaces Blizzard's party frames in a 5 player group exactly as the
+	-- party module does, so either one being enabled means Blizzard's party frames -
+	-- and the "Party" title above them - have to be quarantined too.
+	return IsModuleEnabled("PartyFrames", true) or IsModuleEnabled("RaidFrame5", true)
 end
 
 local function ShouldHandleRaidFrames()
@@ -675,8 +678,12 @@ local function ApplyAzeriteRaidGroupFilter()
 end
 
 local function ApplyAzeriteRaidGroupVisibility()
+	-- Only the true raid sized frames mirror the raid manager's hidden mode. The 5
+	-- player frames stand in for the party frames, and the manager reports hidden
+	-- wherever it does not exist at all - instanced PvP among them - which used to
+	-- leave those frames shown but fully transparent.
 	local alpha = GetCompactRaidHiddenMode() and 0 or 1
-	for _, moduleName in ipairs({ "RaidFrame5", "RaidFrame25", "RaidFrame40" }) do
+	for _, moduleName in ipairs({ "RaidFrame25", "RaidFrame40" }) do
 		local module = GetRaidModule(moduleName)
 		local frame, header = GetRaidModuleFrames(module)
 		if (frame and frame.SetAlpha) then

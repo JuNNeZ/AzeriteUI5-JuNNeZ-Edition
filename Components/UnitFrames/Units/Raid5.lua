@@ -115,20 +115,12 @@ local validGroupBy = {
 	ASSIGNEDROLE = true
 }
 
+-- The 5 player header never mirrors Blizzard's raid filter. That filter only
+-- describes which subgroups of a 10-40 player raid the compact frames draw, and
+-- when the raid manager is unavailable - instanced PvP being the obvious case -
+-- it reports "0", which used to blank this header and hide it outright.
 local GetActiveRaidGroupFilter = function()
-	local quarantine = ns.WoW12BlizzardQuarantine
-	if (quarantine and quarantine.GetRaidGroupFilter) then
-		return quarantine.GetRaidGroupFilter()
-	end
 	return "1,2,3,4,5,6,7,8"
-end
-
-local IsRaidGroupShown = function(group)
-	local filter = GetActiveRaidGroupFilter()
-	if (type(filter) ~= "string" or filter == "") then
-		return true
-	end
-	return string_find("," .. filter .. ",", "," .. tostring(group) .. ",", 1, true) ~= nil
 end
 
 local GetSanitizedHeaderProfile = function(profile)
@@ -920,7 +912,7 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 		table_insert(driver, "[@raid26,exists]"..(db.useInRaid40 and "show" or "hide"))
 		table_insert(driver, "[@raid11,exists]"..(db.useInRaid25 and "show" or "hide"))
 		table_insert(driver, "[@raid6,exists]"..(db.useInRaid10 and "show" or "hide"))
-		table_insert(driver, "[@raid1,exists]"..((db.useInRaid5 and IsRaidGroupShown(1)) and "show" or "hide"))
+		table_insert(driver, "[@raid1,exists]"..(db.useInRaid5 and "show" or "hide"))
 		table_insert(driver, "[@party1,exists]"..(db.useInParties and "show" or "hide"))
 	end
 
@@ -1328,8 +1320,15 @@ RaidFrame5Mod.UpdateSettings = function(self)
 	-- the rest of the session - their events are gone and nothing recorded what they
 	-- were. The next load leaves them alone, so point the player at a reload instead
 	-- of letting them stare at an empty screen wondering what happened.
+	-- Only a toggle made during this session leaves Blizzard's frames stranded.
+	-- Being disabled in the profile at login means they were never touched, so the
+	-- prompt has to compare against the previous state rather than the current one.
 	local profile = self.db and self.db.profile
-	if (profile and not profile.enabled) then
+	local enabled = (profile and profile.enabled) and true or false
+	local wasEnabled = self.__blizzardFrameHandoverState
+	self.__blizzardFrameHandoverState = enabled
+
+	if (wasEnabled == true and not enabled) then
 		local quarantine = ns.WoW12BlizzardQuarantine
 		if (quarantine and quarantine.PromptBlizzardFrameReload) then
 			quarantine.PromptBlizzardFrameReload()
