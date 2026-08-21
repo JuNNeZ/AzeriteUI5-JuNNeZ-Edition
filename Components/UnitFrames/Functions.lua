@@ -75,7 +75,7 @@ API.DebugPrintf = API.DebugPrintf or function(category, verbosity, fmt, ...)
 	for index = 1, count do
 		args[index] = SanitizeDebugValue(select(index, ...))
 	end
-	local ok, message = pcall(string_format, fmt, unpack(args, 1, count))
+	local ok, message = API.TryCall(string_format, fmt, unpack(args, 1, count))
 	if (not ok or type(message) ~= "string") then
 		return
 	end
@@ -91,7 +91,7 @@ API.DebugPrintf = API.DebugPrintf or function(category, verbosity, fmt, ...)
 	end
 	local payload = prefix .. SanitizeDebugValue(message)
 	if (DLAPI and DLAPI.DebugLog) then
-		local writeOK = pcall(DLAPI.DebugLog, "AzeriteUI", payload)
+		local writeOK = API.TryCall(DLAPI.DebugLog, "AzeriteUI", payload)
 		if (writeOK) then
 			return
 		end
@@ -152,7 +152,7 @@ API.SafeUnitIsUnit = API.SafeUnitIsUnit or function(unit, otherUnit)
 	end
 
 	if (type(UnitIsUnit) == "function") then
-		local okMatch, match = pcall(UnitIsUnit, unit, otherUnit)
+		local okMatch, match = API.TryCall(UnitIsUnit, unit, otherUnit)
 		if (okMatch) then
 			if (type(match) == "boolean" and (not IsSecretValue(match))) then
 				return match
@@ -163,16 +163,16 @@ API.SafeUnitIsUnit = API.SafeUnitIsUnit or function(unit, otherUnit)
 	end
 
 	if (type(UnitGUID) == "function") then
-		local okGuidA, guidA = pcall(UnitGUID, unit)
-		local okGuidB, guidB = pcall(UnitGUID, otherUnit)
-		if (okGuidA and okGuidB and type(guidA) == "string" and type(guidB) == "string") then
-			-- Wrap comparison in pcall: even after IsSecretValue checks,
-			-- the comparison itself can fail if the value was tainted
-			-- between the check and the comparison (race with securecall).
-			local okCmp, result = pcall(function() return guidA == guidB end)
-			if (okCmp) then
-				return result
-			end
+		local okGuidA, guidA = API.TryCall(UnitGUID, unit)
+		local okGuidB, guidB = API.TryCall(UnitGUID, otherUnit)
+		-- Both GUIDs must be plain readable strings before we compare them.
+		-- Lua is single threaded and non-preemptive, so nothing can taint a
+		-- value between this check and the comparison below; the comparison of
+		-- two non-secret strings cannot throw and needs no guard.
+		if (okGuidA and okGuidB
+			and type(guidA) == "string" and (not IsSecretValue(guidA))
+			and type(guidB) == "string" and (not IsSecretValue(guidB))) then
+			return guidA == guidB
 		end
 	end
 
@@ -225,7 +225,7 @@ local ResolveInterruptSpellID = function(spellID)
 				break
 			end
 			seen[resolvedSpellID] = true
-			local okOverride, overrideSpellID = pcall(C_Spell.GetOverrideSpell, resolvedSpellID)
+			local okOverride, overrideSpellID = API.TryCall(C_Spell.GetOverrideSpell, resolvedSpellID)
 			if (not okOverride
 				or type(overrideSpellID) ~= "number"
 				or IsSecretValue(overrideSpellID)
@@ -246,16 +246,16 @@ local GetSpellCooldownReadyState = function(spellID)
 	end
 	spellID = ResolveInterruptSpellID(spellID) or spellID
 	if (C_Spell and C_Spell.GetSpellCooldownDuration) then
-		local okDuration, durationObject = pcall(C_Spell.GetSpellCooldownDuration, spellID)
+		local okDuration, durationObject = API.TryCall(C_Spell.GetSpellCooldownDuration, spellID)
 		if (okDuration and durationObject and durationObject.IsZero) then
-			local okZero, isZero = pcall(durationObject.IsZero, durationObject)
+			local okZero, isZero = API.TryCall(durationObject.IsZero, durationObject)
 			if (okZero and type(isZero) == "boolean" and (not IsSecretValue(isZero))) then
 				return isZero and 1 or 0
 			end
 		end
 	end
 	if (C_Spell and C_Spell.GetSpellCooldown) then
-		local okCooldown, cooldownInfo = pcall(C_Spell.GetSpellCooldown, spellID)
+		local okCooldown, cooldownInfo = API.TryCall(C_Spell.GetSpellCooldown, spellID)
 		if (okCooldown and type(cooldownInfo) == "table") then
 			local startTime = cooldownInfo.startTime
 			local duration = cooldownInfo.duration
@@ -268,7 +268,7 @@ local GetSpellCooldownReadyState = function(spellID)
 		end
 	end
 	if (GetSpellCooldown) then
-		local okCooldown, startTime, duration = pcall(GetSpellCooldown, spellID)
+		local okCooldown, startTime, duration = API.TryCall(GetSpellCooldown, spellID)
 		if (okCooldown
 			and type(startTime) == "number"
 			and type(duration) == "number"
@@ -302,7 +302,7 @@ local GetBlizzardCastbarForUnit = function(unit)
 
 	if (unit:match("^nameplate%d+$")) then
 		if (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then
-			local okPlate, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit, issecurefunc and issecurefunc())
+			local okPlate, plate = API.TryCall(C_NamePlate.GetNamePlateForUnit, unit, issecurefunc and issecurefunc())
 			local unitFrame = okPlate and plate and (plate.UnitFrame or plate.unitFrame)
 			return unitFrame and (unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.Castbar or unitFrame.CastingBarFrame)
 		end
@@ -342,7 +342,7 @@ local ProbeBlizzardCastbarNotInterruptible = function(unit)
 
 	local shield = blizzardCastbar.Shield or blizzardCastbar.IconShield or blizzardCastbar.BorderShield
 	if (shield and shield.IsShown) then
-		local okShown, shown = pcall(shield.IsShown, shield)
+		local okShown, shown = API.TryCall(shield.IsShown, shield)
 		if (okShown and type(shown) == "boolean" and (not IsSecretValue(shown))) then
 			if (shown) then
 				return true
@@ -352,7 +352,7 @@ local ProbeBlizzardCastbarNotInterruptible = function(unit)
 	end
 
 	if (shield and shield.GetAlpha) then
-		local okAlpha, alpha = pcall(shield.GetAlpha, shield)
+		local okAlpha, alpha = API.TryCall(shield.GetAlpha, shield)
 		if (okAlpha and type(alpha) == "number" and (not IsSecretValue(alpha))) then
 			if (alpha > .05) then
 				return true
@@ -397,14 +397,16 @@ local IsCastMarkedNotInterruptible = function(castbar)
 	if (type(unit) == "string" and unit ~= "") then
 		local castNotInterruptible
 		if (UnitCastingInfo) then
-			local castResult = { pcall(UnitCastingInfo, unit) }
+			local _, castResult = API.SafeCallPacked("UnitCastingInfo", UnitCastingInfo, unit)
+			castResult = castResult or {}
 			local probedNotInterruptible = castResult[9]
 			if (castResult[1] and type(probedNotInterruptible) == "boolean" and (not IsSecretValue(probedNotInterruptible))) then
 				castNotInterruptible = probedNotInterruptible
 			end
 		end
 		if (castNotInterruptible == nil and UnitChannelInfo) then
-			local channelResult = { pcall(UnitChannelInfo, unit) }
+			local _, channelResult = API.SafeCallPacked("UnitChannelInfo", UnitChannelInfo, unit)
+			channelResult = channelResult or {}
 			local probedNotInterruptible = channelResult[8]
 			if (channelResult[1] and type(probedNotInterruptible) == "boolean" and (not IsSecretValue(probedNotInterruptible))) then
 				castNotInterruptible = probedNotInterruptible
@@ -467,13 +469,13 @@ local IsEnemyUnitForInterruptVisuals = function(owner, unit)
 		return true
 	end
 	if (UnitCanAttack) then
-		local okAttack, canAttack = pcall(UnitCanAttack, "player", unit)
+		local okAttack, canAttack = API.TryCall(UnitCanAttack, "player", unit)
 		if (okAttack and type(canAttack) == "boolean" and (not IsSecretValue(canAttack))) then
 			return canAttack
 		end
 	end
 	if (UnitReaction) then
-		local okReaction, reaction = pcall(UnitReaction, "player", unit)
+		local okReaction, reaction = API.TryCall(UnitReaction, "player", unit)
 		if (okReaction and type(reaction) == "number" and (not IsSecretValue(reaction))) then
 			return reaction <= 4
 		end
@@ -767,10 +769,8 @@ local IsSafeGreaterThan = function(left, right)
 	if (not IsSafeNumeric(left) or not IsSafeNumeric(right)) then
 		return false
 	end
-	local ok, result = pcall(function()
-		return left > right
-	end)
-	return ok and result and true or false
+	-- Both operands are verified plain numbers; the comparison cannot throw.
+	return left > right
 end
 
 local HasSafeNumericRange = function(minValue, maxValue)
@@ -782,60 +782,68 @@ local SetStatusBarValuesCompat = function(element, minValue, maxValue, value, fo
 		return
 	end
 	local smoothing = element.smoothing
-	local okNative = pcall(function()
-		element:SetMinMaxValues(minValue, maxValue)
-		if (smoothing ~= nil) then
-			element:SetValue(value, smoothing)
-		else
-			element:SetValue(value)
+
+	-- Bounds and value are applied as separate guarded steps. Wrapping both in
+	-- one guard let a failure of the first leave the bar with new bounds and a
+	-- stale value, silently and repeatedly.
+	-- TryCall probes the modern signature silently because the legacy fallback
+	-- is a real handled branch, not a fault; the fallback itself reports.
+	if (not API.TryCall(element.SetMinMaxValues, element, minValue, maxValue)) then
+		API.SafeCall("StatusBar.SetMinMaxValues", element.SetMinMaxValues, element, minValue, maxValue, forced)
+	end
+
+	-- Value second, as its own step. Reported on failure so a bar left showing
+	-- a stale value against fresh bounds cannot go unnoticed.
+	if (smoothing ~= nil) then
+		if (not API.TryCall(element.SetValue, element, value, smoothing)) then
+			API.SafeCall("StatusBar.SetValue.smoothed", element.SetValue, element, value, forced)
 		end
-	end)
-	if (not okNative) then
-		pcall(function()
-			element:SetMinMaxValues(minValue, maxValue, forced)
-			element:SetValue(value, forced)
-		end)
+	else
+		if (not API.TryCall(element.SetValue, element, value)) then
+			API.SafeCall("StatusBar.SetValue", element.SetValue, element, value, forced)
+		end
 	end
 end
 
 local SafePercentFromValues = function(cur, max)
-	if (type(cur) ~= "number" or type(max) ~= "number" or max <= 0) then
+	if (not IsSafeNumeric(cur) or not IsSafeNumeric(max) or max <= 0) then
 		return nil
 	end
-	local success, result = pcall(function()
-		return (cur / max * 100) + 0.5
-	end)
-	if (success and type(result) == "number") then
-		return result - (result % 1)
-	end
-	return nil
+	-- Both operands are verified plain numbers; the arithmetic cannot throw.
+	local result = (cur / max * 100) + 0.5
+	return result - (result % 1)
 end
 
 local SafeUnitPercentNumber = function(unit, isPower, powerType)
 	local percent
+	-- The curve-aware signature is probed silently: falling through to the
+	-- curveless call below is an expected branch, not a fault. The curveless
+	-- call is the one that should always work, so it reports if it throws.
 	if (isPower and UnitPowerPercent) then
 		if (CurveConstants and CurveConstants.ScaleTo100) then
-			pcall(function()
-				percent = UnitPowerPercent(unit, powerType, true, CurveConstants.ScaleTo100)
-			end)
+			local ok, value = API.TryCall(UnitPowerPercent, unit, powerType, true, CurveConstants.ScaleTo100)
+			if (ok) then
+				percent = value
+			end
 		end
-		-- Fallback: try curveless when curve version returned secret/nil.
 		if (not IsSafeNumeric(percent)) then
-			pcall(function()
-				percent = UnitPowerPercent(unit, powerType)
-			end)
+			local ok, value = API.SafeCall("UnitPowerPercent", UnitPowerPercent, unit, powerType)
+			if (ok) then
+				percent = value
+			end
 		end
 	elseif (not isPower and UnitHealthPercent) then
 		if (CurveConstants and CurveConstants.ScaleTo100) then
-			pcall(function()
-				percent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
-			end)
+			local ok, value = API.TryCall(UnitHealthPercent, unit, true, CurveConstants.ScaleTo100)
+			if (ok) then
+				percent = value
+			end
 		end
-		-- Fallback: try curveless when curve version returned secret/nil.
 		if (not IsSafeNumeric(percent)) then
-			pcall(function()
-				percent = UnitHealthPercent(unit)
-			end)
+			local ok, value = API.SafeCall("UnitHealthPercent", UnitHealthPercent, unit)
+			if (ok) then
+				percent = value
+			end
 		end
 	end
 	if (IsSafeNumeric(percent)) then
@@ -859,57 +867,10 @@ local NormalizePercent100 = function(percent)
 	return percent
 end
 
-local ProbeSafePercentAPI = function(unit, isPower, powerType)
-	local candidates = {}
-	local InsertCandidate = function(value)
-		if (IsSafeNumeric(value)) then
-			local normalized = NormalizePercent100(value)
-			if (type(normalized) == "number") then
-				candidates[#candidates + 1] = normalized
-			end
-		end
-	end
-	if (isPower) then
-		if (not UnitPowerPercent) then
-			return nil
-		end
-		pcall(function() InsertCandidate(UnitPowerPercent(unit, powerType)) end)
-		pcall(function() InsertCandidate(UnitPowerPercent(unit, nil)) end)
-		pcall(function() InsertCandidate(UnitPowerPercent(unit, powerType, true)) end)
-		pcall(function() InsertCandidate(UnitPowerPercent(unit, nil, true)) end)
-		if (CurveConstants and CurveConstants.ScaleTo100) then
-			pcall(function() InsertCandidate(UnitPowerPercent(unit, powerType, true, CurveConstants.ScaleTo100)) end)
-			pcall(function() InsertCandidate(UnitPowerPercent(unit, nil, true, CurveConstants.ScaleTo100)) end)
-		end
-	else
-		if (not UnitHealthPercent) then
-			return nil
-		end
-		pcall(function() InsertCandidate(UnitHealthPercent(unit)) end)
-		pcall(function() InsertCandidate(UnitHealthPercent(unit, false)) end)
-		pcall(function() InsertCandidate(UnitHealthPercent(unit, true)) end)
-		if (CurveConstants and CurveConstants.ScaleTo100) then
-			pcall(function() InsertCandidate(UnitHealthPercent(unit, false, CurveConstants.ScaleTo100)) end)
-			pcall(function() InsertCandidate(UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)) end)
-		end
-	end
-	return candidates[1]
-end
-
+-- Kept as a named alias for readability at the geometry call sites; the
+-- semantics live in API.IsSafeNumber (see Core/API/SecretValues.lua).
 local CanReadGeometryNumber = function(value)
-	if (type(value) ~= "number") then
-		return false
-	end
-	if (not issecretvalue or not issecretvalue(value)) then
-		return true
-	end
-	if (canaccessvalue) then
-		local ok, readable = pcall(canaccessvalue, value)
-		if (ok and readable) then
-			return true
-		end
-	end
-	return false
+	return API.IsSafeNumber(value)
 end
 
 local GetTexturePercentFromBar = function(element)
@@ -927,7 +888,7 @@ local GetTexturePercentFromBar = function(element)
 	local baseBottom = element.__AzeriteUI_BaseTexCoordBottom
 	if (type(baseLeft) == "number" and type(baseRight) == "number" and type(baseTop) == "number" and type(baseBottom) == "number"
 		and CanReadGeometryNumber(baseLeft) and CanReadGeometryNumber(baseRight) and CanReadGeometryNumber(baseTop) and CanReadGeometryNumber(baseBottom)) then
-		local okTex, left, right, top, bottom = pcall(texture.GetTexCoord, texture)
+		local okTex, left, right, top, bottom = API.TryCall(texture.GetTexCoord, texture)
 		if (okTex and type(left) == "number" and type(right) == "number" and type(top) == "number" and type(bottom) == "number"
 			and CanReadGeometryNumber(left) and CanReadGeometryNumber(right) and CanReadGeometryNumber(top) and CanReadGeometryNumber(bottom)) then
 			local spanX = baseRight - baseLeft
@@ -951,8 +912,8 @@ local GetTexturePercentFromBar = function(element)
 			end
 		end
 	end
-	local okBarW, barWidth = pcall(element.GetWidth, element)
-	local okBarH, barHeight = pcall(element.GetHeight, element)
+	local okBarW, barWidth = API.TryCall(element.GetWidth, element)
+	local okBarH, barHeight = API.TryCall(element.GetHeight, element)
 	if (not okBarW or not okBarH or (not CanReadGeometryNumber(barWidth)) or (not CanReadGeometryNumber(barHeight))) then
 		return nil
 	end
@@ -961,29 +922,19 @@ local GetTexturePercentFromBar = function(element)
 	end
 	local texSize
 	if (orientation == "VERTICAL") then
-		local okTexH, texHeight = pcall(texture.GetHeight, texture)
+		local okTexH, texHeight = API.TryCall(texture.GetHeight, texture)
 		if (not okTexH or (not CanReadGeometryNumber(texHeight))) then
 			return nil
 		end
-		local okDiv, divided = pcall(function()
-			return texHeight / barHeight
-		end)
-		if (not okDiv or (not CanReadGeometryNumber(divided))) then
-			return nil
-		end
-		texSize = divided
+		-- Operands are verified readable numbers and barHeight > 0; cannot throw.
+		texSize = texHeight / barHeight
 	else
-		local okTexW, texWidth = pcall(texture.GetWidth, texture)
+		local okTexW, texWidth = API.TryCall(texture.GetWidth, texture)
 		if (not okTexW or (not CanReadGeometryNumber(texWidth))) then
 			return nil
 		end
-		local okDiv, divided = pcall(function()
-			return texWidth / barWidth
-		end)
-		if (not okDiv or (not CanReadGeometryNumber(divided))) then
-			return nil
-		end
-		texSize = divided
+		-- Operands are verified readable numbers and barWidth > 0; cannot throw.
+		texSize = texWidth / barWidth
 	end
 	if (not CanReadGeometryNumber(texSize)) then
 		return nil
@@ -1001,7 +952,7 @@ local GetSecretPercentFromBar = function(element)
 		return element.__AzeriteUI_MirrorPercent
 	end
 	if (element and element.GetSecretPercent) then
-		local ok, percent = pcall(element.GetSecretPercent, element)
+		local ok, percent = API.TryCall(element.GetSecretPercent, element)
 		if (ok and type(percent) == "number") then
 			return percent
 		end
@@ -1025,9 +976,10 @@ API.AttachScriptSafe = function(frame, scriptName, handler)
 	if (not frame or type(scriptName) ~= "string" or type(handler) ~= "function") then
 		return false
 	end
+	-- HookScript is probed silently; the SetScript path below is a real
+	-- fallback for frames that do not support hooking.
 	if (frame.HookScript) then
-		local okHook = pcall(frame.HookScript, frame, scriptName, handler)
-		if (okHook) then
+		if (API.TryCall(frame.HookScript, frame, scriptName, handler)) then
 			return true
 		end
 	end
@@ -1035,19 +987,18 @@ API.AttachScriptSafe = function(frame, scriptName, handler)
 		return false
 	end
 	local previous
-	local okGet = pcall(function()
-		previous = frame:GetScript(scriptName)
-	end)
-	if (not okGet) then
-		previous = nil
+	local okGet, existing = API.TryCall(frame.GetScript, frame, scriptName)
+	if (okGet) then
+		previous = existing
 	end
-	local okSet = pcall(frame.SetScript, frame, scriptName, function(self, ...)
+	-- Last resort: if this fails the hook is simply not installed, which would
+	-- otherwise be invisible. Report it.
+	return API.SafeCall("HookFrameScript.SetScript", frame.SetScript, frame, scriptName, function(self, ...)
 		if (type(previous) == "function") then
 			previous(self, ...)
 		end
 		handler(self, ...)
 	end)
-	return okSet and true or false
 end
 
 API.BindStatusBarValueMirror = function(bar)
@@ -1090,19 +1041,16 @@ API.BindStatusBarValueMirror = function(bar)
 		local mirrorMax = self.__AzeriteUI_MirrorMax
 		local didUpdateMirrorPercent = false
 		if (valueIsSafe and HasSafeNumericRange(mirrorMin, mirrorMax)) then
-			local okMirror, computedMirrorPercent = pcall(function()
-				local p = ((value - mirrorMin) / (mirrorMax - mirrorMin)) * 100
-				if (p < 0) then
-					return 0
-				elseif (p > 100) then
-					return 100
-				end
-				return p
-			end)
-			if (okMirror and type(computedMirrorPercent) == "number") then
-				self.__AzeriteUI_MirrorPercent = computedMirrorPercent
-				didUpdateMirrorPercent = true
+			-- valueIsSafe and HasSafeNumericRange already verified all three
+			-- operands are plain readable numbers with max > min; cannot throw.
+			local computedMirrorPercent = ((value - mirrorMin) / (mirrorMax - mirrorMin)) * 100
+			if (computedMirrorPercent < 0) then
+				computedMirrorPercent = 0
+			elseif (computedMirrorPercent > 100) then
+				computedMirrorPercent = 100
 			end
+			self.__AzeriteUI_MirrorPercent = computedMirrorPercent
+			didUpdateMirrorPercent = true
 		end
 		if (not self.__AzeriteUI_DisableTexturePercentMirror) then
 			local texturePercent = GetTexturePercentFromBar(self)
@@ -1291,7 +1239,7 @@ API.UpdateHealthFakeFillFromUnitPercent = function(health, fallbackUnit)
 	local unit = health.unit or (owner and owner.unit) or fallbackUnit or "target"
 	local percent, source
 	if (type(UnitHealthPercent) == "function") then
-		local ok, value = pcall(UnitHealthPercent, unit, true, CurveConstants and CurveConstants.ZeroToOne or nil)
+		local ok, value = API.TryCall(UnitHealthPercent, unit, true, CurveConstants and CurveConstants.ZeroToOne or nil)
 		if (ok) then
 			percent = value
 			source = "api"
@@ -1299,7 +1247,7 @@ API.UpdateHealthFakeFillFromUnitPercent = function(health, fallbackUnit)
 	end
 	local applied = false
 	if (source == "api") then
-		applied = pcall(API.ApplySimpleHealthFakeFillByPercent, health, percent)
+		applied = API.SafeCall("ApplySimpleHealthFakeFillByPercent", API.ApplySimpleHealthFakeFillByPercent, health, percent)
 	elseif (percent == nil) then
 		applied = API.ApplySimpleHealthFakeFillByPercent(health, nil)
 	end
@@ -1344,9 +1292,9 @@ local GetSafeHealthFromCalculator = function(element, unit)
 		return nil, nil, nil
 	end
 
-	local okUpdate = pcall(UnitGetDetailedHealPrediction, unit, nil, calculator)
+	local okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, nil, calculator)
 	if (not okUpdate) then
-		okUpdate = pcall(UnitGetDetailedHealPrediction, unit, "player", calculator)
+		okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, "player", calculator)
 	end
 	if (not okUpdate) then
 		return nil, nil, nil
@@ -1354,32 +1302,32 @@ local GetSafeHealthFromCalculator = function(element, unit)
 
 	local defaultMaxMode = Enum and Enum.UnitMaximumHealthMode and Enum.UnitMaximumHealthMode.Default
 	if (defaultMaxMode ~= nil and calculator.SetMaximumHealthMode) then
-		pcall(calculator.SetMaximumHealthMode, calculator, defaultMaxMode)
+		API.SafeCall("HealPrediction.SetMaximumHealthMode", calculator.SetMaximumHealthMode, calculator, defaultMaxMode)
 	end
 
 	local calcCur
 	local calcMax
 	local calcPercent
 	if (calculator.GetCurrentHealth) then
-		local okCur, value = pcall(calculator.GetCurrentHealth, calculator)
+		local okCur, value = API.TryCall(calculator.GetCurrentHealth, calculator)
 		if (okCur and type(value) == "number" and not IsSecretValue(value)) then
 			calcCur = value
 		end
 	end
 	if (calculator.GetMaximumHealth) then
-		local okMax, value = pcall(calculator.GetMaximumHealth, calculator)
+		local okMax, value = API.TryCall(calculator.GetMaximumHealth, calculator)
 		if (okMax and type(value) == "number" and not IsSecretValue(value) and value > 0) then
 			calcMax = value
 		end
 	end
 	if (calculator.GetCurrentHealthPercent) then
-		local okPercent, value = pcall(calculator.GetCurrentHealthPercent, calculator)
+		local okPercent, value = API.TryCall(calculator.GetCurrentHealthPercent, calculator)
 		if (okPercent and type(value) == "number" and not IsSecretValue(value)) then
 			calcPercent = NormalizePercent100(value * 100)
 		end
 	end
 	if (type(calcPercent) ~= "number" and calculator.EvaluateCurrentHealthPercent) then
-		local okPercent, value = pcall(calculator.EvaluateCurrentHealthPercent, calculator, CurveConstants and CurveConstants.ScaleTo100 or nil)
+		local okPercent, value = API.TryCall(calculator.EvaluateCurrentHealthPercent, calculator, CurveConstants and CurveConstants.ScaleTo100 or nil)
 		if (okPercent and type(value) == "number" and not IsSecretValue(value)) then
 			calcPercent = NormalizePercent100(value)
 		end
@@ -1408,21 +1356,19 @@ API.GetSafeHealthForPrediction = function(element, curHealth, maxHealth)
 		if (not safeMax and type(health.safeMax) == "number" and not IsSecretValue(health.safeMax)) then
 			safeMax = health.safeMax
 		end
-		if (not safeCur or not safeMax) then
-			pcall(function()
-				if (not safeCur) then
-					local value = health:GetValue()
-					if (type(value) == "number" and not IsSecretValue(value)) then
-						safeCur = value
-					end
-				end
-				if (not safeMax) then
-					local _, m = health:GetMinMaxValues()
-					if (type(m) == "number" and not IsSecretValue(m)) then
-						safeMax = m
-					end
-				end
-			end)
+		-- Read each bar value as its own guarded step. A single guard around both
+		-- meant a throw on GetValue silently skipped the GetMinMaxValues read too.
+		if (not safeCur) then
+			local ok, value = API.SafeCall("HealPrediction.health.GetValue", health.GetValue, health)
+			if (ok and type(value) == "number" and not IsSecretValue(value)) then
+				safeCur = value
+			end
+		end
+		if (not safeMax) then
+			local ok, _, m = API.SafeCall("HealPrediction.health.GetMinMaxValues", health.GetMinMaxValues, health)
+			if (ok and type(m) == "number" and not IsSecretValue(m)) then
+				safeMax = m
+			end
 		end
 	end
 	if (type(safeMax) ~= "number" or IsSecretValue(safeMax) or safeMax <= 0) then
@@ -1479,10 +1425,14 @@ API.UpdateHealth = function(self, event, unit)
 	element.__AzeriteUI_RawCurSecret = rawCurSecret and true or false
 	element.__AzeriteUI_RawMaxSecret = rawMaxSecret and true or false
 	local barCur, barMin, barMax
-	pcall(function()
-		barCur = element:GetValue()
-		barMin, barMax = element:GetMinMaxValues()
-	end)
+	local okCur, curValue = API.SafeCall("Health.element.GetValue", element.GetValue, element)
+	if (okCur) then
+		barCur = curValue
+	end
+	local okBounds, minValue, maxValue = API.SafeCall("Health.element.GetMinMaxValues", element.GetMinMaxValues, element)
+	if (okBounds) then
+		barMin, barMax = minValue, maxValue
+	end
 	local barMaxSafe = (IsSafeNumeric(barMax) and barMax > 0) and barMax or nil
 	local calcCur, calcMax, calcPercent
 	if ((not rawCurSafe) or (not rawMaxSafe)) then
@@ -1620,11 +1570,11 @@ API.UpdateHealth = function(self, event, unit)
 		end
 	end
 	if (element.Percent and element.Percent.UpdateTag) then
-		pcall(function() element.Percent:UpdateTag() end)
+		API.SafeCall("Tag.Percent.UpdateTag", element.Percent.UpdateTag, element.Percent)
 	end
 
 	if (element.Value and element.Value.UpdateTag) then
-		pcall(function() element.Value:UpdateTag() end)
+		API.SafeCall("Tag.Value.UpdateTag", element.Value.UpdateTag, element.Value)
 	end
 
 	local preview = element.Preview
@@ -1669,12 +1619,21 @@ API.UpdateHealth = function(self, event, unit)
 	if (unit == "target" and ShouldDebugUnit(unit) and ShouldEmitTick(element, "__AzeriteUI_LastTargetBarDebug", 0.35)) then
 		local barVal, barMin, barMax = nil, nil, nil
 		local orient, reverse = nil, nil
-		pcall(function()
-			barVal = element:GetValue()
-			barMin, barMax = element:GetMinMaxValues()
-			orient = element.GetOrientation and element:GetOrientation() or nil
-			reverse = element.GetReverseFill and element:GetReverseFill() or nil
-		end)
+		-- Diagnostic snapshot only; a failed read just prints as nil.
+		local okVal, v = API.TryCall(element.GetValue, element)
+		barVal = okVal and v or nil
+		local okBounds, lo, hi = API.TryCall(element.GetMinMaxValues, element)
+		if (okBounds) then
+			barMin, barMax = lo, hi
+		end
+		if (element.GetOrientation) then
+			local okOrient, o = API.TryCall(element.GetOrientation, element)
+			orient = okOrient and o or nil
+		end
+		if (element.GetReverseFill) then
+			local okReverse, r = API.TryCall(element.GetReverseFill, element)
+			reverse = okReverse and r or nil
+		end
 		API.DebugPrintf("TargetBar", 4,
 			"HealthBar orient=%s reverse=%s barValue=%s barMin=%s barMax=%s safeCur=%s safeMax=%s safePct=%s pctSource=%s fakeSource=%s",
 			tostring(orient),
@@ -1792,10 +1751,10 @@ API.UpdatePower = function(self, event, unit)
 
 	element.safePercent = safePercent or SafePercentFromValues(safeCur - safeMin, safeMax - safeMin)
 	if (element.Percent and element.Percent.UpdateTag) then
-		pcall(function() element.Percent:UpdateTag() end)
+		API.SafeCall("Tag.Percent.UpdateTag", element.Percent.UpdateTag, element.Percent)
 	end
 	if (element.Value and element.Value.UpdateTag) then
-		pcall(function() element.Value:UpdateTag() end)
+		API.SafeCall("Tag.Value.UpdateTag", element.Value.UpdateTag, element.Value)
 	end
 	--[[ Callback: Power:PostUpdate(unit, cur, min, max)
 	Called after the element has been updated.
@@ -1852,11 +1811,10 @@ API.UpdateManaOrb = function(self, event, unit)
 
 	local guid = UnitGUID(unit)
 	local guidChanged = false
-	if (guid) then
-		local success, result = pcall(function()
-			return guid ~= element.guid
-		end)
-		guidChanged = success and result and true or false
+	-- Compare only when both sides are plain readable strings. A secret operand
+	-- is what could throw here, so exclude it rather than guarding the compare.
+	if (API.IsSafeString(guid)) then
+		guidChanged = (element.guid == nil) or (API.IsSafeString(element.guid) and guid ~= element.guid)
 	end
 	local forced = guidChanged or (guid and not element.guid) or (UnitIsDeadOrGhost(unit))
 	if (event == "ForceUpdate" or event == "RefreshUnit" or event == "GROUP_ROSTER_UPDATE") then
@@ -1909,10 +1867,10 @@ API.UpdateManaOrb = function(self, event, unit)
 	element.safeMax = safeMax
 	element.safeCur = safeCur
 	if (element.Percent and element.Percent.UpdateTag) then
-		pcall(function() element.Percent:UpdateTag() end)
+		API.SafeCall("Tag.Percent.UpdateTag", element.Percent.UpdateTag, element.Percent)
 	end
 	if (element.Value and element.Value.UpdateTag) then
-		pcall(function() element.Value:UpdateTag() end)
+		API.SafeCall("Tag.Value.UpdateTag", element.Value.UpdateTag, element.Value)
 	end
 
 	--[[ Callback: Power:PostUpdate(unit, cur, min, max)

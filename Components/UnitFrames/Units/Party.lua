@@ -27,6 +27,7 @@ local _, ns = ...
 local oUF = ns.oUF
 
 local PartyFrameMod = ns:NewModule("PartyFrames", ns.UnitFrameModule, "LibMoreEvents-1.0", "AceHook-3.0")
+local API = ns.API
 
 -- Lua API
 local ipairs = ipairs
@@ -73,6 +74,7 @@ local defaults = { profile = ns:Merge({
 
 	showAuras = true,
 	showPlayer = false,
+	usePortraitSpecIcons = false,
 	useClassColors = true,
 	useBlizzardHealthColors = false,
 	useClassColorOnMouseoverOnly = false,
@@ -300,7 +302,7 @@ local GetDispellableDebuffColor = function(frame)
 		local canDispelType = dispelName and dispelTypes[dispelName]
 		local isRaidPlayerDispellable = false
 		if (auraInstanceID and C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID) then
-			local ok, filtered = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
+			local ok, filtered = API.TryCall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
 			if (ok and not (issecretvalue and issecretvalue(filtered))) then
 				isRaidPlayerDispellable = (filtered == false)
 			end
@@ -390,13 +392,14 @@ local UpdatePartyHealthTextVisibility = function(frame)
 	end
 
 	if (healthPercent.UpdateTag) then
-		pcall(function() healthPercent:UpdateTag() end)
+		API.SafeCall("Party.HealthPercent.UpdateTag", healthPercent.UpdateTag, healthPercent)
 	end
 
 	local percentText
-	pcall(function()
-		percentText = healthPercent:GetText()
-	end)
+	local okText, text = API.TryCall(healthPercent.GetText, healthPercent)
+	if (okText) then
+		percentText = text
+	end
 
 	if (IsPartyUnitInjured(frame) and HasPartyDisplayText(percentText)) then
 		healthValue:Hide()
@@ -700,8 +703,62 @@ local GroupRoleIndicator_Override = function(self, event)
 	end
 end
 
+local UsePartySpecPortraits = function()
+	local module = PartyFrameMod
+	local profile = module and module.db and module.db.profile
+	return (profile and profile.usePortraitSpecIcons) and true or false
+end
+
+--[[
+	Draws the unit's specialization icon over the portrait model.
+
+	Returns true when the icon is showing, so the caller can leave the model
+	alone. A group member's spec is only reachable through the inspect system,
+	so it is routinely unknown for a while after joining or while out of range;
+	in that case this returns false and the normal portrait is drawn instead of
+	a blank square or a misleading question mark.
+]]
+local ShowPartySpecIcon = function(element, unit)
+	local cache = ns.GroupSpecCache
+	if (not cache) then
+		return false
+	end
+
+	local icon = cache:GetSpecInfo(unit)
+	if (not icon) then
+		if (element.SpecIcon) then
+			element.SpecIcon:Hide()
+		end
+		return false
+	end
+
+	if (not element.SpecIcon) then
+		local texture = element:CreateTexture(nil, "ARTWORK")
+		texture:SetAllPoints()
+		-- Spec icons are square art with the usual one-pixel border baked in.
+		texture:SetTexCoord(.1, .9, .1, .9)
+		element.SpecIcon = texture
+	end
+
+	element.SpecIcon:SetTexture(icon)
+	element.SpecIcon:Show()
+
+	if (element.fallback2DTexture) then
+		element.fallback2DTexture:Hide()
+	end
+	element:ClearModel()
+
+	return true
+end
+
 -- Make the portrait look better for offline or invisible units.
 local Portrait_PostUpdate = function(element, unit, hasStateChanged)
+	if (UsePartySpecPortraits() and ShowPartySpecIcon(element, unit)) then
+		return
+	end
+	if (element.SpecIcon) then
+		element.SpecIcon:Hide()
+	end
 	if (not element.state) then
 		element:ClearModel()
 		if (not element.fallback2DTexture) then
@@ -1587,8 +1644,32 @@ PartyFrameMod.CreateUnitFrames = function(self)
 	-- is already registered for this event. Leaving this comment here while I decide.
 end
 
+-- Redraws every party portrait. Used when a spec resolves through inspect, which
+-- happens long after the frame was first drawn.
+PartyFrameMod.UpdatePortraits = function(self)
+	for frame in next,Units do
+		if (frame.Portrait and frame.Portrait.ForceUpdate) then
+			frame.Portrait:ForceUpdate()
+		end
+	end
+end
+
 PartyFrameMod.UpdateSettings = function(self)
 	ns.UnitFrameModule.UpdateSettings(self)
+
+	-- The inspect loop only starts once something actually wants spec data, so a
+	-- player who never enables this never pays for the traffic. It is never
+	-- stopped again: the cache is cheap to keep warm, and turning the option off
+	-- and on again mid-session should not have to rebuild it from nothing.
+	local profile = self.db and self.db.profile
+	if (profile and profile.usePortraitSpecIcons and ns.GroupSpecCache) then
+		ns.GroupSpecCache.Enable()
+		if (not self.__specCacheHooked) then
+			self.__specCacheHooked = true
+			ns.RegisterCallback(self, "GroupSpecCache_Updated", "UpdatePortraits")
+		end
+	end
+	self:UpdatePortraits()
 
 	-- Once ours have replaced them, Blizzard's group frames stay hidden and inert for
 	-- the rest of the session - their events are gone and nothing recorded what they

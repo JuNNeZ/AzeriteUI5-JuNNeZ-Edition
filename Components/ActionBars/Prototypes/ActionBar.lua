@@ -24,6 +24,7 @@
 
 --]]
 local _, ns = ...
+local API = ns.API
 
 -- Lua API
 local next = next
@@ -415,7 +416,7 @@ ActionBar.UpdateBindings = function(self)
 					-- paging states (bonus/dragon/vehicle/override/possess), keep click routing
 					-- so temporary actionbar slots stay in sync with the secure state driver.
 					if (useCommandBindings and (not hasCustomVehicleState) and (not hasDynamicPageState) and SetOverrideBinding) then
-						local ok = pcall(SetOverrideBinding, self, false, key, bindingAction)
+						local ok = API.TryCall(SetOverrideBinding, self, false, key, bindingAction)
 						if (ok) then
 							assigned = true
 						end

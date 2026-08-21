@@ -29,6 +29,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local ID_LABEL = L and L["ID"] or "ID"
 
 local Tooltips = ns:NewModule("Tooltips", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0")
+local API = ns.API
 -- Internal registration guards
 local PostCallRegistered = {}
 -- Theme/feature caches
@@ -58,7 +59,6 @@ local math_max = math.max
 local math_min = math.min
 local ipairs = ipairs
 local next = next
-local pcall = pcall
 local rawget = rawget
 local rawset = rawset
 local select = select
@@ -118,7 +118,7 @@ local SafeUnitExists = function(unit)
 		return false
 	end
 
-	local ok, exists = pcall(UnitExists, unit)
+	local ok, exists = API.TryCall(UnitExists, unit)
 	if (ok) then
 		return SafeBooleanValue(exists) and true or false
 	end
@@ -134,7 +134,7 @@ local ShouldUnitIdentityBeSecret = function(unit)
 		return false
 	end
 
-	local ok, isSecret = pcall(C_Secrets.ShouldUnitIdentityBeSecret, unit)
+	local ok, isSecret = API.TryCall(C_Secrets.ShouldUnitIdentityBeSecret, unit)
 	if (ok) then
 		return SafeBooleanValue(isSecret) and true or false
 	end
@@ -148,7 +148,7 @@ local SafeGetTooltipUnitToken = function(tooltip)
 	end
 
 	local mouseover = SafeUnitExists("mouseover") and "mouseover" or nil
-	local ok, _, unit = pcall(tooltip.GetUnit, tooltip)
+	local ok, _, unit = API.TryCall(tooltip.GetUnit, tooltip)
 	if (ok and IsSafeUnitToken(unit) and SafeUnitExists(unit)) then
 		return unit
 	end
@@ -169,7 +169,7 @@ local SafeGetNamePlateForUnit = function(unit)
 	if (not C_NamePlate) or (not C_NamePlate.GetNamePlateForUnit) then
 		return
 	end
-	local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
+	local ok, plate = API.TryCall(C_NamePlate.GetNamePlateForUnit, unit)
 	if (ok) then
 		return plate
 	end
@@ -251,32 +251,32 @@ local Backdrops = setmetatable({}, { __index = function(t,k)
 	if (bg.SetMouseMotionEnabled) then
 		bg:SetMouseMotionEnabled(false)
 	end
-	pcall(function() bg:SetFrameLevel(k:GetFrameLevel()) end)
+	API.SafeCall("Tooltips.Backdrop.SetFrameLevel", function() bg:SetFrameLevel(k:GetFrameLevel()) end)
 
 	-- WoW12: BackdropTemplate callbacks can receive secret dimensions.
 	if (bg.OnBackdropSizeChanged) then
 		local originalOnBackdropSizeChanged = bg.OnBackdropSizeChanged
 		bg.OnBackdropSizeChanged = function(self, ...)
-			pcall(originalOnBackdropSizeChanged, self, ...)
+			API.TryCall(originalOnBackdropSizeChanged, self, ...)
 		end
 	end
 	if (bg.ApplyBackdrop) then
 		local originalApplyBackdrop = bg.ApplyBackdrop
 		bg.ApplyBackdrop = function(self, ...)
-			pcall(originalApplyBackdrop, self, ...)
+			API.TryCall(originalApplyBackdrop, self, ...)
 		end
 	end
 	if (bg.SetupTextureCoordinates) then
 		local originalSetupTextureCoordinates = bg.SetupTextureCoordinates
 		bg.SetupTextureCoordinates = function(self, ...)
-			pcall(originalSetupTextureCoordinates, self, ...)
+			API.TryCall(originalSetupTextureCoordinates, self, ...)
 		end
 	end
 
 	-- Hook into tooltip framelevel changes.
 	-- Might help with some of the conflicts experienced with Silverdragon and Raider.IO
 	hooksecurefunc(k, "SetFrameLevel", function(self)
-		pcall(function() bg:SetFrameLevel(self:GetFrameLevel()) end)
+		API.SafeCall("Tooltips.Backdrop.SyncFrameLevel", function() bg:SetFrameLevel(self:GetFrameLevel()) end)
 	end)
 	rawset(t,k,bg)
 	return bg
@@ -561,7 +561,7 @@ Tooltips.UpdateBackdropTheme = function(self, tooltip)
 	end
 
 	-- Setup the backdrop theme.
-	local ok = pcall(function()
+	local ok = API.SafeCall("Tooltips.ApplyBackdropTheme", function()
 		backdrop:SetBackdrop(nil)
 		backdrop:SetBackdrop(db.backdrop)
 		backdrop:ClearAllPoints()
@@ -605,7 +605,7 @@ Tooltips.UpdateStatusBarTheme = function(self)
 	local sig = (self._cachedThemeKey or '?') .. ':' .. (db.texture or '?') .. ':' .. (db.height or '?') .. ':' .. (db.offsetLeft or 0) .. ':' .. (db.offsetRight or 0)
 	if (StatusBarThemeSignature[bar] == sig) then return end
 	local texture = (type(db.texture) == "string" and db.texture ~= "") and db.texture or "Interface/TargetingFrame/UI-StatusBar"
-	local ok = pcall(function()
+	local ok = API.SafeCall("Tooltips.ApplyStatusBarTheme", function()
 		bar:SetStatusBarTexture(texture)
 		bar:ClearAllPoints()
 		bar:SetPoint("BOTTOMLEFT", bar:GetParent(), "BOTTOMLEFT", db.offsetLeft, db.offsetBottom)
@@ -623,10 +623,11 @@ Tooltips.UpdateStatusBarTheme = function(self)
 			if (tooltip) then
 				local backdrop = rawget(Backdrops, tooltip)
 				if (backdrop) then
-					pcall(function()
+					API.SafeCall("Tooltips.Bar.OnShow.SetPoint", function()
 						backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom + backdrop.offsetBarBottom)
 					end)
-					pcall(Tooltips.OnValueChanged, Tooltips) -- Force an update to the bar's health value and color.
+					-- Force an update to the bar's health value and color.
+					API.SafeCall("Tooltips.OnValueChanged", Tooltips.OnValueChanged, Tooltips)
 				end
 			end
 		end)
@@ -638,7 +639,7 @@ Tooltips.UpdateStatusBarTheme = function(self)
 			if (tooltip) then
 				local backdrop = rawget(Backdrops, tooltip)
 				if (backdrop) then
-					pcall(function()
+					API.SafeCall("Tooltips.Bar.OnHide.SetPoint", function()
 						backdrop:SetPoint("BOTTOM", 0, backdrop.offsetBottom)
 					end)
 				end
@@ -690,7 +691,7 @@ Tooltips.SetHealthValue = function(self, unit)
 	local unitExists = safeUnit and SafeUnitExists(safeUnit)
 	local unitIsDead
 	if (unitExists) then
-		local okDead, dead = pcall(UnitIsDeadOrGhost, safeUnit)
+		local okDead, dead = API.TryCall(UnitIsDeadOrGhost, safeUnit)
 		unitIsDead = okDead and SafeBooleanValue(dead)
 	end
 	if (unitExists and unitIsDead) then
@@ -702,8 +703,8 @@ Tooltips.SetHealthValue = function(self, unit)
 		local msg, min, max
 
 		if (safeUnit and unitExists) then
-			local okHealth, min = pcall(UnitHealth, safeUnit)
-			local okMaxHealth, max = pcall(UnitHealthMax, safeUnit)
+			local okHealth, min = API.TryCall(UnitHealth, safeUnit)
+			local okMaxHealth, max = API.TryCall(UnitHealthMax, safeUnit)
 			if (not okHealth) then min = nil end
 			if (not okMaxHealth) then max = nil end
 			-- Check if values are secret before comparison
@@ -719,8 +720,8 @@ Tooltips.SetHealthValue = function(self, unit)
 				end
 			end
 		else
-			local okValue, min = pcall(bar.GetValue, bar)
-			local okRange, _, max = pcall(bar.GetMinMaxValues, bar)
+			local okValue, min = API.TryCall(bar.GetValue, bar)
+			local okRange, _, max = API.TryCall(bar.GetMinMaxValues, bar)
 			if (not okValue) or (not okRange) then
 				return
 			end
@@ -763,16 +764,16 @@ Tooltips.SetStatusBarColor = function(self, unit)
 	if (not bar) then return end
 	local color
 	if (IsSafeUnitToken(unit)) then
-		local okColor, unitColor = pcall(GetUnitColor, unit)
+		local okColor, unitColor = API.TryCall(GetUnitColor, unit)
 		if (okColor) then
 			color = unitColor
 		end
 	end
 	if (color) then
-		pcall(bar.SetStatusBarColor, bar, color[1], color[2], color[3])
+		API.SafeCall("Tooltips.Bar.SetStatusBarColor", bar.SetStatusBarColor, bar, color[1], color[2], color[3])
 	else
 		local r, g, b = GameTooltipTextLeft1:GetTextColor()
-		pcall(bar.SetStatusBarColor, bar, r, g, b)
+		API.SafeCall("Tooltips.Bar.SetStatusBarColor.rgb", bar.SetStatusBarColor, bar, r, g, b)
 	end
 end
 
@@ -798,7 +799,7 @@ Tooltips.OnTooltipCleared = function(self, tooltip)
 	if (not tooltip) or (tooltip:IsForbidden()) then return end
 	local bar = GetTooltipStatusBar()
 	if (bar and bar:IsShown()) then
-		pcall(bar.Hide, bar)
+		API.SafeCall("Tooltips.Bar.Hide", bar.Hide, bar)
 	end
 end
 
@@ -864,13 +865,13 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 		return
 	end
 
-	local okColor, color = pcall(GetUnitColor, unit)
+	local okColor, color = API.TryCall(GetUnitColor, unit)
 	if (not okColor) then
 		color = nil
 	end
 	if (color) then
 
-		local okName, unitName, unitRealm = pcall(UnitName, unit)
+		local okName, unitName, unitRealm = API.TryCall(UnitName, unit)
 		if (not okName) then
 			return
 		end
@@ -881,11 +882,11 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 		local gray = Colors.quest.gray.colorCode
 		local levelText
 
-		local okPlayer, isPlayer = pcall(UnitIsPlayer, unit)
+		local okPlayer, isPlayer = API.TryCall(UnitIsPlayer, unit)
 		isPlayer = okPlayer and SafeBooleanValue(isPlayer)
 		if (isPlayer) then
 			if (unitRealm and unitRealm ~= "") then
-				local okRelationship, relationship = pcall(UnitRealmRelationship, unit)
+				local okRelationship, relationship = API.TryCall(UnitRealmRelationship, unit)
 				if (not okRelationship) then relationship = nil end
 				if (IsSecretValue(relationship)) then
 					relationship = nil
@@ -897,7 +898,7 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 					displayName = displayName ..gray..  _G.INTERACTIVE_SERVER_LABEL .."|r"
 				end
 			end
-			local okAFK, isAFK = pcall(UnitIsAFK, unit)
+			local okAFK, isAFK = API.TryCall(UnitIsAFK, unit)
 			isAFK = okAFK and SafeBooleanValue(isAFK)
 			if (isAFK) then
 				displayName = displayName ..gray.. " <" .. _G.AFK ..">|r"
@@ -1153,7 +1154,7 @@ Tooltips.SetDefaultAnchor = function(self, tooltip, parent)
 	end
 
 	local config = self.db.profile.savedPosition
-	local ok = pcall(function()
+	local ok = API.SafeCall("Tooltips.ApplySavedPosition", function()
 		local scale = tonumber(config.scale) or 1
 		if (scale <= 0) then
 			scale = 1
@@ -1214,19 +1215,19 @@ Tooltips.SetHooks = function(self)
 	if (TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType) then
 		if (self.db.profile.showSpellID and Enum.TooltipDataType.Spell and not PostCallRegistered.Spell) then
 			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Spell, function(tooltip, ...)
-				pcall(self.OnTooltipSetSpell, self, tooltip, ...)
+				API.SafeCall("Tooltips.OnTooltipSetSpell", self.OnTooltipSetSpell, self, tooltip, ...)
 			end)
 			PostCallRegistered.Spell = true
 		end
 		if (self.db.profile.showItemID and Enum.TooltipDataType.Item and not PostCallRegistered.Item) then
 			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, ...)
-				pcall(self.OnTooltipSetItem, self, tooltip, ...)
+				API.SafeCall("Tooltips.OnTooltipSetItem", self.OnTooltipSetItem, self, tooltip, ...)
 			end)
 			PostCallRegistered.Item = true
 		end
 		if (not PostCallRegistered.Unit and Enum.TooltipDataType.Unit) then
 			TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, ...)
-				pcall(self.OnTooltipSetUnit, self, tooltip, ...)
+				API.SafeCall("Tooltips.OnTooltipSetUnit", self.OnTooltipSetUnit, self, tooltip, ...)
 			end)
 			PostCallRegistered.Unit = true
 		end

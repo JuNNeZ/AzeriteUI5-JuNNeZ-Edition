@@ -29,7 +29,6 @@ ns.API = API
 
 -- Lua API
 local CreateFrame = CreateFrame
-local pcall = pcall
 local type = type
 
 local CreateFrameUnscaled = function(...)
@@ -43,7 +42,7 @@ local IsHouseEditorActive = function()
 	if (not isActive) then
 		return false
 	end
-	local ok, active = pcall(isActive)
+	local ok, active = API.TryCall(isActive)
 	return ok and active == true
 end
 

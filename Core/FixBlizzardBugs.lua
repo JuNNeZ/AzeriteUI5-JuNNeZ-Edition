@@ -25,6 +25,9 @@
 --]]
 local _, ns = ...
 
+local L = LibStub("AceLocale-3.0"):GetLocale((...))
+local API = ns.API
+
 -- GLOBALS: ChannelFrame
 -- GLOBALS: StaticPopupDialogs, StaticPopup_Show, ReloadUI, CANCEL
 
@@ -32,7 +35,7 @@ local _, ns = ...
 -- or it'll completely mess up the loading order.
 local LoadAddOnFunc = (C_AddOns and C_AddOns.LoadAddOn) or LoadAddOn
 if (LoadAddOnFunc) then
-	pcall(LoadAddOnFunc, "Blizzard_Channels")
+	API.SafeCall("LoadAddOn.Blizzard_Channels", LoadAddOnFunc, "Blizzard_Channels")
 end
 
 -- Kill off the non-stop voice chat error 17 on retail.
@@ -68,12 +71,12 @@ local function SetBlizzardRaidBarVisible(visible)
 		return
 	end
 	pendingRaidBarVisible = nil
-	pcall(manager.SetParent, manager, UIParent)
+	API.SafeCall("RaidBar.manager.SetParent", manager.SetParent, manager, UIParent)
 	if visible then
-		pcall(manager.Show, manager)
-		pcall(manager.SetAlpha, manager, 1)
+		API.SafeCall("RaidBar.manager.Show", manager.Show, manager)
+		API.SafeCall("RaidBar.manager.SetAlpha", manager.SetAlpha, manager, 1)
 	else
-		pcall(manager.Hide, manager)
+		API.SafeCall("RaidBar.manager.Hide", manager.Hide, manager)
 	end
 end
 
@@ -84,8 +87,8 @@ local function ShouldShowBlizzardRaidBar()
 		enabled = ns.GetModuleProfileValue("UnitFrames", "showBlizzardRaidBar", nil)
 	end
 	if (enabled == nil) and ns.GetModule then
-		local ok, unitFrames = pcall(ns.GetModule, ns, "UnitFrames", true)
-		if ok and unitFrames and unitFrames.db and unitFrames.db.profile then
+		local unitFrames = ns:GetModule("UnitFrames", true)
+		if unitFrames and unitFrames.db and unitFrames.db.profile then
 			enabled = unitFrames.db.profile.showBlizzardRaidBar
 		end
 	end
@@ -121,13 +124,14 @@ local SAFE_CASTBAR_TYPE_INFO = {
 	finishAnim = "StandardFinish"
 }
 
--- Generic wrapper: silently bail when the frame is inaccessible, pcall otherwise.
+-- Generic wrapper: bail when the frame is inaccessible, guard the call otherwise.
+-- Past the canaccesstable check a throw is unexpected, so it is reported.
 local function MakeSafeVoidMethod(origFunc)
 	return function(self, ...)
 		if (self and type(self) == "table" and not canaccesstable(self)) then
 			return
 		end
-		pcall(origFunc, self, ...)
+		API.SafeCall("SafeVoidMethod", origFunc, self, ...)
 	end
 end
 
@@ -136,7 +140,7 @@ local function MakeSafeGetTypeInfo(origFunc)
 		if (self and type(self) == "table" and not canaccesstable(self)) then
 			return SAFE_CASTBAR_TYPE_INFO
 		end
-		local ok, info = pcall(origFunc, self, ...)
+		local ok, info = API.TryCall(origFunc, self, ...)
 		if (ok and type(info) == "table" and (not canaccesstable or canaccesstable(info))) then
 			if (self and type(self) == "table") then
 				self.__AzUI_W12_LastTypeInfo = info
@@ -184,8 +188,8 @@ local function IsModuleEnabled(name, defaultValue)
 	if (not ns or not ns.GetModule) then
 		return defaultValue and true or false
 	end
-	local ok, module = pcall(ns.GetModule, ns, name, true)
-	if (not ok or not module) then
+	local module = ns:GetModule(name, true)
+	if (not module) then
 		return defaultValue and true or false
 	end
 	local enabled = module.db and module.db.profile and module.db.profile.enabled
@@ -244,16 +248,10 @@ end
 
 local function GetCVarBoolCompat(name)
 	if (_G.C_CVar and type(_G.C_CVar.GetCVarBool) == "function") then
-		local ok, value = pcall(_G.C_CVar.GetCVarBool, name)
-		if (ok) then
-			return value
-		end
+		return _G.C_CVar.GetCVarBool(name)
 	end
 	if (type(_G.GetCVarBool) == "function") then
-		local ok, value = pcall(_G.GetCVarBool, name)
-		if (ok) then
-			return value
-		end
+		return _G.GetCVarBool(name)
 	end
 	return nil
 end
@@ -281,7 +279,7 @@ local function LockToHiddenParent(frame, parent)
 		return
 	end
 	if (frame and frame.SetParent) then
-		pcall(frame.SetParent, frame, hiddenParent)
+		API.SafeCall("Quarantine.Reparent.SetParent", frame.SetParent, frame, hiddenParent)
 	end
 end
 
@@ -305,7 +303,7 @@ local function QuarantineSubElements(frame)
 			if (InCombatLockdown and InCombatLockdown() and child.IsProtected and child:IsProtected()) then
 				-- Protected children are handled by the out-of-combat reapply.
 			else
-				pcall(child.UnregisterAllEvents, child)
+				API.SafeCall("Quarantine.child.UnregisterAllEvents", child.UnregisterAllEvents, child)
 			end
 		end
 	end
@@ -331,25 +329,29 @@ local function QuarantineFrame(frameOrName, opts)
 	end
 
 	if (frame.UnregisterAllEvents) then
-		pcall(frame.UnregisterAllEvents, frame)
+		API.SafeCall("Quarantine.UnregisterAllEvents", frame.UnregisterAllEvents, frame)
 	end
 	QuarantineSubElements(frame)
 
 	if (frame.Hide) then
-		pcall(frame.Hide, frame)
+		API.SafeCall("Quarantine.Hide", frame.Hide, frame)
 	end
 	if (frame.HookScript and not quarantineHooked[frame]) then
 		quarantineHooked[frame] = true
 		frame:HookScript("OnShow", function(self)
 			if (self and self.Hide) then
-				pcall(self.Hide, self)
+				if (InCombatLockdown and InCombatLockdown() and self.IsProtected and self:IsProtected()) then
+					-- Expected lockdown; the out-of-combat reapply handles it.
+					return
+				end
+				API.SafeCall("Quarantine.OnShow.Hide", self.Hide, self)
 			end
 		end)
 	end
 
 	if (not opts.skipParent and frame.SetParent) then
 		local hiddenParent = GetQuarantineParent()
-		pcall(frame.SetParent, frame, hiddenParent)
+		API.SafeCall("Quarantine.SetParent", frame.SetParent, frame, hiddenParent)
 		if (opts.lockParent and not parentLockedFrames[frame]) then
 			parentLockedFrames[frame] = true
 			hooksecurefunc(frame, "SetParent", LockToHiddenParent)
@@ -399,13 +401,13 @@ local function GetFrameName(frame)
 		return nil
 	end
 	if (frame.GetDebugName) then
-		local ok, value = pcall(frame.GetDebugName, frame)
+		local ok, value = API.TryCall(frame.GetDebugName, frame)
 		if (ok and type(value) == "string") then
 			return value
 		end
 	end
 	if (frame.GetName) then
-		local ok, value = pcall(frame.GetName, frame)
+		local ok, value = API.TryCall(frame.GetName, frame)
 		if (ok and type(value) == "string") then
 			return value
 		end
@@ -507,11 +509,7 @@ local function GetRaidModule(name)
 	if (not ns or not ns.GetModule) then
 		return nil
 	end
-	local ok, module = pcall(ns.GetModule, ns, name, true)
-	if (ok) then
-		return module
-	end
-	return nil
+	return ns:GetModule(name, true)
 end
 
 local function GetCompactRaidHiddenMode()
@@ -532,7 +530,7 @@ local function GetCompactRaidHiddenMode()
 		end
 	end
 	if (toggle and type(toggle.GetChecked) == "function") then
-		local ok, checked = pcall(toggle.GetChecked, toggle)
+		local ok, checked = API.TryCall(toggle.GetChecked, toggle)
 		checked = ok and NormalizeBoolean(checked) or nil
 		if (checked ~= nil) then
 			return checked
@@ -562,9 +560,9 @@ local function GetCompactRaidHiddenMode()
 		for _, key in ipairs({ "IsShown", "HiddenMode", "IsHidden", "hideGroups" }) do
 			local ok, value
 			if (getter == _G.CompactRaidFrameManager_GetSetting) then
-				ok, value = pcall(getter, key)
+				ok, value = API.TryCall(getter, key)
 			else
-				ok, value = pcall(getter, manager, key)
+				ok, value = API.TryCall(getter, manager, key)
 			end
 			value = ok and NormalizeBoolean(value) or nil
 			if (value ~= nil) then
@@ -629,7 +627,7 @@ local function GetCompactRaidGroupFilter()
 
 	if (type(getFilterGroup) == "function") then
 		for i = 1, 8 do
-			local ok, enabled = pcall(getFilterGroup, i)
+			local ok, enabled = API.TryCall(getFilterGroup, i)
 			enabled = ok and NormalizeBoolean(enabled) or nil
 			if (enabled ~= false) then
 				table.insert(groups, tostring(i))
@@ -662,18 +660,18 @@ local function ApplyAzeriteRaidGroupFilter()
 		local module = GetRaidModule(moduleName)
 		local _, header = GetRaidModuleFrames(module)
 		if (module and module.UpdateHeader) then
-			pcall(module.UpdateHeader, module)
+			API.SafeCall("Raid.UpdateHeader", module.UpdateHeader, module)
 		elseif (header and header.SetAttribute) then
-			pcall(header.SetAttribute, header, "groupFilter", groupFilter)
+			API.SafeCall("Raid.header.SetAttribute", header.SetAttribute, header, "groupFilter", groupFilter)
 			if (module and module.ConfigureChildren) then
-				pcall(module.ConfigureChildren, module)
+				API.SafeCall("Raid.ConfigureChildren", module.ConfigureChildren, module)
 			end
 		end
 	end
 
 	local raid5Module = GetRaidModule("RaidFrame5")
 	if (raid5Module and raid5Module.UpdateHeader) then
-		pcall(raid5Module.UpdateHeader, raid5Module)
+		API.SafeCall("Raid5.UpdateHeader", raid5Module.UpdateHeader, raid5Module)
 	end
 end
 
@@ -687,10 +685,10 @@ local function ApplyAzeriteRaidGroupVisibility()
 		local module = GetRaidModule(moduleName)
 		local frame, header = GetRaidModuleFrames(module)
 		if (frame and frame.SetAlpha) then
-			pcall(frame.SetAlpha, frame, alpha)
+			API.SafeCall("Raid.frame.SetAlpha", frame.SetAlpha, frame, alpha)
 		end
 		if (header and header ~= frame and header.SetAlpha) then
-			pcall(header.SetAlpha, header, alpha)
+			API.SafeCall("Raid.header.SetAlpha", header.SetAlpha, header, alpha)
 		end
 	end
 end
@@ -791,12 +789,12 @@ end
 -- When Blizzard nameplate code runs in this tainted context,
 -- API calls like SetNamePlateHitTestFrame, C_UnitAuras, and
 -- TextStatusBar comparisons fail with secret/forbidden errors.
--- We hook at the top-level entry points to pcall the entire
+-- We hook at the top-level entry points to guard the entire
 -- nameplate setup, and guard specific problem functions.
 ----------------------------------------------------------------
 local function GuardNameplateFunctions()
 	-- Intentionally no-op on WoW12:
-	-- avoid pcall-replacing Blizzard nameplate / EditMode / party globals,
+	-- avoid guard-replacing Blizzard nameplate / EditMode / party globals,
 	-- because that makes AzeriteUI the caller and taint cascades outward.
 end
 
@@ -880,7 +878,7 @@ local function HookLayoutRefresh(frame)
 		}
 		for _, r in ipairs(refreshers) do
 			if (type(self[r.method]) == "function") then
-				local ok, v = pcall(self[r.method], self)
+				local ok, v = API.TryCall(self[r.method], self)
 				if (ok and IsCleanValue(v)) then
 					cache[r.key] = v
 				end
@@ -918,7 +916,7 @@ local function SeedGeometryCache(frame)
 	}
 	for _, info in ipairs(singleGetters) do
 		if (type(frame[info.method]) == "function") then
-			local ok, v = pcall(frame[info.method], frame)
+			local ok, v = API.TryCall(frame[info.method], frame)
 			if (ok and IsCleanValue(v)) then
 				cache[info.key] = v
 			end
@@ -926,7 +924,7 @@ local function SeedGeometryCache(frame)
 	end
 
 	if (type(frame.GetCenter) == "function") then
-		local ok, x, y = pcall(frame.GetCenter, frame)
+		local ok, x, y = API.TryCall(frame.GetCenter, frame)
 		if (ok and IsCleanValue(x) and IsCleanValue(y)) then
 			cache.centerX = x
 			cache.centerY = y
@@ -934,7 +932,7 @@ local function SeedGeometryCache(frame)
 	end
 
 	if (type(frame.GetRect) == "function") then
-		local ok, l, b, w, h = pcall(frame.GetRect, frame)
+		local ok, l, b, w, h = API.TryCall(frame.GetRect, frame)
 		if (ok and IsCleanValue(l) and IsCleanValue(b) and IsCleanValue(w) and IsCleanValue(h)) then
 			cache.left = l
 			cache.bottom = b
@@ -967,7 +965,7 @@ local function GetSafeGeometryValue(frame, method, cacheKey, fallback)
 	if (not frame or type(frame[method]) ~= "function") then
 		return fallback
 	end
-	local ok, val = pcall(frame[method], frame)
+	local ok, val = API.TryCall(frame[method], frame)
 	if (ok and IsCleanValue(val)) then
 		-- Also update cache while we're at it
 		local cache = GetGeometryCache(frame)
@@ -1063,7 +1061,7 @@ local function GuardItemDisplaySetup()
 end
 
 local function GuardWidgetSetups()
-	-- WoW 12: Do NOT wrap mixin methods with addon pcall wrappers.
+	-- WoW 12: Do NOT wrap mixin methods with addon guard wrappers.
 	-- Replacing mixin methods taints all values set during the call,
 	-- causing LayoutFrame secret-value errors and UpgradeItem taint.
 	-- Instead, hook post-Setup to cache geometry on dynamic tooltips.
@@ -1240,8 +1238,9 @@ local function PromptBlizzardFrameReload()
 	local key = "AZERITEUI_RESTORE_BLIZZARD_GROUP_FRAMES"
 	if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
 		StaticPopupDialogs[key] = {
-			text = "AzeriteUI hid Blizzard's group frames earlier this session and cannot bring them back on the fly.|n|nReload the interface to get them working again.",
-			button1 = "Reload UI",
+			text = L["AzeriteUI hid Blizzard's group frames earlier this session and cannot bring them back on the fly."]
+				.. "|n|n" .. L["Reload the interface to get them working again."],
+			button1 = L["Reload UI"],
 			button2 = CANCEL or "Cancel",
 			OnAccept = function() ReloadUI() end,
 			timeout = 0,
@@ -1382,7 +1381,7 @@ local function FlushPendingQuarantineFrames()
 	for frame in pairs(pendingReparentFrames) do
 		pendingReparentFrames[frame] = nil
 		if (frame and frame.SetParent) then
-			pcall(frame.SetParent, frame, GetQuarantineParent())
+			API.SafeCall("Quarantine.LockToHiddenParent", frame.SetParent, frame, GetQuarantineParent())
 		end
 	end
 end
@@ -1404,7 +1403,7 @@ local function GetObjectName(value)
 		return nil
 	end
 	if (type(value.GetName) == "function") then
-		local ok, name = pcall(value.GetName, value)
+		local ok, name = API.TryCall(value.GetName, value)
 		if (ok and type(name) == "string") then
 			return name
 		end
@@ -1538,13 +1537,13 @@ local function ApplyPlaterNamePlateAbsorbCleanup()
 			return
 		end
 		if (object.SetAlpha) then
-			pcall(object.SetAlpha, object, 0)
+			API.SafeCall("PlaterAbsorb.SetAlpha", object.SetAlpha, object, 0)
 		end
 		if (object.Hide) then
-			pcall(object.Hide, object)
+			API.SafeCall("PlaterAbsorb.Hide", object.Hide, object)
 		end
 		if (object.UnregisterAllEvents) then
-			pcall(object.UnregisterAllEvents, object)
+			API.SafeCall("PlaterAbsorb.UnregisterAllEvents", object.UnregisterAllEvents, object)
 		end
 	end
 
@@ -1644,7 +1643,7 @@ local function ApplyPlaterNamePlateAbsorbCleanup()
 			if (type(unit) ~= "string") then
 				return
 			end
-			local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
+			local ok, plate = API.TryCall(C_NamePlate.GetNamePlateForUnit, unit)
 			if (ok and plate) then
 				HidePlaterAbsorbVisualsForPlate(plate)
 				if (C_Timer) then

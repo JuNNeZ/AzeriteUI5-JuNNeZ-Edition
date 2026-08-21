@@ -30,6 +30,8 @@ local oUF = ns.oUF
 
 local PlayerFrameMod = ns:NewModule("PlayerFrame", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
+local API = ns.API
+
 -- Lua API
 local AbbreviateNumbers = AbbreviateNumbers
 local BreakUpLargeNumbers = BreakUpLargeNumbers
@@ -437,15 +439,22 @@ PlayerFrameMod.CreateAuraAnchors = function(self)
 	end)
 end
 
+-- Returns false when the move had to be skipped because of combat lockdown, so the
+-- caller can replay it on PLAYER_REGEN_ENABLED.
 local ApplySecondaryManaCrystalPosition = function(frame, savedPosition, scale)
 	local crystal = frame and frame.SecondaryManaCrystal
 	if (not crystal or not savedPosition or not savedPosition[1]) then
-		return
+		return true
+	end
+	-- The crystal is a child of the secure player frame, so these are protected calls.
+	if (InCombatLockdown()) then
+		return false
 	end
 	scale = (type(scale) == "number" and scale > 0) and scale or 1
 	crystal:SetScale(1)
 	crystal:ClearAllPoints()
 	crystal:SetPoint(savedPosition[1], UIParent, savedPosition[1], (savedPosition[2] or 0) / scale, (savedPosition[3] or 0) / scale)
+	return true
 end
 
 PlayerFrameMod.CreateSecondaryManaAnchor = function(self)
@@ -493,7 +502,11 @@ PlayerFrameMod.UpdateSecondaryManaAnchor = function(self)
 
 	local savedPosition = profile.secondaryManaSavedPosition
 	local scale = (profile.savedPosition and profile.savedPosition.scale) or frame:GetScale() or 1
-	ApplySecondaryManaCrystalPosition(frame, savedPosition, scale)
+	if (ApplySecondaryManaCrystalPosition(frame, savedPosition, scale)) then
+		self.secondaryManaAnchorPending = nil
+	else
+		self.secondaryManaAnchorPending = true
+	end
 
 	local anchor = self.secondaryManaAnchor
 	if (not anchor) then
@@ -555,9 +568,18 @@ PlayerFrameMod.UpdateAuraAnchors = function(self)
 	end
 	self.debuffAnchor:SetAnchorPointLocked(true)
 	if (savedPosition and savedPosition[1]) then
-		debuffAnchorTarget:SetScale(scale)
-		debuffAnchorTarget:ClearAllPoints()
-		debuffAnchorTarget:SetPoint(savedPosition[1], UIParent, savedPosition[1], (savedPosition[2] or 0) / scale, (savedPosition[3] or 0) / scale)
+		-- The debuff holder parents a native Blizzard aura container, which makes it
+		-- protected for positioning purposes: SetScale, ClearAllPoints and SetPoint are
+		-- all blocked in combat and raise ADDON_ACTION_BLOCKED. Defer to the combat drop
+		-- rather than firing a blocked call; the anchor above is addon-owned and safe.
+		if (InCombatLockdown()) then
+			self.auraAnchorsPending = true
+		else
+			self.auraAnchorsPending = nil
+			debuffAnchorTarget:SetScale(scale)
+			debuffAnchorTarget:ClearAllPoints()
+			debuffAnchorTarget:SetPoint(savedPosition[1], UIParent, savedPosition[1], (savedPosition[2] or 0) / scale, (savedPosition[3] or 0) / scale)
+		end
 	end
 end
 
@@ -611,9 +633,11 @@ PlayerFrameMod.PreAnchorEvent = function(self, event, ...)
 			UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)
 		end
 	elseif (event == "MFM_Dragging") then
-		if (self.incombat) then
-			return
-		end
+		-- No combat guard here: `self.incombat` was never assigned on this module, so
+		-- this branch has always run in combat. The protected calls it can reach are
+		-- guarded at their source in ApplySecondaryManaCrystalPosition and
+		-- UpdateAuraAnchors, which defer to PLAYER_REGEN_ENABLED. Dropping the position
+		-- save here instead would lose the drag the player just performed.
 		local anchor, point, x, y = ...
 		if (anchor == self.secondaryManaAnchor) then
 			UpdateSecondaryManaSavedPosition(self, anchor, point, x, y)
@@ -647,6 +671,14 @@ PlayerFrameMod.PostAnchorEvent = function(self, event, ...)
 	-- This preserves incremental aura updates via UNIT_AURA events during combat transitions.
 	if (event == "PLAYER_REGEN_ENABLED") then
 		UpdatePlayerDebuffShownState(self.frame)
+		-- Replay anchor work that had to be skipped because the frames involved are
+		-- protected while in combat.
+		if (self.auraAnchorsPending) then
+			self:UpdateAuraAnchors()
+		end
+		if (self.secondaryManaAnchorPending) then
+			self:UpdateSecondaryManaAnchor()
+		end
 		return
 	end
 
@@ -676,9 +708,8 @@ PlayerFrameMod.PostAnchorEvent = function(self, event, ...)
 	end
 
 	if (event == "MFM_Dragging") then
-		if (self.incombat) then
-			return
-		end
+		-- See the matching note in PreAnchorEvent: no combat guard, protected calls are
+		-- guarded at their source.
 		local anchor, point, x, y = ...
 		if (UpdatePlayerAuraSavedPosition(self, anchor, point, x, y)) then
 			return
@@ -781,7 +812,7 @@ local GetBarSparkPercent = function(element)
 		return percent
 	end
 	if (element.GetSecretPercent) then
-		local ok, value = pcall(element.GetSecretPercent, element)
+		local ok, value = API.TryCall(element.GetSecretPercent, element)
 		if (ok) then
 			percent = ClampSparkPercent(value)
 			if (percent ~= nil) then
@@ -901,18 +932,18 @@ local GetSafeDamageAbsorbFromCalculator = function(element, unit)
 		return nil
 	end
 	if (maxClampMode ~= nil and calculator.SetDamageAbsorbClampMode and not element.__AzeriteUI_AbsorbCalculatorClampModeApplied) then
-		pcall(calculator.SetDamageAbsorbClampMode, calculator, maxClampMode)
+		API.SafeCall("Player.calc.SetDamageAbsorbClampMode", calculator.SetDamageAbsorbClampMode, calculator, maxClampMode)
 		element.__AzeriteUI_AbsorbCalculatorClampModeApplied = true
 	end
-	local okUpdate = pcall(UnitGetDetailedHealPrediction, unit, nil, calculator)
+	local okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, nil, calculator)
 	if (not okUpdate) then
-		okUpdate = pcall(UnitGetDetailedHealPrediction, unit, "player", calculator)
+		okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, "player", calculator)
 	end
 	if (not okUpdate) then
 		return nil
 	end
 	if (calculator.GetPredictedValues) then
-		local okPredicted, predictedValues = pcall(calculator.GetPredictedValues, calculator)
+		local okPredicted, predictedValues = API.TryCall(calculator.GetPredictedValues, calculator)
 		if (okPredicted and type(predictedValues) == "table") then
 			local totalDamageAbsorbs = predictedValues.totalDamageAbsorbs
 			if (type(totalDamageAbsorbs) == "number" and (not issecretvalue or not issecretvalue(totalDamageAbsorbs))) then
@@ -923,7 +954,7 @@ local GetSafeDamageAbsorbFromCalculator = function(element, unit)
 	if (not calculator.GetDamageAbsorbs) then
 		return nil
 	end
-	local okAbsorb, absorb = pcall(calculator.GetDamageAbsorbs, calculator)
+	local okAbsorb, absorb = API.TryCall(calculator.GetDamageAbsorbs, calculator)
 	if (not okAbsorb or type(absorb) ~= "number" or (issecretvalue and issecretvalue(absorb))) then
 		return nil
 	end
@@ -936,11 +967,11 @@ local GetAbsorbFromPredictionValues = function(element)
 	end
 	local maxClampMode = Enum and Enum.UnitDamageAbsorbClampMode and Enum.UnitDamageAbsorbClampMode.MaximumHealth
 	if (maxClampMode ~= nil and element.values.SetDamageAbsorbClampMode and not element.__AzeriteUI_PredictionValuesClampModeApplied) then
-		pcall(element.values.SetDamageAbsorbClampMode, element.values, maxClampMode)
+		API.SafeCall("Player.values.SetDamageAbsorbClampMode", element.values.SetDamageAbsorbClampMode, element.values, maxClampMode)
 		element.__AzeriteUI_PredictionValuesClampModeApplied = true
 	end
 	if (element.values.GetPredictedValues) then
-		local okPredicted, predictedValues = pcall(element.values.GetPredictedValues, element.values)
+		local okPredicted, predictedValues = API.TryCall(element.values.GetPredictedValues, element.values)
 		if (okPredicted and type(predictedValues) == "table") then
 			local totalDamageAbsorbs = predictedValues.totalDamageAbsorbs
 			if (type(totalDamageAbsorbs) == "number" and (not issecretvalue or not issecretvalue(totalDamageAbsorbs))) then
@@ -951,7 +982,7 @@ local GetAbsorbFromPredictionValues = function(element)
 	if (not element.values.GetDamageAbsorbs) then
 		return nil
 	end
-	local okAbsorb, absorb = pcall(element.values.GetDamageAbsorbs, element.values)
+	local okAbsorb, absorb = API.TryCall(element.values.GetDamageAbsorbs, element.values)
 	if (not okAbsorb or type(absorb) ~= "number" or (issecretvalue and issecretvalue(absorb))) then
 		return nil
 	end
@@ -979,9 +1010,10 @@ local GetSafeStatusBarValue = function(bar)
 	end
 	local value
 	if (bar.GetValue) then
-		pcall(function()
-			value = bar:GetValue()
-		end)
+		local ok, current = API.TryCall(bar.GetValue, bar)
+		if (ok) then
+			value = current
+		end
 	end
 	if (type(value) ~= "number" or (issecretvalue and issecretvalue(value))) then
 		value = bar.safeCur or bar.cur or bar.safeBarValue
@@ -1360,7 +1392,7 @@ local FormatPlayerPowerShortText = function(value)
 		return nil
 	end
 	if (type(AbbreviateNumbers) == "function") then
-		local ok, formatted = pcall(AbbreviateNumbers, value)
+		local ok, formatted = API.TryCall(AbbreviateNumbers, value)
 		if (ok and formatted ~= nil) then
 			return tostring(formatted)
 		end
@@ -1376,10 +1408,12 @@ local FormatPlayerPowerFullText = function(value)
 end
 
 local ParseDisplayNumber = function(text)
-	if (type(text) ~= "string") then
+	-- A secret string can throw on gsub and comparison, so exclude it here;
+	-- what remains is a plain string the parser below can work on directly.
+	if (not API.IsSafeString(text)) then
 		return nil
 	end
-	local ok, parsed = pcall(function()
+	local ok, parsed = API.TryCall(function()
 		text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("%s+", "")
 		if (text == "") then
 			return nil
@@ -1416,15 +1450,17 @@ end
 
 local GetPlayerRawPowerPercent = function(unit, displayType)
 	local percent = nil
-	pcall(function()
-		if (UnitPowerPercent) then
-			if (CurveConstants and CurveConstants.ScaleTo100) then
-				percent = UnitPowerPercent(unit, displayType, true, CurveConstants.ScaleTo100)
-			else
-				percent = UnitPowerPercent(unit, displayType)
-			end
+	if (UnitPowerPercent) then
+		local ok, value
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			ok, value = API.TryCall(UnitPowerPercent, unit, displayType, true, CurveConstants.ScaleTo100)
+		else
+			ok, value = API.TryCall(UnitPowerPercent, unit, displayType)
 		end
-	end)
+		if (ok) then
+			percent = value
+		end
+	end
 	return percent
 end
 
@@ -1442,7 +1478,7 @@ local GetFormattedPlayerPowerValue = function(element, useFull)
 	local rawCur = UnitPower(unit, displayType)
 	local formatter = useFull and BreakUpLargeNumbers or AbbreviateNumbers
 	if (type(formatter) == "function") then
-		local ok, formatted = pcall(formatter, rawCur)
+		local ok, formatted = API.TryCall(formatter, rawCur)
 		if (ok and formatted ~= nil) then
 			local text = tostring(formatted)
 			local parsed = ParseDisplayNumber(text)
@@ -1485,23 +1521,23 @@ local TrySetPlayerElementValueTextFromRaw = function(element, formatMode)
 
 	if (formatMode == "percent") then
 		if (rawPercent ~= nil) then
-			return pcall(element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
+			return API.SafeCall("Player.PowerValue.SetFormattedText", element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
 		end
 	elseif (formatMode == "full") then
 		if (fullText ~= nil) then
-			return pcall(element.Value.SetFormattedText, element.Value, "%s", fullText)
+			return API.SafeCall("Player.PowerValue.SetFormattedText", element.Value.SetFormattedText, element.Value, "%s", fullText)
 		end
 	elseif (formatMode == "shortpercent") then
 		if (shortText ~= nil and rawPercent ~= nil) then
-			return pcall(element.Value.SetFormattedText, element.Value, "%s |cff888888(|r%d%%|cff888888)|r", shortText, rawPercent)
+			return API.SafeCall("Player.PowerValue.SetFormattedText", element.Value.SetFormattedText, element.Value, "%s |cff888888(|r%d%%|cff888888)|r", shortText, rawPercent)
 		elseif (shortText ~= nil) then
-			return pcall(element.Value.SetFormattedText, element.Value, "%s", shortText)
+			return API.SafeCall("Player.PowerValue.SetFormattedText", element.Value.SetFormattedText, element.Value, "%s", shortText)
 		elseif (rawPercent ~= nil) then
-			return pcall(element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
+			return API.SafeCall("Player.PowerValue.SetFormattedText", element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
 		end
 	else
 		if (shortText ~= nil) then
-			return pcall(element.Value.SetFormattedText, element.Value, "%s", shortText)
+			return API.SafeCall("Player.PowerValue.SetFormattedText", element.Value.SetFormattedText, element.Value, "%s", shortText)
 		end
 	end
 
@@ -1544,16 +1580,16 @@ local GetPlayerElementVisualPercent = function(element)
 	local texSize
 
 	if (orientation == "VERTICAL") then
-		local okBar, value = pcall(element.GetHeight, element)
-		local okTex, texValue = pcall(texture.GetHeight, texture)
+		local okBar, value = API.TryCall(element.GetHeight, element)
+		local okTex, texValue = API.TryCall(texture.GetHeight, texture)
 		if (not okBar or not okTex) then
 			return nil
 		end
 		barSize = value
 		texSize = texValue
 	else
-		local okBar, value = pcall(element.GetWidth, element)
-		local okTex, texValue = pcall(texture.GetWidth, texture)
+		local okBar, value = API.TryCall(element.GetWidth, element)
+		local okTex, texValue = API.TryCall(texture.GetWidth, texture)
 		if (not okBar or not okTex) then
 			return nil
 		end
@@ -1849,10 +1885,10 @@ local UpdateSecondaryManaCrystal = function(frame, unit)
 
 	local mana = UnitPower("player", POWER_TYPE_MANA)
 	local manaMax = UnitPowerMax("player", POWER_TYPE_MANA)
-	local barUpdated = pcall(function()
-		element:SetMinMaxValues(0, manaMax)
-		element:SetValue(mana)
-	end)
+	-- Bounds and value as separate reported steps; one shared guard here meant a
+	-- throw on the bounds silently skipped the value and hid the bar instead.
+	local barUpdated = API.SafeCall("PlayerMana.SetMinMaxValues", element.SetMinMaxValues, element, 0, manaMax)
+		and API.SafeCall("PlayerMana.SetValue", element.SetValue, element, mana)
 	if (not barUpdated) then
 		element:Hide()
 		return
@@ -1861,9 +1897,11 @@ local UpdateSecondaryManaCrystal = function(frame, unit)
 	element:Show()
 	local alphaUpdated = false
 	if (UnitPowerPercent and element.__AzeriteUI_VisibilityCurve) then
-		alphaUpdated = pcall(function()
-			element:SetAlpha(UnitPowerPercent("player", POWER_TYPE_MANA, true, element.__AzeriteUI_VisibilityCurve))
-		end)
+		-- Curve-driven alpha; the explicit alpha fallback below is a real branch.
+		local okPercent, curvePercent = API.TryCall(UnitPowerPercent, "player", POWER_TYPE_MANA, true, element.__AzeriteUI_VisibilityCurve)
+		if (okPercent) then
+			alphaUpdated = API.TryCall(element.SetAlpha, element, curvePercent)
+		end
 	end
 
 	local valuesAreSafe = type(mana) == "number"
@@ -1889,10 +1927,10 @@ local UpdateSecondaryManaCrystal = function(frame, unit)
 	end
 
 	if (element.Value and UnitPowerPercent) then
-		local textUpdated = pcall(function()
-			local curve = CurveConstants and CurveConstants.ScaleTo100 or nil
-			element.Value:SetFormattedText("%d", UnitPowerPercent("player", POWER_TYPE_MANA, true, curve))
-		end)
+		local curve = CurveConstants and CurveConstants.ScaleTo100 or nil
+		local okPercent, percentValue = API.TryCall(UnitPowerPercent, "player", POWER_TYPE_MANA, true, curve)
+		local textUpdated = okPercent
+			and API.SafeCall("PlayerMana.Value.SetFormattedText", element.Value.SetFormattedText, element.Value, "%d", percentValue)
 		if (not textUpdated) then
 			element.Value:SetText("")
 		end
@@ -2557,7 +2595,7 @@ local UnitFrame_UpdateTextures = function(self)
 			return
 		end
 		local safeSubLevel = ClampLayer(subLevel, defaultSubLevel)
-		pcall(texture.SetDrawLayer, texture, layerName, safeSubLevel)
+		API.SafeCall("Player.texture.SetDrawLayer", texture.SetDrawLayer, texture, layerName, safeSubLevel)
 	end
 	if (powerBarScaleX <= 0) then
 		powerBarScaleX = 1
@@ -3762,11 +3800,11 @@ PlayerFrameMod.CreateUnitFrames = function(self)
 
 	self.frame.Enable = function(self)
 		enabled = true
-		local ok = pcall(RegisterAttributeDriver, self, "unit", "[vehicleui]vehicle; player")
+		local ok = API.TryCall(RegisterAttributeDriver, self, "unit", "[vehicleui]vehicle; player")
 		if (not ok) then
 			-- Taint/lockdown fallback: keep the frame visible on player unit
 			-- and retry secure driver registration when combat ends.
-			pcall(self.SetAttribute, self, "unit", "player")
+			API.SafeCall("Player.Enable.SetAttribute", self.SetAttribute, self, "unit", "player")
 			PlayerFrameMod:RegisterEvent("PLAYER_REGEN_ENABLED", "RetryEnableDriver")
 		end
 		self:Show()
@@ -3774,7 +3812,7 @@ PlayerFrameMod.CreateUnitFrames = function(self)
 
 	self.frame.Disable = function(self)
 		enabled = false
-		pcall(UnregisterAttributeDriver, self, "unit")
+		API.SafeCall("Player.Disable.UnregisterAttributeDriver", UnregisterAttributeDriver, self, "unit")
 		self:Hide()
 	end
 
@@ -3795,8 +3833,8 @@ PlayerFrameMod.RetryEnableDriver = function(self)
 	if (not self.frame or not self.frame.IsEnabled or not self.frame:IsEnabled()) then
 		return
 	end
-	pcall(UnregisterAttributeDriver, self.frame, "unit")
-	pcall(RegisterAttributeDriver, self.frame, "unit", "[vehicleui]vehicle; player")
+	API.SafeCall("Player.Retry.UnregisterAttributeDriver", UnregisterAttributeDriver, self.frame, "unit")
+	API.SafeCall("Player.Retry.RegisterAttributeDriver", RegisterAttributeDriver, self.frame, "unit", "[vehicleui]vehicle; player")
 end
 
 PlayerFrameMod.Update = function(self)

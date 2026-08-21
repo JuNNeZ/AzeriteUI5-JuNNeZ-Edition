@@ -32,6 +32,7 @@ local hiddenBagControls = setmetatable({}, { __mode = "k" })
 local applyingAlpha = setmetatable({}, { __mode = "k" })
 local applyingMouse = setmetatable({}, { __mode = "k" })
 local applyingVisibility = setmetatable({}, { __mode = "k" })
+local deferredMouseFrames = setmetatable({}, { __mode = "k" })
 
 local HIDDEN_FRAME_NAMES = {
 	"MainMenuBar",
@@ -44,15 +45,21 @@ local HIDDEN_FRAME_NAMES = {
 	"MultiBar6",
 	"MultiBar7",
 	"BagsBar",
-	"MicroMenu",
-	"MicroMenuContainer",
-	"MicroButtonAndBagsBar",
 	"StanceBar",
 	"PossessActionBar",
 	"MultiCastActionBarFrame",
 	"PetActionBar",
 	"StatusTrackingBarManager",
 	"OverrideActionBar"
+}
+
+-- Kept apart from HIDDEN_FRAME_NAMES so the micro menu can be left alone when the
+-- player asks for Blizzard's own strip back. MicroButtonAndBagsBar carries the bag
+-- controls too, but those are suppressed separately by suppressNamedBagControls.
+local MICRO_MENU_FRAME_NAMES = {
+	"MicroMenu",
+	"MicroMenuContainer",
+	"MicroButtonAndBagsBar"
 }
 
 local MICRO_BUTTON_NAMES = {
@@ -86,11 +93,30 @@ local BLIZZARD_ACTION_BAR_ADDONS = {
 local disableMouseInput = function(frame)
 	if (not frame or applyingMouse[frame]) then return end
 
+	-- EnableMouse and friends are protected on a protected frame while in combat,
+	-- and these run as hooks, so Blizzard touching mouse state mid-fight would drag
+	-- us straight into ADDON_ACTION_BLOCKED. Defer to the combat drop instead; the
+	-- frame is already at alpha zero, so the only cost is that an invisible Blizzard
+	-- button could catch a click until the fight ends.
+	if (InCombatLockdown() and frame.IsProtected and frame:IsProtected()) then
+		deferredMouseFrames[frame] = true
+		return
+	end
+
 	applyingMouse[frame] = true
 	if (frame.EnableMouse) then frame:EnableMouse(false) end
 	if (frame.SetMouseClickEnabled) then frame:SetMouseClickEnabled(false) end
 	if (frame.SetMouseMotionEnabled) then frame:SetMouseMotionEnabled(false) end
 	applyingMouse[frame] = nil
+end
+
+-- Re-run whatever combat lockdown made us skip.
+local flushDeferredMouseFrames = function()
+	if (InCombatLockdown()) then return end
+	for frame in next, deferredMouseFrames do
+		deferredMouseFrames[frame] = nil
+		disableMouseInput(frame)
+	end
 end
 
 local quarantineFrame = function(frame)
@@ -203,7 +229,13 @@ BlizzardABDisabler.HideBlizzard = function(self)
 	for i=1,2 do
 		quarantineFrame(_G["PossessButton" .. i])
 	end
-	quarantineNamedFrames(MICRO_BUTTON_NAMES)
+	-- Leaving these alone is what gives the player Blizzard's bottom micro menu back.
+	-- The AzeriteUI cog wheel keeps working either way: its buttons are proxies that
+	-- run "/click <MicroButtonName>" rather than reparented Blizzard buttons.
+	if (not (ns.ShouldShowBlizzardMicroMenu and ns.ShouldShowBlizzardMicroMenu())) then
+		quarantineNamedFrames(MICRO_MENU_FRAME_NAMES)
+		quarantineNamedFrames(MICRO_BUTTON_NAMES)
+	end
 	suppressNamedBagControls()
 
 	if C_AddOns.IsAddOnLoaded("Blizzard_NewPlayerExperience") then
@@ -249,9 +281,14 @@ BlizzardABDisabler.OnInitialize = function(self)
 	if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return self:Disable() end
 end
 
+BlizzardABDisabler.OnCombatEnd = function(self)
+	flushDeferredMouseFrames()
+end
+
 BlizzardABDisabler.OnEnable = function(self)
 	self:HideBlizzard()
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnBlizzardUIReady")
 	self:RegisterEvent("ADDON_LOADED", "OnBlizzardUIReady")
+	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnCombatEnd")
 	ns.RegisterCallback(self, "Bartender_Handled", "OnBlizzardUIReady")
 end

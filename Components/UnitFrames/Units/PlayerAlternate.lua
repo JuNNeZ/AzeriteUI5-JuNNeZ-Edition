@@ -30,6 +30,8 @@ local oUF = ns.oUF
 
 local PlayerFrameAltMod = ns:NewModule("PlayerFrameAlternate", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
+local API = ns.API
+
 -- Lua API
 local next = next
 local string_gsub = string.gsub
@@ -187,12 +189,12 @@ local GetPlayerAlternateAbsorbFromPredictionValues = function(element)
 	local values = element.values
 	local maxClampMode = Enum and Enum.UnitDamageAbsorbClampMode and Enum.UnitDamageAbsorbClampMode.MaximumHealth
 	if (maxClampMode ~= nil and values.SetDamageAbsorbClampMode and not element.__AzeriteUI_PredictionValuesClampModeApplied) then
-		pcall(values.SetDamageAbsorbClampMode, values, maxClampMode)
+		API.SafeCall("PlayerAlt.values.SetDamageAbsorbClampMode", values.SetDamageAbsorbClampMode, values, maxClampMode)
 		element.__AzeriteUI_PredictionValuesClampModeApplied = true
 	end
 
 	if (values.GetPredictedValues) then
-		local okPredicted, predictedValues = pcall(values.GetPredictedValues, values)
+		local okPredicted, predictedValues = API.TryCall(values.GetPredictedValues, values)
 		if (okPredicted and type(predictedValues) == "table") then
 			local payload, knownZero, safeNumericAbsorb = ResolveAbsorbPayloadFromCandidate(predictedValues.totalDamageAbsorbs)
 			if (payload or knownZero) then
@@ -202,7 +204,7 @@ local GetPlayerAlternateAbsorbFromPredictionValues = function(element)
 	end
 
 	if (values.GetDamageAbsorbs) then
-		local okAbsorb, valuesAbsorb = pcall(values.GetDamageAbsorbs, values)
+		local okAbsorb, valuesAbsorb = API.TryCall(values.GetDamageAbsorbs, values)
 		if (okAbsorb) then
 			local payload, knownZero, safeNumericAbsorb = ResolveAbsorbPayloadFromCandidate(valuesAbsorb)
 			if (payload or knownZero) then
@@ -232,13 +234,13 @@ local GetPlayerAlternateAbsorbFromCalculator = function(element, unit)
 
 	local maxClampMode = Enum and Enum.UnitDamageAbsorbClampMode and Enum.UnitDamageAbsorbClampMode.MaximumHealth
 	if (maxClampMode ~= nil and calculator.SetDamageAbsorbClampMode and not element.__AzeriteUI_AbsorbCalculatorClampModeApplied) then
-		pcall(calculator.SetDamageAbsorbClampMode, calculator, maxClampMode)
+		API.SafeCall("PlayerAlt.calc.SetDamageAbsorbClampMode", calculator.SetDamageAbsorbClampMode, calculator, maxClampMode)
 		element.__AzeriteUI_AbsorbCalculatorClampModeApplied = true
 	end
 
-	local okUpdate = pcall(UnitGetDetailedHealPrediction, unit, nil, calculator)
+	local okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, nil, calculator)
 	if (not okUpdate) then
-		okUpdate = pcall(UnitGetDetailedHealPrediction, unit, "player", calculator)
+		okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, "player", calculator)
 	end
 	if (not okUpdate) then
 		return nil, false, nil
@@ -247,7 +249,7 @@ local GetPlayerAlternateAbsorbFromCalculator = function(element, unit)
 	local knownZero = false
 	local safeNumericAbsorb = nil
 	if (calculator.GetPredictedValues) then
-		local okPredicted, predictedValues = pcall(calculator.GetPredictedValues, calculator)
+		local okPredicted, predictedValues = API.TryCall(calculator.GetPredictedValues, calculator)
 		if (okPredicted and type(predictedValues) == "table") then
 			local payload, isKnownZero, safeNumeric = ResolveAbsorbPayloadFromCandidate(predictedValues.totalDamageAbsorbs)
 			if (payload) then
@@ -261,7 +263,7 @@ local GetPlayerAlternateAbsorbFromCalculator = function(element, unit)
 	end
 
 	if (calculator.GetDamageAbsorbs) then
-		local okAbsorb, calcAbsorb = pcall(calculator.GetDamageAbsorbs, calculator)
+		local okAbsorb, calcAbsorb = API.TryCall(calculator.GetDamageAbsorbs, calculator)
 		if (okAbsorb) then
 			local payload, isKnownZero, safeNumeric = ResolveAbsorbPayloadFromCandidate(calcAbsorb)
 			if (payload) then
@@ -361,19 +363,19 @@ local UpdatePlayerAlternateAbsorbState = function(element, unit, callbackAbsorb,
 	end
 
 	if (not IsSafeNumericAbsorb(safeMax) or safeMax <= 0) then
-		pcall(absorbBar.SetValue, absorbBar, 0)
+		API.SafeCall("PlayerAlt.absorbBar.Reset", absorbBar.SetValue, absorbBar, 0)
 		absorbBar:Hide()
 		return
 	end
 
 	local visualCap = safeMax * .4
 	if (visualCap <= 0) then
-		pcall(absorbBar.SetValue, absorbBar, 0)
+		API.SafeCall("PlayerAlt.absorbBar.Reset", absorbBar.SetValue, absorbBar, 0)
 		absorbBar:Hide()
 		return
 	end
 
-	pcall(absorbBar.SetMinMaxValues, absorbBar, 0, visualCap)
+	API.SafeCall("PlayerAlt.absorbBar.SetMinMaxValues", absorbBar.SetMinMaxValues, absorbBar, 0, visualCap)
 
 	if (absorbPayload ~= nil) then
 		if (IsSafeNumericAbsorb(absorbPayload)) then
@@ -383,17 +385,17 @@ local UpdatePlayerAlternateAbsorbState = function(element, unit, callbackAbsorb,
 			elseif (fallbackValue < 0) then
 				fallbackValue = 0
 			end
-			local okSet = pcall(absorbBar.SetValue, absorbBar, fallbackValue)
+			local okSet = API.TryCall(absorbBar.SetValue, absorbBar, fallbackValue)
 			if (okSet and fallbackValue > 0) then
 				absorbBar:Show()
 			else
-				pcall(absorbBar.SetValue, absorbBar, 0)
+				API.SafeCall("PlayerAlt.absorbBar.Reset", absorbBar.SetValue, absorbBar, 0)
 				absorbBar:Hide()
 			end
 		else
-			local okSet = pcall(absorbBar.SetValue, absorbBar, absorbPayload)
+			local okSet = API.TryCall(absorbBar.SetValue, absorbBar, absorbPayload)
 			if (not okSet) then
-				pcall(absorbBar.SetValue, absorbBar, 0)
+				API.SafeCall("PlayerAlt.absorbBar.Reset", absorbBar.SetValue, absorbBar, 0)
 				absorbBar:Hide()
 				return
 			end
@@ -420,7 +422,7 @@ local UpdatePlayerAlternateAbsorbState = function(element, unit, callbackAbsorb,
 		end
 	else
 		if (knownZero) then
-			pcall(absorbBar.SetValue, absorbBar, 0)
+			API.SafeCall("PlayerAlt.absorbBar.Reset", absorbBar.SetValue, absorbBar, 0)
 		end
 		absorbBar:Hide()
 	end

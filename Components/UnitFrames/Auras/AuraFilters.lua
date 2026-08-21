@@ -24,6 +24,7 @@
 
 --]]
 local _, ns = ...
+local API = ns.API
 
 if (not ns.IsRetail) then return end
 
@@ -80,7 +81,7 @@ local SafeIsAuraFilteredOut = function(unit, auraInstanceID, filter)
 	if (not unit or not auraInstanceID or not filter) then
 		return nil
 	end
-	local ok, res = pcall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, auraInstanceID, filter)
+	local ok, res = API.TryCall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, auraInstanceID, filter)
 	if (not ok or (IsSecret and IsSecret(res))) then
 		return nil
 	end
@@ -171,7 +172,7 @@ local HasDisplayedApplications = function(unit, data)
 	if (not unit or not auraInstanceID) then
 		return false
 	end
-	local ok, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, auraInstanceID, 2, 999)
+	local ok, displayCount = API.TryCall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, auraInstanceID, 2, 999)
 	if (not ok or (IsSecret and IsSecret(displayCount))) then
 		return false
 	end
@@ -189,7 +190,7 @@ local HasAnyDisplayedApplications = function(unit, data)
 	if (not unit or not auraInstanceID) then
 		return false
 	end
-	local ok, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, auraInstanceID, 1, 999)
+	local ok, displayCount = API.TryCall(C_UnitAuras.GetAuraApplicationDisplayCount, unit, auraInstanceID, 1, 999)
 	if (not ok or (IsSecret and IsSecret(displayCount))) then
 		return false
 	end

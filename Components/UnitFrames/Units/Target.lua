@@ -28,11 +28,12 @@ local oUF = ns.oUF
 
 local TargetFrameMod = ns:NewModule("TargetFrame", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
+local API = ns.API
+
 -- Lua API
 local AbbreviateNumbers = AbbreviateNumbers
 local BreakUpLargeNumbers = BreakUpLargeNumbers
 local next = next
-local pcall = pcall
 local string_match = string.match
 local string_gsub = string.gsub
 local type = type
@@ -230,7 +231,7 @@ local IsTargetBossUnit = function(unit, level, classification)
 		return false
 	end
 	if (type(UnitIsBossMob) == "function") then
-		local ok, isBoss = pcall(UnitIsBossMob, unit)
+		local ok, isBoss = API.TryCall(UnitIsBossMob, unit)
 		if (ok and isBoss == true) then
 			return true
 		end
@@ -295,22 +296,11 @@ local ClampTargetPowerLayer = function(value, defaultValue)
 	return numeric
 end
 
-local CanAccessTargetValue = function(value)
-	if (not issecretvalue or not issecretvalue(value)) then
-		return true
-	end
-	if (canaccessvalue) then
-		local ok, readable = pcall(canaccessvalue, value)
-		if (ok and readable) then
-			return true
-		end
-	end
-	return false
-end
-
-local IsSafeNumber = function(value)
-	return (type(value) == "number") and CanAccessTargetValue(value)
-end
+-- Consolidated onto API.CanAccess (Core/API/SecretValues.lua). This file used
+-- to keep its own copy that disagreed with the Arena one about values it could
+-- not probe; both now share the single strict definition.
+local CanAccessTargetValue = API.CanAccess
+local IsSafeNumber = API.IsSafeNumber
 
 local TargetAuraAnchorValues = {
 	TOPLEFT = true,
@@ -530,7 +520,7 @@ local GetTargetBarSparkPercent = function(element, percentOverride)
 		return percent
 	end
 	if (element.GetSecretPercent) then
-		local ok, value = pcall(element.GetSecretPercent, element)
+		local ok, value = API.TryCall(element.GetSecretPercent, element)
 		if (ok) then
 			percent = ClampTargetSparkPercent(value)
 			if (percent ~= nil) then
@@ -670,16 +660,16 @@ local UpdateTargetHealthFakeFillFromBar = function(health)
 		source = "unit"
 	end
 	if (type(percent) ~= "number") then
-		pcall(function()
-			local value = health:GetValue()
-			local _, maxValue = health:GetMinMaxValues()
-			local valueReadable = (type(value) == "number") and (not issecretvalue or not issecretvalue(value))
-			local maxValueReadable = (type(maxValue) == "number") and (not issecretvalue or not issecretvalue(maxValue))
-			if (valueReadable and maxValueReadable and maxValue > 0) then
-				percent = value / maxValue
-				source = "statusbar"
-			end
-		end)
+		-- Each bar read is its own guarded step; one throwing must not skip the
+		-- other, which the single shared guard here used to allow.
+		local okValue, value = API.TryCall(health.GetValue, health)
+		local okBounds, _, maxValue = API.TryCall(health.GetMinMaxValues, health)
+		local valueReadable = okValue and API.IsSafeNumber(value)
+		local maxValueReadable = okBounds and API.IsSafeNumber(maxValue)
+		if (valueReadable and maxValueReadable and maxValue > 0) then
+			percent = value / maxValue
+			source = "statusbar"
+		end
 	end
 	if (type(percent) ~= "number") then
 		local mirrorPercent = health.__AzeriteUI_MirrorPercent
@@ -696,7 +686,7 @@ local UpdateTargetHealthFakeFillFromBar = function(health)
 		end
 	end
 	if (type(percent) ~= "number" and type(UnitHealthPercent) == "function") then
-		local ok, value = pcall(UnitHealthPercent, unit, true, CurveConstants and CurveConstants.ZeroToOne or nil)
+		local ok, value = API.TryCall(UnitHealthPercent, unit, true, CurveConstants and CurveConstants.ZeroToOne or nil)
 		if (ok) then
 			percent = value
 			source = "api"
@@ -704,7 +694,7 @@ local UpdateTargetHealthFakeFillFromBar = function(health)
 	end
 	local applied = false
 	if (source) then
-		applied = pcall(ApplyTargetSimpleHealthFakeFillByPercent, health, percent)
+		applied = API.SafeCall("Target.ApplySimpleHealthFakeFill", ApplyTargetSimpleHealthFakeFillByPercent, health, percent)
 	elseif (percent == nil) then
 		applied = ApplyTargetSimpleHealthFakeFillByPercent(health, nil)
 	end
@@ -944,7 +934,7 @@ local ApplyTargetNativeCastVisualFromTimer = function(cast, durationPayload, sou
 	end
 	local direction = (cast.channeling and Enum and Enum.StatusBarTimerDirection and Enum.StatusBarTimerDirection.RemainingTime)
 		or (Enum and Enum.StatusBarTimerDirection and Enum.StatusBarTimerDirection.ElapsedTime)
-	local ok = pcall(cast.SetTimerDuration, cast, durationPayload, cast.smoothing, direction)
+	local ok = API.TryCall(cast.SetTimerDuration, cast, durationPayload, cast.smoothing, direction)
 	if (not ok) then
 		return false
 	end
@@ -1007,7 +997,7 @@ local GetTargetCastPercentFromDurationObject = function(cast, durationObject)
 
 	local curve = CurveConstants and CurveConstants.ZeroToOne or nil
 	if (cast.channeling and type(durationObject.EvaluateRemainingPercent) == "function") then
-		local okPercent, percent = pcall(durationObject.EvaluateRemainingPercent, durationObject, curve)
+		local okPercent, percent = API.TryCall(durationObject.EvaluateRemainingPercent, durationObject, curve)
 		percent = okPercent and NormalizeTargetCastPercent(percent) or nil
 		if (type(percent) == "number") then
 			return percent
@@ -1015,7 +1005,7 @@ local GetTargetCastPercentFromDurationObject = function(cast, durationObject)
 	end
 
 	if ((not cast.channeling) and type(durationObject.EvaluateElapsedPercent) == "function") then
-		local okPercent, percent = pcall(durationObject.EvaluateElapsedPercent, durationObject, curve)
+		local okPercent, percent = API.TryCall(durationObject.EvaluateElapsedPercent, durationObject, curve)
 		percent = okPercent and NormalizeTargetCastPercent(percent) or nil
 		if (type(percent) == "number") then
 			return percent
@@ -1023,7 +1013,7 @@ local GetTargetCastPercentFromDurationObject = function(cast, durationObject)
 	end
 
 	if (cast.channeling and type(durationObject.GetRemainingPercent) == "function") then
-		local okPercent, percent = pcall(durationObject.GetRemainingPercent, durationObject)
+		local okPercent, percent = API.TryCall(durationObject.GetRemainingPercent, durationObject)
 		percent = okPercent and NormalizeTargetCastPercent(percent) or nil
 		if (type(percent) == "number") then
 			return percent
@@ -1031,7 +1021,7 @@ local GetTargetCastPercentFromDurationObject = function(cast, durationObject)
 	end
 
 	if ((not cast.channeling) and type(durationObject.GetElapsedPercent) == "function") then
-		local okPercent, percent = pcall(durationObject.GetElapsedPercent, durationObject)
+		local okPercent, percent = API.TryCall(durationObject.GetElapsedPercent, durationObject)
 		percent = okPercent and NormalizeTargetCastPercent(percent) or nil
 		if (type(percent) == "number") then
 			return percent
@@ -1077,7 +1067,7 @@ local GetTargetCastPercentFromDurationPayload = function(cast, durationPayload)
 
 	-- Some duration payloads expose progress without curve evaluators.
 	if (durationPayload.GetProgress) then
-		local okProgress, progress = pcall(durationPayload.GetProgress, durationPayload)
+		local okProgress, progress = API.TryCall(durationPayload.GetProgress, durationPayload)
 		if (okProgress) then
 			return NormalizeTargetCastPercent(progress)
 		end
@@ -1259,18 +1249,18 @@ local GetSafeDamageAbsorbFromCalculator = function(element, unit)
 		return nil
 	end
 	if (maxClampMode ~= nil and calculator.SetDamageAbsorbClampMode and not element.__AzeriteUI_AbsorbCalculatorClampModeApplied) then
-		pcall(calculator.SetDamageAbsorbClampMode, calculator, maxClampMode)
+		API.SafeCall("Target.calc.SetDamageAbsorbClampMode", calculator.SetDamageAbsorbClampMode, calculator, maxClampMode)
 		element.__AzeriteUI_AbsorbCalculatorClampModeApplied = true
 	end
-	local okUpdate = pcall(UnitGetDetailedHealPrediction, unit, nil, calculator)
+	local okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, nil, calculator)
 	if (not okUpdate) then
-		okUpdate = pcall(UnitGetDetailedHealPrediction, unit, "player", calculator)
+		okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, "player", calculator)
 	end
 	if (not okUpdate) then
 		return nil
 	end
 	if (calculator.GetPredictedValues) then
-		local okPredicted, predictedValues = pcall(calculator.GetPredictedValues, calculator)
+		local okPredicted, predictedValues = API.TryCall(calculator.GetPredictedValues, calculator)
 		if (okPredicted and type(predictedValues) == "table") then
 			local totalDamageAbsorbs = predictedValues.totalDamageAbsorbs
 			if (type(totalDamageAbsorbs) == "number" and (not issecretvalue or not issecretvalue(totalDamageAbsorbs))) then
@@ -1281,7 +1271,7 @@ local GetSafeDamageAbsorbFromCalculator = function(element, unit)
 	if (not calculator.GetDamageAbsorbs) then
 		return nil
 	end
-	local okAbsorb, absorb = pcall(calculator.GetDamageAbsorbs, calculator)
+	local okAbsorb, absorb = API.TryCall(calculator.GetDamageAbsorbs, calculator)
 	if (not okAbsorb or type(absorb) ~= "number" or (issecretvalue and issecretvalue(absorb))) then
 		return nil
 	end
@@ -1294,7 +1284,7 @@ local GetAbsorbFromPredictionValues = function(element)
 	end
 	local maxClampMode = Enum and Enum.UnitDamageAbsorbClampMode and Enum.UnitDamageAbsorbClampMode.MaximumHealth
 	if (maxClampMode ~= nil and element.values.SetDamageAbsorbClampMode and not element.__AzeriteUI_PredictionValuesClampModeApplied) then
-		pcall(element.values.SetDamageAbsorbClampMode, element.values, maxClampMode)
+		API.SafeCall("Target.values.SetDamageAbsorbClampMode", element.values.SetDamageAbsorbClampMode, element.values, maxClampMode)
 		element.__AzeriteUI_PredictionValuesClampModeApplied = true
 	end
 	-- Retail 12.0.1 can stall in GetPredictedValues() on target prediction tables.
@@ -1302,7 +1292,7 @@ local GetAbsorbFromPredictionValues = function(element)
 	if (not element.values.GetDamageAbsorbs) then
 		return nil
 	end
-	local okAbsorb, absorb = pcall(element.values.GetDamageAbsorbs, element.values)
+	local okAbsorb, absorb = API.TryCall(element.values.GetDamageAbsorbs, element.values)
 	if (not okAbsorb or type(absorb) ~= "number" or (issecretvalue and issecretvalue(absorb))) then
 		return nil
 	end
@@ -1694,7 +1684,7 @@ local GetFormattedTargetPowerValue = function(element, useFull)
 	local rawCur = UnitPower(unit, displayType)
 	local formatter = useFull and BreakUpLargeNumbers or AbbreviateNumbers
 	if (type(formatter) == "function") then
-		local ok, formatted = pcall(formatter, rawCur)
+		local ok, formatted = API.TryCall(formatter, rawCur)
 		local formattedType = type(formatted)
 		if (ok and (formattedType == "string" or formattedType == "number")) then
 			return formatted
@@ -1709,7 +1699,7 @@ local GetFormattedTargetPowerValue = function(element, useFull)
 		safeCur = 0
 	end
 	if (type(formatter) == "function") then
-		local ok, formatted = pcall(formatter, safeCur)
+		local ok, formatted = API.TryCall(formatter, safeCur)
 		local formattedType = type(formatted)
 		if (ok and (formattedType == "string" or formattedType == "number")) then
 			return formatted
@@ -1729,15 +1719,17 @@ local GetTargetRawPowerPercent = function(element)
 		displayType = UnitPowerType(unit)
 	end
 	local percent = nil
-	pcall(function()
-		if (UnitPowerPercent) then
-			if (CurveConstants and CurveConstants.ScaleTo100) then
-				percent = UnitPowerPercent(unit, displayType, true, CurveConstants.ScaleTo100)
-			else
-				percent = UnitPowerPercent(unit, displayType)
-			end
+	if (UnitPowerPercent) then
+		local ok, value
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			ok, value = API.TryCall(UnitPowerPercent, unit, displayType, true, CurveConstants.ScaleTo100)
+		else
+			ok, value = API.TryCall(UnitPowerPercent, unit, displayType)
 		end
-	end)
+		if (ok) then
+			percent = value
+		end
+	end
 	if (type(percent) == "number" and issecretvalue and issecretvalue(percent)) then
 		return percent
 	end
@@ -1789,9 +1781,7 @@ UpdateTargetHealthPercentTag = function(frame)
 	if (not frame or not frame.Health or not frame.Health.Percent or not frame.Health.Percent.UpdateTag) then
 		return
 	end
-	pcall(function()
-		frame.Health.Percent:UpdateTag()
-	end)
+	API.SafeCall("Target.HealthPercent.UpdateTag", frame.Health.Percent.UpdateTag, frame.Health.Percent)
 end
 
 local UpdateTargetPowerValueText = function(frame)
@@ -1817,27 +1807,27 @@ local UpdateTargetPowerValueText = function(frame)
 
 	if (formatMode == "percent") then
 		if (hasPercent and powerValue.SetFormattedText) then
-			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
+			hasValue = API.SafeCall("Target.PowerValue.SetFormattedText", powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
 		end
 	elseif (formatMode == "full") then
 		if (hasFullText and powerValue.SetFormattedText) then
-			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%s", fullText)
+			hasValue = API.SafeCall("Target.PowerValue.SetFormattedText", powerValue.SetFormattedText, powerValue, "%s", fullText)
 		end
 	elseif (formatMode == "shortpercent") then
 		if (hasShortText and hasPercent and powerValue.SetFormattedText) then
-			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%s |cff888888(|r%d%%|cff888888)|r", shortText, rawPercent)
+			hasValue = API.SafeCall("Target.PowerValue.SetFormattedText", powerValue.SetFormattedText, powerValue, "%s |cff888888(|r%d%%|cff888888)|r", shortText, rawPercent)
 		elseif (hasShortText and powerValue.SetFormattedText) then
-			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%s", shortText)
+			hasValue = API.SafeCall("Target.PowerValue.SetFormattedText", powerValue.SetFormattedText, powerValue, "%s", shortText)
 		elseif (hasPercent and powerValue.SetFormattedText) then
-			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
+			hasValue = API.SafeCall("Target.PowerValue.SetFormattedText", powerValue.SetFormattedText, powerValue, "%d%%", rawPercent)
 		end
 	else
 		if (hasShortText and powerValue.SetFormattedText) then
-			hasValue = pcall(powerValue.SetFormattedText, powerValue, "%s", shortText)
+			hasValue = API.SafeCall("Target.PowerValue.SetFormattedText", powerValue.SetFormattedText, powerValue, "%s", shortText)
 		end
 	end
 	if (not hasValue and powerValue.SetText) then
-		pcall(powerValue.SetText, powerValue, "")
+		API.SafeCall("Target.PowerValue.SetText", powerValue.SetText, powerValue, "")
 	end
 	if (powerValue.SetAlpha) then
 		powerValue:SetAlpha(hasValue and GetTargetPowerValueAlpha() or 0)
@@ -1938,7 +1928,7 @@ local ShowTargetPortraitFallback = function(element, unit)
 	if (fallback) then
 		local ok = false
 		if (type(SetPortraitTexture) == "function") then
-			ok = pcall(SetPortraitTexture, fallback, unit)
+			ok = API.SafeCall("Target.Portrait.SetPortraitTexture", SetPortraitTexture, fallback, unit)
 		end
 		if (ok) then
 			fallback:Show()
@@ -1972,15 +1962,14 @@ local IsTargetPortraitSecretValue = function(value)
 	if (type(issecretvalue) ~= "function") then
 		return false
 	end
-	local ok, isSecret = pcall(issecretvalue, value)
-	return ok and isSecret == true
+	return issecretvalue(value) == true
 end
 
 local IsTargetPortraitModelReady = function(unit)
 	if (type(IsUnitModelReadyForUI) ~= "function") then
 		return true
 	end
-	local ok, isReady = pcall(IsUnitModelReadyForUI, unit)
+	local ok, isReady = API.TryCall(IsUnitModelReadyForUI, unit)
 	if (not ok or IsTargetPortraitSecretValue(isReady)) then
 		return false
 	end
@@ -1995,7 +1984,7 @@ local GetTargetPortraitCreatureID = function(unit)
 	if (type(UnitGUID) ~= "function" or type(unit) ~= "string" or unit == "") then
 		return nil
 	end
-	local ok, guid = pcall(UnitGUID, unit)
+	local ok, guid = API.TryCall(UnitGUID, unit)
 	if (not ok or IsTargetPortraitSecretValue(guid) or type(guid) ~= "string" or guid == "") then
 		return nil
 	end
@@ -2014,7 +2003,7 @@ local CanSetTargetPortraitModel = function(element, unit)
 		return false
 	end
 	if (type(element.CanSetUnit) == "function") then
-		local ok, canSetUnit = pcall(element.CanSetUnit, element, unit)
+		local ok, canSetUnit = API.TryCall(element.CanSetUnit, element, unit)
 		if (not ok or IsTargetPortraitSecretValue(canSetUnit) or canSetUnit == false) then
 			return false
 		end
@@ -2031,13 +2020,13 @@ local TrySetTargetPortraitModel = function(element, unit)
 	element:SetPosition(element.positionX or 0, element.positionY or 0, element.positionZ or 0)
 	element:SetRotation(element.rotation and element.rotation*degToRad or 0)
 	element:ClearModel()
-	local ok, success = pcall(element.SetUnit, element, unit)
+	local ok, success = API.SafeCall("Target.Portrait.SetUnit", element.SetUnit, element, unit)
 	if (not ok or success == false) then
 		element:ClearModel()
 		return false
 	end
 	if (type(element.GetDisplayInfo) == "function" and success ~= true) then
-		local okDisplay, displayID = pcall(element.GetDisplayInfo, element)
+		local okDisplay, displayID = API.TryCall(element.GetDisplayInfo, element)
 		if (not okDisplay or IsTargetPortraitSecretValue(displayID) or type(displayID) ~= "number" or displayID <= 0) then
 			element:ClearModel()
 			return false
@@ -2059,7 +2048,7 @@ local TrySetTargetPortraitCreatureModel = function(element, unit)
 	element:SetPosition(element.positionX or 0, element.positionY or 0, element.positionZ or 0)
 	element:SetRotation(element.rotation and element.rotation*degToRad or 0)
 	element:ClearModel()
-	local ok = pcall(element.SetCreature, element, creatureID)
+	local ok = API.SafeCall("Target.Portrait.SetCreature", element.SetCreature, element, creatureID)
 	if (not ok) then
 		element:ClearModel()
 		return false
@@ -2140,7 +2129,7 @@ GetTargetCastTimerPayload = function(cast)
 	if (not cast or not cast.GetTimerDuration) then
 		return nil
 	end
-	local okPayload, payload = pcall(cast.GetTimerDuration, cast)
+	local okPayload, payload = API.TryCall(cast.GetTimerDuration, cast)
 	if (not okPayload) then
 		return nil
 	end
@@ -2179,7 +2168,7 @@ local GetTargetCastRemainingFromPayload = function(durationPayload)
 			return durationPayload
 		end
 	elseif (durationPayload and durationPayload.GetRemainingDuration) then
-		local okRemaining, value = pcall(durationPayload.GetRemainingDuration, durationPayload)
+		local okRemaining, value = API.TryCall(durationPayload.GetRemainingDuration, durationPayload)
 		if (okRemaining and IsSafeNumber(value)) then
 			return value
 		end
@@ -2966,8 +2955,9 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 			self.Castbar.__AzeriteUI_TexturePercent = nil
 		end
 		if (self.Name and self.Name.UpdateTag) then
-			-- pcall: tag may return a secret, which can propagate through oUF wrapper
-			pcall(self.Name.UpdateTag, self.Name)
+			-- Guarded: the tag may return a secret that propagates through the
+			-- oUF wrapper. Reported so a name that stops updating is visible.
+			API.SafeCall("Target.Name.UpdateTag", self.Name.UpdateTag, self.Name)
 		end
 		-- Fallback: if the tag returned empty (secret value filtered out),
 		-- try setting the name directly via SetText which handles secrets.

@@ -371,7 +371,10 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 			fadeInCombat = {
 				name = L["Only show on mouseover"],
 				desc = L["Enable this to only show faded bars on mouseover, and not force them visible in combat."],
-				order = 10,
+				-- 11, matching GenerateBarOptions above. This read 10, the same order
+				-- as fadeAlone, so their positions were being settled by an alphabetical
+				-- tiebreak on the option key rather than by intent.
+				order = 11,
 				type = "toggle", width = "full",
 				hidden = function(info) return isdisabled(info) or not getsetting(info, "enableBarFading") end,
 				set = setter,
@@ -380,7 +383,7 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 			fadeFrom = {
 				name = L["Start Fading from"],
 				desc = L["Choose which button to start the fading from."],
-				order = 11,
+				order = 12,
 				type = "range", width = "full", min = 1, max = maxButtons or 12, step = 1,
 				hidden = function(info) return isdisabled(info) or not getsetting(info, "enableBarFading") end,
 				set = setter,
@@ -544,6 +547,67 @@ local GenerateOptions = function()
 		local id = tonumber((string_match(info[#info - 1],"(%d+)")))
 		local db = getmodule().db.profile
 		return db[option]
+	end
+
+	local getmicromenu = function()
+		return ns:GetModule("MicroMenu", true)
+	end
+
+	local micromenusetting = function(key, fallback)
+		local module = getmicromenu()
+		local profile = module and module.db and module.db.profile
+		if (not profile or profile[key] == nil) then
+			return fallback
+		end
+		return profile[key] and true or false
+	end
+
+	local GenerateMicroMenuOptions = function(order)
+		return {
+			name = L["Micro Menu"],
+			order = order,
+			type = "group",
+			args = {
+				description = {
+					name = L["The micro menu holds the buttons for your character sheet, spellbook, collections, group finder and the game menu. AzeriteUI replaces Blizzard's strip along the bottom of the screen with a cog wheel in the bottom right corner."],
+					order = 0,
+					type = "description",
+					fontSize = "medium"
+				},
+				enabled = {
+					name = L["Show AzeriteUI Cog Wheel"],
+					desc = L["Show the AzeriteUI cog wheel in the bottom right corner. Clicking it opens the micro menu."],
+					order = 1,
+					type = "toggle", width = "full",
+					set = function(info, val)
+						local module = getmicromenu()
+						if (not module or not module.db) then return end
+						module.db.profile.enabled = val
+						module:UpdateSettings()
+					end,
+					get = function(info) return micromenusetting("enabled", true) end
+				},
+				showBlizzardMicroMenu = {
+					name = L["Show Blizzard's Micro Menu"],
+					desc = L["Restore Blizzard's own micro menu along the bottom of the screen. This is independent of the cog wheel above, so you can use either or both."],
+					order = 2,
+					type = "toggle", width = "full",
+					set = function(info, val)
+						local module = getmicromenu()
+						if (not module or not module.db) then return end
+						module.db.profile.showBlizzardMicroMenu = val
+						module:UpdateSettings()
+					end,
+					get = function(info) return micromenusetting("showBlizzardMicroMenu", false) end
+				},
+				reloadNote = {
+					name = L["Both settings apply when the interface loads, so changing either one will ask you to reload."],
+					order = 3,
+					type = "description",
+					fontSize = "medium"
+				}
+			}
+		}
 	end
 
 	local options = {
@@ -738,6 +802,8 @@ local GenerateOptions = function()
 	end)
 
 	options.args["stancebar"] = stanceBarOptions
+
+	options.args["micromenu"] = GenerateMicroMenuOptions(50)
 
 	return options
 end

@@ -1071,6 +1071,11 @@ local GenerateOptions = function()
 		suboptions.args.elementHeader = {
 			name = L["Frame Elements"], order = 10, type = "header", hidden = isdisabled
 		}
+		suboptions.args.usePortraitSpecIcons = {
+			name = L["Show Specialization Icons"],
+			desc = L["Show each party member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."],
+			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 20, scope = "party" })
 		suboptions.args.showAuras = {
 			name = L["Show Auras"],

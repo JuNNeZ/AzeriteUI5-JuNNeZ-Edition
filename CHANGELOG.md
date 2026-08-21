@@ -12,6 +12,39 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.3.86-JuNNeZ (2026-08-21) - Micro Menu Toggle, Party Specialization Icons, and an Options Overhaul
+
+### Highlights
+
+- Added a toggle that brings Blizzard's own micro menu back along the bottom of the screen, at `/az -> Action Bars -> Micro Menu`. The AzeriteUI cog wheel in the bottom right corner now has its own toggle in the same place, and the two are independent, so you can run either or both.
+- Added an option to show each party member's specialization icon in place of their portrait, at `/az -> Unit Frame Settings -> Party -> Show Specialization Icons`.
+- Fixed AzeriteUI calling protected mouse methods on Blizzard's hidden action buttons during combat, which could raise `ADDON_ACTION_BLOCKED` whenever Blizzard touched their mouse state mid-fight.
+- Added `/azdebug taint`, which names the addon responsible for tainting Blizzard's action, pet and stance buttons.
+- Party specialization icons now resolve within a couple of seconds instead of up to six, and keep resolving during combat. Rejoining a group you were in earlier draws its icons immediately.
+- Every Explorer Mode option now has a tooltip. The four delay sliders previously gave no indication that their numbers were seconds, and the exit conditions and element toggles had no explanation at all.
+- Auras with no timer, such as Devotion Aura and the bonus event buffs, now show a full duration bar in the movable top-right aura header instead of an empty trough.
+- Fixed an `AzeriteUI tried to call the protected function 'Frame:SetScale()'` error when opening `/lock` during combat. Moving the player aura row or the secondary mana crystal while in combat now waits for the fight to end and then applies the position, instead of being blocked outright.
+
+### Internal
+
+- Replaced roughly 440 bare `pcall` guards across 27 files with `API.SafeCall` / `API.TryCall` from the new `Core/API/ProtectedCall.lua`. `SafeCall` routes a failed guarded call to the standard error handler so BugSack, BugGrabber, or Blizzard's error frame reports it with a call-site label, bursting three times per site and then throttling to one report per 60 seconds. `TryCall` remains silent and is reserved for guards whose failure is expected. Nothing in the addon should swallow an error without either fixing it or naming it.
+- Consolidated the secret-value accessibility check into `API.CanAccess`, with `API.IsSafeNumber`, `API.IsSafeString` and `API.IsSafeBool` wrappers in `Core/API/SecretValues.lua`. It replaces three private copies - `CanAccessValue` in `Components/UnitFrames/Functions.lua`, `CanAccessTargetValue` in `Units/Target.lua` and `IsArenaValueAccessible` in `Units/Arena.lua` - which had drifted apart: the arena copy returned true when both probe globals were absent while the target copy returned true when only `issecretvalue` was absent, so arena and target frames could disagree about the same value. The shared check never consults `canaccessvalue`.
+- Repaired the locale files. Ten strings that appear in the live interface had never been added to `enUS`, so they could not be translated in any language: the `/lock` help text, the movable-frame position and validation strings, the `Vehicle Seat` and `Widgets` anchor names, the tooltip `ID` label, and the player power color description, which had been reworded for the class-color option in `5.3.74` without the locale key following. Two entries had been destroyed by a bad global replace, collapsing pairs of real keys into `Enable Aura SoClass Powerr Key` in `ptBR` and a spliced action-bar/clock string in `zhTW`. Twenty-eight further translations were missing and falling back to English, mostly the Mana Orb and Demon Hunter Soul Fragment options, with `zhTW` also missing its Edit Mode and aura keys. All ten locales now carry every `enUS` key exactly once.
+- `disableMouseInput` in `HideBlizzard.lua` now defers to the combat drop when the target frame is protected and combat is active, with a weak-keyed pending set flushed on `PLAYER_REGEN_ENABLED`. It runs as a `hooksecurefunc` handler, so Blizzard changing mouse state on a protected action button in combat previously took us straight into a blocked protected call.
+- `GroupSpecCache` now advances the moment a reply arrives rather than on a fixed 1.5 second tick, with 0.5 seconds kept only as a floor between consecutive requests. It also drops the combat gate, since `NotifyInspect` is unprotected and gating on combat meant a group that zoned in and pulled could go a long time before anything resolved. `INSPECT_READY` is no longer filtered on our own pending request, so inspects triggered by other addons are harvested for free.
+- Fixed a stall in `GroupSpecCache`: `INSPECT_READY` is not guaranteed to arrive, and a dropped reply left the pending slot occupied permanently, halting every later lookup for the rest of the session. Pending requests now expire after three seconds.
+- Members who leave a group keep their cached specialization, marked stale, so a rejoin draws instantly and re-inspects in the background instead of starting from portraits again.
+- Localized the group frame reload prompt in `Core/FixBlizzardBugs.lua`, which had shipped as hardcoded English including its button label while every other user-facing string went through `AceLocale`.
+- Moved the new `Micro Menu` group to order 50 so it sits with the page-level Action Bars settings instead of after the stance bar.
+- Fixed a duplicated `order` in the numbered action bar options, where `fadeAlone` and `fadeInCombat` both sat at 10 so their on-screen positions were settled by an alphabetical tiebreak instead of by intent. They now read 10 and 11, matching the pet and stance bar generator they had drifted from.
+- `MicroMenu` gained a settings namespace, and the Blizzard micro menu frames moved out of `HIDDEN_FRAME_NAMES` into their own list so the quarantine can be skipped. The AzeriteUI popup is unaffected either way: its entries are proxies running `/click <MicroButtonName>`, not reparented Blizzard buttons.
+- Added `Components/UnitFrames/GroupSpecCache.lua`, a throttled inspect-backed specialization cache. There is no API that reports a group member's specialization, so it drives `NotifyInspect` and `INSPECT_READY` one unit at a time, skips units that are disconnected, out of range or not inspectable, retries failures no more than once every fifteen seconds, and drops members who leave. It stays dormant until an option asks for it.
+- `Core/Compatibility.lua` now adopts `ns.API` at file scope, because the TOC loads it ahead of `Core.xml`.
+- The top-right aura header's duration bar is now drawn inverted: a full-width aura-colored layer with an opaque dark spent layer growing over it from the right, bound with `Enum.StatusBarTimerDirection.ElapsedTime` and `SetReverseFill(true)`. Blizzard's `ApplyDurationBar` passes permanent auras a zero duration with no zero check, unlike the `ApplyDurationText` path beside it, and addons have no per-aura way to tell a permanent aura apart. Inverting the layers makes elapsed zero render as a full bar, leaving timed auras looking the same as before.
+
+Not yet released or verified in client. Expect this change to surface previously silent failures rather than hide them.
+
+
 ## 5.3.85-JuNNeZ (2026-08-20) - Group Frames in Arena, Reload Prompt, and the Blizzard Party Title
 
 ### Highlights

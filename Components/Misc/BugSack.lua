@@ -28,10 +28,10 @@ local Addon, ns = ...
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local BugSackClipboard = ns:NewModule("BugSackClipboard", "LibMoreEvents-1.0", "AceHook-3.0")
+local API = ns.API
 
 local ipairs = ipairs
 local math_max = math.max
-local pcall = pcall
 local string_format = string.format
 local string_rep = string.rep
 local table_concat = table.concat
@@ -87,7 +87,7 @@ local function AppendErrorField(lines, err, key, label)
 end
 
 local function SafeUnitExists(unit)
-	local ok, exists = pcall(UnitExists, unit)
+	local ok, exists = API.TryCall(UnitExists, unit)
 	if (not ok or IsSecretValue(exists)) then
 		return false
 	end
@@ -99,7 +99,7 @@ local function ShouldUnitIdentityBeSecret(unit)
 		return false
 	end
 
-	local ok, isSecret = pcall(C_Secrets.ShouldUnitIdentityBeSecret, unit)
+	local ok, isSecret = API.TryCall(C_Secrets.ShouldUnitIdentityBeSecret, unit)
 	if (not ok or IsSecretValue(isSecret)) then
 		return true
 	end
@@ -116,9 +116,9 @@ local function GetSafeTargetContext()
 		return "Secret target"
 	end
 
-	local okName, unitName = pcall(UnitName, "target")
-	local okLevel, unitLevel = pcall(UnitLevel, "target")
-	local okClass, unitClass = pcall(UnitClass, "target")
+	local okName, unitName = API.TryCall(UnitName, "target")
+	local okLevel, unitLevel = API.TryCall(UnitLevel, "target")
+	local okClass, unitClass = API.TryCall(UnitClass, "target")
 	if (not okName) then unitName = nil end
 	if (not okLevel) then unitLevel = nil end
 	if (not okClass) then unitClass = nil end
@@ -161,7 +161,7 @@ local function GetSessionSnapshot(sessionId, label)
 			AppendErrorField(errorLines, err, "source", "Source")
 			AppendErrorField(errorLines, err, "index", "Index")
 		end
-		local ok, formatted = pcall(bugSack.FormatError, bugSack, err)
+		local ok, formatted = API.TryCall(bugSack.FormatError, bugSack, err)
 		if ok and not IsSecretValue(formatted) and type(formatted) == "string" and formatted ~= "" then
 			errorLines[#errorLines + 1] = StripColorMarkup(formatted)
 		else
@@ -189,11 +189,11 @@ local function GetSessionSnapshot(sessionId, label)
 		       "\nContext Info:",
 		"  • Player: Level " .. tostring(UnitLevel("player") or "?") .. ", Faction: " .. tostring(UnitFactionGroup("player") or "?"),
 		"  • Zone: " .. string_format("%s / %s", GetRealZoneText() or "?", GetSubZoneText() or "?"),
-		"  • Instance: " .. (function() local ok, result = pcall(function() local inInstance, instType = IsInInstance(); if inInstance then local name, _, diff, _, _, _, id = GetInstanceInfo(); return string_format("%s (%s, %s, ID: %s)", name or "?", instType or "?", tostring(diff or "?"), tostring(id or "?")); else return "None"; end end); return ok and result or "?"; end)(),
+		"  • Instance: " .. (function() local ok, result = API.TryCall(function() local inInstance, instType = IsInInstance(); if inInstance then local name, _, diff, _, _, _, id = GetInstanceInfo(); return string_format("%s (%s, %s, ID: %s)", name or "?", instType or "?", tostring(diff or "?"), tostring(id or "?")); else return "None"; end end); return ok and result or "?"; end)(),
 		"  • Group: " .. string_format("%s, Raid: %s, Size: %s", IsInGroup() and "Yes" or "No", IsInRaid() and "Yes" or "No", tostring(GetNumGroupMembers())),
 		"  • Target: " .. GetSafeTargetContext(),
 		"  • Combat: " .. string_format("%s, Resting: %s, Dead: %s", UnitAffectingCombat("player") and "Yes" or "No", IsResting() and "Yes" or "No", UnitIsDeadOrGhost("player") and "Yes" or "No"),
-		"  • UI: " .. (function() local ok, result = pcall(function() return string_format("Scale %.2f, Locale %s, Resolution %s", (tonumber(GetCVar("uiScale")) or 1), GetLocale(), tostring(GetScreenWidth()) .. "x" .. tostring(GetScreenHeight())); end); return ok and result or "?"; end)(),
+		"  • UI: " .. (function() local ok, result = API.TryCall(function() return string_format("Scale %.2f, Locale %s, Resolution %s", (tonumber(GetCVar("uiScale")) or 1), GetLocale(), tostring(GetScreenWidth()) .. "x" .. tostring(GetScreenHeight())); end); return ok and result or "?"; end)(),
 		"\nAddOns:",
 		"  • " .. (function() local t = {}; for i=1,GetNumAddOns() do if GetAddOnEnableState(nil,i)>0 then local n,v=GetAddOnInfo(i),GetAddOnMetadata(i,"Version"); t[#t+1]=n..(v and (" v"..v) or ""); end end return table_concat(t, ", "); end)(),
 		"\nAzeriteUI Debug:",
@@ -269,7 +269,7 @@ BugSackClipboard.CreateCopyWindow = function(self)
 		end
 		local lineCount = 1
 		if (box.GetNumLines) then
-			local okLines, value = pcall(box.GetNumLines, box)
+			local okLines, value = API.TryCall(box.GetNumLines, box)
 			if (okLines and type(value) == "number" and value > 0) then
 				lineCount = value
 			end

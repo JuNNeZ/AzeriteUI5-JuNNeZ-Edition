@@ -12,6 +12,7 @@
 --]]
 
 local _, ns = ...
+local API = ns.API
 if (not ns or not ns.WoW11) then return end -- Retail only
 
 -- Local print with optional debug flag
@@ -52,7 +53,7 @@ local function DisableOUFAlternativePower()
     end
     for _, obj in ipairs(oUF.objects) do
         if type(obj.DisableElement) == "function" then
-            local ok, err = pcall(obj.DisableElement, obj, "AlternativePower")
+            local ok, err = API.TryCall(obj.DisableElement, obj, "AlternativePower")
             if not ok then SBFPrint("DisableElement error: " .. tostring(err)) end
         end
     end
@@ -90,7 +91,7 @@ local function RestoreAndInitPlayerPowerBarAlt()
     -- Invoke Blizzard handler defensively to initialize barInfo
     local onEvent = alt:GetScript("OnEvent")
     if type(onEvent) == "function" then
-        local ok, err = pcall(onEvent, alt, "UNIT_POWER_BAR_SHOW", "player")
+        local ok, err = API.TryCall(onEvent, alt, "UNIT_POWER_BAR_SHOW", "player")
         if not ok then SBFPrint("OnEvent error: " .. tostring(err)) end
     end
 

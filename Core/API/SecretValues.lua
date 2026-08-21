@@ -38,6 +38,39 @@ end
 -- Expose helper for other modules
 API.IsSecret = IsSecret
 
+--[[
+	Canonical "is this value safe for addon-side logic" check.
+
+	This deliberately does NOT consult canaccessvalue. Treating a secret value as
+	readable invites two problems: canaccessvalue can recurse into a stack
+	overflow on some value shapes, and a value that reports readable at check
+	time can still throw when it is later used in arithmetic or a comparison.
+	Refusing every secret value costs us only a fallback path, never a bad read.
+
+	Previously duplicated three times with divergent semantics as
+	CanAccessValue (UnitFrames/Functions), CanAccessTargetValue (Units/Target)
+	and IsArenaValueAccessible (Units/Arena). The Arena copy additionally
+	returned true when both probe globals were absent while the Target copy
+	returned true when only issecretvalue was absent -- a divergence that made
+	arena and target frames disagree about the same value. Do not re-fork this.
+]]
+API.CanAccess = function(value)
+	return not IsSecret(value)
+end
+
+-- Typed convenience wrappers over API.CanAccess.
+API.IsSafeNumber = function(value)
+	return (type(value) == "number") and (not IsSecret(value))
+end
+
+API.IsSafeString = function(value)
+	return (type(value) == "string") and (not IsSecret(value))
+end
+
+API.IsSafeBool = function(value)
+	return (type(value) == "boolean") and (not IsSecret(value))
+end
+
 API.SafeNumber = function(value, cache, key, fallback)
 	if (type(value) == "number" and not IsSecret(value)) then
 		if (cache and key) then

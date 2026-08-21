@@ -26,6 +26,7 @@
 local _, ns = ...
 
 local MinimapMod = ns:NewModule("Minimap", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0", "AceTimer-3.0", "AceConsole-3.0")
+local API = ns.API
 
 --local LibDD = LibStub("LibUIDropDownMenu-4.0")
 
@@ -388,7 +389,7 @@ local function EnsureTrackingProxy()
 
 	Mixin(proxy, trackingMixin)
 	if (proxy.OnLoad) then
-		pcall(proxy.OnLoad, proxy)
+		API.SafeCall("Minimap.trackingProxy.OnLoad", proxy.OnLoad, proxy)
 	end
 	if (proxy.OnEvent) then
 		proxy:SetScript("OnEvent", proxy.OnEvent)
@@ -404,9 +405,9 @@ local OpenTrackingContextMenu = function(anchor)
 			return true
 		end
 		if (Menu and Menu.GetManager) then
-			local okManager, manager = pcall(Menu.GetManager)
+			local okManager, manager = API.TryCall(Menu.GetManager)
 			if (okManager and manager and manager.GetOpenMenu) then
-				local okMenu, openMenu = pcall(manager.GetOpenMenu, manager)
+				local okMenu, openMenu = API.TryCall(manager.GetOpenMenu, manager)
 				if (okMenu and openMenu and openMenu.IsShown and openMenu:IsShown()) then
 					return true
 				end
@@ -428,31 +429,31 @@ local OpenTrackingContextMenu = function(anchor)
 			return false
 		end
 		if (buttonObject.OpenMenu) then
-			local ok = pcall(buttonObject.OpenMenu, buttonObject)
+			local ok = API.TryCall(buttonObject.OpenMenu, buttonObject)
 			if (ok and IsTrackingMenuVisible(buttonObject)) then
 				return true
 			end
 		end
 		if (MenuUtil and MenuUtil.CreateContextMenu and buttonObject.menuGenerator) then
-			local ok = pcall(MenuUtil.CreateContextMenu, anchor or Minimap, buttonObject.menuGenerator)
+			local ok = API.TryCall(MenuUtil.CreateContextMenu, anchor or Minimap, buttonObject.menuGenerator)
 			if (ok and IsTrackingMenuVisible(buttonObject)) then
 				return true
 			end
 		end
 		if (buttonObject.OnMouseDown) then
-			local ok = pcall(buttonObject.OnMouseDown, buttonObject, "RightButton")
+			local ok = API.TryCall(buttonObject.OnMouseDown, buttonObject, "RightButton")
 			if (ok and IsTrackingMenuVisible(buttonObject)) then
 				return true
 			end
 		end
 		if (buttonObject.OnClick) then
-			local ok = pcall(buttonObject.OnClick, buttonObject, "RightButton")
+			local ok = API.TryCall(buttonObject.OnClick, buttonObject, "RightButton")
 			if (ok and IsTrackingMenuVisible(buttonObject)) then
 				return true
 			end
 		end
 		if (buttonObject.Click) then
-			local ok = pcall(buttonObject.Click, buttonObject, "RightButton")
+			local ok = API.TryCall(buttonObject.Click, buttonObject, "RightButton")
 			if (ok and IsTrackingMenuVisible(buttonObject)) then
 				return true
 			end
@@ -465,7 +466,7 @@ local OpenTrackingContextMenu = function(anchor)
 	if (OpenAndCheck(EnsureTrackingProxy()) or OpenAndCheck(GetTrackingButton())) then
 		return true
 	end
-	local okBlizzard = pcall(Minimap_OnClick, Minimap, "RightButton")
+	local okBlizzard = API.TryCall(Minimap_OnClick, Minimap, "RightButton")
 	if (okBlizzard and IsTrackingMenuVisible()) then
 		return true
 	end

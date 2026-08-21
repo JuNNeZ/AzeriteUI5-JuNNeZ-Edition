@@ -30,6 +30,8 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local ClassPowerMod = ns:NewModule("PlayerClassPowerFrame", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
+local API = ns.API
+
 -- Lua API
 local math_floor = math.floor
 local math_abs = math.abs
@@ -125,10 +127,12 @@ local ShouldShowElementalSwapBarValue = function()
 end
 
 local ParseElementalDisplayNumber = function(text)
-	if (type(text) ~= "string") then
+	-- A secret string can throw on gsub and comparison, so exclude it here;
+	-- what remains is a plain string the parser below can work on directly.
+	if (not API.IsSafeString(text)) then
 		return nil
 	end
-	local ok, parsed = pcall(function()
+	local ok, parsed = API.TryCall(function()
 		text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("%s+", "")
 		if (text == "") then
 			return nil
@@ -163,15 +167,17 @@ end
 
 local GetElementalRawPowerPercent = function(unit, displayType)
 	local percent = nil
-	pcall(function()
-		if (UnitPowerPercent) then
-			if (CurveConstants and CurveConstants.ScaleTo100) then
-				percent = UnitPowerPercent(unit, displayType, true, CurveConstants.ScaleTo100)
-			else
-				percent = UnitPowerPercent(unit, displayType)
-			end
+	if (UnitPowerPercent) then
+		local ok, value
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			ok, value = API.TryCall(UnitPowerPercent, unit, displayType, true, CurveConstants.ScaleTo100)
+		else
+			ok, value = API.TryCall(UnitPowerPercent, unit, displayType)
 		end
-	end)
+		if (ok) then
+			percent = value
+		end
+	end
 	return percent
 end
 
@@ -179,7 +185,7 @@ local GetElementalFormattedPowerValue = function(unit, displayType, useFull)
 	local rawCur = UnitPower(unit, displayType)
 	local formatter = useFull and BreakUpLargeNumbers or AbbreviateNumbers
 	if (type(formatter) == "function") then
-		local ok, formatted = pcall(formatter, rawCur)
+		local ok, formatted = API.TryCall(formatter, rawCur)
 		if (ok and formatted ~= nil) then
 			local text = tostring(formatted)
 			local parsed = ParseElementalDisplayNumber(text)
@@ -201,7 +207,7 @@ local FormatElementalSwapBarShortValue = function(value)
 	end
 	local rounded = math_floor(value + .5)
 	if (type(AbbreviateNumbers) == "function") then
-		local ok, formatted = pcall(AbbreviateNumbers, rounded)
+		local ok, formatted = API.TryCall(AbbreviateNumbers, rounded)
 		if (ok and formatted ~= nil) then
 			return tostring(formatted)
 		end
@@ -270,23 +276,23 @@ local ElementalSwapBar_PostUpdate = function(element, unit)
 		if (showValue) then
 			if (formatMode == "percent") then
 				if (rawPercent ~= nil and element.Value.SetFormattedText) then
-					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
+					usedRaw = API.SafeCall("ClassPower.Value.SetFormattedText", element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
 				end
 			elseif (formatMode == "full") then
 				if (rawFullText ~= nil and element.Value.SetFormattedText) then
-					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%s", rawFullText)
+					usedRaw = API.SafeCall("ClassPower.Value.SetFormattedText", element.Value.SetFormattedText, element.Value, "%s", rawFullText)
 				end
 			elseif (formatMode == "shortpercent") then
 				if (rawShortText ~= nil and rawPercent ~= nil and element.Value.SetFormattedText) then
-					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%s |cff888888(|r%d%%|cff888888)|r", rawShortText, rawPercent)
+					usedRaw = API.SafeCall("ClassPower.Value.SetFormattedText", element.Value.SetFormattedText, element.Value, "%s |cff888888(|r%d%%|cff888888)|r", rawShortText, rawPercent)
 				elseif (rawShortText ~= nil and element.Value.SetFormattedText) then
-					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%s", rawShortText)
+					usedRaw = API.SafeCall("ClassPower.Value.SetFormattedText", element.Value.SetFormattedText, element.Value, "%s", rawShortText)
 				elseif (rawPercent ~= nil and element.Value.SetFormattedText) then
-					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
+					usedRaw = API.SafeCall("ClassPower.Value.SetFormattedText", element.Value.SetFormattedText, element.Value, "%d%%", rawPercent)
 				end
 			else
 				if (rawShortText ~= nil and element.Value.SetFormattedText) then
-					usedRaw = pcall(element.Value.SetFormattedText, element.Value, "%s", rawShortText)
+					usedRaw = API.SafeCall("ClassPower.Value.SetFormattedText", element.Value.SetFormattedText, element.Value, "%s", rawShortText)
 				end
 			end
 		end

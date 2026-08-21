@@ -31,6 +31,8 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local ArenaFrameMod = ns:NewModule("ArenaFrames", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
+local API = ns.API
+
 -- GLOBALS: C_CreatureInfo, C_PvP, C_TooltipInfo, CreateFrame, InCombatLockdown, Enum, IsInInstance, IsUnitModelReadyForUI, SetPortraitTexture
 -- GLOBALS: GetArenaOpponentSpec, GetNumArenaOpponentSpecs, GetNumClasses, GetNumSpecializationsForClassID
 -- GLOBALS: GetSpecializationInfoByID, GetSpecializationInfoForClassID, RegisterAttributeDriver, UnregisterAttributeDriver
@@ -45,7 +47,6 @@ local math_min = math.min
 local math_ceil = math.ceil
 local math_pi = math.pi
 local next = next
-local pcall = pcall
 local select = select
 local setmetatable = setmetatable
 local string_gsub = string.gsub
@@ -145,21 +146,11 @@ local Health_PostUpdate = function(element, unit, cur, max)
 	end
 end
 
-local IsArenaValueAccessible = function(value)
-	if (type(canaccessvalue) == "function") then
-		local ok, canAccess = pcall(canaccessvalue, value)
-		if (not ok or canAccess ~= true) then
-			return false
-		end
-	end
-	if (type(issecretvalue) == "function") then
-		local ok, isSecret = pcall(issecretvalue, value)
-		if (not ok or isSecret == true) then
-			return false
-		end
-	end
-	return true
-end
+-- Consolidated onto API.CanAccess (Core/API/SecretValues.lua). The old local
+-- copy returned true when both probe globals were absent while the Target copy
+-- returned true when only issecretvalue was absent, so the two files disagreed
+-- about the same value. Both now share the single strict definition.
+local IsArenaValueAccessible = API.CanAccess
 
 local ResetArenaOpponentInfo = function(owner)
 	if (not owner) then
@@ -183,7 +174,7 @@ local GetArenaTooltipSpecIDs = function()
 		return lookup
 	end
 
-	local okClasses, numClasses = pcall(GetNumClasses)
+	local okClasses, numClasses = API.TryCall(GetNumClasses)
 	if (not okClasses or not IsArenaValueAccessible(numClasses) or type(numClasses) ~= "number") then
 		return lookup
 	end
@@ -193,9 +184,9 @@ local GetArenaTooltipSpecIDs = function()
 	for classID = 1, numClasses do
 		local classFile
 		if (C_CreatureInfo and type(C_CreatureInfo.GetClassInfo) == "function") then
-			local okClass, classInfo = pcall(C_CreatureInfo.GetClassInfo, classID)
+			local okClass, classInfo = API.TryCall(C_CreatureInfo.GetClassInfo, classID)
 			if (okClass and type(classInfo) == "table") then
-				local okClassFile, value = pcall(function() return classInfo.classFile end)
+				local okClassFile, value = API.TryCall(function() return classInfo.classFile end)
 				if (okClassFile and IsArenaValueAccessible(value) and type(value) == "string") then
 					classFile = value
 				end
@@ -205,11 +196,11 @@ local GetArenaTooltipSpecIDs = function()
 		local classMale = classFile and LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classFile]
 		local classFemale = classFile and LOCALIZED_CLASS_NAMES_FEMALE and LOCALIZED_CLASS_NAMES_FEMALE[classFile]
 		if (classMale or classFemale) then
-			local okSpecs, numSpecs = pcall(GetNumSpecializationsForClassID, classID)
+			local okSpecs, numSpecs = API.TryCall(GetNumSpecializationsForClassID, classID)
 			if (okSpecs and IsArenaValueAccessible(numSpecs) and type(numSpecs) == "number") then
 				for specIndex = 1, numSpecs do
 					local function AddSpecName(gender)
-						local okSpec, specID, specName = pcall(GetSpecializationInfoForClassID, classID, specIndex, gender)
+						local okSpec, specID, specName = API.TryCall(GetSpecializationInfoForClassID, classID, specIndex, gender)
 						if (not okSpec or not IsArenaValueAccessible(specID) or not IsArenaValueAccessible(specName) or type(specID) ~= "number" or type(specName) ~= "string") then
 							return
 						end
@@ -241,24 +232,24 @@ local GetArenaOpponentSpecFromTooltip = function(unit)
 		return nil
 	end
 
-	local okTooltip, tooltipData = pcall(C_TooltipInfo.GetUnit, unit)
+	local okTooltip, tooltipData = API.TryCall(C_TooltipInfo.GetUnit, unit)
 	if (not okTooltip or not IsArenaValueAccessible(tooltipData) or type(tooltipData) ~= "table") then
 		return nil
 	end
 
-	local okLines, lines = pcall(function() return tooltipData.lines end)
+	local okLines, lines = API.TryCall(function() return tooltipData.lines end)
 	if (not okLines or not IsArenaValueAccessible(lines) or type(lines) ~= "table") then
 		return nil
 	end
 
-	local okCount, lineCount = pcall(function() return #lines end)
+	local okCount, lineCount = API.TryCall(function() return #lines end)
 	if (not okCount or type(lineCount) ~= "number") then
 		return nil
 	end
 
 	local lookup = GetArenaTooltipSpecIDs()
 	for lineIndex = 1, lineCount do
-		local okText, lineText = pcall(function()
+		local okText, lineText = API.TryCall(function()
 			local line = lines[lineIndex]
 			if (type(line) == "table") then
 				return line.leftText
@@ -290,7 +281,7 @@ local ResolveArenaOpponentInfo = function(owner, unit, suppliedSpecID)
 
 	local classFile
 	if (type(UnitClass) == "function" and type(unit) == "string") then
-		local ok, _, unitClass = pcall(UnitClass, unit)
+		local ok, _, unitClass = API.TryCall(UnitClass, unit)
 		if (ok and IsArenaValueAccessible(unitClass) and type(unitClass) == "string" and unitClass ~= "") then
 			classFile = unitClass
 			owner.__AzeriteUI_ArenaClassFile = unitClass
@@ -302,7 +293,7 @@ local ResolveArenaOpponentInfo = function(owner, unit, suppliedSpecID)
 		specID = nil
 		local id = GetArenaOpponentIndex(owner, unit)
 		if (id and type(GetArenaOpponentSpec) == "function") then
-			local ok, currentSpecID = pcall(GetArenaOpponentSpec, id)
+			local ok, currentSpecID = API.TryCall(GetArenaOpponentSpec, id)
 			if (ok and IsArenaValueAccessible(currentSpecID) and type(currentSpecID) == "number" and currentSpecID > 0) then
 				specID = currentSpecID
 			end
@@ -320,7 +311,7 @@ local ResolveArenaOpponentInfo = function(owner, unit, suppliedSpecID)
 
 	local icon
 	if (specID and type(GetSpecializationInfoByID) == "function") then
-		local ok, _, _, _, specIcon, _, specClass = pcall(GetSpecializationInfoByID, specID)
+		local ok, _, _, _, specIcon, _, specClass = API.TryCall(GetSpecializationInfoByID, specID)
 		if (ok) then
 			if (IsArenaValueAccessible(specIcon) and type(specIcon) == "number" and specIcon > 0) then
 				icon = specIcon
@@ -385,7 +376,7 @@ local IsArenaMatchContext = function()
 		return true, instanceType
 	end
 	if (C_PvP and type(C_PvP.IsMatchConsideredArena) == "function") then
-		local ok, isArenaMatch = pcall(C_PvP.IsMatchConsideredArena)
+		local ok, isArenaMatch = API.TryCall(C_PvP.IsMatchConsideredArena)
 		if (ok and IsArenaValueAccessible(isArenaMatch) and isArenaMatch == true) then
 			return true, instanceType
 		end
@@ -396,7 +387,7 @@ end
 -- Retail 12.1 throws "Cannot set tex coords when texture has mask" for any
 -- SetTexCoord call on a masked texture, and the spec icon is masked at creation.
 -- GetNumMaskTextures does not reliably report that mask back, so the flag we set
--- ourselves in SetMask is what is trusted here, with a pcall as the last resort.
+-- ourselves in SetMask is what is trusted here, with a guarded call as the last resort.
 -- Masked textures draw the full image anyway, so the reset only matters on the
 -- unmasked fallback path.
 local SetSpecIconTexture = function(texture, file)
@@ -407,7 +398,7 @@ local SetSpecIconTexture = function(texture, file)
 	if (texture.GetNumMaskTextures and texture:GetNumMaskTextures() > 0) then
 		return
 	end
-	pcall(texture.SetTexCoord, texture, 0, 1, 0, 1)
+	API.TryCall(texture.SetTexCoord, texture, 0, 1, 0, 1)
 end
 
 local SpecIcon_Override = function(self, event, unit)
@@ -448,7 +439,7 @@ local SpecIcon_Override = function(self, event, unit)
 			return
 		end
 	else
-		local ok, faction = pcall(UnitFactionGroup, self.unit)
+		local ok, faction = API.TryCall(UnitFactionGroup, self.unit)
 		if (not ok or not IsArenaValueAccessible(faction)) then
 			element:Hide()
 			return
@@ -782,7 +773,7 @@ local ShowArenaPortraitFallback = function(element, unit)
 	end
 
 	fallback:SetTexCoord(.1, .9, .1, .9)
-	local ok = pcall(SetPortraitTexture, fallback, unit)
+	local ok = API.SafeCall("Arena.Portrait.SetPortraitTexture", SetPortraitTexture, fallback, unit)
 	if (not ok) then
 		HideArenaPortraitFallback(element)
 		return false
@@ -798,7 +789,7 @@ local ArenaUnitFlagIsTrue = function(api, unit)
 	if (type(api) ~= "function") then
 		return false
 	end
-	local ok, value = pcall(api, unit)
+	local ok, value = API.TryCall(api, unit)
 	return ok and IsArenaValueAccessible(value) and value == true
 end
 
@@ -813,7 +804,7 @@ local TrySetArenaPortraitModel = function(element, unit)
 		return false
 	end
 	if (type(element.CanSetUnit) == "function") then
-		local ok, canSetUnit = pcall(element.CanSetUnit, element, unit)
+		local ok, canSetUnit = API.TryCall(element.CanSetUnit, element, unit)
 		if (not ok or not IsArenaValueAccessible(canSetUnit) or canSetUnit == false) then
 			return false
 		end
@@ -828,13 +819,13 @@ local TrySetArenaPortraitModel = function(element, unit)
 	element:SetRotation(element.rotation and element.rotation*(2*math_pi)/180 or 0)
 	element:ClearModel()
 
-	local ok, success = pcall(element.SetUnit, element, unit)
+	local ok, success = API.SafeCall("Arena.Portrait.SetUnit", element.SetUnit, element, unit)
 	if (not ok or not IsArenaValueAccessible(success) or success == false) then
 		element:ClearModel()
 		return false
 	end
 	if (type(element.GetDisplayInfo) == "function" and success ~= true) then
-		local okDisplay, displayID = pcall(element.GetDisplayInfo, element)
+		local okDisplay, displayID = API.TryCall(element.GetDisplayInfo, element)
 		if (not okDisplay or not IsArenaValueAccessible(displayID) or type(displayID) ~= "number" or displayID <= 0) then
 			element:ClearModel()
 			return false

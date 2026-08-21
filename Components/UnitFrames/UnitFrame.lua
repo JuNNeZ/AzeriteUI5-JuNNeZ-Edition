@@ -27,6 +27,7 @@ local _, ns = ...
 local oUF = ns.oUF
 
 local UnitFrameMod = ns:NewModule("UnitFrames", "LibMoreEvents-1.0")
+local API = ns.API
 
 local LibSpinBar = LibStub("LibSpinBar-1.0")
 local LibOrb = LibStub("LibOrb-1.0")  -- Mana Orb System by Arahort
@@ -441,7 +442,7 @@ UnitFrameMod.UpdateSettings = function(self)
 			ns.UnitFrame.ApplyPowerValueAlpha(frame)
 			local power = frame.Power
 			if (power and power.ForceUpdate) then
-				pcall(power.ForceUpdate, power)
+				API.SafeCall("UnitFrame.Power.ForceUpdate", power.ForceUpdate, power)
 			end
 		end
 	end

@@ -28,6 +28,7 @@ local _, ns = ...
 if (not ns.IsRetail) then return end
 
 local Auras = ns:NewModule("Auras", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0")
+local API = ns.API
 local LFF = LibStub("LibFadingFrames-1.0")
 
 -- Lua API
@@ -159,24 +160,55 @@ local StyleAuraButton = function(button, filter)
 	-- applies their visibility as a secret value and rejects SetShown(secret)
 	-- once an addon handler exists on the button.
 
+	--[[
+		The duration bar is drawn inverted: a full-width aura-colored layer with a
+		dark "spent" layer growing over it from the right, driven by ElapsedTime.
+
+		A straight RemainingTime bar cannot render a timerless aura correctly.
+		Blizzard's ApplyDurationBar hands the bar a zero duration for permanent
+		auras with no zero check of its own -- unlike ApplyDurationText directly
+		above it, which does `binding:SetEnabled(not auraDuration:IsZero())` --
+		so a permanent aura drives the bar to 0 and Devotion Aura or a bonus
+		event buff renders as an empty trough. Addons cannot tell the two apart
+		per aura: GetAuraDuration and the OnAuraInstance* hooks are all on the
+		private mixin, and this file must not attach script handlers to these
+		buttons at all.
+
+		Inverting the layers turns that zero into the state we want. Elapsed 0
+		means the dark layer has no width, so a timerless aura shows a full
+		aura-colored bar, while a timed aura's colored region still recedes from
+		the right exactly as before.
+	]]
 	local bar = CreateFrame("StatusBar", nil, contents)
 	bar:SetPoint("TOP", contents, "BOTTOM", 0, 0)
 	bar:SetPoint("LEFT", contents, "LEFT", 1, 0)
 	bar:SetPoint("RIGHT", contents, "RIGHT", -1, 0)
 	bar:SetHeight(4)
-	bar:SetStatusBarTexture(GetMedia("bar-small"))
-	bar:SetStatusBarColor(unpack(Colors.aura))
+	-- "plain" is the solid ChatFrameBackground alias, so the spent layer masks the
+	-- colored layer underneath completely. bar-small would let color bleed through
+	-- wherever its own alpha is below one, and blank.tga is the transparent asset
+	-- used elsewhere to clear a texture.
+	bar:SetStatusBarTexture(GetMedia("plain"))
+	bar:SetStatusBarColor(.05, .05, .05, 1)
+	bar:SetReverseFill(true)
+	-- The trough, visible as the one pixel outline around the bar.
 	bar.bg = bar:CreateTexture(nil, "BACKGROUND", nil, -7)
 	bar.bg:SetPoint("TOPLEFT", -1, 1)
 	bar.bg:SetPoint("BOTTOMRIGHT", 1, -1)
 	bar.bg:SetColorTexture(.05, .05, .05, .85)
+	-- The remaining-time layer, sitting under the spent layer at full width.
+	bar.remaining = bar:CreateTexture(nil, "BACKGROUND", nil, -6)
+	bar.remaining:SetAllPoints(bar)
+	bar.remaining:SetTexture(GetMedia("bar-small"))
+	bar.remaining:SetVertexColor(unpack(Colors.aura))
 	button.bar = bar
 
 	button:SetIcon(icon)
 	button:SetApplicationCount(count)
 	button:SetDurationCooldown(cooldown)
 	button:SetDurationBar(bar, {
-		direction = Enum.StatusBarTimerDirection.RemainingTime
+		-- ElapsedTime, not RemainingTime: see the layering note above.
+		direction = Enum.StatusBarTimerDirection.ElapsedTime
 	})
 	if (warningDurationOptions) then
 		button:SetDurationText(warningTime, warningDurationOptions)
@@ -260,7 +292,7 @@ local CreatePrivateAuraContainer = function(parent, unit)
 		anchor:SetPoint("LEFT", container, "LEFT", (index - 1) * AURA_SIZE, 0)
 		container.anchors[index] = anchor
 
-		local ok, anchorID = pcall(C_UnitAuras.AddPrivateAuraAnchor, {
+		local ok, anchorID = API.TryCall(C_UnitAuras.AddPrivateAuraAnchor, {
 			unitToken = unit,
 			auraIndex = index,
 			parent = anchor,
@@ -508,7 +540,7 @@ Auras.RemovePrivateAuraAnchors = function(self)
 	if (not C_UnitAuras or not C_UnitAuras.RemovePrivateAuraAnchor) then return end
 	for _, group in ipairs(self.auraUnitGroups or {}) do
 		for _, anchorID in ipairs(group.privateAuras.anchorIDs or {}) do
-			pcall(C_UnitAuras.RemovePrivateAuraAnchor, anchorID)
+			API.SafeCall("Auras.RemovePrivateAuraAnchor", C_UnitAuras.RemovePrivateAuraAnchor, anchorID)
 		end
 		group.privateAuras.anchorIDs = {}
 	end

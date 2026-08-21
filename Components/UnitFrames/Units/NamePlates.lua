@@ -27,6 +27,7 @@ local _, ns = ...
 local oUF = ns.oUF
 
 local NamePlatesMod = ns:NewModule("NamePlates", "LibMoreEvents-1.0", "AceHook-3.0", "AceTimer-3.0")
+local API = ns.API
 -- Optimization made by Rui.
 
 -- Lua API
@@ -557,14 +558,14 @@ local GetCVarStringSafe = function(name)
 		return nil
 	end
 	if (C_CVar and C_CVar.GetCVar) then
-		local ok, value = pcall(C_CVar.GetCVar, name)
-		if (ok and type(value) == "string" and value ~= "") then
+		local value = C_CVar.GetCVar(name)
+		if (type(value) == "string" and value ~= "") then
 			return value
 		end
 	end
 	if (type(GetCVar) == "function") then
-		local ok, value = pcall(GetCVar, name)
-		if (ok and type(value) == "string" and value ~= "") then
+		local value = GetCVar(name)
+		if (type(value) == "string" and value ~= "") then
 			return value
 		end
 	end
@@ -787,13 +788,12 @@ local SetCVarIfSupported = function(name, value)
 	end
 	local stringValue = tostring(value)
 	if (C_CVar and C_CVar.SetCVar) then
-		local ok = pcall(C_CVar.SetCVar, name, stringValue)
-		if (ok) then
+		if (API.TryCall(C_CVar.SetCVar, name, stringValue)) then
 			return
 		end
 	end
 	if (type(SetCVar) == "function") then
-		pcall(SetCVar, name, stringValue)
+		API.SafeCall("NamePlates.SetCVar." .. tostring(name), SetCVar, name, stringValue)
 	end
 end
 
@@ -802,14 +802,14 @@ local GetCVarBoolIfSupported = function(name, defaultValue)
 		return defaultValue
 	end
 	if (C_CVar and C_CVar.GetCVarBool) then
-		local ok, value = pcall(C_CVar.GetCVarBool, name)
-		if (ok and type(value) == "boolean") then
+		local value = C_CVar.GetCVarBool(name)
+		if (type(value) == "boolean") then
 			return value
 		end
 	end
 	if (type(GetCVarBool) == "function") then
-		local ok, value = pcall(GetCVarBool, name)
-		if (ok and value ~= nil) then
+		local value = GetCVarBool(name)
+		if (value ~= nil) then
 			return value and true or false
 		end
 	end
@@ -1607,7 +1607,7 @@ local NamePlate_PostUpdateHoverElements = function(self)
 	if (self.isObjectPlate and not self.isPRD) then
 		if (ShouldShowObjectPlateOverlay(self)) then
 			if (self.Name and self.Name.UpdateTag) then
-				pcall(self.Name.UpdateTag, self.Name)
+				API.SafeCall("NamePlates.Name.UpdateTag", self.Name.UpdateTag, self.Name)
 			end
 			if (self.Name and self.unit) then
 				local nameText = self.Name:GetText()
@@ -1648,7 +1648,7 @@ local NamePlate_PostUpdateHoverElements = function(self)
 		-- Force tag update to ensure name is always current
 		-- This is critical for dungeons where events may not fire reliably
 		if (self.Name and self.Name.UpdateTag) then
-			pcall(self.Name.UpdateTag, self.Name)
+			API.SafeCall("NamePlates.Name.UpdateTag", self.Name.UpdateTag, self.Name)
 		end
 
 		-- Fallback: if the tag returned empty (secret value filtered out),
@@ -1749,14 +1749,16 @@ local NamePlate_GetLiveNotInterruptible = function(element)
 	end
 
 	if (element and element.casting and UnitCastingInfo) then
-		local castResult = { pcall(UnitCastingInfo, unit) }
+		local _, castResult = API.SafeCallPacked("NamePlates.UnitCastingInfo", UnitCastingInfo, unit)
+		castResult = castResult or {}
 		if (castResult[1]) then
 			return castResult[9]
 		end
 	end
 
 	if (element and element.channeling and UnitChannelInfo) then
-		local channelResult = { pcall(UnitChannelInfo, unit) }
+		local _, channelResult = API.SafeCallPacked("NamePlates.UnitChannelInfo", UnitChannelInfo, unit)
+		channelResult = channelResult or {}
 		if (channelResult[1]) then
 			return channelResult[8]
 		end
@@ -1930,7 +1932,7 @@ do
 		end
 
 		if (C_Spell and C_Spell.GetSpellCooldown) then
-			local okInfo, cooldownInfo = pcall(C_Spell.GetSpellCooldown, spellID)
+			local okInfo, cooldownInfo = API.TryCall(C_Spell.GetSpellCooldown, spellID)
 			if (okInfo and type(cooldownInfo) == "table") then
 				local startTime = cooldownInfo.startTime
 				local duration = cooldownInfo.duration
@@ -1943,7 +1945,7 @@ do
 		end
 
 		if (GetSpellCooldown) then
-			local okCooldown, startTime, duration = pcall(GetSpellCooldown, spellID)
+			local okCooldown, startTime, duration = API.TryCall(GetSpellCooldown, spellID)
 			if (okCooldown
 				and type(startTime) == "number"
 				and type(duration) == "number"
@@ -2100,7 +2102,8 @@ local NamePlate_GetRawNotInterruptible = function(element)
 	local rawNotInterruptible
 	local sawSecretRaw = false
 	if (UnitCastingInfo) then
-		local castResult = { pcall(UnitCastingInfo, unit) }
+		local _, castResult = API.SafeCallPacked("NamePlates.UnitCastingInfo", UnitCastingInfo, unit)
+		castResult = castResult or {}
 		local okCast = castResult[1]
 		local castNotInterruptible = castResult[9]
 		if (okCast and type(castNotInterruptible) == "boolean") then
@@ -2113,7 +2116,8 @@ local NamePlate_GetRawNotInterruptible = function(element)
 	end
 
 	if (rawNotInterruptible == nil and UnitChannelInfo) then
-		local channelResult = { pcall(UnitChannelInfo, unit) }
+		local _, channelResult = API.SafeCallPacked("NamePlates.UnitChannelInfo", UnitChannelInfo, unit)
+		channelResult = channelResult or {}
 		local okChannel = channelResult[1]
 		local channelNotInterruptible = channelResult[8]
 		if (okChannel and type(channelNotInterruptible) == "boolean") then
@@ -2147,7 +2151,7 @@ local NamePlate_GetBlizzardProtectedFallback = function(element)
 		return nil
 	end
 
-	local okPlate, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit, issecurefunc and issecurefunc())
+	local okPlate, plate = API.TryCall(C_NamePlate.GetNamePlateForUnit, unit, issecurefunc and issecurefunc())
 	local unitFrame = okPlate and plate and (plate.UnitFrame or plate.unitFrame)
 	local blizzardCastbar = unitFrame and (unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.Castbar or unitFrame.CastingBarFrame)
 	local active = blizzardCastbar and (blizzardCastbar.casting or blizzardCastbar.channeling or blizzardCastbar.empowering)
@@ -3416,25 +3420,25 @@ NamePlatesMod.HookNamePlates = function(self)
 		if (UF and not (UF.IsForbidden and UF:IsForbidden())) then
 			if (not UF.__AzeriteUI_Disabled) then
 				UF.__AzeriteUI_Disabled = true
-				pcall(function() UF:UnregisterAllEvents() end)
-				pcall(function() UF:SetAlpha(0) end)
+				API.SafeCall("NamePlates.clearClutter.UF.UnregisterAllEvents", UF.UnregisterAllEvents, UF)
+				API.SafeCall("NamePlates.clearClutter.UF.SetAlpha", UF.SetAlpha, UF, 0)
 			end
 			local health = UF.healthBar or UF.healthbar or UF.HealthBar
 			if (health and health.UnregisterAllEvents) then
-				pcall(function() health:UnregisterAllEvents() end)
+				API.SafeCall("NamePlates.clearClutter.health.UnregisterAllEvents", health.UnregisterAllEvents, health)
 			end
 			local power = UF.manabar or UF.ManaBar
 			if (power and power.UnregisterAllEvents) then
-				pcall(function() power:UnregisterAllEvents() end)
+				API.SafeCall("NamePlates.clearClutter.power.UnregisterAllEvents", power.UnregisterAllEvents, power)
 			end
 			local castbar = UF.castBar or UF.CastBar or UF.CastingBarFrame
 			if (castbar and castbar.UnregisterAllEvents) then
-				pcall(function() castbar:UnregisterAllEvents() end)
+				API.SafeCall("NamePlates.clearClutter.castbar.UnregisterAllEvents", castbar.UnregisterAllEvents, castbar)
 			end
 			local auras = UF.AurasFrame
 			if (auras and not (auras.IsForbidden and auras:IsForbidden())) then
-				pcall(function() auras:UnregisterAllEvents() end)
-				pcall(function() auras:Hide() end)
+				API.SafeCall("NamePlates.clearClutter.auras.UnregisterAllEvents", auras.UnregisterAllEvents, auras)
+				API.SafeCall("NamePlates.clearClutter.auras.Hide", auras.Hide, auras)
 			end
 		end
 		local classNameplateManaBar = frame.classNamePlatePowerBar
@@ -3478,11 +3482,11 @@ NamePlatesMod.HookNamePlates = function(self)
 		local health = UF.healthBar or UF.healthbar or UF.HealthBar
 			or (UF.HealthBarsContainer and UF.HealthBarsContainer.healthBar)
 		if (health and health.SetAlpha) then
-			pcall(health.SetAlpha, health, 0)
+			API.SafeCall("NamePlates.blizzPlate.health.SetAlpha", health.SetAlpha, health, 0)
 		end
 
 		if (UF.SetAlpha) then
-			pcall(UF.SetAlpha, UF, 0)
+			API.SafeCall("NamePlates.blizzPlate.UF.SetAlpha", UF.SetAlpha, UF, 0)
 		end
 
 		-- Explicitly hide child frames that may have SetIgnoreParentAlpha(true),
@@ -3490,9 +3494,9 @@ NamePlatesMod.HookNamePlates = function(self)
 		for _, key in ipairs(blizzPlateHideKeys) do
 			local child = UF[key]
 			if (child and child.SetAlpha) then
-				pcall(child.SetAlpha, child, 0)
+				API.SafeCall("NamePlates.blizzPlate.child.SetAlpha", child.SetAlpha, child, 0)
 				if (child.Hide) then
-					pcall(child.Hide, child)
+					API.SafeCall("NamePlates.blizzPlate.child.Hide", child.Hide, child)
 				end
 			end
 		end
@@ -3512,7 +3516,7 @@ NamePlatesMod.HookNamePlates = function(self)
 					for _, key in ipairs(blizzPlateHideKeys) do
 						local child = frame[key]
 						if (child and child.Hide) then
-							pcall(child.Hide, child)
+							API.SafeCall("NamePlates.OnShow.child.Hide", child.Hide, child)
 						end
 					end
 					locked = false

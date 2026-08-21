@@ -27,9 +27,34 @@ local _, ns = ...
 
 local MicroMenu = ns:NewModule("MicroMenu", "LibMoreEvents-1.0", "AceHook-3.0")
 
+local L = LibStub("AceLocale-3.0"):GetLocale((...))
+
 local Colors = ns.Colors
 local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
+
+local defaults = {
+	profile = {
+		-- The AzeriteUI cog wheel in the bottom right corner.
+		enabled = true,
+		-- Blizzard's own micro menu strip along the bottom of the screen.
+		-- Off by default, which is the behavior every prior version shipped.
+		showBlizzardMicroMenu = false
+	}
+}
+
+MicroMenu.GetDefaults = function(self)
+	return defaults
+end
+
+-- Read by Components/ActionBars/Compatibility/HideBlizzard.lua, which runs before
+-- this module initializes, so both the module and its db may still be missing.
+-- Default to hiding Blizzard's strip, matching every version before this option.
+ns.ShouldShowBlizzardMicroMenu = function()
+	local module = ns:GetModule("MicroMenu", true)
+	local profile = module and module.db and module.db.profile
+	return (profile and profile.showBlizzardMicroMenu) and true or false
+end
 
 MicroMenu.SpawnButtons = function(self)
 
@@ -256,10 +281,63 @@ MicroMenu.OnEvent = function(self, event, ...)
 	self:UpdateButtons()
 end
 
+-- Both toggles decide what gets built or quarantined at load: the cog wheel and
+-- its popup are spawned once in OnEnable, and Blizzard's strip is suppressed with
+-- hooksecurefunc wrappers that cannot be lifted again. Neither can be undone mid
+-- session, so a changed toggle asks for a reload rather than pretending to apply.
+MicroMenu.PromptReload = function(self)
+	if (self.reloadPromptShown) then
+		return
+	end
+	self.reloadPromptShown = true
+
+	local key = "AZERITEUI_MICRO_MENU_RELOAD"
+	if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
+		StaticPopupDialogs[key] = {
+			text = L["The micro menu is built when the interface loads, so this change needs a reload to take effect."],
+			button1 = L["Reload UI"],
+			button2 = CANCEL or "Cancel",
+			OnAccept = function() ReloadUI() end,
+			timeout = 0,
+			whileDead = true,
+			hideOnEscape = true,
+			preferredIndex = 3
+		}
+	end
+	if (StaticPopup_Show) then
+		StaticPopup_Show(key)
+	end
+end
+
+MicroMenu.UpdateSettings = function(self)
+	local profile = self.db and self.db.profile
+	if (not profile) then
+		return
+	end
+
+	-- Compare against the state this session was actually built with, so the
+	-- normal settings pass at login cannot trigger the prompt.
+	local state = (profile.enabled and 1 or 0) .. ":" .. (profile.showBlizzardMicroMenu and 1 or 0)
+	if (self.__builtState == nil) then
+		self.__builtState = state
+		return
+	end
+	if (self.__builtState ~= state) then
+		self:PromptReload()
+	end
+end
+
 MicroMenu.OnInitialize = function(self)
+	self.db = ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
 end
 
 MicroMenu.OnEnable = function(self)
+
+	self:UpdateSettings()
+
+	if (self.db and self.db.profile and not self.db.profile.enabled) then
+		return
+	end
 
 	self:SpawnButtons()
 	self:RegisterEvent("DISPLAY_SIZE_CHANGED", "OnEvent")

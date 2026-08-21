@@ -28,6 +28,8 @@ local oUF = ns.oUF
 
 local CastBarMod = ns:NewModule("PlayerCastBarFrame", ns.UnitFrameModule, "LibMoreEvents-1.0")
 
+local API = ns.API
+
 -- GLOBALS: GetNetStats, OverlayPlayerCastingBarFrame, PlayerCastingBarFrame, PetCastingBarFrame
 
 -- Lua API
@@ -56,17 +58,17 @@ local function StopBlizzardCastbarAnims(frame)
 	} do
 		local anim = frame[key]
 		if (anim and type(anim.Stop) == "function") then
-			pcall(anim.Stop, anim)
+			API.SafeCall("BlizzCastbar.anim.Stop", anim.Stop, anim)
 		end
 	end
 	-- Hide glow/flash child textures
 	for _, key in next, { "InterruptGlow", "Flash", "Shine" } do
 		local tex = frame[key]
 		if (tex and type(tex.SetAlpha) == "function") then
-			pcall(tex.SetAlpha, tex, 0)
+			API.SafeCall("BlizzCastbar.tex.SetAlpha", tex.SetAlpha, tex, 0)
 		end
 		if (tex and type(tex.Hide) == "function") then
-			pcall(tex.Hide, tex)
+			API.SafeCall("BlizzCastbar.tex.Hide", tex.Hide, tex)
 		end
 	end
 end
@@ -86,7 +88,7 @@ local function SuppressBlizzardCastbar(frame)
 	ApplySuppressedBlizzardCastbarAlpha(frame)
 	-- Immediately hide frame if it's currently visible
 	if (frame:IsShown()) then
-		pcall(frame.Hide, frame)
+		API.SafeCall("BlizzCastbar.Hide", frame.Hide, frame)
 	end
 	if (not frame.__AzeriteUI_SuppressHooksAttached) then
 		frame.__AzeriteUI_SuppressHooksAttached = true
@@ -132,7 +134,7 @@ local function RestoreBlizzardCastbar(frame, unit)
 		return
 	end
 	frame.__AzeriteUI_Suppressed = nil
-	pcall(frame.SetAlpha, frame, 1)
+	API.SafeCall("BlizzCastbar.Restore.SetAlpha", frame.SetAlpha, frame, 1)
 end
 
 local function ShouldUseCustomCastbar(self)
@@ -189,7 +191,7 @@ local Cast_GetRemainingDuration = function(element, duration)
 		return duration
 	end
 	if (type(duration) == "table" and duration.GetRemainingDuration) then
-		local ok, remaining = pcall(duration.GetRemainingDuration, duration)
+		local ok, remaining = API.TryCall(duration.GetRemainingDuration, duration)
 		if (ok and type(remaining) == "number") then
 			return remaining
 		end
@@ -202,16 +204,16 @@ local Cast_GetMaxDuration = function(element)
 		return element.max
 	end
 	if (element.GetTimerDuration) then
-		local ok, durationObject = pcall(element.GetTimerDuration, element)
+		local ok, durationObject = API.TryCall(element.GetTimerDuration, element)
 		if (ok and type(durationObject) == "table") then
 			if (durationObject.GetTotalDuration) then
-				local totalOk, total = pcall(durationObject.GetTotalDuration, durationObject)
+				local totalOk, total = API.TryCall(durationObject.GetTotalDuration, durationObject)
 				if (totalOk and type(total) == "number" and total > 0) then
 					return total
 				end
 			end
 			if (durationObject.GetRemainingDuration) then
-				local remainingOk, remaining = pcall(durationObject.GetRemainingDuration, durationObject)
+				local remainingOk, remaining = API.TryCall(durationObject.GetRemainingDuration, durationObject)
 				if (remainingOk and type(remaining) == "number" and remaining > 0) then
 					return remaining
 				end
@@ -437,7 +439,7 @@ local style = function(self, unit)
 	interruptGlow:SetAlpha(0)
 	interruptGlow:Hide()
 	if (interruptGlow.SetAtlas) then
-		local ok = pcall(interruptGlow.SetAtlas, interruptGlow, "cast_interrupt_outerglow")
+		local ok = API.TryCall(interruptGlow.SetAtlas, interruptGlow, "cast_interrupt_outerglow")
 		if (not ok) then
 			interruptGlow:SetTexture(db.CastBarBackgroundTexture)
 			interruptGlow:SetVertexColor(1, 0.2, 0.1, 1)

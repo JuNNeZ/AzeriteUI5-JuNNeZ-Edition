@@ -24,6 +24,7 @@
 
 --]]
 local _, ns = ...
+local API = ns.API
 
 -- Lua API
 local bit_bor = bit.bor
@@ -127,27 +128,27 @@ local IsSpellKnownForInterrupt = function(spellID)
 		return false
 	end
 	if (C_SpellBook and C_SpellBook.IsSpellKnownOrInSpellBook) then
-		local okPlayer, knownPlayer = pcall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID)
+		local okPlayer, knownPlayer = API.TryCall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID)
 		if (okPlayer and knownPlayer) then
 			return true
 		end
-		local okPet, knownPet = pcall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID, SPELL_BANK_PET)
+		local okPet, knownPet = API.TryCall(C_SpellBook.IsSpellKnownOrInSpellBook, spellID, SPELL_BANK_PET)
 		if (okPet and knownPet) then
 			return true
 		end
 	end
 	if (C_SpellBook and C_SpellBook.IsSpellKnown) then
-		local okPlayer, knownPlayer = pcall(C_SpellBook.IsSpellKnown, spellID, SPELL_BANK_PLAYER)
+		local okPlayer, knownPlayer = API.TryCall(C_SpellBook.IsSpellKnown, spellID, SPELL_BANK_PLAYER)
 		if (okPlayer and knownPlayer) then
 			return true
 		end
-		local okPet, knownPet = pcall(C_SpellBook.IsSpellKnown, spellID, SPELL_BANK_PET)
+		local okPet, knownPet = API.TryCall(C_SpellBook.IsSpellKnown, spellID, SPELL_BANK_PET)
 		if (okPet and knownPet) then
 			return true
 		end
 	end
 	if (IsSpellKnown) then
-		local okKnown, known = pcall(IsSpellKnown, spellID)
+		local okKnown, known = API.TryCall(IsSpellKnown, spellID)
 		if (okKnown and known) then
 			return true
 		end

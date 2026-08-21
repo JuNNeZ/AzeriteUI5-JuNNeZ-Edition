@@ -105,28 +105,28 @@ local GenerateOptions = function()
 			},
 			delayOnLogin = {
 				name = L["After logging into the game"],
-				desc = "",
+				desc = L["How many seconds to wait after logging in before Explorer Mode starts fading anything. Set to 0 to start immediately."],
 				order = 15,
 				type = "range", width = "full", min = 0, max = 15, step = 1,
 				set = setter, get = getter, hidden = isdisabled,
 			},
 			delayOnReload = {
 				name = L["After reloading the user interface"],
-				desc = "",
+				desc = L["How many seconds to wait after a user interface reload before Explorer Mode starts fading anything. Set to 0 to start immediately."],
 				order = 16,
 				type = "range", width = "full", min = 0, max = 15, step = 1,
 				set = setter, get = getter, hidden = isdisabled,
 			},
 			delayOnZoning = {
 				name = L["After other loading screens"],
-				desc = "",
+				desc = L["How many seconds to wait after any other loading screen before Explorer Mode starts fading anything. Set to 0 to start immediately."],
 				order = 17,
 				type = "range", width = "full", min = 0, max = 15, step = 1,
 				set = setter, get = getter, hidden = isdisabled,
 			},
 			delayOnCombatEnd = {
 				name = L["After combat ends"],
-				desc = "",
+				desc = L["How many seconds to wait after leaving combat before Explorer Mode fades your interface out again. Set to 0 to fade immediately."],
 				order = 18,
 				type = "range", width = "full", min = 0, max = 15, step = 1,
 				set = setter, get = getter, hidden = isdisabled,
@@ -151,14 +151,14 @@ local GenerateOptions = function()
 			},
 			fadeInCombat = {
 				name = L["While engaged in combat"],
-				desc = "",
+				desc = L["Keep your interface visible while you are in combat."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 22
 			},
 			fadeWithLowHealth = {
 				name = L["While having low health"],
-				desc = "",
+				desc = L["Keep your interface visible while your health is below the threshold set below."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 23
@@ -179,7 +179,7 @@ local GenerateOptions = function()
 			},
 			fadeWithLowMana = {
 				name = L["While having low mana"],
-				desc = "",
+				desc = L["Keep your interface visible while your mana is below the threshold set below."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 26
@@ -229,35 +229,35 @@ local GenerateOptions = function()
 			--},
 			fadeInGroups = {
 				name = L["While in a group"],
-				desc = "",
+				desc = L["Keep your interface visible while you are in a party or raid."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 33
 			},
 			fadeInInstances = {
 				name = L["While in an instance"],
-				desc = "",
+				desc = L["Keep your interface visible while you are inside a dungeon, raid or battleground."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 35
 			},
 			fadeWithFriendlyTarget = {
 				name = L["While having a friendly target"],
-				desc = "",
+				desc = L["Keep your interface visible while you have a friendly target selected."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 40
 			},
 			fadeWithHostileTarget = {
 				name = L["While having a hostile target"],
-				desc = "",
+				desc = L["Keep your interface visible while you have a hostile target selected."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 45
 			},
 			fadeWithDeadTarget = {
 				name = L["While having a dead target"],
-				desc = "",
+				desc = L["Keep your interface visible while you have a dead target selected. Unavailable while both friendly and hostile targets already keep it visible."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = function(info) return isdisabled(info) or (getoption(info, "fadeWithFriendlyTarget") and getoption(info, "fadeWithHostileTarget")) end,
 				hidden = isdisabled,
@@ -265,7 +265,7 @@ local GenerateOptions = function()
 			},
 			fadeWithFocusTarget = {
 				name = L["While having a focus target"],
-				desc = "",
+				desc = L["Keep your interface visible while you have a focus target set."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 50
@@ -290,63 +290,63 @@ local GenerateOptions = function()
 			},
 			fadeActionBars = {
 				name = L["Fade ActionBars"],
-				desc = "",
+				desc = L["Include your action bars in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 130
 			},
 			fadePetBar = {
 				name = L["Fade PetBar"],
-				desc = "",
+				desc = L["Include your pet bar in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 131
 			},
 			fadeStanceBar = {
 				name = L["Fade StanceBar"],
-				desc = "",
+				desc = L["Include your stance bar in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 132
 			},
 			fadePlayerFrame = {
 				name = L["Fade Player unit frame"],
-				desc = "",
+				desc = L["Include your player unit frame in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 139
 			},
 			fadePlayerClassPower = {
 				name = L["Fade Player Class Power frame"],
-				desc = "",
+				desc = L["Include your class power display, such as combo points or runes, in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 140
 			},
 			fadePetFrame = {
 				name = L["Fade Pet unit frame"],
-				desc = "",
+				desc = L["Include your pet unit frame in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 141
 			},
 			fadeFocusFrame = {
 				name = L["Fade Focus unit frame"],
-				desc = "",
+				desc = L["Include your focus unit frame in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 142
 			},
 			fadeTracker = {
 				name = L["Fade Objectives Tracker"],
-				desc = "",
+				desc = L["Include the objectives tracker in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 150
 			},
 			fadeChatFrames = {
 				name = L["Fade Chat Windows"],
-				desc = "",
+				desc = L["Include your chat windows in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 160

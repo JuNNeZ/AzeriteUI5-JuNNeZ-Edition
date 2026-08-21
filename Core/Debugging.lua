@@ -24,6 +24,7 @@
 
 --]]
 local _, ns = ...
+local API = ns.API
 local Debugging = ns:NewModule("Debugging", "LibMoreEvents-1.0", "AceConsole-3.0")
 
 -- GLOBALS: EnableAddOn, GetAddOnInfo
@@ -933,7 +934,7 @@ local function TryPrepareRuntimeTestModule(def, module)
 		return false
 	end
 
-	local ok = pcall(module.CreateUnitFrames, module)
+	local ok = API.TryCall(module.CreateUnitFrames, module)
 	if (not ok) then
 		return false
 	end
@@ -952,32 +953,32 @@ local function ForcePreviewFrameUpdate(frame, label)
 	frame:Show()
 	frame:SetAlpha(1)
 	if (frame.Enable) then
-		pcall(frame.Enable, frame)
+		API.TryCall(frame.Enable, frame)
 	end
 	if (frame.Update) then
-		pcall(frame.Update, frame)
+		API.TryCall(frame.Update, frame)
 	end
 	if (frame.UpdateAllElements) then
-		pcall(frame.UpdateAllElements, frame, "RuntimeTest")
+		API.TryCall(frame.UpdateAllElements, frame, "RuntimeTest")
 	end
 	if (frame.PostUpdate) then
-		pcall(frame.PostUpdate, frame)
+		API.TryCall(frame.PostUpdate, frame)
 	end
 	if (frame.Health and frame.Health.ForceUpdate) then
-		pcall(frame.Health.ForceUpdate, frame.Health)
+		API.TryCall(frame.Health.ForceUpdate, frame.Health)
 	end
 	if (frame.Power and frame.Power.ForceUpdate) then
-		pcall(frame.Power.ForceUpdate, frame.Power)
+		API.TryCall(frame.Power.ForceUpdate, frame.Power)
 	end
 	if (frame.Castbar and frame.Castbar.ForceUpdate) then
-		pcall(frame.Castbar.ForceUpdate, frame.Castbar)
+		API.TryCall(frame.Castbar.ForceUpdate, frame.Castbar)
 	end
 	local auras = frame.PlayerAuras or frame.Auras
 	if (auras and auras.ForceUpdate) then
-		pcall(auras.ForceUpdate, auras)
+		API.TryCall(auras.ForceUpdate, auras)
 	end
 	if (label and frame.Name and frame.Name.SetText) then
-		pcall(frame.Name.SetText, frame.Name, label)
+		API.TryCall(frame.Name.SetText, frame.Name, label)
 	end
 end
 
@@ -1298,7 +1299,7 @@ Debugging.EnsureRuntimeTestPreview = function(self, def)
 
 	for i = 1,def.count do
 		local frameName = string_format("%sRuntimeTest%s%d", ns.Prefix or "AzeriteUI", def.key, i)
-		local ok, frameOrErr = pcall(function()
+		local ok, frameOrErr = API.TryCall(function()
 			oUF:SetActiveStyle(ns.Prefix .. def.style)
 			return ns.UnitFrame.Spawn(def.unit or "player", frameName)
 		end)
@@ -1722,7 +1723,7 @@ Debugging.SecretJuNNeZCommand = function(self)
 						health:SetStatusBarColor(unpack(color))
 						C_Timer.After(0.15, function()
 							if (frame.UpdateHealth) then
-								pcall(frame.UpdateHealth, frame)
+								API.TryCall(frame.UpdateHealth, frame)
 							end
 						end)
 					end
@@ -1757,13 +1758,13 @@ Debugging.SecretJuNNeZCommand = function(self)
 		if (playerFrame and playerFrame.frame and playerFrame.frame.Health) then
 			playerFrame.frame.Health:SetStatusBarColor(unpack(origPlayerColor))
 			if (playerFrame.frame.UpdateHealth) then
-				pcall(playerFrame.frame.UpdateHealth, playerFrame.frame)
+				API.TryCall(playerFrame.frame.UpdateHealth, playerFrame.frame)
 			end
 		end
 		if (targetFrame and targetFrame.frame and targetFrame.frame.Health) then
 			targetFrame.frame.Health:SetStatusBarColor(unpack(origTargetColor))
 			if (targetFrame.frame.UpdateHealth) then
-				pcall(targetFrame.frame.UpdateHealth, targetFrame.frame)
+				API.TryCall(targetFrame.frame.UpdateHealth, targetFrame.frame)
 			end
 		end
 	end)
@@ -1866,7 +1867,7 @@ Debugging.SecretGoldpawCommand = function(self)
 						health:SetStatusBarColor(unpack(color))
 						C_Timer.After(0.2, function()
 							if (frame.UpdateHealth) then
-								pcall(frame.UpdateHealth, frame)
+								API.TryCall(frame.UpdateHealth, frame)
 							end
 						end)
 					end
@@ -1902,13 +1903,13 @@ Debugging.SecretGoldpawCommand = function(self)
 		if (playerFrame and playerFrame.frame and playerFrame.frame.Health) then
 			playerFrame.frame.Health:SetStatusBarColor(unpack(origPlayerColor))
 			if (playerFrame.frame.UpdateHealth) then
-				pcall(playerFrame.frame.UpdateHealth, playerFrame.frame)
+				API.TryCall(playerFrame.frame.UpdateHealth, playerFrame.frame)
 			end
 		end
 		if (targetFrame and targetFrame.frame and targetFrame.frame.Health) then
 			targetFrame.frame.Health:SetStatusBarColor(unpack(origTargetColor))
 			if (targetFrame.frame.UpdateHealth) then
-				pcall(targetFrame.frame.UpdateHealth, targetFrame.frame)
+				API.TryCall(targetFrame.frame.UpdateHealth, targetFrame.frame)
 			end
 		end
 	end)
@@ -2007,9 +2008,12 @@ Debugging.ToggleHealthDebugChat = function(self)
 	print("|cff33ff99", "AzeriteUI health debug chat:", ns.API.DEBUG_HEALTH_CHAT and "ON" or "OFF")
 end
 
-local function SafeCall(obj, method, ...)
+-- Diagnostic method probe. Deliberately silent: this file's job is to report
+-- on a possibly broken UI, so it must never raise on its way to doing that.
+-- Not to be confused with API.SafeCall, which reports failures loudly.
+local function ProbeMethod(obj, method, ...)
 	if (obj and obj[method]) then
-		local ok, a, b, c, d, e = pcall(obj[method], obj, ...)
+		local ok, a, b, c, d, e = API.TryCall(obj[method], obj, ...)
 		if (ok) then
 			return a, b, c, d, e
 		end
@@ -2017,15 +2021,14 @@ local function SafeCall(obj, method, ...)
 	return nil
 end
 
-local function IsSecretValue(value)
-	return (issecretvalue and issecretvalue(value)) and true or false
-end
+-- Consolidated onto API.IsSecret (Core/API/SecretValues.lua).
+local IsSecretValue = API.IsSecret
 
 local function SecretSafeText(value)
 	if (IsSecretValue(value)) then
 		return "<secret>"
 	end
-	local ok, text = pcall(tostring, value)
+	local ok, text = API.TryCall(tostring, value)
 	if (ok and text ~= nil) then
 		return text
 	end
@@ -2043,7 +2046,7 @@ local function SafePrintToDebugLog(...)
 		args[i] = SecretSafeText(select(i, ...))
 	end
 	local payload = table_concat(args, " ")
-	local ok = pcall(DLAPI.DebugLog, "AzeriteUI", payload)
+	local ok = API.TryCall(DLAPI.DebugLog, "AzeriteUI", payload)
 	return ok and true or false
 end
 
@@ -2091,8 +2094,8 @@ local function DumpElementSnapshot(element, label)
 		SafePrint("|cfff0f0f0  " .. label .. ":", "missing")
 		return
 	end
-	local value = SafeCall(element, "GetValue")
-	local minValue, maxValue = SafeCall(element, "GetMinMaxValues")
+	local value = ProbeMethod(element, "GetValue")
+	local minValue, maxValue = ProbeMethod(element, "GetMinMaxValues")
 	SafePrint("|cfff0f0f0  " .. label .. " safe:",
 		"cur", element.safeCur,
 		"min", element.safeMin,
@@ -2110,7 +2113,7 @@ local function SafeUnitBoolCall(func, ...)
 	if (type(func) ~= "function") then
 		return nil
 	end
-	local ok, value = pcall(func, ...)
+	local ok, value = API.TryCall(func, ...)
 	if (not ok or type(value) ~= "boolean") then
 		return nil
 	end
@@ -2121,7 +2124,7 @@ local function SafeUnitNumberCall(func, ...)
 	if (type(func) ~= "function") then
 		return nil
 	end
-	local ok, value = pcall(func, ...)
+	local ok, value = API.TryCall(func, ...)
 	if (not ok or type(value) ~= "number") then
 		return nil
 	end
@@ -2153,7 +2156,7 @@ local function DumpUnitSnapshot(unit)
 	DumpUnitValue("UnitHealthMax", UnitHealthMax(unit))
 	if (UnitHealthPercent) then
 		local percent = nil
-		pcall(function()
+		API.TryCall(function()
 			if (CurveConstants and CurveConstants.ScaleTo100) then
 				percent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
 			else
@@ -2168,7 +2171,7 @@ local function DumpUnitSnapshot(unit)
 	DumpUnitValue("UnitPowerMax", UnitPowerMax(unit, powerType))
 	if (UnitPowerPercent) then
 		local powerPercent = nil
-		pcall(function()
+		API.TryCall(function()
 			if (CurveConstants and CurveConstants.ScaleTo100) then
 				powerPercent = UnitPowerPercent(unit, powerType, true, CurveConstants.ScaleTo100)
 			else
@@ -2192,10 +2195,10 @@ local function DumpPoints(frame, indent)
 	if (not frame) then
 		return
 	end
-	local num = SafeCall(frame, "GetNumPoints") or 0
+	local num = ProbeMethod(frame, "GetNumPoints") or 0
 	for i = 1, num do
-		local point, relTo, relPoint, x, y = SafeCall(frame, "GetPoint", i)
-		local relName = relTo and SafeCall(relTo, "GetName") or tostring(relTo)
+		local point, relTo, relPoint, x, y = ProbeMethod(frame, "GetPoint", i)
+		local relName = relTo and ProbeMethod(relTo, "GetName") or tostring(relTo)
 		SafePrint("|cfff0f0f0 " .. indent .. "point[" .. i .. "]:", point, relName, relPoint, x, y)
 	end
 end
@@ -2205,14 +2208,14 @@ local function GetCVarBoolSafe(name)
 		return nil
 	end
 	if (C_CVar and C_CVar.GetCVarBool) then
-		local ok, value = pcall(C_CVar.GetCVarBool, name)
-		if (ok and type(value) == "boolean") then
+		local value = C_CVar.GetCVarBool(name)
+		if (type(value) == "boolean") then
 			return value
 		end
 	end
 	if (GetCVarBool) then
-		local ok, value = pcall(GetCVarBool, name)
-		if (ok and type(value) == "boolean") then
+		local value = GetCVarBool(name)
+		if (type(value) == "boolean") then
 			return value
 		end
 	end
@@ -2224,14 +2227,14 @@ local function GetCVarSafe(name)
 		return nil
 	end
 	if (C_CVar and C_CVar.GetCVar) then
-		local ok, value = pcall(C_CVar.GetCVar, name)
-		if (ok and type(value) == "string") then
+		local value = C_CVar.GetCVar(name)
+		if (type(value) == "string") then
 			return value
 		end
 	end
 	if (GetCVar) then
-		local ok, value = pcall(GetCVar, name)
-		if (ok and type(value) == "string") then
+		local value = GetCVar(name)
+		if (type(value) == "string") then
 			return value
 		end
 	end
@@ -2271,13 +2274,13 @@ local function GetActionCooldownInfoSafe(actionID)
 		return nil
 	end
 	if (C_ActionBar and C_ActionBar.GetActionCooldown) then
-		local ok, info = pcall(C_ActionBar.GetActionCooldown, actionID)
+		local ok, info = API.TryCall(C_ActionBar.GetActionCooldown, actionID)
 		if (ok and type(info) == "table") then
 			return info
 		end
 	end
 	if (GetActionCooldown) then
-		local ok, start, duration, enabled, modRate = pcall(GetActionCooldown, actionID)
+		local ok, start, duration, enabled, modRate = API.TryCall(GetActionCooldown, actionID)
 		if (ok) then
 			return {
 				startTime = start,
@@ -2295,13 +2298,13 @@ local function GetActionChargeInfoSafe(actionID)
 		return nil
 	end
 	if (C_ActionBar and C_ActionBar.GetActionCharges) then
-		local ok, info = pcall(C_ActionBar.GetActionCharges, actionID)
+		local ok, info = API.TryCall(C_ActionBar.GetActionCharges, actionID)
 		if (ok and type(info) == "table") then
 			return info
 		end
 	end
 	if (GetActionCharges) then
-		local ok, charges, maxCharges, startTime, duration, modRate = pcall(GetActionCharges, actionID)
+		local ok, charges, maxCharges, startTime, duration, modRate = API.TryCall(GetActionCharges, actionID)
 		if (ok) then
 			return {
 				currentCharges = charges,
@@ -2429,7 +2432,7 @@ local function PrintDebugHoldTest(spellIDText)
 		print("|cff33ff99", "AzeriteUI holdtest:", "spellID required")
 		return
 	end
-	local ok, result = pcall(C_Spell.IsPressHoldReleaseSpell, spellID)
+	local ok, result = API.TryCall(C_Spell.IsPressHoldReleaseSpell, spellID)
 	print("|cff33ff99", "AzeriteUI holdtest:", "spellID", tostring(spellID), "ok", tostring(ok), "pressHold", SecretSafeText(result))
 end
 
@@ -2484,17 +2487,17 @@ local function DumpTexture(tex, label)
 	if (not tex) then
 		return
 	end
-	local name = label or SafeCall(tex, "GetName") or "(texture)"
-	local path = SafeCall(tex, "GetTexture")
-	local width, height = SafeCall(tex, "GetSize")
-	local alpha = SafeCall(tex, "GetAlpha")
-	local shown = SafeCall(tex, "IsShown")
-	local layer, subLayer = SafeCall(tex, "GetDrawLayer")
-	local blend = SafeCall(tex, "GetBlendMode")
-	local r, g, b, a = SafeCall(tex, "GetVertexColor")
-	local t1, t2, t3, t4 = SafeCall(tex, "GetTexCoord")
-	local parent = SafeCall(tex, "GetParent")
-	local parentName = parent and SafeCall(parent, "GetName") or nil
+	local name = label or ProbeMethod(tex, "GetName") or "(texture)"
+	local path = ProbeMethod(tex, "GetTexture")
+	local width, height = ProbeMethod(tex, "GetSize")
+	local alpha = ProbeMethod(tex, "GetAlpha")
+	local shown = ProbeMethod(tex, "IsShown")
+	local layer, subLayer = ProbeMethod(tex, "GetDrawLayer")
+	local blend = ProbeMethod(tex, "GetBlendMode")
+	local r, g, b, a = ProbeMethod(tex, "GetVertexColor")
+	local t1, t2, t3, t4 = ProbeMethod(tex, "GetTexCoord")
+	local parent = ProbeMethod(tex, "GetParent")
+	local parentName = parent and ProbeMethod(parent, "GetName") or nil
 	SafePrint("|cfff0f0f0  texture:", name, "path:", path)
 	SafePrint("|cfff0f0f0   size:", width, height, "alpha:", alpha, "shown:", shown, "layer:", layer, "sub:", subLayer, "blend:", blend)
 	SafePrint("|cfff0f0f0   parent:", parentName, "vertex:", r, g, b, a)
@@ -2507,26 +2510,26 @@ local function DumpBar(bar, labelOverride)
 		return
 	end
 	local label = labelOverride or bar.__AzeriteUI_DebugLabel or "(bar)"
-	local growth = SafeCall(bar, "GetGrowth")
-	local orient = SafeCall(bar, "GetOrientation")
-	local flipped = SafeCall(bar, "IsFlippedHorizontally")
-	local reverse = SafeCall(bar, "GetReverseFill")
-	local min, max = SafeCall(bar, "GetMinMaxValues")
-	local value = SafeCall(bar, "GetValue")
-	local r1, r2, r3, r4 = SafeCall(bar, "GetRealTexCoord")
-	local secretPercent = SafeCall(bar, "GetSecretPercent")
-	local debugData = SafeCall(bar, "GetDebugData")
-	local width, height = SafeCall(bar, "GetSize")
-	local alpha = SafeCall(bar, "GetAlpha")
-	local shown = SafeCall(bar, "IsShown")
-	local level = SafeCall(bar, "GetFrameLevel")
-	local scale = SafeCall(bar, "GetScale")
-	local effScale = SafeCall(bar, "GetEffectiveScale")
-	local strata = SafeCall(bar, "GetFrameStrata")
-	local parent = SafeCall(bar, "GetParent")
-	local parentName = parent and SafeCall(parent, "GetName") or nil
-	local tex = SafeCall(bar, "GetStatusBarTexture")
-	local colorR, colorG, colorB, colorA = SafeCall(bar, "GetStatusBarColor")
+	local growth = ProbeMethod(bar, "GetGrowth")
+	local orient = ProbeMethod(bar, "GetOrientation")
+	local flipped = ProbeMethod(bar, "IsFlippedHorizontally")
+	local reverse = ProbeMethod(bar, "GetReverseFill")
+	local min, max = ProbeMethod(bar, "GetMinMaxValues")
+	local value = ProbeMethod(bar, "GetValue")
+	local r1, r2, r3, r4 = ProbeMethod(bar, "GetRealTexCoord")
+	local secretPercent = ProbeMethod(bar, "GetSecretPercent")
+	local debugData = ProbeMethod(bar, "GetDebugData")
+	local width, height = ProbeMethod(bar, "GetSize")
+	local alpha = ProbeMethod(bar, "GetAlpha")
+	local shown = ProbeMethod(bar, "IsShown")
+	local level = ProbeMethod(bar, "GetFrameLevel")
+	local scale = ProbeMethod(bar, "GetScale")
+	local effScale = ProbeMethod(bar, "GetEffectiveScale")
+	local strata = ProbeMethod(bar, "GetFrameStrata")
+	local parent = ProbeMethod(bar, "GetParent")
+	local parentName = parent and ProbeMethod(parent, "GetName") or nil
+	local tex = ProbeMethod(bar, "GetStatusBarTexture")
+	local colorR, colorG, colorB, colorA = ProbeMethod(bar, "GetStatusBarColor")
 	local expectedOrient = bar.__AzeriteUI_ExpectedOrientation
 	local expectedFlip = bar.__AzeriteUI_ExpectedFlipped
 	local expectedReverse = bar.__AzeriteUI_ExpectedReverseFill
@@ -2595,11 +2598,11 @@ local function DumpUnitBars(frame, name)
 	end
 	SafePrint("|cff33ff99", "AzeriteUI bar dump:", name)
 	SafePrint("|cfff0f0f0  unit:", frame.unit, "style:", frame.currentStyle)
-	local fwidth, fheight = SafeCall(frame, "GetSize")
-	local fscale = SafeCall(frame, "GetScale")
-	local feff = SafeCall(frame, "GetEffectiveScale")
-	local fstrata = SafeCall(frame, "GetFrameStrata")
-	local flevel = SafeCall(frame, "GetFrameLevel")
+	local fwidth, fheight = ProbeMethod(frame, "GetSize")
+	local fscale = ProbeMethod(frame, "GetScale")
+	local feff = ProbeMethod(frame, "GetEffectiveScale")
+	local fstrata = ProbeMethod(frame, "GetFrameStrata")
+	local flevel = ProbeMethod(frame, "GetFrameLevel")
 	SafePrint("|cfff0f0f0  size:", fwidth, fheight, "scale:", fscale, "effectiveScale:", feff, "strata:", fstrata, "level:", flevel)
 	DumpPoints(frame, "  ")
 	if (name == "TargetFrame") then
@@ -2614,7 +2617,7 @@ local function DumpUnitBars(frame, name)
 	end
 	DumpBar(frame.Health)
 	if (frame.Health and frame.Health.Percent and frame.Health.Percent.GetText) then
-		SafePrint("|cfff0f0f0  healthPercentText:", SafeCall(frame.Health.Percent, "GetText"))
+		SafePrint("|cfff0f0f0  healthPercentText:", ProbeMethod(frame.Health.Percent, "GetText"))
 	end
 	DumpArtTextures(frame.Health, "Health")
 	DumpBar(frame.Health and frame.Health.Preview)
@@ -2640,7 +2643,7 @@ local function DumpAuraButtonState(button, label)
 	local resolvedSpellID
 	local resolvedName
 	if (unit and auraInstanceID and C_UnitAuras and C_UnitAuras.GetAuraDataByAuraInstanceID) then
-		local ok, auraData = pcall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
+		local ok, auraData = API.TryCall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
 		if (ok and auraData and not (issecretvalue and issecretvalue(auraData))) then
 			resolvedSpellID = auraData.spellId or auraData.spellID
 			resolvedName = auraData.name
@@ -2649,25 +2652,25 @@ local function DumpAuraButtonState(button, label)
 			end
 		end
 	end
-	local shown = SafeCall(button, "IsShown")
-	local visible = SafeCall(button, "IsVisible")
-	local alpha = SafeCall(button, "GetAlpha")
-	local width, height = SafeCall(button, "GetSize")
-	local level = SafeCall(button, "GetFrameLevel")
-	local iconTexture = icon and SafeCall(icon, "GetTexture") or nil
-	local iconAlpha = icon and SafeCall(icon, "GetAlpha") or nil
-	local iconShown = icon and SafeCall(icon, "IsShown") or nil
-	local iconDesaturated = icon and SafeCall(icon, "IsDesaturated") or nil
+	local shown = ProbeMethod(button, "IsShown")
+	local visible = ProbeMethod(button, "IsVisible")
+	local alpha = ProbeMethod(button, "GetAlpha")
+	local width, height = ProbeMethod(button, "GetSize")
+	local level = ProbeMethod(button, "GetFrameLevel")
+	local iconTexture = icon and ProbeMethod(icon, "GetTexture") or nil
+	local iconAlpha = icon and ProbeMethod(icon, "GetAlpha") or nil
+	local iconShown = icon and ProbeMethod(icon, "IsShown") or nil
+	local iconDesaturated = icon and ProbeMethod(icon, "IsDesaturated") or nil
 	local iconR, iconG, iconB, iconA
 	if (icon) then
-		iconR, iconG, iconB, iconA = SafeCall(icon, "GetVertexColor")
+		iconR, iconG, iconB, iconA = ProbeMethod(icon, "GetVertexColor")
 	end
-	local countText = count and SafeCall(count, "GetText") or nil
-	local countShown = count and SafeCall(count, "IsShown") or nil
-	local cdShown = cooldown and SafeCall(cooldown, "IsShown") or nil
+	local countText = count and ProbeMethod(count, "GetText") or nil
+	local countShown = count and ProbeMethod(count, "IsShown") or nil
+	local cdShown = cooldown and ProbeMethod(cooldown, "IsShown") or nil
 	local cdStart, cdDuration, cdEnabled
 	if (cooldown) then
-		cdStart, cdDuration, cdEnabled = SafeCall(cooldown, "GetCooldown")
+		cdStart, cdDuration, cdEnabled = ProbeMethod(cooldown, "GetCooldown")
 	end
 	local timeLeft = button.timeLeft
 	local expiration = button.auraExpirationTime or button.expirationTime
@@ -2717,7 +2720,7 @@ local function DumpSecureAuraHeaderChildren(header, label, maxChildren)
 	local cap = tonumber(maxChildren) or 60
 	local dumped = 0
 	for i = 1, cap do
-		local child = SafeCall(header, "GetAttribute", "child" .. i)
+		local child = ProbeMethod(header, "GetAttribute", "child" .. i)
 		if (not child) then
 			break
 		end
@@ -2749,7 +2752,7 @@ local function DumpPlayerAuraSnapshot()
 		if (container) then
 			for _, groupKey in ipairs({ "AzeriteHelpful", "AzeriteHarmful" }) do
 				for index = 1, 40 do
-					local button = SafeCall(container, "GetAuraGroupFrame", groupKey, index)
+					local button = ProbeMethod(container, "GetAuraGroupFrame", groupKey, index)
 					if (button) then
 						dumped = dumped + 1
 						DumpAuraButtonState(button, unitLabel .. ":" .. groupKey .. "[" .. index .. "]")
@@ -2776,29 +2779,29 @@ local function DumpTopRightAuraSnapshot()
 	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: top-right")
 	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(), "numConsolidated", buffs.numConsolidated)
 	SafePrint("|cfff0f0f0", "header:",
-		"shown", SafeCall(buffs, "IsShown"),
-		"alpha", SafeCall(buffs, "GetAlpha"),
-		"unit", SafeCall(buffs, "GetAttribute", "unit"),
-		"filter", SafeCall(buffs, "GetAttribute", "filter"),
-		"point", SafeCall(buffs, "GetAttribute", "point"),
-		"xOffset", SafeCall(buffs, "GetAttribute", "xOffset"),
-		"wrapAfter", SafeCall(buffs, "GetAttribute", "wrapAfter"))
+		"shown", ProbeMethod(buffs, "IsShown"),
+		"alpha", ProbeMethod(buffs, "GetAlpha"),
+		"unit", ProbeMethod(buffs, "GetAttribute", "unit"),
+		"filter", ProbeMethod(buffs, "GetAttribute", "filter"),
+		"point", ProbeMethod(buffs, "GetAttribute", "point"),
+		"xOffset", ProbeMethod(buffs, "GetAttribute", "xOffset"),
+		"wrapAfter", ProbeMethod(buffs, "GetAttribute", "wrapAfter"))
 
 	if (proxy) then
 		SafePrint("|cfff0f0f0", "proxy:",
-			"shown", SafeCall(proxy, "IsShown"),
-			"alpha", SafeCall(proxy, "GetAlpha"),
-			"count", proxy.count and SafeCall(proxy.count, "GetText") or nil,
-			"texture", proxy.texture and SafeCall(proxy.texture, "GetTexture") or nil)
+			"shown", ProbeMethod(proxy, "IsShown"),
+			"alpha", ProbeMethod(proxy, "GetAlpha"),
+			"count", proxy.count and ProbeMethod(proxy.count, "GetText") or nil,
+			"texture", proxy.texture and ProbeMethod(proxy.texture, "GetTexture") or nil)
 	end
 
 	if (consolidation) then
 		SafePrint("|cfff0f0f0", "consolidation:",
-			"shown", SafeCall(consolidation, "IsShown"),
-			"alpha", SafeCall(consolidation, "GetAlpha"),
-			"point", SafeCall(consolidation, "GetAttribute", "point"),
-			"xOffset", SafeCall(consolidation, "GetAttribute", "xOffset"),
-			"wrapAfter", SafeCall(consolidation, "GetAttribute", "wrapAfter"))
+			"shown", ProbeMethod(consolidation, "IsShown"),
+			"alpha", ProbeMethod(consolidation, "GetAlpha"),
+			"point", ProbeMethod(consolidation, "GetAttribute", "point"),
+			"xOffset", ProbeMethod(consolidation, "GetAttribute", "xOffset"),
+			"wrapAfter", ProbeMethod(consolidation, "GetAttribute", "wrapAfter"))
 	end
 
 	DumpSecureAuraHeaderChildren(buffs, "topright.main", 80)
@@ -2819,7 +2822,7 @@ local function CountRawUnitAuras(unit, filter)
 	local total, secretIDs, secretTables, blocked = 0, 0, 0, 0
 	if (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then
 		for index = 1, 255 do
-			local ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, unit, index, filter)
+			local ok, data = API.TryCall(C_UnitAuras.GetAuraDataByIndex, unit, index, filter)
 			if (not ok) then
 				blocked = blocked + 1
 				break
@@ -2842,7 +2845,7 @@ local function CountRawUnitAuras(unit, filter)
 	-- select("#") counts trailing nils, unlike the length operator.
 	local slots = -1
 	if (C_UnitAuras and C_UnitAuras.GetAuraSlots) then
-		local n = select("#", pcall(C_UnitAuras.GetAuraSlots, unit, filter))
+		local n = select("#", API.TryCall(C_UnitAuras.GetAuraSlots, unit, filter))
 		slots = n - 2
 	end
 
@@ -2877,7 +2880,7 @@ local function DumpTargetAuraSnapshot()
 	SafePrint("|cfff0f0f0", " api env:",
 		"issecrettable", issecrettable and true or false,
 		"issecretvalue", issecretvalue and true or false,
-		"blizzBuff1", UnitBuff and select(1, pcall(UnitBuff, unit, 1)) or "n/a")
+		"blizzBuff1", UnitBuff and select(1, API.TryCall(UnitBuff, unit, 1)) or "n/a")
 
 	SafePrint("|cfff0f0f0", " cache:",
 		"allBuffs", CountAuraTableEntries(auras.allBuffs),
@@ -2893,11 +2896,11 @@ local function DumpTargetAuraSnapshot()
 		"allowCombat", auras.allowCombatUpdates, "secretAuras", auras.__AzeriteUI_HasSecretAuras)
 
 	SafePrint("|cfff0f0f0", " container:",
-		"shown", SafeCall(auras, "IsShown"), "visible", SafeCall(auras, "IsVisible"),
-		"alpha", SafeCall(auras, "GetAlpha"),
-		"w", SafeCall(auras, "GetWidth"), "h", SafeCall(auras, "GetHeight"),
-		"points", SafeCall(auras, "GetNumPoints"),
-		"frameShown", SafeCall(frame, "IsShown"), "frameAlpha", SafeCall(frame, "GetAlpha"))
+		"shown", ProbeMethod(auras, "IsShown"), "visible", ProbeMethod(auras, "IsVisible"),
+		"alpha", ProbeMethod(auras, "GetAlpha"),
+		"w", ProbeMethod(auras, "GetWidth"), "h", ProbeMethod(auras, "GetHeight"),
+		"points", ProbeMethod(auras, "GetNumPoints"),
+		"frameShown", ProbeMethod(frame, "IsShown"), "frameAlpha", ProbeMethod(frame, "GetAlpha"))
 
 	local cap = auras.createdButtons or 0
 	if (cap > 8) then cap = 8 end
@@ -2906,13 +2909,13 @@ local function DumpTargetAuraSnapshot()
 		if (button) then
 			local icon = button.Icon
 			SafePrint("|cfff0f0f0 ", " button" .. i,
-				"shown", SafeCall(button, "IsShown"),
-				"visible", SafeCall(button, "IsVisible"),
-				"alpha", SafeCall(button, "GetAlpha"),
-				"points", SafeCall(button, "GetNumPoints"),
-				"w", SafeCall(button, "GetWidth"),
-				"iconShown", icon and SafeCall(icon, "IsShown"),
-				"iconAlpha", icon and SafeCall(icon, "GetAlpha"))
+				"shown", ProbeMethod(button, "IsShown"),
+				"visible", ProbeMethod(button, "IsVisible"),
+				"alpha", ProbeMethod(button, "GetAlpha"),
+				"points", ProbeMethod(button, "GetNumPoints"),
+				"w", ProbeMethod(button, "GetWidth"),
+				"iconShown", icon and ProbeMethod(icon, "IsShown"),
+				"iconAlpha", icon and ProbeMethod(icon, "GetAlpha"))
 		end
 	end
 end
@@ -2959,15 +2962,15 @@ local function GetUnitFrameModules()
 end
 
 local function PrintScaleStatus()
-	local uiScale = SafeCall(UIParent, "GetScale")
+	local uiScale = ProbeMethod(UIParent, "GetScale")
 	local desired = ns.API.GetEffectiveScale()
 	print("|cff33ff99", "AzeriteUI scale status:")
 	print("|cfff0f0f0  UIParent scale:", tostring(uiScale), "desired frame scale:", tostring(desired))
 	for _, mod in next, GetUnitFrameModules() do
 		if (mod and mod.frame) then
 			local name = mod.GetName and mod:GetName() or "Unknown"
-			local frameScale = SafeCall(mod.frame, "GetScale")
-			local eff = SafeCall(mod.frame, "GetEffectiveScale")
+			local frameScale = ProbeMethod(mod.frame, "GetScale")
+			local eff = ProbeMethod(mod.frame, "GetEffectiveScale")
 			local saved = mod.db and mod.db.profile and mod.db.profile.savedPosition and mod.db.profile.savedPosition.scale or nil
 			local anchor = mod.anchor
 			local anchorDefault = anchor and anchor.GetDefaultScale and anchor:GetDefaultScale() or nil
@@ -3001,7 +3004,7 @@ local function GetDebugNamePlateFrame(token)
 
 	if (not frame and ns.ActiveNamePlates) then
 		for plate in next, ns.ActiveNamePlates do
-			if (plate and plate.unit and SafeCall(UnitIsUnit, plate.unit, unit)) then
+			if (plate and plate.unit and ProbeMethod(UnitIsUnit, plate.unit, unit)) then
 				frame = plate
 				resolvedUnit = plate.unit
 				break
@@ -3130,20 +3133,20 @@ PrintPlayerOrbDebug = function()
 	local nativeMin, nativeMax = nil, nil
 	local orbText = nil
 	if (native and native.GetMinMaxValues) then
-		nativeMin, nativeMax = SafeCall(native, "GetMinMaxValues")
+		nativeMin, nativeMax = ProbeMethod(native, "GetMinMaxValues")
 	end
 	if (orb.Value and orb.Value.GetText) then
-		orbText = SafeCall(orb.Value, "GetText")
+		orbText = ProbeMethod(orb.Value, "GetText")
 	end
 
 	print("|cff33ff99", "AzeriteUI player orb debug:")
-	SafePrint("|cfff0f0f0  orb:", "shown", SafeCall(orb, "IsShown"), "width", SafeCall(orb, "GetWidth"), "height", SafeCall(orb, "GetHeight"), "alpha", SafeCall(orb, "GetAlpha"))
+	SafePrint("|cfff0f0f0  orb:", "shown", ProbeMethod(orb, "IsShown"), "width", ProbeMethod(orb, "GetWidth"), "height", ProbeMethod(orb, "GetHeight"), "alpha", ProbeMethod(orb, "GetAlpha"))
 	SafePrint("|cfff0f0f0  text:", orbText)
 	SafePrint("|cfff0f0f0  textures:",
-		"t1", tex1 and SafeCall(tex1, "GetTexture"), tex1 and SafeCall(tex1, "IsShown"), tex1 and SafeCall(tex1, "GetAlpha"),
-		"t2", tex2 and SafeCall(tex2, "GetTexture"), tex2 and SafeCall(tex2, "IsShown"), tex2 and SafeCall(tex2, "GetAlpha"),
-		"t3", tex3 and SafeCall(tex3, "IsShown"), tex3 and SafeCall(tex3, "GetAlpha"),
-		"t4", tex4 and SafeCall(tex4, "IsShown"), tex4 and SafeCall(tex4, "GetAlpha"))
+		"t1", tex1 and ProbeMethod(tex1, "GetTexture"), tex1 and ProbeMethod(tex1, "IsShown"), tex1 and ProbeMethod(tex1, "GetAlpha"),
+		"t2", tex2 and ProbeMethod(tex2, "GetTexture"), tex2 and ProbeMethod(tex2, "IsShown"), tex2 and ProbeMethod(tex2, "GetAlpha"),
+		"t3", tex3 and ProbeMethod(tex3, "IsShown"), tex3 and ProbeMethod(tex3, "GetAlpha"),
+		"t4", tex4 and ProbeMethod(tex4, "IsShown"), tex4 and ProbeMethod(tex4, "GetAlpha"))
 	SafePrint("|cfff0f0f0  element:",
 		"cur", orb.cur,
 		"min", orb.min,
@@ -3157,13 +3160,13 @@ PrintPlayerOrbDebug = function()
 		"barMin", data and data.barMin,
 		"barMax", data and data.barMax,
 		"barDisplayValue", data and data.barDisplayValue,
-		"scrollShown", data and data.scrollframe and SafeCall(data.scrollframe, "IsShown"))
+		"scrollShown", data and data.scrollframe and ProbeMethod(data.scrollframe, "IsShown"))
 	SafePrint("|cfff0f0f0  native:",
-		"value", native and SafeCall(native, "GetValue"),
+		"value", native and ProbeMethod(native, "GetValue"),
 		"min", nativeMin,
 		"max", nativeMax)
 	SafePrint("|cfff0f0f0  crystal:",
-		"shown", crystal and SafeCall(crystal, "IsShown"),
+		"shown", crystal and ProbeMethod(crystal, "IsShown"),
 		"cur", crystal and crystal.cur,
 		"safeCur", crystal and crystal.safeCur,
 		"safePct", crystal and crystal.safePercent,
@@ -3177,6 +3180,7 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug|r  (toggle menu)")
 	print("|cfff0f0f0  /azdebug status|r")
 	print("|cfff0f0f0  /azdebug group|r  (party/raid header report)")
+	print("|cfff0f0f0  /azdebug taint|r  (who tainted Blizzard's action buttons)")
 	print("|cfff0f0f0  /azdebug health [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug health filter <text>|r  (example: Target.)")
 	print("|cfff0f0f0  /azdebug healthchat [on|off|toggle]|r")
@@ -3260,7 +3264,7 @@ local function PrintNamePlateCastDebug(token)
 			end
 
 			if (ns and ns.ActiveNamePlates and frame and frame.unit and C_NamePlate and C_NamePlate.GetNamePlateForUnit) then
-				local okPlate, plate = pcall(C_NamePlate.GetNamePlateForUnit, frame.unit, issecurefunc and issecurefunc())
+				local okPlate, plate = API.TryCall(C_NamePlate.GetNamePlateForUnit, frame.unit, issecurefunc and issecurefunc())
 				local unitFrame = okPlate and plate and (plate.UnitFrame or plate.unitFrame)
 				local blizzardCastbar = unitFrame and (unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.Castbar or unitFrame.CastingBarFrame)
 				local blizzardActive = blizzardCastbar and (blizzardCastbar.casting or blizzardCastbar.channeling or blizzardCastbar.empowering)
@@ -4338,6 +4342,95 @@ end
 -- straight from the live client so a report from inside the instance says which of
 -- the three possible causes it is: the state driver evaluating to hide, the secure
 -- header holding no unit buttons, or the module never having been enabled.
+--[[
+	Reports who tainted Blizzard's own action buttons.
+
+	Blizzard's action buttons stay alive and invisible rather than being
+	unregistered, because removing their events has repeatedly proven more
+	taint-prone than leaving them running. On Retail 12.1 those buttons feed
+	secret values into their own cooldown updates, and Blizzard rejects secret
+	values whenever the execution path is tainted. One tainted button therefore
+	turns into thousands of `ActionButton.lua:847` errors per session, plus
+	ADDON_ACTION_BLOCKED on `SetAttribute` from Blizzard's own update path.
+
+	`issecurevariable` names the addon responsible for each field, so this turns
+	"which addon tainted it" from a guess into an answer. Run it after the errors
+	have started, since a button can be clean until something touches it.
+]]
+Debugging.PrintActionButtonTaintReport = function(self)
+	print("|cff33ff99", "AzeriteUI action button taint report:")
+
+	if (type(issecurevariable) ~= "function") then
+		print("|cffff0000  issecurevariable is unavailable; cannot inspect taint.")
+		return
+	end
+
+	-- The fields Blizzard's own update path reads on these buttons. A tainted
+	-- value in any of them drags Blizzard's execution insecure when it is used.
+	local fields = {
+		"SetAlpha", "EnableMouse", "SetMouseClickEnabled", "SetMouseMotionEnabled",
+		"SetAttribute", "SetScript", "Show", "Hide", "action", "cooldown"
+	}
+
+	local groups = {
+		{ prefix = "ActionButton", count = 12 },
+		{ prefix = "MultiBarBottomLeftButton", count = 12 },
+		{ prefix = "MultiBarBottomRightButton", count = 12 },
+		{ prefix = "MultiBarRightButton", count = 12 },
+		{ prefix = "MultiBarLeftButton", count = 12 },
+		{ prefix = "MultiBar5Button", count = 12 },
+		{ prefix = "MultiBar6Button", count = 12 },
+		{ prefix = "MultiBar7Button", count = 12 },
+		{ prefix = "PetActionButton", count = 10 },
+		{ prefix = "StanceButton", count = 10 }
+	}
+
+	local blamed, anyTainted = {}, false
+
+	for _, group in ipairs(groups) do
+		for index = 1, group.count do
+			local name = group.prefix .. index
+			local button = _G[name]
+			if (button) then
+				for _, field in ipairs(fields) do
+					local ok, secure, culprit = pcall(issecurevariable, button, field)
+					if (ok and secure == false) then
+						anyTainted = true
+						local who = culprit or "<unknown>"
+						local entry = blamed[who]
+						if (not entry) then
+							entry = { count = 0, first = name .. "." .. field, fields = {} }
+							blamed[who] = entry
+						end
+						entry.count = entry.count + 1
+						if (not entry.fields[field]) then
+							entry.fields[field] = true
+							entry.fieldList = (entry.fieldList and (entry.fieldList .. ", ") or "") .. field
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if (not anyTainted) then
+		print("|cff00ff00  No taint found on any Blizzard action, pet or stance button.")
+		print("|cfff0f0f0  If the errors are happening now, the taint is somewhere else.")
+		return
+	end
+
+	for who, entry in pairs(blamed) do
+		local mine = (who == "AzeriteUI5_JuNNeZ_Edition")
+		print((mine and "|cffff4444  " or "|cffffcc00  ") .. who .. ": "
+			.. entry.count .. " tainted field(s)")
+		print("|cfff0f0f0     fields: " .. (entry.fieldList or "?"))
+		print("|cfff0f0f0     first:  " .. entry.first)
+	end
+
+	print("|cfff0f0f0  Blizzard rejects secret values under tainted execution, so any")
+	print("|cfff0f0f0  addon listed here can cause the ActionButton.lua:847 spam.")
+end
+
 Debugging.PrintGroupFrameReport = function(self)
 	local isInstance, instanceType = IsInInstance()
 	print("|cff33ff99", "AzeriteUI group frame report:")
@@ -4425,6 +4518,9 @@ Debugging.DebugMenu = function(self, input)
 	end
 	if (cmd == "group" or cmd == "groups") then
 		return self:PrintGroupFrameReport()
+	end
+	if (cmd == "taint") then
+		return self:PrintActionButtonTaintReport()
 	end
 	if (cmd == "raidbar") then
 		if (not IsDevMode()) then

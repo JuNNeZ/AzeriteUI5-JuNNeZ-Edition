@@ -24,11 +24,12 @@
 
 --]]
 local _, ns = ...
+local API = ns.API
 local Widgets = ns.Private.Widgets or {}
 ns.Private.Widgets = Widgets
 
 -- Lua API
-local next, pairs, pcall, select, type = next, pairs, pcall, select, type
+local next, pairs, select, type = next, pairs, select, type
 
 -- GLOBALS: CreateFrame, GetTime, hooksecurefunc
 
@@ -59,7 +60,7 @@ Timer:SetScript("OnUpdate", function(self, elapsed)
 		local duration = info.duration
 		timeLeft = nil
 		if (info.durationObject and info.durationObject.EvaluateRemainingTime) then
-			local ok, remaining = pcall(info.durationObject.EvaluateRemainingTime, info.durationObject)
+			local ok, remaining = API.TryCall(info.durationObject.EvaluateRemainingTime, info.durationObject)
 			if (ok and IsSafeNumber(remaining)) then
 				timeLeft = remaining
 				info.remaining = remaining
@@ -67,7 +68,7 @@ Timer:SetScript("OnUpdate", function(self, elapsed)
 			else
 				local isZero = false
 				if (info.durationObject.IsZero) then
-					local okZero, zero = pcall(info.durationObject.IsZero, info.durationObject)
+					local okZero, zero = API.TryCall(info.durationObject.IsZero, info.durationObject)
 					if (okZero and type(zero) == "boolean" and zero) then
 						isZero = true
 					end
@@ -216,7 +217,7 @@ Cooldown.SetCooldownFromDurationObject = function(self, durationObject)
 
 	local remaining = nil
 	if (durationObject and durationObject.EvaluateRemainingTime) then
-		local ok, value = pcall(durationObject.EvaluateRemainingTime, durationObject)
+		local ok, value = API.TryCall(durationObject.EvaluateRemainingTime, durationObject)
 		if (ok and IsSafeNumber(value)) then
 			remaining = value
 		end

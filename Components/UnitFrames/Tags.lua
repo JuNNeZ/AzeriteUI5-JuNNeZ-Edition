@@ -34,10 +34,12 @@ local select = select
 local string_format = string.format
 local string_gsub = string.gsub
 local string_len = string.len
+local string_lower = string.lower
 local tonumber = tonumber
 local unpack = unpack
 
 -- Addon API
+local API = ns.API
 local Colors = ns.Colors
 local AbbreviateName = ns.API.AbbreviateName
 local AbbreviateNumber = ns.API.AbbreviateNumber
@@ -80,12 +82,12 @@ local FormatSecretPercent = function(pctVal)
 		_secretPctFS = UIParent:CreateFontString(nil, "BACKGROUND", "GameFontNormalSmall")
 		_secretPctFS:SetAlpha(0)
 	end
-	local ok = pcall(function()
-		_secretPctFS:SetFormattedText("%.0f%%", pctVal)
-	end)
+	local ok = API.TryCall(_secretPctFS.SetFormattedText, _secretPctFS, "%.0f%%", pctVal)
 	if (ok) then
-		local text
-		pcall(function() text = _secretPctFS:GetText() end)
+		local okText, text = API.TryCall(_secretPctFS.GetText, _secretPctFS)
+		if (not okText) then
+			text = nil
+		end
 		if (text ~= nil) then
 			if (issecretvalue and issecretvalue(text)) then
 				return text
@@ -202,7 +204,7 @@ local SafeUnitName = function(unit)
 		return name
 	end
 	if (_G.GetUnitName) then
-		local ok, altName = pcall(_G.GetUnitName, unit, false)
+		local ok, altName = API.TryCall(_G.GetUnitName, unit, false)
 		-- Reject secret values; these must never be used in addon logic
 		if (ok and issecretvalue and issecretvalue(altName)) then
 			altName = nil
@@ -210,7 +212,7 @@ local SafeUnitName = function(unit)
 		if (ok and type(altName) == "string" and altName ~= "") then
 			return altName
 		end
-		ok, altName = pcall(_G.GetUnitName, unit, true)
+		ok, altName = API.TryCall(_G.GetUnitName, unit, true)
 		if (ok and issecretvalue and issecretvalue(altName)) then
 			altName = nil
 		end
@@ -219,7 +221,7 @@ local SafeUnitName = function(unit)
 		end
 	end
 	if (_G.UnitNameUnmodified) then
-		local ok, altName = pcall(_G.UnitNameUnmodified, unit)
+		local ok, altName = API.TryCall(_G.UnitNameUnmodified, unit)
 		if (ok and issecretvalue and issecretvalue(altName)) then
 			altName = nil
 		end
@@ -263,13 +265,12 @@ end
 
 -- WoW 12.0.0: Safe value formatting that avoids arithmetic on secret values
 local SafeNonEmptyString = function(value)
-	if (type(value) ~= "string") then
+	-- A secret string can throw on operations and comparisons, so exclude it
+	-- up front. What remains is a plain string; string.len cannot throw on it.
+	if (not API.IsSafeString(value)) then
 		return false
 	end
-	-- Secret-string values can still error on operations/comparisons.
-	-- Only treat it as safe if we can measure its length.
-	local ok, len = pcall(string.len, value)
-	return ok and len and len > 0
+	return string_len(value) > 0
 end
 
 local FormatPercent = function(value)
@@ -294,18 +295,18 @@ end
 local SafeValueToText = function(value)
 	if not value then return "" end
 	
-	-- AbbreviateNumber can handle secret values internally
-	local success, result = pcall(AbbreviateNumber, value)
-	if success and SafeNonEmptyString(result) then
+	-- AbbreviateNumber handles secret values internally but can still throw on
+	-- some shapes; tostring is a real fallback, so both probes stay silent.
+	local ok, result = API.TryCall(AbbreviateNumber, value)
+	if (ok and SafeNonEmptyString(result)) then
 		return result
 	end
-	
-	-- If it failed, try tostring as last resort
-	local success2, str = pcall(tostring, value)
-	if success2 and SafeNonEmptyString(str) then
+
+	local okStr, str = API.TryCall(tostring, value)
+	if (okStr and SafeNonEmptyString(str)) then
 		return str
 	end
-	
+
 	return "?"
 end
 
@@ -327,38 +328,16 @@ local HasDisplayValue = function(value)
 end
 
 local IsZeroLikeText = function(value)
-	if (type(value) ~= "string") then
+	-- Exclude secret strings once, here. Everything below then operates on a
+	-- plain string with constant patterns, which cannot throw.
+	if (not API.IsSafeString(value)) then
 		return false
 	end
-	if (issecretvalue) then
-		local okSecret, isSecret = pcall(issecretvalue, value)
-		if (okSecret and isSecret) then
-			return false
-		end
-		if (not okSecret) then
-			return false
-		end
-	end
-	local okPlain, plain = pcall(string_gsub, value, "|c%x%x%x%x%x%x%x%x", "")
-	if (not okPlain or type(plain) ~= "string") then
-		return false
-	end
-	local okUnwrap, unwrapped = pcall(string_gsub, plain, "|r", "")
-	if (okUnwrap and type(unwrapped) == "string") then
-		plain = unwrapped
-	end
-	local okTrim, trimmed = pcall(string.gsub, plain, "%s+", "")
-	if (not okTrim or type(trimmed) ~= "string") then
-		return false
-	end
-	local okParen, noParen = pcall(string_gsub, trimmed, "[%(%)]", "")
-	if (okParen and type(noParen) == "string") then
-		trimmed = noParen
-	end
-	local okLower, lowered = pcall(string.lower, trimmed)
-	if (not okLower or type(lowered) ~= "string") then
-		return false
-	end
+	local plain = string_gsub(value, "|c%x%x%x%x%x%x%x%x", "")
+	plain = string_gsub(plain, "|r", "")
+	local trimmed = string_gsub(plain, "%s+", "")
+	trimmed = string_gsub(trimmed, "[%(%)]", "")
+	local lowered = string_lower(trimmed)
 	if (lowered == "<secret>" or lowered == "secret" or lowered == "?" or lowered == "nil") then
 		return true
 	end
@@ -381,11 +360,11 @@ local GetAbsorbFromCalculator = function(frame, unit)
 	-- Prefer the same calculator instance updated by oUF for this frame.
 	if (prediction.values) then
 		if (maxClampMode ~= nil and prediction.values.SetDamageAbsorbClampMode and not prediction.__AzeriteUI_PredictionValuesClampModeApplied) then
-			pcall(prediction.values.SetDamageAbsorbClampMode, prediction.values, maxClampMode)
+			API.SafeCall("Absorb.values.SetDamageAbsorbClampMode", prediction.values.SetDamageAbsorbClampMode, prediction.values, maxClampMode)
 			prediction.__AzeriteUI_PredictionValuesClampModeApplied = true
 		end
 	if (prediction.values.GetPredictedValues) then
-		local okPredicted, predictedValues = pcall(prediction.values.GetPredictedValues, prediction.values)
+		local okPredicted, predictedValues = API.TryCall(prediction.values.GetPredictedValues, prediction.values)
 		if (okPredicted and type(predictedValues) == "table") then
 			local totalDamageAbsorbs = predictedValues.totalDamageAbsorbs
 			if (totalDamageAbsorbs ~= nil) then
@@ -394,7 +373,7 @@ local GetAbsorbFromCalculator = function(frame, unit)
 		end
 	end
 	if (prediction.values.GetDamageAbsorbs) then
-		local okValues, valuesAbsorb = pcall(prediction.values.GetDamageAbsorbs, prediction.values)
+		local okValues, valuesAbsorb = API.TryCall(prediction.values.GetDamageAbsorbs, prediction.values)
 		if (okValues and valuesAbsorb ~= nil) then
 			return valuesAbsorb, "values.GetDamageAbsorbs"
 		end
@@ -411,18 +390,18 @@ local GetAbsorbFromCalculator = function(frame, unit)
 		return nil, "no-calculator"
 	end
 	if (maxClampMode ~= nil and calculator.SetDamageAbsorbClampMode and not prediction.__AzeriteUI_AbsorbCalculatorClampModeApplied) then
-		pcall(calculator.SetDamageAbsorbClampMode, calculator, maxClampMode)
+		API.SafeCall("Absorb.calc.SetDamageAbsorbClampMode", calculator.SetDamageAbsorbClampMode, calculator, maxClampMode)
 		prediction.__AzeriteUI_AbsorbCalculatorClampModeApplied = true
 	end
-	local okUpdate = pcall(UnitGetDetailedHealPrediction, unit, nil, calculator)
+	local okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, nil, calculator)
 	if (not okUpdate) then
-		okUpdate = pcall(UnitGetDetailedHealPrediction, unit, "player", calculator)
+		okUpdate = API.TryCall(UnitGetDetailedHealPrediction, unit, "player", calculator)
 	end
 	if (not okUpdate) then
 		return nil, "calc.update-failed"
 	end
 	if (calculator.GetPredictedValues) then
-		local okPredicted, predictedValues = pcall(calculator.GetPredictedValues, calculator)
+		local okPredicted, predictedValues = API.TryCall(calculator.GetPredictedValues, calculator)
 		if (okPredicted and type(predictedValues) == "table") then
 			local totalDamageAbsorbs = predictedValues.totalDamageAbsorbs
 			if (totalDamageAbsorbs ~= nil) then
@@ -430,7 +409,7 @@ local GetAbsorbFromCalculator = function(frame, unit)
 			end
 		end
 	end
-	local okAbsorb, absorb = pcall(calculator.GetDamageAbsorbs, calculator)
+	local okAbsorb, absorb = API.TryCall(calculator.GetDamageAbsorbs, calculator)
 	if (not okAbsorb or absorb == nil) then
 		return nil, "calc.GetDamageAbsorbs"
 	end
@@ -459,7 +438,7 @@ end
 local SafeAbsorbValueText = function(absorb)
 	if (issecretvalue and issecretvalue(absorb)) then
 		if (type(AbbreviateNumbers) == "function") then
-			local okFormat, formatted = pcall(AbbreviateNumbers, absorb)
+			local okFormat, formatted = API.TryCall(AbbreviateNumbers, absorb)
 			if (okFormat) then
 				local safeFormatted, hasSafeFormatted = ToAbsorbDisplayValue(formatted)
 				if (hasSafeFormatted) then
@@ -474,7 +453,7 @@ local SafeAbsorbValueText = function(absorb)
 		return nil, false
 	end
 	if (type(AbbreviateNumbers) == "function") then
-		local okFormat, formatted = pcall(AbbreviateNumbers, absorb)
+		local okFormat, formatted = API.TryCall(AbbreviateNumbers, absorb)
 		if (okFormat) then
 			local safeFormatted, hasSafeFormatted = ToAbsorbDisplayValue(formatted)
 			if (hasSafeFormatted) then
@@ -507,7 +486,7 @@ local SafeHealthCurrentText = function(unit)
 
 	-- Prefer Blizzard formatter path for WoW12 secret-value compatibility.
 	if (type(AbbreviateNumbers) == "function") then
-		local ok, formatted = pcall(AbbreviateNumbers, current)
+		local ok, formatted = API.TryCall(AbbreviateNumbers, current)
 		if (ok and formatted ~= nil) then
 			local valueType = type(formatted)
 			if (valueType == "string" or valueType == "number") then
@@ -529,7 +508,7 @@ local SafeHealthMaxText = function(unit)
 	end
 
 	if (type(AbbreviateNumbers) == "function") then
-		local ok, formatted = pcall(AbbreviateNumbers, maxHealth)
+		local ok, formatted = API.TryCall(AbbreviateNumbers, maxHealth)
 		if (ok and formatted ~= nil) then
 			local valueType = type(formatted)
 			if (valueType == "string" or valueType == "number") then
@@ -562,7 +541,7 @@ local SafePowerValueText = function(value)
 		end
 	end
 	if (type(AbbreviateNumbers) == "function") then
-		local ok, formatted = pcall(AbbreviateNumbers, value)
+		local ok, formatted = API.TryCall(AbbreviateNumbers, value)
 		if (ok and formatted ~= nil) then
 			local valueType = type(formatted)
 			if (valueType == "string" or valueType == "number") then
@@ -634,14 +613,16 @@ local GetElementLiveValueRange = function(element)
 	local maxValue = nil
 
 	if (element.GetValue) then
-		pcall(function()
-			value = element:GetValue()
-		end)
+		local ok, current = API.TryCall(element.GetValue, element)
+		if (ok) then
+			value = current
+		end
 	end
 	if (element.GetMinMaxValues) then
-		pcall(function()
-			minValue, maxValue = element:GetMinMaxValues()
-		end)
+		local ok, lo, hi = API.TryCall(element.GetMinMaxValues, element)
+		if (ok) then
+			minValue, maxValue = lo, hi
+		end
 	end
 
 	if (type(value) ~= "number" or (issecretvalue and issecretvalue(value))) then
@@ -765,21 +746,25 @@ local SafeUnitPercent = function(unit, isPower, powerType)
 
 	local percent
 	if (isPower and UnitPowerPercent) then
-		pcall(function()
-			if (CurveConstants and CurveConstants.ScaleTo100) then
-				percent = UnitPowerPercent(unit, powerType, true, CurveConstants.ScaleTo100)
-			else
-				percent = UnitPowerPercent(unit, powerType)
-			end
-		end)
+		local ok, value
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			ok, value = API.TryCall(UnitPowerPercent, unit, powerType, true, CurveConstants.ScaleTo100)
+		else
+			ok, value = API.TryCall(UnitPowerPercent, unit, powerType)
+		end
+		if (ok) then
+			percent = value
+		end
 	elseif (not isPower and UnitHealthPercent) then
-		pcall(function()
-			if (CurveConstants and CurveConstants.ScaleTo100) then
-				percent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
-			else
-				percent = UnitHealthPercent(unit)
-			end
-		end)
+		local ok, value
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			ok, value = API.TryCall(UnitHealthPercent, unit, true, CurveConstants.ScaleTo100)
+		else
+			ok, value = API.TryCall(UnitHealthPercent, unit)
+		end
+		if (ok) then
+			percent = value
+		end
 	end
 	if (type(percent) == "number") then
 		if (issecretvalue and issecretvalue(percent)) then
@@ -810,24 +795,25 @@ local SafeUnitHealth = function(unit)
 
 	if (useFrameValues) then
 		if (frame and SafeUnitTokenEquals(frame.unit, unit) and frame.Health) then
-			pcall(function()
-				local health = frame.Health
-				local barVal = health.safeCur or health.cur
-				local barMax = health.safeMax or health.max
-				if (type(barVal) ~= "number") then
-					barVal = health:GetValue()
-				end
-				if (type(barMax) ~= "number") then
-					local _, m = health:GetMinMaxValues()
-					barMax = m
-				end
-				if (type(barVal) == "number") then
-					cur = barVal
-				end
-				if (type(barMax) == "number") then
-					max = barMax
-				end
-			end)
+			local health = frame.Health
+			local barVal = health.safeCur or health.cur
+			local barMax = health.safeMax or health.max
+			-- Each live bar read is its own guarded step; a throw on one must
+			-- not skip the other, which a single shared guard used to allow.
+			if (type(barVal) ~= "number") then
+				local ok, current = API.TryCall(health.GetValue, health)
+				barVal = ok and current or nil
+			end
+			if (type(barMax) ~= "number") then
+				local ok, _, m = API.TryCall(health.GetMinMaxValues, health)
+				barMax = ok and m or nil
+			end
+			if (type(barVal) == "number") then
+				cur = barVal
+			end
+			if (type(barMax) == "number") then
+				max = barMax
+			end
 		end
 	end
 
@@ -920,13 +906,15 @@ local ResolveDisplayHealthPercent = function(unit)
 	end
 	local apiPercent
 	if (UnitHealthPercent) then
-		pcall(function()
-			if (CurveConstants and CurveConstants.ScaleTo100) then
-				apiPercent = UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
-			else
-				apiPercent = UnitHealthPercent(unit)
-			end
-		end)
+		local ok, value
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			ok, value = API.TryCall(UnitHealthPercent, unit, true, CurveConstants.ScaleTo100)
+		else
+			ok, value = API.TryCall(UnitHealthPercent, unit)
+		end
+		if (ok) then
+			apiPercent = value
+		end
 	end
 	if (type(apiPercent) == "number" and not (issecretvalue and issecretvalue(apiPercent))) then
 		if (type(apiPercent) == "number") then
@@ -1083,18 +1071,22 @@ local SafeUnitPower = function(unit, powerType)
 
 	if (useFrameValues) then
 		if (powerElement) then
-			pcall(function()
-				local barVal, _, barMax = GetElementSafeValueRange(powerElement)
-				if (type(barVal) ~= "number" or type(barMax) ~= "number") then
-					barVal, _, barMax = GetElementLiveValueRange(powerElement)
+			local okSafe, barVal, _, barMax = API.SafeCall("Tags.GetElementSafeValueRange", GetElementSafeValueRange, powerElement)
+			if (not okSafe) then
+				barVal, barMax = nil, nil
+			end
+			if (type(barVal) ~= "number" or type(barMax) ~= "number") then
+				local okLive, liveVal, _, liveMax = API.SafeCall("Tags.GetElementLiveValueRange", GetElementLiveValueRange, powerElement)
+				if (okLive) then
+					barVal, barMax = liveVal, liveMax
 				end
-				if (type(barVal) == "number") then
-					cur = barVal
-				end
-				if (type(barMax) == "number") then
-					max = barMax
-				end
-			end)
+			end
+			if (type(barVal) == "number") then
+				cur = barVal
+			end
+			if (type(barMax) == "number") then
+				max = barMax
+			end
 		end
 	end
 
@@ -1155,19 +1147,12 @@ SafePercent = function(cur, max)
 		return nil
 	end
 	
-	if type(cur) ~= "number" or type(max) ~= "number" then return nil end
+	if (not API.IsSafeNumber(cur) or not API.IsSafeNumber(max)) then return nil end
 	if max == 0 then return nil end
-	
-	-- Try calculation in pcall
-	local success, percent = pcall(function()
-		return (cur / max * 100) + 0.5
-	end)
-	
-	if success and type(percent) == "number" then
-		return percent - (percent % 1)
-	end
-	
-	return nil
+
+	-- Both operands are verified plain numbers; the arithmetic cannot throw.
+	local percent = (cur / max * 100) + 0.5
+	return percent - (percent % 1)
 end
 
 -- Tags
@@ -1384,13 +1369,12 @@ Methods[prefix("*:HealthPercent")] = function(unit)
 	-- AbbreviateNumbers converts the secret number to displayable text,
 	-- C_StringUtil.WrapString appends the "%" suffix without Lua concat.
 	if (UnitHealthPercent) then
-		local ok, pctVal = pcall(function()
-			if (CurveConstants and CurveConstants.ScaleTo100) then
-				return UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
-			else
-				return UnitHealthPercent(unit)
-			end
-		end)
+		local ok, pctVal
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			ok, pctVal = API.TryCall(UnitHealthPercent, unit, true, CurveConstants.ScaleTo100)
+		else
+			ok, pctVal = API.TryCall(UnitHealthPercent, unit)
+		end
 		if (ok and pctVal ~= nil) then
 			local formatted = FormatSecretPercent(pctVal)
 			if (formatted ~= nil) then
@@ -1419,13 +1403,12 @@ Methods[prefix("*:TargetHealthPercent")] = function(unit)
 
 	-- WoW 12 secret-safe fallback (same as *:HealthPercent above).
 	if (UnitHealthPercent) then
-		local ok, pctVal = pcall(function()
-			if (CurveConstants and CurveConstants.ScaleTo100) then
-				return UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
-			else
-				return UnitHealthPercent(unit)
-			end
-		end)
+		local ok, pctVal
+		if (CurveConstants and CurveConstants.ScaleTo100) then
+			ok, pctVal = API.TryCall(UnitHealthPercent, unit, true, CurveConstants.ScaleTo100)
+		else
+			ok, pctVal = API.TryCall(UnitHealthPercent, unit)
+		end
 		if (ok and pctVal ~= nil) then
 			local formatted = FormatSecretPercent(pctVal)
 			if (formatted ~= nil) then

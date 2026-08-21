@@ -1,4 +1,5 @@
 local _, ns = ...
+local API = ns.API
 
 ns.NameplateInterruptDB = ns.NameplateInterruptDB or {}
 local DB = ns.NameplateInterruptDB
@@ -96,7 +97,8 @@ DB.GetSpellIDForCastbar = function(castbar)
 	local unit = owner and owner.unit
 	if (type(unit) == "string" and unit ~= "" and (not IsSecretValue(unit))) then
 		if (UnitCastingInfo) then
-			local castResult = { pcall(UnitCastingInfo, unit) }
+			local _, castResult = API.SafeCallPacked("InterruptDB.UnitCastingInfo", UnitCastingInfo, unit)
+			castResult = castResult or {}
 			local okCast = castResult[1]
 			local castSpellID = castResult[10]
 			spellID = okCast and NormalizeSpellID(castSpellID) or nil
@@ -106,7 +108,8 @@ DB.GetSpellIDForCastbar = function(castbar)
 		end
 
 		if (UnitChannelInfo) then
-			local channelResult = { pcall(UnitChannelInfo, unit) }
+			local _, channelResult = API.SafeCallPacked("InterruptDB.UnitChannelInfo", UnitChannelInfo, unit)
+			channelResult = channelResult or {}
 			local okChannel = channelResult[1]
 			local channelSpellID = channelResult[9]
 			spellID = okChannel and NormalizeSpellID(channelSpellID) or nil

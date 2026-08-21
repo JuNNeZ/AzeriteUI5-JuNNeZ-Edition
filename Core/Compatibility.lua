@@ -24,6 +24,11 @@
 
 --]]
 local Addon, ns = ...
+-- This file loads from the TOC before Core.xml, so the API table does not exist
+-- yet. Create/adopt it the same way the Core\API files do; ProtectedCall.lua
+-- later adds SafeCall/TryCall to this same table, well before anything here runs.
+local API = ns.API or {}
+ns.API = API
 
 -- Backdrop template for Lua and XML
 -- Allows us to always set these templates, even in Classic.
@@ -89,7 +94,7 @@ if (tocversion >= 100200) or (tocversion >= 40400 and tocversion < 50000) then
 				end
 				if type(texture) == "table" and texture.SetTexture then
 					if type(original_SetPortraitToTexture) == "function" then
-						local ok = pcall(original_SetPortraitToTexture, texture, asset)
+						local ok = API.TryCall(original_SetPortraitToTexture, texture, asset)
 						if ok then
 							return
 						end
@@ -119,7 +124,7 @@ do
 	ns.SafeUnpackAuraData = function(auraData)
 		-- Try the (possibly wrapped) AuraUtil.UnpackAuraData first.
 		if (AuraUtil and AuraUtil.UnpackAuraData) then
-			local results = Pack(pcall(AuraUtil.UnpackAuraData, auraData))
+			local results = Pack(API.TryCall(AuraUtil.UnpackAuraData, auraData))
 			if (results[1] and results[2] ~= nil) then
 				return unpack(results, 2, results.n)
 			end
@@ -129,12 +134,12 @@ do
 		-- guard with issecretvalue before touching auraData.points.
 		local safePoints
 		if (issecretvalue) then
-			local ok, pts = pcall(function() return auraData.points end)
+			local ok, pts = API.TryCall(function() return auraData.points end)
 			if (ok and not issecretvalue(pts) and type(pts) == "table") then
 				safePoints = pts
 			end
 		else
-			local ok, pts = pcall(function()
+			local ok, pts = API.TryCall(function()
 				local p = auraData.points
 				if (type(p) == "table") then return p end
 			end)
@@ -180,7 +185,7 @@ do
 		if (tocversion < 120000 or filter ~= nil or not UnitCanAssist or type(unitToken) ~= "string") then
 			return filter
 		end
-		local ok, canAssist = pcall(UnitCanAssist, "player", unitToken)
+		local ok, canAssist = API.TryCall(UnitCanAssist, "player", unitToken)
 		if (ok and type(canAssist) == "boolean" and IsReadableValue(canAssist) and canAssist) then
 			if (InCombatLockdown and InCombatLockdown()) then
 				-- Last known-good combat behavior: no filter. Direct RAID_PLAYER_DISPELLABLE
@@ -202,7 +207,7 @@ do
 		if (not UnitCanAssist) then
 			return false
 		end
-		local ok, canAssist = pcall(UnitCanAssist, "player", unitToken)
+		local ok, canAssist = API.TryCall(UnitCanAssist, "player", unitToken)
 		return ok and type(canAssist) == "boolean" and IsReadableValue(canAssist) and canAssist and true or false
 	end
 
@@ -220,7 +225,7 @@ do
 			if (not UnitAuras.GetUnitAuras) then
 				return nil
 			end
-			local okAuras, auraList = pcall(UnitAuras.GetUnitAuras, unitToken, auraFilter)
+			local okAuras, auraList = API.TryCall(UnitAuras.GetUnitAuras, unitToken, auraFilter)
 			if (okAuras and type(auraList) == "table") then
 				attemptedFilteredQuery = true
 				return auraList
@@ -229,7 +234,7 @@ do
 		end
 
 		local function TryGetInstanceIDs(auraFilter)
-			local okIDs, auraInstanceIDs = pcall(UnitAuras.GetUnitAuraInstanceIDs, unitToken, auraFilter)
+			local okIDs, auraInstanceIDs = API.TryCall(UnitAuras.GetUnitAuraInstanceIDs, unitToken, auraFilter)
 			if (okIDs and type(auraInstanceIDs) == "table") then
 				attemptedFilteredQuery = true
 				return auraInstanceIDs
@@ -255,7 +260,7 @@ do
 		if (type(auraInstanceID) ~= "number") then
 			return nil, true
 		end
-		local okAura, auraData = pcall(UnitAuras.GetAuraDataByAuraInstanceID, unitToken, auraInstanceID)
+		local okAura, auraData = API.TryCall(UnitAuras.GetAuraDataByAuraInstanceID, unitToken, auraInstanceID)
 		if (okAura and auraData) then
 			return auraData, true
 		end
