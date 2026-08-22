@@ -55,6 +55,87 @@ API.CreatePrivateAuras = function(owner, relativeTo, size, count)
 	return element
 end
 
+-- Player resource pings
+------------------------------------------------------------
+-- Retail 12.1 split the player frame's ping in two: over the portrait it is an
+-- ordinary unit ping, anywhere else on the frame it reports the player's
+-- resource instead. Blizzard does that in PingableType_PlayerUnitFrameMixin by
+-- flagging isPlayerResource on the target info.
+--
+-- oUF gives our player frames PingableType_UnitFrameMixin, which only ever
+-- returns a GUID, so every ping on those frames is the plain unit one and the
+-- resource ping is unreachable. AzeriteUI has no portrait to split on, so the
+-- resource displays themselves are the test: the mana orb and the power bar.
+--
+-- IsMouseOver is a geometric test and does not care whether the element is
+-- mouse enabled, which matters because the power bar is not.
+--
+-- KNOWN LIMITATION, unresolved: isPlayerResource is a single boolean. It ends
+-- at C_PingSecure.SendUnitPing(guid, type, isPlayerResource) and the client
+-- alone decides which resource to announce - in testing it reported health.
+-- There is no API surface to ask for power specifically, and Blizzard's own
+-- player frame uses the same one flag across both its health and mana bars.
+-- A mana-specific ping is therefore not currently expressible.
+local PLAYER_RESOURCE_PINGS = (PingableType_PlayerUnitFrameMixin and Mixin) and true or false
+
+local IsCursorOverPlayerResource = function(frame)
+	local mana = frame.ManaOrb
+	if (mana and mana:IsVisible() and mana:IsMouseOver()) then
+		return true
+	end
+
+	local power = frame.Power
+	if (power and power:IsVisible() and power:IsMouseOver()) then
+		return true
+	end
+
+	return false
+end
+
+local Player_GetTargetInfo = function(self)
+	return {
+		guid = UnitGUID("player"),
+		isPlayerResource = IsCursorOverPlayerResource(self)
+	}
+end
+
+-- The radial ping wheel is suppressed over the resources, matching Blizzard.
+-- A resource report is contextual only; there is nothing to pick from a wheel.
+local Player_GetAllowRadialWheel = function(self)
+	return not IsCursorOverPlayerResource(self)
+end
+
+local Orb_GetTargetInfo = function()
+	return { guid = UnitGUID("player"), isPlayerResource = true }
+end
+
+local Orb_GetAllowRadialWheel = function()
+	return false
+end
+
+-- Called by both player frame layouts. The stock one owns a mana orb, the
+-- alternate one only a power bar, and neither needs to know that here.
+API.EnablePlayerResourcePings = function(frame)
+	if (not PLAYER_RESOURCE_PINGS) or (not frame) or (not frame.GetTargetInfo) then
+		return
+	end
+
+	frame.GetTargetInfo = Player_GetTargetInfo
+	frame.GetAllowRadialWheel = Player_GetAllowRadialWheel
+
+	-- The orb is anchored inside the player frame, but it is its own frame and
+	-- nothing guarantees it stays within the parent's rect across layouts, so
+	-- it is made a receiver in its own right rather than relying on the frame
+	-- underneath it catching the ping.
+	local mana = frame.ManaOrb
+	if (mana and mana.SetAttribute and not mana.GetIsPingable) then
+		Mixin(mana, PingableTypeMixin)
+		mana.GetTargetInfo = Orb_GetTargetInfo
+		mana.GetAllowRadialWheel = Orb_GetAllowRadialWheel
+		mana:SetAttribute("ping-receiver", true)
+	end
+end
+
 local SanitizeDebugValue = function(value)
 	if (issecretvalue and issecretvalue(value)) then
 		return "<secret>"

@@ -1096,6 +1096,10 @@ local style = function(self, unit, id)
 	self.Power.PostUpdate = Power_UpdateVisibility
 	self.Power.PostUpdateColor = Power_PostUpdateColor
 
+	-- This layout has no mana orb, so the power bar is the only resource a
+	-- ping can land on. See API.EnablePlayerResourcePings in Functions.lua.
+	API.EnablePlayerResourcePings(self)
+
 	local powerBackdropGroup = CreateFrame("Frame", nil, self)
 	powerBackdropGroup:SetAllPoints(power)
 	powerBackdropGroup:SetFrameLevel(power:GetFrameLevel())

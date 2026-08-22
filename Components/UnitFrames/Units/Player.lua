@@ -3532,6 +3532,8 @@ local style = function(self, unit)
 		end
 	end
 
+	API.EnablePlayerResourcePings(self)
+
 	local manaCaseFrame = CreateFrame("Frame", nil, mana)
 	manaCaseFrame:SetFrameLevel(mana:GetFrameLevel() + 4)
 	manaCaseFrame:SetAllPoints()
