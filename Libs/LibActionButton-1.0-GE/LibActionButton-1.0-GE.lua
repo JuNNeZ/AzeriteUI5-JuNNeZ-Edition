@@ -1,7 +1,7 @@
 -- License: LICENSE.txt
 
 local MAJOR_VERSION = "LibActionButton-1.0-GE"
-local MINOR_VERSION = 75 -- Retail duration-object and display-count modernization
+local MINOR_VERSION = 76 -- Ability ping support (GetActionButtonInfo, ping-receiver upkeep)
 
 local LibStub = LibStub
 if not LibStub then error(MAJOR_VERSION .. " requires LibStub.") end
@@ -356,7 +356,14 @@ function lib:CreateButton(id, name, header, config)
 
 	-- Retail ActionButtonTemplate now brings in mixin methods that can override
 	-- LAB's metatable methods unless we explicitly clear them.
+	-- GetActionButtonInfo matters beyond cosmetics: ActionButtonTemplate also
+	-- inherits PingableActionButtonTemplate, and Blizzard's ping system asks
+	-- GetIsPingable -> GetActionButtonInfo before it will announce a spell or
+	-- its cooldown. BaseActionButtonInfoMixin's stub returns nil, which reads
+	-- as "not pingable", so leaving it in place makes every button on every
+	-- bar silently unpingable.
 	button.HasAction = nil
+	button.GetActionButtonInfo = nil
 
 	button.id = id
 	button.header = header
@@ -465,6 +472,25 @@ function SetupSecureSnippets(button)
 			self:SetAttribute(action_field, action)
 			self:SetAttribute("action_field", action_field)
 		end
+
+		-- Replicate PingableType_ActionButtonMixin:UpdatePingAttributes.
+		-- PingableActionButtonTemplate hardcodes ping-receiver to true, and
+		-- Blizzard clears it again on empty slots so that a ping aimed past
+		-- the bar reaches the world instead of dying on an empty button. We
+		-- inherit the attribute but not the upkeep, so we do it here rather
+		-- than from Lua: this also has to stay correct through combat, and
+		-- the restricted environment is the only place we may touch a secure
+		-- attribute mid-fight.
+		-- nil rather than false on the empty branch: Blizzard clears the
+		-- attribute outright, and SetAttribute(name, nil) is how the restricted
+		-- environment spells ClearAttribute.
+		local hasAction
+		if type == "action" then
+			hasAction = (action and GetActionInfo(action)) and true or nil
+		elseif type ~= "empty" then
+			hasAction = true
+		end
+		self:SetAttribute("ping-receiver", hasAction)
 
 		local updateReleaseCasting = self:GetAttribute("UpdateReleaseCasting")
 		if updateReleaseCasting then
@@ -3213,6 +3239,12 @@ Generic.UpdateFlyout = UpdateFlyout
 --- WoW API mapping
 --- Generic Button
 Generic.HasAction                = function(self) return nil end
+-- Consumed by Blizzard's ping system through PingableType_ActionButtonMixin:
+-- GetIsPingable gates on it, and GetTargetInfo turns it into the spellID or
+-- itemID that C_PingSecure announces along with its cooldown. Mirrors the
+-- shape of ActionBarActionButtonMixin:GetActionButtonInfo. A nil return means
+-- "not pingable", which is the right answer for empty and custom buttons.
+Generic.GetActionButtonInfo      = function(self) return nil end
 Generic.GetActionText            = function(self) return "" end
 Generic.GetTexture               = function(self) return nil end
 Generic.GetCount                 = function(self) return 0 end
@@ -3463,6 +3495,17 @@ local function ShouldPreferSpellChargeInfo(actionInfo, spellInfo)
 end
 
 Action.HasAction                = function(self) return HasAction(self._state_action) end
+Action.GetActionButtonInfo      = function(self)
+	local actionType, id, subType = GetActionInfo(self._state_action)
+	local isUsable, notEnoughMana = IsUsableAction(self._state_action)
+	return {
+		id = id,
+		actionType = actionType,
+		subType = subType,
+		isUsable = isUsable,
+		notEnoughMana = notEnoughMana
+	}
+end
 Action.GetActionText            = function(self) return GetActionText(self._state_action) end
 Action.GetTexture               = function(self) return GetActionTexture(self._state_action) end
 Action.GetCount                 = function(self)
@@ -3592,6 +3635,15 @@ end
 -----------------------------------------------------------
 --- Spell Button
 Spell.HasAction                = function(self) return true end
+Spell.GetActionButtonInfo      = function(self)
+	local isUsable, notEnoughMana = C_Spell.IsSpellUsable(self._state_action)
+	return {
+		id = tonumber(self._state_action),
+		actionType = "spell",
+		isUsable = isUsable,
+		notEnoughMana = notEnoughMana
+	}
+end
 Spell.GetActionText            = function(self) return "" end
 Spell.GetTexture               = function(self) return C_Spell.GetSpellTexture(self._state_action) end
 Spell.GetCount                 = function(self) return C_Spell.GetSpellCastCount(self._state_action) end
@@ -3626,6 +3678,13 @@ local function getItemId(input)
 end
 
 Item.HasAction               = function(self) return true end
+Item.GetActionButtonInfo     = function(self)
+	return {
+		id = tonumber(getItemId(self._state_action)),
+		actionType = "item",
+		isUsable = C_Item.IsUsableItem(self._state_action)
+	}
+end
 Item.GetActionText           = function(self) return "" end
 Item.GetTexture              = function(self) return C_Item.GetItemIconByID(self._state_action) end
 Item.GetCount                = function(self) return C_Item.GetItemCount(self._state_action, nil, true) end
@@ -3674,6 +3733,12 @@ Macro.GetSpellId              = function(self) return nil end
 -----------------------------------------------------------
 --- Toy Button
 Toy.HasAction               = function(self) return true end
+Toy.GetActionButtonInfo     = function(self)
+	return {
+		id = tonumber(self._state_action),
+		actionType = "item"
+	}
+end
 Toy.GetActionText           = function(self) return "" end
 Toy.GetTexture              = function(self) return select(3, C_ToyBox.GetToyInfo(self._state_action)) end
 Toy.GetCharges              = function(self) return nil end

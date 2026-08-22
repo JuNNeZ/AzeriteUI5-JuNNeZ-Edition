@@ -12,6 +12,25 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.3.88-JuNNeZ (2026-08-22) - Ability Pings, Resource Callouts, and the Pet Bar Ping Error
+
+### Highlights
+
+- Pinging an ability on your action bars now works. It announces the spell or item along with its cooldown and whether you can afford it, the same callout Blizzard's own bars give. This had never worked on any AzeriteUI bar: the buttons claimed to be ping receivers but reported no action underneath, so the ping system quietly decided there was nothing to announce.
+- Pinging your own unit frame now calls out your health and mana instead of only flagging where you are standing. This is the resource callout Blizzard puts on the player frame; every AzeriteUI frame was being treated as an ordinary unit frame, which has no notion of your own resources.
+- Fixed an error from the pet bar that broke Blizzard's ability ping system. Pinging anywhere over the pet bar raised a Lua error and left pinging broken everywhere else on screen until reload. This is the same defect fixed on the stance bar in 5.3.87, which the pet bar shared and which the stance bar fix did not reach.
+- Pings aimed past an empty slot on an action bar now reach the world instead of dying on the button. Empty buttons had been holding on to their ping receiver status rather than stepping aside as Blizzard's do.
+- Holding the ping key over your own unit frame no longer opens the ping wheel, and gives you the health and mana callout instead. Blizzard offers the wheel only over the player portrait and the callout everywhere else on that frame; our player frame is all orb and crystal with no portrait, so the callout is the whole frame. The wheel is unchanged everywhere else, including over the world, your target, and other players' frames.
+
+### Internal
+
+- `LibActionButton-1.0-GE` gains `GetActionButtonInfo` on the generic, action, spell, item and toy prototypes, and clears the inherited `BaseActionButtonInfoMixin` stub off each button at creation the way it already cleared `HasAction`. The stub returns nil, and `PingableType_ActionButtonMixin:GetIsPingable` reads a nil result as "not pingable", so every button on every bar was unpingable while looking correctly configured. Bumped to minor 76.
+- The library's secure `UpdateState` snippet now maintains the `ping-receiver` attribute, replicating `PingableType_ActionButtonMixin:UpdatePingAttributes`. `PingableActionButtonTemplate` hardcodes the attribute on and Blizzard clears it again for empty slots; we inherited the attribute but not the upkeep. It is done inside the restricted environment because it has to stay correct through combat.
+- `PetButton.Create` sets `button.index`, which `PetActionButtonMixin:GetActionButtonInfo` reads. See the matching note on `StanceButton.lua`.
+- The player frame overrides `GetTargetInfo` to pass `isPlayerResource`, and `GetAllowRadialWheel` to suppress the wheel, matching `PingableType_PlayerUnitFrameMixin`. Blizzard gates both on the cursor being off the portrait; our player frame has no portrait, so the health orb and power crystal are the whole frame.
+- Removed the target frame's `GetContextualPingType`/`GetTargetPingGUID` pair. Both were dropped from `PingableTypeMixin` when the ping system moved to `GetTargetInfo`, so nothing called them, and the bare mixin they sat on returns a target with no guid. All the frame did was park a second, guid-less ping receiver over a target frame that oUF already spawns from `PingableUnitFrameTemplate`.
+
+
 ## 5.3.87-JuNNeZ (2026-08-21) - Target Castbar Fill, Raid Specialization Icons, and Fewer Stray Clicks
 
 ### Highlights

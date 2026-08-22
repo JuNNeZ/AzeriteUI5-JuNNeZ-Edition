@@ -3543,22 +3543,15 @@ local style = function(self, unit, id)
 
 	self.Portrait.Bg = portraitBg
 
-	local portraitOverlayFrame = nil
-	if (ns.IsRetail) then
-		portraitOverlayFrame = CreateFrame("Frame", nil, self, "PingReceiverAttributeTemplate")
-
-		Mixin(portraitOverlayFrame, PingableTypeMixin)
-
-		portraitOverlayFrame.GetContextualPingType = function(self)
-			return PingUtil:GetContextualPingTypeForUnit(self:GetTargetPingGUID())
-		end
-
-		portraitOverlayFrame.GetTargetPingGUID = function(self)
-			return UnitGUID(unit)
-		end
-	else
-		portraitOverlayFrame = CreateFrame("Frame", nil, self)
-	end
+	-- This used to be a PingReceiverAttributeTemplate frame with a
+	-- GetContextualPingType/GetTargetPingGUID pair mixed in. Both methods were
+	-- dropped from PingableTypeMixin when the ping system moved to GetTargetInfo,
+	-- so nothing called them, and the bare PingableTypeMixin they sat on returns
+	-- a target table with no guid at all. All it did was park a second, guid-less
+	-- ping-receiver on top of the target frame. oUF already spawns the frame
+	-- itself from PingableUnitFrameTemplate, which resolves the unit correctly,
+	-- so this is now just the plain art parent it always needed to be.
+	local portraitOverlayFrame = CreateFrame("Frame", nil, self)
 
 	portraitOverlayFrame:SetFrameLevel(self:GetFrameLevel() - 1)
 	portraitOverlayFrame:SetAllPoints()

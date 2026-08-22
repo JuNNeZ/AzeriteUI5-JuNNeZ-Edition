@@ -79,6 +79,15 @@ ns.PetButton.Create = function(id, name, header, buttonConfig)
 	local button = CreateFrame("CheckButton", name, header, "PetActionButtonTemplate")
 	button.showgrid = 0
 	button.id = id
+	-- PetActionButtonTemplate carries Blizzard's PetActionButtonMixin, whose
+	-- HasAction and GetActionButtonInfo read self.index rather than GetID. We
+	-- override HasAction below, but not GetActionButtonInfo, and the template
+	-- also inherits PingableActionButtonTemplate through SmallActionButtonTemplate.
+	-- The ping system calls GetIsPingable -> GetActionButtonInfo on whatever sits
+	-- under the cursor, so without this GetPetActionInfo(nil) threw and a ping
+	-- anywhere over the pet bar broke pinging everywhere. Same defect the stance
+	-- bar had; see StanceButton.lua.
+	button.index = id
 	button.parent = header
 	button.config = buttonConfig or ns:Copy(defaults)
 

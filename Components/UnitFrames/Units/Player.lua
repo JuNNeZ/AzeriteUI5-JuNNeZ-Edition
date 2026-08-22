@@ -48,7 +48,7 @@ local C_Timer_After = C_Timer and C_Timer.After
 
 -- GLOBALS: Enum, PlayerPowerBarAlt
 -- GLOBALS: CreateFrame, GetSpecialization, IsXPUserDisabled, IsLevelAtEffectiveMaxLevel
--- GLOBALS: UnitFactionGroup, UnitLevel, UnitPowerType, UnitHasVehicleUI, UnitIsMercenary, UnitIsPVP, UnitIsPVPFreeForAll
+-- GLOBALS: UnitFactionGroup, UnitGUID, UnitLevel, UnitPowerType, UnitHasVehicleUI, UnitIsMercenary, UnitIsPVP, UnitIsPVPFreeForAll
 
 -- Addon API
 local Colors = ns.Colors
@@ -3149,6 +3149,31 @@ local style = function(self, unit)
 	self:SetSize(unpack(config.Size))
 	self:SetHitRectInsets(unpack(config.HitRectInsets))
 	self:SetFrameLevel(self:GetFrameLevel() + 2)
+
+	-- Ping resource callout
+	--------------------------------------------
+	-- Blizzard's PlayerFrame carries PingableType_PlayerUnitFrameMixin, which is
+	-- what makes a ping on your own frame call out your health and mana instead
+	-- of merely flagging where you are. oUF spawns every frame with the plain
+	-- PingableType_UnitFrameMixin, whose GetTargetInfo returns only a guid, so
+	-- that callout never fired on our player frame.
+	--
+	-- Blizzard gates isPlayerResource on the cursor being off the portrait, and
+	-- suppresses the radial wheel for the same region. Our player frame has no
+	-- portrait at all - the health orb and the power crystal are the whole frame
+	-- - so the resource branch is the only one that can apply here.
+	if (ns.IsRetail) then
+		local pingTargetInfo = { isPlayerResource = true }
+
+		self.GetTargetInfo = function()
+			pingTargetInfo.guid = UnitGUID("player")
+			return pingTargetInfo
+		end
+
+		self.GetAllowRadialWheel = function()
+			return false
+		end
+	end
 
 	-- Overlay for icons and text
 	--------------------------------------------

@@ -1,3 +1,40 @@
+## 2026-08-22 - The ping work the last release held back: ability pings, the resource callout, and the pet bar (5.3.88)
+
+- **This is the deferred half of 5.3.87.** The user's report was two separate failures: "Blizzard's new ability pings doesn't seem to work in Az, although, it works on the player frame to place your name in chat. It doesn't work on the mana section though." Only the stance bar error fix shipped last release. Both of the remaining symptoms are fixed here, and they had nothing to do with each other.
+- **Audited against the interface truth first**, `Blizzard_SharedXML/PingableType.lua` and `PingAttributes.xml` for the mixin contract, `Blizzard_ActionBar/Shared/ActionButton.lua` for the button side, `PingManagerSecureDocumentation.lua` for what the client actually announces. Then against ElvUI 12.1, ShadowedUnitFrames 12.1, Bartender4 and DiabolicUI for how other UIs solve it.
+
+### Ability pings never worked on any AzeriteUI bar
+
+- **Not a 12.1 regression. It had never worked.** `LibActionButton-1.0-GE.lua:359` cleared the inherited `HasAction` off each button at creation because retail's `ActionButtonTemplate` mixins otherwise shadow LAB's metatable methods. It did not clear `GetActionButtonInfo`, which arrives the same way from `BaseActionButtonMixin` -> `BaseActionButtonInfoMixin` and whose stub returns nil.
+- **Nil is not a soft failure here.** `ActionButtonTemplate` also inherits `PingableActionButtonTemplate`, so every LAB button carried `ping-receiver` and advertised itself to the ping system. `PingableType_ActionButtonMixin:GetIsPingable` then asks `GetActionButtonInfo` and reads a nil result as "not pingable". Correctly configured, permanently silent, and nothing anywhere logs a complaint.
+- **Applied:** `button.GetActionButtonInfo = nil` beside the existing `button.HasAction = nil`, plus real implementations on the prototypes. `Generic` returns nil, which is the right answer for empty and custom buttons and matches Blizzard's own base stub. `Action` mirrors `ActionBarActionButtonMixin:GetActionButtonInfo` exactly - `id`, `actionType`, `subType`, `isUsable`, `notEnoughMana`. `Spell`, `Item` and `Toy` get their own rather than sharing one, which is where this diverges from ElvUI: theirs puts a single `GetActionInfo(self._state_action)` on `Generic`, and `_state_action` is a spellID for spell buttons and an `item:12345` string for item buttons, so those two report nonsense on their fork.
+- **`PingSubjectType` is what makes this worth doing.** Six of its ten values - `ActionReady`, `ActionOnCooldown`, `ActionUnavailable`, `ActionNotReady`, `AlertThreat`, `AlertNotThreat` - are contextual-only and unreachable from the wheel. The four `Action*` ones are exactly the cooldown and resource callout the user was asking for, and they are gated behind the `spellID`/`itemID` that `GetTargetInfo` can only produce from `GetActionButtonInfo`.
+- **Empty slots were swallowing pings too.** `PingableActionButtonTemplate` hardcodes `ping-receiver` on and Blizzard clears it again for empty buttons in `UpdatePingAttributes`, so a ping aimed past the bar reaches the world. We inherited the attribute and not the upkeep. Replicated inside the secure `UpdateState` snippet rather than from Lua, because it has to stay correct through combat and the restricted environment is the only place a secure attribute may be touched mid-fight. `GetActionInfo` was already in use there at line 662, so availability was not a guess. `nil` on the empty branch, not `false`: `SetAttribute(name, nil)` is how the restricted environment spells `ClearAttribute`.
+- **`MINOR_VERSION` 75 -> 76.**
+
+### The mana section: the player resource callout
+
+- **`SendUnitPing` takes a third argument** the addon never passed. Its own documentation: "Player unit frame contextual pings have the optional ability to call out the player's health and in some cases mana." That flag is `isPlayerResource`, and it is the entire difference between the two halves of the user's report - the name in chat is an ordinary unit ping, the mana callout is this.
+- **Blizzard sets it from `PingableType_PlayerUnitFrameMixin`**, which `PlayerFrame` carries. Our bundled oUF spawns every frame from `PingableUnitFrameTemplate`, whose plain `PingableType_UnitFrameMixin:GetTargetInfo` returns a guid and nothing else. So the unit ping worked - which is why the name reached chat - and the resource branch was simply never reachable.
+- **Applied:** the player frame overrides `GetTargetInfo` to carry `isPlayerResource`, and `GetAllowRadialWheel` to return false. Blizzard gates both on the cursor being off the portrait; our player frame has no portrait at all, so the health orb and power crystal are the whole frame and the resource branch is the only one that can apply. ElvUI sets the flag but leaves the wheel on, which is a deliberate divergence on their part and not what Blizzard does.
+
+### The pet bar had the stance bar's bug
+
+- **Same defect, same template chain, missed last release.** `PetActionButtonTemplate` reaches `ActionButtonTemplate` through `SmallActionButtonTemplate`, so it brings `PingableActionButtonTemplate` exactly as `StanceButtonTemplate` does. `PetActionButtonMixin:GetActionButtonInfo` reads `self.index`; `ns.PetButton.Create` set `button.id` and `button:SetID(id)` and never `index`.
+- **`PetButton` overrides `HasAction`, which is why this hid.** The stance bar overrode neither and so had two ways to throw. The pet bar had one, reachable only through the ping system, so it stayed dormant until pings started resolving over it.
+- **Same blast radius as the stance bar.** `GetTargetPingReceiverInfo` wraps the lookup in `securecallfunction`, so a throw there returns nil and takes down ping resolution for the whole screen, not just the pet bar.
+- **Applied:** `button.index = id` in `ns.PetButton.Create`.
+
+### Dead pre-11.x ping code on the target frame
+
+- **`Components/UnitFrames/Units/Target.lua` carried a `PingReceiverAttributeTemplate` frame** with `GetContextualPingType` and `GetTargetPingGUID` mixed onto a bare `PingableTypeMixin`. Both methods were dropped from that mixin when the ping system moved to `GetTargetInfo`, so nothing had called them in some time, and the mixin they sat on returns a target table with no guid.
+- **Inherited from upstream AzeriteUI5**, which still carries it at `Components/UnitFrames/Units/Target.lua:757`.
+- **Applied:** removed. All it did was park a second, guid-less ping receiver over a target frame that oUF already spawns from `PingableUnitFrameTemplate` and resolves correctly. The frame stays as the plain art parent the rest of the function uses it as.
+
+### Not verified in client
+
+- **Shipped without a `/reload` test**, at the maintainer's direction. The previous release held this work back precisely because the first test build failed, so the ping paths here have never been confirmed against a live client. The four changes are independent: if pings still misbehave, the action bar library, the player frame, the pet bar and the target frame can each be reverted alone.
+
 ## 2026-08-21 - Explorer Mode latching visible, faded buttons that still cast, and the stance bar breaking Blizzard's ping system (5.3.87)
 
 - **Reported by a user, three items.** "I often click my buttons when I don't want to - like when they are hidden as I'm on a mount." Blizzard's new ability pings "doesn't seem to work in Az, although, it works on the player frame to place your name in chat. It doesn't work on the mana section though." And, after the first test build: "casting a spell while in explorer mode and mounted (or something like that) breaks explorer mode and makes it never fade again until a /reload."
