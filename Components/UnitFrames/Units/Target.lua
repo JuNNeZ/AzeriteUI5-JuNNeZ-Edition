@@ -91,6 +91,35 @@ local defaults = { profile = ns:Merge({
 	castBarScaleY = 100,
 	castBarFollowHealth = false,
 	colorCastBarByInterruptState = true,
+	-- Forces the mirrored capped-tier art onto the castbar for any target that is
+	-- not the player.
+	--
+	-- Default is now off, and the reason is the render change below. The castbar
+	-- draws its fill exactly the way the health bar underneath it does: the same
+	-- `SetTexCoord(percent, 0, 0, 1)` convention on an addon-owned texture. The
+	-- health bar uses db.HealthBarTexture unmirrored, so the castbar has to as
+	-- well or the two are flipped relative to each other on the same rectangle.
+	-- The pre-mirrored asset was compensating for the old path, where the addon
+	-- did not control the texcoords at all.
+	-- `/azdebugtarget mirror` restores it if that reads better in practice.
+	castBarMirrorTexture = false,
+	-- Which texture is the castbar's visible art on the timer-driven path.
+	--
+	--   "overlay" - the addon's own FakeFill texture, anchored to the statusbar
+	--               texture and cropped by texcoord. The statusbar texture is kept
+	--               at alpha 0 as a pure geometry driver. Default, and the same
+	--               structure the health bar on this frame has always used.
+	--   "native"  - the statusbar's own texture is the visible art. Known to scale
+	--               rather than fill; retained only for comparison.
+	--
+	-- A StatusBar driven by SetTimerDuration resizes its texture's *region* but
+	-- does not narrow that texture's texcoords, and texcoords written onto a
+	-- statusbar's own texture do not survive. Two rounds of trying to make the
+	-- statusbar crop itself failed in client for that reason. The visible art has
+	-- to be a texture the addon owns outright.
+	--
+	-- Switch with `/azdebugtarget crop`.
+	castBarCropMode = "overlay",
 	healthLabCastOffsetX = 0,
 	healthLabCastOffsetY = 0,
 	healthLabCastWidthScale = 100,
@@ -476,6 +505,29 @@ local HideTargetNativeHealthVisuals
 
 local UpdateTargetHealthPercentTag
 
+-- Fill direction for any target bar, derived from the two native statusbar
+-- properties rather than from the unit or from a cached growth token.
+--
+-- The compatibility shim in UnitFrame.lua defines growth "LEFT" as exactly
+-- SetReverseFill(true) on a horizontal bar, and "DOWN" as exactly
+-- SetReverseFill(true) on a vertical one, so the reverse-fill flag alone is
+-- authoritative. Reading it back keeps the fake-fill path and the native timer
+-- path from ever disagreeing about which edge the bar grows from, which is what
+-- let the castbar oppose the health bar it overlays. It also removes the old
+-- trap where `__AzeriteUI_Growth` and the reverse-fill flag were combined as if
+-- they were independent, so setting both correctly cancelled them out.
+local GetTargetBarGrowth = function(element)
+	if (not element) then
+		return "RIGHT"
+	end
+	local orientation = (element.GetOrientation and element:GetOrientation()) or "HORIZONTAL"
+	local reverseFill = element.GetReverseFill and element:GetReverseFill()
+	if (orientation == "VERTICAL") then
+		return reverseFill and "DOWN" or "UP"
+	end
+	return reverseFill and "LEFT" or "RIGHT"
+end
+
 local ClampTargetSparkPercent = function(value)
 	if (type(value) ~= "number") or (issecretvalue and issecretvalue(value)) then
 		return nil
@@ -537,7 +589,7 @@ local UpdateTargetBarSparkSize = function(element)
 	if (not spark) then
 		return
 	end
-	local growth = (element.GetGrowth and element:GetGrowth()) or element.__AzeriteUI_Growth or "RIGHT"
+	local growth = GetTargetBarGrowth(element)
 	local width = element.GetWidth and element:GetWidth() or 0
 	local height = element.GetHeight and element:GetHeight() or 0
 	if (type(width) ~= "number" or type(height) ~= "number"
@@ -565,23 +617,33 @@ local UpdateTargetBarSpark = function(element, percentOverride)
 			return
 		end
 	end
-	local percent = GetTargetBarSparkPercent(element, percentOverride)
-	if (type(percent) ~= "number" or percent <= 0 or percent >= 1 or not element:IsShown()) then
+	if (not element:IsShown()) then
 		spark:Hide()
 		return
 	end
-	local growth = (element.GetGrowth and element:GetGrowth()) or element.__AzeriteUI_Growth or "RIGHT"
-	local reverseFill = element.GetReverseFill and element:GetReverseFill()
-	if (reverseFill) then
-		if (growth == "RIGHT") then
-			growth = "LEFT"
-		elseif (growth == "LEFT") then
-			growth = "RIGHT"
-		elseif (growth == "UP") then
-			growth = "DOWN"
-		elseif (growth == "DOWN") then
-			growth = "UP"
+	local growth = GetTargetBarGrowth(element)
+
+	-- Preferred path: ride the moving edge of the statusbar texture itself.
+	-- This is oUF's own documented spark pattern (see Libs/oUF/elements/castbar.lua),
+	-- and it needs no percent at all, so it keeps working on the native timer path
+	-- where the cast duration is a secret value and no readable percent exists.
+	if (element.__AzeriteUI_UseNativeCastVisual) then
+		local nativeTexture = element.GetStatusBarTexture and element:GetStatusBarTexture()
+		if (nativeTexture) then
+			spark:ClearAllPoints()
+			spark:SetPoint("CENTER", nativeTexture, (growth == "LEFT") and "LEFT"
+				or (growth == "UP") and "TOP"
+				or (growth == "DOWN") and "BOTTOM"
+				or "RIGHT", 0, 0)
+			spark:Show()
+			return
 		end
+	end
+
+	local percent = GetTargetBarSparkPercent(element, percentOverride)
+	if (type(percent) ~= "number" or percent <= 0 or percent >= 1) then
+		spark:Hide()
+		return
 	end
 	local width = element:GetWidth()
 	local height = element:GetHeight()
@@ -799,6 +861,10 @@ local ApplyTargetSimpleCastFakeFillByPercent = function(cast, percent)
 	local nativeTexture = cast.GetStatusBarTexture and cast:GetStatusBarTexture()
 	local anchorFrame = nativeTexture or cast
 	local growth = GetTargetCastVisualGrowth(cast)
+	-- This path repoints the FakeFill onto its own anchors, so the overlay path's
+	-- "already anchored to the statusbar texture" cache has to be invalidated or
+	-- it will not re-anchor when the two paths alternate.
+	cast.__AzeriteUI_FakeFillFollowsTexture = nil
 	fakeFill:ClearAllPoints()
 	if (anchorFrame) then
 		fakeFill:SetPoint("TOP", anchorFrame, "TOP")
@@ -875,15 +941,116 @@ local GetTargetCastFakeAlpha = function(cast)
 	return configuredAlpha
 end
 
+-- Whether the castbar wears the mirrored capped-tier art instead of the current
+-- tier's own health bar texture. Deliberate default, toggled for A/B testing by
+-- `/azdebugtarget mirror`. Nil-safe so a missing db reads as the shipped default.
+local ShouldUseTargetCastMirrorTexture = function()
+	local profile = TargetFrameMod and TargetFrameMod.db and TargetFrameMod.db.profile
+	return not (profile and profile.castBarMirrorTexture == false)
+end
+ns.ShouldUseTargetCastMirrorTexture = ShouldUseTargetCastMirrorTexture
+
+-- "overlay" or "native". See the castBarCropMode default for what each means.
+-- Anything other than an explicit "native" resolves to the overlay path, so the
+-- stale "engine"/"manual" values from the two earlier attempts land on the
+-- working default rather than on the legacy renderer.
+local GetTargetCastCropMode = function()
+	local profile = TargetFrameMod and TargetFrameMod.db and TargetFrameMod.db.profile
+	return (profile and profile.castBarCropMode == "native") and "native" or "overlay"
+end
+ns.GetTargetCastCropMode = GetTargetCastCropMode
+
+-- Draw the castbar fill as an addon-owned overlay cropped by texcoord, using the
+-- statusbar's own texture only as an invisible geometry driver.
+--
+-- This is the same structure the health bar on this very frame already uses and
+-- has always rendered correctly with:
+--
+--   HideTargetNativeHealthVisuals   -> nativeTexture:SetAlpha(0)
+--   ApplyTargetSimpleHealthFakeFillByPercent
+--                                   -> fakeFill:SetAllPoints(nativeTexture)
+--                                   -> fakeFill:SetTexCoord(percent, 0, 0, 1)
+--
+-- The castbar's timer path did the exact inverse -- statusbar texture visible at
+-- alpha 1, FakeFill hidden -- and that is why it scaled. A StatusBar driven by
+-- SetTimerDuration resizes its texture's region but does not narrow that
+-- texture's texcoords, and the texcoords it owns cannot be usefully overridden
+-- from Lua: the engine re-establishes them. So the visible art must be a texture
+-- the addon owns outright. Anchoring it to the statusbar texture inherits the
+-- engine-computed region for free, with no arithmetic on any secret value.
+--
+-- This is also precisely what AzeriteUI6 does -- a blank, zero-alpha statusbar
+-- texture plus a separate ARTWORK texture SetAllPoints to it, cropped from
+-- GetElapsedPercent. Goldpaw's "trick to avoiding math on secret values" comment
+-- is on the SetAllPoints line for this reason.
+--
+-- The percent is never read. SetTexCoord is the one primitive documented
+-- `SecretArguments = "AllowedWhenTainted"`, so a secret percent can be handed
+-- straight to it -- required, because UnitCastingDuration is `SecretReturns`.
+-- Do not compare or do arithmetic on `percent` anywhere in here.
+local ApplyTargetOverlayCastFill = function(cast, durationPayload)
+	if (not cast) then
+		return false
+	end
+	local fakeFill = cast.FakeFill
+	if (not fakeFill or not fakeFill.SetTexCoord) then
+		return false
+	end
+	local nativeTexture = cast.GetStatusBarTexture and cast:GetStatusBarTexture()
+	if (not nativeTexture) then
+		return false
+	end
+	if (durationPayload == nil) then
+		return false
+	end
+	-- Index and call inside one guarded call. The duration object can itself be a
+	-- secret value, so even reaching for the method can throw; nothing here may
+	-- assume it is an ordinary table.
+	--
+	-- 0 is DurationTimeModifier.RealTime, which is also the documented default.
+	-- Elapsed for a cast, remaining for a channel, matching the direction oUF
+	-- hands SetTimerDuration -- otherwise the crop would run opposite the region.
+	local okPercent, percent = API.TryCall(function()
+		if (cast.channeling) then
+			return durationPayload:GetRemainingPercent(0)
+		end
+		return durationPayload:GetElapsedPercent(0)
+	end)
+	if (not okPercent or percent == nil) then
+		return false
+	end
+
+	-- Re-anchor only when something else has moved it. ApplyTargetSimpleCastFakeFillByPercent
+	-- repoints this texture, and SetAllPoints is a protected function, so it is
+	-- not something to call every frame for no reason.
+	if (cast.__AzeriteUI_FakeFillFollowsTexture ~= nativeTexture) then
+		fakeFill:ClearAllPoints()
+		fakeFill:SetAllPoints(nativeTexture)
+		cast.__AzeriteUI_FakeFillFollowsTexture = nativeTexture
+	end
+
+	-- Same convention as the health bar: (percent, 0) reveals from the right edge,
+	-- which is where a LEFT-growth fill is anchored. A RIGHT-growth bar reveals
+	-- from the left with (0, percent). Neither branch does arithmetic.
+	if (GetTargetBarGrowth(cast) == "LEFT") then
+		fakeFill:SetTexCoord(percent, 0, 0, 1)
+	else
+		fakeFill:SetTexCoord(0, percent, 0, 1)
+	end
+	if (fakeFill.SetAlpha) then
+		fakeFill:SetAlpha(1)
+	end
+	fakeFill:Show()
+	return true
+end
+
 local IsTargetCastBarInterruptColorEnabled = function()
 	local profile = TargetFrameMod and TargetFrameMod.db and TargetFrameMod.db.profile
 	return not (profile and profile.colorCastBarByInterruptState == false)
 end
 
 GetTargetCastVisualGrowth = function(cast)
-	local owner = cast and cast.__owner
-	local unit = owner and owner.unit
-	return (type(unit) == "string" and unit ~= "" and ns.API.SafeUnitIsUnit(unit, "player")) and "LEFT" or "RIGHT"
+	return GetTargetBarGrowth(cast)
 end
 
 local GetTargetVisibleCastColor = function(cast)
@@ -939,18 +1106,46 @@ local ApplyTargetNativeCastVisualFromTimer = function(cast, durationPayload, sou
 		return false
 	end
 	local nativeTexture = cast.GetStatusBarTexture and cast:GetStatusBarTexture()
-	if (nativeTexture and nativeTexture.SetAlpha) then
-		nativeTexture:SetAlpha(1)
+	local overlayMode = (GetTargetCastCropMode() ~= "native")
+	local overlayApplied = false
+	if (overlayMode) then
+		overlayApplied = ApplyTargetOverlayCastFill(cast, durationPayload)
 	end
-	if (nativeTexture and nativeTexture.Show) then
-		nativeTexture:Show()
-	end
-	ApplyTargetNativeCastVertexColor(cast)
-	if (cast.FakeFill and cast.FakeFill.Hide) then
-		cast.FakeFill:Hide()
+	if (overlayMode) then
+		-- The statusbar texture is now nothing but a geometry driver. It must stay
+		-- shown so the engine keeps resizing it -- the overlay is anchored to it --
+		-- but it must not be seen, or the uncropped art shows through underneath.
+		--
+		-- This happens whether or not the crop resolved. A frame where the duration
+		-- object yields nothing should hold the overlay at its last texcoord, not
+		-- flash the uncropped statusbar art.
+		if (nativeTexture and nativeTexture.SetAlpha) then
+			nativeTexture:SetAlpha(0)
+		end
+		if (nativeTexture and nativeTexture.Show) then
+			nativeTexture:Show()
+		end
+		if (cast.FakeFill and cast.FakeFill.Show) then
+			cast.FakeFill:Show()
+		end
+		ApplyTargetFakeCastVertexColor(cast)
+	else
+		-- Legacy path: the statusbar's own texture is the visible art. Known to
+		-- scale rather than fill on a timer-driven bar; kept only so the two can
+		-- be compared with `/azdebugtarget crop native`.
+		if (nativeTexture and nativeTexture.SetAlpha) then
+			nativeTexture:SetAlpha(1)
+		end
+		if (nativeTexture and nativeTexture.Show) then
+			nativeTexture:Show()
+		end
+		ApplyTargetNativeCastVertexColor(cast)
+		if (cast.FakeFill and cast.FakeFill.Hide) then
+			cast.FakeFill:Hide()
+		end
 	end
 	cast.__AzeriteUI_UseNativeCastVisual = true
-	cast.__AzeriteUI_CastFakePath = "timer_native"
+	cast.__AzeriteUI_CastFakePath = overlayApplied and "timer_overlay" or "timer_native"
 	cast.__AzeriteUI_CastFakePercent = nil
 	cast.__AzeriteUI_CastCropSource = sourceTag or "timer_native"
 	cast.__AzeriteUI_CastLastExplicitPercent = nil
@@ -2572,6 +2767,8 @@ local UnitFrame_UpdateTextures = function(self)
 		tostring((profile and tonumber(profile.castBarScaleX)) or 100),
 		tostring((profile and tonumber(profile.castBarScaleY)) or 100),
 		tostring((profile and profile.castBarFollowHealth) and true or false),
+		tostring(ShouldUseTargetCastMirrorTexture()),
+		tostring(GetTargetCastCropMode()),
 		tostring(powerBarAnchorFrameKey), tostring(powerBackdropAnchorFrameKey), tostring(powerValueAnchorFrameKey),
 		tostring(powerBarOffsetX), tostring(powerBarOffsetY),
 		tostring(powerBackdropOffsetX), tostring(powerBackdropOffsetY),
@@ -2765,7 +2962,7 @@ local UnitFrame_UpdateTextures = function(self)
 	end
 	local isSelfTarget = ns.API.SafeUnitIsUnit(unit, "player")
 	local castBarTexture = db.HealthBarTexture
-	if (not isSelfTarget and ns.API and ns.API.GetMedia) then
+	if (not isSelfTarget and ShouldUseTargetCastMirrorTexture() and ns.API and ns.API.GetMedia) then
 		local mirroredTexture = ns.API.GetMedia("hp_cap_bar_mirror")
 		if (type(mirroredTexture) == "string" and mirroredTexture ~= "") then
 			castBarTexture = mirroredTexture
@@ -2775,14 +2972,21 @@ local UnitFrame_UpdateTextures = function(self)
 		cast:SetStatusBarTexture(castBarTexture)
 		cast._cachedTexture = castBarTexture
 	end
+	-- The FakeFill is the castbar's visible art on the timer path, so it gets the
+	-- same treatment the health bar's FakeFill gets: anchored to the statusbar
+	-- texture, so it inherits the engine-computed fill region, and cropped by
+	-- texcoord from there. ApplyTargetOverlayCastFill narrows the texcoords every
+	-- frame; (1, 0, 0, 1) here is the full-bar resting state.
 	local castFakeFill = cast.FakeFill
+	local castNativeTexture = cast.GetStatusBarTexture and cast:GetStatusBarTexture()
 	if (castFakeFill) then
 		castFakeFill:ClearAllPoints()
-		local castNativeTexture = cast.GetStatusBarTexture and cast:GetStatusBarTexture()
 		if (castNativeTexture) then
 			castFakeFill:SetAllPoints(castNativeTexture)
+			cast.__AzeriteUI_FakeFillFollowsTexture = castNativeTexture
 		else
 			castFakeFill:SetAllPoints(cast)
+			cast.__AzeriteUI_FakeFillFollowsTexture = nil
 		end
 		castFakeFill:SetTexture(castBarTexture)
 		castFakeFill:SetBlendMode("BLEND")
@@ -2791,19 +2995,23 @@ local UnitFrame_UpdateTextures = function(self)
 		castFakeFill:SetAlpha(1)
 	end
 	cast:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
-	cast:SetOrientation("HORIZONTAL")
-	local shouldReverseTargetCastFill = isSelfTarget and true or false
-	if (cast.SetReverseFill) then
-		cast:SetReverseFill(shouldReverseTargetCastFill)
-	end
+	-- The castbar overlays the health bar, so it takes the health bar's own
+	-- declared fill direction. Every target style tier declares
+	-- HealthBarOrientation = "LEFT", and the shim turns that into
+	-- HORIZONTAL + SetReverseFill(true) in one place.
+	--
+	-- This replaces a hard-coded "HORIZONTAL" plus SetReverseFill(isSelfTarget),
+	-- which reversed the fill only when the target was the player and therefore
+	-- had every ordinary target filling against its own health bar.
+	cast:SetOrientation(healthLab.orientation or db.HealthBarOrientation or "LEFT")
 	cast:SetSparkMap(db.HealthBarSparkMap)
 	UpdateTargetBarSparkSize(cast)
 	UpdateTargetBarSpark(cast, nil)
-	cast:SetFlippedHorizontally(false)
-	cast:SetTexCoord(GetTargetFillTexCoords(nil))
-	if (castFakeFill and castFakeFill.SetTexCoord) then
-		castFakeFill:SetTexCoord(1, 0, 0, 1)
-	end
+	-- Nothing writes texcoords to the *statusbar* texture any more. It is a
+	-- geometry driver in overlay mode and the engine's own art in native mode;
+	-- either way the addon has no business pinning its texcoords, which is what
+	-- the old `SetFlippedHorizontally(false)` plus `SetTexCoord` pair did.
+	cast.__AzeriteUI_CastCropModeApplied = GetTargetCastCropMode()
 	local castColorAlpha = db.HealthCastOverlayColor and db.HealthCastOverlayColor[4]
 	if (type(castColorAlpha) ~= "number" or (issecretvalue and issecretvalue(castColorAlpha))) then
 		castColorAlpha = 1
@@ -3181,6 +3389,12 @@ local style = function(self, unit, id)
 		source.__AzeriteUI_UseNativeCastVisual = nil
 		source.__AzeriteUI_CastGenericSyncReason = "OnHide"
 		HideTargetNativeCastVisuals(source)
+		source.__AzeriteUI_FakeFillFollowsTexture = nil
+		-- The overlay narrows its texcoords as the cast runs. Restore the full-bar
+		-- resting state so the next cast does not start mid-crop.
+		if (source.FakeFill and source.FakeFill.SetTexCoord) then
+			API.TryCall(source.FakeFill.SetTexCoord, source.FakeFill, 1, 0, 0, 1)
+		end
 		ns.API.ClearInterruptCastBarRefresh(source)
 		if (source.FakeFill and source.FakeFill.Hide) then
 			source.FakeFill:Hide()

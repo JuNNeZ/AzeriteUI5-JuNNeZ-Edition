@@ -62,6 +62,7 @@ local defaults = { profile = ns:Merge({
 	useInRaid40 = false, -- show in raid groups of 26-40 players
 
 	useRangeIndicator = false,
+	usePortraitSpecIcons = false,
 	useClassColors = true,
 	useBlizzardHealthColors = false,
 	useClassColorOnMouseoverOnly = false,
@@ -417,8 +418,17 @@ local Power_PostUpdate = function(element, unit, cur, min, max)
 	end
 end
 
+local UseRaid5SpecPortraits = function()
+	local profile = RaidFrame5Mod.db and RaidFrame5Mod.db.profile
+	return (profile and profile.usePortraitSpecIcons) and true or false
+end
+
 -- Make the portrait look better for offline or invisible units.
 local Portrait_PostUpdate = function(element, unit, hasStateChanged)
+	if (UseRaid5SpecPortraits() and ns.SpecIcons.ShowOnPortrait(element, unit)) then
+		return
+	end
+	ns.SpecIcons.HideOnPortrait(element)
 	if (not element.state) then
 		element:ClearModel()
 		if (not element.fallback2DTexture) then
@@ -1313,8 +1323,22 @@ RaidFrame5Mod.OnEvent = function(self, event, ...)
 	end
 end
 
+-- Redraws every portrait. Used when a spec resolves through inspect, which
+-- happens long after the frame was first drawn.
+RaidFrame5Mod.UpdatePortraits = function(self)
+	for frame in next,Units do
+		if (frame.Portrait and frame.Portrait.ForceUpdate) then
+			frame.Portrait:ForceUpdate()
+		end
+	end
+end
+
 RaidFrame5Mod.UpdateSettings = function(self)
 	ns.UnitFrameModule.UpdateSettings(self)
+
+	local profile = self.db and self.db.profile
+	ns.SpecIcons.Bind(self, profile and profile.usePortraitSpecIcons, "UpdatePortraits")
+	self:UpdatePortraits()
 
 	-- Once ours have replaced them, Blizzard's group frames stay hidden and inert for
 	-- the rest of the session - their events are gone and nothing recorded what they
@@ -1323,7 +1347,6 @@ RaidFrame5Mod.UpdateSettings = function(self)
 	-- Only a toggle made during this session leaves Blizzard's frames stranded.
 	-- Being disabled in the profile at login means they were never touched, so the
 	-- prompt has to compare against the previous state rather than the current one.
-	local profile = self.db and self.db.profile
 	local enabled = (profile and profile.enabled) and true or false
 	local wasEnabled = self.__blizzardFrameHandoverState
 	self.__blizzardFrameHandoverState = enabled

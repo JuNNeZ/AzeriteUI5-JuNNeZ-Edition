@@ -665,6 +665,13 @@ L["The micro menu is built when the interface loads, so this change needs a relo
 L["Reload UI"] = true
 L["Show Specialization Icons"] = true
 L["Show each party member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."] = true
+L["Show each raid member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."] = true
+L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."] = true
+
+L["Show while mounted"] = true
+L["Keep this bar visible while you are mounted. Turn this off to hide it instead, which also stops you clicking its buttons by accident. Your skyriding bar is unaffected."] = true
+L["Ignore clicks while faded"] = true
+L["Stop faded out buttons from casting when you click them. Faded buttons are invisible but still live, so clicking where one sits will use it. With this on, the click is ignored until you hover the bar and the buttons come back into view."] = true
 
 L["<Left-Click> an anchor to select it and raise it."] = true
 L["<Right-Click> an anchor to deselect it and/or lower it."] = true

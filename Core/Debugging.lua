@@ -1464,6 +1464,55 @@ local function PrintTargetFillDebugStatus()
 	print("|cff33ff99", "AzeriteUI target fill debug:")
 	print("|cfff0f0f0  health:", "curve percent -> fake fill -> mirrored visible art")
 	print("|cfff0f0f0  cast:", "live duration percent -> timer fallback -> unit-time fallback")
+
+	-- Live fill direction, read back off the bars themselves. The health bar and
+	-- the castbar overlay the same rectangle, so these two must agree; a mismatch
+	-- is the castbar-orientation bug reappearing.
+	local targetMod = ns and ns.GetModule and ns:GetModule("TargetFrame", true)
+	local frame = targetMod and targetMod.frame
+	if (not frame) then
+		print("|cfff0f0f0  direction:", "target frame unavailable")
+		return
+	end
+
+	local function DescribeGrowth(bar)
+		if (not bar) then
+			return "absent"
+		end
+		local orientation = (bar.GetOrientation and bar:GetOrientation()) or "?"
+		local reverseFill = bar.GetReverseFill and bar:GetReverseFill()
+		local growth
+		if (orientation == "VERTICAL") then
+			growth = reverseFill and "DOWN" or "UP"
+		else
+			growth = reverseFill and "LEFT" or "RIGHT"
+		end
+		return string_format("%s (%s, reverseFill=%s)", growth, tostring(orientation), tostring(reverseFill and true or false))
+	end
+
+	local healthGrowth = DescribeGrowth(frame.Health)
+	local castGrowth = DescribeGrowth(frame.Castbar)
+	print("|cfff0f0f0  health growth:", healthGrowth)
+	print("|cfff0f0f0  cast growth:  ", castGrowth)
+	if (healthGrowth ~= castGrowth) then
+		print("|cffff4444  MISMATCH: the castbar fills against the health bar it overlays.|r")
+	else
+		print("|cff44ff44  match: castbar and health bar fill the same way.|r")
+	end
+
+	local profile = targetMod.db and targetMod.db.profile
+	local usesMirror = not (profile and profile.castBarMirrorTexture == false)
+	print("|cfff0f0f0  castbar art:", usesMirror and "mirror (hp_cap_bar_mirror)" or "tier (HealthBarTexture)",
+		"|cff888888- /azdebugtarget mirror|r")
+	print("|cfff0f0f0  castbar crop:", (profile and profile.castBarCropMode == "native") and "native (statusbar texture is the art - scales)" or "overlay (addon texture, texcoord cropped - default)",
+		"|cff888888- /azdebugtarget crop|r")
+
+	-- Which of the two render paths the castbar is actually on. The native timer
+	-- path is the one that stretched; the fake-fill path always cropped, which is
+	-- why a self-target looked right while a hostile target did not.
+	local cast = frame.Castbar
+	print("|cfff0f0f0  cast render path:", cast and (cast.__AzeriteUI_UseNativeCastVisual and "native timer" or (cast.__AzeriteUI_CastFakePath or "idle")) or "n/a")
+	print("|cfff0f0f0  style tier:", tostring(frame.currentStyle))
 end
 
 local ADDONS = {
@@ -4205,12 +4254,198 @@ local function UpdateTargetDebugMenu(self)
 	return
 end
 
+-- Castbar art A/B switch.
+--
+-- The target castbar deliberately wears the mirrored capped-tier art
+-- (`hp_cap_bar_mirror`) for every unit that is not the player, rather than the
+-- current style tier's own HealthBarTexture. That is intentional, but it means
+-- a Boss, Critter, Novice or Hardened target shows capped-tier art on the
+-- castbar and tier art on the health bar underneath. This flips between the two
+-- treatments so the pair can be compared side by side on a live target without
+-- editing the file. The setting is saved, so it survives a /reload.
+local function TargetCastMirrorCommand(arg)
+	local targetMod = ns and ns.GetModule and ns:GetModule("TargetFrame", true)
+	local profile = targetMod and targetMod.db and targetMod.db.profile
+	if (not profile) then
+		print("|cff33ff99", "AzeriteUI target castbar art:", "TargetFrame module unavailable")
+		return
+	end
+
+	-- Absent or true both mean the shipped default, which is the mirrored art.
+	local current = not (profile.castBarMirrorTexture == false)
+	arg = type(arg) == "string" and string_match(string_lower(arg), "^%s*(.-)%s*$") or ""
+
+	local wanted
+	if (arg == "on" or arg == "mirror") then
+		wanted = true
+	elseif (arg == "off" or arg == "tier") then
+		wanted = false
+	elseif (arg == "" or arg == "toggle") then
+		wanted = not current
+	elseif (arg == "status") then
+		wanted = current
+	else
+		print("|cff33ff99", "AzeriteUI target castbar art:", "usage: /azdebugtarget mirror [on|off|toggle|status]")
+		return
+	end
+
+	if (wanted ~= current) then
+		profile.castBarMirrorTexture = wanted
+		RefreshTargetDebugTestFrames()
+	end
+
+	print("|cff33ff99", "AzeriteUI target castbar art:",
+		wanted and "|cffffcc00mirror|r (hp_cap_bar_mirror, shipped default)"
+		or "|cffffcc00tier|r (this target's own HealthBarTexture)")
+	if (wanted ~= current) then
+		print("|cfff0f0f0  applied to the current target; target something else to restyle it too|r")
+	end
+end
+
+-- Castbar crop-mode A/B switch.
+--
+-- "overlay" is the default: the addon's own FakeFill texture is the visible art,
+-- anchored to the statusbar texture so it inherits the engine-computed fill
+-- region, and cropped by texcoord. This is the structure the health bar on this
+-- frame has always used. "native" leaves the statusbar's own texture as the
+-- visible art, which scales rather than fills on a timer-driven bar; it is kept
+-- only so the two can be compared.
+-- Ground truth for "the castbar art still is not filling".
+--
+-- Everything below is read straight off the live frame during a cast, so a report
+-- says which link in the chain is broken rather than which one is suspected:
+-- whether the overlay is the visible layer at all, whether the statusbar texture
+-- is actually being resized, and whether the texcoords we set are the texcoords
+-- that survived. Run it while a target is mid-cast.
+local function PrintTargetCastDump()
+	local targetMod = ns and ns.GetModule and ns:GetModule("TargetFrame", true)
+	local frame = targetMod and targetMod.frame
+	local cast = frame and frame.Castbar
+	if (not cast) then
+		print("|cff33ff99", "AzeriteUI target cast dump:", "no castbar")
+		return
+	end
+
+	local function Describe(value)
+		if (type(issecretvalue) == "function" and issecretvalue(value)) then
+			return "<secret>"
+		end
+		if (type(value) == "number") then
+			return string_format("%.4f", value)
+		end
+		return tostring(value)
+	end
+
+	local function Safe(fn, ...)
+		local results = { pcall(fn, ...) }
+		if (not results[1]) then
+			return "<error>"
+		end
+		local out = {}
+		for i = 2, #results do
+			out[#out + 1] = Describe(results[i])
+		end
+		return (#out > 0) and table.concat(out, ", ") or "<none>"
+	end
+
+	print("|cff33ff99", "AzeriteUI target cast dump:")
+	print("|cfff0f0f0  casting/channeling/empowering:", tostring(cast.casting), tostring(cast.channeling), tostring(cast.empowering))
+	print("|cfff0f0f0  render path:", tostring(cast.__AzeriteUI_CastFakePath), "| useNative:", tostring(cast.__AzeriteUI_UseNativeCastVisual))
+
+	local profile = targetMod.db and targetMod.db.profile
+	print("|cfff0f0f0  crop mode:", tostring(profile and profile.castBarCropMode), "| mirror:", tostring(profile and profile.castBarMirrorTexture))
+
+	print("|cfff0f0f0  bar: orientation", Safe(cast.GetOrientation, cast),
+		"| reverseFill", Safe(cast.GetReverseFill, cast),
+		"| fillStyle", cast.GetFillStyle and Safe(cast.GetFillStyle, cast) or "n/a")
+	print("|cfff0f0f0  bar: minmax", Safe(cast.GetMinMaxValues, cast), "| value", Safe(cast.GetValue, cast))
+	print("|cfff0f0f0  bar: size", Safe(cast.GetSize, cast))
+
+	-- The decisive pair. If the statusbar texture's width tracks the cast but its
+	-- texcoords stay full-range, the engine is resizing without cropping - which
+	-- is the whole reason the visible art has to be an addon-owned overlay.
+	local tex = cast.GetStatusBarTexture and cast:GetStatusBarTexture()
+	if (tex) then
+		print("|cfff0f0f0  sbTexture: size", Safe(tex.GetSize, tex),
+			"| alpha", Safe(tex.GetAlpha, tex),
+			"| shown", tostring(tex:IsShown()))
+		print("|cfff0f0f0  sbTexture: texcoord", Safe(tex.GetTexCoord, tex))
+	else
+		print("|cfff0f0f0  sbTexture:", "none")
+	end
+
+	local fill = cast.FakeFill
+	if (fill) then
+		print("|cfff0f0f0  overlay: size", Safe(fill.GetSize, fill),
+			"| alpha", Safe(fill.GetAlpha, fill),
+			"| shown", tostring(fill:IsShown()))
+		print("|cfff0f0f0  overlay: texcoord", Safe(fill.GetTexCoord, fill))
+		print("|cfff0f0f0  overlay: texture", Safe(fill.GetTexture, fill))
+		print("|cfff0f0f0  overlay: anchored to sbTexture:", tostring(cast.__AzeriteUI_FakeFillFollowsTexture == tex))
+	else
+		print("|cfff0f0f0  overlay:", "none")
+	end
+
+	-- Does the duration object hand back anything at all, and is it readable?
+	local okDuration, duration = pcall(cast.GetTimerDuration, cast)
+	if (not okDuration or duration == nil) then
+		print("|cfff0f0f0  duration object:", "<unavailable>")
+	else
+		local okPct, pct = pcall(function()
+			if (cast.channeling) then
+				return duration:GetRemainingPercent(0)
+			end
+			return duration:GetElapsedPercent(0)
+		end)
+		print("|cfff0f0f0  duration percent:", okPct and Describe(pct) or "<error>",
+			"|cff888888(secret is fine - SetTexCoord accepts it)|r")
+	end
+end
+
+local function TargetCastCropCommand(arg)
+	local targetMod = ns and ns.GetModule and ns:GetModule("TargetFrame", true)
+	local profile = targetMod and targetMod.db and targetMod.db.profile
+	if (not profile) then
+		print("|cff33ff99", "AzeriteUI target castbar crop:", "TargetFrame module unavailable")
+		return
+	end
+
+	local current = (profile.castBarCropMode == "native") and "native" or "overlay"
+	arg = type(arg) == "string" and string_match(string_lower(arg), "^%s*(.-)%s*$") or ""
+
+	local wanted
+	if (arg == "native") then
+		wanted = "native"
+	elseif (arg == "overlay") then
+		wanted = "overlay"
+	elseif (arg == "" or arg == "toggle") then
+		wanted = (current == "native") and "overlay" or "native"
+	elseif (arg == "status") then
+		wanted = current
+	else
+		print("|cff33ff99", "AzeriteUI target castbar crop:", "usage: /azdebugtarget crop [overlay|native|toggle|status]")
+		return
+	end
+
+	if (wanted ~= current) then
+		profile.castBarCropMode = wanted
+		RefreshTargetDebugTestFrames()
+	end
+
+	print("|cff33ff99", "AzeriteUI target castbar crop:",
+		(wanted == "overlay") and "|cffffcc00overlay|r (addon texture anchored to the fill region, cropped by texcoord - default)"
+		or "|cffffcc00native|r (statusbar texture is the art - scales on a timer-driven bar)")
+	if (wanted == "native") then
+		print("|cfff0f0f0  expect the art to scale rather than fill; this mode is for comparison only|r")
+	end
+end
+
 Debugging.ToggleTargetDebugMenu = function(self)
 	local frame = self.TargetDebugFrame
 	local created = false
 	if (not frame) then
 		frame = CreateFrame("Frame", "AzeriteUI_TargetDebugMenu", UIParent, "BasicFrameTemplateWithInset")
-		frame:SetSize(520, 240)
+		frame:SetSize(560, 240)
 		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
 		frame:SetFrameStrata("DIALOG")
 		frame:SetClampedToScreen(true)
@@ -4275,6 +4510,30 @@ Debugging.ToggleTargetDebugMenu = function(self)
 			self:TargetDebugMenu("help")
 		end)
 
+		local mirrorBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+		mirrorBtn:SetSize(248, 22)
+		mirrorBtn:SetPoint("TOPLEFT", 12, actionsY - 56)
+		mirrorBtn:SetText("Toggle Castbar Art (mirror/tier)")
+		mirrorBtn:SetScript("OnClick", function()
+			TargetCastMirrorCommand("toggle")
+		end)
+
+		local castDumpBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+		castDumpBtn:SetSize(120, 22)
+		castDumpBtn:SetPoint("LEFT", helpBtn, "RIGHT", 8, 0)
+		castDumpBtn:SetText("Dump Cast")
+		castDumpBtn:SetScript("OnClick", function()
+			PrintTargetCastDump()
+		end)
+
+		local cropBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+		cropBtn:SetSize(248, 22)
+		cropBtn:SetPoint("LEFT", mirrorBtn, "RIGHT", 8, 0)
+		cropBtn:SetText("Toggle Castbar Fill (overlay/native)")
+		cropBtn:SetScript("OnClick", function()
+			TargetCastCropCommand("toggle")
+		end)
+
 		local close = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 		close:SetSize(80, 22)
 		close:SetPoint("BOTTOMRIGHT", -12, 12)
@@ -4316,7 +4575,19 @@ Debugging.TargetDebugMenu = function(self, input)
 		print("|cfff0f0f0  /azdebugtarget|r  (toggle menu)")
 		print("|cfff0f0f0  /azdebugtarget status|r")
 		print("|cfff0f0f0  /azdebugtarget dump|snapshot|refresh|secrettest|r")
+		print("|cfff0f0f0  /azdebugtarget mirror [on|off|toggle|status]|r  (castbar art: mirrored vs tier)")
+		print("|cfff0f0f0  /azdebugtarget crop [overlay|native|toggle|status]|r  (castbar fill: crop vs scale)")
+		print("|cfff0f0f0  /azdebugtarget cast|r  (live castbar dump - run it mid-cast)")
 		return
+	end
+	if (cmd == "mirror") then
+		return TargetCastMirrorCommand(rest)
+	end
+	if (cmd == "crop") then
+		return TargetCastCropCommand(rest)
+	end
+	if (cmd == "cast") then
+		return PrintTargetCastDump()
 	end
 	if (cmd == "status") then
 		return PrintTargetFillDebugStatus()

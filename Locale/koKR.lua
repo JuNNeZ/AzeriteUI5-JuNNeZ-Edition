@@ -664,6 +664,13 @@ L["The micro menu is built when the interface loads, so this change needs a relo
 L["Reload UI"] = "UI 다시 불러오기"
 L["Show Specialization Icons"] = "전문화 아이콘 표시"
 L["Show each party member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."] = "파티원의 초상화 대신 전문화 아이콘을 표시합니다. 전문화는 살펴보기로만 확인할 수 있으므로, 해당 파티원이 충분히 가까이 있고 보일 때까지는 초상화가 그대로 표시됩니다."
+L["Show each raid member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."] = "공격대원의 초상화 대신 전문화 아이콘을 표시합니다. 전문화는 살펴보기로만 확인할 수 있으므로, 해당 공격대원이 충분히 가까이 있고 보일 때까지는 초상화가 그대로 표시됩니다."
+L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."] = "공격대원의 전문화 아이콘을 생명력 막대 옆 역할 표식에 표시합니다. 평소에는 표식이 없는 공격 담당도 포함됩니다. 전문화는 살펴보기로만 확인할 수 있으므로, 해당 공격대원이 충분히 가까이 있고 보일 때까지는 기본 역할 아이콘이 표시됩니다."
+
+L["Show while mounted"] = "탈것에 탑승 중일 때 표시"
+L["Keep this bar visible while you are mounted. Turn this off to hide it instead, which also stops you clicking its buttons by accident. Your skyriding bar is unaffected."] = "탈것에 탑승한 동안 이 바를 계속 표시합니다. 끄면 대신 숨겨지며, 실수로 버튼을 누르는 일도 막을 수 있습니다. 용조종 바에는 영향을 주지 않습니다."
+L["Ignore clicks while faded"] = "흐려진 동안 클릭 무시"
+L["Stop faded out buttons from casting when you click them. Faded buttons are invisible but still live, so clicking where one sits will use it. With this on, the click is ignored until you hover the bar and the buttons come back into view."] = "흐려진 버튼을 클릭해도 시전되지 않도록 합니다. 흐려진 버튼은 보이지 않을 뿐 그대로 살아 있어서, 그 자리를 클릭하면 사용됩니다. 이 설정을 켜면 바 위에 마우스를 올려 버튼이 다시 보일 때까지 클릭이 무시됩니다."
 
 L["<Left-Click> an anchor to select it and raise it."] = "고정점을 <좌클릭>하면 선택되어 위로 올라옵니다."
 L["<Right-Click> an anchor to deselect it and/or lower it."] = "고정점을 <우클릭>하면 선택이 해제되거나 아래로 내려갑니다."

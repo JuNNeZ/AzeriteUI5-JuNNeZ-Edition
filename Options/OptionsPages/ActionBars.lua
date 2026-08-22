@@ -88,6 +88,23 @@ local getoption = function(info,option)
 	return db[option]
 end
 
+-- The visibility conditions live in a sub-table, so they cannot go through the
+-- flat setter above. Option keys are named for the option, not the condition,
+-- which is why the condition is passed in rather than read off info.
+local setvisibility = function(info,condition,val)
+	local id = tonumber((string_match(info[#info - 1],"(%d+)")))
+	local db = getmodule().db.profile.bars[id]
+	db.visibility[condition] = val
+	getmodule():UpdateSettings()
+	ns:Fire("ActionBarSettings_Changed")
+end
+
+local getvisibility = function(info,condition)
+	local id = tonumber((string_match(info[#info - 1],"(%d+)")))
+	local db = getmodule().db.profile.bars[id]
+	return db.visibility[condition]
+end
+
 local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 	local getmodule = function()
 		local module = ns:GetModule(moduleName, true)
@@ -122,6 +139,15 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				fontSize = "medium",
 				hidden = isdisabled
 			},
+			showWhileMounted = {
+				name = L["Show while mounted"],
+				desc = L["Keep this bar visible while you are mounted. Turn this off to hide it instead, which also stops you clicking its buttons by accident. Your skyriding bar is unaffected."],
+				order = 4,
+				type = "toggle", width = "full",
+				hidden = isdisabled,
+				set = function(info, val) setvisibility(info, "mounted", val) end,
+				get = function(info) return getvisibility(info, "mounted") end
+			},
 			enableBarFading = {
 				name = L["Enable Bar Fading"],
 				desc = L["Toggle whether to enable the buttons of this action bar to fade out."],
@@ -154,6 +180,15 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				desc = L["Choose which button to start the fading from."],
 				order = 12,
 				type = "range", width = "full", min = 1, max = 12, step = 1,
+				hidden = function(info) return isdisabled(info) or not getsetting(info, "enableBarFading") end,
+				set = setter,
+				get = getter
+			},
+			blockFadedClicks = {
+				name = L["Ignore clicks while faded"],
+				desc = L["Stop faded out buttons from casting when you click them. Faded buttons are invisible but still live, so clicking where one sits will use it. With this on, the click is ignored until you hover the bar and the buttons come back into view."],
+				order = 13,
+				type = "toggle", width = "full",
 				hidden = function(info) return isdisabled(info) or not getsetting(info, "enableBarFading") end,
 				set = setter,
 				get = getter

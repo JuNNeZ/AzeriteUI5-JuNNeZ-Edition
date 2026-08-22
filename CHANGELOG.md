@@ -12,6 +12,32 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.3.87-JuNNeZ (2026-08-21) - Target Castbar Fill, Raid Specialization Icons, and Fewer Stray Clicks
+
+### Highlights
+
+- The target castbar now fills instead of stretching. The art was being scaled into the fill region rather than revealed by it, so a cast looked like a zooming picture rather than a filling bar. This had been wrong since 12.0 for every target except yourself.
+- The target castbar now also fills in the same direction as the target health bar it sits on. It previously swept left-to-right while the health bar underneath emptied right-to-left.
+- Added specialization icons to the raid frames. On Raid Frames (5) they replace the portrait, as in party; on Raid Frames (25) and (40) they sit on the role badge next to the health bar, which also gives damage dealers a badge where they previously had none.
+- Fixed Explorer Mode getting stuck visible and never fading again until a reload. Mounting and dismounting - including the automatic dismount from casting while mounted - could leave the interface believing you were still on a skyriding mount.
+- Added an option to hide an action bar while you are mounted. A hidden bar cannot be clicked at all, so this stops stray clicks landing on abilities while you ride. Your skyriding bar is unaffected.
+- Added an option to ignore clicks on faded out buttons. Faded buttons are invisible but still live, so clicking where one sits will cast it; with this on the click is ignored until you hover the bar and the buttons come back into view.
+- Fixed an error from AzeriteUI's stance bar buttons that broke Blizzard's ability ping system. Pinging anywhere over the stance bar raised a Lua error and left pinging broken everywhere else on screen until reload.
+
+### Access
+
+- `/az -> Unit Frame Settings -> Raid Frames (5) -> Show Specialization Icons`
+- `/az -> Unit Frame Settings -> Raid Frames (25) -> Show Specialization Icons`
+- `/az -> Unit Frame Settings -> Raid Frames (40) -> Show Specialization Icons`
+- `/az -> Action Bars -> Action Bar <n> -> Show while mounted`
+- `/az -> Action Bars -> Action Bar <n> -> Ignore clicks while faded`
+
+### Internal
+
+- The target castbar's visible art is now an addon-owned texture anchored to the statusbar texture, rather than the statusbar texture itself. A timer-driven `StatusBar` on 12.x resizes its texture's region but does not narrow its texcoords, and texcoords written onto it by an addon do not survive, so neither letting it crop itself nor cropping it in place could ever work. The target health bar had always used the addon-owned structure, which is why health rendered correctly and cast did not.
+- `/azdebugtarget` gains `cast`, `crop` and `mirror` subcommands for comparing castbar render paths live, and `status` now reads the fill direction back off both bars and states whether they agree.
+- Specialization icon drawing for party and all three raid layouts is shared in `Components/UnitFrames/SpecIcons.lua`. `GroupSpecCache.lua` stays a pure data module.
+
 ## 5.3.86-JuNNeZ (2026-08-21) - Micro Menu Toggle, Party Specialization Icons, and an Options Overhaul
 
 ### Highlights

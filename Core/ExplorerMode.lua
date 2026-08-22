@@ -687,6 +687,18 @@ ExplorerMode.OnEvent = function(self, event, ...)
 	elseif (event == "UPDATE_BONUS_ACTIONBAR") then
 		self:CheckDragonRiding()
 
+	elseif (event == "PLAYER_MOUNT_DISPLAY_CHANGED") then
+		-- Every one of these flags latches: each is only re-read on the single
+		-- bar event that sets it, and any of them left true keeps ShouldNotFade
+		-- returning true forever. Dismounting - including the implicit dismount
+		-- from casting while mounted - can land after the last bar event, so
+		-- CheckDragonRiding in particular could keep a stale true and Explorer
+		-- Mode would never fade again until a reload. Re-read the whole set.
+		self:CheckVehicle()
+		self:CheckOverride()
+		self:CheckPossess()
+		self:CheckDragonRiding()
+
 	elseif (event == "UNIT_ENTERING_VEHICLE")
 		or (event == "UNIT_ENTERED_VEHICLE")
 		or (event == "UNIT_EXITING_VEHICLE")
@@ -730,6 +742,7 @@ ExplorerMode.EnableExplorerMode = function(self)
 	self:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR", "OnEvent")
 	self:RegisterEvent("UPDATE_POSSESS_BAR", "OnEvent")
 	self:RegisterEvent("UPDATE_BONUS_ACTIONBAR", "OnEvent")
+	self:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED", "OnEvent")
 	self:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR", "OnEvent", "player")
 	self:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "OnEvent", "player")
 	self:RegisterUnitEvent("UNIT_ENTERING_VEHICLE", "OnEvent", "player")
@@ -762,6 +775,7 @@ ExplorerMode.DisableExplorerMode = function(self)
 	self:UnregisterEvent("UPDATE_OVERRIDE_ACTIONBAR", "OnEvent")
 	self:UnregisterEvent("UPDATE_POSSESS_BAR", "OnEvent")
 	self:UnregisterEvent("UPDATE_BONUS_ACTIONBAR", "OnEvent")
+	self:UnregisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED", "OnEvent")
 	self:UnregisterEvent("UPDATE_VEHICLE_ACTIONBAR", "OnEvent", "player")
 	self:UnregisterEvent("UNIT_ENTERED_VEHICLE", "OnEvent", "player")
 	self:UnregisterEvent("UNIT_ENTERING_VEHICLE", "OnEvent", "player")

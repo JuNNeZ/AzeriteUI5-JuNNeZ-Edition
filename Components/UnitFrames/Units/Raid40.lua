@@ -70,6 +70,7 @@ local defaults = { profile = ns:Merge({
 	useInRaid40 = true, -- show in raid groups of 26-40 players
 
 	useRangeIndicator = true,
+	useSpecIcons = false,
 	showPriorityDebuff = true,
 	priorityDebuffScale = 100,
 	useClassColors = true,
@@ -602,6 +603,11 @@ local Power_PostUpdate = function(element, unit, cur, min, max)
 	end
 end
 
+local UseRaidSpecIcons = function()
+	local profile = RaidFrame40Mod.db and RaidFrame40Mod.db.profile
+	return (profile and profile.useSpecIcons) and true or false
+end
+
 -- Custom Group Role updater
 local GroupRoleIndicator_Override = function(self, event)
 	local element = self.GroupRoleIndicator
@@ -616,11 +622,22 @@ local GroupRoleIndicator_Override = function(self, event)
 	end
 
 	local role = UnitGroupRolesAssigned(self.unit)
-	if (role and element[role]) then
-		element.Icon:SetTexture(element[role])
+
+	-- These frames carry no portrait, so the role plate is the only round slot
+	-- the specialization icon can occupy. It says everything the role art said
+	-- and more, and it also gives damage dealers a plate, which the role art
+	-- never did. Members whose spec inspect has not resolved yet keep the plain
+	-- role art, so the row degrades to exactly what it looked like before.
+	if (UseRaidSpecIcons() and ns.SpecIcons.ShowOnRolePlate(element, self.unit)) then
 		element:Show()
 	else
-		element:Hide()
+		ns.SpecIcons.HideOnRolePlate(element)
+		if (role and element[role]) then
+			element.Icon:SetTexture(element[role])
+			element:Show()
+		else
+			element:Hide()
+		end
 	end
 
 	--[[ Callback: GroupRoleIndicator:PostUpdate(role)
@@ -1481,8 +1498,22 @@ RaidFrame40Mod.CreateUnitFrames = function(self)
 
 end
 
+-- Redraws every role plate. Used when a spec resolves through inspect, which
+-- happens long after the frame was first drawn.
+RaidFrame40Mod.UpdateSpecIcons = function(self)
+	for frame in next,Units do
+		if (frame.GroupRoleIndicator and frame.GroupRoleIndicator.ForceUpdate) then
+			frame.GroupRoleIndicator:ForceUpdate()
+		end
+	end
+end
+
 RaidFrame40Mod.UpdateSettings = function(self)
 	ns.UnitFrameModule.UpdateSettings(self)
+
+	local profile = self.db and self.db.profile
+	ns.SpecIcons.Bind(self, profile and profile.useSpecIcons, "UpdateSpecIcons")
+	self:UpdateSpecIcons()
 
 	-- Once ours have replaced them, Blizzard's group frames stay hidden and inert for
 	-- the rest of the session - their events are gone and nothing recorded what they
@@ -1491,7 +1522,6 @@ RaidFrame40Mod.UpdateSettings = function(self)
 	-- Only a toggle made during this session leaves Blizzard's frames stranded.
 	-- Being disabled in the profile at login means they were never touched, so the
 	-- prompt has to compare against the previous state rather than the current one.
-	local profile = self.db and self.db.profile
 	local enabled = (profile and profile.enabled) and true or false
 	local wasEnabled = self.__blizzardFrameHandoverState
 	self.__blizzardFrameHandoverState = enabled

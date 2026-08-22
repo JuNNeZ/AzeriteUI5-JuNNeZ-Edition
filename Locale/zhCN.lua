@@ -666,6 +666,13 @@ L["The micro menu is built when the interface loads, so this change needs a relo
 L["Reload UI"] = "重新加载界面"
 L["Show Specialization Icons"] = "显示专精图标"
 L["Show each party member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."] = "以专精图标取代队伍成员的头像。成员的专精只能通过观察获取，因此在其距离足够近且可见之前，仍会显示头像。"
+L["Show each raid member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."] = "以专精图标取代团队成员的头像。成员的专精只能通过观察获取，因此在其距离足够近且可见之前，仍会显示头像。"
+L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."] = "在团队成员生命条旁的职责标记上显示其专精图标，包括平时没有标记的输出者。成员的专精只能通过观察获取，因此在其距离足够近且可见之前，仍会显示普通的职责图标。"
+
+L["Show while mounted"] = "骑乘时显示"
+L["Keep this bar visible while you are mounted. Turn this off to hide it instead, which also stops you clicking its buttons by accident. Your skyriding bar is unaffected."] = "骑乘时保持该动作条可见。关闭后将改为隐藏，同时也能避免误点其中的按钮。驭空飞行动作条不受影响。"
+L["Ignore clicks while faded"] = "淡出时忽略点击"
+L["Stop faded out buttons from casting when you click them. Faded buttons are invisible but still live, so clicking where one sits will use it. With this on, the click is ignored until you hover the bar and the buttons come back into view."] = "淡出的按钮被点击时不再施放。淡出的按钮虽然看不见，但依然可以点击，所以点到它所在的位置就会使用它。开启后，点击将被忽略，直到你将鼠标移到动作条上、按钮重新显示为止。"
 
 L["<Left-Click> an anchor to select it and raise it."] = "<左键点击>锚点可选中并将其置于上层。"
 L["<Right-Click> an anchor to deselect it and/or lower it."] = "<右键点击>锚点可取消选中并/或将其置于下层。"

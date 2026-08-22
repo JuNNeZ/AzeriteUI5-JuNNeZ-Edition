@@ -24,7 +24,7 @@
 
 --]]
 local MAJOR_VERSION = "LibFadingFrames-1.0"
-local MINOR_VERSION = 40
+local MINOR_VERSION = 41
 
 assert(LibStub, MAJOR_VERSION .. " requires LibStub.")
 
@@ -104,6 +104,14 @@ local setCurrentAlpha = function(frame, alpha)
 	-- Store the desired value,
 	-- even for empty slots.
 	FadeFrameCurrentAlpha[frame] = alpha
+
+	-- Optional per-frame notification, so an owner can react to opacity it
+	-- does not control. Alpha is the only thing this library changes, and a
+	-- frame that is invisible but still interactive is the caller's problem
+	-- to solve, not this library's to decide on.
+	if (frame.OnFadeAlphaChanged) then
+		frame:OnFadeAlphaChanged(alpha)
+	end
 end
 
 -- Request an alpha change, trigger fade animation.

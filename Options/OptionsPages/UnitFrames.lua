@@ -1230,6 +1230,11 @@ local GenerateOptions = function()
 		suboptions.name = L["Raid Frames"] .. " (5)"
 		suboptions.order = 160
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "1-5 raid health bars" })
+		suboptions.args.usePortraitSpecIcons = {
+			name = L["Show Specialization Icons"],
+			desc = L["Show each raid member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."],
+			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		suboptions.args.useRangeIndicator = {
 			name = L["Use Range Indicator"],
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],
@@ -1244,6 +1249,11 @@ local GenerateOptions = function()
 		suboptions.name = L["Raid Frames"] .. " (25)"
 		suboptions.order = 161
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "6-25 raid health bars" })
+		suboptions.args.useSpecIcons = {
+			name = L["Show Specialization Icons"],
+			desc = L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."],
+			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		suboptions.args.useRangeIndicator = {
 			name = L["Use Range Indicator"],
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],
@@ -1282,6 +1292,11 @@ local GenerateOptions = function()
 		suboptions.name = L["Raid Frames"] .. " (40)"
 		suboptions.order = 162
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "26-40 raid health bars" })
+		suboptions.args.useSpecIcons = {
+			name = L["Show Specialization Icons"],
+			desc = L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."],
+			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		suboptions.args.useRangeIndicator = {
 			name = L["Use Range Indicator"],
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],

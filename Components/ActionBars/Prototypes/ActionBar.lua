@@ -53,10 +53,64 @@ local LFF = LibStub("LibFadingFrames-1.0")
 local playerClass = ns.PlayerClass
 local ACTION_BAR_FRAME_LEVEL = 100
 
+-- Faded buttons keep full mouse interactivity. LibFadingFrames only changes
+-- alpha, so a button at zero opacity still casts when it is clicked, which is
+-- how an invisible bar ends up firing abilities the player cannot see.
+--
+-- The button's own mouse state is the wrong lever: EnableMouse and friends are
+-- protected on a protected frame while in combat, and combat is precisely when
+-- a faded bar gets forced back to full opacity. Disabling clicks out of combat
+-- would leave the button visible but dead for the whole following fight, with
+-- no legal moment to undo it. An ordinary child frame is not protected, so one
+-- shown over the button swallows the click instead, and can be taken back down
+-- mid-fight the moment the button becomes visible again.
+local BLOCKER_LEVEL_OFFSET = 10
+
+local UpdateClickBlocker = function(button, alpha)
+	local blocker = button.fadeClickBlocker
+	if (not blocker) then return end
+
+	-- Defensive only. A plain frame is not protected, so this should never be
+	-- the branch taken, and the feature is worth nothing if it errors instead.
+	if (InCombatLockdown() and blocker:IsProtected()) then return end
+
+	blocker:SetShown((alpha or 1) <= 0)
+end
+
+local AcquireClickBlocker = function(button)
+	local blocker = button.fadeClickBlocker
+	if (not blocker) then
+		blocker = CreateFrame("Frame", nil, button)
+		blocker:SetAllPoints(button)
+		blocker:EnableMouse(true)
+		blocker:Hide()
+
+		button.fadeClickBlocker = blocker
+	end
+
+	-- Re-stated rather than set once at creation, because the bar's frame
+	-- level moves with layout changes and the blocker is only useful while it
+	-- sits above the button it covers.
+	blocker:SetFrameLevel(button:GetFrameLevel() + BLOCKER_LEVEL_OFFSET)
+
+	return blocker
+end
+
+local ReleaseClickBlocker = function(button)
+	button.OnFadeAlphaChanged = nil
+
+	local blocker = button.fadeClickBlocker
+	if (not blocker) then return end
+	if (InCombatLockdown() and blocker:IsProtected()) then return end
+
+	blocker:Hide()
+end
+
 local RestoreFadeAlpha = function(bar)
 	bar:SetAlpha(1)
 	for id,button in next,bar.buttons do
 		button:SetAlpha(1)
+		ReleaseClickBlocker(button)
 	end
 end
 
@@ -115,8 +169,10 @@ local defaults = ns:Merge({
 		dragon = false,
 		possess = false,
 		overridebar = false,
-		vehicleui = false
+		vehicleui = false,
+		mounted = true -- whether to keep the bar visible while mounted
 	},
+	blockFadedClicks = false, -- whether faded out buttons should swallow clicks instead of casting
 	savedPosition = {
 		scale = ns.API.GetEffectiveScale(),
 		[1] = "CENTER",
@@ -323,12 +379,18 @@ ActionBar.UpdateFading = function(self)
 		for id = 1, #buttons do
 			local button = buttons[id]
 			LFF:UnregisterFrameForFading(button)
+			ReleaseClickBlocker(button)
 		end
 
 		-- Register fading for selected buttons.
 		for id = config.fadeFrom or 1, #buttons do
 			local button = buttons[id]
 			if (button:GetTexture()) then
+				if (config.blockFadedClicks) then
+					AcquireClickBlocker(button)
+					button.OnFadeAlphaChanged = UpdateClickBlocker
+					UpdateClickBlocker(button, button:GetAlpha())
+				end
 				LFF:RegisterFrameForFading(button, config.fadeAlone and self:GetName() or "actionbuttons", unpack(config.hitrects))
 			else
 				button:ForceUpdate()
@@ -493,6 +555,13 @@ ActionBar.UpdateVisibilityDriver = function(self)
 			visdriver = visdriver.."[bonusbar:5]show;"
 		else
 			visdriver = visdriver.."[bonusbar:5]hide;"
+		end
+
+		-- Last of the conditionals on purpose. Skyriding counts as mounted, so
+		-- [bonusbar:5] has to be settled before this or hiding while mounted
+		-- would take the skyriding bar down with it.
+		if (not config.visibility.mounted) then
+			visdriver = visdriver.."[mounted]hide;"
 		end
 
 		visdriver = visdriver.."show"

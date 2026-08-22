@@ -66,6 +66,15 @@ ns.StanceButton.Create = function(id, name, header, buttonConfig)
 
 	local button = CreateFrame("CheckButton", name, header, "StanceButtonTemplate")
 	button.id = id
+	-- StanceButtonTemplate carries Blizzard's StanceButtonMixin, whose HasAction
+	-- and GetActionButtonInfo read self.index rather than GetID. Blizzard's own
+	-- stance bar sets that field; ours never did, so those two methods called
+	-- GetShapeshiftFormInfo(nil) and threw. Nothing here used to reach them, but
+	-- on 12.1 the template also brings PingableType_ActionButtonMixin, and the
+	-- ping system calls GetIsPingable -> GetActionButtonInfo on whatever sits
+	-- under the cursor. The error then aborts Blizzard's whole ping resolution,
+	-- so a ping anywhere over the stance bar broke pinging everywhere.
+	button.index = id
 	button.parent = header
 	button.showgrid = 0
 	button.config = buttonConfig or ns:Copy(defaults)

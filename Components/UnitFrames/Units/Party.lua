@@ -709,56 +709,12 @@ local UsePartySpecPortraits = function()
 	return (profile and profile.usePortraitSpecIcons) and true or false
 end
 
---[[
-	Draws the unit's specialization icon over the portrait model.
-
-	Returns true when the icon is showing, so the caller can leave the model
-	alone. A group member's spec is only reachable through the inspect system,
-	so it is routinely unknown for a while after joining or while out of range;
-	in that case this returns false and the normal portrait is drawn instead of
-	a blank square or a misleading question mark.
-]]
-local ShowPartySpecIcon = function(element, unit)
-	local cache = ns.GroupSpecCache
-	if (not cache) then
-		return false
-	end
-
-	local icon = cache:GetSpecInfo(unit)
-	if (not icon) then
-		if (element.SpecIcon) then
-			element.SpecIcon:Hide()
-		end
-		return false
-	end
-
-	if (not element.SpecIcon) then
-		local texture = element:CreateTexture(nil, "ARTWORK")
-		texture:SetAllPoints()
-		-- Spec icons are square art with the usual one-pixel border baked in.
-		texture:SetTexCoord(.1, .9, .1, .9)
-		element.SpecIcon = texture
-	end
-
-	element.SpecIcon:SetTexture(icon)
-	element.SpecIcon:Show()
-
-	if (element.fallback2DTexture) then
-		element.fallback2DTexture:Hide()
-	end
-	element:ClearModel()
-
-	return true
-end
-
 -- Make the portrait look better for offline or invisible units.
 local Portrait_PostUpdate = function(element, unit, hasStateChanged)
-	if (UsePartySpecPortraits() and ShowPartySpecIcon(element, unit)) then
+	if (UsePartySpecPortraits() and ns.SpecIcons.ShowOnPortrait(element, unit)) then
 		return
 	end
-	if (element.SpecIcon) then
-		element.SpecIcon:Hide()
-	end
+	ns.SpecIcons.HideOnPortrait(element)
 	if (not element.state) then
 		element:ClearModel()
 		if (not element.fallback2DTexture) then
@@ -1657,18 +1613,8 @@ end
 PartyFrameMod.UpdateSettings = function(self)
 	ns.UnitFrameModule.UpdateSettings(self)
 
-	-- The inspect loop only starts once something actually wants spec data, so a
-	-- player who never enables this never pays for the traffic. It is never
-	-- stopped again: the cache is cheap to keep warm, and turning the option off
-	-- and on again mid-session should not have to rebuild it from nothing.
 	local profile = self.db and self.db.profile
-	if (profile and profile.usePortraitSpecIcons and ns.GroupSpecCache) then
-		ns.GroupSpecCache.Enable()
-		if (not self.__specCacheHooked) then
-			self.__specCacheHooked = true
-			ns.RegisterCallback(self, "GroupSpecCache_Updated", "UpdatePortraits")
-		end
-	end
+	ns.SpecIcons.Bind(self, profile and profile.usePortraitSpecIcons, "UpdatePortraits")
 	self:UpdatePortraits()
 
 	-- Once ours have replaced them, Blizzard's group frames stay hidden and inert for
@@ -1678,7 +1624,6 @@ PartyFrameMod.UpdateSettings = function(self)
 	-- Only a toggle made during this session leaves Blizzard's frames stranded.
 	-- Being disabled in the profile at login means they were never touched, so the
 	-- prompt has to compare against the previous state rather than the current one.
-	local profile = self.db and self.db.profile
 	local enabled = (profile and profile.enabled) and true or false
 	local wasEnabled = self.__blizzardFrameHandoverState
 	self.__blizzardFrameHandoverState = enabled
