@@ -1,3 +1,33 @@
+## 2026-08-24 - Hiding your own frame in raid sized groups: the party header ignored it, the 5 player frames never offered it (5.3.89)
+
+- **Reported by Neil, one symptom in two frame families.** "The option to not have your own player party frame showing works fab in 'party' but doesn't work in raid 1-5. Also, there's no option to hide your own frame in the 1-5 raid frame itself." The goal is arena healing: the group frames should carry the two teammates only, because the player is already on the big orb frame.
+- **Both halves are raid group problems, and arena is a raid group.** Instanced PvP puts you in one, which is why `[group:raid]` wins there and why the party header goes down its raid branch. Nothing about either fix is arena specific, but arena is where it is felt.
+- **Grounded against Blizzard's own source**, `Blizzard_RestrictedAddOnEnvironment/SecureGroupHeaders.lua` (12.1.0.69273), not against memory.
+
+### Party frames: showPlayer is a party-only attribute
+
+- **Not our bug, and not fixable with the attribute.** `GetGroupHeaderType` decides the header's kind first - RAID if `IsInRaid()` and `showRaid`, PARTY otherwise - and only the PARTY branch consults `showPlayer`, where it picks `start = 0` (player) or `start = 1` (party1 onward). The RAID branch iterates `raid1` to `raid<N>` unconditionally. There is no attribute anywhere in that walk that removes a single unit, so `showPlayer` was being set correctly and doing nothing.
+- **The name list is the one remaining lever.** `SecureGroupHeader_Update` falls through to a name list branch that draws exactly the roster entries whose names are in the attribute, and it is only reachable while neither `groupFilter` nor `roleFilter` is set. So the two have to move together or the header silently keeps drawing the old set - hence `ApplyGroupFilterAttributes`, which owns both attributes and is now the only thing that writes either.
+- **Applied:** in a raid with the option off, `groupFilter` is cleared and `nameList` is set to the player's own subgroup minus the player. Everywhere else the old `groupFilter` is written and `nameList` cleared, so party behaviour is untouched.
+- **The subgroup fallback mirrors `GetActiveGroupFilter` exactly.** An unusable subgroup number - instanced PvP has been known to report one, which is what `5.3.85` fixed for the visibility side - means we filter by nothing but ourselves rather than bailing out and showing the player anyway.
+- **Ordering is unchanged.** The name list branch ignores `groupBy` and only sorts on `NAME`/`NAMELIST`; the header runs `sortMethod = "INDEX"`, so both branches leave the units in raid roster order. Filtering to one subgroup also means the `groupBy = "GROUP"` sort in the old branch had nothing to reorder.
+- **Roster refresh was already in place.** `GROUP_ROSTER_UPDATE` is wired to `Update`, so the name list is rebuilt whenever the roster moves, and `UpdateHeader` still defers the whole thing out of combat as before.
+
+### 5 player raid frames: not a secure group header at all
+
+- **This family has no `showPlayer` to fix.** `RaidFrame5Mod.CreateUnitFrames` spawns five oUF frames onto a plain `SecureHandlerStateTemplate` and drives each one with its own `RegisterAttributeDriver(button, "unit", ...)`. `SecureGroupHeader_Update` never runs over it - `GroupHeader.ForceSecureUpdate` already documents this by testing for `initialConfigFunction` before bumping anything. The `showPlayer` attribute set in `UpdateVisibilityDriver` is inert and is now commented as such.
+- **Applied:** `GetRaidUnitIndexes` builds the five raid indexes each button gets, skipping the player's own index when the new option is off. Player at `raid2` of three yields `raid1, raid3, raid4, raid5, raid6`; the tokens past the end of the roster do not exist, `RegisterUnitWatch` hides those buttons, and the visible frames stay contiguous from the anchor because the empty slots land last.
+- **Party tokens are deliberately left alone.** The driver's non-raid branch is `party1` to `party5`, which never included the player to begin with, and remapping it would leave the buttons skipping a group member the moment the raid became a party. The option therefore only bites in raid sized raid groups, which is exactly where the report comes from.
+- **`showPlayer` defaults to true**, so nothing changes for anyone who does not go looking for it.
+- **The roster rebuild is gated on the option.** `GROUP_ROSTER_UPDATE` is noisy in a raid and nothing moves while the player is shown, so the five driver re-registrations only happen for profiles that turned the option off.
+- **Found while wiring that up: the combat deferral had a hole.** `ApplyTestUnitDrivers` sets `needHeaderUpdate` and waits for `PLAYER_REGEN_ENABLED`, but that handler called `UpdateHeader` and `UpdateUnits` and never the driver pass, so anything deferred out of a driver rebuild was dropped. It calls `Update` now, and the combat drop fallback re-applies the drivers too.
+
+### Not verified in client
+
+- **Shipped as 5.3.89 without a `/reload` test**, at the maintainer's direction - Neil is testing it himself.
+- **No local `/reload` test.** Both fixes are independent and revert cleanly on their own: the party half is confined to `ApplyGroupFilterAttributes` and its helper, the raid half to `GetRaidUnitIndexes` and the new profile key.
+- **Worth checking in the same session:** a 5 man raid group where the player is not `raid1`, an arena, leaving a raid straight into a party, and the option toggled while grouped.
+
 ## 2026-08-22 - The ping work the last release held back: ability pings, the resource callout, and the pet bar (5.3.88)
 
 - **This is the deferred half of 5.3.87.** The user's report was two separate failures: "Blizzard's new ability pings doesn't seem to work in Az, although, it works on the player frame to place your name in chat. It doesn't work on the mana section though." Only the stance bar error fix shipped last release. Both of the remaining symptoms are fixed here, and they had nothing to do with each other.

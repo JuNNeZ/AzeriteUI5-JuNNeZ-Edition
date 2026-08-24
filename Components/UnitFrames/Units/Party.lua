@@ -50,7 +50,7 @@ local unpack = unpack
 
 -- GLOBALS: InCombatLockdown, RegisterAttributeDriver, UnregisterAttributeDriver
 -- GLOBALS: UnitGroupRolesAssigned, UnitGUID, UnitIsUnit, SetPortraitTexture
--- GLOBALS: GetNumGroupMembers, GetRaidRosterInfo, UnitInRaid
+-- GLOBALS: GetNumGroupMembers, GetRaidRosterInfo, UnitInRaid, IsInRaid
 -- GLOBALS: GetTime, C_Timer
 
 -- Addon API
@@ -152,6 +152,65 @@ local GetActiveGroupFilter = function()
 	end
 
 	return defaultFilter
+end
+
+-- Blizzard's secure group header only honours its showPlayer attribute while it is
+-- drawing party tokens. Inside a raid it walks raid1-40 instead, and nothing in that
+-- branch can drop a single unit, which is why hiding yourself worked in a party but
+-- never in the raid sizes these frames can be set to appear in. The header's name list
+-- is the one remaining way to hand it an explicit set of units to draw.
+local GetSubgroupNameListWithoutPlayer = function()
+	if (not IsInRaid()) then return end
+
+	local numMembers = GetNumGroupMembers()
+	if (not ns.API.IsSafeNumber(numMembers) or numMembers < 1) then return end
+
+	local playerIndex, playerSubgroup
+	for i = 1, numMembers do
+		if (UnitIsUnit("raid"..i, "player")) then
+			local _, _, subgroup = GetRaidRosterInfo(i)
+			playerIndex = i
+			-- Same fallback as GetActiveGroupFilter. Instanced PvP has been known to
+			-- report an unusable subgroup, and there the whole raid is the group anyway.
+			if (ns.API.IsSafeNumber(subgroup) and subgroup >= 1 and subgroup <= 8) then
+				playerSubgroup = subgroup
+			end
+			break
+		end
+	end
+
+	if (not playerIndex) then return end
+
+	local names = {}
+	for i = 1, numMembers do
+		if (i ~= playerIndex) then
+			local name, _, subgroup = GetRaidRosterInfo(i)
+			if (ns.API.IsSafeString(name) and (not playerSubgroup or (ns.API.IsSafeNumber(subgroup) and subgroup == playerSubgroup))) then
+				table_insert(names, name)
+			end
+		end
+	end
+
+	-- An empty string still sends the header down the name list branch, which is what
+	-- we want when nobody but the player is left in the group: draw nothing.
+	return table_concat(names, ",")
+end
+
+-- The header reads its name list only while neither a group nor a role filter is set,
+-- so the two have to be written together or the frames keep drawing the old set.
+local ApplyGroupFilterAttributes = function(header, profile)
+	local nameList
+	if (not TESTMODE and profile and profile.showPlayer == false) then
+		nameList = GetSubgroupNameListWithoutPlayer()
+	end
+
+	if (nameList) then
+		header:SetAttribute("groupFilter", nil)
+		header:SetAttribute("nameList", nameList)
+	else
+		header:SetAttribute("nameList", nil)
+		header:SetAttribute("groupFilter", GetActiveGroupFilter())
+	end
 end
 
 -- Generate module defaults on the fly
@@ -1246,6 +1305,9 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 		self:SetAttribute("showPlayer", db.showPlayer)
 	end
 
+	-- Raid groups ignore showPlayer outright, so the filter attributes carry it there.
+	ApplyGroupFilterAttributes(self, db)
+
 end
 
 PartyFrameMod.GetHeaderAttributes = function(self)
@@ -1426,7 +1488,7 @@ PartyFrameMod.UpdateHeader = function(self)
 	header:SetAttribute("initial-height", config.UnitSize[2])
 	header:SetAttribute("groupBy", PARTY_GROUP_BY)
 	header:SetAttribute("groupingOrder", PARTY_GROUPING_ORDER)
-	header:SetAttribute("groupFilter", GetActiveGroupFilter())
+	ApplyGroupFilterAttributes(header, self.db and self.db.profile or defaults.profile)
 	header:SetAttribute("point", db.point)
 	header:SetAttribute("xOffset", db.xOffset)
 	header:SetAttribute("yOffset", db.yOffset)

@@ -12,6 +12,25 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.3.89-JuNNeZ (2026-08-24) - Hiding Your Own Frame in Raid Sized Groups
+
+### Highlights
+
+- The party frames' **Show player** toggle now works in raid groups as well. It only ever applied while you were in an actual party, so in the raid sizes you can set the party frames to appear in - arenas and battlegrounds included, since those put you in a raid group - your own frame came back no matter what the setting said. Blizzard's group header only consults that setting on party units, so the frames now pick their members by name in a raid instead.
+- The **1-5 raid frames** gained the same toggle, which they never had. Turn it off and those frames carry the rest of your group without you, which is what you want in arena when your own frame is already the big health orb: two teammates to heal, and nothing else in the way.
+- Both toggles follow the group as it changes. Joining, leaving, or being moved between raid subgroups rebuilds the frames, and anything that lands mid-fight is applied the moment you drop out of combat.
+
+### Access
+
+- `/azerite` -> Unit Frames -> Party Frames -> **Show player**
+- `/azerite` -> Unit Frames -> Raid Frames (5) -> **Show player** (new, on by default, so nothing changes unless you turn it off)
+
+### Internal
+
+- `showPlayer` is a party-only attribute in `SecureGroupHeaders.lua`: `GetGroupHeaderType` reads it only on the PARTY branch, while the RAID branch walks `raid1` to `raid<N>` with no way to drop a single unit. `Party.lua` now routes both `groupFilter` and `nameList` through one helper and, in a raid with the option off, clears the filter and hands the header its own subgroup minus the player. The name list branch is unreachable while any group or role filter is set, so the two attributes have to move together.
+- The 5 player frames are not a secure group header at all - five oUF frames on a `SecureHandlerStateTemplate`, each driven by its own unit attribute driver on a fixed `raid1`-`raid5` token. `GetRaidUnitIndexes` now builds those tokens and skips the player's own index, leaving the empty slots last so the visible frames stay flush against the anchor. Party tokens are left alone; they never included the player to begin with.
+- `RaidFrame5Mod.OnEvent` called `UpdateHeader` on `PLAYER_REGEN_ENABLED`, which never touches the unit drivers, so a driver rebuild deferred out of combat was dropped. It calls `Update` now.
+
 ## 5.3.88-JuNNeZ (2026-08-22) - Ability Pings, Resource Callouts, and the Pet Bar Ping Error
 
 ### Highlights

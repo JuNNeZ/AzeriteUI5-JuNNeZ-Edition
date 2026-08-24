@@ -1065,7 +1065,7 @@ local GenerateOptions = function()
 		suboptions.order = 150
 		suboptions.args.showPlayer = {
 			name = L["Show player"],
-			desc = L["Toggle whether to show the player while in a party."],
+			desc = L["Toggle whether to show your own frame among the party frames. This applies in a party and in the raid group sizes these frames are set to appear in."],
 			order = 2, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.elementHeader = {
@@ -1229,6 +1229,11 @@ local GenerateOptions = function()
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame5"))
 		suboptions.name = L["Raid Frames"] .. " (5)"
 		suboptions.order = 160
+		suboptions.args.showPlayer = {
+			name = L["Show player"],
+			desc = L["Toggle whether to show your own frame among the 1-5 raid frames. Turn this off in arenas to keep these frames on your teammates only."],
+			order = 5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "1-5 raid health bars" })
 		suboptions.args.usePortraitSpecIcons = {
 			name = L["Show Specialization Icons"],

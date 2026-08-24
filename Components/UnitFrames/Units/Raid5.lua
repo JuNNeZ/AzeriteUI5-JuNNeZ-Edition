@@ -50,6 +50,7 @@ local type = type
 local unpack = unpack
 
 local Units = {}
+local MAX_RAID_UNITS = 40
 
 local defaults = { profile = ns:Merge({
 
@@ -61,6 +62,7 @@ local defaults = { profile = ns:Merge({
 	useInRaid25 = false, -- show in raid groups of 11-25 players
 	useInRaid40 = false, -- show in raid groups of 26-40 players
 
+	showPlayer = true, -- show your own frame alongside the rest of the group
 	useRangeIndicator = false,
 	usePortraitSpecIcons = false,
 	useClassColors = true,
@@ -145,6 +147,29 @@ local IsRuntimeTestMode = function()
 	return (ns.db and ns.db.global and ns.db.global.runtimeUnitTestMode) and true or false
 end
 
+-- These five frames are not a real secure group header. Each button carries its own
+-- unit driver naming a fixed raid index, so hiding the player means handing the
+-- buttons a different set of raid tokens - the header attributes Blizzard offers for
+-- this only ever applied to party tokens.
+-- Party tokens never include the player to begin with and are deliberately left
+-- alone, or leaving a raid would leave the buttons skipping a group member.
+local GetRaidUnitIndexes = function(showPlayer)
+	local indexes = {}
+	local index = 0
+
+	for slot = 1, 5 do
+		index = index + 1
+		if (not showPlayer) then
+			while (index <= MAX_RAID_UNITS and UnitIsUnit("raid"..index, "player")) do
+				index = index + 1
+			end
+		end
+		indexes[slot] = index
+	end
+
+	return indexes
+end
+
 local ApplyTestUnitDrivers = function(self)
 	if (InCombatLockdown()) then
 		self.needHeaderUpdate = true
@@ -157,6 +182,9 @@ local ApplyTestUnitDrivers = function(self)
 		return
 	end
 
+	local profile = self.db and self.db.profile or defaults.profile
+	local raidIndexes = GetRaidUnitIndexes(not (profile and profile.showPlayer == false))
+
 	for i = 1, 5 do
 		local unitButton = header:GetAttribute("child"..i)
 		if (unitButton) then
@@ -165,7 +193,7 @@ local ApplyTestUnitDrivers = function(self)
 				RegisterAttributeDriver(unitButton, "unit", "player")
 			else
 				local driver = {}
-				local raidUnit, partyUnit = "raid"..i, "party"..i
+				local raidUnit, partyUnit = "raid"..raidIndexes[i], "party"..i
 				local raidPetUnit, partyPetUnit = raidUnit.."pet", partyUnit.."pet"
 
 				unitButton:SetAttribute("toggleForVehicle", nil)
@@ -179,6 +207,15 @@ local ApplyTestUnitDrivers = function(self)
 				RegisterAttributeDriver(unitButton, "unit", table_concat(driver, ";"))
 			end
 		end
+	end
+end
+
+-- Only a hidden player makes the raid indexes move, so profiles that show it never
+-- need the rebuild - which matters, because the events that ask for one are noisy.
+local RebuildUnitDriversIfPlayerHidden = function(self)
+	local profile = self.db and self.db.profile
+	if (profile and profile.showPlayer == false) then
+		ApplyTestUnitDrivers(self)
 	end
 end
 
@@ -946,6 +983,9 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	self:SetAttribute("columnAnchorPoint", headerProfile.columnAnchorPoint)
 	self:SetAttribute("showRaid", db.useInRaid5 or db.useInRaid10 or db.useInRaid25 or db.useInRaid40)
 	self:SetAttribute("showParty", db.useInParties)
+	-- Inert here. These five buttons are laid out by our own ConfigureChildren and
+	-- fed by per-button unit drivers, never by SecureGroupHeader_Update, so the
+	-- showPlayer profile option is applied in GetRaidUnitIndexes instead.
 	self:SetAttribute("showPlayer", true)
 
 end
@@ -1198,6 +1238,10 @@ RaidFrame5Mod.CreateUnitFrames = function(self)
 	-- *Only experienced this is Wrath.But adding it as a general update anyway.
 	self:RegisterEvent("PARTY_LEADER_CHANGED", "UpdateUnits")
 
+	-- Each button's unit driver names a fixed raid index, and which of those indexes
+	-- belongs to the player only ever changes with the roster.
+	self:RegisterEvent("GROUP_ROSTER_UPDATE", "OnEvent")
+
 end
 
 RaidFrame5Mod.UpdateHeader = function(self)
@@ -1303,18 +1347,25 @@ RaidFrame5Mod.OnEvent = function(self, event, ...)
 		self:UpdateHeader()
 		self:UpdateUnits() -- needed?
 
+	elseif (event == "GROUP_ROSTER_UPDATE") then
+		-- Which raid token is the player is baked into the unit drivers, so a roster
+		-- change has to rebuild them. The call defers itself while in combat.
+		RebuildUnitDriversIfPlayerHidden(self)
+
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		if (InCombatLockdown()) then return end
 		if (self.needHeaderUpdate) then
 			self.needHeaderUpdate = nil
-			self:UpdateHeader()
-			self:UpdateUnits()
+			-- Update rather than UpdateHeader: the deferred work can be a unit driver
+			-- rebuild, and UpdateHeader alone never touches those.
+			self:Update()
 			return
 		end
 
 		-- Roster changes that arrived during combat could not lay the header out, and
 		-- they leave no flag behind when the header itself swallowed them. The event
 		-- stays registered so every combat drop gets a rebuild.
+		RebuildUnitDriversIfPlayerHidden(self)
 		local header = self:GetUnitFrameOrHeader()
 		if (header and header.ForceSecureUpdate) then
 			header:ForceSecureUpdate()
