@@ -1,3 +1,39 @@
+## 2026-08-24 - Splitting the player toggle by context, and making group frame sorting real (5.3.90)
+
+- **Maintainer follow up to 5.3.89**, three items: allow hiding yourself in a party without hiding yourself in a raid, verify the 5.3.89 change broke nothing, and make sorting configurable per frame family. Plus one decision taken here: the 1-5 raid frames' party branch now honours a player toggle rather than never drawing you at all.
+
+### Verification of 5.3.89, and one flaw it shipped with
+
+- **Nothing broken.** Outside a raid `GetSubgroupNameListWithoutPlayer` returns nil, so the party path runs the old `groupFilter` code verbatim. Hidden buttons cannot leave gaps because Blizzard fills `child1..childK` and hides the surplus, so visible frames stay contiguous. Raid (25) and (40) hardcode `showPlayer` true and never entered the new code. Every call site was already behind an `InCombatLockdown` guard.
+- **One real flaw, since fixed.** `ApplyGroupFilterAttributes` cleared `groupFilter` before setting `nameList`. Each `SetAttribute` reruns `SecureGroupHeader_Update`, and with neither attribute set the header falls back to `"1,2,3,4,5,6,7,8"` and draws the first five members of the **whole raid** for that pass - a visible flash of wrong frames on the first enable or raid zone-in. The rule is now to write the attribute being turned on before the one being turned off; with both set the group filter wins, which is the set already on screen.
+
+### Per-context player visibility
+
+- **`showPlayer` splits into `showPlayerInParty` and `showPlayerInRaid`** on Party and Raid (5). Migrated in place on first read - `SETTINGS_VERSION` is the only migration hook the addon has and it calls `ResetSettings`, which wipes every profile.
+- **The key is removed from the defaults**, so AceDB only reports it for a profile that once stored a non-default value. Those get both halves seeded from it; everyone else lands on defaults identical to the old ones.
+- **Raid (5) party branch now honours the toggle.** It drove `party1`-`party5`, so the player was structurally absent while the raid branch always drew them - the toggle added in 5.3.89 was meaningless in a party. Both default to true. Only profiles that deliberately enabled these frames in parties see a change, and what they see is Blizzard's own behaviour: you, then your group.
+
+### Sorting
+
+- **Raid (25) and (40) role sorting never worked.** `GetGroupRosterInfo` returns the main tank / main assist flag as `role` and the queued role as `assignedRole`; `groupBy = "ROLE"` reads the former. Paired with `groupingOrder = "TANK,HEALER,DAMAGER"` nothing ever matched, every unit hit the nil-order branch of `sortOnGroupWithIDs`, and the result was raid index order. Inherited from upstream stock, confirmed against `.research/tmp/AzeriteUI5-stock`. ElvUI uses `ASSIGNEDROLE` for the same mode.
+- **`Components/UnitFrames/GroupSorting.lua`** is new and owns both mechanisms, because they share nothing but the vocabulary: real headers take four attributes, Raid (5) takes an ordered token list. Class order comes from `CLASS_SORT_ORDER`, which `SecureGroupHeaders.lua` itself unpacks, with a literal fallback.
+- **GROUP means roster order on Raid (5)**, not subgroup order. Those frames draw five units and any group that fits them sits in one subgroup, so subgroup ordering would buy nothing while moving frames on a default profile.
+- **`table.sort` is not stable**, so the roster index is the final tie break on every comparison. Without it two members sharing a key could swap between updates.
+- **The name list and the sort collided.** Hiding yourself in a raid routes the party header down the name list branch, which is the one branch of `SecureGroupHeader_Update` that ignores `groupBy` - so role and class sorting would have silently degraded to name order in exactly the configuration this all started from. The list is built in sorted order and read back with `sortMethod = "NAMELIST"`, which is what that sort method exists for. Built ascending only; the header's own `sortDir` reverses it, and reversing twice cancels out.
+- **`sortDir` on the real headers stays a header attribute.** All three modules carry a dead `sortDir == "DESC"` reversal in their own `ConfigureChildren`, fed from a sanitized profile that never emits the key. Left dead deliberately: Blizzard already honours the attribute when it assigns units, and re-reversing during our re-anchor would cancel it.
+- **`PLAYER_ROLES_ASSIGNED` is now registered** by all four families. Blizzard's header re-sorts on `GROUP_ROSTER_UPDATE` and `UNIT_NAME_UPDATE` only, so a plain role change left a role sorted header stale until the next roster event.
+- **Raid (5) rebuilds are still gated.** `HasDynamicUnitTokens` skips the driver rebuild when the profile is default, because the token list is provably constant there - identity for the raid branch and `player, party1-4` for the party branch, whatever the roster looked like when it was computed.
+
+### Combat behaviour is not the same across the families
+
+- **Real headers re-sort in combat, ours do not.** `SecureGroupHeaders.lua` has no combat guard at all; Blizzard's own roster handler is an untainted path, so Party, Raid (25) and Raid (40) reorder mid-fight. Raid (5) drives its buttons through `RegisterAttributeDriver` and can only rebuild out of combat, so a roster or role change there lands when the fight ends. Worth knowing before anyone reports it as a bug.
+
+### Not verified in client
+
+- **Shipped as 5.3.90 without a `/reload` test**, at the maintainer's direction - Neil is testing it.
+- **No local `/reload` test.** All 14 touched Lua files pass `luac -p`, which is syntax only.
+- **Worth checking:** Raid (25) reordering by role on a live raid, Sort By Name on the party frames, the party frames with the player hidden in an arena while sorted by role, Raid (5) in a party with the player shown, and a profile that had the old `showPlayer` set arriving on the new keys.
+
 ## 2026-08-24 - Hiding your own frame in raid sized groups: the party header ignored it, the 5 player frames never offered it (5.3.89)
 
 - **Reported by Neil, one symptom in two frame families.** "The option to not have your own player party frame showing works fab in 'party' but doesn't work in raid 1-5. Also, there's no option to hide your own frame in the 1-5 raid frame itself." The goal is arena healing: the group frames should carry the two teammates only, because the player is already on the big orb frame.

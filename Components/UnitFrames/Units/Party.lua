@@ -73,7 +73,8 @@ local defaults = { profile = ns:Merge({
 	useInRaid40 = false, -- show in raid groups of 26-40 players
 
 	showAuras = true,
-	showPlayer = false,
+	showPlayerInParty = false,
+	showPlayerInRaid = false,
 	usePortraitSpecIcons = false,
 	useClassColors = true,
 	useBlizzardHealthColors = false,
@@ -99,8 +100,8 @@ local defaults = { profile = ns:Merge({
 	xOffset = 0, -- horizontal offset within the same column
 	yOffset = 0, -- vertical offset within the same column
 
-	groupBy = PARTY_GROUP_BY, -- GROUP, CLASS, ROLE
-	groupingOrder = PARTY_GROUPING_ORDER, -- must match choice in groupBy
+	sortBy = "GROUP", -- GROUP, CLASS, ROLE, NAME - see Components/UnitFrames/GroupSorting.lua
+	sortDir = "ASC", -- ASC, DESC
 
 	unitsPerColumn = 5, -- maximum units per column
 	maxColumns = 1, -- should be 5/unitsPerColumn
@@ -135,6 +136,18 @@ local GetSanitizedHeaderProfile = function(profile)
 	}
 end
 
+-- 5.3.89 and earlier had one showPlayer covering both contexts. Split it in place
+-- rather than bumping SETTINGS_VERSION, which resets every profile wholesale.
+-- The key is gone from the defaults, so a profile only carries it if the player
+-- once changed it away from the old default.
+local MigrateShowPlayer = function(profile)
+	if (profile and profile.showPlayer ~= nil) then
+		profile.showPlayerInParty = profile.showPlayer
+		profile.showPlayerInRaid = profile.showPlayer
+		profile.showPlayer = nil
+	end
+end
+
 local GetActiveGroupFilter = function()
 	local defaultFilter = PARTY_GROUPING_ORDER
 	if (not IsInRaid() or GetNumGroupMembers() <= 0) then
@@ -159,7 +172,7 @@ end
 -- branch can drop a single unit, which is why hiding yourself worked in a party but
 -- never in the raid sizes these frames can be set to appear in. The header's name list
 -- is the one remaining way to hand it an explicit set of units to draw.
-local GetSubgroupNameListWithoutPlayer = function()
+local GetSubgroupNameListWithoutPlayer = function(profile)
 	if (not IsInRaid()) then return end
 
 	local numMembers = GetNumGroupMembers()
@@ -181,14 +194,25 @@ local GetSubgroupNameListWithoutPlayer = function()
 
 	if (not playerIndex) then return end
 
-	local names = {}
+	local entries = {}
 	for i = 1, numMembers do
 		if (i ~= playerIndex) then
 			local name, _, subgroup = GetRaidRosterInfo(i)
 			if (ns.API.IsSafeString(name) and (not playerSubgroup or (ns.API.IsSafeNumber(subgroup) and subgroup == playerSubgroup))) then
-				table_insert(names, name)
+				-- rosterName is kept separate from the name the sorter reads: this one
+				-- carries the realm suffix, which is what the header matches against.
+				table_insert(entries, { unit = "raid"..i, index = i, rosterName = name })
 			end
 		end
+	end
+
+	-- Always built ascending. The header's own sortDir reverses it from here, and
+	-- reversing twice would cancel out.
+	entries = ns.GroupSorting.SortEntries(entries, ns.GroupSorting.SanitizeMode(profile and profile.sortBy), "ASC")
+
+	local names = {}
+	for _, entry in ipairs(entries) do
+		table_insert(names, entry.rosterName)
 	end
 
 	-- An empty string still sends the header down the name list branch, which is what
@@ -200,16 +224,26 @@ end
 -- so the two have to be written together or the frames keep drawing the old set.
 local ApplyGroupFilterAttributes = function(header, profile)
 	local nameList
-	if (not TESTMODE and profile and profile.showPlayer == false) then
-		nameList = GetSubgroupNameListWithoutPlayer()
+	if (not TESTMODE and profile and profile.showPlayerInRaid == false) then
+		nameList = GetSubgroupNameListWithoutPlayer(profile)
 	end
 
+	-- Write the attribute being turned on before the one being turned off. Every
+	-- SetAttribute reruns SecureGroupHeader_Update, and a moment with neither set
+	-- makes the header fall back to "1,2,3,4,5,6,7,8" and draw the first five members
+	-- of the whole raid for that pass. With both set the group filter wins, which is
+	-- the set already on screen.
 	if (nameList) then
-		header:SetAttribute("groupFilter", nil)
 		header:SetAttribute("nameList", nameList)
+		-- The name list branch honours no grouping at all, so the sort order has to
+		-- ride on the list itself. NAMELIST is the sort method that reads it back.
+		-- GroupSorting.ApplyToHeader owns this attribute in every other case, and it
+		-- always runs ahead of this call.
+		header:SetAttribute("sortMethod", "NAMELIST")
+		header:SetAttribute("groupFilter", nil)
 	else
-		header:SetAttribute("nameList", nil)
 		header:SetAttribute("groupFilter", GetActiveGroupFilter())
+		header:SetAttribute("nameList", nil)
 	end
 end
 
@@ -1295,14 +1329,15 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 
 	-- Ensure grouping attributes are valid before any other SetAttribute calls,
 	-- as SecureGroupHeader_Update can run on each call.
-	self:SetAttribute("groupBy", PARTY_GROUP_BY)
-	self:SetAttribute("groupingOrder", PARTY_GROUPING_ORDER)
+	ns.GroupSorting.ApplyToHeader(self, db.sortBy, db.sortDir)
 	self:SetAttribute("showRaid", db.useInRaid5 or db.useInRaid10 or db.useInRaid25 or db.useInRaid40)
 	self:SetAttribute("showParty", db.useInParties)
 	if (TESTMODE) then
 		self:SetAttribute("showPlayer", true)
 	else
-		self:SetAttribute("showPlayer", db.showPlayer)
+		-- Blizzard only reads this while the header draws party tokens, so it is the
+		-- party half of the pair. The raid half rides on the name list instead.
+		self:SetAttribute("showPlayer", db.showPlayerInParty)
 	end
 
 	-- Raid groups ignore showPlayer outright, so the filter attributes carry it there.
@@ -1331,7 +1366,9 @@ PartyFrameMod.GetHeaderAttributes = function(self)
 	"point", db.point, -- Unit anchoring within each column
 	"xOffset", db.xOffset,
 	"yOffset", db.yOffset,
-	"groupBy", PARTY_GROUP_BY, -- fixed to stable group ordering
+	-- Spawn time defaults only. GroupSorting rewrites all four sorting attributes
+	-- from the profile on the first UpdateHeader.
+	"groupBy", PARTY_GROUP_BY,
 	"groupingOrder", PARTY_GROUPING_ORDER,
 	"unitsPerColumn", db.unitsPerColumn, -- Column setup and growth
 	"maxColumns", db.maxColumns,
@@ -1343,7 +1380,7 @@ end
 PartyFrameMod.GetHeaderSize = function(self)
 	local profile = self.db and self.db.profile or defaults.profile
 	local db = profile or defaults.profile
-	local defaultUnits = ((TESTMODE or db.showPlayer) and 5 or 4)
+	local defaultUnits = ((TESTMODE or db.showPlayerInParty) and 5 or 4)
 	return self:GetCalculatedHeaderSize(defaultUnits)
 end
 
@@ -1473,7 +1510,8 @@ end
 PartyFrameMod.UpdateHeader = function(self)
 	local header = self:GetUnitFrameOrHeader()
 	if (not header) then return end
-	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
+	local profile = self.db and self.db.profile or defaults.profile
+	local db = GetSanitizedHeaderProfile(profile)
 	local config = ns.GetConfig("PartyFrames")
 
 	if (InCombatLockdown()) then
@@ -1486,9 +1524,8 @@ PartyFrameMod.UpdateHeader = function(self)
 	-- Set secure grouping attributes first, as any SetAttribute call can trigger SecureGroupHeader_Update.
 	header:SetAttribute("initial-width", config.UnitSize[1])
 	header:SetAttribute("initial-height", config.UnitSize[2])
-	header:SetAttribute("groupBy", PARTY_GROUP_BY)
-	header:SetAttribute("groupingOrder", PARTY_GROUPING_ORDER)
-	ApplyGroupFilterAttributes(header, self.db and self.db.profile or defaults.profile)
+	ns.GroupSorting.ApplyToHeader(header, profile.sortBy, profile.sortDir)
+	ApplyGroupFilterAttributes(header, profile)
 	header:SetAttribute("point", db.point)
 	header:SetAttribute("xOffset", db.xOffset)
 	header:SetAttribute("yOffset", db.yOffset)
@@ -1657,6 +1694,10 @@ PartyFrameMod.CreateUnitFrames = function(self)
 	self:RegisterEvent("PARTY_LEADER_CHANGED", "UpdateUnits")
 	self:RegisterEvent("GROUP_ROSTER_UPDATE", "Update")
 
+	-- Blizzard re-sorts a group header on roster and name events only, so role
+	-- sorting would sit stale until the next roster change without this.
+	self:RegisterEvent("PLAYER_ROLES_ASSIGNED", "Update")
+
 	-- Sometimes offline coloring remains when a member comes back online. Why?
 	-- Not sure if this is something we should force update as the health element
 	-- is already registered for this event. Leaving this comment here while I decide.
@@ -1673,6 +1714,8 @@ PartyFrameMod.UpdatePortraits = function(self)
 end
 
 PartyFrameMod.UpdateSettings = function(self)
+	MigrateShowPlayer(self.db and self.db.profile)
+
 	ns.UnitFrameModule.UpdateSettings(self)
 
 	local profile = self.db and self.db.profile
@@ -1699,6 +1742,8 @@ PartyFrameMod.UpdateSettings = function(self)
 end
 
 PartyFrameMod.OnEnable = function(self)
+
+	MigrateShowPlayer(self.db and self.db.profile)
 
 	self:DisableBlizzard()
 	self:CreateUnitFrames()

@@ -12,6 +12,30 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.3.90-JuNNeZ (2026-08-24) - Per-Context Player Toggles and Group Frame Sorting
+
+### Highlights
+
+- **Showing your own frame is now two separate settings** on both the Party frames and the 1-5 Raid frames: one for parties, one for raid groups. Hiding yourself in arena while keeping your frame in a five man dungeon was not possible before, because a single toggle covered both. Your existing choice carries over to both halves, so nothing changes until you split them yourself.
+- **The 1-5 raid frames can now show your own frame in a party.** They only ever drew your group members there, never you, no matter what the setting said - the raid half of the same frames always drew you. Both halves answer to their own toggle now, and both default to showing you.
+- **All four group frame families gained Sort By and Sort Direction**: by group, by role, by class, or by name. Nothing was configurable before.
+- **Role sorting on the Raid (25) and Raid (40) frames now actually works.** Those frames have shipped with role sorting turned on for years and have been quietly ignoring it, because the setting named the main tank flag rather than the tank/healer/damage role, so nothing ever matched and the roster stayed in join order. **These frames will visibly reorder** the next time you are in a raid: tanks, then healers, then damage. Set Sort By to Group if you want the old order back.
+
+### Access
+
+- `/azerite` -> Unit Frames -> Party Frames -> **Show player in party** / **Show player in raid**
+- `/azerite` -> Unit Frames -> Raid Frames (5) -> **Show player in party** / **Show player in raid**
+- `/azerite` -> Unit Frames -> Party Frames, Raid Frames (5), (25) and (40) -> **Sort By** / **Sort Direction**
+
+### Internal
+
+- New `Components/UnitFrames/GroupSorting.lua` owns the four modes for both mechanisms. Real headers get `groupBy` / `groupingOrder` / `sortMethod` / `sortDir` attributes; the driver fed Raid (5) frames get an ordered token list instead, since none of those attributes reach them.
+- `ROLE` is the main tank / main assist flag in `SecureGroupHeaders.lua`; `ASSIGNEDROLE` is TANK / HEALER / DAMAGER. Raid (25) and (40) paired the former with a `TANK,HEALER,DAMAGER` order, so every unit fell through to the nil-order branch and sorted by raid index. ElvUI spells the same mode `ASSIGNEDROLE`.
+- The party header's name list branch ignores `groupBy` entirely, so hiding yourself in a raid would have silently dropped the sort with it. The list is now built in sorted order and read back with `sortMethod = "NAMELIST"`.
+- `showPlayer` splits into `showPlayerInParty` / `showPlayerInRaid` in place on first read, rather than through `SETTINGS_VERSION`, which resets every profile wholesale.
+- Both header families now refresh on `PLAYER_ROLES_ASSIGNED`. Blizzard re-sorts a group header on roster and name events only, so a plain role change left a role sorted header stale.
+
+
 ## 5.3.89-JuNNeZ (2026-08-24) - Hiding Your Own Frame in Raid Sized Groups
 
 ### Highlights

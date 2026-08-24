@@ -6,6 +6,7 @@
 	<Script file="Tags.lua"/>
 	<Script file="GroupSpecCache.lua"/>
 	<Script file="SpecIcons.lua"/>
+	<Script file="GroupSorting.lua"/>
 
 	<Script file="Auras\AuraData.lua"/>
 	<Script file="Auras\AuraFilters.lua"/>

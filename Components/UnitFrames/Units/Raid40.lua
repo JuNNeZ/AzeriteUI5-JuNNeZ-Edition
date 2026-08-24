@@ -81,8 +81,8 @@ local defaults = { profile = ns:Merge({
 	xOffset = 10, -- horizontal offset within the same column
 	yOffset = 0, -- vertical offset within the same column
 
-	groupBy = "ROLE", -- GROUP, CLASS, ROLE
-	groupingOrder = "TANK,HEALER,DAMAGER", -- must match choice in groupBy
+	sortBy = "ROLE", -- GROUP, CLASS, ROLE, NAME - see Components/UnitFrames/GroupSorting.lua
+	sortDir = "ASC", -- ASC, DESC
 
 	unitsPerColumn = 5, -- maximum units per column
 	maxColumns = 8, -- should be 40/unitsPerColumn
@@ -117,13 +117,6 @@ local validHeaderPoints = {
 	TOPRIGHT = true,
 	BOTTOMLEFT = true,
 	BOTTOMRIGHT = true
-}
-
-local validGroupBy = {
-	GROUP = true,
-	CLASS = true,
-	ROLE = true,
-	ASSIGNEDROLE = true
 }
 
 local GetActiveRaidGroupFilter = function()
@@ -161,8 +154,6 @@ local GetSanitizedHeaderProfile = function(profile)
 		point = (type(db.point) == "string" and validHeaderPoints[db.point] and db.point) or fallback.point or "TOP",
 		xOffset = (type(db.xOffset) == "number" and db.xOffset) or fallback.xOffset or 0,
 		yOffset = (type(db.yOffset) == "number" and db.yOffset) or fallback.yOffset or 0,
-		groupBy = (type(db.groupBy) == "string" and validGroupBy[db.groupBy] and db.groupBy) or fallback.groupBy or "GROUP",
-		groupingOrder = (type(db.groupingOrder) == "string" and db.groupingOrder ~= "" and db.groupingOrder) or fallback.groupingOrder or "1,2,3,4,5,6,7,8",
 		unitsPerColumn = unitsPerColumn,
 		maxColumns = maxColumns,
 		columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0,
@@ -1124,8 +1115,7 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	RegisterAttributeDriver(self, "state-visibility", self.visibility)
 
 	-- Restore secure layout state before any visibility writes can trigger SecureGroupHeader_Update.
-	self:SetAttribute("groupBy", headerProfile.groupBy)
-	self:SetAttribute("groupingOrder", headerProfile.groupingOrder)
+	ns.GroupSorting.ApplyToHeader(self, db.sortBy, db.sortDir)
 	self:SetAttribute("groupFilter", GetActiveRaidGroupFilter())
 	self:SetAttribute("point", headerProfile.point)
 	self:SetAttribute("xOffset", headerProfile.xOffset)
@@ -1233,8 +1223,10 @@ RaidFrame40Mod.GetHeaderAttributes = function(self)
 	"point", db.point, -- Unit anchoring within each column
 	"xOffset", db.xOffset,
 	"yOffset", db.yOffset,
-	"groupBy", "GROUP", -- db.groupBy, -- ROLE, CLASS, GROUP -- Grouping order and type
-	"groupingOrder", "1,2,3,4,5,6,7,8", -- db.groupingOrder,
+	-- Spawn time defaults only. GroupSorting rewrites all four sorting attributes
+	-- from the profile on the first UpdateHeader.
+	"groupBy", "GROUP",
+	"groupingOrder", "1,2,3,4,5,6,7,8",
 	"unitsPerColumn", db.unitsPerColumn, -- Column setup and growth
 	"maxColumns", db.maxColumns,
 	"columnSpacing", db.columnSpacing,
@@ -1374,7 +1366,8 @@ end
 RaidFrame40Mod.UpdateHeader = function(self)
 	local header = self:GetUnitFrameOrHeader()
 	if (not header) then return end
-	local db = GetSanitizedHeaderProfile(self.db and self.db.profile or defaults.profile)
+	local profile = self.db and self.db.profile or defaults.profile
+	local db = GetSanitizedHeaderProfile(profile)
 	local config = ns.GetConfig("RaidFrames")
 
 	if (InCombatLockdown()) then
@@ -1387,8 +1380,7 @@ RaidFrame40Mod.UpdateHeader = function(self)
 	-- Set secure layout attributes from validated saved values only.
 	header:SetAttribute("initial-width", config.UnitSize[1])
 	header:SetAttribute("initial-height", config.UnitSize[2])
-	header:SetAttribute("groupBy", db.groupBy)
-	header:SetAttribute("groupingOrder", db.groupingOrder)
+	ns.GroupSorting.ApplyToHeader(header, profile.sortBy, profile.sortDir)
 	header:SetAttribute("groupFilter", GetActiveRaidGroupFilter())
 	header:SetAttribute("point", db.point)
 	header:SetAttribute("xOffset", db.xOffset)
@@ -1495,6 +1487,10 @@ RaidFrame40Mod.CreateUnitFrames = function(self)
 	-- *Only experienced this is Wrath.But adding it as a general update anyway.
 	self:RegisterEvent("PARTY_LEADER_CHANGED", "UpdateUnits")
 	self:RegisterEvent("GROUP_ROSTER_UPDATE", "Update")
+
+	-- Blizzard re-sorts a group header on roster and name events only, so role
+	-- sorting would sit stale until the next roster change without this.
+	self:RegisterEvent("PLAYER_ROLES_ASSIGNED", "Update")
 
 end
 

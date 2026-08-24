@@ -997,6 +997,52 @@ local GenerateOptions = function()
 		return suboptions, module, setter, getter, setoption, getoption, isdisabled
 	end
 
+	-- Sorting reads the same on every group frame family, so the option block is
+	-- built once. What each mode does is settled in Components/UnitFrames/GroupSorting.lua.
+	local sortByValues = {
+		GROUP = L["Group"],
+		ROLE = L["Role"],
+		CLASS = L["Class"],
+		NAME = L["Name"]
+	}
+	local sortBySorting = { "GROUP", "ROLE", "CLASS", "NAME" }
+	local sortDirValues = {
+		ASC = L["Ascending"],
+		DESC = L["Descending"]
+	}
+	local sortDirSorting = { "ASC", "DESC" }
+
+	local AddGroupSortingOptions = function(suboptions, setter, getter, isdisabled, order)
+		suboptions.args.sortingHeader = {
+			name = L["Sorting"], order = order, type = "header", hidden = isdisabled
+		}
+		suboptions.args.sortBy = {
+			name = L["Sort By"],
+			desc = L["Choose how group members are ordered on these frames."],
+			order = order + 1, type = "select", width = "full", hidden = isdisabled,
+			values = sortByValues, sorting = sortBySorting, set = setter, get = getter
+		}
+		suboptions.args.sortDir = {
+			name = L["Sort Direction"],
+			desc = L["Reverse the order group members are listed in."],
+			order = order + 2, type = "select", width = "full", hidden = isdisabled,
+			values = sortDirValues, sorting = sortDirSorting, set = setter, get = getter
+		}
+	end
+
+	local AddPlayerVisibilityOptions = function(suboptions, setter, getter, isdisabled, order)
+		suboptions.args.showPlayerInParty = {
+			name = L["Show player in party"],
+			desc = L["Toggle whether to show your own frame on these frames while in a non-raid party."],
+			order = order, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.showPlayerInRaid = {
+			name = L["Show player in raid"],
+			desc = L["Toggle whether to show your own frame on these frames while in a raid group. Arenas and battlegrounds are raid groups too."],
+			order = order + 1, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+	end
+
 	local AddHealthColorOptions = function(suboptions, setter, getter, getoption, isdisabled, config)
 		local GetLocalizedText = function(text)
 			return rawget(L, text) or text
@@ -1063,11 +1109,8 @@ local GenerateOptions = function()
 		}
 		suboptions.name = L["Party Frames"]
 		suboptions.order = 150
-		suboptions.args.showPlayer = {
-			name = L["Show player"],
-			desc = L["Toggle whether to show your own frame among the party frames. This applies in a party and in the raid group sizes these frames are set to appear in."],
-			order = 2, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
-		}
+		AddPlayerVisibilityOptions(suboptions, setter, getter, isdisabled, 2)
+		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 5)
 		suboptions.args.elementHeader = {
 			name = L["Frame Elements"], order = 10, type = "header", hidden = isdisabled
 		}
@@ -1229,11 +1272,8 @@ local GenerateOptions = function()
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame5"))
 		suboptions.name = L["Raid Frames"] .. " (5)"
 		suboptions.order = 160
-		suboptions.args.showPlayer = {
-			name = L["Show player"],
-			desc = L["Toggle whether to show your own frame among the 1-5 raid frames. Turn this off in arenas to keep these frames on your teammates only."],
-			order = 5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
-		}
+		AddPlayerVisibilityOptions(suboptions, setter, getter, isdisabled, 2)
+		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 5)
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "1-5 raid health bars" })
 		suboptions.args.usePortraitSpecIcons = {
 			name = L["Show Specialization Icons"],
@@ -1253,6 +1293,7 @@ local GenerateOptions = function()
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame25"))
 		suboptions.name = L["Raid Frames"] .. " (25)"
 		suboptions.order = 161
+		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 5)
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "6-25 raid health bars" })
 		suboptions.args.useSpecIcons = {
 			name = L["Show Specialization Icons"],
@@ -1296,6 +1337,7 @@ local GenerateOptions = function()
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame40"))
 		suboptions.name = L["Raid Frames"] .. " (40)"
 		suboptions.order = 162
+		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 5)
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "26-40 raid health bars" })
 		suboptions.args.useSpecIcons = {
 			name = L["Show Specialization Icons"],

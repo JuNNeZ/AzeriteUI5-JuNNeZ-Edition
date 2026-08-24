@@ -50,7 +50,6 @@ local type = type
 local unpack = unpack
 
 local Units = {}
-local MAX_RAID_UNITS = 40
 
 local defaults = { profile = ns:Merge({
 
@@ -62,7 +61,8 @@ local defaults = { profile = ns:Merge({
 	useInRaid25 = false, -- show in raid groups of 11-25 players
 	useInRaid40 = false, -- show in raid groups of 26-40 players
 
-	showPlayer = true, -- show your own frame alongside the rest of the group
+	showPlayerInParty = true, -- show your own frame while in a non-raid party
+	showPlayerInRaid = true, -- show your own frame while in a raid group
 	useRangeIndicator = false,
 	usePortraitSpecIcons = false,
 	useClassColors = true,
@@ -73,8 +73,8 @@ local defaults = { profile = ns:Merge({
 	xOffset = 0, -- horizontal offset within the same column
 	yOffset = -12, -- vertical offset within the same column
 
-	groupBy = "GROUP", -- GROUP, CLASS, ROLE
-	groupingOrder = "1,2,3,4,5,6,7,8", -- must match choice in groupBy
+	sortBy = "GROUP", -- GROUP, CLASS, ROLE, NAME - see Components/UnitFrames/GroupSorting.lua
+	sortDir = "ASC", -- ASC, DESC
 
 	unitsPerColumn = 5,
 	maxColumns = 1,
@@ -111,13 +111,6 @@ local validHeaderPoints = {
 	BOTTOMRIGHT = true
 }
 
-local validGroupBy = {
-	GROUP = true,
-	CLASS = true,
-	ROLE = true,
-	ASSIGNEDROLE = true
-}
-
 -- The 5 player header never mirrors Blizzard's raid filter. That filter only
 -- describes which subgroups of a 10-40 player raid the compact frames draw, and
 -- when the raid manager is unavailable - instanced PvP being the obvious case -
@@ -134,8 +127,6 @@ local GetSanitizedHeaderProfile = function(profile)
 		point = (type(db.point) == "string" and validHeaderPoints[db.point] and db.point) or fallback.point or "TOP",
 		xOffset = (type(db.xOffset) == "number" and db.xOffset) or fallback.xOffset or 0,
 		yOffset = (type(db.yOffset) == "number" and db.yOffset) or fallback.yOffset or 0,
-		groupBy = (type(db.groupBy) == "string" and validGroupBy[db.groupBy] and db.groupBy) or fallback.groupBy or "GROUP",
-		groupingOrder = (type(db.groupingOrder) == "string" and db.groupingOrder ~= "" and db.groupingOrder) or fallback.groupingOrder or "1,2,3,4,5,6,7,8",
 		unitsPerColumn = (type(db.unitsPerColumn) == "number" and db.unitsPerColumn > 0 and db.unitsPerColumn) or fallback.unitsPerColumn or 5,
 		maxColumns = (type(db.maxColumns) == "number" and db.maxColumns > 0 and db.maxColumns) or fallback.maxColumns or 1,
 		columnSpacing = (type(db.columnSpacing) == "number" and db.columnSpacing) or fallback.columnSpacing or 0,
@@ -143,31 +134,47 @@ local GetSanitizedHeaderProfile = function(profile)
 	}
 end
 
+-- 5.3.89 had one showPlayer covering both contexts. Split it in place rather than
+-- bumping SETTINGS_VERSION, which resets every profile wholesale.
+local MigrateShowPlayer = function(profile)
+	if (profile and profile.showPlayer ~= nil) then
+		profile.showPlayerInParty = profile.showPlayer
+		profile.showPlayerInRaid = profile.showPlayer
+		profile.showPlayer = nil
+	end
+end
+
 local IsRuntimeTestMode = function()
 	return (ns.db and ns.db.global and ns.db.global.runtimeUnitTestMode) and true or false
 end
 
 -- These five frames are not a real secure group header. Each button carries its own
--- unit driver naming a fixed raid index, so hiding the player means handing the
--- buttons a different set of raid tokens - the header attributes Blizzard offers for
--- this only ever applied to party tokens.
--- Party tokens never include the player to begin with and are deliberately left
--- alone, or leaving a raid would leave the buttons skipping a group member.
-local GetRaidUnitIndexes = function(showPlayer)
-	local indexes = {}
-	local index = 0
+-- unit driver, so both which units they draw and the order they draw them in is
+-- whatever token list we hand them - none of Blizzard's header attributes apply.
+-- The raid and party halves of each driver are resolved separately, because the
+-- driver persists across a group changing type and a party token list computed
+-- while in a raid would skip members the moment the raid became a party.
+local GetUnitTokens = function(profile)
+	local sorting = ns.GroupSorting
+	local mode = sorting.SanitizeMode(profile and profile.sortBy)
+	local direction = sorting.SanitizeDirection(profile and profile.sortDir)
 
-	for slot = 1, 5 do
-		index = index + 1
-		if (not showPlayer) then
-			while (index <= MAX_RAID_UNITS and UnitIsUnit("raid"..index, "player")) do
-				index = index + 1
-			end
-		end
-		indexes[slot] = index
-	end
+	local raidOrder = sorting.GetRaidUnitOrder(mode, direction, 5, not (profile and profile.showPlayerInRaid == false))
+	local partyOrder = sorting.GetPartyUnitOrder(mode, direction, 5, not (profile and profile.showPlayerInParty == false))
 
-	return indexes
+	return raidOrder, partyOrder
+end
+
+-- Nothing about the token list moves on a default profile, and the roster event that
+-- would rebuild it is noisy in a raid, so the rebuild stays behind the settings that
+-- actually need it.
+local HasDynamicUnitTokens = function(profile)
+	if (not profile) then return false end
+
+	return profile.showPlayerInParty == false
+		or profile.showPlayerInRaid == false
+		or (profile.sortBy and profile.sortBy ~= "GROUP")
+		or (profile.sortDir and profile.sortDir ~= "ASC")
 end
 
 local ApplyTestUnitDrivers = function(self)
@@ -183,7 +190,7 @@ local ApplyTestUnitDrivers = function(self)
 	end
 
 	local profile = self.db and self.db.profile or defaults.profile
-	local raidIndexes = GetRaidUnitIndexes(not (profile and profile.showPlayer == false))
+	local raidOrder, partyOrder = GetUnitTokens(profile)
 
 	for i = 1, 5 do
 		local unitButton = header:GetAttribute("child"..i)
@@ -193,8 +200,10 @@ local ApplyTestUnitDrivers = function(self)
 				RegisterAttributeDriver(unitButton, "unit", "player")
 			else
 				local driver = {}
-				local raidUnit, partyUnit = "raid"..raidIndexes[i], "party"..i
-				local raidPetUnit, partyPetUnit = raidUnit.."pet", partyUnit.."pet"
+				local raidUnit, partyUnit = "raid"..raidOrder[i], partyOrder[i]
+				-- "player" is the one token whose vehicle form is not a "pet" suffix.
+				local raidPetUnit = raidUnit.."pet"
+				local partyPetUnit = (partyUnit == "player") and "pet" or (partyUnit.."pet")
 
 				unitButton:SetAttribute("toggleForVehicle", nil)
 				table_insert(driver, "[vehicleui,group:raid]"..raidPetUnit)
@@ -210,11 +219,8 @@ local ApplyTestUnitDrivers = function(self)
 	end
 end
 
--- Only a hidden player makes the raid indexes move, so profiles that show it never
--- need the rebuild - which matters, because the events that ask for one are noisy.
-local RebuildUnitDriversIfPlayerHidden = function(self)
-	local profile = self.db and self.db.profile
-	if (profile and profile.showPlayer == false) then
+local RebuildUnitDriversIfDynamic = function(self)
+	if (HasDynamicUnitTokens(self.db and self.db.profile)) then
 		ApplyTestUnitDrivers(self)
 	end
 end
@@ -971,8 +977,6 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	RegisterAttributeDriver(self, "state-visibility", self.visibility)
 
 	-- Restore secure layout state before any visibility writes can trigger SecureGroupHeader_Update.
-	self:SetAttribute("groupBy", headerProfile.groupBy)
-	self:SetAttribute("groupingOrder", headerProfile.groupingOrder)
 	self:SetAttribute("groupFilter", GetActiveRaidGroupFilter())
 	self:SetAttribute("point", headerProfile.point)
 	self:SetAttribute("xOffset", headerProfile.xOffset)
@@ -984,8 +988,8 @@ GroupHeader.UpdateVisibilityDriver = function(self)
 	self:SetAttribute("showRaid", db.useInRaid5 or db.useInRaid10 or db.useInRaid25 or db.useInRaid40)
 	self:SetAttribute("showParty", db.useInParties)
 	-- Inert here. These five buttons are laid out by our own ConfigureChildren and
-	-- fed by per-button unit drivers, never by SecureGroupHeader_Update, so the
-	-- showPlayer profile option is applied in GetRaidUnitIndexes instead.
+	-- fed by per-button unit drivers, never by SecureGroupHeader_Update, so both the
+	-- player toggles and the sort order are resolved in GetUnitTokens instead.
 	self:SetAttribute("showPlayer", true)
 
 end
@@ -1238,9 +1242,10 @@ RaidFrame5Mod.CreateUnitFrames = function(self)
 	-- *Only experienced this is Wrath.But adding it as a general update anyway.
 	self:RegisterEvent("PARTY_LEADER_CHANGED", "UpdateUnits")
 
-	-- Each button's unit driver names a fixed raid index, and which of those indexes
-	-- belongs to the player only ever changes with the roster.
+	-- Each button's unit driver names fixed units, so the list has to be rebuilt
+	-- whenever the roster moves or someone changes the role they are queued as.
 	self:RegisterEvent("GROUP_ROSTER_UPDATE", "OnEvent")
+	self:RegisterEvent("PLAYER_ROLES_ASSIGNED", "OnEvent")
 
 end
 
@@ -1260,8 +1265,6 @@ RaidFrame5Mod.UpdateHeader = function(self)
 	header:UpdateVisibilityDriver()
 	header:SetAttribute("unitWidth", config.UnitSize[1])
 	header:SetAttribute("unitHeight", config.UnitSize[2])
-	header:SetAttribute("groupBy", db.groupBy)
-	header:SetAttribute("groupingOrder", db.groupingOrder)
 	header:SetAttribute("groupFilter", GetActiveRaidGroupFilter())
 	header:SetAttribute("point", db.point)
 	header:SetAttribute("xOffset", db.xOffset)
@@ -1347,10 +1350,11 @@ RaidFrame5Mod.OnEvent = function(self, event, ...)
 		self:UpdateHeader()
 		self:UpdateUnits() -- needed?
 
-	elseif (event == "GROUP_ROSTER_UPDATE") then
-		-- Which raid token is the player is baked into the unit drivers, so a roster
-		-- change has to rebuild them. The call defers itself while in combat.
-		RebuildUnitDriversIfPlayerHidden(self)
+	elseif (event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ROLES_ASSIGNED") then
+		-- The token list names fixed units, so anything that changes who is in the
+		-- group, or what role they signed up as, has to rebuild it. The call defers
+		-- itself while in combat.
+		RebuildUnitDriversIfDynamic(self)
 
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		if (InCombatLockdown()) then return end
@@ -1365,7 +1369,7 @@ RaidFrame5Mod.OnEvent = function(self, event, ...)
 		-- Roster changes that arrived during combat could not lay the header out, and
 		-- they leave no flag behind when the header itself swallowed them. The event
 		-- stays registered so every combat drop gets a rebuild.
-		RebuildUnitDriversIfPlayerHidden(self)
+		RebuildUnitDriversIfDynamic(self)
 		local header = self:GetUnitFrameOrHeader()
 		if (header and header.ForceSecureUpdate) then
 			header:ForceSecureUpdate()
@@ -1385,6 +1389,8 @@ RaidFrame5Mod.UpdatePortraits = function(self)
 end
 
 RaidFrame5Mod.UpdateSettings = function(self)
+	MigrateShowPlayer(self.db and self.db.profile)
+
 	ns.UnitFrameModule.UpdateSettings(self)
 
 	local profile = self.db and self.db.profile
@@ -1416,6 +1422,8 @@ RaidFrame5Mod.OnEnable = function(self)
 	-- They have buggy secret value handling that causes errors
 	-- LoadAddOn("Blizzard_CUFProfiles")
 	-- LoadAddOn("Blizzard_CompactRaidFrames")
+
+	MigrateShowPlayer(self.db and self.db.profile)
 
 	self:DisableBlizzard()
 	self:CreateUnitFrames()
