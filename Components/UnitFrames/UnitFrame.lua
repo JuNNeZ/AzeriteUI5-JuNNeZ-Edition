@@ -92,9 +92,12 @@ local UnitFrame_CreateBar = function(self, name, parent, ...)
 		return element.__AzeriteUI_Growth or "RIGHT"
 	end
 	bar.DisableSmoothing = bar.DisableSmoothing or function(element, disabled)
+		-- Enum.StatusBarInterpolation only has Immediate = 0 and ExponentialEaseOut = 1.
+		-- There is no Linear member; reading one returned nil and made both branches
+		-- resolve to Immediate, which silently discarded the argument.
 		local immediate = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate) or 0
-		local linear = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Linear) or immediate
-		element.smoothing = disabled and immediate or linear
+		local smoothed = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut) or 1
+		element.smoothing = disabled and immediate or smoothed
 	end
 	bar.SetSparkMap = bar.SetSparkMap or function(element, map)
 		element.sparkMap = map

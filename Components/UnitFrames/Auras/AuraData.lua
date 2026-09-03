@@ -32,6 +32,12 @@ local select, type = select, type
 local SPELL_BANK_PLAYER = (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player) or 0
 local SPELL_BANK_PET = (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet) or 1
 
+-- WoW API
+-- GetSpecialization is deprecated in favour of C_SpecializationInfo.GetSpecialization.
+-- Shadowed as a file local so every call site below, and the type() guards around
+-- them, keep working whichever of the two the client still exposes.
+local GetSpecialization = (C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
+
 -- Setup Aura Environment
 ns.AuraData = {
 	Spells = {}, 			-- [spellID] = <bitFlags> (see Flags below)

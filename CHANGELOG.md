@@ -12,6 +12,162 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.4.0-JuNNeZ (2026-09-03) - Reclaimed Art, Working Smoothing, and a Cleared Audit Backlog
+
+The version family moves from 5.3 to 5.4 because this release is not a patch. A full codebase
+audit on 2026-08-26 produced a backlog of eight items; all of them are closed here. Along the way
+three things turned out to have never worked at all rather than to have broken recently - bar
+smoothing, the development mode toggle, and roughly a fifth of the artwork the addon has been
+shipping since the fork.
+
+### Highlights
+
+- **The mana orb has its glass dome.** The player frame has been creating a glass texture for the
+  orb on every single login and hiding it again, because the layout never carried a texture for it
+  to draw. It draws now. This is a specular highlight over the orb rather than a change to its
+  shape, and it is one toggle away if you prefer the old look.
+- **The mana orb ships four fill artworks and you can pick one.** Clouds is what you have always
+  had. Galaxy, Moon and Sphere have been sitting in the addon's art folder, unreachable, since the
+  fork. Two further decorative layers came with them - a heavy **Rim** at the orb's edge and a
+  sculpted **Pedestal** beneath it - and both default to off.
+- **Health and power bars can finally animate.** The function that turns bar smoothing on has been
+  discarding its argument since it was written: it asked the game for an interpolation mode that
+  does not exist, got nothing back, and quietly fell through to "no smoothing" on both branches.
+  Two bars asked for smoothing and never got it, and both now interpolate: the **player health
+  bar** and the **target power bar**. Every other bar in the addon explicitly asks for immediate
+  updates and is unchanged.
+- **Boss castbars use boss castbar art.** With mirrored castbar art switched on, a boss target drew
+  the *Seasoned* tier's bar - a different texture at a different height from the health bar
+  underneath it - because the mirror was hardcoded to one tier's name. Each tier now names its own.
+- **Raid target icons sit in the right place on 40-player raid frames.** The Raid (25) frames move
+  the raid target marker to the left of the leader and master-looter icons. The Raid (40) frames
+  never did, because the function that does it only ever existed in one of the two nearly identical
+  files. Mark a target in a 40 and it now matches a 25.
+- **The cog wheel lights up when you hover it.** It was the only button in the addon with no
+  mouseover feedback at all, and the lit version of its artwork has been shipping unused the whole
+  time.
+- **Optional badges for ordinary, level-?? and dead targets.** The classification badge set that
+  ships includes a silver badge, a lit skull and a spent skull that nothing has ever drawn. Off by
+  default, because it puts a badge on units that normally have none.
+- **`/devmode` actually turns on development mode.** The experimental module gated itself on an
+  unpackaged git checkout *and* the dev mode setting, and the first half is never true in a build
+  anyone can download. `/serial` and `/toggleblips` now work from an installed copy once dev mode
+  is on, which is what the setting always claimed to do.
+- **Two option descriptions came back.** The nameplate interrupt-colour legend and the Class Power
+  Click-Through description were removed from all ten locale files by an unreleased cleanup pass,
+  which would have rendered them as raw English key text in every language. Both are restored,
+  byte-identical to their previous translations.
+- **The public documentation has been rewritten.** The README and all twelve wiki pages predated
+  roughly forty-five releases. They now describe the current addon, including everything shipped
+  since April: group frame sorting, per-context player toggles, party and raid specialization
+  icons, the micro menu toggle, assisted combat highlight, ability pings and the target castbar
+  rework. Several documented facts were simply wrong - `/azdebug` does not require development
+  mode, the Player Alternate frame does not require development mode, the interface version was a
+  release behind, and six slash commands were missing entirely.
+
+### Access
+
+- `/azerite` -> Unit Frames -> Player -> **Mana Orb Texture** (Clouds, Galaxy, Moon, Sphere)
+- `/azerite` -> Unit Frames -> Player -> **Mana Orb Glass** (new, on by default)
+- `/azerite` -> Unit Frames -> Player -> **Mana Orb Rim** / **Mana Orb Pedestal** (new, off by default)
+- `/azerite` -> Unit Frames -> Target -> **Extended Classification Badges** (new, off by default)
+- `/devmode` now reaches `/serial` and `/toggleblips` from an installed copy
+
+### Internal
+
+- `DisableSmoothing` resolves the enabled branch to `Enum.StatusBarInterpolation.ExponentialEaseOut`,
+  with a literal `1` fallback mirroring the existing literal `0`. There is no `Linear` member on
+  12.1 - the enum has only `Immediate = 0` and `ExponentialEaseOut = 1` - so reading it returned nil,
+  fell back to `immediate`, and made the assignment `disabled and 0 or 0`. `Target.lua` read the
+  same missing member for `power.smoothing`.
+- `Raid40.lua` gains `LeaderIndicator_PostUpdate`, copied verbatim from `Raid25.lua` and assigned at
+  the matching point in `style()`. The diff between the two files drops from 41 hunks to 39, with no
+  `Leader` difference remaining.
+- `Target.lua` reads `db.HealthBarMirrorTexture` instead of a hardcoded `hp_cap_bar_mirror`. The
+  Seasoned and Boss tiers declare their own; the SaiyaRatt variant declares `false` explicitly,
+  because `ns:Merge` only fills keys a variant leaves nil and would otherwise have paired a cap
+  mirror with a critter bar.
+- Unreferenced art went from 28 files of 135 to zero, with nothing deleted. 26 were wired into
+  rendering code or published through `Core/SharedMedia.lua`; the last two, which have no home,
+  moved to a new gitignored `Assets_Moot/` that reaches neither build. Research, measurements and
+  per-asset reasoning are in `Docs/RESEARCH_Optional_Deletions_2026-09-02.md`. The short version is
+  that 24 of the 28 ship unreferenced in upstream AzeriteUI 5 as well and were never referenced in
+  its 1596-commit history, so there was no upstream implementation to restore and placement had to
+  come from the art, the naming, and what the code was already shaped to accept.
+- `ApplyDiabolicManaOrbArt` ended with unconditional `Hide()` calls on the orb's `Glass` and
+  `Artwork` textures. Both now route through one `ApplyManaOrbDecoration` helper alongside a new
+  `Rim` layer, driven by `ManaOrbGlass*` / `ManaOrbRim*` / `ManaOrbArtwork*` layout keys on all
+  three player style tiers. Sizes come from each file's measured content fraction, not its canvas:
+  `orb-glass` frames its circle at 0.594 of canvas and `orb-border` at 0.656, so matching the orb's
+  103px fill needs 173 and 157. The pedestal also moved from `OVERLAY, 1` on the case frame to
+  `BACKGROUND, -3` on the orb frame, since drawn above the wooden surround it covered the orb.
+- `SetManaOrbFillTexture` resolves the orb fill from a profile setting and falls back to the layout
+  as written. LibOrb takes one path per animated layer and the layout has always passed the same
+  texture twice; the existing texcoord flip on layer two still follows both call sites, so the
+  paired layers keep animating against each other.
+- `Classification_Update` gained generic, unknown-level and dead branches behind one profile toggle.
+  The badge refreshes on the frame's normal update cycle rather than on health ticks, so a target
+  dying while already selected can hold its old badge until the next update; registering
+  `UNIT_HEALTH` on that frame was not judged worth it for an opt-in decoration.
+- `Layouts/Data/ActionButton.lua` gained `ButtonAssistedHighlightTexture`. The assisted-combat
+  highlight and the proc glow were tinted from the same coloured ring, and `SetVertexColor`
+  multiplies, so only a white base lands on the intended hue.
+- `GetSpecialization` migrated to `C_SpecializationInfo.GetSpecialization` across six files as a
+  file-local shadow, so the existing call sites and their `type()` guards keep working whichever the
+  client exposes. Twelve sites, not the nine the audit listed - `GroupSpecCache.lua` arrived after
+  that list was drawn, and its guard pairs `GetSpecialization` with `GetSpecializationInfo`, so both
+  moved together.
+- `GetCVar` / `GetCVarBool` migrated to `C_CVar.*` the same way in nine files. `SetCVar` needed more
+  than a shadow because `C_CVar.SetCVar` expects a string and several call sites passed numbers:
+  `WorldMap.lua` and `Tutorials.lua` got a local `SetCVarValue` helper, and `NamePlates.lua`'s six
+  bare calls now route through `SetCVarIfSupported`, the guarded string-converting helper that
+  already existed in that file.
+- Removed the `tocversion >= 110007` block in `Compatibility.lua` that recaptured `InCombatLockdown`,
+  `issecurevariable`, `issecure`, `hooksecurefunc`, `RegisterStateDriver` and `UnregisterStateDriver`
+  into `_G`. The 11.0.7 restriction never shipped, all six exist on 12.1, and the block's `rawget`
+  guards were all true, so it wrote nothing. Re-publishing captured secure functions is the shape of
+  thing that causes taint problems if it ever does fire.
+- Removed the Cataclysm Classic branches (`or (tocversion >= 40400 and tocversion < 50000)`) at three
+  sites and the four "Classics" shims for `UnitEffectiveLevel`, `IsXPUserDisabled`,
+  `UnitHasVehicleUI` and `GetTimeToWellRested`. All four exist on retail, so none of the
+  `if (not _G.X)` guards ever fired; the addon's calls to all four now reach Blizzard's own
+  functions. `Compatibility.lua` is 54 lines shorter.
+- `Core/Experimental.lua` gates on a local `IsDevModeEnabled()` testing
+  `ns.IsDevelopment or ns.db.global.enableDevelopmentMode`, matching the idiom `Core/Debugging.lua`
+  already used. `ToggleUI` stays unregistered and now says why in a comment: it switches between
+  AzeriteUI and DiabolicUI, and this build has no relationship with DiabolicUI.
+- `Durability.lua` no longer writes an unused `anyItemBroken` global. The bytecode `SETGLOBAL` scan
+  is down to the three deliberate global writes in the whole addon.
+- `Finalize.lua`'s metatable lock spelled the metafield `____metatable`, with four underscores, so
+  it has never locked anything in this lineage. Corrected to `__metatable`. Verified that the only
+  `setmetatable` on the addon namespace is AceAddon's, from `Core.lua`, which runs well before
+  `Finalize.lua`.
+- `Core/SharedMedia.lua` registered "Azerite Vehicle Exit Button" as `icon-exit-flight`; the file is
+  `icon_exit_flight.tga`. `GetMedia` only formats a path and never checks the file exists, so that
+  entry pointed at nothing. The addon's own use had the correct name.
+- **Locale.** 124 dead `enUS` keys, the `Chat` orphan and a `zhCN`/`zhTW` aura-sorting orphan were
+  removed from all ten files - 1,251 lines, pure deletions, so every surviving translation is
+  byte-identical to what it was. That pass also removed two keys that are still referenced, both
+  containing embedded `\n` sequences, which is the exact blind spot the audit had identified in its
+  own key-extraction regex; the recount was redone with an index-based extractor but the deletion
+  was not. Both restored. Ten new keys were added for the five new options and translated across all
+  nine non-English locales. All ten files now hold 605 keys with zero missing, extra or duplicate,
+  and every key is used.
+- **Packaging.** `.pkgmeta`'s ignore list is now the blacklist mirror of `build-release.ps1`'s
+  whitelist, so the CI-published zip and the locally built zip contain the same files. Seven tracked
+  root entries were reaching the published zip that the local zip excluded. `build-release.ps1`
+  parses `## Version:` out of the TOC and exits non-zero if it is missing, empty or an
+  unsubstituted token, so the version has one home. `FixLog.md` is no longer tracked: the
+  11,150-line internal debug log stays on the maintainer's disk and stops being published.
+
+### Verification
+
+All 167 addon Lua files parse. The bytecode global-write scan returns only the three deliberate
+writes. Ten locale files hold 605 keys each with zero missing, extra or duplicate, and every
+`L["..."]` lookup in the addon resolves. `Assets/` holds 133 files with an unreferenced count of
+zero. Nothing here can be confirmed statically - see the in-client checklist in `Docs/TODO.md`.
+
+
 ## 5.3.90-JuNNeZ (2026-08-24) - Per-Context Player Toggles and Group Frame Sorting
 
 ### Highlights

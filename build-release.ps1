@@ -9,10 +9,34 @@ $AddonName = "AzeriteUI5_JuNNeZ_Edition"
 $SourcePath = $PSScriptRoot
 $DestinationBase = "C:\Users\Jonas\OneDrive\Skrivebord\azeriteui_fan_edit"
 
-# IMPORTANT: UPDATE VERSION BEFORE EACH RELEASE!
-# Also update version in: AzeriteUI5_JuNNeZ_Edition.toc
+# The TOC is the single source of truth for the version number.
+# Update "## Version:" in AzeriteUI5_JuNNeZ_Edition.toc and this script follows.
 # Versioning: patch (5.2.214->5.2.215), minor (5.2.x->5.3.0), major (5.x.x->6.0.0)
-$Version = "5.3.90-JuNNeZ"
+$TocPath = Join-Path $SourcePath "$AddonName.toc"
+if (-not (Test-Path -LiteralPath $TocPath)) {
+    Write-Host "ERROR: TOC not found, cannot resolve version: $TocPath"
+    exit 1
+}
+
+$VersionLine = Select-String -LiteralPath $TocPath -Pattern '^##\s*Version:\s*(.+?)\s*$' | Select-Object -First 1
+if (-not $VersionLine) {
+    Write-Host "ERROR: No '## Version:' line found in $TocPath"
+    exit 1
+}
+
+$Version = $VersionLine.Matches[0].Groups[1].Value
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    Write-Host "ERROR: '## Version:' in $TocPath is empty"
+    exit 1
+}
+
+# A packager substitution token means this tree was never stamped with a real
+# version. Zipping that would produce an archive named after a placeholder.
+if ($Version -match '@[\w-]+@') {
+    Write-Host "ERROR: TOC version is an unsubstituted packager token ('$Version')."
+    Write-Host "       Set a literal version in $AddonName.toc before building locally."
+    exit 1
+}
 
 $DateStamp = Get-Date -Format "dd-MM-yyyy"
 $ArchiveName = "AzeriteUI-$Version-Retail-$DateStamp.zip"

@@ -38,6 +38,11 @@ local select = select
 local type = type
 local unpack = unpack
 
+-- WoW API
+-- GetCVar is deprecated in favour of C_CVar.GetCVar. Shadowed as a file local so
+-- the call sites keep working whichever of the two the client exposes.
+local GetCVar = (C_CVar and C_CVar.GetCVar) or GetCVar
+
 -- Addon API
 local Colors = ns.Colors
 local GetFont = ns.API.GetFont

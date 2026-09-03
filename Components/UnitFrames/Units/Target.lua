@@ -65,6 +65,7 @@ local defaults = { profile = ns:Merge({
 	aurasBelowFrame = false,
 	useStandardBossTexture = false,
 	useStandardCritterTexture = false,
+	showExtendedClassification = false,
 	AurasMaxCols = 0,
 	AuraSize = 36,
 	AurasSpacingX = 4,
@@ -2498,10 +2499,29 @@ local Classification_Update = function(self, event, unit, ...)
 	if (UnitIsPlayer(unit)) then
 		return element:Hide()
 	end
+	-- Extended states are opt-in. They put a badge on units that previously had
+	-- none, which is every ordinary mob in the world, so the default stays exactly
+	-- as it was: boss, elite and rare only.
+	local extended = TargetFrameMod.db and TargetFrameMod.db.profile
+		and TargetFrameMod.db.profile.showExtendedClassification
+
+	if (extended and element.deadTexture and UnitIsDeadOrGhost(unit)) then
+		element:SetTexture(element.deadTexture)
+		return element:Show()
+	end
+
 	local l = UnitEffectiveLevel(unit)
-	local c = (l and l < 1) and "worldboss" or UnitClassification(unit)
+	local isUnknownLevel = (l and l < 1) and true or false
+	local c = isUnknownLevel and "worldboss" or UnitClassification(unit)
 	if (c == "boss" or c == "worldboss") then
-		element:SetTexture(element.bossTexture)
+		-- A level-?? target and a tagged encounter boss are not the same thing, and
+		-- the skull is the long-standing signal for the first. Only used in extended
+		-- mode; otherwise both keep the boss badge they have always had.
+		if (extended and isUnknownLevel and element.unknownTexture) then
+			element:SetTexture(element.unknownTexture)
+		else
+			element:SetTexture(element.bossTexture)
+		end
 		element:Show()
 
 	elseif (c == "elite") then
@@ -2510,6 +2530,10 @@ local Classification_Update = function(self, event, unit, ...)
 
 	elseif (c == "rare" or c == "rareelite") then
 		element:SetTexture(element.rareTexture)
+		element:Show()
+
+	elseif (extended and element.genericTexture) then
+		element:SetTexture(element.genericTexture)
 		element:Show()
 	else
 		element:Hide()
@@ -2962,8 +2986,13 @@ local UnitFrame_UpdateTextures = function(self)
 	end
 	local isSelfTarget = ns.API.SafeUnitIsUnit(unit, "player")
 	local castBarTexture = db.HealthBarTexture
-	if (not isSelfTarget and ShouldUseTargetCastMirrorTexture() and ns.API and ns.API.GetMedia) then
-		local mirroredTexture = ns.API.GetMedia("hp_cap_bar_mirror")
+	if (not isSelfTarget and ShouldUseTargetCastMirrorTexture()) then
+		-- The mirror comes from the active style tier, not from a fixed name. The
+		-- tiers do not share one health texture: Seasoned is hp_cap_bar (1024x128)
+		-- and Boss is hp_boss_bar (1024x64), so a hardcoded hp_cap_bar_mirror drew
+		-- the wrong tier's art at the wrong height on every boss. Tiers with no
+		-- mirrored art declare no key and keep the unmirrored texture.
+		local mirroredTexture = db.HealthBarMirrorTexture
 		if (type(mirroredTexture) == "string" and mirroredTexture ~= "") then
 			castBarTexture = mirroredTexture
 		end
@@ -3592,7 +3621,7 @@ local style = function(self, unit, id)
 	power.frequentUpdates = true
 	power.displayAltPower = true
 	power.colorPower = true
-	power.smoothing = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Linear) or nil
+	power.smoothing = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut) or nil
 	power.safeBarMin = 0
 	power.safeBarMax = 1
 	power.safeBarValue = 1
@@ -3706,6 +3735,9 @@ local style = function(self, unit, id)
 	classification.bossTexture = db.ClassificationBossTexture
 	classification.eliteTexture = db.ClassificationEliteTexture
 	classification.rareTexture = db.ClassificationRareTexture
+	classification.genericTexture = db.ClassificationGenericTexture
+	classification.unknownTexture = db.ClassificationUnknownTexture
+	classification.deadTexture = db.ClassificationDeadTexture
 
 	self.Classification = classification
 

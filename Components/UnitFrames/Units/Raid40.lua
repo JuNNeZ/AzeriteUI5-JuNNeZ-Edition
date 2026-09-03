@@ -642,6 +642,19 @@ local GroupRoleIndicator_Override = function(self, event)
 	end
 end
 
+local LeaderIndicator_PostUpdate = function(element, isLeader, isInLFGInstance)
+
+	local name = element.__owner.Name
+	local ml = element.__owner.MasterLooterIndicator
+	local leader = element.__owner.LeaderIndicator
+
+	-- Move raidtarget to far most left
+	local rt = element.__owner.RaidTargetIndicator
+	rt:ClearAllPoints()
+	rt:SetPoint("RIGHT", isLeader and leader or ml:IsShown() and ml or name, "LEFT")
+
+end
+
 local MasterLooterIndicator_PostUpdate = function(element, isShown)
 
 	local name = element.__owner.Name
@@ -1004,6 +1017,7 @@ local style = function(self, unit)
 	leaderIndicator:SetPoint("RIGHT", self.Name, "LEFT")
 
 	self.LeaderIndicator = leaderIndicator
+	self.LeaderIndicator.PostUpdate = LeaderIndicator_PostUpdate
 
 	-- MasterLooter Indicator
 	--------------------------------------------

@@ -30,6 +30,12 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local Options = ns:GetModule("Options")
 local HasColorPicker = ns.API.IsAddOnEnabled("AzUI_Color_Picker")
 
+-- WoW API
+-- GetSpecialization is deprecated in favour of C_SpecializationInfo.GetSpecialization.
+-- Shadowed as a file local so every call site below, and the type() guards around
+-- them, keep working whichever of the two the client still exposes.
+local GetSpecialization = (C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
+
 local GenerateSubOptions = function(moduleName)
 	local module = ns:GetModule(moduleName, true)
 	if (not module or not module.db or not module.db.profile) then
@@ -536,6 +542,47 @@ local GenerateOptions = function()
 			desc = L["Use the Ice Crystal artwork when Power Crystal style is active."],
 			order = 450, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
+		-- The orb ships four interchangeable fill textures and three decorative
+		-- layers. Only the clouds fill and the case were ever wired up; the glass
+		-- and pedestal textures were created on every login and hidden again.
+		-- Values are plain strings here, matching powerOrbMode above.
+		suboptions.args.manaOrbTexture = {
+			name = L["Mana Orb Texture"],
+			desc = L["Choose which artwork fills the Mana Orb."],
+			order = 460, type = "select", width = "full", hidden = isdisabled,
+			values = {
+				clouds = "Clouds",
+				galaxy = "Galaxy",
+				moon = "Moon",
+				sphere = "Sphere"
+			},
+			set = function(info, val)
+				setoption(info, "manaOrbTexture", val, true)
+				module:UpdateSettings()
+			end,
+			get = function(info)
+				local value = getoption(info, "manaOrbTexture")
+				if (value == "galaxy" or value == "moon" or value == "sphere") then
+					return value
+				end
+				return "clouds"
+			end
+		}
+		suboptions.args.manaOrbGlass = {
+			name = L["Mana Orb Glass"],
+			desc = L["Draw the glass dome over the Mana Orb."],
+			order = 462, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.manaOrbRim = {
+			name = L["Mana Orb Rim"],
+			desc = L["Draw a heavy ring around the edge of the Mana Orb."],
+			order = 464, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.manaOrbPedestal = {
+			name = L["Mana Orb Pedestal"],
+			desc = L["Draw the sculpted plinth beneath the Mana Orb."],
+			order = 466, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		suboptions.args.pvpIndicatorHeader = {
 			name = L["PvP Badge"],
 			order = 500, type = "header", hidden = isdisabled
@@ -798,6 +845,16 @@ local GenerateOptions = function()
 			order = 60, type = "toggle", width = "full", hidden = isdisabled,
 			set = function(info,val) setter(info, not val) end,
 			get = function(info) return not getter(info) end
+		}
+		suboptions.args.showExtendedClassification = {
+			name = L["Extended Classification Badges"],
+			desc = L["Also badge ordinary, level-?? and dead targets, using the rest of the badge set. Off by default, since it puts a badge on units that normally have none."],
+			order = 70, type = "toggle", width = "full", hidden = isdisabled,
+			set = function(info, val)
+				setoption(info, "showExtendedClassification", val, true)
+				module:UpdateSettings()
+			end,
+			get = getter
 		}
 		local targetAuraConfig = ns.GetConfig("TargetFrame")
 		local targetAuraSetter = function(info, val)

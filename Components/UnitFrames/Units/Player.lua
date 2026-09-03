@@ -46,7 +46,13 @@ local type = type
 local unpack = unpack
 local C_Timer_After = C_Timer and C_Timer.After
 
--- GLOBALS: Enum, PlayerPowerBarAlt
+-- WoW API
+-- GetSpecialization is deprecated in favour of C_SpecializationInfo.GetSpecialization.
+-- Shadowed as a file local so every call site below, and the type() guards around
+-- them, keep working whichever of the two the client still exposes.
+local GetSpecialization = (C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
+
+-- GLOBALS: Enum, PlayerPowerBarAlt, C_SpecializationInfo
 -- GLOBALS: CreateFrame, GetSpecialization, IsXPUserDisabled, IsLevelAtEffectiveMaxLevel
 -- GLOBALS: UnitFactionGroup, UnitGUID, UnitLevel, UnitPowerType, UnitHasVehicleUI, UnitIsMercenary, UnitIsPVP, UnitIsPVPFreeForAll
 
@@ -114,6 +120,12 @@ local defaults = { profile = ns:Merge({
 	crystalOrbColorMode = "default",
 	aurasBelowFrame = false,
 	useWrathCrystal = false,
+	-- Mana orb art. The orb ships four interchangeable fill textures and three
+	-- decorative layers; only orb2 and the case were ever wired up.
+	manaOrbTexture = "clouds",
+	manaOrbGlass = true,
+	manaOrbRim = false,
+	manaOrbPedestal = false,
 	powerBarScale = 1,
 	powerBarScaleX = 1,
 	powerBarScaleY = 1,
@@ -2348,6 +2360,54 @@ local Mana_PostUpdate = function(element, unit, cur, min, max)
 	end
 end
 
+-- One decorative orb layer: texture, anchor, size, tint, and whether it is wanted.
+-- Every argument is optional; a missing texture or an unset toggle hides the layer,
+-- which is what all three of these did unconditionally before they had layout keys.
+local ApplyManaOrbDecoration = function(texture, path, position, size, color, enabled)
+	if (not texture) then
+		return
+	end
+	if (not enabled or type(path) ~= "string" or path == "") then
+		return texture:Hide()
+	end
+	texture:ClearAllPoints()
+	texture:SetPoint(unpack(position or { "CENTER", 0, 0 }))
+	if (type(size) == "table") then
+		texture:SetSize(unpack(size))
+	end
+	texture:SetTexture(path)
+	if (type(color) == "table") then
+		texture:SetVertexColor(unpack(color))
+	else
+		texture:SetVertexColor(1, 1, 1, 1)
+	end
+	texture:Show()
+end
+
+-- The orb ships four interchangeable fill textures. LibOrb takes one path per
+-- animated layer, and the layout has always passed the same texture twice, so a
+-- style swap is the same pair with a different name.
+local MANA_ORB_TEXTURES = {
+	clouds = "orb2",
+	galaxy = "orb1",
+	moon = "orb3",
+	sphere = "orb4"
+}
+
+local SetManaOrbFillTexture = function(mana, db)
+	local style = PlayerFrameMod.db and PlayerFrameMod.db.profile and PlayerFrameMod.db.profile.manaOrbTexture
+	local asset = MANA_ORB_TEXTURES[style]
+	if (asset and asset ~= "orb2" and ns.API and ns.API.GetMedia) then
+		local path = ns.API.GetMedia(asset)
+		return mana:SetStatusBarTexture(path, path)
+	end
+	-- No override, or the override is the layout default: use the layout as written.
+	if (type(db.ManaOrbTexture) == "table") then
+		return mana:SetStatusBarTexture(unpack(db.ManaOrbTexture))
+	end
+	return mana:SetStatusBarTexture(db.ManaOrbTexture)
+end
+
 local ApplyDiabolicManaOrbArt = function(mana, db)
 	if (not mana or not db) then
 		return
@@ -2356,9 +2416,6 @@ local ApplyDiabolicManaOrbArt = function(mana, db)
 	local manaBackdrop = mana.Backdrop
 	local manaShade = mana.Shade
 	local manaCase = mana.Case
-	local manaGlass = mana.Glass
-	local manaArtwork = mana.Artwork
-
 	if (manaBackdrop) then
 		manaBackdrop:ClearAllPoints()
 		manaBackdrop:SetPoint(unpack(db.ManaOrbBackdropPosition))
@@ -2383,13 +2440,21 @@ local ApplyDiabolicManaOrbArt = function(mana, db)
 		manaCase:SetVertexColor(unpack(db.ManaOrbForegroundColor))
 	end
 
-	if (manaGlass) then
-		manaGlass:Hide()
-	end
+	-- Glass, rim and pedestal.
+	-- These three textures are created on every login next to Backdrop, Shade and
+	-- Case, and used to be hidden unconditionally because the layout carried no
+	-- keys for them. They now render whenever the layout supplies a texture and
+	-- the profile asks for that layer.
+	local profile = PlayerFrameMod.db and PlayerFrameMod.db.profile
 
-	if (manaArtwork) then
-		manaArtwork:Hide()
-	end
+	ApplyManaOrbDecoration(mana.Glass, db.ManaOrbGlassTexture, db.ManaOrbGlassPosition,
+		db.ManaOrbGlassSize, db.ManaOrbGlassColor, profile and profile.manaOrbGlass)
+
+	ApplyManaOrbDecoration(mana.Rim, db.ManaOrbRimTexture, db.ManaOrbRimPosition,
+		db.ManaOrbRimSize, db.ManaOrbRimColor, profile and profile.manaOrbRim)
+
+	ApplyManaOrbDecoration(mana.Artwork, db.ManaOrbArtworkTexture, db.ManaOrbArtworkPosition,
+		db.ManaOrbArtworkSize, db.ManaOrbArtworkColor, profile and profile.manaOrbPedestal)
 end
 
 local RefreshManaOrb = function(frame, event, unit)
@@ -2889,11 +2954,7 @@ local UnitFrame_UpdateTextures = function(self)
 	mana:SetPoint(unpack(db.ManaOrbPosition))
 	mana:SetSize(unpack(db.ManaOrbSize))
 	mana.colorPower = false
-	if (type(db.ManaOrbTexture) == "table") then
-		mana:SetStatusBarTexture(unpack(db.ManaOrbTexture))
-	else
-		mana:SetStatusBarTexture(db.ManaOrbTexture)
-	end
+	SetManaOrbFillTexture(mana, db)
 	mana:SetStatusBarColor(unpack(config.PowerOrbColors.MANA))
 	do
 		local tex1, tex2 = mana:GetStatusBarTexture()
@@ -3188,7 +3249,7 @@ local style = function(self, unit)
 	local health = self:CreateBar()
 	if (health.SetForceNative) then health:SetForceNative(true) end
 	health:SetFrameLevel(health:GetFrameLevel() + 2)
-	health:DisableSmoothing(false) -- Re-enable linear smoothing for less stepped health motion
+	health:DisableSmoothing(false) -- Interpolated fill (ExponentialEaseOut) for less stepped health motion
 	-- WoW12 safe: no gradients, use oUF color paths.
 	health.colorSmooth = false
 	health.colorClass = PlayerFrameMod.db.profile.useClassColor
@@ -3523,11 +3584,7 @@ local style = function(self, unit)
 	mana.displayAltPower = true
 	mana.colorPower = false
 	mana.__owner = self
-	if (type(db.ManaOrbTexture) == "table") then
-		mana:SetStatusBarTexture(unpack(db.ManaOrbTexture))
-	else
-		mana:SetStatusBarTexture(db.ManaOrbTexture)
-	end
+	SetManaOrbFillTexture(mana, db)
 	mana:SetStatusBarColor(unpack(config.PowerOrbColors.MANA))
 	do
 		local tex1, tex2 = mana:GetStatusBarTexture()
@@ -3561,16 +3618,27 @@ local style = function(self, unit)
 	manaCaseFrame:SetFrameLevel(mana:GetFrameLevel() + 4)
 	manaCaseFrame:SetAllPoints()
 
+	-- Draw order inside manaCaseFrame, which sits four levels above the orb fill:
+	--   BORDER 0  glass      a specular dome over the fill, edges hidden by the case
+	--   BORDER 1  rim        a heavy ring at the fill's edge
+	--   ARTWORK 1 shade      the existing vignette
+	--   ARTWORK 2 case       the existing wood/stone surround
+	-- The pedestal is the exception. It is a plinth the orb stands on, not an
+	-- overlay, so it hangs off the orb frame itself below the backdrop. It used to
+	-- be created at OVERLAY 1 on the case frame, where it would have covered the
+	-- orb outright - which is presumably part of why it was never turned on.
 	local manaBackdrop = mana:CreateTexture(nil, "BACKGROUND", nil, -2)
+	local manaArtwork = mana:CreateTexture(nil, "BACKGROUND", nil, -3)
 	local manaShade = manaCaseFrame:CreateTexture(nil, "ARTWORK", nil, 1)
 	local manaCase = manaCaseFrame:CreateTexture(nil, "ARTWORK", nil, 2)
-	local manaGlass = manaCaseFrame:CreateTexture(nil, "BORDER")
-	local manaArtwork = manaCaseFrame:CreateTexture(nil, "OVERLAY", nil, 1)
+	local manaGlass = manaCaseFrame:CreateTexture(nil, "BORDER", nil, 0)
+	local manaRim = manaCaseFrame:CreateTexture(nil, "BORDER", nil, 1)
 
 	self.ManaOrb.Backdrop = manaBackdrop
 	self.ManaOrb.Shade = manaShade
 	self.ManaOrb.Case = manaCase
 	self.ManaOrb.Glass = manaGlass
+	self.ManaOrb.Rim = manaRim
 	self.ManaOrb.Artwork = manaArtwork
 
 	-- Mana Orb Value

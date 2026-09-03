@@ -55,6 +55,13 @@ ns.GroupSpecCache = GroupSpecCache
 local next = next
 local type = type
 
+-- WoW API
+-- GetSpecialization and GetSpecializationInfo are deprecated in favour of the
+-- C_SpecializationInfo namespace. Shadowed as file locals so the call sites and
+-- the type() guards around them keep working whichever the client still exposes.
+local GetSpecialization = (C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
+local GetSpecializationInfo = (C_SpecializationInfo and C_SpecializationInfo.GetSpecializationInfo) or GetSpecializationInfo
+
 -- Only one inspect may be in flight at a time and the slot is shared with every
 -- other addon, so requests are spaced rather than raced. This is a floor between
 -- consecutive requests, not the cadence: the queue advances the moment a result

@@ -174,6 +174,14 @@ ns.RegisterConfig("TargetFrame", {
 	ClassificationEliteTexture = GetMedia("icon_classification_elite"),
 	ClassificationHordeTexture = GetMedia("icon_badges_horde"),
 	ClassificationRareTexture = GetMedia("icon_classification_rare"),
+	-- The badge element only ever drew boss, elite and rare, and hid itself for
+	-- everything else. These three complete the set that ships in Assets: the
+	-- silver badge for ordinary mobs, the lit skull for a level-?? target, and the
+	-- spent skull for a corpse. They are drawn only when
+	-- "Extended Classification Badges" is on, so the default look is unchanged.
+	ClassificationGenericTexture = GetMedia("icon_classification_generic"),
+	ClassificationUnknownTexture = GetMedia("icon_skull"),
+	ClassificationDeadTexture = GetMedia("icon_skull_dead"),
 
 	-- Target Indicator
 	-----------------------------------------
@@ -347,6 +355,11 @@ ns.RegisterConfig("TargetFrame", {
 		HealthBarSize = { 385, 37 },
 		HealthBarPosition = { "TOPRIGHT", -140, -66 },
 		HealthBarTexture = GetMedia("hp_cap_bar"),
+		-- Horizontally mirrored copy of HealthBarTexture, used by the target castbar
+		-- when '/azdebugtarget mirror on' is active so the cast overlay reads apart
+		-- from the health bar underneath it. Only the tiers that ship a mirrored
+		-- variant declare one; the rest fall back to HealthBarTexture.
+		HealthBarMirrorTexture = GetMedia("hp_cap_bar_mirror"),
 		HealthBarOrientation = "LEFT",
 		HealthBarSparkMap = barSparkMap,
 		HealthBackdropSize = { 716, 188 },
@@ -379,6 +392,7 @@ ns.RegisterConfig("TargetFrame", {
 		HealthBarSize = { 533, 40 },
 		HealthBarPosition = { "TOPRIGHT", -140, -66 },
 		HealthBarTexture = GetMedia("hp_boss_bar"),
+		HealthBarMirrorTexture = GetMedia("hp_boss_bar_mirror"),
 		HealthBarOrientation = "LEFT",
 		-- Per-style fake fill alignment override (used by target health lab settings).
 		HealthLabFakeOffsetX = 0,
@@ -420,6 +434,11 @@ local CreateSaiyaRattTargetStyle = function(caseTexture)
 		HealthBarSize = { 40, 36 },
 		HealthBarPosition = { "TOPRIGHT", -137, -63 },
 		HealthBarTexture = GetMedia("hp_critter_bar"),
+		-- Explicit false, not nil. ns:Merge only fills keys the variant leaves nil,
+		-- so without this the Seasoned and Boss tiers would inherit the base layout's
+		-- HealthBarMirrorTexture and pair a cap/boss mirror with a critter bar. This
+		-- style uses one bar texture for every tier and ships no mirrored variant.
+		HealthBarMirrorTexture = false,
 		HealthBarColor = { Colors.health[1], Colors.health[2], Colors.health[3] },
 		HealthBarOrientation = "LEFT",
 		HealthLabFakeOffsetX = 0,

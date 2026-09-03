@@ -1,17 +1,16 @@
 # AzeriteUI — JuNNeZ Edition
 
-[![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)
-[![Interface](https://img.shields.io/badge/Interface-120000-1f6feb)](#)
+[![WoW Version](https://img.shields.io/badge/WoW-12.1%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)
+[![Interface](https://img.shields.io/badge/Interface-120100-1f6feb)](#)
 [![Lua](https://img.shields.io/badge/Lua-WoW%20API%2012-2c2d72)](#)
 [![Maintainer](https://img.shields.io/badge/Maintainer-JuNNeZ-0a7d32)](https://github.com/JuNNeZ)
-[![Addon Version](https://img.shields.io/badge/Addon-wiki--docs--sync--2026--04--03-informational)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/tags)
 [![GitHub Release](https://img.shields.io/github/v/release/JuNNeZ/AzeriteUI5-JuNNeZ-Edition?display_name=release)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/releases/latest)
 [![CurseForge](https://img.shields.io/badge/CurseForge-Project-orange)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)
 [![CurseForge Downloads](https://img.shields.io/badge/dynamic/json?color=orange&label=downloads&query=%24.downloads.total&url=https%3A%2F%2Fapi.cfwidget.com%2Fwow%2Faddons%2Fazeriteui-junnez-edition-wow12)](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12)
 
 **This is an unofficial fan-edited version of [AzeriteUI 5](https://github.com/goldpawsstuff/AzeriteUI5) by GoldpawsStuff.**
 
-AzeriteUI is a complete custom World of Warcraft user interface replacement for Retail (WoW 12 — Midnight). This JuNNeZ Edition includes additional bug fixes, compatibility patches, and quality-of-life improvements not found in the original release.
+AzeriteUI is a complete custom World of Warcraft user interface replacement for Retail (WoW 12.1 — Midnight). This JuNNeZ Edition includes additional bug fixes, compatibility patches, and quality-of-life improvements not found in the original release.
 
 > **Note:** This is a personal project maintained independently. For official support, use the original AzeriteUI or visit the Discord where JuNNeZ has a channel for this addon.
 
@@ -79,9 +78,26 @@ This opens a comprehensive settings panel powered by Ace3, where you can fine-tu
 |---|---|
 | `/az` or `/azerite` | Opens the AzeriteUI options menu |
 | `/lock` | Toggles movable frame anchors — drag UI elements to reposition them. Use Blizzard's EditMode for default frames. |
+| `/clear` | Clears the chat window |
 | `/resetsettings` | Full settings reset (emergency use only — **erases all profiles**) |
-| `/azdebug` | Opens the debug menu (requires Development Mode to be enabled in options) |
-| `/setminimaptheme [name]` | Change the minimap theme |
+| `/setminimaptheme <name>` | Change the minimap theme. Two ship: `Azerite` and `Blizzard`. Ignored in combat. |
+| `/saiyaratt` | Applies the SaiyaRatt preset profile and layout |
+| `/devmode` | Toggles development mode and reloads |
+| `/azdebug` | Opens the debug menu. Works without Development Mode; it just prints a notice that some features are limited. |
+| `/azdebugkeys` | Keybinding and LibKeyBound diagnostics |
+| `/azdebugtarget` | Target frame and target castbar diagnostics |
+
+Two debug commands are worth knowing about even if you never touch the rest:
+
+- **`/azdebug taint`** — run it *during* a fight, after Blizzard action button errors
+  have started. It names the addon blamed for each tainted field on every Blizzard
+  action, pet and stance button, which is the single most useful thing to attach to
+  such a bug report.
+- **`/azdebugtarget status`** — prints the target health bar's and castbar's live fill
+  direction and flags a mismatch. `/azdebugtarget cast`, run mid-cast, dumps the full
+  castbar render path.
+
+The full subcommand list is in the [wiki](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/wiki/Slash-Commands).
 
 ---
 
@@ -101,6 +117,10 @@ The centerpiece of AzeriteUI — a custom-skinned health bar with Azerite-themed
   - **Mana Orb Only** — always use the circular orb style
   - **Power Crystal Only** — always use the vertical crystal style
 - **Ice Crystal Art** — optional alternate crystal artwork (Wrath-style)
+- **Mana Orb Texture** — four fill artworks for the orb: Clouds (default), Galaxy, Moon, Sphere
+- **Mana Orb Glass** — a glass dome over the orb. On by default; this layer existed in the code but had never been given a texture to draw
+- **Mana Orb Rim** — a heavy ring at the orb's edge (off by default)
+- **Mana Orb Pedestal** — a sculpted plinth beneath the orb (off by default)
 - **Crystal/Orb Color Source** — choose between default AzeriteUI power colors or enhanced token-based colors
 - **Show Health Percent** — display a percentage next to the health value
 - **Show Power Text** — display power value text; optionally show only in combat
@@ -114,7 +134,7 @@ The centerpiece of AzeriteUI — a custom-skinned health bar with Azerite-themed
 
 #### Player Alternate Frame
 
-An alternative player frame style that mirrors the target frame design. Available when Development Mode is enabled. Switching to this automatically disables the default player frame and vice versa. Supports:
+An alternative player frame style that mirrors the target frame design. The group is hidden while the normal Player frame is enabled, so disable Player first and Player Alternate appears — Development Mode is not required. Enabling either one disables the other automatically. Supports:
 
 - Class-colored health bars
 - Auras (above or below frame)
@@ -132,6 +152,7 @@ An alternative player frame style that mirrors the target frame design. Availabl
 - **Show Castbar** — overlay castbar on target; interrupt-state text coloring
 - **Show Unit Name**, **Health Percent**, **Power Value** (with format and alpha options)
 - **Texture Variations** — use a larger texture for boss targets and a smaller one for critters
+- **Extended Classification Badges** — off by default. The badge normally appears only on boss, elite and rare targets. Turning this on completes the set: a silver badge on ordinary mobs, a skull on level-?? targets, and a spent skull on corpses.
 
 #### Target of Target
 
@@ -153,8 +174,10 @@ An alternative player frame style that mirrors the target frame design. Availabl
 
 Full party frame suite with extensive options:
 
-- **Show Player** — toggle whether you appear in the party display
+- **Show player in party** / **Show player in raid** — two separate toggles. Arenas and battlegrounds are raid groups, so this lets you drop your own frame in arena while keeping it in a five-man dungeon.
 - **Visibility** — choose exactly which group sizes activate party frames (party 2-5, raid 1-5, 6-10, 11-25, 26-40)
+- **Sort By** / **Sort Direction** — order by group, role, class or name
+- **Show Specialization Icons** — replaces the portrait with the member's specialization icon. Specialization can only be read by inspecting a unit, so it stays a portrait until they are close, visible and inspectable. Followers keep their portraits permanently; they are NPCs and cannot be inspected.
 - **Health Colors** — flat green, AzeriteUI class colors, Blizzard class colors, or class color on mouseover only
 - **Aura System** with stock or custom filtering:
   - Dispellable debuffs, boss/important debuffs, other short debuffs
@@ -168,9 +191,18 @@ Full party frame suite with extensive options:
 Three separate raid frame styles optimized for different group sizes:
 
 - **Visibility toggles** — fine-grained control over which group sizes each frame type activates for
+- **Sort By** / **Sort Direction** — order by group, role, class or name
+- **Show player in party** / **Show player in raid** (5-man frames)
+- **Show Specialization Icons** — on the 5-man frames this replaces the portrait; on the 25 and 40-man frames it goes on the role badge beside the health bar, including damage dealers, who normally have no badge at all
 - **Health Colors** — same options as party frames
 - **Range Indicator** — fade out-of-range units
 - **Big Debuff** (25 and 40-man) — large priority debuff icon with configurable size
+
+> **Note on role sorting:** the Raid (25) and Raid (40) frames shipped with role sorting
+> nominally enabled for years while silently sorting by raid index, because the setting
+> named the main-tank flag rather than the tank/healer/damage role. This was fixed in
+> 5.3.90, so those frames will visibly reorder into tanks, healers, damage the first
+> time you enter a raid after updating. Set **Sort By** to Group for the old order.
 
 #### Boss Frames
 
@@ -198,6 +230,16 @@ Three separate raid frame styles optimized for different group sizes:
 - **Prioritize Unit Frame Auras** — group auras by relevance and readable timing (vs. application order)
 - **Show Blizzard Raid Bar** — toggle the Blizzard raid utility bar (ready check, ground markers)
 - **Color Cast Spell Text By State** — tint cast spell names by interrupt/protected state
+- **Color Entire Target Castbar By State** — the full-bar version of the above. Currently held disabled while protected target casts still resolve unreliably.
+
+The target castbar renders as an overlay on the health bar and takes its fill
+direction from the same layout data, so the two can no longer disagree.
+`/azdebugtarget status` prints both directions and flags a mismatch.
+
+Pinging your own player frame calls out your health and mana, the same resource
+callout Blizzard puts on its player frame. Holding the ping key over the frame gives
+that callout rather than the radial wheel, because the frame is all orb and crystal
+with no portrait for the wheel to sit on. Every other frame still opens the wheel.
 
 ---
 
@@ -212,6 +254,21 @@ Up to **8 action bars** (Retail) with per-bar configuration:
 - **Use Command Bindings for Hold Cast** — route keybinds through Blizzard action commands first; recommended for press-and-hold behavior
 - **Dim When Inactive** — desaturate and dim buttons when out of combat with no target
 - **Dim Only When Resting** — restrict the dimming to resting areas (inns/cities)
+
+#### Micro Menu
+
+Two independent toggles:
+
+- **Show Blizzard's Micro Menu** — the button strip along the bottom of the screen. Off by default, matching every prior version.
+- **Show AzeriteUI Cog Wheel** — the cog in the bottom right corner that opens the same buttons. It lights up on mouseover.
+
+Both apply at interface load, so changing either one prompts a reload.
+
+#### Assisted Combat Highlight
+
+AzeriteUI draws its own circular glow for Blizzard's assisted combat suggestion, kept
+separate from the proc glow so the button stays circular. **Highlight Color** picks the
+color it uses.
 
 #### Per-Bar Settings
 
@@ -228,6 +285,8 @@ Each of the 8 action bars supports:
 - **Growth Direction** — horizontal/vertical initial expansion
 - **Horizontal Growth** — left or right
 - **Vertical Growth** — up or down
+- **Ignore clicks while faded** — a faded bar stops swallowing clicks
+- **Show while mounted**
 
 #### Pet Bar
 
@@ -236,6 +295,13 @@ Same layout and fading options as main action bars, tailored for pet abilities.
 #### Stance Bar
 
 Same layout and fading options, dynamically adjusting to your class's number of stances/forms.
+
+#### Ability Pings
+
+Pinging an ability on an AzeriteUI bar announces the spell or item along with its
+cooldown and whether you can afford it — the same callout Blizzard's own bars give.
+This covers all eight bars plus the pet and stance bars. Pings aimed past an empty
+slot pass through to the world instead of dying on the button.
 
 #### Removing Abilities
 
@@ -279,6 +345,13 @@ Enemy nameplate castbars use a color-coded system:
 | **Gray** | The cast cannot be interrupted |
 | **Default** | Interrupt state is unknown |
 
+#### Enemy Threat Colors
+
+Health-bar threat colors are configured separately from the castbar interrupt colors
+above. AzeriteUI's deep yellow deliberately keeps the non-target combat health yellow
+darker than the castbar's ready-interrupt yellow, so the two never read as the same
+signal.
+
 #### Advanced
 
 - **Show Blizzard Widgets** — display Blizzard's encounter and objective widgets on plates
@@ -287,7 +360,7 @@ Enemy nameplate castbars use a color-coded system:
 
 ### Explorer Mode
 
-An immersive system that fades UI elements when they are not needed, giving you a cleaner view of the game world.
+An immersive system that fades UI elements when they are not needed, giving you a cleaner view of the game world. Every interactive option on this page carries a tooltip explaining exactly what it watches.
 
 #### Timing
 
@@ -348,6 +421,7 @@ The top-right aura display (your buffs and debuffs), separate from unit frame au
 - **Hide AddOn Text** — hide the custom "AddOns" label
 - **Hide Clock Text** — hide the AzeriteUI clock display
 - **Restore Blizzard Default** — reset to the default Blizzard minimap theme and position
+- `/setminimaptheme <name>` — two themes ship, `Azerite` and `Blizzard`. Names are matched case-insensitively and the command is ignored in combat, re-applying once you leave it.
 
 ---
 
@@ -364,9 +438,13 @@ The top-right aura display (your buffs and debuffs), separate from unit frame au
 
 ### Tooltips
 
-- **Tooltip Theme** — choose between "Azerite" (custom styled) and "Classic"
-- **Disable AzeriteUI Tooltips** — let Blizzard or other addons handle tooltip styling
-- **Transparent Unit Tooltips on Nameplates** — make unit tooltips see-through when anchored to nameplates
+- **Style** — choose between "Azerite" (custom styled) and "Classic"
+- **Do not style tooltips** — let Blizzard or other addons handle tooltip styling
+- **Enable Anchoring** and **Position** — where tooltips appear
+- **Anchor to Cursor** — follow the mouse instead of a fixed position
+- **Transparent unit tooltips on nameplates** — make unit tooltips see-through when anchored to nameplates
+- **Hide UnitFrame Tooltips in Combat** and **Hide ActionBar Tooltips in Combat**
+- **Show Guildname**, **Show itemID**, **Show spellID**
 - ConsolePort is automatically detected — AzeriteUI will not style or anchor tooltips when ConsolePort is active
 
 ---
@@ -448,12 +526,30 @@ AzeriteUI uses a single saved variable database (`AzeriteUI5_DB`) with Ace3 prof
 This fan edition includes the following over the original AzeriteUI 5:
 
 - **Retail-only WoW 12 codebase** — consolidated after the 5.3.46-JuNNeZ release
-- **WoW 12 secret-value compatibility fixes** — adapting to Blizzard's API changes for the Midnight expansion
-- **Actionbar live-update fixes** — action buttons refresh correctly during play
+- **WoW 12.1 secret-value compatibility work** — Retail 12.1 protects more combat, aura,
+  cooldown and unit data as secret values, which addons may hand to Blizzard-owned
+  widgets but never read or format. Aura data is routed through a guarded unpacker so a
+  secret field degrades to a missing number rather than a Lua error.
+- **Group frame sorting** — Sort By group, role, class or name across Party, Raid (5),
+  (25) and (40), where nothing was configurable before, plus the fix for role sorting on
+  the 25 and 40-man frames that had been silently inert
+- **Per-context player toggles** — show or hide your own frame separately for parties
+  and raid-sized groups
+- **Specialization icons** on party and raid frames, backed by a shared inspect cache
+- **Ability pings and resource callouts** on AzeriteUI action bars and the player frame
+- **Micro menu toggle** — Blizzard's bottom strip and the AzeriteUI cog wheel as
+  independent switches
+- **Target castbar rework** — the castbar takes its fill direction from layout data
+  rather than from the unit, and renders as a cropped overlay instead of a scaled bar
+- **Explorer Mode tooltips** on all 22 interactive options
+- **Guarded-call refactor** — roughly 440 former `pcall` sites moved to a reporting
+  `SafeCall` / silent-probe `TryCall` pair
+- **Ten fully populated locales**, every key present in every file
 - **Decursive compatibility** — fixes for interoperability with the Decursive addon
-- **Additional bug fixes** not present in the official release
-- **Custom tweaks and quality-of-life improvements**
-- **Experimental features and refinements**
+- **Actionbar live-update fixes** — action buttons refresh correctly during play
+
+The per-release detail lives in [CHANGELOG.md](CHANGELOG.md), which is delta-only:
+each entry lists what changed since the previous release and nothing else.
 
 ---
 
@@ -476,13 +572,16 @@ A: Type `/resetsettings` in chat. **Warning:** this erases all profiles and save
 **Q: Is this compatible with the official AzeriteUI?**
 A: No. Do not install both versions simultaneously. This fan edition fully replaces the official addon.
 
+**Q: Do I need Development Mode?**
+A: No. `/azdebug` works without it — it prints a notice that some features are limited and then continues. `/devmode` adds the version label in the corner and a few developer-only options, and reloads when toggled.
+
 **Q: Where can I get support?**
 A: This is a personal fan project. JuNNeZ has a channel in GoldpawsStuff's Discord for this edition. For official AzeriteUI support, use the links in the Credits section below.
 
 ### Unit Frames
 
 **Q: How do I switch between the orb-style player frame and the bar-style player frame?**
-A: Enable Development Mode in the options, then go to Unit Frames > Player Alternate to toggle between the two styles.
+A: Go to `/az` > Unit Frames > Player and turn **Enable** off. The **Player Alternate** group appears once the normal Player frame is disabled. Development Mode is not required; enabling either frame disables the other automatically.
 
 **Q: Can I show health percentages on the player and target frames?**
 A: Yes. Go to `/az` > Unit Frames > Player (or Target) and enable "Show Health Percent".
@@ -581,12 +680,17 @@ These addons are recognized and integrate with AzeriteUI:
 
 AzeriteUI bundles the following libraries:
 
-- Ace3 (AceAddon, AceDB, AceConsole, AceConfig, AceLocale, AceHook)
-- oUF (unit frame framework)
-- LibMoreEvents
-- LibEditModeOverride
-- LibKeyBound
+- Ace3 — AceAddon, AceDB, AceDBOptions, AceConsole, AceConfig, AceGUI, AceLocale,
+  AceHook, AceEvent, AceTimer, AceComm, AceSerializer, CallbackHandler
+- oUF and oUF_Plugins — unit frame framework, forked
+- LibActionButton-1.0-GE — action button library, forked
+- LibOrb-1.0, LibSmoothBar-1.0, LibSpinBar-1.0, LibFadingFrames-1.0 — AzeriteUI's own
+- LibMoreEvents-1.0, LibEditModeOverride, LibKeyBound-1.0, LibSharedMedia-3.0
+- LibUIDropDownMenu, LibDeflate, UTF8
 - TaintLess
+
+The `-GE` forks and the AzeriteUI-authored libs are deliberately ahead of upstream and
+are not re-fetched at package time.
 
 ---
 

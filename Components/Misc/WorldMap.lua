@@ -28,6 +28,19 @@ local GetBestMapForUnit = C_Map and C_Map.GetBestMapForUnit
 local GetPlayerMapPosition = C_Map and C_Map.GetPlayerMapPosition
 local InCombatLockdown = InCombatLockdown
 
+-- WoW API
+-- SetCVar is deprecated in favour of C_CVar.SetCVar, which expects a string
+-- value, so the conversion happens here rather than at every call site.
+local SetCVarValue = function(name, value)
+	local stringValue = tostring(value)
+	if (C_CVar and C_CVar.SetCVar) then
+		return C_CVar.SetCVar(name, stringValue)
+	end
+	if (type(SetCVar) == "function") then
+		return SetCVar(name, stringValue)
+	end
+end
+
 -- AzeriteUI API
 local GetMedia = ns.API.GetMedia
 local UIHider = ns.Hider
@@ -293,7 +306,7 @@ WorldMapMod.UpdateSettings = function(self)
 	if (self.db.profile.enabled) then
 		if (not InCombatLockdown()) then
 			WorldMapFrame:EnableMouse(false)
-			SetCVar("miniWorldMap", 0)
+			SetCVarValue("miniWorldMap", 0)
 		end
 		if (WorldMapFrame.BlackoutFrame) then
 			WorldMapFrame.BlackoutFrame:EnableMouse(false)
@@ -401,7 +414,7 @@ WorldMapMod.OnEvent = function(self, event, ...)
 		end
 	elseif (event == "PLAYER_ENTERING_WORLD") then
 		if (IsWorldMapEnabled() and not InCombatLockdown()) then
-			SetCVar("miniWorldMap", 0)
+			SetCVarValue("miniWorldMap", 0)
 		end
 	end
 end

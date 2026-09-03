@@ -38,6 +38,11 @@ local table_concat = table.concat
 local tostring = tostring
 local type = type
 
+-- WoW API
+-- GetCVar is deprecated in favour of C_CVar.GetCVar. Shadowed as a file local so
+-- the call sites keep working whichever of the two the client exposes.
+local GetCVar = (C_CVar and C_CVar.GetCVar) or GetCVar
+
 local function GetSessionCopyLabel()
 	local copyText = L["Copy"] or COPY or "Copy"
 	return string_format("%s Session", copyText)

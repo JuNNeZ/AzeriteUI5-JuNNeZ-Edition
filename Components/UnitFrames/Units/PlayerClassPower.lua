@@ -39,6 +39,12 @@ local next = next
 local type = type
 local unpack = unpack
 
+-- WoW API
+-- GetSpecialization is deprecated in favour of C_SpecializationInfo.GetSpecialization.
+-- Shadowed as a file local so every call site below, and the type() guards around
+-- them, keep working whichever of the two the client still exposes.
+local GetSpecialization = (C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
+
 -- Addon API
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
 local noop = ns.Noop

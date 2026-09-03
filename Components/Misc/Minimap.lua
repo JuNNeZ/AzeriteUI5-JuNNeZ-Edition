@@ -43,6 +43,11 @@ local table_insert = table.insert
 local type = type
 local unpack = unpack
 
+-- WoW API
+-- GetCVarBool is deprecated in favour of C_CVar.GetCVarBool. Shadowed as a file
+-- local so the call sites keep working whichever of the two the client exposes.
+local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
+
 -- GLOBALS: AddonCompartmentFrame, GameTimeFrame, MiniMapBattlefieldFrame, MiniMapMailFrame, MiniMapLFGFrame
 -- GLOBALS: C_CraftingOrders, GameTooltip, GameTooltip_SetDefaultAnchor, GarrisonLandingPage_Toggle
 -- GLOBALS: GetPlayerFacing, GetRealZoneText

@@ -32,6 +32,11 @@ if (not ActionBarMod) then return end
 
 ActionBarMod:SetEnabledState(false)
 
+-- WoW API
+-- GetCVarBool is deprecated in favour of C_CVar.GetCVarBool. Shadowed as a file
+-- local so the call sites keep working whichever of the two the client exposes.
+local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
+
 ActionBarMod.OnInitialize = function(self)
 	if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return self:Disable() end
 

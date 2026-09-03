@@ -1664,7 +1664,11 @@ Debugging.EnableBlizzardAddOns = function(self)
 end
 
 Debugging.EnableScriptErrors = function(self)
-	SetCVar("scriptErrors", 1)
+	-- SetCVar is deprecated in favour of C_CVar.SetCVar, which expects a string.
+	if (C_CVar and C_CVar.SetCVar) then
+		return C_CVar.SetCVar("scriptErrors", "1")
+	end
+	SetCVar("scriptErrors", "1")
 end
 
 Debugging.EnsureDebugCommands = function(self)

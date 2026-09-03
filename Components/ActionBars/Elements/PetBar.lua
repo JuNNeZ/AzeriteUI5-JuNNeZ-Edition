@@ -49,6 +49,11 @@ local select = select
 local setmetatable = setmetatable
 local unpack = unpack
 
+-- WoW API
+-- GetCVarBool is deprecated in favour of C_CVar.GetCVarBool. Shadowed as a file
+-- local so the call sites keep working whichever of the two the client exposes.
+local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
+
 -- Addon API
 local Colors = ns.Colors
 local GetMedia = ns.API.GetMedia

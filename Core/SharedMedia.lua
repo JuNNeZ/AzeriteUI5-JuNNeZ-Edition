@@ -68,8 +68,30 @@ AddMedia("texture", 	"Azerite Minimap Border", 						"minimap-border")
 AddMedia("texture", 	"Azerite Targeting Icon (Blue)", 				"icon_target_blue")
 AddMedia("texture", 	"Azerite Targeting Icon (Green)", 				"icon_target_green")
 AddMedia("texture", 	"Azerite Targeting Icon (Red)", 				"icon_target_red")
-AddMedia("texture", 	"Azerite Vehicle Exit Button", 					"icon-exit-flight")
+AddMedia("texture", 	"Azerite Vehicle Exit Button", 					"icon_exit_flight")
 AddMedia("texture", 	"Diabolic Orb Backdrop Sword", 					"orb-backdrop2")
 AddMedia("texture", 	"Minimap Mask Opaque (Circular)", 				"minimap-mask-opaque")
 AddMedia("texture", 	"Minimap Mask Transparent (Circular)", 			"minimap-mask-transparent")
 AddMedia("texture", 	"Simple White Plus", 							"plus")
+
+-- Art that ships in Assets but no module claims.
+-- These are complete, usable pieces from the same art set as everything above -
+-- alternates and unclaimed members of families the addon already draws. Publishing
+-- them here is what the registry is for: it makes them addressable by name, to this
+-- addon and to anything else reading LibSharedMedia, instead of shipping in every
+-- download while being unreachable. Details, and what building a home for each
+-- would take, are in Docs\RESEARCH_Optional_Deletions_2026-09-02.md.
+AddMedia("statusbar",	"Azerite Health Bar Highlight", 					"hp_cap_bar_highlight")
+AddMedia("texture", 	"Azerite Badge NPC Boss (Classification)", 		"icon_classification_boss")
+AddMedia("texture", 	"Azerite Castbar Backdrop (Wooden)", 			"cast_back_wooden")
+AddMedia("texture", 	"Azerite ClassPower Backdrop (Block)", 			"point_block")
+AddMedia("texture", 	"Azerite ClassPower Point (Gem)", 				"point_gem")
+AddMedia("texture", 	"Azerite Minimap Ring Backdrop (Two Bars)", 		"minimap-twobars-backdrop")
+AddMedia("texture", 	"Azerite Minimap Ring Inner (Two Bars)", 		"minimap-bars-two-inner")
+AddMedia("texture", 	"Azerite Minimap Ring Outer (Two Bars)", 		"minimap-bars-two-outer")
+AddMedia("texture", 	"Azerite Party Mana Ring", 						"party_mana")
+AddMedia("texture", 	"Azerite PartyRole Badge (Damager)", 			"partyrole_dps")
+AddMedia("texture", 	"Azerite PartyRole Badge (Healer)", 				"partyrole_heal")
+AddMedia("texture", 	"Azerite PartyRole Badge (Tank)", 				"partyrole_tank")
+AddMedia("texture", 	"Azerite Spell Alert (Circular)", 				"IconAlert-Circle")
+AddMedia("texture", 	"Azerite Spell Alert Ants (Circular)", 			"IconAlertAnts-Circle")

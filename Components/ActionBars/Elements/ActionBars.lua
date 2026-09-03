@@ -44,6 +44,11 @@ local unpack = unpack
 -- GLOBALS: CreateFrame, ClearOverrideBindings, RegisterStateDriver, UnregisterStateDriver, UIParent
 -- GLOBALS: HasBonusActionBar, GetBonusBarOffset
 
+-- WoW API
+-- GetCVarBool is deprecated in favour of C_CVar.GetCVarBool. Shadowed as a file
+-- local so the call sites keep working whichever of the two the client exposes.
+local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
+
 -- Addon API
 local Colors = ns.Colors
 local GetMedia = ns.API.GetMedia
@@ -384,7 +389,7 @@ local style = function(self)
 	self.CustomAssistedHighlight = self.OverlayFrame:CreateTexture(nil, "ARTWORK", nil, -6)
 	self.CustomAssistedHighlight:SetSize(unpack(db.ButtonSpellHighlightSize))
 	self.CustomAssistedHighlight:SetPoint(unpack(db.ButtonSpellHighlightPosition))
-	self.CustomAssistedHighlight:SetTexture(db.ButtonSpellHighlightTexture)
+	self.CustomAssistedHighlight:SetTexture(db.ButtonAssistedHighlightTexture or db.ButtonSpellHighlightTexture)
 	self.CustomAssistedHighlight:SetVertexColor(.35, .85, 1, .95)
 	self.CustomAssistedHighlight:Hide()
 

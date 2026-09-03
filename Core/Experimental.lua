@@ -32,8 +32,17 @@ local Experimental = ns:NewModule("Experimental", "LibMoreEvents-1.0", "AceConso
 local next = next
 local string_lower = string.lower
 
+-- Dev mode gate.
+-- ns.IsDevelopment is only ever true for an unpackaged git checkout, so gating
+-- on it alone made this whole module unreachable in every shipped build. The
+-- '/devmode' toggle in Core\Development.lua is what makes it reachable from an
+-- installed copy; this matches the same test Core\Debugging.lua uses.
+local IsDevModeEnabled = function()
+	return (ns.IsDevelopment or (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)) and true or false
+end
+
 Experimental.ToggleUI = function(self, input)
-	if (not ns.IsDevelopment) then return end
+	if (not IsDevModeEnabled()) then return end
 	if (not self._ui_list) then
 		self._ui_list = {}
 		for ui,cmds in next,{
@@ -62,7 +71,7 @@ Experimental.ToggleUI = function(self, input)
 end
 
 Experimental.ToggleBlips = function(self)
-	if (not ns.IsDevelopment) then return end
+	if (not IsDevModeEnabled()) then return end
 
 	if (not self.Blips) then
 
@@ -142,9 +151,11 @@ Experimental.SerializeOptions = function(self)
 end
 
 Experimental.OnInitialize = function(self)
-	if (ns.IsDevelopment and ns.db.global.enableDevelopmentMode) then
+	if (IsDevModeEnabled()) then
 		self:RegisterChatCommand("serial", "SerializeOptions")
 		self:RegisterChatCommand("toggleblips", "ToggleBlips")
+		-- ToggleUI stays unregistered: it switches between AzeriteUI and
+		-- DiabolicUI, and this build has no relationship with DiabolicUI.
 		--self:RegisterChatCommand("go", "ToggleUI")
 	end
 end

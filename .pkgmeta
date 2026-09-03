@@ -6,30 +6,54 @@ manual-changelog:
   filename: CHANGELOG.md
   markup-type: markdown
 
+# This ignore list is the blacklist mirror of the whitelist in build-release.ps1
+# ($ReleaseEntries). Anything not in that whitelist should be ignored here, or the
+# CI-published zip carries files the locally built zip does not.
+# Whitelist, for reference: Assets, Components, Core, Layouts, Libs, Locale,
+# Options, WoW11, the .toc, FontStyles.xml, LICENSE, LICENSE.txt.
+# CHANGELOG.md is deliberately not ignored: manual-changelog above consumes it.
 ignore:
   # Development files
   - .github
   - .vscode
   - .research
+  - .devcontainer
+  - .agents
+  - .claude
+  - .codex
   - .editorconfig
   - .gitignore
   - .gitattributes
-  
+  - .luacheckrc
+  - .mcp.json
+
   # Development documentation
   - AGENTS.md
   - FixLog.md
   - FixLog_Archive_*.md
   - CHANGELOG_ARCHIVE.md
   - Docs
-  
+  - FEATURE_PLAN.md
+  - FIRST_RELEASE_CHECKLIST.md
+  - MULTI_PLATFORM_RELEASE.md
+  - RELEASE_WORKFLOW.md
+  - README.md
+
+  # Retired art, kept on the maintainer's disk only
+  - Assets_Moot
+
+  # Wiki sources, published to the GitHub Wiki by sync-wiki.yml, not shipped
+  - wiki
+  - publish-wiki.sh
+
   # Build scripts
   - build-release.ps1
   - "*.ps1"
-  
+
   # IDE files
   - "*.code-workspace"
   - "*.sublime-*"
-  
+
   # Temporary files
   - "*.bak"
   - "*.tmp"

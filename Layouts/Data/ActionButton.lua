@@ -68,5 +68,11 @@ ns.RegisterConfig("ActionButton", {
 
 	ButtonSpellHighlightPosition = { "CENTER", 0, 0 },
 	ButtonSpellHighlightSize = { 134.295081967, 134.295081967 },
-	ButtonSpellHighlightTexture = GetMedia("actionbutton-spellhighlight")
+	ButtonSpellHighlightTexture = GetMedia("actionbutton-spellhighlight"),
+	-- The assisted combat suggestion is drawn from the same art as the proc glow but
+	-- tinted a different colour, and SetVertexColor multiplies, so it only lands on
+	-- the intended hue when the base art is white and neutral. actionbutton-spellhighlight
+	-- is a crisp coloured ring; actionbutton-glow-white is the untinted diffuse glow
+	-- that exists for exactly this. Omit the key to fall back to the proc art.
+	ButtonAssistedHighlightTexture = GetMedia("actionbutton-glow-white")
 })

@@ -7,7 +7,6 @@
 	<Script file="Containers.lua"/>
 
 	<Script file="Durability.lua"/>
-	<!---->
 	<Script file="BugSack.lua"/>
 	<Script file="ErrorsFrame.lua"/>
 	<Script file="GameMenu.lua"/>

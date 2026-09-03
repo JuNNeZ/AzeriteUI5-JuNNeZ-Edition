@@ -238,9 +238,6 @@ Durability.UpdateWidget = function(self, forced)
 				showDurability = 1
 			end
 			numAlerts = numAlerts + 1
-			if (alert == 2) then
-				anyItemBroken = true
-			end
 		else
 			texture:SetVertexColor(unpack(inventoryColors.default))
 			if (value.showSeparate) then

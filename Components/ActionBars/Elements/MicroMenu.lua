@@ -33,6 +33,11 @@ local Colors = ns.Colors
 local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
 
+-- WoW API
+-- GetCVarBool is deprecated in favour of C_CVar.GetCVarBool. Shadowed as a file
+-- local so the call sites keep working whichever of the two the client exposes.
+local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
+
 local defaults = {
 	profile = {
 		-- The AzeriteUI cog wheel in the bottom right corner.
@@ -225,6 +230,24 @@ MicroMenu.SpawnButtons = function(self)
 	texture:SetPoint("CENTER", 0, 0)
 	texture:SetTexture(GetMedia("config_button"))
 	texture:SetVertexColor(Colors.ui[1], Colors.ui[2], Colors.ui[3])
+
+	-- config_button_bright is the lit twin of config_button: same 128x128 art, same
+	-- geometry, brighter metal. It ships for this and nothing else, and the cog was
+	-- the only AzeriteUI button with no mouseover feedback at all. Kept as a plain
+	-- texture swap on the insecure side; the toggle is a SecureHandlerClickTemplate
+	-- and nothing here touches an attribute, so this stays safe in combat.
+	local highlight = toggle:CreateTexture(nil, "ARTWORK", nil, 1)
+	highlight:SetSize(96, 96)
+	highlight:SetPoint("CENTER", 0, 0)
+	highlight:SetTexture(GetMedia("config_button_bright"))
+	highlight:SetVertexColor(Colors.ui[1], Colors.ui[2], Colors.ui[3])
+	highlight:Hide()
+
+	toggle.Texture = texture
+	toggle.Highlight = highlight
+
+	toggle:HookScript("OnEnter", function(self) self.Highlight:Show() end)
+	toggle:HookScript("OnLeave", function(self) self.Highlight:Hide() end)
 
 	RegisterStateDriver(toggle, "visibility", "[petbattle]hide;show")
 end

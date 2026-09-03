@@ -39,34 +39,23 @@ if (BackdropTemplateMixin) then
 	ns.Private.BackdropTemplate = "BackdropTemplate" -- Usable in Lua
 end
 
--- Classics
-if (not _G.UnitEffectiveLevel) then
-	_G.UnitEffectiveLevel = UnitLevel
-end
-
-if (not _G.IsXPUserDisabled) then
-	_G.IsXPUserDisabled = function() return false end
-end
-
-if (not _G.UnitHasVehicleUI) then
-	_G.UnitHasVehicleUI = function() return false end
-end
-
-if (not _G.GetTimeToWellRested) then
-	_G.GetTimeToWellRested = function() return nil end
-end
+-- The four Classic-era shims that used to live here (UnitEffectiveLevel,
+-- IsXPUserDisabled, UnitHasVehicleUI, GetTimeToWellRested) were removed on
+-- 2026-09-02. All four exist on Retail 12.1, so every "if (not _G.X)" guard was
+-- false and none of them ever installed. The addon still calls all four; those
+-- calls reach Blizzard's own implementations, which is what they always reached.
 
 local tocversion = select(4, GetBuildInfo())
 
 -- Deprecated in 10.1.0
-if (tocversion >= 100100) or (tocversion >= 40400 and tocversion < 50000) then
+if (tocversion >= 100100) then
 	if (not _G.GetAddOnMetadata) then
 		_G.GetAddOnMetadata = C_AddOns.GetAddOnMetadata
 	end
 end
 
 -- Deprecated in 10.2.0
-if (tocversion >= 100200) or (tocversion >= 40400 and tocversion < 50000) then
+if (tocversion >= 100200) then
 	local original_SetPortraitToTexture = SetPortraitToTexture
 	for method,func in next,{
 		GetCVarInfo = C_CVar.GetCVarInfo,
@@ -269,7 +258,7 @@ do
 end
 
 -- Deprecated in 10.2.5
-if (tocversion >= 100205) or (tocversion >= 40400 and tocversion < 50000) then
+if (tocversion >= 100205) then
 	for method,func in next,{
 		GetTimeToWellRested = function() return nil end,
 		FillLocalizedClassList = function(tbl, isFemale)
@@ -534,49 +523,6 @@ if (tocversion >= 110000) then
 		if (not _G[method]) then
 			_G[method] = func
 		end
-	end
-end
-
--- Restricted in 11.0.7 (Midnight prepatch)  
--- Many secure functions are no longer available in the restricted environment
--- Define them as upvalues first, then make globally accessible
-if (tocversion >= 110007) then
-	--  Capture these from the current environment before they're restricted
-	local _InCombatLockdown = InCombatLockdown
-	local _issecurevariable = issecurevariable
-	local _issecure = issecure  
-	local _hooksecurefunc = hooksecurefunc
-	local _RegisterStateDriver = RegisterStateDriver
-	local _UnregisterStateDriver = UnregisterStateDriver
-	
-	-- Now make them globally accessible for addon code
-	if (not rawget(_G, "InCombatLockdown")) then
-		rawset(_G, "InCombatLockdown", _InCombatLockdown)
-	end
-	
-	if (not rawget(_G, "issecurevariable")) then
-		rawset(_G, "issecurevariable", _issecurevariable)
-	end
-	
-	if (not rawget(_G, "issecure")) then
-		rawset(_G, "issecure", _issecure)
-	end
-	
-	if (not rawget(_G, "hooksecurefunc")) then
-		rawset(_G, "hooksecurefunc", _hooksecurefunc)
-	end
-	
-	if (not rawget(_G, "RegisterStateDriver")) then
-		rawset(_G, "RegisterStateDriver", _RegisterStateDriver)
-	end
-	
-	if (not rawget(_G, "UnregisterStateDriver")) then
-		rawset(_G, "UnregisterStateDriver", _UnregisterStateDriver)
-	end
-	
-	-- AddOn loading functions moved to C_AddOns
-	if (not rawget(_G, "IsAddOnLoaded")) then
-		rawset(_G, "IsAddOnLoaded", C_AddOns.IsAddOnLoaded)
 	end
 end
 

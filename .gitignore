@@ -24,6 +24,12 @@ Desktop.ini
 .research/
 Backups/
 
+# Art that no module references any more. Kept on disk so it is not lost and so
+# the history of the art set stays legible, but deliberately untracked and out of
+# both builds. build-release.ps1 copies a whitelist of runtime roots and this is
+# not one of them; .pkgmeta ignores it as well. See Assets_Moot/README.md.
+Assets_Moot/
+
 # Development documentation (internal only)
 AGENTS.md
 FixLog.md
@@ -31,14 +37,16 @@ FixLog_Archive_*.md
 Docs/
 
 # Build and release artifacts
-*.ps1
+# build-release.ps1 is deliberately tracked: the release tooling belongs in the
+# repo. It is still excluded from the published zip by .pkgmeta, which is a
+# separate concern from version control. Other .ps1 files live under Docs/ or
+# .research/ and are covered by those entries.
 *.zip
 dist/
 build/
 release/
 *.bak
 *.tmp
-build-release.ps1
 RELEASE_WORKFLOW.md
 
 # Logs and debugging
@@ -54,6 +62,7 @@ FEATURE_PLAN.md
 .mcp.json
 .agents/
 .claude/
+.codex/
 
 # Git related
 *.orig

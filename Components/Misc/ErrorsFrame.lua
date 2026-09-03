@@ -30,6 +30,11 @@ local ErrorsFrame = ns:NewModule("ErrorsFrame", ns.MovableModulePrototype, "LibM
 -- GLOBALS: UIErrorsFrame, UIParent
 -- GLOBALS: GetCVarBool, GetGameMessageInfo, PlaySound, PlayVocalErrorSoundID
 
+-- WoW API
+-- GetCVarBool is deprecated in favour of C_CVar.GetCVarBool. Shadowed as a file
+-- local so the call sites keep working whichever of the two the client exposes.
+local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
+
 -- Addon API
 local GetFont = ns.API.GetFont
 

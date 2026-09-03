@@ -3673,16 +3673,16 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 		local isInInstance, instanceType = IsInInstance()
 		if (isInInstance) then
 			if (instanceType == "pvp") then
-				SetCVar("nameplateMinAlpha", 1) -- The minimum alpha of nameplates.
+				SetCVarIfSupported("nameplateMinAlpha", 1) -- The minimum alpha of nameplates.
 			elseif (instanceType == "arena") then
-				SetCVar("nameplateMinAlpha", 1) -- The minimum alpha of nameplates.
+				SetCVarIfSupported("nameplateMinAlpha", 1) -- The minimum alpha of nameplates.
 			else
-				SetCVar("nameplateMinAlpha", .75) -- The minimum alpha of nameplates.
+				SetCVarIfSupported("nameplateMinAlpha", .75) -- The minimum alpha of nameplates.
 			end
-			SetCVar("nameplateOccludedAlphaMult", .45) -- Alpha multiplier of hidden plates
+			SetCVarIfSupported("nameplateOccludedAlphaMult", .45) -- Alpha multiplier of hidden plates
 		else
-			SetCVar("nameplateMinAlpha", .4) -- The minimum alpha of nameplates.
-			SetCVar("nameplateOccludedAlphaMult", .15) -- Alpha multiplier of hidden plates
+			SetCVarIfSupported("nameplateMinAlpha", .4) -- The minimum alpha of nameplates.
+			SetCVarIfSupported("nameplateOccludedAlphaMult", .15) -- Alpha multiplier of hidden plates
 		end
 	elseif (event == "UI_SCALE_CHANGED") then
 		ApplyNamePlateDriverSettings(self)

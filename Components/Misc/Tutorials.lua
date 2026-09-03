@@ -26,6 +26,22 @@
 local _, ns = ...
 local BlizzTutorials = ns:NewModule("BlizzTutorials", "LibMoreEvents-1.0", "AceTimer-3.0", "AceHook-3.0")
 
+-- Lua API
+local type = type
+
+-- WoW API
+-- SetCVar is deprecated in favour of C_CVar.SetCVar, which expects a string
+-- value, so the conversion happens here rather than at every call site.
+local SetCVarValue = function(name, value)
+	local stringValue = tostring(value)
+	if (C_CVar and C_CVar.SetCVar) then
+		return C_CVar.SetCVar(name, stringValue)
+	end
+	if (type(SetCVar) == "function") then
+		return SetCVar(name, stringValue)
+	end
+end
+
 BlizzTutorials.DisableHelpTip = function(self)
 	if (not HelpTip) then return end
 	local AcknowledgeTips = function()
@@ -55,7 +71,7 @@ BlizzTutorials.DisableNPE = function(self, event, ...)
 end
 
 BlizzTutorials.DisableTutorials = function(self)
-	SetCVar("showTutorials", "0")
+	SetCVarValue("showTutorials", "0")
 end
 
 BlizzTutorials.OnEvent = function(self, event, ...)

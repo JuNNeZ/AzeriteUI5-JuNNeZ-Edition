@@ -285,6 +285,32 @@ ns.RegisterConfig("PlayerFrame", {
 		ManaOrbForegroundTexture = GetMedia("orb_case_low"),
 		ManaOrbForegroundColor = { Colors.ui[1], Colors.ui[2], Colors.ui[3] },
 
+		-- Mana Orb Glass, Rim and Pedestal
+		-- The orb frame already creates a Glass and an Artwork texture on every login
+		-- (Player.lua, "Mana Orb" block) and ApplyDiabolicManaOrbArt hid both because
+		-- no layout keys existed for them. These are those keys.
+		-- Sizes come from each file's opaque content, not from its canvas: orb2 fills
+		-- 99.8% of its 512px canvas and renders at 103, so a circle of the same 103
+		-- diameter needs 103 * 0.998 / <content fraction>.
+		--   orb-glass  content 0.594 -> 173
+		--   orb-border content 0.656 -> 157
+		-- orb-art2 is not a circle. Its content sits in the lower half of the canvas
+		-- and reads as a plinth beneath the orb at the case's own size.
+		ManaOrbGlassSize = { 173, 173 },
+		ManaOrbGlassPosition = { "CENTER", 0, 0 },
+		ManaOrbGlassTexture = GetMedia("orb-glass"),
+		ManaOrbGlassColor = { 1, 1, 1, .9 },
+
+		ManaOrbRimSize = { 157, 157 },
+		ManaOrbRimPosition = { "CENTER", 0, 0 },
+		ManaOrbRimTexture = GetMedia("orb-border"),
+		ManaOrbRimColor = { 1, 1, 1, 1 },
+
+		ManaOrbArtworkSize = { 188, 188 },
+		ManaOrbArtworkPosition = { "CENTER", 0, 0 },
+		ManaOrbArtworkTexture = GetMedia("orb-art2"),
+		ManaOrbArtworkColor = { 1, 1, 1, 1 },
+
 		-- Mana Orb Threat
 		ManaOrbThreatSize = { 188, 188 },
 		ManaOrbThreatPosition = { "CENTER", 0, 0 },
@@ -363,6 +389,32 @@ ns.RegisterConfig("PlayerFrame", {
 		ManaOrbForegroundTexture = GetMedia("orb_case_hi"),
 		ManaOrbForegroundColor = { Colors.ui[1], Colors.ui[2], Colors.ui[3] },
 
+		-- Mana Orb Glass, Rim and Pedestal
+		-- The orb frame already creates a Glass and an Artwork texture on every login
+		-- (Player.lua, "Mana Orb" block) and ApplyDiabolicManaOrbArt hid both because
+		-- no layout keys existed for them. These are those keys.
+		-- Sizes come from each file's opaque content, not from its canvas: orb2 fills
+		-- 99.8% of its 512px canvas and renders at 103, so a circle of the same 103
+		-- diameter needs 103 * 0.998 / <content fraction>.
+		--   orb-glass  content 0.594 -> 173
+		--   orb-border content 0.656 -> 157
+		-- orb-art2 is not a circle. Its content sits in the lower half of the canvas
+		-- and reads as a plinth beneath the orb at the case's own size.
+		ManaOrbGlassSize = { 173, 173 },
+		ManaOrbGlassPosition = { "CENTER", 0, 0 },
+		ManaOrbGlassTexture = GetMedia("orb-glass"),
+		ManaOrbGlassColor = { 1, 1, 1, .9 },
+
+		ManaOrbRimSize = { 157, 157 },
+		ManaOrbRimPosition = { "CENTER", 0, 0 },
+		ManaOrbRimTexture = GetMedia("orb-border"),
+		ManaOrbRimColor = { 1, 1, 1, 1 },
+
+		ManaOrbArtworkSize = { 188, 188 },
+		ManaOrbArtworkPosition = { "CENTER", 0, 0 },
+		ManaOrbArtworkTexture = GetMedia("orb-art2"),
+		ManaOrbArtworkColor = { 1, 1, 1, 1 },
+
 		-- Mana Orb Threat
 		ManaOrbThreatSize = { 188, 188 },
 		ManaOrbThreatPosition = { "CENTER", 0, 0 },
@@ -440,6 +492,32 @@ ns.RegisterConfig("PlayerFrame", {
 		ManaOrbForegroundPosition = { "CENTER", 0, 0 },
 		ManaOrbForegroundTexture = GetMedia("orb_case_hi"),
 		ManaOrbForegroundColor = { Colors.ui[1], Colors.ui[2], Colors.ui[3] },
+
+		-- Mana Orb Glass, Rim and Pedestal
+		-- The orb frame already creates a Glass and an Artwork texture on every login
+		-- (Player.lua, "Mana Orb" block) and ApplyDiabolicManaOrbArt hid both because
+		-- no layout keys existed for them. These are those keys.
+		-- Sizes come from each file's opaque content, not from its canvas: orb2 fills
+		-- 99.8% of its 512px canvas and renders at 103, so a circle of the same 103
+		-- diameter needs 103 * 0.998 / <content fraction>.
+		--   orb-glass  content 0.594 -> 173
+		--   orb-border content 0.656 -> 157
+		-- orb-art2 is not a circle. Its content sits in the lower half of the canvas
+		-- and reads as a plinth beneath the orb at the case's own size.
+		ManaOrbGlassSize = { 173, 173 },
+		ManaOrbGlassPosition = { "CENTER", 0, 0 },
+		ManaOrbGlassTexture = GetMedia("orb-glass"),
+		ManaOrbGlassColor = { 1, 1, 1, .9 },
+
+		ManaOrbRimSize = { 157, 157 },
+		ManaOrbRimPosition = { "CENTER", 0, 0 },
+		ManaOrbRimTexture = GetMedia("orb-border"),
+		ManaOrbRimColor = { 1, 1, 1, 1 },
+
+		ManaOrbArtworkSize = { 188, 188 },
+		ManaOrbArtworkPosition = { "CENTER", 0, 0 },
+		ManaOrbArtworkTexture = GetMedia("orb-art2"),
+		ManaOrbArtworkColor = { 1, 1, 1, 1 },
 
 		-- Mana Orb Threat
 		ManaOrbThreatSize = { 188, 188 },
