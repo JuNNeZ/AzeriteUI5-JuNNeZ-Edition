@@ -1,7 +1,7 @@
 # AzeriteUI — JuNNeZ Edition
 
-[![WoW Version](https://img.shields.io/badge/WoW-12.1%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)
-[![Interface](https://img.shields.io/badge/Interface-120100-1f6feb)](#)
+[![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)
+[![Interface](https://img.shields.io/badge/Interface-120000-1f6feb)](#)
 [![Lua](https://img.shields.io/badge/Lua-WoW%20API%2012-2c2d72)](#)
 [![Maintainer](https://img.shields.io/badge/Maintainer-JuNNeZ-0a7d32)](https://github.com/JuNNeZ)
 [![GitHub Release](https://img.shields.io/github/v/release/JuNNeZ/AzeriteUI5-JuNNeZ-Edition?display_name=release)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/releases/latest)
