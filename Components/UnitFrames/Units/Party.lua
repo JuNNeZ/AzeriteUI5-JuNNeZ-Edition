@@ -73,8 +73,10 @@ local defaults = { profile = ns:Merge({
 	useInRaid40 = false, -- show in raid groups of 26-40 players
 
 	showAuras = true,
+	showRaidTargetIcons = true,
 	showPlayerInParty = false,
 	showPlayerInRaid = false,
+	useRangeIndicator = false,
 	usePortraitSpecIcons = false,
 	useClassColors = true,
 	useBlizzardHealthColors = false,
@@ -1137,6 +1139,17 @@ local style = function(self, unit)
 
 	self.ReadyCheckIndicator = readyCheckIndicator
 
+	-- RaidTarget Indicator
+	--------------------------------------------
+	-- SetRaidTargetIconTexture only picks a cell out of the sprite sheet, so
+	-- the sheet itself has to be set here or the element draws nothing.
+	local raidTargetIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, 2)
+	raidTargetIndicator:SetSize(unpack(db.RaidTargetSize))
+	raidTargetIndicator:SetPoint(unpack(db.RaidTargetPosition))
+	raidTargetIndicator:SetTexture(db.RaidTargetTexture)
+
+	self.RaidTargetIndicator = raidTargetIndicator
+
 	-- Ressurection Indicator
 	--------------------------------------------
 	local resurrectIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, 1)
@@ -1231,6 +1244,14 @@ local style = function(self, unit)
 
 	self.Auras = auras
 	ApplyPartyAuraLayout(self)
+
+	-- Range Opacity
+	-----------------------------------------------------------
+	-- Matches the raid frames, which have carried this since forever. The
+	-- layout has always declared OutOfRangeAlpha for party frames; only the
+	-- element itself was missing. Stays disabled until the option asks for
+	-- it, see UpdateUnits.
+	self.Range = { outsideAlpha = db.OutOfRangeAlpha or .6 }
 
 	-- Textures need an update when frame is displayed.
 	self.PostUpdate = UnitFrame_PostUpdate
@@ -1551,6 +1572,18 @@ PartyFrameMod.UpdateUnits = function(self)
 			frame.Auras:ForceUpdate()
 		else
 			frame:DisableElement("Auras")
+		end
+		if (self.db.profile.showRaidTargetIcons) then
+			frame:EnableElement("RaidTargetIndicator")
+		else
+			frame:DisableElement("RaidTargetIndicator")
+			frame.RaidTargetIndicator:Hide()
+		end
+		if (self.db.profile.useRangeIndicator) then
+			frame:EnableElement("Range")
+		else
+			frame:DisableElement("Range")
+			frame:SetAlpha(1)
 		end
 		frame:UpdateAllElements("RefreshUnit")
 		AuraHighlight_Update(frame)

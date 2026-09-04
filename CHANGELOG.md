@@ -12,6 +12,71 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.4.1-JuNNeZ (2026-09-04) - Profile Sharing, Keybind Mode, and Target Markers
+
+The first phase of the roadmap rebuilt in `FEATURE_PLAN.md` on 2026-09-04, and
+deliberately the low-risk phase: three of the four items surface behaviour the addon
+already had but never exposed.
+
+**Please stress test the profile strings.** Export and import are new, they touch every
+module's settings at once, and the machinery underneath them shipped unfinished upstream
+and had to be repaired before it could run at all. Duplicate your profile before
+importing anything.
+
+### Profile export and import
+
+The profile page can finally share a setup. **Generate Export String** packs the active
+profile, frame positions included, into one printable string; paste someone else's string
+into the import box and press Accept to apply it. Importing overwrites the active profile
+and prompts for a reload, and a string from a newer version of AzeriteUI is rejected with
+its own message rather than half-applied.
+
+This shipped unfinished upstream. `ns.Export`, `ns.ExportLayouts` and `ns.Import` had
+empty bodies, the options entries were dev-mode only and permanently disabled, and three
+supporting bugs had to be fixed before any of it could work:
+
+- `ns:PurgeKeys` and `ns:PurgeOtherKeys` mutated their table but returned nothing, so
+  every caller assigned nil. `PurgeOtherKeys` also recursed into subtables asking the
+  opposite question, leaving branches standing that it was meant to strip.
+- `GetDefaults()` returns the AceDB wrapper, `{ profile = ... }`, not the profile itself.
+  The merge and export paths walked it alongside `self.db.profile`, which would have
+  nested the whole settings tree under a bogus `profile` key. They now go through a new
+  `Module:GetProfileDefaults()`.
+- `MergeSettings` recursed with a nil target when a branch was missing, and a nil target
+  falls back to the module's entire profile - so a missing subtable would have merged its
+  defaults onto the top level.
+
+Export is opt out rather than opt in. Every module holding a settings profile takes part
+unless it says otherwise; the debug, development, experimental and options modules never
+do. Layouts only come from modules that actually save a position.
+
+### Keybind mode is documented
+
+`/kb` has worked since the bars were written - LibKeyBound ships with the addon, every
+action, pet and stance button already carries a bind target, and the library registers the
+slash command itself. Nothing said so. It is now in the README slash table and has an
+**Action Bars > Keybind Mode** button that closes the options window first, since the
+window sits on top of the bars you are trying to hover.
+
+### Unit frames
+
+- **Party frames now have the range indicator.** Every other group frame has had one for
+  years and the party layout has always declared `OutOfRangeAlpha`; only the element was
+  missing. Off by default, under Party > Use Range Indicator.
+- **Target markers on party, raid (5) and target frames.** The skull, cross and star icons
+  were only ever drawn on the 25 and 40 player raid frames. On by default, with a
+  **Show Target Markers** toggle on each of the three.
+
+### Housekeeping
+
+- README and the badge workflow said 12.0 / Interface 120000. The TOC has been 120100
+  since 12.1. Both are corrected; the workflow was the one that mattered, since it rewrites
+  those lines in the README on every run.
+- Eleven new locale keys, present in all ten locales. The German, Spanish, French,
+  Italian, Portuguese, Russian, Korean and Chinese strings are new translations and have
+  not been reviewed by the locale contributors.
+
+
 ## 5.4.0-JuNNeZ (2026-09-03) - Reclaimed Art, Working Smoothing, and a Cleared Audit Backlog
 
 The version family moves from 5.3 to 5.4 because this release is not a patch. A full codebase

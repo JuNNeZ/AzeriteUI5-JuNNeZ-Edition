@@ -165,6 +165,13 @@ ns.RegisterConfig("TargetFrame", {
 	PvPIndicatorAllianceTexture = GetMedia("icon_badges_alliance"),
 	PvPIndicatorHordeTexture = GetMedia("icon_badges_horde"),
 
+	-- RaidTarget Indicator
+	-----------------------------------------
+	-- Above the portrait, opposite the classification badge below it.
+	RaidTargetPosition = { "TOPRIGHT", -40, 12 },
+	RaidTargetSize = { 32, 32 },
+	RaidTargetTexture = GetMedia("raid_target_icons"),
+
 	-- Classification
 	-----------------------------------------
 	ClassificationPosition = { "TOPRIGHT", -41, -91 },

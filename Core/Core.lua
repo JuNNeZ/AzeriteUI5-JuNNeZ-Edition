@@ -63,7 +63,9 @@ _G["AzeriteUI"] = ns
 -- Lua API
 local next = next
 local select = select
+local tonumber = tonumber
 local tostring = tostring
+local type = type
 
 local defaults = {
 	char = {
@@ -294,66 +296,167 @@ ns.EnsureBuiltinProfiles = function(self)
 	self.db.char.profile = charProfileKey or currentProfileKey or self:GetDefaultProfile()
 end
 
-ns.Export = function(self, ...)
+-- Bump when the container shape below changes in a way older builds cannot
+-- read. Profile contents are versioned separately by ns.SETTINGS_VERSION.
+ns.EXPORT_VERSION = 1
 
-	-- Decide which modules to export.
+-- Collects the modules that opted into export, optionally narrowed to the
+-- names passed in. Returns a name-keyed set, or nil for "everything".
+local GetExportModuleFilter = function(...)
 	local numModules = select("#", ...)
-	local moduleList
+	if (numModules < 1) then return end
 
-	if (numModules > 0) then
-		moduleList = {}
-
-		for i = 1, numModules do
-			moduleList[(select(i, ...))] = true
+	local moduleList = {}
+	for i = 1, numModules do
+		local name = select(i, ...)
+		if (type(name) == "string") then
+			moduleList[name] = true
 		end
 	end
-
-	for moduleName in next,ns.exportableSettings do
-		if (not moduleList or moduleList[moduleName]) then
-
-			-- serialize, compress and encode
-			local module = self:GetModule(moduleName, true)
-			if (module) then
-				local data
-			end
-
-			-- prefix and add to export table
-		end
-	end
-
-	for moduleName in next,ns.exportableLayouts do
-		if (not moduleList or moduleList[moduleName]) then
-
-			-- serialize, compress and encode
-			local module = self:GetModule(moduleName, true)
-			if (module) then
-
-			end
-
-			-- prefix and add to export table
-		end
-	end
-
+	return moduleList
 end
 
+-- Serializes the current profile into a single printable string.
+-- Pass module names to export only those, or nothing for the whole profile.
+ns.Export = function(self, ...)
+	local moduleList = GetExportModuleFilter(...)
+
+	local container = {
+		version = ns.EXPORT_VERSION,
+		addon = ns.Prefix,
+		settingsVersion = ns.SETTINGS_VERSION,
+		profile = self.db and self.db.profile and ns:Copy(self.db.profile) or nil,
+		modules = {}
+	}
+
+	-- Walk the live module list rather than the opt-in tables: export is opt
+	-- out, and each module decides for itself via IsSettingsExportable and
+	-- IsLayoutExportable. See Core/ModulePrototype.lua.
+	for moduleName,module in self:IterateModules() do
+		if (not moduleList or moduleList[moduleName]) then
+			if (module.GetExportData) then
+				local settings, layout = module:GetExportData()
+				if (settings or layout) then
+					container.modules[moduleName] = {
+						settings = settings,
+						layout = layout
+					}
+				end
+			end
+		end
+	end
+
+	if (not next(container.modules) and not container.profile) then return end
+
+	local serialized = self:Serialize(container)
+	local compressed = LibDeflate:CompressDeflate(serialized)
+
+	return LibDeflate:EncodeForPrint(compressed)
+end
+
+-- Layout-only export, for sharing frame placement without settings.
 ns.ExportLayouts = function(self, ...)
-	local modules = {}
+	local moduleList = GetExportModuleFilter(...)
 
+	local container = {
+		version = ns.EXPORT_VERSION,
+		addon = ns.Prefix,
+		settingsVersion = ns.SETTINGS_VERSION,
+		modules = {}
+	}
+
+	for moduleName,module in self:IterateModules() do
+		if (not moduleList or moduleList[moduleName]) then
+			if (module.GetExportData) then
+				local _, layout = module:GetExportData()
+				if (layout) then
+					container.modules[moduleName] = { layout = layout }
+				end
+			end
+		end
+	end
+
+	if (not next(container.modules)) then return end
+
+	local serialized = self:Serialize(container)
+	local compressed = LibDeflate:CompressDeflate(serialized)
+
+	return LibDeflate:EncodeForPrint(compressed)
 end
 
-ns.Import = function(self, encoded)
+-- Decodes an export string without applying it. Returns the container table,
+-- or nil plus a reason string. Kept separate from Import so the options panel
+-- can validate what was pasted before offering to apply it.
+ns.DecodeImport = function(self, encoded)
+	if (type(encoded) ~= "string") then
+		return nil, "malformed"
+	end
+
+	-- Copy/paste routinely drags whitespace and newlines along with it.
+	encoded = encoded:gsub("%s+", "")
+	if (encoded == "") then
+		return nil, "malformed"
+	end
 
 	local compressed = LibDeflate:DecodeForPrint(encoded)
-	local serialized = LibDeflate:DecompressDeflate(compressed)
-	local success, table = self:Deserialize(serialized)
-
-	if (success) then
-
-
-		local currentProfileKey = self.db:GetCurrentProfile()
-
+	if (not compressed) then
+		return nil, "malformed"
 	end
 
+	local serialized = LibDeflate:DecompressDeflate(compressed)
+	if (not serialized) then
+		return nil, "malformed"
+	end
+
+	local success, container = self:Deserialize(serialized)
+	if (not success or type(container) ~= "table") then
+		return nil, "malformed"
+	end
+
+	if (type(container.modules) ~= "table" and type(container.profile) ~= "table") then
+		return nil, "malformed"
+	end
+
+	if (tonumber(container.version) and tonumber(container.version) > ns.EXPORT_VERSION) then
+		return nil, "newer"
+	end
+
+	return container
+end
+
+-- Applies an export string onto the currently active profile.
+-- Returns true plus the number of modules touched, or nil plus a reason.
+ns.Import = function(self, encoded)
+	local container, reason = self:DecodeImport(encoded)
+	if (not container) then
+		return nil, reason
+	end
+
+	-- The addon's own profile keys, merged the same defensive way the modules
+	-- are: only keys the current build knows about are copied across.
+	if (type(container.profile) == "table" and self.db and self.db.profile) then
+		for key in next,defaults.profile do
+			if (container.profile[key] ~= nil) then
+				self.db.profile[key] = container.profile[key]
+			end
+		end
+	end
+
+	local imported = 0
+	if (type(container.modules) == "table") then
+		for moduleName,data in next,container.modules do
+			if (type(data) == "table") then
+				local module = self:GetModule(moduleName, true)
+				if (module and module.ImportData) then
+					if (module:ImportData(data.settings, data.layout)) then
+						imported = imported + 1
+					end
+				end
+			end
+		end
+	end
+
+	return true, imported
 end
 
 ns.RefreshConfig = function(self, event, ...)

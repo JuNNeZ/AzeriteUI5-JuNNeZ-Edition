@@ -59,6 +59,7 @@ local defaults = { profile = ns:Merge({
 	showAuras = true,
 	showCastbar = true,
 	showName = true,
+	showRaidTargetIcons = true,
 	showHealthPercent = true,
 	showPowerValue = true,
 	PowerValueFormat = "short",
@@ -3753,6 +3754,17 @@ local style = function(self, unit, id)
 
 	self.TargetIndicator = targetIndicator
 
+	-- RaidTarget Indicator
+	--------------------------------------------
+	-- SetRaidTargetIconTexture only picks a cell out of the sprite sheet, so
+	-- the sheet itself has to be set here or the element draws nothing.
+	local raidTargetIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, 2)
+	raidTargetIndicator:SetSize(unpack(db.RaidTargetSize))
+	raidTargetIndicator:SetPoint(unpack(db.RaidTargetPosition))
+	raidTargetIndicator:SetTexture(db.RaidTargetTexture)
+
+	self.RaidTargetIndicator = raidTargetIndicator
+
 	-- Unit Name
 	--------------------------------------------
 	local name = self:CreateFontString(nil, "OVERLAY", nil, 1)
@@ -3915,6 +3927,16 @@ TargetFrameMod.Update = function(self)
 		local currentPower = self.frame.Power.safeCur or self.frame.Power.cur or 0
 		local maxPower = self.frame.Power.safeMax or self.frame.Power.max or 1
 		self.frame.Power.PostUpdate(self.frame.Power, "target", currentPower, 0, maxPower)
+	end
+
+	if (self.db.profile.showRaidTargetIcons) then
+		self.frame:EnableElement("RaidTargetIndicator")
+		if (self.frame.RaidTargetIndicator and self.frame.RaidTargetIndicator.ForceUpdate) then
+			self.frame.RaidTargetIndicator:ForceUpdate()
+		end
+	else
+		self.frame:DisableElement("RaidTargetIndicator")
+		self.frame.RaidTargetIndicator:Hide()
 	end
 
 	self.frame.Name:SetShown(self.db.profile.showName)

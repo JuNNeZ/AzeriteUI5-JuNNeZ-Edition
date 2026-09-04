@@ -737,6 +737,28 @@ local GenerateOptions = function()
 					return value and true or false
 				end
 			},
+			-- The bars have carried LibKeyBound targets on every button for as
+			-- long as they have existed, and the library registers /kb itself,
+			-- so this button only surfaces behaviour that already shipped.
+			keybindMode = {
+				name = L["Keybind Mode"],
+				desc = L["Hover any action button and press a key to bind it. Press Escape to clear the binding, and Enter or Escape outside a button to finish."],
+				order = 3,
+				type = "execute",
+				hidden = function(info) return not LibStub("LibKeyBound-1.0", true) end,
+				disabled = function(info) return InCombatLockdown() end,
+				func = function(info)
+					local KeyBound = LibStub("LibKeyBound-1.0", true)
+					if (not KeyBound) then return end
+					-- The options window sits on top of the bars, so it has to
+					-- go away before there is anything to hover.
+					local options = ns:GetModule("Options", true)
+					if (options and options.CloseOptionsMenu) then
+						options:CloseOptionsMenu()
+					end
+					KeyBound:Toggle()
+				end
+			},
 			dimWhenInactive = {
 				name = L["Dim the actionbuttons when inactive"],
 				desc = L["Dim down and desaturate your action buttons when not engaged in combat and not currently targeting anything."],

@@ -117,6 +117,13 @@ ns.RegisterConfig("PartyFrames", {
 	TargetHighlightTargetColor = { 255/255, 239/255, 169/255, 1 },
 	TargetHighlightFocusColor = { 144/255, 195/255, 255/255, 1 },
 
+	-- RaidTarget Indicator
+	-----------------------------------------
+	-- Sits above the portrait, clear of the role badge at TOP centre.
+	RaidTargetPosition = { "TOPLEFT", 22, -8 },
+	RaidTargetSize = { 28, 28 },
+	RaidTargetTexture = GetMedia("raid_target_icons_small"),
+
 	-- Ready Check
 	-----------------------------------------
 	ReadyCheckPosition = { "CENTER", 0, -7 + 10 },

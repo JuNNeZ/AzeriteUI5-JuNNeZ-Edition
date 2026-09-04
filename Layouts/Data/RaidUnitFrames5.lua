@@ -112,6 +112,13 @@ ns.RegisterConfig("Raid5Frames", {
 	NameFont = GetFont(11, true),
 	NameColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .75 },
 
+	-- RaidTarget Indicator
+	-----------------------------------------
+	-- Top left of the 210x86 unit, above the portrait and left of the name.
+	RaidTargetPosition = { "TOPLEFT", 12, -6 },
+	RaidTargetSize = { 24, 24 },
+	RaidTargetTexture = GetMedia("raid_target_icons_small"),
+
 	-- Ready Check
 	-----------------------------------------
 	ReadyCheckPosition = { "CENTER", -64, 0 },

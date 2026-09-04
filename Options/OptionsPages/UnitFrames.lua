@@ -766,6 +766,11 @@ local GenerateOptions = function()
 			desc = L["Toggle whether to show the name of the unit."],
 			order = 30, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
+		suboptions.args.showRaidTargetIcons = {
+			name = L["Show Target Markers"],
+			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
+			order = 30.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		suboptions.args.showHealthPercent = {
 			name = L["Show Health Percent"],
 			desc = L["Show current target health percent next to target health value text."],
@@ -1182,6 +1187,16 @@ local GenerateOptions = function()
 			desc = L["Toggle whether to show auras on this unit frame."],
 			order = 40, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
+		suboptions.args.showRaidTargetIcons = {
+			name = L["Show Target Markers"],
+			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
+			order = 41, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.useRangeIndicator = {
+			name = L["Use Range Indicator"],
+			desc = L["Toggle whether to fade unit frames of units that are out of range."],
+			order = 42, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		local partyAuraSettingsDisabled = function(info)
 			return isdisabled(info) or not getoption(info, "showAuras")
 		end
@@ -1341,6 +1356,11 @@ local GenerateOptions = function()
 			name = L["Use Range Indicator"],
 			desc = L["Toggle whether to fade unit frames of units that are out of range."],
 			order = 50, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.showRaidTargetIcons = {
+			name = L["Show Target Markers"],
+			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
+			order = 55, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		options.args.raid5 = suboptions
 	end

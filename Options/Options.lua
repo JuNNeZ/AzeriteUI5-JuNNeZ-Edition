@@ -29,7 +29,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
 
--- GLOBALS: CONFIRM_RESET_SETTINGS, Settings
+-- GLOBALS: CONFIRM_RESET_SETTINGS, Settings, StaticPopupDialogs, StaticPopup_Show, ReloadUI
 
 local Options = ns:NewModule("Options", "LibMoreEvents-1.0", "AceConsole-3.0", "AceHook-3.0")
 
@@ -140,6 +140,33 @@ local string_format = string.format
 local table_remove = table.remove
 local table_sort = table.sort
 local type = type
+
+-- Scratch state for the profile page's export/import boxes. Deliberately not
+-- stored in the database: these are transient clipboard contents, not settings.
+local exportString, importString = "", ""
+local importStatus -- nil, "malformed" or "newer"
+
+-- Imported settings reach the modules immediately, but frames built at load
+-- time will not restyle themselves, so ask for a reload rather than leaving
+-- the interface in a half-applied state.
+Options.PromptImportReload = function(self)
+	local key = "AZERITEUI_SETTINGS_IMPORT_RELOAD"
+	if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
+		StaticPopupDialogs[key] = {
+			text = L["Imported settings need a reload of the interface to take effect."],
+			button1 = L["Reload UI"],
+			button2 = _G.CANCEL or "Cancel",
+			OnAccept = function() ReloadUI() end,
+			timeout = 0,
+			whileDead = true,
+			hideOnEscape = true,
+			preferredIndex = 3
+		}
+	end
+	if (StaticPopup_Show) then
+		StaticPopup_Show(key)
+	end
+end
 
 Options.GenerateProfileMenu = function(self)
 	local options = {
@@ -263,30 +290,99 @@ Options.GenerateProfileMenu = function(self)
 			}
 		}
 	}
-	if (ns.IsDevelopment and ns.db.global.enableDevelopmentMode) then
-		options.args.space4 = {
-			name = "", order = 10, type = "description"
-		}
-		options.args.export = {
-			name = L["Export"],
-			desc = L["Expert the current settings profile to a string you can copy and share with other people."],
-			type = "execute",
-			order = 11,
-			disabled = function(info) return true end,
-			func = function(info) end
-		}
-		options.args.import = {
-			name = L["Import"],
-			desc = L["Import settings from a string into the current options profile."],
-			type = "execute",
-			order = 12,
-			disabled = function(info) return true end,
-			func = function(info) end
-		}
-		options.args.space5 = {
-			name = "", order = 13, type = "description"
-		}
-	end
+	options.args.space4 = {
+		name = "", order = 10, type = "description"
+	}
+	options.args.exportHeader = {
+		name = L["Export"],
+		type = "header",
+		order = 11
+	}
+	options.args.exportDescription = {
+		name = L["Export the current settings profile to a string you can copy and share with other people."],
+		type = "description", fontSize = "medium",
+		order = 12
+	}
+	options.args.exportGenerate = {
+		name = L["Generate Export String"],
+		type = "execute",
+		order = 13,
+		func = function(info)
+			exportString = ns:Export() or ""
+		end
+	}
+	options.args.exportString = {
+		name = L["Select the text below and copy it with Ctrl-C."],
+		type = "input", multiline = 6, width = "full",
+		order = 14,
+		hidden = function(info) return exportString == "" end,
+		get = function(info) return exportString end,
+		-- Read-only in practice. Editing the box would only corrupt the string,
+		-- so anything typed here is discarded and the generated value restored.
+		set = function(info, val) end
+	}
+	options.args.space5 = {
+		name = "", order = 15, type = "description"
+	}
+	options.args.importHeader = {
+		name = L["Import"],
+		type = "header",
+		order = 16
+	}
+	options.args.importDescription = {
+		name = L["Import settings from a string into the current options profile."],
+		type = "description", fontSize = "medium",
+		order = 17
+	}
+	options.args.importString = {
+		name = L["Paste a settings string here, then press Accept."],
+		type = "input", multiline = 6, width = "full",
+		order = 18,
+		get = function(info) return importString end,
+		set = function(info, val)
+			importString = val or ""
+			importStatus = nil
+			if (importString:gsub("%s+", "") ~= "") then
+				local container, reason = ns:DecodeImport(importString)
+				if (not container) then
+					importStatus = reason
+				end
+			end
+		end
+	}
+	options.args.importStatus = {
+		name = function(info)
+			if (importStatus == "newer") then
+				return L["That settings string was created by a newer version of AzeriteUI."]
+			end
+			return L["That settings string could not be read. Make sure it was copied in full."]
+		end,
+		type = "description", fontSize = "medium",
+		order = 19,
+		hidden = function(info) return not importStatus end
+	}
+	options.args.importAccept = {
+		name = _G.ACCEPT or "Accept",
+		type = "execute",
+		order = 20,
+		confirm = function(info)
+			return L["This overwrites the settings in the currently active profile. Continue?"]
+		end,
+		disabled = function(info)
+			return importStatus ~= nil or importString:gsub("%s+", "") == ""
+		end,
+		func = function(info)
+			local success = ns:Import(importString)
+			if (success) then
+				importString = ""
+				importStatus = nil
+				Options:PromptImportReload()
+			end
+		end
+	}
+	options.args.space6 = {
+		name = "", order = 21, type = "description"
+	}
 
 	local order = 0
 	for i,arg in next,options.args do
@@ -306,6 +402,12 @@ Options.OpenOptionsMenu = function(self)
 	if (AceConfigRegistry:GetOptionsTable(Addon)) then
 		AceConfigDialog:SetDefaultSize(Addon, 880, 720)
 		AceConfigDialog:Open(Addon)
+	end
+end
+
+Options.CloseOptionsMenu = function(self)
+	if (AceConfigRegistry:GetOptionsTable(Addon)) then
+		AceConfigDialog:Close(Addon)
 	end
 end
 

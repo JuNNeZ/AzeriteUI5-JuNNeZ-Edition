@@ -61,8 +61,9 @@ ns.Copy = function(self, target, source)
 	return target
 end
 
--- Purges given keys from a table
+-- Purges given keys from a table, at every depth. Returns the table.
 ns.PurgeKeys = function(self, target, ...)
+	if (type(target) ~= "table") then return target end
 	for k,v in pairs(target) do
 		local shouldPurge
 		for i = 1,select("#", ...) do
@@ -81,28 +82,29 @@ ns.PurgeKeys = function(self, target, ...)
 			end
 		end
 	end
+	return target
 end
 
--- Purges keys not given from a table
+-- Purges top level keys not given from a table. Returns the table.
+--
+-- This is the inverse of PurgeKeys and is deliberately shallow: it answers
+-- "keep only these branches", which is what the layout export needs when it
+-- asks for savedPosition and nothing else. Recursing here would ask the
+-- opposite question of every subtable and leave the other branches standing.
 ns.PurgeOtherKeys = function(self, target, ...)
-	for k,v in pairs(target) do
-		-- Leave table structure intact, always.
-		if (type(v) == "table") then
-			target[k] = ns:PurgeKeys(target[k], ...)
-		else
-			-- Assume anything not a table
-			-- should be purged until proven otherwise.
-			local shouldPurge = true
-			for i = 1,select("#", ...) do
-				local wantedKeys = select(i, ...)
-				if (wantedKeys == k) then
-					shouldPurge = nil
-					break
-				end
-			end
-			if (shouldPurge) then
-				target[k] = nil
+	if (type(target) ~= "table") then return target end
+	for k in pairs(target) do
+		local shouldKeep
+		for i = 1,select("#", ...) do
+			local wantedKeys = select(i, ...)
+			if (wantedKeys == k) then
+				shouldKeep = true
+				break
 			end
 		end
+		if (not shouldKeep) then
+			target[k] = nil
+		end
 	end
+	return target
 end

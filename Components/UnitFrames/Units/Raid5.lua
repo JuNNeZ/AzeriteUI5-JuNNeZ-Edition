@@ -63,6 +63,7 @@ local defaults = { profile = ns:Merge({
 
 	showPlayerInParty = true, -- show your own frame while in a non-raid party
 	showPlayerInRaid = true, -- show your own frame while in a raid group
+	showRaidTargetIcons = true,
 	useRangeIndicator = false,
 	usePortraitSpecIcons = false,
 	useClassColors = true,
@@ -764,6 +765,17 @@ local style = function(self, unit)
 
 	self.ReadyCheckIndicator = readyCheckIndicator
 
+	-- RaidTarget Indicator
+	--------------------------------------------
+	-- SetRaidTargetIconTexture only picks a cell out of the sprite sheet, so
+	-- the sheet itself has to be set here or the element draws nothing.
+	local raidTargetIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, 2)
+	raidTargetIndicator:SetSize(unpack(db.RaidTargetSize))
+	raidTargetIndicator:SetPoint(unpack(db.RaidTargetPosition))
+	raidTargetIndicator:SetTexture(db.RaidTargetTexture)
+
+	self.RaidTargetIndicator = raidTargetIndicator
+
 	-- CombatFeedback Text
 	--------------------------------------------
 	local feedbackText = overlay:CreateFontString(nil, "OVERLAY")
@@ -1319,6 +1331,12 @@ RaidFrame5Mod.UpdateUnits = function(self)
 	if (not self:GetFrame()) then return end
 	for frame in next,Units do
 		ApplyHealthColorMode(frame, self.db.profile)
+		if (self.db.profile.showRaidTargetIcons) then
+			frame:EnableElement("RaidTargetIndicator")
+		else
+			frame:DisableElement("RaidTargetIndicator")
+			frame.RaidTargetIndicator:Hide()
+		end
 		if (self.db.profile.useRangeIndicator) then
 			frame:EnableElement("Range")
 		else

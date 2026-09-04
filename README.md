@@ -1,7 +1,7 @@
 # AzeriteUI — JuNNeZ Edition
 
-[![WoW Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)
-[![Interface](https://img.shields.io/badge/Interface-120000-1f6feb)](#)
+[![WoW Version](https://img.shields.io/badge/WoW-12.1%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)
+[![Interface](https://img.shields.io/badge/Interface-120100-1f6feb)](#)
 [![Lua](https://img.shields.io/badge/Lua-WoW%20API%2012-2c2d72)](#)
 [![Maintainer](https://img.shields.io/badge/Maintainer-JuNNeZ-0a7d32)](https://github.com/JuNNeZ)
 [![GitHub Release](https://img.shields.io/github/v/release/JuNNeZ/AzeriteUI5-JuNNeZ-Edition?display_name=release)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/releases/latest)
@@ -78,6 +78,7 @@ This opens a comprehensive settings panel powered by Ace3, where you can fine-tu
 |---|---|
 | `/az` or `/azerite` | Opens the AzeriteUI options menu |
 | `/lock` | Toggles movable frame anchors — drag UI elements to reposition them. Use Blizzard's EditMode for default frames. |
+| `/kb` | Toggles keybind mode. Hover any action, pet or stance button and press a key to bind it; Escape clears the binding. Also reachable from `/az` > Action Bars > Keybind Mode. |
 | `/clear` | Clears the chat window |
 | `/resetsettings` | Full settings reset (emergency use only — **erases all profiles**) |
 | `/setminimaptheme <name>` | Change the minimap theme. Two ship: `Azerite` and `Blizzard`. Ignored in combat. |
@@ -152,6 +153,8 @@ An alternative player frame style that mirrors the target frame design. The grou
 - **Show Castbar** — overlay castbar on target; interrupt-state text coloring
 - **Show Unit Name**, **Health Percent**, **Power Value** (with format and alpha options)
 - **Texture Variations** — use a larger texture for boss targets and a smaller one for critters
+- **Show Target Markers** — the raid target icon (skull, cross, star and so on) above
+  the portrait. On by default.
 - **Extended Classification Badges** — off by default. The badge normally appears only on boss, elite and rare targets. Turning this on completes the set: a silver badge on ordinary mobs, a skull on level-?? targets, and a spent skull on corpses.
 
 #### Target of Target
@@ -178,6 +181,9 @@ Full party frame suite with extensive options:
 - **Visibility** — choose exactly which group sizes activate party frames (party 2-5, raid 1-5, 6-10, 11-25, 26-40)
 - **Sort By** / **Sort Direction** — order by group, role, class or name
 - **Show Specialization Icons** — replaces the portrait with the member's specialization icon. Specialization can only be read by inspecting a unit, so it stays a portrait until they are close, visible and inspectable. Followers keep their portraits permanently; they are NPCs and cannot be inspected.
+- **Show Target Markers** — the raid target icon on each party frame. On by default.
+- **Range Indicator** — fade party members who are out of range. The raid frames have
+  always had this; the party frames were missing the element entirely.
 - **Health Colors** — flat green, AzeriteUI class colors, Blizzard class colors, or class color on mouseover only
 - **Aura System** with stock or custom filtering:
   - Dispellable debuffs, boss/important debuffs, other short debuffs
@@ -194,6 +200,7 @@ Three separate raid frame styles optimized for different group sizes:
 - **Sort By** / **Sort Direction** — order by group, role, class or name
 - **Show player in party** / **Show player in raid** (5-man frames)
 - **Show Specialization Icons** — on the 5-man frames this replaces the portrait; on the 25 and 40-man frames it goes on the role badge beside the health bar, including damage dealers, who normally have no badge at all
+- **Show Target Markers** (5-man) — the raid target icon on each frame. On by default.
 - **Health Colors** — same options as party frames
 - **Range Indicator** — fade out-of-range units
 - **Big Debuff** (25 and 40-man) — large priority debuff icon with configurable size
@@ -252,6 +259,8 @@ Up to **8 action bars** (Retail) with per-bar configuration:
 - **Hide Hotkeys** — remove keybind text from all action buttons (also affects pet and stance bars)
 - **Cast on Key Down** — trigger abilities on key press instead of release
 - **Use Command Bindings for Hold Cast** — route keybinds through Blizzard action commands first; recommended for press-and-hold behavior
+- **Keybind Mode** — opens LibKeyBound's binding mode and closes the options window so
+  the bars are reachable. Hover a button, press a key. Same thing as `/kb`.
 - **Dim When Inactive** — desaturate and dim buttons when out of combat with no target
 - **Dim Only When Resting** — restrict the dimming to resting areas (inns/cities)
 
@@ -518,6 +527,14 @@ Use `/lock` to enter frame-moving mode. This reveals anchor handles on all Azeri
 ### Profiles
 
 AzeriteUI uses a single saved variable database (`AzeriteUI5_DB`) with Ace3 profile support. All settings are stored per-profile and can be managed through the options panel.
+
+**Export and Import** — the profile page carries a pair of text boxes for sharing a
+setup. **Generate Export String** packs the active profile, including frame positions,
+into one printable string; paste someone else's string into the import box and press
+Accept to apply it over your current profile. Importing overwrites the active profile
+and prompts for a reload, so duplicate the profile first if you want to keep what you
+have. Strings created by a newer version of AzeriteUI are rejected rather than
+half-applied.
 
 ---
 
