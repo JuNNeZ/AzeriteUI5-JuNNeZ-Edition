@@ -21,6 +21,7 @@
 	<Include file="UTF8\utf8.xml"/>
 	<Include file="LibKeyBound-1.0\lib.xml"/>
 	<Script file="LibDeflate\LibDeflate.lua"/>
+	<Script file="LibRangeCheck-3.0\LibRangeCheck-3.0.lua"/>
 
 	<!-- Edit Mode -->
 	<Include file="LibEditModeOverride\LibEditModeOverride.xml"/>

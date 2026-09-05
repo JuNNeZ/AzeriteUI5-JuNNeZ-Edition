@@ -62,6 +62,7 @@ local defaults = { profile = ns:Merge({
 
 	enabled = true,
 	useRangeIndicator = false,
+	rangeIndicatorRange = 40, -- fade distance in yards, 40 uses the game's own group check
 	showInBattlegrounds = true,
 
 	point = "TOP", -- anchor point of unitframe, group members within column grow opposite
@@ -1621,7 +1622,12 @@ ArenaFrameMod.UpdateUnits = function(self)
 	for frame in next,Units do
 		if (self.db.profile.useRangeIndicator) then
 			frame:EnableElement("Range")
+			-- Enemies are never in your group, so the game's own range check has no
+			-- answer for them and the stock element would simply never fade. These
+			-- frames measure at every distance, the default 40 yards included.
+			ns.RangeFade.Apply(frame, self.db.profile.rangeIndicatorRange, true)
 		else
+			ns.RangeFade.Release(frame)
 			frame:DisableElement("Range")
 			frame:SetAlpha(1)
 		end

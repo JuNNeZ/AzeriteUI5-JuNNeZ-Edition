@@ -77,6 +77,7 @@ local defaults = { profile = ns:Merge({
 	showPlayerInParty = false,
 	showPlayerInRaid = false,
 	useRangeIndicator = false,
+	rangeIndicatorRange = 40, -- fade distance in yards, 40 uses the game's own group check
 	usePortraitSpecIcons = false,
 	useClassColors = true,
 	useBlizzardHealthColors = false,
@@ -1579,7 +1580,9 @@ PartyFrameMod.UpdateUnits = function(self)
 		end
 		if (self.db.profile.useRangeIndicator) then
 			frame:EnableElement("Range")
+			ns.RangeFade.Apply(frame, self.db.profile.rangeIndicatorRange)
 		else
+			ns.RangeFade.Release(frame)
 			frame:DisableElement("Range")
 			frame:SetAlpha(1)
 		end

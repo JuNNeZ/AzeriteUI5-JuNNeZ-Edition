@@ -8,7 +8,6 @@ on:
     paths:
       - wiki/**
       - .github/workflows/sync-wiki.yml
-      - publish-wiki.sh
   workflow_dispatch:
 
 permissions:

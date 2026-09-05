@@ -1092,6 +1092,39 @@ local GenerateOptions = function()
 		}
 	end
 
+	-- The distance is meaningless without the toggle, so the two are built
+	-- together wherever a group menu offers range fading.
+	local AddRangeIndicatorOptions = function(suboptions, setter, getter, getoption, isdisabled, order, hostile)
+		suboptions.args.useRangeIndicator = {
+			name = L["Use Range Indicator"],
+			desc = L["Toggle whether to fade unit frames of units that are out of range."],
+			order = order, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.rangeIndicatorRange = {
+			name = L["Fade Distance (yards)"],
+			-- Enemy frames have no group range check behind them, so the wording
+			-- that leans on it would be describing something that never happens.
+			desc = hostile
+				and L["Choose how far away an enemy has to be before its frame fades. Enemies are never in your group, so the game has no range check to offer here: the distance is measured with the spells and items your class currently has, and the fade lands on the nearest range one of them covers."]
+				or L["Choose how far away a unit has to be before its frame fades. 40 yards is the game's own group range check. Shorter distances are measured with the spells and items your class currently has, so the fade lands on the nearest range one of them covers, and falls back to 40 yards when nothing reaches that far."],
+			order = order + 1, type = "range", width = "full", min = 5, max = 40, step = 5, hidden = isdisabled,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "rangeIndicatorRange")
+				if (type(value) ~= "number") then
+					return 40
+				end
+				if (value < 5) then
+					return 5
+				elseif (value > 40) then
+					return 40
+				end
+				return value
+			end,
+			disabled = function(info) return not getoption(info, "useRangeIndicator") end
+		}
+	end
+
 	local AddPlayerVisibilityOptions = function(suboptions, setter, getter, isdisabled, order)
 		suboptions.args.showPlayerInParty = {
 			name = L["Show player in party"],
@@ -1192,11 +1225,7 @@ local GenerateOptions = function()
 			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
 			order = 41, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
-		suboptions.args.useRangeIndicator = {
-			name = L["Use Range Indicator"],
-			desc = L["Toggle whether to fade unit frames of units that are out of range."],
-			order = 42, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
-		}
+		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 42)
 		local partyAuraSettingsDisabled = function(info)
 			return isdisabled(info) or not getoption(info, "showAuras")
 		end
@@ -1352,11 +1381,7 @@ local GenerateOptions = function()
 			desc = L["Show each raid member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."],
 			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
-		suboptions.args.useRangeIndicator = {
-			name = L["Use Range Indicator"],
-			desc = L["Toggle whether to fade unit frames of units that are out of range."],
-			order = 50, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
-		}
+		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
 		suboptions.args.showRaidTargetIcons = {
 			name = L["Show Target Markers"],
 			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
@@ -1377,11 +1402,7 @@ local GenerateOptions = function()
 			desc = L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."],
 			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
-		suboptions.args.useRangeIndicator = {
-			name = L["Use Range Indicator"],
-			desc = L["Toggle whether to fade unit frames of units that are out of range."],
-			order = 50, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
-		}
+		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
 		suboptions.args.showPriorityDebuff = {
 			name = L["Show Big Debuff"],
 			desc = L["Toggle whether to show the large priority debuff icon on 11-25 raid frames."],
@@ -1421,11 +1442,7 @@ local GenerateOptions = function()
 			desc = L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."],
 			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
-		suboptions.args.useRangeIndicator = {
-			name = L["Use Range Indicator"],
-			desc = L["Toggle whether to fade unit frames of units that are out of range."],
-			order = 50, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
-		}
+		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
 		suboptions.args.showPriorityDebuff = {
 			name = L["Show Big Debuff"],
 			desc = L["Toggle whether to show the large priority debuff icon on 26-40 raid frames."],
@@ -1466,11 +1483,7 @@ local GenerateOptions = function()
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("ArenaFrames")
 		suboptions.name = L["Arena Enemy Frames"]
 		suboptions.order = 180
-		suboptions.args.useRangeIndicator = {
-			name = L["Use Range Indicator"],
-			desc = L["Toggle whether to fade unit frames of units that are out of range."],
-			order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
-		}
+		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 11, true)
 		suboptions.args.visibilityHeader = {
 			name = L["Visibility"], order = 19, type = "header", hidden = isdisabled
 		}

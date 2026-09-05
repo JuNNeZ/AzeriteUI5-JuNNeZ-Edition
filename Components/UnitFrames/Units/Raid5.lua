@@ -65,6 +65,7 @@ local defaults = { profile = ns:Merge({
 	showPlayerInRaid = true, -- show your own frame while in a raid group
 	showRaidTargetIcons = true,
 	useRangeIndicator = false,
+	rangeIndicatorRange = 40, -- fade distance in yards, 40 uses the game's own group check
 	usePortraitSpecIcons = false,
 	useClassColors = true,
 	useBlizzardHealthColors = false,
@@ -1341,7 +1342,9 @@ RaidFrame5Mod.UpdateUnits = function(self)
 		end
 		if (self.db.profile.useRangeIndicator) then
 			frame:EnableElement("Range")
+			ns.RangeFade.Apply(frame, self.db.profile.rangeIndicatorRange)
 		else
+			ns.RangeFade.Release(frame)
 			frame:DisableElement("Range")
 			frame:SetAlpha(1)
 		end

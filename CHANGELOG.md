@@ -9,7 +9,37 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
-## Unreleased
+## 5.4.3-JuNNeZ (2026-09-05) - Range Fading at Your Own Distance
+
+### Added
+
+- **The range indicator can fade at a distance you choose.** Party, Raid (5), Raid (25),
+  Raid (40) and Arena each get their own slider beside the range toggle. 40 yards is the
+  game's own group check and stays the default, so nothing changes until you move it.
+  Shorter distances are measured with the spells and items your class currently has, and
+  settle on the nearest range one of them covers - ask for 30 and you may get 28, depending
+  on what you can cast. If nothing reaches that far, group frames fall back to the 40 yard
+  check rather than fading the whole group out.
+
+- `/az -> Unit Frame Settings -> Party Frames -> Fade Distance (yards)`
+- `/az -> Unit Frame Settings -> Raid Frames (5) -> Fade Distance (yards)`
+- `/az -> Unit Frame Settings -> Raid Frames (25) -> Fade Distance (yards)`
+- `/az -> Unit Frame Settings -> Raid Frames (40) -> Fade Distance (yards)`
+- `/az -> Unit Frame Settings -> Arena Enemy Frames -> Fade Distance (yards)`
+
+### Fixed
+
+- **The arena range indicator now actually fades.** It had never done anything: the check
+  behind it only answers for units in your own group, and arena enemies never are. Enemy
+  frames now measure at every distance, the default 40 yards included, so the existing
+  toggle at `/az -> Unit Frame Settings -> Arena Enemy Frames -> Use Range Indicator` starts
+  working for the first time.
+
+### Changed
+
+- **Export and import moved to their own page.** They sat above the settings tree, where two
+  multiline text boxes crowded every settings page into the lower third of the window. They
+  are now the last entry in the tree, at `/az -> Export & Import`, with room for larger boxes.
 
 
 ## 5.4.2-JuNNeZ (2026-09-05) - Portrait Alpha and the Party Frame Error

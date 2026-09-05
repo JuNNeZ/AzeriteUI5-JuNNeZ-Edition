@@ -70,6 +70,7 @@ local defaults = { profile = ns:Merge({
 	useInRaid40 = false, -- show in raid groups of 26-40 players
 
 	useRangeIndicator = true,
+	rangeIndicatorRange = 40, -- fade distance in yards, 40 uses the game's own group check
 	useSpecIcons = false,
 	showPriorityDebuff = true,
 	priorityDebuffScale = 100,
@@ -1454,7 +1455,9 @@ RaidFrame25Mod.UpdateUnits = function(self)
 		ApplyPriorityDebuffLayout(frame, self.db.profile)
 		if (self.db.profile.useRangeIndicator) then
 			frame:EnableElement("Range")
+			ns.RangeFade.Apply(frame, self.db.profile.rangeIndicatorRange)
 		else
+			ns.RangeFade.Release(frame)
 			frame:DisableElement("Range")
 			frame:SetAlpha(1)
 		end

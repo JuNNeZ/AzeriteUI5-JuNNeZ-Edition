@@ -290,99 +290,6 @@ Options.GenerateProfileMenu = function(self)
 			}
 		}
 	}
-	options.args.space4 = {
-		name = "", order = 10, type = "description"
-	}
-	options.args.exportHeader = {
-		name = L["Export"],
-		type = "header",
-		order = 11
-	}
-	options.args.exportDescription = {
-		name = L["Export the current settings profile to a string you can copy and share with other people."],
-		type = "description", fontSize = "medium",
-		order = 12
-	}
-	options.args.exportGenerate = {
-		name = L["Generate Export String"],
-		type = "execute",
-		order = 13,
-		func = function(info)
-			exportString = ns:Export() or ""
-		end
-	}
-	options.args.exportString = {
-		name = L["Select the text below and copy it with Ctrl-C."],
-		type = "input", multiline = 6, width = "full",
-		order = 14,
-		hidden = function(info) return exportString == "" end,
-		get = function(info) return exportString end,
-		-- Read-only in practice. Editing the box would only corrupt the string,
-		-- so anything typed here is discarded and the generated value restored.
-		set = function(info, val) end
-	}
-	options.args.space5 = {
-		name = "", order = 15, type = "description"
-	}
-	options.args.importHeader = {
-		name = L["Import"],
-		type = "header",
-		order = 16
-	}
-	options.args.importDescription = {
-		name = L["Import settings from a string into the current options profile."],
-		type = "description", fontSize = "medium",
-		order = 17
-	}
-	options.args.importString = {
-		name = L["Paste a settings string here, then press Accept."],
-		type = "input", multiline = 6, width = "full",
-		order = 18,
-		get = function(info) return importString end,
-		set = function(info, val)
-			importString = val or ""
-			importStatus = nil
-			if (importString:gsub("%s+", "") ~= "") then
-				local container, reason = ns:DecodeImport(importString)
-				if (not container) then
-					importStatus = reason
-				end
-			end
-		end
-	}
-	options.args.importStatus = {
-		name = function(info)
-			if (importStatus == "newer") then
-				return L["That settings string was created by a newer version of AzeriteUI."]
-			end
-			return L["That settings string could not be read. Make sure it was copied in full."]
-		end,
-		type = "description", fontSize = "medium",
-		order = 19,
-		hidden = function(info) return not importStatus end
-	}
-	options.args.importAccept = {
-		name = _G.ACCEPT or "Accept",
-		type = "execute",
-		order = 20,
-		confirm = function(info)
-			return L["This overwrites the settings in the currently active profile. Continue?"]
-		end,
-		disabled = function(info)
-			return importStatus ~= nil or importString:gsub("%s+", "") == ""
-		end,
-		func = function(info)
-			local success = ns:Import(importString)
-			if (success) then
-				importString = ""
-				importStatus = nil
-				Options:PromptImportReload()
-			end
-		end
-	}
-	options.args.space6 = {
-		name = "", order = 21, type = "description"
-	}
 
 	local order = 0
 	for i,arg in next,options.args do
@@ -390,6 +297,105 @@ Options.GenerateProfileMenu = function(self)
 	end
 	order = order + 10
 	return options, order
+end
+
+-- Export and import live on their own page at the end of the tree. They need
+-- two multiline boxes to be usable at all, and that is more room than the
+-- profile page can spare above the settings tree.
+Options.GenerateSharingMenu = function(self)
+	return {
+		name = L["Export & Import"],
+		type = "group",
+		args = {
+			exportHeader = {
+				name = L["Export"],
+				type = "header",
+				order = 1
+			},
+			exportDescription = {
+				name = L["Export the current settings profile to a string you can copy and share with other people."],
+				type = "description", fontSize = "medium",
+				order = 2
+			},
+			exportGenerate = {
+				name = L["Generate Export String"],
+				type = "execute",
+				order = 3,
+				func = function(info)
+					exportString = ns:Export() or ""
+				end
+			},
+			exportString = {
+				name = L["Select the text below and copy it with Ctrl-C."],
+				type = "input", multiline = 8, width = "full",
+				order = 4,
+				hidden = function(info) return exportString == "" end,
+				get = function(info) return exportString end,
+				-- Read-only in practice. Editing the box would only corrupt the string,
+				-- so anything typed here is discarded and the generated value restored.
+				set = function(info, val) end
+			},
+			space1 = {
+				name = "", order = 5, type = "description"
+			},
+			importHeader = {
+				name = L["Import"],
+				type = "header",
+				order = 6
+			},
+			importDescription = {
+				name = L["Import settings from a string into the current options profile."],
+				type = "description", fontSize = "medium",
+				order = 7
+			},
+			importString = {
+				name = L["Paste a settings string here, then press Accept."],
+				type = "input", multiline = 8, width = "full",
+				order = 8,
+				get = function(info) return importString end,
+				set = function(info, val)
+					importString = val or ""
+					importStatus = nil
+					if (importString:gsub("%s+", "") ~= "") then
+						local container, reason = ns:DecodeImport(importString)
+						if (not container) then
+							importStatus = reason
+						end
+					end
+				end
+			},
+			importStatus = {
+				name = function(info)
+					if (importStatus == "newer") then
+						return L["That settings string was created by a newer version of AzeriteUI."]
+					end
+					return L["That settings string could not be read. Make sure it was copied in full."]
+				end,
+				type = "description", fontSize = "medium",
+				order = 9,
+				hidden = function(info) return not importStatus end
+			},
+			importAccept = {
+				name = _G.ACCEPT or "Accept",
+				type = "execute",
+				order = 10,
+				confirm = function(info)
+					return L["This overwrites the settings in the currently active profile. Continue?"]
+				end,
+				disabled = function(info)
+					return importStatus ~= nil or importString:gsub("%s+", "") == ""
+				end,
+				func = function(info)
+					local success = ns:Import(importString)
+					if (success) then
+						importString = ""
+						importStatus = nil
+						Options:PromptImportReload()
+					end
+				end
+			}
+		}
+	}
 end
 
 Options.Refresh = function(self)
@@ -455,6 +461,12 @@ Options.GenerateOptionsMenu = function(self)
 			options.args[data.name] = data.group
 		end
 	end
+
+	-- Placed last so the tree lists it below every settings page.
+	order = order + 10
+	local sharing = self:GenerateSharingMenu()
+	sharing.order = order
+	options.args.sharing = sharing
 
 	self.options = options
 

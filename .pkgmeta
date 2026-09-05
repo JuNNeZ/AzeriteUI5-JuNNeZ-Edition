@@ -34,8 +34,6 @@ ignore:
   - CHANGELOG_ARCHIVE.md
   - Docs
   - FEATURE_PLAN.md
-  - FIRST_RELEASE_CHECKLIST.md
-  - MULTI_PLATFORM_RELEASE.md
   - RELEASE_WORKFLOW.md
   - README.md
 
@@ -44,7 +42,6 @@ ignore:
 
   # Wiki sources, published to the GitHub Wiki by sync-wiki.yml, not shipped
   - wiki
-  - publish-wiki.sh
 
   # Build scripts
   - build-release.ps1
