@@ -185,6 +185,95 @@ API.SafeUnitIsUnit = API.SafeUnitIsUnit or function(unit, otherUnit)
 	return false
 end
 
+--[[
+	3D portrait alpha.
+
+	A PlayerModel does not inherit the alpha of its parent chain -- the model is
+	drawn through its own channel, SetModelAlpha. That is what the old "Fix
+	unresponsive alpha on 3D Portrait" comment in the stylers was circling
+	without naming, and the fix it introduced was a pair of secure hooks per
+	frame, one on the frame and one on the global UIParent, both running
+	`Portrait:SetAlpha(self:GetEffectiveAlpha())`. Three faults:
+
+	  * `GetEffectiveAlpha` carries the RequiresScriptObjectAlphaAccess
+	    precondition, whose failure mode is ReturnWithError: it hands a tainted
+	    caller no values at all once the parent chain owns the secret Alpha
+	    aspect, as it does on any addon-restricted map. Feeding that nil to
+	    SetAlpha is a hard error, and it was the crash this replaced.
+	  * It wrote the frame's alpha over the portrait's own, discarding the
+	    configured PortraitAlpha of .85 the first time a frame's alpha changed.
+	  * The UIParent hook was a fresh closure per unit frame, installed on a
+	    global and never removed. Nothing in this addon, and nothing in
+	    Blizzard's UI, calls `UIParent:SetAlpha`.
+
+	The frame hook is handed the alpha it was called with, so there is no
+	guarded getter left to fail. ElvUI reaches the same shape in
+	`UF:ModelAlphaFix`; AzeriteUI6 deleted the hooks outright and lost the fade
+	with them. Neither hooks UIParent.
+
+	The two channels are kept strictly separate, so this is correct whether or
+	not a model honours its own widget alpha -- which the API gives no way to
+	settle from outside the game:
+
+	  * The widget keeps PortraitAlpha, set once at construction. It is also
+	    what the 2D fallback texture parented to the model inherits, and that
+	    texture is an ordinary region, so it already fades with the frame.
+	  * The model gets the frame's alpha, and only that. Nothing multiplies
+	    PortraitAlpha in twice.
+
+	ElvUI does multiply the two together, which is right only if the widget
+	channel is inert. If it is not, the portrait renders at PortraitAlpha
+	squared. The cost of not multiplying is milder and in one direction: should
+	the widget channel turn out to be inert, the model sits at full opacity
+	instead of .85, exactly where it sits today, and the fade still works.
+]]
+
+-- Shared by every portrait, so the hook chain on a frame's SetAlpha stays one
+-- link long however many frames spawn. hooksecurefunc on a widget method passes
+-- the widget itself as the first argument.
+local Portrait_OnOwnerSetAlpha = function(frame, alpha)
+	local portrait = frame and frame.Portrait
+	if (not portrait or not portrait.SetModelAlpha) then
+		return
+	end
+	-- SetModelAlpha is SecretArguments = "AllowedWhenUntainted"; unlike SetAlpha
+	-- it will not accept a secret from us. Draw the model solid rather than
+	-- error, and let the next readable call correct it.
+	if (not API.IsSafeNumber(alpha)) then
+		alpha = 1
+	end
+	API.TryCall(portrait.SetModelAlpha, portrait, alpha)
+end
+
+--[[
+	Re-apply the owning frame's alpha to a portrait's model.
+
+	ClearModel and SetUnit reset the model's alpha, so every styler's portrait
+	update has to call this once it is done rebuilding the model.
+]]
+API.RefreshPortraitModelAlpha = function(portrait)
+	local frame = portrait and (portrait.alphaOwner or portrait.__owner)
+	if (not frame) then
+		return
+	end
+	Portrait_OnOwnerSetAlpha(frame, frame:GetAlpha())
+end
+
+--[[
+	Wire a 3D portrait's model alpha to its unit frame's alpha.
+
+	Call once per portrait at construction. Safe to call for a 2D portrait:
+	without SetModelAlpha there is nothing to fix and nothing is hooked.
+]]
+API.AttachPortraitAlphaFix = function(frame, portrait)
+	if (not frame or not portrait or not portrait.SetModelAlpha) then
+		return
+	end
+	portrait.alphaOwner = frame
+	API.RefreshPortraitModelAlpha(portrait)
+	hooksecurefunc(frame, "SetAlpha", Portrait_OnOwnerSetAlpha)
+end
+
 local GetPrimaryInterruptSpellID = function()
 	if (ns.AuraData and ns.AuraData.GetKnownInterruptSpells) then
 		local known = ns.AuraData.GetKnownInterruptSpells()

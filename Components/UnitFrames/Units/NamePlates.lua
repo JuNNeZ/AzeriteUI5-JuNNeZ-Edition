@@ -2687,6 +2687,25 @@ local NamePlate_OnEvent = function(self, event, unit, ...)
 	NamePlate_PostUpdate(self, event, unit, ...)
 end
 
+--[[
+	Mirror UIParent's alpha onto our nameplates, so they fade out when Immersion
+	says so. Nameplates toggle SetIgnoreParentAlpha for mouseover and soft
+	target, which is what breaks the inheritance this puts back.
+
+	One hook for every plate, installed on first style. It used to be a closure
+	per plate, on a global, never removed: with plates created on demand for the
+	whole session that left a chain dozens deep, every link doing the same work.
+	UIParent:GetAlpha carries no access precondition, so unlike GetEffectiveAlpha
+	it cannot come back empty, and SetAlpha takes a secret from us either way.
+]]
+local uiParentAlphaHooked
+local SyncNamePlatesToUIParentAlpha = function()
+	local alpha = UIParent:GetAlpha()
+	for plate in next, ns.NamePlates do
+		plate:SetAlpha(alpha)
+	end
+end
+
 local style = function(self, unit, id)
 
 	local db = ns.GetConfig("NamePlates")
@@ -3027,8 +3046,10 @@ local style = function(self, unit, id)
 	self:RegisterEvent("PLAYER_SOFT_ENEMY_CHANGED", NamePlate_OnEvent, true)
 	self:RegisterEvent("PLAYER_SOFT_INTERACT_CHANGED", NamePlate_OnEvent, true)
 
-	-- Make our nameplates obey UIParent alpha and fade out when Immersion says so.
-	hooksecurefunc(UIParent, "SetAlpha", function() self:SetAlpha(UIParent:GetAlpha()) end)
+	if (not uiParentAlphaHooked) then
+		uiParentAlphaHooked = true
+		hooksecurefunc(UIParent, "SetAlpha", SyncNamePlatesToUIParentAlpha)
+	end
 
 end
 

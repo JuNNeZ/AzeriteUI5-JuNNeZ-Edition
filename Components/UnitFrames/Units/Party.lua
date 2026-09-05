@@ -832,6 +832,7 @@ local Portrait_PostUpdate = function(element, unit, hasStateChanged)
 		element:SetUnit(unit)
 		element.guid = UnitGUID(unit)
 	end
+	API.RefreshPortraitModelAlpha(element)
 end
 
 -- Update the border color of priority debuffs.
@@ -1042,6 +1043,7 @@ local style = function(self, unit)
 
 	self.Portrait = portrait
 	self.Portrait.PostUpdate = Portrait_PostUpdate
+	API.AttachPortraitAlphaFix(self, portrait)
 
 	local portraitBg = portraitFrame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	portraitBg:SetPoint(unpack(db.PortraitBackgroundPosition))
@@ -1262,10 +1264,6 @@ local style = function(self, unit)
 	self:RegisterEvent("UNIT_AURA", UnitFrame_OnEvent)
 	self:RegisterEvent("UNIT_CONNECTION", UnitFrame_OnEvent)
 	self:RegisterEvent("PLAYER_FLAGS_CHANGED", UnitFrame_OnEvent)
-
-	-- Fix unresponsive alpha on 3D Portrait.
-	hooksecurefunc(UIParent, "SetAlpha", function() self.Portrait:SetAlpha(self:GetEffectiveAlpha()) end)
-	hooksecurefunc(self, "SetAlpha", function() self.Portrait:SetAlpha(self:GetEffectiveAlpha()) end)
 
 end
 

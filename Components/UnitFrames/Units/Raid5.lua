@@ -495,6 +495,7 @@ local Portrait_PostUpdate = function(element, unit, hasStateChanged)
 		element:SetUnit(unit)
 		element.guid = UnitGUID(unit)
 	end
+	ns.API.RefreshPortraitModelAlpha(element)
 end
 
 -- Update targeting highlight outline
@@ -699,6 +700,7 @@ local style = function(self, unit)
 
 	self.Portrait = portrait
 	self.Portrait.PostUpdate = Portrait_PostUpdate
+	ns.API.AttachPortraitAlphaFix(self, portrait)
 
 	local portraitBg = portraitFrame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	portraitBg:SetPoint(unpack(db.PortraitBackgroundPosition))

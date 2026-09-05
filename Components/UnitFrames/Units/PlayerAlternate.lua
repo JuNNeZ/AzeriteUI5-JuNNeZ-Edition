@@ -594,6 +594,7 @@ local Portrait_PostUpdate = function(element, unit, hasStateChanged)
 		element:SetUnit(unit)
 		element.guid = UnitGUID(unit)
 	end
+	API.RefreshPortraitModelAlpha(element)
 end
 
 -- Toggle cast text color on protected casts.
@@ -1041,6 +1042,7 @@ local style = function(self, unit, id)
 
 	self.Portrait = portrait
 	self.Portrait.PostUpdate = Portrait_PostUpdate
+	API.AttachPortraitAlphaFix(self, portrait)
 
 	local portraitBg = portraitFrame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	portraitBg:SetPoint(unpack(db.PortraitBackgroundPosition))
@@ -1272,13 +1274,6 @@ local style = function(self, unit, id)
 			self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED", UnitFrame_OnEvent)
 		end
 	end
-
-	-- Fix unresponsive alpha on 3D Portrait.
-	hooksecurefunc(UIParent, "SetAlpha", function() self.Portrait:SetAlpha(self:GetEffectiveAlpha()) end)
-
-	-- this won't work with the explorer mode, need a different solution
-	--hooksecurefunc(self, "SetAlpha", function() self.Portrait:SetAlpha(self:GetEffectiveAlpha()) end)
-
 
 	-- Textures need an update when frame is displayed.
 	self.PostUpdate = UnitFrame_PostUpdate

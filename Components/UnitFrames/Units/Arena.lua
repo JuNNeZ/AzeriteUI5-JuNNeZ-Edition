@@ -853,6 +853,7 @@ local Portrait_Override = function(self, event, unit)
 	else
 		ShowArenaPortraitFallback(element, unit)
 	end
+	API.RefreshPortraitModelAlpha(element)
 end
 
 -- Update targeting highlight outline
@@ -1083,6 +1084,7 @@ local style = function(self, unit)
 
 	self.Portrait = portrait
 	self.Portrait.Override = Portrait_Override
+	API.AttachPortraitAlphaFix(self, portrait)
 
 	local portraitBg = portraitFrame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	portraitBg:SetPoint(unpack(db.PortraitBackgroundPosition))

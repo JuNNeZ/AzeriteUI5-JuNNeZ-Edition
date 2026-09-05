@@ -2267,6 +2267,7 @@ local Portrait_PostUpdate = function(element, unit, hasStateChanged)
 		element.__AzeriteUI_UsingCreaturePortrait = nil
 		ShowTargetPortraitFallback(element, unit)
 	end
+	API.RefreshPortraitModelAlpha(element)
 end
 
 -- Toggle cast text and castbar interrupt coloring.
@@ -3564,6 +3565,7 @@ local style = function(self, unit, id)
 
 	self.Portrait = portrait
 	self.Portrait.PostUpdate = Portrait_PostUpdate
+	API.AttachPortraitAlphaFix(self, portrait)
 
 	local portraitBg = portraitFrame:CreateTexture(nil, "BACKGROUND", nil, 0)
 	portraitBg:SetPoint(unpack(db.PortraitBackgroundPosition))
@@ -3872,10 +3874,6 @@ local style = function(self, unit, id)
 
 	-- Toggle name size based on ToT frame.
 	ns.RegisterCallback(self, "UnitFrame_ToT_Updated", Name_PostUpdate)
-
-	-- Fix unresponsive alpha on 3D Portrait.
-	hooksecurefunc(UIParent, "SetAlpha", function() self.Portrait:SetAlpha(self:GetEffectiveAlpha()) end)
-	hooksecurefunc(self, "SetAlpha", function() self.Portrait:SetAlpha(self:GetEffectiveAlpha()) end)
 
 end
 

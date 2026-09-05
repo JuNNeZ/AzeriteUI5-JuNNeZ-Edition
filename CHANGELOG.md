@@ -12,6 +12,50 @@ Do not repeat older items from prior versions in newer entries.
 ## Unreleased
 
 
+## 5.4.2-JuNNeZ (2026-09-05) - Portrait Alpha and the Party Frame Error
+
+A patch release for one error report from 5.4.1 and the two older bugs found sitting
+underneath it. All three are in the 3D portraits.
+
+### Fixed
+
+- **Party frames threw a `SetAlpha` error on entering a scenario, dungeon or raid.**
+  Six of them at login, from the portrait's alpha handling. It asked the game for the
+  frame's on-screen opacity, and inside an instance Retail 12.1 is allowed to refuse the
+  question and answer with nothing at all - which the portrait then tried to use. It no
+  longer needs to ask.
+
+- **Portraits were losing their 85% opacity and rendering solid.** The same code
+  overwrote the portrait's configured transparency with the unit frame's the first time
+  the frame faded for any reason, so portraits drifted to fully opaque and stayed there.
+
+- **Raid and arena portraits stayed bright when the unit went out of range.** Both frame
+  types dim to 60% at range, and the portrait was the one piece that never dimmed with
+  them. It does now, matching party and target frames.
+
+### Internal
+
+- The portrait alpha fix is a single shared helper in `UnitFrames/Functions.lua`, wired
+  into all five stylers that own a 3D portrait, replacing the closure pairs each of them
+  carried. It writes to the model's own alpha channel rather than the widget's, so the
+  configured `PortraitAlpha` is no longer in the path of the fade.
+- Unit frames no longer hook `UIParent:SetAlpha` at all - nothing in the addon or in
+  Blizzard's own interface calls it. Nameplates still need the hook and keep one shared
+  handler over the plate registry, instead of a fresh closure for every plate created in
+  a session.
+
+### Fixed
+
+- **Party frames threw `bad argument #1 to 'SetAlpha'` on restricted maps.** The 3D portrait alpha hook fed `GetEffectiveAlpha()` straight into `SetAlpha`, and in 12.1 that getter is allowed to return *nothing at all* - it carries the `RequiresScriptObjectAlphaAccess` precondition, which fails by returning no values once anything in the frame's parent chain owns the secret Alpha aspect, as it does inside a scenario, dungeon or raid. The party frames' new range indicator was what finally drove the hook down that path: turning the option off disables the range element, which sets the frame's alpha on its way out, which fires the hook. Six errors at login in a scenario.
+
+- **Portraits were losing their configured 85% opacity.** The same hook wrote the unit frame's alpha over the portrait's own, so `PortraitAlpha` survived only until the first time a frame's alpha changed. The portrait's own alpha is now left alone, and the fade rides a separate channel.
+
+- **Raid and arena portraits never faded with the frame.** Both frame types dim to 60% when the unit is out of range, and both have a 3D portrait that stayed at full brightness while everything around it faded. They had no portrait alpha handling at all; they now share the same one as party, target and the alternate player frame.
+
+### Changed
+
+- **Fewer hooks on `UIParent`.** Every unit frame and every nameplate used to install its own closure on `UIParent:SetAlpha`, none of which were ever removed - dozens of them by the end of a session, all doing the same work. The unit frame ones are gone outright (nothing in this addon or in Blizzard's interface calls `UIParent:SetAlpha`), and the nameplate one, which has a real job to do, is now a single hook that updates every plate instead of one hook per plate.
+
 ## 5.4.1-JuNNeZ (2026-09-04) - Profile Sharing, Keybind Mode, and Target Markers
 
 The first phase of the roadmap rebuilt in `FEATURE_PLAN.md` on 2026-09-04, and
