@@ -13,19 +13,18 @@ Do not repeat older items from prior versions in newer entries.
 
 ### Fixed
 
-- **The UI no longer freezes when a raid boss resets.** Changing target in a raid could throw an
-  error while restyling the target's aura icons, and because the error interrupted the layout pass
-  before it finished, the next target change started the whole pass over and threw again. On a boss
-  reset, with everyone retargeting at once, that repeated until the screen locked up. In WoW 12.1
-  the game closes its aura buttons to addons wherever aura data is secret, which is most raid
-  content, so the icons are now left alone once the game has taken ownership of them.
+- **The UI no longer locks up when you change targets in a raid.** Switching between a boss and
+  anything else rebuilds the target's aura row, and in a raid that rebuild threw an error part-way
+  through. Because it never finished, the next target change started it over and threw again, so it
+  compounded with every swap - at its worst on a boss reset, when the whole raid retargets at once.
+  Target auras now leave those icons alone in content where the game keeps aura information private.
 
 ### Known limitation
 
-- **Inside raids, the player aura brightness toggle only reaches newly drawn icons.** Because the
-  game will not let us restyle an aura icon that is already on screen there,
+- **In a raid, the player aura brightness toggle only reaches icons drawn after you change it.** The
+  game will not let us restyle an aura icon that is already on screen there, so
   `/az -> Unit Frame Settings -> Player -> Player Aura Row -> Always Show Full Brightness` may not
-  visibly take hold until those icons are redrawn. Everywhere else it applies at once, as before.
+  take hold until those icons are redrawn. Everywhere else it applies at once, as before.
 
 
 ## 5.4.3-JuNNeZ (2026-09-05) - Range Fading at Your Own Distance

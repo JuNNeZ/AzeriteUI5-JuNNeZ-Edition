@@ -52,6 +52,21 @@ local HELPFUL_GROUPS = {
 	HELPFUL_NAMEPLATE_GROUP,
 	HELPFUL_SHORT_GROUP
 }
+
+-- Every group key the containers below register, exported so tooling walks the
+-- real list instead of keeping its own. Core/Debugging.lua kept a private copy
+-- naming a single "AzeriteHelpful" group, which stopped existing when the
+-- helpful side was split into six, and its aura snapshot silently dumped only
+-- harmful buttons from then on. Do not re-fork this.
+ns.PlayerAuraContainers.GroupKeys = {
+	HARMFUL_GROUP,
+	HELPFUL_PRIORITY_GROUP,
+	HELPFUL_BOSS_GROUP,
+	HELPFUL_STEALABLE_GROUP,
+	HELPFUL_PERSONAL_GROUP,
+	HELPFUL_NAMEPLATE_GROUP,
+	HELPFUL_SHORT_GROUP
+}
 local BORDER_OVERHANG = 6
 local PLAYER_AURA_MAX_DURATION = 300
 
@@ -434,13 +449,40 @@ local function UpdateContainerBrightness(container, alwaysBright)
 	end
 end
 
-local function ApplyContainerConfiguration(container, config, width)
+--[[
+	Anchors, per-group layouts and the short-buff candidate filters are pure
+	functions of these fields. Everything else in a configuration -- the frame
+	counts and the container width -- moves independently, and on the target
+	frame it moves constantly: a boss carries AurasSizeBoss and AurasNumTotalBoss
+	while everything else carries the plain pair, so swapping between a boss and
+	any other target re-entered the whole pass on every retarget.
+
+	That was not merely redundant. SetAuraGroupLayout marks the container dirty
+	with no equality check of its own, and SetAuraGroupCandidateFilters runs a
+	synchronous UpdateAllAuras every single call, so re-applying an identical
+	configuration cost seven dirty layout groups and a full aura re-evaluation
+	per container. The counts and the three flow-layout setters all compare
+	before they act, so they stay outside the gate where they belong.
+]]
+local function GetContainerLayoutSignature(config)
+	return table.concat({
+		tostring(config.size),
+		tostring(config.spacingX),
+		tostring(config.spacingY),
+		tostring(config.initialAnchor),
+		tostring(config.growthX),
+		tostring(config.growthY),
+		tostring(config.useStockBehavior),
+		tostring(config.showPersonal),
+		tostring(config.showTemporary),
+		tostring(config.showLong),
+		tostring(config.maxDuration)
+	}, ":")
+end
+
+local function ApplyContainerLayout(container, config)
 	local useStockBehavior = GetBoolean(config.useStockBehavior, true)
-	local showPriority = useStockBehavior or GetBoolean(config.showPriority, true)
-	local showBoss = useStockBehavior or GetBoolean(config.showBoss, true)
-	local showStealable = useStockBehavior or GetBoolean(config.showStealable, true)
 	local showPersonal = useStockBehavior or GetBoolean(config.showPersonal, true)
-	local showNameplate = useStockBehavior or GetBoolean(config.showNameplate, true)
 	local showTemporary = useStockBehavior or GetBoolean(config.showTemporary, true)
 	local showLong = (not useStockBehavior) and GetBoolean(config.showLong, false)
 	local maxDuration = type(config.maxDuration) == "number" and config.maxDuration or PLAYER_AURA_MAX_DURATION
@@ -469,33 +511,41 @@ local function ApplyContainerConfiguration(container, config, width)
 			layoutIndex = layoutIndex
 		}
 	end
-	local harmfulLayout = {
-		elementSpacing = config.spacingX,
-		lineSpacing = config.spacingY,
-		groupSpacing = config.spacingX,
-		groupLineSpacing = config.spacingY,
-		elementWidth = config.size,
-		elementHeight = config.size,
-		layoutIndex = 1
-	}
 
 	local offsetX, offsetY = GetContainerAnchorOffset(config.initialAnchor)
 	container:ClearAllPoints()
 	container:SetPoint(config.initialAnchor, container:GetParent(), config.initialAnchor, offsetX, offsetY)
 	container:SetFlowLayoutAnchorPoint(config.initialAnchor)
 	container:SetFlowLayoutGrowthDirection(horizontal, vertical)
-	container:SetFlowLayoutMaximumLineSize(width)
-	container:SetAuraGroupLayout(HARMFUL_GROUP, harmfulLayout)
-	container:SetAuraGroupMaxFrameCount(HARMFUL_GROUP, config.maxDebuffs)
+	container:SetAuraGroupLayout(HARMFUL_GROUP, CreateLayout(1))
 	for layoutIndex, groupKey in ipairs(HELPFUL_GROUPS) do
 		container:SetAuraGroupLayout(groupKey, CreateLayout(layoutIndex + 1))
 	end
+	container:SetAuraGroupCandidateFilters(HELPFUL_SHORT_GROUP, shortFilters)
+end
+
+local function ApplyContainerConfiguration(container, config, width)
+	local layoutSignature = GetContainerLayoutSignature(config)
+	if (container.__AzeriteUI_LayoutSignature ~= layoutSignature) then
+		ApplyContainerLayout(container, config)
+		container.__AzeriteUI_LayoutSignature = layoutSignature
+	end
+
+	local useStockBehavior = GetBoolean(config.useStockBehavior, true)
+	local showPriority = useStockBehavior or GetBoolean(config.showPriority, true)
+	local showBoss = useStockBehavior or GetBoolean(config.showBoss, true)
+	local showStealable = useStockBehavior or GetBoolean(config.showStealable, true)
+	local showPersonal = useStockBehavior or GetBoolean(config.showPersonal, true)
+	local showNameplate = useStockBehavior or GetBoolean(config.showNameplate, true)
+	local showTemporary = useStockBehavior or GetBoolean(config.showTemporary, true)
+
+	container:SetFlowLayoutMaximumLineSize(width)
+	container:SetAuraGroupMaxFrameCount(HARMFUL_GROUP, config.maxDebuffs)
 	container:SetAuraGroupMaxFrameCount(HELPFUL_PRIORITY_GROUP, showPriority and config.maxBuffs or 0)
 	container:SetAuraGroupMaxFrameCount(HELPFUL_BOSS_GROUP, showBoss and config.maxBuffs or 0)
 	container:SetAuraGroupMaxFrameCount(HELPFUL_STEALABLE_GROUP, showStealable and config.maxBuffs or 0)
 	container:SetAuraGroupMaxFrameCount(HELPFUL_PERSONAL_GROUP, showPersonal and config.maxBuffs or 0)
 	container:SetAuraGroupMaxFrameCount(HELPFUL_NAMEPLATE_GROUP, showNameplate and config.maxBuffs or 0)
-	container:SetAuraGroupCandidateFilters(HELPFUL_SHORT_GROUP, shortFilters)
 	container:SetAuraGroupMaxFrameCount(HELPFUL_SHORT_GROUP, (showPersonal or showTemporary) and config.maxBuffs or 0)
 	UpdateContainerBrightness(container, GetBoolean(config.alwaysBright, false))
 end

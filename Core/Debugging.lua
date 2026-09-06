@@ -2803,7 +2803,8 @@ local function DumpPlayerAuraSnapshot()
 	}) do
 		local container, unitLabel = containerInfo[1], containerInfo[2]
 		if (container) then
-			for _, groupKey in ipairs({ "AzeriteHelpful", "AzeriteHarmful" }) do
+			local groupKeys = ns.PlayerAuraContainers and ns.PlayerAuraContainers.GroupKeys
+			for _, groupKey in ipairs(groupKeys or {}) do
 				for index = 1, 40 do
 					local button = ProbeMethod(container, "GetAuraGroupFrame", groupKey, index)
 					if (button) then
