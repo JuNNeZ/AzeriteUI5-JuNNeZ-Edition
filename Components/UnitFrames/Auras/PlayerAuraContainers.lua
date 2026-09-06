@@ -162,11 +162,32 @@ end
 	methods on has to be checked. A failing probe counts as "do not touch",
 	which is the safe answer either way.
 ]]
+local function AuraDataIsSecret()
+	local shouldAurasBeSecret = C_Secrets and C_Secrets.ShouldAurasBeSecret
+	if (type(shouldAurasBeSecret) ~= "function") then
+		-- No secret system on this build, so nothing enforces the restriction.
+		return false
+	end
+
+	local ok, isSecret = TryCall(shouldAurasBeSecret)
+	if (ok and IsSafeBool(isSecret)) then
+		return isSecret
+	end
+	return true
+end
+
 local function CanTouchAuraWidget(widget)
 	if (not widget) then return false end
-	if (type(widget.CanBeAccessedInContext) ~= "function") then return true end
 
-	local ok, accessible = TryCall(widget.CanBeAccessedInContext, widget)
+	local canBeAccessed = widget.CanBeAccessedInContext
+	if (type(canBeAccessed) ~= "function") then
+		-- A build without the per-object query. The global answer is coarser --
+		-- it cannot see a restriction that was never applied to this widget --
+		-- but it errs in the same direction, which beats assuming access.
+		return not AuraDataIsSecret()
+	end
+
+	local ok, accessible = TryCall(canBeAccessed, widget)
 	return ok and IsSafeBool(accessible) and accessible
 end
 
