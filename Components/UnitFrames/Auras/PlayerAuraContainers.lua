@@ -32,6 +32,9 @@ ns.PlayerAuraContainers = ns.PlayerAuraContainers or {}
 local Colors = ns.Colors
 local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
+local IsSafeBool = ns.API.IsSafeBool
+local TryCall = ns.API.TryCall
+local type = type
 local unpack = unpack
 
 local HELPFUL_PRIORITY_GROUP = "AzeriteHelpfulPriority"
@@ -148,9 +151,28 @@ local function StyleDispelBorder(button, border)
 	end
 end
 
+--[[
+	Aura buttons and every region parented to them carry Blizzard's
+	DenyTaintedAccessWhenAurasAreSecret access restriction, applied by the frame
+	provider the moment our initializeFrame callback returns. Wherever aura data
+	is secret -- raid instances, most notably -- any method we call on one of
+	them from our own tainted code raises a forbidden object error.
+
+	Reading plain fields off the button stays legal, so only the widget we call
+	methods on has to be checked. A failing probe counts as "do not touch",
+	which is the safe answer either way.
+]]
+local function CanTouchAuraWidget(widget)
+	if (not widget) then return false end
+	if (type(widget.CanBeAccessedInContext) ~= "function") then return true end
+
+	local ok, accessible = TryCall(widget.CanBeAccessedInContext, widget)
+	return ok and IsSafeBool(accessible) and accessible
+end
+
 local function SetAuraButtonBrightness(button, alwaysBright)
 	local icon = button and button.Icon
-	if (not icon) then return end
+	if (not CanTouchAuraWidget(icon)) then return end
 
 	local subdued = button.__AzeriteUI_Subdued and not alwaysBright
 	icon:SetDesaturated(subdued)
@@ -372,6 +394,11 @@ local function GetBoolean(value, fallback)
 	return fallback
 end
 
+-- The style state is what every button created from here on reads in
+-- initializeFrame, so it has to be updated even where the live buttons below
+-- turn out to be untouchable. Where aura data is secret the existing pooled
+-- buttons keep the brightness they were created with; that is a cosmetic lag,
+-- and the alternative is a forbidden object error on every configuration pass.
 local function UpdateContainerBrightness(container, alwaysBright)
 	local styleState = container.__AzeriteUI_StyleState
 	if (styleState) then
