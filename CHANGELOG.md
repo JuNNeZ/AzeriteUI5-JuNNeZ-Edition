@@ -9,6 +9,27 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.4.5-JuNNeZ (2026-09-06) - Less Work on Every Target Swap
+
+### Fixed
+
+- **Changing targets in a raid no longer rebuilds the target aura row from scratch.** A boss and an
+  ordinary target differ only in how wide that row is and how many icons it holds, but every swap
+  between the two also re-applied the row's anchors, all seven of its group layouts and its filters,
+  and that last step makes the game re-evaluate every aura on the spot. Those steps now run only
+  when something they depend on actually changes, so retargeting in a raid does less work each time.
+  Nothing about the row you see changes.
+
+### Internal
+
+- The aura access guard added in 5.4.4 now falls back to `C_Secrets.ShouldAurasBeSecret` where the
+  per-object access query is unavailable, so it fails closed instead of open. No behaviour change on
+  a current client.
+- `/azdebug` aura snapshots list helpful auras again. The debug code kept a private copy of the aura
+  group list that stopped matching the six helpful groups the player row registers, and had been
+  quietly dumping harmful auras only. It now reads the list the containers actually register.
+
+
 ## 5.4.4-JuNNeZ (2026-09-06) - The Raid Freeze on Target Auras
 
 ### Fixed

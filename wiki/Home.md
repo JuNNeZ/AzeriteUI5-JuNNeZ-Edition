@@ -3,7 +3,7 @@
 AzeriteUI 5 JuNNeZ Edition is a full UI replacement for World of Warcraft Retail.
 It is an unofficial, fan-maintained edition of [AzeriteUI 5](https://github.com/goldpawsstuff/AzeriteUI5) by GoldpawsStuff.
 
-Current release: **5.4.4-JuNNeZ**, built against **Interface 120100** (Retail 12.1).
+Current release: **5.4.5-JuNNeZ**, built against **Interface 120100** (Retail 12.1).
 
 ## Quick links
 
