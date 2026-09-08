@@ -9,6 +9,19 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.4.7-JuNNeZ (2026-09-08) - The Blips the Hidden Minimap Left Behind
+
+### Fixed
+
+- **A hidden minimap no longer leaves your player arrow and your group's dots floating on an empty
+  screen.** Auto-hide faded out the map and everything sitting on it, but the game paints the player
+  arrow, the party and raid dots and the tracking icons over the map rather than inside it, and
+  those ignore transparency entirely. The map is now taken off screen outright while auto-hide has
+  it hidden, which takes its blips with it. Nothing about the option itself changes -
+  `/az` -> Minimap -> Auto-Hide works exactly as before, and the map still comes straight back when
+  you leave.
+
+
 ## 5.4.6-JuNNeZ (2026-09-08) - A Minimap That Gets Out of the Way
 
 ### Added

@@ -1245,17 +1245,27 @@ MinimapMod.UpdateAutoHide = function(self)
 
 	self.autoHidden = shouldHide or nil
 
-	-- Alpha rather than Hide(), so we never end up fighting Blizzard or
-	-- EditMode over who owns the minimap's visibility. Children inherit it,
-	-- which covers our own artwork and any minimap buttons parented to the map.
+	-- MinimapCluster keeps its visibility and loses only its alpha. It is the
+	-- EditMode system frame and this module calls Show() on it elsewhere, so
+	-- contesting its shown state invites a fight. Alpha is inherited, which
+	-- takes the cluster's own children - zone text, difficulty, the border -
+	-- in the one call.
 	local alpha = shouldHide and 0 or 1
 
 	if (MinimapCluster) then
 		MinimapCluster:SetAlpha(alpha)
 	end
 
+	-- The map itself has to go out properly. Its blips - the player arrow, the
+	-- party and raid dots, every tracking icon - are drawn by the client over
+	-- the widget rather than parented to it, and they ignore frame alpha, so
+	-- alpha alone left them floating on an empty screen. Hide() takes them
+	-- with it. MinimapContainer has a fixed size, so hiding the map inside it
+	-- does not make the cluster relayout. The alpha stays alongside it as a
+	-- backstop for anything outside this addon showing the map back.
 	if (self.frame) then
 		self.frame:SetAlpha(alpha)
+		self.frame:SetShown(not shouldHide)
 	end
 
 	self:UpdateAutoHideMouse()
