@@ -38,6 +38,35 @@ local isdisabled = function(info)
 	return info[#info] ~= "enabled" and not getmodule().db.profile.enabled
 end
 
+-- The situation toggles only mean anything once auto-hide itself is on,
+-- so grey them out rather than hide them. The list stays readable that way.
+local isautohidedisabled = function(info)
+	local profile = getmodule().db.profile
+	return not profile.enabled or not profile.autoHideEnabled
+end
+
+local setAutoHide = function(key, value)
+	local module = getmodule()
+	module.db.profile[key] = value
+	module:UpdateAutoHide()
+end
+
+local autoHideToggle = function(name, desc, order, key)
+	return {
+		name = name,
+		desc = desc,
+		order = order,
+		type = "toggle",
+		disabled = isautohidedisabled,
+		set = function(info, val)
+			setAutoHide(key, val)
+		end,
+		get = function(info)
+			return getmodule().db.profile[key]
+		end
+	}
+end
+
 local setTextVisibility = function(key, value)
 	local module = getmodule()
 	module.db.profile[key] = value
@@ -114,16 +143,59 @@ local GenerateOptions = function()
 					return getmodule().db.profile.hideClockText
 				end
 			},
+			autoHide = {
+				name = L["Auto-Hide"],
+				order = 7,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					autoHideEnabled = {
+						name = L["Hide the Minimap Automatically"],
+						desc = L["Hide the minimap while you are in the content selected below, and bring it back as soon as you leave it."],
+						order = 1,
+						type = "toggle",
+						width = "full",
+						set = function(info, val)
+							setAutoHide("autoHideEnabled", val)
+						end,
+						get = function(info)
+							return getmodule().db.profile.autoHideEnabled
+						end
+					},
+					space1 = {
+						name = "",
+						order = 2,
+						type = "description"
+					},
+					autoHideInArenas = autoHideToggle(
+						L["Arenas"],
+						L["Hide the minimap while you are in an arena match."],
+						3, "autoHideInArenas"),
+					autoHideInBattlegrounds = autoHideToggle(
+						L["Battlegrounds"],
+						L["Hide the minimap while you are in a battleground."],
+						4, "autoHideInBattlegrounds"),
+					autoHideInDungeons = autoHideToggle(
+						L["Dungeons"],
+						L["Hide the minimap while you are in a dungeon."],
+						5, "autoHideInDungeons"),
+					autoHideInRaids = autoHideToggle(
+						L["Raid Instances"],
+						L["Hide the minimap while you are in a raid instance."],
+						6, "autoHideInRaids")
+				}
+			},
 			space3 = {
 				name = "",
-				order = 7,
+				order = 8,
 				type = "description",
 				hidden = isdisabled
 			},
 			restoreBlizzard = {
 				name = L["Restore Blizzard Default"],
 				desc = L["Restore the default Blizzard minimap theme and positioning."],
-				order = 8,
+				order = 9,
 				type = "execute",
 				hidden = isdisabled,
 				func = function(info)

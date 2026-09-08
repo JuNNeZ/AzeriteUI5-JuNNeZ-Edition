@@ -9,6 +9,20 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.4.6-JuNNeZ (2026-09-08) - A Minimap That Gets Out of the Way
+
+### Added
+
+- **The minimap can now hide itself in the content you choose.** Switch on
+  `/az` -> Minimap -> Auto-Hide -> **Hide the Minimap Automatically**, then tick where it should
+  disappear: **Arenas**, **Battlegrounds**, **Dungeons** or **Raid Instances**. Arenas and
+  battlegrounds are ticked to begin with, so the common case takes a single click. The map comes
+  back the moment you leave, and stays on screen while the frame mover is open so you can still
+  position it. Off by default - nothing changes until you turn it on.
+- Auto-hide covers the minimap and everything sitting on it, addon minimap buttons included. The
+  clock and coordinate panel is a separate frame under `/az` -> Info and stays where it is.
+
+
 ## 5.4.5-JuNNeZ (2026-09-06) - Less Work on Every Target Swap
 
 ### Fixed

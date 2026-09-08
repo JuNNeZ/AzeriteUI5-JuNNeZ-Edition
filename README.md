@@ -429,6 +429,7 @@ The top-right aura display (your buffs and debuffs), separate from unit frame au
 - **Enable/Disable** — when disabled, the minimap is untouched by AzeriteUI
 - **Hide AddOn Text** — hide the custom "AddOns" label
 - **Hide Clock Text** — hide the AzeriteUI clock display
+- **Auto-Hide** — hide the minimap in arenas, battlegrounds, dungeons or raid instances, each ticked separately. Off by default; switching it on starts with arenas and battlegrounds selected. The map returns the moment you leave, and stays visible while the frame mover is open so you can still reposition it.
 - **Restore Blizzard Default** — reset to the default Blizzard minimap theme and position
 - `/setminimaptheme <name>` — two themes ship, `Azerite` and `Blizzard`. Names are matched case-insensitively and the command is ignored in combat, re-applying once you leave it.
 

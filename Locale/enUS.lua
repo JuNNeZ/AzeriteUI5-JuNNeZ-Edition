@@ -625,3 +625,15 @@ L["Show player in party"] = true
 L["Show player in raid"] = true
 L["Toggle whether to show your own frame on these frames while in a non-raid party."] = true
 L["Toggle whether to show your own frame on these frames while in a raid group. Arenas and battlegrounds are raid groups too."] = true
+
+L["Auto-Hide"] = true
+L["Hide the Minimap Automatically"] = true
+L["Hide the minimap while you are in the content selected below, and bring it back as soon as you leave it."] = true
+L["Arenas"] = true
+L["Battlegrounds"] = true
+L["Dungeons"] = true
+L["Raid Instances"] = true
+L["Hide the minimap while you are in an arena match."] = true
+L["Hide the minimap while you are in a battleground."] = true
+L["Hide the minimap while you are in a dungeon."] = true
+L["Hide the minimap while you are in a raid instance."] = true

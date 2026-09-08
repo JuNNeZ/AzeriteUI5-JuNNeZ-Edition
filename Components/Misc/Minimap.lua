@@ -52,7 +52,7 @@ local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
 -- GLOBALS: C_CraftingOrders, GameTooltip, GameTooltip_SetDefaultAnchor, GarrisonLandingPage_Toggle
 -- GLOBALS: GetPlayerFacing, GetRealZoneText
 -- GLOBALS: ExpansionLandingPageMinimapButton, GarrisonLandingPageMinimapButton, MinimapZoneTextButton, MiniMapWorldMapButton, TimeManagerClockButton, QueueStatusButton
--- GLOBALS: InCombatLockdown, IsResting, HasNewMail, PlaySound, ToggleDropDownMenu
+-- GLOBALS: InCombatLockdown, IsInInstance, IsResting, HasNewMail, PlaySound, ToggleDropDownMenu
 -- GLOBALS: MinimapZoomIn, MinimapZoomOut, Minimap_OnClick
 -- GLOBALS: Minimap, MinimapBackdrop, MinimapCluster, MinimapBorder, MinimapBorderTop, MicroMenuContainer, MinimapCompassTexture, MiniMapInstanceDifficulty, MiniMapTracking
 -- GLOBALS: MenuUtil
@@ -77,11 +77,26 @@ local IN_TORGHAST = (not IsResting()) and (GetRealZoneText() == GetRealZoneText(
 local mapScale = 1
 local Minimap_OnMouseButton_Hook
 
+-- The situations the minimap can be automatically hidden in, keyed by the
+-- instanceType IsInInstance() reports for them. Anything not listed here -
+-- the open world, scenarios, delves - leaves the minimap alone.
+local AutoHideSettings = {
+	arena = "autoHideInArenas",
+	pvp = "autoHideInBattlegrounds",
+	party = "autoHideInDungeons",
+	raid = "autoHideInRaids"
+}
+
 local defaults = { profile = ns:Merge({
 	enabled = true,
 	theme = "Azerite",
 	hideAddonText = false,
 	hideClockText = false,
+	autoHideEnabled = false,
+	autoHideInArenas = true,
+	autoHideInBattlegrounds = true,
+	autoHideInDungeons = false,
+	autoHideInRaids = false,
 	textVisibilityMigrated = false
 }, ns.MovableModulePrototype.defaults) }
 
@@ -1173,10 +1188,84 @@ MinimapMod.UpdatePositionAndScale = function(self)
 	end
 end
 
+-- Whether the instance we are currently in is one
+-- the player asked us to hide the minimap in.
+MinimapMod.ShouldAutoHide = function(self)
+	local db = self.db and self.db.profile
+	if (not db or not db.enabled or not db.autoHideEnabled) then return false end
+
+	-- Step aside while the anchor is on screen, or the player would be
+	-- dragging an invisible minimap around in the frame mover.
+	if (self.anchor and self.anchor:IsShown()) then return false end
+
+	local _, instanceType = IsInInstance()
+	local setting = instanceType and AutoHideSettings[instanceType]
+
+	return (setting and db[setting]) and true or false
+end
+
+-- Kept apart from UpdateAutoHide so a combat lockdown can only postpone the
+-- mouse half of it. The alpha half is never protected and always applies.
+MinimapMod.UpdateAutoHideMouse = function(self)
+
+	-- EnableMouse and friends are protected on a protected frame in combat.
+	-- Wait for the combat drop rather than risk a blocked action; the map is
+	-- already at alpha zero by then, so the only cost is that it can still
+	-- catch a click until the fight ends.
+	if (InCombatLockdown()) then
+		self.autoHideMouseNeeded = true
+		return
+	end
+
+	self.autoHideMouseNeeded = nil
+
+	local enable = not self.autoHidden
+
+	if (self.frame) then
+		self.frame:EnableMouse(enable)
+		self.frame:EnableMouseWheel(enable)
+	end
+
+	if (self.clickHandler) then
+		self.clickHandler:EnableMouse(enable)
+	end
+end
+
+MinimapMod.UpdateAutoHide = function(self)
+	local shouldHide = self:ShouldAutoHide()
+
+	-- Nothing to apply and nothing to restore. This is the path taken by
+	-- everyone who leaves auto-hide off, and it touches no minimap state.
+	if (shouldHide == (self.autoHidden or false)) then
+		if (self.autoHideMouseNeeded) then
+			self:UpdateAutoHideMouse()
+		end
+		return
+	end
+
+	self.autoHidden = shouldHide or nil
+
+	-- Alpha rather than Hide(), so we never end up fighting Blizzard or
+	-- EditMode over who owns the minimap's visibility. Children inherit it,
+	-- which covers our own artwork and any minimap buttons parented to the map.
+	local alpha = shouldHide and 0 or 1
+
+	if (MinimapCluster) then
+		MinimapCluster:SetAlpha(alpha)
+	end
+
+	if (self.frame) then
+		self.frame:SetAlpha(alpha)
+	end
+
+	self:UpdateAutoHideMouse()
+end
+
 MinimapMod.UpdateSettings = function(self)
 	if (not self.db or not self.db.profile) then return end
 	self:UpdateAddonCompartmentVisibility()
 	self:UpdateClockVisibility()
+	self:UpdateAutoHide()
 	if (not self.db.profile.enabled) then return end
 
 	-- Just update theme and settings
@@ -1264,8 +1353,13 @@ MinimapMod.OnEvent = function(self, event, ...)
 	if (event == "PLAYER_ENTERING_WORLD" or event == "VARIABLES_LOADED") then
 		self:UpdateAnchor()
 		self:UpdateSettings()
-	elseif (event == "PLAYER_REGEN_ENABLED" and self.pendingTheme) then
-		self:SetTheme(self.pendingTheme)
+	elseif (event == "PLAYER_REGEN_ENABLED") then
+		if (self.pendingTheme) then
+			self:SetTheme(self.pendingTheme)
+		end
+		if (self.autoHideMouseNeeded) then
+			self:UpdateAutoHideMouse()
+		end
 	end
 end
 
@@ -1317,6 +1411,12 @@ MinimapMod.OnEnable = function(self)
 
 	self:CreateCustomElements()
 	self:CreateAnchor(MINIMAP_LABEL):SetDefaultScale(mapScale * ns.API.GetEffectiveScale())
+
+	-- Re-evaluate auto-hide whenever the frame mover comes and goes.
+	if (self.anchor) then
+		self.anchor:HookScript("OnShow", function() self:UpdateAutoHide() end)
+		self.anchor:HookScript("OnHide", function() self:UpdateAutoHide() end)
+	end
 
 	ns.MovableModulePrototype.OnEnable(self)
 

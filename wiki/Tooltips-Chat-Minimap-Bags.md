@@ -34,6 +34,10 @@ anchor tooltips at all, to stay out of its way.
 
 - **Enable** - when off, AzeriteUI leaves the minimap completely alone.
 - **Hide AddOn Text** and **Hide Clock Text**.
+- **Auto-Hide** - switch on **Hide the Minimap Automatically**, then tick the content you
+  want the minimap gone in: **Arenas**, **Battlegrounds**, **Dungeons** or **Raid
+  Instances**. Arenas and battlegrounds start ticked. It comes back the moment you leave,
+  and stays visible while the frame mover is open so you can still reposition it.
 - **Restore Blizzard Default** - back to Blizzard's minimap look and position.
 - `/setminimaptheme <name>` switches theme. Two ship: `Azerite` and `Blizzard`. The
   command is ignored in combat and re-applies once you leave it.
