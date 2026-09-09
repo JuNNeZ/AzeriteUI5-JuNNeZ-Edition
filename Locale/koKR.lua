@@ -638,3 +638,5 @@ L["Hide the minimap while you are in an arena match."] = "투기장 전투 중�
 L["Hide the minimap while you are in a battleground."] = "전장에 있는 동안 미니맵을 숨깁니다."
 L["Hide the minimap while you are in a dungeon."] = "던전에 있는 동안 미니맵을 숨깁니다."
 L["Hide the minimap while you are in a raid instance."] = "공격대 인스턴스에 있는 동안 미니맵을 숨깁니다."
+L["Show empty buttons"] = "빈 버튼 표시"
+L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."] = "행동 단축바의 빈 칸을 빈 버튼으로 표시합니다. 이 옵션을 끄면 실제로 무언가를 넣은 버튼만 표시됩니다. 바 페이드가 켜져 있으면 빈 버튼도 바의 나머지 부분과 함께 흐려집니다."

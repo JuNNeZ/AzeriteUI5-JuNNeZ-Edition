@@ -638,3 +638,5 @@ L["Hide the minimap while you are in an arena match."] = "Oculta o minimapa enqu
 L["Hide the minimap while you are in a battleground."] = "Oculta o minimapa enquanto você estiver em um campo de batalha."
 L["Hide the minimap while you are in a dungeon."] = "Oculta o minimapa enquanto você estiver em uma masmorra."
 L["Hide the minimap while you are in a raid instance."] = "Oculta o minimapa enquanto você estiver em uma instância de raide."
+L["Show empty buttons"] = "Mostrar botões vazios"
+L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."] = "Mostra os espaços vazios das suas barras de ação como botões em branco. Desative para ver apenas os botões nos quais você realmente colocou algo. Botões vazios esmaecem junto com o resto da barra quando o esmaecimento da barra está ativado."

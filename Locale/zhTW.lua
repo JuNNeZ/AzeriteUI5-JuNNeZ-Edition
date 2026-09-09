@@ -638,3 +638,5 @@ L["Hide the minimap while you are in an arena match."] = "在競技場對戰中�
 L["Hide the minimap while you are in a battleground."] = "在戰場中隱藏小地圖。"
 L["Hide the minimap while you are in a dungeon."] = "在地城中隱藏小地圖。"
 L["Hide the minimap while you are in a raid instance."] = "在團隊副本中隱藏小地圖。"
+L["Show empty buttons"] = "顯示空按鈕"
+L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."] = "將快捷列上的空格位顯示為空白按鈕。關閉後只顯示你實際放置了內容的按鈕。啟用快捷列淡出時，空按鈕會與快捷列的其餘部分一同淡出。"

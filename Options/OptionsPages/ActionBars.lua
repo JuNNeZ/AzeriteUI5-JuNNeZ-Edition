@@ -759,6 +759,14 @@ local GenerateOptions = function()
 					KeyBound:Toggle()
 				end
 			},
+			showEmptyButtons = {
+				name = L["Show empty buttons"],
+				desc = L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."],
+				order = 4,
+				type = "toggle", width = "full",
+				set = setter,
+				get = getter
+			},
 			dimWhenInactive = {
 				name = L["Dim the actionbuttons when inactive"],
 				desc = L["Dim down and desaturate your action buttons when not engaged in combat and not currently targeting anything."],

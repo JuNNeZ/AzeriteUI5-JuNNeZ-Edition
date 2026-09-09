@@ -638,3 +638,5 @@ L["Hide the minimap while you are in an arena match."] = "Blendet die Minikarte 
 L["Hide the minimap while you are in a battleground."] = "Blendet die Minikarte aus, solange du dich auf einem Schlachtfeld befindest."
 L["Hide the minimap while you are in a dungeon."] = "Blendet die Minikarte aus, solange du dich in einem Dungeon befindest."
 L["Hide the minimap while you are in a raid instance."] = "Blendet die Minikarte aus, solange du dich in einer Schlachtzugsinstanz befindest."
+L["Show empty buttons"] = "Leere Schaltflächen anzeigen"
+L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."] = "Zeigt die leeren Plätze deiner Aktionsleisten als leere Schaltflächen an. Schalte dies aus, um nur die Schaltflächen zu sehen, auf die du tatsächlich etwas gelegt hast. Leere Schaltflächen blenden zusammen mit dem Rest der Leiste aus, wenn das Ausblenden der Leiste aktiviert ist."

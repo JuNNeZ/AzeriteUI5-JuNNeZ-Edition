@@ -637,3 +637,5 @@ L["Hide the minimap while you are in an arena match."] = true
 L["Hide the minimap while you are in a battleground."] = true
 L["Hide the minimap while you are in a dungeon."] = true
 L["Hide the minimap while you are in a raid instance."] = true
+L["Show empty buttons"] = true
+L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."] = true

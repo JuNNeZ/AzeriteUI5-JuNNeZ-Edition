@@ -9,6 +9,31 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.4.8-JuNNeZ (2026-09-09) - The Dismount Button and the Empty Slots
+
+### Fixed
+
+- **Empty action bar slots no longer sit there at full brightness while the rest of the bar fades
+  away.** Slots you have not put anything on were being forced back to full opacity every time the
+  UI reapplied your settings, which is why fading a bar appeared to fade only the buttons you
+  actually use and leave a row of empty frames behind. Empty slots are now hidden by default, on
+  every action bar, and they stay hidden through settings changes, mounting, vehicles and bar
+  swaps.
+- **The dismount button now goes with the hidden minimap.** The round exit icon that appears at the
+  upper left of the minimap ring when you are mounted, in a vehicle or on a taxi is this UI's own
+  button, and it hangs off the screen rather than off the map, so auto-hide never reached it and it
+  sat there on its own. It now goes with everything else, and stops taking clicks while it is gone.
+  Worth knowing: that button is how you click to dismount or to leave a battleground vehicle, so
+  with the map hidden you will want your Dismount keybind or `/leavevehicle` instead.
+  `/az` -> Minimap -> Auto-Hide, unchanged otherwise.
+
+### Added
+
+- **Show empty buttons.** If you liked seeing the full grid on your action bars, turn it back on and
+  the empty slots come back - and this time they fade along with the rest of the bar instead of
+  staying put. `/az` -> Action Bars -> Show empty buttons. Off by default.
+
+
 ## 5.4.7-JuNNeZ (2026-09-08) - The Blips the Hidden Minimap Left Behind
 
 ### Fixed

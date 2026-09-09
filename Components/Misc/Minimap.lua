@@ -87,6 +87,17 @@ local AutoHideSettings = {
 	raid = "autoHideInRaids"
 }
 
+-- Our own dismount and vehicle exit button. It sits on the minimap ring, at the
+-- upper left of it, but hangs off UIParent rather than the map, so it inherits
+-- none of the map's alpha and has to be taken along by hand. Looked up on demand
+-- rather than cached: the module owning it is disabled outright when Bartender4
+-- takes over the action bars, and the button only exists once that module has
+-- enabled. See Components/ActionBars/Elements/VehicleExit.lua.
+local GetVehicleExitButton = function()
+	local module = ns:GetModule("VehicleExit", true)
+	return module and module.Button
+end
+
 local defaults = { profile = ns:Merge({
 	enabled = true,
 	theme = "Azerite",
@@ -1208,10 +1219,12 @@ end
 -- mouse half of it. The alpha half is never protected and always applies.
 MinimapMod.UpdateAutoHideMouse = function(self)
 
-	-- EnableMouse and friends are protected on a protected frame in combat.
-	-- Wait for the combat drop rather than risk a blocked action; the map is
-	-- already at alpha zero by then, so the only cost is that it can still
-	-- catch a click until the fight ends.
+	-- EnableMouse and friends are protected calls on a protected frame in
+	-- combat, and the vehicle exit button is genuinely one of those - it is a
+	-- SecureActionButtonTemplate. Wait for the combat drop rather than risk a
+	-- blocked action; everything here is invisible by then, so the only cost is
+	-- a click the exit button can still swallow until the fight ends. Entering
+	-- an instance drops combat first, so this only arises on a mid-fight toggle.
 	if (InCombatLockdown()) then
 		self.autoHideMouseNeeded = true
 		return
@@ -1228,6 +1241,11 @@ MinimapMod.UpdateAutoHideMouse = function(self)
 
 	if (self.clickHandler) then
 		self.clickHandler:EnableMouse(enable)
+	end
+
+	local exitButton = GetVehicleExitButton()
+	if (exitButton) then
+		exitButton:EnableMouse(enable)
 	end
 end
 
@@ -1266,6 +1284,15 @@ MinimapMod.UpdateAutoHide = function(self)
 	if (self.frame) then
 		self.frame:SetAlpha(alpha)
 		self.frame:SetShown(not shouldHide)
+	end
+
+	-- Alpha only for the exit button, never Show() or Hide(). A state driver
+	-- owns its visibility - "[@vehicle,exists,canexitvehicle][possessbar]
+	-- [mounted]show;hide" - and it is a protected frame, so contesting that
+	-- would be a blocked call the moment the player is in combat.
+	local exitButton = GetVehicleExitButton()
+	if (exitButton) then
+		exitButton:SetAlpha(alpha)
 	end
 
 	self:UpdateAutoHideMouse()

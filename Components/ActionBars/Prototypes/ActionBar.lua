@@ -106,10 +106,21 @@ local ReleaseClickBlocker = function(button)
 	blocker:Hide()
 end
 
+-- An empty slot is invisible unless the grid is switched on, so anything that
+-- restores alpha in bulk has to ask the button what its alpha should be rather
+-- than assume full opacity. Forcing every button to 1 is what left empty slots
+-- sitting at full brightness on a bar whose real buttons had faded away.
+local GetRestingAlpha = function(button)
+	local config = button.config
+	if (config and config.showGrid) then return 1 end
+	if (button.HasAction and button:HasAction()) then return 1 end
+	return 0
+end
+
 local RestoreFadeAlpha = function(bar)
 	bar:SetAlpha(1)
 	for id,button in next,bar.buttons do
-		button:SetAlpha(1)
+		button:SetAlpha(GetRestingAlpha(button))
 		ReleaseClickBlocker(button)
 	end
 end
@@ -173,6 +184,7 @@ local defaults = ns:Merge({
 		mounted = true -- whether to keep the bar visible while mounted
 	},
 	blockFadedClicks = false, -- whether faded out buttons should swallow clicks instead of casting
+	showEmptyButtons = false, -- whether slots without an action stay visible as empty buttons
 	savedPosition = {
 		scale = ns.API.GetEffectiveScale(),
 		[1] = "CENTER",
@@ -184,6 +196,7 @@ local defaults = ns:Merge({
 ns.ActionBar = {}
 ns.ActionBar.prototype = ActionBar
 ns.ActionBar.defaults = defaults
+ns.ActionBar.GetRestingAlpha = GetRestingAlpha
 
 ns.ActionBar.Create = function(self, id, config, name)
 
@@ -327,6 +340,9 @@ ActionBar.CreateButton = function(self, buttonConfig)
 	buttonConfig.dimWhenInactive = self.config.dimWhenInactive
 	buttonConfig.actionButtonUI = true
 	buttonConfig.assistedHighlight = true
+	-- LibActionButton calls the empty slot artwork a grid, and holds such slots
+	-- at zero alpha unless this says otherwise.
+	buttonConfig.showGrid = self.config.showEmptyButtons and true or false
 
 	local keyBoundTarget = string_format(BINDTEMPLATE_BY_ID[self.id], button.id)
 	button.keyBoundTarget = keyBoundTarget
@@ -382,10 +398,13 @@ ActionBar.UpdateFading = function(self)
 			ReleaseClickBlocker(button)
 		end
 
-		-- Register fading for selected buttons.
+		-- Register fading for selected buttons. An empty slot is only worth
+		-- registering while the grid is on, since an already invisible button
+		-- has nothing to fade. With the grid on it fades along with the rest
+		-- instead of being left behind at full opacity.
 		for id = config.fadeFrom or 1, #buttons do
 			local button = buttons[id]
-			if (button:GetTexture()) then
+			if (button:GetTexture() or config.showEmptyButtons) then
 				if (config.blockFadedClicks) then
 					AcquireClickBlocker(button)
 					button.OnFadeAlphaChanged = UpdateClickBlocker

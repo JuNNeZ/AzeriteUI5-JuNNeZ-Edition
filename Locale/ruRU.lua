@@ -638,3 +638,5 @@ L["Hide the minimap while you are in an arena match."] = "Скрывает ми�
 L["Hide the minimap while you are in a battleground."] = "Скрывает миникарту, пока вы находитесь на поле боя."
 L["Hide the minimap while you are in a dungeon."] = "Скрывает миникарту, пока вы находитесь в подземелье."
 L["Hide the minimap while you are in a raid instance."] = "Скрывает миникарту, пока вы находитесь в рейдовом подземелье."
+L["Show empty buttons"] = "Показывать пустые кнопки"
+L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."] = "Показывает пустые ячейки панелей команд как пустые кнопки. Отключите, чтобы видеть только те кнопки, на которые вы действительно что-то поместили. Пустые кнопки скрываются вместе с остальной панелью, если включено затухание панели."

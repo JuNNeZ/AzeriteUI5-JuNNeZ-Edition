@@ -97,6 +97,7 @@ local defaults = { profile = ns:Merge({
 	UseCommandBindingsForHoldCast = ns.WoW10 and true or false,
 	dimWhenResting = false,
 	dimWhenInactive = false,
+	showEmptyButtons = false, -- whether slots without an action stay visible as empty buttons
 	assistedHighlightColor = "cyan", -- Color scheme for AzeriteUI's circular assisted highlight
 	hideElements = {
 		macro = true,
@@ -528,6 +529,9 @@ ActionBarMod.CreateBars = function(self)
 		config.clickOnDown = self.db.profile.clickOnDown
 		config.useCommandBindingsForHoldCast = self.db.profile.UseCommandBindingsForHoldCast ~= false
 		config.hideElements = self.db.profile.hideElements
+		-- Read while the bar builds its buttons, so empty slots start out at
+		-- the right opacity rather than waiting for the first settings pass.
+		config.showEmptyButtons = self.db.profile.showEmptyButtons and true or false
 
 		local bar = ns.ActionBar:Create(BAR_TO_ID[i], config, ns.Prefix.."ActionBar"..i)
 		bar.buttonWidth, bar.buttonHeight = unpack(ns.GetConfig("ActionButton").ButtonSize)
@@ -703,7 +707,10 @@ ActionBarMod.UpdateBarButtonCounts = function(self)
 					button:UpdateAllStates()
 				end
 				button:ForceUpdate()
-				button:SetAlpha(1)
+				-- Recovers buttons left invisible by a fade or a bar state
+				-- change, without dragging empty slots back into view with
+				-- them. See ns.ActionBar.GetRestingAlpha.
+				button:SetAlpha(ns.ActionBar.GetRestingAlpha(button))
 			end
 		end
 	end
@@ -863,6 +870,7 @@ ActionBarMod.UpdateSettings = function(self, event)
 		bar.config.dimWhenResting = self.db.profile.dimWhenResting
 		bar.config.dimWhenInactive = self.db.profile.dimWhenInactive
 		bar.config.hideElements = self.db.profile.hideElements
+		bar.config.showEmptyButtons = self.db.profile.showEmptyButtons and true or false
 
 		-- Copy select settings into each button's config table.
 		for id,button in pairs(bar.buttons) do
@@ -871,6 +879,7 @@ ActionBarMod.UpdateSettings = function(self, event)
 			button.config.dimWhenResting = bar.config.dimWhenResting
 			button.config.dimWhenInactive = bar.config.dimWhenInactive
 			button.config.hideElements = bar.config.hideElements
+			button.config.showGrid = bar.config.showEmptyButtons
 			button:UpdateConfig(button.config)
 			ns.ActionButton.UpdateMouseoverCast(button)
 			--button:ForceUpdate()
