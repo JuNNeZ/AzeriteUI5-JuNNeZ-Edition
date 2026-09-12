@@ -9,6 +9,25 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.4.9-JuNNeZ (2026-09-12) - A Dismount Button You Can Place
+
+### Added
+
+- **The dismount button can now have a position of its own.** The round exit icon that shows up
+  while you are mounted, in a vehicle or on a taxi normally rides the upper left of the minimap
+  ring. Turn this on and it comes off the map, so you can put it anywhere on screen - useful if you
+  have moved the minimap, replaced it with another addon's, or turned this one's minimap off
+  entirely and been left with a button floating where the map used to be. Switch it back off and the
+  button returns to the ring.
+  `/az` -> Action Bars -> Dismount Button -> Use a custom position, then `/lock` to drag it into
+  place and the mouse wheel over it to resize it.
+- **A dismount button you have placed yourself no longer hides with the minimap.** Auto-hide takes
+  the button along only while it is still sitting on the map ring, which was the point of hiding it
+  in 5.4.8. Once it is somewhere else on screen it stays visible and clickable in arenas,
+  battlegrounds and anywhere else the map hides itself - so you keep your click to dismount or to
+  leave a battleground vehicle.
+
+
 ## 5.4.8-JuNNeZ (2026-09-09) - The Dismount Button and the Empty Slots
 
 ### Fixed

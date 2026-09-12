@@ -641,3 +641,9 @@ L["Hide the minimap while you are in a dungeon."] = "在地下城中隐藏小地
 L["Hide the minimap while you are in a raid instance."] = "在团队副本中隐藏小地图。"
 L["Show empty buttons"] = "显示空按钮"
 L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."] = "将动作条上的空格位显示为空白按钮。关闭后只显示你实际放置了内容的按钮。启用动作条淡出时，空按钮会与动作条的其余部分一同淡出。"
+
+L["Dismount Button"] = "下坐骑按钮"
+L["The dismount button appears while you are mounted, in a vehicle or in control of another creature, and clicking it puts you back on your own feet. It normally sits at the upper left of the minimap ring and follows the minimap around."] = "当你骑乘坐骑、乘坐载具或操控其他生物时会出现下坐骑按钮，点击它即可回到地面。它默认位于小地图边框的左上方，并随小地图一起移动。"
+L["Use a custom position"] = "使用自定义位置"
+L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."] = "将下坐骑按钮从小地图上分离，放到屏幕上的任意位置。输入 /lock 即可把它拖到想要的地方。拥有独立位置的按钮不再属于小地图，因此小地图自动隐藏时它也会保持显示。"
+L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."] = "输入 /lock 打开框体移动界面，然后将下坐骑按钮拖到你想要的位置。在按钮上滚动鼠标滚轮可以调整它的大小。"

@@ -639,3 +639,9 @@ L["Hide the minimap while you are in a dungeon."] = true
 L["Hide the minimap while you are in a raid instance."] = true
 L["Show empty buttons"] = true
 L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."] = true
+
+L["Dismount Button"] = true
+L["The dismount button appears while you are mounted, in a vehicle or in control of another creature, and clicking it puts you back on your own feet. It normally sits at the upper left of the minimap ring and follows the minimap around."] = true
+L["Use a custom position"] = true
+L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."] = true
+L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."] = true

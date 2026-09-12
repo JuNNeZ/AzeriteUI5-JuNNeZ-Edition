@@ -98,6 +98,17 @@ local GetVehicleExitButton = function()
 	return module and module.Button
 end
 
+-- Whether that button is still riding the minimap. Once the player has given
+-- it a position of its own it stops taking part in the map's auto-hide: it is
+-- somewhere else on screen by then, and dismounting is exactly what you want
+-- reachable in the content the map is hidden in.
+local IsVehicleExitButtonAttached = function()
+	local module = ns:GetModule("VehicleExit", true)
+	local db = module and module.db and module.db.profile
+
+	return not (db and db.useCustomPosition)
+end
+
 local defaults = { profile = ns:Merge({
 	enabled = true,
 	theme = "Azerite",
@@ -1245,8 +1256,32 @@ MinimapMod.UpdateAutoHideMouse = function(self)
 
 	local exitButton = GetVehicleExitButton()
 	if (exitButton) then
-		exitButton:EnableMouse(enable)
+		-- A detached button is not part of the map any more, so it keeps its
+		-- clicks whatever the map is doing.
+		exitButton:EnableMouse(enable or not IsVehicleExitButtonAttached())
 	end
+end
+
+-- Alpha only for the exit button, never Show() or Hide(). A state driver owns
+-- its visibility - "[@vehicle,exists,canexitvehicle][possessbar][mounted]
+-- show;hide" - and it is a protected frame, so contesting that would be a
+-- blocked call the moment the player is in combat.
+MinimapMod.UpdateVehicleExitAlpha = function(self)
+	local exitButton = GetVehicleExitButton()
+	if (not exitButton) then return end
+
+	local hide = self.autoHidden and IsVehicleExitButtonAttached()
+
+	exitButton:SetAlpha(hide and 0 or 1)
+end
+
+-- Re-applies the map's current hidden state to the exit button, alpha and
+-- clicks both. UpdateAutoHide only runs its body when the hidden state itself
+-- changes, so this is the way in for the VehicleExit module when the player
+-- attaches or detaches the button while the map is already hidden.
+MinimapMod.UpdateVehicleExitButton = function(self)
+	self:UpdateVehicleExitAlpha()
+	self:UpdateAutoHideMouse()
 end
 
 MinimapMod.UpdateAutoHide = function(self)
@@ -1286,14 +1321,9 @@ MinimapMod.UpdateAutoHide = function(self)
 		self.frame:SetShown(not shouldHide)
 	end
 
-	-- Alpha only for the exit button, never Show() or Hide(). A state driver
-	-- owns its visibility - "[@vehicle,exists,canexitvehicle][possessbar]
-	-- [mounted]show;hide" - and it is a protected frame, so contesting that
-	-- would be a blocked call the moment the player is in combat.
-	local exitButton = GetVehicleExitButton()
-	if (exitButton) then
-		exitButton:SetAlpha(alpha)
-	end
+	-- The exit button goes with the map, unless the player has given it a
+	-- position of its own somewhere else on screen.
+	self:UpdateVehicleExitAlpha()
 
 	self:UpdateAutoHideMouse()
 end

@@ -645,6 +645,55 @@ local GenerateOptions = function()
 		}
 	end
 
+	local getvehicleexit = function()
+		local module = ns:GetModule("VehicleExit", true)
+		if (module and module:IsEnabled() and module.db) then
+			return module
+		end
+	end
+
+	local GenerateDismountButtonOptions = function(order)
+		if (not getvehicleexit()) then return end
+		return {
+			name = L["Dismount Button"],
+			order = order,
+			type = "group",
+			args = {
+				description = {
+					name = L["The dismount button appears while you are mounted, in a vehicle or in control of another creature, and clicking it puts you back on your own feet. It normally sits at the upper left of the minimap ring and follows the minimap around."],
+					order = 0,
+					type = "description",
+					fontSize = "medium"
+				},
+				useCustomPosition = {
+					name = L["Use a custom position"],
+					desc = L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."],
+					order = 1,
+					type = "toggle", width = "full",
+					set = function(info, val)
+						local module = getvehicleexit()
+						if (not module) then return end
+						module:SetUseCustomPosition(val)
+					end,
+					get = function(info)
+						local module = getvehicleexit()
+						return module and module.db.profile.useCustomPosition or false
+					end
+				},
+				moverNote = {
+					name = L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."],
+					order = 2,
+					type = "description",
+					fontSize = "medium",
+					hidden = function(info)
+						local module = getvehicleexit()
+						return not (module and module.db.profile.useCustomPosition)
+					end
+				}
+			}
+		}
+	end
+
 	local options = {
 		name = L["Action Bar Settings"],
 		type = "group", childGroups = "tree",
@@ -869,6 +918,8 @@ local GenerateOptions = function()
 	options.args["stancebar"] = stanceBarOptions
 
 	options.args["micromenu"] = GenerateMicroMenuOptions(50)
+
+	options.args["dismountbutton"] = GenerateDismountButtonOptions(60)
 
 	return options
 end

@@ -640,3 +640,9 @@ L["Hide the minimap while you are in a dungeon."] = "던전에 있는 동안 미
 L["Hide the minimap while you are in a raid instance."] = "공격대 인스턴스에 있는 동안 미니맵을 숨깁니다."
 L["Show empty buttons"] = "빈 버튼 표시"
 L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."] = "행동 단축바의 빈 칸을 빈 버튼으로 표시합니다. 이 옵션을 끄면 실제로 무언가를 넣은 버튼만 표시됩니다. 바 페이드가 켜져 있으면 빈 버튼도 바의 나머지 부분과 함께 흐려집니다."
+
+L["Dismount Button"] = "탈것 내리기 버튼"
+L["The dismount button appears while you are mounted, in a vehicle or in control of another creature, and clicking it puts you back on your own feet. It normally sits at the upper left of the minimap ring and follows the minimap around."] = "탈것 내리기 버튼은 탈것에 타고 있을 때, 차량에 탑승했을 때, 또는 다른 생물을 조종할 때 나타나며, 클릭하면 다시 두 발로 돌아옵니다. 기본적으로 미니맵 테두리의 왼쪽 위에 붙어 미니맵을 따라다닙니다."
+L["Use a custom position"] = "사용자 지정 위치 사용"
+L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."] = "탈것 내리기 버튼을 미니맵에서 분리해 화면의 원하는 곳에 둡니다. /lock 을 입력하면 끌어서 배치할 수 있습니다. 자체 위치를 가진 버튼은 더 이상 미니맵에 속하지 않으므로, 미니맵이 스스로 숨을 때도 계속 표시됩니다."
+L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."] = "/lock 을 입력해 프레임 이동 창을 열고 탈것 내리기 버튼을 원하는 위치로 끌어다 놓으세요. 버튼 위에서 마우스 휠을 돌리면 크기를 조절할 수 있습니다."
