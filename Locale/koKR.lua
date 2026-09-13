@@ -646,3 +646,13 @@ L["The dismount button appears while you are mounted, in a vehicle or in control
 L["Use a custom position"] = "사용자 지정 위치 사용"
 L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."] = "탈것 내리기 버튼을 미니맵에서 분리해 화면의 원하는 곳에 둡니다. /lock 을 입력하면 끌어서 배치할 수 있습니다. 자체 위치를 가진 버튼은 더 이상 미니맵에 속하지 않으므로, 미니맵이 스스로 숨을 때도 계속 표시됩니다."
 L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."] = "/lock 을 입력해 프레임 이동 창을 열고 탈것 내리기 버튼을 원하는 위치로 끌어다 놓으세요. 버튼 위에서 마우스 휠을 돌리면 크기를 조절할 수 있습니다."
+
+L["%s is restyling the game menu too, and the two styles clash. Which game menu do you want to keep?"] = "%s도 게임 메뉴의 모양을 바꾸고 있어 두 스타일이 충돌합니다. 어느 게임 메뉴를 유지하시겠습니까?"
+L["Picking AzeriteUI or Blizzard turns %s off for this character. The interface reloads to apply your choice."] = "AzeriteUI 또는 블리자드를 선택하면 이 캐릭터에서 %s 애드온이 비활성화됩니다. 선택을 적용하기 위해 인터페이스를 다시 불러옵니다."
+L["Blizzard"] = "블리자드"
+L["Decide Later"] = "나중에 결정"
+L["Game Menu Style"] = "게임 메뉴 스타일"
+L["AzeriteUI restyles the game menu you open with Escape. If another addon restyles it too, AzeriteUI asks which one you want to keep when you open the menu."] = "AzeriteUI는 Esc 키로 여는 게임 메뉴의 모양을 바꿉니다. 다른 애드온도 게임 메뉴의 모양을 바꾸면, 메뉴를 열 때 어느 쪽을 유지할지 AzeriteUI가 묻습니다."
+L["Choose which addon styles the game menu. Changing this reloads the interface."] = "게임 메뉴의 스타일을 적용할 애드온을 선택합니다. 변경하면 인터페이스를 다시 불러옵니다."
+L["This turns %s off for this character and reloads the interface."] = "이 캐릭터에서 %s 애드온을 비활성화하고 인터페이스를 다시 불러옵니다."
+L["The game menu style changes when the interface reloads."] = "게임 메뉴 스타일은 인터페이스를 다시 불러오면 바뀝니다."

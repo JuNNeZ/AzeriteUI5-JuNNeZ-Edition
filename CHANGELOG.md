@@ -9,6 +9,27 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.4.10-JuNNeZ (2026-09-13) - When Another Addon Styles the Game Menu
+
+### Added
+
+- **AzeriteUI now asks what to do when another addon restyles the game menu too.** The menu you
+  open with Escape could end up with two addons' looks stacked on top of each other. If W2UI,
+  GW2 UI, FeelUI, DiabolicUI3, AddOnSkins or ConsolePort's menu is styling it as well, AzeriteUI
+  asks the first time you open the menu in a session:
+  - **AzeriteUI** keeps AzeriteUI's look and turns the other addon off for this character.
+  - **The other addon's name** keeps its look and turns AzeriteUI's game menu style off.
+  - **Blizzard** turns both off and gives you the plain game menu.
+  - **Decide Later** changes nothing, and neither does pressing Escape.
+
+  Every choice reloads the interface. AzeriteUI and Blizzard switch the whole other addon off, not
+  just its game menu, and you can turn it back on from the AddOns list. If you want AzeriteUI's menu
+  but the rest of the other addon, some of these addons can switch their own game menu styling off
+  in their settings instead - AzeriteUI does not ask while that is off.
+- **Change the game menu style whenever you like.** `/az` -> Game Menu -> Game Menu Style lists the
+  same choices and asks before reloading.
+
+
 ## 5.4.9-JuNNeZ (2026-09-12) - A Dismount Button You Can Place
 
 ### Added

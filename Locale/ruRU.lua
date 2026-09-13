@@ -646,3 +646,13 @@ L["The dismount button appears while you are mounted, in a vehicle or in control
 L["Use a custom position"] = "Использовать свою позицию"
 L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."] = "Отделяет кнопку спешивания от миникарты и позволяет разместить её в любом месте экрана. Введите /lock, чтобы перетащить её на место. Кнопка со своей позицией больше не относится к миникарте, поэтому она остаётся видимой и когда миникарта скрывается сама."
 L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."] = "Введите /lock, чтобы открыть перемещение рамок, и перетащите кнопку спешивания туда, куда хотите. Колесо мыши над ней меняет её размер."
+
+L["%s is restyling the game menu too, and the two styles clash. Which game menu do you want to keep?"] = "%s тоже меняет оформление игрового меню, и два стиля конфликтуют. Какое игровое меню оставить?"
+L["Picking AzeriteUI or Blizzard turns %s off for this character. The interface reloads to apply your choice."] = "Если выбрать AzeriteUI или Blizzard, аддон %s будет отключён для этого персонажа. Интерфейс перезагрузится, чтобы применить ваш выбор."
+L["Blizzard"] = "Blizzard"
+L["Decide Later"] = "Решить позже"
+L["Game Menu Style"] = "Стиль игрового меню"
+L["AzeriteUI restyles the game menu you open with Escape. If another addon restyles it too, AzeriteUI asks which one you want to keep when you open the menu."] = "AzeriteUI меняет оформление игрового меню, которое открывается клавишей Esc. Если другой аддон тоже его меняет, AzeriteUI при открытии меню спросит, какое из них оставить."
+L["Choose which addon styles the game menu. Changing this reloads the interface."] = "Выберите, какой аддон оформляет игровое меню. Изменение перезагрузит интерфейс."
+L["This turns %s off for this character and reloads the interface."] = "Аддон %s будет отключён для этого персонажа, а интерфейс перезагрузится."
+L["The game menu style changes when the interface reloads."] = "Стиль игрового меню изменится после перезагрузки интерфейса."

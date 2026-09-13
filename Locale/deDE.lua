@@ -646,3 +646,13 @@ L["The dismount button appears while you are mounted, in a vehicle or in control
 L["Use a custom position"] = "Eigene Position verwenden"
 L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."] = "Löst die Absteige-Schaltfläche von der Minikarte und platziert sie an einer beliebigen Stelle des Bildschirms. Tippe /lock, um sie an ihren Platz zu ziehen. Eine Schaltfläche mit eigener Position gehört nicht mehr zur Minikarte und bleibt daher auch sichtbar, wenn sich die Minikarte selbst ausblendet."
 L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."] = "Tippe /lock, um den Rahmenschieber aufzurufen, und zieh die Absteige-Schaltfläche dorthin, wo du sie haben willst. Mit dem Mausrad darüber änderst du ihre Größe."
+
+L["%s is restyling the game menu too, and the two styles clash. Which game menu do you want to keep?"] = "%s gestaltet das Spielmenü ebenfalls um, und die beiden Stile vertragen sich nicht. Welches Spielmenü möchtest du behalten?"
+L["Picking AzeriteUI or Blizzard turns %s off for this character. The interface reloads to apply your choice."] = "Wählst du AzeriteUI oder Blizzard, wird %s für diesen Charakter deaktiviert. Die Benutzeroberfläche wird neu geladen, um deine Wahl zu übernehmen."
+L["Blizzard"] = "Blizzard"
+L["Decide Later"] = "Später entscheiden"
+L["Game Menu Style"] = "Stil des Spielmenüs"
+L["AzeriteUI restyles the game menu you open with Escape. If another addon restyles it too, AzeriteUI asks which one you want to keep when you open the menu."] = "AzeriteUI gestaltet das Spielmenü um, das du mit Escape öffnest. Gestaltet ein anderes Addon es ebenfalls um, fragt AzeriteUI beim Öffnen des Menüs, welches du behalten möchtest."
+L["Choose which addon styles the game menu. Changing this reloads the interface."] = "Wähle, welches Addon das Spielmenü gestaltet. Eine Änderung lädt die Benutzeroberfläche neu."
+L["This turns %s off for this character and reloads the interface."] = "Dadurch wird %s für diesen Charakter deaktiviert und die Benutzeroberfläche neu geladen."
+L["The game menu style changes when the interface reloads."] = "Der Stil des Spielmenüs ändert sich, sobald die Benutzeroberfläche neu geladen wird."

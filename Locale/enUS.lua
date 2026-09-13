@@ -645,3 +645,13 @@ L["The dismount button appears while you are mounted, in a vehicle or in control
 L["Use a custom position"] = true
 L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."] = true
 L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."] = true
+
+L["%s is restyling the game menu too, and the two styles clash. Which game menu do you want to keep?"] = true
+L["Picking AzeriteUI or Blizzard turns %s off for this character. The interface reloads to apply your choice."] = true
+L["Blizzard"] = true
+L["Decide Later"] = true
+L["Game Menu Style"] = true
+L["AzeriteUI restyles the game menu you open with Escape. If another addon restyles it too, AzeriteUI asks which one you want to keep when you open the menu."] = true
+L["Choose which addon styles the game menu. Changing this reloads the interface."] = true
+L["This turns %s off for this character and reloads the interface."] = true
+L["The game menu style changes when the interface reloads."] = true

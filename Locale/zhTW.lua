@@ -646,3 +646,13 @@ L["The dismount button appears while you are mounted, in a vehicle or in control
 L["Use a custom position"] = "使用自訂位置"
 L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."] = "將下坐騎按鈕從小地圖上分離，放到畫面上的任意位置。輸入 /lock 即可把它拖到想要的地方。擁有獨立位置的按鈕不再屬於小地圖，因此小地圖自動隱藏時它也會保持顯示。"
 L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."] = "輸入 /lock 開啟框架移動介面，然後將下坐騎按鈕拖到你想要的位置。在按鈕上滾動滑鼠滾輪可以調整它的大小。"
+
+L["%s is restyling the game menu too, and the two styles clash. Which game menu do you want to keep?"] = "%s 也在修改遊戲選單的樣式，兩種樣式會互相衝突。你想保留哪個遊戲選單？"
+L["Picking AzeriteUI or Blizzard turns %s off for this character. The interface reloads to apply your choice."] = "選擇 AzeriteUI 或暴雪會為此角色停用 %s。介面將重新載入以套用你的選擇。"
+L["Blizzard"] = "暴雪"
+L["Decide Later"] = "稍後決定"
+L["Game Menu Style"] = "遊戲選單樣式"
+L["AzeriteUI restyles the game menu you open with Escape. If another addon restyles it too, AzeriteUI asks which one you want to keep when you open the menu."] = "AzeriteUI 會修改按 Esc 開啟的遊戲選單的樣式。如果其他插件也修改了它，AzeriteUI 會在你開啟選單時詢問要保留哪一個。"
+L["Choose which addon styles the game menu. Changing this reloads the interface."] = "選擇由哪個插件設定遊戲選單的樣式。變更此項會重新載入介面。"
+L["This turns %s off for this character and reloads the interface."] = "這將為此角色停用 %s 並重新載入介面。"
+L["The game menu style changes when the interface reloads."] = "遊戲選單樣式將在重新載入介面後改變。"

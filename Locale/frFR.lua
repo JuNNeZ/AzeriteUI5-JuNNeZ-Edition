@@ -646,3 +646,13 @@ L["The dismount button appears while you are mounted, in a vehicle or in control
 L["Use a custom position"] = "Utiliser une position personnalisée"
 L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."] = "Détache le bouton de la minicarte et le place où vous voulez à l'écran. Tapez /lock pour le faire glisser à sa place. Un bouton doté de sa propre position n'appartient plus à la minicarte : il reste donc visible même lorsque la minicarte se masque d'elle-même."
 L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."] = "Tapez /lock pour afficher le déplaceur de cadres, puis faites glisser le bouton là où vous le souhaitez. La molette de la souris au-dessus du bouton en modifie la taille."
+
+L["%s is restyling the game menu too, and the two styles clash. Which game menu do you want to keep?"] = "%s modifie aussi l'apparence du menu du jeu, et les deux styles entrent en conflit. Quel menu du jeu voulez-vous garder ?"
+L["Picking AzeriteUI or Blizzard turns %s off for this character. The interface reloads to apply your choice."] = "Choisir AzeriteUI ou Blizzard désactive %s pour ce personnage. L'interface se recharge pour appliquer votre choix."
+L["Blizzard"] = "Blizzard"
+L["Decide Later"] = "Décider plus tard"
+L["Game Menu Style"] = "Style du menu du jeu"
+L["AzeriteUI restyles the game menu you open with Escape. If another addon restyles it too, AzeriteUI asks which one you want to keep when you open the menu."] = "AzeriteUI modifie l'apparence du menu du jeu que vous ouvrez avec Échap. Si un autre addon la modifie aussi, AzeriteUI vous demande lequel garder à l'ouverture du menu."
+L["Choose which addon styles the game menu. Changing this reloads the interface."] = "Choisissez l'addon qui donne son style au menu du jeu. Modifier ce réglage recharge l'interface."
+L["This turns %s off for this character and reloads the interface."] = "Cela désactive %s pour ce personnage et recharge l'interface."
+L["The game menu style changes when the interface reloads."] = "Le style du menu du jeu change au rechargement de l'interface."

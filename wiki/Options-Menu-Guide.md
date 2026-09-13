@@ -20,6 +20,7 @@ per profile.
 | Widgets | Top-center encounter and zone widgets. |
 | Tooltips | Style, anchoring, combat visibility, ID display. |
 | Info Bar | Clock format and local vs server time. |
+| Game Menu | Which addon styles the Escape game menu when more than one tries to. |
 | Explorer Mode | Automatic UI fading, its timing and its exit conditions. |
 
 ## Typical setup flow
@@ -49,6 +50,11 @@ per profile.
 - **Action Bars -> Micro Menu.** Blizzard's bottom strip and the AzeriteUI cog wheel
   in the bottom right are independent toggles. Both settings apply at load, so
   changing either prompts a reload.
+- **Game Menu -> Game Menu Style.** Only matters when another addon also restyles the
+  Escape menu - W2UI, GW2 UI, FeelUI, DiabolicUI3, AddOnSkins or ConsolePort's menu.
+  AzeriteUI asks which one to keep the first time the menu opens in a session, and this
+  is where you change it later. Keeping AzeriteUI's or Blizzard's menu turns the other
+  addon off for that character. Saved per character, and every change reloads.
 - **Unit Frames -> Player -> Mana Orb Texture / Glass / Rim / Pedestal.** The orb ships four
   fill artworks and three decorative layers; until now only one fill and the surrounding case
   were reachable. Glass is on by default, the rest keep the previous look.
