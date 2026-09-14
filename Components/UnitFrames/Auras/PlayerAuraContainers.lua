@@ -220,7 +220,11 @@ local function SetAuraButtonBrightness(button, alwaysBright)
 end
 
 local function StyleAuraButton(button, isHarmful, options, subdued, styleState)
-	local size = options.size or 36
+	-- Group frame containers size debuffs apart from buffs and change both at runtime,
+	-- so they keep the current sizes on the style state. Every other display leaves
+	-- those unset and keeps using the size it was created with.
+	local stateSize = styleState and (isHarmful and styleState.harmfulSize or styleState.helpfulSize)
+	local size = stateSize or options.size or 36
 	button:SetSize(size, size)
 	if (options.buttonFrameLevel) then
 		button:SetFrameLevel(options.buttonFrameLevel)
@@ -449,9 +453,34 @@ local function UpdateContainerBrightness(container, alwaysBright)
 	end
 end
 
+-- AddAuraGroup and SetAuraGroupFilterString assert on a filter string the client does
+-- not understand, so anything built from newer tokens or negation is checked first.
+local function IsUsableFilterString(filterString)
+	local validate = AuraUtil and AuraUtil.IsValidFilterString
+	if (type(validate) ~= "function") then
+		return false
+	end
+	local ok, isValid = TryCall(validate, filterString)
+	return ok and isValid == true
+end
+
+-- "Player / Self Buffs" means cast by you or your pet and "Other Temporary Buffs" means
+-- everything else, which is exactly the PLAYER filter token. The isFromPlayerOrPlayerPet
+-- aura field this used to read means cast by any player, so it passed other players'
+-- buffs off as yours and kept them out of "other". Both on, or both off, needs no split.
+-- A client without negation shows both rather than hiding the other side.
+local function GetShortGroupFilterString(showPersonal, showTemporary)
+	if (showPersonal and not showTemporary) then
+		return "HELPFUL|PLAYER"
+	elseif (showTemporary and not showPersonal and IsUsableFilterString("HELPFUL|!PLAYER")) then
+		return "HELPFUL|!PLAYER"
+	end
+	return "HELPFUL"
+end
+
 --[[
-	Anchors, per-group layouts and the short-buff candidate filters are pure
-	functions of these fields. Everything else in a configuration -- the frame
+	Anchors, per-group layouts and the short-buff filter string and candidate
+	filters are pure functions of these fields. Everything else in a configuration -- the frame
 	counts and the container width -- moves independently, and on the target
 	frame it moves constantly: a boss carries AurasSizeBoss and AurasNumTotalBoss
 	while everything else carries the plain pair, so swapping between a boss and
@@ -494,9 +523,6 @@ local function ApplyContainerLayout(container, config)
 		nameplateShowAll = false,
 		maxDuration = showLong and nil or maxDuration
 	}
-	if (showPersonal ~= showTemporary) then
-		shortFilters.isFromPlayerOrPlayerPet = showPersonal
-	end
 
 	local horizontal = GetFlowDirection(config.growthX == "LEFT" and "Left" or "Right", config.growthX == "LEFT" and -1 or 1)
 	local vertical = GetFlowDirection(config.growthY == "DOWN" and "Down" or "Up", config.growthY == "DOWN" and -1 or 1)
@@ -521,6 +547,8 @@ local function ApplyContainerLayout(container, config)
 	for layoutIndex, groupKey in ipairs(HELPFUL_GROUPS) do
 		container:SetAuraGroupLayout(groupKey, CreateLayout(layoutIndex + 1))
 	end
+	-- Compares before it acts.
+	container:SetAuraGroupFilterString(HELPFUL_SHORT_GROUP, GetShortGroupFilterString(showPersonal, showTemporary))
 	container:SetAuraGroupCandidateFilters(HELPFUL_SHORT_GROUP, shortFilters)
 end
 
@@ -701,4 +729,415 @@ ns.PlayerAuraContainers.CreateForUnit = function(parent, unit, options)
 	Mixin(display, DisplayMixin)
 	display:Configure(BuildDisplayConfig(options))
 	return display
+end
+
+--[[
+	Party and raid frames.
+
+	The player rows above sort auras by nameplate flags, which say little about a group
+	member. These groups sort with AuraUtil.ProcessAura instead, the classification
+	Blizzard's own raid frames are built on. The container runs it through its
+	ProcessAura policy inside Blizzard's environment, so it keeps working in combat,
+	where a Lua scan of C_UnitAuras comes back empty. That is what keeps a Restoration
+	Druid's Rejuvenation, Regrowth and Lifebloom on a party frame mid fight: ProcessAura
+	files them as Buff (cast by the player, castable on the unit, not a self-buff).
+
+	ProcessAura gives each aura exactly one class, so the ProcessAura groups never share
+	an aura. The two token groups stay off the boss groups through isBossOrRoleAura, and
+	off the player's own group through a negated PLAYER token while that group shows;
+	the raid-flagged group also leaves externals to theirs. PLAYER has to be a token: the
+	isFromPlayerOrPlayerPet aura field means cast by any player, which is how Blizzard's
+	TargetFrameAuraContainer reads it, and GW2_UI and VuhDo split on the token for the
+	same reason. Without negation support an aura can land in two groups, never in none.
+
+	Groups draw in the order listed. The display clips whatever does not fit, so the
+	player's own buffs come first and the least specific categories fall off the end.
+]]
+local GROUP_HELPFUL_OWN = "AzeriteGroupHelpfulOwn"
+local GROUP_HARMFUL_DISPEL = "AzeriteGroupHarmfulDispel"
+local GROUP_HARMFUL_BOSS = "AzeriteGroupHarmfulBoss"
+local GROUP_HELPFUL_BOSS = "AzeriteGroupHelpfulBoss"
+local GROUP_HARMFUL_OTHER = "AzeriteGroupHarmfulOther"
+local GROUP_HELPFUL_EXTERNAL = "AzeriteGroupHelpfulExternal"
+local GROUP_HELPFUL_RAID = "AzeriteGroupHelpfulRaid"
+
+local EXTERNAL_GROUP_FILTER = "HELPFUL|EXTERNAL_DEFENSIVE"
+local RAID_GROUP_FILTER = "HELPFUL|RAID_IN_COMBAT"
+
+local GROUP_FRAME_AURA_GROUPS = {
+	{ key = GROUP_HELPFUL_OWN, filter = "HELPFUL", isHarmful = false, shownField = "showOwn" },
+	{ key = GROUP_HARMFUL_DISPEL, filter = "HARMFUL", isHarmful = true, shownField = "showDispel" },
+	{ key = GROUP_HARMFUL_BOSS, filter = "HARMFUL", isHarmful = true, shownField = "showBoss" },
+	{ key = GROUP_HELPFUL_BOSS, filter = "HELPFUL", isHarmful = false, shownField = "showBoss" },
+	{ key = GROUP_HARMFUL_OTHER, filter = "HARMFUL", isHarmful = true, shownField = "showOther" },
+	{ key = GROUP_HELPFUL_EXTERNAL, filter = EXTERNAL_GROUP_FILTER, isHarmful = false, shownField = "showExternal" },
+	{ key = GROUP_HELPFUL_RAID, filter = RAID_GROUP_FILTER, isHarmful = false, shownField = "showRaid" }
+}
+
+-- Named keys for callers that create only some of the groups, and the ordered list
+-- for tooling, for the same reason GroupKeys is exported above.
+ns.PlayerAuraContainers.GroupFrameGroup = {
+	HelpfulOwn = GROUP_HELPFUL_OWN,
+	HarmfulDispel = GROUP_HARMFUL_DISPEL,
+	HarmfulBoss = GROUP_HARMFUL_BOSS,
+	HelpfulBoss = GROUP_HELPFUL_BOSS,
+	HarmfulOther = GROUP_HARMFUL_OTHER,
+	HelpfulExternal = GROUP_HELPFUL_EXTERNAL,
+	HelpfulRaid = GROUP_HELPFUL_RAID
+}
+ns.PlayerAuraContainers.GroupFrameKeys = {}
+for index, group in ipairs(GROUP_FRAME_AURA_GROUPS) do
+	ns.PlayerAuraContainers.GroupFrameKeys[index] = group.key
+end
+
+local GROUP_FRAME_CONFIG_FIELDS = {
+	"size", "harmfulSize", "spacingX", "spacingY", "initialAnchor", "growthX", "growthY", "maxAuras",
+	"showOwn", "ownMaxDuration", "showDispel", "showBoss", "showOther", "otherMaxDuration",
+	"onlyDispellable", "showExternal", "showRaid"
+}
+
+local function GetProcessedAuraTypes()
+	local auraTypes = AuraUtil and AuraUtil.AuraUpdateChangedType
+	if (type(auraTypes) ~= "table" or not auraTypes.Buff or not auraTypes.Debuff or not auraTypes.Dispel) then
+		return nil
+	end
+	return auraTypes
+end
+
+-- Appends negated tokens to a filter string, if the client understands the result.
+local function WithExcludedTokens(filterString, ...)
+	local excluded = filterString
+	for index = 1, select("#", ...) do
+		local token = select(index, ...)
+		if (token) then
+			excluded = excluded .. "|!" .. token
+		end
+	end
+	if (excluded ~= filterString and IsUsableFilterString(excluded)) then
+		return excluded
+	end
+	return filterString
+end
+
+local function GetGroupFilterString(group, config)
+	local ownToken = config.showOwn and "PLAYER" or nil
+	if (group.key == GROUP_HELPFUL_EXTERNAL) then
+		return WithExcludedTokens(EXTERNAL_GROUP_FILTER, ownToken)
+	elseif (group.key == GROUP_HELPFUL_RAID) then
+		return WithExcludedTokens(RAID_GROUP_FILTER, ownToken, config.showExternal and "EXTERNAL_DEFENSIVE" or nil)
+	end
+	return group.filter
+end
+
+local function GetGroupFrameCandidateFilters(groupKey, config, auraTypes)
+	if (groupKey == GROUP_HELPFUL_OWN) then
+		return {
+			processedAuraType = auraTypes.Buff,
+			excludeSpellIDs = HiddenAuras,
+			maxDuration = config.ownMaxDuration
+		}
+	elseif (groupKey == GROUP_HARMFUL_DISPEL) then
+		return {
+			processedAuraType = auraTypes.Dispel
+		}
+	elseif (groupKey == GROUP_HARMFUL_BOSS or groupKey == GROUP_HELPFUL_BOSS) then
+		-- ProcessAura files boss and role auras as Debuff whichever way they point.
+		return {
+			processedAuraType = auraTypes.Debuff,
+			isBossOrRoleAura = true
+		}
+	elseif (groupKey == GROUP_HARMFUL_OTHER) then
+		return {
+			processedAuraType = auraTypes.Debuff,
+			isBossOrRoleAura = false,
+			maxDuration = config.otherMaxDuration
+		}
+	end
+
+	-- Externals and raid-flagged buffs. Whose buffs these take is settled in the
+	-- filter string, see GetGroupFilterString.
+	return {
+		excludeSpellIDs = HiddenAuras,
+		isBossOrRoleAura = false
+	}
+end
+
+-- Spell ID sets are static, so they are left out.
+local function GetCandidateFilterSignature(filters)
+	return table.concat({
+		tostring(filters.processedAuraType),
+		tostring(filters.maxDuration),
+		tostring(filters.isBossOrRoleAura)
+	}, ":")
+end
+
+local function GetGroupFrameConfigSignature(config)
+	local parts = {}
+	for index, field in ipairs(GROUP_FRAME_CONFIG_FIELDS) do
+		parts[index] = tostring(config[field])
+	end
+	return table.concat(parts, ":")
+end
+
+local function BuildGroupFrameConfig(options)
+	local size = options.size or 30
+	return {
+		size = size,
+		harmfulSize = options.harmfulSize or size,
+		spacingX = options.spacingX or options.spacing or 0,
+		spacingY = options.spacingY or options.spacing or 0,
+		initialAnchor = options.initialAnchor or "TOPLEFT",
+		growthX = options.growthX or "RIGHT",
+		growthY = options.growthY or "DOWN",
+		maxAuras = options.maxAuras or 0,
+		showOwn = options.showOwn ~= false,
+		ownMaxDuration = options.ownMaxDuration,
+		showDispel = options.showDispel ~= false,
+		showBoss = options.showBoss ~= false,
+		showOther = options.showOther ~= false,
+		otherMaxDuration = options.otherMaxDuration,
+		onlyDispellable = options.onlyDispellable == true,
+		showExternal = options.showExternal ~= false,
+		showRaid = options.showRaid ~= false
+	}
+end
+ns.PlayerAuraContainers.BuildGroupFrameConfig = BuildGroupFrameConfig
+
+local function ResizeGroupFrames(container, groupKey, size)
+	local sizes = container.__AzeriteUI_GroupFrameSizes
+	if (sizes[groupKey] == size) then return end
+	sizes[groupKey] = size
+
+	-- Pooled buttons carry the same access restriction as the player rows once aura
+	-- data is secret, and keep their old size there. New buttons read the size from
+	-- the style state either way.
+	for frameIndex = 1, container:GetAuraGroupFrameCount(groupKey) do
+		local button = container:GetAuraGroupFrame(groupKey, frameIndex)
+		if (CanTouchAuraWidget(button)) then
+			button:SetSize(size, size)
+		end
+	end
+end
+
+local function ApplyGroupFrameConfiguration(container, config, width)
+	local onlyDispellable = config.onlyDispellable and true or false
+	if (container.__AzeriteUI_OnlyDispellable ~= onlyDispellable) then
+		container:SetAuraProcessingPolicy(CustomAuraContainerAuraProcessingPolicy.ProcessAura, {
+			displayOnlyDispellableDebuffs = onlyDispellable
+		})
+		container.__AzeriteUI_OnlyDispellable = onlyDispellable
+	end
+
+	local styleState = container.__AzeriteUI_StyleState
+	styleState.helpfulSize = config.size
+	styleState.harmfulSize = config.harmfulSize
+
+	local horizontal = GetFlowDirection(config.growthX == "LEFT" and "Left" or "Right", config.growthX == "LEFT" and -1 or 1)
+	local vertical = GetFlowDirection(config.growthY == "DOWN" and "Down" or "Up", config.growthY == "DOWN" and -1 or 1)
+	local offsetX, offsetY = GetContainerAnchorOffset(config.initialAnchor)
+	container:ClearAllPoints()
+	container:SetPoint(config.initialAnchor, container:GetParent(), config.initialAnchor, offsetX, offsetY)
+	container:SetFlowLayoutAnchorPoint(config.initialAnchor)
+	container:SetFlowLayoutGrowthDirection(horizontal, vertical)
+	container:SetFlowLayoutMaximumLineSize(width)
+
+	local auraTypes = GetProcessedAuraTypes()
+	for layoutIndex, group in ipairs(GROUP_FRAME_AURA_GROUPS) do
+		local groupKey = group.key
+		if (container.__AzeriteUI_GroupKeys[groupKey]) then
+			local size = group.isHarmful and config.harmfulSize or config.size
+			container:SetAuraGroupLayout(groupKey, {
+				elementSpacing = config.spacingX,
+				lineSpacing = config.spacingY,
+				groupSpacing = config.spacingX,
+				groupLineSpacing = config.spacingY,
+				elementWidth = size,
+				elementHeight = size,
+				layoutIndex = layoutIndex
+			})
+
+			-- Compares before it acts.
+			container:SetAuraGroupFilterString(groupKey, GetGroupFilterString(group, config))
+
+			-- Does not compare, and rebuilds the container on every call.
+			local filters = GetGroupFrameCandidateFilters(groupKey, config, auraTypes)
+			local filterSignature = GetCandidateFilterSignature(filters)
+			if (container.__AzeriteUI_FilterSignatures[groupKey] ~= filterSignature) then
+				container:SetAuraGroupCandidateFilters(groupKey, filters)
+				container.__AzeriteUI_FilterSignatures[groupKey] = filterSignature
+			end
+
+			container:SetAuraGroupMaxFrameCount(groupKey, config[group.shownField] and config.maxAuras or 0)
+			ResizeGroupFrames(container, groupKey, size)
+		end
+	end
+end
+
+local function CreateGroupAuraContainer(parent, options, config)
+	local container = CreateFrame(
+		"AuraContainer",
+		nil,
+		parent,
+		"CustomAuraContainerTemplate, DisableUntrustedLayoutScriptsTemplate"
+	)
+	container:SetFrameLevel(parent:GetFrameLevel())
+	SetMouseInputEnabled(container, false)
+	container:SetPoint(config.initialAnchor, parent, config.initialAnchor, GetContainerAnchorOffset(config.initialAnchor))
+
+	local styleState = {
+		alwaysBright = true,
+		helpfulSize = config.size,
+		harmfulSize = config.harmfulSize
+	}
+	container.__AzeriteUI_StyleState = styleState
+	container.__AzeriteUI_GroupKeys = {}
+	container.__AzeriteUI_FilterSignatures = {}
+	container.__AzeriteUI_GroupFrameSizes = {}
+
+	container:SetAuraProcessingPolicy(CustomAuraContainerAuraProcessingPolicy.ProcessAura, {
+		displayOnlyDispellableDebuffs = config.onlyDispellable
+	})
+	container.__AzeriteUI_OnlyDispellable = config.onlyDispellable
+
+	local auraTypes = GetProcessedAuraTypes()
+	for layoutIndex, group in ipairs(GROUP_FRAME_AURA_GROUPS) do
+		local groupKey = group.key
+		if (not options.groupKeys or options.groupKeys[groupKey]) then
+			local isHarmful = group.isHarmful
+			local size = isHarmful and config.harmfulSize or config.size
+			local filters = GetGroupFrameCandidateFilters(groupKey, config, auraTypes)
+			container:AddAuraGroup(groupKey, GetGroupFilterString(group, config), {
+				initializeFrame = function(button)
+					StyleAuraButton(button, isHarmful, options, false, styleState)
+				end,
+				candidateFilters = filters,
+				-- Frame counts come from the first configuration pass.
+				maxFrameCount = 0,
+				sortMethod = GetSortMethod(isHarmful),
+				sortDirection = GetSortDirection(),
+				layout = {
+					elementWidth = size,
+					elementHeight = size,
+					layoutIndex = layoutIndex
+				}
+			})
+			container.__AzeriteUI_GroupKeys[groupKey] = true
+			container.__AzeriteUI_FilterSignatures[groupKey] = GetCandidateFilterSignature(filters)
+			container.__AzeriteUI_GroupFrameSizes[groupKey] = size
+		end
+	end
+
+	return container
+end
+
+local function IsGroupFrameUnitToken(unit)
+	if (type(unit) ~= "string") then
+		return false
+	end
+	return unit == "player" or unit == "pet" or unit == "vehicle"
+		or unit:match("^party%d$") ~= nil or unit:match("^partypet%d$") ~= nil
+		or unit:match("^raid%d+$") ~= nil or unit:match("^raidpet%d+$") ~= nil
+end
+
+local GroupDisplayMixin = CreateFromMixins(DisplayMixin)
+
+function GroupDisplayMixin:Configure(config)
+	local signature = GetGroupFrameConfigSignature(config)
+	if (signature == self.configurationSignature) then return end
+
+	-- Unlike the player rows, nothing in this pass is protected. The display, its clip
+	-- frame and the container are plain frames and every container setter is part of
+	-- Blizzard's inbound interface, so an option change, or a relayout from a roster
+	-- update during a fight, applies at once instead of waiting for combat to end.
+	ApplyGroupFrameConfiguration(self.container, config, self:GetWidth())
+	self.configurationSignature = signature
+	self:ForceUpdate()
+end
+
+-- Returns true when the container was pointed at a new unit, which rebuilds it.
+function GroupDisplayMixin:SetDisplayUnit(unit)
+	if (not IsGroupFrameUnitToken(unit) or unit == self.unit) then
+		return false
+	end
+	self.unit = unit
+	self.container:SetUnit(unit)
+	self.container:SetEnabled(self.displayEnabled == true)
+	return true
+end
+
+function GroupDisplayMixin:SetDisplayEnabled(enabled)
+	enabled = enabled and true or false
+	self.displayEnabled = enabled
+
+	-- An enabled container registers UNIT_AURA for its unit, and a header button is
+	-- styled before the header hands it one. Stay disabled until a real unit arrives.
+	self.container:SetEnabled(enabled and self.unit ~= nil)
+
+	if (InCombatLockdown()) then
+		self.pendingShownState = enabled
+		self:SetAlpha(enabled and 1 or 0)
+		return
+	end
+
+	self.pendingShownState = nil
+	self:SetAlpha(1)
+	self:SetShown(enabled)
+end
+
+-- Party and raid variant of CreateForUnit. Returns nil where the client lacks the
+-- container, ProcessAura classification or the filter tokens the groups rely on, and
+-- the caller keeps its scanning element in that case.
+ns.PlayerAuraContainers.CreateForGroupUnit = function(parent, unit, options)
+	if (not C_XMLUtil or not C_XMLUtil.GetTemplateInfo or not C_XMLUtil.GetTemplateInfo("CustomAuraContainerTemplate")) then
+		return nil
+	end
+	if (not AuraContainerSortMethod or not AuraContainerSortDirection or not AnchorUtil) then
+		return nil
+	end
+	local policies = CustomAuraContainerAuraProcessingPolicy
+	if (not policies or not policies.ProcessAura or not GetProcessedAuraTypes()
+		or not IsUsableFilterString(EXTERNAL_GROUP_FILTER) or not IsUsableFilterString(RAID_GROUP_FILTER)) then
+		return nil
+	end
+
+	local displayFrameLevel = parent:GetFrameLevel() + 1
+	options.buttonFrameLevel = displayFrameLevel
+
+	local display = CreateFrame("Frame", nil, parent, "DisableUntrustedLayoutScriptsTemplate")
+	SetMouseInputEnabled(display, false)
+	display:SetSize(options.width, options.height)
+	display:SetFrameLevel(displayFrameLevel)
+
+	local clipFrame = CreateFrame("Frame", nil, display, "DisableUntrustedLayoutScriptsTemplate")
+	SetMouseInputEnabled(clipFrame, false)
+	clipFrame:SetFrameLevel(display:GetFrameLevel())
+	clipFrame:SetPoint("TOPLEFT", display, "TOPLEFT", -BORDER_OVERHANG, BORDER_OVERHANG)
+	clipFrame:SetPoint("BOTTOMRIGHT", display, "BOTTOMRIGHT", BORDER_OVERHANG, -BORDER_OVERHANG)
+	clipFrame:SetClipsChildren(true)
+	display.clipFrame = clipFrame
+
+	local config = BuildGroupFrameConfig(options)
+	display.container = CreateGroupAuraContainer(clipFrame, options, config)
+	display.containers = { display.container }
+
+	Mixin(display, GroupDisplayMixin)
+	display:SetDisplayUnit(unit)
+	display:Configure(config)
+	return display
+end
+
+-- Called from a group frame's PostUpdate. oUF runs that after every full element
+-- update, which is where a header button first learns its unit and where a roster
+-- change that handed its token to another player surfaces.
+ns.PlayerAuraContainers.UpdateGroupFrameUnit = function(frame, event)
+	local native = frame and frame.NativeAuras
+	if (not native or not native.SetDisplayUnit) then
+		return
+	end
+	if (native:SetDisplayUnit(frame.unit)) then
+		return
+	end
+	if (event) then
+		native:ForceUpdate()
+	end
 end

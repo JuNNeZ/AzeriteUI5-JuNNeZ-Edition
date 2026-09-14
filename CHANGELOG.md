@@ -9,6 +9,45 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.4.11-JuNNeZ (2026-09-14) - Party Auras That Last Through Combat
+
+### Fixed
+
+- **Party frame auras no longer vanish the moment combat starts.** Heal-over-time spells such as
+  Rejuvenation, Regrowth and Lifebloom, along with the other buffs and debuffs on your party members,
+  disappeared from the party frames as soon as a fight began and came back once it ended. The game no
+  longer lets addons read aura data during combat, so the party aura row now uses the same
+  game-driven aura display as the player and target frames, which keeps updating mid fight. Your own
+  buffs are drawn first.
+- **Raid Frames (5) get the same fix.** They show the buffs you can apply and the debuffs you can
+  dispel, in and out of combat.
+- **"Player / Self Buffs" and "Other Temporary Buffs" now split by who cast the buff.** With only
+  "Player / Self Buffs" on, buffs other players put on you no longer slip in; with only "Other
+  Temporary Buffs" on, those buffs now show instead of being hidden.
+  `/az` -> Unit Frame Settings -> Player -> Player Aura Row, with Use AzeriteUI Stock Behavior off.
+
+### Changed
+
+- **The Party Aura Row options now pick from the game's own aura categories.** Stock behavior shows
+  your own castable buffs, dispellable, boss and other debuffs, and externals and raid buffs from
+  other players. The custom toggles switch those categories on and off as before. "Show Short Helpful
+  Buffs" on its own keeps your buffs to under a minute and "Show Other Short Debuffs" keeps other
+  debuffs to about five minutes; stacks no longer count as short, and other players' buffs are no
+  longer dimmed. `/az` -> Unit Frame Settings -> Party Frames -> Party Aura Row.
+
+### Known limitations
+
+- The dispellable-debuff glow around a party frame and the priority-debuff icon in its middle still
+  read aura data the old way, so they go blank during combat.
+- Where the game keeps aura data secret, in dungeons and raids, changing Aura Size or Debuff Size %
+  only reaches aura icons drawn after the change.
+
+### Internal
+
+- `/azdebug aurasnapshot party|raid5` and `/azdebug unitmenu [trace on|off]`, for the combat aura
+  and raid right-click menu reports.
+
+
 ## 5.4.10-JuNNeZ (2026-09-13) - When Another Addon Styles the Game Menu
 
 ### Added

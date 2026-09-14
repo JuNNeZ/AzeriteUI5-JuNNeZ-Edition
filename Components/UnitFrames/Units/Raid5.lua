@@ -517,8 +517,11 @@ local TargetHighlight_Update = function(self, event, unit, ...)
 	end
 end
 
-local UnitFrame_PostUpdate = function(self)
+local UnitFrame_PostUpdate = function(self, event)
 	--TargetHighlight_Update(self)
+	if (ns.PlayerAuraContainers and ns.PlayerAuraContainers.UpdateGroupFrameUnit) then
+		ns.PlayerAuraContainers.UpdateGroupFrameUnit(self, event)
+	end
 end
 
 local UnitFrame_OnEvent = function(self, event, unit, ...)
@@ -897,6 +900,41 @@ local style = function(self, unit)
 	end
 
 	self.Auras = auras
+
+	-- The scanning element above is empty in combat on Retail 12.1, as on the party
+	-- frames. The native row keeps what the "RAID" filter asked for - buffs you can
+	-- apply, HoTs included, and debuffs you can dispel - sorted by the client instead.
+	local nativeGroups = ns.PlayerAuraContainers and ns.PlayerAuraContainers.GroupFrameGroup
+	if (nativeGroups and ns.PlayerAuraContainers.CreateForGroupUnit) then
+		local native = ns.PlayerAuraContainers.CreateForGroupUnit(self, unit, {
+			width = db.AurasSize[1],
+			height = db.AurasSize[2],
+			size = db.AuraSize,
+			spacing = db.AuraSpacing,
+			spacingX = db.AurasSpacingX,
+			spacingY = db.AurasSpacingY,
+			initialAnchor = db.AurasInitialAnchor,
+			growthX = db.AurasGrowthX,
+			growthY = db.AurasGrowthY,
+			maxAuras = db.AurasNumTotal,
+			disableMouse = db.AurasDisableMouse,
+			disableCooldown = db.AurasDisableCooldown,
+			tooltipAnchor = db.AurasTooltipAnchor,
+			groupKeys = {
+				[nativeGroups.HelpfulOwn] = true,
+				[nativeGroups.HarmfulDispel] = true
+			},
+			showBoss = false,
+			showOther = false,
+			showExternal = false,
+			showRaid = false
+		})
+		if (native) then
+			native:SetPoint(unpack(db.AurasPosition))
+			self.NativeAuras = native
+		end
+	end
+
 	ns.API.CreatePrivateAuras(self, self.Health, 20, 3)
 
 	-- Range Opacity
@@ -1348,6 +1386,12 @@ RaidFrame5Mod.UpdateUnits = function(self)
 			frame:DisableElement("Range")
 			frame:SetAlpha(1)
 		end
+		-- Raid5 has no aura toggle, so the native row simply takes over where it exists.
+		if (frame.NativeAuras) then
+			frame:DisableElement("Auras")
+			frame.NativeAuras:SetDisplayEnabled(true)
+			frame.NativeAuras:ForceUpdate()
+		end
 		frame:UpdateAllElements("RefreshUnit")
 	end
 end
@@ -1397,6 +1441,13 @@ RaidFrame5Mod.OnEvent = function(self, event, ...)
 		if (header and header.ForceSecureUpdate) then
 			header:ForceSecureUpdate()
 			self:ConfigureChildren()
+		end
+
+		-- A native aura row enabled during combat only changed its alpha.
+		for frame in next,Units do
+			if (frame.NativeAuras) then
+				frame.NativeAuras:ApplyPendingShownState()
+			end
 		end
 	end
 end

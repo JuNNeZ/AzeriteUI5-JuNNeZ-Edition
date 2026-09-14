@@ -281,6 +281,53 @@ local GetPartyAuraSetting = function(profile, key, fallback)
 	return fallback
 end
 
+-- The same clamp PartyPostUpdateButton applies to the scanning element's debuffs.
+local GetPartyDebuffScale = function(profile)
+	local scale = 1
+	if (profile and type(profile.partyAuraDebuffScale) == "number") then
+		scale = profile.partyAuraDebuffScale / 100
+	end
+	if (scale < .5) then
+		scale = .5
+	elseif (scale > 2) then
+		scale = 2
+	end
+	return scale
+end
+
+-- The native aura row cannot run PartyAuraFilter, which reads aura data in Lua that
+-- the client withholds during combat. It is built from categories the client sorts
+-- instead (CreateForGroupUnit in PlayerAuraContainers.lua), and the party options
+-- switch those on and off here. Stock behavior shows every category. The two "short"
+-- limits are the scanning filter's: under 61 seconds helpful, 301 seconds harmful.
+local PARTY_SHORT_HELPFUL_DURATION = 60
+local PARTY_SHORT_HARMFUL_DURATION = 301
+
+local GetPartyNativeAuraOptions = function(profile)
+	local stock = GetPartyAuraSetting(profile, "partyAuraUseStockBehavior", true) and true or false
+	local Show = function(key)
+		return stock or (GetPartyAuraSetting(profile, key, true) and true or false)
+	end
+	local onlyDispellable = (not stock) and (GetPartyAuraSetting(profile, "partyAuraOnlyDispellableDebuffs", false) and true or false)
+	local showRaidBuffs = Show("partyAuraShowHelpfulRaidBuffs")
+	local showShortBuffs = Show("partyAuraShowHelpfulShortBuffs")
+
+	return {
+		-- Your own castable buffs, HoTs included, drawn ahead of everything else.
+		showOwn = showRaidBuffs or showShortBuffs,
+		ownMaxDuration = (showShortBuffs and not showRaidBuffs) and PARTY_SHORT_HELPFUL_DURATION or nil,
+		-- "Only Show Dispellable Debuffs" keeps boss mechanics, as its description
+		-- promises, and leaves the narrowing to Blizzard's own dispellable-only mode.
+		showDispel = onlyDispellable or Show("partyAuraShowDispellableDebuffs"),
+		showBoss = onlyDispellable or Show("partyAuraShowBossAndImportantDebuffs"),
+		showOther = onlyDispellable or Show("partyAuraShowOtherDebuffs"),
+		otherMaxDuration = (not stock and not onlyDispellable) and PARTY_SHORT_HARMFUL_DURATION or nil,
+		onlyDispellable = onlyDispellable,
+		showExternal = Show("partyAuraShowHelpfulExternals"),
+		showRaid = showRaidBuffs
+	}
+end
+
 local GetPartyAuraLayoutValue = function(profile, key, fallback)
 	local value = GetPartyAuraSetting(profile, key, fallback)
 	return (value ~= nil) and value or fallback
@@ -374,6 +421,26 @@ local ApplyPartyAuraLayout = function(frame)
 	auras["spacing-y"] = spacingY
 	auras["growth-x"] = growthX
 	auras["growth-y"] = growthY
+
+	local native = frame.NativeAuras
+	if (native) then
+		local harmfulSize = math_floor(auraSize * GetPartyDebuffScale(profile) + .5)
+		-- A larger debuff makes its line taller, and the native row clips to its own
+		-- bounds, so the height is sized for the larger of the two.
+		local lineSize = math_max(auraSize, harmfulSize)
+		native:SetSize(width, (rows * lineSize) + ((rows - 1) * spacingY))
+
+		local nativeOptions = GetPartyNativeAuraOptions(profile)
+		nativeOptions.size = auraSize
+		nativeOptions.harmfulSize = harmfulSize
+		nativeOptions.spacingX = spacingX
+		nativeOptions.spacingY = spacingY
+		nativeOptions.initialAnchor = initialAnchor
+		nativeOptions.growthX = growthX
+		nativeOptions.growthY = growthY
+		nativeOptions.maxAuras = numTotal
+		native:Configure(ns.PlayerAuraContainers.BuildGroupFrameConfig(nativeOptions))
+	end
 end
 
 local GetDispellableDebuffColor = function(frame)
@@ -862,10 +929,13 @@ local TargetHighlight_Update = function(self, event, unit, ...)
 	end
 end
 
-local UnitFrame_PostUpdate = function(self)
+local UnitFrame_PostUpdate = function(self, event)
 	TargetHighlight_Update(self)
 	AuraHighlight_Update(self)
 	UpdatePartyHealthTextVisibility(self)
+	if (ns.PlayerAuraContainers and ns.PlayerAuraContainers.UpdateGroupFrameUnit) then
+		ns.PlayerAuraContainers.UpdateGroupFrameUnit(self, event)
+	end
 end
 
 local UnitFrame_OnEvent = function(self, event, unit, ...)
@@ -1246,6 +1316,33 @@ local style = function(self, unit)
 	end
 
 	self.Auras = auras
+
+	-- Retail 12.1 hands addon code no aura data at all while in combat (FixLog,
+	-- 2026-08-18), so the scanning element above goes blank the moment a fight starts
+	-- and fills again when it ends, every HoT a healer keeps on the group included.
+	-- The native AuraContainer is filled by the client and keeps working, which is why
+	-- the player rows and the target frame already moved to it. UpdateUnits decides
+	-- which of the two draws; the scanning element stays as the fallback.
+	if (ns.PlayerAuraContainers and ns.PlayerAuraContainers.CreateForGroupUnit) then
+		local native = ns.PlayerAuraContainers.CreateForGroupUnit(self, unit, {
+			width = db.AurasSize[1],
+			height = db.AurasSize[2],
+			size = db.AuraSize,
+			spacing = db.AuraSpacing,
+			initialAnchor = db.AurasInitialAnchor,
+			growthX = db.AurasGrowthX,
+			growthY = db.AurasGrowthY,
+			maxAuras = db.AurasNumTotal,
+			disableMouse = db.AurasDisableMouse,
+			disableCooldown = db.AurasDisableCooldown,
+			tooltipAnchor = db.AurasTooltipAnchor
+		})
+		if (native) then
+			native:SetPoint(unpack(db.AurasPosition))
+			self.NativeAuras = native
+		end
+	end
+
 	ApplyPartyAuraLayout(self)
 
 	-- Range Opacity
@@ -1566,11 +1663,23 @@ PartyFrameMod.UpdateUnits = function(self)
 	for frame in next,Units do
 		ApplyHealthColorMode(frame, self.db.profile)
 		ApplyPartyAuraLayout(frame)
+		local native = frame.NativeAuras
 		if (self.db.profile.showAuras) then
-			frame:EnableElement("Auras")
-			frame.Auras:ForceUpdate()
+			if (native) then
+				-- Only one of the two may draw: the scanning element would duplicate the
+				-- native row out of combat and show nothing during it.
+				frame:DisableElement("Auras")
+				native:SetDisplayEnabled(true)
+				native:ForceUpdate()
+			else
+				frame:EnableElement("Auras")
+				frame.Auras:ForceUpdate()
+			end
 		else
 			frame:DisableElement("Auras")
+			if (native) then
+				native:SetDisplayEnabled(false)
+			end
 		end
 		if (self.db.profile.showRaidTargetIcons) then
 			frame:EnableElement("RaidTargetIndicator")
@@ -1643,6 +1752,13 @@ PartyFrameMod.OnEvent = function(self, event, ...)
 	if (header and header.ForceSecureUpdate) then
 		header:ForceSecureUpdate()
 		self:ConfigureChildren()
+	end
+
+	-- A native aura row switched on or off during combat only changed its alpha.
+	for frame in next,Units do
+		if (frame.NativeAuras) then
+			frame.NativeAuras:ApplyPendingShownState()
+		end
 	end
 end
 

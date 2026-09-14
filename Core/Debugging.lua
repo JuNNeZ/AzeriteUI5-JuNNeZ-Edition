@@ -2974,6 +2974,254 @@ local function DumpTargetAuraSnapshot()
 	end
 end
 
+-- Party and Raid5 aura probe. "api" is what a Lua scan of the unit returns right now,
+-- which is 0 in combat on Retail 12.1. "native" is the client-filled container those
+-- frames draw from instead. A healer's HoTs counted under native while api reads 0 is
+-- the combat fix doing its job.
+local function DumpGroupFrameAuraSnapshot(styleSuffix, label)
+	SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", label, "combat", InCombatLockdown and InCombatLockdown())
+
+	local groupKeys = ns.PlayerAuraContainers and ns.PlayerAuraContainers.GroupFrameKeys or {}
+	local styleName = ns.Prefix .. styleSuffix
+	local dumped = 0
+	for frame in next, ns.UnitFrames or {} do
+		if (dumped < 5 and frame.style == styleName and ProbeMethod(frame, "IsVisible")) then
+			dumped = dumped + 1
+			local unit = frame.unit
+			local helpful = unit and CountRawUnitAuras(unit, "HELPFUL") or -1
+			local harmful = unit and CountRawUnitAuras(unit, "HARMFUL") or -1
+			SafePrint("|cfff0f0f0", " frame", ProbeMethod(frame, "GetName"), "unit", unit,
+				"scanElement", frame.IsElementEnabled and frame:IsElementEnabled("Auras"),
+				"api HELPFUL", helpful, "api HARMFUL", harmful)
+
+			local native = frame.NativeAuras
+			local container = native and native.container
+			if (not container) then
+				SafePrint("|cfff0f0f0", "  native: none, the scanning element draws this frame")
+			else
+				SafePrint("|cfff0f0f0", "  native:", "unit", native.unit, "enabled", native.displayEnabled,
+					"shown", ProbeMethod(native, "IsShown"), "alpha", ProbeMethod(native, "GetAlpha"))
+				for _, groupKey in ipairs(groupKeys) do
+					local pool = ProbeMethod(container, "GetAuraGroupFrameCount", groupKey)
+					if (type(pool) == "number" and pool > 0) then
+						local shown, unreadable = 0, 0
+						for index = 1, pool do
+							local button = ProbeMethod(container, "GetAuraGroupFrame", groupKey, index)
+							local isShown = button and ProbeMethod(button, "IsShown")
+							if (isShown == true) then
+								shown = shown + 1
+							elseif (isShown == nil) then
+								-- Aura buttons refuse addon calls once aura data is secret.
+								unreadable = unreadable + 1
+							end
+						end
+						SafePrint("|cfff0f0f0", "   ", groupKey, "shown", shown, "unreadable", unreadable, "pool", pool)
+					end
+				end
+			end
+		end
+	end
+	if (dumped == 0) then
+		SafePrint("|cfff0f0f0", " no visible", label, "frames")
+	end
+end
+
+-- Right-click menu probe. It answers the two questions that separate the causes of a
+-- unit menu missing Blizzard entries: which Blizzard menu the right click resolves to,
+-- and whether any addon has replaced part of Blizzard's menu code, which
+-- issecurevariable names the addon for. Nothing here opens a menu or calls a
+-- protected function; the trace is a secure post-hook.
+local UnitMenuTraceEnabled = false
+local UnitMenuTraceHooked = false
+
+local function ReadUnitFlag(func, ...)
+	if (type(func) ~= "function") then
+		return nil
+	end
+	local ok, value = API.TryCall(func, ...)
+	if (not ok or IsSecretValue(value)) then
+		return nil
+	end
+	return value and true or false
+end
+
+local function FindUnitButtonUnderMouse()
+	local foci = GetMouseFoci and GetMouseFoci()
+	local frame = (type(foci) == "table" and foci[1]) or (GetMouseFocus and GetMouseFocus()) or nil
+	for _ = 1, 12 do
+		if (type(frame) ~= "table") then
+			return nil
+		end
+		local unit = ProbeMethod(frame, "GetAttribute", "unit")
+		if (type(unit) == "string" and not IsSecretValue(unit)) then
+			return frame, unit
+		end
+		frame = ProbeMethod(frame, "GetParent")
+	end
+	return nil
+end
+
+-- Read-only copies of the unit classification in SECURE_ACTIONS.togglemenu, the right
+-- click action oUF gives AzeriteUI unit frames, and in CompactUnitFrame_OpenMenu, the
+-- function behind Blizzard's raid frames. A flag the client hides reads as false.
+local function PredictUnitMenus(unit)
+	unit = unit:lower()
+	local unitType = unit:match("^([a-z]+)%d+$") or unit
+	local isSelf = ReadUnitFlag(UnitIsUnit, unit, "player")
+	local isVehicle = ReadUnitFlag(UnitIsUnit, unit, "vehicle")
+	local isPet = ReadUnitFlag(UnitIsUnit, unit, "pet")
+	local groupMenu = ReadUnitFlag(UnitInRaid, unit) and "RAID_PLAYER" or (ReadUnitFlag(UnitInParty, unit) and "PARTY" or "PLAYER")
+
+	local toggle
+	if (unitType == "party") then
+		toggle = "PARTY"
+	elseif (unitType == "boss") then
+		toggle = "BOSS"
+	elseif (unitType == "focus") then
+		toggle = "FOCUS"
+	elseif (unitType == "arena" or unitType == "arenapet") then
+		toggle = "ARENAENEMY"
+	elseif (isSelf) then
+		toggle = "SELF"
+	elseif (isVehicle) then
+		toggle = "VEHICLE"
+	elseif (isPet) then
+		toggle = "PET"
+	elseif (ReadUnitFlag(UnitIsOtherPlayersBattlePet, unit)) then
+		toggle = "OTHERBATTLEPET"
+	elseif (ReadUnitFlag(UnitIsOtherPlayersPet, unit)) then
+		toggle = "OTHERPET"
+	elseif (ReadUnitFlag(UnitIsPlayer, unit)) then
+		toggle = groupMenu
+	elseif (ReadUnitFlag(UnitIsUnit, unit, "target")) then
+		toggle = "TARGET"
+	end
+
+	local compact
+	if (isSelf) then
+		compact = "SELF"
+	elseif (isVehicle) then
+		compact = "VEHICLE"
+	elseif (isPet) then
+		compact = "PET"
+	elseif (ReadUnitFlag(UnitIsHumanPlayer, unit)) then
+		compact = groupMenu
+	else
+		compact = "TARGET"
+	end
+
+	return toggle or "none (no menu opens)", compact
+end
+
+local function CollectReplacedFunctions(results, label, tbl, seen)
+	if (type(tbl) ~= "table" or seen[tbl]) then
+		return
+	end
+	seen[tbl] = true
+	local ok = API.TryCall(function()
+		for key, value in pairs(tbl) do
+			if (type(key) == "string" and type(value) == "function") then
+				local isSecure, taintedBy = issecurevariable(tbl, key)
+				if (not isSecure) then
+					results[#results + 1] = label .. "." .. key .. " <- " .. tostring(taintedBy)
+				end
+			end
+		end
+	end)
+	if (not ok) then
+		results[#results + 1] = label .. " <unreadable>"
+	end
+end
+
+-- Walks a menu the way UnitPopupManager assembles it, inline submenus included.
+local function CollectMenuEntryTaint(results, label, menu, seen, depth)
+	if (type(menu) ~= "table" or depth > 3) then
+		return
+	end
+	CollectReplacedFunctions(results, label, menu, seen)
+	if (type(menu.GetEntries) ~= "function") then
+		return
+	end
+	local ok, entries = API.TryCall(menu.GetEntries, menu)
+	if (ok and type(entries) == "table") then
+		for index, entry in ipairs(entries) do
+			CollectMenuEntryTaint(results, label .. "[" .. index .. "]", entry, seen, depth + 1)
+		end
+	end
+end
+
+local function DumpUnitMenuDiagnostics()
+	SafePrint("|cff33ff99", "AzeriteUI unit menu probe")
+
+	-- The mouse can rest on a forbidden Blizzard frame, which raises on any lookup.
+	local okFind, frame, unit = API.TryCall(FindUnitButtonUnderMouse)
+	if (not okFind or not frame) then
+		SafePrint("|cfff0f0f0", " no unit frame under the mouse: hover the raid or party frame, then run it from a keybind or macro")
+	else
+		local okResolve, resolved = API.TryCall(SecureButton_GetModifiedUnit, frame, "RightButton")
+		local checkUnit = (okResolve and type(resolved) == "string" and not IsSecretValue(resolved)) and resolved or unit
+		local toggle, compact = PredictUnitMenus(checkUnit)
+		SafePrint("|cfff0f0f0", " frame", ProbeMethod(frame, "GetName"), "unit", unit, "right click unit", checkUnit,
+			"*type2", ProbeMethod(frame, "GetAttribute", "*type2"),
+			"type2", ProbeMethod(frame, "GetAttribute", "type2"),
+			"menu-function", type(ProbeMethod(frame, "GetAttribute", "menu-function")))
+		SafePrint("|cfff0f0f0", " flags:", "UnitIsPlayer", ReadUnitFlag(UnitIsPlayer, checkUnit),
+			"UnitIsHumanPlayer", ReadUnitFlag(UnitIsHumanPlayer, checkUnit),
+			"UnitInRaid", ReadUnitFlag(UnitInRaid, checkUnit), "UnitInParty", ReadUnitFlag(UnitInParty, checkUnit))
+		SafePrint("|cfff0f0f0", " menu:", "togglemenu opens", toggle, "Blizzard raid frames open", compact)
+	end
+
+	local results, seen = {}, {}
+	for _, name in ipairs({ "UnitPopup_OpenMenu", "UnitPopupManager", "UnitPopupMenus", "UnitPopupSharedUtil", "MenuUtil", "SecureUnitButton_OnClick", "CompactUnitFrame_OpenMenu" }) do
+		local isSecure, taintedBy = issecurevariable(name)
+		if (not isSecure) then
+			results[#results + 1] = name .. " <- " .. tostring(taintedBy)
+		end
+	end
+	CollectReplacedFunctions(results, "UnitPopupManager", UnitPopupManager, seen)
+	CollectReplacedFunctions(results, "UnitPopupSharedUtil", UnitPopupSharedUtil, seen)
+	CollectReplacedFunctions(results, "MenuUtil", MenuUtil, seen)
+	for _, which in ipairs({ "RAID_PLAYER", "PARTY", "PLAYER", "TARGET" }) do
+		local menu = type(UnitPopupMenus) == "table" and UnitPopupMenus[which]
+		if (menu) then
+			local isSecure, taintedBy = issecurevariable(UnitPopupMenus, which)
+			if (not isSecure) then
+				results[#results + 1] = "UnitPopupMenus." .. which .. " <- " .. tostring(taintedBy)
+			end
+			CollectMenuEntryTaint(results, which, menu, seen, 1)
+		end
+	end
+
+	if (#results == 0) then
+		SafePrint("|cfff0f0f0", " menu code: no replaced Blizzard menu functions found")
+	else
+		SafePrint("|cfff0f0f0", " menu code: replaced functions (name <- addon):", #results)
+		for index = 1, math.min(#results, 25) do
+			SafePrint("|cfff0f0f0", "  ", results[index])
+		end
+	end
+	SafePrint("|cfff0f0f0", " trace:", UnitMenuTraceEnabled and "ON" or "OFF", "(/azdebug unitmenu trace on)")
+end
+
+local function SetUnitMenuTrace(enabled)
+	UnitMenuTraceEnabled = enabled and true or false
+	if (UnitMenuTraceEnabled and not UnitMenuTraceHooked and type(UnitPopup_OpenMenu) == "function") then
+		UnitMenuTraceHooked = true
+		-- Runs after Blizzard's call has finished, and leaves that call untouched.
+		hooksecurefunc("UnitPopup_OpenMenu", function(which, contextData)
+			if (not UnitMenuTraceEnabled) then
+				return
+			end
+			local okFind, frame = API.TryCall(FindUnitButtonUnderMouse)
+			frame = okFind and frame or nil
+			SafePrint("|cff33ff99", "AzeriteUI unit menu opened:", "menu", which,
+				"unit", type(contextData) == "table" and contextData.unit or nil,
+				"frame", frame and ProbeMethod(frame, "GetName") or nil)
+		end)
+	end
+	print("|cff33ff99", "AzeriteUI unit menu trace:", UnitMenuTraceEnabled and "ON" or "OFF")
+end
+
 local function DumpAuraSnapshot(scope)
 	scope = (type(scope) == "string" and scope:lower()) or "both"
 	local previousTarget = SafePrintTarget
@@ -2986,13 +3234,17 @@ local function DumpAuraSnapshot(scope)
 		DumpTopRightAuraSnapshot()
 	elseif (scope == "target" or scope == "targetframe") then
 		DumpTargetAuraSnapshot()
+	elseif (scope == "party") then
+		DumpGroupFrameAuraSnapshot("Party", "party")
+	elseif (scope == "raid5") then
+		DumpGroupFrameAuraSnapshot("Raid5", "raid5")
 	elseif (scope == "both" or scope == "all" or scope == "") then
 		DumpPlayerAuraSnapshot()
 		DumpTopRightAuraSnapshot()
 		DumpTargetAuraSnapshot()
 	else
 		handled = false
-		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "unknown scope", tostring(scope), "(use player|topright|target|both)")
+		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "unknown scope", tostring(scope), "(use player|topright|target|party|raid5|both)")
 	end
 
 	SafePrintTarget = previousTarget
@@ -3244,7 +3496,9 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug dump player|r")
 	print("|cfff0f0f0  /azdebug dump tot|r")
 	print("|cfff0f0f0  /azdebug dump all|r")
-	print("|cfff0f0f0  /azdebug aurasnapshot [player|topright|target|both]|r")
+	print("|cfff0f0f0  /azdebug aurasnapshot [player|topright|target|party|raid5|both]|r")
+	print("|cfff0f0f0  /azdebug unitmenu|r  (hover a unit frame; which menu it opens, replaced menu code)")
+	print("|cfff0f0f0  /azdebug unitmenu trace [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug nameplates [unit]|r")
 	print("|cfff0f0f0  /azdebug snapshot [unit]|r")
 	print("|cfff0f0f0  /azdebug blizzard enable|r")
@@ -4922,6 +5176,17 @@ Debugging.DebugMenu = function(self, input)
 	if (cmd == "aurasnapshot" or cmd == "auras") then
 		local sub = rest:match("^(%S+)") or "both"
 		return DumpAuraSnapshot(sub)
+	end
+	if (cmd == "unitmenu") then
+		local sub, token = rest:match("^(%S*)%s*(%S*)")
+		if (sub == "trace") then
+			local mode = ParseOnOffToggle(token)
+			if (not mode) then
+				return PrintDebugHelp()
+			end
+			return SetUnitMenuTrace(SetDebugFlag(UnitMenuTraceEnabled, mode))
+		end
+		return DumpUnitMenuDiagnostics()
 	end
 	if (cmd == "nameplates" or cmd == "nameplate") then
 		local unit = rest:match("^(%S+)")
