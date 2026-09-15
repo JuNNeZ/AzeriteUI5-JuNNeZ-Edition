@@ -63,6 +63,7 @@ local defaults = { profile = ns:Merge({
 
 	showPlayerInParty = true, -- show your own frame while in a non-raid party
 	showPlayerInRaid = true, -- show your own frame while in a raid group
+	showAuras = true,
 	showRaidTargetIcons = true,
 	useRangeIndicator = false,
 	rangeIndicatorRange = 40, -- fade distance in yards, 40 uses the game's own group check
@@ -1386,11 +1387,23 @@ RaidFrame5Mod.UpdateUnits = function(self)
 			frame:DisableElement("Range")
 			frame:SetAlpha(1)
 		end
-		-- Raid5 has no aura toggle, so the native row simply takes over where it exists.
-		if (frame.NativeAuras) then
+		local native = frame.NativeAuras
+		if (self.db.profile.showAuras) then
+			if (native) then
+				-- Only one of the two may draw, as on the party frames: the scanning element
+				-- would duplicate the native row out of combat and show nothing during it.
+				frame:DisableElement("Auras")
+				native:SetDisplayEnabled(true)
+				native:ForceUpdate()
+			else
+				frame:EnableElement("Auras")
+				frame.Auras:ForceUpdate()
+			end
+		else
 			frame:DisableElement("Auras")
-			frame.NativeAuras:SetDisplayEnabled(true)
-			frame.NativeAuras:ForceUpdate()
+			if (native) then
+				native:SetDisplayEnabled(false)
+			end
 		end
 		frame:UpdateAllElements("RefreshUnit")
 	end
@@ -1443,7 +1456,7 @@ RaidFrame5Mod.OnEvent = function(self, event, ...)
 			self:ConfigureChildren()
 		end
 
-		-- A native aura row enabled during combat only changed its alpha.
+		-- A native aura row switched on or off during combat only changed its alpha.
 		for frame in next,Units do
 			if (frame.NativeAuras) then
 				frame.NativeAuras:ApplyPendingShownState()

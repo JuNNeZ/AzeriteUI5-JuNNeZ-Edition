@@ -9,6 +9,17 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.4.12-JuNNeZ (2026-09-15) - An Aura Toggle for Raid Frames (5)
+
+### Added
+
+- **Raid Frames (5) can now hide their aura row.** Since 5.4.11 the buffs you can apply and the
+  debuffs you can dispel stay on these frames through combat, with no way to turn them off. Show
+  Auras is on by default, so nothing changes unless you switch it off. Blizzard's boss mechanic icons
+  in the middle of the health bar still show either way.
+  `/az` -> Unit Frame Settings -> Raid Frames (5) -> Show Auras.
+
+
 ## 5.4.11-JuNNeZ (2026-09-14) - Party Auras That Last Through Combat
 
 ### Fixed

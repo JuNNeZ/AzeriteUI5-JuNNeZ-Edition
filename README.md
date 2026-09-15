@@ -201,6 +201,7 @@ Three separate raid frame styles optimized for different group sizes:
 - **Show player in party** / **Show player in raid** (5-man frames)
 - **Show Specialization Icons** — on the 5-man frames this replaces the portrait; on the 25 and 40-man frames it goes on the role badge beside the health bar, including damage dealers, who normally have no badge at all
 - **Show Target Markers** (5-man) — the raid target icon on each frame. On by default.
+- **Show Auras** (5-man) — the aura row on each frame: the buffs you can apply, heal-over-time spells included, and the debuffs you can dispel. On by default.
 - **Health Colors** — same options as party frames
 - **Range Indicator** — fade out-of-range units
 - **Big Debuff** (25 and 40-man) — large priority debuff icon with configurable size

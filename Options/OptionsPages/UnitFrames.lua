@@ -1382,6 +1382,11 @@ local GenerateOptions = function()
 			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
+		suboptions.args.showAuras = {
+			name = L["Show Auras"],
+			desc = L["Toggle whether to show auras on this unit frame."],
+			order = 54, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		suboptions.args.showRaidTargetIcons = {
 			name = L["Show Target Markers"],
 			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
