@@ -9,6 +9,19 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.4.13-JuNNeZ (2026-09-17) - Friendly Names Closer to Their Heads
+
+### Fixed
+
+- **Friendly player names sit just above the character again.** With names only turned on, player
+  names floated well above heads, as if the hidden health bar and castbar still took up room. They
+  now sit just over the head, and a bigger Friendly name size (%) makes the name grow upwards
+  instead of down over the character.
+  `/az` -> Nameplates -> Friendly Players -> Use names only for friendly players.
+- **Mailbox and other object names no longer show up oversized.** They could appear at the larger
+  friendly player name size when their nameplate had last shown a friendly player's name.
+
+
 ## 5.4.12-JuNNeZ (2026-09-15) - An Aura Toggle for Raid Frames (5)
 
 ### Added

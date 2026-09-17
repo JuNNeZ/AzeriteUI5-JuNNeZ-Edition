@@ -124,7 +124,7 @@ end
 local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
 local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
 local FRIENDLY_NAME_ONLY_SCALE_MULTIPLIER = 2
-local FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = 6
+local FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = 0 -- gap above the plate bottom, in scaled name units
 local GLOBAL_NAMEPLATE_BASE_SCALE_DEFAULT = 2
 local GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT = 1.1
 local NAMEPLATE_MAX_DISTANCE_MIN = 20
@@ -852,6 +852,11 @@ local AnchorStandardNamePlateName = function(self)
 	if (not self or not self.Name) then
 		return
 	end
+	-- Name-only plates keep the anchor ApplyFriendlyNameOnlyNameAnchor gave them.
+	-- Overwriting it here is what floated those names back up in 5.3.19.
+	if (ShouldUseFriendlyPlayerNameOnly(self)) then
+		return
+	end
 	local db = ns.GetConfig("NamePlates")
 	local point, x, y = unpack(db.NamePosition)
 	self.Name:ClearAllPoints()
@@ -1030,9 +1035,12 @@ local ApplyFriendlyNameOnlyNameAnchor = function(self, db, enabled)
 		if (self.__AzeriteUI_NameOnlyAnchorApplied) then
 			return
 		end
-		local point, x, y = unpack(db.NamePosition or { "TOP", 0, 16 })
+		-- Sit the name on the bottom edge of Blizzard's plate, the point its own
+		-- castbar, health bar and name stack upwards from, so the hidden bars
+		-- reserve no room and a larger name grows upwards, away from the head.
+		local _, x = unpack(db.NamePosition or { "TOP", 0, 16 })
 		self.Name:ClearAllPoints()
-		self.Name:SetPoint(point, x, FRIENDLY_NAME_ONLY_NAME_OFFSET_Y)
+		self.Name:SetPoint("BOTTOM", self:GetParent() or self, "BOTTOM", x, FRIENDLY_NAME_ONLY_NAME_OFFSET_Y)
 		self.__AzeriteUI_NameOnlyAnchorApplied = true
 		return
 	end
@@ -2287,6 +2295,9 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 		if (self:IsElementEnabled("Auras")) then
 			self:DisableElement("Auras")
 		end
+		-- A recycled frame may still carry a name-only player's anchor and text size.
+		ApplyFriendlyNameOnlyNameAnchor(self, db, false)
+		ApplyFriendlyNameOnlyFontScale(self, false)
 		if (ShouldShowObjectPlateOverlay(self)) then
 			ApplyObjectPlateVisualState(self)
 			NamePlate_PostUpdateHoverElements(self)
