@@ -1780,9 +1780,8 @@ PartyFrameMod.DisableBlizzard = function(self)
 	end
 
 	-- WoW 12.0.0: Don't call oUF:DisableBlizzard - it checks for CompactPartyFrameMember which loads the buggy addon
-	-- Note: ns.ClientBuild is the build number (~58135), NOT the TOC version.
-	-- ns.ClientVersion is the interface/TOC number (120000+ for WoW 12).
-	if (ns.ClientVersion and ns.ClientVersion >= 120000) then
+	-- Forever uses the same secret-value engine with interface 16001.
+	if (ns.HasSecretValues) then
 		if (UIParent and UIParent.UnregisterEvent) then
 			UIParent:UnregisterEvent("GROUP_ROSTER_UPDATE")
 		end

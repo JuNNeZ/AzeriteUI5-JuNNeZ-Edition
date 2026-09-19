@@ -24,9 +24,9 @@
 
 --]]
 local _, ns = ...
-local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
-if (not ns.WoW11) then return end
+if (not ns.WoW11 or ns.IsForever) then return end
+local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local ArenaFrameMod = ns:GetModule("ArenaFrames")
 ArenaFrameMod:SetEnabledState(false)

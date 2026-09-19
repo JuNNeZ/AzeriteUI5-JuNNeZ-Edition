@@ -156,6 +156,7 @@ end
 	must render a fallback and redraw on GroupSpecCache_Updated.
 ]]
 GroupSpecCache.GetSpecID = function(_, unit)
+	if (ns.IsForever) then return nil end
 	if (type(unit) ~= "string" or not UnitExists(unit)) then
 		return nil
 	end
@@ -365,7 +366,8 @@ end)
 	spec portraits on never pays for any of this.
 ]]
 GroupSpecCache.Enable = function()
-	if (ticker) then
+	if (ticker or ns.IsForever or type(GetSpecialization) ~= "function"
+		or type(GetInspectSpecialization) ~= "function") then
 		return
 	end
 

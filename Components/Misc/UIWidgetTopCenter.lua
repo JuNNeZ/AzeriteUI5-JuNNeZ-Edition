@@ -88,6 +88,7 @@ UIWidgetTopCenter.PrepareFrames = function(self)
 end
 
 UIWidgetTopCenter.OnEvent = function(self, event, ...)
+	if (not self.frame) then return end
 	if (event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_TARGET_CHANGED") then
 		if (self.db.profile.alwaysShow) then
 			self.frame:Show()

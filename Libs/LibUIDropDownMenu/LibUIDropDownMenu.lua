@@ -18,7 +18,7 @@ local GameTooltip_SetTitle, GameTooltip_AddInstructionLine, GameTooltip_AddNorma
 
 -- ----------------------------------------------------------------------------
 local MAJOR_VERSION = "LibUIDropDownMenu-4.0"
-local MINOR_VERSION = 90000 + tonumber(("$Rev: 135 $"):match("%d+"))
+local MINOR_VERSION = 90000 + tonumber(("$Rev: 136 $"):match("%d+"))
 
 
 local LibStub = _G.LibStub
@@ -29,7 +29,9 @@ if not lib then return end
 -- Determine WoW TOC Version
 local WoWClassicEra, WoWClassicTBC, WoWWOTLKC, WoWRetail
 local wowversion  = select(4, GetBuildInfo())
-if wowversion < 20000 then
+if WOW_PROJECT_MAINLINE ~= nil and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+	WoWRetail = true
+elseif wowversion < 20000 then
 	WoWClassicEra = true
 elseif wowversion < 30000 then 
 	WoWClassicTBC = true

@@ -874,7 +874,9 @@ local GenerateOptions = function()
 	}
 
 	for id = 1,ns.IsRetail and 8 or 5 do
-		options.args["bar"..id] = GenerateIndexedBarOptions("ActionBars", string_format(L["Action Bar %d"], id), 100 + id*10)
+		if (getmodule().bars and getmodule().bars[id]) then
+			options.args["bar"..id] = GenerateIndexedBarOptions("ActionBars", string_format(L["Action Bar %d"], id), 100 + id*10)
+		end
 	end
 
 	options.args["petbar"] = GenerateBarOptions("PetBar", L["Pet Bar"], 200, NUM_PET_ACTION_SLOTS)

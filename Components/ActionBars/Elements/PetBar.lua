@@ -796,7 +796,9 @@ PetBarMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("PLAYER_TARGET_CHANGED", "OnEvent")
 	self:RegisterEvent("UPDATE_BINDINGS", "OnEvent")
-	self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnEvent")
+	if (ns.API.IsEventAvailable("HOUSE_EDITOR_MODE_CHANGED")) then
+		self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnEvent")
+	end
 	self:RegisterEvent("UNIT_AURA", "OnEvent")
 	self:RegisterEvent("UNIT_FLAGS", "OnEvent")
 	self:RegisterEvent("UNIT_PET", "OnEvent")

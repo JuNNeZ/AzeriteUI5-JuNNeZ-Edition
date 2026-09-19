@@ -45,17 +45,17 @@ end
 -- false and none of them ever installed. The addon still calls all four; those
 -- calls reach Blizzard's own implementations, which is what they always reached.
 
-local tocversion = select(4, GetBuildInfo())
+local hasSecretValues = ns.HasSecretValues
 
 -- Deprecated in 10.1.0
-if (tocversion >= 100100) then
+if (C_AddOns and C_AddOns.GetAddOnMetadata) then
 	if (not _G.GetAddOnMetadata) then
 		_G.GetAddOnMetadata = C_AddOns.GetAddOnMetadata
 	end
 end
 
 -- Deprecated in 10.2.0
-if (tocversion >= 100200) then
+if (C_AddOns and C_CVar) then
 	local original_SetPortraitToTexture = SetPortraitToTexture
 	for method,func in next,{
 		GetCVarInfo = C_CVar.GetCVarInfo,
@@ -171,7 +171,7 @@ do
 	end
 
 	ns.GetLegacyUnitDebuffFilter = function(unitToken, filter)
-		if (tocversion < 120000 or filter ~= nil or not UnitCanAssist or type(unitToken) ~= "string") then
+		if (not hasSecretValues or filter ~= nil or not UnitCanAssist or type(unitToken) ~= "string") then
 			return filter
 		end
 		local ok, canAssist = API.TryCall(UnitCanAssist, "player", unitToken)
@@ -187,7 +187,7 @@ do
 	end
 
 	ns.ShouldUseCombatFriendlyDispellableList = function(unitToken, filter)
-		if (tocversion < 120000 or filter ~= nil or type(unitToken) ~= "string") then
+		if (not hasSecretValues or filter ~= nil or type(unitToken) ~= "string") then
 			return false
 		end
 		if (not (InCombatLockdown and InCombatLockdown())) then
@@ -258,7 +258,7 @@ do
 end
 
 -- Deprecated in 10.2.5
-if (tocversion >= 100205) then
+if (C_Item and C_UnitAuras) then
 	for method,func in next,{
 		GetTimeToWellRested = function() return nil end,
 		FillLocalizedClassList = function(tbl, isFemale)
@@ -306,7 +306,7 @@ if (tocversion >= 100205) then
 				auraData = C_UnitAuras.GetDebuffDataByIndex(unitToken, index, legacyFilter)
 			end
 			if not auraData then return nil end
-			if (tocversion >= 120000) then
+			if (hasSecretValues) then
 				local name, icon, applications, dispelName, duration, expirationTime,
 					sourceUnit, isStealable, nameplateShowPersonal, spellID = ns.SafeUnpackAuraData(auraData)
 				return name, icon, applications, dispelName, duration, expirationTime,
@@ -363,13 +363,13 @@ do
 		end
 	end
 
-	if (tocversion >= 120000) then
+	if (hasSecretValues) then
 		WrapLegacyAuraTuple("UnitDebuff")
 	end
 end
 
 -- Deprecated in 10.x.x, removed in 11.0.0
-if (tocversion >= 110000) then
+if (C_Spell and C_SpellBook and C_Reputation) then
 	for method,func in next, {
 		GetSpellCharges = function(...)
 			local numArgs = select("#", ...)
@@ -424,7 +424,8 @@ if (tocversion >= 110000) then
 				return C_Spell.GetSpellCastCount(spellIdentifier)
 			end
 		end,
-		GetSpellLossOfControlCooldown = function(...)
+		GetSpellLossOfControlCooldown = C_Spell.GetSpellLossOfControlCooldown
+			and C_SpellBook.GetSpellBookItemLossOfControlCooldown and function(...)
 			local numArgs = select("#", ...)
 
 			if (numArgs == 2) then
@@ -492,7 +493,7 @@ if (tocversion >= 110000) then
 end
 
 -- Deprecated in 11.0.0
-if (tocversion >= 110000) then
+if (C_Reputation) then
 	for method,func in next, {
 		GetNumFactions = C_Reputation.GetNumFactions,
 		GetFactionInfo = function(index)

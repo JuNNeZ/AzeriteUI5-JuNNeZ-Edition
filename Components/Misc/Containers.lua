@@ -66,7 +66,7 @@ Containers.AquireBagButtons = function(self)
 	-- Try to avoid the potential error with anima deposit animations.
 	-- Just give it a simplified version of the default position it is given,
 	-- it will be replaced by UpdateContainerFrameAnchors() later on anyway.
-	if (not backpack:GetPoint()) then
+	if (backpack and not backpack:GetPoint()) then
 		backpack:SetPoint("BOTTOMRIGHT", backpack:GetParent(), "BOTTOMRIGHT", -14, 93 )
 	end
 
@@ -125,7 +125,7 @@ Containers.AquireBagButtons = function(self)
 		end
 	end
 
-	if (combined) then
+	if (combined and backpack and firstSlot) then
 
 		self:HookScript(backpack, "OnShow", function()
 			firstSlot:SetParent(backpack)

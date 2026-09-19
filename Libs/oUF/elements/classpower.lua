@@ -43,6 +43,9 @@ local _, ns = ...
 local oUF = ns.oUF
 
 local playerClass = UnitClassBase('player')
+-- Classic resources in the modern Forever engine: only Rogue/Druid combo points.
+if(ns.IsForever and playerClass ~= 'ROGUE' and playerClass ~= 'DRUID') then return end
+local powerSpellIDs = (Constants and Constants.UnitPowerSpellIDs) or {}
 
 -- sourced from Blizzard_FrameXMLBase/Constants.lua
 local SPEC_DEMONHUNTER_DEVOURER = _G.SPEC_DEMONHUNTER_DEVOURER or 3
@@ -69,12 +72,12 @@ local POWER_TYPE_MAELSTROM = 'MAELSTROM'
 local POWER_TYPE_SOUL_FRAGMENTS = 'SOUL_FRAGMENTS' -- fake, but it's present in PowerBarColor
 local POWER_TYPE_SOUL_SHARDS = 'SOUL_SHARDS'
 
-local SPELL_DARK_HEART = Constants.UnitPowerSpellIDs.DARK_HEART_SPELL_ID or 1225789
+local SPELL_DARK_HEART = powerSpellIDs.DARK_HEART_SPELL_ID or 1225789
 local SPELL_MAELSTROM_WEAPON = 344179
 local SPELL_MAELSTROM_WEAPON_TALENT = 187880
 local SPELL_SHRED = 5221
-local SPELL_SILENCE_THE_WHISPERS = Constants.UnitPowerSpellIDs.SILENCE_THE_WHISPERS_SPELL_ID or 1227702
-local SPELL_VOID_METAMORPHOSIS = Constants.UnitPowerSpellIDs.VOID_METAMORPHOSIS_SPELL_ID or 1217607
+local SPELL_SILENCE_THE_WHISPERS = powerSpellIDs.SILENCE_THE_WHISPERS_SPELL_ID or 1227702
+local SPELL_VOID_METAMORPHOSIS = powerSpellIDs.VOID_METAMORPHOSIS_SPELL_ID or 1217607
 
 local SOUL_FRAGMENTS_NO_META_INDEX = 1
 local SOUL_FRAGMENTS_META_INDEX = 2
@@ -124,7 +127,7 @@ local function GetGenericPowerColor(element, powerType)
 end
 
 local function GetComboPoints(unit)
-	return UnitPower(unit, POWER_ID_COMBO_POINTS), GetUnitChargedPowerPoints(unit)
+	return UnitPower(unit, POWER_ID_COMBO_POINTS), GetUnitChargedPowerPoints and GetUnitChargedPowerPoints(unit)
 end
 
 local function GetComboPointsMax(unit)
@@ -501,7 +504,7 @@ local function Visibility(self, event, unit)
 end
 
 local function VisibilityPath(self, event, ...)
-	if(event == 'TRAIT_CONFIG_UPDATED') then
+	if(event == 'TRAIT_CONFIG_UPDATED' and C_ClassTalents and C_ClassTalents.GetActiveConfigID) then
 		if(C_ClassTalents.GetActiveConfigID() ~= ...) then return end
 	end
 
@@ -581,7 +584,10 @@ local function Enable(self, unit)
 
 		if(requireSpec or requireSpell or playerClass == 'SHAMAN') then
 			self:RegisterEvent('PLAYER_LEVEL_UP', VisibilityPath, true)
-			self:RegisterEvent('TRAIT_CONFIG_UPDATED', VisibilityPath, true)
+			if(not ns.IsForever and C_ClassTalents and C_ClassTalents.GetActiveConfigID) then
+				self:RegisterEvent('TRAIT_CONFIG_UPDATED', VisibilityPath, true)
+			end
+			self:RegisterEvent('SPELLS_CHANGED', VisibilityPath, true)
 		end
 
 		if(requirePower) then
@@ -611,6 +617,7 @@ local function Disable(self)
 		ClassPowerDisable(self)
 
 		self:UnregisterEvent('PLAYER_LEVEL_UP', VisibilityPath)
+		self:UnregisterEvent('SPELLS_CHANGED', VisibilityPath)
 		self:UnregisterEvent('TRAIT_CONFIG_UPDATED', VisibilityPath)
 		self:UnregisterEvent('UNIT_DISPLAYPOWER', VisibilityPath)
 	end

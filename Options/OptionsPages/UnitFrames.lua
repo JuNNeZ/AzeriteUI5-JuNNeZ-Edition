@@ -44,6 +44,7 @@ local GenerateSubOptions = function(moduleName)
 		local alwaysDisabled = function() return true end
 		return {
 			type = "group",
+			hidden = true, -- The module is unavailable on this client.
 			args = {
 				enabled = {
 					name = L["Enable"],
@@ -1212,7 +1213,7 @@ local GenerateOptions = function()
 		suboptions.args.usePortraitSpecIcons = {
 			name = L["Show Specialization Icons"],
 			desc = L["Show each party member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."],
-			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
 		}
 		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 20, scope = "party" })
 		suboptions.args.showAuras = {
@@ -1379,7 +1380,7 @@ local GenerateOptions = function()
 		suboptions.args.usePortraitSpecIcons = {
 			name = L["Show Specialization Icons"],
 			desc = L["Show each raid member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."],
-			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
 		}
 		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
 		suboptions.args.showAuras = {
@@ -1405,7 +1406,7 @@ local GenerateOptions = function()
 		suboptions.args.useSpecIcons = {
 			name = L["Show Specialization Icons"],
 			desc = L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."],
-			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
 		}
 		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
 		suboptions.args.showPriorityDebuff = {
@@ -1445,7 +1446,7 @@ local GenerateOptions = function()
 		suboptions.args.useSpecIcons = {
 			name = L["Show Specialization Icons"],
 			desc = L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."],
-			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
 		}
 		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
 		suboptions.args.showPriorityDebuff = {
@@ -1524,7 +1525,7 @@ local GenerateOptions = function()
 
 			local IsSpecMatch = function(...)
 				local wanted = select("#", ...)
-				if (wanted == 0 or not ns.IsRetail) then
+				if (wanted == 0 or not ns.IsRetailContent) then
 					return true
 				end
 				local currentSpec = (GetSpecialization and GetSpecialization()) or nil
@@ -1587,7 +1588,7 @@ local GenerateOptions = function()
 						return ns.PlayerClass ~= "DEATHKNIGHT"
 					end
 				}
-				if (ns.IsRetail) then
+				if (ns.IsRetailContent) then
 					suboptions.args.soulFragmentsDisplayMode = {
 						name = function()
 							if (ns.PlayerClass == "SHAMAN") then

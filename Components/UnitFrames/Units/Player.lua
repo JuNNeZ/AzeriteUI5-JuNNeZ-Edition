@@ -66,7 +66,7 @@ local playerXPDisabled = IsXPUserDisabled()
 local SPEC_PALADIN_RETRIBUTION = SPEC_PALADIN_RETRIBUTION or 3
 local SPEC_SHAMAN_ELEMENTAL = _G.SPEC_SHAMAN_ELEMENTAL or 1
 local POWER_TYPE_MANA = (ns.IsRetail and Enum and Enum.PowerType and Enum.PowerType.Mana) or 0
-local playerIsRetribution = playerClass == "PALADIN" and (ns.IsRetail and GetSpecialization() == SPEC_PALADIN_RETRIBUTION)
+local playerIsRetribution = playerClass == "PALADIN" and (ns.IsRetailContent and GetSpecialization and GetSpecialization() == SPEC_PALADIN_RETRIBUTION)
 local ORB_DYNAMIC_CLASS_ALLOW = {
 	DRUID = true,
 	EVOKER = true,
@@ -1355,7 +1355,7 @@ local ResolvePlayerPowerWidgetVisibility = function(frame, unit)
 end
 
 local GetElementalMaelstromDisplayMode = function()
-	if (not ns.IsRetail or playerClass ~= "SHAMAN") then
+	if (not ns.IsRetailContent or playerClass ~= "SHAMAN") then
 		return "crystal_spec"
 	end
 	local classPowerMod = ns:GetModule("PlayerClassPowerFrame", true)
@@ -3108,7 +3108,7 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 	if (event == "PLAYER_ENTERING_WORLD") then
 		playerXPDisabled = IsXPUserDisabled()
 		playerLevel = UnitLevel("player")
-		playerIsRetribution = playerClass == "PALADIN" and (ns.IsRetail and GetSpecialization() == SPEC_PALADIN_RETRIBUTION)
+		playerIsRetribution = playerClass == "PALADIN" and (ns.IsRetailContent and GetSpecialization and GetSpecialization() == SPEC_PALADIN_RETRIBUTION)
 
 		if (self.PlayerAuras) then
 			self.PlayerAuras:ApplyPendingConfiguration()
@@ -3125,7 +3125,7 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 		RefreshManaOrb(self, event, GetPlayerPowerUnit(self))
 
 	elseif (event == "PLAYER_SPECIALIZATION_CHANGED") then
-		playerIsRetribution = playerClass == "PALADIN" and (ns.IsRetail and GetSpecialization() == SPEC_PALADIN_RETRIBUTION)
+		playerIsRetribution = playerClass == "PALADIN" and (ns.IsRetailContent and GetSpecialization and GetSpecialization() == SPEC_PALADIN_RETRIBUTION)
 
 		self.Power:ForceUpdate()
 		RefreshManaOrb(self, event, GetPlayerPowerUnit(self))
@@ -3441,7 +3441,7 @@ local style = function(self, unit)
 	power.GetDisplayPower = function(element)
 		local owner = element and element.__owner
 		local unitToken = GetPlayerPowerUnit(owner)
-		if (ns.IsRetail and playerClass == "SHAMAN" and GetSpecialization and GetSpecialization() == SPEC_SHAMAN_ELEMENTAL) then
+		if (ns.IsRetailContent and playerClass == "SHAMAN" and GetSpecialization and GetSpecialization() == SPEC_SHAMAN_ELEMENTAL) then
 			if (GetElementalMaelstromDisplayMode() == "crystal_mana") then
 				return POWER_TYPE_MANA, 0
 			end

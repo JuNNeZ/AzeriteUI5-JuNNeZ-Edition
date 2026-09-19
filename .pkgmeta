@@ -10,7 +10,7 @@ manual-changelog:
 # ($ReleaseEntries). Anything not in that whitelist should be ignored here, or the
 # CI-published zip carries files the locally built zip does not.
 # Whitelist, for reference: Assets, Components, Core, Layouts, Libs, Locale,
-# Options, WoW11, the .toc, FontStyles.xml, LICENSE, LICENSE.txt.
+# Options, WoW11, the base and _Camelot .toc files, FontStyles.xml, LICENSE, LICENSE.txt.
 # CHANGELOG.md is deliberately not ignored: manual-changelog above consumes it.
 ignore:
   # Development files
@@ -46,6 +46,8 @@ ignore:
   # Build scripts
   - build-release.ps1
   - "*.ps1"
+  # Client TOC generator and offline harnesses are development tools.
+  - Tools
 
   # IDE files
   - "*.code-workspace"

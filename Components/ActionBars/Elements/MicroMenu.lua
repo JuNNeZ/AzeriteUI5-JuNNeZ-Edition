@@ -67,6 +67,8 @@ MicroMenu.SpawnButtons = function(self)
 		CharacterMicroButton = CHARACTER_BUTTON,
 		ProfessionMicroButton = TRADE_SKILLS,
 		PlayerSpellsMicroButton = SPELLBOOK_ABILITIES_BUTTON,
+		SpellbookMicroButton = SPELLBOOK_ABILITIES_BUTTON,
+		TalentMicroButton = TALENTS,
 		AchievementMicroButton = ACHIEVEMENT_BUTTON,
 		QuestLogMicroButton = QUESTLOG_BUTTON,
 		HousingMicroButton = HOUSING_DASHBOARD or HOUSING,
@@ -82,7 +84,9 @@ MicroMenu.SpawnButtons = function(self)
 	local buttons = {
 		CharacterMicroButton,
 		ProfessionMicroButton,
-		PlayerSpellsMicroButton,
+		SpellbookMicroButton or PlayerSpellsMicroButton,
+		TalentMicroButton,
+		LegacyMicroButton,
 		AchievementMicroButton,
 		QuestLogMicroButton,
 		HousingMicroButton,
@@ -94,6 +98,23 @@ MicroMenu.SpawnButtons = function(self)
 		StoreMicroButton,
 		MainMenuMicroButton
 	}
+
+	-- Blizzard's list selects the client's buttons and excludes disabled game
+	-- systems. Forever has Spellbook, Talent and Legacy buttons of its own.
+	local nativeMenu = _G.MicroMenu
+	if (nativeMenu and nativeMenu.GenerateButtonInfos) then
+		buttons = {}
+		for _, info in ipairs(nativeMenu:GenerateButtonInfos()) do
+			local disabled = info.gameRule and (not C_GameRules or not C_GameRules.IsGameRuleActive
+				or C_GameRules.IsGameRuleActive(info.gameRule))
+			if (info.button and not disabled and not (info.callback and info.callback())) then
+				if (info.button == GuildMicroButton and QuickJoinToastButton) then
+					buttons[#buttons + 1] = QuickJoinToastButton
+				end
+				buttons[#buttons + 1] = info.button
+			end
+		end
+	end
 
 	self.buttons = {}
 
@@ -194,6 +215,7 @@ MicroMenu.SpawnButtons = function(self)
 		end
 	end
 
+	if (not self.buttons[1]) then return end
 	backdrop:SetPoint("RIGHT", self.buttons[1], "RIGHT", 10, 0)
 	backdrop:SetPoint("BOTTOM", self.buttons[1], "BOTTOM", 0, -20)
 	backdrop:SetPoint("LEFT", self.buttons[1], "LEFT", -10, 0)

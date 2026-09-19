@@ -1154,8 +1154,8 @@ RaidFrame40Mod.DisableBlizzard = function(self)
 	end
 
 	-- WoW 12.0.0: Don't touch CompactRaidFrameManager at all - even checking if it exists loads the buggy addon
-	-- Note: ns.ClientBuild is build number (~58135), ns.ClientVersion is TOC version (120000).
-	if (ns.ClientVersion and ns.ClientVersion >= 120000) then
+	-- Forever uses the same secret-value engine with interface 16001.
+	if (ns.HasSecretValues) then
 		if (UIParent and UIParent.UnregisterEvent) then
 			UIParent:UnregisterEvent("GROUP_ROSTER_UPDATE")
 		end

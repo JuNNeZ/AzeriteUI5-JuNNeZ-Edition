@@ -25,7 +25,7 @@
 --]]
 local _, ns = ...
 
-if (not ns.IsRetail) then return end
+if (not ns.IsMainline or not TopBannerMgr or not TopBannerManager_Show) then return end
 
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 

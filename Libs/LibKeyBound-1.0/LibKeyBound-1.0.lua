@@ -10,7 +10,7 @@ Dependencies: CallbackHandler-1.0
 --]]
 
 local MAJOR = 'LibKeyBound-1.0'
-local MINOR = 100000 + 3
+local MINOR = 100000 + 4
 
 --[[
 	LibKeyBound-1.0
@@ -43,7 +43,8 @@ LibKeyBound.L = L
 LibKeyBound.Binder = LibKeyBound.Binder or {}
 
 local SaveBindings = SaveBindings or AttemptToSaveBindings
-local WoW10 = select(4, GetBuildInfo()) >= 100000
+local WoW10 = (WOW_PROJECT_MAINLINE ~= nil and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
+	or select(4, GetBuildInfo()) >= 100000
 
 -- #NODOC
 function LibKeyBound:Initialize()

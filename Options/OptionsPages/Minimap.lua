@@ -58,6 +58,7 @@ local autoHideToggle = function(name, desc, order, key)
 		order = order,
 		type = "toggle",
 		disabled = isautohidedisabled,
+		hidden = key == "autoHideInArenas" and ns.IsForever or nil,
 		set = function(info, val)
 			setAutoHide(key, val)
 		end,

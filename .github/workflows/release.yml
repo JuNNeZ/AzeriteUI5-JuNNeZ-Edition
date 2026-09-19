@@ -79,6 +79,19 @@ jobs:
             exit 1
           fi
       
+      - name: Validate Forever load entry
+        shell: pwsh
+        run: ./Tools/BuildClientTOC.ps1 -Check
+
+      - name: Validate CurseForge client versions
+        shell: bash
+        run: |
+          curl --fail --silent --show-error \
+            -H "x-api-token: $CF_API_KEY" \
+            -o "$RUNNER_TEMP/curseforge-versions.json" \
+            "https://wow.curseforge.com/api/game/wow/versions"
+          python3 Tools/ValidateUploadClients.py "$RUNNER_TEMP/curseforge-versions.json"
+
       - name: Create Package
         uses: BigWigsMods/packager@v2
         with:

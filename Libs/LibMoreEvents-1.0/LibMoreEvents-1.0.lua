@@ -24,7 +24,7 @@
 
 --]]
 local MAJOR_VERSION = "LibMoreEvents-1.0"
-local MINOR_VERSION = 4
+local MINOR_VERSION = 5
 
 if (not LibStub) then
 	error(MAJOR_VERSION .. " requires LibStub.")
@@ -131,6 +131,9 @@ end
 -- Validation
 --------------------------------------------------
 local validateEvent = function(event)
+	if (C_EventUtils and C_EventUtils.IsEventValid) then
+		return C_EventUtils.IsEventValid(event)
+	end
 	local isOK = _xpcall(validator.RegisterEvent, validator, event)
 	if (isOK) then
 		validator:UnregisterEvent(event)

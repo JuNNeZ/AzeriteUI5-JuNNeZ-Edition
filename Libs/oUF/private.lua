@@ -43,6 +43,9 @@ function Private.validateUnit(unit)
 end
 
 function Private.validateEvent(event)
+	if(C_EventUtils and C_EventUtils.IsEventValid) then
+		return C_EventUtils.IsEventValid(event)
+	end
 	local isOK = xpcall(validator.RegisterEvent, Private.nierror, validator, event)
 	if(isOK) then
 		validator:UnregisterEvent(event)

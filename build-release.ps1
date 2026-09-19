@@ -39,11 +39,12 @@ if ($Version -match '@[\w-]+@') {
 }
 
 $DateStamp = Get-Date -Format "dd-MM-yyyy"
-$ArchiveName = "AzeriteUI-$Version-Retail-$DateStamp.zip"
+& (Join-Path $PSScriptRoot 'Tools\BuildClientTOC.ps1') -Check
+$ArchiveName = "AzeriteUI-$Version-Retail-Forever-$DateStamp.zip"
 
-# Runtime roots copied into the release. WoW11 contains the current Retail
+# Runtime roots copied into the release. WoW11 contains the modern-client
 # delayed-start bootstrap despite its historical folder name and remains loaded
-# by the Retail TOC.
+# by both client TOCs.
 $ReleaseEntries = @(
     "Assets",
     "Components",
@@ -54,6 +55,7 @@ $ReleaseEntries = @(
     "Options",
     "WoW11",
     "$AddonName.toc",
+    "${AddonName}_Camelot.toc",
     "FontStyles.xml",
     "LICENSE",
     "LICENSE.txt"

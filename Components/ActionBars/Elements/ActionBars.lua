@@ -993,7 +993,9 @@ ActionBarMod.OnEnable = function(self)
 	self:RegisterEvent("UPDATE_VEHICLE_ACTIONBAR", "UpdateBindings")
 	self:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED", "UpdateBindings")
 	self:RegisterEvent("PLAYER_REGEN_DISABLED", "UpdateBindings")
-	self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnHouseEditorModeChanged")
+	if (ns.API.IsEventAvailable("HOUSE_EDITOR_MODE_CHANGED")) then
+		self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnHouseEditorModeChanged")
+	end
 	-- ns.RegisterCallback(self, "AssistedHighlightColor_Changed", "UpdateAssistedHighlightColor")
 
 	self:UpdateSettings()

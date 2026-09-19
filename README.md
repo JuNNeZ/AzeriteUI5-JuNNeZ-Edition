@@ -1,7 +1,7 @@
 # AzeriteUI — JuNNeZ Edition
 
-[![WoW Version](https://img.shields.io/badge/WoW-12.1%20Midnight-blue)](https://worldofwarcraft.blizzard.com/)
-[![Interface](https://img.shields.io/badge/Interface-120100-1f6feb)](#)
+[![WoW Version](https://img.shields.io/badge/WoW-Retail%20%2B%20Forever-blue)](https://worldofwarcraft.blizzard.com/)
+[![Interface](https://img.shields.io/badge/Interface-120100%20%2F%2016001-1f6feb)](#)
 [![Lua](https://img.shields.io/badge/Lua-WoW%20API%2012-2c2d72)](#)
 [![Maintainer](https://img.shields.io/badge/Maintainer-JuNNeZ-0a7d32)](https://github.com/JuNNeZ)
 [![GitHub Release](https://img.shields.io/github/v/release/JuNNeZ/AzeriteUI5-JuNNeZ-Edition?display_name=release)](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/releases/latest)
@@ -10,7 +10,7 @@
 
 **This is an unofficial fan-edited version of [AzeriteUI 5](https://github.com/goldpawsstuff/AzeriteUI5) by GoldpawsStuff.**
 
-AzeriteUI is a complete custom World of Warcraft user interface replacement for Retail (WoW 12.1 — Midnight). This JuNNeZ Edition includes additional bug fixes, compatibility patches, and quality-of-life improvements not found in the original release.
+AzeriteUI is a complete custom World of Warcraft user interface replacement for Retail (WoW 12.1 — Midnight) and WoW Forever beta (1.60.1). This JuNNeZ Edition includes additional bug fixes, compatibility patches, and quality-of-life improvements not found in the original release.
 
 > **Note:** This is a personal project maintained independently. For official support, use the original AzeriteUI or visit the Discord where JuNNeZ has a channel for this addon.
 
@@ -46,7 +46,7 @@ AzeriteUI is a complete custom World of Warcraft user interface replacement for 
 ## Installation
 
 1. Download the latest release from [GitHub Releases](https://github.com/JuNNeZ/AzeriteUI5-JuNNeZ-Edition/releases/latest) or [CurseForge](https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12).
-2. Extract the `AzeriteUI5_JuNNeZ_Edition` folder into your `World of Warcraft/_retail_/Interface/AddOns/` directory.
+2. Extract the `AzeriteUI5_JuNNeZ_Edition` folder into your `World of Warcraft/_retail_/Interface/AddOns/` directory, or the Forever client's `Interface/AddOns/` folder. The same download contains both client TOCs.
 3. **Do NOT install this alongside the official AzeriteUI.** This edition replaces it entirely.
 4. Restart WoW or type `/reload` in the chat if the game was already running.
 
@@ -103,6 +103,11 @@ The full subcommand list is in the [wiki](https://github.com/JuNNeZ/AzeriteUI5-J
 ---
 
 ## Features Overview
+
+Features and settings adapt to the client. Forever omits arena frames, archaeology,
+vehicle seats, specialization inspection and Retail-only class resources; Rogue
+and Druid combo points remain available. Forever support is new and has passed
+offline checks, with in-game beta testing still needed.
 
 ### Unit Frames
 
@@ -544,7 +549,7 @@ half-applied.
 
 This fan edition includes the following over the original AzeriteUI 5:
 
-- **Retail-only WoW 12 codebase** — consolidated after the 5.3.46-JuNNeZ release
+- **Retail and Forever compatibility** — one download with client-appropriate features and settings
 - **WoW 12.1 secret-value compatibility work** — Retail 12.1 protects more combat, aura,
   cooldown and unit data as secret values, which addons may hand to Blizzard-owned
   widgets but never read or format. Aura data is routed through a guarded unpacker so a
@@ -763,7 +768,7 @@ This fan edition is maintained independently and includes:
 
 - WoW 12 secret-value compatibility fixes
 - Actionbar live-update fixes
-- Retail-only compatibility for WoW 12 (Midnight expansion) and future updates
+- Retail 12.1 and WoW Forever beta compatibility
 - Decursive compatibility patch
 - Personal tweaks and experimental features
 - Additional bug fixes not present in the official release

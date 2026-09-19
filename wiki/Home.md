@@ -1,9 +1,9 @@
 # AzeriteUI 5 - JuNNeZ Edition Wiki
 
-AzeriteUI 5 JuNNeZ Edition is a full UI replacement for World of Warcraft Retail.
+AzeriteUI 5 JuNNeZ Edition is a full UI replacement for World of Warcraft Retail and WoW Forever.
 It is an unofficial, fan-maintained edition of [AzeriteUI 5](https://github.com/goldpawsstuff/AzeriteUI5) by GoldpawsStuff.
 
-Current release: **5.4.13-JuNNeZ**, built against **Interface 120100** (Retail 12.1).
+Current release: **5.5.0-JuNNeZ**, for **Interface 120100** (Retail 12.1) and **16001** (Forever beta 1.60.1).
 
 ## Quick links
 
@@ -21,8 +21,10 @@ Current release: **5.4.13-JuNNeZ**, built against **Interface 120100** (Retail 1
 
 ## Supported version
 
-Retail only. The addon was consolidated to a retail-only codebase in 5.3.46-JuNNeZ;
-there are no Classic, Cata or MoP branches left in it.
+Retail 12.1 and WoW Forever beta 1.60.1 use the same download. Features and settings
+that do not apply to the selected client are disabled or hidden automatically.
+Forever support is new and still needs in-game beta testing. Classic Era, Cata
+and MoP are not supported.
 
 ## Main commands
 
@@ -49,7 +51,7 @@ Beyond the upstream 5 series, this edition carries ongoing Retail 12.1 work:
 - **Group frame sorting** by group, role, class or name, on Party, Raid (5), (25) and (40).
 - **Per-context player toggles** - show or hide your own frame separately for parties
   and for raid-sized groups.
-- **Specialization icons** on party and raid frames.
+- **Specialization icons** on party and raid frames (Retail).
 - **Ability pings and resource callouts** on AzeriteUI action bars and the player frame.
 - **Micro menu toggle** - Blizzard's bottom strip and the AzeriteUI cog wheel are
   independently switchable.

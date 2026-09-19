@@ -739,7 +739,9 @@ StanceBarMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("UPDATE_BINDINGS", "OnEvent")
-	self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnEvent")
+	if (ns.API.IsEventAvailable("HOUSE_EDITOR_MODE_CHANGED")) then
+		self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnEvent")
+	end
 	self:RegisterEvent("UPDATE_BONUS_ACTIONBAR", "OnEvent")
 	self:RegisterEvent("UPDATE_SHAPESHIFT_COOLDOWN", "OnEvent")
 	self:RegisterEvent("UPDATE_SHAPESHIFT_FORM", "OnEvent")

@@ -7,16 +7,18 @@
    - CurseForge: <https://www.curseforge.com/wow/addons/azeriteui-junnez-edition-wow12>
    - Wago
 2. Extract the folder `AzeriteUI5_JuNNeZ_Edition` into:
-   `World of Warcraft/_retail_/Interface/AddOns/`
+   `World of Warcraft/_retail_/Interface/AddOns/` for Retail, or the Forever
+   client's `Interface/AddOns/` folder. The same ZIP contains both client TOCs.
 3. Restart the game, or `/reload` if it was already running.
 
 The folder name matters. If the zip extracts to something like
-`AzeriteUI5_JuNNeZ_Edition-5.4.13`, rename it.
+`AzeriteUI5_JuNNeZ_Edition-5.5.0`, rename it.
 
 ## Requirements
 
-- **Retail only.** Interface 120100 (WoW 12.1). There are no Classic branches in this
-  addon; it was consolidated to retail-only in 5.3.46-JuNNeZ.
+- **Retail 12.1** (Interface 120100) or **WoW Forever beta 1.60.1** (Interface 16001).
+  Classic Era, Cata and MoP are not supported. Forever support still needs
+  in-game beta testing.
 - `Blizzard_AuraContainer` is a hard dependency and ships with the game.
 - Optional and detected automatically if present: TaintLess, Clique,
   LibKeyBound-1.0, LibEditModeOverride, LibSharedMedia-3.0, !LibUIDropDownMenu,

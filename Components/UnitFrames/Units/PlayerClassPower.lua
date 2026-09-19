@@ -24,6 +24,8 @@
 
 --]]
 local _, ns = ...
+
+if (ns.IsForever and ns.PlayerClass ~= "ROGUE" and ns.PlayerClass ~= "DRUID") then return end
 local oUF = ns.oUF
 
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
@@ -57,15 +59,15 @@ local POWER_TYPE_MAELSTROM = (Enum and Enum.PowerType and Enum.PowerType.Maelstr
 
 local defaults = { profile = ns:Merge({
 	showComboPoints = true,
-	showArcaneCharges = ns.IsRetail or nil,
-	showChi = ns.IsRetail or nil,
-	showHolyPower = ns.IsRetail or nil,
-	showMaelstrom = ns.IsRetail or nil,
-	showSoulFragments = ns.IsRetail or nil,
+	showArcaneCharges = ns.IsRetailContent or nil,
+	showChi = ns.IsRetailContent or nil,
+	showHolyPower = ns.IsRetailContent or nil,
+	showMaelstrom = ns.IsRetailContent or nil,
+	showSoulFragments = ns.IsRetailContent or nil,
 	soulFragmentsDisplayMode = "gradient",
 	showRunes = true,
-	showSoulShards = ns.IsRetail or nil,
-	showStagger = ns.IsRetail or nil,
+	showSoulShards = ns.IsRetailContent or nil,
+	showStagger = ns.IsRetailContent or nil,
 	showFullOutOfCombat = false,
 	elementalMaelstromDisplayMode = "crystal_spec",
 	elementalSwapBarAnchorMigrated = false,
@@ -85,7 +87,7 @@ local GetElementalMaelstromDisplayMode = function(db)
 end
 
 local ShouldUseElementalSwapBar = function(db)
-	if (not ns.IsRetail or playerClass ~= "SHAMAN") then
+	if (not ns.IsRetailContent or playerClass ~= "SHAMAN") then
 		return false
 	end
 	local currentSpec = (GetSpecialization and GetSpecialization()) or nil
@@ -538,7 +540,7 @@ ClassPowerMod.GenerateDefaults = function(self)
 	local x = -223 * ns.API.GetEffectiveScale()
 	local y = -84 * ns.API.GetEffectiveScale()
 	local point = "CENTER"
-	if (ns.IsRetail and playerClass == "SHAMAN") then
+	if (ns.IsRetailContent and playerClass == "SHAMAN") then
 		-- Default near the top-right of the player health bar; still movable through /lock.
 		point = "BOTTOMLEFT"
 		x = 375 * ns.API.GetEffectiveScale()
@@ -694,15 +696,15 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 	end
 
 	local db = ClassPowerMod.db.profile
-	local currentSpec = (ns.IsRetail and GetSpecialization and GetSpecialization()) or nil
-	if (ns.IsRetail and playerClass == "SHAMAN" and powerType == "MAELSTROM" and currentSpec == SPEC_SHAMAN_ELEMENTAL) then
+	local currentSpec = (ns.IsRetailContent and GetSpecialization and GetSpecialization()) or nil
+	if (ns.IsRetailContent and playerClass == "SHAMAN" and powerType == "MAELSTROM" and currentSpec == SPEC_SHAMAN_ELEMENTAL) then
 		-- Elemental now uses a secondary bar instead of class plates.
 		if (ShouldUseElementalSwapBar(db)) then
 			return element:Hide()
 		end
 	end
 
-	if (ns.IsRetail) then
+	if (ns.IsMainline) then
 		if (playerClass == "MAGE" and powerType == "ARCANE_CHARGES" and not db.showArcaneCharges)
 		or (playerClass == "MONK" and powerType == "CHI" and not db.showChi)
 		or (playerClass == "PALADIN" and powerType == "HOLY_POWER" and not db.showHolyPower)
@@ -1161,7 +1163,7 @@ local style = function(self, unit)
 
 		-- Elemental Shaman Secondary Resource Bar
 		--------------------------------------------
-		if (ns.IsRetail and playerClass == "SHAMAN") then
+		if (ns.IsRetailContent and playerClass == "SHAMAN") then
 			local petConfig = ns.GetConfig("PetFrame")
 			local elementalBar = self:CreateBar()
 			elementalBar:SetFrameLevel(self:GetFrameLevel() + 2)
@@ -1321,7 +1323,7 @@ ClassPowerMod.Update = function(self)
 		end
 	end
 
-	if (ns.IsRetail and playerClass == "MONK") then
+	if (ns.IsRetailContent and playerClass == "MONK") then
 		if (self.db.profile.showStagger) then
 			self.frame:EnableElement("Stagger")
 			self.frame.Stagger:ForceUpdate()
@@ -1351,7 +1353,7 @@ ClassPowerMod.Update = function(self)
 		self:UpdatePositionAndScale()
 		self:UpdateAnchor()
 	end
-	if (ns.IsRetail and playerClass == "SHAMAN" and self.frame) then
+	if (ns.IsRetailContent and playerClass == "SHAMAN" and self.frame) then
 		local classPowerConfig = ns.GetConfig("PlayerClassPower")
 		local petConfig = ns.GetConfig("PetFrame")
 		if (useElementalSwapBar) then
@@ -1360,7 +1362,7 @@ ClassPowerMod.Update = function(self)
 			self.frame:SetSize(unpack((classPowerConfig and classPowerConfig.ClassPowerFrameSize) or { 124, 168 }))
 		end
 	end
-	if (ns.IsRetail and playerClass == "SHAMAN" and self.frame.Power) then
+	if (ns.IsRetailContent and playerClass == "SHAMAN" and self.frame.Power) then
 		if (useElementalSwapBar) then
 			self.frame:Show()
 			self.frame:EnableElement("Power")
@@ -1388,7 +1390,7 @@ ClassPowerMod.Update = function(self)
 
 	ApplyClassPowerClickThrough(self)
 	SyncClassPowerFrameLevel(self)
-	if (ns.IsRetail and playerClass == "SHAMAN") then
+	if (ns.IsRetailContent and playerClass == "SHAMAN") then
 		local playerFrameMod = ns:GetModule("PlayerFrame", true)
 		local playerFrame = playerFrameMod and playerFrameMod.frame
 		if (playerFrame and playerFrame.Power and playerFrame.Power.ForceUpdate) then
@@ -1407,7 +1409,7 @@ ClassPowerMod.OnEnable = function(self)
 	self:CreateAnchor(self:GetLabel())
 	ApplyClassPowerClickThrough(self)
 
-	if (ns.IsRetail and playerClass == "SHAMAN") then
+	if (ns.IsRetailContent and playerClass == "SHAMAN") then
 		self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateSettings")
 		self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED", "UpdateSettings")
 		self:RegisterEvent("TRAIT_CONFIG_UPDATED", "UpdateSettings")

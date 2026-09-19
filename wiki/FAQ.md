@@ -8,8 +8,11 @@ the original addon's channels.
 
 ## Which game version is supported?
 
-Retail only, Interface 120100 (WoW 12.1). The codebase was consolidated to
-retail-only in 5.3.46-JuNNeZ.
+Retail 12.1 (Interface 120100) and WoW Forever beta 1.60.1 (Interface 16001),
+using the same download. Forever hides unsupported systems such as arena frames,
+specialization icons and Retail-only class resources. Rogue/Druid combo points
+remain available. Classic Era, Cata and MoP are not supported. Forever support
+has passed offline checks and still needs in-game beta testing.
 
 ## How do I open settings?
 

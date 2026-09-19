@@ -9,6 +9,18 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.5.0-JuNNeZ (2026-09-19) - Retail and Forever
+
+### Highlights
+
+- **One download for Retail and WoW Forever.** Adds the Forever beta load entry alongside Retail 12.1, with automatic client detection.
+- **Settings match your client.** Forever omits arena frames, archaeology, the vehicle-seat display, specialization inspection and Retail-only class resources. Rogue and Druid combo points remain available. Unsupported settings are hidden in `/az`.
+- **The cog-wheel menu follows the client.** Forever includes its Spellbook, Talents and Legacy buttons, while entries disabled by the game are omitted.
+- **Shared UI compatibility fixes** keep modern aura safety, keybinding and dropdown behavior active on Forever despite its lower interface number.
+
+Forever support is new and has passed offline checks; in-game beta testing is still needed.
+
+
 ## 5.4.13-JuNNeZ (2026-09-17) - Friendly Names Closer to Their Heads
 
 ### Fixed

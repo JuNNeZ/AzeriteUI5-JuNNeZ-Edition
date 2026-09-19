@@ -60,10 +60,8 @@ ns.Private.ClientMinor = tonumber(minor)
 ns.Private.ClientMicro = tonumber(micro)
 ns.Private.ClientBuild = tonumber(build)
 
--- Simple flags for client version checks (retail-only build)
-ns.Private.IsRetail = true
-ns.Private.WoW10 = true
-ns.Private.WoW11 = true
+-- Engine/content flags are initialized in Core/Client.lua before compatibility
+-- shims and embedded libraries load. Forever's 1.60.x is a modern Mainline UI.
 
 -- Developer Mode constants
 ------------------------------------------------------
