@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2024 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 --]]
 local _, ns = ...

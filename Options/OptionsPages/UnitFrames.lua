@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -101,6 +102,12 @@ local GenerateSubOptions = function(moduleName)
 		}
 	}
 
+
+	-- Every setting in this group reads and writes that module's profile, which
+	-- is what lets the panel mark the ones that differ from their defaults.
+	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+		ns.OptionsKit.Defaults.Bind(options, moduleName)
+	end
 	return options, module, setter, getter, setoption, getoption, isdisabled
 end
 
@@ -1705,8 +1712,14 @@ local GenerateOptions = function()
 		end
 	end
 
+
+	-- The page's own settings, the ones not inside a unit's sub-group, live on
+	-- the UnitFrames module itself.
+	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+		ns.OptionsKit.Defaults.Bind(options, "UnitFrames")
+	end
 	return options
 end
 
-Options:AddGroup(L["Unit Frames"], GenerateOptions, -8000)
+Options:AddGroup(L["Unit Frames"], GenerateOptions, -8000, "frames", "UnitFrames")
 

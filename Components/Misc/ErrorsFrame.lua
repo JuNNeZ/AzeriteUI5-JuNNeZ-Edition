@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +35,10 @@ local ErrorsFrame = ns:NewModule("ErrorsFrame", ns.MovableModulePrototype, "LibM
 -- GetCVarBool is deprecated in favour of C_CVar.GetCVarBool. Shadowed as a file
 -- local so the call sites keep working whichever of the two the client exposes.
 local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
+
+-- Blizzard_DeprecatedSoundScript supplies the raw global; it does not load on
+-- WoW Forever or Retail 12.1.5+, so prefer the namespace.
+local PlayVocalErrorSoundID = (C_Sound and C_Sound.PlayVocalErrorSound) or PlayVocalErrorSoundID
 
 -- Addon API
 local GetFont = ns.API.GetFont

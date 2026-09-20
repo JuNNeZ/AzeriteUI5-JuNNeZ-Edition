@@ -9,6 +9,23 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 
 
+## 5.6.0-JuNNeZ (2026-09-20) - Forever and the New Options Panel
+
+### Highlights
+
+- **Try the new options panel with `/az new`.** Search across settings, browse grouped pages and sections, and see which supported settings differ from their defaults, with individual reset controls.
+- **Make the panel your own.** Open `/az new` -> Settings -> Appearance for themes, background opacity, scale and position reset. Settings -> Changelog shows recent release notes in game.
+- **Forever action bars and group frames work around the beta's broken secure execution.** Adds fallback paths for bar paging, visibility, player aura switching and party/raid frame setup, and avoids the startup probe that generated a Blizzard error.
+- **Forever's cog-wheel menu respects character unlocks** and uses a compatible open/close path. The objective tracker also uses the beta-compatible visibility path.
+- **A day/night indicator for the Forever minimap.** Drag it around the ring, right-click to adjust its distance, or turn it off under `/az` -> Minimap -> Day and Night Indicator to restore Blizzard's indicator.
+
+### Access and beta limits
+
+- `/az` keeps the existing window; `/az classic` opens the stock Ace3 dialog. The new panel is an opt-in preview; later panel phases, including migration of `/az`, are deferred. Change frame settings outside combat.
+- On the current Forever beta, action drag-and-drop, custom flyouts and Clique click-casting remain unavailable. Newly created group frames during combat finish setup after combat ends.
+- Offline checks passed for both clients. Live `/reload`, combat and visual regression testing of this combined release is still needed.
+
+
 ## 5.5.0-JuNNeZ (2026-09-19) - Retail and Forever
 
 ### Highlights

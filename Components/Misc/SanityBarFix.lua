@@ -1,5 +1,12 @@
 --[[
 
+	The MIT License (MIT)
+
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen
+
+--]]
+--[[
+
   SanityBarFix – minimal, safe, and improved
   ------------------------------------------------
   • Disables oUF’s “AlternativePower” element so no layout hides

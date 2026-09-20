@@ -30,6 +30,11 @@ Backups/
 # not one of them; .pkgmeta ignores it as well. See Assets_Moot/README.md.
 Assets_Moot/
 
+# Draft art generated from the shipping set, not wired into any module and not yet
+# seen in game. Untracked and out of both builds until a file is approved and moved
+# into Assets/. .pkgmeta ignores it as well. See Assets_Draft/README.md.
+Assets_Draft/
+
 # Development documentation (internal only)
 AGENTS.md
 FixLog.md

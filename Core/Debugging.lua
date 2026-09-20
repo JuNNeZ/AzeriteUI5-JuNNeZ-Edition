@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -3486,6 +3487,9 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug|r  (toggle menu)")
 	print("|cfff0f0f0  /azdebug status|r")
 	print("|cfff0f0f0  /azdebug group|r  (party/raid header report)")
+	print("|cfff0f0f0  /azdebug secure|r  (secure snippet support and what it costs)")
+	print("|cfff0f0f0  /azdebug secure reset|r  (forget the cached answer and re-probe)")
+	print("|cfff0f0f0  /azdebug micromenu|r  (why a cog-wheel entry does nothing)")
 	print("|cfff0f0f0  /azdebug taint|r  (who tainted Blizzard's action buttons)")
 	print("|cfff0f0f0  /azdebug health [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug health filter <text>|r  (example: Target.)")
@@ -5049,6 +5053,12 @@ Debugging.DebugMenu = function(self, input)
 	if (cmd == "group" or cmd == "groups") then
 		return self:PrintGroupFrameReport()
 	end
+	if (cmd == "secure" or cmd == "snippets") then
+		return self:PrintSecureSnippetReport(rest)
+	end
+	if (cmd == "micromenu" or cmd == "menu") then
+		return self:PrintMicroMenuReport()
+	end
 	if (cmd == "taint") then
 		return self:PrintActionButtonTaintReport()
 	end
@@ -5246,6 +5256,97 @@ Debugging.ToggleFixesDebug = function(self)
 		ns.db.global.debugFixes = not ns.db.global.debugFixes
 		print("|cff33ff99", "AzeriteUI FixBlizzardBugs debug:", ns.db.global.debugFixes and "ON" or "OFF")
 	end
+end
+
+-- Reports whether this client can compile secure handler snippets, and what the
+-- addon does instead when it cannot. See Core/Client.lua for the detection and
+-- Docs/CLIENT_COMPATIBILITY.md for the evidence.
+Debugging.PrintSecureSnippetReport = function(self, input)
+	if (type(input) == "string" and input:lower():find("reset", 1, true)) then
+		if (ns.db and ns.db.global) then
+			ns.db.global.secureSnippets = nil
+			print("|cff33ff99", "AzeriteUI secure snippets:", ns.IsForever
+				and "cache cleared; Forever remains unavailable and will not probe on /reload."
+				or "cache cleared; it will re-probe on the next /reload.")
+		else
+			print("|cff33ff99", "AzeriteUI secure snippets:", "settings not ready.")
+		end
+		return
+	end
+
+	local available = ns.HasSecureSnippets ~= false
+	local source = ns.SecureSnippetsKnownUnavailable and "known Forever limitation (no probe)"
+		or (ns.SecureSnippetsFromCache and "cache (no probe this login)" or "a live probe this login")
+
+	print("|cff33ff99", "AzeriteUI secure snippets:", available and "available" or "UNAVAILABLE")
+	print("|cfff0f0f0  answer from:", source,
+		"build:", tostring(ns.SecureSnippetsBuild))
+	print("|cfff0f0f0  client:", tostring(ns.ClientPatch), "interface:", tostring(select(4, GetBuildInfo())),
+		ns.IsForever and "(Forever)" or (ns.IsRetailContent and "(Retail)" or ""))
+
+	local isAddOnLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+	print("|cfff0f0f0  Blizzard_RestrictedAddOnEnvironment loaded:",
+		tostring(type(isAddOnLoaded) == "function" and isAddOnLoaded("Blizzard_RestrictedAddOnEnvironment") or false))
+
+	if (available) then
+		print("|cfff0f0f0  Action bar paging, the cog menu, group headers and the tracker all use their")
+		print("|cfff0f0f0  normal secure paths.")
+		return
+	end
+
+	print("|cffff8800  This client cannot build restricted closures, so every secure snippet fails in")
+	print("|cffff8800  Blizzard_RestrictedAddOnEnvironment/RestrictedExecution.lua:79. That is a client")
+	print("|cffff8800  bug, not an addon one. AzeriteUI works around it:")
+	print("|cfff0f0f0   - Bars page through Blizzard's own state driver; what a button casts stays")
+	print("|cfff0f0f0     correct in combat, and `type` catches up when combat ends.")
+	print("|cfff0f0f0   - Keys use command bindings instead of click bindings.")
+	print("|cfff0f0f0   - Show/hide states use the native visibility driver.")
+	print("|cffff8800  Not available: dragging actions off the bars, the custom flyout, and the")
+	print("|cffff8800  vehicle-exit override on bar 1 button 7 (the dismount button still works).")
+end
+
+-- Why a cog-wheel entry does nothing when clicked.
+--
+-- Every entry but Game Menu forwards to Blizzard's own micro button with a `/click`
+-- macro, and `/click` on a disabled Button is a no-op. So the answer is almost always
+-- "Blizzard has it gated": talents need an earned talent point, Legacy needs renown
+-- above zero, Group Finder a minimum level, the Shop an available store.
+Debugging.PrintMicroMenuReport = function(self)
+	local module = ns:GetModule("MicroMenu", true)
+	if (not module or not module.buttons) then
+		print("|cff33ff99", "AzeriteUI micro menu:", "module not loaded")
+		return
+	end
+
+	print("|cff33ff99", "AzeriteUI micro menu:", #module.buttons, "entries")
+
+	for _, button in ipairs(module.buttons) do
+		local native = button.ref
+		local name = native and native.GetName and native:GetName() or "?"
+		local enabled = native and native.IsEnabled and native:IsEnabled()
+		local shown = native and native.IsShown and native:IsShown()
+		local route = button:GetAttribute("macrotext") or "own OnClick"
+		local reason = native and native.disabledTooltip
+
+		if (type(reason) == "function") then
+			local ok, text = pcall(reason)
+			reason = ok and text or "<tooltip callback failed>"
+		end
+
+		print(("|cfff0f0f0  %-26s native:%s shown:%s entry:%s  %s"):format(
+			name,
+			enabled and "|cff00ff00enabled|r" or "|cffff4444DISABLED|r",
+			shown and "y" or "n",
+			button:IsEnabled() and "on" or "greyed",
+			tostring(route)))
+
+		if (not enabled and reason) then
+			print("|cffff8800      Blizzard's reason:", tostring(reason))
+		end
+	end
+
+	print("|cfff0f0f0  A DISABLED native button cannot be clicked by anything, including")
+	print("|cfff0f0f0  Blizzard's own strip. That is a gate on the character, not a bug here.")
 end
 
 Debugging.SecretValueTest = function(self, input)

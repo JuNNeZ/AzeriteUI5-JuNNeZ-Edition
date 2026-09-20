@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +38,10 @@ local ButtonBar = ns.ButtonBar.prototype
 
 local PetBar = setmetatable({}, { __index = ButtonBar })
 local PetBar_MT = { __index = PetBar }
+
+-- See Core/API/SecureDrivers.lua. Where snippets cannot compile, `_onstate-vis` is
+-- replaced by the native `state-visibility` state, which Blizzard resolves itself.
+local hasSecureSnippets = ns.HasSecureSnippets ~= false
 
 -- GLOBALS: InCombatLockdown, hooksecurefunc
 -- GLOBALS: GetBindingKey, ClearOverrideBindings, SetOverrideBindingClick
@@ -462,6 +467,16 @@ PetBar.UpdateVisibilityDriver = function(self)
 		visdriver = visdriver.."hide"
 	end
 
+	-- The native state does the show/hide from Blizzard's own code, so it also
+	-- survives combat. `userhidden` needs no folding here: Bar.Disable is the only
+	-- thing that sets it, and it always comes with config.enabled false, which is
+	-- already a plain "hide" driver.
+	if (not hasSecureSnippets) then
+		UnregisterStateDriver(self, "vis")
+		ns.API.RegisterVisibilityDriver(self, visdriver or "hide")
+		return
+	end
+
 	UnregisterStateDriver(self, "vis")
 	self:SetAttribute("state-vis", "0")
 	RegisterStateDriver(self, "vis", visdriver or "hide")
@@ -481,27 +496,29 @@ PetBarMod.CreateBar = function(self)
 		bar.config.clickOnDown = GetCVarBool("ActionButtonUseKeyDown")
 	end
 
-	bar:SetAttribute("UpdateVisibility", [[
-		local visibility = self:GetAttribute("visibility");
-		local userhidden = self:GetAttribute("userhidden");
-		if (visibility == "show") then
-			if (userhidden) then
+	if (hasSecureSnippets) then
+		bar:SetAttribute("UpdateVisibility", [[
+			local visibility = self:GetAttribute("visibility");
+			local userhidden = self:GetAttribute("userhidden");
+			if (visibility == "show") then
+				if (userhidden) then
+					self:Hide();
+				else
+					self:Show();
+				end
+			elseif (visibility == "hide") then
 				self:Hide();
-			else
-				self:Show();
 			end
-		elseif (visibility == "hide") then
-			self:Hide();
-		end
-	]])
+		]])
 
-	bar:SetAttribute("_onstate-vis", [[
-		if (not newstate) then
-			return
-		end
-		self:SetAttribute("visibility", newstate);
-		self:RunAttribute("UpdateVisibility");
-	]])
+		bar:SetAttribute("_onstate-vis", [[
+			if (not newstate) then
+				return
+			end
+			self:SetAttribute("visibility", newstate);
+			self:RunAttribute("UpdateVisibility");
+		]])
+	end
 
 	for id= 1,NUM_PET_ACTION_SLOTS do
 		style(bar:CreateButton())

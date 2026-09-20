@@ -199,15 +199,20 @@ for _, forever in ipairs({false, true}) do
 		local f = { name = name, scripts = {}, attributes = {} }
 		for method in ("SetFrameStrata SetScale Hide Show SetFrameLevel SetBackdrop SetBackdropColor " ..
 			"RegisterForClicks SetSize SetPoint SetColorTexture SetFontObject SetText SetJustifyH " ..
-			"SetJustifyV SetTextColor SetVertexColor SetFrameRef SetTexture HookScript Enable Disable"):gmatch("%S+") do
+			"SetJustifyV SetTextColor SetVertexColor SetFrameRef SetTexture HookScript"):gmatch("%S+") do
 			f[method] = function() end
 		end
+		-- Enabled state is real state, not a no-op: the menu has to grey an entry
+		-- whose native button Blizzard has gated, or it swallows the click.
+		f.enabled = true
+		f.Enable = function(self) self.enabled = true end
+		f.Disable = function(self) self.enabled = false end
 		f.GetName = function(self) return self.name end
 		f.GetFrameLevel = function() return 1 end
 		f.SetScript = function(self, key, value) self.scripts[key] = value end
 		f.GetScript = function(self, key) return self.scripts[key] end
 		f.SetAttribute = function(self, key, value) self.attributes[key] = value end
-		f.IsEnabled = function() return true end
+		f.IsEnabled = function(self) return self.enabled end
 		f.IsMouseOver = function() return false end
 		f.CreateTexture = function() return frame() end
 		f.CreateFontString = function() return frame() end
@@ -241,10 +246,213 @@ for _, forever in ipairs({false, true}) do
 	end
 	check(next(expected) == nil, "every supported menu button retained")
 	check(module.toggle ~= nil, "cog created")
+
+	-- Blizzard gates Talents, Legacy, Group Finder and the Shop on a level 1
+	-- character. `/click` on a disabled button does nothing, so the entry must grey
+	-- out rather than look live and swallow the press.
+	local gated = module.buttons[1]
+	check(gated.ref:IsEnabled(), "native button starts enabled")
+	check(gated:IsEnabled(), "its entry starts enabled")
+
+	-- A per-feature gate (Legacy below renown 1, Talents before the first talent
+	-- point) disables the button while the keybind still reaches the feature, because
+	-- the binding calls the toggle directly. Those are lifted so the cog can do what
+	-- the key does. `commandName` is how a button says it has such a binding.
+	gated.ref.commandName = "TOGGLELEGACYSYSTEM"
+	gated.ref:Disable()
+	module:UpdateButtons()
+	check(gated.ref:IsEnabled(), "a feature-gated native button is re-enabled")
+	check(gated:IsEnabled(), "so its entry stays usable")
+
+	-- A full-screen frame disables the whole strip and the keybinds with it. That
+	-- gate is Blizzard's to keep.
+	env.MICRO_BUTTONS_DISABLED = true
+	gated.ref:Disable()
+	module:UpdateButtons()
+	check(not gated.ref:IsEnabled(), "the full-screen gate is left alone")
+	check(not gated:IsEnabled(), "and the entry greys out with it")
+	env.MICRO_BUTTONS_DISABLED = nil
+
+	-- A button with no binding command has no other route in, so it stays greyed.
+	gated.ref.commandName = nil
+	gated.ref:Disable()
+	module:UpdateButtons()
+	check(not gated:IsEnabled(), "an entry with no binding command greys out")
+	gated.ref:Enable()
+	module:UpdateButtons()
+	check(gated:IsEnabled(), "and comes back when Blizzard re-enables it")
+
 	env.MicroMenu.GenerateButtonInfos = function() return {} end
 	module.toggle = nil
 	module:SpawnButtons()
 	check(#module.buttons == 0 and module.toggle == nil, "empty native menu safely omitted")
+end
+
+-- Restricted execution (secure handler snippets).
+--
+-- Retail decides by whether a snippet actually ran. Forever's known-broken restricted
+-- environment must select the fallback without executing a probe.
+do
+	local function probeClient(interface, marker, restrictedAddOnLoaded, snippetRuns, saved)
+		local env = setmetatable({}, { __index = _G })
+		env._G = env
+		env.WOW_PROJECT_MAINLINE = 1
+		env.WOW_PROJECT_ID = 1
+		env.GetBuildInfo = function() return "1.60.1", "69913", "Sep 2026", interface end
+		env.C_AddOns = {
+			GetAddOnMetadata = function() return marker end,
+			IsAddOnLoaded = function(name)
+				return name == "Blizzard_RestrictedAddOnEnvironment" and restrictedAddOnLoaded or false
+			end
+		}
+		local probe = { attributes = {} }
+		probe.Hide = function() end
+		probe.SetAttribute = function(self, key, value)
+			self.attributes[key] = value
+			if (key ~= "state-azsnippetprobe") then return end
+
+			-- The real client answers a `state-<id>` write by running `_onstate-<id>`.
+			-- When it cannot build the closure the error unwinds back out through
+			-- SetAttribute into the caller, which is what this reproduces - and what
+			-- aborted Core/Client.lua on Forever 1.60.1.69913 before it was pcall'ed.
+			if (not snippetRuns) then
+				error("RestrictedExecution.lua:79: attempt to call a nil value", 0)
+			end
+			self.AzeriteUI_SecureSnippetProbe()
+		end
+		env.CreateFrame = function() return probe end
+		env.AzeriteUI5_DB = saved
+
+		local ns = {}
+		run("Core/Private.lua", env, ns)
+		run("Core/Client.lua", env, ns)
+		return ns, probe
+	end
+
+	local ns = probeClient(120100, nil, false, false)
+	check(ns.HasSecureSnippets == true, "clients without the Lua restricted environment are not probed")
+
+	local working, probe = probeClient(120100, nil, true, true)
+	check(working.HasSecureSnippets == true, "a snippet that runs reports available")
+	check(probe.attributes["_onstate-azsnippetprobe"], "the probe installs a snippet body")
+
+	-- Retail probe errors must remain contained, and its cache is valid only for the
+	-- build that created it. A stale "available" answer would disable every fallback.
+	local cachedOff = probeClient(120100, nil, true, true, { global = { secureSnippets = {
+		build = "69913", available = false } } })
+	check(cachedOff.HasSecureSnippets == false, "a matching cache is used instead of probing")
+	check(cachedOff.SecureSnippetsFromCache == true, "and says so")
+
+	local staleBuild = probeClient(120100, nil, true, true, { global = { secureSnippets = {
+		build = "00000", available = false } } })
+	check(staleBuild.HasSecureSnippets == true, "a cache from another build is ignored")
+	check(staleBuild.SecureSnippetsFromCache == false, "and re-probes")
+
+	local junk = probeClient(120100, nil, true, true, { global = { secureSnippets = { build = "69913" } } })
+	check(junk.HasSecureSnippets == true and junk.SecureSnippetsFromCache == false,
+		"a cache entry with no boolean answer is ignored")
+
+	local brokenRetail = probeClient(120100, nil, true, false)
+	check(brokenRetail.HasSecureSnippets == false, "a raising Retail probe reports unavailable")
+	check(type(brokenRetail.API) == "table" and type(brokenRetail.API.IsEventAvailable) == "function",
+		"a raising Retail probe does not abort the rest of Core/Client.lua")
+
+	local brokenForever, foreverProbe = probeClient(16001, "Forever", true, false)
+	check(brokenForever.HasSecureSnippets == false and brokenForever.SecureSnippetsKnownUnavailable,
+		"Forever selects the fallback without running a probe")
+	check(not foreverProbe.attributes["_onstate-azsnippetprobe"],
+		"Forever never installs the erroring probe snippet")
+end
+-- Action bar paging, with and without restricted execution.
+--
+-- Executes the real prototype file. What matters is that the page driver arrives
+-- already numeric where no snippet can resolve symbols, that each button gets its own
+-- `action` driver so casts survive combat, and that no `_onstate-*` body is installed
+-- on a client that would raise on it.
+for _, snippets in ipairs({true, false}) do
+	local env = setmetatable({}, { __index = _G })
+	env._G = env
+	env.InCombatLockdown = function() return false end
+	env.NUM_ACTIONBAR_BUTTONS = 12
+	env.BOTTOMLEFT_ACTIONBAR_PAGE, env.BOTTOMRIGHT_ACTIONBAR_PAGE = 6, 5
+	env.RIGHT_ACTIONBAR_PAGE, env.LEFT_ACTIONBAR_PAGE = 4, 3
+	env.LEAVE_VEHICLE = "Leave Vehicle"
+	env.C_ActionBar = {
+		GetVehicleBarIndex = function() return 12 end,
+		GetTempShapeshiftBarIndex = function() return 13 end,
+		GetOverrideBarIndex = function() return 14 end
+	}
+	env.LibStub = function() return {} end
+
+	local stateDrivers, attributeDrivers = {}, {}
+	env.RegisterStateDriver = function(frame, state, values) stateDrivers[frame] = stateDrivers[frame] or {}; stateDrivers[frame][state] = values end
+	env.UnregisterStateDriver = function(frame, state) if stateDrivers[frame] then stateDrivers[frame][state] = nil end end
+	env.RegisterAttributeDriver = function(frame, name, values) attributeDrivers[frame] = attributeDrivers[frame] or {}; attributeDrivers[frame][name] = values end
+	env.UnregisterAttributeDriver = function(frame, name) if attributeDrivers[frame] then attributeDrivers[frame][name] = nil end end
+
+	local ns = { Private = {} }
+	setmetatable(ns, { __index = ns.Private })
+	ns.Private.HasSecureSnippets = snippets
+	ns.Private.IsRetail = true
+	ns.Private.PlayerClass = "DRUID"
+	ns.Private.API = { GetEffectiveScale = function() return 1 end,
+		RegisterVisibilityDriver = function(frame, driver)
+			env.RegisterStateDriver(frame, "visibility", driver)
+			return true
+		end }
+	ns.Merge = function(_, a) return a end
+	ns.ButtonBar = { prototype = {}, defaults = {} }
+	run("Components/ActionBars/Prototypes/ActionBar.lua", env, ns)
+
+	local buttons = {}
+	local bar = setmetatable({ id = 1, buttons = buttons, config = { enabled = true,
+		visibility = { possess = false, overridebar = false, vehicleui = false, dragon = false, mounted = true } } },
+		{ __index = ns.ActionBar.prototype })
+	bar.SetAttribute = function() end
+	bar.GetAttribute = function() end
+	for i = 1, 12 do
+		buttons[i] = { id = i }
+	end
+
+	bar:UpdateStateDriver()
+	bar:UpdateVisibilityDriver()
+
+	local page = stateDrivers[bar] and stateDrivers[bar].page
+	check(type(page) == "string", "bar 1 registers a page driver")
+
+	-- The symbols are the driver's *values*, so match the space before them:
+	-- "[possessbar] possess" is symbolic, "[possessbar] 12" is not.
+	if (snippets) then
+		check(page:find("] possess", 1, true) and page:find("] dragon", 1, true),
+			"symbolic page driver retained where snippets compile")
+		check(attributeDrivers[buttons[1]] == nil, "no per-button action driver where snippets compile")
+		check(stateDrivers[bar].vis ~= nil, "custom vis state retained where snippets compile")
+	else
+		check(not page:find("] possess", 1, true) and not page:find("] dragon", 1, true),
+			"page driver carries no symbol a snippet would have to resolve")
+		check(page:find("[overridebar] 14", 1, true), "override bar index resolved from the client")
+		check(page:find("[possessbar] 12", 1, true), "vehicle bar index resolved from the client")
+		check(page:find("[shapeshift] 13", 1, true), "temp shapeshift index resolved from the client")
+		check(page:find("[bonusbar:4] 10", 1, true), "class bonus bars retained")
+
+		-- Slot = (page - 1) * 12 + button id, the same arithmetic LAB uses per state.
+		local third = attributeDrivers[buttons[3]] and attributeDrivers[buttons[3]].action
+		check(type(third) == "string", "each button drives its own action attribute")
+		check(third:find("[bonusbar:1] 75", 1, true), "bonus bar slot for button 3 on page 7")
+		check(third:find("[bar:2] 15", 1, true), "page 2 slot for button 3")
+
+		check(stateDrivers[bar].vis == nil, "custom vis state not used without snippets")
+		check(stateDrivers[bar].visibility ~= nil, "native visibility state used instead")
+
+		-- A bar that never pages must not add drivers to Blizzard's throttled rescan.
+		local static = setmetatable({ id = 5, buttons = { { id = 1 } }, config = bar.config },
+			{ __index = ns.ActionBar.prototype })
+		static.SetAttribute = function() end
+		static.GetAttribute = function() end
+		static:UpdateStateDriver()
+		check(stateDrivers[static].page == "5", "a non-paging bar drives its own page number")
+		check(attributeDrivers[static.buttons[1]] == nil, "a non-paging bar registers no action driver")
+	end
 end
 
 print("Client compatibility: " .. checks .. " checks passed")

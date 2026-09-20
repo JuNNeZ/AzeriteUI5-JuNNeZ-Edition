@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -434,4 +435,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Nameplates"], GenerateOptions, -7000)
+Options:AddGroup(L["Nameplates"], GenerateOptions, -7000, "frames", "NamePlates")

@@ -3,6 +3,24 @@
 Open with `/az` or `/azerite`. The panel is Ace3-based and every setting is stored
 per profile.
 
+## New panel preview (5.6.0)
+
+Open `/az new` for the custom panel: grouped navigation, search, section tracking,
+changed-setting markers and individual reset controls. It edits the same addon
+profiles as the existing window. `/az classic` opens the stock Ace3 fallback.
+
+The new panel's **Settings -> Appearance** page controls theme, background opacity,
+scale and position reset; **Settings -> Changelog** shows recent release notes.
+Those appearance settings belong to the window, separately from addon profiles.
+
+This release includes phases 1 through 4c. Live preview, migration of `/az`, further
+artwork, keyboard navigation and other later phases remain deferred. Change frame
+settings outside combat; the preview does not provide a general deferred-write queue.
+
+On Forever, **Minimap -> Day and Night Indicator** controls the new indicator.
+Drag it around the map or right-click it to adjust its distance. Turning it off
+restores Blizzard's own indicator.
+
 ## Sections, in menu order
 
 | Section | Covers |

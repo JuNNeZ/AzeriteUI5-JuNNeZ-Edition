@@ -13,7 +13,33 @@ local cases = {
 	{"class resource gate", "Libs/oUF/elements/classpower.lua", "if(ns.IsForever and playerClass", "if(false and playerClass"},
 	{"menu game rules", "Components/ActionBars/Elements/MicroMenu.lua", "and not disabled and not", "and not"},
 	{"menu callbacks", "Components/ActionBars/Elements/MicroMenu.lua", "info.callback and info.callback()", "false"},
-	{"event validation", "Libs/oUF/private.lua", "return C_EventUtils.IsEventValid(event)", "return true"}
+	{"event validation", "Libs/oUF/private.lua", "return C_EventUtils.IsEventValid(event)", "return true"},
+	{"snippet probe", "Core/Client.lua", "\treturn ran\nend", "\treturn true\nend"},
+	-- Without the pcall the error escapes and takes the rest of Core/Client.lua with
+	-- it, which is exactly what happened on Forever 1.60.1.69913.
+	{"snippet probe containment", "Core/Client.lua",
+		'pcall(probe.SetAttribute, probe, "state-azsnippetprobe", "run")',
+		'probe:SetAttribute("state-azsnippetprobe", "run")'},
+	{"snippet probe scope", "Core/Client.lua",
+		'if (not isAddOnLoaded("Blizzard_RestrictedAddOnEnvironment")) then return true end',
+		'if (false) then return true end'},
+	{"Forever probe bypass", "Core/Client.lua", "if (forever) then", "if (false) then"},
+	{"numeric page driver", "Components/ActionBars/Prototypes/ActionBar.lua",
+		"statedriver = BuildConditionalDriver(conditions, fallback, function(page) return page end)", ""},
+	{"per-button action driver", "Components/ActionBars/Prototypes/ActionBar.lua",
+		"\t\tself:UpdateActionDrivers()", ""},
+	{"native visibility driver", "Components/ActionBars/Prototypes/ActionBar.lua",
+		'API.RegisterVisibilityDriver(self, visdriver or "hide")', ""},
+	{"non-paging bar guard", "Components/ActionBars/Prototypes/ActionBar.lua",
+		"\tif (not conditions) then return end", ""},
+	-- An entry whose native button Blizzard has gated must grey out, or it looks
+	-- live and swallows the press - which is how Talents and Legacy read at level 1.
+	{"micro menu gating", "Components/ActionBars/Elements/MicroMenu.lua",
+		"local usable = IsNativeButtonUsable(button.ref)", "local usable = true"},
+	-- Trusting a cache from another build would keep a stale "available" answer
+	-- across the very patch that changed it.
+	{"snippet cache build match", "Core/Client.lua",
+		"cached.build == currentBuild and ", ""}
 }
 assert(originalLoadfile(root .. "/Tools/Harness/client_harness.lua"))()
 for _, case in ipairs(cases) do

@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -62,6 +63,11 @@ local MICRO_MENU_FRAME_NAMES = {
 	"MicroButtonAndBagsBar"
 }
 
+-- Quarantining the container alone would make these invisible, since alpha is
+-- inherited, but not deaf: an unlisted button keeps its mouse input and can still
+-- swallow a click from behind AzeriteUI's own menu. Every button the client can put
+-- on the strip therefore needs its own entry. Missing names are skipped, so the
+-- Forever-only four at the end cost nothing on Retail.
 local MICRO_BUTTON_NAMES = {
 	"CharacterMicroButton",
 	"ProfessionMicroButton",
@@ -75,7 +81,12 @@ local MICRO_BUTTON_NAMES = {
 	"EJMicroButton",
 	"CollectionsMicroButton",
 	"MainMenuMicroButton",
-	"StoreMicroButton"
+	"StoreMicroButton",
+	-- Blizzard_MicroMenu/Camelot/MicroMenuContainerOverrides.lua
+	"SpellbookMicroButton",
+	"TalentMicroButton",
+	"LegacyMicroButton",
+	"HelpMicroButton"
 }
 
 local BAG_BUTTON_NAMES = {

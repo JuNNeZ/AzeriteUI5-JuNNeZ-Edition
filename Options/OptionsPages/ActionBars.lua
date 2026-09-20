@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -309,6 +310,12 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 			}
 		}
 	}
+
+	-- Every setting in this group reads and writes that module's profile, which
+	-- is what lets the panel mark the ones that differ from their defaults.
+	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+		ns.OptionsKit.Defaults.Bind(options, moduleName)
+	end
 	return options
 end
 
@@ -540,6 +547,12 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 			}
 		}
 	}
+
+	-- Every setting in this group reads and writes that module's profile, which
+	-- is what lets the panel mark the ones that differ from their defaults.
+	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+		ns.OptionsKit.Defaults.Bind(options, moduleName)
+	end
 	return options
 end
 
@@ -920,10 +933,16 @@ local GenerateOptions = function()
 	options.args["stancebar"] = stanceBarOptions
 
 	options.args["micromenu"] = GenerateMicroMenuOptions(50)
+	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+		ns.OptionsKit.Defaults.Bind(options.args["micromenu"], "MicroMenu")
+	end
 
 	options.args["dismountbutton"] = GenerateDismountButtonOptions(60)
+	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+		ns.OptionsKit.Defaults.Bind(options.args["dismountbutton"], "VehicleExit")
+	end
 
 	return options
 end
 
-Options:AddGroup(L["Action Bars"], GenerateOptions, -9000)
+Options:AddGroup(L["Action Bars"], GenerateOptions, -9000, "bars", "ActionBars")

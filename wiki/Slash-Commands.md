@@ -5,6 +5,8 @@
 | Command | What it does |
 | --- | --- |
 | `/az`, `/azerite` | Open the AzeriteUI options menu. |
+| `/az new` | Open the new custom options panel preview. |
+| `/az classic` | Open the stock Ace3 options dialog. |
 | `/lock` | Toggle frame movement mode for AzeriteUI-owned frames. Blizzard-owned frames use Blizzard's Edit Mode instead. |
 | `/clear` | Clear the chat window. |
 | `/resetsettings` | Reset the AzeriteUI database. **Destructive - this erases every profile.** |

@@ -1,6 +1,6 @@
 --[[
 The MIT License (MIT)
-Copyright (c) 2026
+Copyright (c) 2026 Jonas "JuNNeZ" Andersen
 ]]
 local _, ns = ...
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
@@ -59,4 +59,4 @@ local GenerateOptions = function()
   return options
 end
 
-Options:AddGroup("Widgets", GenerateOptions, -2700)
+Options:AddGroup("Widgets", GenerateOptions, -2700, "interface", "UIWidgetTopCenter")

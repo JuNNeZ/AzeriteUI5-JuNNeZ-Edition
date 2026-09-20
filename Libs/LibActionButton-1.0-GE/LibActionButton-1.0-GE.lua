@@ -1,7 +1,19 @@
 -- License: LICENSE.txt
 
 local MAJOR_VERSION = "LibActionButton-1.0-GE"
-local MINOR_VERSION = 76 -- Ability ping support (GetActionButtonInfo, ping-receiver upkeep)
+local MINOR_VERSION = 77 -- Button state without restricted execution (WoW Forever 1.60.1)
+
+-- Whether secure handler snippets compile on this client.
+--
+-- Everything this library does to a button in combat - `_childupdate-state`, the
+-- `UpdateState` snippet, and the OnClick/drag wrappers - runs as a restricted
+-- closure. WoW Forever's 1.60.1 beta loads the Lua restricted environment but
+-- Blizzard_EnvironmentCleanup nils `loadstring_untainted` before it is captured, so
+-- no closure can be built and every one of those paths raises
+-- RestrictedExecution.lua:79. The host addon works this out once and publishes the
+-- answer; anything embedding this library without that flag keeps stock behaviour.
+local _, LAB_addonNamespace = ...
+local HasSecureSnippets = not (type(LAB_addonNamespace) == "table" and LAB_addonNamespace.HasSecureSnippets == false)
 
 local LibStub = LibStub
 if not LibStub then error(MAJOR_VERSION .. " requires LibStub.") end
@@ -46,6 +58,9 @@ local GetActionLossOfControlCooldownDuration = C_ActionBar.GetActionLossOfContro
 local GetActionLossOfControlCooldownInfo = C_ActionBar.GetActionLossOfControlCooldownInfo or function() return nil end
 local IsEquippedGearOutfitAction = C_ActionBar.IsEquippedGearOutfitAction
 local C_Container_GetItemCooldown = C_Container.GetItemCooldown
+-- Blizzard_DeprecatedItemScript supplies the raw GetItemCooldown global; it does
+-- not load on WoW Forever or Retail 12.1.5+, so prefer the namespace for Toy.GetCooldown.
+local GetItemCooldown = (C_Item and C_Item.GetItemCooldown) or GetItemCooldown
 local C_EquipmentSet_PickupEquipmentSet = C_EquipmentSet.PickupEquipmentSet
 local C_LevelLink_IsActionLocked = C_LevelLink and C_LevelLink.IsActionLocked
 local C_TransmogOutfitInfo_IsLockedOutfit = C_TransmogOutfitInfo and C_TransmogOutfitInfo.IsLockedOutfit
@@ -594,6 +609,19 @@ function SetupSecureSnippets(button)
 		return self:RunAttribute("PickupButton", buttonType, buttonAction)
 	]])
 
+	-- A wrap is accepted without complaint on a client that cannot build restricted
+	-- closures; it only fails when the wrapped script fires, and the failure happens
+	-- *before* Blizzard's own handler is reached, so a wrapped button would stop
+	-- responding entirely. Leaving the scripts unwrapped keeps the stock secure
+	-- handlers intact and clicks working. Drag-and-drop off these buttons is lost,
+	-- because there is no insecure way to rewrite a protected button's contents.
+	if not HasSecureSnippets then
+		if UseCustomFlyout then
+			button.header:SetFrameRef("flyoutHandler", GetFlyoutHandler())
+		end
+		return
+	end
+
 	button:SetScript("OnDragStart", nil)
 	-- Wrapped OnDragStart(self, button, kind, value, ...)
 	button.header:WrapScript(button, "OnDragStart", [[
@@ -626,6 +654,10 @@ function SetupSecureSnippets(button)
 end
 
 function WrapOnClick(button, unwrapheader)
+	-- See SetupSecureSnippets: an unbuildable wrapper swallows the click instead of
+	-- passing it on, so the button keeps Blizzard's own OnClick instead.
+	if not HasSecureSnippets then return end
+
 	-- unwrap OnClick until we got our old script out
 	if unwrapheader and unwrapheader.UnwrapScript then
 		local wrapheader
@@ -889,6 +921,12 @@ function Generic:UpdateState(state)
 		return
 	end
 
+	if not HasSecureSnippets then
+		-- No restricted closure to run, so do the snippet's work here instead.
+		self:UpdateStateInsecure(state)
+		return
+	end
+
 	if self.header then
 		self.header:SetFrameRef("updateButton", self)
 		self.header:Execute([[
@@ -898,6 +936,47 @@ function Generic:UpdateState(state)
 	end
 
 	self:UpdateAction()
+end
+
+--- Apply a state to this button without the restricted environment.
+--
+-- This is the plain-Lua twin of the `UpdateState` snippet, for clients that cannot
+-- build restricted closures. The two halves have different rules:
+--
+-- * The attribute half decides what a click casts. Writing a secure attribute from
+--   insecure code is only legal outside combat, so it is skipped during a fight and
+--   the button keeps whatever it was last given. A caller that needs the cast to stay
+--   correct mid-fight has to drive the `action` attribute with an attribute driver,
+--   which Blizzard's own state-driver manager applies from secure code.
+-- * The display half is not protected and always runs, so the icon, cooldown and
+--   count follow the page immediately, in or out of combat.
+function Generic:UpdateStateInsecure(state)
+	if not state then state = self:GetAttribute("state") end
+	state = tostring(state)
+
+	if not InCombatLockdown() then
+		self:SetAttribute("state", state)
+
+		local kind = self.state_types[state] or "empty"
+		self:SetAttribute("type", kind)
+
+		if kind ~= "empty" and kind ~= "custom" then
+			local action_field = (kind == "pet") and "action" or kind
+			self:SetAttribute(action_field, self.state_actions[state])
+			self:SetAttribute("action_field", action_field)
+		end
+
+		-- PingableType_ActionButtonMixin:UpdatePingAttributes, as the snippet does it.
+		local hasAction
+		if kind == "action" then
+			hasAction = (self.state_actions[state] and GetActionInfo(self.state_actions[state])) and true or nil
+		elseif kind ~= "empty" then
+			hasAction = true
+		end
+		self:SetAttribute("ping-receiver", hasAction)
+	end
+
+	self:UpdateAction(true, state)
 end
 
 function Generic:GetAction(state)
@@ -1198,6 +1277,11 @@ if UseCustomFlyout then
 	local InSync = false
 	local function SyncFlyoutInfoToHandler()
 		if InCombatLockdown() or InSync then return end
+		-- The whole point of this function is to load a generated table into the
+		-- restricted environment, and the flyout is opened from a restricted closure
+		-- as well. Neither exists on a client that cannot build one, so the custom
+		-- flyout stays unbuilt there and flyout spells are reached from the spellbook.
+		if not HasSecureSnippets then return end
 		InSync = true
 
 		local maxNumSlots = 0
@@ -1405,7 +1489,10 @@ function Generic:PostClick(button, down)
 	UpdateButtonState(self)
 	UpdateFlyout(self, down)
 
-	if self._receiving_drag and not InCombatLockdown() then
+	-- Placing an action by clicking with a full cursor rewrites protected attributes,
+	-- which only the restricted environment may do. Without it the pickup is left on
+	-- the cursor rather than silently dropped into a button that cannot accept it.
+	if self._receiving_drag and HasSecureSnippets and not InCombatLockdown() then
 		if self._old_type then
 			self:SetAttribute("type", self._old_type)
 			self._old_type = nil
@@ -2242,8 +2329,10 @@ end
 -----------------------------------------------------------
 --- button management
 
-function Generic:UpdateAction(force)
-	local actionType, action = self:GetAction()
+-- `state` is optional and only used where the button's `state` attribute cannot be
+-- trusted to be current, which is the in-combat half of UpdateStateInsecure.
+function Generic:UpdateAction(force, state)
+	local actionType, action = self:GetAction(state)
 	if force or actionType ~= self._state_type or action ~= self._state_action then
 		-- type changed, update the metatable
 		if force or self._state_type ~= actionType then
@@ -2432,8 +2521,12 @@ function Update(self, which)
 	end
 
 	-- this could've been a spec change, need to call OnStateChanged for action buttons, if present
+	-- Both branches below run a snippet through the header, so they are skipped where
+	-- the client cannot build one. `pressAndHoldAction` and `typerelease` then keep
+	-- their creation-time values; press-and-hold casting is a Retail spell property
+	-- and has nothing to answer to on a client without restricted execution.
 	local isTypeAction = self._state_type == 'action'
-	if isTypeAction and not InCombatLockdown() then
+	if isTypeAction and HasSecureSnippets and not InCombatLockdown() then
 		local updateReleaseCasting = which == "PLAYER_ENTERING_WORLD" and self:GetAttribute("UpdateReleaseCasting")
 		if updateReleaseCasting then -- zone in dragon mount on Evokers can bug
 			self.header:SetFrameRef("updateButton", self)

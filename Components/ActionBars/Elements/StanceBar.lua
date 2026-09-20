@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +38,9 @@ local ButtonBar = ns.ButtonBar.prototype
 
 local StanceBar = setmetatable({}, { __index = ButtonBar })
 local StanceBar_MT = { __index = StanceBar }
+
+-- Whether secure handler snippets compile on this client; see Core/Client.lua.
+local hasSecureSnippets = ns.HasSecureSnippets ~= false
 
 -- GLOBALS: InCombatLockdown
 -- GLOBALS: GetBindingKey, ClearOverrideBindings, SetOverrideBindingClick
@@ -467,27 +471,32 @@ StanceBarMod.CreateBar = function(self)
 		bar.config.clickOnDown = GetCVarBool("ActionButtonUseKeyDown")
 	end
 
-	bar:SetAttribute("UpdateVisibility", [[
-		local visibility = self:GetAttribute("visibility");
-		local userhidden = self:GetAttribute("userhidden");
-		if (visibility == "show") then
-			if (userhidden) then
+	-- Nothing drives a "vis" state on this bar; it is shown and hidden directly from
+	-- Lua. The bodies are kept for parity with the other bars, but only where the
+	-- client can compile them, so a future driver cannot fail silently on Forever.
+	if (hasSecureSnippets) then
+		bar:SetAttribute("UpdateVisibility", [[
+			local visibility = self:GetAttribute("visibility");
+			local userhidden = self:GetAttribute("userhidden");
+			if (visibility == "show") then
+				if (userhidden) then
+					self:Hide();
+				else
+					self:Show();
+				end
+			elseif (visibility == "hide") then
 				self:Hide();
-			else
-				self:Show();
 			end
-		elseif (visibility == "hide") then
-			self:Hide();
-		end
-	]])
+		]])
 
-	bar:SetAttribute("_onstate-vis", [[
-		if (not newstate) then
-			return
-		end
-		self:SetAttribute("visibility", newstate);
-		self:RunAttribute("UpdateVisibility");
-	]])
+		bar:SetAttribute("_onstate-vis", [[
+			if (not newstate) then
+				return
+			end
+			self:SetAttribute("visibility", newstate);
+			self:RunAttribute("UpdateVisibility");
+		]])
+	end
 
 	self.bar = bar
 end

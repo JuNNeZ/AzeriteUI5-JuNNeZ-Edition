@@ -655,3 +655,62 @@ L["AzeriteUI restyles the game menu you open with Escape. If another addon resty
 L["Choose which addon styles the game menu. Changing this reloads the interface."] = true
 L["This turns %s off for this character and reloads the interface."] = true
 L["The game menu style changes when the interface reloads."] = true
+
+L["Profiles"] = true
+L["Search settings"] = true
+L["Nothing matches '%s'."] = true
+L["Settings that move or rebuild frames wait until you leave combat."] = true
+L["JuNNeZ Edition"] = true
+
+L["Azerite"] = true
+L["Dark"] = true
+L["Light"] = true
+L["Class Color"] = true
+L["Options Panel"] = true
+L["Theme"] = true
+L["Choose the colors the AzeriteUI options window is drawn with. Class Color follows the class of the character you are logged in on."] = true
+
+L["Setup"] = true
+L["Frames"] = true
+L["Bars"] = true
+L["World"] = true
+L["Interface"] = true
+L["Settings"] = true
+L["General"] = true
+
+L["Background Opacity"] = true
+L["How solid the options window is drawn. This scales the opacity the chosen theme asks for; the borders keep their own, so the window never loses its edges."] = true
+
+-- The Settings tab: the window's own settings, and the release notes.
+L["Options"] = true
+L["Appearance"] = true
+L["How this window is drawn. These are kept outside your settings profiles, so switching profile never changes them and exporting one never carries them."] = true
+L["Window"] = true
+L["Panel Scale"] = true
+L["How large the options window is drawn, independently of the rest of the interface. Useful on a very high resolution display, where the window can otherwise be smaller than everything around it."] = true
+L["Reset Position and Size"] = true
+L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = true
+L["About"] = true
+L["Changelog"] = true
+L["The %d most recent releases. Everything older is in CHANGELOG.md."] = true
+L["The release notes are not available in this build."] = true
+L["%s - this setting needs a %s control, which this panel cannot draw yet."] = true
+
+L["%d settings"] = true
+L["%d of %d settings"] = true
+
+L["Changed from default"] = true
+L["This setting no longer matches the value it ships with. Click to put this one setting back, without touching the rest of the profile."] = true
+L["%d settings here differ from their defaults."] = true
+L["%d settings, %d changed"] = true
+
+L["Go to page"] = true
+L["SEARCH"] = true
+L["Nothing matches that."] = true
+
+L["Day and Night Indicator"] = true
+L["Show Forever's day and night cycle on the edge of the minimap, where you can drag it around the ring and right-click it to set its distance from the map. When disabled, Blizzard's own indicator on the minimap cluster is shown instead."] = true
+L["Daytime"] = true
+L["Nighttime"] = true
+L["Distance"] = true
+L["<Right-Click to set the distance from the map>"] = true

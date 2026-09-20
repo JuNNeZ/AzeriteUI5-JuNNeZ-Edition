@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +36,19 @@ local Tracker = ns:NewModule("Tracker", ns.MovableModulePrototype, "LibMoreEvent
 local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
 
+-- Whether secure handler snippets compile on this client; see Core/Client.lua.
+local hasSecureSnippets = ns.HasSecureSnippets ~= false
+
+-- Hide while a boss or arena frame exists, show otherwise.
+local GetAutoHideDriver = function()
+	local driver = "hide;show"
+	driver = "[@arena1,exists][@arena2,exists][@arena3,exists][@arena4,exists][@arena5,exists]" .. driver
+	driver = "[@boss1,exists][@boss2,exists][@boss3,exists][@boss4,exists][@boss5,exists]" .. driver
+	--driver = "[@target,exists]" .. driver -- For testing purposes
+
+	return driver
+end
+
 local defaults = { profile = ns:Merge({
 
 	theme = "Azerite",
@@ -49,30 +63,50 @@ Tracker.GenerateDefaults = function(self)
 	return defaults
 end
 
+Tracker.QueueCombatRefresh = function(self)
+	self.combatRefreshPending = true
+	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+end
+
 Tracker.PrepareFrames = function(self)
+	if (InCombatLockdown()) then
+		self:QueueCombatRefresh()
+		return false
+	end
+	if (ObjectiveTrackerFrame.autoHider) then
+		return true
+	end
 
 	ObjectiveTrackerFrame.autoHider = CreateFrame("Frame", nil, ObjectiveTrackerFrame, "SecureHandlerStateTemplate")
-	ObjectiveTrackerFrame.autoHider:SetAttribute("_onstate-vis", [[ if (newstate == "hide") then self:Hide() else self:Show() end ]])
-	-- Secure attribute handler to allow insecure code to request a forced visibility change
-	-- Use SetAttribute("forcevis", "hide"/"show") from insecure code to trigger.
-	ObjectiveTrackerFrame.autoHider:SetAttribute("_onattributechanged", [[
-		if (name == "forcevis") then
-			if (value == "hide") then
-				self:Hide()
-			elseif (value == "show") then
-				self:Show()
+
+	if (hasSecureSnippets) then
+		ObjectiveTrackerFrame.autoHider:SetAttribute("_onstate-vis", [[ if (newstate == "hide") then self:Hide() else self:Show() end ]])
+		-- Secure attribute handler to allow insecure code to request a forced visibility change
+		-- Use SetAttribute("forcevis", "hide"/"show") from insecure code to trigger.
+		ObjectiveTrackerFrame.autoHider:SetAttribute("_onattributechanged", [[
+			if (name == "forcevis") then
+				if (value == "hide") then
+					self:Hide()
+				elseif (value == "show") then
+					self:Show()
+				end
 			end
-		end
-	]])
+		]])
+	end
+
  	ObjectiveTrackerFrame.autoHider:SetScript("OnHide", function() ObjectiveTrackerFrame:SetAlpha(0) end)
  	ObjectiveTrackerFrame.autoHider:SetScript("OnShow", function() ObjectiveTrackerFrame:SetAlpha(.9) end)
 
-	local driver = "hide;show"
-	driver = "[@arena1,exists][@arena2,exists][@arena3,exists][@arena4,exists][@arena5,exists]" .. driver
-	driver = "[@boss1,exists][@boss2,exists][@boss3,exists][@boss4,exists][@boss5,exists]" .. driver
-	--driver = "[@target,exists]" .. driver -- For testing purposes
-
-	RegisterStateDriver(ObjectiveTrackerFrame.autoHider, "vis", driver)
+	if (hasSecureSnippets) then
+		RegisterStateDriver(ObjectiveTrackerFrame.autoHider, "vis", GetAutoHideDriver())
+	else
+		-- Neither snippet can be compiled here, so both jobs move onto the one state
+		-- Blizzard resolves itself. `_onstate-vis` becomes the native visibility state
+		-- and `forcevis` folds into the same driver string: the whole answer is "hide"
+		-- while the tracker is switched off, and the boss/arena conditionals otherwise.
+		-- Registering a driver needs to be out of combat, which UpdateSettings honours.
+		self:UpdateAutoHideDriver()
+	end
 
 	ObjectiveTrackerUIWidgetContainer:SetFrameStrata("BACKGROUND")
 	ObjectiveTrackerFrame:SetFrameStrata("BACKGROUND")
@@ -82,9 +116,38 @@ Tracker.PrepareFrames = function(self)
 
 	self.GetFrame = function() return ObjectiveTrackerFrame end
 
+	return true
+end
+
+-- The tracker's own on/off setting and the boss/arena auto-hide are two answers to
+-- the same question, so where there is no snippet to combine them they are combined
+-- into the driver string instead.
+Tracker.UpdateAutoHideDriver = function(self)
+	local autoHider = ObjectiveTrackerFrame and ObjectiveTrackerFrame.autoHider
+	if (not autoHider) then return end
+	if (InCombatLockdown()) then
+		self:QueueCombatRefresh()
+		return false
+	end
+
+	local disabled = self.db and self.db.profile and self.db.profile.disableBlizzardTracker
+
+	return ns.API.RegisterVisibilityDriver(autoHider, disabled and "hide" or GetAutoHideDriver())
 end
 
 Tracker.UpdateSettings = function(self)
+	if (InCombatLockdown()) then
+		self:QueueCombatRefresh()
+		return
+	end
+
+	-- Checked before the secret-value branch below, which returns early and would
+	-- otherwise make this unreachable: `issecretvalue` exists on Forever too, so the
+	-- client this is for never got here.
+	if (not hasSecureSnippets) then
+		self:UpdateAutoHideDriver()
+		return
+	end
 
 	if (issecretvalue) then
 		if ObjectiveTrackerFrame.autoHider then
@@ -97,6 +160,10 @@ Tracker.UpdateSettings = function(self)
 
 		if (not self:IsHooked(ObjectiveTrackerFrame, "Show")) then
 			self:SecureHook(ObjectiveTrackerFrame, "Show", function(this)
+				if (InCombatLockdown()) then
+					self:QueueCombatRefresh()
+					return
+				end
 				if (self.db.profile.disableBlizzardTracker and ObjectiveTrackerFrame.autoHider) then
 					ObjectiveTrackerFrame.autoHider:SetAttribute("forcevis", "hide")
 				end
@@ -105,6 +172,10 @@ Tracker.UpdateSettings = function(self)
 
 		if (not self:IsHooked(ObjectiveTrackerFrame, "SetShown")) then
 			self:SecureHook(ObjectiveTrackerFrame, "SetShown", function(this, show)
+				if (InCombatLockdown()) then
+					self:QueueCombatRefresh()
+					return
+				end
 				if (self.db.profile.disableBlizzardTracker and show and ObjectiveTrackerFrame.autoHider) then
 					ObjectiveTrackerFrame.autoHider:SetAttribute("forcevis", "hide")
 				end
@@ -125,6 +196,17 @@ Tracker.UpdateSettings = function(self)
 end
 
 Tracker.OnEvent = function(self, event, ...)
+	if (event == "PLAYER_REGEN_ENABLED") then
+		if (InCombatLockdown()) then return end
+		if (self.combatRefreshPending) then
+			self.combatRefreshPending = nil
+			self:PrepareFrames()
+			self:UpdateSettings()
+		end
+		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+		return
+	end
+
 	if (event == "PLAYER_ENTERING_WORLD" or event == "SETTINGS_LOADED") then
 		ObjectiveTrackerFrame:SetAlpha(.9)
 		self:UpdateSettings()

@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -57,6 +58,9 @@ local RegisterCooldown = ns.Widgets.RegisterCooldown
 
 local STARTUP_BUTTON_REFRESH_DELAY = .5
 local STARTUP_BUTTON_REFRESH_ATTEMPTS = 2
+
+-- Whether secure handler snippets compile on this client; see Core/Client.lua.
+local hasSecureSnippets = ns.HasSecureSnippets ~= false
 
 local HasVisibleActionbarTextures = function(self)
 	for _,bar in next,self.bars do
@@ -545,7 +549,16 @@ ActionBarMod.CreateBars = function(self)
 		self.bars[i] = bar
 	end
 
-	local petBattleController = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
+	-- The pet-battle key passthrough is a restricted snippet from end to end: it
+	-- rebinds keys with SetBinding on a secure handler, which only the restricted
+	-- environment may do. Where that cannot be built, the controller is not created
+	-- at all, rather than left to raise on its first state change. Pet-battle keys
+	-- then fall back to whatever the player has bound to Blizzard's own bar.
+	local petBattleController = hasSecureSnippets
+		and CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
+		or nil
+
+	if (petBattleController) then
 	petBattleController:SetAttribute("_onstate-petbattle", string_format([[
 		if (newstate == "petbattle") then
 			local b1, b2, b3, b4, b5, b6 = "%s", "%s", "%s", "%s", "%s", "%s";
@@ -577,17 +590,22 @@ ActionBarMod.CreateBars = function(self)
 			self:ClearBindings()
 		end
 	]], (function(b) local t={}; for i=1,6 do t[i]=b[i]:GetName() end; return unpack(t) end)(self.bars[1].buttons)))
+	end
 
 	self.bars[1].Disable = function(self)
 		ns.ActionBar.prototype.Disable(self)
 		ClearOverrideBindings(self)
-		UnregisterStateDriver(petBattleController, "petbattle")
+		if (petBattleController) then
+			UnregisterStateDriver(petBattleController, "petbattle")
+		end
 	end
 
 	self.bars[1].Enable = function(self)
 		ns.ActionBar.prototype.Enable(self)
 		self:UpdateBindings()
-		RegisterStateDriver(petBattleController, "petbattle", "[petbattle]petbattle;nopetbattle")
+		if (petBattleController) then
+			RegisterStateDriver(petBattleController, "petbattle", "[petbattle]petbattle;nopetbattle")
+		end
 	end
 
 end

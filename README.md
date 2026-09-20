@@ -68,7 +68,11 @@ or
 /azerite
 ```
 
-This opens a comprehensive settings panel powered by Ace3, where you can fine-tune every aspect of the interface.
+This opens the existing settings window. **`/az new`** opens the new custom panel preview,
+with search, grouped navigation, section tracking and reset controls for supported settings.
+Its **Settings -> Appearance** page offers themes, opacity and scale; **Settings -> Changelog**
+shows recent release notes. **`/az classic`** opens the stock Ace3 dialog. These windows share
+the same addon profiles. Later panel phases remain deferred; change frame settings outside combat.
 
 ---
 
@@ -77,6 +81,8 @@ This opens a comprehensive settings panel powered by Ace3, where you can fine-tu
 | Command | Description |
 |---|---|
 | `/az` or `/azerite` | Opens the AzeriteUI options menu |
+| `/az new` | Opens the new custom options panel preview |
+| `/az classic` | Opens the stock Ace3 options dialog |
 | `/lock` | Toggles movable frame anchors — drag UI elements to reposition them. Use Blizzard's EditMode for default frames. |
 | `/kb` | Toggles keybind mode. Hover any action, pet or stance button and press a key to bind it; Escape clears the binding. Also reachable from `/az` > Action Bars > Keybind Mode. |
 | `/clear` | Clears the chat window |
@@ -108,6 +114,10 @@ Features and settings adapt to the client. Forever omits arena frames, archaeolo
 vehicle seats, specialization inspection and Retail-only class resources; Rogue
 and Druid combo points remain available. Forever support is new and has passed
 offline checks, with in-game beta testing still needed.
+
+The current Forever beta needs a fallback for Blizzard's broken restricted execution.
+Action drag-and-drop, custom flyouts and Clique click-casting remain unavailable there;
+group frames created during combat finish setup after combat. Retail keeps its secure path.
 
 ### Unit Frames
 
@@ -321,6 +331,7 @@ slot pass through to the world instead of dying on the button.
 #### Removing Abilities
 
 Hold `Alt + Ctrl + Shift` and drag with the left mouse button to remove abilities from the action bars.
+This is unavailable with the current Forever beta's secure-execution fallback.
 
 ---
 
@@ -432,6 +443,7 @@ The top-right aura display (your buffs and debuffs), separate from unit frame au
 
 ### Minimap
 
+- **Day and Night Indicator (Forever)** — drag it around the minimap, right-click to adjust its distance, or turn it off under `/az` -> Minimap -> Day and Night Indicator to restore Blizzard's own indicator.
 - **Enable/Disable** — when disabled, the minimap is untouched by AzeriteUI
 - **Hide AddOn Text** — hide the custom "AddOns" label
 - **Hide Clock Text** — hide the AzeriteUI clock display
@@ -535,7 +547,7 @@ Use `/lock` to enter frame-moving mode. This reveals anchor handles on all Azeri
 
 AzeriteUI uses a single saved variable database (`AzeriteUI5_DB`) with Ace3 profile support. All settings are stored per-profile and can be managed through the options panel.
 
-**Export and Import** — the profile page carries a pair of text boxes for sharing a
+**Export and Import** — the Export & Import page carries a pair of text boxes for sharing a
 setup. **Generate Export String** packs the active profile, including frame positions,
 into one printable string; paste someone else's string into the import box and press
 Accept to apply it over your current profile. Importing overwrites the active profile
@@ -568,7 +580,7 @@ This fan edition includes the following over the original AzeriteUI 5:
 - **Explorer Mode tooltips** on all 22 interactive options
 - **Guarded-call refactor** — roughly 440 former `pcall` sites moved to a reporting
   `SafeCall` / silent-probe `TryCall` pair
-- **Ten fully populated locales**, every key present in every file
+- **Ten locales**, with new panel strings falling back to English pending translation
 - **Decursive compatibility** — fixes for interoperability with the Decursive addon
 - **Actionbar live-update fixes** — action buttons refresh correctly during play
 
@@ -585,7 +597,7 @@ each entry lists what changed since the previous release and nothing else.
 A: Type `/az` or `/azerite` in the chat. You can also find AzeriteUI in the Blizzard AddOns settings panel (Esc > Options > AddOns).
 
 **Q: How do I remove abilities from the action bars?**
-A: Hold `Alt + Ctrl + Shift` and drag with the left mouse button.
+A: On Retail, hold `Alt + Ctrl + Shift` and drag with the left mouse button. Dragging is unavailable with the current Forever beta's secure-execution fallback.
 
 **Q: How do I move UI elements around?**
 A: Type `/lock` in chat. This shows movable anchor handles that you can drag. Type `/lock` again to save and exit. For default Blizzard frames, use WoW's built-in EditMode.
@@ -674,7 +686,7 @@ A: The "Clear Chat On Reload" feature temporarily blocks old messages. Hold `Shi
 ### Compatibility
 
 **Q: Does this work with Clique?**
-A: Yes. Clique is listed as an optional dependency and is fully supported.
+A: On Retail, yes. Clique click-casting is unavailable with the current Forever beta's secure-execution fallback.
 
 **Q: Does this work with Decursive?**
 A: Yes. The JuNNeZ Edition includes specific compatibility fixes for Decursive.
@@ -737,6 +749,16 @@ The container installs:
 - `luarocks`
 - `ripgrep`
 - Recommended WoW/Lua VS Code extensions used in this project
+
+### Maintainer toolchain
+
+- [Hated WoW MCP](https://github.com/RdyGaming/hated-wow-mcp) provides client-aware Retail and WoW
+  Forever API, Blizzard UI-source, TOC/XML, CVar, and game-data lookups. Use the explicit `forever`
+  flavor when investigating the Forever client.
+- Elune is available locally through `Tools/Run-Elune.ps1` for isolated Lua 5.1 taint experiments.
+
+These tools support static investigation and focused experiments; only live `/reload` and combat tests
+can confirm actual addon behavior in Retail or WoW Forever.
 
 ---
 

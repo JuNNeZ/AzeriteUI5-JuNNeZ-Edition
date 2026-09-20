@@ -18,6 +18,10 @@ local _, ns = ...
 local oUF = ns.oUF or oUF
 assert(oUF, 'oUF not loaded')
 
+-- Blizzard_DeprecatedItemScript supplies the raw global; it does not load on
+-- WoW Forever or Retail 12.1.5+, so prefer the namespace.
+local GetItemIcon = (C_Item and C_Item.GetItemIconByID) or GetItemIcon
+
 local ClearCooldowns = function(self)
 	local element = self.Trinket
 	element.spellID = 0

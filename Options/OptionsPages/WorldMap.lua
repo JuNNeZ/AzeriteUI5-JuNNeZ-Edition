@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2026
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen
 
 --]]
 local _, ns = ...
@@ -57,4 +57,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(WORLD_MAP, GenerateOptions, -2900)
+Options:AddGroup(WORLD_MAP, GenerateOptions, -2900, "world", "WorldMap")

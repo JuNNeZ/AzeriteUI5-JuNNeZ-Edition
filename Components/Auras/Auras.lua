@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -423,19 +424,29 @@ Auras.CreateAuras = function(self)
 
 	frame:SetFrameRef("playerAuras", self.playerAuras)
 	frame:SetFrameRef("vehicleAuras", self.vehicleAuras)
-	frame:SetAttribute("_onstate-unit", [[
-		local playerAuras = self:GetFrameRef("playerAuras");
-		local vehicleAuras = self:GetFrameRef("vehicleAuras");
-		if (newstate == "vehicle") then
-			playerAuras:Hide();
-			vehicleAuras:Show();
-		else
-			vehicleAuras:Hide();
-			playerAuras:Show();
-		end
-	]])
 
-	RegisterStateDriver(frame, "unit", "[vehicleui]vehicle;player")
+	if (ns.HasSecureSnippets ~= false) then
+		frame:SetAttribute("_onstate-unit", [[
+			local playerAuras = self:GetFrameRef("playerAuras");
+			local vehicleAuras = self:GetFrameRef("vehicleAuras");
+			if (newstate == "vehicle") then
+				playerAuras:Hide();
+				vehicleAuras:Show();
+			else
+				vehicleAuras:Hide();
+				playerAuras:Show();
+			end
+		]])
+
+		RegisterStateDriver(frame, "unit", "[vehicleui]vehicle;player")
+	else
+		-- One custom state that only ever shows one group and hides the other is two
+		-- native `state-visibility` drivers, with the same conditional inverted. The
+		-- groups are protected (SecureHandlerShowHideTemplate), so this also keeps the
+		-- swap working through a fight, which an insecure Show/Hide could not.
+		ns.API.RegisterVisibilityDriver(self.playerAuras, "[vehicleui]hide;show")
+		ns.API.RegisterVisibilityDriver(self.vehicleAuras, "[vehicleui]show;hide")
+	end
 
 	return true
 end

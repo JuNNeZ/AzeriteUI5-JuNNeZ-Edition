@@ -81,12 +81,18 @@ if (-not (Test-Path $DestinationBase)) {
 
 # Temporary build directory
 $TempBuildPath = Join-Path $env:TEMP "AzeriteUI_Build"
+$TempRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
+$TempBuildPath = [IO.Path]::GetFullPath($TempBuildPath)
+if (-not $TempBuildPath.StartsWith($TempRoot, [StringComparison]::OrdinalIgnoreCase) -or
+    [IO.Path]::GetFileName($TempBuildPath) -ne 'AzeriteUI_Build') {
+    throw "Refusing to clean an unexpected release build path: $TempBuildPath"
+}
 $TempAddonPath = Join-Path $TempBuildPath $AddonName
 
 # Clean temp directory if it exists
 if (Test-Path $TempBuildPath) {
     Write-Host "Cleaning temporary build directory..."
-    Remove-Item $TempBuildPath -Recurse -Force
+    Remove-Item -LiteralPath $TempBuildPath -Recurse -Force
 }
 
 # Create temp directory structure
@@ -165,7 +171,7 @@ try {
 
 # Clean up temp directory
 Write-Host "Cleaning up..."
-Remove-Item $TempBuildPath -Recurse -Force
+Remove-Item -LiteralPath $TempBuildPath -Recurse -Force
 
 # Get archive size
 $ArchiveSize = (Get-Item $ArchivePath).Length / 1MB

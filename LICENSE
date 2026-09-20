@@ -1,6 +1,46 @@
+AzeriteUI 5 - JuNNeZ Edition
+============================
+
+This is an unofficial fan edition of AzeriteUI 5 by GoldpawsStuff, maintained
+with the original author's permission.
+
+Two licences apply to what you are holding, and both must travel with any copy
+of it. Neither one replaces the other.
+
+
+1. The original AzeriteUI
+-------------------------
+
+AzeriteUI was created by Daniel Troconis and Lars Norberg (GoldpawsStuff). Its
+code, design and artwork remain theirs, under their own licence, which is
+reproduced in full in LICENSE.txt. Nothing in this file alters, replaces or
+supersedes it.
+
+Two things about that licence are worth repeating here, because they are easy to
+miss and they still apply to this edition:
+
+  * It covers the code only.
+
+  * None of the artwork or media assets may be shared, modified, published or
+    distributed in any shape or form. This applies to everything in Assets/,
+    including art added by this edition, because that art is drawn from, and
+    derived from, the original set. It is not covered by the MIT grant below.
+
+
+2. The JuNNeZ Edition
+---------------------
+
+The changes and additions that make up this edition - the bug fixes,
+compatibility work, new modules and the custom options panel - are the work of
+Jonas "JuNNeZ" Andersen and are offered under the MIT licence below.
+
+This grant covers those contributions as source code. It does not extend to the
+original AzeriteUI code, which stays under LICENSE.txt, nor to any artwork or
+media asset, which stays under the restriction quoted above.
+
 MIT License
 
-Copyright (c) 2026 JuNNeZ
+Copyright (c) 2026 Jonas "JuNNeZ" Andersen
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +59,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+3. Bundled libraries
+--------------------
+
+Everything under Libs/ is third-party work by its own authors, shipped under its
+own licence and carrying its own copyright notices. Those files are untouched by
+sections 1 and 2, and their notices govern them.

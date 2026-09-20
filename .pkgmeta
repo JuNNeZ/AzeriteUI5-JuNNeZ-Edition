@@ -40,13 +40,17 @@ ignore:
   # Retired art, kept on the maintainer's disk only
   - Assets_Moot
 
+  # Draft art awaiting approval. Never ships until a file is wired in and moved
+  # into Assets/, which is the whitelisted runtime root.
+  - Assets_Draft
+
   # Wiki sources, published to the GitHub Wiki by sync-wiki.yml, not shipped
   - wiki
 
   # Build scripts
   - build-release.ps1
   - "*.ps1"
-  # Client TOC generator and offline harnesses are development tools.
+  # Tools/BuildChangelog.lua generates Options/Changelog.lua, which does ship.
   - Tools
 
   # IDE files

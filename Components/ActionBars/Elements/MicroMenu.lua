@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +38,12 @@ local GetMedia = ns.API.GetMedia
 -- GetCVarBool is deprecated in favour of C_CVar.GetCVarBool. Shadowed as a file
 -- local so the call sites keep working whichever of the two the client exposes.
 local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
+
+-- Whether secure handler snippets compile on this client; see Core/Client.lua.
+local hasSecureSnippets = ns.HasSecureSnippets ~= false
+
+-- Matches the .75 second grace the restricted RegisterAutoHide is given below.
+local MICROMENU_AUTOHIDE_DELAY = .75
 
 local defaults = {
 	profile = {
@@ -142,16 +149,21 @@ MicroMenu.SpawnButtons = function(self)
 
 			button:RegisterForClicks("AnyUp", "AnyDown")
 
-			if (microButton == CharacterMicroButton) then
-				button.nocombat = true
-				button:SetScript("OnClick", function(self, button, down)
-					if (InCombatLockdown()) then return end
-					local castondown = GetCVarBool("ActionButtonUseKeyDown")
-					if (castondown and not down) or (not castondown and down) then return end
-					ToggleCharacter("PaperDollFrame")
-				end)
-
-			elseif (microButton == MainMenuMicroButton) then
+			-- MainMenuMicroButton is the one entry that cannot go through `/click`.
+			-- Its own OnClick opens with `if (self:IsMouseOver())`, and the native
+			-- button sits at zero alpha in the corner while the pointer is over this
+			-- menu, so a forwarded click would silently do nothing. Everything else
+			-- uses the macro route, which runs Blizzard's handler from a secure click
+			-- and therefore does not taint the panel-show path.
+			--
+			-- CharacterMicroButton used to be special-cased here as well, calling
+			-- ToggleCharacter("PaperDollFrame") from this insecure handler. That is
+			-- exactly what CharacterMicroButtonMixin:OnClick already does, so the
+			-- macro route is behaviour-identical - and the insecure call tainted
+			-- ShowUIPanel, which made Blizzard's own TextStatusBar refuse to compare
+			-- the player frame's secret health values (TextStatusBar.lua:110,
+			-- "execution tainted by AzeriteUI5_JuNNeZ_Edition").
+			if (microButton == MainMenuMicroButton) then
 				button.nocombat = true
 				button:SetScript("OnClick", function(self, button, down)
 					if (InCombatLockdown()) then return end
@@ -233,19 +245,31 @@ MicroMenu.SpawnButtons = function(self)
 	bar:SetPoint("BOTTOMRIGHT", toggle, "TOPLEFT", 0, 0)
 	bar:SetSize(200, 4 + 32*#self.buttons)
 
-	toggle:SetAttribute("_onclick", [[
-		local bar = self:GetFrameRef("Bar");
-		if (bar:IsShown()) then
-			bar:Hide();
-		else
-			bar:Show();
-		end
-		bar:UnregisterAutoHide();
-		if (bar:IsShown()) then
-			bar:RegisterAutoHide(.75);
-			bar:AddToAutoHide(self);
-		end
-	]])
+	if (hasSecureSnippets) then
+		toggle:SetAttribute("_onclick", [[
+			local bar = self:GetFrameRef("Bar");
+			if (bar:IsShown()) then
+				bar:Hide();
+			else
+				bar:Show();
+			end
+			bar:UnregisterAutoHide();
+			if (bar:IsShown()) then
+				bar:RegisterAutoHide(.75);
+				bar:AddToAutoHide(self);
+			end
+		]])
+	else
+		-- `_onclick` and the RegisterAutoHide family are both restricted-environment
+		-- only, so on a client that cannot build a closure the cog does nothing at all
+		-- and raises on every press. The toggle is reproduced insecurely instead.
+		--
+		-- The menu bar is protected, so showing or hiding it is refused in combat.
+		-- That costs nothing here: every entry in this menu that opens a panel is
+		-- already disabled in combat, and the cog goes back to working the moment the
+		-- fight ends.
+		toggle:HookScript("OnClick", MicroMenu.OnToggleClickInsecure)
+	end
 
 	local texture = toggle:CreateTexture(nil, "ARTWORK", nil, 0)
 	texture:SetSize(96, 96)
@@ -274,21 +298,122 @@ MicroMenu.SpawnButtons = function(self)
 	RegisterStateDriver(toggle, "visibility", "[petbattle]hide;show")
 end
 
+-- The insecure twin of the `_onclick` snippet above, used only where restricted
+-- closures are unavailable. Hooked onto the toggle button, so it is handed the
+-- button rather than the module and looks the module up itself.
+MicroMenu.OnToggleClickInsecure = function()
+	local module = ns:GetModule("MicroMenu", true)
+	local bar = module and module.bar
+	if (not bar) then return end
+	if (InCombatLockdown()) then return end
+
+	bar:SetShown(not bar:IsShown())
+
+	if (bar:IsShown()) then
+		module:StartAutoHideInsecure()
+	else
+		module:StopAutoHideInsecure()
+	end
+end
+
+-- RegisterAutoHide/AddToAutoHide live in the restricted environment, so the grace
+-- period is timed here instead. The menu closes once the pointer has been off both
+-- the menu and the cog for the same .75 seconds Blizzard's version waits.
+MicroMenu.StartAutoHideInsecure = function(self)
+	local bar, toggle = self.bar, self.toggle
+	if (not bar) then return end
+
+	self.autoHideElapsed = 0
+
+	bar:SetScript("OnUpdate", function(_, elapsed)
+		if (bar:IsMouseOver() or (toggle and toggle:IsMouseOver())) then
+			self.autoHideElapsed = 0
+			return
+		end
+
+		self.autoHideElapsed = (self.autoHideElapsed or 0) + elapsed
+		if (self.autoHideElapsed < MICROMENU_AUTOHIDE_DELAY) then return end
+
+		self:StopAutoHideInsecure()
+
+		-- The menu bar is protected, so a fight that starts while it is open keeps it
+		-- open until the fight ends. Nothing is lost: its combat-unsafe entries are
+		-- already disabled by UpdateButtons.
+		if (not InCombatLockdown()) then
+			bar:Hide()
+		end
+	end)
+end
+
+MicroMenu.StopAutoHideInsecure = function(self)
+	if (not self.bar) then return end
+
+	self.autoHideElapsed = 0
+	self.bar:SetScript("OnUpdate", nil)
+end
+
+-- Blizzard disables a micro button for two different reasons, and only one of them
+-- should stop this menu.
+--
+-- A per-feature gate disables the *button* while leaving the feature reachable:
+-- Legacy below renown 1, Talents before the first talent point, Group Finder below
+-- its level. Every micro button carries a `commandName` KeyValue naming its binding,
+-- and those bindings call the toggle directly and never touch the button -
+-- `Bindings_Camelot.xml` has `TOGGLELEGACYSYSTEM` running `ToggleLegacySystemUI()`
+-- outright. That is why pressing the key opens Legacy while clicking the disabled
+-- button cannot, and `/click` on a disabled Button is a no-op. Re-enabling the button
+-- lets this menu do what the key already does.
+--
+-- `MICRO_BUTTONS_DISABLED` is the other reason: a full-screen frame is up and the
+-- whole strip is off. That one is honoured, because the keybinds go with it.
+--
+-- Called from the UpdateMicroButtons hook and never from a click, so a later press
+-- runs Blizzard's own OnClick with no AzeriteUI code anywhere in the chain. That is
+-- what keeps it from tainting ShowUIPanel the way the old Character handler did.
+local RestoreGatedNativeButton = function(microButton)
+	if (not microButton) then return end
+	if (_G.MICRO_BUTTONS_DISABLED) then return end
+	if (type(microButton.commandName) ~= "string") then return end
+	if (not microButton.IsEnabled) or (microButton:IsEnabled()) then return end
+	if (microButton.IsShown and not microButton:IsShown()) then return end
+	if (not microButton.Enable) then return end
+
+	microButton:Enable()
+end
+
+-- Whether Blizzard's own micro button would do anything if it were clicked, after
+-- the gate above has been lifted where it can be.
+local IsNativeButtonUsable = function(microButton)
+	if (not microButton) then return false end
+	if (not microButton.IsEnabled) then return true end
+
+	return microButton:IsEnabled() and true or false
+end
+
 MicroMenu.UpdateButtons = function(self)
 	if (InCombatLockdown()) then return end
 	for i,button in next,self.buttons do
-		if (button.nocombat) then
-			if (self.incombat) then
-				button:Disable()
-				button:GetScript("OnLeave")(button)
-			else
-				button:Enable()
-				if (button:IsMouseOver()) then
-					button:GetScript("OnEnter")(button)
-				else
-					button:GetScript("OnLeave")(button)
-				end
-			end
+		RestoreGatedNativeButton(button.ref)
+
+		local usable = IsNativeButtonUsable(button.ref)
+
+		if (button.nocombat and self.incombat) then
+			usable = false
+		end
+
+		-- The entry carries Blizzard's answer, so a gated feature greys out here the
+		-- same way it does on Blizzard's own strip instead of silently swallowing
+		-- the click. MainMenu and the macro entries are otherwise always usable.
+		if (usable) then
+			button:Enable()
+		else
+			button:Disable()
+		end
+
+		if (usable and button:IsMouseOver()) then
+			button:GetScript("OnEnter")(button)
+		else
+			button:GetScript("OnLeave")(button)
 		end
 	end
 end
@@ -385,6 +510,15 @@ MicroMenu.OnEnable = function(self)
 	end
 
 	self:SpawnButtons()
+
+	-- None of the events below fire when a micro button's *enabled* state changes -
+	-- earning a talent point, gaining renown, reaching the Group Finder level. This
+	-- is the one call Blizzard makes for all of them, so the greying in UpdateButtons
+	-- stays in step with the strip it mirrors.
+	if (type(_G.UpdateMicroButtons) == "function" and not self:IsHooked("UpdateMicroButtons")) then
+		self:SecureHook("UpdateMicroButtons", function() self:UpdateButtons() end)
+	end
+
 	self:RegisterEvent("DISPLAY_SIZE_CHANGED", "OnEvent")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEvent")

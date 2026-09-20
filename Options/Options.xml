@@ -1,5 +1,31 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
 
+	<!--
+		The custom options panel.
+		* Kit.lua is art and measurement only, and must load first.
+		* Config.lua reads AceConfig option tables. No frames, no AceGUI.
+		* Defaults.lua knows which settings differ from their defaults.
+		* Controls.lua is the new panel's own widgets. No AceGUI at all.
+		* Renderer.lua turns an option table into rows of those controls.
+		* Changelog.lua is generated from CHANGELOG.md by Tools/BuildChangelog.lua.
+		* PanelOptions.lua is the panel's own settings tab, and the changelog.
+		* Panel.lua is the new window itself, at /az new.
+		* Gallery.lua shows the controls on their own, at /az gallery.
+		* Widgets.lua registers AceGUI widget types, for the current panel.
+		* Window.lua owns the window, the page rail and the search.
+	-->
+	<Script file="Kit\Kit.lua"/>
+	<Script file="Kit\Config.lua"/>
+	<Script file="Kit\Defaults.lua"/>
+	<Script file="Kit\Controls.lua"/>
+	<Script file="Kit\Renderer.lua"/>
+	<Script file="Changelog.lua"/>
+	<Script file="Kit\PanelOptions.lua"/>
+	<Script file="Kit\Panel.lua"/>
+	<Script file="Kit\Gallery.lua"/>
+	<Script file="Kit\Widgets.lua"/>
+	<Script file="Kit\Window.lua"/>
+
 	<Script file="Options.lua"/>
 	<Script file="OptionsPages\ActionBars.lua"/>
 	<Script file="OptionsPages\Auras.lua"/>

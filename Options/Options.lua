@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -94,10 +95,7 @@ Options.InitializeSettingsPanel = function(self)
 	button:SetPoint("CENTER", optionsFrame, 0, -45)
 	button:SetScale(2)
 	button:SetScript("OnClick", function()
-		if AceConfigRegistry:GetOptionsTable(Addon) then
-			AceConfigDialog:SetDefaultSize(Addon, 880, 720)
-			AceConfigDialog:Open(Addon)
-		end
+		Options:OpenOptionsMenu()
 	end)
 
 	-- Credits section (bottom area)
@@ -132,8 +130,6 @@ end
 
 
 -- Lua API
-local math_max = math.max
-local next = next
 local ipairs = ipairs
 local pairs = pairs
 local string_format = string.format
@@ -168,10 +164,15 @@ Options.PromptImportReload = function(self)
 	end
 end
 
+-- The profile controls used to sit at the root of the options table, which
+-- meant AceConfigDialog drew them above every single page. They are a page of
+-- their own now, so the root holds nothing but groups and the options window
+-- can build its page list straight from it.
 Options.GenerateProfileMenu = function(self)
-	local options = {
+	local profiles = {
+		name = L["Profiles"],
 		type = "group",
-		childGroups = "tree",
+		order = -10000,
 		args = {
 			profiles = {
 				name = L["Settings Profile"],
@@ -260,43 +261,52 @@ Options.GenerateProfileMenu = function(self)
 				type = "execute",
 				order = 8,
 				disabled = function(info)
-					local val = info.options.args.newprofileName.arg
+					local val = info.options.args.profiles.args.newprofileName.arg
 					return (not val or val == "" or ns:ProfileExists(val))
 				end,
 				func = function(info)
-					local layoutName = info.options.args.newprofileName.arg
+					local layoutName = info.options.args.profiles.args.newprofileName.arg
 					if (layoutName) then
 						ns:SetProfile(layoutName)
-						info.options.args.newprofileName.arg = ""
+						info.options.args.profiles.args.newprofileName.arg = ""
 					end
 				end
 			},
+			-- The options window's own appearance used to sit here, under a
+			-- header on the profile page. It is not a profile setting and it is
+			-- not a setting for the interface either, so it now has the Settings
+			-- tab of the new panel to itself: Options/Kit/PanelOptions.lua.
 			duplicate = {
 				name = L["Duplicate"],
 				desc = L["Create a new profile with the chosen name and copy the settings from the currently active one."],
 				type = "execute",
 				order = 9,
 				disabled = function(info)
-					local val = info.options.args.newprofileName.arg
+					local val = info.options.args.profiles.args.newprofileName.arg
 					return (not val or val == "" or ns:ProfileExists(val))
 				end,
 				func = function(info)
-					local layoutName = info.options.args.newprofileName.arg
+					local layoutName = info.options.args.profiles.args.newprofileName.arg
 					if (layoutName) then
 						ns:DuplicateProfile(layoutName)
-						info.options.args.newprofileName.arg = ""
+						info.options.args.profiles.args.newprofileName.arg = ""
 					end
 				end
 			}
 		}
 	}
 
-	local order = 0
-	for i,arg in next,options.args do
-		order = math_max(order, arg.order or 0)
-	end
-	order = order + 10
-	return options, order
+	local options = {
+		type = "group",
+		childGroups = "tree",
+		args = {
+			profiles = profiles
+		}
+	}
+
+	-- The root holds groups only, so every page added afterwards orders above
+	-- the profile page rather than around the controls that used to sit here.
+	return options, 0
 end
 
 -- Export and import live on their own page at the end of the tree. They need
@@ -398,32 +408,122 @@ Options.GenerateSharingMenu = function(self)
 	}
 end
 
+-- The custom window is the normal way in. The stock AceConfigDialog frame is
+-- kept as a fallback, both for `/az classic` and for the case where the window
+-- cannot be built at all, so options are never unreachable.
+local GetWindow = function()
+	return ns.OptionsKit and ns.OptionsKit.Window
+end
+
 Options.Refresh = function(self)
 	if (AceConfigRegistry:GetOptionsTable(Addon)) then
 		AceConfigRegistry:NotifyChange(Addon)
 	end
-end
 
-Options.OpenOptionsMenu = function(self)
-	if (AceConfigRegistry:GetOptionsTable(Addon)) then
-		AceConfigDialog:SetDefaultSize(Addon, 880, 720)
-		AceConfigDialog:Open(Addon)
+	-- A custom container is not in AceConfigDialog.OpenFrames, so the registry
+	-- notification above never reaches it. Feed the open page again by hand.
+	local window = GetWindow()
+	if (window and window:IsShown()) then
+		window:Refresh()
 	end
 end
 
+-- The classic window has to be built from stock Ace3 parts only. Leaving our
+-- widget types on the options table would drag any fault in them into the very
+-- fallback meant to survive it, so they are handed back first.
+Options.OpenClassicOptionsMenu = function(self)
+	if (not AceConfigRegistry:GetOptionsTable(Addon)) then return end
+
+	local window = GetWindow()
+	if (window) then
+		window:Close()
+		window:RemoveDialogControls()
+	end
+
+	AceConfigDialog:SetDefaultSize(Addon, 880, 720)
+	AceConfigDialog:Open(Addon)
+end
+
+Options.OpenOptionsMenu = function(self, input)
+	if (not AceConfigRegistry:GetOptionsTable(Addon)) then return end
+
+	if (input == "classic" or input == "legacy") then
+		return self:OpenClassicOptionsMenu()
+	end
+
+	-- The panel being built to replace this one. It is kept on its own
+	-- command while it is in pieces, so the working panel is never the one
+	-- under the knife. `/az` moves over once it is finished.
+	if (input == "new") then
+		local panel = ns.OptionsKit and ns.OptionsKit.Panel
+		if (panel) then
+			return panel:Toggle()
+		end
+		ns:Print("The new options panel is not available in this build.")
+		return
+	end
+
+	-- The controls on their own, with no option table behind them. Kept for
+	-- judging how a control looks without hunting for one that uses it.
+	if (input == "gallery") then
+		local gallery = ns.OptionsKit and ns.OptionsKit.Gallery
+		if (gallery) then
+			return gallery:Toggle()
+		end
+		return
+	end
+
+	-- Never leave both windows on screen at once.
+	AceConfigDialog:Close(Addon)
+
+	local window = GetWindow()
+	if (window and window:Open()) then return end
+
+	self:OpenClassicOptionsMenu()
+end
+
+Options.ToggleOptionsMenu = function(self)
+	local window = GetWindow()
+	if (window and window:IsShown()) then
+		window:Close()
+		return
+	end
+	self:OpenOptionsMenu()
+end
+
 Options.CloseOptionsMenu = function(self)
+	local window = GetWindow()
+	if (window) then
+		window:Close()
+	end
 	if (AceConfigRegistry:GetOptionsTable(Addon)) then
 		AceConfigDialog:Close(Addon)
 	end
 end
 
-Options.AddGroup = function(self, name, group, priority)
+-- `section` names the band a page sits under in the new panel's rail:
+-- setup, frames, bars, world or interface. It is kept here rather than on the
+-- options table because AceConfigRegistry validates that table, and an
+-- unknown key in it would be a risk for no gain. Pages that name no section
+-- fall to the end of the rail under a general heading.
+Options.AddGroup = function(self, name, group, priority, section, moduleName)
 	if (not self.objects) then
 		self.objects = {}
 	end
-	if (group) then
-		self.objects[#self.objects + 1] = { name = name, group = group, priority = priority }
+	if (not self.sections) then
+		self.sections = {}
 	end
+	if (group) then
+		self.objects[#self.objects + 1] = {
+			name = name, group = group, priority = priority, moduleName = moduleName
+		}
+		self.sections[name] = section
+	end
+end
+
+-- The rail section for a page, by the key it has in the options table.
+Options.GetSection = function(self, name)
+	return self.sections and self.sections[name]
 end
 
 Options.GenerateOptionsMenu = function(self)
@@ -459,6 +559,11 @@ Options.GenerateOptionsMenu = function(self)
 			data.group.order = order
 			data.group.childGroups = data.group.childGroups or "tab"
 			options.args[data.name] = data.group
+
+			-- Only now does the group table exist to bind against.
+			if (data.moduleName and ns.OptionsKit and ns.OptionsKit.Defaults) then
+				ns.OptionsKit.Defaults.Bind(data.group, data.moduleName)
+			end
 		end
 	end
 
@@ -468,7 +573,20 @@ Options.GenerateOptionsMenu = function(self)
 	sharing.order = order
 	options.args.sharing = sharing
 
+	-- The two pages this module builds itself.
+	self.sections = self.sections or {}
+	self.sections.profiles = "setup"
+	self.sections.sharing = "setup"
+
 	self.options = options
+
+	-- Point every option AzeriteUI has a widget for at that widget, in one
+	-- pass, so the five thousand lines of page definitions stay free of
+	-- presentation detail. Anything naming a control of its own is untouched.
+	local window = GetWindow()
+	if (window) then
+		window:ApplyDialogControls(options)
+	end
 
 	AceConfigRegistry:RegisterOptionsTable(Addon, options)
 end

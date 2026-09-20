@@ -555,6 +555,116 @@ do
 		return walkObject(_G[frame])
 	end
 
+	-- Header configuration without restricted execution.
+	--
+	-- Blizzard's SecureGroupHeaders runs `initialConfigFunction` as a restricted
+	-- closure for every unit button it creates, and copies `_initialAttribute-*`
+	-- snippet bodies onto the button for mouseover and unit changes. Where the client
+	-- cannot build a closure, the very first one raises out of
+	-- SecureGroupHeader_Update, which abandons the whole pass: the header ends up with
+	-- one unconfigured, unanchored child and no styling at all.
+	--
+	-- Leaving `initialConfigFunction` unset lets Blizzard's pass complete normally -
+	-- children created, anchored, `unit` set, shown - and the configuration is redone
+	-- here afterwards. All of it is legal outside combat, and header children are only
+	-- created while the header is visible, so a roster change taken mid-fight is
+	-- caught when the fight ends.
+	local hasSecureSnippets = not (type(ns) == 'table' and ns.HasSecureSnippets == false)
+
+	local pendingHeaders = {}
+	local pendingWatcher
+
+	local function guessUnit(header, child)
+		local unit
+		local groupFilter = header:GetAttribute('groupFilter')
+
+		if(type(groupFilter) == 'string' and groupFilter:match('MAIN[AT]')) then
+			unit = (groupFilter:match('MAIN([AT])') == 'T') and 'maintank' or 'mainassist'
+		elseif(header:GetAttribute('showRaid')) then
+			unit = 'raid'
+		elseif(header:GetAttribute('showParty')) then
+			unit = 'party'
+		end
+
+		local headerType = header:GetAttribute('oUF-headerType')
+		local suffix = child:GetAttribute('unitsuffix')
+		if(unit and suffix) then
+			if(headerType == 'pet' and suffix == 'target') then
+				unit = unit .. headerType .. suffix
+			else
+				unit = unit .. suffix
+			end
+		elseif(unit and headerType == 'pet') then
+			unit = unit .. headerType
+		end
+
+		return unit
+	end
+
+	local function configureChildInsecure(header, child)
+		if(child.__oUFInsecureConfigured) then return end
+		child.__oUFInsecureConfigured = true
+
+		if(not child:GetAttribute('oUF-onlyProcessChildren')) then
+			-- The body every layout in this tree supplies through
+			-- `oUF-initialConfigFunction`. A layout that needs something else can put a
+			-- plain Lua function on the header as `initialConfigFunctionInsecure`,
+			-- since an attribute cannot carry one.
+			local width = header:GetAttribute('initial-width')
+			local height = header:GetAttribute('initial-height')
+			if(width) then child:SetWidth(width) end
+			if(height) then child:SetHeight(height) end
+			child:SetFrameLevel(child:GetFrameLevel() + 10)
+
+			if(type(header.initialConfigFunctionInsecure) == 'function') then
+				header.initialConfigFunctionInsecure(header, child)
+			end
+
+			child:SetAttribute('*type1', 'target')
+			child:SetAttribute('*type2', 'togglemenu')
+			child:SetAttribute('oUF-guessUnit', guessUnit(header, child))
+
+			RegisterUnitWatch(child)
+		end
+
+		header:styleFunction(child:GetName())
+	end
+
+	local function configureHeaderInsecure(header)
+		if(InCombatLockdown()) then
+			pendingHeaders[header] = true
+			if(pendingWatcher) then pendingWatcher:RegisterEvent('PLAYER_REGEN_ENABLED') end
+			return
+		end
+
+		pendingHeaders[header] = nil
+
+		local index = 1
+		local child = header:GetAttribute('child' .. index)
+		while(child) do
+			configureChildInsecure(header, child)
+			index = index + 1
+			child = header:GetAttribute('child' .. index)
+		end
+	end
+
+	if(not hasSecureSnippets and type(_G.SecureGroupHeader_Update) == 'function') then
+		pendingWatcher = CreateFrame('Frame')
+		pendingWatcher:SetScript('OnEvent', function(self)
+			self:UnregisterEvent('PLAYER_REGEN_ENABLED')
+
+			for header in next, pendingHeaders do
+				configureHeaderInsecure(header)
+			end
+		end)
+
+		hooksecurefunc('SecureGroupHeader_Update', function(header)
+			if(not header.__oUFInsecureHeader) then return end
+
+			configureHeaderInsecure(header)
+		end)
+	end
+
 	-- There has to be an easier way to do this.
 	local initialConfigFunction = [[
 		local header = self:GetParent()
@@ -684,6 +794,25 @@ do
 		table.insert(headers, header)
 
 		-- We set it here so layouts can't directly override it.
+		--
+		-- None of it is set where the client cannot compile a snippet. The copied
+		-- `_initialAttribute-*` bodies are the worse half: `_onenter`/`_onleave` would
+		-- raise on every mouseover of a group frame, and `refreshUnitChange` on every
+		-- roster change. See configureHeaderInsecure above for the replacement.
+		if(not hasSecureSnippets) then
+			header.__oUFInsecureHeader = true
+			header:SetAttribute('oUF-headerType', isPetHeader and 'pet' or 'group')
+
+			-- Clique registers its click-cast header through `clickcast_register`,
+			-- which is a restricted closure as well. It is left alone rather than
+			-- pointed at a header that cannot answer.
+			if(header:GetAttribute('showParty')) then
+				self:DisableBlizzard('party')
+			end
+
+			return header
+		end
+
 		header:SetAttribute('initialConfigFunction', initialConfigFunction)
 		header:SetAttribute('_initialAttributeNames', '_onenter,_onleave,refreshUnitChange,_onstate-vehicleui')
 		header:SetAttribute('_initialAttribute-_onenter', [[

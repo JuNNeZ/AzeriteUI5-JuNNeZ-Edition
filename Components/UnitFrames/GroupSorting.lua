@@ -1,5 +1,12 @@
 --[[
 
+	The MIT License (MIT)
+
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen
+
+--]]
+--[[
+
 	Shared ordering for the group frame families.
 
 	Four user facing modes, spelled the same way everywhere so the options read the

@@ -37,8 +37,10 @@ local IsSecret = issecretvalue
 
 -- WoW API
 -- WoW API (explicitly reference globals to avoid sandboxed nil upvalues)
-local GetSpecialization = _G.GetSpecialization
-local GetSpecializationInfo = _G.GetSpecializationInfo
+-- Blizzard_DeprecatedSpecialization (AllowLoadGameType: classic, standard) supplies the
+-- raw globals; it does not load on WoW Forever, so prefer the namespace there.
+local GetSpecialization = (_G.C_SpecializationInfo and _G.C_SpecializationInfo.GetSpecialization) or _G.GetSpecialization
+local GetSpecializationInfo = (_G.C_SpecializationInfo and _G.C_SpecializationInfo.GetSpecializationInfo) or _G.GetSpecializationInfo
 local IsUsableSpell = _G.IsUsableSpell
 local UnitAura = _G.UnitAura
 local UnitCanAttack = _G.UnitCanAttack

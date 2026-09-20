@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +28,7 @@ local _, ns = ...
 
 local MinimapMod = ns:NewModule("Minimap", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0", "AceTimer-3.0", "AceConsole-3.0")
 local API = ns.API
+local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 --local LibDD = LibStub("LibUIDropDownMenu-4.0")
 
@@ -40,6 +42,7 @@ local pairs = pairs
 local string_format = string.format
 local string_lower = string.lower
 local table_insert = table.insert
+local tonumber = tonumber
 local type = type
 local unpack = unpack
 
@@ -53,6 +56,7 @@ local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
 -- GLOBALS: GetPlayerFacing, GetRealZoneText
 -- GLOBALS: ExpansionLandingPageMinimapButton, GarrisonLandingPageMinimapButton, MinimapZoneTextButton, MiniMapWorldMapButton, TimeManagerClockButton, QueueStatusButton
 -- GLOBALS: InCombatLockdown, IsInInstance, IsResting, HasNewMail, PlaySound, ToggleDropDownMenu
+-- GLOBALS: C_DateAndTime, GetCursorPosition
 -- GLOBALS: MinimapZoomIn, MinimapZoomOut, Minimap_OnClick
 -- GLOBALS: Minimap, MinimapBackdrop, MinimapCluster, MinimapBorder, MinimapBorderTop, MicroMenuContainer, MinimapCompassTexture, MiniMapInstanceDifficulty, MiniMapTracking
 -- GLOBALS: MenuUtil
@@ -75,6 +79,9 @@ local L_HAVE_MAIL_FROM = HAVE_MAIL_FROM -- "Unread mail from:"
 local TORGHAST_ZONE_ID = 2162
 local IN_TORGHAST = (not IsResting()) and (GetRealZoneText() == GetRealZoneText(TORGHAST_ZONE_ID))
 local mapScale = 1
+local math_atan2 = math.atan2
+local math_max = math.max
+local math_min = math.min
 local Minimap_OnMouseButton_Hook
 
 -- The situations the minimap can be automatically hidden in, keyed by the
@@ -86,6 +93,236 @@ local AutoHideSettings = {
 	party = "autoHideInDungeons",
 	raid = "autoHideInRaids"
 }
+
+-- The day and night indicator
+---------------------------------------------------------
+-- Forever draws one of these on MinimapCluster, where Blizzard's Edit Mode owns
+-- its position and a replaced MinimapCluster:SetEditModeScale keeps putting it
+-- back. Rather than contest that ownership we build our own on the AzeriteUI map
+-- ring, drive it from the same two documented signals Blizzard uses, and fade
+-- theirs to nothing. Theirs stays alive, parented and registered throughout, so
+-- standing down is a single SetAlpha away and Edit Mode never notices us.
+-- Reference: Blizzard_Minimap/Camelot/Diel.lua in the Forever UI source.
+local DIEL_BUTTON_SIZE = 56
+local DIEL_SCENE_SIZE = 25
+local DIEL_DISTANCE_OFFSET = 0
+local DIEL_DISTANCE_LIMIT = 60
+
+-- The saved distance is player input by way of a slider, and the slider is not
+-- the only thing that can write it. Clamp on the way out, every time.
+local ClampDielDistance = function(value)
+	value = tonumber(value)
+	if (not value) then return DIEL_DISTANCE_OFFSET end
+
+	return math_max(-DIEL_DISTANCE_LIMIT, math_min(DIEL_DISTANCE_LIMIT, value))
+end
+
+local Diel_OnEnter = function(self)
+	if (GameTooltip:IsForbidden()) then return end
+
+	GameTooltip_SetDefaultAnchor(GameTooltip, self)
+	GameTooltip:AddLine(self.isDayTime and L["Daytime"] or L["Nighttime"])
+	GameTooltip:AddLine(L["<Left-Click and drag to move>"], unpack(Colors.green))
+	GameTooltip:AddLine(L["<Right-Click to set the distance from the map>"], unpack(Colors.green))
+	GameTooltip:Show()
+
+	self.tooltipShown = true
+end
+
+local Diel_OnLeave = function(self)
+	self.tooltipShown = nil
+
+	if (GameTooltip:IsForbidden()) then return end
+	GameTooltip:Hide()
+end
+
+-- Whether the player wants our copy of the indicator. Off is not "no indicator":
+-- it hands the display back to the native frame we would otherwise fade out.
+MinimapMod.IsDielEnabled = function(self)
+	if (not ns.IsForever) then return false end
+
+	local db = self.db and self.db.profile
+
+	return not (db and db.dielEnabled == false)
+end
+
+MinimapMod.PositionDiel = function(self)
+	local frame = self.dielFrame
+	if (not frame) then return end
+
+	local width, height = Minimap:GetSize()
+	if (not width or not height or width <= 0 or height <= 0) then return end
+
+	local db = self.db and self.db.profile
+	local angle = (db and db.dielAngle) or half_pi
+	local distance = ClampDielDistance(db and db.dielDistanceOffset)
+
+	-- Zero puts the button's center 6px outside the map edge, which is where the
+	-- XP button it borrows its housing from sits. See Layouts/Data/StatusBars.lua.
+	local radius = math_min(width, height)/2 + 6 + distance
+
+	frame:ClearAllPoints()
+	frame:SetPoint("CENTER", Minimap, "CENTER", radius*math_cos(angle), radius*math_sin(angle))
+end
+
+MinimapMod.UpdateDielDrag = function(self)
+	local frame = self.dielFrame
+	if (not frame or not self.db or not self.db.profile) then return end
+
+	local cursorX, cursorY = GetCursorPosition()
+	local centerX, centerY = Minimap:GetCenter()
+	local scale = Minimap:GetEffectiveScale()
+	if (not cursorX or not cursorY or not centerX or not centerY or not scale or scale == 0) then return end
+
+	-- Only the angle is dragged. The distance from the ring is the slider's job,
+	-- so the button cannot be pulled off the edge by a stray mouse movement.
+	self.db.profile.dielAngle = math_atan2(cursorY/scale - centerY, cursorX/scale - centerX)
+	self:PositionDiel()
+end
+
+MinimapMod.UpdateDiel = function(self, isDayTime)
+	local frame = self.dielFrame
+	if (not frame) then return end
+
+	local nativeDiel = MinimapCluster and MinimapCluster.DielFrame
+
+	-- Match Forever's native initialization/event contract. false means night,
+	-- so only a non-boolean is missing data worth querying the client over.
+	if (not API.IsSafeBool(isDayTime)) then
+		if (C_DateAndTime and type(C_DateAndTime.IsDayTime) == "function") then
+			isDayTime = C_DateAndTime.IsDayTime()
+		end
+	end
+
+	-- Either the player asked for Blizzard's indicator back, or the client will
+	-- not tell us which half of the cycle it is. Neither is a case for guessing:
+	-- stand down and let the native frame show through.
+	if (not self:IsDielEnabled() or not API.IsSafeBool(isDayTime)) then
+		frame.isDayTime = nil
+		frame:Hide()
+		if (nativeDiel) then nativeDiel:SetAlpha(1) end
+		return
+	end
+
+	-- The five-second reconcile calls this with an unchanged state most times it
+	-- fires. Swapping the texture is the only part worth repeating on a change.
+	if (frame.isDayTime ~= isDayTime) then
+		frame.isDayTime = isDayTime
+		frame.Scene:SetTexture(GetMedia(isDayTime and "minimap-diel-day-sky" or "minimap-diel-night-sky"))
+
+		-- A cycle change under the cursor should not leave a stale tooltip up.
+		if (frame.tooltipShown) then
+			Diel_OnEnter(frame)
+		end
+	end
+
+	frame:Show()
+	-- Keep Blizzard's Edit Mode frame and event handler alive.
+	if (nativeDiel) then nativeDiel:SetAlpha(0) end
+	self:PositionDiel()
+end
+
+MinimapMod.CreateDiel = function(self)
+	if (not ns.IsForever or self.dielFrame) then return end
+	if (not (MinimapCluster and MinimapCluster.DielFrame)) then return end
+
+	local frame = CreateFrame("Button", nil, Minimap)
+	frame:SetSize(DIEL_BUTTON_SIZE, DIEL_BUTTON_SIZE)
+	frame:SetFrameLevel(Minimap:GetFrameLevel() + 40)
+	frame:EnableMouse(true)
+	frame:RegisterForDrag("LeftButton")
+	frame:RegisterForClicks("RightButtonUp")
+	frame:SetHitRectInsets(-4, -4, -4, -4)
+
+	-- The same housing the XP button wears, so the ring reads as one set.
+	local border = frame:CreateTexture(nil, "BACKGROUND", nil, 0)
+	border:SetPoint("CENTER")
+	border:SetTexture(GetMedia("point_plate"))
+	border:SetVertexColor(Colors.ui[1], Colors.ui[2], Colors.ui[3])
+	border:SetSize(100, 100)
+	frame.Border = border
+
+	-- Our sky scene fills the center of that housing.
+	local scene = frame:CreateTexture(nil, "ARTWORK", nil, 0)
+	scene:SetPoint("CENTER")
+	scene:SetSize(DIEL_SCENE_SIZE, DIEL_SCENE_SIZE)
+	frame.Scene = scene
+
+	frame:SetScript("OnEnter", Diel_OnEnter)
+	frame:SetScript("OnLeave", Diel_OnLeave)
+
+	-- The drag runs off OnUpdate, but only for as long as the drag lasts. A script
+	-- that polls a flag every frame for the life of the session is a cost with
+	-- nothing to show for it in the frames nobody is dragging, which is all of them.
+	local DielDrag_OnUpdate = function()
+		self:UpdateDielDrag()
+	end
+
+	frame:SetScript("OnDragStart", function(button)
+		button:SetScript("OnUpdate", DielDrag_OnUpdate)
+	end)
+
+	frame:SetScript("OnDragStop", function(button)
+		button:SetScript("OnUpdate", nil)
+	end)
+
+	self.dielFrame = frame
+
+	-- Right-click panel holding the one control that is not a drag: how far off
+	-- the map edge the button sits.
+	local picker = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+	picker:SetSize(190, 58)
+	picker:SetPoint("TOP", frame, "BOTTOM", 0, -4)
+	picker:SetFrameLevel(frame:GetFrameLevel() + 10)
+	picker:SetBackdrop({ bgFile = GetMedia("plain"), edgeFile = GetMedia("border-tooltip"), edgeSize = 12 })
+	picker:SetBackdropColor(.025, .035, .05, .95)
+	picker:EnableMouse(true)
+	picker:Hide()
+
+	self.dielPicker = picker
+
+	local label = picker:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	label:SetPoint("TOP", 0, -10)
+
+	local slider = CreateFrame("Slider", nil, picker, "UISliderTemplate")
+	slider:SetSize(164, 16)
+	slider:SetPoint("BOTTOM", 0, 10)
+	slider:SetMinMaxValues(-DIEL_DISTANCE_LIMIT, DIEL_DISTANCE_LIMIT)
+	slider:SetValueStep(1)
+	slider:SetObeyStepOnDrag(true)
+	slider:SetScript("OnValueChanged", function(_, value)
+		if (not self.db or not self.db.profile) then return end
+
+		value = ClampDielDistance(value)
+		self.db.profile.dielDistanceOffset = value
+		label:SetText(string_format("%s: %+.0f", L["Distance"], value))
+		self:PositionDiel()
+	end)
+
+	frame:SetScript("OnClick", function()
+		if (not self.db or not self.db.profile) then return end
+
+		if (picker:IsShown()) then
+			picker:Hide()
+			return
+		end
+
+		local value = ClampDielDistance(self.db.profile.dielDistanceOffset)
+		slider:SetValue(value)
+		label:SetText(string_format("%s: %+.0f", L["Distance"], value))
+		picker:Show()
+	end)
+
+	-- The map takes this button with it when it auto-hides, and neither the panel
+	-- nor a half-finished drag has any business surviving that.
+	frame:SetScript("OnHide", function(button)
+		button:SetScript("OnUpdate", nil)
+		button.tooltipShown = nil
+		picker:Hide()
+	end)
+
+	self:UpdateDiel()
+end
 
 -- Our own dismount and vehicle exit button. It sits on the minimap ring, at the
 -- upper left of it, but hangs off UIParent rather than the map, so it inherits
@@ -119,6 +356,9 @@ local defaults = { profile = ns:Merge({
 	autoHideInBattlegrounds = true,
 	autoHideInDungeons = false,
 	autoHideInRaids = false,
+	dielEnabled = true,
+	dielAngle = half_pi,
+	dielDistanceOffset = DIEL_DISTANCE_OFFSET,
 	textVisibilityMigrated = false
 }, ns.MovableModulePrototype.defaults) }
 
@@ -1342,6 +1582,7 @@ MinimapMod.UpdateSettings = function(self)
 
 	self:SetTheme(self.db.profile.theme)
 	self:UpdateCompass()
+	self:UpdateDiel()
 	self:UpdateMail()
 	self:UpdateTimers()
 	self:UpdateCustomElements()
@@ -1427,6 +1668,8 @@ MinimapMod.OnEvent = function(self, event, ...)
 		if (self.autoHideMouseNeeded) then
 			self:UpdateAutoHideMouse()
 		end
+	elseif (event == "DIEL_CYCLE_CHANGED") then
+		self:UpdateDiel(...)
 	end
 end
 
@@ -1438,6 +1681,11 @@ MinimapMod.OnEnable = function(self)
 	self.db.profile.useHalfClock = nil
 	self.db.profile.useServerTime = nil
 	self:MigrateLegacyTextVisibilitySettings()
+	-- Retire the temporary Diel art picker and tuning values; keep dielAngle.
+	for _, key in ipairs({ "dielBorderScale", "dielCycleBorderScale", "dielAzeriteBorderScale",
+		"dielLayer", "dielStyleMigrated", "dielSeparateBorderScalesMigrated" }) do
+		self.db.profile[key] = nil
+	end
 
 	self:InitializeObjectTables()
 
@@ -1477,6 +1725,16 @@ MinimapMod.OnEnable = function(self)
 	self.frame:SetQuestBlobRingScalar(0)
 
 	self:CreateCustomElements()
+	self:CreateDiel()
+	-- Reconcile with Forever's current cycle even if its transition event was missed.
+	-- AceTimer cancels this on disable; replace the handle when re-enabled.
+	if (self.dielTimer) then
+		self:CancelTimer(self.dielTimer)
+		self.dielTimer = nil
+	end
+	if (ns.IsForever and self.dielFrame) then
+		self.dielTimer = self:ScheduleRepeatingTimer("UpdateDiel", 5)
+	end
 	self:CreateAnchor(MINIMAP_LABEL):SetDefaultScale(mapScale * ns.API.GetEffectiveScale())
 
 	-- Re-evaluate auto-hide whenever the frame mover comes and goes.
@@ -1492,6 +1750,9 @@ MinimapMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("UPDATE_PENDING_MAIL", "UpdateMail")
 	self:RegisterEvent("VARIABLES_LOADED", "OnEvent")
+	if (ns.IsForever and (not API.IsEventAvailable or API.IsEventAvailable("DIEL_CYCLE_CHANGED"))) then
+		self:RegisterEvent("DIEL_CYCLE_CHANGED", "OnEvent")
+	end
 
 	self:RegisterEvent("CRAFTINGORDERS_UPDATE_PERSONAL_ORDER_COUNTS", "UpdateMail")
 

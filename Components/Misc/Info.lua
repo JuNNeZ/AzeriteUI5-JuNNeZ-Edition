@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -403,8 +404,9 @@ Info.UpdateZone = function(self)
 		return
 	end
 	local a = zoneName:GetAlpha() -- needed to preserve alpha after text color changes
-	local minimapZoneName = GetMinimapZoneText()
-	local pvpType = GetZonePVPInfo()
+	-- Not yet available on some client builds (e.g. WoW Forever beta); avoid a hard error.
+	local minimapZoneName = (type(GetMinimapZoneText) == "function") and GetMinimapZoneText() or ""
+	local pvpType = (type(GetZonePVPInfo) == "function") and GetZonePVPInfo() or nil
 	if (pvpType) then
 		local color = Colors.zone[pvpType]
 		if (color) then

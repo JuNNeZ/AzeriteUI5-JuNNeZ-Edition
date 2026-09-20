@@ -12,7 +12,7 @@
 3. Restart the game, or `/reload` if it was already running.
 
 The folder name matters. If the zip extracts to something like
-`AzeriteUI5_JuNNeZ_Edition-5.5.0`, rename it.
+`AzeriteUI5_JuNNeZ_Edition-5.6.0`, rename it.
 
 ## Requirements
 
@@ -34,6 +34,7 @@ conflicting saved variables.
 No configuration is required - the defaults are a complete UI.
 
 - `/az` opens the options.
+- `/az new` opens the custom options preview; `/az classic` opens the stock Ace3 dialog.
 - `/lock` shows the movers for AzeriteUI's own frames; drag, then `/lock` again.
 - Blizzard-owned frames use Blizzard's Edit Mode (Esc -> Edit Mode).
 - The first thing worth setting deliberately is **Unit Frames -> (family) ->

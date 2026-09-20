@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -144,9 +145,27 @@ local GenerateOptions = function()
 					return getmodule().db.profile.hideClockText
 				end
 			},
+			dielEnabled = {
+				name = L["Day and Night Indicator"],
+				desc = L["Show Forever's day and night cycle on the edge of the minimap, where you can drag it around the ring and right-click it to set its distance from the map. When disabled, Blizzard's own indicator on the minimap cluster is shown instead."],
+				order = 7,
+				type = "toggle",
+				width = "full",
+				-- Only Forever has a day and night cycle to indicate.
+				hidden = function(info)
+					return isdisabled(info) or not ns.IsForever
+				end,
+				set = function(info, val)
+					getmodule().db.profile.dielEnabled = val
+					getmodule():UpdateDiel()
+				end,
+				get = function(info)
+					return getmodule().db.profile.dielEnabled
+				end
+			},
 			autoHide = {
 				name = L["Auto-Hide"],
-				order = 7,
+				order = 8,
 				type = "group",
 				inline = true,
 				hidden = isdisabled,
@@ -189,14 +208,14 @@ local GenerateOptions = function()
 			},
 			space3 = {
 				name = "",
-				order = 8,
+				order = 9,
 				type = "description",
 				hidden = isdisabled
 			},
 			restoreBlizzard = {
 				name = L["Restore Blizzard Default"],
 				desc = L["Restore the default Blizzard minimap theme and positioning."],
-				order = 9,
+				order = 10,
 				type = "execute",
 				hidden = isdisabled,
 				func = function(info)
@@ -222,4 +241,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Minimap"], GenerateOptions, -3000)
+Options:AddGroup(L["Minimap"], GenerateOptions, -3000, "world", "Minimap")

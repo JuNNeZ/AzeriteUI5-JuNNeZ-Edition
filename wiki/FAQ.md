@@ -18,6 +18,9 @@ has passed offline checks and still needs in-game beta testing.
 
 `/az` or `/azerite`.
 
+Use `/az new` for the new custom panel preview, or `/az classic` for the stock
+Ace3 dialog. All three edit the same addon profiles. Later panel phases remain deferred.
+
 ## How do I move frames?
 
 `/lock` for AzeriteUI-owned frames. Blizzard's Edit Mode for Blizzard-owned frames.
@@ -25,6 +28,10 @@ has passed offline checks and still needs in-game beta testing.
 ## How do I remove an ability from a bar?
 
 Hold `Alt + Ctrl + Shift` and drag with the left mouse button.
+
+This is unavailable on the current Forever beta: its restricted execution is broken.
+The compatibility fallback also omits custom flyouts and Clique click-casting.
+Group frames created during combat finish setup after combat ends.
 
 ## How do I reset everything?
 
@@ -79,7 +86,7 @@ own the same nameplate.
 
 ## Does it work with Clique, Decursive, ConsolePort?
 
-- **Clique**: yes, supported as an optional dependency.
+- **Clique**: supported on Retail; unavailable with Forever's secure-execution fallback.
 - **Decursive**: yes. This edition carries a specific compatibility patch that keeps
   Decursive receiving usable debuff data under Retail 12.1's secret-value rules.
 - **ConsolePort**: partially. When ConsolePort is loaded, AzeriteUI stops styling and

@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -1702,6 +1703,46 @@ end
 
 ApplyGuards()
 
+-- Say out loud, once per session, that this client cannot run secure snippets.
+--
+-- The features that depend on them do not fail with a Lua error any more - the
+-- snippets are not installed where they cannot compile - so without this the loss
+-- would be silent, and a player would only find out by trying to drag an action off
+-- a bar. `/azdebug secure` prints the full picture. Core/Client.lua has the cause.
+-- Persist what Core/Client.lua worked out, so the next login on this build can read
+-- the answer instead of paying another probe error for it. AceDB exists by now.
+local function RememberSecureSnippetSupport()
+	if (not (ns.db and ns.db.global)) then return end
+	if (not ns.SecureSnippetsBuild) then return end
+
+	local stored = ns.db.global.secureSnippets
+	if (type(stored) == "table"
+		and stored.build == ns.SecureSnippetsBuild
+		and stored.available == (ns.HasSecureSnippets ~= false)) then
+		return
+	end
+
+	ns.db.global.secureSnippets = {
+		build = ns.SecureSnippetsBuild,
+		available = ns.HasSecureSnippets ~= false
+	}
+end
+
+local announcedMissingSnippets = false
+local function AnnounceMissingSecureSnippets()
+	RememberSecureSnippetSupport()
+
+	if (ns.HasSecureSnippets ~= false) then return end
+	if (announcedMissingSnippets) then return end
+	announcedMissingSnippets = true
+
+	print("|cff33ff99AzeriteUI:|r this client cannot run secure handler snippets"
+		.. " (a Blizzard bug in this build), so action dragging and the custom flyout"
+		.. " are unavailable. AzeriteUI selects its fallback before the broken"
+		.. " |cffff8800RestrictedExecution.lua:79|r probe can run."
+		.. " Type |cfff0f0f0/azdebug secure|r for details.")
+end
+
 local guardFrame = CreateFrame("Frame")
 guardFrame:RegisterEvent("ADDON_LOADED")
 guardFrame:RegisterEvent("PLAYER_LOGIN")
@@ -1740,6 +1781,7 @@ guardFrame:SetScript("OnEvent", function(self, event, addonName)
 	elseif (event == "PLAYER_LOGIN") then
 		ApplyGuards()
 		SetBlizzardRaidBarVisible(ShouldShowBlizzardRaidBar())
+		AnnounceMissingSecureSnippets()
 		self:UnregisterEvent("PLAYER_LOGIN")
 	elseif (event == "PLAYER_ENTERING_WORLD" or event == "GROUP_ROSTER_UPDATE") then
 		ApplyGuards()

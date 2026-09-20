@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -200,7 +201,11 @@ local IsSecureHeaderChild = function(frame)
 	if (not parent or not parent.GetAttribute) then
 		return false
 	end
-	return parent:GetAttribute("initialConfigFunction") ~= nil
+	-- `oUF-headerType` rather than `initialConfigFunction`: oUF sets the former on
+	-- every header it spawns, while the latter only exists where the client can
+	-- compile the snippet it holds. A module that drives its own unit buttons, such
+	-- as Raid5, sets neither and is correctly not treated as a header child.
+	return parent:GetAttribute("oUF-headerType") ~= nil
 end
 
 -- UnitFrame Prototype

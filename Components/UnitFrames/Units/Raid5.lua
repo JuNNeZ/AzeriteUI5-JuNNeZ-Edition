@@ -3,6 +3,7 @@
 	The MIT License (MIT)
 
 	Copyright (c) 2026 Lars Norberg
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -995,7 +996,11 @@ GroupHeader.ForceSecureUpdate = function(self)
 	-- Only real secure group headers rebuild on attribute changes. Modules that drive
 	-- their unit buttons through per-button unit drivers have no such handler, and
 	-- those buttons keep working in combat anyway.
-	if (not self:GetAttribute("initialConfigFunction")) then return end
+	--
+	-- `oUF-headerType` rather than `initialConfigFunction`: oUF sets the former on
+	-- every header it spawns, while the latter only exists where the client can
+	-- compile the snippet it holds.
+	if (not self:GetAttribute("oUF-headerType")) then return end
 
 	self:SetAttribute("azeriteHeaderRefresh", GetTime())
 end

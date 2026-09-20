@@ -2,7 +2,7 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2026
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen
 
 --]]
 local _, ns = ...
@@ -54,4 +54,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(GAME_MENU, GenerateOptions, -2400)
+Options:AddGroup(GAME_MENU, GenerateOptions, -2400, "interface", "GameMenuSkin")

@@ -16,6 +16,7 @@
 	<Script file="API\Frames.lua"/>
 	<Script file="API\Positions.lua"/>
 	<Script file="API\Scale.lua"/>
+	<Script file="API\SecureDrivers.lua"/>
 	<Script file="API\Tables.lua"/>
 	<Script file="API\ProtectedCall.lua"/>
 	<Script file="API\SecretValues.lua"/>
