@@ -215,6 +215,26 @@ Kit.InsetBackdrop = {
 	insets = { left = 4, right = 4, top = 4, bottom = 4 }
 }
 
+-- Live previews should read as a light cast over the affected object, not as
+-- another tooltip window. The glow art is white and takes its gold from the
+-- fixed colour below; unlike BorderFocus, it deliberately does not follow the
+-- selected panel theme or the player's class.
+Kit.PreviewGlowBackdrop = {
+	edgeFile = GetMedia("border-glow"),
+	edgeSize = 18
+}
+
+Kit.PreviewGlowLabelBackdrop = {
+	bgFile = [[Interface\Tooltips\UI-Tooltip-Background]],
+	edgeFile = GetMedia("border-glow"),
+	edgeSize = 12,
+	insets = { left = 4, right = 4, top = 4, bottom = 4 }
+}
+
+Kit.PreviewGold = {
+	Colors.normal[1], Colors.normal[2], Colors.normal[3], 1
+}
+
 --------------------------------------------------------------------------
 -- Themes
 --------------------------------------------------------------------------

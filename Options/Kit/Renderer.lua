@@ -90,10 +90,19 @@ local MarkModified = function(control, options, path, current)
 	control:SetModified(modified)
 end
 
+-- A change is previewed before the page rebuilds and releases the control that
+-- made it. Unbound settings (profiles and the panel's own appearance) simply
+-- return false from Preview.Request and leave no trace.
+local PreviewChange = function(options, path, label)
+	local Preview = Kit.Preview
+	if (Preview) then Preview:Request(options, path, label) end
+end
+
 local Bind = function(control, option, options, path, page)
 	local bound = Copy(path)
+	local label = AsString(Config.GetName(option, options, path, APP), "")
 
-	control:SetLabel(AsString(Config.GetName(option, options, path, APP), ""))
+	control:SetLabel(label)
 
 	-- The artifact puts the description under the label as a plain line rather
 	-- than inside a tooltip nobody hovers to find.
@@ -120,10 +129,14 @@ local Bind = function(control, option, options, path, page)
 
 		MarkModified(control, options, bound, value)
 		control:SetOnRevert(function(self)
-			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then page:Refresh() end
+			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then
+				PreviewChange(options, bound, label)
+				page:Refresh()
+			end
 		end)
 		control:SetCallback(function(self, value)
 			Config.SetValue(option, options, bound, APP, value and true or false)
+			PreviewChange(options, bound, label)
 			page:Refresh()
 		end)
 		return
@@ -145,11 +158,15 @@ local Bind = function(control, option, options, path, page)
 
 		MarkModified(control, options, bound, value)
 		control:SetOnRevert(function(self)
-			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then page:Refresh() end
+			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then
+				PreviewChange(options, bound, label)
+				page:Refresh()
+			end
 		end)
 
 		control:SetCallback(function(self, newValue)
 			Config.SetValue(option, options, bound, APP, newValue)
+			PreviewChange(options, bound, label)
 			page:Refresh()
 		end)
 		return
@@ -167,11 +184,15 @@ local Bind = function(control, option, options, path, page)
 
 		MarkModified(control, options, bound, value)
 		control:SetOnRevert(function(self)
-			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then page:Refresh() end
+			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then
+				PreviewChange(options, bound, label)
+				page:Refresh()
+			end
 		end)
 
 		control:SetCallback(function(self, newValue)
 			Config.SetValue(option, options, bound, APP, newValue)
+			PreviewChange(options, bound, label)
 			page:Refresh()
 		end)
 		return
@@ -187,6 +208,7 @@ local Bind = function(control, option, options, path, page)
 
 		control:SetCallback(function(self, newText)
 			Config.SetValue(option, options, bound, APP, newText)
+			PreviewChange(options, bound, label)
 			page:Refresh()
 		end)
 		return

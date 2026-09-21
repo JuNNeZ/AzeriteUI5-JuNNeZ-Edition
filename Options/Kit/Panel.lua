@@ -747,6 +747,20 @@ Panel.SetCount = function(self, text)
 	if (self.count) then self.count:SetText(text or "") end
 end
 
+-- Brief confirmation for live previews. The outline carries the setting's name
+-- in the world; this line also explains when there was no usable live frame to
+-- outline, which is more truthful than drawing a generic mock-up.
+Panel.SetPreviewStatus = function(self, text, found)
+	if (not self.previewStatus or not self.previewText) then return end
+
+	self.previewFound = found and true or false
+	self.previewText:SetText(text or "")
+	self.previewText:SetTextColor(unpack(self.previewFound and Kit.TextSelected or Kit.TextDisabled))
+	self.previewStatus.remaining = 2.6
+	self.previewStatus:SetAlpha(1)
+	self.previewStatus:Show()
+end
+
 Panel.SelectPage = function(self, key)
 	local options = GetOptions()
 	if (not options or not key) then return end
@@ -951,6 +965,9 @@ Panel.ApplyTheme = function(self)
 	if (self.version) then self.version:SetTextColor(unpack(Kit.TextDisabled)) end
 	if (self.empty) then self.empty:SetTextColor(unpack(Kit.TextDisabled)) end
 	if (self.combatText) then self.combatText:SetTextColor(unpack(Kit.TextDisabled)) end
+	if (self.previewText) then
+		self.previewText:SetTextColor(unpack(self.previewFound and Kit.TextSelected or Kit.TextDisabled))
+	end
 	if (self.count) then self.count:SetTextColor(unpack(Kit.TextDisabled)) end
 	if (self.crumb) then self.crumb:SetTextColor(unpack(Kit.TextSelected)) end
 	if (self.pageTitle) then self.pageTitle:SetTextColor(unpack(Kit.TextHighlight)) end
@@ -1014,6 +1031,7 @@ Panel.ApplyTheme = function(self)
 	end
 
 	if (page) then page:Restyle() end
+	if (Kit.Preview) then Kit.Preview:Restyle() end
 end
 
 Panel.LoadTheme = function(self)
@@ -1462,6 +1480,30 @@ local Build = function()
 	combatText:Hide()
 	Panel.combatText = combatText
 
+	local previewStatus = CreateFrame("Frame", nil, footer)
+	previewStatus:SetPoint("LEFT", footer, "CENTER", -80, 0)
+	previewStatus:SetPoint("RIGHT", footer, "RIGHT", -22, 0)
+	previewStatus:SetHeight(FOOTER_H)
+	previewStatus:Hide()
+
+	local previewText = previewStatus:CreateFontString(nil, "OVERLAY")
+	previewText:SetFontObject(Kit.GetFont(12, true))
+	previewText:SetAllPoints()
+	previewText:SetJustifyH("RIGHT")
+	previewText:SetWordWrap(false)
+	Panel.previewStatus = previewStatus
+	Panel.previewText = previewText
+
+	previewStatus:SetScript("OnUpdate", function(self, elapsed)
+		self.remaining = (self.remaining or 0) - elapsed
+		if (self.remaining <= 0) then
+			self:Hide()
+			self:SetAlpha(1)
+		elseif (self.remaining < .5) then
+			self:SetAlpha(self.remaining / .5)
+		end
+	end)
+
 	local resizer = CreateFrame("Button", nil, frame)
 	resizer:SetSize(16, 16)
 	resizer:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -6, 6)
@@ -1544,6 +1586,7 @@ end
 
 Panel.Close = function(self)
 	if (frame) then frame:Hide() end
+	if (Kit.Preview) then Kit.Preview:Hide() end
 end
 
 Panel.IsShown = function(self)

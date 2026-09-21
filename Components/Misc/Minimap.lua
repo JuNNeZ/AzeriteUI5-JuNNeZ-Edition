@@ -107,6 +107,26 @@ local DIEL_BUTTON_SIZE = 56
 local DIEL_SCENE_SIZE = 25
 local DIEL_DISTANCE_OFFSET = 0
 local DIEL_DISTANCE_LIMIT = 60
+local DIEL_THEME_SKY = "Sky"
+local DIEL_THEME_CELESTIAL = "Celestial"
+local DIEL_THEMES = {
+	[DIEL_THEME_SKY] = {
+		day = "minimap-diel-day-sky",
+		night = "minimap-diel-night-sky",
+		label = "Sky"
+	},
+	[DIEL_THEME_CELESTIAL] = {
+		day = "minimap-diel-day-celestial",
+		night = "minimap-diel-night-celestial",
+		label = "Sun & Moon"
+	}
+}
+
+local GetDielTheme = function(db)
+	local theme = db and db.dielTheme
+
+	return DIEL_THEMES[theme] and theme or DIEL_THEME_SKY
+end
 
 -- The saved distance is player input by way of a slider, and the slider is not
 -- the only thing that can write it. Clamp on the way out, every time.
@@ -123,7 +143,7 @@ local Diel_OnEnter = function(self)
 	GameTooltip_SetDefaultAnchor(GameTooltip, self)
 	GameTooltip:AddLine(self.isDayTime and L["Daytime"] or L["Nighttime"])
 	GameTooltip:AddLine(L["<Left-Click and drag to move>"], unpack(Colors.green))
-	GameTooltip:AddLine(L["<Right-Click to set the distance from the map>"], unpack(Colors.green))
+	GameTooltip:AddLine(L["<Right-Click to choose theme and distance>"], unpack(Colors.green))
 	GameTooltip:Show()
 
 	self.tooltipShown = true
@@ -204,11 +224,16 @@ MinimapMod.UpdateDiel = function(self, isDayTime)
 		return
 	end
 
-	-- The five-second reconcile calls this with an unchanged state most times it
-	-- fires. Swapping the texture is the only part worth repeating on a change.
-	if (frame.isDayTime ~= isDayTime) then
+	local db = self.db and self.db.profile
+	local theme = GetDielTheme(db)
+
+	-- The five-second reconcile calls this with unchanged state and theme most
+	-- times it fires. Swapping the texture is only useful when either changes.
+	if (frame.isDayTime ~= isDayTime or frame.dielTheme ~= theme) then
 		frame.isDayTime = isDayTime
-		frame.Scene:SetTexture(GetMedia(isDayTime and "minimap-diel-day-sky" or "minimap-diel-night-sky"))
+		frame.dielTheme = theme
+		local media = DIEL_THEMES[theme]
+		frame.Scene:SetTexture(GetMedia(isDayTime and media.day or media.night))
 
 		-- A cycle change under the cursor should not leave a stale tooltip up.
 		if (frame.tooltipShown) then
@@ -242,7 +267,7 @@ MinimapMod.CreateDiel = function(self)
 	border:SetSize(100, 100)
 	frame.Border = border
 
-	-- Our sky scene fills the center of that housing.
+	-- The selected day/night artwork fills the center of that housing.
 	local scene = frame:CreateTexture(nil, "ARTWORK", nil, 0)
 	scene:SetPoint("CENTER")
 	scene:SetSize(DIEL_SCENE_SIZE, DIEL_SCENE_SIZE)
@@ -268,10 +293,9 @@ MinimapMod.CreateDiel = function(self)
 
 	self.dielFrame = frame
 
-	-- Right-click panel holding the one control that is not a drag: how far off
-	-- the map edge the button sits.
+	-- Right-click panel holding the controls that do not belong to the radial drag.
 	local picker = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-	picker:SetSize(190, 58)
+	picker:SetSize(190, 92)
 	picker:SetPoint("TOP", frame, "BOTTOM", 0, -4)
 	picker:SetFrameLevel(frame:GetFrameLevel() + 10)
 	picker:SetBackdrop({ bgFile = GetMedia("plain"), edgeFile = GetMedia("border-tooltip"), edgeSize = 12 })
@@ -281,8 +305,28 @@ MinimapMod.CreateDiel = function(self)
 
 	self.dielPicker = picker
 
+	local themeButton = CreateFrame("Button", nil, picker, "UIPanelButtonTemplate")
+	themeButton:SetSize(164, 20)
+	themeButton:SetPoint("TOP", 0, -10)
+	self.dielThemeButton = themeButton
+
+	local UpdateThemeButton = function()
+		local db = self.db and self.db.profile
+		local theme = GetDielTheme(db)
+		themeButton:SetText(string_format("%s: %s", L["Theme"], L[DIEL_THEMES[theme].label]))
+	end
+
+	themeButton:SetScript("OnClick", function()
+		if (not self.db or not self.db.profile) then return end
+
+		local theme = GetDielTheme(self.db.profile)
+		self.db.profile.dielTheme = theme == DIEL_THEME_SKY and DIEL_THEME_CELESTIAL or DIEL_THEME_SKY
+		UpdateThemeButton()
+		self:UpdateDiel(frame.isDayTime)
+	end)
+
 	local label = picker:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	label:SetPoint("TOP", 0, -10)
+	label:SetPoint("TOP", 0, -42)
 
 	local slider = CreateFrame("Slider", nil, picker, "UISliderTemplate")
 	slider:SetSize(164, 16)
@@ -310,6 +354,7 @@ MinimapMod.CreateDiel = function(self)
 		local value = ClampDielDistance(self.db.profile.dielDistanceOffset)
 		slider:SetValue(value)
 		label:SetText(string_format("%s: %+.0f", L["Distance"], value))
+		UpdateThemeButton()
 		picker:Show()
 	end)
 
@@ -359,6 +404,7 @@ local defaults = { profile = ns:Merge({
 	dielEnabled = true,
 	dielAngle = half_pi,
 	dielDistanceOffset = DIEL_DISTANCE_OFFSET,
+	dielTheme = DIEL_THEME_SKY,
 	textVisibilityMigrated = false
 }, ns.MovableModulePrototype.defaults) }
 

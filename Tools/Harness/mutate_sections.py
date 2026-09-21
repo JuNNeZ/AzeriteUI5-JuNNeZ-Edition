@@ -13,7 +13,9 @@ PANEL = os.path.join(ADDON, "Options", "Kit", "Panel.lua")
 PANELOPTS = os.path.join(ADDON, "Options", "Kit", "PanelOptions.lua")
 CONTROLS = os.path.join(ADDON, "Options", "Kit", "Controls.lua")
 RENDERER = os.path.join(ADDON, "Options", "Kit", "Renderer.lua")
+PREVIEW = os.path.join(ADDON, "Options", "Kit", "Preview.lua")
 KIT = os.path.join(ADDON, "Options", "Kit", "Kit.lua")
+OPTIONS = os.path.join(ADDON, "Options", "Options.lua")
 STUBS = os.path.join(SP, "stubs.lua")
 
 # Mutating the changelog generator proves nothing until the data is generated
@@ -149,6 +151,56 @@ MUTATIONS = [
      "\tvalue = min(self.MaxScale, max(self.MinScale, value))", "\tvalue = value"),
     (PANEL, "the scale is not remembered",
      "\t\tdb.global.optionsScale = value", "\t\tlocal _ = value"),
+    # Phase 6 command routing.
+    (OPTIONS, "bare /az skips the new panel",
+     "\tif (panel and panel:Toggle()) then return true end",
+     "\tif (false and panel and panel:Toggle()) then return true end"),
+    (OPTIONS, "/az classic is routed like bare /az",
+     '\tif (input == "classic") then', "\tif (false) then"),
+    (OPTIONS, "/az legacy is routed like bare /az",
+     '\tif (input == "legacy" or input == "stock") then', "\tif (false) then"),
+    (OPTIONS, "stock fallback keeps custom dialog controls",
+     "\t\twindow:RemoveDialogControls()\n", ""),
+    (OPTIONS, "a failed new panel never reaches classic",
+     "\treturn self:OpenClassicOptionsMenu()\nend\n\nOptions.ToggleOptionsMenu",
+     "\treturn false\nend\n\nOptions.ToggleOptionsMenu"),
+    # Phase 5 live previews.
+    (RENDERER, "a changed toggle never requests a preview",
+     "\t\tcontrol:SetCallback(function(self, value)\n"
+     "\t\t\tConfig.SetValue(option, options, bound, APP, value and true or false)\n"
+     "\t\t\tPreviewChange(options, bound, label)",
+     "\t\tcontrol:SetCallback(function(self, value)\n"
+     "\t\t\tConfig.SetValue(option, options, bound, APP, value and true or false)\n"
+     "\t\t\tlocal _ = label"),
+    (RENDERER, "execute actions request misleading previews",
+     "\t\t\tConfig.Execute(option, options, bound, APP)\n\t\t\tpage:Refresh()",
+     "\t\t\tConfig.Execute(option, options, bound, APP)\n"
+     "\t\t\tPreviewChange(options, bound, label)\n\t\t\tpage:Refresh()"),
+    (PREVIEW, "the preview mutates the frame it is meant to observe",
+     "\tif (not target) then\n",
+     "\tif (target) then target:Show() end\n\n\tif (not target) then\n"),
+    (PREVIEW, "the no-frame result is hidden from the player",
+     "\t\tSetPanelStatus(string_format(L[\"No visible frame to preview for %s.\"], label), false)\n",
+     ""),
+    (PREVIEW, "every action-bar setting highlights bar one",
+     "\treturn PreferContent(id and bars[id] or bars[1])",
+     "\treturn PreferContent(bars[1])"),
+    (PREVIEW, "shared unit-frame settings have no concrete target",
+     "\t\treturn ResolveNamed(\"PlayerFrame\", path)",
+     "\t\treturn FirstModuleFrame(module)"),
+    (PREVIEW, "nameplate preview ignores AzeriteUI's live plate",
+     "\tif (type(ns.ActiveNamePlates) == \"table\") then",
+     "\tif (false) then"),
+    (KIT, "the frame preview falls back to a tooltip border",
+     'Kit.PreviewGlowBackdrop = {\n\tedgeFile = GetMedia("border-glow")',
+     'Kit.PreviewGlowBackdrop = {\n\tedgeFile = GetMedia("border-tooltip")'),
+    (KIT, "the preview label falls back to a tooltip border",
+     'Kit.PreviewGlowLabelBackdrop = {\n\tbgFile = [[Interface\\Tooltips\\UI-Tooltip-Background]],\n'
+     '\tedgeFile = GetMedia("border-glow")',
+     'Kit.PreviewGlowLabelBackdrop = {\n\tbgFile = [[Interface\\Tooltips\\UI-Tooltip-Background]],\n'
+     '\tedgeFile = GetMedia("border-tooltip")'),
+    (PREVIEW, "the preview stops identifying its glow style",
+     '\tname = "golden-glow",', '\tname = "tooltip-border",'),
     # Types the panel cannot draw.
     (RENDERER, "an undrawable type goes missing silently again",
      '\t\tout[#out + 1] = {\n\t\t\tkind = "description",\n\t\t\tunsupported = kind,',

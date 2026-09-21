@@ -6,18 +6,21 @@
 		* Config.lua reads AceConfig option tables. No frames, no AceGUI.
 		* Defaults.lua knows which settings differ from their defaults.
 		* Controls.lua is the new panel's own widgets. No AceGUI at all.
+		* Preview.lua outlines the real frame owned by a changed setting.
 		* Renderer.lua turns an option table into rows of those controls.
 		* Changelog.lua is generated from CHANGELOG.md by Tools/BuildChangelog.lua.
 		* PanelOptions.lua is the panel's own settings tab, and the changelog.
-		* Panel.lua is the new window itself, at /az new.
+		* Panel.lua is the new window itself, at /az (and the /az new alias).
 		* Gallery.lua shows the controls on their own, at /az gallery.
-		* Widgets.lua registers AceGUI widget types, for the current panel.
-		* Window.lua owns the window, the page rail and the search.
+		* Widgets.lua registers AceGUI widget types for the retained classic window.
+		* Window.lua owns the retained /az classic window, its rail and its search.
+		* Stock AceConfigDialog remains available at /az legacy.
 	-->
 	<Script file="Kit\Kit.lua"/>
 	<Script file="Kit\Config.lua"/>
 	<Script file="Kit\Defaults.lua"/>
 	<Script file="Kit\Controls.lua"/>
+	<Script file="Kit\Preview.lua"/>
 	<Script file="Kit\Renderer.lua"/>
 	<Script file="Changelog.lua"/>
 	<Script file="Kit\PanelOptions.lua"/>
@@ -41,5 +44,6 @@
 	<Script file="OptionsPages\Tooltips.lua"/>
 	<Script file="OptionsPages\Tracker.lua"/>
 	<Script file="OptionsPages\UnitFrames.lua"/>
+	<Script file="OptionsPages\HealthPrediction.lua"/>
 
 </Ui>

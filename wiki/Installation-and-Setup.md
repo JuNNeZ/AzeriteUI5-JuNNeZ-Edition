@@ -33,8 +33,8 @@ conflicting saved variables.
 
 No configuration is required - the defaults are a complete UI.
 
-- `/az` opens the options.
-- `/az new` opens the custom options preview; `/az classic` opens the stock Ace3 dialog.
+- `/az` opens the custom options panel; `/az new` remains an alias.
+- `/az classic` opens the retained previous window; `/az legacy` opens the stock Ace3 dialog.
 - `/lock` shows the movers for AzeriteUI's own frames; drag, then `/lock` again.
 - Blizzard-owned frames use Blizzard's Edit Mode (Esc -> Edit Mode).
 - The first thing worth setting deliberately is **Unit Frames -> (family) ->

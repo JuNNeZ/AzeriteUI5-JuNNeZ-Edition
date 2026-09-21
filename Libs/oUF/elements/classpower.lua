@@ -178,7 +178,9 @@ elseif(playerClass == 'DRUID') then
 	classPowerID = POWER_ID_COMBO_POINTS
 	classPowerType = POWER_TYPE_COMBO_POINTS
 	requirePower = POWER_ID_ENERGY
-	requireSpell = SPELL_SHRED
+	-- Forever: Shred is learned at 22 and ranked; 5221 (Rank 1) can drop out of
+	-- the spellbook. Cat Form's Energy is the only reliable combo-point gate there.
+	requireSpell = (not ns.IsForever) and SPELL_SHRED or nil
 
 	GetPowerUpdaters = function()
 		return GetComboPoints, GetComboPointsMax, GetGenericPowerColor

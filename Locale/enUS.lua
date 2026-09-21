@@ -3,6 +3,7 @@ local L = LibStub("AceLocale-3.0"):NewLocale((...), "enUS", true, true)
 L["<Ctrl and Right-Click to undo last change>"] = true
 L["<Left-Click and drag to move>"] = true
 L["<MouseWheel to change scale>"] = true
+L["<Right-Click to choose theme and distance>"] = true
 L["<Shift-Click to reset to default>"] = true
 L["24 Hour Mode"] = true
 L["Action Bar %d"] = true
@@ -702,6 +703,8 @@ L["%d of %d settings"] = true
 L["Changed from default"] = true
 L["This setting no longer matches the value it ships with. Click to put this one setting back, without touching the rest of the profile."] = true
 L["%d settings here differ from their defaults."] = true
+L["Previewing %s."] = true
+L["No visible frame to preview for %s."] = true
 L["%d settings, %d changed"] = true
 
 L["Go to page"] = true
@@ -713,4 +716,5 @@ L["Show Forever's day and night cycle on the edge of the minimap, where you can 
 L["Daytime"] = true
 L["Nighttime"] = true
 L["Distance"] = true
-L["<Right-Click to set the distance from the map>"] = true
+L["Sky"] = true
+L["Sun & Moon"] = true

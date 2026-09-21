@@ -135,7 +135,7 @@ end
 
 -- Hands every option back to its stock AceGUI widget.
 --
--- `/az classic` has to produce a window built entirely from stock parts. While
+-- `/az legacy` has to produce a window built entirely from stock parts. While
 -- the injected controls stayed on the table, a broken widget of ours took the
 -- fallback down with it, which is precisely what happened on the first run in
 -- game: a bad font object threw from our checkbox, the window failed to build,
@@ -865,7 +865,8 @@ Window.Open = function(self, ...)
 	local options = self:GetOptions()
 	if (not options) then return false end
 
-	-- `/az classic` strips these on its way out, so put them back.
+	-- `/az legacy` strips these on its way out, so put them back for
+	-- the retained `/az classic` window.
 	self:ApplyDialogControls(options)
 
 	-- Applied before the frame is built, so the chrome is created in the

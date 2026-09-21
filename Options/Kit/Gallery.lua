@@ -5,7 +5,7 @@
 	Copyright (c) 2026 Jonas "JuNNeZ" Andersen
 
 --]]
--- A gallery of the new panel's controls, opened with `/az new`.
+-- A gallery of the new panel's controls, opened with `/az gallery`.
 --
 -- Phase 2 of the options rewrite produces controls but no window to put them
 -- in, which would leave nothing to look at until phase 3. This is that missing
@@ -16,7 +16,7 @@
 -- now in ways no offline render caught, and this is the shortest path between
 -- changing a number and seeing it in the client.
 --
--- It is scaffolding. When phase 3 lands the real window, this goes.
+-- It is retained scaffolding for inspecting every control state in one place.
 local Addon, ns = ...
 
 local Kit = ns.OptionsKit
@@ -125,7 +125,7 @@ local Build = function()
 	local hint = frame:CreateFontString(nil, "OVERLAY")
 	hint:SetFontObject(Kit.GetFont(11))
 	hint:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -19)
-	hint:SetText("/az new   |   phase 2 scaffolding")
+	hint:SetText("/az gallery   |   control scaffolding")
 	Gallery.hint = hint
 
 	-- Theme switcher, so all four can be compared without leaving the frame.

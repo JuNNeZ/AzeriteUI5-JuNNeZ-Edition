@@ -18,8 +18,9 @@ has passed offline checks and still needs in-game beta testing.
 
 `/az` or `/azerite`.
 
-Use `/az new` for the new custom panel preview, or `/az classic` for the stock
-Ace3 dialog. All three edit the same addon profiles. Later panel phases remain deferred.
+`/az` opens the new custom panel, and `/az new` remains an alias. Use `/az classic`
+for the retained previous window or `/az legacy` for the stock Ace3 dialog. All three
+edit the same addon profiles.
 
 ## How do I move frames?
 

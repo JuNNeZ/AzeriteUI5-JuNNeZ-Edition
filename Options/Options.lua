@@ -408,10 +408,14 @@ Options.GenerateSharingMenu = function(self)
 	}
 end
 
--- The custom window is the normal way in. The stock AceConfigDialog frame is
--- kept as a fallback, both for `/az classic` and for the case where the window
--- cannot be built at all, so options are never unreachable.
-local GetWindow = function()
+-- The new panel is the normal way in. The previous skinned window remains at
+-- `/az classic`, and stock AceConfigDialog remains the final `/az legacy`
+-- fallback, so a fault in either custom surface never makes options unreachable.
+local GetPanel = function()
+	return ns.OptionsKit and ns.OptionsKit.Panel
+end
+
+local GetClassicWindow = function()
 	return ns.OptionsKit and ns.OptionsKit.Window
 end
 
@@ -422,19 +426,29 @@ Options.Refresh = function(self)
 
 	-- A custom container is not in AceConfigDialog.OpenFrames, so the registry
 	-- notification above never reaches it. Feed the open page again by hand.
-	local window = GetWindow()
+	local panel = GetPanel()
+	if (panel and panel:IsShown()) then
+		panel:Refresh()
+	end
+
+	local window = GetClassicWindow()
 	if (window and window:IsShown()) then
 		window:Refresh()
 	end
 end
 
--- The classic window has to be built from stock Ace3 parts only. Leaving our
--- widget types on the options table would drag any fault in them into the very
+-- The stock window has to be built from stock Ace3 parts only. Leaving our
+-- widget types on the options table would drag any fault in them into the final
 -- fallback meant to survive it, so they are handed back first.
-Options.OpenClassicOptionsMenu = function(self)
+Options.OpenStockOptionsMenu = function(self)
 	if (not AceConfigRegistry:GetOptionsTable(Addon)) then return end
 
-	local window = GetWindow()
+	local panel = GetPanel()
+	if (panel) then
+		panel:Close()
+	end
+
+	local window = GetClassicWindow()
 	if (window) then
 		window:Close()
 		window:RemoveDialogControls()
@@ -442,25 +456,35 @@ Options.OpenClassicOptionsMenu = function(self)
 
 	AceConfigDialog:SetDefaultSize(Addon, 880, 720)
 	AceConfigDialog:Open(Addon)
+	return true
+end
+
+-- The panel that `/az` used before Phase 6 is intentionally retained for now.
+-- If it cannot be built, fall through to the stock dialog above.
+Options.OpenClassicOptionsMenu = function(self)
+	if (not AceConfigRegistry:GetOptionsTable(Addon)) then return end
+
+	local panel = GetPanel()
+	if (panel) then
+		panel:Close()
+	end
+	AceConfigDialog:Close(Addon)
+
+	local window = GetClassicWindow()
+	if (window and window:Open()) then return true end
+
+	return self:OpenStockOptionsMenu()
 end
 
 Options.OpenOptionsMenu = function(self, input)
 	if (not AceConfigRegistry:GetOptionsTable(Addon)) then return end
 
-	if (input == "classic" or input == "legacy") then
+	if (input == "classic") then
 		return self:OpenClassicOptionsMenu()
 	end
 
-	-- The panel being built to replace this one. It is kept on its own
-	-- command while it is in pieces, so the working panel is never the one
-	-- under the knife. `/az` moves over once it is finished.
-	if (input == "new") then
-		local panel = ns.OptionsKit and ns.OptionsKit.Panel
-		if (panel) then
-			return panel:Toggle()
-		end
-		ns:Print("The new options panel is not available in this build.")
-		return
+	if (input == "legacy" or input == "stock") then
+		return self:OpenStockOptionsMenu()
 	end
 
 	-- The controls on their own, with no option table behind them. Kept for
@@ -473,26 +497,35 @@ Options.OpenOptionsMenu = function(self, input)
 		return
 	end
 
-	-- Never leave both windows on screen at once.
+	-- Bare `/az` is the new panel. `/az new` remains an alias for release notes,
+	-- macros and anyone already using the preview command.
 	AceConfigDialog:Close(Addon)
 
-	local window = GetWindow()
-	if (window and window:Open()) then return end
+	local window = GetClassicWindow()
+	if (window) then window:Close() end
 
-	self:OpenClassicOptionsMenu()
+	local panel = GetPanel()
+	if (panel and panel:Toggle()) then return true end
+
+	return self:OpenClassicOptionsMenu()
 end
 
 Options.ToggleOptionsMenu = function(self)
-	local window = GetWindow()
-	if (window and window:IsShown()) then
-		window:Close()
+	local panel = GetPanel()
+	if (panel and panel:IsShown()) then
+		panel:Close()
 		return
 	end
 	self:OpenOptionsMenu()
 end
 
 Options.CloseOptionsMenu = function(self)
-	local window = GetWindow()
+	local panel = GetPanel()
+	if (panel) then
+		panel:Close()
+	end
+
+	local window = GetClassicWindow()
 	if (window) then
 		window:Close()
 	end
@@ -583,7 +616,7 @@ Options.GenerateOptionsMenu = function(self)
 	-- Point every option AzeriteUI has a widget for at that widget, in one
 	-- pass, so the five thousand lines of page definitions stay free of
 	-- presentation detail. Anything naming a control of its own is untouched.
-	local window = GetWindow()
+	local window = GetClassicWindow()
 	if (window) then
 		window:ApplyDialogControls(options)
 	end

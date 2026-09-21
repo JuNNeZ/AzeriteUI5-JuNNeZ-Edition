@@ -1818,8 +1818,47 @@ do
 	local interruptListenerFrame
 	local interruptInfoResolver
 
+	-- Forever: classic-content interrupts. Spells may be ranked there, so every rank
+	-- is listed and the first known one wins. Unverified in game (see FixLog).
+	local FOREVER_INTERRUPTS = {
+		[1] = { ids = { 6552, 6554 }, cooldown = 10 }, -- Warrior: Pummel
+		[4] = { ids = { 1766, 1767, 1768, 1769 }, cooldown = 10 }, -- Rogue: Kick
+		[5] = { ids = { 15487 }, cooldown = 45 }, -- Priest: Silence (talent)
+		[7] = { ids = { 8042, 8044, 8045, 8046, 10412, 10413, 10414 }, cooldown = 6 }, -- Shaman: Earth Shock
+		[8] = { ids = { 2139 }, cooldown = 30 }, -- Mage: Counterspell
+		[9] = { ids = { 19244, 19647 }, cooldown = 24, pet = true } -- Warlock: Spell Lock (Felhunter)
+	}
+
+	local GetForeverInterruptResolver = function(playerClass)
+		local entry = FOREVER_INTERRUPTS[playerClass]
+		if (not entry) then
+			return function() return nil end
+		end
+		return function()
+			if (not C_SpellBook or not C_SpellBook.IsSpellKnown) then
+				return nil
+			end
+			local bank = entry.pet and Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet or nil
+			if (entry.pet and not bank) then
+				return nil
+			end
+			-- Highest rank first, so the cooldown lookup uses the spell actually on the bar.
+			for i = #entry.ids, 1, -1 do
+				local spellID = entry.ids[i]
+				if (C_SpellBook.IsSpellKnown(spellID, bank)) then
+					return { id = spellID, cooldown = entry.cooldown }
+				end
+			end
+			return nil
+		end
+	end
+
 	local DetermineInterruptInfoResolver = function()
 		local playerClass = select(3, UnitClass("player"))
+
+		if (ns.IsForever) then
+			return GetForeverInterruptResolver(playerClass)
+		end
 
 		if (playerClass == 1) then -- Warrior
 			return function()

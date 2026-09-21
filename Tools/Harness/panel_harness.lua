@@ -103,7 +103,7 @@ end
 section("Loading")
 for _, file in ipairs({
 	"Options/Kit/Kit.lua", "Options/Kit/Config.lua", "Options/Kit/Defaults.lua",
-	"Options/Kit/Controls.lua",
+	"Options/Kit/Controls.lua", "Options/Kit/Preview.lua",
 	"Options/Kit/Renderer.lua",
 	"Options/Changelog.lua", "Options/Kit/PanelOptions.lua",
 	"Options/Kit/Panel.lua", "Options/Kit/Gallery.lua",
@@ -114,12 +114,14 @@ for _, file in ipairs({
 end
 
 local xml = io.open(root .. "/Options/Options.xml"):read("*a")
-local pages = 0
+local pages, declaredPages = 0, 0
 for file in xml:gmatch('<Script file="OptionsPages\\([%w_]+%.lua)"/>') do
+	declaredPages = declaredPages + 1
 	local ok = pcall(load, "Options/OptionsPages/" .. file)
 	if ok then pages = pages + 1 end
 end
-check(pages == 14, "all 14 option pages load", pages)
+check(declaredPages > 0 and pages == declaredPages,
+	"all declared option pages load", string.format("%d of %d", pages, declaredPages))
 
 local Options = S.modules["Options"]
 Options:GenerateOptionsMenu()
@@ -368,6 +370,223 @@ check(Defaults.Same(5, 5) and not Defaults.Same(5, 6), "scalars compare directly
 for _, entry in ipairs(Panel.pages or {}) do
 	local ok6 = pcall(Defaults.CountModified, options, { entry.key })
 	check(ok6, "counting changes on " .. entry.name .. " does not error")
+end
+
+--------------------------------------------------------------------------
+section("Live frame previews")
+--------------------------------------------------------------------------
+local Preview = Kit.Preview
+check(Preview ~= nil, "Kit.Preview exists")
+check(Kit.PreviewGlowBackdrop.edgeFile:find("border%-glow%.tga$") ~= nil,
+	"the live preview uses the shipped glow art instead of the tooltip border",
+	Kit.PreviewGlowBackdrop.edgeFile)
+check(Kit.PreviewGlowLabelBackdrop.edgeFile:find("border%-glow%.tga$") ~= nil,
+	"the preview label uses the same glow family",
+	Kit.PreviewGlowLabelBackdrop.edgeFile)
+check(Kit.PreviewGold[1] == ns.Colors.normal[1]
+	and Kit.PreviewGold[2] == ns.Colors.normal[2]
+	and Kit.PreviewGold[3] == ns.Colors.normal[3],
+	"the preview glow keeps AzeriteUI gold independently of panel themes")
+
+do
+	local values = { enabled = false, size = 5, choice = "a", text = "old" }
+	local mutations = 0
+	local savedActionBars = S.modules.ActionBars
+	local savedPlayerFrame = S.modules.PlayerFrame
+	local savedActiveNamePlates = ns.ActiveNamePlates
+	local target = CreateFrame("Frame", nil, UIParent)
+	target:SetSize(180, 42)
+
+	-- The preview may inspect the target and anchor its own sibling to it. It
+	-- must not change the target itself, especially when it is protected in game.
+	for _, method in ipairs({ "Show", "Hide", "SetShown", "SetAlpha", "SetScale",
+		"SetSize", "SetWidth", "SetHeight", "SetParent", "SetPoint", "ClearAllPoints" }) do
+		target[method] = function() mutations = mutations + 1 end
+	end
+
+	S.modules.PreviewOuter = {
+		GetProfileDefaults = function()
+			return { enabled = false, size = 5, choice = "a", text = "old" }
+		end
+	}
+	S.modules.PreviewInner = {
+		frame = target,
+		GetProfileDefaults = function()
+			return { enabled = false, size = 5, choice = "a", text = "old" }
+		end
+	}
+
+	local nested = {
+		name = "Nested preview", type = "group", order = 1,
+		args = {
+			enabled = {
+				name = "Preview Toggle", type = "toggle", order = 1,
+				get = function(info) return values[info[#info]] end,
+				set = function(info, value) values[info[#info]] = value end
+			},
+			size = {
+				name = "Preview Range", type = "range", order = 2,
+				min = 1, max = 10, step = 1,
+				get = function(info) return values[info[#info]] end,
+				set = function(info, value) values[info[#info]] = value end
+			},
+			choice = {
+				name = "Preview Select", type = "select", order = 3,
+				values = { a = "A", b = "B" },
+				get = function(info) return values[info[#info]] end,
+				set = function(info, value) values[info[#info]] = value end
+			},
+			text = {
+				name = "Preview Input", type = "input", order = 4,
+				get = function(info) return values[info[#info]] end,
+				set = function(info, value) values[info[#info]] = value end
+			},
+			action = {
+				name = "Preview Action", type = "execute", order = 5,
+				func = function() end
+			}
+		}
+	}
+	local previewGroup = {
+		name = "Preview page", type = "group", order = 1,
+		args = { nested = nested }
+	}
+	local previewOptions = {
+		type = "group",
+		args = { preview = previewGroup }
+	}
+
+	Defaults.Bind(previewGroup, "PreviewOuter")
+	Defaults.Bind(nested, "PreviewInner")
+
+	local content = CreateFrame("Frame", nil, UIParent)
+	content:SetWidth(600)
+	local previewPage = Renderer:CreatePage(content)
+	previewPage:Show(previewOptions, { "preview" })
+
+	local FindControl = function(label)
+		for _, control in ipairs(previewPage:GetControls()) do
+			if control.labelText == label then return control end
+		end
+	end
+
+	local toggle, action = FindControl("Preview Toggle"), FindControl("Preview Action")
+
+	check(toggle ~= nil, "the preview test toggle is rendered")
+	check(action ~= nil, "the preview test action is rendered")
+
+	if toggle then
+		toggle:Fire(true)
+		local request = Preview:GetLastRequest()
+		check(request and request.moduleName == "PreviewInner",
+			"a changed nested setting previews its deepest bound module",
+			request and request.moduleName)
+		check(request and request.target == target,
+			"the owning module's real frame is the preview target")
+		check(request and request.label == "Preview Toggle",
+			"the preview names the changed setting", request and request.label)
+		check(request and request.style == "golden-glow",
+			"the preview records the golden glow treatment", request and request.style)
+		check(mutations == 0, "the preview never mutates the target frame", mutations)
+
+		local beforeRevert = request and request.id or 0
+		if toggle.onRevert then toggle.onRevert(toggle) end
+		local reverted = Preview:GetLastRequest()
+		check(reverted and reverted.id > beforeRevert,
+			"reverting one setting requests a new preview")
+	end
+
+	for _, change in ipairs({
+		{ label = "Preview Range", value = 7 },
+		{ label = "Preview Select", value = "b" },
+		{ label = "Preview Input", value = "new" }
+	}) do
+		local control = FindControl(change.label)
+		local before = Preview:GetLastRequest()
+		before = before and before.id or 0
+		if control then control:Fire(change.value) end
+		local request = Preview:GetLastRequest()
+		check(control and request and request.id > before and request.label == change.label,
+			change.label .. " requests the owning frame preview",
+			request and request.label)
+	end
+
+	local beforeAction = Preview:GetLastRequest()
+	beforeAction = beforeAction and beforeAction.id or 0
+	action = FindControl("Preview Action")
+	if action then action:Fire(true) end
+	local afterAction = Preview:GetLastRequest()
+	check((afterAction and afterAction.id or 0) == beforeAction,
+		"an execute action does not request a frame preview")
+
+	S.modules.NoFramePreview = {
+		GetProfileDefaults = function() return { enabled = false } end
+	}
+	local noFrameGroup = {
+		name = "No frame", type = "group", order = 1,
+		args = {
+			enabled = {
+				name = "No Frame Toggle", type = "toggle", order = 1,
+				get = function() return false end,
+				set = function() end
+			}
+		}
+	}
+	local noFrameOptions = { type = "group", args = { noframe = noFrameGroup } }
+	Defaults.Bind(noFrameGroup, "NoFramePreview")
+	previewPage:Show(noFrameOptions, { "noframe" })
+	local noFrameToggle = previewPage:GetControls()[1]
+	if noFrameToggle then noFrameToggle:Fire(true) end
+	local noFrameRequest = Preview:GetLastRequest()
+	check(noFrameRequest and noFrameRequest.moduleName == "NoFramePreview"
+		and noFrameRequest.target == nil,
+		"a bound setting without a live object records an honest no-frame result")
+	check(Panel.previewText and Panel.previewText:GetText():find("No visible frame", 1, true),
+		"the panel explains when no live frame can be outlined",
+		Panel.previewText and Panel.previewText:GetText())
+
+	local beforeUnbound = noFrameRequest and noFrameRequest.id or 0
+	local unboundGroup = {
+		name = "Unbound", type = "group", order = 1,
+		args = {
+			enabled = {
+				name = "Unbound Toggle", type = "toggle", order = 1,
+				get = function() return false end,
+				set = function() end
+			}
+		}
+	}
+	local unboundOptions = { type = "group", args = { unbound = unboundGroup } }
+	previewPage:Show(unboundOptions, { "unbound" })
+	previewPage:GetControls()[1]:Fire(true)
+	check((Preview:GetLastRequest() and Preview:GetLastRequest().id or 0) == beforeUnbound,
+		"an unbound profile or panel setting requests no preview")
+
+	local thirdBar = CreateFrame("Frame", nil, UIParent)
+	thirdBar:SetSize(300, 36)
+	S.modules.ActionBars = { bars = { [3] = thirdBar } }
+	check(Preview:ResolveModuleTarget("ActionBars", { "actionbars", "bar3", "enabled" }) == thirdBar,
+		"Action Bar 3 settings resolve to Action Bar 3")
+
+	local player = CreateFrame("Frame", nil, UIParent)
+	player:SetSize(240, 70)
+	S.modules.PlayerFrame = { frame = player }
+	check(Preview:ResolveModuleTarget("UnitFrames", { "healthprediction", "enabled" }) == player,
+		"shared Unit Frames settings resolve to the player frame")
+	check(Preview:ResolveModuleTarget("ExplorerMode", { "explorer", "fadePlayerFrame" }) == player,
+		"Explorer Mode resolves an element setting to that element's frame")
+
+	local livePlate = CreateFrame("Frame", nil, UIParent)
+	livePlate:SetSize(120, 24)
+	livePlate.isTarget = true
+	ns.ActiveNamePlates = { [livePlate] = true }
+	check(Preview:ResolveModuleTarget("NamePlates", { "nameplates", "scale" }) == livePlate,
+		"nameplate settings resolve to the addon-owned live target plate")
+
+	-- The rest of this harness still drives the addon's real option tables.
+	S.modules.ActionBars = savedActionBars
+	S.modules.PlayerFrame = savedPlayerFrame
+	ns.ActiveNamePlates = savedActiveNamePlates
 end
 
 --------------------------------------------------------------------------
@@ -1299,6 +1518,58 @@ Kit.SetOpacity(1)
 
 check(pcall(function() Panel:Refresh() end), "the panel refreshes")
 check(pcall(function() Panel:Close() end), "the panel closes")
+
+--------------------------------------------------------------------------
+section("Command routing")
+--------------------------------------------------------------------------
+-- Phase 6 makes the new panel the ordinary command while deliberately keeping
+-- both older escape hatches. Exercise the dispatch itself, not just the three
+-- windows in isolation, so a later cleanup cannot silently swap them back.
+do
+	local Window = Kit.Window
+	local Dialog = S.AceConfigDialog
+	local calls = {}
+
+	local realPanelToggle, realPanelClose = Panel.Toggle, Panel.Close
+	local realWindowOpen, realWindowClose = Window.Open, Window.Close
+	local realRemove = Window.RemoveDialogControls
+	local realDialogOpen, realDialogClose = Dialog.Open, Dialog.Close
+
+	Panel.Toggle = function() calls[#calls + 1] = "panel" return true end
+	Panel.Close = function() calls[#calls + 1] = "panel-close" end
+	Window.Open = function() calls[#calls + 1] = "classic" return true end
+	Window.Close = function() calls[#calls + 1] = "classic-close" end
+	Window.RemoveDialogControls = function() calls[#calls + 1] = "controls-remove" end
+	Dialog.Open = function() calls[#calls + 1] = "stock" end
+	Dialog.Close = function() calls[#calls + 1] = "stock-close" end
+
+	Options:OpenOptionsMenu()
+	check(calls[#calls] == "panel", "bare /az opens the new panel", calls[#calls])
+
+	Options:OpenOptionsMenu("new")
+	check(calls[#calls] == "panel", "/az new remains a new-panel alias", calls[#calls])
+
+	Options:OpenOptionsMenu("classic")
+	check(calls[#calls] == "classic", "/az classic opens the retained window", calls[#calls])
+
+	Options:OpenOptionsMenu("legacy")
+	check(calls[#calls] == "stock", "/az legacy opens stock Ace3", calls[#calls])
+	check(calls[#calls - 1] == "controls-remove",
+		"the stock fallback removes custom dialog controls", calls[#calls - 1])
+
+	Panel.Toggle = function() calls[#calls + 1] = "panel-failed" return false end
+	Options:OpenOptionsMenu()
+	check(calls[#calls] == "classic", "a failed new panel falls back to classic", calls[#calls])
+
+	Window.Open = function() calls[#calls + 1] = "classic-failed" return false end
+	Options:OpenOptionsMenu("classic")
+	check(calls[#calls] == "stock", "a failed classic window falls back to stock", calls[#calls])
+
+	Panel.Toggle, Panel.Close = realPanelToggle, realPanelClose
+	Window.Open, Window.Close = realWindowOpen, realWindowClose
+	Window.RemoveDialogControls = realRemove
+	Dialog.Open, Dialog.Close = realDialogOpen, realDialogClose
+end
 
 --------------------------------------------------------------------------
 print()

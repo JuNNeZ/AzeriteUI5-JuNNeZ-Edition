@@ -175,6 +175,8 @@ local GenerateOptions = function()
 	}
 
 	-- Player
+	options.args.healthPrediction = Options:GenerateHealthPredictionOptions()
+
 	do
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("PlayerFrame")
 		suboptions.hidden = function(info)
@@ -1722,4 +1724,3 @@ local GenerateOptions = function()
 end
 
 Options:AddGroup(L["Unit Frames"], GenerateOptions, -8000, "frames", "UnitFrames")
-

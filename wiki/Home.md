@@ -30,9 +30,10 @@ and MoP are not supported.
 
 | Command | What it does |
 | --- | --- |
-| `/az`, `/azerite` | Open the options menu |
-| `/az new` | Open the new custom options panel preview |
-| `/az classic` | Open the stock Ace3 options dialog |
+| `/az`, `/azerite` | Open the new custom options panel |
+| `/az new` | Alias for the new custom options panel |
+| `/az classic` | Open the retained previous options window |
+| `/az legacy` | Open the stock Ace3 options dialog |
 | `/lock` | Toggle AzeriteUI's frame movers |
 | `/clear` | Clear the chat window |
 | `/resetsettings` | Reset the whole addon database, every profile |

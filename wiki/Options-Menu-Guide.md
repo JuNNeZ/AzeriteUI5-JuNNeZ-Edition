@@ -1,21 +1,24 @@
 # Options Menu Guide
 
-Open with `/az` or `/azerite`. The panel is Ace3-based and every setting is stored
-per profile.
+Open the custom panel with `/az` or `/azerite`. It reads the addon's AceConfig option
+tables through AzeriteUI's own renderer; addon settings remain stored per profile.
 
-## New panel preview (5.6.0)
+## Custom panel
 
-Open `/az new` for the custom panel: grouped navigation, search, section tracking,
-changed-setting markers and individual reset controls. It edits the same addon
-profiles as the existing window. `/az classic` opens the stock Ace3 fallback.
+The custom panel provides grouped navigation, search, section tracking, changed-setting
+markers, individual reset controls and live frame previews. Changing a frame-backed setting
+briefly casts a golden glow around and labels the real affected frame; if no usable live frame
+exists, the footer says so. `/az new` remains an alias. `/az classic` opens the retained previous
+window, and `/az legacy` opens the stock Ace3 fallback. They edit the same addon profiles.
 
 The new panel's **Settings -> Appearance** page controls theme, background opacity,
 scale and position reset; **Settings -> Changelog** shows recent release notes.
 Those appearance settings belong to the window, separately from addon profiles.
 
-This release includes phases 1 through 4c. Live preview, migration of `/az`, further
-artwork, keyboard navigation and other later phases remain deferred. Change frame
-settings outside combat; the preview does not provide a general deferred-write queue.
+The released panel includes phases 1 through 4c. The post-release worktree migrates `/az`
+to it while retaining the previous window and adds the live frame preview. Further artwork,
+keyboard navigation and other later phases remain deferred. Change frame settings outside
+combat; the panel does not provide a general deferred-write queue.
 
 On Forever, **Minimap -> Day and Night Indicator** controls the new indicator.
 Drag it around the map or right-click it to adjust its distance. Turning it off

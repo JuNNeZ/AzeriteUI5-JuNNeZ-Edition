@@ -924,7 +924,7 @@ for key, v in pairs(a) do
 	end
 end
 
--- `/az classic` must hand every option back to its stock widget, or a fault in
+-- `/az legacy` must hand every option back to its stock widget, or a fault in
 -- one of ours takes the fallback window down too.
 Kit.Window:RemoveDialogControls()
 local stillOurs, stillTheirs = {}, 0
@@ -943,7 +943,7 @@ check(stillTheirs == 1, "RemoveDialogControls leaves a foreign control alone")
 
 -- ...and re-opening the window must put them back.
 Kit.Window:ApplyDialogControls(sample)
-check(a.toggle.dialogControl == T.CheckBox, "controls are restored after a classic round trip")
+check(a.toggle.dialogControl == T.CheckBox, "controls are restored after a legacy round trip")
 check(a.preset.dialogControl == "SomebodyElse", "the foreign control is still untouched")
 
 --------------------------------------------------------------------------

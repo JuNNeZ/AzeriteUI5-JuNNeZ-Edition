@@ -218,6 +218,17 @@ check("an explicit false event picks night", frame.Scene.texture:find("night%-sk
 MinimapMod:UpdateDiel(true)
 check("an explicit true event picks day back", frame.Scene.texture:find("day%-sky") ~= nil)
 
+MinimapMod.db.profile.dielTheme = "Celestial"
+MinimapMod:UpdateDiel(true)
+check("changing theme refreshes an unchanged day state", frame.Scene.texture:find("day%-celestial") ~= nil)
+
+MinimapMod:UpdateDiel(false)
+check("the celestial theme pairs the supplied moon with night", frame.Scene.texture:find("night%-celestial") ~= nil)
+
+MinimapMod.db.profile.dielTheme = "not-a-theme"
+MinimapMod:UpdateDiel(true)
+check("an invalid theme safely falls back to the sky pair", frame.Scene.texture:find("day%-sky") ~= nil)
+
 local before = frame.Scene.setTextureCalls
 MinimapMod:UpdateDiel(true)
 MinimapMod:UpdateDiel(true)
@@ -334,6 +345,17 @@ frame:Show()
 MinimapMod.db.profile.dielDistanceOffset = 12
 frame.scripts.OnClick(frame)
 check("right-click opens the panel", MinimapMod.dielPicker:IsShown() == true)
+check("the panel exposes the theme choice", MinimapMod.dielThemeButton ~= nil)
+
+MinimapMod.db.profile.dielTheme = "Sky"
+MinimapMod.dielThemeButton.scripts.OnClick(MinimapMod.dielThemeButton)
+check("the theme button selects the sun and moon pair",
+	MinimapMod.db.profile.dielTheme == "Celestial" and frame.Scene.texture:find("day%-celestial") ~= nil)
+
+MinimapMod.dielThemeButton.scripts.OnClick(MinimapMod.dielThemeButton)
+check("the theme button cycles back to the sky pair",
+	MinimapMod.db.profile.dielTheme == "Sky" and frame.Scene.texture:find("day%-sky") ~= nil)
+
 check("right-click again closes it", (function()
 	frame.scripts.OnClick(frame)
 	return MinimapMod.dielPicker:IsShown() == false

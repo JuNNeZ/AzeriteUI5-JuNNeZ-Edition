@@ -44,6 +44,11 @@ local defaults = { profile = ns:Merge({
 	enabled = true,
 	disableAuraSorting = false,
 	showBlizzardRaidBar = false,
+	showIncomingHeals = true,
+	showOverhealIndicator = false,
+	showDamageAbsorbs = true,
+	absorbDisplayMode = "total",
+	showHealAbsorbs = true,
 	colorCastSpellTextByState = false,
 	powerValueAlpha = 75,
 	playerPowerValueAlpha = nil,
@@ -391,6 +396,7 @@ ns.UnitFrameModule = ns:Merge({
 }, ns.MovableModulePrototype)
 
 UnitFrameMod.UpdateSettings = function(self)
+	if (API.RefreshHealthPrediction) then API.RefreshHealthPrediction() end
 	local ApplyAuraSortSettings = function(frame, preSetPosition, sortFunction)
 		if (not frame) then
 			return

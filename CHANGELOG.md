@@ -7,6 +7,32 @@ Retail 12.1 protects more combat, aura, cooldown, and unit data as secret values
 
 Release note rule: each version entry must include only what changed since the previous release (delta-only).
 Do not repeat older items from prior versions in newer entries.
+Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
+
+
+## 5.7.0-JuNNeZ (2026-09-21) - New Options, Predictions and Forever Fixes
+
+### Highlights
+
+- **The new options panel now opens with `/az`.** It includes search, grouped navigation, changed-setting markers and individual resets. `/az new` remains an alias, `/az classic` keeps the previous skinned window, and `/az legacy` opens stock Ace3.
+- **Changed frame settings briefly identify their live frame with a golden glow.** The preview never moves, resizes, shows or hides the target. When no usable frame exists, the panel explains that in its footer instead of drawing a simulated frame.
+- **Incoming heals and absorbs now use shaped overlays that fit AzeriteUI health bars.** Under `/az` -> Unit Frames -> Incoming Heals and Absorbs, incoming heals, overheal cues, damage absorbs and healing absorbs can be controlled independently. Damage absorbs can show their total size or follow current health and incoming healing.
+- **Forever Druids can see combo points without a specific rank of Shred.** Cat Form's Energy now gates the display on Forever, while Retail keeps its existing Shred requirement.
+- **Forever's day/night indicator has two artwork themes.** Right-click the minimap indicator to choose between the existing Sky scenes and the supplied Sun & Moon artwork, alongside its saved distance control.
+- **Forever nameplate interrupt colors recognize classic spell IDs and ranks.** Pummel, Kick, Silence, Earth Shock, Counterspell and pet Spell Lock use a Forever-specific resolver; Retail remains unchanged.
+
+### Development
+
+- **Moved the custom panel from preview to the normal settings route while preserving both fallbacks.** Opening, closing and refreshing cover the new panel, retained window and stock dialog. The live-frame resolver handles numbered action bars, Explorer Mode elements, shared unit-frame settings and active AzeriteUI nameplates, with mutation-tested failure paths.
+- **Built an addon-owned health-prediction renderer around Blizzard's native measurement widgets.** Fixed shaped artwork is revealed by masks while oUF retains event and lifecycle ownership, avoiding addon arithmetic on protected unit values. Separate caches preserve existing numeric absorb text and target-layout behavior.
+- **Expanded client-specific regression coverage.** The panel, prediction geometry, Diel themes, real Retail and Forever option tables, client capability gates and deliberately broken variants are checked offline. Those checks do not emulate protected execution or GPU rendering in WoW.
+
+### Access and known limits
+
+- The retained options window remains at `/az classic`; deleting it is deferred by maintainer choice.
+- Some policy settings do not own one visible frame. `Show Blizzard Raid Bar` and `Color Cast Spell Text By State`, for example, currently glow the player frame as the shared Unit Frames representative. More precise targets or explanatory previews are planned.
+- Health-prediction rendering received live iteration for shield proportions, but the final overheal option, all frame families, combat behavior and Forever rendering still need broader in-game coverage.
+- The Forever Druid combo-point gate and classic interrupt resolver pass offline checks but still need live class/rank testing. Forever action dragging, custom flyouts and Clique click-casting remain unavailable.
 
 
 ## 5.6.0-JuNNeZ (2026-09-20) - Forever and the New Options Panel
@@ -19,7 +45,14 @@ Do not repeat older items from prior versions in newer entries.
 - **Forever's cog-wheel menu respects character unlocks** and uses a compatible open/close path. The objective tracker also uses the beta-compatible visibility path.
 - **A day/night indicator for the Forever minimap.** Drag it around the ring, right-click to adjust its distance, or turn it off under `/az` -> Minimap -> Day and Night Indicator to restore Blizzard's indicator.
 
-### Access and beta limits
+### Development
+
+- **Built the new panel's controls and layout system around the existing settings.** The preview draws its own sliders, switches, menus and pages while sharing the same settings tables and profiles with the classic dialog. The layout work also handles wrapped help text and recalculates page spacing when the window is resized.
+- **Traced Forever's startup errors to Blizzard's secure execution and developed alternate paths.** Bar paging and visibility use Blizzard's native state drivers, while group-frame setup requested during combat waits until combat ends. Retail retains its existing secure path; the Forever workaround has the limitations listed below.
+- **Developed and refined the minimap's day/night presentation.** New sun and moon artwork sits in an AzeriteUI housing, with saved placement, distance adjustment, tooltips and an option to restore Blizzard's indicator.
+- **Added regression checks for the panel and both clients.** Tests exercise the real settings tables, navigation, controls, compatibility gates and day/night behavior. Deliberately broken versions were also tested to confirm that the checks detect regressions; these offline checks do not replace in-game testing.
+
+### Access and known limits
 
 - `/az` keeps the existing window; `/az classic` opens the stock Ace3 dialog. The new panel is an opt-in preview; later panel phases, including migration of `/az`, are deferred. Change frame settings outside combat.
 - On the current Forever beta, action drag-and-drop, custom flyouts and Clique click-casting remain unavailable. Newly created group frames during combat finish setup after combat ends.

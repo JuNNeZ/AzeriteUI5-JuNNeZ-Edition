@@ -68,11 +68,13 @@ or
 /azerite
 ```
 
-This opens the existing settings window. **`/az new`** opens the new custom panel preview,
-with search, grouped navigation, section tracking and reset controls for supported settings.
-Its **Settings -> Appearance** page offers themes, opacity and scale; **Settings -> Changelog**
-shows recent release notes. **`/az classic`** opens the stock Ace3 dialog. These windows share
-the same addon profiles. Later panel phases remain deferred; change frame settings outside combat.
+This opens the new custom panel, with search, grouped navigation, section tracking and reset
+controls for supported settings. Changing a frame-backed setting briefly casts a golden glow around
+the real affected frame; if no live frame is available, the panel says so in its footer. Its
+**Settings -> Appearance** page offers themes, opacity and scale; **Settings -> Changelog** shows
+recent release notes. **`/az new`** remains an alias, **`/az classic`** opens the previous skinned
+window, and **`/az legacy`** opens the stock Ace3 dialog. All three share the same addon profiles.
+Change frame settings outside combat.
 
 ---
 
@@ -81,8 +83,9 @@ the same addon profiles. Later panel phases remain deferred; change frame settin
 | Command | Description |
 |---|---|
 | `/az` or `/azerite` | Opens the AzeriteUI options menu |
-| `/az new` | Opens the new custom options panel preview |
-| `/az classic` | Opens the stock Ace3 options dialog |
+| `/az new` | Alias for the new custom options panel |
+| `/az classic` | Opens the retained previous options window |
+| `/az legacy` | Opens the stock Ace3 options dialog |
 | `/lock` | Toggles movable frame anchors — drag UI elements to reposition them. Use Blizzard's EditMode for default frames. |
 | `/kb` | Toggles keybind mode. Hover any action, pet or stance button and press a key to bind it; Escape clears the binding. Also reachable from `/az` > Action Bars > Keybind Mode. |
 | `/clear` | Clears the chat window |
