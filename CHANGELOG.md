@@ -10,6 +10,17 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.7.1-JuNNeZ (2026-09-21) - Forever Combo Points
+
+### Highlights
+
+- **Forever Rogues and Druids now see their combo points.** Forever keeps classic combo points on the target, and the display was reading them the Retail way, so it always saw zero and stayed hidden. It now reads the points on your current target and updates when you change target. Retail is unchanged.
+
+### Access and known limits
+
+- Fixed from Blizzard's Forever interface source and a player report; not yet confirmed in game.
+
+
 ## 5.7.0-JuNNeZ (2026-09-21) - New Options, Predictions and Forever Fixes
 
 ### Highlights

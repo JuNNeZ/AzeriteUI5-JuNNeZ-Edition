@@ -126,12 +126,23 @@ local function GetGenericPowerColor(element, powerType)
 	return element.__owner.colors.power[powerType]
 end
 
+-- Forever keeps classic combo points on the target: Blizzard's Camelot ComboFrame reads
+-- GetComboPoints(unit, 'target') and refreshes on PLAYER_TARGET_CHANGED.
+local GetTargetComboPoints = ns.IsForever and _G.GetComboPoints or nil
+
 local function GetComboPoints(unit)
+	if(GetTargetComboPoints) then
+		return GetTargetComboPoints(unit, 'target') or 0
+	end
 	return UnitPower(unit, POWER_ID_COMBO_POINTS), GetUnitChargedPowerPoints and GetUnitChargedPowerPoints(unit)
 end
 
 local function GetComboPointsMax(unit)
-	return UnitPowerMax(unit, POWER_ID_COMBO_POINTS)
+	local max = UnitPowerMax(unit, POWER_ID_COMBO_POINTS)
+	if(GetTargetComboPoints and (type(max) ~= 'number' or (not (IsSecretValue and IsSecretValue(max)) and max <= 0))) then
+		return 5
+	end
+	return max
 end
 
 if(playerClass == 'DEMONHUNTER') then
@@ -435,6 +446,11 @@ local function Path(self, ...)
 	return (self.ClassPower.Override or Update) (self, ...)
 end
 
+-- Forever: target-bound combo points change with the target, not with a power event.
+local function TargetChangedPath(self, event)
+	return Path(self, event, 'player', classPowerType)
+end
+
 local function Visibility(self, event, unit)
 	local element = self.ClassPower
 	local powerType, isAuraPower
@@ -546,6 +562,9 @@ do
 		end
 
 		self:RegisterEvent('SPELLS_CHANGED', ColorPath, true)
+		if(GetTargetComboPoints) then
+			self:RegisterEvent('PLAYER_TARGET_CHANGED', TargetChangedPath, true)
+		end
 
 		self.ClassPower.__isEnabled = true
 
@@ -563,6 +582,7 @@ do
 		self:UnregisterEvent('UNIT_MAXPOWER', Path)
 		self:UnregisterEvent('UNIT_POWER_POINT_CHARGE', Path)
 		self:UnregisterEvent('SPELLS_CHANGED', ColorPath)
+		self:UnregisterEvent('PLAYER_TARGET_CHANGED', TargetChangedPath)
 
 		if(not unregisterOnly) then
 			local element = self.ClassPower
