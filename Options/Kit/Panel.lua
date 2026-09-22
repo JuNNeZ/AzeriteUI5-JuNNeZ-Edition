@@ -30,6 +30,7 @@ local AceConfigRegistry = LibStub("AceConfigRegistry-3.0", true)
 local ipairs = ipairs
 local max, min = math.max, math.min
 local pcall = pcall
+local string_char = string.char
 local string_find, string_lower = string.find, string.lower
 local string_format = string.format
 local table_insert = table.insert
@@ -38,6 +39,7 @@ local tonumber, tostring, type = tonumber, tostring, type
 local unpack = unpack
 
 -- GLOBALS: CreateFrame, GameTooltip, InCombatLockdown, UIParent, UISpecialFrames
+-- GLOBALS: IsShiftKeyDown
 -- GLOBALS: C_AddOns
 
 local Panel = {}
@@ -645,6 +647,11 @@ end
 -- that setting's own page is counted again: counting reads every setting on a
 -- page, and a slider being dragged changes one setting many times a second.
 Panel.OnSettingChanged = function(self, path)
+	-- First, and outside the guards below: a change made in combat is held
+	-- rather than written, the footer is where that is said, and it has to be
+	-- said whether or not this page has counts to bring up to date.
+	self:UpdateCombatNotice()
+
 	if (self.tab ~= "options" or type(path) ~= "table" or type(path[1]) ~= "string") then return end
 
 	local options = GetOptions()
@@ -671,6 +678,309 @@ Panel.OnSettingChanged = function(self, path)
 		self.pageDesc:SetText(string_format(L["%d settings here differ from their defaults."], total))
 	end
 	self:ShowCount()
+end
+
+--------------------------------------------------------------------------
+-- The keyboard
+--------------------------------------------------------------------------
+-- Phase 12, and the one decision in it worth stating plainly: **this window
+-- never listens to the keyboard until it is asked to.**
+--
+-- A shown frame with EnableKeyboard(true) receives every key the player
+-- presses, and only propagates what it chooses to. A config window that did
+-- that while it happened to be open would eat W, A, S and D - you would press
+-- forward and type into a search box instead of walking. No amount of care
+-- about *which* keys are consumed fixes the default case, so the keyboard is
+-- switched on by an explicit act (clicking the search box, or Tab from it) and
+-- switched off again the moment it is left, closed, or clicked away from.
+--
+-- While it is on, the ring walks: search box -> rail -> the page's controls.
+-- Tab moves on, Shift-Tab moves back, Up and Down move within the group, Left
+-- and Right change a value that has an order, Enter does what a click does, and
+-- Escape hands the keyboard back to the game.
+local KEY_CONSUMED = {
+	TAB = true, UP = true, DOWN = true, LEFT = true, RIGHT = true,
+	ENTER = true, SPACE = true, ESCAPE = true
+}
+
+-- Printable keys go to the search box, which is the "type to search" the plan
+-- asks for - only ever while the ring is already on, never as a side effect of
+-- the window being open.
+local TYPED = {}
+for i = 1, 26 do TYPED[string_char(64 + i)] = string_char(96 + i) end
+for i = 0, 9 do TYPED[tostring(i)] = tostring(i) end
+
+Panel.ClearKeyboardFocus = function(self)
+	local was = self.keyboard
+	self.keyboard = nil
+
+	for _, control in ipairs((page and page:GetControls()) or {}) do
+		if (control.SetFocused) then control:SetFocused(false) end
+	end
+	for i = 1, #railRows do
+		if (railRows[i].focusEdge) then railRows[i].focusEdge:Hide() end
+	end
+
+	if (self.keyboardHost) then
+		self.keyboardHost:EnableKeyboard(false)
+		self.keyboardHost:SetScript("OnKeyDown", nil)
+		self.keyboardHost = nil
+	end
+	return was ~= nil
+end
+
+-- Everything the ring can stop on, in the order Tab walks it.
+local FocusStops = function()
+	local stops = { { kind = "search" } }
+
+	for i = 1, #railRows do
+		if (railRows[i]:IsShown()) then
+			stops[#stops + 1] = { kind = "rail", index = i }
+		end
+	end
+
+	for i, control in ipairs((page and page:GetControls()) or {}) do
+		-- A heading is not a stop: there is nothing to do to one.
+		if (control.frame:IsShown() and control.kind ~= "header" and control.kind ~= "description") then
+			stops[#stops + 1] = { kind = "control", index = i }
+		end
+	end
+
+	return stops
+end
+
+Panel.SetKeyboardFocus = function(self, at)
+	local stops = FocusStops()
+	if (#stops == 0) then return false end
+
+	at = min(#stops, max(1, at or 1))
+	local stop = stops[at]
+
+	-- Clear the old mark, but keep the keyboard on: it is moving, not leaving.
+	for _, control in ipairs((page and page:GetControls()) or {}) do
+		if (control.SetFocused) then control:SetFocused(false) end
+	end
+	for i = 1, #railRows do
+		if (railRows[i].focusEdge) then railRows[i].focusEdge:Hide() end
+	end
+
+	self.keyboard = at
+
+	local host
+	if (stop.kind == "search") then
+		-- No OnKeyDown here on purpose. An EditBox with focus already receives
+		-- what is typed, and a handler that also inserted the character would
+		-- type everything twice. Tab, Enter and the arrows out of the box are
+		-- the EditBox's own scripts, set where it is built.
+		searchBox:SetFocus()
+
+	elseif (stop.kind == "rail") then
+		host = railRows[stop.index]
+		if (searchBox) then searchBox:ClearFocus() end
+
+		-- The rail marks its own rows; this is the keyboard's mark on top of
+		-- that, so "where the keyboard is" and "which page is open" stay
+		-- separate things.
+		local row = railRows[stop.index]
+		if (not row.focusEdge) then
+			local edge = row:CreateTexture(nil, "OVERLAY")
+			edge:SetTexture(Kit.GetMedia("plain"))
+			edge:SetWidth(2)
+			edge:SetPoint("TOPRIGHT", row, "TOPRIGHT", -1, 0)
+			edge:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -1, 0)
+			row.focusEdge = edge
+		end
+		local accent = Kit.TextSelected
+		row.focusEdge:SetVertexColor(accent[1], accent[2], accent[3], 1)
+		row.focusEdge:Show()
+
+	else
+		local control = page:GetControls()[stop.index]
+		host = control.frame
+		if (searchBox) then searchBox:ClearFocus() end
+		if (control.SetFocused) then control:SetFocused(true) end
+
+		-- A row you cannot see is not focus, it is a mark somewhere off screen.
+		if (contentScroll and control.frame.GetTop) then
+			local offset = self.page.layout and self.page.layout[stop.index]
+				and self.page.layout[stop.index].offset
+			if (offset) then
+				local height = contentScroll:GetHeight() or 0
+				local scroll = contentScroll:GetVerticalScroll() or 0
+				local range = contentScroll:GetVerticalScrollRange() or 0
+
+				local want = scroll
+				if (offset < scroll) then
+					want = offset
+				elseif (offset + 40 > scroll + height) then
+					want = offset + 40 - height
+				end
+				contentScroll:SetVerticalScroll(min(range, max(0, want)))
+			end
+		end
+	end
+
+	-- Only the frame the keyboard is actually on listens, and it hands every
+	-- key it does not use straight back to the game.
+	if (self.keyboardHost and self.keyboardHost ~= host) then
+		self.keyboardHost:EnableKeyboard(false)
+		self.keyboardHost:SetScript("OnKeyDown", nil)
+	end
+
+	self.keyboardHost = host
+	if (host and host.EnableKeyboard) then
+		host:EnableKeyboard(true)
+		host:SetScript("OnKeyDown", function(_, key) Panel:OnKey(key) end)
+	end
+
+	return true
+end
+
+Panel.MoveKeyboardFocus = function(self, delta)
+	local stops = FocusStops()
+	if (#stops == 0) then return false end
+
+	local at = (self.keyboard or 0) + (delta or 1)
+	if (at < 1) then at = #stops end
+	if (at > #stops) then at = 1 end
+
+	return self:SetKeyboardFocus(at)
+end
+
+-- Where the keyboard is, and what it is on. Kept as a pair so the harness can
+-- read back what a key did rather than what it was told to do.
+Panel.GetKeyboardFocus = function(self)
+	if (not self.keyboard) then return end
+
+	local stops = FocusStops()
+	local stop = stops[self.keyboard]
+	if (not stop) then return end
+
+	return stop.kind, stop.index, self.keyboard
+end
+
+Panel.OnKey = function(self, key)
+	local host = self.keyboardHost
+	if (not host) then return false end
+
+	-- Anything this window has no use for belongs to the game. Set first, so
+	-- an early return below cannot leave a key swallowed.
+	if (host.SetPropagateKeyboardInput) then
+		host:SetPropagateKeyboardInput(not (KEY_CONSUMED[key] or TYPED[key]))
+	end
+
+	local kind, index = self:GetKeyboardFocus()
+	if (not kind) then return false end
+
+	if (key == "ESCAPE") then
+		self:ClearKeyboardFocus()
+		return true
+	end
+
+	if (key == "TAB") then
+		self:MoveKeyboardFocus(IsShiftKeyDown() and -1 or 1)
+		return true
+	end
+
+	-- Up and Down stay inside the group the keyboard is in: a rail of fifteen
+	-- pages and a page of two hundred settings are two different lists, and
+	-- arrowing off the end of one into the other is not navigation.
+	if (key == "UP" or key == "DOWN") then
+		local step = (key == "DOWN") and 1 or -1
+		local stops = FocusStops()
+		local wanted = (self.keyboard or 1) + step
+
+		if (stops[wanted] and stops[wanted].kind == kind) then
+			self:SetKeyboardFocus(wanted)
+		end
+		return true
+	end
+
+	if (kind == "rail") then
+		local row = railRows[index]
+		if (key == "ENTER" or key == "SPACE") then
+			if (row and row.key) then Rail_OnClick(row) end
+			return true
+		end
+	end
+
+	if (kind == "control") then
+		local control = page:GetControls()[index]
+		if (not control) then return false end
+
+		if (key == "ENTER" or key == "SPACE") then
+			local activated = control:Activate()
+
+			-- A control that takes a caret has just taken the keyboard, and it
+			-- is now typing rather than navigating. The ring stands down; the
+			-- box's own Enter and Escape finish the job.
+			if (activated and (control.kind == "input" or control.kind == "range")) then
+				self:ClearKeyboardFocus()
+			end
+			return true
+		end
+		if (key == "LEFT" or key == "RIGHT") then
+			control:Nudge(key == "RIGHT" and 1 or -1)
+			return true
+		end
+	end
+
+	-- A letter or a digit is a search, wherever the ring happens to be.
+	local typed = TYPED[key]
+	if (typed and searchBox) then
+		local text = searchBox:GetText() or ""
+		if (kind ~= "search") then text = "" end
+
+		searchBox:SetText(text .. (IsShiftKeyDown() and key or typed))
+		self:SetKeyboardFocus(1)
+		self:ShowResults(searchBox:GetText())
+		if (searchBox.placeholder) then searchBox.placeholder:Hide() end
+		return true
+	end
+
+	return false
+end
+
+--------------------------------------------------------------------------
+-- The combat notice
+--------------------------------------------------------------------------
+-- Until Phase 10 this line was a label rather than a mechanism: it said that
+-- settings which move or rebuild frames wait until combat ends, and nothing
+-- waited. Kit.Combat holds them now, so the line says what is actually true -
+-- that changes made in here are held, and how many are waiting.
+--
+-- It stays up after combat ends only if something is still queued, which should
+-- not outlive the flush by more than the frame it happens in.
+Panel.UpdateCombatNotice = function(self)
+	if (not self.combatText or not self.combatIcon) then return end
+
+	local waiting = (Kit.Combat and Kit.Combat:Count()) or 0
+	local inCombat = InCombatLockdown()
+
+	self.combatIcon:SetShown(inCombat or waiting > 0)
+	self.combatText:SetShown(inCombat or waiting > 0)
+
+	if (waiting == 1) then
+		self.combatText:SetText(L["1 change is waiting for combat to end."])
+	elseif (waiting > 1) then
+		self.combatText:SetText(string_format(L["%d changes are waiting for combat to end."], waiting))
+	else
+		self.combatText:SetText(L["Changes you make now are applied when you leave combat."])
+	end
+end
+
+-- The queue emptied. Whatever was held has been written, so the page has to be
+-- read again: a held value was being drawn from the queue, and there is no
+-- queue any more.
+Panel.OnCombatFlushed = function(self, applied)
+	self.changedByPage = {}
+
+	if (frame and frame:IsShown()) then
+		self:Refresh()
+	end
+	self:UpdateCombatNotice()
+
+	return applied
 end
 
 -- The count's own click: into the Changed view, or back to where you were.
@@ -1072,11 +1382,32 @@ Panel.Refresh = function(self)
 	end
 end
 
+-- The casing is a child of the window, so it starts one level above it and
+-- every other child sits above it in turn. Lifting it clear is what makes the
+-- border read as the outside of the window rather than as something the header
+-- and the footer are drawn over.
+--
+-- A page of controls nests about ten levels deep at its worst (a slider's knob
+-- host sits two above its fill host, and the value box one above that), so the
+-- margin here is deliberately far larger than anything the panel builds. The
+-- level is relative to the window, which the game keeps that way when a
+-- top-level frame is raised.
+local CASING_LEVEL = 50
+
+Panel.RaiseCasing = function(self)
+	if (not frame or not self.casing) then return end
+	self.casing:SetFrameLevel((frame:GetFrameLevel() or 0) + CASING_LEVEL)
+end
+
 Panel.ApplyTheme = function(self)
 	if (not frame) then return end
 
 	frame:SetBackdropColor(unpack(Kit.WindowColor))
-	frame:SetBackdropBorderColor(unpack(Kit.BorderIdle))
+
+	-- Untinted, so the sculpted edge shows as itself. See Kit.WindowCasing.
+	if (self.casing) then
+		self.casing:SetBackdropBorderColor(unpack(Kit.WindowCasingColor))
+	end
 
 	if (self.searchBackdrop) then
 		self.searchBackdrop:SetBackdropColor(unpack(Kit.InsetColor))
@@ -1264,14 +1595,38 @@ local Build = function()
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
 	frame:SetResizable(true)
-	frame:SetBackdrop(Kit.WindowBackdrop)
+
+	-- The fill only. The casing is a frame of its own, below, so it can be drawn
+	-- above everything the window holds rather than under the first child.
+	frame:SetBackdrop(Kit.WindowFill)
+
+	-- The casing hangs outside the window, so the clamp has to know about it or
+	-- the window can be dragged until its border is off the screen.
+	local outset = Kit.WindowOutset
+	frame:SetClampRectInsets(-outset.left, outset.right, outset.top, -outset.bottom)
+
 	if (frame.SetResizeBounds) then frame:SetResizeBounds(MIN_W, MIN_H) end
+
+	local casing = CreateFrame("Frame", nil, frame, ns.BackdropTemplate)
+	casing:SetPoint("TOPLEFT", frame, "TOPLEFT", -outset.left, outset.top)
+	casing:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", outset.right, -outset.bottom)
+	casing:SetBackdrop(Kit.WindowCasing)
+	casing:SetBackdropBorderColor(unpack(Kit.WindowCasingColor))
+	casing:EnableMouse(false)
+	Panel.casing = casing
+
+	Panel:RaiseCasing()
 
 	UISpecialFrames[#UISpecialFrames + 1] = name
 
 	frame:SetScript("OnHide", function()
 		if (Kit.Controls and Kit.Controls.CloseDropdown) then Kit.Controls.CloseDropdown() end
 		SavePosition()
+
+		-- Whatever the keyboard was on is gone with the window, and a frame
+		-- left listening for keys it will never use is exactly the thing this
+		-- is careful about.
+		Panel:ClearKeyboardFocus()
 	end)
 
 	Panel.headings = {}
@@ -1402,10 +1757,48 @@ local Build = function()
 		self:SetText("")
 		self:ClearFocus()
 		Panel:ClearSearch()
+		Panel:ClearKeyboardFocus()
 	end)
-	search:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+
+	-- Enter opens the first result rather than only dismissing the caret, which
+	-- is the whole point of having typed something.
+	search:SetScript("OnEnterPressed", function(self)
+		local first = resultRows[1]
+		if (Panel.searching and first and first:IsShown()) then
+			Panel:OpenResult(first)
+			Panel:ClearKeyboardFocus()
+			return
+		end
+		self:ClearFocus()
+	end)
+
+	-- Tab out of the box is how the keyboard ring is entered: from here the
+	-- window listens, and until here it does not.
+	search:SetScript("OnTabPressed", function()
+		-- This only fires while the box has focus, so the ring is at the search
+		-- stop whether or not anything has said so yet.
+		Panel.keyboard = Panel.keyboard or 1
+		Panel:MoveKeyboardFocus(IsShiftKeyDown() and -1 or 1)
+	end)
+
+	-- Down from the search box steps into the rail. Left and Right are left
+	-- alone: they move the caret, which is what they are for in a text box.
+	search:SetScript("OnArrowPressed", function(_, key)
+		Panel.keyboard = Panel.keyboard or 1
+		if (key == "DOWN") then
+			Panel:MoveKeyboardFocus(1)
+		elseif (key == "UP") then
+			Panel:MoveKeyboardFocus(-1)
+		end
+	end)
+
 	search:SetScript("OnEditFocusGained", function()
 		Kit.SetBorderColor(searchBackdrop, Kit.BorderFocus)
+
+		-- Clicking into the box is the other way in. Nothing is captured by
+		-- this: the box has the keyboard because it has focus, as any edit box
+		-- does, and the ring only knows where it stands.
+		Panel.keyboard = 1
 	end)
 	search:SetScript("OnEditFocusLost", function()
 		Kit.SetBorderColor(searchBackdrop, Kit.BorderIdle)
@@ -1623,8 +2016,8 @@ local Build = function()
 	combatText:SetFontObject(Kit.GetFont(12))
 	combatText:SetPoint("LEFT", combatIcon, "RIGHT", 4, 0)
 	combatText:SetJustifyH("LEFT")
-	combatText:SetText(L["Settings that move or rebuild frames wait until you leave combat."])
 	combatText:Hide()
+	Panel.combatIcon = combatIcon
 	Panel.combatText = combatText
 
 	local previewStatus = CreateFrame("Frame", nil, footer)
@@ -1672,15 +2065,11 @@ local Build = function()
 	watcher:RegisterEvent("PLAYER_REGEN_DISABLED")
 	watcher:RegisterEvent("PLAYER_REGEN_ENABLED")
 	watcher:SetScript("OnEvent", function()
-		local inCombat = InCombatLockdown()
-		combatIcon:SetShown(inCombat)
-		combatText:SetShown(inCombat)
+		Panel:UpdateCombatNotice()
 	end)
 
 	frame:SetScript("OnShow", function()
-		local inCombat = InCombatLockdown()
-		combatIcon:SetShown(inCombat)
-		combatText:SetShown(inCombat)
+		Panel:UpdateCombatNotice()
 	end)
 
 	-- Position last, so nothing above depends on the size it lands at.
@@ -1721,6 +2110,10 @@ Panel.Open = function(self, key)
 
 	frame:Show()
 	frame:Raise()
+
+	-- Raising a top-level frame moves its level, and the casing has to stay the
+	-- same distance above it.
+	self:RaiseCasing()
 
 	key = key or self.selected
 	if (not key or not (GetView(key) or Config.GetSubOption(options, key))) then

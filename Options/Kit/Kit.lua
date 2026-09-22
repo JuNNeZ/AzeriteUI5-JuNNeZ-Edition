@@ -27,7 +27,10 @@ local table_sort = table.sort
 local type = type
 local unpack = unpack
 
+local tostring = tostring
+
 -- GLOBALS: CreateFrame, UnitClass
+-- GLOBALS: StaticPopupDialogs, StaticPopup_Show
 
 local API = ns.API
 local GetFont = API.GetFont
@@ -189,12 +192,81 @@ Kit.Fill = {
 --------------------------------------------------------------------------
 -- The window follows the game menu's own backdrop so the two read as one
 -- interface. See Components/Misc/GameMenu.lua.
+--
+-- The new panel no longer uses this: it draws its fill and its casing as two
+-- separate things, below. The retained /az classic window and the gallery still
+-- do, and nothing about them is changing.
 Kit.WindowBackdrop = {
 	bgFile = [[Interface\Tooltips\UI-Tooltip-Background]],
 	edgeFile = GetMedia("border-tooltip"),
 	edgeSize = 24,
 	insets = { left = 7, right = 7, top = 7, bottom = 7 }
 }
+
+--------------------------------------------------------------------------
+-- The options window's fill and casing
+--------------------------------------------------------------------------
+-- Drawn the way this addon draws its own tooltips, because it is the same art
+-- and the two should read as one interface. Layouts/Data/Tooltips.lua:85 is the
+-- reference; the numbers below are that entry's, not a second opinion of it.
+--
+-- Three things the single backdrop above got wrong, and all three come from one
+-- measurement. border-tooltip.tga is 512x64: eight 64px cells, of which the
+-- backdrop samples x=4..60. The solid rim (alpha >= 128) sits at x 6..21 in the
+-- left and right cells and at x 23..37 in the top and bottom ones, which at an
+-- edgeSize of 32 is 1..10px deep on the sides and 11..19px deep top and bottom.
+--
+--  * At edgeSize 24 with 7px insets the fill reached a pixel *past* the top and
+--    bottom rim, so the window read as a slab of background with a border sunk
+--    into it. The casing hangs outside the window instead, exactly as the
+--    tooltip's backdrop hangs outside the tooltip, so the rim lands clear of
+--    everything the window draws and the fill tucks under it.
+--  * A backdrop draws its Center on BACKGROUND and its edges on BORDER, so in
+--    one frame the casing is above the fill but below every child frame - the
+--    header, the rail, the footer, a control's own backdrop. Separating them
+--    lets the casing be a frame of its own, above all of it.
+--  * The casing was tinted to the theme's border colour, which is 35% grey on
+--    azerite: the sculpted bronze went muddy. It is drawn untinted now, like
+--    the tooltip. Per-theme casing art is the remaining half of Phase 7 and is
+--    deliberately not attempted here.
+--
+-- How far the casing hangs outside the window, matching the tooltip's own
+-- offsets. Nothing about the window's layout moves; only this frame grows.
+Kit.WindowOutset = { left = 10, right = 10, top = 18, bottom = 18 }
+
+-- The fill. Its insets are negative on purpose: the tooltip's fill reaches 2px
+-- past the tooltip's own rect (a 10px offset against an 8px inset), which keeps
+-- it under the rim at scales where the rim lands on a half pixel. A backdrop
+-- applies insets as plain offsets from the frame's own edges, so a negative one
+-- is an overhang (Blizzard_SharedXML/NineSlice.lua, SetupCenter).
+--
+-- The texture is the addon's own plain white one rather than Blizzard's tooltip
+-- background. A plain white texture takes exactly the alpha it is given, so the
+-- slider's 100% is the alpha that reaches the screen and nothing of the world is
+-- left showing through it.
+Kit.WindowOverhang = 2
+
+Kit.WindowFill = {
+	bgFile = GetMedia("plain"),
+	insets = {
+		left = -Kit.WindowOverhang, right = -Kit.WindowOverhang,
+		top = -Kit.WindowOverhang, bottom = -Kit.WindowOverhang
+	}
+}
+
+-- The casing. No bgFile: it is the sculpted edge and nothing else, so it can be
+-- drawn above the whole window without covering any of it. The tooltip's `tile`
+-- is not carried over for the same reason - it governs a fill this frame does
+-- not have, and a flat white fill is the same tiled or stretched.
+Kit.WindowCasing = {
+	edgeFile = GetMedia("border-tooltip"),
+	edgeSize = 32
+}
+
+-- Untinted, as the tooltip draws it. Unlike BorderIdle this does not follow the
+-- theme, which is the trade Phase 7 records: a tint is how a theme would colour
+-- the casing, and tinting this art is what made it grey.
+Kit.WindowCasingColor = { 1, 1, 1, 1 }
 
 -- The addon's own tooltip border, drawn small enough to sit on a button. At
 -- the game menu's edgeSize of 16 with 5px insets the corners take up the whole
@@ -257,6 +329,12 @@ Kit.TextHighlight = {}
 Kit.TextSelected = {}
 Kit.TextDisabled = {}
 
+-- What a setting says when it refuses a value. It is read where the help line
+-- sits, so it has to carry against the window's own background rather than
+-- shout in a colour the theme never uses; kit_harness holds it to the same
+-- contrast floor as the accent.
+Kit.TextWarning = {}
+
 local themes = {
 	azerite = {
 		order = 1,
@@ -264,6 +342,7 @@ local themes = {
 		text = { Colors.offwhite[1], Colors.offwhite[2], Colors.offwhite[3] },
 		bright = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3] },
 		muted = { .5, .5, .5 },
+		warning = { .95, .45, .40 },
 		border = { .35, .35, .35, .95 },
 		window = { .03, .03, .03, .95 },
 		backdrop = { .05, .05, .05, .92 },
@@ -276,6 +355,7 @@ local themes = {
 		text = { .78, .78, .80 },
 		bright = { 1, 1, 1 },
 		muted = { .42, .42, .45 },
+		warning = { .92, .48, .44 },
 		border = { .22, .22, .24, .95 },
 		window = { .015, .015, .02, .97 },
 		backdrop = { .03, .03, .04, .94 },
@@ -291,6 +371,7 @@ local themes = {
 		text = { .12, .12, .14 },
 		bright = { 0, 0, 0 },
 		muted = { .40, .40, .43 },
+		warning = { .60, .10, .08 },
 		border = { .26, .25, .23, .95 },
 		window = { .88, .88, .90, .97 },
 		backdrop = { .93, .93, .95, .96 },
@@ -362,6 +443,7 @@ Kit.SetTheme = function(key)
 	CopyInto(Kit.TextNormal, theme.text or base.text)
 	CopyInto(Kit.TextHighlight, theme.bright or base.bright)
 	CopyInto(Kit.TextDisabled, theme.muted or base.muted)
+	CopyInto(Kit.TextWarning, theme.warning or base.warning)
 
 	CopyInto(Kit.BorderIdle, theme.border or base.border)
 	CopyInto(Kit.BorderHover, theme.bright or base.bright, 1)
@@ -423,6 +505,53 @@ Kit.GetThemeChoices = function()
 end
 
 Kit.SetTheme(currentTheme)
+
+--------------------------------------------------------------------------
+-- Asking before something irreversible
+--------------------------------------------------------------------------
+-- An option table can say `confirm`, and until Phase 11 nothing in this panel
+-- read it: Delete Profile deleted, Reset reset, and Import overwrote the whole
+-- profile, each on one click with nothing asked. Stock Ace3 asks.
+--
+-- Blizzard's own popup rather than one of ours, for three reasons: it is the
+-- prompt this addon already uses for the reload after an import
+-- (Options/Options.lua, PromptImportReload), it sits above the panel without
+-- anything here having to reason about strata or focus, and a question that can
+-- destroy a profile is not the place to debut a new widget.
+--
+-- Nothing is destroyed if the popup cannot be shown. All of Blizzard's popup
+-- slots being taken is rare, but the answer to "I could not ask" is not "do it
+-- anyway".
+local CONFIRM_KEY = "AZERITEUI_OPTIONS_CONFIRM"
+
+Kit.Confirm = function(question, onAccept, onCancel)
+	if (type(onAccept) ~= "function") then return false end
+
+	if (not StaticPopupDialogs or not StaticPopup_Show) then
+		onAccept()
+		return true
+	end
+
+	StaticPopupDialogs[CONFIRM_KEY] = {
+		text = "%s",
+		button1 = _G.ACCEPT or "Accept",
+		button2 = _G.CANCEL or "Cancel",
+		OnAccept = function() onAccept() end,
+		OnCancel = function() if (onCancel) then onCancel() end end,
+		timeout = 0,
+		whileDead = true,
+		hideOnEscape = true,
+		preferredIndex = 3
+	}
+
+	local shown = StaticPopup_Show(CONFIRM_KEY, tostring(question or ""))
+	if (not shown) then
+		ns:Print(L["There was no room to ask for confirmation. Nothing was changed."])
+		if (onCancel) then onCancel() end
+		return false
+	end
+	return true
+end
 
 --------------------------------------------------------------------------
 -- Shared helpers

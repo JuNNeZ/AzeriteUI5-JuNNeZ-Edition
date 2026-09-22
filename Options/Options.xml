@@ -5,6 +5,7 @@
 		* Kit.lua is art and measurement only, and must load first.
 		* Config.lua reads AceConfig option tables. No frames, no AceGUI.
 		* Defaults.lua knows which settings differ from their defaults.
+		* Combat.lua holds writes made in combat until it ends.
 		* Controls.lua is the new panel's own widgets. No AceGUI at all.
 		* Preview.lua outlines the real frame owned by a changed setting.
 		* Renderer.lua turns an option table into rows of those controls.
@@ -20,6 +21,7 @@
 	<Script file="Kit\Kit.lua"/>
 	<Script file="Kit\Config.lua"/>
 	<Script file="Kit\Defaults.lua"/>
+	<Script file="Kit\Combat.lua"/>
 	<Script file="Kit\Controls.lua"/>
 	<Script file="Kit\Preview.lua"/>
 	<Script file="Kit\Renderer.lua"/>
@@ -36,6 +38,9 @@
 	<Script file="OptionsPages\Auras.lua"/>
 	<Script file="OptionsPages\Bags.lua"/>
 	<Script file="OptionsPages\Chat.lua"/>
+	<!-- Hidden unless Development Mode is on: the control types no shipped
+	     setting uses, so that they can be tested at all. -->
+	<Script file="OptionsPages\ControlTypes.lua"/>
 	<Script file="OptionsPages\ExplorerMode.lua"/>
 	<Script file="OptionsPages\GameMenu.lua"/>
 	<Script file="OptionsPages\Info.lua"/>

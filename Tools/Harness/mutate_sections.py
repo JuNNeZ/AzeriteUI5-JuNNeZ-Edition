@@ -10,6 +10,7 @@ SP = os.path.dirname(os.path.abspath(__file__))
 LUA = r"C:\Program Files (x86)\Lua\5.1\lua.exe"
 
 PANEL = os.path.join(ADDON, "Options", "Kit", "Panel.lua")
+COMBAT = os.path.join(ADDON, "Options", "Kit", "Combat.lua")
 PANELOPTS = os.path.join(ADDON, "Options", "Kit", "PanelOptions.lua")
 CONTROLS = os.path.join(ADDON, "Options", "Kit", "Controls.lua")
 RENDERER = os.path.join(ADDON, "Options", "Kit", "Renderer.lua")
@@ -17,6 +18,7 @@ PREVIEW = os.path.join(ADDON, "Options", "Kit", "Preview.lua")
 VIEWS = os.path.join(ADDON, "Options", "Kit", "Views.lua")
 KIT = os.path.join(ADDON, "Options", "Kit", "Kit.lua")
 OPTIONS = os.path.join(ADDON, "Options", "Options.lua")
+CONTROLTYPES = os.path.join(ADDON, "Options", "OptionsPages", "ControlTypes.lua")
 STUBS = os.path.join(SP, "stubs.lua")
 
 # Mutating the changelog generator proves nothing until the data is generated
@@ -167,16 +169,10 @@ MUTATIONS = [
      "\treturn false\nend\n\nOptions.ToggleOptionsMenu"),
     # Phase 5 live previews.
     (RENDERER, "a changed toggle never requests a preview",
-     "\t\tcontrol:SetCallback(function(self, value)\n"
-     "\t\t\tConfig.SetValue(option, options, bound, APP, value and true or false)\n"
-     "\t\t\tPreviewChange(options, bound, label)",
-     "\t\tcontrol:SetCallback(function(self, value)\n"
-     "\t\t\tConfig.SetValue(option, options, bound, APP, value and true or false)\n"
-     "\t\t\tlocal _ = label"),
+     "			end, true, multi)", "			end, false, multi)"),
     (RENDERER, "execute actions request misleading previews",
-     "\t\t\tConfig.Execute(option, options, bound, APP)\n\t\t\tpage:Refresh()",
-     "\t\t\tConfig.Execute(option, options, bound, APP)\n"
-     "\t\t\tPreviewChange(options, bound, label)\n\t\t\tpage:Refresh()"),
+     "\t\t\t\tConfig.Execute(option, options, bound, APP)\n\t\t\tend, false)",
+     "\t\t\t\tConfig.Execute(option, options, bound, APP)\n\t\t\tend, true)"),
     (PREVIEW, "the preview mutates the frame it is meant to observe",
      "\tif (#targets == 0) then\n",
      "\tfor _, t in ipairs(targets) do t:Show() end\n\n\tif (#targets == 0) then\n"),
@@ -322,7 +318,234 @@ MUTATIONS = [
     (RENDERER, "the line does not name the type it wanted",
      'AsString(Config.GetName(option, options, childPath, APP), key), kind)',
      'AsString(Config.GetName(option, options, childPath, APP), key), "")'),
+    # Phase 7, the half that is not art: the window's fill and its casing.
+    #
+    # The ones marked "kit" are caught by kit_harness, which is where the panel's
+    # numbers are held against the tooltip's own layout data. Everything else is
+    # caught by the panel harness as usual.
+    (KIT, "the casing goes back to an edge the rim does not fit in",
+     'Kit.WindowCasing = {\n\tedgeFile = GetMedia("border-tooltip"),\n\tedgeSize = 32\n}',
+     'Kit.WindowCasing = {\n\tedgeFile = GetMedia("border-tooltip"),\n\tedgeSize = 24\n}', "kit"),
+    (KIT, "the casing stops hanging outside the window",
+     "Kit.WindowOutset = { left = 10, right = 10, top = 18, bottom = 18 }",
+     "Kit.WindowOutset = { left = 7, right = 7, top = 7, bottom = 7 }", "kit"),
+    (KIT, "the fill no longer reaches under the rim",
+     "\t\tleft = -Kit.WindowOverhang, right = -Kit.WindowOverhang,\n"
+     "\t\ttop = -Kit.WindowOverhang, bottom = -Kit.WindowOverhang",
+     "\t\tleft = Kit.WindowOverhang, right = Kit.WindowOverhang,\n"
+     "\t\ttop = Kit.WindowOverhang, bottom = Kit.WindowOverhang", "kit"),
+    (KIT, "the fill goes back to Blizzard's tooltip background",
+     'Kit.WindowFill = {\n\tbgFile = GetMedia("plain"),',
+     'Kit.WindowFill = {\n\tbgFile = [[Interface\\Tooltips\\UI-Tooltip-Background]],', "kit"),
+    (KIT, "the casing carries a fill of its own again",
+     'Kit.WindowCasing = {\n\tedgeFile = GetMedia("border-tooltip"),',
+     'Kit.WindowCasing = {\n\tbgFile = GetMedia("plain"),\n\tedgeFile = GetMedia("border-tooltip"),',
+     "kit"),
+    (KIT, "the casing is tinted grey again",
+     "Kit.WindowCasingColor = { 1, 1, 1, 1 }",
+     "Kit.WindowCasingColor = { .35, .35, .35, .95 }"),
+    (PANEL, "the window is drawn with one backdrop again",
+     "\tframe:SetBackdrop(Kit.WindowFill)", "\tframe:SetBackdrop(Kit.WindowBackdrop)"),
+    (PANEL, "the casing is left among the window's own children",
+     "\tself.casing:SetFrameLevel((frame:GetFrameLevel() or 0) + CASING_LEVEL)",
+     "\tlocal _ = CASING_LEVEL"),
+    (PANEL, "the casing is lifted by less than a control nests",
+     "local CASING_LEVEL = 50", "local CASING_LEVEL = 2"),
+    (PANEL, "raising the window leaves the casing behind",
+     "\tframe:Raise()\n\n\t-- Raising a top-level frame moves its level, and the casing has to stay the\n"
+     "\t-- same distance above it.\n\tself:RaiseCasing()",
+     "\tframe:Raise()"),
+    (PANEL, "the clamp does not know the casing hangs outside",
+     "\tframe:SetClampRectInsets(-outset.left, outset.right, outset.top, -outset.bottom)\n",
+     ""),
+    (PANEL, "the casing is repainted with the theme's border colour",
+     "\t\tself.casing:SetBackdropBorderColor(unpack(Kit.WindowCasingColor))",
+     "\t\tself.casing:SetBackdropBorderColor(unpack(Kit.BorderIdle))"),
+    # Phase 10: changes made in combat.
+    (COMBAT, "nothing is ever held",
+     "\tif (not InCombatLockdown()) then return false end",
+     "\tif (true) then return false end"),
+    (COMBAT, "the window's own settings are held too",
+     "\tif (Kit.PanelOptions and options == Kit.PanelOptions.GetTable()) then return false end\n",
+     ""),
+    (COMBAT, "a slider dragged across its range queues every value",
+     "\tlocal entry = pending[key]\n\tif (not entry) then",
+     "\tlocal entry = nil\n\tif (not entry) then"),
+    (COMBAT, "combat ending applies nothing",
+     'watcher:SetScript("OnEvent", function()\n\tCombat:Flush()\nend)',
+     'watcher:SetScript("OnEvent", function()\nend)'),
+    (COMBAT, "the queue never listens for the end of combat",
+     '\nwatcher:RegisterEvent("PLAYER_REGEN_ENABLED")', ""),
+    (COMBAT, "one setter that throws strands the rest",
+     "\t\tlocal ok, err = pcall(entry.apply)", "\t\tlocal ok, err = true, entry.apply()"),
+    (COMBAT, "the queue outlives the flush",
+     "\tself:Clear()\n", ""),
+    (RENDERER, "a change made in combat is written anyway",
+     "\tif (Combat and Combat:ShouldQueue(options)) then\n"
+     "\t\treturn Combat:Queue(path, label, value, hasValue, apply, extra)",
+     "\tif (false and Combat:ShouldQueue(options)) then\n"
+     "\t\treturn Combat:Queue(path, label, value, hasValue, apply, extra)"),
+    (RENDERER, "a held control snaps back to the stored value",
+     "\t\tif (held and held.hasValue) then value = held.value end\n\t\tcontrol:SetValue(type(value)",
+     "\t\tcontrol:SetValue(type(value)"),
+    (RENDERER, "a held row is not marked as waiting",
+     "\tcontrol:SetPending(held and true or false)", "\tcontrol:SetPending(false)"),
+    (RENDERER, "reverting in combat writes straight away",
+     "\tlocal Combat = Kit.Combat\n\tif (Combat and Combat:ShouldQueue(options)) then\n"
+     "\t\tif (default == nil) then return end",
+     "\tlocal Combat = Kit.Combat\n\tif (false) then\n"
+     "\t\tif (default == nil) then return end"),
+    (CONTROLS, "the gem and the waiting mark are shown at once",
+     "\t\tself.gem:SetShown(self.modified and not self.pending)",
+     "\t\tself.gem:SetShown(self.modified)"),
+    (CONTROLS, "the waiting mark is never drawn",
+     "\t\tself.waiting:SetShown(self.pending and true or false)",
+     "\t\tself.waiting:SetShown(false)"),
+    # The latent bug this phase turned up: the arrow was decided against an
+    # onRevert that had not been handed over yet.
+    (CONTROLS, "the revert arrow is decided before it has anything to revert with",
+     "\tcontrol.SetOnRevert = function(self, fn)\n\t\tself.onRevert = fn\n\t\tUpdateMarks(self)\n\tend",
+     "\tcontrol.SetOnRevert = function(self, fn)\n\t\tself.onRevert = fn\n\tend"),
+    (PANEL, "the footer does not count what is waiting",
+     '\telseif (waiting > 1) then', "\telseif (false) then"),
+    (PANEL, "the footer is not brought up to date as changes are held",
+     "\tself:UpdateCombatNotice()\n\n\tif (self.tab ~= \"options\"", "\tif (self.tab ~= \"options\""),
+    (PANEL, "the notice stays up after everything has been applied",
+     "\tself:UpdateCombatNotice()\n\n\treturn applied", "\treturn applied"),
+    # Phase 11: asking before something irreversible, and refusing a bad value.
+    (RENDERER, "nothing is ever confirmed",
+     "\tlocal question = Question(option, options, path, label, value)",
+     "\tlocal question = nil"),
+    (RENDERER, "the question is asked and the change made anyway",
+     "\tif (question) then\n\t\tKit.Confirm(question, Finish, function() page:Refresh() end)\n\t\treturn false\n\tend",
+     "\tif (question) then\n\t\tKit.Confirm(question, Finish, function() page:Refresh() end)\n\tend"),
+    (RENDERER, "cancelling leaves the control showing what was refused",
+     "\t\tKit.Confirm(question, Finish, function() page:Refresh() end)",
+     "\t\tKit.Confirm(question, Finish, nil)"),
+    (RENDERER, "a confirm that cannot be resolved is taken as permission",
+     '\tif (not ok) then\n\t\treturn string_format(L["Are you sure you want to change %s?"], label or "")\n\tend',
+     "\tif (not ok) then return end"),
+    (RENDERER, "a bare confirm asks nothing",
+     "\tif (type(result) == \"string\") then return result end\n\tif (not result) then return end",
+     "\tif (type(result) == \"string\") then return result end\n\tif (true) then return end"),
+    (RENDERER, "nothing is ever validated",
+     "\t\tlocal refusal = Refusal(option, options, path, label, value)",
+     "\t\tlocal refusal = nil"),
+    (RENDERER, "a refused value is written anyway",
+     "\t\tif (refusal) then\n\t\t\tcontrol:SetError(refusal)\n\t\t\tpage:Layout()\n\t\t\treturn false\n\t\tend",
+     "\t\tif (refusal) then\n\t\t\tcontrol:SetError(refusal)\n\t\tend"),
+    (RENDERER, "a refusal with no reason says nothing at all",
+     "\tif (not result) then return Reason(option, label) end",
+     "\tif (not result) then return end"),
+    (KIT, "the confirmation acts when it cannot be shown",
+     '\tif (not shown) then\n\t\tns:Print(L["There was no room to ask for confirmation. Nothing was changed."])',
+     '\tif (not shown) then\n\t\tonAccept()'),
+    (CONTROLS, "a refusal is not drawn where the help line is",
+     "\t\tlocal shown = self.errorText or self.helpText",
+     "\t\tlocal shown = self.helpText"),
+    # Phase 12: the keyboard.
+    (PANEL, "the window listens for keys before it is asked to",
+     "\tframe:EnableMouse(true)\n\tframe:SetMovable(true)",
+     "\tframe:EnableMouse(true)\n\tframe:EnableKeyboard(true)\n\tframe:SetMovable(true)"),
+    (PANEL, "closing the window leaves it listening",
+     "\t\tPanel:ClearKeyboardFocus()\n\tend)\n\n\tPanel.headings = {}",
+     "\tend)\n\n\tPanel.headings = {}"),
+    (PANEL, "every key is taken from the game",
+     "\t\thost:SetPropagateKeyboardInput(not (KEY_CONSUMED[key] or TYPED[key]))",
+     "\t\thost:SetPropagateKeyboardInput(false)"),
+    (PANEL, "Tab does not move the keyboard on",
+     '\tif (key == "TAB") then\n\t\tself:MoveKeyboardFocus(IsShiftKeyDown() and -1 or 1)\n\t\treturn true\n\tend',
+     '\tif (key == "TAB") then\n\t\treturn true\n\tend'),
+    (PANEL, "Escape does not hand the keyboard back",
+     '\tif (key == "ESCAPE") then\n\t\tself:ClearKeyboardFocus()\n\t\treturn true\n\tend',
+     '\tif (key == "ESCAPE") then\n\t\treturn true\n\tend'),
+    (PANEL, "Up and Down wander out of the list they are in",
+     "\t\tif (stops[wanted] and stops[wanted].kind == kind) then",
+     "\t\tif (stops[wanted]) then"),
+    (PANEL, "Enter on a control does nothing",
+     "\t\t\tlocal activated = control:Activate()", "\t\t\tlocal activated = false"),
+    (PANEL, "a letter does not reach the search",
+     "\tlocal typed = TYPED[key]\n\tif (typed and searchBox) then",
+     "\tlocal typed = TYPED[key]\n\tif (false) then"),
+    (PANEL, "the keyboard's row is not marked",
+     "\t\tif (control.SetFocused) then control:SetFocused(true) end",
+     "\t\tif (false) then control:SetFocused(true) end"),
+    (PANEL, "Tab out of the search box goes nowhere",
+     "\t\tPanel.keyboard = Panel.keyboard or 1\n\t\tPanel:MoveKeyboardFocus(IsShiftKeyDown() and -1 or 1)",
+     "\t\tPanel.keyboard = Panel.keyboard or 1"),
+    (CONTROLS, "Enter on a toggle does not flip it",
+     "\tcontrol.Activate = Flip\n\tcontrol.Nudge = Flip",
+     "\tcontrol.Nudge = Flip"),
+    # Phase 9: the three types nothing drew.
+    (RENDERER, "a colour is collected as something with no control",
+     '\t\t\tor kind == "color" or kind == "keybinding") then',
+     '\t\t\tor kind == "keybinding") then'),
+    (RENDERER, "a multiselect is one row again rather than one per value",
+     '\t\tif (kind == "multiselect") then',
+     '\t\tif (false) then'),
+    (RENDERER, "every row of a multiselect writes the same key",
+     "\t\t\t\tif (multi ~= nil) then\n\t\t\t\t\tConfig.SetValue(option, options, bound, APP, multi, newValue)",
+     "\t\t\t\tif (false) then\n\t\t\t\t\tConfig.SetValue(option, options, bound, APP, multi, newValue)"),
+    (RENDERER, "a multiselect row reads the setting rather than its own key",
+     "\t\tlocal value = Config.GetValue(option, options, bound, APP, multi) and true or false",
+     "\t\tlocal value = Config.GetValue(option, options, bound, APP) and true or false"),
+    (RENDERER, "a multiselect row is marked against the whole table",
+     "\t\t\tMarkMultiModified(control, options, bound, multi, value)",
+     "\t\t\tMarkModified(control, options, bound, value)"),
+    (RENDERER, "reverting one key of a multiselect writes the whole table",
+     "\tif (multi ~= nil) then\n\t\tif (type(default) ~= \"table\") then return end",
+     "\tif (false) then\n\t\tif (type(default) ~= \"table\") then return end"),
+    (RENDERER, "the rows of a multiselect are bound as the option's own type",
+     "\tlocal kind = (entry and entry.kind) or option.type",
+     "\tlocal kind = option.type"),
+    (RENDERER, "a colour is written as one value",
+     "\t\t\t\tConfig.SetValue(option, options, bound, APP, nr, ng, nb, na)",
+     "\t\t\t\tConfig.SetValue(option, options, bound, APP, nr)"),
+    (COMBAT, "two keys of one multiselect are one held change",
+     "\tlocal key = table_concat(path, \"\\001\")\n\tif (extra ~= nil) then key = key .. \"\\001\" .. tostring(extra) end",
+     "\tlocal key = table_concat(path, \"\\001\")"),
+    (CONTROLS, "a keybinding never listens for a key",
+     "\t\tbox:EnableKeyboard(true)\n", ""),
+    (CONTROLS, "a keybinding records the modifier key itself",
+     "\t\tif (MODIFIER_KEYS[key]) then return end", "\t\tif (false) then return end"),
+    (CONTROLS, "a keybinding keeps the keyboard after it has its key",
+     "\t\tbox:EnableKeyboard(false)\n\t\tbox:SetScript(\"OnKeyDown\", nil)",
+     "\t\tbox:SetScript(\"OnKeyDown\", nil)"),
+    (CONTROLS, "Escape on a keybinding is recorded as a binding",
+     '\t\tif (key == "ESCAPE") then\n\t\t\tcontrol:SetValue(nil)',
+     '\t\tif (false) then\n\t\t\tcontrol:SetValue(nil)'),
+    (CONTROLS, "a colour swatch does not show its alpha",
+     "\tcontrol.SetHasAlpha = function(self, hasAlpha)\n\t\tself.hasAlpha = hasAlpha and true or false",
+     "\tcontrol.SetHasAlpha = function(self, hasAlpha)\n\t\tself.hasAlpha = false"),
+    # Reported from the first in-game pass: the scale slider fought the cursor,
+    # and the Control Types page that made Phase 9 testable at all.
+    (CONTROLS, "a slider that moves itself is written while it is dragged",
+     "\t\tif (control.commitOnRelease) then\n\t\t\tcontrol:SetValue(value)",
+     "\t\tif (false) then\n\t\t\tcontrol:SetValue(value)"),
+    (CONTROLS, "a slider committed on release never commits",
+     "\t\tif (control.dragged) then\n\t\t\tcontrol.dragged = nil",
+     "\t\tif (false) then\n\t\t\tcontrol.dragged = nil"),
+    (RENDERER, "the panel scale is never told to wait for the drag to end",
+     "\t\tif (control.SetCommitOnRelease) then\n\t\t\tcontrol:SetCommitOnRelease(option.commitOnRelease and true or false)\n\t\tend\n",
+     ""),
+    (PANELOPTS, "the panel scale is applied while it is being dragged",
+     "\t\t\tcommitOnRelease = true,\n", ""),
+    (CONTROLTYPES, "the test page is visible to everybody",
+     "\t\thidden = function() return not IsDevelopment() end,\n", ""),
+    (CONTROLTYPES, "the multiselect on the test page has one key",
+     'beta = L["Beta"],\n\t\t\tgamma = L["Gamma"]', 'beta = L["Beta"]'),
+    (CONTROLTYPES, "the test page drops one of its colour shapes",
+     "\toptions.args.solid = {", "\toptions.args.solidUnused = {\n\t\thidden = true,"),
     # stubs.lua
+    (STUBS, "[stub] an edit box forgets what it was told",
+     "\t\tf.GetText = function(self) return rawget(self, \"textValue\") or \"\" end\n\t\tf.Insert",
+     "\t\tf.GetText = function(self) return \"\" end\n\t\tf.Insert"),
+    (STUBS, "[stub] a frame does not say whether it is listening for keys",
+     '\trawset(t, "IsKeyboardEnabled", function(self)\n\t\treturn rawget(self, "keyboardValue") and true or false\n\tend)',
+     '\trawset(t, "IsKeyboardEnabled", function() return false end)'),
+    (STUBS, "[stub] the popup never shows",
+     "\tlocal dialog = makeStub({ which = which, text = text })\n\tpopups[#popups + 1] = dialog\n\treturn dialog",
+     "\tlocal dialog = makeStub({ which = which, text = text })\n\tpopups[#popups + 1] = dialog\n\treturn nil"),
     (STUBS, "[stub] every string is one line tall again",
      "\t\tlocal perLine = math.max(1, math.floor(width / CHAR_W))\n"
      "\t\tlocal lines = math.max(1, math.ceil(#text / perLine))",
@@ -351,8 +574,14 @@ MUTATIONS = [
 ]
 
 
-def run():
-    p = subprocess.run([LUA, os.path.join(SP, "panel_harness.lua"), ".", SP],
+# Which harness is supposed to notice. Most of these are the panel's, but the
+# window's own edge is measured against the tooltip's real layout data, and that
+# lives in the kit harness - so a mutation can name the one that catches it.
+HARNESSES = { "panel": "panel_harness.lua", "kit": "kit_harness.lua" }
+
+
+def run(which="panel"):
+    p = subprocess.run([LUA, os.path.join(SP, HARNESSES[which]), ".", SP],
                        cwd=ADDON, capture_output=True, text=True)
     out = (p.stdout or "") + (p.stderr or "")
     for line in out.splitlines():
@@ -368,11 +597,12 @@ def failures(result):
     return int(m.group(1)) if m else -1
 
 
-baseline, out = run()
-print("baseline:", baseline)
-if failures(baseline) != 0:
-    print(out)
-    sys.exit(1)
+for which in HARNESSES:
+    baseline, out = run(which)
+    print("baseline (%s): %s" % (which, baseline))
+    if failures(baseline) != 0:
+        print(out)
+        sys.exit(1)
 
 def regenerate():
     subprocess.run([LUA, os.path.join("Tools", "BuildChangelog.lua")],
@@ -380,7 +610,10 @@ def regenerate():
 
 
 caught = 0
-for path, label, old, new in MUTATIONS:
+for mutation in MUTATIONS:
+    path, label, old, new = mutation[:4]
+    which = mutation[4] if len(mutation) > 4 else "panel"
+
     src = open(path, encoding="utf-8").read()
     if old not in src:
         print("  MISSING  %-52s (mutation text not found)" % label)
@@ -395,7 +628,7 @@ for path, label, old, new in MUTATIONS:
         open(path, "w", encoding="utf-8").write(src.replace(old, new, 1))
         if generated:
             regenerate()
-        result, _ = run()
+        result, _ = run(which)
         ok = failures(result) != 0
         caught += ok
         print("  %-8s %-52s %s" % ("caught" if ok else "SURVIVED", label, result))
@@ -405,7 +638,8 @@ for path, label, old, new in MUTATIONS:
             os.remove(f + ".bak")
 
 print("\n%d of %d mutations caught" % (caught, len(MUTATIONS)))
-after, _ = run()
-print("restored:", after)
-if failures(after) != 0:
-    sys.exit(1)
+for which in HARNESSES:
+    after, _ = run(which)
+    print("restored (%s): %s" % (which, after))
+    if failures(after) != 0:
+        sys.exit(1)

@@ -91,6 +91,12 @@ do
 	check(scroll:GetVerticalScroll() == 600, "you cannot scroll past the end",
 		scroll:GetVerticalScroll())
 
+	-- Blizzard's popup hands back the dialog it showed, and nil only when every
+	-- slot is taken. Code that refuses to act when it could not ask would look
+	-- like code that never acts if this always answered nil.
+	check(StaticPopup_Show("HARNESS_CONTRACT", "x") ~= nil,
+		"the popup hands back the dialog it showed")
+
 	local fired = 0
 	scroll:SetScript("OnVerticalScroll", function() fired = fired + 1 end)
 	scroll:SetVerticalScroll(600)
@@ -103,7 +109,7 @@ end
 section("Loading")
 for _, file in ipairs({
 	"Options/Kit/Kit.lua", "Options/Kit/Config.lua", "Options/Kit/Defaults.lua",
-	"Options/Kit/Controls.lua", "Options/Kit/Preview.lua",
+	"Options/Kit/Combat.lua", "Options/Kit/Controls.lua", "Options/Kit/Preview.lua",
 	"Options/Kit/Renderer.lua", "Options/Kit/Views.lua",
 	"Options/Changelog.lua", "Options/Kit/PanelOptions.lua",
 	"Options/Kit/Panel.lua", "Options/Kit/Gallery.lua",
@@ -2012,12 +2018,672 @@ do
 end
 
 --------------------------------------------------------------------------
+section("The window's own edge")
+--------------------------------------------------------------------------
+-- Phase 7, the half of it that is not art: the casing is drawn the way the
+-- tooltip's is, above everything the window holds, and the fill underneath it
+-- takes the alpha the slider asks for. kit_harness checks the numbers against
+-- the tooltip's own layout data; this checks what the window did with them.
+do
+	local fill = Panel.frame:GetBackdrop()
+	check(fill == Kit.WindowFill, "the window is painted with the fill backdrop")
+	check(fill and fill.edgeFile == nil,
+		"which carries no border of its own", fill and fill.edgeFile)
+
+	check(Panel.casing ~= nil, "the casing is a frame of its own")
+	check(Panel.casing and Panel.casing:GetBackdrop() == Kit.WindowCasing,
+		"drawn with the casing backdrop")
+
+	-- Above everything. A backdrop's border is on the BORDER layer of its own
+	-- frame, which puts it under every child frame the window has - the header,
+	-- the rail, the footer, a control's own inset. That is what made the border
+	-- read as something the window was drawn over.
+	local frames = {
+		Panel.contentScroll, Panel.railScroll, Panel.page.content,
+		Panel.searchBox, Panel.searchBackdrop, Panel.previewStatus, Panel.countButton
+	}
+	for _, row in ipairs(Panel.railRows) do frames[#frames + 1] = row end
+	for _, tab in ipairs(Panel.tabs or {}) do frames[#frames + 1] = tab end
+	for _, control in ipairs(Panel.page:GetControls()) do
+		frames[#frames + 1] = control.frame
+		if control.area then frames[#frames + 1] = control.area end
+		if control.revert then frames[#frames + 1] = control.revert end
+	end
+
+	local deepest = 0
+	for _, f in ipairs(frames) do
+		if f and f.GetFrameLevel then deepest = math.max(deepest, f:GetFrameLevel() or 0) end
+	end
+
+	local casingLevel = Panel.casing and Panel.casing:GetFrameLevel() or 0
+	check(#frames > 20, "there is a window's worth of frames to be above", #frames)
+	check(casingLevel > deepest, "the casing is above everything the window holds",
+		casingLevel .. " over " .. deepest)
+
+	-- A control nests several levels below its row, and a page can be rebuilt
+	-- with deeper ones than are on screen right now, so the gap is deliberately
+	-- much larger than the deepest thing measured above.
+	check(casingLevel - Panel.frame:GetFrameLevel() >= 20,
+		"with room to spare for controls that nest deeper",
+		casingLevel - Panel.frame:GetFrameLevel())
+
+	-- Raising the window moves its level, and the casing has to go with it. The
+	-- game re-levels children on a raise; Panel:Open asks for it explicitly, and
+	-- this is that ask.
+	local was = Panel.frame:GetFrameLevel()
+	Panel.frame:SetFrameLevel(was + 100)
+	Panel:RaiseCasing()
+	check(Panel.casing:GetFrameLevel() == casingLevel + 100,
+		"raising the window takes the casing with it", Panel.casing:GetFrameLevel())
+
+	-- And opening the window is where that has to be asked for: Panel:Open
+	-- raises it, which moves its level out from under the casing.
+	Panel.casing:SetFrameLevel(0)
+	Panel:Open()
+	check(Panel.casing:GetFrameLevel() > Panel.frame:GetFrameLevel() + 20,
+		"opening the window puts the casing back above it",
+		Panel.casing:GetFrameLevel() .. " over " .. Panel.frame:GetFrameLevel())
+
+	Panel.frame:SetFrameLevel(was)
+	Panel:RaiseCasing()
+
+	-- The casing hangs outside the window, so the clamp has to be told, or the
+	-- window can be dragged until its own border is off the screen.
+	local l, r, t, b = Panel.frame:GetClampRectInsets()
+	local outset = Kit.WindowOutset
+	check(l == -outset.left and r == outset.right and t == outset.top and b == -outset.bottom,
+		"the clamp knows how far the casing hangs out",
+		string.format("%s/%s/%s/%s", tostring(l), tostring(r), tostring(t), tostring(b)))
+
+	-- Untinted under every theme. Tinting this art is what turned the sculpted
+	-- bronze edge grey, and a theme that re-tinted it would undo the whole thing.
+	local _, themeOrder = Kit.GetThemeChoices()
+	for _, key in ipairs(themeOrder) do
+		Panel:SetTheme(key)
+		local cr, cg, cb, ca = Panel.casing:GetBackdropBorderColor()
+		check(cr == 1 and cg == 1 and cb == 1 and ca == 1,
+			"the casing stays untinted under " .. key,
+			string.format("%s,%s,%s,%s", tostring(cr), tostring(cg), tostring(cb), tostring(ca)))
+	end
+	Panel:SetTheme("azerite")
+
+	-- And 100% on the slider reaches the window as alpha 1.
+	Kit.SetOpacity(1)
+	Panel:ApplyTheme()
+	local _, _, _, alpha = Panel.frame:GetBackdropColor()
+	check(alpha == 1, "at 100% the fill is painted fully opaque", alpha)
+
+	Kit.SetOpacity(0.5)
+	Panel:ApplyTheme()
+	local _, _, _, half = Panel.frame:GetBackdropColor()
+	check(half and half < 0.55 and half > 0.45, "and the slider thins it out", half)
+
+	Kit.SetOpacity(1)
+	Panel:ApplyTheme()
+end
+
+--------------------------------------------------------------------------
+section("Changes made in combat")
+--------------------------------------------------------------------------
+-- Phase 10. The footer has promised since Phase 3 that settings which move or
+-- rebuild frames wait until combat ends, and until now nothing waited: the
+-- write went straight through and the line was decoration.
+do
+	local Combat = Kit.Combat
+	check(Combat ~= nil, "the combat queue exists")
+
+	check(Combat.watcher and Combat.watcher:IsEventRegistered("PLAYER_REGEN_ENABLED"),
+		"and listens for the end of combat itself, so a closed panel still applies")
+
+	local store = { enabled = false, size = 7 }
+	local ran = 0
+
+	S.modules.CombatTest = {
+		GetProfileDefaults = function() return { enabled = false, size = 3 } end
+	}
+
+	local group = {
+		name = "Combat test", type = "group", order = 1,
+		args = {
+			enabled = { name = "Combat Toggle", type = "toggle", order = 1,
+				get = function(info) return store[info[#info]] end,
+				set = function(info, value) store[info[#info]] = value end },
+			size = { name = "Combat Range", type = "range", order = 2,
+				min = 1, max = 10, step = 1,
+				get = function(info) return store[info[#info]] end,
+				set = function(info, value) store[info[#info]] = value end },
+			action = { name = "Combat Action", type = "execute", order = 3,
+				func = function() ran = ran + 1 end }
+		}
+	}
+	local combatOptions = { type = "group", args = { combat = group } }
+	Kit.Defaults.Bind(group, "CombatTest")
+
+	local content = CreateFrame("Frame", nil, UIParent)
+	content:SetWidth(600)
+
+	local combatPage = Renderer:CreatePage(content)
+	-- Wired like the real page, so the footer is reached the way it is in game.
+	combatPage.OnChanged = function(_, path) Panel:OnSettingChanged(path) end
+	combatPage:Show(combatOptions, { "combat" })
+
+	local Find = function(label)
+		for _, control in ipairs(combatPage:GetControls()) do
+			if control.labelText == label then return control end
+		end
+	end
+
+	----------------------------------------------------------------
+	-- Out of combat nothing changes
+	----------------------------------------------------------------
+	Find("Combat Toggle"):Fire(true)
+	check(store.enabled == true, "out of combat a setting is written straight away", store.enabled)
+	check(Combat:Count() == 0, "with nothing queued", Combat:Count())
+	check(Find("Combat Toggle").pending ~= true, "and no row marked as waiting")
+
+	----------------------------------------------------------------
+	-- In combat it waits
+	----------------------------------------------------------------
+	store.enabled = false
+	InCombatLockdown = function() return true end
+	combatPage:Show(combatOptions, { "combat" })
+
+	Find("Combat Toggle"):Fire(true)
+	check(store.enabled == false, "in combat the setting is not written", store.enabled)
+	check(Combat:Count() == 1, "the change is held instead", Combat:Count())
+
+	local toggle = Find("Combat Toggle")
+	check(toggle:GetValue() == true,
+		"and the control goes on showing what was chosen", toggle:GetValue())
+	check(toggle.pending == true, "the row says it is waiting")
+	check(toggle.waiting:IsShown() == true, "with the waiting mark drawn")
+
+	-- The gem reads the profile, which has not changed, so the two marks cannot
+	-- both be right. A row that is waiting says so.
+	local range = Find("Combat Range")
+	check(range.gem:IsShown() == true, "a changed setting shows its gem before it is touched")
+	range:Fire(9)
+
+	range = Find("Combat Range")
+	check(Combat:Count() == 2, "a second setting queues behind the first", Combat:Count())
+	check(range.waiting:IsShown() == true, "the row it was changed on is marked waiting")
+	check(range.gem:IsShown() == false, "and the gem stands down while it waits")
+	check(range.revert:IsShown() == true, "the revert arrow stays reachable")
+
+	-- A slider dragged across its range is one held change, not forty.
+	range:Fire(4)
+	range = Find("Combat Range")
+	check(Combat:Count() == 2, "the same setting changed again is still one held change",
+		Combat:Count())
+	check(range:GetValue() == 4, "showing the last value chosen", range:GetValue())
+
+	-- An action waits too, and does not run.
+	Find("Combat Action"):Fire(true)
+	check(ran == 0, "an execute action does not run in combat", ran)
+	check(Combat:Count() == 3, "it is held like anything else", Combat:Count())
+	check(Find("Combat Action").waiting:IsShown() == true, "and its row is marked")
+
+	-- The footer, which is the whole point of the phase.
+	check(Panel.combatText:IsShown() == true, "the footer notice is up")
+	check(Panel.combatText:GetText():find("3 changes are waiting", 1, true) ~= nil,
+		"and counts what is waiting", Panel.combatText:GetText())
+
+	-- The window's own settings are never held: they change nothing the game
+	-- protects, and holding them would be a lie in the other direction.
+	check(Combat:ShouldQueue(Kit.PanelOptions.GetTable()) == false,
+		"the panel's own settings are written in combat")
+	check(Combat:ShouldQueue(options) == true, "the addon's settings are not")
+
+	----------------------------------------------------------------
+	-- Reverting a held change
+	----------------------------------------------------------------
+	range = Find("Combat Range")
+	range.onRevert(range)
+	range = Find("Combat Range")
+	check(range:GetValue() == 3, "reverting in combat shows the default it will go back to",
+		range:GetValue())
+	check(store.size == 7, "without writing it yet", store.size)
+	check(Combat:Count() == 3, "and it is still one held change for that setting",
+		Combat:Count())
+
+	----------------------------------------------------------------
+	-- Combat ends
+	----------------------------------------------------------------
+	InCombatLockdown = function() return false end
+
+	-- Through the queue's own event handler rather than by calling the flush,
+	-- because "it happens when combat ends" is a claim about that wiring.
+	local handler = Combat.watcher:GetScript("OnEvent")
+	check(type(handler) == "function", "the queue has something to do when combat ends")
+	handler(Combat.watcher, "PLAYER_REGEN_ENABLED")
+
+	check(store.enabled == true, "the toggle lands", store.enabled)
+	check(store.size == 3, "the reverted slider lands on its default", store.size)
+	check(ran == 1, "the action runs once", ran)
+	check(Combat:Count() == 0, "and the queue is empty", Combat:Count())
+	check(Panel.combatText:IsShown() == false, "the footer notice goes away")
+
+	combatPage:Show(combatOptions, { "combat" })
+	check(Find("Combat Toggle").pending ~= true, "no row is left marked as waiting")
+
+	----------------------------------------------------------------
+	-- One bad setter must not strand the changes queued behind it
+	----------------------------------------------------------------
+	local landed = 0
+	Combat:Queue({ "combat", "bad" }, "Bad", true, true, function() error("nope") end)
+	Combat:Queue({ "combat", "good" }, "Good", true, true, function() landed = landed + 1 end)
+
+	local ok2, bad2 = Combat:Flush()
+	check(ok2 == 1 and bad2 == 1, "a setter that throws is counted and the rest still apply",
+		string.format("%d applied, %d failed", ok2, bad2))
+	check(landed == 1, "the change behind it landed", landed)
+
+	Combat:Clear()
+	Panel:UpdateCombatNotice()
+end
+
+--------------------------------------------------------------------------
+section("The keyboard")
+--------------------------------------------------------------------------
+-- Phase 12. The thing worth checking hardest is the thing that is *not* done:
+-- a shown frame with EnableKeyboard(true) receives every key the player
+-- presses, so a config window that listened while it merely happened to be
+-- open would eat the movement keys.
+do
+	Panel:SelectPage(Panel.pages[1] and Panel.pages[1].key)
+	Panel:ClearKeyboardFocus()
+
+	check(Panel:GetKeyboardFocus() == nil, "the window starts with the keyboard nowhere")
+	check(Panel.keyboardHost == nil, "and nothing listening for keys")
+
+	-- Every frame the window owns, asked directly: is anything listening?
+	local listening = 0
+	local frames = { Panel.frame, Panel.contentScroll, Panel.railScroll, Panel.page.content,
+		Panel.casing, Panel.previewStatus, Panel.countButton }
+	for _, row in ipairs(Panel.railRows) do frames[#frames + 1] = row end
+	for _, control in ipairs(Panel.page:GetControls()) do frames[#frames + 1] = control.frame end
+	for _, f in ipairs(frames) do
+		if (f and f.IsKeyboardEnabled and f:IsKeyboardEnabled()) then listening = listening + 1 end
+	end
+	check(listening == 0, "no frame of the window listens until it is asked to", listening)
+
+	----------------------------------------------------------------
+	-- Tab out of the search box is the way in
+	----------------------------------------------------------------
+	local tab = Panel.searchBox:GetScript("OnTabPressed")
+	check(type(tab) == "function", "Tab in the search box does something")
+
+	tab(Panel.searchBox)
+	local kind = Panel:GetKeyboardFocus()
+	check(kind == "rail", "Tab from the search box steps into the rail", kind)
+	check(Panel.keyboardHost ~= nil, "and something is listening now")
+	check(Panel.keyboardHost:IsKeyboardEnabled() == true, "on the row the keyboard is on")
+
+	----------------------------------------------------------------
+	-- What is taken from the game, and what is handed back
+	----------------------------------------------------------------
+	-- The stub records what SetPropagateKeyboardInput was told, because this is
+	-- a claim about exactly that call. Inside the ring, a letter searches - the
+	-- same bargain a focused edit box already makes in this game - but only the
+	-- keys the window has a use for are taken, and only while it is on.
+	local Propagated = function(key)
+		local host = Panel.keyboardHost
+		Panel:OnKey(key)
+		return host.propagateValue
+	end
+
+	check(Propagated("F1") ~= false, "a key the window has no use for reaches the game")
+	check(Propagated("F5") ~= false, "and so does another")
+
+	Panel:ClearKeyboardFocus()
+	tab(Panel.searchBox)
+	check(Propagated("TAB") == false, "Tab is taken by the window")
+
+	Panel:ClearKeyboardFocus()
+	tab(Panel.searchBox)
+	check(Propagated("ENTER") == false, "and so is Enter")
+
+	Panel:ClearKeyboardFocus()
+	tab(Panel.searchBox)
+	check(Propagated("W") == false, "a letter is taken, because it searches")
+
+	-- ...and the moment the ring is let go, every key is the game's again.
+	Panel.searchBox:SetText("")
+	Panel:ClearSearch()
+	Panel:ClearKeyboardFocus()
+	check(Panel.keyboardHost == nil, "nothing is listening once the ring is let go")
+
+	----------------------------------------------------------------
+	-- Walking the window
+	----------------------------------------------------------------
+	Panel:ClearKeyboardFocus()
+	tab(Panel.searchBox)
+
+	-- Tab is the search box's own script while the caret is in it, and the
+	-- window's OnKeyDown everywhere else, so pressing it means one of two
+	-- things depending on where the ring stands. As it does in the game.
+	local PressTab = function()
+		if (not Panel.keyboardHost) then
+			tab(Panel.searchBox)
+		else
+			Panel:OnKey("TAB")
+		end
+	end
+
+	local _, firstRow = Panel:GetKeyboardFocus()
+	Panel:OnKey("DOWN")
+	local kind2, secondRow = Panel:GetKeyboardFocus()
+	check(kind2 == "rail" and secondRow == firstRow + 1,
+		"Down moves to the next page in the rail", tostring(secondRow))
+
+	Panel:OnKey("UP")
+	local _, backRow = Panel:GetKeyboardFocus()
+	check(backRow == firstRow, "and Up moves back", tostring(backRow))
+
+	-- ...and stops there. The stop above the first rail row is the search box,
+	-- which is a different list; arrowing off the end of one into another is
+	-- not navigation, and Tab is what crosses between them.
+	Panel:OnKey("UP")
+	local kindUp, stillRow = Panel:GetKeyboardFocus()
+	check(kindUp == "rail" and stillRow == firstRow,
+		"Up at the top of the rail stays in the rail", tostring(kindUp))
+
+	-- Tab walks the whole window: the rail, then the page. Up and Down do not.
+	local seen = {}
+	for i = 1, 400 do
+		PressTab()
+		local k = Panel:GetKeyboardFocus()
+		seen[k] = (seen[k] or 0) + 1
+		if (seen.control) then break end
+	end
+	check(seen.control ~= nil, "Tab reaches the page's own controls")
+
+	-- Enter on a control does what a click does.
+	local kind3, index3 = Panel:GetKeyboardFocus()
+	check(kind3 == "control", "the keyboard is on a control", kind3)
+
+	local control = Panel.page:GetControls()[index3]
+	check(control.focused == true, "which is marked as the one the keyboard is on")
+	check(control.focusEdge:IsShown() == true, "with a mark that is drawn")
+
+	----------------------------------------------------------------
+	-- A toggle, activated and nudged with the keyboard alone
+	----------------------------------------------------------------
+	local toggle
+	for i, c in ipairs(Panel.page:GetControls()) do
+		if (c.kind == "toggle" and not c.disabled and not toggle) then toggle = { c, i } end
+	end
+
+	if (toggle) then
+		local stops = 0
+		for i = 1, 400 do
+			PressTab()
+			local k, index = Panel:GetKeyboardFocus()
+			stops = i
+			if (k == "control" and index == toggle[2]) then break end
+		end
+
+		local was = toggle[1]:GetValue()
+		Panel:OnKey("ENTER")
+		local now = Panel.page:GetControls()[toggle[2]]
+
+		check(now and now:GetValue() ~= was,
+			"Enter on a toggle changes it, as a click would", tostring(now and now:GetValue()))
+
+		-- Put it back the same way.
+		Panel:OnKey("ENTER")
+		now = Panel.page:GetControls()[toggle[2]]
+		check(now and now:GetValue() == was, "and again puts it back", tostring(now and now:GetValue()))
+		check(stops > 0, "reached by Tab alone", stops)
+	end
+
+	----------------------------------------------------------------
+	-- Typing goes to the search, and Escape hands the keyboard back
+	----------------------------------------------------------------
+	Panel.searchBox:SetText("")
+	Panel:OnKey("Z")
+	check(Panel.searchBox:GetText() == "z", "a letter typed anywhere in the ring searches",
+		Panel.searchBox:GetText())
+	check(Panel:GetKeyboardFocus() == "search", "and the keyboard follows it to the box")
+
+	Panel.searchBox:SetText("")
+	Panel:ClearSearch()
+
+	Panel:ClearKeyboardFocus()
+	tab(Panel.searchBox)
+	check(Panel:GetKeyboardFocus() ~= nil, "the ring is up again")
+
+	Panel:OnKey("ESCAPE")
+	check(Panel:GetKeyboardFocus() == nil, "Escape gives the keyboard back to the game")
+	check(Panel.keyboardHost == nil, "and nothing is left listening")
+
+	-- Closing the window must do the same, whatever the keyboard was on.
+	tab(Panel.searchBox)
+	local closing = Panel.frame:GetScript("OnHide")
+	if (closing) then closing(Panel.frame) end
+	check(Panel.keyboardHost == nil, "closing the window stops it listening too")
+
+	Panel:Open()
+end
+
+--------------------------------------------------------------------------
+section("Asking first, and refusing")
+--------------------------------------------------------------------------
+-- Phase 11. An option table can carry `confirm` and `validate`; Config has
+-- resolved both since Phase 1 and nothing called either, so Delete Profile
+-- deleted on one click and an invalid profile name was accepted in silence.
+do
+	local POPUP = "AZERITEUI_OPTIONS_CONFIRM"
+
+	local Popup = function() return S.popups[#S.popups] end
+	local Answer = function(accepted)
+		local dialog = StaticPopupDialogs[POPUP]
+		if (not dialog) then return end
+		if (accepted) then
+			if (dialog.OnAccept) then dialog.OnAccept() end
+		elseif (dialog.OnCancel) then
+			dialog.OnCancel()
+		end
+	end
+
+	local store = { armed = false, name = "ok" }
+	local ran = 0
+
+	S.modules.ConfirmTest = {
+		GetProfileDefaults = function() return { armed = false, name = "ok" } end
+	}
+
+	local group = {
+		name = "Confirm test", type = "group", order = 1,
+		args = {
+			-- Ace3 resolves a confirm function's returned string as the question.
+			armed = { name = "Armed", type = "toggle", order = 1,
+				confirm = function() return "Really do the thing?" end,
+				get = function(info) return store[info[#info]] end,
+				set = function(info, value) store[info[#info]] = value end },
+			-- `confirm = true` carries no words, so they come from name and desc.
+			generic = { name = "Generic", type = "toggle", order = 2,
+				desc = "What it does.",
+				confirm = true,
+				get = function() return false end,
+				set = function() end },
+			-- A string names a method on a handler this option does not have.
+			-- Ace3 errors; the panel asks anyway rather than act unasked.
+			broken = { name = "Broken", type = "toggle", order = 5,
+				confirm = "NoSuchMethod",
+				get = function() return false end,
+				set = function(info, value) store.brokenWritten = true end },
+			name = { name = "Name", type = "input", order = 3,
+				validate = function(info, value)
+					if (value == "") then return "That name is empty." end
+					if (value == "taken") then return false end
+					return true
+				end,
+				get = function(info) return store[info[#info]] end,
+				set = function(info, value) store[info[#info]] = value end },
+			act = { name = "Act", type = "execute", order = 4,
+				confirm = "Run it?",
+				func = function() ran = ran + 1 end }
+		}
+	}
+	local confirmOptions = { type = "group", args = { confirm = group } }
+	Kit.Defaults.Bind(group, "ConfirmTest")
+
+	local content = CreateFrame("Frame", nil, UIParent)
+	content:SetWidth(600)
+
+	local confirmPage = Renderer:CreatePage(content)
+	confirmPage:Show(confirmOptions, { "confirm" })
+
+	local Find = function(label)
+		for _, control in ipairs(confirmPage:GetControls()) do
+			if control.labelText == label then return control end
+		end
+	end
+
+	----------------------------------------------------------------
+	-- Confirming
+	----------------------------------------------------------------
+	local before = #S.popups
+
+	-- Activated rather than fired: a click flips the control *and* calls back,
+	-- so the control is already showing the new value while the question is up.
+	-- Firing alone would leave nothing for a cancel to put back, and the check
+	-- below would pass against a control that never moved.
+	Find("Armed"):Activate()
+
+	check(#S.popups == before + 1, "a setting that asks first shows the question",
+		#S.popups - before)
+	check(Popup().text == "Really do the thing?", "in the words the option gave",
+		Popup() and Popup().text)
+	check(store.armed == false, "and nothing is written while it is being asked",
+		store.armed)
+
+	check(Find("Armed"):GetValue() == true,
+		"the control shows what was clicked while the question is up",
+		Find("Armed"):GetValue())
+
+	Answer(false)
+	check(store.armed == false, "cancelling writes nothing", store.armed)
+	check(Find("Armed"):GetValue() == false,
+		"and the control goes back to what it was", Find("Armed"):GetValue())
+
+	Find("Armed"):Activate()
+	Answer(true)
+	check(store.armed == true, "accepting writes it", store.armed)
+
+	-- `confirm = true` has no words of its own, so the panel supplies them.
+	before = #S.popups
+	Find("Generic"):Fire(true)
+	check(#S.popups == before + 1, "a bare confirm still asks")
+	check(Popup().text:find("Generic", 1, true) ~= nil,
+		"and the question names the setting", Popup() and Popup().text)
+	check(Popup().text:find("What it does.", 1, true) ~= nil,
+		"and says what it does, as Ace3 words it", Popup() and Popup().text)
+	Answer(false)
+
+	-- A confirm that cannot be resolved must not become "no need to ask".
+	before = #S.popups
+	Find("Broken"):Fire(true)
+	check(#S.popups == before + 1, "a confirm that cannot be resolved still asks")
+	check(store.brokenWritten == nil, "and writes nothing meanwhile", store.brokenWritten)
+	Answer(false)
+
+	-- An action, which is what the Profiles page is mostly made of.
+	before, ran = #S.popups, 0
+	Find("Act"):Fire(true)
+	check(#S.popups == before + 1, "an action asks too")
+	check(ran == 0, "and does not run until it is answered", ran)
+	Answer(true)
+	check(ran == 1, "then runs once", ran)
+
+	-- There being no room to ask is not permission to act.
+	local realShow = StaticPopup_Show
+	StaticPopup_Show = function() return nil end
+	store.armed = false
+	Find("Armed"):Fire(true)
+	check(store.armed == false, "a question that cannot be shown writes nothing", store.armed)
+	StaticPopup_Show = realShow
+
+	----------------------------------------------------------------
+	-- Refusing
+	----------------------------------------------------------------
+	store.name = "ok"
+	confirmPage:Show(confirmOptions, { "confirm" })
+
+	Find("Name"):Fire("")
+	local nameRow = Find("Name")
+	check(store.name == "ok", "a refused value is not written", store.name)
+	check(nameRow.errorText == "That name is empty.",
+		"and the row carries the reason it was refused", nameRow.errorText)
+	check(nameRow.help:GetText() == "That name is empty.",
+		"where the help line is read", nameRow.help:GetText())
+	check(nameRow.help:IsShown() == true, "and it is drawn")
+
+	-- `false` is a refusal with no reason given, which still has to say
+	-- something rather than look like nothing happened.
+	nameRow:Fire("taken")
+	nameRow = Find("Name")
+	check(store.name == "ok", "a bare refusal is not written either", store.name)
+	check(nameRow.errorText ~= nil and nameRow.errorText ~= "",
+		"and still says something", nameRow.errorText)
+
+	nameRow:Fire("fine")
+	nameRow = Find("Name")
+	check(store.name == "fine", "an acceptable value is written", store.name)
+	check(nameRow.errorText == nil, "and the refusal is cleared", nameRow.errorText)
+
+	-- A refusal is never queued for combat: it never became a change.
+	InCombatLockdown = function() return true end
+	local queued = Kit.Combat:Count()
+	Find("Name"):Fire("")
+	check(Kit.Combat:Count() == queued, "a refused value is not held for combat either",
+		Kit.Combat:Count())
+	Kit.Combat:Clear()
+	InCombatLockdown = function() return false end
+
+	----------------------------------------------------------------
+	-- The page this was really about
+	----------------------------------------------------------------
+	-- Deleting a profile is the one click in this window that destroys
+	-- something. Driven through the real options table, on the real page.
+	local deletes = 0
+	local realDelete = ns.DeleteProfile
+	ns.DeleteProfile = function(...) deletes = deletes + 1 return realDelete(...) end
+
+	Panel:SelectPage("profiles")
+
+	local deleteRow
+	for _, control in ipairs(Panel.page:GetControls()) do
+		-- The locale stub answers with the key, so this is the shipped label.
+		if (control.labelText == "Delete") then deleteRow = control end
+	end
+
+	check(deleteRow ~= nil, "the Profiles page has its Delete button")
+	if (deleteRow) then
+		before = #S.popups
+		deleteRow:Fire(true)
+		check(#S.popups == before + 1, "deleting a profile asks first")
+		check(deletes == 0, "and deletes nothing until it is answered", deletes)
+
+		Answer(false)
+		check(deletes == 0, "cancelling keeps the profile", deletes)
+
+		deleteRow:Fire(true)
+		Answer(true)
+		check(deletes == 1, "accepting deletes it", deletes)
+	end
+
+	ns.DeleteProfile = realDelete
+	Panel:SelectPage(Panel.pages[1] and Panel.pages[1].key)
+end
+
+--------------------------------------------------------------------------
 section("A type the panel cannot draw")
 --------------------------------------------------------------------------
--- color, keybinding and multiselect have no control of ours. No page uses one
--- today, which is exactly what makes it dangerous: adding the first colour
--- picker would produce a setting that is simply not on the page, with nothing
--- to say so and nothing to error. It has to be visible instead.
+-- The trap that says so, which is all this section used to be about: color,
+-- keybinding and multiselect are drawn for real now (see the section below),
+-- so the type that has to be caught here is one nobody has thought of.
 do
 	local group = {
 		type = "group",
@@ -2025,39 +2691,349 @@ do
 		args = {
 			ordinary = { type = "toggle", name = "An ordinary toggle", order = 1,
 				get = function() return true end, set = function() end },
-			tint = { type = "color", name = "Some Colour", order = 2,
-				get = function() return 1, 1, 1, 1 end, set = function() end },
-			bind = { type = "keybinding", name = "Some Keybinding", order = 3,
-				get = function() return "" end, set = function() end },
-			many = { type = "multiselect", name = "Some Multiselect", order = 4,
-				values = function() return {} end,
-				get = function() return false end, set = function() end }
+			odd = { type = "cheese", name = "Some Cheese", order = 2,
+				get = function() return 1 end, set = function() end }
 		}
 	}
 
 	local entries = Renderer:Collect(group, group, {})
-	check(#entries == 4, "nothing is dropped on the floor", #entries)
+	check(#entries == 2, "nothing is dropped on the floor", #entries)
 
-	local named, kinds = 0, {}
+	local named = 0
 	for _, entry in ipairs(entries) do
 		if entry.unsupported then
 			named = named + 1
-			kinds[#kinds + 1] = entry.unsupported
-			check(entry.label:match(entry.unsupported) ~= nil,
-				"the line names the " .. entry.unsupported .. " type it wanted", entry.label)
+			check(entry.unsupported == "cheese",
+				"the line names the type it wanted", entry.unsupported)
+			check(entry.label:match("cheese") ~= nil,
+				"and says so where it would have been drawn", entry.label)
 		end
 	end
+	check(named == 1, "a type with no control of ours still says so", named)
 
-	table.sort(kinds)
-	check(table.concat(kinds, ",") == "color,keybinding,multiselect",
-		"each undrawable type says so", table.concat(kinds, ","))
-
-	-- And the ordinary toggle beside them is untouched.
+	-- And the ordinary toggle beside it is untouched.
 	local ordinary = 0
 	for _, entry in ipairs(entries) do
 		if entry.kind == "toggle" then ordinary = ordinary + 1 end
 	end
 	check(ordinary == 1, "a type we can draw is still drawn", ordinary)
+end
+
+--------------------------------------------------------------------------
+section("Colour, keybinding and multiselect")
+--------------------------------------------------------------------------
+-- Phase 9. No page uses any of these today, which is what made them dangerous
+-- and is also why every check here runs against a table built for the purpose.
+do
+	local store = { tint = { 1, 1, 1, 1 }, bind = nil, many = { alpha = true, beta = false } }
+
+	S.modules.TypesTest = {
+		GetProfileDefaults = function()
+			return { tint = { 1, 1, 1, 1 }, bind = nil, many = { alpha = true, beta = false } }
+		end
+	}
+
+	local group = {
+		name = "Types test", type = "group", order = 1,
+		args = {
+			tint = { name = "Tint", type = "color", order = 1, hasAlpha = true,
+				get = function() return store.tint[1], store.tint[2], store.tint[3], store.tint[4] end,
+				set = function(info, r, g, b, a) store.tint = { r, g, b, a } end },
+			bind = { name = "Bind", type = "keybinding", order = 2,
+				get = function() return store.bind end,
+				set = function(info, value) store.bind = value end },
+			many = { name = "Many", type = "multiselect", order = 3,
+				values = { alpha = "Alpha", beta = "Beta" },
+				get = function(info, key) return store.many[key] end,
+				set = function(info, key, value) store.many[key] = value end }
+		}
+	}
+	local typeOptions = { type = "group", args = { types = group } }
+	Kit.Defaults.Bind(group, "TypesTest")
+
+	local content = CreateFrame("Frame", nil, UIParent)
+	content:SetWidth(600)
+
+	local typePage = Renderer:CreatePage(content)
+	typePage:Show(typeOptions, { "types" })
+
+	local Find = function(label)
+		for _, control in ipairs(typePage:GetControls()) do
+			if control.labelText == label then return control end
+		end
+	end
+
+	local kinds = {}
+	for _, control in ipairs(typePage:GetControls()) do
+		kinds[control.kind] = (kinds[control.kind] or 0) + 1
+	end
+
+	check(kinds.color == 1, "a colour setting draws a colour control", kinds.color)
+	check(kinds.keybinding == 1, "a keybinding setting draws a keybinding control",
+		kinds.keybinding)
+
+	----------------------------------------------------------------
+	-- Colour
+	----------------------------------------------------------------
+	local tint = Find("Tint")
+	local r, g, b, a = tint:GetValue()
+	check(r == 1 and g == 1 and b == 1 and a == 1, "the swatch reads the setting's colour",
+		string.format("%s,%s,%s,%s", tostring(r), tostring(g), tostring(b), tostring(a)))
+	check(tint.hasAlpha == true, "and knows it has an alpha to show")
+
+	-- Four values out of the picker, four values into the setter.
+	tint:Fire(0.2, 0.4, 0.6, 0.8)
+	check(store.tint[1] == 0.2 and store.tint[4] == 0.8,
+		"a colour is written as four values, not one",
+		table.concat({ tostring(store.tint[1]), tostring(store.tint[4]) }, ","))
+
+	tint = Find("Tint")
+	check(tint.modified == true, "and the row is marked as changed", tint.modified)
+
+	-- Held for combat, a colour has to come back as a colour.
+	InCombatLockdown = function() return true end
+	Find("Tint"):Fire(0.9, 0.1, 0.1, 1)
+	local heldTint = Find("Tint")
+	local hr, _, _, ha = heldTint:GetValue()
+	check(store.tint[1] == 0.2, "a colour changed in combat is not written yet", store.tint[1])
+	check(hr == 0.9 and ha == 1, "but the swatch shows what was chosen",
+		string.format("%s,%s", tostring(hr), tostring(ha)))
+	Kit.Combat:Clear()
+	InCombatLockdown = function() return false end
+
+	----------------------------------------------------------------
+	-- Keybinding
+	----------------------------------------------------------------
+	typePage:Show(typeOptions, { "types" })
+
+	local bind = Find("Bind")
+	check(bind.text:GetText() ~= "", "an unbound keybinding says so rather than being blank",
+		bind.text:GetText())
+
+	local listen = bind.box:GetScript("OnClick")
+	check(type(listen) == "function", "clicking a keybinding does something")
+
+	listen(bind.box)
+	check(bind.listening == true, "it listens for the next key")
+	check(bind.box:IsKeyboardEnabled() == true, "and takes the keyboard while it does")
+
+	local record = bind.box:GetScript("OnKeyDown")
+	record(bind.box, "LSHIFT")
+	check(bind.listening == true, "a modifier on its own is not a binding")
+
+	record(bind.box, "F")
+	check(store.bind == "F", "the key pressed becomes the binding", store.bind)
+
+	bind = Find("Bind")
+	check(bind.listening ~= true, "and it stops listening once it has one")
+	check(bind.box:IsKeyboardEnabled() == false, "handing the keyboard back",
+		bind.box:IsKeyboardEnabled())
+	check(bind.text:GetText() == "F", "the button shows the binding", bind.text:GetText())
+
+	-- Escape clears it, which is the only way to unbind.
+	listen(bind.box)
+	bind.box:GetScript("OnKeyDown")(bind.box, "ESCAPE")
+	check(store.bind == nil, "Escape clears the binding", tostring(store.bind))
+
+	----------------------------------------------------------------
+	-- Multiselect
+	----------------------------------------------------------------
+	typePage:Show(typeOptions, { "types" })
+
+	local alpha, beta = Find("Alpha"), Find("Beta")
+	check(alpha ~= nil and beta ~= nil, "a multiselect draws one row per value")
+	check(alpha.kind == "toggle" and beta.kind == "toggle", "each of them a toggle")
+
+	local heading = 0
+	for _, control in ipairs(typePage:GetControls()) do
+		if (control.kind == "header" and control.labelText == "Many") then heading = heading + 1 end
+	end
+	check(heading == 1, "under a heading naming the setting they belong to", heading)
+
+	check(alpha:GetValue() == true and beta:GetValue() == false,
+		"each row reads its own key")
+
+	beta:Fire(true)
+	check(store.many.beta == true, "and writes its own key", tostring(store.many.beta))
+	check(store.many.alpha == true, "without touching the others", tostring(store.many.alpha))
+
+	beta = Find("Beta")
+	check(beta.modified == true, "a key that differs from its default is marked", beta.modified)
+	check(Find("Alpha").modified == false, "and one that does not, is not")
+
+	-- Reverting one key puts that key back, not the whole table.
+	store.many.alpha = false
+	typePage:Show(typeOptions, { "types" })
+	local row = Find("Alpha")
+	row.onRevert(row)
+	check(store.many.alpha == true, "reverting one key restores that key",
+		tostring(store.many.alpha))
+	check(store.many.beta == true, "and leaves the others alone", tostring(store.many.beta))
+
+	-- Two keys of one setting changed in combat are two held changes, not one
+	-- that overwrote the other.
+	store.many.alpha, store.many.beta = true, false
+	typePage:Show(typeOptions, { "types" })
+
+	InCombatLockdown = function() return true end
+	Kit.Combat:Clear()
+
+	Find("Alpha"):Fire(false)
+	Find("Beta"):Fire(true)
+	check(Kit.Combat:Count() == 2, "two keys of one setting are two held changes",
+		Kit.Combat:Count())
+	check(Find("Alpha"):GetValue() == false and Find("Beta"):GetValue() == true,
+		"each showing its own choice")
+
+	InCombatLockdown = function() return false end
+	Kit.Combat:Flush()
+	check(store.many.alpha == false and store.many.beta == true,
+		"and both land when combat ends",
+		tostring(store.many.alpha) .. "," .. tostring(store.many.beta))
+
+	Kit.Combat:Clear()
+end
+
+--------------------------------------------------------------------------
+section("Dragging a slider")
+--------------------------------------------------------------------------
+-- Reported from the first in-game pass: dragging Panel Scale fought the cursor.
+-- Applying a scale rescales the window, so the track slides out from under the
+-- cursor mid-drag, the knob chases it, and the value runs away. Those settings
+-- commit once, on release. Everything else still writes as it is dragged, which
+-- is what makes a preview-while-you-drag work at all.
+do
+	local store = { live = 5, deferred = 5 }
+
+	S.modules.DragTest = {
+		GetProfileDefaults = function() return { live = 5, deferred = 5 } end
+	}
+
+	local group = {
+		name = "Drag test", type = "group", order = 1,
+		args = {
+			live = { name = "Live", type = "range", order = 1, min = 0, max = 10, step = 1,
+				get = function(info) return store[info[#info]] end,
+				set = function(info, value) store[info[#info]] = value end },
+			deferred = { name = "Deferred", type = "range", order = 2, min = 0, max = 10, step = 1,
+				commitOnRelease = true,
+				get = function(info) return store[info[#info]] end,
+				set = function(info, value) store[info[#info]] = value end }
+		}
+	}
+	local dragOptions = { type = "group", args = { drag = group } }
+	Kit.Defaults.Bind(group, "DragTest")
+
+	local content = CreateFrame("Frame", nil, UIParent)
+	content:SetWidth(600)
+
+	local dragPage = Renderer:CreatePage(content)
+	dragPage:Show(dragOptions, { "drag" })
+
+	local Find = function(label)
+		for _, control in ipairs(dragPage:GetControls()) do
+			if control.labelText == label then return control end
+		end
+	end
+
+	-- A drag is mouse down, some movement, mouse up. The stub's cursor sits at a
+	-- fixed point, so the value it lands on is whatever the track's geometry
+	-- gives - which is fine: what is being checked is *when* it is written.
+	local Drag = function(control)
+		local down = control.input:GetScript("OnMouseDown")
+		local up = control.input:GetScript("OnMouseUp")
+		local track = control.input:GetScript("OnUpdate")
+
+		down(control.input)
+		track = control.input:GetScript("OnUpdate")
+		if (track) then track(control.input) end
+
+		return function() up(control.input) end
+	end
+
+	local live = Find("Live")
+	check(live ~= nil and live.commitOnRelease ~= true,
+		"an ordinary slider writes as it is dragged")
+
+	local release = Drag(live)
+	check(store.live ~= 5, "which it does before the button is let go", store.live)
+	release()
+
+	local deferred = Find("Deferred")
+	check(deferred ~= nil and deferred.commitOnRelease == true,
+		"a slider that moves itself is marked to wait")
+
+	local was = store.deferred
+	release = Drag(deferred)
+
+	check(store.deferred == was, "nothing is written while it is being dragged", store.deferred)
+	check(deferred:GetValue() ~= was,
+		"but the knob and the number still follow the cursor", deferred:GetValue())
+
+	local moved = deferred:GetValue()
+	release()
+	check(store.deferred == moved, "and the value is written once, on release", store.deferred)
+
+	-- The real one this was reported against.
+	local scale = Kit.PanelOptions.GetTable().args.appearance.args.scale
+	check(scale.commitOnRelease == true, "Panel Scale is one of them")
+	check(scale.step == 0.01, "and moves in single percents", scale.step)
+
+	local opacity = Kit.PanelOptions.GetTable().args.appearance.args.opacity
+	check(opacity.step == 0.01, "so does Background Opacity", opacity.step)
+	check(opacity.commitOnRelease ~= true,
+		"which still writes as it is dragged, because it does not move the window")
+end
+
+--------------------------------------------------------------------------
+section("The Control Types page")
+--------------------------------------------------------------------------
+-- The page that exists so these three can be tested in the game at all. It is
+-- hidden unless Development Mode is on, which means the rest of this harness
+-- never renders it - so it is rendered here deliberately, on the real options
+-- table, with the flag set.
+do
+	local PAGE = "Control Types"
+
+	local listed = function()
+		for _, entry in ipairs(Panel.pages or {}) do
+			if (entry.key == PAGE) then return true end
+		end
+		return false
+	end
+
+	ns.db.global.enableDevelopmentMode = nil
+	Panel:BuildRail()
+	check(listed() == false, "the page is not in the rail without Development Mode")
+
+	ns.db.global.enableDevelopmentMode = true
+	Panel:BuildRail()
+	check(listed() == true, "and is there with it")
+
+	Panel:SelectPage(PAGE)
+
+	local kinds = {}
+	for _, control in ipairs(Panel.page:GetControls()) do
+		kinds[control.kind] = (kinds[control.kind] or 0) + 1
+	end
+
+	check((kinds.color or 0) == 2, "it draws both shapes of colour setting", kinds.color)
+	check((kinds.keybinding or 0) == 1, "and a keybinding", kinds.keybinding)
+	check((kinds.toggle or 0) == 3, "and the multiselect's three keys as toggles", kinds.toggle)
+
+	-- The report line reads every one of them back, so a broken getter shows up
+	-- here rather than as a blank row in the game.
+	local report
+	for _, control in ipairs(Panel.page:GetControls()) do
+		if (control.kind == "description" and (control.labelText or ""):find("Keybinding", 1, true)) then
+			report = control.labelText
+		end
+	end
+	check(report ~= nil, "and says back what it is holding", report)
+
+	ns.db.global.enableDevelopmentMode = nil
+	Panel:BuildRail()
+	Panel:SelectPage(Panel.pages[1] and Panel.pages[1].key)
 end
 
 --------------------------------------------------------------------------

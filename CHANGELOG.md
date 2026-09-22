@@ -10,6 +10,31 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.9.0-JuNNeZ (2026-09-22) - A Solid Window, a Combat Queue and Settings That Ask First
+
+### Highlights
+
+- **The options window is solid, and its border is where a border should be.** The background is fully opaque at 100% and thins out smoothly on the slider, which now moves a percent at a time rather than in five-percent notches. The sculpted edge is drawn the way AzeriteUI draws its own tooltips - same art, same weight, untinted - and it sits above everything the window holds, so no part of the header, list or footer is drawn over it any more.
+- **Settings changed in combat now really do wait for combat to end.** The footer has promised this for several releases while the change went through immediately. It is a queue now: the setting keeps the value you chose, the row is marked, the footer counts what is waiting, and everything is applied the moment you leave combat - even if you closed the window in the meantime. The window's own appearance settings still apply at once, because they change nothing the game protects.
+- **Deleting a profile asks first.** Delete Profile, Reset and importing settings each destroyed or overwrote something on a single click in the new window, with nothing asked. All three now confirm first, as they always did in the old dialog.
+- **A setting that refuses a value says why.** Naming a new profile with an empty or duplicate name used to do nothing at all. The row now explains the refusal where its help text sits, and clears it as soon as the setting accepts what you typed.
+- **The window can be driven from the keyboard.** Click the search box and press Tab to start: Tab and Shift-Tab move between settings, the arrows move within the list, Left and Right change a value, Enter does what a click does, typing searches, and Escape hands the keyboard back. Nothing is captured until you ask for it, so your movement and action keys keep working while the window is merely open.
+- **Panel Scale no longer fights the cursor.** Dragging it rescaled the window under your mouse, so the slider slid away from the cursor and the value ran off. It now applies when you let go, while the slider itself still follows the cursor.
+
+### Development
+
+- **Measured the border art instead of guessing at it.** The sculpted rim sits one to ten pixels into a side edge and eleven to nineteen into the top or bottom, which is why the old drawing let the background show past it. The casing now hangs outside the window by the same offsets the addon's tooltips use, with the fill tucked underneath, and the offline checks compare the panel's numbers against the tooltip's own layout data so the two cannot drift apart. The window's fill was also moved off Blizzard's tooltip background texture, whose opacity is not ours to control, onto one that takes exactly the alpha the slider asks for.
+- **Built the confirmation and refusal handling against the Ace3 library's own source** rather than from an idea of how those fields work, because a text string in either of them means something different from what it looks like. Two cases deliberately fail safe: a confirmation the panel cannot work out is still asked, and a question that cannot be shown changes nothing.
+- **Added the three control types no setting in this addon uses yet** - a colour swatch that opens the game's own picker, a keybinding button, and a multi-choice setting drawn as one toggle per option - together with a page to test them on, which appears only with Development Mode enabled. Adding any of these to a real settings page will now draw a working control instead of a blank space.
+- **Extended the offline checks to 527 for the panel and 186 deliberately broken versions**, covering the border's layering, the combat queue, the keyboard, confirmations and refusals, the new control types and slider dragging. Five separate faults in the test scaffolding itself were found and fixed along the way, including one that had made every slider drag untestable. None of this emulates rendering, taint or protected execution in the game.
+
+### Access and known limits
+
+- Tested in game on Retail, over a written checklist covering the window, the combat queue, confirmations, the keyboard, previews and a regression sweep. **Not yet tested on Forever**, and the new control types have not been exercised in game since the page for them was added.
+- A change queued during combat is not saved anywhere until it is applied, so reloading the interface mid-combat discards it.
+- Typing to search works while the keyboard is being used to walk the window, which is also when letters stop reaching the game, exactly as they do when any text box has focus. Press Escape to hand the keyboard back.
+- Each theme still wears the same bronze casing; per-theme, per-class and per-race window art remains deferred.
+
 ## 5.8.0-JuNNeZ (2026-09-22) - Quick Start, Truer Previews and Chattynator
 
 ### Highlights

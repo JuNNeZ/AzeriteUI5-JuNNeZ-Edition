@@ -4,8 +4,10 @@ local M = {}
 --------------------------------------------------------------------------
 -- Widget / frame stubs
 --------------------------------------------------------------------------
+-- GetFrameLevel is deliberately not here: it is recorded per frame below, so
+-- there is one answer to it rather than a constant and a record.
 local numberMethods = {
-	GetFrameLevel = 3, GetWidth = 200, GetHeight = 24, GetStringHeight = 12,
+	GetWidth = 200, GetHeight = 24, GetStringHeight = 12,
 	GetVerticalScrollRange = 0, GetVerticalScroll = 0, GetNumPoints = 1,
 	GetScale = 1, GetEffectiveScale = 1, GetTop = 100, GetLeft = 100,
 	GetRight = 300, GetBottom = 50, GetAlpha = 1
@@ -110,6 +112,77 @@ local visibility = function(t)
 		rawset(self, "borderColor", { r, g, b, a })
 		return self
 	end)
+	rawset(t, "GetBackdropBorderColor", function(self)
+		local c = rawget(self, "borderColor")
+		if not c then return nil end
+		return c[1], c[2], c[3], c[4]
+	end)
+
+	-- Which backdrop a frame was given, so a check about the art it is drawn
+	-- with is reading the frame rather than the table it was read from.
+	rawset(t, "SetBackdrop", function(self, backdrop)
+		rawset(self, "backdropInfo", backdrop)
+		return self
+	end)
+	rawset(t, "GetBackdrop", function(self) return rawget(self, "backdropInfo") end)
+
+	-- Frame levels, because "the casing is above everything the window draws"
+	-- is a claim about levels and nothing else. A flat 3 for every frame made
+	-- that claim untestable: every answer was the same number.
+	--
+	-- A child starts one level above its parent, as in the game; CreateFrame
+	-- sets that from the parent it is given.
+	rawset(t, "SetFrameLevel", function(self, level)
+		rawset(self, "levelValue", level)
+		return self
+	end)
+	rawset(t, "GetFrameLevel", function(self) return rawget(self, "levelValue") or 3 end)
+
+	-- Whether a frame is listening for keys, and whether it hands the key it is
+	-- handling back to the game. Both were no-op setters, which made "the
+	-- options window does not eat the movement keys" a claim nothing could
+	-- check - and that claim is the whole design of its keyboard handling.
+	rawset(t, "EnableKeyboard", function(self, enabled)
+		rawset(self, "keyboardValue", enabled and true or false)
+		return self
+	end)
+	rawset(t, "IsKeyboardEnabled", function(self)
+		return rawget(self, "keyboardValue") and true or false
+	end)
+	rawset(t, "SetPropagateKeyboardInput", function(self, propagate)
+		rawset(self, "propagateValue", propagate and true or false)
+		return self
+	end)
+
+	-- How far a frame's clamp reaches past its own rect. The options window's
+	-- casing hangs outside it, and "the clamp was told about it" is a claim
+	-- about these four numbers.
+	rawset(t, "SetClampRectInsets", function(self, l, r, tp, b)
+		rawset(self, "clampInsets", { l, r, tp, b })
+		return self
+	end)
+	rawset(t, "GetClampRectInsets", function(self)
+		local c = rawget(self, "clampInsets")
+		if not c then return nil end
+		return c[1], c[2], c[3], c[4]
+	end)
+
+	-- Which events a frame asked for. Nothing here fires them; the harness calls
+	-- the handler itself, and this is how it can tell that the frame would have
+	-- been called at all.
+	rawset(t, "RegisterEvent", function(self, event)
+		local events = rawget(self, "registeredEvents")
+		if not events then
+			events = {}
+			rawset(self, "registeredEvents", events)
+		end
+		events[event] = true
+		return self
+	end)
+	rawset(t, "IsEventRegistered", function(self, event)
+		local events = rawget(self, "registeredEvents")
+		return (events and events[event]) and true or false
+	end)
 
 	rawset(t, "SetScale", function(self, s) rawset(self, "scaleValue", s) return self end)
 	rawset(t, "GetScale", function(self) return rawget(self, "scaleValue") or 1 end)
@@ -170,9 +243,37 @@ end
 local created = {}
 function CreateFrame(frameType, name, parent, template)
 	local f = makeStub({ frameType = frameType, name = name })
+
+	-- One above its parent, as the game does it.
+	if parent and parent.GetFrameLevel then
+		rawset(f, "levelValue", (parent:GetFrameLevel() or 0) + 1)
+	end
 	f.SetScript = function(self, script, handler) self.scripts[script] = handler return self end
 	f.GetScript = function(self, script) return self.scripts[script] end
 	f.HookScript = f.SetScript
+
+	-- An EditBox remembers what it was told, and whether it has the caret.
+	--
+	-- Until the panel could be driven from the keyboard nothing asked a box
+	-- what it held - the search ran from a string passed straight to
+	-- ShowResults - so SetText was a no-op and GetText answered "". A key that
+	-- types into the search box could then be checked only against the stub.
+	if frameType == "EditBox" then
+		f.SetText = function(self, text)
+			rawset(self, "textValue", text or "")
+			local handler = self.scripts["OnTextChanged"]
+			if handler then handler(self, false) end
+			return self
+		end
+		f.GetText = function(self) return rawget(self, "textValue") or "" end
+		f.Insert = function(self, text)
+			return self:SetText((rawget(self, "textValue") or "") .. (text or ""))
+		end
+
+		f.SetFocus = function(self) rawset(self, "focusValue", true) return self end
+		f.ClearFocus = function(self) rawset(self, "focusValue", false) return self end
+		f.HasFocus = function(self) return rawget(self, "focusValue") and true or false end
+	end
 
 	-- A ScrollFrame remembers where it is, and tells its handler when it moves.
 	--
@@ -227,6 +328,13 @@ UISpecialFrames = {}
 GameTooltip = makeStub()
 function PlaySound() end
 function InCombatLockdown() return false end
+
+-- A cursor at a fixed point, which with the stub's GetLeft/GetWidth puts it at
+-- the right-hand end of a slider's track. Without this, every drag in this
+-- harness computed a value from a nil cursor and quietly did nothing, so the
+-- whole drag path - including which settings write while they are dragged -
+-- could not be tested at all.
+function GetCursorPosition() return 300, 200 end
 function wipe(t) for k in pairs(t) do t[k] = nil end return t end
 C_AddOns = { GetAddOnMetadata = function() return "5.4.13-JuNNeZ" end }
 SEARCH = "Search"
@@ -236,7 +344,17 @@ function CreateColorFromHexString() return { WrapTextInColorCode = function(_, s
 WHITE_FONT_COLOR = CreateColorFromHexString()
 function ReloadUI() end
 StaticPopupDialogs = {}
-function StaticPopup_Show() end
+
+-- Blizzard's popup hands back the dialog frame it showed, or nil when every
+-- slot is taken. A stub that always answered nil would make "there was no room
+-- to ask" the normal case, which is the opposite of the game, and code that
+-- refuses to act when it cannot ask would then look like code that never acts.
+local popups = {}
+function StaticPopup_Show(which, text)
+	local dialog = makeStub({ which = which, text = text })
+	popups[#popups + 1] = dialog
+	return dialog
+end
 function geterrorhandler() return function(msg) error(msg, 0) end end
 
 -- Globals the real option pages reach for.
@@ -510,6 +628,7 @@ setmetatable(_G, {
 })
 
 M.ns, M.Addon, M.load = ns, Addon, load
+M.popups = popups
 M.registeredWidgets = registeredWidgets
 M.AceGUI, M.AceConfigDialog, M.AceConfigRegistry = AceGUI, AceConfigDialog, AceConfigRegistry
 M.optionsTables, M.modules = optionsTables, modules

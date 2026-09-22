@@ -25,10 +25,12 @@ local Controls = Kit.Controls
 if (not Config or not Controls) then return end
 
 -- Lua API
-local ipairs = ipairs
+local ipairs, pairs = ipairs, pairs
+local table_sort = table.sort
 local max = math.max
 local pcall = pcall
 local string_format = string.format
+local string_match = string.match
 local tonumber, tostring, type = tonumber, tostring, type
 
 local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
@@ -90,6 +92,22 @@ local MarkModified = function(control, options, path, current)
 	control:SetModified(modified)
 end
 
+-- The same, for one key of a multiselect: the default is the key's own entry
+-- in the setting's default table, and an absent table means no gem rather than
+-- a guess.
+local MarkMultiModified = function(control, options, path, multi, current)
+	local Defaults = Kit.Defaults
+	local default = Defaults and Defaults.Get(options, path)
+
+	if (type(default) ~= "table") then
+		control:SetOnRevert(nil)
+		control:SetModified(false)
+		return
+	end
+
+	control:SetModified((default[multi] and true or false) ~= (current and true or false))
+end
+
 -- A change is previewed before the page rebuilds and releases the control that
 -- made it. Unbound settings (profiles and the panel's own appearance) simply
 -- return false from Preview.Request and leave no trace.
@@ -108,9 +126,208 @@ local NotifyChanged = function(page, path)
 	end
 end
 
-local Bind = function(control, option, options, path, page)
+--------------------------------------------------------------------------
+-- Writing
+--------------------------------------------------------------------------
+-- One write, held until combat ends when it has to be. Kit.Combat owns the
+-- rule and the queue; the renderer only asks, and reads back what is waiting so
+-- a control can go on showing the value that was chosen.
+--
+-- `value` is what the control should show until the write happens. An execute
+-- action has none, which is what `hasValue` distinguishes from a pending false.
+local Write = function(options, path, label, value, hasValue, apply, extra)
+	local Combat = Kit.Combat
+	if (Combat and Combat:ShouldQueue(options)) then
+		return Combat:Queue(path, label, value, hasValue, apply, extra)
+	end
+
+	apply()
+	return false
+end
+
+-- The change waiting on this setting, if any.
+local Held = function(path, extra)
+	local Combat = Kit.Combat
+	return (Combat and Combat:Peek(path, extra)) or nil
+end
+
+--------------------------------------------------------------------------
+-- Refusing, and asking first
+--------------------------------------------------------------------------
+-- An option table can carry `validate` and `confirm`, and until Phase 11 this
+-- panel read neither. `Config` has resolved both since Phase 1; nothing called
+-- them. That is not cosmetic on the two pages most certain to be visited:
+-- Delete Profile deleted, Reset reset, and Import overwrote the active profile,
+-- each on a single click with nothing asked.
+--
+-- Both follow `AceConfigDialog-3.0.lua:700-830` rather than an idea of what
+-- they ought to mean. In particular a *string* `confirm` or `validate` is the
+-- name of a method on the option's handler, not the text to show; the text
+-- comes from what that method returns. Config resolves that part already.
+--
+-- Ace3's own wording for a refusal that gave no reason: the setting's name,
+-- then what it wanted.
+local Reason = function(option, label)
+	label = label or ""
+
+	if (type(option.usage) == "string") then
+		return label .. ": " .. option.usage
+	end
+	if (type(option.pattern) == "string") then
+		return string_format(L["%s: expected %s"], label, option.pattern)
+	end
+	return string_format(L["%s: invalid value"], label)
+end
+
+-- Nothing, or the reason this value cannot be used. An execute never reaches
+-- here: Ace3 does not validate one, because there is no value to validate.
+local Refusal = function(option, options, path, label, value)
+	if (option.type == "input" and type(option.pattern) == "string") then
+		if (type(value) ~= "string" or not string_match(value, option.pattern)) then
+			return Reason(option, label)
+		end
+	end
+
+	if (option.validate == nil) then return end
+
+	local ok, result = pcall(Config.Validate, option, options, path, APP, value)
+
+	-- A validate that could not be resolved is a refusal, not a pass. Ace3
+	-- errors outright here; throwing out of a click in this window would be
+	-- worse than refusing the value and saying so on the row.
+	if (not ok) then return Reason(option, label) end
+
+	if (type(result) == "string") then return result end
+	if (not result) then return Reason(option, label) end
+end
+
+-- The question to ask before a change, or nothing.
+local Question = function(option, options, path, label, value)
+	if (option.confirm == nil) then return end
+
+	local ok, result = pcall(Config.GetConfirm, option, options, path, APP, value)
+
+	-- Same direction as above, for the same reason: not being able to work out
+	-- whether to ask is not permission to go ahead without asking.
+	if (not ok) then
+		return string_format(L["Are you sure you want to change %s?"], label or "")
+	end
+
+	if (type(result) == "string") then return result end
+	if (not result) then return end
+
+	-- `confirm = true` carries no words, so Ace3 builds them from the setting's
+	-- own name and description, unless the option spells them out.
+	if (type(option.confirmText) == "string") then return option.confirmText end
+
+	local desc = Config.GetDesc(option, options, path, APP)
+	if (type(desc) == "string" and desc ~= "") then
+		return (label or "") .. " - " .. desc
+	end
+	return string_format(L["Are you sure you want to change %s?"], label or "")
+end
+
+-- Putting one setting back is a write like any other, so in combat it waits
+-- like any other. What is held is the default value, so the row shows what it
+-- is going back to rather than the value still sitting in the profile.
+local RevertOne = function(options, path, label, page, multi)
+	local Defaults = Kit.Defaults
+	if (not Defaults) then return end
+
+	local default = Defaults.Get(options, path)
+
+	-- One key of a multiselect goes back to its own key's default, inside the
+	-- setting's default table, not to the whole table.
+	if (multi ~= nil) then
+		if (type(default) ~= "table") then return end
+
+		local want = default[multi] and true or false
+		local group = Config.GetGroup(options, path)
+		if (type(group) ~= "table") then return end
+
+		local Apply = function() Config.SetValue(group, options, path, APP, multi, want) end
+
+		local Combat = Kit.Combat
+		if (Combat and Combat:ShouldQueue(options)) then
+			Combat:Queue(path, label, want, true, Apply, multi)
+		else
+			Apply()
+		end
+
+		PreviewChange(options, path, label)
+		NotifyChanged(page, path)
+		page:Refresh()
+		return
+	end
+
+	local Combat = Kit.Combat
+	if (Combat and Combat:ShouldQueue(options)) then
+		if (default == nil) then return end
+
+		Combat:Queue(path, label, default, true, function()
+			Defaults.Revert(options, path)
+		end)
+
+	elseif (not Defaults.Revert(options, path)) then
+		return
+	end
+
+	PreviewChange(options, path, label)
+	NotifyChanged(page, path)
+	page:Refresh()
+end
+
+-- One change, from a control somebody has just used. Everything that writes a
+-- setting goes through here, in this order:
+--
+--   refuse it          - `validate` said no, so the row says why and nothing is
+--                        written, not even queued
+--   ask first          - `confirm` said so, and the answer decides
+--   write or hold it   - Kit.Combat decides which
+--   preview and report - the glow, the gems, the counts, the page
+--
+-- Asking is not synchronous: the popup answers later, which is why the write
+-- lives in the callback and a cancel refreshes the page. A control has already
+-- drawn the value you clicked by the time the question appears, and the refresh
+-- is what puts it back.
+local Commit = function(control, option, options, path, label, page, value, hasValue, apply, preview, extra)
+	if (hasValue) then
+		local refusal = Refusal(option, options, path, label, value)
+		if (refusal) then
+			control:SetError(refusal)
+			page:Layout()
+			return false
+		end
+	end
+	control:SetError(nil)
+
+	local Finish = function()
+		Write(options, path, label, value, hasValue, apply, extra)
+		if (preview) then PreviewChange(options, path, label) end
+		NotifyChanged(page, path)
+		page:Refresh()
+	end
+
+	local question = Question(option, options, path, label, value)
+	if (question) then
+		Kit.Confirm(question, Finish, function() page:Refresh() end)
+		return false
+	end
+
+	Finish()
+	return true
+end
+
+-- `entry` is the row this control is being bound for, which for a multiselect
+-- is one of several sharing an option and a path. Its own value key travels as
+-- `multi`: an extra argument to get and set, part of the queue's key, and the
+-- label the row is drawn with.
+local Bind = function(control, option, options, path, page, entry)
 	local bound = Copy(path)
-	local label = AsString(Config.GetName(option, options, path, APP), "")
+	local multi = entry and entry.multi
+
+	local label = (entry and entry.label)
+		or AsString(Config.GetName(option, options, path, APP), "")
 
 	control:SetLabel(label)
 
@@ -122,34 +339,57 @@ local Bind = function(control, option, options, path, page)
 	local disabled = Config.IsDisabled(option, options, bound, APP)
 	control:SetDisabled(disabled and true or false)
 
-	local kind = option.type
+	-- The row's kind, not the option's: one multiselect is drawn as a run of
+	-- toggles, and each of those rows is a toggle however the option describes
+	-- itself.
+	local kind = (entry and entry.kind) or option.type
+
+	-- What this setting has waiting for combat to end, if anything. Read once:
+	-- the control shows the held value, and the gem goes on reading the profile,
+	-- because nothing has been written there yet.
+	local held = Held(bound, multi)
+	control:SetPending(held and true or false)
 
 	if (kind == "execute") then
 		control:SetText(AsString(Config.GetName(option, options, path, APP), ""))
+		-- No preview: an action is not one setting and has no frame of its own.
+		-- It is still reported, because an action held for combat has to reach
+		-- the footer's count, and one that ran may have changed any number of
+		-- settings on this page.
 		control:SetCallback(function()
-			Config.Execute(option, options, bound, APP)
-			page:Refresh()
+			Commit(control, option, options, bound, label, page, nil, false, function()
+				Config.Execute(option, options, bound, APP)
+			end, false)
 		end)
 		return
 	end
 
 	if (kind == "toggle") then
-		local value = Config.GetValue(option, options, bound, APP) and true or false
+		local value = Config.GetValue(option, options, bound, APP, multi) and true or false
+
+		if (multi ~= nil) then
+			-- One key of a multiselect. Its default lives inside the setting's
+			-- own default table, under the same key.
+			MarkMultiModified(control, options, bound, multi, value)
+		else
+			MarkModified(control, options, bound, value)
+		end
+
+		if (held and held.hasValue) then value = held.value and true or false end
 		control:SetValue(value)
 
-		MarkModified(control, options, bound, value)
 		control:SetOnRevert(function(self)
-			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then
-				PreviewChange(options, bound, label)
-				NotifyChanged(page, bound)
-				page:Refresh()
-			end
+			RevertOne(options, bound, label, page, multi)
 		end)
-		control:SetCallback(function(self, value)
-			Config.SetValue(option, options, bound, APP, value and true or false)
-			PreviewChange(options, bound, label)
-			NotifyChanged(page, bound)
-			page:Refresh()
+		control:SetCallback(function(self, newValue)
+			newValue = newValue and true or false
+			Commit(control, option, options, bound, label, page, newValue, true, function()
+				if (multi ~= nil) then
+					Config.SetValue(option, options, bound, APP, multi, newValue)
+				else
+					Config.SetValue(option, options, bound, APP, newValue)
+				end
+			end, true, multi)
 		end)
 		return
 	end
@@ -165,23 +405,27 @@ local Bind = function(control, option, options, path, page)
 		control:SetSliderValues(lo, hi, step)
 		control:SetIsPercent(option.isPercent and true or false)
 
+		-- Ours, not Ace3's, and only the panel's own settings table uses it: a
+		-- setting that moves the slider while it is being dragged has to be
+		-- written once, on release. See Controls.SetCommitOnRelease.
+		if (control.SetCommitOnRelease) then
+			control:SetCommitOnRelease(option.commitOnRelease and true or false)
+		end
+
 		local value = Config.GetValue(option, options, bound, APP)
+		MarkModified(control, options, bound, value)
+
+		if (held and held.hasValue) then value = held.value end
 		control:SetValue(type(value) == "number" and value or lo)
 
-		MarkModified(control, options, bound, value)
 		control:SetOnRevert(function(self)
-			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then
-				PreviewChange(options, bound, label)
-				NotifyChanged(page, bound)
-				page:Refresh()
-			end
+			RevertOne(options, bound, label, page)
 		end)
 
 		control:SetCallback(function(self, newValue)
-			Config.SetValue(option, options, bound, APP, newValue)
-			PreviewChange(options, bound, label)
-			NotifyChanged(page, bound)
-			page:Refresh()
+			Commit(control, option, options, bound, label, page, newValue, true, function()
+				Config.SetValue(option, options, bound, APP, newValue)
+			end, true)
 		end)
 		return
 	end
@@ -194,22 +438,63 @@ local Bind = function(control, option, options, path, page)
 
 		local value = Config.GetValue(option, options, bound, APP)
 		if (type(values) == "table" and values[value] == nil) then value = nil end
+		MarkModified(control, options, bound, value)
+
+		if (held and held.hasValue) then value = held.value end
 		control:SetValue(value)
 
-		MarkModified(control, options, bound, value)
 		control:SetOnRevert(function(self)
-			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then
-				PreviewChange(options, bound, label)
-				NotifyChanged(page, bound)
-				page:Refresh()
-			end
+			RevertOne(options, bound, label, page)
 		end)
 
 		control:SetCallback(function(self, newValue)
-			Config.SetValue(option, options, bound, APP, newValue)
-			PreviewChange(options, bound, label)
-			NotifyChanged(page, bound)
-			page:Refresh()
+			Commit(control, option, options, bound, label, page, newValue, true, function()
+				Config.SetValue(option, options, bound, APP, newValue)
+			end, true)
+		end)
+		return
+	end
+
+	if (kind == "color") then
+		control:SetHasAlpha(option.hasAlpha and true or false)
+
+		local r, g, b, a = Config.GetValue(option, options, bound, APP)
+		MarkModified(control, options, bound, { r, g, b, a })
+
+		if (held and held.hasValue and type(held.value) == "table") then
+			r, g, b, a = held.value[1], held.value[2], held.value[3], held.value[4]
+		end
+		control:SetValue(r, g, b, a)
+
+		control:SetOnRevert(function(self)
+			RevertOne(options, bound, label, page)
+		end)
+
+		-- Four values in, one table held: the queue has to be able to show the
+		-- colour again while it waits, and a colour is not one number.
+		control:SetCallback(function(self, nr, ng, nb, na)
+			Commit(control, option, options, bound, label, page, { nr, ng, nb, na }, true, function()
+				Config.SetValue(option, options, bound, APP, nr, ng, nb, na)
+			end, true)
+		end)
+		return
+	end
+
+	if (kind == "keybinding") then
+		local value = Config.GetValue(option, options, bound, APP)
+		MarkModified(control, options, bound, value)
+
+		if (held and held.hasValue) then value = held.value end
+		control:SetValue(type(value) == "string" and value or nil)
+
+		control:SetOnRevert(function(self)
+			RevertOne(options, bound, label, page)
+		end)
+
+		control:SetCallback(function(self, binding)
+			Commit(control, option, options, bound, label, page, binding, true, function()
+				Config.SetValue(option, options, bound, APP, binding)
+			end, true)
 		end)
 		return
 	end
@@ -220,13 +505,13 @@ local Bind = function(control, option, options, path, page)
 		end
 
 		local text = Config.GetValue(option, options, bound, APP)
+		if (held and held.hasValue) then text = held.value end
 		control:SetValue(AsString(text, ""))
 
 		control:SetCallback(function(self, newText)
-			Config.SetValue(option, options, bound, APP, newText)
-			PreviewChange(options, bound, label)
-			NotifyChanged(page, bound)
-			page:Refresh()
+			Commit(control, option, options, bound, label, page, newText, true, function()
+				Config.SetValue(option, options, bound, APP, newText)
+			end, true)
 		end)
 		return
 	end
@@ -276,8 +561,42 @@ Collect = function(group, options, path, out, depth)
 			return
 		end
 
+		-- A multiselect is not one control but a list of toggles over one
+		-- `values` table, each reading and writing with its own key as an extra
+		-- argument. Config.GetValue has passed extras through since Phase 1 for
+		-- exactly this. The setting's own name becomes the heading above them,
+		-- because otherwise the toggles arrive with nothing to say what they
+		-- are a choice of.
+		if (kind == "multiselect") then
+			local values = Config.GetValues(option, options, childPath, APP)
+			if (type(values) ~= "table") then return end
+
+			local keys = {}
+			for valueKey in pairs(values) do keys[#keys + 1] = valueKey end
+			table_sort(keys, function(a, b)
+				return tostring(values[a]) < tostring(values[b])
+			end)
+
+			local name = AsString(Config.GetName(option, options, childPath, APP), key)
+			if (name ~= "") then
+				out[#out + 1] = { kind = "header", label = name }
+			end
+
+			for _, valueKey in ipairs(keys) do
+				out[#out + 1] = {
+					kind = "toggle",
+					option = option,
+					path = Copy(childPath),
+					multi = valueKey,
+					label = AsString(values[valueKey], tostring(valueKey))
+				}
+			end
+			return
+		end
+
 		if (kind == "toggle" or kind == "range" or kind == "select"
-			or kind == "input" or kind == "execute") then
+			or kind == "input" or kind == "execute"
+			or kind == "color" or kind == "keybinding") then
 
 			if (kind == "select" and option.style == "radio") then return end
 
@@ -360,6 +679,7 @@ Renderer.CreatePage = function(self, content)
 		control:SetCallback(nil)
 		control:SetOnRevert(nil)
 		control:SetModified(false)
+		control:SetPending(false)
 
 		local key = control.segmented and "segmented" or control.kind
 		page.pool[key] = page.pool[key] or {}
@@ -500,7 +820,7 @@ Renderer.CreatePage = function(self, content)
 						or Controls.CreateInput(content)
 				end
 
-				local ok, err = pcall(Bind, control, entry.option, options, entry.path, self)
+				local ok, err = pcall(Bind, control, entry.option, options, entry.path, self, entry)
 				if (not ok) then
 					control:SetLabel(entry.kind .. " (failed)")
 					control:SetHelp(tostring(err))

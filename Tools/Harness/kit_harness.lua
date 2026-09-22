@@ -399,6 +399,84 @@ do
 end
 
 --------------------------------------------------------------------------
+section("The window's fill and casing")
+--------------------------------------------------------------------------
+-- The panel is meant to be drawn the way this addon draws its own tooltips, so
+-- the check reads the tooltip's real layout data rather than a copy of its
+-- numbers. Change one and this fails, which is the point: the two are supposed
+-- to be the same window edge.
+do
+	local configs = {}
+	ns.RegisterConfig = function(name, config) configs[name] = config end
+
+	local okTip, errTip = pcall(load, "Layouts/Data/Tooltips.lua")
+	check(okTip, "the tooltip layout data loads", errTip)
+
+	local tip = configs.Tooltips and configs.Tooltips.themes
+		and configs.Tooltips.themes.Azerite and configs.Tooltips.themes.Azerite.backdropStyle
+	check(tip ~= nil, "the Azerite tooltip declares a backdrop style")
+
+	if (tip) then
+		check(Kit.WindowCasing.edgeFile == tip.backdrop.edgeFile,
+			"the casing uses the tooltip's own border art", Kit.WindowCasing.edgeFile)
+		check(Kit.WindowCasing.edgeSize == tip.backdrop.edgeSize,
+			"at the tooltip's edge size", Kit.WindowCasing.edgeSize)
+		check(Kit.WindowCasing.bgFile == nil,
+			"and carries no fill of its own, so it can be drawn above the window")
+
+		-- The tooltip hangs its backdrop outside itself and then insets the fill
+		-- back in. The panel does the same, in two frames instead of one, and the
+		-- two have to come out at the same place on every side.
+		check(Kit.WindowOutset.left == -tip.offsetLeft
+			and Kit.WindowOutset.right == tip.offsetRight,
+			"the casing hangs out sideways exactly as far as the tooltip's",
+			Kit.WindowOutset.left .. "/" .. Kit.WindowOutset.right)
+		check(Kit.WindowOutset.top == tip.offsetTop
+			and Kit.WindowOutset.bottom == -tip.offsetBottom,
+			"and the same above and below", Kit.WindowOutset.top .. "/" .. Kit.WindowOutset.bottom)
+
+		for _, side in ipairs({ "left", "right", "top", "bottom" }) do
+			local overhang = Kit.WindowOutset[side] - tip.backdrop.insets[side]
+			check(overhang == Kit.WindowOverhang,
+				"the fill reaches past the window on the " .. side
+					.. " by what the tooltip's does", overhang)
+			check(Kit.WindowFill.insets[side] == -Kit.WindowOverhang,
+				"which is what the fill's " .. side .. " inset is asking for",
+				Kit.WindowFill.insets[side])
+		end
+	end
+
+	-- The rim measured off Assets/border-tooltip.tga: solid from 11px into a
+	-- 32px top or bottom edge, 1px into a side. The casing has to hang out past
+	-- the far side of that, or the fill shows outside the border - which is what
+	-- made the old 24px casing read as a border sunk into a slab.
+	local RIM_INNER = { left = 10, right = 10, top = 19, bottom = 19 }
+	for side, inner in pairs(RIM_INNER) do
+		check(Kit.WindowOutset[side] + Kit.WindowOverhang >= inner,
+			"the " .. side .. " rim lands outside the window's own edge",
+			Kit.WindowOutset[side] + Kit.WindowOverhang)
+	end
+
+	-- The fill takes the alpha it is given. Blizzard's tooltip background carries
+	-- its own, which is not ours to reason about, and 100% has to mean opaque.
+	check(Kit.WindowFill.bgFile ~= [[Interface\Tooltips\UI-Tooltip-Background]],
+		"the fill is not drawn with Blizzard's tooltip background", Kit.WindowFill.bgFile)
+	check(Kit.WindowFill.bgFile:find("plain", 1, true) ~= nil,
+		"it is the addon's own plain texture", Kit.WindowFill.bgFile)
+
+	-- Untinted, as the tooltip draws it. A tint is what turned the sculpted
+	-- bronze to grey.
+	local casing = Kit.WindowCasingColor
+	check(casing[1] == 1 and casing[2] == 1 and casing[3] == 1 and casing[4] == 1,
+		"the casing is drawn untinted", table.concat(casing, ","))
+
+	-- The retained classic window is not part of this and must not be dragged
+	-- into it by a shared table.
+	check(Kit.WindowBackdrop ~= Kit.WindowFill and Kit.WindowBackdrop.edgeSize == 24,
+		"the classic window keeps its own backdrop", Kit.WindowBackdrop.edgeSize)
+end
+
+--------------------------------------------------------------------------
 section("Themes")
 --------------------------------------------------------------------------
 local values, order = Kit.GetThemeChoices()

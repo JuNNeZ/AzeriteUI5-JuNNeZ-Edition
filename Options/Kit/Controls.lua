@@ -48,6 +48,7 @@ local type = type
 local unpack = unpack
 
 -- GLOBALS: CreateFrame, UIParent, PlaySound, GameTooltip, GetCursorPosition
+-- GLOBALS: ColorPickerFrame, IsShiftKeyDown, IsControlKeyDown, IsAltKeyDown
 
 local Controls = {}
 Kit.Controls = Controls
@@ -77,6 +78,25 @@ local SOUND_ON, SOUND_OFF, SOUND_CLICK = 856, 857, 852
 --------------------------------------------------------------------------
 local SetTextColor = function(fontstring, color)
 	fontstring:SetTextColor(color[1], color[2], color[3])
+end
+
+-- Left and Right on a control whose values have an order: one step along the
+-- list it is drawn from, stopping at each end rather than wrapping round, so
+-- holding a key cannot walk the value past where you meant to stop.
+local StepThroughList = function(self, delta)
+	if (self.disabled or not self.order or #self.order == 0) then return false end
+
+	local at
+	for i, key in ipairs(self.order) do
+		if (key == self.value) then at = i end
+	end
+
+	local wanted = min(#self.order, max(1, (at or 1) + (delta or 0)))
+	if (self.order[wanted] == self.value) then return false end
+
+	self:SetValue(self.order[wanted])
+	self:Fire(self.order[wanted])
+	return true
 end
 
 --------------------------------------------------------------------------
@@ -148,6 +168,21 @@ local CreateRow = function(parent, kind)
 	gem:Hide()
 	control.gem = gem
 
+	-- A change made in combat is held until it ends, and takes the gem's place
+	-- while it waits. The same mark the footer uses for the notice, so the row
+	-- and the line at the bottom of the window are saying one thing.
+	local waiting = frame:CreateTexture(nil, "OVERLAY")
+
+	-- The gem's own 9px, measured through this texture's body ratio: the file
+	-- carries a soft shadow well outside its solid part, and sizing it by the
+	-- file would push that shadow under the label and past the row's left edge.
+	local waitingSize = Kit.DrawSize(9, "icon_combat")
+	waiting:SetSize(waitingSize, waitingSize)
+	waiting:SetPoint("CENTER", gem, "CENTER", 0, 0)
+	waiting:SetTexture(GetMedia("icon-combat"))
+	waiting:Hide()
+	control.waiting = waiting
+
 	local label = frame:CreateFontString(nil, "OVERLAY")
 	label:SetFontObject(GetFont(13))
 	label:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT, -9)
@@ -207,6 +242,13 @@ local CreateRow = function(parent, kind)
 		GameTooltip:AddLine(L["Changed from default"], unpack(Kit.TextSelected))
 		GameTooltip:AddLine(L["This setting no longer matches the value it ships with. Click to put this one setting back, without touching the rest of the profile."],
 			Kit.TextNormal[1], Kit.TextNormal[2], Kit.TextNormal[3], true)
+
+		-- A held change has not reached the profile yet, so saying only the above
+		-- would be telling the player something that is not true of it.
+		if (control.pending) then
+			GameTooltip:AddLine(L["This change is waiting for combat to end."],
+				Kit.TextDisabled[1], Kit.TextDisabled[2], Kit.TextDisabled[3], true)
+		end
 		GameTooltip:Show()
 	end)
 	revert:SetScript("OnLeave", function()
@@ -222,11 +264,27 @@ local CreateRow = function(parent, kind)
 		self.label:SetText(self.labelText)
 	end
 
+	-- What a setting said when it refused a value. An option can carry
+	-- `validate`, and a refusal has to be readable on the row that caused it -
+	-- the new profile name is rejected for a reason, and "nothing happened" is
+	-- not that reason. It takes the help line's place, because it is about this
+	-- setting and is what you need to read right now; the help comes back as
+	-- soon as the setting accepts something.
+	control.SetError = function(self, text)
+		self.errorText = (text and text ~= "") and text or nil
+		self:SetHelp(self.helpText)
+	end
+
 	control.SetHelp = function(self, text)
 		self.helpText = (text and text ~= "") and text or nil
 
-		if (self.helpText) then
-			self.help:SetText(self.helpText)
+		-- Shown, measured and wrapped exactly like a help line, so a long
+		-- refusal cannot draw over the row beneath it.
+		local shown = self.errorText or self.helpText
+		self.shownHelp = shown
+
+		if (shown) then
+			self.help:SetText(shown)
 			self.help:Show()
 			self.hasHelp = true
 		else
@@ -234,6 +292,8 @@ local CreateRow = function(parent, kind)
 			self.help:Hide()
 			self.hasHelp = false
 		end
+
+		SetTextColor(self.help, self.errorText and Kit.TextWarning or Kit.TextDisabled)
 		self.frame:SetHeight(self:GetHeight())
 	end
 
@@ -244,7 +304,7 @@ local CreateRow = function(parent, kind)
 			(width or 0) - PAD_LEFT - PAD_RIGHT - CONTROL_WIDTH - LABEL_GAP)
 
 		if (self.hasHelp) then
-			local lines = MeasureText(GetFont(11), self.helpText, self.textWidth)
+			local lines = MeasureText(GetFont(11), self.shownHelp or self.helpText, self.textWidth)
 			self.helpHeight = min(HELP_MAX_LINES * HELP_LINE, max(HELP_LINE, lines))
 		else
 			self.helpHeight = 0
@@ -292,26 +352,79 @@ local CreateRow = function(parent, kind)
 		self.callback = fn
 	end
 
+	--------------------------------------------------------------
+	-- Reached with the keyboard
+	--------------------------------------------------------------
+	-- The row the keyboard is on carries the same bar down its left edge that
+	-- the rail marks the open page with, so "where am I" means one thing
+	-- everywhere in the window.
+	local focusEdge = frame:CreateTexture(nil, "ARTWORK")
+	focusEdge:SetTexture(GetMedia("plain"))
+	focusEdge:SetWidth(2)
+	focusEdge:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -1)
+	focusEdge:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 1)
+	focusEdge:Hide()
+	control.focusEdge = focusEdge
+
+	control.SetFocused = function(self, focused)
+		self.focused = focused and true or false
+		self.focusEdge:SetShown(self.focused)
+		self.hover:SetShown(self.focused)
+
+		local accent = Kit.TextSelected
+		self.focusEdge:SetVertexColor(accent[1], accent[2], accent[3], 1)
+	end
+
+	-- What Enter does here, and whether it did anything. A control with nothing
+	-- to activate says so rather than swallowing the key.
+	control.Activate = function() return false end
+
+	-- What Left and Right do here. Only the controls with an order to their
+	-- values have an answer.
+	control.Nudge = function() return false end
+
+	-- The two marks share one spot and one rule: while a change is waiting for
+	-- combat to end, that is what the row has to say, so the waiting mark wins
+	-- over the gem. The revert arrow stays reachable for either, because putting
+	-- a held change back is the one thing you are most likely to want.
+	local UpdateMarks = function(self)
+		self.waiting:SetShown(self.pending and true or false)
+		self.gem:SetShown(self.modified and not self.pending)
+		self.revert:SetShown((self.modified or self.pending) and self.onRevert ~= nil)
+	end
+
+	-- The marks are re-read here, and this is not tidiness. The renderer marks a
+	-- row as changed and only then hands it the function to revert with, and a
+	-- control out of the pool had that function cleared on release - so the
+	-- arrow was decided against an onRevert that was still nil and never showed
+	-- at all. The gem was visible, the arrow beside it was not.
 	control.SetOnRevert = function(self, fn)
 		self.onRevert = fn
+		UpdateMarks(self)
 	end
 
 	control.SetModified = function(self, modified)
 		self.modified = modified and true or false
-		self.gem:SetShown(self.modified)
-		self.revert:SetShown(self.modified and self.onRevert ~= nil)
+		UpdateMarks(self)
 	end
 
-	control.Fire = function(self, value)
+	control.SetPending = function(self, pending)
+		self.pending = pending and true or false
+		UpdateMarks(self)
+	end
+
+	-- Everything through one callback, and a colour is four values rather than
+	-- one, so what a control fires is passed on as it was given.
+	control.Fire = function(self, ...)
 		if (self.callback) then
-			self.callback(self, value)
+			self.callback(self, ...)
 		end
 	end
 
 	-- Re-reads the theme. Controls add their own bits by wrapping this.
 	control.Restyle = function(self)
 		SetTextColor(self.label, self.disabled and Kit.TextDisabled or Kit.TextNormal)
-		SetTextColor(self.help, Kit.TextDisabled)
+		SetTextColor(self.help, self.errorText and Kit.TextWarning or Kit.TextDisabled)
 
 		local border = Kit.BorderIdle
 		self.rule:SetVertexColor(border[1], border[2], border[3], .35)
@@ -372,6 +485,7 @@ Controls.CreateHeader = function(parent)
 	control.SetHelp = function() end
 	control.SetDisabled = function() end
 	control.SetModified = function() end
+	control.SetPending = function() end
 	control.SetCallback = function() end
 	control.SetOnRevert = function() end
 	control.GetHeight = function() return 30 end
@@ -479,12 +593,20 @@ Controls.CreateToggle = function(parent)
 		self.gemOn:SetVertexColor(unpack(self.disabled and Kit.TextDisabled or Kit.TextSelected))
 	end
 
-	box:SetScript("OnClick", function()
-		if (control.disabled) then return end
+	local Flip = function()
+		if (control.disabled) then return false end
 		control:SetValue(not control.value)
 		PlaySound(control.value and SOUND_ON or SOUND_OFF)
 		control:Fire(control.value)
-	end)
+		return true
+	end
+
+	box:SetScript("OnClick", Flip)
+
+	-- Enter, and Left/Right, do what a click does: there are only two values,
+	-- so there is nothing else either of them could mean.
+	control.Activate = Flip
+	control.Nudge = Flip
 	box:SetScript("OnEnter", function() control.hover:Show() end)
 	box:SetScript("OnLeave", function() control.hover:Hide() end)
 
@@ -647,6 +769,29 @@ Controls.CreateSlider = function(parent)
 		return self.value
 	end
 
+	-- One of the option's own steps per press, or a hundredth of the range when
+	-- it declares none, which is what the mouse wheel already does here.
+	control.Nudge = function(self, delta)
+		if (self.disabled) then return false end
+
+		local step = self.step
+		if (not step or step <= 0) then
+			step = ((self.max or 100) - (self.min or 0)) / 100
+		end
+
+		local was = self.value
+		self:SetValue((self.value or self.min or 0) + step * (delta or 0), true)
+		return self.value ~= was
+	end
+
+	-- Enter puts the caret in the value box, where a number can be typed
+	-- straight in rather than stepped to.
+	control.Activate = function(self)
+		if (self.disabled) then return false end
+		self.valuebox:SetFocus()
+		return true
+	end
+
 	control.SetDisabled = function(self, disabled)
 		self.disabled = disabled and true or false
 		input:EnableMouse(not self.disabled)
@@ -690,15 +835,36 @@ Controls.CreateSlider = function(parent)
 		return lo + fraction * (hi - lo)
 	end
 
+	-- Some settings cannot be written while the slider is being dragged, because
+	-- writing them moves the slider. Panel Scale is the one: it rescales the
+	-- whole window, so the track slides out from under the cursor mid-drag, the
+	-- knob chases the cursor to catch up, and the value runs away. Those commit
+	-- once, when the drag ends. The knob, the fill and the number still follow
+	-- the cursor the whole way; only the write waits.
+	control.SetCommitOnRelease = function(self, wanted)
+		self.commitOnRelease = wanted and true or false
+	end
+
 	local Track = function()
 		local value = ValueFromCursor()
-		if (value) then
-			control:SetValue(value, true)
+		if (value == nil) then return end
+
+		if (control.commitOnRelease) then
+			control:SetValue(value)
+			control.dragged = true
+			return
 		end
+
+		control:SetValue(value, true)
 	end
 
 	local StopTracking = function()
 		input:SetScript("OnUpdate", nil)
+
+		if (control.dragged) then
+			control.dragged = nil
+			if (not control.disabled) then control:Fire(control.value) end
+		end
 	end
 
 	input:SetScript("OnMouseDown", function()
@@ -991,6 +1157,16 @@ Controls.CreateDropdown = function(parent)
 		PlaySound(SOUND_CLICK)
 		OpenPullout(control)
 	end)
+
+	control.Activate = function(self)
+		if (self.disabled) then return false end
+		PlaySound(SOUND_CLICK)
+		OpenPullout(self)
+		return true
+	end
+
+	-- Left and Right step through the list in the order it is drawn in.
+	control.Nudge = StepThroughList
 	box:SetScript("OnEnter", function()
 		control.hover:Show()
 		if (not control.disabled) then
@@ -1097,6 +1273,9 @@ Controls.CreateSegmented = function(parent)
 		return self.value
 	end
 
+	control.Nudge = StepThroughList
+	control.Activate = function(self) return StepThroughList(self, 1) end
+
 	control.SetDisabled = function(self, disabled)
 		self.disabled = disabled and true or false
 		self:Restyle()
@@ -1170,6 +1349,14 @@ Controls.CreateInput = function(parent)
 
 	control.GetValue = function(self)
 		return box:GetText()
+	end
+
+	-- Enter puts the caret in the box. Enter again commits it, which is the
+	-- box's own script and not something this has to know about.
+	control.Activate = function(self)
+		if (self.disabled) then return false end
+		box:SetFocus()
+		return true
 	end
 
 	control.SetDisabled = function(self, disabled)
@@ -1255,11 +1442,15 @@ Controls.CreateButton = function(parent)
 		SetTextColor(self.text, self.disabled and Kit.TextDisabled or Kit.TextNormal)
 	end
 
-	box:SetScript("OnClick", function()
-		if (control.disabled) then return end
+	local Press = function()
+		if (control.disabled) then return false end
 		PlaySound(SOUND_CLICK)
 		control:Fire(true)
-	end)
+		return true
+	end
+
+	box:SetScript("OnClick", Press)
+	control.Activate = Press
 	box:SetScript("OnEnter", function()
 		control.hover:Show()
 		if (not control.disabled) then
@@ -1321,6 +1512,7 @@ Controls.CreateParagraph = function(parent)
 	control.SetHelp = function() end
 	control.SetDisabled = function() end
 	control.SetModified = function() end
+	control.SetPending = function() end
 	control.SetCallback = function() end
 	control.SetOnRevert = function() end
 
@@ -1441,6 +1633,14 @@ Controls.CreateMultiline = function(parent)
 		return edit:GetText()
 	end
 
+	-- Enter puts the caret in the field. It cannot also commit here: this is a
+	-- multi-line box, and Enter inside it is a new line.
+	control.Activate = function(self)
+		if (self.disabled) then return false end
+		edit:SetFocus()
+		return true
+	end
+
 	control.SetDisabled = function(self, disabled)
 		self.disabled = disabled and true or false
 		edit:EnableMouse(not self.disabled)
@@ -1518,6 +1718,280 @@ Controls.WantsSegmented = function(values)
 	return count > 0 and width <= SEGMENTED_CHARS
 end
 
+--------------------------------------------------------------------------
+-- Colour
+--------------------------------------------------------------------------
+-- A swatch of the colour itself, on the same sculpted border a button wears.
+-- Clicking it opens Blizzard's own picker rather than drawing another one:
+-- people know that window, it already handles hex entry and an alpha slider,
+-- and a colour picker is a great deal of widget to get wrong.
+--
+-- Alpha is passed straight through. The old picker took `opacity` inverted;
+-- the one every supported client has does not (see the INVERTED_ALPHA note in
+-- AceGUIWidget-ColorPicker.lua, which is false for these clients).
+Controls.CreateColor = function(parent)
+	local control = CreateRow(parent, "color")
+
+	local box = CreateFrame("Button", nil, control.area)
+	box:SetSize(44, 20)
+	box:SetPoint("RIGHT", control.area, "RIGHT", 0, 0)
+	box:SetPoint("CENTER", control.area, "CENTER", 0, 0)
+	control.box = box
+
+	local backdrop = Kit.CreateBackdrop(box, Kit.InsetBackdrop, 2)
+	control.backdrop = backdrop
+
+	-- Two textures, not one: a colour at half alpha over a dark ground reads as
+	-- a different colour entirely, and the point of a swatch is to show what
+	-- was chosen. The left half is the colour as it is used, the right half is
+	-- the same colour opaque.
+	local shade = box:CreateTexture(nil, "ARTWORK")
+	shade:SetTexture(GetMedia("plain"))
+	shade:SetPoint("TOPLEFT", box, "TOPLEFT", 1, -1)
+	shade:SetPoint("BOTTOMRIGHT", box, "BOTTOM", 0, 1)
+	control.shade = shade
+
+	local solid = box:CreateTexture(nil, "ARTWORK")
+	solid:SetTexture(GetMedia("plain"))
+	solid:SetPoint("TOPLEFT", box, "TOP", 0, -1)
+	solid:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -1, 1)
+	control.solid = solid
+
+	control.SetHasAlpha = function(self, hasAlpha)
+		self.hasAlpha = hasAlpha and true or false
+		self.shade:SetShown(self.hasAlpha)
+		if (self.hasAlpha) then
+			self.solid:SetPoint("TOPLEFT", box, "TOP", 0, -1)
+		else
+			self.solid:SetPoint("TOPLEFT", box, "TOPLEFT", 1, -1)
+		end
+	end
+
+	control.SetValue = function(self, r, g, b, a)
+		self.r, self.g, self.b = tonumber(r) or 1, tonumber(g) or 1, tonumber(b) or 1
+		self.a = tonumber(a) or 1
+
+		self.shade:SetVertexColor(self.r, self.g, self.b, self.a)
+		self.solid:SetVertexColor(self.r, self.g, self.b, 1)
+	end
+
+	control.GetValue = function(self)
+		return self.r, self.g, self.b, self.a
+	end
+
+	control.SetDisabled = function(self, disabled)
+		self.disabled = disabled and true or false
+		if (self.disabled) then box:Disable() else box:Enable() end
+		self:Restyle()
+	end
+
+	local baseRestyle = control.Restyle
+	control.Restyle = function(self)
+		baseRestyle(self)
+
+		self.backdrop:SetBackdropColor(unpack(Kit.InsetColor))
+		Kit.SetBorderColor(self.backdrop, Kit.BorderIdle)
+		self.shade:SetDesaturated(self.disabled and true or false)
+		self.solid:SetDesaturated(self.disabled and true or false)
+	end
+
+	local Open = function()
+		if (control.disabled) then return false end
+
+		local picker = _G.ColorPickerFrame
+		if (not picker or not picker.SetupColorPickerAndShow) then return false end
+
+		local r, g, b, a = control.r, control.g, control.b, control.a or 1
+
+		local Changed = function()
+			local nr, ng, nb = picker:GetColorRGB()
+			local na = picker.GetColorAlpha and picker:GetColorAlpha() or 1
+			if (not control.hasAlpha) then na = 1 end
+
+			control:SetValue(nr, ng, nb, na)
+			control:Fire(nr, ng, nb, na)
+		end
+
+		picker:SetupColorPickerAndShow({
+			r = r, g = g, b = b,
+			hasOpacity = control.hasAlpha,
+			opacity = a,
+			swatchFunc = Changed,
+			opacityFunc = Changed,
+
+			-- Cancel restores what was there, and says so, because the picker
+			-- has been writing the colour live while it was open.
+			cancelFunc = function()
+				control:SetValue(r, g, b, a)
+				control:Fire(r, g, b, a)
+			end
+		})
+		return true
+	end
+
+	box:SetScript("OnClick", Open)
+	box:SetScript("OnEnter", function()
+		control.hover:Show()
+		if (not control.disabled) then Kit.SetBorderColor(backdrop, Kit.BorderHover) end
+	end)
+	box:SetScript("OnLeave", function()
+		control.hover:Hide()
+		Kit.SetBorderColor(backdrop, Kit.BorderIdle)
+	end)
+
+	control.Activate = Open
+
+	control:SetHasAlpha(false)
+	control:SetValue(1, 1, 1, 1)
+	control:SetDisabled(false)
+	return control
+end
+
+--------------------------------------------------------------------------
+-- Keybinding
+--------------------------------------------------------------------------
+-- Click it, then press the combination you want. The value is the binding
+-- *string*; what it is bound to is the option's business, exactly as it is in
+-- Ace3, and nothing here calls SetBinding.
+--
+-- While it is listening it takes the keyboard, which is the one place in this
+-- window where that is the point rather than a hazard: you asked for the next
+-- key you press to be recorded. Escape clears the binding and stops listening,
+-- and so does clicking elsewhere.
+local MODIFIER_KEYS = {
+	LSHIFT = true, RSHIFT = true, LCTRL = true, RCTRL = true,
+	LALT = true, RALT = true, UNKNOWN = true
+}
+
+Controls.CreateKeybinding = function(parent)
+	local control = CreateRow(parent, "keybinding")
+
+	local box = CreateFrame("Button", nil, control.area)
+	box:SetHeight(26)
+	box:SetWidth(CONTROL_WIDTH)
+	box:SetPoint("RIGHT", control.area, "RIGHT", 0, 0)
+	box:SetPoint("CENTER", control.area, "CENTER", 0, 0)
+	control.box = box
+
+	local backdrop = Kit.CreateBackdrop(box, Kit.ButtonBackdrop)
+	control.backdrop = backdrop
+
+	local text = box:CreateFontString(nil, "OVERLAY")
+	text:SetFontObject(GetFont(12))
+	text:SetPoint("CENTER", box, "CENTER", 0, 0)
+	text:SetJustifyH("CENTER")
+	text:SetWordWrap(false)
+	control.text = text
+
+	local Show = function(self)
+		if (self.listening) then
+			self.text:SetText(L["Press a key..."])
+		elseif (self.value and self.value ~= "") then
+			self.text:SetText(self.value)
+		else
+			self.text:SetText(L["Not bound"])
+		end
+		self:Restyle()
+	end
+
+	control.SetValue = function(self, value)
+		self.value = (type(value) == "string" and value ~= "") and value or nil
+		Show(self)
+	end
+
+	control.GetValue = function(self)
+		return self.value
+	end
+
+	local Stop = function(self)
+		if (not self.listening) then return end
+		self.listening = nil
+
+		box:EnableKeyboard(false)
+		box:SetScript("OnKeyDown", nil)
+		Show(self)
+	end
+	control.StopListening = Stop
+
+	local Record = function(key)
+		if (key == "ESCAPE") then
+			control:SetValue(nil)
+			Stop(control)
+			control:Fire(nil)
+			return
+		end
+
+		if (MODIFIER_KEYS[key]) then return end
+
+		local binding = key
+		if (IsShiftKeyDown()) then binding = "SHIFT-" .. binding end
+		if (IsControlKeyDown()) then binding = "CTRL-" .. binding end
+		if (IsAltKeyDown()) then binding = "ALT-" .. binding end
+
+		control:SetValue(binding)
+		Stop(control)
+		control:Fire(binding)
+	end
+
+	local Listen = function()
+		if (control.disabled or control.listening) then return false end
+
+		control.listening = true
+		Show(control)
+
+		box:EnableKeyboard(true)
+
+		-- Nothing is propagated while listening: the next key belongs to this
+		-- button, which is the whole of what was asked for by clicking it.
+		box:SetScript("OnKeyDown", function(self, key)
+			if (self.SetPropagateKeyboardInput) then self:SetPropagateKeyboardInput(false) end
+			Record(key)
+		end)
+		return true
+	end
+
+	control.SetDisabled = function(self, disabled)
+		self.disabled = disabled and true or false
+		if (self.disabled) then
+			Stop(self)
+			box:Disable()
+		else
+			box:Enable()
+		end
+		self:Restyle()
+	end
+
+	local baseRestyle = control.Restyle
+	control.Restyle = function(self)
+		baseRestyle(self)
+
+		self.backdrop:SetBackdropColor(unpack(Kit.BackdropColor))
+		Kit.SetBorderColor(self.backdrop, self.listening and Kit.BorderFocus or Kit.BorderIdle)
+
+		local color = self.disabled and Kit.TextDisabled
+			or (self.listening and Kit.TextSelected
+				or (self.value and Kit.TextHighlight or Kit.TextDisabled))
+		SetTextColor(self.text, color)
+	end
+
+	box:SetScript("OnClick", Listen)
+	box:SetScript("OnHide", function() Stop(control) end)
+	box:SetScript("OnEnter", function()
+		control.hover:Show()
+		if (not control.disabled) then Kit.SetBorderColor(backdrop, Kit.BorderHover) end
+	end)
+	box:SetScript("OnLeave", function()
+		control.hover:Hide()
+		Kit.SetBorderColor(backdrop, control.listening and Kit.BorderFocus or Kit.BorderIdle)
+	end)
+
+	control.Activate = Listen
+
+	control:SetValue(nil)
+	control:SetDisabled(false)
+	return control
+end
+
 Controls.Create = function(parent, optionType, option, valueCount)
 	if (optionType == "toggle") then
 		return Controls.CreateToggle(parent)
@@ -1539,6 +2013,12 @@ Controls.Create = function(parent, optionType, option, valueCount)
 
 	elseif (optionType == "execute") then
 		return Controls.CreateButton(parent)
+
+	elseif (optionType == "color") then
+		return Controls.CreateColor(parent)
+
+	elseif (optionType == "keybinding") then
+		return Controls.CreateKeybinding(parent)
 
 	elseif (optionType == "header") then
 		return Controls.CreateHeader(parent)

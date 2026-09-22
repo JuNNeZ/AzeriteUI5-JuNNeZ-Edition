@@ -53,9 +53,13 @@ Mutation runs — do the checks above actually catch a break?
 
 ```sh
 python Tools/Harness/mutate.py . Tools/Harness     # Config.lua
-python Tools/Harness/mutate_sections.py            # the panel, the controls, the stubs
+python Tools/Harness/mutate_sections.py            # the panel, the kit, the controls, the stubs
 lua Tools/Harness/mutate_client.lua .              # client gates, entirely in memory
 ```
+
+`mutate_sections.py` runs the panel harness by default and the kit harness for the mutations that
+name it - the window's own edge is measured against `Layouts/Data/Tooltips.lua`, which is a kit
+check. Both are run clean first and again at the end.
 
 `mutate_sections.py` has the addon root and the Lua path at the top of the file. It backs up every
 file it edits and restores it, and prints `restored:` at the end — if that line is missing or shows

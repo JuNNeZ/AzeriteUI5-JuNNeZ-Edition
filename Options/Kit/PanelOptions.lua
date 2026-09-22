@@ -95,7 +95,11 @@ local appearance = {
 			type = "range",
 			order = 2,
 			isPercent = true,
-			min = 0.2, max = 1, step = 0.05,
+
+			-- A percent slider that moves in twentieths reads as notched rather
+			-- than smooth, and this one is dragged while watching the window
+			-- behind it. One percent per step.
+			min = 0.2, max = 1, step = 0.01,
 			get = function()
 				return Kit.GetOpacity()
 			end,
@@ -120,7 +124,12 @@ local appearance = {
 			type = "range",
 			order = 11,
 			isPercent = true,
-			min = 0.7, max = 1.4, step = 0.05,
+			min = 0.7, max = 1.4, step = 0.01,
+
+			-- Written on release, not while dragging. Applying a scale rescales
+			-- the window, which moves this very slider out from under the
+			-- cursor; the knob then chases the cursor and the value runs away.
+			commitOnRelease = true,
 			get = function()
 				return Kit.Panel and Kit.Panel:GetPanelScale() or 1
 			end,
