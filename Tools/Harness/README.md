@@ -19,6 +19,7 @@ lua Tools/Harness/real_options_harness.lua . Tools/Harness Forever # unavailable
 lua Tools/Harness/client_harness.lua      .                # Retail/Forever detection, APIs, modules, menus
 lua Tools/Harness/diel_harness.lua        .                # the Forever day and night indicator
 lua Tools/Harness/combo_points_harness.lua .               # Forever secret combo points
+lua Tools/Harness/chat_guard_harness.lua   .               # chat module stays out of chat replacements
 ```
 
 Two arguments: the addon root, then this folder. Both harness files and `stubs.lua` are found

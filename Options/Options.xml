@@ -8,6 +8,7 @@
 		* Controls.lua is the new panel's own widgets. No AceGUI at all.
 		* Preview.lua outlines the real frame owned by a changed setting.
 		* Renderer.lua turns an option table into rows of those controls.
+		* Views.lua gathers Quick Start and Changed from settings on other pages.
 		* Changelog.lua is generated from CHANGELOG.md by Tools/BuildChangelog.lua.
 		* PanelOptions.lua is the panel's own settings tab, and the changelog.
 		* Panel.lua is the new window itself, at /az (and the /az new alias).
@@ -22,6 +23,7 @@
 	<Script file="Kit\Controls.lua"/>
 	<Script file="Kit\Preview.lua"/>
 	<Script file="Kit\Renderer.lua"/>
+	<Script file="Kit\Views.lua"/>
 	<Script file="Changelog.lua"/>
 	<Script file="Kit\PanelOptions.lua"/>
 	<Script file="Kit\Panel.lua"/>

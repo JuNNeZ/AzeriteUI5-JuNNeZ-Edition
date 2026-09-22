@@ -10,6 +10,29 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.8.0-JuNNeZ (2026-09-22) - Quick Start, Truer Previews and Chattynator
+
+### Highlights
+
+- **Chattynator's editbox position setting works again.** AzeriteUI re-anchored the chat input line under its own chat window on every login and reload, overriding Chattynator's choice to put it at the top. With Chattynator enabled, AzeriteUI now leaves chat alone, as it already does for Prat, ls_Glass and BigInputBox. That also stops AzeriteUI from fading out the chat menu, channel and voice buttons Chattynator places in its own button bar, and from blanking and resizing the editbox artwork that Chattynator's Blizzard skin uses.
+- **`/az` now opens on Quick Start.** A new first page in the Setup band gathers ten of the settings that change the most, from Explorer Mode and the action bars to nameplates, incoming heals and chat fading. Each one is still on its own page as well, and settings your client or character cannot use are left out.
+- **Everything you have changed, in one list.** When any setting differs from its default, the header count (for example "349 settings, 12 changed") becomes a link. Click it to see every changed setting grouped by page and section; resetting one removes it from the list, and clicking the count again takes you back. The change markers and the count now update as soon as you change something, not the next time the panel opens.
+- **Live previews glow the frames a setting actually changes.** Settings shared between frames used to flash the player frame. Incoming heal and absorb settings now glow every visible health bar, Color Cast Spell Text By State glows the target frame and nameplates, and page-wide action bar settings such as Hide Hotkeys glow every bar. Explorer Mode's timing and conditions glow the elements it fades, and nameplate size settings pick a plate of the right kind. When several frames glow, the footer counts them.
+- **When nothing on screen can show a change, the footer says why.** Show Blizzard Raid Bar explains that the bar only appears in a party or raid, and Cast action keybinds on key down explains that it changes key presses rather than looks. Tooltip, world map, game menu and bag settings are outlined only while that window is open; otherwise the footer asks you to open it.
+
+### Development
+
+- **Audited every setting for what it changes on screen, not where it is saved.** A setting records which profile stores it. For shared unit frame, action bar and Explorer Mode settings, that pointed the preview at one representative frame. The audit produced a table giving each such setting an exact frame, a family of frames or an explanation. A setting added later without an entry previews nothing rather than the player frame. Nameplate previews read only the flags the nameplate code already sanitises, never protected unit data.
+- **Built pages gathered from settings on other pages.** Quick Start and the changed list draw each row from the setting's real location, with its own control, change marker and reset, and gather again on every refresh, so a reset setting drops out at once. Only the page that changed is recounted, so dragging a slider does not recount the whole panel.
+- **Extended the offline checks.** The panel checks now cover the preview table (failing if an entry names a setting that no longer exists or drifts from Explorer Mode's own list), explanations fitting the footer at the smallest window, both new pages against the real Retail and Forever option tables, and live counts. Deliberately broken versions confirm the checks catch regressions. A new check covers the chat addon exclusion. None of this emulates rendering or protected execution in WoW.
+
+### Access and known limits
+
+- Everything in this release is verified against source and offline checks only; nothing is confirmed in game yet. The Quick Start selection may still change.
+- With Chattynator enabled, AzeriteUI's Chat options (fading and message timing) no longer apply and are left out of Quick Start; use Chattynator's own settings. Explorer Mode's chat fading does not reach Chattynator windows.
+- Chattynator's social (Quick Join) button may still be hidden, because AzeriteUI hides Blizzard's micro buttons by default. Turning on **Action Bars -> Micro Menu -> Show Blizzard's Micro Menu** should bring it back; this is untested.
+
+
 ## 5.7.2-JuNNeZ (2026-09-22) - Forever Combo Points, Take Two
 
 ### Highlights

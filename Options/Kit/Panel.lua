@@ -32,8 +32,9 @@ local max, min = math.max, math.min
 local pcall = pcall
 local string_find, string_lower = string.find, string.lower
 local string_format = string.format
+local table_insert = table.insert
 local table_wipe = table.wipe or wipe
-local tostring, type = tostring, type
+local tonumber, tostring, type = tonumber, tostring, type
 local unpack = unpack
 
 -- GLOBALS: CreateFrame, GameTooltip, InCombatLockdown, UIParent, UISpecialFrames
@@ -56,6 +57,13 @@ local FOOTER_H = 26
 local PAGE_HEAD_H = 54
 
 local TABSTRIP_H = 30
+
+-- The footer's preview line runs from just left of the footer's centre to
+-- near its right edge, on one line that does not wrap. At the smallest window
+-- this is all the room an explanation gets, so the harness measures against it.
+local FOOTER_INSET = 12
+local PREVIEW_LEFT, PREVIEW_RIGHT = -80, -22
+Panel.PreviewMinWidth = (MIN_W - FOOTER_INSET * 2) / 2 - PREVIEW_LEFT + PREVIEW_RIGHT
 
 -- The two halves of the window, chosen at the bottom of the rail.
 --
@@ -116,6 +124,13 @@ local GetBand = function(key, module)
 		return Kit.PanelOptions and Kit.PanelOptions.Section(key) or "panel"
 	end
 	return (module and module:GetSection(key)) or "other"
+end
+
+-- A page the option table does not have: Quick Start, or Changed. Only the
+-- Options tab has them, since they are built from the addon's settings.
+local GetView = function(key)
+	if (Panel.tab ~= "options" or not Kit.Views) then return end
+	return Kit.Views.Get(key)
 end
 
 local Resolve = function(value, fallback)
@@ -475,6 +490,17 @@ Panel.BuildRail = function(self)
 		end
 	end
 
+	-- Views are listed first in their band: Quick Start leads Setup, so it is
+	-- the page a first visit lands on.
+	if (self.tab == "options" and Kit.Views) then
+		local listed = Kit.Views.Listed()
+		for i = #listed, 1, -1 do
+			local view = listed[i]
+			bySection[view.band] = bySection[view.band] or {}
+			table_insert(bySection[view.band], 1, { key = view.key, name = view.name, view = true })
+		end
+	end
+
 	self.pages = {}
 
 	self.sectionRows = self.sectionRows or {}
@@ -518,7 +544,7 @@ Panel.BuildRail = function(self)
 				-- module defaults to differ from, and a gem beside Changelog
 				-- would be nonsense.
 				local changed = 0
-				if (self.tab == "options") then
+				if (self.tab == "options" and not entry.view) then
 					changed = self.changedByPage[entry.key]
 					if (changed == nil) then
 						changed = Kit.Defaults
@@ -589,13 +615,84 @@ Panel.BuildRail = function(self)
 	BuildIndex(options)
 
 	self.totalChanged = totalChanged
-	if (totalChanged > 0) then
-		self:SetCount(string_format(L["%d settings, %d changed"], #searchIndex, totalChanged))
+	self:ShowCount()
+	self:UpdateTabs()
+	self:ApplyTheme()
+end
+
+-- The tally in the header. With something changed on the Options tab it is
+-- also the way into the Changed view, and it says so by being drawn as a link.
+Panel.ShowCount = function(self)
+	local total = self.totalChanged or 0
+	local onChanged = (self.selected == (Kit.Views and Kit.Views.CHANGED))
+
+	self.countActive = (self.tab == "options" and not self.searching
+		and (total > 0 or onChanged)) and true or false
+	if (self.countButton) then self.countButton:SetShown(self.countActive) end
+
+	if (self.searching) then return end
+	if (total > 0) then
+		self:SetCount(string_format(L["%d settings, %d changed"], #searchIndex, total))
 	else
 		self:SetCount(string_format(L["%d settings"], #searchIndex))
 	end
-	self:UpdateTabs()
-	self:ApplyTheme()
+	if (self.count) then
+		self.count:SetTextColor(unpack(self.countActive and Kit.TextSelected or Kit.TextDisabled))
+	end
+end
+
+-- Brings the gems and the tally up to date after one setting changed. Only
+-- that setting's own page is counted again: counting reads every setting on a
+-- page, and a slider being dragged changes one setting many times a second.
+Panel.OnSettingChanged = function(self, path)
+	if (self.tab ~= "options" or type(path) ~= "table" or type(path[1]) ~= "string") then return end
+
+	local options = GetOptions()
+	if (not options or not Kit.Defaults) then return end
+
+	self.changedByPage = self.changedByPage or {}
+	self.changedByPage[path[1]] = Kit.Defaults.CountModified(options, { path[1] })
+
+	local total = 0
+	for _, entry in ipairs(self.pages or {}) do
+		if (not entry.view) then total = total + (self.changedByPage[entry.key] or 0) end
+	end
+	self.totalChanged = total
+
+	for i = 1, #railRows do
+		local row = railRows[i]
+		if (row:IsShown() and row.key == path[1]) then
+			row.changed = self.changedByPage[path[1]]
+			row.dot:SetShown(row.changed > 0)
+		end
+	end
+
+	if (self.selected == (Kit.Views and Kit.Views.CHANGED) and self.pageDesc) then
+		self.pageDesc:SetText(string_format(L["%d settings here differ from their defaults."], total))
+	end
+	self:ShowCount()
+end
+
+-- The count's own click: into the Changed view, or back to where you were.
+Panel.ToggleChanged = function(self)
+	local changed = Kit.Views and Kit.Views.CHANGED
+	if (not changed or self.tab ~= "options") then return end
+
+	if (self.selected == changed) then
+		local back = self.beforeChanged
+		if (not back or back == changed) then back = self.pages and self.pages[1] and self.pages[1].key end
+		self:SelectPage(back)
+		return
+	end
+
+	self.beforeChanged = self.selected
+	if (searchBox and searchBox:GetText() ~= "") then
+		searchBox:SetText("")
+		searchBox:ClearFocus()
+		if (searchBox.placeholder) then searchBox.placeholder:Show() end
+		self:HideResults()
+	end
+	self:SelectPage(changed)
 end
 
 --------------------------------------------------------------------------
@@ -750,13 +847,15 @@ end
 -- Brief confirmation for live previews. The outline carries the setting's name
 -- in the world; this line also explains when there was no usable live frame to
 -- outline, which is more truthful than drawing a generic mock-up.
-Panel.SetPreviewStatus = function(self, text, found)
+-- `hold` is how long the line stays up; an explanation needs longer than a
+-- frame name does.
+Panel.SetPreviewStatus = function(self, text, found, hold)
 	if (not self.previewStatus or not self.previewText) then return end
 
 	self.previewFound = found and true or false
 	self.previewText:SetText(text or "")
 	self.previewText:SetTextColor(unpack(self.previewFound and Kit.TextSelected or Kit.TextDisabled))
-	self.previewStatus.remaining = 2.6
+	self.previewStatus.remaining = tonumber(hold) or 2.6
 	self.previewStatus:SetAlpha(1)
 	self.previewStatus:Show()
 end
@@ -789,10 +888,28 @@ Panel.SelectPage = function(self, key)
 	end
 
 	-- The heading, before the rows, so the page names itself.
-	local option = Config.GetSubOption(options, key)
+	local view = GetView(key)
+	local option = (not view) and Config.GetSubOption(options, key) or nil
 	local _, module = GetOptions()
 
-	if (option) then
+	if (view) then
+		self.pageTitle:SetText(view.name)
+		self.pageDesc:SetText(view.desc or "")
+
+		local label = view.crumb
+		if (not label) then
+			for _, entry in ipairs(SECTIONS) do
+				if (entry.key == view.band) then label = entry.label end
+			end
+		end
+		self.crumbBase = (label or view.name):upper()
+		self.crumb:SetText(self.crumbBase)
+
+		-- The rail's list is read on every refresh, not captured here: the rail
+		-- is rebuilt just below, and again whenever the panel refreshes.
+		page:ShowList(options, function() return view.collect(options, Panel.pages) end)
+
+	elseif (option) then
 		local name = Resolve(option.name, key)
 		self.pageTitle:SetText(type(name) == "string" and name or key)
 
@@ -811,7 +928,7 @@ Panel.SelectPage = function(self, key)
 		self.crumb:SetText(self.crumbBase)
 	end
 
-	page:Show(options, { key })
+	if (not view) then page:Show(options, { key }) end
 	contentScroll:SetVerticalScroll(0)
 
 	-- The rail is redrawn now that the page knows its sections. Counts come
@@ -820,6 +937,11 @@ Panel.SelectPage = function(self, key)
 	self:BuildRail()
 	self:UpdateActiveSection()
 	self:ApplyTheme()
+
+	if (key == (Kit.Views and Kit.Views.CHANGED)) then
+		self.pageDesc:SetText(string_format(L["%d settings here differ from their defaults."],
+			self.totalChanged or 0))
+	end
 
 	self.selecting = nil
 end
@@ -905,6 +1027,7 @@ Panel.ShowResults = function(self, query)
 	end
 
 	self:SetCount(string_format(L["%d of %d settings"], #matches, #searchIndex))
+	self:ShowCount()
 	self:ApplyTheme()
 end
 
@@ -968,7 +1091,9 @@ Panel.ApplyTheme = function(self)
 	if (self.previewText) then
 		self.previewText:SetTextColor(unpack(self.previewFound and Kit.TextSelected or Kit.TextDisabled))
 	end
-	if (self.count) then self.count:SetTextColor(unpack(Kit.TextDisabled)) end
+	if (self.count) then
+		self.count:SetTextColor(unpack(self.countActive and Kit.TextSelected or Kit.TextDisabled))
+	end
 	if (self.crumb) then self.crumb:SetTextColor(unpack(Kit.TextSelected)) end
 	if (self.pageTitle) then self.pageTitle:SetTextColor(unpack(Kit.TextHighlight)) end
 	if (self.pageDesc) then self.pageDesc:SetTextColor(unpack(Kit.TextDisabled)) end
@@ -1225,6 +1350,27 @@ local Build = function()
 	count:SetWordWrap(false)
 	Panel.count = count
 
+	local countButton = CreateFrame("Button", nil, searchRow)
+	countButton:SetPoint("TOPLEFT", count, "TOPLEFT", -4, 3)
+	countButton:SetPoint("BOTTOMRIGHT", count, "BOTTOMRIGHT", 4, -3)
+	countButton:SetScript("OnClick", function() Panel:ToggleChanged() end)
+	countButton:SetScript("OnEnter", function(self)
+		count:SetTextColor(unpack(Kit.TextHighlight))
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
+		local changed = Kit.Views and Kit.Views.CHANGED
+		GameTooltip:AddLine((Panel.selected == changed)
+			and L["Back to the page you were on."]
+			or L["Show only the settings that differ from their defaults."],
+			Kit.TextHighlight[1], Kit.TextHighlight[2], Kit.TextHighlight[3], true)
+		GameTooltip:Show()
+	end)
+	countButton:SetScript("OnLeave", function()
+		count:SetTextColor(unpack(Panel.countActive and Kit.TextSelected or Kit.TextDisabled))
+		GameTooltip:Hide()
+	end)
+	countButton:Hide()
+	Panel.countButton = countButton
+
 	local search = CreateFrame("EditBox", nil, searchRow)
 	search:SetHeight(24)
 	search:SetPoint("LEFT", searchRow, "LEFT", 6, 0)
@@ -1446,6 +1592,7 @@ local Build = function()
 	end)
 
 	page = Renderer:CreatePage(pageContent)
+	page.OnChanged = function(_, path) Panel:OnSettingChanged(path) end
 	Panel.page = page
 
 	-- Both scroll frames are on the panel as well as in these upvalues, so the
@@ -1462,8 +1609,8 @@ local Build = function()
 	----------------------------------------------------------------
 	local footer = CreateFrame("Frame", nil, frame)
 	footer:SetHeight(FOOTER_H)
-	footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 8)
-	footer:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 8)
+	footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", FOOTER_INSET, 8)
+	footer:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -FOOTER_INSET, 8)
 
 	local combatIcon = footer:CreateTexture(nil, "ARTWORK")
 	combatIcon:SetTexture(Kit.GetMedia("icon-combat"))
@@ -1481,8 +1628,8 @@ local Build = function()
 	Panel.combatText = combatText
 
 	local previewStatus = CreateFrame("Frame", nil, footer)
-	previewStatus:SetPoint("LEFT", footer, "CENTER", -80, 0)
-	previewStatus:SetPoint("RIGHT", footer, "RIGHT", -22, 0)
+	previewStatus:SetPoint("LEFT", footer, "CENTER", PREVIEW_LEFT, 0)
+	previewStatus:SetPoint("RIGHT", footer, "RIGHT", PREVIEW_RIGHT, 0)
 	previewStatus:SetHeight(FOOTER_H)
 	previewStatus:Hide()
 
@@ -1576,7 +1723,7 @@ Panel.Open = function(self, key)
 	frame:Raise()
 
 	key = key or self.selected
-	if (not key or not Config.GetSubOption(options, key)) then
+	if (not key or not (GetView(key) or Config.GetSubOption(options, key))) then
 		key = self.pages and self.pages[1] and self.pages[1].key
 	end
 	self:SelectPage(key)

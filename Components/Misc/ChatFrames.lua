@@ -26,11 +26,29 @@
 --]]
 local _, ns = ...
 
+-- Addons that take over the chat frames or the editbox. With any of them enabled,
+-- this module stays out entirely instead of skinning frames it no longer owns.
 -- BigInputBox also replaces chat editbox behavior and can taint secure send paths
 -- when multiple chat modifiers are active. Keep AzeriteUI chat skinning out of that stack.
-if (ns.API.IsAddOnEnabled("Prat-3.0")
-	or ns.API.IsAddOnEnabled("ls_Glass")
-	or ns.API.IsAddOnEnabled("BigInputBox")) then return end
+-- Chattynator reuses ChatFrame1EditBox and anchors it to its own window, and moves the
+-- menu, channel, voice and social buttons into its own bar. Styling here re-anchored
+-- the editbox on login and faded those buttons out.
+local CHAT_REPLACEMENTS = {
+	"Prat-3.0",
+	"ls_Glass",
+	"BigInputBox",
+	"Chattynator"
+}
+
+local IsChatReplaced = function()
+	for _,addon in ipairs(CHAT_REPLACEMENTS) do
+		if (ns.API.IsAddOnEnabled(addon)) then
+			return true
+		end
+	end
+end
+
+if (IsChatReplaced()) then return end
 
 local ChatFrames = ns:NewModule("ChatFrames", "LibMoreEvents-1.0", "AceHook-3.0", "AceConsole-3.0", "AceTimer-3.0")
 
@@ -622,9 +640,7 @@ ChatFrames.OnEvent = function(self, event, ...)
 end
 
 ChatFrames.OnInitialize = function(self)
-	if (ns.API.IsAddOnEnabled("Prat-3.0")
-		or ns.API.IsAddOnEnabled("ls_Glass")
-		or ns.API.IsAddOnEnabled("BigInputBox")) then
+	if (IsChatReplaced()) then
 		return self:Disable()
 	end
 

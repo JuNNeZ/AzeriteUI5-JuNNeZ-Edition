@@ -104,7 +104,7 @@ section("Loading")
 for _, file in ipairs({
 	"Options/Kit/Kit.lua", "Options/Kit/Config.lua", "Options/Kit/Defaults.lua",
 	"Options/Kit/Controls.lua", "Options/Kit/Preview.lua",
-	"Options/Kit/Renderer.lua",
+	"Options/Kit/Renderer.lua", "Options/Kit/Views.lua",
 	"Options/Changelog.lua", "Options/Kit/PanelOptions.lua",
 	"Options/Kit/Panel.lua", "Options/Kit/Gallery.lua",
 	"Options/Kit/Widgets.lua", "Options/Kit/Window.lua", "Options/Options.lua",
@@ -571,10 +571,15 @@ do
 	local player = CreateFrame("Frame", nil, UIParent)
 	player:SetSize(240, 70)
 	S.modules.PlayerFrame = { frame = player }
-	check(Preview:ResolveModuleTarget("UnitFrames", { "healthprediction", "enabled" }) == player,
-		"shared Unit Frames settings resolve to the player frame")
+	-- Phase 5c: UnitFrames owns no frame. Its settings each carry a policy, and
+	-- one added later without an entry must not quietly flash the player frame,
+	-- which is the bug live 5.7.0 feedback reported.
+	check(Preview:ResolveModuleTarget("UnitFrames", { "Unit Frames", "someFutureSetting" }) == nil,
+		"an unlisted Unit Frames setting previews nothing rather than the player frame")
 	check(Preview:ResolveModuleTarget("ExplorerMode", { "explorer", "fadePlayerFrame" }) == player,
 		"Explorer Mode resolves an element setting to that element's frame")
+	check(Preview:ResolveModuleTarget("ExplorerMode", { "explorer", "someFutureSetting" }) == nil,
+		"an unknown Explorer Mode setting previews nothing rather than the player frame")
 
 	local livePlate = CreateFrame("Frame", nil, UIParent)
 	livePlate:SetSize(120, 24)
@@ -587,6 +592,565 @@ do
 	S.modules.ActionBars = savedActionBars
 	S.modules.PlayerFrame = savedPlayerFrame
 	ns.ActiveNamePlates = savedActiveNamePlates
+end
+
+--------------------------------------------------------------------------
+section("Semantic previews")
+--------------------------------------------------------------------------
+-- Phase 5c. A binding says whose profile a setting is stored in, not what it
+-- changes on screen. Everything here goes through the real option table's own
+-- paths, so a renamed setting or a moved binding fails here, not in game.
+do
+	-- Every leaf of the real table, hidden ones included: the class- and
+	-- client-specific settings are exactly the ones a rendered page skips.
+	local leaves = {}
+	local function walkLeaves(group, path)
+		if type(group) ~= "table" or type(group.args) ~= "table" then return end
+		for key, option in pairs(group.args) do
+			if type(option) == "table" and option.type then
+				local childPath = {}
+				for i = 1, #path do childPath[i] = path[i] end
+				childPath[#childPath + 1] = key
+				if option.type == "group" then
+					walkLeaves(option, childPath)
+				elseif option.type ~= "header" and option.type ~= "description"
+					and option.type ~= "execute" then
+					leaves[#leaves + 1] = {
+						path = childPath,
+						key = key,
+						module = Defaults.ModuleNameFor(options, childPath)
+					}
+				end
+			end
+		end
+	end
+	walkLeaves(options, {})
+
+	local function HasBarKey(path)
+		for _, key in ipairs(path) do
+			if type(key) == "string" and key:match("^bar%d+$") then return true end
+		end
+	end
+
+	-- "Module:key" -> the shallowest real path, so a page-level Action Bars
+	-- setting wins over a per-bar one that happens to share its key.
+	local pathFor, barLeaf = {}, nil
+	for _, leaf in ipairs(leaves) do
+		if leaf.module then
+			local id = leaf.module .. ":" .. leaf.key
+			if not pathFor[id] or #leaf.path < #pathFor[id] then pathFor[id] = leaf.path end
+			if leaf.module == "ActionBars" and not barLeaf then
+				for _, key in ipairs(leaf.path) do
+					if key == "bar3" then barLeaf = leaf end
+				end
+			end
+		end
+	end
+
+	-- The audit, as an assertion. Each of these is a class of setting that
+	-- used to be shown on a frame it does not own.
+	local explorerKeys = {}
+	local explorerSource = io.open(root .. "/Core/ExplorerMode.lua"):read("*a")
+	local fadeBlock = explorerSource:match("local FADE_OPTION_KEYS = (%b{})")
+	for key in (fadeBlock or ""):gmatch('"([%w_]+)"') do explorerKeys[key] = true end
+	check(next(explorerKeys) ~= nil, "the Explorer Mode element list is read from its module")
+
+	local missingElements, extraElements = {}, {}
+	for key in pairs(explorerKeys) do
+		if not Preview.ExplorerTargets[key] then missingElements[#missingElements + 1] = key end
+	end
+	for key in pairs(Preview.ExplorerTargets) do
+		if not explorerKeys[key] then extraElements[#extraElements + 1] = key end
+	end
+	check(#missingElements == 0 and #extraElements == 0,
+		"the preview names exactly the elements Explorer Mode fades",
+		table.concat(missingElements, ", ") .. " / " .. table.concat(extraElements, ", "))
+
+	local unlisted, outcome = {}, { exact = 0, family = 0, explain = 0, module = 0 }
+	for _, leaf in ipairs(leaves) do
+		local policy = leaf.module and Preview:GetPolicy(leaf.module, leaf.path)
+		if leaf.module then
+			if policy then outcome[policy.kind] = outcome[policy.kind] + 1
+			else outcome.module = outcome.module + 1 end
+		end
+
+		local needsPolicy =
+			(leaf.module == "UnitFrames")
+			or (leaf.module == "ExplorerMode" and not explorerKeys[leaf.key])
+			or (leaf.module == "ActionBars" and not HasBarKey(leaf.path))
+		if needsPolicy and not policy then
+			unlisted[#unlisted + 1] = leaf.module .. ":" .. leaf.key
+		end
+	end
+	print(string.format("  %d bound settings: %d by module frame, %d exact, %d family, %d explained",
+		outcome.module + outcome.exact + outcome.family + outcome.explain,
+		outcome.module, outcome.exact, outcome.family, outcome.explain))
+	check(#unlisted == 0,
+		"every shared, general Explorer and page-level Action Bars setting has a preview policy",
+		table.concat(unlisted, ", "))
+
+	-- The other direction: a policy for a setting that no longer exists means
+	-- the setting was renamed and has lost its policy without anyone noticing.
+	local stale = {}
+	for moduleName, set in pairs(Preview.Policies) do
+		for key in pairs(set) do
+			if key ~= "*" and not pathFor[moduleName .. ":" .. key] then
+				stale[#stale + 1] = moduleName .. ":" .. key
+			end
+		end
+	end
+	check(#stale == 0, "every preview policy names a setting the real table has",
+		table.concat(stale, ", "))
+
+	-- Every explanation has to fit the footer at the smallest window size.
+	check(type(Panel.PreviewMinWidth) == "number" and Panel.PreviewMinWidth > 0,
+		"the panel says how wide its preview line can get", tostring(Panel.PreviewMinWidth))
+	local tooLong = {}
+	for moduleName, set in pairs(Preview.Policies) do
+		for key, policy in pairs(set) do
+			local text = policy.explain
+			if text and #text * 6.2 > (Panel.PreviewMinWidth or 0) then
+				tooLong[#tooLong + 1] = string.format("%s:%s (%d chars)", moduleName, key, #text)
+			end
+		end
+	end
+	table.sort(tooLong)
+	check(#tooLong == 0, "every explanation fits the footer at the smallest window",
+		table.concat(tooLong, ", "))
+
+	-- Live frames standing in for the game. None of them may be touched.
+	local saved = {}
+	for _, name in ipairs({ "PlayerFrame", "TargetFrame", "PartyFrames", "RaidFrame25", "BossFrames",
+		"ActionBars", "ExplorerMode", "MicroMenu", "NamePlates", "PetFrame" }) do
+		saved[name] = S.modules[name]
+	end
+	local savedPlates, savedRaidBar = ns.ActiveNamePlates, _G.CompactRaidFrameManager
+
+	local touched = 0
+	local function Frame(w, h, shown)
+		local f = CreateFrame("Frame", nil, UIParent)
+		f:SetSize(w, h)
+		if shown == false then f:Hide() end
+		for _, method in ipairs({ "Show", "Hide", "SetShown", "SetAlpha", "SetScale",
+			"SetSize", "SetWidth", "SetHeight", "SetParent", "SetPoint", "ClearAllPoints" }) do
+			f[method] = function() touched = touched + 1 end
+		end
+		return f
+	end
+	local function SetVisible(f, shown) rawset(f, "shownValue", shown) end
+
+	local player, target, party = Frame(240, 70), Frame(240, 70), Frame(180, 300)
+	-- Raid25 keeps a container for Edit Mode that is always shown; its header
+	-- is empty outside a raid. Boss keeps one too, holding a frame per boss.
+	local raidContainer = Frame(300, 300)
+	raidContainer.content = Frame(0, 0)
+	local bossContainer = Frame(250, 485)
+	local boss1, boss2 = Frame(250, 90), Frame(250, 90, false)
+	bossContainer.units = { boss1, boss2 }
+
+	local enemyPlate, friendlyPlate = Frame(120, 24), Frame(120, 24)
+	enemyPlate.isTarget, enemyPlate.canAttack = true, true
+	friendlyPlate.canAssist, friendlyPlate.isPlayerUnit = true, true
+
+	S.modules.PlayerFrame = { frame = player }
+	S.modules.TargetFrame = { frame = target }
+	S.modules.PartyFrames = { frame = party }
+	S.modules.RaidFrame25 = { frame = raidContainer }
+	S.modules.BossFrames = { frame = bossContainer }
+	S.modules.NamePlates = {}
+	ns.ActiveNamePlates = { [enemyPlate] = true, [friendlyPlate] = true }
+
+	local function Targets(id)
+		local path = pathFor[id]
+		if not path then return {}, nil, nil end
+		local targets, moduleName, kind = Preview:ResolveTargets(options, path)
+		return targets or {}, moduleName, kind
+	end
+	local function Has(list, frame)
+		for _, f in ipairs(list) do if f == frame then return true end end
+		return false
+	end
+	local function Request(id, label)
+		Preview:Request(options, pathFor[id], label)
+		return Preview:GetLastRequest()
+	end
+
+	-- The two settings live feedback reported.
+	local raidBar = Frame(200, 300, false)
+	_G.CompactRaidFrameManager = raidBar
+	local hiddenBar = Request("UnitFrames:showBlizzardRaidBar", "Show Blizzard Raid Bar")
+	check(hiddenBar and #hiddenBar.targets == 0 and not Has(hiddenBar.targets, player),
+		"Show Blizzard Raid Bar no longer flashes the player frame")
+	check(hiddenBar and hiddenBar.explanation and hiddenBar.explanation:find("party or raid", 1, true),
+		"a hidden raid bar is explained, not outlined where it last was",
+		hiddenBar and hiddenBar.explanation)
+	check(Panel.previewText:GetText():find("party or raid", 1, true),
+		"the footer shows the explanation", Panel.previewText:GetText())
+	SetVisible(raidBar, true)
+	local shownBar = Request("UnitFrames:showBlizzardRaidBar", "Show Blizzard Raid Bar")
+	check(shownBar and shownBar.targets[1] == raidBar and #shownBar.targets == 1,
+		"a shown raid bar is Blizzard's raid frame manager itself")
+
+	local cast = Targets("UnitFrames:colorCastSpellTextByState")
+	check(#cast == 2 and Has(cast, target) and Has(cast, enemyPlate) and not Has(cast, player),
+		"Color Cast Spell Text By State shows the target frame and nameplates, not the player",
+		#cast)
+
+	local sorting = Targets("UnitFrames:disableAuraSorting")
+	check(Has(sorting, target) and Has(sorting, party) and Has(sorting, enemyPlate)
+		and not Has(sorting, player),
+		"aura sorting shows the frames that sort auras, and the player frame does not",
+		#sorting)
+
+	local health, healthModule, healthKind = Targets("UnitFrames:showIncomingHeals")
+	check(healthModule == "UnitFrames" and healthKind == "family",
+		"health prediction is a family setting", tostring(healthKind))
+	check(#health == 5 and Has(health, player) and Has(health, target) and Has(health, party)
+		and Has(health, boss1) and Has(health, enemyPlate),
+		"health prediction shows every visible health bar", #health)
+	check(not Has(health, raidContainer) and not Has(health, raidContainer.content),
+		"an empty group container is not a visible member")
+	check(not Has(health, bossContainer) and not Has(health, boss2),
+		"only the boss frames actually shown are members")
+	SetVisible(target, false)
+	check(not Has(Targets("UnitFrames:showIncomingHeals"), target),
+		"a hidden frame is not outlined as a family member")
+	SetVisible(target, true)
+
+	-- One label, a count in the footer, and no stale glow left behind.
+	local family = Request("UnitFrames:showIncomingHeals", "Show Incoming Heals")
+	local overlays, shown = Preview:GetOverlays(), 0
+	for _, overlay in ipairs(overlays) do if overlay:IsShown() then shown = shown + 1 end end
+	check(family and shown == #family.targets, "a family draws one glow per member",
+		string.format("%d glows, %d members", shown, family and #family.targets or -1))
+	check(overlays[1].label and overlays[1].label:GetText() == "Show Incoming Heals"
+		and overlays[2] and overlays[2].label == nil,
+		"only the first glow of a family carries the label")
+	check(Panel.previewText:GetText():find("Previewing 5 frames", 1, true),
+		"the footer counts the frames a family setting reaches", Panel.previewText:GetText())
+	Request("UnitFrames:showBlizzardRaidBar", "Show Blizzard Raid Bar")
+	shown = 0
+	for _, overlay in ipairs(overlays) do if overlay:IsShown() then shown = shown + 1 end end
+	check(shown == 1, "a single-frame preview clears the rest of a family's glows", shown)
+	Preview:Hide()
+	shown = 0
+	for _, overlay in ipairs(overlays) do if overlay:IsShown() then shown = shown + 1 end end
+	check(shown == 0, "hiding the preview hides every glow", shown)
+
+	-- Action Bars: the page-level settings reach every bar, one of them
+	-- changes nothing you can see, and a bar's own settings keep that bar.
+	local bar1, bar2, bar3 = Frame(300, 36), Frame(300, 36), Frame(300, 36, false)
+	S.modules.ActionBars = { bars = { bar1, bar2, bar3 } }
+	local hotkeys = Targets("ActionBars:hideElementsHotkey")
+	check(#hotkeys == 2 and Has(hotkeys, bar1) and Has(hotkeys, bar2),
+		"a page-level Action Bars setting shows every visible bar, not bar one", #hotkeys)
+	local keyDown = Request("ActionBars:clickOnDown", "Cast action keybinds on key down")
+	check(keyDown and keyDown.kind == "explain" and #keyDown.targets == 0 and keyDown.explanation,
+		"key-down casting is explained rather than outlined")
+	-- 6.2px a character is the stub's font model, the same one the wrapping
+	-- checks use. The footer line does not wrap, so a longer line is cut off.
+	check(keyDown and keyDown.explanation
+		and #keyDown.explanation * 6.2 <= Panel.PreviewMinWidth,
+		"the explanation the footer actually shows fits on its one line",
+		keyDown and keyDown.explanation)
+	check(barLeaf ~= nil, "the real table has an Action Bar 3 setting")
+	if barLeaf then
+		local own = Preview:ResolveTargets(options, barLeaf.path)
+		check(own and own[1] == bar3 and #own == 1,
+			"a per-bar setting still shows its own bar, even hidden",
+			table.concat(barLeaf.path, "."))
+	end
+
+	-- Explorer Mode's general settings reach the elements it is set to fade.
+	local pet = Frame(160, 50)
+	S.modules.PetFrame = { frame = pet }
+	S.modules.ExplorerMode = { db = { profile = {
+		fadeActionBars = true, fadePlayerFrame = true, fadePetFrame = false
+	} } }
+	local explorer = Targets("ExplorerMode:fadeInCombat")
+	check(Has(explorer, player) and Has(explorer, bar1) and Has(explorer, bar2),
+		"an Explorer Mode condition shows the elements it fades", #explorer)
+	check(not Has(explorer, pet), "an element Explorer Mode does not fade is left out")
+	local allBars = Targets("ExplorerMode:fadeActionBars")
+	check(#allBars == 2 and Has(allBars, bar1) and Has(allBars, bar2),
+		"Fade ActionBars shows every bar, not bar one", #allBars)
+	check(Targets("ExplorerMode:fadePlayerFrame")[1] == player,
+		"an Explorer element toggle still shows that element")
+
+	-- Nameplates: a friendly-only setting must not glow a hostile target.
+	check(Targets("NamePlates:friendlyScale")[1] == friendlyPlate,
+		"a friendly nameplate setting shows a friendly plate, not the enemy target")
+	check(Targets("NamePlates:enemyScale")[1] == enemyPlate,
+		"an enemy nameplate setting shows an enemy plate")
+	check(Targets("NamePlates:hideFriendlyPlayerHealthBar")[1] == friendlyPlate,
+		"a friendly player setting shows a friendly player's plate")
+	-- Blizzard's own plate is there too, and carries none of the flags a
+	-- friendly-only setting needs, so it must not be picked as a fallback.
+	local savedNamePlateAPI = C_NamePlate
+	local blizzardPlate = Frame(120, 24)
+	C_NamePlate = { GetNamePlateForUnit = function() return { UnitFrame = blizzardPlate } end }
+	local friendlyTarget = Request("NamePlates:friendlyTargetScale", "Friendly/player target size (%)")
+	C_NamePlate = savedNamePlateAPI
+	check(friendlyTarget and #friendlyTarget.targets == 0
+		and friendlyTarget.explanation and friendlyTarget.explanation:find("Target a friendly", 1, true),
+		"a friendly target setting with only an enemy targeted asks for a friendly target",
+		friendlyTarget and friendlyTarget.explanation)
+	check(Targets("NamePlates:nameplateTargetScale")[1] == enemyPlate,
+		"the enemy target setting shows the targeted enemy")
+	local distance = Request("NamePlates:maxDistance", "Maximum distance")
+	check(distance and distance.kind == "explain" and #distance.targets == 0,
+		"maximum distance is explained rather than pinned on one plate")
+	check(Targets("NamePlates:castBarOffsetY")[1] == enemyPlate,
+		"a setting every plate shares still shows the target plate")
+
+	-- The cog, not the popup it opens.
+	local cog, popup = Frame(32, 32), Frame(300, 40, false)
+	S.modules.MicroMenu = { bar = popup, toggle = cog }
+	check(Targets("MicroMenu:enabled")[1] == cog,
+		"Show AzeriteUI Cog Wheel shows the cog, not its hidden popup")
+
+	-- A closed tooltip has no place on screen.
+	SetVisible(GameTooltip, false)
+	local closedTip = Request("Tooltips:theme", "Set Tooltip Theme")
+	check(closedTip and #closedTip.targets == 0 and closedTip.explanation,
+		"a closed tooltip is explained, not outlined where it last was")
+	SetVisible(GameTooltip, true)
+	check(Targets("Tooltips:theme")[1] == GameTooltip, "a shown tooltip is outlined")
+
+	check(touched == 0, "no semantic preview touches a frame it identifies", touched)
+
+	Preview:Hide()
+	for name, module in pairs(saved) do S.modules[name] = module end
+	ns.ActiveNamePlates, _G.CompactRaidFrameManager = savedPlates, savedRaidBar
+end
+
+--------------------------------------------------------------------------
+section("Quick Start and changed settings")
+--------------------------------------------------------------------------
+-- Phase 8. Two pages the option table does not have, drawn from settings that
+-- live on other pages, each row bound to its real path. Under these stubs a
+-- value written through a real setter differs from the stub module's default,
+-- which is what lets a change be made and counted here.
+do
+	local Views = Kit.Views
+	check(Views ~= nil, "Kit.Views exists")
+	-- The stub locale answers every key with itself, as enUS does.
+	local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
+
+	local function ValueControls()
+		local out = {}
+		for _, control in ipairs(Panel.page:GetControls()) do
+			if control.kind ~= "header" and control.kind ~= "description" then
+				out[#out + 1] = control
+			end
+		end
+		return out
+	end
+	local function Find(label)
+		for _, control in ipairs(Panel.page:GetControls()) do
+			if control.labelText == label then return control end
+		end
+	end
+	local function Headings()
+		local out = {}
+		for _, control in ipairs(Panel.page:GetControls()) do
+			if control.kind == "header" then out[#out + 1] = control.labelText or "" end
+		end
+		return out
+	end
+	local function RailRow(key)
+		for _, row in ipairs(Panel.railRows or {}) do
+			if row:IsShown() and row.key == key then return row end
+		end
+	end
+
+	-- Quick Start: first in the rail, so a first visit lands on it.
+	check(Panel.pages[1] and Panel.pages[1].key == Views.QUICKSTART,
+		"Quick Start is the first page in the rail", Panel.pages[1] and Panel.pages[1].key)
+	check(Panel.railLayout[1] and Panel.railLayout[1].kind == "band"
+		and Panel.railLayout[2] and Panel.railLayout[2].label == L["Quick Start"],
+		"Quick Start leads the Setup band")
+	local listedChanged = false
+	for _, entry in ipairs(Panel.pages) do
+		if entry.key == Views.CHANGED then listedChanged = true end
+	end
+	check(not listedChanged, "the Changed view is not a rail page")
+
+	Panel.selected = nil
+	Panel:Close()
+	Panel:Open()
+	check(Panel.selected == Views.QUICKSTART, "a first open lands on Quick Start", Panel.selected)
+
+	-- Every Quick Start entry resolves on this client, to the setting it names.
+	local rows = Views.CollectQuickStart(options, Panel.pages)
+	local items, bar2 = {}, nil
+	for _, entry in ipairs(rows) do
+		if entry.option then
+			items[#items + 1] = entry
+			local moduleName = Defaults.ModuleNameFor(options, entry.path)
+			if moduleName == "ActionBars" and entry.path[#entry.path] == "enabled" then bar2 = entry end
+		end
+	end
+	check(#items == #Views.QuickStart, "every Quick Start setting is found on Retail",
+		string.format("%d of %d", #items, #Views.QuickStart))
+	local inBar2 = false
+	for _, key in ipairs(bar2 and bar2.path or {}) do if key == "bar2" then inBar2 = true end end
+	check(inBar2, "a Quick Start entry naming a bar gets that bar, not the first one it meets",
+		bar2 and table.concat(bar2.path, "."))
+	local pageLevel
+	for _, entry in ipairs(items) do
+		if entry.path[#entry.path] == "dimWhenInactive" then pageLevel = entry end
+	end
+	check(pageLevel and #pageLevel.path == 2,
+		"an entry without a group gets the page-level setting", pageLevel and table.concat(pageLevel.path, "."))
+
+	Panel:SelectPage(Views.QUICKSTART)
+	check(Panel.pageTitle:GetText() == L["Quick Start"], "Quick Start names itself",
+		Panel.pageTitle:GetText())
+	check(#ValueControls() == #Views.QuickStart, "Quick Start draws a real control for each setting",
+		#ValueControls())
+	check(#Panel.page:GetSections() == 0, "Quick Start lists no sections in the rail",
+		#Panel.page:GetSections())
+	local trailed = false
+	for _, heading in ipairs(Headings()) do
+		if heading:find(" > ", 1, true) then trailed = true end
+	end
+	check(trailed, "a Quick Start heading names the page and section a setting lives in",
+		table.concat(Headings(), " | "))
+
+	-- A change made on Quick Start writes the real setting and is counted on
+	-- that setting's own page, without the panel being refreshed. Under these
+	-- stubs some settings already read as changed; only the difference counts.
+	local before = Panel.totalChanged or 0
+	print("  changed before the test: " .. before)
+	local explorer = Find(L["Enable Explorer Mode"])
+	check(explorer ~= nil, "Quick Start shows Enable Explorer Mode")
+	if explorer then explorer:Fire(true) end
+	check(S.modules.ExplorerMode.db.profile.enabled == true,
+		"a Quick Start control writes the setting it stands for")
+	check((Panel.totalChanged or 0) == before + 1,
+		"the header tally counts the change at once",
+		string.format("%d -> %d", before, Panel.totalChanged or 0))
+	check(Panel.count:GetText():find(tostring(before + 1) .. " changed", 1, true),
+		"the header says how many are changed", Panel.count:GetText())
+	check(Panel.countButton:IsShown(), "with something changed, the tally is a way in")
+
+	-- The gem, on a page with nothing changed before. Explorer Mode already
+	-- carries one under these stubs, so it could not show a gem appearing.
+	local chatPage
+	for _, entry in ipairs(Panel.pages) do
+		if Defaults.ModuleNameFor(options, { entry.key }) == "ChatFrames" then chatPage = entry.key end
+	end
+	local chatRow = RailRow(chatPage)
+	check(chatRow and not chatRow.dot:IsShown(), "the Chat page starts without a gem")
+	local fade = Find(L["Fade Chat"])
+	check(fade ~= nil, "Quick Start shows Fade Chat")
+	if fade then fade:Fire(true) end
+	check(chatRow and chatRow.dot:IsShown(), "a change on Quick Start lights its own page's gem at once")
+	fade = Find(L["Fade Chat"])
+	if fade and fade.onRevert then fade.onRevert(fade) end
+	check(chatRow and not chatRow.dot:IsShown(), "and putting it back puts the gem out")
+
+	-- A change on an ordinary page is counted at once too.
+	local unitsPage
+	for _, entry in ipairs(Panel.pages) do
+		if Defaults.ModuleNameFor(options, { entry.key }) == "UnitFrames" then unitsPage = entry.key end
+	end
+	Panel:SelectPage(unitsPage)
+	local castText = Find(L["Color Cast Spell Text By State"])
+	check(castText ~= nil, "Color Cast Spell Text By State is on the Unit Frames page")
+	if castText then castText:Fire(true) end
+	check((Panel.totalChanged or 0) == before + 2,
+		"a change on its own page is counted without reopening", Panel.totalChanged)
+
+	-- The Changed view: every changed setting, as controls, grouped by page.
+	local cameFrom = Panel.selected
+	Panel:ToggleChanged()
+	check(Panel.selected == Views.CHANGED, "the tally opens the Changed view", Panel.selected)
+	check(Panel.pageTitle:GetText() == L["Changed from default"], "the Changed view names itself",
+		Panel.pageTitle:GetText())
+	check(#ValueControls() == (Panel.totalChanged or 0),
+		"the Changed view holds exactly the settings the tally counts",
+		string.format("%d rows, %d counted", #ValueControls(), Panel.totalChanged or 0))
+	check(Find(L["Enable Explorer Mode"]) and Find(L["Color Cast Spell Text By State"]),
+		"both changes are listed, from their different pages")
+	check(Panel.countButton:IsShown(), "the tally stays a link while the view is open")
+
+	-- Putting one back removes its row, and the tally follows.
+	local row = Find(L["Enable Explorer Mode"])
+	if row and row.onRevert then row.onRevert(row) end
+	check(Find(L["Enable Explorer Mode"]) == nil, "a reverted setting leaves the Changed view")
+	check((Panel.totalChanged or 0) == before + 1, "and the tally drops with it", Panel.totalChanged)
+	check(Panel.pageDesc:GetText():find(tostring(before + 1), 1, true),
+		"the view's own description keeps count", Panel.pageDesc:GetText())
+
+	row = Find(L["Color Cast Spell Text By State"])
+	if row and row.onRevert then row.onRevert(row) end
+	check((Panel.totalChanged or 0) == before, "both changes are put back", Panel.totalChanged)
+	check(Panel.countButton:IsShown(), "the way back stays open")
+
+	-- Under these stubs the real table always has settings that read as
+	-- changed, so the empty case is shown on a table where nothing is.
+	do
+		local values = { flag = false }
+		S.modules.ViewsProbe = { GetProfileDefaults = function() return { flag = false } end }
+		local probePage = {
+			name = "Probe Page", type = "group", order = 1,
+			args = {
+				flag = {
+					name = "Probe Flag", type = "toggle", order = 1,
+					get = function(info) return values[info[#info]] end,
+					set = function(info, value) values[info[#info]] = value end
+				}
+			}
+		}
+		local probe = { type = "group", args = { probe = probePage } }
+		Defaults.Bind(probePage, "ViewsProbe")
+		local probePages = { { key = "probe", name = "Probe Page" } }
+
+		local empty, none = Views.CollectChanged(probe, probePages)
+		check(none == 0 and #empty == 1 and empty[1].kind == "description"
+			and empty[1].label == L["Nothing here differs from its default."],
+			"with nothing changed, the view says so rather than showing a blank page")
+
+		values.flag = true
+		local one, count = Views.CollectChanged(probe, probePages)
+		check(count == 1 and one[1].kind == "header" and one[1].label == "Probe Page"
+			and one[2].option and one[2].path[2] == "flag",
+			"a page-level change is filed under its page's name")
+		S.modules.ViewsProbe = nil
+	end
+
+	Panel:ToggleChanged()
+	check(Panel.selected == cameFrom, "the tally leads back to the page you came from", Panel.selected)
+
+	Panel:Close()
+	Panel:Open(Views.CHANGED)
+	check(Panel.selected == Views.CHANGED, "the panel can be opened straight onto a view", Panel.selected)
+	Panel:SelectPage(cameFrom)
+
+	-- A search owns the tally while it is up.
+	Panel:ShowResults("scale")
+	check(not Panel.countButton:IsShown(), "the tally is not a link during a search")
+	Panel:ClearSearch()
+
+	-- The Settings tab has no module defaults, so no view and no link.
+	Panel:SetTab("settings")
+	check(not Panel.countButton:IsShown(), "the Settings tab has no Changed view")
+	local anyView = false
+	for _, entry in ipairs(Panel.pages or {}) do if entry.view then anyView = true end end
+	check(not anyView, "the Settings tab lists no views")
+	Panel:SetTab("options")
+
+	-- The view and the tally have to agree on the real table, not only on the
+	-- two settings changed above.
+	local _, rowsCounted = Views.CollectChanged(options, Panel.pages)
+	local counted = 0
+	for _, entry in ipairs(Panel.pages) do
+		if not entry.view then counted = counted + Defaults.CountModified(options, { entry.key }) end
+	end
+	check(rowsCounted == counted, "the Changed view and the rail count the same settings",
+		string.format("%d listed, %d counted", rowsCounted, counted))
 end
 
 --------------------------------------------------------------------------

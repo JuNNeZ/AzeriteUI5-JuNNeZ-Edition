@@ -98,6 +98,16 @@ local PreviewChange = function(options, path, label)
 	if (Preview) then Preview:Request(options, path, label) end
 end
 
+-- Tells whoever owns the page which setting just changed, so counts kept
+-- elsewhere (the rail's gems, the header's tally) can be brought up to date
+-- for that setting's own page. The path is the setting's real one, which is
+-- what lets a view gathered from several pages report it correctly.
+local NotifyChanged = function(page, path)
+	if (type(page.OnChanged) == "function") then
+		pcall(page.OnChanged, page, path)
+	end
+end
+
 local Bind = function(control, option, options, path, page)
 	local bound = Copy(path)
 	local label = AsString(Config.GetName(option, options, path, APP), "")
@@ -131,12 +141,14 @@ local Bind = function(control, option, options, path, page)
 		control:SetOnRevert(function(self)
 			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then
 				PreviewChange(options, bound, label)
+				NotifyChanged(page, bound)
 				page:Refresh()
 			end
 		end)
 		control:SetCallback(function(self, value)
 			Config.SetValue(option, options, bound, APP, value and true or false)
 			PreviewChange(options, bound, label)
+			NotifyChanged(page, bound)
 			page:Refresh()
 		end)
 		return
@@ -160,6 +172,7 @@ local Bind = function(control, option, options, path, page)
 		control:SetOnRevert(function(self)
 			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then
 				PreviewChange(options, bound, label)
+				NotifyChanged(page, bound)
 				page:Refresh()
 			end
 		end)
@@ -167,6 +180,7 @@ local Bind = function(control, option, options, path, page)
 		control:SetCallback(function(self, newValue)
 			Config.SetValue(option, options, bound, APP, newValue)
 			PreviewChange(options, bound, label)
+			NotifyChanged(page, bound)
 			page:Refresh()
 		end)
 		return
@@ -186,6 +200,7 @@ local Bind = function(control, option, options, path, page)
 		control:SetOnRevert(function(self)
 			if (Kit.Defaults and Kit.Defaults.Revert(options, bound)) then
 				PreviewChange(options, bound, label)
+				NotifyChanged(page, bound)
 				page:Refresh()
 			end
 		end)
@@ -193,6 +208,7 @@ local Bind = function(control, option, options, path, page)
 		control:SetCallback(function(self, newValue)
 			Config.SetValue(option, options, bound, APP, newValue)
 			PreviewChange(options, bound, label)
+			NotifyChanged(page, bound)
 			page:Refresh()
 		end)
 		return
@@ -209,6 +225,7 @@ local Bind = function(control, option, options, path, page)
 		control:SetCallback(function(self, newText)
 			Config.SetValue(option, options, bound, APP, newText)
 			PreviewChange(options, bound, label)
+			NotifyChanged(page, bound)
 			page:Refresh()
 		end)
 		return
@@ -291,6 +308,9 @@ end
 
 Renderer.Collect = function(self, group, options, path)
 	local out = {}
+	-- A key with no group behind it (a view such as Quick Start) has no rows
+	-- of its own to collect.
+	if (type(group) ~= "table") then return out end
 	Collect(group, options, path or {}, out, 0)
 	return out
 end
@@ -405,12 +425,16 @@ Renderer.CreatePage = function(self, content)
 	-- Re-reads every visible control from the table. A setting that enables
 	-- another one has to be able to grey it out the moment it changes.
 	page.Refresh = function(self)
+		if (self.collect) then
+			self:ShowList(self.options, self.collect)
+			return
+		end
 		if (not self.options or not self.path) then return end
 		self:Show(self.options, self.path)
 	end
 
 	page.Show = function(self, options, path)
-		self.options, self.path = options, path
+		self.options, self.path, self.collect = options, path, nil
 
 		local group = Config.GetGroup(options, path)
 		if (not group) then
@@ -419,8 +443,25 @@ Renderer.CreatePage = function(self, content)
 			return 0
 		end
 
-		local entries = Renderer:Collect(group, options, path)
+		return self:Render(options, Renderer:Collect(group, options, path))
+	end
 
+	-- Draws rows gathered elsewhere, from settings that may sit on different
+	-- pages. Each row carries its own real path, so binding works as it does on
+	-- the setting's own page. `collect` is kept and asked again on every
+	-- refresh, which is how a view that filters by value drops a row the moment
+	-- it stops qualifying. A collector that fails says so on the page.
+	page.ShowList = function(self, options, collect)
+		self.options, self.path, self.collect = options, nil, collect
+
+		local ok, entries = pcall(collect)
+		if (not ok or type(entries) ~= "table") then
+			entries = { { kind = "description", label = tostring(entries) } }
+		end
+		return self:Render(options, entries)
+	end
+
+	page.Render = function(self, options, entries)
 		self:Clear()
 
 		for i, entry in ipairs(entries) do
