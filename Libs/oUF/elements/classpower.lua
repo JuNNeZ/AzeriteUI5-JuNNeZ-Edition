@@ -139,7 +139,8 @@ end
 
 local function GetComboPointsMax(unit)
 	local max = UnitPowerMax(unit, POWER_ID_COMBO_POINTS)
-	if(GetTargetComboPoints and (type(max) ~= 'number' or (not (IsSecretValue and IsSecretValue(max)) and max <= 0))) then
+	-- A secret max cannot size the points, and classic combo points always top out at 5.
+	if(GetTargetComboPoints and (type(max) ~= 'number' or (IsSecretValue and IsSecretValue(max)) or max <= 0)) then
 		return 5
 	end
 	return max
@@ -400,12 +401,34 @@ local function Update(self, event, unit, powerType)
 			prevCur = 0
 			element.__cur = 0
 		end
+
+		-- Forever returns combo points as secrets even out of combat. The bars accept them, so give
+		-- each point its own [i - 1, i] range and let the client clamp the value, instead of doing
+		-- arithmetic on it here. PostUpdate receives the secret and must not compare it either.
+		-- Forever only: Retail keeps its cached fallback for every resource.
+		local isSecretCur = GetTargetComboPoints and (type(cur) == 'number') and IsSecretValue and IsSecretValue(cur)
+		if(isSecretCur) then
+			for i = 1, max do
+				element[i]:SetMinMaxValues(i - 1, i)
+				element[i]:SetValue(cur)
+			end
+			element.__isSecretCur = true
+		end
+
+		local wasSecretCur = element.__isSecretCur and not isSecretCur
+		if(wasSecretCur) then
+			for i = 1, #element do
+				element[i]:SetMinMaxValues(0, 1)
+			end
+			element.__isSecretCur = nil
+		end
+
 		local hasSafeCur = (type(cur) == 'number') and (not IsSecretValue or not IsSecretValue(cur))
-		if(not hasSafeCur) then
+		if(not hasSafeCur and not isSecretCur) then
 			cur = prevCur
 		end
 
-		local hasCurChanged = cur ~= prevCur
+		local hasCurChanged = (not isSecretCur) and (wasSecretCur or cur ~= prevCur)
 		if(hasCurChanged) then
 			local numActive = cur + 0.9
 			for i = 1, max do

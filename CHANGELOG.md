@@ -10,6 +10,23 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.7.2-JuNNeZ (2026-09-22) - Forever Combo Points, Take Two
+
+### Highlights
+
+- **Forever Rogues and Druids now actually see their combo points.** Forever hands combo points to addons as hidden ("secret") values, even out of combat, and AzeriteUI read them as zero, so the display never appeared. The game now fills the points directly: filled points are bright, empty sockets half-faded, the display is hidden with no points, and a full set still fades after combat unless **Unit Frames -> Class Power -> Show Full Class Power Out of Combat** is on. Retail is unchanged.
+
+### Development
+
+- A player's `/dump` showed 5.7.1 had the cause wrong: the count was correct but secret, not zero. Each point now takes the secret value through its own range, and visibility comes from Blizzard's curve-based percent API, so addon code never reads or compares the number.
+- Added an offline test that runs the real class power code against a stand-in secret value that fails on any arithmetic or comparison, plus deliberate-break checks proving each part of the fix is covered and Retail keeps its old path.
+
+### Access and known limits
+
+- Verified offline only; not yet confirmed in game.
+- With Class Power Click-Through turned off, the invisible zero-point display still blocks clicks in its area.
+
+
 ## 5.7.1-JuNNeZ (2026-09-21) - Forever Combo Points
 
 ### Highlights

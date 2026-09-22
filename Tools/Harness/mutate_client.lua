@@ -39,9 +39,34 @@ local cases = {
 	-- Trusting a cache from another build would keep a stale "available" answer
 	-- across the very patch that changed it.
 	{"snippet cache build match", "Core/Client.lua",
-		"cached.build == currentBuild and ", ""}
+		"cached.build == currentBuild and ", ""},
+	-- Forever combo points are secret; each break below leaves them invisible or throws.
+	{"secret point fill", "Libs/oUF/elements/classpower.lua",
+		"element[i]:SetValue(cur)\n", "", "combo_points_harness.lua"},
+	{"secret max fallback", "Libs/oUF/elements/classpower.lua",
+		"(IsSecretValue and IsSecretValue(max)) or max <= 0",
+		"(not (IsSecretValue and IsSecretValue(max)) and max <= 0)", "combo_points_harness.lua"},
+	{"secret range restore", "Libs/oUF/elements/classpower.lua",
+		"element[i]:SetMinMaxValues(0, 1)", "", "combo_points_harness.lua"},
+	{"secret hide at zero", "Components/UnitFrames/Units/PlayerClassPower.lua",
+		"hideAtZero and not isSecretCur and cur <= 0", "hideAtZero and cur <= 0", "combo_points_harness.lua"},
+	{"secret point alpha", "Components/UnitFrames/Units/PlayerClassPower.lua",
+		"elseif (isSecretCur) then", "elseif (false) then", "combo_points_harness.lua"},
+	{"secret full fade option", "Components/UnitFrames/Units/PlayerClassPower.lua",
+		"not element.inCombat and not showFullOutOfCombat)", "not element.inCombat)", "combo_points_harness.lua"},
+	{"secret empty socket", "Components/UnitFrames/Units/PlayerClassPower.lua",
+		"curve:AddPoint(.5 / max, .5)", "", "combo_points_harness.lua"},
+	{"secret half-step threshold", "Components/UnitFrames/Units/PlayerClassPower.lua",
+		"curve:AddPoint((index - .5) / max, 1)", "curve:AddPoint(index / max, 1)", "combo_points_harness.lua"},
+	{"secret path Forever only", "Libs/oUF/elements/classpower.lua",
+		"local isSecretCur = GetTargetComboPoints and (type(cur)", "local isSecretCur = (type(cur)",
+		"combo_points_harness.lua"}
 }
+local function harnessFor(case)
+	return root .. "/Tools/Harness/" .. (case[5] or "client_harness.lua")
+end
 assert(originalLoadfile(root .. "/Tools/Harness/client_harness.lua"))()
+assert(originalLoadfile(root .. "/Tools/Harness/combo_points_harness.lua"))()
 for _, case in ipairs(cases) do
 	local mutations = 0
 	loadfile = function(path)
@@ -54,7 +79,7 @@ for _, case in ipairs(cases) do
 		mutations = mutations + 1
 		return loadstring(source:sub(1, first - 1) .. case[4] .. source:sub(last + 1), "@" .. path)
 	end
-	local ok, err = pcall(assert(originalLoadfile(root .. "/Tools/Harness/client_harness.lua")))
+	local ok, err = pcall(assert(originalLoadfile(harnessFor(case))))
 	loadfile = originalLoadfile
 	assert(mutations > 0, "mutation was not applied: " .. case[1])
 	assert(not ok, "mutation survived: " .. case[1])

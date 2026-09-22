@@ -18,6 +18,7 @@ lua Tools/Harness/real_options_harness.lua . Tools/Harness   # the real table, e
 lua Tools/Harness/real_options_harness.lua . Tools/Harness Forever # unavailable settings hidden
 lua Tools/Harness/client_harness.lua      .                # Retail/Forever detection, APIs, modules, menus
 lua Tools/Harness/diel_harness.lua        .                # the Forever day and night indicator
+lua Tools/Harness/combo_points_harness.lua .               # Forever secret combo points
 ```
 
 Two arguments: the addon root, then this folder. Both harness files and `stubs.lua` are found
@@ -34,6 +35,13 @@ comments - and runs that real source against a stubbed client, so it tests the
 shipped file rather than a copy that drifts from it. Move those comments and it
 fails loudly rather than silently testing nothing. It cannot see textures, frame
 strata, Blizzard's Edit Mode or a real cycle transition.
+
+`combo_points_harness.lua` also only needs the addon root. It runs the real oUF
+ClassPower element, the real PlayerClassPower style and the real layout data against
+a secret stand-in that reports as a number but throws on any arithmetic, ordering
+comparison or indexing - Forever returns combo points that way even out of combat.
+Its curve and StatusBar model Blizzard's documented Step and clamp behavior; they
+are not the client. `mutate_client.lua` carries its mutations.
 
 For client-aware API, UI-source, TOC/XML, and Forever game-data checks, use
 [Hated WoW MCP](https://github.com/RdyGaming/hated-wow-mcp) with `flavor: "forever"`.

@@ -599,10 +599,53 @@ local ClassPower_PostUpdateColor = function(element, r, g, b)
 	-- oUF callback for color updates (not actively used for SoulFragmentsPoints)
 end
 
+-- Forever hands out combo points as secret values, even out of combat. Addon code may neither
+-- compare the count nor pass it to Curve:Evaluate, but UnitPowerPercent evaluates a curve against
+-- it inside the client and SetAlpha accepts the secret result. One step curve per point keeps the
+-- usual rules: hidden at zero, empty socket at half alpha, filled at full, and a full set fading
+-- out of combat unless the player chose to keep it.
+local POWER_ID_COMBO_POINTS = (Enum and Enum.PowerType and Enum.PowerType.ComboPoints) or 4
+local SecretPointCurves = {}
+
+local GetSecretPointAlpha = function(index, max, fadeWhenFull)
+	if (not UnitPowerPercent or not C_CurveUtil or not C_CurveUtil.CreateCurve
+	or not Enum or not Enum.LuaCurveType or not Enum.LuaCurveType.Step) then
+		return 1
+	end
+
+	local key = index .. ":" .. max .. (fadeWhenFull and ":fade" or "")
+	local curve = SecretPointCurves[key]
+	if (not curve) then
+		-- The input is count / max. Each step sits half a point below its count,
+		-- so client float rounding cannot put a whole count on the wrong side.
+		curve = C_CurveUtil.CreateCurve()
+		curve:SetType(Enum.LuaCurveType.Step)
+		curve:AddPoint(0, 0)
+		if (index > 1) then
+			curve:AddPoint(.5 / max, .5)
+		end
+		if (not fadeWhenFull or index < max) then
+			curve:AddPoint((index - .5) / max, 1)
+		end
+		if (fadeWhenFull) then
+			curve:AddPoint((max - .5) / max, 0)
+		end
+		SecretPointCurves[key] = curve
+	end
+
+	local ok, alpha = API.TryCall(UnitPowerPercent, "player", POWER_ID_COMBO_POINTS, false, curve)
+	if (not ok or type(alpha) ~= "number") then
+		return 1
+	end
+	return alpha
+end
+
 -- Update classpower layout and textures.
 -- *also used for one-time setup of stagger and runes.
 local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerType)
 	local isMaelstrom = (powerType == "MAELSTROM")
+	-- The element already filled the points from a secret count; only pass it on to widgets.
+	local isSecretCur = (type(cur) == "number") and issecretvalue and issecretvalue(cur)
 	if (isMaelstrom) then
 		-- ElvUI-style secret-safe behavior:
 		-- keep classpower visible and reuse last safe values when payload is unreadable.
@@ -618,7 +661,7 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		end
 	end
 
-	if (type(cur) == "number") then
+	if (type(cur) == "number" and not isSecretCur) then
 		element.__AzeriteUI_LastSafeCur = cur
 	end
 	if (type(max) == "number") then
@@ -637,7 +680,7 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 
 	-- Keep maelstrom visible at zero so Enhancement doesn't look disabled.
 	local hideAtZero = (powerType ~= "MAELSTROM")
-	if (type(cur) ~= "number" or (hideAtZero and cur <= 0)) then
+	if (type(cur) ~= "number" or (hideAtZero and not isSecretCur and cur <= 0)) then
 		return element:Hide()
 	end
 
@@ -934,6 +977,8 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 						point:SetAlpha((i <= (cur - 5)) and 1.0 or 0.3)
 					end
 				end
+			elseif (isSecretCur) then
+				point:SetAlpha(GetSecretPointAlpha(i, max, not element.inCombat and not showFullOutOfCombat))
 			elseif (element.inCombat) then
 				point:SetAlpha((cur == max) and 1 or (value < pmax) and .5 or 1)
 			else
