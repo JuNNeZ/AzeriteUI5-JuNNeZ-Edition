@@ -995,38 +995,6 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 	local options, orderoffset = Options:GenerateProfileMenu()
 	orderoffset = orderoffset + 30
 
-	-- Export/import positions.
-	if (ns.IsDevelopment and ns.db.global.enableDevelopmentMode) then
-		options.args.framePositionsHeader = {
-			name = "Layouts",
-			order = orderoffset + 1,
-			type = "header",
-			disabled = function(info) return true end
-		}
-		options.args.framePositionsExport = {
-			name = "Export Layout",
-			desc = "Expert the current frame positions to a string you can copy and share with other people.",
-			type = "execute",
-			order = orderoffset + 2,
-			disabled = function(info) return true end,
-			func = function(info) end
-		}
-
-		options.args.framePositionsImport = {
-			name = "Import Layout",
-			desc = "Import frame positions from a string into the current options profile.",
-			type = "execute",
-			order = orderoffset + 3,
-			disabled = function(info) return true end,
-			func = function(info) end
-		}
-		options.args.framePositionsSpace = {
-			name = "", order = orderoffset + 4, type = "description"
-		}
-
-		orderoffset = orderoffset + 10
-	end
-
 	-- Frame positioning & scaling.
 	options.args.frameSelectionHeader = {
 		name = function(info)

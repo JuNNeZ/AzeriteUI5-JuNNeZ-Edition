@@ -2418,21 +2418,33 @@ local function PrintDebugKeyBindings()
 		print("|cff33ff99", "AzeriteUI /azdebugkeys:", "ActionBars module unavailable")
 		return
 	end
+	-- The route is the one ActionBar:UpdateBindings recorded when it bound the key, not
+	-- one recomputed from settings: bar 1 keeps the click route whatever the setting
+	-- says. `now` is what the client resolves the key to at this moment, overrides
+	-- included, so a key another binding has taken shows as TAKEN. Run it while a key
+	-- is dead, before reloading (Docs/TODO.md item 7.1).
 	print("|cff33ff99", "AzeriteUI key binding dump:")
 	for barIndex, bar in pairs(module.bars) do
 		if (bar and bar.buttons and bar.config and bar.config.numbuttons and bar.config.numbuttons > 0) then
-			local modeCommand = bar.config.useCommandBindingsForHoldCast and true or false
-			print("|cfff0f0f0  bar"..tostring(barIndex)..": mode", modeCommand and "command" or "click")
+			-- A disabled bar's buttons keep the route from before their keys were cleared.
+			local enabled = bar.IsEnabled and bar:IsEnabled() and true or false
+			print("|cfff0f0f0  bar"..tostring(barIndex)..": enabled", tostring(enabled))
 			for buttonIndex = 1, bar.config.numbuttons do
 				local button = bar.buttons[buttonIndex]
 				if (button) then
 					local target = button.keyBoundTarget
-					local key1, key2 = nil, nil
+					local route = button.__AzeriteUI_BindingRoute
+					print("|cfff0f0f0    ", tostring(button:GetName()), "slot", tostring(button._state_action), "bind", tostring(target), "mode", tostring(button.__AzeriteUI_BindingMode), "route", tostring(route))
 					if (type(target) == "string" and target ~= "") then
-						key1, key2 = GetBindingKey(target)
+						for keyNumber = 1, select("#", GetBindingKey(target)) do
+							local key = select(keyNumber, GetBindingKey(target))
+							if (key and key ~= "") then
+								local now = GetBindingAction and GetBindingAction(key, true) or nil
+								local taken = (enabled and route and now ~= route) and "  |cffff4040TAKEN|r" or ""
+								print("|cfff0f0f0      key", tostring(key), "now", tostring(now) .. taken)
+							end
+						end
 					end
-					local route = modeCommand and target or ("CLICK " .. tostring(button:GetName()) .. ":LeftButton")
-					print("|cfff0f0f0    ", tostring(button:GetName()), "slot", tostring(button._state_action), "bind", tostring(target), "route", tostring(route), "keys", tostring(key1), tostring(key2))
 				end
 			end
 		end
@@ -2462,7 +2474,7 @@ local function PrintDebugKeyCooldown(buttonName)
 	print("|cff33ff99", "AzeriteUI key cooldown debug:")
 	print("|cfff0f0f0  button:", tostring(button:GetName()))
 	print("|cfff0f0f0  actionID:", tostring(actionID), "actionType:", tostring(actionType), "token:", tostring(actionToken), "subType:", tostring(subType))
-	print("|cfff0f0f0  attrs: useOnKeyDown", SecretSafeText(button:GetAttribute("useOnKeyDown")), "pressAndHoldAction", SecretSafeText(button:GetAttribute("pressAndHoldAction")), "typerelease", SecretSafeText(button:GetAttribute("typerelease")))
+	print("|cfff0f0f0  attrs: useOnKeyDown", SecretSafeText(button:GetAttribute("useOnKeyDown")), "pressAndHoldAction", SecretSafeText(button:GetAttribute("pressAndHoldAction")), "typerelease", SecretSafeText(button:GetAttribute("typerelease")), "LABToggledOnDown", SecretSafeText(button:GetAttribute("LABToggledOnDown")))
 
 	if (cooldownInfo) then
 		print("|cfff0f0f0  cooldown:", "start", SecretSafeText(cooldownInfo.startTime), "duration", SecretSafeText(cooldownInfo.duration), "modRate", SecretSafeText(cooldownInfo.modRate), "isEnabled", SecretSafeText(cooldownInfo.isEnabled))

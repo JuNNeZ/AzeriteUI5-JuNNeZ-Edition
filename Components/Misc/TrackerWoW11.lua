@@ -49,6 +49,16 @@ local GetAutoHideDriver = function()
 	return driver
 end
 
+-- The tracker is hidden by alpha rather than Hide(), leaving Blizzard's frame alone.
+-- The alpha follows the auto-hider's shown state, and Immersion's while that is open.
+-- OnShow/OnHide only fire on a change, so anything restoring the alpha must ask here
+-- rather than assume the tracker should be showing.
+local UpdateTrackerAlpha = function()
+	local autoHider = ObjectiveTrackerFrame.autoHider
+	local hidden = (autoHider and not autoHider:IsShown()) or (ImmersionFrame and ImmersionFrame:IsShown())
+	ObjectiveTrackerFrame:SetAlpha(hidden and 0 or .9)
+end
+
 local defaults = { profile = ns:Merge({
 
 	theme = "Azerite",
@@ -81,38 +91,18 @@ Tracker.PrepareFrames = function(self)
 
 	if (hasSecureSnippets) then
 		ObjectiveTrackerFrame.autoHider:SetAttribute("_onstate-vis", [[ if (newstate == "hide") then self:Hide() else self:Show() end ]])
-		-- Secure attribute handler to allow insecure code to request a forced visibility change
-		-- Use SetAttribute("forcevis", "hide"/"show") from insecure code to trigger.
-		ObjectiveTrackerFrame.autoHider:SetAttribute("_onattributechanged", [[
-			if (name == "forcevis") then
-				if (value == "hide") then
-					self:Hide()
-				elseif (value == "show") then
-					self:Show()
-				end
-			end
-		]])
 	end
 
- 	ObjectiveTrackerFrame.autoHider:SetScript("OnHide", function() ObjectiveTrackerFrame:SetAlpha(0) end)
- 	ObjectiveTrackerFrame.autoHider:SetScript("OnShow", function() ObjectiveTrackerFrame:SetAlpha(.9) end)
+	ObjectiveTrackerFrame.autoHider:SetScript("OnHide", UpdateTrackerAlpha)
+	ObjectiveTrackerFrame.autoHider:SetScript("OnShow", UpdateTrackerAlpha)
 
-	if (hasSecureSnippets) then
-		RegisterStateDriver(ObjectiveTrackerFrame.autoHider, "vis", GetAutoHideDriver())
-	else
-		-- Neither snippet can be compiled here, so both jobs move onto the one state
-		-- Blizzard resolves itself. `_onstate-vis` becomes the native visibility state
-		-- and `forcevis` folds into the same driver string: the whole answer is "hide"
-		-- while the tracker is switched off, and the boss/arena conditionals otherwise.
-		-- Registering a driver needs to be out of combat, which UpdateSettings honours.
-		self:UpdateAutoHideDriver()
-	end
+	self:UpdateAutoHideDriver()
 
 	ObjectiveTrackerUIWidgetContainer:SetFrameStrata("BACKGROUND")
 	ObjectiveTrackerFrame:SetFrameStrata("BACKGROUND")
 	ObjectiveTrackerFrame:SetFrameLevel(50)
 	ObjectiveTrackerFrame:SetClampedToScreen(false)
-	ObjectiveTrackerFrame:SetAlpha(.9)
+	UpdateTrackerAlpha()
 
 	self.GetFrame = function() return ObjectiveTrackerFrame end
 
@@ -120,8 +110,15 @@ Tracker.PrepareFrames = function(self)
 end
 
 -- The tracker's own on/off setting and the boss/arena auto-hide are two answers to
--- the same question, so where there is no snippet to combine them they are combined
--- into the driver string instead.
+-- the same question, so they are one driver string: "hide" while the tracker is
+-- switched off, the boss/arena conditionals otherwise. Where snippets compile,
+-- `_onstate-vis` shows and hides the hider; where they do not, Blizzard's native
+-- visibility state does the same job without one.
+--
+-- Do not bring back a `forcevis` attribute for this. The hider is a
+-- SecureHandlerStateTemplate, which only dispatches `state-*` attributes
+-- (SecureHandlers.lua:107), so an `_onattributechanged` snippet on it never runs.
+-- That is how the switch did nothing on Retail through 5.9.0.
 Tracker.UpdateAutoHideDriver = function(self)
 	local autoHider = ObjectiveTrackerFrame and ObjectiveTrackerFrame.autoHider
 	if (not autoHider) then return end
@@ -131,68 +128,21 @@ Tracker.UpdateAutoHideDriver = function(self)
 	end
 
 	local disabled = self.db and self.db.profile and self.db.profile.disableBlizzardTracker
+	local driver = disabled and "hide" or GetAutoHideDriver()
 
-	return ns.API.RegisterVisibilityDriver(autoHider, disabled and "hide" or GetAutoHideDriver())
+	if (hasSecureSnippets) then
+		RegisterStateDriver(autoHider, "vis", driver)
+		return true
+	end
+
+	return ns.API.RegisterVisibilityDriver(autoHider, driver)
 end
 
 Tracker.UpdateSettings = function(self)
-	if (InCombatLockdown()) then
-		self:QueueCombatRefresh()
-		return
-	end
-
-	-- Checked before the secret-value branch below, which returns early and would
-	-- otherwise make this unreachable: `issecretvalue` exists on Forever too, so the
-	-- client this is for never got here.
-	if (not hasSecureSnippets) then
-		self:UpdateAutoHideDriver()
-		return
-	end
-
-	if (issecretvalue) then
-		if ObjectiveTrackerFrame.autoHider then
-			ObjectiveTrackerFrame.autoHider:SetAttribute("forcevis", self.db.profile.disableBlizzardTracker and "hide" or "show")
-		end
-		return
-	end
-
-	if (self.db.profile.disableBlizzardTracker) then
-
-		if (not self:IsHooked(ObjectiveTrackerFrame, "Show")) then
-			self:SecureHook(ObjectiveTrackerFrame, "Show", function(this)
-				if (InCombatLockdown()) then
-					self:QueueCombatRefresh()
-					return
-				end
-				if (self.db.profile.disableBlizzardTracker and ObjectiveTrackerFrame.autoHider) then
-					ObjectiveTrackerFrame.autoHider:SetAttribute("forcevis", "hide")
-				end
-			end)
-		end
-
-		if (not self:IsHooked(ObjectiveTrackerFrame, "SetShown")) then
-			self:SecureHook(ObjectiveTrackerFrame, "SetShown", function(this, show)
-				if (InCombatLockdown()) then
-					self:QueueCombatRefresh()
-					return
-				end
-				if (self.db.profile.disableBlizzardTracker and show and ObjectiveTrackerFrame.autoHider) then
-					ObjectiveTrackerFrame.autoHider:SetAttribute("forcevis", "hide")
-				end
-			end)
-		end
-
-		-- Request secure handler to hide the tracker rather than calling :Hide()
-		if ObjectiveTrackerFrame.autoHider then
-			ObjectiveTrackerFrame.autoHider:SetAttribute("forcevis", "hide")
-		end
-	else
-
-		-- Request secure handler to show the tracker
-		if ObjectiveTrackerFrame.autoHider then
-			ObjectiveTrackerFrame.autoHider:SetAttribute("forcevis", "show")
-		end
-	end
+	-- Defers itself past combat. The alpha is not protected and is re-derived either
+	-- way, so nothing here can assert the tracker back to visible.
+	self:UpdateAutoHideDriver()
+	UpdateTrackerAlpha()
 end
 
 Tracker.OnEvent = function(self, event, ...)
@@ -208,7 +158,6 @@ Tracker.OnEvent = function(self, event, ...)
 	end
 
 	if (event == "PLAYER_ENTERING_WORLD" or event == "SETTINGS_LOADED") then
-		ObjectiveTrackerFrame:SetAlpha(.9)
 		self:UpdateSettings()
 
 		-- Ensure EncounterBar isn't suppressed by parenting/alpha side-effects
@@ -262,10 +211,10 @@ Tracker.OnEvent = function(self, event, ...)
 			end
 			if (ImmersionFrame) then
 				if (not self:IsHooked(ImmersionFrame, "OnShow")) then
-					self:SecureHookScript(ImmersionFrame, "OnShow", function() ObjectiveTrackerFrame:SetAlpha(0) end)
+					self:SecureHookScript(ImmersionFrame, "OnShow", UpdateTrackerAlpha)
 				end
 				if (not self:IsHooked(ImmersionFrame, "OnHide")) then
-					self:SecureHookScript(ImmersionFrame, "OnHide", function() ObjectiveTrackerFrame:SetAlpha(.9) end)
+					self:SecureHookScript(ImmersionFrame, "OnHide", UpdateTrackerAlpha)
 				end
 			end
 		end

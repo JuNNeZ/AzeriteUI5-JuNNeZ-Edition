@@ -452,7 +452,7 @@ local style = function(self, unit)
 	healPredict.maxOverflow = 1
 
 	self.HealthPrediction = healPredict
-	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Temporary rollback: broken white prediction overlay covers boss health bars.
+	-- self.HealthPrediction.PostUpdate = HealPredict_PostUpdate -- Superseded in 5.7.0: Components/UnitFrames/HealthPrediction.lua draws prediction through the element's Override.
 	self.HealthPrediction:SetAlpha(0)
 	self.HealthPrediction:Hide()
 
@@ -548,7 +548,7 @@ local style = function(self, unit)
 		absorb:Hide()
 		ApplyBossBarFillRule(absorb, db.HealthBarOrientation == "LEFT" and "RIGHT" or db.HealthBarOrientation)
 
-		-- self.HealthPrediction.absorbBar = absorb -- Temporary rollback: broken absorb overlay covers boss health bars.
+		-- self.HealthPrediction.absorbBar = absorb -- Superseded in 5.7.0 by Components/UnitFrames/HealthPrediction.lua.
 	end
 
 	-- CombatFeedback Text

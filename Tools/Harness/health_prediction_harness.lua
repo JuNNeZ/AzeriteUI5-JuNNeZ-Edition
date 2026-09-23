@@ -357,8 +357,14 @@ local options
 local module = { db = { profile = profile } }
 local optionsModule = { AddGroup = function() error("prediction must not register a top-level page") end }
 function ns:GetModule(name) return name == "Options" and optionsModule or module end
+-- The page reads its text through AceLocale. enUS values are `true`, which AceLocale returns as the key.
+LibStub = LibStub or function()
+	return { GetLocale = function() return setmetatable({}, { __index = function(_, key) return key end }) end }
+end
 assert(loadfile(root.."/Options/OptionsPages/HealthPrediction.lua"))("Test", ns)
 options = optionsModule:GenerateHealthPredictionOptions()
+equal(options.name, "Incoming Heals and Absorbs", "the page reads its name through the locale table")
+equal(options.args.absorbDisplayMode.values.followHealth, "Follow health", "select values read through the locale table")
 for _, key in ipairs({ "showIncomingHeals", "showDamageAbsorbs", "showHealAbsorbs" }) do
 	local option = options.args[key]
 	check(option.get({ key }), "option defaults on")

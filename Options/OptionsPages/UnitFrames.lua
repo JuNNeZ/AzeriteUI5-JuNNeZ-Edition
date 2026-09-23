@@ -225,9 +225,9 @@ local GenerateOptions = function()
 			desc = L["Choose stock AzeriteUI power colors, enhanced token-based power colors, or your class color."],
 			order = 20, type = "select", width = "full", hidden = isdisabled,
 			values = {
-				default = "Default",
-				enhanced = "Enhanced Colors",
-				classColor = "Class Color"
+				default = L["Default"],
+				enhanced = L["Enhanced Colors"],
+				classColor = L["Class Color"]
 			},
 			set = setter,
 			get = function(info)
@@ -502,10 +502,10 @@ local GenerateOptions = function()
 			desc = L["Choose how power text is displayed."],
 			order = 350.1, type = "select", width = "full", hidden = isdisabled,
 			values = {
-				short = "Short Number",
-				full = "Full Number",
-				percent = "Percent",
-				shortpercent = "Short + Percent"
+				short = L["Short Number"],
+				full = L["Full Number"],
+				percent = L["Percent"],
+				shortpercent = L["Short + Percent"]
 			},
 			set = function(info, val)
 				setoption(info, "PowerValueFormat", val, true)
@@ -796,10 +796,10 @@ local GenerateOptions = function()
 			desc = L["Choose how target power text is formatted."],
 			order = 32.1, type = "select", width = "full", hidden = isdisabled,
 			values = {
-				short = "Short Number",
-				full = "Full Number",
-				percent = "Percent",
-				shortpercent = "Short + Percent"
+				short = L["Short Number"],
+				full = L["Full Number"],
+				percent = L["Percent"],
+				shortpercent = L["Short + Percent"]
 			},
 			set = function(info, val)
 				setoption(info, "PowerValueFormat", val, true)

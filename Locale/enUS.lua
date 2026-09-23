@@ -772,3 +772,27 @@ L["Nighttime"] = true
 L["Distance"] = true
 L["Sky"] = true
 L["Sun & Moon"] = true
+
+-- Incoming heals and absorbs, under Unit Frames.
+L["Incoming Heals and Absorbs"] = true
+L["Show prediction layers inside AzeriteUI health bars, including group frames and nameplates. Absorbs use diagonal stripes; healing absorbs use a dark red lattice. Requires the client's heal prediction calculator."] = true
+L["Show Incoming Heals"] = true
+L["Show incoming healing after current health."] = true
+L["Show Damage Absorbs"] = true
+L["Show shields with diagonal stripes using the selected display mode."] = true
+L["Show Overheal Indicator"] = true
+L["Show a green end marker when pending incoming healing exceeds missing health. Requires Show Incoming Heals. This is a prediction, not a record of healing already wasted."] = true
+L["Absorb Display Mode"] = true
+L["Total shield shows the full amount from the bar's end, overlapping health when needed; a gap is possible at low health. Follow health starts after health and incoming heals, shows only what fits, and marks excess with an end stripe."] = true
+L["Total shield"] = true
+L["Follow health"] = true
+L["Show Healing Absorbs"] = true
+L["Show healing absorption extending back into current health, after accounting for incoming healing."] = true
+
+-- Choices in the Unit Frames color and number settings.
+L["Default"] = true
+L["Enhanced Colors"] = true
+L["Short Number"] = true
+L["Full Number"] = true
+L["Percent"] = true
+L["Short + Percent"] = true

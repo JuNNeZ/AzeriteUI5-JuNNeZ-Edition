@@ -10,6 +10,28 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.9.1-JuNNeZ (2026-09-23) - The Tracker Switch Works, and Every Language Is Complete
+
+### Highlights
+
+- **Hide the Blizzard Tracker now really hides it.** On Forever the quest tracker came back after every login, reload and loading screen while `/az -> Objectives Tracker -> Hide the Blizzard Tracker` stayed ticked. On Retail the switch had never done anything at all. It now works on both, stays hidden through boss and arena encounters, and with the switch off the tracker still fades out during those encounters as before. **If you ticked it once and forgot because nothing happened, your tracker will disappear after this update** - untick it to bring the tracker back.
+- **AzeriteUI is fully translated in German, Spanish, French, Italian, Korean, Brazilian Portuguese, Russian and both Simplified and Traditional Chinese.** The options window, its Settings tab, the preview messages, the day and night indicator and the Incoming Heals and Absorbs page had been English in every language. The heals and absorbs page and the power text and crystal colour choices under Unit Frames could not be translated at all, because their text was written straight into the page; now they read through the translation table like everything else.
+
+### Development
+
+- **Traced the tracker switch through Blizzard's own secure frame code.** The switch sent its request to a kind of secure frame that only listens for state changes, so on Retail the request was never heard; on Forever a separate path did hide the tracker, and then the addon's own login handling faded it straight back in. Both now go through the single visibility rule that already handled bosses and arenas. A new offline test drives the real module through logins, reloads, loading screens, encounters, combat and Immersion dialogues on both clients. It failed the old code exactly where the report said, and passes the new one.
+- **Translations are now checked rather than hoped for.** A new offline test loads every language file the way the game does and fails if a language is missing an English string, has an extra or duplicate one, leaves one empty, changes the placeholders a string is filled in with, or lets a preview line or tab label outgrow the options window. From now on, any new string has to arrive in all ten languages.
+
+### Access and known limits
+
+- Verified offline only: neither change has been seen in the game on either client yet.
+- The translations were written without native speakers, following each language's existing wording for nameplates, profiles and frames. Corrections are welcome on the Discord. Longer German and French lines are the most likely to crowd the options window at its smallest size.
+
+### Internal
+
+- `/azdebug keys bindings` now shows what each key does right now and marks a key something else has taken, for the report of action bar keys that stop responding mid-combat.
+- Removed the Export and Import Layout buttons that only appeared, permanently disabled, in the Development Mode mover options.
+
 ## 5.9.0-JuNNeZ (2026-09-22) - A Solid Window, a Combat Queue and Settings That Ask First
 
 ### Highlights

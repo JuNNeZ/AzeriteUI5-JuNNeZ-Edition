@@ -20,7 +20,23 @@ lua Tools/Harness/client_harness.lua      .                # Retail/Forever dete
 lua Tools/Harness/diel_harness.lua        .                # the Forever day and night indicator
 lua Tools/Harness/combo_points_harness.lua .               # Forever secret combo points
 lua Tools/Harness/chat_guard_harness.lua   .               # chat module stays out of chat replacements
+lua Tools/Harness/tracker_harness.lua      .               # Hide the Blizzard Tracker, Retail and Forever
+lua Tools/Harness/locale_harness.lua       .               # all ten locales: parity, specifiers, widths
 ```
+
+`locale_harness.lua` loads every `Locale/*.lua` through a stub AceLocale instead of parsing it, so
+it sees keys exactly as the client does - the `\n` keys a pattern once dropped included. It fails
+when a locale lacks an enUS key or has an extra one, defines a key twice, leaves a value empty,
+moves or changes a format specifier, or lets a preview explanation or tab label outgrow the panel.
+The explanations are read out of `Options/Kit/Preview.lua` and the widths out of
+`Options/Kit/Panel.lua`, so neither is a copy that can drift. Adding an enUS key fails it until the
+nine translations are in.
+
+`tracker_harness.lua` also only needs the addon root. It runs the real tracker module and
+`Core/API/SecureDrivers.lua` against two Blizzard behaviours copied from source: a
+`SecureHandlerStateTemplate` only runs snippets for `state-*` attributes, and a state driver's
+`Hide()` on an already hidden frame fires no `OnHide`. The module used to be wrong about both. Its
+mutations are the `tracker` entries in `mutate_client.lua`.
 
 Two arguments: the addon root, then this folder. Both harness files and `stubs.lua` are found
 relative to the second.

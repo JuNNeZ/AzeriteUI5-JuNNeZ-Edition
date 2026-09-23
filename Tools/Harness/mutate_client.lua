@@ -60,13 +60,67 @@ local cases = {
 		"curve:AddPoint((index - .5) / max, 1)", "curve:AddPoint(index / max, 1)", "combo_points_harness.lua"},
 	{"secret path Forever only", "Libs/oUF/elements/classpower.lua",
 		"local isSecretCur = GetTargetComboPoints and (type(cur)", "local isSecretCur = (type(cur)",
-		"combo_points_harness.lua"}
+		"combo_points_harness.lua"},
+	-- Hide the Blizzard Tracker. The tracker is hidden by alpha, so anything that asserts
+	-- the alpha instead of deriving it shows a tracker the player switched off.
+	{"tracker alpha at prepare", "Components/Misc/TrackerWoW11.lua",
+		"SetClampedToScreen(false)\n\tUpdateTrackerAlpha()",
+		"SetClampedToScreen(false)\n\tObjectiveTrackerFrame:SetAlpha(.9)", "tracker_harness.lua"},
+	{"tracker alpha on events", "Components/Misc/TrackerWoW11.lua",
+		"event == \"SETTINGS_LOADED\") then\n\t\tself:UpdateSettings()",
+		"event == \"SETTINGS_LOADED\") then\n\t\tself:UpdateSettings()\n\t\tObjectiveTrackerFrame:SetAlpha(.9)",
+		"tracker_harness.lua"},
+	{"tracker alpha re-derived on settings", "Components/Misc/TrackerWoW11.lua",
+		"\tself:UpdateAutoHideDriver()\n\tUpdateTrackerAlpha()\nend", "\tself:UpdateAutoHideDriver()\nend",
+		"tracker_harness.lua"},
+	{"tracker hider OnHide", "Components/Misc/TrackerWoW11.lua",
+		"SetScript(\"OnHide\", UpdateTrackerAlpha)", "SetScript(\"OnHide\", function() end)", "tracker_harness.lua"},
+	-- The Retail break that shipped: the setting never reached the driver.
+	{"tracker Retail driver folds the setting", "Components/Misc/TrackerWoW11.lua",
+		"RegisterStateDriver(autoHider, \"vis\", driver)",
+		"RegisterStateDriver(autoHider, \"vis\", GetAutoHideDriver())", "tracker_harness.lua"},
+	{"tracker Forever driver folds the setting", "Components/Misc/TrackerWoW11.lua",
+		"RegisterVisibilityDriver(autoHider, driver)",
+		"RegisterVisibilityDriver(autoHider, GetAutoHideDriver())", "tracker_harness.lua"},
+	{"tracker driver combat deferral", "Components/Misc/TrackerWoW11.lua",
+		"\tif (InCombatLockdown()) then\n\t\tself:QueueCombatRefresh()\n\t\treturn false\n\tend\n\n\tlocal disabled",
+		"\tlocal disabled", "tracker_harness.lua"},
+	{"tracker combat refresh applies", "Components/Misc/TrackerWoW11.lua",
+		"self:PrepareFrames()\n\t\t\tself:UpdateSettings()", "self:PrepareFrames()", "tracker_harness.lua"},
+	{"tracker combat refresh unregisters", "Components/Misc/TrackerWoW11.lua",
+		"self:UnregisterEvent(\"PLAYER_REGEN_ENABLED\", \"OnEvent\")", "", "tracker_harness.lua"},
+	{"tracker snippet gate", "Components/Misc/TrackerWoW11.lua",
+		"local hasSecureSnippets = ns.HasSecureSnippets ~= false", "local hasSecureSnippets = true",
+		"tracker_harness.lua"},
+	{"tracker Immersion open", "Components/Misc/TrackerWoW11.lua",
+		" or (ImmersionFrame and ImmersionFrame:IsShown())", "", "tracker_harness.lua"},
+	{"tracker Immersion close", "Components/Misc/TrackerWoW11.lua",
+		"SecureHookScript(ImmersionFrame, \"OnHide\", UpdateTrackerAlpha)",
+		"SecureHookScript(ImmersionFrame, \"OnHide\", function() ObjectiveTrackerFrame:SetAlpha(.9) end)",
+		"tracker_harness.lua"},
+	-- Locales. A missing key falls back to English; a moved specifier formats the wrong value,
+	-- or raises, because Lua 5.1's string.format has no positional arguments.
+	{"locale missing key", "Locale/deDE.lua",
+		"L[\"Search settings\"] = \"Einstellungen durchsuchen\"", "", "locale_harness.lua"},
+	{"locale specifier order", "Locale/deDE.lua",
+		"\"%d von %d Einstellungen\"", "\"%s von %d Einstellungen\"", "locale_harness.lua"},
+	{"locale duplicate key", "Locale/frFR.lua",
+		"L[\"Not bound\"] = \"Non assigné\"",
+		"L[\"Not bound\"] = \"Non assigné\"\nL[\"Not bound\"] = \"Non assigné\"", "locale_harness.lua"},
+	{"locale empty value", "Locale/zhCN.lua", "= \"搜索设置\"", "= \"\"", "locale_harness.lua"},
+	{"locale explanation width", "Locale/deDE.lua", "= \"Gilt für alle Aktionsleisten.\"",
+		"= \"Gilt für jede einzelne Aktionsleiste, die AzeriteUI zeichnet, und für alle ihre Tasten.\"",
+		"locale_harness.lua"},
+	{"locale tab width", "Locale/ruRU.lua", "L[\"Options\"] = \"Параметры\"",
+		"L[\"Options\"] = \"Параметры интерфейса\"", "locale_harness.lua"}
 }
 local function harnessFor(case)
 	return root .. "/Tools/Harness/" .. (case[5] or "client_harness.lua")
 end
 assert(originalLoadfile(root .. "/Tools/Harness/client_harness.lua"))()
 assert(originalLoadfile(root .. "/Tools/Harness/combo_points_harness.lua"))()
+assert(originalLoadfile(root .. "/Tools/Harness/tracker_harness.lua"))()
+assert(originalLoadfile(root .. "/Tools/Harness/locale_harness.lua"))()
 for _, case in ipairs(cases) do
 	local mutations = 0
 	loadfile = function(path)
