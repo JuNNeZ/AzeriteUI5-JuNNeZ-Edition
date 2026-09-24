@@ -17,6 +17,24 @@ if you run Plater or another nameplate addon.
 - **Only show auras on your target**
 - **Maximum distance** - how far plates remain visible
 
+### Aura filters
+
+Which kinds of aura a plate shows, each a switch. They fill the two aura rows in this
+order, and they keep showing in combat:
+
+- **Crowd control** - stuns, fears, roots and the like, from anyone
+- **Your debuffs**, optionally **Only the ones Blizzard highlights**
+- **Important debuffs from others** - what Blizzard flags to show on every nameplate
+- **Buffs you can dispel** - purge, spellsteal or soothe
+- **Important enemy buffs** - such as big defensive cooldowns
+- **Your short buffs** - 30 seconds or less, on friendly plates
+
+### Stacking
+
+**Stack enemy nameplates** and **Stack friendly nameplates** are Blizzard's own
+settings, shown here so you do not have to go to the game's Options for them. Changing
+one here changes it there. A change made in combat applies when combat ends.
+
 ### Size
 
 - **Use Blizzard overall scale** - follow Blizzard's own nameplate scale slider
@@ -26,6 +44,7 @@ if you run Plater or another nameplate addon.
 - **Friendly NPC size (%)**
 - **Friendly name size (%)** and **Friendly name target size (%)** for name-only plates
 - **Castbar vertical offset**
+- **Target marker size** - the raid target icon (skull, cross, star...) beside the health bar
 
 ### Friendly players
 

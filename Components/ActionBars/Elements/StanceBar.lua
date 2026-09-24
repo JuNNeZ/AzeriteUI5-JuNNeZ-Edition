@@ -644,11 +644,40 @@ StanceBarMod.RefreshConfig = function(self)
 	self:UpdateSettings()
 end
 
+-- Shapeshift events come in bursts. Upstream LibActionButton throttles UPDATE_SHAPESHIFT_FORM
+-- because the client fires it far more often than forms change, and each one re-enabled this
+-- bar, which out of combat also rebinds its keys and re-registers its fading. Requests are
+-- collected and served once, on the next frame, as the pet bar's are.
+StanceBarMod.QueueStanceBarUpdate = function(self, updateState)
+	if (updateState) then
+		self.__AzeriteUI_PendingStanceBarState = true
+	end
+	if (self.__AzeriteUI_StanceBarUpdateTimer) then return end
+	self.__AzeriteUI_StanceBarUpdateTimer = self:ScheduleTimer("OnStanceBarUpdateTimer", 0)
+end
+
+StanceBarMod.OnStanceBarUpdateTimer = function(self)
+	local updateState = self.__AzeriteUI_PendingStanceBarState
+	self.__AzeriteUI_StanceBarUpdateTimer = nil
+	self.__AzeriteUI_PendingStanceBarState = nil
+	if (not self.bar) then return end
+
+	if (updateState) then
+		if (InCombatLockdown()) then
+			self.needupdate = true
+		else
+			self:UpdateEnabled()
+			self.bar:UpdateButtonCount()
+		end
+	end
+	for id,button in next,self.bar.buttons do
+		button:Update()
+	end
+end
+
 StanceBarMod.OnEvent = function(self, event, ...)
 	if (event == "UPDATE_SHAPESHIFT_COOLDOWN") then
-		for id,button in next,self.bar.buttons do
-			button:Update()
-		end
+		self:QueueStanceBarUpdate()
 
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		if (self.needupdate and not InCombatLockdown()) then
@@ -664,18 +693,7 @@ StanceBarMod.OnEvent = function(self, event, ...)
 		self:UpdateBindings()
 
 	else
-		if (InCombatLockdown()) then
-			self.needupdate = true
-			for id,button in next,self.bar.buttons do
-				button:Update()
-			end
-		else
-			self:UpdateEnabled()
-			self.bar:UpdateButtonCount()
-			for id,button in next,self.bar.buttons do
-				button:Update()
-			end
-		end
+		self:QueueStanceBarUpdate(true)
 	end
 end
 

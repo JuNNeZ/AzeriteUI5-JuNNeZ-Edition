@@ -32,7 +32,6 @@ local Options = ns:GetModule("Options")
 local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
 local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
 local NAMEPLATE_SCALE_DEFAULT = 2
-local NAMEPLATE_MAX_DISTANCE_DEFAULT = 40
 local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = .8
 local FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT = 1
 local ENEMY_NAMEPLATE_SCALE_DEFAULT = .66
@@ -44,11 +43,34 @@ local DISTANCE_SLIDER_MIN = 20
 local DISTANCE_SLIDER_MAX = 60
 local CASTBAR_OFFSET_SLIDER_MIN = -30
 local CASTBAR_OFFSET_SLIDER_MAX = 30
+local RAID_TARGET_SIZE_DEFAULT = 28
+local RAID_TARGET_SIZE_SLIDER_MIN = 12
+local RAID_TARGET_SIZE_SLIDER_MAX = 64
 local TARGET_SLIDER_MIN = 1
 local TARGET_SLIDER_MAX = 500
+local EXECUTE_THRESHOLD_SLIDER_MIN = .05
+local EXECUTE_THRESHOLD_SLIDER_MAX = .5
+local EXECUTE_THRESHOLD_FALLBACK = .2
 
 local getmodule = function()
 	return ns:GetModule("NamePlates", true)
+end
+
+-- The nameplate addon the module stood down for at login, or nil.
+local GetConflictingAddOn = function()
+	local module = getmodule()
+	local addon = module and module.conflictingAddOn
+	return (type(addon) == "string") and addon or nil
+end
+
+-- The class's execute threshold (Components/UnitFrames/ExecuteRange.lua), or 20% for a class without
+-- one, which is where a threshold set by hand starts.
+local GetAutomaticExecuteThreshold = function()
+	local threshold = ns.API.GetExecuteThreshold and ns.API.GetExecuteThreshold() or 0
+	if (type(threshold) ~= "number" or threshold < EXECUTE_THRESHOLD_SLIDER_MIN) then
+		return EXECUTE_THRESHOLD_FALLBACK
+	end
+	return threshold
 end
 
 local setter = function(info,val)
@@ -170,8 +192,24 @@ local GenerateOptions = function()
 				desc = L["Toggle whether to use Azerite nameplates or Blizzard's default nameplates."],
 				order = 0,
 				type = "toggle", width = "full",
+				confirm = true,
+				confirmText = L["Switching AzeriteUI nameplates on or off reloads the interface."],
 				set = setter,
 				get = getter
+			},
+			-- Another nameplate addon is enabled, so the module stood down at login (CheckForConflicts).
+			conflictInfo = {
+				name = function()
+					local addon = GetConflictingAddOn()
+					if (addon) then
+						return string.format(L["%s is enabled, so AzeriteUI's nameplates stand down. These settings apply once it is disabled."], addon)
+					end
+					return ""
+				end,
+				order = .5,
+				type = "description",
+				width = "full",
+				hidden = function() return not GetConflictingAddOn() end
 			},
 			credit = {
 				name = L["Optimization made by Rui"],
@@ -232,6 +270,277 @@ local GenerateOptions = function()
 					}
 				}
 			},
+			-- The kinds of aura a plate shows: groups of the native aura display, see
+			-- PlayerAuraContainers.lua, CreateForNamePlate. The keys are the module's profile keys.
+			auraFilters = {
+				name = L["Aura filters"],
+				order = 1.2,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				disabled = function(info) return not getoption(info, "showAuras") end,
+				args = {
+					auraFiltersDescription = {
+						name = L["Which kinds of aura a nameplate shows, in combat too. They fill the aura rows in this order."],
+						order = 0,
+						type = "description",
+						width = "full"
+					},
+					auraCrowdControl = {
+						name = L["Crowd control"],
+						desc = L["Stuns, fears, roots and other crowd control on the unit, from anyone."],
+						order = 1,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					auraOwnDebuffs = {
+						name = L["Your debuffs"],
+						desc = L["Damage over time and other debuffs you or your pet put on the unit."],
+						order = 2,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					auraOwnDebuffsBlizzardOnly = {
+						name = L["Only the ones Blizzard highlights"],
+						desc = L["Of your debuffs, show only those Blizzard's own nameplates would show."],
+						order = 3,
+						type = "toggle", width = "full",
+						disabled = function(info) return not getoption(info, "showAuras") or not getoption(info, "auraOwnDebuffs") end,
+						set = setter,
+						get = getter
+					},
+					auraOtherDebuffs = {
+						name = L["Important debuffs from others"],
+						desc = L["Debuffs from other players that Blizzard flags to show on every nameplate."],
+						order = 4,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					auraDispellableBuffs = {
+						name = L["Buffs you can dispel"],
+						desc = L["Enemy buffs your group can purge, spellsteal or soothe."],
+						order = 5,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					auraImportantBuffs = {
+						name = L["Important enemy buffs"],
+						desc = L["Buffs Blizzard marks as important on enemy nameplates, such as big defensive cooldowns."],
+						order = 6,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					auraOwnBuffs = {
+						name = L["Your short buffs"],
+						desc = L["Buffs you cast that last 30 seconds or less, on friendly nameplates."],
+						order = 7,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					}
+				}
+			},
+			-- Blizzard's own setting, read and written straight through: AzeriteUI stores nothing.
+			-- Shown even with Azerite nameplates off, since it moves Blizzard's plates as well.
+			stacking = {
+				name = L["Stacking"],
+				order = 1.4,
+				type = "group",
+				inline = true,
+				hidden = function(info)
+					local module = getmodule()
+					return not (module and module.IsStackingSupported and module:IsStackingSupported())
+				end,
+				args = {
+					stackingDescription = {
+						name = L["These are the game's own nameplate settings, the same ones Blizzard's Options change. A change made in combat applies when it ends."],
+						order = 0,
+						type = "description",
+						width = "full"
+					},
+					stackEnemyPlates = {
+						name = L["Stack enemy nameplates"],
+						desc = L["Enemy nameplates move apart so they do not overlap."],
+						order = 1,
+						type = "toggle", width = "full",
+						set = function(info, val) getmodule():SetStacking("enemy", val) end,
+						get = function(info) return getmodule():GetStacking("enemy") end
+					},
+					stackFriendlyPlates = {
+						name = L["Stack friendly nameplates"],
+						desc = L["Friendly nameplates move apart so they do not overlap."],
+						order = 2,
+						type = "toggle", width = "full",
+						set = function(info, val) getmodule():SetStacking("friendly", val) end,
+						get = function(info) return getmodule():GetStacking("friendly") end
+					}
+				}
+			},
+			-- How far plates reach and how faint they get, per kind of content. The selector is the
+			-- page's own state; the three settings below edit the kind it shows. The distance keeps
+			-- its old key, so its preview and default follow it.
+			contentSettings = {
+				name = L["Content settings"],
+				order = 1.6,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					contentDescription = {
+						name = L["Each kind of content keeps its own values, and the one you are in is used. Pick a kind to change it."],
+						order = 0,
+						type = "description",
+						width = "full"
+					},
+					editedContent = {
+						name = L["Content"],
+						desc = L["Which kind of content the settings below change. Opens on the one you are in."],
+						order = 1,
+						type = "select", width = "full",
+						values = function()
+							return {
+								world = L["Open world"],
+								dungeon = L["Dungeon"],
+								mythicplus = L["Mythic+"],
+								raid = L["Raid"],
+								battleground = L["Battleground"],
+								arena = L["Arena"]
+							}
+						end,
+						sorting = function()
+							return getmodule():GetContentTypes()
+						end,
+						set = function(info, val) getmodule():SetEditedContent(val) end,
+						get = function(info) return getmodule():GetEditedContent() end
+					},
+					maxDistance = {
+						name = L["Maximum distance"],
+						desc = L["How far away nameplates can appear. `40` matches the current Rui retail baseline."],
+						order = 2,
+						type = "range", width = "full",
+						min = DISTANCE_SLIDER_MIN, max = DISTANCE_SLIDER_MAX, step = 1,
+						set = function(info, val) getmodule():SetContentValue("maxDistance", val) end,
+						get = function(info) return getmodule():GetContentValue("maxDistance") end
+					},
+					contentMinAlpha = {
+						name = L["Faintest alpha"],
+						desc = L["How faint the nameplates of units other than your target get with distance."],
+						order = 3,
+						type = "range", width = "full",
+						min = 0, max = 1, step = .05, isPercent = true,
+						set = function(info, val) getmodule():SetContentValue("minAlpha", val) end,
+						get = function(info) return getmodule():GetContentValue("minAlpha") end
+					},
+					contentOccludedAlpha = {
+						name = L["Alpha behind walls"],
+						desc = L["How faint nameplates get while walls or other objects hide their unit."],
+						order = 4,
+						type = "range", width = "full",
+						min = 0, max = 1, step = .05, isPercent = true,
+						set = function(info, val) getmodule():SetContentValue("occludedAlpha", val) end,
+						get = function(info) return getmodule():GetContentValue("occludedAlpha") end
+					}
+				}
+			},
+			-- The combat filter: enemies nobody in your group is fighting fade.
+			otherFights = {
+				name = L["Other fights"],
+				order = 1.7,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					combatFilter = {
+						name = L["Fade enemies fighting someone else"],
+						desc = L["Enemies in combat with no one in your group fade, so the pull you are in stands out. Your target, focus and the plate under your cursor never fade."],
+						order = 1,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					combatFilterAlpha = {
+						name = L["Faded alpha"],
+						desc = L["How faint those enemies' nameplates get."],
+						order = 2,
+						type = "range", width = "full",
+						min = 0, max = 1, step = .05, isPercent = true,
+						disabled = function(info) return not getoption(info, "combatFilter") end,
+						set = setter,
+						get = getter
+					}
+				}
+			},
+			-- The execute marker. One profile key holds the threshold: 0 follows the class, anything
+			-- else was set by hand, so the Automatic / By hand choice has no key of its own.
+			executeRange = {
+				name = L["Execute range"],
+				order = 1.8,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					executeMarker = {
+						name = L["Show the execute marker"],
+						desc = L["A line across enemy health bars at your execute threshold. Once an enemy's health falls below it, the part of the bar below the line is tinted."],
+						order = 1,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					executeThresholdMode = {
+						name = L["Threshold"],
+						desc = L["Automatic follows your class and specialization, and classes without an execute get no marker. Set it by hand where a talent moves it, as Massacre does."],
+						order = 2,
+						type = "select", width = "full",
+						values = function()
+							return { auto = L["Automatic"], custom = L["By hand"] }
+						end,
+						sorting = function()
+							return { "auto", "custom" }
+						end,
+						disabled = function(info) return not getoption(info, "executeMarker") end,
+						set = function(info, val)
+							local module = getmodule()
+							if (not module or not module.db) then return end
+							if (val == "custom") then
+								module.db.profile.executeThreshold = GetAutomaticExecuteThreshold()
+							else
+								module.db.profile.executeThreshold = 0
+							end
+							module:UpdateSettings()
+						end,
+						get = function(info)
+							local value = getoption(info, "executeThreshold")
+							return (type(value) == "number" and value > 0) and "custom" or "auto"
+						end
+					},
+					executeThreshold = {
+						name = L["Threshold by hand"],
+						desc = L["Where the marker sits when the threshold is set by hand."],
+						order = 3,
+						type = "range", width = "full",
+						min = EXECUTE_THRESHOLD_SLIDER_MIN, max = EXECUTE_THRESHOLD_SLIDER_MAX, step = .01, isPercent = true,
+						disabled = function(info)
+							local value = getoption(info, "executeThreshold")
+							return not getoption(info, "executeMarker") or not (type(value) == "number" and value > 0)
+						end,
+						set = setter,
+						-- While automatic, the class's threshold, which is where By hand starts from.
+						get = function(info)
+							local value = getter(info)
+							if (type(value) ~= "number" or value <= 0) then
+								return GetAutomaticExecuteThreshold()
+							end
+							return value
+						end
+					}
+				}
+			},
 			size = {
 				name = L["Size"],
 				order = 2,
@@ -256,23 +565,6 @@ local GenerateOptions = function()
 						disabled = function(info) return getoption(info, "useBlizzardGlobalScale") end,
 						set = SetScaledOption("scale", NAMEPLATE_SCALE_DEFAULT),
 						get = GetScaledOption("scale", NAMEPLATE_SCALE_DEFAULT)
-					},
-					maxDistance = {
-						name = L["Maximum distance"],
-						desc = L["How far away nameplates can appear. `40` matches the current Rui retail baseline."],
-						order = 3,
-						type = "range", width = "full",
-						min = DISTANCE_SLIDER_MIN, max = DISTANCE_SLIDER_MAX, step = 1,
-						set = setter,
-						get = function(info)
-							local module = getmodule()
-							if (not module or not module.db) then return NAMEPLATE_MAX_DISTANCE_DEFAULT end
-							local value = module.db.profile.maxDistance
-							if (type(value) ~= "number") then
-								value = NAMEPLATE_MAX_DISTANCE_DEFAULT
-							end
-							return value
-						end
 					},
 					castBarOffsetY = {
 						name = L["Castbar vertical offset"],
@@ -327,6 +619,21 @@ local GenerateOptions = function()
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,
 						set = SetAdditiveTargetOption("enemyTargetScale", ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT, "nameplateTargetScale"),
 						get = GetAdditiveTargetOption("enemyTargetScale", ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT, "nameplateTargetScale")
+					},
+					raidTargetSize = {
+						name = L["Target marker size"],
+						desc = L["Size of the raid target icon - skull, cross, star and so on - beside the nameplate's health bar. `28` is the intended default."],
+						order = 9,
+						type = "range", width = "full",
+						min = RAID_TARGET_SIZE_SLIDER_MIN, max = RAID_TARGET_SIZE_SLIDER_MAX, step = 1,
+						set = setter,
+						get = function(info)
+							local value = getter(info)
+							if (type(value) ~= "number") then
+								return RAID_TARGET_SIZE_DEFAULT
+							end
+							return value
+						end
 					}
 				}
 			},

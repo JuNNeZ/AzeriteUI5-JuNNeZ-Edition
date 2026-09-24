@@ -1,0 +1,1826 @@
+== login
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+== add ten plates
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.422
+  name hidden@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate5 (friendly player)
+  unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="Aelwyn" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate6 (object)
+  unit=nameplate6 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@0 ignore=false scale=1.138
+  name hidden@1 text="nil" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate8 (personal resource)
+  unit=nameplate8 obj=nil npc=false prd=true widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="nil" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.898,0.612,0.431 orient=RIGHT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=ALL:Health
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate10 (decorative NPC)
+  unit=nameplate10 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@0 ignore=false scale=1.138
+  name hidden@1 text="nil" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+== next frame after adding
+== target the elite
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== soft-target the hostile
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=true focus=false mouse=false combat=false
+  frame shown@1 ignore=true scale=1.408
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight shown@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== soft-target the ore vein
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate6 (object)
+  unit=nameplate6 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=true focus=false mouse=false combat=false
+  frame shown@1 ignore=true scale=1.138
+  name shown@1 text="Copper Vein" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+== focus the boar
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight shown@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== clear the target
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight hidden@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras hidden@1 unit=nameplate1 enabled=false pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== target the elite again
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== hover the hostile
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=true combat=false
+  frame shown@1 ignore=true scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== stop hovering
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== enter combat
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=true
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight shown@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.422
+  name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate5 (friendly player)
+  unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Aelwyn" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate6 (object)
+  unit=nameplate6 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=true focus=false mouse=false combat=true
+  frame shown@1 ignore=true scale=1.138
+  name shown@1 text="Copper Vein" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate8 (personal resource)
+  unit=nameplate8 obj=nil npc=false prd=true widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="nil" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.898,0.612,0.431 orient=RIGHT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=ALL:Health
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate10 (decorative NPC)
+  unit=nameplate10 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@0 ignore=false scale=1.138
+  name hidden@1 text="nil" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+== elite gets two auras
+== elite gets four auras
+== elite casts, interrupt ready
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=1,0.82,0 tex=1,0.82,0 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== hostile casts, cannot be interrupted
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.502,0.502,0.502 tex=0.502,0.502,0.502 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== interrupt on cooldown mid-cast
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.8,0.098,0.098 tex=0.8,0.098,0.098 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== elite's cast fails
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.8,0.098,0.098 tex=0.8,0.098,0.098 text=0.8,0.098,0.098 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== hostile's cast ends
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== a cast turns uninterruptible before its castbar knows how to refresh
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.502,0.502,0.502 tex=0.502,0.502,0.502 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== that cast ends
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== leave combat
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight shown@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.422
+  name hidden@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate5 (friendly player)
+  unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="Aelwyn" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate6 (object)
+  unit=nameplate6 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=true focus=false mouse=false combat=false
+  frame shown@1 ignore=true scale=1.138
+  name shown@1 text="Copper Vein" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate8 (personal resource)
+  unit=nameplate8 obj=nil npc=false prd=true widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="nil" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.898,0.612,0.431 orient=RIGHT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=ALL:Health
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate10 (decorative NPC)
+  unit=nameplate10 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@0 ignore=false scale=1.138
+  name hidden@1 text="nil" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+== names only for friendly players
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+Plate5 (friendly player)
+  unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=2.276
+  name shown@1 text="Aelwyn" color=0.69,0.784,0.882 pt=BOTTOM>BlizzPlate:BOTTOM(0,0) scale=2.5
+  health hidden@0 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar hidden@0; backdrop hidden@0
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=BOTTOM>Name:TOP(0,4); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+== show Blizzard widgets
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight shown@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.422
+  name hidden@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,42) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,25); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== always show names
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight shown@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.422
+  name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,42) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,25); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,82)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== auras on every plate
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight shown@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.422
+  name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,42) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,25); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,82)
+  native auras shown@1 unit=nameplate7 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate9 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== aura filters changed
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+== bigger target markers
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=40 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=40 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight shown@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=40 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.422
+  name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=40 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate5 (friendly player)
+  unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=2.276
+  name shown@1 text="Aelwyn" color=0.69,0.784,0.882 pt=BOTTOM>BlizzPlate:BOTTOM(0,0) scale=2.5
+  health hidden@0 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar hidden@0; backdrop hidden@0
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=40 pt=BOTTOM>Name:TOP(0,4); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,42) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,25); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=40 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,82)
+  native auras shown@1 unit=nameplate7 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=40 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate9 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== target markers back to their default size
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight shown@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.422
+  name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate5 (friendly player)
+  unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=2.276
+  name shown@1 text="Aelwyn" color=0.69,0.784,0.882 pt=BOTTOM>BlizzPlate:BOTTOM(0,0) scale=2.5
+  health hidden@0 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar hidden@0; backdrop hidden@0
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=BOTTOM>Name:TOP(0,4); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,42) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,25); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,82)
+  native auras shown@1 unit=nameplate7 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate9 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== enemy plates switched off in the game
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@0 ignore=false scale=1.408
+  name hidden@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health hidden@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge hidden@1 tex=Assets\icon_classification_elite.tga; highlight hidden@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@0 ignore=false scale=0.939
+  name hidden@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=false
+  frame shown@0 ignore=false scale=0.939
+  name hidden@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
+== enemy plates back
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=true mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight shown@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== zone into a dungeon
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.75 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+== zone into an arena
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=1 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+== back to the open world
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+== hostile plate removed
+Plate2 (hostile)
+  unit=nil obj=nil npc=nil prd=nil widgetsOnly=nil canAttack=nil
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
+== hostile plate recycled
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== the boar's plate back after the aura filters changed
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+== names only switched off again
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate5 (friendly player)
+  unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Aelwyn" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate5 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== personal resource frame reused for a hostile
+Plate8 (personal resource)
+  unit=nameplate8 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Frenzied Gnoll" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate8 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== the frame back on the personal resource display
+Plate8 (personal resource)
+  unit=nameplate8 obj=nil npc=false prd=true widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.898,0.612,0.431 orient=RIGHT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=ALL:Health
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras hidden@1 unit=nameplate8 enabled=false pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== clear the focus
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== a plate appears before its unit is ready
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== the unit is ready one frame later
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Late Arrival" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== reload in combat inside a dungeon
+  cvars nameplateLargerScale=1 nameplateMaxScale=1 nameplateMinScale=1 nameplateSelectedScale=1 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.422
+  name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate5 (friendly player)
+  unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Aelwyn" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate5 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate6 (object)
+  unit=nameplate6 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=true focus=false mouse=false combat=true
+  frame shown@1 ignore=true scale=1.138
+  name shown@1 text="Copper Vein" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,42) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,25); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,82)
+  native auras shown@1 unit=nameplate7 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate8 (personal resource)
+  unit=nameplate8 obj=nil npc=false prd=true widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.898,0.612,0.431 orient=RIGHT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=ALL:Health
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras hidden@1 unit=nameplate8 enabled=false pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate9 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate10 (decorative NPC)
+  unit=nameplate10 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@0 ignore=false scale=1.138
+  name hidden@1 text="nil" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=true
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Late Arrival" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== combat ends after that reload
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.75 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateTargetBehindMaxDistance=15
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.422
+  name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate5 (friendly player)
+  unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Aelwyn" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate5 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate6 (object)
+  unit=nameplate6 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=true focus=false mouse=false combat=false
+  frame shown@1 ignore=true scale=1.138
+  name shown@1 text="Copper Vein" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+Plate7 (widget-only)
+  unit=nameplate7 obj=nil npc=false prd=false widgetsOnly=true canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Siege Engine" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,42) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,25); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,82)
+  native auras shown@1 unit=nameplate7 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate8 (personal resource)
+  unit=nameplate8 obj=nil npc=false prd=true widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.898,0.612,0.431 orient=RIGHT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=ALL:Health
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras hidden@1 unit=nameplate8 enabled=false pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate9 (secret hostile)
+  unit=nameplate9 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Masked Assassin" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate9 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate10 (decorative NPC)
+  unit=nameplate10 obj=true npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@0 ignore=false scale=1.138
+  name hidden@1 text="nil" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Late Arrival" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== hover the boar
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=true combat=false
+  frame shown@1 ignore=true scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== the cursor moves straight onto the elite
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=true combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== the cursor leaves
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== content settings
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+== combat filter on
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@0.35 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.753,0.384,0 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== combat filter off
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== the interrupt resolver asked
+== stacking passed through
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== execute marker on
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  execute line shown@1 pt=CENTER>Health:LEFT(18.4,0); zone shown@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  execute line shown@1 pt=CENTER>Health:LEFT(18.4,0); zone shown@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  execute line shown@1 pt=CENTER>Health:LEFT(18.4,0); zone shown@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Late Arrival" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  execute line shown@1 pt=CENTER>Health:LEFT(18.4,0); zone shown@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== the elite drops below a fifth of its health
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  execute line shown@1 pt=CENTER>Health:LEFT(18.4,0); zone shown@secret:1 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== threshold set by hand, then automatic again
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+== the class decides the threshold
+== a marked plate reused for a friendly unit
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.422
+  name shown@1 text="Late Arrival" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== execute marker off
+  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate1 (hostile elite)
+  unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=true soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.408
+  name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value shown@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
+  badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
+  native auras shown@1 unit=nameplate1 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:1 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== switch nameplates off
+  reloads 1

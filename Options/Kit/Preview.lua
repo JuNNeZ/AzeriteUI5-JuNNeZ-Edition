@@ -476,7 +476,28 @@ local policies = {
 		maxDistance = {
 			kind = "explain",
 			explain = L["Changes how far away nameplates appear."]
-		}
+		},
+		-- Both fade the plates that are not your target, so the target plate shows nothing of them.
+		contentMinAlpha = {
+			kind = "explain",
+			explain = L["Changes how faint nameplates get."]
+		},
+		contentOccludedAlpha = {
+			kind = "explain",
+			explain = L["Changes how faint nameplates get."]
+		},
+		combatFilter = {
+			kind = "explain",
+			explain = L["Changes how faint nameplates get."]
+		},
+		combatFilterAlpha = {
+			kind = "explain",
+			explain = L["Changes how faint nameplates get."]
+		},
+		-- The marker is drawn on the plates the player can attack, the ones IsEnemyPlate picks.
+		executeMarker = Plates(IsEnemyPlate, L["No enemy nameplate is visible to preview."]),
+		executeThresholdMode = Plates(IsEnemyPlate, L["No enemy nameplate is visible to preview."]),
+		executeThreshold = Plates(IsEnemyPlate, L["No enemy nameplate is visible to preview."])
 	},
 	MicroMenu = {
 		-- The module's `bar` is the cog's popup, hidden until clicked.

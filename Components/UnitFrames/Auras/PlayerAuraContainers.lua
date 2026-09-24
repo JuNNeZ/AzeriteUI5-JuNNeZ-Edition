@@ -1142,3 +1142,274 @@ ns.PlayerAuraContainers.UpdateGroupFrameUnit = function(frame, event)
 		native:ForceUpdate()
 	end
 end
+
+--[[
+	Nameplates.
+
+	The plates drew their auras through the oUF element, which scans C_UnitAuras from
+	Lua, and Retail 12.1 gives addon code no aura data at all in combat: a plate's auras
+	went the moment a pull began and did not come back until it ended (FixLog.md,
+	2026-08-18 and 2026-09-24). This container is filled engine side and keeps going.
+	Plater's 12.x build draws its plate auras the same way.
+
+	What a plate shows is chosen by kind, each kind a group the player can switch off
+	(Nameplates options, Aura filters). They draw in this order, and the display clips
+	whatever does not fit, so the kinds that matter most come first:
+
+	  crowd control          HARMFUL|CROWD_CONTROL, from anyone
+	  your debuffs           HARMFUL|PLAYER; optionally only the ones Blizzard's own
+	                         plates show (nameplateShowPersonal)
+	  debuffs from others    HARMFUL|!PLAYER, flagged to show on every nameplate
+	  buffs you can dispel   HELPFUL|RAID_PLAYER_DISPELLABLE: purge, spellsteal, soothe
+	  important buffs        HELPFUL|IMPORTANT, Blizzard's own pick for enemy plates
+	  your short buffs       HELPFUL|PLAYER, 30 seconds or less
+
+	Groups do not share an aura, so each leaves out, with a negated token, what an earlier
+	group that is switched on already shows. Without negation a group keeps its plain
+	filter, where an aura can show twice but never goes missing; debuffs from others cannot
+	be told from your own without it, and that group is left out instead.
+
+	Every group creates its first ten buttons up front (FrameCreationBatchSize in
+	Blizzard_AuraContainerShared.lua). So a plate builds its container the first time it
+	has auras to show rather than when it is styled, and adds a group the first time that
+	kind is switched on. A group switched off keeps its buttons and shows none.
+]]
+local PLATE_OWN_BUFF_MAX_DURATION = 30
+
+local NAMEPLATE_AURA_GROUPS = {
+	{
+		key = "AzeritePlateCrowdControl", shownField = "showCrowdControl", isHarmful = true,
+		filter = "HARMFUL|CROWD_CONTROL|INCLUDE_NAME_PLATE_ONLY",
+		candidates = function(config) return { excludeSpellIDs = HiddenAuras } end
+	},
+	{
+		key = "AzeritePlateHarmfulOwn", shownField = "showOwnDebuffs", isHarmful = true,
+		filter = "HARMFUL|PLAYER|INCLUDE_NAME_PLATE_ONLY",
+		exclude = function(config) return config.showCrowdControl and "CROWD_CONTROL" or nil end,
+		candidates = function(config)
+			return { excludeSpellIDs = HiddenAuras, nameplateShowPersonal = config.ownDebuffsBlizzardOnly or nil }
+		end
+	},
+	{
+		key = "AzeritePlateHarmfulOthers", shownField = "showOtherDebuffs", isHarmful = true,
+		filter = "HARMFUL|INCLUDE_NAME_PLATE_ONLY", requiresExclusion = true,
+		exclude = function(config) return "PLAYER", config.showCrowdControl and "CROWD_CONTROL" or nil end,
+		candidates = function(config) return { excludeSpellIDs = HiddenAuras, nameplateShowAll = true } end
+	},
+	{
+		key = "AzeritePlateHelpfulDispellable", shownField = "showDispellableBuffs", isHarmful = false,
+		filter = "HELPFUL|RAID_PLAYER_DISPELLABLE",
+		candidates = function(config) return { excludeSpellIDs = HiddenAuras } end
+	},
+	{
+		key = "AzeritePlateHelpfulImportant", shownField = "showImportantBuffs", isHarmful = false,
+		filter = "HELPFUL|IMPORTANT",
+		exclude = function(config) return config.showDispellableBuffs and "RAID_PLAYER_DISPELLABLE" or nil end,
+		candidates = function(config) return { excludeSpellIDs = HiddenAuras } end
+	},
+	{
+		key = "AzeritePlateHelpfulOwn", shownField = "showOwnBuffs", isHarmful = false,
+		filter = "HELPFUL|PLAYER",
+		exclude = function(config)
+			return config.showDispellableBuffs and "RAID_PLAYER_DISPELLABLE" or nil, config.showImportantBuffs and "IMPORTANT" or nil
+		end,
+		candidates = function(config)
+			return { excludeSpellIDs = HiddenAuras, maxDuration = PLATE_OWN_BUFF_MAX_DURATION }
+		end
+	}
+}
+
+local NAMEPLATE_CONFIG_FIELDS = {
+	"maxAuras", "showCrowdControl", "showOwnDebuffs", "ownDebuffsBlizzardOnly", "showOtherDebuffs",
+	"showDispellableBuffs", "showImportantBuffs", "showOwnBuffs"
+}
+
+-- For tooling, as GroupKeys above.
+ns.PlayerAuraContainers.NamePlateKeys = {}
+for index, group in ipairs(NAMEPLATE_AURA_GROUPS) do
+	ns.PlayerAuraContainers.NamePlateKeys[index] = group.key
+end
+
+-- Every kind shown unless the settings say otherwise, Blizzard's pick of your debuffs off.
+local function BuildNamePlateConfig(settings)
+	settings = settings or {}
+	return {
+		maxAuras = settings.maxAuras or 6,
+		showCrowdControl = settings.showCrowdControl ~= false,
+		showOwnDebuffs = settings.showOwnDebuffs ~= false,
+		ownDebuffsBlizzardOnly = settings.ownDebuffsBlizzardOnly == true,
+		showOtherDebuffs = settings.showOtherDebuffs ~= false,
+		showDispellableBuffs = settings.showDispellableBuffs ~= false,
+		showImportantBuffs = settings.showImportantBuffs ~= false,
+		showOwnBuffs = settings.showOwnBuffs ~= false
+	}
+end
+ns.PlayerAuraContainers.BuildNamePlateConfig = BuildNamePlateConfig
+
+-- The group's filter string for this config, or nil when the client cannot express it.
+local function GetNamePlateGroupFilter(group, config)
+	if (not IsUsableFilterString(group.filter)) then
+		return nil
+	end
+	if (not group.exclude) then
+		return group.filter
+	end
+	local filter = WithExcludedTokens(group.filter, group.exclude(config))
+	if (group.requiresExclusion and filter == group.filter) then
+		return nil
+	end
+	return filter
+end
+
+-- Spell ID sets are static, so they are left out.
+local function GetNamePlateCandidateSignature(filters)
+	return tostring(filters.nameplateShowPersonal) .. ":" .. tostring(filters.nameplateShowAll) .. ":" .. tostring(filters.maxDuration)
+end
+
+local NamePlateDisplayMixin = {}
+
+-- Applies the kinds `config` switches on. Only what changed reaches the container:
+-- SetAuraGroupCandidateFilters rebuilds it on every call, and a group added once stays.
+function NamePlateDisplayMixin:Configure(config)
+	local parts = {}
+	for index, field in ipairs(NAMEPLATE_CONFIG_FIELDS) do
+		parts[index] = tostring(config[field])
+	end
+	local signature = table.concat(parts, ":")
+	if (signature == self.configurationSignature) then
+		return
+	end
+	self.configurationSignature = signature
+
+	local container = self.container
+	local options = self.options
+	local styleState = self.styleState
+	local spacingX = options.spacingX or options.spacing or 0
+	local spacingY = options.spacingY or options.spacing or 0
+	for layoutIndex, group in ipairs(NAMEPLATE_AURA_GROUPS) do
+		local filter = config[group.shownField] and GetNamePlateGroupFilter(group, config) or nil
+		local added = self.addedGroups[group.key]
+		if (filter and not added) then
+			local isHarmful = group.isHarmful
+			local candidates = group.candidates(config)
+			container:AddAuraGroup(group.key, filter, {
+				initializeFrame = function(button)
+					StyleAuraButton(button, isHarmful, options, false, styleState)
+				end,
+				candidateFilters = candidates,
+				maxFrameCount = config.maxAuras,
+				sortMethod = GetSortMethod(isHarmful),
+				sortDirection = GetSortDirection(),
+				layout = {
+					elementSpacing = spacingX,
+					lineSpacing = spacingY,
+					groupSpacing = spacingX,
+					groupLineSpacing = spacingY,
+					elementWidth = options.size,
+					elementHeight = options.size,
+					layoutIndex = layoutIndex
+				}
+			})
+			self.addedGroups[group.key] = { candidates = GetNamePlateCandidateSignature(candidates) }
+		elseif (added) then
+			if (filter) then
+				-- Compares before it acts.
+				container:SetAuraGroupFilterString(group.key, filter)
+				local candidates = group.candidates(config)
+				local candidateSignature = GetNamePlateCandidateSignature(candidates)
+				if (candidateSignature ~= added.candidates) then
+					container:SetAuraGroupCandidateFilters(group.key, candidates)
+					added.candidates = candidateSignature
+				end
+			end
+			container:SetAuraGroupMaxFrameCount(group.key, filter and config.maxAuras or 0)
+		end
+	end
+end
+
+-- Returns true when the container was pointed at a new unit, which rebuilds it.
+function NamePlateDisplayMixin:SetDisplayUnit(unit)
+	if (type(unit) ~= "string" or unit == "" or unit == self.unit) then
+		return false
+	end
+	self.unit = unit
+	self.container:SetUnit(unit)
+	return true
+end
+
+-- A plate is a plain frame (oUF spawns it from PingableUnitFrameTemplate), so unlike the
+-- player and group rows nothing here has to wait for combat to end.
+function NamePlateDisplayMixin:SetDisplayEnabled(enabled)
+	enabled = (enabled and self.unit ~= nil) and true or false
+	if (enabled == self.displayEnabled) then
+		return
+	end
+	self.displayEnabled = enabled
+	self.container:SetEnabled(enabled)
+	self:SetShown(enabled)
+end
+
+function NamePlateDisplayMixin:ForceUpdate()
+	self.container:UpdateAllAuras()
+end
+
+-- Nameplate variant of CreateForUnit: the kinds above, laid out in one flow and clipped to
+-- options.width x options.height, `config` saying which kinds are on (BuildNamePlateConfig).
+-- Returns nil where the client lacks the container, and the plate keeps its scanning
+-- element in that case.
+ns.PlayerAuraContainers.CreateForNamePlate = function(parent, options, config)
+	if (not C_XMLUtil or not C_XMLUtil.GetTemplateInfo or not C_XMLUtil.GetTemplateInfo("CustomAuraContainerTemplate")) then
+		return nil
+	end
+	if (not AuraContainerSortMethod or not AuraContainerSortDirection or not AnchorUtil) then
+		return nil
+	end
+	-- Every group is checked before it is added; a client that cannot check them gets none.
+	if (not IsUsableFilterString("HARMFUL|PLAYER")) then
+		return nil
+	end
+
+	local displayFrameLevel = parent:GetFrameLevel() + 1
+	options.buttonFrameLevel = displayFrameLevel
+
+	local display = CreateFrame("Frame", nil, parent, "DisableUntrustedLayoutScriptsTemplate")
+	SetMouseInputEnabled(display, false)
+	display:SetSize(options.width, options.height)
+	display:SetFrameLevel(displayFrameLevel)
+
+	local clipFrame = CreateFrame("Frame", nil, display, "DisableUntrustedLayoutScriptsTemplate")
+	SetMouseInputEnabled(clipFrame, false)
+	clipFrame:SetFrameLevel(display:GetFrameLevel())
+	clipFrame:SetPoint("TOPLEFT", display, "TOPLEFT", -BORDER_OVERHANG, BORDER_OVERHANG)
+	clipFrame:SetPoint("BOTTOMRIGHT", display, "BOTTOMRIGHT", BORDER_OVERHANG, -BORDER_OVERHANG)
+	clipFrame:SetClipsChildren(true)
+	display.clipFrame = clipFrame
+
+	local initialAnchor = options.initialAnchor or "BOTTOMLEFT"
+	local container = CreateFrame("AuraContainer", nil, clipFrame, "CustomAuraContainerTemplate, DisableUntrustedLayoutScriptsTemplate")
+	container:SetFrameLevel(clipFrame:GetFrameLevel())
+	SetMouseInputEnabled(container, false)
+	container:SetPoint(initialAnchor, clipFrame, initialAnchor, GetContainerAnchorOffset(initialAnchor))
+	container:SetFlowLayoutAnchorPoint(initialAnchor)
+	container:SetFlowLayoutGrowthDirection(
+		GetFlowDirection(options.growthX == "LEFT" and "Left" or "Right", options.growthX == "LEFT" and -1 or 1),
+		GetFlowDirection(options.growthY == "DOWN" and "Down" or "Up", options.growthY == "DOWN" and -1 or 1))
+	container:SetFlowLayoutMaximumLineSize(options.width)
+
+	display.container = container
+	display.containers = { container }
+	display.options = options
+	-- Nothing on a plate is dimmed.
+	display.styleState = { alwaysBright = true }
+	container.__AzeriteUI_StyleState = display.styleState
+	display.addedGroups = {}
+
+	Mixin(display, NamePlateDisplayMixin)
+	display:Configure(config or BuildNamePlateConfig())
+
+	-- Off until the plate says otherwise: an enabled container registers UNIT_AURA for its unit.
+	display.displayEnabled = false
+	container:SetEnabled(false)
+	display:Hide()
+	return display
+end

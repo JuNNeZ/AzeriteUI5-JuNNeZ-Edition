@@ -796,3 +796,72 @@ L["Short Number"] = true
 L["Full Number"] = true
 L["Percent"] = true
 L["Short + Percent"] = true
+
+-- Nameplates.
+L["Switching AzeriteUI nameplates on or off reloads the interface."] = true
+L["Target marker size"] = true
+L["Size of the raid target icon - skull, cross, star and so on - beside the nameplate's health bar. `28` is the intended default."] = true
+L["Aura filters"] = true
+L["Which kinds of aura a nameplate shows, in combat too. They fill the aura rows in this order."] = true
+L["Crowd control"] = true
+L["Stuns, fears, roots and other crowd control on the unit, from anyone."] = true
+L["Your debuffs"] = true
+L["Damage over time and other debuffs you or your pet put on the unit."] = true
+L["Only the ones Blizzard highlights"] = true
+L["Of your debuffs, show only those Blizzard's own nameplates would show."] = true
+L["Important debuffs from others"] = true
+L["Debuffs from other players that Blizzard flags to show on every nameplate."] = true
+L["Buffs you can dispel"] = true
+L["Enemy buffs your group can purge, spellsteal or soothe."] = true
+L["Important enemy buffs"] = true
+L["Buffs Blizzard marks as important on enemy nameplates, such as big defensive cooldowns."] = true
+L["Your short buffs"] = true
+L["Buffs you cast that last 30 seconds or less, on friendly nameplates."] = true
+L["Stacking"] = true
+L["These are the game's own nameplate settings, the same ones Blizzard's Options change. A change made in combat applies when it ends."] = true
+L["Stack enemy nameplates"] = true
+L["Enemy nameplates move apart so they do not overlap."] = true
+L["Stack friendly nameplates"] = true
+L["Friendly nameplates move apart so they do not overlap."] = true
+
+-- The game menu.
+L["Show AzeriteUI in the game menu"] = true
+L["Adds an AzeriteUI button under Options in the game menu you open with Escape."] = true
+
+-- Nameplates: content settings.
+L["Content settings"] = true
+L["Each kind of content keeps its own values, and the one you are in is used. Pick a kind to change it."] = true
+L["Content"] = true
+L["Which kind of content the settings below change. Opens on the one you are in."] = true
+L["Open world"] = true
+L["Dungeon"] = true
+L["Mythic+"] = true
+L["Raid"] = true
+L["Battleground"] = true
+L["Arena"] = true
+L["Faintest alpha"] = true
+L["How faint the nameplates of units other than your target get with distance."] = true
+L["Alpha behind walls"] = true
+L["How faint nameplates get while walls or other objects hide their unit."] = true
+L["Changes how faint nameplates get."] = true
+
+-- Nameplates: the combat filter.
+L["Other fights"] = true
+L["Fade enemies fighting someone else"] = true
+L["Enemies in combat with no one in your group fade, so the pull you are in stands out. Your target, focus and the plate under your cursor never fade."] = true
+L["Faded alpha"] = true
+L["How faint those enemies' nameplates get."] = true
+
+-- Nameplates: the execute marker.
+L["Execute range"] = true
+L["Show the execute marker"] = true
+L["A line across enemy health bars at your execute threshold. Once an enemy's health falls below it, the part of the bar below the line is tinted."] = true
+L["Threshold"] = true
+L["Automatic follows your class and specialization, and classes without an execute get no marker. Set it by hand where a talent moves it, as Massacre does."] = true
+L["Automatic"] = true
+L["By hand"] = true
+L["Threshold by hand"] = true
+L["Where the marker sits when the threshold is set by hand."] = true
+
+-- Nameplates: another nameplate addon is enabled.
+L["%s is enabled, so AzeriteUI's nameplates stand down. These settings apply once it is disabled."] = true

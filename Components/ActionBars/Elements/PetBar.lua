@@ -620,6 +620,29 @@ PetBarMod.UpdatePetBarState = function(self)
 	self:UpdatePetButtons()
 end
 
+-- The refresh events below can be dispatched from inside a secure key press: a macro's
+-- /petattack calls PetAttack inside UseAction, and PET_BAR_UPDATE fires within that call.
+-- The whole refresh then counted against the key press, where BugSack caught a "script
+-- ran too long" (TODO 7.1). Requests are collected and served once, on the next frame.
+PetBarMod.QueuePetBarUpdate = function(self, updateState)
+	if (updateState) then
+		self.__AzeriteUI_PendingPetBarState = true
+	end
+	if (self.__AzeriteUI_PetBarUpdateTimer) then return end
+	self.__AzeriteUI_PetBarUpdateTimer = self:ScheduleTimer("OnPetBarUpdateTimer", 0)
+end
+
+PetBarMod.OnPetBarUpdateTimer = function(self)
+	local updateState = self.__AzeriteUI_PendingPetBarState
+	self.__AzeriteUI_PetBarUpdateTimer = nil
+	self.__AzeriteUI_PendingPetBarState = nil
+	if (updateState) then
+		self:UpdatePetBarState()
+	else
+		self:UpdatePetButtons()
+	end
+end
+
 -- Called by the movable frame manager
 -- when defaults somehow are changed,
 -- like when the user interface scale is modified.
@@ -706,13 +729,13 @@ PetBarMod.OnEvent = function(self, event, arg1)
 		end
 
 	elseif (event == "PET_BAR_UPDATE" or (event == "UNIT_PET" and arg1 == "player") or event == "PET_UI_UPDATE" or event == "UPDATE_VEHICLE_ACTIONBAR") then
-		self:UpdatePetBarState()
+		self:QueuePetBarUpdate(true)
 
 	elseif (event == "PLAYER_CONTROL_LOST" or event == "PLAYER_CONTROL_GAINED" or event == "PLAYER_FARSIGHT_FOCUS_CHANGED" or event == "PET_BAR_UPDATE_USABLE" or event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_MOUNT_DISPLAY_CHANGED") then
-		self:UpdatePetButtons()
+		self:QueuePetBarUpdate()
 
 	elseif (event == "UNIT_FLAGS" or event == "UNIT_AURA") and (arg1 == "pet") then
-		self:UpdatePetButtons()
+		self:QueuePetBarUpdate()
 
 	elseif (event =="PET_BAR_UPDATE_COOLDOWN") then
 		for id,button in next,self.bar.buttons do
@@ -816,9 +839,17 @@ PetBarMod.OnEnable = function(self)
 	if (ns.API.IsEventAvailable("HOUSE_EDITOR_MODE_CHANGED")) then
 		self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnEvent")
 	end
-	self:RegisterEvent("UNIT_AURA", "OnEvent")
-	self:RegisterEvent("UNIT_FLAGS", "OnEvent")
 	self:RegisterEvent("UNIT_PET", "OnEvent")
+
+	-- The pet's auras and flags only, as Bartender4 does it; registered for every unit,
+	-- each raid member's aura change reached this bar just to be thrown away. On a frame
+	-- of our own, because LibMoreEvents shares one frame across the addon, and a unit
+	-- filter there would also narrow every other module's registration of the event.
+	local petEvents = self.petEventFrame or CreateFrame("Frame")
+	petEvents:RegisterUnitEvent("UNIT_AURA", "pet")
+	petEvents:RegisterUnitEvent("UNIT_FLAGS", "pet")
+	petEvents:SetScript("OnEvent", function(_, event, unit) self:OnEvent(event, unit) end)
+	self.petEventFrame = petEvents
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnAnchorEvent")
 	self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnAnchorEvent")

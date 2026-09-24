@@ -31,6 +31,7 @@ local GameMenuSkin = ns:NewModule("GameMenuSkin", "AceHook-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 -- GLOBALS: C_AddOns, C_Timer, GameMenuFrame, ReloadUI, StaticPopupDialogs, StaticPopup_Show, UnitName
+-- GLOBALS: GAMEMENU_OPTIONS, HideUIPanel, InCombatLockdown, PlaySound, SOUNDKIT
 
 -- Lua API
 local ipairs = ipairs
@@ -51,8 +52,14 @@ local defaults = {
 	--   owner: nil or "azeriteui" styles the menu, "blizzard" leaves it alone,
 	--          and "other" leaves it to the addon in `rival` while that is enabled.
 	--   rival: folder name of the other addon the choice was made about.
-	char = {}
+	char = {},
+	profile = {
+		-- An AzeriteUI button in the menu, under Blizzard's Options. Independent of the style.
+		showMenuButton = true
+	}
 }
+
+local MENU_BUTTON_TEXT = "AzeriteUI"
 
 local function IsGameMenuButton(button)
 	if (not button or button:GetParent() ~= GameMenuFrame) then
@@ -387,6 +394,85 @@ GameMenuSkin.QueueRivalCheck = function(self)
 	end)
 end
 
+--[[
+	The AzeriteUI button.
+
+	Blizzard rebuilds the menu from a button pool every time it opens
+	(GameMenuFrameMixin:InitButtons, which runs Reset and then AddButton for each
+	entry). Adding ours with AddButton would acquire a pool button from addon code,
+	and the next secure InitButtons would wire Log Out and Exit Game from that tainted
+	pool, so their protected Logout() and Quit() get blocked. GW2_UI records the same
+	finding and avoids it the same way: the button is our own, made from the menu's
+	button template, and joins the menu's layout only through its layoutIndex. The
+	menu's Layout reads that number; InitButtons reads nothing it has not written
+	itself, so Blizzard's entries stay clean.
+]]
+GameMenuSkin.OpenOptions = function(self)
+	if (SOUNDKIT and PlaySound) then
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION)
+	end
+	-- As Blizzard's own entries do, but not in combat, where the panel system
+	-- belongs to secure code; the menu stays open then and the options open on top.
+	if (not InCombatLockdown()) then
+		HideUIPanel(GameMenuFrame)
+	end
+
+	-- Opened, not toggled: the button never closes a panel that is already open.
+	local panel = ns.OptionsKit and ns.OptionsKit.Panel
+	if (panel and panel.IsShown and panel:IsShown()) then
+		return
+	end
+	local options = ns:GetModule("Options", true)
+	if (options and options.OpenOptionsMenu) then
+		options:OpenOptionsMenu()
+	end
+end
+
+GameMenuSkin.UpdateMenuButton = function(self)
+	local menu = GameMenuFrame
+	if (not menu or not menu.buttonPool or type(menu.buttonTemplate) ~= "string") then
+		return
+	end
+
+	local button = self.menuButton
+	if (not self.db.profile.showMenuButton) then
+		if (button) then
+			button.layoutIndex = nil
+			button:Hide()
+		end
+		return
+	end
+
+	if (not button) then
+		button = CreateFrame("Button", nil, menu, menu.buttonTemplate)
+		button:SetText(MENU_BUTTON_TEXT)
+		button:SetScript("OnClick", function() self:OpenOptions() end)
+		self.menuButton = button
+	end
+
+	-- Just under Blizzard's Options, or last, a section apart, if that is not there.
+	local optionsIndex, lastIndex = nil, 0
+	for pooled in menu.buttonPool:EnumerateActive() do
+		local index = pooled.layoutIndex
+		if (type(index) == "number") then
+			if (index > lastIndex) then
+				lastIndex = index
+			end
+			if (pooled:GetText() == GAMEMENU_OPTIONS) then
+				optionsIndex = index
+			end
+		end
+	end
+	if (optionsIndex) then
+		button.layoutIndex = optionsIndex + .5
+		button.topPadding = nil
+	else
+		button.layoutIndex = lastIndex + 1
+		button.topPadding = 20
+	end
+	button:Show()
+end
+
 GameMenuSkin.OnMenuShown = function(self)
 	if (self.skinning) then
 		self:UpdateSkin()
@@ -414,6 +500,12 @@ GameMenuSkin.OnEnable = function(self)
 	-- that is.
 	if (not self:IsHooked(GameMenuFrame, "OnShow")) then
 		self:SecureHookScript(GameMenuFrame, "OnShow", "OnMenuShown")
+	end
+
+	-- After every rebuild of Blizzard's entries, so the button keeps its place among
+	-- them. Whatever the style: Blizzard's own menu gets the button too.
+	if (type(GameMenuFrame.InitButtons) == "function" and not self:IsHooked(GameMenuFrame, "InitButtons")) then
+		self:SecureHook(GameMenuFrame, "InitButtons", "UpdateMenuButton")
 	end
 
 	if (not self.skinning) then

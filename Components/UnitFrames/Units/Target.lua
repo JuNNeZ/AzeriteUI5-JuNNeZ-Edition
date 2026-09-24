@@ -3878,6 +3878,23 @@ local style = function(self, unit, id)
 
 end
 
+-- Blizzard's ComboFrame draws combo points beside its target frame, but is parented to
+-- UIParent, so hiding TargetFrame leaves it behind. Where comboPointLocation is "1", as
+-- on Forever, it fades in beside the hidden TargetFrame whenever the player has combo
+-- points (TODO 7.4). Only its nine point frames go transparent: Blizzard fades ComboFrame
+-- itself and the points' textures, never the point frames, so nothing undoes this, and
+-- its events, anchors and fades are left alone.
+local HideBlizzardComboPoints = function()
+	local comboFrame = _G.ComboFrame
+	local points = comboFrame and comboFrame.ComboPoints
+	if (type(points) ~= "table") then return end
+	for _, point in next, points do
+		if (type(point) == "table" and point.SetAlpha) then
+			point:SetAlpha(0)
+		end
+	end
+end
+
 TargetFrameMod.CreateUnitFrames = function(self)
 
 	local unit, name = "target", "Target"
@@ -3886,6 +3903,9 @@ TargetFrameMod.CreateUnitFrames = function(self)
 	oUF:SetActiveStyle(ns.Prefix..name)
 
 	self.frame = ns.UnitFrame.Spawn(unit, ns.Prefix.."UnitFrame"..name)
+
+	-- Spawning hid TargetFrame; its combo points go with it.
+	HideBlizzardComboPoints()
 end
 
 TargetFrameMod.Update = function(self)

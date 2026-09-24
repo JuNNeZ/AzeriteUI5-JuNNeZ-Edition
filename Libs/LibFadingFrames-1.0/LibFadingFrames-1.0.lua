@@ -24,7 +24,7 @@
 
 --]]
 local MAJOR_VERSION = "LibFadingFrames-1.0"
-local MINOR_VERSION = 41
+local MINOR_VERSION = 42
 
 assert(LibStub, MAJOR_VERSION .. " requires LibStub.")
 
@@ -367,7 +367,14 @@ lib.RegisterFrameForFading = function(_, frame, fadeGroup, ...)
 	--requestAlpha(frame, 0)
 	--setCurrentAlpha(frame, 0)
 
-	lib:UpdateTargetAlphas()
+	-- Only the new frame's target is unknown; no other frame's target depends on what
+	-- a registration changes. Re-evaluating every frame here made a bar registering ten
+	-- buttons pay for ten passes over every faded button in the interface, and the pet
+	-- bar does that on each PET_BAR_UPDATE, which can fire inside a secure key press.
+	if (lib.inWorld) then
+		lib.cursorType = GetCursorInfo()
+		updateTargetAlpha(frame)
+	end
 end
 
 lib.UnregisterFrameForFading = function(_, frame)

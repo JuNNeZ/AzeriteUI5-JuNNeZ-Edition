@@ -63,6 +63,19 @@ ns.StanceButtons = {}
 ns.StanceButton = StanceButton
 ns.StanceButton.defaults = defaults
 
+-- ToShortKey runs some seventy gsubs per key and its answer depends on the key alone.
+-- Hotkeys are redrawn on every stance bar refresh, so each key is shortened once.
+local shortKeys = {}
+
+local GetShortKey = function(key)
+	local shortKey = shortKeys[key]
+	if (not shortKey) then
+		shortKey = KeyBound:ToShortKey(key)
+		shortKeys[key] = shortKey
+	end
+	return shortKey
+end
+
 ns.StanceButton.Create = function(id, name, header, buttonConfig)
 
 	local button = CreateFrame("CheckButton", name, header, "StanceButtonTemplate")
@@ -154,7 +167,7 @@ end
 
 StanceButton.GetHotkey = function(self)
 	local key = GetBindingKey(string_format("SHAPESHIFTBUTTON%d", self:GetID())) or GetBindingKey("CLICK "..self:GetName()..":LeftButton")
-	return key and KeyBound and KeyBound:ToShortKey(key)
+	return key and KeyBound and GetShortKey(key)
 end
 
 StanceButton.GetTexture = function(self)

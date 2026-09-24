@@ -2,6 +2,8 @@
 
 	<Script file="UnitFrame.lua"/>
 	<Script file="Functions.lua"/>
+	<Script file="Interrupts.lua"/>
+	<Script file="ExecuteRange.lua"/>
 	<Script file="HealthPrediction.lua"/>
 	<Script file="NameplateInterruptDB.lua"/>
 	<Script file="Tags.lua"/>
@@ -30,6 +32,16 @@
 	<Script file="Units\Raid25.lua"/>
 	<Script file="Units\Raid40.lua"/>
 	<Script file="Units\Arena.lua"/>
-	<Script file="Units\NamePlates.lua"/>
+	<!-- One module in load order; see NamePlates\Settings.lua. -->
+	<Script file="NamePlates\Settings.lua"/>
+	<Script file="NamePlates\Classification.lua"/>
+	<Script file="NamePlates\CVars.lua"/>
+	<Script file="NamePlates\Visibility.lua"/>
+	<Script file="NamePlates\Elements.lua"/>
+	<Script file="NamePlates\Castbar.lua"/>
+	<Script file="NamePlates\Layout.lua"/>
+	<Script file="NamePlates\BlizzardPlates.lua"/>
+	<Script file="NamePlates\Style.lua"/>
+	<Script file="NamePlates\Module.lua"/>
 
 </Ui>

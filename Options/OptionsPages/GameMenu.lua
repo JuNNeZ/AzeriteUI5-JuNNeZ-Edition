@@ -47,6 +47,19 @@ local GenerateOptions = function()
 				get = function(info)
 					return getmodule():GetStyle()
 				end
+			},
+			-- Takes effect the next time the menu opens; Blizzard rebuilds it then anyway.
+			showMenuButton = {
+				name = L["Show AzeriteUI in the game menu"],
+				desc = L["Adds an AzeriteUI button under Options in the game menu you open with Escape."],
+				order = 3,
+				type = "toggle", width = "full",
+				set = function(info, val)
+					getmodule().db.profile.showMenuButton = val and true or false
+				end,
+				get = function(info)
+					return getmodule().db.profile.showMenuButton ~= false
+				end
 			}
 		}
 	}

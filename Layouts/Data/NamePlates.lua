@@ -63,6 +63,12 @@ ns.RegisterConfig("NamePlates", {
 	HealthAbsorbColor = { 1, 1, 1, .35 },
 	HealthCastOverlayColor = { 1, 1, 1, .35 },
 
+	-- Execute range (the execute marker): a line at the threshold, and the part of the bar below it
+	-- washed in the zone colour once the enemy is inside it.
+	ExecuteLineColor = { 1, 1, 1, .85 },
+	ExecuteLineWidth = 2,
+	ExecuteZoneColor = { 1, .15, .05, .35 },
+
 	HealthBackdropPosition = { "CENTER", 0, 0 },
 	HealthBackdropSize = { 92, 24 },
 	HealthBackdropTexture = GetMedia("nameplate_backdrop"),
@@ -127,7 +133,6 @@ ns.RegisterConfig("NamePlates", {
 	AuraSize = 26,
 	AuraSpacing = 4,
 	AurasNumTotal = 6,
-	AurasNumPerRow = 3,
 	AurasDisableMouse = true,
 	AurasDisableCooldown = false,
 	AurasOnlyShowPlayer = false, -- handle this in the filter instead
@@ -151,8 +156,10 @@ ns.RegisterConfig("NamePlates", {
 
 	-- Raid Target Indicator
 	-----------------------------------------
-	RaidTargetPosition = { "BOTTOM", 0, 38 },
-	RaidTargetSize = { 64, 64 },
+	-- Beside the health bar, as on Blizzard's own plates: the marker's point, the health bar's point,
+	-- x, y. Its size is the Target marker size option (NamePlates\Settings.lua).
+	RaidTargetPosition = { "RIGHT", "LEFT", -6, 0 },
+	RaidTargetNameOnlyOffsetY = 4, -- above the name, on a friendly name-only plate
 	RaidTargetTexture = GetMedia("raid_target_icons"),
 
 	-- Target Highlight

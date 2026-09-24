@@ -67,6 +67,19 @@ ns.PetButtons = {}
 ns.PetButton = PetButton
 ns.PetButton.defaults = defaults
 
+-- ToShortKey runs some seventy gsubs per key and its answer depends on the key alone.
+-- Hotkeys are redrawn on every pet bar refresh, so each key is shortened once.
+local shortKeys = {}
+
+local GetShortKey = function(key)
+	local shortKey = shortKeys[key]
+	if (not shortKey) then
+		shortKey = KeyBound:ToShortKey(key)
+		shortKeys[key] = shortKey
+	end
+	return shortKey
+end
+
 local UpdateTooltip = function(self)
 	if (GameTooltip:IsForbidden()) then
 		return
@@ -279,7 +292,7 @@ end
 
 PetButton.GetHotkey = function(self)
 	local key = GetBindingKey(format("BONUSACTIONBUTTON%d", self.id)) or GetBindingKey("CLICK "..self:GetName()..":LeftButton")
-	return key and KeyBound and KeyBound:ToShortKey(key)
+	return key and KeyBound and GetShortKey(key)
 end
 
 PetButton.GetBindings = function(self)

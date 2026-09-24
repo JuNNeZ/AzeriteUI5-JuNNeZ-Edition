@@ -22,7 +22,35 @@ lua Tools/Harness/combo_points_harness.lua .               # Forever secret comb
 lua Tools/Harness/chat_guard_harness.lua   .               # chat module stays out of chat replacements
 lua Tools/Harness/tracker_harness.lua      .               # Hide the Blizzard Tracker, Retail and Forever
 lua Tools/Harness/locale_harness.lua       .               # all ten locales: parity, specifiers, widths
+lua Tools/Harness/nameplate_harness.lua    .               # nameplates: named checks + golden snapshot
 ```
+
+`nameplate_harness.lua` is the contract for the nameplate overhaul (`Docs/Nameplates Overhaul
+Plan.md`). It loads the real module - every `NamePlates\*.lua` file, in the order
+`Components/UnitFrames/UnitFrames.xml` lists them, so it also proves that order - with the layout
+data, colours and interrupt database, against a fake of oUF's nameplate driver that does what
+`Libs/oUF/ouf.lua:1000-1070` does, and walks eleven plates of every kind through a scripted session.
+Some checks are about work rather than looks (a target change touches only the plates that changed,
+nothing polls while nothing is hovered); they count widget calls, which the golden file cannot see. Three outputs: named checks for the behaviours
+that must survive; `nameplate_golden.txt`, every plate's visible state after every step (only the
+plates that changed are written); and `nameplate_metrics.txt`, widget calls and plates touched per
+step. A deliberate behaviour change is a reviewed golden diff re-recorded with `--record`; a
+performance change is checked with `--metrics` and re-recorded with `--record-metrics`. The fake
+oUF elements copy what the real ones do to visibility (castbar hidden when idle, raid marker and
+threat glow only when set), because the first draft showed all three on every plate and the golden
+file was recording the stub. Plates draw their auras through Blizzard's native `AuraContainer` on
+Retail; the harness loads the real `Auras/PlayerAuraContainers.lua` against a fake container that
+keeps the unit, the on/off state and how often it was told to re-read, and rejects the inputs
+`Blizzard_CustomAuraContainer.lua` would (unknown filter tokens, candidate filters or layout keys).
+Which auras it would show is the client's and is not modelled; which kinds a container asks for (the
+Aura filters settings) is, group by group. Blizzard's stacking option is a fake bitfield CVar behind
+`C_CVar.GetCVarBitfield` / `SetCVarBitfield`, so the passthrough's reads, writes and combat hold are
+checked. The execute marker's tint goes through `UnitHealthPercent` with a step curve: the harness
+evaluates the curve against a per-unit `healthPercent` and hands back a secret number that `type()`
+calls a number but that raises on arithmetic or comparison, as the client's does, so a marker that
+did maths on its answer would fail here. Standing down for another nameplate addon (`W.addons`) is
+checked for CVar writes and reloads. It runs in its own environment so it cannot leave globals behind for the next harness in
+`mutate_client.lua`.
 
 `locale_harness.lua` loads every `Locale/*.lua` through a stub AceLocale instead of parsing it, so
 it sees keys exactly as the client does - the `\n` keys a pattern once dropped included. It fails
