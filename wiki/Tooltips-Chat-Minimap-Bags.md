@@ -12,8 +12,9 @@ pages that sit alongside them.
 - **Enable Anchoring** and **Position** - where tooltips appear.
 - **Anchor to Cursor** - follow the mouse instead.
 - **Transparent unit tooltips on nameplates**.
-- **Hide UnitFrame Tooltips in Combat** and **Hide ActionBar Tooltips in Combat**.
-- **Show Guildname**, **Show itemID**, **Show spellID**.
+- **Hide in Combat**, then **Hide UnitFrame Tooltips in Combat** and **Hide ActionBar Tooltips in Combat**
+  for which ones.
+- **Show itemID** and **Show spellID**.
 
 ConsolePort is detected automatically. While it is loaded, AzeriteUI does not style or
 anchor tooltips at all, to stay out of its way.

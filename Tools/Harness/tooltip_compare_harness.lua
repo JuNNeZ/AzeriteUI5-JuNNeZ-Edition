@@ -7,9 +7,15 @@
 -- Initialize and AnchorShoppingTooltips copied verbatim from
 -- Blizzard_SharedXMLGame/Tooltip/TooltipComparisonManager.lua (identical in live 12.1.0 and forever
 -- 1.60.1), against frames that resolve their anchors to screen rectangles.
--- No rendering, taint or restricted-environment checks. Stock Lua 5.1 cannot make `==` or a table
--- index raise on a secret, so a missing guard shows only where a secret reaches arithmetic or goes
--- back into SetPoint: the secret scale case and the "offsets" secret-anchoring case.
+-- No rendering, taint or restricted-environment checks. Stock Lua 5.1 cannot make `==`, a boolean
+-- test or a table index raise on a secret, so a missing guard shows only where a secret reaches
+-- arithmetic or goes back into SetPoint: the secret scale case and the "offsets" secret-anchoring case.
+-- Secret anchoring is what the live client showed (FixLog 2026-09-25, tooltip audit): the join is
+-- found by counting GetPointByName's answers and made to the frame Blizzard's code joins it to.
+-- The rest of the tooltip audit rides along, against the same loaded module: the native aura
+-- containers' AuraButtonTooltip styled through AuraContainerInbound (checked against the documented
+-- AuraContainerTooltipBackdropOptions), aura spell IDs without UnitAura (Classic-only), the unit name
+-- line written to the tooltip it belongs to, and secret health leaving no stale numbers.
 -- lua Tools/Harness/tooltip_compare_harness.lua .
 -- lua Tools/Harness/tooltip_compare_harness.lua . <path to a mutated Tooltips.lua>
 -- Mutations: the "tooltip" entries in mutate_client.lua.
@@ -91,6 +97,8 @@ function Frame:SetBackdropBorderColor() end
 function Frame:SetOwner(owner, anchorType) self.owner, self.anchorType = owner, anchorType end
 function Frame:GetAnchorType() return self.anchorType end
 function Frame:SetAnchorType() world.slides = world.slides + 1 end
+function Frame:SetScale(scale) self.scale = scale end
+function Frame:GetScale() return self.scale end
 function Frame:GetWidth() return self.width end
 function Frame:GetHeight() return self.height end
 function Frame:Scale() return self.scale * (self.parent and self.parent:Scale() or 1) end
@@ -123,16 +131,25 @@ function Frame:SetPoint(point, a, b, c, d)
 end
 function Frame:ClearAllPoints() self.points = {} end
 function Frame:GetNumPoints() return #self.points end
-function Frame:GetPoint(index)
-	local anchor = self.points[index]
-	if (not anchor) then return end
-	-- SecretWhenAnchoringSecret (SimpleScriptRegionResizingAPIDocumentation.lua). "offsets" keeps the
-	-- names readable so code without a guard gets as far as handing a secret back to SetPoint.
-	if (self.secretAnchoring == "all") then return SECRET, SECRET, SECRET, SECRET, SECRET end
-	if (self.secretAnchoring == "offsets") then
+-- SecretWhenAnchoringSecret (SimpleScriptRegionResizingAPIDocumentation.lua). "offsets" keeps the
+-- names readable so code without a guard gets as far as handing a secret back to SetPoint.
+local function AnswerPoint(frame, anchor)
+	if (frame.secretAnchoring == "all") then return SECRET, SECRET, SECRET, SECRET, SECRET end
+	if (frame.secretAnchoring == "offsets") then
 		return anchor.point, anchor.relativeTo, anchor.relativePoint, SecretValue(anchor.x), SecretValue(anchor.y)
 	end
 	return anchor.point, anchor.relativeTo, anchor.relativePoint, anchor.x, anchor.y
+end
+function Frame:GetPoint(index)
+	local anchor = self.points[index]
+	if (not anchor) then return end
+	return AnswerPoint(self, anchor)
+end
+-- MayReturnNothing: no answers at all for a point the frame does not have, secret or not.
+function Frame:GetPointByName(point)
+	for _, anchor in ipairs(self.points) do
+		if (anchor.point == point) then return AnswerPoint(self, anchor) end
+	end
 end
 
 -- Screen rectangle in pixels: left, right, top, bottom. An edge named by a point wins; a centre
@@ -303,6 +320,8 @@ local function NewModule()
 		self.hooks[object] = self.hooks[object] or {}
 		self.hooks[object][script] = { active = true }
 	end
+	-- LibMoreEvents, as far as UpdateTooltipThemes' PLAYER_ENTERING_WORLD call uses it.
+	function module:UnregisterEvent() end
 	function module:Unhook(a, b)
 		local object, method = Key(a, b)
 		local entry = self.hooks[object] and self.hooks[object][method]
@@ -314,9 +333,52 @@ local function NewModule()
 	return module
 end
 
+local function NewFontString()
+	return {
+		shown = true,
+		SetPoint = function() end, SetFontObject = function() end, SetTextColor = function() end,
+		SetText = function(self, text) self.text = text end, GetText = function(self) return self.text end,
+		GetTextColor = function() return 1, 1, 1 end,
+		Show = function(self) self.shown = true end, Hide = function(self) self.shown = false end,
+		IsShown = function(self) return self.shown end
+	}
+end
+
+-- AuraContainerInbound.SetTooltipBackdrop's argument, AuraContainerTooltipBackdropOptions in
+-- AuraContainerUtilDocumentation.lua (identical on Retail 12.1.0 and Forever 1.60.1), and the
+-- bgFile-or-edgeFile rule AuraContainerUtil.SetTooltipBackdrop raises on.
+local BackdropOptionFields = { backdropInfo = "table", borderColor = "table", centerColor = "table", anchorOffsets = "table" }
+local BackdropInfoFields = { bgFile = "string", edgeFile = "string", edgeSize = "number", insets = "table", tile = "boolean", tileEdge = "boolean", tileSize = "number" }
+local EdgeFields = { left = true, right = true, top = true, bottom = true }
+local function ValidateBackdropOptions(options)
+	assert(type(options) == "table", "options must be a table")
+	for key, value in pairs(options) do
+		assert(BackdropOptionFields[key] == type(value), "unexpected option " .. tostring(key))
+	end
+	local info = assert(options.backdropInfo, "backdropInfo is not nilable")
+	for key, value in pairs(info) do
+		assert(BackdropInfoFields[key] == type(value), "unexpected backdropInfo field " .. tostring(key))
+	end
+	assert(info.bgFile or info.edgeFile, "expected a non-nil value for either bgFile or edgeFile")
+	for _, edges in ipairs({ info.insets or {}, options.anchorOffsets or {} }) do
+		for key, value in pairs(edges) do
+			assert(EdgeFields[key] and type(value) == "number", "bad edge " .. tostring(key))
+		end
+	end
+	for _, color in ipairs({ options.borderColor or { r = 0, g = 0, b = 0, a = 0 }, options.centerColor or { r = 0, g = 0, b = 0, a = 0 } }) do
+		for _, key in ipairs({ "r", "g", "b", "a" }) do
+			assert(type(color[key]) == "number", "colour without " .. key)
+		end
+	end
+end
+
 local function Load(options)
 	local env = {}
-	world = { env = env, errors = {}, slides = 0, modifier = true }
+	world = {
+		env = env, errors = {}, slides = 0, modifier = true, printed = {},
+		auraStyles = {}, auraResets = 0, auraFilters = {}, health = {}, names = {}, units = {},
+		timers = {}, modules = {}, secondCopy = true
+	}
 
 	local UIParent = NewFrame("UIParent")
 	UIParent.fixed, UIParent.width, UIParent.height = { 0, SCREEN_H }, SCREEN_W, SCREEN_H
@@ -330,6 +392,28 @@ local function Load(options)
 	GameTooltip.NineSlice = NewFrame(nil, GameTooltip)
 	local mainWidth = GameTooltip.width * GameTooltip:Scale()
 	GameTooltip.fixed = { (options.side == "left") and (SCREEN_W - 40 - mainWidth) or 40, 700 }
+	-- What the aura ID and unit hooks touch. Setters are Blizzard's no-ops the module hooks.
+	GameTooltip.lines = {}
+	GameTooltip.TextLeft1 = NewFontString()
+	function GameTooltip:AddLine(text) table.insert(self.lines, text) end
+	function GameTooltip:AddDoubleLine(left, right) table.insert(self.lines, left .. " || " .. right) end
+	function GameTooltip:NumLines() return 0 end
+	function GameTooltip:GetUnit() return nil, world.tooltipUnit end
+	for _, method in ipairs({ "SetUnitAura", "SetUnitBuff", "SetUnitDebuff", "SetUnitBuffByAuraInstanceID",
+		"SetUnitDebuffByAuraInstanceID", "SetUnitAuraByAuraInstanceID" }) do
+		GameTooltip[method] = function() end
+	end
+	local bar = NewFrame(nil, GameTooltip)
+	function bar:SetStatusBarTexture() end
+	function bar:SetHeight() end
+	function bar:SetStatusBarColor() end
+	bar.fontStrings = {}
+	function bar:CreateFontString()
+		local fontString = NewFontString()
+		table.insert(self.fontStrings, fontString)
+		return fontString
+	end
+	GameTooltip.StatusBar = bar
 
 	local compareTooltips = {}
 	for i = 1, 2 do
@@ -366,20 +450,63 @@ local function Load(options)
 		return frame
 	end
 
+	-- Blizzard_AuraContainerInbound.lua; absent until Blizzard_AuraContainer loads.
+	local inbound = {
+		SetTooltipBackdrop = function(styleOptions)
+			if (world.refuseAuraStyle) then
+				world.refuseAuraStyle = nil
+				error("refused by the client")
+			end
+			ValidateBackdropOptions(styleOptions)
+			table.insert(world.auraStyles, styleOptions)
+		end,
+		ResetTooltipStyle = function() world.auraResets = world.auraResets + 1 end
+	}
+	world.inbound = inbound
+
 	for key, value in pairs({
-		_G = env, UIParent = UIParent, GameTooltip = GameTooltip,
+		_G = env, UIParent = UIParent, GameTooltip = GameTooltip, GameTooltipTextLeft1 = GameTooltip.TextLeft1,
 		ShoppingTooltip1 = compareTooltips[1], ShoppingTooltip2 = compareTooltips[2],
 		TooltipComparisonManager = manager,
+		AuraContainerInbound = (not options.lateAuraContainer) and inbound or nil,
 		CreateFrame = CreateFrame, hooksecurefunc = hooksecurefunc, issecretvalue = IsSecret,
+		CreateColor = function(r, g, b, a) return { r = r, g = g, b = b, a = a } end,
 		GetTime = function() return 0 end,
+		C_Timer = { After = function(_, callback) table.insert(world.timers, callback) end },
 		IsModifiedClick = function() return world.modifier end,
 		geterrorhandler = function() return function(message) table.insert(world.errors, message) end end,
+		print = function(...)
+			local parts = {}
+			for i = 1, select("#", ...) do parts[i] = tostring((select(i, ...))) end
+			table.insert(world.printed, table.concat(parts, " "))
+		end,
 		-- Hooked by the module; Blizzard's bodies do nothing the harness measures.
 		SharedTooltip_SetBackdropStyle = function() end,
 		GameTooltip_UnitColor = function() end,
 		GameTooltip_ShowCompareItem = function() end,
 		GameTooltip_SetDefaultAnchor = function() end,
-		LibStub = function() return { GetLocale = function() return {} end } end
+		LibStub = function() return { GetLocale = function() return {} end } end,
+		-- Aura spell IDs. UnitAura is deliberately absent: Retail and Forever do not have it.
+		C_UnitAuras = {
+			GetAuraDataByIndex = function(unit, index, filter)
+				table.insert(world.auraFilters, tostring(filter))
+				return world.auraData
+			end,
+			GetAuraDataByAuraInstanceID = function() return world.auraData end
+		},
+		C_Secrets = {
+			ShouldUnitAuraIndexBeSecret = function() return world.secretAura end,
+			ShouldUnitAuraInstanceBeSecret = function() return world.secretAura end,
+			ShouldUnitIdentityBeSecret = function() return false end
+		},
+		UnitClass = function() return "Druid", "DRUID" end,
+		UnitName = function(unit) return world.names[unit] end,
+		UnitExists = function(unit) return world.units[unit] and true or false end,
+		UnitIsPlayer = function() return false end,
+		UnitIsDeadOrGhost = function() return false end,
+		UnitHealth = function(unit) return world.health[unit] and world.health[unit][1] end,
+		UnitHealthMax = function(unit) return world.health[unit] and world.health[unit][2] end,
+		UNKNOWN = "Unknown"
 	}) do
 		env[key] = value
 	end
@@ -388,15 +515,25 @@ local function Load(options)
 	local configs = {}
 	local module = NewModule()
 	local ns = {
-		API = { GetFont = function() end, GetMedia = function(name) return name end },
-		Colors = { offwhite = { 1, 1, 1 }, quest = { gray = { colorCode = "" } } },
+		API = {
+			GetFont = function() end, GetMedia = function(name) return name end,
+			GetUnitColor = function() return { colorCode = "|cff00ff00" } end,
+			AbbreviateNumber = tostring, AbbreviateNumberBalanced = tostring
+		},
+		Colors = {
+			offwhite = { 1, 1, 1 }, quest = { gray = { colorCode = "" } },
+			class = { DRUID = { colorCode = "|cffff7c0a" }, PRIEST = { colorCode = "|cffffffff" } }
+		},
 		Hider = UIHider,
 		BackdropTemplate = BACKDROP_TEMPLATE,
 		MovableModulePrototype = { defaults = {} },
 		RegisterConfig = function(name, config) configs[name] = config end,
 		GetConfig = function(name) return configs[name] end,
 		Merge = function(_, a) return a end,
-		NewModule = function() return module end
+		NewModule = function() return module end,
+		GetModule = function(_, name) return world.modules[name] end,
+		-- Retail and Forever alike: both are the mainline family.
+		WoW10 = true
 	}
 
 	for _, file in ipairs({ root .. "/Core/API/ProtectedCall.lua", root .. "/Layouts/Data/Tooltips.lua", path }) do
@@ -407,19 +544,33 @@ local function Load(options)
 
 	module.db = { profile = {
 		theme = options.theme, disableAzeriteUITooltips = options.disabled or false,
-		nameplateUnitTransparency = false, showItemID = false, showSpellID = false, anchor = true
+		nameplateUnitTransparency = false, showItemID = false, showSpellID = options.showSpellID or false, anchor = true,
+		anchorToCursor = false, savedPosition = { scale = options.anchorScale or 1, "BOTTOMRIGHT", -300, 200 },
+		hideInCombat = options.hideInCombat or false, hideActionBarTooltipsInCombat = true, hideUnitFrameTooltipsInCombat = true
 	} }
+	if (options.withActionBars) then
+		world.actionBarRefreshes = 0
+		world.modules.ActionBars = {
+			IsEnabled = function() return true end,
+			UpdateSettings = function() world.actionBarRefreshes = world.actionBarRefreshes + 1 end
+		}
+	end
 	module:UpdateSettings()
-	return module, env, configs.Tooltips.themes[options.theme].backdropStyle
+	return module, env, configs.Tooltips.themes[options.theme].backdropStyle, configs.Tooltips.themes
 end
 
 -- TooltipComparisonManager:CompareItem -> RefreshItems: Initialize, then SetItemTooltip for each
 -- tooltip it fills (ClearLines -> OnTooltipCleared -> GameTooltip_ClearStyle ->
 -- SharedTooltip_SetBackdropStyle, then the lines), then AnchorShoppingTooltips. CycleItem skips
 -- Initialize.
-local function Compare(env, secondary, cycle)
+-- Then the same anchoring again, through the frames' own SetPoint but past any hook on the global
+-- manager table. The live client drew compare tooltips edge to edge after a hook on the manager
+-- had set their offsets (Retail and Forever, FixLog 2026-09-25): something anchors them after
+-- that hook. A second copy of the manager, as Blizzard's secure environment could load one, is
+-- the model; with it, the 5.10.1 design and the audit's first cut fail here as they did live.
+local function Compare(env, secondary, cycle, mainTooltip)
 	local manager = env.TooltipComparisonManager
-	if (not cycle) then manager:Initialize(env.GameTooltip) end
+	if (not cycle) then manager:Initialize(mainTooltip or env.GameTooltip) end
 	for i, tooltip in ipairs(env.GameTooltip.shoppingTooltips) do
 		if (i == 1 or secondary) then
 			env.SharedTooltip_SetBackdropStyle(tooltip, nil)
@@ -427,6 +578,15 @@ local function Compare(env, secondary, cycle)
 		end
 	end
 	manager:AnchorShoppingTooltips(true, secondary and true or false)
+	if (world.secondCopy) then
+		TooltipComparisonManager.AnchorShoppingTooltips(manager, true, secondary and true or false)
+	end
+end
+
+local function RunTimers()
+	local timers = world.timers
+	world.timers = {}
+	for _, callback in ipairs(timers) do callback() end
 end
 
 local function BackdropRect(frame)
@@ -492,6 +652,21 @@ local function CheckHeader(theme, tooltip, style, label)
 	check(bottom <= backdropTop - band[1] * scale and bottom >= backdropTop - (band[2] + 1) * scale, tucked, backdropTop - bottom)
 end
 
+local function PointOffset(tooltip, name)
+	for _, anchor in ipairs(tooltip.points) do
+		if (anchor.point == name) then return anchor.x end
+	end
+end
+
+-- The /azdebug tooltips line for one compare tooltip.
+local function DiagnosticsLine(module, name)
+	world.printed = {}
+	if (module.PrintDiagnostics) then module:PrintDiagnostics() end
+	for _, line in ipairs(world.printed) do
+		if (string.find(line, name .. ":", 1, true)) then return line end
+	end
+end
+
 local function CheckErrors(label)
 	check(#world.errors == 0, label .. ": no guarded call failed", world.errors[1])
 end
@@ -526,12 +701,16 @@ for _, theme in ipairs({ "Azerite", "Classic" }) do
 		Compare(env, case.secondary)
 		CheckRow(env, case.side, case.secondary, label .. ", next compare")
 
-		-- Our handler running again without Blizzard must not widen twice.
-		check(module.OnAnchorShoppingTooltips, label .. ": the module has a comparison anchoring handler")
-		if (module.OnAnchorShoppingTooltips) then
-			module:OnAnchorShoppingTooltips(env.TooltipComparisonManager)
-			CheckRow(env, case.side, case.secondary, label .. ", handler run twice")
+		-- The join alone, carrying the height as well: no TOP left whose centre could compete with it.
+		local shownTooltips = case.secondary and { env.ShoppingTooltip1, env.ShoppingTooltip2 } or { env.ShoppingTooltip1 }
+		for _, tooltip in ipairs(shownTooltips) do
+			check(#tooltip.points == 1 and tooltip.points[1].point ~= "TOP",
+				label .. ": " .. tooltip.name .. " is held by its join alone", #tooltip.points)
 		end
+		-- A frame later the joins are still ours, and /azdebug tooltips says so.
+		RunTimers()
+		local line = DiagnosticsLine(module, "ShoppingTooltip1")
+		check(line and string.find(line, "held a frame later", 1, true), label .. ": /azdebug tooltips says the join held", line)
 		CheckErrors(label)
 	end
 end
@@ -563,13 +742,78 @@ do
 		label .. ": the joins stay edge to edge", tostring(JoinOffset(env.ShoppingTooltip1)) .. "/" .. tostring(JoinOffset(env.ShoppingTooltip2)))
 	CheckErrors(label)
 
-	-- Secret anchoring: GetPoint answers secrets, so the tooltip stays where Blizzard put it.
-	for _, secrecy in ipairs({ "all", "offsets" }) do
-		label = "Azerite, secret anchoring (" .. secrecy .. ")"
+	-- Secret anchoring: the joins are made from the SetPoint arguments, so nothing secret is read;
+	-- only the frame-later check cannot read the result back, and says so.
+	for _, theme in ipairs({ "Azerite", "Classic" }) do
+		for _, secrecy in ipairs({ "all", "offsets" }) do
+			for _, case in ipairs({
+				{ side = "right" }, { side = "left" },
+				{ side = "right", secondary = true }, { side = "left", secondary = true }
+			}) do
+				label = string.format("%s, secret anchoring (%s), %s%s", theme, secrecy, case.side, case.secondary and ", two items" or "")
+				module, env = Load({ theme = theme, side = case.side })
+				env.ShoppingTooltip1.secretAnchoring = secrecy
+				env.ShoppingTooltip2.secretAnchoring = secrecy
+				Compare(env, case.secondary)
+				CheckRow(env, case.side, case.secondary, label)
+				Compare(env, case.secondary, true)
+				CheckRow(env, case.side, case.secondary, label .. ", anchored again")
+				RunTimers()
+				local line = DiagnosticsLine(module, "ShoppingTooltip1")
+				check(line and string.find(line, "widened", 1, true) and string.find(line, "unknown, anchoring secret", 1, true),
+					label .. ": /azdebug tooltips says widened, not readable back", line)
+				CheckErrors(label)
+			end
+		end
+	end
+
+	-- Other addons' anchors are theirs: an edge Blizzard's joins do not use, or a join with an offset.
+	label = "Azerite, someone else's anchors"
+	module, env = Load({ theme = "Azerite", side = "right" })
+	Compare(env, false)
+	local primary = env.ShoppingTooltip1
+	local ours = PointOffset(primary, "TOPLEFT")
+	primary:SetPoint("LEFT", env.GameTooltip, "LEFT")
+	check(PointOffset(primary, "LEFT") == 0 and PointOffset(primary, "TOPLEFT") == ours,
+		label .. ": an anchor to another edge is left as set, ours too", tostring((PointOffset(primary, "LEFT"))))
+	module, env = Load({ theme = "Azerite", side = "right" })
+	Compare(env, false)
+	primary = env.ShoppingTooltip1
+	primary:SetPoint("TOPLEFT", env.GameTooltip, "TOPRIGHT", 3, 0)
+	check(PointOffset(primary, "TOPLEFT") == 3, label .. ": a join with its own offset is left as set", PointOffset(primary, "TOPLEFT"))
+	CheckErrors(label)
+
+	-- Something moving a joined tooltip without SetPoint: /azdebug tooltips says so a frame later.
+	label = "Azerite, moved behind our back"
+	module, env = Load({ theme = "Azerite", side = "right" })
+	Compare(env, false)
+	env.ShoppingTooltip1.points[1].x = 0
+	RunTimers()
+	local moved = DiagnosticsLine(module, "ShoppingTooltip1")
+	check(moved and string.find(moved, "moved to 0.0 a frame later", 1, true), label .. ": reported", moved)
+	CheckErrors(label)
+
+	-- An embedded item tooltip (quest rewards and the like) compares from inside another tooltip.
+	-- Blizzard joins the compare tooltips to that outer tooltip (anchorFrame:GetParent():GetParent()).
+	for _, secrecy in ipairs({ "none", "all" }) do
+		label = "Azerite, embedded item tooltip, anchoring " .. secrecy
 		module, env = Load({ theme = "Azerite", side = "right" })
-		env.ShoppingTooltip1.secretAnchoring = secrecy
-		Compare(env, false)
-		check(JoinOffset(env.ShoppingTooltip1) == 0, label .. ": the join is left as Blizzard made it", JoinOffset(env.ShoppingTooltip1))
+		local holder = NewFrame(nil, env.GameTooltip)
+		holder.width, holder.height = 200, 60
+		holder:SetPoint("TOPLEFT", env.GameTooltip, "TOPLEFT", 10, -40)
+		local embedded = NewFrame("EmbeddedItemTooltipTooltip", holder)
+		embedded.width, embedded.height = 200, 60
+		embedded:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, 0)
+		embedded.IsEmbedded = true
+		embedded.shoppingTooltips = env.GameTooltip.shoppingTooltips
+		env.ShoppingTooltip1.secretAnchoring = (secrecy ~= "none") and secrecy or nil
+		Compare(env, false, false, embedded)
+		check(Near(Seam(env.GameTooltip, env.ShoppingTooltip1), 0), label .. ": the compare tooltip's border meets the outer tooltip's",
+			Seam(env.GameTooltip, env.ShoppingTooltip1))
+		local _, _, embeddedTop = embedded:Rect()
+		local _, _, compareTop = env.ShoppingTooltip1:Rect()
+		check(Near(embeddedTop, compareTop), label .. ": its top stays level with the embedded tooltip's, as Blizzard put it",
+			compareTop - embeddedTop)
 		CheckErrors(label)
 	end
 
@@ -589,6 +833,217 @@ do
 	Compare(env, false)
 	check(not env.ShoppingTooltip1.shown, label .. ": the compare tooltip is hidden")
 	check(JoinOffset(env.ShoppingTooltip1) == 0, label .. ": its join is not widened", JoinOffset(env.ShoppingTooltip1))
+	CheckErrors(label)
+end
+
+-- The native aura containers' AuraButtonTooltip (player buffs, plate and frame aura rows) wears
+-- the theme through AuraContainerInbound.SetTooltipBackdrop.
+local function CheckAuraStyle(style, applied, label)
+	if (not applied) then
+		check(false, label .. ": the aura tooltip was styled", "no SetTooltipBackdrop call")
+		return
+	end
+	local info, offsets = applied.backdropInfo, applied.anchorOffsets or {}
+	check(info.edgeFile == style.backdrop.edgeFile and info.bgFile == style.backdrop.bgFile and info.edgeSize == style.backdrop.edgeSize,
+		label .. ": the theme's border and fill", tostring(info.edgeFile) .. " " .. tostring(info.edgeSize))
+	check(info.insets and info.insets.left == style.backdrop.insets.left and info.insets.top == style.backdrop.insets.top,
+		label .. ": the theme's insets")
+	check(offsets.left == style.offsetLeft and offsets.right == style.offsetRight and offsets.top == style.offsetTop
+		and offsets.bottom == style.offsetBottom, label .. ": hangs past the tooltip as our other tooltips' backdrops do",
+		string.format("%s/%s/%s/%s", tostring(offsets.left), tostring(offsets.right), tostring(offsets.top), tostring(offsets.bottom)))
+	local border, fill = applied.borderColor or {}, applied.centerColor or {}
+	check(border.r == style.backdropBorderColor[1] and border.g == style.backdropBorderColor[2] and border.a == (style.backdropBorderColor[4] or 1)
+		and fill.r == style.backdropColor[1] and fill.a == style.backdropColor[4], label .. ": the theme's colours")
+end
+
+do
+	for _, theme in ipairs({ "Azerite", "Classic" }) do
+		local label = theme .. ", aura tooltip"
+		local module, _, style, themes = Load({ theme = theme, side = "right" })
+		check(#world.auraStyles == 1, label .. ": styled once at login", #world.auraStyles)
+		CheckAuraStyle(style, world.auraStyles[1], label)
+		module:UpdateSettings()
+		module:UpdateTooltipThemes("PLAYER_ENTERING_WORLD")
+		check(#world.auraStyles == 1, label .. ": not restyled when nothing changed", #world.auraStyles)
+
+		local other = (theme == "Azerite") and "Classic" or "Azerite"
+		module.db.profile.theme = other
+		module:UpdateSettings()
+		check(#world.auraStyles == 2, label .. ": restyled on a theme change", #world.auraStyles)
+		CheckAuraStyle(themes[other].backdropStyle, world.auraStyles[2], label .. ", switched to " .. other)
+
+		module.db.profile.disableAzeriteUITooltips = true
+		module:UpdateSettings()
+		check(world.auraResets == 1, label .. ": switched off, Blizzard's style is put back", world.auraResets)
+		module:UpdateSettings()
+		check(world.auraResets == 1, label .. ": and only once", world.auraResets)
+		module.db.profile.disableAzeriteUITooltips = false
+		module:UpdateSettings()
+		check(#world.auraStyles == 3, label .. ": switched on again, styled again", #world.auraStyles)
+		CheckErrors(label)
+	end
+
+	-- Off from login: another addon's aura tooltip style is not ours to reset.
+	local label = "Azerite, aura tooltip, off from login"
+	local module = Load({ theme = "Azerite", side = "right", disabled = true })
+	module:OnAddonLoaded("ADDON_LOADED", "Blizzard_AuraContainer")
+	check(#world.auraStyles == 0 and world.auraResets == 0, label .. ": neither styled nor reset",
+		#world.auraStyles .. "/" .. world.auraResets)
+	CheckErrors(label)
+
+	-- Blizzard_AuraContainer loading after us.
+	label = "Classic, aura tooltip, container loads late"
+	local style, _
+	module, _, style = Load({ theme = "Classic", side = "right", lateAuraContainer = true })
+	check(#world.auraStyles == 0, label .. ": nothing to style before it loads", #world.auraStyles)
+	world.env.AuraContainerInbound = world.inbound
+	module:OnAddonLoaded("ADDON_LOADED", "SomethingElse")
+	check(#world.auraStyles == 0, label .. ": another addon's load is ignored", #world.auraStyles)
+	module:OnAddonLoaded("ADDON_LOADED", "Blizzard_AuraContainer")
+	CheckAuraStyle(style, world.auraStyles[1], label)
+	CheckErrors(label)
+
+	-- A refusal is reported, and tried again on the next refresh.
+	label = "Azerite, aura tooltip, refused once"
+	module, _, style = Load({ theme = "Azerite", side = "right", lateAuraContainer = true })
+	world.env.AuraContainerInbound = world.inbound
+	world.refuseAuraStyle = true
+	module:OnAddonLoaded("ADDON_LOADED", "Blizzard_AuraContainer")
+	check(#world.errors == 1 and string.find(world.errors[1], "Tooltips.ApplyAuraTooltipTheme", 1, true),
+		label .. ": the refusal reached the error handler", world.errors[1])
+	module:UpdateTooltipThemes()
+	CheckAuraStyle(style, world.auraStyles[1], label .. ", next refresh")
+end
+
+-- Show spellID on aura tooltips. UnitAura is Classic-only, so the index-based setters read
+-- C_UnitAuras.GetAuraDataByIndex; SetUnitBuff and SetUnitDebuff imply HELPFUL and HARMFUL.
+do
+	local label = "aura spell IDs"
+	local module, env = Load({ theme = "Classic", side = "right", showSpellID = true })
+	local tip = env.GameTooltip
+	world.names.player = "Tim"
+	world.auraData = { name = "Mark of the Wild", spellId = 1126, sourceUnit = "player" }
+	local function Run(method, ...)
+		tip.lines, world.auraFilters = {}, {}
+		local ok, err = pcall(tip[method], tip, ...)
+		check(ok, label .. ", " .. method .. ": no error", err)
+		return tip.lines, world.auraFilters[1]
+	end
+	local lines, filter = Run("SetUnitBuff", "player", 1)
+	check(filter == "HELPFUL", label .. ": SetUnitBuff reads a helpful aura", filter)
+	check(lines[2] and string.find(lines[2], "1126", 1, true) and string.find(lines[2], "Tim", 1, true),
+		label .. ": the spell ID and caster are added", lines[2])
+	lines, filter = Run("SetUnitDebuff", "player", 2)
+	check(filter == "HARMFUL", label .. ": SetUnitDebuff reads a harmful aura", filter)
+	lines, filter = Run("SetUnitBuff", "player", 1, "PLAYER")
+	check(filter == "HELPFUL|PLAYER", label .. ": a buff filter adds to HELPFUL", filter)
+	lines, filter = Run("SetUnitDebuff", "player", 1, "HARMFUL|RAID")
+	check(filter == "HARMFUL|RAID", label .. ": a filter that names the kind is kept", filter)
+	lines, filter = Run("SetUnitAura", "player", 3, "HARMFUL")
+	check(filter == "HARMFUL" and #lines == 2, label .. ": SetUnitAura passes its filter", filter)
+	lines = Run("SetUnitAuraByAuraInstanceID", "target", 55)
+	check(#lines == 2 and string.find(lines[2], "1126", 1, true), label .. ": Blizzard's plate aura setter gets the ID too", lines[2])
+	world.secretAura = true
+	lines = Run("SetUnitBuff", "player", 1)
+	check(#lines == 0, label .. ": a secret aura adds nothing", #lines)
+	world.secretAura = nil
+	world.auraData = { name = "Mark of the Wild", spellId = SECRET, sourceUnit = "player" }
+	lines = Run("SetUnitBuff", "player", 1)
+	check(#lines == 0, label .. ": a secret spell ID adds nothing", #lines)
+	module.db.profile.showSpellID = false
+	world.auraData = { name = "Mark of the Wild", spellId = 1126 }
+	lines = Run("SetUnitBuff", "player", 1)
+	check(#lines == 0, label .. ": Show spellID off adds nothing", #lines)
+	CheckErrors(label)
+end
+
+-- Unit post-calls run for any tooltip given unit data: the name goes on that tooltip's line.
+do
+	local label = "unit name line"
+	local module, env = Load({ theme = "Classic", side = "right" })
+	local other = NewFrame("SomeAddonTooltip", env.UIParent)
+	other.TextLeft1 = NewFontString()
+	function other:GetUnit() return nil, "target" end
+	world.units.target, world.names.target = true, "Bob"
+	env.GameTooltip.TextLeft1:SetText("Sword of Something")
+	local ok, err = pcall(module.OnTooltipSetUnit, module, other)
+	check(ok, label .. ": no error", err)
+	check(other.TextLeft1:GetText() == "|cff00ff00Bob|r", label .. ": written to the tooltip the unit is on", other.TextLeft1:GetText())
+	check(env.GameTooltip.TextLeft1:GetText() == "Sword of Something", label .. ": GameTooltip's first line is left alone",
+		env.GameTooltip.TextLeft1:GetText())
+	other.TextLeft1:SetText("Blizzard's secret name")
+	world.names.target = SECRET
+	pcall(module.OnTooltipSetUnit, module, other)
+	check(other.TextLeft1:GetText() == "Blizzard's secret name", label .. ": a secret name is not replaced with Unknown",
+		other.TextLeft1:GetText())
+	world.names.target = "Bob"
+	local bare = NewFrame("NoLinesTooltip", env.UIParent)
+	function bare:GetUnit() return nil, "target" end
+	check(pcall(module.OnTooltipSetUnit, module, bare), label .. ": a tooltip without a name line is skipped")
+	CheckErrors(label)
+end
+
+-- The value on GameTooltip's health bar: secret health hides it, never the last unit's numbers.
+do
+	local label = "health text"
+	local module, env = Load({ theme = "Classic", side = "right" })
+	-- The module's value text, made on the bar when the theme was applied at login.
+	local text = env.GameTooltip.StatusBar.fontStrings[1]
+	world.units.mouseover = true
+	world.health.mouseover = { 1000, 2000 }
+	module:SetHealthValue("mouseover")
+	check(text and text:IsShown() and text:GetText() == "1000 / 2000", label .. ": a readable unit's health is printed", text and text:GetText())
+	world.health.mouseover = { SecretValue(500), SecretValue(2000) }
+	local ok, err = pcall(module.SetHealthValue, module, "mouseover")
+	check(ok, label .. ": secret health raises nothing", err)
+	check(text and not text:IsShown(), label .. ": secret health hides the text, not the last unit's numbers", text and text:GetText())
+	world.health.mouseover = { 300, 600 }
+	module:SetHealthValue("mouseover")
+	check(text and text:IsShown() and text:GetText() == "300 / 600", label .. ": readable again, printed again", text and text:GetText())
+	CheckErrors(label)
+end
+
+-- Compare tooltips take GameTooltip's scale when it is set, so they are drawn at its size and the
+-- join is the plain sum of the two overhangs (live: 18.9 where both at one scale give 20).
+do
+	for _, cursor in ipairs({ false, true }) do
+		local label = "compare tooltip scale" .. (cursor and ", anchored to the cursor" or "")
+		local module, env = Load({ theme = "Azerite", side = "right", anchorScale = .89 })
+		module.db.profile.anchorToCursor = cursor
+		env.GameTooltip_SetDefaultAnchor(env.GameTooltip, env.UIParent)
+		check(env.GameTooltip.scale == .89 and env.ShoppingTooltip1.scale == .89 and env.ShoppingTooltip2.scale == .89,
+			label .. ": both compare tooltips at the tooltip's scale", env.ShoppingTooltip1.scale .. "/" .. env.ShoppingTooltip2.scale)
+		if (not cursor) then
+			Compare(env, true)
+			CheckRow(env, "right", true, label)
+			local line = DiagnosticsLine(module, "ShoppingTooltip2")
+			check(line and string.find(line, "by 20.0", 1, true), label .. ": the join is the two overhangs", line)
+		end
+		CheckErrors(label)
+	end
+end
+
+-- Tooltips > Hide in Combat: one answer per kind, and the action bars asked to hand it to
+-- LibActionButton only when it changes (and at login only when it is on).
+do
+	local label = "hide in combat"
+	local module = Load({ theme = "Classic", side = "right", withActionBars = true })
+	check(world.actionBarRefreshes == 0, label .. ": off at login, the action bars are left alone", world.actionBarRefreshes)
+	check(module.ShouldHideInCombat and not module:ShouldHideInCombat("actionbars") and not module:ShouldHideInCombat("unitframes"),
+		label .. ": off hides nothing")
+	module.db.profile.hideInCombat = true
+	module:UpdateSettings()
+	check(world.actionBarRefreshes == 1, label .. ": switched on, the action bars refresh", world.actionBarRefreshes)
+	check(module:ShouldHideInCombat("actionbars") and module:ShouldHideInCombat("unitframes") and not module:ShouldHideInCombat("minimap"),
+		label .. ": on, action bars and unit frames, nothing else")
+	module:UpdateSettings()
+	check(world.actionBarRefreshes == 1, label .. ": unchanged, no refresh", world.actionBarRefreshes)
+	module.db.profile.hideActionBarTooltipsInCombat = false
+	module:UpdateSettings()
+	check(world.actionBarRefreshes == 2 and not module:ShouldHideInCombat("actionbars") and module:ShouldHideInCombat("unitframes"),
+		label .. ": action bars off alone", world.actionBarRefreshes)
+	module = Load({ theme = "Classic", side = "right", withActionBars = true, hideInCombat = true })
+	check(world.actionBarRefreshes == 1, label .. ": on at login, the action bars refresh once", world.actionBarRefreshes)
 	CheckErrors(label)
 end
 

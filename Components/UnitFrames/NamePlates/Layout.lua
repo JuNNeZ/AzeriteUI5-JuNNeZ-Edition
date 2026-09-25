@@ -130,8 +130,15 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 			end
 		end
 	end
-	if (self.Castbar and not self.Castbar:IsShown()) then
-		self.Castbar:Show()
+	-- The hidden, object and name-only states hide the castbar. Showing it back unasked drew an idle
+	-- bar, last fill and last spell name included, for the frame before oUF's OnUpdate hid it again
+	-- (castbar.lua:658-662), on every mouseover. A bar hidden mid-cast asks oUF instead: CastStart
+	-- shows it if the cast still runs, and clears it if the cast ended meanwhile (CastStop skips a
+	-- hidden bar, castbar.lua:448). oUF shows an idle bar itself when the next cast starts.
+	local castbar = self.Castbar
+	if (castbar and not castbar:IsShown() and castbar.ForceUpdate
+		and (castbar.casting or castbar.channeling or castbar.empowering)) then
+		castbar:ForceUpdate()
 	end
 	-- What only changes with the plate's job - the personal resource display or any other plate -
 	-- or with settings: applied once per job and again after a full refresh, which clears the

@@ -10,6 +10,28 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.10.2-JuNNeZ (2026-09-25) - Tooltips That Line Up, and No Castbar Flicker
+
+### Highlights
+
+- **Compare tooltips really stop overlapping.** 5.10.1 said they no longer overlapped, but in the game they were still drawn edge to edge, one border running under the other. Shift-hovering an item now puts the tooltips side by side with every border whole and the "Equipped" tab still tucked behind it. The compare tooltips are also drawn at the same size as the tooltip they compare against, where they used to be slightly larger.
+- **Buff tooltips wear the AzeriteUI theme.** Hovering the buffs at the top right, the aura row on the player frame or a nameplate aura showed Blizzard's default tooltip whatever the theme. Those tooltips now follow your Azerite or Classic theme, and go back to Blizzard's look when AzeriteUI's tooltip styling is switched off.
+- **Tooltip fixes you may notice.** With `/az -> Tooltips -> Show spellID` on, hovering a buff or debuff raised a Lua error and showed no ID; IDs now show there, and on Blizzard's nameplate auras too. A unit's name is no longer written into a different tooltip than the one describing that unit, and a hidden name is no longer replaced with "Unknown". In combat inside instances, where the game hides a unit's health, the tooltip's health text now disappears instead of showing the previous unit's numbers.
+- **Hide in Combat reaches action buttons and unit frames.** `/az -> Tooltips -> Hide in Combat` and its **Hide ActionBar Tooltips in Combat** and **Hide UnitFrame Tooltips in Combat** switches only ever affected the pet and stance bars. They now hide the tooltips of the action buttons and the unit frames in combat as well, and bring them back when it ends. **Show Guildname**, which never did anything, is gone.
+- **No more flicker under nameplates.** Mousing over a nameplate or changing target could flash a gold bar under the health bar for a moment, sometimes carrying the name of a spell another mob had cast earlier. After a failed or interrupted cast, that bar could also come back for the rest of its brief hold. The castbar now appears only while the unit is casting.
+
+### Development
+
+- **Found out why the 5.10.1 compare fix did not hold, with a report built for it.** `/azdebug tooltips` prints what AzeriteUI did to each compare tooltip and whether it was still in place a frame later. The first live report showed the spacing set and the tooltips drawn edge to edge anyway: either something positioned them again afterwards, or Blizzard's own top anchor won over the spacing. Which one is still open, and the fix does not depend on it. AzeriteUI now makes each join itself inside every call that positions a compare tooltip, whichever copy of Blizzard's code makes it. That needs no one-frame delay, which is what made the 5.3.5x attempt jitter. The offline tooltip test now repeats Blizzard's positioning the way the live client did, and both earlier versions fail it where the game showed the overlap.
+- **Audited the whole tooltip module against Blizzard's Retail 12.1 and Forever source.** The buff tooltips turned out to be a protected Blizzard frame that addon code cannot touch, with one styling call Blizzard exports for it, which AzeriteUI now uses. The audit also turned up the Classic-only aura call behind the spell ID error, the nameplate aura tooltips that were never hooked, the name and health text faults, and settings nothing read. The offline tooltip test covers each of these, and the 5.10.1 module fails it in every one of those areas.
+- **Traced the nameplate flicker to AzeriteUI's own layout pass**, which showed the castbar every time a plate was laid out, for the castbar code to hide again a frame later. The offline nameplate test hid such bars before every snapshot, so it could never see the flash. It now checks what is on screen before that frame, and checks that a plate hidden mid-cast shows its cast again when it comes back.
+
+### Access and known limits
+
+- **Confirmed in game on Retail:** the compare tooltips with the Azerite theme, the buff tooltip theme, Show spellID, the unit name and the health text. **Verified offline only:** all of it on Forever, the compare tooltips with the Classic theme, Hide in Combat, and the nameplate castbar.
+- **If you ticked Hide in Combat earlier, action button and unit frame tooltips will now disappear in combat.** Both of its switches start on; untick either one under `/az -> Tooltips` to keep those tooltips.
+- If compare tooltips still overlap for you, type `/azdebug tooltips` straight after the shift-hover and post what it prints on the Discord.
+
 ## 5.10.1-JuNNeZ (2026-09-25) - Action Bars Back on Forever, and Friendly NPCs Sized as Such
 
 ### Highlights

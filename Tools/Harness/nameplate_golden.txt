@@ -499,7 +499,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -647,7 +647,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -864,7 +864,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=40 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -958,7 +958,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1092,7 +1092,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1125,6 +1125,36 @@ Plate3 (neutral rare)
   native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== enemy plates hidden and back during a cast
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast shown@1 color=1,0.82,0 tex=1,0.82,0 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== enemy plates hidden and back while the cast ends
+Plate2 (hostile)
+  unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Umbral Stalker" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
+  raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == zone into a dungeon
   cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.75 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 == zone into an arena
@@ -1140,6 +1170,7 @@ Plate2 (hostile)
   health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
   badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
@@ -1154,6 +1185,7 @@ Plate2 (hostile)
   health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
   badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
   raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
@@ -1255,7 +1287,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1270,6 +1302,7 @@ Plate2 (hostile)
   health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
   badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
   raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
@@ -1401,7 +1434,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1416,6 +1449,7 @@ Plate2 (hostile)
   health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
   badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
   raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
@@ -1560,7 +1594,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1588,7 +1622,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1606,7 +1640,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1621,6 +1655,7 @@ Plate2 (hostile)
   health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
   badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
   raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
@@ -1649,6 +1684,7 @@ Plate2 (hostile)
   health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
   badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
   raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
@@ -1663,7 +1699,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1692,7 +1728,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1708,6 +1744,7 @@ Plate2 (hostile)
   health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
   badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
   raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
@@ -1750,7 +1787,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1786,7 +1823,7 @@ Plate1 (hostile elite)
   name shown@1 text="Voidbound Ritualist" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,22) scale=1
   health shown@1 color=0.976,0.737,0.216 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
-  cast shown@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
   cast fromBoolean=false yes=0.502,0.502,0.502 no=0.8,0.098,0.098
   badge shown@1 tex=Assets\icon_classification_elite.tga; highlight shown@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,62)
@@ -1802,6 +1839,7 @@ Plate2 (hostile)
   health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
   badge hidden@1 tex=nil; highlight hidden@1 color=1,0.98,0.925; threat hidden@1
   raid enabled=true shown@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
@@ -1943,6 +1981,7 @@ Plate12 (vendor)
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  cast fromBoolean=false yes=0.502,0.502,0.502 no=1,0.82,0
   badge hidden@1 tex=nil; highlight hidden@1 color=0.725,1,0.714; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate12 enabled=true pt=CENTER>Auras:CENTER(0,0)

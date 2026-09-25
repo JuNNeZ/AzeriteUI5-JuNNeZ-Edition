@@ -36,7 +36,21 @@ tooltip they compare against, and whether the "Equipped" tab's bottom edge lands
 each theme's border art is solid (measured from the art; see the file). Cases: both themes, either
 side, one or two items, a scaled tooltip, the first compare of a session, a re-anchor, switched off and
 on, secret anchoring and scale, no compare modifier. It fails against the 5.10.0 module (FixLog
-2026-09-25). Its mutations are the `tooltip compare` entries in `mutate_client.lua`.
+2026-09-25). After 5.10.1 and the audit's first cut, the live client still drew compare tooltips edge to
+edge although our hook on the manager had set the offsets, so `Compare` runs Blizzard's anchoring a second
+time after the manager, as an unhooked copy calling the frames' own `SetPoint`; both of those versions
+fail here on the seams, as they did live. The module now re-makes each join from a `SetPoint` post-hook
+on the compare tooltip, and the checks require each compare tooltip to be held by its join alone (no
+`TOP`), the join to still be ours a frame later (as `/azdebug tooltips` reports it), secret anchoring to
+change nothing, other addons' anchors to be left alone, an embedded tooltip's top to stay level, and the
+compare tooltips to take GameTooltip's scale. Hide in Combat's answers and the action bar refreshes are
+checked here too. The rest of the tooltip audit runs against the same loaded module: the native
+aura containers' `AuraButtonTooltip` styled through a fake `AuraContainerInbound` that validates the
+documented `AuraContainerTooltipBackdropOptions` (per theme, theme change, switch off and on, off from
+login, `Blizzard_AuraContainer` loading late, a refusal retried), aura spell IDs with no `UnitAura`
+global (Retail and Forever have none), the unit name written to the tooltip the unit is on, and secret
+health hiding the value text. It fails against the 5.10.1 module in every one of those areas. Its
+mutations are the `tooltip` entries in `mutate_client.lua`.
 
 `flyout_harness.lua` loads the whole of `Libs/LibActionButton-1.0-GE` as an upgrade over an older copy
 with one button, because that runs `InitializeEventHandler` at load - the call the first `CreateButton`
@@ -60,7 +74,10 @@ step. A deliberate behaviour change is a reviewed golden diff re-recorded with `
 performance change is checked with `--metrics` and re-recorded with `--record-metrics`. The fake
 oUF elements copy what the real ones do to visibility (castbar hidden when idle, raid marker and
 threat glow only when set), because the first draft showed all three on every plate and the golden
-file was recording the stub. Plates draw their auras through Blizzard's native `AuraContainer` on
+file was recording the stub. The fake castbar update does what oUF's `CastStart` does (a running cast
+shown, none cleared and hidden), and each step ends with the frame boundary, oUF's OnUpdate hiding an
+idle castbar. The golden cannot see what was on screen for the frame before that boundary, so a named
+check does: no step may end with an idle castbar shown (FixLog 2026-09-25). Plates draw their auras through Blizzard's native `AuraContainer` on
 Retail; the harness loads the real `Auras/PlayerAuraContainers.lua` against a fake container that
 keeps the unit, the on/off state and how often it was told to re-read, and rejects the inputs
 `Blizzard_CustomAuraContainer.lua` would (unknown filter tokens, candidate filters or layout keys).

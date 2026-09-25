@@ -637,7 +637,18 @@ function Plate:UpdateElement(name, event)
 		local status = UnitThreatSituation(unit)
 		self.ThreatIndicator:SetShown(type(status) == "number" and status > 0) -- threatindicator.lua:63-72
 	elseif (name == "Castbar") then
-		if (not (self.Castbar.casting or self.Castbar.channeling)) then self.Castbar:Hide() end
+		-- CastStart (castbar.lua:240-364): a running cast is set up and shown; none clears the
+		-- flags and hides the bar, which is what brings back a bar whose cast ended while hidden.
+		local bar, cast = self.Castbar, rec and rec.casting
+		if (cast) then
+			bar.casting, bar.notInterruptible, bar.spellID = true, cast.notInterruptible, cast.spellID
+			bar.Text:SetText(cast.name)
+			if (bar.PostCastStart) then bar.PostCastStart(bar, unit) end
+			bar:Show()
+		else
+			bar.casting, bar.channeling, bar.notInterruptible, bar.spellID = nil, nil, nil, nil
+			bar:Hide()
+		end
 	end
 end
 function Plate:UpdateAllElements(event)
@@ -949,19 +960,34 @@ local function Snapshot(f)
 	return table.concat(out, "\n")
 end
 
--- The frame after each step: oUF's castbar OnUpdate hides an idle bar (castbar.lua:658-663).
+-- An idle castbar: nothing cast, nothing held. oUF's castbar OnUpdate hides one on the next frame
+-- (castbar.lua:658-663), so one still shown when a step ends is on screen for that frame.
+local function IdleCastbarShown(f)
+	local bar = f.Castbar
+	return (bar and bar.__shown and not (bar.casting or bar.channeling) and (bar.holdTime or 0) <= 0) and true or false
+end
+
+-- The frame after each step: oUF's castbar OnUpdate hides an idle bar.
 local function FrameBoundary()
 	for _, f in ipairs(plateOrder) do
-		local bar = f.Castbar
-		if (bar and bar.__shown and not (bar.casting or bar.channeling) and (bar.holdTime or 0) <= 0) then
-			bar:Hide()
-		end
+		if (IdleCastbarShown(f)) then f.Castbar:Hide() end
+		if (f.Castbar) then f.Castbar.__harnessCastEnded = nil end
 	end
 end
+
+-- Steps that ended with an idle castbar on screen. The module's own layout pass showed one on every
+-- mouseover, target change and full update (FixLog 2026-09-25). A cast that just ended is oUF's:
+-- CastStop leaves the bar up for its OnUpdate to hide, and StopCast marks it.
+local idleCastbarSteps = {}
 
 local golden, metrics = {}, {}
 local previous = {}
 local function Step(name)
+	for _, f in ipairs(plateOrder) do
+		if (IdleCastbarShown(f) and not f.Castbar.__harnessCastEnded) then
+			idleCastbarSteps[#idleCastbarSteps + 1] = name .. " (Plate" .. f.__index .. ")"
+		end
+	end
 	FrameBoundary()
 	local changed = {}
 	for _, f in ipairs(plateOrder) do
@@ -1125,6 +1151,7 @@ Step("target the elite again")
 W.alias.mouseover = "nameplate2"
 Fire("UPDATE_MOUSEOVER_UNIT")
 check(P[2].isMouseOver and RunningTimers() == 1, "hovering a plate marks it and starts the short poll", RunningTimers())
+check(not P[2].Castbar.__shown, "hovering a plate that casts nothing shows no castbar, not even for a frame (FixLog 2026-09-25)")
 Step("hover the hostile")
 W.alias.mouseover = nil
 Tick()
@@ -1171,6 +1198,7 @@ local function StopCast(f, failed)
 	f.Castbar.casting = nil
 	-- A failed cast is held on screen for timeToHold (castbar.lua:457); a finished one is not.
 	f.Castbar.holdTime = failed and (f.Castbar.timeToHold or 0) or 0
+	f.Castbar.__harnessCastEnded = not failed
 	if (failed) then f.Castbar.PostCastFail(f.Castbar, f.unit) else f.Castbar.PostCastStop(f.Castbar, f.unit) end
 end
 
@@ -1279,6 +1307,26 @@ Step("enemy plates switched off in the game")
 W.cvars.nameplateShowEnemies = "1"
 Fire("CVAR_UPDATE", "nameplateShowEnemies")
 Step("enemy plates back")
+
+-- A plate hidden mid-cast and shown again. The layout pass no longer shows an idle castbar, so a
+-- cast has to come back through oUF: shown if it still runs, gone if it ended meanwhile. oUF's
+-- CastStop skips a hidden bar (castbar.lua:448), so that bar still says casting when it returns.
+Cast(P[2], "Shadow Mend", false)
+W.cvars.nameplateShowEnemies = "0"
+Fire("CVAR_UPDATE", "nameplateShowEnemies")
+check(not P[2].Castbar.__shown, "a hidden plate hides its cast")
+W.cvars.nameplateShowEnemies = "1"
+Fire("CVAR_UPDATE", "nameplateShowEnemies")
+check(P[2].Castbar.__shown and P[2].Castbar.casting, "a plate shown again mid-cast shows the cast again")
+Step("enemy plates hidden and back during a cast")
+W.cvars.nameplateShowEnemies = "0"
+Fire("CVAR_UPDATE", "nameplateShowEnemies")
+resolve(P[2].unit).casting = nil
+W.cvars.nameplateShowEnemies = "1"
+Fire("CVAR_UPDATE", "nameplateShowEnemies")
+check(not P[2].Castbar.__shown and not P[2].Castbar.casting,
+	"a cast that ended while its plate was hidden is not shown when the plate comes back")
+Step("enemy plates hidden and back while the cast ends")
 
 W.instance = { true, "party" }
 Fire("PLAYER_ENTERING_WORLD", false, false)
@@ -1826,6 +1874,18 @@ do
 	W.alias.softinteract = savedSoftInteract
 	Fire("PLAYER_SOFT_INTERACT_CHANGED")
 	check(Hidden(P[12]), "and is hidden again once it is not")
+	-- The soft target brings the vendor back through the layout pass alone (OnSelectionChanged),
+	-- with no oUF update, so a cast it was hidden in only comes back if that pass asks oUF.
+	Cast(P[12], "Brewing", false)
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	check(Hidden(P[12]) and not P[12].Castbar.__shown, "a plate hidden mid-cast hides the cast")
+	W.alias.softinteract = "nameplate12"
+	Fire("PLAYER_SOFT_INTERACT_CHANGED")
+	check(P[12].Castbar.__shown and P[12].Castbar.casting,
+		"a plate the layout pass alone brings back mid-cast shows the cast again")
+	W.alias.softinteract = savedSoftInteract
+	Fire("PLAYER_SOFT_INTERACT_CHANGED")
+	resolve(P[12].unit).casting = nil
 	W.units.nameplate4.widgetsOnly = true
 	Fire("UNIT_FACTION", "nameplate4")
 	check(not Hidden(P[4]), "a friendly NPC given a plate for its widgets still shows")
@@ -1834,6 +1894,7 @@ do
 	W.cvars.nameplateShowFriendlyNpcs = "1"
 	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
 	check(not Hidden(P[12]) and not Hidden(P[4]), "switched back on, they return")
+	check(not P[12].Castbar.__shown and not P[12].Castbar.casting, "without the cast that ended while they were hidden")
 	W.cvars.nameplateShowFriendlyPlayers = "0"
 	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
 	check(Hidden(P[5]) and Hidden(P[13]) and not Hidden(P[12]),
@@ -2011,6 +2072,8 @@ check(stepText("interrupt on cooldown mid-cast"):find("color=" .. col(ns.Colors.
 	"a cast while your interrupt is on cooldown is red")
 check(stepText("elite's cast fails"):find("color=" .. col(ns.Colors.red), 1, true), "a failed cast is red")
 check(stepText("switch nameplates off"):find("reloads 1", 1, true), "switching nameplates off reloads the interface")
+check(#idleCastbarSteps == 0, "no step leaves an idle castbar on screen, not even for the frame before oUF hides it",
+	string.format("%d, first: %s", #idleCastbarSteps, tostring(idleCastbarSteps[1])))
 check(#W.errors == 0, "no guarded call reported an error", W.errors[1])
 check(#W.unknownCVarWrites == 0, "no CVar the client does not have is ever written", W.unknownCVarWrites[1])
 

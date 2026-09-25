@@ -182,7 +182,12 @@ local UnitFrame_OnEnter = function(self, ...)
 	if (self.OnEnter) then
 		self:OnEnter(...)
 	end
-	-- Tooltip interception disabled; always delegate to Blizzard handler.
+	-- Tooltips > Hide in Combat. Returning here only skips Blizzard's handler; nothing of ours
+	-- runs inside it, so it cannot taint it (upstream AzeriteUI has the same check).
+	local tooltips = ns:GetModule("Tooltips", true)
+	if (tooltips and tooltips:IsEnabled() and tooltips:ShouldHideInCombat("unitframes") and InCombatLockdown()) then
+		return
+	end
 	return _G.UnitFrame_OnEnter(self, ...)
 end
 

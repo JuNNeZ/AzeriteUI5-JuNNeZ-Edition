@@ -71,9 +71,9 @@ local tonumber = tonumber
 local unpack = unpack
 local GetTime = GetTime
 
--- GLOBALS: C_UnitAuras, CreateFrame, GetMouseFocus, hooksecurefunc
+-- GLOBALS: AuraContainerInbound, C_UnitAuras, CreateColor, CreateFrame, GetMouseFocus, hooksecurefunc
 -- GLOBALS: GameTooltip, GameTooltipTextLeft1, GameTooltipStatusBar, UIParent
--- GLOBALS: UnitAura, UnitClass, UnitExists, UnitEffectiveLevel, UnitHealth, UnitHealthMax, UnitName, UnitRealmRelationship, UnitIsDeadOrGhost, UnitIsPlayer
+-- GLOBALS: UnitClass, UnitExists, UnitEffectiveLevel, UnitHealth, UnitHealthMax, UnitName, UnitRealmRelationship, UnitIsDeadOrGhost, UnitIsPlayer
 -- GLOBALS: LE_REALM_RELATION_COALESCED, LE_REALM_RELATION_VIRTUAL, FOREIGN_SERVER_LABEL, INTERACTIVE_SERVER_LABEL
 -- GLOGALS: NarciGameTooltip
 
@@ -200,6 +200,22 @@ function Tooltips:IsDisabled()
 	return self.db and self.db.profile and self.db.profile.disableAzeriteUITooltips
 end
 
+-- Tooltips > Hide in Combat, for "actionbars" or "unitframes". Independent of the styling switch.
+-- Read by the unit frames' OnEnter and the action bars' settings pass (LibActionButton's own
+-- "nocombat" tooltip mode); the pet and stance bars read the profile themselves.
+function Tooltips:ShouldHideInCombat(kind)
+	local profile = self.db and self.db.profile
+	if (not profile) or (not profile.hideInCombat) then
+		return false
+	end
+	if (kind == "actionbars") then
+		return profile.hideActionBarTooltipsInCombat and true or false
+	elseif (kind == "unitframes") then
+		return profile.hideUnitFrameTooltipsInCombat and true or false
+	end
+	return false
+end
+
 function Tooltips:EnsureHighlightCache()
 	if (self._originalHighlightSystem and self._originalClearHighlight) then
 		return
@@ -310,6 +326,13 @@ local GetStatusBarText = function(bar, valuePosition, valueFont, valueColor)
 	return text
 end
 
+local HideStatusBarText = function(bar)
+	local text = StatusBarText[bar]
+	if (text) then
+		text:Hide()
+	end
+end
+
 -- Compare tooltips wear an "Equipped" tab that ShoppingTooltipTemplate tucks
 -- 1px behind the tooltip's top edge. Our backdrop hangs above that edge, so the
 -- tab is tucked behind our border instead, as high as the theme says.
@@ -344,6 +367,9 @@ end
 
 local ManagedTooltipState = setmetatable({}, { __mode = "k" })
 local CompareLayoutHooked = setmetatable({}, { __mode = "k" })
+
+-- What the compare hook and the aura tooltip style last did, for /azdebug tooltips.
+local Trace = { joins = 0, compare = {}, held = {} }
 
 local IsManagedTooltip = function(tooltip)
 	if (not tooltip) or (tooltip.IsForbidden and tooltip:IsForbidden()) then
@@ -395,7 +421,6 @@ local defaults = { profile = ns:Merge({
 	theme = "Classic",
 	showItemID = false,
 	showSpellID = false,
-	showGuildName = false,
 	-- New: allow users to completely disable AzeriteUI tooltip styling
 	disableAzeriteUITooltips = false,
 	-- Optional: make unit tooltips transparent when anchored to nameplates
@@ -669,6 +694,52 @@ Tooltips.UpdateStatusBarTheme = function(self)
 
 end
 
+-- Blizzard's native aura containers (the player buffs, and the player frame's and the plates'
+-- aura rows) show their own AuraButtonTooltip. It is forbidden, hidden from addons and driven from
+-- Blizzard's secure environment, so SharedTooltip_SetBackdropStyle never reaches us for it.
+-- AuraContainerInbound is the one way in, the same on Retail and Forever. Blizzard never calls it
+-- itself, so a style set here stays until this module or another addon changes it.
+local GetAuraContainerInbound = function()
+	local inbound = _G.AuraContainerInbound
+	if (type(inbound) == "table" and type(inbound.SetTooltipBackdrop) == "function") then
+		return inbound
+	end
+end
+
+local ToColor = function(color)
+	return CreateColor(color[1], color[2], color[3], color[4] or 1)
+end
+
+Tooltips.UpdateAuraTooltipTheme = function(self)
+	-- Blizzard_AuraContainer can load after us; OnAddonLoaded comes back here when it does.
+	local inbound = GetAuraContainerInbound()
+	if (not inbound) then return end
+
+	if (self:IsDisabled()) then
+		-- Only our own style is undone; another addon's is not ours to reset.
+		if (self._auraTooltipStyle and type(inbound.ResetTooltipStyle) == "function") then
+			API.SafeCall("Tooltips.ResetAuraTooltipStyle", inbound.ResetTooltipStyle)
+			Trace.aura = "reset to Blizzard's"
+		end
+		self._auraTooltipStyle = nil
+		return
+	end
+
+	local themeData = self:GetTheme()
+	local db = themeData and themeData.backdropStyle
+	if (not db) or (self._auraTooltipStyle == db) then return end
+
+	local ok = API.SafeCall("Tooltips.ApplyAuraTooltipTheme", inbound.SetTooltipBackdrop, {
+		backdropInfo = db.backdrop,
+		borderColor = ToColor(db.backdropBorderColor),
+		centerColor = ToColor(db.backdropColor),
+		-- Our backdrop's reach past the tooltip, as UpdateBackdropTheme anchors it.
+		anchorOffsets = { left = db.offsetLeft, right = db.offsetRight, top = db.offsetTop, bottom = db.offsetBottom }
+	})
+	self._auraTooltipStyle = ok and db or nil
+	Trace.aura = ok and ("styled, " .. tostring(self._cachedThemeKey)) or "styling failed, see BugSack"
+end
+
 Tooltips.UpdateTooltipThemes = function(self, event, ...)
 	if (self:IsDisabled()) then return end
 	if (event == "PLAYER_ENTERING_WORLD") then
@@ -695,6 +766,7 @@ Tooltips.UpdateTooltipThemes = function(self, event, ...)
 	end
 
 	self:UpdateStatusBarTheme()
+	self:UpdateAuraTooltipTheme()
 end
 
 Tooltips.SetHealthValue = function(self, unit)
@@ -724,9 +796,9 @@ Tooltips.SetHealthValue = function(self, unit)
 			local okMaxHealth, max = API.TryCall(UnitHealthMax, safeUnit)
 			if (not okHealth) then min = nil end
 			if (not okMaxHealth) then max = nil end
-			-- Check if values are secret before comparison
+			-- Secret health cannot be printed. Hide the text rather than leave the last unit's numbers.
 			if (IsSecretValue(min) or IsSecretValue(max)) then
-				-- Can't display secret values
+				HideStatusBarText(bar)
 				return
 			end
 			if (type(min) == "number" and type(max) == "number") then
@@ -742,8 +814,8 @@ Tooltips.SetHealthValue = function(self, unit)
 			if (not okValue) or (not okRange) then
 				return
 			end
-			-- Check if values are secret
 			if (IsSecretValue(min) or IsSecretValue(max)) then
+				HideStatusBarText(bar)
 				return
 			end
 			if (type(min) ~= "number" or type(max) ~= "number" or max <= 0) then
@@ -877,6 +949,10 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 	if (self:IsDisabled()) then return end
 	if (not tooltip) or (tooltip:IsForbidden()) then return end
 
+	-- Unit post-calls run for every tooltip given unit data, not only GameTooltip.
+	local nameLine = tooltip.TextLeft1
+	if (not nameLine) then return end
+
 	local unit = SafeGetTooltipUnitToken(tooltip)
 	if (not unit) or ShouldUnitIdentityBeSecret(unit) then
 		return
@@ -892,7 +968,8 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 		if (not okName) then
 			return
 		end
-		if (IsSecretValue(unitName)) then unitName = nil end
+		-- Blizzard already drew a secret name; "Unknown" would only replace it.
+		if (IsSecretValue(unitName)) then return end
 		if (IsSecretValue(unitRealm)) then unitRealm = nil end
 		unitName = unitName or _G.UNKNOWN
 		local displayName = color.colorCode..unitName.."|r"
@@ -923,9 +1000,9 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 		end
 
 		if (levelText) then
-			_G.GameTooltipTextLeft1:SetText(levelText .. gray .. ": |r" .. displayName)
+			nameLine:SetText(levelText .. gray .. ": |r" .. displayName)
 		else
-			_G.GameTooltipTextLeft1:SetText(displayName)
+			nameLine:SetText(displayName)
 		end
 
 	end
@@ -1061,22 +1138,44 @@ Tooltips.OnCompareItemShow = function(self, tooltip)
 		-- attempts to override Blizzard's placement caused persistent
 		-- jitter because two independent positioning systems fought over
 		-- the same anchors with a mandatory 1-frame delay between them.
-		-- The only adjustment is OnAnchorShoppingTooltips, inside Blizzard's call.
+		-- The only adjustment is OnCompareTooltipSetPoint, inside Blizzard's calls.
 	end)
 end
 
--- TooltipComparisonManager sets compare tooltips edge to edge with the tooltip
--- they compare against. Our backdrops hang outside their tooltips, so the two
--- borders overlapped. The joins it has just made are widened by what the two
--- backdrops hang out, inside the same call, so nothing is placed twice on screen.
+-- TooltipComparisonManager:AnchorShoppingTooltips puts each compare tooltip's TOP on the tooltip it
+-- compares against, then joins its side edge to its neighbour's, edge to edge. Our backdrops hang
+-- outside their tooltips, so the borders overlapped.
+-- Widening the joins after the manager returned (5.10.1, then the first cut of the tooltip audit)
+-- set the offsets, and the client still drew the tooltips edge to edge: something anchors them
+-- again after that, or the TOP anchor's centre wins over the join's offset (FixLog 2026-09-25).
+-- So each join is made again from inside the SetPoint call that makes it, whoever calls it, with
+-- the gap and, where the join can carry the height as well, without the TOP anchor. Nothing is
+-- read back from the frame (its anchoring can be secret) and nothing waits for a later frame.
 -- Blizzard still picks the side, the stacking and the screen-edge slide.
--- [point] = { relativePoint, which way the gap goes }
+-- [point] = { relativePoint, which way the gap goes, the top-aligned point and relative point
+-- that make the same join }
 local CompareJoins = {
-	LEFT = { "RIGHT", 1 },
-	RIGHT = { "LEFT", -1 },
-	TOPLEFT = { "TOPRIGHT", 1 },
-	TOPRIGHT = { "TOPLEFT", -1 }
+	LEFT = { "RIGHT", 1, "TOPLEFT", "TOPRIGHT" },
+	RIGHT = { "LEFT", -1, "TOPRIGHT", "TOPLEFT" },
+	TOPLEFT = { "TOPRIGHT", 1, "TOPLEFT", "TOPRIGHT" },
+	TOPRIGHT = { "TOPLEFT", -1, "TOPRIGHT", "TOPLEFT" }
 }
+
+-- Every compare tooltip there is: GameTooltip's and ItemRefTooltip's.
+local CompareTooltips = function()
+	local list = {}
+	for _, name in ipairs({ "ShoppingTooltip1", "ShoppingTooltip2", "ItemRefShoppingTooltip1", "ItemRefShoppingTooltip2" }) do
+		local compareTooltip = _G[name]
+		if (compareTooltip) and (not compareTooltip:IsForbidden()) then
+			list[#list + 1] = compareTooltip
+		end
+	end
+	return list
+end
+
+local CountAnswers = function(...)
+	return select("#", ...), ...
+end
 
 -- How far our backdrop reaches past one side of a tooltip, in that tooltip's scale.
 local GetBackdropOverhang = function(frame, side)
@@ -1090,54 +1189,80 @@ local GetBackdropOverhang = function(frame, side)
 	return math_max(0, backdrop.offsetRight or 0)
 end
 
-local WidenCompareJoin = function(compareTooltip)
-	if (not compareTooltip) or compareTooltip:IsForbidden() or (not compareTooltip:IsShown()) then
-		return
-	end
-	-- GetPoint is secret when the anchoring is; leave such a tooltip where Blizzard put it.
-	local numPoints = compareTooltip:GetNumPoints()
-	if (IsSecretValue(numPoints)) then
-		return
-	end
-	for i = 1, numPoints do
-		local point, relativeTo, relativePoint, x, y = compareTooltip:GetPoint(i)
-		if (IsSecretValue(point) or IsSecretValue(relativeTo) or IsSecretValue(relativePoint) or IsSecretValue(x) or IsSecretValue(y)) then
-			return
+-- /azdebug tooltips: whether a join we made was still ours a frame later. Read only.
+local JoinCheckPending = setmetatable({}, { __mode = "k" })
+local CheckJoinHeld = function(compareTooltip, name, point, x)
+	if (JoinCheckPending[compareTooltip]) or (not C_Timer) or (not C_Timer.After) then return end
+	JoinCheckPending[compareTooltip] = true
+	C_Timer.After(0, function()
+		JoinCheckPending[compareTooltip] = nil
+		local count, _, _, _, heldX = CountAnswers(compareTooltip:GetPointByName(point))
+		if (count == 0) then
+			Trace.held[name] = "gone a frame later"
+		elseif (IsSecretValue(heldX)) then
+			Trace.held[name] = "unknown, anchoring secret"
+		elseif (math_abs(heldX - x) < .01) then
+			Trace.held[name] = "held a frame later"
+		else
+			Trace.held[name] = string_format("moved to %.1f a frame later", heldX)
 		end
-		local join = CompareJoins[point]
-		if (join and relativeTo and relativePoint == join[1]) then
-			local direction = join[2]
-			local gap = GetBackdropOverhang(compareTooltip, direction > 0 and "LEFT" or "RIGHT")
-			local reach = GetBackdropOverhang(relativeTo, direction > 0 and "RIGHT" or "LEFT")
-			if (reach > 0) then
-				-- The offset is in the compare tooltip's scale, the other backdrop in its own.
-				local ownScale, otherScale = compareTooltip:GetEffectiveScale(), relativeTo:GetEffectiveScale()
-				if (IsSecretValue(ownScale) or IsSecretValue(otherScale)) then
-					return
-				end
-				gap = gap + reach * otherScale / ownScale
-			end
-			if (gap > 0) then
-				compareTooltip:SetPoint(point, relativeTo, relativePoint, direction * gap, y)
-			end
-			return
-		end
-	end
+	end)
 end
 
-Tooltips.OnAnchorShoppingTooltips = function(self, manager)
+-- One compare tooltip's join made again with room for both borders. Returns what it did.
+local JoinCompareTooltip = function(self, compareTooltip, point, relativeTo)
+	-- Both backdrops are built before they are measured: the first compare of a session
+	-- can come before a sized tooltip let UpdateBackdropTheme build one.
+	self:UpdateBackdropTheme(compareTooltip)
+	self:UpdateBackdropTheme(relativeTo)
+	local join = CompareJoins[point]
+	local direction = join[2]
+	local gap = GetBackdropOverhang(compareTooltip, direction > 0 and "LEFT" or "RIGHT")
+	local reach = GetBackdropOverhang(relativeTo, direction > 0 and "RIGHT" or "LEFT")
+	if (reach > 0) then
+		-- The offset is in the compare tooltip's scale, the other backdrop in its own.
+		local ownScale, otherScale = compareTooltip:GetEffectiveScale(), relativeTo:GetEffectiveScale()
+		if (IsSecretValue(ownScale) or IsSecretValue(otherScale)) then
+			return "secret scale, left edge to edge"
+		end
+		gap = gap + reach * otherScale / ownScale
+	end
+	if (gap <= 0) then
+		return "no backdrop overhang"
+	end
+	-- The TOP anchor is on the manager's anchorFrame. A join to the other compare tooltip, or to
+	-- that same frame, gives the same height, so it replaces TOP. A tooltip embedded in another
+	-- (quest rewards) is joined to the outer one, and there TOP stays.
+	local manager = _G.TooltipComparisonManager
+	if (point == "TOPLEFT" or point == "TOPRIGHT") or (manager and manager.anchorFrame == relativeTo) then
+		compareTooltip:ClearAllPoints()
+		compareTooltip:SetPoint(join[3], relativeTo, join[4], direction * gap, 0)
+		CheckJoinHeld(compareTooltip, compareTooltip:GetName() or "?", join[3], direction * gap)
+		return string_format("%s join widened by %.1f, made as %s alone", point, gap, join[3])
+	end
+	compareTooltip:SetPoint(point, relativeTo, join[1], direction * gap, 0)
+	CheckJoinHeld(compareTooltip, compareTooltip:GetName() or "?", point, direction * gap)
+	return string_format("%s join widened by %.1f, TOP kept (embedded)", point, gap)
+end
+
+-- A post-hook on a compare tooltip's own SetPoint, so it runs inside every call that anchors it.
+Tooltips.OnCompareTooltipSetPoint = function(self, compareTooltip, point, relativeTo, relativePoint, x, y)
 	if (self:IsDisabled()) then return end
-	local tooltip = manager and manager.tooltip
-	local compareTooltips = tooltip and tooltip.shoppingTooltips
-	if (type(compareTooltips) ~= "table") then return end
-	-- All styled before any is measured, as one can hang from the other: the first
-	-- compare of a session can arrive before a sized tooltip let UpdateBackdropTheme build it.
-	for _, compareTooltip in ipairs(compareTooltips) do
-		self:UpdateBackdropTheme(compareTooltip)
+	if (IsSecretValue(point) or IsSecretValue(relativeTo) or IsSecretValue(relativePoint) or IsSecretValue(x) or IsSecretValue(y)) then
+		return
 	end
-	for _, compareTooltip in ipairs(compareTooltips) do
-		API.SafeCall("Tooltips.WidenCompareJoin", WidenCompareJoin, compareTooltip)
+	-- Only a join as AnchorShoppingTooltips makes it: to a frame's opposite edge, with no offsets.
+	-- Our own SetPoint below carries an offset, so it does not come back here.
+	local join = (type(point) == "string") and CompareJoins[point]
+	if (not join) or (type(relativeTo) ~= "table") or (relativePoint ~= join[1]) or (x and x ~= 0) or (y and y ~= 0) then
+		return
 	end
+	if (compareTooltip:IsForbidden()) then return end
+	local shown = compareTooltip:IsShown()
+	if (IsSecretValue(shown) or not shown) then return end
+	local ok, result = API.SafeCall("Tooltips.JoinCompareTooltip", JoinCompareTooltip, self, compareTooltip, point, relativeTo)
+	Trace.joins = Trace.joins + 1
+	Trace.compare[compareTooltip:GetName() or "?"] = ok and result or "failed, see BugSack"
 end
 
 Tooltips.SetUnitAura = function(self, tooltip, unit, index, filter)
@@ -1154,7 +1279,11 @@ Tooltips.SetUnitAura = function(self, tooltip, unit, index, filter)
 		end
 	end
 
-	local name, _, _, _, _, _, source, _, _, spellID = UnitAura(unit, index, filter)
+	-- UnitAura exists only on Classic clients (Blizzard_Deprecated/Classic); Retail and Forever
+	-- have the table form.
+	local data = C_UnitAuras.GetAuraDataByIndex(unit, index, filter)
+	if (not data) then return end
+	local name, source, spellID = data.name, data.sourceUnit, data.spellId
 	if (IsSecretValue(name)) then name = nil end
 	if (IsSecretValue(source)) then source = nil end
 	if (IsSecretValue(spellID)) then spellID = nil end
@@ -1163,6 +1292,7 @@ Tooltips.SetUnitAura = function(self, tooltip, unit, index, filter)
 
 	if (source) then
 		local _, class = UnitClass(source)
+		if (IsSecretValue(class)) then class = nil end
 		local color = Colors.class[class or "PRIEST"]
 		local sourceName = UnitName(source)
 		if (IsSecretValue(sourceName)) then sourceName = nil end
@@ -1172,17 +1302,35 @@ Tooltips.SetUnitAura = function(self, tooltip, unit, index, filter)
 			return
 		end
 		tooltip:AddLine(" ")
-	tooltip:AddDoubleLine(leftText, rightText)
+		tooltip:AddDoubleLine(leftText, rightText)
 	else
 		local spellLine = string_format("|cFFCA3C3C%s|r %s", ID_LABEL, spellID)
 		if (TooltipHasLineText(tooltip, spellLine)) then
 			return
 		end
 		tooltip:AddLine(" ")
-	tooltip:AddLine(spellLine)
+		tooltip:AddLine(spellLine)
 	end
 
 	tooltip:Show()
+end
+
+-- SetUnitBuff and SetUnitDebuff imply HELPFUL and HARMFUL; their filter adds to it.
+local WithAuraKind = function(filter, kind)
+	if (IsSecretValue(filter)) then return end
+	if (type(filter) ~= "string") or (filter == "") then return kind end
+	if (string_find(filter, "HELPFUL", 1, true) or string_find(filter, "HARMFUL", 1, true)) then return filter end
+	return kind .. "|" .. filter
+end
+
+Tooltips.SetUnitBuff = function(self, tooltip, unit, index, filter)
+	filter = WithAuraKind(filter, "HELPFUL")
+	if (filter) then self:SetUnitAura(tooltip, unit, index, filter) end
+end
+
+Tooltips.SetUnitDebuff = function(self, tooltip, unit, index, filter)
+	filter = WithAuraKind(filter, "HARMFUL")
+	if (filter) then self:SetUnitAura(tooltip, unit, index, filter) end
 end
 
 Tooltips.SetUnitAuraInstanceID = function(self, tooltip, unit, auraInstanceID)
@@ -1209,6 +1357,7 @@ Tooltips.SetUnitAuraInstanceID = function(self, tooltip, unit, auraInstanceID)
 
 	if (sourceUnit) then
 		local _, class = UnitClass(sourceUnit)
+		if (IsSecretValue(class)) then class = nil end
 		local color = Colors.class[class or "PRIEST"]
 		local sourceName = UnitName(sourceUnit)
 		if (IsSecretValue(sourceName)) then sourceName = nil end
@@ -1231,6 +1380,18 @@ Tooltips.SetUnitAuraInstanceID = function(self, tooltip, unit, auraInstanceID)
 	tooltip:Show()
 end
 
+
+-- GameTooltip's scale is ours; its compare tooltips were left at their own, so they came out
+-- bigger than the tooltip they compare against. Both are children of UIParent.
+local MatchCompareScale = function(tooltip, scale)
+	local compareTooltips = tooltip.shoppingTooltips
+	if (type(compareTooltips) ~= "table") then return end
+	for _, compareTooltip in ipairs(compareTooltips) do
+		if (not compareTooltip:IsForbidden()) then
+			compareTooltip:SetScale(scale)
+		end
+	end
+end
 
 Tooltips.SetDefaultAnchor = function(self, tooltip, parent)
 	if (self:IsDisabled()) then return end
@@ -1258,6 +1419,7 @@ Tooltips.SetDefaultAnchor = function(self, tooltip, parent)
 
 			tooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
 			tooltip:SetScale(scale)
+			MatchCompareScale(tooltip, scale)
 
 		else
 
@@ -1266,6 +1428,7 @@ Tooltips.SetDefaultAnchor = function(self, tooltip, parent)
 
 			tooltip:SetOwner(parent or UIParent, "ANCHOR_NONE")
 			tooltip:SetScale(scale)
+			MatchCompareScale(tooltip, scale)
 			tooltip:ClearAllPoints()
 			tooltip:SetPoint(anchorPoint, UIParent, anchorPoint, ((config[2] or 0) + x)/scale, ((config[3] or 0) + y)/scale)
 		end
@@ -1288,19 +1451,10 @@ Tooltips.SetHooks = function(self)
 	if (not self:IsHooked("GameTooltip_ShowCompareItem")) then
 		self:SecureHook("GameTooltip_ShowCompareItem", "OnCompareItemShow")
 	end
-	-- Blizzard_SharedXMLGame's, loaded before any addon on Retail and Forever.
-	local comparisonManager = _G.TooltipComparisonManager
-	if (comparisonManager and comparisonManager.AnchorShoppingTooltips and not self:IsHooked(comparisonManager, "AnchorShoppingTooltips")) then
-		self:SecureHook(comparisonManager, "AnchorShoppingTooltips", "OnAnchorShoppingTooltips")
-	end
-	for _, compareTooltip in ipairs({
-		_G.ShoppingTooltip1,
-		_G.ShoppingTooltip2,
-		_G.ItemRefShoppingTooltip1,
-		_G.ItemRefShoppingTooltip2
-	}) do
-		if (compareTooltip) then
-			self:HookCompareTooltipLayoutUpdates(compareTooltip)
+	for _, compareTooltip in ipairs(CompareTooltips()) do
+		self:HookCompareTooltipLayoutUpdates(compareTooltip)
+		if (not self:IsHooked(compareTooltip, "SetPoint")) then
+			self:SecureHook(compareTooltip, "SetPoint", "OnCompareTooltipSetPoint")
 		end
 	end
 	-- Don't override tooltip anchoring when ConsolePort is active
@@ -1343,11 +1497,13 @@ Tooltips.SetHooks = function(self)
 
 	if (GameTooltip) then
 		if (not self:IsHooked(GameTooltip, "SetUnitAura")) then self:SecureHook(GameTooltip, "SetUnitAura", "SetUnitAura") end
-		if (not self:IsHooked(GameTooltip, "SetUnitBuff")) then self:SecureHook(GameTooltip, "SetUnitBuff", "SetUnitAura") end
-		if (not self:IsHooked(GameTooltip, "SetUnitDebuff")) then self:SecureHook(GameTooltip, "SetUnitDebuff", "SetUnitAura") end
+		if (not self:IsHooked(GameTooltip, "SetUnitBuff")) then self:SecureHook(GameTooltip, "SetUnitBuff", "SetUnitBuff") end
+		if (not self:IsHooked(GameTooltip, "SetUnitDebuff")) then self:SecureHook(GameTooltip, "SetUnitDebuff", "SetUnitDebuff") end
 		if (ns.WoW10) then
 			if (not self:IsHooked(GameTooltip, "SetUnitBuffByAuraInstanceID")) then self:SecureHook(GameTooltip, "SetUnitBuffByAuraInstanceID", "SetUnitAuraInstanceID") end
 			if (not self:IsHooked(GameTooltip, "SetUnitDebuffByAuraInstanceID")) then self:SecureHook(GameTooltip, "SetUnitDebuffByAuraInstanceID", "SetUnitAuraInstanceID") end
+			-- Blizzard's plate auras and the cooldown viewer use this one.
+			if (GameTooltip.SetUnitAuraByAuraInstanceID and not self:IsHooked(GameTooltip, "SetUnitAuraByAuraInstanceID")) then self:SecureHook(GameTooltip, "SetUnitAuraByAuraInstanceID", "SetUnitAuraInstanceID") end
 		end
 		if (not self:IsHooked(GameTooltip, "OnTooltipCleared")) then self:SecureHookScript(GameTooltip, "OnTooltipCleared", "OnTooltipCleared") end
 		if (GameTooltip.StatusBar and not self:IsHooked(GameTooltip.StatusBar, "OnValueChanged")) then self:SecureHookScript(GameTooltip.StatusBar, "OnValueChanged", "OnValueChanged") end
@@ -1365,6 +1521,17 @@ Tooltips.UpdateAnchor = function(self)
 end
 
 Tooltips.UpdateSettings = function(self)
+	-- The action bars hand the combat switch to LibActionButton in their own settings pass, which
+	-- waits out combat by itself. Run it when the answer changes, and at login only if it is on.
+	local hideActionBars = self:ShouldHideInCombat("actionbars")
+	if (hideActionBars ~= self._hideActionBarTooltips) and (hideActionBars or self._hideActionBarTooltips ~= nil) then
+		local actionBars = ns:GetModule("ActionBars", true)
+		if (actionBars and actionBars:IsEnabled() and actionBars.UpdateSettings) then
+			actionBars:UpdateSettings()
+		end
+	end
+	self._hideActionBarTooltips = hideActionBars
+
 	local disabled = self:IsDisabled()
 	if (disabled) then
 		if (self._stylingActive ~= false) then
@@ -1404,6 +1571,7 @@ Tooltips.UpdateSettings = function(self)
 			end
 
 			self:RestoreHighlightState()
+			self:UpdateAuraTooltipTheme()
 			self._stylingActive = false
 		end
 		return
@@ -1442,7 +1610,25 @@ Tooltips.OnAddonLoaded = function(self, event, addon)
 		if (self:UpdateConsolePortState()) then
 			self:UpdateSettings()
 		end
+	elseif (addon == "Blizzard_AuraContainer") then
+		self:UpdateAuraTooltipTheme()
 	end
+end
+
+-- /azdebug tooltips: what the compare hook and the aura tooltip style last did.
+Tooltips.PrintDiagnostics = function(self)
+	local hooked = 0
+	for _, compareTooltip in ipairs(CompareTooltips()) do
+		if (self:IsHooked(compareTooltip, "SetPoint")) then hooked = hooked + 1 end
+	end
+	print("|cff33ff99AzeriteUI tooltips:|r", self:IsDisabled() and "styling off" or "styling on", "theme:", self.db and self.db.profile.theme)
+	print("|cfff0f0f0  compare tooltips hooked:|r", hooked, "joins made:", Trace.joins)
+	for _, name in ipairs({ "ShoppingTooltip1", "ShoppingTooltip2", "ItemRefShoppingTooltip1", "ItemRefShoppingTooltip2" }) do
+		if (Trace.compare[name]) then
+			print("|cfff0f0f0  " .. name .. ":|r", Trace.compare[name] .. ";", Trace.held[name] or "not checked yet")
+		end
+	end
+	print("|cfff0f0f0  aura tooltip:|r", Trace.aura or (GetAuraContainerInbound() and "not styled" or "Blizzard_AuraContainer not loaded"))
 end
 
 	-- Try to unhook our hooks when disabling styling
@@ -1452,8 +1638,9 @@ end
 		if (self:IsHooked("GameTooltip_UnitColor")) then self:Unhook("GameTooltip_UnitColor") end
 		if (self:IsHooked("GameTooltip_ShowCompareItem")) then self:Unhook("GameTooltip_ShowCompareItem") end
 		if (self:IsHooked("GameTooltip_SetDefaultAnchor")) then self:Unhook("GameTooltip_SetDefaultAnchor") end
-		local comparisonManager = _G.TooltipComparisonManager
-		if (comparisonManager and self:IsHooked(comparisonManager, "AnchorShoppingTooltips")) then self:Unhook(comparisonManager, "AnchorShoppingTooltips") end
+		for _, compareTooltip in ipairs(CompareTooltips()) do
+			if (self:IsHooked(compareTooltip, "SetPoint")) then self:Unhook(compareTooltip, "SetPoint") end
+		end
 
 		-- GameTooltip methods
 		if (_G.GameTooltip) then
@@ -1464,6 +1651,7 @@ end
 			if (ns.WoW10) then
 				if (self:IsHooked(gtt, "SetUnitBuffByAuraInstanceID")) then self:Unhook(gtt, "SetUnitBuffByAuraInstanceID") end
 				if (self:IsHooked(gtt, "SetUnitDebuffByAuraInstanceID")) then self:Unhook(gtt, "SetUnitDebuffByAuraInstanceID") end
+				if (self:IsHooked(gtt, "SetUnitAuraByAuraInstanceID")) then self:Unhook(gtt, "SetUnitAuraByAuraInstanceID") end
 			end
 			-- Script hooks (use Unhook for scripts with AceHook)
 			if (self:IsHooked(gtt, "OnTooltipCleared")) then self:Unhook(gtt, "OnTooltipCleared") end

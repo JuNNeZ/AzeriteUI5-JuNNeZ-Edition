@@ -880,6 +880,11 @@ ActionBarMod.UpdateSettings = function(self, event)
 		end
 	end
 
+	-- Tooltips > Hide in Combat. LibActionButton's own "nocombat" mode skips the tooltip in its
+	-- OnEnter; a wrapper around that OnEnter was the 5.2.x MoneyFrame taint and stays gone.
+	local tooltips = ns:GetModule("Tooltips", true)
+	local tooltipMode = (tooltips and tooltips:IsEnabled() and tooltips.ShouldHideInCombat and tooltips:ShouldHideInCombat("actionbars")) and "nocombat" or "enabled"
+
 	-- Copy global settings to individual bars for easier updates.
 	-- We do not grant user access to these settings per bar.
 	for i,bar in next,self.bars do
@@ -898,6 +903,7 @@ ActionBarMod.UpdateSettings = function(self, event)
 			button.config.dimWhenInactive = bar.config.dimWhenInactive
 			button.config.hideElements = bar.config.hideElements
 			button.config.showGrid = bar.config.showEmptyButtons
+			button.config.tooltip = tooltipMode
 			button:UpdateConfig(button.config)
 			ns.ActionButton.UpdateMouseoverCast(button)
 			--button:ForceUpdate()

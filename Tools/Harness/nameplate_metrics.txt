@@ -1,17 +1,17 @@
 login                                      calls=0     plates=0
-add ten plates                             calls=1830  plates=10
+add ten plates                             calls=1790  plates=10
 next frame after adding                    calls=80    plates=0
-target the elite                           calls=63    plates=1
-soft-target the hostile                    calls=43    plates=1
-soft-target the ore vein                   calls=68    plates=2
-focus the boar                             calls=40    plates=1
-clear the target                           calls=42    plates=1
-target the elite again                     calls=54    plates=1
-hover the hostile                          calls=39    plates=1
-stop hovering                              calls=37    plates=1
-enter combat                               calls=351   plates=10
-elite gets two auras                       calls=51    plates=1
-elite gets four auras                      calls=51    plates=1
+target the elite                           calls=58    plates=1
+soft-target the hostile                    calls=38    plates=1
+soft-target the ore vein                   calls=63    plates=2
+focus the boar                             calls=35    plates=1
+clear the target                           calls=37    plates=1
+target the elite again                     calls=49    plates=1
+hover the hostile                          calls=34    plates=1
+stop hovering                              calls=32    plates=1
+enter combat                               calls=311   plates=10
+elite gets two auras                       calls=46    plates=1
+elite gets four auras                      calls=46    plates=1
 elite casts, interrupt ready               calls=13    plates=1
 hostile casts, cannot be interrupted       calls=14    plates=1
 interrupt on cooldown mid-cast             calls=11    plates=1
@@ -19,50 +19,52 @@ elite's cast fails                         calls=9     plates=1
 hostile's cast ends                        calls=13    plates=1
 a cast turns uninterruptible before its castbar knows how to refresh calls=9     plates=1
 that cast ends                             calls=13    plates=1
-leave combat                               calls=444   plates=10
-names only for friendly players            calls=560   plates=10
-show Blizzard widgets                      calls=559   plates=10
-always show names                          calls=569   plates=10
-auras on every plate                       calls=609   plates=10
-aura filters changed                       calls=559   plates=10
-bigger target markers                      calls=580   plates=10
-target markers back to their default size  calls=1154  plates=10
-enemy plates switched off in the game      calls=381   plates=10
-enemy plates back                          calls=439   plates=10
+leave combat                               calls=408   plates=10
+names only for friendly players            calls=526   plates=10
+show Blizzard widgets                      calls=525   plates=10
+always show names                          calls=535   plates=10
+auras on every plate                       calls=575   plates=10
+aura filters changed                       calls=525   plates=10
+bigger target markers                      calls=546   plates=10
+target markers back to their default size  calls=1092  plates=10
+enemy plates switched off in the game      calls=358   plates=10
+enemy plates back                          calls=408   plates=10
+enemy plates hidden and back during a cast calls=806   plates=10
+enemy plates hidden and back while the cast ends calls=781   plates=10
 zone into a dungeon                        calls=0     plates=0
 zone into an arena                         calls=0     plates=0
 back to the open world                     calls=0     plates=0
 hostile plate removed                      calls=15    plates=1
-hostile plate recycled                     calls=67    plates=1
-the boar's plate back after the aura filters changed calls=575   plates=10
-names only switched off again              calls=600   plates=10
-personal resource frame reused for a hostile calls=111   plates=1
-the frame back on the personal resource display calls=92    plates=1
-clear the focus                            calls=40    plates=1
-a plate appears before its unit is ready   calls=191   plates=1
-the unit is ready one frame later          calls=50    plates=1
-reload in combat inside a dungeon          calls=666   plates=11
-combat ends after that reload              calls=490   plates=11
-hover the boar                             calls=38    plates=1
-the cursor moves straight onto the elite   calls=69    plates=2
+hostile plate recycled                     calls=62    plates=1
+the boar's plate back after the aura filters changed calls=541   plates=10
+names only switched off again              calls=561   plates=10
+personal resource frame reused for a hostile calls=106   plates=1
+the frame back on the personal resource display calls=87    plates=1
+clear the focus                            calls=35    plates=1
+a plate appears before its unit is ready   calls=186   plates=1
+the unit is ready one frame later          calls=45    plates=1
+reload in combat inside a dungeon          calls=622   plates=11
+combat ends after that reload              calls=446   plates=11
+hover the boar                             calls=33    plates=1
+the cursor moves straight onto the elite   calls=64    plates=2
 the cursor leaves                          calls=33    plates=1
-content settings                           calls=2776  plates=11
-combat filter on                           calls=653   plates=11
-combat filter off                          calls=1392  plates=11
+content settings                           calls=2624  plates=11
+combat filter on                           calls=609   plates=11
+combat filter off                          calls=1308  plates=11
 the interrupt resolver asked               calls=0     plates=0
-stacking passed through                    calls=862   plates=11
-execute marker on                          calls=716   plates=11
+stacking passed through                    calls=786   plates=11
+execute marker on                          calls=672   plates=11
 the elite drops below a fifth of its health calls=6     plates=1
-threshold set by hand, then automatic again calls=2038  plates=11
+threshold set by hand, then automatic again calls=1922  plates=11
 the class decides the threshold            calls=128   plates=4
-a marked plate reused for a friendly unit  calls=1471  plates=11
-execute marker off                         calls=659   plates=11
-a vendor and a follower companion appear   calls=422   plates=2
-friendly NPCs sized by their own setting   calls=1558  plates=13
-names only, the companion included         calls=1540  plates=13
-friendly NPC plates switched off in the game calls=532   plates=13
-the game's visibility settings followed    calls=3504  plates=13
-the visibility settings passed through     calls=1562  plates=13
-the game's Nameplate Size followed         calls=2512  plates=13
-the driver's size and CVars                calls=2582  plates=13
+a marked plate reused for a friendly unit  calls=1387  plates=11
+execute marker off                         calls=615   plates=11
+a vendor and a follower companion appear   calls=412   plates=2
+friendly NPCs sized by their own setting   calls=1460  plates=13
+names only, the companion included         calls=1450  plates=13
+friendly NPC plates switched off in the game calls=493   plates=13
+the game's visibility settings followed    calls=3913  plates=13
+the visibility settings passed through     calls=1436  plates=13
+the game's Nameplate Size followed         calls=2326  plates=13
+the driver's size and CVars                calls=2400  plates=13
 switch nameplates off                      calls=0     plates=0
