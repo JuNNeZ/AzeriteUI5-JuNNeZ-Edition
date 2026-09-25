@@ -33,7 +33,7 @@ local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
 local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
 local NAMEPLATE_SCALE_DEFAULT = 2
 local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = .8
-local FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT = 1
+local FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT = .8
 local ENEMY_NAMEPLATE_SCALE_DEFAULT = .66
 local FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = 0
 local ENEMY_NAMEPLATE_TARGET_SCALE_DEFAULT = .5
@@ -178,6 +178,28 @@ local SetFriendlyNameOnlyTargetOption = function()
 		end
 		module:UpdateSettings()
 	end
+end
+
+-- One of Blizzard's settings for which nameplates show, read and written straight through
+-- (Components/UnitFrames/NamePlates/CVars.lua). Hidden where the client has no such setting.
+local ShownToggle = function(kind, name, desc, order)
+	return {
+		name = name,
+		desc = desc,
+		order = order,
+		type = "toggle", width = "full",
+		hidden = function(info)
+			local module = getmodule()
+			return not (module and module.IsShownSettingSupported and module:IsShownSettingSupported(kind))
+		end,
+		set = function(info, val) getmodule():SetShownSetting(kind, val) end,
+		get = function(info) return getmodule():GetShownSetting(kind) end
+	}
+end
+
+local IsStackingHidden = function(info)
+	local module = getmodule()
+	return not (module and module.IsStackingSupported and module:IsStackingSupported())
 end
 
 local GenerateOptions = function()
@@ -345,17 +367,14 @@ local GenerateOptions = function()
 					}
 				}
 			},
-			-- Blizzard's own setting, read and written straight through: AzeriteUI stores nothing.
-			-- Shown even with Azerite nameplates off, since it moves Blizzard's plates as well.
+			-- Blizzard's own settings, read and written straight through: AzeriteUI stores nothing.
+			-- Shown even with Azerite nameplates off, since they change Blizzard's plates as well. The
+			-- four that decide which plates show are the ones the plates follow (Visibility.lua).
 			stacking = {
-				name = L["Stacking"],
+				name = L["Game settings"],
 				order = 1.4,
 				type = "group",
 				inline = true,
-				hidden = function(info)
-					local module = getmodule()
-					return not (module and module.IsStackingSupported and module:IsStackingSupported())
-				end,
 				args = {
 					stackingDescription = {
 						name = L["These are the game's own nameplate settings, the same ones Blizzard's Options change. A change made in combat applies when it ends."],
@@ -363,11 +382,20 @@ local GenerateOptions = function()
 						type = "description",
 						width = "full"
 					},
+					showAll = ShownToggle("showAll", L["Always show nameplates"],
+						L["Off, nameplates only show while you are in combat."], .1),
+					showEnemies = ShownToggle("enemies", L["Enemies"],
+						L["Nameplates of units you can attack."], .2),
+					showFriendlyPlayers = ShownToggle("friendlyPlayers", L["Friendly players"],
+						L["Nameplates of players on your side."], .3),
+					showFriendlyNPCs = ShownToggle("friendlyNPCs", L["Friendly NPCs"],
+						L["Nameplates of friendly NPCs, such as vendors and quest givers."], .4),
 					stackEnemyPlates = {
 						name = L["Stack enemy nameplates"],
 						desc = L["Enemy nameplates move apart so they do not overlap."],
 						order = 1,
 						type = "toggle", width = "full",
+						hidden = IsStackingHidden,
 						set = function(info, val) getmodule():SetStacking("enemy", val) end,
 						get = function(info) return getmodule():GetStacking("enemy") end
 					},
@@ -376,6 +404,7 @@ local GenerateOptions = function()
 						desc = L["Friendly nameplates move apart so they do not overlap."],
 						order = 2,
 						type = "toggle", width = "full",
+						hidden = IsStackingHidden,
 						set = function(info, val) getmodule():SetStacking("friendly", val) end,
 						get = function(info) return getmodule():GetStacking("friendly") end
 					}
@@ -575,6 +604,23 @@ local GenerateOptions = function()
 						set = setter,
 						get = getter
 					},
+					-- The game's nameplateOtherAtBase, which the driver writes with its other CVars.
+					platePosition = {
+						name = L["Position"],
+						desc = L["Where nameplates sit on their unit: over its head, or at its feet."],
+						order = 3.6,
+						type = "select", width = "full",
+						values = function()
+							return { head = L["Over the head"], feet = L["At the feet"] }
+						end,
+						sorting = function()
+							return { "head", "feet" }
+						end,
+						set = setter,
+						get = function(info)
+							return (getter(info) == "feet") and "feet" or "head"
+						end
+					},
 					friendlyScale = {
 						name = L["Friendly/player size (%)"],
 						desc = L["The default size for friendly player nameplates. `100%` is the intended default."],
@@ -604,7 +650,7 @@ local GenerateOptions = function()
 					},
 					friendlyTargetScale = {
 						name = L["Friendly/player target size (%)"],
-						desc = L["How much larger friendly NPC plates become when targeted. Friendly player name-only plates use this too unless you set a separate override below."],
+						desc = L["How much larger friendly nameplates, players and NPCs alike, become when targeted. Friendly player name-only plates use this too unless you set a separate override below."],
 						order = 7,
 						type = "range", width = "full",
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,

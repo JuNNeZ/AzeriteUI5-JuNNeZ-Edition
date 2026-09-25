@@ -48,7 +48,7 @@ local GetNamePlateCastBarOffsetSetting = NP.GetNamePlateCastBarOffsetSetting
 local GetTargetLikeNameLift = NP.GetTargetLikeNameLift
 local GetNamePlateAuraConfig = NP.GetNamePlateAuraConfig
 local GetNamePlateAuraConfigVersion = NP.GetNamePlateAuraConfigVersion
-local GetCVarBoolIfSupported = NP.GetCVarBoolIfSupported
+local IsShownByBlizzard = NP.IsShownByBlizzard
 
 local UpdateNamePlateWidgetContainer = function(self, shouldShow)
 	local container = self and self.WidgetContainer
@@ -169,21 +169,26 @@ local ShouldShowNamePlateForBlizzardVisibility = function(self)
 		return true
 	end
 
-	local showAll = GetCVarBoolIfSupported("nameplateShowAll", true)
-	if ((not showAll) and (not self.inCombat)) then
+	if ((not IsShownByBlizzard("showAll")) and (not self.inCombat)) then
 		return false
 	end
 
 	if (IsHostileNamePlate(self)) then
-		return GetCVarBoolIfSupported("nameplateShowEnemies", true)
+		return IsShownByBlizzard("enemies")
 	end
 
 	if (self.isFriendlyAssistableNPC) then
-		return GetCVarBoolIfSupported("nameplateShowFriends", true)
-			and GetCVarBoolIfSupported("nameplateShowFriendlyNPCs", true)
+		-- With friendly NPC plates off, the engine still gives one a plate for its widgets or as a soft
+		-- target, and Blizzard's own plate shows it (Blizzard_NamePlateUnitFrame.lua,
+		-- UpdateWidgetsOnlyMode). Its setting stands on its own since Retail 12; before, it also needed
+		-- the friendly one.
+		if (self.nameplateShowsWidgetsOnly or self.isTarget or self.isSoftTarget) then
+			return true
+		end
+		return IsShownByBlizzard("friendlyNPCs")
 	end
 
-	return GetCVarBoolIfSupported("nameplateShowFriends", true)
+	return IsShownByBlizzard("friendlyPlayers")
 end
 
 --[[

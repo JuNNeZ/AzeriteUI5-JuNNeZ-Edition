@@ -1,5 +1,5 @@
 == login
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 == add ten plates
 Plate1 (hostile elite)
   unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
@@ -43,7 +43,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name hidden@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
@@ -300,7 +300,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=true
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
@@ -535,7 +535,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name hidden@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
@@ -624,7 +624,7 @@ Plate10 (decorative NPC)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets hidden@0 ignore=false
 == names only for friendly players
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 Plate5 (friendly player)
   unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
@@ -639,7 +639,7 @@ Plate5 (friendly player)
   power hidden@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets hidden@1 ignore=false
 == show Blizzard widgets
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 Plate1 (hostile elite)
   unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=true soft=false focus=false mouse=false combat=false
@@ -683,7 +683,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name hidden@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
@@ -720,7 +720,7 @@ Plate9 (secret hostile)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == always show names
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 Plate2 (hostile)
   unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=false soft=false focus=false mouse=false combat=false
@@ -750,7 +750,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
@@ -787,7 +787,7 @@ Plate9 (secret hostile)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == auras on every plate
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 Plate2 (hostile)
   unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=false soft=false focus=false mouse=false combat=false
@@ -817,7 +817,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
@@ -854,9 +854,9 @@ Plate9 (secret hostile)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == aura filters changed
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 == bigger target markers
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 Plate1 (hostile elite)
   unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=true soft=false focus=false mouse=false combat=false
@@ -900,7 +900,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
@@ -950,7 +950,7 @@ Plate9 (secret hostile)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == target markers back to their default size
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 Plate1 (hostile elite)
   unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=true soft=false focus=false mouse=false combat=false
@@ -994,7 +994,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
@@ -1126,11 +1126,11 @@ Plate3 (neutral rare)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == zone into a dungeon
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.75 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.75 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 == zone into an arena
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=1 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=60 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=1 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=60 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 == back to the open world
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 == hostile plate removed
 Plate2 (hostile)
   unit=nil obj=nil npc=nil prd=nil widgetsOnly=nil canAttack=nil
@@ -1160,9 +1160,9 @@ Plate2 (hostile)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == the boar's plate back after the aura filters changed
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=1
 == names only switched off again
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 Plate5 (friendly player)
   unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
@@ -1247,7 +1247,7 @@ Plate11 (late arrival)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == reload in combat inside a dungeon
-  cvars nameplateLargerScale=1 nameplateMaxScale=1 nameplateMinScale=1 nameplateSelectedScale=1 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxScale=1 nameplateMinScale=1 nameplateSelectedScale=1 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 Plate1 (hostile elite)
   unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=true soft=false focus=false mouse=false combat=true
@@ -1291,7 +1291,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=true
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value shown@1 pt=CENTER>-:CENTER(0,-18)
@@ -1393,7 +1393,7 @@ Plate11 (late arrival)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == combat ends after that reload
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.75 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateTargetBehindMaxDistance=15
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.75 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.45 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15
 Plate1 (hostile elite)
   unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=true soft=false focus=false mouse=false combat=false
@@ -1437,7 +1437,7 @@ Plate3 (neutral rare)
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
@@ -1596,9 +1596,9 @@ Plate1 (hostile elite)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == content settings
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 == combat filter on
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 Plate1 (hostile elite)
   unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=true soft=false focus=false mouse=false combat=false
@@ -1640,7 +1640,7 @@ Plate3 (neutral rare)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == combat filter off
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 Plate2 (hostile)
   unit=nameplate2 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=false soft=false focus=false mouse=false combat=false
@@ -1684,7 +1684,7 @@ Plate3 (neutral rare)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == execute marker on
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 Plate1 (hostile elite)
   unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=true soft=false focus=false mouse=false combat=false
@@ -1759,14 +1759,14 @@ Plate1 (hostile elite)
   execute line shown@1 pt=CENTER>Health:LEFT(18.4,0); zone shown@secret:1 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == threshold set by hand, then automatic again
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 == the class decides the threshold
 == a marked plate reused for a friendly unit
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 Plate11 (late arrival)
   unit=nameplate11 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false
-  frame shown@1 ignore=false scale=1.422
+  frame shown@1 ignore=false scale=1.138
   name shown@1 text="Late Arrival" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
   health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
@@ -1778,7 +1778,7 @@ Plate11 (late arrival)
   execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == execute marker off
-  cvars NamePlateHorizontalScale=1 NamePlateVerticalScale=1 clampTargetNameplateToScreen=1 nameplateClassResourceTopInset=0 nameplateGlobalScale=1.1 nameplateLargeBottomInset=0.04 nameplateLargeTopInset=0.1 nameplateLargerScale=1 nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplateOtherBottomInset=0.04 nameplateOtherTopInset=0.1 nameplateResourceOnTarget=0 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 Plate1 (hostile elite)
   unit=nameplate1 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
   state target=true soft=false focus=false mouse=false combat=false
@@ -1822,5 +1822,137 @@ Plate3 (neutral rare)
   power shown@0; prediction hidden@0
   execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== a vendor and a follower companion appear
+Plate12 (vendor)
+  unit=nameplate12 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Innkeeper Allison" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate12 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate13 (follower)
+  unit=nameplate13 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Brann Bronzebeard" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate13 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== friendly NPCs sized by their own setting
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+== names only, the companion included
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate13 (follower)
+  unit=nameplate13 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Brann Bronzebeard" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate13 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== friendly NPC plates switched off in the game
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@0 ignore=false scale=1.138
+  name hidden@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@0 ignore=false scale=1.138
+  name hidden@1 text="Late Arrival" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
+Plate12 (vendor)
+  unit=nameplate12 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@0 ignore=false scale=1.138
+  name hidden@1 text="Innkeeper Allison" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health hidden@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate12 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
+== the game's visibility settings followed
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Late Arrival" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power shown@0; prediction hidden@0
+  execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate12 (vendor)
+  unit=nameplate12 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Innkeeper Allison" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=0.725,1,0.714; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate12 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== the visibility settings passed through
+  cvars nameplateShowFriendlyNpcs=1
+== the game's Nameplate Size followed
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+== the driver's size and CVars
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
 == switch nameplates off
   reloads 1

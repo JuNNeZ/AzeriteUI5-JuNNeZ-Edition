@@ -1,7 +1,7 @@
 -- License: LICENSE.txt
 
 local MAJOR_VERSION = "LibActionButton-1.0-GE"
-local MINOR_VERSION = 77 -- Button state without restricted execution (WoW Forever 1.60.1)
+local MINOR_VERSION = 78 -- Flyout discovery survives GetFlyoutInfo returning nothing (WoW Forever 1.60.1.70009)
 
 -- Whether secure handler snippets compile on this client.
 --
@@ -1340,10 +1340,17 @@ if UseCustomFlyout then
 
 	-- discover all possible flyouts
 	function DiscoverFlyoutSpells()
+		-- The table only feeds the restricted flyout, which SyncFlyoutInfoToHandler does not
+		-- build on a client without secure snippets, so there is nothing to discover it for.
+		if not HasSecureSnippets then return end
+
 		-- 300 is a safe upper limit in 10.0.2, the highest known spell is 229
 		for flyoutID = 1, 300 do
 			local success, _, _, numSlots, isKnown = pcall(GetFlyoutInfo, flyoutID)
-			if success then
+			-- An unknown ID used to raise, and the pcall absorbed it. WoW Forever 1.60.1.70009
+			-- (C_Flyout, MayReturnNothing) returns nothing instead, and a nil loop limit here
+			-- aborted the first CreateButton - and with it every action bar.
+			if success and IsSafeNumber(numSlots) then
 				lib.FlyoutInfo[flyoutID] = { numSlots = numSlots, isKnown = isKnown, slots = {} }
 				for slotID = 1, numSlots do
 					local spellID, overrideSpellID, isKnownSlot, spellName = GetFlyoutSlotInfo(flyoutID, slotID)
@@ -1371,7 +1378,8 @@ if UseCustomFlyout then
 
 		for flyoutID, data in pairs(lib.FlyoutInfo) do
 			local success, _, _, numSlots, isKnown = pcall(GetFlyoutInfo, flyoutID)
-			if success then
+			-- See DiscoverFlyoutSpells: a flyout that stops answering is skipped, as one that raises is.
+			if success and IsSafeNumber(numSlots) then
 				data.isKnown = isKnown
 				for slotID = 1, numSlots do
 					local spellID, overrideSpellID, isKnownSlot, spellName = GetFlyoutSlotInfo(flyoutID, slotID)

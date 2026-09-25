@@ -29,22 +29,35 @@ order, and they keep showing in combat:
 - **Important enemy buffs** - such as big defensive cooldowns
 - **Your short buffs** - 30 seconds or less, on friendly plates
 
-### Stacking
+### Game settings
 
-**Stack enemy nameplates** and **Stack friendly nameplates** are Blizzard's own
-settings, shown here so you do not have to go to the game's Options for them. Changing
-one here changes it there. A change made in combat applies when combat ends.
+Blizzard's own nameplate settings, shown here so you do not have to go to the game's
+Options for them. Changing one here changes it there, and AzeriteUI's plates follow
+them. A change made in combat applies when combat ends.
+
+- **Always show nameplates** - off, plates only show while you are in combat
+- **Enemies**, **Friendly players** and **Friendly NPCs** - which plates show at all. With
+  friendly NPCs off, a friendly NPC still gets its plate while it is your soft target or
+  has an objective bar, as with Blizzard's plates.
+- **Stack enemy nameplates** and **Stack friendly nameplates**
 
 ### Size
 
-- **Use Blizzard overall scale** - follow Blizzard's own nameplate scale slider
+- **Use Blizzard overall scale** - follow Blizzard's Nameplate Size setting instead of
+  **Overall size**; Medium matches 100%
 - **Overall size (%)**
-- **Enemy size (%)** and **Enemy target size (%)**
-- **Friendly/player size (%)** and **Friendly/player target size (%)**
-- **Friendly NPC size (%)**
-- **Friendly name size (%)** and **Friendly name target size (%)** for name-only plates
 - **Castbar vertical offset**
+- **Position** - over the unit's head, or at its feet
+- **Enemy size (%)** and **Enemy target size (%)**
+- **Friendly/player size (%)** - friendly players, and the companions of follower dungeons,
+  which the game draws as players
+- **Friendly NPC size (%)** - vendors, trainers, quest givers and every other friendly NPC
+- **Friendly/player target size (%)** - how much larger any friendly plate grows when targeted
+- **Friendly name size (%)** and **Friendly name target size (%)** for name-only plates
 - **Target marker size** - the raid target icon (skull, cross, star...) beside the health bar
+
+Blizzard's **Simplified** nameplate option does not shrink AzeriteUI's plates; the size
+settings above decide.
 
 ### Friendly players
 

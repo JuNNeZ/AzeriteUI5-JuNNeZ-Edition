@@ -58,6 +58,7 @@ local RefreshActiveNamePlates = NP.RefreshActiveNamePlates
 local GetDriverCVars = NP.GetDriverCVars
 local ApplyNamePlateDriverSettings = NP.ApplyNamePlateDriverSettings
 local ApplyPendingNamePlateStacking = NP.ApplyPendingNamePlateStacking
+local ApplyPendingNamePlateVisibility = NP.ApplyPendingNamePlateVisibility
 local NamePlate_PostUpdateElements = NP.NamePlate_PostUpdateElements
 local NamePlate_NeedsSecondPass = NP.NamePlate_NeedsSecondPass
 local NamePlate_PostUpdate = NP.NamePlate_PostUpdate
@@ -66,6 +67,8 @@ local NamePlate_OnLeave = NP.NamePlate_OnLeave
 local NamePlate_RefreshSelection = NP.NamePlate_RefreshSelection
 local style = NP.style
 local IsVisibilityManagedCVar = NP.IsVisibilityManagedCVar
+local IsBlizzardScaleCVar = NP.IsBlizzardScaleCVar
+local IsBlizzardPlateSizeCVar = NP.IsBlizzardPlateSizeCVar
 local IsFightingSomeoneElse = NP.IsFightingSomeoneElse
 local ApplyNamePlateAlpha = NP.ApplyNamePlateAlpha
 local CONTENT_TYPES = NP.CONTENT_TYPES
@@ -322,6 +325,22 @@ NamePlatesMod.OnSelectionChanged = function(self, event)
 	end
 end
 
+-- Blizzard's driver sets every plate to its own size when its nameplate options or the display change
+-- (Blizzard_NamePlates.lua, UpdateNamePlateSize), over the size the oUF driver set from our layout. Put
+-- ours back on the next frame, once it has; in combat that waits like any driver refresh.
+NamePlatesMod.ScheduleDriverRefresh = function(self)
+	if (self.driverRefreshScheduled) then
+		return
+	end
+	self.driverRefreshScheduled = true
+	C_Timer.After(0, function()
+		self.driverRefreshScheduled = nil
+		if (self:IsEnabled()) then
+			ApplyNamePlateDriverSettings(self)
+		end
+	end)
+end
+
 -- Entering combat changes what every plate shows (names, health text), so every plate is laid out,
 -- once. Leaving combat is the module's full refresh, below.
 NamePlatesMod.OnCombatStart = function(self, event)
@@ -357,19 +376,25 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 	elseif (event == "UI_SCALE_CHANGED") then
 		ApplyNamePlateDriverSettings(self)
 		RefreshActiveNamePlates()
+	elseif (event == "DISPLAY_SIZE_CHANGED") then
+		self:ScheduleDriverRefresh()
 	elseif (event == "CVAR_UPDATE") then
 		local name = ...
-		if (name == "nameplateGlobalScale" and IsUsingBlizzardGlobalScale()) then
+		if (IsBlizzardScaleCVar(name) and IsUsingBlizzardGlobalScale()) then
 			ApplyNamePlateDriverSettings(self)
 			RefreshActiveNamePlates()
 		elseif (IsVisibilityManagedCVar(name)) then
 			RefreshActiveNamePlates()
+		end
+		if (IsBlizzardPlateSizeCVar(name)) then
+			self:ScheduleDriverRefresh()
 		end
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		if (self.pendingDriverRefresh) then
 			ApplyNamePlateDriverSettings(self)
 		end
 		ApplyPendingNamePlateStacking(self)
+		ApplyPendingNamePlateVisibility(self)
 		-- A full pass on purpose: combat is when unit answers come back secret, and this is where a
 		-- plate added under that restriction is read again with clear answers.
 		RefreshActiveNamePlates()
@@ -519,6 +544,7 @@ NamePlatesMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_SOFT_INTERACT_CHANGED", "OnEvent")
 	self:RegisterEvent("UPDATE_MOUSEOVER_UNIT", "OnEvent")
 	self:RegisterEvent("UI_SCALE_CHANGED", "OnEvent")
+	self:RegisterEvent("DISPLAY_SIZE_CHANGED", "OnEvent")
 	self:RegisterEvent("CVAR_UPDATE", "OnEvent")
 	if (C_ChallengeMode) then
 		self:RegisterEvent("CHALLENGE_MODE_START", "OnEvent")

@@ -52,6 +52,9 @@ ns.RegisterConfig("Tooltips", {
 				offsetBottom = -6,
 				offsetBar = 0,
 				offsetBarBottom = -2,
+				-- Bottom of the compare tooltips' "Equipped" tab, above the tooltip's top edge:
+				-- 1px behind where this border becomes visible, as Blizzard tucks it behind its own.
+				compareHeaderOffsetY = 3,
 				backdropColor = { .05, .05, .05, .95 },
 				backdropBorderColor = { .6, .6, .6, 1 },
 				backdrop = {
@@ -80,6 +83,8 @@ ns.RegisterConfig("Tooltips", {
 				offsetBottom = -18,
 				offsetBar = 0,
 				offsetBarBottom = -6,
+				-- The art's solid top edge starts 12px inside the backdrop (offsetTop - 12 = 6).
+				compareHeaderOffsetY = 5,
 				backdropColor = { .05, .05, .05, .95 },
 				backdropBorderColor = { 1, 1, 1, 1 },
 				backdrop = {

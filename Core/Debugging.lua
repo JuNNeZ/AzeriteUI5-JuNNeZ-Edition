@@ -3361,6 +3361,7 @@ local function PrintNamePlateScaleStatus(token)
 		"softEnemy", tostring(info.softEnemy),
 		"softInteract", tostring(info.softInteract),
 		"hostile", tostring(info.hostile),
+		"friendlyNPC", tostring(info.friendlyNPC),
 		"nameOnly", tostring(info.friendlyNameOnly))
 	SafePrint("|cfff0f0f0  scale inputs:",
 		"base", tostring(info.baseScale),

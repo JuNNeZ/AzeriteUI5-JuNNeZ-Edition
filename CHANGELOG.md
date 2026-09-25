@@ -10,6 +10,29 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.10.1-JuNNeZ (2026-09-25) - Action Bars Back on Forever, and Friendly NPCs Sized as Such
+
+### Highlights
+
+- **Action bars are back on Forever.** After the Forever 1.60.1.70009 client update every action bar could be missing, the pet and stance bars too, with `'for' limit must be a number` errors from LibActionButton in BugSack. Going back to an older AzeriteUI did not help, because every version had the same flaw. The bars now load again. Retail was not affected.
+- **Friendly NPC size now reaches friendly NPCs.** Most vendors, trainers and quest givers were sized as friendly players, so `/az -> Nameplates -> Size -> Friendly NPC size (%)` seemed to do nothing for them. NPCs are now told apart the way Blizzard's own nameplates do it, and the companions of follower dungeons count as players, as they do on Blizzard's plates. Friendly NPC size now starts at the friendly player size, so vendors look as they did until you change it.
+- **Blizzard's nameplate settings from inside AzeriteUI.** `/az -> Nameplates -> Game settings` (it was Stacking) now also holds the game's own **Always show nameplates**, **Enemies**, **Friendly players** and **Friendly NPCs** switches; changing one there changes it in the game's Options, and AzeriteUI's plates follow at once. A new **Position** choice under Size puts plates over heads or at feet. **Use Blizzard overall scale** follows the game's Nameplate Size again, Medium matching 100%; it had stopped following anything.
+- **Compare tooltips no longer overlap.** Shift-hovering an item, the AzeriteUI border covered the "Equipped" tab and overlapped the tooltip beside it. The borders now meet instead of overlapping, and the tab sits on top of the border, with both the Azerite and the Classic theme.
+- **Nameplate fixes you may notice.** Blizzard's **Simplified** nameplate option no longer shrinks AzeriteUI's plates for friendly players and NPCs; the size settings decide. Changing Blizzard's nameplate size or style, or resizing the game window, no longer leaves the plates with Blizzard's spacing and click area until the next reload. **Maximum distance** now limits other players' plates too, and battlegrounds and arenas start at 60 yards so enemy players stay in range.
+
+### Development
+
+- **Traced the missing bars to one changed answer in the Forever client.** The action button library looks for flyout spells by asking about every flyout number in turn, and counted on the game raising an error for a number that does not exist. Forever 70009 answers such a number with nothing instead, and that stopped the library before a single bar was built. The library now skips an empty answer as it skips an error, and does not look for flyouts on Forever at all, where AzeriteUI's own flyouts cannot open. A new offline test loads the whole library against four ways a client can answer; the old copy fails it with the reporter's exact two errors.
+- **Checked every nameplate setting against Blizzard's own Retail 12.1 and Forever code.** That found the friendly NPC test Blizzard does not use, the Simplified option scaling AzeriteUI's plates from underneath, Blizzard resizing the plates over AzeriteUI's size, the friendly visibility settings under their old names, the Blizzard scale setting that no longer exists, and about ten settings AzeriteUI still wrote that the game no longer has. It now writes only settings the client has. Platynator and Plater were read for how they handle the same settings. The offline nameplate test now runs against the real 12.1 set and refuses any other, which the old test could not tell apart, and adds a vendor that cannot be assisted and a follower companion.
+- **Compare tooltips are spaced inside Blizzard's own layout call.** An earlier attempt in 5.3.5x moved them a frame later, which made them jitter, and was removed. The gap is now added as Blizzard places them, from the width each theme's border really has, and the tab is tucked by the height measured from the border art. A new offline test measures the seam and the tab edge on both themes, either side, with one or two compared items.
+
+### Access and known limits
+
+- **Verified offline only:** none of these changes has been seen in the game yet, on either client.
+- In the open world, other players' plates now stop at your **Maximum distance** (40 by default) instead of the game's 60. Raise it under `/az -> Nameplates -> Content settings` if you want them farther.
+- Near the right edge of the screen, a compare tooltip the game pushes back on screen may still overlap its neighbour by up to the border's width.
+- The new option text was translated without native speakers; corrections are welcome on the Discord.
+
 ## 5.10.0-JuNNeZ (2026-09-24) - Smarter Nameplates
 
 ### Highlights

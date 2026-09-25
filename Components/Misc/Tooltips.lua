@@ -310,6 +310,19 @@ local GetStatusBarText = function(bar, valuePosition, valueFont, valueColor)
 	return text
 end
 
+-- Compare tooltips wear an "Equipped" tab that ShoppingTooltipTemplate tucks
+-- 1px behind the tooltip's top edge. Our backdrop hangs above that edge, so the
+-- tab is tucked behind our border instead, as high as the theme says.
+-- Without a style it gets the template's own anchor back.
+local PlaceCompareHeader = function(tooltip, backdropStyle)
+	local header = tooltip and tooltip.CompareHeader
+	if (not header) then
+		return
+	end
+	header:ClearAllPoints()
+	header:SetPoint("BOTTOMLEFT", tooltip, "TOPLEFT", 0, backdropStyle and backdropStyle.compareHeaderOffsetY or -1)
+end
+
 local RestoreBlizzardTooltipBackdrop = function(tooltip)
 	if (not tooltip) or tooltip:IsForbidden() then
 		return
@@ -326,6 +339,7 @@ local RestoreBlizzardTooltipBackdrop = function(tooltip)
 		tooltip.NineSlice:SetParent(tooltip)
 		tooltip.NineSlice:SetAlpha(1)
 	end
+	PlaceCompareHeader(tooltip)
 end
 
 local ManagedTooltipState = setmetatable({}, { __mode = "k" })
@@ -577,6 +591,8 @@ Tooltips.UpdateBackdropTheme = function(self, tooltip)
 		RestoreBlizzardTooltipBackdrop(tooltip)
 		return
 	end
+
+	PlaceCompareHeader(tooltip, db)
 
 	-- Make sure our backdrop is visible after a previous disable restored Blizzard skin
 	if (not backdrop:IsShown()) then
@@ -1045,7 +1061,83 @@ Tooltips.OnCompareItemShow = function(self, tooltip)
 		-- attempts to override Blizzard's placement caused persistent
 		-- jitter because two independent positioning systems fought over
 		-- the same anchors with a mandatory 1-frame delay between them.
+		-- The only adjustment is OnAnchorShoppingTooltips, inside Blizzard's call.
 	end)
+end
+
+-- TooltipComparisonManager sets compare tooltips edge to edge with the tooltip
+-- they compare against. Our backdrops hang outside their tooltips, so the two
+-- borders overlapped. The joins it has just made are widened by what the two
+-- backdrops hang out, inside the same call, so nothing is placed twice on screen.
+-- Blizzard still picks the side, the stacking and the screen-edge slide.
+-- [point] = { relativePoint, which way the gap goes }
+local CompareJoins = {
+	LEFT = { "RIGHT", 1 },
+	RIGHT = { "LEFT", -1 },
+	TOPLEFT = { "TOPRIGHT", 1 },
+	TOPRIGHT = { "TOPLEFT", -1 }
+}
+
+-- How far our backdrop reaches past one side of a tooltip, in that tooltip's scale.
+local GetBackdropOverhang = function(frame, side)
+	local backdrop = frame and rawget(Backdrops, frame)
+	if (not backdrop) or (not backdrop:IsShown()) then
+		return 0
+	end
+	if (side == "LEFT") then
+		return math_max(0, -(backdrop.offsetLeft or 0))
+	end
+	return math_max(0, backdrop.offsetRight or 0)
+end
+
+local WidenCompareJoin = function(compareTooltip)
+	if (not compareTooltip) or compareTooltip:IsForbidden() or (not compareTooltip:IsShown()) then
+		return
+	end
+	-- GetPoint is secret when the anchoring is; leave such a tooltip where Blizzard put it.
+	local numPoints = compareTooltip:GetNumPoints()
+	if (IsSecretValue(numPoints)) then
+		return
+	end
+	for i = 1, numPoints do
+		local point, relativeTo, relativePoint, x, y = compareTooltip:GetPoint(i)
+		if (IsSecretValue(point) or IsSecretValue(relativeTo) or IsSecretValue(relativePoint) or IsSecretValue(x) or IsSecretValue(y)) then
+			return
+		end
+		local join = CompareJoins[point]
+		if (join and relativeTo and relativePoint == join[1]) then
+			local direction = join[2]
+			local gap = GetBackdropOverhang(compareTooltip, direction > 0 and "LEFT" or "RIGHT")
+			local reach = GetBackdropOverhang(relativeTo, direction > 0 and "RIGHT" or "LEFT")
+			if (reach > 0) then
+				-- The offset is in the compare tooltip's scale, the other backdrop in its own.
+				local ownScale, otherScale = compareTooltip:GetEffectiveScale(), relativeTo:GetEffectiveScale()
+				if (IsSecretValue(ownScale) or IsSecretValue(otherScale)) then
+					return
+				end
+				gap = gap + reach * otherScale / ownScale
+			end
+			if (gap > 0) then
+				compareTooltip:SetPoint(point, relativeTo, relativePoint, direction * gap, y)
+			end
+			return
+		end
+	end
+end
+
+Tooltips.OnAnchorShoppingTooltips = function(self, manager)
+	if (self:IsDisabled()) then return end
+	local tooltip = manager and manager.tooltip
+	local compareTooltips = tooltip and tooltip.shoppingTooltips
+	if (type(compareTooltips) ~= "table") then return end
+	-- All styled before any is measured, as one can hang from the other: the first
+	-- compare of a session can arrive before a sized tooltip let UpdateBackdropTheme build it.
+	for _, compareTooltip in ipairs(compareTooltips) do
+		self:UpdateBackdropTheme(compareTooltip)
+	end
+	for _, compareTooltip in ipairs(compareTooltips) do
+		API.SafeCall("Tooltips.WidenCompareJoin", WidenCompareJoin, compareTooltip)
+	end
 end
 
 Tooltips.SetUnitAura = function(self, tooltip, unit, index, filter)
@@ -1196,6 +1288,11 @@ Tooltips.SetHooks = function(self)
 	if (not self:IsHooked("GameTooltip_ShowCompareItem")) then
 		self:SecureHook("GameTooltip_ShowCompareItem", "OnCompareItemShow")
 	end
+	-- Blizzard_SharedXMLGame's, loaded before any addon on Retail and Forever.
+	local comparisonManager = _G.TooltipComparisonManager
+	if (comparisonManager and comparisonManager.AnchorShoppingTooltips and not self:IsHooked(comparisonManager, "AnchorShoppingTooltips")) then
+		self:SecureHook(comparisonManager, "AnchorShoppingTooltips", "OnAnchorShoppingTooltips")
+	end
 	for _, compareTooltip in ipairs({
 		_G.ShoppingTooltip1,
 		_G.ShoppingTooltip2,
@@ -1289,16 +1386,9 @@ Tooltips.UpdateSettings = function(self)
 				_G.QuestScrollFrame and _G.QuestScrollFrame.CampaignTooltip,
 				_G.NarciGameTooltip
 			} do
-				if (tt and not tt:IsForbidden()) then
-					if (tt.NineSlice and tt.NineSlice.GetParent and tt.NineSlice:GetParent() == UIHider) then
-						tt.NineSlice:SetParent(tt)
-						tt.NineSlice:SetAlpha(1)
-					end
-					tt:EnableDrawLayer("BACKGROUND")
-					tt:EnableDrawLayer("BORDER")
-					local backdrop = rawget(Backdrops, tt)
-					if (backdrop) then backdrop:Hide() end
-				end
+				-- Also forgets the style signature, so switching back on restyles in
+				-- full instead of taking UpdateBackdropTheme's nothing-changed return.
+				RestoreBlizzardTooltipBackdrop(tt)
 			end
 
 			local gtt = _G.GameTooltip
@@ -1362,6 +1452,8 @@ end
 		if (self:IsHooked("GameTooltip_UnitColor")) then self:Unhook("GameTooltip_UnitColor") end
 		if (self:IsHooked("GameTooltip_ShowCompareItem")) then self:Unhook("GameTooltip_ShowCompareItem") end
 		if (self:IsHooked("GameTooltip_SetDefaultAnchor")) then self:Unhook("GameTooltip_SetDefaultAnchor") end
+		local comparisonManager = _G.TooltipComparisonManager
+		if (comparisonManager and self:IsHooked(comparisonManager, "AnchorShoppingTooltips")) then self:Unhook(comparisonManager, "AnchorShoppingTooltips") end
 
 		-- GameTooltip methods
 		if (_G.GameTooltip) then

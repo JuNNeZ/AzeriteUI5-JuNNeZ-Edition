@@ -363,7 +363,7 @@ L["Highlight the affected party frame using the debuff type color when a removab
 L["How far away nameplates can appear. `40` matches the current Rui retail baseline."] = true
 L["How many aura icons are shown on each row. Set to 0 for automatic wrapping from frame width."] = true
 L["How much larger enemy plates become when targeted. `100%` is the intended default."] = true
-L["How much larger friendly NPC plates become when targeted. Friendly player name-only plates use this too unless you set a separate override below."] = true
+L["How much larger friendly nameplates, players and NPCs alike, become when targeted. Friendly player name-only plates use this too unless you set a separate override below."] = true
 L["Import"] = true
 L["Import settings from a string into the current options profile."] = true
 L["Info/Clock Settings"] = true
@@ -817,12 +817,23 @@ L["Important enemy buffs"] = true
 L["Buffs Blizzard marks as important on enemy nameplates, such as big defensive cooldowns."] = true
 L["Your short buffs"] = true
 L["Buffs you cast that last 30 seconds or less, on friendly nameplates."] = true
-L["Stacking"] = true
+L["Game settings"] = true
 L["These are the game's own nameplate settings, the same ones Blizzard's Options change. A change made in combat applies when it ends."] = true
 L["Stack enemy nameplates"] = true
 L["Enemy nameplates move apart so they do not overlap."] = true
 L["Stack friendly nameplates"] = true
 L["Friendly nameplates move apart so they do not overlap."] = true
+L["Always show nameplates"] = true
+L["Off, nameplates only show while you are in combat."] = true
+L["Enemies"] = true
+L["Nameplates of units you can attack."] = true
+L["Friendly players"] = true
+L["Nameplates of players on your side."] = true
+L["Friendly NPCs"] = true
+L["Nameplates of friendly NPCs, such as vendors and quest givers."] = true
+L["Where nameplates sit on their unit: over its head, or at its feet."] = true
+L["Over the head"] = true
+L["At the feet"] = true
 
 -- The game menu.
 L["Show AzeriteUI in the game menu"] = true

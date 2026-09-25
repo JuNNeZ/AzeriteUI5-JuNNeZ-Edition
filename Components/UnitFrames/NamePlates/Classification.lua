@@ -36,6 +36,7 @@ local tostring = tostring
 
 local IsSecretValue = NP.IsSecretValue
 local IsSafeUnitToken = NP.IsSafeUnitToken
+local IsPlayerForDisplay = NP.IsPlayerForDisplay
 
 local GetGuidType = function(unit)
 	if (type(unit) ~= "string" or IsSecretValue(unit) or unit == "") then
@@ -88,7 +89,9 @@ local NamePlate_Classify = function(plate, unit)
 	plate.nameplateShowsWidgetsOnly = ns.IsRetail and UnitNameplateShowsWidgetsOnly(unit)
 	local canAttack = UnitCanAttack("player", unit)
 	local canAssist = UnitCanAssist("player", unit)
-	local isPlayerUnit = UnitIsPlayer(unit)
+	local isFriend = UnitIsFriend("player", unit)
+	-- Players, and NPCs the game draws as players (follower companions): false on a secret answer.
+	local isPlayerUnit = IsPlayerForDisplay(unit)
 	local playerControlled = UnitPlayerControlled(unit)
 	local reaction = UnitReaction("player", unit)
 	local guidType = GetGuidType(unit)
@@ -99,8 +102,8 @@ local NamePlate_Classify = function(plate, unit)
 	if (issecretvalue and issecretvalue(canAssist)) then
 		canAssist = nil
 	end
-	if (issecretvalue and issecretvalue(isPlayerUnit)) then
-		isPlayerUnit = false
+	if (issecretvalue and issecretvalue(isFriend)) then
+		isFriend = nil
 	end
 	if (issecretvalue and issecretvalue(playerControlled)) then
 		playerControlled = false
@@ -118,6 +121,9 @@ local NamePlate_Classify = function(plate, unit)
 			canAssist = true
 		end
 	end
+	if (isFriend == nil and type(reaction) == "number") then
+		isFriend = reaction >= 5
+	end
 
 	plate.canAttack = (canAttack == true)
 	plate.canAssist = (canAssist == true)
@@ -130,7 +136,11 @@ local NamePlate_Classify = function(plate, unit)
 	local forceHideObjectLikeNPC = (type(npcID) == "string") and AlwaysHideObjectLikeNPCByID[npcID] and true or false
 	local suppressObjectLikeNPCByID = forceHideObjectLikeNPC and (not forceShowFriendlyNPC) and true or false
 	plate.isObjectPlate = (guidLooksLikeObject or suppressObjectLikeNPCByID or (plate.nameplateShowsWidgetsOnly and passiveWorldObjectLike and (not isCompanionLikeGuidType)) or (passiveWorldObjectLike and guidType == nil)) and true or nil
-	plate.isFriendlyAssistableNPC = (not plate.isObjectPlate) and (not isPlayerUnit) and (canAttack ~= true) and ((canAssist == true) or forceShowFriendlyNPC) and (not playerControlled)
+	-- A friendly NPC as Blizzard's plates count one: friendly and not a player (NamePlateUnitFrameMixin
+	-- IsFriend, IsPlayer). The name is older than that: until 2026-09-25 it took UnitCanAssist, which
+	-- most vendors, trainers and quest givers answer false, and those were sized as friendly players.
+	plate.isFriendlyAssistableNPC = (not plate.isObjectPlate) and (not isPlayerUnit) and (canAttack ~= true)
+		and ((isFriend == true) or (canAssist == true) or forceShowFriendlyNPC) and (not playerControlled)
 	return table.concat({ tostring(plate.canAttack), tostring(plate.canAssist), tostring(plate.isPlayerUnit),
 		tostring(plate.isObjectPlate), tostring(plate.isFriendlyAssistableNPC), tostring(plate.nameplateShowsWidgetsOnly) }, ",")
 end

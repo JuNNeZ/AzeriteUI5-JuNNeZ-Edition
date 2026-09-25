@@ -69,11 +69,22 @@ end
 --------------------------------------------------------------------------------
 local W = {
 	combat = false, time = 100, instance = { false, "none" },
+	-- The nameplate CVars Retail 12.1 has, at the values the tests start from: the names in both clones'
+	-- Blizzard_SettingsDefinitions_Frame/Nameplates.lua and the CVar registry. Nothing else exists, so a
+	-- write to anything else is one the client would refuse (W.unknownCVarWrites).
 	cvars = {
-		nameplateShowAll = "1", nameplateShowEnemies = "1", nameplateShowFriends = "1",
-		nameplateShowFriendlyNPCs = "1", nameplateGlobalScale = "1"
+		nameplateShowAll = "1", nameplateShowEnemies = "1", nameplateShowFriendlyPlayers = "1",
+		nameplateShowFriendlyNpcs = "1", nameplateSize = "2",
+		nameplateShowDebuffsOnFriendly = "1", nameplateOtherAtBase = "0",
+		nameplateMaxDistance = "60", nameplatePlayerMaxDistance = "60",
+		nameplateMaxScale = "1", nameplateMinScale = "0.8", nameplateSelectedScale = "1.2", nameplateSimplifiedScale = "0.3",
+		nameplateMaxScaleDistance = "10", nameplateMinScaleDistance = "10",
+		nameplateMaxAlpha = "1", nameplateMinAlpha = "0.6", nameplateSelectedAlpha = "1",
+		nameplateMaxAlphaDistance = "40", nameplateMinAlphaDistance = "10", nameplateOccludedAlphaMult = "0.4",
+		nameplateTargetBehindMaxDistance = "0.1",
+		nameplateShowOnlyNameForFriendlyPlayerUnits = "0", nameplateUseClassColorForFriendlyPlayerUnitNames = "0"
 	},
-	cvarWrites = {}, reloads = 0, errors = {}, auraContainers = {},
+	cvarWrites = {}, unknownCVarWrites = {}, reloads = 0, errors = {}, auraContainers = {},
 	units = {}, alias = {}, plates = {}, cooldowns = {},
 	calls = 0, touched = {}, callsByPlate = {}, methodsByPlate = {},
 	nextFrame = {}, timers = {},
@@ -128,6 +139,7 @@ function UnitReaction(a, b)
 	return field(u, "reaction")
 end
 function UnitIsPlayer(u) return field(u, "isPlayer") or false end
+function UnitTreatAsPlayerForDisplay(u) return field(u, "treatAsPlayer") or false end
 function UnitPlayerControlled(u) return field(u, "playerControlled") or false end
 function UnitIsTrivial(u) return field(u, "trivial") or false end
 function UnitClassification(u) return field(u, "classification") or "normal" end
@@ -212,7 +224,12 @@ C_CVar = {
 		if (v == nil) then return nil end
 		return v == "1"
 	end,
+	-- A CVar the client does not have is refused, as the client refuses it.
 	SetCVar = function(name, value)
+		if (W.cvars[name] == nil) then
+			W.unknownCVarWrites[#W.unknownCVarWrites + 1] = name
+			return false
+		end
 		W.cvars[name] = tostring(value)
 		W.cvarWrites[#W.cvarWrites + 1] = name .. "=" .. tostring(value)
 		return true
@@ -1754,6 +1771,173 @@ do
 	Step("execute marker off")
 end
 
+-- Friendly NPCs and the game's settings the plates follow (FixLog 2026-09-25). A friendly NPC is what
+-- Blizzard's own plates call one: friendly and not a player. Most vendors, trainers and quest givers
+-- cannot be assisted, and asking UnitCanAssist alone had them sized as friendly players.
+do
+	local function near(a, b) return rawtype(a) == "number" and rawtype(b) == "number" and math.abs(a - b) < 1e-6 end
+	local function Breakdown(f) return M:GetDebugPlateScaleBreakdown(f) end
+	local function Hidden(f) return f.__alpha == 0 and f.__AzeriteUI_AlphaHidden == true end
+	local savedSoftInteract = W.alias.softinteract
+
+	Unit("nameplate12", { name = "Innkeeper Allison", guid = creature(6740), isFriend = true, reaction = 5 })
+	Unit("nameplate13", { name = "Brann Bronzebeard", guid = creature(206017), isFriend = true, canAssist = true,
+		reaction = 5, treatAsPlayer = true, className = "Warrior", class = "WARRIOR", classID = 1 })
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate12")
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate13")
+	Flush()
+	P[12].__label, P[13].__label = "vendor", "follower"
+	Step("a vendor and a follower companion appear")
+	check(P[12].isFriendlyAssistableNPC == true, "a friendly NPC that cannot be assisted is a friendly NPC")
+	check(not P[13].isFriendlyAssistableNPC and P[13].isPlayerUnit == true,
+		"a companion the game draws as a player counts as a player, as Blizzard's plates count it")
+
+	local defaultNPCScale, defaultFriendlyScale = W.profile.friendlyNPCScale, W.profile.friendlyScale
+	W.profile.friendlyNPCScale, W.profile.friendlyScale = .5, 1.2
+	M:UpdateSettings()
+	check(near(Breakdown(P[12]).relationScale, .5) and near(Breakdown(P[4]).relationScale, .5),
+		"Friendly NPC size sizes the vendor and the trainer", Breakdown(P[12]).relationScale)
+	check(near(Breakdown(P[5]).relationScale, 1.2) and near(Breakdown(P[13]).relationScale, 1.2),
+		"Friendly/player size sizes friendly players and the companion", Breakdown(P[13]).relationScale)
+	check(near(P[12].__scale, P[4].__scale) and near(P[12].__scale * 1.2, P[5].__scale * .5),
+		"and the plates are drawn at those sizes", P[12].__scale)
+	W.profile.friendlyNPCScale, W.profile.friendlyScale = defaultNPCScale, defaultFriendlyScale
+	M:UpdateSettings()
+	check(near(P[12].__scale, P[5].__scale), "by default a friendly NPC is drawn at the friendly player size", P[12].__scale)
+	Step("friendly NPCs sized by their own setting")
+
+	W.profile.hideFriendlyPlayerHealthBar = true
+	M:UpdateSettings()
+	check(not P[13].Health.__shown and P[13].Name.__shown, "names only for friendly players covers a companion drawn as one")
+	check(P[12].Health.__shown, "and leaves a friendly NPC its health bar")
+	W.profile.hideFriendlyPlayerHealthBar = false
+	M:UpdateSettings()
+	Step("names only, the companion included")
+
+	-- The game's visibility settings by the names Retail 12.1 has, the event naming them as it does.
+	W.cvars.nameplateShowFriendlyNpcs = "0"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	check(Hidden(P[12]) and Hidden(P[4]), "friendly NPC plates switched off in the game are hidden at once")
+	check(not Hidden(P[5]) and not Hidden(P[13]), "and friendly players are left alone")
+	Step("friendly NPC plates switched off in the game")
+	W.alias.softinteract = "nameplate12"
+	Fire("PLAYER_SOFT_INTERACT_CHANGED")
+	check(not Hidden(P[12]), "a friendly NPC the engine keeps a plate for as a soft target still shows")
+	W.alias.softinteract = savedSoftInteract
+	Fire("PLAYER_SOFT_INTERACT_CHANGED")
+	check(Hidden(P[12]), "and is hidden again once it is not")
+	W.units.nameplate4.widgetsOnly = true
+	Fire("UNIT_FACTION", "nameplate4")
+	check(not Hidden(P[4]), "a friendly NPC given a plate for its widgets still shows")
+	W.units.nameplate4.widgetsOnly = nil
+	Fire("UNIT_FACTION", "nameplate4")
+	W.cvars.nameplateShowFriendlyNpcs = "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	check(not Hidden(P[12]) and not Hidden(P[4]), "switched back on, they return")
+	W.cvars.nameplateShowFriendlyPlayers = "0"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	check(Hidden(P[5]) and Hidden(P[13]) and not Hidden(P[12]),
+		"friendly player plates switched off hide the players and the companion, not the NPCs")
+	W.cvars.nameplateShowFriendlyPlayers = "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	-- A client that still has the old names: the plates follow those.
+	W.cvars.nameplateShowFriendlyPlayers, W.cvars.nameplateShowFriendlyNpcs = nil, nil
+	W.cvars.nameplateShowFriends, W.cvars.nameplateShowFriendlyNPCs = "1", "0"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNPCs")
+	check(Hidden(P[12]) and not Hidden(P[5]), "on a client with the old names, the plates follow those")
+	W.cvars.nameplateShowFriends, W.cvars.nameplateShowFriendlyNPCs = "0", "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriends")
+	check(Hidden(P[5]) and not Hidden(P[12]), "friendly players included")
+	W.cvars.nameplateShowFriends, W.cvars.nameplateShowFriendlyNPCs = nil, nil
+	W.cvars.nameplateShowFriendlyPlayers, W.cvars.nameplateShowFriendlyNpcs = "1", "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	check(not Hidden(P[12]), "back on the new names")
+	Step("the game's visibility settings followed")
+
+	-- The same settings passed through the options page, as stacking is.
+	check(M:IsShownSettingSupported("friendlyNPCs") and M:GetShownSetting("friendlyNPCs") == true
+		and M:GetShownSetting("showAll") == true, "the options read the game's visibility settings")
+	M:SetShownSetting("friendlyNPCs", false)
+	check(W.cvars.nameplateShowFriendlyNpcs == "0", "and write them by the client's own name", W.cvars.nameplateShowFriendlyNpcs)
+	W.combat = true
+	Fire("PLAYER_REGEN_DISABLED")
+	M:SetShownSetting("friendlyNPCs", true)
+	check(W.cvars.nameplateShowFriendlyNpcs == "0" and M:GetShownSetting("friendlyNPCs") == true,
+		"a visibility change in combat waits, and the option shows what was chosen")
+	W.combat = false
+	Fire("PLAYER_REGEN_ENABLED")
+	check(W.cvars.nameplateShowFriendlyNpcs == "1", "and is made when combat ends", W.cvars.nameplateShowFriendlyNpcs)
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	do
+		local saved = W.cvars.nameplateShowAll
+		W.cvars.nameplateShowAll = nil
+		check(not M:IsShownSettingSupported("showAll") and M:GetShownSetting("showAll") == nil,
+			"a setting the client does not have is not offered")
+		W.cvars.nameplateShowAll = saved
+	end
+	Step("the visibility settings passed through")
+
+	-- Use Blizzard overall scale follows the game's Nameplate Size, Medium being AzeriteUI's 100%.
+	W.profile.useBlizzardGlobalScale = true
+	W.cvars.nameplateSize = "3"
+	Fire("CVAR_UPDATE", "nameplateSize")
+	check(near(Breakdown(P[2]).overallScale, 2 * 1.25), "Use Blizzard overall scale follows the game's Nameplate Size",
+		Breakdown(P[2]).overallScale)
+	check(near(P[2].__scale, Breakdown(P[2]).computedScale), "and the plates are redrawn when it changes", P[2].__scale)
+	NamePlateConstants = { NAME_PLATE_SCALES = { [3] = { horizontal = 1.3 } } }
+	Fire("CVAR_UPDATE", "nameplateSize")
+	check(near(Breakdown(P[2]).overallScale, 2 * 1.3), "Blizzard's own table of sizes is read once it is loaded",
+		Breakdown(P[2]).overallScale)
+	NamePlateConstants = nil
+	W.cvars.nameplateSize = "2"
+	Fire("CVAR_UPDATE", "nameplateSize")
+	check(near(Breakdown(P[2]).overallScale, 2), "at Medium the plates are at 100%", Breakdown(P[2]).overallScale)
+	W.profile.useBlizzardGlobalScale = false
+	M:UpdateSettings()
+	Step("the game's Nameplate Size followed")
+
+	-- Blizzard's driver sets its own plate size when its options change; ours is put back after it.
+	local size = ns.GetConfig("NamePlates").Size
+	W.driver.plateWidth, W.driver.plateHeight = 230, 60
+	Fire("CVAR_UPDATE", "nameplateStyle")
+	Flush()
+	check(W.driver.plateWidth == size[1] and W.driver.plateHeight == size[2],
+		"after Blizzard's driver resizes the plates, AzeriteUI's size is put back", W.driver.plateWidth)
+	W.driver.plateWidth = 230
+	Fire("DISPLAY_SIZE_CHANGED")
+	Flush()
+	check(W.driver.plateWidth == size[1], "and after the display changes size", W.driver.plateWidth)
+	W.driver.plateWidth = 230
+	W.combat = true
+	Fire("PLAYER_REGEN_DISABLED")
+	Fire("CVAR_UPDATE", "nameplateSize")
+	Flush()
+	check(W.driver.plateWidth == 230, "in combat that waits", W.driver.plateWidth)
+	W.combat = false
+	Fire("PLAYER_REGEN_ENABLED")
+	check(W.driver.plateWidth == size[1], "and is done when combat ends", W.driver.plateWidth)
+
+	-- The driver's own CVars.
+	check(W.cvars.nameplatePlayerMaxDistance == W.cvars.nameplateMaxDistance,
+		"other players' plates reach as far as Maximum distance says", W.cvars.nameplatePlayerMaxDistance)
+	check(W.cvars.nameplateSimplifiedScale == "1", "the game does not shrink the plates it simplifies",
+		W.cvars.nameplateSimplifiedScale)
+	W.instance = { true, "pvp" }
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.cvars.nameplateMaxDistance == "60" and W.cvars.nameplatePlayerMaxDistance == "60",
+		"in a battleground plates reach 60 yards by default, other players' included", W.cvars.nameplatePlayerMaxDistance)
+	W.instance = { false, "none" }
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	W.profile.platePosition = "feet"
+	M:UpdateSettings()
+	check(W.cvars.nameplateOtherAtBase == "2", "Position at the feet is the game's nameplateOtherAtBase 2",
+		W.cvars.nameplateOtherAtBase)
+	W.profile.platePosition = "head"
+	M:UpdateSettings()
+	check(W.cvars.nameplateOtherAtBase == "0", "and over the head is 0", W.cvars.nameplateOtherAtBase)
+	Step("the driver's size and CVars")
+end
+
 -- Plays nice (Phase 9): another nameplate addon enabled, the module stands down at login and keeps
 -- the addon's name for the options page. Run against a copy of the profile, then put back.
 do
@@ -1828,6 +2012,7 @@ check(stepText("interrupt on cooldown mid-cast"):find("color=" .. col(ns.Colors.
 check(stepText("elite's cast fails"):find("color=" .. col(ns.Colors.red), 1, true), "a failed cast is red")
 check(stepText("switch nameplates off"):find("reloads 1", 1, true), "switching nameplates off reloads the interface")
 check(#W.errors == 0, "no guarded call reported an error", W.errors[1])
+check(#W.unknownCVarWrites == 0, "no CVar the client does not have is ever written", W.unknownCVarWrites[1])
 
 --------------------------------------------------------------------------------
 -- Golden and metrics

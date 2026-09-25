@@ -86,18 +86,23 @@ local defaults = { profile = ns:Merge({
 	maxDistance = 40, -- before 2026-09 the one distance everywhere; now each content's (contentSettings)
 	-- How faint plates get and how far they reach, per kind of content (Content settings). The defaults
 	-- are the values that were hardcoded per zone until 2026-09, so nothing moves until a player does.
+	-- The distance reaches other players' plates too since 2026-09-25 (nameplatePlayerMaxDistance, which
+	-- was left at the game's 60), so PvP content starts at 60 rather than cut enemy players short.
 	contentSettings = {
 		world = { minAlpha = .4, occludedAlpha = .15, maxDistance = 40 },
 		dungeon = { minAlpha = .75, occludedAlpha = .45, maxDistance = 40 },
 		mythicplus = { minAlpha = .75, occludedAlpha = .45, maxDistance = 40 },
 		raid = { minAlpha = .75, occludedAlpha = .45, maxDistance = 40 },
-		battleground = { minAlpha = 1, occludedAlpha = .45, maxDistance = 40 },
-		arena = { minAlpha = 1, occludedAlpha = .45, maxDistance = 40 }
+		battleground = { minAlpha = 1, occludedAlpha = .45, maxDistance = 60 },
+		arena = { minAlpha = 1, occludedAlpha = .45, maxDistance = 60 }
 	},
 	castBarOffsetY = 0,
 	raidTargetSize = 28,
+	-- Over the unit's head or at its feet: the game's nameplateOtherAtBase, written with the driver's CVars.
+	platePosition = "head",
 	friendlyScale = .8,
-	friendlyNPCScale = 1,
+	-- 1 until 2026-09-25, when friendly NPCs that cannot be assisted were still drawn at friendlyScale.
+	friendlyNPCScale = .8,
 	enemyScale = .66,
 	friendlyTargetScale = 0,
 	enemyTargetScale = .5,
@@ -158,7 +163,7 @@ local NAMEPLATE_RAID_TARGET_SIZE_MIN = 12
 local NAMEPLATE_RAID_TARGET_SIZE_MAX = 64
 local NAMEPLATE_RAID_TARGET_SIZE_DEFAULT = 28
 local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = .8
-local FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT = 1
+local FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT = .8
 local ENEMY_NAMEPLATE_SCALE_DEFAULT = .66
 local FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = 0
 local GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT = 0
@@ -280,6 +285,26 @@ local IsFriendlyPlayerNameOnlyEnabled = function()
 	return profile and profile.hideFriendlyPlayerHealthBar and true or false
 end
 
+-- A player as Blizzard's own plates count one: a player, or an NPC the game draws as one, such as a
+-- follower dungeon companion (Blizzard_NamePlateUnitFrame.lua, UpdateIsPlayer). False on a secret answer.
+local IsPlayerForDisplay = function(unit)
+	if (not IsSafeUnitToken(unit)) then
+		return false
+	end
+	local isPlayer = UnitIsPlayer(unit)
+	if (IsSecretValue(isPlayer)) then
+		return false
+	end
+	if (isPlayer == true) then
+		return true
+	end
+	if (type(UnitTreatAsPlayerForDisplay) ~= "function") then
+		return false
+	end
+	local treatAsPlayer = UnitTreatAsPlayerForDisplay(unit)
+	return (not IsSecretValue(treatAsPlayer)) and treatAsPlayer == true
+end
+
 local ShouldUseFriendlyPlayerNameOnly = function(self)
 	if (not IsFriendlyPlayerNameOnlyEnabled()) then
 		return false
@@ -288,14 +313,7 @@ local ShouldUseFriendlyPlayerNameOnly = function(self)
 		return false
 	end
 	local unit = self.unit
-	if (not IsSafeUnitToken(unit)) then
-		return false
-	end
-	local isPlayer = UnitIsPlayer(unit)
-	if (IsSecretValue(isPlayer)) then
-		return false
-	end
-	if (isPlayer ~= true) then
+	if (not IsPlayerForDisplay(unit)) then
 		return false
 	end
 
@@ -391,6 +409,29 @@ local GetBlizzardNamePlateGlobalScale = function()
 		return GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT
 	end
 	return value
+end
+
+-- What "Use Blizzard overall scale" follows in place of the Overall size slider. Retail 12 and Forever
+-- replaced nameplateGlobalScale with nameplateSize, five steps Blizzard_NamePlates turns into scales
+-- (NamePlateConstants.NAME_PLATE_SCALES), and Medium is AzeriteUI's own 100%. A client that still has
+-- the old CVar keeps what it did; one with neither gets 100%.
+local BLIZZARD_NAMEPLATE_SIZE_SCALES = { .75, 1, 1.25, 1.4, 1.6 } -- Enum.NamePlateSize Small (1) to Huge (5)
+
+local GetBlizzardOverallScale = function()
+	local size = tonumber(GetCVarStringSafe("nameplateSize"))
+	if (size) then
+		local scales = NamePlateConstants and NamePlateConstants.NAME_PLATE_SCALES
+		local entry = (type(scales) == "table") and scales[size]
+		local scale = (type(entry) == "table") and entry.horizontal or BLIZZARD_NAMEPLATE_SIZE_SCALES[size]
+		if (type(scale) ~= "number" or scale <= 0) then
+			scale = 1
+		end
+		return GLOBAL_NAMEPLATE_BASE_SCALE_DEFAULT * scale
+	end
+	if (GetCVarStringSafe("nameplateGlobalScale")) then
+		return GetBlizzardNamePlateGlobalScale()
+	end
+	return GLOBAL_NAMEPLATE_BASE_SCALE_DEFAULT
 end
 
 local IsHostileNamePlate = function(self)
@@ -569,7 +610,7 @@ end
 local GetEffectivePlateScale = function(self)
 	local scale = ns.API.GetScale()
 	if (IsUsingBlizzardGlobalScale()) then
-		scale = scale * GetBlizzardNamePlateGlobalScale()
+		scale = scale * GetBlizzardOverallScale()
 	else
 		scale = scale * GetNamePlateProfileScale()
 	end
@@ -629,7 +670,7 @@ NamePlatesMod.GetDebugPlateScaleBreakdown = function(self, frame)
 	end
 
 	local isHostile = IsHostileNamePlate(frame)
-	local overallScale = IsUsingBlizzardGlobalScale() and GetBlizzardNamePlateGlobalScale() or GetNamePlateProfileScale()
+	local overallScale = IsUsingBlizzardGlobalScale() and GetBlizzardOverallScale() or GetNamePlateProfileScale()
 	local isFriendlyNPC = frame.isFriendlyAssistableNPC and true or false
 	local relationScale = isHostile and GetEnemyNamePlateScaleSetting()
 		or isFriendlyNPC and GetFriendlyNPCNamePlateScaleSetting()
@@ -722,6 +763,7 @@ NP.IsSafeUnitToken = IsSafeUnitToken
 NP.SafeUnitMatches = SafeUnitMatches
 NP.GetNamePlateBarLayout = GetNamePlateBarLayout
 NP.IsFriendlyPlayerNameOnlyEnabled = IsFriendlyPlayerNameOnlyEnabled
+NP.IsPlayerForDisplay = IsPlayerForDisplay
 NP.ShouldUseFriendlyPlayerNameOnly = ShouldUseFriendlyPlayerNameOnly
 NP.GetValidatedProfileScale = GetValidatedProfileScale
 NP.IsUsingBlizzardGlobalScale = IsUsingBlizzardGlobalScale

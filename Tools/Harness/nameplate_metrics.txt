@@ -57,4 +57,12 @@ threshold set by hand, then automatic again calls=2038  plates=11
 the class decides the threshold            calls=128   plates=4
 a marked plate reused for a friendly unit  calls=1471  plates=11
 execute marker off                         calls=659   plates=11
+a vendor and a follower companion appear   calls=422   plates=2
+friendly NPCs sized by their own setting   calls=1558  plates=13
+names only, the companion included         calls=1540  plates=13
+friendly NPC plates switched off in the game calls=532   plates=13
+the game's visibility settings followed    calls=3504  plates=13
+the visibility settings passed through     calls=1562  plates=13
+the game's Nameplate Size followed         calls=2512  plates=13
+the driver's size and CVars                calls=2582  plates=13
 switch nameplates off                      calls=0     plates=0

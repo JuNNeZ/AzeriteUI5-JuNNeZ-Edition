@@ -23,7 +23,29 @@ lua Tools/Harness/chat_guard_harness.lua   .               # chat module stays o
 lua Tools/Harness/tracker_harness.lua      .               # Hide the Blizzard Tracker, Retail and Forever
 lua Tools/Harness/locale_harness.lua       .               # all ten locales: parity, specifiers, widths
 lua Tools/Harness/nameplate_harness.lua    .               # nameplates: named checks + golden snapshot
+lua Tools/Harness/flyout_harness.lua       .               # LibActionButton flyout discovery, both clients
+lua Tools/Harness/tooltip_compare_harness.lua .            # compare tooltips: borders and the Equipped tab
 ```
+
+`tooltip_compare_harness.lua` loads the real `Components/Misc/Tooltips.lua` with its layout data and
+`Core/API/ProtectedCall.lua`, and Blizzard's `TooltipComparisonManager` `Initialize` and
+`AnchorShoppingTooltips` copied verbatim (the file is identical on Retail and Forever). Its frames
+resolve their anchors to screen rectangles, so it measures what is drawn: the seam between two
+tooltips' backdrops (negative is an overlap), whether the compare tooltips still line up with the
+tooltip they compare against, and whether the "Equipped" tab's bottom edge lands inside the band where
+each theme's border art is solid (measured from the art; see the file). Cases: both themes, either
+side, one or two items, a scaled tooltip, the first compare of a session, a re-anchor, switched off and
+on, secret anchoring and scale, no compare modifier. It fails against the 5.10.0 module (FixLog
+2026-09-25). Its mutations are the `tooltip compare` entries in `mutate_client.lua`.
+
+`flyout_harness.lua` loads the whole of `Libs/LibActionButton-1.0-GE` as an upgrade over an older copy
+with one button, because that runs `InitializeEventHandler` at load - the call the first `CreateButton`
+makes, which with the player logged in discovers flyouts at once. It models the two ways a client
+answers `GetFlyoutInfo` for an unknown ID: raising (Retail 12.1.0, Forever before 1.60.1.70009) and
+returning nothing (Forever 1.60.1.70009's `C_Flyout`, `MayReturnNothing`). The second took every action
+bar with it (FixLog 2026-09-25). The old button stops the load the moment it is touched, so button code
+never runs against the stubs; reaching it is the proof that discovery finished. Its mutations are the
+`flyout` entries in `mutate_client.lua`.
 
 `nameplate_harness.lua` is the contract for the nameplate overhaul (`Docs/Nameplates Overhaul
 Plan.md`). It loads the real module - every `NamePlates\*.lua` file, in the order
@@ -49,7 +71,11 @@ checked. The execute marker's tint goes through `UnitHealthPercent` with a step 
 evaluates the curve against a per-unit `healthPercent` and hands back a secret number that `type()`
 calls a number but that raises on arithmetic or comparison, as the client's does, so a marker that
 did maths on its answer would fail here. Standing down for another nameplate addon (`W.addons`) is
-checked for CVar writes and reloads. It runs in its own environment so it cannot leave globals behind for the next harness in
+checked for CVar writes and reloads. The CVars are Retail 12.1's, by the names both clients have
+(`nameplateShowFriendlyPlayers`, `nameplateShowFriendlyNpcs`, `nameplateSize` and so on), and a write to
+any other is refused and counted, as the client refuses it; a named check holds the whole session to
+none. A vendor that cannot be assisted and a follower companion (`UnitTreatAsPlayerForDisplay`) stand
+for the friendly NPCs `UnitCanAssist` used to miss (FixLog 2026-09-25). It runs in its own environment so it cannot leave globals behind for the next harness in
 `mutate_client.lua`.
 
 `locale_harness.lua` loads every `Locale/*.lua` through a stub AceLocale instead of parsing it, so
