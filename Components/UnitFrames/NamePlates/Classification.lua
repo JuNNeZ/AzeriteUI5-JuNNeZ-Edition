@@ -141,8 +141,13 @@ local NamePlate_Classify = function(plate, unit)
 	-- most vendors, trainers and quest givers answer false, and those were sized as friendly players.
 	plate.isFriendlyAssistableNPC = (not plate.isObjectPlate) and (not isPlayerUnit) and (canAttack ~= true)
 		and ((isFriend == true) or (canAssist == true) or forceShowFriendlyNPC) and (not playerControlled)
+	-- A player's pet, totem or guardian, as Blizzard's plate asks (NamePlateUnitFrameMixin IsMinion). Not
+	-- documented as secret on either client; a secret answer counts as no minion.
+	local isMinion = UnitIsMinion and UnitIsMinion(unit)
+	plate.isMinion = ((not IsSecretValue(isMinion)) and isMinion == true) and true or nil
 	return table.concat({ tostring(plate.canAttack), tostring(plate.canAssist), tostring(plate.isPlayerUnit),
-		tostring(plate.isObjectPlate), tostring(plate.isFriendlyAssistableNPC), tostring(plate.nameplateShowsWidgetsOnly) }, ",")
+		tostring(plate.isObjectPlate), tostring(plate.isFriendlyAssistableNPC), tostring(plate.nameplateShowsWidgetsOnly),
+		tostring(plate.isMinion) }, ",")
 end
 
 -- A unit can arrive before its answers do. One frame after a plate is added, look again: lay it out

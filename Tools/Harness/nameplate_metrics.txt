@@ -66,6 +66,8 @@ friendly NPC plates switched off in the game calls=493   plates=13
 the game's visibility settings followed    calls=3913  plates=13
 the visibility settings passed through     calls=1436  plates=13
 friendly plates only for your target       calls=4092  plates=13
+minions only for your target               calls=4664  plates=15
+your target's floating name                calls=1064  plates=13
 the game's Nameplate Size followed         calls=2326  plates=13
 the driver's size and CVars                calls=2400  plates=13
 switch nameplates off                      calls=0     plates=0

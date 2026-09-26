@@ -82,6 +82,8 @@ local defaults = { profile = ns:Merge({
 	-- ShouldShowNamePlateForBlizzardVisibility). The game's setting for the kind stays on, so the plates exist.
 	friendlyNPCsTargetOnly = false,
 	friendlyPlayersTargetOnly = false,
+	-- Players' pets, totems and guardians, friendly or enemy, only for your target (since 2026-09-26).
+	minionsTargetOnly = false,
 	friendlyNameOnlyFontScale = 2.5,
 	friendlyNameOnlyTargetScale = false,
 	showBlizzardWidgets = false,

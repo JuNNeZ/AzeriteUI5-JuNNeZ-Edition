@@ -10,6 +10,22 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.11.1-JuNNeZ (2026-09-26) - Minions for Your Target, and No Names Over Corpses
+
+### Highlights
+
+- **Minions only for your target.** A new switch under `/az -> Nameplates -> Visibility` does for players' pets, totems and guardians what 5.11.0 did for friendly NPCs: friendly or enemy, they show a nameplate only while you target them, and tab-targeting an enemy pet counts. Ticking it turns on the game's **Enemy minions** and **Friendly minions** settings, which it needs. Both now also sit under `/az -> Nameplates -> Game settings`, so you can turn them off again there.
+- **No more names floating over corpses.** Looting or skinning a dead enemy showed its name hanging over the body, because dead units have no nameplate to carry it. Untick `/az -> Nameplates -> Game settings -> Your target's floating name` to hide it. It is the game's own setting, one Blizzard's Options do not offer.
+
+### Development
+
+- **Found where the corpse name comes from.** The game drops a unit's nameplate when it dies, so there is nothing for AzeriteUI to draw in its place. Going through the game's name settings on both clients turned up one that shows your target's name when no other setting would, and turning it off in game hid the corpse name; the new switch passes it straight through. Minions are recognised the way Blizzard's own nameplates recognise them, and the offline nameplate test covers both switches.
+
+### Access and known limits
+
+- **Your target's floating name** is not limited to corpses: with it off, no target without a nameplate shows a name over it. A target with an AzeriteUI nameplate still shows its name on the plate.
+- The new option text was translated without native speakers; corrections are welcome on the Discord.
+
 ## 5.11.0-JuNNeZ (2026-09-26) - Friendly Nameplates Only for Your Target, and a Castbar That Steps Back
 
 ### Highlights

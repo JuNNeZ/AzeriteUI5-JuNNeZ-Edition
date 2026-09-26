@@ -306,7 +306,16 @@ local VISIBILITY_CVARS = {
 	showAll = { "nameplateShowAll" },
 	enemies = { "nameplateShowEnemies" },
 	friendlyPlayers = { "nameplateShowFriendlyPlayers", "nameplateShowFriends" },
-	friendlyNPCs = { "nameplateShowFriendlyNpcs", "nameplateShowFriendlyNPCs" }
+	friendlyNPCs = { "nameplateShowFriendlyNpcs", "nameplateShowFriendlyNPCs" },
+	-- Players' pets, totems and guardians; Blizzard's Options nest these under Enemies and Friendly players.
+	-- Passed through for Minions only for your target (Visibility.lua), which needs them; the plates do not
+	-- follow them here, the engine does.
+	enemyMinions = { "nameplateShowEnemyMinions" },
+	friendlyMinions = { "nameplateShowFriendlyPlayerMinions" },
+	-- Not a kind of plate: the name the engine draws over the unit you target when your other name settings
+	-- would not, such as a corpse you loot or skin (FixLog 2026-09-26, turning it off hid one live). Blizzard's
+	-- Options do not offer it; it is passed through the same way, and the plates do not follow it.
+	targetName = { "UnitNameFocused" }
 }
 
 -- nil where the client has none of its names.

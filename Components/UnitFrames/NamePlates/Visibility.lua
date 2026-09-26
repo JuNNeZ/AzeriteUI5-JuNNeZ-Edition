@@ -164,15 +164,35 @@ local AnchorStandardNamePlateName = function(self)
 	self.Name:SetPoint(point, x, y + GetTargetLikeNameLift(self) + GetNamePlateWidgetLift(self))
 end
 
--- Friendly NPCs/players only for your target (off by default). Neither client has such a setting: the
--- engine makes a plate by the game's setting for the kind, and with it off a hard target gets none, only
--- its name in the world. So the game's setting stays on, every plate of the kind is made, and the ones
--- that are not the target or the soft target are hidden here.
-local TARGET_ONLY_KEYS = { friendlyNPCs = "friendlyNPCsTargetOnly", friendlyPlayers = "friendlyPlayersTargetOnly" }
+-- Friendly NPCs, friendly players or minions only for your target (off by default). Neither client has
+-- such a setting: the engine makes a plate by the game's setting for the kind, and with it off a hard
+-- target gets none, only its name in the world. So the game's setting stays on, every plate of the kind
+-- is made, and the ones that are not the target or the soft target are hidden here. Minions are players'
+-- pets, totems and guardians on either side (NamePlate_Classify, isMinion); a friendly one is also hidden
+-- by the friendly players switch, as it was before minions had their own.
+local TARGET_ONLY_KEYS = {
+	friendlyNPCs = "friendlyNPCsTargetOnly",
+	friendlyPlayers = "friendlyPlayersTargetOnly",
+	minions = "minionsTargetOnly"
+}
+-- The game's settings each switch needs on (CVars.lua, VISIBILITY_CVARS).
+local TARGET_ONLY_NEEDS = {
+	friendlyNPCs = { "friendlyNPCs" },
+	friendlyPlayers = { "friendlyPlayers" },
+	minions = { "friendlyMinions", "enemyMinions" }
+}
 
 local IsTargetOnly = function(kind)
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
 	return (profile and profile[TARGET_ONLY_KEYS[kind]]) and true or false
+end
+
+local IsSelected = function(self)
+	return (self.isTarget or self.isSoftTarget) and true or false
+end
+
+local IsHiddenMinion = function(self)
+	return (self.isMinion and IsTargetOnly("minions") and not IsSelected(self)) and true or false
 end
 
 local ShouldShowNamePlateForBlizzardVisibility = function(self)
@@ -185,7 +205,7 @@ local ShouldShowNamePlateForBlizzardVisibility = function(self)
 	end
 
 	if (IsHostileNamePlate(self)) then
-		return IsShownByBlizzard("enemies")
+		return IsShownByBlizzard("enemies") and not IsHiddenMinion(self)
 	end
 
 	if (self.isFriendlyAssistableNPC) then
@@ -199,7 +219,7 @@ local ShouldShowNamePlateForBlizzardVisibility = function(self)
 		return IsShownByBlizzard("friendlyNPCs") and not IsTargetOnly("friendlyNPCs")
 	end
 
-	if (IsTargetOnly("friendlyPlayers") and not (self.isTarget or self.isSoftTarget)) then
+	if (IsHiddenMinion(self) or (IsTargetOnly("friendlyPlayers") and not IsSelected(self))) then
 		return false
 	end
 	return IsShownByBlizzard("friendlyPlayers")
@@ -625,20 +645,24 @@ NP.ApplyFriendlyNameOnlyNameAnchor = ApplyFriendlyNameOnlyNameAnchor
 NP.ApplyFriendlyNameOnlyFontScale = ApplyFriendlyNameOnlyFontScale
 NP.ApplyFriendlyNameOnlyVisualState = ApplyFriendlyNameOnlyVisualState
 
--- For the options page: friendly NPCs or friendly players ("friendlyNPCs", "friendlyPlayers") only for
--- your target. It needs the game's setting for the kind on, so turning it on turns that on too, as the
--- option says; turning it off leaves the game's setting as it is.
-NamePlatesMod.GetFriendlyTargetOnly = function(self, kind)
+-- For the options page: friendly NPCs, friendly players or minions ("friendlyNPCs", "friendlyPlayers",
+-- "minions") only for your target. Each needs the game's settings for its kind on (TARGET_ONLY_NEEDS), so
+-- turning it on turns those on too, as the option says; turning it off leaves them as they are.
+NamePlatesMod.GetTargetOnly = function(self, kind)
 	return IsTargetOnly(kind)
 end
-NamePlatesMod.SetFriendlyTargetOnly = function(self, kind, enabled)
+NamePlatesMod.SetTargetOnly = function(self, kind, enabled)
 	local key = TARGET_ONLY_KEYS[kind]
 	if (not key or not self.db) then
 		return
 	end
 	self.db.profile[key] = enabled and true or false
-	if (enabled and self:GetShownSetting(kind) == false) then
-		self:SetShownSetting(kind, true)
+	if (enabled) then
+		for _, needed in ipairs(TARGET_ONLY_NEEDS[kind]) do
+			if (self:GetShownSetting(needed) == false) then
+				self:SetShownSetting(needed, true)
+			end
+		end
 	end
 	self:UpdateSettings()
 end

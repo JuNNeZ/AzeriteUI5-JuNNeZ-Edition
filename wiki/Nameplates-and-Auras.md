@@ -18,6 +18,9 @@ if you run Plater or another nameplate addon.
 - **Friendly NPCs only for your target** - only your target's friendly NPC plate shows, and the one
   your interact key would use. Ticking it turns on the game's Friendly NPCs setting, which it needs
 - **Friendly players only for your target** - the same for friendly player plates
+- **Minions only for your target** - players' pets, totems and guardians, friendly or enemy,
+  show a plate only while you target them. Ticking it turns on the game's Friendly minions
+  and Enemy minions settings, which it needs
 - **Maximum distance** - how far plates remain visible
 
 ### Aura filters
@@ -42,6 +45,11 @@ them. A change made in combat applies when combat ends.
 - **Enemies**, **Friendly players** and **Friendly NPCs** - which plates show at all. With
   friendly NPCs off, a friendly NPC still gets its plate while it is your soft target or
   has an objective bar, as with Blizzard's plates.
+- **Enemy minions** and **Friendly minions** - plates for players' pets, totems and
+  guardians. Each needs Enemies or Friendly players on.
+- **Your target's floating name** - the name the game draws over your target when your
+  other name settings would not, such as a corpse you loot or skin. Untick to hide it; a
+  target with a nameplate shows its name there anyway. Blizzard's Options do not offer it.
 - **Stack enemy nameplates** and **Stack friendly nameplates**
 
 ### Size

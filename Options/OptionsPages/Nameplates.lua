@@ -291,22 +291,30 @@ local GenerateOptions = function()
 						get = getter
 					},
 					-- Ticking one also turns on the game's setting for its kind under Game settings,
-					-- which it needs (NamePlates/Visibility.lua, SetFriendlyTargetOnly).
+					-- which it needs (NamePlates/Visibility.lua, SetTargetOnly).
 					friendlyNPCsTargetOnly = {
 						name = L["Friendly NPCs only for your target"],
 						desc = L["Only your target's friendly NPC nameplate shows, and the one your interact key would use. Turns on the game's Friendly NPCs setting under Game settings, which this needs."],
 						order = 4,
 						type = "toggle", width = "full",
-						set = function(info, val) getmodule():SetFriendlyTargetOnly("friendlyNPCs", val) end,
-						get = function(info) return getmodule():GetFriendlyTargetOnly("friendlyNPCs") end
+						set = function(info, val) getmodule():SetTargetOnly("friendlyNPCs", val) end,
+						get = function(info) return getmodule():GetTargetOnly("friendlyNPCs") end
 					},
 					friendlyPlayersTargetOnly = {
 						name = L["Friendly players only for your target"],
 						desc = L["Only your target's friendly player nameplate shows. Turns on the game's Friendly players setting under Game settings, which this needs."],
 						order = 5,
 						type = "toggle", width = "full",
-						set = function(info, val) getmodule():SetFriendlyTargetOnly("friendlyPlayers", val) end,
-						get = function(info) return getmodule():GetFriendlyTargetOnly("friendlyPlayers") end
+						set = function(info, val) getmodule():SetTargetOnly("friendlyPlayers", val) end,
+						get = function(info) return getmodule():GetTargetOnly("friendlyPlayers") end
+					},
+					minionsTargetOnly = {
+						name = L["Minions only for your target"],
+						desc = L["Players' pets, totems and guardians, friendly or enemy, show a nameplate only while you target them. Turns on the game's Friendly minions and Enemy minions settings under Game settings, which this needs; friendly ones also need Friendly players."],
+						order = 6,
+						type = "toggle", width = "full",
+						set = function(info, val) getmodule():SetTargetOnly("minions", val) end,
+						get = function(info) return getmodule():GetTargetOnly("minions") end
 					}
 				}
 			},
@@ -387,7 +395,9 @@ local GenerateOptions = function()
 			},
 			-- Blizzard's own settings, read and written straight through: AzeriteUI stores nothing.
 			-- Shown even with Azerite nameplates off, since they change Blizzard's plates as well. The
-			-- four that decide which plates show are the ones the plates follow (Visibility.lua).
+			-- four that decide which plates show are the ones the plates follow (Visibility.lua); the two
+			-- minion switches are here so what Minions only for your target turns on can be turned off, and
+			-- the target's floating name is here because Blizzard's Options have no switch for it.
 			stacking = {
 				name = L["Game settings"],
 				order = 1.4,
@@ -404,8 +414,14 @@ local GenerateOptions = function()
 						L["Off, nameplates only show while you are in combat."], .1),
 					showEnemies = ShownToggle("enemies", L["Enemies"],
 						L["Nameplates of units you can attack."], .2),
+					showEnemyMinions = ShownToggle("enemyMinions", L["Enemy minions"],
+						L["Nameplates of the pets, totems and guardians of players you can attack. Needs Enemies."], .25),
 					showFriendlyPlayers = ShownToggle("friendlyPlayers", L["Friendly players"],
 						L["Nameplates of players on your side."], .3),
+					showFriendlyMinions = ShownToggle("friendlyMinions", L["Friendly minions"],
+						L["Nameplates of the pets, totems and guardians of players on your side. Needs Friendly players."], .35),
+					showTargetName = ShownToggle("targetName", L["Your target's floating name"],
+						L["The game draws the name of the unit you target over it even when your other name settings would not, such as a corpse you loot or skin. Untick to hide it; a unit with a nameplate shows its name there. Blizzard's Options do not offer this one."], .5),
 					showFriendlyNPCs = ShownToggle("friendlyNPCs", L["Friendly NPCs"],
 						L["Nameplates of friendly NPCs, such as vendors and quest givers."], .4),
 					stackEnemyPlates = {

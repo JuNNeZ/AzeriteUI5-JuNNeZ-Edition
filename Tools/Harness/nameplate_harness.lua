@@ -75,6 +75,7 @@ local W = {
 	cvars = {
 		nameplateShowAll = "1", nameplateShowEnemies = "1", nameplateShowFriendlyPlayers = "1",
 		nameplateShowFriendlyNpcs = "1", nameplateSize = "2",
+		nameplateShowEnemyMinions = "0", nameplateShowFriendlyPlayerMinions = "0", UnitNameFocused = "1",
 		nameplateShowDebuffsOnFriendly = "1", nameplateOtherAtBase = "0",
 		nameplateMaxDistance = "60", nameplatePlayerMaxDistance = "60",
 		nameplateMaxScale = "1", nameplateMinScale = "0.8", nameplateSelectedScale = "1.2", nameplateSimplifiedScale = "0.3",
@@ -141,6 +142,7 @@ end
 function UnitIsPlayer(u) return field(u, "isPlayer") or false end
 function UnitTreatAsPlayerForDisplay(u) return field(u, "treatAsPlayer") or false end
 function UnitPlayerControlled(u) return field(u, "playerControlled") or false end
+function UnitIsMinion(u) return field(u, "minion") or false end
 function UnitIsTrivial(u) return field(u, "trivial") or false end
 function UnitClassification(u) return field(u, "classification") or "normal" end
 function UnitCreatureType(u) return field(u, "creatureType") end
@@ -1941,16 +1943,16 @@ do
 	-- Friendly plates only for your target (FixLog 2026-09-26, Tim's request). Neither client has such a
 	-- setting: with friendly NPC plates off, a hard target gets no plate, only its name in the world. So
 	-- the game's setting stays on, every plate is made, and only the target's and soft target's are drawn.
-	check(not M:GetFriendlyTargetOnly("friendlyNPCs") and not M:GetFriendlyTargetOnly("friendlyPlayers"),
+	check(not M:GetTargetOnly("friendlyNPCs") and not M:GetTargetOnly("friendlyPlayers"),
 		"friendly plates only for your target is off by default")
 	local savedTarget = W.alias.target
 	W.cvars.nameplateShowFriendlyNpcs = "0"
 	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
-	M:SetFriendlyTargetOnly("friendlyNPCs", true)
+	M:SetTargetOnly("friendlyNPCs", true)
 	check(W.cvars.nameplateShowFriendlyNpcs == "1",
 		"turning it on for NPCs turns on the game's friendly NPC plates, which it needs", W.cvars.nameplateShowFriendlyNpcs)
 	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
-	check(M:GetFriendlyTargetOnly("friendlyNPCs") and W.profile.friendlyNPCsTargetOnly == true, "and it is saved")
+	check(M:GetTargetOnly("friendlyNPCs") and W.profile.friendlyNPCsTargetOnly == true, "and it is saved")
 	check(Hidden(P[12]) and Hidden(P[4]), "friendly NPCs that are not your target are hidden")
 	check(not Hidden(P[5]) and not Hidden(P[13]) and not Hidden(P[1]) and not Hidden(P[2]),
 		"friendly players and enemies are left alone")
@@ -1982,7 +1984,7 @@ do
 	W.units.nameplate4.widgetsOnly = nil
 	Fire("UNIT_FACTION", "nameplate4")
 
-	M:SetFriendlyTargetOnly("friendlyPlayers", true)
+	M:SetTargetOnly("friendlyPlayers", true)
 	check(Hidden(P[5]) and Hidden(P[13]), "friendly players only for your target hides the players and the companion")
 	check(not Hidden(P[1]) and not Hidden(P[2]), "and leaves enemies alone")
 	W.alias.target = "nameplate5"
@@ -1990,14 +1992,97 @@ do
 	check(not Hidden(P[5]) and P[5].Name.__shown and Hidden(P[13]), "and shows the one you target")
 
 	-- Off again: every plate is back, and the game's setting is left as it is.
-	M:SetFriendlyTargetOnly("friendlyNPCs", false)
-	M:SetFriendlyTargetOnly("friendlyPlayers", false)
+	M:SetTargetOnly("friendlyNPCs", false)
+	M:SetTargetOnly("friendlyPlayers", false)
 	check(not Hidden(P[12]) and not Hidden(P[4]) and not Hidden(P[13]) and not Hidden(P[5]),
 		"turned off, every friendly plate is back")
 	check(W.cvars.nameplateShowFriendlyNpcs == "1", "and the game's setting stays on", W.cvars.nameplateShowFriendlyNpcs)
 	W.alias.target = savedTarget
 	Fire("PLAYER_TARGET_CHANGED")
 	Step("friendly plates only for your target")
+
+	-- Minions only for your target (FixLog 2026-09-26): players' pets, totems and guardians on either side,
+	-- told apart by UnitIsMinion as Blizzard's plate does. The two plates are removed at the end, so the
+	-- steps after this one see the same plates as before.
+	Unit("nameplate14", { name = "Felhunter", guid = "Pet-0-1-2-3-417-0000ABCDEF", canAttack = true, reaction = 2,
+		playerControlled = true, minion = true })
+	Unit("nameplate15", { name = "Cat", guid = "Pet-0-1-2-3-3619-0000ABCDEF", canAssist = true, isFriend = true,
+		reaction = 5, playerControlled = true, minion = true })
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate14")
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate15")
+	Flush()
+	P[14].__label, P[15].__label = "enemy minion", "friendly minion"
+	check(P[14].isMinion and P[15].isMinion and not P[2].isMinion and not P[5].isMinion,
+		"players' pets are told apart as minions, other units are not")
+	check(not Hidden(P[14]) and not Hidden(P[15]), "minions show by default")
+	check(not M:GetTargetOnly("minions"), "minions only for your target is off by default")
+	M:SetTargetOnly("minions", true)
+	check(W.cvars.nameplateShowEnemyMinions == "1" and W.cvars.nameplateShowFriendlyPlayerMinions == "1",
+		"turning it on turns on the game's enemy and friendly minion plates, which it needs",
+		W.cvars.nameplateShowEnemyMinions)
+	Fire("CVAR_UPDATE", "nameplateShowEnemyMinions")
+	check(Hidden(P[14]) and Hidden(P[15]), "minions that are not your target are hidden, enemy and friendly")
+	check(not Hidden(P[2]) and not Hidden(P[5]) and not Hidden(P[12]), "other enemies, players and NPCs are left alone")
+	W.alias.target = "nameplate14"
+	Fire("PLAYER_TARGET_CHANGED")
+	check(not Hidden(P[14]) and P[14].Health.__shown and Hidden(P[15]), "the enemy minion you target shows, the other does not")
+	W.alias.target = "nameplate15"
+	Fire("PLAYER_TARGET_CHANGED")
+	check(Hidden(P[14]) and not Hidden(P[15]), "a new target: the enemy minion hides and the friendly one shows")
+	W.alias.target = nil
+	Fire("PLAYER_TARGET_CHANGED")
+	W.alias.softenemy = "nameplate14"
+	Fire("PLAYER_SOFT_ENEMY_CHANGED")
+	check(not Hidden(P[14]), "an enemy minion that is your soft target shows")
+	W.alias.softenemy = nil
+	Fire("PLAYER_SOFT_ENEMY_CHANGED")
+	W.alias.mouseover = "nameplate14"
+	Fire("UPDATE_MOUSEOVER_UNIT")
+	check(Hidden(P[14]), "hovering a minion does not show it")
+	W.alias.mouseover = nil
+	Tick()
+	-- A secret answer counts as no minion: the plate is left to the other rules.
+	W.units.nameplate14.secret = { minion = true }
+	Fire("UNIT_FACTION", "nameplate14")
+	check(not P[14].isMinion and not Hidden(P[14]), "a minion answer that is secret hides nothing")
+	W.units.nameplate14.secret = nil
+	Fire("UNIT_FACTION", "nameplate14")
+	check(Hidden(P[14]), "and the plate is hidden again once the answer is readable")
+
+	-- Off: the minions return and the game's settings stay on. The friendly players switch still covers
+	-- friendly minions, as it did before they had a switch of their own.
+	M:SetTargetOnly("minions", false)
+	check(not Hidden(P[14]) and not Hidden(P[15]), "turned off, the minions are back")
+	check(W.cvars.nameplateShowEnemyMinions == "1" and W.cvars.nameplateShowFriendlyPlayerMinions == "1",
+		"and the game's minion settings stay on")
+	M:SetTargetOnly("friendlyPlayers", true)
+	check(Hidden(P[15]) and not Hidden(P[14]), "friendly players only for your target still hides a friendly minion")
+	M:SetTargetOnly("friendlyPlayers", false)
+	check(M:IsShownSettingSupported("enemyMinions") and M:GetShownSetting("friendlyMinions") == true,
+		"the options read the game's minion settings")
+	M:SetShownSetting("enemyMinions", false)
+	M:SetShownSetting("friendlyMinions", false)
+	check(W.cvars.nameplateShowEnemyMinions == "0" and W.cvars.nameplateShowFriendlyPlayerMinions == "0",
+		"and write them")
+	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate14")
+	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate15")
+	W.alias.target = savedTarget
+	Fire("PLAYER_TARGET_CHANGED")
+	Step("minions only for your target")
+
+	-- Your target's floating name (FixLog 2026-09-26): the game's UnitNameFocused, passed through. Turning it
+	-- off hid a corpse's name live. It is a name the engine draws, so no plate follows it.
+	check(M:IsShownSettingSupported("targetName") and M:GetShownSetting("targetName") == true,
+		"the options read the game's setting for your target's floating name")
+	M:SetShownSetting("targetName", false)
+	check(W.cvars.UnitNameFocused == "0", "and write it", W.cvars.UnitNameFocused)
+	Fire("CVAR_UPDATE", "UnitNameFocused")
+	check(not Hidden(P[1]) and not Hidden(P[5]) and not Hidden(P[12]) and P[1].Name.__shown,
+		"no plate follows it, the target's included")
+	M:SetShownSetting("targetName", true)
+	Fire("CVAR_UPDATE", "UnitNameFocused")
+	check(W.cvars.UnitNameFocused == "1", "and it goes back on", W.cvars.UnitNameFocused)
+	Step("your target's floating name")
 
 	-- Use Blizzard overall scale follows the game's Nameplate Size, Medium being AzeriteUI's 100%.
 	W.profile.useBlizzardGlobalScale = true

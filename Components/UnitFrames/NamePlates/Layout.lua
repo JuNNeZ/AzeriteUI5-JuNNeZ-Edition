@@ -323,6 +323,7 @@ local NamePlate_OnHide = function(self)
 	self.isPlayerUnit = nil
 	self.isObjectPlate = nil
 	self.isFriendlyAssistableNPC = nil
+	self.isMinion = nil
 	self.nameplateShowsWidgetsOnly = nil
 	if (self.Castbar) then
 		ns.API.ClearInterruptCastBarRefresh(self.Castbar)
