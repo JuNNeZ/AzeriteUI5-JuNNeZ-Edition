@@ -470,7 +470,27 @@ local cases = {
 		"if (IsSecretValue(unitName)) then return end", "if (IsSecretValue(unitName)) then unitName = nil end",
 		"tooltip_compare_harness.lua"},
 	{"tooltip secret health hides the text", "Components/Misc/Tooltips.lua",
-		"\t\t\t\tHideStatusBarText(bar)\n", "", "tooltip_compare_harness.lua"}
+		"\t\t\t\tHideStatusBarText(bar)\n", "", "tooltip_compare_harness.lua"},
+	-- Friendly plates only for your target (FixLog 2026-09-26).
+	{"nameplate friendly NPCs target only ignored", "Components/UnitFrames/NamePlates/Visibility.lua",
+		"return IsShownByBlizzard(\"friendlyNPCs\") and not IsTargetOnly(\"friendlyNPCs\")",
+		"return IsShownByBlizzard(\"friendlyNPCs\")", "nameplate_harness.lua"},
+	{"nameplate friendly players target only ignored", "Components/UnitFrames/NamePlates/Visibility.lua",
+		"if (IsTargetOnly(\"friendlyPlayers\") and not (self.isTarget or self.isSoftTarget)) then",
+		"if (false) then", "nameplate_harness.lua"},
+	{"nameplate target only hides the target too", "Components/UnitFrames/NamePlates/Visibility.lua",
+		"if (IsTargetOnly(\"friendlyPlayers\") and not (self.isTarget or self.isSoftTarget)) then",
+		"if (IsTargetOnly(\"friendlyPlayers\")) then", "nameplate_harness.lua"},
+	{"nameplate target only leaves the game's setting off", "Components/UnitFrames/NamePlates/Visibility.lua",
+		"if (enabled and self:GetShownSetting(kind) == false) then", "if (false) then", "nameplate_harness.lua"},
+	-- The player's castbar on pushback (GitHub #5).
+	{"castbar pushback keeps the old times", "Libs/oUF/elements/castbar.lua",
+		"\t\t\telement.startTime = startTime\n\t\t\telement.endTime = endTime / 1000\n", "", "castbar_pushback_harness.lua"},
+	{"castbar pushback timer on the old span", "Libs/oUF/elements/castbar.lua",
+		"\t\t\t\tduration = span\n", "", "castbar_pushback_harness.lua"},
+	{"castbar pushback moves an empowered cast", "Libs/oUF/elements/castbar.lua",
+		"if(not element.empowering and type(endTime) == 'number'", "if(type(endTime) == 'number'",
+		"castbar_pushback_harness.lua"}
 }
 local function harnessFor(case)
 	return root .. "/Tools/Harness/" .. (case[5] or "client_harness.lua")
@@ -482,6 +502,7 @@ assert(originalLoadfile(root .. "/Tools/Harness/locale_harness.lua"))()
 assert(originalLoadfile(root .. "/Tools/Harness/nameplate_harness.lua"))()
 assert(originalLoadfile(root .. "/Tools/Harness/flyout_harness.lua"))()
 assert(originalLoadfile(root .. "/Tools/Harness/tooltip_compare_harness.lua"))()
+assert(originalLoadfile(root .. "/Tools/Harness/castbar_pushback_harness.lua"))()
 for _, case in ipairs(cases) do
 	local mutations = 0
 	loadfile = function(path)

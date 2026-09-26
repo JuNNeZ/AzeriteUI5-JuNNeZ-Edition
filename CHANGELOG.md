@@ -10,6 +10,26 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.11.0-JuNNeZ (2026-09-26) - Friendly Nameplates Only for Your Target, and a Castbar That Steps Back
+
+### Highlights
+
+- **Friendly nameplates only for your target.** Two new switches under `/az -> Nameplates -> Visibility`: **Friendly NPCs only for your target** and **Friendly players only for your target**. With one on, a city full of vendors and quest givers shows no friendly plates until you click one. That one then gets its AzeriteUI nameplate instead of the game's floating name, and loses it when you target something else. The NPC your interact key would use shows its plate too. Ticking a switch also turns on the game's own Friendly NPCs or Friendly players setting, which it needs; unticking it leaves that setting as it is.
+- **The player castbar steps back when you are hit.** When damage pushed a cast back, the red delay number appeared but the bar kept filling on the old schedule, sat full, and then waited for the spell to land. The bar now steps back on each hit as Blizzard's does, a channel that loses time shows it on the bar, and the delay number no longer counts earlier hits twice.
+- **Target portrait rotation no longer errors.** A rotation set for the target frame's portrait raised a Lua error on every portrait update. No layout sets one by default, so most players never saw it.
+
+### Development
+
+- **Worked out why no setting could do this.** Neither Retail nor Forever has a "target only" mode for friendly plates: the game makes a plate for every friendly NPC or for none, and with none, the NPC you click gets only its floating name. AzeriteUI now keeps the game making the plates and draws only the ones you target, through the same hidden state the plates already use when the game's own settings hide them. The offline nameplate test gained a step covering a vendor, a trainer, a friendly player and a follower companion through targeting, target switches, hovering, the interact key and objective bars.
+- **Fixed the castbar from a player's report on GitHub.** The report traced the problem to the start and end times the bar is drawn from, which a pushback never updated, and a follow-up tested a fix in game on Forever that also rebuilds the bar's timer, since that client keeps the old span otherwise. AzeriteUI's change follows that report and the way Blizzard's own castbar recalculates on both clients. A new offline test drives the real castbar code through two pushbacks, a channel, an empowered cast and another unit's cast; the 5.10.2 code fails it with the reported symptoms.
+
+### Access and known limits
+
+- **Verified offline only:** none of these changes has been seen in the game yet. The castbar fix matches one the reporter ran in game on Forever.
+- A hidden friendly plate is still there, only invisible, so clicking just above an NPC's head can still select it.
+- Blizzard's own NPC Names setting is separate. If names still float over friendly NPCs you have not targeted, turn them off in the game's Options under Nameplates.
+- The new option text was translated without native speakers; corrections are welcome on the Discord.
+
 ## 5.10.2-JuNNeZ (2026-09-25) - Tooltips That Line Up, and No Castbar Flicker
 
 ### Highlights

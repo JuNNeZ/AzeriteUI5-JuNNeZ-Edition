@@ -25,7 +25,16 @@ lua Tools/Harness/locale_harness.lua       .               # all ten locales: pa
 lua Tools/Harness/nameplate_harness.lua    .               # nameplates: named checks + golden snapshot
 lua Tools/Harness/flyout_harness.lua       .               # LibActionButton flyout discovery, both clients
 lua Tools/Harness/tooltip_compare_harness.lua .            # compare tooltips: borders and the Equipped tab
+lua Tools/Harness/castbar_pushback_harness.lua .           # oUF castbar: the player's bar steps back on pushback
 ```
+
+`castbar_pushback_harness.lua` loads the real `Libs/oUF/elements/castbar.lua` into its own environment and
+drives the player's cast through a start and two pushbacks, a channel cut short, an empowered cast,
+another unit's cast and a client without `C_DurationUtil` (GitHub #5, FixLog 2026-09-26). The bar is what
+the element's own `OnUpdate` draws, the timer the last duration handed to `SetTimerDuration`; the
+client's duration getters answer with the span the cast started with, as the reporter found Forever does
+after a delay. It fails against the 5.10.2 element: the bar full before the cast ends, the timer on the
+old span, the delay counted twice. Its mutations are the `castbar` entries in `mutate_client.lua`.
 
 `tooltip_compare_harness.lua` loads the real `Components/Misc/Tooltips.lua` with its layout data and
 `Core/API/ProtectedCall.lua`, and Blizzard's `TooltipComparisonManager` `Initialize` and

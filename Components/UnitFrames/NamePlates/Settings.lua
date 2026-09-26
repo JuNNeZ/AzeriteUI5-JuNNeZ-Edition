@@ -78,6 +78,10 @@ local defaults = { profile = ns:Merge({
 	threatColorPreset = "azerite",
 	healthValuePlacement = "below",
 	hideFriendlyPlayerHealthBar = false,
+	-- Friendly plates drawn only for your target and soft target, per kind (Visibility.lua,
+	-- ShouldShowNamePlateForBlizzardVisibility). The game's setting for the kind stays on, so the plates exist.
+	friendlyNPCsTargetOnly = false,
+	friendlyPlayersTargetOnly = false,
 	friendlyNameOnlyFontScale = 2.5,
 	friendlyNameOnlyTargetScale = false,
 	showBlizzardWidgets = false,

@@ -15,6 +15,9 @@ if you run Plater or another nameplate addon.
 - **Health text placement** - below the bar, inside the bar, or inside only in combat
 - **Show auras**
 - **Only show auras on your target**
+- **Friendly NPCs only for your target** - only your target's friendly NPC plate shows, and the one
+  your interact key would use. Ticking it turns on the game's Friendly NPCs setting, which it needs
+- **Friendly players only for your target** - the same for friendly player plates
 - **Maximum distance** - how far plates remain visible
 
 ### Aura filters

@@ -164,6 +164,17 @@ local AnchorStandardNamePlateName = function(self)
 	self.Name:SetPoint(point, x, y + GetTargetLikeNameLift(self) + GetNamePlateWidgetLift(self))
 end
 
+-- Friendly NPCs/players only for your target (off by default). Neither client has such a setting: the
+-- engine makes a plate by the game's setting for the kind, and with it off a hard target gets none, only
+-- its name in the world. So the game's setting stays on, every plate of the kind is made, and the ones
+-- that are not the target or the soft target are hidden here.
+local TARGET_ONLY_KEYS = { friendlyNPCs = "friendlyNPCsTargetOnly", friendlyPlayers = "friendlyPlayersTargetOnly" }
+
+local IsTargetOnly = function(kind)
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return (profile and profile[TARGET_ONLY_KEYS[kind]]) and true or false
+end
+
 local ShouldShowNamePlateForBlizzardVisibility = function(self)
 	if (not self or self.isPRD) then
 		return true
@@ -185,9 +196,12 @@ local ShouldShowNamePlateForBlizzardVisibility = function(self)
 		if (self.nameplateShowsWidgetsOnly or self.isTarget or self.isSoftTarget) then
 			return true
 		end
-		return IsShownByBlizzard("friendlyNPCs")
+		return IsShownByBlizzard("friendlyNPCs") and not IsTargetOnly("friendlyNPCs")
 	end
 
+	if (IsTargetOnly("friendlyPlayers") and not (self.isTarget or self.isSoftTarget)) then
+		return false
+	end
 	return IsShownByBlizzard("friendlyPlayers")
 end
 
@@ -610,3 +624,21 @@ NP.SetNamePlateAurasShown = SetNamePlateAurasShown
 NP.ApplyFriendlyNameOnlyNameAnchor = ApplyFriendlyNameOnlyNameAnchor
 NP.ApplyFriendlyNameOnlyFontScale = ApplyFriendlyNameOnlyFontScale
 NP.ApplyFriendlyNameOnlyVisualState = ApplyFriendlyNameOnlyVisualState
+
+-- For the options page: friendly NPCs or friendly players ("friendlyNPCs", "friendlyPlayers") only for
+-- your target. It needs the game's setting for the kind on, so turning it on turns that on too, as the
+-- option says; turning it off leaves the game's setting as it is.
+NamePlatesMod.GetFriendlyTargetOnly = function(self, kind)
+	return IsTargetOnly(kind)
+end
+NamePlatesMod.SetFriendlyTargetOnly = function(self, kind, enabled)
+	local key = TARGET_ONLY_KEYS[kind]
+	if (not key or not self.db) then
+		return
+	end
+	self.db.profile[key] = enabled and true or false
+	if (enabled and self:GetShownSetting(kind) == false) then
+		self:SetShownSetting(kind, true)
+	end
+	self:UpdateSettings()
+end

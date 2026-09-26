@@ -289,6 +289,24 @@ local GenerateOptions = function()
 						disabled = function(info) return not getoption(info, "showAuras") end,
 						set = setter,
 						get = getter
+					},
+					-- Ticking one also turns on the game's setting for its kind under Game settings,
+					-- which it needs (NamePlates/Visibility.lua, SetFriendlyTargetOnly).
+					friendlyNPCsTargetOnly = {
+						name = L["Friendly NPCs only for your target"],
+						desc = L["Only your target's friendly NPC nameplate shows, and the one your interact key would use. Turns on the game's Friendly NPCs setting under Game settings, which this needs."],
+						order = 4,
+						type = "toggle", width = "full",
+						set = function(info, val) getmodule():SetFriendlyTargetOnly("friendlyNPCs", val) end,
+						get = function(info) return getmodule():GetFriendlyTargetOnly("friendlyNPCs") end
+					},
+					friendlyPlayersTargetOnly = {
+						name = L["Friendly players only for your target"],
+						desc = L["Only your target's friendly player nameplate shows. Turns on the game's Friendly players setting under Game settings, which this needs."],
+						order = 5,
+						type = "toggle", width = "full",
+						set = function(info, val) getmodule():SetFriendlyTargetOnly("friendlyPlayers", val) end,
+						get = function(info) return getmodule():GetFriendlyTargetOnly("friendlyPlayers") end
 					}
 				}
 			},

@@ -1938,6 +1938,67 @@ do
 	end
 	Step("the visibility settings passed through")
 
+	-- Friendly plates only for your target (FixLog 2026-09-26, Tim's request). Neither client has such a
+	-- setting: with friendly NPC plates off, a hard target gets no plate, only its name in the world. So
+	-- the game's setting stays on, every plate is made, and only the target's and soft target's are drawn.
+	check(not M:GetFriendlyTargetOnly("friendlyNPCs") and not M:GetFriendlyTargetOnly("friendlyPlayers"),
+		"friendly plates only for your target is off by default")
+	local savedTarget = W.alias.target
+	W.cvars.nameplateShowFriendlyNpcs = "0"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	M:SetFriendlyTargetOnly("friendlyNPCs", true)
+	check(W.cvars.nameplateShowFriendlyNpcs == "1",
+		"turning it on for NPCs turns on the game's friendly NPC plates, which it needs", W.cvars.nameplateShowFriendlyNpcs)
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	check(M:GetFriendlyTargetOnly("friendlyNPCs") and W.profile.friendlyNPCsTargetOnly == true, "and it is saved")
+	check(Hidden(P[12]) and Hidden(P[4]), "friendly NPCs that are not your target are hidden")
+	check(not Hidden(P[5]) and not Hidden(P[13]) and not Hidden(P[1]) and not Hidden(P[2]),
+		"friendly players and enemies are left alone")
+	W.alias.target = "nameplate12"
+	Fire("PLAYER_TARGET_CHANGED")
+	check(not Hidden(P[12]) and P[12].Name.__shown and P[12].Health.__shown,
+		"the friendly NPC you target shows its Azerite plate")
+	check(Hidden(P[4]), "the other friendly NPC stays hidden")
+	W.alias.target = "nameplate4"
+	Fire("PLAYER_TARGET_CHANGED")
+	check(Hidden(P[12]) and not Hidden(P[4]), "a new target: the old NPC's plate hides and the new one's shows")
+	W.alias.target = nil
+	Fire("PLAYER_TARGET_CHANGED")
+	check(Hidden(P[4]) and Hidden(P[12]), "with no target, no friendly NPC plate shows")
+	W.alias.mouseover = "nameplate12"
+	Fire("UPDATE_MOUSEOVER_UNIT")
+	check(Hidden(P[12]), "hovering a friendly NPC does not show its plate")
+	W.alias.mouseover = nil
+	Tick()
+	W.alias.softinteract = "nameplate12"
+	Fire("PLAYER_SOFT_INTERACT_CHANGED")
+	check(not Hidden(P[12]), "the NPC your interact key would use shows")
+	W.alias.softinteract = savedSoftInteract
+	Fire("PLAYER_SOFT_INTERACT_CHANGED")
+	check(Hidden(P[12]), "and hides again once it would not")
+	W.units.nameplate4.widgetsOnly = true
+	Fire("UNIT_FACTION", "nameplate4")
+	check(not Hidden(P[4]), "a friendly NPC shown for its widgets still shows")
+	W.units.nameplate4.widgetsOnly = nil
+	Fire("UNIT_FACTION", "nameplate4")
+
+	M:SetFriendlyTargetOnly("friendlyPlayers", true)
+	check(Hidden(P[5]) and Hidden(P[13]), "friendly players only for your target hides the players and the companion")
+	check(not Hidden(P[1]) and not Hidden(P[2]), "and leaves enemies alone")
+	W.alias.target = "nameplate5"
+	Fire("PLAYER_TARGET_CHANGED")
+	check(not Hidden(P[5]) and P[5].Name.__shown and Hidden(P[13]), "and shows the one you target")
+
+	-- Off again: every plate is back, and the game's setting is left as it is.
+	M:SetFriendlyTargetOnly("friendlyNPCs", false)
+	M:SetFriendlyTargetOnly("friendlyPlayers", false)
+	check(not Hidden(P[12]) and not Hidden(P[4]) and not Hidden(P[13]) and not Hidden(P[5]),
+		"turned off, every friendly plate is back")
+	check(W.cvars.nameplateShowFriendlyNpcs == "1", "and the game's setting stays on", W.cvars.nameplateShowFriendlyNpcs)
+	W.alias.target = savedTarget
+	Fire("PLAYER_TARGET_CHANGED")
+	Step("friendly plates only for your target")
+
 	-- Use Blizzard overall scale follows the game's Nameplate Size, Medium being AzeriteUI's 100%.
 	W.profile.useBlizzardGlobalScale = true
 	W.cvars.nameplateSize = "3"

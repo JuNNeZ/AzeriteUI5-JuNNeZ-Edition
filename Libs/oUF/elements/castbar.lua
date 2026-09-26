@@ -374,12 +374,12 @@ local function CastUpdate(self, event, unit, _, _, castID)
 		return
 	end
 
-	local direction, duration, name, startTime, _ = Enum.StatusBarTimerDirection.ElapsedTime
+	local direction, duration, name, startTime, endTime, _ = Enum.StatusBarTimerDirection.ElapsedTime
 	if(event == 'UNIT_SPELLCAST_DELAYED') then
-		name, _, _, startTime = UnitCastingInfo(unit)
+		name, _, _, startTime, endTime = UnitCastingInfo(unit)
 		duration = UnitCastingDuration(unit)
 	else
-		name, _, _, startTime = UnitChannelInfo(unit)
+		name, _, _, startTime, endTime = UnitChannelInfo(unit)
 		if(event == 'UNIT_SPELLCAST_EMPOWER_UPDATE') then
 			duration = UnitEmpoweredChannelDuration(unit)
 		else
@@ -406,6 +406,23 @@ local function CastUpdate(self, event, unit, _, _, castID)
 		end
 
 		element.delay = element.delay + delta
+
+		-- AzeriteUI (GitHub #5): the cast was pushed back or the channel cut short, so its times
+		-- moved. onUpdate draws the bar from the stored ones and the next delay is measured from
+		-- them, so both take the new ones, and so does the timer: on Forever a duration read here
+		-- still runs on the old span. Blizzard's bar recomputes from these times the same way
+		-- (CastingBarFrame.lua, HandleCastDelayed). An empowered cast keeps what it had.
+		if(not element.empowering and type(endTime) == 'number'
+			and (not issecretvalue or not issecretvalue(endTime))) then
+			element.startTime = startTime
+			element.endTime = endTime / 1000
+
+			if(C_DurationUtil and C_DurationUtil.CreateDuration) then
+				local span = C_DurationUtil.CreateDuration()
+				span:SetTimeSpan(element.startTime, element.endTime)
+				duration = span
+			end
+		end
 	end
 
 	if(duration) then
