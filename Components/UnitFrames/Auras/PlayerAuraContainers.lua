@@ -126,7 +126,52 @@ local function GetContainerAnchorOffset(anchor)
 	return offsetX, offsetY
 end
 
+-- The countdown's colour as it runs out: white until the last 30 seconds, then yellow at
+-- ten, orange at three and red at the end. Blizzard's duration text binding evaluates the
+-- curve against the remaining time itself (Blizzard_CustomAuraButton.lua, SetDurationText),
+-- so the time, which may be secret, never reaches our code. Built once, shared by every
+-- button; nil on a client without colour curves or duration text bindings.
+local timerColorOptions
+do
+	local curveUtil = C_CurveUtil
+	local property = Enum.DurationTextBindingProperty and Enum.DurationTextBindingProperty.RemainingDuration
+	local linear = Enum.LuaCurveType and Enum.LuaCurveType.Linear
+	if (curveUtil and curveUtil.CreateColorCurve and property and linear) then
+		local curve = curveUtil.CreateColorCurve()
+		curve:SetType(linear)
+		local AddPoint = function(seconds, color)
+			curve:AddPoint(seconds, { r = color[1], g = color[2], b = color[3], a = 1 })
+		end
+		AddPoint(0, Colors.quest.red)
+		AddPoint(3, Colors.quest.orange)
+		AddPoint(10, Colors.quest.yellow)
+		AddPoint(30, Colors.offwhite)
+		timerColorOptions = { textColor = { curve = curve, property = property } }
+	end
+end
+
+local function StyleDurationText(button, border)
+	local time = border:CreateFontString(nil, "OVERLAY")
+	time:SetFontObject(GetFont(14, true))
+	time:SetPoint("TOPLEFT", button, "TOPLEFT", -4, 4)
+	time:SetJustifyH("LEFT")
+	time:SetWordWrap(false)
+	time:SetFixedColor(false)
+
+	local ok = TryCall(button.SetDurationText, button, time, timerColorOptions)
+	if (not ok) then
+		time:Hide()
+		return false
+	end
+	button.Time = time
+	return true
+end
+
 local function StyleDurationCooldown(button, border)
+	if (timerColorOptions and type(button.SetDurationText) == "function" and StyleDurationText(button, border)) then
+		return
+	end
+
 	local cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
 	SetMouseInputEnabled(cooldown, false)
 	cooldown:SetAllPoints(button)
@@ -190,6 +235,37 @@ local function AuraDataIsSecret()
 		return isSecret
 	end
 	return true
+end
+
+-- actionbutton-spellhighlight-square's solid ring spans 132 of its 256 pixels and the
+-- square icon mask shows 54 of 64, so this puts the ring on the icon's edge and lets
+-- the glow spill a few pixels past the button.
+local PANDEMIC_EDGE_SCALE = (54 / 64) / (132 / 256)
+
+local function SizePandemicEdge(edge, size)
+	local edgeSize = size * PANDEMIC_EDGE_SCALE
+	edge:SetSize(edgeSize, edgeSize)
+end
+
+-- Lights the button's edge for the pandemic window: the last stretch of an aura in
+-- which recasting it loses nothing. Blizzard's button works the window out from the
+-- aura's base and refresh-extended durations and owns the region's shown state from
+-- here on (Blizzard_CustomAuraButton.lua, AddPandemicRegion), so no aura data passes
+-- through our code. Auras that cannot be extended never show it.
+local function AddPandemicEdge(button, border, size)
+	if (type(button.AddPandemicRegion) ~= "function") then return end
+
+	local edge = border:CreateTexture(nil, "ARTWORK")
+	edge:SetTexture(GetMedia("actionbutton-spellhighlight-square"))
+	edge:SetVertexColor(unpack(Colors.title))
+	edge:SetPoint("CENTER", button, "CENTER", 0, 0)
+	SizePandemicEdge(edge, size)
+	edge:Hide()
+
+	local ok = TryCall(button.AddPandemicRegion, button, edge)
+	if (ok) then
+		button.PandemicEdge = edge
+	end
 end
 
 local function CanTouchAuraWidget(widget)
@@ -268,6 +344,8 @@ local function StyleAuraButton(button, isHarmful, options, subdued, styleState)
 	if (not options.disableCooldown) then
 		StyleDurationCooldown(button, border)
 	end
+
+	AddPandemicEdge(button, border, size)
 
 	button:SetCancelAuraButtons(isHarmful and nil or "RightButtonUp")
 	-- Do not add SetScript/HookScript handlers to CustomAuraButtonTemplate.
@@ -916,6 +994,9 @@ local function ResizeGroupFrames(container, groupKey, size)
 		local button = container:GetAuraGroupFrame(groupKey, frameIndex)
 		if (CanTouchAuraWidget(button)) then
 			button:SetSize(size, size)
+			if (CanTouchAuraWidget(button.PandemicEdge)) then
+				SizePandemicEdge(button.PandemicEdge, size)
+			end
 		end
 	end
 end

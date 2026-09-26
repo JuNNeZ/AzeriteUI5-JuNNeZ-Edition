@@ -887,3 +887,21 @@ L["Where the marker sits when the threshold is set by hand."] = "Onde o marcador
 
 -- Nameplates: another nameplate addon is enabled.
 L["%s is enabled, so AzeriteUI's nameplates stand down. These settings apply once it is disabled."] = "%s está ativado, então as placas de identificação do AzeriteUI ficam de lado. Estas configurações valem quando ele for desativado."
+
+-- Mythic+ and the Great Vault (Components/Misc/MythicPlus.lua, Components/Misc/Info.lua).
+L["These settings control AzeriteUI's Mythic+ timer, the card shown when a key ends, and the Font of Power."] = "Estas configurações controlam o cronômetro Mítica+ do AzeriteUI, o cartão mostrado quando uma chave termina e a Fonte do Poder."
+L["Show the key timer"] = "Mostrar o cronômetro da chave"
+L["A timer for the running key, with marks where the +3 and +2 upgrades run out, the time left to the next one, and your deaths."] = "Um cronômetro para a chave em andamento, com marcas onde os aprimoramentos +3 e +2 acabam, o tempo até o próximo e suas mortes."
+L["Show enemy forces"] = "Mostrar forças inimigas"
+L["A bar for the enemy forces counted so far."] = "Uma barra com as forças inimigas contadas até agora."
+L["Show the end-of-run card"] = "Mostrar o cartão de fim de corrida"
+L["When a key ends: your time, how many levels the keystone went up, your new rating, and whether it was your best time. Click it to close it."] = "Quando uma chave termina: seu tempo, quantos níveis a Pedra-chave subiu, sua nova pontuação e se foi seu melhor tempo. Clique nele para fechá-lo."
+L["Slot your keystone automatically"] = "Inserir a Pedra-chave automaticamente"
+L["When you open the Font of Power, your keystone goes in by itself."] = "Ao abrir a Fonte do Poder, sua Pedra-chave entra sozinha."
+L["New best time for this dungeon"] = "Novo melhor tempo nesta masmorra"
+L["Show Great Vault progress"] = "Mostrar o progresso do Grande Cofre"
+L["How many Great Vault slots you have unlocked this week, left of the latency. Hover it for each row and what the next slot needs."] = "Quantos espaços do Grande Cofre você desbloqueou nesta semana, à esquerda da latência. Passe o mouse para ver cada linha e o que falta para o próximo espaço."
+L["Great Vault"] = "Grande Cofre"
+L["%d more for the next slot"] = "Mais %d para o próximo espaço"
+L["Rewards are waiting in the Great Vault."] = "Há recompensas esperando no Grande Cofre."
+L["Vault"] = "Cofre"

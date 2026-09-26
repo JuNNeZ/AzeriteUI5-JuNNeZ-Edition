@@ -887,3 +887,21 @@ L["Where the marker sits when the threshold is set by hand."] = "기준을 직�
 
 -- Nameplates: another nameplate addon is enabled.
 L["%s is enabled, so AzeriteUI's nameplates stand down. These settings apply once it is disabled."] = "%s이(가) 켜져 있어 AzeriteUI 이름표는 사용되지 않습니다. 이 설정은 해당 애드온을 끄면 적용됩니다."
+
+-- Mythic+ and the Great Vault (Components/Misc/MythicPlus.lua, Components/Misc/Info.lua).
+L["These settings control AzeriteUI's Mythic+ timer, the card shown when a key ends, and the Font of Power."] = "이 설정은 AzeriteUI의 신화+ 타이머, 쐐기가 끝날 때 표시되는 카드, 힘의 샘을 조정합니다."
+L["Show the key timer"] = "쐐기 타이머 표시"
+L["A timer for the running key, with marks where the +3 and +2 upgrades run out, the time left to the next one, and your deaths."] = "진행 중인 쐐기의 타이머입니다. +3과 +2 상승이 끝나는 지점의 표시, 다음 단계까지 남은 시간, 사망 횟수를 보여줍니다."
+L["Show enemy forces"] = "적 병력 표시"
+L["A bar for the enemy forces counted so far."] = "지금까지 집계된 적 병력을 보여주는 바입니다."
+L["Show the end-of-run card"] = "완료 카드 표시"
+L["When a key ends: your time, how many levels the keystone went up, your new rating, and whether it was your best time. Click it to close it."] = "쐐기가 끝나면 기록 시간, 쐐기돌이 오른 단계 수, 새 평점, 최고 기록 여부를 보여줍니다. 클릭하면 닫힙니다."
+L["Slot your keystone automatically"] = "쐐기돌 자동으로 넣기"
+L["When you open the Font of Power, your keystone goes in by itself."] = "힘의 샘을 열면 쐐기돌이 자동으로 들어갑니다."
+L["New best time for this dungeon"] = "이 던전의 새 최고 기록"
+L["Show Great Vault progress"] = "위대한 금고 진행도 표시"
+L["How many Great Vault slots you have unlocked this week, left of the latency. Hover it for each row and what the next slot needs."] = "이번 주에 잠금 해제한 위대한 금고 칸 수를 지연 시간 왼쪽에 표시합니다. 마우스를 올리면 줄마다 진행도와 다음 칸에 필요한 것을 보여줍니다."
+L["Great Vault"] = "위대한 금고"
+L["%d more for the next slot"] = "다음 칸까지 %d 남음"
+L["Rewards are waiting in the Great Vault."] = "위대한 금고에 보상이 기다리고 있습니다."
+L["Vault"] = "금고"

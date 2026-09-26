@@ -887,3 +887,21 @@ L["Where the marker sits when the threshold is set by hand."] = "Wo die Markieru
 
 -- Nameplates: another nameplate addon is enabled.
 L["%s is enabled, so AzeriteUI's nameplates stand down. These settings apply once it is disabled."] = "%s ist aktiviert, daher treten die Namensplaketten von AzeriteUI zurück. Diese Einstellungen gelten, sobald es deaktiviert ist."
+
+-- Mythic+ and the Great Vault (Components/Misc/MythicPlus.lua, Components/Misc/Info.lua).
+L["These settings control AzeriteUI's Mythic+ timer, the card shown when a key ends, and the Font of Power."] = "Diese Einstellungen steuern AzeriteUIs Mythisch+-Timer, die Karte am Ende eines Schlüssels und den Quell der Macht."
+L["Show the key timer"] = "Schlüsseltimer anzeigen"
+L["A timer for the running key, with marks where the +3 and +2 upgrades run out, the time left to the next one, and your deaths."] = "Ein Timer für den laufenden Schlüssel, mit Markierungen, wo die Aufwertungen +3 und +2 ablaufen, der verbleibenden Zeit bis zur nächsten und deinen Toden."
+L["Show enemy forces"] = "Feindliche Streitkräfte anzeigen"
+L["A bar for the enemy forces counted so far."] = "Ein Balken für die bisher gezählten feindlichen Streitkräfte."
+L["Show the end-of-run card"] = "Abschlusskarte anzeigen"
+L["When a key ends: your time, how many levels the keystone went up, your new rating, and whether it was your best time. Click it to close it."] = "Wenn ein Schlüssel endet: deine Zeit, um wie viele Stufen der Schlüsselstein aufgewertet wurde, deine neue Wertung und ob es deine Bestzeit war. Klicke darauf, um sie zu schließen."
+L["Slot your keystone automatically"] = "Schlüsselstein automatisch einsetzen"
+L["When you open the Font of Power, your keystone goes in by itself."] = "Wenn du den Quell der Macht öffnest, wird dein Schlüsselstein von selbst eingesetzt."
+L["New best time for this dungeon"] = "Neue Bestzeit für diesen Dungeon"
+L["Show Great Vault progress"] = "Fortschritt der Großen Schatzkammer anzeigen"
+L["How many Great Vault slots you have unlocked this week, left of the latency. Hover it for each row and what the next slot needs."] = "Wie viele Plätze der Großen Schatzkammer du diese Woche freigeschaltet hast, links von der Latenz. Fahre darüber für jede Reihe und was der nächste Platz braucht."
+L["Great Vault"] = "Große Schatzkammer"
+L["%d more for the next slot"] = "Noch %d für den nächsten Platz"
+L["Rewards are waiting in the Great Vault."] = "In der Großen Schatzkammer warten Belohnungen."
+L["Vault"] = "Kammer"

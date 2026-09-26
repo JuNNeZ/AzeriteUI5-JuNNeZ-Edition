@@ -45,6 +45,7 @@
 	<Script file="OptionsPages\GameMenu.lua"/>
 	<Script file="OptionsPages\Info.lua"/>
 	<Script file="OptionsPages\Minimap.lua"/>
+	<Script file="OptionsPages\MythicPlus.lua"/>
 	<Script file="OptionsPages\WorldMap.lua"/>
 	<Script file="OptionsPages\Nameplates.lua"/>
 	<Script file="OptionsPages\Widgets.lua"/>

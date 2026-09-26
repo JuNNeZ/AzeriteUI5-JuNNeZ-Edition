@@ -887,3 +887,21 @@ L["Where the marker sits when the threshold is set by hand."] = "手動設定門
 
 -- Nameplates: another nameplate addon is enabled.
 L["%s is enabled, so AzeriteUI's nameplates stand down. These settings apply once it is disabled."] = "%s 已啟用，因此 AzeriteUI 的姓名牌不會啟用。停用它後這些設定才會生效。"
+
+-- Mythic+ and the Great Vault (Components/Misc/MythicPlus.lua, Components/Misc/Info.lua).
+L["These settings control AzeriteUI's Mythic+ timer, the card shown when a key ends, and the Font of Power."] = "這些設定控制 AzeriteUI 的傳奇鑰石計時器、鑰石結束時顯示的卡片以及能量之泉。"
+L["Show the key timer"] = "顯示鑰石計時器"
+L["A timer for the running key, with marks where the +3 and +2 upgrades run out, the time left to the next one, and your deaths."] = "目前鑰石的計時器，標出 +3 與 +2 升級的截止點、距離下一級的剩餘時間以及你的死亡次數。"
+L["Show enemy forces"] = "顯示敵方部隊"
+L["A bar for the enemy forces counted so far."] = "顯示目前已計入的敵方部隊的進度條。"
+L["Show the end-of-run card"] = "顯示結束卡片"
+L["When a key ends: your time, how many levels the keystone went up, your new rating, and whether it was your best time. Click it to close it."] = "鑰石結束時：你的用時、鑰石提升了幾級、你的新評分，以及是否為你的最佳時間。點擊即可關閉。"
+L["Slot your keystone automatically"] = "自動放入鑰石"
+L["When you open the Font of Power, your keystone goes in by itself."] = "打開能量之泉時，你的鑰石會自動放入。"
+L["New best time for this dungeon"] = "此地城的新最佳時間"
+L["Show Great Vault progress"] = "顯示寶庫進度"
+L["How many Great Vault slots you have unlocked this week, left of the latency. Hover it for each row and what the next slot needs."] = "在延遲左側顯示你本週已解鎖的寶庫欄位數。滑鼠停留可查看每一列以及下一個欄位還需要什麼。"
+L["Great Vault"] = "寶庫"
+L["%d more for the next slot"] = "距下一個欄位還差 %d"
+L["Rewards are waiting in the Great Vault."] = "寶庫中有獎勵等待領取。"
+L["Vault"] = "寶庫"

@@ -26,7 +26,17 @@ lua Tools/Harness/nameplate_harness.lua    .               # nameplates: named c
 lua Tools/Harness/flyout_harness.lua       .               # LibActionButton flyout discovery, both clients
 lua Tools/Harness/tooltip_compare_harness.lua .            # compare tooltips: borders and the Equipped tab
 lua Tools/Harness/castbar_pushback_harness.lua .           # oUF castbar: the player's bar steps back on pushback
+lua Tools/Harness/mythicplus_harness.lua   .               # Mythic+ timer, forces, end card, keystone, Great Vault
 ```
+
+`mythicplus_harness.lua` loads the real `Components/Misc/MythicPlus.lua` and `Components/Misc/Info.lua`
+against a small fake client whose answers follow how `Blizzard_ScenarioObjectiveTracker.lua`,
+`Blizzard_ChallengesUI.lua` and `Blizzard_WeeklyRewards.lua` read the same calls. It drives a key through
+the +3, +2, +1 and over-time stages, deaths, enemy forces (raw count, the rounded fallback, completion,
+overshoot), a secret time, the settings, the end-of-run card (timed with a record, over time, a practice
+run, switched off), the Font of Power (found, switched off, already slotted, cursor busy, combat, refused,
+no key) and the vault counter and tooltip. It cannot say whether the live client still answers that way,
+or how any of it looks. Its mutations are the `mythicplus` and `vault` entries in `mutate_client.lua`.
 
 `castbar_pushback_harness.lua` loads the real `Libs/oUF/elements/castbar.lua` into its own environment and
 drives the player's cast through a start and two pushbacks, a channel cut short, an empowered cast,

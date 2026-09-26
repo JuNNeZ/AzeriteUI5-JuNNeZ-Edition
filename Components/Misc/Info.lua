@@ -65,6 +65,7 @@ local defaults = { profile = ns:Merge({
 	enableFPS = true,
 	enableZone = true,
 	enableResting = true,
+	enableGreatVault = true,
 
 	useHalfClock = GetCurrentRegionName() == "US",
 	useServerTime = false,
@@ -205,6 +206,81 @@ local Fps_OnLeave = function(self)
 	GameTooltip:Hide()
 end
 
+-- Great Vault progress, read the way Blizzard_WeeklyRewards.lua reads it: each row of the
+-- vault is one threshold type, each activity in it one slot, unlocked once its progress
+-- reaches its threshold. Retail only; Forever has the API but no vault content.
+local VAULT_ROWS = {
+	{ "Raid", RAIDS },
+	{ "Activities", DUNGEONS },
+	{ "World", WORLD },
+	{ "RankedPvP", PVP }
+}
+
+local GetVaultRows = function()
+	if (not ns.IsRetailContent or not C_WeeklyRewards or not C_WeeklyRewards.GetActivities) then return end
+	local types = Enum.WeeklyRewardChestThresholdType
+	if (not types) then return end
+
+	local rows, unlocked, total = {}, 0, 0
+	for _, entry in ipairs(VAULT_ROWS) do
+		local kind = types[entry[1]]
+		local activities = kind and C_WeeklyRewards.GetActivities(kind)
+		if (type(activities) == "table" and #activities > 0) then
+			local row = { label = entry[2] or entry[1], unlocked = 0, total = #activities }
+			for _, activity in ipairs(activities) do
+				local progress, threshold = activity.progress, activity.threshold
+				if (type(progress) == "number" and type(threshold) == "number") then
+					if (progress >= threshold) then
+						row.unlocked = row.unlocked + 1
+					elseif (not row.need) then
+						row.need = threshold - progress
+					end
+				end
+			end
+			unlocked = unlocked + row.unlocked
+			total = total + row.total
+			rows[#rows + 1] = row
+		end
+	end
+	if (total == 0) then return end
+	return rows, unlocked, total
+end
+
+local Vault_UpdateTooltip = function(self)
+	if (GameTooltip:IsForbidden()) then return end
+
+	local rows = GetVaultRows()
+	if (not rows) then return end
+
+	local rh, gh, bh = unpack(Colors.highlight)
+	local r, g, b = unpack(Colors.normal)
+
+	GameTooltip_SetDefaultAnchor(GameTooltip, self)
+	GameTooltip:AddLine(L["Great Vault"], unpack(Colors.title))
+	for _, row in ipairs(rows) do
+		local text = string_format("%d/%d", row.unlocked, row.total)
+		if (row.need) then
+			text = text .. "  |cff888888" .. string_format(L["%d more for the next slot"], row.need) .. "|r"
+		end
+		GameTooltip:AddDoubleLine(row.label, text, rh, gh, bh, r, g, b)
+	end
+	if (C_WeeklyRewards.HasAvailableRewards and C_WeeklyRewards.HasAvailableRewards()) then
+		GameTooltip:AddLine(L["Rewards are waiting in the Great Vault."], unpack(Colors.quest.green))
+	end
+	GameTooltip:Show()
+end
+
+local Vault_OnEnter = function(self)
+	self.UpdateTooltip = Vault_UpdateTooltip
+	self:UpdateTooltip()
+end
+
+local Vault_OnLeave = function(self)
+	self.UpdateTooltip = nil
+	if (GameTooltip:IsForbidden()) then return end
+	GameTooltip:Hide()
+end
+
 Info.PrepareFrames = function(self)
 	if (self.frame) then return end
 
@@ -247,6 +323,22 @@ Info.PrepareFrames = function(self)
 	fps:SetScript("OnLeave", Fps_OnLeave)
 
 	self.fps = fps
+
+	-- Great Vault Text, to the left of the latency.
+	local vault = frame:CreateFontString(nil, "OVERLAY", nil, 1)
+	vault:SetFontObject(db.LatencyFont)
+	vault:SetTextColor(unpack(db.LatencyColor))
+	vault:SetPoint("RIGHT", latency, "LEFT", -10, 0)
+	vault:SetJustifyH("RIGHT")
+	vault:SetJustifyV("MIDDLE")
+
+	local vaultFrame = CreateFrame("Frame", nil, frame)
+	vaultFrame:SetAllPoints(vault)
+	vaultFrame:SetScript("OnEnter", Vault_OnEnter)
+	vaultFrame:SetScript("OnLeave", Vault_OnLeave)
+
+	self.vault = vault
+	self.vaultFrame = vaultFrame
 
 	-- Resting Text
 	local resting = frame:CreateFontString(nil, "OVERLAY", nil, 1)
@@ -420,7 +512,30 @@ Info.UpdateZone = function(self)
 	zoneName:SetText(minimapZoneName)
 end
 
+Info.UpdateGreatVault = function(self)
+	local vault = self.vault
+	if (not vault) then return end
+
+	local rows, unlocked, total
+	if (self.db.profile.enableGreatVault) then
+		rows, unlocked, total = GetVaultRows()
+	end
+	if (not rows) then
+		vault:SetText("")
+		vault:Hide()
+		self.vaultFrame:Hide()
+		return
+	end
+
+	local ready = C_WeeklyRewards.HasAvailableRewards and C_WeeklyRewards.HasAvailableRewards()
+	local color = ready and Colors.quest.green.colorCode or Colors.normal.colorCode
+	vault:SetFormattedText("|cff888888%s|r %s%d/%d|r", L["Vault"], color, unlocked, total)
+	vault:Show()
+	self.vaultFrame:Show()
+end
+
 Info.UpdateSettings = function(self)
+	self:UpdateGreatVault()
 	self:UpdateClock()
 	self:UpdateClockVisibility()
 	self:UpdatePerformance()
@@ -449,6 +564,15 @@ Info.OnEnable = function(self)
 	self:RegisterEvent("ZONE_CHANGED", "UpdateZone")
 	self:RegisterEvent("ZONE_CHANGED_INDOORS", "UpdateZone")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "UpdateZone")
+
+	if (ns.IsRetailContent and C_WeeklyRewards) then
+		self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateGreatVault")
+		for _, event in ipairs({ "WEEKLY_REWARDS_UPDATE", "CHALLENGE_MODE_COMPLETED", "CHALLENGE_MODE_MAPS_UPDATE" }) do
+			if (ns.API.IsEventAvailable(event)) then
+				self:RegisterEvent(event, "UpdateGreatVault")
+			end
+		end
+	end
 
 end
 

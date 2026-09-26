@@ -5287,8 +5287,8 @@ Debugging.PrintSecureSnippetReport = function(self, input)
 	if (type(input) == "string" and input:lower():find("reset", 1, true)) then
 		if (ns.db and ns.db.global) then
 			ns.db.global.secureSnippets = nil
-			print("|cff33ff99", "AzeriteUI secure snippets:", ns.IsForever
-				and "cache cleared; Forever remains unavailable and will not probe on /reload."
+			print("|cff33ff99", "AzeriteUI secure snippets:", ns.SecureSnippetsKnownUnavailable
+				and "cache cleared; this Forever build remains unavailable and will not probe on /reload."
 				or "cache cleared; it will re-probe on the next /reload.")
 		else
 			print("|cff33ff99", "AzeriteUI secure snippets:", "settings not ready.")
@@ -5297,7 +5297,7 @@ Debugging.PrintSecureSnippetReport = function(self, input)
 	end
 
 	local available = ns.HasSecureSnippets ~= false
-	local source = ns.SecureSnippetsKnownUnavailable and "known Forever limitation (no probe)"
+	local source = ns.SecureSnippetsKnownUnavailable and "known broken Forever build, before 70009 (no probe)"
 		or (ns.SecureSnippetsFromCache and "cache (no probe this login)" or "a live probe this login")
 
 	print("|cff33ff99", "AzeriteUI secure snippets:", available and "available" or "UNAVAILABLE")

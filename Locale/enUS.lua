@@ -886,3 +886,21 @@ L["Where the marker sits when the threshold is set by hand."] = true
 
 -- Nameplates: another nameplate addon is enabled.
 L["%s is enabled, so AzeriteUI's nameplates stand down. These settings apply once it is disabled."] = true
+
+-- Mythic+ and the Great Vault (Components/Misc/MythicPlus.lua, Components/Misc/Info.lua).
+L["These settings control AzeriteUI's Mythic+ timer, the card shown when a key ends, and the Font of Power."] = true
+L["Show the key timer"] = true
+L["A timer for the running key, with marks where the +3 and +2 upgrades run out, the time left to the next one, and your deaths."] = true
+L["Show enemy forces"] = true
+L["A bar for the enemy forces counted so far."] = true
+L["Show the end-of-run card"] = true
+L["When a key ends: your time, how many levels the keystone went up, your new rating, and whether it was your best time. Click it to close it."] = true
+L["Slot your keystone automatically"] = true
+L["When you open the Font of Power, your keystone goes in by itself."] = true
+L["New best time for this dungeon"] = true
+L["Show Great Vault progress"] = true
+L["How many Great Vault slots you have unlocked this week, left of the latency. Hover it for each row and what the next slot needs."] = true
+L["Great Vault"] = true
+L["%d more for the next slot"] = true
+L["Rewards are waiting in the Great Vault."] = true
+L["Vault"] = true

@@ -10,6 +10,32 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.12.0-JuNNeZ (2026-09-26) - Mythic+ Timer, Great Vault, Pandemic Timers, and Dragging Back on Forever
+
+### Highlights
+
+- **A Mythic+ timer.** A new frame shows the running key: dungeon and level, a timer bar with marks where the +3 and +2 upgrades run out, how long you have left for the next one, your deaths and the time they cost, and a bar for enemy forces. The bar goes from green to yellow, orange and red as the upgrades slip away. Move it with `/lock`; turn each part on or off under `/az -> Mythic+`.
+- **A card when the key ends**, showing your time against the limit, how many levels the keystone went up, your new rating and what it gained, and whether it was your best time in that dungeon. Click it to close it.
+- **Your keystone slots itself.** Open the Font of Power and your key goes in. Untick `/az -> Mythic+ -> Slot your keystone automatically` to do it by hand.
+- **Great Vault progress on the info bar.** "Vault 2/9" sits left of the latency and turns green when rewards are waiting; hover it to see each row and what the next slot needs. Turn it off under `/az -> Info/Clock Settings`.
+- **Pandemic timers on aura icons.** On the player, target, group frames and nameplates, an aura's icon lights up gold for the last stretch in which recasting it loses nothing, the game's own pandemic window. Aura countdowns also change colour as they run out: yellow under 10 seconds, orange under 3, red at the end.
+- **Forever: dragging actions and flyouts are back.** Forever 1.60.1.70009 fixed the game bug that stopped addons running secure code, so on that build and later you can drag spells onto and off the action bars again, open flyouts such as Mage portals, and use bar 1's vehicle exit. The chat message saying these were unavailable no longer appears.
+
+### Development
+
+- **Built the Mythic+ frame on the same data Blizzard's own tracker uses:** the dungeon's world timer and time limit, the death count and the enemy forces criterion, so the numbers match the default tracker. The end-of-run card reuses the game's own completion wording, so it reads correctly in every language, and every value is checked before any arithmetic in case a later patch starts hiding it.
+- **Made the aura timers work within the new secret aura rules.** The time left on an aura is hidden from addons in many places, so AzeriteUI hands the game a colour scale and the pandemic highlight and lets the game apply them, instead of reading the time itself.
+- **Traced the Forever fix to Blizzard's files.** The newest Forever build changes the load order that had broken secure code since the beta began. AzeriteUI now checks each Forever build once, as it already does on Retail, and falls back to the old workaround if a later build breaks it again.
+- **Added an offline test for the Mythic+ features and the vault counter.** It drives the real code through a key's stages, deaths, enemy forces, the end-of-run card, keystone slotting and the vault. It also showed that one of the existing checks had stopped running, which is fixed. These tests cannot show how anything looks in the game.
+
+### Access and known limits
+
+- **Verified offline only:** none of this has been seen in the game yet. The Forever fix follows Blizzard's published files for build 70009.
+- The Mythic+ frame, card and Great Vault counter are Retail only. Blizzard's own completion banner still shows next to the card, and clicking the vault counter does not open the Great Vault.
+- Aura countdowns now use the game's number format, which may read slightly differently from before.
+- The new option text was translated without native speakers; corrections are welcome on the Discord.
+
+
 ## 5.11.1-JuNNeZ (2026-09-26) - Minions for Your Target, and No Names Over Corpses
 
 ### Highlights

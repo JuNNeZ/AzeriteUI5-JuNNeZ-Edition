@@ -86,19 +86,23 @@ local ProbeSecureSnippets = function()
 	return ran
 end
 
--- Retail probe answers are remembered per client build. Forever is deliberately not
--- probed: the active TOC selects its fallback before a broken restricted closure can
--- reach BugGrabber. A future Forever client change needs an explicit compatibility
--- review rather than silently restoring a known-erroring probe.
+-- Probe answers are remembered per client build. Forever builds before 70009 are
+-- deliberately not probed: their load order is known broken, and the probe would only
+-- put Blizzard's error in BugSack. Forever 1.60.1.70009 fixed it - its
+-- Blizzard_EnvironmentCleanup.toc now carries a plain
+-- `## OptionalDep: Blizzard_RestrictedAddOnEnvironment`, the ordering Retail has always
+-- had - so from that build on Forever is probed and cached exactly like Retail.
 --
--- Read raw for Retail, because AceDB has not been built yet at this point in the load.
+-- Read raw, because AceDB has not been built yet at this point in the load.
 -- Core/FixBlizzardBugs.lua writes the result back at PLAYER_LOGIN.
+local FOREVER_FIRST_FIXED_BUILD = 70009
 local currentBuild = tostring(select(2, GetBuildInfo()))
 local cached = type(AzeriteUI5_DB) == "table"
 	and type(AzeriteUI5_DB.global) == "table"
 	and AzeriteUI5_DB.global.secureSnippets
+local knownBrokenForever = forever and (tonumber(currentBuild) or 0) < FOREVER_FIRST_FIXED_BUILD
 
-if (forever) then
+if (knownBrokenForever) then
 	ns.Private.HasSecureSnippets = false
 	ns.Private.SecureSnippetsKnownUnavailable = true
 	ns.Private.SecureSnippetsFromCache = false

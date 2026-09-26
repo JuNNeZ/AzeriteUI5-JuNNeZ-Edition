@@ -887,3 +887,21 @@ L["Where the marker sits when the threshold is set by hand."] = "Où se place le
 
 -- Nameplates: another nameplate addon is enabled.
 L["%s is enabled, so AzeriteUI's nameplates stand down. These settings apply once it is disabled."] = "%s est activé, donc les barres d'info d'AzeriteUI s'effacent. Ces réglages s'appliquent une fois qu'il est désactivé."
+
+-- Mythic+ and the Great Vault (Components/Misc/MythicPlus.lua, Components/Misc/Info.lua).
+L["These settings control AzeriteUI's Mythic+ timer, the card shown when a key ends, and the Font of Power."] = "Ces réglages contrôlent le chronomètre Mythique+ d'AzeriteUI, la carte affichée à la fin d'une clé et la Fontaine de puissance."
+L["Show the key timer"] = "Afficher le chronomètre de la clé"
+L["A timer for the running key, with marks where the +3 and +2 upgrades run out, the time left to the next one, and your deaths."] = "Un chronomètre pour la clé en cours, avec des repères là où les améliorations +3 et +2 expirent, le temps restant jusqu'à la suivante et vos morts."
+L["Show enemy forces"] = "Afficher les forces ennemies"
+L["A bar for the enemy forces counted so far."] = "Une barre pour les forces ennemies comptées jusqu'ici."
+L["Show the end-of-run card"] = "Afficher la carte de fin de donjon"
+L["When a key ends: your time, how many levels the keystone went up, your new rating, and whether it was your best time. Click it to close it."] = "À la fin d'une clé : votre temps, de combien de niveaux la clé a monté, votre nouvelle cote et s'il s'agit de votre meilleur temps. Cliquez dessus pour la fermer."
+L["Slot your keystone automatically"] = "Placer la clé automatiquement"
+L["When you open the Font of Power, your keystone goes in by itself."] = "Quand vous ouvrez la Fontaine de puissance, votre clé s'y place toute seule."
+L["New best time for this dungeon"] = "Nouveau meilleur temps pour ce donjon"
+L["Show Great Vault progress"] = "Afficher la progression de la Grande chambre forte"
+L["How many Great Vault slots you have unlocked this week, left of the latency. Hover it for each row and what the next slot needs."] = "Combien d'emplacements de la Grande chambre forte vous avez débloqués cette semaine, à gauche de la latence. Survolez-le pour chaque rangée et ce qu'il faut pour l'emplacement suivant."
+L["Great Vault"] = "Grande chambre forte"
+L["%d more for the next slot"] = "Encore %d pour l'emplacement suivant"
+L["Rewards are waiting in the Great Vault."] = "Des récompenses vous attendent dans la Grande chambre forte."
+L["Vault"] = "Chambre"

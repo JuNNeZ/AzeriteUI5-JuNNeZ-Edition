@@ -2,7 +2,6 @@
 
 	The MIT License (MIT)
 
-	Copyright (c) 2026 Lars Norberg
 	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,11 +29,10 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local Options = ns:GetModule("Options")
 
--- Lua API
-local string_format = string.format
-
+-- Components/Misc/MythicPlus.lua. The module only exists on Retail, so this page
+-- builds nothing on Forever.
 local getmodule = function()
-	local module = ns:GetModule("Info", true)
+	local module = ns:GetModule("MythicPlus", true)
 	if (module and module:IsEnabled()) then
 		return module
 	end
@@ -49,64 +47,55 @@ local getter = function(info)
 	return getmodule().db.profile[info[#info]]
 end
 
-local isdisabled = function(info)
-	return info[#info] ~= "enabled" and not getmodule().db.profile.enabled
-end
-
 local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Info/Clock Settings"],
+		name = L["Mythic+"],
 		type = "group",
 		args = {
 			description = {
+				name = L["These settings control AzeriteUI's Mythic+ timer, the card shown when a key ends, and the Font of Power."],
 				order = 1,
 				type = "description",
-				name = L["These settings control the info text and clock shown in AzeriteUI's top information area."],
 				fontSize = "medium"
 			},
-			header = {
+			showTimer = {
+				name = L["Show the key timer"],
+				desc = L["A timer for the running key, with marks where the +3 and +2 upgrades run out, the time left to the next one, and your deaths."],
 				order = 10,
-				type = "header",
-				name = L["Clock Settings"]
-			},
-			useHalfClock = {
-				name = L["24 Hour Mode"],
-				desc = string_format(L["Enable to use a 24 hour clock, disable to show a 12 hour clock with %s/%s suffixes."], TIMEMANAGER_AM, TIMEMANAGER_PM),
-				order = 20,
 				type = "toggle", width = "full",
-				hidden = isdisabled,
-				set = function(info,val) setter(info, not val) end,
-				get = function(info) return not getter(info) end
+				set = setter,
+				get = getter
 			},
-			useServerTime = {
-				name = L["Use Local Time"],
-				desc = L["Set the clock to your computer's local time, disable to show the server time instead."],
-				order = 21,
+			showForces = {
+				name = L["Show enemy forces"],
+				desc = L["A bar for the enemy forces counted so far."],
+				order = 11,
 				type = "toggle", width = "full",
-				hidden = isdisabled,
-				set = function(info,val) setter(info, not val) end,
-				get = function(info) return not getter(info) end
+				set = setter,
+				get = getter
 			},
-			enableGreatVault = {
-				name = L["Show Great Vault progress"],
-				desc = L["How many Great Vault slots you have unlocked this week, left of the latency. Hover it for each row and what the next slot needs."],
-				order = 30,
+			showCompletionCard = {
+				name = L["Show the end-of-run card"],
+				desc = L["When a key ends: your time, how many levels the keystone went up, your new rating, and whether it was your best time. Click it to close it."],
+				order = 12,
 				type = "toggle", width = "full",
-				-- Forever has no Great Vault.
-				hidden = function(info) return not ns.IsRetailContent or isdisabled(info) end,
+				set = setter,
+				get = getter
+			},
+			autoSlotKeystone = {
+				name = L["Slot your keystone automatically"],
+				desc = L["When you open the Font of Power, your keystone goes in by itself."],
+				order = 13,
+				type = "toggle", width = "full",
 				set = setter,
 				get = getter
 			}
-			-- TODO:
-			-- Information block settings:
-			-- - Text alignment
-			-- - Visible elements
 		}
 	}
 
 	return options
 end
 
-Options:AddGroup("Info Bar", GenerateOptions, -2500, "interface", "Info")
+Options:AddGroup("MythicPlus", GenerateOptions, -2750, "world", "MythicPlus")

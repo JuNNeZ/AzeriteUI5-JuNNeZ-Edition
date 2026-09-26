@@ -887,3 +887,21 @@ L["Where the marker sits when the threshold is set by hand."] = "Где стои
 
 -- Nameplates: another nameplate addon is enabled.
 L["%s is enabled, so AzeriteUI's nameplates stand down. These settings apply once it is disabled."] = "%s включён, поэтому индикаторы AzeriteUI не используются. Эти настройки заработают, когда он будет отключён."
+
+-- Mythic+ and the Great Vault (Components/Misc/MythicPlus.lua, Components/Misc/Info.lua).
+L["These settings control AzeriteUI's Mythic+ timer, the card shown when a key ends, and the Font of Power."] = "Эти настройки управляют таймером эпохального+ подземелья AzeriteUI, карточкой в конце ключа и Источником силы."
+L["Show the key timer"] = "Показывать таймер ключа"
+L["A timer for the running key, with marks where the +3 and +2 upgrades run out, the time left to the next one, and your deaths."] = "Таймер текущего ключа с отметками, где заканчиваются улучшения +3 и +2, временем до следующего и числом смертей."
+L["Show enemy forces"] = "Показывать силы противника"
+L["A bar for the enemy forces counted so far."] = "Полоса с уже засчитанными силами противника."
+L["Show the end-of-run card"] = "Показывать карточку в конце забега"
+L["When a key ends: your time, how many levels the keystone went up, your new rating, and whether it was your best time. Click it to close it."] = "Когда ключ завершён: ваше время, на сколько уровней поднялся ключ, новый рейтинг и лучшее ли это время. Щелкните по ней, чтобы закрыть."
+L["Slot your keystone automatically"] = "Вставлять ключ автоматически"
+L["When you open the Font of Power, your keystone goes in by itself."] = "Когда вы открываете Источник силы, ваш ключ вставляется сам."
+L["New best time for this dungeon"] = "Новое лучшее время в этом подземелье"
+L["Show Great Vault progress"] = "Показывать прогресс Великого хранилища"
+L["How many Great Vault slots you have unlocked this week, left of the latency. Hover it for each row and what the next slot needs."] = "Сколько ячеек Великого хранилища открыто на этой неделе, слева от задержки. Наведите курсор, чтобы увидеть каждый ряд и что нужно для следующей ячейки."
+L["Great Vault"] = "Великое хранилище"
+L["%d more for the next slot"] = "Ещё %d до следующей ячейки"
+L["Rewards are waiting in the Great Vault."] = "В Великом хранилище вас ждут награды."
+L["Vault"] = "Хранилище"

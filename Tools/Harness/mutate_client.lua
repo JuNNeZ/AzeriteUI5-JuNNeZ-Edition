@@ -23,7 +23,11 @@ local cases = {
 	{"snippet probe scope", "Core/Client.lua",
 		'if (not isAddOnLoaded("Blizzard_RestrictedAddOnEnvironment")) then return true end',
 		'if (false) then return true end'},
-	{"Forever probe bypass", "Core/Client.lua", "if (forever) then", "if (false) then"},
+	{"Forever probe bypass", "Core/Client.lua", "if (knownBrokenForever) then", "if (false) then"},
+	-- Forever 1.60.1.70009 fixed the restricted environment's load order (FixLog 2026-09-26);
+	-- moving the gate past it would keep dragging and the flyout off on a working client.
+	{"Forever fixed build gate", "Core/Client.lua",
+		"local FOREVER_FIRST_FIXED_BUILD = 70009", "local FOREVER_FIRST_FIXED_BUILD = 70010"},
 	{"numeric page driver", "Components/ActionBars/Prototypes/ActionBar.lua",
 		"statedriver = BuildConditionalDriver(conditions, fallback, function(page) return page end)", ""},
 	{"per-button action driver", "Components/ActionBars/Prototypes/ActionBar.lua",
@@ -505,7 +509,35 @@ local cases = {
 		"\t\t\t\tduration = span\n", "", "castbar_pushback_harness.lua"},
 	{"castbar pushback moves an empowered cast", "Libs/oUF/elements/castbar.lua",
 		"if(not element.empowering and type(endTime) == 'number'", "if(type(endTime) == 'number'",
-		"castbar_pushback_harness.lua"}
+		"castbar_pushback_harness.lua"},
+	-- Mythic+ and the Great Vault (FixLog 2026-09-26).
+	{"mythicplus +3 mark", "Components/Misc/MythicPlus.lua",
+		"local PLUS_THREE = .6", "local PLUS_THREE = .65", "mythicplus_harness.lua"},
+	{"mythicplus +2 mark", "Components/Misc/MythicPlus.lua",
+		"local PLUS_TWO = .8", "local PLUS_TWO = .85", "mythicplus_harness.lua"},
+	{"mythicplus secret time used", "Components/Misc/MythicPlus.lua",
+		"if (IsSecret(value) or type(value) ~= \"number\") then return nil end",
+		"if (type(value) ~= \"number\") then return nil end", "mythicplus_harness.lua"},
+	{"mythicplus forces from the rounded percentage", "Components/Misc/MythicPlus.lua",
+		"fraction = count / total", "fraction = count / 100", "mythicplus_harness.lua"},
+	{"mythicplus finished timer dropped", "Components/Misc/MythicPlus.lua",
+		"\t\tif (not self.completed) then\n\t\t\tself:Deactivate()\n\t\tend",
+		"\t\tself:Deactivate()", "mythicplus_harness.lua"},
+	{"mythicplus practice run card", "Components/Misc/MythicPlus.lua",
+		"or info.practiceRun == true) then return end", ") then return end", "mythicplus_harness.lua"},
+	{"mythicplus keystone switch ignored", "Components/Misc/MythicPlus.lua",
+		"if (not self.db.profile.autoSlotKeystone or not ChallengeMode.SlotKeystone) then return end",
+		"if (not ChallengeMode.SlotKeystone) then return end", "mythicplus_harness.lua"},
+	{"mythicplus keystone left on the cursor", "Components/Misc/MythicPlus.lua",
+		"\tif (CursorHasItem()) then\n\t\tClearCursor()\n\tend", "", "mythicplus_harness.lua"},
+	{"mythicplus cursor item dropped", "Components/Misc/MythicPlus.lua",
+		"if (InCombatLockdown() or CursorHasItem()) then return end",
+		"if (InCombatLockdown()) then return end", "mythicplus_harness.lua"},
+	{"vault slot unlocked at its threshold", "Components/Misc/Info.lua",
+		"if (progress >= threshold) then", "if (progress > threshold) then", "mythicplus_harness.lua"},
+	{"vault switch ignored", "Components/Misc/Info.lua",
+		"\tif (self.db.profile.enableGreatVault) then\n\t\trows, unlocked, total = GetVaultRows()\n\tend",
+		"\trows, unlocked, total = GetVaultRows()", "mythicplus_harness.lua"}
 }
 local function harnessFor(case)
 	return root .. "/Tools/Harness/" .. (case[5] or "client_harness.lua")
@@ -518,6 +550,7 @@ assert(originalLoadfile(root .. "/Tools/Harness/nameplate_harness.lua"))()
 assert(originalLoadfile(root .. "/Tools/Harness/flyout_harness.lua"))()
 assert(originalLoadfile(root .. "/Tools/Harness/tooltip_compare_harness.lua"))()
 assert(originalLoadfile(root .. "/Tools/Harness/castbar_pushback_harness.lua"))()
+assert(originalLoadfile(root .. "/Tools/Harness/mythicplus_harness.lua"))()
 for _, case in ipairs(cases) do
 	local mutations = 0
 	loadfile = function(path)

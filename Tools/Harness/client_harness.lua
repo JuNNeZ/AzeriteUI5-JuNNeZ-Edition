@@ -293,12 +293,12 @@ end
 -- Retail decides by whether a snippet actually ran. Forever's known-broken restricted
 -- environment must select the fallback without executing a probe.
 do
-	local function probeClient(interface, marker, restrictedAddOnLoaded, snippetRuns, saved)
+	local function probeClient(interface, marker, restrictedAddOnLoaded, snippetRuns, saved, build)
 		local env = setmetatable({}, { __index = _G })
 		env._G = env
 		env.WOW_PROJECT_MAINLINE = 1
 		env.WOW_PROJECT_ID = 1
-		env.GetBuildInfo = function() return "1.60.1", "69913", "Sep 2026", interface end
+		env.GetBuildInfo = function() return "1.60.1", build or "69913", "Sep 2026", interface end
 		env.C_AddOns = {
 			GetAddOnMetadata = function() return marker end,
 			IsAddOnLoaded = function(name)
@@ -362,6 +362,27 @@ do
 		"Forever selects the fallback without running a probe")
 	check(not foreverProbe.attributes["_onstate-azsnippetprobe"],
 		"Forever never installs the erroring probe snippet")
+
+	-- Forever 1.60.1.70009 fixed the load order (Blizzard_EnvironmentCleanup.toc gained a
+	-- plain OptionalDep on the restricted environment), so from there it probes like Retail.
+	local fixedForever, fixedProbe = probeClient(16001, "Forever", true, true, nil, "70009")
+	check(fixedForever.HasSecureSnippets == true and not fixedForever.SecureSnippetsKnownUnavailable,
+		"Forever 70009 probes, and a snippet that runs restores the secure paths")
+	check(fixedProbe.attributes["_onstate-azsnippetprobe"], "and the probe really ran")
+
+	local laterBroken = probeClient(16001, "Forever", true, false, nil, "70100")
+	check(laterBroken.HasSecureSnippets == false and not laterBroken.SecureSnippetsKnownUnavailable,
+		"a later Forever build that breaks again is caught by the probe")
+
+	local cachedForever = probeClient(16001, "Forever", true, true, { global = { secureSnippets = {
+		build = "70009", available = false } } }, "70009")
+	check(cachedForever.HasSecureSnippets == false and cachedForever.SecureSnippetsFromCache == true,
+		"Forever 70009 reads its cache like Retail")
+
+	local oldCache = probeClient(16001, "Forever", true, false, { global = { secureSnippets = {
+		build = "69977", available = true } } }, "69977")
+	check(oldCache.HasSecureSnippets == false and oldCache.SecureSnippetsKnownUnavailable,
+		"a broken Forever build ignores even an 'available' cache")
 end
 -- Action bar paging, with and without restricted execution.
 --
