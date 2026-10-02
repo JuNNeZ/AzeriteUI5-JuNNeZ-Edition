@@ -146,7 +146,9 @@ local AnchorStandardNamePlateCastBar = function(self)
 		return
 	end
 	self.Castbar:ClearAllPoints()
-	self.Castbar:SetPoint("TOP", self.Health, "BOTTOM", 0, -1 + NAMEPLATE_CASTBAR_BASELINE_OFFSET + GetNamePlateCastBarOffsetSetting())
+	local offset = -1 + NAMEPLATE_CASTBAR_BASELINE_OFFSET + GetNamePlateCastBarOffsetSetting()
+	if (ns.HunterTheme) then offset = ns.HunterTheme:GetNameplateCastOffset(offset) end
+	self.Castbar:SetPoint("TOP", self.Health, "BOTTOM", 0, offset)
 end
 
 local AnchorStandardNamePlateName = function(self)

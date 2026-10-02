@@ -48,6 +48,10 @@ ns.RegisterConfigVariant = function(preset, name, config)
 	end
 end
 
+local FinishConfig = function(name, config)
+	return ns.PaladinTheme and ns.PaladinTheme:GetConfig(name, config) or config
+end
+
 ns.GetConfig = function(name)
 	local config = configs[name]
 	if (not config) then
@@ -56,13 +60,13 @@ ns.GetConfig = function(name)
 
 	local preset = ns.GetActiveConfigVariant and ns:GetActiveConfigVariant()
 	if (type(preset) ~= "string" or preset == "") then
-		return config
+		return FinishConfig(name, config)
 	end
 
 	local variants = configVariants[preset]
 	local variant = variants and variants[name]
 	if (not variant) then
-		return config
+		return FinishConfig(name, config)
 	end
 
 	if (not resolvedConfigs[preset]) then
@@ -71,6 +75,6 @@ ns.GetConfig = function(name)
 	if (not resolvedConfigs[preset][name]) then
 		resolvedConfigs[preset][name] = ns:Merge(ns:Copy(variant), config)
 	end
-	return resolvedConfigs[preset][name]
+	return FinishConfig(name, resolvedConfigs[preset][name])
 end
 

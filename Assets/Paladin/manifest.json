@@ -1,0 +1,284 @@
+{
+  "health-case": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "053959d57a77d01e474e7726ad8cd428da67a007dabaa0f4cf6e15674c2be64e"
+  },
+  "health-portrait": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "e50cd830f817d9938349c1afabd8403c6953fb011da372ba8d989c8287405122"
+  },
+  "health-wide": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "d5064348380ff42be6b0c5bfe1932879401f0190b2f7d36c86bbf359cd75868e"
+  },
+  "health-lowmid": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "2eedc4afdf2cb686ab464f4f4460f48ed79036fcbee413fe9daef56a8a358ce7"
+  },
+  "health-small": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "20701759cf1faab2e23783c5ecc2654073460bbbdc9cc1efdd182df5cb3bf553"
+  },
+  "lion-cast": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "12b8fa66d42bfab2778702f69403d9fd08c57d6b6bb8c116e6dbbac87a756671"
+  },
+  "holy-case": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "ff3abc17fb1e2212e34c7659baeee99f724d78e30db7dc5d5fdb2b00fd85b889"
+  },
+  "holy-fill": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "272c6aec1558b2ca125ca7ff418e0b8b642c9664615de391cf7a4d53d9af4d33"
+  },
+  "orb-case": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "704e5eed36554fe85f4602d0edf3e8ca8a47beb7d4fc3b6cedaee0be124ccca9"
+  },
+  "crystal-holder": {
+    "size": [
+      256,
+      128
+    ],
+    "sha256": "6a51ee42a6b2ec5a601c8eed06050aa33da9f658cf18b16de854a87d6004d72f"
+  },
+  "light-body": {
+    "size": [
+      512,
+      512
+    ],
+    "sha256": "79dd2ac0f8426a9af0c964e507835bd419aa4073f9c178c896cc28ba5ab7b37e"
+  },
+  "light-strands": {
+    "size": [
+      512,
+      512
+    ],
+    "sha256": "734781a7a51e6ef27e3de40da0ad75e4c3adb2a414d724a9e85009262309ee9e"
+  },
+  "orb-light": {
+    "size": [
+      512,
+      512
+    ],
+    "sha256": "6980008e4298758b3444686ce1c70ebd1eb331d8547eca1ebee0235129e2e54f"
+  },
+  "orb-strands": {
+    "size": [
+      512,
+      512
+    ],
+    "sha256": "f0211f81b134874e791a477172a2649b2304fbdb2df79365c2df1d4fdabf7f24"
+  },
+  "action-ring": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "629b81c6f8220c9d23c9783a3cf8fa3256ab4887eff4ff83bfab9bb8e9f7246c"
+  },
+  "utility-cog": {
+    "size": [
+      128,
+      128
+    ],
+    "sha256": "2443846e86425a4aac9c08a76c27bcd1ff27c1aaa681d5a9a92fa542f58ffd48"
+  },
+  "compact-case": {
+    "size": [
+      256,
+      128
+    ],
+    "sha256": "8f4784aaa85a17c83ff1acaab531c430ae31d794244333e296e21a68d7db1e56"
+  },
+  "utility-edge": {
+    "size": [
+      512,
+      64
+    ],
+    "sha256": "c48acc428e986c3b97b24d5c0718043f424040f8bc41be2e2e54fc4871c055a1"
+  },
+  "minimap-ring": {
+    "size": [
+      512,
+      512
+    ],
+    "sha256": "ca92ed085f303f853f681e6ec0d570827b252fa7a24d7bdeb7b4badbf2648732"
+  },
+  "portrait-case": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "fe0d58aee6b80ffb24462b8011e326790dfa8590a8584e9a530366ac83856a44"
+  },
+  "portrait-case-low": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "2d66c60aad5fc3e93d6e98869137f041374dc92008d4c58f696f087d4c18daa7"
+  },
+  "plate-case": {
+    "size": [
+      256,
+      64
+    ],
+    "sha256": "19f143726d8f940eecdeffdbc68fa16b57da82f1b0c88a0fa5cb980487eafeb5"
+  },
+  "seal": {
+    "size": [
+      32,
+      32
+    ],
+    "sha256": "44ae4d574eeca371cfdd6c0fd6bb0806c03f883cd3701e693cbf651d488f05f9"
+  },
+  "party-case": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "254c8e7bbce1bbf621a010f7d0a5413c2ce5327c5c79b9d6fa9c3497f69e427a"
+  },
+  "utility-plate": {
+    "size": [
+      128,
+      128
+    ],
+    "sha256": "ff27022f40d1c756e2d7c1ec823b1ef5848bf0a214ede1e3c12c4eb0783127d3"
+  },
+  "vehicle-exit": {
+    "size": [
+      128,
+      128
+    ],
+    "sha256": "f3a9d304da451de17b73e8c0675dc309cae2ce429c988c5a41c3f899d5f333c9"
+  },
+  "status-backdrop": {
+    "size": [
+      512,
+      512
+    ],
+    "sha256": "801e4bbe469fd00a1a87c92bd8e3d71524f874d7664541cde0fa62cb1c42c208"
+  },
+  "critter-case": {
+    "size": [
+      128,
+      128
+    ],
+    "sha256": "33d5b4c07d2464acc65325730deab5365300c3b4b100df44fb02e1c9ae78979c"
+  },
+  "health-glow": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "8b0dc6b2e6340c837ff0291ab119ceb61c44283b442b623e1db3bed60e458d92"
+  },
+  "health-portrait-glow": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "9ba90f53949e6411b01fd01f1435090e7b1e7e65750a90cf6c5d69ab75fa51b7"
+  },
+  "health-wide-glow": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "0004f33c44626396023282c7c70c56140a48588c80abda3e5793455f5e669594"
+  },
+  "health-lowmid-glow": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "905c0f0d3b793367c515c7aa3fbfa88b0cbacd54a15c72578cfea191c6ca4c9a"
+  },
+  "health-small-glow": {
+    "size": [
+      1024,
+      512
+    ],
+    "sha256": "738f519b5cbb44a084f4cccaf9c99f0005c5fa0404ca865685bb4bffd761f5fa"
+  },
+  "crystal-holder-glow": {
+    "size": [
+      256,
+      128
+    ],
+    "sha256": "372fd39fbab7edc89671220d37e2a12b7450919fbc6689196353cb5936791efe"
+  },
+  "orb-case-glow": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "6fe0b7f3ac94b5ac0d3f9d8c7fb39e996991d4904e42c7fd5054efa61268c5e1"
+  },
+  "_sources": {
+    "health-case.png": "e95b1edeaa5ac8c08dd86c39507ca9e64ee36d6093a04db5087b2a7fa37ff4ab",
+    "lion-cast.png": "1f56cb62f1d7b1bae23ea9e10f26413c96cdad3b4ecb97299983a40815342a79",
+    "portrait-case.png": "49b9eb11176ed9d7c25123b52f04ca20f7fe8c3d226c302258872a7cc64ba04d",
+    "plate-case.png": "bec8f9a52f3c23357010c6831fa37eaa8335b489a64f7902106780ca02e2ca51",
+    "action-ring.png": "4f95ab6d4ff57758c65be6b0b54c46f519f04f3173e3f37be856533074a8333b",
+    "minimap-ring.png": "b53824d6ace51f9b95ca38526f91dc16f3be7a30aab7289bb45d958d05703599",
+    "utility-frame.png": "17d635f1474bea4a35ef909a6c1edb8aea4b07b4cf9b082daa4745f8900c60de",
+    "seal.png": "4b99f14ef3f00ef492d4ffe7ea21b186e90b4f237a7e7a27578f6b6541b7ca80",
+    "crystal-holder.png": "ccda399011284e255c66ff40bfcca5e50d2e39700d4522273db6710bf491b217",
+    "orb-case.png": "1334c636b2f7addffa6be8073a5ede5ef443e0a6bb2c0dd49644f7970c79024c",
+    "light-body.png": "9d82641a90ccebb507ba8dc01a0a2baf9332c901382485e62827dbf609cae689",
+    "light-strands.png": "27815aec54eda344f9acf831a12587ff5d5524d43c21c3471cb8dbf33bdf8071"
+  },
+  "_revision2_sources": {
+    "action-subtle.png": "10a590518645e6e849e59d082c1c40cba7515de487e6c93e32f2a68f624732a4",
+    "utility-subtle.png": "0a806386f03d6ad95eb6f69bfc4562b86b48cf808ee40f3c88c1ea41c946d48c",
+    "compact-subtle.png": "ce5f5394ac0145ce3bbf1433e92b7839fa6f8cba9c5c97486d7d2394bed65cbd",
+    "tooltip-subtle.png": "668e1acb0427d4198825fbea5d589bb25ed22b84ef8840c7b99cb4d2e6dbdfb0"
+  },
+  "_revision3_sources": {
+    "minimap-simple.png": "79d007fd212f73c52f496b2041996ec31b7da4b0a35a80f5458c74422bc52fb2",
+    "portrait-simple.png": "6912b61ff0839eb6ce9e7a72123301d48eaa1b06998ae2913c391a090f2bf656",
+    "plate-simple.png": "39bd5741250ef919636c31299a14de6e45fe8278eaa02aaef307882bb779a50c",
+    "seal-simple.png": "1088449f1581fee6b7887ee6e5b099ec42fb270000fcce29beeaa7668c21ed85"
+  },
+  "_revision4_sources": {
+    "party-case.png": "5d722023cc3a5b72c13d775dc8358e492c8eb5b29ad51be7ed7a9f654a2f89df",
+    "utility-plate.png": "aaea69ab2f5e1ff7da2c326ba02cffaa1f7d15f922db3bea49aeb79973d48f7a",
+    "vehicle-exit.png": "d0e0b7b38ae531f64737fb22b42746508139fd6e32a485b37ac400ed46b5bf6b",
+    "status-backdrop.png": "fbfa29d04d0231b9099e0b3dd2931362a320cd87ba9bb5d73985ad6809b4f3b2"
+  },
+  "_revision5_sources": {
+    "lion-cast.png": "6a8120bef8cb5c1a18b94bef8661e88c1f7851642054a0b5b44c0be55ae5c590",
+    "holy-case.png": "7a699acc28af2d04a64f0b5768960eaaaa0655419ba1d0bbc3d372812d8c9af8",
+    "holy-fill.png": "8205449391371540b037a6f4dd6078a2052341e509ca592dc02efe9212587aba"
+  }
+}

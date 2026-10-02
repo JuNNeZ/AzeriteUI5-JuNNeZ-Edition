@@ -431,6 +431,7 @@ local style = function(self, unit)
 	targetHighlight.colorFocus = db.TargetHighlightFocusColor
 
 	self.TargetHighlight = targetHighlight
+	if (ns.HunterTheme) then ns.HunterTheme:StylePet(self) end
 
 	-- Textures need an update when frame is displayed.
 	self.PostUpdate = UnitFrame_PostUpdate
@@ -494,4 +495,3 @@ PetFrameMod.OnEnable = function(self)
 
 	ns.MovableModulePrototype.OnEnable(self)
 end
-

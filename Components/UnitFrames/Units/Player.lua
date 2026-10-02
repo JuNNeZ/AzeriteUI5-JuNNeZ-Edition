@@ -2082,11 +2082,19 @@ local ResolvePlayerPowerColorFromTable = function(colorTable, token, fallbackCol
 	return color
 end
 
+local UsePlayerIceCrystal = function()
+	local requested = PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()
+	if (ns.PaladinTheme) then return ns.PaladinTheme:UseIceCrystal(requested) end
+	return requested
+end
+
 local ResolvePlayerPowerDefaultColor = function(config, token)
 	return ResolvePlayerPowerColorFromTable(config and config.PowerBarColors, token, POWER_CRYSTAL_DEFAULT_COLOR)
 end
 
 local ResolvePlayerPowerBaseColor = function(config, profile, token)
+	local themeColor = ns.PaladinTheme and ns.PaladinTheme:GetPowerColor(token)
+	if (themeColor) then return themeColor end
 	local defaultColor = ResolvePlayerPowerDefaultColor(config, token)
 	local colorMode = profile and profile.crystalOrbColorMode or "default"
 	if (colorMode == "classColor" or colorMode == "class") then
@@ -2396,6 +2404,7 @@ local MANA_ORB_TEXTURES = {
 }
 
 local SetManaOrbFillTexture = function(mana, db)
+	if (ns.PaladinTheme and ns.PaladinTheme:StyleOrb(mana)) then return end
 	local style = PlayerFrameMod.db and PlayerFrameMod.db.profile and PlayerFrameMod.db.profile.manaOrbTexture
 	local asset = MANA_ORB_TEXTURES[style]
 	if (asset and asset ~= "orb2" and ns.API and ns.API.GetMedia) then
@@ -2642,7 +2651,7 @@ local UnitFrame_UpdateTextures = function(self)
 	local powerThreatBarAnchorFrameKey = (profile and profile.powerThreatBarAnchorFrame) or "POWER"
 	local powerThreatCaseAnchorFrameKey = (profile and profile.powerThreatCaseAnchorFrame) or "POWER"
 	local powerBarArtLayer = (profile and tonumber(profile.powerBarArtLayer)) or 0
-	local useIceCrystal = PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()
+	local useIceCrystal = UsePlayerIceCrystal()
 	local ClampLayer = function(value, defaultValue)
 		local numeric = tonumber(value)
 		if (type(numeric) ~= "number") then
@@ -2793,6 +2802,7 @@ local UnitFrame_UpdateTextures = function(self)
 	healthBackdrop:SetSize(unpack(db.HealthBackdropSize))
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 	healthBackdrop:SetVertexColor(unpack(db.HealthBackdropColor))
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleHealth(self, db, false) end
 
 	local healPredict = self.HealthPrediction
 	healPredict:SetTexture(db.HealthBarTexture)
@@ -2839,7 +2849,7 @@ local UnitFrame_UpdateTextures = function(self)
 	SetPointWithOffset(power, powerBarPoint, powerBarOffsetX, powerBarOffsetY, powerAnchorFrame)
 	power:SetSize(powerBackdropWidth, powerBackdropHeight)
 	-- WoW 12.0: Cache texture to prevent flickering
-	local powerTexture = (PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and db.PowerBarTextureWrath or db.PowerBarTexture
+	local powerTexture = (UsePlayerIceCrystal()) and db.PowerBarTextureWrath or db.PowerBarTexture
 	if (power._cachedTexture ~= powerTexture) then
 		power:SetStatusBarTexture(powerTexture)
 		power._cachedTexture = powerTexture
@@ -2903,7 +2913,7 @@ local UnitFrame_UpdateTextures = function(self)
 	local powerBackdropAnchorFrame = power
 	SetPointWithOffset(powerBackdrop, CURRENT_POWER_CRYSTAL_LAYOUT.backdropPoint, 0, 0, powerBackdropAnchorFrame)
 	powerBackdrop:SetSize(powerBackdropWidth, powerBackdropHeight)
-	powerBackdrop:SetTexture((PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and db.PowerBackdropTextureWrath or db.PowerBackdropTexture)
+	powerBackdrop:SetTexture((UsePlayerIceCrystal()) and db.PowerBackdropTextureWrath or db.PowerBackdropTexture)
 	powerBackdrop:SetVertexColor(1, 1, 1, 1)
 	SafeSetDrawLayer(powerBackdrop, "BACKGROUND", -2 + powerBarArtLayer, -2)
 
@@ -2922,6 +2932,7 @@ local UnitFrame_UpdateTextures = function(self)
 	powerCase:SetTexture(db.PowerBarForegroundTexture)
 	powerCase:SetVertexColor(unpack(db.PowerBarForegroundColor))
 	SafeSetDrawLayer(powerCase, "ARTWORK", 2 + powerBarArtLayer, 2)
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleCrystal(power, powerTexture, adjustedCoord) end
 
 	local powerValue = self.Power.Value
 	if (powerValue) then
@@ -3020,6 +3031,7 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 	end
 
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleThreat(self, false) end
 	ApplyPlayerAuraLayout(self)
 
 end
@@ -3331,6 +3343,7 @@ local style = function(self, unit)
 	castText:SetTextColor(unpack(config.CastBarTextColor))
 	castText:SetJustifyH(config.HealthValueJustifyH)
 	castText:SetJustifyV(config.HealthValueJustifyV)
+	if (config.CastBarTextSize) then castText:SetSize(unpack(config.CastBarTextSize)) end
 	castText:Hide()
 	castText.color = config.CastBarTextColor or { 1, 1, 1, 1 }
 	castText.colorProtected = config.CastBarTextProtectedColor or castText.color
@@ -3468,7 +3481,7 @@ local style = function(self, unit)
 	self.Power.Override = ns.API.UpdatePower
 	ns.API.BindStatusBarValueMirror(self.Power)
 	self.Power.PostUpdate = Power_UpdateVisibility
-	self.Power.PostUpdateColor = not (PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) and Power_PostUpdateColor
+	self.Power.PostUpdateColor = not (UsePlayerIceCrystal()) and Power_PostUpdateColor
 
 	local powerFakeFill = power:CreateTexture(nil, "ARTWORK", nil, 1)
 	powerFakeFill:SetAllPoints(power)
@@ -3823,7 +3836,7 @@ local style = function(self, unit)
 	-- Seasonal Flavors
 	--------------------------------------------
 	-- Feast of Winter Veil
-	if (ns.API.IsWinterVeil()) then
+	if (ns.API.IsWinterVeil() and UsePlayerIceCrystal()) then
 		local winterVeilPower = power:CreateTexture(nil, "OVERLAY", nil, 0)
 		winterVeilPower:SetSize(unpack(config.Seasonal.WinterVeilPowerSize))
 		winterVeilPower:SetPoint(unpack(config.Seasonal.WinterVeilPowerPlace))
@@ -3975,7 +3988,7 @@ PlayerFrameMod.Update = function(self)
 
 	UpdatePlayerHealthPercentVisibility(self.frame)
 
-	if (self.db.profile.useWrathCrystal or ns.API.IsWinterVeil()) then
+	if (UsePlayerIceCrystal()) then
 		self.frame.Power.colorPower = false
 		self.frame.Power.PostUpdateColor = nil
 		self.frame.Power:SetStatusBarColor(1,1,1,1)

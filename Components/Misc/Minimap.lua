@@ -1278,7 +1278,7 @@ MinimapMod.SetTheme = function(self, requestedTheme)
 					end
 
 					if (ElementTypes[element] == "Texture") then
-						object:SetTexture(data.Path)
+						object:SetTexture(ns.PaladinTheme and ns.PaladinTheme:ResolvePath(data.Path) or data.Path)
 						object:SetDrawLayer(data.DrawLayer or "ARTWORK", data.DrawLevel or 0)
 						if (data.Color) then
 							object:SetVertexColor(unpack(data.Color))

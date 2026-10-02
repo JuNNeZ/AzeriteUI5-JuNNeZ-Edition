@@ -2918,6 +2918,7 @@ local UnitFrame_UpdateTextures = function(self)
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 	healthBackdrop:SetVertexColor(unpack(db.HealthBackdropColor))
 	healthBackdrop:SetTexCoord(GetTargetFillTexCoords(nil))
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleHealth(self, db, true) end
 
 	local healPredict = self.HealthPrediction
 	healPredict:SetTexture(db.HealthBarTexture)
@@ -3097,6 +3098,7 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 	end
 
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleThreat(self, true) end
 	local portraitBorder = self.Portrait.Border
 	portraitBorder:SetTexture(db.PortraitBorderTexture)
 	portraitBorder:SetVertexColor(unpack(db.PortraitBorderColor))
@@ -3444,6 +3446,7 @@ local style = function(self, unit, id)
 	castText:SetTextColor(unpack(db.CastBarTextColor))
 	castText:SetJustifyH(db.HealthValueJustifyH)
 	castText:SetJustifyV(db.HealthValueJustifyV)
+	if (db.CastBarTextSize) then castText:SetSize(unpack(db.CastBarTextSize)) end
 	castText:Hide()
 	castText.color = db.CastBarTextColor
 	castText.colorProtected = db.CastBarTextProtectedColor

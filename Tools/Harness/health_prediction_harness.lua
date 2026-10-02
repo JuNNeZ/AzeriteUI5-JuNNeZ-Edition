@@ -454,4 +454,16 @@ check(not pcall(segment, p.damageAbsorb, 170, 200), "anchor mutation must fail")
 -- Mutation: the setters reject both the secret-as-width and extra-return bugs.
 check(not pcall(methods.SetWidth, p.damageAbsorb, opaque(12)), "secret width mutation must fail")
 check(not pcall(methods.SetValue, p.damageAbsorb, opaque(12), opaque(false)), "tuple mutation must fail")
+-- New Hunter fill paths must retain shaped prediction even when the theme
+-- becomes active after this renderer's initial media table was registered.
+local originalMedia=ns.API.GetMedia
+ns.API.GetMedia=function(name) return "Interface\\AddOns\\Test\\Assets\\Hunter\\"..name..".tga" end
+for _,shape in ipairs({"hp_cap_bar","hp_lowmid_bar","hp_boss_bar","hp_critter_bar","cast_bar","nameplate_bar","pet-fill"}) do
+    local themed=frame(shape,false,"Party",false)
+    update(themed)
+    check(themed.HealthPrediction.healingAll.shown,"Hunter prediction recognized: "..shape)
+    equal(themed.HealthPrediction.healingAll.Art.path,ns.API.GetMedia(shape),"Hunter prediction fill path")
+    equal(themed.HealthPrediction.damageAbsorb.Art.path,ns.API.GetMedia(shape.."-absorb"),"Hunter absorb shape path")
+end
+ns.API.GetMedia=originalMedia
 print("health_prediction_harness: "..tests.." assertions passed (not a WoW rendering test)")

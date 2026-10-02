@@ -963,6 +963,7 @@ local style = function(self, unit)
 	healthBackdrop:SetTexCoord(GetArenaFillTexCoords(nil))
 
 	self.Health.Backdrop = healthBackdrop
+	if (ns.HunterTheme) then ns.HunterTheme:StyleTestLayers(self.Health, true, false) end
 
 	local healthPreview = self:CreateBar(nil, health)
 	if (healthPreview.SetForceNative) then healthPreview:SetForceNative(true) end

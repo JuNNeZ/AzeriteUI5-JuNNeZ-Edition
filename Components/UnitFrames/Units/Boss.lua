@@ -422,6 +422,7 @@ local style = function(self, unit)
 	healthBackdrop:SetTexCoord(GetBossFillTexCoords(nil))
 
 	self.Health.Backdrop = healthBackdrop
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleHealth(self, db, true) end
 
 	local healthPreview = self:CreateBar(nil, health)
 	if (healthPreview.SetForceNative) then healthPreview:SetForceNative(true) end

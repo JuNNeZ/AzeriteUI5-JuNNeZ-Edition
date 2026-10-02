@@ -98,6 +98,8 @@ local alias = {
 
 -- Retrieve an asset from the media asset folder.
 local GetMedia = function(name, type)
+	local themed = ns.PaladinTheme and ns.PaladinTheme:ResolveMedia(name)
+	if (themed and (not type or type == "tga")) then return themed end
 	return alias[name] or string_format([[Interface\AddOns\%s\Assets\%s.%s]], Addon, name, type or "tga")
 end
 

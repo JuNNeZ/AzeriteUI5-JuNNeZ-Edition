@@ -545,7 +545,8 @@ local Power_PostUpdateColor = function(element, unit, r, g, b)
 	local config = ns.GetConfig("PlayerFrameAlternate")
 
 	local _, pToken = UnitPowerType(unit)
-	local color = pToken and config.PowerBarColors[pToken]
+	if (issecretvalue and issecretvalue(pToken)) then return end
+	local color = type(pToken) == "string" and config.PowerBarColors[pToken]
 	if (color) then
 		element:SetStatusBarColor(color[1], color[2], color[3])
 	end
@@ -696,6 +697,7 @@ local UnitFrame_UpdateTextures = function(self)
 	healthBackdrop:SetSize(unpack(db.HealthBackdropSize))
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 	healthBackdrop:SetVertexColor(unpack(db.HealthBackdropColor))
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleHealth(self, db, false) end
 
 	local healPredict = self.HealthPrediction
 	healPredict:SetTexture(db.HealthBarTexture)
@@ -777,6 +779,7 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 	end
 
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleThreat(self, false) end
 	local portraitBorder = self.Portrait.Border
 	portraitBorder:SetTexture(db.PortraitBorderTexture)
 	portraitBorder:SetVertexColor(unpack(db.PortraitBorderColor))
@@ -788,6 +791,9 @@ local UnitFrame_UpdateTextures = function(self)
 	end
 
 	power:SetFrameLevel(self:GetFrameLevel() + (config.PowerFrameLevelOffset or 5))
+	if (ns.PaladinTheme and config.PowerBarOrientation == "UP") then
+		ns.PaladinTheme:StyleCrystal(power, config.PowerBarTexture, config.PowerBarTexCoord)
+	end
 	if (power.BackdropGroup) then
 		power.BackdropGroup:SetFrameLevel(power:GetFrameLevel())
 	end
@@ -961,6 +967,7 @@ local style = function(self, unit, id)
 	castText:SetTextColor(unpack(db.CastBarTextColor))
 	castText:SetJustifyH(db.HealthValueJustifyH)
 	castText:SetJustifyV(db.HealthValueJustifyV)
+	if (db.CastBarTextSize) then castText:SetSize(unpack(db.CastBarTextSize)) end
 	castText:Hide()
 	castText.color = db.CastBarTextColor
 	castText.colorProtected = db.CastBarTextProtectedColor

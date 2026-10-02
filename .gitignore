@@ -79,3 +79,6 @@ FEATURE_PLAN.md
 *.swo
 .*.swp
 discord post.md
+
+# Python bytecode from Tools/*.py
+__pycache__/

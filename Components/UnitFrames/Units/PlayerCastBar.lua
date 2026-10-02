@@ -376,7 +376,7 @@ local style = function(self, unit)
 
 	local db = ns.GetConfig("PlayerCastBar")
 
-	self:SetSize(112 + 16, 11 + 16)
+	self:SetSize(db.CastBarSize[1] + 16, db.CastBarSize[2] + 16)
 
 	-- Cast Bar
 	--------------------------------------------
@@ -404,6 +404,7 @@ local style = function(self, unit)
 	castShield:SetTexture(db.CastBarShieldTexture)
 	castShield:SetVertexColor(unpack(db.CastBarShieldColor))
 	cast.Shield = castShield
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleCastbar(cast) end
 
 	local castSafeZone = cast:CreateTexture(nil, "ARTWORK", nil, 0)
 	castSafeZone:SetTexture(db.CastBarSpellQueueTexture)

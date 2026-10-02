@@ -1,0 +1,79 @@
+{
+  "actionbutton-border": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "c2658866a5f4ab02437ef6ce046d118d964d4c0eb210503fed509f0ba6ea370a"
+  },
+  "cast_back-over": {
+    "size": [
+      256,
+      128
+    ],
+    "sha256": "845713db0f155c74d98a7f9058b30ca228b51ffb0e83bc0d43a560b407c8e7b3"
+  },
+  "cast_back": {
+    "size": [
+      256,
+      128
+    ],
+    "sha256": "431629be99df55fcb3ba9ecb313e8078df390d04200a49d336e0ca79606a58df"
+  },
+  "cast_bar": {
+    "size": [
+      256,
+      32
+    ],
+    "sha256": "23d79d9dd7bad572f8a5ca597a96bec885c6ffe110aa29e6d89e8f0ee703f514"
+  },
+  "eagle": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "6febca1b4af0a604cb5d9d829ce0103fa7fce7149aae6bb05101285e52c0c0dd"
+  },
+  "endcap-thasdorah": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "e3ad90ceff57fc1cfb52c3dad403abd46956245208532498e4f14663fd904e96"
+  },
+  "hp_cap_bar": {
+    "size": [
+      1024,
+      128
+    ],
+    "sha256": "0b71ee6ad71899b4a72db9e0f6e380c5520082f65e3a0f738968b7fadb42d589"
+  },
+  "hp_cap_case-over": {
+    "size": [
+      1024,
+      256
+    ],
+    "sha256": "f9b0f1098631fff5135ad0cd29da1924597c1f8fb0c07a893ca265ec5ab25b19"
+  },
+  "hp_cap_case": {
+    "size": [
+      1024,
+      256
+    ],
+    "sha256": "f8322bcab4619a417d440cf021d6d3c3042e80bf75af247ef6ad802f30eef6ba"
+  },
+  "orb-focus": {
+    "size": [
+      512,
+      512
+    ],
+    "sha256": "f51a333d8d209c46b3984a3b682508432ddb0e995e9c47b8ddb482ed83801ccc"
+  },
+  "orb_case_hi": {
+    "size": [
+      256,
+      256
+    ],
+    "sha256": "d71a5664f3e7c0e7998ab2e7313a94aa358e58d0cd671cbfdd6ecb7f2c923026"
+  }
+}

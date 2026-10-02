@@ -208,6 +208,7 @@ local style = function(self, unit, id)
 	castBackdrop:SetTexture(db.CastBarBackdropTexture)
 
 	self.Castbar.Backdrop = castBackdrop
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleNameplate(self) end
 
 	local castText = castbar:CreateFontString(nil, "OVERLAY", nil, 1)
 	castText:SetPoint(unpack(db.CastBarNamePosition))

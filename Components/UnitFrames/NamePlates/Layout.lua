@@ -246,6 +246,7 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 		AnchorStandardNamePlateCastBar(self)
 		self.Castbar.Backdrop:Show()
 	end
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleNameplate(self) end
 	UpdateExecuteMarker(self)
 
 	SetNameColorForUnit(self, db)

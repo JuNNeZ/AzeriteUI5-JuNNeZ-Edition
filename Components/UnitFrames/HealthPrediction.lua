@@ -1,13 +1,19 @@
 -- Shaped prediction art. Unit amounts go only to native StatusBars; Lua never
 -- reads their values or their fill geometry. A mask follows each native fill.
-local _, ns = ...
+local Addon, ns = ...
 local API = ns.API
 local WHITE = [[Interface\Buttons\WHITE8X8]]
 local frames = setmetatable({}, { __mode = "k" })
 local shapes = {}
 for _, name in ipairs({ "cast_bar", "hp_lowmid_bar", "hp_cap_bar", "hp_boss_bar", "hp_critter_bar", "nameplate_bar" }) do
 	shapes[API.GetMedia(name):lower()] = name
+	shapes[("Interface\\AddOns\\"..Addon.."\\Assets\\Hunter\\"..name..".tga"):lower()] = name
+	shapes[("Interface\\AddOns\\"..Addon.."\\Assets\\HunterPilot\\"..name..".tga"):lower()] = name
+	shapes[("Interface\\AddOns\\"..Addon.."\\Assets\\HunterDropIn\\"..name..".tga"):lower()] = name
 end
+
+shapes[("Interface\\AddOns\\"..Addon.."\\Assets\\Hunter\\pet-fill.tga"):lower()] = "pet-fill"
+shapes[("Interface\\AddOns\\"..Addon.."\\Assets\\HunterDropIn\\pet-fill.tga"):lower()] = "pet-fill"
 
 local function GetProfile()
 	local module = ns:GetModule("UnitFrames", true)

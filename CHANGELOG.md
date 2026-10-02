@@ -10,6 +10,28 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.13.0-JuNNeZ-beta1 (2026-10-02) - Beta: Hunter and Paladin Theme Previews
+
+### Highlights
+
+- **A Hunter theme to try.** Type `/azhunter on` to repaint the main AzeriteUI theme in Unseen Path colours: the health, cast and resource casings, portraits, the crystal and orb, action buttons, the minimap and the options window, with a Hunter pet frame of its own. It is saved per character and reloads the interface, outside combat. `/azhunter off` brings back the usual art, and `/azhunter status` tells you which set is on.
+- **Pick the end of your health bar.** `/azhunter endcap` followed by `thasdorah`, `talonclaw`, `titanstrike`, `thoridal`, `raeshalare` or `none` chooses the ornament at the end of the health bar.
+- **Two newer Hunter art sets to compare.** `/azhunter pilot` shows the round-two art, which keeps the original frame sizes and positions, and `/azhunter test` shows the staged drop-in set. Both are works in progress.
+- **A Paladin preview for development mode.** With development mode on, `/azpaladin on` gives the main theme an Ashbringer health casing, a lion castbar, Holy Light in the crystal and orb, and gold and purple rings. Turning on one theme turns the other off.
+
+### Development
+
+- **Made the art without changing how the frames work.** Each new texture is painted to match the size, openings and transparency of the one it replaces, so bars still fill where they did, and colours that change in play (health, mana, threat) still come from the game instead of the artwork. Health prediction and absorb shapes follow the new bars as well.
+- **Built tools to check the art before it reaches the game.** Scripts measure each texture's openings and size against the original and flag anything that will not fit as a drop-in replacement, and comparison sheets put the original and themed frames side by side. Offline tests cover both themes and the health prediction shapes.
+
+### Access and known limits
+
+- **Beta, verified offline only.** Neither theme has been tested in the game yet, on Retail or Forever. Expect pieces that are out of place, and report them on the Discord with a screenshot.
+- Both themes apply to the main AzeriteUI theme only. They switch off on the SaiyaRatt profile and the other layout variants.
+- The theme commands are temporary. A proper theme picker in the options is planned.
+- The download is larger than usual because it carries the art for all three Hunter sets and the Paladin set.
+
+
 ## 5.12.0-JuNNeZ (2026-09-26) - Mythic+ Timer, Great Vault, Pandemic Timers, and Dragging Back on Forever
 
 ### Highlights

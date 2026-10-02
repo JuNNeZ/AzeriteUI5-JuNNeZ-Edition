@@ -291,6 +291,7 @@ MicroMenu.SpawnButtons = function(self)
 
 	toggle.Texture = texture
 	toggle.Highlight = highlight
+	if (ns.PaladinTheme) then ns.PaladinTheme:StyleUtilityButton(toggle) end
 
 	toggle:HookScript("OnEnter", function(self) self.Highlight:Show() end)
 	toggle:HookScript("OnLeave", function(self) self.Highlight:Hide() end)
