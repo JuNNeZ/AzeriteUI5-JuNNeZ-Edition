@@ -54,6 +54,19 @@ local HIDDEN_FRAME_NAMES = {
 	"OverrideActionBar"
 }
 
+-- Forever's shaman totem bar has no AzeriteUI replacement. There it is its own Edit
+-- Mode system parented to UIParent (Blizzard_ActionBar/Shared/MultiCastActionBarFrame.xml,
+-- loaded for camelot, wrath and cata) with its own "Show Totem Action Bar" setting,
+-- and it only shows while the player has multi-cast totem spells. Leave it to
+-- Blizzard instead of fading it to nothing.
+if (ns.IsForever) then
+	for i = #HIDDEN_FRAME_NAMES, 1, -1 do
+		if (HIDDEN_FRAME_NAMES[i] == "MultiCastActionBarFrame") then
+			table.remove(HIDDEN_FRAME_NAMES, i)
+		end
+	end
+end
+
 -- Kept apart from HIDDEN_FRAME_NAMES so the micro menu can be left alone when the
 -- player asks for Blizzard's own strip back. MicroButtonAndBagsBar carries the bag
 -- controls too, but those are suppressed separately by suppressNamedBagControls.

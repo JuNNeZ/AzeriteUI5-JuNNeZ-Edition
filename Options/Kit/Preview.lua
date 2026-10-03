@@ -513,6 +513,13 @@ local policies = {
 			frame = function()
 				return PreferContent(_G.MicroMenuContainer) or PreferContent(_G.MicroMenu)
 			end
+		},
+		showBagButton = {
+			kind = "exact",
+			frame = function()
+				local module = Module("MicroMenu")
+				return module and PreferContent(module.bagButton)
+			end
 		}
 	},
 	-- Windows that are closed most of the time. Their last position is not a

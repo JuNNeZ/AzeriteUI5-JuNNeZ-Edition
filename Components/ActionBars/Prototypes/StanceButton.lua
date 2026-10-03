@@ -27,6 +27,7 @@
 local _, ns = ...
 
 local KeyBound = LibStub("LibKeyBound-1.0", true)
+local LAB = LibStub("LibActionButton-1.0-GE")
 
 -- GLOBALS: CreateFrame, CooldownFrame_Set
 -- GLOBALS: GetBindingKey, GetShapeshiftFormInfo, GetShapeshiftFormCooldown
@@ -68,6 +69,11 @@ ns.StanceButton.defaults = defaults
 local shortKeys = {}
 
 local GetShortKey = function(key)
+	-- A gamepad key is drawn as the controller's glyphs, whose style follows the
+	-- controller in use, so it is not cached.
+	if (LAB.IsGamePadKey(key)) then
+		return LAB.GetHotkeyText(key)
+	end
 	local shortKey = shortKeys[key]
 	if (not shortKey) then
 		shortKey = KeyBound:ToShortKey(key)
@@ -166,7 +172,7 @@ StanceButton.UpdateHotkeys = function(self)
 end
 
 StanceButton.GetHotkey = function(self)
-	local key = GetBindingKey(string_format("SHAPESHIFTBUTTON%d", self:GetID())) or GetBindingKey("CLICK "..self:GetName()..":LeftButton")
+	local key = LAB.PickHotkey(GetBindingKey(string_format("SHAPESHIFTBUTTON%d", self:GetID()))) or LAB.PickHotkey(GetBindingKey("CLICK "..self:GetName()..":LeftButton"))
 	return key and KeyBound and GetShortKey(key)
 end
 

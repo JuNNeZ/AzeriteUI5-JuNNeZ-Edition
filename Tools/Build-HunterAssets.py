@@ -110,14 +110,46 @@ def tooltip_atlas(art, original):
               art.crop((0,h-c,c,h)), art.crop((w-c,h-c,w,h))]
     result = Image.new('RGBA', original.size)
     side = original.height
-    for i,piece in enumerate(pieces):
+    edges = []
+    for i,piece in enumerate(pieces[:4]):
         tile = original.crop((i*side,0,(i+1)*side,side))
         packed=register(piece,tile)
-        # Atlas cells retain native gutters and corner joins, not casing art.
-        # Keep the transparent inside of each new corner; forcing the old
-        # alpha here would make its empty pixels opaque black.
         result.paste(packed,(i*side,0))
+        edges.append(rim_span(packed))
+    # Corners are not stretched into the native corner's bounds: the art's
+    # chamfer is longer than its rim, and stretching made solid wedges that
+    # filled the tooltip's inner corner and met the rims 4-5x too wide. Each
+    # corner is the whole frame, scaled by the factors that sized the rims and
+    # placed with its outer edges on theirs, so the rims run straight into the
+    # neighbouring edge cells. The frame must be longer than a cell past its
+    # chamfer, which every edgeFile here is.
+    rim = rim_width(art)
+    left,right,top,bottom = edges
+    for i,(vertical,horizontal,at_right,at_bottom) in enumerate(
+            [(left,top,False,False),(right,top,True,False),(left,bottom,False,True),(right,bottom,True,True)]):
+        kx = (vertical[1]-vertical[0]+1)/rim; ky = (horizontal[1]-horizontal[0]+1)/rim
+        frame = art.resize((round(w*kx),round(h*ky)),S)
+        x = vertical[1]+1-frame.width if at_right else vertical[0]
+        y = horizontal[1]+1-frame.height if at_bottom else horizontal[0]
+        cell = Image.new('RGBA',(side,side))
+        cell.paste(frame.crop((-x,-y,side-x,side-y)),(0,0))
+        result.paste(cell,((4+i)*side,0))
     return result
+
+def rim_span(cell):
+    # Solid columns of an edge cell: top/bottom are stored rotated, so every
+    # edge is a vertical strip.
+    a = cell.getchannel('A'); y = cell.height//2
+    solid = [x for x in range(cell.width) if a.getpixel((x,y)) >= 128]
+    return solid[0], solid[-1]
+
+def rim_width(art):
+    a = art.getchannel('A'); y = art.height//2
+    x = 0
+    while a.getpixel((x,y)) < 128: x += 1
+    start = x
+    while a.getpixel((x,y)) >= 128: x += 1
+    return x-start
 
 def build():
     OUT.mkdir(exist_ok=True)

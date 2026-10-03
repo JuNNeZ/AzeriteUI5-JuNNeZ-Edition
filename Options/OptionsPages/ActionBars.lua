@@ -653,6 +653,19 @@ local GenerateOptions = function()
 					order = 3,
 					type = "description",
 					fontSize = "medium"
+				},
+				showBagButton = {
+					name = L["Show Bag Button"],
+					desc = L["Show a bag button beside the cog wheel. Clicking it opens your bags, and the number on it is how many bag slots are free. This one applies at once."],
+					order = 4,
+					type = "toggle", width = "full",
+					set = function(info, val)
+						local module = getmicromenu()
+						if (not module or not module.db) then return end
+						module.db.profile.showBagButton = val
+						module:UpdateSettings()
+					end,
+					get = function(info) return micromenusetting("showBagButton", true) end
 				}
 			}
 		}

@@ -262,6 +262,9 @@ end
 --------------------------------------------
 local UnitFrame_PostUpdate = function(self, event)
 	TargetHighlight_Update(self, event)
+	if (self.PetHappiness) then
+		self.PetHappiness:UpdateHappiness()
+	end
 end
 
 local UnitFrame_OnEvent = function(self, event, unit, ...)
@@ -431,6 +434,28 @@ local style = function(self, unit)
 	targetHighlight.colorFocus = db.TargetHighlightFocusColor
 
 	self.TargetHighlight = targetHighlight
+
+	-- Hunter pet happiness (Forever)
+	--------------------------------------------
+	-- Blizzard's own indicator (Blizzard_FrameXML/PetHappiness.xml), the one its
+	-- PetFrame and pet paper doll use: icon, UNIT_HAPPINESS/UNIT_PET updates and the
+	-- diet/damage/loyalty tooltip. It hides itself for anything but a hunter pet.
+	-- Retail pets have no happiness, so this stays Forever only.
+	if (ns.IsForever and ns.PlayerClass == "HUNTER" and PetHappinessIndicatorMixin) then
+		local ok, happiness = pcall(CreateFrame, "Frame", nil, overlay, "PetFrameHappinessTemplate")
+		if (ok and happiness) then
+			happiness:SetSize(unpack(db.HappinessSize or { 20, 19 }))
+			happiness:ClearAllPoints()
+			if (db.HappinessPosition) then
+				happiness:SetPoint(unpack(db.HappinessPosition))
+			else
+				happiness:SetPoint("RIGHT", health, "LEFT", -4, 0)
+			end
+			happiness:UpdateHappiness()
+			self.PetHappiness = happiness
+		end
+	end
+
 	if (ns.HunterTheme) then ns.HunterTheme:StylePet(self) end
 
 	-- Textures need an update when frame is displayed.

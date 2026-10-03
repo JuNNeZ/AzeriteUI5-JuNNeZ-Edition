@@ -140,9 +140,11 @@ Theme.GetConfig = function(self, name, original)
     if name == "PlayerFrame" then
         for _,tier in ipairs({"Novice","Hardened","Seasoned"}) do
             local t=config[tier]
-            -- Expanded viewport must share the legacy 120x140 area's center.
-            t.PowerBarPosition[2]=t.PowerBarPosition[2]-(t.PowerBackdropSize[1]-t.PowerBarSize[1])/2
-            t.PowerBarPosition[3]=t.PowerBarPosition[3]-(t.PowerBackdropSize[2]-t.PowerBarSize[2])/2
+            -- The expanded 196px viewport already shares the legacy 120x140
+            -- area's center: Player.lua adds POWER_CRYSTAL_BASELINE_OFFSET
+            -- (-37,-28) to PowerBarPosition. Shifting it here as well put the
+            -- crystal 38 left and 28 below the orb's place, short of the bar.
+
             -- Leave a small gutter between the new orb clasps and health fill.
             t.ManaOrbPosition[2]=t.ManaOrbPosition[2]-8
         end
@@ -445,18 +447,26 @@ Theme.StylePet = function(self, owner)
     casing:SetSize(width*scale,height*scale)
     casing:SetPoint("TOPLEFT",bar,"TOPLEFT",-left*scale,top*scale)
     bar.Backdrop:SetAlpha(0)
-    local portrait=owner.Overlay:CreateTexture(nil,"ARTWORK")
+    -- A 3D model, animated like the target's portrait. Models take no mask
+    -- textures; the casing is opaque outside its round socket, so it crops one.
+    local portrait=CreateFrame("PlayerModel",nil,owner)
+    portrait:SetFrameLevel(owner.Overlay:GetFrameLevel()-1)
     portrait:SetSize((g[9]-g[7])*scale,(g[10]-g[8])*scale)
     portrait:SetPoint("TOPLEFT",bar,"TOPLEFT",(g[7]-left)*scale,(top-g[8])*scale)
-    local mask=owner.Overlay:CreateMaskTexture()
-    mask:SetTexture(ns.API.GetMedia("actionbutton-mask-circular"),"CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE")
-    mask:SetAllPoints(portrait); portrait:AddMaskTexture(mask)
     owner.Portrait=portrait
+    if ns.API.AttachPortraitAlphaFix then ns.API.AttachPortraitAlphaFix(owner,portrait) end
+    -- A model draws on a clear background, where the 2D portrait was a filled
+    -- square; fill the socket so the world does not show around the pet's head.
+    -- Left square on purpose: the casing crops it, while the circular mask's
+    -- solid disc is only 110 of its 128px and left a ring unfilled.
+    local backdrop=owner:CreateTexture(nil,"BACKGROUND")
+    backdrop:SetAllPoints(portrait); backdrop:SetColorTexture(.09,.08,.11,1)
+    portrait.Bg=backdrop
     if owner.TargetHighlight then
         owner.TargetHighlight:SetTexture(path("pet-case-glow"))
         owner.TargetHighlight:ClearAllPoints(); owner.TargetHighlight:SetAllPoints(casing)
     end
-    owner.HunterPetArt={casing,mask}
+    owner.HunterPetArt={casing,portrait,backdrop}
 end
 
 -- Preserve user offsets which move casts farther away; clamp upward offsets

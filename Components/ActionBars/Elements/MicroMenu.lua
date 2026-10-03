@@ -45,13 +45,26 @@ local hasSecureSnippets = ns.HasSecureSnippets ~= false
 -- Matches the .75 second grace the restricted RegisterAutoHide is given below.
 local MICROMENU_AUTOHIDE_DELAY = .75
 
+-- The bag button is drawn like a small action button: the same backdrop, circular
+-- mask and border ring, in the proportions Layouts/Data/ActionButton.lua gives a
+-- 64px button (134.3px art, 44px icon).
+local BAG_BUTTON_SIZE = 40
+local BAG_BUTTON_ART_SIZE = BAG_BUTTON_SIZE * 134.295081967 / 64
+local BAG_BUTTON_ICON_SIZE = BAG_BUTTON_SIZE * 44 / 64
+local BAG_BUTTON_GAP = 16
+-- FileDataID 130716 on both Retail and Forever.
+local BAG_BUTTON_ICON = [[Interface\Buttons\Button-Backpack-Up]]
+
 local defaults = {
 	profile = {
 		-- The AzeriteUI cog wheel in the bottom right corner.
 		enabled = true,
 		-- Blizzard's own micro menu strip along the bottom of the screen.
 		-- Off by default, which is the behavior every prior version shipped.
-		showBlizzardMicroMenu = false
+		showBlizzardMicroMenu = false,
+		-- A bag button beside the cog. HideBlizzard.lua hides Blizzard's bag bar, so
+		-- without this the bags are only reachable by keybind.
+		showBagButton = true
 	}
 }
 
@@ -299,6 +312,144 @@ MicroMenu.SpawnButtons = function(self)
 	RegisterStateDriver(toggle, "visibility", "[petbattle]hide;show")
 end
 
+local BagButton_OnEnter = function(self)
+	if (GameTooltip:IsForbidden()) then return end
+	GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+	GameTooltip:AddLine(L["Bags"])
+	if (self.freeSlots) then
+		GameTooltip:AddLine(string.format(L["Free bag slots: %d"], self.freeSlots), 1, 1, 1)
+	end
+	GameTooltip:Show()
+end
+
+local BagButton_OnLeave = function(self)
+	if (GameTooltip:IsForbidden()) then return end
+	if (GameTooltip:IsOwned(self)) then
+		GameTooltip:Hide()
+	end
+end
+
+MicroMenu.SpawnBagButton = function(self)
+	local button = CreateFrame("Button", ns.Prefix.."BagButton", UIParent, "SecureActionButtonTemplate")
+	button:SetScale(ns.API.GetEffectiveScale())
+	button:SetSize(BAG_BUTTON_SIZE, BAG_BUTTON_SIZE)
+	button:RegisterForClicks("AnyUp", "AnyDown")
+
+	-- The same route the micro menu entries take: a secure `/click` on Blizzard's own
+	-- backpack button, which HideBlizzard.lua keeps alive at zero alpha. Its handler
+	-- toggles the bags or drops the item on the cursor into the backpack, and no
+	-- AzeriteUI code runs in the chain, so the container frames are not tainted.
+	local backpack = _G.MainMenuBarBackpackButton
+	if (backpack and backpack.GetName and backpack:GetName()) then
+		button:SetAttribute("type", "macro")
+		button:SetAttribute("click", "macro")
+		button:SetAttribute("macrotext", "/click "..backpack:GetName())
+		button:SetAttribute("pressAndHoldAction", true)
+	else
+		-- No Blizzard backpack button to forward to. Opening bags is not protected.
+		button:SetScript("OnClick", function(_, _, down)
+			if (down) then return end
+			if (type(_G.ToggleAllBags) == "function") then _G.ToggleAllBags() end
+		end)
+	end
+
+	local backdrop = button:CreateTexture(nil, "BACKGROUND", nil, -7)
+	backdrop:SetSize(BAG_BUTTON_ART_SIZE, BAG_BUTTON_ART_SIZE)
+	backdrop:SetPoint("CENTER")
+	backdrop:SetTexture(GetMedia("actionbutton-backdrop"))
+	backdrop:SetVertexColor(.67, .67, .67)
+
+	local icon = button:CreateTexture(nil, "BACKGROUND", nil, 1)
+	icon:SetSize(BAG_BUTTON_ICON_SIZE, BAG_BUTTON_ICON_SIZE)
+	icon:SetPoint("CENTER")
+	icon:SetTexture(BAG_BUTTON_ICON)
+	icon:SetMask(GetMedia("actionbutton-mask-circular"))
+
+	local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+	highlight:SetSize(BAG_BUTTON_ICON_SIZE, BAG_BUTTON_ICON_SIZE)
+	highlight:SetPoint("CENTER")
+	highlight:SetColorTexture(1, 1, 1, .15)
+	highlight:SetMask(GetMedia("actionbutton-mask-circular"))
+
+	local border = button:CreateTexture(nil, "BORDER", nil, 1)
+	border:SetSize(BAG_BUTTON_ART_SIZE, BAG_BUTTON_ART_SIZE)
+	border:SetPoint("CENTER")
+	border:SetTexture(GetMedia("actionbutton-border"))
+	border:SetVertexColor(Colors.ui[1], Colors.ui[2], Colors.ui[3])
+
+	local count = button:CreateFontString(nil, "OVERLAY")
+	count:SetFontObject(GetFont(13, true))
+	count:SetPoint("BOTTOMRIGHT", -1, 1)
+	count:SetJustifyH("RIGHT")
+
+	button.Icon = icon
+	button.Border = border
+	button.Count = count
+
+	button:SetScript("OnEnter", BagButton_OnEnter)
+	button:SetScript("OnLeave", BagButton_OnLeave)
+
+	self.bagButton = button
+
+	self:UpdateBagButtonPosition()
+	self:UpdateBagButton()
+	self:UpdateBagSlots()
+end
+
+-- Beside the cog when it is there, in its corner when it is not.
+MicroMenu.UpdateBagButtonPosition = function(self)
+	local button = self.bagButton
+	if (not button) then return end
+
+	button:ClearAllPoints()
+	if (self.toggle) then
+		button:SetPoint("RIGHT", self.toggle, "LEFT", -BAG_BUTTON_GAP, 0)
+	else
+		local scale = ns.API.GetEffectiveScale()
+		button:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -10 / scale, 10 / scale)
+	end
+end
+
+-- Applies the setting at once. The button is protected, so its state driver can only
+-- be swapped outside combat; a change made mid-fight lands when the fight ends.
+MicroMenu.UpdateBagButton = function(self)
+	local button = self.bagButton
+	if (not button) then return end
+	if (InCombatLockdown()) then
+		self.bagButtonUpdateNeeded = true
+		return
+	end
+	self.bagButtonUpdateNeeded = nil
+
+	local profile = self.db and self.db.profile
+	if (not profile or profile.showBagButton) then
+		RegisterStateDriver(button, "visibility", "[petbattle]hide;show")
+	else
+		RegisterStateDriver(button, "visibility", "hide")
+	end
+end
+
+MicroMenu.UpdateBagSlots = function(self)
+	local button = self.bagButton
+	if (not button) then return end
+
+	local free = C_Container and C_Container.CalculateTotalNumberOfFreeBagSlots and C_Container.CalculateTotalNumberOfFreeBagSlots()
+	if (not ns.API.IsSafeNumber(free)) then
+		button.freeSlots = nil
+		button.Count:SetText("")
+		return
+	end
+
+	button.freeSlots = free
+	button.Count:SetText(free)
+	local color = (free == 0) and Colors.red or Colors.normal
+	button.Count:SetTextColor(color[1], color[2], color[3])
+end
+
+MicroMenu.OnBagEvent = function(self)
+	self:UpdateBagSlots()
+end
+
 -- The insecure twin of the `_onclick` snippet above, used only where restricted
 -- closures are unavailable. Hooked onto the toggle button, so it is handed the
 -- button rather than the module and looks the module up itself.
@@ -393,6 +544,8 @@ end
 
 MicroMenu.UpdateButtons = function(self)
 	if (InCombatLockdown()) then return end
+	-- Only the bag button exists when the cog is switched off.
+	if (not self.buttons) then return end
 	for i,button in next,self.buttons do
 		RestoreGatedNativeButton(button.ref)
 
@@ -432,11 +585,16 @@ MicroMenu.UpdateScale = function(self)
 	if (self.bar) then
 		self.bar:SetScale(ns.API.GetEffectiveScale())
 	end
+	if (self.bagButton) then
+		self.bagButton:SetScale(ns.API.GetEffectiveScale())
+		self:UpdateBagButtonPosition()
+	end
 end
 
 MicroMenu.OnEvent = function(self, event, ...)
 	if (event == "PLAYER_ENTERING_WORLD") then
 		self.incombat = nil
+		self:UpdateBagSlots()
 	elseif (event == "PLAYER_REGEN_DISABLED") then
 		self.incombat = true
 	elseif (event == "PLAYER_REGEN_ENABLED") then
@@ -444,6 +602,9 @@ MicroMenu.OnEvent = function(self, event, ...)
 		if (self.updateneeded) then
 			self.updateneeded = nil
 			self:UpdateScale()
+		end
+		if (self.bagButtonUpdateNeeded) then
+			self:UpdateBagButton()
 		end
 		self.incombat = nil
 	elseif (event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED") then
@@ -486,6 +647,10 @@ MicroMenu.UpdateSettings = function(self)
 		return
 	end
 
+	-- The bag button is always built, so its switch applies at once and is left out
+	-- of the reload state below.
+	self:UpdateBagButton()
+
 	-- Compare against the state this session was actually built with, so the
 	-- normal settings pass at login cannot trigger the prompt.
 	local state = (profile.enabled and 1 or 0) .. ":" .. (profile.showBlizzardMicroMenu and 1 or 0)
@@ -506,19 +671,21 @@ MicroMenu.OnEnable = function(self)
 
 	self:UpdateSettings()
 
-	if (self.db and self.db.profile and not self.db.profile.enabled) then
-		return
+	if (not (self.db and self.db.profile and not self.db.profile.enabled)) then
+		self:SpawnButtons()
+
+		-- None of the events below fire when a micro button's *enabled* state changes -
+		-- earning a talent point, gaining renown, reaching the Group Finder level. This
+		-- is the one call Blizzard makes for all of them, so the greying in UpdateButtons
+		-- stays in step with the strip it mirrors.
+		if (type(_G.UpdateMicroButtons) == "function" and not self:IsHooked("UpdateMicroButtons")) then
+			self:SecureHook("UpdateMicroButtons", function() self:UpdateButtons() end)
+		end
 	end
 
-	self:SpawnButtons()
-
-	-- None of the events below fire when a micro button's *enabled* state changes -
-	-- earning a talent point, gaining renown, reaching the Group Finder level. This
-	-- is the one call Blizzard makes for all of them, so the greying in UpdateButtons
-	-- stays in step with the strip it mirrors.
-	if (type(_G.UpdateMicroButtons) == "function" and not self:IsHooked("UpdateMicroButtons")) then
-		self:SecureHook("UpdateMicroButtons", function() self:UpdateButtons() end)
-	end
+	-- Built whether or not the cog is, and after it so it can sit beside it.
+	self:SpawnBagButton()
+	self:RegisterEvent("BAG_UPDATE_DELAYED", "OnBagEvent")
 
 	self:RegisterEvent("DISPLAY_SIZE_CHANGED", "OnEvent")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")

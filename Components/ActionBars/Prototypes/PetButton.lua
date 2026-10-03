@@ -27,6 +27,7 @@
 local _, ns = ...
 
 local KeyBound = LibStub("LibKeyBound-1.0", true)
+local LAB = LibStub("LibActionButton-1.0-GE")
 
 -- Lua API
 local next = next
@@ -72,6 +73,11 @@ ns.PetButton.defaults = defaults
 local shortKeys = {}
 
 local GetShortKey = function(key)
+	-- A gamepad key is drawn as the controller's glyphs, whose style follows the
+	-- controller in use, so it is not cached.
+	if (LAB.IsGamePadKey(key)) then
+		return LAB.GetHotkeyText(key)
+	end
 	local shortKey = shortKeys[key]
 	if (not shortKey) then
 		shortKey = KeyBound:ToShortKey(key)
@@ -291,7 +297,7 @@ PetButton.HideGrid = function(self)
 end
 
 PetButton.GetHotkey = function(self)
-	local key = GetBindingKey(format("BONUSACTIONBUTTON%d", self.id)) or GetBindingKey("CLICK "..self:GetName()..":LeftButton")
+	local key = LAB.PickHotkey(GetBindingKey(format("BONUSACTIONBUTTON%d", self.id))) or LAB.PickHotkey(GetBindingKey("CLICK "..self:GetName()..":LeftButton"))
 	return key and KeyBound and GetShortKey(key)
 end
 

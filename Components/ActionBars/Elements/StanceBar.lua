@@ -33,6 +33,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local StanceBarMod = ns:NewModule("StanceBar", "LibMoreEvents-1.0", "LibFadingFrames-1.0", "AceConsole-3.0", "AceTimer-3.0")
 
 local LFF = LibStub("LibFadingFrames-1.0")
+local LAB = LibStub("LibActionButton-1.0-GE")
 
 local ButtonBar = ns.ButtonBar.prototype
 
@@ -692,6 +693,16 @@ StanceBarMod.OnEvent = function(self, event, ...)
 	elseif (event == "UPDATE_BINDINGS") or (event == "HOUSE_EDITOR_MODE_CHANGED") then
 		self:UpdateBindings()
 
+	elseif (event == "GAME_PAD_ACTIVE_CHANGED") then
+		-- Only the hotkey text follows the input in use; the bindings stay as they are,
+		-- which keeps this legal in combat.
+		LAB.SetGamePadActive((...))
+		if (self.bar) then
+			for id,button in next,self.bar.buttons do
+				button:UpdateHotkeys()
+			end
+		end
+
 	else
 		self:QueueStanceBarUpdate(true)
 	end
@@ -766,6 +777,9 @@ StanceBarMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("UPDATE_BINDINGS", "OnEvent")
+	if (ns.API.IsEventAvailable("GAME_PAD_ACTIVE_CHANGED")) then
+		self:RegisterEvent("GAME_PAD_ACTIVE_CHANGED", "OnEvent")
+	end
 	if (ns.API.IsEventAvailable("HOUSE_EDITOR_MODE_CHANGED")) then
 		self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnEvent")
 	end

@@ -53,10 +53,22 @@ end
 -- The alpha follows the auto-hider's shown state, and Immersion's while that is open.
 -- OnShow/OnHide only fire on a change, so anything restoring the alpha must ask here
 -- rather than assume the tracker should be showing.
+-- ns.MythicPlusHidesTracker is set by Components/Misc/MythicPlus.lua while its own
+-- frame shows the running key, which Blizzard's tracker would otherwise show twice.
 local UpdateTrackerAlpha = function()
+	if (not ObjectiveTrackerFrame) then return end
 	local autoHider = ObjectiveTrackerFrame.autoHider
 	local hidden = (autoHider and not autoHider:IsShown()) or (ImmersionFrame and ImmersionFrame:IsShown())
+		or ns.MythicPlusHidesTracker
 	ObjectiveTrackerFrame:SetAlpha(hidden and 0 or .9)
+
+	-- Forever's quest timers (Blizzard_QuestTimer, classic and camelot only) are a child
+	-- of the tracker, so hiding the tracker took timed quests' countdowns with it. Keep
+	-- them visible where they are; they only show while a timed quest runs.
+	local questTimer = ns.IsForever and QuestTimerFrame
+	if (questTimer and questTimer.SetIgnoreParentAlpha) then
+		questTimer:SetIgnoreParentAlpha(hidden and true or false)
+	end
 end
 
 local defaults = { profile = ns:Merge({
@@ -142,6 +154,11 @@ Tracker.UpdateSettings = function(self)
 	-- Defers itself past combat. The alpha is not protected and is re-derived either
 	-- way, so nothing here can assert the tracker back to visible.
 	self:UpdateAutoHideDriver()
+	UpdateTrackerAlpha()
+end
+
+-- Re-reads every reason to hide the tracker. Alpha only, so safe in combat.
+Tracker.RefreshAlpha = function(self)
 	UpdateTrackerAlpha()
 end
 

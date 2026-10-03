@@ -31,6 +31,8 @@ if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local ExtraButtons = ns:NewModule("ExtraActionButtons", "LibMoreEvents-1.0", "AceHook-3.0")
 
+local LAB = LibStub("LibActionButton-1.0-GE")
+
 -- Lua API
 local pairs = pairs
 local string_find = string.find
@@ -242,12 +244,17 @@ ExtraButtons.UpdateZoneButtons = function(self)
 	end
 end
 
-ExtraButtons.UpdateBindings = function(self)
+ExtraButtons.UpdateBindings = function(self, event, ...)
+	if (event == "GAME_PAD_ACTIVE_CHANGED") then
+		LAB.SetGamePadActive((...))
+	end
 	if (self.ExtraButtons) then
 		for button in pairs(self.ExtraButtons) do
 			if (button.HotKey) then
 				if (button.bindingAction) then
-					button.HotKey:SetText(GetBindingKey(button.bindingAction))
+					-- Keyboard keys as they always were; a gamepad key as the controller's glyphs.
+					local key = LAB.PickHotkey(GetBindingKey(button.bindingAction))
+					button.HotKey:SetText((key and LAB.IsGamePadKey(key)) and LAB.GetHotkeyText(key) or key or "")
 				else
 					button.HotKey:SetText("")
 				end
@@ -269,4 +276,7 @@ ExtraButtons.OnEnable = function(self)
 	self:UpdateZoneButtons()
 	self:UpdateBindings()
 	self:RegisterEvent("UPDATE_BINDINGS", "UpdateBindings")
+	if (ns.API.IsEventAvailable("GAME_PAD_ACTIVE_CHANGED")) then
+		self:RegisterEvent("GAME_PAD_ACTIVE_CHANGED", "UpdateBindings")
+	end
 end

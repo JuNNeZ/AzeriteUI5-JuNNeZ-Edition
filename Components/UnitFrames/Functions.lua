@@ -204,13 +204,19 @@ end
 	  * It wrote the frame's alpha over the portrait's own, discarding the
 	    configured PortraitAlpha of .85 the first time a frame's alpha changed.
 	  * The UIParent hook was a fresh closure per unit frame, installed on a
-	    global and never removed. Nothing in this addon, and nothing in
-	    Blizzard's UI, calls `UIParent:SetAlpha`.
+	    global and never removed.
 
 	The frame hook is handed the alpha it was called with, so there is no
 	guarded getter left to fail. ElvUI reaches the same shape in
 	`UF:ModelAlphaFix`; AzeriteUI6 deleted the hooks outright and lost the fade
-	with them. Neither hooks UIParent.
+	with them.
+
+	UIParent still needs a hook. Nothing in Blizzard's UI calls
+	`UIParent:SetAlpha`, but DialogueUI fades the whole interface that way while
+	it talks (`DialogueUI/Code/Camera.lua`), and a model left out of it stays
+	solid over a faded screen. There is one shared hook for every portrait, and
+	the model gets the frame's alpha times `UIParent:GetAlpha()`, which, like
+	the frame's own getter, carries no access precondition.
 
 	The two channels are kept strictly separate, so this is correct whether or
 	not a model honours its own widget alpha -- which the API gives no way to
@@ -232,6 +238,18 @@ end
 -- Shared by every portrait, so the hook chain on a frame's SetAlpha stays one
 -- link long however many frames spawn. hooksecurefunc on a widget method passes
 -- the widget itself as the first argument.
+-- Frames with a 3D portrait, weak so a discarded frame is not kept alive.
+local portraitOwners = setmetatable({}, { __mode = "k" })
+local isUIParentHooked = false
+
+local GetUIParentAlpha = function()
+	local alpha = UIParent and UIParent:GetAlpha()
+	if (not API.IsSafeNumber(alpha)) then
+		return 1
+	end
+	return alpha
+end
+
 local Portrait_OnOwnerSetAlpha = function(frame, alpha)
 	local portrait = frame and frame.Portrait
 	if (not portrait or not portrait.SetModelAlpha) then
@@ -243,7 +261,13 @@ local Portrait_OnOwnerSetAlpha = function(frame, alpha)
 	if (not API.IsSafeNumber(alpha)) then
 		alpha = 1
 	end
-	API.TryCall(portrait.SetModelAlpha, portrait, alpha)
+	API.TryCall(portrait.SetModelAlpha, portrait, alpha * GetUIParentAlpha())
+end
+
+local Portraits_OnUIParentSetAlpha = function()
+	for frame in next, portraitOwners do
+		Portrait_OnOwnerSetAlpha(frame, frame:GetAlpha())
+	end
 end
 
 --[[
@@ -271,8 +295,13 @@ API.AttachPortraitAlphaFix = function(frame, portrait)
 		return
 	end
 	portrait.alphaOwner = frame
+	portraitOwners[frame] = true
 	API.RefreshPortraitModelAlpha(portrait)
 	hooksecurefunc(frame, "SetAlpha", Portrait_OnOwnerSetAlpha)
+	if (not isUIParentHooked and UIParent) then
+		isUIParentHooked = true
+		hooksecurefunc(UIParent, "SetAlpha", Portraits_OnUIParentSetAlpha)
+	end
 end
 
 local EmitInterruptDebug = function(castbar, reason, spellID, cooldownState, finalState)
@@ -1750,6 +1779,20 @@ API.UpdatePower = function(self, event, unit)
 	end
 end
 
+-- The power type the orb shows. Mana, unless the orb's owner says otherwise
+-- (Player.lua: a hunter on "Mana Orb Only" sees Focus). A non-number answer,
+-- or a secret one, keeps whatever the orb showed last.
+local GetManaOrbDisplayType = function(element, unit)
+	if (type(element.GetDisplayPowerType) ~= "function") then
+		return POWER_TYPE_MANA
+	end
+	local displayType = element:GetDisplayPowerType(unit)
+	if (type(displayType) ~= "number" or IsSecretValue(displayType)) then
+		return element.displayType or POWER_TYPE_MANA
+	end
+	return displayType
+end
+
 API.UpdateManaOrb = function(self, event, unit)
 	local element = self.ManaOrb
 	if (not element) then
@@ -1783,7 +1826,12 @@ API.UpdateManaOrb = function(self, event, unit)
 	end
 	element.guid = guid
 
-	local displayType, min = POWER_TYPE_MANA, 0
+	local displayType, min = GetManaOrbDisplayType(element, unit), 0
+	if (displayType ~= element.displayType) then
+		-- Cached values belong to the previous power type.
+		element.safeCur, element.safeMax, element.safePercent = nil, nil, nil
+		element.__AzeriteUI_DisplayCur, element.__AzeriteUI_DisplayPercent = nil, nil
+	end
 	local cur, max = UnitPower(unit, displayType), UnitPowerMax(unit, displayType)
 	local rawCurSafe = (type(cur) == "number") and (not issecretvalue or not issecretvalue(cur))
 	local rawMaxSafe = (type(max) == "number") and (not issecretvalue or not issecretvalue(max)) and max > min

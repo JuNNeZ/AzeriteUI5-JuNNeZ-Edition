@@ -75,36 +75,34 @@ local GetUnitColor = function(unit)
 	return color
 end
 
--- Unit difficulty coloring.
+-- Unit difficulty coloring, as Blizzard's DifficultyUtil.GetRelativeDifficultyColor
+-- and GetScalingQuestDifficultyColor. The green test used to compare against the
+-- negated trivial range, which can never pass, so every unit more than four levels
+-- below the player read grey instead of green; most visible on Forever, which levels
+-- without scaling.
+local GetTrivialRange = function(fn, fallback)
+	local range = (type(fn) == "function") and fn("player")
+	if (type(range) == "number") then return range end
+	return fallback
+end
+
 local GetDifficultyColor = function(level, isScaling)
 	local colors = Colors.quest
-	if (isScaling) then
-		local levelDiff = level - UnitEffectiveLevel("player")
-		if (levelDiff > 5) then
-			return colors.red[1], colors.red[2], colors.red[3], colors.red.colorCode
-		elseif (levelDiff > 3) then
-			return colors.orange[1], colors.orange[2], colors.orange[3], colors.orange.colorCode
-		elseif (levelDiff >= 0) then
-			return colors.yellow[1], colors.yellow[2], colors.yellow[3], colors.yellow.colorCode
-		elseif (-levelDiff <= -UnitQuestTrivialLevelRangeScaling("player")) then
-			return colors.green[1], colors.green[2], colors.green[3], colors.green.colorCode
-		else
-			return colors.gray[1], colors.gray[2], colors.gray[3], colors.gray.colorCode
-		end
+	local playerLevel = (UnitEffectiveLevel or UnitLevel)("player")
+	local levelDiff = level - playerLevel
+	local color
+	if (levelDiff >= 5) then
+		color = colors.red
+	elseif (levelDiff >= 3) then
+		color = colors.orange
+	elseif (levelDiff >= (isScaling and 0 or -4)) then
+		color = colors.yellow
+	elseif (-levelDiff <= (isScaling and GetTrivialRange(UnitQuestTrivialLevelRangeScaling, 8) or GetTrivialRange(UnitQuestTrivialLevelRange, 8))) then
+		color = colors.green
 	else
-		local levelDiff = level - UnitLevel("player")
-		if (levelDiff > 5) then
-			return colors.red[1], colors.red[2], colors.red[3], colors.red.colorCode
-		elseif (levelDiff > 3) then
-			return colors.orange[1], colors.orange[2], colors.orange[3], colors.orange.colorCode
-		elseif (levelDiff >= -4) then
-			return colors.yellow[1], colors.yellow[2], colors.yellow[3], colors.yellow.colorCode
-		elseif (-levelDiff <= -UnitQuestTrivialLevelRange("player")) then
-			return colors.green[1], colors.green[2], colors.green[3], colors.green.colorCode
-		else
-			return colors.gray[1], colors.gray[2], colors.gray[3], colors.gray.colorCode
-		end
+		color = colors.gray
 	end
+	return color[1], color[2], color[3], color.colorCode
 end
 
 -- Global API

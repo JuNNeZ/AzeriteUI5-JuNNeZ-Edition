@@ -561,6 +561,9 @@ L["Show the AzeriteUI cog wheel in the bottom right corner. Clicking it opens th
 L["Show Blizzard's Micro Menu"] = true
 L["Restore Blizzard's own micro menu along the bottom of the screen. This is independent of the cog wheel above, so you can use either or both."] = true
 L["Both settings apply when the interface loads, so changing either one will ask you to reload."] = true
+L["Show Bag Button"] = true
+L["Show a bag button beside the cog wheel. Clicking it opens your bags, and the number on it is how many bag slots are free. This one applies at once."] = true
+L["Free bag slots: %d"] = true
 L["The micro menu holds the buttons for your character sheet, spellbook, collections, group finder and the game menu. AzeriteUI replaces Blizzard's strip along the bottom of the screen with a cog wheel in the bottom right corner."] = true
 L["The micro menu is built when the interface loads, so this change needs a reload to take effect."] = true
 L["Reload UI"] = true
@@ -898,6 +901,12 @@ L["When a key ends: your time, how many levels the keystone went up, your new ra
 L["Slot your keystone automatically"] = true
 L["When you open the Font of Power, your keystone goes in by itself."] = true
 L["New best time for this dungeon"] = true
+L["Show the affixes"] = true
+L["The key's affixes as icons under the title, with their names below. Hover an icon to read what it does."] = true
+L["Show boss progress"] = true
+L["Every boss in the dungeon, ticked off when it dies, with the time on the key timer when it did."] = true
+L["Hide Blizzard's tracker during a key"] = true
+L["Blizzard's objective tracker shows the same key, so it is hidden while this frame is up and comes back when you leave the dungeon."] = true
 L["Show Great Vault progress"] = true
 L["How many Great Vault slots you have unlocked this week, left of the latency. Hover it for each row and what the next slot needs."] = true
 L["Great Vault"] = true

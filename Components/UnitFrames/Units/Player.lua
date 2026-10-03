@@ -1320,6 +1320,23 @@ local PlayerHasAdditionalManaPower = function(unit)
 	return additionalPowerInfo == true
 end
 
+-- What the orb shows: mana for anyone who uses it, as their primary power or
+-- beside it (a druid in cat form, a shadow priest); otherwise the primary power,
+-- so a hunter on "Mana Orb Only" sees Focus. Decided by power type, not by
+-- UnitPowerMax(mana), which a hunter can answer non-zero and which can be secret.
+local GetManaOrbPowerType = function(element, unit)
+	local primary = GetSafePlayerPrimaryPowerType(unit)
+	if (not primary) then
+		return element.displayType or POWER_TYPE_MANA
+	end
+	-- Blizzard pairs mana only with Astral Power, Insanity and Maelstrom; a druid
+	-- in cat or bear form keeps the mana it shapeshifts back to, as before.
+	if (primary == POWER_TYPE_MANA) or PlayerHasAdditionalManaPower(unit) or (playerClass == "DRUID") then
+		return POWER_TYPE_MANA
+	end
+	return primary
+end
+
 local ResolvePlayerPowerWidgetVisibility = function(frame, unit)
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
 	if (not profile) then
@@ -2092,10 +2109,12 @@ local ResolvePlayerPowerDefaultColor = function(config, token)
 	return ResolvePlayerPowerColorFromTable(config and config.PowerBarColors, token, POWER_CRYSTAL_DEFAULT_COLOR)
 end
 
+-- A theme's colour (Hunter Focus orange) stands in for Default only; Enhanced
+-- and Class Color are the player's explicit choice and win over it.
 local ResolvePlayerPowerBaseColor = function(config, profile, token)
-	local themeColor = ns.PaladinTheme and ns.PaladinTheme:GetPowerColor(token)
-	if (themeColor) then return themeColor end
 	local defaultColor = ResolvePlayerPowerDefaultColor(config, token)
+	local themeColor = ns.PaladinTheme and ns.PaladinTheme:GetPowerColor(token)
+	if (themeColor) then defaultColor = themeColor end
 	local colorMode = profile and profile.crystalOrbColorMode or "default"
 	if (colorMode == "classColor" or colorMode == "class") then
 		return ResolvePlayerPowerColorFromTable(Colors and Colors.class, playerClass, defaultColor)
@@ -2325,12 +2344,26 @@ local Power_OnMouseOver = function(element)
 	end
 end
 
-local Mana_PostUpdate = function(element, unit, cur, min, max)
+-- The orb's fill colour for the power type it last showed. Called from the
+-- orb's PostUpdate and from UnitFrame_UpdateTextures, which runs after every
+-- frame event and used to repaint the orb mana blue over this.
+local UpdateManaOrbColor = function(element)
 	local config = ns.GetConfig("PlayerFrame")
 	local displayType = element and element.displayType
 	local token = (type(displayType) == "number" and (not issecretvalue or not issecretvalue(displayType)) and POWER_TYPE_TOKENS[displayType]) or "MANA"
+	token = POWER_CRYSTAL_TOKEN_ALIASES[token] or token
 
-	local color = config and config.PowerOrbColors and config.PowerOrbColors[token]
+	-- Coloured exactly as the crystal colours the same resource (a theme's
+	-- colour, then Crystal/Orb Color Source), so the two never disagree. Mana on
+	-- Default is the one exception: the orb keeps its own lighter purple.
+	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
+	local colorMode = profile and profile.crystalOrbColorMode or "default"
+	local color
+	if (token == "MANA" and colorMode == "default" and not (ns.PaladinTheme and ns.PaladinTheme:GetPowerColor(token))) then
+		color = config and config.PowerOrbColors and config.PowerOrbColors.MANA
+	else
+		color = ResolvePlayerPowerBaseColor(config, profile, token)
+	end
 	if (type(color) ~= "table") then
 		color = config and config.PowerOrbColors and config.PowerOrbColors.MANA
 	end
@@ -2338,6 +2371,10 @@ local Mana_PostUpdate = function(element, unit, cur, min, max)
 		element.colorPower = false
 		element:SetStatusBarColor(color[1], color[2], color[3], color[4] or 1)
 	end
+end
+
+local Mana_PostUpdate = function(element, unit, cur, min, max)
+	UpdateManaOrbColor(element)
 	UpdatePlayerElementValueText(element)
 	local displayPercent = element.__AzeriteUI_DisplayPercent
 	local displayCur = element.__AzeriteUI_DisplayCur
@@ -2610,7 +2647,7 @@ end
 -- Update player frame based on player level.
 local UnitFrame_UpdateTextures = function(self)
 	local playerLevel = playerLevel or UnitLevel("player")
-	local key = (playerXPDisabled or ns.API.IsLevelAtEffectiveMaxLevel(playerLevel)) and "Seasoned" or playerLevel < 10 and "Novice" or "Hardened"
+	local key = ns.API.GetLevelTier(playerLevel, playerXPDisabled)
 	local config = ns.GetConfig("PlayerFrame")
 	local db = config[key]
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile or nil
@@ -2967,7 +3004,7 @@ local UnitFrame_UpdateTextures = function(self)
 	mana:SetSize(unpack(db.ManaOrbSize))
 	mana.colorPower = false
 	SetManaOrbFillTexture(mana, db)
-	mana:SetStatusBarColor(unpack(config.PowerOrbColors.MANA))
+	UpdateManaOrbColor(mana)
 	do
 		local tex1, tex2 = mana:GetStatusBarTexture()
 		if (tex2 and tex2.SetTexCoord) then
@@ -3204,7 +3241,8 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 		playerXPDisabled = true
 
 	elseif (event == "PLAYER_LEVEL_UP") then
-		playerLevel = UnitLevel("player")
+		-- The payload carries the new level; UnitLevel can still answer the old one.
+		playerLevel = ns.API.GetSafeLevel(unit) or UnitLevel("player")
 	end
 
 	UnitFrame_PostUpdate(self)
@@ -3215,9 +3253,7 @@ local style = function(self, unit)
 	local config = ns.GetConfig("PlayerFrame")
 	-- Pick the same profile key used by UnitFrame_UpdateTextures so we have
 	-- non-nil sizing/texture data before the first PostUpdate runs.
-	local key = (playerXPDisabled or ns.API.IsLevelAtEffectiveMaxLevel(playerLevel)) and "Seasoned"
-		or (playerLevel < 10 and "Novice")
-		or "Hardened"
+	local key = ns.API.GetLevelTier(playerLevel, playerXPDisabled)
 	local db = config[key] or config.Seasoned or config.Hardened or config.Novice or config
 
 	self:SetSize(unpack(config.Size))
@@ -3621,6 +3657,7 @@ local style = function(self, unit)
 	self.ManaOrb = mana
 	self.ManaOrb.Override = ns.API.UpdateManaOrb
 	self.ManaOrb.PostUpdate = Mana_PostUpdate
+	self.ManaOrb.GetDisplayPowerType = GetManaOrbPowerType
 	self.ManaOrb.ForceUpdate = function(element)
 		local owner = element and element.__owner
 		if (owner) then

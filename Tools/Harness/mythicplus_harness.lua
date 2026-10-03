@@ -39,6 +39,9 @@ local methods = {
 	SetValue = function(self, value) self.value = value end,
 	GetValue = function(self) return self.value end,
 	SetStatusBarColor = function(self, r, g, b) self.barColor = { r, g, b } end,
+	SetAtlas = function(self, atlas) self.atlas = atlas end,
+	SetTexture = function(self, texture) self.texture = texture end,
+	SetHeight = function(self, height) self.height = height end,
 	SetScript = function(self, name, fn) self.scripts[name] = fn end,
 	SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end,
 	ClearAllPoints = function(self) self.points = {} end,
@@ -77,7 +80,9 @@ local function Reset()
 		cleared = 0,
 		activities = {},
 		vaultReady = false,
-		secret = {}
+		secret = {},
+		affixes = {},
+		charged = true
 	}
 end
 Reset()
@@ -91,6 +96,8 @@ env.CreateFrame = function(kind) return Widget(kind) end
 env.UIParent = Widget("Frame")
 env.GameTooltip = Widget("GameTooltip")
 env.GameTooltip.IsForbidden = function() return false end
+env.GameTooltip.SetOwner = function(self, owner) self.owner = owner end
+env.GameTooltip.GetOwner = function(self) return self.owner end
 env.GameTooltip.lines = {}
 env.GameTooltip.AddLine = function(self, text) self.lines[#self.lines + 1] = text end
 env.GameTooltip.AddDoubleLine = function(self, left, right) self.lines[#self.lines + 1] = left .. "|" .. right end
@@ -120,7 +127,11 @@ end
 env.C_ChallengeMode = {
 	GetActiveChallengeMapID = function() return client.mapID end,
 	GetMapUIInfo = function(id) local m = client.maps[id]; if m then return m[1], m[2], m[3] end end,
-	GetActiveKeystoneInfo = function() return client.level, {}, true end,
+	GetActiveKeystoneInfo = function() return client.level, client.affixes, client.charged end,
+	GetAffixInfo = function(id)
+		local affix = ({ [9] = { "Tyrannical", "Bosses hit harder.", 236401 }, [152] = { "Challenger's Peril", "Deaths cost more.", 4555 } })[id]
+		if (affix) then return affix[1], affix[2], affix[3] end
+	end,
 	GetDeathCount = function() return client.deaths[1], client.deaths[2] end,
 	GetChallengeCompletionInfo = function() return client.completion end,
 	GetDungeonScoreRarityColor = function() return { WrapTextInColorCode = function(_, s) return "<" .. s .. ">" end } end,
@@ -155,6 +166,7 @@ env.C_WeeklyRewards = {
 	HasAvailableRewards = function() return client.vaultReady end
 }
 env.CHALLENGE_MODE_DEATH_COUNT_TITLE = "%d Deaths"
+env.CHALLENGE_MODE_DEPLETED_KEYSTONE = "Depleted Keystone"
 env.CHALLENGE_MODE_COMPLETE_BEAT_TIMER = "You beat the timer!"
 env.CHALLENGE_MODE_COMPLETE_KEYSTONE_UPGRADED = "Keystone upgraded %d levels"
 env.CHALLENGE_MODE_COMPLETE_TIME_EXPIRED = "Time expired"
@@ -244,9 +256,13 @@ local ns = NewNamespace(true)
 Load("Components/Misc/MythicPlus.lua", ns)
 local M = assert(modules.MythicPlus, "the module exists on Retail")
 local function Profile()
-	return { enabled = true, showTimer = true, showForces = true, showCompletionCard = true, autoSlotKeystone = true, savedPosition = {} }
+	return { enabled = true, showTimer = true, showAffixes = true, showForces = true, showBosses = true, hideBlizzardTracker = true,
+		showCompletionCard = true, autoSlotKeystone = true, savedPosition = {} }
 end
 M.db = { profile = Profile() }
+-- The tracker module, as far as Mythic+ talks to it.
+local trackerRefreshes = 0
+modules.Tracker = { RefreshAlpha = function() trackerRefreshes = trackerRefreshes + 1 end }
 M:OnEnable()
 local frame = M.frame
 
@@ -339,6 +355,116 @@ M:OnEvent("SCENARIO_CRITERIA_UPDATE")
 check(frame.forces.value == 1, "overshooting the total caps at full")
 
 -------------------------------------------------------------------------------
+-- Affixes
+-------------------------------------------------------------------------------
+local function TimerY() return frame.timer.points[1] and frame.timer.points[1][5] end
+check(TimerY() == -36 and frame.forces.points[1][5] == -80, "no affixes: the timer and forces sit where they always did",
+	tostring(TimerY()) .. " " .. tostring(frame.forces.points[1][5]))
+check(not frame.affixNames.shown, "no affixes, no names line")
+
+client.affixes, client.charged = { 9, 152 }, true
+M:OnEvent("CHALLENGE_MODE_START")
+check(frame.affixNames.text == "Tyrannical  |cff888888·|r  Challenger's Peril", "affix names under the icons", frame.affixNames.text)
+check(#frame.affixes == 2 and frame.affixes[1].shown and frame.affixes[2].shown, "one icon per affix")
+check(frame.affixes[1].icon.texture == 236401 and frame.affixes[2].affixID == 152, "icon and ID from GetAffixInfo")
+check(TimerY() == -80, "the affix row pushes the timer down", TimerY())
+frame.affixes[2].scripts.OnEnter(frame.affixes[2])
+check(env.GameTooltip.text == "Challenger's Peril" and env.GameTooltip.lines[#env.GameTooltip.lines] == "Deaths cost more.",
+	"hovering an affix says what it does")
+
+client.charged = false
+M:OnEvent("CHALLENGE_MODE_START")
+check(frame.affixNames.text:sub(1, #ns.Colors.quest.red.colorCode + 17) == ns.Colors.quest.red.colorCode .. "Depleted Keystone",
+	"a depleted key says so first", frame.affixNames.text)
+
+client.affixes, client.charged = { 152 }, true
+M:OnEvent("CHALLENGE_MODE_START")
+check(frame.affixes[1].shown and not frame.affixes[2].shown, "fewer affixes hide the spare icon")
+M.db.profile.showAffixes = false
+M:UpdateSettings()
+check(not frame.affixes[1].shown and not frame.affixNames.shown and TimerY() == -36, "the switch hides the row and closes the gap")
+M.db.profile.showAffixes = true
+M:UpdateSettings()
+
+local secretAffixes = { 9 }
+client.secret[secretAffixes] = true
+client.affixes = secretAffixes
+M:OnEvent("CHALLENGE_MODE_START")
+check(M.numAffixes == 0 and frame.affixNames.text == "", "a secret affix table is not read")
+client.secret = {}
+client.affixes = {}
+M:OnEvent("CHALLENGE_MODE_START")
+
+-------------------------------------------------------------------------------
+-- Bosses
+-------------------------------------------------------------------------------
+client.criteria = {
+	{ criteriaID = 11, description = "Charonus defeated", isWeightedProgress = false, quantity = 0, totalQuantity = 1, quantityString = "" },
+	{ criteriaID = 12, description = "Atroxus defeated", isWeightedProgress = false, quantity = 0, totalQuantity = 1, quantityString = "" },
+	{ criteriaID = 13, description = "Enemy Forces", isWeightedProgress = true, quantity = 10, totalQuantity = 400, quantityString = "40%" }
+}
+M:OnEvent("CHALLENGE_MODE_START")
+local bosses = frame.bosses
+check(M.numBosses == 2 and bosses[1].shown and bosses[2].shown, "one line per boss, forces left out", M.numBosses)
+check(bosses[1].name.text == "Charonus defeated" and bosses[1].icon.atlas == "ui-questtracker-objective-nub",
+	"a living boss gets the tracker's dot")
+check(bosses[1].points[1][5] == -80 - 12 - 14, "bosses start under the forces bar", bosses[1].points[1][5])
+check(bosses[2].points[1][5] == bosses[1].points[1][5] - 17, "and stack down")
+check(frame.height == -(bosses[2].points[1][5] - 17), "the frame grows to hold them", frame.height)
+
+At(754)
+client.criteria[2].completed = true
+M:OnEvent("SCENARIO_CRITERIA_UPDATE")
+check(bosses[2].icon.atlas == "ui-questtracker-tracker-check" and bosses[2].time.text == "12:34", "a kill is ticked with its time", bosses[2].time.text)
+check(Same(bosses[2].name.color, ns.Colors.quest.green), "and turns green")
+At(900)
+M:OnEvent("SCENARIO_CRITERIA_UPDATE")
+check(bosses[2].time.text == "12:34", "the kill time stays put")
+check(bosses[1].time.text == "", "a living boss has no time")
+
+-- A /reload in the key: the kill was before we looked, so no time is made up.
+M.bossState = {}
+M:OnEvent("PLAYER_ENTERING_WORLD")
+check(bosses[2].icon.atlas == "ui-questtracker-tracker-check" and bosses[2].time.text == "", "a kill from before a reload has no time")
+At(960)
+M:OnEvent("SCENARIO_CRITERIA_UPDATE")
+check(bosses[2].time.text == "", "nor gets one at the next update", bosses[2].time.text)
+
+M.db.profile.showBosses = false
+M:UpdateSettings()
+check(not bosses[1].shown and not bosses[2].shown, "the switch hides the bosses")
+M.db.profile.showBosses = true
+M:UpdateSettings()
+
+client.criteria[2].completed = nil
+M:OnEvent("CHALLENGE_MODE_START")
+check(bosses[2].time.text == "" and bosses[2].icon.atlas == "ui-questtracker-objective-nub", "a new key starts every boss alive")
+client.criteria[2].completed = true
+M:OnEvent("SCENARIO_CRITERIA_UPDATE")
+check(bosses[2].time.text == "16:00", "and times its kills afresh", bosses[2].time.text)
+
+-------------------------------------------------------------------------------
+-- Blizzard's tracker
+-------------------------------------------------------------------------------
+check(ns.MythicPlusHidesTracker == true and trackerRefreshes > 0, "Blizzard's tracker is hidden while the key shows")
+local refreshes = trackerRefreshes
+M:UpdateSettings()
+check(trackerRefreshes == refreshes, "no refresh when nothing changed")
+M.db.profile.hideBlizzardTracker = false
+M:UpdateSettings()
+check(ns.MythicPlusHidesTracker == nil and trackerRefreshes == refreshes + 1, "the switch gives the tracker back")
+M.db.profile.hideBlizzardTracker = true
+M:UpdateSettings()
+check(ns.MythicPlusHidesTracker == true, "and takes it again")
+
+-- The forces section's criteria, back for the settings below.
+client.criteria = {
+	{ description = "Boss", isWeightedProgress = false, quantity = 0, totalQuantity = 1, quantityString = "" },
+	{ description = "Enemy Forces", isWeightedProgress = true, quantity = 50, totalQuantity = 460, quantityString = "230%" }
+}
+M:OnEvent("SCENARIO_CRITERIA_UPDATE")
+
+-------------------------------------------------------------------------------
 -- Settings
 -------------------------------------------------------------------------------
 M.db.profile.showTimer = false
@@ -346,8 +472,11 @@ M:UpdateSettings()
 check(frame.shown and not frame.timer.shown and frame.forces.shown, "forces alone")
 check(frame.forces.points[1] and frame.forces.points[1][2] == frame, "forces move to the top without the timer")
 M.db.profile.showForces = false
+M.db.profile.showAffixes = false
+M.db.profile.showBosses = false
 M:UpdateSettings()
-check(not frame.shown, "both off hides the frame")
+check(not frame.shown, "everything off hides the frame")
+check(ns.MythicPlusHidesTracker == nil, "and gives Blizzard's tracker back")
 M.db.profile = Profile()
 M:UpdateSettings()
 check(frame.shown and frame.timer.shown, "both back on")
@@ -375,6 +504,7 @@ M:OnEvent("WORLD_STATE_TIMER_STOP")
 check(frame.shown, "the finished timer stays until you leave")
 M:OnEvent("PLAYER_ENTERING_WORLD")
 check(not frame.shown and M.timerID == nil, "leaving the dungeon hides it")
+check(ns.MythicPlusHidesTracker == nil, "and Blizzard's tracker comes back")
 
 card.scripts.OnClick(card)
 check(not card.shown, "a click closes the card")

@@ -31,12 +31,104 @@ if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local ConsolePort = ns:NewModule("ConsolePort", "LibMoreEvents-1.0", "AceHook-3.0")
 
-ConsolePort.UpdateHotkeys = function(self)
-	local HotkeyHandler = _G.ConsolePortHotkeyHandler
+-- Lua API
+local pcall = pcall
+local select = select
+local string_format = string.format
+local type = type
+
+-- WoW API
+local GetBindingKey = _G.GetBindingKey
+
+-- The first gamepad key among a binding's keys, split the way ConsolePort's own
+-- GamepadAPI:GetBindings does: "SHIFT-PAD1" -> "PAD1", "SHIFT-".
+local FindPadKey = function(...)
+	for i = 1, select("#", ...) do
+		local key = select(i, ...)
+		if (type(key) == "string") then
+			local btnID = key:match("([^%-]+)$")
+			if (btnID and btnID:find("^PAD")) then
+				return btnID, key:sub(1, #key - #btnID)
+			end
+		end
+	end
+end
+
+local GetButtonPadKey = function(button)
+	local btnID, modID
+	if (button.keyBoundTarget) then
+		btnID, modID = FindPadKey(GetBindingKey(button.keyBoundTarget))
+	end
+	if (not btnID) then
+		local clickButton = button.config and button.config.keyBoundClickButton or "LeftButton"
+		btnID, modID = FindPadKey(GetBindingKey(string_format("CLICK %s:%s", button:GetName(), clickButton)))
+	end
+	return btnID, modID
+end
+
+-- LibActionButton shows the text hotkey again on every config or binding refresh.
+-- Keep it hidden while one of ConsolePort's icon widgets sits on the button.
+local Button_PostKeybind = function(_, button)
+	if (button.__AzeriteUI_ConsolePortHotkey and button.HotKey) then
+		button.HotKey:Hide()
+	end
+end
+
+-- ConsolePort finds action buttons by walking every frame below UIParent, and on
+-- WoW 12 the walk stops at any frame with access constraints
+-- (CPAPI.IsObjectRestricted), skipping everything under it. Buttons it never
+-- reaches keep LibActionButton's text hotkey ("PAD1" shortened to text) instead of
+-- the gamepad icons. Give those buttons ConsolePort's own widget here.
+ConsolePort.DrawMissingHotkeys = function(_, HotkeyHandler, device, ActionBars)
+	if (not device or type(HotkeyHandler.GetWidget) ~= "function" or type(HotkeyHandler.GetHotkeyData) ~= "function") then return end
+
+	-- Respect ConsolePort's own switch to draw no icons at all.
+	local db = _G.ConsolePort and _G.ConsolePort.GetData and _G.ConsolePort:GetData()
+	if (type(db) == "table") then
+		local ok, disabled = pcall(db, "disableHotkeyRendering")
+		if (ok and disabled) then return end
+	end
+
+	local drawn = {}
+	for widget in HotkeyHandler.Widgets:EnumerateActive() do
+		local owner = widget:GetParent()
+		if (owner) then
+			drawn[owner] = true
+		end
+	end
+
+	for button in next, ActionBars.buttons do
+		button.__AzeriteUI_ConsolePortHotkey = nil
+		if (not button.postKeybind) then
+			button.postKeybind = Button_PostKeybind
+		end
+		if (drawn[button]) then
+			button.__AzeriteUI_ConsolePortHotkey = true
+		else
+			local btnID, modID = GetButtonPadKey(button)
+			if (btnID) then
+				local ok, data = pcall(HotkeyHandler.GetHotkeyData, HotkeyHandler, device, btnID, modID, 32, 32)
+				if (ok and data) then
+					local widget = HotkeyHandler:GetWidget()
+					if (pcall(widget.SetData, widget, data, button)) then
+						button.__AzeriteUI_ConsolePortHotkey = true
+					else
+						HotkeyHandler.Widgets:Release(widget)
+					end
+				end
+			end
+		end
+	end
+end
+
+ConsolePort.UpdateHotkeys = function(self, HotkeyHandler, device)
+	HotkeyHandler = HotkeyHandler or _G.ConsolePortHotkeyHandler
 	if (not HotkeyHandler) then return end
 
-	local ActionBars = ns:GetModule("ActionBars")
-	if (not ActionBars or not ActionBars:IsEnabled()) then return end
+	local ActionBars = ns:GetModule("ActionBars", true)
+	if (not ActionBars or not ActionBars:IsEnabled() or not ActionBars.buttons) then return end
+
+	self:DrawMissingHotkeys(HotkeyHandler, device, ActionBars)
 
 	for widget in HotkeyHandler.Widgets:EnumerateActive() do
 		local owner = widget:GetParent()

@@ -144,7 +144,7 @@ local function widget(parent)
 	end
 	return w
 end
-env.CreateFrame = function(_, _, parent) return widget(parent) end
+env.CreateFrame = function(kind, _, parent) local w = widget(parent); w.kind = kind; return w end
 
 env.hooksecurefunc=function(object,key,callback)
  local before=object[key]
@@ -182,7 +182,10 @@ native:Hide();check(not halo.shown,"threat halo follows hide")
 local count=widgetCount;theme:StyleThreat(owner,true);check(widgetCount==count,"no duplicate threat texture")
 ns.db.char.hunterEndcap="none";theme:StyleThreat(owner,true);check(halo.alpha==0,"no halo for disabled ornament")
 owner.Overlay=widget(owner);theme:StylePet(owner)
-check(owner.Portrait and owner.Portrait.mask,"pet portrait registered with oUF and masked")
+local portrait=owner.Portrait
+check(portrait and portrait.kind=="PlayerModel","pet portrait is an animated model registered with oUF")
+check(portrait.level<owner.Overlay.level,"pet model sits under the casing that crops it")
+check(portrait.Bg and portrait.Bg.allPoints==portrait and portrait.Bg.color and not portrait.Bg.mask,"pet socket filled edge to edge behind the model")
 count=widgetCount;theme:StylePet(owner);check(widgetCount==count,"pet styling idempotent")
 local resource=widget(owner); resource:SetSize(196,196); resource.Case=widget(resource)
 owner.Power=resource
@@ -213,8 +216,15 @@ end
 check(ns.GetConfig("PartyFrames").PowerBarPosition[3]==8,"party power remains in native position")
 check(ns.GetConfig("PartyFrames").PortraitBackgroundTexture:find("Hunter",1,true),"Hunter portrait backing")
 local player=ns.GetConfig("PlayerFrame").Seasoned
-check(player.PowerBarPosition[2]+player.PowerBackdropSize[1]/2==80,"crystal viewport retains original center X")
-check(player.PowerBarPosition[3]+player.PowerBackdropSize[2]/2==108,"crystal viewport retains original center Y")
+-- Drawn where Player.lua puts it: PowerBarPosition plus its baseline offset
+-- (POWER_CRYSTAL_BASELINE_OFFSET_X/Y), at the 196px viewport's size. The same
+-- center as the stock crystal, so it meets the bar where the orb does.
+local playerSource=assert(io.open(root.."/Components/UnitFrames/Units/Player.lua","rb")):read("*a")
+local baseX=tonumber(playerSource:match("POWER_CRYSTAL_BASELINE_OFFSET_X = (%-?%d+)"))
+local baseY=tonumber(playerSource:match("POWER_CRYSTAL_BASELINE_OFFSET_Y = (%-?%d+)"))
+check(baseX and baseY,"Player.lua crystal baseline offsets found")
+check(player.PowerBarPosition[2]+baseX+player.PowerBackdropSize[1]/2==81,"crystal viewport keeps the stock center X")
+check(player.PowerBarPosition[3]+baseY+player.PowerBackdropSize[2]/2==108,"crystal viewport keeps the stock center Y")
 print("Hunter theme: "..checks.." checks passed (offline only)")
 -- Optional source-driven layout export for the offline assembly renderer.
 if (arg[2]) then

@@ -180,13 +180,13 @@
     },
     "border-tooltip": {
       "file": "Assets\\Hunter\\border-tooltip.tga",
-      "sha256": "c14f8846963efa9a6585a8b5c65228b7f6ae0ccbedf2b3b712fa4b80bfd44656",
+      "sha256": "de3421ec809b8d85b8a4b2a3737b67137e7020cae2528a6590a82ba03b3ab7bb",
       "transform": null,
       "operation": "reuse existing native export"
     },
     "better-blizzard-border-small-alternate": {
       "file": "Assets\\Hunter\\better-blizzard-border-small-alternate.tga",
-      "sha256": "fd2cc0b710f9c59fdd34aa93fd30fca2340e91c29d65326c07cc0a690518d0c0",
+      "sha256": "029724305c952a96ef37ee46bd413a4b7c109a486e2ef3f9225dc75cd69d19c3",
       "transform": null,
       "operation": "reuse existing native export"
     }
@@ -391,7 +391,7 @@
         512,
         64
       ],
-      "sha256": "c14f8846963efa9a6585a8b5c65228b7f6ae0ccbedf2b3b712fa4b80bfd44656",
+      "sha256": "de3421ec809b8d85b8a4b2a3737b67137e7020cae2528a6590a82ba03b3ab7bb",
       "look_notes": []
     },
     "better-blizzard-border-small-alternate": {
@@ -401,7 +401,7 @@
         512,
         64
       ],
-      "sha256": "fd2cc0b710f9c59fdd34aa93fd30fca2340e91c29d65326c07cc0a690518d0c0",
+      "sha256": "029724305c952a96ef37ee46bd413a4b7c109a486e2ef3f9225dc75cd69d19c3",
       "look_notes": []
     },
     "actionbutton-backdrop": {

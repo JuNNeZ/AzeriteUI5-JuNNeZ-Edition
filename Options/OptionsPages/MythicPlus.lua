@@ -68,10 +68,34 @@ local GenerateOptions = function()
 				set = setter,
 				get = getter
 			},
+			showAffixes = {
+				name = L["Show the affixes"],
+				desc = L["The key's affixes as icons under the title, with their names below. Hover an icon to read what it does."],
+				order = 10.1,
+				type = "toggle", width = "full",
+				set = setter,
+				get = getter
+			},
 			showForces = {
 				name = L["Show enemy forces"],
 				desc = L["A bar for the enemy forces counted so far."],
 				order = 11,
+				type = "toggle", width = "full",
+				set = setter,
+				get = getter
+			},
+			showBosses = {
+				name = L["Show boss progress"],
+				desc = L["Every boss in the dungeon, ticked off when it dies, with the time on the key timer when it did."],
+				order = 11.1,
+				type = "toggle", width = "full",
+				set = setter,
+				get = getter
+			},
+			hideBlizzardTracker = {
+				name = L["Hide Blizzard's tracker during a key"],
+				desc = L["Blizzard's objective tracker shows the same key, so it is hidden while this frame is up and comes back when you leave the dungeon."],
+				order = 11.2,
 				type = "toggle", width = "full",
 				set = setter,
 				get = getter

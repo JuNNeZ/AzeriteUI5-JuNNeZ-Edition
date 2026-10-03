@@ -670,9 +670,9 @@ end
 
 -- Update player frame based on player level.
 local UnitFrame_UpdateTextures = function(self)
-	local currentPlayerLevel = UnitLevel("player") or playerLevel or 0
+	local currentPlayerLevel = ns.API.GetSafeLevel(playerLevel) or UnitLevel("player")
 	local playerXPDisabled = IsXPUserDisabled and IsXPUserDisabled()
-	local key = (playerXPDisabled or ns.API.IsLevelAtEffectiveMaxLevel(currentPlayerLevel)) and "Seasoned" or currentPlayerLevel < 10 and "Novice" or "Hardened"
+	local key = ns.API.GetLevelTier(currentPlayerLevel, playerXPDisabled)
 	local config = ns.GetConfig("PlayerFrameAlternate")
 	local db = config[key]
 
@@ -879,7 +879,8 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 		end
 
 	elseif (event == "PLAYER_LEVEL_UP") then
-		playerLevel = UnitLevel("player")
+		-- The payload carries the new level; UnitLevel can still answer the old one.
+		playerLevel = ns.API.GetSafeLevel(unit) or UnitLevel("player")
 	end
 	UnitFrame_PostUpdate(self)
 end

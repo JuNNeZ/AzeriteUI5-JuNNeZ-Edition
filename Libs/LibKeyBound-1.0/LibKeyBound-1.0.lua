@@ -46,6 +46,15 @@ local SaveBindings = SaveBindings or AttemptToSaveBindings
 local WoW10 = (WOW_PROJECT_MAINLINE ~= nil and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
 	or select(4, GetBuildInfo()) >= 100000
 
+-- AzeriteUI: WoW Forever (TOC 16001) fails the WoW10 test but ships only the modern
+-- templates; its missing OptionsCheckButtonTemplate threw from CreateFrame. Prefer the
+-- modern template whenever the client has it.
+local function PickTemplate(modern, legacy)
+	if WoW10 then return modern end
+	if C_XMLUtil and C_XMLUtil.GetTemplateInfo and C_XMLUtil.GetTemplateInfo(modern) then return modern end
+	return legacy
+end
+
 -- #NODOC
 function LibKeyBound:Initialize()
 	do
@@ -93,7 +102,7 @@ function LibKeyBound:Initialize()
 		desc:SetText(format(L.BindingsHelp, GetBindingText('ESCAPE')))
 
 		-- Per character bindings checkbox
-		local perChar = CreateFrame('CheckButton', 'KeyboundDialogCheck', f, WoW10 and 'UICheckButtonTemplate' or 'OptionsCheckButtonTemplate')
+		local perChar = CreateFrame('CheckButton', 'KeyboundDialogCheck', f, PickTemplate('UICheckButtonTemplate', 'OptionsCheckButtonTemplate'))
 		_G[perChar:GetName() .. 'Text']:SetText(CHARACTER_SPECIFIC_KEYBINDINGS)
 
 		perChar:SetScript('OnShow', function(self)
@@ -107,7 +116,7 @@ function LibKeyBound:Initialize()
 		end)
 
 		-- Okay bindings checkbox
-		local okayBindings = CreateFrame('CheckButton', 'KeyboundDialogOkay', f, WoW10 and 'UIPanelButtonTemplate' or 'OptionsButtonTemplate')
+		local okayBindings = CreateFrame('CheckButton', 'KeyboundDialogOkay', f, PickTemplate('UIPanelButtonTemplate', 'OptionsButtonTemplate'))
 		okayBindings:SetSize(100, 20)
 		getglobal(okayBindings:GetName() .. 'Text'):SetText(OKAY)
 
@@ -137,7 +146,7 @@ function LibKeyBound:Initialize()
 		end)
 
 		-- Cancel bindings checkbox
-		local cancelBindings = CreateFrame('CheckButton', 'KeyboundDialogCancel', f, WoW10 and 'UIPanelButtonTemplate' or 'OptionsButtonTemplate')
+		local cancelBindings = CreateFrame('CheckButton', 'KeyboundDialogCancel', f, PickTemplate('UIPanelButtonTemplate', 'OptionsButtonTemplate'))
 		cancelBindings:SetSize(100, 20)
 		getglobal(cancelBindings:GetName() .. 'Text'):SetText(CANCEL)
 

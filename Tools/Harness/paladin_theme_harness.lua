@@ -100,12 +100,20 @@ setfenv(resolverChunk, {
 	ResolvePlayerPowerColorFromTable = function(t, token, fallback) return t[token] or fallback end
 })
 local resolve = resolverChunk()
+-- The theme colour stands in for Default only; Enhanced and Class Color are the
+-- player's explicit choice and win over it (FixLog 2026-10-03, orb step 7).
+local expected = { default = "holy", enhanced = enhanced, new = enhanced, classColor = class, class = class }
 for _, mode in ipairs({ "default", "enhanced", "new", "classColor", "class" }) do
 	local profile = { crystalOrbColorMode = mode }
 	local color = resolve({}, profile, "MANA")
-	check(color[1] == 1 and color[2] == .78 and color[3] == .28, "holy mana overrides "..mode)
+	if (expected[mode] == "holy") then
+		check(color[1] == 1 and color[2] == .78 and color[3] == .28, "holy mana replaces "..mode)
+	else
+		check(color == expected[mode], "the player's "..mode.." choice wins over holy mana")
+	end
 	check(profile.crystalOrbColorMode == mode, "saved mode is unchanged")
 end
+check(resolve({}, {}, "MANA")[2] == .78, "holy mana with no saved mode")
 check(resolve({}, {}, "RAGE") == default, "non-mana power retains resolver")
 ns.db.char.paladinPreview = false
 check(resolve({}, {}, "MANA") == default, "off restores default mana")

@@ -107,6 +107,24 @@ end
 -- Bonus bars are pages 7 through 11, matching [bonusbar:1] through [bonusbar:5].
 local BONUS_BAR_OFFSET = 6
 
+-- How many stance/form bonus bars bar 1 pages to. Forever's own MainActionBar
+-- pages to `GetBonusBarIndex()` for any class with a bonus bar
+-- (ActionBarController_UpdateAll), which covers Warrior stances; Retail keeps the
+-- classes that still have one. A class with no bonus bar never matches the extra
+-- conditions, so listing all four on Forever is harmless.
+local GetBonusBarCount = function()
+	if (ns.IsForever) then
+		return 4
+	elseif (playerClass == "DRUID") then
+		return 4
+	elseif (playerClass == "MONK") then
+		return 3
+	elseif (playerClass == "ROGUE") then
+		return 1
+	end
+	return 0
+end
+
 -- The conditional list this bar's page driver is built from, as {condition, page}.
 -- Order matters and matches the symbolic driver used where snippets work.
 local GetPageConditions = function(barID)
@@ -128,16 +146,7 @@ local GetPageConditions = function(barID)
 		{ "[bar:6]", 6 }
 	}
 
-	local bonusBars = 0
-	if (playerClass == "DRUID") then
-		bonusBars = 4
-	elseif (playerClass == "MONK") then
-		bonusBars = 3
-	elseif (playerClass == "ROGUE") then
-		bonusBars = 1
-	end
-
-	for i = 1, bonusBars do
+	for i = 1, GetBonusBarCount() do
 		conditions[#conditions + 1] = { "[bonusbar:"..i.."]", BONUS_BAR_OFFSET + i }
 	end
 
@@ -717,14 +726,8 @@ ActionBar.UpdateStateDriver = function(self)
 	if (self.id == 1) then
 		statedriver = "[overridebar] possess; [possessbar] possess; [shapeshift] possess; [bonusbar:5] dragon; [form,noform] 0; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6"
 
-		if (playerClass == "DRUID") then
-			statedriver = statedriver .. "; [bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10"
-
-		elseif (playerClass == "MONK") then
-			statedriver = statedriver .. "; [bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9"
-
-		elseif (playerClass == "ROGUE") then
-			statedriver = statedriver .. "; [bonusbar:1] 7"
+		for i = 1, GetBonusBarCount() do
+			statedriver = statedriver .. "; [bonusbar:"..i.."] "..(BONUS_BAR_OFFSET + i)
 		end
 
 		statedriver = statedriver .. "; 1"

@@ -47,15 +47,111 @@ local IsHouseEditorActive = function()
 	return ok and active == true
 end
 
-local IsPlayerAtEffectiveMaxLevel = function()
-	return GameRulesUtil.IsPlayerAtEffectiveMaxLevel()
+local IsSecret = function(value)
+	return (type(issecretvalue) == "function") and issecretvalue(value) and true or false
+end
+
+-- Returns a level that addon logic may compare, or nil when it is missing or secret.
+local GetSafeLevel = function(level)
+	if (type(level) ~= "number") or IsSecret(level) then
+		return nil
+	end
+	return level
+end
+
+-- A positive, comparable cap, or nil. Forever sets the global MAX_PLAYER_LEVEL to 0
+-- (Blizzard_UIPanels_Game/Vanilla/ReputationFrame.lua), so zero never counts.
+local GetSafeCap = function(func)
+	local ok, value = API.TryCall(func)
+	value = ok and GetSafeLevel(value)
+	return (value and value > 0) and value or nil
+end
+
+-- The level cap that ends the player's levelling, on any client. Blizzard's own
+-- GameRulesUtil.GetEffectiveMaxLevelForPlayer is preferred (identical on Retail and
+-- Forever 1.60.1); the fallbacks repeat its min(expansion cap, player cap).
+-- Returns nil when the client cannot say.
+local GetEffectiveMaxLevel = function()
+	local cap = GetSafeCap(GameRulesUtil and GameRulesUtil.GetEffectiveMaxLevelForPlayer)
+	if (cap) then
+		return cap
+	end
+	local expansionCap = GetSafeCap(GetMaxLevelForPlayerExpansion)
+	local playerCap = GetSafeCap(GetMaxPlayerLevel)
+	if (expansionCap and playerCap) then
+		return math.min(expansionCap, playerCap)
+	end
+	cap = expansionCap or playerCap
+	if (cap) then
+		return cap
+	end
+	cap = GetSafeLevel(MAX_PLAYER_LEVEL)
+	return (cap and cap > 0) and cap or nil
 end
 
 local IsLevelAtEffectiveMaxLevel = function(level)
-	if (type(level) ~= "number") or (issecretvalue and issecretvalue(level)) then
+	level = GetSafeLevel(level)
+	local cap = GetEffectiveMaxLevel()
+	if (not level) or (not cap) then
 		return false
 	end
-	return level >= GameRulesUtil.GetEffectiveMaxLevelForPlayer()
+	return level >= cap
+end
+
+local IsPlayerAtEffectiveMaxLevel = function()
+	return IsLevelAtEffectiveMaxLevel(UnitLevel("player"))
+end
+
+-- The unit frame skin tier for a level: "Novice" below 10, "Seasoned" at the cap,
+-- for "??" (level below 1) or with experience switched off, "Hardened" otherwise
+-- and whenever the level is missing or secret. Never compares a secret value.
+local GetLevelTier = function(level, xpDisabled)
+	if (xpDisabled == true) then
+		return "Seasoned"
+	end
+	level = GetSafeLevel(level)
+	if (not level) then
+		return "Hardened"
+	end
+	if (level < 1) or IsLevelAtEffectiveMaxLevel(level) then
+		return "Seasoned"
+	end
+	return (level < 10) and "Novice" or "Hardened"
+end
+
+-- Creature type 8 is Critter in the client's CreatureType table on every flavor.
+-- UnitCreatureType returns (localized name, id); the name alone fails on any
+-- non-English client, so the id is checked first; the English name and the
+-- client's own name for type 8 (C_CreatureInfo) cover a client without the id.
+local CREATURE_TYPE_CRITTER = 8
+local critterTypeName
+
+local GetCritterTypeName = function()
+	if (critterTypeName == nil) then
+		critterTypeName = false
+		local getInfo = C_CreatureInfo and C_CreatureInfo.GetCreatureTypeInfo
+		local ok, info = API.TryCall(getInfo, CREATURE_TYPE_CRITTER)
+		local name = ok and type(info) == "table" and info.name
+		if (type(name) == "string") and (not IsSecret(name)) and (name ~= "") then
+			critterTypeName = name
+		end
+	end
+	return critterTypeName or nil
+end
+
+-- True when the unit's creature type is Critter, in any client language.
+local IsUnitCritterType = function(unit)
+	local ok, name, id = API.TryCall(UnitCreatureType, unit)
+	if (not ok) then
+		return false
+	end
+	if (type(id) == "number") and (not IsSecret(id)) and (id == CREATURE_TYPE_CRITTER) then
+		return true
+	end
+	if (type(name) ~= "string") or IsSecret(name) then
+		return false
+	end
+	return (name == "Critter") or (name == GetCritterTypeName())
 end
 
 -- Global API
@@ -64,3 +160,7 @@ API.CreateFrameUnscaled = CreateFrameUnscaled
 API.IsHouseEditorActive = IsHouseEditorActive
 API.IsPlayerAtEffectiveMaxLevel = IsPlayerAtEffectiveMaxLevel
 API.IsLevelAtEffectiveMaxLevel = IsLevelAtEffectiveMaxLevel
+API.GetSafeLevel = GetSafeLevel
+API.GetEffectiveMaxLevel = GetEffectiveMaxLevel
+API.GetLevelTier = GetLevelTier
+API.IsUnitCritterType = IsUnitCritterType

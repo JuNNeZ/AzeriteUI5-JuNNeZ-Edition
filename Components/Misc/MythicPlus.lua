@@ -26,8 +26,11 @@
 local _, ns = ...
 
 --[[
-	Mythic+: a key timer with the +3 and +2 marks, an enemy forces bar, a card when
-	the key ends, and the keystone slotted into the Font of Power by itself.
+	Mythic+: a key timer with the +3 and +2 marks, the week's affixes, an enemy forces
+	bar, each boss with the time it died, a card when the key ends, and the keystone
+	slotted into the Font of Power by itself. While the frame shows a key, Blizzard's
+	objective tracker (which shows the same key) is hidden by alpha through
+	TrackerWoW11.lua.
 
 	Everything here is read the way Blizzard's own challenge block reads it
 	(Blizzard_ScenarioObjectiveTracker.lua, ScenarioTimerMixin and
@@ -69,13 +72,18 @@ local PLUS_TWO = .8
 
 local FRAME_WIDTH = 260
 local BAR_WIDTH, BAR_HEIGHT = 220, 12
+local AFFIX_SIZE, AFFIX_SPACING = 24, 5
+local BOSS_HEIGHT = 17
 local UPDATE_INTERVAL = .25
 local CARD_DURATION = 30
 
 local defaults = { profile = ns:Merge({
 	enabled = true,
 	showTimer = true,
+	showAffixes = true,
 	showForces = true,
+	showBosses = true,
+	hideBlizzardTracker = true,
 	showCompletionCard = true,
 	autoSlotKeystone = true
 }, ns.MovableModulePrototype.defaults) }
@@ -150,6 +158,79 @@ local CreateMark = function(bar, fraction, text)
 	return mark
 end
 
+-- The affix tooltip, as ScenarioChallengeModeAffixMixin:OnEnter shows it.
+local Affix_OnEnter = function(button)
+	if (not button.affixID or GameTooltip:IsForbidden()) then return end
+	local name, description = ChallengeMode.GetAffixInfo(button.affixID)
+	if (type(name) ~= "string" or IsSecret(name)) then return end
+	GameTooltip:SetOwner(button, "ANCHOR_BOTTOMRIGHT")
+	GameTooltip:SetText(name, 1, 1, 1, 1, true)
+	if (type(description) == "string" and not IsSecret(description)) then
+		GameTooltip:AddLine(description, nil, nil, nil, true)
+	end
+	GameTooltip:Show()
+end
+
+local Affix_OnLeave = function(button)
+	if (GameTooltip:IsForbidden()) then return end
+	if (GameTooltip:GetOwner() == button) then
+		GameTooltip:Hide()
+	end
+end
+
+-- One affix: its icon in a thin dark frame, hoverable for what it does.
+local CreateAffix = function(parent)
+	local button = CreateFrame("Frame", nil, parent)
+	button:SetSize(AFFIX_SIZE, AFFIX_SIZE)
+	button:EnableMouse(true)
+	button:SetScript("OnEnter", Affix_OnEnter)
+	button:SetScript("OnLeave", Affix_OnLeave)
+
+	local border = button:CreateTexture(nil, "BACKGROUND")
+	border:SetPoint("TOPLEFT", -1, 1)
+	border:SetPoint("BOTTOMRIGHT", 1, -1)
+	border:SetColorTexture(0, 0, 0, .85)
+
+	local edge = button:CreateTexture(nil, "BORDER")
+	edge:SetAllPoints()
+	edge:SetColorTexture(Colors.title[1] * .55, Colors.title[2] * .55, Colors.title[3] * .55, 1)
+
+	local icon = button:CreateTexture(nil, "ARTWORK")
+	icon:SetPoint("TOPLEFT", 1, -1)
+	icon:SetPoint("BOTTOMRIGHT", -1, 1)
+	icon:SetTexCoord(.08, .92, .08, .92)
+	button.icon = icon
+
+	return button
+end
+
+-- One boss line: a tick or a dot, the boss, and the time it died.
+local CreateBoss = function(parent)
+	local line = CreateFrame("Frame", nil, parent)
+	line:SetSize(BAR_WIDTH, BOSS_HEIGHT)
+
+	local icon = line:CreateTexture(nil, "ARTWORK")
+	icon:SetSize(14, 14)
+	icon:SetPoint("LEFT", 0, 0)
+	line.icon = icon
+
+	local time = line:CreateFontString(nil, "OVERLAY")
+	time:SetFontObject(GetFont(12, true))
+	time:SetPoint("RIGHT", 0, 0)
+	time:SetJustifyH("RIGHT")
+	line.time = time
+
+	local name = line:CreateFontString(nil, "OVERLAY")
+	name:SetFontObject(GetFont(12, true))
+	name:SetPoint("LEFT", icon, "RIGHT", 5, 0)
+	name:SetPoint("RIGHT", -46, 0)
+	name:SetJustifyH("LEFT")
+	name:SetWordWrap(false)
+	line.name = name
+
+	return line
+end
+
 MythicPlus.PrepareFrames = function(self)
 	if (self.frame) then return end
 
@@ -161,8 +242,6 @@ MythicPlus.PrepareFrames = function(self)
 	local title = frame:CreateFontString(nil, "OVERLAY")
 	title:SetFontObject(GetFont(15, true))
 	title:SetTextColor(unpack(Colors.title))
-	title:SetPoint("TOPLEFT", 0, 0)
-	title:SetPoint("TOPRIGHT", -70, 0)
 	title:SetJustifyH("LEFT")
 	title:SetWordWrap(false)
 	frame.title = title
@@ -170,12 +249,20 @@ MythicPlus.PrepareFrames = function(self)
 	local deaths = frame:CreateFontString(nil, "OVERLAY")
 	deaths:SetFontObject(GetFont(13, true))
 	deaths:SetTextColor(unpack(Colors.offwhite))
-	deaths:SetPoint("TOPRIGHT", 0, -1)
 	deaths:SetJustifyH("RIGHT")
 	frame.deaths = deaths
 
+	-- Affix buttons are made as a key needs them; the names sit under the icons.
+	frame.affixes = {}
+	local affixNames = frame:CreateFontString(nil, "OVERLAY")
+	affixNames:SetFontObject(GetFont(12, true))
+	affixNames:SetTextColor(unpack(Colors.offwhite))
+	affixNames:SetJustifyH("LEFT")
+	affixNames:SetWidth(FRAME_WIDTH)
+	affixNames:SetWordWrap(false)
+	frame.affixNames = affixNames
+
 	local timer = CreateBar(frame)
-	timer:SetPoint("TOP", frame, "TOP", 0, -36)
 	timer.plusThree = CreateMark(timer, PLUS_THREE, "+3")
 	timer.plusTwo = CreateMark(timer, PLUS_TWO, "+2")
 	frame.timer = timer
@@ -186,11 +273,75 @@ MythicPlus.PrepareFrames = function(self)
 	frame.nextLevel = nextLevel
 
 	local forces = CreateBar(frame)
-	forces:SetPoint("TOP", timer, "BOTTOM", 0, -32)
 	forces:SetStatusBarColor(unpack(Colors.normal))
 	frame.forces = forces
 
+	frame.bosses = {}
+
 	self.frame = frame
+	self.numAffixes = 0
+	self.numBosses = 0
+	self.bossState = {}
+end
+
+-- Stacks whatever is switched on from the top down and sizes the frame to it. The
+-- timer leaves room above itself for the +3/+2 labels and below for the next level.
+MythicPlus.UpdateLayout = function(self)
+	local frame = self.frame
+	local db = self.db.profile
+	local y = 0
+
+	if (db.showTimer) then
+		frame.title:ClearAllPoints()
+		frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, y)
+		frame.title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -70, y)
+		frame.deaths:ClearAllPoints()
+		frame.deaths:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, y - 1)
+		y = y - 22
+	end
+
+	local affixesShown = db.showAffixes and self.numAffixes > 0
+	for index, button in ipairs(frame.affixes) do
+		button:SetShown(affixesShown and index <= self.numAffixes)
+		if (index == 1) then
+			button:ClearAllPoints()
+			button:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, y)
+		end
+	end
+	frame.affixNames:SetShown(affixesShown)
+	if (affixesShown) then
+		y = y - AFFIX_SIZE - 4
+		frame.affixNames:ClearAllPoints()
+		frame.affixNames:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, y)
+		y = y - 16
+	end
+
+	if (db.showTimer) then
+		y = y - 14
+		frame.timer:ClearAllPoints()
+		frame.timer:SetPoint("TOP", frame, "TOP", 0, y)
+		y = y - BAR_HEIGHT - 32
+	end
+
+	if (db.showForces) then
+		if (y == 0) then y = -8 end
+		frame.forces:ClearAllPoints()
+		frame.forces:SetPoint("TOP", frame, "TOP", 0, y)
+		y = y - BAR_HEIGHT - 14
+	end
+
+	local bossesShown = db.showBosses and self.numBosses > 0
+	for index, line in ipairs(frame.bosses) do
+		local shown = bossesShown and index <= self.numBosses
+		line:SetShown(shown)
+		if (shown) then
+			line:ClearAllPoints()
+			line:SetPoint("TOP", frame, "TOP", 0, y)
+			y = y - BOSS_HEIGHT
+		end
+	end
+
+	frame:SetHeight(math_max(1, -y))
 end
 
 -- The completion card. It sits under the spot Blizzard's own banner uses, is not
@@ -266,16 +417,22 @@ MythicPlus.CheckTimers = function(self)
 	end
 
 	local name, _, timeLimit = ChallengeMode.GetMapUIInfo(mapID)
-	local level = ChallengeMode.GetActiveKeystoneInfo and Number((ChallengeMode.GetActiveKeystoneInfo()))
+	local level, affixes, charged
+	if (ChallengeMode.GetActiveKeystoneInfo) then
+		level, affixes, charged = ChallengeMode.GetActiveKeystoneInfo()
+	end
+	level = Number(level)
 
 	self.timerID = timerID
 	self.timeLimit = Number(timeLimit)
 	self.completed = nil
 	self.frame.title:SetText(level and string_format("+%d  %s", level, name or "") or (name or ""))
 
+	self:UpdateAffixes(affixes, charged)
 	self:UpdateDeaths()
 	self:UpdateForces()
 	self:UpdateTime()
+	self:UpdateBosses()
 	self:UpdateVisibility()
 
 	if (not self.ticker) then
@@ -287,6 +444,7 @@ MythicPlus.Deactivate = function(self)
 	self.timerID = nil
 	self.timeLimit = nil
 	self.completed = nil
+	self.bossState = {}
 	if (self.ticker) then
 		self:CancelTimer(self.ticker)
 		self.ticker = nil
@@ -389,12 +547,135 @@ MythicPlus.UpdateForces = function(self)
 	forces.label:SetText(text)
 end
 
+-- The key's affixes as a row of icons, their names under it, and the game's own
+-- "Depleted Keystone" in front when the key was not charged.
+MythicPlus.UpdateAffixes = function(self, affixes, charged)
+	local frame = self.frame
+	local names = {}
+	local count = 0
+
+	if (type(affixes) == "table" and not IsSecret(affixes) and ChallengeMode.GetAffixInfo) then
+		for _, affixID in ipairs(affixes) do
+			affixID = Number(affixID)
+			local name, _, icon
+			if (affixID) then
+				name, _, icon = ChallengeMode.GetAffixInfo(affixID)
+			end
+			if (type(name) == "string" and not IsSecret(name)) then
+				count = count + 1
+				local button = frame.affixes[count]
+				if (not button) then
+					button = CreateAffix(frame)
+					if (count > 1) then
+						button:SetPoint("LEFT", frame.affixes[count - 1], "RIGHT", AFFIX_SPACING, 0)
+					end
+					frame.affixes[count] = button
+				end
+				button.affixID = affixID
+				button.icon:SetTexture(Number(icon) or [[Interface\Icons\INV_Misc_QuestionMark]])
+				names[count] = name
+			end
+		end
+	end
+
+	local text = table.concat(names, "  |cff888888·|r  ")
+	if (charged == false and CHALLENGE_MODE_DEPLETED_KEYSTONE) then
+		local depleted = Colors.quest.red.colorCode .. CHALLENGE_MODE_DEPLETED_KEYSTONE .. "|r"
+		text = (count > 0) and (depleted .. "  |cff888888·|r  " .. text) or depleted
+	end
+	frame.affixNames:SetText(text)
+
+	self.numAffixes = count
+end
+
+-- The bosses are the step's criteria that are not the weighted forces criterion.
+local GetBosses = function()
+	if (not C_Scenario or not C_Scenario.GetStepInfo or not C_ScenarioInfo or not C_ScenarioInfo.GetCriteriaInfo) then return end
+
+	local numCriteria = Number(select(3, C_Scenario.GetStepInfo()))
+	if (not numCriteria) then return end
+
+	local bosses = {}
+	for index = 1, numCriteria do
+		local info = C_ScenarioInfo.GetCriteriaInfo(index)
+		if (info and info.isWeightedProgress ~= true) then
+			local name = info.description
+			if (type(name) == "string" and not IsSecret(name) and name ~= "") then
+				bosses[#bosses + 1] = {
+					key = Number(info.criteriaID) or index,
+					name = name,
+					done = info.completed == true
+				}
+			end
+		end
+	end
+	return bosses
+end
+
+-- bossState remembers each boss for the running key: true while it lives, the time
+-- on the key timer when it was first seen dead, or false when it was already dead
+-- the first time it was seen (after a /reload in the key) and the time is unknown.
+MythicPlus.UpdateBosses = function(self)
+	local frame = self.frame
+	local bosses = GetBosses() or {}
+	local state = self.bossState
+	local elapsed = self.timerID and Number(select(2, GetWorldElapsedTime(self.timerID)))
+
+	for index, boss in ipairs(bosses) do
+		local seen = state[boss.key]
+		if (seen == nil) then
+			state[boss.key] = (not boss.done) or false
+		elseif (not boss.done) then
+			state[boss.key] = true
+		elseif (seen == true) then
+			state[boss.key] = elapsed or false
+		end
+
+		local line = frame.bosses[index]
+		if (not line) then
+			line = CreateBoss(frame)
+			frame.bosses[index] = line
+		end
+
+		line.name:SetText(boss.name)
+		if (boss.done) then
+			local time = state[boss.key]
+			line.icon:SetAtlas("ui-questtracker-tracker-check", false)
+			line.name:SetTextColor(unpack(Colors.quest.green))
+			line.time:SetTextColor(unpack(Colors.quest.green))
+			line.time:SetText(type(time) == "number" and FormatTime(time) or "")
+		else
+			line.icon:SetAtlas("ui-questtracker-objective-nub", false)
+			line.name:SetTextColor(unpack(Colors.offwhite))
+			line.time:SetText("")
+		end
+	end
+
+	if (#bosses ~= self.numBosses) then
+		self.numBosses = #bosses
+		self:UpdateLayout()
+	end
+end
+
+-- Blizzard's tracker shows the same key, so it goes while ours is up. Alpha only,
+-- through the Tracker module, which owns every other reason to hide it.
+MythicPlus.SetTrackerHidden = function(self, hidden)
+	hidden = hidden and true or nil
+	if (ns.MythicPlusHidesTracker == hidden) then return end
+	ns.MythicPlusHidesTracker = hidden
+
+	local tracker = ns:GetModule("Tracker", true)
+	if (tracker and tracker.RefreshAlpha) then
+		tracker:RefreshAlpha()
+	end
+end
+
 MythicPlus.UpdateVisibility = function(self)
 	local frame = self.frame
 	if (not frame) then return end
 
 	local db = self.db.profile
-	local active = self.timerID and (db.showTimer or db.showForces)
+	local active = self.timerID and (db.showTimer or db.showForces or db.showAffixes or db.showBosses) and true or false
 
 	frame.title:SetShown(db.showTimer)
 	frame.deaths:SetShown(db.showTimer)
@@ -402,14 +683,10 @@ MythicPlus.UpdateVisibility = function(self)
 	frame.nextLevel:SetShown(db.showTimer)
 	frame.forces:SetShown(db.showForces)
 
-	frame.forces:ClearAllPoints()
-	if (db.showTimer) then
-		frame.forces:SetPoint("TOP", frame.timer, "BOTTOM", 0, -32)
-	else
-		frame.forces:SetPoint("TOP", frame, "TOP", 0, -8)
-	end
+	self:UpdateLayout()
 
-	frame:SetShown(active and true or false)
+	frame:SetShown(active)
+	self:SetTrackerHidden(active and db.hideBlizzardTracker)
 end
 
 -------------------------------------------------------------------------------
@@ -538,22 +815,34 @@ MythicPlus.OnEvent = function(self, event, ...)
 		if (self.timerID) then self:UpdateDeaths() end
 
 	elseif (event == "SCENARIO_CRITERIA_UPDATE" or event == "SCENARIO_POI_UPDATE") then
-		if (self.timerID) then self:UpdateForces() end
+		if (self.timerID) then
+			self:UpdateForces()
+			self:UpdateBosses()
+		end
 
 	elseif (event == "CHALLENGE_MODE_COMPLETED") then
 		if (self.timerID) then
 			self:UpdateTime()
 			self:UpdateForces()
+			self:UpdateBosses()
 			self.completed = true
 		end
 		self:ShowCompletionCard()
 
 	elseif (event == "CHALLENGE_MODE_RESET" or event == "PLAYER_ENTERING_WORLD") then
 		self.completed = nil
+		if (event == "CHALLENGE_MODE_RESET") then
+			self.bossState = {}
+		end
+		self:CheckTimers()
+
+	elseif (event == "CHALLENGE_MODE_START") then
+		-- A new key: no boss of the last one carries over.
+		self.bossState = {}
 		self:CheckTimers()
 
 	else
-		-- CHALLENGE_MODE_START, WORLD_STATE_TIMER_START, WORLD_STATE_TIMER_STOP
+		-- WORLD_STATE_TIMER_START, WORLD_STATE_TIMER_STOP
 		self:CheckTimers()
 	end
 end

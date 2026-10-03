@@ -1,7 +1,7 @@
 -- License: LICENSE.txt
 
 local MAJOR_VERSION = "LibActionButton-1.0-GE"
-local MINOR_VERSION = 78 -- Flyout discovery survives GetFlyoutInfo returning nothing (WoW Forever 1.60.1.70009)
+local MINOR_VERSION = 79 -- Gamepad keys drawn as the client's button glyphs
 
 -- Whether secure handler snippets compile on this client.
 --
@@ -1672,6 +1672,71 @@ function Generic:UpdateConfig(config)
 end
 
 -----------------------------------------------------------
+--- Gamepad hotkeys
+--
+-- The client draws a gamepad key as its own button glyph: GetBindingText(key, 1)
+-- returns atlas markup ("|A:Gamepad_Ltr_A_32:14:14|a", from SetGamepadBindingStrings
+-- in SharedConstants.lua) in the label style of the controller in use, and that is
+-- what Blizzard's ActionButton:UpdateHotkeys shows. LibKeyBound's ToShortKey only
+-- knows text, so on its own "PAD1" stays "PAD1".
+--
+-- GAME_PAD_ACTIVE_CHANGED is the client's only report of which input is in use.
+-- Until the first one, a client with gamepad support switched on counts as active.
+local gamePadActive
+
+local IsGamePadKey = function(key)
+	if type(key) ~= "string" or key == "" then return false end
+	if IsBindingForGamePad then
+		return IsBindingForGamePad(key) and true or false
+	end
+	-- "SHIFT-PAD1" -> "PAD1"; "NUMPAD1" is a keyboard key.
+	local button = key:match("([^%-]+)$")
+	return (button and button:find("^PAD")) and true or false
+end
+
+local IsGamePadInUse = function()
+	if gamePadActive ~= nil then return gamePadActive end
+	return (C_GamePad and C_GamePad.IsEnabled and C_GamePad.IsEnabled()) and true or false
+end
+
+lib.IsGamePadKey = IsGamePadKey
+
+--- Record GAME_PAD_ACTIVE_CHANGED's payload. Buttons outside this library that
+-- listen for the event call this first, since frames receive it in no set order.
+function lib.SetGamePadActive(isActive)
+	gamePadActive = isActive and true or false
+end
+
+--- The key to show out of a binding's keys (GetBindingKey's returns): the first one
+-- of the kind in use, gamepad or keyboard, else the first one there is.
+function lib.PickHotkey(...)
+	local first
+	local preferPad = IsGamePadInUse()
+	for i = 1, select("#", ...) do
+		local key = select(i, ...)
+		if type(key) == "string" and key ~= "" then
+			if IsGamePadKey(key) == preferPad then
+				return key
+			end
+			first = first or key
+		end
+	end
+	return first
+end
+
+--- Hotkey text for one key: the client's glyphs for a gamepad key, short text otherwise.
+function lib.GetHotkeyText(key)
+	if type(key) ~= "string" or key == "" then return end
+	if IsGamePadKey(key) and GetBindingText then
+		local text = GetBindingText(key, 1)
+		if type(text) == "string" and text ~= "" then
+			return text
+		end
+	end
+	return KeyBound and KeyBound:ToShortKey(key) or key
+end
+
+-----------------------------------------------------------
 --- event handler
 
 function ForAllButtons(method, onlyWithAction, event)
@@ -1831,6 +1896,9 @@ function OnEvent(_, event, arg1, arg2, arg3, arg4)
 	elseif event == "ACTIONBAR_HIDEGRID" or event == "PET_BAR_HIDEGRID" then
 		HideGrid()
 	elseif event == "UPDATE_BINDINGS" or event == "GAME_PAD_ACTIVE_CHANGED" then
+		if event == "GAME_PAD_ACTIVE_CHANGED" then
+			lib.SetGamePadActive(arg1)
+		end
 		ForAllButtons(UpdateHotkeys, nil, event)
 	elseif event == "PLAYER_TARGET_CHANGED" then
 		if TARGETAURA_ENABLED then
@@ -2276,12 +2344,12 @@ end
 
 function Generic:GetHotkey()
 	local name = ("CLICK %s:%s"):format(self:GetName(), self.config.keyBoundClickButton)
-	local key = GetBindingKey(self.config.keyBoundTarget or name)
+	local key = lib.PickHotkey(GetBindingKey(self.config.keyBoundTarget or name))
 	if not key and self.config.keyBoundTarget then
-		key = GetBindingKey(name)
+		key = lib.PickHotkey(GetBindingKey(name))
 	end
 	if key then
-		return KeyBound and KeyBound:ToShortKey(key) or key
+		return lib.GetHotkeyText(key)
 	end
 end
 

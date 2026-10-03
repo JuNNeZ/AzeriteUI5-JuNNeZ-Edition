@@ -10,26 +10,33 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
-## 5.13.0-JuNNeZ-beta1 (2026-10-02) - Beta: Hunter and Paladin Theme Previews
+## 5.13.0-JuNNeZ (2026-10-03) - A Hunter Theme, Affixes and Bosses in Mythic+, a Bag Button, and Gamepad Glyphs
 
 ### Highlights
 
-- **A Hunter theme to try.** Type `/azhunter on` to repaint the main AzeriteUI theme in Unseen Path colours: the health, cast and resource casings, portraits, the crystal and orb, action buttons, the minimap and the options window, with a Hunter pet frame of its own. It is saved per character and reloads the interface, outside combat. `/azhunter off` brings back the usual art, and `/azhunter status` tells you which set is on.
-- **Pick the end of your health bar.** `/azhunter endcap` followed by `thasdorah`, `talonclaw`, `titanstrike`, `thoridal`, `raeshalare` or `none` chooses the ornament at the end of the health bar.
-- **Two newer Hunter art sets to compare.** `/azhunter pilot` shows the round-two art, which keeps the original frame sizes and positions, and `/azhunter test` shows the staged drop-in set. Both are works in progress.
-- **A Paladin preview for development mode.** With development mode on, `/azpaladin on` gives the main theme an Ashbringer health casing, a lion castbar, Holy Light in the crystal and orb, and gold and purple rings. Turning on one theme turns the other off.
+- **A Hunter theme to try.** Type `/azhunter on` to repaint the main AzeriteUI theme in Unseen Path colours: the health, cast and resource casings, portraits, the crystal and orb, action buttons, tooltips, the minimap and the options window, with a Hunter pet frame whose portrait moves like the target's. `/azhunter endcap` followed by `thasdorah`, `talonclaw`, `titanstrike`, `thoridal`, `raeshalare` or `none` picks the ornament at the end of the health bar. It is saved per character and reloads the interface outside combat; `/azhunter off` brings back the usual art and `/azhunter status` shows which set is on. `/azhunter pilot` and `/azhunter test` show two newer art sets that are still being worked on.
+- **Mythic+ shows affixes and bosses.** The key frame now has a row of affix icons with their names (hover for the description, and a red note when the key was not charged), and each boss under the enemy forces bar, ticked off with the time of the kill. Blizzard's own key block no longer shows underneath it during the key. Each part can be switched off under `/az -> Mythic+`.
+- **A bag button.** A round button in the action button art sits beside the cog: click it to open your bags, or to drop the item on your cursor into the backpack, and it shows your free slots, in red when the bags are full. It works in combat. Turn it off under `/az -> Action Bars -> Micro Menu`.
+- **Controller buttons on your action bars, even without ConsolePort.** When you play with a controller, keys bound to it show the controller's own button icons on the action, pet and stance bars and the extra button, in the style of the pad you use; keyboard keys keep their text.
+- **ConsolePort and DialogueUI fixes.** With ConsolePort, action buttons that showed the key as text instead of a gamepad icon now get ConsolePort's icons, with modifiers, and respect its setting to turn hotkey icons off. With DialogueUI, the 3D target portrait (and the party, raid, arena and alternate player portraits) now fades out with the rest of the interface during a conversation.
+- **The orb follows your colour setting.** `/az -> Unit Frames -> Player -> Crystal/Orb Color Source` now colours the mana orb as well as the crystal; until now the orb was painted back to mana blue whatever you chose. On "Mana Orb Only", a class without mana sees its own resource in the orb (a Hunter's Focus) instead of an empty one.
+- **Forever: action bar 1 swaps with your stance.** Bar 1 now pages for Warrior stances, and for every other class Blizzard gives a stance bar on Forever, as it already did for Druid forms and Rogue stealth. Your Shift+number paging still works on top.
+- **More for Forever.** Blizzard's totem bar is no longer hidden (place it in Edit Mode), Hunters see their pet's happiness beside the pet frame, quest timers stay visible when the objective tracker is hidden, and the keybinding window no longer throws an error at login.
 
 ### Development
 
-- **Made the art without changing how the frames work.** Each new texture is painted to match the size, openings and transparency of the one it replaces, so bars still fill where they did, and colours that change in play (health, mana, threat) still come from the game instead of the artwork. Health prediction and absorb shapes follow the new bars as well.
-- **Built tools to check the art before it reaches the game.** Scripts measure each texture's openings and size against the original and flag anything that will not fit as a drop-in replacement, and comparison sheets put the original and themed frames side by side. Offline tests cover both themes and the health prediction shapes.
+- **Made the Hunter art without changing how the frames work.** Each texture is painted to the size, openings and transparency of the one it replaces, so bars fill where they did and colours that change in play (health, power, threat) still come from the game. Scripts measure every texture against the original before it reaches the game; they also found and fixed tooltip and aura borders whose corners had been stretched into solid wedges.
+- **Reworked how the orb picks and colours its resource.** It now asks which power the player actually uses instead of guessing from the mana value, and takes its colour from the same place as the crystal. The colour bug turned out to be a later step in every frame update that repainted the orb, which is why earlier attempts never reached the screen.
+- **Made the unit frame stages work on every client and language.** Novice, Hardened and Seasoned art and the critter frame were decided by English names and one way of finding the level cap; they now use the game's creature type numbers and several fallbacks, switch on level-up without a `/reload`, and enemy level colours match Blizzard's own thresholds on both clients.
+- **Kept the new buttons and icons out of protected code.** The bag button opens the bags through Blizzard's own backpack button, so no addon code runs in that chain. The controller icons are only redrawn as text, which is safe in combat. New offline tests cover the bag button, the controller icons, the ConsolePort and DialogueUI fixes, the unit frame stages and the Mythic+ additions, and fail when the key pieces are removed. They cannot show how anything looks in the game.
 
 ### Access and known limits
 
-- **Beta, verified offline only.** Neither theme has been tested in the game yet, on Retail or Forever. Expect pieces that are out of place, and report them on the Discord with a screenshot.
-- Both themes apply to the main AzeriteUI theme only. They switch off on the SaiyaRatt profile and the other layout variants.
-- The theme commands are temporary. A proper theme picker in the options is planned.
-- The download is larger than usual because it carries the art for all three Hunter sets and the Paladin set.
+- **Tested in the game:** the Hunter theme and the orb colours on Retail. Everything else is verified offline only so far, and none of it has been tried on Forever yet.
+- The Hunter theme applies to the main AzeriteUI theme only and switches off on the SaiyaRatt profile and the other layout variants. The `/azhunter` commands are temporary until a theme picker arrives in the options. A Paladin preview exists for development mode only (`/azpaladin`).
+- With Blizzard's key block hidden, its buttons can still be clicked where it would be, as with the other ways the tracker is hidden.
+- The download is larger than usual because it carries the theme art.
+- The new option text was translated without native speakers; corrections are welcome on the Discord.
 
 
 ## 5.12.0-JuNNeZ (2026-09-26) - Mythic+ Timer, Great Vault, Pandemic Timers, and Dragging Back on Forever

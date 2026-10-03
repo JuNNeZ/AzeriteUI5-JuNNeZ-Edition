@@ -26,7 +26,11 @@
 --]]
 local _, ns = ...
 
-do return end -- Classic-only module, not used on retail
+-- Classic-only module, not used on retail. Do not turn it on for Forever either:
+-- there QuestTimerFrame is parented to ObjectiveTrackerFrame and pads the tracker's
+-- top (Blizzard_QuestTimer/Mainline), so it already moves with the tracker, and
+-- TrackerWoW11.lua keeps it visible while the tracker is hidden.
+do return end
 
 local QuestTimers = ns:NewModule("QuestTimers", ns.MovableModulePrototype, "LibMoreEvents-1.0")
 

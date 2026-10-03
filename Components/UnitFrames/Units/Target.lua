@@ -271,7 +271,13 @@ local IsTargetBossUnit = function(unit, level, classification)
 	if (classification == "boss" or classification == "worldboss") then
 		return true
 	end
-	return type(level) == "number" and level < 1
+	-- Level -1 ("??") is any unit 10 or more levels above the player, which is common
+	-- while levelling on Forever. Only an unknown or elite-type classification makes it
+	-- a boss; a plain "??" mob falls through to the Seasoned tier.
+	if (type(level) == "number") and (level < 1) then
+		return classification ~= "normal" and classification ~= "trivial" and classification ~= "minus"
+	end
+	return false
 end
 
 local ResolveTargetAnchorFrame = function(frame, key)
@@ -2710,7 +2716,7 @@ local UnitFrame_UpdateTextures = function(self)
 
 	local key
 	if (UnitIsPlayer(unit)) then
-		key = ns.API.IsLevelAtEffectiveMaxLevel(level) and "Seasoned" or level < 10 and "Novice" or "Hardened"
+		key = ns.API.GetLevelTier(level)
 	else
 		local unitLevel = UnitLevel(unit)
 		if ((type(issecretvalue) == "function") and issecretvalue(unitLevel)) then
@@ -2723,22 +2729,20 @@ local UnitFrame_UpdateTextures = function(self)
 		if (type(unitLevel) == "number" and unitLevel < 1 and not classification) then
 			classification = "worldboss"
 		end
-		local creatureType = UnitCreatureType(unit)
-		if ((type(issecretvalue) == "function") and issecretvalue(creatureType)) then
-			creatureType = nil
-		end
+		local isCritterType = ns.API.IsUnitCritterType(unit)
 		local unitHealthMax = UnitHealthMax(unit)
 		if ((type(issecretvalue) == "function") and issecretvalue(unitHealthMax)) then
 			unitHealthMax = nil
 		end
-		local lowHealthCritterLike = (type(unitHealthMax) == "number" and unitHealthMax > 0 and unitHealthMax <= 40 and type(level) == "number" and level <= 2)
+		local safeLevel = ns.API.GetSafeLevel(level)
+		local lowHealthCritterLike = (type(unitHealthMax) == "number" and unitHealthMax > 0 and unitHealthMax <= 40 and safeLevel and safeLevel <= 2)
 
 		if (not TargetFrameMod.db.profile.useStandardBossTexture) and IsTargetBossUnit(unit, unitLevel, classification) then
 			key = "Boss"
-		elseif (not TargetFrameMod.db.profile.useStandardCritterTexture) and ((creatureType == "Critter") or (lowHealthCritterLike and UnitCanAttack("player", unit)) or ((not ns.IsRetail) and (level == 1) and (type(unitHealthMax) == "number") and (unitHealthMax < 30))) then
+		elseif (not TargetFrameMod.db.profile.useStandardCritterTexture) and (isCritterType or (lowHealthCritterLike and UnitCanAttack("player", unit)) or ((not ns.IsRetailContent) and (safeLevel == 1) and (type(unitHealthMax) == "number") and (unitHealthMax < 30))) then
 			key = "Critter"
 		else
-			key = (level < 1 or ns.API.IsLevelAtEffectiveMaxLevel(level)) and "Seasoned" or level < 10 and "Novice" or "Hardened"
+			key = ns.API.GetLevelTier(level)
 		end
 	end
 
@@ -3250,7 +3254,8 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 		end
 
 	elseif (event == "PLAYER_LEVEL_UP") then
-		playerLevel = UnitLevel("player")
+		-- The payload carries the new level; UnitLevel can still answer the old one.
+		playerLevel = ns.API.GetSafeLevel(unit) or UnitLevel("player")
 	end
 	UnitFrame_PostUpdate(self)
 end

@@ -33,6 +33,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local PetBarMod = ns:NewModule("PetBar", "LibMoreEvents-1.0", "LibFadingFrames-1.0", "AceConsole-3.0", "AceTimer-3.0")
 
 local LFF = LibStub("LibFadingFrames-1.0")
+local LAB = LibStub("LibActionButton-1.0-GE")
 
 local ButtonBar = ns.ButtonBar.prototype
 
@@ -754,6 +755,15 @@ PetBarMod.OnEvent = function(self, event, arg1)
 
 	elseif (event == "UPDATE_BINDINGS") or (event == "HOUSE_EDITOR_MODE_CHANGED") then
 		self:UpdateBindings()
+	elseif (event == "GAME_PAD_ACTIVE_CHANGED") then
+		-- Only the hotkey text follows the input in use; the bindings stay as they are,
+		-- which keeps this legal in combat.
+		LAB.SetGamePadActive(arg1)
+		if (self.bar) then
+			for id,button in next,self.bar.buttons do
+				button:UpdateHotkeys()
+			end
+		end
 	end
 end
 
@@ -836,6 +846,9 @@ PetBarMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("PLAYER_TARGET_CHANGED", "OnEvent")
 	self:RegisterEvent("UPDATE_BINDINGS", "OnEvent")
+	if (ns.API.IsEventAvailable("GAME_PAD_ACTIVE_CHANGED")) then
+		self:RegisterEvent("GAME_PAD_ACTIVE_CHANGED", "OnEvent")
+	end
 	if (ns.API.IsEventAvailable("HOUSE_EDITOR_MODE_CHANGED")) then
 		self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnEvent")
 	end
