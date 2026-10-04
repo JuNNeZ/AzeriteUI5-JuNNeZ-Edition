@@ -61,6 +61,26 @@ local function load(relative)
 	return chunk(Addon, ns)
 end
 
+-- The theme modules live in Core/ and are not loaded here; the Themes page only
+-- calls their documented methods, so permissive stubs stand in for them. The
+-- real Core/ThemeEffects.lua decides what the page shows.
+ns.HunterTheme = setmetatable({
+	loadedActive = true,
+	IsActive = function() return true end,
+	GetEndcapChoices = function() return { thasdorah = true, talonclaw = true, titanstrike = true, thoridal = true, raeshalare = true, none = true } end
+}, moduleStubMT)
+ns.PaladinTheme = setmetatable({ loadedActive = false, IsActive = function() return false end }, moduleStubMT)
+ns.MageTheme = setmetatable({
+	loadedActive = false,
+	IsActive = function() return false end,
+	GetEndcapChoices = function() return { school = true, aluneth = true, felomelorn = true, ebonchill = true, atiesh = true, dragonwrath = true, none = true } end
+}, moduleStubMT)
+ns.MageCrystalPreview = setmetatable({ IsActive = function() return false end }, moduleStubMT)
+ns.db = ns.db or {}
+ns.db.char = ns.db.char or {}
+ns.db.global = ns.db.global or {}
+assert(loadfile(root .. "/Core/ThemeEffects.lua"))(Addon, ns)
+
 load("Options/Kit/Kit.lua")
 load("Options/Kit/Widgets.lua")
 load("Options/Kit/Window.lua")
@@ -117,6 +137,30 @@ end
 local minimap = assert(options.args.Minimap)
 assert((minimap.args.autoHide.args.autoHideInArenas.hidden == true) == forever, "arena auto-hide visibility")
 print("Client option gates: " .. (forever and "Forever" or "Retail") .. " passed")
+
+-- Themes page: a theme dropdown, Lite+, and only the settings in use.
+local themes = assert(options.args.Themes, "Themes page built")
+for _, key in ipairs({ "theme", "litePlus", "effects", "hunter", "paladin", "mageTheme", "mage" }) do assert(themes.args[key], "Themes entry: " .. key) end
+local themeSelect = themes.args.theme
+assert(themeSelect.get() == "hunter", "the dropdown shows the theme in use")
+assert(themeSelect.values().mage and not themeSelect.values().paladin, "Paladin offered only in Development Mode")
+assert(themeSelect.sorting()[1] == "azerite", "AzeriteUI first")
+assert(type(themeSelect.confirm(nil, "mage")) == "string", "leaving Hunter asks before reloading")
+assert(not themes.args.hunter.hidden() and themes.args.paladin.hidden() and themes.args.mage.hidden() and themes.args.mageTheme.hidden(), "only the Hunter settings show on Hunter")
+local mageEndcap = themes.args.mageTheme.args.endcap
+assert(mageEndcap.values().school and mageEndcap.values().dragonwrath and mageEndcap.sorting[1] == "school", "Mage staves, the school's first")
+assert(themes.args.effects.hidden(), "Lite+ effects hidden until Lite+ is on")
+ns.db.char.themeLitePlus = true; ns.db.global.enableDevelopmentMode = true; ns.db.char.themeOrbEffect = "paladin"
+assert(not themes.args.effects.hidden() and not themes.args.paladin.hidden(), "Lite+ shows the effects and the settings of the Paladin orb")
+local crystalValues = themes.args.effects.args.crystal.values()
+assert(crystalValues.theme and crystalValues.mage and crystalValues.paladin and crystalValues.none, "crystal effect choices")
+assert(themes.args.effects.args.crystal.sorting()[1] == "theme", "the theme's own first")
+ns.db.char.themeLitePlus, ns.db.char.themeOrbEffect, ns.db.global.enableDevelopmentMode = nil, nil, nil
+local endcap = themes.args.hunter.args.endcap
+local values = endcap.values()
+assert(values.thasdorah and values.none and endcap.sorting[1] == "thasdorah", "endcap choices and order")
+assert(endcap.confirm == nil, "a new endcap applies without a reload")
+print("Themes page passed")
 
 local bars = assert(options.args.ActionBars or options.args["Action Bars"])
 for id = 1, 8 do

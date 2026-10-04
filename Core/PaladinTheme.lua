@@ -7,8 +7,8 @@ ns.PaladinTheme = Theme
 local path = function(name)
 	return "Interface\\AddOns\\"..Addon.."\\Assets\\Paladin\\"..name..".tga"
 end
--- Existing component hooks enter here. Delegate to Hunter before Paladin
--- gates so the two themes never stack; each owns its separate layout cache.
+-- Existing component hooks enter here. Delegate to Hunter and Mage before
+-- Paladin gates so themes never stack; each owns its separate layout cache.
 local cache = {}
 local media = {
 	["actionbutton-border"] = "action-ring",
@@ -35,6 +35,7 @@ local media = {
 
 Theme.IsActive = function(self)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return false end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return false end
 	local db = ns.db
 	if (not db or not db.global or not db.char or not db.global.enableDevelopmentMode or not db.char.paladinPreview) then return false end
 	if (ns.IsSaiyaRattProfile and ns:IsSaiyaRattProfile()) then return false end
@@ -44,6 +45,7 @@ end
 
 Theme.UseIceCrystal = function(self, requested)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:UseIceCrystal(requested) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:UseIceCrystal(requested) end
 	return requested and not self:IsActive()
 end
 
@@ -51,17 +53,20 @@ end
 -- Preview-only mana styling takes precedence over saved crystal color modes.
 Theme.GetPowerColor = function(self, token)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:GetPowerColor(token) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:GetPowerColor(token) end
 	if (self:IsActive() and token == "MANA") then return { 1, .78, .28 } end
 end
 
 Theme.ResolveMedia = function(self, name)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:ResolveMedia(name) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:ResolveMedia(name) end
 	if (self:IsActive() and media[name]) then return path(media[name]) end
 end
 
 -- Some skins store media at file-load time, before AceDB is initialized.
 Theme.ResolvePath = function(self, original)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:ResolvePath(original) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:ResolvePath(original) end
 	local name = type(original) == "string" and original:match("[\\/]Assets[\\/]([^\\/]+)%.tga$")
 	return (name and self:ResolveMedia(name)) or original
 end
@@ -117,6 +122,7 @@ end
 -- Lazily copy resolved layouts: source tables and other profiles are untouched.
 Theme.GetConfig = function(self, name, original)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:GetConfig(name, original) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:GetConfig(name, original) end
 	if (not self:IsActive()) then return original end
 	if (cache[original]) then return cache[original] end
 	local config = CopyLayout(original)
@@ -202,6 +208,7 @@ end
 
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleHealth(owner, db, flip) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleHealth(owner, db, flip) end
 	if (not self:IsActive()) then return end
 	local bar = owner.Health
 	local material, width, right, fillTop, fillBottom = HealthGeometry(bar, db)
@@ -234,6 +241,7 @@ end
 
 Theme.StyleThreat = function(self, owner, flip)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleThreat(owner, flip) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleThreat(owner, flip) end
 	if (not self:IsActive()) then return end
 	local threat = owner.ThreatIndicator
 	local art = threat and threat.textures and threat.textures.Health
@@ -248,6 +256,7 @@ end
 
 Theme.StyleCastbar = function(self, cast)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleCastbar(cast) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleCastbar(cast) end
 	if (not self:IsActive()) then return end
 	local frame = cast.PaladinCasing or NewCasing(cast)
 	frame.Art:SetTexture(path("lion-cast"))
@@ -265,6 +274,7 @@ end
 
 Theme.StyleNameplate = function(self, owner)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleNameplate(owner) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleNameplate(owner) end
 	if (not self:IsActive()) then return end
 	for _, bar in ipairs({ owner.Health, owner.Castbar }) do
 		-- Material replaces the original BACKGROUND texture at its original
@@ -302,11 +312,46 @@ local Pulse = function(texture)
 	group:Play()
 end
 
+-- Holy light strength, 0 to 1 (0 hides it). Multiplies the pulse through the
+-- light's own frame, so the animation keeps running untouched underneath.
+local lights = setmetatable({}, { __mode = "k" })
+local LightStrength = function()
+	local value = tonumber(ns.db and ns.db.char and ns.db.char.paladinLight)
+	if (not value or value ~= value) then return 1 end
+	return math.max(0, math.min(1, value))
+end
+local ApplyLight = function(content)
+	lights[content] = true
+	local strength = LightStrength()
+	content:SetAlpha(strength)
+	content:SetShown(strength > 0)
+end
+
+Theme.GetLightStrength = function(self) return LightStrength() end
+
+--- Applies live to the crystal and orb light.
+Theme.SetLightStrength = function(self, value)
+	value = tonumber(value)
+	if (not value) then return false end
+	value = math.max(0, math.min(1, value))
+	ns.db.char.paladinLight = value ~= 1 and value or nil
+	for content in pairs(lights) do ApplyLight(content) end
+	return true
+end
+
+-- An effect that is switched off keeps its frames for reuse, hidden, and
+-- drops out of the strength list so a strength change cannot show it again.
+local HideLight = function(content)
+	if (not content) then return end
+	lights[content] = nil
+	content:SetShown(false)
+end
+
 -- Crystal is already a native StatusBar. Anchor a clipping frame to its fill
 -- texture, just as LibOrb does: no reading, branching or arithmetic on mana.
-Theme.StyleCrystal = function(self, power, texturePath, coords)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleCrystal(power, texturePath, coords) end
-	if (not self:IsActive()) then return end
+--- Crystal effect "paladin". Core/ThemeEffects.lua decides when; any theme
+--- may use it (Lite+).
+Theme.ApplyCrystalEffect = function(self, power, texturePath, coords)
 	if (not power.PaladinLight) then
 		local clip = CreateFrame("Frame", nil, power)
 		clip:SetFrameLevel(power:GetFrameLevel() + 1)
@@ -321,14 +366,17 @@ Theme.StyleCrystal = function(self, power, texturePath, coords)
 		Pulse(content.Strands)
 		power.PaladinLight = content
 	end
+	ApplyLight(power.PaladinLight)
 	local mask = power.PaladinLight.Strands.Mask
 	mask:SetTexture(texturePath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 	mask:SetTexCoord(unpack(coords or { 0, 1, 0, 1 }))
 end
 
-Theme.StyleOrb = function(self, orb)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleOrb(orb) end
-	if (not self:IsActive()) then return false end
+Theme.ClearCrystalEffect = function(self, power) HideLight(power.PaladinLight) end
+
+--- Orb effect "paladin". Clearing it leaves the fill texture to Player.lua,
+--- which sets the layout's own straight after.
+Theme.ApplyOrbEffect = function(self, orb)
 	orb:SetStatusBarTexture(path("orb-light"), path("orb-light"))
 	if (not orb.PaladinLight) then
 		local content = CreateFrame("Frame", nil, orb:GetOverlay())
@@ -338,11 +386,15 @@ Theme.StyleOrb = function(self, orb)
 		Pulse(content.Strands)
 		orb.PaladinLight = content
 	end
+	ApplyLight(orb.PaladinLight)
 	return true
 end
 
+Theme.ClearOrbEffect = function(self, orb) HideLight(orb.PaladinLight) end
+
 Theme.StyleUtilityButton = function(self, button)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleUtilityButton(button) end
+	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleUtilityButton(button) end
 	if (not self:IsActive()) then return end
 	-- Registered to the original cog canvas; retain its existing size/anchors.
 	button.Texture:SetTexture(path("utility-cog"))
@@ -370,7 +422,7 @@ Theme.Command = function(self, input)
 		return
 	end
 	local enabled = arg == "on" or ((arg == "" or arg == "toggle") and not ns.db.char.paladinPreview)
-	if (enabled) then ns.db.char.hunterPreview = false end -- explicit Paladin choice leaves Hunter
+	if (enabled) then ns.db.char.hunterPreview, ns.db.char.magePreview = false, false end -- explicit Paladin choice leaves Hunter and Mage
 	ns.db.char.paladinPreview = enabled and true or false
 	ReloadUI()
 end

@@ -10,6 +10,32 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.14.0-JuNNeZ (2026-10-04) - A Themes Page, Lite+ Effects, and a Mage Theme Preview
+
+### Highlights
+
+- **Themes have their own page.** `/az -> Themes` has a dropdown for the art AzeriteUI is drawn with: AzeriteUI, Hunter, Mage, and Paladin in Development Mode. It shows only the settings of the theme you use. Every theme but AzeriteUI's own is marked (WIP) and may still change.
+- **Lite+: mix crystal and orb effects.** Tick Lite+ on the Themes page to use another theme's power crystal or mana orb effect on the theme you are using, or on AzeriteUI's own art: the Mage crystal, or the Paladin or Hunter orb. Only the settings of the effects you pick are shown.
+- **A Mage theme to try (WIP).** The Tirisgarde in Dalaran violet and Kirin Tor gold: every casing the theme replaces, from health, cast and nameplate bars to portraits, action buttons, the minimap, tooltips and the options window, painted to the same shapes as the originals. A staff caps the end of the health bars (by default the one for your crystal's school: Aluneth, Felo'melorn or Ebonchill, or pick Atiesh, Dragonwrath or none), Atiesh sits on the player cast bar, and a school badge on the crystal. Choose it on the Themes page or type `/azmage on`.
+- **Hunter endcaps you can size and move.** Under the Hunter section, set the endcap's size and nudge it sideways or up and down; it grows and shrinks around its own centre, so it no longer drifts outward when made larger. `/azhunter endcapscale 0.5-2` does the same from chat.
+- **Fewer reloads.** Only switching theme reloads the interface now. Endcap choice, size and position, Lite+ and its effects, and the Mage crystal's school apply at once; a new Hunter endcap used to reload.
+- **Crystal and orb in front on Hunter and Paladin.** Their crystal and orb casings now sit in front of the health bar's ornate end instead of underneath it, where it covered part of them.
+
+### Development
+
+- **Separated a theme's layout from its effects.** Each theme still rebuilds the frame art when it is chosen, which is why switching theme reloads. The crystal and orb effects are now a separate layer that the player frame redraws on the spot, which is what lets Lite+ mix them and why everything except the theme itself changes without a reload.
+- **Fitted the Mage art without moving anything.** The Mage pack replaces textures by name, on the same canvas and openings as AzeriteUI's own, so bars, fills and colours that change in play work as before. A new offline test walks the real layouts and fails if any size or position changes, and checks that every texture the theme asks for is shipped. The staves, cast head and badge use the anchor points the art was drawn for.
+- **Retired the Hunter pilot and test art sets.** The art kept is the Hunter theme as it shipped, so `/azhunter pilot` and `/azhunter test` are gone along with their art, which also makes the download smaller.
+
+### Access and known limits
+
+- **Not yet tested in the game:** all of this release is checked offline only, on Retail and Forever alike. The Mage theme's fit in particular, the staves, cast head and badge, still needs live checking.
+- **The themes are works in progress.** The Paladin theme is still for Development Mode only and is being redone.
+- **The Mage crystal is static for now.** Its moving energy is not in this release; its textures are too large to ship until they are made smaller. With the Mage crystal on, the player power widget shows the crystal.
+- Parts of the Mage art set are not used yet: the glowing inlays, the orb materials, the minimap north marker and the pet badge.
+- The new option text was translated without native speakers; corrections are welcome on the Discord.
+
+
 ## 5.13.0-JuNNeZ (2026-10-03) - A Hunter Theme, Affixes and Bosses in Mythic+, a Bag Button, and Gamepad Glyphs
 
 ### Highlights

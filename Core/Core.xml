@@ -46,9 +46,10 @@
 	<Script file="Experimental.lua"/>
 	<Script file="PaladinTheme.lua"/>
 	<Script file="HunterMedia.lua"/>
-	<Script file="HunterTestMedia.lua"/>
 	<Script file="HunterGeometry.lua" />
-	<Script file="ThemeOrnamentSlots.lua"/>
 	<Script file="HunterTheme.lua"/>
+	<Script file="MageCrystalPreview.lua"/>
+	<Script file="MageTheme.lua"/>
+	<Script file="ThemeEffects.lua"/>
 
 </Ui>

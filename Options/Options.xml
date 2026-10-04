@@ -51,6 +51,7 @@
 	<Script file="OptionsPages\Widgets.lua"/>
 	<Script file="OptionsPages\Tooltips.lua"/>
 	<Script file="OptionsPages\Tracker.lua"/>
+	<Script file="OptionsPages\Themes.lua"/>
 	<Script file="OptionsPages\UnitFrames.lua"/>
 	<Script file="OptionsPages\HealthPrediction.lua"/>
 

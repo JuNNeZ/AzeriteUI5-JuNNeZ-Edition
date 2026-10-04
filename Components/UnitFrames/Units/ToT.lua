@@ -357,7 +357,6 @@ local style = function(self, unit)
 	healthBackdrop:SetVertexColor(unpack(db.HealthBackdropColor))
 
 	self.Health.Backdrop = healthBackdrop
-	if (ns.HunterTheme) then ns.HunterTheme:StyleTestLayers(self.Health, false, false) end
 
 	local healthPreview = self:CreateBar(nil, health)
 	if (healthPreview.SetForceNative) then healthPreview:SetForceNative(true) end

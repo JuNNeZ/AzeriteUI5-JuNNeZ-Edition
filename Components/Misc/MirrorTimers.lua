@@ -119,7 +119,6 @@ MirrorTimers.CreateTimer = function(self, ...)
 	backdrop:SetTexture(config.MirrorTimerBackdropTexture)
 	backdrop:SetVertexColor(unpack(config.MirrorTimerBackdropColor))
 	timer.backdrop = backdrop
-	if (ns.HunterTheme) then ns.HunterTheme:StyleTestLayers(timer, false, false) end
 
 	local label = timer:CreateFontString(nil, "OVERLAY", nil, 6)
 	label:SetFontObject(config.MirrorTimerLabelFont)

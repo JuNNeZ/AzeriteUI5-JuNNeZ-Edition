@@ -40,7 +40,6 @@ load("Core/API/Assets.lua")
 load("Core/PaladinTheme.lua")
 load("Core/HunterMedia.lua")
 load("Core/HunterGeometry.lua")
-load("Core/ThemeOrnamentSlots.lua")
 load("Core/HunterTheme.lua")
 load("Core/Finalize.lua")
 load("Layouts/Layouts.lua")
@@ -99,6 +98,11 @@ theme:Command("endcap invalid");check(reloads==r,"invalid choice no reload")
 for _,key in ipairs({"thasdorah","talonclaw","titanstrike","thoridal","raeshalare","none"}) do
  theme:Command("endcap "..key);check(ns.db.char.hunterEndcap==key,"endcap selection "..key)
 end
+check(reloads==r,"endcap choice applies without a reload")
+r=reloads;theme:Command("endcapscale 3");check(reloads==r and ns.db.char.hunterEndcapScale==nil,"endcap scale out of range refused")
+theme:Command("endcapscale abc");check(reloads==r and ns.db.char.hunterEndcapScale==nil,"endcap scale non-number refused")
+theme:Command("endcapscale 1.5");check(ns.db.char.hunterEndcapScale==1.5,"endcap scale stored")
+theme:Command("endcapscale reset");check(ns.db.char.hunterEndcapScale==nil,"endcap scale reset")
 local widgetCount = 0
 local function widget(parent)
 	widgetCount = widgetCount + 1
@@ -154,6 +158,23 @@ local owner=widget();owner.Health=widget(owner);owner.Health.Backdrop=widget(own
 ns.db.char.hunterEndcap="thasdorah"
 theme:StyleHealth(owner,original.Seasoned,false)
 check(owner.Health.HunterOrnaments.Tip.texture:find("endcap-thasdorah",1,true),"endcap art")
+local tip=owner.Health.HunterOrnaments.Tip
+local tipSize,tipX=tip.width,tip.points.CENTER[3]
+ns.db.char.hunterEndcapScale=1.5;theme:StyleHealth(owner,original.Seasoned,false)
+check(tip.width==tipSize*1.5,"endcap scale applied")
+check(tip.points.CENTER[3]==tipX and tip.points.CENTER[4]==0,"scaled endcap keeps its centre")
+ns.db.char.hunterEndcapScale=9;theme:StyleHealth(owner,original.Seasoned,false)
+check(tip.width==tipSize,"bad saved scale falls back to 1")
+ns.db.char.hunterEndcapScale=nil
+check(theme:SetEndcapScale(2) and tip.width==tipSize*2,"scale applies live without restyle")
+check(theme:SetEndcapOffset(5,-3) and tip.points.CENTER[3]==tipX+5 and tip.points.CENTER[4]==-3,"offset applies live")
+check(theme:SetEndcapOffset(nil,500) and select(2,theme:GetEndcapOffset())==60,"offset clamped")
+theme:StyleHealth(owner,original.Seasoned,true)
+check(tip.points.CENTER[2]=="LEFT" and tip.points.CENTER[3]==-(tipX+5),"mirrored offset moves outward")
+check(not theme:SetEndcapScale(3) and theme:GetEndcapScale()==2,"out of range scale refused")
+check(theme:ResetEndcapPlacement() and ns.db.char.hunterEndcapScale==nil and ns.db.char.hunterEndcapX==nil and ns.db.char.hunterEndcapY==nil,"reset placement")
+theme:StyleHealth(owner,original.Seasoned,false)
+check(tip.width==tipSize and tip.points.CENTER[3]==tipX,"reset restores size and place")
 local count=widgetCount
 theme:StyleHealth(owner,original.Seasoned,true)
 check(widgetCount==count,"reuse ornaments")
@@ -174,13 +195,17 @@ theme:StyleThreat(owner,true)
 local native=owner.ThreatIndicator.textures.Health
 check(native.texture:find("Hunter",1,true),"whole casing has new threat art")
 check(native.width==owner.Health.HunterCasing.Art.width and native.points.TOPLEFT[3]==owner.Health.HunterCasing.Art.points.TOPLEFT[3],"threat and casing share exact geometry")
-local orb=widget();check(theme:StyleOrb(orb) and orb.fillPaths[1]:find("orb-focus",1,true),"faceted orb uses native clipping")
+local orb=widget();check(theme:ApplyOrbEffect(orb) and orb.fillPaths[1]:find("orb-focus",1,true),"faceted orb uses native clipping")
 local halo=owner.Health.HunterOrnaments.Threat
 native:Show();check(halo.shown,"threat halo follows show")
 native:SetVertexColor(.7,.2,.1);check(halo.color[1]==.7 and halo.color[3]==.1,"native threat color forwarded")
 native:Hide();check(not halo.shown,"threat halo follows hide")
 local count=widgetCount;theme:StyleThreat(owner,true);check(widgetCount==count,"no duplicate threat texture")
 ns.db.char.hunterEndcap="none";theme:StyleThreat(owner,true);check(halo.alpha==0,"no halo for disabled ornament")
+r=reloads;check(theme:SetEndcap("talonclaw") and reloads==r,"endcap art changes live")
+check(owner.Health.HunterOrnaments.Tip.texture:find("endcap-talonclaw",1,true) and owner.Health.HunterOrnaments.Tip.alpha==1,"live endcap art redrawn")
+check(halo.texture:find("endcap-talonclaw-glow",1,true) and halo.alpha==1,"threat glow follows a live endcap change")
+check(not theme:SetEndcap("bogus") and ns.db.char.hunterEndcap=="talonclaw","unknown endcap refused")
 owner.Overlay=widget(owner);theme:StylePet(owner)
 local portrait=owner.Portrait
 check(portrait and portrait.kind=="PlayerModel","pet portrait is an animated model registered with oUF")

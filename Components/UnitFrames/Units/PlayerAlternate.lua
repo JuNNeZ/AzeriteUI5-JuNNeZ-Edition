@@ -791,8 +791,8 @@ local UnitFrame_UpdateTextures = function(self)
 	end
 
 	power:SetFrameLevel(self:GetFrameLevel() + (config.PowerFrameLevelOffset or 5))
-	if (ns.PaladinTheme and config.PowerBarOrientation == "UP") then
-		ns.PaladinTheme:StyleCrystal(power, config.PowerBarTexture, config.PowerBarTexCoord)
+	if (ns.ThemeEffects and config.PowerBarOrientation == "UP") then
+		ns.ThemeEffects:StyleCrystal(power, config.PowerBarTexture, config.PowerBarTexCoord, nil, false)
 	end
 	if (power.BackdropGroup) then
 		power.BackdropGroup:SetFrameLevel(power:GetFrameLevel())

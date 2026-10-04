@@ -1269,6 +1269,7 @@ end
 
 -- Show mana orb when mana is the primary resource, or when always show mana orb is enabled.
 local GetPlayerPowerOrbMode = function()
+	if (ns.MageCrystalPreview and ns.MageCrystalPreview:IsActive()) then return "legacyCrystal" end
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
 	if (not profile) then
 		return "orbV2"
@@ -2100,6 +2101,7 @@ local ResolvePlayerPowerColorFromTable = function(colorTable, token, fallbackCol
 end
 
 local UsePlayerIceCrystal = function()
+	if (ns.MageCrystalPreview and ns.MageCrystalPreview:IsActive()) then return false end
 	local requested = PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()
 	if (ns.PaladinTheme) then return ns.PaladinTheme:UseIceCrystal(requested) end
 	return requested
@@ -2441,7 +2443,7 @@ local MANA_ORB_TEXTURES = {
 }
 
 local SetManaOrbFillTexture = function(mana, db)
-	if (ns.PaladinTheme and ns.PaladinTheme:StyleOrb(mana)) then return end
+	if (ns.ThemeEffects and ns.ThemeEffects:StyleOrb(mana)) then return end
 	local style = PlayerFrameMod.db and PlayerFrameMod.db.profile and PlayerFrameMod.db.profile.manaOrbTexture
 	local asset = MANA_ORB_TEXTURES[style]
 	if (asset and asset ~= "orb2" and ns.API and ns.API.GetMedia) then
@@ -2969,7 +2971,10 @@ local UnitFrame_UpdateTextures = function(self)
 	powerCase:SetTexture(db.PowerBarForegroundTexture)
 	powerCase:SetVertexColor(unpack(db.PowerBarForegroundColor))
 	SafeSetDrawLayer(powerCase, "ARTWORK", 2 + powerBarArtLayer, 2)
-	if (ns.PaladinTheme) then ns.PaladinTheme:StyleCrystal(power, powerTexture, adjustedCoord) end
+	-- Core/ThemeEffects.lua: the theme's crystal case and the effect inside it.
+	if (ns.ThemeEffects) then
+		ns.ThemeEffects:StyleCrystal(power, powerTexture, adjustedCoord, db.PowerBarForegroundTexture)
+	end
 
 	local powerValue = self.Power.Value
 	if (powerValue) then
