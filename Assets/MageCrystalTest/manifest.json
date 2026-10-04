@@ -1,11 +1,11 @@
 {
-  "status": "Fire flames v7 offline validated; new live appearance/performance pending",
+  "status": "Energy repacked to one 8 MB atlas per school (2026-10-04); live appearance pending",
   "native_geometry": "Original crystal fill/backdrop, case alpha, sizes and anchors retained",
   "assets": [
     {
-      "path": "Assets/MageCrystalTest/crystal-arcane-flow-atlas.tga",
-      "sha256": "385f0ec9ac6dbb8d1afe414f284473f273a2fa30573c859bb2b0c8797f56d112",
-      "bytes": 4194322
+      "path": "Assets/MageCrystalTest/arcane-energy.tga",
+      "sha256": "e477cca03947b01573528bf9812d253e68bb7ae955f02097b46f9de80d572dcb",
+      "bytes": 8388652
     },
     {
       "path": "Assets/MageCrystalTest/crystal-arcane-pattern.tga",
@@ -13,24 +13,24 @@
       "bytes": 262162
     },
     {
-      "path": "Assets/MageCrystalTest/crystal-fire-flow-atlas.tga",
-      "sha256": "3b4f0508513d9b0b7d4c16f1b713c6a234f6b1b09e639dee322404fd94110f16",
-      "bytes": 4194322
-    },
-    {
       "path": "Assets/MageCrystalTest/crystal-fire-pattern.tga",
       "sha256": "0ca64c526a7dbbef48ed6b303a33b53a08518fda0e13b607a8448366cd8c4c5e",
       "bytes": 262162
     },
     {
-      "path": "Assets/MageCrystalTest/crystal-frost-flow-atlas.tga",
-      "sha256": "9b2037a3d3008fe6a54080e6368a6d681490027bfd90815a84a024b8e648e234",
-      "bytes": 4194322
-    },
-    {
       "path": "Assets/MageCrystalTest/crystal-frost-pattern.tga",
       "sha256": "f79196dd1cf9318577cc3822f9f6449f4e5c66e91c0b235044f606833c4bcddd",
       "bytes": 262162
+    },
+    {
+      "path": "Assets/MageCrystalTest/fire-energy.tga",
+      "sha256": "141cb385bb7d2cce096e3d3e3553326db7a40e3f8115e39eb2703e8bede74136",
+      "bytes": 8388652
+    },
+    {
+      "path": "Assets/MageCrystalTest/frost-energy.tga",
+      "sha256": "4798fa1fe998d1a2f92c5e37c21222b9990500f47ab4dfdcf1383e8f58332a15",
+      "bytes": 8388652
     },
     {
       "path": "Assets/MageCrystalTest/pw_crystal_case.tga",
@@ -41,46 +41,6 @@
       "path": "Assets/MageCrystalTest/pw_crystal_case_low.tga",
       "sha256": "29258685f027654ad66888566fd9bc0651df7a500a2bfc1c0b794c20a540173d",
       "bytes": 131090
-    },
-    {
-      "path": "Assets/MageCrystalTest/fire-energy-01.tga",
-      "sha256": "c5a4a2143ca3383318ff35a58d1a893f713bd6606729db5d7637bb23fd9e89f8",
-      "bytes": 16777234
-    },
-    {
-      "path": "Assets/MageCrystalTest/fire-energy-02.tga",
-      "sha256": "96a9ebfc37f84752f64bae004dc165ede629229527bf76dcca61c0ae1dbdd6f4",
-      "bytes": 16777234
-    },
-    {
-      "path": "Assets/MageCrystalTest/fire-energy-03.tga",
-      "sha256": "24f35a9da931b3f84dad42efb7fa34afe00875bcb828ee8abea0e03c83c735d9",
-      "bytes": 16777234
-    },
-    {
-      "path": "Assets/MageCrystalTest/fire-energy-04.tga",
-      "sha256": "8382ba6ac2248a484c5482ef9257393a8f9c1fa38b82ea8dca2467fa46d7f78d",
-      "bytes": 16777234
-    },
-    {
-      "path": "Assets/MageCrystalTest/fire-energy-05.tga",
-      "sha256": "f8409c52fe5e08cb3c621710104d3de519820b306f47c41e9b4f4a31ae25bd9a",
-      "bytes": 16777234
-    },
-    {
-      "path": "Assets/MageCrystalTest/fire-energy-06.tga",
-      "sha256": "c9ae1a0de5e10aa24d4bc466207b9da72fe1076661c42435690a6b802c212a8d",
-      "bytes": 16777234
-    },
-    {
-      "path": "Assets/MageCrystalTest/fire-energy-07.tga",
-      "sha256": "371c49b7df9191f6804a20b42fb1ad2379805567acb70cb32c2fe487d401627e",
-      "bytes": 16777234
-    },
-    {
-      "path": "Assets/MageCrystalTest/fire-energy-08.tga",
-      "sha256": "d48ec43d83d9eec27453e89478331f07566aac1443d5f8bb82995ed5adbed76d",
-      "bytes": 16777234
     }
   ],
   "case_revision": "v2: generated material registered to native painted bounds; original alpha and facet shading preserved; no nearest-color gutter mapping",
@@ -149,5 +109,12 @@
       }
     ],
     "artRevision": "v7: broad smooth flame tongues, fewer embers, smaller UV warp; 512px frames, 2048px pages. 40% default speed, existing saved choice retained."
+  },
+  "energy_atlas": {
+    "built_by": "Tools/Build-MageEnergyAtlas.py --page 2048x1024",
+    "source": "Assets_Draft/MageCrystalEnergy: the approved 128-frame animation, 8 pages of 16 frames at 512px per school (not shipped)",
+    "layout": "one 2048x1024 page per school, 18 columns x 8 rows of 110x128 cells, all 128 frames",
+    "crop": "PowerBarTexCoord 50,206,37,219 of 255 widened by 4 on each side: 46,210,33,223",
+    "runtime": "Core/MageCrystalPreview.lua ENERGY table must match"
   }
 }

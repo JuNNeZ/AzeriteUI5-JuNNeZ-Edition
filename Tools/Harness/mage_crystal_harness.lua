@@ -56,10 +56,24 @@ assert(loadfile((arg[1] or '.')..'/Core/MageCrystalPreview.lua'))('AzeriteUI5_Ju
 assert(loadfile((arg[1] or '.')..'/Core/ThemeEffects.lua'))('AzeriteUI5_JuNNeZ_Edition',ns)
 module:OnInitialize()
 check(module.command=='azmagecrystal','command registered without development mode')
--- Shipped static: the energy pages are not in the release yet.
-check(module.EnergyAvailable==false,'moving energy off until its pages ship')
--- The rest of this harness drives the animation as it will run once they do.
-module.EnergyAvailable=true
+-- One repacked atlas per school (Tools/Build-MageEnergyAtlas.py); the layout
+-- below must match ENERGY in Core/MageCrystalPreview.lua and the build output.
+check(module.EnergyAvailable==true,'moving energy ships')
+local E={columns=18,cellW=110,cellH=128,pageW=2048,pageH=1024,crop={46/255,210/255,33/255,223/255}}
+local function U(index,c) return (index%E.columns+(c-E.crop[1])/(E.crop[2]-E.crop[1]))*E.cellW/E.pageW end
+local function V(index,c) return (math.floor(index/E.columns)+(c-E.crop[3])/(E.crop[4]-E.crop[3]))*E.cellH/E.pageH end
+local function near(a,b) return math.abs(a-b)<1e-9 end
+for _,school in ipairs({'arcane','fire','frost'}) do
+	local file=io.open((arg[1] or '.')..'/Assets/MageCrystalTest/'..school..'-energy.tga','rb')
+	check(file,school..' atlas shipped')
+	if file then
+		local header=file:read(18); local size=file:seek('end'); file:close()
+		local w=header:byte(13)+header:byte(14)*256; local h=header:byte(15)+header:byte(16)*256
+		check(w==E.pageW and h==E.pageH and header:byte(17)==32,school..' atlas is a 32-bit '..E.pageW..'x'..E.pageH..' page')
+		check(size<9*2^20,school..' atlas stays small')
+	end
+end
+check(E.columns*math.floor(E.pageH/E.cellH)>=128 and E.columns*E.cellW<=E.pageW,'all 128 frames fit the page')
 check(not module:IsActive(),'opt-in default')
 local power=obj()
 power.Case=obj(); power.Case:SetParent(power); power.fill=obj()
@@ -89,10 +103,10 @@ check(art.Clip.clips and art.Clip.points[3][2]==power.fill,'clip follows native 
 check(art.Mask.path=='original.tga' and art.Mask.coords[1]==crop[1],'original mask and crop')
 check(art.Pattern.mask==art.Mask and art.Flow.mask==art.Mask,'both textures masked')
 check(power.Case.path:find('pw_crystal_case_low.tga',1,true),'low variant retained')
-check(art.Flow.path:find('arcane-energy-01',1,true),'correct atlas')
-check(art.Flow.coords[1]==crop[1]/4,'crop mapped into first atlas cell')
+check(art.Flow.path:find('arcane-energy.tga',1,true),'correct atlas')
+check(near(art.Flow.coords[1],U(0,crop[1])) and near(art.Flow.coords[2],U(0,crop[2])) and near(art.Flow.coords[4],V(0,crop[4])),'crop mapped into first atlas cell')
 art.scripts.OnUpdate(art, 1/16)
-check(art.Index==1 and art.Flow.coords[1]==(1+crop[1])/4,'atlas advances with elapsed time')
+check(art.Index==1 and near(art.Flow.coords[1],U(1,crop[1])),'atlas advances with elapsed time')
 art.scripts.OnUpdate(art, 8-1/16)
 check(art.Index==0,'eight second loop wraps')
 check(art.FlowNext.mask==art.Mask and art.FlowNext.path==art.Flow.path,'shared asset and mask for interpolation')
@@ -105,7 +119,7 @@ check(art.FlowNext.alpha>nextAlpha and art.Index==0,'alpha changes between frame
 art.scripts.OnUpdate(art,8-art.Time)
 check(art.Index==0 and art.Flow.alpha==.7 and art.FlowNext.alpha==0,'loop boundary has continuous weights')
 art.scripts.OnUpdate(art,127.5/16)
-check(art.Index==127 and art.FlowNext.coords[1]==crop[1]/4,'last frame blends into first')
+check(art.Index==127 and near(art.FlowNext.coords[1],U(0,crop[1])) and near(art.FlowNext.coords[3],V(0,crop[3])),'last frame blends into first')
 art.scripts.OnUpdate(art,1/32)
 
 local count=#frames
@@ -116,7 +130,7 @@ for i=1,10 do
 	module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
 end
 check(art.Index>=15 and art.Time>.9,'frequent restyling preserves elapsed phase')
-check(art.Flow.coords[1]==((art.Index%4)+crop[1])/4,'restyling retains current atlas coordinates')
+check(near(art.Flow.coords[1],U(art.Index,crop[1])),'restyling retains current atlas coordinates')
 module:Command('static')
 module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
 check(not art.Flow.shown and not art.FlowNext.shown and not art.scripts.OnUpdate,'static hides both layers and has no animation callback')
@@ -124,23 +138,24 @@ module:SetFireSpeed(1)
 module:Command('fire')
 module:Command('flow')
 module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
-check(art.Energy and art.Flow.path:find('fire-energy-01',1,true),'Fire uses volumetric atlas')
+check(art.Energy and art.Flow.path:find('fire-energy.tga',1,true),'Fire uses volumetric atlas')
+local fireWrites=art.Flow.textureWrites
 check(art.Pattern.alpha==.12 and art.Flow.color[1]==1,'Fire reduces lines and retains authored energy colors')
 art.scripts.OnUpdate(art,15.5/16)
-check(art.Index==15 and art.Flow.path:find('fire-energy-01',1,true) and art.FlowNext.path:find('fire-energy-02',1,true),'interpolation crosses atlas page boundary')
+check(art.Index==15 and art.Flow.path==art.FlowNext.path and near(art.FlowNext.coords[1],U(16,crop[1])),'interpolation crosses into the next frame on the one atlas')
 check(math.abs(art.Flow.alpha-.35)<.00001 and math.abs(art.FlowNext.alpha-.35)<.00001,'Fire sub-frame blend weights')
 module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
 check(art.Index==15 and art.Time==15.5/16,'Fire phase survives restyling')
 art.scripts.OnUpdate(art,1/16)
-check(art.Index==16 and art.Flow.path:find('fire-energy-02',1,true),'Fire advances at 16 source frames per second')
+check(art.Index==16 and near(art.Flow.coords[1],U(16,crop[1])) and near(art.Flow.coords[3],V(16,crop[3])),'Fire advances at 16 source frames per second')
 art.scripts.OnUpdate(art,127.5/16-art.Time)
-check(art.Index==127 and art.Flow.path:find('fire-energy-08',1,true) and art.FlowNext.path:find('fire-energy-01',1,true),'last page blends into first')
+check(art.Index==127 and near(art.Flow.coords[3],V(127,crop[3])) and near(art.FlowNext.coords[1],U(0,crop[1])),'last frame blends into first')
 art.scripts.OnUpdate(art,.5/16)
-check(art.Index==0 and art.Flow.path:find('fire-energy-01',1,true),'Fire eight second loop wraps')
+check(art.Index==0 and art.Flow.textureWrites==fireWrites,'Fire eight second loop wraps without swapping the file')
 -- Walk every sample; UV cells and page indices must stay within eight pages.
 for i=1,128 do
 	art.scripts.OnUpdate(art,1/16)
-	check(art.Flow.MageEnergyPage>=1 and art.Flow.MageEnergyPage<=8,'Fire page in range')
+	check(art.Flow.path==art.FlowNext.path and art.Flow.textureWrites==fireWrites,'Fire stays on its one atlas')
 	check(art.Flow.coords[1]>=0 and art.Flow.coords[2]<=1 and art.Flow.coords[3]>=0 and art.Flow.coords[4]<=1,'Fire cropped UV in range')
 end
 module:Command('static')
@@ -259,8 +274,8 @@ for _,school in ipairs({'frost','arcane'}) do
 	check(art.Energy and art.School==school and art.Time==0,'school switch resets correct atlas')
 	for i=1,128 do
 		art.scripts.OnUpdate(art,1/16)
-		check(art.Flow.path:find(school..'-energy-',1,true),'correct school page')
-		check(art.Flow.MageEnergyPage>=1 and art.Flow.MageEnergyPage<=8,'school page bounded')
+		check(art.Flow.path:find(school..'-energy.tga',1,true),'correct school atlas')
+		check(art.Flow.path==art.FlowNext.path and art.Flow.path:find(school..'-energy.tga',1,true),'school atlas bound')
 		check(art.Flow.coords[1]>=0 and art.Flow.coords[2]<=1 and art.Flow.coords[3]>=0 and art.Flow.coords[4]<=1,'school crop bounded')
 	end
 	check(art.Index==0,'128 frame school loop wraps')
@@ -284,34 +299,31 @@ for _,school in ipairs({'fire','frost','arcane'}) do
 		check(power.Case.points==casePoints and foreground.shown,'reusing foreground preserves case anchors')
 	end
 end
--- File bindings stay stable even across repeated styling and loop/page seams.
+-- File bindings stay stable even across repeated styling and the loop seam:
+-- both crossfade layers are bound to the school's one atlas.
 for _,school in ipairs({'fire','frost','arcane'}) do
 	module:Command(school); module:Command('flow'); module:SetSchoolSpeed(.4,school)
 	module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
+	local layers={art.Flow,art.FlowNext}
 	local writes={}
-	check(#art.EnergyPages==8,'eight persistent page pairs')
-	for page,pair in ipairs(art.EnergyPages) do
-		for _,texture in ipairs(pair) do
-			writes[texture]=texture.textureWrites
-			check(texture.path:find(school..'-energy-',1,true) and texture.mask==art.Mask,'page permanently bound and masked')
-		end
+	check(not art.EnergyPages,'no per-page texture pairs')
+	for _,texture in ipairs(layers) do
+		writes[texture]=texture.textureWrites
+		check(texture.path:find(school..'-energy.tga',1,true) and texture.mask==art.Mask,'atlas permanently bound and masked')
 	end
 	for tick=1,1500 do
 		art.scripts.OnUpdate(art,1/30)
 		if tick%10==0 then module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga') end
 		local alpha=0
-		for _,pair in ipairs(art.EnergyPages) do
-			for _,texture in ipairs(pair) do
-				check(texture.textureWrites==writes[texture],'no file replacement during playback/restyling')
-				alpha=alpha+texture.alpha
-			end
+		for _,texture in ipairs(layers) do
+			check(texture.textureWrites==writes[texture],'no file replacement during playback/restyling')
+			alpha=alpha+texture.alpha
 		end
-		check(math.abs(alpha-.7)<.000001,'no alpha gap or stale-page overlap')
+		check(math.abs(alpha-.7)<.000001,'no alpha gap during playback')
+		check(art.Flow.coords[1]>=0 and art.Flow.coords[2]<=1 and art.Flow.coords[4]<=1,'cell coordinates stay on the page')
 	end
 	module:Command('static'); module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
-	for _,pair in ipairs(art.EnergyPages) do
-		for _,texture in ipairs(pair) do check(not texture.shown and texture.alpha==0,'static hides every page') end
-	end
+	for _,texture in ipairs(layers) do check(not texture.shown and texture.alpha==0,'static hides both layers') end
 end
 -- With the pages unshipped, a flow setting still draws the static pattern.
 module.EnergyAvailable=false; variant=''; combat=false

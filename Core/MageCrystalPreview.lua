@@ -3,11 +3,15 @@
 local Addon, ns = ...
 local Preview = ns:NewModule("MageCrystalPreview", "AceConsole-3.0", "LibMoreEvents-1.0")
 ns.MageCrystalPreview = Preview
--- The moving energy's 24 atlas pages (398 MB at 2048px) are not shipped yet;
--- they live in Assets_Draft/MageCrystalEnergy until they are made smaller.
--- Until then the crystal draws its static school pattern whatever the flow
--- setting says. Set true only when the pages are back in Assets/MageCrystalTest.
-Preview.EnergyAvailable = false
+-- The moving energy: one atlas per school, built by Tools/Build-MageEnergyAtlas.py
+-- from the approved 128-frame source (eight 2048px pages per school, 398 MB,
+-- kept in Assets_Draft/MageCrystalEnergy). Each frame is cut to the crystal's
+-- texcoord crop plus a 4/255 margin and packed in rows of 18 cells, 110x128,
+-- on a 2048x1024 page: 8 MB per school, every frame kept. ENERGY must match
+-- what the build script prints. False draws the static pattern instead.
+Preview.EnergyAvailable = true
+local ENERGY = { frames = 128, fps = 16, columns = 18, cellW = 110, cellH = 128, pageW = 2048, pageH = 1024,
+	crop = { 46/255, 210/255, 33/255, 223/255 } }
 local schools = { arcane = { .72, .48, 1 }, fire = { 1, .48, .12 }, frost = { .40, .80, 1 } }
 local function Path(name)
 	return "Interface\\AddOns\\"..Addon.."\\Assets\\MageCrystalTest\\"..name..".tga"
@@ -108,68 +112,54 @@ function Preview:IsActive()
 	return effects and effects:GetCrystalEffect() == "mage" or false
 end
 
+-- The crystal's crop (coords, 0-1 of the source frame) is mapped into the
+-- frame's cell. It is clamped to the baked crop, so no cell ever samples its
+-- neighbour; the default crop sits a few texels inside every cell edge.
 local function AtlasCoords(texture, index, coords)
-	local column, row = index % 4, math.floor(index / 4)
-	texture:SetTexCoord((column + coords[1])/4, (column + coords[2])/4,
-		(row + coords[3])/4, (row + coords[4])/4)
+	local crop = ENERGY.crop
+	local column, row = index % ENERGY.columns, math.floor(index / ENERGY.columns)
+	local function clamp(value, low, high) return math.max(low, math.min(high, value)) end
+	local function u(value)
+		value = clamp(value, crop[1], crop[2])
+		return (column + (value - crop[1])/(crop[2] - crop[1]))*ENERGY.cellW/ENERGY.pageW
+	end
+	local function v(value)
+		value = clamp(value, crop[3], crop[4])
+		return (row + (value - crop[3])/(crop[4] - crop[3]))*ENERGY.cellH/ENERGY.pageH
+	end
+	texture:SetTexCoord(u(coords[1]), u(coords[2]), v(coords[3]), v(coords[4]))
 end
 
--- Keep every atlas bound to a persistent pair of regions. Playback never
--- replaces a visible texture's file, including at page and loop boundaries.
+-- Both crossfade layers stay bound to the school's single atlas. Playback only
+-- moves texcoords; a visible texture's file is never swapped, not even at the
+-- loop boundary. The file changes only with the school.
 local function PrepareEnergyPages(content, power, school, animated)
-	if (animated and not content.EnergyPages) then
-		content.EnergyPages = { { content.Flow, content.FlowNext } }
-		for page = 2, 8 do
-			local pair = {}
-			for slot = 1, 2 do
-				local art = content:CreateTexture(nil, "ARTWORK", nil, 1)
-				art:SetAllPoints(power)
-				art:AddMaskTexture(content.Mask)
-				art:SetBlendMode("ADD")
-				art:SetAlpha(0)
-				pair[slot] = art
-			end
-			content.EnergyPages[page] = pair
+	for _, art in ipairs({ content.Flow, content.FlowNext }) do
+		if (animated and content.PageSchool ~= school) then
+			art:SetTexture(Path(school.."-energy"))
 		end
-	end
-	if (not content.EnergyPages) then return end
-	for page, pair in ipairs(content.EnergyPages) do
-		for _, art in ipairs(pair) do
-			if (animated and content.PageSchool ~= school) then
-				art:SetTexture(Path(string.format(school.."-energy-%02d", page)))
-				art.MageEnergyPage = page
-			end
-			art:SetVertexColor(1, 1, 1)
-			art:SetShown(animated)
-			art:SetAlpha(0)
-		end
+		art:SetVertexColor(1, 1, 1)
+		art:SetShown(animated)
+		art:SetAlpha(0)
 	end
 	if (animated) then content.PageSchool = school end
 end
 
 local function SetFlowFrame(frame, texture, index)
-	AtlasCoords(texture, frame.Energy and index % 16 or index, frame.Coords)
-end
-
-local function SelectEnergyFrames(frame, index)
-	frame.Flow:SetAlpha(0)
-	frame.FlowNext:SetAlpha(0)
-	frame.Flow = frame.EnergyPages[math.floor(index / 16) + 1][1]
-	frame.FlowNext = frame.EnergyPages[math.floor(((index + 1) % 128) / 16) + 1][2]
+	AtlasCoords(texture, index % ENERGY.frames, frame.Coords)
 end
 
 -- Crossfade neighboring atlas samples at the client's render rate. Both
 -- layers share the native mask and fill clip; no resource sampling.
 local function UpdateFlow(frame)
 	if (not frame.Energy) then frame.Flow:SetAlpha(0); frame.FlowNext:SetAlpha(0); return end
-	local phase = frame.Time * (frame.Energy and 16 or 2)
+	local phase = frame.Time * ENERGY.fps
 	local index = math.floor(phase)
 	local blend = phase - index
 	if (index ~= frame.Index) then
 		frame.Index = index
-		if (frame.Energy) then SelectEnergyFrames(frame, index) end
 		SetFlowFrame(frame, frame.Flow, index)
-		SetFlowFrame(frame, frame.FlowNext, (index + 1) % (frame.Energy and 128 or 16))
+		SetFlowFrame(frame, frame.FlowNext, (index + 1) % ENERGY.frames)
 	end
 	local strength = frame.Energy and .7 or .8
 	frame.Flow:SetAlpha(strength * (1 - blend))
@@ -347,9 +337,8 @@ function Preview:StyleCrystal(power, texturePath, coords, casePath)
 	-- those updates so frequent resource events cannot pin the atlas at frame 0.
 	content.Time, content.Index = content.Time or 0, content.Index or 0
 	PrepareEnergyPages(content, power, school, animated)
-	if (energy) then SelectEnergyFrames(content, content.Index) end
 	SetFlowFrame(content, content.Flow, content.Index)
-	SetFlowFrame(content, content.FlowNext, (content.Index + 1) % (content.Energy and 128 or 16))
+	SetFlowFrame(content, content.FlowNext, (content.Index + 1) % ENERGY.frames)
 	UpdateFlow(content)
 	content:SetScript("OnUpdate", animated and function(frame, elapsed)
 		-- Only local elapsed time is used; never read or compare unit resources.

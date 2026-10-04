@@ -10,6 +10,22 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.14.1-JuNNeZ (2026-10-04) - The Mage Crystal Moves
+
+### Highlights
+
+- **The Mage crystal's energy moves.** In 5.14.0 the Mage crystal showed a still pattern; now the energy inside it flows again: drifting flames for Fire, cold mist and ice motes for Frost, and orbiting currents for Arcane. Turn it on or off with "Moving energy" and set its pace with "Animation speed" in the Mage crystal section of `/az -> Themes`, or with `/azmagecrystal flow`, `static` and `speed`.
+
+### Development
+
+- **Made the animation small enough to ship.** It was 398 MB, far too large to ask anyone to download. The crystal only ever shows the middle third of each frame, and the soft, volumetric energy loses nothing visible at a lower resolution, so each frame is now cut to the part the crystal shows and all 128 frames for a school share one texture. That comes to 24 MB for all three schools, about 8 MB in the download. Every frame is kept, so the motion and its smooth blending between frames are as they were. A script rebuilds the textures from the original frames and measures them against the source.
+
+### Access and known limits
+
+- **Not yet tested in the game.** The smaller textures were compared with the originals offline, at the crystal's real size; how the animation looks in play, and what it costs in frame rate, still need checking on Retail and Forever.
+- The themes remain works in progress, as described for 5.14.0.
+
+
 ## 5.14.0-JuNNeZ (2026-10-04) - A Themes Page, Lite+ Effects, and a Mage Theme Preview
 
 ### Highlights
