@@ -22,7 +22,7 @@ Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead wit
 
 ### Access and known limits
 
-- **Not yet tested in the game.** The smaller textures were compared with the originals offline, at the crystal's real size; how the animation looks in play, and what it costs in frame rate, still need checking on Retail and Forever.
+- **Tested in the game:** the maintainer confirmed that the animation looks right with the smaller textures.
 - The themes remain works in progress, as described for 5.14.0.
 
 
