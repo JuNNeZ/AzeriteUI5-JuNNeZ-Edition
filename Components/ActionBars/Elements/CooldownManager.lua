@@ -102,7 +102,7 @@ local BAR_VIEWER = "BuffBarCooldownViewer"
 -- the Edit Mode icon size, and the text scales with it.
 local FONTS = {
 	EssentialCooldownViewer = { cooldown = 18, count = 15, key = 12 },
-	UtilityCooldownViewer = { cooldown = 13, count = 12, key = 10 },
+	UtilityCooldownViewer = { cooldown = 13, count = 12, key = 11 },
 	BuffIconCooldownViewer = { cooldown = 15, count = 14 },
 	BuffBarCooldownViewer = { count = 12, bar = 13 }
 }

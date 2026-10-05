@@ -63,7 +63,13 @@ function Region:GetFont() return self.fontPath, self.fontSize, self.fontFlags en
 function Region:SetFont(p, s, f) self.fontPath, self.fontSize, self.fontFlags, self.fontObject = p, s, f, nil end
 function Region:SetTextColor(r, g, b, a) self.textColor = { r, g, b, a } end
 function Region:GetTextColor() local c = self.textColor or { 1, 1, 1, 1 }; return c[1], c[2], c[3], c[4] end
-function Region:SetText(t) self.text = t end
+function Region:SetText(t)
+	if self.kind == "FontString" then
+		local font = self.fontObject
+		assert(self.fontPath or type(font) == "string" or (font and font.configured), "FontString:SetText(): Font not set")
+	end
+	self.text = t
+end
 function Region:SetJustifyH() end
 function Region:SetJustifyV() end
 
@@ -208,7 +214,17 @@ end
 local enabledAddons = {}
 local events = {}
 local modules = {}
-local fonts = setmetatable({}, { __index = function(t, k) local f = { GetName = function() return "AzeriteUIFont" .. k end, size = k }; rawset(t, k, f); return f end })
+-- Missing font sizes still produce Font objects in Core/API/Assets.lua, but
+-- those objects have no face. Use the shipped inventory instead of inventing it.
+local fontFile = assert(io.open(root .. "/FontStyles.xml", "rb"))
+local fontSource = fontFile:read("*a"); fontFile:close()
+local outlinedSizes = {}
+for size in fontSource:gmatch('<FontFamily name="AzeriteFont(%d+)Outline"') do outlinedSizes[tonumber(size)] = true end
+local fonts = setmetatable({}, { __index = function(t, k)
+	local f = { GetName = function() return "AzeriteUIFont" .. k end, size = k, configured = outlinedSizes[k] }
+	rawset(t, k, f)
+	return f
+end })
 
 local ns = {
 	Colors = {
@@ -305,6 +321,11 @@ Data(essential.active[2]).cooldownInfo = { spellID = 999, overrideSpellID = 200 
 
 local M = Load()
 M:OnEnable()
+check(fonts[11].configured and not fonts[10].configured, "font model matches shipped 11px and missing 10px outlined families")
+for _, f in ipairs(viewers.UtilityCooldownViewer.active) do
+	-- OnEnable has already written text to this label; the font-aware stub must allow it.
+	check(Mask(f).texture == Assets("actionbutton-mask-square-rounded"), "Utility viewer styles successfully with configured key font")
+end
 check(events.UPDATE_BINDINGS and events.ACTIONBAR_SLOT_CHANGED and events.PLAYER_REGEN_ENABLED, "listens for bindings, bar slots and combat end")
 
 -- Items built before the module loaded.

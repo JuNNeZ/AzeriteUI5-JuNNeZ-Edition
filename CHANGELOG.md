@@ -10,6 +10,20 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.16.1-JuNNeZ (2026-10-05) - Cooldown Manager Font Fix
+
+### Highlights
+
+- **Fixed "Font not set" errors from the Cooldown Manager.** Utility ability keybind labels now use a shipped font instead of requesting a missing size, allowing the viewer to finish styling on login and when refreshed.
+
+### Development
+
+- The regression check now uses the addon's actual font definitions and rejects text writes without a configured font. It reproduced the reported error before the fix and passes afterward.
+
+### Access and known limits
+
+- Verified offline; please reload and check Utility keybind labels in the client. Live confirmation on Retail and Forever is still owed.
+
 ## 5.16.0-JuNNeZ (2026-10-05) - Cooldown Manager Skin and Alternate-Power Fix
 
 ### Highlights
