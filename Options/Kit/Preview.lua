@@ -261,7 +261,8 @@ local explorerOrder = {
 	{ "fadePetFrame", "PetFrame" },
 	{ "fadeFocusFrame", "FocusFrame" },
 	{ "fadeTracker", "Tracker" },
-	{ "fadeChatFrames", "ChatFrames" }
+	{ "fadeChatFrames", "ChatFrames" },
+	{ "fadeCooldownManager", "CooldownManager" }
 }
 
 local explorerTargets = {}

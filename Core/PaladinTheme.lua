@@ -63,6 +63,12 @@ Theme.ResolveMedia = function(self, name)
 	if (self:IsActive() and media[name]) then return path(media[name]) end
 end
 
+-- This theme's file for a native name whether or not the theme is active, for
+-- elements that let the player pick a skin of their own (CooldownManager.lua).
+Theme.ResolveOwnMedia = function(self, name)
+	if (media[name]) then return path(media[name]) end
+end
+
 -- Some skins store media at file-load time, before AceDB is initialized.
 Theme.ResolvePath = function(self, original)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:ResolvePath(original) end

@@ -31,6 +31,7 @@ lua Tools/Harness/unit_tier_harness.lua    .               # Novice/Hardened/Sea
 lua Tools/Harness/addon_compat_harness.lua .               # ConsolePort icons, gamepad glyphs without it, portraits under a DialogueUI fade
 lua Tools/Harness/bag_button_harness.lua   .               # the bag button beside the cog: secure route, switch, free slots
 lua Tools/Harness/proc_highlight_harness.lua .             # proc styles, preview/reset, riding visibility combinations
+lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/dropdown, restore, keybinds, Explorer fade proxies
 ```
 
 `mythicplus_harness.lua` loads the real `Components/Misc/MythicPlus.lua` and `Components/Misc/Info.lua`
@@ -181,6 +182,10 @@ failures, check `git status` before doing anything else.
 `ring-always-shown`, `show-after-restyle`, `no-neutral-colour`, `preview-reallocated`,
 `wrong-visibility-setting`, or `skyriding-always-hidden`. Each must fail. Mutations
 only change the loaded source in memory; they never edit the working files.
+
+`cooldown_manager_harness.lua` takes the same kind of argument: `themed-art`, `circle-unthemed`, `no-revert`,
+`base-first`, `fade-ignores-opacity`, `rebuild-in-combat` or `writes-blizzard`. Each must fail,
+and a mutation whose pattern no longer matches the source stops the run instead of passing.
 
 **A check that has never failed has never been shown to work.** Every group of checks gets a
 mutation entry before it is trusted. This panel has now produced five separate stub lies, each of

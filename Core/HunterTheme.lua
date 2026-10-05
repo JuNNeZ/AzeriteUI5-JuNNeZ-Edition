@@ -43,6 +43,12 @@ Theme.ResolveMedia = function(self, name)
 	if (self:IsActive() and ns.HunterMedia and ns.HunterMedia[name]) then return path(name) end
 end
 
+-- This theme's file for a native name whether or not the theme is active, for
+-- elements that let the player pick a skin of their own (CooldownManager.lua).
+Theme.ResolveOwnMedia = function(self, name)
+	if (ns.HunterMedia and ns.HunterMedia[name]) then return path(name) end
+end
+
 Theme.ResolvePath = function(self, original)
 	local name = type(original) == "string" and original:match("[\\/]Assets[\\/]([^\\/]+)%.tga$")
 	return (name and self:ResolveMedia(name)) or original

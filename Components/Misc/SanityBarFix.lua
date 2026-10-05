@@ -7,12 +7,12 @@
 --]]
 --[[
 
-  SanityBarFix – minimal, safe, and improved
+  SanityBarFix – native alternate-power event restoration
   ------------------------------------------------
   • Disables oUF’s “AlternativePower” element so no layout hides
     Blizzard’s PlayerPowerBarAlt.
   • Restores Blizzard’s own events once the bar is created.
-  • Immediately invokes Blizzard’s show-handler so barInfo is set.
+  • Leaves initialization and power updates to Blizzard’s native events.
   • No styling, no repositioning – the bar remains exactly like
     the default UI.
 
@@ -67,7 +67,7 @@ local function DisableOUFAlternativePower()
     SBFPrint("oUF AlternativePower disabled on existing objects")
 end
 
-local function RestoreAndInitPlayerPowerBarAlt()
+local function RestorePlayerPowerBarAltEvents()
     if ShouldSkipBlizzardAltPowerBar() then
         local alt = _G and _G.PlayerPowerBarAlt
         if alt then
@@ -95,14 +95,10 @@ local function RestoreAndInitPlayerPowerBarAlt()
     alt:RegisterEvent("UNIT_POWER_UPDATE")
     alt:RegisterEvent("UNIT_MAXPOWER")
 
-    -- Invoke Blizzard handler defensively to initialize barInfo
-    local onEvent = alt:GetScript("OnEvent")
-    if type(onEvent) == "function" then
-        local ok, err = API.TryCall(onEvent, alt, "UNIT_POWER_BAR_SHOW", "player")
-        if not ok then SBFPrint("OnEvent error: " .. tostring(err)) end
-    end
-
-    SBFPrint("PlayerPowerBarAlt events restored & initialized")
+    -- Let the native event dispatch initialize and update the bar. Calling its
+    -- OnEvent here taints value/displayedValue, then the smooth OnUpdate
+    -- compares secret power values from that tainted state every frame.
+    SBFPrint("PlayerPowerBarAlt events restored")
     return true
 end
 
@@ -113,7 +109,7 @@ local f = CreateFrame("Frame")
 
 f:SetScript("OnEvent", function(self, event, ...)
     if ShouldSkipBlizzardAltPowerBar() then
-        RestoreAndInitPlayerPowerBarAlt()
+        RestorePlayerPowerBarAltEvents()
         return
     end
 
@@ -132,12 +128,12 @@ f:SetScript("OnEvent", function(self, event, ...)
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         -- Try once on zone load
-        RestoreAndInitPlayerPowerBarAlt()
+        RestorePlayerPowerBarAltEvents()
 
     elseif event == "UNIT_POWER_BAR_SHOW" then
         local unit = ...
         if unit == "player" then
-            RestoreAndInitPlayerPowerBarAlt()
+            RestorePlayerPowerBarAltEvents()
         end
     end
 end)

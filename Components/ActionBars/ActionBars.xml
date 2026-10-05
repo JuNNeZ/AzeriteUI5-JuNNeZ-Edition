@@ -23,5 +23,6 @@
 	<Script file="Elements\VehicleExit.lua"/>
 	<Script file="Elements\MicroMenu.lua"/>
 	<Script file="Elements\EncounterBar.lua"/>
+	<Script file="Elements\CooldownManager.lua"/>
 
 </Ui>

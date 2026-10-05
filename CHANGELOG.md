@@ -10,6 +10,21 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.16.0-JuNNeZ (2026-10-05) - Cooldown Manager Skin and Alternate-Power Fix
+
+### Highlights
+
+- **Blizzard's Cooldown Manager in AzeriteUI style.** `/az -> Cooldown Manager` skins the Cooldown Manager's four viewers with circular, square or rounded buttons. The circular style has its own skin setting: follow the interface theme (default), AzeriteUI, Mage or Hunter (Paladin in Development Mode), so it can differ from the theme in use. Square and rounded buttons use new AzeriteUI backdrop and border art. Changes apply at once.
+- **Cooldown Manager follows Explorer Mode.** A new "Cooldown Manager" fade option on the Explorer Mode page fades the viewers with the rest of the interface, without touching Blizzard's own alpha or Edit Mode opacity.
+- **Fixed an alternate-power bar error flood.** The player's alternate power bar (boss and encounter resources) no longer has its event handler called from AzeriteUI, which tainted the bar and made its per-frame update compare secret power values. Blizzard's own events now set it up.
+
+### Development
+
+- **Built the skin on proxies the module owns instead of altering Blizzard's viewers.** Offline tests cover each skin choice, old profiles with no skin saved, missing theme modules, the options dropdown and Development Mode availability; all ten locales were updated and kept at parity. Added harnesses for the Cooldown Manager and the alternate-power bar.
+
+### Access and known limits
+
+- Offline results only; live confirmation in the client is still owed for the Cooldown Manager (all four viewers, newly pooled icons, combat, Edit Mode) and the alternate-power fix.
 ## 5.15.0-JuNNeZ (2026-10-05) - Proc Highlights, Skyriding Bars, and Theme Bar Tests
 
 ### Highlights

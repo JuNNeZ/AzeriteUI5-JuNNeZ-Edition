@@ -977,3 +977,22 @@ L["Cycle test fill"] = true
 L["Protected cast"] = true
 L["Open bar preview"] = true
 L["Close bar preview"] = true
+
+-- Cooldown Manager (Components/ActionBars/Elements/CooldownManager.lua).
+L["Cooldown Manager"] = true
+L["AzeriteUI styles Blizzard's Cooldown Manager in place. Its position, size, padding and opacity stay in Edit Mode, and Explorer Mode can fade it with the rest of the interface."] = true
+L["%s is styling the Cooldown Manager, so AzeriteUI leaves it alone."] = true
+L["Style the Cooldown Manager"] = true
+L["AzeriteUI borders, masks and fonts on the icons and bars Blizzard draws. Turn it off for Blizzard's own look."] = true
+L["Icon style"] = true
+L["Square and rounded wear AzeriteUI's square metal border. Circular wears the action bar ring."] = true
+L["Square"] = true
+L["Rounded"] = true
+L["Circular"] = true
+L["Show keybinds"] = true
+L["The key bound to each ability on your AzeriteUI action bars, in the corner of its icon. Abilities not on a bar show none."] = true
+L["Fade Cooldown Manager"] = true
+L["Include Blizzard's Cooldown Manager in what Explorer Mode fades out."] = true
+L["Skin"] = true
+L["Follow the interface theme"] = true
+L["Give the Cooldown Manager a theme of its own, whatever the rest of the interface wears. It changes the circular ring; square and rounded wear AzeriteUI art in every skin until themes have square art."] = true

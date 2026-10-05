@@ -38,6 +38,7 @@
 	<Script file="OptionsPages\Auras.lua"/>
 	<Script file="OptionsPages\Bags.lua"/>
 	<Script file="OptionsPages\Chat.lua"/>
+	<Script file="OptionsPages\CooldownManager.lua"/>
 	<!-- Hidden unless Development Mode is on: the control types no shipped
 	     setting uses, so that they can be tested at all. -->
 	<Script file="OptionsPages\ControlTypes.lua"/>

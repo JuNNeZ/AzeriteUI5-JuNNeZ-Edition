@@ -351,6 +351,13 @@ local GenerateOptions = function()
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 160
+			},
+			fadeCooldownManager = {
+				name = L["Fade Cooldown Manager"],
+				desc = L["Include Blizzard's Cooldown Manager in what Explorer Mode fades out."],
+				type = "toggle", width = "full",
+				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
+				order = 170
 			}
 		}
 	}

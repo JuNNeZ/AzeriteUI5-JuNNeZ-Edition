@@ -79,7 +79,8 @@ local defaults = { profile = ns:Merge({
 	fadePetFrame = true,
 	fadeFocusFrame = true,
 	fadeTracker = true,
-	fadeChatFrames = true
+	fadeChatFrames = true,
+	fadeCooldownManager = true
 
 }, ns.MovableModulePrototype.defaults) }
 
@@ -92,7 +93,8 @@ local FADE_OPTION_KEYS = {
 	"fadePetFrame",
 	"fadeFocusFrame",
 	"fadeTracker",
-	"fadeChatFrames"
+	"fadeChatFrames",
+	"fadeCooldownManager"
 }
 
 ExplorerMode.GenerateDefaults = function(self)
@@ -123,7 +125,8 @@ ExplorerMode.UpdateSettings = function(self, forceRefresh)
 			PlayerClassPowerFrame = { moduleName = "PlayerClassPowerFrame" },
 			PetFrame = { moduleName = "PetFrame" },
 			FocusFrame = { moduleName = "FocusFrame" },
-			Tracker = { moduleName = "Tracker" }
+			Tracker = { moduleName = "Tracker" },
+			CooldownManager = { moduleName = "CooldownManager" }
 		}
 		self._modulesInfo = modulesInfo
 	end
@@ -331,6 +334,23 @@ ExplorerMode.UpdateSettings = function(self, forceRefresh)
 				LFF:RegisterFrameForFading(tracker, TrackerModule:GetName())
 			else
 				LFF:UnregisterFrameForFading(tracker)
+			end
+		end
+	end
+
+	-- Cooldown Manager
+	--------------------------------------------
+	-- Blizzard's viewers are faded through proxies the module owns, so their own
+	-- SetAlpha and Edit Mode opacity are left alone. See CooldownManager.lua.
+	local CooldownManagerInfo = modulesInfo.CooldownManager
+	local CooldownManagerModule = CooldownManagerInfo.module
+	if (CooldownManagerModule and CooldownManagerModule.GetFadeFrames) then
+		local fade = not forced and CooldownManagerInfo.enabled and db.enabled and db.fadeCooldownManager
+		for _,proxy in ipairs(CooldownManagerModule:GetFadeFrames()) do
+			if (fade) then
+				LFF:RegisterFrameForFading(proxy, self:GetName())
+			else
+				LFF:UnregisterFrameForFading(proxy)
 			end
 		end
 	end

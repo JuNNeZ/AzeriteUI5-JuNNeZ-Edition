@@ -63,6 +63,20 @@ local configNames = { "PlayerFrame", "PlayerFrameAlternate", "TargetFrame", "Bos
 local theme = ns.MageTheme
 local GetMedia = ns.API.GetMedia
 check(not theme:IsActive(), "safe before database")
+-- Cooldown Manager can request dormant theme art without activating a theme.
+for _, entry in ipairs({
+	{ ns.MageTheme, "Mage/actionbutton-border" },
+	{ ns.HunterTheme, "Hunter/actionbutton-border" },
+	{ ns.PaladinTheme, "Paladin/action-ring" }
+}) do
+	local own, relative = entry[1], entry[2]
+	local expected = "Interface\\AddOns\\AzeriteUI5_JuNNeZ_Edition\\Assets\\" .. relative:gsub("/", "\\") .. ".tga"
+	check(own:ResolveOwnMedia("actionbutton-border") == expected, "dormant own ring: " .. relative)
+	check(not own:ResolveMedia("actionbutton-border"), "normal resolver still requires active theme: " .. relative)
+	check(not own:ResolveOwnMedia("actionbutton-mask-circular"), "shared mask has no own replacement: " .. relative)
+	local disk = io.open(root .. "/Assets/" .. relative .. ".tga", "rb")
+	check(disk, "own ring shipped: " .. relative); if disk then disk:close() end
+end
 ns.db = { global = {}, char = {}, RegisterCallback = function() end }
 theme:OnInitialize()
 check(theme.command == "azmage", "slash registered")
@@ -77,6 +91,12 @@ check(theme:IsActive() and reloads == 1 and ns.db.char.magePreview, "on reloads 
 theme.loadedActive = true
 check(ns.ThemeEffects:GetTheme() == "mage", "Theme effects see the Mage theme")
 check(not ns.PaladinTheme:IsActive(), "Paladin stands aside")
+check(ns.PaladinTheme:ResolveOwnMedia("actionbutton-border"):find("\\Paladin\\action-ring.tga", 1, true),
+	"Paladin own media does not delegate to active Mage")
+check(ns.HunterTheme:ResolveOwnMedia("actionbutton-border"):find("\\Hunter\\actionbutton-border.tga", 1, true),
+	"Hunter own media does not follow active Mage")
+check(GetMedia("actionbutton-border"):find("\\Mage\\actionbutton-border.tga", 1, true) and reloads == 1,
+	"own media lookups leave the interface theme and reload state unchanged")
 
 -- Every replaced name resolves through GetMedia, and every file exists.
 local count = 0
