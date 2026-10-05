@@ -5,7 +5,8 @@
 -- art paths (circular follows the theme or its own skin; square styles stay AzeriteUI),
 -- restoring everything when styling is turned off, the
 -- keybind lookup (override first, secret values ignored, no rebuild in combat), the Explorer
--- Mode proxies against the viewer's own Edit Mode opacity, the rival addon stand-down, and that
+-- Mode proxies against the viewer's own Edit Mode opacity, the proc glow drawn over the border
+-- (ActionButtonSpellAlerts.lua parents it to the item, one level up), the rival addon stand-down, and that
 -- nothing is written into Blizzard's frame tables.
 -- Plain Lua 5.1. It does not render, and it cannot show taint; the in-game check is still owed.
 -- lua Tools/Harness/cooldown_manager_harness.lua . [mutation]
@@ -201,7 +202,8 @@ _G.C_Timer = { After = function(_, fn) timers[#timers + 1] = fn end }
 local function RunTimers() local list = timers; timers = {}; for _, fn in ipairs(list) do fn() end end
 _G.InCombatLockdown = function() return inCombat end
 _G.UIParent = NewFrame("Frame")
-_G.CreateFrame = function(kind, _, parent) local f = NewFrame(kind); f.parent = parent; return f end
+local frameLogAll = {}
+_G.CreateFrame = function(kind, _, parent) local f = NewFrame(kind); f.parent = parent; frameLogAll[#frameLogAll + 1] = f; return f end
 _G.Enum = { EditModeCooldownViewerSetting = { Opacity = 7 } }
 local SECRET = setmetatable({}, { __tostring = function() return "secret" end })
 _G.issecretvalue = function(v) return v == SECRET end
@@ -286,6 +288,8 @@ local function Load()
 		source = source:gsub("viewer:SetAlpha%(GetOpacity%(viewer%) %* alpha%)", "viewer:SetAlpha(alpha)")
 	elseif (mutation == "rebuild-in-combat") then
 		source = source:gsub("if %(InCombatLockdown%(%)%) then", "if (false) then")
+	elseif (mutation == "glow-under") then
+		source = source:gsub("alert:SetFrameLevel%(skin.decor:GetFrameLevel%(%) %+ 1%)", "")
 	elseif (mutation == "writes-blizzard") then
 		source = source:gsub("skins%[item%] = skin\n", "skins[item] = skin\n\titem.__AzeriteUI = true\n")
 	end
@@ -319,6 +323,17 @@ local essential = viewers.EssentialCooldownViewer
 Data(essential.active[1]).cooldownInfo = { spellID = 100 }
 Data(essential.active[2]).cooldownInfo = { spellID = 999, overrideSpellID = 200 }
 
+-- Blizzard's spell alert manager: the glow frame is created on first show, a child of the
+-- item one level above it (ActionButtonSpellAlerts.lua GetAlertFrame).
+_G.ActionButtonSpellAlertManager = {
+	ShowAlert = function(_, button)
+		local d = Data(button)
+		d.SpellActivationAlert = d.SpellActivationAlert or NewFrame("Frame", { level = button:GetFrameLevel() + 1 })
+	end
+}
+-- An item already glowing when the module loads.
+ActionButtonSpellAlertManager:ShowAlert(essential.active[2])
+
 local M = Load()
 M:OnEnable()
 check(fonts[11].configured and not fonts[10].configured, "font model matches shipped 11px and missing 10px outlined families")
@@ -349,6 +364,16 @@ check(found ~= "themed", "no class theme art on the square styles")
 local later = essential:Acquire()
 check(Mask(later).texture == Assets("actionbutton-mask-square-rounded"), "a newly acquired item is styled")
 
+-- The proc glow: over the border, under the counts, on items glowing before and after styling.
+local function DecorOf(it)
+	for _, f in ipairs(frameLogAll) do if f.parent == it and f.kind == "Frame" and f.regions[1] then return f end end
+end
+local glowing = Data(essential.active[2])
+check(glowing.SpellActivationAlert.level > DecorOf(essential.active[2]).level, "a glow shown before styling is lifted over the border")
+ActionButtonSpellAlertManager:ShowAlert(item)
+check(data.SpellActivationAlert.level > DecorOf(item).level, "a glow shown after styling is lifted over the border")
+check(data.ChargeCount.level > data.SpellActivationAlert.level, "charges stay over the glow")
+
 -- Tracked Bars.
 local barItem = viewers.BuffBarCooldownViewer.active[1]
 local barData = Data(barItem)
@@ -374,6 +399,7 @@ check(data.Cooldown.countdownFont == "GameFontHighlightHugeOutline", "and the co
 check(data.ChargeCount.Current.fontObject == "NumberFontNormal", "and the charge font")
 check(not (data.OutOfRange.masks and data.OutOfRange.masks[Mask(item)]), "and the out of range shade's mask")
 check(barData.Bar.barTexture.atlas == "UI-HUD-CoolDownManager-Bar" and barData.Bar.BarBG.alpha == 1, "and the bar")
+check(data.SpellActivationAlert.level == data.level + 1, "and the glow's level")
 local buffData = Data(viewers.BuffIconCooldownViewer.active[1])
 check(buffData.Cooldown.countdownString.fontPath == "Fonts\\FRIZQT__.TTF", "a countdown without a named font gets its font back")
 

@@ -10,6 +10,21 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.16.2-JuNNeZ (2026-10-05) - Proc Glow and Explorer Mode Fixes
+
+### Highlights
+
+- **Proc glows show on top of Cooldown Manager buttons again.** With the Cooldown Manager styled, Blizzard's proc glow drew behind the AzeriteUI border. It now sits over the border, with charges and stacks still readable on top.
+- **Explorer Mode fades out again after combat.** On mana classes and Druids, the action bars and other faded elements could stay visible after a fight until `/reload`. In combat the game hides current mana from addons, and that hidden value was being treated as low mana. With mana full, nothing cleared it afterwards. Hidden mana now counts as unknown, and health and mana are checked again when combat ends.
+
+### Development
+
+- Traced both problems through Blizzard's own code: the proc glow is created on first use, one frame level above the button, and current and maximum mana are hidden under separate rules. The Cooldown Manager regression test now covers the glow sitting above the border, both for glows that existed before styling and ones created after, and its removal when styling is turned off.
+
+### Access and known limits
+
+- Verified offline only; live confirmation on Retail and Forever is still owed.
+
 ## 5.16.1-JuNNeZ (2026-10-05) - Cooldown Manager Font Fix
 
 ### Highlights

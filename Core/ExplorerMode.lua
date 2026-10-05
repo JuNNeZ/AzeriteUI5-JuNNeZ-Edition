@@ -477,9 +477,11 @@ ExplorerMode.CheckPower = function(self)
 	if (powerType == "MANA") then
 		local min = UnitPower("player", POWER_TYPE_MANA) or 0
 		local max = UnitPowerMax("player", POWER_TYPE_MANA) or 0
-		-- Guard against secret values (WoW 12+)
+		-- Secret in combat (WoW 12+). Unknown is not low: treating it as empty
+		-- latched lowPower, and with full mana no power event clears it after combat.
 		if issecretvalue(min) or issecretvalue(max) then
-			min = 0
+			self.lowPower = nil
+			return
 		end
 		if (max > 0) and (min/max < self.db.profile.fadeThresholdMana) then
 			self.lowPower = true
@@ -496,9 +498,10 @@ ExplorerMode.CheckPower = function(self)
 		if (playerClass == "DRUID") then
 			local min = UnitPower("player", POWER_TYPE_MANA) or 0
 			local max = UnitPowerMax("player", POWER_TYPE_MANA) or 0
-			-- Guard against secret values (WoW 12+)
+			-- Secret in combat (WoW 12+); see above.
 			if issecretvalue(min) or issecretvalue(max) then
-				min = 0
+				self.lowPower = nil
+				return
 			end
 			if (max > 0) and (min/max < self.db.profile.fadeThresholdManaInForms) then
 				self.lowPower = true
@@ -682,6 +685,11 @@ ExplorerMode.OnEvent = function(self, event, ...)
 
 	elseif (event == "PLAYER_REGEN_ENABLED") then
 		self.inCombat = false
+
+		-- Health and power were secret or stale in combat, and at full neither
+		-- fires another event, so read them again now.
+		self:CheckHealth()
+		self:CheckPower()
 
 		if (self.db.profile.delayOnCombatEnd > 0) then
 			self:SetTimedForcedState(self.db.profile.delayOnCombatEnd)

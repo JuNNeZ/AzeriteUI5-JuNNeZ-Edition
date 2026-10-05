@@ -86,7 +86,7 @@ local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
 
--- GLOBALS: C_Timer, CreateFrame, Enum, InCombatLockdown, UIParent, hooksecurefunc, issecretvalue
+-- GLOBALS: ActionButtonSpellAlertManager, C_Timer, CreateFrame, Enum, InCombatLockdown, UIParent, hooksecurefunc, issecretvalue
 
 local VIEWERS = {
 	"EssentialCooldownViewer",
@@ -336,10 +336,11 @@ local GetSkin = function(item, viewerName)
 		skin.key = key
 	end
 
-	-- Blizzard's count frames sit at the cooldown's level; lift them over the border.
+	-- Blizzard's count frames sit at the cooldown's level; lift them over the
+	-- border and the proc glow (LiftAlert puts that at the border's level + 1).
 	for _, frame in ipairs({ item.ChargeCount, item.Applications, item.DebuffBorder }) do
 		if (IsUsable(frame) and frame.SetFrameLevel) then
-			frame:SetFrameLevel(decor:GetFrameLevel() + 1)
+			frame:SetFrameLevel(decor:GetFrameLevel() + 2)
 		end
 	end
 
@@ -378,6 +379,25 @@ local RestoreTexts = function(skin)
 			fontString:SetTextColor(color[1], color[2], color[3], color[4] or 1)
 		end
 		skin.fonts[fontString] = nil
+	end
+end
+
+-- Blizzard's proc glow (ActionButtonSpellAlerts.lua) is a child of the item,
+-- one level above it, so the border would draw over it. Put it over the border.
+-- Icons only: a Tracked Bars item's glow would cover its whole bar.
+local LiftAlert = function(skin)
+	if (skin.bar) then return end
+	local alert = skin.item.SpellActivationAlert
+	if (IsUsable(alert) and alert.SetFrameLevel) then
+		alert:SetFrameLevel(skin.decor:GetFrameLevel() + 1)
+	end
+end
+
+local DropAlert = function(skin)
+	if (skin.bar) then return end
+	local alert = skin.item.SpellActivationAlert
+	if (IsUsable(alert) and alert.SetFrameLevel) then
+		alert:SetFrameLevel(skin.item:GetFrameLevel() + 1)
 	end
 end
 
@@ -483,6 +503,8 @@ local ApplySkin = function(skin, style, showKeys, skinKey)
 		skin.key:SetShown(showKeys and true or false)
 	end
 
+	LiftAlert(skin)
+
 	skin.applied = true
 end
 
@@ -544,6 +566,8 @@ local RevertSkin = function(skin)
 			skin.barBackdrop:Hide()
 		end
 	end
+
+	DropAlert(skin)
 
 	skin.backdrop:Hide()
 	skin.decor:Hide()
@@ -761,6 +785,16 @@ CooldownManager.OnEnable = function(self)
 
 	for _, viewerName in ipairs(VIEWERS) do
 		self:HookViewer(viewerName)
+	end
+
+	-- The glow frame is created on its first show, after the item was styled.
+	local alerts = ActionButtonSpellAlertManager
+	if (type(alerts) == "table" and type(alerts.ShowAlert) == "function" and not self.alertHooked) then
+		self.alertHooked = true
+		hooksecurefunc(alerts, "ShowAlert", function(_, button)
+			local skin = button and skins[button]
+			if (skin and skin.applied) then LiftAlert(skin) end
+		end)
 	end
 
 	for _, event in ipairs({
