@@ -10,6 +10,22 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.16.3-JuNNeZ (2026-10-05) - Explorer Mode and Cooldown Manager Follow-ups
+
+### Highlights
+
+- **Explorer Mode no longer stays visible after combat because of old health readings.** 5.16.2 fixed this for mana; health could do the same. In combat the game hides health from addons, so AzeriteUI fell back on the last value the player frame could read. After the fight that value could still look low even at full health, and no further health update came to correct it. Explorer Mode now asks the game directly whenever it can.
+- **Tracked Buffs stack counts show above the Cooldown Manager border.** Since 5.16.0, the stack numbers and debuff border on Tracked Buffs icons were drawn under the AzeriteUI border.
+- **Blizzard's pandemic effect on Tracked Buffs icons shows above the border**, like the proc glow fix in 5.16.2.
+
+### Development
+
+- An audit of the 5.16.2 fixes found these three. The Cooldown Manager regression test now also covers the pandemic effect, the Tracked Buffs counts and border, and putting them back when styling is turned off. Offline tests of the Explorer Mode health and mana checks pass.
+
+### Access and known limits
+
+- Verified offline only; live confirmation on Retail and Forever is still owed.
+
 ## 5.16.2-JuNNeZ (2026-10-05) - Proc Glow and Explorer Mode Fixes
 
 ### Highlights
@@ -19,7 +35,7 @@ Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead wit
 
 ### Development
 
-- Traced both problems through Blizzard's own code: the proc glow is created on first use, one frame level above the button, and current and maximum mana are hidden under separate rules. The Cooldown Manager regression test now covers the glow sitting above the border, both for glows that existed before styling and ones created after, and its removal when styling is turned off.
+- Traced both problems through Blizzard's own code: the proc glow is created on first use, one frame level above the button, and current and maximum mana are hidden under separate rules. The Cooldown Manager regression test now covers the glow sitting above the border, both for glows that existed before styling and ones created after, and that it goes back to Blizzard's layer when styling is turned off.
 
 ### Access and known limits
 

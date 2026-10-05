@@ -338,7 +338,9 @@ local GetSkin = function(item, viewerName)
 
 	-- Blizzard's count frames sit at the cooldown's level; lift them over the
 	-- border and the proc glow (LiftAlert puts that at the border's level + 1).
-	for _, frame in ipairs({ item.ChargeCount, item.Applications, item.DebuffBorder }) do
+	-- Each item has only some of these, so no ipairs over a list with holes.
+	for _, key in ipairs({ "ChargeCount", "Applications", "DebuffBorder" }) do
+		local frame = item[key]
 		if (IsUsable(frame) and frame.SetFrameLevel) then
 			frame:SetFrameLevel(decor:GetFrameLevel() + 2)
 		end
@@ -382,22 +384,28 @@ local RestoreTexts = function(skin)
 	end
 end
 
--- Blizzard's proc glow (ActionButtonSpellAlerts.lua) is a child of the item,
--- one level above it, so the border would draw over it. Put it over the border.
--- Icons only: a Tracked Bars item's glow would cover its whole bar.
+-- Blizzard's proc glow (ActionButtonSpellAlerts.lua) and pandemic effect
+-- (CooldownViewer.lua SetupPandemicStateFrameForItem) are children of the
+-- item, one level above it, so the border would draw over them. Put them over
+-- the border. Icons only: Blizzard already lifts a Tracked Bars item's
+-- pandemic frame over its bar, and bar items never glow.
+local LiftEffect = function(skin, frame)
+	if (skin.bar or not IsUsable(frame) or not frame.SetFrameLevel) then return end
+	frame:SetFrameLevel(skin.decor:GetFrameLevel() + 1)
+end
+
 local LiftAlert = function(skin)
-	if (skin.bar) then return end
-	local alert = skin.item.SpellActivationAlert
-	if (IsUsable(alert) and alert.SetFrameLevel) then
-		alert:SetFrameLevel(skin.decor:GetFrameLevel() + 1)
-	end
+	LiftEffect(skin, skin.item.SpellActivationAlert)
+	LiftEffect(skin, skin.item.PandemicIcon)
 end
 
 local DropAlert = function(skin)
 	if (skin.bar) then return end
-	local alert = skin.item.SpellActivationAlert
-	if (IsUsable(alert) and alert.SetFrameLevel) then
-		alert:SetFrameLevel(skin.item:GetFrameLevel() + 1)
+	for _, key in ipairs({ "SpellActivationAlert", "PandemicIcon" }) do
+		local frame = skin.item[key]
+		if (IsUsable(frame) and frame.SetFrameLevel) then
+			frame:SetFrameLevel(skin.item:GetFrameLevel() + 1)
+		end
 	end
 end
 
@@ -665,6 +673,14 @@ CooldownManager.HookViewer = function(self, viewerName)
 	end
 	if (type(viewer.UpdateSystemSettingOpacity) == "function") then
 		hooksecurefunc(viewer, "UpdateSystemSettingOpacity", function() self:ApplyFade(viewer) end)
+	end
+	-- The pandemic frame comes from a pool and is parented here, before the
+	-- item stores it, so it is lifted when anchored.
+	if (type(viewer.AnchorPandemicStateFrame) == "function") then
+		hooksecurefunc(viewer, "AnchorPandemicStateFrame", function(_, frame, item)
+			local skin = item and skins[item]
+			if (skin and skin.applied) then LiftEffect(skin, frame) end
+		end)
 	end
 end
 

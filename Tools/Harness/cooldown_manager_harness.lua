@@ -5,8 +5,8 @@
 -- art paths (circular follows the theme or its own skin; square styles stay AzeriteUI),
 -- restoring everything when styling is turned off, the
 -- keybind lookup (override first, secret values ignored, no rebuild in combat), the Explorer
--- Mode proxies against the viewer's own Edit Mode opacity, the proc glow drawn over the border
--- (ActionButtonSpellAlerts.lua parents it to the item, one level up), the rival addon stand-down, and that
+-- Mode proxies against the viewer's own Edit Mode opacity, the proc glow and pandemic effect drawn
+-- over the border (Blizzard parents both to the item, one level up), the rival addon stand-down, and that
 -- nothing is written into Blizzard's frame tables.
 -- Plain Lua 5.1. It does not render, and it cannot show taint; the in-game check is still owed.
 -- lua Tools/Harness/cooldown_manager_harness.lua . [mutation]
@@ -178,6 +178,14 @@ local function NewViewer(name, count)
 	viewer.active = active
 	viewer.OnAcquireItemFrame = function() end
 	viewer.RefreshData = function() end
+	viewer.AnchorPandemicStateFrame = function() end
+	-- CooldownViewer.lua: pooled frame parented to the item, anchored, then stored on it.
+	viewer.ShowPandemic = function(self, item)
+		local frame = NewFrame("Frame", { level = item:GetFrameLevel() + 1 })
+		self:AnchorPandemicStateFrame(frame, item)
+		Data(item).PandemicIcon = frame
+		return frame
+	end
 	viewer.UpdateSystemSettingOpacity = function(self) self:SetAlpha(self.opacity / 100) end
 	viewer.GetSettingValue = function(self, setting) assert(setting == 7, "asks for the opacity setting"); return self.opacity end
 	viewer.Acquire = function(self)
@@ -289,7 +297,9 @@ local function Load()
 	elseif (mutation == "rebuild-in-combat") then
 		source = source:gsub("if %(InCombatLockdown%(%)%) then", "if (false) then")
 	elseif (mutation == "glow-under") then
-		source = source:gsub("alert:SetFrameLevel%(skin.decor:GetFrameLevel%(%) %+ 1%)", "")
+		source = source:gsub("LiftEffect%(skin, skin.item.SpellActivationAlert%)", "")
+	elseif (mutation == "pandemic-under") then
+		source = source:gsub("if %(skin and skin.applied%) then LiftEffect%(skin, frame%) end", "")
 	elseif (mutation == "writes-blizzard") then
 		source = source:gsub("skins%[item%] = skin\n", "skins[item] = skin\n\titem.__AzeriteUI = true\n")
 	end
@@ -373,6 +383,12 @@ check(glowing.SpellActivationAlert.level > DecorOf(essential.active[2]).level, "
 ActionButtonSpellAlertManager:ShowAlert(item)
 check(data.SpellActivationAlert.level > DecorOf(item).level, "a glow shown after styling is lifted over the border")
 check(data.ChargeCount.level > data.SpellActivationAlert.level, "charges stay over the glow")
+local buffIcon = viewers.BuffIconCooldownViewer.active[1]
+local pandemic = viewers.BuffIconCooldownViewer:ShowPandemic(buffIcon)
+check(pandemic.level > DecorOf(buffIcon).level, "a pandemic effect is lifted over the border")
+check(Data(buffIcon).Applications.level > pandemic.level, "stacks stay over the pandemic effect")
+check(Data(buffIcon).Applications.level > DecorOf(buffIcon).level, "Tracked Buffs stacks are over the border (item has no ChargeCount)")
+check(Data(buffIcon).DebuffBorder.level > DecorOf(buffIcon).level, "and its debuff border")
 
 -- Tracked Bars.
 local barItem = viewers.BuffBarCooldownViewer.active[1]
@@ -400,6 +416,7 @@ check(data.ChargeCount.Current.fontObject == "NumberFontNormal", "and the charge
 check(not (data.OutOfRange.masks and data.OutOfRange.masks[Mask(item)]), "and the out of range shade's mask")
 check(barData.Bar.barTexture.atlas == "UI-HUD-CoolDownManager-Bar" and barData.Bar.BarBG.alpha == 1, "and the bar")
 check(data.SpellActivationAlert.level == data.level + 1, "and the glow's level")
+check(pandemic.level == Data(buffIcon).level + 1, "and the pandemic effect's level")
 local buffData = Data(viewers.BuffIconCooldownViewer.active[1])
 check(buffData.Cooldown.countdownString.fontPath == "Fonts\\FRIZQT__.TTF", "a countdown without a named font gets its font back")
 

@@ -440,6 +440,13 @@ end
 ExplorerMode.CheckHealth = function(self)
 	local min = UnitHealth("player") or 0
 	local max = UnitHealthMax("player") or 0
+	-- The game's answer wins whenever it is readable. The frame keeps its last
+	-- readable value through secret stretches, so after combat it can be stale,
+	-- and at full health no further event would correct it.
+	if not (issecretvalue and (issecretvalue(min) or issecretvalue(max))) then
+		self.lowHealth = (max > 0) and (min/max < self.db.profile.fadeThresholdHealth) or nil
+		return
+	end
 	local frame
 	local playerFrameAlternate = ns:GetModule("PlayerFrameAlternate", true)
 	if (playerFrameAlternate and playerFrameAlternate.IsEnabled and playerFrameAlternate:IsEnabled() and playerFrameAlternate.GetFrame) then
