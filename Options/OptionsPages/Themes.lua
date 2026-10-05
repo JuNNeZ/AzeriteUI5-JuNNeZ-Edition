@@ -256,13 +256,14 @@ local GenerateMage = function(order)
 				order = 1,
 				type = "select", width = "full",
 				values = {
+					auto = L["Follow specialization"],
 					arcane = _G.STRING_SCHOOL_ARCANE or "Arcane",
 					fire = _G.STRING_SCHOOL_FIRE or "Fire",
 					frost = _G.STRING_SCHOOL_FROST or "Frost"
 				},
-				sorting = { "arcane", "fire", "frost" },
+				sorting = { "auto", "arcane", "fire", "frost" },
 				set = function(info, val) Mage:Command(val) end,
-				get = function(info) return Mage:GetSchool() end
+				get = function(info) return Mage:GetSchoolChoice() end
 			},
 			flow = {
 				name = L["Moving energy"],
@@ -276,6 +277,11 @@ local GenerateMage = function(order)
 				set = function(info, val) Mage:Command(val and "flow" or "static") end,
 				get = function(info) return ns.db.char.mageCrystalFlow ~= false end
 			},
+			strength = {name=L["Energy strength"],order=2.1,type="range",width="full",min=0,max=1,step=.05,isPercent=true,
+				get=function() return Mage:GetEffectStrength() end,set=function(_,v) Mage:SetEffectStrength(v) end},
+			particles = {name=L["Energy particles"],order=2.2,type="toggle",width="full",
+				disabled=function() return not Mage.EnergyAvailable or ns.db.char.mageCrystalFlow==false end,
+				get=function() return ns.db.char.mageCrystalParticles~=false end,set=function(_,v) Mage:SetParticles(v) end},
 			speed = {
 				name = L["Animation speed"],
 				desc = L["How fast the selected school's energy moves. 100% is an eight-second loop."],
@@ -290,11 +296,28 @@ local GenerateMage = function(order)
 	}
 end
 
+local GenerateTests = function()
+	local P=ns.ThemeBarPreview
+	if (not P) then return end
+	return {name=L["Bar tests"],type="group",inline=true,order=40,disabled=InCombatLockdown,args={
+		kind={name=L["Bar variant"],type="select",width="full",order=1,values=function() return P:GetChoices() end,
+			get=function() return P.kind end,set=function(_,v) P:Set("kind",v) end},
+		fill={name=L["Test fill"],type="range",width="full",order=2,min=0,max=1,step=.05,isPercent=true,
+			get=function() return P.fraction end,set=function(_,v) P:Set("fraction",v) end,disabled=function() return InCombatLockdown() or P.animate end},
+		animate={name=L["Cycle test fill"],type="toggle",width="full",order=3,get=function() return P.animate end,set=function(_,v) P:Set("animate",v) end},
+		protected={name=L["Protected cast"],type="toggle",width="full",order=4,hidden=function() return P.kind~="cast" end,
+			get=function() return P.protected end,set=function(_,v) P:Set("protected",v) end},
+		show={name=L["Open bar preview"],type="execute",order=5,func=function() P:Show() end},
+		close={name=L["Close bar preview"],type="execute",order=6,func=function() if (P.window) then P.window:Hide() end end}
+	}}
+end
+
 local GenerateOptions = function()
 	if (not Effects()) then return end
 	local options = {
 		name = L["Themes"],
 		type = "group",
+		disabled = InCombatLockdown,
 		args = {
 			description = {
 				name = L["Class artwork drawn over AzeriteUI's own frames. One theme shows at a time, and every setting here is saved per character."],
@@ -362,7 +385,8 @@ local GenerateOptions = function()
 			hunter = GenerateHunter(10),
 			paladin = GeneratePaladin(20),
 			mageTheme = GenerateMageTheme(25),
-			mage = GenerateMage(30)
+			mage = GenerateMage(30),
+			tests = GenerateTests()
 		}
 	}
 	return options

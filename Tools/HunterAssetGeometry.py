@@ -9,6 +9,16 @@ import hashlib
 from PIL import Image, ImageDraw, ImageChops
 
 
+def pet_fill_material(root, alpha):
+    """Pack the same neutral health faceting into the existing pet contour."""
+    original = Image.open(root/'Assets/hp_cap_bar.tga').convert('RGBA')
+    w, h = original.size
+    material = original.crop((round(w*.12), round(h*.1), round(w*.88), round(h*.72)))
+    material = material.resize(alpha.size, Image.Resampling.LANCZOS)
+    material.putalpha(alpha)
+    return material
+
+
 def extend_assets(root, manifest, mapping, read, halo, opening, sampling, nine_slice):
     out = root / 'Assets/Hunter'
     src = root / 'Docs/Research_Assets/Hunter/Production/v1'
@@ -125,9 +135,9 @@ def extend_assets(root, manifest, mapping, read, halo, opening, sampling, nine_s
     save('pet-case',add_glass(pet,(round(pet.width*.86),pet.height//2)).resize((1024,512),sampling),'connected pet concept')
     # Pet uses cast_bar prediction semantics, but its own contour. Separate path
     # is recognized as cast_bar by the addon prediction renderer.
-    petfill=read(out/'cast_bar.tga')
-    petfill.putalpha(petmask.crop(pb).resize(petfill.size,sampling))
-    save('pet-fill',petfill,'connected pet opening',True)
+    petalpha=petmask.crop(pb).resize(read(out/'cast_bar.tga').size,sampling)
+    petfill=pet_fill_material(root,petalpha)
+    save('pet-fill',petfill,'connected pet opening + original neutral health faceting',True)
     for suffix in ('-absorb','-healabsorb'):
         pattern=read(out/('cast_bar'+suffix+'.tga'))
         pattern.putalpha(ImageChops.multiply(pattern.getchannel('A'),petfill.getchannel('A')))

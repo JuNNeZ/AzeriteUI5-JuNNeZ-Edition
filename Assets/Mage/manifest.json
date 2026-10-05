@@ -1,0 +1,268 @@
+{
+  "theme": "Mage / The Tirisgarde",
+  "capRevision": 14,
+  "date": "2026-10-05",
+  "geometry": "Native canvases, original alpha, aperture and padding; geometry owned by original layouts.",
+  "status": "46 runtime textures. Dedicated compact Atiesh cast head, minimap compass and pet seal wired. Border inlays intentionally excluded. Mage orb interiors remain draft. Live Retail/Forever ornament fitting pending.",
+  "assets": [
+    {
+      "path": "Assets/Mage/actionbutton-border.tga",
+      "sha256": "4b9edf1279616e35dff0f7c6304ff4b8d894eabc0f3c8b68649b33fdb7bfb04d",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/badge-eye.tga",
+      "sha256": "8870c24c7a000cd54d40874703605de899fff0f174e428438cbffbe123c7307c",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/badge-fire.tga",
+      "sha256": "85510d08186ca29a9e0104fe45e8fa941875074ce8d51b9988782da94fed5f3d",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/badge-frost.tga",
+      "sha256": "c537ba8632528d464591d83d828ed56ef658a3412c5b27f6cc16e6b4e2338c39",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/badge-water-elemental.tga",
+      "sha256": "c2f70e7e7cf6d6673660f578148d3e254ae0b181dca020c20dd58a12ce751abf",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/better-blizzard-border-small-alternate.tga",
+      "sha256": "2d08039060d6f2091841f2afd51a20c6fe50385639a5539851e972b291ad74e9",
+      "bytes": 131090
+    },
+    {
+      "path": "Assets/Mage/border-aura.tga",
+      "sha256": "6265e6fbb05d4a1108fee57aa8b0add43776cb5af49da98810fb203cca6326f3",
+      "bytes": 32786
+    },
+    {
+      "path": "Assets/Mage/border-tooltip.tga",
+      "sha256": "5c4d68dba23c62a63226c88f983d98a9c5ad8584240eed5dc646227abebf2498",
+      "bytes": 131090
+    },
+    {
+      "path": "Assets/Mage/cast-head-atiesh.tga",
+      "sha256": "a44ae4c9758f3f3f122e3171e9534cc44c514e00a6672688a823b663031c0529",
+      "bytes": 262188
+    },
+    {
+      "path": "Assets/Mage/cast_back.tga",
+      "sha256": "1d111ff718cdf246b5327d2c2304d9161a163ea42136439f4e5cd3c87d712583",
+      "bytes": 131090
+    },
+    {
+      "path": "Assets/Mage/cast_back_spiked.tga",
+      "sha256": "e8d0fadebbcd4bf7c873582f6b5c6b31599f4cd2e298166ff98c37dc4bcb3fa8",
+      "bytes": 131090
+    },
+    {
+      "path": "Assets/Mage/cast_back_wooden.tga",
+      "sha256": "2f0a6e43801cab061045476696fe0ba88d59117ac96a89e7cd9a89fb067ea34e",
+      "bytes": 131090
+    },
+    {
+      "path": "Assets/Mage/config_button.tga",
+      "sha256": "77dcca0607ceba01f6c0ef2573ba95633c562d4c5e08f53e5c85f2942542459b",
+      "bytes": 65554
+    },
+    {
+      "path": "Assets/Mage/config_button_bright.tga",
+      "sha256": "dcde8ac52dd5c6bcb69a258662cbbb608e275c38db913235f201320d32453107",
+      "bytes": 65554
+    },
+    {
+      "path": "Assets/Mage/hp_boss_case.tga",
+      "sha256": "4e8e059398a3eabf8fc36d22a3e2f8b334ad9212882f92a0616ef6cf0475185a",
+      "bytes": 1048594
+    },
+    {
+      "path": "Assets/Mage/hp_cap_case.tga",
+      "sha256": "1d5f6b252b5796f351f132aeff5d0804cab0d9ef0046ccfa0ae220cf9a3e61f2",
+      "bytes": 1048594
+    },
+    {
+      "path": "Assets/Mage/hp_critter_case.tga",
+      "sha256": "95cea7a1ca5076fd558f51dc2f2bdcbb3460c551c4d1969c539de1d8f22be389",
+      "bytes": 65554
+    },
+    {
+      "path": "Assets/Mage/hp_critter_case_hi.tga",
+      "sha256": "b8a7160c5e5d37f233df12a684508b54fe961e5becaabe567d22489790ddcc74",
+      "bytes": 65554
+    },
+    {
+      "path": "Assets/Mage/hp_low_case.tga",
+      "sha256": "b9262fe2c8811096a687ce61b6a66577baa440a45208178f2f6976953e8180ac",
+      "bytes": 1048594
+    },
+    {
+      "path": "Assets/Mage/hp_mid_case.tga",
+      "sha256": "01e547ae994e5507477137d8bd512c892d0fc5be0d89a835d1bf1ea44057d640",
+      "bytes": 1048594
+    },
+    {
+      "path": "Assets/Mage/icon_exit_flight.tga",
+      "sha256": "c6f9d636ef58c40c39b396c6ef2ba2ef6901bf0af9dc346b33685e2529574d56",
+      "bytes": 65554
+    },
+    {
+      "path": "Assets/Mage/minimap-border.tga",
+      "sha256": "0f48453350cfe78a04ccab42e3f6a153f7db292a2f7794d6676258503d02422c",
+      "bytes": 1048594
+    },
+    {
+      "path": "Assets/Mage/minimap-north.tga",
+      "sha256": "3e63eb6fc3609c42ecd7a1559b5d372298fa23b4a579a938a8652763d72008f2",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/minimap-onebar-backdrop.tga",
+      "sha256": "2e73f676c49c454563443d319a2c275f0ce478a16dda14a45f9c273f192764c3",
+      "bytes": 1048594
+    },
+    {
+      "path": "Assets/Mage/minimap-twobars-backdrop.tga",
+      "sha256": "d394fc83e3262a50b8efe9ca6c8b0371b08fa514e154b48b954e587ddea6cc90",
+      "bytes": 1048594
+    },
+    {
+      "path": "Assets/Mage/nameplate_backdrop.tga",
+      "sha256": "2fc76cd3551dea01510fce7bb5dd4406aca79dc77ca8cdbca6bb030e3c6c1807",
+      "bytes": 65554
+    },
+    {
+      "path": "Assets/Mage/options-box.tga",
+      "sha256": "c7d62b919ba6faade7a9c9226d69ac79bb9c1c88f312c69b27a6f3c17a9e954c",
+      "bytes": 16402
+    },
+    {
+      "path": "Assets/Mage/orb-border.tga",
+      "sha256": "48ed8d43f9852d8a39b752d1dc38ef202d08fc0239395194bfd2241a0e8ce673",
+      "bytes": 1048594
+    },
+    {
+      "path": "Assets/Mage/orb_case_hi.tga",
+      "sha256": "21bc456e796f8c6eb2296b3796e7fdf925251fd4e9f2ba3a584a72c0f8f7b90d",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/orb_case_low.tga",
+      "sha256": "ba875a28b912c7082bc1725985572672ac48c6016845a5fb45fe694833d8e37f",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/ornament-aluneth-glow.tga",
+      "sha256": "74f832fb04a5345295c56fb2074fc400fd6cd42bba93c08fd3d5b1ed94c0931f",
+      "bytes": 262188
+    },
+    {
+      "path": "Assets/Mage/ornament-aluneth.tga",
+      "sha256": "6e8b7a21089ef3d2818941c489ecbe88e5bca0dc82b0c1598ce5e0cb1e3bfae3",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/ornament-atiesh-glow.tga",
+      "sha256": "0a675bff259fc8b8693f77d1b71ca5c26460c982e7ef79682b82c136effc1f53",
+      "bytes": 262188
+    },
+    {
+      "path": "Assets/Mage/ornament-atiesh.tga",
+      "sha256": "bfb0d649852ac0fbf460021bc7293a0942186bdc8a87396e52ce794338d2db19",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/ornament-dragonwrath-glow.tga",
+      "sha256": "38a5cdc343fbe39b8ea6e3fd79b4853b1f87ad263c8de598a91abd87c7d86da1",
+      "bytes": 262188
+    },
+    {
+      "path": "Assets/Mage/ornament-dragonwrath.tga",
+      "sha256": "4582c72076e5fd6510a4292b006a2fd4a88fbeb78efab4e668d543db1b9b7b3e",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/ornament-ebonchill-glow.tga",
+      "sha256": "ee5bffe3c4607a2ac058fb5a15559e92534c26894039965059471265162e1074",
+      "bytes": 262188
+    },
+    {
+      "path": "Assets/Mage/ornament-ebonchill.tga",
+      "sha256": "0a1fd1383121651d16e3edbddff8d9a383efffab3f595af224ccfe1c7c4dc59e",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/ornament-felomelorn-glow.tga",
+      "sha256": "86376f3e4a3a3535a001694b31d5825c36dd3aebab11e3ef00fc0f910ade8567",
+      "bytes": 262188
+    },
+    {
+      "path": "Assets/Mage/ornament-felomelorn.tga",
+      "sha256": "ae30e6dab59e2f10a27ea3ebb7a5c445a3ad22de606d4802cc0c96f52fdf9e70",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/party_portrait_border.tga",
+      "sha256": "8622a94bab2401f1684734fe0b134a1e237f7b0b313240bfa30d03fde9ddf685",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/point_plate.tga",
+      "sha256": "eabc860fa5fc67cf53090f16fda2ff3e23d7fe24a0011300f7c7e2a6781d38af",
+      "bytes": 65554
+    },
+    {
+      "path": "Assets/Mage/portrait_frame_hi.tga",
+      "sha256": "81f240eb1c0dcd3bb5faed9711fa366817ee85bf0aeb1ee65bab5908f495c232",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/portrait_frame_lo.tga",
+      "sha256": "8e38f45c7aa8b9c04fddba59bdfd94105a944767f7c81348fcfc5cf82ff827b8",
+      "bytes": 262162
+    },
+    {
+      "path": "Assets/Mage/pw_crystal_case.tga",
+      "sha256": "7602d7196d2988d4820a06ddd0fdbfdd9a26430de7ee500f64d515e02c7ab6fc",
+      "bytes": 131090
+    },
+    {
+      "path": "Assets/Mage/pw_crystal_case_low.tga",
+      "sha256": "556ae2c487cd91d1febaec41db040ce05fce4cb42a7d01faffe9ffa4f73135ef",
+      "bytes": 131090
+    }
+  ],
+  "sourcePack": "Assets_Draft/Mage-Complete-Assets-v12/manifest.json",
+  "newCapProvenance": "Built-in imagegen, generated source registered uniformly to native bounds; original alpha retained.",
+  "ornamentRevision": 15,
+  "ornamentSlots": {
+    "castHead": {
+      "canvas": [
+        256,
+        256
+      ],
+      "size": 48,
+      "anchor": "CENTER / cast LEFT",
+      "offset": [
+        -26,
+        0
+      ]
+    },
+    "petBadge": {
+      "size": 32,
+      "anchor": "RIGHT / Health LEFT",
+      "offset": [
+        -2,
+        0
+      ]
+    },
+    "north": {
+      "size": 32,
+      "anchor": "CENTER / compass north"
+    }
+  }
+}

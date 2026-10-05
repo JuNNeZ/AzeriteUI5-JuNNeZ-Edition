@@ -34,12 +34,12 @@
     },
     {
       "path": "Assets/MageCrystalTest/pw_crystal_case.tga",
-      "sha256": "db71d59a249f4c1b45f5d366b157fbab20c3194bb9187159e63ad6253754759a",
+      "sha256": "7602d7196d2988d4820a06ddd0fdbfdd9a26430de7ee500f64d515e02c7ab6fc",
       "bytes": 131090
     },
     {
       "path": "Assets/MageCrystalTest/pw_crystal_case_low.tga",
-      "sha256": "29258685f027654ad66888566fd9bc0651df7a500a2bfc1c0b794c20a540173d",
+      "sha256": "556ae2c487cd91d1febaec41db040ce05fce4cb42a7d01faffe9ffa4f73135ef",
       "bytes": 131090
     }
   ],
@@ -116,5 +116,6 @@
     "layout": "one 2048x1024 page per school, 18 columns x 8 rows of 110x128 cells, all 128 frames",
     "crop": "PowerBarTexCoord 50,206,37,219 of 255 widened by 4 on each side: 46,210,33,223",
     "runtime": "Core/MageCrystalPreview.lua ENERGY table must match"
-  }
+  },
+  "capRevision": "14: ebon/violet and antique gold matching the full Mage theme; original alpha retained"
 }

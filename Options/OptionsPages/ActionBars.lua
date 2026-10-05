@@ -142,12 +142,23 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 			},
 			showWhileMounted = {
 				name = L["Show while mounted"],
-				desc = L["Keep this bar visible while you are mounted. Turn this off to hide it instead, which also stops you clicking its buttons by accident. Your skyriding bar is unaffected."],
+				desc = L["Keep this bar available while riding a ground mount or using steady flight. This does not control skyriding. Normal bar fading still applies; bar 1 always switches to riding abilities during skyriding."],
 				order = 4,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
 				set = function(info, val) setvisibility(info, "mounted", val) end,
 				get = function(info) return getvisibility(info, "mounted") end
+			},
+			showWhileSkyriding = {
+				name = L["Show while skyriding"],
+				desc = L["Keep this secondary bar available while skyriding, when bar 1 switches to riding abilities. Independent of Show while mounted; normal bar fading still applies. Does not change vehicle or possession visibility."],
+				order = 5,
+				type = "toggle", width = "full",
+				hidden = function(info)
+					return not ns.IsRetail or isdisabled(info) or tonumber(string_match(info[#info - 1], "(%d+)")) == 1
+				end,
+				set = function(info, val) setvisibility(info, "dragon", val) end,
+				get = function(info) return getvisibility(info, "dragon") end
 			},
 			enableBarFading = {
 				name = L["Enable Bar Fading"],
@@ -906,6 +917,71 @@ local GenerateOptions = function()
 	end
 
 	options.args["petbar"] = GenerateBarOptions("PetBar", L["Pet Bar"], 200, NUM_PET_ACTION_SLOTS)
+
+	local procDisabled = function() return getmodule().db.profile.procHighlightStyle == "off" end
+	options.args.procHighlight = {
+		name = L["Proc Highlight"], order = 70, type = "group",
+		args = {
+			description = {
+				name = L["Style ability proc alerts on all AzeriteUI action bars. Assisted combat suggestions use their own highlight. Changes apply without reloading."],
+				type = "description", fontSize = "medium", order = 0
+			},
+			procHighlightStyle = {
+				name = L["Highlight Style"], type = "select", order = 1,
+				values = { current = L["Current ring"], outline = L["Solid outline"], glow = L["Soft glow"], both = L["Outline + glow"], off = L["Off"] },
+				sorting = { "current", "outline", "glow", "both", "off" },
+				set = setter, get = getter
+			},
+			procHighlightThickness = {
+				name = L["Thickness"], type = "select", order = 2,
+				values = { thin = L["Thin"], medium = L["Medium"], thick = L["Thick"] },
+				sorting = { "thin", "medium", "thick" },
+				disabled = function() return procDisabled() or getmodule().db.profile.procHighlightStyle == "current" end,
+				set = setter, get = getter
+			},
+			procHighlightColorSource = {
+				name = L["Colour source"], type = "select", order = 3,
+				values = { gold = L["Default gold"], class = L["Class Color"], custom = L["Custom colour"] },
+				sorting = { "gold", "class", "custom" },
+				disabled = procDisabled, set = setter, get = getter
+			},
+			procHighlightColor = {
+				name = L["Custom colour"], type = "color", order = 4,
+				hidden = function() return getmodule().db.profile.procHighlightColorSource ~= "custom" end,
+				disabled = procDisabled,
+				get = function()
+					return ns.ActionBarProcHighlight.GetCustomColor(getmodule().db.profile)
+				end,
+				set = function(info, r, g, b)
+					-- Per-setting revert supplies its default as one table.
+					if (type(r) == "table") then r, g, b = r[1], r[2], r[3] end
+					getmodule().db.profile.procHighlightColor = { r, g, b }
+					getmodule():UpdateSettings()
+				end
+			},
+			procHighlightOpacity = {
+				name = L["Opacity"], type = "range", order = 5,
+				min = 0, max = 1, step = .05, isPercent = true,
+				disabled = procDisabled, set = setter, get = getter
+			},
+			preview = {
+				name = L["Preview proc highlight"], type = "execute", order = 6,
+				func = function() ns.ActionBarProcHighlight.Preview(getmodule().db.profile) end
+			},
+			reset = {
+				name = L["Reset proc highlight"], type = "execute", order = 7,
+				func = function()
+					for key, value in pairs(ns.ActionBarProcHighlight.defaults) do
+						getmodule().db.profile[key] = type(value) == "table" and ns:Copy(value) or value
+					end
+					getmodule():UpdateSettings()
+				end
+			}
+		}
+	}
+	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+		ns.OptionsKit.Defaults.Bind(options.args.procHighlight, "ActionBars")
+	end
 
 	local stanceBarOptions = GenerateBarOptions("StanceBar", L["Stance Bar"], 210, GetNumShapeshiftForms())
 

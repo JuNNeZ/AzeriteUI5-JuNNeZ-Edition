@@ -941,3 +941,39 @@ L["Which artwork AzeriteUI is drawn with. Switching theme reloads the interface.
 L["Follow the school"] = true
 L["Themes are a work in progress: their art and fit may still change between releases."] = true
 L["Work in progress: the moving energy is not in this release yet, so the crystal shows a still pattern."] = true
+
+-- Proc highlights and riding visibility.
+L["Proc Highlight"] = true
+L["Highlight Style"] = true
+L["Current ring"] = true
+L["Solid outline"] = true
+L["Soft glow"] = true
+L["Outline + glow"] = true
+L["Off"] = true
+L["Thickness"] = true
+L["Thin"] = true
+L["Medium"] = true
+L["Thick"] = true
+L["Colour source"] = true
+L["Default gold"] = true
+L["Custom colour"] = true
+L["Opacity"] = true
+L["Preview proc highlight"] = true
+L["Reset proc highlight"] = true
+L["Sample only; no ability is activated."] = true
+L["Show while skyriding"] = true
+L["Style ability proc alerts on all AzeriteUI action bars. Assisted combat suggestions use their own highlight. Changes apply without reloading."] = true
+L["Keep this bar available while riding a ground mount or using steady flight. This does not control skyriding. Normal bar fading still applies; bar 1 always switches to riding abilities during skyriding."] = true
+L["Keep this secondary bar available while skyriding, when bar 1 switches to riding abilities. Independent of Show while mounted; normal bar fading still applies. Does not change vehicle or possession visibility."] = true
+
+-- Mage resources and shared theme bar tests.
+L["Follow specialization"] = true
+L["Energy strength"] = true
+L["Energy particles"] = true
+L["Bar tests"] = true
+L["Bar variant"] = true
+L["Test fill"] = true
+L["Cycle test fill"] = true
+L["Protected cast"] = true
+L["Open bar preview"] = true
+L["Close bar preview"] = true

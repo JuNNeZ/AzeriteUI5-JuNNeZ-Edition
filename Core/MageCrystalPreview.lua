@@ -23,11 +23,32 @@ local function ClampSpeed(value)
 	return math.max(.1, math.min(2, value))
 end
 
+function Preview:GetEffectStrength()
+	local value=tonumber(ns.db.char.mageCrystalStrength)
+	return value and value==value and math.max(0,math.min(1,value)) or .7
+end
+function Preview:SetEffectStrength(value)
+	if (InCombatLockdown()) then return end
+	value=tonumber(value);if (not value or value~=value) then return end
+	ns.db.char.mageCrystalStrength=math.max(0,math.min(1,value))
+	if (ns.ThemeEffects) then ns.ThemeEffects:Refresh() end
+end
+function Preview:SetParticles(enabled)
+	if (InCombatLockdown()) then return end
+	ns.db.char.mageCrystalParticles=enabled and true or false
+	if (ns.ThemeEffects) then ns.ThemeEffects:Refresh() end
+end
+function Preview:GetSchoolChoice()
+	local char=ns.db.char
+	return (char.mageSchoolAuto==true or (char.mageSchoolAuto==nil and not char.mageCrystalSchool)) and "auto" or self:GetSchool()
+end
+
 function Preview:GetFireSpeed()
 	return self.fireSpeed or ClampSpeed(ns.db.char.mageCrystalFireSpeed)
 end
 
 function Preview:SetFireSpeed(value)
+	if (InCombatLockdown()) then return end
 	self.fireSpeed = ClampSpeed(value)
 	ns.db.char.mageCrystalFireSpeed = self.fireSpeed
 	if (self.speedHint) then
@@ -37,8 +58,17 @@ end
 
 local speedKeys = { fire = "mageCrystalFireSpeed", frost = "mageCrystalFrostSpeed", arcane = "mageCrystalArcaneSpeed" }
 function Preview:GetSchool()
-	local school = ns.db.char.mageCrystalSchool
-	return schools[school] and school or "arcane"
+	local char=ns.db.char
+	if (char.mageSchoolAuto==true or (char.mageSchoolAuto==nil and not char.mageCrystalSchool)) then
+		if (ns.PlayerClass=="MAGE") then
+			local get=(C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
+			local info=(C_SpecializationInfo and C_SpecializationInfo.GetSpecializationInfo) or GetSpecializationInfo
+			local index=get and get();local id=index and info and info(index)
+			local school=({[62]="arcane",[63]="fire",[64]="frost"})[id]
+			if (school) then return school end
+		end
+	end
+	return schools[char.mageCrystalSchool] and char.mageCrystalSchool or "arcane"
 end
 function Preview:GetSchoolSpeed(school)
 	school = school or self:GetSchool()
@@ -46,6 +76,7 @@ function Preview:GetSchoolSpeed(school)
 	return ClampSpeed(ns.db.char[speedKeys[school]])
 end
 function Preview:SetSchoolSpeed(value, school)
+	if (InCombatLockdown()) then return end
 	school = school or self:GetSchool()
 	if (school == "fire") then self:SetFireSpeed(value)
 	else ns.db.char[speedKeys[school]] = ClampSpeed(value) end
@@ -161,7 +192,7 @@ local function UpdateFlow(frame)
 		SetFlowFrame(frame, frame.Flow, index)
 		SetFlowFrame(frame, frame.FlowNext, (index + 1) % ENERGY.frames)
 	end
-	local strength = frame.Energy and .7 or .8
+	local strength = Preview:GetEffectStrength()
 	frame.Flow:SetAlpha(strength * (1 - blend))
 	frame.FlowNext:SetAlpha(strength * blend)
 end
@@ -203,8 +234,8 @@ local function UpdateEmbers(content, elapsed)
 	local scale = width / 196
 	local speed = .45 + .55 * Preview:GetSchoolSpeed(content.School)
 	for _, ember in ipairs(content.Embers) do
-		for _, key in ipairs({ "Glow", "Core" }) do ember[key]:SetShown(content.Energy) end
-		if (content.Energy) then
+		for _, key in ipairs({ "Glow", "Core" }) do ember[key]:SetShown(content.Energy and ns.db.char.mageCrystalParticles ~= false) end
+		if (content.Energy and ns.db.char.mageCrystalParticles ~= false) then
 			ember.Life = (ember.Life + elapsed * ember.Rate * speed) % 1
 			local phase, seed = ember.Life, ember.Seed
 			local x = .24 + .5 * ((seed * .618034) % 1)
@@ -228,7 +259,7 @@ local function UpdateEmbers(content, elapsed)
 				art:SetPoint("CENTER", anchor, "BOTTOMLEFT", x * width, y * height)
 				art:SetSize(ember.Size * scale * (halo and 2.4 or 1),
 					ember.Size * scale * (halo and 1.8 or 1.2))
-				art:SetAlpha(fade * shimmer * ember.Opacity * (halo and .3 or 1))
+				art:SetAlpha(math.min(1, fade * shimmer * ember.Opacity * (halo and .3 or 1) * Preview:GetEffectStrength()/.7))
 			end
 		end
 	end
@@ -243,11 +274,12 @@ function Preview:StyleCrystal(power, texturePath, coords, casePath)
 		end
 		return
 	end
-	local school = ns.db.char.mageCrystalSchool
-	if (not schools[school]) then school = "arcane" end
+	local school = self:GetSchool()
 	local animated = ns.db.char.mageCrystalFlow ~= false and Preview.EnergyAvailable == true
 	local low = type(casePath) == "string" and casePath:find("_low", 1, true)
-	power.Case:SetTexture(Path(low and "pw_crystal_case_low" or "pw_crystal_case"))
+	local caseName=low and "pw_crystal_case_low" or "pw_crystal_case"
+	local themed=ns.MageTheme and ns.MageTheme:ResolveMedia(caseName)
+	power.Case:SetTexture(themed or Path(caseName))
 	power.Case:SetVertexColor(1, 1, 1, 1)
 	local content = power.MageCrystalArt
 	if (not content) then
@@ -324,7 +356,7 @@ function Preview:StyleCrystal(power, texturePath, coords, casePath)
 	UpdateEmbers(content, 0)
 	-- Each school replaces glowing facet lines with moving volume; the
 	-- native crystal below remains readable. Static retains the prior pattern.
-	content.Pattern:SetAlpha(energy and .12 or .65)
+	content.Pattern:SetAlpha((energy and .12 or .65)*self:GetEffectStrength()/.7)
 	for _, art in ipairs({ content.Flow, content.FlowNext }) do
 		if (energy) then
 			art:SetVertexColor(1, 1, 1)
@@ -355,14 +387,14 @@ function Preview:Command(input)
 	if (arg == "speed") then self:ShowSpeedControls(); return end
 	if (arg == "status") then
 		self:Print("Mage crystal: "..(self:IsActive() and "on" or "off").."; "..
-			(ns.db.char.mageCrystalSchool or "arcane").."; "..
+			self:GetSchool().."; "..
 			(ns.db.char.mageCrystalFlow == false and "static" or "flow")..
 			string.format("; speed %.2fx.", self:GetSchoolSpeed()))
 		return
 	end
 	if (arg ~= "" and arg ~= "on" and arg ~= "off" and arg ~= "toggle"
-		and arg ~= "static" and arg ~= "flow" and not schools[arg]) then
-		self:Print("/azmagecrystal [on|off|arcane|fire|frost|static|flow|toggle|status|speed]")
+		and arg ~= "static" and arg ~= "flow" and arg ~= "auto" and not schools[arg]) then
+		self:Print("/azmagecrystal [on|off|auto|arcane|fire|frost|static|flow|toggle|status|speed]")
 		return
 	end
 	if (InCombatLockdown()) then self:Print("Change the crystal test outside combat."); return end
@@ -375,7 +407,8 @@ function Preview:Command(input)
 		self:Print("Select the main AzeriteUI layout before enabling this crystal test.")
 		return
 	end
-	if (schools[arg]) then ns.db.char.mageCrystalSchool = arg end
+	if (schools[arg]) then ns.db.char.mageCrystalSchool = arg; ns.db.char.mageSchoolAuto=false end
+	if (arg=="auto") then ns.db.char.mageSchoolAuto=true end
 	if (arg == "static" or arg == "flow") then ns.db.char.mageCrystalFlow = arg == "flow" end
 	if (arg == "flow" and not self.EnergyAvailable) then
 		self:Print("The moving energy is a work in progress and not in this release; the crystal stays static.")
@@ -418,6 +451,7 @@ function Preview:OnInitialize()
 end
 
 function Preview:OnEnable()
+	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED", "ProfileChanged")
 	for _, event in ipairs({ "OnProfileChanged", "OnProfileCopied", "OnProfileReset" }) do
 		ns.db.RegisterCallback(self, event, "ProfileChanged")
 	end

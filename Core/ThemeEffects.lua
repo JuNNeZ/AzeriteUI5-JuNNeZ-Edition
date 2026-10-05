@@ -114,6 +114,7 @@ Effects.Refresh = function(self)
 	end
 	-- Mage endcaps can follow the crystal's school.
 	if (ns.MageTheme) then ns.MageTheme:RefreshOrnaments() end
+	if (ns.ThemeBarPreview) then ns.ThemeBarPreview:Refresh() end
 	return true
 end
 

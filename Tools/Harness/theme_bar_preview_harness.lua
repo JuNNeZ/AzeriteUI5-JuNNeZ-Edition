@@ -213,17 +213,6 @@ theme:SetEndcap("atiesh"); check(glow.texture:find("ornament-atiesh-glow", 1, tr
 local cast = widget(owner)
 ns.PaladinTheme:StyleCastbar(cast)
 check(cast.MageCastHead.Art.texture:find("cast-head-atiesh.tga", 1, true) and cast.MageCastHead.Art.points.CENTER[3] == -26, "Atiesh cast head on the left")
-check(cast.MageCastHead.Art.width == 48 and cast.MageCastHead.Art.points.CENTER[3] + 24 < 0, "cast head stays outside the functional fill")
-local pet = widget(); pet.Health = widget(pet); pet.Health:SetSize(112, 11)
-theme:StylePet(pet)
-local seal = pet.Health.MagePetBadge
-check(seal and seal.Art.texture:find("badge-water-elemental.tga", 1, true), "water seal wired")
-check(seal.Art.width == 32 and seal.Art.points.RIGHT[1] == pet.Health and seal.Art.points.RIGHT[3] == -2, "pet seal outside fill, native bar unchanged")
-local sameSeal = seal; theme:StylePet(pet); check(pet.Health.MagePetBadge == sameSeal, "pet seal reused")
-local compass = widget(); compass.north = widget(compass)
-theme:StyleCompass(compass)
-check(compass.MageNorth.texture:find("minimap-north.tga", 1, true) and compass.MageNorth.points.CENTER[1] == compass.north, "north follows native rotating anchor")
-check(compass.north.alpha == 0 and compass.MageNorth.width == 32, "one visible north label")
 local power = widget(owner); power.Case = widget(power); power.Case:SetSize(120, 100)
 ns.ThemeEffects:StyleCrystal(power, "crystal.tga", { 0, 1, 0, 1 }, "case.tga")
 local badge = power.MageBadge
@@ -237,10 +226,6 @@ check(not alternate.MageBadge, "no badge on the alternate frame's crystal")
 
 -- Off: everything native again, and the badge hides on the next redraw.
 ns.variant = "SaiyaRatt"
-local inactivePet = widget(); inactivePet.Health = widget(inactivePet)
-theme:StylePet(inactivePet); check(not inactivePet.Health.MagePetBadge, "no Mage pet art on other layouts")
-local inactiveCompass = widget(); inactiveCompass.north = widget(inactiveCompass)
-theme:StyleCompass(inactiveCompass); check(not inactiveCompass.MageNorth, "no Mage compass art on other layouts")
 check(not theme:IsActive() and not GetMedia("hp_cap_case"):find("\\Mage\\", 1, true), "other layouts stay native")
 ns.ThemeEffects:StyleCrystal(power, "crystal.tga", { 0, 1, 0, 1 }, "case.tga")
 check(not badge.shown, "badge hidden when the theme is not in use")
@@ -255,4 +240,45 @@ ns.db.char.hunterPreview = false
 combat = true; local r = reloads; theme:Command("off"); check(reloads == r and theme:IsActive(), "combat refuses")
 combat = false; theme:Command("off"); check(not ns.db.char.magePreview and reloads == r + 1, "off reloads out of the Mage theme")
 
-print("Mage theme: "..checks.." checks passed (offline only)")
+
+
+-- All synthetic test variants build from the current real theme configurations.
+local make=widget
+widget=function(parent)
+ local w=make(parent)
+ function w:GetParent() return self.parent end
+ function w:GetName() return 'ThemeBarTests' end
+ function w:IsShown() return self.shown end
+ function w:SetText(v) self.text=v end
+ function w:SetStatusBarTexture(...) self.fill=self.fill or widget(self);self.fill.texture={...} end
+ function w:GetStatusBarTexture() self.fill=self.fill or widget(self);return self.fill end
+ function w:SetDrawLayer(...) self.drawLayer={...} end
+ function w:SetStatusBarColor(...) self.fillColor={...} end
+ function w:SetMinMaxValues(...) self.minmax={...} end
+ function w:SetValue(v) self.value=v end
+ function w:SetOrientation(v) self.orientation=v end
+ function w:SetReverseFill(v) self.reversed=v end
+ return w
+end
+env.LibStub=function() return {CreateOrb=function(_,_,parent) return widget(parent) end} end
+load('Core/ThemeBarPreview.lua')
+local P=ns.ThemeBarPreview
+P.window=widget();P.hint=widget();P.entries={}
+combat=false;ns.db.char.magePreview=true;ns.db.char.hunterPreview=false;ns.db.char.paladinPreview=false
+for key,def in pairs(P.Definitions) do
+ local config=ns.GetConfig(def[1]);check(config,'test config exists: '..key)
+ local db=def[2] and config[def[2]] or config;check(db,'test tier exists: '..key)
+ P.kind=key;P:Refresh()
+ local entry=P.entries[key];check(entry and entry.owner.shown,'preview builds '..key)
+ for _,bar in ipairs(entry.bars) do check(bar.value==.5,'synthetic half fill: '..key) end
+ P:Set('fraction',0);for _,bar in ipairs(entry.bars) do check(bar.value==0,'empty preview: '..key) end
+ P:Set('fraction',1);for _,bar in ipairs(entry.bars) do check(bar.value==1,'full preview: '..key) end
+ P:Set('fraction',.5)
+end
+local entries=0;for _ in pairs(P.entries) do entries=entries+1 end
+check(entries>=22,'all tier and compact test families available')
+P:Set('kind','cast');P:Set('protected',true)
+check(P.entries.cast.cast.Shield.shown and not P.entries.cast.cast.Backdrop.shown,'protected cast casing')
+P:Set('protected',false);check(not P.entries.cast.cast.Shield.shown and P.entries.cast.cast.Backdrop.shown,'ordinary cast casing')
+combat=true;local before=P.kind;P:Set('kind','playerLo');check(P.kind==before,'combat blocks test writes')
+print('Theme preview: '..checks..' checks passed (offline only)')

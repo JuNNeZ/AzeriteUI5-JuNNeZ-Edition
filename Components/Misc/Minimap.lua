@@ -1334,6 +1334,7 @@ MinimapMod.CreateCustomElements = function(self)
 	north:SetTextColor(unpack(db.CompassColor))
 	north:SetText(db.CompassNorthTag)
 	compass.north = north
+	if (ns.MageTheme) then ns.MageTheme:StyleCompass(compass) end
 
 	self.compass = compass
 

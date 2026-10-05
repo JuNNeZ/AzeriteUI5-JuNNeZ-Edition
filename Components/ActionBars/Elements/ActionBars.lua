@@ -110,7 +110,7 @@ local defaults = { profile = ns:Merge({
 		border = false,
 		borderIfEmpty = true
 	}
-}, ns.MovableModulePrototype.defaults) }
+}, ns:Merge(ns:Copy(ns.MovableModulePrototype.defaults), ns.ActionBarProcHighlight.defaults)) }
 
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
@@ -383,12 +383,8 @@ local style = function(self)
 	self.IconBorder:SetVertexColor(unpack(db.ButtonBorderColor))
 
 	-- Blizzard Spell Activation / MaxDps (addon) / SpellActivationOverlay (addon for Wrath/Classic Era)
-	self.CustomSpellActivationAlert = self.OverlayFrame:CreateTexture(nil, "ARTWORK", nil, -7)
-	self.CustomSpellActivationAlert:SetSize(unpack(db.ButtonSpellHighlightSize))
-	self.CustomSpellActivationAlert:SetPoint(unpack(db.ButtonSpellHighlightPosition))
-	self.CustomSpellActivationAlert:SetTexture(db.ButtonSpellHighlightTexture)
-	self.CustomSpellActivationAlert:SetVertexColor(249/255, 188/255, 65/255, .75)
-	self.CustomSpellActivationAlert:Hide()
+	self.CustomSpellActivationAlert = ns.ActionBarProcHighlight.Create(self.OverlayFrame, db)
+	ns.ActionBarProcHighlight.Apply(self.CustomSpellActivationAlert, ActionBarMod.db.profile)
 
 	-- Keep assisted highlight separate from proc glow so the button can stay circular.
 	self.CustomAssistedHighlight = self.OverlayFrame:CreateTexture(nil, "ARTWORK", nil, -6)
@@ -884,6 +880,7 @@ ActionBarMod.UpdateSettings = function(self, event)
 	-- OnEnter; a wrapper around that OnEnter was the 5.2.x MoneyFrame taint and stays gone.
 	local tooltips = ns:GetModule("Tooltips", true)
 	local tooltipMode = (tooltips and tooltips:IsEnabled() and tooltips.ShouldHideInCombat and tooltips:ShouldHideInCombat("actionbars")) and "nocombat" or "enabled"
+	ns.ActionBarProcHighlight.UpdatePreview(self.db.profile)
 
 	-- Copy global settings to individual bars for easier updates.
 	-- We do not grant user access to these settings per bar.
@@ -897,6 +894,7 @@ ActionBarMod.UpdateSettings = function(self, event)
 
 		-- Copy select settings into each button's config table.
 		for id,button in pairs(bar.buttons) do
+			ns.ActionBarProcHighlight.Apply(button.CustomSpellActivationAlert, self.db.profile)
 			button.config.clickOnDown = bar.config.clickOnDown
 			button.config.useCommandBindingsForHoldCast = bar.config.useCommandBindingsForHoldCast
 			button.config.dimWhenResting = bar.config.dimWhenResting

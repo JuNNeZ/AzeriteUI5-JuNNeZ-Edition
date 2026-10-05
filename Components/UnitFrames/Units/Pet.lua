@@ -260,6 +260,18 @@ end
 
 -- Frame Script Handlers
 --------------------------------------------
+local happinessColors = { { 1, .15, .12 }, { 1, .85, .1 }, { .25, 1, .15 } }
+local PetHappiness_UpdateBadge = function(indicator)
+	local badge = indicator.HappinessBadge
+	local data = indicator.tooltipData
+	local happiness = data and data.happiness
+	local color
+	if (not (issecretvalue and issecretvalue(happiness)) and type(happiness) == "number" and indicator:IsShown()) then
+		color = happinessColors[happiness]
+	end
+	badge:SetVertexColor(unpack(color or { .6, .6, .6 }))
+end
+
 local UnitFrame_PostUpdate = function(self, event)
 	TargetHighlight_Update(self, event)
 	if (self.PetHappiness) then
@@ -457,6 +469,22 @@ local style = function(self, unit)
 	end
 
 	if (ns.HunterTheme) then ns.HunterTheme:StylePet(self) end
+	if (ns.MageTheme) then ns.MageTheme:StylePet(self) end
+
+	-- Themes with a separate badge texture opt into the same happiness and
+	-- hover behavior. Keep Blizzard's template events, visibility and tooltip;
+	-- hide only its smiley texture, not the mouse-enabled indicator frame.
+	if (self.PetHappiness and self.PetHappinessBadge) then
+		local happiness = self.PetHappiness
+		happiness.HappinessBadge = self.PetHappinessBadge
+		self.PetHappinessBadge:SetDesaturated(true)
+		happiness.Texture:SetAlpha(0)
+		happiness:ClearAllPoints()
+		happiness:SetAllPoints(self.PetHappinessBadge)
+		happiness:SetFrameLevel(overlay:GetFrameLevel() + 1)
+		hooksecurefunc(happiness, "UpdateHappiness", PetHappiness_UpdateBadge)
+		PetHappiness_UpdateBadge(happiness)
+	end
 
 	-- Textures need an update when frame is displayed.
 	self.PostUpdate = UnitFrame_PostUpdate

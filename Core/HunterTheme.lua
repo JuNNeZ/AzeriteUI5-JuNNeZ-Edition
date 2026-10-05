@@ -355,6 +355,23 @@ Theme.StylePet = function(self, owner)
 		owner.TargetHighlight:ClearAllPoints(); owner.TargetHighlight:SetAllPoints(casing)
 	end
 	owner.HunterPetArt = {casing,portrait,backdrop}
+	if (owner.PetHappiness) then
+		-- Only the paw and its dark cavity, inside the metal hexagon. Sampling
+		-- the same casing UVs keeps the baked green paw covered pixel for pixel.
+		local badge = owner.Overlay:CreateTexture(nil, "OVERLAY", nil, 1)
+		badge:SetTexture(path("pet-case"))
+		badge:SetTexCoord(135/width, 355/width, 250/height, 480/height)
+		badge:SetSize(220*scale, 230*scale)
+		badge:SetPoint("TOPLEFT", bar, "TOPLEFT", (135-left)*scale, (top-250)*scale)
+		-- Exclude the bevel at the crop's lower corners from the colour wash.
+		local mask = owner.Overlay:CreateMaskTexture()
+		mask:SetAllPoints(badge)
+		mask:SetTexture(ns.API.GetMedia("actionbutton-mask-circular"))
+		mask:SetTexCoord(5/128, 123/128, 5/128, 123/128)
+		badge:AddMaskTexture(mask)
+		badge.Mask = mask
+		owner.PetHappinessBadge = badge
+	end
 end
 
 -- Preserve user offsets which move casts farther away; clamp upward offsets

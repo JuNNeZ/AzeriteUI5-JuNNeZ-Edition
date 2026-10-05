@@ -451,7 +451,12 @@ local policies = {
 		dimWhenInactive = barFamily,
 		dimWhenResting = barFamily,
 		clickOnDown = keyHandling,
-		useCommandBindingsForHoldCast = keyHandling
+		useCommandBindingsForHoldCast = keyHandling,
+		procHighlightStyle = barFamily,
+		procHighlightThickness = barFamily,
+		procHighlightColorSource = barFamily,
+		procHighlightColor = barFamily,
+		procHighlightOpacity = barFamily
 	},
 	ExplorerMode = {
 		-- Its own toggle names a whole set of bars, not bar one.

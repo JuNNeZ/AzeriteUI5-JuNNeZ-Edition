@@ -14,6 +14,7 @@
 	<Script file="Prototypes\StanceButton.lua"/>
 
 	<!-- Elements -->
+	<Script file="Elements\ProcHighlight.lua"/>
 	<Script file="Elements\ActionBars.lua"/>
 	<Script file="Elements\PetBar.lua"/>
 	<Script file="Elements\StanceBar.lua"/>

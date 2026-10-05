@@ -330,4 +330,37 @@ module.EnergyAvailable=false; variant=''; combat=false
 ns.db.char.mageCrystalFlow=true; module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
 check(not art.Energy and not art.Flow.shown and not art.FlowNext.shown and not art.scripts.OnUpdate and art.Pattern.alpha==.65,'static pattern while the energy is unshipped')
 module:Command('flow'); check(module.message and module.message:find('work in progress',1,true),'flow command says the energy is not in this release')
+
+-- Mage palette routing, specialization selection and separate live controls.
+module.EnergyAvailable=true;variant='';combat=false
+ns.PlayerClass='MAGE';ns.db.char.mageSchoolAuto=true
+local specialization=62
+C_SpecializationInfo={GetSpecialization=function() return 1 end,GetSpecializationInfo=function() return specialization end}
+for id,school in pairs({[62]='arcane',[63]='fire',[64]='frost'}) do
+ specialization=id;check(module:GetSchool()==school,'school follows own specialization')
+end
+check(module:GetSchoolChoice()=='auto','automatic option remains selected')
+module:Command('fire');check(module:GetSchool()=='fire' and ns.db.char.mageSchoolAuto==false,'manual school overrides automatic selection')
+module:Command('auto');specialization=64;check(module:GetSchool()=='frost','automatic selection can be restored')
+C_SpecializationInfo=nil;GetSpecialization=function() return 1 end;GetSpecializationInfo=function() return 62 end
+check(module:GetSchool()=='arcane','legacy capability fallback')
+GetSpecialization=nil;GetSpecializationInfo=nil;ns.PlayerClass='PALADIN'
+check(module:GetSchool()=='fire','cross-class tests retain manual fallback')
+module:SetEffectStrength(.35);check(module:GetEffectStrength()==.35,'strength stored independently of speed')
+module:Command('flow');module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
+check(math.abs(art.Flow.alpha+art.FlowNext.alpha-.35)<.000001,'crossfade keeps selected total energy strength')
+module:SetParticles(false);module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
+for _,ember in ipairs(art.Embers) do check(not ember.Core.shown and not ember.Glow.shown,'particles hide independently') end
+module:SetParticles(true);module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
+for _,ember in ipairs(art.Embers) do check(ember.Core.shown and ember.Glow.shown,'particles restored') end
+module:SetEffectStrength(5);check(module:GetEffectStrength()==1,'strength clamped')
+combat=true;module:SetEffectStrength(0);module:SetParticles(false)
+check(module:GetEffectStrength()==1 and ns.db.char.mageCrystalParticles,'combat refuses cosmetic writes')
+combat=false;module:SetEffectStrength(.7)
+ns.MageTheme={IsActive=function() return false end, ResolveMedia=function(_,name) return 'Mage/'..name..'.tga' end}
+module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case_low.tga')
+check(power.Case.path=='Mage/pw_crystal_case_low.tga','low cap uses full Mage palette')
+module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
+check(power.Case.path=='Mage/pw_crystal_case.tga','normal cap uses full Mage palette')
+
 print('PASS: '..checks..' Mage crystal command/render checks')

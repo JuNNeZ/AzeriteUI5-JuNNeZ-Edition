@@ -81,6 +81,7 @@ ns.db.char = ns.db.char or {}
 ns.db.global = ns.db.global or {}
 assert(loadfile(root .. "/Core/ThemeEffects.lua"))(Addon, ns)
 
+load("Core/ThemeBarPreview.lua")
 load("Options/Kit/Kit.lua")
 load("Options/Kit/Widgets.lua")
 load("Options/Kit/Window.lua")
@@ -160,7 +161,14 @@ local endcap = themes.args.hunter.args.endcap
 local values = endcap.values()
 assert(values.thasdorah and values.none and endcap.sorting[1] == "thasdorah", "endcap choices and order")
 assert(endcap.confirm == nil, "a new endcap applies without a reload")
-print("Themes page passed")
+
+local tests=assert(themes.args.tests,'shared theme tests section')
+for _,key in ipairs({'kind','fill','animate','protected','show','close'}) do assert(tests.args[key],'test control '..key) end
+local variants=tests.args.kind.values()
+assert(variants.playerLo and variants.playerMid and variants.playerHi and variants.targetBoss and variants.crystalLo and variants.orbHi,'tier and resource test choices')
+assert(themes.args.mage.args.school.values.auto,'automatic specialization choice')
+assert(themes.args.mage.args.strength and themes.args.mage.args.particles,'independent effect controls')
+print("Themes page passed, including shared tests and relevant Mage effect controls")
 
 local bars = assert(options.args.ActionBars or options.args["Action Bars"])
 for id = 1, 8 do

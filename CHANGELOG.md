@@ -10,6 +10,30 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.15.0-JuNNeZ (2026-10-05) - Proc Highlights, Skyriding Bars, and Theme Bar Tests
+
+### Highlights
+
+- **Make ability procs easier to see.** `/az -> Action Bars -> Proc Highlight` lets you choose how a proc lights up an action button: the current ring (still the default), a solid outline, a soft glow, outline and glow together, or off. The new styles come in thin, medium and thick, in the default gold, your class colour or a colour of your own, at any opacity. A preview button shows a sample without casting anything, and a reset button puts it back. Changes apply at once, without a reload.
+- **Keep a secondary bar while skyriding.** Each Retail secondary action bar now has "Show while skyriding", next to "Show while mounted". Until now "Show while mounted" could not keep a bar during skyriding, when bar 1 switches to the riding abilities. The two settings are now separate, and both descriptions say which kind of riding they cover.
+- **Test every bar shape in a theme.** `/az -> Themes -> Bar tests`, or `/azmage preview`, opens a preview window with 23 sample bars in the real layouts: player and target at each level stage, boss, critter, focus, target of target, pet, party, raid, arena, cast bars (protected casts too), nameplates, crystals and orbs. Set the fill or let it cycle to see each theme's casings empty, partly full and full. It shows sample bars only and closes in combat.
+- **More of the Mage theme (WIP).** A new crystal cap in dark violet and antique gold; a smaller Atiesh head on the cast bar that sits beside the bar instead of over it; a Mage north marker on the minimap that turns with the compass; and a water elemental seal at the end of the pet bar. The Mage crystal can now follow your specialization's school ("Follow specialization" on the Themes page or `/azmagecrystal auto`, the new default if you never picked a school), with a slider for the energy's strength and a switch for its particles.
+- **Hunter pet frame.** The pet's health bar now has the same faceted finish as the other health bars, and on Forever the pet's happiness shows as a green, yellow or red paw in the pet casing, with Blizzard's own tooltip when you hover it.
+
+### Development
+
+- **Built the proc styles around the action button library instead of replacing its alert.** The library still decides when a proc shows and hides; AzeriteUI only changes what it looks like, so turning the highlight off and on again during an active proc keeps it in step. Six new textures keep the inner edge of the existing ring, so the outline never covers the spell icon. An offline test covers each style, the preview, reset and every combination of the two riding settings, and fails when any of six deliberate faults is put in.
+- **Found why mounted bars disappeared while skyriding.** The bar's visibility rule checks skyriding before it checks mounts, so the mounted setting never got a say. Rather than change that order, the skyriding setting each bar already had is now shown in the options.
+- **Made the bar tests from the real layouts.** The preview window draws each sample from the same layout tables and casing art the frames use, without reading any unit or touching the real frames, so a casing that does not fit shows up before it reaches the game. An offline check of the art found that the Hunter theme's older textures do not yet match the native shapes everywhere; that art is unchanged in this release.
+
+### Access and known limits
+
+- **Not yet tested in the game:** all of this release is checked offline only, on Retail and Forever alike.
+- "Show while skyriding" is for Retail; Forever has no skyriding.
+- The themes remain works in progress. Parts of the Mage art set are still unused: the glowing inlays, the orb materials and the panel tint. The Paladin theme is still being redone.
+- The new option text was translated without native speakers; corrections are welcome on the Discord.
+
+
 ## 5.14.1-JuNNeZ (2026-10-04) - The Mage Crystal Moves
 
 ### Highlights

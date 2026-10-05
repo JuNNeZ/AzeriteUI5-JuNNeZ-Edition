@@ -28,7 +28,7 @@ Theme.Media = media
 -- the bar's outer end, sized against the Seasoned meter's 40px height; the
 -- cast head on the cast bar's left end; the school badge on the crystal case.
 local ENDCAP_SLOT = { size = 88, x = 14, y = 0, reference = 40 }
-local CAST_HEAD_SLOT = { size = 68, x = -12, y = 0 }
+local CAST_HEAD_SLOT = { size = 48, x = -26, y = 0 }
 local BADGE_SLOT = { size = 32, yFraction = .06 }
 local BADGES = { arcane = "badge-eye", fire = "badge-fire", frost = "badge-frost" }
 -- Each school's suggested staff, used by the "school" endcap choice.
@@ -215,10 +215,34 @@ end
 Theme.StyleCastbar = function(self, cast)
 	if (not self:IsActive()) then return end
 	local frame = OrnamentFrame(cast, "MageCastHead")
-	frame.Art:SetTexture(path("ornament-atiesh"))
+	frame.Art:SetTexture(path("cast-head-atiesh"))
 	frame.Art:ClearAllPoints()
 	frame.Art:SetSize(CAST_HEAD_SLOT.size, CAST_HEAD_SLOT.size)
 	frame.Art:SetPoint("CENTER", cast, "LEFT", CAST_HEAD_SLOT.x, CAST_HEAD_SLOT.y)
+	frame:Show()
+end
+
+-- The north ornament follows the existing moving compass anchor. Rotation,
+-- radius and minimap geometry stay owned by the original compass code.
+Theme.StyleCompass = function(self, compass)
+	if (not self:IsActive() or not compass or not compass.north) then return end
+	local art = compass.MageNorth
+	if (not art) then art = compass:CreateTexture(nil, "OVERLAY"); compass.MageNorth = art end
+	art:SetTexture(path("minimap-north"))
+	art:SetSize(32, 32)
+	art:SetPoint("CENTER", compass.north, "CENTER", 0, 0)
+	compass.north:SetAlpha(0) -- The texture already contains the N.
+end
+
+-- A compact water-elemental seal joins the pet casing at its left end.
+-- Parent visibility follows the pet frame; no unit data or hit rect changes.
+Theme.StylePet = function(self, owner)
+	if (not self:IsActive() or not owner or not owner.Health) then return end
+	local frame = OrnamentFrame(owner.Health, "MagePetBadge")
+	frame.Art:SetTexture(path("badge-water-elemental"))
+	frame.Art:SetSize(32, 32)
+	frame.Art:ClearAllPoints()
+	frame.Art:SetPoint("RIGHT", owner.Health, "LEFT", -2, 0)
 	frame:Show()
 end
 
@@ -315,6 +339,7 @@ end
 
 Theme.Command = function(self, input)
 	local command, option = (input or ""):lower():match("^%s*(%S*)%s*(%S*)%s*$")
+	if (command=="preview" and ns.ThemeBarPreview) then ns.ThemeBarPreview:Show();return end
 	if (command == "status") then
 		self:Print((self:IsActive() and "Mage theme: on" or "Mage theme: off").."; endcap: "..EndcapKey())
 		return

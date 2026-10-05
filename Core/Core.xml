@@ -51,5 +51,6 @@
 	<Script file="MageCrystalPreview.lua"/>
 	<Script file="MageTheme.lua"/>
 	<Script file="ThemeEffects.lua"/>
+	<Script file="ThemeBarPreview.lua"/>
 
 </Ui>

@@ -212,6 +212,14 @@ check(portrait and portrait.kind=="PlayerModel","pet portrait is an animated mod
 check(portrait.level<owner.Overlay.level,"pet model sits under the casing that crops it")
 check(portrait.Bg and portrait.Bg.allPoints==portrait and portrait.Bg.color and not portrait.Bg.mask,"pet socket filled edge to edge behind the model")
 count=widgetCount;theme:StylePet(owner);check(widgetCount==count,"pet styling idempotent")
+local pet=widget();pet.Health=widget(pet);pet.Health:SetSize(144,144*115/930)
+pet.Health.Backdrop=widget(pet.Health);pet.Overlay=widget(pet);pet.PetHappiness=widget(pet)
+theme:StylePet(pet)
+local badge=pet.PetHappinessBadge
+check(badge and badge.mask and badge.mask.allPoints==badge,"happiness paw has a mask excluding the metal corners")
+check(badge.texture==pet.HunterPetArt[1].texture,"happiness uses the exact casing pixels")
+check(math.abs(badge.width-220*144/930)<1e-9 and math.abs(badge.height-230*144/930)<1e-9,"paw crop follows actual pet scale")
+check(not owner.PetHappinessBadge,"no happiness badge for Retail or missing template")
 local resource=widget(owner); resource:SetSize(196,196); resource.Case=widget(resource)
 owner.Power=resource
 owner.ThreatIndicator.textures.PowerBar=widget(owner)

@@ -1770,9 +1770,9 @@
         256,
         32
       ],
-      "source": "connected pet opening",
+      "source": "connected pet opening + original neutral health faceting",
       "path": "Assets/Hunter/pet-fill.tga",
-      "sha256": "e84d18f19fb37f8e3131e08b8f4cf349a8e80b16a74238d8b21258c2c13f2eda"
+      "sha256": "0315f74a710b42d576a1136aa62b3a075ac4e10415c6c1bcffac3c1fc7200e40"
     },
     "pet-fill-absorb": {
       "size": [
