@@ -25,6 +25,7 @@ Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead wit
 ### Access and known limits
 
 - Offline results only; live confirmation in the client is still owed for the Cooldown Manager (all four viewers, newly pooled icons, combat, Edit Mode) and the alternate-power fix.
+
 ## 5.15.0-JuNNeZ (2026-10-05) - Proc Highlights, Skyriding Bars, and Theme Bar Tests
 
 ### Highlights
