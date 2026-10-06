@@ -85,8 +85,9 @@ local Colors = ns.Colors
 local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
+local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
 
--- GLOBALS: ActionButtonSpellAlertManager, C_Timer, CreateFrame, Enum, InCombatLockdown, UIParent, hooksecurefunc, issecretvalue
+-- GLOBALS: ActionButtonSpellAlertManager, C_Timer, CreateFrame, Enum, InCombatLockdown, ReloadUI, UIParent, hooksecurefunc, issecretvalue
 
 local VIEWERS = {
 	"EssentialCooldownViewer",
@@ -142,21 +143,28 @@ local BLIZZARD_SWIPE = [[Interface\HUD\UI-HUD-CoolDownManager-Icon-Swipe]]
 local BLIZZARD_BAR = "UI-HUD-CoolDownManager-Bar"
 local BLIZZARD_BAR_COLOR = { 1, .5, .25 }
 
--- Addons that restyle the same frames. While one is enabled AzeriteUI leaves the
--- Cooldown Manager alone. TODO: none of these is installed on the maintainer's
--- machine, so the folder names come from their project pages and are unverified.
+-- Addons that restyle the same item frames out of the box, read from each one's
+-- newest source (FixLog 2026-10-06): ArcUI 3.9.1 masks, crops and re-anchors the
+-- icons and hides their borders; BetterCooldownManager skins them. The player is
+-- asked which one to use. CooldownManagerCentered is left out on purpose: by
+-- default it only lays the rows out, and its square icons are off.
 local RIVALS = {
 	"ArcUI",
-	"CooldownManagerCentered",
 	"BetterCooldownManager"
 }
 
-local defaults = { profile = ns:Merge({
-	styleIcons = true,
-	iconStyle = "rounded",
-	skin = "theme",
-	showKeybinds = true
-}, ns.ModulePrototype.defaults) }
+local defaults = {
+	-- Per character, since the choice can turn the other addon off, and addons are
+	-- enabled per character. owner: "other" or "both"; rival: the folder name the
+	-- choice was made about. Anything else means the player has not chosen yet.
+	char = {},
+	profile = ns:Merge({
+		styleIcons = true,
+		iconStyle = "rounded",
+		skin = "theme",
+		showKeybinds = true
+	}, ns.ModulePrototype.defaults)
+}
 
 CooldownManager.GenerateDefaults = function(self)
 	return defaults
@@ -778,8 +786,57 @@ CooldownManager.UpdateSettings = function(self)
 	self:QueueKeybinds()
 end
 
+-- The addon AzeriteUI leaves the Cooldown Manager to, if any.
 CooldownManager.GetRival = function(self)
 	return self.rival
+end
+
+-- The addon AzeriteUI styles the Cooldown Manager alongside, because the player
+-- chose both, if any.
+CooldownManager.GetSharedWith = function(self)
+	return self.sharedWith
+end
+
+local FindRival = function()
+	for _, addon in ipairs(RIVALS) do
+		if (IsAddOnEnabled(addon)) then
+			return addon
+		end
+	end
+end
+
+-- This character's saved answer about the given addon: "other", "both" or nil.
+-- An answer about a different addon, or AzeriteUI picked and the addon enabled
+-- again since, counts as no answer.
+CooldownManager.GetRivalChoice = function(self, rival)
+	local char = self.db.char
+	if (char.rival ~= rival) then return end
+	if (char.owner == "other" or char.owner == "both") then
+		return char.owner
+	end
+end
+
+-- Asks which addon should style the Cooldown Manager. Also called from the
+-- options page to change an earlier answer.
+CooldownManager.PromptRivalChoice = function(self)
+	local rival = self.rival or self.sharedWith
+	if (not rival) then return end
+	ns.API.ShowAddonConflictPrompt({
+		key = "CooldownManager",
+		feature = L["Cooldown Manager"],
+		rival = rival,
+		OnChoose = function(choice)
+			local char = self.db.char
+			char.owner = choice
+			char.rival = rival
+			-- Unanswered, AzeriteUI already stands down, so "other" needs nothing
+			-- more. After "both" our hooks are on the frames and only a reload
+			-- takes them off. "azeriteui" and "both" reload in the prompt itself.
+			if (choice == "other" and self.sharedWith) then
+				ReloadUI()
+			end
+		end
+	})
 end
 
 CooldownManager.OnInitialize = function(self)
@@ -792,11 +849,19 @@ end
 CooldownManager.OnEnable = function(self)
 	if (not _G.EssentialCooldownViewer) then return end
 
-	for _, addon in ipairs(RIVALS) do
-		if (IsAddOnEnabled(addon)) then
-			self.rival = addon
+	-- Until the player answers, AzeriteUI stands down as it always has, and asks
+	-- once per session, a moment after login so the popup is not lost in it.
+	local rival = FindRival()
+	if (rival) then
+		local choice = self:GetRivalChoice(rival)
+		if (choice ~= "both") then
+			self.rival = rival
+			if (not choice) then
+				C_Timer.After(3, function() self:PromptRivalChoice() end)
+			end
 			return
 		end
+		self.sharedWith = rival
 	end
 
 	for _, viewerName in ipairs(VIEWERS) do

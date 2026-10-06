@@ -44,8 +44,10 @@ end
 
 Containers.AquireBagButtons = function(self)
 
-	-- Don't interfere with known bag addons.
-	for _,addon in next,{ "AdiBags", "ArkInventory", "Bagnon", "Bartender4", "Combuctor" } do
+	-- Don't interfere with known bag addons. Baganator (834) and BetterBags hide
+	-- Blizzard's backpack frames, so moving the bag slots into them only hides the
+	-- slots with them; neither addon uses those slots for its own window.
+	for _,addon in next,{ "AdiBags", "ArkInventory", "Baganator", "Bagnon", "Bartender4", "BetterBags", "Combuctor" } do
 		if (ns.API.IsAddOnEnabled(addon)) then return end
 	end
 

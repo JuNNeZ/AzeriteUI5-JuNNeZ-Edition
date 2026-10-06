@@ -997,3 +997,10 @@ L["Include Blizzard's Cooldown Manager in what Explorer Mode fades out."] = "Inc
 L["Skin"] = "Aparência"
 L["Follow the interface theme"] = "Seguir o tema da interface"
 L["Give the Cooldown Manager a theme of its own, whatever the rest of the interface wears. It changes the circular ring; square and rounded wear AzeriteUI art in every skin until themes have square art."] = "Dá ao Gerenciador de Recargas um tema próprio, seja qual for o do resto da interface. Muda o anel circular; quadrado e arredondado usam a arte do AzeriteUI em todas as aparências até os temas terem arte quadrada."
+-- Addon conflict prompt (Core/API/Addons.lua) and the Cooldown Manager's choice.
+L["Both (unsupported)"] = "Ambos (sem suporte)"
+L["%s and AzeriteUI both restyle the same part of the interface, and the two do not work together: %s. Which one do you want to use?"] = "%s e AzeriteUI alteram a mesma parte da interface, e os dois não funcionam juntos: %s. Qual você quer usar?"
+L["Picking AzeriteUI turns %s off for this character and reloads the interface. Both keeps the two running, which is not supported."] = "Escolher AzeriteUI desativa %s para este personagem e recarrega a interface. \"Ambos\" mantém os dois ativos, o que não tem suporte."
+L["AzeriteUI and %s both style the Cooldown Manager, as you chose. This combination is not supported."] = "AzeriteUI e %s estilizam o gerenciador de recargas, como você escolheu. Esta combinação não tem suporte."
+L["Choose again"] = "Escolher de novo"
+L["Ask again which addon styles the Cooldown Manager."] = "Perguntar de novo qual addon estiliza o gerenciador de recargas."

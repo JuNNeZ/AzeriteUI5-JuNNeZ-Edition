@@ -53,6 +53,12 @@ local getrival = function()
 	return type(rival) == "string" and rival or nil
 end
 
+-- The folder name of an addon AzeriteUI styles alongside, as the player chose, if any.
+local getshared = function()
+	local shared = getmodule():GetSharedWith()
+	return type(shared) == "string" and shared or nil
+end
+
 local isunstyled = function(info)
 	return not getmodule().db.profile.styleIcons or getrival() ~= nil
 end
@@ -90,6 +96,23 @@ local GenerateOptions = function()
 				type = "description",
 				fontSize = "medium",
 				hidden = function() return getrival() == nil end
+			},
+			shared = {
+				name = function()
+					return string.format(L["AzeriteUI and %s both style the Cooldown Manager, as you chose. This combination is not supported."], getshared() or "")
+				end,
+				order = 3,
+				type = "description",
+				fontSize = "medium",
+				hidden = function() return getshared() == nil end
+			},
+			choose = {
+				name = L["Choose again"],
+				desc = L["Ask again which addon styles the Cooldown Manager."],
+				order = 4,
+				type = "execute",
+				func = function() getmodule():PromptRivalChoice() end,
+				hidden = function() return getrival() == nil and getshared() == nil end
 			},
 			styleIcons = {
 				name = L["Style the Cooldown Manager"],

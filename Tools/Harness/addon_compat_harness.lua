@@ -389,5 +389,63 @@ do
 	end
 end
 
+---------------------------------------------------------------------------
+-- 4. The addon conflict prompt (Core/API/Addons.lua ShowAddonConflictPrompt)
+--    Four buttons: AzeriteUI turns the other addon off for this character and
+--    reloads, the other addon reloads nothing, Both reloads, Decide Later does
+--    nothing. Clicks follow StaticPopup_OnClick with selectCallbackByIndex:
+--    button i runs OnButton<i>(dialog, data).
+---------------------------------------------------------------------------
+do
+	local saved = {}
+	for _, k in ipairs({ "StaticPopupDialogs", "StaticPopup_Show", "C_AddOns", "UnitName", "ReloadUI", "LibStub" }) do saved[k] = _G[k] end
+
+	local shown, disabled, reloads, chosen
+	_G.StaticPopupDialogs = {}
+	_G.StaticPopup_Show = function(key, text, text2, data) shown = { key = key, text = text, data = data } end
+	_G.C_AddOns = {
+		GetAddOnInfo = function(name) if (name == "ArcUI") then return name, "ArcUI Title" end return name, "" end,
+		DisableAddOn = function(name, character) disabled = { name = name, character = character } end
+	}
+	_G.UnitName = function() return "Tester" end
+	_G.ReloadUI = function() reloads = reloads + 1 end
+	_G.LibStub = function() return { GetLocale = function() return setmetatable({}, { __index = function(_, k) return k end }) end } end
+
+	local ns = { API = {} }
+	assert(loadfile(root .. "/Core/API/Addons.lua"))("AzeriteUI5_JuNNeZ_Edition", ns)
+	local API = ns.API
+
+	check(API.GetAddOnTitle("ArcUI") == "ArcUI Title" and API.GetAddOnTitle("Other") == "Other", "addon title from the TOC, else the folder")
+
+	local click = function(index)
+		shown, disabled, reloads, chosen = nil, nil, 0, nil
+		API.ShowAddonConflictPrompt({ key = "test", feature = "Feature", rival = "ArcUI", OnChoose = function(c) chosen = c end })
+		local dialog = _G.StaticPopupDialogs[shown.key]
+		check(dialog.selectCallbackByIndex == true, "per button callbacks")
+		dialog["OnButton" .. index](dialog, shown.data)
+		return dialog
+	end
+
+	local dialog = click(1)
+	check(shown.key == "AZERITEUI_ADDON_CONFLICT_TEST", "popup keyed by the caller")
+	check(dialog.button1 == "AzeriteUI" and dialog.button2 == "ArcUI Title" and dialog.button3 == "Both (unsupported)" and dialog.button4 == "Decide Later", "buttons: AzeriteUI, the other addon, both, later")
+	check(type(shown.text) == "string" and shown.text:find("ArcUI Title", 1, true) and shown.text:find("Feature", 1, true), "the question names the addon and the feature")
+	check(chosen == "azeriteui" and disabled and disabled.name == "ArcUI" and disabled.character == "Tester" and reloads == 1, "AzeriteUI: the other addon off for this character, then reload")
+	check(dialog.OnCancel == nil and dialog.hideOnEscape, "Escape decides nothing")
+
+	click(2)
+	check(chosen == "other" and disabled == nil and reloads == 0, "the other addon: saved, nothing disabled, no reload")
+	click(3)
+	check(chosen == "both" and disabled == nil and reloads == 1, "both: saved, nothing disabled, reload")
+	click(4)
+	check(chosen == nil and disabled == nil and reloads == 0, "decide later: nothing")
+
+	shown = nil
+	API.ShowAddonConflictPrompt({ key = "test" })
+	check(shown == nil, "no rival, no prompt")
+
+	for k, v in pairs(saved) do _G[k] = v end
+end
+
 print(string.format("addon_compat_harness: %d passed, %d failed", passed, failed))
 if (failed > 0) then os.exit(1) end

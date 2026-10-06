@@ -997,3 +997,10 @@ L["Include Blizzard's Cooldown Manager in what Explorer Mode fades out."] = "탐
 L["Skin"] = "스킨"
 L["Follow the interface theme"] = "인터페이스 테마 따르기"
 L["Give the Cooldown Manager a theme of its own, whatever the rest of the interface wears. It changes the circular ring; square and rounded wear AzeriteUI art in every skin until themes have square art."] = "나머지 인터페이스의 테마와 관계없이 재사용 대기시간 관리자에 별도의 테마를 적용합니다. 원형 고리가 바뀌며, 테마에 사각형 아트가 생기기 전까지 사각형과 둥근 사각형은 모든 스킨에서 AzeriteUI 아트를 씁니다."
+-- Addon conflict prompt (Core/API/Addons.lua) and the Cooldown Manager's choice.
+L["Both (unsupported)"] = "둘 다 (지원 안 됨)"
+L["%s and AzeriteUI both restyle the same part of the interface, and the two do not work together: %s. Which one do you want to use?"] = "%s와(과) AzeriteUI가 인터페이스의 같은 부분을 바꾸며, 둘은 함께 작동하지 않습니다: %s. 어느 쪽을 사용하시겠습니까?"
+L["Picking AzeriteUI turns %s off for this character and reloads the interface. Both keeps the two running, which is not supported."] = "AzeriteUI를 선택하면 이 캐릭터에서 %s이(가) 꺼지고 인터페이스가 다시 불러와집니다. '둘 다'는 둘을 모두 유지하며, 이는 지원되지 않습니다."
+L["AzeriteUI and %s both style the Cooldown Manager, as you chose. This combination is not supported."] = "선택하신 대로 AzeriteUI와 %s이(가) 모두 재사용 대기시간 관리자를 꾸밉니다. 이 조합은 지원되지 않습니다."
+L["Choose again"] = "다시 선택"
+L["Ask again which addon styles the Cooldown Manager."] = "재사용 대기시간 관리자를 꾸밀 애드온을 다시 묻습니다."

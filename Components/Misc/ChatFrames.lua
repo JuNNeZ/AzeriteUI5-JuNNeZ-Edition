@@ -592,7 +592,9 @@ ChatFrames.OnEvent = function(self, event, ...)
 		if (isInitialLogin or isReloadingUi) then
 			self:UnregisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 
-			for i = 1, NUM_CHAT_WINDOWS do
+			-- NUM_CHAT_WINDOWS only exists while Blizzard's deprecation fallbacks load.
+			local numChatWindows = (Constants and Constants.ChatFrameConstants and Constants.ChatFrameConstants.MaxChatWindows) or NUM_CHAT_WINDOWS
+			for i = 1, numChatWindows do
 				local frame = _G["ChatFrame"..i]
 				if (i == 2) then
 					local buttonframe = CombatLogQuickButtonFrame_Custom

@@ -997,3 +997,10 @@ L["Include Blizzard's Cooldown Manager in what Explorer Mode fades out."] = "Inc
 L["Skin"] = "Apariencia"
 L["Follow the interface theme"] = "Seguir el tema de la interfaz"
 L["Give the Cooldown Manager a theme of its own, whatever the rest of the interface wears. It changes the circular ring; square and rounded wear AzeriteUI art in every skin until themes have square art."] = "Da al Gestor de reutilizaciones un tema propio, lleve lo que lleve el resto de la interfaz. Cambia el anillo circular; cuadrado y redondeado llevan el arte de AzeriteUI en todas las apariencias hasta que los temas tengan arte cuadrado."
+-- Addon conflict prompt (Core/API/Addons.lua) and the Cooldown Manager's choice.
+L["Both (unsupported)"] = "Ambos (no compatible)"
+L["%s and AzeriteUI both restyle the same part of the interface, and the two do not work together: %s. Which one do you want to use?"] = "%s y AzeriteUI modifican la misma parte de la interfaz y no funcionan juntos: %s. ¿Cuál quieres usar?"
+L["Picking AzeriteUI turns %s off for this character and reloads the interface. Both keeps the two running, which is not supported."] = "Elegir AzeriteUI desactiva %s para este personaje y recarga la interfaz. Con «Ambos» siguen los dos activos, lo cual no está soportado."
+L["AzeriteUI and %s both style the Cooldown Manager, as you chose. This combination is not supported."] = "AzeriteUI y %s dan estilo al gestor de reutilizaciones, como elegiste. Esta combinación no está soportada."
+L["Choose again"] = "Volver a elegir"
+L["Ask again which addon styles the Cooldown Manager."] = "Volver a preguntar qué addon da estilo al gestor de reutilizaciones."

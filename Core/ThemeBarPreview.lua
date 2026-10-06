@@ -93,7 +93,7 @@ function Preview:Refresh()
   ns.ThemeEffects:StyleCrystal(entry.power,entry.db.PowerBarTexture,entry.db.PowerBarTexCoord,entry.db.PowerBarForegroundTexture)
  end
  if (entry.orb and ns.ThemeEffects) then entry.orb:SetStatusBarTexture(unpack(entry.db.ManaOrbTexture));ns.ThemeEffects:StyleOrb(entry.orb) end
- if (entry.cast) then entry.cast:SetStatusBarColor(unpack(self.protected and {.75,.18,.12,1} or entry.db.CastBarColor));entry.cast.Shield:SetShown(self.protected);entry.cast.Backdrop:SetShown(not self.protected) end
+ if (entry.cast) then entry.cast:SetStatusBarColor(unpack(self.protected and {.75,.18,.12,1} or entry.db.CastBarColor));entry.cast.Shield:SetShown(self.protected);entry.cast.Backdrop:SetShown(not self.protected or entry.cast.KeepBackdrop or false) end
  self.hint:SetText(self:GetChoices()[self.kind].." | "..math.floor(self.fraction*100+.5).."% | "..ns.ThemeEffects:GetTheme().." | Esc to close")
 end
 function Preview:Set(key,value)

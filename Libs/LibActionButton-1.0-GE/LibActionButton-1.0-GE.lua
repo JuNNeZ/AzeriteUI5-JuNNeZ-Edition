@@ -1,7 +1,7 @@
 -- License: LICENSE.txt
 
 local MAJOR_VERSION = "LibActionButton-1.0-GE"
-local MINOR_VERSION = 79 -- Gamepad keys drawn as the client's button glyphs
+local MINOR_VERSION = 80 -- Action queries through C_ActionBar; unit range checks keep their unit
 
 -- Whether secure handler snippets compile on this client.
 --
@@ -57,6 +57,20 @@ local GetActionCooldownDuration = C_ActionBar.GetActionCooldownDuration
 local GetActionLossOfControlCooldownDuration = C_ActionBar.GetActionLossOfControlCooldownDuration
 local GetActionLossOfControlCooldownInfo = C_ActionBar.GetActionLossOfControlCooldownInfo or function() return nil end
 local IsEquippedGearOutfitAction = C_ActionBar.IsEquippedGearOutfitAction
+-- The bare globals live in Blizzard_DeprecatedActionBar, which only loads while the
+-- loadDeprecationFallbacks CVar is on. Its IsActionInRange also drops the unit argument.
+local HasAction = C_ActionBar.HasAction or HasAction
+local GetActionTexture = C_ActionBar.GetActionTexture or GetActionTexture
+local GetActionText = C_ActionBar.GetActionText or GetActionText
+local IsUsableAction = C_ActionBar.IsUsableAction or IsUsableAction
+local IsAttackAction = C_ActionBar.IsAttackAction or IsAttackAction
+local IsEquippedAction = C_ActionBar.IsEquippedAction or IsEquippedAction
+local IsCurrentAction = C_ActionBar.IsCurrentAction or IsCurrentAction
+local IsAutoRepeatAction = C_ActionBar.IsAutoRepeatAction or IsAutoRepeatAction
+local IsConsumableAction = C_ActionBar.IsConsumableAction or IsConsumableAction
+local IsStackableAction = C_ActionBar.IsStackableAction or IsStackableAction
+local IsItemAction = C_ActionBar.IsItemAction or IsItemAction
+local IsActionInRange = C_ActionBar.IsActionInRange or IsActionInRange
 local C_Container_GetItemCooldown = C_Container.GetItemCooldown
 -- Blizzard_DeprecatedItemScript supplies the raw GetItemCooldown global; it does
 -- not load on WoW Forever or Retail 12.1.5+, so prefer the namespace for Toy.GetCooldown.
@@ -118,11 +132,10 @@ end
 -- GLOBALS: C_Item, C_Spell, C_ToyBox, UIParent
 -- GLOBALS: CooldownFrame_Clear, ClearActionButtonCooldowns, ClearCursor, CooldownFrame_Set, CreateFrame
 -- GLOBALS: FlyoutButtonMixin, FlyoutHasSpell, GameTooltip, GetActionCharges, GetActionCooldown, GetActionInfo
--- GLOBALS: GetActionLossOfControlCooldown, GetActionTexture, GetActionText, GetBindingKey, GetBindingText, GetCallPetSpellInfo
+-- GLOBALS: GetActionLossOfControlCooldown, GetBindingKey, GetBindingText, GetCallPetSpellInfo
 -- GLOBALS: GetCursorInfo, GetFlyoutInfo, GetFlyoutSlotInfo, GetItemCooldown, GetMacroInfo, GetMacroSpell
--- GLOBALS: GetTime, HasAction, InCombatLockdown, IsActionInRange, IsAttackAction, IsAutoRepeatAction
--- GLOBALS: IsConsumableAction, IsCurrentAction, IsEquippedAction, IsItemAction, IsLoggedIn, IsMouseButtonDown
--- GLOBALS: IsStackableAction, IsUsableAction, PickupAction, PickupCompanion, PickupMacro, PickupPetAction
+-- GLOBALS: GetTime, InCombatLockdown, IsLoggedIn, IsMouseButtonDown
+-- GLOBALS: PickupAction, PickupCompanion, PickupMacro, PickupPetAction
 -- GLOBALS: SetBinding, SetBindingClick, SetClampedTextureRotation, SpellFlyout, ActionButton_ApplyCooldown
 
 lib.eventFrame = lib.eventFrame or CreateFrame("Frame")

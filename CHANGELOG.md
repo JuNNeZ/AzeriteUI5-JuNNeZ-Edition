@@ -10,6 +10,26 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.17.0-JuNNeZ (2026-10-06) - Plays Nice with Other Addons
+
+### Highlights
+
+- **AzeriteUI asks which addon you want when ArcUI or BetterCooldownManager is enabled.** Both restyle Blizzard's Cooldown Manager the same way AzeriteUI does, and two styles on the same icons do not work together. Until now AzeriteUI quietly stepped aside. A few seconds after login you now choose: **AzeriteUI** (turns the other addon off for this character and reloads), **the other addon** (AzeriteUI steps aside, no reload), **Both** (both keep styling, unsupported, reloads) or **Decide Later**. Change your answer under `/az -> Cooldown Manager -> Choose again`.
+- **CooldownManagerCentered and AzeriteUI's Cooldown Manager style now work together.** Out of the box that addon only centres the rows, so AzeriteUI no longer steps aside for it.
+- **Baganator and BetterBags are left alone.** While either is enabled AzeriteUI no longer moves Blizzard's bag slots, the same as with AdiBags, Bagnon and the other bag addons. The bag button beside the cog opens them as before.
+- **The info bar colours the zone name by PvP type on Forever too.**
+- **The Hunter theme's protected-cast preview keeps its frame** in `/az -> Themes -> Bar tests`, matching the 5.16.4 castbar fix.
+
+### Development
+
+- Went through the roadmap's planned compatibility list against each addon's newest source. Only real clashes get the question, where the other addon changes the same frames in a way that breaks AzeriteUI's version; addons that only add tooltip lines (RaiderIO, ArchonTooltip) need nothing. Cell's newest release no longer ships a Retail or Forever version, and OmniCD's is still marked for an older game version on both clients, so neither needed a change. The question is a shared piece other features can use for future clashes.
+- Action buttons, the chat setup at login and the keybinding mode's open-chat key now use the game's current functions instead of names that only exist while Blizzard's deprecation fallbacks are on. This also fixes range colouring for actions that check a specific unit.
+- Regression tests cover the question's four answers, each answer being remembered or asked again, and which addons count as a clash.
+
+### Access and known limits
+
+- Verified offline only; live confirmation on Retail and Forever is still owed, including each answer with ArcUI and CooldownManagerCentered with the Circular icon style.
+
 ## 5.16.4-JuNNeZ (2026-10-06) - Hunter Castbar Fix
 
 ### Highlights

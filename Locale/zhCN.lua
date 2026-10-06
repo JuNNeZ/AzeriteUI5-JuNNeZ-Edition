@@ -998,3 +998,10 @@ L["Include Blizzard's Cooldown Manager in what Explorer Mode fades out."] = "将
 L["Skin"] = "外观"
 L["Follow the interface theme"] = "跟随界面主题"
 L["Give the Cooldown Manager a theme of its own, whatever the rest of the interface wears. It changes the circular ring; square and rounded wear AzeriteUI art in every skin until themes have square art."] = "为冷却管理器单独指定主题，不受界面其余部分影响。它会改变圆形边环；在主题提供方形美术之前，方形和圆角在任何外观下都使用 AzeriteUI 美术。"
+-- Addon conflict prompt (Core/API/Addons.lua) and the Cooldown Manager's choice.
+L["Both (unsupported)"] = "两者都用（不支持）"
+L["%s and AzeriteUI both restyle the same part of the interface, and the two do not work together: %s. Which one do you want to use?"] = "%s 和 AzeriteUI 都会修改界面的同一部分，两者无法同时正常工作：%s。你想使用哪一个？"
+L["Picking AzeriteUI turns %s off for this character and reloads the interface. Both keeps the two running, which is not supported."] = "选择 AzeriteUI 会为此角色禁用 %s 并重载界面。选择“两者都用”会同时保留两者，这不受支持。"
+L["AzeriteUI and %s both style the Cooldown Manager, as you chose. This combination is not supported."] = "按照你的选择，AzeriteUI 和 %s 都在美化冷却管理器。这种组合不受支持。"
+L["Choose again"] = "重新选择"
+L["Ask again which addon styles the Cooldown Manager."] = "重新询问由哪个插件美化冷却管理器。"

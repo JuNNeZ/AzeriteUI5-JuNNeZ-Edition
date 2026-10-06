@@ -997,3 +997,10 @@ L["Include Blizzard's Cooldown Manager in what Explorer Mode fades out."] = "В�
 L["Skin"] = "Облик"
 L["Follow the interface theme"] = "Следовать теме интерфейса"
 L["Give the Cooldown Manager a theme of its own, whatever the rest of the interface wears. It changes the circular ring; square and rounded wear AzeriteUI art in every skin until themes have square art."] = "Даёт менеджеру восстановления собственную тему, независимо от остального интерфейса. Меняется круглое кольцо; квадратный и скруглённый стили используют оформление AzeriteUI в любом облике, пока у тем нет квадратного оформления."
+-- Addon conflict prompt (Core/API/Addons.lua) and the Cooldown Manager's choice.
+L["Both (unsupported)"] = "Оба (не поддерживается)"
+L["%s and AzeriteUI both restyle the same part of the interface, and the two do not work together: %s. Which one do you want to use?"] = "%s и AzeriteUI изменяют одну и ту же часть интерфейса и не работают вместе: %s. Что вы хотите использовать?"
+L["Picking AzeriteUI turns %s off for this character and reloads the interface. Both keeps the two running, which is not supported."] = "Если выбрать AzeriteUI, %s будет отключён для этого персонажа, а интерфейс перезагрузится. «Оба» оставляет работать оба, что не поддерживается."
+L["AzeriteUI and %s both style the Cooldown Manager, as you chose. This combination is not supported."] = "AzeriteUI и %s оба оформляют менеджер восстановления, как вы выбрали. Это сочетание не поддерживается."
+L["Choose again"] = "Выбрать заново"
+L["Ask again which addon styles the Cooldown Manager."] = "Снова спросить, какой аддон оформляет менеджер восстановления."

@@ -222,6 +222,13 @@ _G.hooksecurefunc = function(t, key, hook)
 end
 
 local enabledAddons = {}
+-- Locale lookups answer with the key, as AceLocale does for enUS.
+_G.LibStub = function() return { GetLocale = function() return setmetatable({}, { __index = function(_, k) return k end }) end } end
+-- The conflict prompt (Core/API/Addons.lua) is recorded, not drawn; reloads are counted.
+local prompts, reloads = {}, 0
+_G.ReloadUI = function() reloads = reloads + 1 end
+-- Character data outlives a Load(), as SavedVariables outlive a reload.
+local charStore = {}
 local events = {}
 local modules = {}
 -- Missing font sizes still produce Font objects in Core/API/Assets.lua, but
@@ -247,12 +254,13 @@ local ns = {
 		-- The active theme answers here: the circular style asks, the square ones must not.
 		GetMedia = function(name) return "THEMED:" .. name end,
 		IsAddOnEnabled = function(name) return enabledAddons[name] and true or false end,
+		ShowAddonConflictPrompt = function(opts) prompts[#prompts + 1] = opts end,
 		IsEventAvailable = function() return true end
 	},
 	db = { RegisterNamespace = function(_, _, defaults)
 		local profile = {}
 		for k, v in pairs(defaults.profile) do profile[k] = v end
-		return { profile = profile, RegisterCallback = function() end }
+		return { profile = profile, char = charStore, RegisterCallback = function() end }
 	end }
 }
 function ns:Merge(target, source)
@@ -300,6 +308,12 @@ local function Load()
 		source = source:gsub("LiftEffect%(skin, skin.item.SpellActivationAlert%)", "")
 	elseif (mutation == "pandemic-under") then
 		source = source:gsub("if %(skin and skin.applied%) then LiftEffect%(skin, frame%) end", "")
+	elseif (mutation == "choice-ignored") then
+		source = source:gsub('if %(choice ~= "both"%) then', "if (true) then")
+	elseif (mutation == "always-ask") then
+		source = source:gsub("if %(not choice%) then", "if (true) then")
+	elseif (mutation == "keeps-answer") then
+		source = source:gsub('if %(char.rival ~= rival%) then return end', "")
 	elseif (mutation == "writes-blizzard") then
 		source = source:gsub("skins%[item%] = skin\n", "skins[item] = skin\n\titem.__AzeriteUI = true\n")
 	end
@@ -602,11 +616,73 @@ NewViewer("BuffIconCooldownViewer", 0)
 NewViewer("BuffBarCooldownViewer", 0)
 enabledAddons.ArcUI = true
 modules.CooldownManager = nil
+timers = {}
 local R = Load()
 R:OnEnable()
 check(R:GetRival() == "ArcUI", "a rival addon is named")
 check(Mask(viewers.EssentialCooldownViewer.active[1]).atlas == "UI-HUD-CoolDownManager-Mask", "and the Cooldown Manager is left alone")
 check(#R:GetFadeFrames() == 0, "and not faded")
+
+-- Unanswered: the player is asked, once, after login.
+check(#prompts == 0, "the question waits for login to settle")
+RunTimers()
+check(#prompts == 1 and prompts[1].rival == "ArcUI" and prompts[1].key == "CooldownManager", "then asks which addon styles the Cooldown Manager")
+check(prompts[1].feature == "Cooldown Manager", "naming the feature")
+
+-- Answering with the other addon saves it per character and reloads nothing.
+prompts[1].OnChoose("other")
+check(charStore.owner == "other" and charStore.rival == "ArcUI", "the answer is saved for this character")
+check(reloads == 0, "standing down needs no reload")
+
+local function Session()
+	for k in pairs(viewers) do _G[k] = nil end
+	viewers = {}
+	NewViewer("EssentialCooldownViewer", 1)
+	NewViewer("UtilityCooldownViewer", 0)
+	NewViewer("BuffIconCooldownViewer", 0)
+	NewViewer("BuffBarCooldownViewer", 0)
+	modules.CooldownManager = nil
+	prompts, timers, reloads = {}, {}, 0
+	local m = Load()
+	m:OnEnable()
+	RunTimers()
+	return m
+end
+
+-- Answered "other": next login stands down without asking.
+R = Session()
+check(R:GetRival() == "ArcUI" and #prompts == 0, "an answered question is not asked again")
+
+-- Answered "both": AzeriteUI styles alongside the other addon.
+charStore.owner = "both"
+R = Session()
+check(R:GetRival() == nil and R:GetSharedWith() == "ArcUI", "both: styled alongside the other addon")
+check(Mask(viewers.EssentialCooldownViewer.active[1]).atlas ~= "UI-HUD-CoolDownManager-Mask", "both: our mask is on the items")
+check(#R:GetFadeFrames() > 0 and #prompts == 0, "both: faded with the rest, and not asked again")
+R:PromptRivalChoice()
+check(#prompts == 1 and prompts[1].rival == "ArcUI", "the options page can ask again")
+prompts[1].OnChoose("other")
+check(reloads == 1, "leaving both for the other addon reloads, since our hooks are on")
+
+-- Picked AzeriteUI (the other addon was turned off) and the addon enabled again: ask again.
+charStore.owner, charStore.rival = "azeriteui", "ArcUI"
+R = Session()
+check(R:GetRival() == "ArcUI" and #prompts == 1, "the addon back on after picking AzeriteUI: asked again")
+
+-- An answer about another addon does not carry over.
+charStore.owner, charStore.rival = "other", "ArcUI"
+enabledAddons.ArcUI = nil
+enabledAddons.BetterCooldownManager = true
+R = Session()
+check(R:GetRival() == "BetterCooldownManager" and #prompts == 1, "a different addon is asked about on its own")
+enabledAddons.BetterCooldownManager = nil
+
+-- CooldownManagerCentered only lays the rows out by default: styled, not asked.
+enabledAddons.CooldownManagerCentered = true
+R = Session()
+check(R:GetRival() == nil and R:GetSharedWith() == nil and #prompts == 0, "CooldownManagerCentered is not a rival")
+check(Mask(viewers.EssentialCooldownViewer.active[1]).atlas ~= "UI-HUD-CoolDownManager-Mask", "and the items are styled")
+enabledAddons.CooldownManagerCentered = nil
 
 print(string.format("Cooldown Manager: %d checks, %d failures", checks, failures))
 if (failures > 0) then os.exit(1) end

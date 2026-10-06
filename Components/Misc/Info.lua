@@ -498,6 +498,8 @@ Info.UpdateZone = function(self)
 	local a = zoneName:GetAlpha() -- needed to preserve alpha after text color changes
 	-- Not yet available on some client builds (e.g. WoW Forever beta); avoid a hard error.
 	local minimapZoneName = (type(GetMinimapZoneText) == "function") and GetMinimapZoneText() or ""
+	-- The bare GetZonePVPInfo is a Retail deprecation alias; Forever only has C_PvP's.
+	local GetZonePVPInfo = (C_PvP and C_PvP.GetZonePVPInfo) or _G.GetZonePVPInfo
 	local pvpType = (type(GetZonePVPInfo) == "function") and GetZonePVPInfo() or nil
 	if (pvpType) then
 		local color = Colors.zone[pvpType]

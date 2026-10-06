@@ -491,7 +491,9 @@ function LibKeyBound.Binder:OnKeyDown(key)
 
 	local openChatKey = GetBindingKey('OPENCHAT')
 	if openChatKey and key == openChatKey then
-		ChatFrame_OpenChat("")
+		-- ChatFrame_OpenChat only exists while Blizzard's deprecation fallbacks load.
+		local OpenChat = (ChatFrameUtil and ChatFrameUtil.OpenChat) or ChatFrame_OpenChat
+		OpenChat("")
 		return
 	end
 

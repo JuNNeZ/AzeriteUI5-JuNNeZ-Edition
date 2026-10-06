@@ -28,10 +28,10 @@ lua Tools/Harness/tooltip_compare_harness.lua .            # compare tooltips: b
 lua Tools/Harness/castbar_pushback_harness.lua .           # oUF castbar: the player's bar steps back on pushback
 lua Tools/Harness/mythicplus_harness.lua   .               # Mythic+ timer, forces, end card, keystone, Great Vault
 lua Tools/Harness/unit_tier_harness.lua    .               # Novice/Hardened/Seasoned tiers and critters, any client or language
-lua Tools/Harness/addon_compat_harness.lua .               # ConsolePort icons, gamepad glyphs without it, portraits under a DialogueUI fade
+lua Tools/Harness/addon_compat_harness.lua .               # ConsolePort icons, gamepad glyphs without it, portraits under a DialogueUI fade, the addon conflict prompt
 lua Tools/Harness/bag_button_harness.lua   .               # the bag button beside the cog: secure route, switch, free slots
 lua Tools/Harness/proc_highlight_harness.lua .             # proc styles, preview/reset, riding visibility combinations
-lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/dropdown, restore, keybinds, Explorer fade proxies
+lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/dropdown, restore, keybinds, Explorer fade proxies, rival addon choice
 ```
 
 `mythicplus_harness.lua` loads the real `Components/Misc/MythicPlus.lua` and `Components/Misc/Info.lua`
