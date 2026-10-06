@@ -10,6 +10,20 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.17.1-JuNNeZ (2026-10-06) - Pet Bar Keybinds Actually Cast
+
+### Highlights
+
+- **Pet action bar keybinds now cast the ability instead of doing nothing.** Pressing a keybind on a pet bar button (reported on Warlock) silently toggled autocast instead of using the action, so most presses appeared to do nothing even though the correct keybind was shown on the button. Mouse clicks on the pet bar were unaffected. Left-click and the assigned keybind now behave the same.
+
+### Development
+
+- Root cause: pet buttons use Blizzard's own `PetActionButtonTemplate`, whose click handler only calls `CastPetAction` when the click's button name is literally `"LeftButton"` and otherwise calls `TogglePetAutocast`. The pet bar's keybind-to-click simulation used a virtual `"Keybind"` button name (the convention our LAB-driven action and stance bars use, where it is recognized and mapped back to `"LeftButton"`), which Blizzard's plain pet button mixin does not recognize, so every keybind press fell into the autocast-toggle branch. `Components/ActionBars/Elements/PetBar.lua`'s retail keybind path now simulates a `"LeftButton"` click for pet buttons specifically.
+
+### Access and known limits
+
+- Verified offline (`luac -p`, lint). Live `/reload` confirmation of pet bar keybind casting on a pet class is still owed.
+
 ## 5.17.0-JuNNeZ (2026-10-06) - Plays Nice with Other Addons
 
 ### Highlights

@@ -423,8 +423,14 @@ PetBar.UpdateBindings = function(self)
 					local key = select(keyNumber, GetBindingKey(bindingAction))
 					if (key and (key ~= "")) then
 
-						-- this is why we need named buttons
-						SetOverrideBindingClick(self, false, key, buttonName, "Keybind") -- assign the key to our own button
+						-- Unlike our LAB-driven action/stance buttons, pet buttons use Blizzard's
+						-- own PetActionButtonMixin_OnClick, which only calls CastPetAction when the
+						-- click's button name is literally "LeftButton" (anything else falls through
+						-- to TogglePetAutocast). LAB recognizes a virtual "Keybind" click and maps it
+						-- back to "LeftButton" internally, but these plain template buttons do not, so
+						-- a "Keybind" click here silently toggled autocast instead of casting the
+						-- action. Use "LeftButton" so the keybind behaves like a real left click.
+						SetOverrideBindingClick(self, false, key, buttonName, "LeftButton") -- assign the key to our own button
 
 					end
 				end
