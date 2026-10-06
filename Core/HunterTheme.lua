@@ -312,6 +312,9 @@ Theme.StyleCastbar = function(self, cast)
 	-- The old shield is a whole bar border. Existing Cast_Update colors still
 	-- distinguish protected casts; do not draw that border as a detached icon.
 	cast.Shield:SetAlpha(0)
+	-- With no shield standing in, protected casts (professions, Dismiss Pet)
+	-- keep the regular casing instead of losing it (PlayerCastBar.lua).
+	cast.KeepBackdrop = true
 end
 
 Theme.StyleNameplate = function(self, owner)

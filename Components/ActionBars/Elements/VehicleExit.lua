@@ -32,13 +32,17 @@ local VehicleExit = ns:NewModule("VehicleExit", ns.MovableModulePrototype, "LibM
 
 -- GLOBALS: GameTooltip, GameTooltip_SetDefaultAnchor, Minimap, UIParent
 -- GLOBALS: CreateFrame, InCombatLockdown, RegisterStateDriver
--- GLOBALS: UnitOnTaxi, IsMounted, IsPossessBarVisible, PetCanBeDismissed, PetDismiss, TaxiRequestEarlyLanding
+-- GLOBALS: UnitOnTaxi, IsMounted, PetCanBeDismissed, PetDismiss, TaxiRequestEarlyLanding
 -- GLOBALS: TAXI_CANCEL, TAXI_CANCEL_DESCRIPTION
 -- GLOBALS: PET_DISMISS, NEWBIE_TOOLTIP_UNIT_PET_DISMISS
 -- GLOBALS: BINDING_NAME_VEHICLEEXIT
 
 -- Lua API
 local unpack = unpack
+
+-- WoW API. C_ActionBar since 12.0.0 on Retail and Forever; the global only
+-- survives in Blizzard's deprecation fallbacks (loadDeprecationFallbacks CVar).
+local IsPossessBarVisible = (C_ActionBar and C_ActionBar.IsPossessBarVisible) or _G.IsPossessBarVisible
 
 -- Addon API
 local Colors = ns.Colors

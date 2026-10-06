@@ -10,6 +10,20 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.16.4-JuNNeZ (2026-10-06) - Hunter Castbar Fix
+
+### Highlights
+
+- **The Hunter theme castbar keeps its frame on every cast.** Casts that cannot be interrupted, such as planting herbalism seeds, making mulch or Dismiss Pet, showed the fill with no frame around it. AzeriteUI swaps in a spiked frame for these casts, and the Hunter theme hides that one, so nothing was left. The Hunter theme now keeps its normal frame; the red fill still marks the cast as uninterruptible. Other themes are unchanged.
+
+### Development
+
+- Explorer Mode and the vehicle exit button now ask for the vehicle, override, possess and bonus bar state through the game's current action bar functions. The old names only exist while Blizzard's deprecation fallbacks are switched on, which they are by default, so nothing changes today; this keeps both working if that setting is turned off or removed.
+
+### Access and known limits
+
+- Verified offline only; live confirmation on Retail and Forever is still owed.
+
 ## 5.16.3-JuNNeZ (2026-10-05) - Explorer Mode and Cooldown Manager Follow-ups
 
 ### Highlights

@@ -331,9 +331,11 @@ end
 -- Update cast bar color and backdrop to indicate protected casts.
 -- *Note that the shield icon works as an alternate backdrop here,
 --  which is why we're hiding the regular backdrop on protected casts.
+--  Themes that hide the shield set element.KeepBackdrop (HunterTheme.lua),
+--  or protected casts would be drawn with no casing at all.
 local Cast_Update = function(element, unit)
 	if (element.notInterruptible) then
-		element.Backdrop:Hide()
+		element.Backdrop:SetShown(element.KeepBackdrop and true or false)
 		element:SetStatusBarColor(unpack(Colors.red))
 	else
 		element.Backdrop:Show()

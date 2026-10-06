@@ -37,6 +37,20 @@ local type = type
 -- Sourced from BlizzardInterfaceResources/Resources/EnumerationTables.lua
 local POWER_TYPE_MANA = Enum.PowerType.Mana
 
+-- WoW API. Since 12.0.0 these live in C_ActionBar on Retail and Forever; the
+-- globals survive only in Blizzard_DeprecatedActionBar, which loads only while
+-- the loadDeprecationFallbacks CVar is on. The global is the fallback.
+local C_ActionBar = C_ActionBar
+local GetActionBarAPI = function(name)
+	return (C_ActionBar and C_ActionBar[name]) or _G[name]
+end
+local HasVehicleActionBar = GetActionBarAPI("HasVehicleActionBar")
+local HasOverrideActionBar = GetActionBarAPI("HasOverrideActionBar")
+local HasTempShapeshiftActionBar = GetActionBarAPI("HasTempShapeshiftActionBar")
+local IsPossessBarVisible = GetActionBarAPI("IsPossessBarVisible")
+local HasBonusActionBar = GetActionBarAPI("HasBonusActionBar")
+local GetBonusBarOffset = GetActionBarAPI("GetBonusBarOffset")
+
 -- Player Constants
 local _,playerClass = UnitClass("player")
 local playerLevel = UnitLevel("player")
