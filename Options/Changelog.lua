@@ -17,26 +17,26 @@ ns.Changelog = {
 	{
 		version = "5.17.2-JuNNeZ",
 		date = "2026-10-07",
-		title = "Cleaner Edit Mode and Pet Frames",
+		title = "Pet Health Background and Edit Mode Fixes",
 		groups = {
 			{
 				kind = "Highlights",
 				items = {
-					"Pet health loss now shows a dark background, matching the other unit frames instead of revealing the game world through the empty part of the bar.",
-					"Blizzard's replaced party, raid, arena and personal-resource previews are hidden while Edit Mode is open. AzeriteUI also hides their selection outlines and checkboxes, including arena member icons and cast bars that ignore their parent's transparency.",
-					"The alternate power bar no longer gets extra power-update events from AzeriteUI, avoiding a nil maximum-power error when its counter is not initialized.",
+					"Pet health loss now has a dark background, matching the other unit frames instead of showing the world through the empty part of the bar.",
+					"Blizzard's replaced party, raid, arena and personal-resource previews no longer show in Edit Mode. Their selection outlines and checkboxes are hidden too, including arena member debuff icons and cast bars. The minimap and Vehicle Exit button selection outlines are hidden as well.",
+					"AzeriteUI stops adding power-update events to Blizzard's alternate power bar, avoiding the nil maximum-power error reported when the counter is not initialized.",
 				},
 			},
 			{
 				kind = "Development",
 				items = {
-					"Edit Mode suppression uses selection and alpha post-hooks and restores preview alpha on exit, without changing Blizzard's Edit Mode system registry. /azdebug editmode reports preview, overlay, checkbox and arena-member state to help diagnose anything still visible. A lightweight Elune harness covers the selection-hook security behavior.",
+					"Edit Mode suppression uses post-hooks and alpha-only hiding, restoring preview alpha on exit without changing Blizzard's Edit Mode registry. /azdebug editmode reports preview, overlay, checkbox and arena-member state. The Elune harness checks that the selection hook leaves the registry untouched.",
 				},
 			},
 			{
 				kind = "Access and known limits",
 				items = {
-					"Edit Mode hiding was confirmed live on Retail 12.1. Forever has not yet been confirmed. The pet background and alternate-power event change have not yet received live in-game confirmation.",
+					"Edit Mode hiding was confirmed live on Retail 12.1; Forever is not yet confirmed. The pet background and alternate-power change have not yet been confirmed in game.",
 				},
 			},
 		},

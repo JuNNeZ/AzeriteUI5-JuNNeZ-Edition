@@ -1,22 +1,6 @@
 
 # Changelog
 
-## 5.17.2-JuNNeZ (2026-10-07) - Cleaner Edit Mode and Pet Frames
-
-### Highlights
-
-- **Pet health loss now shows a dark background**, matching the other unit frames instead of revealing the game world through the empty part of the bar.
-- **Blizzard's replaced party, raid, arena and personal-resource previews are hidden while Edit Mode is open.** AzeriteUI also hides their selection outlines and checkboxes, including arena member icons and cast bars that ignore their parent's transparency.
-- **The alternate power bar no longer gets extra power-update events from AzeriteUI**, avoiding a nil maximum-power error when its counter is not initialized.
-
-### Development
-
-- Edit Mode suppression uses selection and alpha post-hooks and restores preview alpha on exit, without changing Blizzard's Edit Mode system registry. `/azdebug editmode` reports preview, overlay, checkbox and arena-member state to help diagnose anything still visible. A lightweight Elune harness covers the selection-hook security behavior.
-
-### Access and known limits
-
-- Edit Mode hiding was confirmed live on Retail 12.1. Forever has not yet been confirmed. The pet background and alternate-power event change have not yet received live in-game confirmation.
-
 ## A note on WoW 12.1 addon development
 
 Retail 12.1 protects more combat, aura, cooldown, and unit data as secret values. Addons can often display those values only by handing them directly to Blizzard-owned widgets instead of reading or formatting them, which is why one visual layer may keep working while related text or logic disappears; safe fixes increasingly require narrow ownership boundaries between Blizzard and other addons.
@@ -25,6 +9,22 @@ Release note rule: each version entry must include only what changed since the p
 Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
+
+## 5.17.2-JuNNeZ (2026-10-07) - Pet Health Background and Edit Mode Fixes
+
+### Highlights
+
+- **Pet health loss now has a dark background**, matching the other unit frames instead of showing the world through the empty part of the bar.
+- **Blizzard's replaced party, raid, arena and personal-resource previews no longer show in Edit Mode.** Their selection outlines and checkboxes are hidden too, including arena member debuff icons and cast bars. The minimap and Vehicle Exit button selection outlines are hidden as well.
+- **AzeriteUI stops adding power-update events to Blizzard's alternate power bar**, avoiding the nil maximum-power error reported when the counter is not initialized.
+
+### Development
+
+- Edit Mode suppression uses post-hooks and alpha-only hiding, restoring preview alpha on exit without changing Blizzard's Edit Mode registry. `/azdebug editmode` reports preview, overlay, checkbox and arena-member state. The Elune harness checks that the selection hook leaves the registry untouched.
+
+### Access and known limits
+
+- Edit Mode hiding was confirmed live on Retail 12.1; Forever is not yet confirmed. The pet background and alternate-power change have not yet been confirmed in game.
 
 ## 5.17.1-JuNNeZ (2026-10-06) - Pet Bar Keybinds Actually Cast
 
