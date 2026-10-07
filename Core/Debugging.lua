@@ -3514,6 +3514,7 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug dump tot|r")
 	print("|cfff0f0f0  /azdebug dump all|r")
 	print("|cfff0f0f0  /azdebug aurasnapshot [player|topright|target|party|raid5|both]|r")
+	print("|cfff0f0f0  /azdebug editmode|r  (what Edit Mode is showing: previews, overlays, checkboxes)")
 	print("|cfff0f0f0  /azdebug tooltips|r  (what the compare tooltip joins and the aura tooltip style last did)")
 	print("|cfff0f0f0  /azdebug unitmenu|r  (hover a unit frame; which menu it opens, replaced menu code)")
 	print("|cfff0f0f0  /azdebug unitmenu trace [on|off|toggle]|r")
@@ -5207,6 +5208,11 @@ Debugging.DebugMenu = function(self, input)
 			return tooltips:PrintDiagnostics()
 		end
 		print("|cff33ff99", "AzeriteUI /azdebug tooltips:", "the Tooltips module is not loaded.")
+		return
+	end
+	if (cmd == "editmode") then
+		if (ns.PrintEditModeDiagnostics) then return ns.PrintEditModeDiagnostics() end
+		print("|cff33ff99", "AzeriteUI /azdebug editmode:", "not loaded.")
 		return
 	end
 	if (cmd == "unitmenu") then

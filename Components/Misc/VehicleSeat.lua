@@ -53,6 +53,7 @@ end
 VehicleSeat.PrepareFrames = function(self)
 
 	self.frame = VehicleSeatIndicator
+	if (ns.HideEditModeSelection) then ns.HideEditModeSelection(self.frame) end
 
 	self.frame:ClearAllPoints()
 	self.frame:SetParent(UIParent)

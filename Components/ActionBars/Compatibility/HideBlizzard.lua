@@ -25,6 +25,210 @@
 
 --]]
 local _, ns = ...
+
+-- Blizzard's Edit Mode selection overlay ignores its parent's alpha and mouse state, so a
+-- bar we fade to nothing can still be highlighted and dragged in Edit Mode. The overlay
+-- is a plain child frame (not protected, not in the system registry), so hiding it from a
+-- post-hook leaves registration, saved layouts and Blizzard's own selection logic alone.
+local selectionHooked = setmetatable({}, { __mode = "k" })
+local hidingSelection = setmetatable({}, { __mode = "k" })
+ns.HideEditModeSelection = function(frame)
+	local selection = frame and frame.Selection
+	if (not selection or type(selection.Hide) ~= "function") then return end
+	if (selectionHooked[selection]) then return end
+	selectionHooked[selection] = true
+	hooksecurefunc(selection, "Show", function(self)
+		if (hidingSelection[self]) then return end
+		hidingSelection[self] = true
+		self:Hide()
+		hidingSelection[self] = nil
+	end)
+	if (selection:IsShown()) then selection:Hide() end
+end
+
+-- Blizzard frames AzeriteUI replaces or hides outside the action bars. The module name
+-- (when set) must be enabled, otherwise the player still needs Blizzard's overlay.
+local EDIT_MODE_REPLACED = {
+	{ "PersonalResourceDisplayFrame" },
+	{ "MainStatusTrackingBarContainer" },
+	{ "SecondaryStatusTrackingBarContainer" },
+	{ "CompactArenaFrame" },
+	{ "CompactRaidFrameContainer" },
+	{ "BuffFrame", "Auras" },
+	{ "DebuffFrame", "Auras" },
+	{ "MinimapCluster", "Minimap" },
+	{ "MainMenuBarVehicleLeaveButton", "VehicleExit" }
+}
+
+ns.HideReplacedEditModeSelections = function()
+	for _, entry in ipairs(EDIT_MODE_REPLACED) do
+		local module = entry[2] and ns:GetModule(entry[2], true)
+		if (not entry[2] or (module and module:IsEnabled())) then
+			ns.HideEditModeSelection(_G[entry[1]])
+		end
+	end
+end
+
+-- Edit Mode's side panel also lists a "show this frame" checkbox for each of these. Ticking
+-- one force-shows Blizzard's copy of a frame AzeriteUI replaces. LayoutSettings re-shows
+-- the boxes whenever the panel is rebuilt, so hide them from a post-hook; writing
+-- checkButton.shouldHide instead would put addon-written state in Blizzard's layout path.
+local EDIT_MODE_CHECKBOXES = { "ArenaFrames", "RaidFrames", "PartyFrames", "PersonalResourceDisplay", "VehicleLeaveButton" }
+local checkboxesHooked = false
+
+local hideReplacedCheckboxes = function()
+	local manager = _G.EditModeManagerFrame
+	local container = manager and manager.AccountSettings and manager.AccountSettings.SettingsContainer
+	if (not container) then return end
+	for _, key in ipairs(EDIT_MODE_CHECKBOXES) do
+		local checkBox = container[key]
+		if (checkBox and checkBox.Hide) then checkBox:Hide() end
+	end
+end
+
+ns.HideReplacedEditModeCheckboxes = function()
+	local manager = _G.EditModeManagerFrame
+	local settings = manager and manager.AccountSettings
+	if (not settings or type(settings.LayoutSettings) ~= "function") then return end
+	if (not checkboxesHooked) then
+		checkboxesHooked = true
+		hooksecurefunc(settings, "LayoutSettings", hideReplacedCheckboxes)
+	end
+	hideReplacedCheckboxes()
+end
+
+-- Hiding a checkbox does not untick it: a box left ticked in an earlier session still
+-- force-shows Blizzard's party, raid, arena and personal resource previews when Edit Mode
+-- opens. Fade those previews to nothing for as long as Edit Mode is active. Alpha is not
+-- protected state, and nothing here calls into or writes to Blizzard's Edit Mode tables.
+-- Entries: frame name, then the modules (any one enabled) that replace it; none = always.
+local EDIT_MODE_PREVIEWS = {
+	{ "PersonalResourceDisplayFrame" },
+	{ "CompactArenaFrame", "ArenaFrames" },
+	{ "CompactRaidFrameContainer", "RaidFrame5", "RaidFrame25", "RaidFrame40" },
+	{ "PartyFrame", "PartyFrames", "RaidFrame5" },
+	{ "CompactPartyFrame", "PartyFrames", "RaidFrame5" }
+}
+local previewAlpha = setmetatable({}, { __mode = "k" })
+local previewHooked = setmetatable({}, { __mode = "k" })
+local settingPreviewAlpha = false
+local editModeActive = false
+local previewHooksInstalled = false
+
+local setPreviewAlpha = function(frame, alpha)
+	settingPreviewAlpha = true
+	frame:SetAlpha(alpha)
+	settingPreviewAlpha = false
+end
+
+local isPreviewReplaced = function(entry)
+	if (#entry == 1) then return true end
+	for i = 2, #entry do
+		local module = ns:GetModule(entry[i], true)
+		if (module and module:IsEnabled()) then return true end
+	end
+	return false
+end
+
+-- The arena members' debuff, CC remover, cast bar and diminish tray are created with
+-- ignoreParentAlpha, so fading CompactArenaFrame leaves them drawn. Fade them directly.
+local ARENA_MEMBER_CHILDREN = { "DebuffFrame", "CcRemoverFrame", "CastingBarFrame", "SpellDiminishStatusTray" }
+
+local fadeFrame = function(frame)
+	if (previewAlpha[frame] == nil) then
+		previewAlpha[frame] = frame:GetAlpha()
+	end
+	if (not previewHooked[frame]) then
+		previewHooked[frame] = true
+		hooksecurefunc(frame, "SetAlpha", function(self)
+			if (editModeActive and not settingPreviewAlpha and previewAlpha[self] ~= nil) then
+				setPreviewAlpha(self, 0)
+			end
+		end)
+	end
+	setPreviewAlpha(frame, 0)
+end
+
+local restoreFrame = function(frame)
+	if (previewAlpha[frame] == nil) then return end
+	local alpha = previewAlpha[frame]
+	previewAlpha[frame] = nil
+	setPreviewAlpha(frame, alpha)
+end
+
+local applyEditModePreviews = function()
+	-- Modules may have enabled since login, so re-check the overlays each time.
+	if (editModeActive) then ns.HideReplacedEditModeSelections() end
+	local apply = editModeActive and fadeFrame or restoreFrame
+	for _, entry in ipairs(EDIT_MODE_PREVIEWS) do
+		local frame = _G[entry[1]]
+		if (frame and frame.SetAlpha and isPreviewReplaced(entry)) then
+			apply(frame)
+			if (entry[1] == "CompactArenaFrame" and type(frame.memberUnitFrames) == "table") then
+				for _, member in ipairs(frame.memberUnitFrames) do
+					for _, key in ipairs(ARENA_MEMBER_CHILDREN) do
+						local child = member[key]
+						if (child and child.SetAlpha) then apply(child) end
+					end
+				end
+			end
+		end
+	end
+end
+ns.HideReplacedEditModePreviews = function()
+	local manager = _G.EditModeManagerFrame
+	if (not manager or previewHooksInstalled) then return end
+	if (type(manager.EnterEditMode) ~= "function" or type(manager.ExitEditMode) ~= "function") then return end
+	previewHooksInstalled = true
+	hooksecurefunc(manager, "EnterEditMode", function() editModeActive = true; applyEditModePreviews() end)
+	hooksecurefunc(manager, "ExitEditMode", function() editModeActive = false; applyEditModePreviews() end)
+	-- Ticking a box mid-session builds the preview afterwards, so catch it on the way.
+	hooksecurefunc(manager.AccountSettings or manager, "LayoutSettings", function()
+		if (editModeActive) then applyEditModePreviews() end
+	end)
+end
+
+-- /azdebug editmode: read-only report on what Edit Mode is showing, so a leftover preview can be named.
+ns.PrintEditModeDiagnostics = function()
+	local out = function(...) print("|cff33ff99AzeriteUI /azdebug editmode:|r", ...) end
+	local manager = _G.EditModeManagerFrame
+	out("Edit Mode open:", tostring(manager and manager:IsShown() or false), "| our active flag:", tostring(editModeActive), "| hooks:", tostring(previewHooksInstalled))
+	local describe = function(frame)
+		if (not frame or not frame.IsShown) then return "missing" end
+		local parent = frame.GetParent and frame:GetParent()
+		local name = parent and parent.GetName and parent:GetName() or "?"
+		local sel = frame.Selection
+		return ("shown=%s visible=%s alpha=%.2f parent=%s selection=%s"):format(
+			tostring(frame:IsShown()), tostring(frame.IsVisible and frame:IsVisible()), frame:GetAlpha() or -1, name,
+			sel and tostring(sel:IsShown()) or "none")
+	end
+	for _, entry in ipairs(EDIT_MODE_PREVIEWS) do
+		out(entry[1], isPreviewReplaced(entry) and "(we fade)" or "(left alone)", describe(_G[entry[1]]))
+	end
+	local arena = _G.CompactArenaFrame
+	for i, member in ipairs(arena and arena.memberUnitFrames or {}) do
+		for _, key in ipairs(ARENA_MEMBER_CHILDREN) do
+			if (member[key] and member[key]:IsShown()) then out("arena member" .. i, key, describe(member[key])) end
+		end
+	end
+	out("MainMenuBarVehicleLeaveButton", describe(_G.MainMenuBarVehicleLeaveButton))
+	for _, entry in ipairs(EDIT_MODE_REPLACED) do
+		out("overlay", entry[1], describe(_G[entry[1]]))
+	end
+	local container = manager and manager.AccountSettings and manager.AccountSettings.SettingsContainer
+	if (container) then
+		for _, key in ipairs(EDIT_MODE_CHECKBOXES) do
+			local box = container[key]
+			out("checkbox", key, box and ("shown=" .. tostring(box:IsShown())) or "missing")
+		end
+	end
+	for i = 1, 5 do
+		local member = _G["CompactPartyFrameMember" .. i]
+		if (member and member:IsShown()) then
+			out("CompactPartyFrameMember" .. i, describe(member), "ignoreParentAlpha=" .. tostring(member.GetIgnoreParentAlpha and member:GetIgnoreParentAlpha()))
+		end
+	end
+end
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local BlizzardABDisabler = ns:NewModule("BlizzardABDisabler", "LibMoreEvents-1.0", "AceHook-3.0")
@@ -148,6 +352,7 @@ local quarantineFrame = function(frame)
 
 	frame:SetAlpha(0)
 	disableMouseInput(frame)
+	ns.HideEditModeSelection(frame)
 
 	if (not quarantinedFrames[frame]) then
 		quarantinedFrames[frame] = true
@@ -294,6 +499,9 @@ BlizzardABDisabler.QueueHideBlizzard = function(self)
 end
 
 BlizzardABDisabler.OnBlizzardUIReady = function(self, event, addon)
+	ns.HideReplacedEditModeSelections()
+	ns.HideReplacedEditModeCheckboxes()
+	ns.HideReplacedEditModePreviews()
 	if (event == "ADDON_LOADED" and not BLIZZARD_ACTION_BAR_ADDONS[addon]) then
 		return
 	end
@@ -310,6 +518,9 @@ BlizzardABDisabler.OnCombatEnd = function(self)
 end
 
 BlizzardABDisabler.OnEnable = function(self)
+	ns.HideReplacedEditModeSelections()
+	ns.HideReplacedEditModeCheckboxes()
+	ns.HideReplacedEditModePreviews()
 	self:HideBlizzard()
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnBlizzardUIReady")
 	self:RegisterEvent("ADDON_LOADED", "OnBlizzardUIReady")

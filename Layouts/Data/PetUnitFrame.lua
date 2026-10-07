@@ -65,6 +65,8 @@ ns.RegisterConfig("PetFrame", {
 	HealthAbsorbColor = { 1, 1, 1, .5 },
 	HealthCastOverlayColor = { 1, 1, 1, .5 },
 
+	HealthBackgroundColor = { 0, 0, 0, .75 },
+
 	HealthBackdropPosition = { "CENTER", 1, -2 },
 	HealthBackdropSize = { 193,93 },
 	HealthBackdropTexture = GetMedia("cast_back"),

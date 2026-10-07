@@ -89,11 +89,13 @@ local function RestorePlayerPowerBarAltEvents()
     end
 
     -- Ensure Blizzard drives it fully
+    -- Only the three events Blizzard's own XML registers. UNIT_POWER_UPDATE and
+    -- UNIT_MAXPOWER belong to UnitPowerBarAlt_SetUp/TearDown; registering them
+    -- here fired the counter-bar update before CounterBar_SetUp had run
+    -- (UnitPowerBarAlt.lua:710 "bad argument #2 to 'min'").
     alt:RegisterEvent("UNIT_POWER_BAR_SHOW")
     alt:RegisterEvent("UNIT_POWER_BAR_HIDE")
     alt:RegisterEvent("PLAYER_ENTERING_WORLD")
-    alt:RegisterEvent("UNIT_POWER_UPDATE")
-    alt:RegisterEvent("UNIT_MAXPOWER")
 
     -- Let the native event dispatch initialize and update the bar. Calling its
     -- OnEvent here taints value/displayedValue, then the smooth OnUpdate

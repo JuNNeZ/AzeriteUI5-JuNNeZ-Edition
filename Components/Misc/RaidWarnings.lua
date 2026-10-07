@@ -49,6 +49,7 @@ RaidWarnings.PrepareFrames = function(self)
 	if (self.frame) then return true end
 
 	self.frame = RaidWarningFrame
+	if (ns.HideEditModeSelection) then ns.HideEditModeSelection(self.frame) end
 	if (not self.frame) then
 		return false
 	end

@@ -328,6 +328,14 @@ local style = function(self, unit)
 	self.Health.PostUpdate = Health_PostUpdate
 	self.Health.PostUpdateColor = Health_PostUpdateColor
 
+	-- Dark fill behind the bar so lost health is not see-through.
+	local healthFill = health:CreateTexture(nil, "BACKGROUND", nil, -2)
+	healthFill:SetAllPoints(health)
+	healthFill:SetTexture(db.HealthBarTexture)
+	healthFill:SetVertexColor(unpack(db.HealthBackgroundColor or { 0, 0, 0, .75 }))
+
+	self.Health.Background = healthFill
+
 	local healthBackdrop = health:CreateTexture(nil, "BACKGROUND", nil, -1)
 	healthBackdrop:SetPoint(unpack(db.HealthBackdropPosition))
 	healthBackdrop:SetSize(unpack(db.HealthBackdropSize))

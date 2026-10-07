@@ -59,6 +59,7 @@ ArcheologyBar.PrepareFrames = function(self)
 	end
 
 	self.frame = ArcheologyDigsiteProgressBar
+	if (ns.HideEditModeSelection) then ns.HideEditModeSelection(self.frame) end
 
 	self.frame:SetScript("OnShow", function(self)
 		self.timeSinceLeftDigsiteCheck = 0;
