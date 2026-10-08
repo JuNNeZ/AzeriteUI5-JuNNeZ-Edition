@@ -10,6 +10,20 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.18.1-JuNNeZ (2026-10-08) - Shaman Imbues on Forever
+
+### Highlights
+
+- **WoW Forever: Shaman imbues now show in the player aura row.** Flametongue, Windfury, Rockbiter and other weapon imbues get their own icon at the start of the row, with a countdown, charges and the weapon tooltip, even while you have a target. In 5.18.0 Forever showed only oils and stones there. **Show Weapon Enchants** and **Show Debuffs Only** control them too.
+
+### Development
+
+- On Forever an imbue is its own enchant type that Blizzard's aura container never receives. Several current Forever addons draw imbues themselves for the same reason. The row now reads every weapon enchant through Forever's own API and draws AzeriteUI icons for the ones the container leaves out, skipping the oil it already shows. Every value is checked for secrecy before use, and anything unreadable is skipped. The offline harness gained a Forever section, including fake secret values and three more deliberately broken copies.
+
+### Access and known limits
+
+- Offline-tested only; not yet confirmed in game on Forever. If you recast an imbue in combat, its icon updates at once, but the row only makes room for it when combat ends. Imbue icons have no right-click cancel, and the top-right buff list still cannot show Forever imbues. Retail is unchanged.
+
 ## 5.18.0-JuNNeZ (2026-10-08) - Weapon Enchants on the Player Aura Row
 
 ### Highlights

@@ -741,6 +741,166 @@ local function ApplyItemEnchantmentLayout(container, config)
 	})
 end
 
+--[[
+	Forever weapon imbues. On WoW Forever an imbue (Flametongue, Rockbiter, Windfury) is its
+	own enchant type, Enum.ItemEnchantType.Imbue, and C_PaperDollInfo.GetTemporaryEnchantmentInfo,
+	the container's only enchant source, reports just the temporary one (oils, stones). So the
+	row draws cells of its own for every timed enchant C_Item.GetWeaponEnchantInfo lists that the
+	container does not already show, at the start of the row, and moves the container along by
+	as many slots. C_Item.GetWeaponEnchantInfo only exists on Forever, so Retail never gets here.
+
+	Nothing read from either API is tested, compared or used in arithmetic before it is known
+	not to be secret; an unreadable entry is skipped rather than guessed. The cells are plain
+	frames of our own, so they update in combat; the container move waits for combat to end.
+]]
+local IsSecret = function(value)
+	return issecretvalue and issecretvalue(value) or false
+end
+
+local IsSecretTable = function(value)
+	return issecrettable and issecrettable(value) or false
+end
+
+-- Not secret and set; the secrecy check comes first, as comparing a secret raises.
+local Readable = function(value)
+	if (IsSecret(value)) then
+		return false
+	end
+	return value ~= nil
+end
+
+local ReadableNumber = function(value)
+	return Readable(value) and type(value) == "number"
+end
+
+local FOREVER_IMBUES = (C_Item and C_Item.GetWeaponEnchantInfo and C_PaperDollInfo
+	and C_PaperDollInfo.GetTemporaryEnchantmentInfo and Enum and Enum.ItemEnchantType
+	and Enum.ItemEnchantType.Imbue and Enum.WeaponSlot) and true or false
+
+-- { weapon slot, inventory slot, whether the row's container shows its temporary enchant }
+local IMBUE_WEAPONS = {}
+if (FOREVER_IMBUES) then
+	local weaponSlot = Enum.WeaponSlot
+	for _, entry in ipairs({
+		{ weaponSlot.MainHand, INVSLOT_MAINHAND or 16, true },
+		{ weaponSlot.OffHand, INVSLOT_OFFHAND or 17, true },
+		{ weaponSlot.Ranged, INVSLOT_RANGED or 18, false }
+	}) do
+		if (entry[1] ~= nil) then
+			IMBUE_WEAPONS[#IMBUE_WEAPONS + 1] = entry
+		end
+	end
+end
+
+-- The enchant ID the container shows for an inventory slot, and whether it shows one at all.
+-- An unreadable ID still counts as shown, so the caller can leave that slot's temporary
+-- enchants to the container rather than draw one twice.
+local function GetContainerEnchantID(inventorySlot)
+	local ok, info = TryCall(C_PaperDollInfo.GetTemporaryEnchantmentInfo, inventorySlot)
+	if (not ok or type(info) ~= "table") then
+		return nil, false
+	end
+	if (not IsSecretTable(info) and ReadableNumber(info.enchantID)) then
+		return info.enchantID, true
+	end
+	return nil, true
+end
+
+-- Fills `into` with the enchants to draw, in cell order; returns how many.
+local function ReadImbues(into)
+	local count = 0
+	local permanent = Enum.ItemEnchantType.Permanent
+	local imbue = Enum.ItemEnchantType.Imbue
+	for _, weapon in ipairs(IMBUE_WEAPONS) do
+		local inventorySlot = weapon[2]
+		local shownID, containerShows
+		if (weapon[3]) then
+			shownID, containerShows = GetContainerEnchantID(inventorySlot)
+		end
+		-- The container shows something here but its ID is unreadable: draw imbues only.
+		local imbuesOnly = containerShows and shownID == nil
+		local ok, list = TryCall(C_Item.GetWeaponEnchantInfo, weapon[1])
+		if (ok and type(list) == "table" and not IsSecretTable(list)) then
+			for _, enchant in ipairs(list) do
+				if (type(enchant) == "table" and not IsSecretTable(enchant)
+					and Readable(enchant.hasEnchant) and enchant.hasEnchant == true
+					and Readable(enchant.enchantType) and enchant.enchantType ~= permanent
+					and (not imbuesOnly or enchant.enchantType == imbue)
+					and ReadableNumber(enchant.enchantID) and enchant.enchantID ~= shownID
+					and ReadableNumber(enchant.timeLeft) and enchant.timeLeft > 0) then
+					count = count + 1
+					local entry = into[count] or {}
+					into[count] = entry
+					entry.inventorySlot = inventorySlot
+					entry.enchantID = enchant.enchantID
+					entry.timeLeft = enchant.timeLeft / 1000
+					entry.charges = (ReadableNumber(enchant.charges) and enchant.charges > 1) and enchant.charges or nil
+				end
+			end
+		end
+	end
+	for index = #into, count + 1, -1 do
+		into[index] = nil
+	end
+	return count
+end
+
+local function CreateImbueCell(display)
+	local options = display.itemEnchantmentOptions
+	local size = options.size or 36
+	local cell = CreateFrame("Frame", nil, display.playerWrapper)
+	cell:SetSize(size, size)
+	cell:SetFrameLevel(options.buttonFrameLevel or display:GetFrameLevel())
+	SetMouseInputEnabled(cell, not options.disableMouse)
+
+	local icon = cell:CreateTexture(nil, "BACKGROUND", nil, 1)
+	icon:SetAllPoints(cell)
+	local mask = cell:CreateMaskTexture(nil, "BACKGROUND", nil, 2)
+	mask:SetAllPoints(cell)
+	mask:SetTexture(GetMedia("actionbutton-mask-square"))
+	icon:AddMaskTexture(mask)
+	cell.Icon = icon
+
+	local border = ns.AuraStyles.CreateTextureBorder(cell)
+	SetMouseInputEnabled(border, false)
+	border:SetPoint("TOPLEFT", -6, 6)
+	border:SetPoint("BOTTOMRIGHT", 6, -6)
+	border:SetFrameLevel(cell:GetFrameLevel() + 2)
+	border:SetBackdropBorderColor(unpack(Colors.verydarkgray))
+
+	local count = border:CreateFontString(nil, "OVERLAY")
+	count:SetFontObject(GetFont(12, true))
+	count:SetTextColor(unpack(Colors.offwhite))
+	count:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -2, 3)
+	cell.Count = count
+
+	local cooldown = CreateFrame("Cooldown", nil, cell, "CooldownFrameTemplate")
+	SetMouseInputEnabled(cooldown, false)
+	cooldown:SetAllPoints(cell)
+	cooldown:SetDrawEdge(false)
+	cooldown:SetDrawBling(false)
+	cooldown:SetDrawSwipe(true)
+	cooldown:SetSwipeColor(0, 0, 0, 0)
+	cooldown:SetHideCountdownNumbers(options.disableCooldown and true or false)
+	if (cooldown.SetCountdownAbbrevThreshold) then
+		cooldown:SetCountdownAbbrevThreshold(2)
+	end
+	cooldown:SetFrameLevel(border:GetFrameLevel() + 1)
+	cell.Cooldown = cooldown
+
+	cell:SetScript("OnEnter", function(self)
+		if (not self.inventorySlot or not GameTooltip) then return end
+		GameTooltip:SetOwner(self, options.tooltipAnchor or "ANCHOR_TOPLEFT")
+		GameTooltip:SetInventoryItem("player", self.inventorySlot)
+		GameTooltip:Show()
+	end)
+	cell:SetScript("OnLeave", function()
+		if (GameTooltip) then GameTooltip:Hide() end
+	end)
+	cell:Hide()
+	return cell
+end
+
 local DisplayMixin = {}
 
 function DisplayMixin:Configure(config)
@@ -784,6 +944,127 @@ function DisplayMixin:ApplyItemEnchantments(config)
 		end
 		self:SetActivePlayerContainer(plain, config)
 	end
+	if (FOREVER_IMBUES) then
+		self:ApplyImbues(config, wanted)
+	end
+end
+
+-- Forever only, out of combat (from Configure): remembers the layout, follows the switch
+-- and listens for weapon changes only while imbues are wanted.
+function DisplayMixin:ApplyImbues(config, wanted)
+	self.imbueLayout = {
+		size = config.size or 36,
+		spacingX = config.spacingX or 0,
+		initialAnchor = config.initialAnchor or "BOTTOMLEFT",
+		growthX = config.growthX or "RIGHT"
+	}
+	self.imbuesWanted = wanted and true or false
+	self.imbues = self.imbues or {}
+	self.imbueCells = self.imbueCells or {}
+	self.imbueTimers = self.imbueTimers or {}
+
+	if (wanted and not self.imbueEvents) then
+		local display = self
+		local events = CreateFrame("Frame")
+		events:SetScript("OnEvent", function(_, event)
+			if (event == "PLAYER_REGEN_ENABLED") then
+				if (display.imbueLayoutPending) then
+					display:LayoutImbues()
+				end
+			else
+				display:RefreshImbues()
+			end
+		end)
+		self.imbueEvents = events
+	end
+	if (self.imbueEvents) then
+		self.imbueEvents:UnregisterAllEvents()
+		if (wanted) then
+			self.imbueEvents:RegisterEvent("WEAPON_ENCHANT_CHANGED")
+			self.imbueEvents:RegisterEvent("WEAPON_SLOT_CHANGED")
+			self.imbueEvents:RegisterEvent("PLAYER_ENTERING_WORLD")
+			self.imbueEvents:RegisterEvent("PLAYER_REGEN_ENABLED")
+			self.imbueEvents:RegisterUnitEvent("UNIT_INVENTORY_CHANGED", "player")
+		end
+	end
+	self:RefreshImbues()
+	-- Configure has just reset the container's anchor and line size; shift them again.
+	self:LayoutImbues()
+end
+
+-- Reads the enchants and updates the cells; safe in combat. Moves the container only when
+-- the number of cells changes.
+function DisplayMixin:RefreshImbues()
+	local count = self.imbuesWanted and ReadImbues(self.imbues) or 0
+	local now = GetTime()
+	local timers, seen = self.imbueTimers, {}
+	for index = 1, count do
+		local imbue = self.imbues[index]
+		local cell = self.imbueCells[index]
+		if (not cell) then
+			cell = CreateImbueCell(self)
+			self.imbueCells[index] = cell
+		end
+		-- The API gives time left only; the full length is taken when an enchant first
+		-- appears or is cast again, so the countdown restarts there.
+		local key = imbue.inventorySlot .. ":" .. imbue.enchantID
+		local endTime = now + imbue.timeLeft
+		local timer = timers[key]
+		if (not timer or endTime > timer.endTime + 1) then
+			timer = { duration = imbue.timeLeft }
+			timers[key] = timer
+		end
+		timer.endTime = endTime
+		seen[key] = true
+
+		cell.inventorySlot = imbue.inventorySlot
+		cell.Icon:SetTexture(GetInventoryItemTexture("player", imbue.inventorySlot))
+		cell.Count:SetText(imbue.charges or "")
+		cell.Cooldown:SetCooldown(endTime - timer.duration, timer.duration)
+		cell:Show()
+	end
+	for key in pairs(timers) do
+		if (not seen[key]) then
+			timers[key] = nil
+		end
+	end
+	for index = count + 1, #self.imbueCells do
+		self.imbueCells[index].inventorySlot = nil
+		self.imbueCells[index]:Hide()
+	end
+	if (count ~= self.imbuesShown) then
+		self.imbuesShown = count
+		self:LayoutImbues()
+	end
+end
+
+-- Cells lead the row from its starting corner, and the container moves along by as many
+-- slots with its line shortened to match, so the row keeps its box.
+function DisplayMixin:LayoutImbues()
+	local layout = self.imbueLayout
+	if (not layout) then return end
+
+	local count = self.imbuesShown or 0
+	local step = layout.size + layout.spacingX
+	local direction = layout.growthX == "LEFT" and -1 or 1
+	local offsetX, offsetY = GetContainerAnchorOffset(layout.initialAnchor)
+	for index = 1, count do
+		local cell = self.imbueCells[index]
+		cell:ClearAllPoints()
+		cell:SetPoint(layout.initialAnchor, self.playerWrapper, layout.initialAnchor, offsetX + (index - 1) * step * direction, offsetY)
+	end
+
+	if (InCombatLockdown()) then
+		self.imbueLayoutPending = true
+		return
+	end
+	self.imbueLayoutPending = nil
+
+	local shift = count * step
+	local container = self.playerContainer
+	container:ClearAllPoints()
+	container:SetPoint(layout.initialAnchor, container:GetParent(), layout.initialAnchor, offsetX + shift * direction, offsetY)
+	container:SetFlowLayoutMaximumLineSize(math.max(0, self:GetWidth() - shift))
 end
 
 -- Swaps the container the player row draws from, out of combat only (Configure defers).

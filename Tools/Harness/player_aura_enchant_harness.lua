@@ -420,5 +420,168 @@ do
 	AuraContainerItemEnchantmentSlot = slots
 end
 
+--------------------------------------------------------------------------------
+-- Forever: imbues are their own enchant type that the container never shows.
+-- A second copy of the file is loaded with Forever's APIs present, since the file
+-- decides at load. Secret values are tables here: Lua raises on comparing, adding
+-- or joining a table with a number, so any unguarded use of one fails the run.
+--------------------------------------------------------------------------------
+do
+	local SECRET = setmetatable({}, { __tostring = function() return "<secret>" end })
+	local function Secret() return setmetatable({}, getmetatable(SECRET)) end
+	local secrets = {}
+	issecretvalue = function(value) return type(value) == "table" and getmetatable(value) == getmetatable(SECRET) end
+	issecrettable = function(value) return secrets[value] == true end
+
+	local now = 1000
+	GetTime = function() return now end
+	GetInventoryItemTexture = function(_, slot) return "weapon" .. slot end
+	INVSLOT_MAINHAND, INVSLOT_OFFHAND, INVSLOT_RANGED = 16, 17, 18
+	Enum = { ItemEnchantType = { None = 0, Permanent = 1, Temporary = 2, Imbue = 3 },
+		WeaponSlot = { MainHand = 0, OffHand = 1, Ranged = 2 } }
+
+	local weapon = {}       -- weapon slot -> list of WeaponEnchantInfo
+	local temporary = {}    -- inventory slot -> TemporaryItemEnchantInfo
+	C_Item = { GetWeaponEnchantInfo = function(slot) return weapon[slot] or {} end }
+	C_PaperDollInfo = { GetTemporaryEnchantmentInfo = function(slot) return temporary[slot] end }
+
+	-- Frame bits the cells and the event frame use.
+	function Region:SetScript(name, fn) self["__" .. name] = fn end
+	function Region:RegisterEvent(event) self.__events = self.__events or {}; self.__events[event] = true end
+	function Region:RegisterUnitEvent(event) self.__events = self.__events or {}; self.__events[event] = true end
+	function Region:UnregisterAllEvents() self.__events = {} end
+	function Region:SetText(text) self.__text = text end
+	function Region:SetCooldown(start, duration) self.__start, self.__duration = start, duration end
+	local setPoint = Region.SetPoint
+	function Region:SetPoint(point, relativeTo, relativePoint, x, y)
+		self.__x, self.__y = x, y
+		return setPoint(self, point, relativeTo, relativePoint, x, y)
+	end
+	function AuraContainer:SetFlowLayoutMaximumLineSize(size) self.__lineSize = size end
+
+	local foreverNs = {
+		Colors = ns.Colors, API = ns.API, AuraData = ns.AuraData, AuraStyles = ns.AuraStyles, IsRetail = true
+	}
+	assert(loadfile(target))("AzeriteUI5_JuNNeZ_Edition", foreverNs)
+	local CreateForever = foreverNs.PlayerAuraContainers.Create
+
+	local function NewForever(itemEnchantments)
+		client = "12.1.5"
+		containers = {}
+		local display = CreateForever(NewRegion("Frame"), {
+			width = 300, height = 80, size = 36, spacingX = 4, spacingY = 4,
+			initialAnchor = "BOTTOMLEFT", growthX = "RIGHT", growthY = "UP",
+			maxBuffs = 16, maxDebuffs = 16, itemEnchantments = itemEnchantments
+		})
+		display:SetSize(300, 80)
+		display:SetDisplayEnabled(true)
+		return display
+	end
+	local function ShownCells(display)
+		local n = 0
+		for _, cell in ipairs(display.imbueCells or {}) do
+			if (cell.__shown) then n = n + 1 end
+		end
+		return n
+	end
+	local tag = " [Forever]"
+
+	-- Flametongue on the main hand, an oil the container already shows on the off hand.
+	weapon[0] = { { hasEnchant = true, enchantType = 3, timeLeft = 1800000, charges = 0, enchantID = 5, enchantIconID = 1 } }
+	weapon[1] = { { hasEnchant = true, enchantType = 2, timeLeft = 600000, charges = 0, enchantID = 9, enchantIconID = 2 } }
+	temporary[17] = { enchantID = 9, remainingTimeMs = 600000, chargesRemaining = 0, hasExpirationTime = true }
+
+	local display = NewForever(true)
+	local player = display.playerContainer
+	display:Configure(Config())
+	check(ShownCells(display) == 1, "an imbue the container cannot show gets a cell" .. tag, ShownCells(display))
+	local cell = display.imbueCells[1]
+	check(cell.inventorySlot == 16, "the cell is the main hand's" .. tag, cell.inventorySlot)
+	check(cell.Cooldown.__duration == 1800 and cell.Cooldown.__start == now, "the cell counts down the imbue" .. tag)
+	check(cell.__x == 6, "the cell leads the row from its corner" .. tag, cell.__x)
+	check(player.__x == 6 + 40, "the container moves along by one slot" .. tag, player.__x)
+	check(player.__lineSize == 300 - 40, "the container's line shortens by one slot" .. tag, player.__lineSize)
+	check(cell.__OnEnter ~= nil, "the cell has a tooltip" .. tag)
+
+	-- The same oil counted by the container never gets a second cell; a permanent one never shows.
+	weapon[1][2] = { hasEnchant = true, enchantType = 1, timeLeft = 0, charges = 0, enchantID = 11, enchantIconID = 3 }
+	display:RefreshImbues()
+	check(ShownCells(display) == 1, "the container's own enchant and permanent ones are skipped" .. tag)
+
+	-- A ranged imbue: the row's container has no ranged slot, so it is drawn too.
+	weapon[2] = { { hasEnchant = true, enchantType = 2, timeLeft = 60000, charges = 3, enchantID = 13, enchantIconID = 4 } }
+	display:RefreshImbues()
+	check(ShownCells(display) == 2, "a ranged enchant gets a cell" .. tag, ShownCells(display))
+	check(display.imbueCells[2].Count.__text == 3, "charges show on the cell" .. tag)
+	check(player.__x == 6 + 80, "the container moves along by two slots" .. tag, player.__x)
+	weapon[2] = nil
+
+	-- Secret fields and secret tables are skipped, never touched.
+	weapon[0] = {
+		{ hasEnchant = Secret(), enchantType = 3, timeLeft = 1800000, charges = 0, enchantID = 5, enchantIconID = 1 },
+		{ hasEnchant = true, enchantType = Secret(), timeLeft = 1800000, charges = 0, enchantID = 6, enchantIconID = 1 },
+		{ hasEnchant = true, enchantType = 3, timeLeft = Secret(), charges = 0, enchantID = 7, enchantIconID = 1 },
+		{ hasEnchant = true, enchantType = 3, timeLeft = 1800000, charges = Secret(), enchantID = 8, enchantIconID = 1 },
+		{ hasEnchant = true, enchantType = 3, timeLeft = 1800000, charges = 0, enchantID = Secret(), enchantIconID = 1 },
+	}
+	local secretTable = { hasEnchant = true, enchantType = 3, timeLeft = 1, charges = 0, enchantID = 1 }
+	secrets[secretTable] = true
+	weapon[0][6] = secretTable
+	temporary[17] = { enchantID = Secret(), remainingTimeMs = 1, chargesRemaining = 0, hasExpirationTime = true }
+	local ok, err = pcall(display.RefreshImbues, display)
+	check(ok, "secret fields raise nothing" .. tag, err)
+	-- Only the entry whose only secret is its charges is readable enough to draw. The oil's
+	-- container ID is secret now, so the off hand is left to the container: imbues only.
+	check(ShownCells(display) == 1, "only fully readable enchants are drawn, no duplicate oil" .. tag, ShownCells(display))
+	check(display.imbueCells[1].Count.__text == "", "a secret charge count is left blank" .. tag)
+
+	-- In combat the cells follow at once and the container waits for combat to end.
+	temporary[17] = { enchantID = 9, remainingTimeMs = 600000, chargesRemaining = 0, hasExpirationTime = true }
+	weapon[0] = {}
+	local beforeCombat = player.__x
+	combat = true
+	display:RefreshImbues()
+	check(beforeCombat ~= 6, "the container was moved before combat" .. tag, beforeCombat)
+	check(ShownCells(display) == 0, "cells hide in combat" .. tag)
+	check(player.__x == beforeCombat, "the container does not move in combat" .. tag, player.__x)
+	combat = false
+	display.imbueEvents.__OnEvent(display.imbueEvents, "PLAYER_REGEN_ENABLED")
+	check(player.__x == 6 and player.__lineSize == 300, "the container moves back when combat ends" .. tag, player.__x)
+
+	-- Recast: the countdown restarts from the new time left.
+	weapon[0] = { { hasEnchant = true, enchantType = 3, timeLeft = 1800000, charges = 0, enchantID = 5, enchantIconID = 1 } }
+	display:RefreshImbues()
+	now = now + 600
+	weapon[0][1].timeLeft = 1200000
+	display:RefreshImbues()
+	check(display.imbueCells[1].Cooldown.__duration == 1800, "the countdown keeps its full length while it runs" .. tag)
+	weapon[0][1].timeLeft = 1800000
+	display:RefreshImbues()
+	check(display.imbueCells[1].Cooldown.__duration == 1800 and display.imbueCells[1].Cooldown.__start == now,
+		"a recast restarts the countdown" .. tag)
+
+	-- Switched off, or Show Debuffs Only: no cells, no events, container back in place.
+	display:Configure(Config({ showItemEnchantments = false }))
+	check(ShownCells(display) == 0, "switching off hides the cells" .. tag)
+	check(player.__x == 6 and player.__lineSize == 300, "switching off puts the container back" .. tag)
+	check(next(display.imbueEvents.__events) == nil, "switching off stops listening" .. tag)
+	display:Configure(Config({ showItemEnchantments = true }))
+	check(ShownCells(display) == 1 and display.imbueEvents.__events.WEAPON_ENCHANT_CHANGED, "switching back on draws again" .. tag)
+	display:Configure(Config({ maxBuffs = 0 }))
+	check(ShownCells(display) == 0, "Show Debuffs Only hides the cells" .. tag)
+
+	-- Displays without the capability never draw them.
+	local plainDisplay = NewForever(nil)
+	plainDisplay:Configure(Config())
+	check(plainDisplay.imbueCells == nil, "no cells without the capability" .. tag)
+end
+
+-- Retail: the first copy loaded without C_Item.GetWeaponEnchantInfo never draws cells.
+do
+	local display = NewDisplay("12.1.0", true)
+	display:Configure(Config())
+	check(display.imbueCells == nil, "Retail never draws imbue cells")
+end
+
 print(string.format("Player aura enchants: %d checks, %d failures", checks, failures))
 if (failures > 0) then error("player aura enchant harness failed", 0) end

@@ -48,7 +48,9 @@ parked one disabled and hidden, the active one configured and enabled as the row
 combat deferral and a client without item enchantments. A second argument loads a copy of the file
 instead; ten mutants (registering at creation, enchants on the vehicle row, no layout index, Show Debuffs
 Only ignored, no swap, the parked container left visible, a new container per swap, no swap back, the
-swapped-in container left unconfigured or always enabled) each fail it.
+swapped-in container left unconfigured or always enabled, and three Forever ones) each fail it. A second
+copy loaded with Forever's APIs covers the imbue cells the container cannot show: de-duplication, secret
+fields (fake secrets are tables, so an unguarded comparison or sum raises), combat deferral and recasts.
 
 the +3, +2, +1 and over-time stages, deaths, enemy forces (raw count, the rounded fallback, completion,
 overshoot), a secret time, the settings, the end-of-run card (timed with a record, over time, a practice
