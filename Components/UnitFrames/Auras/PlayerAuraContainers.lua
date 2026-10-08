@@ -70,6 +70,10 @@ ns.PlayerAuraContainers.GroupKeys = {
 }
 local BORDER_OVERHANG = 6
 local PLAYER_AURA_MAX_DURATION = 300
+-- Weapon enchants sit between the debuffs (layoutIndex 1) and the first buff group (2),
+-- the way Blizzard's own buff frame leads its buffs with them.
+local ITEM_ENCHANTMENT_LAYOUT_INDEX = 1.5
+local ITEM_ENCHANTMENT_SLOTS = { "MainHand", "OffHand" }
 
 local AuraSpells = ns.AuraData and ns.AuraData.Spells or {}
 local HiddenAuras = ns.AuraData and ns.AuraData.Hidden or {}
@@ -479,7 +483,8 @@ local function CopyConfiguration(config)
 		showNameplate = config.showNameplate,
 		showTemporary = config.showTemporary,
 		showLong = config.showLong,
-		maxDuration = config.maxDuration
+		maxDuration = config.maxDuration,
+		showItemEnchantments = config.showItemEnchantments
 	}
 end
 
@@ -502,7 +507,8 @@ local function GetConfigurationSignature(config)
 		tostring(config.showNameplate),
 		tostring(config.showTemporary),
 		tostring(config.showLong),
-		tostring(config.maxDuration)
+		tostring(config.maxDuration),
+		tostring(config.showItemEnchantments)
 	}, ":")
 end
 
@@ -657,6 +663,84 @@ local function ApplyContainerConfiguration(container, config, width)
 	UpdateContainerBrightness(container, GetBoolean(config.alwaysBright, false))
 end
 
+--[[
+	Temporary weapon enchants (Shaman imbues, poisons, oils) are not unit auras, so no
+	aura group or candidate filter can ever show them. Blizzard's container shows them as
+	item enchantments of their own (Blizzard_AuraContainerEnchantments.lua). Until now only
+	the top-right header registered them, and that header hides while you have a target and
+	fades out unless hovered, so in a fight an imbue showed nowhere. The player row
+	registers the main and off hand here, only when asked to and never in combat:
+	DisplayMixin:Configure defers itself until combat ends.
+
+	12.1.5 and Forever switch a registered slot off and on in place. 12.1.0 has no public way
+	to unregister one (Unregister/ClearItemEnchantments are on the private mixins), so there
+	the row swaps to a second player container that never had slots, and back again.
+]]
+local function RegisterItemEnchantments(container, options)
+	local slots = AuraContainerItemEnchantmentSlot
+	if (not slots or type(container.AddItemEnchantment) ~= "function") then
+		return
+	end
+
+	local frames = container.__AzeriteUI_ItemEnchantmentFrames
+	if (not frames) then
+		frames = {}
+		container.__AzeriteUI_ItemEnchantmentFrames = frames
+	end
+
+	local styleState = container.__AzeriteUI_StyleState
+	local enchantmentOptions = {
+		initializeFrame = function(button)
+			StyleAuraButton(button, false, options, false, styleState)
+		end,
+		hidePermanent = false
+	}
+	for _, slotName in ipairs(ITEM_ENCHANTMENT_SLOTS) do
+		local slot = slots[slotName]
+		if (slot ~= nil and not frames[slotName]) then
+			local ok, frame = TryCall(container.AddItemEnchantment, container, slot, enchantmentOptions)
+			if (ok) then
+				-- Kept for /azdebug aurasnapshot, since 12.1.0 has no GetItemEnchantmentFrame.
+				frames[slotName] = frame or true
+			end
+		end
+	end
+end
+
+-- Returns false when registered slots should be hidden but the client cannot switch them off.
+local function SetItemEnchantmentsEnabled(container, enabled)
+	local frames = container.__AzeriteUI_ItemEnchantmentFrames
+	if (not frames or not next(frames)) then
+		return true
+	end
+
+	local slots = AuraContainerItemEnchantmentSlot
+	local setEnabled = container.SetItemEnchantmentEnabled
+	if (not slots or type(setEnabled) ~= "function") then
+		return enabled
+	end
+	for slotName in pairs(frames) do
+		TryCall(setEnabled, container, slots[slotName], enabled)
+	end
+	return true
+end
+
+local function ApplyItemEnchantmentLayout(container, config)
+	local frames = container.__AzeriteUI_ItemEnchantmentFrames
+	if (not frames or not next(frames) or type(container.SetItemEnchantmentLayout) ~= "function") then
+		return
+	end
+	TryCall(container.SetItemEnchantmentLayout, container, {
+		elementSpacing = config.spacingX,
+		lineSpacing = config.spacingY,
+		groupSpacing = config.spacingX,
+		groupLineSpacing = config.spacingY,
+		elementWidth = config.size,
+		elementHeight = config.size,
+		layoutIndex = ITEM_ENCHANTMENT_LAYOUT_INDEX
+	})
+end
+
 local DisplayMixin = {}
 
 function DisplayMixin:Configure(config)
@@ -672,9 +756,57 @@ function DisplayMixin:Configure(config)
 	for _, container in ipairs(self.containers) do
 		ApplyContainerConfiguration(container, config, width)
 	end
+	self:ApplyItemEnchantments(config)
 	self.configurationSignature = signature
 	self.pendingConfiguration = nil
 	self:ForceUpdate()
+end
+
+-- Only a display created with itemEnchantments has a container for them, and the slots
+-- are registered only once the configuration asks for them explicitly. Weapon enchants are
+-- helpful effects, so a row with no buff slots (Show Debuffs Only) hides them too.
+function DisplayMixin:ApplyItemEnchantments(config)
+	local container = self.itemEnchantmentContainer
+	if (not container) then return end
+
+	local wanted = config.showItemEnchantments == true and (config.maxBuffs or 0) > 0
+	if (wanted) then
+		RegisterItemEnchantments(container, self.itemEnchantmentOptions)
+		-- Back from the container without slots, if 12.1.0 swapped to it.
+		self:SetActivePlayerContainer(container, config)
+	end
+	ApplyItemEnchantmentLayout(container, config)
+	if (not SetItemEnchantmentsEnabled(container, wanted)) then
+		local plain = self.plainPlayerContainer
+		if (not plain) then
+			plain = CreateAuraContainer(self.playerWrapper, "player", self.itemEnchantmentOptions)
+			self.plainPlayerContainer = plain
+		end
+		self:SetActivePlayerContainer(plain, config)
+	end
+end
+
+-- Swaps the container the player row draws from, out of combat only (Configure defers).
+-- The outgoing one is disabled, which drops its event registrations and empties it, and
+-- hidden: Blizzard only processes a container that is both visible and enabled. A new
+-- container starts disabled, so the incoming one takes the display's own state.
+function DisplayMixin:SetActivePlayerContainer(incoming, config)
+	local outgoing = self.playerContainer
+	if (incoming == outgoing) then return end
+
+	outgoing:SetEnabled(false)
+	outgoing:Hide()
+
+	ApplyContainerConfiguration(incoming, config, self:GetWidth())
+	incoming:Show()
+	incoming:SetEnabled(self.displayEnabled == true)
+
+	self.playerContainer = incoming
+	for index, container in ipairs(self.containers) do
+		if (container == outgoing) then
+			self.containers[index] = incoming
+		end
+	end
 end
 
 function DisplayMixin:ApplyPendingConfiguration()
@@ -732,7 +864,8 @@ local function BuildDisplayConfig(options)
 		showNameplate = options.showNameplate,
 		showTemporary = options.showTemporary,
 		showLong = options.showLong,
-		maxDuration = options.maxDuration
+		maxDuration = options.maxDuration,
+		showItemEnchantments = options.showItemEnchantments
 	}
 end
 
@@ -766,6 +899,11 @@ ns.PlayerAuraContainers.Create = function(parent, options)
 	display.playerContainer = CreateAuraContainer(display.playerWrapper, "player", options)
 	display.vehicleContainer = CreateAuraContainer(display.vehicleWrapper, "vehicle", options)
 	display.containers = { display.playerContainer, display.vehicleContainer }
+	if (options.itemEnchantments) then
+		-- Weapon enchants are the player's own; the vehicle row never shows them.
+		display.itemEnchantmentContainer = display.playerContainer
+		display.itemEnchantmentOptions = options
+	end
 
 	Mixin(display, DisplayMixin)
 	display:Configure(BuildDisplayConfig(options))

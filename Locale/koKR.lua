@@ -500,6 +500,8 @@ L["Use the original AzeriteUI party-frame aura behavior. Turn this off if you wa
 L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."] = "AzeriteUI 기본 플레이어 행 필터링과 밝음/어두움 혼합 오라 스타일을 사용합니다. 아래 사용자 정의 카테고리로 직접 필터를 만들려면 끄세요."
 L["Show Debuffs Only"] = "약화 효과만 표시"
 L["Always Show Full Brightness"] = "항상 전체 밝기로 표시"
+L["Show Weapon Enchants"] = "무기 마법부여 표시"
+L["Show temporary weapon enchants, such as Shaman imbues, poisons and oils, in the attached player aura row."] = "주술사 무기 강화, 독, 오일 같은 임시 무기 마법부여를 플레이어에 연결된 오라 줄에 표시합니다."
 L["Render all visible player-row aura icons at full brightness. Use this if you prefer no dimmed aura icons."] = "표시되는 플레이어 행의 모든 오라 아이콘을 전체 밝기로 렌더링합니다. 어두워진 오라 아이콘을 원하지 않으면 사용하세요."
 L["Version:"] = "버전:"
 L["What To Show"] = "표시할 내용"

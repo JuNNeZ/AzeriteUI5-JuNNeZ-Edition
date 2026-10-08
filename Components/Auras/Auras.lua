@@ -266,11 +266,14 @@ local AddItemEnchantments = function(container)
 		end,
 		hidePermanent = false
 	}
+	-- Kept for /azdebug aurasnapshot, since 12.1.0 has no GetItemEnchantmentFrame.
+	local frames = {}
+	container.__AzeriteUI_ItemEnchantmentFrames = frames
 	if (slots.MainHand) then
-		container:AddItemEnchantment(slots.MainHand, options)
+		frames.MainHand = container:AddItemEnchantment(slots.MainHand, options)
 	end
 	if (slots.OffHand) then
-		container:AddItemEnchantment(slots.OffHand, options)
+		frames.OffHand = container:AddItemEnchantment(slots.OffHand, options)
 	end
 end
 

@@ -2702,18 +2702,21 @@ local function DumpAuraButtonState(button, label)
 
 	local icon = button.Icon or button.icon
 	local count = button.Count or button.count
-	local cooldown = button.Cooldown or button.cd
+	local cooldown = button.Cooldown or button.cd or button.cooldown
 	local auraInstanceID = button.auraInstanceID
-	local spellID = button.auraSpellID or button.spellID
-	local unit = button.GetParent and button:GetParent() and button:GetParent().__owner and button:GetParent().__owner.unit or nil
+	local spellID = FirstSet(button.auraSpellID, button.spellID)
+	-- A method call on a restricted aura button raises, so even GetParent goes through ProbeMethod.
+	local parent = ProbeMethod(button, "GetParent")
+	local owner = parent and parent.__owner
+	local unit = owner and owner.unit
 	local resolvedSpellID
 	local resolvedName
-	if (unit and auraInstanceID and C_UnitAuras and C_UnitAuras.GetAuraDataByAuraInstanceID) then
+	if (unit and not IsSecretValue(auraInstanceID) and auraInstanceID and C_UnitAuras and C_UnitAuras.GetAuraDataByAuraInstanceID) then
 		local ok, auraData = API.TryCall(C_UnitAuras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
-		if (ok and auraData and not (issecretvalue and issecretvalue(auraData))) then
-			resolvedSpellID = auraData.spellId or auraData.spellID
+		if (ok and type(auraData) == "table" and not IsSecretValue(auraData) and not (issecrettable and issecrettable(auraData))) then
+			resolvedSpellID = FirstSet(auraData.spellId, auraData.spellID)
 			resolvedName = auraData.name
-			if (not spellID) then
+			if (not IsSecretValue(spellID) and spellID == nil) then
 				spellID = resolvedSpellID
 			end
 		end
@@ -2723,23 +2726,17 @@ local function DumpAuraButtonState(button, label)
 	local alpha = ProbeMethod(button, "GetAlpha")
 	local width, height = ProbeMethod(button, "GetSize")
 	local level = ProbeMethod(button, "GetFrameLevel")
-	local iconTexture = icon and ProbeMethod(icon, "GetTexture") or nil
-	local iconAlpha = icon and ProbeMethod(icon, "GetAlpha") or nil
-	local iconShown = icon and ProbeMethod(icon, "IsShown") or nil
-	local iconDesaturated = icon and ProbeMethod(icon, "IsDesaturated") or nil
-	local iconR, iconG, iconB, iconA
-	if (icon) then
-		iconR, iconG, iconB, iconA = ProbeMethod(icon, "GetVertexColor")
-	end
-	local countText = count and ProbeMethod(count, "GetText") or nil
-	local countShown = count and ProbeMethod(count, "IsShown") or nil
-	local cdShown = cooldown and ProbeMethod(cooldown, "IsShown") or nil
-	local cdStart, cdDuration, cdEnabled
-	if (cooldown) then
-		cdStart, cdDuration, cdEnabled = ProbeMethod(cooldown, "GetCooldown")
-	end
+	local iconTexture = ProbeIf(icon, "GetTexture")
+	local iconAlpha = ProbeIf(icon, "GetAlpha")
+	local iconShown = ProbeIf(icon, "IsShown")
+	local iconDesaturated = ProbeIf(icon, "IsDesaturated")
+	local iconR, iconG, iconB, iconA = ProbeIf(icon, "GetVertexColor")
+	local countText = ProbeIf(count, "GetText")
+	local countShown = ProbeIf(count, "IsShown")
+	local cdShown = ProbeIf(cooldown, "IsShown")
+	local cdStart, cdDuration, cdEnabled = ProbeIf(cooldown, "GetCooldown")
 	local timeLeft = button.timeLeft
-	local expiration = button.auraExpirationTime or button.expirationTime
+	local expiration = FirstSet(button.auraExpirationTime, button.expirationTime)
 	local duration = button.duration
 
 	SafePrint("|cfff0f0f0", label,
@@ -2760,7 +2757,7 @@ local function DumpAuraButtonState(button, label)
 		"player", button.isPlayer,
 		"stealable", button.isStealable)
 	SafePrint("|cfff0f0f0 ", " visual:",
-		"icon", iconTexture and "yes" or "no",
+		"icon", PresenceText(iconTexture),
 		"iconShown", iconShown,
 		"iconAlpha", iconAlpha,
 		"desat", iconDesaturated,
@@ -2777,24 +2774,23 @@ local function DumpAuraButtonState(button, label)
 		"timeLeft", timeLeft)
 end
 
-local function DumpSecureAuraHeaderChildren(header, label, maxChildren)
-	if (not header) then
-		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", label, "header missing")
-		return
+-- Weapon enchant buttons are not in any aura group. The containers keep the frames that
+-- AddItemEnchantment returned, since 12.1.0 has no GetItemEnchantmentFrame to ask for them.
+local function DumpItemEnchantmentFrames(container, label)
+	local frames = container and container.__AzeriteUI_ItemEnchantmentFrames
+	if (type(frames) ~= "table") then
+		return 0
 	end
 
-	local cap = tonumber(maxChildren) or 60
 	local dumped = 0
-	for i = 1, cap do
-		local child = ProbeMethod(header, "GetAttribute", "child" .. i)
-		if (not child) then
-			break
+	for _, slotName in ipairs({ "MainHand", "OffHand" }) do
+		local frame = frames[slotName]
+		if (type(frame) == "table") then
+			dumped = dumped + 1
+			DumpAuraButtonState(frame, label .. ":enchant:" .. slotName)
 		end
-		dumped = dumped + 1
-		DumpAuraButtonState(child, label .. "[" .. i .. "]")
 	end
-
-	SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", label, "children dumped:", dumped)
+	return dumped
 end
 
 local function DumpPlayerAuraSnapshot()
@@ -2807,7 +2803,9 @@ local function DumpPlayerAuraSnapshot()
 	end
 
 	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: playerframe")
-	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(), "unit", frame.unit, "native", true)
+	local enchantContainer = auras.itemEnchantmentContainer
+	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(), "unit", frame.unit, "native", true,
+		"enchantRow", (not enchantContainer and "none") or (auras.playerContainer == enchantContainer and "active" or "swapped out"))
 
 	local dumped = 0
 	for _, containerInfo in ipairs({
@@ -2834,45 +2832,62 @@ end
 
 local function DumpTopRightAuraSnapshot()
 	local module = ns:GetModule("Auras", true)
-	local buffs = module and module.buffs
-	if (not buffs) then
-		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "top-right buffs header not found")
+	local frame = module and module.frame
+	if (not frame) then
+		SafePrint("|cff33ff99", "AzeriteUI aura snapshot:", "top-right aura header not found")
 		return
 	end
 
-	local proxy = buffs.proxy
-	local consolidation = buffs.consolidation
-
+	local db = module.db and module.db.profile
 	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: top-right")
-	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(), "numConsolidated", buffs.numConsolidated)
-	SafePrint("|cfff0f0f0", "header:",
-		"shown", ProbeMethod(buffs, "IsShown"),
-		"alpha", ProbeMethod(buffs, "GetAlpha"),
-		"unit", ProbeMethod(buffs, "GetAttribute", "unit"),
-		"filter", ProbeMethod(buffs, "GetAttribute", "filter"),
-		"point", ProbeMethod(buffs, "GetAttribute", "point"),
-		"xOffset", ProbeMethod(buffs, "GetAttribute", "xOffset"),
-		"wrapAfter", ProbeMethod(buffs, "GetAttribute", "wrapAfter"))
-
-	if (proxy) then
-		SafePrint("|cfff0f0f0", "proxy:",
-			"shown", ProbeMethod(proxy, "IsShown"),
-			"alpha", ProbeMethod(proxy, "GetAlpha"),
-			"count", proxy.count and ProbeMethod(proxy.count, "GetText") or nil,
-			"texture", proxy.texture and ProbeMethod(proxy.texture, "GetTexture") or nil)
+	SafePrint("|cfff0f0f0", "combat", InCombatLockdown and InCombatLockdown(), "native", true,
+		"target", UnitExists and UnitExists("target"))
+	-- Fade When Idle and the visibility driver act on this parent frame, not on the
+	-- containers, so its alpha is the one that says whether anything can be seen.
+	-- Parenthesised so only the first of ProbeMethod's five returns is printed.
+	SafePrint("|cfff0f0f0", "frame:",
+		"shown", (ProbeMethod(frame, "IsShown")),
+		"visible", (ProbeMethod(frame, "IsVisible")),
+		"alpha", (ProbeMethod(frame, "GetAlpha")))
+	if (db) then
+		SafePrint("|cfff0f0f0", "settings:",
+			"enabled", db.enabled,
+			"fadeWhenIdle", db.enableAuraFading,
+			"modifier", db.enableModifier and db.modifier or false,
+			"keepWhileTargeting", db.ignoreTarget)
 	end
 
-	if (consolidation) then
-		SafePrint("|cfff0f0f0", "consolidation:",
-			"shown", ProbeMethod(consolidation, "IsShown"),
-			"alpha", ProbeMethod(consolidation, "GetAlpha"),
-			"point", ProbeMethod(consolidation, "GetAttribute", "point"),
-			"xOffset", ProbeMethod(consolidation, "GetAttribute", "xOffset"),
-			"wrapAfter", ProbeMethod(consolidation, "GetAttribute", "wrapAfter"))
+	local dumped = 0
+	for _, groupInfo in ipairs({
+		{ module.playerAuras, "player" },
+		{ module.vehicleAuras, "vehicle" }
+	}) do
+		local group, unitLabel = groupInfo[1], groupInfo[2]
+		if (group) then
+			SafePrint("|cfff0f0f0", unitLabel .. ":",
+				"shown", (ProbeMethod(group, "IsShown")),
+				"visible", (ProbeMethod(group, "IsVisible")))
+			for _, container in ipairs({ group.buffs, group.debuffs }) do
+				local groupKey = container and container.groupKey
+				if (groupKey) then
+					local count = ProbeMethod(container, "GetAuraGroupFrameCount", groupKey)
+					if (IsSecretValue(count) or type(count) ~= "number") then
+						count = 0
+					end
+					for index = 1, count do
+						local button = ProbeMethod(container, "GetAuraGroupFrame", groupKey, index)
+						if (button) then
+							dumped = dumped + 1
+							DumpAuraButtonState(button, unitLabel .. ":" .. groupKey .. "[" .. index .. "]")
+						end
+					end
+				end
+			end
+			dumped = dumped + DumpItemEnchantmentFrames(group.buffs, unitLabel)
+		end
 	end
 
-	DumpSecureAuraHeaderChildren(buffs, "topright.main", 80)
-	DumpSecureAuraHeaderChildren(consolidation, "topright.consolidation", 80)
+	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: top-right buttons dumped:", dumped)
 end
 
 -- Target-frame aura probe. Splits "target auras vanish in combat" into the three
@@ -3016,19 +3031,48 @@ local function DumpGroupFrameAuraSnapshot(styleSuffix, label)
 					"shown", ProbeMethod(native, "IsShown"), "alpha", ProbeMethod(native, "GetAlpha"))
 				for _, groupKey in ipairs(groupKeys) do
 					local pool = ProbeMethod(container, "GetAuraGroupFrameCount", groupKey)
-					if (type(pool) == "number" and pool > 0) then
-						local shown, unreadable = 0, 0
+					if (not IsSecretValue(pool) and type(pool) == "number" and pool > 0) then
+						local shown, secret, unreadable = 0, 0, 0
+-- Native aura buttons hold their shown state, icon and timings as secret values, even out
+-- of combat (Blizzard sets them from aura data), and a secret may not be tested, compared
+-- or joined: "x and ProbeMethod(...) or nil" raised on the first top-right button in game.
+-- SafePrint renders a secret as <secret>; these keep the logic before it from touching one.
+local function ProbeIf(obj, method, ...)
+	if (not obj) then
+		return nil
+	end
+	return ProbeMethod(obj, method, ...)
+end
+
+-- The first of two values that is set, without testing a secret one.
+local function FirstSet(first, second)
+	if (IsSecretValue(first) or first ~= nil) then
+		return first
+	end
+	return second
+end
+
+local function PresenceText(value)
+	if (IsSecretValue(value)) then
+		return "<secret>"
+	end
+	return value and "yes" or "no"
+end
+
 						for index = 1, pool do
 							local button = ProbeMethod(container, "GetAuraGroupFrame", groupKey, index)
-							local isShown = button and ProbeMethod(button, "IsShown")
-							if (isShown == true) then
+							local isShown = ProbeIf(button, "IsShown")
+							-- Comparing a secret raises just like testing one, so it is sorted out first.
+							if (IsSecretValue(isShown)) then
+								secret = secret + 1
+							elseif (isShown == true) then
 								shown = shown + 1
 							elseif (isShown == nil) then
 								-- Aura buttons refuse addon calls once aura data is secret.
 								unreadable = unreadable + 1
 							end
 						end
-						SafePrint("|cfff0f0f0", "   ", groupKey, "shown", shown, "unreadable", unreadable, "pool", pool)
+						SafePrint("|cfff0f0f0", "   ", groupKey, "shown", shown, "secret", secret, "unreadable", unreadable, "pool", pool)
 					end
 				end
 			end
@@ -3151,10 +3195,15 @@ local function CollectMenuEntryTaint(results, label, menu, seen, depth)
 	if (type(menu) ~= "table" or depth > 3) then
 		return
 	end
+	-- The active container's: with the option off, 12.1.0 swaps to one that has no slots.
+	dumped = dumped + DumpItemEnchantmentFrames(auras.playerContainer, "player")
 	CollectReplacedFunctions(results, label, menu, seen)
 	if (type(menu.GetEntries) ~= "function") then
 		return
 	end
+-- The header has been native aura containers since 5.3.78. This used to read the
+-- SecureAuraHeader attributes and child list, which no longer exist, so it always
+-- reported zero children.
 	local ok, entries = API.TryCall(menu.GetEntries, menu)
 	if (ok and type(entries) == "table") then
 		for index, entry in ipairs(entries) do

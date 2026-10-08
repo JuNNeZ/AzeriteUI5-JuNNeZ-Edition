@@ -507,6 +507,8 @@ L["Use the original AzeriteUI party-frame aura behavior. Turn this off if you wa
 L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."] = true
 L["Show Debuffs Only"] = true
 L["Always Show Full Brightness"] = true
+L["Show Weapon Enchants"] = true
+L["Show temporary weapon enchants, such as Shaman imbues, poisons and oils, in the attached player aura row."] = true
 L["Render all visible player-row aura icons at full brightness. Use this if you prefer no dimmed aura icons."] = true
 L["Version:"] = true
 L["What To Show"] = true

@@ -285,6 +285,15 @@ local GenerateOptions = function()
 			order = 211.55, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
 		}
+		-- Weapon enchants are not auras, so none of the buff categories below can include them.
+		suboptions.args.playerAuraShowWeaponEnchants = {
+			name = L["Show Weapon Enchants"],
+			desc = L["Show temporary weapon enchants, such as Shaman imbues, poisons and oils, in the attached player aura row."],
+			order = 211.56, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			disabled = function(info)
+				return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraDebuffsOnly")
+			end
+		}
 		suboptions.args.playerAuraWhatToShowHeader = {
 			name = L["Custom Buff Categories"],
 			order = 212.5, type = "header", hidden = isdisabled,

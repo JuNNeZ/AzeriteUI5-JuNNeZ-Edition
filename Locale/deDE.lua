@@ -508,6 +508,8 @@ L["Use the original AzeriteUI party-frame aura behavior. Turn this off if you wa
 L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."] = "AzeriteUIs standardmäßige Filterung der Spielerleiste und gemischte Hell/Dunkel-Aurenstile verwenden. Deaktivieren, um einen eigenen Filter aus den benutzerdefinierten Kategorien unten zu erstellen."
 L["Show Debuffs Only"] = "Nur Debuffs anzeigen"
 L["Always Show Full Brightness"] = "Immer volle Helligkeit anzeigen"
+L["Show Weapon Enchants"] = "Waffenverzauberungen anzeigen"
+L["Show temporary weapon enchants, such as Shaman imbues, poisons and oils, in the attached player aura row."] = "Temporäre Waffenverzauberungen wie Schamanen-Waffenbuffs, Gifte und Öle in der angehängten Spieler-Aurenreihe anzeigen."
 L["Render all visible player-row aura icons at full brightness. Use this if you prefer no dimmed aura icons."] = "Alle sichtbaren Aura-Symbole in der Spielerleiste mit voller Helligkeit darstellen. Verwenden, wenn keine abgedunkelten Aura-Symbole gewünscht sind."
 L["Version:"] = "Version:"
 L["What To Show"] = "Was anzeigen"

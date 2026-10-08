@@ -23,6 +23,7 @@ lua Tools/Harness/chat_guard_harness.lua   .               # chat module stays o
 lua Tools/Harness/tracker_harness.lua      .               # Hide the Blizzard Tracker, Retail and Forever
 lua Tools/Harness/locale_harness.lua       .               # all ten locales: parity, specifiers, widths
 lua Tools/Harness/nameplate_harness.lua    .               # nameplates: named checks + golden snapshot
+lua Tools/Harness/player_aura_enchant_harness.lua .        # weapon enchants in the player aura row, 12.1.0 and 12.1.5/Forever
 lua Tools/Harness/flyout_harness.lua       .               # LibActionButton flyout discovery, both clients
 lua Tools/Harness/tooltip_compare_harness.lua .            # compare tooltips: borders and the Equipped tab
 lua Tools/Harness/castbar_pushback_harness.lua .           # oUF castbar: the player's bar steps back on pushback
@@ -37,6 +38,18 @@ lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/
 `mythicplus_harness.lua` loads the real `Components/Misc/MythicPlus.lua` and `Components/Misc/Info.lua`
 against a small fake client whose answers follow how `Blizzard_ScenarioObjectiveTracker.lua`,
 `Blizzard_ChallengesUI.lua` and `Blizzard_WeeklyRewards.lua` read the same calls. It drives a key through
+`player_aura_enchant_harness.lua` loads the real `PlayerAuraContainers.lua` against a fake aura
+container whose item-enchantment calls check their inputs the way `Blizzard_CustomAuraContainer.lua`
+does, once shaped like 12.1.0 (no `SetItemEnchantmentEnabled`) and once like 12.1.5/Forever. It covers
+registration only on request and only for the player (never the vehicle row or a display created without
+`itemEnchantments`), the layout index between debuffs and buffs, switching off in place (12.1.5/Forever)
+or by swapping the row to a second player container without slots and back (12.1.0, at most two, the
+parked one disabled and hidden, the active one configured and enabled as the row is), Show Debuffs Only,
+combat deferral and a client without item enchantments. A second argument loads a copy of the file
+instead; ten mutants (registering at creation, enchants on the vehicle row, no layout index, Show Debuffs
+Only ignored, no swap, the parked container left visible, a new container per swap, no swap back, the
+swapped-in container left unconfigured or always enabled) each fail it.
+
 the +3, +2, +1 and over-time stages, deaths, enemy forces (raw count, the rounded fallback, completion,
 overshoot), a secret time, the settings, the end-of-run card (timed with a record, over time, a practice
 run, switched off), the Font of Power (found, switched off, already slotted, cursor busy, combat, refused,

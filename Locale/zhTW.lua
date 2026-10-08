@@ -490,6 +490,8 @@ L["Use the original AzeriteUI party-frame aura behavior. Turn this off if you wa
 L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."] = "使用AzeriteUI預設的玩家列過濾與明暗混合光環樣式。若想從下方自訂類別建立自己的過濾器，請關閉此選項。"
 L["Show Debuffs Only"] = "僅顯示減益效果"
 L["Always Show Full Brightness"] = "一律顯示完整亮度"
+L["Show Weapon Enchants"] = "顯示武器附魔"
+L["Show temporary weapon enchants, such as Shaman imbues, poisons and oils, in the attached player aura row."] = "在附加玩家光環列中顯示暫時性武器附魔，例如薩滿武器強化、毒藥和油。"
 L["Render all visible player-row aura icons at full brightness. Use this if you prefer no dimmed aura icons."] = "將所有可見的玩家列光環圖示以完整亮度顯示。若你不希望看到變暗的光環圖示，請使用此選項。"
 L["Version:"] = "版本："
 L["What To Show"] = "顯示內容"

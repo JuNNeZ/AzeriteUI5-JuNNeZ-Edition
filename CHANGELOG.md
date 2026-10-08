@@ -10,6 +10,23 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.18.0-JuNNeZ (2026-10-08) - Weapon Enchants on the Player Aura Row
+
+### Highlights
+
+- **Weapon enchants now show in the aura row above your health bar.** Shaman imbues such as Flametongue, Rogue poisons, oils and whetstones appear right after your debuffs, with their timer, even while you have a target. Before, they only appeared in the top-right buff list, which hides while you have a target and fades out unless you hover it. Turn them off with `/az` → Unit Frames → Player → **Show Weapon Enchants**. The setting applies at once, with no reload. **Show Debuffs Only** hides them too.
+- **`/azdebug aurasnapshot topright` works again.** It now reads the current top-right list, including its weapon-enchant buttons and the fade and visibility settings, instead of always reporting zero buttons. The aura snapshots no longer raise "boolean test on a secret boolean value" on Blizzard's aura buttons.
+
+### Development
+
+- Weapon enchants are not auras, so no buff filter could ever include them. The row now registers Blizzard's own item-enchantment slots on its player container. Retail 12.1.0 cannot remove a slot once added, so turning the option off swaps the row to a second container without slots; 12.1.5 and Forever switch the slots off in place. A new offline harness checks both shapes, combat deferral and the vehicle row, and is itself tested by ten deliberately broken copies.
+- The investigation started from a player report (Shaman, Flametongue not visible). It confirmed that the row's other filters work as designed: buffs longer than five minutes or without a timer stay in the top-right list in stock mode.
+
+### Access and known limits
+
+- The enchant icon and the top-right snapshot were confirmed live on Retail. Turning the option off and on without a reload, Show Debuffs Only and everything on Forever are offline-tested only. On Forever it is not yet known whether Blizzard's container receives Shaman imbues at all.
+- The Player Alternate frame (SaiyaRatt profile) does not show weapon enchants yet.
+
 ## 5.17.2-JuNNeZ (2026-10-07) - Pet Health Background and Edit Mode Fixes
 
 ### Highlights

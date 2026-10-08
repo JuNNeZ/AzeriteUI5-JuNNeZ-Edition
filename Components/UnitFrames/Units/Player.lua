@@ -99,6 +99,7 @@ local defaults = { profile = ns:Merge({
 	showHealthPercent = false,
 	playerAuraUseStockBehavior = true,
 	playerAuraDebuffsOnly = false,
+	playerAuraShowWeaponEnchants = true,
 	playerAuraAlwaysBright = false,
 	playerAuraShowDebuffs = true,
 	playerAuraShowImportantAuras = true,
@@ -350,7 +351,8 @@ local ApplyPlayerAuraLayout = function(frame)
 		showNameplate = profile.playerAuraShowNameplateAuras ~= false,
 		showTemporary = profile.playerAuraShowShortBuffsInCombat ~= false,
 		showLong = profile.playerAuraShowLongUtilityBuffs and true or false,
-		maxDuration = GetPlayerAuraCount(profile, "playerAuraMaxDuration", 300, 30, 3600)
+		maxDuration = GetPlayerAuraCount(profile, "playerAuraMaxDuration", 300, 30, 3600),
+		showItemEnchantments = profile.playerAuraShowWeaponEnchants ~= false
 	})
 
 	if (not debuffs) then
@@ -3809,7 +3811,9 @@ local style = function(self, unit)
 		maxDebuffs = config.AurasNumTotal,
 		disableMouse = config.AurasDisableMouse,
 		disableCooldown = config.AurasDisableCooldown,
-		tooltipAnchor = config.AurasTooltipAnchor
+		tooltipAnchor = config.AurasTooltipAnchor,
+		-- Weapon enchants, toggled by playerAuraShowWeaponEnchants in ApplyPlayerAuraLayout.
+		itemEnchantments = true
 	})
 	auras:SetSize(unpack(config.AurasSize))
 	auras:SetPoint(unpack(config.AurasPosition))
