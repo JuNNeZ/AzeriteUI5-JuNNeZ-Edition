@@ -890,7 +890,18 @@ local function CreateImbueCell(display)
 
 	cell:SetScript("OnEnter", function(self)
 		if (not self.inventorySlot or not GameTooltip) then return end
-		GameTooltip:SetOwner(self, options.tooltipAnchor or "ANCHOR_TOPLEFT")
+		-- Owning the tooltip by this cell makes it inherit the cell's layout restrictions
+		-- (UntrustedLayoutScriptExecution), so anchor to UIParent at the cell's position.
+		GameTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+		local left, top = self:GetLeft(), self:GetTop()
+		local scale, tipScale = self:GetEffectiveScale(), GameTooltip:GetEffectiveScale()
+		if (ReadableNumber(left) and ReadableNumber(top) and ReadableNumber(scale)
+			and ReadableNumber(tipScale) and tipScale > 0) then
+			GameTooltip:ClearAllPoints()
+			GameTooltip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left * scale / tipScale, top * scale / tipScale)
+		else
+			GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
+		end
 		GameTooltip:SetInventoryItem("player", self.inventorySlot)
 		GameTooltip:Show()
 	end)

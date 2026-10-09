@@ -10,6 +10,16 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.18.2-JuNNeZ (2026-10-09) - Imbue Tooltip Taint Fix
+
+### Highlights
+
+- **Hovering a weapon imbue icon no longer raises a taint error.** On Forever, the imbue icons added in 5.18.1 showed their tooltip in a way the client refused ("Anchoring disallowed ... UntrustedLayoutScriptExecution"). The tooltip is now anchored to the screen at the icon's top-left corner, so it sits slightly differently from before.
+
+### Access and known limits
+
+- Offline-checked only; not yet confirmed in game. Retail is unchanged.
+
 ## 5.18.1-JuNNeZ (2026-10-08) - Shaman Imbues on Forever
 
 ### Highlights
