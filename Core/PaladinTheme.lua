@@ -34,6 +34,7 @@ local media = {
 }
 
 Theme.IsActive = function(self)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return false end
 	if (ns.MageTheme and ns.MageTheme:IsActive()) then return false end
 	local db = ns.db
@@ -428,7 +429,7 @@ Theme.Command = function(self, input)
 		return
 	end
 	local enabled = arg == "on" or ((arg == "" or arg == "toggle") and not ns.db.char.paladinPreview)
-	if (enabled) then ns.db.char.hunterPreview, ns.db.char.magePreview = false, false end -- explicit Paladin choice leaves Hunter and Mage
+	if (enabled) then ns.db.char.legacyHUD = false; ns.db.char.hunterPreview, ns.db.char.magePreview = false, false end -- explicit Paladin choice leaves Hunter and Mage
 	ns.db.char.paladinPreview = enabled and true or false
 	ReloadUI()
 end

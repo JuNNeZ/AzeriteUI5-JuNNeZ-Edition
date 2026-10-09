@@ -44,6 +44,7 @@
 	<Script file="Development.lua"/>
 	<Script file="Debugging.lua"/>
 	<Script file="Experimental.lua"/>
+	<Script file="LegacyHUD.lua"/>
 	<Script file="PaladinTheme.lua"/>
 	<Script file="HunterMedia.lua"/>
 	<Script file="HunterGeometry.lua" />

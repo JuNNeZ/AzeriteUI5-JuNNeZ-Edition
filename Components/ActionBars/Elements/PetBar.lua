@@ -84,6 +84,7 @@ local defaults = { profile = ns:Merge({
 	breakpoint = NUM_PET_ACTION_SLOTS, -- when to start a new grid row
 	offset = 44/64, -- 44 -- relative offset in the growth direction for the alternate zigzag row as a fraction of button size.
 	hitrects = { -10, -10, -10, -10 },
+	buttonShape = "circle", -- "circle", "rounded" or "square", applied on reload
 	hideElements = {
 		macro = true,
 		hotkey = false,
@@ -125,9 +126,9 @@ local onLeave = function(self)
 	end
 end
 
-local style = function(button)
+local style = function(button, shape)
 
-	local db = ns.GetConfig("PetActionButton")
+	local db = ns.API.GetShapedButtonConfig(ns.GetConfig("PetActionButton"), shape)
 
 	-- Clean up the button template
 	for _,i in next,{ --[["AutoCastShine",]] "Border", "Name", "NewActionTexture", "NormalTexture", "SpellHighlightAnim", "SpellHighlightTexture",
@@ -496,7 +497,7 @@ PetBarMod.CreateBar = function(self)
 
 	local bar = setmetatable(ns.ButtonBar:Create("PetBar", self.db.profile, ns.Prefix.."PetBar"), PetBar_MT)
 	bar.buttonWidth, bar.buttonHeight = unpack(config.ButtonSize)
-	bar.defaults = defaults.profile
+	bar.defaults = self:GetDefaults().profile
 	bar.config = self.db.profile
 
 	if (ns.WoW10) then
@@ -528,7 +529,8 @@ PetBarMod.CreateBar = function(self)
 	end
 
 	for id= 1,NUM_PET_ACTION_SLOTS do
-		style(bar:CreateButton())
+		local button = style(bar:CreateButton(), self.db.profile.buttonShape)
+		if (ns.LegacyHUD) then ns.LegacyHUD:StyleButton(button) end
 	end
 
 	self.bar = bar
@@ -563,10 +565,8 @@ PetBarMod.CreateAnchor = function(self)
 end
 
 PetBarMod.GetDefaults = function(self)
-	if (self.GenerateDefaults) then
-		return self:GenerateDefaults()
-	end
-	return self.defaults
+	local defaults = self.GenerateDefaults and self:GenerateDefaults() or self.defaults
+	return ns.LegacyHUD and ns.LegacyHUD:GetDefaults(self:GetName(), defaults) or defaults
 end
 
 PetBarMod.SetDefaults = function(self, defaults)
@@ -886,5 +886,6 @@ end
 PetBarMod.OnInitialize = function(self)
 	if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return self:Disable() end
 
-	self.db = ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
+	self.db = ns.LegacyHUD and ns.LegacyHUD:RegisterNamespace(self:GetName(), self:GetDefaults())
+		or ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
 end

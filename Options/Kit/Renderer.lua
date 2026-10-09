@@ -137,7 +137,7 @@ end
 -- action has none, which is what `hasValue` distinguishes from a pending false.
 local Write = function(options, path, label, value, hasValue, apply, extra)
 	local Combat = Kit.Combat
-	if (Combat and Combat:ShouldQueue(options)) then
+	if (Combat and Combat:ShouldQueue(options, path)) then
 		return Combat:Queue(path, label, value, hasValue, apply, extra)
 	end
 

@@ -33,11 +33,10 @@ lua Tools/Harness/addon_compat_harness.lua .               # ConsolePort icons, 
 lua Tools/Harness/bag_button_harness.lua   .               # the bag button beside the cog: secure route, switch, free slots
 lua Tools/Harness/proc_highlight_harness.lua .             # proc styles, preview/reset, riding visibility combinations
 lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/dropdown, restore, keybinds, Explorer fade proxies, rival addon choice
+lua Tools/Harness/cdready_menu_harness.lua .               # real debug page, row layout, immediate probe vs queued repairs
+lua Tools/Harness/cdready_harness.lua .                    # opt-in probe, secrets, callbacks, polling and cleanup
 ```
 
-`mythicplus_harness.lua` loads the real `Components/Misc/MythicPlus.lua` and `Components/Misc/Info.lua`
-against a small fake client whose answers follow how `Blizzard_ScenarioObjectiveTracker.lua`,
-`Blizzard_ChallengesUI.lua` and `Blizzard_WeeklyRewards.lua` read the same calls. It drives a key through
 `player_aura_enchant_harness.lua` loads the real `PlayerAuraContainers.lua` against a fake aura
 container whose item-enchantment calls check their inputs the way `Blizzard_CustomAuraContainer.lua`
 does, once shaped like 12.1.0 (no `SetItemEnchantmentEnabled`) and once like 12.1.5/Forever. It covers
@@ -52,6 +51,9 @@ swapped-in container left unconfigured or always enabled, and three Forever ones
 copy loaded with Forever's APIs covers the imbue cells the container cannot show: de-duplication, secret
 fields (fake secrets are tables, so an unguarded comparison or sum raises), combat deferral and recasts.
 
+`mythicplus_harness.lua` loads the real `Components/Misc/MythicPlus.lua` and `Components/Misc/Info.lua`
+against a small fake client whose answers follow how `Blizzard_ScenarioObjectiveTracker.lua`,
+`Blizzard_ChallengesUI.lua` and `Blizzard_WeeklyRewards.lua` read the same calls. It drives a key through
 the +3, +2, +1 and over-time stages, deaths, enemy forces (raw count, the rounded fallback, completion,
 overshoot), a secret time, the settings, the end-of-run card (timed with a record, over time, a practice
 run, switched off), the Font of Power (found, switched off, already slotted, cursor busy, combat, refused,
@@ -202,6 +204,60 @@ only change the loaded source in memory; they never edit the working files.
 `base-first`, `fade-ignores-opacity`, `rebuild-in-combat` or `writes-blizzard`. Each must fail,
 and a mutation whose pattern no longer matches the source stops the run instead of passing.
 
+`cdready_harness.lua` loads the entire real Debugging.lua and invokes its actual
+/azdebug dispatcher. Runs Retail/Forever fixtures with opaque getter values, duration
+objects and callback arguments. It covers dormant load, Development Mode gating,
+missing APIs (named), global/namespaced combat APIs, direct duration feed, GCD exclusion, shown-state readiness, nil/failed
+inputs, callbacks during feed and natural expiry, combat entry/exit, polling, retargeting
+without duplicate loops, and off/dev-mode cleanup. The 2026-10-08 comparison covers five
+independent widgets (cooldown ignore/include GCD, charges, cached action slot and resolved spell), per-source callback labels/counters,
+missing/secret charge inputs, charge events and one-second re-feed even without events. It cannot certify the real client's
+widget lifecycle, secrecy or combat safety. Logger-present Retail/Forever fixtures
+also cover the installed DLAPI format contract, literal percent signs, sanitized
+secrets/nil, exclusive logger output for async callbacks, absent/malformed/throwing
+API fallback and resumed logging. Cooldown-ready harness checks Inspect delegates
+to this shared sink rather than printing directly.
+
+Run each mutation separately after the root argument; each must fail:
+`ungated`, `visible`, `hidden-parent`, `gcd`, `secret-shown`, `secret-print`, `nil-ready`,
+`feed-failure-ready`, `no-done`, `no-event`, `no-poll`, `no-stop`, `old-loop`, `no-route`,
+`callback-boolean`, `wrong-origin`, `no-global-fallback`,
+`no-preview-route`, `preview-ungated`, `preview-no-stop`, `no-charge-lane`,
+`wrong-charge-getter`, `with-gcd-ignored`, `no-refeed`, `no-lane-label`,
+`no-charge-event`, `partial-stop`, `missing-charge-ready`, `no-log-sink`, `log-format`,
+`no-log-fallback`, `secret-log`, `log-chat-duplicate`, `async-chat`,
+`action-gcd`, `action-wrong-id`, `action-combat-resolve`, `action-secret-id`,
+`action-wrong-kind`, `action-no-invalidate`, `action-ready-missing`,
+`action-no-resolved-lane`, `action-base-as-resolved`, `action-no-match`, `action-largest-slot`,
+`slot-blanket-invalidate`, `slot-ignore-watched`, `slot-secret-print`, `slot-combat-read`,
+`slot-mismatch-ready`, `slot-no-exit-recheck`, `slot-stop-resolved`, `slot-rebind-duplicate`.
+Action fixtures cover deterministic own-button matching, base/override resolution,
+empty original spell timer alongside an active action/variant timer, combat reuse
+without button/API mapping reads, source recovery, secret durations/IDs, missing APIs,
+slot/page/bonus validation and full Stop cleanup. Unsupported sources remain unknown.
+The 2026-10-09 repair checks unrelated slot events OOC/in combat, recovery after those
+events, safe slot-payload logging (including nil/zero/secret/invalid payloads), unchanged
+watched-slot revalidation, duplicate bindings preserving the same cached slot, changed
+spell mappings, action-only combat deferral, independent resolved-spell sampling, and
+exit/first-OOC-tick recovery without buttons being read in combat.
+Cooldown-ready logging mutation: `inspect-no-sink`.
+Elune: `Tools/Run-Elune.ps1 -Script Tools/Harness/cdready_harness.lua . --taint`.
+The Retail Paladin live guide is `Docs/Cooldown Ready Probe - Retail Paladin.md`.
+
+`cdready_menu_harness.lua` loads real Debugging.lua, Options, Kit Panel/Config/Renderer/
+Controls/Combat and the registered Debug page. It drives actual control callbacks
+with handler spies (the real probe/dispatch is covered by cdready_harness). Retail
+and Forever cover five section jumps, no native popup/automatic start, three widths
+with positive-height nonoverlapping rows, presets/manual IDs, invalid/missing API,
+dev/combat/secret gates, closing without stopping, dynamic visible-state refresh,
+immediate start/status/stop and scratch input, OOC drawing refusal and queued repair
+flush. Offline font/widget fixtures cannot establish live rendering or WoW taint.
+Run each mutation independently: `wrong-panel`, `wrong-tab`, `no-immediate`,
+`all-immediate`, `renderer-no-path`, `auto-start`, `ungated`, `invalid-start`,
+`missing-api`, `combat-preview`, `combat-inspect`, `secret-combat`, `forever-preset`,
+`no-stop`, `no-inspect`, `bad-id`, `no-queue-repair`, `no-refresh`, `auto-nameplate`.
+Elune: `Tools/Run-Elune.ps1 -Script Tools/Harness/cdready_menu_harness.lua . --taint`.
+
 **A check that has never failed has never been shown to work.** Every group of checks gets a
 mutation entry before it is trusted. This panel has now produced five separate stub lies, each of
 which passed every check it should have failed:
@@ -215,3 +271,9 @@ which passed every check it should have failed:
 | every string is 12px tall | as many lines as it wraps to at that width |
 
 Each one hid a real defect. When a check passes on the first run, suspect the stub.
+
+## editmode_selection_hide_harness.lua
+
+Run with `Tools/Run-Elune.ps1 -Script Tools/Harness/editmode_selection_hide_harness.lua`. Models the Edit Mode selection-overlay hide (`ns.HideEditModeSelection`): the post-hook hides the overlay, Blizzard's secure path stays secure, and the registry is untouched; a negative control shows registry mutation taints. Frames are tables, so live `/reload` + Edit Mode is still owed. `Tools/Audit-EditModeSystems.py` lists Edit Mode systems per client (its `REPLACED` map is a rough guide).
+
+Legacy compact HUD: `lua Tools/Harness/legacy_hud_harness.lua .` loads real layout data and AceDB. Health prediction also covers Legacy rectangular fills. Offline only; see `Docs/Legacy HUD.md` for the live loop.

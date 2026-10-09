@@ -103,6 +103,7 @@ local defaults = { profile = ns:Merge({
 	dimWhenInactive = false,
 	showEmptyButtons = false, -- whether slots without an action stay visible as empty buttons
 	assistedHighlightColor = "cyan", -- Color scheme for AzeriteUI's circular assisted highlight
+	extraButtonShape = "circle", -- extra action and zone ability buttons, applied on reload
 	hideElements = {
 		macro = true,
 		hotkey = false,
@@ -255,14 +256,34 @@ ActionBarMod.GenerateDefaults = function(self)
 				[3] = -82 * ns.API.GetEffectiveScale()
 			}
 		}, ns.ActionBar.defaults)
+
+		for i = 1,#defaults.profile.bars do
+			defaults.profile.bars[i].buttonShape = "circle"
+		end
 	end
 
 	return defaults
 end
 
-local style = function(self)
+-- Button shapes. Circle is AzeriteUI's own design and the default; Square and
+-- Rounded are optional alternatives, picked per bar and applied on reload.
+-- The art and geometry live in ns.API.GetShapedButtonConfig, shared with the
+-- pet, stance and extra buttons.
+ActionBarMod.GetButtonShape = function(self, barIndex)
+	local bar = self.db and self.db.profile and self.db.profile.bars and self.db.profile.bars[barIndex]
+	local shape = bar and bar.buttonShape
+	return ns.API.IsButtonShape(shape) and shape or "circle"
+end
 
-	local db = ns.GetConfig("ActionButton")
+-- Returns the shared circle config, or a copy with the shape's art and
+-- geometry swapped in. The shared config is never modified.
+local GetShapedConfig = function(shape)
+	return ns.API.GetShapedButtonConfig(ns.GetConfig("ActionButton"), shape)
+end
+
+local style = function(self, shape)
+
+	local db = GetShapedConfig(shape)
 
 	local m = db.ButtonMaskTexture
 	local b = "" -- GetMedia("blank")
@@ -535,10 +556,11 @@ ActionBarMod.CreateBars = function(self)
 
 		local bar = ns.ActionBar:Create(BAR_TO_ID[i], config, ns.Prefix.."ActionBar"..i)
 		bar.buttonWidth, bar.buttonHeight = unpack(ns.GetConfig("ActionButton").ButtonSize)
-		bar.defaults = defaults.profile.bars[i]
+		bar.defaults = self:GetDefaults().profile.bars[i]
 
 		for id,button in next,bar.buttons do
-			style(button)
+			style(button, self:GetButtonShape(i))
+			if (ns.LegacyHUD) then ns.LegacyHUD:StyleButton(button) end
 			self.buttons[button] = true
 		end
 
@@ -675,10 +697,8 @@ ActionBarMod.GenerateBarDisplayName = function(self, id)
 end
 
 ActionBarMod.GetDefaults = function(self)
-	if (self.GenerateDefaults) then
-		return self:GenerateDefaults()
-	end
-	return self.defaults
+	local defaults = self.GenerateDefaults and self:GenerateDefaults() or self.defaults
+	return ns.LegacyHUD and ns.LegacyHUD:GetDefaults(self:GetName(), defaults) or defaults
 end
 
 ActionBarMod.SetDefaults = function(self, defaults)
@@ -1031,7 +1051,8 @@ end
 ActionBarMod.OnInitialize = function(self)
 	if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return self:Disable() end
 
-	self.db = ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
+	self.db = ns.LegacyHUD and ns.LegacyHUD:RegisterNamespace(self:GetName(), self:GetDefaults())
+		or ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
 
 	if (ns.WoW10) then
 		self.db.profile.clickOnDown = GetCVarBool("ActionButtonUseKeyDown")

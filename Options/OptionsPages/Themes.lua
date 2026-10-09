@@ -63,6 +63,7 @@ local Theme = function() return Effects() and Effects():GetTheme() end
 -- Names shared by the theme and effect lists. "none" is Blizzard's own word.
 local Label = function(key)
 	if (key == "azerite") then return "AzeriteUI" end
+	if (key == "legacy") then return "Legacy" end
 	if (key == "hunter") then return ClassName("HUNTER", "Hunter") end
 	if (key == "paladin") then return ClassName("PALADIN", "Paladin") end
 	if (key == "mage") then return ClassName("MAGE", "Mage") end

@@ -106,6 +106,46 @@ local getvisibility = function(info,condition)
 	return db.visibility[condition]
 end
 
+-- Button shape dropdown, shared by the action, pet, stance and extra buttons.
+-- Shapes apply on reload, so a change offers one. Hidden under the Legacy HUD,
+-- which draws its own rounded buttons and ignores the choice.
+local ShapeOption = function(name, desc, order, hidden, get, set)
+	return {
+		name = name,
+		desc = desc,
+		order = order,
+		type = "select", style = "dropdown",
+		hidden = function(info)
+			return (ns.LegacyHUD and ns.LegacyHUD:IsActive()) or (hidden and hidden(info)) or false
+		end,
+		values = {
+			["circle"] = L["Circle (intended design)"],
+			["rounded"] = L["Rounded"],
+			["square"] = L["Square"],
+		},
+		sorting = { "circle", "rounded", "square" },
+		set = function(info, val)
+			if (get(info) == val) then return end
+			set(info, val)
+			local key = "AZERITEUI_ACTIONBAR_SHAPE_RELOAD"
+			if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
+				StaticPopupDialogs[key] = {
+					text = L["Button shapes apply when the interface loads. Reload now?"],
+					button1 = L["Reload UI"],
+					button2 = _G.CANCEL or "Cancel",
+					OnAccept = function() ReloadUI() end,
+					timeout = 0,
+					whileDead = true,
+					hideOnEscape = true,
+					preferredIndex = 3
+				}
+			end
+			if (StaticPopup_Show) then StaticPopup_Show(key) end
+		end,
+		get = get
+	}
+end
+
 local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 	local getmodule = function()
 		local module = ns:GetModule(moduleName, true)
@@ -160,6 +200,9 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				set = function(info, val) setvisibility(info, "dragon", val) end,
 				get = function(info) return getvisibility(info, "dragon") end
 			},
+			buttonShape = ShapeOption(L["Button Shape"],
+				L["Choose the shape of this bar's buttons. Circle is the intended AzeriteUI design. Square and Rounded are alternatives that keep the same spacing. Changing this asks you to reload."],
+				14, isdisabled, getter, setter),
 			enableBarFading = {
 				name = L["Enable Bar Fading"],
 				desc = L["Toggle whether to enable the buttons of this action bar to fade out."],
@@ -403,6 +446,11 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				fontSize = "medium",
 				hidden = isdisabled
 			},
+			buttonShape = ShapeOption(L["Button Shape"],
+				L["Choose the shape of this bar's buttons. Circle is the intended AzeriteUI design. Square and Rounded are alternatives that keep the same spacing. Changing this asks you to reload."],
+				14, isdisabled, getter, function(info, val)
+					getmodule().db.profile.buttonShape = val
+				end),
 			enableBarFading = {
 				name = L["Enable Bar Fading"],
 				desc = L["Toggle whether to enable the buttons of this action bar to fade out."],
@@ -870,6 +918,11 @@ local GenerateOptions = function()
 				set = setter,
 				get = getter
 			},
+			extraButtonShape = ShapeOption(L["Extra Button Shape"],
+				L["Choose the shape of the extra action and zone ability buttons. Circle is the intended AzeriteUI design. Changing this asks you to reload."],
+				7, nil, getter, function(info, val)
+					getmodule().db.profile.extraButtonShape = val
+				end),
 			--[[
 			assistedHighlightHeader = {
 				name = L["Assisted Combat Highlight"],

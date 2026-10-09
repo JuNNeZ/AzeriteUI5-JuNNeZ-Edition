@@ -328,7 +328,8 @@ end
 
 -- The profile and sharing pages hold no module settings of their own, so their
 -- settings are expected not to resolve. Every other page must.
-local expectedUnbound = { profiles = true, sharing = true }
+-- Debug holds session input and existing global flags, not profile settings.
+local expectedUnbound = { profiles = true, sharing = true, ["Debug tools"] = true }
 local surprises = {}
 for _, row in ipairs(byPage) do
 	if row.miss > 0 and not expectedUnbound[row.key] then

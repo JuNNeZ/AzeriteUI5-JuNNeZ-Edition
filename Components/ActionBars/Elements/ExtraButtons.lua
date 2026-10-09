@@ -57,7 +57,9 @@ ExtraButtons.UpdateButton = function(self, button)
 		end
 	end
 
-	local db = ns.GetConfig("ExtraActionButton")
+	local bars = ns:GetModule("ActionBars", true)
+	local shape = bars and bars.db and bars.db.profile and bars.db.profile.extraButtonShape
+	local db = ns.API.GetShapedButtonConfig(ns.GetConfig("ExtraActionButton"), shape)
 
 	local m = db.ExtraButtonMask
 	local b = "" -- GetMedia("blank")
@@ -211,6 +213,7 @@ ExtraButtons.UpdateButton = function(self, button)
 
 		button.__GP_Border = border
 	end
+	if (ns.LegacyHUD) then ns.LegacyHUD:StyleButton(button) end
 
 end
 

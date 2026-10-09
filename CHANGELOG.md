@@ -10,6 +10,29 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.19.0-JuNNeZ (2026-10-09) - Legacy HUD, Button Shapes and Debug Tools
+
+### Highlights
+
+- **The original compact AzeriteUI / GoldpawUI look is back as the Legacy HUD.** Type `/go legacy` out of combat to switch, `/go azerite` to return, `/go status` to check; switching reloads. You get rectangular unit bars instead of the crystal and orb, rounded square buttons with the hexagonal casing that lights up on hover, the old minimap ring, aura borders and combat icon. You can also choose it on the Themes page once it is active.
+- **Your normal layout is left alone.** Legacy keeps its own saved positions. By default the minimap sits top right with its text and widgets underneath, the buff row beside it, and tooltips, durability and vehicle seat in their old spots. Move anything you like; going back with `/go azerite` restores your Azerite profile exactly as it was.
+- **Square and rounded buttons.** Every action bar, the pet bar and the stance bar has a **Button Shape** choice (Circle, Rounded, Square) under `/az` → Action Bars, and the extra action and zone ability buttons have **Extra Button Shape**. Circle stays the default; a change asks you to reload. Spacing is unchanged, and pet and stance buttons are scaled to their smaller size.
+- **`/azdebug` now opens a Debug tools page in the `/az` window.** Five sections (Cooldown tests, Health and unit frames, Keybindings, Raid utility bar, Utilities) replace the crowded old debug popup. Debug output goes to the _DebugLog addon's AzeriteUI tab when it is installed, and to chat otherwise. Development Mode is required for most tools.
+
+### Development
+
+- Legacy is a port of the AzeriteUI 3.x layout onto today's code, not a reinstall of the old addon. Its sizes, art and positions come from the 3.x source and its art is used with separately granted permission. Today's unit frames, health prediction, auras and secure action paging keep running underneath. Every 3.x Legacy layout setting and texture was audited against the port. Chat and tracker placement, the old pull-out bar panels, faster fading and the split aura filters were left out on purpose, as layout or behaviour rather than look.
+- Legacy layouts live in separate saved settings per module. Your usual choices, such as aura filters and text, carry over once; positions never do. Hunter, Mage and Paladin theme art and Lite+ effects stand aside while Legacy is on.
+- The button shape art and sizing are shared by all button types and scale to each button's cell, so the Circle look and spacing are untouched.
+- The Debug page's cooldown tests compare several cooldown sources for one spell through a real recovery, to investigate spells whose ready state Blizzard reports inconsistently. Start, status and stop work in combat; they never cast anything.
+- Offline harnesses cover the Legacy layout and profile isolation, the shape sizes, and the Debug page's controls, combat gating and log routing.
+
+### Access and known limits
+
+- Everything here is offline-tested only. Legacy rendering, the shapes' fit in game and the Debug page still need live confirmation on Retail and Forever.
+- Nameplates keep their modern look under Legacy. The tracker (Edit Mode) and chat stay where you put them.
+- Legacy is for the main AzeriteUI profile; it refuses to switch on while a variant such as SaiyaRatt is selected, and never in combat.
+
 ## 5.18.2-JuNNeZ (2026-10-09) - Imbue Tooltip Taint Fix
 
 ### Highlights

@@ -466,4 +466,10 @@ for _,shape in ipairs({"hp_cap_bar","hp_lowmid_bar","hp_boss_bar","hp_critter_ba
     equal(themed.HealthPrediction.damageAbsorb.Art.path,ns.API.GetMedia(shape.."-absorb"),"Hunter absorb shape path")
 end
 ns.API.GetMedia=originalMedia
+profile.absorbDisplayMode="followHealth"
+local legacy=frame("Legacy\\statusbar-power",false,"Player",false)
+update(legacy)
+check(legacy.HealthPrediction.shapedPrediction, "Legacy fill recognized")
+equal(legacy.HealthPrediction.damageAbsorb.Art.path,ns.API.GetMedia("Legacy\\statusbar-power-absorb"),"Legacy rectangular absorb path")
+segment(legacy.HealthPrediction.damageAbsorb, 70, 85)
 print("health_prediction_harness: "..tests.." assertions passed (not a WoW rendering test)")

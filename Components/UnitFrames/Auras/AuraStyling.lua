@@ -94,15 +94,37 @@ local SetAuraTextureBorderColor = function(self, red, green, blue, alpha)
 		return
 	end
 
+	-- The Legacy HUD's neutral border is the 3.x grey (ui * .3), not our warm
+	-- dark grey. Only our own colour constants are compared, never aura data.
+	local neutral = self.__AzeriteUI_LegacyNeutral
+	if (neutral and not (issecretvalue and (issecretvalue(red) or issecretvalue(green) or issecretvalue(blue)))
+		and red == Colors.verydarkgray[1] and green == Colors.verydarkgray[2] and blue == Colors.verydarkgray[3]) then
+		red, green, blue = neutral[1], neutral[2], neutral[3]
+	end
+
 	for i = 1, #pieces do
 		pieces[i]:SetVertexColor(red or 1, green or 1, blue or 1, alpha or 1)
 	end
 end
 
+-- Texture coordinates of one backdrop edge segment (0 left, 1 right, 2 top,
+-- 3 bottom, 4-7 corners) on a 256x32 sheet, cropped by inset pixels.
+local GetEdgeCoords = function(segment, inset, rotated)
+	local left, right = segment/8 + inset/256, (segment + 1)/8 - inset/256
+	local top, bottom = inset/32, 1 - inset/32
+	if (rotated) then
+		return { left, bottom, right, bottom, left, top, right, top }
+	end
+	return { left, top, left, bottom, right, top, right, bottom }
+end
+
 local CreateAuraTextureBorder = function(aura)
-	local edgeSize = 12
-	local coordStart = 0.0625
-	local coordEnd = 1 - coordStart
+	-- The Legacy HUD draws the 3.x aura border as 3.x did: the whole sheet at
+	-- a 16px edge, 7px outside the icon (callers place the frame 6px outside).
+	local legacy = ns.LegacyHUD and ns.LegacyHUD:IsActive()
+	local edgeSize = legacy and 16 or 12
+	local inset = legacy and 0 or 2
+	local outset = legacy and 1 or 0
 	local file = GetMedia("border-aura")
 	local border = CreateFrame("Frame", nil, aura)
 	local pieces = {}
@@ -120,43 +142,44 @@ local CreateAuraTextureBorder = function(aura)
 		return texture
 	end
 
-	local topLeft = createPiece({ 0.5078125, coordStart, 0.5078125, coordEnd, 0.6171875, coordStart, 0.6171875, coordEnd })
+	local topLeft = createPiece(GetEdgeCoords(4, inset))
 	topLeft:SetSize(edgeSize, edgeSize)
-	topLeft:SetPoint("TOPLEFT")
+	topLeft:SetPoint("TOPLEFT", -outset, outset)
 
-	local topRight = createPiece({ 0.6328125, coordStart, 0.6328125, coordEnd, 0.7421875, coordStart, 0.7421875, coordEnd })
+	local topRight = createPiece(GetEdgeCoords(5, inset))
 	topRight:SetSize(edgeSize, edgeSize)
-	topRight:SetPoint("TOPRIGHT")
+	topRight:SetPoint("TOPRIGHT", outset, outset)
 
-	local bottomLeft = createPiece({ 0.7578125, coordStart, 0.7578125, coordEnd, 0.8671875, coordStart, 0.8671875, coordEnd })
+	local bottomLeft = createPiece(GetEdgeCoords(6, inset))
 	bottomLeft:SetSize(edgeSize, edgeSize)
-	bottomLeft:SetPoint("BOTTOMLEFT")
+	bottomLeft:SetPoint("BOTTOMLEFT", -outset, -outset)
 
-	local bottomRight = createPiece({ 0.8828125, coordStart, 0.8828125, coordEnd, 0.9921875, coordStart, 0.9921875, coordEnd })
+	local bottomRight = createPiece(GetEdgeCoords(7, inset))
 	bottomRight:SetSize(edgeSize, edgeSize)
-	bottomRight:SetPoint("BOTTOMRIGHT")
+	bottomRight:SetPoint("BOTTOMRIGHT", outset, -outset)
 
-	local top = createPiece({ 0.2578125, coordEnd, 0.3671875, coordEnd, 0.2578125, coordStart, 0.3671875, coordStart })
+	local top = createPiece(GetEdgeCoords(2, inset, true))
 	top:SetHeight(edgeSize)
 	top:SetPoint("TOPLEFT", topLeft, "TOPRIGHT")
 	top:SetPoint("TOPRIGHT", topRight, "TOPLEFT")
 
-	local bottom = createPiece({ 0.3828125, coordEnd, 0.4921875, coordEnd, 0.3828125, coordStart, 0.4921875, coordStart })
+	local bottom = createPiece(GetEdgeCoords(3, inset, true))
 	bottom:SetHeight(edgeSize)
 	bottom:SetPoint("BOTTOMLEFT", bottomLeft, "BOTTOMRIGHT")
 	bottom:SetPoint("BOTTOMRIGHT", bottomRight, "BOTTOMLEFT")
 
-	local left = createPiece({ 0.0078125, coordStart, 0.0078125, coordEnd, 0.1171875, coordStart, 0.1171875, coordEnd })
+	local left = createPiece(GetEdgeCoords(0, inset))
 	left:SetWidth(edgeSize)
 	left:SetPoint("TOPLEFT", topLeft, "BOTTOMLEFT")
 	left:SetPoint("BOTTOMLEFT", bottomLeft, "TOPLEFT")
 
-	local right = createPiece({ 0.1328125, coordStart, 0.1328125, coordEnd, 0.2421875, coordStart, 0.2421875, coordEnd })
+	local right = createPiece(GetEdgeCoords(1, inset))
 	right:SetWidth(edgeSize)
 	right:SetPoint("TOPRIGHT", topRight, "BOTTOMRIGHT")
 	right:SetPoint("BOTTOMRIGHT", bottomRight, "TOPRIGHT")
 
 	border.__AzeriteUI_BorderPieces = pieces
+	border.__AzeriteUI_LegacyNeutral = legacy and { Colors.ui[1] * .3, Colors.ui[2] * .3, Colors.ui[3] * .3 } or nil
 	border.SetBackdropBorderColor = SetAuraTextureBorderColor
 	return border
 end

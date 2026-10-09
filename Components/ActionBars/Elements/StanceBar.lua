@@ -83,6 +83,7 @@ local defaults = { profile = ns:Merge({
 	breakpoint = 10, -- when to start a new grid row
 	offset = 44/64, -- 44 -- relative offset in the growth direction for the alternate zigzag row as a fraction of button size.
 	hitrects = { -10, -10, -10, -10 },
+	buttonShape = "circle", -- "circle", "rounded" or "square", applied on reload
 	hideElements = {
 		macro = true,
 		hotkey = false,
@@ -124,9 +125,9 @@ local onLeave = function(self)
 	end
 end
 
-local style = function(button)
+local style = function(button, shape)
 
-	local db = ns.GetConfig("StanceButton")
+	local db = ns.API.GetShapedButtonConfig(ns.GetConfig("StanceButton"), shape)
 
 	-- Clean up the button template
 	for _,i in next,{ --[["AutoCastShine",]] "Border", "Name", "NewActionTexture", "NormalTexture", "SpellHighlightAnim", "SpellHighlightTexture",
@@ -379,7 +380,8 @@ StanceBar.UpdateButtonCount = function(self)
 	local updateBindings = (numStances > #self.buttons)
 
 	for id = #self.buttons + 1,numStances do
-		style(self:CreateButton())
+		local button = style(self:CreateButton(), self.config.buttonShape)
+		if (ns.LegacyHUD) then ns.LegacyHUD:StyleButton(button) end
 	end
 
 	for id,button in next,self.buttons do
@@ -465,7 +467,7 @@ StanceBarMod.CreateBar = function(self)
 
 	local bar = setmetatable(ns.ButtonBar:Create("StanceBar", self.db.profile, ns.Prefix.."StanceBar"), StanceBar_MT)
 	bar.buttonWidth, bar.buttonHeight = unpack(config.ButtonSize)
-	bar.defaults = defaults.profile
+	bar.defaults = self:GetDefaults().profile
 	bar.config = self.db.profile
 
 	if (ns.WoW10) then
@@ -530,10 +532,8 @@ StanceBarMod.CreateAnchor = function(self)
 end
 
 StanceBarMod.GetDefaults = function(self)
-	if (self.GenerateDefaults) then
-		return self:GenerateDefaults()
-	end
-	return self.defaults
+	local defaults = self.GenerateDefaults and self:GenerateDefaults() or self.defaults
+	return ns.LegacyHUD and ns.LegacyHUD:GetDefaults(self:GetName(), defaults) or defaults
 end
 
 StanceBarMod.SetDefaults = function(self, defaults)
@@ -808,5 +808,6 @@ end
 StanceBarMod.OnInitialize = function(self)
 	if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return self:Disable() end
 
-	self.db = ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
+	self.db = ns.LegacyHUD and ns.LegacyHUD:RegisterNamespace(self:GetName(), self:GetDefaults())
+		or ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
 end

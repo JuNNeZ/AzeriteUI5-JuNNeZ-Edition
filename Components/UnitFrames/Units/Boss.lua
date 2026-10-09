@@ -619,12 +619,14 @@ BossFrameMod.CreateUnitFrames = function(self)
 	oUF:SetActiveStyle(ns.Prefix..name)
 
 	local frame = setmetatable(CreateFrame("Frame", nil, UIParent), GroupHeader_MT)
-	frame:SetSize(250, 97 * MAX_BOSS_FRAMES)
+	local legacy = ns.LegacyHUD and ns.LegacyHUD:IsActive()
+	local spacing = legacy and 113 or 97
+	frame:SetSize(legacy and 198 or 250, spacing * MAX_BOSS_FRAMES)
 	frame.units = {}
 
 	for i = 1,MAX_BOSS_FRAMES do
 		local unitFrame = ns.UnitFrame.Spawn(unit..i, ns.Prefix.."UnitFrame"..name..i)
-		unitFrame:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -(i-1)*97)
+		unitFrame:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -(i-1)*spacing)
 
 		frame.units[i] = unitFrame
 	end

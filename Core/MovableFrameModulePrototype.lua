@@ -49,10 +49,8 @@ local Module = ns:Merge({ defaults = { enabled = true } }, ns.ModulePrototype)
 ns.MovableModulePrototype = Module
 
 Module.GetDefaults = function(self)
-	if (self.GenerateDefaults) then
-		return self:GenerateDefaults()
-	end
-	return self.defaults
+	local defaults = self.GenerateDefaults and self:GenerateDefaults() or self.defaults
+	return ns.LegacyHUD and ns.LegacyHUD:GetDefaults(self:GetName(), defaults) or defaults
 end
 
 Module.SetDefaults = function(self, defaults)
@@ -283,7 +281,8 @@ Module.OnInitialize = function(self)
 		self:PreInitialize()
 	end
 
-	self.db = ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
+	self.db = ns.LegacyHUD and ns.LegacyHUD:RegisterNamespace(self:GetName(), self:GetDefaults())
+		or ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
 	self.db.RegisterCallback(self, "OnProfileChanged", "OnRefreshConfig")
 	self.db.RegisterCallback(self, "OnProfileCopied", "OnRefreshConfig")
 	self.db.RegisterCallback(self, "OnProfileReset", "OnRefreshConfig")

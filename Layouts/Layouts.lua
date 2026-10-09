@@ -49,6 +49,7 @@ ns.RegisterConfigVariant = function(preset, name, config)
 end
 
 local FinishConfig = function(name, config)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return ns.LegacyHUD:GetConfig(name, config) end
 	return ns.PaladinTheme and ns.PaladinTheme:GetConfig(name, config) or config
 end
 

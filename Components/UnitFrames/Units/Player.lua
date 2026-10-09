@@ -1341,6 +1341,7 @@ local GetManaOrbPowerType = function(element, unit)
 end
 
 local ResolvePlayerPowerWidgetVisibility = function(frame, unit)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return true, false end
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
 	if (not profile) then
 		return true, false
@@ -1896,6 +1897,10 @@ local UpdatePlayerManaValueTag = function(frame)
 end
 
 local UpdateSecondaryManaCrystal = function(frame, unit)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then
+		if (frame and frame.SecondaryManaCrystal) then frame.SecondaryManaCrystal:Hide() end
+		return
+	end
 	local element = frame and frame.SecondaryManaCrystal
 	if (not element) then
 		return
@@ -2103,6 +2108,7 @@ local ResolvePlayerPowerColorFromTable = function(colorTable, token, fallbackCol
 end
 
 local UsePlayerIceCrystal = function()
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
 	if (ns.MageCrystalPreview and ns.MageCrystalPreview:IsActive()) then return false end
 	local requested = PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()
 	if (ns.PaladinTheme) then return ns.PaladinTheme:UseIceCrystal(requested) end
@@ -3077,6 +3083,7 @@ local UnitFrame_UpdateTextures = function(self)
 
 	if (ns.PaladinTheme) then ns.PaladinTheme:StyleThreat(self, false) end
 	ApplyPlayerAuraLayout(self)
+	if (ns.LegacyHUD) then ns.LegacyHUD:RefreshUnit(self) end
 
 end
 

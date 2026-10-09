@@ -569,6 +569,12 @@ L["Free bag slots: %d"] = true
 L["The micro menu holds the buttons for your character sheet, spellbook, collections, group finder and the game menu. AzeriteUI replaces Blizzard's strip along the bottom of the screen with a cog wheel in the bottom right corner."] = true
 L["The micro menu is built when the interface loads, so this change needs a reload to take effect."] = true
 L["Reload UI"] = true
+L["Button Shape"] = true
+L["Choose the shape of this bar's buttons. Circle is the intended AzeriteUI design. Square and Rounded are alternatives that keep the same spacing. Changing this asks you to reload."] = true
+L["Circle (intended design)"] = true
+L["Button shapes apply when the interface loads. Reload now?"] = true
+L["Extra Button Shape"] = true
+L["Choose the shape of the extra action and zone ability buttons. Circle is the intended AzeriteUI design. Changing this asks you to reload."] = true
 L["Show Specialization Icons"] = true
 L["Show each party member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."] = true
 L["Show each raid member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."] = true
@@ -1005,3 +1011,76 @@ L["Picking AzeriteUI turns %s off for this character and reloads the interface. 
 L["AzeriteUI and %s both style the Cooldown Manager, as you chose. This combination is not supported."] = true
 L["Choose again"] = true
 L["Ask again which addon styles the Cooldown Manager."] = true
+
+-- Target execute marker (shared threshold).
+
+-- Cooldown-ready alerts
+
+-- Cooldown test submenu (Development Mode).
+L["Cooldown tests"] = true
+L["Select a spell on your active action bar and start out of combat. Cast normally and wait for the real icon to recover. Restart after bar or talent changes; closing this window leaves the test running."] = true
+L["Spell ID"] = true
+L["Start / restart"] = true
+L["Print status"] = true
+L["Stop test"] = true
+L["Preview flash"] = true
+L["Inspect icons"] = true
+L["Close test window"] = true
+L["Compare the source rows in _DebugLog (AzeriteUI), including action-slot and resolved-spell timers. A valid timer is shown during the real cooldown and hidden at recovery; a GCD-only change is not a pass."] = true
+L["Test running: spell %d"] = true
+L["Test stopped"] = true
+L["Enable Development Mode to use these tests."] = true
+L["This client lacks the APIs required for the cooldown probe."] = true
+L["Retail presets are disabled on Forever. Enter a spell ID verified on this client. Preview and inspect require out of combat."] = true
+L["Preview and inspect require out of combat. Presets only select an ID; cast the learned spell yourself."] = true
+L["Blessing of Sacrifice"] = true
+L["Divine Protection"] = true
+L["Judgment"] = true
+
+-- Debug page in the options panel.
+L["Debug tools"] = true
+L["Health and unit frames"] = true
+L["Keybindings"] = true
+L["Raid utility bar"] = true
+L["Utilities"] = true
+L["Paladin preset"] = true
+L["Manual spell ID"] = true
+L["Health debug"] = true
+L["Health debug chat"] = true
+L["Statusbar/orb debug"] = true
+L["Blizzard fixes debug"] = true
+L["Health filter prefix"] = true
+L["Reset filter"] = true
+L["Dump target bars"] = true
+L["Dump player bars"] = true
+L["Dump ToT bars"] = true
+L["Dump all bars"] = true
+L["Nameplate unit"] = true
+L["Inspect nameplate cast"] = true
+L["Inspect nameplate scale"] = true
+L["All nameplates"] = true
+L["Auto nameplate scale"] = true
+L["Snapshot unit"] = true
+L["Snapshot"] = true
+L["Target debug menu"] = true
+L["Reattach player bars"] = true
+L["Reattach target bars"] = true
+L["Verbose"] = true
+L["Bindings"] = true
+L["Button name"] = true
+L["Inspect button cooldown"] = true
+L["Hold test"] = true
+L["Force on"] = true
+L["Force off"] = true
+L["Toggle"] = true
+L["Enable Blizzard addons"] = true
+L["Enable script errors"] = true
+L["Scale status"] = true
+L["Reset unit frame scales"] = true
+L["Secret test unit"] = true
+L["Run secret test"] = true
+L["Maintainer tests and diagnostics. Select a section in the sidebar; nothing starts automatically."] = true
+L["Repairs reattach movement handles. Frame changes wait until combat ends."] = true
+L["Solo force-show is a temporary debug override. The normal raid bar setting stays on the Unit Frames page. Reload if Blizzard already hid the bar."] = true
+
+L["Output is written to _DebugLog -> AzeriteUI when available; otherwise to chat."] = true

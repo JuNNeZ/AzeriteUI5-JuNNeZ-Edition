@@ -76,6 +76,7 @@ local endcapBars = setmetatable({}, { __mode = "k" })
 local crystals = setmetatable({}, { __mode = "k" })
 
 Theme.IsActive = function(self)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
 	local char = Char()
 	if (not char or not char.magePreview) then return false end
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return false end

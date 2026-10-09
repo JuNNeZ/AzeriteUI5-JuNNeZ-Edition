@@ -43,6 +43,8 @@ Effects.GetThemes = function(self)
 	for _, key in ipairs(THEMES) do
 		if (key ~= "paladin" or DevMode()) then list[#list + 1] = key end
 	end
+	-- Keep the command-only HUD hidden until it is already selected.
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then list[#list + 1] = "legacy" end
 	return list
 end
 
@@ -50,6 +52,7 @@ end
 Effects.GetTheme = function(self)
 	local char = Char()
 	if (not char or not MainLayout()) then return "azerite" end
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return "legacy" end
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return "hunter" end
 	if (ns.MageTheme and ns.MageTheme:IsActive()) then return "mage" end
 	if (ns.PaladinTheme and ns.PaladinTheme:IsActive()) then return "paladin" end
@@ -58,6 +61,7 @@ end
 
 --- True when switching to this theme must rebuild the frame layouts.
 Effects.NeedsReload = function(self, theme)
+	if (ns.LegacyHUD and (ns.LegacyHUD.loadedActive or false) ~= (theme == "legacy")) then return true end
 	for key, module in pairs({ hunter = ns.HunterTheme, paladin = ns.PaladinTheme, mage = ns.MageTheme }) do
 		if ((module.loadedActive or false) ~= (theme == key)) then return true end
 	end
@@ -93,12 +97,14 @@ end
 
 --- The effect drawn in the power crystal: "none", "paladin" or "mage".
 Effects.GetCrystalEffect = function(self)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return "none" end
 	if (not Char() or not MainLayout()) then return "none" end
 	return Resolve(THEME_CRYSTAL[self:GetTheme()], self:GetCrystalChoice())
 end
 
 --- The effect drawn in the mana orb: "none", "paladin" or "hunter".
 Effects.GetOrbEffect = function(self)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return "none" end
 	if (not Char() or not MainLayout()) then return "none" end
 	return Resolve(THEME_ORB[self:GetTheme()], self:GetOrbChoice())
 end
@@ -126,6 +132,7 @@ Effects.SetTheme = function(self, theme)
 		ns:Print("Select the main AzeriteUI theme before choosing another.")
 		return false
 	end
+	char.legacyHUD = theme == "legacy"
 	char.hunterPreview = theme == "hunter"
 	char.paladinPreview = theme == "paladin"
 	char.magePreview = theme == "mage"

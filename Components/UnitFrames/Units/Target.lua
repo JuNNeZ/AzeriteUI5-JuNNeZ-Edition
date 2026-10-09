@@ -3157,6 +3157,7 @@ local UnitFrame_UpdateTextures = function(self)
 		self.NativeAuras:ForceUpdate()
 	end
 
+	if (ns.LegacyHUD) then ns.LegacyHUD:RefreshUnit(self) end
 	ns:Fire("UnitFrame_Target_Updated", unit, key)
 end
 

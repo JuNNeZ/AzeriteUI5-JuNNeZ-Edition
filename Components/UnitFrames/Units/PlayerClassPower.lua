@@ -88,6 +88,7 @@ local GetElementalMaelstromDisplayMode = function(db)
 end
 
 local ShouldUseElementalSwapBar = function(db)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
 	if (not ns.IsRetailContent or playerClass ~= "SHAMAN") then
 		return false
 	end

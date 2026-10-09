@@ -12,6 +12,8 @@ end
 
 shapes[("Interface\\AddOns\\"..Addon.."\\Assets\\Hunter\\pet-fill.tga"):lower()] = "pet-fill"
 
+shapes[("Interface\\AddOns\\"..Addon.."\\Assets\\Legacy\\statusbar-power.tga"):lower()] = "Legacy\\statusbar-power"
+
 local function GetProfile()
 	local module = ns:GetModule("UnitFrames", true)
 	return module and module.db and module.db.profile or {}

@@ -98,13 +98,84 @@ local alias = {
 
 -- Retrieve an asset from the media asset folder.
 local GetMedia = function(name, type)
-	local themed = ns.PaladinTheme and ns.PaladinTheme:ResolveMedia(name)
+	local themed = ns.LegacyHUD and ns.LegacyHUD:ResolveMedia(name)
+		or (ns.PaladinTheme and ns.PaladinTheme:ResolveMedia(name))
 	if (themed and (not type or type == "tga")) then return themed end
 	return alias[name] or string_format([[Interface\AddOns\%s\Assets\%s.%s]], Addon, name, type or "tga")
 end
 
+-- Optional Square and Rounded button art. Circle is AzeriteUI's own design and
+-- stays the default. Sizes come from the art's measured bounds on the 256px
+-- sheets for a 64px cell: the border's outer edge lands at about 62px, inside
+-- the cell, so neighbours never overlap. Smaller cells (pet, stance) scale the
+-- same proportions.
+local BUTTON_SHAPES = {
+	square = {
+		mask = "actionbutton-mask-square",
+		backdrop = "actionbutton-backdrop-square",
+		border = "actionbutton-border-square",
+		highlight = "actionbutton-spellhighlight-square",
+		deco = 96.3
+	},
+	rounded = {
+		mask = "actionbutton-mask-square-rounded",
+		backdrop = "actionbutton-backdrop-square-rounded",
+		border = "actionbutton-border-square-rounded",
+		highlight = "actionbutton-spellhighlight-square-rounded",
+		deco = 93.1
+	}
+}
+
+--- Returns true when shape names one of the optional button shapes.
+local IsButtonShape = function(shape)
+	return BUTTON_SHAPES[shape] ~= nil
+end
+
+--- Returns db unchanged for the circle, and under the Legacy HUD (which has its
+--- own rounded buttons); otherwise a copy with the shape's art swapped in.
+--- Takes the Button* configs and the extra button's ExtraButton* config.
+--- The config passed in is never modified.
+local GetShapedButtonConfig = function(db, shape)
+	local s = BUTTON_SHAPES[shape]
+	if (not s or type(db) ~= "table" or (ns.LegacyHUD and ns.LegacyHUD:IsActive())) then return db end
+	local extra = db.ExtraButtonSize ~= nil
+	local cell = extra and db.ExtraButtonSize or db.ButtonSize
+	if (type(cell) ~= "table" or type(cell[1]) ~= "number") then return db end
+	local c = {}
+	for k,v in next,db do c[k] = v end
+	local scale = cell[1] / 64
+	local icon, deco, glow = 60 * scale, s.deco * scale, 117.5 * scale
+	local bind, count = { "TOPLEFT", 8 * scale, -8 * scale }, { "BOTTOMRIGHT", -7 * scale, 7 * scale }
+	if (extra) then
+		c.ExtraButtonMask = GetMedia(s.mask)
+		c.ExtraButtonBorderTexture = GetMedia(s.border)
+		c.ExtraButtonBorderSize = { deco, deco }
+		c.ExtraButtonIconSize = { icon, icon }
+		c.ExtraButtonCooldownSize = { icon, icon }
+		c.ExtraButtonBindPosition = bind
+		c.ExtraButtonCountPosition = count
+		return c
+	end
+	c.ButtonMaskTexture = GetMedia(s.mask)
+	c.ButtonBackdropTexture = GetMedia(s.backdrop)
+	c.ButtonBackdropSize = { deco, deco }
+	c.ButtonBorderTexture = GetMedia(s.border)
+	c.ButtonBorderSize = { deco, deco }
+	c.ButtonSpellHighlightTexture = GetMedia(s.highlight)
+	c.ButtonSpellHighlightSize = { glow, glow }
+	if (db.ButtonAssistedHighlightTexture) then
+		c.ButtonAssistedHighlightTexture = GetMedia(s.highlight)
+	end
+	c.ButtonIconSize = { icon, icon }
+	c.ButtonKeybindPosition = bind
+	c.ButtonCountPosition = count
+	return c
+end
+
 -- Global API
 ---------------------------------------------------------
+API.IsButtonShape = IsButtonShape
+API.GetShapedButtonConfig = GetShapedButtonConfig
 API.GetFont = GetFont
 API.GetAllFonts = GetAllFonts
 API.GetAllChatFonts = GetAllChatFonts

@@ -81,9 +81,16 @@ end
 -- Whether a write against this option table has to wait. The table is the
 -- question, not the setting: the panel's own Settings tab is drawn from
 -- PanelOptions and changes only how this window is painted.
-Combat.ShouldQueue = function(self, options)
+-- Identity allowlist for owned diagnostic actions, not arbitrary option fields.
+-- Only probe controls/scratch input register here; repairs remain queued.
+local immediate = setmetatable({}, { __mode = "k" })
+Combat.AllowImmediate = function(self, option)
+	immediate[option] = true
+end
+Combat.ShouldQueue = function(self, options, path)
 	if (not InCombatLockdown()) then return false end
 	if (Kit.PanelOptions and options == Kit.PanelOptions.GetTable()) then return false end
+	if (path and Kit.Config and immediate[Kit.Config.GetGroup(options, path)]) then return false end
 	return true
 end
 

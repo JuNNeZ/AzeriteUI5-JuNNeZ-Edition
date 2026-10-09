@@ -42,6 +42,7 @@
 	<!-- Hidden unless Development Mode is on: the control types no shipped
 	     setting uses, so that they can be tested at all. -->
 	<Script file="OptionsPages\ControlTypes.lua"/>
+	<Script file="OptionsPages\Debug.lua"/>
 	<Script file="OptionsPages\ExplorerMode.lua"/>
 	<Script file="OptionsPages\GameMenu.lua"/>
 	<Script file="OptionsPages\Info.lua"/>

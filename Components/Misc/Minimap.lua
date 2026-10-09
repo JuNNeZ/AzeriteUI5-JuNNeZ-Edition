@@ -652,7 +652,12 @@ local Skins = {
 				DrawLayer = "BORDER",
 				DrawLevel = 1,
 				Path = GetMedia("minimap-border"),
-				Size = function() return (398 / mapScale), (398 / mapScale) end, -- 404
+				Size = function()
+					-- The Legacy HUD's ring is a different piece of art: AzeriteUI 3.x drew it
+					-- 256px around a 210px map, so it keeps that proportion here.
+					local size = (ns.LegacyHUD and ns.LegacyHUD:IsActive()) and (198 * 256/210) or 398 -- 404
+					return (size / mapScale), (size / mapScale)
+				end,
 				Point = { "CENTER", 0, 0 },
 				Color = { Colors.ui[1], Colors.ui[2], Colors.ui[3] },
 			},

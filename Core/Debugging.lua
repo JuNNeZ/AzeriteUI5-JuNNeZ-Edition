@@ -24,7 +24,7 @@
 	SOFTWARE.
 
 --]]
-local _, ns = ...
+local Addon, ns = ...
 local API = ns.API
 local Debugging = ns:NewModule("Debugging", "LibMoreEvents-1.0", "AceConsole-3.0")
 
@@ -36,7 +36,14 @@ local Debugging = ns:NewModule("Debugging", "LibMoreEvents-1.0", "AceConsole-3.0
 local ipairs = ipairs
 local next = next
 local pairs = pairs
-local print = print
+local ChatPrint = print
+local DiagnosticPrint
+-- File-local routing also covers asynchronous diagnostic callbacks. Never hook
+-- global print: the logger and unrelated addons keep their own output paths.
+local print = function(...)
+	if (DiagnosticPrint) then return DiagnosticPrint(...) end
+	return ChatPrint(...)
+end
 local select = select
 local tostring = tostring
 local type = type
@@ -1741,7 +1748,7 @@ Debugging.SecretJuNNeZCommand = function(self)
 	
 	for i, msg in ipairs(messages) do
 		C_Timer.After((i-1) * 0.5, function()
-			print(msg)
+			ChatPrint(msg)
 			C_Sound.PlaySound(SOUNDKIT.RAID_WARNING)
 		end)
 	end
@@ -1826,7 +1833,7 @@ Debugging.SecretJuNNeZCommand = function(self)
 	-- Final message and cleanup
 	C_Timer.After(5.0, function()
 		local finalMsg = "|cff00ff00THANKS FOR USING THE JUNNEZ EDITION! CHAOS COMPLETE!!!|r"
-		print(finalMsg)
+		ChatPrint(finalMsg)
 		if (centerFrame and centerFrame:IsShown()) then
 			centerFrame:Hide()
 		end
@@ -1888,7 +1895,7 @@ Debugging.SecretGoldpawCommand = function(self)
 	
 	for i, msg in ipairs(messages) do
 		C_Timer.After((i-1) * 0.6, function()
-			print(msg)
+			ChatPrint(msg)
 			C_Sound.PlaySound(SOUNDKIT.ACHIEVEMENT_MENU_OPEN)
 		end)
 	end
@@ -1970,7 +1977,7 @@ Debugging.SecretGoldpawCommand = function(self)
 	
 	-- Final tribute message
 	C_Timer.After(3.5, function()
-		print("|cffffd700Honoring Goldpaw - The Original Architect!|r")
+		ChatPrint("|cffffd700Honoring Goldpaw - The Original Architect!|r")
 		C_Sound.PlaySound(SOUNDKIT.RAID_WARNING)
 		if (centerFrame and centerFrame:IsShown()) then
 			centerFrame:Hide()
@@ -2076,7 +2083,9 @@ local function ProbeMethod(obj, method, ...)
 end
 
 -- Consolidated onto API.IsSecret (Core/API/SecretValues.lua).
-local IsSecretValue = API.IsSecret
+local IsSecretValue = API.IsSecret or function(value)
+	return type(issecretvalue) == "function" and issecretvalue(value)
+end
 
 local function SecretSafeText(value)
 	if (IsSecretValue(value)) then
@@ -2089,10 +2098,10 @@ local function SecretSafeText(value)
 	return "<unprintable>"
 end
 
-local SafePrintTarget = "chat"
+local SafePrintTarget = "debuglog"
 
 local function SafePrintToDebugLog(...)
-	if (not (DLAPI and DLAPI.DebugLog)) then
+	if (type(DLAPI) ~= "table" or type(DLAPI.DebugLog) ~= "function") then
 		return false
 	end
 	local args = {}
@@ -2100,7 +2109,7 @@ local function SafePrintToDebugLog(...)
 		args[i] = SecretSafeText(select(i, ...))
 	end
 	local payload = table_concat(args, " ")
-	local ok = API.TryCall(DLAPI.DebugLog, "AzeriteUI", payload)
+	local ok = API.TryCall(DLAPI.DebugLog, "AzeriteUI", "%s", payload)
 	return ok and true or false
 end
 
@@ -2116,8 +2125,360 @@ local function SafePrint(...)
 	elseif (SafePrintTarget == "both") then
 		SafePrintToDebugLog(unpack(args))
 	end
-	print(unpack(args))
+	ChatPrint(unpack(args))
 end
+
+-- Public addon-local sink for diagnostics in other owned modules.
+Debugging.PrintDiagnostic = function(self, ...)
+	return SafePrint(...)
+end
+DiagnosticPrint = SafePrint
+
+-- Cooldown-ready gating probe. Nothing is allocated or registered until invoked.
+-- Alpha zero keeps it visually hidden without overriding the engine's shown state.
+do
+	local probe
+	local function Describe(value)
+		local secret = issecretvalue(value)
+		if (secret) then return "<secret>", true end
+		return tostring(value), false
+	end
+	local function Read(method, owner)
+		local ok, value = API.TryCall(method, owner)
+		local text, secret = Describe(value)
+		return value, secret, text.."/secret="..tostring(secret).."/ok="..tostring(ok), ok
+	end
+	-- Resolve only at an explicitly OOC start. Combat samples use cached plain IDs.
+	local function PlainID(value)
+		return not issecretvalue(value) and type(value) == "number" and value > 0
+			and value < math.huge and value % 1 == 0
+	end
+	local function ResolveSpell(id)
+		if (type(C_Spell.GetBaseSpell) ~= "function" or type(C_Spell.GetOverrideSpell) ~= "function") then
+			return nil, nil, "missing base/override spell API"
+		end
+		local ok, base = API.TryCall(C_Spell.GetBaseSpell, id)
+		if (not ok or not PlainID(base)) then return nil, nil, "unreadable base spell" end
+		local current, seen = base, {}
+		for _ = 1, 5 do
+			seen[current] = true
+			local success, override = API.TryCall(C_Spell.GetOverrideSpell, current)
+			if (not success or not PlainID(override)) then return nil, nil, "unreadable override spell" end
+			if (override == current) then return base, current end
+			if (seen[override]) then return nil, nil, "override cycle" end
+			current = override
+		end
+		return nil, nil, "override chain too long"
+	end
+	local function PrepareSources(combatAPI, id, expectedSlot)
+		local ok, combat = API.TryCall(combatAPI)
+		if (not ok or issecretvalue(combat) or combat ~= false) then
+			return nil, nil, "start out of combat to resolve sources"
+		end
+		local base, resolved, why = ResolveSpell(id)
+		if (not resolved) then return nil, nil, why end
+		local module = type(ns.GetModule) == "function" and ns:GetModule("ActionBars", true)
+		local slot
+		if (module and type(module.buttons) == "table") then
+			for button in pairs(module.buttons) do
+				if (type(button.GetAction) == "function" and type(button.GetSpellId) == "function") then
+					local actionOK, kind, action = API.TryCall(button.GetAction, button)
+					local spellOK, spell = API.TryCall(button.GetSpellId, button)
+					if (actionOK and not issecretvalue(kind) and kind == "action" and PlainID(action)
+						and spellOK and PlainID(spell)) then
+						if ((not expectedSlot or action == expectedSlot) and (spell == id or spell == base or spell == resolved)) then
+							-- Duplicate bindings are deterministic: choose the lowest matching slot.
+							if (not slot or action < slot) then slot = action end
+						end
+					end
+				end
+			end
+		end
+		print("|cff33ff99AzeriteUI cdready|r", "MAPPING selected="..id.." base="..base
+			.." resolved="..resolved.." actionSlot="..tostring(slot).." (cached OOC; restart after bar/talent changes)")
+		if (not slot) then return nil, resolved, "no matching AzeriteUI action slot on the active page" end
+		return slot, resolved
+	end
+	local function RecheckActionLane(lane)
+		local combatOK, inCombat = API.TryCall(lane.combatAPI)
+		if (not combatOK or issecretvalue(inCombat) or inCombat ~= false) then
+			lane.pendingMapping = true
+			lane.unavailable = "action mapping changed; restart out of combat"
+			return "deferred until out of combat"
+		end
+		lane.pendingMapping = false
+		local slot, resolved, reason = PrepareSources(lane.combatAPI, lane.spellID, lane.actionSlot)
+		if (slot ~= lane.actionSlot or resolved ~= lane.resolvedSpellID) then
+			lane.unavailable = reason or "cached action mapping changed; restart out of combat"
+			return "mapping mismatch"
+		end
+		if (not C_ActionBar or type(C_ActionBar.GetActionCooldownDuration) ~= "function") then
+			lane.unavailable = "missing C_ActionBar.GetActionCooldownDuration"
+			return "action API unavailable"
+		end
+		lane.unavailable = nil
+		return "mapping verified"
+	end
+	local function SnapshotLane(probe, reason, force)
+		if (not probe or not probe.active) then return end
+		local shown, secretShown, shownText, shownOK = Read(probe.cooldown.IsShown, probe.cooldown)
+		local _, _, visibleText = Read(probe.cooldown.IsVisible, probe.cooldown)
+		local _, _, combatText = Read(probe.combatAPI)
+		local ready = "unknown"
+		if (probe.fed and shownOK and not secretShown and type(shown) == "boolean") then
+			ready = shown and "false" or "true"
+		end
+		local line = "source="..probe.source.." spell="..probe.spellID.." combat="..combatText.." shown="..shownText
+			.." visible="..visibleText.." duration="..probe.durationText
+			.." feedOK="..tostring(probe.fed).." readyViaShown="..ready
+			.." needsSecretForShown="..tostring(secretShown).." doneCount="..probe.doneCount
+			.." actionSlot="..tostring(probe.actionSlot).." unavailable="..tostring(probe.unavailable)
+		if (force or line ~= probe.lastLine) then
+			print("|cff33ff99AzeriteUI cdready|r", "["..reason.."]", line)
+			probe.lastLine = line
+		end
+	end
+	local function Snapshot(reason, force)
+		if (not probe or not probe.active) then return end
+		for _, lane in ipairs(probe.lanes) do SnapshotLane(lane, reason, force) end
+	end
+	local function FeedLane(probe, reason, force)
+		if (not probe or not probe.active) then return end
+		local getter = probe.source == "charges" and C_Spell.GetSpellChargeDuration or C_Spell.GetSpellCooldownDuration
+		if (probe.source == "action-ignoreGCD") then
+			getter = C_ActionBar and C_ActionBar.GetActionCooldownDuration
+		end
+		if (probe.unavailable) then getter = nil end
+		if (probe.source == "charges" and type(C_Spell.GetSpellChargeDuration) ~= "function") then getter = nil end
+		if (type(getter) ~= "function") then
+			probe.durationText, probe.fed = "unavailable", false
+			probe.feeding = true; probe.cooldown:Clear(); probe.feeding = false
+			SnapshotLane(probe, reason, force)
+			return
+		end
+		local ok, duration
+		if (probe.source == "action-ignoreGCD") then ok, duration = API.TryCall(getter, probe.actionSlot, true)
+		elseif (probe.source == "charges") then ok, duration = API.TryCall(getter, probe.spellID)
+		else ok, duration = API.TryCall(getter, probe.spellID, probe.ignoreGCD) end
+		local secret = issecretvalue(duration)
+		-- Never tostring/index/test a secret duration object. Its contents are not read.
+		probe.durationText = (secret and "<secret>" or (ok and duration ~= nil and "<object>" or "nil"))
+			.."/secret="..tostring(secret).."/ok="..tostring(ok)
+		probe.fed = false
+		if (ok and (secret or duration ~= nil)) then
+			probe.feeding = true
+			local feedOK, err = API.TryCall(probe.cooldown.SetCooldownFromDurationObject, probe.cooldown, duration, true)
+			probe.feeding = false
+			probe.fed = feedOK
+			if (not feedOK) then
+				local text, secretError = Describe(err)
+				print("|cffff4444AzeriteUI cdready|r", "source="..probe.source.." feed error="..text.."/secret="..tostring(secretError))
+			end
+		else
+			-- A nil/failed getter is not evidence that the spell is ready.
+			probe.feeding = true
+			probe.cooldown:Clear()
+			probe.feeding = false
+		end
+		SnapshotLane(probe, reason, force)
+	end
+	local function Feed(reason, force)
+		if (not probe or not probe.active) then return end
+		for _, lane in ipairs(probe.lanes) do FeedLane(lane, reason, force) end
+	end
+	local function Stop()
+		if (not probe) then return end
+		probe.active = false
+		probe.generation = probe.generation + 1
+		probe.events:UnregisterAllEvents()
+		probe.events:SetScript("OnEvent", nil)
+		for _, lane in ipairs(probe.lanes) do
+			lane.active = false
+			lane.cooldown:SetScript("OnCooldownDone", nil)
+			lane.cooldown:Clear()
+			lane.cooldown:Hide()
+		end
+	end
+	-- Owned input/state only; the menu does not inspect duration values.
+	Debugging.GetCooldownProbeState = function(self)
+		return probe and probe.active == true or false, probe and probe.spellID
+	end
+	Debugging.CooldownReadyProbe = function(self, input)
+		local token = (type(input) == "string" and input:match("^%s*(.-)%s*$")) or ""
+		local readyModule = type(ns.GetModule) == "function" and ns:GetModule("CooldownManager", true)
+		if (token == "preview" or token == "inspect") then
+			if (not IsDevMode()) then print("AzeriteUI cdready: Development Mode is required."); return end
+			if (readyModule and readyModule.DebugReadyAlerts) then return readyModule:DebugReadyAlerts(token) end
+			print("AzeriteUI cdready: Cooldown Manager module is unavailable.")
+			return
+		end
+		if (token == "off") then
+			if (readyModule and readyModule.StopReadyPreviews) then readyModule:StopReadyPreviews() end
+			Stop()
+			print("|cff33ff99AzeriteUI cdready|r", "OFF (no saved state)")
+			return
+		end
+		if (not IsDevMode()) then
+			Stop()
+			print("|cff33ff99AzeriteUI cdready|r", "Development Mode is required.")
+			return
+		end
+		if (token == "status") then
+			if (probe and probe.active) then Snapshot("status", true)
+			else print("|cff33ff99AzeriteUI cdready|r", "OFF") end
+			return
+		end
+		local spellID = tonumber(token)
+		if (not spellID or spellID <= 0 or spellID % 1 ~= 0 or spellID == math.huge) then
+			print("|cff33ff99AzeriteUI cdready|r", "Usage: /azdebug cdready <spellID>|status|preview|inspect|off")
+			return
+		end
+		Stop()
+		local combatAPI = C_RestrictedActions and C_RestrictedActions.InCombatLockdown
+		if (type(combatAPI) ~= "function") then combatAPI = InCombatLockdown end
+		local missing = {}
+		if (type(issecretvalue) ~= "function") then missing[#missing + 1] = "issecretvalue" end
+		if (not C_Spell or type(C_Spell.GetSpellCooldownDuration) ~= "function") then
+			missing[#missing + 1] = "C_Spell.GetSpellCooldownDuration"
+		end
+		if (type(combatAPI) ~= "function") then
+			missing[#missing + 1] = "C_RestrictedActions.InCombatLockdown / InCombatLockdown"
+		end
+		if (not C_Timer or type(C_Timer.After) ~= "function") then missing[#missing + 1] = "C_Timer.After" end
+		if (#missing > 0) then
+			print("|cffff4444AzeriteUI cdready|r", "UNAVAILABLE: missing "..table_concat(missing, ", "))
+			return
+		end
+		if (not probe) then
+			probe = { generation = 0, events = CreateFrame("Frame", nil, UIParent),
+				cooldown = CreateFrame("Cooldown", nil, UIParent, "CooldownFrameTemplate") }
+			probe.cooldown:SetSize(1, 1)
+			probe.cooldown:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -100, -100)
+			probe.cooldown:SetAlpha(0)
+			probe.source, probe.ignoreGCD = "cooldown-ignoreGCD", true
+			probe.lanes = { probe }
+			for _, source in ipairs({ "cooldown-withGCD", "charges" }) do
+				local cooldown = CreateFrame("Cooldown", nil, UIParent, "CooldownFrameTemplate")
+				cooldown:SetSize(1, 1)
+				cooldown:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -100, -100)
+				cooldown:SetAlpha(0)
+				probe.lanes[#probe.lanes + 1] = { source = source, ignoreGCD = false, cooldown = cooldown }
+			end
+			for _, source in ipairs({ "action-ignoreGCD", "resolved-spell" }) do
+				local cooldown = CreateFrame("Cooldown", nil, UIParent, "CooldownFrameTemplate")
+				cooldown:SetSize(1, 1)
+				cooldown:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -100, -100)
+				cooldown:SetAlpha(0)
+				probe.lanes[#probe.lanes + 1] = { source = source, ignoreGCD = true, cooldown = cooldown }
+			end
+		end
+		for _, probe in ipairs(probe.lanes) do
+			if (type(probe.cooldown.SetCooldownFromDurationObject) ~= "function"
+				or type(probe.cooldown.IsShown) ~= "function" or type(probe.cooldown.IsVisible) ~= "function") then
+				Stop()
+				print("|cffff4444AzeriteUI cdready|r", "UNAVAILABLE: Cooldown duration or visibility method is missing.")
+				return
+			end
+		end
+		local actionSlot, resolved, sourceReason = PrepareSources(combatAPI, spellID)
+		probe.generation = probe.generation + 1
+		for _, probe in ipairs(probe.lanes) do
+			probe.combatAPI = combatAPI
+			probe.spellID, probe.active, probe.doneCount = spellID, true, 0
+			probe.actionSlot, probe.unavailable, probe.pendingMapping = nil, nil, false
+			probe.resolvedSpellID = resolved
+			if (probe.source == "action-ignoreGCD") then
+				probe.actionSlot = actionSlot
+				probe.unavailable = not actionSlot and sourceReason or nil
+				if (not C_ActionBar or type(C_ActionBar.GetActionCooldownDuration) ~= "function") then
+					probe.unavailable = "missing C_ActionBar.GetActionCooldownDuration"
+				end
+			elseif (probe.source == "resolved-spell") then
+				probe.spellID = resolved or spellID
+				probe.unavailable = not resolved and sourceReason or nil
+			end
+			probe.lastLine, probe.durationText, probe.fed = nil, "not fed", false
+			probe.cooldown:SetScript("OnCooldownDone", function(_, ...)
+				if (not probe.active) then return end
+				if (not IsDevMode()) then Stop(); return end
+				probe.doneCount = probe.doneCount + 1
+				local origin = probe.feeding and "during-feed" or "outside-feed"
+				print("|cff33ff99AzeriteUI cdready|r", "OnCooldownDone source="..probe.source.." origin="..origin
+					.." callbackNeedsSecret=false (event observed; readiness still unproven)")
+				for i = 1, select("#", ...) do
+					local text, secret = Describe(select(i, ...))
+					print("|cff33ff99AzeriteUI cdready|r", "source="..probe.source.." callbackArg"..i.."="..text.."/secret="..tostring(secret))
+				end
+				SnapshotLane(probe, "OnCooldownDone", true)
+			end)
+		end
+		probe.events:SetScript("OnEvent", function(_, event, slot)
+			if (not probe.active) then return end
+			if (not IsDevMode()) then Stop(); return end
+			if (issecretvalue(event)) then Snapshot("secret event name", true); return end
+			-- Deliberately do not read event spell IDs; re-feed the user-selected ID.
+			if (event == "ACTIONBAR_SLOT_CHANGED" or event == "ACTIONBAR_PAGE_CHANGED" or event == "UPDATE_BONUS_ACTIONBAR") then
+				local slotText, secretSlot = Describe(slot)
+				for _, lane in ipairs(probe.lanes) do
+					if (lane.source == "action-ignoreGCD") then
+						local decision = "no cached action slot"
+						if (lane.actionSlot) then
+							if (event == "ACTIONBAR_SLOT_CHANGED" and not secretSlot and PlainID(slot) and slot ~= lane.actionSlot) then
+								decision = "unrelated slot; mapping retained"
+							else
+								decision = RecheckActionLane(lane)
+							end
+						end
+						print("|cff33ff99AzeriteUI cdready|r", "SLOT event="..event.." slot="..slotText
+							.."/secret="..tostring(secretSlot).." cached="..tostring(lane.actionSlot).." decision="..decision)
+					end
+				end
+				Feed(event, true)
+			elseif (event == "SPELL_UPDATE_COOLDOWN" or event == "SPELL_UPDATE_CHARGES") then Feed(event)
+			elseif (event == "PLAYER_REGEN_ENABLED") then
+				for _, lane in ipairs(probe.lanes) do
+					if (lane.pendingMapping) then RecheckActionLane(lane) end
+				end
+				Feed(event, true)
+			else Snapshot(event, true) end
+		end)
+		probe.events:RegisterEvent("SPELL_UPDATE_COOLDOWN")
+		if (type(API.IsEventAvailable) == "function" and API.IsEventAvailable("SPELL_UPDATE_CHARGES")) then
+			probe.events:RegisterEvent("SPELL_UPDATE_CHARGES")
+		end
+		for _, event in ipairs({ "ACTIONBAR_SLOT_CHANGED", "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR" }) do
+			if (type(API.IsEventAvailable) == "function" and API.IsEventAvailable(event)) then probe.events:RegisterEvent(event) end
+		end
+		probe.events:RegisterEvent("PLAYER_REGEN_DISABLED")
+		probe.events:RegisterEvent("PLAYER_REGEN_ENABLED")
+		local generation, ticks = probe.generation, 0
+		local function Tick()
+			if (not probe.active or probe.generation ~= generation) then return end
+			if (not IsDevMode()) then Stop(); return end
+			for _, lane in ipairs(probe.lanes) do
+				if (lane.pendingMapping) then RecheckActionLane(lane) end
+			end
+			ticks = ticks + 1
+			Feed("tick", ticks % 5 == 0)
+			C_Timer.After(1, Tick)
+		end
+		print("|cff33ff99AzeriteUI cdready|r", "START spell="..spellID
+			.." sources=cooldown-ignoreGCD,cooldown-withGCD,charges,action-ignoreGCD,resolved-spell; alpha=0; one-second re-feed; no duration numbers read; /azdebug cdready off stops it.")
+		Feed("start")
+		C_Timer.After(1, Tick)
+	end
+end
+
+-- Compact opt-in front end for the existing probe and drawing diagnostics.
+-- Both debug entry points use the shipped options panel, never a second popup.
+Debugging.ToggleDebugMenu = function(self)
+	local panel = ns.OptionsKit and ns.OptionsKit.Panel
+	if (not panel) then return end
+	local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
+	panel:SetTab("options")
+	return panel:Open(L["Debug tools"])
+end
+Debugging.ToggleCooldownTestMenu = Debugging.ToggleDebugMenu
 
 local function DumpUnitValue(label, value)
 	SafePrint("|cfff0f0f0  " .. label .. ":", value, IsSecretValue(value) and "(secret)" or "(clean)")
@@ -2695,6 +3056,32 @@ local function DumpUnitBars(frame, name)
 	DumpArtTextures(frame.ManaOrb, "ManaOrb")
 end
 
+-- Native aura buttons hold their shown state, icon and timings as secret values, even out
+-- of combat (Blizzard sets them from aura data), and a secret may not be tested, compared
+-- or joined: "x and ProbeMethod(...) or nil" raised on the first top-right button in game.
+-- SafePrint renders a secret as <secret>; these keep the logic before it from touching one.
+local function ProbeIf(obj, method, ...)
+	if (not obj) then
+		return nil
+	end
+	return ProbeMethod(obj, method, ...)
+end
+
+-- The first of two values that is set, without testing a secret one.
+local function FirstSet(first, second)
+	if (IsSecretValue(first) or first ~= nil) then
+		return first
+	end
+	return second
+end
+
+local function PresenceText(value)
+	if (IsSecretValue(value)) then
+		return "<secret>"
+	end
+	return value and "yes" or "no"
+end
+
 local function DumpAuraButtonState(button, label)
 	if (not button) then
 		return
@@ -2826,10 +3213,15 @@ local function DumpPlayerAuraSnapshot()
 			end
 		end
 	end
+	-- The active container's: with the option off, 12.1.0 swaps to one that has no slots.
+	dumped = dumped + DumpItemEnchantmentFrames(auras.playerContainer, "player")
 
 	SafePrint("|cff33ff99", "AzeriteUI aura snapshot: playerframe buttons dumped:", dumped)
 end
 
+-- The header has been native aura containers since 5.3.78. This used to read the
+-- SecureAuraHeader attributes and child list, which no longer exist, so it always
+-- reported zero children.
 local function DumpTopRightAuraSnapshot()
 	local module = ns:GetModule("Auras", true)
 	local frame = module and module.frame
@@ -3033,32 +3425,6 @@ local function DumpGroupFrameAuraSnapshot(styleSuffix, label)
 					local pool = ProbeMethod(container, "GetAuraGroupFrameCount", groupKey)
 					if (not IsSecretValue(pool) and type(pool) == "number" and pool > 0) then
 						local shown, secret, unreadable = 0, 0, 0
--- Native aura buttons hold their shown state, icon and timings as secret values, even out
--- of combat (Blizzard sets them from aura data), and a secret may not be tested, compared
--- or joined: "x and ProbeMethod(...) or nil" raised on the first top-right button in game.
--- SafePrint renders a secret as <secret>; these keep the logic before it from touching one.
-local function ProbeIf(obj, method, ...)
-	if (not obj) then
-		return nil
-	end
-	return ProbeMethod(obj, method, ...)
-end
-
--- The first of two values that is set, without testing a secret one.
-local function FirstSet(first, second)
-	if (IsSecretValue(first) or first ~= nil) then
-		return first
-	end
-	return second
-end
-
-local function PresenceText(value)
-	if (IsSecretValue(value)) then
-		return "<secret>"
-	end
-	return value and "yes" or "no"
-end
-
 						for index = 1, pool do
 							local button = ProbeMethod(container, "GetAuraGroupFrame", groupKey, index)
 							local isShown = ProbeIf(button, "IsShown")
@@ -3195,15 +3561,10 @@ local function CollectMenuEntryTaint(results, label, menu, seen, depth)
 	if (type(menu) ~= "table" or depth > 3) then
 		return
 	end
-	-- The active container's: with the option off, 12.1.0 swaps to one that has no slots.
-	dumped = dumped + DumpItemEnchantmentFrames(auras.playerContainer, "player")
 	CollectReplacedFunctions(results, label, menu, seen)
 	if (type(menu.GetEntries) ~= "function") then
 		return
 	end
--- The header has been native aura containers since 5.3.78. This used to read the
--- SecureAuraHeader attributes and child list, which no longer exist, so it always
--- reported zero children.
 	local ok, entries = API.TryCall(menu.GetEntries, menu)
 	if (ok and type(entries) == "table") then
 		for index, entry in ipairs(entries) do
@@ -3546,6 +3907,7 @@ end
 
 local function PrintDebugHelp()
 	print("|cff33ff99", "AzeriteUI /azdebug commands:")
+	print("|cfff0f0f0  /azdebug cdready <spellID>|status|preview|inspect|off|r  (Development Mode: cooldown readiness probe)")
 	print("|cfff0f0f0  /azdebug|r  (toggle menu)")
 	print("|cfff0f0f0  /azdebug status|r")
 	print("|cfff0f0f0  /azdebug group|r  (party/raid header report)")
@@ -4121,459 +4483,15 @@ Debugging.ToggleTestMenu = function(self)
 	end
 end
 
-local function UpdateDebugMenu(self)
-	local frame = self.DebugFrame
-	if (not frame) then
-		return
-	end
-	local filter = ns.API.DEBUG_HEALTH_FILTER
-	if (not filter or filter == "") then
-		filter = "Target."
-		ns.API.DEBUG_HEALTH_FILTER = filter
-		if (ns.db and ns.db.global) then
-			ns.db.global.debugHealthFilter = filter
-		end
-	end
-	frame.HealthToggle:SetChecked(ns.API.DEBUG_HEALTH and true or false)
-	frame.HealthChatToggle:SetChecked(ns.API.DEBUG_HEALTH_CHAT and true or false)
-	if (frame.BarsToggle) then
-		frame.BarsToggle:SetChecked(_G.__AzeriteUI_DEBUG_BARS and true or false)
-	end
-	frame.FixesToggle:SetChecked((ns.db and ns.db.global and ns.db.global.debugFixes) and true or false)
-	if (frame.KeyVerboseToggle) then
-		frame.KeyVerboseToggle:SetChecked((ns.db and ns.db.global and ns.db.global.debugKeysVerbose) and true or false)
-	end
-	frame.FilterEdit:SetText(filter)
-	if (frame.RaidBarStatus) then
-		local forced = (ns.db and ns.db.global and ns.db.global.debugForceBlizzardRaidBar) and true or false
-		local setting = (ns:GetModule("UnitFrames", true) and ns:GetModule("UnitFrames", true).db and ns:GetModule("UnitFrames", true).db.profile and ns:GetModule("UnitFrames", true).db.profile.showBlizzardRaidBar) and true or false
-		local devMode = IsDevMode()
-		frame.RaidBarStatus:SetText(string_format("Saved /az toggle: %s    Solo force-show: %s", setting and "|cff70ff70ON|r" or "|cffff7070OFF|r", forced and "|cff70ff70ON|r" or "|cffff7070OFF|r"))
-		if (frame.RaidBarHint) then
-			frame.RaidBarHint:SetText(devMode and "Use the buttons below for solo testing. /reload is still the safe refresh if Blizzard hid the bar earlier this session." or "Enable Dev Mode to use the solo force-show controls.")
-		end
-		if (frame.RaidBarOnButton and frame.RaidBarOffButton and frame.RaidBarToggleButton) then
-			frame.RaidBarOnButton:SetEnabled(devMode)
-			frame.RaidBarOffButton:SetEnabled(devMode)
-			frame.RaidBarToggleButton:SetEnabled(devMode)
-		end
-	end
-end
-
-Debugging.ToggleDebugMenu = function(self)
-	local frame = self.DebugFrame
-	local created = false
-	if (not frame) then
-		frame = CreateFrame("Frame", "AzeriteUI_DebugMenu", UIParent, "BasicFrameTemplateWithInset")
-		frame:SetSize(620, 840)
-		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 110)
-		frame:SetFrameStrata("DIALOG")
-		frame:SetClampedToScreen(true)
-		frame:SetMovable(true)
-		frame:EnableMouse(true)
-		frame:RegisterForDrag("LeftButton")
-		frame:SetScript("OnDragStart", function(f) f:StartMoving() end)
-		frame:SetScript("OnDragStop", function(f) f:StopMovingOrSizing() end)
-		frame.TitleText:SetText("AzeriteUI Debug")
-		if (frame.NineSlice and frame.NineSlice.SetVertexColor) then
-			frame.NineSlice:SetVertexColor(.78, .82, .90)
-		end
-		if (frame.Bg) then
-			frame.Bg:SetColorTexture(.04, .05, .07, .96)
-		end
-		if (frame.Inset and frame.Inset.Bg) then
-			frame.Inset.Bg:SetColorTexture(.07, .08, .11, .92)
-		end
-
-		local subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		subtitle:SetPoint("TOPLEFT", 16, -34)
-		subtitle:SetText("Focused debug controls for health, dumps, utilities, and the Blizzard raid utility bar.")
-
-		local function CreatePanel(parent, title, point, relPoint, x, y, width, height)
-			local panel = CreateFrame("Frame", nil, parent, BackdropTemplateMixin and "BackdropTemplate")
-			panel:SetPoint(point, parent, relPoint, x, y)
-			panel:SetSize(width, height)
-			if (panel.SetBackdrop) then
-				panel:SetBackdrop({
-					bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-					edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-					tile = true,
-					tileSize = 8,
-					edgeSize = 8,
-					insets = { left = 2, right = 2, top = 2, bottom = 2 }
-				})
-				panel:SetBackdropColor(.09, .10, .14, .92)
-				panel:SetBackdropBorderColor(.22, .26, .34, .95)
-			end
-			local label = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-			label:SetPoint("TOPLEFT", 12, -10)
-			label:SetText(title)
-			local accent = panel:CreateTexture(nil, "ARTWORK")
-			accent:SetPoint("TOPLEFT", 12, -32)
-			accent:SetPoint("TOPRIGHT", -12, -32)
-			accent:SetHeight(1)
-			accent:SetColorTexture(.26, .52, .84, .65)
-			return panel
-		end
-
-		local function AddTooltip(widget, text)
-			if (not text) then
-				return
-			end
-			widget:SetScript("OnEnter", function(control)
-				GameTooltip:SetOwner(control, "ANCHOR_RIGHT")
-				GameTooltip:ClearLines()
-				GameTooltip:AddLine(text, 1, 1, 1, true)
-				GameTooltip:Show()
-			end)
-			widget:SetScript("OnLeave", function()
-				GameTooltip:Hide()
-			end)
-		end
-
-		local function AddCheckButton(parent, label, x, y, onClick, tooltip)
-			local btn = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-			btn:SetPoint("TOPLEFT", x, y)
-			btn.text:SetText(label)
-			btn:SetScript("OnClick", onClick)
-			AddTooltip(btn, tooltip)
-			return btn
-		end
-
-		local function AddButton(parent, text, width, x, y, onClick, tooltip)
-			local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-			btn:SetSize(width, 24)
-			btn:SetPoint("TOPLEFT", x, y)
-			btn:SetText(text)
-			btn:SetScript("OnClick", onClick)
-			AddTooltip(btn, tooltip)
-			return btn
-		end
-
-		local leftPanel = CreatePanel(frame, "Flags", "TOPLEFT", "TOPLEFT", 12, -58, 286, 216)
-		local rightPanel = CreatePanel(frame, "Raid Utility Bar", "TOPRIGHT", "TOPRIGHT", -12, -58, 310, 216)
-		local lowerLeftPanel = CreatePanel(frame, "Dumps & Repairs", "TOPLEFT", "TOPLEFT", 12, -282, 286, 200)
-		local lowerRightPanel = CreatePanel(frame, "Utilities", "TOPRIGHT", "TOPRIGHT", -12, -282, 310, 200)
-		local bottomPanel = CreatePanel(frame, "Inspect & Snapshots", "TOPLEFT", "TOPLEFT", 12, -490, 596, 250)
-
-		frame.HealthToggle = AddCheckButton(leftPanel, "Health debug", 12, -44, function()
-			self:ToggleHealthDebug()
-			UpdateDebugMenu(self)
-			local pf = ns:GetModule("PlayerFrame", true)
-			if pf and pf.Update then pf:Update() end
-			local tf = ns:GetModule("TargetFrame", true)
-			if tf and tf.Update then tf:Update() end
-		end, "Show health debug overlay text on unitframes.")
-		frame.HealthChatToggle = AddCheckButton(leftPanel, "Health debug chat", 12, -70, function()
-			self:ToggleHealthDebugChat()
-			UpdateDebugMenu(self)
-			local pf = ns:GetModule("PlayerFrame", true)
-			if pf and pf.Update then pf:Update() end
-			local tf = ns:GetModule("TargetFrame", true)
-			if tf and tf.Update then tf:Update() end
-		end, "Print health/statusbar debug output to chat.")
-		frame.BarsToggle = AddCheckButton(leftPanel, "Statusbar/orb debug", 12, -96, function()
-			self:ToggleBarsDebug()
-			UpdateDebugMenu(self)
-		end, "Enable verbose bar/orb debug output in chat.")
-		frame.FixesToggle = AddCheckButton(leftPanel, "FixBlizzardBugs debug", 12, -122, function()
-			self:ToggleFixesDebug()
-			UpdateDebugMenu(self)
-			local pf = ns:GetModule("PlayerFrame", true)
-			if pf and pf.Update then pf:Update() end
-			local tf = ns:GetModule("TargetFrame", true)
-			if tf and tf.Update then tf:Update() end
-		end, "Enable FixBlizzardBugs debug counters in chat.")
-
-		local filterTitle = leftPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		filterTitle:SetPoint("TOPLEFT", 12, -158)
-		filterTitle:SetText("Health filter prefix")
-		local filterDesc = leftPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		filterDesc:SetPoint("TOPLEFT", 12, -174)
-		filterDesc:SetWidth(248)
-		filterDesc:SetJustifyH("LEFT")
-		filterDesc:SetText("Restrict health debug output to frame names that begin with this text.")
-
-		frame.FilterEdit = CreateFrame("EditBox", nil, leftPanel, "InputBoxTemplate")
-		frame.FilterEdit:SetSize(134, 20)
-		frame.FilterEdit:SetPoint("TOPLEFT", 12, -196)
-		frame.FilterEdit:SetAutoFocus(false)
-		local currentFilter = ns.API.DEBUG_HEALTH_FILTER
-		if (not currentFilter or currentFilter == "") then
-			currentFilter = "Target."
-		end
-		frame.FilterEdit:SetText(currentFilter)
-		frame.FilterEdit:SetScript("OnEnterPressed", function(edit)
-			local text = edit:GetText()
-			if (not text or text == "") then
-				text = "Target."
-			end
-			ns.API.DEBUG_HEALTH_FILTER = text
-			if (ns.db and ns.db.global) then
-				ns.db.global.debugHealthFilter = text
-			end
-			edit:ClearFocus()
-		end)
-		AddButton(leftPanel, "Set", 54, 154, -196, function()
-			local text = frame.FilterEdit:GetText()
-			if (not text or text == "") then
-				text = "Target."
-			end
-			ns.API.DEBUG_HEALTH_FILTER = text
-			if (ns.db and ns.db.global) then
-				ns.db.global.debugHealthFilter = text
-			end
-			frame.FilterEdit:SetText(text)
-		end)
-		AddButton(leftPanel, "Reset", 62, 214, -196, function()
-			local text = "Target."
-			ns.API.DEBUG_HEALTH_FILTER = text
-			if (ns.db and ns.db.global) then
-				ns.db.global.debugHealthFilter = text
-			end
-			frame.FilterEdit:SetText(text)
-		end)
-
-		local raidLead = rightPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		raidLead:SetPoint("TOPLEFT", 12, -44)
-		raidLead:SetWidth(286)
-		raidLead:SetJustifyH("LEFT")
-		raidLead:SetText("The saved /az toggle controls the normal Blizzard raid utility bar behavior. The controls below add a dev-only solo force-show override for testing ready check and world markers.")
-		frame.RaidBarStatus = rightPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		frame.RaidBarStatus:SetPoint("TOPLEFT", 12, -88)
-		frame.RaidBarStatus:SetWidth(286)
-		frame.RaidBarStatus:SetJustifyH("LEFT")
-		frame.RaidBarHint = rightPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		frame.RaidBarHint:SetPoint("TOPLEFT", 12, -110)
-		frame.RaidBarHint:SetWidth(286)
-		frame.RaidBarHint:SetJustifyH("LEFT")
-		frame.RaidBarOnButton = AddButton(rightPanel, "Force On", 84, 12, -148, function()
-			self:DebugMenu("raidbar on")
-			UpdateDebugMenu(self)
-		end, "Dev-only: force-show the Blizzard raid utility bar even while solo.")
-		frame.RaidBarOffButton = AddButton(rightPanel, "Force Off", 84, 104, -148, function()
-			self:DebugMenu("raidbar off")
-			UpdateDebugMenu(self)
-		end, "Disable the solo force-show override and return to normal behavior.")
-		frame.RaidBarToggleButton = AddButton(rightPanel, "Toggle", 84, 196, -148, function()
-			self:DebugMenu("raidbar toggle")
-			UpdateDebugMenu(self)
-		end, "Flip the solo force-show override.")
-		AddButton(rightPanel, "Print Status", 104, 12, -178, function()
-			self:DebugMenu("raidbar status")
-		end, "Print the raidbar force-show state to chat.")
-		AddButton(rightPanel, "Open /az", 84, 124, -178, function()
-			local options = ns:GetModule("Options", true)
-			if (options and options.OpenOptionsMenu) then
-				options:OpenOptionsMenu()
-			end
-		end, "Open the main AzeriteUI options menu.")
-
-		local dumpTarget = AddButton(lowerLeftPanel, "Dump Target Bars", 122, 12, -44, function()
-			local targetFrame = ns:GetModule("TargetFrame", true)
-			DumpUnitBars(targetFrame and targetFrame.frame, "TargetFrame")
-		end)
-		local dumpPlayer = AddButton(lowerLeftPanel, "Dump Player Bars", 122, 146, -44, function()
-			local playerFrame = ns:GetModule("PlayerFrame", true)
-			DumpUnitBars(playerFrame and playerFrame.frame, "PlayerFrame")
-		end)
-		local dumpToT = AddButton(lowerLeftPanel, "Dump ToT Bars", 122, 12, -74, function()
-			local totFrame = ns:GetModule("ToTFrame", true)
-			DumpUnitBars(totFrame and totFrame.frame, "ToTFrame")
-		end)
-		local dumpAll = AddButton(lowerLeftPanel, "Dump All Bars", 122, 146, -74, function()
-			local targetFrame = ns:GetModule("TargetFrame", true)
-			local playerFrame = ns:GetModule("PlayerFrame", true)
-			local totFrame = ns:GetModule("ToTFrame", true)
-			DumpUnitBars(targetFrame and targetFrame.frame, "TargetFrame")
-			DumpUnitBars(playerFrame and playerFrame.frame, "PlayerFrame")
-			DumpUnitBars(totFrame and totFrame.frame, "ToTFrame")
-		end)
-		local dumpHint = lowerLeftPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		dumpHint:SetPoint("TOPLEFT", 12, -108)
-		dumpHint:SetWidth(258)
-		dumpHint:SetJustifyH("LEFT")
-		dumpHint:SetText("Repair buttons reattach the movement modules for health and castbar handles if a live frame lost them during testing.")
-
-		local function ReattachMovementModules(unit)
-			local mod = ns:GetModule(unit, true)
-			if (mod and mod.frame) then
-				if (mod.frame.Health and mod.frame.Health.AttachMovementModule) then
-					mod.frame.Health:AttachMovementModule()
-					print("|cff33ff99", unit .. " Healthbar movement module reattached.")
-				end
-				if (mod.frame.Castbar and mod.frame.Castbar.AttachMovementModule) then
-					mod.frame.Castbar:AttachMovementModule()
-					print("|cff33ff99", unit .. " Castbar movement module reattached.")
-				end
-			else
-				print("|cff33ff99", unit .. " frame not found.")
-			end
-		end
-		AddButton(lowerLeftPanel, "Reattach Player Bars", 122, 12, -144, function()
-			ReattachMovementModules("PlayerFrame")
-		end)
-		AddButton(lowerLeftPanel, "Reattach Target Bars", 122, 146, -144, function()
-			ReattachMovementModules("TargetFrame")
-		end)
-
-		AddButton(lowerRightPanel, "Print Status", 96, 12, -44, function()
-			Debugging.DebugMenu(self, "status")
-		end)
-		AddButton(lowerRightPanel, "Help", 70, 116, -44, function()
-			PrintDebugHelp()
-		end)
-		AddButton(lowerRightPanel, "Enable Blizzard AddOns", 152, 146, -44, function()
-			self:EnableBlizzardAddOns()
-		end)
-		AddButton(lowerRightPanel, "Enable Script Errors", 152, 12, -74, function()
-			self:EnableScriptErrors()
-			print("|cff33ff99", "AzeriteUI script errors:", "ENABLED (CVar scriptErrors=1)")
-		end)
-		AddButton(lowerRightPanel, "Scale Status", 96, 172, -74, function()
-			PrintScaleStatus()
-		end)
-		AddButton(lowerRightPanel, "Reset UnitFrame Scales", 152, 12, -104, function()
-			ResetUnitFrameScales()
-		end)
-
-		local secretLabel = lowerRightPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		secretLabel:SetPoint("TOPLEFT", 12, -146)
-		secretLabel:SetText("Secret test unit")
-		frame.SecretEdit = CreateFrame("EditBox", nil, lowerRightPanel, "InputBoxTemplate")
-		frame.SecretEdit:SetSize(120, 20)
-		frame.SecretEdit:SetPoint("TOPLEFT", 12, -166)
-		frame.SecretEdit:SetAutoFocus(false)
-		frame.SecretEdit:SetText("player")
-		AddButton(lowerRightPanel, "Run Secret Test", 120, 140, -164, function()
-			local unit = frame.SecretEdit:GetText()
-			self:SecretValueTest(unit)
-		end)
-
-		local inspectLead = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		inspectLead:SetPoint("TOPLEFT", 12, -42)
-		inspectLead:SetWidth(572)
-		inspectLead:SetJustifyH("LEFT")
-		inspectLead:SetText("These controls cover the remaining /azdebug inspection commands that need a unit token or a focused one-shot action.")
-
-		local nameplateLabel = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		nameplateLabel:SetPoint("TOPLEFT", 12, -68)
-		nameplateLabel:SetText("Nameplate unit")
-		frame.NameplateUnitEdit = CreateFrame("EditBox", nil, bottomPanel, "InputBoxTemplate")
-		frame.NameplateUnitEdit:SetSize(110, 20)
-		frame.NameplateUnitEdit:SetPoint("LEFT", nameplateLabel, "RIGHT", 10, 0)
-		frame.NameplateUnitEdit:SetAutoFocus(false)
-		frame.NameplateUnitEdit:SetText("auto")
-		AddButton(bottomPanel, "Cast Debug", 96, 252, -66, function()
-			local token = frame.NameplateUnitEdit:GetText()
-			if (not token or token == "" or token:lower() == "auto") then
-				self:DebugMenu("nameplates")
-			else
-				self:DebugMenu("nameplates " .. token)
-			end
-		end, "Run /azdebug nameplates [unit]. Use auto or leave blank to inspect all active nameplates.")
-		AddButton(bottomPanel, "Scale Debug", 96, 356, -66, function()
-			local token = frame.NameplateUnitEdit:GetText()
-			if (not token or token == "") then
-				token = "auto"
-			end
-			self:DebugMenu("scale nameplates " .. token)
-		end, "Run /azdebug scale nameplates [unit].")
-
-		local snapshotLabel = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		snapshotLabel:SetPoint("TOPLEFT", 12, -98)
-		snapshotLabel:SetText("Snapshot unit")
-		frame.SnapshotUnitEdit = CreateFrame("EditBox", nil, bottomPanel, "InputBoxTemplate")
-		frame.SnapshotUnitEdit:SetSize(110, 20)
-		frame.SnapshotUnitEdit:SetPoint("LEFT", snapshotLabel, "RIGHT", 18, 0)
-		frame.SnapshotUnitEdit:SetAutoFocus(false)
-		frame.SnapshotUnitEdit:SetText("target")
-		AddButton(bottomPanel, "Snapshot", 96, 252, -96, function()
-			local unit = frame.SnapshotUnitEdit:GetText()
-			if (not unit or unit == "") then
-				unit = "target"
-			end
-			self:DebugMenu("snapshot " .. unit)
-		end, "Run /azdebug snapshot [unit].")
-		AddButton(bottomPanel, "Target Debug Menu", 130, 356, -96, function()
-			self:ToggleTargetDebugMenu()
-		end, "Open the dedicated target fill debug popup.")
-		AddButton(bottomPanel, "Nameplate Scale Auto", 130, 448, -66, function()
-			self:DebugMenu("scale nameplates auto")
-		end, "Run /azdebug scale nameplates auto.")
-		AddButton(bottomPanel, "All Nameplates", 130, 448, -96, function()
-			self:DebugMenu("nameplates")
-		end, "Run /azdebug nameplates with no unit filter.")
-
-		local keyLead = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		keyLead:SetPoint("TOPLEFT", 12, -144)
-		keyLead:SetText("Key debug")
-		frame.KeyVerboseToggle = AddCheckButton(bottomPanel, "Verbose", 86, -140, function()
-			self:DebugKeysMenu("toggle")
-			UpdateDebugMenu(self)
-		end, "Toggle /azdebug keys verbose output.")
-		AddButton(bottomPanel, "Status", 84, 180, -138, function()
-			self:DebugKeysMenu("status")
-		end, "Run /azdebug keys status.")
-		AddButton(bottomPanel, "Bindings", 84, 272, -138, function()
-			self:DebugKeysMenu("bindings")
-		end, "Run /azdebug keys bindings.")
-
-		local keyButtonLabel = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		keyButtonLabel:SetPoint("TOPLEFT", 12, -184)
-		keyButtonLabel:SetText("Button")
-		frame.KeyButtonEdit = CreateFrame("EditBox", nil, bottomPanel, "InputBoxTemplate")
-		frame.KeyButtonEdit:SetSize(106, 20)
-		frame.KeyButtonEdit:SetPoint("LEFT", keyButtonLabel, "RIGHT", 8, 0)
-		frame.KeyButtonEdit:SetAutoFocus(false)
-		frame.KeyButtonEdit:SetText("")
-		AddButton(bottomPanel, "Cooldown", 84, 180, -182, function()
-			local buttonName = frame.KeyButtonEdit:GetText()
-			if (buttonName and buttonName ~= "") then
-				self:DebugKeysMenu("cooldown " .. buttonName)
-			else
-				self:DebugKeysMenu("cooldown")
-			end
-		end, "Run /azdebug keys cooldown [buttonName].")
-
-		local holdLabel = bottomPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		holdLabel:SetPoint("TOPLEFT", 280, -184)
-		holdLabel:SetText("SpellID")
-		frame.HoldSpellEdit = CreateFrame("EditBox", nil, bottomPanel, "InputBoxTemplate")
-		frame.HoldSpellEdit:SetSize(88, 20)
-		frame.HoldSpellEdit:SetPoint("LEFT", holdLabel, "RIGHT", 8, 0)
-		frame.HoldSpellEdit:SetAutoFocus(false)
-		frame.HoldSpellEdit:SetText("")
-		AddButton(bottomPanel, "Hold Test", 84, 468, -182, function()
-			local spellID = frame.HoldSpellEdit:GetText()
-			if (spellID and spellID ~= "") then
-				self:DebugKeysMenu("holdtest " .. spellID)
-			else
-				self:DebugKeysMenu("holdtest")
-			end
-		end, "Run /azdebug keys holdtest [spellID].")
-
-		local close = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		close:SetSize(88, 24)
-		close:SetPoint("BOTTOMRIGHT", -12, 12)
-		close:SetText("Close")
-		close:SetScript("OnClick", function() frame:Hide() end)
-
-		self.DebugFrame = frame
-		created = true
-	end
-
-	if (created) then
-		UpdateDebugMenu(self)
-		frame:Show()
-		return
-	end
-
-	if (frame:IsShown()) then
-		frame:Hide()
-	else
-		UpdateDebugMenu(self)
-		frame:Show()
+-- Repairs are only exposed as bounded actions; the options renderer queues
+-- these in combat just like other frame-changing settings.
+Debugging.ReattachDebugBars = function(self, unit)
+	if (not IsDevMode() or (unit ~= "PlayerFrame" and unit ~= "TargetFrame")) then return end
+	local mod = ns:GetModule(unit, true)
+	if (not mod or not mod.frame) then return end
+	for _, key in ipairs({ "Health", "Castbar" }) do
+		local bar = mod.frame[key]
+		if (bar and bar.AttachMovementModule) then bar:AttachMovementModule() end
 	end
 end
 
@@ -5095,6 +5013,9 @@ Debugging.DebugMenu = function(self, input)
 	end
 	local cmd, rest = input:match("^(%S+)%s*(.-)$")
 	cmd = cmd and cmd:lower() or "status"
+	if (cmd == "cdready") then
+		return self:CooldownReadyProbe(rest)
+	end
 	if (cmd == "menu") then
 		return self:ToggleDebugMenu()
 	end

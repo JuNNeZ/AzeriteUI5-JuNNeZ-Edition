@@ -31,6 +31,7 @@ end
 local endcapBars = setmetatable({}, { __mode = "k" })
 
 Theme.IsActive = function(self)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
 	local db = ns.db
 	if (not db or not db.char or not db.char.hunterPreview) then return false end
 	if (ns.IsSaiyaRattProfile and ns:IsSaiyaRattProfile()) then return false end
@@ -468,6 +469,7 @@ Theme.Command = function(self, input)
 	if (enabling and ((variant and variant ~= "") or (ns.IsSaiyaRattProfile and ns:IsSaiyaRattProfile()))) then
 		self:Print("Select the main AzeriteUI theme before enabling Hunter."); return
 	end
+	if (enabling) then ns.db.char.legacyHUD = false end
 	ns.db.char.hunterPreview = enabling and true or false
 	-- Preserve the Paladin preference: /azhunter off returns to it automatically.
 	ReloadUI()
