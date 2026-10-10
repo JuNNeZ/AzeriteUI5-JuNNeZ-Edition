@@ -10,6 +10,24 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.20.0-JuNNeZ (2026-10-10) - Target Execute Marker and Cooldown-Ready Alerts
+
+### Highlights
+
+- **Execute marker on the target frame.** Turn it on under `/az` → Unit Frames → Target → **Execute range**: a line marks your execute threshold on the target's health bar, and the part below it turns red once the target drops into range. It follows every target tier (normal, elite, boss, critter, and the SaiyaRatt art), hides on friendly or non-attackable targets, and shares its threshold with the nameplate marker, so **Automatic** (your class and spec's execute) or **By hand** set on either page moves both. Off by default.
+- **Cooldown-ready alerts in the Cooldown Manager.** Under `/az` → Cooldown Manager → **Cooldown-ready alerts**, choose Essential and/or Utility cooldowns and their icon flashes gold around its whole casing the moment the cooldown comes back, with an optional sound. It only fires on a cooldown you actually watched recover, never at login, on the global cooldown, or for an icon that was already ready. Off by default; it needs AzeriteUI's Cooldown Manager styling.
+
+### Development
+
+- Both features were built to work with Retail 12.1's hidden combat numbers. The execute marker hands Blizzard's own health curve to the red zone instead of reading the target's health, and the alerts watch a hidden copy of each cooldown rather than reading cooldown times. Where a client lacks what either needs, the option is greyed out with an explanation and nothing is built.
+- The alert flash was redone twice after in-game reports that it was too faint, and spells that can hold charges now alert when their ordinary cooldown recovers. The `/azdebug cdready` probe on the Debug tools page was used on Retail to compare how a spell's cooldown is reported in and out of combat.
+- New offline test suites cover the execute marker on every tier and fill direction and the alerts across both cooldown viewers, charge spells, combat and cleanup, including runs that simulate a tainted caller. Ten new strings are translated in all ten languages.
+
+### Access and known limits
+
+- Offline-tested. The alert flash and charge-spell recovery were seen live on Retail during development; the finished features still need a full in-game pass on Retail and Forever.
+- Alerts are for an ordinary cooldown coming back, not for each charge of a multi-charge spell.
+
 ## 5.19.3-JuNNeZ (2026-10-10) - Aura Size, Target Power and SaiyaRatt Imbues
 
 ### Highlights

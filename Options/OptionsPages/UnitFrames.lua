@@ -880,6 +880,91 @@ local GenerateOptions = function()
 			end,
 			get = getter
 		}
+		-- Only the marker switch belongs to TargetFrame. Both pages edit the
+		-- same NamePlates.executeThreshold; 0 still means Automatic.
+		local executeAvailable = function()
+			return module and type(module.IsExecuteMarkerAvailable) == "function"
+				and module:IsExecuteMarkerAvailable() or false
+		end
+		local sharedExecuteProfile = function()
+			local plates = ns:GetModule("NamePlates", true)
+			return plates and plates.db and plates.db.profile
+		end
+		local sharedExecuteDisabled = function(info)
+			return isdisabled(info) or not executeAvailable()
+				or not getoption(info, "executeMarker") or not sharedExecuteProfile()
+		end
+		local setSharedExecuteThreshold = function(value)
+			local plates = ns:GetModule("NamePlates", true)
+			if (not plates or not plates.db or not plates.db.profile) then return end
+			plates.db.profile.executeThreshold = value
+			plates:UpdateSettings()
+		end
+		local automaticExecuteThreshold = function()
+			local value = ns.API.GetExecuteThreshold and ns.API.GetExecuteThreshold() or 0
+			return (type(value) == "number" and value >= .05) and value or .2
+		end
+		suboptions.args.executeRange = {
+			name = L["Execute range"], order = 75, type = "group", inline = true, hidden = isdisabled,
+			args = {
+				executeMarker = {
+					name = L["Show the execute marker"],
+					desc = L["A line across enemy health bars at your execute threshold. Once an enemy's health falls below it, the part of the bar below the line is tinted."],
+					order = 1, type = "toggle", width = "full", set = setter, get = getter,
+					disabled = function() return not executeAvailable() end
+				},
+				unavailable = {
+					name = L["This client lacks the health curve APIs required for the target execute marker."],
+					order = 2, type = "description",
+					hidden = executeAvailable
+				},
+				sharedThreshold = {
+					name = L["Threshold"], order = 3, type = "group", inline = true,
+					hidden = function() return not executeAvailable() end,
+					args = {
+						description = {
+							name = L["The threshold is shared with nameplates. Changing it here changes both markers."],
+							order = 1, type = "description"
+						},
+						executeThresholdMode = {
+							name = L["Threshold"],
+							desc = L["Automatic follows your class and specialization, and classes without an execute get no marker. Set it by hand where a talent moves it, as Massacre does."],
+							order = 2, type = "select", width = "full",
+							values = { auto = L["Automatic"], custom = L["By hand"] },
+							sorting = { "auto", "custom" }, disabled = sharedExecuteDisabled,
+							get = function()
+								local profile = sharedExecuteProfile()
+								return (profile and type(profile.executeThreshold) == "number"
+									and profile.executeThreshold > 0) and "custom" or "auto"
+							end,
+							set = function(_, val)
+								setSharedExecuteThreshold(val == "custom" and automaticExecuteThreshold() or 0)
+							end
+						},
+						executeThreshold = {
+							name = L["Threshold by hand"],
+							desc = L["Where the marker sits when the threshold is set by hand."],
+							order = 3, type = "range", width = "full",
+							min = .05, max = .5, step = .01, isPercent = true,
+							disabled = function(info)
+								local profile = sharedExecuteProfile()
+								return sharedExecuteDisabled(info) or not profile
+									or not (type(profile.executeThreshold) == "number" and profile.executeThreshold > 0)
+							end,
+							get = function()
+								local profile = sharedExecuteProfile()
+								local value = profile and profile.executeThreshold
+								return (type(value) == "number" and value > 0) and value or automaticExecuteThreshold()
+							end,
+							set = function(_, val) setSharedExecuteThreshold(val) end
+						}
+					}
+				}
+			}
+		}
+		if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+			ns.OptionsKit.Defaults.Bind(suboptions.args.executeRange.args.sharedThreshold, "NamePlates")
+		end
 		local targetAuraConfig = ns.GetConfig("TargetFrame")
 		local targetAuraSetter = function(info, val)
 			module.db.profile[info[#info]] = val

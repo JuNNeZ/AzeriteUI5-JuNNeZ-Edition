@@ -255,6 +255,9 @@ NamePlatesMod.UpdateCombatFilterTimer = function(self)
 end
 
 NamePlatesMod.UpdateSettings = function(self)
+	-- The target shares this threshold even when another addon owns the plates.
+	local target = ns:GetModule("TargetFrame", true)
+	if (target and target.UpdateExecuteMarker) then target:UpdateExecuteMarker() end
 	-- Check if the enabled state has changed. Standing down for another nameplate addon is not a
 	-- change: counted as one, every setting changed on the page reloaded the interface.
 	local isCurrentlyEnabled = self:IsEnabled()

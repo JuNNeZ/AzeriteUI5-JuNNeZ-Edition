@@ -1014,8 +1014,18 @@ L["Choose again"] = "Volver a elegir"
 L["Ask again which addon styles the Cooldown Manager."] = "Volver a preguntar qué addon da estilo al gestor de reutilizaciones."
 
 -- Target execute marker (shared threshold).
+L["This client lacks the health curve APIs required for the target execute marker."] = "Este cliente no dispone de las API de curvas de salud necesarias para el marcador de ejecución del objetivo."
+L["The threshold is shared with nameplates. Changing it here changes both markers."] = "El umbral se comparte con las placas de nombre. Cambiarlo aquí modifica ambos marcadores."
 
 -- Cooldown-ready alerts
+L["Cooldown-ready alerts"] = "Avisos de reutilización disponible"
+L["Pulse icons when an observed cooldown becomes ready. Requires AzeriteUI styling; charge recovery and tracked buffs are not included."] = "Los iconos pulsan al terminar una reutilización observada. Requiere el estilo de AzeriteUI; no incluye recuperación de cargas ni beneficios seguidos."
+L["Essential cooldowns"] = "Reutilizaciones esenciales"
+L["Utility cooldowns"] = "Reutilizaciones de utilidad"
+L["Play a sound when ready"] = "Reproducir sonido al estar disponible"
+L["Cooldown-ready sound is unavailable on this client."] = "El sonido de disponibilidad no está disponible en este cliente."
+L["Cooldown-ready alerts are unavailable: this client lacks the required duration, secrecy or cooldown event API."] = "Los avisos no están disponibles: este cliente carece de la API necesaria de duración, valores secretos o eventos de reutilización."
+L["Cooldown-ready alerts are unavailable: this client lacks the required Cooldown widget methods."] = "Los avisos no están disponibles: este cliente carece de los métodos necesarios del widget Cooldown."
 
 -- Cooldown test submenu (Development Mode).
 L["Cooldown tests"] = "Pruebas de reutilización"

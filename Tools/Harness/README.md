@@ -33,6 +33,7 @@ lua Tools/Harness/addon_compat_harness.lua .               # ConsolePort icons, 
 lua Tools/Harness/bag_button_harness.lua   .               # the bag button beside the cog: secure route, switch, free slots
 lua Tools/Harness/proc_highlight_harness.lua .             # proc styles, preview/reset, riding visibility combinations
 lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/dropdown, restore, keybinds, Explorer fade proxies, rival addon choice
+lua Tools/Harness/target_execute_harness.lua .             # target tiers, mirrored crops, shared threshold, secrets, off/on
 lua Tools/Harness/cdready_menu_harness.lua .               # real debug page, row layout, immediate probe vs queued repairs
 lua Tools/Harness/cdready_harness.lua .                    # opt-in probe, secrets, callbacks, polling and cleanup
 ```
@@ -177,7 +178,7 @@ For client-aware API, UI-source, TOC/XML, and Forever game-data checks, use
 For isolated Lua 5.1 taint experiments, use `Tools/Run-Elune.ps1`. Neither tool
 replaces the harnesses or live `/reload` testing.
 
-Mutation runs — do the checks above actually catch a break?
+Mutation runs â€” do the checks above actually catch a break?
 
 ```sh
 python Tools/Harness/mutate.py . Tools/Harness     # Config.lua
@@ -190,7 +191,7 @@ name it - the window's own edge is measured against `Layouts/Data/Tooltips.lua`,
 check. Both are run clean first and again at the end.
 
 `mutate_sections.py` has the addon root and the Lua path at the top of the file. It backs up every
-file it edits and restores it, and prints `restored:` at the end — if that line is missing or shows
+file it edits and restores it, and prints `restored:` at the end â€” if that line is missing or shows
 failures, check `git status` before doing anything else.
 
 ## The rule that matters
@@ -203,6 +204,23 @@ only change the loaded source in memory; they never edit the working files.
 `cooldown_manager_harness.lua` takes the same kind of argument: `themed-art`, `circle-unthemed`, `no-revert`,
 `base-first`, `fade-ignores-opacity`, `rebuild-in-combat` or `writes-blizzard`. Each must fail,
 and a mutation whose pattern no longer matches the source stops the run instead of passing.
+
+`target_execute_harness.lua` loads the real target module and tier layouts, the shared
+nameplate threshold resolver, and the real target option table. It covers every tier,
+both fill directions, base and SaiyaRatt art, bar scaling, threshold zero, friendly and
+non-attackable targets, faction changes, class/spec callbacks, missing capabilities,
+and off/on reuse. Opaque health results reach SetAlpha without arithmetic or comparisons.
+Run each of these mutations separately after the root argument; each must fail:
+`default-on`, `ignores-off`, `friendly`, `non-attackable`, `zero`, `wrong-tier`,
+`wrong-direction`, `wrong-crop`, `wrong-line-slice`, `ignores-scale`, `secret-math`,
+`wrong-step`, `no-show`, `no-capability`, `no-faction-event`, `no-class-callback`,
+`no-health-update`, `no-shared-notify`, `duplicate-setting`.
+
+For tainted addon execution against the same synthetic widgets:
+`Tools/Run-Elune.ps1 -Script Tools/Harness/target_execute_harness.lua . --taint`.
+Elune checks tainted calls and an untouched native sentinel; it does not emulate protected
+WoW frames or certify live combat safety. The harness cannot judge the marker's visual
+contrast, and both clients still require the FixLog gameplay battery.
 
 `cdready_harness.lua` loads the entire real Debugging.lua and invokes its actual
 /azdebug dispatcher. Runs Retail/Forever fixtures with opaque getter values, duration
@@ -272,8 +290,48 @@ which passed every check it should have failed:
 
 Each one hid a real defect. When a check passes on the first run, suspect the stub.
 
+## Cooldown-ready alerts (Option 2b)
+
+`lua Tools/Harness/cooldown_ready_harness.lua .` loads the real module and options through
+cooldown_manager_harness.lua's sealed Blizzard item fixtures. Retail/Forever-shaped runs cover
+default-off allocation, per-viewer switches, GCD exclusion, active-to-ready combat transitions,
+initial/repeated readiness, native expiry without a callback, all three styles, optional sound,
+opaque duration forwarding, secret/unreadable shown state, nil/refused feeds, slot overrides/reuse,
+hidden/released slots, charge-capable ordinary cooldown eligibility, profile/off/module cleanup, conflict choices and missing
+APIs/widget methods. Plain Lua cannot reproduce actual secret values; mutations verify the guards.
+
+The art checks read shipped TGA RGB and alpha, compare 104 painted aperture rows
+along both axes at 30/40/50/70px, and require controlled icon overlap under the visible
+metal rather than matching black shadow alpha. They also check opaque icon-center
+coverage, full-icon mask attachment/visibility, 30px Utility geometry, fixed outer
+casing size, draw layers, foreground level/current strata, longer square timing and
+unchanged Circular geometry. Preview/inspect tests cover Development Mode/combat
+gates, silent charge-icon rendering independent of readiness, secret-safe diagnostics,
+reuse, expiry and profile/module cleanup. Plain Lua does not render WoW masks/blends.
+
+Each mutation must fail on its own:
+`default-on`, `no-gate`, `gcd`, `initial-ready`, `repeat`, `secret-shown`, `nil-ready`,
+`feed-ready`, `slot-reset`, `released`, `charges`, `unknown-charges`,
+`no-charge-event`, `charge-event-capability`, `late-poll`, `base-first`, `off-events`, `off-update`,
+`circle-art`, `sound-off`, `no-sound`, `no-event`, `no-poll`, `writes-blizzard`,
+`loose-square`, `loose-rounded`, `no-border-flash`, `small-outline`,
+`short-square-pulse`, `no-hold`, `circle-flash`, `dark-flash`,
+`unmasked-flash`, `stale-level`, `wrong-mask`, `no-icon-flash`, `outline-icon-mask`,
+`hidden-icon-mask`, `stale-strata`, `preview-sound`, `preview-combat`, `preview-dev`,
+`preview-cleanup`, `inspect-secret`.
+Example: `lua Tools/Harness/cooldown_ready_harness.lua . secret-shown`.
+
+`Tools/Run-Elune.ps1 -Script Tools/Harness/cooldown_ready_harness.lua . --taint`
+runs the same module with a tainted caller and an untouched native sentinel. Synthetic widgets
+cannot certify Blizzard frame taint or live widget secrecy. Live steps:
+`Docs/Cooldown Ready Alerts - Retail Paladin.md`.
+
 ## editmode_selection_hide_harness.lua
 
 Run with `Tools/Run-Elune.ps1 -Script Tools/Harness/editmode_selection_hide_harness.lua`. Models the Edit Mode selection-overlay hide (`ns.HideEditModeSelection`): the post-hook hides the overlay, Blizzard's secure path stays secure, and the registry is untouched; a negative control shows registry mutation taints. Frames are tables, so live `/reload` + Edit Mode is still owed. `Tools/Audit-EditModeSystems.py` lists Edit Mode systems per client (its `REPLACED` map is a rough guide).
 
 Legacy compact HUD: `lua Tools/Harness/legacy_hud_harness.lua .` loads real layout data and AceDB. Health prediction also covers Legacy rectangular fills. Offline only; see `Docs/Legacy HUD.md` for the live loop.
+
+### Cooldown-ready representative regressions (2026-10-09)
+
+`cooldown_ready_harness.lua` now crosses eight representative metadata IDs, both charge flags, both viewers, override mapping and both recovery events. These synthetic IDs/flags exercise shared logic; they do not certify live spell/talent behavior. Tests also cover unknown/secret charge flags, absent charge-event capability, ordinary-ready silence for charge-capable spells, and native expiry within one 100 ms poll. Baseline and Elune-tainted: 864 checks. All 45 independent mutations fail, including restored blanket charge exclusion, removed charge event, ignored event capability and a one-second poll. Run via `Tools/Run-Elune.ps1 -Script Tools/Harness/cooldown_ready_harness.lua . [--taint|mutation]`. Live five-spell battery: `Docs/Cooldown Ready Alerts - Retail Paladin.md`.

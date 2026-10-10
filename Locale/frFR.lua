@@ -1014,8 +1014,18 @@ L["Choose again"] = "Choisir à nouveau"
 L["Ask again which addon styles the Cooldown Manager."] = "Demander à nouveau quel addon stylise le gestionnaire de temps de recharge."
 
 -- Target execute marker (shared threshold).
+L["This client lacks the health curve APIs required for the target execute marker."] = "Ce client ne dispose pas des API de courbe de vie nécessaires au marqueur d’exécution de la cible."
+L["The threshold is shared with nameplates. Changing it here changes both markers."] = "Le seuil est partagé avec les barres de nom. Le modifier ici change les deux marqueurs."
 
 -- Cooldown-ready alerts
+L["Cooldown-ready alerts"] = "Alertes de disponibilité"
+L["Pulse icons when an observed cooldown becomes ready. Requires AzeriteUI styling; charge recovery and tracked buffs are not included."] = "Les icônes pulsent à la fin d’un temps de recharge observé. Nécessite le style AzeriteUI ; les charges et améliorations suivies sont exclues."
+L["Essential cooldowns"] = "Temps de recharge essentiels"
+L["Utility cooldowns"] = "Temps de recharge utilitaires"
+L["Play a sound when ready"] = "Jouer un son à la disponibilité"
+L["Cooldown-ready sound is unavailable on this client."] = "Le son de disponibilité est indisponible sur ce client."
+L["Cooldown-ready alerts are unavailable: this client lacks the required duration, secrecy or cooldown event API."] = "Les alertes sont indisponibles : ce client ne possède pas l’API requise de durée, de valeurs secrètes ou d’événements de recharge."
+L["Cooldown-ready alerts are unavailable: this client lacks the required Cooldown widget methods."] = "Les alertes sont indisponibles : ce client ne possède pas les méthodes requises du widget Cooldown."
 
 -- Cooldown test submenu (Development Mode).
 L["Cooldown tests"] = "Tests de recharge"

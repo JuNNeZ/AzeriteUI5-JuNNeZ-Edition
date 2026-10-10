@@ -377,10 +377,10 @@ check(data.Cooldown.countdownFont == "AzeriteUIFont18", "countdown in AzeriteUI'
 check(data.ChargeCount.Current.fontObject == fonts[15], "charges in AzeriteUI's font")
 check(data.OutOfRange.masks and data.OutOfRange.masks[Mask(item)], "the out of range shade is masked to the icon")
 
--- The border and backdrop: AzeriteUI art, never the theme's, at 2.06 x a 50px icon.
+-- The border and backdrop: AzeriteUI art, fitted to the masked icon aperture.
 local found
 for _, r in ipairs(data.regions) do if r.texture == Assets("actionbutton-backdrop-square-rounded") then found = r end end
-check(found and math.abs(found.width - 103) < .01, "backdrop at 2.06 x the icon, from Assets")
+check(found and math.abs(found.width - 50 * 216 / 118) < .01, "backdrop fitted to the mask, from Assets")
 for _, r in ipairs(data.regions) do if r.texture and tostring(r.texture):find("THEMED", 1, true) then found = "themed" end end
 check(found ~= "themed", "no class theme art on the square styles")
 
@@ -546,7 +546,7 @@ M:UpdateSettings()
 check(Mask(item).texture == Assets("actionbutton-mask-square") and data.Cooldown.circular == false, "square mask and edge")
 check(ring.texture == Assets("actionbutton-border-square"), "the square styles stay AzeriteUI art under any skin (Mage chosen)")
 M.db.profile.skin = "theme"
-check(data.Icon.points and data.Icon.points.all == item, "the icon fills its frame again")
+check(data.Icon.width and math.abs(data.Icon.width - 50 * 1.14) < .01, "square fill overlaps visible inner metal")
 
 -- The real options page, including dynamic values/sorting and the live setter.
 local generate

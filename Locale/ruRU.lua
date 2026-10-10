@@ -1014,8 +1014,18 @@ L["Choose again"] = "Выбрать заново"
 L["Ask again which addon styles the Cooldown Manager."] = "Снова спросить, какой аддон оформляет менеджер восстановления."
 
 -- Target execute marker (shared threshold).
+L["This client lacks the health curve APIs required for the target execute marker."] = "В этом клиенте нет API кривых здоровья, необходимых для метки добивания на рамке цели."
+L["The threshold is shared with nameplates. Changing it here changes both markers."] = "Порог используется также на индикаторах здоровья над головами. Его изменение здесь влияет на обе метки."
 
 -- Cooldown-ready alerts
+L["Cooldown-ready alerts"] = "Оповещения о готовности"
+L["Pulse icons when an observed cooldown becomes ready. Requires AzeriteUI styling; charge recovery and tracked buffs are not included."] = "Значки вспыхивают по окончании наблюдаемой перезарядки. Требуется оформление AzeriteUI; восстановление зарядов и отслеживаемые эффекты не включены."
+L["Essential cooldowns"] = "Основные перезарядки"
+L["Utility cooldowns"] = "Вспомогательные перезарядки"
+L["Play a sound when ready"] = "Звук при готовности"
+L["Cooldown-ready sound is unavailable on this client."] = "Звук готовности недоступен на этом клиенте."
+L["Cooldown-ready alerts are unavailable: this client lacks the required duration, secrecy or cooldown event API."] = "Оповещения недоступны: на этом клиенте нет необходимого API длительности, секретных значений или событий перезарядки."
+L["Cooldown-ready alerts are unavailable: this client lacks the required Cooldown widget methods."] = "Оповещения недоступны: на этом клиенте нет необходимых методов виджета Cooldown."
 
 -- Cooldown test submenu (Development Mode).
 L["Cooldown tests"] = "Тесты восстановления"

@@ -1014,8 +1014,18 @@ L["Choose again"] = "다시 선택"
 L["Ask again which addon styles the Cooldown Manager."] = "재사용 대기시간 관리자를 꾸밀 애드온을 다시 묻습니다."
 
 -- Target execute marker (shared threshold).
+L["This client lacks the health curve APIs required for the target execute marker."] = "이 클라이언트에는 대상 마무리 공격 표시기에 필요한 생명력 곡선 API가 없습니다."
+L["The threshold is shared with nameplates. Changing it here changes both markers."] = "기준값은 이름표와 공유됩니다. 여기서 변경하면 두 표시기 모두에 적용됩니다."
 
 -- Cooldown-ready alerts
+L["Cooldown-ready alerts"] = "재사용 대기시간 완료 알림"
+L["Pulse icons when an observed cooldown becomes ready. Requires AzeriteUI styling; charge recovery and tracked buffs are not included."] = "관찰한 재사용 대기시간이 끝나면 아이콘이 빛납니다. AzeriteUI 스타일이 필요하며 충전 회복과 추적 강화 효과는 제외됩니다."
+L["Essential cooldowns"] = "주요 재사용 대기시간"
+L["Utility cooldowns"] = "보조 재사용 대기시간"
+L["Play a sound when ready"] = "준비 완료 시 소리 재생"
+L["Cooldown-ready sound is unavailable on this client."] = "이 클라이언트에서는 준비 완료 소리를 사용할 수 없습니다."
+L["Cooldown-ready alerts are unavailable: this client lacks the required duration, secrecy or cooldown event API."] = "완료 알림을 사용할 수 없습니다. 이 클라이언트에 필요한 지속 시간, 비밀 값 또는 재사용 대기시간 이벤트 API가 없습니다."
+L["Cooldown-ready alerts are unavailable: this client lacks the required Cooldown widget methods."] = "완료 알림을 사용할 수 없습니다. 이 클라이언트에 필요한 Cooldown 위젯 메서드가 없습니다."
 
 -- Cooldown test submenu (Development Mode).
 L["Cooldown tests"] = "재사용 대기시간 테스트"

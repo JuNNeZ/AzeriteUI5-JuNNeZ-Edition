@@ -1014,8 +1014,18 @@ L["Choose again"] = "Erneut wählen"
 L["Ask again which addon styles the Cooldown Manager."] = "Erneut fragen, welches Addon den Abklingzeitenmanager gestaltet."
 
 -- Target execute marker (shared threshold).
+L["This client lacks the health curve APIs required for the target execute marker."] = "Dieser Client hat nicht die Gesundheitskurven-APIs, die für die Hinrichtungsmarkierung am Ziel benötigt werden."
+L["The threshold is shared with nameplates. Changing it here changes both markers."] = "Der Schwellenwert wird mit den Namensplaketten geteilt. Änderungen hier gelten für beide Markierungen."
 
 -- Cooldown-ready alerts
+L["Cooldown-ready alerts"] = "Abklingzeit-Bereitschaftshinweise"
+L["Pulse icons when an observed cooldown becomes ready. Requires AzeriteUI styling; charge recovery and tracked buffs are not included."] = "Symbole pulsieren, wenn eine beobachtete Abklingzeit endet. Erfordert AzeriteUI-Gestaltung; Aufladungen und verfolgte Stärkungseffekte sind nicht enthalten."
+L["Essential cooldowns"] = "Wichtige Abklingzeiten"
+L["Utility cooldowns"] = "Weitere Abklingzeiten"
+L["Play a sound when ready"] = "Bei Bereitschaft einen Ton abspielen"
+L["Cooldown-ready sound is unavailable on this client."] = "Der Bereitschaftston ist auf diesem Client nicht verfügbar."
+L["Cooldown-ready alerts are unavailable: this client lacks the required duration, secrecy or cooldown event API."] = "Bereitschaftshinweise sind nicht verfügbar: Diesem Client fehlt die erforderliche Dauer-, Geheimwert- oder Abklingzeitereignis-API."
+L["Cooldown-ready alerts are unavailable: this client lacks the required Cooldown widget methods."] = "Bereitschaftshinweise sind nicht verfügbar: Diesem Client fehlen die erforderlichen Cooldown-Widget-Methoden."
 
 -- Cooldown test submenu (Development Mode).
 L["Cooldown tests"] = "Abklingzeittests"

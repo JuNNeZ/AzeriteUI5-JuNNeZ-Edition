@@ -57,6 +57,7 @@ local Colors = ns.Colors
 local playerLevel = UnitLevel("player")
 
 local defaults = { profile = ns:Merge({
+	executeMarker = false,
 	showAuras = true,
 	showCastbar = true,
 	showName = true,
@@ -1399,6 +1400,122 @@ local ShowTargetIdleCastFakeFill = function(cast, reason)
 	return applied
 end
 
+-- Target Execute Marker
+--------------------------------------------
+-- Geometry uses only the tier's layout and profile scale. The client's step-curve
+-- result can be secret: it goes straight to SetAlpha, never into addon logic.
+TargetFrameMod.IsExecuteMarkerAvailable = function()
+	return type(UnitHealthPercent) == "function" and type(UnitExists) == "function"
+		and type(UnitCanAttack) == "function" and type(UnitIsFriend) == "function"
+		and type(issecretvalue) == "function" and C_CurveUtil
+		and type(C_CurveUtil.CreateCurve) == "function"
+		and Enum and Enum.LuaCurveType and Enum.LuaCurveType.Step ~= nil or false
+end
+
+local targetExecuteCurves = {}
+local UpdateTargetExecuteZone = function(self)
+	local marker = self and self.ExecuteMarker
+	if (not marker or not marker.isShown) then return end
+	local curve = targetExecuteCurves[marker.threshold]
+	if (not curve) then
+		curve = C_CurveUtil.CreateCurve()
+		curve:SetType(Enum.LuaCurveType.Step)
+		curve:AddPoint(0, 1)
+		curve:AddPoint(marker.threshold, 0)
+		targetExecuteCurves[marker.threshold] = curve
+	end
+	local ok, alpha = API.TryCall(UnitHealthPercent, self.unit, false, curve)
+	if (ok and type(alpha) == "number") then
+		marker.Zone:SetAlpha(alpha)
+	else
+		marker.Zone:SetAlpha(0)
+	end
+end
+
+local HideTargetExecuteMarker = function(self)
+	local marker = self and self.ExecuteMarker
+	if (marker and marker.isShown) then
+		marker.isShown = false
+		marker.Line:Hide()
+		marker.Zone:Hide()
+	end
+end
+
+local UpdateTargetExecuteMarker = function(self)
+	local profile = TargetFrameMod.db and TargetFrameMod.db.profile
+	if (not self or not profile or not profile.executeMarker or profile.enabled == false
+		or not TargetFrameMod.IsExecuteMarkerAvailable()) then
+		return HideTargetExecuteMarker(self)
+	end
+	local unit = self.unit
+	if (not unit) then return HideTargetExecuteMarker(self) end
+	local exists = UnitExists(unit)
+	local canAttack = UnitCanAttack("player", unit)
+	local isFriend = UnitIsFriend("player", unit)
+	if (issecretvalue(exists) or issecretvalue(canAttack) or issecretvalue(isFriend)) then
+		return HideTargetExecuteMarker(self)
+	end
+	if (not exists or not canAttack or isFriend) then return HideTargetExecuteMarker(self) end
+	-- Same resolver as the nameplates, independent of their enabled/marker switches.
+	local plates = ns.NamePlatesPrivate
+	local threshold = plates and plates.GetNamePlateExecuteThreshold and plates.GetNamePlateExecuteThreshold() or 0
+	if (not API.IsSafeNumber(threshold) or threshold <= 0) then return HideTargetExecuteMarker(self) end
+	local root = ns.GetConfig("TargetFrame")
+	local db = root and root[self.currentStyle]
+	local health = self.Health
+	if (not db or not health) then return HideTargetExecuteMarker(self) end
+	local scaleKey = (self.currentStyle == "Boss") and "bossHealthBar"
+		or (self.currentStyle == "Critter") and "critterHealthBar" or "healthBar"
+	local scaleX = (tonumber(profile[scaleKey.."ScaleX"]) or 100) / 100
+	local scaleY = (tonumber(profile[scaleKey.."ScaleY"]) or 100) / 100
+	if (scaleX <= 0) then scaleX = 1 end
+	if (scaleY <= 0) then scaleY = 1 end
+	local width, height = db.HealthBarSize[1] * scaleX, db.HealthBarSize[2] * scaleY
+	local reverse = health:GetReverseFill()
+	if (issecretvalue(reverse)) then return HideTargetExecuteMarker(self) end
+	reverse = reverse and true or false
+	local marker = self.ExecuteMarker
+	if (not marker) then
+		local parent = health.Overlay or health
+		local zone = parent:CreateTexture(nil, "ARTWORK", nil, -1)
+		zone:SetVertexColor(1, .18, .08, .35)
+		zone:SetAlpha(0)
+		local line = parent:CreateTexture(nil, "ARTWORK", nil, 1)
+		line:SetVertexColor(1, .8, .25, .9)
+		marker = { Zone = zone, Line = line, isShown = false }
+		self.ExecuteMarker = marker
+	end
+	if (marker.threshold ~= threshold or marker.reverse ~= reverse or marker.texture ~= db.HealthBarTexture
+		or marker.width ~= width or marker.height ~= height) then
+		marker.threshold, marker.reverse, marker.texture = threshold, reverse, db.HealthBarTexture
+		marker.width, marker.height = width, height
+		local edge = reverse and "RIGHT" or "LEFT"
+		local span = width * threshold
+		marker.Zone:SetTexture(db.HealthBarTexture)
+		marker.Zone:ClearAllPoints()
+		marker.Zone:SetPoint("TOP"..edge, health, "TOP"..edge, 0, 0)
+		marker.Zone:SetSize(span, height)
+		-- Full target art is mirrored (1,0), unlike the nameplate. Reveal
+		-- (threshold,0) from the right, or (1,1-threshold) from the left.
+		marker.Zone:SetTexCoord(reverse and threshold or 1, reverse and 0 or (1 - threshold), 0, 1)
+		-- A narrow slice of that same art gives the line its exact silhouette,
+		-- including the cap/boss padding and the critter's rounded contour.
+		local sample = reverse and threshold or (1 - threshold)
+		local half = 1 / width
+		marker.Line:SetTexture(db.HealthBarTexture)
+		marker.Line:ClearAllPoints()
+		marker.Line:SetPoint("TOP", health, "TOP"..edge, reverse and -span or span, 0)
+		marker.Line:SetSize(2, height)
+		marker.Line:SetTexCoord(math.min(1, sample + half), math.max(0, sample - half), 0, 1)
+	end
+	if (not marker.isShown) then
+		marker.isShown = true
+		marker.Line:Show()
+		marker.Zone:Show()
+	end
+	UpdateTargetExecuteZone(self)
+end
+
 -- Element Callbacks
 --------------------------------------------
 -- Forceupdate health prediction on health updates,
@@ -1410,6 +1527,7 @@ local Health_PostUpdate = function(element, unit, cur, max)
 		element.safePercent = NormalizeTargetDisplayPercent((cur / max) * 100)
 	end
 	SyncTargetHealthVisualState(element)
+	UpdateTargetExecuteZone(element.__owner)
 	local predict = element.__owner.HealthPrediction
 	if (predict) then
 		predict:ForceUpdate()
@@ -3164,6 +3282,7 @@ end
 
 local UnitFrame_PostUpdate = function(self)
 	UnitFrame_UpdateTextures(self)
+	TargetFrameMod:UpdateExecuteMarker()
 	if (self.Health and self.Health.ForceUpdate) then
 		self.Health:ForceUpdate()
 	end
@@ -3916,6 +4035,17 @@ TargetFrameMod.CreateUnitFrames = function(self)
 
 	-- Spawning hid TargetFrame; its combo points go with it.
 	HideBlizzardComboPoints()
+end
+
+-- Called by shared nameplate settings as well as the target's own updates.
+TargetFrameMod.UpdateExecuteMarker = function(self)
+	if (self.frame and self.db.profile.executeMarker and self.IsExecuteMarkerAvailable()
+		and not self.executeMarkerListening) then
+		self.executeMarkerListening = true
+		self.frame:RegisterEvent("UNIT_FACTION", UpdateTargetExecuteMarker)
+		API.RegisterExecuteThresholdCallback(function() UpdateTargetExecuteMarker(self.frame) end)
+	end
+	UpdateTargetExecuteMarker(self.frame)
 end
 
 TargetFrameMod.Update = function(self)

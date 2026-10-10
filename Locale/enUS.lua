@@ -1013,8 +1013,18 @@ L["Choose again"] = true
 L["Ask again which addon styles the Cooldown Manager."] = true
 
 -- Target execute marker (shared threshold).
+L["This client lacks the health curve APIs required for the target execute marker."] = true
+L["The threshold is shared with nameplates. Changing it here changes both markers."] = true
 
 -- Cooldown-ready alerts
+L["Cooldown-ready alerts"] = true
+L["Pulse icons when an observed cooldown becomes ready. Requires AzeriteUI styling; charge recovery and tracked buffs are not included."] = true
+L["Essential cooldowns"] = true
+L["Utility cooldowns"] = true
+L["Play a sound when ready"] = true
+L["Cooldown-ready sound is unavailable on this client."] = true
+L["Cooldown-ready alerts are unavailable: this client lacks the required duration, secrecy or cooldown event API."] = true
+L["Cooldown-ready alerts are unavailable: this client lacks the required Cooldown widget methods."] = true
 
 -- Cooldown test submenu (Development Mode).
 L["Cooldown tests"] = true

@@ -1015,8 +1015,18 @@ L["Choose again"] = "重新选择"
 L["Ask again which addon styles the Cooldown Manager."] = "重新询问由哪个插件美化冷却管理器。"
 
 -- Target execute marker (shared threshold).
+L["This client lacks the health curve APIs required for the target execute marker."] = "此客户端缺少目标斩杀标记所需的生命值曲线 API。"
+L["The threshold is shared with nameplates. Changing it here changes both markers."] = "该阈值与姓名板共用。在此修改会同时影响两处标记。"
 
 -- Cooldown-ready alerts
+L["Cooldown-ready alerts"] = "冷却就绪提醒"
+L["Pulse icons when an observed cooldown becomes ready. Requires AzeriteUI styling; charge recovery and tracked buffs are not included."] = "观察到的冷却结束时图标会闪光。需要 AzeriteUI 样式；不包括充能恢复和追踪增益。"
+L["Essential cooldowns"] = "主要冷却"
+L["Utility cooldowns"] = "辅助冷却"
+L["Play a sound when ready"] = "就绪时播放声音"
+L["Cooldown-ready sound is unavailable on this client."] = "此客户端不支持冷却就绪声音。"
+L["Cooldown-ready alerts are unavailable: this client lacks the required duration, secrecy or cooldown event API."] = "冷却就绪提醒不可用：此客户端缺少所需的持续时间、秘密值或冷却事件 API。"
+L["Cooldown-ready alerts are unavailable: this client lacks the required Cooldown widget methods."] = "冷却就绪提醒不可用：此客户端缺少所需的 Cooldown 控件方法。"
 
 -- Cooldown test submenu (Development Mode).
 L["Cooldown tests"] = "冷却测试"

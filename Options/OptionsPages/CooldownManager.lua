@@ -159,6 +159,45 @@ local GenerateOptions = function()
 					return getmodule():GetSkin()
 				end
 			},
+			readyAlerts = {
+				name = L["Cooldown-ready alerts"],
+				order = 20, type = "group", inline = true,
+				args = {
+					description = {
+						name = L["Pulse icons when an observed cooldown becomes ready. Requires AzeriteUI styling; charge recovery and tracked buffs are not included."],
+						order = 1, type = "description"
+					},
+					unavailable = {
+						name = function() return getmodule():GetReadyUnavailable() or "" end,
+						order = 2, type = "description",
+						hidden = function() return not getmodule():GetReadyUnavailable() end
+					},
+					readyEssential = {
+						name = L["Essential cooldowns"], order = 10, type = "toggle",
+						disabled = function() return isunstyled() or getmodule():GetReadyUnavailable() ~= nil end,
+						set = setter, get = getter
+					},
+					readyUtility = {
+						name = L["Utility cooldowns"], order = 11, type = "toggle",
+						disabled = function() return isunstyled() or getmodule():GetReadyUnavailable() ~= nil end,
+						set = setter, get = getter
+					},
+					readySound = {
+						name = L["Play a sound when ready"], order = 12, type = "toggle",
+						disabled = function()
+							local module = getmodule()
+							return isunstyled() or module:GetReadyUnavailable() ~= nil or not module:IsReadySoundAvailable()
+								or not (module.db.profile.readyEssential or module.db.profile.readyUtility)
+						end,
+						set = setter, get = getter
+					},
+					soundUnavailable = {
+						name = L["Cooldown-ready sound is unavailable on this client."],
+						order = 13, type = "description",
+						hidden = function() return getmodule():IsReadySoundAvailable() end
+					}
+				}
+			},
 			showKeybinds = {
 				name = L["Show keybinds"],
 				desc = L["The key bound to each ability on your AzeriteUI action bars, in the corner of its icon. Abilities not on a bar show none."],

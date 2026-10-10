@@ -87,7 +87,7 @@ local GetMedia = ns.API.GetMedia
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
 local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
 
--- GLOBALS: ActionButtonSpellAlertManager, C_Timer, CreateFrame, Enum, InCombatLockdown, ReloadUI, UIParent, hooksecurefunc, issecretvalue
+-- GLOBALS: ActionButtonSpellAlertManager, C_Spell, C_Sound, C_Timer, CreateFrame, Enum, InCombatLockdown, ReloadUI, UIParent, hooksecurefunc, issecretvalue
 
 local VIEWERS = {
 	"EssentialCooldownViewer",
@@ -109,8 +109,10 @@ local FONTS = {
 }
 
 -- `icon` is the icon's share of the item frame, `deco` the backdrop and border
--- size against the icon. The square set is built for 2.06 x the icon
--- (Assets_Draft/README.md, "The square button stack"); the action bar ring is
+-- size against the nominal icon. Square masks expose 54/64 of that size;
+-- exterior border uses 216/118. Fill extends under the painted inner metal,
+-- not just its black shadow: 1.14 square / 1.18 rounded, with seam overlap.
+-- The original draft ratio (2.06) left a gap. The action bar ring is
 -- drawn at 134.3 for a 44 pixel icon, 3.05 x. The ring's metal reaches further
 -- out, so a circular icon is drawn smaller to keep it inside its neighbours.
 local STYLES = {
@@ -118,13 +120,13 @@ local STYLES = {
 		mask = "actionbutton-mask-square",
 		backdrop = "actionbutton-backdrop-square",
 		border = "actionbutton-border-square",
-		icon = 1, deco = 2.06
+		icon = 1.14, deco = (216 / 118) / 1.14
 	},
 	rounded = {
 		mask = "actionbutton-mask-square-rounded",
 		backdrop = "actionbutton-backdrop-square-rounded",
 		border = "actionbutton-border-square-rounded",
-		icon = 1, deco = 2.06
+		icon = 1.18, deco = (216 / 118) / 1.18
 	},
 	circular = {
 		mask = "actionbutton-mask-circular",
@@ -162,7 +164,10 @@ local defaults = {
 		styleIcons = true,
 		iconStyle = "rounded",
 		skin = "theme",
-		showKeybinds = true
+		showKeybinds = true,
+		readyEssential = false,
+		readyUtility = false,
+		readySound = false
 	}, ns.ModulePrototype.defaults)
 }
 
@@ -692,6 +697,322 @@ CooldownManager.HookViewer = function(self, viewerName)
 	end
 end
 
+-- Cooldown-ready alerts: only owned widgets and layers.
+local READY_VIEWERS = {
+	EssentialCooldownViewer = "readyEssential",
+	UtilityCooldownViewer = "readyUtility"
+}
+
+CooldownManager.GetReadyUnavailable = function(self)
+	if (self.readyUnavailable) then return self.readyUnavailable end
+	if (not C_Spell or type(C_Spell.GetSpellCooldownDuration) ~= "function"
+		or type(issecretvalue) ~= "function" or not ns.API.IsEventAvailable("SPELL_UPDATE_COOLDOWN")) then
+		return L["Cooldown-ready alerts are unavailable: this client lacks the required duration, secrecy or cooldown event API."]
+	end
+end
+
+CooldownManager.IsReadySoundAvailable = function(self)
+	return C_Sound and type(C_Sound.PlaySoundWithOptions) == "function"
+end
+
+local ResetReady = function(state)
+	state.active, state.fed, state.spellID, state.remaining = nil, nil, nil, nil
+	state.cooldown:Hide()
+	state.pulse:Hide()
+end
+
+-- Configuration metadata only. Charge capability does not exclude an ordinary
+-- cooldown: no charge counts or per-charge recharge notifications are inferred.
+local ReadySpell = function(item)
+	if (type(item.GetCooldownInfo) ~= "function") then return nil, "metadata-unavailable" end
+	local ok, info = pcall(item.GetCooldownInfo, item)
+	if (not ok or IsSecret(info) or type(info) ~= "table") then return nil, "metadata-unreadable" end
+	local charges = info.charges
+	if (IsSecret(charges)) then return nil, "charges-secret" end
+	if (type(charges) ~= "boolean") then return nil, "charges-unknown" end
+	local spellID = info.overrideSpellID
+	if (IsSecret(spellID)) then return nil, "spell-secret" end
+	if (spellID == nil) then spellID = info.spellID end
+	if (IsSecret(spellID) or type(spellID) ~= "number" or spellID <= 0) then return nil, "spell-unreadable" end
+	return spellID, "eligible"
+end
+
+local FeedReady = function(state)
+	local ok, duration = pcall(C_Spell.GetSpellCooldownDuration, state.spellID, true)
+	-- Opaque durations go directly to the native widget, never to math.
+	if (not ok or (not IsSecret(duration) and duration == nil)) then
+		state.fed, state.active = nil, nil
+		return
+	end
+	state.fed = pcall(state.cooldown.SetCooldownFromDurationObject, state.cooldown, duration, true)
+	if (not state.fed) then state.active = nil end
+end
+
+local NewReady = function(self, skin)
+	if (self.readyUnavailable) then return end
+	local cooldown = CreateFrame("Cooldown", nil, UIParent, "CooldownFrameTemplate")
+	cooldown:SetSize(1, 1)
+	cooldown:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", -100, -100)
+	cooldown:SetAlpha(0)
+	if (type(cooldown.SetCooldownFromDurationObject) ~= "function" or type(cooldown.IsShown) ~= "function") then
+		cooldown:Hide()
+		self.readyUnavailable = L["Cooldown-ready alerts are unavailable: this client lacks the required Cooldown widget methods."]
+		return
+	end
+	local pulse = CreateFrame("Frame", nil, skin.decor)
+	pulse:SetAllPoints(skin.decor)
+	pulse:SetFrameLevel(skin.decor:GetFrameLevel() + 1)
+	pulse:EnableMouse(false)
+	local glow = pulse:CreateTexture(nil, "OVERLAY")
+	glow:SetPoint("CENTER", skin.icon, "CENTER", 0, 0)
+	glow:SetBlendMode("ADD")
+	-- Use the metal alpha silhouette, not its dark RGB, for a bright flash.
+	local borderFlash = pulse:CreateTexture(nil, "ARTWORK")
+	borderFlash:SetPoint("CENTER", skin.icon, "CENTER", 0, 0)
+	borderFlash:SetBlendMode("ADD")
+	if (type(pulse.CreateMaskTexture) ~= "function" or type(borderFlash.SetColorTexture) ~= "function"
+		or type(borderFlash.AddMaskTexture) ~= "function" or type(pulse.SetFrameStrata) ~= "function"
+		or type(skin.decor.GetFrameStrata) ~= "function") then
+		cooldown:Hide()
+		pulse:Hide()
+		self.readyUnavailable = L["Cooldown-ready alerts are unavailable: this client lacks the required Cooldown widget methods."]
+		return
+	end
+	borderFlash:SetColorTexture(1, .85, .45, 1)
+	local iconFlash = pulse:CreateTexture(nil, "ARTWORK")
+	iconFlash:SetAllPoints(skin.icon)
+	iconFlash:SetBlendMode("ADD")
+	iconFlash:SetColorTexture(1, .85, .45, .5)
+	local iconMask = pulse:CreateMaskTexture(nil, "ARTWORK")
+	iconMask:SetAllPoints(iconFlash)
+	iconFlash:AddMaskTexture(iconMask)
+	local borderMask = pulse:CreateMaskTexture(nil, "ARTWORK")
+	borderMask:SetAllPoints(borderFlash)
+	borderFlash:AddMaskTexture(borderMask)
+	borderFlash:Hide()
+	pulse:Hide()
+	return { cooldown = cooldown, pulse = pulse, glow = glow, borderFlash = borderFlash, borderMask = borderMask, iconFlash = iconFlash, iconMask = iconMask }
+end
+
+local PulseReady = function(self, state, skin, silent)
+	-- Pooled item levels can change after these owned layers were created.
+	state.pulse:SetFrameLevel(skin.decor:GetFrameLevel() + 1)
+	state.pulse:SetFrameStrata(skin.decor:GetFrameStrata())
+	local style = self:GetStyle()
+	local name = style.circular and "actionbutton-spellhighlight" or "actionbutton-spellhighlight-square-rounded"
+	state.glow:SetTexture(StyleArt(style, name, self:GetSkin()))
+	local size = skin.size * style.icon * style.deco
+	state.iconMask:SetTexture(StyleArt(style, style.mask, self:GetSkin()), "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	state.iconMask:Show()
+	state.iconFlash:Show()
+	if (style.circular) then
+		state.glow:SetSize(size, size)
+		state.borderFlash:Hide()
+	else
+		-- Match the highlight's 132px bright footprint to the border's 158px
+		-- metal footprint. The filled silhouette supplies the missing stroke thickness.
+		state.glow:SetSize(size * 158 / 132, size * 158 / 132)
+		state.borderMask:SetTexture(StyleArt(style, style.border, self:GetSkin()), "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		state.borderFlash:SetSize(size, size)
+		state.borderMask:Show()
+		state.borderFlash:Show()
+	end
+	state.duration = style.circular and .8 or 1.2
+	state.fadeDuration = style.circular and .8 or .95
+	state.remaining = state.duration
+	state.pulse:SetAlpha(1)
+	state.pulse:Show()
+	if (not silent and self.db.profile.readySound and self:IsReadySoundAvailable()) then
+		-- RAID_WARNING sound kit from Blizzard's SoundKitConstants.
+		pcall(C_Sound.PlaySoundWithOptions, { soundKitID = 8959, forceNoDuplicates = true })
+	end
+end
+
+-- Explicit OOC drawing test; independent of readiness eligibility and sound.
+-- Uses separate owned layers so preview never manufactures a real transition.
+CooldownManager.StopReadyPreviews = function(self)
+	if (self.readyPreviewController) then
+		self.readyPreviewController:SetScript("OnUpdate", nil)
+		self.readyPreviewController:Hide()
+	end
+	if (self.readyPreviews) then
+		for _, state in pairs(self.readyPreviews) do ResetReady(state) end
+	end
+end
+
+local DebugReadyText = function(value)
+	if (IsSecret(value)) then return "<secret>" end
+	return tostring(value)
+end
+local DebugReadyRead = function(owner, method)
+	if (not owner or type(owner[method]) ~= "function") then return "n/a" end
+	local ok, value = pcall(owner[method], owner)
+	if (not ok) then return "<refused>" end
+	return DebugReadyText(value)
+end
+
+-- Called by /azdebug cdready preview|inspect only; no debug handlers at load.
+-- Use the same persistent diagnostic sink as /azdebug. The fallback keeps
+-- this module independently usable when the optional debug module is absent.
+local DebugPrint = function(...)
+	local debug = ns:GetModule("Debugging", true)
+	if (debug and type(debug.PrintDiagnostic) == "function") then
+		return debug:PrintDiagnostic(...)
+	end
+	print(...)
+end
+CooldownManager.DebugReadyAlerts = function(self, action)
+	if (not IsDevelopmentMode()) then DebugPrint("AzeriteUI cdready: Development Mode is required."); return end
+	local combat = InCombatLockdown()
+	if (IsSecret(combat) or combat) then DebugPrint("AzeriteUI cdready: preview/inspect require out of combat."); return end
+	if (action == "preview") then self:StopReadyPreviews() end
+	local unavailable = self:GetReadyUnavailable()
+	DebugPrint("AzeriteUI cdready", action == "preview" and "DRAWING TEST ONLY; no readiness event or sound" or "INSPECT", unavailable or "")
+	local count = 0
+	for _, viewerName in ipairs(VIEWERS) do
+		local setting = READY_VIEWERS[viewerName]
+		local viewer = setting and _G[viewerName]
+		if (IsUsable(viewer)) then
+			EnumerateItems(viewer, function(item)
+				local skin = skins[item]
+				local spellID, reason = ReadySpell(item)
+				local ok, visible = pcall(item.IsVisible, item)
+				local safeVisible = ok and not IsSecret(visible) and visible == true
+				local styled = skin and skin.applied and self:ShouldStyle()
+				local state = self.readyStates and self.readyStates[item]
+				local infoOK, info = pcall(item.GetCooldownInfo or function() end, item)
+				local base, override, charges
+				if (infoOK and not IsSecret(info) and type(info) == "table") then
+					base, override, charges = info.spellID, info.overrideSpellID, info.charges
+				end
+				DebugPrint("AzeriteUI cdready", viewerName, "base="..DebugReadyText(base), "override="..DebugReadyText(override),
+					"charges="..DebugReadyText(charges), "reason="..reason,
+					"selected="..tostring(self.db.profile[setting] == true), "visible="..DebugReadyText(visible),
+					"styled="..tostring(styled and true or false), "fed="..DebugReadyText(state and state.fed),
+					"observedActive="..DebugReadyText(state and state.active))
+				if (skin) then
+					DebugPrint("AzeriteUI cdready geometry", "icon="..DebugReadyRead(skin.icon,"GetWidth").."x"..DebugReadyRead(skin.icon,"GetHeight"),
+						"masks="..DebugReadyRead(skin.icon,"GetNumMaskTextures"), "itemScale="..DebugReadyRead(item,"GetEffectiveScale"),
+						"borderLevel="..DebugReadyRead(skin.decor,"GetFrameLevel"), "borderStrata="..DebugReadyRead(skin.decor,"GetFrameStrata"),
+						"pulseLevel="..DebugReadyRead(state and state.pulse,"GetFrameLevel"), "pulseStrata="..DebugReadyRead(state and state.pulse,"GetFrameStrata"))
+				end
+				if (action ~= "preview" or not styled or not safeVisible or unavailable) then return end
+				self.readyPreviews = self.readyPreviews or setmetatable({}, { __mode = "k" })
+				local preview = self.readyPreviews[item]
+				if (not preview) then preview = NewReady(self, skin); self.readyPreviews[item] = preview end
+				if (not preview) then return end
+				PulseReady(self, preview, skin, true)
+				DebugPrint("AzeriteUI cdready preview layer", DebugReadyRead(preview.pulse,"GetFrameLevel"), DebugReadyRead(preview.pulse,"GetFrameStrata"))
+				count = count + 1
+			end)
+		end
+	end
+	if (action ~= "preview") then return end
+	DebugPrint("AzeriteUI cdready: preview icons="..count.." (includes charges; drawing only)")
+	if (count == 0) then return end
+	self.readyPreviewController = self.readyPreviewController or CreateFrame("Frame", nil, UIParent)
+	self.readyPreviewController:SetScript("OnUpdate", function(_, elapsed)
+		if (not IsDevelopmentMode() or not self:ShouldStyle()) then self:StopReadyPreviews(); return end
+		local running = false
+		for _, state in pairs(self.readyPreviews) do
+			if (state.remaining) then
+				state.remaining = state.remaining - elapsed
+				if (state.remaining <= 0) then state.remaining = nil; state.pulse:Hide()
+				else state.pulse:SetAlpha(math.min(1, state.remaining / state.fadeDuration)); running = true end
+			end
+		end
+		if (not running) then self:StopReadyPreviews() end
+	end)
+	self.readyPreviewController:Show()
+end
+
+-- Released/reassigned/hidden slots never inherit a pending transition.
+-- Event payloads are unused. OnCooldownDone alone did not pass the combat probe.
+CooldownManager.ScanReadyAlerts = function(self, feed)
+	if (not self:ShouldStyle() or self:GetReadyUnavailable()) then self:StopReadyAlerts(); return end
+	local seen = {}
+	for viewerName, setting in pairs(READY_VIEWERS) do
+		local viewer = _G[viewerName]
+		if (self.db.profile[setting] and IsUsable(viewer)) then
+			EnumerateItems(viewer, function(item)
+				local skin = skins[item]
+				if (not skin or not skin.applied or not IsUsable(item)) then return end
+				local visibleOK, visible = pcall(item.IsVisible, item)
+				if (not visibleOK or IsSecret(visible) or visible ~= true) then return end
+				local spellID = ReadySpell(item)
+				if (not spellID) then return end
+				local state = self.readyStates[item]
+				if (not state) then
+					state = NewReady(self, skin)
+					if (not state) then return end
+					self.readyStates[item] = state
+				end
+				seen[item] = true
+				local changed = state.spellID ~= spellID
+				if (changed) then ResetReady(state); state.spellID = spellID end
+				if (feed or changed or not state.fed) then FeedReady(state) end
+				local ok, shown = pcall(state.cooldown.IsShown, state.cooldown)
+				if (not state.fed or not ok or IsSecret(shown) or type(shown) ~= "boolean") then
+					state.active = nil
+					return
+				end
+				if (state.active == true and shown == false) then PulseReady(self, state, skin) end
+				state.active = shown
+			end)
+		end
+	end
+	for item, state in pairs(self.readyStates) do
+		if (not seen[item]) then ResetReady(state) end
+	end
+end
+
+CooldownManager.StopReadyAlerts = function(self)
+	if (self.readyController) then
+		self.readyController:UnregisterAllEvents()
+		self.readyController:SetScript("OnEvent", nil)
+		self.readyController:SetScript("OnUpdate", nil)
+		self.readyController:Hide()
+	end
+	if (self.readyStates) then
+		for _, state in pairs(self.readyStates) do ResetReady(state) end
+	end
+end
+
+CooldownManager.UpdateReadyAlerts = function(self)
+	self:StopReadyAlerts()
+	if (not self:ShouldStyle() or self:GetReadyUnavailable()
+		or not (self.db.profile.readyEssential or self.db.profile.readyUtility)) then return end
+	self.readyStates = self.readyStates or setmetatable({}, { __mode = "k" })
+	self.readyController = self.readyController or CreateFrame("Frame", nil, UIParent)
+	local controller = self.readyController
+	controller:SetScript("OnEvent", function() self:ScanReadyAlerts(true) end)
+	controller:RegisterEvent("SPELL_UPDATE_COOLDOWN")
+	-- Some spells finish their ordinary cooldown on the charge update event.
+	if (ns.API.IsEventAvailable("SPELL_UPDATE_CHARGES")) then
+		controller:RegisterEvent("SPELL_UPDATE_CHARGES")
+	end
+	local accumulated = 0
+	controller:SetScript("OnUpdate", function(_, elapsed)
+		if (not self:ShouldStyle() or self:GetReadyUnavailable()) then self:StopReadyAlerts(); return end
+		-- Only our animation time is calculated; no game duration values.
+		for _, state in pairs(self.readyStates) do
+			if (state.remaining) then
+				state.remaining = state.remaining - elapsed
+				if (state.remaining <= 0) then
+					state.remaining = nil
+					state.pulse:Hide()
+				else
+					state.pulse:SetAlpha(math.min(1, state.remaining / state.fadeDuration))
+				end
+			end
+		end
+		accumulated = accumulated + elapsed
+		if (accumulated >= .1) then accumulated = 0; self:ScanReadyAlerts(false) end
+	end)
+	controller:Show()
+	self:ScanReadyAlerts(true)
+end
+
 -------------------------------------------------------------------------------
 -- Explorer Mode
 -------------------------------------------------------------------------------
@@ -782,7 +1103,9 @@ CooldownManager.OnEvent = function(self, event, ...)
 end
 
 CooldownManager.UpdateSettings = function(self)
+	self:StopReadyPreviews()
 	self:UpdateAll()
+	self:UpdateReadyAlerts()
 	self:QueueKeybinds()
 end
 
@@ -894,5 +1217,11 @@ CooldownManager.OnEnable = function(self)
 
 	-- Items Blizzard built before this module loaded.
 	self:UpdateAll()
+	self:UpdateReadyAlerts()
 	self:QueueKeybinds()
+end
+
+CooldownManager.OnDisable = function(self)
+	self:StopReadyPreviews()
+	self:StopReadyAlerts()
 end
