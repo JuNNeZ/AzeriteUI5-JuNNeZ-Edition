@@ -583,5 +583,30 @@ do
 	check(display.imbueCells == nil, "Retail never draws imbue cells")
 end
 
+-- Aura size: buttons used to keep the size the display was created with (the layout
+-- default) while only the flow layout took the chosen size, so smaller icons overlapped.
+do
+	local display = NewDisplay("12.1.5", true)
+	display:Configure(Config())
+	local container = display.containers[1]
+	local pooled = NewRegion("Button", container)
+	pooled:SetSize(36, 36)
+	container.GetAuraGroupFrameCount = function(_, key) return key == HARMFUL_GROUP and 1 or 0 end
+	container.GetAuraGroupFrame = function() return pooled end
+	display:Configure(Config({ size = 23 }))
+	check(pooled:GetWidth() == 23, "pooled aura buttons follow the chosen size", tostring(pooled:GetWidth()))
+	local state = container.__AzeriteUI_StyleState
+	check(state and state.helpfulSize == 23 and state.harmfulSize == 23, "new aura buttons are created at the chosen size")
+	local enchant = container.__enchants[MAIN]
+	check(not enchant or enchant.button:GetWidth() == 23, "weapon enchant buttons follow the chosen size")
+	check(not enchant or enchant.button.__AzeriteUI_TextSize == 10, "aura text shrinks with small icons")
+	local lineSize
+	container.SetFlowLayoutMaximumLineSize = function(_, width) lineSize = width end
+	display:Configure(Config({ size = 23, maxCols = 3 }))
+	check(lineSize == 3 * 23 + 2 * 4 + 1, "auras per row sets the native line size", tostring(lineSize))
+	display:Configure(Config({ size = 23 }))
+	check(lineSize == 300, "no per-row limit keeps the display width", tostring(lineSize))
+end
+
 print(string.format("Player aura enchants: %d checks, %d failures", checks, failures))
 if (failures > 0) then error("player aura enchant harness failed", 0) end

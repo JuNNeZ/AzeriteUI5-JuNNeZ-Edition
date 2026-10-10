@@ -10,6 +10,25 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.19.3-JuNNeZ (2026-10-10) - Aura Size, Target Power and SaiyaRatt Imbues
+
+### Highlights
+
+- **Smaller aura icons no longer overlap.** Setting the target's aura size below about 34 under `/az` → Unit Frames → Target left the icons at their default size while spacing them for the smaller one, so they piled on top of each other, and icons added later could come out a different size. Every icon now follows the size you pick, on the target, the player row and group frames.
+- **Auras per row works on the target.** The setting had no effect on Retail's target auras; it now limits each row to the number you choose. 0 still fills the frame's width.
+- **Aura timers fit small icons.** Duration and stack numbers now shrink with the icon instead of spilling over their neighbours. The default size looks the same as before.
+- **Legacy target power bar shows its fill again.** Under `/go legacy` the target's power bar showed only its dark background; the coloured fill was hidden underneath it.
+- **Weapon enchants on the SaiyaRatt profile.** Imbues, poisons and oils now show in the SaiyaRatt player aura row too, as they do on the standard player frame.
+
+### Development
+
+- The aura problems came from buttons being sized once, at creation, from the layout default while the chosen size only reached their placement. Sizes now flow through to every button and text, and the offline aura tests cover size, per-row width and text size.
+- Fixing a Debug tools page error (a test status line formatting a missing spell ID) let the options panel test run in full again; it then showed that Extra Button Shape had no preview, which it now has.
+
+### Access and known limits
+
+- Offline-tested only; not yet confirmed in game. SaiyaRatt's player auras still use the standard filtering, as before.
+
 ## 5.19.2-JuNNeZ (2026-10-10) - Legacy HUD Repairs and a Full Profile Reset
 
 ### Highlights

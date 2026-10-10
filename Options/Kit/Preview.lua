@@ -457,7 +457,13 @@ local policies = {
 		procHighlightThickness = barFamily,
 		procHighlightColorSource = barFamily,
 		procHighlightColor = barFamily,
-		procHighlightOpacity = barFamily
+		procHighlightOpacity = barFamily,
+		-- Applies on reload; the buttons only exist while an extra or zone ability is up.
+		extraButtonShape = {
+			kind = "exact",
+			visibleOnly = true,
+			frame = function() return PreferContent(_G.ExtraActionButton1) or PreferContent(_G.ZoneAbilityFrame) end
+		}
 	},
 	ExplorerMode = {
 		-- Its own toggle names a whole set of bars, not bar one.

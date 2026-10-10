@@ -832,7 +832,8 @@ local UnitFrame_UpdateAuraPosition = function(self)
 			growthX = db.AurasGrowthX,
 			growthY = db.AurasGrowthY,
 			maxBuffs = db.AurasNumTotal - math.floor(db.AurasNumTotal / 4),
-			maxDebuffs = math.floor(db.AurasNumTotal / 4)
+			maxDebuffs = math.floor(db.AurasNumTotal / 4),
+			showItemEnchantments = true
 		})
 
 	else
@@ -846,7 +847,8 @@ local UnitFrame_UpdateAuraPosition = function(self)
 			growthX = db.AurasGrowthXAlternate,
 			growthY = db.AurasGrowthYAlternate,
 			maxBuffs = db.AurasNumTotalAlternate - math.floor(db.AurasNumTotalAlternate / 4),
-			maxDebuffs = math.floor(db.AurasNumTotalAlternate / 4)
+			maxDebuffs = math.floor(db.AurasNumTotalAlternate / 4),
+			showItemEnchantments = true
 		})
 
 	end
@@ -1250,7 +1252,9 @@ local style = function(self, unit, id)
 		maxDebuffs = math.floor(db.AurasNumTotal / 4),
 		disableMouse = db.AurasDisableMouse,
 		disableCooldown = db.AurasDisableCooldown,
-		tooltipAnchor = db.AurasTooltipAnchor
+		tooltipAnchor = db.AurasTooltipAnchor,
+		-- Weapon enchants (imbues, poisons, oils), as on the main player frame since 5.18.
+		itemEnchantments = true
 	})
 	self.PlayerAuras = auras
 

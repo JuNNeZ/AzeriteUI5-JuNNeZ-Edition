@@ -142,6 +142,10 @@ check(pet.LegacyBorder.backdrop.edgeSize==32 and pet.LegacyBorder.point[2]==15,'
 check(pet.Power.orientation=='HORIZONTAL' and pet.enabledElement=='Power','native power element enabled')
 pet.Power:SetOrientation('VERTICAL');H:RefreshUnit(pet)
 check(pet.Power.orientation=='HORIZONTAL','native tier refresh cannot restore crystal orientation')
+local tgt=widget(316);tgt.level=10;tgt.style=ns.Prefix..'Target';tgt.Health=widget();tgt.Power=widget(300);tgt.Power.level=15
+local bgHolder=widget();bgHolder.level=15;tgt.Power.Backdrop=widget();tgt.Power.Backdrop.parent=bgHolder
+function M:GetParent()return self.parent end
+H:RefreshUnit(tgt);check(tgt.Power.level==12 and bgHolder.level==11,'target power backdrop stays below the lowered fill')
 function M:GetParent()return self.parent end
 local target=widget(316);target.style=ns.Prefix..'Target';target.Health=widget();target.Portrait=widget();target.Portrait.parent=widget()
 ns.oUF.init(target);check(target.Portrait.alpha==0 and not target.Portrait.parent.shown,'target portrait holder hidden: 3D model and 2D fallback')

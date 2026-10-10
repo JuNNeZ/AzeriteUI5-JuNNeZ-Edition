@@ -451,7 +451,13 @@ HUD.RefreshUnit = function(self, frame)
 		power.__AzeriteUI_PowerFakeOrientation = "RIGHT"
 		power.__AzeriteUI_PowerFakeWidth, power.__AzeriteUI_PowerFakeHeight = width, height
 		power:SetFrameLevel(frame:GetFrameLevel() + 2)
-		if (power.Backdrop) then power.Backdrop:ClearAllPoints(); power.Backdrop:SetAllPoints(power) end
+		if (power.Backdrop) then
+			power.Backdrop:ClearAllPoints(); power.Backdrop:SetAllPoints(power)
+			-- Target keeps its backdrop on its own frame, levelled once to the bar's
+			-- original level (+5). Lowering the bar put the dark backdrop over the fill.
+			local holder = power.Backdrop.GetParent and power.Backdrop:GetParent()
+			if (holder and holder ~= power and holder ~= frame and holder.SetFrameLevel) then holder:SetFrameLevel(power:GetFrameLevel() - 1) end
+		end
 		if (power.Case) then power.Case:ClearAllPoints(); power.Case:SetAllPoints(power) end
 		if (power.Spark) then power.Spark:SetAlpha(0) end
 	end

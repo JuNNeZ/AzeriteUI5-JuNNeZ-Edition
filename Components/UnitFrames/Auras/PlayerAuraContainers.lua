@@ -196,6 +196,8 @@ local function StyleDurationCooldown(button, border)
 			region:SetTextColor(unpack(Colors.offwhite))
 			region:ClearAllPoints()
 			region:SetPoint("TOPLEFT", button, "TOPLEFT", -4, 4)
+			button.__AzeriteUI_TimeTexts = button.__AzeriteUI_TimeTexts or {}
+			table.insert(button.__AzeriteUI_TimeTexts, region)
 		end
 	end
 
@@ -300,6 +302,20 @@ local function SetAuraButtonBrightness(button, alwaysBright)
 	end
 end
 
+-- Duration and stack text in fonts sized for the icon: the fixed 14/12 spilled over
+-- neighbouring icons once the aura size went below about 30. 36 keeps 14/12.
+local function ApplyAuraTextSize(button, size)
+	if (type(size) ~= "number") then return end
+	local timeSize, countSize = 14, 12
+	if (size < 26) then timeSize, countSize = 10, 9
+	elseif (size < 32) then timeSize, countSize = 12, 10 end
+	if (button.__AzeriteUI_TextSize == timeSize) then return end
+	button.__AzeriteUI_TextSize = timeSize
+	if (button.Time) then button.Time:SetFontObject(GetFont(timeSize, true)) end
+	for _, region in ipairs(button.__AzeriteUI_TimeTexts or {}) do region:SetFontObject(GetFont(timeSize, true)) end
+	if (button.Count) then button.Count:SetFontObject(GetFont(countSize, true)) end
+end
+
 local function StyleAuraButton(button, isHarmful, options, subdued, styleState)
 	-- Group frame containers size debuffs apart from buffs and change both at runtime,
 	-- so they keep the current sizes on the style state. Every other display leaves
@@ -350,6 +366,7 @@ local function StyleAuraButton(button, isHarmful, options, subdued, styleState)
 	end
 
 	AddPandemicEdge(button, border, size)
+	ApplyAuraTextSize(button, size)
 
 	button:SetCancelAuraButtons(isHarmful and nil or "RightButtonUp")
 	-- Do not add SetScript/HookScript handlers to CustomAuraButtonTemplate.
@@ -484,7 +501,8 @@ local function CopyConfiguration(config)
 		showTemporary = config.showTemporary,
 		showLong = config.showLong,
 		maxDuration = config.maxDuration,
-		showItemEnchantments = config.showItemEnchantments
+		showItemEnchantments = config.showItemEnchantments,
+		maxCols = config.maxCols
 	}
 end
 
@@ -508,7 +526,8 @@ local function GetConfigurationSignature(config)
 		tostring(config.showTemporary),
 		tostring(config.showLong),
 		tostring(config.maxDuration),
-		tostring(config.showItemEnchantments)
+		tostring(config.showItemEnchantments),
+		tostring(config.maxCols)
 	}, ":")
 end
 
@@ -534,6 +553,42 @@ local function UpdateContainerBrightness(container, alwaysBright)
 		local frameCount = container:GetAuraGroupFrameCount(groupKey)
 		for frameIndex = 1, frameCount do
 			SetAuraButtonBrightness(container:GetAuraGroupFrame(groupKey, frameIndex), alwaysBright)
+		end
+	end
+end
+
+-- Buttons were sized once, from the options the display was created with (the layout
+-- default), while the chosen size only reached the flow layout's element size. Below
+-- that default the icons overlapped, and pooled buttons created at different times
+-- disagreed. New buttons read the style state; pooled ones are resized where touchable.
+local function ResizeContainerFrames(container, size)
+	if (type(size) ~= "number") then return end
+	local styleState = container.__AzeriteUI_StyleState
+	if (styleState) then
+		styleState.helpfulSize, styleState.harmfulSize = size, size
+	end
+	if (container.__AzeriteUI_FrameSize == size) then return end
+	container.__AzeriteUI_FrameSize = size
+	local function Resize(groupKey)
+		for frameIndex = 1, container:GetAuraGroupFrameCount(groupKey) do
+			local button = container:GetAuraGroupFrame(groupKey, frameIndex)
+			if (CanTouchAuraWidget(button)) then
+				button:SetSize(size, size)
+				if (CanTouchAuraWidget(button.PandemicEdge)) then
+					SizePandemicEdge(button.PandemicEdge, size)
+				end
+				ApplyAuraTextSize(button, size)
+			end
+		end
+	end
+	Resize(HARMFUL_GROUP)
+	for _, groupKey in ipairs(HELPFUL_GROUPS) do Resize(groupKey) end
+	-- Weapon enchant buttons are outside the aura groups (stored as true on 12.1.0).
+	for _, button in pairs(container.__AzeriteUI_ItemEnchantmentFrames or {}) do
+		if (type(button) == "table" and CanTouchAuraWidget(button)) then
+			button:SetSize(size, size)
+			if (CanTouchAuraWidget(button.PandemicEdge)) then SizePandemicEdge(button.PandemicEdge, size) end
+			ApplyAuraTextSize(button, size)
 		end
 	end
 end
@@ -661,6 +716,7 @@ local function ApplyContainerConfiguration(container, config, width)
 	container:SetAuraGroupMaxFrameCount(HELPFUL_NAMEPLATE_GROUP, showNameplate and config.maxBuffs or 0)
 	container:SetAuraGroupMaxFrameCount(HELPFUL_SHORT_GROUP, (showPersonal or showTemporary) and config.maxBuffs or 0)
 	UpdateContainerBrightness(container, GetBoolean(config.alwaysBright, false))
+	ResizeContainerFrames(container, config.size)
 end
 
 --[[
@@ -914,6 +970,17 @@ end
 
 local DisplayMixin = {}
 
+-- Line width for the flow layout: the display's width, or exactly maxCols icons
+-- ("Auras per row") when set. The extra point keeps float rounding from wrapping
+-- the last icon of a full row.
+function DisplayMixin:GetLineSize(config)
+	local cols, size = config and config.maxCols, config and config.size
+	if (type(cols) == "number" and cols >= 1 and type(size) == "number") then
+		return cols * size + (cols - 1) * (config.spacingX or 0) + 1
+	end
+	return self:GetWidth()
+end
+
 function DisplayMixin:Configure(config)
 	local signature = GetConfigurationSignature(config)
 	if (signature == self.configurationSignature) then return end
@@ -923,7 +990,8 @@ function DisplayMixin:Configure(config)
 		return
 	end
 
-	local width = self:GetWidth()
+	local width = self:GetLineSize(config)
+	self.lineSize = width
 	for _, container in ipairs(self.containers) do
 		ApplyContainerConfiguration(container, config, width)
 	end
@@ -1075,7 +1143,7 @@ function DisplayMixin:LayoutImbues()
 	local container = self.playerContainer
 	container:ClearAllPoints()
 	container:SetPoint(layout.initialAnchor, container:GetParent(), layout.initialAnchor, offsetX + shift * direction, offsetY)
-	container:SetFlowLayoutMaximumLineSize(math.max(0, self:GetWidth() - shift))
+	container:SetFlowLayoutMaximumLineSize(math.max(0, (self.lineSize or self:GetWidth()) - shift))
 end
 
 -- Swaps the container the player row draws from, out of combat only (Configure defers).
@@ -1089,7 +1157,7 @@ function DisplayMixin:SetActivePlayerContainer(incoming, config)
 	outgoing:SetEnabled(false)
 	outgoing:Hide()
 
-	ApplyContainerConfiguration(incoming, config, self:GetWidth())
+	ApplyContainerConfiguration(incoming, config, self:GetLineSize(config))
 	incoming:Show()
 	incoming:SetEnabled(self.displayEnabled == true)
 
@@ -1157,7 +1225,8 @@ local function BuildDisplayConfig(options)
 		showTemporary = options.showTemporary,
 		showLong = options.showLong,
 		maxDuration = options.maxDuration,
-		showItemEnchantments = options.showItemEnchantments
+		showItemEnchantments = options.showItemEnchantments,
+		maxCols = options.maxCols
 	}
 end
 
@@ -1427,6 +1496,7 @@ local function ResizeGroupFrames(container, groupKey, size)
 			if (CanTouchAuraWidget(button.PandemicEdge)) then
 				SizePandemicEdge(button.PandemicEdge, size)
 			end
+			ApplyAuraTextSize(button, size)
 		end
 	end
 end

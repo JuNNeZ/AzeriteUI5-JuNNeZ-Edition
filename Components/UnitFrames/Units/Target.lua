@@ -486,7 +486,8 @@ local ApplyTargetAuraLayout = function(frame, styleKey)
 			growthX = layout.growthX,
 			growthY = layout.growthY,
 			maxBuffs = layout.numTotal,
-			maxDebuffs = layout.numTotal
+			maxDebuffs = layout.numTotal,
+			maxCols = layout.maxCols
 		})
 	end
 end

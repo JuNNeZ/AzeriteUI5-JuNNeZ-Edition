@@ -112,7 +112,8 @@ local function GenerateOptions()
 		local debug = Debug()
 		local active, id = false, nil
 		if (debug) then active, id = debug:GetCooldownProbeState() end
-		return active and string.format(L["Test running: spell %d"], id) or L["Test stopped"]
+		-- A probe can be active before its spell ID is known; %d would raise on nil.
+		return (active and type(id) == "number") and string.format(L["Test running: spell %d"], id) or L["Test stopped"]
 	end }
 	a.start = Immediate({ type = "execute", name = L["Start / restart"], order = 6,
 		disabled = function() return not Dev() or not Capable() or not ValidID(spell) end,
