@@ -10,6 +10,18 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.19.1-JuNNeZ (2026-10-10) - Legacy Portrait and Minimap Fixes
+
+### Highlights
+
+- **No more stray portrait under the Legacy target frame.** When a target's 3D model was not ready yet, AzeriteUI showed a flat picture of the target instead, and Legacy did not hide it. It is now hidden along with the model.
+- **Turning the minimap back on brings the AzeriteUI minimap back.** If you had used **Restore Blizzard Default** (for example while running another minimap addon), switching `/az` → Minimap → **Enable** back on kept Blizzard's look, and the page had no way to change it. Enable now restores the AzeriteUI look. This affected every layout, not just Legacy. Without updating, `/setminimaptheme azerite` does the same.
+
+### Access and known limits
+
+- Offline-checked only; not yet confirmed in game.
+- Two more Legacy reports are still under investigation: an extra background showing around the cast bar, and the target-of-target frame's background.
+
 ## 5.19.0-JuNNeZ (2026-10-09) - Legacy HUD, Button Shapes and Debug Tools
 
 ### Highlights

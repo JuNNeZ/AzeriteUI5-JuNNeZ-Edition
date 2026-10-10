@@ -141,6 +141,8 @@ check(pet.LegacyBorder and pet.Power.width==142 and pet.Power.height==8,'pet get
 check(pet.Power.orientation=='HORIZONTAL' and pet.enabledElement=='Power','native power element enabled')
 pet.Power:SetOrientation('VERTICAL');H:RefreshUnit(pet)
 check(pet.Power.orientation=='HORIZONTAL','native tier refresh cannot restore crystal orientation')
+local target=widget(316);target.style=ns.Prefix..'Target';target.Health=widget();target.Portrait=widget();target.Portrait.fallbackParent=widget()
+ns.oUF.init(target);check(target.Portrait.alpha==0 and target.Portrait.fallbackParent.alpha==0,'target 2D portrait fallback hidden with the model')
 local plate=widget();plate.Health=widget();plate.isNamePlate=true;plate.style=ns.Prefix..'Target'
 ns.oUF.init(plate);check(not plate.LegacyBorder and not plate.Power,'nameplates untouched')
 local cast=widget();cast.style=ns.Prefix..'PlayerCastBar';cast.Castbar=widget(224)

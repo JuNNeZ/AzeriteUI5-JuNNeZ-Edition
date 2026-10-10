@@ -322,6 +322,9 @@ HUD.StyleUnit = function(self, frame)
 		if (frame.Portrait.Bg) then frame.Portrait.Bg:SetAlpha(0) end
 		if (frame.Portrait.Shade) then frame.Portrait.Shade:SetAlpha(0) end
 		if (frame.Portrait.Border) then frame.Portrait.Border:SetAlpha(0) end
+		-- Target and Arena draw their 2D fallback in a sibling of the model,
+		-- so the model's alpha never reached it. Its holder carries both.
+		if (frame.Portrait.fallbackParent) then frame.Portrait.fallbackParent:SetAlpha(0) end
 	end
 	if (not frame.Name and frame.Tag) then
 		local name = (frame.Overlay or frame):CreateFontString(nil, "OVERLAY")

@@ -93,8 +93,14 @@ local GenerateOptions = function()
 				type = "toggle",
 				width = "full",
 				set = function(info, val)
-					getmodule().db.profile.enabled = val
-					getmodule():UpdateSettings()
+					local module = getmodule()
+					module.db.profile.enabled = val
+					-- "Restore Blizzard Default" stores the Blizzard theme and this page
+					-- has no theme picker, so switching AzeriteUI back on restores its own.
+					if (val and module.db.profile.theme == "Blizzard") then
+						module.db.profile.theme = "Azerite"
+					end
+					module:UpdateSettings()
 				end,
 				get = function(info)
 					return getmodule().db.profile.enabled
