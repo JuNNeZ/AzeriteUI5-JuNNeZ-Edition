@@ -1598,6 +1598,36 @@
         512
       ],
       "sha256": "3f88a6d882c44267e331a7daa6fa98769eabb428849efbe4a59d62cda7c1de51"
+    },
+    "actionbutton-border-square": {
+      "path": "Assets/Hunter/actionbutton-border-square.tga",
+      "sha256": "06002dad9f9fea3fa5543a4982b0e0cb9c15d9268ddaf17fa78d18f72643e954",
+      "bytes": 262188,
+      "source": "Assets/Hunter/actionbutton-border.tga",
+      "sourceSha256": "7d68318bbfc090b25f7ec299864830849beacba04962d9a396ffa9e36fdb3147",
+      "alphaSource": "Assets/actionbutton-border-square.tga",
+      "alphaSourceSha256": "fd17a7b0f48903f00583875b2f8b6626120f155e89ef49500167c81e5e75e491",
+      "build": "Tools/ThemeButtonShapes.py: polar material sampling; exact native alpha",
+      "disposition": "hunter material",
+      "size": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border-square-rounded": {
+      "path": "Assets/Hunter/actionbutton-border-square-rounded.tga",
+      "sha256": "956f4c36752f9552ced11de115f0cc01c8b172a300a4e56dddfeb38a5e063097",
+      "bytes": 262188,
+      "source": "Assets/Hunter/actionbutton-border.tga",
+      "sourceSha256": "7d68318bbfc090b25f7ec299864830849beacba04962d9a396ffa9e36fdb3147",
+      "alphaSource": "Assets/actionbutton-border-square-rounded.tga",
+      "alphaSourceSha256": "70e73f8a643a2c82262dfcc8768a7b7b3126e15ba934f6affb02b5de41e2ee1e",
+      "build": "Tools/ThemeButtonShapes.py: polar material sampling; exact native alpha",
+      "disposition": "hunter material",
+      "size": [
+        256,
+        256
+      ]
     }
   },
   "additional": {

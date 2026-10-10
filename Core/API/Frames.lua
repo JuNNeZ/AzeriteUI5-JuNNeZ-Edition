@@ -154,9 +154,37 @@ local IsUnitCritterType = function(unit)
 	return (name == "Critter") or (name == GetCritterTypeName())
 end
 
+-- A player's Mythic+ rating this season and the colour the game gives that score,
+-- or nil when there is none to show (no rating, not a player, an older client).
+-- C_PlayerInfo.GetPlayerMythicPlusRatingSummary documents no secret return, but the
+-- score is still checked, so a client that starts hiding it shows nothing instead
+-- of raising. The unit token is passed as given; callers hand in plain tokens.
+local GetMythicPlusRating = function(unit)
+	local playerInfo = C_PlayerInfo
+	if (type(unit) ~= "string" or IsSecret(unit)) then return end
+	if (not playerInfo or type(playerInfo.GetPlayerMythicPlusRatingSummary) ~= "function") then return end
+
+	local ok, summary = pcall(playerInfo.GetPlayerMythicPlusRatingSummary, unit)
+	if (not ok or type(summary) ~= "table" or IsSecret(summary)) then return end
+
+	local score = summary.currentSeasonScore
+	if (IsSecret(score) or type(score) ~= "number" or score <= 0) then return end
+
+	local color
+	local challengeMode = C_ChallengeMode
+	if (challengeMode and type(challengeMode.GetDungeonScoreRarityColor) == "function") then
+		local okColor, result = pcall(challengeMode.GetDungeonScoreRarityColor, score)
+		if (okColor and type(result) == "table" and not IsSecret(result)) then
+			color = result
+		end
+	end
+	return score, color
+end
+
 -- Global API
 ---------------------------------------------------------
 API.CreateFrameUnscaled = CreateFrameUnscaled
+API.GetMythicPlusRating = GetMythicPlusRating
 API.IsHouseEditorActive = IsHouseEditorActive
 API.IsPlayerAtEffectiveMaxLevel = IsPlayerAtEffectiveMaxLevel
 API.IsLevelAtEffectiveMaxLevel = IsLevelAtEffectiveMaxLevel

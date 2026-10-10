@@ -3,7 +3,7 @@
   "capRevision": 14,
   "date": "2026-10-05",
   "geometry": "Native canvases, original alpha, aperture and padding; geometry owned by original layouts.",
-  "status": "46 runtime textures. Dedicated compact Atiesh cast head, minimap compass and pet seal wired. Border inlays intentionally excluded. Mage orb interiors remain draft. Live Retail/Forever ornament fitting pending.",
+  "status": "48 runtime textures. Dedicated compact Atiesh cast head, minimap compass and pet seal wired. Border inlays intentionally excluded. Mage orb interiors remain draft. Live Retail/Forever ornament fitting pending. Square/Rounded borders use Mage circle material and native alpha; shared backdrops/masks/highlights; live fitting pending.",
   "assets": [
     {
       "path": "Assets/Mage/actionbutton-border.tga",
@@ -234,6 +234,26 @@
       "path": "Assets/Mage/pw_crystal_case_low.tga",
       "sha256": "556ae2c487cd91d1febaec41db040ce05fce4cb42a7d01faffe9ffa4f73135ef",
       "bytes": 131090
+    },
+    {
+      "path": "Assets/Mage/actionbutton-border-square.tga",
+      "sha256": "c134047c5140babac7e644f0c7b6033c5eb014b19b7e6303083db1cd089c683e",
+      "bytes": 262188,
+      "source": "Assets/Mage/actionbutton-border.tga",
+      "sourceSha256": "4b9edf1279616e35dff0f7c6304ff4b8d894eabc0f3c8b68649b33fdb7bfb04d",
+      "alphaSource": "Assets/actionbutton-border-square.tga",
+      "alphaSourceSha256": "fd17a7b0f48903f00583875b2f8b6626120f155e89ef49500167c81e5e75e491",
+      "build": "Tools/ThemeButtonShapes.py: polar material sampling; exact native alpha"
+    },
+    {
+      "path": "Assets/Mage/actionbutton-border-square-rounded.tga",
+      "sha256": "49a135ace1c42a03ff41aa8dfd7ecd4963a129f84ced81d6234a25c3c40f1d39",
+      "bytes": 262188,
+      "source": "Assets/Mage/actionbutton-border.tga",
+      "sourceSha256": "4b9edf1279616e35dff0f7c6304ff4b8d894eabc0f3c8b68649b33fdb7bfb04d",
+      "alphaSource": "Assets/actionbutton-border-square-rounded.tga",
+      "alphaSourceSha256": "70e73f8a643a2c82262dfcc8768a7b7b3126e15ba934f6affb02b5de41e2ee1e",
+      "build": "Tools/ThemeButtonShapes.py: polar material sampling; exact native alpha"
     }
   ],
   "sourcePack": "Assets_Draft/Mage-Complete-Assets-v12/manifest.json",

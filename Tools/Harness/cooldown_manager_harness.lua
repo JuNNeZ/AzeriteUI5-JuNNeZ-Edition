@@ -2,7 +2,7 @@
 -- built the way Blizzard_CooldownViewer/CooldownViewer.xml builds them (an unnamed MaskTexture and
 -- IconOverlay texture per item, a Cooldown, ChargeCount/Applications frames, a bar on Tracked Bars).
 -- Covers: hooks and styling of items built before and after load, the three styles and their
--- art paths (circular follows the theme or its own skin; square styles stay AzeriteUI),
+-- art paths (all styles follow the theme or their own skin; missing art stays shared),
 -- restoring everything when styling is turned off, the
 -- keybind lookup (override first, secret values ignored, no rebuild in combat), the Explorer
 -- Mode proxies against the viewer's own Edit Mode opacity, the proc glow and pandemic effect drawn
@@ -251,8 +251,11 @@ local ns = {
 	ModulePrototype = { defaults = { enabled = true } },
 	API = {
 		GetFont = function(size) return fonts[size] end,
-		-- The active theme answers here: the circular style asks, the square ones must not.
-		GetMedia = function(name) return "THEMED:" .. name end,
+		-- The active theme supplies borders; masks/backdrops/highlights remain shared.
+		GetMedia = function(name)
+			if name:find("actionbutton-border", 1, true) then return "THEMED:" .. name end
+			return "Interface\\AddOns\\AzeriteUI5_JuNNeZ_Edition\\Assets\\" .. name .. ".tga"
+		end,
 		IsAddOnEnabled = function(name) return enabledAddons[name] and true or false end,
 		ShowAddonConflictPrompt = function(opts) prompts[#prompts + 1] = opts end,
 		IsEventAvailable = function() return true end
@@ -382,7 +385,7 @@ local found
 for _, r in ipairs(data.regions) do if r.texture == Assets("actionbutton-backdrop-square-rounded") then found = r end end
 check(found and math.abs(found.width - 50 * 216 / 118) < .01, "backdrop fitted to the mask, from Assets")
 for _, r in ipairs(data.regions) do if r.texture and tostring(r.texture):find("THEMED", 1, true) then found = "themed" end end
-check(found ~= "themed", "no class theme art on the square styles")
+check(found ~= "themed", "backdrop stays shared on the square styles")
 
 -- Items acquired later are styled by the hook.
 local later = essential:Acquire()
@@ -482,7 +485,7 @@ check(keyString.text == "CHANGED", "and are rebuilt when combat ends")
 -- Circular.
 M.db.profile.iconStyle = "circular"
 M:UpdateSettings()
-check(Mask(item).texture == "THEMED:actionbutton-mask-circular", "circular mask, through the theme")
+check(Mask(item).texture == Assets("actionbutton-mask-circular"), "circular mask stays shared")
 check(data.Cooldown.circular == true, "circular swipe edge")
 check(data.Icon.width and math.abs(data.Icon.width - 36) < .01, "the circular icon is drawn at 72%")
 -- Keep the border identity even if a mutation changes its texture.
@@ -499,8 +502,12 @@ check(Choices() == "theme,azerite", "no theme module loaded: only the theme and 
 local function Own(prefix, names)
 	return { ResolveOwnMedia = function(_, name) if (names[name]) then return prefix .. names[name] end end }
 end
-modules.MageTheme = Own("MAGE:", { ["actionbutton-border"] = "actionbutton-border" })
-modules.HunterTheme = Own("HUNTER:", { ["actionbutton-border"] = "actionbutton-border" })
+modules.MageTheme = Own("MAGE:", { ["actionbutton-border"] = "actionbutton-border",
+	["actionbutton-border-square"] = "actionbutton-border-square",
+	["actionbutton-border-square-rounded"] = "actionbutton-border-square-rounded" })
+modules.HunterTheme = Own("HUNTER:", { ["actionbutton-border"] = "actionbutton-border",
+	["actionbutton-border-square"] = "actionbutton-border-square",
+	["actionbutton-border-square-rounded"] = "actionbutton-border-square-rounded" })
 modules.PaladinTheme = Own("PALADIN:", { ["actionbutton-border"] = "action-ring" })
 check(Choices() == "theme,azerite,mage,hunter", "Mage and Hunter are offered; Paladin only in Development Mode")
 
@@ -544,7 +551,7 @@ M.db.profile.skin = "mage"
 M.db.profile.iconStyle = "square"
 M:UpdateSettings()
 check(Mask(item).texture == Assets("actionbutton-mask-square") and data.Cooldown.circular == false, "square mask and edge")
-check(ring.texture == Assets("actionbutton-border-square"), "the square styles stay AzeriteUI art under any skin (Mage chosen)")
+check(ring.texture == "MAGE:actionbutton-border-square", "square uses the selected Mage skin")
 M.db.profile.skin = "theme"
 check(data.Icon.width and math.abs(data.Icon.width - 50 * 1.14) < .01, "square fill overlaps visible inner metal")
 
@@ -576,7 +583,30 @@ for _, style in ipairs({ "square", "rounded" }) do
 	for _, key in ipairs(M:GetSkinChoices()) do
 		skinOption.set({ "skin" }, key)
 		local suffix = style == "rounded" and "-rounded" or ""
-		check(ring.texture == Assets("actionbutton-border-square" .. suffix), style .. " stays AzeriteUI under " .. key)
+		local name = "actionbutton-border-square" .. suffix
+		local expected = key == "theme" and "THEMED:" .. name
+			or key == "mage" and "MAGE:" .. name or key == "hunter" and "HUNTER:" .. name or Assets(name)
+		check(ring.texture == expected, style .. " uses selected skin " .. key)
+		check(Mask(item).texture == Assets("actionbutton-mask-square" .. suffix), style .. " shared mask under " .. key)
+		for viewerName, viewer in pairs(viewers) do
+			local pooled = viewer:Acquire()
+			M:StyleItem(viewerName, pooled)
+			local itemData = Data(pooled)
+			local holder = itemData.Icon.regions and itemData.Icon or itemData
+			local gotBorder, gotBackdrop = false, false
+			-- Owned decor frames are recorded separately, parented to the pooled item.
+			for _, frame in ipairs(frameLog) do
+				if frame.parent == (itemData.Icon.regions and itemData.Icon or pooled) then
+					for _, region in ipairs(frame.regions) do
+						if region.texture == expected then gotBorder = true end
+					end
+				end
+			end
+			for _, region in ipairs(holder.regions) do
+				if region.texture == Assets("actionbutton-backdrop-square" .. suffix) then gotBackdrop = true end
+			end
+			check(gotBorder and gotBackdrop, viewerName .. style .. key .. " pooled border/shared backdrop")
+		end
 	end
 end
 M.db.profile.styleIcons = false

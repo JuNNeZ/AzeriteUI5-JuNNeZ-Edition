@@ -37,6 +37,8 @@ lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/
 lua Tools/Harness/target_execute_harness.lua .             # target tiers, mirrored crops, shared threshold, secrets, off/on
 lua Tools/Harness/cdready_menu_harness.lua .               # real debug page, row layout, immediate probe vs queued repairs
 lua Tools/Harness/cdready_harness.lua .                    # opt-in probe, secrets, callbacks, polling and cleanup
+lua Tools/Harness/auracost_harness.lua .                   # /azdebug auracost: alternating windows, noise verdict, report
+lua Tools/Harness/snapping_harness.lua .                   # /lock snapping: Edit Mode magnetism rules, grid lines
 ```
 
 `player_aura_enchant_harness.lua` loads the real `PlayerAuraContainers.lua` against a fake aura
@@ -336,3 +338,7 @@ Legacy compact HUD: `lua Tools/Harness/legacy_hud_harness.lua .` loads real layo
 ### Cooldown-ready representative regressions (2026-10-09)
 
 `cooldown_ready_harness.lua` now crosses eight representative metadata IDs, both charge flags, both viewers, override mapping and both recovery events. These synthetic IDs/flags exercise shared logic; they do not certify live spell/talent behavior. Tests also cover unknown/secret charge flags, absent charge-event capability, ordinary-ready silence for charge-capable spells, and native expiry within one 100 ms poll. Baseline and Elune-tainted: 864 checks. All 45 independent mutations fail, including restored blanket charge exclusion, removed charge event, ignored event capability and a one-second poll. Run via `Tools/Run-Elune.ps1 -Script Tools/Harness/cooldown_ready_harness.lua . [--taint|mutation]`. Live five-spell battery: `Docs/Cooldown Ready Alerts - Retail Paladin.md`.
+
+Edit Mode movers (Elune): `Tools/Run-Elune.ps1 -Script Tools/Harness/editmode_mover_callback_harness.lua` models
+`EventRegistry`'s `EditMode.Enter`/`Exit` callbacks (secure event-key barrier, `securecallfunction`) and checks that
+Blizzard's Edit Mode path stays secure while our movers show and hide.

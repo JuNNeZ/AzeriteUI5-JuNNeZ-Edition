@@ -17,6 +17,7 @@
 	<Script file="Auras\AuraSorting.lua"/>
 	<Script file="Auras\AuraStyling.lua"/>
 	<Script file="Auras\PlayerAuraContainers.lua"/>
+	<Script file="Auras\AuraCostProbe.lua"/>
 
 	<Script file="Units\Player.lua"/>
 	<Script file="Units\PlayerAlternate.lua"/>

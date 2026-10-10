@@ -170,6 +170,21 @@ local GenerateOptions = function()
 				hidden = isdisabled,
 				set = setter,
 				get = getter
+			},
+			-- Built into each native aura button when it is created, so the change asks
+			-- for a reload. Retail only: the native aura rows do not exist on Forever.
+			auraTimerColors = {
+				name = L["Color Aura Timers"],
+				desc = L["Aura countdowns on unit frames and nameplates turn yellow, orange and red as they run out. Turn this off to keep them white."],
+				order = 40,
+				type = "toggle", width = "full",
+				hidden = function(info) return (not ns.IsRetail) or isdisabled(info) end,
+				confirm = function() return L["Changing this reloads the interface."] end,
+				set = function(info, val)
+					getmodule().db.profile.auraTimerColors = val and true or false
+					ReloadUI()
+				end,
+				get = function(info) return getmodule().db.profile.auraTimerColors ~= false end
 			}
 		}
 	}
@@ -1328,6 +1343,13 @@ local GenerateOptions = function()
 			name = L["Show Target Markers"],
 			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
 			order = 41, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		-- Retail only: Forever has no Mythic+ rating.
+		suboptions.args.showMythicPlusRating = {
+			name = L["Show Mythic+ rating"],
+			desc = L["Show each party member's Mythic+ rating for this season in the top right corner of their frame."],
+			order = 41.5, type = "toggle", width = "full", set = setter, get = getter,
+			hidden = function(info) return (not ns.IsRetailContent) or isdisabled(info) end
 		}
 		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 42)
 		local partyAuraSettingsDisabled = function(info)

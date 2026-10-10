@@ -11,13 +11,14 @@ ns.MageTheme = Theme
 local path = function(name) return "Interface\\AddOns\\"..Addon.."\\Assets\\Mage\\"..name..".tga" end
 local cache = {}
 
--- The 30 native casings the pack replaces (manifest "replace").
+-- Native casings and optional shaped borders; shared functional layers stay native.
 local media = {}
 for _, name in ipairs({
 	"hp_cap_case", "hp_mid_case", "hp_low_case", "hp_boss_case", "hp_critter_case", "hp_critter_case_hi",
 	"cast_back", "cast_back_spiked", "cast_back_wooden", "nameplate_backdrop",
 	"pw_crystal_case", "pw_crystal_case_low", "orb_case_hi", "orb_case_low", "orb-border",
 	"portrait_frame_hi", "portrait_frame_lo", "party_portrait_border", "actionbutton-border",
+	"actionbutton-border-square", "actionbutton-border-square-rounded",
 	"minimap-border", "minimap-onebar-backdrop", "minimap-twobars-backdrop", "point_plate",
 	"config_button", "config_button_bright", "icon_exit_flight", "options-box",
 	"border-tooltip", "border-aura", "better-blizzard-border-small-alternate"

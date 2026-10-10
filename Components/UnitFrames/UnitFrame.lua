@@ -50,6 +50,7 @@ local defaults = { profile = ns:Merge({
 	absorbDisplayMode = "total",
 	showHealAbsorbs = true,
 	colorCastSpellTextByState = false,
+	auraTimerColors = true,
 	powerValueAlpha = 75,
 	playerPowerValueAlpha = nil,
 	targetPowerValueAlpha = nil,
@@ -238,6 +239,14 @@ ns.UnitFrame.ShouldColorCastSpellTextByState = function()
 	local module = ns:GetModule("UnitFrames", true)
 	local profile = module and module.db and module.db.profile
 	return profile and profile.colorCastSpellTextByState == true or false
+end
+
+-- Whether native aura countdowns turn yellow, orange and red as they run out.
+-- Read when a button is styled, so a change applies from the next reload.
+ns.UnitFrame.ShouldColorAuraTimers = function()
+	local module = ns:GetModule("UnitFrames", true)
+	local profile = module and module.db and module.db.profile
+	return not (profile and profile.auraTimerColors == false)
 end
 
 ns.UnitFrame.GetPowerValueAlpha = function(kind)

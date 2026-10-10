@@ -154,6 +154,15 @@ do
 	end
 end
 
+-- The same duration text without the curve, for players who turned the colours off
+-- (Unit Frames -> Color Aura Timers). The text then keeps the colour set below.
+local plainTimerOptions = {}
+
+local function UseTimerColors()
+	local unitFrame = ns.UnitFrame
+	return not (unitFrame and unitFrame.ShouldColorAuraTimers) or unitFrame.ShouldColorAuraTimers()
+end
+
 local function StyleDurationText(button, border)
 	local time = border:CreateFontString(nil, "OVERLAY")
 	time:SetFontObject(GetFont(14, true))
@@ -161,8 +170,9 @@ local function StyleDurationText(button, border)
 	time:SetJustifyH("LEFT")
 	time:SetWordWrap(false)
 	time:SetFixedColor(false)
+	time:SetTextColor(unpack(Colors.offwhite))
 
-	local ok = TryCall(button.SetDurationText, button, time, timerColorOptions)
+	local ok = TryCall(button.SetDurationText, button, time, UseTimerColors() and timerColorOptions or plainTimerOptions)
 	if (not ok) then
 		time:Hide()
 		return false

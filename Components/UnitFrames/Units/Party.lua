@@ -75,6 +75,7 @@ local defaults = { profile = ns:Merge({
 
 	showAuras = true,
 	showRaidTargetIcons = true,
+	showMythicPlusRating = false,
 	showPlayerInParty = false,
 	showPlayerInRaid = false,
 	useRangeIndicator = false,
@@ -930,6 +931,33 @@ local TargetHighlight_Update = function(self, event, unit, ...)
 	end
 end
 
+-- The member's Mythic+ rating in the frame's top right corner, opposite the raid
+-- marker, in the score's rarity colour. Off by default; nothing on Forever.
+local MythicPlusRating_Update = function(self)
+	local element = self.MythicPlusRating
+	if (not element) then return end
+
+	local profile = PartyFrameMod.db and PartyFrameMod.db.profile
+	local unit = self.unit
+	local score, color
+	if (profile and profile.showMythicPlusRating and API.GetMythicPlusRating and unit) then
+		score, color = API.GetMythicPlusRating(unit)
+	end
+	if (not score) then
+		element:SetText("")
+		element:Hide()
+		return
+	end
+
+	element:SetText(string.format("%d", score))
+	if (color and color.GetRGB) then
+		element:SetTextColor(color:GetRGB())
+	else
+		element:SetTextColor(unpack(Colors.offwhite))
+	end
+	element:Show()
+end
+
 local UnitFrame_PostUpdate = function(self, event)
 	TargetHighlight_Update(self)
 	AuraHighlight_Update(self)
@@ -937,6 +965,15 @@ local UnitFrame_PostUpdate = function(self, event)
 	if (ns.PlayerAuraContainers and ns.PlayerAuraContainers.UpdateGroupFrameUnit) then
 		ns.PlayerAuraContainers.UpdateGroupFrameUnit(self, event)
 	end
+	-- Full updates only (a new unit, a settings change); aura events would ask the
+	-- rating again many times a second for a value that changes once per key.
+	if (event) then
+		MythicPlusRating_Update(self)
+	end
+end
+
+local MythicPlusRating_OnEvent = function(self)
+	MythicPlusRating_Update(self)
 end
 
 local UnitFrame_OnEvent = function(self, event, unit, ...)
@@ -1224,6 +1261,16 @@ local style = function(self, unit)
 
 	self.RaidTargetIndicator = raidTargetIndicator
 
+	-- Mythic+ Rating
+	--------------------------------------------
+	local rating = overlay:CreateFontString(nil, "OVERLAY", nil, 2)
+	rating:SetFontObject(GetFont(12, true))
+	rating:SetJustifyH("RIGHT")
+	rating:SetPoint("TOPRIGHT", self, "TOPRIGHT", -18, -14)
+	rating:Hide()
+
+	self.MythicPlusRating = rating
+
 	-- Ressurection Indicator
 	--------------------------------------------
 	local resurrectIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, 1)
@@ -1363,6 +1410,12 @@ local style = function(self, unit)
 	self:RegisterEvent("UNIT_AURA", UnitFrame_OnEvent)
 	self:RegisterEvent("UNIT_CONNECTION", UnitFrame_OnEvent)
 	self:RegisterEvent("PLAYER_FLAGS_CHANGED", UnitFrame_OnEvent)
+
+	-- A rating changes when a key ends; a new member brings their own.
+	self:RegisterEvent("GROUP_ROSTER_UPDATE", MythicPlusRating_OnEvent, true)
+	if (ns.API.IsEventAvailable and ns.API.IsEventAvailable("CHALLENGE_MODE_COMPLETED")) then
+		self:RegisterEvent("CHALLENGE_MODE_COMPLETED", MythicPlusRating_OnEvent, true)
+	end
 
 end
 

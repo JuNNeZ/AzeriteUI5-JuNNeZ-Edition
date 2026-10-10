@@ -57,13 +57,42 @@ local EDIT_MODE_REPLACED = {
 	{ "BuffFrame", "Auras" },
 	{ "DebuffFrame", "Auras" },
 	{ "MinimapCluster", "Minimap" },
-	{ "MainMenuBarVehicleLeaveButton", "VehicleExit" }
+	{ "MainMenuBarVehicleLeaveButton", "VehicleExit" },
+	-- PlayerCastBar.lua fades Blizzard's cast bar by alpha only; its overlay ignores that.
+	{ "PlayerCastingBarFrame", "PlayerCastBarFrame" },
+	-- Seen on Forever with /azdebug editmode (FixLog 2026-10-10); the same systems exist on Retail.
+	{ "PartyFrame", "PartyFrames", "RaidFrame5" },
+	{ "ExtraAbilityContainer", "ExtraActionButtons" },
+	{ "EncounterBar", "EncounterBar" },
+	{ "DurabilityFrame", "Durability" },
+	-- Only while AzeriteUI places tooltips (Tooltips -> Enable Anchoring); otherwise
+	-- Blizzard's container is where they go, and Edit Mode is how to move it.
+	{ "GameTooltipDefaultContainer", "Tooltips", when = function(module)
+		local profile = module.db and module.db.profile
+		return profile and profile.anchor ~= false and not profile.disableAzeriteUITooltips
+	end },
+	-- The minimap skin takes the queue eye, unless Bartender's queue bar owns it (Minimap.lua).
+	{ "QueueStatusButton", "Minimap", when = function()
+		return not ns.API.IsAddOnEnabled("Bartender4")
+	end }
 }
+
+-- An entry applies when it names no module, or any one of its modules is enabled and
+-- its own condition (if it has one) agrees.
+local isReplaced = function(entry)
+	if (not entry[2]) then return true end
+	for i = 2, #entry do
+		local module = ns:GetModule(entry[i], true)
+		if (module and module:IsEnabled()) then
+			return not entry.when or entry.when(module) and true or false
+		end
+	end
+	return false
+end
 
 ns.HideReplacedEditModeSelections = function()
 	for _, entry in ipairs(EDIT_MODE_REPLACED) do
-		local module = entry[2] and ns:GetModule(entry[2], true)
-		if (not entry[2] or (module and module:IsEnabled())) then
+		if (isReplaced(entry)) then
 			ns.HideEditModeSelection(_G[entry[1]])
 		end
 	end
@@ -193,14 +222,22 @@ ns.PrintEditModeDiagnostics = function()
 	local out = function(...) print("|cff33ff99AzeriteUI /azdebug editmode:|r", ...) end
 	local manager = _G.EditModeManagerFrame
 	out("Edit Mode open:", tostring(manager and manager:IsShown() or false), "| our active flag:", tostring(editModeActive), "| hooks:", tostring(previewHooksInstalled))
+	-- Group frames fade with range, so their alpha can be secret; a secret in the line
+	-- turns the whole printed line into "???".
+	local safe = function(value)
+		if (issecretvalue and issecretvalue(value)) then return nil end
+		return value
+	end
 	local describe = function(frame)
 		if (not frame or not frame.IsShown) then return "missing" end
 		local parent = frame.GetParent and frame:GetParent()
-		local name = parent and parent.GetName and parent:GetName() or "?"
+		local name = parent and parent.GetName and safe(parent:GetName()) or "?"
 		local sel = frame.Selection
-		return ("shown=%s visible=%s alpha=%.2f parent=%s selection=%s"):format(
-			tostring(frame:IsShown()), tostring(frame.IsVisible and frame:IsVisible()), frame:GetAlpha() or -1, name,
-			sel and tostring(sel:IsShown()) or "none")
+		local alpha = safe(frame:GetAlpha())
+		return ("shown=%s visible=%s alpha=%s parent=%s selection=%s"):format(
+			tostring(safe(frame:IsShown())), tostring(safe(frame.IsVisible and frame:IsVisible())),
+			alpha and ("%.2f"):format(alpha) or "secret", name,
+			sel and tostring(safe(sel:IsShown())) or "none")
 	end
 	for _, entry in ipairs(EDIT_MODE_PREVIEWS) do
 		out(entry[1], isPreviewReplaced(entry) and "(we fade)" or "(left alone)", describe(_G[entry[1]]))
@@ -225,9 +262,36 @@ ns.PrintEditModeDiagnostics = function()
 	for i = 1, 5 do
 		local member = _G["CompactPartyFrameMember" .. i]
 		if (member and member:IsShown()) then
-			out("CompactPartyFrameMember" .. i, describe(member), "ignoreParentAlpha=" .. tostring(member.GetIgnoreParentAlpha and member:GetIgnoreParentAlpha()))
+			out("CompactPartyFrameMember" .. i, describe(member), "ignoreParentAlpha=" .. tostring(safe(member.GetIgnoreParentAlpha and member:GetIgnoreParentAlpha())))
 		end
 	end
+
+	-- Every Edit Mode system whose selection overlay is on screen right now, so a client
+	-- with systems the lists above do not name (Forever) can be read in one go. Read
+	-- only: the registry is walked, never written, and no Blizzard method is called
+	-- beyond plain getters, each through pcall.
+	local systems = manager and manager.registeredSystemFrames
+	if (type(systems) ~= "table") then
+		out("systems: registry not readable on this client")
+		return
+	end
+	local visible = 0
+	for index, frame in ipairs(systems) do
+		local selection = type(frame) == "table" and frame.Selection
+		local okShown, isVisible = false, false
+		if (selection and selection.IsVisible) then
+			okShown, isVisible = pcall(selection.IsVisible, selection)
+		end
+		if (okShown and isVisible) then
+			visible = visible + 1
+			local okName, systemName = pcall(function() return frame:GetSystemName() end)
+			local frameName = frame.GetName and frame:GetName() or ("#" .. index)
+			out("visible selection:", tostring(okName and systemName or frame.system), frameName,
+				describe(frame), "| we hook it:", tostring(selectionHooked[selection] and true or false))
+		end
+	end
+	out("systems:", #systems, "| with a visible selection:", visible,
+		(manager:IsShown() and "" or "(open Edit Mode first; selections only show while it is open)"))
 end
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
@@ -426,13 +490,18 @@ BlizzardABDisabler.HideBlizzard = function(self)
 	quarantineNamedFrames(HIDDEN_FRAME_NAMES)
 
 	-- In TWW 11.0+, hide the gryphons (EndCaps) on MainActionBar
+	-- On Forever each gryphon is its own Edit Mode system
+	-- (Blizzard_ActionBar/Camelot/MainMenuBarEndCaps.xml, EditModeMainActionBarEndCap*SystemTemplate),
+	-- with its own selection overlay that the main bar's does not cover.
 	local MainActionBar = _G.MainActionBar
 	if (MainActionBar and MainActionBar.EndCaps) then
 		if (MainActionBar.EndCaps.LeftEndCap) then
 			MainActionBar.EndCaps.LeftEndCap:Hide()
+			ns.HideEditModeSelection(MainActionBar.EndCaps.LeftEndCap)
 		end
 		if (MainActionBar.EndCaps.RightEndCap) then
 			MainActionBar.EndCaps.RightEndCap:Hide()
+			ns.HideEditModeSelection(MainActionBar.EndCaps.RightEndCap)
 		end
 	end
 

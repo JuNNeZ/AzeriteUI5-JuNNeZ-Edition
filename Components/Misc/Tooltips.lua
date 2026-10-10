@@ -421,6 +421,7 @@ local defaults = { profile = ns:Merge({
 	theme = "Classic",
 	showItemID = false,
 	showSpellID = false,
+	showMythicPlusRating = false,
 	-- New: allow users to completely disable AzeriteUI tooltip styling
 	disableAzeriteUITooltips = false,
 	-- Optional: make unit tooltips transparent when anchored to nameplates
@@ -1007,6 +1008,33 @@ Tooltips.OnTooltipSetUnit = function(self, tooltip, data)
 
 	end
 
+	self:AddMythicPlusRating(tooltip, unit)
+end
+
+-- A player's Mythic+ rating as one line, in the score's rarity colour. Off by
+-- default; RaiderIO users already get a fuller block from that addon.
+Tooltips.AddMythicPlusRating = function(self, tooltip, unit)
+	if (not self.db.profile.showMythicPlusRating) then return end
+	if (not API.GetMythicPlusRating) then return end
+
+	local okPlayer, isPlayer = API.TryCall(UnitIsPlayer, unit)
+	if (not okPlayer or not SafeBooleanValue(isPlayer)) then return end
+
+	local score, color = API.GetMythicPlusRating(unit)
+	if (not score) then return end
+
+	local scoreText = string_format("%d", score)
+	if (color and color.WrapTextInColorCode) then
+		local okWrap, wrapped = API.TryCall(color.WrapTextInColorCode, color, scoreText)
+		if (okWrap and type(wrapped) == "string" and not IsSecretValue(wrapped)) then
+			scoreText = wrapped
+		end
+	end
+
+	local line = L["Mythic+ Rating"] .. ": " .. scoreText
+	if (TooltipHasLineText(tooltip, line)) then return end
+	tooltip:AddLine(line, 1, 1, 1)
+	tooltip:Show()
 end
 
 local GetCompareTooltips = function(tooltip)

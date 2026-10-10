@@ -3925,6 +3925,8 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug dump tot|r")
 	print("|cfff0f0f0  /azdebug dump all|r")
 	print("|cfff0f0f0  /azdebug aurasnapshot [player|topright|target|party|raid5|both]|r")
+	print("|cfff0f0f0  /azdebug auracost [perUnit]|status|stop|r  (what corner aura dots would cost; 32 in a party measures 160; /reload after)")
+	print("|cfff0f0f0  /azdebug sated|r  (who in the group has Sated/Exhaustion, read directly; run in and out of combat after a lust)")
 	print("|cfff0f0f0  /azdebug editmode|r  (what Edit Mode is showing: previews, overlays, checkboxes)")
 	print("|cfff0f0f0  /azdebug tooltips|r  (what the compare tooltip joins and the aura tooltip style last did)")
 	print("|cfff0f0f0  /azdebug unitmenu|r  (hover a unit frame; which menu it opens, replaced menu code)")
@@ -5171,6 +5173,20 @@ Debugging.DebugMenu = function(self, input)
 	if (cmd == "aurasnapshot" or cmd == "auras") then
 		local sub = rest:match("^(%S+)") or "both"
 		return DumpAuraSnapshot(sub)
+	end
+	if (cmd == "sated") then
+		if (ns.AuraCostProbe and ns.AuraCostProbe.SatedTest) then
+			return ns.AuraCostProbe.SatedTest(rest, print)
+		end
+		print("|cff33ff99", "AzeriteUI /azdebug sated:", "Retail only; this client has no native aura containers.")
+		return
+	end
+	if (cmd == "auracost") then
+		if (ns.AuraCostProbe and ns.AuraCostProbe.Run) then
+			return ns.AuraCostProbe.Run(rest, print)
+		end
+		print("|cff33ff99", "AzeriteUI /azdebug auracost:", "Retail only; this client has no native aura containers.")
+		return
 	end
 	if (cmd == "tooltips" or cmd == "tooltip") then
 		local tooltips = ns:GetModule("Tooltips", true)

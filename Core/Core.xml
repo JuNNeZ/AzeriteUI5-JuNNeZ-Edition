@@ -20,6 +20,7 @@
 	<Script file="API\Tables.lua"/>
 	<Script file="API\ProtectedCall.lua"/>
 	<Script file="API\SecretValues.lua"/>
+	<Script file="API\Snapping.lua"/>
 	<Script file="API\Time.lua"/>
 
 	<!--

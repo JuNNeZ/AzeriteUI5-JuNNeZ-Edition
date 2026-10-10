@@ -1105,3 +1105,23 @@ L["All release notes"] = true
 L["Show me"] = true
 L["Show What's New after updates"] = true
 L["A few seconds after the first login on a new version, a short summary opens with buttons that take you to what changed. Type /az whatsnew to open it at any time."] = true
+
+-- Roadmap items 1-7 (2026-10-10): aura timer colours, Explorer Mode in keys, battle rez,
+-- the completion banner, Mythic+ rating, movers in Edit Mode and snapping.
+L["Color Aura Timers"] = true
+L["Aura countdowns on unit frames and nameplates turn yellow, orange and red as they run out. Turn this off to keep them white."] = true
+L["During a Mythic+ key"] = true
+L["Keep your interface visible while a Mythic+ key is running, even if you let it fade in other instances."] = true
+L["Show battle rez charges"] = true
+L["The group's battle resurrection charges under the key timer, with the time until the next one comes back."] = true
+L["Hide Blizzard's completion banner"] = true
+L["Show only the end-of-run card when a key ends, without Blizzard's banner above it. Blizzard still writes the result to chat."] = true
+L["Mythic+ Rating"] = true
+L["Show Mythic+ rating"] = true
+L["Add a player's Mythic+ rating for this season to their tooltip, in the color the game gives that score."] = true
+L["Show each party member's Mythic+ rating for this season in the top right corner of their frame."] = true
+L["Moving Frames"] = true
+L["Show in Edit Mode"] = true
+L["Show these frames while Blizzard's Edit Mode is open, so you can move Blizzard's frames and AzeriteUI's together."] = true
+L["Snap to edges and other frames"] = true
+L["A dragged frame snaps to the screen's edges and center, to other frames, and to the Edit Mode grid when it is shown. Hold Alt while dragging to place it freely."] = true

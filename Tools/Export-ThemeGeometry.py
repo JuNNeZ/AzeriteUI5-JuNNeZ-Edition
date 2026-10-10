@@ -19,7 +19,8 @@ LAYOUT = json.loads((ROOT / 'Docs/Research_Assets/Paladin/Revision5/layouts.json
 CASINGS = ['hp_cap_case', 'hp_mid_case', 'hp_low_case', 'hp_boss_case', 'hp_critter_case', 'hp_critter_case_hi',
            'cast_back', 'cast_back_spiked', 'cast_back_wooden', 'nameplate_backdrop', 'pw_crystal_case',
            'pw_crystal_case_low', 'orb_case_hi', 'orb_case_low', 'orb-border', 'portrait_frame_hi',
-           'portrait_frame_lo', 'party_portrait_border', 'actionbutton-border', 'minimap-border',
+           'portrait_frame_lo', 'party_portrait_border', 'actionbutton-border',
+           'actionbutton-border-square', 'actionbutton-border-square-rounded', 'minimap-border',
            'minimap-onebar-backdrop', 'minimap-twobars-backdrop', 'point_plate', 'config_button',
            'config_button_bright', 'icon_exit_flight', 'options-box', 'border-tooltip', 'border-aura',
            'better-blizzard-border-small-alternate']
@@ -92,6 +93,12 @@ def fillmask(name, canvas):
     if name in ('pw_crystal_case', 'pw_crystal_case_low'):
         bar = (0, 0, *P['PowerBarSize'])
         return paste(alpha(P['PowerBarTexture'], P['PowerBarTexCoord']), bar, anchor(bar, P['PowerBarForegroundSize'], P['PowerBarForegroundPosition']))
+    if name in ('actionbutton-border-square', 'actionbutton-border-square-rounded'):
+        # Same shaped config as Core/API/Assets.lua, no per-theme geometry.
+        deco = 93.1 if name.endswith('rounded') else 96.3
+        mask = 'actionbutton-mask-square-rounded.tga' if name.endswith('rounded') else 'actionbutton-mask-square.tga'
+        return paste(alpha('Interface/Assets/' + mask), (2, 2, 60, 60),
+                     ((64-deco)/2, (64-deco)/2, deco, deco))
     if name == 'actionbutton-border':
         db = LAYOUT['ActionButton']; rect = (0, 0, *db['ButtonSize'])
         return paste(alpha(db['ButtonMaskTexture']), anchor(rect, db['ButtonIconSize'], db['ButtonIconPosition']),

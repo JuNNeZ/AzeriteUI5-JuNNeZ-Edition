@@ -46,6 +46,9 @@ local methods = {
 	SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end,
 	ClearAllPoints = function(self) self.points = {} end,
 	GetSize = function() return 260, 110 end,
+	SetAlpha = function(self, alpha) self.alpha = alpha end,
+	SetCooldownFromDurationObject = function(self, duration) self.duration = duration end,
+	Clear = function(self) self.duration = nil; self.cleared = (rawget(self, "cleared") or 0) + 1 end,
 	CreateFontString = function() return Widget("FontString") end,
 	CreateTexture = function() return Widget("Texture") end
 }
@@ -457,6 +460,83 @@ M.db.profile.hideBlizzardTracker = true
 M:UpdateSettings()
 check(ns.MythicPlusHidesTracker == true, "and takes it again")
 
+-------------------------------------------------------------------------------
+-- Battle rez charges
+-------------------------------------------------------------------------------
+-- Fake secrets are tables: an unguarded comparison or sum on one raises.
+local secretCharges = {}
+client.secret[secretCharges] = true
+local rezInfo = { currentCharges = 2, maxCharges = 5, isActive = true }
+local rezDuration = { "duration object" }
+env.C_Spell = {
+	GetSpellCharges = function(spellID) if (spellID == 20484) then return rezInfo end end,
+	GetSpellChargeDuration = function(spellID) if (spellID == 20484) then return rezDuration end end
+}
+local rez = frame.rez
+check(rez ~= nil, "the timer has a battle rez element")
+M:UpdateBattleRez()
+check(not rez.shown, "off unless the setting asks for it (old profiles have no key)")
+M.db.profile.showBattleRez = true
+M:UpdateBattleRez()
+check(rez.shown and rez.count.text == 2, "charges shown during a key", tostring(rez.count.text))
+check(rez.cooldown.duration == rezDuration, "the recharge goes to the cooldown as a duration object")
+check(M.events.SPELL_UPDATE_CHARGES == "OnEvent", "listens for SPELL_UPDATE_CHARGES")
+
+rezInfo.currentCharges = secretCharges
+M:OnEvent("SPELL_UPDATE_CHARGES")
+check(rez.shown and rez.count.text == secretCharges, "a secret count is handed to the font string untouched")
+
+rezInfo.isActive = false
+M:OnEvent("SPELL_UPDATE_CHARGES")
+check(rawget(rez.cooldown, "duration") == nil and (rawget(rez.cooldown, "cleared") or 0) > 0, "no recharge running: the cooldown is cleared")
+
+M.db.profile.showTimer = false
+M:UpdateBattleRez()
+check(not rez.shown, "hidden with the timer")
+M.db.profile.showTimer = true
+M.db.profile.showBattleRez = false
+M:UpdateBattleRez()
+check(not rez.shown, "the switch hides it")
+M.db.profile.showBattleRez = true
+env.C_Spell = nil
+M:UpdateBattleRez()
+check(not rez.shown, "a client without C_Spell shows nothing")
+rezInfo.currentCharges, rezInfo.isActive = 2, true
+
+-------------------------------------------------------------------------------
+-- Blizzard's completion banner
+-------------------------------------------------------------------------------
+local banner = Widget("Frame")
+env.ChallengeModeCompleteBanner = banner
+M:UpdateSettings()
+check(rawget(banner, "alpha") == nil, "the banner is left alone unless asked")
+M.db.profile.hideBlizzardBanner = true
+M:UpdateSettings()
+check(banner.alpha == 0, "hidden by alpha when the card replaces it")
+M.db.profile.showCompletionCard = false
+M:UpdateSettings()
+check(banner.alpha == 1, "given back when the card is off")
+banner.alpha = .5
+M:UpdateSettings()
+check(banner.alpha == .5, "alpha we did not set is never touched")
+M.db.profile.showCompletionCard = true
+
+local bannerHook
+env.TopBannerManager_Show = function() end
+env.hooksecurefunc = function(name, fn) if (name == "TopBannerManager_Show") then bannerHook = fn end end
+M.bannerHooked = nil
+M:OnEnable()
+check(type(bannerHook) == "function", "post-hooks the top banner manager")
+banner.alpha = 1
+bannerHook(Widget("Frame"))
+check(banner.alpha == 1, "other banners are left alone")
+bannerHook(banner)
+check(banner.alpha == 0, "the completion banner is hidden as it is queued")
+M.db.profile.hideBlizzardBanner = false
+M:UpdateSettings()
+check(banner.alpha == 1, "and shown again when the switch is turned off")
+env.hooksecurefunc, env.TopBannerManager_Show, env.ChallengeModeCompleteBanner = nil, nil, nil
+
 -- The forces section's criteria, back for the settings below.
 client.criteria = {
 	{ description = "Boss", isWeightedProgress = false, quantity = 0, totalQuantity = 1, quantityString = "" },
@@ -616,6 +696,54 @@ do
 	client.activities = {}
 	Info:UpdateGreatVault()
 	check(not vault.shown, "no vault data, no counter")
+end
+
+-------------------------------------------------------------------------------
+-- Mythic+ rating (Core/API/Frames.lua), shared by the tooltip and party frames
+-------------------------------------------------------------------------------
+do
+	local ratingNS = { API = {} }
+	local summaries = {}
+	local rarity = { GetRGB = function() return 1, .5, 0 end, WrapTextInColorCode = function(_, s) return "<" .. s .. ">" end }
+	env.C_PlayerInfo = {
+		GetPlayerMythicPlusRatingSummary = function(unit)
+			local summary = summaries[unit]
+			if (summary == "error") then error("bad unit") end
+			return summary
+		end
+	}
+	env.C_ChallengeMode.GetDungeonScoreRarityColor = function() return rarity end
+	Load("Core/API/Frames.lua", ratingNS)
+	local GetRating = ratingNS.API.GetMythicPlusRating
+	check(type(GetRating) == "function", "the rating helper exists")
+
+	summaries.party1 = { currentSeasonScore = 2450, runs = {} }
+	local score, color = GetRating("party1")
+	check(score == 2450 and color == rarity, "score and its rarity colour", score)
+
+	summaries.party2 = { currentSeasonScore = 0, runs = {} }
+	check(GetRating("party2") == nil, "no rating, nothing to show")
+	check(GetRating("party3") == nil, "no summary, nothing to show")
+	summaries.party3 = "error"
+	check(GetRating("party3") == nil, "a call that raises shows nothing")
+
+	local secretScore = {}
+	client.secret[secretScore] = true
+	summaries.party4 = { currentSeasonScore = secretScore }
+	check(GetRating("party4") == nil, "a secret score is never compared")
+
+	local secretUnit = "raid1"
+	client.secret[secretUnit] = true
+	summaries.raid1 = { currentSeasonScore = 3000 }
+	check(GetRating(secretUnit) == nil, "a secret unit token is not passed on")
+	client.secret[secretUnit] = nil
+
+	env.C_ChallengeMode.GetDungeonScoreRarityColor = nil
+	score, color = GetRating("party1")
+	check(score == 2450 and color == nil, "no colour call: the score alone")
+
+	env.C_PlayerInfo = nil
+	check(GetRating("party1") == nil, "a client without the call shows nothing")
 end
 
 print(string.format("Mythic+: %d checks, %d failures", checks, failures))

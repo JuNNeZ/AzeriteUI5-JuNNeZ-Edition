@@ -19,6 +19,7 @@ CLIENTS = {
 # value: the AzeriteUI module that owns the replacement.
 REPLACED = {
     "ActionBar": "ActionBars",
+    "MainActionBarEndCap": "ActionBars (Forever gryphons)",
     "StatusTrackingBar": "Bars (XP/Rep)",
     "StatusTrackingBar1": "Bars (XP/Rep)",
     "StatusTrackingBar2": "Bars (XP/Rep)",
@@ -40,6 +41,9 @@ REPLACED = {
 TEMPLATE_RE = re.compile(r'<Frame\s+name="(EditMode\w+SystemTemplate)"[^>]*?inherits="([^"]*)"', re.S)
 SYSTEM_RE = re.compile(r'key="system"\s+value="Enum\.EditModeSystem\.(\w+)"')
 USE_RE = re.compile(r'<(?:Frame|Button|Cooldown|StatusBar|ScrollFrame|CheckButton|ModelScene|Model)\b[^>]*?\bname="(\w+)"[^>]*?\binherits="([^"]*EditMode\w+SystemTemplate[^"]*)"', re.S)
+# Systems with no global name, only a parentKey (Forever's MainActionBar.EndCaps.LeftEndCap and
+# RightEndCap). Reported as ".<parentKey>"; the file says which frame owns them.
+KEY_RE = re.compile(r'<(?:Frame|Button|StatusBar)\b(?![^>]*\bname=)[^>]*?\bparentKey="(\w+)"[^>]*?\binherits="([^"]*EditMode\w+SystemTemplate[^"]*)"', re.S)
 
 
 def template_systems(addons):
@@ -79,8 +83,9 @@ def audit(addons):
         if "Blizzard_EditMode" in path.parts:
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        for match in USE_RE.finditer(text):
-            frame, inherits = match.group(1), match.group(2)
+        matches = [(m.group(1), m.group(2)) for m in USE_RE.finditer(text)]
+        matches += [("." + m.group(1), m.group(2)) for m in KEY_RE.finditer(text)]
+        for frame, inherits in matches:
             templates = [t.strip() for t in inherits.split(",") if "EditMode" in t]
             for template in templates:
                 system = systems.get(template)

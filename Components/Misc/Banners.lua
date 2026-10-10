@@ -58,7 +58,6 @@ local defaults = { profile = ns:Merge({
 	HideBoss = false,
 	hideLevel = false,
 	hidePvP = false,
-	hideChallenges = false,
 	hideCovenant = false,
 	hideMajorFactions = false,
 	hideObjectives = false

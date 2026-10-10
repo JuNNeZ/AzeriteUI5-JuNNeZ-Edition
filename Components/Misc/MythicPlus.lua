@@ -85,8 +85,13 @@ local defaults = { profile = ns:Merge({
 	showBosses = true,
 	hideBlizzardTracker = true,
 	showCompletionCard = true,
+	hideBlizzardBanner = false,
+	showBattleRez = true,
 	autoSlotKeystone = true
 }, ns.MovableModulePrototype.defaults) }
+
+-- Rebirth. In a key every class reads the group's shared battle rez pool through it.
+local BATTLE_REZ_SPELL = 20484
 
 MythicPlus.GenerateDefaults = function(self)
 	defaults.profile.savedPosition = {
@@ -271,6 +276,35 @@ MythicPlus.PrepareFrames = function(self)
 	nextLevel:SetFontObject(GetFont(12, true))
 	nextLevel:SetPoint("TOP", timer, "BOTTOM", 0, -6)
 	frame.nextLevel = nextLevel
+
+	-- Battle rez: the shared charges and the recharge. Both are secret in a key, so the
+	-- count goes straight into the font string and the recharge into the cooldown.
+	local rez = CreateFrame("Frame", nil, frame)
+	rez:SetSize(16, 16)
+	rez:SetPoint("TOPLEFT", timer, "BOTTOMLEFT", 0, -4)
+	rez:Hide()
+
+	local rezIcon = rez:CreateTexture(nil, "ARTWORK")
+	rezIcon:SetAllPoints()
+	rezIcon:SetTexCoord(.08, .92, .08, .92)
+	local spellTexture = C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(BATTLE_REZ_SPELL)
+	rezIcon:SetTexture(Number(spellTexture) or [[Interface\Icons\Spell_Nature_Reincarnation]])
+	rez.icon = rezIcon
+
+	local rezCooldown = CreateFrame("Cooldown", nil, rez, "CooldownFrameTemplate")
+	rezCooldown:SetAllPoints()
+	rezCooldown:SetDrawEdge(false)
+	rezCooldown:SetDrawBling(false)
+	rezCooldown:SetHideCountdownNumbers(true)
+	rez.cooldown = rezCooldown
+
+	local rezCount = rez:CreateFontString(nil, "OVERLAY")
+	rezCount:SetFontObject(GetFont(13, true))
+	rezCount:SetTextColor(unpack(Colors.offwhite))
+	rezCount:SetPoint("LEFT", rez, "RIGHT", 4, 0)
+	rez.count = rezCount
+
+	frame.rez = rez
 
 	local forces = CreateBar(frame)
 	forces:SetStatusBarColor(unpack(Colors.normal))
@@ -657,6 +691,65 @@ MythicPlus.UpdateBosses = function(self)
 	end
 end
 
+-- The group's battle rez charges for the running key. C_Spell.GetSpellCharges is
+-- SecretWhenCooldownsRestricted, which a key is, so currentCharges is never compared
+-- or added to anything: it is handed to the font string as it comes. isActive is
+-- documented NeverSecret. The recharge is a duration object for the cooldown widget,
+-- fed the way the cooldown-ready alerts feed theirs.
+MythicPlus.UpdateBattleRez = function(self)
+	local frame = self.frame
+	local rez = frame and frame.rez
+	if (not rez) then return end
+
+	local db = self.db.profile
+	local spell = C_Spell
+	local info
+	if (self.timerID and db.showTimer and db.showBattleRez and spell and type(spell.GetSpellCharges) == "function") then
+		local ok, result = pcall(spell.GetSpellCharges, BATTLE_REZ_SPELL)
+		if (ok and type(result) == "table" and not IsSecret(result)) then
+			info = result
+		end
+	end
+	if (not info) then
+		rez:Hide()
+		return
+	end
+
+	if (not pcall(rez.count.SetText, rez.count, info.currentCharges)) then
+		rez.count:SetText("")
+	end
+
+	local fed = false
+	if (info.isActive == true and type(spell.GetSpellChargeDuration) == "function") then
+		local ok, duration = pcall(spell.GetSpellChargeDuration, BATTLE_REZ_SPELL)
+		if (ok and duration and type(rez.cooldown.SetCooldownFromDurationObject) == "function") then
+			fed = pcall(rez.cooldown.SetCooldownFromDurationObject, rez.cooldown, duration, true)
+		end
+	end
+	if (not fed and rez.cooldown.Clear) then
+		rez.cooldown:Clear()
+	end
+
+	rez:Show()
+end
+
+-- Blizzard's own completion banner, hidden by alpha while our card replaces it. The
+-- banner's AnimIn animates its children, never the frame, so the frame's alpha holds.
+-- Only alpha we set ourselves is ever put back.
+MythicPlus.UpdateBlizzardBanner = function(self)
+	local banner = _G.ChallengeModeCompleteBanner
+	if (not banner or not banner.SetAlpha) then return end
+
+	local db = self.db.profile
+	if (db.showCompletionCard and db.hideBlizzardBanner) then
+		banner:SetAlpha(0)
+		self.bannerHidden = true
+	elseif (self.bannerHidden) then
+		banner:SetAlpha(1)
+		self.bannerHidden = nil
+	end
+end
+
 -- Blizzard's tracker shows the same key, so it goes while ours is up. Alpha only,
 -- through the Tracker module, which owns every other reason to hide it.
 MythicPlus.SetTrackerHidden = function(self, hidden)
@@ -684,6 +777,7 @@ MythicPlus.UpdateVisibility = function(self)
 	frame.forces:SetShown(db.showForces)
 
 	self:UpdateLayout()
+	self:UpdateBattleRez()
 
 	frame:SetShown(active)
 	self:SetTrackerHidden(active and db.hideBlizzardTracker)
@@ -814,6 +908,9 @@ MythicPlus.OnEvent = function(self, event, ...)
 	elseif (event == "CHALLENGE_MODE_DEATH_COUNT_UPDATED") then
 		if (self.timerID) then self:UpdateDeaths() end
 
+	elseif (event == "SPELL_UPDATE_CHARGES") then
+		if (self.timerID) then self:UpdateBattleRez() end
+
 	elseif (event == "SCENARIO_CRITERIA_UPDATE" or event == "SCENARIO_POI_UPDATE") then
 		if (self.timerID) then
 			self:UpdateForces()
@@ -849,6 +946,7 @@ end
 
 MythicPlus.UpdateSettings = function(self)
 	self:UpdateVisibility()
+	self:UpdateBlizzardBanner()
 end
 
 MythicPlus.OnEnable = function(self)
@@ -867,11 +965,23 @@ MythicPlus.OnEnable = function(self)
 		"WORLD_STATE_TIMER_STOP",
 		"SCENARIO_CRITERIA_UPDATE",
 		"SCENARIO_POI_UPDATE",
+		"SPELL_UPDATE_CHARGES",
 		"PLAYER_ENTERING_WORLD"
 	}) do
 		if (ns.API.IsEventAvailable(event)) then
 			self:RegisterEvent(event, "OnEvent")
 		end
+	end
+
+	-- Blizzard_ChallengesUI loads on demand and queues its banner through the top banner
+	-- manager, so the alpha is set each time the banner is queued.
+	if (type(TopBannerManager_Show) == "function" and not self.bannerHooked) then
+		self.bannerHooked = true
+		hooksecurefunc("TopBannerManager_Show", function(frame)
+			if (frame and frame == _G.ChallengeModeCompleteBanner) then
+				self:UpdateBlizzardBanner()
+			end
+		end)
 	end
 
 	self:CheckTimers()

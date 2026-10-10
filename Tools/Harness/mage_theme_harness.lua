@@ -107,7 +107,7 @@ for name in pairs(theme.Media) do
 	local disk = io.open(root.."/Assets/Mage/"..name..".tga", "rb")
 	check(disk, "shipped: "..name); if (disk) then disk:close() end
 end
-check(count == 30, "all 30 casings from the manifest")
+check(count == 32, "30 casings plus two shaped borders from the manifest")
 for _, name in ipairs({ "hp_cap_bar", "cast_bar", "orb2", "point_gem" }) do
 	check(not GetMedia(name):find("\\Mage\\", 1, true), "shared original kept: "..name)
 end

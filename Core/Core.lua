@@ -78,7 +78,11 @@ local defaults = {
 	},
 	profile = {
 		autoLoadEditModeLayout = true,
-		editModeLayout = ns.Prefix
+		editModeLayout = ns.Prefix,
+		-- /lock movers: show them while Blizzard's Edit Mode is open, and snap them
+		-- to the screen, the grid and each other. See Core/MovableFrameManager.lua.
+		moversInEditMode = true,
+		moverSnapping = true
 	}
 }
 

@@ -10,6 +10,32 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.22.0-JuNNeZ (2026-10-10) - Edit Mode, Snapping and Mythic+ Extras
+
+### Highlights
+
+- **AzeriteUI's frames move in Blizzard's Edit Mode.** Open Edit Mode and every frame you would move with `/lock` shows up there too, so Blizzard's frames and AzeriteUI's are arranged in one place. Turn it off with **Show in Edit Mode** in the `/lock` window. `/lock` itself is unchanged and stays available.
+- **Frames snap into place.** A frame you drag, in Edit Mode or `/lock`, snaps to the screen's edges and center, to other AzeriteUI frames, and to the Edit Mode grid when it is shown, with a gold guide line where it lines up. In Edit Mode it follows Blizzard's **Enable Snap** box; hold **Alt** to place a frame freely, or turn snapping off in the `/lock` window.
+- **A cleaner Edit Mode.** Blizzard's outlines no longer show for frames AzeriteUI replaces: the cast bar, party frames, extra ability buttons, encounter bar, durability figure, the queue eye on the minimap, the tooltip position while AzeriteUI places tooltips, and on WoW Forever the two action bar gryphons.
+- **Square and Rounded buttons in Mage and Hunter metal.** The Rounded and Square button shapes (`/az` -> Action Bars -> Button Shape) and the Cooldown Manager's square and rounded icons now wear the Mage or Hunter border while that theme is active, instead of AzeriteUI's.
+- **Mythic+ extras** (`/az` -> Mythic+): the group's **battle rez charges** under the key timer, with the time until the next one, and an option to **hide Blizzard's completion banner** so only AzeriteUI's end-of-run card shows. Explorer Mode gets **During a Mythic+ key**, which keeps the interface up during a key even if you let it fade in other dungeons.
+- **Mythic+ rating** for each party member, in the top right corner of their frame (`/az` -> Unit Frames -> Party Frames) and in player tooltips (`/az` -> Tooltips). Both are off by default.
+- **Aura timer colors can be turned off.** `/az` -> Unit Frames -> **Color Aura Timers** keeps aura countdowns white instead of turning yellow, orange and red. Changing it reloads the interface.
+
+### Development
+
+- AzeriteUI does not register its frames as Edit Mode systems, which would taint Edit Mode for every frame in it. It listens for Edit Mode opening and closing instead, and copies Blizzard's own snapping rules (an 8 pixel range, the screen, the grid and other frames) for its movers. An offline taint test models Blizzard's callback registry and confirms Edit Mode stays secure.
+- The leftover Edit Mode outlines on WoW Forever were found with a new `/azdebug editmode` report that lists every Blizzard frame whose outline is on screen. It showed that Forever's gryphons are Edit Mode systems of their own, which the tools had missed.
+- The Mage and Hunter square borders were built from each theme's own round border material and keep the exact shape and transparency of AzeriteUI's square borders, so button sizes, spacing and saved layouts do not change. Tests check the art's outline, the rebuild and the routing for every bar, viewer and skin.
+- Two future features were measured before being built. A test command showed that 160 aura trackers, enough for corner indicators on a 40-player raid, cost no measurable frame time in combat, so corner aura dots can go ahead. A second test showed that Blizzard's aura trackers cannot pick out Sated or Exhaustion, but those debuffs can be read directly, in combat too, so a "can lust again" indicator for group frames can be built that way.
+
+### Access and known limits
+
+- Edit Mode movers, snapping with the grid and Alt, and the hidden gryphon and cast bar outlines were confirmed live on WoW Forever. The other hidden outlines, and everything on Retail, are offline-tested.
+- The Mythic+ additions (battle rez, banner, rating and Explorer Mode in a key) have not yet been seen in a key. Rating needs Retail.
+- Square and Rounded Mage and Hunter borders are offline-tested only.
+- Edit Mode still shows Blizzard's outlines for the objective tracker (moved in Edit Mode), Loss of Control and, on Forever, the totem bar; those frames belong to Blizzard.
+
 ## 5.21.0-JuNNeZ (2026-10-10) - What's New Popup and Even Aura Rows
 
 ### Highlights

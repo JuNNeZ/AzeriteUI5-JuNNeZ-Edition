@@ -36,6 +36,27 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.22.0-JuNNeZ",
+		items = {
+			{
+				text = "AzeriteUI's frames now show in Blizzard's Edit Mode and snap to edges, the grid and each other. /lock still works."
+			},
+			{
+				text = "Square and Rounded buttons wear the Mage or Hunter border with those themes.",
+				page = L["Action Bars"]
+			},
+			{
+				text = "Mythic+: battle rez charges under the timer, and Blizzard's end banner can be hidden.",
+				page = "MythicPlus"
+			},
+			{
+				text = "Show each party member's Mythic+ rating on their frame (off by default).",
+				page = L["Unit Frames"],
+				section = L["Party Frames"]
+			}
+		}
+	},
+	{
 		version = "5.21.0-JuNNeZ",
 		items = {
 			{

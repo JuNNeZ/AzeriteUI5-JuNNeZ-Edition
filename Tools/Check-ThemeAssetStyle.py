@@ -96,6 +96,11 @@ def check(path):
                     fails.append(f'opening {list(found)} covers part of the meter {m}')
                 elif found[1] < m[1] - slack or found[3] > m[3] + slack:
                     fails.append(f'opening {list(found)} is taller than the meter {m} by more than {slack} px: a gap shows around the fill')
+    # Bounds alone cannot detect a changed square/rounded corner radius.
+    if name in ('actionbutton-border-square', 'actionbutton-border-square-rounded') and original.exists():
+        native = Image.open(original).convert('RGBA')
+        if native.size == im.size and native.getchannel('A').tobytes() != im.getchannel('A').tobytes():
+            fails.append('square/rounded alpha differs from original; corners, glass and shadow must match exactly')
     if original.exists() and Image.open(original).size == im.size:
         oa = np.asarray(Image.open(original).convert('RGBA')).astype(np.float32); osolid = oa[..., 3] > 200; both = solid & osolid
         if both.sum() > 64 and both.sum() / max((solid | osolid).sum(), 1) > .9:

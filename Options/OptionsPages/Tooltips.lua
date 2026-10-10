@@ -160,6 +160,16 @@ local GenerateOptions = function()
 				set = setter,
 				get = getter
 			},
+			-- Retail only: Forever has no Mythic+ rating.
+			showMythicPlusRating = {
+				name = L["Show Mythic+ rating"],
+				desc = L["Add a player's Mythic+ rating for this season to their tooltip, in the color the game gives that score."],
+				order = 22,
+				type = "toggle", width = "full",
+				hidden = function() return not ns.IsRetailContent end,
+				set = setter,
+				get = getter
+			},
 			anchorHeader = {
 				name = L["Position"],
 				order = 29,

@@ -76,6 +76,15 @@ local GenerateOptions = function()
 				set = setter,
 				get = getter
 			},
+			showBattleRez = {
+				name = L["Show battle rez charges"],
+				desc = L["The group's battle resurrection charges under the key timer, with the time until the next one comes back."],
+				order = 10.2,
+				type = "toggle", width = "full",
+				disabled = function(info) return not getmodule().db.profile.showTimer end,
+				set = setter,
+				get = getter
+			},
 			showForces = {
 				name = L["Show enemy forces"],
 				desc = L["A bar for the enemy forces counted so far."],
@@ -105,6 +114,15 @@ local GenerateOptions = function()
 				desc = L["When a key ends: your time, how many levels the keystone went up, your new rating, and whether it was your best time. Click it to close it."],
 				order = 12,
 				type = "toggle", width = "full",
+				set = setter,
+				get = getter
+			},
+			hideBlizzardBanner = {
+				name = L["Hide Blizzard's completion banner"],
+				desc = L["Show only the end-of-run card when a key ends, without Blizzard's banner above it. Blizzard still writes the result to chat."],
+				order = 12.1,
+				type = "toggle", width = "full",
+				disabled = function(info) return not getmodule().db.profile.showCompletionCard end,
 				set = setter,
 				get = getter
 			},

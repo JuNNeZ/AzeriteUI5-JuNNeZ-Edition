@@ -440,6 +440,11 @@ local policies = {
 			members = AURA_SORT_FRAMES,
 			explain = L["Applies to auras on target, group and arena frames and nameplates."]
 		},
+		-- Applies on the reload the setting asks for, so there is nothing to outline live.
+		auraTimerColors = {
+			kind = "explain",
+			explain = L["Changing this reloads the interface."]
+		},
 		showIncomingHeals = healthPolicy,
 		showOverhealIndicator = healthPolicy,
 		showDamageAbsorbs = healthPolicy,

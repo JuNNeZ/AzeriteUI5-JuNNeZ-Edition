@@ -2,6 +2,8 @@
 local _, ns = ...
 ns.HunterMedia = {
 	["actionbutton-border"] = true,
+	["actionbutton-border-square"] = true,
+	["actionbutton-border-square-rounded"] = true,
 	["actionbutton-glow-white"] = true,
 	["better-blizzard-border-small-alternate"] = true,
 	["border-aura"] = true,

@@ -71,6 +71,7 @@ local defaults = { profile = ns:Merge({
 	fadeInCombat = false,
 	fadeInGroups = false,
 	fadeInInstances = false,
+	fadeInMythicPlus = false,
 	fadeWithFriendlyTarget = false,
 	fadeWithHostileTarget = false,
 	fadeWithDeadTarget = true,
@@ -421,6 +422,7 @@ ExplorerMode.CheckForForcedState = function(self)
 	or (self.isDragonRiding and not db.fadeInVehicles)
 	or (self.inVehicle and not db.fadeInVehicles)
 	or (self.inInstance and not db.fadeInInstances)
+	or (self.inMythicPlus and not db.fadeInMythicPlus)
 	or (self.lowHealth and not db.fadeWithLowHealth)
 	or (self.lowPower and not db.fadeWithLowMana)
 	--or (self.badAura)
@@ -608,6 +610,21 @@ ExplorerMode.CheckInstance = function(self)
 	self.inInstance = nil
 end
 
+-- Whether a Mythic+ key is running. Not secret, and Forever has no keys, where the
+-- call is missing or answers false.
+ExplorerMode.CheckMythicPlus = function(self)
+	local challengeMode = C_ChallengeMode
+	local isActive = challengeMode and challengeMode.IsChallengeModeActive
+	if (type(isActive) == "function") then
+		local ok, active = pcall(isActive)
+		if (ok and active == true) then
+			self.inMythicPlus = true
+			return
+		end
+	end
+	self.inMythicPlus = nil
+end
+
 ExplorerMode.OnTimedForcedStateEnd = function(self)
 	if (self.delayTimer) then
 		self:CancelTimer(self.delayTimer)
@@ -676,6 +693,7 @@ ExplorerMode.OnEvent = function(self, event, ...)
 		self.inCombat = InCombatLockdown()
 
 		self:CheckInstance()
+		self:CheckMythicPlus()
 		self:CheckGroup()
 		self:CheckTarget()
 
@@ -768,6 +786,12 @@ ExplorerMode.OnEvent = function(self, event, ...)
 
 	elseif (event == "ZONE_CHANGED_NEW_AREA") then
 		self:CheckInstance()
+		self:CheckMythicPlus()
+
+	elseif (event == "CHALLENGE_MODE_START")
+		or (event == "CHALLENGE_MODE_COMPLETED")
+		or (event == "CHALLENGE_MODE_RESET") then
+		self:CheckMythicPlus()
 	end
 
 	self:UpdateSettings()
@@ -798,6 +822,13 @@ ExplorerMode.EnableExplorerMode = function(self)
 	self:RegisterUnitEvent("UNIT_ENTERING_VEHICLE", "OnEvent", "player")
 	self:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "OnEvent", "player")
 	self:RegisterUnitEvent("UNIT_EXITING_VEHICLE", "OnEvent", "player")
+
+	-- Mythic+ keys starting and ending. Missing on Forever.
+	for _, event in ipairs({ "CHALLENGE_MODE_START", "CHALLENGE_MODE_COMPLETED", "CHALLENGE_MODE_RESET" }) do
+		if (ns.API.IsEventAvailable(event)) then
+			self:RegisterEvent(event, "OnEvent")
+		end
+	end
 
 	-- This is needed to put actionbars that were exempt from Explorer Mode fading
 	-- back into it when their own full fading has been disabled.
@@ -831,6 +862,13 @@ ExplorerMode.DisableExplorerMode = function(self)
 	self:UnregisterEvent("UNIT_ENTERING_VEHICLE", "OnEvent", "player")
 	self:UnregisterEvent("UNIT_EXITED_VEHICLE", "OnEvent", "player")
 	self:UnregisterEvent("UNIT_EXITING_VEHICLE", "OnEvent", "player")
+
+	for _, event in ipairs({ "CHALLENGE_MODE_START", "CHALLENGE_MODE_COMPLETED", "CHALLENGE_MODE_RESET" }) do
+		if (ns.API.IsEventAvailable(event)) then
+			self:UnregisterEvent(event, "OnEvent")
+		end
+	end
+	self.inMythicPlus = nil
 
 	-- This is needed to put actionbars that were exempt from Explorer Mode fading
 	-- back into it when their own full fading has been disabled.

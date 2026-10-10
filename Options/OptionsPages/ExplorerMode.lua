@@ -242,6 +242,16 @@ local GenerateOptions = function()
 				set = setterReverse, get = getterReverse, disabled = isdisabled, hidden = isdisabled,
 				order = 35
 			},
+			-- Separate from instances, so a player who lets the interface fade in
+			-- dungeons still keeps it during a key. Retail only, like Mythic+ itself.
+			fadeInMythicPlus = {
+				name = L["During a Mythic+ key"],
+				desc = L["Keep your interface visible while a Mythic+ key is running, even if you let it fade in other instances."],
+				type = "toggle", width = "full",
+				set = setterReverse, get = getterReverse, disabled = isdisabled,
+				hidden = function(info) return (not ns.IsRetailContent) or isdisabled(info) end,
+				order = 35.5
+			},
 			fadeWithFriendlyTarget = {
 				name = L["While having a friendly target"],
 				desc = L["Keep your interface visible while you have a friendly target selected."],

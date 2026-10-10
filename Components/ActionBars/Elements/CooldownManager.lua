@@ -50,10 +50,9 @@ local Addon, ns = ...
 	AzeriteUI, or one theme's art through that theme's ResolveOwnMedia, whatever
 	the rest of the interface wears (Paladin only in Development Mode, as on the
 	Themes page). It changes live, since only this module's textures move.
-	The square and rounded styles are always the AzeriteUI set, read
-	straight from Assets/, because no theme has square art yet; see
-	Docs/Theme Engine Plan.md, "Cooldown Manager". A theme switch reloads the
-	interface, so the art is picked once per session.
+	Square and rounded follow the same skin choice: Mage and Hunter supply
+	borders, while masks and backdrops stay shared. Themes without these
+	borders fall back to AzeriteUI art. A theme switch reloads the interface.
 
 	Hooks are post-hooks on each viewer (hooksecurefunc), and per-item state lives
 	in a weak table here, so nothing is written into Blizzard's frame tables.
@@ -120,13 +119,15 @@ local STYLES = {
 		mask = "actionbutton-mask-square",
 		backdrop = "actionbutton-backdrop-square",
 		border = "actionbutton-border-square",
-		icon = 1.14, deco = (216 / 118) / 1.14
+		icon = 1.14, deco = (216 / 118) / 1.14,
+		themed = true
 	},
 	rounded = {
 		mask = "actionbutton-mask-square-rounded",
 		backdrop = "actionbutton-backdrop-square-rounded",
 		border = "actionbutton-border-square-rounded",
-		icon = 1.18, deco = (216 / 118) / 1.18
+		icon = 1.18, deco = (216 / 118) / 1.18,
+		themed = true
 	},
 	circular = {
 		mask = "actionbutton-mask-circular",

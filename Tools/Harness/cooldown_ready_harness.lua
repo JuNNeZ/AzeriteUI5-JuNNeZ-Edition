@@ -236,9 +236,10 @@ local function ReadyTests(flavor)
   check(state.iconFlash.solidColor[4]==.5,flavor.." wash retains icon details")
   check(state.iconFlash.parent==state.pulse and state.iconFlash.drawLayer=="ARTWORK"
    and state.glow.drawLayer=="OVERLAY",flavor.." icon wash below outer accent on owned foreground frame")
-  local expectedMask=style=="circular" and "THEMED:actionbutton-mask-circular" or Assets("actionbutton-mask-"..style:gsub("rounded","square-rounded"))
+  -- Only borders go through the theme (cooldown_manager_harness GetMedia); masks and glows stay shared.
+  local expectedMask=style=="circular" and Assets("actionbutton-mask-circular") or Assets("actionbutton-mask-"..style:gsub("rounded","square-rounded"))
   check(state.iconMask.texture==expectedMask,flavor.." full icon uses fill mask not outline")
-  local wanted=style=="circular" and "THEMED:actionbutton-spellhighlight" or Assets("actionbutton-spellhighlight-square-rounded")
+  local wanted=style=="circular" and Assets("actionbutton-spellhighlight") or Assets("actionbutton-spellhighlight-square-rounded")
   check(state.glow.texture==wanted,flavor.." "..style.." art")
   if style=="circular" then
    check(not state.borderFlash.shown and state.duration==.8,flavor.." circular effect unchanged")
@@ -246,7 +247,7 @@ local function ReadyTests(flavor)
   else
    local suffix=style=="rounded" and "-rounded" or ""
    local size=50*216/118
-   check(state.borderFlash.shown and state.borderMask.texture==Assets("actionbutton-border-square"..suffix),flavor.." full metal flashes")
+   check(state.borderFlash.shown and state.borderMask.texture=="THEMED:actionbutton-border-square"..suffix,flavor.." full metal flashes")
    local color=state.borderFlash.solidColor
    check(color and color[1]==1 and color[2]==.85 and color[3]==.45 and color[4]==1,flavor.." bright color independent of dark metal RGB")
    check(state.borderFlash.masks and state.borderFlash.masks[state.borderMask]

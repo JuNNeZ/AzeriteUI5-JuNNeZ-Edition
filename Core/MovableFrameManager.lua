@@ -29,7 +29,6 @@ local _, ns = ...
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local MovableFramesManager = ns:NewModule("MovableFramesManager", "LibMoreEvents-1.0", "AceConsole-3.0", "AceHook-3.0")
-local EMP --= ns:GetModule("EditMode", true)
 
 local AceGUI = LibStub("AceGUI-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
@@ -76,6 +75,97 @@ OUTLINE:SetFrameLevel(10000)
 -- Anchor cache
 local AnchorData = {}
 local AnchorProxies = {}
+
+-- Snapping
+--------------------------------------
+-- Guide lines shown while a dragged mover sits snapped to a line. Plain textures on
+-- our own frame; Blizzard's snap preview lines are left alone.
+local GUIDES
+local GetGuides = function()
+	if (GUIDES) then return GUIDES end
+	local frame = CreateFrame("Frame", nil, UIParent)
+	frame:SetAllPoints()
+	frame:SetFrameStrata("HIGH")
+	frame:SetFrameLevel(10001)
+	frame:EnableMouse(false)
+	local vertical = frame:CreateTexture(nil, "OVERLAY")
+	vertical:SetColorTexture(Colors.title[1], Colors.title[2], Colors.title[3], .85)
+	vertical:SetWidth(2)
+	vertical:Hide()
+	local horizontal = frame:CreateTexture(nil, "OVERLAY")
+	horizontal:SetColorTexture(Colors.title[1], Colors.title[2], Colors.title[3], .85)
+	horizontal:SetHeight(2)
+	horizontal:Hide()
+	GUIDES = { frame = frame, vertical = vertical, horizontal = horizontal }
+	return GUIDES
+end
+
+local HideGuides = function()
+	if (not GUIDES) then return end
+	GUIDES.vertical:Hide()
+	GUIDES.horizontal:Hide()
+end
+
+local ShowGuide = function(texture, isVertical, offset)
+	texture:ClearAllPoints()
+	if (isVertical) then
+		texture:SetPoint("TOP", UIParent, "TOPLEFT", offset, 0)
+		texture:SetPoint("BOTTOM", UIParent, "BOTTOMLEFT", offset, 0)
+	else
+		texture:SetPoint("LEFT", UIParent, "BOTTOMLEFT", 0, offset)
+		texture:SetPoint("RIGHT", UIParent, "BOTTOMRIGHT", 0, offset)
+	end
+	texture:Show()
+end
+
+local IsEditModeActive = function()
+	local editMode = EditModeManagerFrame
+	return editMode and editMode.IsEditModeActive and editMode:IsEditModeActive() and true or false
+end
+
+-- Snapping follows our own switch, and while Blizzard's Edit Mode is open also its
+-- Enable Snap checkbox. Holding Alt places a frame freely.
+local IsSnapEnabled = function()
+	local profile = ns.db and ns.db.profile
+	if (profile and profile.moverSnapping == false) then return false end
+	if (IsAltKeyDown and IsAltKeyDown()) then return false end
+	if (IsEditModeActive() and EditModeManagerFrame.IsSnapEnabled) then
+		return EditModeManagerFrame:IsSnapEnabled() and true or false
+	end
+	return true
+end
+
+-- The lines a dragged mover may snap to, in UIParent units from its bottom left:
+-- the screen's edges and centre, the Edit Mode grid while it is shown, and the
+-- edges and centres of every other mover on screen.
+local GetSnapTargets = function(dragged)
+	local uiLeft, uiBottom = UIParent:GetLeft() or 0, UIParent:GetBottom() or 0
+	local uiWidth, uiHeight = UIParent:GetWidth(), UIParent:GetHeight()
+	local xTargets = { 0, uiWidth / 2, uiWidth }
+	local yTargets = { 0, uiHeight / 2, uiHeight }
+
+	local grid = IsEditModeActive() and EditModeManagerFrame.Grid
+	if (grid and grid:IsShown() and type(grid.gridSpacing) == "number") then
+		ns.API.AddGridLines(xTargets, uiWidth / 2, uiWidth, grid.gridSpacing)
+		ns.API.AddGridLines(yTargets, uiHeight / 2, uiHeight, grid.gridSpacing)
+	end
+
+	for anchor in next, AnchorData do
+		if (anchor ~= dragged and anchor:IsShown()) then
+			local left, bottom, width, height = anchor:GetRect()
+			if (left and width and width > 0 and height > 0) then
+				left, bottom = left - uiLeft, bottom - uiBottom
+				xTargets[#xTargets + 1] = left
+				xTargets[#xTargets + 1] = left + width / 2
+				xTargets[#xTargets + 1] = left + width
+				yTargets[#yTargets + 1] = bottom
+				yTargets[#yTargets + 1] = bottom + height / 2
+				yTargets[#yTargets + 1] = bottom + height
+			end
+		end
+	end
+	return xTargets, yTargets
+end
 
 -- Utility
 --------------------------------------
@@ -758,6 +848,7 @@ Anchor.OnDragStart = function(self, button)
 	--fy = fy * frameScale
 
 	anchorData.dragStartPosition = { fx - (w/2), fy - (h/2) }
+	anchorData.isDragging = true
 	--anchorData.dragStartPosition = { fx - (w/2)*frameScale, fy - (h/2)*frameScale }
 
 	-- Treat the dragged frame as clicked.
@@ -795,6 +886,26 @@ Anchor.UpdateOverlay = function(self)
 	fx = anchorData.restrictToVertical and anchorData.dragStartPosition[1] or (fx - (w/2))
 	fy = anchorData.restrictToHorizontal and anchorData.dragStartPosition[2] or (fy - (h/2))
 
+	-- Snap an edge or the centre onto a nearby line, per axis, and show where.
+	local snappedX, snappedY
+	if (IsSnapEnabled()) then
+		local range = ns.API.SNAP_RANGE / (UIParent:GetEffectiveScale() or 1)
+		local xTargets, yTargets = GetSnapTargets(self)
+		if (not anchorData.restrictToVertical) then
+			local delta, line = ns.API.FindSnap(fx, w, xTargets, range)
+			if (delta) then fx, snappedX = fx + delta, line end
+		end
+		if (not anchorData.restrictToHorizontal) then
+			local delta, line = ns.API.FindSnap(fy, h, yTargets, range)
+			if (delta) then fy, snappedY = fy + delta, line end
+		end
+	end
+	local guides = (snappedX or snappedY or GUIDES) and GetGuides()
+	if (guides) then
+		if (snappedX) then ShowGuide(guides.vertical, true, snappedX) else guides.vertical:Hide() end
+		if (snappedY) then ShowGuide(guides.horizontal, false, snappedY) else guides.horizontal:Hide() end
+	end
+
 	self.Overlay:SetSize(w,h)
 	self.Overlay:ClearAllPoints()
 	self.Overlay:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", fx, fy)
@@ -806,7 +917,14 @@ Anchor.OnDragStop = function(self)
 
 	self:StopMovingOrSizing()
 	self:SetScript("OnUpdate", nil)
-	--self:UpdateOverlay()
+	-- One last pass at the release point, so the frame lands where it snapped
+	-- rather than where the last 0.05 s tick left the overlay. Only after a real
+	-- drag: a mover that may not move gets OnDragStop too.
+	if (anchorData.isDragging) then
+		self:UpdateOverlay()
+	end
+	anchorData.isDragging = nil
+	HideGuides()
 
 	local point, x, y = getPosition(self.Overlay, (self:IsAnchorPointLocked() and self:GetPosition()))
 
@@ -871,6 +989,7 @@ end
 Anchor.OnHide = function(self)
 	self:SetScript("OnUpdate", nil)
 	self.elapsed = 0
+	HideGuides()
 end
 
 Anchor.OnUpdate = function(self, elapsed)
@@ -1062,56 +1181,31 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 	}
 	orderoffset = orderoffset + 20
 
-	-- EditMode integration
-	if (EMP) then
-		options.args.editmodeHeader = {
-			type = "header",
-			order = orderoffset + 30,
-			name = L["HUD Edit Mode"]
-		}
-		options.args.editmodeCreateDescription = {
-			type = "description",
-			order = orderoffset + 31,
-			fontSize = "medium",
-			hidden = function(info)
-				return MovableFramesManager.incombat or EMP:DoesDefaultLayoutExist()
-			end,
-			name = string_format(L["Click the button below to create an EditMode preset named '%s'."], ns.Prefix)
-		}
-		options.args.editmodeCreateButton = {
-			type = "execute",
-			order = orderoffset + 32,
-			width = "full",
-			name = L["Create EditMode Layout"],
-			hidden = function(info)
-				return MovableFramesManager.incombat or EMP:DoesDefaultLayoutExist()
-			end,
-			func = function(info)
-				EMP:ResetLayouts()
-			end
-		}
-		options.args.editmodeResetDescription = {
-			type = "description",
-			order = orderoffset + 33,
-			fontSize = "medium",
-			hidden = function(info)
-				return MovableFramesManager.incombat or not EMP:CanEditActiveLayout()
-			end,
-			name = L["Click the button below to reset the currently selected EditMode preset to positions matching the default layout."]
-		}
-		options.args.editmodeResetPreset = {
-			type = "execute",
-			order = orderoffset + 34,
-			width = "full",
-			name = L["Reset EditMode Layout"],
-			hidden = function(info)
-				return MovableFramesManager.incombat or not EMP:CanEditActiveLayout()
-			end,
-			func = function(info)
-				EMP:ApplySystems()
-			end
-		}
-	end
+	-- How movers behave: with Blizzard's Edit Mode, and when dragged near a line.
+	options.args.moversHeader = {
+		type = "header",
+		order = orderoffset + 40,
+		name = L["Moving Frames"]
+	}
+	options.args.moversInEditMode = {
+		type = "toggle", width = "full",
+		order = orderoffset + 41,
+		name = L["Show in Edit Mode"],
+		desc = L["Show these frames while Blizzard's Edit Mode is open, so you can move Blizzard's frames and AzeriteUI's together."],
+		get = function() return not (ns.db.profile.moversInEditMode == false) end,
+		set = function(info, val)
+			ns.db.profile.moversInEditMode = val and true or false
+			MovableFramesManager:RefreshEditModeAnchors()
+		end
+	}
+	options.args.moverSnapping = {
+		type = "toggle", width = "full",
+		order = orderoffset + 42,
+		name = L["Snap to edges and other frames"],
+		desc = L["A dragged frame snaps to the screen's edges and center, to other frames, and to the Edit Mode grid when it is shown. Hold Alt while dragging to place it freely."],
+		get = function() return not (ns.db.profile.moverSnapping == false) end,
+		set = function(info, val) ns.db.profile.moverSnapping = val and true or false end
+	}
 
 	local colorize = function(msg)
 		msg = string.gsub(msg, "<", "|cffffd200<")
@@ -1287,10 +1381,45 @@ MovableFramesManager.UpdateMovableFrameAnchors = function(self)
 end
 
 MovableFramesManager.HideMovableFrameAnchors = function(self)
-	if (not self.app.frame:IsShown()) then
+	if (not self.app.frame:IsShown() and not self.editModeShowsAnchors) then
 		for anchor in next,AnchorData do
 			anchor:Hide()
 		end
+	end
+end
+
+-- Blizzard's Edit Mode: our movers come and go with it, so one tool moves both
+-- Blizzard's frames and ours. EventRegistry runs these callbacks through
+-- securecallfunction (CallbackRegistry.lua, TriggerEvent), so nothing of ours runs
+-- inside Edit Mode's own secure walk over its systems, and nothing of Blizzard's
+-- is written here. Positions still save to the profile, exactly as in /lock.
+MovableFramesManager.OnEditModeEnter = function(self)
+	local profile = ns.db and ns.db.profile
+	if (profile and profile.moversInEditMode == false) then return end
+	self.editModeShowsAnchors = true
+	self:UpdateMovableFrameAnchors()
+end
+
+MovableFramesManager.OnEditModeExit = function(self)
+	if (not self.editModeShowsAnchors) then return end
+	self.editModeShowsAnchors = nil
+	if (CURRENT) then
+		CURRENT.isSelected = nil
+		CURRENT:OnLeave()
+		CURRENT = nil
+	end
+	HideGuides()
+	self:HideMovableFrameAnchors()
+end
+
+-- For the /lock window's switch: apply it at once if Edit Mode is already open.
+MovableFramesManager.RefreshEditModeAnchors = function(self)
+	if (not IsEditModeActive()) then return end
+	local profile = ns.db and ns.db.profile
+	if (profile and profile.moversInEditMode == false) then
+		self:OnEditModeExit()
+	else
+		self:OnEditModeEnter()
 	end
 end
 
@@ -1311,27 +1440,8 @@ MovableFramesManager.OnEvent = function(self, event, ...)
 			end
 		end
 
-	elseif (event == "PLAYER_LOGIN") then
-		if (EMP) then
-			return EMP:LoadLayouts()
-		end
-
 	elseif (event == "PLAYER_ENTERING_WORLD") then
-		local isInitialLogin, isReloadingUi = ...
-		if (isInitialLogin or isReloadingUi) then
-			if (EMP) then
-				self:RegisterEvent("EDIT_MODE_LAYOUTS_UPDATED", "OnEvent")
-			end
-		end
 		self.incombat = InCombatLockdown()
-
-	elseif (event == "EDIT_MODE_LAYOUTS_UPDATED") then
-		local _, fromServer = ...
-		if (fromServer) then
-			if (EMP) then
-				EMP:LoadLayouts()
-			end
-		end
 	end
 
 	if (event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED") then
@@ -1390,8 +1500,13 @@ MovableFramesManager.OnInitialize = function(self)
 	self.appName = L["Movable Frames Manager"]
 
 	self:RegisterChatCommand("lock", "ToggleMFMFrame")
+
+	-- Retail and Forever both send these from EditModeManagerFrameMixin.
+	if (EventRegistry and EventRegistry.RegisterCallback) then
+		EventRegistry:RegisterCallback("EditMode.Enter", self.OnEditModeEnter, self)
+		EventRegistry:RegisterCallback("EditMode.Exit", self.OnEditModeExit, self)
+	end
 	self:RegisterEvent("DISPLAY_SIZE_CHANGED", "OnEvent")
-	self:RegisterEvent("PLAYER_LOGIN", "OnEvent")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
