@@ -10,6 +10,22 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.20.1-JuNNeZ (2026-10-10) - Legacy Keybinds and Proc Highlights
+
+### Highlights
+
+- **Keybinds are back on Legacy action buttons.** Under `/go legacy` the hexagonal button casing was drawn over the keybind text, stack counts and spell activation (proc) highlights, so hotkeys vanished and procs barely showed. The casing now sits beneath them, on action, pet, stance and extra buttons.
+- **Proc highlight options work under Legacy.** With the highlight no longer hidden, style, colour source, colour and opacity under `/az` → Action Bars → Proc Highlight take effect. Thickness is hidden while Legacy is active, because Legacy draws every proc style with its own square highlight.
+
+### Development
+
+- AzeriteUI's own copy of LibSharedMedia is now the latest version, the same one the published download already carried, so local builds match what players run. That version reports addons that register fonts or sounds that don't exist; AzeriteUI's own 50 media files were checked and all exist.
+
+### Access and known limits
+
+- Offline-tested only; not yet confirmed in game.
+- If another addon registers a missing font or sound, LibSharedMedia now reports it as an error naming that file. The fix belongs to the addon that registers it.
+
 ## 5.20.0-JuNNeZ (2026-10-10) - Target Execute Marker and Cooldown-Ready Alerts
 
 ### Highlights

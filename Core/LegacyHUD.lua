@@ -299,7 +299,11 @@ end
 --- Called after an action/pet/stance/extra button's normal style has finished.
 HUD.StyleButton = function(self, button)
 	if (not self:IsActive() or button.LegacyBorder) then return end
-	local border = Border(button.OverlayFrame or button.overlay or button, false, 9)
+	-- Under the overlay (keybind, count, proc highlight), above the icon and swipe.
+	-- On the overlay at +10 the casing's edge covered the keybind and the proc ring.
+	local overlay = button.OverlayFrame or button.overlay
+	local border = Border(button, false, 9)
+	border:SetFrameLevel(overlay and math.max(button:GetFrameLevel() + 1, overlay:GetFrameLevel() - 1) or button:GetFrameLevel() + 2)
 	button.LegacyBorder = border
 	if (button.CustomAssistedHighlight) then button.CustomAssistedHighlight:SetDesaturated(true) end
 	-- The original casing lights up while hovered. Colour only: no state is read.

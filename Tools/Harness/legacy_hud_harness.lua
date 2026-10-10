@@ -160,6 +160,8 @@ ns.oUF.init(cast);check(cast.Castbar.LegacyBorder.backdrop.edgeSize==32,'origina
 check(cast.Castbar.KeepBackdrop==true and cast.Castbar.Shield.alpha==0,'no shield casing: backdrop kept on protected casts')
 local class=widget();class.style=ns.Prefix..'PlayerClassPower';class.ClassPower=widget(224)
 ns.oUF.init(class);check(class.ClassPower.LegacyBorder,'classpower casing inherits element visibility')
+local ab=widget(54);ab.level=5;ab.OverlayFrame=widget();ab.OverlayFrame.level=8
+H:StyleButton(ab);check(ab.LegacyBorder.parent==ab and ab.LegacyBorder.level==7,'button casing sits under the keybind/proc overlay')
 local button=widget(54);button.iconBorder=widget();button.Border=widget();button.Border:Hide()
 H:StyleButton(button);button.iconBorder:Hide();check(not button.LegacyBorder.shown,'border toggle hides original casing')
 button.iconBorder:Show();check(button.LegacyBorder.shown,'border toggle restores casing')

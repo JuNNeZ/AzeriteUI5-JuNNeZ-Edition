@@ -989,6 +989,8 @@ local GenerateOptions = function()
 				name = L["Thickness"], type = "select", order = 2,
 				values = { thin = L["Thin"], medium = L["Medium"], thick = L["Thick"] },
 				sorting = { "thin", "medium", "thick" },
+				-- Legacy draws every proc style with its one square highlight art.
+				hidden = function() return ns.LegacyHUD and ns.LegacyHUD:IsActive() end,
 				disabled = function() return procDisabled() or getmodule().db.profile.procHighlightStyle == "current" end,
 				set = setter, get = getter
 			},
