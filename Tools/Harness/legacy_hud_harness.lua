@@ -138,15 +138,22 @@ ns.db.char.legacyHUD=true
 local pet=widget();pet.style=ns.Prefix..'Pet';pet.Health=widget()
 ns.oUF.init(pet)
 check(pet.LegacyBorder and pet.Power.width==142 and pet.Power.height==8,'pet gets compact power widget')
+check(pet.LegacyBorder.backdrop.edgeSize==32 and pet.LegacyBorder.point[2]==15,'small frame casing: 3.x hex_small 32 at 15px out')
 check(pet.Power.orientation=='HORIZONTAL' and pet.enabledElement=='Power','native power element enabled')
 pet.Power:SetOrientation('VERTICAL');H:RefreshUnit(pet)
 check(pet.Power.orientation=='HORIZONTAL','native tier refresh cannot restore crystal orientation')
-local target=widget(316);target.style=ns.Prefix..'Target';target.Health=widget();target.Portrait=widget();target.Portrait.fallbackParent=widget()
-ns.oUF.init(target);check(target.Portrait.alpha==0 and target.Portrait.fallbackParent.alpha==0,'target 2D portrait fallback hidden with the model')
+function M:GetParent()return self.parent end
+local target=widget(316);target.style=ns.Prefix..'Target';target.Health=widget();target.Portrait=widget();target.Portrait.parent=widget()
+ns.oUF.init(target);check(target.Portrait.alpha==0 and not target.Portrait.parent.shown,'target portrait holder hidden: 3D model and 2D fallback')
+check(target.LegacyBorder.backdrop.edgeSize==32 and target.LegacyBorder.point[2]==3,'large frame casing unchanged at 3px')
+function M:SetParent(v)self.parent=v end
+local named=widget(158);named.style=ns.Prefix..'ToT';named.Health=widget();named.Overlay=widget();named.Name=widget();named.Name.parent=named
+ns.oUF.init(named);check(named.Name.parent==named.Overlay,'name lifted above the health bar')
 local plate=widget();plate.Health=widget();plate.isNamePlate=true;plate.style=ns.Prefix..'Target'
 ns.oUF.init(plate);check(not plate.LegacyBorder and not plate.Power,'nameplates untouched')
-local cast=widget();cast.style=ns.Prefix..'PlayerCastBar';cast.Castbar=widget(224)
+local cast=widget();cast.style=ns.Prefix..'PlayerCastBar';cast.Castbar=widget(224);cast.Castbar.Shield=widget()
 ns.oUF.init(cast);check(cast.Castbar.LegacyBorder.backdrop.edgeSize==32,'original cast border sizing')
+check(cast.Castbar.KeepBackdrop==true and cast.Castbar.Shield.alpha==0,'no shield casing: backdrop kept on protected casts')
 local class=widget();class.style=ns.Prefix..'PlayerClassPower';class.ClassPower=widget(224)
 ns.oUF.init(class);check(class.ClassPower.LegacyBorder,'classpower casing inherits element visibility')
 local button=widget(54);button.iconBorder=widget();button.Border=widget();button.Border:Hide()
@@ -174,4 +181,17 @@ mb:SetBackdropBorderColor(unpack(ns.Colors.verydarkgray));check(mtl.color[1]==69
 ns.db.char.legacyHUD=true
 C_UI={Reload=function()reloads=reloads+1 end};local before=reloads
 H:Command('azerite');check(reloads==before+1,'namespace reload API used when available')
+-- Retail runs WoW11/ActionBars/ActionBars.lua's delayed init. It must take the Legacy
+-- path too: registering the main namespace with Legacy defaults let AceDB strip the
+-- player's Azerite values that matched them (fading, growth, anchor) at logout.
+H:Command('legacy');ns.WoW11=true;ns.API.IsAddOnEnabled=function()return false end
+local abar={GetName=function()return 'ActionBars' end,SetEnabledState=function()end,RegisterEvent=function()end,UnregisterEvent=function()end,Enable=function()end}
+abar.GetDefaults=function(self)return H:GetDefaults('ActionBars',{profile={bars={{enableBarFading=true,growth='horizontal',savedPosition={'BOTTOMLEFT',1,2}},{enableBarFading=true,savedPosition={'BOTTOMLEFT',3,4}},{growth='vertical',savedPosition={'RIGHT',5,6}}}}})end
+ns.GetModule=function(_,name)return name=='ActionBars' and abar or {Enable=function()end}end
+load('WoW11/ActionBars/ActionBars.lua',ns);abar:DelayedEnable()
+check(abar.db==ns.db:GetNamespace('LegacyHUD_ActionBars',true),'retail delayed action bar init uses the Legacy namespace')
+local mainBars=ns.db:GetNamespace('ActionBars').defaults.profile.bars
+check(mainBars[1].enableBarFading==true and mainBars[3].growth=='vertical','main action bar namespace keeps Azerite defaults')
+local cb=H:GetDefaults('PlayerCastBarFrame',{profile={savedPosition={'CENTER',1,2}}}).profile.savedPosition
+check(cb[1]=='BOTTOM' and cb[3]==230,'castbar module name gets the Legacy namespace and 3.x spot')
 print('Legacy HUD: '..checks..' checks passed (real layouts and AceDB; offline only).')

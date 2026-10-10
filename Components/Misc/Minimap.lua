@@ -651,7 +651,9 @@ local Skins = {
 				Owner = "Backdrop",
 				DrawLayer = "BORDER",
 				DrawLevel = 1,
-				Path = GetMedia("minimap-border"),
+				-- Resolved when the theme is applied: at file load the character's
+				-- Legacy choice is not known yet, so the Legacy ring art was never used.
+				Path = function() return GetMedia("minimap-border") end,
 				Size = function()
 					-- The Legacy HUD's ring is a different piece of art: AzeriteUI 3.x drew it
 					-- 256px around a 210px map, so it keeps that proportion here.
@@ -1283,7 +1285,8 @@ MinimapMod.SetTheme = function(self, requestedTheme)
 					end
 
 					if (ElementTypes[element] == "Texture") then
-						object:SetTexture(ns.PaladinTheme and ns.PaladinTheme:ResolvePath(data.Path) or data.Path)
+						local path = type(data.Path) == "function" and data.Path() or data.Path
+						object:SetTexture(ns.PaladinTheme and ns.PaladinTheme:ResolvePath(path) or path)
 						object:SetDrawLayer(data.DrawLayer or "ARTWORK", data.DrawLevel or 0)
 						if (data.Color) then
 							object:SetVertexColor(unpack(data.Color))

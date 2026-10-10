@@ -1085,3 +1085,5 @@ L["Repairs reattach movement handles. Frame changes wait until combat ends."] = 
 L["Solo force-show is a temporary debug override. The normal raid bar setting stays on the Unit Frames page. Reload if Blizzard already hid the bar."] = "솔로 강제 표시는 임시 디버그 설정입니다. 일반 설정은 유닛 프레임 페이지에 있습니다. 블리자드가 이미 숨겼다면 다시 불러오세요."
 
 L["Output is written to _DebugLog -> AzeriteUI when available; otherwise to chat."] = "가능하면 _DebugLog -> AzeriteUI에 출력하며, 사용할 수 없으면 대화창에 출력합니다."
+
+L["Do you really want to reset everything to default?"] = "정말로 모든 설정을 기본값으로 초기화하시겠습니까?"

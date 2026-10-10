@@ -30,7 +30,7 @@ local positions = {
 	PetFrame = { "BOTTOMRIGHT", -210, 195 },
 	ToTFrame = { "BOTTOMLEFT", 210, 195 },
 	FocusFrame = { "BOTTOMRIGHT", -368, 195 },
-	PlayerCastBar = { "BOTTOM", 0, 230 },
+	PlayerCastBarFrame = { "BOTTOM", 0, 230 },
 	PlayerClassPowerFrame = { "BOTTOM", 0, 274 },
 	PartyFrames = { "TOPLEFT", 56, -64 },
 	RaidFrame5 = { "TOPLEFT", 56, -64 },
@@ -136,7 +136,9 @@ HUD.RegisterNamespace = function(self, name, defaults)
 	local db = ns.db:RegisterNamespace("LegacyHUD_"..name, defaults)
 	local Seed = function()
 		if (db.profile.legacyHUDSchema == 1) then return end
-		local saved = original.sv.profiles[ns.db:GetCurrentProfile()]
+		-- A namespace that was never saved has no profiles table yet.
+		local profiles = original.sv and original.sv.profiles
+		local saved = profiles and profiles[ns.db:GetCurrentProfile()]
 		local copy = Copy(saved or {})
 		-- Layout values belong exclusively to Legacy's defaults. Gameplay
 		-- options (aura filters, text choices, visibility) carry over once.
@@ -285,6 +287,15 @@ local function Border(parent, large, offset, edgeSize)
 	return border
 end
 
+-- Unit casings as 3.x placed them: player/target hex at 3px out, the small
+-- frames' hex_small 32 at 15px out, raid's hex_small 24 at 11px out.
+local function UnitBorder(frame)
+	local width = frame:GetWidth()
+	if (width > 200) then return Border(frame, true, 3) end
+	if (width < 100) then return Border(frame, false, 11, 24) end
+	return Border(frame, false, 15, 32)
+end
+
 --- Called after an action/pet/stance/extra button's normal style has finished.
 HUD.StyleButton = function(self, button)
 	if (not self:IsActive() or button.LegacyBorder) then return end
@@ -312,7 +323,7 @@ HUD.StyleUnit = function(self, frame)
 	local styles = { Player = true, Target = true, Pet = true, ToT = true, Focus = true, Party = true, Raid5 = true, Raid25 = true, Raid40 = true, Boss = true, Arena = true }
 	local style = type(frame.style) == "string" and frame.style:sub(#ns.Prefix + 1)
 	if (not styles[style]) then return end
-	frame.LegacyBorder = Border(frame, frame:GetWidth() > 200, frame:GetWidth() > 200 and 3 or 0)
+	frame.LegacyBorder = UnitBorder(frame)
 	local overlay = frame.Health:CreateTexture(nil, "OVERLAY", nil, -1)
 	-- Shade the native bar without changing its clipped fill or reading a value.
 	overlay:SetAllPoints(frame.Health)
@@ -322,9 +333,11 @@ HUD.StyleUnit = function(self, frame)
 		if (frame.Portrait.Bg) then frame.Portrait.Bg:SetAlpha(0) end
 		if (frame.Portrait.Shade) then frame.Portrait.Shade:SetAlpha(0) end
 		if (frame.Portrait.Border) then frame.Portrait.Border:SetAlpha(0) end
-		-- Target and Arena draw their 2D fallback in a sibling of the model,
-		-- so the model's alpha never reached it. Its holder carries both.
-		if (frame.Portrait.fallbackParent) then frame.Portrait.fallbackParent:SetAlpha(0) end
+		-- A 3D model ignores frame alpha (the alpha fix drives SetModelAlpha
+		-- from the frame's alpha), and Target/Arena keep their 2D fallback in a
+		-- sibling of the model. Hiding the holder takes model, fallback and Bg.
+		local holder = frame.Portrait.GetParent and frame.Portrait:GetParent()
+		if (holder and holder ~= frame) then holder:Hide() end
 	end
 	if (not frame.Name and frame.Tag) then
 		local name = (frame.Overlay or frame):CreateFontString(nil, "OVERLAY")
@@ -335,13 +348,18 @@ HUD.StyleUnit = function(self, frame)
 		frame:Tag(name, "["..ns.Prefix..":Name(20,nil,nil,nil)]")
 		frame.Name = name
 	end
+	-- Target/ToT/Focus/Boss draw their name on the frame itself. Legacy puts it
+	-- over the health bar, a child frame that would cover it; lift it above.
+	if (frame.Name and frame.Overlay and frame.Name.GetParent and frame.Name:GetParent() == frame) then
+		frame.Name:SetParent(frame.Overlay)
+	end
 	if (frame.Name and frame.Name.SetWidth) then frame.Name:SetWidth(frame:GetWidth() - 24) end
 	if (style == "Player" and frame.CombatIndicator and frame.CombatIndicator.SetTexCoord) then
 		frame.CombatIndicator:SetTexCoord(.5, 1, 0, .5)
 	end
 	local highlight = frame.TargetHighlight
 	if (highlight) then
-		local border = Border(frame, false, 0)
+		local border = UnitBorder(frame)
 		border:SetShown(highlight:IsShown())
 		hooksecurefunc(highlight, "Show", function() border:Show() end)
 		hooksecurefunc(highlight, "Hide", function() border:Hide() end)
@@ -352,7 +370,7 @@ HUD.StyleUnit = function(self, frame)
 	end
 	local threat = frame.ThreatIndicator
 	if (threat) then
-		local border = Border(frame, frame:GetWidth() > 200, frame:GetWidth() > 200 and 3 or 0)
+		local border = UnitBorder(frame)
 		border:Hide()
 		hooksecurefunc(threat, "Show", function() border:Show() end)
 		hooksecurefunc(threat, "Hide", function() border:Hide() end)
@@ -460,6 +478,10 @@ ns.oUF:RegisterInitCallback(function(frame)
 	if (not HUD:IsActive() or frame.isNamePlate) then return end
 	if (frame.style == ns.Prefix.."PlayerCastBar" and frame.Castbar) then
 		frame.Castbar.LegacyBorder = Border(frame.Castbar, false, 23, 32)
+		-- 3.x had no shield casing. Protected casts and channels (fishing) hid
+		-- the backdrop and showed the shield region poking out of the casing.
+		frame.Castbar.KeepBackdrop = true
+		if (frame.Castbar.Shield) then frame.Castbar.Shield:SetAlpha(0) end
 	elseif (frame.style == ns.Prefix.."PlayerClassPower") then
 		for _, element in ipairs({ frame.ClassPower or false, frame.Runes or false, frame.Stagger or false }) do
 			if (element) then element.LegacyBorder = Border(element, false, 23, 32) end

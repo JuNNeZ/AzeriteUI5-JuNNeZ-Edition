@@ -157,8 +157,49 @@ ns.DeleteProfile = function(self, targetProfileKey)
 	end
 end
 
+-- AceDB-3.0-GE only resets namespaces registered this session. Saved ones
+-- nobody registered (LegacyHUD_* under Azerite, other clients' modules) kept
+-- the old values, so clear the current profile from them as AceDB-3.0 does.
+local ResetUnloadedNamespaces = function(db)
+	local namespaces = db.sv and db.sv.namespaces
+	if (type(namespaces) ~= "table") then return end
+	local profileKey = db:GetCurrentProfile()
+	for name, data in next, namespaces do
+		if (not (db.children and db.children[name]) and type(data) == "table" and type(data.profiles) == "table") then
+			data.profiles[profileKey] = nil
+		end
+	end
+end
+
+-- This character's own choices (theme, Lite+, Mage crystal, conflict and menu
+-- picks) live in db.char, outside the profile. Reset means everything back to
+-- default, so clear them too, keeping only which profile the character uses.
+-- Account-wide db.global is left alone: it is shared with other characters.
+local ResetCharacter = function(db)
+	local charKey = db.keys and db.keys.char
+	local char = rawget(db, "char")
+	if (type(char) == "table") then
+		local profileKey = char.profile
+		for key in next, char do char[key] = nil end
+		char.profile = profileKey
+	end
+	local namespaces = db.sv and db.sv.namespaces
+	if (not charKey or type(namespaces) ~= "table") then return end
+	for name, data in next, namespaces do
+		local child = db.children and db.children[name]
+		local childChar = child and rawget(child, "char")
+		if (type(childChar) == "table") then
+			for key in next, childChar do childChar[key] = nil end
+		elseif (type(data) == "table" and type(data.char) == "table") then
+			data.char[charKey] = nil
+		end
+	end
+end
+
 ns.ResetProfile = function(self)
 	self.db:ResetProfile()
+	ResetUnloadedNamespaces(self.db)
+	ResetCharacter(self.db)
 	if (self:IsSaiyaRattProfile()) then
 		self:ApplySaiyaRattPreset()
 	end

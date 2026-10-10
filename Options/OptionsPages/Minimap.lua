@@ -100,6 +100,13 @@ local GenerateOptions = function()
 					if (val and module.db.profile.theme == "Blizzard") then
 						module.db.profile.theme = "Azerite"
 					end
+					-- Retail's delayed start (WoW11/Misc/Minimap.lua) skips the module when
+					-- it was off at login, so switching it on did nothing until a reload.
+					if (val and not module:IsEnabled() and not InCombatLockdown()) then
+						module:Enable()
+						local bars = ns:GetModule("PlayerStatusBars", true)
+						if (bars and not bars:IsEnabled()) then bars:Enable() end
+					end
 					module:UpdateSettings()
 				end,
 				get = function(info)

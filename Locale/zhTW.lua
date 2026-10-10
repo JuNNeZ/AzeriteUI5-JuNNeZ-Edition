@@ -1085,3 +1085,5 @@ L["Repairs reattach movement handles. Frame changes wait until combat ends."] = 
 L["Solo force-show is a temporary debug override. The normal raid bar setting stays on the Unit Frames page. Reload if Blizzard already hid the bar."] = "單人強制顯示是臨時偵錯覆寫。正常團隊列設定仍在單位框架頁面。若暴雪已隱藏該列，請重載介面。"
 
 L["Output is written to _DebugLog -> AzeriteUI when available; otherwise to chat."] = "若可用，輸出會寫入_DebugLog -> AzeriteUI；否則寫入聊天。"
+
+L["Do you really want to reset everything to default?"] = "確定要將所有設定重設為預設值嗎？"

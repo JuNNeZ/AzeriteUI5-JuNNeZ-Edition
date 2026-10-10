@@ -47,7 +47,11 @@ end
 ActionBarMod.DelayedEnable = function(self)
 	self:UnregisterEvent("PLAYER_ENTERING_WORLD", "DelayedEnable")
 
-	self.db = ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
+	-- Same path as Components/ActionBars/Elements/ActionBars.lua. Registering the
+	-- main namespace with Legacy's defaults made AceDB strip every Azerite value
+	-- that matched them (bar fading, growth, anchor) on a Legacy logout.
+	self.db = ns.LegacyHUD and ns.LegacyHUD:RegisterNamespace(self:GetName(), self:GetDefaults())
+		or ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
 
 	if (ns.WoW10) then
 		self.db.profile.clickOnDown = GetCVarBool("ActionButtonUseKeyDown")

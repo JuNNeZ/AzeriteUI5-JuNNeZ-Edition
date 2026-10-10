@@ -10,6 +10,28 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.19.2-JuNNeZ (2026-10-10) - Legacy HUD Repairs and a Full Profile Reset
+
+### Highlights
+
+- **Switching to Legacy no longer erases your Azerite action bar settings.** On Retail, going to `/go legacy` and back could silently reset bar fading, bar direction and bar anchors in your normal layout to their defaults. It no longer does. Settings already lost this way have to be set once more under `/az` → Action Bars.
+- **Legacy keeps its own minimap and cast bar spots.** Moving the minimap or the cast bar under Legacy no longer changes where they sit in your Azerite layout, and both now start in their original 3.x places (minimap top right, cast bar bottom centre).
+- **The Legacy minimap shows its own ring.** It was drawing the Azerite ring art shrunk inside the map; the old Legacy stone ring now sits around the map edge.
+- **Cleaner Legacy unit frames.** The target portrait (the 3D model as well as the flat picture) no longer peeks out under the target frame; Target, Target of Target, Focus and Boss show their names again; the small frames get the 3.x hex casing without the dark square corners.
+- **Cast bar.** Fishing, channels and casts that can't be interrupted no longer show a stray casing poking out of the Legacy cast bar.
+- **Minimap Enable works straight away.** If the minimap was turned off when you logged in, switching `/az` → Minimap → **Enable** on now applies at once instead of after a reload.
+- **Profiles → Reset now really resets everything.** It also clears settings kept for modules that were not loaded at the time (such as Legacy's own layout) and this character's own choices (theme, Lite+, Mage crystal, addon conflict and game menu picks), then reloads so every page shows its defaults. Account-wide settings, game options and your Edit Mode layout are left alone. The confirmation now says plainly that everything goes back to default.
+
+### Development
+
+- The action bar and minimap problems were traced through the saved settings themselves: comparing saves before and after a Legacy round trip showed the lost values were exactly those that matched Legacy's defaults. The cause was Retail's delayed start for the action bars and minimap, which bypassed Legacy's separate settings.
+- Legacy's offline tests now load that Retail start-up code directly, and also cover the portrait, names, casing sizes, cast bar and cast bar position (76 checks). The tests also exposed and fixed a Lua error Legacy would have raised for a module that had never saved settings, such as on a fresh install.
+
+### Access and known limits
+
+- Offline-tested. The causes were confirmed with live readouts and saved settings from Retail; the fixes themselves still need checking in game, and on Forever.
+- The full reset is offline-tested only; it has not yet been run in game.
+
 ## 5.19.1-JuNNeZ (2026-10-10) - Legacy Portrait and Minimap Fixes
 
 ### Highlights

@@ -30,7 +30,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
 
--- GLOBALS: CONFIRM_RESET_SETTINGS, Settings, StaticPopupDialogs, StaticPopup_Show, ReloadUI
+-- GLOBALS: Settings, StaticPopupDialogs, StaticPopup_Show, ReloadUI
 
 local Options = ns:NewModule("Options", "LibMoreEvents-1.0", "AceConsole-3.0", "AceHook-3.0")
 
@@ -202,10 +202,14 @@ Options.GenerateProfileMenu = function(self)
 				type = "execute",
 				order = 2,
 				confirm = function(info)
-					return _G.CONFIRM_RESET_SETTINGS
+					return L["Do you really want to reset everything to default?"]
 				end,
 				func = function(info)
 					ns:ResetProfile(ns:GetProfile())
+					-- Several modules (nameplates, chat, world map, menus) only
+					-- read their settings at load, so a reset is half applied
+					-- until the interface reloads. The confirm above already asked.
+					ReloadUI()
 				end
 			},
 			delete = {

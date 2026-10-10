@@ -41,7 +41,10 @@ MinimapMod.DelayedEnable = function(self)
 	self:UnregisterEvent("PLAYER_ENTERING_WORLD", "DelayedEnable")
 
 	-- Initialize the database
-	self.db = ns.db:RegisterNamespace(self:GetName(), self:GenerateDefaults())
+	-- Same path as the movable module prototype, so Legacy gets its own minimap
+	-- namespace and corner default instead of writing the main profile.
+	self.db = ns.LegacyHUD and ns.LegacyHUD:RegisterNamespace(self:GetName(), self:GetDefaults())
+		or ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
 	self.db.RegisterCallback(self, "OnProfileChanged", "OnRefreshConfig")
 	self.db.RegisterCallback(self, "OnProfileCopied", "OnRefreshConfig")
 	self.db.RegisterCallback(self, "OnProfileReset", "OnRefreshConfig")
