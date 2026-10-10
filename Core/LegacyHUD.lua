@@ -496,5 +496,16 @@ ns.oUF:RegisterInitCallback(function(frame)
 		for _, element in ipairs({ frame.ClassPower or false, frame.Runes or false, frame.Stagger or false }) do
 			if (element) then element.LegacyBorder = Border(element, false, 23, 32) end
 		end
+		-- A class without class power (Hunter, Warrior) keeps the ClassPower container
+		-- shown with every point hidden; only PostVisibility says so. Without this the
+		-- casing drew an empty box in the middle of the screen.
+		local classPower = frame.ClassPower
+		if (classPower and classPower.LegacyBorder) then
+			local previous = classPower.PostVisibility
+			classPower.PostVisibility = function(element, isVisible, ...)
+				if (previous) then previous(element, isVisible, ...) end
+				element.LegacyBorder:SetShown(isVisible and true or false)
+			end
+		end
 	else HUD:RefreshUnit(frame) end
 end)

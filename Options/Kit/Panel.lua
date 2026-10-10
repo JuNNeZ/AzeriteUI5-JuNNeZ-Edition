@@ -40,7 +40,7 @@ local unpack = unpack
 
 -- GLOBALS: CreateFrame, GameTooltip, InCombatLockdown, UIParent, UISpecialFrames
 -- GLOBALS: IsShiftKeyDown
--- GLOBALS: C_AddOns
+-- GLOBALS: C_AddOns, C_Timer
 
 local Panel = {}
 Kit.Panel = Panel
@@ -2121,6 +2121,28 @@ Panel.Open = function(self, key)
 	end
 	self:SelectPage(key)
 
+	return true
+end
+
+-- Opens a page and scrolls to one of its sections, by the heading drawn for it.
+-- The scroll is the section row's own click, a frame later, so the page has
+-- laid itself out and the row knows where its section starts. A heading the
+-- page does not have leaves you at the top of the page.
+Panel.OpenSection = function(self, key, label)
+	if (not self:Open(key)) then return false end
+	if (type(label) ~= "string" or label == "") then return true end
+
+	local wanted = string_lower(label)
+	C_Timer.After(0, function()
+		if (not self:IsShown() or self.selected ~= key) then return end
+		for _, row in ipairs(self.sectionRows or {}) do
+			if (row:IsShown() and type(row.label) == "string" and string_lower(row.label) == wanted) then
+				local click = row:GetScript("OnClick")
+				if (click) then click(row) end
+				return
+			end
+		end
+	end)
 	return true
 end
 

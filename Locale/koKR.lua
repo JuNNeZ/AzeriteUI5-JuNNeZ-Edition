@@ -1097,3 +1097,12 @@ L["Solo force-show is a temporary debug override. The normal raid bar setting st
 L["Output is written to _DebugLog -> AzeriteUI when available; otherwise to chat."] = "가능하면 _DebugLog -> AzeriteUI에 출력하며, 사용할 수 없으면 대화창에 출력합니다."
 
 L["Do you really want to reset everything to default?"] = "정말로 모든 설정을 기본값으로 초기화하시겠습니까?"
+
+-- What's New popup
+L["What's New"] = "새로운 기능"
+L["Remind me later"] = "나중에 알림"
+L["Got it"] = "확인"
+L["All release notes"] = "전체 패치 노트"
+L["Show me"] = "보기"
+L["Show What's New after updates"] = "업데이트 후 새로운 기능 표시"
+L["A few seconds after the first login on a new version, a short summary opens with buttons that take you to what changed. Type /az whatsnew to open it at any time."] = "새 버전으로 처음 접속하고 몇 초 후, 변경된 항목으로 바로 이동하는 버튼이 있는 짧은 요약이 열립니다. 언제든지 /az whatsnew 를 입력해 열 수 있습니다."

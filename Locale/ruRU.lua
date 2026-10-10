@@ -1097,3 +1097,12 @@ L["Solo force-show is a temporary debug override. The normal raid bar setting st
 L["Output is written to _DebugLog -> AzeriteUI when available; otherwise to chat."] = "Результаты записываются в _DebugLog -> AzeriteUI, если доступно; иначе в чат."
 
 L["Do you really want to reset everything to default?"] = "Вы действительно хотите сбросить всё к настройкам по умолчанию?"
+
+-- What's New popup
+L["What's New"] = "Что нового"
+L["Remind me later"] = "Напомнить позже"
+L["Got it"] = "Понятно"
+L["All release notes"] = "Все примечания к версиям"
+L["Show me"] = "Показать"
+L["Show What's New after updates"] = "Показывать «Что нового» после обновлений"
+L["A few seconds after the first login on a new version, a short summary opens with buttons that take you to what changed. Type /az whatsnew to open it at any time."] = "Через несколько секунд после первого входа в новой версии откроется краткая сводка с кнопками, ведущими к изменениям. Введите /az whatsnew, чтобы открыть её в любой момент."

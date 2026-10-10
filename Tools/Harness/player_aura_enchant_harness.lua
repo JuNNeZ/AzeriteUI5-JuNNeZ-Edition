@@ -606,6 +606,10 @@ do
 	check(lineSize == 3 * 23 + 2 * 4 + 1, "auras per row sets the native line size", tostring(lineSize))
 	display:Configure(Config({ size = 23 }))
 	check(lineSize == 300, "no per-row limit keeps the display width", tostring(lineSize))
+	local groupLayout
+	container.SetAuraGroupLayout = function(_, _, layout) groupLayout = layout end
+	display:Configure(Config({ size = 22, spacingX = 4 }))
+	check(groupLayout and groupLayout.elementSpacing == 4 and groupLayout.groupSpacing == 0, "no extra gap between aura groups")
 end
 
 print(string.format("Player aura enchants: %d checks, %d failures", checks, failures))

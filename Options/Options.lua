@@ -501,6 +501,15 @@ Options.OpenOptionsMenu = function(self, input)
 		return
 	end
 
+	-- The What's New popup for the newest notes, whether or not it was dismissed.
+	if (input == "whatsnew") then
+		local whatsNew = ns.OptionsKit and ns.OptionsKit.WhatsNew
+		if (whatsNew) then
+			return whatsNew:Open(ns.Version) or whatsNew:Open()
+		end
+		return
+	end
+
 	-- Bare `/az` is the new panel. `/az new` remains an alias for release notes,
 	-- macros and anyone already using the preview command.
 	AceConfigDialog:Close(Addon)

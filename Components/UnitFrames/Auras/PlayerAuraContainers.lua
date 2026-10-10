@@ -666,11 +666,15 @@ local function ApplyContainerLayout(container, config)
 
 	local horizontal = GetFlowDirection(config.growthX == "LEFT" and "Left" or "Right", config.growthX == "LEFT" and -1 or 1)
 	local vertical = GetFlowDirection(config.growthY == "DOWN" and "Down" or "Up", config.growthY == "DOWN" and -1 or 1)
+	-- Blizzard's flow layout adds groupSpacing on top of elementSpacing when the next
+	-- group continues a line (AnchorUtil.ApplyFlowLayout), so a non-zero value doubled
+	-- the gap at every group change and made rows wrap and end unevenly. Here and in
+	-- the other aura layouts it stays 0: every gap is the chosen spacing.
 	local function CreateLayout(layoutIndex)
 		return {
 			elementSpacing = config.spacingX,
 			lineSpacing = config.spacingY,
-			groupSpacing = config.spacingX,
+			groupSpacing = 0,
 			groupLineSpacing = config.spacingY,
 			elementWidth = config.size,
 			elementHeight = config.size,
@@ -789,7 +793,7 @@ local function ApplyItemEnchantmentLayout(container, config)
 	TryCall(container.SetItemEnchantmentLayout, container, {
 		elementSpacing = config.spacingX,
 		lineSpacing = config.spacingY,
-		groupSpacing = config.spacingX,
+		groupSpacing = 0,
 		groupLineSpacing = config.spacingY,
 		elementWidth = config.size,
 		elementHeight = config.size,
@@ -1531,7 +1535,7 @@ local function ApplyGroupFrameConfiguration(container, config, width)
 			container:SetAuraGroupLayout(groupKey, {
 				elementSpacing = config.spacingX,
 				lineSpacing = config.spacingY,
-				groupSpacing = config.spacingX,
+				groupSpacing = 0,
 				groupLineSpacing = config.spacingY,
 				elementWidth = size,
 				elementHeight = size,
@@ -1884,7 +1888,7 @@ function NamePlateDisplayMixin:Configure(config)
 				layout = {
 					elementSpacing = spacingX,
 					lineSpacing = spacingY,
-					groupSpacing = spacingX,
+					groupSpacing = 0,
 					groupLineSpacing = spacingY,
 					elementWidth = options.size,
 					elementHeight = options.size,

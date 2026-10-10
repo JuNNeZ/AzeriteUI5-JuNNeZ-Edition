@@ -364,7 +364,7 @@ local UpdateContainerLayout = function(container, config)
 	local layout = {
 		elementSpacing = config.paddingX,
 		lineSpacing = config.paddingY,
-		groupSpacing = config.paddingX,
+		groupSpacing = 0,
 		groupLineSpacing = config.paddingY,
 		elementWidth = AURA_SIZE,
 		elementHeight = AURA_SIZE
@@ -380,7 +380,7 @@ local UpdateContainerLayout = function(container, config)
 		container:SetItemEnchantmentLayout({
 			elementSpacing = config.paddingX,
 			lineSpacing = config.paddingY,
-			groupSpacing = config.paddingX,
+			groupSpacing = 0,
 			groupLineSpacing = config.paddingY,
 			elementWidth = AURA_SIZE,
 			elementHeight = AURA_SIZE

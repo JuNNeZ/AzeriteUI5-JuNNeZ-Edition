@@ -163,6 +163,22 @@ local appearance = {
 local BuildChangelog = function()
 	local args = {}
 
+	-- The What's New popup's switch lives with the notes it summarises. Order 0
+	-- puts it above the first release.
+	args.whatsNew = {
+		name = L["Show What's New after updates"],
+		desc = L["A few seconds after the first login on a new version, a short summary opens with buttons that take you to what changed. Type /az whatsnew to open it at any time."],
+		type = "toggle",
+		width = "full",
+		order = 0,
+		get = function()
+			return not (Kit.WhatsNew and not Kit.WhatsNew:IsEnabled())
+		end,
+		set = function(info, val)
+			if (Kit.WhatsNew) then Kit.WhatsNew:SetEnabled(val) end
+		end
+	}
+
 	if (type(ns.Changelog) ~= "table" or #ns.Changelog == 0) then
 		args.missing = {
 			name = L["The release notes are not available in this build."],

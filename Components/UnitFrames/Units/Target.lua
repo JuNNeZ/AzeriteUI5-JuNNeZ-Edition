@@ -475,7 +475,20 @@ local ApplyTargetAuraLayout = function(frame, styleKey)
 	local native = frame.NativeAuras
 	if (native) then
 		if (layout.size and layout.size[1] and layout.size[2]) then
-			native:SetSize(unpack(layout.size))
+			-- The native display clips to its own box, which the layout sizes for
+			-- two rows of default icons. Smaller icons or a per-row limit wrap the
+			-- buffs and debuffs (numTotal each) into more rows, cut off below it.
+			local width, height = layout.size[1], layout.size[2]
+			local size, spacingX, spacingY = layout.auraSize, layout.spacingX or 0, layout.spacingY or 0
+			local count = layout.numTotal or 0
+			if (type(size) == "number" and size > 0 and count > 0) then
+				local cols = layout.maxCols or math_max(1, math_floor((width + spacingX) / (size + spacingX)))
+				-- Buffs and debuffs are separate groups; allow each its own lines.
+				local rows = math.ceil(count / cols) * 2
+				width = math_max(width, cols * size + (cols - 1) * spacingX)
+				height = math_max(height, rows * size + (rows - 1) * spacingY)
+			end
+			native:SetSize(width, height)
 		end
 		native:ClearAllPoints()
 		native:SetPoint(unpack(auraPoint))

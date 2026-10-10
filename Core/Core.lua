@@ -527,6 +527,10 @@ end
 ns.OnInitialize = function(self)
 	self.db = LibStub("AceDB-3.0-GE"):New("AzeriteUI5_DB", defaults, self:GetDefaultProfile())
 
+	-- -1 is the default, so no saved settings existed before this login. Read
+	-- before the reset below writes the current version over it.
+	self.IsFreshInstall = (self.db.global.version == -1)
+
 	if (self.db.global.version < ns.SETTINGS_VERSION) then
 		self:ResetSettings(true)
 	end

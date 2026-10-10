@@ -10,6 +10,24 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.21.0-JuNNeZ (2026-10-10) - What's New Popup and Even Aura Rows
+
+### Highlights
+
+- **A What's New window after updates.** A few seconds into your first login after an update, a small window lists what changed in a few short lines, each with a button that takes you straight to the setting. **Got it** hides it until the next update, **Remind me later** keeps it for next time, and you can turn it off for good on `/az` → Changelog. `/az whatsnew` opens it any time. It never appears after a `/reload`, waits until you leave combat, and stays quiet on a fresh install.
+- **Target auras no longer get cut off.** With smaller aura icons or an auras-per-row limit, the target's auras wrap onto extra rows, and anything below the second row used to be clipped. The aura area now grows to fit.
+- **Even aura rows everywhere.** The gap between some auras was twice as wide as the rest, so rows ended at different places and could wrap one icon early. Every gap is now your chosen spacing, on the target and player rows, party and raid frames, nameplates and the top-right buff row.
+- **No empty class power box on Legacy.** Under `/go legacy`, classes without class power (such as Hunters and Warriors) showed an empty hexagonal box in the middle of the screen; it now only appears when there is something to show.
+
+### Development
+
+- The uneven rows came from how Blizzard's aura layout adds an extra gap between aura groups on the same line. AzeriteUI splits auras into several groups (important, boss, personal and so on), so a row with several group changes became wider; that extra group gap is now zero in every aura layout.
+- The What's New notes are written by hand, separate from this changelog, so the popup stays short; the release build warns when a version has none. It comes with its own offline test suite, and its seven new strings are translated in all ten languages.
+
+### Access and known limits
+
+- The What's New window was checked live on Retail; the aura and Legacy fixes are offline-tested only.
+
 ## 5.20.1-JuNNeZ (2026-10-10) - Legacy Keybinds and Proc Highlights
 
 ### Highlights

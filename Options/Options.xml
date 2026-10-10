@@ -13,6 +13,7 @@
 		* Changelog.lua is generated from CHANGELOG.md by Tools/BuildChangelog.lua.
 		* PanelOptions.lua is the panel's own settings tab, and the changelog.
 		* Panel.lua is the new window itself, at /az (and the /az new alias).
+		* WhatsNew.lua is the hand-written popup notes; Kit\WhatsNew.lua draws them.
 		* Gallery.lua shows the controls on their own, at /az gallery.
 		* Widgets.lua registers AceGUI widget types for the retained classic window.
 		* Window.lua owns the retained /az classic window, its rail and its search.
@@ -29,6 +30,8 @@
 	<Script file="Changelog.lua"/>
 	<Script file="Kit\PanelOptions.lua"/>
 	<Script file="Kit\Panel.lua"/>
+	<Script file="WhatsNew.lua"/>
+	<Script file="Kit\WhatsNew.lua"/>
 	<Script file="Kit\Gallery.lua"/>
 	<Script file="Kit\Widgets.lua"/>
 	<Script file="Kit\Window.lua"/>

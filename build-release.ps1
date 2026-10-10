@@ -38,6 +38,13 @@ if ($Version -match '@[\w-]+@') {
     exit 1
 }
 
+# What's New popup notes (Options/WhatsNew.lua). A release without an entry shows
+# no popup, which is allowed for small fixes, so this warns rather than stops.
+$WhatsNewPath = Join-Path $PSScriptRoot 'Options\WhatsNew.lua'
+if (-not (Select-String -LiteralPath $WhatsNewPath -SimpleMatch "version = `"$Version`"" -Quiet)) {
+    Write-Host "WARNING: Options\WhatsNew.lua has no entry for $Version; players will see no What's New popup."
+}
+
 $DateStamp = Get-Date -Format "dd-MM-yyyy"
 & (Join-Path $PSScriptRoot 'Tools\BuildClientTOC.ps1') -Check
 $ArchiveName = "AzeriteUI-$Version-Retail-Forever-$DateStamp.zip"

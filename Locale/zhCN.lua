@@ -1098,3 +1098,12 @@ L["Solo force-show is a temporary debug override. The normal raid bar setting st
 L["Output is written to _DebugLog -> AzeriteUI when available; otherwise to chat."] = "若可用，输出会写入_DebugLog -> AzeriteUI；否则写入聊天。"
 
 L["Do you really want to reset everything to default?"] = "确定要将所有设置重置为默认值吗？"
+
+-- What's New popup
+L["What's New"] = "新功能"
+L["Remind me later"] = "稍后提醒"
+L["Got it"] = "知道了"
+L["All release notes"] = "全部更新说明"
+L["Show me"] = "查看"
+L["Show What's New after updates"] = "更新后显示新功能"
+L["A few seconds after the first login on a new version, a short summary opens with buttons that take you to what changed. Type /az whatsnew to open it at any time."] = "新版本首次登录几秒后，会打开一份简短摘要，其中的按钮可直接跳转到更改内容。随时输入 /az whatsnew 即可打开。"
