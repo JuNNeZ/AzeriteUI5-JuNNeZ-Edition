@@ -10,6 +10,16 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.22.1-JuNNeZ (2026-10-10) - Release Notes Fit on GitHub
+
+### Highlights
+
+- **No changes to the addon itself.** The 5.22.0 release notes had grown past the size GitHub accepts, so that release could not be published there automatically. Older notes now live in the changelog archive, and every download page gets the full notes again. If you already have 5.22.0, this update changes nothing in game.
+
+### Internal
+
+- The nine oldest entries (5.4.0 to 5.4.8) moved to `CHANGELOG_ARCHIVE.md`. The in-game changelog still shows the 12 newest releases.
+
 ## 5.22.0-JuNNeZ (2026-10-10) - Edit Mode, Snapping and Mythic+ Extras
 
 ### Highlights
