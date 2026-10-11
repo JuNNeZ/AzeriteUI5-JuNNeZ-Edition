@@ -1206,6 +1206,19 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 		get = function() return not (ns.db.profile.moverSnapping == false) end,
 		set = function(info, val) ns.db.profile.moverSnapping = val and true or false end
 	}
+	-- One slider for the whole layout: every frame's scale and its distance
+	-- from its screen anchor grow together, so frames keep their spacing.
+	options.args.frameScale = {
+		type = "range", width = "full",
+		order = orderoffset + 43,
+		name = L["AzeriteUI Scale"],
+		desc = L["Scales every AzeriteUI frame at once, keeping the layout's proportions. Each frame's own scale still applies on top. Nameplates have their own size settings."],
+		min = ns.API.FRAME_SCALE_MIN, max = ns.API.FRAME_SCALE_MAX, softMin = .7, softMax = 1.5, step = .01, bigStep = .05,
+		isPercent = true,
+		disabled = function() return InCombatLockdown() end,
+		get = function() return ns.API.GetFrameScaleMultiplier() end,
+		set = function(info, val) MovableFramesManager:SetFrameScale(val) end
+	}
 
 	local colorize = function(msg)
 		msg = string.gsub(msg, "<", "|cffffd200<")
@@ -1435,6 +1448,10 @@ MovableFramesManager.OnEvent = function(self, event, ...)
 		if (not InCombatLockdown()) then
 			self.incombat = nil
 
+			if (self.frameScaleReloadPending) then
+				self:OnFrameScaleProfileChanged()
+			end
+
 			if (self:IsMFMFrameOpen()) then
 				self:RefreshMFMFrame()
 			end
@@ -1446,14 +1463,26 @@ MovableFramesManager.OnEvent = function(self, event, ...)
 
 	if (event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED") then
 		local scale = UIParent:GetScale()
+		local factor = SCALE / scale
+		SCALE = scale
+		self:RescaleAnchors(factor)
+	end
+end
 
-		for anchor,anchorData in next,AnchorData do
+--- Multiplies every mover's scale and position, current and default, by factor.
+-- A UI scale change and the master scale both zoom AzeriteUI this way, so the
+-- layout keeps its proportions; each module saves the result through its own
+-- MFM_ScaleUpdated / MFM_PositionUpdated handler, then MFM_UIScaleChanged
+-- lets it rebuild its defaults.
+MovableFramesManager.RescaleAnchors = function(self, factor)
+	if (type(factor) ~= "number" or factor <= 0 or factor == 1) then return end
 
-			local anchorscale = anchor:GetScale()
-			local point, x, y = anchor:GetPosition()
+	for anchor,anchorData in next,AnchorData do
 
-			local nscale = (anchorscale * SCALE) / scale
-			local npoint, nx, ny = point, (x * SCALE) / scale, (y * SCALE) / scale
+		local point, x, y = anchor:GetPosition()
+		if (point) then
+			local nscale = anchor:GetScale() * factor
+			local npoint, nx, ny = point, x * factor, y * factor
 
 			anchor:SetScale(nscale)
 			anchor:ClearAllPoints()
@@ -1462,25 +1491,45 @@ MovableFramesManager.OnEvent = function(self, event, ...)
 			anchorData.lastScale = nscale
 			anchorData.lastPosition = { npoint, nx, ny }
 			anchorData.currentPosition = { npoint, nx, ny }
-
-			if (anchorData.defaultPosition) then
-				local anchorscale = anchorData.defaultScale
-				local point, x, y = anchorData.defaultPosition[1], anchorData.defaultPosition[2], anchorData.defaultPosition[3]
-
-				local nscale = (anchorscale * SCALE) / scale
-				local npoint, nx, ny = point, (x * SCALE) / scale, (y * SCALE) / scale
-
-				anchorData.defaultPosition[1] = npoint
-				anchorData.defaultPosition[2] = nx
-				anchorData.defaultPosition[3] = ny
-				anchorData.defaultScale = nscale
-			end
 		end
 
-		SCALE = scale
-
-		ns:Fire("MFM_UIScaleChanged")
+		if (anchorData.defaultPosition and anchorData.defaultScale) then
+			anchorData.defaultPosition[2] = anchorData.defaultPosition[2] * factor
+			anchorData.defaultPosition[3] = anchorData.defaultPosition[3] * factor
+			anchorData.defaultScale = anchorData.defaultScale * factor
+		end
 	end
+
+	ns:Fire("MFM_UIScaleChanged")
+end
+
+--- Sets the master scale (a fraction, 1 = normal) and zooms every mover by the change.
+-- Refused in combat: the modules would apply it after combat, but the movers would not.
+MovableFramesManager.SetFrameScale = function(self, value)
+	if (InCombatLockdown()) then return false end
+	value = tonumber(value)
+	if (not value or not ns.db or not ns.db.profile) then return false end
+	local old = ns.API.GetFrameScaleMultiplier()
+	ns.db.profile.frameScale = math.max(ns.API.FRAME_SCALE_MIN, math.min(ns.API.FRAME_SCALE_MAX, value))
+	local new = ns.API.GetFrameScaleMultiplier()
+	self.appliedFrameScale = new
+	if (math.abs(new - old) > .0001) then
+		self:RescaleAnchors(new / old)
+	end
+	return true
+end
+
+-- Defaults were generated with the master scale in use at login; another
+-- profile's saved positions carry its own. A reload rebuilds both together.
+-- OnEvent's PLAYER_REGEN_ENABLED branch retries a reload deferred by combat.
+MovableFramesManager.OnFrameScaleProfileChanged = function(self)
+	self.frameScaleReloadPending = nil
+	if (not self.appliedFrameScale or math.abs(ns.API.GetFrameScaleMultiplier() - self.appliedFrameScale) < .0001) then return end
+	if (InCombatLockdown()) then
+		self.frameScaleReloadPending = true
+		return
+	end
+	if (C_UI and C_UI.Reload) then C_UI.Reload() elseif (ReloadUI) then ReloadUI() end
 end
 
 MovableFramesManager.OnInitialize = function(self)
@@ -1502,6 +1551,14 @@ MovableFramesManager.OnInitialize = function(self)
 	self:RegisterChatCommand("lock", "ToggleMFMFrame")
 
 	-- Retail and Forever both send these from EditModeManagerFrameMixin.
+	-- The master scale this session's defaults were generated with.
+	self.appliedFrameScale = ns.API.GetFrameScaleMultiplier()
+	if (ns.db and ns.db.RegisterCallback) then
+		ns.db.RegisterCallback(self, "OnProfileChanged", "OnFrameScaleProfileChanged")
+		ns.db.RegisterCallback(self, "OnProfileCopied", "OnFrameScaleProfileChanged")
+		ns.db.RegisterCallback(self, "OnProfileReset", "OnFrameScaleProfileChanged")
+	end
+
 	if (EventRegistry and EventRegistry.RegisterCallback) then
 		EventRegistry:RegisterCallback("EditMode.Enter", self.OnEditModeEnter, self)
 		EventRegistry:RegisterCallback("EditMode.Exit", self.OnEditModeExit, self)

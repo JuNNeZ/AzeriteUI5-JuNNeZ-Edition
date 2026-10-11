@@ -82,7 +82,10 @@ local defaults = {
 		-- /lock movers: show them while Blizzard's Edit Mode is open, and snap them
 		-- to the screen, the grid and each other. See Core/MovableFrameManager.lua.
 		moversInEditMode = true,
-		moverSnapping = true
+		moverSnapping = true,
+		-- Master scale for every movable frame, baked into their saved scale and
+		-- position when changed. See API.GetFrameScaleMultiplier (Core/API/Scale.lua).
+		frameScale = 1
 	}
 }
 

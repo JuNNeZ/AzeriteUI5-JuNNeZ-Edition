@@ -36,7 +36,6 @@ local ipairs = ipairs
 local next = next
 local select = select
 local tostring = tostring
-local unpack = unpack
 
 local NamePlatesMod = NP.NamePlatesMod
 local GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT = NP.GLOBAL_NAMEPLATE_BLIZZARD_SCALE_DEFAULT
@@ -156,6 +155,57 @@ local GetDriverCVars = function()
 	return values
 end
 
+-- Blizzard's own plate width for its current Size and Style (Blizzard_NamePlates.lua, GetNamePlateWidth;
+-- read-only getters on Retail 12.1 and Forever 1.60.1). nil if the client has no such getter.
+local GetBlizzardPlateWidth = function()
+	local driver = NamePlateDriverFrame
+	if (not driver or not driver.GetNamePlateWidth or not driver.GetNamePlateScale
+		or not NamePlateConstants or not CVarCallbackRegistry) then
+		return nil
+	end
+	local ok, width = pcall(function()
+		local style = CVarCallbackRegistry:GetCVarNumberOrDefault(NamePlateConstants.STYLE_CVAR)
+		return driver:GetNamePlateWidth(style, driver:GetNamePlateScale(style))
+	end)
+	return (ok and type(width) == "number" and width > 0) and width or nil
+end
+
+-- The game has one plate size for every plate, and ours (the layout's Size) is what it gets. In
+-- dungeons and raids it draws friendly plates itself (ForbiddenNamePlateUnitFrameTemplate), inside that
+-- size: a name-only friendly player's name spans the plate's width less insets, so our 80px cut names
+-- to one character and "..." (FixLog 2026-10-11). There, while friendly players' plates show, the width
+-- is Blizzard's own; the height and our own plates (sized in Style.lua) stay as they are. A wider plate
+-- only widens the box the game stacks overlapping plates by.
+local GetDriverSize = function(self, db)
+	local width, height = db.Size[1], db.Size[2]
+	local inInstance, instanceType = IsInInstance()
+	if (inInstance and (instanceType == "party" or instanceType == "raid")
+		and self.GetShownSetting and self:GetShownSetting("friendlyPlayers")) then
+		local blizzard = GetBlizzardPlateWidth()
+		if (blizzard and blizzard > width) then
+			width = blizzard
+		end
+	end
+	return width, height
+end
+
+-- Only the size, and only when it changes: showing or hiding friendly players' plates while in an
+-- instance (Module.lua, CVAR_UPDATE). oUF's SetSize stores plateWidth/plateHeight.
+local ApplyNamePlateDriverSize = function(self)
+	local driver = self and self.namePlateDriver
+	if (not driver or not driver.SetSize) then
+		return
+	end
+	if (InCombatLockdown()) then
+		self.pendingDriverRefresh = true
+		return
+	end
+	local width, height = GetDriverSize(self, ns.GetConfig("NamePlates"))
+	if (driver.plateWidth ~= width or driver.plateHeight ~= height) then
+		driver:SetSize(width, height)
+	end
+end
+
 local ApplyNamePlateDriverSettings = function(self)
 	local driver = self and self.namePlateDriver
 	if (not driver) then
@@ -168,7 +218,7 @@ local ApplyNamePlateDriverSettings = function(self)
 
 	local db = ns.GetConfig("NamePlates")
 	if (driver.SetSize) then
-		driver:SetSize(unpack(db.Size))
+		driver:SetSize(GetDriverSize(self, db))
 	end
 	if (driver.SetCVars) then
 		driver:SetCVars(GetDriverCVars())
@@ -409,6 +459,7 @@ NP.IsShownByBlizzard = IsShownByBlizzard
 NP.ApplyFriendlyNameOnlyCVars = ApplyFriendlyNameOnlyCVars
 NP.GetDriverCVars = GetDriverCVars
 NP.ApplyNamePlateDriverSettings = ApplyNamePlateDriverSettings
+NP.ApplyNamePlateDriverSize = ApplyNamePlateDriverSize
 NP.IsVisibilityManagedCVar = IsVisibilityManagedCVar
 NP.IsBlizzardScaleCVar = IsBlizzardScaleCVar
 NP.IsBlizzardPlateSizeCVar = IsBlizzardPlateSizeCVar

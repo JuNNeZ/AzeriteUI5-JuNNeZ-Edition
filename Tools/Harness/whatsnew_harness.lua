@@ -75,13 +75,14 @@ local function Load(opts)
 		GetFont = function() return {} end,
 	}
 	local hud = { Command = function(self, input) world.hud[#world.hud + 1] = input end }
+	local movers = { OpenMFMFrame = function() world.moversOpened = true end }
 
 	local ns = {
 		OptionsKit = Kit, Prefix = "AzeriteUI", Version = opts.version or "5.20.1-JuNNeZ",
 		IsDevelopment = opts.development, IsFreshInstall = opts.fresh,
 		db = { global = opts.global or {} },
 		Print = function(self, ...) world.prints[#world.prints + 1] = table.concat({ ... }, " ") end,
-		GetModule = function(self, name) return name == "LegacyHUD" and hud or nil end,
+		GetModule = function(self, name) return (name == "LegacyHUD" and hud) or (name == "MovableFramesManager" and movers) or nil end,
 	}
 
 	assert(loadfile(root .. "/Options/WhatsNew.lua"))("AzeriteUI5_JuNNeZ_Edition", ns)
@@ -121,14 +122,27 @@ do
 			check(type(item.text) == "string" and item.text ~= "", "shipped: entry " .. i .. " item " .. j .. " has text")
 		end
 	end
-	-- The shipped /go legacy item reaches the HUD command.
 	check(W:Open(), "shipped: opens the newest entry")
-	local runItem
-	for _, item in ipairs(list[1].items) do if (item.run) then runItem = item end end
-	if (runItem) then
-		runItem.run()
-		check(world.hud[1] == "legacy", "shipped: the run item calls LegacyHUD:Command('legacy')")
+	-- Every shipped run item runs without error.
+	for i, entry in ipairs(list) do
+		for j, item in ipairs(entry.items or {}) do
+			if (item.run) then
+				check(pcall(item.run), "shipped: entry " .. i .. " item " .. j .. " runs")
+			end
+		end
 	end
+	-- The shipped /go legacy item reaches the HUD command, wherever it now sits.
+	local legacyFound
+	for _, entry in ipairs(list) do
+		for _, item in ipairs(entry.items or {}) do
+			if (item.run and item.label == "/go legacy") then legacyFound = true end
+		end
+	end
+	if (legacyFound) then
+		check(world.hud[1] == "legacy", "shipped: the /go legacy item calls LegacyHUD:Command('legacy')")
+	end
+	-- 5.23.0's button opens the /lock window, where AzeriteUI Scale is.
+	check(world.moversOpened, "shipped: the Open /lock item opens the mover window")
 end
 
 -- First login on a version with an entry: one 8 second timer, then the window.

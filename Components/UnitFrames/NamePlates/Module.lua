@@ -57,6 +57,7 @@ local ApplyFriendlyNameOnlyCVars = NP.ApplyFriendlyNameOnlyCVars
 local RefreshActiveNamePlates = NP.RefreshActiveNamePlates
 local GetDriverCVars = NP.GetDriverCVars
 local ApplyNamePlateDriverSettings = NP.ApplyNamePlateDriverSettings
+local ApplyNamePlateDriverSize = NP.ApplyNamePlateDriverSize
 local ApplyPendingNamePlateStacking = NP.ApplyPendingNamePlateStacking
 local ApplyPendingNamePlateVisibility = NP.ApplyPendingNamePlateVisibility
 local NamePlate_PostUpdateElements = NP.NamePlate_PostUpdateElements
@@ -388,6 +389,8 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 			RefreshActiveNamePlates()
 		elseif (IsVisibilityManagedCVar(name)) then
 			RefreshActiveNamePlates()
+			-- In an instance, showing friendly players widens the plate size (CVars.lua, GetDriverSize).
+			ApplyNamePlateDriverSize(self)
 		end
 		if (IsBlizzardPlateSizeCVar(name)) then
 			self:ScheduleDriverRefresh()

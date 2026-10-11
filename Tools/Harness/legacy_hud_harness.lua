@@ -68,6 +68,16 @@ check(ns.GetConfig('ExtraActionButton').ExtraButtonSize[1]==56, '56px extra butt
 local lcfg=ns.GetConfig('ActionButton');check(Shaped(lcfg,'square')==lcfg,'legacy ignores per-bar shapes')
 check(ns.GetConfig('PetFrame').Size[1]==158, 'compact pet')
 local party=ns.GetConfig('PartyFrames');check(party.GroupRolePosition[1]=='LEFT' and party.GroupRolePosition[2]<0 and party.GroupRoleBackdropSize[1]==54,'party role plate moves to the left casing')
+-- Raid roles are positioned inside the health bar (their parent), never past its right edge.
+local raid=ns.GetConfig('RaidFrames');local rp=raid.GroupRolePosition
+check(rp[1]=='BOTTOMRIGHT' and rp[2]<=0 and raid.GroupRoleSize[1]<=raid.HealthBarSize[2] and raid.GroupRoleBackdropTexture=='','raid role icon inside the bar, no plate')
+check(raid.StatusPosition[1]=='BOTTOMLEFT' and raid.NamePosition[1]=='TOPLEFT','raid status and name on separate corners')
+local arena=ns.GetConfig('ArenaFrames');local ap=arena.PvPSpecIconFramePosition
+check(ap[1]=='RIGHT' and ap[2]-7<=-((arena.UnitSize or arena.Size)[1]+15),'arena spec eye clear of the casing')
+-- 3.x: the ring fills 122 of 256px, drawn at (button - 8) / (122/256).
+for _,b in ipairs({'ActionButton','PetActionButton','StanceButton'}) do
+ local c=ns.GetConfig(b);check(math.abs(c.ButtonSpellHighlightSize[1]*122/256-(c.ButtonSize[1]-8))<.001,b..' highlight ring at the icon edge')
+end
 check(ns.GetConfig('PlayerCastBar').CastBarSize[1]==224, 'central castbar')
 for _,layout in pairs(ns.GetConfig('PlayerClassPower').ClassPowerLayouts) do
  if #layout>0 then local last=layout[#layout];check(math.abs(last.Position[2]+last.Size[1]-224)<.001,'class segments fit 224px') end

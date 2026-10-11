@@ -76,6 +76,8 @@ local Load = function(opts)
 	local ns = {
 		Prefix = "AzeriteUI",
 		HasSecureSnippets = true,
+		-- Core.lua makes ns a CallbackHandler target; MicroMenu listens for MFM_UIScaleChanged.
+		RegisterCallback = function() end,
 		Colors = { ui = { .1, .2, .3 }, red = { 1, 0, 0 }, normal = { 1, .7, .1 }, highlight = { 1, 1, 1 },
 			offwhite = { .9, .9, .9 }, gray = { .5, .5, .5 } },
 		API = {

@@ -1126,3 +1126,5 @@ L["Show in Edit Mode"] = "Показывать в режиме редактир�
 L["Show these frames while Blizzard's Edit Mode is open, so you can move Blizzard's frames and AzeriteUI's together."] = "Показывает эти рамки, пока открыт режим редактирования Blizzard, чтобы двигать рамки Blizzard и AzeriteUI вместе."
 L["Snap to edges and other frames"] = "Прилипать к краям и другим рамкам"
 L["A dragged frame snaps to the screen's edges and center, to other frames, and to the Edit Mode grid when it is shown. Hold Alt while dragging to place it freely."] = "Перетаскиваемая рамка прилипает к краям и центру экрана, к другим рамкам и к сетке режима редактирования, когда она показана. Удерживайте Alt при перетаскивании, чтобы поставить рамку свободно."
+L["AzeriteUI Scale"] = "Масштаб AzeriteUI"
+L["Scales every AzeriteUI frame at once, keeping the layout's proportions. Each frame's own scale still applies on top. Nameplates have their own size settings."] = "Масштабирует все рамки AzeriteUI сразу, сохраняя пропорции раскладки. Собственный масштаб каждой рамки применяется поверх. У индикаторов здоровья свои настройки размера."

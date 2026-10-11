@@ -692,4 +692,6 @@ MicroMenu.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("UI_SCALE_CHANGED", "OnEvent")
+	-- Fired after the master scale (/lock) zooms the movers; this bar has none.
+	ns.RegisterCallback(self, "MFM_UIScaleChanged", "UpdateScale")
 end

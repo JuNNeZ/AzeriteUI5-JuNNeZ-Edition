@@ -37,8 +37,25 @@ API.GetScale = function()
 	return 768/1080
 end
 
+-- The player's master scale for every movable AzeriteUI frame (/lock -> AzeriteUI Scale).
+-- Stored in the core profile; 1 until the database exists.
+API.FRAME_SCALE_MIN, API.FRAME_SCALE_MAX = .5, 2
+API.GetFrameScaleMultiplier = function()
+	local profile = ns.db and ns.db.profile
+	local value = profile and tonumber(profile.frameScale)
+	if (not value or value ~= value) then return 1 end
+	return math.max(API.FRAME_SCALE_MIN, math.min(API.FRAME_SCALE_MAX, value))
+end
+
+-- The effective scale without the master scale, for code that already
+-- multiplies in a saved scale which carries it (the tooltips).
+API.GetBaseEffectiveScale = function()
+	return (768/1080) / UIParent:GetScale()
+end
+
 -- Get the scale to use on custom elements when slaved to UIParent
 -- in order for them to match the scale of custom elements ignoring the parent scale.
+-- Includes the master scale, so every default position and scale built from it follows.
 API.GetEffectiveScale = function()
-	return (768/1080) / UIParent:GetScale()
+	return API.GetBaseEffectiveScale() * API.GetFrameScaleMultiplier()
 end

@@ -34,7 +34,28 @@ local LegacyCommand = function(input)
 	end
 end
 
+local OpenMovers = function()
+	local manager = ns:GetModule("MovableFramesManager", true)
+	if (manager and manager.OpenMFMFrame) then manager:OpenMFMFrame() end
+end
+
 ns.WhatsNew = {
+	{
+		version = "5.23.0-JuNNeZ",
+		items = {
+			{
+				text = "Resize all of AzeriteUI at once: AzeriteUI Scale in the /lock window keeps your layout's proportions.",
+				run = OpenMovers,
+				label = "Open /lock"
+			},
+			{
+				text = "Friendly players' names are no longer cut to one letter in dungeons and raids."
+			},
+			{
+				text = "Legacy: raid role icons sit inside each frame, and spell highlights show on the buttons again."
+			}
+		}
+	},
 	{
 		version = "5.22.0-JuNNeZ",
 		items = {

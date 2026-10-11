@@ -1616,7 +1616,9 @@ end
 
 Tooltips.PostUpdatePositionAndScale = function(self)
 	if (self:IsDisabled()) then return end
-	GameTooltip:SetScale(self.db.profile.savedPosition.scale * ns.API.GetEffectiveScale())
+	-- The saved scale already carries the master scale (/lock); the base
+	-- effective scale keeps it from being applied twice.
+	GameTooltip:SetScale(self.db.profile.savedPosition.scale * ns.API.GetBaseEffectiveScale())
 end
 
 Tooltips.OnEnable = function(self)

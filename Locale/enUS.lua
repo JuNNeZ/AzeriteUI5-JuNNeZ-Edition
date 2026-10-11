@@ -1125,3 +1125,5 @@ L["Show in Edit Mode"] = true
 L["Show these frames while Blizzard's Edit Mode is open, so you can move Blizzard's frames and AzeriteUI's together."] = true
 L["Snap to edges and other frames"] = true
 L["A dragged frame snaps to the screen's edges and center, to other frames, and to the Edit Mode grid when it is shown. Hold Alt while dragging to place it freely."] = true
+L["AzeriteUI Scale"] = true
+L["Scales every AzeriteUI frame at once, keeping the layout's proportions. Each frame's own scale still applies on top. Nameplates have their own size settings."] = true

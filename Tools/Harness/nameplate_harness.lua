@@ -2124,6 +2124,46 @@ do
 	Fire("PLAYER_REGEN_ENABLED")
 	check(W.driver.plateWidth == size[1], "and is done when combat ends", W.driver.plateWidth)
 
+	-- In dungeons and raids the game draws friendly plates itself, inside this one size; a name-only
+	-- friendly player's name spans its width, so ours cut names to a character (FixLog 2026-10-11).
+	-- Blizzard's getters as on Retail 12.1 / Forever 1.60.1 (Blizzard_NamePlates.lua).
+	local savedInstance, savedFriends = W.instance, W.cvars.nameplateShowFriendlyPlayers
+	NamePlateConstants = { STYLE_CVAR = "nameplateStyle" }
+	CVarCallbackRegistry = { GetCVarNumberOrDefault = function(_, name) return tonumber(W.cvars[name]) or 0 end }
+	NamePlateDriverFrame = {
+		GetNamePlateScale = function(_, style) return { horizontal = 1 } end,
+		GetNamePlateWidth = function(_, style, scale) return 190 * scale.horizontal end
+	}
+	W.cvars.nameplateShowFriendlyPlayers = "1"
+	W.instance = { true, "party" }
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == 190 and W.driver.plateHeight == size[2],
+		"in a dungeon with friendly players shown, the plate takes Blizzard's width, our height", W.driver.plateWidth)
+	W.cvars.nameplateShowFriendlyPlayers = "0"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	check(W.driver.plateWidth == size[1], "hiding friendly players there gives our width back", W.driver.plateWidth)
+	W.cvars.nameplateShowFriendlyPlayers = "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	check(W.driver.plateWidth == 190, "and showing them widens it again", W.driver.plateWidth)
+	W.instance = { true, "arena" }
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == size[1], "arenas keep our width", W.driver.plateWidth)
+	W.instance = { true, "raid" }
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == 190, "raids widen like dungeons", W.driver.plateWidth)
+	W.instance = { false, "none" }
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == size[1], "outside, where the plates are ours, our width", W.driver.plateWidth)
+	NamePlateDriverFrame.GetNamePlateWidth = function() return size[1] - 10 end
+	W.instance = { true, "party" }
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == size[1], "never narrower than ours", W.driver.plateWidth)
+	NamePlateConstants, CVarCallbackRegistry, NamePlateDriverFrame = nil, nil, nil
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == size[1], "a client without Blizzard's getters keeps our width", W.driver.plateWidth)
+	W.instance, W.cvars.nameplateShowFriendlyPlayers = savedInstance, savedFriends
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+
 	-- The driver's own CVars.
 	check(W.cvars.nameplatePlayerMaxDistance == W.cvars.nameplateMaxDistance,
 		"other players' plates reach as far as Maximum distance says", W.cvars.nameplatePlayerMaxDistance)

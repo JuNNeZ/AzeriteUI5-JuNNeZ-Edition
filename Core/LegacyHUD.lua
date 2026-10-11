@@ -232,6 +232,21 @@ HUD.GetConfig = function(self, name, original)
 			-- Here it sits on the left casing, clear of the bars and text.
 			config.GroupRolePosition, config.GroupRoleSize = { "LEFT", -34, 0 }, { 28, 28 }
 			config.GroupRoleBackdropSize, config.GroupRoleIconSize = { 54, 54 }, { 24, 24 }
+		elseif (config.GroupRolePosition and name == "RaidFrames") then
+			-- Azerite's plate hangs 25px outside the raid frame, which on Legacy's
+			-- 76px bars is the next frame's casing. 3.x showed the bare icon; here
+			-- it sits inside the health bar's bottom right (positions are relative
+			-- to the health bar), with Dead/Offline moved to the bottom left so
+			-- neither lands on the name.
+			config.GroupRolePosition, config.GroupRoleSize = { "BOTTOMRIGHT", -2, 1 }, { 14, 14 }
+			config.GroupRoleIconSize, config.GroupRoleBackdropTexture = { 14, 14 }, ""
+			config.StatusPosition, config.StatusJustifyH = { "BOTTOMLEFT", 3, 1 }, "LEFT"
+		end
+		if (config.PvPSpecIconFramePosition and name == "ArenaFrames") then
+			-- Hung 21px off the right edge, the spec eye covered the health value
+			-- and the casing. Arena frames sit at the screen's right, so it goes
+			-- outside the casing on the left (its 44px eye is inset 7px).
+			config.PvPSpecIconFramePosition = { "RIGHT", -(spec[1] + 10), 0 }
 		end
 		config.CastBarTextPosition, config.CastBarValuePosition = { "LEFT", 10, 0 }, { "RIGHT", -10, 0 }
 		config.CastBarTextSize = { spec[3] - 60, spec[4] }
@@ -249,7 +264,11 @@ HUD.GetConfig = function(self, name, original)
 		config.ButtonBackdropTexture, config.ButtonBackdropColor = WHITE, { 0, 0, 0, .75 }
 		config.ButtonBorderTexture = ""
 		config.ButtonBorderSize, config.ButtonBorderPosition = { size, size }, { "CENTER", 0, 0 }
-		config.ButtonSpellHighlightSize, config.ButtonSpellHighlightPosition = { size, size }, { "CENTER", 0, 0 }
+		-- The square ring fills only the middle 122px of its 256px texture; 3.x
+		-- drew it at (size - 8) / (122/256). At button size the ring shrank to a
+		-- hairline around a small square mid-icon, so procs looked absent.
+		local glow = (size - 8) * 256 / 122
+		config.ButtonSpellHighlightSize, config.ButtonSpellHighlightPosition = { glow, glow }, { "CENTER", 0, 0 }
 		config.ButtonSpellHighlightTexture, config.ButtonAssistedHighlightTexture = media("actionbutton-spellhighlight-square-rounded"), media("actionbutton-spellhighlight-square-rounded")
 		config.ButtonKeybindPosition, config.ButtonKeybindJustifyH, config.ButtonKeybindFont = { "TOPLEFT", 6, -6 }, "LEFT", ns.API.GetFont(13, true)
 		config.ButtonCountPosition, config.ButtonCountFont = { "BOTTOMRIGHT", -6, 6 }, ns.API.GetFont(14, true)
@@ -365,6 +384,9 @@ HUD.StyleUnit = function(self, frame)
 		frame.Name:SetParent(frame.Overlay)
 	end
 	if (frame.Name and frame.Name.SetWidth) then frame.Name:SetWidth(frame:GetWidth() - 24) end
+	-- The name tag cuts by character count; wider glyphs (CJK) still overran
+	-- the narrow raid bars and wrapped onto the status text. One line only.
+	if (frame.Name and frame.Name.SetWordWrap) then frame.Name:SetWordWrap(false) end
 	if (style == "Player" and frame.CombatIndicator and frame.CombatIndicator.SetTexCoord) then
 		frame.CombatIndicator:SetTexCoord(.5, 1, 0, .5)
 	end

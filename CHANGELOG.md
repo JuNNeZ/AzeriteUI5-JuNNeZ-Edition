@@ -10,24 +10,30 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
-## 5.22.2-JuNNeZ (2026-10-11) - Legacy Party Roles and Map Taint
+## 5.23.0-JuNNeZ (2026-10-11) - AzeriteUI Scale, Dungeon Names and Legacy Fixes
 
 ### Highlights
 
-- **Party role icons no longer cover the name and health on Legacy.** Under `/go legacy`, the tank, healer and damage plate sat in the middle of each party frame, on top of the name and health value. It now sits on the frame's left edge, clear of the bars and text.
-- **An empty power bar keeps its dark fill on Legacy.** A dead target (or any frame whose power bar hides, such as a unit without power) left a plain black strip under the health bar. That strip now shows the same dark bar background as everything else.
-- **No more aura tooltip errors.** Hovering some auras, mostly in combat or in restricted content, raised "Secret values are only allowed during untainted execution" each time. Those auras now simply show no tooltip, as Blizzard does not let addons look them up.
-- **The world map no longer blocks quest pins in combat.** Opening the map in combat could report that AzeriteUI tried to call `Button:SetPassThroughButtons()`. AzeriteUI no longer changes the maximized map's panel settings, which is what pulled Blizzard's panel handling out of its secure state.
+- **Resize the whole UI with one slider.** `/lock` now has **AzeriteUI Scale** under Moving Frames (50-200%). It scales every AzeriteUI frame at once and keeps the layout's proportions: each frame grows together with its distance from its screen edge, so bars keep their spacing and corner frames stay in their corners. Each frame's own scale still applies on top, and Reset puts a frame back to its default at the chosen size. Nameplates keep their own size settings.
+- **Friendly players' names are whole again in dungeons and raids.** There the game draws friendly nameplates itself, inside the plate size AzeriteUI sets for its own compact plates, so name-only players showed one letter and "..." (most visible with Chinese and Korean names). In dungeons and raids, while friendly players' plates are shown, the plate now takes Blizzard's own width.
+- **Legacy: party and raid role icons no longer cover other frames.** Under `/go legacy`, the party role plate sat on top of the name and health value; it now sits on the frame's left edge. On raid frames the plate hung outside the frame onto its neighbour; it is now a small icon inside the bar's bottom right, and Dead/Offline moved to the bottom left so it no longer prints over the name.
+- **Legacy: spell highlights show on the action buttons again.** Proc highlights, every proc style, the assisted highlight and the pet and stance highlights were drawn as a hairline square in the middle of the icon. They now ring the icon as they did in AzeriteUI 3.x.
+- **Legacy: tidier frames.** Names stay on one line (long and Chinese names wrapped onto the text below), an empty power bar keeps its dark fill instead of a black strip, and the arena spec icon sits beside the frame instead of over the health value.
+- **No more aura tooltip errors, and the world map no longer blocks quest pins in combat.** Hovering some auras in combat or restricted content raised "Secret values are only allowed during untainted execution"; those auras now show no tooltip, as Blizzard does not let addons look them up. Opening the map in combat could report a blocked `Button:SetPassThroughButtons()`; AzeriteUI no longer rewrites the maximized map's panel settings, which it did on every maximize.
 
 ### Development
 
-- The Legacy layout reuses each frame's normal settings and only resizes the bars, so the party frame's role plate kept its place from the much taller Azerite party frame. Legacy now places it on the left casing and draws it above the border. The power strip got a background that belongs to the frame itself, beneath the power bar, so it stays visible whenever the bar and its own backdrop are hidden.
-- The world map change removes the map's permission to stay open beside other panels while maximized. Blizzard's own rule applies again, so opening a panel such as the character window may close the maximized map.
+- The master scale reuses the mover system's own answer to a change of the game's UI scale: every mover's scale and position, current and default, are multiplied by the change and each module saves the result as it does after a drag. The master scale is also part of the scale every default layout is built from, so a reload, a reset and the Legacy layout all agree with it. Tooltips had their scale applied twice and the micro menu, which has no mover, did not follow it; both were fixed along the way.
+- For the dungeon names, Blizzard's nameplate source on both clients showed how its name-only friendly plates fit their name to the plate's width, and that one plate size serves every nameplate in the game. Outside instances, and in arenas and battlegrounds, AzeriteUI's plate size is unchanged.
+- The Legacy layout converts each frame's normal settings, so pieces placed for Azerite's larger frames (role plates, status text, the arena spec icon) landed on or beside the much smaller Legacy bars. Every positioned element of each Legacy unit frame was compared with the Legacy frame sizes to find them. The square highlight ring fills only the middle half of its image; AzeriteUI 3.x drew it at about twice the button size, and Legacy now uses the same measure.
+- New offline tests cover the master scale (the real scale code and frame handlers), the dungeon plate width (entering and leaving instances, toggling friendly plates, clients without Blizzard's width), and the Legacy role, status, spec icon and highlight placement. Each new check was confirmed to fail when its fix is removed.
 
 ### Access and known limits
 
-- Checked offline only (Lua syntax and the Legacy HUD test, which now covers the role plate position). The party role position and the power strip have not yet been seen in game.
-- The map fix removes the most likely cause of the blocked action; other changes the map module makes could in principle still taint it. Please report it if the error comes back.
+- All of this release is checked offline only (Lua syntax and the automated tests); none of it has yet been seen in game. Please report anything that looks out of place.
+- AzeriteUI Scale cannot be changed in combat. Switching to a profile saved with a different scale reloads the interface. A module that is turned off, and the theme you are not using (Azerite or Legacy), only have their default positions rescaled until you next use them, as with a change of the game's UI scale.
+- In dungeons and raids, the wider plate also widens the space the game uses to stack overlapping enemy plates, so plates in a large pull may stack a little higher. Scenarios and delves are unchanged.
+- The world map fix removes the most likely cause of the blocked action; other changes the map module makes could in principle still taint it. Please report it if the error comes back.
 
 ## 5.22.1-JuNNeZ (2026-10-10) - Release Notes Fit on GitHub
 
