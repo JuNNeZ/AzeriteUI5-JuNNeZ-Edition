@@ -194,10 +194,16 @@ ns.AuraStyles.CreateTextureBorder = CreateAuraTextureBorder
 local UpdateTooltip = function(self)
 	if (GameTooltip:IsForbidden()) then return end
 
+	-- Blizzard rejects secret aura IDs and units from addon code, so a
+	-- restricted aura gets no tooltip instead of an error on every hover.
+	local unit, auraInstanceID = self:GetParent().__owner.unit, self.auraInstanceID
+	if (not unit or not auraInstanceID) then return end
+	if (issecretvalue and (issecretvalue(unit) or issecretvalue(auraInstanceID))) then return end
+
 	if (self.isHarmful) then
-		GameTooltip:SetUnitDebuffByAuraInstanceID(self:GetParent().__owner.unit, self.auraInstanceID)
+		GameTooltip:SetUnitDebuffByAuraInstanceID(unit, auraInstanceID)
 	else
-		GameTooltip:SetUnitBuffByAuraInstanceID(self:GetParent().__owner.unit, self.auraInstanceID)
+		GameTooltip:SetUnitBuffByAuraInstanceID(unit, auraInstanceID)
 	end
 end
 

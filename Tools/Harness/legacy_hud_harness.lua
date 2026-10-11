@@ -67,6 +67,7 @@ check(ns.GetConfig('ActionButton').ButtonSize[1]==54, '54px primary buttons')
 check(ns.GetConfig('ExtraActionButton').ExtraButtonSize[1]==56, '56px extra button')
 local lcfg=ns.GetConfig('ActionButton');check(Shaped(lcfg,'square')==lcfg,'legacy ignores per-bar shapes')
 check(ns.GetConfig('PetFrame').Size[1]==158, 'compact pet')
+local party=ns.GetConfig('PartyFrames');check(party.GroupRolePosition[1]=='LEFT' and party.GroupRolePosition[2]<0 and party.GroupRoleBackdropSize[1]==54,'party role plate moves to the left casing')
 check(ns.GetConfig('PlayerCastBar').CastBarSize[1]==224, 'central castbar')
 for _,layout in pairs(ns.GetConfig('PlayerClassPower').ClassPowerLayouts) do
  if #layout>0 then local last=layout[#layout];check(math.abs(last.Position[2]+last.Size[1]-224)<.001,'class segments fit 224px') end

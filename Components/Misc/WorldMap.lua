@@ -109,14 +109,10 @@ end
 local ApplyStyledMaximizedState = function()
 	WorldMapFrame:SetParent(UIParent)
 	WorldMapFrame:SetScale(1)
-	if (not InCombatLockdown()) then
-		if (WorldMapFrame:GetAttribute("UIPanelLayout-area") ~= "center") then
-			SetUIPanelAttribute(WorldMapFrame, "area", "center")
-		end
-		if (WorldMapFrame:GetAttribute("UIPanelLayout-allowOtherPanels") ~= true) then
-			SetUIPanelAttribute(WorldMapFrame, "allowOtherPanels", true)
-		end
-	end
+	-- No SetUIPanelAttribute here. Blizzard sets the maximized map's panel
+	-- layout itself; an attribute written by an addon taints UIParent's panel
+	-- manager, and the next map opened in combat had its quest pins blocked
+	-- (ADDON_ACTION_BLOCKED on Button:SetPassThroughButtons).
 	WorldMapFrame:OnFrameSizeChanged()
 	WorldMapFrame.NavBar:Hide()
 	WorldMapFrame.BorderFrame:SetAlpha(0)

@@ -226,6 +226,13 @@ HUD.GetConfig = function(self, name, original)
 				config.Seasonal.LoveFestivalCombatIndicatorColor = config.CombatIndicatorColor
 			end
 		end
+		if (config.GroupRolePosition and name == "PartyFrames") then
+			-- Azerite hangs the role plate from the top centre of its tall party
+			-- frame; on Legacy's short bar that is on top of the name and health.
+			-- Here it sits on the left casing, clear of the bars and text.
+			config.GroupRolePosition, config.GroupRoleSize = { "LEFT", -34, 0 }, { 28, 28 }
+			config.GroupRoleBackdropSize, config.GroupRoleIconSize = { 54, 54 }, { 24, 24 }
+		end
 		config.CastBarTextPosition, config.CastBarValuePosition = { "LEFT", 10, 0 }, { "RIGHT", -10, 0 }
 		config.CastBarTextSize = { spec[3] - 60, spec[4] }
 		if (config.AurasPosition) then
@@ -403,6 +410,9 @@ HUD.StyleUnit = function(self, frame)
 		frame.Power:SetOrientation("HORIZONTAL")
 	end
 	if (frame.ManaOrb) then frame.ManaOrb:SetAlpha(0); frame.ManaOrb:EnableMouse(false) end
+	-- The role plate overlaps the casing, so it has to draw above it.
+	local role = frame.GroupRoleIndicator
+	if (role and role.SetFrameLevel) then role:SetFrameLevel(frame.LegacyBorder:GetFrameLevel() + 1) end
 end
 
 HUD.Command = function(self, input)
@@ -464,6 +474,18 @@ HUD.RefreshUnit = function(self, frame)
 		end
 		if (power.Case) then power.Case:ClearAllPoints(); power.Case:SetAllPoints(power) end
 		if (power.Spark) then power.Spark:SetAlpha(0) end
+		-- The power bar and its backdrop hide on a dead or powerless unit, which
+		-- left an empty black strip under the health bar. This slot lives on the
+		-- frame itself, below both, so the strip keeps its dark fill.
+		local slot = frame.LegacyPowerSlot
+		if (not slot) then
+			slot = frame:CreateTexture(nil, "BORDER", nil, 7)
+			slot:SetTexture(media("statusbar-dark"))
+			slot:SetVertexColor(.1, .1, .1, 1)
+			frame.LegacyPowerSlot = slot
+		end
+		slot:ClearAllPoints()
+		slot:SetAllPoints(power)
 	end
 	if (frame.ManaOrb) then frame.ManaOrb:SetAlpha(0); frame.ManaOrb:EnableMouse(false) end
 end

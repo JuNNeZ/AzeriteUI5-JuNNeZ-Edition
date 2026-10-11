@@ -10,6 +10,25 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.22.2-JuNNeZ (2026-10-11) - Legacy Party Roles and Map Taint
+
+### Highlights
+
+- **Party role icons no longer cover the name and health on Legacy.** Under `/go legacy`, the tank, healer and damage plate sat in the middle of each party frame, on top of the name and health value. It now sits on the frame's left edge, clear of the bars and text.
+- **An empty power bar keeps its dark fill on Legacy.** A dead target (or any frame whose power bar hides, such as a unit without power) left a plain black strip under the health bar. That strip now shows the same dark bar background as everything else.
+- **No more aura tooltip errors.** Hovering some auras, mostly in combat or in restricted content, raised "Secret values are only allowed during untainted execution" each time. Those auras now simply show no tooltip, as Blizzard does not let addons look them up.
+- **The world map no longer blocks quest pins in combat.** Opening the map in combat could report that AzeriteUI tried to call `Button:SetPassThroughButtons()`. AzeriteUI no longer changes the maximized map's panel settings, which is what pulled Blizzard's panel handling out of its secure state.
+
+### Development
+
+- The Legacy layout reuses each frame's normal settings and only resizes the bars, so the party frame's role plate kept its place from the much taller Azerite party frame. Legacy now places it on the left casing and draws it above the border. The power strip got a background that belongs to the frame itself, beneath the power bar, so it stays visible whenever the bar and its own backdrop are hidden.
+- The world map change removes the map's permission to stay open beside other panels while maximized. Blizzard's own rule applies again, so opening a panel such as the character window may close the maximized map.
+
+### Access and known limits
+
+- Checked offline only (Lua syntax and the Legacy HUD test, which now covers the role plate position). The party role position and the power strip have not yet been seen in game.
+- The map fix removes the most likely cause of the blocked action; other changes the map module makes could in principle still taint it. Please report it if the error comes back.
+
 ## 5.22.1-JuNNeZ (2026-10-10) - Release Notes Fit on GitHub
 
 ### Highlights
