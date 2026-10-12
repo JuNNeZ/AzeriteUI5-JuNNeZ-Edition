@@ -751,6 +751,13 @@ local GenerateOptions = function()
 						disabled = function(info) return not getoption(info, "hideFriendlyPlayerHealthBar") end,
 						set = SetFriendlyNameOnlyTargetOption(),
 						get = GetFriendlyNameOnlyTargetOption()
+					},
+					-- The game hands addons forbidden plates for friendly units in instances
+					-- (FORBIDDEN_NAME_PLATE_UNIT_ADDED); their name height follows nameplateSize.
+					instanceNote = {
+						name = L["In dungeons and raids the game draws friendly nameplates itself and addons cannot change them. Their size follows the game's own nameplate Size setting."],
+						order = 4,
+						type = "description", width = "full"
 					}
 				}
 			},

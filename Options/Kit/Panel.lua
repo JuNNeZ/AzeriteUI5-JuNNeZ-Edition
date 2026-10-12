@@ -23,6 +23,11 @@ local Config = Kit.Config
 local Renderer = Kit.Renderer
 if (not Config or not Renderer) then return end
 
+-- The window style (Look.lua), read once when the window is built and kept in
+-- Panel.rounded: every row is made after that, and a style that changed under
+-- rows already made would leave half the rail in each.
+local Look = Kit.Look
+
 local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
 local AceConfigRegistry = LibStub("AceConfigRegistry-3.0", true)
 
@@ -261,14 +266,33 @@ local CreateRailRow = function(index, list, height, onClick, withTrail)
 	row.highlight = highlight
 
 	-- The selected page carries a bar down its left edge, as the artifact does
-	-- with `border-left: 2px solid`.
+	-- with `border-left: 2px solid`. Rounded, the highlight is a rounded wash and
+	-- the bar a short pip inside it, clear of its corners.
 	local edge = row:CreateTexture(nil, "ARTWORK")
 	edge:SetTexture(Kit.GetMedia("plain"))
 	edge:SetWidth(2)
-	edge:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
-	edge:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
+	if (Panel.rounded) then
+		Look.RoundTexture(highlight)
+		edge:SetPoint("TOPLEFT", row, "TOPLEFT", 3, -5)
+		edge:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 3, 5)
+	else
+		edge:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
+		edge:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
+	end
 	edge:Hide()
 	row.edge = edge
+
+	-- The page's icon, once the art has shipped (Look.PageIconsAvailable). The
+	-- label moves over only when there is an icon to make room for.
+	local textLeft = 12
+	if (Panel.rounded and not withTrail and Look.PageIconsAvailable) then
+		local icon = row:CreateTexture(nil, "ARTWORK")
+		icon:SetSize(16, 16)
+		icon:SetPoint("LEFT", row, "LEFT", 9, 0)
+		icon:Hide()
+		row.icon = icon
+		textLeft = 31
+	end
 
 	-- A gem on a page holding settings that differ from their defaults.
 	local dot = row:CreateTexture(nil, "OVERLAY")
@@ -298,7 +322,7 @@ local CreateRailRow = function(index, list, height, onClick, withTrail)
 		trail:SetWordWrap(false)
 		row.trail = trail
 	else
-		text:SetPoint("LEFT", row, "LEFT", 12, 0)
+		text:SetPoint("LEFT", row, "LEFT", textLeft, 0)
 		text:SetPoint("RIGHT", row, "RIGHT", -8, 0)
 		row.trail = false
 	end
@@ -334,6 +358,7 @@ local Result_Row = function(index)
 	highlight:SetTexture(Kit.GetMedia("plain"))
 	highlight:SetAllPoints()
 	highlight:Hide()
+	if (Panel.rounded) then Look.RoundTexture(highlight) end
 	row.highlight = highlight
 
 	local rule = row:CreateTexture(nil, "BACKGROUND")
@@ -399,6 +424,7 @@ local Section_Row = function(index)
 	highlight:SetTexture(Kit.GetMedia("plain"))
 	highlight:SetAllPoints()
 	highlight:Hide()
+	if (Panel.rounded) then Look.RoundTexture(highlight) end
 	row.highlight = highlight
 
 	-- The same bar a selected page carries, so the section you are reading is
@@ -469,6 +495,8 @@ end
 -- Public
 --------------------------------------------------------------------------
 Panel.BuildRail = function(self)
+	if (not railContent) then return end
+
 	local options, module = GetOptions()
 	if (not options) then return end
 
@@ -538,6 +566,7 @@ Panel.BuildRail = function(self)
 				row:SetPoint("TOP", railContent, "TOP", 0, -offset)
 				row.key = entry.key
 				row.text:SetText(entry.name)
+				if (row.icon) then row.icon:SetShown(Look.SetPageIcon(row.icon, entry.key)) end
 
 				-- Counting reads every setting on the page, so it is done when the
 				-- panel opens or refreshes and cached for the redraws in between.
@@ -1024,6 +1053,15 @@ end
 Panel.SetTab = function(self, key)
 	if (self.tab == key) then return end
 
+	-- Before the window exists there is no rail to rebuild: What's New asks
+	-- for the Settings tab and only then opens the window on the changelog.
+	-- Remember the tab; Open builds the window and draws the rail for it.
+	if (not frame) then
+		self.tab = key
+		self.selected = nil
+		return
+	end
+
 	self.lastPage = self.lastPage or {}
 	self.lastPage[self.tab] = self.selected
 
@@ -1413,6 +1451,19 @@ Panel.ApplyTheme = function(self)
 		self.searchBackdrop:SetBackdropColor(unpack(Kit.InsetColor))
 		Kit.SetBorderColor(self.searchBackdrop, Kit.BorderIdle)
 	end
+
+	-- Rounded: the rail's well is coloured like the search box, the inset it
+	-- is the larger twin of, and the rules take the theme's border.
+	if (self.railWell) then
+		self.railWell:SetBackdropColor(unpack(Kit.InsetColor))
+		Kit.SetBorderColor(self.railWell, Kit.BorderIdle)
+	end
+	if (self.chromeRules) then
+		local border = Kit.BorderIdle
+		for i = 1, #self.chromeRules do
+			self.chromeRules[i]:SetVertexColor(border[1], border[2], border[3], .7)
+		end
+	end
 	if (self.searchGlyph) then self.searchGlyph:SetVertexColor(unpack(Kit.TextSelected)) end
 	if (self.placeholder) then self.placeholder:SetTextColor(unpack(Kit.TextDisabled)) end
 	if (searchBox) then searchBox:SetTextColor(unpack(Kit.TextHighlight)) end
@@ -1452,6 +1503,10 @@ Panel.ApplyTheme = function(self)
 		row.edge:SetVertexColor(accent[1], accent[2], accent[3], 1)
 		row.dot:SetVertexColor(accent[1], accent[2], accent[3])
 		row.text:SetTextColor(unpack(row.selected and accent or Kit.TextNormal))
+		if (row.icon) then
+			local tint = row.selected and accent or Kit.TextNormal
+			row.icon:SetVertexColor(tint[1], tint[2], tint[3], 1)
+		end
 	end
 
 	for i = 1, #(self.sectionRows or {}) do
@@ -1596,9 +1651,16 @@ local Build = function()
 	frame:SetMovable(true)
 	frame:SetResizable(true)
 
+	-- Rounded is the same casing with round corners (Look.CasingBackdrop), so it
+	-- hangs out by the same outset and is drawn and raised the same way. Its
+	-- fill does not overhang (Look.WindowFill), so the square fill's corners
+	-- stay under the curved rim; the shadow is a frame of its own below.
+	Panel.rounded = (Look and Look.IsRounded()) and true or false
+	Panel.chromeRules = {}
+
 	-- The fill only. The casing is a frame of its own, below, so it can be drawn
 	-- above everything the window holds rather than under the first child.
-	frame:SetBackdrop(Kit.WindowFill)
+	frame:SetBackdrop(Panel.rounded and Look.WindowFill or Kit.WindowFill)
 
 	-- The casing hangs outside the window, so the clamp has to know about it or
 	-- the window can be dragged until its border is off the screen.
@@ -1607,10 +1669,12 @@ local Build = function()
 
 	if (frame.SetResizeBounds) then frame:SetResizeBounds(MIN_W, MIN_H) end
 
+	if (Panel.rounded) then Panel.shadow = Look.Shadow(frame) end
+
 	local casing = CreateFrame("Frame", nil, frame, ns.BackdropTemplate)
 	casing:SetPoint("TOPLEFT", frame, "TOPLEFT", -outset.left, outset.top)
 	casing:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", outset.right, -outset.bottom)
-	casing:SetBackdrop(Kit.WindowCasing)
+	casing:SetBackdrop(Panel.rounded and Look.CasingBackdrop or Kit.WindowCasing)
 	casing:SetBackdropBorderColor(unpack(Kit.WindowCasingColor))
 	casing:EnableMouse(false)
 	Panel.casing = casing
@@ -1736,8 +1800,17 @@ local Build = function()
 	searchBox = search
 	Panel.searchBox = search
 
-	local searchBackdrop = Kit.CreateBackdrop(search, Kit.InsetBackdrop, 2)
+	local searchBackdrop = Kit.CreateBackdrop(search,
+		Panel.rounded and Look.InsetBackdrop or Kit.InsetBackdrop, 2)
 	Panel.searchBackdrop = searchBackdrop
+
+	-- Rounded closes the top band with the addon's own sculpted rule.
+	if (Panel.rounded) then
+		local rule = Look.Rule(searchRow)
+		rule:SetPoint("BOTTOMLEFT", searchRow, "BOTTOMLEFT", 2, -4)
+		rule:SetPoint("BOTTOMRIGHT", searchRow, "BOTTOMRIGHT", -2, -4)
+		Panel.chromeRules[#Panel.chromeRules + 1] = rule
+	end
 
 	local searchGlyph = search:CreateTexture(nil, "OVERLAY")
 	searchGlyph:SetSize(14, 14)
@@ -1812,16 +1885,30 @@ local Build = function()
 	rail:SetPoint("TOPLEFT", searchRow, "BOTTOMLEFT", 8, -6)
 	rail:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, FOOTER_H + 8 + TABSTRIP_H)
 
-	local railEdge = rail:CreateTexture(nil, "ARTWORK")
-	railEdge:SetTexture(Kit.GetMedia("plain"))
-	railEdge:SetWidth(1)
-	railEdge:SetPoint("TOPRIGHT", rail, "TOPRIGHT", 0, 0)
-	railEdge:SetPoint("BOTTOMRIGHT", rail, "BOTTOMRIGHT", 0, 0)
-	Panel.railEdge = railEdge
+	-- The rail is set off from the page by a line, or rounded, by being a well
+	-- of its own: the aura border with round corners, the search box's inset
+	-- at the rail's size. At the rail's own level, so the rows scroll above it.
+	if (Panel.rounded) then
+		local well = CreateFrame("Frame", nil, rail, ns.BackdropTemplate)
+		well:SetAllPoints(rail)
+		well:SetBackdrop(Look.InsetBackdrop)
+		well:SetFrameLevel(rail:GetFrameLevel())
+		Panel.railWell = well
+	else
+		local railEdge = rail:CreateTexture(nil, "ARTWORK")
+		railEdge:SetTexture(Kit.GetMedia("plain"))
+		railEdge:SetWidth(1)
+		railEdge:SetPoint("TOPRIGHT", rail, "TOPRIGHT", 0, 0)
+		railEdge:SetPoint("BOTTOMRIGHT", rail, "BOTTOMRIGHT", 0, 0)
+		Panel.railEdge = railEdge
+	end
 
 	railScroll = CreateFrame("ScrollFrame", nil, rail)
-	railScroll:SetPoint("TOPLEFT", rail, "TOPLEFT", 4, 0)
-	railScroll:SetPoint("BOTTOMRIGHT", rail, "BOTTOMRIGHT", -6, 0)
+	-- Inside the well's rim when rounded: the aura rim is about 7px deep at
+	-- edgeSize 10, and a highlight drawn over it reads as a row escaping the well.
+	local inset = Panel.rounded and 8 or 0
+	railScroll:SetPoint("TOPLEFT", rail, "TOPLEFT", 4 + inset / 2, -inset)
+	railScroll:SetPoint("BOTTOMRIGHT", rail, "BOTTOMRIGHT", -6 - inset / 4, inset)
 	railScroll:SetClipsChildren(true)
 
 	railContent = CreateFrame("Frame", nil, railScroll)
@@ -1878,6 +1965,7 @@ local Build = function()
 		highlight:SetTexture(Kit.GetMedia("plain"))
 		highlight:SetAllPoints()
 		highlight:Hide()
+		if (Panel.rounded) then Look.RoundTexture(highlight) end
 		button.highlight = highlight
 
 		-- Under the selected tab rather than beside it, because these sit at the
@@ -1928,8 +2016,10 @@ local Build = function()
 	crumb:SetWordWrap(false)
 	Panel.crumb = crumb
 
+	-- A size larger when rounded, in the addon's own face, which every locale
+	-- can draw.
 	local pageTitle = pageHead:CreateFontString(nil, "OVERLAY")
-	pageTitle:SetFontObject(Kit.GetFont(18, true))
+	pageTitle:SetFontObject(Kit.GetFont(Panel.rounded and 20 or 18, true))
 	pageTitle:SetPoint("TOPLEFT", crumb, "BOTTOMLEFT", 0, -3)
 	pageTitle:SetPoint("RIGHT", pageHead, "RIGHT", 0, 0)
 	pageTitle:SetJustifyH("LEFT")
@@ -2004,6 +2094,14 @@ local Build = function()
 	footer:SetHeight(FOOTER_H)
 	footer:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", FOOTER_INSET, 8)
 	footer:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -FOOTER_INSET, 8)
+
+	-- And opens the bottom band with the same rule.
+	if (Panel.rounded) then
+		local rule = Look.Rule(footer)
+		rule:SetPoint("TOPLEFT", footer, "TOPLEFT", -4, 1)
+		rule:SetPoint("TOPRIGHT", footer, "TOPRIGHT", 4, 1)
+		Panel.chromeRules[#Panel.chromeRules + 1] = rule
+	end
 
 	local combatIcon = footer:CreateTexture(nil, "ARTWORK")
 	combatIcon:SetTexture(Kit.GetMedia("icon-combat"))

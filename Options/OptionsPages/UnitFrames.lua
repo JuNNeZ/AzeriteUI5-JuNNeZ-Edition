@@ -257,6 +257,14 @@ local GenerateOptions = function()
 				return "default"
 			end
 		}
+		suboptions.args.legacyCenterWithoutTarget = {
+			name = L["Center Without a Target"],
+			desc = L["Legacy HUD: move the player frame to the middle of the screen while you have no target, and back beside the target frame when you pick one. It slides out of combat and jumps in combat."],
+			order = 30, type = "toggle", width = "full", set = setter, get = getter,
+			hidden = function(info)
+				return isdisabled(info) or not (ns.LegacyHUD and ns.LegacyHUD:IsActive())
+			end
+		}
 
 		suboptions.args.elementHeader = {
 			name = L["Frame Elements"], order = 100, type = "header", hidden = isdisabled
@@ -1439,6 +1447,20 @@ local GenerateOptions = function()
 				local value = getoption(info, "AuraSize")
 				if (type(value) ~= "number") then
 					return partyAuraConfig.AuraSize or 30
+				end
+				return math.floor(value + .5)
+			end,
+			disabled = partyAuraLayoutDisabled
+		}
+		suboptions.args.AurasMaxCols = {
+			name = L["Auras Per Row"],
+			desc = L["How many aura icons are shown on each row. Set to 0 for automatic wrapping from frame width."],
+			order = 195, type = "range", width = "full", min = 0, max = 6, step = 1, hidden = isdisabled,
+			set = setter,
+			get = function(info)
+				local value = getoption(info, "AurasMaxCols")
+				if (type(value) ~= "number") then
+					return 0
 				end
 				return math.floor(value + .5)
 			end,

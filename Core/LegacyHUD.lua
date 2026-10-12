@@ -512,6 +512,141 @@ HUD.RefreshUnit = function(self, frame)
 	if (frame.ManaOrb) then frame.ManaOrb:SetAlpha(0); frame.ManaOrb:EnableMouse(false) end
 end
 
+-- Player frame in the middle of the screen while there is no target (Luciful's
+-- idea, 2026-10-12), back beside the target frame once there is one. The frame
+-- is the secure unit button, so in combat only a restricted snippet may move it,
+-- and it jumps. Out of combat the snippet hands over to insecure code that slides
+-- it. Both spots are BOTTOMLEFT offsets from the screen in the frame's own scale:
+-- home is wherever UpdatePositionAndScale just put it, centre is the same height.
+local SLIDE_TIME = .25
+local center
+
+local CENTER_SNIPPET = [[
+	local unit = self:GetFrameRef("unit")
+	if (not unit) then return end
+	if (PlayerInCombat()) then
+		local x, y = self:GetAttribute(newstate.."-x"), self:GetAttribute(newstate.."-y")
+		if (x and y) then
+			unit:ClearAllPoints()
+			unit:SetPoint("BOTTOMLEFT", "$screen", "BOTTOMLEFT", x, y)
+		end
+	else
+		self:CallMethod("Slide", newstate)
+	end
+]]
+
+local function CenterPlace(frame, x, y)
+	frame:ClearAllPoints()
+	frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", x, y)
+end
+
+local function CenterState()
+	if (center.snippets) then return center.driver:GetAttribute("state-azcenter") or "home" end
+	return UnitExists("target") and "home" or "center"
+end
+
+local function CenterStop()
+	center.tween:SetScript("OnUpdate", nil)
+	center.toX, center.toY = nil, nil
+end
+
+local function CenterStep(_, elapsed)
+	-- Combat began mid-slide: PLAYER_REGEN_DISABLED already landed it.
+	if (InCombatLockdown()) then CenterStop(); center.pending = true; return end
+	center.elapsed = center.elapsed + elapsed
+	local t = math.min(center.elapsed / SLIDE_TIME, 1)
+	t = t * t * (3 - 2 * t)
+	CenterPlace(center.frame, center.fromX + (center.toX - center.fromX) * t, center.fromY + (center.toY - center.fromY) * t)
+	if (t >= 1) then CenterStop() end
+end
+
+-- Insecure; called by the snippet out of combat and by events. `instant` skips the slide.
+local function CenterSlide(_, state, instant)
+	if (not center or not center.enabled) then return end
+	if (InCombatLockdown()) then center.pending = true; return end
+	center.pending = nil
+	-- While /lock or Edit Mode shows the movers, the frame stays where it is dragged.
+	local anchor = center.module.anchor
+	if (state ~= "center" or (anchor and anchor:IsShown())) then state = "home" end
+	local x, y = center.driver:GetAttribute(state.."-x"), center.driver:GetAttribute(state.."-y")
+	if (not x or not y) then return end
+	local frame = center.frame
+	local fromX, fromY = frame:GetLeft(), frame:GetBottom()
+	if (instant or not fromX or not fromY) then CenterStop(); CenterPlace(frame, x, y); return end
+	center.fromX, center.fromY, center.toX, center.toY, center.elapsed = fromX, fromY, x, y, 0
+	center.tween:SetScript("OnUpdate", CenterStep)
+end
+
+local function CenterEvent(_, event)
+	if (not center.enabled) then return end
+	if (event == "PLAYER_REGEN_DISABLED") then
+		-- The last moment insecure code may move the frame: finish any slide.
+		if (center.toX) then
+			local x, y = center.toX, center.toY
+			CenterStop(); CenterPlace(center.frame, x, y)
+		end
+	elseif (event == "PLAYER_REGEN_ENABLED") then
+		if (center.pending) then CenterSlide(nil, CenterState(), true) end
+	elseif (event == "PLAYER_TARGET_CHANGED") then
+		-- Only registered where secure snippets cannot run (see SecureDrivers.lua).
+		CenterSlide(nil, CenterState())
+	end
+end
+
+local function CreateCenter(module)
+	local frame = module.frame
+	center = { module = module, frame = frame, snippets = ns.API.HasSecureSnippets and ns.API.HasSecureSnippets() }
+	-- Its own plain frame: a protected frame cannot change its scripts in combat.
+	center.tween = CreateFrame("Frame")
+	center.tween:SetScript("OnEvent", CenterEvent)
+	center.tween:RegisterEvent("PLAYER_REGEN_DISABLED")
+	center.tween:RegisterEvent("PLAYER_REGEN_ENABLED")
+	center.driver = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
+	center.driver.Slide = CenterSlide
+	if (center.snippets) then
+		center.driver:SetFrameRef("unit", frame)
+		center.driver:SetAttribute("_onstate-azcenter", CENTER_SNIPPET)
+	end
+	local anchor = module.anchor
+	if (anchor and anchor.HookScript) then
+		anchor:HookScript("OnShow", function() CenterSlide(nil, "home", true) end)
+		anchor:HookScript("OnHide", function() CenterSlide(nil, CenterState(), true) end)
+	end
+end
+
+--- Called after the player frame was put at its saved spot (never in combat).
+HUD.UpdatePlayerCenter = function(self, module)
+	local frame = module and module.frame
+	if (not frame or InCombatLockdown()) then return end
+	local profile = module.db and module.db.profile
+	local enabled = self:IsActive() and profile and profile.enabled and profile.legacyCenterWithoutTarget and true or false
+	if (not enabled) then
+		if (center and center.enabled) then
+			center.enabled = false
+			CenterStop()
+			if (center.snippets) then UnregisterStateDriver(center.driver, "azcenter")
+			else center.tween:UnregisterEvent("PLAYER_TARGET_CHANGED") end
+		end
+		return
+	end
+	if (not center) then CreateCenter(module) end
+	local left, bottom = frame:GetLeft(), frame:GetBottom()
+	local scale = frame:GetEffectiveScale()
+	if (not left or not bottom or not scale or scale <= 0) then return end
+	local width = UIParent:GetWidth() * UIParent:GetEffectiveScale() / scale
+	local driver = center.driver
+	driver:SetAttribute("home-x", left)
+	driver:SetAttribute("home-y", bottom)
+	driver:SetAttribute("center-x", (width - frame:GetWidth()) / 2)
+	driver:SetAttribute("center-y", bottom)
+	if (not center.enabled) then
+		center.enabled = true
+		if (center.snippets) then RegisterStateDriver(driver, "azcenter", "[@target,exists] home; center")
+		else center.tween:RegisterEvent("PLAYER_TARGET_CHANGED") end
+	end
+	CenterSlide(nil, CenterState(), true)
+end
+
 HUD.ProfileChanged = function(self)
 	if (self.loadedActive ~= self:IsActive()) then
 		if (InCombatLockdown()) then self:RegisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
@@ -537,18 +672,42 @@ ns.oUF:RegisterInitCallback(function(frame)
 		frame.Castbar.KeepBackdrop = true
 		if (frame.Castbar.Shield) then frame.Castbar.Shield:SetAlpha(0) end
 	elseif (frame.style == ns.Prefix.."PlayerClassPower") then
+		-- The casing shows only while a point is drawn. Out of combat a full resource
+		-- (Holy Power at 5, every rune ready) or empty Stagger keeps the element shown
+		-- with every point at alpha 0, which left an empty box. A secret alpha (Forever
+		-- combo points) cannot be read and counts as drawn.
+		local SyncCasing = function(element)
+			local drawn = false
+			if (element.legacyVisible ~= false) then
+				for i = 1, #element do
+					local point = element[i]
+					if (point and point:IsShown()) then
+						local alpha = point:GetAlpha()
+						if ((issecretvalue and issecretvalue(alpha)) or alpha > 0) then drawn = true break end
+					end
+				end
+			end
+			element.LegacyBorder:SetShown(drawn)
+		end
 		for _, element in ipairs({ frame.ClassPower or false, frame.Runes or false, frame.Stagger or false }) do
-			if (element) then element.LegacyBorder = Border(element, false, 23, 32) end
+			if (element) then
+				element.LegacyBorder = Border(element, false, 23, 32)
+				local previous = element.PostUpdate
+				element.PostUpdate = function(self, ...)
+					if (previous) then previous(self, ...) end
+					SyncCasing(self)
+				end
+			end
 		end
 		-- A class without class power (Hunter, Warrior) keeps the ClassPower container
-		-- shown with every point hidden; only PostVisibility says so. Without this the
-		-- casing drew an empty box in the middle of the screen.
+		-- shown with every point hidden; only PostVisibility says so.
 		local classPower = frame.ClassPower
 		if (classPower and classPower.LegacyBorder) then
 			local previous = classPower.PostVisibility
 			classPower.PostVisibility = function(element, isVisible, ...)
 				if (previous) then previous(element, isVisible, ...) end
-				element.LegacyBorder:SetShown(isVisible and true or false)
+				element.legacyVisible = isVisible and true or false
+				SyncCasing(element)
 			end
 		end
 	else HUD:RefreshUnit(frame) end

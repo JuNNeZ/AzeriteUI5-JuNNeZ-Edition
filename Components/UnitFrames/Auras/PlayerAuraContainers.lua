@@ -1535,7 +1535,9 @@ local function ApplyGroupFrameConfiguration(container, config, width)
 	container:SetPoint(config.initialAnchor, container:GetParent(), config.initialAnchor, offsetX, offsetY)
 	container:SetFlowLayoutAnchorPoint(config.initialAnchor)
 	container:SetFlowLayoutGrowthDirection(horizontal, vertical)
-	container:SetFlowLayoutMaximumLineSize(width)
+	-- Group boxes fit their icons exactly; the spare pixel matches GetLineSize on the
+	-- player rows, so a width read back as 97.99 cannot drop the row's last icon.
+	container:SetFlowLayoutMaximumLineSize(width + 1)
 
 	local auraTypes = GetProcessedAuraTypes()
 	for layoutIndex, group in ipairs(GROUP_FRAME_AURA_GROUPS) do
@@ -1638,14 +1640,16 @@ end
 local GroupDisplayMixin = CreateFromMixins(DisplayMixin)
 
 function GroupDisplayMixin:Configure(config)
-	local signature = GetGroupFrameConfigSignature(config)
+	-- The width is part of it: "Auras per row" resizes the box without changing config.
+	local width = self:GetWidth()
+	local signature = GetGroupFrameConfigSignature(config) .. ":" .. width
 	if (signature == self.configurationSignature) then return end
 
 	-- Unlike the player rows, nothing in this pass is protected. The display, its clip
 	-- frame and the container are plain frames and every container setter is part of
 	-- Blizzard's inbound interface, so an option change, or a relayout from a roster
 	-- update during a fight, applies at once instead of waiting for combat to end.
-	ApplyGroupFrameConfiguration(self.container, config, self:GetWidth())
+	ApplyGroupFrameConfiguration(self.container, config, width)
 	self.configurationSignature = signature
 	self:ForceUpdate()
 end

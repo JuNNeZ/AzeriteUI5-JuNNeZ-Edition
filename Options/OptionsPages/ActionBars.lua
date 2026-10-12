@@ -923,43 +923,6 @@ local GenerateOptions = function()
 				7, nil, getter, function(info, val)
 					getmodule().db.profile.extraButtonShape = val
 				end),
-			--[[
-			assistedHighlightHeader = {
-				name = L["Assisted Combat Highlight"],
-				order = 100,
-				type = "header"
-			},
-			assistedHighlightDesc = {
-				name = L["Choose the color for AzeriteUI's circular assisted combat suggestion glow."],
-				order = 101,
-				type = "description",
-				fontSize = "medium"
-			},
-			assistedHighlightColor = {
-				name = L["Highlight Color"],
-				desc = L["Choose the color scheme for AzeriteUI's circular assisted combat highlight."],
-				order = 102,
-				type = "select", style = "dropdown",
-				values = {
-					["cyan"] = L["Cyan Blue"],
-					["blue"] = L["Dark Blue"],
-					["purple"] = L["Purple"],
-					["green"] = L["Green"],
-					["red"] = L["Red"],
-					["white"] = L["White"],
-					["pink"] = L["Pink"]
-				},
-				set = function(info, val)
-					local db = getmodule().db.profile
-					db.assistedHighlightColor = val
-					ns:Fire("AssistedHighlightColor_Changed", val)
-				end,
-				get = function(info)
-					local db = getmodule().db.profile
-					return db.assistedHighlightColor or "cyan"
-				end
-			},
-			--]]
 		}
 	}
 
@@ -1036,6 +999,77 @@ local GenerateOptions = function()
 	}
 	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
 		ns.OptionsKit.Defaults.Bind(options.args.procHighlight, "ActionBars")
+	end
+
+	-- The assisted combat suggestion, styled the same way as the proc glow but with
+	-- settings of its own, so the two stay told apart. Its "current" look is the
+	-- neutral glow it has always had, so any colour reads true on it.
+	local Assisted = ns.ActionBarAssistedHighlight
+	local assistedDisabled = function() return getmodule().db.profile.assistedHighlightStyle == "off" end
+	options.args.assistedHighlight = {
+		name = L["Assisted Combat Highlight"], order = 71, type = "group",
+		args = {
+			description = {
+				name = L["Style the glow on the ability Blizzard's assisted combat suggests next, on all AzeriteUI action bars. It keeps its own settings, so a suggestion and a proc can still be told apart. Changes apply without reloading."],
+				type = "description", fontSize = "medium", order = 0
+			},
+			assistedHighlightStyle = {
+				name = L["Highlight Style"], type = "select", order = 1,
+				values = { current = L["Current glow"], outline = L["Solid outline"], glow = L["Soft glow"], both = L["Outline + glow"], off = L["Off"] },
+				sorting = { "current", "outline", "glow", "both", "off" },
+				set = setter, get = getter
+			},
+			assistedHighlightThickness = {
+				name = L["Thickness"], type = "select", order = 2,
+				values = { thin = L["Thin"], medium = L["Medium"], thick = L["Thick"] },
+				sorting = { "thin", "medium", "thick" },
+				-- Legacy draws every style with its one square highlight art.
+				hidden = function() return ns.LegacyHUD and ns.LegacyHUD:IsActive() end,
+				disabled = function() return assistedDisabled() or getmodule().db.profile.assistedHighlightStyle == "current" end,
+				set = setter, get = getter
+			},
+			assistedHighlightColorSource = {
+				name = L["Colour source"], type = "select", order = 3,
+				values = { default = L["Default blue"], class = L["Class Color"], custom = L["Custom colour"] },
+				sorting = { "default", "class", "custom" },
+				disabled = assistedDisabled, set = setter, get = getter
+			},
+			assistedHighlightColor = {
+				name = L["Custom colour"], type = "color", order = 4,
+				hidden = function() return getmodule().db.profile.assistedHighlightColorSource ~= "custom" end,
+				disabled = assistedDisabled,
+				get = function()
+					return Assisted.GetCustomColor(getmodule().db.profile)
+				end,
+				set = function(info, r, g, b)
+					-- Per-setting revert supplies its default as one table.
+					if (type(r) == "table") then r, g, b = r[1], r[2], r[3] end
+					getmodule().db.profile.assistedHighlightColor = { r, g, b }
+					getmodule():UpdateSettings()
+				end
+			},
+			assistedHighlightOpacity = {
+				name = L["Opacity"], type = "range", order = 5,
+				min = 0, max = 1, step = .05, isPercent = true,
+				disabled = assistedDisabled, set = setter, get = getter
+			},
+			preview = {
+				name = L["Preview assisted highlight"], type = "execute", order = 6,
+				func = function() Assisted.Preview(getmodule().db.profile) end
+			},
+			reset = {
+				name = L["Reset assisted highlight"], type = "execute", order = 7,
+				func = function()
+					for key, value in pairs(Assisted.defaults) do
+						getmodule().db.profile[key] = type(value) == "table" and ns:Copy(value) or value
+					end
+					getmodule():UpdateSettings()
+				end
+			}
+		}
+	}
+	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+		ns.OptionsKit.Defaults.Bind(options.args.assistedHighlight, "ActionBars")
 	end
 
 	local stanceBarOptions = GenerateBarOptions("StanceBar", L["Stance Bar"], 210, GetNumShapeshiftForms())

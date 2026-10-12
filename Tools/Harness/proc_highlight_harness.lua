@@ -16,6 +16,12 @@ local function load(path, ns, env)
 		source = source:gsub('profile = profile or {}', 'alert:Show(); profile = profile or {}')
 	elseif arg[2] == "no-neutral-colour" and path:find("ProcHighlight.lua",1,true) then
 		source = source:gsub('source == "custom"', 'source == "disabled"')
+	elseif arg[2] == "assisted-loses-art" and path:find("ProcHighlight.lua",1,true) then
+		source = source:gsub('local legacy = style == "current" and %(spec.keepArt or source == spec.base%)', 'local legacy = style == "current" and source == spec.base')
+	elseif arg[2] == "assisted-no-desaturate" and path:find("ProcHighlight.lua",1,true) then
+		source = source:gsub('self.ring:SetDesaturated%(desaturated%)', '')
+	elseif arg[2] == "old-scheme-kept" and path == "Components/ActionBars/Elements/ActionBars.lua" then
+		source = source:gsub('self.db.profile.assistedHighlightColor = nil', '')
 	elseif arg[2] == "preview-reallocated" and path:find("ProcHighlight.lua",1,true) then
 		source = source:gsub('if %(not Highlight.preview%) then', 'if (true) then')
 	elseif arg[2] == "wrong-visibility-setting" and path == "Options/OptionsPages/ActionBars.lua" then
@@ -56,6 +62,7 @@ function methods:IsVisible() return self.shown and (not self.parent or self.pare
 function methods:SetTexture(texture) self.texture = texture end
 function methods:SetVertexColor(...) self.color = {...} end
 function methods:SetBlendMode(mode) self.blend = mode end
+function methods:SetDesaturated(value) self.desaturated = value end
 local function object(parent)
 	return setmetatable({ parent = parent, shown = true }, { __index = methods })
 end
@@ -125,20 +132,82 @@ check(not preview.alert.ring:IsVisible() and not preview.alert.halo:IsVisible(),
 preview:Hide()
 check(not preview.alert:IsVisible() and #env.UISpecialFrames == 1, "preview closes and is Escape-dismissable")
 
+-- The assisted combat suggestion: the same styling with settings of its own.
+local A = ns.ActionBarAssistedHighlight
+check(A and A ~= H and A.defaults.assistedHighlightStyle == "current", "assisted highlight has its own module and defaults")
+for key in pairs(A.defaults) do check(H.defaults[key] == nil, "assisted keys do not overlap proc keys: "..key) end
+local adb = { ButtonSpellHighlightSize = {134,134}, ButtonSpellHighlightPosition = {"CENTER",0,0},
+	ButtonSpellHighlightTexture = "original-ring", ButtonAssistedHighlightTexture = "glow-white" }
+local assisted = A.Create(object(), adb)
+A.Apply(assisted, A.defaults)
+check(not assisted:IsShown(), "styling never shows a suggestion")
+check(assisted.ring.texture == "glow-white" and assisted.ring:IsShown() and not assisted.halo:IsShown(), "default keeps the neutral assisted glow")
+check(assisted.ring.color[1] == .35 and assisted.ring.color[2] == .85 and assisted.ring.color[3] == 1 and assisted.ring.color[4] == .95, "default keeps the cyan tint at 95%")
+A.Apply(assisted, {assistedHighlightColorSource = "custom", assistedHighlightColor = {1, 0, 0}})
+check(assisted.ring.texture == "glow-white" and assisted.ring.color[1] == 1 and assisted.ring.color[2] == 0, "current keeps its art under any colour")
+A.Apply(assisted, {assistedHighlightColorSource = "class"})
+check(assisted.ring.color[1] == .2 and assisted.ring.color[2] == .8, "class colour")
+assisted:Show()
+for _, style in ipairs({"current", "outline", "glow", "both", "off"}) do
+	for _, width in ipairs({"thin", "medium", "thick"}) do
+		A.Apply(assisted, {assistedHighlightStyle = style, assistedHighlightThickness = width})
+		check(assisted:IsShown(), "restyling keeps a shown suggestion shown")
+		check(assisted.ring:IsShown() == (style == "current" or style == "outline" or style == "both"), "assisted ring selection")
+		check(assisted.halo:IsShown() == (style == "glow" or style == "both"), "assisted glow selection")
+		if (style ~= "current") then
+			check(assisted.ring.texture == "actionbutton-proc-outline-"..width, "assisted neutral ring thickness")
+			check(assisted.halo.texture == "actionbutton-proc-glow-"..width, "assisted glow thickness")
+		end
+	end
+end
+A.Apply(assisted, {procHighlightStyle = "off", procHighlightColorSource = "custom", procHighlightColor = {0,1,0}})
+check(assisted.ring:IsShown() and assisted.ring.color[1] == .35, "proc settings never reach the suggestion")
+H.Apply(alert, {assistedHighlightStyle = "off"})
+check(alert.ring:IsShown() and alert.ring.color[1] == 249/255, "assisted settings never reach the proc")
+A.Apply(assisted, {assistedHighlightStyle="bogus",assistedHighlightColorSource="bogus",assistedHighlightColor="purple",assistedHighlightOpacity=0/0})
+check(assisted.ring.texture == "glow-white" and assisted.ring.color[1] == .35 and assisted.ring.color[4] == .95, "old scheme names and bad values fall back")
+local r, g, b = A.GetCustomColor({assistedHighlightColor = "cyan"})
+check(r == .35 and g == .85 and b == 1, "the colour picker reads an old scheme name as the default")
+local fallback = A.Create(object(), {ButtonSpellHighlightSize = {1,1}, ButtonSpellHighlightPosition = {"CENTER"}, ButtonSpellHighlightTexture = "shape-ring"})
+A.Apply(fallback, A.defaults)
+check(fallback.ring.texture == "shape-ring", "without assisted art the shape's own highlight is used")
+assisted:SetDesaturated(true)
+check(assisted.ring.desaturated and assisted.halo.desaturated, "Legacy's desaturate reaches both layers")
+-- The preview draws from the real button config, which carries the assisted art
+-- (Layouts/Data/ActionButton.lua ButtonAssistedHighlightTexture).
+db.ButtonAssistedHighlightTexture = "glow-white"
+A.Preview(A.defaults)
+check(A.preview and A.preview ~= H.preview and A.preview.alert.ring.texture == "glow-white", "assisted preview is its own window")
+check(#env.UISpecialFrames == 2 and A.preview.name ~= H.preview.name, "both previews are Escape-dismissable")
+A.UpdatePreview({assistedHighlightStyle = "off"})
+check(not A.preview.alert.ring:IsVisible(), "assisted preview updates live")
+A.preview:Hide()
+
 -- Real module registration merges cosmetic defaults with its profile defaults.
 local runtime = {}
 local runtimeNS = { API={IsAddOnEnabled=function() return false end,GetMedia=ns.API.GetMedia,GetEffectiveScale=function() return 1 end},
 	Colors=ns.Colors,Widgets={RegisterCooldown=function() end},MovableModulePrototype={defaults={enabled=true}},
 	ActionBar={defaults={}},
-	ActionBarProcHighlight=H,NewModule=function() return runtime end }
+	ActionBarProcHighlight=H,ActionBarAssistedHighlight=A,NewModule=function() return runtime end }
 load("Core/API/Tables.lua",runtimeNS,env)
 env.BOTTOMLEFT_ACTIONBAR_PAGE,env.BOTTOMRIGHT_ACTIONBAR_PAGE,env.RIGHT_ACTIONBAR_PAGE,env.LEFT_ACTIONBAR_PAGE=6,5,4,3
 load("Components/ActionBars/Elements/ActionBars.lua",runtimeNS,env)
 local realDefaults = runtime:GetDefaults().profile
 check(realDefaults.enabled and realDefaults.procHighlightStyle == "current" and realDefaults.procHighlightOpacity == .75, "real module carries both inherited and proc defaults")
+check(realDefaults.assistedHighlightStyle == "current" and type(realDefaults.assistedHighlightColor) == "table"
+	and realDefaults.assistedHighlightColor ~= A.defaults.assistedHighlightColor, "and the assisted defaults, copied")
+-- A profile still holding the old scheme name is cleared on load.
+local saved = { profile = { assistedHighlightColor = "purple" } }
+runtimeNS.db = { RegisterNamespace = function() return saved end }
+function runtime:GetName() return "ActionBars" end
+runtime:OnInitialize()
+check(saved.profile.assistedHighlightColor == nil, "an old scheme name is dropped on load")
+saved.profile.assistedHighlightColor = {1, 0, 0}
+runtime:OnInitialize()
+check(saved.profile.assistedHighlightColor[1] == 1, "a chosen colour is kept")
 
 -- Build and exercise the real options closures against a real-shaped profile.
-local module = { db = {profile = ns:Copy(H.defaults)}, bars = {} }
+local module = { db = {profile = ns:Merge(ns:Copy(H.defaults), A.defaults)}, bars = {} }
 module.db.profile.bars = {}
 for i=1,8 do module.bars[i] = {}; module.db.profile.bars[i] = {enabled=true, visibility={mounted=true, dragon=i==1}} end
 function module:IsEnabled() return true end
@@ -167,6 +236,29 @@ proc.reset.func()
 check(module.db.profile.procHighlightStyle == "current", "reset restores style")
 module.db.profile.procHighlightColor[1] = 0
 check(H.defaults.procHighlightColor[1] == 249/255, "reset never aliases default colour")
+local assistedOptions = options.args.assistedHighlight and options.args.assistedHighlight.args
+check(assistedOptions ~= nil and options.args.assistedHighlight.order == 71, "Assisted Combat Highlight sits beside Proc Highlight")
+for _, key in ipairs({"assistedHighlightStyle","assistedHighlightThickness","assistedHighlightColorSource","assistedHighlightOpacity"}) do
+	check(assistedOptions[key].get({"assistedHighlight",key}) == A.defaults[key], "assisted option defaults: "..key)
+end
+local before = module.updates
+assistedOptions.assistedHighlightStyle.set({"assistedHighlight","assistedHighlightStyle"}, "glow")
+check(module.db.profile.assistedHighlightStyle == "glow" and module.db.profile.procHighlightStyle == "current"
+	and module.updates == before + 1, "assisted style written and applied, proc untouched")
+check(assistedOptions.assistedHighlightColor.hidden(), "custom colour hidden until chosen")
+module.db.profile.assistedHighlightColorSource = "custom"
+check(not assistedOptions.assistedHighlightColor.hidden(), "and shown when it is")
+assistedOptions.assistedHighlightColor.set(nil, A.defaults.assistedHighlightColor)
+check(module.db.profile.assistedHighlightColor[1] == .35, "assisted colour revert accepts table")
+module.db.profile.assistedHighlightStyle = "off"
+check(assistedOptions.assistedHighlightOpacity.disabled(), "Off disables the rest")
+ns.LegacyHUD = { IsActive = function() return true end }
+check(assistedOptions.assistedHighlightThickness.hidden(), "Legacy hides thickness")
+ns.LegacyHUD = nil
+assistedOptions.reset.func()
+check(module.db.profile.assistedHighlightStyle == "current" and module.db.profile.assistedHighlightColorSource == "default", "assisted reset restores")
+module.db.profile.assistedHighlightColor[1] = 0
+check(A.defaults.assistedHighlightColor[1] == .35, "assisted reset never aliases default colour")
 for i=1,8 do
 	local opt = options.args["bar"..i].args.showWhileSkyriding
 	check(opt.hidden({"bar"..i,"showWhileSkyriding"}) == (i==1), "skyriding toggle only secondary bars")
@@ -208,4 +300,4 @@ for _, snippets in ipairs({true,false}) do
 		end
 	end
 end
-print("Proc highlight / riding: "..checks.." checks passed")
+print("Proc and assisted highlight / riding: "..checks.." checks passed")

@@ -305,6 +305,33 @@ ns.UnitFrame.InitializeUnitFrame = function(self)
 
 end
 
+-- Group frames register for clicks from their style function (right-click menus need
+-- "AnyUp"). A secure header that spawns a child in combat (someone joins the raid
+-- mid-fight) runs that style in lockdown, where RegisterForClicks is blocked
+-- (ADDON_ACTION_BLOCKED, Raid25.lua). Such children are queued until combat ends;
+-- left-click targeting works meanwhile, since buttons take LeftButtonUp by default.
+local pendingClicks, clickQueueFrame = {}, nil
+
+ns.UnitFrame.RegisterGroupClicks = function(self)
+	if (not InCombatLockdown()) then
+		self:RegisterForClicks("AnyUp")
+		return
+	end
+	pendingClicks[self] = true
+	if (not clickQueueFrame) then
+		clickQueueFrame = CreateFrame("Frame")
+		clickQueueFrame:SetScript("OnEvent", function(queue)
+			if (InCombatLockdown()) then return end
+			queue:UnregisterEvent("PLAYER_REGEN_ENABLED")
+			for frame in next, pendingClicks do
+				pendingClicks[frame] = nil
+				frame:RegisterForClicks("AnyUp")
+			end
+		end)
+	end
+	clickQueueFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+end
+
 ns.UnitFrame.Spawn = function(unit, overrideName, ...)
 	local frame = oUF:Spawn(unit, overrideName)
 

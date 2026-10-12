@@ -102,7 +102,6 @@ local defaults = { profile = ns:Merge({
 	dimWhenResting = false,
 	dimWhenInactive = false,
 	showEmptyButtons = false, -- whether slots without an action stay visible as empty buttons
-	assistedHighlightColor = "cyan", -- Color scheme for AzeriteUI's circular assisted highlight
 	extraButtonShape = "circle", -- extra action and zone ability buttons, applied on reload
 	hideElements = {
 		macro = true,
@@ -111,7 +110,8 @@ local defaults = { profile = ns:Merge({
 		border = false,
 		borderIfEmpty = true
 	}
-}, ns:Merge(ns:Copy(ns.MovableModulePrototype.defaults), ns.ActionBarProcHighlight.defaults)) }
+}, ns:Merge(ns:Merge(ns:Copy(ns.MovableModulePrototype.defaults), ns.ActionBarProcHighlight.defaults),
+	ns.ActionBarAssistedHighlight.defaults)) }
 
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
@@ -407,24 +407,12 @@ local style = function(self, shape)
 	self.CustomSpellActivationAlert = ns.ActionBarProcHighlight.Create(self.OverlayFrame, db)
 	ns.ActionBarProcHighlight.Apply(self.CustomSpellActivationAlert, ActionBarMod.db.profile)
 
-	-- Keep assisted highlight separate from proc glow so the button can stay circular.
-	self.CustomAssistedHighlight = self.OverlayFrame:CreateTexture(nil, "ARTWORK", nil, -6)
-	self.CustomAssistedHighlight:SetSize(unpack(db.ButtonSpellHighlightSize))
-	self.CustomAssistedHighlight:SetPoint(unpack(db.ButtonSpellHighlightPosition))
-	self.CustomAssistedHighlight:SetTexture(db.ButtonAssistedHighlightTexture or db.ButtonSpellHighlightTexture)
-	self.CustomAssistedHighlight:SetVertexColor(.35, .85, 1, .95)
-	self.CustomAssistedHighlight:Hide()
-
-	--[[ Parked for now: neutral top color overlay made the assisted highlight too large.
-	-- Neutral color layer above the assisted base art.
-	self.CustomAssistedHighlightColor = self.OverlayFrame:CreateTexture(nil, "ARTWORK", nil, -5)
-	self.CustomAssistedHighlightColor:SetSize(unpack(db.ButtonSpellHighlightSize))
-	self.CustomAssistedHighlightColor:SetPoint(unpack(db.ButtonSpellHighlightPosition))
-	self.CustomAssistedHighlightColor:SetTexture(m)
-	self.CustomAssistedHighlightColor:SetBlendMode("ADD")
-	self.CustomAssistedHighlightColor:SetVertexColor(.35, .85, 1, .45)
-	self.CustomAssistedHighlightColor:Hide()
-	--]]
+	-- The assisted combat suggestion, kept apart from the proc glow so the two stay
+	-- told apart and the button stays its own shape. LAB only shows and hides it
+	-- (LibActionButton-1.0-GE UpdateAssistedCombatHighlight); how it looks is the
+	-- player's, from /az -> Action Bars -> Assisted Combat Highlight.
+	self.CustomAssistedHighlight = ns.ActionBarAssistedHighlight.Create(self.OverlayFrame, db)
+	ns.ActionBarAssistedHighlight.Apply(self.CustomAssistedHighlight, ActionBarMod.db.profile)
 
 	-- Cooldown Timer Text
 	self.cooldownCount = nativeCooldownCount or self.OverlayFrame:CreateFontString(nil, "ARTWORK", nil, 1)
@@ -901,6 +889,7 @@ ActionBarMod.UpdateSettings = function(self, event)
 	local tooltips = ns:GetModule("Tooltips", true)
 	local tooltipMode = (tooltips and tooltips:IsEnabled() and tooltips.ShouldHideInCombat and tooltips:ShouldHideInCombat("actionbars")) and "nocombat" or "enabled"
 	ns.ActionBarProcHighlight.UpdatePreview(self.db.profile)
+	ns.ActionBarAssistedHighlight.UpdatePreview(self.db.profile)
 
 	-- Copy global settings to individual bars for easier updates.
 	-- We do not grant user access to these settings per bar.
@@ -915,6 +904,9 @@ ActionBarMod.UpdateSettings = function(self, event)
 		-- Copy select settings into each button's config table.
 		for id,button in pairs(bar.buttons) do
 			ns.ActionBarProcHighlight.Apply(button.CustomSpellActivationAlert, self.db.profile)
+			if (button.CustomAssistedHighlight) then
+				ns.ActionBarAssistedHighlight.Apply(button.CustomAssistedHighlight, self.db.profile)
+			end
 			button.config.clickOnDown = bar.config.clickOnDown
 			button.config.useCommandBindingsForHoldCast = bar.config.useCommandBindingsForHoldCast
 			button.config.dimWhenResting = bar.config.dimWhenResting
@@ -1038,14 +1030,9 @@ ActionBarMod.OnEnable = function(self)
 	if (ns.API.IsEventAvailable("HOUSE_EDITOR_MODE_CHANGED")) then
 		self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnHouseEditorModeChanged")
 	end
-	-- ns.RegisterCallback(self, "AssistedHighlightColor_Changed", "UpdateAssistedHighlightColor")
 
 	self:UpdateSettings()
 
-end
-
-ActionBarMod.UpdateAssistedHighlightColor = function(self, eventOrColor, colorScheme)
-	-- Parked for now while the assisted highlight ships with a fixed blue tint.
 end
 
 ActionBarMod.OnInitialize = function(self)
@@ -1053,6 +1040,13 @@ ActionBarMod.OnInitialize = function(self)
 
 	self.db = ns.LegacyHUD and ns.LegacyHUD:RegisterNamespace(self:GetName(), self:GetDefaults())
 		or ns.db:RegisterNamespace(self:GetName(), self:GetDefaults())
+
+	-- Until 2026-03 assistedHighlightColor held a scheme name ("cyan", "blue", "purple")
+	-- for a dropdown that never reached the glow. It is a colour now; an old name is
+	-- dropped so the default applies, which is what those players have been seeing.
+	if (type(self.db.profile.assistedHighlightColor) ~= "table") then
+		self.db.profile.assistedHighlightColor = nil
+	end
 
 	if (ns.WoW10) then
 		self.db.profile.clickOnDown = GetCVarBool("ActionButtonUseKeyDown")

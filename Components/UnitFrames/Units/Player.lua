@@ -161,7 +161,9 @@ local defaults = { profile = ns:Merge({
 	pvpIndicatorOffsetX = 0,
 	pvpIndicatorOffsetY = 0,
 	powerOffsetZeroMigrated = true,
-	powerCrystalBaselineApplied = true
+	powerCrystalBaselineApplied = true,
+	-- Legacy HUD only: centre the frame while there is no target (Core/LegacyHUD.lua).
+	legacyCenterWithoutTarget = false
 }, ns.MovableModulePrototype.defaults) }
 
 -- Generate module defaults on the fly
@@ -3983,6 +3985,14 @@ PlayerFrameMod.CreateUnitFrames = function(self)
 	UnregisterUnitWatch(self.frame)
 	self.frame:SetAttribute("toggleForVehicle", false)
 
+end
+
+-- The frame has just been put at its saved spot; Legacy may take it to the centre.
+PlayerFrameMod.PostUpdatePositionAndScale = function(self)
+	ns.UnitFrameModule.PostUpdatePositionAndScale(self)
+	if (ns.LegacyHUD and ns.LegacyHUD.UpdatePlayerCenter) then
+		ns.LegacyHUD:UpdatePlayerCenter(self)
+	end
 end
 
 PlayerFrameMod.RetryEnableDriver = function(self)

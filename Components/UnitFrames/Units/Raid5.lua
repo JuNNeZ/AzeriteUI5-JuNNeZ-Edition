@@ -539,7 +539,7 @@ local style = function(self, unit)
 
 	-- Apply common scripts and member values.
 	ns.UnitFrame.InitializeUnitFrame(self)
-	self:RegisterForClicks("AnyUp")
+	ns.UnitFrame.RegisterGroupClicks(self)
 	ns.UnitFrames[self] = true -- add to global registry
 	Units[self] = true -- add to local registry
 

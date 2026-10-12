@@ -54,7 +54,13 @@ local function Load(opts)
 	return world, alt, Fire, env
 end
 
-local restored = { "UNIT_POWER_BAR_SHOW", "UNIT_POWER_BAR_HIDE", "PLAYER_ENTERING_WORLD",
+-- Only the events Blizzard's OnLoad registers (UnitPowerBarAlt.lua:39-41). UNIT_POWER_UPDATE and
+-- UNIT_MAXPOWER belong to UnitPowerBarAlt_SetUp/TearDown (:210-211); registering them ourselves
+-- fired the counter bar before CounterBar_SetUp ran, ":710 bad argument #2 to 'min'" (5.17.2).
+local restored = { "UNIT_POWER_BAR_SHOW", "UNIT_POWER_BAR_HIDE", "PLAYER_ENTERING_WORLD" }
+local setupOwned = { "UNIT_POWER_UPDATE", "UNIT_MAXPOWER" }
+-- SaiyaRatt suppression takes all five away.
+local suppressed = { "UNIT_POWER_BAR_SHOW", "UNIT_POWER_BAR_HIDE", "PLAYER_ENTERING_WORLD",
 	"UNIT_POWER_UPDATE", "UNIT_MAXPOWER" }
 do
 	local w, alt, Fire = Load({})
@@ -66,6 +72,7 @@ do
 	Check(w.disables == 13, "late oUF objects checked for six seconds")
 	Fire("PLAYER_ENTERING_WORLD")
 	for _, event in ipairs(restored) do Check(alt.events[event], event .. " restored") end
+	for _, event in ipairs(setupOwned) do Check(not alt.events[event], event .. " left to Blizzard's bar setup") end
 	Check(not alt.hidden, "normal layout keeps Blizzard bar available")
 	alt.events.UNIT_POWER_BAR_SHOW = nil
 	Fire("UNIT_POWER_BAR_SHOW", "target")
@@ -81,10 +88,10 @@ do
 end
 do
 	local w, alt, Fire = Load({ saiya = true })
-	for _, event in ipairs(restored) do alt.events[event] = true end
+	for _, event in ipairs(suppressed) do alt.events[event] = true end
 	Fire("PLAYER_LOGIN")
 	Check(alt.hidden and w.disables == 0, "SaiyaRatt suppression preserved")
-	for _, event in ipairs(restored) do Check(not alt.events[event], event .. " suppressed") end
+	for _, event in ipairs(suppressed) do Check(not alt.events[event], event .. " suppressed") end
 	Check(w.handlerCalls == 0, "SaiyaRatt never invokes native handler")
 end
 do

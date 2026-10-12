@@ -1705,7 +1705,10 @@ API.UpdatePower = function(self, event, unit)
 	end
 
 	local writeMin = safeMin
-	local writeMax = rawMaxSafe and rawMax or safeMax
+	-- A secret max goes to the bar as it is, the way health does. The cached max
+	-- falls back to 100 after a forced update, and a secret mana value drawn against
+	-- 0..100 filled the bar (party healer's mana looked full in restricted content).
+	local writeMax = (rawMaxSafe or rawMaxSecret) and rawMax or safeMax
 	local writeCur = rawCurNum and rawCur or safeCur
 	if (not UnitIsConnected(unit)) then
 		writeCur = writeMax

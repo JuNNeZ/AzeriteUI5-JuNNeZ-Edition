@@ -5,11 +5,17 @@
 -- Config -> Renderer -> Controls without a single error, because that is the
 -- path AceConfigDialog used to own.
 --
--- Usage: lua panel_harness.lua <addon root> <scratchpad>
+-- Usage: lua panel_harness.lua <addon root> <scratchpad> [rounded|classic]
+--
+-- The window is built once per run, in one window style (Look.lua), so the
+-- harness runs once per style. Rounded is the default, as it is in game.
 
 local root, SP = arg[1], arg[2]
 local S = dofile(SP .. "/stubs.lua")
 local ns, Addon = S.ns, S.Addon
+
+local STYLE = arg[3] or "rounded"
+ns.db.global.optionsWindowStyle = STYLE
 
 local failures, checks = 0, 0
 local function check(ok, what, detail)
@@ -108,7 +114,7 @@ end
 --------------------------------------------------------------------------
 section("Loading")
 for _, file in ipairs({
-	"Options/Kit/Kit.lua", "Options/Kit/Config.lua", "Options/Kit/Defaults.lua",
+	"Options/Kit/Kit.lua", "Options/Kit/Look.lua", "Options/Kit/Config.lua", "Options/Kit/Defaults.lua",
 	"Options/Kit/Combat.lua", "Options/Kit/Controls.lua", "Options/Kit/Preview.lua",
 	"Options/Kit/Renderer.lua", "Options/Kit/Views.lua",
 	"Options/Changelog.lua", "Options/Kit/PanelOptions.lua",
@@ -160,6 +166,17 @@ print(string.format("  %d pages, all sectioned", sectioned))
 --------------------------------------------------------------------------
 section("Opening")
 --------------------------------------------------------------------------
+-- What's New's "All release notes" switches tab before the window has ever
+-- been built (BugSack, 5.23.0: Panel.lua:335 headings nil). That has to be
+-- remembered, not drawn.
+do
+	local okTab, errTab = pcall(function() Panel:SetTab("settings") end)
+	check(okTab, "switching tab before the window is built does not raise", errTab)
+	check(Panel.tab == "settings", "and the tab is remembered for when it opens", Panel.tab)
+	okTab, errTab = pcall(function() Panel:SetTab("options") end)
+	check(okTab and Panel.tab == "options", "and can be switched back", errTab or Panel.tab)
+end
+
 local ok, err = pcall(function() Panel:Open() end)
 check(ok, "the panel builds and opens", err)
 check(Panel.pages ~= nil and #Panel.pages > 0, "the rail has pages",
@@ -2025,14 +2042,19 @@ section("The window's own edge")
 -- tooltip's is, above everything the window holds, and the fill underneath it
 -- takes the alpha the slider asks for. kit_harness checks the numbers against
 -- the tooltip's own layout data; this checks what the window did with them.
+--
+-- Both styles draw the casing this way. Rounded swaps only its edge file and
+-- the fill's overhang, so every check below holds for each.
 do
 	local fill = Panel.frame:GetBackdrop()
-	check(fill == Kit.WindowFill, "the window is painted with the fill backdrop")
+	local wantFill = (STYLE == "classic") and Kit.WindowFill or Kit.Look.WindowFill
+	local wantCasing = (STYLE == "classic") and Kit.WindowCasing or Kit.Look.CasingBackdrop
+	check(fill == wantFill, "the window is painted with the fill backdrop")
 	check(fill and fill.edgeFile == nil,
 		"which carries no border of its own", fill and fill.edgeFile)
 
 	check(Panel.casing ~= nil, "the casing is a frame of its own")
-	check(Panel.casing and Panel.casing:GetBackdrop() == Kit.WindowCasing,
+	check(Panel.casing and Panel.casing:GetBackdrop() == wantCasing,
 		"drawn with the casing backdrop")
 
 	-- Above everything. A backdrop's border is on the BORDER layer of its own
@@ -2121,6 +2143,94 @@ do
 
 	Kit.SetOpacity(1)
 	Panel:ApplyTheme()
+end
+
+--------------------------------------------------------------------------
+section("The window style")
+--------------------------------------------------------------------------
+-- Rounded (Look.lua) is AzeriteUI's own borders with round corners, a shadow,
+-- a rail well and sculpted rules. Classic is the window as it was.
+do
+	local Look = Kit.Look
+	check(Panel.rounded == (STYLE == "rounded"), "the window was built in the " .. STYLE .. " style")
+
+	if (STYLE == "rounded") then
+		check(Look.CasingBackdrop.edgeSize == Kit.WindowCasing.edgeSize,
+			"the rounded casing is drawn at the casing's own edge size")
+		check(Look.InsetBackdrop.edgeSize == Kit.InsetBackdrop.edgeSize,
+			"and the well at the inset's")
+		check(Panel.railWell and Panel.railWell:GetBackdrop() == Look.InsetBackdrop, "the rail is a well")
+		check(Panel.railWell and Panel.railWell:GetFrameLevel() < Panel.railScroll:GetFrameLevel(),
+			"below the rows that scroll in it")
+		check(Panel.railEdge == nil, "which replaces the rail's dividing line")
+		check(Panel.searchBackdrop:GetBackdrop() == Look.InsetBackdrop, "the search box is the same inset")
+		check(#Panel.chromeRules == 2, "the top and bottom bands are ruled off", #Panel.chromeRules)
+		check(Panel.shadow and Panel.shadow:GetFrameLevel() < Panel.frame:GetFrameLevel(),
+			"the shadow sits below the window")
+
+		-- The well is tinted like the inset it replaces, under every theme.
+		local _, themeOrder = Kit.GetThemeChoices()
+		for _, key in ipairs(themeOrder) do
+			Panel:SetTheme(key)
+			local r, g, b = Panel.railWell:GetBackdropBorderColor()
+			local want = Kit.BorderIdle
+			check(r == want[1] and g == want[2] and b == want[3], "the well takes the border colour under " .. key)
+		end
+		Panel:SetTheme("azerite")
+
+		if (not Look.PageIconsAvailable) then
+			local icons = 0
+			for _, row in ipairs(Panel.railRows) do if row.icon then icons = icons + 1 end end
+			check(icons == 0, "no page icons until the art ships", icons)
+		end
+	else
+		check(Panel.railWell == nil and Panel.railEdge ~= nil, "the rail keeps its line")
+		check(Panel.shadow == nil and #Panel.chromeRules == 0, "and nothing else is added")
+	end
+
+	-- Every page has a cell, and no shipped page falls back to the generic one.
+	local generic = {}
+	for _, entry in ipairs(Panel.pages or {}) do
+		if (Look.PageIconFor(entry.key) == "generic") then generic[#generic + 1] = entry.key end
+	end
+	check(#generic == 0, "every page in the rail has its own icon cell", table.concat(generic, ", "))
+
+	-- The shipped atlas must reach every visible page row, including Settings.
+	-- Classic deliberately keeps its original rail without page icons.
+	local previousTab = Panel.tab
+	for _, tab in ipairs({ "options", "settings" }) do
+		Panel:SetTab(tab)
+		local visible, missing, unexpected = 0, 0, 0
+		for _, row in ipairs(Panel.railRows or {}) do
+			if (row:IsShown()) then
+				visible = visible + 1
+				if (not row.icon or not row.icon:IsShown()) then missing = missing + 1 end
+				if (row.icon) then unexpected = unexpected + 1 end
+			end
+		end
+		check(visible > 0, tab .. " has page rows to check")
+		if (STYLE == "rounded" and Look.PageIconsAvailable) then
+			check(missing == 0, "every " .. tab .. " page row shows its icon", missing)
+		else
+			check(unexpected == 0, tab .. " keeps its rail without page icons", unexpected)
+		end
+	end
+	Panel:SetTab(previousTab)
+
+	-- The style is a choice that waits for a reload. Choosing it stores it and
+	-- asks; it does not rebuild anything under the open window.
+	local style = Kit.PanelOptions.GetTable().args.appearance.args.windowStyle
+	check(style ~= nil, "Appearance offers the window style")
+	local values = style and style.values() or {}
+	check(values.rounded and values.classic, "with both styles to choose from")
+	check(style and style.get() == STYLE, "and shows the one in use", style and style.get())
+	local other = (STYLE == "rounded") and "classic" or "rounded"
+	style.set(nil, other)
+	check(ns.db.global.optionsWindowStyle == other, "choosing one stores it", ns.db.global.optionsWindowStyle)
+	check(Panel.rounded == (STYLE == "rounded"), "without rebuilding the open window")
+	style.set(nil, STYLE)
+	check(ns.db.global.optionsWindowStyle == STYLE, "and choosing back stores that",
+		ns.db.global.optionsWindowStyle)
 end
 
 --------------------------------------------------------------------------

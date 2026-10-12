@@ -3,6 +3,7 @@
 	<!--
 		The custom options panel.
 		* Kit.lua is art and measurement only, and must load first.
+		* Look.lua is the window style (Rounded or Classic) the panel is built in.
 		* Config.lua reads AceConfig option tables. No frames, no AceGUI.
 		* Defaults.lua knows which settings differ from their defaults.
 		* Combat.lua holds writes made in combat until it ends.
@@ -20,6 +21,7 @@
 		* Stock AceConfigDialog remains available at /az legacy.
 	-->
 	<Script file="Kit\Kit.lua"/>
+	<Script file="Kit\Look.lua"/>
 	<Script file="Kit\Config.lua"/>
 	<Script file="Kit\Defaults.lua"/>
 	<Script file="Kit\Combat.lua"/>

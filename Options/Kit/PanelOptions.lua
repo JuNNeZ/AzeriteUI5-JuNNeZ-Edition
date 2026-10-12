@@ -24,6 +24,8 @@ local ipairs = ipairs
 local string_format = string.format
 local type = type
 
+-- GLOBALS: ReloadUI
+
 local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
 local Kit = ns.OptionsKit
 
@@ -111,6 +113,33 @@ local appearance = {
 				end
 
 				Reskin()
+			end
+		},
+		-- Read once, when the window is built (Look.lua), so a change reloads
+		-- rather than leaving half the window in each style. Answering no keeps
+		-- the choice for the next reload.
+		windowStyle = {
+			name = L["Window Style"],
+			desc = L["How the window itself is drawn, in AzeriteUI's tooltip metal either way. Rounded rounds off its corners, adds a soft shadow and sets the rail in a well of its own; Classic keeps the square casing. The controls look the same in both. Changing it reloads the interface."],
+			type = "select", style = "dropdown",
+			order = 3,
+			hidden = function()
+				return not Kit.Look
+			end,
+			values = function()
+				return (Kit.Look.GetStyleChoices())
+			end,
+			sorting = function()
+				local _, order = Kit.Look.GetStyleChoices()
+				return order
+			end,
+			get = function()
+				return Kit.Look.GetChosenStyle()
+			end,
+			set = function(info, val)
+				if (val == Kit.Look.GetChosenStyle()) then return end
+				if (not Kit.Look.SetStyle(val)) then return end
+				Kit.Confirm(L["The window style changes after a reload. Reload the interface now?"], ReloadUI)
 			end
 		},
 		windowHeader = {

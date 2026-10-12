@@ -169,10 +169,22 @@ ns.oUF.init(plate);check(not plate.LegacyBorder and not plate.Power,'nameplates 
 local cast=widget();cast.style=ns.Prefix..'PlayerCastBar';cast.Castbar=widget(224);cast.Castbar.Shield=widget()
 ns.oUF.init(cast);check(cast.Castbar.LegacyBorder.backdrop.edgeSize==32,'original cast border sizing')
 check(cast.Castbar.KeepBackdrop==true and cast.Castbar.Shield.alpha==0,'no shield casing: backdrop kept on protected casts')
-local class=widget();class.style=ns.Prefix..'PlayerClassPower';class.ClassPower=widget(224)
+function M:GetAlpha()return self.alpha or 1 end
+local class=widget();class.style=ns.Prefix..'PlayerClassPower';class.ClassPower=widget(224);class.ClassPower[1]=widget()
 ns.oUF.init(class);check(class.ClassPower.LegacyBorder,'classpower casing inherits element visibility')
 class.ClassPower:PostVisibility(false);check(not class.ClassPower.LegacyBorder.shown,'no class power: casing hidden')
 class.ClassPower:PostVisibility(true);check(class.ClassPower.LegacyBorder.shown,'class power back: casing shown')
+local holy=widget();holy.style=ns.Prefix..'PlayerClassPower';holy.ClassPower=widget(224)
+for i=1,5 do holy.ClassPower[i]=widget() end
+holy.ClassPower.PostUpdate=function(element,cur,max)for i=1,max do element[i]:SetAlpha(cur==max and 0 or 1) end end
+ns.oUF.init(holy);holy.ClassPower:PostUpdate(5,5);check(not holy.ClassPower.LegacyBorder.shown,'full Holy Power faded out of combat: casing hidden')
+holy.ClassPower:PostUpdate(3,5);check(holy.ClassPower.LegacyBorder.shown,'Holy Power spent: casing back')
+holy.ClassPower:PostVisibility(false);check(not holy.ClassPower.LegacyBorder.shown,'PostVisibility(false) still hides with drawn points')
+local monk=widget();monk.style=ns.Prefix..'PlayerClassPower';monk.Stagger=widget(224)
+for i=1,3 do monk.Stagger[i]=widget() end
+monk.Stagger.PostUpdate=function(element,cur)for i=1,3 do element[i]:SetAlpha(cur==0 and 0 or 1) end end
+ns.oUF.init(monk);monk.Stagger:PostUpdate(0);check(not monk.Stagger.LegacyBorder.shown,'no stagger out of combat: casing hidden')
+monk.Stagger:PostUpdate(10);check(monk.Stagger.LegacyBorder.shown,'stagger taken: casing shown')
 local ab=widget(54);ab.level=5;ab.OverlayFrame=widget();ab.OverlayFrame.level=8
 H:StyleButton(ab);check(ab.LegacyBorder.parent==ab and ab.LegacyBorder.level==7,'button casing sits under the keybind/proc overlay')
 local button=widget(54);button.iconBorder=widget();button.Border=widget();button.Border:Hide()
@@ -213,4 +225,68 @@ local mainBars=ns.db:GetNamespace('ActionBars').defaults.profile.bars
 check(mainBars[1].enableBarFading==true and mainBars[3].growth=='vertical','main action bar namespace keeps Azerite defaults')
 local cb=H:GetDefaults('PlayerCastBarFrame',{profile={savedPosition={'CENTER',1,2}}}).profile.savedPosition
 check(cb[1]=='BOTTOM' and cb[3]==230,'castbar module name gets the Legacy namespace and 3.x spot')
+-- Player frame centred without a target. Stubs only: the restricted environment,
+-- the state driver and the slide's timing are live checks.
+do
+ H:Command('legacy');combat=false
+ local drivers,frames={},{}
+ RegisterStateDriver=function(f,state,cond)drivers[state]=cond;f.attr['state-'..state]=f.attr['state-'..state] or 'center' end
+ UnregisterStateDriver=function(_,state)drivers[state]=nil end
+ UnitExists=function()return false end
+ CreateFrame=function(_,_,_,template)
+  local f={attr={},scripts={},events={},template=template}
+  function f:SetAttribute(k,v)self.attr[k]=v end
+  function f:GetAttribute(k)return self.attr[k] end
+  function f:SetFrameRef(k,v)self.ref=v end
+  function f:SetScript(k,v)self.scripts[k]=v end
+  function f:RegisterEvent(e)self.events[e]=true end
+  function f:UnregisterEvent(e)self.events[e]=nil end
+  frames[#frames+1]=f;return f
+ end
+ UIParent.GetEffectiveScale=function()return 1 end
+ local unit={left=500,bottom=250}
+ function unit:GetLeft()return self.left end
+ function unit:GetBottom()return self.bottom end
+ function unit:GetWidth()return 316 end
+ function unit:GetEffectiveScale()return 1 end
+ function unit:ClearAllPoints()end
+ function unit:SetPoint(p,rel,rp,x,y)self.point,self.left,self.bottom=p,x,y end
+ local shown,hooks=false,{}
+ local anchor={IsShown=function()return shown end,HookScript=function(_,k,fn)hooks[k]=fn end}
+ local mod={frame=unit,anchor=anchor,db={profile={enabled=true,legacyCenterWithoutTarget=false}}}
+ ns.API.HasSecureSnippets=function()return true end
+ H:UpdatePlayerCenter(mod)
+ check(#frames==0 and unit.left==500,'centre off: nothing created, frame stays home')
+ mod.db.profile.legacyCenterWithoutTarget=true
+ H:UpdatePlayerCenter(mod)
+ local tween,driver=frames[1],frames[2]
+ check(driver.template=='SecureHandlerStateTemplate' and driver.ref==unit and driver.attr['_onstate-azcenter'],'secure driver holds the unit and a snippet')
+ check(drivers.azcenter=='[@target,exists] home; center','driver follows the target')
+ check(driver.attr['home-x']==500 and driver.attr['home-y']==250,'home is where the saved position put the frame')
+ check(driver.attr['center-x']==(1920-316)/2 and driver.attr['center-y']==250,'centre is mid-screen at the same height')
+ check(unit.left==(1920-316)/2 and unit.point=='BOTTOMLEFT','no target: placed in the centre at once')
+ driver:Slide('home')
+ check(tween.scripts.OnUpdate,'out of combat a target change slides')
+ tween.scripts.OnUpdate(tween,.1);check(unit.left>500 and unit.left<(1920-316)/2,'mid-slide between the spots')
+ tween.scripts.OnEvent(tween,'PLAYER_REGEN_DISABLED')
+ check(unit.left==500 and tween.scripts.OnUpdate==nil,'entering combat lands the slide')
+ combat=true;driver:Slide('center');check(unit.left==500,'insecure code never moves it in combat')
+ combat=false;driver.attr['state-azcenter']='center';tween.scripts.OnEvent(tween,'PLAYER_REGEN_ENABLED')
+ check(unit.left==(1920-316)/2,'a change missed in combat is applied when it ends')
+ shown=true;hooks.OnShow();check(unit.left==500,'movers shown: frame goes home')
+ driver:Slide('center');check(unit.left==500,'and stays home while they show')
+ shown=false;hooks.OnHide();check(unit.left==(1920-316)/2,'movers hidden: back to the target state')
+ mod.db.profile.legacyCenterWithoutTarget=false;H:UpdatePlayerCenter(mod)
+ check(drivers.azcenter==nil,'turning it off removes the driver')
+ -- The snippet is plain Lua 5.1 run in Blizzard's restricted environment.
+ local src=assert(io.open(root..'/Core/LegacyHUD.lua')):read('*a')
+ local snippet=src:match('local CENTER_SNIPPET = %[%[(.-)%]%]')
+ check(snippet and loadstring(snippet),'restricted snippet compiles')
+ local moved,called
+ local handle={GetAttribute=function(_,k)return driver.attr[k]end,CallMethod=function(_,m,s)called=m..':'..s end,
+  GetFrameRef=function()return {ClearAllPoints=function()end,SetPoint=function(_,p,rel,rp,x,y)moved={p,rel,rp,x,y}end}end}
+ local run=function(state,inCombat)local f=loadstring(snippet);setfenv(f,{self=handle,newstate=state,PlayerInCombat=function()return inCombat end});f()end
+ run('home',true);check(moved and moved[2]=='$screen' and moved[4]==500 and moved[5]==250,'in combat the snippet jumps to the spot')
+ run('center',false);check(called=='Slide:center','out of combat the snippet hands over to the slide')
+end
 print('Legacy HUD: '..checks..' checks passed (real layouts and AceDB; offline only).')

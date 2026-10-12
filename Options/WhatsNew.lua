@@ -41,6 +41,29 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.24.0-JuNNeZ",
+		items = {
+			{
+				text = "Style the Assisted Highlight again: style, thickness, colour and opacity, with a preview.",
+				page = L["Action Bars"],
+				section = L["Assisted Combat Highlight"]
+			},
+			{
+				text = "Party frames: choose how many auras per row, and party mana no longer looks full while a healer drinks.",
+				page = L["Unit Frames"],
+				section = L["Party Frames"]
+			},
+			{
+				text = "The options window has a rounded look with page icons. The old look is under Settings -> Appearance."
+			},
+			{
+				text = "Legacy: the player frame can move to the centre while you have no target (Unit Frames -> Player).",
+				page = L["Unit Frames"],
+				section = L["Player"]
+			}
+		}
+	},
+	{
 		version = "5.23.0-JuNNeZ",
 		items = {
 			{

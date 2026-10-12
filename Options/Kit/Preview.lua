@@ -463,6 +463,11 @@ local policies = {
 		procHighlightColorSource = barFamily,
 		procHighlightColor = barFamily,
 		procHighlightOpacity = barFamily,
+		assistedHighlightStyle = barFamily,
+		assistedHighlightThickness = barFamily,
+		assistedHighlightColorSource = barFamily,
+		assistedHighlightColor = barFamily,
+		assistedHighlightOpacity = barFamily,
 		-- Applies on reload; the buttons only exist while an extra or zone ability is up.
 		extraButtonShape = {
 			kind = "exact",

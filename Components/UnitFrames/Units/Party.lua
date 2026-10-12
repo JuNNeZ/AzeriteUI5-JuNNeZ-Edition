@@ -85,6 +85,7 @@ local defaults = { profile = ns:Merge({
 	useBlizzardHealthColors = false,
 	useClassColorOnMouseoverOnly = false,
 	AuraSize = 30,
+	AurasMaxCols = 0, -- auras per row, 0 = as many as the layout's aura box fits
 	AurasSpacingX = 4,
 	AurasSpacingY = 4,
 	AurasGrowthX = "RIGHT",
@@ -335,7 +336,11 @@ local GetPartyAuraLayoutValue = function(profile, key, fallback)
 	return (value ~= nil) and value or fallback
 end
 
-local GetPartyAuraPerRow = function(config)
+local GetPartyAuraPerRow = function(config, profile)
+	local cols = GetPartyAuraSetting(profile, "AurasMaxCols", 0)
+	if (type(cols) == "number" and cols >= 1) then
+		return math_floor(cols + .5)
+	end
 	local size = (config and config.AuraSize) or 30
 	local spacing = (config and config.AuraSpacing) or 4
 	local frameWidth = config and config.AurasSize and config.AurasSize[1]
@@ -404,7 +409,7 @@ local ApplyPartyAuraLayout = function(frame)
 	local growthX = GetPartyAuraLayoutValue(profile, "AurasGrowthX", config.AurasGrowthX or "RIGHT")
 	local growthY = GetPartyAuraLayoutValue(profile, "AurasGrowthY", config.AurasGrowthY or "DOWN")
 	local initialAnchor = GetPartyAuraLayoutValue(profile, "AurasInitialAnchor", config.AurasInitialAnchor or "TOPLEFT")
-	local perRow = GetPartyAuraPerRow(config)
+	local perRow = GetPartyAuraPerRow(config, profile)
 	local numTotal = config.AurasNumTotal or 6
 	local rows = math_max(1, math_ceil(numTotal / perRow))
 	local width = (perRow * auraSize) + ((perRow - 1) * spacingX)
@@ -986,7 +991,7 @@ local style = function(self, unit)
 
 	-- Apply common scripts and member values.
 	ns.UnitFrame.InitializeUnitFrame(self)
-	self:RegisterForClicks("AnyUp")
+	ns.UnitFrame.RegisterGroupClicks(self)
 	ns.UnitFrames[self] = true -- add to global registry
 	Units[self] = true -- add to local registry
 
