@@ -267,6 +267,9 @@ local Vault_UpdateTooltip = function(self)
 	if (C_WeeklyRewards.HasAvailableRewards and C_WeeklyRewards.HasAvailableRewards()) then
 		GameTooltip:AddLine(L["Rewards are waiting in the Great Vault."], unpack(Colors.quest.green))
 	end
+	if (WeeklyRewards_ShowUI) then
+		GameTooltip:AddLine(L["<Left-Click to open the Great Vault>"], unpack(Colors.quest.gray))
+	end
 	GameTooltip:Show()
 end
 
@@ -279,6 +282,21 @@ local Vault_OnLeave = function(self)
 	self.UpdateTooltip = nil
 	if (GameTooltip:IsForbidden()) then return end
 	GameTooltip:Hide()
+end
+
+-- Opens and closes the vault the way the Encounter Journal and the map pin do: through
+-- Blizzard's own WeeklyRewards_ShowUI, which loads the window and hands it to the UI
+-- panel manager, whose secure delegate does the showing. That manager refuses while
+-- protected functions are blocked, so out of combat only, and nothing of ours touches
+-- the vault window itself.
+local Vault_OnClick = function(self)
+	if (InCombatLockdown()) then return end
+	local window = _G.WeeklyRewardsFrame
+	if (window and window:IsShown()) then
+		HideUIPanel(window)
+	elseif (WeeklyRewards_ShowUI) then
+		WeeklyRewards_ShowUI()
+	end
 end
 
 Info.PrepareFrames = function(self)
@@ -332,10 +350,12 @@ Info.PrepareFrames = function(self)
 	vault:SetJustifyH("RIGHT")
 	vault:SetJustifyV("MIDDLE")
 
-	local vaultFrame = CreateFrame("Frame", nil, frame)
+	local vaultFrame = CreateFrame("Button", nil, frame)
 	vaultFrame:SetAllPoints(vault)
 	vaultFrame:SetScript("OnEnter", Vault_OnEnter)
 	vaultFrame:SetScript("OnLeave", Vault_OnLeave)
+	vaultFrame:SetScript("OnClick", Vault_OnClick)
+	vaultFrame:RegisterForClicks("LeftButtonUp")
 
 	self.vault = vault
 	self.vaultFrame = vaultFrame

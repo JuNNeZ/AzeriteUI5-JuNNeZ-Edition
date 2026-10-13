@@ -117,6 +117,9 @@ load("Options/Kit/Widgets.lua")
 load("Options/Kit/Window.lua")
 load("Options/Options.lua")
 
+-- Components an option page builds from directly (Tools/Harness/option_components.lua).
+dofile((arg[2] or ".") .. "/option_components.lua")(load, ns)
+
 local xml = io.open(root .. "/Options/Options.xml"):read("*a")
 for file in xml:gmatch('<Script file="OptionsPages\\([%w_]+%.lua)"/>') do
 	pcall(load, "Options/OptionsPages/" .. file)

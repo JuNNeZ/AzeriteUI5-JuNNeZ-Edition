@@ -5,8 +5,8 @@ local taint = mutation == "--taint"; if taint then mutation = nil end
 local checks, failures = 0, 0
 local function check(ok, label) checks=checks+1; if not ok then failures=failures+1; print("FAIL: "..label) end end
 local mutations = {
- ["wrong-panel"]={"Core/Debugging.lua",'panel:Open(L["Debug tools"])','panel:Open(L["Cooldown Manager"])'},
- ["wrong-tab"]={"Core/Debugging.lua",'panel:SetTab("options")','panel:SetTab("settings")'},
+ ["wrong-panel"]={"AzeriteUI5_JuNNeZ_Edition_Debug/Debugging.lua",'panel:Open(L["Debug tools"])','panel:Open(L["Cooldown Manager"])'},
+ ["wrong-tab"]={"AzeriteUI5_JuNNeZ_Edition_Debug/Debugging.lua",'panel:SetTab("options")','panel:SetTab("settings")'},
  ["no-immediate"]={"Options/Kit/Combat.lua",'immediate[option] = true','immediate[option] = nil'},
  ["all-immediate"]={"Options/Kit/Combat.lua",'return true\nend\n\n-- The entry waiting','return false\nend\n\n-- The entry waiting'},
  ["renderer-no-path"]={"Options/Kit/Renderer.lua",'Combat:ShouldQueue(options, path)','Combat:ShouldQueue(options)'},
@@ -44,7 +44,7 @@ local function client(forever)
  C_Spell={GetSpellCooldownDuration=function() return {} end}
  local created={};local make=CreateFrame
  CreateFrame=function(...) local f=make(...);local parent=select(3,...);f.GetParent=function() return parent end;created[#created+1]=f;return f end
- for _,rel in ipairs({"Core/Debugging.lua","Options/Kit/Kit.lua","Options/Kit/Config.lua","Options/Kit/Defaults.lua","Options/Kit/Combat.lua","Options/Kit/Controls.lua","Options/Kit/Preview.lua","Options/Kit/Renderer.lua","Options/Kit/Views.lua","Options/Changelog.lua","Options/Kit/PanelOptions.lua","Options/Kit/Panel.lua","Options/Options.lua","Options/OptionsPages/Debug.lua"}) do loadSource(rel,ns,Addon) end
+ for _,rel in ipairs({"AzeriteUI5_JuNNeZ_Edition_Debug/Debugging.lua","Options/Kit/Kit.lua","Options/Kit/Config.lua","Options/Kit/Defaults.lua","Options/Kit/Combat.lua","Options/Kit/Controls.lua","Options/Kit/Preview.lua","Options/Kit/Renderer.lua","Options/Kit/Views.lua","Options/Changelog.lua","Options/Kit/PanelOptions.lua","Options/Kit/Panel.lua","Options/Options.lua","Options/OptionsPages/Debug.lua"}) do loadSource(rel,ns,Addon) end
  local M=S.modules.Debugging;local actions,commands={},{};local active,id=false,nil
  M.CooldownReadyProbe=function(_,v) actions[#actions+1]=v;if v=="off" then active,id=false,nil elseif tonumber(v) then active,id=true,tonumber(v) end end
  M.GetCooldownProbeState=function() return active,id end

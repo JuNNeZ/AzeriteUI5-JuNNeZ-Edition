@@ -9,7 +9,7 @@ local Effects = {}
 ns.ThemeEffects = Effects
 
 -- In dropdown order.
-local THEMES = { "azerite", "hunter", "paladin", "mage" }
+local THEMES = { "azerite", "legacy", "hunter", "paladin", "mage" }
 local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage" }
 local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none" }
 local CRYSTAL_EFFECTS = { "none", "paladin", "mage" }
@@ -43,12 +43,16 @@ Effects.GetThemes = function(self)
 	for _, key in ipairs(THEMES) do
 		if (key ~= "paladin" or DevMode()) then list[#list + 1] = key end
 	end
-	-- Keep the command-only HUD hidden until it is already selected.
-	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then list[#list + 1] = "legacy" end
+	-- Legacy needs its module; it writes the same switch /go does (Core/LegacyHUD.lua).
+	if (not ns.LegacyHUD) then
+		for index, key in ipairs(list) do
+			if (key == "legacy") then table.remove(list, index); break end
+		end
+	end
 	return list
 end
 
---- The theme in use: "azerite", "hunter", "paladin" or "mage".
+--- The theme in use: "azerite", "legacy", "hunter", "paladin" or "mage".
 Effects.GetTheme = function(self)
 	local char = Char()
 	if (not char or not MainLayout()) then return "azerite" end

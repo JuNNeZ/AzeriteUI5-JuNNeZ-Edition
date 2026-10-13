@@ -80,19 +80,6 @@ local function large(value)
 	end
 end
 
-local function short(value)
-	value = tonumber(value)
-	if (not value) then
-		return ""
-	end
-	if (value >= 1e9) then							return ("%.1fb"):format(value / 1e9):gsub("%.?0+([kmb])$", "%1")
-	elseif (value >= 1e6) then 						return ("%.1fm"):format(value / 1e6):gsub("%.?0+([kmb])$", "%1")
-	elseif (value >= 1e3) or (value <= -1e3) then 	return ("%.1fk"):format(value / 1e3):gsub("%.?0+([kmb])$", "%1")
-	elseif (value > 0) then							return tostring(math_floor(value))
-	else 											return ""
-	end
-end
-
 if (GetLocale() == "zhCN") then
 	large = function(value)
 		value = tonumber(value)
@@ -101,17 +88,6 @@ if (GetLocale() == "zhCN") then
 		end
 		if (value >= 1e8) then 							return string_format("%.2f亿", value/1e8)
 		elseif (value >= 1e4) then 						return string_format("%.2f万", value/1e4)
-		elseif (value > 0) then 						return tostring(math_floor(value))
-		else 											return ""
-		end
-	end
-	short = function(value)
-		value = tonumber(value)
-		if (not value) then
-			return ""
-		end
-		if (value >= 1e8) then							return ("%.2f亿"):format(value / 1e8):gsub("%.?0+([km])$", "%1")
-		elseif (value >= 1e4) or (value <= -1e3) then	return ("%.2f万"):format(value / 1e4):gsub("%.?0+([km])$", "%1")
 		elseif (value > 0) then 						return tostring(math_floor(value))
 		else 											return ""
 		end
@@ -157,6 +133,25 @@ local function createUpdateFrame()
 	end)
 end
 
+local function IsSecret(value)
+	return issecretvalue and issecretvalue(value) or false
+end
+
+-- A readable amount keeps the short formats above. A secret one goes straight to the
+-- client's own formatter (AbbreviateNumbers takes secrets from addon code), and the
+-- result is only ever handed to the font string, never read.
+local function FormatAmount(amount)
+	if (IsSecret(amount)) then
+		return AbbreviateNumbers and AbbreviateNumbers(amount) or nil
+	end
+	return large(amount)
+end
+
+-- Flags that come with a zero amount: the hit did no damage. Used to tell a hit from
+-- a miss when the amount itself cannot be compared.
+local ZERO_AMOUNT_FLAGS = { ABSORB = true, BLOCK = true, RESIST = true, MISS = true,
+	DODGE = true, PARRY = true, EVADE = true, DEFLECT = true, IMMUNE = true, REFLECT = true }
+
 local function Update(self, event, unit, ...)
 	if(not unit) or (unit ~= self.unit) then
 		return
@@ -165,7 +160,20 @@ local function Update(self, event, unit, ...)
 	local element = self.CombatFeedback
 	local colors = self.colors.feedback or colors
 
+	-- Unit frame settings can switch the text off without a reload.
+	local UnitFrame = ns.UnitFrame
+	if (UnitFrame and UnitFrame.ShouldShowCombatFeedback and not UnitFrame.ShouldShowCombatFeedback()) then
+		element:Hide()
+		feedback[self] = nil
+		return
+	end
+
 	local event, flagText, amount, schoolMask = ...
+	if (IsSecret(event)) then return end
+	-- The payload names this flagText; the code below always read an unset global
+	-- "flags", so crits and crushing blows were never drawn large.
+	local flags = (not IsSecret(flagText)) and flagText or nil
+	local amountSecret = IsSecret(amount)
 	local color, fontType, text, arg
 
 	local function ApplyApproxHealthDelta(frame, delta)
@@ -208,8 +216,14 @@ local function Update(self, event, unit, ...)
 		color = colors.IMMUNE
 
 	elseif (event == 'WOUND') then
-		if (amount ~= 0) then
-			if (type(amount) == "number" and amount > 0) then
+		local isHit
+		if (amountSecret) then
+			isHit = not (flags and ZERO_AMOUNT_FLAGS[flags])
+		else
+			isHit = (amount ~= 0)
+		end
+		if (isHit) then
+			if (not amountSecret and type(amount) == "number" and amount > 0) then
 				ApplyApproxHealthDelta(self, -amount)
 			end
 
@@ -228,12 +242,13 @@ local function Update(self, event, unit, ...)
 				color = colors.DAMAGE
 			end
 
-			if (flags == 'BLOCK_REDUCED') then
-				text = COMBAT_TEXT_BLOCK_REDUCED:format(short(text))
+			-- Blizzard formats this one string the same way (CombatFeedback.lua).
+			if (flags == 'BLOCK_REDUCED' and COMBAT_TEXT_BLOCK_REDUCED) then
+				text = COMBAT_TEXT_BLOCK_REDUCED
 			else
 				text = damage_format
-				arg = large(amount)
 			end
+			arg = FormatAmount(amount)
 
 		elseif (flags == 'ABSORB') then
 			fontType ='small'
@@ -261,11 +276,11 @@ local function Update(self, event, unit, ...)
 		color = colors.BLOCK
 
 	elseif (event == 'HEAL') then
-		if (type(amount) == "number" and amount > 0) then
+		if (not amountSecret and type(amount) == "number" and amount > 0) then
 			ApplyApproxHealthDelta(self, amount)
 		end
 		text = heal_format
-		arg = large(amount)
+		arg = FormatAmount(amount)
 		if (flags == 'CRITICAL') then
 			fontType ='large'
 			color = colors.CRITHEAL
@@ -274,7 +289,8 @@ local function Update(self, event, unit, ...)
 		end
 
 	elseif (event == 'ENERGIZE') then
-		text = large(amount)
+		text = "%s"
+		arg = FormatAmount(amount)
 		if (flags == 'CRITICAL') then
 			fontType = 'large'
 			color = colors.CRITENERGIZE
@@ -298,7 +314,7 @@ local function Update(self, event, unit, ...)
 			element:SetFontObject(fontObject or element.feedbackFont)
 			element.fontType = fontType
 		end
-		element:SetFormattedText(text, arg)
+		element:SetFormattedText(text, arg or "")
 		element:SetTextColor(unpack(color or colors.STANDARD))
 		element:SetAlpha(0)
 		element:Show()

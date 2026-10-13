@@ -95,6 +95,11 @@ if (-not $TempBuildPath.StartsWith($TempRoot, [StringComparison]::OrdinalIgnoreC
     throw "Refusing to clean an unexpected release build path: $TempBuildPath"
 }
 $TempAddonPath = Join-Path $TempBuildPath $AddonName
+# The load-on-demand debug tools ship as their own addon folder beside the main one
+# (Core/DebugLoader.lua loads it on first use of /azdebug).
+$CompanionName = "${AddonName}_Debug"
+$CompanionSourcePath = Join-Path $SourcePath $CompanionName
+$TempCompanionPath = Join-Path $TempBuildPath $CompanionName
 
 # Clean temp directory if it exists
 if (Test-Path $TempBuildPath) {
@@ -145,6 +150,14 @@ try {
         Remove-Item -LiteralPath $resolvedPath -Recurse -Force
     }
 
+    if (-not (Test-Path -LiteralPath $CompanionSourcePath)) {
+        throw "Required release entry is missing: $CompanionName"
+    }
+    New-Item -ItemType Directory -Path $TempCompanionPath -Force | Out-Null
+    Get-ChildItem -LiteralPath $CompanionSourcePath -File |
+        Where-Object { $_.Extension -in @(".lua", ".toc", ".xml", ".svg") } |
+        Copy-Item -Destination $TempCompanionPath -Force
+
     $DevelopmentFileNames = @(".editorconfig", ".gitattributes", ".luacheckrc", ".mcp.json", ".pkgmeta")
     Get-ChildItem -LiteralPath $TempAddonPath -File -Recurse -Force |
         Where-Object { $DevelopmentFileNames -contains $_.Name -or $_.Extension -in @(".code-workspace", ".md") } |
@@ -168,7 +181,7 @@ try {
     }
     
     # Create zip archive
-    Compress-Archive -Path $TempAddonPath -DestinationPath $ArchivePath -CompressionLevel Optimal
+    Compress-Archive -Path @($TempAddonPath, $TempCompanionPath) -DestinationPath $ArchivePath -CompressionLevel Optimal
     
     Write-Host "[DONE] Archive created successfully"
 } catch {

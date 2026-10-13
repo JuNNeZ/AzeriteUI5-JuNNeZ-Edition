@@ -447,6 +447,169 @@ local Inset = function(box)
 end
 
 --------------------------------------------------------------------------
+-- Scroll bar
+--------------------------------------------------------------------------
+-- A visible bar beside a ScrollFrame, so a page with more below the fold says
+-- so: a page that only scrolled by wheel looked complete to players who then
+-- thought settings were missing. A track and a thumb sized to the share of the
+-- page in view; drag the thumb, click the track to page, wheel over either.
+-- Hidden while everything fits. The bar sits wherever the caller anchors it.
+--
+-- Drawn in the sliders' own art, turned upright: the cast_back trough and a
+-- cast_bar fill in the accent for the thumb. No knob: the maintainer found it
+-- added nothing (2026-10-13); the fill brightens instead while held or hovered.
+local SCROLLBAR_W, THUMB_MIN = 12, 28
+
+-- A slice of horizontal art drawn upright: the texture's left end at the top.
+local SetUprightCoord = function(texture, coords)
+	local l, r, t, b = coords[1], coords[2], coords[3], coords[4]
+	texture:SetTexCoord(l, b, r, b, l, t, r, t)
+end
+
+-- Kit.CreateSliceBar stood on end: caps top and bottom, the middle stretching.
+local CreateUprightSlice = function(parent, layer, spec, width, anchor, sublevel)
+	anchor = anchor or parent
+	local cap = spec.capSource * width / spec.bodyHeight
+	local media = GetMedia(spec.media)
+
+	local top = parent:CreateTexture(nil, layer, nil, sublevel)
+	top:SetTexture(media)
+	SetUprightCoord(top, spec.left)
+	top:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, 0)
+	top:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", 0, 0)
+	top:SetHeight(cap)
+
+	local bottom = parent:CreateTexture(nil, layer, nil, sublevel)
+	bottom:SetTexture(media)
+	SetUprightCoord(bottom, spec.right)
+	bottom:SetPoint("BOTTOMLEFT", anchor, "BOTTOMLEFT", 0, 0)
+	bottom:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", 0, 0)
+	bottom:SetHeight(cap)
+
+	local mid = parent:CreateTexture(nil, layer, nil, sublevel)
+	mid:SetTexture(media)
+	SetUprightCoord(mid, spec.mid)
+	mid:SetPoint("TOPLEFT", top, "BOTTOMLEFT", 0, 0)
+	mid:SetPoint("BOTTOMRIGHT", bottom, "TOPRIGHT", 0, 0)
+
+	return {
+		SetVertexColor = function(_, r, g, b, a)
+			top:SetVertexColor(r, g, b, a)
+			mid:SetVertexColor(r, g, b, a)
+			bottom:SetVertexColor(r, g, b, a)
+		end
+	}
+end
+
+Controls.CreateScrollBar = function(scroll, parent)
+	local bar = CreateFrame("Frame", nil, parent or scroll:GetParent())
+	bar:SetWidth(SCROLLBAR_W)
+	bar:SetFrameLevel(scroll:GetFrameLevel() + 5)
+	bar:EnableMouse(true)
+	bar:Hide()
+
+	local track = CreateUprightSlice(bar, "BACKGROUND", Kit.Trough, SCROLLBAR_W)
+	bar.track = track
+
+	-- The thumb is the slider's fill, set into the trough the same way: a slim
+	-- bar in the groove, inset from its sides by Kit.FillMetrics.
+	local fillW, fillLeft, fillRight = Kit.FillMetrics(SCROLLBAR_W)
+	local thumb = CreateFrame("Button", nil, bar)
+	thumb:SetWidth(SCROLLBAR_W)
+	thumb:SetPoint("TOP", bar, "TOP", 0, 0)
+	thumb:RegisterForClicks("LeftButtonDown")
+	local fillHost = CreateFrame("Frame", nil, thumb)
+	fillHost:SetPoint("TOPLEFT", thumb, "TOPLEFT", fillLeft, -1)
+	fillHost:SetPoint("BOTTOMRIGHT", thumb, "BOTTOMRIGHT", -fillRight, 1)
+	local fill = CreateUprightSlice(fillHost, "ARTWORK", Kit.Fill, fillW)
+	thumb.fill = fill
+
+	bar.thumb = thumb
+
+	-- Where the thumb goes for the scroll frame's current position.
+	bar.Update = function(self)
+		local range = scroll:GetVerticalScrollRange() or 0
+		local height = self:GetHeight() or 0
+		if (range <= 0 or height <= 0) then
+			self:Hide()
+			return
+		end
+		self:Show()
+		local view = scroll:GetHeight() or height
+		local size = max(THUMB_MIN, min(height, height * view / (view + range)))
+		local at = min(range, max(0, scroll:GetVerticalScroll() or 0))
+		thumb:SetHeight(size)
+		self.offset = (height - size) * at / range
+		thumb:SetPoint("TOP", self, "TOP", 0, -self.offset)
+	end
+
+	-- The slider's colours: the theme's track and the accent fill, turning to
+	-- the highlight while you hold or hover it.
+	bar.Restyle = function(self)
+		local trackColor = Kit.TrackColor
+		track:SetVertexColor(trackColor[1], trackColor[2], trackColor[3], trackColor[4] or 1)
+		local color = (thumb.dragging or thumb:IsMouseOver()) and Kit.TextHighlight or Kit.TextSelected
+		fill:SetVertexColor(color[1], color[2], color[3], Kit.FillAlpha)
+	end
+
+	local ScrollTo = function(value)
+		local range = scroll:GetVerticalScrollRange() or 0
+		scroll:SetVerticalScroll(min(range, max(0, value)))
+	end
+
+	-- Dragging: the cursor's travel along the track maps to the page's travel.
+	thumb:SetScript("OnMouseDown", function(self)
+		local _, y = GetCursorPosition()
+		self.dragging = { y = y / self:GetEffectiveScale(), from = scroll:GetVerticalScroll() or 0 }
+		bar:Restyle()
+	end)
+	thumb:SetScript("OnMouseUp", function(self)
+		self.dragging = nil
+		bar:Restyle()
+	end)
+	thumb:SetScript("OnUpdate", function(self)
+		local drag = self.dragging
+		if (not drag) then return end
+		local _, y = GetCursorPosition()
+		local travel = (bar:GetHeight() or 0) - (self:GetHeight() or 0)
+		if (travel <= 0) then return end
+		local range = scroll:GetVerticalScrollRange() or 0
+		ScrollTo(drag.from + (drag.y - y / self:GetEffectiveScale()) * range / travel)
+	end)
+	thumb:SetScript("OnEnter", function() bar:Restyle() end)
+	thumb:SetScript("OnLeave", function() bar:Restyle() end)
+
+	-- A click on the track pages toward it, as the game's own scroll bars do.
+	bar:SetScript("OnMouseDown", function(self)
+		local _, y = GetCursorPosition()
+		y = y / self:GetEffectiveScale()
+		local page = (scroll:GetHeight() or 0) * .9
+		local top = thumb:GetTop() or 0
+		ScrollTo((scroll:GetVerticalScroll() or 0) + (y > top and -page or page))
+	end)
+
+	-- The wheel over the bar scrolls what it belongs to.
+	local OnWheel = function(_, delta)
+		local handler = scroll:GetScript("OnMouseWheel")
+		if (handler) then handler(scroll, delta) end
+	end
+	bar:EnableMouseWheel(true)
+	bar:SetScript("OnMouseWheel", OnWheel)
+	thumb:EnableMouseWheel(true)
+	thumb:SetScript("OnMouseWheel", OnWheel)
+
+	local Refresh = function() bar:Update() end
+	scroll:HookScript("OnVerticalScroll", Refresh)
+	scroll:HookScript("OnScrollRangeChanged", Refresh)
+	scroll:HookScript("OnSizeChanged", Refresh)
+	bar:SetScript("OnSizeChanged", Refresh)
+	bar:SetScript("OnShow", function(self) self:Restyle() end)
+
+	bar:Restyle()
+	return bar
+end
+
+--------------------------------------------------------------------------
 -- Group header
 --------------------------------------------------------------------------
 -- Not a row: a band above a run of rows, with the addon's own rule beneath it.
@@ -463,6 +626,24 @@ Controls.CreateHeader = function(parent)
 	label:SetJustifyH("LEFT")
 	label:SetWordWrap(false)
 	control.label = label
+
+	-- A section's icon, the same one the rail shows beside it, so the two are
+	-- matched at a glance. Only on sections that have one (Look.SetSectionIcon)
+	-- and only in the Rounded look, as with the page icons.
+	local icon = frame:CreateTexture(nil, "OVERLAY")
+	icon:SetSize(16, 16)
+	icon:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", PAD_LEFT - 2, 6)
+	icon:Hide()
+	control.icon = icon
+
+	control.SetIcon = function(self, key)
+		local Look = Kit.Look
+		local shown = key and Look and Look.IsRounded and Look.IsRounded()
+			and Look.SetSectionIcon(self.icon, key) or false
+		self.icon:SetShown(shown)
+		self.label:ClearAllPoints()
+		self.label:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", PAD_LEFT + (shown and 20 or 0), 8)
+	end
 
 	local rule = frame:CreateTexture(nil, "ARTWORK")
 	rule:SetTexture(GetMedia("bar-small"))
@@ -494,6 +675,7 @@ Controls.CreateHeader = function(parent)
 		local accent = Kit.TextSelected
 		SetTextColor(self.label, accent)
 		self.rule:SetVertexColor(accent[1], accent[2], accent[3], .35)
+		self.icon:SetVertexColor(accent[1], accent[2], accent[3], 1)
 	end
 
 	control:Restyle()
@@ -967,7 +1149,12 @@ local CreatePullout = function()
 		self:SetVerticalScroll(min(range, max(0, self:GetVerticalScroll() - delta * ROW_H * 2)))
 	end)
 
-	frame.scroll, frame.child = scroll, child
+	-- Lists longer than MAX_ROWS scroll; the bar says so (OpenPullout makes room for it).
+	local bar = Controls.CreateScrollBar(scroll, frame)
+	bar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -6)
+	bar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 6)
+
+	frame.scroll, frame.child, frame.bar = scroll, child, bar
 	return frame
 end
 
@@ -1062,8 +1249,12 @@ local OpenPullout = function(control)
 	local shown = min(count, MAX_ROWS)
 	local width = max(control.box:GetWidth(), 150)
 
-	pullout.child:SetSize(width - 12, max(1, count * ROW_H))
+	-- Room for the scroll bar only when the list is longer than the pullout.
+	local barRoom = (count > MAX_ROWS) and 16 or 0
+	pullout.scroll:SetPoint("BOTTOMRIGHT", pullout, "BOTTOMRIGHT", -6 - barRoom, 6)
+	pullout.child:SetSize(width - 12 - barRoom, max(1, count * ROW_H))
 	pullout.scroll:SetVerticalScroll(0)
+	pullout.bar:Restyle()
 	pullout:SetSize(width, shown * ROW_H + 12)
 	pullout:ClearAllPoints()
 	pullout:SetPoint("TOPRIGHT", control.box, "BOTTOMRIGHT", 0, -2)

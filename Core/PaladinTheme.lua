@@ -1,15 +1,14 @@
 -- Optional artwork preview. Saved per character, enabled only in development
 -- mode, and rebuilt on reload. Gameplay colors/values stay with their owners.
-local Addon, ns = ...
+local _, ns = ...
+local Engine = ns.ThemeEngine
 local Theme = ns:NewModule("PaladinTheme", "AceConsole-3.0", "LibMoreEvents-1.0")
 ns.PaladinTheme = Theme
+-- Components ask the engine (ThemeEngine.lua), which hands each hook to the one
+-- theme in use; Hunter and Mage win over this preview when several are switched on.
+Engine:Register(Theme, 30)
 
-local path = function(name)
-	return "Interface\\AddOns\\"..Addon.."\\Assets\\Paladin\\"..name..".tga"
-end
--- Existing component hooks enter here. Delegate to Hunter and Mage before
--- Paladin gates so themes never stack; each owns its separate layout cache.
-local cache = {}
+local path = Engine:MediaPath("Paladin")
 local media = {
 	["actionbutton-border"] = "action-ring",
 	["minimap-border"] = "minimap-ring",
@@ -34,33 +33,25 @@ local media = {
 }
 
 Theme.IsActive = function(self)
-	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return false end
 	if (ns.MageTheme and ns.MageTheme:IsActive()) then return false end
 	local db = ns.db
 	if (not db or not db.global or not db.char or not db.global.enableDevelopmentMode or not db.char.paladinPreview) then return false end
-	if (ns.IsSaiyaRattProfile and ns:IsSaiyaRattProfile()) then return false end
-	local variant = ns.GetActiveConfigVariant and ns:GetActiveConfigVariant()
-	return not variant or variant == ""
+	return Engine:IsMainLayout()
 end
 
+-- The golden mana crystal replaces the ice one.
 Theme.UseIceCrystal = function(self, requested)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:UseIceCrystal(requested) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:UseIceCrystal(requested) end
 	return requested and not self:IsActive()
 end
 
 -- Called with the sanitized resource token from the player power renderer.
 -- Preview-only mana styling takes precedence over saved crystal color modes.
 Theme.GetPowerColor = function(self, token)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:GetPowerColor(token) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:GetPowerColor(token) end
 	if (self:IsActive() and token == "MANA") then return { 1, .78, .28 } end
 end
 
 Theme.ResolveMedia = function(self, name)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:ResolveMedia(name) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:ResolveMedia(name) end
 	if (self:IsActive() and media[name]) then return path(media[name]) end
 end
 
@@ -72,68 +63,31 @@ end
 
 -- Some skins store media at file-load time, before AceDB is initialized.
 Theme.ResolvePath = function(self, original)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:ResolvePath(original) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:ResolvePath(original) end
-	local name = type(original) == "string" and original:match("[\\/]Assets[\\/]([^\\/]+)%.tga$")
+	local name = Engine.AssetName(original)
 	return (name and self:ResolveMedia(name)) or original
 end
 
-local IsWidget = function(value)
-	return type(value.GetObjectType) == "function" or type(value[0]) == "userdata"
-end
-
--- Layouts can contain actual Font/Frame objects (for example Minimap anchors).
--- Preserve those identities; copying a WoW object's Lua table loses its native
--- wrapper and may recurse through the entire frame tree.
-local function CopyLayout(source, seen)
-	if (type(source) ~= "table" or IsWidget(source)) then return source end
-	seen = seen or {}
-	if (seen[source]) then return seen[source] end
-	local result = {}
-	seen[source] = result
-	for key, value in pairs(source) do result[key] = CopyLayout(value, seen) end
-	return result
-end
-
-local function Transform(t, seen)
-	seen = seen or {}
-	if (seen[t] or IsWidget(t)) then return end
-	seen[t] = true
-	for key, value in pairs(t) do
-		if (type(value) == "table") then
-			Transform(value, seen)
-		elseif (type(value) == "string") then
-			local name = value:match("[\\/]Assets[\\/]([^\\/]+)%.tga$")
-			if (name and media[name]) then t[key] = path(media[name]) end
+-- Remapped decorative textures lose their material tint (ThemeEngine.lua); after
+-- that, these are material tints too, never class, reaction, threat or cast-state
+-- colors.
+local replaceOptions = {
+	resolve = function(name) return media[name] and path(media[name]) end,
+	after = function(t)
+		for _, prefix in ipairs({ "ButtonBorder", "ExtraButtonBorder", "PortraitBorder", "PowerBarForeground", "ManaOrbForeground" }) do
+			if (t[prefix.."Color"]) then t[prefix.."Color"] = { 1, 1, 1, 1 } end
+		end
+		if (t.ManaOrbForegroundTexture) then
+			-- The lion casing replaces the old rim/plinth; keep the independent glass.
+			t.ManaOrbRimColor = { 1, 1, 1, 0 }
+			t.ManaOrbArtworkColor = { 1, 1, 1, 0 }
 		end
 	end
-	-- Neutralize only material tints for remapped decorative textures.
-	for key, value in pairs(t) do
-		if (type(key) == "string" and type(value) == "string" and value:find("\\Assets\\Paladin\\", 1, true)) then
-			local prefix = key:match("^(.-)Texture$") or key:match("^(.-)TexturePath$")
-			local color = prefix and t[prefix.."Color"]
-			if (type(color) == "table") then t[prefix.."Color"] = { 1, 1, 1, color[4] or 1 } end
-		end
-	end
-	-- These are material tints, never class, reaction, threat or cast-state colors.
-	for _, prefix in ipairs({ "ButtonBorder", "ExtraButtonBorder", "PortraitBorder", "PowerBarForeground", "ManaOrbForeground" }) do
-		if (t[prefix.."Color"]) then t[prefix.."Color"] = { 1, 1, 1, 1 } end
-	end
-	if (t.ManaOrbForegroundTexture) then
-		-- The lion casing replaces the old rim/plinth; keep the independent glass.
-		t.ManaOrbRimColor = { 1, 1, 1, 0 }
-		t.ManaOrbArtworkColor = { 1, 1, 1, 0 }
-	end
-end
+}
 
 -- Lazily copy resolved layouts: source tables and other profiles are untouched.
-Theme.GetConfig = function(self, name, original)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:GetConfig(name, original) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:GetConfig(name, original) end
-	if (not self:IsActive()) then return original end
-	if (cache[original]) then return cache[original] end
-	local config = CopyLayout(original)
-	Transform(config)
+local BuildConfig = function(name, original)
+	local config = Engine:CopyLayout(original)
+	Engine:ReplaceMedia(config, replaceOptions)
 	if (name == "PlayerFrame") then
 		config.PowerOrbColors.MANA = { 1, .78, .28 }
 		for _, tier in ipairs({ "Novice", "Hardened", "Seasoned" }) do
@@ -175,8 +129,13 @@ Theme.GetConfig = function(self, name, original)
 			config.Critter.CastBarValuePosition = { "CENTER", 0, 0 }
 		end
 	end
-	cache[original] = config
 	return config
+end
+local CachedConfig = Engine:NewConfigCache(BuildConfig)
+
+Theme.GetConfig = function(self, name, original)
+	if (not self:IsActive()) then return original end
+	return CachedConfig(name, original)
 end
 
 local NewCasing = function(bar)
@@ -214,8 +173,6 @@ local HealthGeometry = function(bar, db)
 end
 
 Theme.StyleHealth = function(self, owner, db, flip)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleHealth(owner, db, flip) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleHealth(owner, db, flip) end
 	if (not self:IsActive()) then return end
 	local bar = owner.Health
 	local material, width, right, fillTop, fillBottom = HealthGeometry(bar, db)
@@ -247,8 +204,6 @@ Theme.StyleHealth = function(self, owner, db, flip)
 end
 
 Theme.StyleThreat = function(self, owner, flip)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleThreat(owner, flip) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleThreat(owner, flip) end
 	if (not self:IsActive()) then return end
 	local threat = owner.ThreatIndicator
 	local art = threat and threat.textures and threat.textures.Health
@@ -262,8 +217,6 @@ Theme.StyleThreat = function(self, owner, flip)
 end
 
 Theme.StyleCastbar = function(self, cast)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleCastbar(cast) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleCastbar(cast) end
 	if (not self:IsActive()) then return end
 	local frame = cast.PaladinCasing or NewCasing(cast)
 	frame.Art:SetTexture(path("lion-cast"))
@@ -280,8 +233,6 @@ Theme.StyleCastbar = function(self, cast)
 end
 
 Theme.StyleNameplate = function(self, owner)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleNameplate(owner) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleNameplate(owner) end
 	if (not self:IsActive()) then return end
 	for _, bar in ipairs({ owner.Health, owner.Castbar }) do
 		-- Material replaces the original BACKGROUND texture at its original
@@ -400,8 +351,6 @@ end
 Theme.ClearOrbEffect = function(self, orb) HideLight(orb.PaladinLight) end
 
 Theme.StyleUtilityButton = function(self, button)
-	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return ns.HunterTheme:StyleUtilityButton(button) end
-	if (ns.MageTheme and ns.MageTheme:IsActive()) then return ns.MageTheme:StyleUtilityButton(button) end
 	if (not self:IsActive()) then return end
 	-- Registered to the original cog canvas; retain its existing size/anchors.
 	button.Texture:SetTexture(path("utility-cog"))
@@ -434,29 +383,14 @@ Theme.Command = function(self, input)
 	ReloadUI()
 end
 
-Theme.ProfileChanged = function(self)
-	if (self.loadedActive ~= self:IsActive()) then
-		if (InCombatLockdown()) then
-			self:RegisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
-		else
-			self:UnregisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
-			ReloadUI()
-		end
-	end
-end
-
 Theme.OnInitialize = function(self)
 	if (ns.db.global.enableDevelopmentMode) then self:RegisterChatCommand("azpaladin", "Command") end
 end
 
+Theme.ProfileChanged = Engine.ProfileChanged
+
 Theme.OnEnable = function(self)
-	self.loadedActive = self:IsActive()
-	if (self.loadedActive and ns.OptionsKit) then
-		for _, key in ipairs({ "WindowBackdrop", "WindowCasing", "ButtonBackdrop" }) do
-			ns.OptionsKit[key].edgeFile = path("utility-edge")
-		end
-	end
-	ns.db.RegisterCallback(self, "OnProfileChanged", "ProfileChanged")
-	ns.db.RegisterCallback(self, "OnProfileCopied", "ProfileChanged")
-	ns.db.RegisterCallback(self, "OnProfileReset", "ProfileChanged")
+	-- Chosen at load; a profile switching it on or off reloads (ThemeEngine.lua).
+	Engine:WatchProfile(self)
+	if (self.loadedActive) then Engine:StyleOptionsKit(path("utility-edge")) end
 end

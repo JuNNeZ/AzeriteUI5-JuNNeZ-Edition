@@ -71,9 +71,9 @@ local Label = function(key)
 	return _G.NONE or "None"
 end
 
--- Every theme but AzeriteUI's own is still a work in progress.
+-- Every theme but AzeriteUI's own and the Legacy HUD is still a work in progress.
 local WIP = function(key, label)
-	return key ~= "azerite" and key ~= "theme" and key ~= "none" and label.." (WIP)" or label
+	return key ~= "azerite" and key ~= "legacy" and key ~= "theme" and key ~= "none" and label.." (WIP)" or label
 end
 
 local List = function(keys, withTheme)
@@ -351,6 +351,8 @@ local GenerateOptions = function()
 				desc = L["Use the power crystal and mana orb effects of the other themes on the theme you are using. Only the settings of the effects you pick are shown."],
 				order = 3,
 				type = "toggle", width = "full",
+				-- The Legacy HUD draws no crystal or orb effects (ThemeEffects.lua).
+				hidden = function() return Theme() == "legacy" end,
 				set = function(info, val) Effects():SetLitePlus(val) end,
 				get = function(info) return Effects():IsLitePlus() end
 			},
@@ -359,7 +361,7 @@ local GenerateOptions = function()
 				order = 4,
 				type = "group",
 				inline = true,
-				hidden = function() return not Effects():IsLitePlus() end,
+				hidden = function() return Theme() == "legacy" or not Effects():IsLitePlus() end,
 				args = {
 					crystal = {
 						name = L["Crystal effect"],

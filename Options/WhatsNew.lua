@@ -41,6 +41,27 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.25.0-JuNNeZ",
+		items = {
+			{
+				text = "Execute range has its own page: only enemies you fight, a lead before your execute, your own colours.",
+				page = L["Execute range"]
+			},
+			{
+				text = "Group frames can show who is Sated, and your buffs as dots in each frame's corners.",
+				page = L["Group Frames"],
+				section = L["Group Indicators"]
+			},
+			{
+				text = "Aura Sounds: hear a sound when a buff or debuff is gained, stacks or fades (Retail).",
+				page = L["Aura Sounds"]
+			},
+			{
+				text = "Combat text works in dungeons again. The options window has scroll bars and section icons."
+			}
+		}
+	},
+	{
 		version = "5.24.0-JuNNeZ",
 		items = {
 			{
@@ -50,7 +71,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Party frames: choose how many auras per row, and party mana no longer looks full while a healer drinks.",
-				page = L["Unit Frames"],
+				page = L["Group Frames"],
 				section = L["Party Frames"]
 			},
 			{
@@ -95,7 +116,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Show each party member's Mythic+ rating on their frame (off by default).",
-				page = L["Unit Frames"],
+				page = L["Group Frames"],
 				section = L["Party Frames"]
 			}
 		}

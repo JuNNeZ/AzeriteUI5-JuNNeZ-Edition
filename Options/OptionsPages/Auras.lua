@@ -235,4 +235,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup("Auras", GenerateOptions, -6000, "frames", "Auras")
+Options:AddGroup("Auras", GenerateOptions, -6000, "auras", "Auras")

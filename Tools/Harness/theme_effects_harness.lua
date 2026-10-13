@@ -163,4 +163,24 @@ local foreground = widget(power); power.MageCrystalCaseFrame = foreground; power
 style()
 check(power.Case.parent == foreground and foreground.level == 14, "the Mage crystal's own case frame is lifted instead")
 
+-- Legacy in the theme list (2026-10-13): always offered, chosen like /go legacy.
+ns.LegacyHUD = { IsActive = function() return ns.db.char.legacyHUD == true and not variant end }
+ns.db.char.paladinPreview, ns.db.char.hunterPreview, ns.db.char.magePreview = false, false, false
+ns.HunterTheme.loadedActive, ns.PaladinTheme.loadedActive, ns.MageTheme.loadedActive = nil, nil, nil
+local themes = E:GetThemes()
+check(themes[1] == "azerite" and themes[2] == "legacy", "Legacy is offered right after AzeriteUI, before it is active")
+local before = reloads
+check(E:SetTheme("legacy") and reloads == before + 1, "choosing Legacy reloads")
+check(ns.db.char.legacyHUD == true and not ns.db.char.hunterPreview and not ns.db.char.magePreview and not ns.db.char.paladinPreview,
+	"it writes the switch /go legacy writes and clears the class themes")
+ns.LegacyHUD.loadedActive = true
+check(E:GetTheme() == "legacy" and E:GetCrystalEffect() == "none" and E:GetOrbEffect() == "none", "Legacy in use, no crystal or orb effects")
+check(E:SetTheme("hunter") and reloads == before + 2 and ns.db.char.legacyHUD == false and ns.db.char.hunterPreview, "Legacy to Hunter reloads and leaves Legacy")
+ns.LegacyHUD.loadedActive = nil
+variant = "SaiyaRatt"
+check(not E:SetTheme("legacy"), "Legacy refused on another layout, as /go refuses it")
+variant = nil
+ns.LegacyHUD = nil
+check(not E:GetThemes()[2] or E:GetThemes()[2] ~= "legacy", "without the Legacy module it is not offered")
+
 print("Theme effects: " .. checks .. " checks passed (offline only)")

@@ -12,6 +12,11 @@ manual-changelog:
 # Whitelist, for reference: Assets, Components, Core, Layouts, Libs, Locale,
 # Options, WoW11, the base and _Camelot .toc files, FontStyles.xml, LICENSE, LICENSE.txt.
 # CHANGELOG.md is deliberately not ignored: manual-changelog above consumes it.
+# The load-on-demand debug tools are their own addon, shipped beside the main folder
+# (Core/DebugLoader.lua loads it on first use of /azdebug). build-release.ps1 does the same.
+move-folders:
+  AzeriteUI5_JuNNeZ_Edition/AzeriteUI5_JuNNeZ_Edition_Debug: AzeriteUI5_JuNNeZ_Edition_Debug
+
 ignore:
   # Development files
   - .github

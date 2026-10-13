@@ -88,6 +88,7 @@ local TABS = {
 local SECTIONS = {
 	{ key = "setup", label = L["Setup"] },
 	{ key = "frames", label = L["Frames"] },
+	{ key = "auras", label = L["Auras"] },
 	{ key = "bars", label = L["Bars"] },
 	{ key = "world", label = L["World"] },
 	{ key = "interface", label = L["Interface"] },
@@ -437,9 +438,20 @@ local Section_Row = function(index)
 	edge:Hide()
 	row.edge = edge
 
+	-- The section's icon, the same one its heading on the page carries. A
+	-- section without one keeps its text where the others' starts, so the list
+	-- stays one column.
+	if (Panel.rounded and Look.PageIconsAvailable) then
+		local icon = row:CreateTexture(nil, "ARTWORK")
+		icon:SetSize(13, 13)
+		icon:SetPoint("LEFT", row, "LEFT", 18, 0)
+		icon:Hide()
+		row.icon = icon
+	end
+
 	local text = row:CreateFontString(nil, "OVERLAY")
 	text:SetFontObject(Kit.GetFont(11))
-	text:SetPoint("LEFT", row, "LEFT", 26, 0)
+	text:SetPoint("LEFT", row, "LEFT", row.icon and 35 or 26, 0)
 	text:SetPoint("RIGHT", row, "RIGHT", -8, 0)
 	text:SetJustifyH("LEFT")
 	text:SetWordWrap(false)
@@ -619,6 +631,7 @@ Panel.BuildRail = function(self)
 							sub.railOffset = offset
 							sub.label = section.label
 							sub.text:SetText(section.label)
+							if (sub.icon) then sub.icon:SetShown(Look.SetSectionIcon(sub.icon, section.key)) end
 							sub:Show()
 
 							self.railLayout[#self.railLayout + 1] = {
@@ -1155,6 +1168,7 @@ Panel.UpdateActiveSection = function(self)
 		row.edge:SetShown(row.active)
 		row.highlight:SetShown(row.active)
 		row.text:SetTextColor(unpack(row.active and accent or Kit.TextNormal))
+		if (row.icon) then row.icon:SetVertexColor(unpack(row.active and accent or Kit.TextDisabled)) end
 	end
 
 	-- The rail is on the far left and long pages are read on the right, so the
@@ -1489,6 +1503,8 @@ Panel.ApplyTheme = function(self)
 		local border = Kit.BorderIdle
 		self.railEdge:SetVertexColor(border[1], border[2], border[3], .8)
 	end
+	if (self.contentBar) then self.contentBar:Restyle() end
+	if (self.railBar) then self.railBar:Restyle() end
 
 	local accent = Kit.TextSelected
 	for i = 1, #self.headings do
@@ -1514,6 +1530,8 @@ Panel.ApplyTheme = function(self)
 		row.highlight:SetVertexColor(accent[1], accent[2], accent[3], .12)
 		row.edge:SetVertexColor(accent[1], accent[2], accent[3], 1)
 		row.text:SetTextColor(unpack(row.active and accent or Kit.TextNormal))
+		-- Muted until it is the section being read, so a list of them stays quiet.
+		if (row.icon) then row.icon:SetVertexColor(unpack(row.active and accent or Kit.TextDisabled)) end
 	end
 
 	for i = 1, #(self.tabs or {}) do
@@ -1908,7 +1926,8 @@ local Build = function()
 	-- edgeSize 10, and a highlight drawn over it reads as a row escaping the well.
 	local inset = Panel.rounded and 8 or 0
 	railScroll:SetPoint("TOPLEFT", rail, "TOPLEFT", 4 + inset / 2, -inset)
-	railScroll:SetPoint("BOTTOMRIGHT", rail, "BOTTOMRIGHT", -6 - inset / 4, inset)
+	-- 14px more on the right for the scroll bar.
+	railScroll:SetPoint("BOTTOMRIGHT", rail, "BOTTOMRIGHT", -20 - inset / 4, inset)
 	railScroll:SetClipsChildren(true)
 
 	railContent = CreateFrame("Frame", nil, railScroll)
@@ -1924,6 +1943,11 @@ local Build = function()
 	railScroll:SetScript("OnSizeChanged", function(self, width)
 		if (width and width > 0) then railContent:SetWidth(width) end
 	end)
+
+	local railBar = Kit.Controls.CreateScrollBar(railScroll, rail)
+	railBar:SetPoint("TOPLEFT", railScroll, "TOPRIGHT", 2, 0)
+	railBar:SetPoint("BOTTOMLEFT", railScroll, "BOTTOMRIGHT", 2, 0)
+	Panel.railBar = railBar
 
 	local empty = rail:CreateFontString(nil, "OVERLAY")
 	empty:SetFontObject(Kit.GetFont(12))
@@ -2043,7 +2067,8 @@ local Build = function()
 
 	contentScroll = CreateFrame("ScrollFrame", nil, frame)
 	contentScroll:SetPoint("TOPLEFT", pageHead, "BOTTOMLEFT", 0, -4)
-	contentScroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, FOOTER_H + 8)
+	-- The page's scroll bar takes the right edge, so a long page shows that it goes on.
+	contentScroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, FOOTER_H + 8)
 	contentScroll:SetClipsChildren(true)
 
 	pageContent = CreateFrame("Frame", nil, contentScroll)
@@ -2073,6 +2098,11 @@ local Build = function()
 	contentScroll:SetScript("OnVerticalScroll", function()
 		Panel:UpdateActiveSection()
 	end)
+
+	local contentBar = Kit.Controls.CreateScrollBar(contentScroll, frame)
+	contentBar:SetPoint("TOPLEFT", contentScroll, "TOPRIGHT", 4, 0)
+	contentBar:SetPoint("BOTTOMLEFT", contentScroll, "BOTTOMRIGHT", 4, 0)
+	Panel.contentBar = contentBar
 
 	page = Renderer:CreatePage(pageContent)
 	page.OnChanged = function(_, path) Panel:OnSettingChanged(path) end

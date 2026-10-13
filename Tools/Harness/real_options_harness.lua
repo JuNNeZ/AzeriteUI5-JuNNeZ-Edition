@@ -90,6 +90,9 @@ load("Options/Options.lua")
 local Kit = ns.OptionsKit
 local Options = realModules["Options"]
 
+-- Components an option page builds from directly (Tools/Harness/option_components.lua).
+dofile((arg[2] or ".") .. "/option_components.lua")(load, ns)
+
 -- Load every page listed in Options.xml, in its declared order.
 local xml = io.open(root .. "/Options/Options.xml"):read("*a")
 local pages, failedPages = {}, {}
@@ -130,8 +133,11 @@ if forever then
 	assert(units.args.arena.hidden == true, "Forever arena settings must be hidden")
 	assert(units.args.classpower.hidden == true, "Forever mage has no Arcane Charges settings")
 end
+-- Party and raid frames moved to their own page on 2026-10-13.
+local groups = assert(options.args["Group Frames"], "Group Frames page")
 for _, key in ipairs({"party", "raid5", "raid25", "raid40"}) do
-	local group = assert(units.args[key], key)
+	assert(units.args[key] == nil, "group frames left Unit Frames: " .. key)
+	local group = assert(groups.args[key], key)
 	local option = group.args.usePortraitSpecIcons or group.args.useSpecIcons
 	assert(option.hidden({"UnitFrames", key, "useSpecIcons"}) == forever, "specialization visibility: " .. key)
 end

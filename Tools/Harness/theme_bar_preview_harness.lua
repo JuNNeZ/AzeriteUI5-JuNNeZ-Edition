@@ -41,6 +41,7 @@ ns.Private.PlayerClass = "MAGE"
 load("Core/API/Tables.lua")
 load("Core/Common/Colors.lua")
 load("Core/API/Assets.lua")
+load("Core/ThemeEngine.lua")
 load("Core/PaladinTheme.lua")
 load("Core/HunterMedia.lua")
 load("Core/HunterGeometry.lua")
@@ -171,15 +172,15 @@ end
 
 local owner = widget(); owner.Health = widget(owner)
 local seasoned = ns.GetConfig("PlayerFrame").Seasoned
-ns.PaladinTheme:StyleHealth(owner, seasoned, false)
+ns.ThemeEngine:StyleHealth(owner, seasoned, false)
 local frame = owner.Health.MageOrnaments
 local art = frame and frame.Art
-check(art and art.texture:find("ornament-aluneth.tga", 1, true), "Arcane follows Aluneth by default (through Paladin's dispatcher)")
+check(art and art.texture:find("ornament-aluneth.tga", 1, true), "Arcane follows Aluneth by default (through the theme engine)")
 check(art.width == 88 and art.points.CENTER[2] == "RIGHT" and art.points.CENTER[3] == 14 and art.points.CENTER[4] == 0, "manifest endcap slot on a 40px bar")
 check(frame.level > owner.Health.level and frame.mouse == false, "ornament above the bar, not interactive")
 check(theme:SetEndcapScale(1.5) and art.width == 132 and art.points.CENTER[3] == 14, "size grows in place, live")
 check(theme:SetEndcapOffset(6, -2) and art.points.CENTER[3] == 20 and art.points.CENTER[4] == -2, "offset live")
-ns.PaladinTheme:StyleHealth(owner, seasoned, true)
+ns.ThemeEngine:StyleHealth(owner, seasoned, true)
 check(art.points.CENTER[2] == "LEFT" and art.points.CENTER[3] == -20 and art.coords[1] == 1, "mirrored target endcap")
 check(theme:ResetEndcapPlacement() and art.width == 88 and art.points.CENTER[3] == -14, "reset")
 ns.db.char.mageCrystalSchool = "fire"; theme:RefreshOrnaments()
@@ -190,18 +191,18 @@ check(not theme:SetEndcap("bogus") and theme:GetEndcap() == "none", "unknown sta
 theme:SetEndcap("school")
 check(ns.db.char.mageEndcap == nil and frame.shown, "school is the stored default")
 -- Critters and compact bars keep their own casing.
-owner.Health:SetSize(40, 36); ns.PaladinTheme:StyleHealth(owner, seasoned, false)
+owner.Health:SetSize(40, 36); ns.ThemeEngine:StyleHealth(owner, seasoned, false)
 check(not frame.shown, "critter has no endcap")
 owner.Health:SetSize(385, 40)
 local compact = widget(); compact.Health = widget(compact)
-ns.PaladinTheme:StyleHealth(compact, { HealthBarTexture = "cast_bar.tga" }, false)
+ns.ThemeEngine:StyleHealth(compact, { HealthBarTexture = "cast_bar.tga" }, false)
 check(not compact.Health.MageOrnaments, "compact bars have no endcap")
 
 -- Threat glow follows the native threat texture and the staff.
-ns.PaladinTheme:StyleHealth(owner, seasoned, false)
+ns.ThemeEngine:StyleHealth(owner, seasoned, false)
 owner.ThreatIndicator = { textures = { Health = widget(owner) }, isShown = false }
 local native = owner.ThreatIndicator.textures.Health
-ns.PaladinTheme:StyleThreat(owner, false)
+ns.ThemeEngine:StyleThreat(owner, false)
 local glow = frame.Threat
 check(glow and glow.texture:find("ornament-felomelorn-glow", 1, true) and glow.allPoints == art, "staff glow on the staff")
 native:Show(); check(glow.shown, "glow follows show")
@@ -211,7 +212,7 @@ theme:SetEndcap("atiesh"); check(glow.texture:find("ornament-atiesh-glow", 1, tr
 
 -- Cast head and school badge.
 local cast = widget(owner)
-ns.PaladinTheme:StyleCastbar(cast)
+ns.ThemeEngine:StyleCastbar(cast)
 check(cast.MageCastHead.Art.texture:find("cast-head-atiesh.tga", 1, true) and cast.MageCastHead.Art.points.CENTER[3] == -26, "Atiesh cast head on the left")
 local power = widget(owner); power.Case = widget(power); power.Case:SetSize(120, 100)
 ns.ThemeEffects:StyleCrystal(power, "crystal.tga", { 0, 1, 0, 1 }, "case.tga")

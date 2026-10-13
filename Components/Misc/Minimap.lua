@@ -1286,7 +1286,7 @@ MinimapMod.SetTheme = function(self, requestedTheme)
 
 					if (ElementTypes[element] == "Texture") then
 						local path = type(data.Path) == "function" and data.Path() or data.Path
-						object:SetTexture(ns.PaladinTheme and ns.PaladinTheme:ResolvePath(path) or path)
+						object:SetTexture(ns.ThemeEngine and ns.ThemeEngine:ResolvePath(path) or path)
 						object:SetDrawLayer(data.DrawLayer or "ARTWORK", data.DrawLevel or 0)
 						if (data.Color) then
 							object:SetVertexColor(unpack(data.Color))
@@ -1342,7 +1342,7 @@ MinimapMod.CreateCustomElements = function(self)
 	north:SetTextColor(unpack(db.CompassColor))
 	north:SetText(db.CompassNorthTag)
 	compass.north = north
-	if (ns.MageTheme) then ns.MageTheme:StyleCompass(compass) end
+	if (ns.ThemeEngine) then ns.ThemeEngine:StyleCompass(compass) end
 
 	self.compass = compass
 

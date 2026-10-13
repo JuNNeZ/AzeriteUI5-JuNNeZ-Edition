@@ -23,7 +23,14 @@
 	SOFTWARE.
 
 --]]
+-- Part of AzeriteUI5_JuNNeZ_Edition_Debug, loaded on demand (Core/DebugLoader.lua).
+-- That addon's own `...` names the companion, so the main addon's namespace is read
+-- from the global Core/Core.lua publishes under its name. Harnesses pass it directly.
 local AddonName, ns = ...
+do
+	local main = _G["AzeriteUI5_JuNNeZ_Edition"]
+	if (type(main) == "table") then AddonName, ns = "AzeriteUI5_JuNNeZ_Edition", main end
+end
 
 if (not ns.IsRetail) then return end
 

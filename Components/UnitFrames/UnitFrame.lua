@@ -51,6 +51,16 @@ local defaults = { profile = ns:Merge({
 	showHealAbsorbs = true,
 	colorCastSpellTextByState = false,
 	auraTimerColors = true,
+	showCombatFeedback = true,
+	-- Group Indicators (GroupIndicators.lua): Sated and corner aura dots on party and raid frames.
+	groupSated = false,
+	groupCorners = false,
+	groupCornerOnlyMine = true,
+	groupCornerSize = 10,
+	groupCornerSpellsTOPLEFT = "",
+	groupCornerSpellsTOPRIGHT = "",
+	groupCornerSpellsBOTTOMLEFT = "",
+	groupCornerSpellsBOTTOMRIGHT = "",
 	powerValueAlpha = 75,
 	playerPowerValueAlpha = nil,
 	targetPowerValueAlpha = nil,
@@ -249,6 +259,14 @@ ns.UnitFrame.ShouldColorAuraTimers = function()
 	return not (profile and profile.auraTimerColors == false)
 end
 
+-- Whether hits, heals and misses flash as text on the unit frames
+-- (Libs/oUF_Plugins/oUF_CombatFeedback.lua asks on every event).
+ns.UnitFrame.ShouldShowCombatFeedback = function()
+	local module = ns:GetModule("UnitFrames", true)
+	local profile = module and module.db and module.db.profile
+	return not (profile and profile.showCombatFeedback == false)
+end
+
 ns.UnitFrame.GetPowerValueAlpha = function(kind)
 	local module = ns:GetModule("UnitFrames", true)
 	local profile = module and module.db and module.db.profile
@@ -438,6 +456,7 @@ ns.UnitFrameModule = ns:Merge({
 
 UnitFrameMod.UpdateSettings = function(self)
 	if (API.RefreshHealthPrediction) then API.RefreshHealthPrediction() end
+	if (ns.GroupIndicators) then ns.GroupIndicators.Refresh() end
 	local ApplyAuraSortSettings = function(frame, preSetPosition, sortFunction)
 		if (not frame) then
 			return
@@ -488,8 +507,13 @@ UnitFrameMod.UpdateSettings = function(self)
 	end
 
 	-- Force update ClassPower elements to reflect customization changes
+	local showFeedback = ns.UnitFrame.ShouldShowCombatFeedback()
 	if (ns.UnitFrames) then
 		for frame in next,ns.UnitFrames do
+			-- Text already on screen fades by itself; switched off, it goes at once.
+			if (not showFeedback and frame.CombatFeedback) then
+				frame.CombatFeedback:Hide()
+			end
 			local classpower = frame.ClassPower
 			if (classpower and frame:IsElementEnabled("ClassPower")) then
 				classpower:ForceUpdate()

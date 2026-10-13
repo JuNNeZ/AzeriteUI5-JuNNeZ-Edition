@@ -2113,7 +2113,7 @@ local UsePlayerIceCrystal = function()
 	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
 	if (ns.MageCrystalPreview and ns.MageCrystalPreview:IsActive()) then return false end
 	local requested = PlayerFrameMod.db.profile.useWrathCrystal or ns.API.IsWinterVeil()
-	if (ns.PaladinTheme) then return ns.PaladinTheme:UseIceCrystal(requested) end
+	if (ns.ThemeEngine) then return ns.ThemeEngine:UseIceCrystal(requested) end
 	return requested
 end
 
@@ -2125,7 +2125,7 @@ end
 -- and Class Color are the player's explicit choice and win over it.
 local ResolvePlayerPowerBaseColor = function(config, profile, token)
 	local defaultColor = ResolvePlayerPowerDefaultColor(config, token)
-	local themeColor = ns.PaladinTheme and ns.PaladinTheme:GetPowerColor(token)
+	local themeColor = ns.ThemeEngine and ns.ThemeEngine:GetPowerColor(token)
 	if (themeColor) then defaultColor = themeColor end
 	local colorMode = profile and profile.crystalOrbColorMode or "default"
 	if (colorMode == "classColor" or colorMode == "class") then
@@ -2371,7 +2371,7 @@ local UpdateManaOrbColor = function(element)
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
 	local colorMode = profile and profile.crystalOrbColorMode or "default"
 	local color
-	if (token == "MANA" and colorMode == "default" and not (ns.PaladinTheme and ns.PaladinTheme:GetPowerColor(token))) then
+	if (token == "MANA" and colorMode == "default" and not (ns.ThemeEngine and ns.ThemeEngine:GetPowerColor(token))) then
 		color = config and config.PowerOrbColors and config.PowerOrbColors.MANA
 	else
 		color = ResolvePlayerPowerBaseColor(config, profile, token)
@@ -2851,7 +2851,7 @@ local UnitFrame_UpdateTextures = function(self)
 	healthBackdrop:SetSize(unpack(db.HealthBackdropSize))
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 	healthBackdrop:SetVertexColor(unpack(db.HealthBackdropColor))
-	if (ns.PaladinTheme) then ns.PaladinTheme:StyleHealth(self, db, false) end
+	if (ns.ThemeEngine) then ns.ThemeEngine:StyleHealth(self, db, false) end
 
 	local healPredict = self.HealthPrediction
 	healPredict:SetTexture(db.HealthBarTexture)
@@ -3083,7 +3083,7 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 	end
 
-	if (ns.PaladinTheme) then ns.PaladinTheme:StyleThreat(self, false) end
+	if (ns.ThemeEngine) then ns.ThemeEngine:StyleThreat(self, false) end
 	ApplyPlayerAuraLayout(self)
 	if (ns.LegacyHUD) then ns.LegacyHUD:RefreshUnit(self) end
 

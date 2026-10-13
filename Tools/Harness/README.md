@@ -39,6 +39,12 @@ lua Tools/Harness/cdready_menu_harness.lua .               # real debug page, ro
 lua Tools/Harness/cdready_harness.lua .                    # opt-in probe, secrets, callbacks, polling and cleanup
 lua Tools/Harness/auracost_harness.lua .                   # /azdebug auracost: alternating windows, noise verdict, report
 lua Tools/Harness/snapping_harness.lua .                   # /lock snapping: Edit Mode magnetism rules, grid lines
+lua Tools/Harness/combat_feedback_harness.lua .            # combat text: secret amounts, crits, the switch
+lua Tools/Harness/group_indicators_harness.lua .           # Sated and corner aura dots on group frames
+lua Tools/Harness/aura_sounds_harness.lua .                # aura sounds: registration, restrictions, LibSharedMedia
+lua Tools/Harness/debug_loader_harness.lua .               # the load-on-demand debug companion and its loader
+lua Tools/Harness/theme_engine_harness.lua .               # theme engine: dispatch, media swap, endcap settings
+lua Tools/Harness/aura_brightness_harness.lua .            # TODO 5.1: the brightness toggle in and out of raids
 ```
 
 `player_aura_enchant_harness.lua` loads the real `PlayerAuraContainers.lua` against a fake aura

@@ -697,7 +697,7 @@ local UnitFrame_UpdateTextures = function(self)
 	healthBackdrop:SetSize(unpack(db.HealthBackdropSize))
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 	healthBackdrop:SetVertexColor(unpack(db.HealthBackdropColor))
-	if (ns.PaladinTheme) then ns.PaladinTheme:StyleHealth(self, db, false) end
+	if (ns.ThemeEngine) then ns.ThemeEngine:StyleHealth(self, db, false) end
 
 	local healPredict = self.HealthPrediction
 	healPredict:SetTexture(db.HealthBarTexture)
@@ -779,7 +779,7 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 	end
 
-	if (ns.PaladinTheme) then ns.PaladinTheme:StyleThreat(self, false) end
+	if (ns.ThemeEngine) then ns.ThemeEngine:StyleThreat(self, false) end
 	local portraitBorder = self.Portrait.Border
 	portraitBorder:SetTexture(db.PortraitBorderTexture)
 	portraitBorder:SetVertexColor(unpack(db.PortraitBorderColor))

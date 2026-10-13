@@ -9,7 +9,7 @@ local function check(ok, label)
  checks = checks + 1
  if not ok then failures = failures + 1; print("FAIL: "..label) end
 end
-local f = assert(io.open(root.."/Core/Debugging.lua", "rb"))
+local f = assert(io.open(root.."/AzeriteUI5_JuNNeZ_Edition_Debug/Debugging.lua", "rb"))
 local source = f:read("*a"):gsub("\r\n", "\n"); f:close()
 local mutations = {
  ["slot-rebind-duplicate"] = {'PrepareSources(lane.combatAPI, lane.spellID, lane.actionSlot)', 'PrepareSources(lane.combatAPI, lane.spellID)'},
@@ -139,7 +139,7 @@ local function client(flavor, globalOnly, logger)
   end
   world.frames[#world.frames+1]=frame; return frame
  end
- local chunk = assert(loadstring(source, "@Core/Debugging.lua")); setfenv(chunk,env); chunk("AzeriteUI",ns)
+ local chunk = assert(loadstring(source, "@AzeriteUI5_JuNNeZ_Edition_Debug/Debugging.lua")); setfenv(chunk,env); chunk("AzeriteUI",ns)
  check(#world.frames==0 and #world.timers==0 and #world.logs==0,flavor.." dormant load")
  local function run(input) module:DebugMenu("cdready "..input) end
  local function contains(s, also)

@@ -5,6 +5,7 @@
 	<Script file="Interrupts.lua"/>
 	<Script file="ExecuteRange.lua"/>
 	<Script file="HealthPrediction.lua"/>
+	<Script file="GroupIndicators.lua"/>
 	<Script file="NameplateInterruptDB.lua"/>
 	<Script file="Tags.lua"/>
 	<Script file="GroupSpecCache.lua"/>
@@ -17,7 +18,6 @@
 	<Script file="Auras\AuraSorting.lua"/>
 	<Script file="Auras\AuraStyling.lua"/>
 	<Script file="Auras\PlayerAuraContainers.lua"/>
-	<Script file="Auras\AuraCostProbe.lua"/>
 
 	<Script file="Units\Player.lua"/>
 	<Script file="Units\PlayerAlternate.lua"/>

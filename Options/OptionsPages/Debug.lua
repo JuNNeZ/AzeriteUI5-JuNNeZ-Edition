@@ -8,6 +8,12 @@ local spell = ns.IsForever and "" or "6940"
 local preset = "manual"
 local inputs = { nameplate = "auto", snapshot = "target", secret = "player", button = "", hold = "" }
 local function Debug() return ns:GetModule("Debugging", true) end
+-- The tools are a load-on-demand companion (Core/DebugLoader.lua). Actions load it the
+-- first time one is used; showing this page never does.
+local function LoadDebug()
+	if (ns.LoadDebugTools) then return (ns.LoadDebugTools()) end
+	return Debug()
+end
 local function Dev() return ns.db and ns.db.global and ns.db.global.enableDevelopmentMode and true or false end
 local function OOC()
 	if (type(issecretvalue) ~= "function" or type(InCombatLockdown) ~= "function") then return false end
@@ -28,11 +34,13 @@ local function ValidID(value)
 	return id and id > 0 and id < math.huge and id % 1 == 0
 end
 local function Command(value)
-	local debug = Debug()
+	local debug = Dev() and LoadDebug()
 	if (Dev() and debug) then debug:DebugMenu(value) end
 end
 local function Probe(value)
-	local debug = Debug()
+	-- Stopping needs no load: nothing can be running before the tools are loaded.
+	local debug
+	if (value == "off") then debug = Debug() elseif (Dev()) then debug = LoadDebug() end
 	if (debug and (value == "off" or Dev())) then debug:CooldownReadyProbe(value) end
 end
 local function Immediate(option)
@@ -147,14 +155,14 @@ local function GenerateOptions()
 		allPlates = Action("All nameplates", 23, "nameplates"), autoScale = Action("Auto nameplate scale", 24, "scale nameplates auto"),
 		unit = Input("Snapshot unit", 25, "snapshot"), snapshot = DynamicAction("Snapshot", 26, "snapshot", "snapshot"),
 		targetMenu = { type = "execute", name = L["Target debug menu"], order = 27, disabled = function() return not Dev() end,
-			func = function() local debug = Debug(); if (Dev() and debug) then debug:ToggleTargetDebugMenu() end end },
+			func = function() local debug = Dev() and LoadDebug(); if (debug) then debug:ToggleTargetDebugMenu() end end },
 		repairHint = { type = "description", name = L["Repairs reattach movement handles. Frame changes wait until combat ends."], order = 30 }
 	} }
 	for i, unit in ipairs({ "PlayerFrame", "TargetFrame" }) do
 		local label = i == 1 and "Reattach player bars" or "Reattach target bars"
 		health.args[unit] = { type = "execute", name = L[label], order = 30 + i,
 			disabled = function() return not Dev() end, func = function()
-				local debug = Debug(); if (Dev() and debug) then debug:ReattachDebugBars(unit) end
+				local debug = Dev() and LoadDebug(); if (debug) then debug:ReattachDebugBars(unit) end
 			end }
 	end
 	local keys = { type = "group", name = L["Keybindings"], order = 3, args = {

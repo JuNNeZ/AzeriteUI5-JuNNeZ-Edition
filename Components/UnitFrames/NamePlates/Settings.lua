@@ -74,6 +74,14 @@ local defaults = { profile = ns:Merge({
 	-- The execute range on enemy plates (Elements.lua, ExecuteMarker_Update). 0 follows the class.
 	executeMarker = false,
 	executeThreshold = 0,
+	-- Only on enemies you or your pet are fighting (nameplates; the target is chosen by you).
+	executeCombatOnly = true,
+	-- Show the line only from this much above the threshold (0 = always). Shared with the target.
+	executeLead = 0,
+	-- Own colours for line and tint, shared with the target; off keeps each frame's own.
+	executeCustomColors = false,
+	executeLineColor = { 1, 1, 1, .85 },
+	executeZoneColor = { 1, .15, .05, .35 },
 	showNameAlways = false,
 	threatColorPreset = "azerite",
 	healthValuePlacement = "below",
@@ -613,6 +621,40 @@ local GetNamePlateExecuteThreshold = function()
 	return ns.API.GetExecuteThreshold and ns.API.GetExecuteThreshold() or 0
 end
 
+-- How far above the threshold the line appears, and the player's own colours (nil when the
+-- frame keeps its layout colours). The target frame reads the same through ns.NamePlatesPrivate.
+local EXECUTE_LEAD_MAX = .2
+local GetExecuteMarkerStyle = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local lead = profile and profile.executeLead
+	if (type(lead) ~= "number" or lead ~= lead or lead < 0) then lead = 0 end
+	if (lead > EXECUTE_LEAD_MAX) then lead = EXECUTE_LEAD_MAX end
+	local line, zone
+	if (profile and profile.executeCustomColors) then
+		line = type(profile.executeLineColor) == "table" and profile.executeLineColor or nil
+		zone = type(profile.executeZoneColor) == "table" and profile.executeZoneColor or nil
+	end
+	return lead, line, zone
+end
+
+local executeLeadCurves = {}
+-- 1 below threshold + lead, 0 from there up; false without client curves. The answer is
+-- secret where health is, and only ever goes to SetAlpha.
+local GetExecuteLeadCurve = function(limit)
+	local curve = executeLeadCurves[limit]
+	if (curve == nil) then
+		curve = false
+		if (C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType and Enum.LuaCurveType.Step) then
+			curve = C_CurveUtil.CreateCurve()
+			curve:SetType(Enum.LuaCurveType.Step)
+			curve:AddPoint(0, 1)
+			curve:AddPoint(limit, 0)
+		end
+		executeLeadCurves[limit] = curve
+	end
+	return curve
+end
+
 local GetEffectivePlateScale = function(self)
 	local scale = ns.API.GetScale()
 	if (IsUsingBlizzardGlobalScale()) then
@@ -777,6 +819,8 @@ NP.GetBlizzardNamePlateGlobalScale = GetBlizzardNamePlateGlobalScale
 NP.IsHostileNamePlate = IsHostileNamePlate
 NP.GetNamePlateMaxDistanceSetting = GetNamePlateMaxDistanceSetting
 NP.GetNamePlateExecuteThreshold = GetNamePlateExecuteThreshold
+NP.GetExecuteMarkerStyle = GetExecuteMarkerStyle
+NP.GetExecuteLeadCurve = GetExecuteLeadCurve
 NP.CONTENT_TYPES = CONTENT_TYPES
 NP.GetCurrentContentType = GetCurrentContentType
 NP.GetContentSetting = GetContentSetting

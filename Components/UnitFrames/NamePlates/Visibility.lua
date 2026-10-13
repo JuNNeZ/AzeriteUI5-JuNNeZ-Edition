@@ -147,7 +147,7 @@ local AnchorStandardNamePlateCastBar = function(self)
 	end
 	self.Castbar:ClearAllPoints()
 	local offset = -1 + NAMEPLATE_CASTBAR_BASELINE_OFFSET + GetNamePlateCastBarOffsetSetting()
-	if (ns.HunterTheme) then offset = ns.HunterTheme:GetNameplateCastOffset(offset) end
+	if (ns.ThemeEngine) then offset = ns.ThemeEngine:GetNameplateCastOffset(offset) end
 	self.Castbar:SetPoint("TOP", self.Health, "BOTTOM", 0, offset)
 end
 
@@ -286,6 +286,16 @@ local IsFightingSomeoneElse = function(self)
 		return not IsOnGroupThreatTable(unit, PARTY_UNITS, PARTY_PETS, count < 4 and count or 4)
 	end
 	return true
+end
+
+-- True when the plate's unit has you or your pet on its threat table. A secret answer counts
+-- as yes, so a marker is never hidden on a guess. For the execute marker's combat switch.
+local IsFightingYou = function(self)
+	local unit = self and self.unit
+	if (not IsSafeUnitToken(unit)) then
+		return false
+	end
+	return IsOnThreatTable("player", unit) or IsOnThreatTable("pet", unit)
 end
 
 local GetCombatFilterAlpha = function()
@@ -638,6 +648,7 @@ NP.AnchorStandardNamePlateCastBar = AnchorStandardNamePlateCastBar
 NP.AnchorStandardNamePlateName = AnchorStandardNamePlateName
 NP.ShouldShowNamePlateForBlizzardVisibility = ShouldShowNamePlateForBlizzardVisibility
 NP.IsFightingSomeoneElse = IsFightingSomeoneElse
+NP.IsFightingYou = IsFightingYou
 NP.ApplyNamePlateAlpha = ApplyNamePlateAlpha
 NP.ShouldShowObjectPlateOverlay = ShouldShowObjectPlateOverlay
 NP.ApplyObjectPlateVisualState = ApplyObjectPlateVisualState

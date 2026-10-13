@@ -250,7 +250,20 @@ function CreateFrame(frameType, name, parent, template)
 	end
 	f.SetScript = function(self, script, handler) self.scripts[script] = handler return self end
 	f.GetScript = function(self, script) return self.scripts[script] end
-	f.HookScript = f.SetScript
+	-- As the game does it: the hook runs after the handler already there, it
+	-- does not replace it.
+	f.HookScript = function(self, script, handler)
+		local previous = self.scripts[script]
+		if (not previous) then
+			self.scripts[script] = handler
+			return self
+		end
+		self.scripts[script] = function(...)
+			previous(...)
+			handler(...)
+		end
+		return self
+	end
 
 	-- An EditBox remembers what it was told, and whether it has the caret.
 	--

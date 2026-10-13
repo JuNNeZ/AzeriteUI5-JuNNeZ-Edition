@@ -37,6 +37,7 @@ ns.Private.PlayerClass = "PALADIN"
 load("Core/API/Tables.lua")
 load("Core/Common/Colors.lua")
 load("Core/API/Assets.lua")
+load("Core/ThemeEngine.lua")
 load("Core/PaladinTheme.lua")
 load("Core/Finalize.lua")
 load("Layouts/Layouts.lua")

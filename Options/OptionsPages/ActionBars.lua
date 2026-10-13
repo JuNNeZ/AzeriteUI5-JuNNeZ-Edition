@@ -656,129 +656,6 @@ local GenerateOptions = function()
 		return db[option]
 	end
 
-	local getmicromenu = function()
-		return ns:GetModule("MicroMenu", true)
-	end
-
-	local micromenusetting = function(key, fallback)
-		local module = getmicromenu()
-		local profile = module and module.db and module.db.profile
-		if (not profile or profile[key] == nil) then
-			return fallback
-		end
-		return profile[key] and true or false
-	end
-
-	local GenerateMicroMenuOptions = function(order)
-		return {
-			name = L["Micro Menu"],
-			order = order,
-			type = "group",
-			args = {
-				description = {
-					name = L["The micro menu holds the buttons for your character sheet, spellbook, collections, group finder and the game menu. AzeriteUI replaces Blizzard's strip along the bottom of the screen with a cog wheel in the bottom right corner."],
-					order = 0,
-					type = "description",
-					fontSize = "medium"
-				},
-				enabled = {
-					name = L["Show AzeriteUI Cog Wheel"],
-					desc = L["Show the AzeriteUI cog wheel in the bottom right corner. Clicking it opens the micro menu."],
-					order = 1,
-					type = "toggle", width = "full",
-					set = function(info, val)
-						local module = getmicromenu()
-						if (not module or not module.db) then return end
-						module.db.profile.enabled = val
-						module:UpdateSettings()
-					end,
-					get = function(info) return micromenusetting("enabled", true) end
-				},
-				showBlizzardMicroMenu = {
-					name = L["Show Blizzard's Micro Menu"],
-					desc = L["Restore Blizzard's own micro menu along the bottom of the screen. This is independent of the cog wheel above, so you can use either or both."],
-					order = 2,
-					type = "toggle", width = "full",
-					set = function(info, val)
-						local module = getmicromenu()
-						if (not module or not module.db) then return end
-						module.db.profile.showBlizzardMicroMenu = val
-						module:UpdateSettings()
-					end,
-					get = function(info) return micromenusetting("showBlizzardMicroMenu", false) end
-				},
-				reloadNote = {
-					name = L["Both settings apply when the interface loads, so changing either one will ask you to reload."],
-					order = 3,
-					type = "description",
-					fontSize = "medium"
-				},
-				showBagButton = {
-					name = L["Show Bag Button"],
-					desc = L["Show a bag button beside the cog wheel. Clicking it opens your bags, and the number on it is how many bag slots are free. This one applies at once."],
-					order = 4,
-					type = "toggle", width = "full",
-					set = function(info, val)
-						local module = getmicromenu()
-						if (not module or not module.db) then return end
-						module.db.profile.showBagButton = val
-						module:UpdateSettings()
-					end,
-					get = function(info) return micromenusetting("showBagButton", true) end
-				}
-			}
-		}
-	end
-
-	local getvehicleexit = function()
-		local module = ns:GetModule("VehicleExit", true)
-		if (module and module:IsEnabled() and module.db) then
-			return module
-		end
-	end
-
-	local GenerateDismountButtonOptions = function(order)
-		if (not getvehicleexit()) then return end
-		return {
-			name = L["Dismount Button"],
-			order = order,
-			type = "group",
-			args = {
-				description = {
-					name = L["The dismount button appears while you are mounted, in a vehicle or in control of another creature, and clicking it puts you back on your own feet. It normally sits at the upper left of the minimap ring and follows the minimap around."],
-					order = 0,
-					type = "description",
-					fontSize = "medium"
-				},
-				useCustomPosition = {
-					name = L["Use a custom position"],
-					desc = L["Detach the dismount button from the minimap and put it anywhere on screen. Type /lock to drag it into place. A button with a position of its own no longer belongs to the minimap, so it also stays visible when the minimap hides itself."],
-					order = 1,
-					type = "toggle", width = "full",
-					set = function(info, val)
-						local module = getvehicleexit()
-						if (not module) then return end
-						module:SetUseCustomPosition(val)
-					end,
-					get = function(info)
-						local module = getvehicleexit()
-						return module and module.db.profile.useCustomPosition or false
-					end
-				},
-				moverNote = {
-					name = L["Type /lock to bring up the frame mover, then drag the dismount button where you want it. Mouse wheel over it there to resize it."],
-					order = 2,
-					type = "description",
-					fontSize = "medium",
-					hidden = function(info)
-						local module = getvehicleexit()
-						return not (module and module.db.profile.useCustomPosition)
-					end
-				}
-			}
-		}
-	end
-
 	local options = {
 		name = L["Action Bar Settings"],
 		type = "group", childGroups = "tree",
@@ -952,8 +829,6 @@ local GenerateOptions = function()
 				name = L["Thickness"], type = "select", order = 2,
 				values = { thin = L["Thin"], medium = L["Medium"], thick = L["Thick"] },
 				sorting = { "thin", "medium", "thick" },
-				-- Legacy draws every proc style with its one square highlight art.
-				hidden = function() return ns.LegacyHUD and ns.LegacyHUD:IsActive() end,
 				disabled = function() return procDisabled() or getmodule().db.profile.procHighlightStyle == "current" end,
 				set = setter, get = getter
 			},
@@ -1023,8 +898,6 @@ local GenerateOptions = function()
 				name = L["Thickness"], type = "select", order = 2,
 				values = { thin = L["Thin"], medium = L["Medium"], thick = L["Thick"] },
 				sorting = { "thin", "medium", "thick" },
-				-- Legacy draws every style with its one square highlight art.
-				hidden = function() return ns.LegacyHUD and ns.LegacyHUD:IsActive() end,
 				disabled = function() return assistedDisabled() or getmodule().db.profile.assistedHighlightStyle == "current" end,
 				set = setter, get = getter
 			},
@@ -1110,15 +983,8 @@ local GenerateOptions = function()
 
 	options.args["stancebar"] = stanceBarOptions
 
-	options.args["micromenu"] = GenerateMicroMenuOptions(50)
-	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
-		ns.OptionsKit.Defaults.Bind(options.args["micromenu"], "MicroMenu")
-	end
-
-	options.args["dismountbutton"] = GenerateDismountButtonOptions(60)
-	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
-		ns.OptionsKit.Defaults.Bind(options.args["dismountbutton"], "VehicleExit")
-	end
+	-- The micro menu has its own page (OptionsPages/MicroMenu.lua) and the dismount
+	-- button, which follows the minimap, sits on the Minimap page.
 
 	return options
 end

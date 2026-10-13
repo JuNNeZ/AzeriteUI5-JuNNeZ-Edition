@@ -18,7 +18,8 @@ SIZE = 32 * S
 KEYS = (
     "quickstart themes profiles sharing unitframes auras nameplates actionbars "
     "cooldowns minimap mythicplus worldmap tracker bags chat infobar tooltips "
-    "widgets gamemenu explorer debug controltypes appearance changelog changed generic"
+    "widgets gamemenu explorer debug controltypes appearance changelog changed generic "
+    "groupframes aurasounds micromenu executerange"
 ).split()
 
 
@@ -164,6 +165,27 @@ def motif(key):
         g.line([(7, 13), (25, 13)], width=2)
         g.line([(11, 8), (16, 13), (21, 8)], width=2)
         g.line([(16, 14), (16, 24)], width=2)
+    elif key == "groupframes":
+        # Four party/raid tiles, each with a health fill along its top.
+        for x, y in [(6, 7), (17, 7), (6, 18), (17, 18)]:
+            g.box((x, y, x+9, y+7), radius=1, width=2)
+            g.line([(x+2, y+2.5), (x+7, y+2.5)], width=2)
+    elif key == "aurasounds":
+        g.polygon([(6, 13), (10, 13), (15, 8), (15, 24), (10, 19), (6, 19)], fill=True)
+        g.arc((11, 11, 21, 21), -50, 50, width=2.5)
+        g.arc((11, 6, 27, 26), -50, 50, width=2.5)
+    elif key == "micromenu":
+        # The cog wheel in the bottom right corner.
+        g.circle((9, 9, 23, 23), width=3.5)
+        for i in range(8):
+            a = math.radians(i * 45 + 22.5)
+            g.line([(16 + 8*math.cos(a), 16 + 8*math.sin(a)),
+                    (16 + 9.5*math.cos(a), 16 + 9.5*math.sin(a))], width=4.5)
+    elif key == "executerange":
+        # A health bar, the line at the threshold and the low end below it filled.
+        g.box((5, 11, 27, 21), radius=2, width=2)
+        g.box((8, 14, 12, 18), radius=.6, fill=True)
+        g.line([(15, 8), (15, 24)], width=2.5)
     elif key == "generic":
         g.box((6, 6, 26, 26), radius=3, width=2.5)
         for x in [12, 20]:
@@ -219,7 +241,7 @@ def validate(atlas, path):
     assert header[2] == 2 and header[16] == 32 and header[17] & 15 == 8, "TGA must be uncompressed RGBA"
     with Image.open(path) as reopened:
         assert reopened.convert("RGBA").tobytes() == atlas.tobytes(), "TGA roundtrip"
-    print("PASS: 512x256 RGBA, uncompressed TGA, greyscale, 26 safe cells, 6 transparent reserves, exact roundtrip")
+    print(f"PASS: 512x256 RGBA, uncompressed TGA, greyscale, {len(KEYS)} safe cells, {32 - len(KEYS)} transparent reserves, exact roundtrip")
 
 
 def preview(atlas, path):
@@ -229,12 +251,13 @@ def preview(atlas, path):
         ("Light", (247, 247, 250), (31, 31, 36), (107, 79, 10)),
         ("Class / Mage", (5, 5, 5), (196, 196, 196), (63, 199, 235)),
     ]
-    img = Image.new("RGB", (1120, 940), (24, 25, 28))
+    height = 88 + len(KEYS)*32 + 20
+    img = Image.new("RGB", (1120, height), (24, 25, 28))
     d = ImageDraw.Draw(img)
     d.text((20, 14), "OPTIONS PAGE ICONS / original greyscale art / 28px overview + 16px normal & selected", fill="white")
     for t, (label, bg, normal, selected) in enumerate(themes):
         x0 = t*280
-        d.rectangle((x0+8, 42, x0+272, 930), fill=bg)
+        d.rectangle((x0+8, 42, x0+272, height-10), fill=bg)
         ink = (110, 110, 110) if t == 2 else (180, 180, 180)
         d.text((x0+18, 54), label, fill=ink)
         for i, key in enumerate(KEYS):

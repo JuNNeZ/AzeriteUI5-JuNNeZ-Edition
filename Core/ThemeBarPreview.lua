@@ -50,17 +50,17 @@ function Preview:Build(key)
  if (kind=="health" or kind=="plate") then
   local bar=Bar(owner,owner,db,"HealthBar");owner.Health=bar;entry.bars[1]=bar
   bar.Backdrop=Art(owner,(kind=="plate" or not def[2]) and bar or owner,db,"HealthBackdrop")
-  if (kind~="plate" and ns.PaladinTheme) then ns.PaladinTheme:StyleHealth(owner,db,db.HealthBarOrientation=="LEFT") end
+  if (kind~="plate" and ns.ThemeEngine) then ns.ThemeEngine:StyleHealth(owner,db,db.HealthBarOrientation=="LEFT") end
   if (key=="pet" and ns.MageTheme) then ns.MageTheme:StylePet(owner) end
   if (kind=="plate") then
    local cast=Bar(owner,owner,db,"CastBar");cast:ClearAllPoints();cast:SetPoint("TOP",bar,"BOTTOM",0,-12)
    cast.Backdrop=Art(owner,cast,db,"CastBarBackdrop");owner.Castbar=cast;entry.bars[2]=cast
-   if (ns.PaladinTheme) then ns.PaladinTheme:StyleNameplate(owner) end
+   if (ns.ThemeEngine) then ns.ThemeEngine:StyleNameplate(owner) end
   end
  elseif (kind=="cast") then
   local cast=Bar(owner,owner,db,"CastBar");entry.bars[1]=cast
   cast.Backdrop=Art(cast,cast,db,"CastBarBackground");cast.Shield=Art(cast,cast,db,"CastBarShield","BORDER")
-  if (ns.PaladinTheme) then ns.PaladinTheme:StyleCastbar(cast) end
+  if (ns.ThemeEngine) then ns.ThemeEngine:StyleCastbar(cast) end
   entry.cast=cast
  elseif (kind=="crystal") then
   local power=Bar(owner,owner,db,"PowerBar");owner.Power=power;entry.bars[1]=power

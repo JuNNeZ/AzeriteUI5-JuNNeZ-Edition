@@ -48,9 +48,6 @@ local RAID_TARGET_SIZE_SLIDER_MIN = 12
 local RAID_TARGET_SIZE_SLIDER_MAX = 64
 local TARGET_SLIDER_MIN = 1
 local TARGET_SLIDER_MAX = 500
-local EXECUTE_THRESHOLD_SLIDER_MIN = .05
-local EXECUTE_THRESHOLD_SLIDER_MAX = .5
-local EXECUTE_THRESHOLD_FALLBACK = .2
 
 local getmodule = function()
 	return ns:GetModule("NamePlates", true)
@@ -61,16 +58,6 @@ local GetConflictingAddOn = function()
 	local module = getmodule()
 	local addon = module and module.conflictingAddOn
 	return (type(addon) == "string") and addon or nil
-end
-
--- The class's execute threshold (Components/UnitFrames/ExecuteRange.lua), or 20% for a class without
--- one, which is where a threshold set by hand starts.
-local GetAutomaticExecuteThreshold = function()
-	local threshold = ns.API.GetExecuteThreshold and ns.API.GetExecuteThreshold() or 0
-	if (type(threshold) ~= "number" or threshold < EXECUTE_THRESHOLD_SLIDER_MIN) then
-		return EXECUTE_THRESHOLD_FALLBACK
-	end
-	return threshold
 end
 
 local setter = function(info,val)
@@ -538,71 +525,10 @@ local GenerateOptions = function()
 					}
 				}
 			},
-			-- The execute marker. One profile key holds the threshold: 0 follows the class, anything
-			-- else was set by hand, so the Automatic / By hand choice has no key of its own.
-			executeRange = {
-				name = L["Execute range"],
-				order = 1.8,
-				type = "group",
-				inline = true,
-				hidden = isdisabled,
-				args = {
-					executeMarker = {
-						name = L["Show the execute marker"],
-						desc = L["A line across enemy health bars at your execute threshold. Once an enemy's health falls below it, the part of the bar below the line is tinted."],
-						order = 1,
-						type = "toggle", width = "full",
-						set = setter,
-						get = getter
-					},
-					executeThresholdMode = {
-						name = L["Threshold"],
-						desc = L["Automatic follows your class and specialization, and classes without an execute get no marker. Set it by hand where a talent moves it, as Massacre does."],
-						order = 2,
-						type = "select", width = "full",
-						values = function()
-							return { auto = L["Automatic"], custom = L["By hand"] }
-						end,
-						sorting = function()
-							return { "auto", "custom" }
-						end,
-						disabled = function(info) return not getoption(info, "executeMarker") end,
-						set = function(info, val)
-							local module = getmodule()
-							if (not module or not module.db) then return end
-							if (val == "custom") then
-								module.db.profile.executeThreshold = GetAutomaticExecuteThreshold()
-							else
-								module.db.profile.executeThreshold = 0
-							end
-							module:UpdateSettings()
-						end,
-						get = function(info)
-							local value = getoption(info, "executeThreshold")
-							return (type(value) == "number" and value > 0) and "custom" or "auto"
-						end
-					},
-					executeThreshold = {
-						name = L["Threshold by hand"],
-						desc = L["Where the marker sits when the threshold is set by hand."],
-						order = 3,
-						type = "range", width = "full",
-						min = EXECUTE_THRESHOLD_SLIDER_MIN, max = EXECUTE_THRESHOLD_SLIDER_MAX, step = .01, isPercent = true,
-						disabled = function(info)
-							local value = getoption(info, "executeThreshold")
-							return not getoption(info, "executeMarker") or not (type(value) == "number" and value > 0)
-						end,
-						set = setter,
-						-- While automatic, the class's threshold, which is where By hand starts from.
-						get = function(info)
-							local value = getter(info)
-							if (type(value) ~= "number" or value <= 0) then
-								return GetAutomaticExecuteThreshold()
-							end
-							return value
-						end
-					}
-				}
+			-- The execute marker has its own page (OptionsPages/ExecuteRange.lua).
+			executeRangeMoved = {
+				name = L["The execute marker has its own page: Execute range."],
+				order = 1.8, type = "description", hidden = isdisabled
 			},
 			size = {
 				name = L["Size"],

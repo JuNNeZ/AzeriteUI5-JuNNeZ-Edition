@@ -255,6 +255,25 @@ NamePlatesMod.UpdateCombatFilterTimer = function(self)
 	end
 end
 
+-- The execute marker's combat switch follows who is fighting whom, which no event on the plate
+-- reports reliably for every enemy. While the marker and the switch are on, active plates are
+-- asked again on the combat filter's interval; each pass changes only what changed.
+NamePlatesMod.UpdateExecuteTimer = function(self)
+	local profile = self.db.profile
+	if (profile.executeMarker and profile.executeCombatOnly and self:IsEnabled()) then
+		if (not self.executeTimer) then
+			self.executeTimer = self:ScheduleRepeatingTimer(function()
+				for plate in next, ns.ActiveNamePlates do UpdateExecuteMarker(plate) end
+			end, COMBAT_FILTER_INTERVAL)
+		end
+		return
+	end
+	if (self.executeTimer) then
+		self:CancelTimer(self.executeTimer)
+		self.executeTimer = nil
+	end
+end
+
 NamePlatesMod.UpdateSettings = function(self)
 	-- The target shares this threshold even when another addon owns the plates.
 	local target = ns:GetModule("TargetFrame", true)
@@ -273,6 +292,7 @@ NamePlatesMod.UpdateSettings = function(self)
 		ApplyNamePlateDriverSettings(self)
 		RefreshActiveNamePlates(true)
 		self:UpdateCombatFilterTimer()
+		self:UpdateExecuteTimer()
 	end
 end
 
@@ -559,6 +579,7 @@ NamePlatesMod.OnEnable = function(self)
 	end
 
 	self:UpdateCombatFilterTimer()
+	self:UpdateExecuteTimer()
 	self:RegisterEvent("NAME_PLATE_UNIT_ADDED", "OnEvent")
 
 	-- A spec, talent or spell change can move the execute threshold; only the markers follow it.

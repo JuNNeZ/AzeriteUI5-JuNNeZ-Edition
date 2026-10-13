@@ -146,6 +146,15 @@ function M:EnableElement(name)self.enabledElement=name end
 CreateFrame=function(_,_,parent)local w=widget();w.parent=parent;return w end
 hooksecurefunc=function(object,name,callback)local prev=object[name];object[name]=function(self,...)prev(self,...);callback(self,...)end end
 ns.db.char.legacyHUD=true
+do -- Each proc style keeps its own square ring under Legacy, and the file exists.
+ local seen={}
+ for _,kind in ipairs({'outline','glow'}) do for _,w in ipairs({'thin','medium','thick'}) do
+  local path=H:ResolveMedia('actionbutton-proc-'..kind..'-'..w)
+  local file=path and path:match('[\\/](actionbutton%-proc%-square%-[%a%-]+%.tga)$')
+  check(file and not seen[path] and io.open(root..'/Assets/'..file,'rb'),'legacy proc '..kind..' '..w..' has its own square ring')
+  seen[path or '']=true
+ end end
+end
 local pet=widget();pet.style=ns.Prefix..'Pet';pet.Health=widget()
 ns.oUF.init(pet)
 check(pet.LegacyBorder and pet.Power.width==142 and pet.Power.height==8,'pet gets compact power widget')

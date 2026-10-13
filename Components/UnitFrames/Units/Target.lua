@@ -1443,6 +1443,18 @@ local UpdateTargetExecuteZone = function(self)
 	else
 		marker.Zone:SetAlpha(0)
 	end
+	-- The shared lead: the line appears only from threshold + lead down.
+	local lineAlpha = 1
+	local plates = ns.NamePlatesPrivate
+	if (marker.lead and marker.lead > 0 and plates and plates.GetExecuteLeadCurve) then
+		lineAlpha = 0
+		local leadCurve = plates.GetExecuteLeadCurve(marker.threshold + marker.lead)
+		if (leadCurve) then
+			local okLead, value = API.TryCall(UnitHealthPercent, self.unit, false, leadCurve)
+			if (okLead and type(value) == "number") then lineAlpha = value end
+		end
+	end
+	marker.Line:SetAlpha(lineAlpha)
 end
 
 local HideTargetExecuteMarker = function(self)
@@ -1521,6 +1533,16 @@ local UpdateTargetExecuteMarker = function(self)
 		marker.Line:SetSize(2, height)
 		marker.Line:SetTexCoord(math.min(1, sample + half), math.max(0, sample - half), 0, 1)
 	end
+	-- The colours and lead set on the nameplates page apply here too.
+	local lead, lineColor, zoneColor = 0, nil, nil
+	if (plates.GetExecuteMarkerStyle) then lead, lineColor, zoneColor = plates.GetExecuteMarkerStyle() end
+	marker.lead = lead
+	local lr, lg, lb, la = 1, .8, .25, .9
+	if (lineColor) then lr, lg, lb, la = lineColor[1], lineColor[2], lineColor[3], lineColor[4] or 1 end
+	marker.Line:SetVertexColor(lr, lg, lb, la)
+	local zr, zg, zb, za = 1, .18, .08, .35
+	if (zoneColor) then zr, zg, zb, za = zoneColor[1], zoneColor[2], zoneColor[3], zoneColor[4] or 1 end
+	marker.Zone:SetVertexColor(zr, zg, zb, za)
 	if (not marker.isShown) then
 		marker.isShown = true
 		marker.Line:Show()
@@ -3054,7 +3076,7 @@ local UnitFrame_UpdateTextures = function(self)
 	healthBackdrop:SetTexture(db.HealthBackdropTexture)
 	healthBackdrop:SetVertexColor(unpack(db.HealthBackdropColor))
 	healthBackdrop:SetTexCoord(GetTargetFillTexCoords(nil))
-	if (ns.PaladinTheme) then ns.PaladinTheme:StyleHealth(self, db, true) end
+	if (ns.ThemeEngine) then ns.ThemeEngine:StyleHealth(self, db, true) end
 
 	local healPredict = self.HealthPrediction
 	healPredict:SetTexture(db.HealthBarTexture)
@@ -3234,7 +3256,7 @@ local UnitFrame_UpdateTextures = function(self)
 		end
 	end
 
-	if (ns.PaladinTheme) then ns.PaladinTheme:StyleThreat(self, true) end
+	if (ns.ThemeEngine) then ns.ThemeEngine:StyleThreat(self, true) end
 	local portraitBorder = self.Portrait.Border
 	portraitBorder:SetTexture(db.PortraitBorderTexture)
 	portraitBorder:SetVertexColor(unpack(db.PortraitBorderColor))

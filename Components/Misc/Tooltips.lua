@@ -1365,6 +1365,9 @@ Tooltips.SetUnitAuraInstanceID = function(self, tooltip, unit, auraInstanceID)
 	if (self:IsDisabled()) then return end
 	if (not self.db.profile.showSpellID) then return end
 	if (not IsSafeUnitToken(unit)) then return end
+	-- Blizzard's nameplate auras hand over secret instance IDs in instances; the
+	-- C_Secrets and C_UnitAuras lookups refuse a secret ID from tainted code.
+	if (IsSecretValue(auraInstanceID)) then return end
 
 	if (C_Secrets and C_Secrets.ShouldUnitAuraInstanceBeSecret) then
 		local isAuraSecret = SafeBooleanValue(C_Secrets.ShouldUnitAuraInstanceBeSecret(unit, auraInstanceID))

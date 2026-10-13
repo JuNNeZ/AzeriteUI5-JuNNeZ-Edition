@@ -155,9 +155,10 @@ local function client(flavor)
 	local resolver = assert(settings:match("(local EXECUTE_THRESHOLD_MAX = .-)\nlocal GetEffectivePlateScale"))
 	local plates = { db = { profile = { enabled = false, executeMarker = false, executeThreshold = 0 } } }
 	modules.NamePlates = plates
-	local chunk = assert(loadstring("local ns, NamePlatesMod = ...\n"..resolver.."\nreturn GetNamePlateExecuteThreshold"))
+	local chunk = assert(loadstring("local ns, NamePlatesMod = ...\n"..resolver.."\nreturn GetNamePlateExecuteThreshold, GetExecuteMarkerStyle, GetExecuteLeadCurve"))
 	setfenv(chunk, env)
-	ns.NamePlatesPrivate = { GetNamePlateExecuteThreshold = chunk(ns, plates) }
+	local threshold, style, leadCurve = chunk(ns, plates)
+	ns.NamePlatesPrivate = { GetNamePlateExecuteThreshold = threshold, GetExecuteMarkerStyle = style, GetExecuteLeadCurve = leadCurve }
 	-- Use the real shared settings notification without touching plate/CVar code.
 	local moduleSource = source("Components/UnitFrames/NamePlates/Module.lua")
 	local notify = assert(moduleSource:match("NamePlatesMod.UpdateSettings = function%(self%)(.-)\n	%-%- Check if"))
@@ -298,6 +299,24 @@ for _, flavor in ipairs({ "Retail", "Forever" }) do
 	check(marker.isShown and marker.threshold == .2, "automatic callback restores marker")
 	plates.db.profile.executeThreshold = .35; plates:UpdateSettings()
 	check(marker.threshold == .35, "nameplate settings immediately update target even with plates off")
+	-- The colours and the lead set on the nameplates page reach the target too (2026-10-13).
+	plates.db.profile.executeCustomColors = true
+	plates.db.profile.executeLineColor = { .1, .2, .3, .4 }
+	plates.db.profile.executeZoneColor = { .5, .6, .7, .8 }
+	update()
+	check(marker.Line.color[1] == .1 and marker.Line.color[4] == .4 and marker.Zone.color[1] == .5, flavor..": shared own colours")
+	plates.db.profile.executeCustomColors = false
+	update()
+	check(marker.Line.color[1] ~= .1, flavor..": own colours off, the target's own again")
+	plates.db.profile.executeLead = .05
+	update()
+	W.percent = marker.threshold + .1; f.Health:PostUpdate("target")
+	check(marker.Line.alpha == 0, flavor..": lead, line hidden well above the threshold")
+	W.percent = marker.threshold + .02; f.Health:PostUpdate("target")
+	check(marker.Line.alpha == 1, flavor..": lead, line shown within it")
+	plates.db.profile.executeLead = 0
+	update()
+	check(marker.Line.alpha == 1, flavor..": no lead, line always shown")
 	M.db.profile.enabled = false; update()
 	check(not marker.isShown, "target module off hides"); M.db.profile.enabled = true
 	env.C_CurveUtil = false; update()
@@ -313,37 +332,48 @@ local savedArg = arg
 arg = { root }
 local S = dofile(root.."/Tools/Harness/stubs.lua")
 arg = savedArg
-local parentModule = S.ns:NewModule("UnitFrames")
-parentModule.db = { profile = { enabled = true } }
 local factory
 S.ns:NewModule("Options").AddGroup = function(_, _, fn) factory = fn end
-S.ns:GetModule("Options").GenerateHealthPredictionOptions = function() return {} end
 local target = S.ns:NewModule("TargetFrame")
 target.db = { profile = { enabled = true } }
 target.IsExecuteMarkerAvailable = function() return true end
+local targetUpdates = 0
+target.UpdateExecuteMarker = function() targetUpdates = targetUpdates + 1 end
 local plates = S.ns:NewModule("NamePlates")
 plates.db = { profile = { enabled = false, executeMarker = false } }
 plates.db.profile.executeThreshold = 0
 S.ns.API.GetExecuteThreshold = function() return .2 end
 local count = 0
 plates.UpdateSettings = function() count = count + 1 end
-local chunk = assert(loadstring(source("Options/OptionsPages/UnitFrames.lua")))
+-- /az -> Execute range: both switches and every shared setting on one page.
+local chunk = assert(loadstring(source("Options/OptionsPages/ExecuteRange.lua")))
 chunk(S.Addon, S.ns)
 local options = factory()
-local range = options.args.target.args.executeRange
-local args = range.args.sharedThreshold.args
-target.db.profile.executeMarker = true
-check(not range.args.executeMarker.disabled(), "target toggle available")
-check(not args.executeThresholdMode.disabled({"executeThresholdMode"}), "threshold usable while nameplate marker off")
+local targetArgs, plateArgs = options.args.target.args, options.args.nameplates.args
+local args = options.args.threshold.args
+check(args.executeThresholdMode.disabled(), "shared settings off while neither marker is on")
+targetArgs.executeMarker.set({}, true)
+check(target.db.profile.executeMarker == true and targetUpdates == 1, "target switch writes TargetFrame and refreshes it")
+check(not targetArgs.executeMarker.disabled(), "target toggle available")
+check(plateArgs.executeMarker.disabled() and not plateArgs.platesOff.hidden(), "plates off: their switch is off and explained")
+check(not args.executeThresholdMode.disabled(), "threshold usable while nameplate marker off")
+check(not args.executeLead.disabled() and not options.args.colors.args.executeCustomColors.disabled(), "lead and colours usable with only the target marker")
 args.executeThresholdMode.set({}, "custom")
 check(plates.db.profile.executeThreshold == .2 and target.db.profile.executeThreshold == nil, "mode writes shared setting only")
 args.executeThreshold.set({}, .35)
 check(plates.db.profile.executeThreshold == .35 and count == 2, "slider writes shared setting and notifies")
 args.executeThresholdMode.set({}, "auto")
 check(plates.db.profile.executeThreshold == 0, "Automatic restores shared zero")
+args.executeLead.set({ "executeLead" }, .05)
+check(plates.db.profile.executeLead == .05, "lead is stored with the plates")
 target.IsExecuteMarkerAvailable = function() return false end
-check(range.args.executeMarker.disabled() and not range.args.unavailable.hidden(), "missing client API explanation shown")
-check(range.args.sharedThreshold.hidden(), "missing API hides shared controls")
+check(targetArgs.executeMarker.disabled() and not targetArgs.unavailable.hidden(), "missing client API explanation shown")
+check(args.executeThresholdMode.disabled(), "missing API and plates off: shared controls off")
+plates.db.profile.enabled = true
+plates.db.profile.executeMarker = true
+check(not plateArgs.executeMarker.disabled() and not args.executeThresholdMode.disabled(), "plate marker alone enables the shared settings")
+plates.conflictingAddOn = "Plater"
+check(plateArgs.executeMarker.disabled(), "another nameplate addon disables the plate switch")
 
 assert(not mutation or applied, "mutation did not apply: "..tostring(mutation))
 print(("target execute harness: %d checks, %d failures%s"):format(checks, failures, taint and " (Elune tainted addon calls)" or ""))

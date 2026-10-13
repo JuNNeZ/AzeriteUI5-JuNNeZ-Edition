@@ -109,4 +109,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup("Info Bar", GenerateOptions, -2500, "interface", "Info")
+Options:AddGroup("Info Bar", GenerateOptions, -2950, "world", "Info")

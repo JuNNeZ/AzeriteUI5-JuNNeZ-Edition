@@ -406,7 +406,7 @@ local style = function(self, unit)
 	castShield:SetTexture(db.CastBarShieldTexture)
 	castShield:SetVertexColor(unpack(db.CastBarShieldColor))
 	cast.Shield = castShield
-	if (ns.PaladinTheme) then ns.PaladinTheme:StyleCastbar(cast) end
+	if (ns.ThemeEngine) then ns.ThemeEngine:StyleCastbar(cast) end
 
 	local castSafeZone = cast:CreateTexture(nil, "ARTWORK", nil, 0)
 	castSafeZone:SetTexture(db.CastBarSpellQueueTexture)

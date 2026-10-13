@@ -4,12 +4,13 @@
 -- offset or texcoord is changed. Ornaments are separate, non-interactive art.
 -- The crystal's energy is Core/MageCrystalPreview.lua; Core/ThemeEffects.lua
 -- decides when it plays.
-local Addon, ns = ...
+local _, ns = ...
+local Engine = ns.ThemeEngine
 local Theme = ns:NewModule("MageTheme", "AceConsole-3.0", "LibMoreEvents-1.0")
 ns.MageTheme = Theme
+Engine:Register(Theme, 20)
 
-local path = function(name) return "Interface\\AddOns\\"..Addon.."\\Assets\\Mage\\"..name..".tga" end
-local cache = {}
+local path = Engine:MediaPath("Mage")
 
 -- Native casings and optional shaped borders; shared functional layers stay native.
 local media = {}
@@ -35,7 +36,6 @@ local BADGES = { arcane = "badge-eye", fire = "badge-fire", frost = "badge-frost
 -- Each school's suggested staff, used by the "school" endcap choice.
 local SCHOOL_ENDCAPS = { arcane = "aluneth", fire = "felomelorn", frost = "ebonchill" }
 local endcaps = { school = true, aluneth = true, felomelorn = true, ebonchill = true, atiesh = true, dragonwrath = true, none = true }
-local ENDCAP_OFFSET_LIMIT = 60
 
 local Char = function() return ns.db and ns.db.char end
 
@@ -44,10 +44,14 @@ local School = function()
 	return preview and preview:GetSchool() or "arcane"
 end
 
-local EndcapKey = function()
-	local key = Char() and Char().mageEndcap or "school"
-	return endcaps[key] and key or "school"
-end
+-- Choice ("school" follows the crystal's school and is stored as nil), size and
+-- nudge, per character. Every change redraws the ornaments at once.
+local endcapSettings = Engine:NewEndcapSettings({
+	prefix = "mage", choices = endcaps, default = "school", clearDefault = true,
+	refresh = function() Theme:RefreshOrnaments() end
+})
+endcapSettings.Install(Theme)
+local EndcapKey, EndcapScale, EndcapOffset = endcapSettings.GetKey, endcapSettings.GetScale, endcapSettings.GetOffset
 
 -- The staff actually drawn, or nil for none.
 local EndcapArt = function()
@@ -57,33 +61,15 @@ local EndcapArt = function()
 	return "ornament-"..key
 end
 
-local EndcapScale = function()
-	local scale = tonumber(Char() and Char().mageEndcapScale)
-	return (scale and scale >= .5 and scale <= 2) and scale or 1
-end
-
-local EndcapOffset = function()
-	local char = Char()
-	local function clamp(value)
-		value = tonumber(value)
-		if (not value or value ~= value) then return 0 end
-		return math.max(-ENDCAP_OFFSET_LIMIT, math.min(ENDCAP_OFFSET_LIMIT, value))
-	end
-	return clamp(char and char.mageEndcapX), clamp(char and char.mageEndcapY)
-end
-
 -- Every styled bar and crystal, so ornament changes apply without a reload.
 local endcapBars = setmetatable({}, { __mode = "k" })
 local crystals = setmetatable({}, { __mode = "k" })
 
 Theme.IsActive = function(self)
-	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
 	local char = Char()
 	if (not char or not char.magePreview) then return false end
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return false end
-	if (ns.IsSaiyaRattProfile and ns:IsSaiyaRattProfile()) then return false end
-	local variant = ns.GetActiveConfigVariant and ns:GetActiveConfigVariant()
-	return not variant or variant == ""
+	return Engine:IsMainLayout()
 end
 
 Theme.ResolveMedia = function(self, name)
@@ -101,42 +87,19 @@ Theme.ResolvePath = function(self, original)
 	return (name and self:ResolveMedia(name)) or original
 end
 
-local function Copy(source, seen)
-	if (type(source) ~= "table" or type(source.GetObjectType) == "function" or type(source[0]) == "userdata") then return source end
-	seen = seen or {}
-	if (seen[source]) then return seen[source] end
-	local result = {}; seen[source] = result
-	for key, value in pairs(source) do result[key] = Copy(value, seen) end
-	return result
-end
-
 -- Replaces media paths only. Casing tint must be white (manifest), so the
--- colour paired with each replaced texture loses its tint but keeps alpha.
-local function Transform(t, seen)
-	if (type(t.GetObjectType) == "function" or type(t[0]) == "userdata") then return end
-	seen = seen or {}; if (seen[t]) then return end; seen[t] = true
-	for key, value in pairs(t) do
-		if (type(value) == "table") then Transform(value, seen)
-		elseif (type(value) == "string") then
-			local replacement = Theme:ResolvePath(value)
-			if (replacement ~= value) then
-				t[key] = replacement
-				local prefix = type(key) == "string" and (key:match("^(.-)Texture$") or key:match("^(.-)TexturePath$"))
-				local color = prefix and t[prefix.."Color"]
-				if (type(color) == "table") then t[prefix.."Color"] = { 1, 1, 1, color[4] or 1 } end
-			end
-		end
-	end
-end
+-- colour paired with each replaced texture loses its tint but keeps alpha
+-- (ThemeEngine.lua). Lazily copied: source tables and other profiles are untouched.
+local replaceOptions = { resolve = function(name) return Theme:ResolveMedia(name) end }
+local CachedConfig = Engine:NewConfigCache(function(name, original)
+	local config = Engine:CopyLayout(original)
+	Engine:ReplaceMedia(config, replaceOptions)
+	return config
+end)
 
--- Lazily copied: source tables and other profiles are untouched.
 Theme.GetConfig = function(self, name, original)
 	if (not self:IsActive()) then return original end
-	if (cache[original]) then return cache[original] end
-	local config = Copy(original)
-	Transform(config)
-	cache[original] = config
-	return config
+	return CachedConfig(name, original)
 end
 
 -- Mana stays sapphire and the ice crystal stays the player's choice.
@@ -304,46 +267,8 @@ Theme.RefreshOrnaments = function(self)
 	for power in pairs(crystals) do self:StyleCrystal(power) end
 end
 
-Theme.GetEndcapChoices = function(self) return endcaps end
-Theme.GetEndcap = function(self) return EndcapKey() end
-Theme.GetEndcapScale = function(self) return EndcapScale() end
-Theme.GetEndcapOffset = function(self) return EndcapOffset() end
-
---- Endcap by key: "school" follows the crystal's school. Applies live.
-Theme.SetEndcap = function(self, key)
-	if (not endcaps[key] or InCombatLockdown()) then return false end
-	Char().mageEndcap = key ~= "school" and key or nil
-	self:RefreshOrnaments()
-	return true
-end
-
-Theme.SetEndcapScale = function(self, scale)
-	scale = tonumber(scale)
-	if (not scale or scale < .5 or scale > 2 or InCombatLockdown()) then return false end
-	Char().mageEndcapScale = scale ~= 1 and scale or nil
-	self:RefreshOrnaments()
-	return true
-end
-
-Theme.SetEndcapOffset = function(self, x, y)
-	if (InCombatLockdown()) then return false end
-	local oldX, oldY = EndcapOffset()
-	x, y = tonumber(x) or oldX, tonumber(y) or oldY
-	x = math.max(-ENDCAP_OFFSET_LIMIT, math.min(ENDCAP_OFFSET_LIMIT, x))
-	y = math.max(-ENDCAP_OFFSET_LIMIT, math.min(ENDCAP_OFFSET_LIMIT, y))
-	Char().mageEndcapX = x ~= 0 and x or nil
-	Char().mageEndcapY = y ~= 0 and y or nil
-	self:RefreshOrnaments()
-	return true
-end
-
-Theme.ResetEndcapPlacement = function(self)
-	if (InCombatLockdown()) then return false end
-	local char = Char()
-	char.mageEndcapScale, char.mageEndcapX, char.mageEndcapY = nil, nil, nil
-	self:RefreshOrnaments()
-	return true
-end
+-- GetEndcapChoices, GetEndcap(Scale/Offset), SetEndcap(Scale/Offset) and
+-- ResetEndcapPlacement come from the engine's endcap settings above.
 
 Theme.Command = function(self, input)
 	local command, option = (input or ""):lower():match("^%s*(%S*)%s*(%S*)%s*$")
@@ -372,24 +297,12 @@ Theme.Command = function(self, input)
 	effects:SetTheme(enabling and "mage" or "azerite")
 end
 
-Theme.ProfileChanged = function(self)
-	if (self.loadedActive ~= self:IsActive()) then
-		if (InCombatLockdown()) then self:RegisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
-		else self:UnregisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged"); ReloadUI() end
-	else
-		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
-	end
-end
-
 Theme.OnInitialize = function(self) self:RegisterChatCommand("azmage", "Command") end
 
+Theme.ProfileChanged = Engine.ProfileChanged
+
 Theme.OnEnable = function(self)
-	self.loadedActive = self:IsActive()
-	if (self.loadedActive and ns.OptionsKit) then
-		for _, key in ipairs({ "WindowBackdrop", "WindowCasing", "ButtonBackdrop" }) do ns.OptionsKit[key].edgeFile = path("border-tooltip") end
-		if (ns.OptionsKit.InsetBackdrop) then ns.OptionsKit.InsetBackdrop.edgeFile = path("border-aura") end
-	end
-	ns.db.RegisterCallback(self, "OnProfileChanged", "ProfileChanged")
-	ns.db.RegisterCallback(self, "OnProfileCopied", "ProfileChanged")
-	ns.db.RegisterCallback(self, "OnProfileReset", "ProfileChanged")
+	-- Chosen at load; a profile switching it on or off reloads (ThemeEngine.lua).
+	Engine:WatchProfile(self)
+	if (self.loadedActive) then Engine:StyleOptionsKit(path("border-tooltip"), path("border-aura")) end
 end

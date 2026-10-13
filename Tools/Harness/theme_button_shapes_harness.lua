@@ -15,6 +15,7 @@ local function load(path)
 	chunk("AzeriteUI5_JuNNeZ_Edition", ns)
 end
 load("Core/API/Assets.lua")
+load("Core/ThemeEngine.lua")
 load("Core/PaladinTheme.lua")
 load("Core/HunterMedia.lua")
 load("Core/HunterTheme.lua")

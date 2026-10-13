@@ -207,7 +207,8 @@ local cells = {
 	tracker = 12, bags = 13, chat = 14, infobar = 15,
 	tooltips = 16, widgets = 17, gamemenu = 18, explorer = 19,
 	debug = 20, controltypes = 21, appearance = 22, changelog = 23,
-	changed = 24, generic = 25
+	changed = 24, generic = 25, groupframes = 26, aurasounds = 27,
+	micromenu = 28, executerange = 29
 }
 Look.PageIconCells = cells
 
@@ -225,10 +226,13 @@ local IconFor = function(key)
 			[L["Control Types"]] = "controltypes", [L["Cooldown Manager"]] = "cooldowns",
 			[L["Debug tools"]] = "debug", [L["Explorer Mode"]] = "explorer",
 			[L["Minimap"]] = "minimap", [L["Nameplates"]] = "nameplates",
-			[L["Tooltips"]] = "tooltips", [L["Unit Frames"]] = "unitframes"
+			[L["Tooltips"]] = "tooltips", [L["Unit Frames"]] = "unitframes",
+			[L["Group Frames"]] = "groupframes", [L["Aura Sounds"]] = "aurasounds",
+			[L["Micro Menu"]] = "micromenu", [L["Execute range"]] = "executerange"
 		}
 		-- The keys OptionsPages/GameMenu.lua and WorldMap.lua register with.
 		byKey[_G.MAINMENU_BUTTON or "Game Menu"] = "gamemenu"
+		if (_G.GAME_MENU) then byKey[_G.GAME_MENU] = "gamemenu" end
 		if (_G.WORLD_MAP) then byKey[_G.WORLD_MAP] = "worldmap" end
 		if (views) then
 			if (views.QUICKSTART) then byKey[views.QUICKSTART] = "quickstart" end
@@ -243,6 +247,69 @@ Look.GetPageIconCoords = function(key)
 	local cell = cells[IconFor(key)] or cells.generic
 	local col, row = cell % COLS, (cell - cell % COLS) / COLS
 	return col / COLS, (col + 1) / COLS, row / ROWS, (row + 1) / ROWS
+end
+
+-- Section icons
+--------------------------------------------------------------------------
+-- options-sections.tga, built by Tools/Build-OptionsSectionIcons.py: the same
+-- 8x4 sheet of 64px cells, for the sections a page lists in the rail and heads
+-- on the page. Known by the section's key in the option table, never by its
+-- localised name. Several sections share a motif, and a section with no motif
+-- that means something gets none: icons are for finding your way, not for every
+-- line, so no setting carries one and there is no generic fallback here.
+local SECTION_COLS, SECTION_ROWS = 8, 4
+local sectionCells = {
+	player = 0, target = 1, tot = 2, focus = 3, pet = 4, boss = 5, arena = 6, castbar = 7,
+	classpower = 8, heal = 9, party = 10, raid = 11, corners = 12, actionbar = 13, stance = 14, proc = 15,
+	assist = 16, bell = 17, eye = 18, eyeslash = 19, resize = 20, droplet = 21, funnel = 22, gate = 23,
+	friendly = 24, gear = 25, wrench = 26, horseshoe = 27, clock = 28, key = 29
+}
+Look.SectionIconCells = sectionCells
+
+-- Section key -> motif. "page:<icon>" borrows a page icon where the section is
+-- that page's subject (the Execute range page's Nameplates section).
+local SECTION_ICONS = {
+	player = "player", playerAlternate = "player", target = "target", tot = "tot", focus = "focus",
+	pet = "pet", petbar = "pet", boss = "boss", arena = "arena", otherFights = "arena",
+	castbar = "castbar", classpower = "classpower", healthPrediction = "heal", health = "heal",
+	party = "party", raid = "raid", raid5 = "raid", raid25 = "raid", raid40 = "raid",
+	groupIndicators = "corners", stancebar = "stance", procHighlight = "proc",
+	assistedHighlight = "assist", readyAlerts = "bell", visibility = "eye", autoHide = "eyeslash",
+	size = "resize", colors = "droplet", auraFilters = "funnel", contentSettings = "gate",
+	friendlyPlayers = "friendly", stacking = "gear", advanced = "wrench", utilities = "wrench",
+	dismountbutton = "horseshoe", cooldown = "clock", keys = "key",
+	threshold = "page:executerange", nameplates = "page:nameplates"
+}
+Look.SectionIcons = SECTION_ICONS
+
+-- The motif for a section key, or nil. Numbered bars share one.
+Look.SectionIconFor = function(key)
+	if (type(key) ~= "string") then return end
+	if (key:match("^bar%d+$")) then return "actionbar" end
+	return SECTION_ICONS[key]
+end
+
+-- Points a texture at a section's icon. Answers false, and leaves the texture
+-- alone, for a section without one or while the art has not shipped.
+Look.SetSectionIcon = function(texture, key)
+	if (not Look.PageIconsAvailable or not texture) then return false end
+	local icon = Look.SectionIconFor(key)
+	if (not icon) then return false end
+	local pageIcon = icon:match("^page:(.+)$")
+	if (pageIcon) then
+		local cell = cells[pageIcon]
+		if (not cell) then return false end
+		local col, row = cell % COLS, (cell - cell % COLS) / COLS
+		texture:SetTexture(GetMedia("options-pages"))
+		texture:SetTexCoord(col / COLS, (col + 1) / COLS, row / ROWS, (row + 1) / ROWS)
+		return true
+	end
+	local cell = sectionCells[icon]
+	if (not cell) then return false end
+	local col, row = cell % SECTION_COLS, (cell - cell % SECTION_COLS) / SECTION_COLS
+	texture:SetTexture(GetMedia("options-sections"))
+	texture:SetTexCoord(col / SECTION_COLS, (col + 1) / SECTION_COLS, row / SECTION_ROWS, (row + 1) / SECTION_ROWS)
+	return true
 end
 
 -- Points a texture at a page's icon. Answers false, and leaves the texture

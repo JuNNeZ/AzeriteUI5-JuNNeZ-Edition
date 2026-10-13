@@ -125,6 +125,9 @@ for _, file in ipairs({
 	check(ok, file:match("[^/]+$") .. " loads", err)
 end
 
+-- Components an option page builds from directly (Tools/Harness/option_components.lua).
+check(pcall(dofile((arg[2] or ".") .. "/option_components.lua"), load, ns), "option components load (GroupIndicators, AuraSounds)")
+
 local xml = io.open(root .. "/Options/Options.xml"):read("*a")
 local pages, declaredPages = 0, 0
 for file in xml:gmatch('<Script file="OptionsPages\\([%w_]+%.lua)"/>') do
@@ -1075,10 +1078,11 @@ do
 	if fade and fade.onRevert then fade.onRevert(fade) end
 	check(chatRow and not chatRow.dot:IsShown(), "and putting it back puts the gem out")
 
-	-- A change on an ordinary page is counted at once too.
+	-- A change on an ordinary page is counted at once too. Group Frames binds the
+	-- same module since the 2026-10-13 split, so take the first: Unit Frames.
 	local unitsPage
 	for _, entry in ipairs(Panel.pages) do
-		if Defaults.ModuleNameFor(options, { entry.key }) == "UnitFrames" then unitsPage = entry.key end
+		if not unitsPage and Defaults.ModuleNameFor(options, { entry.key }) == "UnitFrames" then unitsPage = entry.key end
 	end
 	Panel:SelectPage(unitsPage)
 	local castText = Find(L["Color Cast Spell Text By State"])
@@ -1303,6 +1307,25 @@ do
 
 	check(#wrong == 0, "scrolling to a heading marks that section",
 		table.concat(wrong, " | "))
+
+	-- A page that scrolls shows a scroll bar, so nobody takes the fold for the end.
+	local bar = Panel.contentBar
+	check(bar ~= nil and Panel.railBar ~= nil, "the page and the rail have scroll bars")
+	if bar then
+		bar:SetHeight(400)
+		Panel.contentScroll:SetVerticalScroll(0)
+		bar:Update()
+		check(bar:IsShown(), "a long page shows its scroll bar")
+		local range = Panel.contentScroll:GetVerticalScrollRange()
+		Panel.contentScroll:SetVerticalScroll(range)
+		bar:Update()
+		check(math.abs((bar.offset or -1) - (400 - bar.thumb:GetHeight())) < 1,
+			"at the end of the page the thumb is at the bottom", tostring(bar.offset))
+		rawset(Panel.contentScroll, "scrollRange", 0)
+		bar:Update()
+		check(not bar:IsShown(), "a page that fits hides the bar")
+		rawset(Panel.contentScroll, "scrollRange", nil)
+	end
 
 	-- Exactly one may be marked at a time.
 	Panel.contentScroll:SetVerticalScroll(sections[2] and sections[2].offset + 1 or 40)
@@ -2194,6 +2217,39 @@ do
 		if (Look.PageIconFor(entry.key) == "generic") then generic[#generic + 1] = entry.key end
 	end
 	check(#generic == 0, "every page in the rail has its own icon cell", table.concat(generic, ", "))
+
+	-- Section icons: every motif named has a cell on its sheet, and the open
+	-- page's sections show theirs in the rail and on their headings.
+	local missing = {}
+	for key, icon in pairs(Look.SectionIcons) do
+		local pageIcon = icon:match("^page:(.+)$")
+		if (pageIcon and Look.PageIconCells[pageIcon] == nil) or (not pageIcon and Look.SectionIconCells[icon] == nil) then
+			missing[#missing + 1] = key .. "=" .. icon
+		end
+	end
+	check(#missing == 0, "every section icon names a real cell", table.concat(missing, ", "))
+	check(Look.SectionIconFor("bar7") == "actionbar" and Look.SectionIconFor("someNewThing") == nil,
+		"numbered bars share a motif, and an unknown section gets none")
+	if (Panel.rounded and Look.PageIconsAvailable) then
+		local unitFrames = L and L["Unit Frames"] or "Unit Frames"
+		Panel:SelectPage(unitFrames)
+		local withIcon, rows = {}, 0
+		for _, row in ipairs(Panel.sectionRows or {}) do
+			if (row:IsShown()) then
+				rows = rows + 1
+				if (row.icon and row.icon:IsShown()) then withIcon[#withIcon + 1] = row.label end
+			end
+		end
+		check(rows > 0 and #withIcon >= 8, "Unit Frames' sections show their icons in the rail",
+			string.format("%d of %d", #withIcon, rows))
+		local headed = 0
+		for _, control in ipairs(Panel.page:GetControls()) do
+			if (control.kind == "header" and control.major and control.icon and control.icon:IsShown()) then
+				headed = headed + 1
+			end
+		end
+		check(headed == #withIcon, "each of those headings carries the same icon", headed .. " vs " .. #withIcon)
+	end
 
 	-- The shipped atlas must reach every visible page row, including Settings.
 	-- Classic deliberately keeps its original rail without page icons.

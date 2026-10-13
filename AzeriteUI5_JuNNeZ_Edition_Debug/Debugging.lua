@@ -24,7 +24,14 @@
 	SOFTWARE.
 
 --]]
+-- Part of AzeriteUI5_JuNNeZ_Edition_Debug, loaded on demand (Core/DebugLoader.lua).
+-- That addon's own `...` names the companion, so the main addon's namespace is read
+-- from the global Core/Core.lua publishes under its name. Harnesses pass it directly.
 local Addon, ns = ...
+do
+	local main = _G["AzeriteUI5_JuNNeZ_Edition"]
+	if (type(main) == "table") then Addon, ns = "AzeriteUI5_JuNNeZ_Edition", main end
+end
 local API = ns.API
 local Debugging = ns:NewModule("Debugging", "LibMoreEvents-1.0", "AceConsole-3.0")
 
@@ -3927,6 +3934,10 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug aurasnapshot [player|topright|target|party|raid5|both]|r")
 	print("|cfff0f0f0  /azdebug auracost [perUnit]|status|stop|r  (what corner aura dots would cost; 32 in a party measures 160; /reload after)")
 	print("|cfff0f0f0  /azdebug sated|r  (who in the group has Sated/Exhaustion, read directly; run in and out of combat after a lust)")
+	print("|cfff0f0f0  /azdebug execute|r  (the execute marker on the target frame and the target's nameplate: size, crop, alpha)")
+	print("|cfff0f0f0  /azdebug radial [off]|r  (native radial fills: a timed ring and one fed your health, secret or not)")
+	print("|cfff0f0f0  /azdebug svg [off]|r  (does an addon's own .svg file load: vector graphics and a texture)")
+	print("|cfff0f0f0  /azdebug onupdatemode|r  (a new frame's OnUpdate mode)")
 	print("|cfff0f0f0  /azdebug editmode|r  (what Edit Mode is showing: previews, overlays, checkboxes)")
 	print("|cfff0f0f0  /azdebug tooltips|r  (what the compare tooltip joins and the aura tooltip style last did)")
 	print("|cfff0f0f0  /azdebug unitmenu|r  (hover a unit frame; which menu it opens, replaced menu code)")
@@ -5173,6 +5184,22 @@ Debugging.DebugMenu = function(self, input)
 	if (cmd == "aurasnapshot" or cmd == "auras") then
 		local sub = rest:match("^(%S+)") or "both"
 		return DumpAuraSnapshot(sub)
+	end
+	-- Render experiments (RenderProbe.lua): radial fills, addon SVG files, OnUpdate modes.
+	if (cmd == "radial" or cmd == "svg" or cmd == "onupdatemode") then
+		local probe = ns.RenderProbe
+		local run = probe and ({ radial = probe.Radial, svg = probe.Svg, onupdatemode = probe.OnUpdateMode })[cmd]
+		if (run) then return run(rest, print) end
+		print("|cff33ff99", "AzeriteUI /azdebug " .. cmd .. ":", "the render probe is not loaded.")
+		return
+	end
+	-- Execute marker readout (ExecuteProbe.lua).
+	if (cmd == "execute") then
+		if (ns.ExecuteProbe and ns.ExecuteProbe.Run) then
+			return ns.ExecuteProbe.Run(rest, print)
+		end
+		print("|cff33ff99", "AzeriteUI /azdebug execute:", "the execute probe is not loaded.")
+		return
 	end
 	if (cmd == "sated") then
 		if (ns.AuraCostProbe and ns.AuraCostProbe.SatedTest) then

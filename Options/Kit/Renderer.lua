@@ -538,6 +538,8 @@ Collect = function(group, options, path, out, depth)
 				out[#out + 1] = {
 					kind = "header",
 					major = true,
+					-- The option key names the section's icon (Look.SetSectionIcon).
+					key = key,
 					label = AsString(Config.GetName(option, options, childPath, APP), key)
 				}
 				Collect(option, options, childPath, out, depth + 1)
@@ -715,6 +717,7 @@ Renderer.CreatePage = function(self, content)
 			if (control.kind == "header" and control.major) then
 				self.sections[#self.sections + 1] = {
 					label = control.GetLabel and control:GetLabel() or control.label:GetText(),
+					key = control.key,
 					offset = offset
 				}
 			end
@@ -791,6 +794,8 @@ Renderer.CreatePage = function(self, content)
 				control = Acquire("header")
 				control:SetLabel(entry.label)
 				control.major = entry.major and true or false
+				control.key = entry.key
+				if (control.SetIcon) then control:SetIcon(entry.major and entry.key or nil) end
 
 			elseif (entry.kind == "description") then
 				control = Acquire("description")

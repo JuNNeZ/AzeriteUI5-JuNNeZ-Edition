@@ -49,6 +49,9 @@ local GetTargetLikeNameLift = NP.GetTargetLikeNameLift
 local AnchorStandardNamePlateName = NP.AnchorStandardNamePlateName
 local ShouldShowObjectPlateOverlay = NP.ShouldShowObjectPlateOverlay
 local GetNamePlateExecuteThreshold = NP.GetNamePlateExecuteThreshold
+local GetExecuteMarkerStyle = NP.GetExecuteMarkerStyle
+local GetExecuteLeadCurve = NP.GetExecuteLeadCurve
+local IsFightingYou = NP.IsFightingYou
 local GetNamePlateBarLayout = NP.GetNamePlateBarLayout
 
 -- Execute Marker
@@ -58,7 +61,6 @@ local GetNamePlateBarLayout = NP.GetNamePlateBarLayout
 -- sits at a fixed share of the bar's layout width, so it reads no health. Whether the enemy is inside
 -- is asked of UnitHealthPercent through a step curve the client evaluates; its answer is secret and
 -- goes straight into SetAlpha, never into addon logic. Built the first time a plate needs it.
-local WHITE = [[Interface\Buttons\WHITE8X8]]
 local executeZoneCurves = {}
 
 -- 1 below the threshold, 0 at or above it. False where the client has no curves.
@@ -88,8 +90,10 @@ local CreateExecuteMarker = function(self)
 	zone:SetVertexColor(unpack(db.ExecuteZoneColor))
 	zone:SetAlpha(0)
 
+	-- A thin slice of the same art, so the line has the bar's silhouette: a plain rectangle
+	-- reached past the shaped bar's top and bottom.
 	local line = parent:CreateTexture(nil, "ARTWORK", nil, 1)
-	line:SetTexture(WHITE)
+	line:SetTexture(db.HealthBarTexture)
 	line:SetVertexColor(unpack(db.ExecuteLineColor))
 	line:SetSize(db.ExecuteLineWidth, db.HealthBarSize[2])
 
@@ -113,6 +117,20 @@ local UpdateExecuteZone = function(self)
 		end
 	end
 	marker.Zone:SetAlpha(alpha)
+
+	-- With a lead, the line appears only from threshold + lead down.
+	local lineAlpha = 1
+	if (marker.lead and marker.lead > 0 and UnitHealthPercent and self.unit) then
+		lineAlpha = 0
+		local leadCurve = GetExecuteLeadCurve(marker.threshold + marker.lead)
+		if (leadCurve) then
+			local ok, value = API.TryCall(UnitHealthPercent, self.unit, false, leadCurve)
+			if (ok and type(value) == "number") then
+				lineAlpha = value
+			end
+		end
+	end
+	marker.Line:SetAlpha(lineAlpha)
 end
 
 -- Shown on plates the player can attack while the setting is on and there is a threshold; placed
@@ -123,6 +141,7 @@ local UpdateExecuteMarker = function(self)
 	local threshold = profile.executeMarker and GetNamePlateExecuteThreshold() or 0
 	local show = threshold > 0 and self.canAttack and not self.isPRD and not self.isObjectPlate
 		and not ShouldUseFriendlyPlayerNameOnly(self)
+		and (not profile.executeCombatOnly or IsFightingYou(self))
 	if (not show) then
 		if (marker and marker.isShown) then
 			marker.isShown = false
@@ -156,6 +175,21 @@ local UpdateExecuteMarker = function(self)
 		else
 			marker.Zone:SetTexCoord(bars.texLeft, bars.texLeft + span, bars.texTop, bars.texBottom)
 		end
+		-- The line's slice of the art, one layout pixel either side of the threshold.
+		local sample = reverse and (bars.texRight - span) or (bars.texLeft + span)
+		local half = (bars.texRight - bars.texLeft) * (db.ExecuteLineWidth / 2) / db.HealthBarSize[1]
+		marker.Line:SetTexCoord(math.max(bars.texLeft, sample - half), math.min(bars.texRight, sample + half), bars.texTop, bars.texBottom)
+	end
+
+	-- The player's colours and lead, shared with the target frame.
+	local lead, lineColor, zoneColor = GetExecuteMarkerStyle()
+	marker.lead = lead
+	-- A colour change stores a new table, so comparing the tables is enough.
+	if (marker.lineColor ~= lineColor or marker.zoneColor ~= zoneColor or not marker.colored) then
+		local db = ns.GetConfig("NamePlates")
+		marker.lineColor, marker.zoneColor, marker.colored = lineColor, zoneColor, true
+		marker.Line:SetVertexColor(unpack(lineColor or db.ExecuteLineColor))
+		marker.Zone:SetVertexColor(unpack(zoneColor or db.ExecuteZoneColor))
 	end
 	if (not marker.isShown) then
 		marker.isShown = true

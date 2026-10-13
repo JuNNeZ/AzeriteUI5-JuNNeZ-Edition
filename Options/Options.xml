@@ -51,15 +51,19 @@
 	<Script file="OptionsPages\ExplorerMode.lua"/>
 	<Script file="OptionsPages\GameMenu.lua"/>
 	<Script file="OptionsPages\Info.lua"/>
+	<Script file="OptionsPages\MicroMenu.lua"/>
 	<Script file="OptionsPages\Minimap.lua"/>
 	<Script file="OptionsPages\MythicPlus.lua"/>
 	<Script file="OptionsPages\WorldMap.lua"/>
 	<Script file="OptionsPages\Nameplates.lua"/>
+	<Script file="OptionsPages\ExecuteRange.lua"/>
 	<Script file="OptionsPages\Widgets.lua"/>
 	<Script file="OptionsPages\Tooltips.lua"/>
 	<Script file="OptionsPages\Tracker.lua"/>
 	<Script file="OptionsPages\Themes.lua"/>
 	<Script file="OptionsPages\UnitFrames.lua"/>
 	<Script file="OptionsPages\HealthPrediction.lua"/>
+	<Script file="OptionsPages\GroupIndicators.lua"/>
+	<Script file="OptionsPages\AuraSounds.lua"/>
 
 </Ui>

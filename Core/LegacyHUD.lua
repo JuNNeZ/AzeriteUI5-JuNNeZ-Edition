@@ -462,7 +462,10 @@ HUD.ResolveMedia = function(self, name)
 	if (not self:IsActive() or type(name) ~= "string") then return end
 	if (name == "minimap-border") then return media("minimap-border-legacy") end
 	if (name == "border-aura") then return media("aura_border") end
-	if (name:match("^actionbutton%-proc%-")) then return media("actionbutton-spellhighlight-square-rounded") end
+	-- The proc styles' square twins (Tools/Build-ProcHighlightAssets.py), shaped like
+	-- the Legacy ring, so outline, glow and thickness still differ under Legacy.
+	local proc = name:match("^actionbutton%-proc%-(%a+%-%a+)$")
+	if (proc) then return "Interface\\AddOns\\"..Addon.."\\Assets\\actionbutton-proc-square-"..proc..".tga" end
 end
 
 --- Re-applied by the player/target tier refresh, after their native layouts.

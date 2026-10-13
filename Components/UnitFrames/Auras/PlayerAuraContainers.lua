@@ -299,9 +299,11 @@ local function CanTouchAuraWidget(widget)
 	return ok and IsSafeBool(accessible) and accessible
 end
 
+-- Returns false when the icon could not be reached (aura data secret), true otherwise.
 local function SetAuraButtonBrightness(button, alwaysBright)
 	local icon = button and button.Icon
-	if (not CanTouchAuraWidget(icon)) then return end
+	if (not icon) then return true end
+	if (not CanTouchAuraWidget(icon)) then return false end
 
 	local subdued = button.__AzeriteUI_Subdued and not alwaysBright
 	icon:SetDesaturated(subdued)
@@ -310,6 +312,7 @@ local function SetAuraButtonBrightness(button, alwaysBright)
 	else
 		icon:SetVertexColor(1, 1, 1)
 	end
+	return true
 end
 
 -- Duration and stack text in fonts sized for the icon: the fixed 14/12 spilled over
@@ -553,17 +556,56 @@ end
 -- turn out to be untouchable. Where aura data is secret the existing pooled
 -- buttons keep the brightness they were created with; that is a cosmetic lag,
 -- and the alternative is a forbidden object error on every configuration pass.
-local function UpdateContainerBrightness(container, alwaysBright)
+--[[
+	Brightness (TODO 5.1). Where aura data is secret (raids), a button already in the
+	pool cannot be restyled, so a change reaches only buttons created afterwards. Such
+	a container remembers the value it still owes and is retried whenever the client
+	may have lifted the restriction (combat ends, a restriction changes, a new zone or
+	loading screen), so the lag ends on leaving the raid instead of at the next reload.
+]]
+local pendingBrightness = setmetatable({}, { __mode = "k" })
+local brightnessRetry
+local UpdateContainerBrightness
+
+local RetryPendingBrightness = function()
+	for container, alwaysBright in pairs(pendingBrightness) do
+		UpdateContainerBrightness(container, alwaysBright)
+	end
+	if (not next(pendingBrightness) and brightnessRetry) then
+		brightnessRetry:UnregisterAllEvents()
+	end
+end
+
+local WatchPendingBrightness = function()
+	if (not brightnessRetry) then
+		brightnessRetry = CreateFrame("Frame")
+		brightnessRetry:SetScript("OnEvent", RetryPendingBrightness)
+	end
+	for _, event in ipairs({ "PLAYER_REGEN_ENABLED", "ADDON_RESTRICTION_STATE_CHANGED", "ZONE_CHANGED_NEW_AREA", "PLAYER_ENTERING_WORLD" }) do
+		pcall(brightnessRetry.RegisterEvent, brightnessRetry, event)
+	end
+end
+
+UpdateContainerBrightness = function(container, alwaysBright)
 	local styleState = container.__AzeriteUI_StyleState
 	if (styleState) then
 		styleState.alwaysBright = alwaysBright
 	end
 
+	local skipped = false
 	for _, groupKey in ipairs(HELPFUL_GROUPS) do
 		local frameCount = container:GetAuraGroupFrameCount(groupKey)
 		for frameIndex = 1, frameCount do
-			SetAuraButtonBrightness(container:GetAuraGroupFrame(groupKey, frameIndex), alwaysBright)
+			if (not SetAuraButtonBrightness(container:GetAuraGroupFrame(groupKey, frameIndex), alwaysBright)) then
+				skipped = true
+			end
 		end
+	end
+	if (skipped) then
+		pendingBrightness[container] = alwaysBright
+		WatchPendingBrightness()
+	else
+		pendingBrightness[container] = nil
 	end
 end
 

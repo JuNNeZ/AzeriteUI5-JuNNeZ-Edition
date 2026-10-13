@@ -380,6 +380,19 @@ local AURA_SORT_FRAMES = Members("TargetFrame", "PartyFrames", "RaidFrame5", "Ar
 -- The only two readers of ns.UnitFrame.ShouldColorCastSpellTextByState.
 local CAST_TEXT_FRAMES = Members("TargetFrame", "NamePlates")
 
+-- Every module whose frames carry a CombatFeedback text.
+local FEEDBACK_FRAMES = Members("PlayerFrame", "PlayerFrameAlternate", "TargetFrame", "PartyFrames",
+	"RaidFrame5", "RaidFrame25", "RaidFrame40", "BossFrames", "ArenaFrames")
+
+-- The four group frame modules GroupIndicators.lua attaches to.
+local GROUP_INDICATOR_FRAMES = Members("PartyFrames", "RaidFrame5", "RaidFrame25", "RaidFrame40")
+
+local groupIndicatorPolicy = {
+	kind = "family",
+	members = GROUP_INDICATOR_FRAMES,
+	explain = L["Applies to party and raid frames."]
+}
+
 -- Every module that builds a health prediction element.
 local HEALTH_FRAMES = Members("PlayerFrame", "PlayerFrameAlternate", "TargetFrame", "ToTFrame",
 	"FocusFrame", "PetFrame", "PartyFrames", "RaidFrame5", "RaidFrame25", "RaidFrame40",
@@ -444,6 +457,19 @@ local policies = {
 		auraTimerColors = {
 			kind = "explain",
 			explain = L["Changing this reloads the interface."]
+		},
+		groupSated = groupIndicatorPolicy,
+		groupCorners = groupIndicatorPolicy,
+		groupCornerOnlyMine = groupIndicatorPolicy,
+		groupCornerSize = groupIndicatorPolicy,
+		groupCornerSpellsTOPLEFT = groupIndicatorPolicy,
+		groupCornerSpellsTOPRIGHT = groupIndicatorPolicy,
+		groupCornerSpellsBOTTOMLEFT = groupIndicatorPolicy,
+		groupCornerSpellsBOTTOMRIGHT = groupIndicatorPolicy,
+		showCombatFeedback = {
+			kind = "family",
+			members = FEEDBACK_FRAMES,
+			explain = L["Applies to combat text on unit frames."]
 		},
 		showIncomingHeals = healthPolicy,
 		showOverhealIndicator = healthPolicy,

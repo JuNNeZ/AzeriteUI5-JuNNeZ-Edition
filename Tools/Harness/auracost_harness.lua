@@ -1,6 +1,6 @@
 -- /azdebug auracost, offline.
 --
--- Loads the real Components/UnitFrames/Auras/AuraCostProbe.lua against a fake client
+-- Loads the real AzeriteUI5_JuNNeZ_Edition_Debug/AuraCostProbe.lua against a fake client
 -- and drives its OnUpdate scripts with chosen frame times: the build spread over
 -- frames, the six alternating off/on windows, the settle time after each switch,
 -- the noise verdict, and the report. It cannot say what containers cost in game.
@@ -61,7 +61,7 @@ env.GetAddOnMemoryUsage = function() return memory end
 local function Load()
 	containers, holder, driver = {}, nil, nil
 	local ns = { IsRetail = true }
-	local chunk = assert(loadfile(root .. "/Components/UnitFrames/Auras/AuraCostProbe.lua"))
+	local chunk = assert(loadfile(root .. "/AzeriteUI5_JuNNeZ_Edition_Debug/AuraCostProbe.lua"))
 	setfenv(chunk, env)
 	chunk("AzeriteUI5_JuNNeZ_Edition", ns)
 	return ns.AuraCostProbe

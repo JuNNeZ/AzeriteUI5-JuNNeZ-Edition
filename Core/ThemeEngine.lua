@@ -1,0 +1,291 @@
+--[[
+
+	The MIT License (MIT)
+
+	Copyright (c) 2026 Jonas "JuNNeZ" Andersen (JuNNeZ Edition modifications)
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+
+--]]
+local Addon, ns = ...
+
+--[[
+	The theme engine (Docs/Theme Engine Plan.md): one place the interface asks about
+	themes, and the parts every theme shares.
+
+	Unit frames, nameplates, the minimap, the micro menu and the layouts call the
+	engine's hooks (StyleHealth, GetConfig, ResolveMedia, ...). The engine hands each
+	call to the one theme in use, or answers as stock AzeriteUI when none is. Before
+	this, PaladinTheme.lua was that switchboard, forwarding every hook to Hunter and
+	Mage first; a fourth theme would have meant a fourth forwarding line in each.
+
+	A theme registers itself with a priority (lower wins when two say they are active;
+	Hunter, Mage, Paladin as before) and implements the hooks it needs. The shared
+	parts live here: the layout copy, the media swap with its tint rule, the main-
+	layout gate, endcap settings, the reload on profile change and the options window
+	borders.
+
+	Effects that one theme lends to another (Lite+: a Paladin crystal on a Mage
+	interface) stay theme methods; Core/ThemeEffects.lua calls them directly.
+]]
+
+local Engine = {}
+ns.ThemeEngine = Engine
+
+local themes = {}
+
+--- Adds a theme. `priority` orders themes that are active at once; lower wins.
+Engine.Register = function(self, theme, priority)
+	theme.__enginePriority = priority or 100
+	themes[#themes + 1] = theme
+	table.sort(themes, function(a, b) return a.__enginePriority < b.__enginePriority end)
+end
+
+--- The theme in use, or nil for stock AzeriteUI.
+Engine.GetActive = function(self)
+	for _, theme in ipairs(themes) do
+		if (theme:IsActive()) then return theme end
+	end
+end
+
+Engine.GetThemes = function(self)
+	return themes
+end
+
+--[[ Dispatch ]]--
+
+-- Hook -> what stock AzeriteUI answers when no theme is active or the active theme
+-- does not implement it. nil means "nothing to do".
+local STOCK = {
+	ResolveMedia = function(name) return nil end,
+	ResolvePath = function(original) return original end,
+	GetConfig = function(name, original) return original end,
+	UseIceCrystal = function(requested) return requested end,
+	GetPowerColor = function(token) return nil end,
+	GetNameplateCastOffset = function(offset) return offset end,
+	StyleHealth = false, StyleThreat = false, StyleCastbar = false, StyleNameplate = false,
+	StyleUtilityButton = false, StylePet = false, StyleCompass = false
+}
+Engine.Hooks = STOCK
+
+for hook, stock in pairs(STOCK) do
+	Engine[hook] = function(self, ...)
+		local theme = self:GetActive()
+		local method = theme and theme[hook]
+		if (type(method) == "function") then return method(theme, ...) end
+		if (stock) then return stock(...) end
+	end
+end
+
+--[[ Shared parts ]]--
+
+--- Path to a file in Assets\<folder>, as a function of the file's name.
+Engine.MediaPath = function(self, folder)
+	return function(name) return "Interface\\AddOns\\" .. Addon .. "\\Assets\\" .. folder .. "\\" .. name .. ".tga" end
+end
+
+--- Themes dress the main layout only: not Legacy, SaiyaRatt or another layout variant.
+Engine.IsMainLayout = function(self)
+	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
+	if (ns.IsSaiyaRattProfile and ns:IsSaiyaRattProfile()) then return false end
+	local variant = ns.GetActiveConfigVariant and ns:GetActiveConfigVariant()
+	return not variant or variant == ""
+end
+
+local IsWidget = function(value)
+	return type(value.GetObjectType) == "function" or type(value[0]) == "userdata"
+end
+
+--- Deep copy of a layout table. Layouts can hold real Font and Frame objects
+--- (Minimap anchors); those keep their identity, since copying a widget's Lua
+--- table loses its native wrapper and may walk the whole frame tree.
+Engine.CopyLayout = function(self, source, seen)
+	if (type(source) ~= "table" or IsWidget(source)) then return source end
+	seen = seen or {}
+	if (seen[source]) then return seen[source] end
+	local result = {}
+	seen[source] = result
+	for key, value in pairs(source) do result[key] = self:CopyLayout(value, seen) end
+	return result
+end
+
+local AssetName = function(value)
+	return type(value) == "string" and value:match("[\\/]Assets[\\/]([^\\/]+)%.tga$") or nil
+end
+Engine.AssetName = AssetName
+
+--- Replaces every media path in a layout table, and every table inside it, that
+--- `options.resolve(name)` has a file for. A replaced texture's paired colour
+--- (FooTexture/FooTexturePath -> FooColor) turns white with its alpha kept: theme
+--- casings carry their own material colour. Assets `options.keepTint(name)` names
+--- keep theirs (Hunter's neutral halos). `options.after(t)` runs on each table once
+--- its own paths are done, for a theme's per-table adjustments.
+Engine.ReplaceMedia = function(self, t, options, seen)
+	seen = seen or {}
+	if (seen[t] or IsWidget(t)) then return end
+	seen[t] = true
+	local resolve, keepTint = options.resolve, options.keepTint
+	for key, value in pairs(t) do
+		if (type(value) == "table") then
+			self:ReplaceMedia(value, options, seen)
+		elseif (type(value) == "string") then
+			local name = AssetName(value)
+			local replacement = name and resolve(name)
+			if (replacement and replacement ~= value) then
+				t[key] = replacement
+				local prefix = type(key) == "string" and (key:match("^(.-)Texture$") or key:match("^(.-)TexturePath$"))
+				local color = prefix and t[prefix .. "Color"]
+				local kept = keepTint and keepTint(AssetName(replacement) or name)
+				if (type(color) == "table" and not kept) then t[prefix .. "Color"] = { 1, 1, 1, color[4] or 1 } end
+			end
+		end
+	end
+	if (options.after) then options.after(t) end
+end
+
+--- A per-theme cache for themed layout copies: each source table is copied once.
+--- `build(name, original)` makes the copy.
+Engine.NewConfigCache = function(self, build)
+	local cache = {}
+	return function(name, original)
+		if (cache[original]) then return cache[original] end
+		local config = build(name, original)
+		cache[original] = config
+		return config
+	end
+end
+
+--[[ Endcaps ]]--
+
+local OFFSET_LIMIT = 60
+Engine.EndcapOffsetLimit = OFFSET_LIMIT
+
+local Clamp = function(value, low, high)
+	value = tonumber(value)
+	if (not value or value ~= value) then return nil end
+	return math.max(low, math.min(high, value))
+end
+
+--- The endcap choice, size and nudge a theme stores per character, as
+--- ns.db.char.<prefix>Endcap, <prefix>EndcapScale, <prefix>EndcapX/Y.
+--- options: prefix, choices (key -> true), default, clearDefault (store nil for the
+--- default instead of the key), refresh (called after every change).
+Engine.NewEndcapSettings = function(self, options)
+	local prefix, choices, default = options.prefix, options.choices, options.default
+	local settings = {}
+	local Char = function() return ns.db and ns.db.char end
+
+	settings.GetKey = function()
+		local char = Char()
+		local key = char and char[prefix .. "Endcap"] or default
+		return choices[key] and key or default
+	end
+	settings.GetScale = function()
+		local char = Char()
+		local scale = tonumber(char and char[prefix .. "EndcapScale"])
+		return (scale and scale >= .5 and scale <= 2) and scale or 1
+	end
+	settings.GetOffset = function()
+		local char = Char()
+		return Clamp(char and char[prefix .. "EndcapX"], -OFFSET_LIMIT, OFFSET_LIMIT) or 0,
+			Clamp(char and char[prefix .. "EndcapY"], -OFFSET_LIMIT, OFFSET_LIMIT) or 0
+	end
+	local Changed = function()
+		if (options.refresh) then options.refresh() end
+		return true
+	end
+	settings.SetKey = function(key)
+		if (not choices[key] or InCombatLockdown()) then return false end
+		local stored = key
+		if (options.clearDefault and key == default) then stored = nil end
+		Char()[prefix .. "Endcap"] = stored
+		return Changed()
+	end
+	settings.SetScale = function(scale)
+		scale = tonumber(scale)
+		if (not scale or scale < .5 or scale > 2 or InCombatLockdown()) then return false end
+		Char()[prefix .. "EndcapScale"] = scale ~= 1 and scale or nil
+		return Changed()
+	end
+	settings.SetOffset = function(x, y)
+		if (InCombatLockdown()) then return false end
+		local oldX, oldY = settings.GetOffset()
+		x = Clamp(x, -OFFSET_LIMIT, OFFSET_LIMIT) or oldX
+		y = Clamp(y, -OFFSET_LIMIT, OFFSET_LIMIT) or oldY
+		local char = Char()
+		char[prefix .. "EndcapX"] = x ~= 0 and x or nil
+		char[prefix .. "EndcapY"] = y ~= 0 and y or nil
+		return Changed()
+	end
+	settings.Reset = function()
+		if (InCombatLockdown()) then return false end
+		local char = Char()
+		char[prefix .. "EndcapScale"], char[prefix .. "EndcapX"], char[prefix .. "EndcapY"] = nil, nil, nil
+		return Changed()
+	end
+
+	--- The theme methods the Themes page and commands call, on `theme`.
+	settings.Install = function(theme)
+		theme.GetEndcapChoices = function() return choices end
+		theme.GetEndcap = function() return settings.GetKey() end
+		theme.GetEndcapScale = function() return settings.GetScale() end
+		theme.GetEndcapOffset = function() return settings.GetOffset() end
+		theme.SetEndcap = function(_, key) return settings.SetKey(key) end
+		theme.SetEndcapScale = function(_, scale) return settings.SetScale(scale) end
+		theme.SetEndcapOffset = function(_, x, y) return settings.SetOffset(x, y) end
+		theme.ResetEndcapPlacement = function() return settings.Reset() end
+	end
+	return settings
+end
+
+--[[ Lifecycle ]]--
+
+--- A theme is chosen at load. A profile change that switches it on or off reloads,
+--- once combat allows. Each theme sets `Theme.ProfileChanged = Engine.ProfileChanged`.
+Engine.ProfileChanged = function(theme)
+	if (theme.loadedActive ~= theme:IsActive()) then
+		if (InCombatLockdown()) then
+			theme:RegisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
+		else
+			theme:UnregisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
+			ReloadUI()
+		end
+	else
+		theme:UnregisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
+	end
+end
+
+--- Notes whether the theme loaded active and listens for profile changes.
+--- Call from the theme's OnEnable.
+Engine.WatchProfile = function(self, theme)
+	theme.loadedActive = theme:IsActive()
+	ns.db.RegisterCallback(theme, "OnProfileChanged", "ProfileChanged")
+	ns.db.RegisterCallback(theme, "OnProfileCopied", "ProfileChanged")
+	ns.db.RegisterCallback(theme, "OnProfileReset", "ProfileChanged")
+end
+
+--- The options window's borders in the active theme's metal (Options/Kit).
+Engine.StyleOptionsKit = function(self, edgeFile, insetFile)
+	local kit = ns.OptionsKit
+	if (not kit) then return end
+	for _, key in ipairs({ "WindowBackdrop", "WindowCasing", "ButtonBackdrop" }) do
+		if (kit[key]) then kit[key].edgeFile = edgeFile end
+	end
+	if (insetFile and kit.InsetBackdrop) then kit.InsetBackdrop.edgeFile = insetFile end
+end

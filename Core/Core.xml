@@ -43,9 +43,11 @@
 	<Script file="FixBlizzardBugs.lua"/>
 	<Script file="ExplorerMode.lua"/>
 	<Script file="Development.lua"/>
-	<Script file="Debugging.lua"/>
+	<!-- /azdebug and the probes load on demand from AzeriteUI5_JuNNeZ_Edition_Debug. -->
+	<Script file="DebugLoader.lua"/>
 	<Script file="Experimental.lua"/>
 	<Script file="LegacyHUD.lua"/>
+	<Script file="ThemeEngine.lua"/>
 	<Script file="PaladinTheme.lua"/>
 	<Script file="HunterMedia.lua"/>
 	<Script file="HunterGeometry.lua" />

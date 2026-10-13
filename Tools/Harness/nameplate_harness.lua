@@ -1704,6 +1704,9 @@ do
 	for i, f in ipairs(P) do if (f.ExecuteMarker) then built[#built + 1] = i end end
 	check(#built == 0, "the execute marker builds nothing while it is off", table.concat(built, ","))
 
+	-- The checks below are the marker on every enemy plate; the combat switch (default on) is
+	-- tested on its own afterwards.
+	W.profile.executeCombatOnly = false
 	W.profile.executeMarker = true
 	M:UpdateSettings()
 	Step("execute marker on")
@@ -1809,6 +1812,73 @@ do
 	Flush()
 	check(P[11].ExecuteMarker and Hidden(P[11]), "a marked plate reused for a friendly unit hides its marker")
 	Step("a marked plate reused for a friendly unit")
+
+	-- 2026-10-13: the line is a slice of the bar's own art, so it has the bar's silhouette
+	-- instead of a rectangle reaching past the shaped bar.
+	do
+		local line = P[1].ExecuteMarker.Line
+		local tc = line.__texcoord
+		local sample = TEX_LEFT + (TEX_RIGHT - TEX_LEFT) * .2
+		check(line.__texture == P[1].Health.__barTexture and tc and tc[1] < sample and tc[2] > sample
+			and tc[1] >= TEX_LEFT and tc[2] <= TEX_RIGHT,
+			"the line is a slice of the bar's art around the threshold, inside the bar's crop", tc and (tc[1] .. "," .. tc[2]))
+	end
+
+	-- Only enemies you are fighting (default on): you or your pet on the threat table; a secret
+	-- answer counts as yes. The repeating refresh runs only while the marker and the switch are on.
+	do
+		local timersBefore = #W.timers
+		W.profile.executeCombatOnly = true
+		M:UpdateSettings()
+		check(#W.timers == timersBefore + 1, "the combat switch starts one refresh timer")
+		local rec = resolve(P[1].unit)
+		local saved = rec.threat
+		rec.threat = nil
+		M:UpdateSettings()
+		check(Hidden(P[1]), "an enemy not fighting you shows no marker")
+		rec.threat = 0
+		W.timers[#W.timers]()
+		check(Shown(P[1]), "once it has you on its threat table the next refresh shows it")
+		rec.threat = SECRET
+		W.timers[#W.timers]()
+		check(Shown(P[1]), "a secret threat answer counts as fighting you")
+		rec.threat = saved
+		Step("execute marker: only enemies you are fighting")
+		W.profile.executeCombatOnly = false
+		M:UpdateSettings()
+	end
+
+	-- Shown from a lead above the threshold: the line's alpha is the client's curve answer.
+	do
+		W.profile.executeLead = .05
+		M:UpdateSettings()
+		Health(P[1], .3)
+		check(Reveal(P[1].ExecuteMarker.Line.__alpha) == 0, "with a 5% lead the line is hidden at 30%")
+		Health(P[1], .22)
+		check(Reveal(P[1].ExecuteMarker.Line.__alpha) == 1 and issecretvalue(P[1].ExecuteMarker.Line.__alpha),
+			"and shown at 22%, through the client's secret answer")
+		check(Tint(P[1]) == 0, "the tint still waits for the threshold itself")
+		W.profile.executeLead = 0
+		M:UpdateSettings()
+		Health(P[1], .5)
+		check(P[1].ExecuteMarker.Line.__alpha == 1, "no lead: the line is always shown")
+		Health(P[1], .15)
+	end
+
+	-- Own colours, read again when changed; off returns to the layout's.
+	do
+		W.profile.executeCustomColors = true
+		W.profile.executeLineColor = { .1, .2, .3, .4 }
+		W.profile.executeZoneColor = { .5, .6, .7, .8 }
+		M:UpdateSettings()
+		local line, zone = P[1].ExecuteMarker.Line.__vertex, P[1].ExecuteMarker.Zone.__vertex
+		check(line[1] == .1 and line[4] == .4 and zone[1] == .5 and zone[4] == .8, "own colours reach the line and the tint")
+		W.profile.executeCustomColors = false
+		M:UpdateSettings()
+		line = P[1].ExecuteMarker.Line.__vertex
+		check(line[1] ~= .1, "off again: the layout's colours")
+		Step("execute marker: lead and colours")
+	end
 
 	W.profile.executeMarker = false
 	M:UpdateSettings()

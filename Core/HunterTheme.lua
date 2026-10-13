@@ -1,42 +1,28 @@
 -- Unseen Path artwork. Original layouts and native resource/prediction shapes
 -- remain the geometry contract; ornaments are independent, non-interactive art.
-local Addon, ns = ...
+local _, ns = ...
+local Engine = ns.ThemeEngine
 local Theme = ns:NewModule("HunterTheme", "AceConsole-3.0", "LibMoreEvents-1.0")
 ns.HunterTheme = Theme
-local cache = {}
+Engine:Register(Theme, 10)
 local endcaps = { thasdorah = true, talonclaw = true, titanstrike = true, thoridal = true, raeshalare = true, none = true }
-local path = function(name) return "Interface\\AddOns\\"..Addon.."\\Assets\\Hunter\\"..name..".tga" end
--- Health endcap size multiplier (/azhunter endcapscale); casts keep their head size.
-local EndcapScale = function()
-	local scale = tonumber(ns.db and ns.db.char and ns.db.char.hunterEndcapScale)
-	return (scale and scale >= .5 and scale <= 2) and scale or 1
-end
--- Health endcap nudge in pixels. X is outward from the bar's end, so a mirrored
--- target moves the same way on screen as the player's endcap mirrored.
-local ENDCAP_OFFSET_LIMIT = 60
-local EndcapOffset = function()
-	local char = ns.db and ns.db.char
-	local function clamp(value)
-		value = tonumber(value)
-		if (not value or value ~= value) then return 0 end
-		return math.max(-ENDCAP_OFFSET_LIMIT, math.min(ENDCAP_OFFSET_LIMIT, value))
-	end
-	return clamp(char and char.hunterEndcapX), clamp(char and char.hunterEndcapY)
-end
-local EndcapKey = function()
-	local key = ns.db.char.hunterEndcap or "thasdorah"
-	return endcaps[key] and key or "thasdorah"
-end
+local path = Engine:MediaPath("Hunter")
 -- Every styled bar, so endcap changes apply without a reload.
 local endcapBars = setmetatable({}, { __mode = "k" })
+-- Choice, size multiplier (/azhunter endcapscale; casts keep their head size) and
+-- nudge in pixels. X is outward from the bar's end, so a mirrored target moves the
+-- same way on screen as the player's endcap mirrored.
+local endcapSettings = Engine:NewEndcapSettings({
+	prefix = "hunter", choices = endcaps, default = "thasdorah",
+	refresh = function() Theme:RefreshEndcaps() end
+})
+endcapSettings.Install(Theme)
+local EndcapKey, EndcapScale, EndcapOffset = endcapSettings.GetKey, endcapSettings.GetScale, endcapSettings.GetOffset
 
 Theme.IsActive = function(self)
-	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return false end
 	local db = ns.db
 	if (not db or not db.char or not db.char.hunterPreview) then return false end
-	if (ns.IsSaiyaRattProfile and ns:IsSaiyaRattProfile()) then return false end
-	local variant = ns.GetActiveConfigVariant and ns:GetActiveConfigVariant()
-	return not variant or variant == ""
+	return Engine:IsMainLayout()
 end
 
 Theme.ResolveMedia = function(self, name)
@@ -55,48 +41,28 @@ Theme.ResolvePath = function(self, original)
 	return (name and self:ResolveMedia(name)) or original
 end
 
-local function Copy(source, seen)
-	if (type(source) ~= "table" or type(source.GetObjectType) == "function" or type(source[0]) == "userdata") then return source end
-	seen = seen or {}
-	if (seen[source]) then return seen[source] end
-	local result = {}; seen[source] = result
-	for k,v in pairs(source) do result[k] = Copy(v, seen) end
-	return result
-end
+local Copy = function(source) return Engine:CopyLayout(source) end
 
-local function Transform(t, seen)
-	if (type(t.GetObjectType) == "function" or type(t[0]) == "userdata") then return end
-	seen = seen or {}; if (seen[t]) then return end; seen[t] = true
-	for key,value in pairs(t) do
-		if (type(value) == "table") then Transform(value, seen)
-		elseif (type(value) == "string") then
-			local replacement = Theme:ResolvePath(value)
-			t[key] = replacement
-			-- Decorative material colors become white. Neutral halo and aura
-			-- textures retain their semantic runtime colors.
-			local assetName = replacement:match("([^\\/]+)%.tga$")
-			if (replacement ~= value and type(key) == "string" and not (ns.HunterTintable and ns.HunterTintable[assetName])) then
-				local prefix = key:match("^(.-)Texture$") or key:match("^(.-)TexturePath$")
-				local c = prefix and t[prefix.."Color"]
-				if (type(c) == "table") then t[prefix.."Color"] = { 1,1,1,c[4] or 1 } end
-			end
+-- Decorative material colors become white. Neutral halo and aura textures retain
+-- their semantic runtime colors (HunterTintable).
+local replaceOptions = {
+	resolve = function(name) return Theme:ResolveMedia(name) end,
+	keepTint = function(assetName) return ns.HunterTintable and ns.HunterTintable[assetName] end,
+	after = function(t)
+		if (t.PowerBarForegroundPosition) then
+			t.PowerBarForegroundPosition = { "BOTTOM", 0, -51 }
+		end
+		if (t.ManaOrbArtworkTexture) then
+			t.ManaOrbArtworkSize = { 32, 32 }
+			t.ManaOrbArtworkPosition = { "BOTTOM", 0, -12 }
+			t.ManaOrbArtworkColor = { 1, 1, 1, 1 }
 		end
 	end
-	if (t.PowerBarForegroundPosition) then
-		t.PowerBarForegroundPosition = { "BOTTOM", 0, -51 }
-	end
-	if (t.ManaOrbArtworkTexture) then
-		t.ManaOrbArtworkSize = { 32, 32 }
-		t.ManaOrbArtworkPosition = { "BOTTOM", 0, -12 }
-		t.ManaOrbArtworkColor = { 1, 1, 1, 1 }
-	end
-end
+}
 
-Theme.GetConfig = function(self, name, original)
-	if (not self:IsActive()) then return original end
-	if (cache[original]) then return cache[original] end
+local BuildConfig = function(name, original)
 	local config = Copy(original)
-	Transform(config)
+	Engine:ReplaceMedia(config, replaceOptions)
 	if (name == "PlayerFrame" or name == "PlayerFrameAlternate") then
 		config.PowerBarColors.FOCUS = { 1, .62, .12 }
 		if (config.PowerOrbColors) then config.PowerOrbColors.FOCUS = { 1, .62, .12 } end
@@ -132,8 +98,13 @@ Theme.GetConfig = function(self, name, original)
 			t.ManaOrbPosition[2] = t.ManaOrbPosition[2]-8
 		end
 	end
-	cache[original] = config
 	return config
+end
+local CachedConfig = Engine:NewConfigCache(BuildConfig)
+
+Theme.GetConfig = function(self, name, original)
+	if (not self:IsActive()) then return original end
+	return CachedConfig(name, original)
 end
 
 Theme.UseIceCrystal = function(self, requested) return false end
@@ -397,47 +368,9 @@ Theme.RefreshEndcaps = function(self)
 	for bar, info in pairs(endcapBars) do Endcap(bar, info.flip, info.cast) end
 end
 
-Theme.GetEndcapChoices = function(self) return endcaps end
-Theme.GetEndcap = function(self) return EndcapKey() end
-Theme.GetEndcapScale = function(self) return EndcapScale() end
-Theme.GetEndcapOffset = function(self) return EndcapOffset() end
-
---- Endcap art by key (see GetEndcapChoices). Applies live.
-Theme.SetEndcap = function(self, key)
-	if (not endcaps[key] or InCombatLockdown()) then return false end
-	ns.db.char.hunterEndcap = key
-	self:RefreshEndcaps()
-	return true
-end
-
---- Size multiplier, .5 to 2. Applies live; returns false when refused.
-Theme.SetEndcapScale = function(self, scale)
-	scale = tonumber(scale)
-	if (not scale or scale < .5 or scale > 2 or InCombatLockdown()) then return false end
-	ns.db.char.hunterEndcapScale = scale ~= 1 and scale or nil
-	self:RefreshEndcaps()
-	return true
-end
-
---- Pixel nudge; either value may be nil to keep it. Applies live.
-Theme.SetEndcapOffset = function(self, x, y)
-	if (InCombatLockdown()) then return false end
-	local oldX, oldY = EndcapOffset()
-	x, y = tonumber(x) or oldX, tonumber(y) or oldY
-	x = math.max(-ENDCAP_OFFSET_LIMIT, math.min(ENDCAP_OFFSET_LIMIT, x))
-	y = math.max(-ENDCAP_OFFSET_LIMIT, math.min(ENDCAP_OFFSET_LIMIT, y))
-	ns.db.char.hunterEndcapX = x ~= 0 and x or nil
-	ns.db.char.hunterEndcapY = y ~= 0 and y or nil
-	self:RefreshEndcaps()
-	return true
-end
-
-Theme.ResetEndcapPlacement = function(self)
-	if (InCombatLockdown()) then return false end
-	ns.db.char.hunterEndcapScale, ns.db.char.hunterEndcapX, ns.db.char.hunterEndcapY = nil, nil, nil
-	self:RefreshEndcaps()
-	return true
-end
+-- GetEndcapChoices, GetEndcap(Scale/Offset), SetEndcap(Scale/Offset) and
+-- ResetEndcapPlacement come from the engine's endcap settings above; each
+-- applies live through RefreshEndcaps and refuses in combat.
 
 Theme.Command = function(self, input)
 	local command, option = (input or ""):lower():match("^%s*(%S*)%s*(%S*)%s*$")
@@ -475,26 +408,15 @@ Theme.Command = function(self, input)
 	ReloadUI()
 end
 
-Theme.ProfileChanged = function(self)
-	if (self.loadedActive ~= self:IsActive()) then
-		if (InCombatLockdown()) then self:RegisterEvent("PLAYER_REGEN_ENABLED","ProfileChanged")
-		else self:UnregisterEvent("PLAYER_REGEN_ENABLED","ProfileChanged"); ReloadUI() end
-	else
-		self:UnregisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
-	end
-end
 Theme.OnInitialize = function(self)
 	-- The round-two pilot and the staged test set were removed on 2026-10-04.
 	if (ns.db and ns.db.char) then ns.db.char.hunterPilot, ns.db.char.hunterTest = nil, nil end
 	self:RegisterChatCommand("azhunter","Command")
 end
+Theme.ProfileChanged = Engine.ProfileChanged
+
 Theme.OnEnable = function(self)
-	self.loadedActive = self:IsActive()
-	if (self.loadedActive and ns.OptionsKit) then
-		for _,key in ipairs({ "WindowBackdrop", "WindowCasing", "ButtonBackdrop" }) do ns.OptionsKit[key].edgeFile = path("border-tooltip") end
-		if (ns.OptionsKit.InsetBackdrop) then ns.OptionsKit.InsetBackdrop.edgeFile = path("border-aura") end
-	end
-	ns.db.RegisterCallback(self,"OnProfileChanged","ProfileChanged")
-	ns.db.RegisterCallback(self,"OnProfileCopied","ProfileChanged")
-	ns.db.RegisterCallback(self,"OnProfileReset","ProfileChanged")
+	-- Chosen at load; a profile switching it on or off reloads (ThemeEngine.lua).
+	Engine:WatchProfile(self)
+	if (self.loadedActive) then Engine:StyleOptionsKit(path("border-tooltip"), path("border-aura")) end
 end

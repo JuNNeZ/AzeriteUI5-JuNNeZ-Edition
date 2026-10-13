@@ -59,4 +59,4 @@ local GenerateOptions = function()
   return options
 end
 
-Options:AddGroup("Widgets", GenerateOptions, -2700, "interface", "UIWidgetTopCenter")
+Options:AddGroup("Widgets", GenerateOptions, -2700, "world", "UIWidgetTopCenter")

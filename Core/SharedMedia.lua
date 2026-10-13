@@ -96,3 +96,19 @@ AddMedia("texture", 	"Azerite PartyRole Badge (Healer)", 				"partyrole_heal")
 AddMedia("texture", 	"Azerite PartyRole Badge (Tank)", 				"partyrole_tank")
 AddMedia("texture", 	"Azerite Spell Alert (Circular)", 				"IconAlert-Circle")
 AddMedia("texture", 	"Azerite Spell Alert Ants (Circular)", 			"IconAlertAnts-Circle")
+
+-- Sounds: Blizzard's own files by FileDataID, so Aura Sounds (Components/Auras/AuraSounds.lua)
+-- has something to offer without a media pack. Only IDs that shipping addons already
+-- register under the same meaning: WeakAuras (Types.lua), VuhDo and ArcUI.
+for _, sound in ipairs({
+	{ "AzeriteUI: Bell", 566558 },          -- VuhDo "Elf Bell Toll", ArcUI "Bell"
+	{ "AzeriteUI: Warning", 567397 },       -- ArcUI "Warning"
+	{ "AzeriteUI: Alarm", 567458 },         -- ArcUI "Alarm"
+	{ "AzeriteUI: Chime", 566076 },         -- WeakAuras "Simon Chime"
+	{ "AzeriteUI: Shing", 566240 },         -- WeakAuras "Shing!"
+	{ "AzeriteUI: Cheer", 567283 },         -- WeakAuras "Cheer"
+	{ "AzeriteUI: Thunder", 566202 },       -- WeakAuras "Thunder crack"
+	{ "AzeriteUI: Rubber Ducky", 566121 }   -- WeakAuras "Rubber Ducky"
+}) do
+	LSM:Register("sound", sound[1], sound[2])
+end

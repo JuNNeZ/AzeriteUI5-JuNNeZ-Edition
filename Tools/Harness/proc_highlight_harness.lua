@@ -253,7 +253,7 @@ check(module.db.profile.assistedHighlightColor[1] == .35, "assisted colour rever
 module.db.profile.assistedHighlightStyle = "off"
 check(assistedOptions.assistedHighlightOpacity.disabled(), "Off disables the rest")
 ns.LegacyHUD = { IsActive = function() return true end }
-check(assistedOptions.assistedHighlightThickness.hidden(), "Legacy hides thickness")
+check(assistedOptions.assistedHighlightThickness.hidden == nil and options.args.procHighlight.args.procHighlightThickness.hidden == nil, "Legacy keeps thickness (square proc rings)")
 ns.LegacyHUD = nil
 assistedOptions.reset.func()
 check(module.db.profile.assistedHighlightStyle == "current" and module.db.profile.assistedHighlightColorSource == "default", "assisted reset restores")

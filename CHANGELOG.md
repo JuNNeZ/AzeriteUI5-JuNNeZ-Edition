@@ -10,6 +10,37 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.25.0-JuNNeZ (2026-10-13) - Execute Range Page, Group Indicators, Aura Sounds and a Tidier Options Window
+
+### Highlights
+
+- **Execute range has its own page and stays inside the bar.** Every execute marker setting is now in one place, `/az -> Execute range`: a switch for nameplates, a separate one for the target frame, and the threshold, lead and colours they share. The nameplate line is cut from the bar's own art, so it no longer reaches above and below the health bar. New: **Only enemies you are fighting** (nameplates, on by default) shows the marker only on enemies that have you or your pet on their threat list. **Show from above the threshold** brings the line in early, for example 5% before your execute; the red tint still waits for the execute itself. **Own colours** sets the line and tint colours for both nameplates and the target frame.
+- **Sated and corner aura dots on group frames.** `/az -> Group Frames -> Group Indicators`. **Show Sated** puts a small Bloodlust-used icon with a countdown on each party and raid member, in combat as well. **Show Corner Dots** shows your own buffs (or anyone's) in the four corners of each group frame, from spell lists you choose per corner, with a size setting and suggestions for your class. Both are off by default.
+- **Aura sounds (Retail).** `/az -> Aura Sounds`: six slots that play a sound when a buff or debuff is gained, stacks or fades on you, your target or your focus. The game plays the sound itself, so it works in combat, raids and keys. Pick from **Common auras** (defensives and external cooldowns of every class, Bloodlust, and "Bloodlust ready again" when Sated fades) or type spell names or IDs. AzeriteUI looks up the aura each spell actually gives, which is not always the spell's own ID. A line under each slot says what the game answered. AzeriteUI now also adds eight of the game's own sounds to the list, so it is not empty without a sound pack.
+- **Combat text works again.** Hit and heal numbers on unit frames now show in dungeons and raids, where the game hides the amounts from addons. Critical hits are drawn large again; they had been drawn like ordinary hits. New switch: `/az -> Unit Frames -> Show Combat Text`.
+- **A tidier options window.** Party and raid settings moved to their own **Group Frames** page, with **Aura Sounds**, **Micro Menu** and **Execute range** also on their own pages. The Dismount Button is now on the Minimap page, and the Info Bar and Widgets pages are under World. Long pages, the page list and long dropdown lists now have a visible scroll bar, drawn like AzeriteUI's sliders, so nothing below the fold goes unnoticed. In the Rounded look, the sections under each page (Player, Target, Action Bar 1, Raid Frames, Visibility and so on) have small icons, the same in the page list and on the page; settings themselves get none.
+- **Legacy is a theme like the others, and its proc styles differ again.** `/az -> Themes -> Theme -> Legacy` switches to it and back, as `/go legacy` does. Under Legacy, every proc and assisted highlight style and thickness had drawn the same square ring (reported by Luciful); each now has its own art.
+
+### Fixes
+
+- **Great Vault on the info bar opens the vault.** Left-click the vault counter to open or close Blizzard's Great Vault window. Nothing happens in combat.
+- **No more Lua errors from aura tooltips on nameplates in dungeons** with Show spellID on, and none from the Sated icon in dungeons.
+- **Player aura brightness catches up after a raid.** In raids the game does not let addons change existing aura icons, so a brightness change made there only reached new auras until `/reload`. The skipped icons now update when the restriction ends.
+
+### Development
+
+- The debug tools (`/azdebug`, its probes and test menus, about a fifth of the addon's code) are now a separate addon, **AzeriteUI5 JuNNeZ Edition Debug Tools**, packaged beside the main folder and loaded only on first use. Saved debug switches, script errors and the debug commands keep working from the main addon. New probes measure native radial fills, addon SVG files and the execute marker's geometry (`/azdebug radial`, `svg`, `onupdatemode`, `execute`).
+- The Hunter, Mage and Paladin themes now run on one shared theme engine instead of the Paladin theme forwarding calls to the other two. Every themed layout and media lookup was compared before and after the move, and all of them were identical.
+- Aura sounds required research into a new 12.1 function. It is the renamed private-aura sound function, it matches the aura's own ID, and registering waits only for combat, encounters, keys and PvP matches; the restriction tied to the map is active in the open world and had kept every slot waiting. Aura IDs that differ from their spell's are looked up in Blizzard's own Cooldown Manager data for your spells. The Common auras IDs were checked against other addons' aura lists.
+- The scroll bars reuse the sliders' own art turned upright. The 30 section icons were drawn as an original set, generated by a script with the same rules and checks as the page icons. New offline tests cover combat text with hidden amounts, the group indicators, aura sounds, the debug loader, the theme engine, aura brightness in raids, the execute page and the scroll bars.
+
+### Access and known limits
+
+- Confirmed in game on Retail: the two-folder package and the debug tools loading on demand, combat text, Sated, corner dots, every execute marker change, Legacy from the Themes page and `/go`, the themes on the new engine, and aura brightness outdoors.
+- Checked offline only: aura sounds (in testing the sound came only after combat; the latest changes address this but are not yet confirmed), the vault click, aura brightness in and after a raid, corner dot Only Mine and placement, the scroll bars and the section icons. Nothing has been tested on WoW Forever yet.
+- Corner dots need the game's native aura containers, so they are Retail only; Sated shows on both clients. Corner dots show buffs only: the game does not filter friendly debuffs by spell.
+- Aura sounds need Retail 12.1. A change made in combat applies when the fight ends.
+
 ## 5.24.0-JuNNeZ (2026-10-12) - Assisted Highlight, Rounded Options Window and Group Frame Fixes
 
 ### Highlights

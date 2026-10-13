@@ -202,7 +202,7 @@ local function NewNamespace(retail)
 		Colors = {
 			title = Color(1, .9, .5), offwhite = Color(.77, .77, .77), normal = Color(.9, .7, .15),
 			highlight = Color(.98, .98, .98), ui = Color(.75, .75, .75),
-			quest = { green = Color(.35, .79, .35), yellow = Color(1, .7, .15), orange = Color(1, .42, .1), red = Color(.8, .1, .1) },
+			quest = { green = Color(.35, .79, .35), yellow = Color(1, .7, .15), orange = Color(1, .42, .1), red = Color(.8, .1, .1), gray = Color(120/255, 120/255, 120/255) },
 			zone = {}
 		},
 		API = {
@@ -676,13 +676,34 @@ do
 	check(vault.shown, "the vault counter shows")
 	check(vault.text == "|cff888888Vault|r " .. infoNS.Colors.normal.colorCode .. "2/9|r", "unlocked slots over all slots", vault.text)
 
+	-- Blizzard's own opener, and the panel manager's close.
+	local opened, closed = 0, 0
+	env.WeeklyRewardsFrame = nil
+	env.WeeklyRewards_ShowUI = function() opened = opened + 1 end
+	env.HideUIPanel = function(window) if (window == env.WeeklyRewardsFrame) then closed = closed + 1 end end
+
 	Info.vaultFrame.scripts.OnEnter(Info.vaultFrame)
 	local lines = env.GameTooltip.lines
 	check(lines[1] == "Great Vault", "tooltip title", lines[1])
 	check(lines[2] == "Raids|1/3  |cff8888882 more for the next slot|r", "raid row", lines[2])
 	check(lines[3] == "Dungeons|1/3  |cff8888883 more for the next slot|r", "dungeon row", lines[3])
 	check(lines[4] == "World|0/3  |cff8888882 more for the next slot|r", "world row", lines[4])
-	check(#lines == 4, "no PvP row when the client has none", #lines)
+	check(lines[5] == "<Left-Click to open the Great Vault>", "the tooltip says it can be clicked", lines[5])
+	check(#lines == 5, "no PvP row when the client has none", #lines)
+
+	-- Clicking: Blizzard's opener out of combat, the panel manager's close when open,
+	-- nothing at all in combat.
+	check(Info.vaultFrame.kind == "Button" and Info.vaultFrame.scripts.OnClick, "the counter is a button")
+	Info.vaultFrame.scripts.OnClick(Info.vaultFrame)
+	check(opened == 1, "a click opens the vault through WeeklyRewards_ShowUI")
+	env.WeeklyRewardsFrame = Widget("Frame")
+	Info.vaultFrame.scripts.OnClick(Info.vaultFrame)
+	check(closed == 1 and opened == 1, "a click while it is open closes it")
+	env.WeeklyRewardsFrame:Hide()
+	client.combat = true
+	Info.vaultFrame.scripts.OnClick(Info.vaultFrame)
+	check(opened == 1 and closed == 1, "in combat a click does nothing")
+	client.combat = false
 
 	client.vaultReady = true
 	Info:UpdateGreatVault()

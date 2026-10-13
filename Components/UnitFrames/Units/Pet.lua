@@ -476,8 +476,8 @@ local style = function(self, unit)
 		end
 	end
 
-	if (ns.HunterTheme) then ns.HunterTheme:StylePet(self) end
-	if (ns.MageTheme) then ns.MageTheme:StylePet(self) end
+	-- The theme in use, if it dresses the pet frame (Hunter's casing, Mage's seal).
+	if (ns.ThemeEngine) then ns.ThemeEngine:StylePet(self) end
 
 	-- Themes with a separate badge texture opt into the same happiness and
 	-- hover behavior. Keep Blizzard's template events, visibility and tooltip;
