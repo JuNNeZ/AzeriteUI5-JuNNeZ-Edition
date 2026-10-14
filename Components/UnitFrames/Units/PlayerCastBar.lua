@@ -49,7 +49,9 @@ local Colors = ns.Colors
 local GetFont = ns.API.GetFont
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
 
-local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }
+local defaults = { profile = ns:Merge({
+	showDelay = true -- the red +time right of the bar when a hit pushes the cast back
+}, ns.MovableModulePrototype.defaults) }
 
 -- Stop all Blizzard castbar animation groups to prevent interrupt/finish
 -- effects from playing invisibly (or flashing before alpha hooks fire).
@@ -549,6 +551,14 @@ end
 CastBarMod.Update = function(self)
 end
 
+-- oUF keeps writing the delay text; hiding the font string is all the toggle needs.
+CastBarMod.UpdateSettings = function(self)
+	local cast = self.frame and self.frame.Castbar
+	if (not cast or not cast.Delay) then return end
+	local profile = self.db and self.db.profile
+	cast.Delay:SetShown(not profile or profile.showDelay ~= false)
+end
+
 CastBarMod.OnEnable = function(self)
 
 	self:CreateUnitFrames()
@@ -557,6 +567,7 @@ CastBarMod.OnEnable = function(self)
 	self:RegisterEvent("CVAR_UPDATE", "UpdateVisibility")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateVisibility")
 	self:UpdateVisibility("OnEnable")
+	self:UpdateSettings()
 
 	ns.MovableModulePrototype.OnEnable(self)
 end

@@ -1584,6 +1584,11 @@ local GenerateOptions = function()
 		if (suboptions and suboptions.args) then
 			suboptions.name = L["Cast Bar"]
 			suboptions.order = 200
+			suboptions.args.showDelay = {
+				name = L["Show Pushback Time"],
+				desc = L["Shows the red +time right of the cast bar when taking damage pushes your cast back."],
+				order = 10, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			}
 			options.args.castbar = suboptions
 		end
 	end

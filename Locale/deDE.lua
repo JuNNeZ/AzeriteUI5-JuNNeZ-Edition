@@ -1206,3 +1206,12 @@ L["Bloodlust / Heroism / Time Warp"] = "Kampfrausch / Heldentum / Zeitkrümmung"
 L["Bloodlust ready again (Sated fades)"] = "Kampfrausch wieder bereit (Sättigung endet)"
 L["A spell name or ID, or several separated by commas. AzeriteUI looks up the aura each one gives, which is not always the spell's own ID."] = "Ein Zaubername oder eine ID, oder mehrere durch Kommas getrennt. AzeriteUI sucht die Aura, die jeder gibt; das ist nicht immer die ID des Zaubers selbst."
 L["Registered: %s."] = "Registriert: %s."
+
+-- Cast bar pushback toggle and cast bar endcap placement (2026-10-14).
+L["Show Pushback Time"] = "Rückstoßzeit anzeigen"
+L["Shows the red +time right of the cast bar when taking damage pushes your cast back."] = "Zeigt die rote +Zeit rechts vom Zauberbalken, wenn erlittener Schaden deinen Zauber verzögert."
+L["Cast bar endcap size"] = "Größe der Zauberbalken-Endkappe"
+L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."] = "Wie groß die Verzierungen des Zauberbalkens gezeichnet werden. Sie wachsen und schrumpfen um ihre eigene Mitte."
+L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "Verschiebt die Verzierungen des Zauberbalkens von den Enden des Balkens weg oder darüber hinein."
+L["Moves the cast bar's ornaments up or down."] = "Verschiebt die Verzierungen des Zauberbalkens nach oben oder unten."
+L["Reset cast bar endcap size and position"] = "Größe und Position der Zauberbalken-Endkappe zurücksetzen"

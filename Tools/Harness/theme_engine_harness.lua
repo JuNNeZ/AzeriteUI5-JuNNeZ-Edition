@@ -108,6 +108,14 @@ combat = true
 check(not holder:SetEndcap("none") and not holder:SetEndcapScale(1.2) and not holder:SetEndcapOffset(1, 1) and not holder:ResetEndcapPlacement(), "all refused in combat")
 combat = false
 check(holder:ResetEndcapPlacement() and ns.db.char.testEndcapX == nil and ns.db.char.testEndcapScale == nil, "reset clears placement")
+-- A cast bar set: named, no choices, stored apart.
+local castSet = Engine:NewEndcapSettings({ prefix = "testCast", name = "CastEndcap" })
+local castHolder = {}
+castSet.Install(castHolder)
+check(castHolder.GetCastEndcap == nil and castHolder.SetCastEndcap == nil and castHolder.GetEndcapScale == nil, "a named set without choices installs size and nudge only")
+check(castSet.GetKey() == nil and not castSet.SetKey("school"), "no choices, no key")
+check(castHolder:SetCastEndcapScale(1.5) and ns.db.char.testCastEndcapScale == 1.5 and holder:GetEndcapScale() == 1, "stored apart from the health set")
+check(castHolder:SetCastEndcapOffset(-5, 2) and castHolder:ResetCastEndcapPlacement() and ns.db.char.testCastEndcapX == nil and ns.db.char.testCastEndcapScale == nil, "named reset")
 
 -- Profile change: reload only when the theme flips, deferred in combat.
 local module = { loadedActive = false, active = false, events = {} }

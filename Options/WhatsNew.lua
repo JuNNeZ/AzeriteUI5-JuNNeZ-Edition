@@ -41,6 +41,20 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.26.0-JuNNeZ",
+		items = {
+			{
+				text = "Hide the red pushback time beside your cast bar: Show Pushback Time.",
+				page = L["Unit Frames"],
+				section = L["Cast Bar"]
+			},
+			{
+				text = "Hunter and Mage themes: resize and move the cast bar's endcaps.",
+				page = "Themes"
+			}
+		}
+	},
+	{
 		version = "5.25.0-JuNNeZ",
 		items = {
 			{

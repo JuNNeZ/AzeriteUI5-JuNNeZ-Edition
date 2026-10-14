@@ -1206,3 +1206,12 @@ L["Bloodlust / Heroism / Time Warp"] = "피의 욕망 / 영웅심 / 시간 왜�
 L["Bloodlust ready again (Sated fades)"] = "피의 욕망 다시 준비됨 (만족감 사라짐)"
 L["A spell name or ID, or several separated by commas. AzeriteUI looks up the aura each one gives, which is not always the spell's own ID."] = "주문 이름이나 ID, 또는 쉼표로 구분한 여러 개. AzeriteUI가 각 주문이 주는 효과를 찾아 줍니다. 효과 ID가 주문 ID와 다를 때도 있습니다."
 L["Registered: %s."] = "등록됨: %s."
+
+-- Cast bar pushback toggle and cast bar endcap placement (2026-10-14).
+L["Show Pushback Time"] = "시전 지연 시간 표시"
+L["Shows the red +time right of the cast bar when taking damage pushes your cast back."] = "피해를 받아 시전이 지연될 때 시전바 오른쪽에 빨간색 +시간을 표시합니다."
+L["Cast bar endcap size"] = "시전바 끝장식 크기"
+L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."] = "시전바 장식을 그리는 크기입니다. 장식은 자기 중심을 기준으로 커지고 작아집니다."
+L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "시전바 장식을 바의 끝에서 바깥으로 밀거나 바 위로 들여옵니다."
+L["Moves the cast bar's ornaments up or down."] = "시전바 장식을 위나 아래로 옮깁니다."
+L["Reset cast bar endcap size and position"] = "시전바 끝장식 크기와 위치 초기화"

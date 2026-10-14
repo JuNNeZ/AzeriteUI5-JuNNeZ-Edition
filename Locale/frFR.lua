@@ -1206,3 +1206,12 @@ L["Bloodlust / Heroism / Time Warp"] = "Furie sanguinaire / Héroïsme / Distors
 L["Bloodlust ready again (Sated fades)"] = "Furie sanguinaire à nouveau prête (Rassasié se dissipe)"
 L["A spell name or ID, or several separated by commas. AzeriteUI looks up the aura each one gives, which is not always the spell's own ID."] = "Un nom ou un ID de sort, ou plusieurs séparés par des virgules. AzeriteUI cherche l'aura que chacun donne, qui n'est pas toujours l'ID du sort lui-même."
 L["Registered: %s."] = "Enregistré : %s."
+
+-- Cast bar pushback toggle and cast bar endcap placement (2026-10-14).
+L["Show Pushback Time"] = "Afficher le temps de recul"
+L["Shows the red +time right of the cast bar when taking damage pushes your cast back."] = "Affiche le +temps en rouge à droite de la barre de sorts quand les dégâts subis retardent votre incantation."
+L["Cast bar endcap size"] = "Taille de l'embout de la barre de sorts"
+L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."] = "Taille à laquelle les ornements de la barre de sorts sont dessinés. Ils grandissent et rétrécissent autour de leur propre centre."
+L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "Éloigne les ornements de la barre de sorts des extrémités de la barre, ou les ramène par-dessus."
+L["Moves the cast bar's ornaments up or down."] = "Déplace les ornements de la barre de sorts vers le haut ou vers le bas."
+L["Reset cast bar endcap size and position"] = "Réinitialiser la taille et la position de l'embout de la barre de sorts"

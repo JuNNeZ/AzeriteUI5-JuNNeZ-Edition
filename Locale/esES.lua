@@ -1206,3 +1206,12 @@ L["Bloodlust / Heroism / Time Warp"] = "Ansia de sangre / Heroísmo / Distorsió
 L["Bloodlust ready again (Sated fades)"] = "Ansia de sangre lista otra vez (termina Saciado)"
 L["A spell name or ID, or several separated by commas. AzeriteUI looks up the aura each one gives, which is not always the spell's own ID."] = "Un nombre o ID de hechizo, o varios separados por comas. AzeriteUI busca el aura que da cada uno, que no siempre es el ID del propio hechizo."
 L["Registered: %s."] = "Registrado: %s."
+
+-- Cast bar pushback toggle and cast bar endcap placement (2026-10-14).
+L["Show Pushback Time"] = "Mostrar tiempo de retroceso"
+L["Shows the red +time right of the cast bar when taking damage pushes your cast back."] = "Muestra el +tiempo en rojo a la derecha de la barra de hechizos cuando el daño recibido retrasa tu lanzamiento."
+L["Cast bar endcap size"] = "Tamaño del remate de la barra de hechizos"
+L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."] = "Tamaño con que se dibujan los adornos de la barra de hechizos. Crecen y encogen alrededor de su propio centro."
+L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "Aleja los adornos de la barra de hechizos de los extremos de la barra, o los mete sobre ella."
+L["Moves the cast bar's ornaments up or down."] = "Mueve los adornos de la barra de hechizos hacia arriba o hacia abajo."
+L["Reset cast bar endcap size and position"] = "Restablecer tamaño y posición del remate de la barra de hechizos"

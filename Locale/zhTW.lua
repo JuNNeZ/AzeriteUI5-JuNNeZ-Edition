@@ -1206,3 +1206,12 @@ L["Bloodlust / Heroism / Time Warp"] = "嗜血 / 英勇 / 時間扭曲"
 L["Bloodlust ready again (Sated fades)"] = "嗜血再次可用（滿足消失）"
 L["A spell name or ID, or several separated by commas. AzeriteUI looks up the aura each one gives, which is not always the spell's own ID."] = "法術名稱或ID，或用逗號分隔多個。AzeriteUI 會查找每個法術給予的光環，其ID不一定與法術本身相同。"
 L["Registered: %s."] = "已註冊：%s。"
+
+-- Cast bar pushback toggle and cast bar endcap placement (2026-10-14).
+L["Show Pushback Time"] = "顯示施法延遲時間"
+L["Shows the red +time right of the cast bar when taking damage pushes your cast back."] = "受到傷害使施法被推遲時，在施法條右側顯示紅色的 +時間。"
+L["Cast bar endcap size"] = "施法條端飾大小"
+L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."] = "施法條裝飾的繪製大小。它們以自身中心為基準放大和縮小。"
+L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "將施法條裝飾從施法條兩端向外移出，或向內移到施法條上。"
+L["Moves the cast bar's ornaments up or down."] = "將施法條裝飾向上或向下移動。"
+L["Reset cast bar endcap size and position"] = "重置施法條端飾大小和位置"

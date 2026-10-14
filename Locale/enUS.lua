@@ -1205,3 +1205,12 @@ L["Bloodlust / Heroism / Time Warp"] = true
 L["Bloodlust ready again (Sated fades)"] = true
 L["A spell name or ID, or several separated by commas. AzeriteUI looks up the aura each one gives, which is not always the spell's own ID."] = true
 L["Registered: %s."] = true
+
+-- Cast bar pushback toggle and cast bar endcap placement (2026-10-14).
+L["Show Pushback Time"] = true
+L["Shows the red +time right of the cast bar when taking damage pushes your cast back."] = true
+L["Cast bar endcap size"] = true
+L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."] = true
+L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = true
+L["Moves the cast bar's ornaments up or down."] = true
+L["Reset cast bar endcap size and position"] = true

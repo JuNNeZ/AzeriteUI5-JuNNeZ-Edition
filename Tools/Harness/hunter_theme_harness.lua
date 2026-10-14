@@ -188,6 +188,12 @@ check(owner.Health.HunterOrnaments.shown,"restore after critter")
 local cast=widget(owner);cast.Shield=widget(cast);cast:SetSize(252,24.75)
 theme:StyleCastbar(cast)
 check(cast.Shield.alpha==0 and cast.HunterOrnaments.Eagle,"eagle casing without shield artifact")
+local castTip,eagle=cast.HunterOrnaments.Tip,cast.HunterOrnaments.Eagle
+check(castTip.width==58 and eagle.width==58 and castTip.points.CENTER[3]==21 and eagle.points.CENTER[3]==-21,"eagle mirrors the cast tip, unscaled")
+check(theme:SetCastEndcapScale(1.5) and castTip.width==87 and eagle.width==87 and castTip.points.CENTER[3]==21 and eagle.points.CENTER[3]==-21,"cast endcaps grow in place, live")
+check(theme:SetCastEndcapOffset(4,-2) and castTip.points.CENTER[3]==25 and eagle.points.CENTER[3]==-25 and eagle.points.CENTER[4]==-2 and castTip.points.CENTER[4]==-2,"cast endcaps move outward, live")
+check(theme:GetEndcapScale()==1 and theme:GetEndcapOffset()==0,"health endcap untouched by the cast settings")
+check(theme:ResetCastEndcapPlacement() and ns.db.char.hunterCastEndcapScale==nil and ns.db.char.hunterCastEndcapX==nil and castTip.width==58,"cast endcap reset")
 owner.Castbar=cast;cast.Backdrop=widget(cast);cast.shown=false
 theme:StyleNameplate(owner)
 check(not cast.shown,"idle plate remains hidden")

@@ -52,6 +52,12 @@ local endcapSettings = Engine:NewEndcapSettings({
 })
 endcapSettings.Install(Theme)
 local EndcapKey, EndcapScale, EndcapOffset = endcapSettings.GetKey, endcapSettings.GetScale, endcapSettings.GetOffset
+-- The cast head's own size and nudge; X is outward, to the left.
+local castSettings = Engine:NewEndcapSettings({
+	prefix = "mageCast", name = "CastEndcap",
+	refresh = function() Theme:RefreshOrnaments() end
+})
+castSettings.Install(Theme)
 
 -- The staff actually drawn, or nil for none.
 local EndcapArt = function()
@@ -63,6 +69,7 @@ end
 
 -- Every styled bar and crystal, so ornament changes apply without a reload.
 local endcapBars = setmetatable({}, { __mode = "k" })
+local castBars = setmetatable({}, { __mode = "k" })
 local crystals = setmetatable({}, { __mode = "k" })
 
 Theme.IsActive = function(self)
@@ -183,14 +190,22 @@ end
 
 -- Atiesh on the player cast bar's left end. The native casing, shield and
 -- protected-cast colours are untouched.
-Theme.StyleCastbar = function(self, cast)
-	if (not self:IsActive()) then return end
+local CastHead = function(cast)
 	local frame = OrnamentFrame(cast, "MageCastHead")
+	castBars[cast] = true
+	local size = CAST_HEAD_SLOT.size*castSettings.GetScale()
+	local dx, dy = castSettings.GetOffset()
 	frame.Art:SetTexture(path("cast-head-atiesh"))
 	frame.Art:ClearAllPoints()
-	frame.Art:SetSize(CAST_HEAD_SLOT.size, CAST_HEAD_SLOT.size)
-	frame.Art:SetPoint("CENTER", cast, "LEFT", CAST_HEAD_SLOT.x, CAST_HEAD_SLOT.y)
+	frame.Art:SetSize(size, size)
+	-- Centre-anchored, so a size change grows it in place.
+	frame.Art:SetPoint("CENTER", cast, "LEFT", CAST_HEAD_SLOT.x - dx, CAST_HEAD_SLOT.y + dy)
 	frame:Show()
+end
+
+Theme.StyleCastbar = function(self, cast)
+	if (not self:IsActive()) then return end
+	CastHead(cast)
 end
 
 -- The north ornament follows the existing moving compass anchor. Rotation,
@@ -260,10 +275,11 @@ Theme.StyleCrystal = function(self, power)
 	frame:Show()
 end
 
---- Redraws ornaments after a choice changes: endcaps, glows and badges.
+--- Redraws ornaments after a choice changes: endcaps, cast heads, glows and badges.
 Theme.RefreshOrnaments = function(self)
 	if (not self:IsActive()) then return end
 	for bar, flip in pairs(endcapBars) do Endcap(bar, flip) end
+	for cast in pairs(castBars) do CastHead(cast) end
 	for power in pairs(crystals) do self:StyleCrystal(power) end
 end
 

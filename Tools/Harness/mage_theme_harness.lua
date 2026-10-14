@@ -235,6 +235,10 @@ local cast = widget(owner)
 ns.ThemeEngine:StyleCastbar(cast)
 check(cast.MageCastHead.Art.texture:find("cast-head-atiesh.tga", 1, true) and cast.MageCastHead.Art.points.CENTER[3] == -26, "Atiesh cast head on the left")
 check(cast.MageCastHead.Art.width == 48 and cast.MageCastHead.Art.points.CENTER[3] + 24 < 0, "cast head stays outside the functional fill")
+local head = cast.MageCastHead.Art
+check(theme:SetCastEndcapScale(1.5) and head.width == 72 and head.points.CENTER[3] == -26, "cast head grows in place, live")
+check(theme:SetCastEndcapOffset(5, 3) and head.points.CENTER[3] == -31 and head.points.CENTER[4] == 3, "cast head moves outward, live")
+check(theme:ResetCastEndcapPlacement() and head.width == 48 and head.points.CENTER[3] == -26 and ns.db.char.mageCastEndcapX == nil, "cast head reset")
 local pet = widget(); pet.Health = widget(pet); pet.Health:SetSize(112, 11)
 theme:StylePet(pet)
 local seal = pet.Health.MagePetBadge

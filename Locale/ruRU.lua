@@ -1206,3 +1206,12 @@ L["Bloodlust / Heroism / Time Warp"] = "Жажда крови / Героизм /
 L["Bloodlust ready again (Sated fades)"] = "Жажда крови снова готова (спадает «Пресыщение»)"
 L["A spell name or ID, or several separated by commas. AzeriteUI looks up the aura each one gives, which is not always the spell's own ID."] = "Название или ID заклинания, или несколько через запятую. AzeriteUI находит эффект, который дает каждое; его ID не всегда совпадает с ID заклинания."
 L["Registered: %s."] = "Зарегистрировано: %s."
+
+-- Cast bar pushback toggle and cast bar endcap placement (2026-10-14).
+L["Show Pushback Time"] = "Показывать время задержки"
+L["Shows the red +time right of the cast bar when taking damage pushes your cast back."] = "Показывает красное +время справа от индикатора заклинаний, когда полученный урон задерживает ваше заклинание."
+L["Cast bar endcap size"] = "Размер наконечника индикатора заклинаний"
+L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."] = "Размер, с которым рисуются украшения индикатора заклинаний. Они растут и сжимаются вокруг собственного центра."
+L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "Отодвигает украшения индикатора заклинаний от концов полосы или заводит их на неё."
+L["Moves the cast bar's ornaments up or down."] = "Сдвигает украшения индикатора заклинаний вверх или вниз."
+L["Reset cast bar endcap size and position"] = "Сбросить размер и положение наконечника индикатора заклинаний"

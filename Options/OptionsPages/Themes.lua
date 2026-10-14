@@ -90,6 +90,47 @@ local List = function(keys, withTheme)
 	return values, sorting
 end
 
+-- The cast bar's endcap size and nudge, kept apart from the health bars' (the
+-- theme's CastEndcap methods, ThemeEngine.lua). Added to a theme group's args.
+local AddCastEndcap = function(theme, args)
+	local limit = ns.ThemeEngine and ns.ThemeEngine.EndcapOffsetLimit or 60
+	args.castHeader = { name = L["Cast Bar"], order = 10, type = "header" }
+	args.castEndcapScale = {
+		name = L["Cast bar endcap size"],
+		desc = L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."],
+		order = 11,
+		type = "range", width = "full",
+		min = .5, max = 2, step = .05, isPercent = true,
+		set = function(info, val) theme:SetCastEndcapScale(val) end,
+		get = function(info) return theme:GetCastEndcapScale() end
+	}
+	args.castEndcapX = {
+		name = L["X Offset"],
+		desc = L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."],
+		order = 12,
+		type = "range", width = "full",
+		min = -limit, max = limit, step = 1,
+		set = function(info, val) theme:SetCastEndcapOffset(val, nil) end,
+		get = function(info) return (theme:GetCastEndcapOffset()) end
+	}
+	args.castEndcapY = {
+		name = L["Y Offset"],
+		desc = L["Moves the cast bar's ornaments up or down."],
+		order = 13,
+		type = "range", width = "full",
+		min = -limit, max = limit, step = 1,
+		set = function(info, val) theme:SetCastEndcapOffset(nil, val) end,
+		get = function(info) return select(2, theme:GetCastEndcapOffset()) end
+	}
+	args.resetCastEndcap = {
+		name = L["Reset cast bar endcap size and position"],
+		order = 14,
+		type = "execute",
+		func = function() theme:ResetCastEndcapPlacement() end
+	}
+	return args
+end
+
 local GenerateHunter = function(order)
 	local Hunter = ns.HunterTheme
 	if (not Hunter) then return end
@@ -99,7 +140,7 @@ local GenerateHunter = function(order)
 		type = "group",
 		inline = true,
 		hidden = function() return Theme() ~= "hunter" end,
-		args = {
+		args = AddCastEndcap(Hunter, {
 			endcap = {
 				name = L["Endcap"],
 				desc = L["The ornament at the outer end of the health bars."],
@@ -147,7 +188,7 @@ local GenerateHunter = function(order)
 				type = "execute",
 				func = function() Hunter:ResetEndcapPlacement() end
 			}
-		}
+		})
 	}
 end
 
@@ -160,7 +201,7 @@ local GenerateMageTheme = function(order)
 		type = "group",
 		inline = true,
 		hidden = function() return Theme() ~= "mage" end,
-		args = {
+		args = AddCastEndcap(Mage, {
 			endcap = {
 				name = L["Endcap"],
 				desc = L["The ornament at the outer end of the health bars."],
@@ -210,7 +251,7 @@ local GenerateMageTheme = function(order)
 				type = "execute",
 				func = function() Mage:ResetEndcapPlacement() end
 			}
-		}
+		})
 	}
 end
 

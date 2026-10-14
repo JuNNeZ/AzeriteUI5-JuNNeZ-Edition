@@ -9,15 +9,21 @@ local endcaps = { thasdorah = true, talonclaw = true, titanstrike = true, thorid
 local path = Engine:MediaPath("Hunter")
 -- Every styled bar, so endcap changes apply without a reload.
 local endcapBars = setmetatable({}, { __mode = "k" })
--- Choice, size multiplier (/azhunter endcapscale; casts keep their head size) and
--- nudge in pixels. X is outward from the bar's end, so a mirrored target moves the
--- same way on screen as the player's endcap mirrored.
+-- Choice, size multiplier (/azhunter endcapscale) and nudge in pixels. X is outward
+-- from the bar's end, so a mirrored target moves the same way on screen as the
+-- player's endcap mirrored.
 local endcapSettings = Engine:NewEndcapSettings({
 	prefix = "hunter", choices = endcaps, default = "thasdorah",
 	refresh = function() Theme:RefreshEndcaps() end
 })
 endcapSettings.Install(Theme)
 local EndcapKey, EndcapScale, EndcapOffset = endcapSettings.GetKey, endcapSettings.GetScale, endcapSettings.GetOffset
+-- The cast bar's tip and eagle have a size and nudge of their own (same bow).
+local castSettings = Engine:NewEndcapSettings({
+	prefix = "hunterCast", name = "CastEndcap",
+	refresh = function() Theme:RefreshEndcaps() end
+})
+castSettings.Install(Theme)
 
 Theme.IsActive = function(self)
 	local db = ns.db
@@ -129,9 +135,9 @@ local Endcap = function(bar, flip, cast)
 	frame:SetShown(not compact)
 	if (compact) then return end
 	local base = math.min(cast and 58 or 48, bar:GetHeight()*(cast and 2.35 or 1.2))
-	local size = base*(cast and 1 or EndcapScale())
-	local dx, dy = 0, 0
-	if (not cast) then dx, dy = EndcapOffset() end
+	local size = base*(cast and castSettings.GetScale() or EndcapScale())
+	local dx, dy
+	if (cast) then dx, dy = castSettings.GetOffset() else dx, dy = EndcapOffset() end
 	local art = frame.Tip
 	art:SetTexture(path("endcap-"..(key == "none" and "thasdorah" or key)))
 	art:SetAlpha(key == "none" and 0 or 1)
@@ -154,7 +160,9 @@ local Endcap = function(bar, flip, cast)
 		frame.Eagle = eagle
 		eagle:SetTexture(path("eagle")); eagle:ClearAllPoints()
 		eagle:SetSize(size,size)
-		eagle:SetPoint("RIGHT",bar,"LEFT",8,0)
+		-- Mirror of the tip: centred where its unscaled art sat (inner edge 8px
+		-- over the bar's left end), X outward to the left.
+		eagle:SetPoint("CENTER",bar,"LEFT",-x,dy)
 	end
 end
 

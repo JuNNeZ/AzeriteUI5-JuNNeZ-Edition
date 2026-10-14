@@ -1206,3 +1206,12 @@ L["Bloodlust / Heroism / Time Warp"] = "Brama di Sangue / Eroismo / Distorsione 
 L["Bloodlust ready again (Sated fades)"] = "Brama di Sangue di nuovo pronta (Sazietà svanisce)"
 L["A spell name or ID, or several separated by commas. AzeriteUI looks up the aura each one gives, which is not always the spell's own ID."] = "Un nome o ID di incantesimo, o più separati da virgole. AzeriteUI cerca l'aura che ognuno dà, che non è sempre l'ID dell'incantesimo stesso."
 L["Registered: %s."] = "Registrato: %s."
+
+-- Cast bar pushback toggle and cast bar endcap placement (2026-10-14).
+L["Show Pushback Time"] = "Mostra tempo di ritardo"
+L["Shows the red +time right of the cast bar when taking damage pushes your cast back."] = "Mostra il +tempo in rosso a destra della barra degli incantesimi quando i danni subiti ritardano il tuo lancio."
+L["Cast bar endcap size"] = "Dimensione del terminale della barra degli incantesimi"
+L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."] = "Quanto grandi vengono disegnati gli ornamenti della barra degli incantesimi. Crescono e si riducono attorno al proprio centro."
+L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "Allontana gli ornamenti della barra degli incantesimi dalle estremità della barra, o li sposta sopra di essa."
+L["Moves the cast bar's ornaments up or down."] = "Sposta gli ornamenti della barra degli incantesimi in su o in giù."
+L["Reset cast bar endcap size and position"] = "Ripristina dimensione e posizione del terminale della barra degli incantesimi"

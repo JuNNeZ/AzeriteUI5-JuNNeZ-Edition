@@ -184,14 +184,17 @@ end
 
 --- The endcap choice, size and nudge a theme stores per character, as
 --- ns.db.char.<prefix>Endcap, <prefix>EndcapScale, <prefix>EndcapX/Y.
---- options: prefix, choices (key -> true), default, clearDefault (store nil for the
---- default instead of the key), refresh (called after every change).
+--- options: prefix, choices (key -> true; nil for size and nudge only), default,
+--- clearDefault (store nil for the default instead of the key), refresh (called
+--- after every change), name (the theme methods' infix, "Endcap" by default; a
+--- cast bar set uses "CastEndcap": GetCastEndcapScale, SetCastEndcapOffset, ...).
 Engine.NewEndcapSettings = function(self, options)
 	local prefix, choices, default = options.prefix, options.choices, options.default
 	local settings = {}
 	local Char = function() return ns.db and ns.db.char end
 
 	settings.GetKey = function()
+		if (not choices) then return end
 		local char = Char()
 		local key = char and char[prefix .. "Endcap"] or default
 		return choices[key] and key or default
@@ -211,7 +214,7 @@ Engine.NewEndcapSettings = function(self, options)
 		return true
 	end
 	settings.SetKey = function(key)
-		if (not choices[key] or InCombatLockdown()) then return false end
+		if (not choices or not choices[key] or InCombatLockdown()) then return false end
 		local stored = key
 		if (options.clearDefault and key == default) then stored = nil end
 		Char()[prefix .. "Endcap"] = stored
@@ -242,14 +245,17 @@ Engine.NewEndcapSettings = function(self, options)
 
 	--- The theme methods the Themes page and commands call, on `theme`.
 	settings.Install = function(theme)
-		theme.GetEndcapChoices = function() return choices end
-		theme.GetEndcap = function() return settings.GetKey() end
-		theme.GetEndcapScale = function() return settings.GetScale() end
-		theme.GetEndcapOffset = function() return settings.GetOffset() end
-		theme.SetEndcap = function(_, key) return settings.SetKey(key) end
-		theme.SetEndcapScale = function(_, scale) return settings.SetScale(scale) end
-		theme.SetEndcapOffset = function(_, x, y) return settings.SetOffset(x, y) end
-		theme.ResetEndcapPlacement = function() return settings.Reset() end
+		local name = options.name or "Endcap"
+		if (choices) then
+			theme["Get" .. name .. "Choices"] = function() return choices end
+			theme["Get" .. name] = function() return settings.GetKey() end
+			theme["Set" .. name] = function(_, key) return settings.SetKey(key) end
+		end
+		theme["Get" .. name .. "Scale"] = function() return settings.GetScale() end
+		theme["Get" .. name .. "Offset"] = function() return settings.GetOffset() end
+		theme["Set" .. name .. "Scale"] = function(_, scale) return settings.SetScale(scale) end
+		theme["Set" .. name .. "Offset"] = function(_, x, y) return settings.SetOffset(x, y) end
+		theme["Reset" .. name .. "Placement"] = function() return settings.Reset() end
 	end
 	return settings
 end

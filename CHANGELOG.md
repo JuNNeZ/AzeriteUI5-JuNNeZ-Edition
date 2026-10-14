@@ -10,6 +10,23 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.26.0-JuNNeZ (2026-10-14) - Pushback Time Toggle and Cast Bar Endcap Placement
+
+### Highlights
+
+- **Hide the pushback time.** When taking damage pushes your cast back, AzeriteUI shows the delay as red `+time` text to the right of the player cast bar. You can now turn it off: `/az -> Unit Frames -> Cast Bar -> Show Pushback Time`. It is on by default, so nothing changes unless you switch it off, and it applies at once. Requested by Neil.
+- **Resize and move the cast bar's endcaps.** The Hunter theme (the bow tip and the eagle) and the Mage theme (Atiesh's head) now have cast bar endcap settings under `/az -> Themes`: size (50-200%), X and Y offset, and a reset. They are separate from the health bar endcap settings, apply at once and are saved per character. The endcaps grow and shrink around their own centre, and X moves them outward from the ends of the bar. Requested by Yarko.
+
+### Development
+
+- The themes' endcap settings were generalised so a theme can carry a second set that only has size and position. The cast bar endcaps use it in both themes, which keeps them independent of the health bar endcaps. The Hunter eagle is now anchored by its centre, so it scales in place; at 100% it sits where it did before. New offline tests check the size, outward movement and reset of the cast bar endcaps in both themes, and the locale check covers the seven new texts in all ten languages.
+
+### Access and known limits
+
+- Stock AzeriteUI, Legacy and the Paladin preview draw no cast bar endcap, so the new endcap settings appear only on the Hunter and Mage themes.
+- The toggle covers the player cast bar. The target cast bar shows its delay inside its own time text and is unchanged.
+- Checked offline only; not yet confirmed in game on Retail or WoW Forever.
+
 ## 5.25.0-JuNNeZ (2026-10-13) - Execute Range Page, Group Indicators, Aura Sounds and a Tidier Options Window
 
 ### Highlights
