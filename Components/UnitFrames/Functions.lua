@@ -772,7 +772,7 @@ end
 -- polling for ToT) may mean another unit in the frame, and snaps.
 local EASE_EVENTS = {
 	ForceUpdate = true,
-	UNIT_HEALTH = true, UNIT_MAXHEALTH = true,
+	UNIT_HEALTH = true, UNIT_MAXHEALTH = true, UNIT_MAX_HEALTH_MODIFIERS_CHANGED = true,
 	UNIT_ABSORB_AMOUNT_CHANGED = true, UNIT_HEAL_ABSORB_AMOUNT_CHANGED = true, UNIT_HEAL_PREDICTION = true,
 	UNIT_POWER_FREQUENT = true, UNIT_POWER_UPDATE = true, UNIT_MAXPOWER = true
 }
@@ -794,6 +794,15 @@ API.TraceSmooth = function(element, unit, event, snap, guidChanged, rawCur, rawC
 	local reason = ""
 	if (snap) then
 		reason = guidChanged and " (another unit)" or (not element.__AzeriteUI_HasValue) and " (first value)" or " (event)"
+	else
+		-- The trace runs before the write: a plain update inside the hold after a snap
+		-- (SetStatusBarValuesCompat) snaps too, so say so instead of "eased".
+		local now = GetTime and GetTime() or nil
+		local holdUntil = element.__AzeriteUI_SnapUntil
+		if (now and type(holdUntil) == "number" and now < holdUntil) then
+			snap = true
+			reason = " (hold after a snap)"
+		end
 	end
 	local delta = ""
 	if (rawCurSafe) then

@@ -33,8 +33,7 @@ ns.HunterTheme = {
 }
 ns.PaladinTheme = {
 	IsActive = function()
-		return ns.db.char.paladinPreview == true and ns.db.global.enableDevelopmentMode == true
-			and not ns.HunterTheme:IsActive() and not variant
+		return ns.db.char.paladinPreview == true and not ns.HunterTheme:IsActive() and not variant
 	end,
 	ApplyCrystalEffect = record("paladin:crystal"), ClearCrystalEffect = record("paladin:crystal-off"),
 	ApplyOrbEffect = record("paladin:orb"), ClearOrbEffect = record("paladin:orb-off")
@@ -57,10 +56,10 @@ local function drawn()
 	return seen, orb
 end
 
--- Defaults: AzeriteUI, no effects, Paladin hidden outside Development Mode.
+-- Defaults: AzeriteUI, no effects; Paladin offered like the other themes.
 check(E:GetTheme() == "azerite", "AzeriteUI by default")
 check(E:GetCrystalEffect() == "none" and E:GetOrbEffect() == "none", "no effects by default")
-check(#E:GetThemes() == 3, "Paladin not offered outside Development Mode")
+check(#E:GetThemes() == 4, "Paladin offered outside Development Mode", #E:GetThemes())
 check(not E:NeedsReload("azerite"), "the theme already built needs no reload")
 local seen, orb = drawn()
 check(seen["paladin:crystal-off"] and seen["paladin:orb-off"] and not orb, "unused effects are cleared, orb left to Player.lua")
@@ -109,7 +108,9 @@ E:SetLitePlus(true); E:SetCrystalChoice("paladin")
 ns.db.global.enableDevelopmentMode = false
 check(E:GetCrystalEffect() == "paladin", "Paladin Light in Lite+ outside Development Mode")
 check(E:SetOrbChoice("paladin") and E:GetOrbEffect() == "paladin", "Paladin orb Light outside Development Mode")
-check(not E:SetTheme("paladin"), "full Paladin artwork remains a Development Mode preview")
+local offered = false
+for _, key in ipairs(E:GetThemes()) do if (key == "paladin") then offered = true end end
+check(offered, "the full Paladin theme is offered outside Development Mode")
 seen, orb = drawn()
 check(orb and seen["paladin:crystal"] and seen["paladin:orb"], "both public Lite+ Light effects dispatched")
 ns.db.global.enableDevelopmentMode = true

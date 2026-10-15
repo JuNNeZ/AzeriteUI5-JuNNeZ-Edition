@@ -155,7 +155,7 @@ assert(not resourceColour.values().light, "Light resource colour is specific to 
 for _, key in ipairs({ "theme", "litePlus", "effects", "hunter", "paladin", "mageTheme", "mage" }) do assert(themes.args[key], "Themes entry: " .. key) end
 local themeSelect = themes.args.theme
 assert(themeSelect.get() == "hunter", "the dropdown shows the theme in use")
-assert(themeSelect.values().mage and not themeSelect.values().paladin, "Paladin offered only in Development Mode")
+assert(themeSelect.values().mage and themeSelect.values().paladin, "Mage and Paladin offered without Development Mode")
 assert(themeSelect.sorting()[1] == "azerite", "AzeriteUI first")
 assert(type(themeSelect.confirm(nil, "mage")) == "string", "leaving Hunter asks before reloading")
 assert(not themes.args.hunter.hidden() and themes.args.paladin.hidden() and themes.args.mage.hidden() and themes.args.mageTheme.hidden(), "only the Hunter settings show on Hunter")

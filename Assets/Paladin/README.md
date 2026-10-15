@@ -246,3 +246,79 @@ Review and exact built-in prompts: Docs/Research_Assets/Paladin/Rebuild-2026-10-
 HD-Repair (paths from repository root). Production sources: Sources/HD there.
 After /reload, check actual threat on/off, endcap None/restore, join, model
 aperture, user scales/anchors and combat on Retail and Forever.
+
+
+## 2026-10-15 - Intact HD portrait and matching health terminals (offline correction)
+
+Supersedes the radial portrait export and tiny concept health crops described
+above. The approved portrait attachment is now the literal locked source,
+uniformly contained in the native canvas: original painted height, source
+aspect, no radial remap or native metal stencil. Its narrower natural width
+is intentional; the saved frame rectangle and live model stay unchanged.
+Native glass is copied only into its actual transparent aperture.
+
+A new 2169x725 template-guided built-in image_gen painting supplies all four
+health variants. One uniform material scale preserves finished end facets;
+plain runs are shortened or stud sections inserted for native bar lengths.
+Normal/boss retain three/five studs. Native fill and prediction are untouched.
+A complete closed dipped termination is shown with Endcap None. Enabling the
+separate foreground relic selects its mounting shoulder and matching halo,
+so the old lower tip does not protrude through the fitting. Both sides mirror
+as a unit; runtime size, offset, layer order and saved settings are retained.
+
+Four approved crystal/cradle TGAs, endcap painting, cast art, Light/effect art
+and every unrelated existing texture remain byte-identical to this iteration's
+baseline. Sixteen existing health/portrait TGAs change; twelve matching capped
+back/front/glow textures are added. No version/release action in this repair.
+
+Review, exact built-in prompts, approved portrait lock and hash inventory:
+Docs/Research_Assets/Paladin/Rebuild-2026-10-14/Whole-Asset-Repair/.
+Assembly.png uses actual exports and native layouts at empty/partial/full,
+normal/novice/boss, both terminals and threat. Source-to-export.png compares
+the intact approved border with the exported sprite at the same height.
+These are offline reconstructions, not screenshots of the live WoW client.
+
+After /reload, compare player/target Endcap None and Ashbringer, including
+health/prediction underneath, dipped bare ending, portrait model, actual threat,
+UI scale, saved positions and combat/BugSack. Retail and Forever still need
+visual acceptance. Older exact-native-alpha passes did not prove fidelity.
+
+
+## Protected player castbar spike - 2026-10-15
+
+The protected casing now combines the unchanged ordinary rails with an intact
+HD Paladin stud, replacing the old shadow-only spike. Its separate front layer
+follows Shield at the native rectangle; ordinary backdrop visibility selects
+the matching shield state within Paladin only. Fill, text, colour logic and
+optional libram remain unchanged. Both protected TGAs change; all other 68
+textures retain their hashes. This leaves 25 native casing alphas exact, with
+the painted cast spike using its own alpha within native bounds. Offline
+comparison/tests: Docs/Research_Assets/Paladin/Rebuild-2026-10-14/Cast-Spike-Repair.
+After /reload, validate ordinary/protected casts and channels, state changes,
+libram None/restore and BugSack in Retail/Forever. Live acceptance remains owed.
+
+
+## HD player castbar and Silver Hand libram - 2026-10-15 (offline)
+
+The ordinary and protected player cast casings now use a dedicated HD painting,
+exported at 1024x512 (4x density) for both back and front layers. This is a
+scoped canvas-density exception: normalized native openings, draw rectangles,
+fill, text, anchors and optional book placement are unchanged. Straight rail
+runs are shortened at one material scale; finished tips remain intact. The
+protected variant keeps its separate painted stud and matching foreground.
+
+The libram is newly painted in HD, with a silver armored fist and gold sunburst
+representing the Order of the Silver Hand embossed between its gold straps.
+Its export remains 256x256 in the existing shared slot. Five existing TGAs
+change; all other 65 Paladin TGAs, including the approved crystal, health,
+portrait and wooden compact casting case, retain their pre-task hashes.
+
+Installed asset checks pass, style has zero geometry failures (21 advisory look
+notes); Paladin/preview/effects harnesses pass 2209/550/53 checks. Old 256x128
+cast pair is rejected by the HD density guard. Sources, generation prompts,
+actual-export comparison and hash evidence are retained in
+Docs/Research_Assets/Paladin/Rebuild-2026-10-14/Cast-HD-Repair/.
+
+Still owed in Retail and Forever: /reload, ordinary/protected casts and channels,
+transitions, libram None/restore, scaled and moved layouts, text/fill and BugSack.
+The comparison is an offline reconstruction; no live client confirmation.

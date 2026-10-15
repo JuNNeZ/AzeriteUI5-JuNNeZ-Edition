@@ -140,3 +140,34 @@ API.CopyLayout = function(sv, source, target, getLive)
 	end
 	return copied
 end
+
+--- Puts profile `target`'s layout back to defaults in the raw saved tables: every saved
+-- position, the mover links and the master scale go; every other setting stays. This is
+-- the /lock window's Reset (Luciful's request); the full reset stays on /az -> Profiles.
+-- getLive(name) as for API.CopyLayout. Returns the number of namespaces that held positions.
+API.ResetLayout = function(sv, target, getLive)
+	if (type(sv) ~= "table" or type(target) ~= "string") then return 0 end
+
+	local coreTarget = type(sv.profiles) == "table" and sv.profiles[target]
+	if (type(coreTarget) == "table") then
+		for key in next, CORE_KEYS do coreTarget[key] = nil end
+	end
+
+	local cleared = 0
+	local namespaces = sv.namespaces
+	if (type(namespaces) ~= "table") then return cleared end
+	for name, data in next, namespaces do
+		if (type(data) == "table") then
+			local to = type(data.profiles) == "table" and data.profiles[target] or nil
+			if (type(to) ~= "table" and getLive) then
+				local live = getLive(name)
+				if (type(live) == "table") then to = live end
+			end
+			if (HasPosition(to, 1)) then
+				ClearPositions(to, 1)
+				cleared = cleared + 1
+			end
+		end
+	end
+	return cleared
+end

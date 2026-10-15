@@ -102,6 +102,18 @@ local ApplySmoothing = function(bar)
 	end
 end
 
+-- DisableSmoothing(false[, kind]) on bars from CreateBar; SetBarSmoothing below for plain StatusBars.
+local SetBarSmoothing = function(element, disabled, kind)
+	element.__AzeriteUI_WantsSmoothing = (not disabled) and true or nil
+	element.__AzeriteUI_SmoothKind = kind or element.__AzeriteUI_SmoothKind or "bars"
+	if (element.__AzeriteUI_WantsSmoothing) then
+		SmoothBars[element] = true
+	else
+		SmoothBars[element] = nil
+	end
+	ApplySmoothing(element)
+end
+
 -- UnitFrame Callbacks
 ---------------------------------------------------
 local UnitFrame_CreateBar = function(self, name, parent, ...)
@@ -146,16 +158,7 @@ local UnitFrame_CreateBar = function(self, name, parent, ...)
 	-- DisableSmoothing(false[, "castbars"]) lets the bar ease while its switch is on;
 	-- DisableSmoothing(true) keeps it Immediate. Enum.StatusBarInterpolation only has
 	-- Immediate = 0 and ExponentialEaseOut = 1 (there is no Linear member).
-	bar.DisableSmoothing = bar.DisableSmoothing or function(element, disabled, kind)
-		element.__AzeriteUI_WantsSmoothing = (not disabled) and true or nil
-		element.__AzeriteUI_SmoothKind = kind or element.__AzeriteUI_SmoothKind or "bars"
-		if (element.__AzeriteUI_WantsSmoothing) then
-			SmoothBars[element] = true
-		else
-			SmoothBars[element] = nil
-		end
-		ApplySmoothing(element)
-	end
+	bar.DisableSmoothing = bar.DisableSmoothing or SetBarSmoothing
 	bar.SetSparkMap = bar.SetSparkMap or function(element, map)
 		element.sparkMap = map
 	end
@@ -317,6 +320,13 @@ ns.UnitFrame.SetSmoothingEnabled = function(kind, enabled)
 			ApplySmoothing(bar)
 		end
 	end
+end
+
+--- Lets a plain StatusBar (not made by CreateBar, e.g. Target's power crystal) ease
+-- under the same switch: wants true lists it, false keeps it Immediate. kind as above.
+ns.UnitFrame.SetBarSmoothing = function(bar, wants, kind)
+	if (not bar) then return end
+	SetBarSmoothing(bar, not wants, kind)
 end
 
 -- Re-applies the saved switches to every listed bar (profile changes).

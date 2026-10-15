@@ -56,15 +56,12 @@ local originalGroups = {}
 for _, name in ipairs({ "PetFrame", "PartyFrames", "Raid5Frames", "RaidFrames", "ArenaFrames", "MirrorTimers" }) do originalGroups[name] = ns.GetConfig(name) end
 local compactOriginals = { FocusFrame = ns.GetConfig("FocusFrame"), ToTFrame = ns.GetConfig("ToTFrame") }
 ns.db = { global = {}, char = {}, RegisterCallback = function() end }
+check(not theme:IsActive(), "off until chosen")
+check(ns.GetConfig("PlayerFrame") == original, "off returns original table")
+theme:OnInitialize()
+check(theme.command == "azpaladin", "command registered without Development Mode (public since 5.27.1)")
 ns.db.char.paladinPreview = true
-check(not theme:IsActive(), "saved request alone does not enable development art")
-check(ns.GetConfig("PlayerFrame") == original, "dev-off returns original table")
-theme:OnInitialize()
-check(not theme.command, "hidden command unavailable outside dev mode")
-ns.db.global.enableDevelopmentMode = true
-theme:OnInitialize()
-check(theme.command == "azpaladin", "secret command registered in dev mode")
-check(theme:IsActive(), "main theme can enable preview")
+check(theme:IsActive(), "choosing it enables the theme without Development Mode")
 local casings = 0
 for name in pairs(theme.Media) do
 	casings = casings + 1
@@ -412,6 +409,9 @@ check(nativeBackdrop.texture:find("-capped.tga",1,true)
 owner.Health:SetSize(40,36)
 theme:StyleHealth(owner, { HealthBackdropTexture = theme:ResolveOwnMedia("hp_critter_case") }, true)
 check(not owner.Health.PaladinOrnaments.shown and not owner.Health.PaladinRails.shown, "critter has no blade ornament or misplaced long rails")
+check(not owner.Health.PaladinOrnaments.Threat.shown, "critter transition clears the separate endcap halo")
+threat:Show()
+check(not owner.Health.PaladinOrnaments.Threat.shown, "compact threat events cannot resurrect the old relic halo")
 owner.Health:SetSize(533,40)
 theme:StyleHealth(owner, { HealthBackdropTexture = theme:ResolveOwnMedia("hp_boss_case") }, true)
 check(owner.Health.PaladinRails.Art.texture:find("hp_boss_case-capped-over", 1, true), "boss casing foreground follows native variant")
@@ -421,10 +421,14 @@ check(owner.Health.PaladinRails.Art.allPoints == nativeBackdrop, "alternate play
 local standalone = widget(owner)
 standalone:SetSize(112,11)
 standalone.Backdrop, standalone.Shield = widget(standalone), widget(standalone)
+standalone.Shield:Hide()
 theme:StyleCastbar(standalone)
 check(standalone.Shield.alpha == nil, "native protected cast shield retained")
 check(standalone.width == 112 and standalone.height == 11, "cast meter is native sized")
 check(standalone.PaladinRails.Art.allPoints == standalone.Backdrop, "cast foreground follows native backdrop")
+check(standalone.PaladinShieldRails.Art.allPoints == standalone.Shield
+    and standalone.PaladinShieldRails.Art.texture:find("cast_back_spiked-over",1,true), "protected front uses its own painted spike and Shield rectangle")
+check(not standalone.PaladinShieldRails.shown, "ordinary cast starts without protected front")
 check(standalone.PaladinCastHead.Art.texture:find("cast-head-libram", 1, true), "standalone libram cast head")
 check(standalone.PaladinCastHead.Art.points.CENTER[2] == "LEFT", "libram on cast left only")
 check(theme:SetCastEndcap("none") and not standalone.PaladinCastHead.shown,
@@ -441,15 +445,52 @@ local castCount = widgetCount
 theme:StyleCastbar(standalone)
 check(widgetCount == castCount, "cast restyle reuses frames")
 standalone.Backdrop:Hide()
+standalone.Shield:Show()
+check(standalone.PaladinShieldRails.shown, "protected cast shows painted spike front with shield")
 check(not standalone.PaladinRails.shown, "protected cast hides ordinary front lip with native backdrop")
 standalone.Backdrop:Show()
+standalone.Shield:Hide()
+check(not standalone.PaladinShieldRails.shown, "ordinary cast clears protected spike front")
 check(standalone.PaladinRails.shown, "ordinary front lip returns with backdrop")
 standalone.Backdrop:SetShown(false)
+standalone.Shield:SetShown(true)
 theme:StyleCastbar(standalone)
 check(not standalone.PaladinRails.shown, "restyle during protected cast does not resurrect ordinary rails")
+check(standalone.PaladinShieldRails.shown, "restyle during protected cast preserves matching spike front")
+standalone.Shield:SetShown(false)
+check(not standalone.PaladinShieldRails.shown, "SetShown false clears the protected front")
 standalone.Backdrop:SetShown(true)
 check(theme:SetCastEndcapScale(1.5) and standalone.PaladinCastHead.Art.width == 72, "live cast size changes ornament only")
 check(standalone.width == 112, "live cast ornament never scales meter")
+
+-- Exercise the actual player's callback as well as direct widget transitions.
+-- Duration/net-stat stubs keep the unrelated latency-zone work out of this test.
+do
+    local file = assert(io.open(root.."/Components/UnitFrames/Units/PlayerCastBar.lua","r"))
+    local source = file:read("*a"); file:close()
+    local first = assert(source:find("local Cast_Update = function",1,true))
+    local last = assert(source:find("-- Frame Script Handlers",first,true))
+    local chunk = assert(loadstring("local Colors, Cast_GetMaxDuration, GetNetStats = ...\n"
+        ..source:sub(first,last-1).."\nreturn Cast_Update"))
+    setfenv(chunk,env)
+    local update = chunk(ns.Colors,function() return 1 end,function() return 0,0,0,0 end)
+    standalone.SafeZone = widget(standalone)
+    standalone.SetStatusBarColor = function(self,...) self.castColor = {...} end
+    standalone.notInterruptible = false; update(standalone,"player")
+    check(standalone.PaladinRails.shown and not standalone.Shield.shown and not standalone.PaladinShieldRails.shown,
+        "real ordinary cast callback clears protected spike and its old shadow")
+    standalone.notInterruptible = true; update(standalone,"player")
+    check(not standalone.PaladinRails.shown and standalone.Shield.shown and standalone.PaladinShieldRails.shown,
+        "real protected cast callback switches backdrop and matching spike front")
+    theme:SetCastEndcap("none")
+    check(standalone.PaladinShieldRails.shown and not standalone.PaladinCastHead.shown,
+        "protected spike remains when optional libram is disabled")
+    theme:SetCastEndcap("libram")
+    standalone.notInterruptible = false; update(standalone,"player")
+    check(standalone.PaladinRails.shown and not standalone.PaladinShieldRails.shown,
+        "real callback restores ordinary rails after a protected cast")
+end
+
 theme:ResetCastEndcapPlacement()
 owner.Health:SetSize(112,11)
 theme:StyleHealth(owner, { HealthBarTexture = "cast_bar.tga", HealthBackdropTexture = theme:ResolveOwnMedia("cast_back") }, true)
@@ -689,7 +730,7 @@ do
     local crystalOption, orbOption = page.args.effects.args.crystal, page.args.effects.args.orb
     check(crystalOption.values().paladin and orbOption.values().paladin,
         "both Lite+ lists offer approved Light without Development Mode")
-    check(not page.args.theme.values().paladin, "public Light does not expose full Paladin artwork")
+    check(page.args.theme.values().paladin, "the full Paladin theme is offered without Development Mode")
     local beforeLite = reloads
     page.args.litePlus.set(nil, true)
     crystalOption.set(nil, "paladin"); orbOption.set(nil, "paladin")

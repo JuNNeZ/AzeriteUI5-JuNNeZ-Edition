@@ -165,6 +165,20 @@ ns.CopyLayout = function(self, sourceProfileKey)
 	return true
 end
 
+--- Puts the current profile's layout (frame positions, mover links and AzeriteUI Scale)
+-- back to defaults, leaving every other setting alone, then reloads so each module
+-- places its frames from its defaults. Refused in combat. See API.ResetLayout.
+ns.ResetLayout = function(self)
+	if (InCombatLockdown()) then return false end
+	local children = self.db.children
+	ns.API.ResetLayout(self.db.sv, self.db:GetCurrentProfile(), function(name)
+		local child = children and children[name]
+		return child and child.profile
+	end)
+	ReloadUI()
+	return true
+end
+
 ns.DeleteProfile = function(self, targetProfileKey)
 	local currentProfileKey = self.db:GetCurrentProfile()
 	if (targetProfileKey == "Default" or self:IsBuiltinProfile(targetProfileKey)) then

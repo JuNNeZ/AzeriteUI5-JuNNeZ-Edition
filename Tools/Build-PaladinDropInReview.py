@@ -136,8 +136,9 @@ def cast(fraction, themed=True, protected=False, endcap=True):
     B.fill(scene, db['CastBarTexture'], bar, 1, B.DARK)
     B.fill(scene, db['CastBarTexture'], bar, fraction, (.8,.2,.12) if protected else db['CastBarColor'])
     if themed:
-        # Ordinary front lip disappears with native backdrop during protected casts.
-        if not protected: over(scene, 'cast_back', rect)
+        # Each native backdrop has its own matching foreground; the protected
+        # state retains its painted Paladin spike above the fill.
+        over(scene, 'cast_back_spiked' if protected else 'cast_back', rect)
         # Runtime anchors to LEFT at x=-26, without mirroring the book artwork.
         if endcap:
             B.put(scene, asset('Interface/Assets/Paladin/cast-head-libram.tga'),
@@ -370,6 +371,82 @@ def contour_review():
     board.convert('RGB').save(folder/'Comparison.png')
 
 
+def whole_asset_review():
+    """Review installed exports, source identity and both matching terminals."""
+    folder = WORK/'Whole-Asset-Repair'; folder.mkdir(exist_ok=True)
+    board = Image.new('RGBA',(1500,1460),'#24252b')
+    label(board,'EXPORTED GAME TEXTURES / ORIGINAL LAYOUT',(24,16),25)
+    label(board,'Offline reconstruction. No live model, font metrics or engine animation; default ornament size/offset.',(24,58),16)
+    cases = [('PlayerFrame','Seasoned',1,'crystal',False),
+             ('TargetFrame','Seasoned',1,None,False),
+             ('TargetFrame','Boss',.4,None,False),
+             ('TargetFrame','Novice',0,None,False),
+             ('TargetFrame','Seasoned',.4,None,True)]
+    for row,(kind,tier,fraction,resource,threat) in enumerate(cases):
+        y = 105+row*260
+        for col,cap in enumerate((False,True)):
+            label(board,f'{kind} / {tier} / {int(fraction*100)}% / cap '+('ON' if cap else 'OFF')+(' / threat' if threat else ''),(24+col*740,y),17)
+            paste_trim(board,unit(kind,tier,fraction,resource,endcap=cap,threat=threat),(24+col*740,y+38),1)
+    board.convert('RGB').save(folder/'Assembly.png')
+    source_board = Image.new('RGBA',(1350,510),'#24252b')
+    label(source_board,'APPROVED PAINTING / EXPORTED SPRITE - SAME HEIGHT, INTACT PLANES',(24,16),23)
+    for col,file in enumerate((WORK/'Sources/HD/portrait.png',EXPORT/'portrait_frame_hi.tga')):
+        im = Image.open(file).convert('RGBA')
+        im = im.crop(im.getchannel('A').point(lambda a:255 if a>128 else 0).getbbox())
+        im = im.resize((round(im.width*300/im.height),300),B.S)
+        source_board.alpha_composite(im,(40+col*360,112))
+        label(source_board,'APPROVED SOURCE' if col==0 else 'ACTUAL TGA + NATIVE GLASS',(40+col*360,77),16)
+    label(source_board,'HD health source',(780,77),18)
+    rails=Image.open(WORK/'Sources/HD/health-rails.png').convert('RGBA')
+    rails=rails.crop(rails.getchannel('A').point(lambda a:255 if a>128 else 0).getbbox())
+    rails.thumbnail((540,150),B.S);source_board.alpha_composite(rails,(780,145))
+    label(source_board,'Metal is scaled once; straight rail sections',(780,290),17)
+    label(source_board,'are shortened/extended; finished ends stay intact.',(780,318),17)
+    label(source_board,'Shared fill and saved frame geometry unchanged.',(780,358),17)
+    source_board.convert('RGB').save(folder/'Source-to-export.png')
+
+
+def cast_spike_review():
+    folder=WORK/'Cast-Spike-Repair'; folder.mkdir(exist_ok=True)
+    board=Image.new('RGBA',(1080,700),'#303139')
+    label(board,'PALADIN CAST / NATIVE FILL AND LAYOUT - OFFLINE EXPORT REVIEW',(24,20),23)
+    for row,cap in enumerate((True,False)):
+        for col,protected in enumerate((False,True)):
+            title=('Uninterruptible' if protected else 'Ordinary')+(' / libram' if cap else ' / no libram')
+            label(board,title,(24+col*530,100+row*265),19)
+            paste_trim(board,cast(.65,protected=protected,endcap=cap),(24+col*530,150+row*265),2.8)
+    label(board,'Both states use the same rails; protected front follows Shield. No live client rendering claimed.',(24,650),17)
+    board.convert('RGB').save(folder/'Comparison.png')
+
+
+def cast_hd_review():
+    folder=WORK/'Cast-HD-Repair'; folder.mkdir(exist_ok=True)
+    board=Image.new('RGBA',(1320,1100),'#303139')
+    label(board,'CASTBAR / ACTUAL OLD AND HD EXPORTS / ENLARGED 3X FOR DETAIL',(24,18),23)
+    label(board,'Offline reconstruction; identical native fill, layer sizes, anchors and book placement.',(24,58),17)
+    for row,(protected,cap,fraction) in enumerate(((False,True,1),(True,True,.65),(False,False,.4),(True,False,0))):
+        for col,before in enumerate((True,False)):
+            old_asset,old_front=globals()['asset'],globals()['over']
+            if before:
+                def before_asset(path):
+                    name=Path(path.replace('\\','/')).stem if path else ''
+                    if name in ('cast_back','cast_back_spiked','cast-head-libram'):
+                        return Image.open(folder/(name+'-before.tga')).convert('RGBA')
+                    return old_asset(path)
+                def before_front(scene,name,rect,flip=False):
+                    file=folder/(name+'-over-before.tga')
+                    if file.exists(): B.put(scene,Image.open(file).convert('RGBA'),rect,flip)
+                    else: old_front(scene,name,rect,flip)
+                globals()['asset'],globals()['over']=before_asset,before_front
+            try:
+                title=('OLD 256x128' if before else 'NEW 1024x512')+(' / protected' if protected else ' / ordinary')+(' / book' if cap else ' / no book')
+                label(board,title,(24+col*650,110+row*240),17)
+                paste_trim(board,cast(fraction,protected=protected,endcap=cap),(24+col*650,145+row*240),3)
+            finally:
+                globals()['asset'],globals()['over']=old_asset,old_front
+    board.convert('RGB').save(folder/'Comparison.png')
+
+
 def hd_review():
     folder=WORK/'HD-Repair'
     board=Image.new('RGBA',(1600,1300),'#14161a')
@@ -398,4 +475,7 @@ if __name__ == '__main__':
     concept_frames_review()
     contour_review()
     hd_review()
+    whole_asset_review()
+    cast_spike_review()
+    cast_hd_review()
     print('Three assembly pages, five casing pages, resource states and actual tooltip atlas review written.')

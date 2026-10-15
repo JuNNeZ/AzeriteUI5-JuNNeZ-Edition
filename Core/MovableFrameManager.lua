@@ -81,6 +81,14 @@ local KeyedAnchors = {} -- stable key -> anchor, for links (RequestAnchor(key))
 -- and saved as a plain UIParent position through MFM_PositionUpdated, like any move.
 local LINKS_SUSPENDED -- set while every mover is rescaled at once
 local PROPAGATING -- set while followers are being placed, so each pass runs once
+-- Set from load until a frame after the first PLAYER_ENTERING_WORLD, and for a frame after a
+-- profile change. Movers are created, sized and placed by their modules then, some late
+-- (Retail's action bars enable on PLAYER_ENTERING_WORLD), and the UI scale may change under
+-- them. Saved positions are already right, so nothing follows anything while settling; at
+-- the end each link's offset is taken from the saved positions (SyncLinkOffsets). Placing
+-- followers from half-built geometry here pushed linked action bars off screen at login
+-- (Luciful, 2026-10-15).
+local SETTLING = true
 
 -- Snapping
 --------------------------------------
@@ -1221,8 +1229,8 @@ MovableFramesManager.ApplyFollowers = function(self, anchor)
 	PROPAGATING = nil
 end
 
--- Places every linked mover, targets before their followers. At login, after a profile
--- change, after a rescale and after combat if something waited.
+-- Places every linked mover, targets before their followers. After a rescale and after
+-- combat if something waited. Not at login or on a profile change: see SETTLING.
 MovableFramesManager.ApplyAllLinks = function(self)
 	if (InCombatLockdown()) then
 		self.linksPending = true
@@ -1251,7 +1259,7 @@ end
 -- A mover moved, rescaled or was shown: its followers go with it. A mover that rescaled
 -- is first put back on its own link, since its size changed around its anchor point.
 MovableFramesManager.OnMoverChanged = function(self, event, anchor)
-	if (LINKS_SUSPENDED or PROPAGATING or not anchor or not AnchorData[anchor]) then return end
+	if (SETTLING or LINKS_SUSPENDED or PROPAGATING or not anchor or not AnchorData[anchor]) then return end
 	if (InCombatLockdown()) then
 		self.linksPending = true
 		return
@@ -1264,13 +1272,35 @@ MovableFramesManager.OnMoverChanged = function(self, event, anchor)
 	self:ApplyFollowers(anchor)
 end
 
--- After login and profile changes the modules place their movers first; links follow
--- on the next frame.
-MovableFramesManager.ScheduleApplyAllLinks = function(self)
+--- Rewrites every link's offset from where its follower and target are saved, moving nothing.
+-- Links whose follower or target is missing or disabled are left as they are.
+MovableFramesManager.SyncLinkOffsets = function(self)
+	local links = GetLinks()
+	if (not links or not next(links)) then return end
+	for key in next, links do
+		local follower = KeyedAnchors[key]
+		if (follower and follower:IsEnabled()) then
+			follower:UpdateLinkOffset()
+		end
+	end
+end
+
+MovableFramesManager.IsSettling = function(self)
+	return SETTLING and true or false
+end
+
+-- After login and profile changes the modules place their movers first, from their saved
+-- positions; on the next frame the links take their offsets from those positions.
+MovableFramesManager.ScheduleSettle = function(self)
+	SETTLING = true
+	local settle = function()
+		SETTLING = nil
+		self:SyncLinkOffsets()
+	end
 	if (C_Timer and C_Timer.After) then
-		C_Timer.After(0, function() self:ApplyAllLinks() end)
+		C_Timer.After(0, settle)
 	else
-		self:ApplyAllLinks()
+		settle()
 	end
 end
 
@@ -1368,6 +1398,21 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 
 	local options, orderoffset = Options:GenerateProfileMenu()
 	orderoffset = orderoffset + 30
+
+	-- /lock is for placing frames, so its Reset puts only the layout back. The
+	-- full reset stays on /az -> Profiles. This table is built fresh per call.
+	local profileArgs = options.args.profiles and options.args.profiles.args
+	if (profileArgs and profileArgs.reset) then
+		profileArgs.reset = {
+			name = L["Reset layout"],
+			desc = L["Puts every frame back in its default position and removes anchors and AzeriteUI Scale. Every other setting stays as it is. The interface reloads."],
+			type = "execute",
+			order = profileArgs.reset.order,
+			disabled = function() return InCombatLockdown() end,
+			confirm = function() return L["Reset the layout of this profile to default? The interface reloads."] end,
+			func = function() ns:ResetLayout() end
+		}
+	end
 
 	-- Frame positioning & scaling.
 	options.args.frameSelectionHeader = {
@@ -1896,7 +1941,11 @@ MovableFramesManager.OnEvent = function(self, event, ...)
 
 	elseif (event == "PLAYER_ENTERING_WORLD") then
 		self.incombat = InCombatLockdown()
-		self:ScheduleApplyAllLinks()
+		-- Only the first one: later loading screens put movers back where they are saved.
+		if (not self.settledOnce) then
+			self.settledOnce = true
+			self:ScheduleSettle()
+		end
 	end
 
 	if (event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED") then
@@ -1941,6 +1990,13 @@ MovableFramesManager.RescaleAnchors = function(self, factor)
 	end
 	LINKS_SUSPENDED = nil
 
+	-- While settling, the links take their offsets from the rescaled positions afterwards.
+	-- Scaling them here as well would count movers that do not exist yet.
+	if (SETTLING) then
+		ns:Fire("MFM_UIScaleChanged")
+		return
+	end
+
 	local links = GetLinks()
 	if (links) then
 		for _, link in next, links do
@@ -1973,7 +2029,7 @@ end
 
 -- A profile change, copy or reset: links of the new profile, then the master scale check.
 MovableFramesManager.OnCoreProfileChanged = function(self)
-	self:ScheduleApplyAllLinks()
+	self:ScheduleSettle()
 	self:OnFrameScaleProfileChanged()
 end
 

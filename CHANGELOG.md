@@ -10,6 +10,29 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.27.1-JuNNeZ (2026-10-15) - Paladin Theme for Testing, Anchored Frames Stay Put, Reset Layout in /lock
+
+### Highlights
+
+- **The Paladin theme is open for testing.** Pick **Paladin (WIP)** under `/az -> Themes` (or type `/azpaladin`) to try the full Paladin look: casings rebuilt from the approved concept, the Ashbringer health endcap and libram cast endcap (each can be resized, moved or turned off), the Light-filled crystal and orb, and Paladin rings for the Cooldown Manager. It no longer needs Development Mode. It is still a work in progress, so screenshots and reports on Discord are very welcome.
+- **Anchored frames keep their place after logging out.** Frames anchored to each other could end up somewhere else after a full logout and login: action bars slid off the bottom of the screen. Linked frames are no longer re-placed while the game loads. Everything now loads exactly where it was saved, and anchors pick up from there. If your bars already moved, drag them back once in `/lock` and they stay put. Thanks to Luciful for the report and screenshot.
+- **Reset in `/lock` resets only the layout.** The Reset button in the `/lock` window used to reset every AzeriteUI setting, the same as the Profiles page. It is now **Reset layout**: every frame goes back to its default position, anchors and AzeriteUI Scale are removed, and all other settings stay as they are. The interface reloads. The full reset is still under `/az -> Profiles -> Reset`. Suggested by Luciful.
+- **Target health glides cleanly.** On the target frame, the health spark now rides the moving edge of the bar instead of jumping to the end, and stays visible in dungeons and raids. The shaped health art keeps following until the glide is finished. Target power now obeys the **Smooth health and power** switch and `/azsmooth`.
+
+### Development
+
+- The anchoring fix comes from replaying a fresh login offline: Retail creates the action bars late, and a UI scale change before that scaled their anchor distances while the bars themselves were not rescaled, so linked bars were placed from mismatched numbers and saved there, a little further off at every login. At login and after a profile change, AzeriteUI now waits a frame and then reads each anchor's distance from the saved positions instead of moving frames. A new test replays that login order and fails with the old code.
+- Reset layout shares its rules with Copy layout from: the same saved positions (including Legacy's), anchors and AzeriteUI Scale, and nothing else.
+- An audit of the smooth bars and the target's mirrored health bar found and fixed eight issues, including a percent read as a fraction (very low health could draw as full for a moment) and health updates syncing the bar three times each. A new test runs the target's real health code.
+- Before opening it up, the Paladin theme got an intact HD portrait, health casing ends that match with and without the Ashbringer endcap, and a studded protected-cast casing. Its theme, effects, Cooldown Manager and options tests now check that it is offered without Development Mode.
+
+### Access and known limits
+
+- Everything in this release was checked offline only; nothing has been tested in game yet, on Retail or WoW Forever.
+- The Paladin theme is marked WIP: expect rough edges, especially on WoW Forever, where its art has not been checked in game. Switching to or from it reloads the interface.
+- Frames that were already saved in the wrong place are not moved back automatically.
+
+
 ## 5.27.0-JuNNeZ (2026-10-15) - Anchored Frames, Frame Settings on Click and Smooth Bars
 
 ### Highlights

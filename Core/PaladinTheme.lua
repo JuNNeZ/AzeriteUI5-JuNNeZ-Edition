@@ -37,8 +37,8 @@ Theme.IsActive = function(self)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return false end
 	if (ns.MageTheme and ns.MageTheme:IsActive()) then return false end
 	local db = ns.db
-	return db and db.global and db.char and db.global.enableDevelopmentMode
-		and db.char.paladinPreview and Engine:IsMainLayout() or false
+	-- Public for testing since 5.27.1, like Hunter and Mage (marked WIP on the Themes page).
+	return db and db.char and db.char.paladinPreview and Engine:IsMainLayout() or false
 end
 -- Existing palettes stay native; Light is an explicit, opt-in mana source.
 local LIGHT_POWER_COLOR = { 1, .84, .35 }
@@ -147,7 +147,10 @@ Theme.StyleHealth = function(self, owner, db, flip)
 		or bar:GetWidth() < bar:GetHeight()*2
 	if (compact) then
 		healthBars[bar] = nil
-		if (bar.PaladinOrnaments) then bar.PaladinOrnaments:SetShown(false) end
+		if (bar.PaladinOrnaments) then
+			bar.PaladinOrnaments:SetShown(false)
+			if (bar.PaladinOrnaments.Threat) then bar.PaladinOrnaments.Threat:Hide() end
+		end
 		return
 	end
 	HealthEndcap(bar, flip)
@@ -177,7 +180,7 @@ Theme.StyleThreat = function(self, owner, flip)
 		portraitGlow:SetAllPoints(portrait)
 		portraitGlow:SetTexture(path(portraitName.."-glow"))
 	end
-	if (not frame or not native) then return end
+	if (not frame or not native or healthBars[bar] == nil) then return end
 	local glow = frame.Threat
 	if (not glow) then
 		-- Keep the halo behind the entire health assembly, not above its fill
@@ -187,7 +190,7 @@ Theme.StyleThreat = function(self, owner, flip)
 		glow:SetBlendMode("ADD")
 		frame.Threat, frame.ThreatSource = glow, native
 		local SetShown = function(shown)
-			if (healthSettings.GetKey() == "none") then glow:Hide() else glow:SetShown(shown) end
+			if (healthSettings.GetKey() == "none" or healthBars[bar] == nil) then glow:Hide() else glow:SetShown(shown) end
 		end
 		hooksecurefunc(native, "Show", function() SetShown(true) end)
 		hooksecurefunc(native, "Hide", function() SetShown(false) end)
@@ -222,14 +225,32 @@ Theme.StyleCastbar = function(self, cast)
 	-- Match the standalone player's existing casing; native shield/protected
 	-- cast cue is retained. The front lip tracks its native backdrop visibility.
 	CasingOver(cast, path("cast_back"), false)
-	if (cast.Backdrop and cast.PaladinRails and not cast.PaladinRails.visibilityHooked) then
-		local frame = cast.PaladinRails
-		frame.visibilityHooked = true
-		hooksecurefunc(cast.Backdrop, "Show", function() frame:SetShown(true) end)
-		hooksecurefunc(cast.Backdrop, "Hide", function() frame:SetShown(false) end)
-		hooksecurefunc(cast.Backdrop, "SetShown", function(_, shown) frame:SetShown(shown) end)
+	local shieldRails
+	if (cast.Shield) then
+		shieldRails = ArtFrame(cast, "PaladinShieldRails", 1)
+		shieldRails.Art:SetTexture(path("cast_back_spiked-over"))
+		shieldRails.Art:SetAllPoints(cast.Shield)
 	end
-	if (cast.PaladinRails and cast.Backdrop) then cast.PaladinRails:SetShown(cast.Backdrop:IsShown()) end
+	-- PlayerCastBar's native callback already toggles Backdrop for protection.
+	-- oUF's shield toggle is currently disabled; keep our shield paired with
+	-- that existing switch, without reading notInterruptible unit values.
+	for _, pair in ipairs({ { cast.Backdrop, cast.PaladinRails }, { cast.Shield, shieldRails } }) do
+		local texture, frame = pair[1], pair[2]
+		if (texture and frame) then
+			if (not frame.visibilityHooked) then
+				frame.visibilityHooked = true
+				local SetShown = function(shown)
+					frame:SetShown(shown)
+					if (texture == cast.Backdrop and cast.Shield) then cast.Shield:SetShown(not shown) end
+				end
+				hooksecurefunc(texture, "Show", function() SetShown(true) end)
+				hooksecurefunc(texture, "Hide", function() SetShown(false) end)
+				hooksecurefunc(texture, "SetShown", function(_, shown) SetShown(shown) end)
+			end
+			frame:SetShown(texture:IsShown())
+		end
+	end
+	if (cast.Shield and cast.Backdrop) then cast.Shield:SetShown(not cast.Backdrop:IsShown()) end
 	CastHead(cast)
 end
 Theme.StyleNameplate = function(self, owner)
@@ -478,11 +499,10 @@ end
 Theme.ClearOrbEffect = function(self, orb) HideLight(orb.PaladinLight) end
 
 Theme.Command = function(self, input)
-	if (not ns.db.global.enableDevelopmentMode) then return end
 	local arg = (input or ""):lower():match("^%s*(.-)%s*$")
 	if (arg == "preview" and ns.ThemeBarPreview) then ns.ThemeBarPreview:Show(); return end
 	if (arg == "status") then
-		self:Print(self:IsActive() and "Paladin preview: on." or "Paladin preview: off (requires the main theme and development mode).")
+		self:Print(self:IsActive() and "Paladin preview: on." or "Paladin preview: off (requires the main theme).")
 		return
 	end
 	if (arg ~= "" and arg ~= "on" and arg ~= "off" and arg ~= "toggle") then
@@ -501,7 +521,7 @@ Theme.Command = function(self, input)
 end
 
 Theme.OnInitialize = function(self)
-	if (ns.db.global.enableDevelopmentMode) then self:RegisterChatCommand("azpaladin", "Command") end
+	self:RegisterChatCommand("azpaladin", "Command")
 end
 
 Theme.ProfileChanged = Engine.ProfileChanged

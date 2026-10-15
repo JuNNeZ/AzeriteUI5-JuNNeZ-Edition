@@ -80,13 +80,8 @@ local List = function(keys, withTheme)
 	local values, sorting = {}, {}
 	if (withTheme) then values.theme = Label("theme"); sorting[1] = "theme" end
 	for _, key in ipairs(keys) do
-		-- Paladin's approved Light effect is public in Lite+; its complete
-		-- artwork theme remains a Development Mode preview.
-		local hidden = key == "paladin" and not withTheme and not (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
-		if (not hidden) then
-			values[key] = WIP(key, Label(key))
-			sorting[#sorting + 1] = key
-		end
+		values[key] = WIP(key, Label(key))
+		sorting[#sorting + 1] = key
 	end
 	return values, sorting
 end

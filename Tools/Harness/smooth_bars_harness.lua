@@ -142,6 +142,19 @@ slash.azsmooth("on")
 check(profile.smoothBars == true and profile.smoothCastbars == true, "/azsmooth on sets both")
 check(printed[#printed] and printed[#printed]:find("health/power") ~= nil, "and reports the state", printed[#printed])
 
+-- A plain StatusBar (Target's power crystal) is listed through SetBarSmoothing and
+-- follows the switch; it used to be set to ease directly and ignored /azsmooth.
+local crystal = NewBar()
+ns.UnitFrame.SetBarSmoothing(crystal, true)
+check(crystal.smoothing == EASED, "a plain bar listed by SetBarSmoothing eases", crystal.smoothing)
+ns.UnitFrame.SetSmoothingEnabled("bars", false)
+check(crystal.smoothing == IMMEDIATE and crystal.snapped == 1, "and the switch turns it off (and finishes it)", crystal.smoothing)
+ns.UnitFrame.SetSmoothingEnabled("bars", true)
+check(crystal.smoothing == EASED, "and on again")
+ns.UnitFrame.SetBarSmoothing(crystal, false)
+ns.UnitFrame.SetSmoothingEnabled("bars", true)
+check(crystal.smoothing == IMMEDIATE, "SetBarSmoothing(bar, false) keeps it Immediate")
+
 -- A profile change re-applies the saved switches.
 profile.smoothBars = false
 ns.UnitFrame.RefreshSmoothing()
@@ -210,6 +223,9 @@ if (loaded and rawget(API, "UpdateHealth")) then
 	check(bar.writes[#bar.writes] == EASED, "ForceUpdate on the same unit eases", bar.writes[#bar.writes])
 	pcall(API.UpdateHealth, owner, "UNIT_ABSORB_AMOUNT_CHANGED", "party1")
 	check(bar.writes[#bar.writes] == EASED, "an absorb change eases")
+	-- oUF sends it through Path: it is a value change and must not cut a glide.
+	pcall(API.UpdateHealth, owner, "UNIT_MAX_HEALTH_MODIFIERS_CHANGED", "party1")
+	check(bar.writes[#bar.writes] == EASED, "a max health modifier change eases", bar.writes[#bar.writes])
 	pcall(API.UpdateHealth, owner, "GROUP_ROSTER_UPDATE", "party1")
 	check(bar.writes[#bar.writes] == IMMEDIATE, "a roster change snaps")
 	check(bar.rangeInterpolation == IMMEDIATE, "and its range snaps with it")
@@ -259,6 +275,13 @@ if (loaded and rawget(API, "UpdateHealth")) then
 	local before = #lines
 	pcall(API.UpdateHealth, owner, "OnShow", "party1")
 	check(#lines == before + 1 and lines[#lines]:find("snap") and lines[#lines]:find("%(event%)"), "and a snap with its reason", lines[#lines])
+	-- A plain update inside the hold after that snap snaps too: the trace must say so.
+	sameFrame = true
+	unitHealth = 50
+	pcall(API.UpdateHealth, owner, "UNIT_HEALTH", "party1")
+	sameFrame = false
+	check(bar.writes[#bar.writes] == IMMEDIATE, "a write in the hold snaps")
+	check(lines[#lines]:find("snap") and lines[#lines]:find("hold after a snap", 1, true), "and the trace says snap (hold), not eased", lines[#lines])
 	slash.azsmooth("trace off")
 	check(rawget(ns.API, "SmoothTrace") == nil, "/azsmooth trace off stops it")
 	API.SmoothTrace = nil

@@ -48,8 +48,7 @@ local Addon, ns = ...
 	through GetMedia, so a Mage, Hunter or Paladin theme's action bar ring is used
 	here too. The `skin` setting can override that for the Cooldown Manager alone:
 	AzeriteUI, or one theme's art through that theme's ResolveOwnMedia, whatever
-	the rest of the interface wears (Paladin only in Development Mode, as on the
-	Themes page). It changes live, since only this module's textures move.
+	the rest of the interface wears. It changes live, since only this module's textures move.
 	Square and rounded follow the same skin choice: Mage and Hunter supply
 	borders, while masks and backdrops stay shared. Themes without these
 	borders fall back to AzeriteUI art. A theme switch reloads the interface.
@@ -207,12 +206,11 @@ local IsDevelopmentMode = function()
 	return ns.db and ns.db.global and ns.db.global.enableDevelopmentMode and true or false
 end
 
--- A skin the player may pick right now. Paladin is a Development Mode preview.
+-- A skin the player may pick right now: any theme whose module is loaded.
 local IsSkinAvailable = function(key)
 	if (key == "theme" or key == "azerite") then return true end
 	local moduleName = SKIN_THEMES[key]
-	if (not moduleName or not ns:GetModule(moduleName, true)) then return false end
-	return key ~= "paladin" or IsDevelopmentMode()
+	return moduleName and ns:GetModule(moduleName, true) and true or false
 end
 
 -- A style's art. A themed style goes through the chosen skin: the interface

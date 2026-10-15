@@ -32,8 +32,14 @@ def hole(im):
 
 def check(path):
     """Return (geometry failures, look notes) for one texture."""
-    name = path.stem; im = Image.open(path).convert('RGBA'); a = np.asarray(im).astype(np.float32)
+    name = path.stem; im = Image.open(path).convert('RGBA')
     fails, notes = [], []
+    if path.parent == ASSETS/'Paladin' and name.removesuffix('-over') in ('cast_back','cast_back_spiked'):
+        # Maintainer-requested HD export: four texels per native texel, with
+        # unchanged normalized bounds/aperture and runtime layer rectangles.
+        if im.size != (1024,512): fails.append('Paladin HD cast texture must be 1024x512')
+        im = im.resize((256,128),Image.Resampling.LANCZOS)
+    a = np.asarray(im).astype(np.float32)
     w, h = im.size
     if w & (w - 1) or h & (h - 1): fails.append(f'canvas {w}x{h} is not power-of-two')
     alpha = a[..., 3]; solid = alpha > 200

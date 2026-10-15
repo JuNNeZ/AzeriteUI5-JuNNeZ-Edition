@@ -191,6 +191,83 @@ local function Rect(anchor) return anchor:GetRect() end
 local function MoveTo(anchor, point, x, y) anchor:UpdatePosition(point, x, y) end
 
 --------------------------------------------------------------------------
+-- Login replay (Luciful, 2026-10-15: linked action bars off screen after a relog)
+--------------------------------------------------------------------------
+-- The order a fresh login has: early movers exist, the UI scale changes, Retail's action
+-- bars are created on PLAYER_ENTERING_WORLD with a placeholder size and then sized, and
+-- links settle a frame later. Saved positions were right at logout; nothing may move.
+do
+	local timers = {}
+	_G.C_Timer = { After = function(_, fn) timers[#timers + 1] = fn end }
+	local function RunTimers() local run = timers; timers = {}; for _, fn in ipairs(run) do fn() end end
+
+	ns.db.profile.moverLinks = { azerite = {
+		["ActionBars.bar2"] = { target = "ActionBars.bar1", point = "BOTTOM", relativePoint = "TOP", x = 0, y = 10 },
+		["Login.ToT"] = { target = "Login.Target", point = "TOP", relativePoint = "BOTTOM", x = 0, y = -20 }
+	} }
+	check(MFM:IsSettling(), "the manager starts out settling")
+
+	-- Early movers, placed from their saved spots; then the UI scale changes before PEW.
+	local lt = Mover("Login.Target", 300, 80, "TOPRIGHT", -100, -100)
+	local lot = Mover("Login.ToT", 100, 40, "TOPRIGHT", -200, -200)
+	MFM:RescaleAnchors(.8)
+	check(near(ns.db.profile.moverLinks.azerite["Login.ToT"].y, -20), "a rescale while settling leaves link offsets alone",
+		ns.db.profile.moverLinks.azerite["Login.ToT"].y)
+
+	-- Bars come late, first at a placeholder size, then sized and re-placed by their module.
+	local bar1 = Mover("ActionBars.bar1", 2, 2, "BOTTOM", 0, 20)
+	local bar2 = Mover("ActionBars.bar2", 2, 2, "BOTTOM", 0, 90)
+	saved[bar2] = nil
+	bar1:SetSize(400, 60); bar1:ClearAllPoints(); bar1:SetPoint("BOTTOM", 0, 20)
+	bar2:SetSize(400, 60); bar2:ClearAllPoints(); bar2:SetPoint("BOTTOM", 0, 90)
+	local _, b2 = Rect(bar2)
+	check(near(b2, 90), "a half-built target does not move its follower", b2)
+
+	MFM:OnEvent("PLAYER_ENTERING_WORLD")
+	check(MFM:IsSettling(), "still settling until the next frame")
+	RunTimers()
+	check(not MFM:IsSettling(), "settled a frame after PLAYER_ENTERING_WORLD")
+	_, b2 = Rect(bar2)
+	check(near(b2, 90), "after login bar 2 is where it was saved", b2)
+	local l2 = ns.db.profile.moverLinks.azerite["ActionBars.bar2"]
+	check(near(l2.y, 10) and near(l2.x, 0), "the link's offset is taken from the saved spots", tostring(l2.x) .. "," .. tostring(l2.y))
+	local lotLink = ns.db.profile.moverLinks.azerite["Login.ToT"]
+	local _, tb = Rect(lt)
+	local _, ob, _, oh = Rect(lot)
+	check(near(lotLink.y, ob + oh - tb), "a rescaled pair's offset matches where they stand", tostring(lotLink.y) .. " vs " .. tostring(ob + oh - tb))
+
+	-- Following works normally afterwards.
+	MoveTo(bar1, "BOTTOM", 0, 25)
+	_, b2 = Rect(bar2)
+	check(near(b2, 95), "after settling, bar 2 follows bar 1", b2)
+	local _, ob2 = Rect(lot)
+	local _, tb2 = Rect(lt)
+	MoveTo(lt, "TOPRIGHT", -100, -110)
+	local _, ob3 = Rect(lot)
+	local _, tb3 = Rect(lt)
+	check(near(ob3 - ob2, tb3 - tb2), "and ToT follows Target by the same amount", tostring(ob3 - ob2) .. " vs " .. tostring(tb3 - tb2))
+
+	-- A later loading screen does not re-settle or re-place anything.
+	MFM:OnEvent("PLAYER_ENTERING_WORLD")
+	check(not MFM:IsSettling() and #timers == 0, "a second PLAYER_ENTERING_WORLD changes nothing")
+
+	-- A profile change settles again: positions first, offsets from them a frame later.
+	MFM:OnCoreProfileChanged()
+	check(MFM:IsSettling(), "a profile change settles")
+	MoveTo(bar1, "BOTTOM", 0, 200)
+	_, b2 = Rect(bar2)
+	check(near(b2, 95), "while settling a moved target leaves its follower", b2)
+	RunTimers()
+	check(not MFM:IsSettling(), "and ends a frame later")
+	check(near(ns.db.profile.moverLinks.azerite["ActionBars.bar2"].y, 95 - 260), "the offset follows the new profile's spots",
+		ns.db.profile.moverLinks.azerite["ActionBars.bar2"].y)
+
+	for _, a in ipairs({ lt, lot, bar1, bar2 }) do a:Disable() end
+	ns.db.profile.moverLinks = nil
+	_G.C_Timer = { After = function(_, fn) fn() end }
+end
+
+--------------------------------------------------------------------------
 -- Checks
 --------------------------------------------------------------------------
 local player = Mover("PlayerFrame", 400, 100, "BOTTOMLEFT", 100, 200)

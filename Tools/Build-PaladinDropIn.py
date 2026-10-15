@@ -1,9 +1,10 @@
 """Export the approved Ashbringer / Silver Hand art on native texture contracts.
 
-Sources are retained paintings, literal concept holder/rails/libram cutouts,
-and high-resolution endcap/portrait repaints made after live quality review.
-Native alpha, glass, fill contours, shadows and atlas cells are registration
-data. Geometry and gameplay layout are not changed to fit a generated image.
+Sources are retained paintings, the approved literal crystal holder, the retained
+cast/libram cutouts, and HD health/endcap/portrait paintings. The portrait keeps
+its own alpha and proportions; health uses modular straight rails and paired
+closed/mounting endings. Native fill contours, glass, canvases and gameplay
+layout remain fixed; generated metal is never radially warped to native alpha.
 Run without arguments to build staging; --install requires every source.
 """
 from pathlib import Path
@@ -177,6 +178,8 @@ def export_crystal(name, source, native):
 def export_casing(name):
     native = Image.open(ASSETS / (name+'.tga')).convert('RGBA')
     generated = Image.open(SOURCE / (name+'.png')).convert('RGBA')
+    if name in concept_frames.HD_CAST:
+        native = native.resize(tuple(v*concept_frames.CAST_DENSITY for v in native.size),S)
     if name in CRYSTAL:
         export_crystal(name, generated, native)
         return
@@ -192,12 +195,16 @@ def export_casing(name):
         if name in concept_frames.HEALTH:
             # A closed OG dip when bare; a straight mounting shoulder beneath
             # the removable relic. Keep fill/recess unchanged in either state.
+            opaque = np.asarray(front)[:,:,3]>128
+            bottoms = native.height-1-opaque[::-1].argmax(0)
+            x0,y0,x1,y1 = fill.getbbox()
+            rail_bottom = int(np.median(bottoms[x0+60:x1-100]))
             for suffix, image in (('', back), ('-over', front)):
                 pixels = np.array(image)
                 hole = np.asarray(fill)>0
                 x0,y0,x1,y1 = fill.getbbox()
                 yy,xx = np.mgrid[:image.height,:image.width]
-                shoulder = (xx>x1-52) & (yy>y1+12) & ~hole
+                shoulder = (xx>x1-90) & (yy>rail_bottom) & ~hole
                 pixels[shoulder,3] = 0
                 capped = Image.fromarray(pixels)
                 save(name+'-capped'+suffix,capped)
@@ -313,7 +320,7 @@ def main():
     write_guides()
     required = list(SPEC) + ORNAMENTS
     missing = [n for n in required if not (SOURCE/(n+'.png')).exists()]
-    missing += ['HD/'+n for n in ('ornament-ashbringer.png','portrait.png','health-rails.png') if not (concept_frames.HD/n).exists()]
+    missing += ['HD/'+n for n in ('ornament-ashbringer.png','portrait.png','health-rails.png','cast-rails.png','cast-head-libram.png') if not (concept_frames.HD/n).exists()]
     if args.install and missing:
         raise SystemExit('Incomplete sources: '+', '.join(missing))
     for name in SPEC:
@@ -324,7 +331,7 @@ def main():
             ornament(name)
     manifest = {
         'theme': 'Ashbringer / Silver Hand', 'concept': 'Concepts-2026-10-14',
-        'geometry': '26 exact native casing alphas; 4 modular HD health rails on native fills; 2 intact HD portraits; 2 approved crystal holders; unchanged runtime geometry',
+        'geometry': '24 exact native casing alphas; 2 HD cast cases at 4x density; 4 modular HD health rails on native fills; 2 intact HD portraits; 2 approved crystal holders; unchanged runtime geometry',
         'crystalFit': crystal_fits,
         'measuredCrystal': {'revision': 2, 'reference': 'approved-concept.png',
                             'cutout': 'Measured-Cradle/Concept-holder-cutout.png',
@@ -335,6 +342,7 @@ def main():
                           'recipeSha256': digest(ROOT/'Tools/PaladinConceptFrames.py'),
                           'parts': {n+'.png': digest(concept_frames.PARTS/(n+'.png')) for n in
                                     ('health-rails', 'cast-rails', 'portrait', 'ornament-ashbringer', 'cast-head-libram')}},
+        'hdDensity': {name+suffix:concept_frames.CAST_DENSITY for name in sorted(concept_frames.HD_CAST) for suffix in ('','-over')},
         'hdSources': {p.name: {'sha256':digest(p), 'canvas':list(Image.open(p).size)}
                       for p in sorted(concept_frames.HD.glob('*.png'))},
         'sources': {p.stem: {'sha256': digest(p)} for p in sorted(SOURCE.glob('*.png'))},

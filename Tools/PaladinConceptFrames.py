@@ -1,10 +1,11 @@
-"""Approved-sheet rails and HD signature parts on native meter apertures.
+"""Whole HD portrait and modular HD health rails on native meter apertures.
 
-The maintainer approved these cutouts on 2026-10-15. Keep the crystal build
-separate: its already approved bytes are a locked input, not regenerated here.
-No concept health/cast colour is exported. The game's functional fill remains.
-The 2026-10-15 quality correction repaints the endcap/portrait at source HD;
-the small concept crops remain reference material, never enlarged production.
+The approved crystal is byte-locked. The approved portrait is uniformly
+scaled as one intact painting. Health uses a fresh template-guided HD source,
+with finished ends and straight modular rail runs. Cast and libram use dedicated HD paintings, with the two player cast textures
+exported at 4x density. Small concept cutouts remain historical reference and
+the unchanged wooden compact-casing recipe.
+Functional fill contours, native layer rectangles and saved anchors stay fixed.
 """
 from pathlib import Path
 from functools import lru_cache
@@ -20,6 +21,8 @@ S = Image.Resampling.LANCZOS
 HEALTH = {'hp_cap_case', 'hp_mid_case', 'hp_low_case', 'hp_boss_case'}
 CAST = {'cast_back', 'cast_back_spiked', 'cast_back_wooden'}
 PORTRAIT = {'portrait_frame_hi', 'portrait_frame_lo'}
+HD_CAST = {'cast_back', 'cast_back_spiked'}
+CAST_DENSITY = 4
 
 
 def cut(points, holes=()):
@@ -193,7 +196,50 @@ def outline(image):
     return glow
 
 
+def cast_front(native, clearance):
+    """One HD material scale; shorten straight runs, retain both complete tips."""
+    source = Image.open(HD/'cast-rails.png').convert('RGBA')
+    hole = inner_hole(source)
+    box = source.getchannel('A').point(lambda a:255 if a>128 else 0).getbbox()
+    source, hole = source.crop(box), hole.crop(box)
+    src_rows = np.flatnonzero(np.asarray(hole)[:,hole.width//2]>128)
+    target_rows = np.flatnonzero(np.asarray(clearance)[:,native.width//2]>128)
+    factor = len(target_rows)/len(src_rows)
+    art = source.resize((round(source.width*factor),round(source.height*factor)),S)
+    hbox, target = hole.getbbox(), clearance.getbbox()
+    delta = (target[2]-target[0])-round((hbox[2]-hbox[0])*factor)
+    assert delta<=0, 'HD cast source must supply enough rail length'
+    cut = -delta
+    seam = (art.width-cut)//2
+    joined = Image.new('RGBA',(art.width-cut,art.height))
+    joined.alpha_composite(art.crop((0,0,seam,art.height)))
+    joined.alpha_composite(art.crop((seam+cut,0,art.width,art.height)),(seam,0))
+    result = Image.new('RGBA',native.size)
+    result.alpha_composite(joined,(round(target[0]-hbox[0]*factor),
+                                  round(target_rows[0]-src_rows[0]*factor)))
+    return np.array(result)
+
+
 def casing(name, native, fill, clearance):
+    if name == 'cast_back_spiked':
+        # Build the protected variant from the finished ordinary casing. The
+        # original spiked alpha is not an art source: retaining it without its
+        # metal left a black ghost triangle in the live screenshot.
+        plain = Image.open(ROOT/'Assets/cast_back.tga').convert('RGBA').resize(native.size,S)
+        back, front = casing('cast_back',plain,fill,clearance)
+        source = Image.open(HD/'health-rails.png').convert('RGBA')
+        stud = source.crop((668,207,728,284))
+        density = native.width/256
+        height = round(20*density)
+        stud = stud.resize((round(stud.width*height/stud.height),height),S)
+        fitting = Image.new('RGBA',native.size)
+        fitting.alpha_composite(stud,(round(125*density)-stud.width//2,round(31*density)))
+        shadow = Image.new('RGBA',native.size,(0,0,0,0))
+        shadow.putalpha(fitting.getchannel('A').filter(ImageFilter.GaussianBlur(2*density)).point(lambda a:round(a*.65)))
+        for image in (back,front):
+            image.alpha_composite(shadow)
+            image.alpha_composite(fitting)
+        return back,front
     health, cast, _, _, portrait = sources()
     if name in PORTRAIT:
         return hd_portrait(native), None
@@ -201,7 +247,9 @@ def casing(name, native, fill, clearance):
     # Coordinates are local to the retained, mirrored/cropped source above.
     source_fill = (19,29,359,63) if name in HEALTH else (19,17,137,33)
     target = fill.getbbox()
-    front = health_front(native,fill) if name in HEALTH else np.array(project(source, source_fill, target, native.size))
+    front = (health_front(native,fill) if name in HEALTH else
+             cast_front(native,clearance) if name in HD_CAST else
+             np.array(project(source, source_fill, target, native.size)))
     original = np.asarray(native)
     inside = np.asarray(clearance) > 0
     front[inside,3] = 0
@@ -218,8 +266,9 @@ def casing(name, native, fill, clearance):
     back_image.alpha_composite(Image.fromarray(front))
     back = np.array(back_image)
     # Preserve the new metal's own silhouette; native recess only backs fill.
-    if name in HEALTH:
-        back[:,:,3] = np.maximum(front[:,:,3],np.where(np.asarray(fill)>0,255,0)).astype('uint8')
+    if name in HEALTH | HD_CAST:
+        cavity = clearance if name in HD_CAST else fill
+        back[:,:,3] = np.maximum(front[:,:,3],np.where(np.asarray(cavity)>0,255,0)).astype('uint8')
     else:
         back[:,:,3] = original[:,:,3]
     return Image.fromarray(back), Image.fromarray(front)
@@ -227,7 +276,7 @@ def casing(name, native, fill, clearance):
 
 def ornament(name):
     _, _, relic, book, _ = sources()
-    source = Image.open(HD/'ornament-ashbringer.png').convert('RGBA') if name == 'ornament-ashbringer' else book
+    source = Image.open(HD/(name+'.png')).convert('RGBA') if name in ('ornament-ashbringer','cast-head-libram') else book
     box = source.getchannel('A').point(lambda a:255 if a>128 else 0).getbbox()
     art = source.crop(box)
     factor = 224/max(art.size)

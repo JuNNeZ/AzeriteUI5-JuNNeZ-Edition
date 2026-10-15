@@ -22,10 +22,6 @@ end
 
 local Char = function() return ns.db and ns.db.char end
 
-local DevMode = function()
-	return ns.db and ns.db.global and ns.db.global.enableDevelopmentMode and true or false
-end
-
 -- Themes draw only over the main AzeriteUI layout, never over SaiyaRatt or a
 -- config variant; the theme modules check the same thing.
 local MainLayout = function()
@@ -37,12 +33,10 @@ end
 --- True on the main AzeriteUI layout, the only one themes draw over.
 Effects.IsMainLayout = function(self) return MainLayout() end
 
---- Theme keys the dropdown may offer. Paladin is a Development Mode preview.
+--- Theme keys the dropdown may offer.
 Effects.GetThemes = function(self)
 	local list = {}
-	for _, key in ipairs(THEMES) do
-		if (key ~= "paladin" or DevMode()) then list[#list + 1] = key end
-	end
+	for _, key in ipairs(THEMES) do list[#list + 1] = key end
 	-- Legacy needs its module; it writes the same switch /go does (Core/LegacyHUD.lua).
 	if (not ns.LegacyHUD) then
 		for index, key in ipairs(list) do

@@ -41,6 +41,23 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.27.1-JuNNeZ",
+		items = {
+			{
+				text = "The Paladin theme is open for testing, no Development Mode needed. Feedback welcome!",
+				page = "Themes"
+			},
+			{
+				text = "Anchored frames now load where you left them. If your bars moved, drag them back once in /lock.",
+				run = OpenMovers,
+				label = "Open /lock"
+			},
+			{
+				text = "Reset in /lock now resets only the layout. The full reset stays under Profiles."
+			}
+		}
+	},
+	{
 		version = "5.27.0-JuNNeZ",
 		items = {
 			{

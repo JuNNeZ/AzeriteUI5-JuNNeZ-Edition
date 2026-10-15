@@ -509,7 +509,7 @@ modules.HunterTheme = Own("HUNTER:", { ["actionbutton-border"] = "actionbutton-b
 	["actionbutton-border-square"] = "actionbutton-border-square",
 	["actionbutton-border-square-rounded"] = "actionbutton-border-square-rounded" })
 modules.PaladinTheme = Own("PALADIN:", { ["actionbutton-border"] = "action-ring" })
-check(Choices() == "theme,azerite,mage,hunter", "Mage and Hunter are offered; Paladin only in Development Mode")
+check(Choices() == "theme,azerite,mage,hunter,paladin", "Mage, Hunter and Paladin are offered without Development Mode")
 
 M.db.profile.skin = "azerite"
 M:UpdateSettings()
@@ -529,11 +529,7 @@ check(hunterBorder and hunterBorder.texture == "HUNTER:actionbutton-border"
 	and Mask(hunterItem).texture == Assets("actionbutton-mask-circular"), "new pooled items use the selected skin")
 M.db.profile.skin = "paladin"
 M:UpdateSettings()
-check(M:GetSkin() == "theme" and ring.texture == "THEMED:actionbutton-border", "a saved Paladin skin outside Development Mode follows the theme")
-ns.db.global = { enableDevelopmentMode = true }
-M:UpdateSettings()
-check(Choices() == "theme,azerite,mage,hunter,paladin" and ring.texture == "PALADIN:action-ring", "Development Mode: the Paladin skin")
-ns.db.global = nil
+check(M:GetSkin() == "paladin" and ring.texture == "PALADIN:action-ring", "a saved Paladin skin applies without Development Mode")
 M.db.profile.skin = "nonsense"
 M:UpdateSettings()
 check(M:GetSkin() == "theme" and ring.texture == "THEMED:actionbutton-border", "an unknown saved skin follows the theme")
@@ -566,16 +562,15 @@ _G.LOCALIZED_CLASS_NAMES_MALE = { MAGE = "Mage", HUNTER = "Hunter", PALADIN = "P
 assert(loadfile(root .. "/Options/OptionsPages/CooldownManager.lua"))("AzeriteUI5_JuNNeZ_Edition", ns)
 local options = assert(generate()).args
 local skinOption = options.skin
-check(table.concat(skinOption.sorting(), ",") == "theme,azerite,mage,hunter"
-	and skinOption.values().mage == "Mage (WIP)" and not skinOption.values().paladin,
+check(table.concat(skinOption.sorting(), ",") == "theme,azerite,mage,hunter,paladin"
+	and skinOption.values().mage == "Mage (WIP)" and skinOption.values().paladin == "Paladin (WIP)",
 	"real dropdown lists available skins with WIP labels")
 M.db.profile.iconStyle = "circular"
 skinOption.set({ "skin" }, "hunter")
 check(skinOption.get() == "hunter" and ring.texture == "HUNTER:actionbutton-border", "dropdown setter redraws immediately")
 skinOption.set({ "skin" }, "theme")
 check(ring.texture == "THEMED:actionbutton-border", "follow-theme restores interface art immediately")
-ns.db.global = { enableDevelopmentMode = true }
-check(skinOption.values().paladin == "Paladin (WIP)", "dropdown offers Paladin in Development Mode")
+check(skinOption.values().paladin == "Paladin (WIP)", "dropdown offers Paladin")
 skinOption.set({ "skin" }, "paladin")
 check(ring.texture == "PALADIN:action-ring", "dropdown applies Paladin's own ring")
 for _, style in ipairs({ "square", "rounded" }) do

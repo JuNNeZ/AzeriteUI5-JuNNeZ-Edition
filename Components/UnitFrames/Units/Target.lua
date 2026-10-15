@@ -629,6 +629,24 @@ local UpdateTargetBarSparkSize = function(element)
 	end
 end
 
+-- 0 at empty and full, 1 between (Step: the last point at or below the percent wins).
+local targetHealthSparkCurve
+local GetTargetHealthSparkCurve = function()
+	if (targetHealthSparkCurve == nil) then
+		targetHealthSparkCurve = false
+		if (type(UnitHealthPercent) == "function" and C_CurveUtil and type(C_CurveUtil.CreateCurve) == "function"
+			and Enum and Enum.LuaCurveType and Enum.LuaCurveType.Step ~= nil) then
+			local curve = C_CurveUtil.CreateCurve()
+			curve:SetType(Enum.LuaCurveType.Step)
+			curve:AddPoint(0, 0)
+			curve:AddPoint(.001, 1)
+			curve:AddPoint(.999, 0)
+			targetHealthSparkCurve = curve
+		end
+	end
+	return targetHealthSparkCurve or nil
+end
+
 local UpdateTargetBarSpark = function(element, percentOverride)
 	local spark = element and element.Spark
 	if (not spark) then
@@ -664,6 +682,35 @@ local UpdateTargetBarSpark = function(element, percentOverride)
 		end
 	end
 
+	-- Target health: ride the crop helper's moving edge (SetTargetHealthCrop), so the
+	-- spark follows an eased glide instead of waiting at its end, and needs no readable
+	-- percent. Hidden at full and empty as below; when health is secret a step curve
+	-- answers that, and its result only ever goes to SetAlpha.
+	local cropDriver = element.__AzeriteUI_CropDriver
+	local cropTexture = cropDriver and cropDriver.anchoredFill and cropDriver:GetStatusBarTexture()
+	if (cropTexture) then
+		spark:ClearAllPoints()
+		spark:SetPoint("CENTER", cropTexture, (growth == "LEFT") and "LEFT"
+			or (growth == "UP") and "TOP"
+			or (growth == "DOWN") and "BOTTOM"
+			or "RIGHT", 0, 0)
+		local known = ClampTargetSparkPercent(percentOverride) or ClampTargetSparkPercent(element.__AzeriteUI_TargetSparkPercent)
+		local alpha = 1
+		if (known ~= nil) then
+			alpha = (known > 0 and known < 1) and 1 or 0
+		else
+			local curve = GetTargetHealthSparkCurve()
+			if (curve) then
+				local owner = element.__owner
+				local ok, value = API.TryCall(UnitHealthPercent, element.unit or (owner and owner.unit) or "target", false, curve)
+				if (ok and type(value) == "number") then alpha = value end
+			end
+		end
+		spark:SetAlpha(alpha)
+		spark:Show()
+		return
+	end
+
 	local percent = GetTargetBarSparkPercent(element, percentOverride)
 	if (type(percent) ~= "number" or percent <= 0 or percent >= 1) then
 		spark:Hide()
@@ -685,6 +732,7 @@ local UpdateTargetBarSpark = function(element, percentOverride)
 		local x = width * ((growth == "LEFT") and (1 - percent) or percent)
 		spark:SetPoint("CENTER", element, "LEFT", x, 0)
 	end
+	spark:SetAlpha(1) -- the crop-edge path above may have left it at 0
 	spark:Show()
 end
 
@@ -694,27 +742,32 @@ end
 -- while the bar glides. Both now come from one hidden helper bar the size of the health
 -- bar, with its fill direction: it is handed the percent with the health write's
 -- interpolation, the fill is anchored to the helper's texture (its width), and for a
--- short window after each change the helper's GetInterpolatedValue crops the fill.
--- (A first 1x1 helper finished its easing at once while the health region was still
--- gliding: the art stretched, then jumped into place.) The interpolated value is secret
+-- glide the helper's GetInterpolatedValue crops the fill every frame, until the next
+-- snap. (A first 1x1 helper finished its easing at once while the health region was
+-- still gliding: the art stretched, then jumped into place. A fixed one-second follow
+-- window cut the crop short whenever the engine's curve ran longer; how long it runs
+-- cannot be asked, IsInterpolating is secret too.) The interpolated value is secret
 -- whenever the percent is (SecretReturnsForAspect BarValue): it is never compared, only
 -- handed to SetTexCoord, which takes secret arguments. Forced updates snap both.
-local TARGET_CROP_FOLLOW_TIME = 1
+--
+-- The art is mirrored and the bar reversed (UnitFrame_UpdateTextures pins
+-- SetReverseFill(true)): the helper's texture keeps the right edge, and (crop, 0)
+-- shows the right-hand part of the mirrored art. A non-reversed bar would need
+-- (1, 1 - crop), which a secret crop cannot be turned into.
 local INTERPOLATION_IMMEDIATE = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate) or 0
 local INTERPOLATION_EASED = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut) or 1
 
-local FollowTargetHealthCrop = function(driver, elapsed)
-	driver.followLeft = (driver.followLeft or 0) - elapsed
+local FollowTargetHealthCrop = function(driver)
 	local fill = driver.fill
-	if (driver.followLeft <= 0) then
-		driver:SetScript("OnUpdate", nil)
-		if (fill) then API.TryCall(fill.SetTexCoord, fill, driver.cropTarget, 0, 0, 1) end
-		return
-	end
 	local ok, value = API.TryCall(driver.GetInterpolatedValue, driver)
 	if (ok and fill) then
 		API.TryCall(fill.SetTexCoord, fill, value, 0, 0, 1)
 	end
+end
+
+local StopTargetHealthCropFollow = function(driver)
+	driver.following = nil
+	driver:SetScript("OnUpdate", nil)
 end
 
 local GetTargetHealthCropDriver = function(health)
@@ -734,7 +787,7 @@ local GetTargetHealthCropDriver = function(health)
 		if (on) then return end
 		local cropDriver = element.__AzeriteUI_CropDriver
 		if (not cropDriver) then return end
-		cropDriver:SetScript("OnUpdate", nil)
+		StopTargetHealthCropFollow(cropDriver)
 		API.TryCall(cropDriver.SetToTargetValue, cropDriver)
 		if (cropDriver.fill) then API.TryCall(cropDriver.fill.SetTexCoord, cropDriver.fill, cropDriver.cropTarget, 0, 0, 1) end
 	end
@@ -754,7 +807,7 @@ local SetTargetHealthCrop = function(health, fakeFill, crop)
 		print(string.format("|cffE5B226[azsmooth]|r target shaped fill: %s", eased and "|cff00ff00eased|r"
 			or (health.__AzeriteUI_LastInterpolation == INTERPOLATION_EASED and "|cffff4040snap|r (redraw, no write this frame)" or "|cffff4040snap|r")))
 	end
-	-- Same fill direction as the health bar (its growth can be flipped in the options).
+	-- Same fill direction as the health bar (always reversed today; see above).
 	if (health.GetOrientation) then
 		local okO, orientation = API.TryCall(health.GetOrientation, health)
 		if (okO and orientation) then driver:SetOrientation(orientation) end
@@ -769,23 +822,26 @@ local SetTargetHealthCrop = function(health, fakeFill, crop)
 		fakeFill:SetAllPoints(driverTexture)
 		driver.anchoredFill = fakeFill
 	end
-	-- The helper runs 0..1; a readable percent given as 0..100 is brought into range.
-	-- A secret one comes from UnitHealthPercent's ZeroToOne curve and is never touched.
-	if (type(crop) == "number" and not (issecretvalue and issecretvalue(crop)) and crop > 1) then
-		crop = crop / 100
+	-- The helper runs 0..1, and every caller passes 0..1 (UpdateTargetHealthFakeFillFromBar
+	-- converts its 0..100 sources). A readable value is only clamped; guessing the scale
+	-- from "> 1" read 0.8% as 80%. A secret one (the ZeroToOne curve) is never touched.
+	if (type(crop) == "number" and not (issecretvalue and issecretvalue(crop))) then
+		if (crop > 1) then crop = 1 elseif (crop < 0) then crop = 0 end
 	end
 	driver.fill = fakeFill
 	driver.cropTarget = crop
 	API.TryCall(driver.SetValue, driver, crop, eased and INTERPOLATION_EASED or INTERPOLATION_IMMEDIATE)
-	if (eased) then
-		driver.followLeft = TARGET_CROP_FOLLOW_TIME
-		driver:SetScript("OnUpdate", FollowTargetHealthCrop)
+	if (eased and driver.GetInterpolatedValue) then
+		if (not driver.following) then
+			driver.following = true
+			driver:SetScript("OnUpdate", FollowTargetHealthCrop)
+		end
 		local ok, value = API.TryCall(driver.GetInterpolatedValue, driver)
 		if (ok and API.TryCall(fakeFill.SetTexCoord, fakeFill, value, 0, 0, 1)) then
 			return
 		end
 	else
-		driver:SetScript("OnUpdate", nil)
+		StopTargetHealthCropFollow(driver)
 	end
 	fakeFill:SetTexCoord(crop, 0, 0, 1)
 end
@@ -856,14 +912,15 @@ local UpdateTargetHealthFakeFillFromBar = function(health)
 	if (type(percent) ~= "number") then
 		local mirrorPercent = health.__AzeriteUI_MirrorPercent
 		if (type(mirrorPercent) == "number" and (not issecretvalue or not issecretvalue(mirrorPercent))) then
-			percent = mirrorPercent
+			-- Mirror and texture percents are 0..100 (Functions.lua); everything below is 0..1.
+			percent = mirrorPercent / 100
 			source = "mirror"
 		end
 	end
 	if (type(percent) ~= "number") then
 		local texturePercent = health.__AzeriteUI_TexturePercent
 		if (type(texturePercent) == "number" and (not issecretvalue or not issecretvalue(texturePercent))) then
-			percent = texturePercent
+			percent = texturePercent / 100
 			source = "texture"
 		end
 	end
@@ -1653,7 +1710,9 @@ local Health_PostUpdate = function(element, unit, cur, max)
 	if (element.__AzeriteUI_RawCurSafe and element.__AzeriteUI_RawMaxSafe
 		and type(cur) == "number" and type(max) == "number" and max > 0
 		and (not issecretvalue or (not issecretvalue(cur) and not issecretvalue(max)))) then
-		element.safePercent = NormalizeTargetDisplayPercent((cur / max) * 100)
+		-- 0..1: the normalizer reads anything <= 1 as a fraction, so a 0..100 value
+		-- under 1% (a nearly dead target) came out as up to 100%.
+		element.safePercent = NormalizeTargetDisplayPercent(cur / max)
 	end
 	SyncTargetHealthVisualState(element)
 	UpdateTargetExecuteZone(element.__owner)
@@ -3571,11 +3630,21 @@ local style = function(self, unit, id)
 	healthFakeFill:SetAlpha(1)
 	self.Health.FakeFill = healthFakeFill
 
-	ns.API.AttachScriptSafe(health, "OnMinMaxChanged", function(source, minValue, maxValue)
+	-- Only writes from outside API.UpdateHealth need these: its own writes are followed
+	-- by Health_PostUpdate's sync in the same frame, and while a glide is followed a
+	-- sync without a write this frame would snap the crop to the end. Before, every
+	-- update synced three times and printed three trace lines.
+	local SyncTargetHealthFromScript = function(source)
+		local driver = source.__AzeriteUI_CropDriver
+		if (driver and driver.following) then return end
+		if (GetTime and source.__AzeriteUI_LastWriteTime == GetTime()) then return end
 		SyncTargetHealthVisualState(source)
+	end
+	ns.API.AttachScriptSafe(health, "OnMinMaxChanged", function(source, minValue, maxValue)
+		SyncTargetHealthFromScript(source)
 	end)
 	ns.API.AttachScriptSafe(health, "OnValueChanged", function(source, value)
-		SyncTargetHealthVisualState(source)
+		SyncTargetHealthFromScript(source)
 	end)
 
 	local healthBackdrop = self:CreateTexture(nil, "BACKGROUND", nil, -1)
@@ -3888,7 +3957,9 @@ local style = function(self, unit, id)
 	power.frequentUpdates = true
 	power.displayAltPower = true
 	power.colorPower = true
-	power.smoothing = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut) or nil
+	-- Listed with the other eased bars, so /azsmooth and /az -> Unit Frames switch it too
+	-- (it was set to ease directly and ignored both).
+	ns.UnitFrame.SetBarSmoothing(power, true)
 	power.safeBarMin = 0
 	power.safeBarMax = 1
 	power.safeBarValue = 1

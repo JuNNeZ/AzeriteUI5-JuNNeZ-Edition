@@ -1229,6 +1229,9 @@ L["More settings"] = true
 L["Copy layout from"] = true
 L["Copies frame positions, anchors and AzeriteUI Scale from another profile into this one. Every other setting stays as it is. The interface reloads."] = true
 L["Copy the layout from %s into this profile? The interface reloads."] = true
+L["Reset layout"] = true
+L["Puts every frame back in its default position and removes anchors and AzeriteUI Scale. Every other setting stays as it is. The interface reloads."] = true
+L["Reset the layout of this profile to default? The interface reloads."] = true
 -- Smooth bars (Unit Frames, Debug tools)
 L["Smooth health and power"] = true
 L["Health and power bars glide to each new value instead of jumping. A new target or group member still shows at once."] = true

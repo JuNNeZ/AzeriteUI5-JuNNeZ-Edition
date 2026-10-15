@@ -1,7 +1,7 @@
 {
   "theme": "Ashbringer / Silver Hand",
   "concept": "Concepts-2026-10-14",
-  "geometry": "26 exact native casing alphas; 4 modular HD health rails on native fills; 2 intact HD portraits; 2 approved crystal holders; unchanged runtime geometry",
+  "geometry": "24 exact native casing alphas; 2 HD cast cases at 4x density; 4 modular HD health rails on native fills; 2 intact HD portraits; 2 approved crystal holders; unchanged runtime geometry",
   "crystalFit": {
     "pw_crystal_case": {
       "sourcePainted": [
@@ -59,7 +59,7 @@
     "reference": "approved-concept.png",
     "referenceSha256": "efacb3f800c97f7dff286a128f943d573bf34ff2ceabddd4818de2ca5330ba51",
     "recipe": "Tools/PaladinConceptFrames.py",
-    "recipeSha256": "5da22d940fc64d93dab5afa8e49abcee080cd327cafcd943ea8e95db5240ca90",
+    "recipeSha256": "d76098b173a440e357475ada2d0d0649612929168434bbb8e454783bf17b8665",
     "parts": {
       "health-rails.png": "6385e53195395d3f7d654dc9e6d411f3586ca289ad7205e63fb06e548cca69cb",
       "cast-rails.png": "9189fc553e14e54c1b7bedf55cdadda5f16c92e68ae6d864dbb201294e474fdb",
@@ -68,7 +68,27 @@
       "cast-head-libram.png": "eee20049c29d646720e215445fa3c1dbc3ca50f3b540d465e1958a4abbe32b32"
     }
   },
+  "hdDensity": {
+    "cast_back": 4,
+    "cast_back-over": 4,
+    "cast_back_spiked": 4,
+    "cast_back_spiked-over": 4
+  },
   "hdSources": {
+    "cast-head-libram.png": {
+      "sha256": "b5bdf2db30e78b82b2232408e2fbb00e2c707b2a93dfb9c2f3844d81f176d945",
+      "canvas": [
+        1254,
+        1254
+      ]
+    },
+    "cast-rails.png": {
+      "sha256": "e994e224c9433875c2bf9f6e2c20d44fe1770ff7332e41b940007fcde390cb84",
+      "canvas": [
+        1774,
+        887
+      ]
+    },
     "health-rails.png": {
       "sha256": "8cb48c15866345ce5b942720d457846c47c1eb493783a6ba40c400f6e8e458cc",
       "canvas": [
@@ -84,7 +104,7 @@
       ]
     },
     "portrait.png": {
-      "sha256": "a4c6000909451d80b2773cf7e0d497486a09642df275fd69521508a3e56704a7",
+      "sha256": "045580e8b31d208b129658a3f23aba8fc4e31f3ac1b8db09ea4e0c6ce219b931",
       "canvas": [
         1254,
         1254
@@ -237,21 +257,21 @@
         1024,
         256
       ],
-      "sha256": "6cccaefb1a00c668163e785fc032acc98eeceeb335c483a33b86ff067af110cd"
+      "sha256": "d0e29b0bbd2f4501a6acc62bc34f7898dae8412d7670e1dd5337477ee84a15f5"
     },
     "hp_cap_case-capped-over": {
       "canvas": [
         1024,
         256
       ],
-      "sha256": "309554ec94dcc4cdfd1c5135652602c4b1f19e407a84f83babef9f577ca7818e"
+      "sha256": "72571f9f122952dd87fd94543aef10dde561f0022bf456e6a851983808d7b26a"
     },
     "hp_cap_case-capped-glow": {
       "canvas": [
         1024,
         256
       ],
-      "sha256": "bf69176bb831c0fcc564f842eb48178a6dec773e4ccbf6c45438749efdb141de"
+      "sha256": "c85b8d25b5c5f5613eda62fb65861ec19fe8a37a7e03497f516d9c29b4f6cf61"
     },
     "hp_mid_case": {
       "canvas": [
@@ -279,21 +299,21 @@
         1024,
         256
       ],
-      "sha256": "028647b02fe101bda65bc2456037c4e284b84b5bd3a12933b69bc03228188714"
+      "sha256": "75b793c3c134d5ac5ebb4ae87174244700bf741c0b1e0c8d7bb55bb2275ae94f"
     },
     "hp_mid_case-capped-over": {
       "canvas": [
         1024,
         256
       ],
-      "sha256": "006a52fab42dd51c796ac190453e7505cdeac57bafecb00a54797ae75fc2e08f"
+      "sha256": "ecc8e656ca6e46f6fca0721f15e3c58d1a1f9a9f186243d1529bb7dd5749ff26"
     },
     "hp_mid_case-capped-glow": {
       "canvas": [
         1024,
         256
       ],
-      "sha256": "aa1eac37abad6ebe8449fcf92672a4cc60889b6f63e7f0cdaae99b3fe68574df"
+      "sha256": "bf986bc93f2985526e61013745303fc23e75c52a52996e38f0bac62f6c9ac228"
     },
     "hp_low_case": {
       "canvas": [
@@ -321,21 +341,21 @@
         1024,
         256
       ],
-      "sha256": "bc07b3758751d7627be7d31cb8a4f3d03bda4a0fd67ab480af070a7de661ec28"
+      "sha256": "cb5e136631bef0065b1fcec253b1259dc30cd450006b8f6b361772a231801186"
     },
     "hp_low_case-capped-over": {
       "canvas": [
         1024,
         256
       ],
-      "sha256": "006a52fab42dd51c796ac190453e7505cdeac57bafecb00a54797ae75fc2e08f"
+      "sha256": "ecc8e656ca6e46f6fca0721f15e3c58d1a1f9a9f186243d1529bb7dd5749ff26"
     },
     "hp_low_case-capped-glow": {
       "canvas": [
         1024,
         256
       ],
-      "sha256": "aa1eac37abad6ebe8449fcf92672a4cc60889b6f63e7f0cdaae99b3fe68574df"
+      "sha256": "bf986bc93f2985526e61013745303fc23e75c52a52996e38f0bac62f6c9ac228"
     },
     "hp_boss_case": {
       "canvas": [
@@ -363,21 +383,21 @@
         1024,
         256
       ],
-      "sha256": "474f6eb273dccb061e9d6000ddae46c705fbef0a32ec6ee0f45d20d11459e4a1"
+      "sha256": "2c06f0a41b451790661ebd7207d5fe2aad885a926ca84dc84c305b9d72ae7636"
     },
     "hp_boss_case-capped-over": {
       "canvas": [
         1024,
         256
       ],
-      "sha256": "a961881cf5b4849fc59d75fc9f2bbe3f19cb385465b03aed15af89ca7e0b6ed1"
+      "sha256": "7f484393369ce8102c358f05c6fb9e8c46e82cfd1b9f942f40f8ceed77d049e3"
     },
     "hp_boss_case-capped-glow": {
       "canvas": [
         1024,
         256
       ],
-      "sha256": "86b54dfadb31c9472d2d2a8700f2373d417bceed043148811a4d1f9ffeb4d77c"
+      "sha256": "350e50b03f8a24157a38415936277e085b182ae2dd546fe107bc9b7141e8bda7"
     },
     "hp_critter_case": {
       "canvas": [
@@ -395,31 +415,31 @@
     },
     "cast_back": {
       "canvas": [
-        256,
-        128
+        1024,
+        512
       ],
-      "sha256": "4eaa9fa0022dfa84c20bacdb3306d0c273f1295d12b48ace4edb49f9e8e0ae5c"
+      "sha256": "46bc5245afdda97a286a5ad561783569e6450a41be76c343c7249d78b473f9f4"
     },
     "cast_back-over": {
       "canvas": [
-        256,
-        128
+        1024,
+        512
       ],
-      "sha256": "faa4fc36a007fcaae4ffd12dc1cfe83d972edf116b9f71dea6bc012927ae8f9f"
+      "sha256": "7a859e6ac253107260a1b319b14d6260046a517ad04137792a33e74a86103611"
     },
     "cast_back_spiked": {
       "canvas": [
-        256,
-        128
+        1024,
+        512
       ],
-      "sha256": "38c81eae55910ecd567e153f5f852ff171dd8e4dc0b40f9bac330a43a7e800b0"
+      "sha256": "749fe1caf1affab51478f4c0a46b90adb347a38e3ecf1a63925389ba01a91543"
     },
     "cast_back_spiked-over": {
       "canvas": [
-        256,
-        128
+        1024,
+        512
       ],
-      "sha256": "faa4fc36a007fcaae4ffd12dc1cfe83d972edf116b9f71dea6bc012927ae8f9f"
+      "sha256": "ecd3631de6fc6728af3ee44d28421be2b73998011fa430fe7e6803f1abee16ea"
     },
     "cast_back_wooden": {
       "canvas": [
@@ -657,7 +677,7 @@
         256,
         256
       ],
-      "sha256": "4aa70aa1bdaf0157b85efaf1a25f9d10a69c15b1f7ed9b19ac037373c669210b"
+      "sha256": "4cd0046e0867eb3166029fc45b4130b002cc5f64aa1956a945c0d9d669db6992"
     },
     "minimap-north": {
       "canvas": [

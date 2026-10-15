@@ -63,7 +63,8 @@ def mask(name, canvas):
         owner = (0,0,*base['Size'])
         return project(alpha(db['HealthBarTexture']),anchor(owner,db['HealthBarSize'],db['HealthBarPosition']),
                        anchor(owner,db['HealthBackdropSize'],db['HealthBackdropPosition']),canvas,True)
-    return Image.open(ROOT/'Docs/Research_Assets/Templates'/(name+'-fill.png')).convert('L')
+    result = Image.open(ROOT/'Docs/Research_Assets/Templates'/(name+'-fill.png')).convert('L')
+    return result if result.size == canvas else result.resize(canvas,S)
 
 
 def crystal_overlap(name, foreground_alpha):

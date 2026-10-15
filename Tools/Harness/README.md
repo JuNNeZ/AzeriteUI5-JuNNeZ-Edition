@@ -35,6 +35,7 @@ lua Tools/Harness/bag_button_harness.lua   .               # the bag button besi
 lua Tools/Harness/proc_highlight_harness.lua .             # proc styles, preview/reset, riding visibility combinations
 lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/dropdown, restore, keybinds, Explorer fade proxies, rival addon choice
 lua Tools/Harness/target_execute_harness.lua .             # target tiers, mirrored crops, shared threshold, secrets, off/on
+lua Tools/Harness/target_health_crop_harness.lua .         # target shaped fill: eased crop helper, scale, spark on its edge
 lua Tools/Harness/cdready_menu_harness.lua .               # real debug page, row layout, immediate probe vs queued repairs
 lua Tools/Harness/cdready_harness.lua .                    # opt-in probe, secrets, callbacks, polling and cleanup
 lua Tools/Harness/auracost_harness.lua .                   # /azdebug auracost: alternating windows, noise verdict, report
@@ -362,7 +363,7 @@ following `Components/Components.xml` includes), five rows at most, sections tha
 rules (Day and Night only on Forever, bars 6-8 only on Retail, Player Alternate hidden while Player is on).
 `panel_harness.lua`'s "Frame settings panel" section builds, opens, refreshes and closes the window on the Kit stubs.
 
-Layout copy: `lua Tools/Harness/layout_copy_harness.lua .` runs `Core/API/Layout.lua` on an AceDB-shaped table.
+Layout copy: `lua Tools/Harness/layout_copy_harness.lua .` runs `Core/API/Layout.lua` on an AceDB-shaped table, both `CopyLayout` and `ResetLayout` (the `/lock` window's Reset layout).
 
 Raid25/Raid40 merge: `lua Tools/Harness/raid_merge_harness.lua . [old Raid25.lua] [old Raid40.lua]` loads
 `Components/UnitFrames/Units/RaidLarge.lua`; given the pre-merge files (`git show 9292b5f:Components/UnitFrames/Units/Raid25.lua`,
@@ -375,6 +376,12 @@ and counts Explorer Mode's settings passes per event. Run it on a folder holding
 Eased bars: `lua Tools/Harness/smooth_bars_harness.lua .` loads the real UnitFrame.lua (smoothing switch, list of
 bars, /azsmooth) and Functions.lua (API.UpdateHealth/UpdatePower: plain updates ease, forced ones snap). The bar
 stub only has real StatusBar methods: an addon field like DisableSmoothing must read nil, as in the game.
+
+Target health crop: `lua Tools/Harness/target_health_crop_harness.lua . [mutation]` cuts the real block of
+Target.lua from `GetTargetBarGrowth` to `SyncTargetHealthVisualState` and runs it on stubs: the crop helper's
+reversed direction, snap vs eased follow (no one-second cut-off), redraws snap, switch-off finishes the crop,
+0..1 vs 0..100 percent sources, secret percents untouched, the spark on the helper's edge. Mutations
+`one-second-follow`, `mirror-0-100`, `spark-at-end`, `no-snap-on-redraw` must each fail.
 
 World map canvas taint (Elune): `Tools/Run-Elune.ps1 -Script Tools/Harness/worldmap_canvas_taint_probe.lua`. Models the
 map scroll container's scale fields in Blizzard's read-then-write order: an addon call to `OnFrameSizeChanged` leaves

@@ -20,11 +20,21 @@ def check_health_contour(name, actual):
     original_box = Image.fromarray(native[:,:,3]).point(lambda a:255 if a>128 else 0).getbbox()
     box = actual.getchannel('A').point(lambda a:255 if a>128 else 0).getbbox()
     assert all(abs(box[i]-original_box[i]) <= (41 if i%2==0 else 10) for i in range(4)), name+' outside native footprint'
+    # Three ordinary studs / five on boss: native identity slots, HD planes.
+    solid = pixels[:,:,3]>200
+    tops = np.where(solid.any(0),solid.argmax(0),actual.height)
+    columns = np.flatnonzero(solid.any(0))
+    lo,hi = columns[0]+65,columns[-1]-65
+    baseline = np.median(tops[lo:hi])
+    indices = np.flatnonzero((tops<baseline-5)&(np.arange(actual.width)>=lo)&(np.arange(actual.width)<hi))
+    groups = np.split(indices,np.where(np.diff(indices)>1)[0]+1)
+    assert len([g for g in groups if len(g)>4]) == (5 if name=='hp_boss_case' else 3), name+' stud identity/count changed'
     if name == 'hp_cap_case':
         # The supplied endcap-off screenshot exposes this native lower-right
         # drop. A flat concept rectangle leaves it black or completely absent.
         metal = pixels[173:179,747:758]
-        assert (metal[:,:,:3].max(2)[metal[:,:,3]>200]>35).mean()>.8, name+' dip lacks concept metal'
+        opaque = metal[:,:,3]>200
+        assert opaque.sum()>=10 and (metal[:,:,:3].max(2)[opaque]>35).mean()>.8, name+' dip lacks concept metal'
 
 
 def check_portrait(name, actual):
@@ -49,21 +59,38 @@ def check_portrait(name, actual):
     assert np.array_equal(pixels[glass],original[glass]), name+' native glass missing inside intact aperture'
 
 
+def check_cast_spike(plain, spiked):
+    assert plain.shape == spiked.shape == (512,1024,4), 'castbar still uses a low-resolution runtime texture'
+    density = 4
+    outside_spike = np.ones(plain.shape[:2],dtype=bool)
+    outside_spike[23*density:58*density,108*density:143*density] = False
+    assert np.array_equal(plain[outside_spike],spiked[outside_spike]), 'protected cast changes ordinary rails outside spike'
+    tip = spiked[31*density:48*density,116*density:135*density]
+    metal = tip[:,:,3]>200
+    gold = metal & (tip[:,:,0]>90) & (tip[:,:,0].astype(float)>tip[:,:,2]*1.3)
+    assert gold.sum()>30*density*density, 'protected cast spike is only the old dark shadow, missing painted Paladin metal'
+
+
 assert not manifest['missingSources'], 'incomplete source manifest'
 casings = 0
 for name, entry in manifest['textures'].items():
     target = THEME/(name+'.tga')
     assert hashlib.sha256(target.read_bytes()).hexdigest() == entry['sha256'], name+' installed hash'
     original = ASSETS/(name+'.tga')
+    density = manifest.get('hdDensity',{}).get(name,1)
+    if name.removesuffix('-over') in ('cast_back','cast_back_spiked'):
+        assert density==4 and Image.open(target).size==(1024,512), name+' HD runtime density missing'
     if original.exists():
         actual = Image.open(target).convert('RGBA')
         native = Image.open(original).convert('RGBA')
-        assert actual.size == native.size, name+' canvas'
+        assert actual.size == tuple(v*density for v in native.size), name+' canvas/density'
         if name not in ('pw_crystal_case', 'pw_crystal_case_low','portrait_frame_hi','portrait_frame_lo',
-                        'hp_cap_case','hp_mid_case','hp_low_case','hp_boss_case'):
+                        'hp_cap_case','hp_mid_case','hp_low_case','hp_boss_case','cast_back','cast_back_spiked'):
             assert actual.getchannel('A').tobytes() == native.getchannel('A').tobytes(), name+' alpha'
         casings += 1
 assert casings == 34, 'native casing coverage'
+check_cast_spike(np.asarray(Image.open(THEME/'cast_back-over.tga').convert('RGBA')),
+                 np.asarray(Image.open(THEME/'cast_back_spiked-over.tga').convert('RGBA')))
 for name, entry in manifest['inventory'].items():
     assert hashlib.sha256((ASSETS/(name+'.tga')).read_bytes()).hexdigest() == entry['originalSha256'], name+' shared root changed'
 for target in THEME.glob('*-over.tga'):
@@ -95,6 +122,8 @@ for name in ('pw_crystal_case', 'pw_crystal_case_low'):
     assert not alpha[30:40, 115:140].any(), name+' cavity is not transparent'
 measured = manifest['measuredCrystal']
 work = ROOT/'Docs/Research_Assets/Paladin/Rebuild-2026-10-14'
+approved_portrait = json.loads((work/'Whole-Asset-Repair/approved-portrait-lock.json').read_text())
+assert hashlib.sha256((work/approved_portrait['source']).read_bytes()).hexdigest() == approved_portrait['sha256'], 'approved portrait source replaced'
 assert hashlib.sha256((work/measured['reference']).read_bytes()).hexdigest() == measured['referenceSha256']
 cutout = (work/measured['cutout']).read_bytes()
 assert hashlib.sha256(cutout).hexdigest() == measured['cutoutSha256']
@@ -113,6 +142,10 @@ for file, entry in manifest['hdSources'].items():
     assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], 'HD source '+file
     size = Image.open(source).size
     assert max(size)>=1024 and min(size)>=512, 'small source used for HD art: '+file
+for file,minimum in (('cast-rails.png',(1000,150)),('cast-head-libram.png',(500,900))):
+    source = Image.open(work/'Sources/HD'/file).convert('RGBA')
+    box = source.getchannel('A').point(lambda a:255 if a>128 else 0).getbbox()
+    assert box[2]-box[0]>=minimum[0] and box[3]-box[1]>=minimum[1], file+' production art still comes from a small concept crop'
 for name in ('portrait_frame_hi','portrait_frame_lo'):
     check_portrait(name,Image.open(THEME/(name+'.tga')).convert('RGBA'))
 for name in ('hp_cap_case','hp_mid_case','hp_low_case','hp_boss_case'):
@@ -150,4 +183,4 @@ endcap = np.asarray(Image.open(THEME/'ornament-ashbringer.tga').convert('RGBA'))
 x0 = round((.5+(-6-14)/88)*256)
 x1 = round((.5-14/88)*256)
 assert (endcap[120:136, x0:x1+1] > 200).all(), 'endcap does not cover health termination'
-print('Paladin installed art: hashes, 26 exact native casing alphas, intact approved portrait planes/silhouette/glass, HD rail clearance/dip/paired terminals, crystal lock, shared root and exterior threat passed (offline only).')
+print('Paladin installed art: hashes, 24 exact native casing alphas, 4x HD cast layers, painted protected cast spike, intact approved portrait planes/silhouette/glass, HD rail clearance/dip/paired terminals, crystal lock, shared root and exterior threat passed (offline only).')
