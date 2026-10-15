@@ -1215,3 +1215,41 @@ L["How large the cast bar's ornaments are drawn. They grow and shrink around the
 L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "將施法條裝飾從施法條兩端向外移出，或向內移到施法條上。"
 L["Moves the cast bar's ornaments up or down."] = "將施法條裝飾向上或向下移動。"
 L["Reset cast bar endcap size and position"] = "重置施法條端飾大小和位置"
+
+-- Mover anchoring (/lock)
+L["Anchor To"] = "錨定到"
+L["Keeps this frame beside another AzeriteUI frame and moves it when that frame moves. Dragging it changes the distance. Shift-click resets it and removes the anchor."] = "讓此框架保持在另一個 AzeriteUI 框架旁邊，並隨其移動。拖曳可改變距離。Shift-點擊會重置並移除錨定。"
+L["Not anchored"] = "未錨定"
+L["This frame's point"] = "此框架的錨點"
+L["Point on the other frame"] = "另一框架的錨點"
+L["Distance X"] = "距離 X"
+L["Distance Y"] = "距離 Y"
+L["Distance between the two points. 0 puts them on top of each other."] = "兩個錨點之間的距離。0 表示重疊。"
+L["More settings"] = "更多設定"
+-- Layout copy (/lock)
+L["Copy layout from"] = "複製版面自"
+L["Copies frame positions, anchors and AzeriteUI Scale from another profile into this one. Every other setting stays as it is. The interface reloads."] = "從另一個設定檔複製框架位置、錨定和 AzeriteUI 縮放到此設定檔。其他設定保持不變。介面將重新載入。"
+L["Copy the layout from %s into this profile? The interface reloads."] = "將 %s 的版面複製到此設定檔？介面將重新載入。"
+-- Smooth bars (Unit Frames, Debug tools)
+L["Smooth health and power"] = "平滑生命值和能量"
+L["Health and power bars glide to each new value instead of jumping. A new target or group member still shows at once."] = "生命值和能量條平滑過渡到新數值，而不是跳變。新的目標或隊友會立即顯示。"
+L["Smooth castbar pushback"] = "平滑施法推遲"
+L["When a cast is pushed back, the bar slides to its new place instead of jumping. A new cast always starts at once."] = "施法被推遲時，施法條平滑移動到新位置，而不是跳變。新的施法總是立即開始。"
+L["Smooth bars"] = "平滑條"
+L["All on"] = "全部開啟"
+L["All off"] = "全部關閉"
+L["Flip both"] = "同時切換"
+L["Switch eased bars while you fight to compare them side by side. The same two settings as on the Unit Frames page; /azsmooth [on|off] [bars|cast] does it from chat."] = "戰鬥中切換平滑條以便比較。與單位框架頁面的兩個設定相同；聊天中可用 /azsmooth [on|off] [bars|cast]。"
+L["Health and power: %s   Castbar pushback: %s"] = "生命值和能量：%s   施法推遲：%s"
+L["Applies to castbars on unit frames."] = "適用於單位框架上的施法條。"
+
+-- Smooth bars preview (Debug tools)
+L["Smooth bars preview"] = "平滑條預覽"
+L["Both bars get the same hits and heals, big and small, every 1.4 seconds."] = "兩條條每 1.4 秒受到相同的大小傷害與治療。"
+L["Eased"] = "平滑"
+L["Snaps"] = "跳變"
+L["Toggle preview"] = "切換預覽"
+
+-- Paladin Light resource palette
+L["Light colored"] = "聖光色"
+L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = "選擇能量水晶和法力寶珠的顏色。聖光色使用金色聖光。"

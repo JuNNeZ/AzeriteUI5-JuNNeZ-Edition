@@ -54,12 +54,12 @@ local function client(forever)
  local Options=S.modules.Options;Options:GenerateOptionsMenu()
  local Kit=ns.OptionsKit;local Panel,Config,Combat=Kit.Panel,Kit.Config,Kit.Combat
  local options=Options:GetOptionsObject();local group=options.args["Debug tools"]
- check(group and group.args.cooldown and group.args.health and group.args.keys and group.args.raid and group.args.utilities,"five sections registered")
+ check(group and group.args.cooldown and group.args.health and group.args.keys and group.args.raid and group.args.utilities and group.args.smooth,"six sections registered")
  check(#actions==0,"load does not start probe")
  M:ToggleDebugMenu();check(Panel:IsShown() and Panel.selected=="Debug tools" and Panel.tab=="options","opens real panel debug page")
  check(not M.DebugFrame and not M.CooldownTestFrame,"no native debug popup")
  check(#actions==0,"opening is idle")
- check(#Panel.page:GetSections()==5,"section jumps exposed")
+ check(#Panel.page:GetSections()==6,"section jumps exposed (Smooth bars added 2026-10-14)")
  local function control(label)
   for _,c in ipairs(Panel.page:GetControls()) do if c.labelText==label and c.kind~="header" and c.kind~="description" then return c end end
   error("missing control "..label)

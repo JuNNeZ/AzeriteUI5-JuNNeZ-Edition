@@ -53,7 +53,7 @@ local tostring = tostring
 local type = type
 local unpack = unpack
 
--- GLOBALS: CreateFrame, EditModeManagerFrame, UIParent, WorldFrame
+-- GLOBALS: C_Timer, CreateFrame, EditModeManagerFrame, InCombatLockdown, UIParent, WorldFrame
 
 -- Addon API
 local Colors = ns.Colors
@@ -75,6 +75,12 @@ OUTLINE:SetFrameLevel(10000)
 -- Anchor cache
 local AnchorData = {}
 local AnchorProxies = {}
+local KeyedAnchors = {} -- stable key -> anchor, for links (RequestAnchor(key))
+
+-- Links between movers (Docs/Mover Anchoring Plan.md). A follower is placed by its link
+-- and saved as a plain UIParent position through MFM_PositionUpdated, like any move.
+local LINKS_SUSPENDED -- set while every mover is rescaled at once
+local PROPAGATING -- set while followers are being placed, so each pass runs once
 
 -- Snapping
 --------------------------------------
@@ -137,8 +143,10 @@ end
 
 -- The lines a dragged mover may snap to, in UIParent units from its bottom left:
 -- the screen's edges and centre, the Edit Mode grid while it is shown, and the
--- edges and centres of every other mover on screen.
-local GetSnapTargets = function(dragged)
+-- edges and centres of every other mover on screen. `exclude` holds movers that
+-- move with the dragged one (its followers): snapping to them would chase itself.
+-- Built once when a drag starts; nothing else moves while one mover is dragged.
+local GetSnapTargets = function(dragged, exclude)
 	local uiLeft, uiBottom = UIParent:GetLeft() or 0, UIParent:GetBottom() or 0
 	local uiWidth, uiHeight = UIParent:GetWidth(), UIParent:GetHeight()
 	local xTargets = { 0, uiWidth / 2, uiWidth }
@@ -151,7 +159,7 @@ local GetSnapTargets = function(dragged)
 	end
 
 	for anchor in next, AnchorData do
-		if (anchor ~= dragged and anchor:IsShown()) then
+		if (anchor ~= dragged and anchor:IsShown() and not (exclude and exclude[anchor])) then
 			local left, bottom, width, height = anchor:GetRect()
 			if (left and width and width > 0 and height > 0) then
 				left, bottom = left - uiLeft, bottom - uiBottom
@@ -174,7 +182,7 @@ local compare = function(...)
 	local numArgs = select("#", ...)
 	if (numArgs == 2) then
 		local s, s2 = ...
-		return (math_abs(s - s2) < (diff or 0.01))
+		return (math_abs(s - s2) < 0.01)
 	else
 		local point, x, y, point2, x2, y2, diff = ...
 		return (point == point2) and (math_abs(x - x2) < (diff or 0.01)) and (math_abs(y - y2) < (diff or 0.01))
@@ -339,7 +347,7 @@ local mt = getmetatable(CreateFrame("Button")).__index
 local Anchor = {}
 
 -- Constructor
-Anchor.Create = function(self)
+Anchor.Create = function(self, key)
 
 	local anchor = CreateFrame("Button", nil, UIParent)
 	anchor:Hide()
@@ -409,8 +417,12 @@ Anchor.Create = function(self)
 		maxScale = 2.5,
 		scaleStep = .1,
 		lockAnchorPoint = false,
-		colorGroup = "general"
+		colorGroup = "general",
+		key = (type(key) == "string" and key ~= "" and not KeyedAnchors[key]) and key or nil
 	}
+	if (AnchorData[anchor].key) then
+		KeyedAnchors[AnchorData[anchor].key] = anchor
+	end
 
 	AnchorProxies[overlay] = AnchorData[anchor]
 
@@ -722,7 +734,7 @@ Anchor.SetWidth = function(self, width)
 	local anchorData = AnchorData[self]
 	anchorData.width = width
 	self:SetWidthBase(width * anchorData.scale)
-	self:SetHitRectInsets(width < 20 and -10 or 0, width < 20 and -10 or 0, height < 20 and -10 or 0, height < 20 and -10 or 0)
+	self:UpdateHitRect()
 end
 
 Anchor.SetHeightBase = mt.SetHeight
@@ -730,7 +742,17 @@ Anchor.SetHeight = function(self, height)
 	local anchorData = AnchorData[self]
 	anchorData.height = height
 	self:SetHeightBase(height * anchorData.scale)
-	self:SetHitRectInsets(width < 20 and -10 or 0, width < 20 and -10 or 0, height < 20 and -10 or 0, height < 20 and -10 or 0)
+	self:UpdateHitRect()
+end
+
+-- A mover under 20 wide or tall gets 10 extra on each side of that axis to click.
+-- (SetWidth and SetHeight read the other side from locals that did not exist.)
+Anchor.UpdateHitRect = function(self)
+	local anchorData = AnchorData[self]
+	local width, height = anchorData.width or 0, anchorData.height or 0
+	local padX = width < 20 and -10 or 0
+	local padY = height < 20 and -10 or 0
+	self:SetHitRectInsets(padX, padX, padY, padY)
 end
 
 Anchor.SetPointBase = mt.SetPoint
@@ -766,6 +788,89 @@ Anchor.SetColorGroup = function(self, colorGroup)
 	self.Overlay:SetBackdropBorderColor(r, g, b, 1)
 end
 
+-- The frame settings panel (Options/Kit/FramePanel.lua), loaded after us.
+local GetFramePanel = function()
+	local Kit = ns.OptionsKit
+	return Kit and Kit.FramePanel
+end
+
+-- Anchor Links
+--------------------------------------
+-- The links of the HUD in use: Legacy keeps its own positions, so it keeps its own links.
+local GetLinks = function(create)
+	local profile = ns.db and ns.db.profile
+	if (not profile) then return end
+	local all = profile.moverLinks
+	if (type(all) ~= "table") then
+		if (not create) then return end
+		all = {}
+		profile.moverLinks = all
+	end
+	local hud = (ns.LegacyHUD and ns.LegacyHUD:IsActive()) and "legacy" or "azerite"
+	local links = all[hud]
+	if (type(links) ~= "table") then
+		if (not create) then return end
+		links = {}
+		all[hud] = links
+	end
+	return links
+end
+
+-- A mover's rect in UIParent units from its bottom left, read from its saved position
+-- and size rather than from the frame, so hidden movers answer too.
+local GetAnchorRect = function(anchor)
+	local point, x, y = anchor:GetPosition()
+	local width, height = anchor:GetSize()
+	if (not point or not width or not height or width <= 0 or height <= 0) then return end
+	local left, bottom = ns.API.RectFromPoint(point, x, y, width, height, UIParent:GetWidth(), UIParent:GetHeight())
+	if (not left) then return end
+	return left, bottom, width, height
+end
+
+Anchor.GetKey = function(self)
+	return AnchorData[self].key
+end
+
+-- This mover's link and the mover it follows, if both exist and the target is enabled.
+Anchor.GetLink = function(self)
+	local key = AnchorData[self].key
+	local links = key and GetLinks()
+	local link = links and links[key]
+	if (type(link) ~= "table") then return end
+	local target = KeyedAnchors[link.target]
+	return link, (target and target:IsEnabled()) and target or nil
+end
+
+-- Places this mover by its link. Keeps its own anchor point, so its saved position keeps
+-- the shape its module expects. Returns true if it moved.
+Anchor.ApplyLink = function(self)
+	local link, target = self:GetLink()
+	if (not link or not target) then return end
+	local targetLeft, targetBottom, targetWidth, targetHeight = GetAnchorRect(target)
+	local width, height = self:GetSize()
+	local point, currentX, currentY = self:GetPosition()
+	if (not targetLeft or not point or not width or not height) then return end
+	local left, bottom = ns.API.LinkedRect(link, targetLeft, targetBottom, targetWidth, targetHeight, width, height)
+	if (not left) then return end
+	local x, y = ns.API.PointFromRect(point, left, bottom, width, height, UIParent:GetWidth(), UIParent:GetHeight())
+	if (not x or compare(point, currentX, currentY, point, x, y)) then return end
+	self:UpdatePosition(point, x, y)
+	return true
+end
+
+-- After the person moves a linked mover, the link keeps it there: its offset is rewritten.
+Anchor.UpdateLinkOffset = function(self)
+	local link, target = self:GetLink()
+	if (not link or not target) then return end
+	local targetLeft, targetBottom, targetWidth, targetHeight = GetAnchorRect(target)
+	local left, bottom, width, height = GetAnchorRect(self)
+	if (not targetLeft or not left) then return end
+	local x, y = ns.API.LinkOffset(link.point, link.relativePoint, targetLeft, targetBottom, targetWidth, targetHeight, left, bottom, width, height)
+	if (x) then
+		link.x = math_floor(x * 100 + .5) / 100
+		link.y = math_floor(y * 100 + .5) / 100
+	end
+end
 
 -- Anchor Script Handlers
 --------------------------------------
@@ -786,10 +891,18 @@ Anchor.OnClick = function(self, button)
 		self:SetFrameLevel(60)
 
 		if (IsShiftKeyDown() and not self:IsInDefaultPosition()) then
+			-- Back to default means back to following nothing.
+			if (self:GetLink()) then
+				MovableFramesManager:SetAnchorLink(self, nil)
+			end
 			self:ResetToDefault()
 		end
 
 		MovableFramesManager:RefreshMFMFrame()
+
+		-- Like Edit Mode's settings dialog: this frame's settings beside it.
+		local panel = GetFramePanel()
+		if (panel) then panel:Open(self) end
 
 	elseif (button == "RightButton") then
 		if (CURRENT and CURRENT == self) then
@@ -797,12 +910,16 @@ Anchor.OnClick = function(self, button)
 			self.isSelected = nil
 			self:OnLeave()
 
+			local panel = GetFramePanel()
+			if (panel) then panel:Close() end
+
 			MovableFramesManager:RefreshMFMFrame()
 		end
 		self:SetFrameLevel(40)
 
 		if (IsControlKeyDown() and self:HasMovedSinceLastUpdate()) then
 			self:ResetLastChange()
+			self:UpdateLinkOffset()
 		end
 	end
 
@@ -849,6 +966,19 @@ Anchor.OnDragStart = function(self, button)
 
 	anchorData.dragStartPosition = { fx - (w/2), fy - (h/2) }
 	anchorData.isDragging = true
+
+	-- Snap lines for this whole drag, leaving out the movers that follow this one.
+	local exclude
+	local key = anchorData.key
+	local links = key and GetLinks()
+	if (links and next(links)) then
+		exclude = {}
+		for _, followerKey in next, ns.API.LinkFollowers(links, key) do
+			local follower = KeyedAnchors[followerKey]
+			if (follower) then exclude[follower] = true end
+		end
+	end
+	anchorData.snapX, anchorData.snapY = GetSnapTargets(self, exclude)
 	--anchorData.dragStartPosition = { fx - (w/2)*frameScale, fy - (h/2)*frameScale }
 
 	-- Treat the dragged frame as clicked.
@@ -890,7 +1020,10 @@ Anchor.UpdateOverlay = function(self)
 	local snappedX, snappedY
 	if (IsSnapEnabled()) then
 		local range = ns.API.SNAP_RANGE / (UIParent:GetEffectiveScale() or 1)
-		local xTargets, yTargets = GetSnapTargets(self)
+		local xTargets, yTargets = anchorData.snapX, anchorData.snapY
+		if (not xTargets) then
+			xTargets, yTargets = GetSnapTargets(self)
+		end
 		if (not anchorData.restrictToVertical) then
 			local delta, line = ns.API.FindSnap(fx, w, xTargets, range)
 			if (delta) then fx, snappedX = fx + delta, line end
@@ -924,6 +1057,7 @@ Anchor.OnDragStop = function(self)
 		self:UpdateOverlay()
 	end
 	anchorData.isDragging = nil
+	anchorData.snapX, anchorData.snapY = nil, nil
 	HideGuides()
 
 	local point, x, y = getPosition(self.Overlay, (self:IsAnchorPointLocked() and self:GetPosition()))
@@ -931,6 +1065,7 @@ Anchor.OnDragStop = function(self)
 	anchorData.currentPosition = { point, x, y }
 
 	self:UpdatePosition(point, x, y)
+	self:UpdateLinkOffset()
 
 	MovableFramesManager:RefreshMFMFrame()
 end
@@ -1016,8 +1151,127 @@ end
 
 -- Module API
 --------------------------------------
-MovableFramesManager.RequestAnchor = function(self, ...)
-	return Anchor:Create(...)
+--- Creates a mover. key is a stable, unlocalized name (the module's, or the module's plus
+-- a suffix when it has several); only keyed movers can be linked to one another.
+MovableFramesManager.RequestAnchor = function(self, key)
+	return Anchor:Create(key)
+end
+
+MovableFramesManager.GetAnchorByKey = function(self, key)
+	return key and KeyedAnchors[key]
+end
+
+--- Links anchor to target so that anchor's point sits on target's relativePoint, keeping
+-- anchor where it is now. A nil target removes the link and leaves the frame in place.
+-- Returns true, or false and a reason: "combat", "nokey", "cycle", "target", "point".
+MovableFramesManager.SetAnchorLink = function(self, anchor, target, point, relativePoint)
+	if (InCombatLockdown()) then return false, "combat" end
+	local key = anchor and AnchorData[anchor] and AnchorData[anchor].key
+	if (not key) then return false, "nokey" end
+
+	if (not target) then
+		local links = GetLinks()
+		if (links) then links[key] = nil end
+		self:RefreshMFMFrame()
+		return true
+	end
+
+	local targetKey = AnchorData[target] and AnchorData[target].key
+	if (not targetKey or not target:IsEnabled()) then return false, "target" end
+	point = point or "CENTER"
+	relativePoint = relativePoint or point
+	if (not ns.API.IsAnchorPoint(point) or not ns.API.IsAnchorPoint(relativePoint)) then return false, "point" end
+	local links = GetLinks(true)
+	if (not links or ns.API.WouldLinkCycle(links, key, targetKey)) then return false, "cycle" end
+
+	links[key] = { target = targetKey, point = point, relativePoint = relativePoint, x = 0, y = 0 }
+	anchor:UpdateLinkOffset()
+	self:RefreshMFMFrame()
+	return true
+end
+
+--- The movers anchor may be linked to: keyed, enabled, and not following anchor.
+MovableFramesManager.GetLinkTargets = function(self, anchor)
+	local out = {}
+	local key = anchor and AnchorData[anchor] and AnchorData[anchor].key
+	if (not key) then return out end
+	local links = GetLinks()
+	for targetKey, target in next, KeyedAnchors do
+		if (target ~= anchor and target:IsEnabled() and not ns.API.WouldLinkCycle(links, key, targetKey)) then
+			out[#out + 1] = target
+		end
+	end
+	return out
+end
+
+-- Places every mover that follows anchor, nearest first, once.
+MovableFramesManager.ApplyFollowers = function(self, anchor)
+	local key = AnchorData[anchor] and AnchorData[anchor].key
+	local links = key and GetLinks()
+	if (not links or not next(links)) then return end
+	local followers = ns.API.LinkFollowers(links, key)
+	if (#followers == 0) then return end
+	PROPAGATING = true
+	for _, followerKey in next, followers do
+		local follower = KeyedAnchors[followerKey]
+		if (follower and follower:IsEnabled()) then
+			follower:ApplyLink()
+		end
+	end
+	PROPAGATING = nil
+end
+
+-- Places every linked mover, targets before their followers. At login, after a profile
+-- change, after a rescale and after combat if something waited.
+MovableFramesManager.ApplyAllLinks = function(self)
+	if (InCombatLockdown()) then
+		self.linksPending = true
+		return
+	end
+	self.linksPending = nil
+	local links = GetLinks()
+	if (not links or not next(links)) then return end
+	local order = {}
+	for key in next, links do order[#order + 1] = key end
+	table_sort(order, function(a, b)
+		local da, db = ns.API.LinkDepth(links, a), ns.API.LinkDepth(links, b)
+		if (da ~= db) then return da < db end
+		return tostring(a) < tostring(b)
+	end)
+	PROPAGATING = true
+	for _, key in next, order do
+		local follower = KeyedAnchors[key]
+		if (follower and follower:IsEnabled()) then
+			follower:ApplyLink()
+		end
+	end
+	PROPAGATING = nil
+end
+
+-- A mover moved, rescaled or was shown: its followers go with it. A mover that rescaled
+-- is first put back on its own link, since its size changed around its anchor point.
+MovableFramesManager.OnMoverChanged = function(self, event, anchor)
+	if (LINKS_SUSPENDED or PROPAGATING or not anchor or not AnchorData[anchor]) then return end
+	if (InCombatLockdown()) then
+		self.linksPending = true
+		return
+	end
+	if (event == "MFM_ScaleUpdated") then
+		PROPAGATING = true
+		anchor:ApplyLink()
+		PROPAGATING = nil
+	end
+	self:ApplyFollowers(anchor)
+end
+
+-- After login and profile changes the modules place their movers first; links follow
+-- on the next frame.
+MovableFramesManager.ScheduleApplyAllLinks = function(self)
+	if (C_Timer and C_Timer.After) then
+		C_Timer.After(0, function() self:ApplyAllLinks() end)
+	else
+		self:ApplyAllLinks()
+	end
 end
 
 MovableFramesManager.GenerateMFMFrame = function(self)
@@ -1103,6 +1357,7 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 		CURRENT:ClearAllPoints()
 		CURRENT:SetPoint(point, x, y)
 		CURRENT:SetScale(scale)
+		CURRENT:UpdateLinkOffset()
 	end
 
 	local validate = function(info,val)
@@ -1165,6 +1420,9 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 					CURRENT:OnLeave()
 					CURRENT = nil
 
+					local panel = GetFramePanel()
+					if (panel) then panel:Close() end
+
 					MovableFramesManager:RefreshMFMFrame()
 				end
 			else
@@ -1205,6 +1463,27 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 		desc = L["A dragged frame snaps to the screen's edges and center, to other frames, and to the Edit Mode grid when it is shown. Hold Alt while dragging to place it freely."],
 		get = function() return not (ns.db.profile.moverSnapping == false) end,
 		set = function(info, val) ns.db.profile.moverSnapping = val and true or false end
+	}
+	-- Another profile's frame positions, anchors and master scale, nothing else.
+	options.args.copyLayout = {
+		type = "select", style = "dropdown", width = "full",
+		order = orderoffset + 44,
+		name = L["Copy layout from"],
+		desc = L["Copies frame positions, anchors and AzeriteUI Scale from another profile into this one. Every other setting stays as it is. The interface reloads."],
+		disabled = function() return InCombatLockdown() end,
+		values = function()
+			local values = {}
+			local current = ns:GetProfile()
+			for _, key in next, ns:GetProfiles() do
+				if (key ~= current) then values[key] = key end
+			end
+			return values
+		end,
+		get = function() return nil end,
+		set = function(info, val) ns:CopyLayout(val) end,
+		confirm = function(info, val)
+			return string_format(L["Copy the layout from %s into this profile? The interface reloads."], tostring(val))
+		end
 	}
 	-- One slider for the whole layout: every frame's scale and its distance
 	-- from its screen anchor grow together, so frames keep their spacing.
@@ -1255,23 +1534,24 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 		fontSize = "medium",
 		hidden = noselection
 	}
+	local pointValues = {
+		["TOPLEFT"] = L["Top-Left Corner"],
+		["TOP"] = L["Top Center"],
+		["TOPRIGHT"] = L["Top-Right Corner"],
+		["RIGHT"] = L["Middle Right Side"],
+		["BOTTOMRIGHT"] = L["Bottom-Right Corner"],
+		["BOTTOM"] = L["Bottom Center"],
+		["BOTTOMLEFT"] = L["Bottom-Left Corner"],
+		["LEFT"] = L["Middle Left Side"],
+		["CENTER"] = L["Center"]
+	}
 	options.args.point = {
 		name = L["Anchor Point"],
 		desc = L["Sets the anchor point."],
 		order = orderoffset + 110,
 		hidden = noselection,
 		type = "select", style = "dropdown",
-		values = {
-			["TOPLEFT"] = L["Top-Left Corner"],
-			["TOP"] = L["Top Center"],
-			["TOPRIGHT"] = L["Top-Right Corner"],
-			["RIGHT"] = L["Middle Right Side"],
-			["BOTTOMRIGHT"] = L["Bottom-Right Corner"],
-			["BOTTOM"] = L["Bottom Center"],
-			["BOTTOMLEFT"] = L["Bottom-Left Corner"],
-			["LEFT"] = L["Middle Left Side"],
-			["CENTER"] = L["Center"]
-		},
+		values = pointValues,
 		set = setter,
 		get = getter
 	}
@@ -1322,6 +1602,125 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 		end
 	}
 
+	-- Anchoring to another AzeriteUI frame (Docs/Mover Anchoring Plan.md). Changing the
+	-- target or a point keeps the frame where it is; the offsets move it.
+	local nolink = function(info)
+		return not CURRENT or not CURRENT:GetLink()
+	end
+	local cannotlink = function(info)
+		return InCombatLockdown() or not CURRENT or not CURRENT:GetKey()
+	end
+	-- Refusals need no message: the rows are disabled in combat, and loops are not offered.
+	local linkSet = function(target, point, relativePoint)
+		MovableFramesManager:SetAnchorLink(CURRENT, target, point, relativePoint)
+	end
+	options.args.anchorTarget = {
+		name = L["Anchor To"],
+		desc = L["Keeps this frame beside another AzeriteUI frame and moves it when that frame moves. Dragging it changes the distance. Shift-click resets it and removes the anchor."],
+		order = orderoffset + 150,
+		hidden = noselection,
+		disabled = cannotlink,
+		type = "select", style = "dropdown", width = "full",
+		values = function(info)
+			local values = { NONE = L["Not anchored"] }
+			for _, target in next, MovableFramesManager:GetLinkTargets(CURRENT) do
+				local title = target.Title:GetText()
+				values[target:GetKey()] = (title and title ~= "") and title or target:GetKey()
+			end
+			return values
+		end,
+		sorting = function(info)
+			local sorted = {}
+			for _, target in next, MovableFramesManager:GetLinkTargets(CURRENT) do
+				sorted[#sorted + 1] = target
+			end
+			table_sort(sorted, function(a, b)
+				return (a.Title:GetText() or a:GetKey()) < (b.Title:GetText() or b:GetKey())
+			end)
+			for index, target in next, sorted do sorted[index] = target:GetKey() end
+			table_insert(sorted, 1, "NONE")
+			return sorted
+		end,
+		get = function(info)
+			local link = CURRENT and CURRENT:GetLink()
+			return link and link.target or "NONE"
+		end,
+		set = function(info, val)
+			if (not CURRENT) then return end
+			if (val == "NONE") then return linkSet(nil) end
+			local link = CURRENT:GetLink()
+			linkSet(MovableFramesManager:GetAnchorByKey(val), link and link.point, link and link.relativePoint)
+		end
+	}
+	options.args.anchorPoint = {
+		name = L["This frame's point"],
+		order = orderoffset + 151,
+		hidden = nolink, disabled = cannotlink,
+		type = "select", style = "dropdown",
+		values = pointValues,
+		get = function(info) local link = CURRENT and CURRENT:GetLink(); return link and link.point end,
+		set = function(info, val)
+			local link, target = CURRENT:GetLink()
+			if (target) then linkSet(target, val, link.relativePoint) end
+		end
+	}
+	options.args.anchorRelativePoint = {
+		name = L["Point on the other frame"],
+		order = orderoffset + 152,
+		hidden = nolink, disabled = cannotlink,
+		type = "select", style = "dropdown",
+		values = pointValues,
+		get = function(info) local link = CURRENT and CURRENT:GetLink(); return link and link.relativePoint end,
+		set = function(info, val)
+			local link, target = CURRENT:GetLink()
+			if (target) then linkSet(target, link.point, val) end
+		end
+	}
+	local linkOffsetGet = function(info)
+		local link = CURRENT and CURRENT:GetLink()
+		if (not link) then return end
+		local value = (info[#info] == "anchorOffsetX") and link.x or link.y
+		return tostring(math_floor((tonumber(value) or 0) * 100 + .5) / 100)
+	end
+	local linkOffsetSet = function(info, val)
+		if (not CURRENT) then return end
+		local link, target = CURRENT:GetLink()
+		val = tonumber((string_match(val, "(-*%d+%.?%d*)")))
+		if (not link or not target or not val or InCombatLockdown()) then return end
+		if (info[#info] == "anchorOffsetX") then link.x = val else link.y = val end
+		CURRENT:ApplyLink()
+		MovableFramesManager:RefreshMFMFrame()
+	end
+	options.args.anchorOffsetX = {
+		name = L["Distance X"],
+		desc = L["Distance between the two points. 0 puts them on top of each other."],
+		order = orderoffset + 153,
+		hidden = nolink, disabled = cannotlink,
+		type = "input", validate = validate,
+		get = linkOffsetGet, set = linkOffsetSet
+	}
+	options.args.anchorOffsetY = {
+		name = L["Distance Y"],
+		desc = L["Distance between the two points. 0 puts them on top of each other."],
+		order = orderoffset + 154,
+		hidden = nolink, disabled = cannotlink,
+		type = "input", validate = validate,
+		get = linkOffsetGet, set = linkOffsetSet
+	}
+
+	-- The frame settings panel draws these same rows (Options/Kit/FramePanel.lua).
+	self.positionOptions = {
+		type = "group", name = "",
+		args = {
+			scale = options.args.scale,
+			anchorTarget = options.args.anchorTarget,
+			anchorPoint = options.args.anchorPoint,
+			anchorRelativePoint = options.args.anchorRelativePoint,
+			anchorOffsetX = options.args.anchorOffsetX,
+			anchorOffsetY = options.args.anchorOffsetY
+		}
+	}
+
 	self:SecureHook(self.app.frame, "Show", "UpdateMovableFrameAnchors")
 	self:SecureHook(self.app.frame, "Hide", "HideMovableFrameAnchors")
 
@@ -1341,7 +1740,37 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 	return
 end
 
+--- The selected mover's Position rows, as an option table of their own.
+MovableFramesManager.GetPositionOptions = function(self)
+	if (not self.positionOptions) then
+		self:GenerateMFMFrame()
+	end
+	return self.positionOptions
+end
+
+-- Clicks, drag ends, wheel steps and combat changes all ask for a refresh, often several
+-- in one frame. Nothing is redrawn unless the /lock window or the frame panel is open,
+-- and then once, on the next frame.
 MovableFramesManager.RefreshMFMFrame = function(self)
+	local panel = GetFramePanel()
+	local panelShown = panel and panel:IsShown()
+	local windowShown = self.app and self.app.frame and self.app.frame:IsShown()
+	if (not panelShown and not windowShown) then return end
+	if (self.refreshQueued) then return end
+	self.refreshQueued = true
+	if (C_Timer and C_Timer.After) then
+		C_Timer.After(0, function() self:RefreshMFMFrameNow() end)
+	else
+		self:RefreshMFMFrameNow()
+	end
+end
+
+MovableFramesManager.RefreshMFMFrameNow = function(self)
+	self.refreshQueued = nil
+
+	local panel = GetFramePanel()
+	if (panel) then panel:Refresh() end
+
 	if (AceConfigRegistry:GetOptionsTable(self.appName)) then
 		if (self.app.frame:IsShown()) then
 			-- When using a custom window for the dialog,
@@ -1398,6 +1827,8 @@ MovableFramesManager.HideMovableFrameAnchors = function(self)
 		for anchor in next,AnchorData do
 			anchor:Hide()
 		end
+		local panel = GetFramePanel()
+		if (panel) then panel:Close() end
 	end
 end
 
@@ -1421,6 +1852,8 @@ MovableFramesManager.OnEditModeExit = function(self)
 		CURRENT:OnLeave()
 		CURRENT = nil
 	end
+	local panel = GetFramePanel()
+	if (panel) then panel:Close() end
 	HideGuides()
 	self:HideMovableFrameAnchors()
 end
@@ -1452,6 +1885,10 @@ MovableFramesManager.OnEvent = function(self, event, ...)
 				self:OnFrameScaleProfileChanged()
 			end
 
+			if (self.linksPending) then
+				self:ApplyAllLinks()
+			end
+
 			if (self:IsMFMFrameOpen()) then
 				self:RefreshMFMFrame()
 			end
@@ -1459,6 +1896,7 @@ MovableFramesManager.OnEvent = function(self, event, ...)
 
 	elseif (event == "PLAYER_ENTERING_WORLD") then
 		self.incombat = InCombatLockdown()
+		self:ScheduleApplyAllLinks()
 	end
 
 	if (event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED") then
@@ -1477,6 +1915,8 @@ end
 MovableFramesManager.RescaleAnchors = function(self, factor)
 	if (type(factor) ~= "number" or factor <= 0 or factor == 1) then return end
 
+	-- Followers are placed once, after every mover has its new scale and spot.
+	LINKS_SUSPENDED = true
 	for anchor,anchorData in next,AnchorData do
 
 		local point, x, y = anchor:GetPosition()
@@ -1499,6 +1939,18 @@ MovableFramesManager.RescaleAnchors = function(self, factor)
 			anchorData.defaultScale = anchorData.defaultScale * factor
 		end
 	end
+	LINKS_SUSPENDED = nil
+
+	local links = GetLinks()
+	if (links) then
+		for _, link in next, links do
+			if (type(link) == "table") then
+				link.x = (tonumber(link.x) or 0) * factor
+				link.y = (tonumber(link.y) or 0) * factor
+			end
+		end
+	end
+	self:ApplyAllLinks()
 
 	ns:Fire("MFM_UIScaleChanged")
 end
@@ -1517,6 +1969,12 @@ MovableFramesManager.SetFrameScale = function(self, value)
 		self:RescaleAnchors(new / old)
 	end
 	return true
+end
+
+-- A profile change, copy or reset: links of the new profile, then the master scale check.
+MovableFramesManager.OnCoreProfileChanged = function(self)
+	self:ScheduleApplyAllLinks()
+	self:OnFrameScaleProfileChanged()
 end
 
 -- Defaults were generated with the master scale in use at login; another
@@ -1554,10 +2012,16 @@ MovableFramesManager.OnInitialize = function(self)
 	-- The master scale this session's defaults were generated with.
 	self.appliedFrameScale = ns.API.GetFrameScaleMultiplier()
 	if (ns.db and ns.db.RegisterCallback) then
-		ns.db.RegisterCallback(self, "OnProfileChanged", "OnFrameScaleProfileChanged")
-		ns.db.RegisterCallback(self, "OnProfileCopied", "OnFrameScaleProfileChanged")
-		ns.db.RegisterCallback(self, "OnProfileReset", "OnFrameScaleProfileChanged")
+		ns.db.RegisterCallback(self, "OnProfileChanged", "OnCoreProfileChanged")
+		ns.db.RegisterCallback(self, "OnProfileCopied", "OnCoreProfileChanged")
+		ns.db.RegisterCallback(self, "OnProfileReset", "OnCoreProfileChanged")
 	end
+
+	-- Linked movers follow their targets (Docs/Mover Anchoring Plan.md).
+	ns.RegisterCallback(self, "MFM_PositionUpdated", "OnMoverChanged")
+	ns.RegisterCallback(self, "MFM_ScaleUpdated", "OnMoverChanged")
+	ns.RegisterCallback(self, "MFM_Dragging", "OnMoverChanged")
+	ns.RegisterCallback(self, "MFM_AnchorShown", "OnMoverChanged")
 
 	if (EventRegistry and EventRegistry.RegisterCallback) then
 		EventRegistry:RegisterCallback("EditMode.Enter", self.OnEditModeEnter, self)

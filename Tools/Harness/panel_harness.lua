@@ -3279,6 +3279,115 @@ do
 end
 
 --------------------------------------------------------------------------
+section("Frame settings panel")
+--------------------------------------------------------------------------
+-- Options/Kit/FramePanel.lua: built, opened beside a mover, refreshed and closed on
+-- these stubs. Paths and the rows themselves are frame_panel_harness.lua's job; this
+-- is that the window builds and lays out without error.
+do
+	local ok, err = pcall(load, "Options/Kit/FramePanel.lua")
+	check(ok and Kit.FramePanel, "FramePanel.lua loads", err)
+	local FramePanel = Kit.FramePanel
+	if (FramePanel) then
+		local scaleValue = 1
+		local positionOptions = { type = "group", name = "", args = {
+			scale = { type = "range", name = "Scale", min = 25, max = 250, step = 1,
+				get = function() return scaleValue * 100 end, set = function(_, v) scaleValue = v / 100 end },
+			anchorTarget = { type = "select", name = "Anchor To", values = { NONE = "Not anchored" },
+				get = function() return "NONE" end, set = function() end },
+			anchorPoint = { type = "select", name = "Point", values = { CENTER = "Center" }, hidden = function() return true end,
+				get = function() return "CENTER" end, set = function() end }
+		} }
+		local manager = S.modules.MovableFramesManager or {}
+		S.modules.MovableFramesManager = manager
+		manager.GetPositionOptions = function() return positionOptions end
+
+		local title = { GetText = function() return "Action Bar 1" end }
+		local anchor = { Title = title, GetKey = function() return "ActionBars.bar1" end,
+			Overlay = { GetRight = function() return 400 end } }
+
+		local opened, openErr = pcall(FramePanel.Open, FramePanel, anchor)
+		check(opened and openErr == true, "the panel opens for a mover", openErr)
+		check(FramePanel:IsShown(), "and is shown")
+		check(FramePanel:GetAnchor() == anchor, "for that mover")
+		check(pcall(FramePanel.Refresh, FramePanel), "it refreshes")
+		check(pcall(FramePanel.Reposition, FramePanel), "it follows the mover")
+
+		local noOptions = { Title = title, GetKey = function() return "AlertFrames" end, Overlay = anchor.Overlay }
+		check(pcall(FramePanel.Open, FramePanel, noOptions) and FramePanel:GetAnchor() == noOptions,
+			"a frame with no settings opens with Position only")
+
+		FramePanel:Open(anchor)
+		local more, moreErr = pcall(FramePanel.OpenMore, FramePanel)
+		check(more and Panel:IsShown(), "More settings opens the options window", moreErr)
+		check(not FramePanel:IsShown(), "and closes the frame settings panel")
+		Panel:Close()
+
+		-- In Edit Mode: More settings leaves it through Blizzard's own close path, out of combat only.
+		local closes, editActive = 0, true
+		_G.EditModeManagerFrame = {
+			IsEditModeActive = function() return editActive end,
+			onCloseCallback = function() closes = closes + 1 end
+		}
+		FramePanel:Open(anchor)
+		FramePanel:OpenMore()
+		check(closes == 1, "More settings closes Edit Mode through its own close path", closes)
+		Panel:Close()
+		local realLockdown = InCombatLockdown
+		_G.InCombatLockdown = function() return true end
+		FramePanel:Open(anchor)
+		FramePanel:OpenMore()
+		check(closes == 1, "in combat Edit Mode is left alone", closes)
+		_G.InCombatLockdown = realLockdown
+		editActive = false
+		FramePanel:Open(anchor)
+		FramePanel:OpenMore()
+		check(closes == 1, "outside Edit Mode nothing is closed", closes)
+		Panel:Close()
+		_G.EditModeManagerFrame = nil
+
+		-- Debug tools -> Smooth bars -> Toggle preview builds the side-by-side bars and toggles them.
+		local debugGroup = options.args["Debug tools"]
+		local smoothArgs = debugGroup and type(debugGroup.args) == "table" and debugGroup.args.smooth and debugGroup.args.smooth.args
+		check(smoothArgs and smoothArgs.preview, "Smooth bars has a preview button")
+		if (smoothArgs and smoothArgs.preview) then
+			local okOpen, errOpen = pcall(smoothArgs.preview.func)
+			check(okOpen, "the preview opens", errOpen)
+			local okClose, errClose = pcall(smoothArgs.preview.func)
+			check(okClose, "and toggles", errClose)
+		end
+
+		FramePanel:Close()
+		check(not FramePanel:IsShown(), "it closes")
+
+		manager.GetPositionOptions = function() return nil end
+		check(FramePanel:Open(anchor) == false, "no Position table, no panel")
+
+		-- Stacked rows (Controls SetStacked): the narrow panel gives the label and help the
+		-- full width and puts the control on a line of its own; normal pages are untouched.
+		local Controls = Kit.Controls
+		local row = Controls.Create(UIParent, "toggle")
+		row:SetLabel("Show Health Percent")
+		row:SetHelp("Toggle whether to show health percent on this unit frame.")
+		local normalHeight = row:Measure(600)
+		check(row.stacked == false, "a new row is not stacked")
+		row:SetStacked(false)
+		check(row:Measure(600) == normalHeight, "SetStacked(false) on a normal row changes nothing")
+		row:SetStacked(true)
+		local stackedHeight = row:Measure(300)
+		check(row.stacked and stackedHeight > normalHeight, "a stacked row is taller: text above, control below",
+			tostring(stackedHeight) .. " vs " .. tostring(normalHeight))
+		row:SetStacked(false)
+		check(row:Measure(600) == normalHeight, "and unstacked it is a normal row again")
+		local multi = Controls.CreateMultiline and Controls.CreateMultiline(UIParent)
+		if (multi) then
+			multi:SetStacked(true)
+			check(not multi.stacked, "the multiline field keeps its own layout")
+		end
+	end
+end
+
+--------------------------------------------------------------------------
 print()
 print(string.format("%d checks, %d failures", checks, failures))
 os.exit(failures == 0 and 0 or 1)

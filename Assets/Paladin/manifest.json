@@ -1,284 +1,2087 @@
 {
-  "health-case": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "053959d57a77d01e474e7726ad8cd428da67a007dabaa0f4cf6e15674c2be64e"
+  "theme": "Ashbringer / Silver Hand",
+  "concept": "Concepts-2026-10-14",
+  "geometry": "26 exact native casing alphas; 4 modular HD health rails on native fills; 2 intact HD portraits; 2 approved crystal holders; unchanged runtime geometry",
+  "crystalFit": {
+    "pw_crystal_case": {
+      "sourcePainted": [
+        3,
+        1,
+        139,
+        55
+      ],
+      "nativePainted": [
+        39,
+        21,
+        216,
+        91
+      ],
+      "painted": [
+        40,
+        17,
+        214,
+        87
+      ],
+      "uniformScale": 0.98984375,
+      "policy": "literal concept cutout; uniform rendered scale; crystal-landmark registration"
+    },
+    "pw_crystal_case_low": {
+      "sourcePainted": [
+        3,
+        1,
+        139,
+        55
+      ],
+      "nativePainted": [
+        39,
+        21,
+        216,
+        90
+      ],
+      "painted": [
+        40,
+        17,
+        214,
+        87
+      ],
+      "uniformScale": 0.98984375,
+      "policy": "literal concept cutout; uniform rendered scale; crystal-landmark registration"
+    }
   },
-  "health-portrait": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "e50cd830f817d9938349c1afabd8403c6953fb011da372ba8d989c8287405122"
+  "measuredCrystal": {
+    "revision": 2,
+    "reference": "approved-concept.png",
+    "cutout": "Measured-Cradle/Concept-holder-cutout.png",
+    "referenceSha256": "efacb3f800c97f7dff286a128f943d573bf34ff2ceabddd4818de2ca5330ba51",
+    "cutoutSha256": "9bf019f390c27648530958363a249de4aa9308f33a267f69d9d15104464b1e21"
   },
-  "health-wide": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "d5064348380ff42be6b0c5bfe1932879401f0190b2f7d36c86bbf359cd75868e"
+  "conceptFrames": {
+    "reference": "approved-concept.png",
+    "referenceSha256": "efacb3f800c97f7dff286a128f943d573bf34ff2ceabddd4818de2ca5330ba51",
+    "recipe": "Tools/PaladinConceptFrames.py",
+    "recipeSha256": "5da22d940fc64d93dab5afa8e49abcee080cd327cafcd943ea8e95db5240ca90",
+    "parts": {
+      "health-rails.png": "6385e53195395d3f7d654dc9e6d411f3586ca289ad7205e63fb06e548cca69cb",
+      "cast-rails.png": "9189fc553e14e54c1b7bedf55cdadda5f16c92e68ae6d864dbb201294e474fdb",
+      "portrait.png": "29444da4b3c77c51b5b95b6eba01021ef313ba348a3392cf24f2bcffebc52039",
+      "ornament-ashbringer.png": "0399f8a601604c6c74d3a34d2182162887d8c12fc75d69ba17bd6a7cc9ef1056",
+      "cast-head-libram.png": "eee20049c29d646720e215445fa3c1dbc3ca50f3b540d465e1958a4abbe32b32"
+    }
   },
-  "health-lowmid": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "2eedc4afdf2cb686ab464f4f4460f48ed79036fcbee413fe9daef56a8a358ce7"
+  "hdSources": {
+    "health-rails.png": {
+      "sha256": "8cb48c15866345ce5b942720d457846c47c1eb493783a6ba40c400f6e8e458cc",
+      "canvas": [
+        2169,
+        725
+      ]
+    },
+    "ornament-ashbringer.png": {
+      "sha256": "0dbb9ec68ce7b3dc12b4075099e820e8273f086889f07144c8af46149af6b25f",
+      "canvas": [
+        1254,
+        1254
+      ]
+    },
+    "portrait.png": {
+      "sha256": "a4c6000909451d80b2773cf7e0d497486a09642df275fd69521508a3e56704a7",
+      "canvas": [
+        1254,
+        1254
+      ]
+    }
   },
-  "health-small": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "20701759cf1faab2e23783c5ecc2654073460bbbdc9cc1efdd182df5cb3bf553"
+  "sources": {
+    "actionbutton-border-square-rounded": {
+      "sha256": "856a52bf2ff5883a636303c9df2835b7e8367157535ff87adfb1b458dd160298"
+    },
+    "actionbutton-border-square": {
+      "sha256": "fc6ac999db960bea6ddafe74d1adf743738290c80dc9b6d81c464f6a83c091cc"
+    },
+    "actionbutton-border": {
+      "sha256": "9174d338e8e8c867365e89b461648ca0ccb359f85312e1ceebbc41b5c313b119"
+    },
+    "better-blizzard-border-small-alternate": {
+      "sha256": "0e86f5b254bde5be091dcc95a5da8368043787ba351b8a74c28f87988b67868a"
+    },
+    "border-aura": {
+      "sha256": "48f72e01baa5fdf31a6e4ad2561e68bced722e7346383aaac983555a4308aa33"
+    },
+    "border-tooltip": {
+      "sha256": "ae952d55f29bcdb8aef78f32c4eaffca5f3364a93618ba61908984969a890cd7"
+    },
+    "cast-head-libram": {
+      "sha256": "480ffc894eb2bce13d40d5c9617888ef55ee6292fab23cd81ffddd053e3fa066"
+    },
+    "cast_back": {
+      "sha256": "6fe66917869a79a550e506e3e127a50c2686f5d0c58a022403961be9ae2d65a1"
+    },
+    "cast_back_spiked": {
+      "sha256": "4681e5dc231db40d46600f9fc0ee322471e25fe783a18c27bbf39e845ce9fbda"
+    },
+    "cast_back_wooden": {
+      "sha256": "b5165d2a5af804b944d15762915467d7b38e746aebcb7f2a9835ffca04286470"
+    },
+    "config_button": {
+      "sha256": "2696740a588d79cc1cd033fad1ec7f9a3408fb6a863f14a4a92bcef14cde0f66"
+    },
+    "config_button_bright": {
+      "sha256": "750730170daf60f1f5652736614058fdbb49b18b77c7322fbee782478462bec6"
+    },
+    "hp_boss_case": {
+      "sha256": "765849648addb8b5d1ff03a4d41d7b7b1fac67b8530a6c621ed6cd3a42ae7d92"
+    },
+    "hp_cap_case": {
+      "sha256": "37fb162942c5e6df7edc30755158de39ff4668510c4b89f87c00dd5401fcb30b"
+    },
+    "hp_critter_case": {
+      "sha256": "ad84193e519aed77c3145f5a00868e77064db2b18cb87a431b8df219a17fab9e"
+    },
+    "hp_critter_case_hi": {
+      "sha256": "317786a85f19934eb74067e9e695baba5adb3d69195796d1fe592fd80186d1a7"
+    },
+    "hp_low_case": {
+      "sha256": "5849d764cae2046f06229aa3ba4f915325e440ff885d3135ab4e4c069da2e1c0"
+    },
+    "hp_mid_case": {
+      "sha256": "e44f7857b1a427d12f89c1c8832b6b0ecdd62634efa937cc1e34357944c9ec1b"
+    },
+    "icon_exit_flight": {
+      "sha256": "5993620c5b1946e5b29d94182a4b0761e239563222e6ef8acafaa8838bceab2f"
+    },
+    "minimap-border": {
+      "sha256": "32159917b8e73f86eb927c47a9570b3e69627ad9ccfe3f1b3819a8b16e3f66e0"
+    },
+    "minimap-north": {
+      "sha256": "1a1569e02a9ed143499fd46fdb70af386d75bc60c03a57923642d0eb55329de7"
+    },
+    "minimap-onebar-backdrop": {
+      "sha256": "6fe0c583d66247a5fd97094e591a7459c6e9d181583bfd7af26716655dc421ee"
+    },
+    "minimap-twobars-backdrop": {
+      "sha256": "dd0c5ff8989c308de2b3a9c317f0c49ac2a42bac781ffdaa911e10a1bec539b3"
+    },
+    "nameplate_backdrop": {
+      "sha256": "c49637335d21b7e67b7aaa4420e087c08e0cb5723a8c8a56e86baa88114e511f"
+    },
+    "options-box": {
+      "sha256": "ac48ace2187c5030f16b917465bfae081e5c5dd9e0a11685cdda5d51dbb17e66"
+    },
+    "options-casing-round-superseded": {
+      "sha256": "d98ff6f943a8708c9b51fb4e9994d1c7a64d661d787feb82483adc692f96f6a9"
+    },
+    "options-casing-round": {
+      "sha256": "2b1259272f99b51230180e9d32e2375e0055e50bf3e3a1781701768f27ab0593"
+    },
+    "options-well-round-superseded": {
+      "sha256": "e64432ac21a2271eb7cf41d7ede9aba71709be08bf38a58f60866ed5ba75fe90"
+    },
+    "options-well-round": {
+      "sha256": "b0f5e8ed52a765a03c9f66449a839343323ebb20faaeae02c1598756794eda86"
+    },
+    "orb-border": {
+      "sha256": "1dc819e38eb9735cfd2243e8ca7873e77b6bfc2667fb1b73af3c363e15957cda"
+    },
+    "orb_case_hi": {
+      "sha256": "72906201f67d45870426e793e295cca616f9118ed935019b09962b7ff8be9cb2"
+    },
+    "orb_case_low": {
+      "sha256": "fcc43b43441645bf30915d3c51ccdc0e921631f6797f814b1b83306f9f9d430d"
+    },
+    "ornament-ashbringer": {
+      "sha256": "5919a21bcdd089806a02ef56f6b2898f4f67ed4ef9990c0ba940f1a138adbad4"
+    },
+    "party_portrait_border": {
+      "sha256": "eb7b5de9342604bfa33e9dec2e8290347c58a3fb259dd6cd54f2aa83ca57cddd"
+    },
+    "point_plate": {
+      "sha256": "ed1a2f5b26205d15105c858d2a4e3b86eddefa84cb3569de628ecd399743ab7e"
+    },
+    "portrait_frame_hi": {
+      "sha256": "cc50728ce5282e2a179f294105a524485b280d17106be6983e14d38b7cdbbbfb"
+    },
+    "portrait_frame_lo": {
+      "sha256": "7f426db40ce26c5f7e8138a5dbfb644162179b9f28b06d5cd14b84566358f8bf"
+    },
+    "pw_crystal_case": {
+      "sha256": "9bf019f390c27648530958363a249de4aa9308f33a267f69d9d15104464b1e21"
+    },
+    "pw_crystal_case_low": {
+      "sha256": "9bf019f390c27648530958363a249de4aa9308f33a267f69d9d15104464b1e21"
+    }
   },
-  "lion-cast": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "12b8fa66d42bfab2778702f69403d9fd08c57d6b6bb8c116e6dbbac87a756671"
+  "textures": {
+    "hp_cap_case": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "4b39c798079691b3d67102cd8c4219543333b055ace8c7895217732bc0c5d883"
+    },
+    "hp_cap_case-over": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "ce2b7c74852828ef1124d598d8eed7875676ae9f759efe9429018e30b7a7bed8"
+    },
+    "hp_cap_case-glow": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "072e58a73d5fcdd9baba7af93f707d9c96bff111f079d8be954157504ea52303"
+    },
+    "hp_cap_case-capped": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "6cccaefb1a00c668163e785fc032acc98eeceeb335c483a33b86ff067af110cd"
+    },
+    "hp_cap_case-capped-over": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "309554ec94dcc4cdfd1c5135652602c4b1f19e407a84f83babef9f577ca7818e"
+    },
+    "hp_cap_case-capped-glow": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "bf69176bb831c0fcc564f842eb48178a6dec773e4ccbf6c45438749efdb141de"
+    },
+    "hp_mid_case": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "e7ce6e6d8d557607391968e5541c855b9cf9e1c7867085072c577f71c1f2ef6a"
+    },
+    "hp_mid_case-over": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "b8d60447759b4eb4aa0bf1bbda71ba98c9c68d5419c7f85841634cb202c4b3c6"
+    },
+    "hp_mid_case-glow": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "643141a49ca9e10772fbaa69cf16553217de52a52d0bd73fd64d9c5bba2d300b"
+    },
+    "hp_mid_case-capped": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "028647b02fe101bda65bc2456037c4e284b84b5bd3a12933b69bc03228188714"
+    },
+    "hp_mid_case-capped-over": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "006a52fab42dd51c796ac190453e7505cdeac57bafecb00a54797ae75fc2e08f"
+    },
+    "hp_mid_case-capped-glow": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "aa1eac37abad6ebe8449fcf92672a4cc60889b6f63e7f0cdaae99b3fe68574df"
+    },
+    "hp_low_case": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "709c9b1088b5d20568e951f6f3eae68872044beff5e4fb0dc1fa83d96b112785"
+    },
+    "hp_low_case-over": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "b8d60447759b4eb4aa0bf1bbda71ba98c9c68d5419c7f85841634cb202c4b3c6"
+    },
+    "hp_low_case-glow": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "643141a49ca9e10772fbaa69cf16553217de52a52d0bd73fd64d9c5bba2d300b"
+    },
+    "hp_low_case-capped": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "bc07b3758751d7627be7d31cb8a4f3d03bda4a0fd67ab480af070a7de661ec28"
+    },
+    "hp_low_case-capped-over": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "006a52fab42dd51c796ac190453e7505cdeac57bafecb00a54797ae75fc2e08f"
+    },
+    "hp_low_case-capped-glow": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "aa1eac37abad6ebe8449fcf92672a4cc60889b6f63e7f0cdaae99b3fe68574df"
+    },
+    "hp_boss_case": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "d107f67f8440cd1d49f62150f088152e00a6558a2f8b14c278de8ecc9e05023f"
+    },
+    "hp_boss_case-over": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "751dd9431cf8a23429da7d544e333047ee5cf4541471c90a2d95d1de771ed042"
+    },
+    "hp_boss_case-glow": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "2915e61dfd5e8fcc976ba858dabff27b4e12a2d4a443ad025076bc71a14f2bba"
+    },
+    "hp_boss_case-capped": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "474f6eb273dccb061e9d6000ddae46c705fbef0a32ec6ee0f45d20d11459e4a1"
+    },
+    "hp_boss_case-capped-over": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "a961881cf5b4849fc59d75fc9f2bbe3f19cb385465b03aed15af89ca7e0b6ed1"
+    },
+    "hp_boss_case-capped-glow": {
+      "canvas": [
+        1024,
+        256
+      ],
+      "sha256": "86b54dfadb31c9472d2d2a8700f2373d417bceed043148811a4d1f9ffeb4d77c"
+    },
+    "hp_critter_case": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sha256": "ae36985f02931b0f0eb6e79ca7aff926a70722d2cb9aa996db6ed228a1e9b23e"
+    },
+    "hp_critter_case_hi": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sha256": "0790285066e14843c916958c7878713c8be8daa31fdd3144f1e1159d848fd1f7"
+    },
+    "cast_back": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "4eaa9fa0022dfa84c20bacdb3306d0c273f1295d12b48ace4edb49f9e8e0ae5c"
+    },
+    "cast_back-over": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "faa4fc36a007fcaae4ffd12dc1cfe83d972edf116b9f71dea6bc012927ae8f9f"
+    },
+    "cast_back_spiked": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "38c81eae55910ecd567e153f5f852ff171dd8e4dc0b40f9bac330a43a7e800b0"
+    },
+    "cast_back_spiked-over": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "faa4fc36a007fcaae4ffd12dc1cfe83d972edf116b9f71dea6bc012927ae8f9f"
+    },
+    "cast_back_wooden": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "fff4b12b03bb722d3a21ef9ba2ba7a4444d89620d4ea1084fed92fe7a6a07b5e"
+    },
+    "cast_back_wooden-over": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "faa4fc36a007fcaae4ffd12dc1cfe83d972edf116b9f71dea6bc012927ae8f9f"
+    },
+    "nameplate_backdrop": {
+      "canvas": [
+        256,
+        64
+      ],
+      "sha256": "85a5540badbda68f8332503a048936b00edab8a35c37aba800ac1d116fd4eae2"
+    },
+    "pw_crystal_case": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "1f54cf02a97675007d59caa39a322b60a92349dfd8f263c2fb62f8c8376df064"
+    },
+    "pw_crystal_case-front": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "1f54cf02a97675007d59caa39a322b60a92349dfd8f263c2fb62f8c8376df064"
+    },
+    "pw_crystal_case_low": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "1f54cf02a97675007d59caa39a322b60a92349dfd8f263c2fb62f8c8376df064"
+    },
+    "pw_crystal_case_low-front": {
+      "canvas": [
+        256,
+        128
+      ],
+      "sha256": "1f54cf02a97675007d59caa39a322b60a92349dfd8f263c2fb62f8c8376df064"
+    },
+    "orb_case_hi": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "0ab124030446c97bd0a577b5dea52de311141d16639b7cabb519ae57f58226db"
+    },
+    "orb_case_low": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "c353b8fc66baa300b568d6a882025156376beccfc3286e963388527abba34dca"
+    },
+    "orb-border": {
+      "canvas": [
+        512,
+        512
+      ],
+      "sha256": "4d271a3942341d636dc54b8ba28cd0a3a27ea2f1023773bb1fdd30455e76f6cb"
+    },
+    "portrait_frame_hi": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "35cacf28a7b683fea238fd5fe86ee89dfba5c1788c521130f8105de0bc33b65c"
+    },
+    "portrait_frame_hi-glow": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "5725c472d2270e009b8adadb75324945b2cadc202e2ff52401323d6c3cfb1315"
+    },
+    "portrait_frame_lo": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "e5432e929801f52623eef49edce1d1514406ad2ba0cce6699ba6268a4097a973"
+    },
+    "portrait_frame_lo-glow": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "1f7a9db5d10bd00165c63020e8ba8eac6591b676fa4d06ac6c0d652d6dd1098a"
+    },
+    "party_portrait_border": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "dffcc047ef8298f559aa3c3cd599b53492642047128ee1fbffcade7007b96b46"
+    },
+    "actionbutton-border": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "67e19db0334e934f8ff5161f6810b98ed1ac9d9bfa86d0b99cee99591182e9ef"
+    },
+    "actionbutton-border-square": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "03b6a46883dc5b67e1fdf6f859dc6c07d63182e7ae183d7a4ccbe3614551e135"
+    },
+    "actionbutton-border-square-rounded": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "7763c221fd10cb206b28cc9036cea4763ca79a3951007498e14d916186f5b6c9"
+    },
+    "minimap-border": {
+      "canvas": [
+        512,
+        512
+      ],
+      "sha256": "447a3f446c0a0a330105104743b53dcc0ff2ae13e2b82ec4d99e905d2a364a41"
+    },
+    "minimap-onebar-backdrop": {
+      "canvas": [
+        512,
+        512
+      ],
+      "sha256": "c863eba29177bdd66992135b583fe4635ddbb88896850e0358f0b73ee2707193"
+    },
+    "minimap-twobars-backdrop": {
+      "canvas": [
+        512,
+        512
+      ],
+      "sha256": "b3661e02883ccebf8007b3e1b5513c0d6bddbc8477181c3516e4156ab45c71a2"
+    },
+    "point_plate": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sha256": "1e7fce7089a2687645c0d6cf6be16e242e4629ac464fed162dac38a84fd66d48"
+    },
+    "config_button": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sha256": "95617f0c85625cb1b0c98e83a1a9af12405cc9cd3c1282a86b48d384bdfd27d5"
+    },
+    "config_button_bright": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sha256": "1226e1a5066f365f47781dd49dd3bf822271add34b2d289979db4a618252293e"
+    },
+    "icon_exit_flight": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sha256": "7d3bfe57b675ce5544c9f0373fe318e3b30d7697ac8760b3548999b4576c73c6"
+    },
+    "options-box": {
+      "canvas": [
+        64,
+        64
+      ],
+      "sha256": "1fbae8067a6e55474a01baf3deff11771cd8aae72d243b348121ebb2cd35054f"
+    },
+    "border-tooltip": {
+      "canvas": [
+        512,
+        64
+      ],
+      "sha256": "23a89dea7b1537585bf8772e77bad8e8d8482dd5a32f789b70d182ad5a4e8df0"
+    },
+    "border-aura": {
+      "canvas": [
+        256,
+        32
+      ],
+      "sha256": "aaf07e683f64b52ea3f012bed02f8cd740064e5e4b7d07e7a7bce31d558987b4"
+    },
+    "better-blizzard-border-small-alternate": {
+      "canvas": [
+        512,
+        64
+      ],
+      "sha256": "2615aeeb72725411c4c5c7d258496e4236620b4cdeba218d14b9c74d84e59e7f"
+    },
+    "options-casing-round": {
+      "canvas": [
+        512,
+        64
+      ],
+      "sha256": "843c23dce6f847f734f90978b9396ac60331f24e9a269b8537f344f87997c664"
+    },
+    "options-well-round": {
+      "canvas": [
+        256,
+        32
+      ],
+      "sha256": "2b879f3f703e9df086a51ac26b75e052502c9c542f54087be4908b7c263e2930"
+    },
+    "ornament-ashbringer": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "b7d1ec3a83cc373aa39107cdae98269dd22c123ded8d09f55bcf321943683d36"
+    },
+    "ornament-ashbringer-glow": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "5067af2db9e4bb89f96095d18a14b4c7b27cd214b8a814abff2867f0767df54e"
+    },
+    "cast-head-libram": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "4aa70aa1bdaf0157b85efaf1a25f9d10a69c15b1f7ed9b19ac037373c669210b"
+    },
+    "minimap-north": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sha256": "af1a56c843f255a3a8bc9588cc900180007c926a6299f4c83f2d377793158f3b"
+    }
   },
-  "holy-case": {
-    "size": [
-      256,
-      256
-    ],
-    "sha256": "ff3abc17fb1e2212e34c7659baeee99f724d78e30db7dc5d5fdb2b00fd85b889"
+  "inventory": {
+    "actionbutton-backdrop-square-rounded": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "9f8b52f5425caaaca59914c9430a49434cc58106ca287d75734aa5e8a16b7778"
+    },
+    "actionbutton-backdrop-square": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "a5af18fd439e700f82bbaf84ad16edee6ccd9fea976a25fb36406138339fbf4e"
+    },
+    "actionbutton-backdrop": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "41ca5f0885a333f219ed2a4b452df78610d2c283abe30c481b1aa622307df846"
+    },
+    "actionbutton-border-square-rounded": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "70e73f8a643a2c82262dfcc8768a7b7b3126e15ba934f6affb02b5de41e2ee1e"
+    },
+    "actionbutton-border-square": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "fd17a7b0f48903f00583875b2f8b6626120f155e89ef49500167c81e5e75e491"
+    },
+    "actionbutton-border": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "8c2cbc2af6b368127c55b98ce1b21c3b4b87627778c180a351195a20ffde6be6"
+    },
+    "actionbutton-glow-white": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "7444eacf5249616eb675d9aed9e6973ab5afceac767ede0edd2f67b3d0b58ce3"
+    },
+    "actionbutton-mask-circular": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "b796600d2c0369f27e98a776bea65c367116f1d074b039e80a205803cd4a2da1"
+    },
+    "actionbutton-mask-square-rounded": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "b497f2dc0c83acedb030784f2bf2f3740f687d3bf721bb7d3669a7c7361c7f4a"
+    },
+    "actionbutton-mask-square": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "edc88d91ec094fc0b92762888ea2919c58bd4c821887c3b3047c5f18ce187153"
+    },
+    "actionbutton-proc-glow-medium": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "5d772247856d32c87fb5de9dd2aa32cf1f530e2ee720d3dd22a23c9a40a6fb63"
+    },
+    "actionbutton-proc-glow-thick": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "938272e585cdb62de65421a0d94214314aca71cf598baf658ad9f588419dca68"
+    },
+    "actionbutton-proc-glow-thin": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "d58b3cef1c7fd3c169e06282293b16012dbaef9aed5ac7f9b0d0ff026d95dcf2"
+    },
+    "actionbutton-proc-outline-medium": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "791697283eb094550e7fa58c2d111eaee38fd36b5d55bb4cef7d57ce9cf48325"
+    },
+    "actionbutton-proc-outline-thick": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "4629e37f0474f95ee47b5e1094947b74a6baabaa20044e893ceb0ab971bd3a4b"
+    },
+    "actionbutton-proc-outline-thin": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "a267e9068527bbccc0c0b42bd6696a23a8b8fddcec48fcf5a9f7298600ce871c"
+    },
+    "actionbutton-proc-square-glow-medium": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "5ce170f209bdbedf72556ae622c59e9a628fd7f1b5cb7fb6dcdd644be6ff2217"
+    },
+    "actionbutton-proc-square-glow-thick": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "cff549789ae6df8a890d7855897d8f72ec40258a67db6f70ed9d249158f6fc00"
+    },
+    "actionbutton-proc-square-glow-thin": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "f7a5150e33ff511879d459275cbbb7b3fd34c3b8f47f18ea44ba89021c32d245"
+    },
+    "actionbutton-proc-square-outline-medium": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "6c0103c3da1e388a3d0dc75cb8f3bc3a10eed76f0ce75f6ea9651531a3367cf7"
+    },
+    "actionbutton-proc-square-outline-thick": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "2e0dac7340dec1bb6bd3b7608722db7a807b104ffa64e65076c3568e6cecee69"
+    },
+    "actionbutton-proc-square-outline-thin": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "4bfe66a627da8df10814cb32d53d144f02d26202d0c298845d90c277c39cc1dc"
+    },
+    "actionbutton-spellhighlight-square-rounded": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "1a33cc4a451479190e21f4a630889b729696120405f73395e78c40329c2164d8"
+    },
+    "actionbutton-spellhighlight-square": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "25834c84b9ad77d4c894a2df230b44522bb9fb71ea6a80507e5e42bc6b88753c"
+    },
+    "actionbutton-spellhighlight": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "23594bb642ccc90c05f56f5d37176b07f1794e9d3a90deec7e36b68c0f20657a"
+    },
+    "bar-progress": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        64
+      ],
+      "originalSha256": "e2b85afe0d1dbdc4f52ffb8089e5dfde8ad2a78f40eb53ef9e343a79158eeee2"
+    },
+    "bar-small": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        8
+      ],
+      "originalSha256": "103e62f7d1bfea572d7c7339babc8ab72892554ebf52503323cafb4c7dad44cc"
+    },
+    "better-blizzard-border-small-alternate": {
+      "disposition": "replaced casing",
+      "canvas": [
+        512,
+        64
+      ],
+      "originalSha256": "aca0a9a57024663023cb72f4109868f911b667ed90c3cb0566cd36c6fd3e71a9"
+    },
+    "blank": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        32,
+        32
+      ],
+      "originalSha256": "4c37301881aa33176bb2a967875bb7dceb5c76791754b98e8eb6334de3d0a619"
+    },
+    "border-aura": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        32
+      ],
+      "originalSha256": "6e24970aa04f97669169542842d2fdb7d9ba47f77f35abaf4686665e9793767f"
+    },
+    "border-glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        32
+      ],
+      "originalSha256": "82d623f863965fa4564e74624ffc88782713b22dbac878ca0630712f05dd0ab9"
+    },
+    "border-tooltip": {
+      "disposition": "replaced casing",
+      "canvas": [
+        512,
+        64
+      ],
+      "originalSha256": "f99611ade73ba1059cabec070a067d1b27a2a57d24431248f436c4b6310cac13"
+    },
+    "cast_back": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        128
+      ],
+      "originalSha256": "2cade7ed198ec804bffc5e5a17e93dc1cc1025e82faa44b99993308a4c89e36d"
+    },
+    "cast_back_outline": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        128
+      ],
+      "originalSha256": "38fbb5184a4eec598dccc720f65c36345f227540007d5da64a3b6dfe1578f397"
+    },
+    "cast_back_spiked": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        128
+      ],
+      "originalSha256": "80fa7a87de00456a017ce6d41f5ef038c4d7d694dcc77b65b2c570323a75faa0"
+    },
+    "cast_back_wooden": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        128
+      ],
+      "originalSha256": "8a8781320b4be3395c1e293dfe7c058e5c32fd530272449493c0075539d5abb8"
+    },
+    "cast_bar-absorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        32
+      ],
+      "originalSha256": "989acbba07df746ea5764f90e7ee6a69976429158f094e63028690bb9faa5ff1"
+    },
+    "cast_bar-healabsorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        32
+      ],
+      "originalSha256": "6eb7441e395cab5446b650f63709edbee865223aff4e261d6acd76f67c4df5c8"
+    },
+    "cast_bar": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        32
+      ],
+      "originalSha256": "5efa3d4416d6b9cf4b93a9c40841fc175a207af1e1ca651dfc1e7bf99c8129f8"
+    },
+    "config_button": {
+      "disposition": "replaced casing",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "c4960955b6c582a8c9cc80f3daed75462db9b7ee2efae1c5ddbef3a24767134a"
+    },
+    "config_button_bright": {
+      "disposition": "replaced casing",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "b0983b402bb3b54244af26ac478f85429ab4fb930cee9bd5f630d48c8fdf5e9f"
+    },
+    "GoldpawKapow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        1024
+      ],
+      "originalSha256": "da6543ad331ef8ff3df96aefb494a0c8fd3942243abd1558993b642647976834"
+    },
+    "group-finder-eye-blue": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "b5a2ce3baf5be9a84503d8651148d3228f479e07ec79fea7666a3d2f952dfce2"
+    },
+    "group-finder-eye-green": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "7bdf6805c5e25bd50a3bb2644e00cf7bd1bc53e78b6023e38938c0a1c4b6d24d"
+    },
+    "group-finder-eye-orange": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "d5c80dcee14754899244b7710bb13527616db2f01ca211bb8a8c67783bc8f62c"
+    },
+    "group-finder-eye-purple": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "a13ff08c05876557b8bb6f6668af16229b7a1c400a214e96950f747bb7425cad"
+    },
+    "group-finder-eye-red": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "8f4931988b9c0b4a8f6de90b895ecc5fc30d8beac2a35d05ff5ec60592fe6014"
+    },
+    "grouprole-icons-dps": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "8264905f04ca80b4f89b7c23262ecdec9ec7b92d6233f99961007ebc88e4ea1e"
+    },
+    "grouprole-icons-heal": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "0b7d3d1d877d30c12d5559936ebc4cfc3afacd92a6ea1a0fb22ed6d31399f400"
+    },
+    "grouprole-icons-tank": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "7e9969400ab799eddb6753dc688edc08bf7f78762fed33ff76982ef99ed32e33"
+    },
+    "hp_boss_bar-absorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        64
+      ],
+      "originalSha256": "2d985b5a66431cdbdb798ff11018d1ff0edf34cc7110c311f8e5664b8ee9a31b"
+    },
+    "hp_boss_bar-healabsorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        64
+      ],
+      "originalSha256": "166eb9a878f2b0a7e65fb849d28f16ae54154e31a0d27d39ebf96b876d5b800f"
+    },
+    "hp_boss_bar": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        64
+      ],
+      "originalSha256": "42370df0ab884b7e3d5d0c1fcdb661db0bcb6f9152d19ad1c72d8d3a86d935b9"
+    },
+    "hp_boss_bar_mirror": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        64
+      ],
+      "originalSha256": "ee89cb6ba5da4078e75f884f0e4247912d5a01df3f9699f3d529e94e2ebc6f22"
+    },
+    "hp_boss_case": {
+      "disposition": "replaced casing",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "83a55223de3fd2ef54e318dc5a270dd3da4515a5b5b8e34c40ecd43bce57ab82"
+    },
+    "hp_boss_case_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "895e6d16505fb8be4668f7fd3a4702ce9065c2dd0bb38775c89b2b77fb7498f1"
+    },
+    "hp_cap_bar-absorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        128
+      ],
+      "originalSha256": "f7cda4d72c54437a549c57b29f6988153b1a99ff0d28af8a5f6774fd4caaad85"
+    },
+    "hp_cap_bar-healabsorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        128
+      ],
+      "originalSha256": "19df0e5d232bc3a34b78388d8534a052518ad4aa1d8acd5b97e0bfcf50ea3ebb"
+    },
+    "hp_cap_bar": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        128
+      ],
+      "originalSha256": "1c980fa1543ef11d6d157d5454b26fadf623388a4782b1a8ce295b6b30c6f067"
+    },
+    "hp_cap_bar_highlight": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        128
+      ],
+      "originalSha256": "135f94a8d90c419ed37966f38ef65c755e1e4da16b1454110e0f49d4a7bc0170"
+    },
+    "hp_cap_bar_mirror": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        128
+      ],
+      "originalSha256": "a898ed142db1e9b7bd440a3b6e94c5dee08f4816117df9fdd8df3cd9f330005b"
+    },
+    "hp_cap_case": {
+      "disposition": "replaced casing",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "855e7a472da166b7ca93242e3d420453920ff728b912def5f11a6bf2ae2c1bda"
+    },
+    "hp_cap_case_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "e7632efde364ab3d03e2e867702c3dd69c106399b863a2c96e0e888134b62518"
+    },
+    "hp_critter_bar-absorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "773dd3ebebbc0541bee78f5c9f0d147ec645583d23eff9e4c923a17d59fc29f8"
+    },
+    "hp_critter_bar-healabsorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "ba4d6c468832e21425cdea4b88378d7d5f90c9622ac6eb1e4f9c39779909f2d0"
+    },
+    "hp_critter_bar": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "773e0ba9f41bc3d772979d7aee4cc779833ded181359b4ba5840030cf1ba0a67"
+    },
+    "hp_critter_case": {
+      "disposition": "replaced casing",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "4c7fedab2876af2a34a4427649baefb5982beb8e8ffd3f9ea79588423cd3d7f4"
+    },
+    "hp_critter_case_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "1e00c536e765c9c7cffa51f3412f263ee1eeb3139ff93c6d60f2bf41a7fc6310"
+    },
+    "hp_critter_case_hi": {
+      "disposition": "replaced casing",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "40cca00420a82bad9c21db85beabf7abd6c558a421f4c5bedbfeaf84e28bfe3b"
+    },
+    "hp_low_case": {
+      "disposition": "replaced casing",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "b683386a5d7b9328a7d5a2cad8d0cf2450627024b67e82f19ff389222baa50ef"
+    },
+    "hp_low_case_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "85cb56afb798e8287f29140bc35ac196e5fafc1ee2d137e7d043fea1d4d18d83"
+    },
+    "hp_lowmid_bar-absorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        64
+      ],
+      "originalSha256": "0caa9b4dc8746ee821f08686f69f95d67f2a2639ed7d4a566fad30f62470c4c7"
+    },
+    "hp_lowmid_bar-healabsorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        64
+      ],
+      "originalSha256": "fef5b2bf50e356b06944338b8e3bf5714291d6a4c1983f45865ef75e813f4782"
+    },
+    "hp_lowmid_bar": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        64
+      ],
+      "originalSha256": "54837b931f7f098c95053342f6b4a16649d3f9576545f3abc6c1ad3d5c86532d"
+    },
+    "hp_mid_case": {
+      "disposition": "replaced casing",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "28425d8f6c1d6a08f878df9a234a085fc7846fadef22e430ada9f985c746f240"
+    },
+    "hp_mid_case_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "b3b307074b2eec246a3d3be01e307f9c18f71459b2a91ae04d19029a4962decd"
+    },
+    "icon-combat": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "b181c90cbbb5c3d11dcd084cab511bfebd5726a972fd70ef222559fa831e6acd"
+    },
+    "icon-heart-blue": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "9649bb3a5460ec25ca4705364897756107639a0d62100b3fcf0ca843f6581762"
+    },
+    "icon-heart-green": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "fa157d4008478d22e542045e5aa97f73fb1e578c494b1787946401bd8309555d"
+    },
+    "icon-heart-red": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "9a907962d0d9fe6197418aa682162606bf0d99e8354e40d2d23e036f42db9567"
+    },
+    "icon_badges_alliance": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "6bbd4db7abdd05ee3de09da3ac43a21fdb94fc3defdf9d9122b05142bbea8d6a"
+    },
+    "icon_badges_boss": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "1ec3a79605b20d529c845079c2d69f12e3e47bfbb65f3adffc1efe6575c7559c"
+    },
+    "icon_badges_horde": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "0a813569b6eddb769b688806307e7527bf05730bb5613ed1ba3dbb208c21971a"
+    },
+    "icon_classification_boss": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "611047bde9b80cc8c45a4e0518bf309c5025b4130c24fee5cf2db5971ce8797c"
+    },
+    "icon_classification_elite": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "8768acbf55fd745cc9c17c8adcd5fad8e3ba40e6b210f9016d89e076af2c2736"
+    },
+    "icon_classification_generic": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "586b698b06f5e16f8c4e82544588a87c27cc898af3263b0ff3ee44c2c9ca71bd"
+    },
+    "icon_classification_rare": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "2e657b57943312e0e662d9f88bcec65f41583514fc0a9b7aaa8b4f6f3d148f8b"
+    },
+    "icon_exit_flight": {
+      "disposition": "replaced casing",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "f9623748bf97207a46c6d173001bf73dca83301f440f1cc44f31d7cea2309d90"
+    },
+    "icon_skull": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "5c45659442b8214754346663c62075ab6148ab5ef99a05e1a674bf81a566e442"
+    },
+    "icon_skull_dead": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "9d2dfccbe25133d30f22e2ac19bfa763bb1150da07809d53a78bb0a024c32db6"
+    },
+    "icon_target_blue": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        64
+      ],
+      "originalSha256": "3ff869f123a819ab752c2dafca27919a7a2c0ce78a3a8a0632dbfee62866500e"
+    },
+    "icon_target_green": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        64
+      ],
+      "originalSha256": "daf230cd99d62251c543dd3a006e913043a760d569a9146ea8d8b1d4a371ad94"
+    },
+    "icon_target_red": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        64
+      ],
+      "originalSha256": "be270bfb8e1fcb2a43dcd4a93ba29c0252f4f9944c0017ac75accdb7340c4664"
+    },
+    "IconAlert-Circle": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        256
+      ],
+      "originalSha256": "6ad80fb66c393580901dccdc9330d000d06cd01c01938c88beecf3299a749ee0"
+    },
+    "IconAlertAnts-Circle": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "495d47977135df6227a01c6e0bc395422970b4dc974f250199e29cd69fc4d7f3"
+    },
+    "JuNNeZKapow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        1024
+      ],
+      "originalSha256": "7541d667d5d996c595488df448efd6d5702307b9633e7fdde4ea3b97c0b4683b"
+    },
+    "minimap-bars-single": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "19a2a3cf1ec7ce10bf23e5759edc1b5a4f5eb7f3823799c5385d67e945c83053"
+    },
+    "minimap-bars-two-inner": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "a38aeb19a44d3345871a52d19d88bb0f3aaa168eceffb6bf2dadc7597e53765a"
+    },
+    "minimap-bars-two-outer": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "6b08b22a97116e768fef84f6794146962761d1bd2dad0786f00fd705f6a20a8f"
+    },
+    "minimap-border": {
+      "disposition": "replaced casing",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "db8607fd5ba9b9269f7392bf3d7242f1d839f68885571c8bfe9c3ff7343d9831"
+    },
+    "minimap-diel-day-celestial": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "1c46b9ef7559079add6fe9614b78cd442c562e1161cc3367ab3fa17d9d59270e"
+    },
+    "minimap-diel-day-sky": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "978b2107e6c8a856d485035f4d32293f80e65cb25d82339d201a2104737a00d5"
+    },
+    "minimap-diel-night-celestial": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "557fae05d69027d396f5ed51c8fd01639e050e4192c3ee8075f51756274cfea8"
+    },
+    "minimap-diel-night-sky": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "bab6fda20a32f397d6e533ba8570d7b2620d75964c156518931f3f767143bcd3"
+    },
+    "minimap-mask-opaque": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "deab976130cc17b18ad4a432072a88f337efe007626f5356018a79165eb2b1c1"
+    },
+    "minimap-mask-transparent": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "d41e8d2bdf63e7ed74a140db160c85e4899338c28c3d2868807b185cbfd57a2c"
+    },
+    "minimap-onebar-backdrop": {
+      "disposition": "replaced casing",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "a77c7b49c0f4345929a4a3a627e86d7d0b2eaffae0812bcad66adab70828d19f"
+    },
+    "minimap-twobars-backdrop": {
+      "disposition": "replaced casing",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "d7630f866e637eddd45e8f5359695e6f83f32ad1e88e947ed9338a0a3edf6fe9"
+    },
+    "nameplate_backdrop": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        64
+      ],
+      "originalSha256": "46b84a5817570430b50469e25b368721da02f054b6aeecffceb6eb20b5316e06"
+    },
+    "nameplate_bar-absorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        64
+      ],
+      "originalSha256": "19d78f0b9977d5226aabef55002e950e60e8c65ec064e818ed347be0c6ce7e81"
+    },
+    "nameplate_bar-healabsorb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        64
+      ],
+      "originalSha256": "8171b96e4f6e5fd7ddafecbe9fdc3338f17ec3954415846c0b28dda268318036"
+    },
+    "nameplate_bar": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        64
+      ],
+      "originalSha256": "e7811214ba7988da12a4e4aac8285e3bc00fb1c9b69092631fd2c4b909eff14b"
+    },
+    "nameplate_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        64
+      ],
+      "originalSha256": "7c8b5659b2badb48f8559bf0386cc5dffed50f455821dfc63a12d15d4e8feb5f"
+    },
+    "nameplate_outline": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        64
+      ],
+      "originalSha256": "630371eee38d56bebe0eda29eaa898b69f24af4ba66751a6a688d5806df224c9"
+    },
+    "options-box": {
+      "disposition": "replaced casing",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "28c5008cc4150a394ccc4848163df1faa7fc108d5d206332a4ab6bd68e6e5c74"
+    },
+    "options-casing-round": {
+      "disposition": "replaced casing",
+      "canvas": [
+        512,
+        64
+      ],
+      "originalSha256": "8459812e7d00a78ae32f11bf8baf1b7878263b5a266f1c20fa981c8ca8b0faaf"
+    },
+    "options-check": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "7b0919ebee38afbd6b9c056e477ef6f947bd10ef70b72682288c14c4b594a89b"
+    },
+    "options-close-bright": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "78262eecc917f143358c82e3f944678a5947757314f993a22954686531b6c3b1"
+    },
+    "options-close": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "21369de620a5342a013d5d59661624082bd7864a483568bfd5e21dd583cc79a6"
+    },
+    "options-glyphs": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        128
+      ],
+      "originalSha256": "4c7569308a65c243119cc6573f02f832f9d4704e774ba34c4f437ea7dfcf88c6"
+    },
+    "options-pages": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        256
+      ],
+      "originalSha256": "b4f2483625faac748fee59a357f0d9347c4cdebfd0db2dc7e8ada9551835dfd4"
+    },
+    "options-round6-fill": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "479b293b355148ee3990de70a5776c367014efe8268f4aac6ce2e2e2e20650c2"
+    },
+    "options-sections": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        256
+      ],
+      "originalSha256": "dabdc9fc87b207895f1143c9ba5345241bd4cfe4c826ad8a8032149e51b72aef"
+    },
+    "options-shadow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "3a709617332b5a7061338006af5e15496856a7fe4870b40150fc157390aa6fb5"
+    },
+    "options-well-round": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        32
+      ],
+      "originalSha256": "8b1c4b30ccf94a13cf0efa3c5acadca81c5febed85f7176210d97b2fa60df04a"
+    },
+    "orb-art2": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "365f88dc2a3043705bdbffe60f364ad53c9ca1012662fdb53477fc8a5cbc32a6"
+    },
+    "orb-backdrop2": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "67528534f2eec18aca21ce524a54189631f9a29ed0a14f834c80cb69e0306e53"
+    },
+    "orb-border": {
+      "disposition": "replaced casing",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "c933a56b1e89513b9d3309dca33537c55d1b76bd5db55242e611eec2cb7e3af0"
+    },
+    "orb-glass": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "14105d9a76ac812c87d6e13847c8f4768c5284a1378c2d91e9268268e9851ef9"
+    },
+    "orb1": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "495addb4a8213aba284ed0bde5e849b0cbcf6a6c3e6ad3e07f53dfd56cca6bd3"
+    },
+    "orb2": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "2d46944af030c3461e80b59ff1927d27e39facebbfae9a8fefbe8dad43063ae3"
+    },
+    "orb3": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "e1c5e09ddbe25fc25ccaab9860ee7205bcbd6713b45522174f03dddd3349c019"
+    },
+    "orb4": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "a240258da4782f40aac22fbad0e9d22324fd673538fac825199950a784f39989"
+    },
+    "orb_case_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "5c628be43a18a2b060895a6d9ad60f78982e71dd399f40963b7cbb560d061d15"
+    },
+    "orb_case_hi": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "912ad83deb1a5d7ab38499144bc32daaa45ebd5b4ba48548704ac584f675b7a5"
+    },
+    "orb_case_low": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "bda2be4e396f2a90a5a180b0bf2bcd29e7096ee54a95759455de490bab35e862"
+    },
+    "party_mana": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "6bf4d40c10d4c9415fdb676064954b0280c8afc0ecb0d7f89fc4c6258ddb8c15"
+    },
+    "party_portrait_back": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "d06ffbb2fd813b5449a9372ef35f4f8438096c6bf8fd86af688d48aa0ccdcc3f"
+    },
+    "party_portrait_border": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "c42345169c304024af2d301c1579469fda90b77b5d09d10327e39b95a582c505"
+    },
+    "partyrole_dps": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "c595760cfd2d938512109122ee1a5b220cb9587049131259cad39607761d085f"
+    },
+    "partyrole_heal": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "c5670af17424d6249ff5f6ed959493a6ea43b3adf324f96f23694c943503201c"
+    },
+    "partyrole_tank": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "e7f67602b1a7d2ee323a88ab286d4715c3562839368a646b8041bef436f8c484"
+    },
+    "plus": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        32,
+        32
+      ],
+      "originalSha256": "c70864be04d708ca98906308e2189aa8d0cb5753114cf4ab1ee0f025771213ab"
+    },
+    "point_block": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "ac62e25c68056a179b87a11094e30dae77216ddd30240350bedae6d3461b0e22"
+    },
+    "point_crystal": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        32,
+        32
+      ],
+      "originalSha256": "84c74860c58441ebab4464b1cd904faf35dc081fe4b9a913f81fabc7d1d39b92"
+    },
+    "point_diamond": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "72e89f6d956cb37c8734f3c9be76cd21fb12c9d56e84095c753bf161c54bf388"
+    },
+    "point_dk_block": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "1d582485dea7c4fb315e0d2ce8b3dfa88f7b0bd1757c049b21aff6e38fb443c3"
+    },
+    "point_gem": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        32,
+        32
+      ],
+      "originalSha256": "3748f3d249e142fb9ee0b7bc58526901c7f37528be4507e8e56980753ae6b718"
+    },
+    "point_hearth": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "fc4e67807b59cf6868d362b7bf704a6ed570d417005c8f0e79744ab4dd11034c"
+    },
+    "point_plate": {
+      "disposition": "replaced casing",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "d240be92f3abbfdc020d7df1981cbff74b1b27949e7ce4fc8d24502aa67aa3d9"
+    },
+    "point_rune1": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "6e2a8dd80a75de7c297708fc4d9533685e351b02dd46803a8efbde6ebf5a249d"
+    },
+    "point_rune2": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "dbd52a36d85ebb658667dcaada0499ad71ebab0aa9a1f69f8e574be281c8db87"
+    },
+    "point_rune3": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "e5ad7ef2b6346adbe44917242db1fbdcef29512f76f4c730702827e3734ac59b"
+    },
+    "point_rune4": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        64,
+        64
+      ],
+      "originalSha256": "a964d3a67f197bb8c8d719c2796c74dea3d3efc71733564b19514769143799b2"
+    },
+    "portrait_frame_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "f4d898dec061130a22fde72562da48b33fcb48bcaf5ba8dab23305e993fa2c6a"
+    },
+    "portrait_frame_hi": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "ddc8b7b561f8fdc3f7c22b5d9a78891bf20841d72a2c877640b5d10508fb8c1d"
+    },
+    "portrait_frame_lo": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "6609976e6085537dd4f870d403a87d8efeb7c08aba9883c36c801ee9cc8a46a9"
+    },
+    "power-bar-back": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "ca35da4a2e145b2cb985581b580db753762eb3c8754039f526d0648f59c84b79"
+    },
+    "power-bar-front": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        104
+      ],
+      "originalSha256": "6fa269290f89489730c0838e55d6d6d664f1dc619a1a22325f330e5fac720ab1"
+    },
+    "power-crystal-ice-back": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "087dfe8901b91f6094a0da84fc97d4a6b2a8d7faf64224b593ac777b13a999ee"
+    },
+    "power-crystal-ice-front": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "e0f2514fc0d93c882ce816fa2c2de0935db85a6b959db72123e75c33c1689270"
+    },
+    "power-crystal-ice-icon": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "da005a7158601efed6f56b74873757a84944d7dfe8723f868fc1a19857ec4378"
+    },
+    "power_bar_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        1024,
+        256
+      ],
+      "originalSha256": "dd36ab47240cbe85ef70f995db04f29b68281afc67c8df8e25d7488086556656"
+    },
+    "power_crystal_back": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "392a461e46d0e2f3dec9e1c423487c675cb86c3ffd307568b436628647532ca9"
+    },
+    "power_crystal_front": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "ee5613ae0cd63e7dd11c54a2471b4ceb98606290fcf31e84c600e18e3284eb37"
+    },
+    "power_crystal_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "b66a9167b7587c974fe89ea5add4423835bc9bcb1f1f281a869ce9282969661f"
+    },
+    "power_crystal_small_back": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "8ec7976fb76a99c61805728c174221d0240efc5ba9436b11036bc757cf92de23"
+    },
+    "power_crystal_small_front": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        128,
+        128
+      ],
+      "originalSha256": "94589ab4f58d9b0a7b1048c6c8764211df72ef18f5cf348e6862ea2ed723fef4"
+    },
+    "pw_crystal_case": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        128
+      ],
+      "originalSha256": "52b601a7a079d8d0d8e9a43511c5263c5a6fcd60f4ac796e4e8183d06636eb4c"
+    },
+    "pw_crystal_case_glow": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        128
+      ],
+      "originalSha256": "a4925ffd9ce6b532acd282c9dfb82583e16280023cfc5dd504652ec18cf60881"
+    },
+    "pw_crystal_case_low": {
+      "disposition": "replaced casing",
+      "canvas": [
+        256,
+        128
+      ],
+      "originalSha256": "aebf1bb25d7970b039b17bb50d5c3767de4a6dade9c0d111101e065c6cd5162a"
+    },
+    "raid_target_icons": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "d6ea9f98c9fe5b1701b3729a6ebb3bdd631196ffeca9c35dcd822c58dbccf799"
+    },
+    "raid_target_icons_small": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "00f4e5877588c462b25dcbcb69701bbc90c96373ec7282f487e1da7b9a1cc042"
+    },
+    "seasonal_winterveil_crystal": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "bc5e9fbae1b1b0bca93aa7fe16eb30213acbf8457e0f811421b44288c14a8ba5"
+    },
+    "seasonal_winterveil_orb": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        256,
+        256
+      ],
+      "originalSha256": "22ea309581dfc33286dbf75a07ac327d1679fd88cc5814675e6d8c25eb40a60c"
+    },
+    "shade-circle": {
+      "disposition": "shared functional/semantic/other media",
+      "canvas": [
+        512,
+        512
+      ],
+      "originalSha256": "3f88a6d882c44267e331a7daa6fa98769eabb428849efbe4a59d62cda7c1de51"
+    }
   },
-  "holy-fill": {
-    "size": [
-      256,
-      256
-    ],
-    "sha256": "272c6aec1558b2ca125ca7ff418e0b8b642c9664615de391cf7a4d53d9af4d33"
-  },
-  "orb-case": {
-    "size": [
-      256,
-      256
-    ],
-    "sha256": "704e5eed36554fe85f4602d0edf3e8ca8a47beb7d4fc3b6cedaee0be124ccca9"
-  },
-  "crystal-holder": {
-    "size": [
-      256,
-      128
-    ],
-    "sha256": "6a51ee42a6b2ec5a601c8eed06050aa33da9f658cf18b16de854a87d6004d72f"
-  },
-  "light-body": {
-    "size": [
-      512,
-      512
-    ],
-    "sha256": "79dd2ac0f8426a9af0c964e507835bd419aa4073f9c178c896cc28ba5ab7b37e"
-  },
-  "light-strands": {
-    "size": [
-      512,
-      512
-    ],
-    "sha256": "734781a7a51e6ef27e3de40da0ad75e4c3adb2a414d724a9e85009262309ee9e"
-  },
-  "orb-light": {
-    "size": [
-      512,
-      512
-    ],
-    "sha256": "6980008e4298758b3444686ce1c70ebd1eb331d8547eca1ebee0235129e2e54f"
-  },
-  "orb-strands": {
-    "size": [
-      512,
-      512
-    ],
-    "sha256": "f0211f81b134874e791a477172a2649b2304fbdb2df79365c2df1d4fdabf7f24"
-  },
-  "action-ring": {
-    "size": [
-      256,
-      256
-    ],
-    "sha256": "629b81c6f8220c9d23c9783a3cf8fa3256ab4887eff4ff83bfab9bb8e9f7246c"
-  },
-  "utility-cog": {
-    "size": [
-      128,
-      128
-    ],
-    "sha256": "2443846e86425a4aac9c08a76c27bcd1ff27c1aaa681d5a9a92fa542f58ffd48"
-  },
-  "compact-case": {
-    "size": [
-      256,
-      128
-    ],
-    "sha256": "8f4784aaa85a17c83ff1acaab531c430ae31d794244333e296e21a68d7db1e56"
-  },
-  "utility-edge": {
-    "size": [
-      512,
-      64
-    ],
-    "sha256": "c48acc428e986c3b97b24d5c0718043f424040f8bc41be2e2e54fc4871c055a1"
-  },
-  "minimap-ring": {
-    "size": [
-      512,
-      512
-    ],
-    "sha256": "ca92ed085f303f853f681e6ec0d570827b252fa7a24d7bdeb7b4badbf2648732"
-  },
-  "portrait-case": {
-    "size": [
-      256,
-      256
-    ],
-    "sha256": "fe0d58aee6b80ffb24462b8011e326790dfa8590a8584e9a530366ac83856a44"
-  },
-  "portrait-case-low": {
-    "size": [
-      256,
-      256
-    ],
-    "sha256": "2d66c60aad5fc3e93d6e98869137f041374dc92008d4c58f696f087d4c18daa7"
-  },
-  "plate-case": {
-    "size": [
-      256,
-      64
-    ],
-    "sha256": "19f143726d8f940eecdeffdbc68fa16b57da82f1b0c88a0fa5cb980487eafeb5"
-  },
-  "seal": {
-    "size": [
-      32,
-      32
-    ],
-    "sha256": "44ae4d574eeca371cfdd6c0fd6bb0806c03f883cd3701e693cbf651d488f05f9"
-  },
-  "party-case": {
-    "size": [
-      256,
-      256
-    ],
-    "sha256": "254c8e7bbce1bbf621a010f7d0a5413c2ce5327c5c79b9d6fa9c3497f69e427a"
-  },
-  "utility-plate": {
-    "size": [
-      128,
-      128
-    ],
-    "sha256": "ff27022f40d1c756e2d7c1ec823b1ef5848bf0a214ede1e3c12c4eb0783127d3"
-  },
-  "vehicle-exit": {
-    "size": [
-      128,
-      128
-    ],
-    "sha256": "f3a9d304da451de17b73e8c0675dc309cae2ce429c988c5a41c3f899d5f333c9"
-  },
-  "status-backdrop": {
-    "size": [
-      512,
-      512
-    ],
-    "sha256": "801e4bbe469fd00a1a87c92bd8e3d71524f874d7664541cde0fa62cb1c42c208"
-  },
-  "critter-case": {
-    "size": [
-      128,
-      128
-    ],
-    "sha256": "33d5b4c07d2464acc65325730deab5365300c3b4b100df44fb02e1c9ae78979c"
-  },
-  "health-glow": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "8b0dc6b2e6340c837ff0291ab119ceb61c44283b442b623e1db3bed60e458d92"
-  },
-  "health-portrait-glow": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "9ba90f53949e6411b01fd01f1435090e7b1e7e65750a90cf6c5d69ab75fa51b7"
-  },
-  "health-wide-glow": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "0004f33c44626396023282c7c70c56140a48588c80abda3e5793455f5e669594"
-  },
-  "health-lowmid-glow": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "905c0f0d3b793367c515c7aa3fbfa88b0cbacd54a15c72578cfea191c6ca4c9a"
-  },
-  "health-small-glow": {
-    "size": [
-      1024,
-      512
-    ],
-    "sha256": "738f519b5cbb44a084f4cccaf9c99f0005c5fa0404ca865685bb4bffd761f5fa"
-  },
-  "crystal-holder-glow": {
-    "size": [
-      256,
-      128
-    ],
-    "sha256": "372fd39fbab7edc89671220d37e2a12b7450919fbc6689196353cb5936791efe"
-  },
-  "orb-case-glow": {
-    "size": [
-      256,
-      256
-    ],
-    "sha256": "6fe0b7f3ac94b5ac0d3f9d8c7fb39e996991d4904e42c7fd5054efa61268c5e1"
-  },
-  "_sources": {
-    "health-case.png": "e95b1edeaa5ac8c08dd86c39507ca9e64ee36d6093a04db5087b2a7fa37ff4ab",
-    "lion-cast.png": "1f56cb62f1d7b1bae23ea9e10f26413c96cdad3b4ecb97299983a40815342a79",
-    "portrait-case.png": "49b9eb11176ed9d7c25123b52f04ca20f7fe8c3d226c302258872a7cc64ba04d",
-    "plate-case.png": "bec8f9a52f3c23357010c6831fa37eaa8335b489a64f7902106780ca02e2ca51",
-    "action-ring.png": "4f95ab6d4ff57758c65be6b0b54c46f519f04f3173e3f37be856533074a8333b",
-    "minimap-ring.png": "b53824d6ace51f9b95ca38526f91dc16f3be7a30aab7289bb45d958d05703599",
-    "utility-frame.png": "17d635f1474bea4a35ef909a6c1edb8aea4b07b4cf9b082daa4745f8900c60de",
-    "seal.png": "4b99f14ef3f00ef492d4ffe7ea21b186e90b4f237a7e7a27578f6b6541b7ca80",
-    "crystal-holder.png": "ccda399011284e255c66ff40bfcca5e50d2e39700d4522273db6710bf491b217",
-    "orb-case.png": "1334c636b2f7addffa6be8073a5ede5ef443e0a6bb2c0dd49644f7970c79024c",
-    "light-body.png": "9d82641a90ccebb507ba8dc01a0a2baf9332c901382485e62827dbf609cae689",
-    "light-strands.png": "27815aec54eda344f9acf831a12587ff5d5524d43c21c3471cb8dbf33bdf8071"
-  },
-  "_revision2_sources": {
-    "action-subtle.png": "10a590518645e6e849e59d082c1c40cba7515de487e6c93e32f2a68f624732a4",
-    "utility-subtle.png": "0a806386f03d6ad95eb6f69bfc4562b86b48cf808ee40f3c88c1ea41c946d48c",
-    "compact-subtle.png": "ce5f5394ac0145ce3bbf1433e92b7839fa6f8cba9c5c97486d7d2394bed65cbd",
-    "tooltip-subtle.png": "668e1acb0427d4198825fbea5d589bb25ed22b84ef8840c7b99cb4d2e6dbdfb0"
-  },
-  "_revision3_sources": {
-    "minimap-simple.png": "79d007fd212f73c52f496b2041996ec31b7da4b0a35a80f5458c74422bc52fb2",
-    "portrait-simple.png": "6912b61ff0839eb6ce9e7a72123301d48eaa1b06998ae2913c391a090f2bf656",
-    "plate-simple.png": "39bd5741250ef919636c31299a14de6e45fe8278eaa02aaef307882bb779a50c",
-    "seal-simple.png": "1088449f1581fee6b7887ee6e5b099ec42fb270000fcce29beeaa7668c21ed85"
-  },
-  "_revision4_sources": {
-    "party-case.png": "5d722023cc3a5b72c13d775dc8358e492c8eb5b29ad51be7ed7a9f654a2f89df",
-    "utility-plate.png": "aaea69ab2f5e1ff7da2c326ba02cffaa1f7d15f922db3bea49aeb79973d48f7a",
-    "vehicle-exit.png": "d0e0b7b38ae531f64737fb22b42746508139fd6e32a485b37ac400ed46b5bf6b",
-    "status-backdrop.png": "fbfa29d04d0231b9099e0b3dd2931362a320cd87ba9bb5d73985ad6809b4f3b2"
-  },
-  "_revision5_sources": {
-    "lion-cast.png": "6a8120bef8cb5c1a18b94bef8661e88c1f7851642054a0b5b44c0be55ae5c590",
-    "holy-case.png": "7a699acc28af2d04a64f0b5768960eaaaa0655419ba1d0bbc3d372812d8c9af8",
-    "holy-fill.png": "8205449391371540b037a6f4dd6078a2052341e509ca592dc02efe9212587aba"
-  }
+  "sharedEffects": [
+    "light-strands",
+    "orb-light",
+    "orb-strands"
+  ],
+  "missingSources": [],
+  "liveValidated": false
 }

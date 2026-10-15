@@ -325,7 +325,8 @@ local style = function(self, unit)
 	if (health.SetForceNative) then health:SetForceNative(true) end
 	health:SetFrameLevel(health:GetFrameLevel() + 2)
 	if (health.DisableSmoothing) then
-		health:DisableSmoothing(true) -- WoW 12.0: Disable smoothing to prevent proxy flickering
+		-- Was off "to prevent proxy flickering" (WoW 12.0); now behind the switch for a side-by-side check.
+		health:DisableSmoothing(false) -- Eases while /az -> Unit Frames -> Smooth health and power is on (UnitFrame.lua).
 	end
 	health:SetPoint(unpack(db.HealthBarPosition))
 	health:SetSize(unpack(db.HealthBarSize))

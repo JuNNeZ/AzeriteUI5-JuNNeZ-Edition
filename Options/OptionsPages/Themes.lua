@@ -80,8 +80,9 @@ local List = function(keys, withTheme)
 	local values, sorting = {}, {}
 	if (withTheme) then values.theme = Label("theme"); sorting[1] = "theme" end
 	for _, key in ipairs(keys) do
-		-- Paladin is a Development Mode preview, its effects with it.
-		local hidden = key == "paladin" and not (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
+		-- Paladin's approved Light effect is public in Lite+; its complete
+		-- artwork theme remains a Development Mode preview.
+		local hidden = key == "paladin" and not withTheme and not (ns.db and ns.db.global and ns.db.global.enableDevelopmentMode)
 		if (not hidden) then
 			values[key] = WIP(key, Label(key))
 			sorting[#sorting + 1] = key
@@ -128,6 +129,21 @@ local AddCastEndcap = function(theme, args)
 		type = "execute",
 		func = function() theme:ResetCastEndcapPlacement() end
 	}
+	-- Lite+ may expose Paladin light settings on another theme; its ornament
+	-- controls belong only to Paladin's own casings.
+	if (theme == ns.PaladinTheme) then
+		args.castEndcap = {
+			name = L["Endcap"], order = 10.5, type = "select",
+			values = { libram = "Libram", none = _G.NONE or "None" },
+			sorting = { "libram", "none" },
+			hidden = function() return Theme() ~= "paladin" end,
+			get = function() return theme:GetCastEndcap() end,
+			set = function(_, value) theme:SetCastEndcap(value) end
+		}
+		for _, key in ipairs({ "castHeader", "castEndcapScale", "castEndcapX", "castEndcapY", "resetCastEndcap" }) do
+			args[key].hidden = function() return Theme() ~= "paladin" end
+		end
+	end
 	return args
 end
 
@@ -267,9 +283,42 @@ local GeneratePaladin = function(order)
 		inline = true,
 		hidden = function()
 			local effects = Effects()
-			return not effects or (effects:GetCrystalEffect() ~= "paladin" and effects:GetOrbEffect() ~= "paladin")
+			return not effects or (Theme() ~= "paladin" and effects:GetCrystalEffect() ~= "paladin" and effects:GetOrbEffect() ~= "paladin")
 		end,
-		args = {
+		args = AddCastEndcap(Paladin, {
+			endcap = {
+				name = L["Endcap"], desc = L["The ornament at the outer end of the health bars."],
+				order = 2, type = "select", width = "full",
+				values = { ashbringer = "Ashbringer", none = _G.NONE or "None" },
+				sorting = { "ashbringer", "none" },
+				hidden = function() return Theme() ~= "paladin" end,
+				get = function() return Paladin:GetEndcap() end,
+				set = function(_, value) Paladin:SetEndcap(value) end
+			},
+			endcapScale = {
+				name = L["Endcap size"], order = 3, type = "range", width = "full",
+				min = .5, max = 2, step = .05, isPercent = true,
+				hidden = function() return Theme() ~= "paladin" end,
+				get = function() return Paladin:GetEndcapScale() end,
+				set = function(_, value) Paladin:SetEndcapScale(value) end
+			},
+			endcapX = {
+				name = L["X Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+				hidden = function() return Theme() ~= "paladin" end,
+				get = function() return (Paladin:GetEndcapOffset()) end,
+				set = function(_, value) Paladin:SetEndcapOffset(value, nil) end
+			},
+			endcapY = {
+				name = L["Y Offset"], order = 5, type = "range", width = "full", min = -60, max = 60, step = 1,
+				hidden = function() return Theme() ~= "paladin" end,
+				get = function() return select(2, Paladin:GetEndcapOffset()) end,
+				set = function(_, value) Paladin:SetEndcapOffset(nil, value) end
+			},
+			resetEndcap = {
+				name = L["Reset endcap size and position"], order = 6, type = "execute",
+				hidden = function() return Theme() ~= "paladin" end,
+				func = function() Paladin:ResetEndcapPlacement() end
+			},
 			light = {
 				name = L["Holy light strength"],
 				desc = L["How strongly the moving holy light shows on the power crystal and the mana orb. 0% hides it."],
@@ -279,7 +328,7 @@ local GeneratePaladin = function(order)
 				set = function(info, val) Paladin:SetLightStrength(val) end,
 				get = function(info) return Paladin:GetLightStrength() end
 			}
-		}
+		})
 	}
 end
 

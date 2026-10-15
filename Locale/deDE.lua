@@ -1215,3 +1215,41 @@ L["How large the cast bar's ornaments are drawn. They grow and shrink around the
 L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "Verschiebt die Verzierungen des Zauberbalkens von den Enden des Balkens weg oder darüber hinein."
 L["Moves the cast bar's ornaments up or down."] = "Verschiebt die Verzierungen des Zauberbalkens nach oben oder unten."
 L["Reset cast bar endcap size and position"] = "Größe und Position der Zauberbalken-Endkappe zurücksetzen"
+
+-- Mover anchoring (/lock)
+L["Anchor To"] = "Verankern an"
+L["Keeps this frame beside another AzeriteUI frame and moves it when that frame moves. Dragging it changes the distance. Shift-click resets it and removes the anchor."] = "Hält dieses Fenster neben einem anderen AzeriteUI-Fenster und bewegt es mit, wenn sich jenes bewegt. Ziehen ändert den Abstand. Umschalt-Klick setzt es zurück und entfernt die Verankerung."
+L["Not anchored"] = "Nicht verankert"
+L["This frame's point"] = "Punkt dieses Fensters"
+L["Point on the other frame"] = "Punkt am anderen Fenster"
+L["Distance X"] = "Abstand X"
+L["Distance Y"] = "Abstand Y"
+L["Distance between the two points. 0 puts them on top of each other."] = "Abstand zwischen den beiden Punkten. 0 legt sie aufeinander."
+L["More settings"] = "Weitere Einstellungen"
+-- Layout copy (/lock)
+L["Copy layout from"] = "Layout kopieren von"
+L["Copies frame positions, anchors and AzeriteUI Scale from another profile into this one. Every other setting stays as it is. The interface reloads."] = "Kopiert Fensterpositionen, Verankerungen und die AzeriteUI-Skalierung aus einem anderen Profil in dieses. Alle anderen Einstellungen bleiben, wie sie sind. Die Oberfläche wird neu geladen."
+L["Copy the layout from %s into this profile? The interface reloads."] = "Das Layout von %s in dieses Profil kopieren? Die Oberfläche wird neu geladen."
+-- Smooth bars (Unit Frames, Debug tools)
+L["Smooth health and power"] = "Gesundheit und Ressource glätten"
+L["Health and power bars glide to each new value instead of jumping. A new target or group member still shows at once."] = "Gesundheits- und Ressourcenleisten gleiten zum neuen Wert, statt zu springen. Ein neues Ziel oder Gruppenmitglied wird sofort angezeigt."
+L["Smooth castbar pushback"] = "Zauberverzögerung glätten"
+L["When a cast is pushed back, the bar slides to its new place instead of jumping. A new cast always starts at once."] = "Wird ein Zauber verzögert, gleitet die Leiste an ihre neue Stelle, statt zu springen. Ein neuer Zauber beginnt immer sofort."
+L["Smooth bars"] = "Leisten glätten"
+L["All on"] = "Alle an"
+L["All off"] = "Alle aus"
+L["Flip both"] = "Beide umschalten"
+L["Switch eased bars while you fight to compare them side by side. The same two settings as on the Unit Frames page; /azsmooth [on|off] [bars|cast] does it from chat."] = "Schalte geglättete Leisten im Kampf um, um sie direkt zu vergleichen. Dieselben zwei Einstellungen wie auf der Seite Einheitenfenster; /azsmooth [on|off] [bars|cast] geht auch im Chat."
+L["Health and power: %s   Castbar pushback: %s"] = "Gesundheit und Ressource: %s   Zauberverzögerung: %s"
+L["Applies to castbars on unit frames."] = "Gilt für Zauberleisten an Einheitenfenstern."
+
+-- Smooth bars preview (Debug tools)
+L["Smooth bars preview"] = "Vorschau: geglättete Leisten"
+L["Both bars get the same hits and heals, big and small, every 1.4 seconds."] = "Beide Leisten bekommen alle 1,4 Sekunden dieselben Treffer und Heilungen, große und kleine."
+L["Eased"] = "Geglättet"
+L["Snaps"] = "Springt"
+L["Toggle preview"] = "Vorschau ein/aus"
+
+-- Paladin Light resource palette
+L["Light colored"] = "Vom Licht gefärbt"
+L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = "Wähle die Farbe des Ressourcenkristalls und der Manakugel. Vom Licht gefärbt verwendet goldenes Licht."

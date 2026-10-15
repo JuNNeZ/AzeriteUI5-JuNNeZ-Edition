@@ -10,7 +10,8 @@ local function check(value, label)
 end
 
 local reloads, refreshes, combat = 0, 0, false
-ReloadUI = function() reloads = reloads + 1 end
+C_UI = { Reload = function() reloads = reloads + 1 end }
+ReloadUI = function() error("theme dropdown must use modern reload API") end
 InCombatLockdown = function() return combat end
 
 local ns = { db = { global = {}, char = {} } }
@@ -103,10 +104,14 @@ check(E:SetOrbChoice("none") and E:GetOrbEffect() == "none", "Lite+ can switch a
 check(E:SetLitePlus(false) and E:GetCrystalEffect() == "none" and E:GetOrbEffect() == "hunter", "Lite+ off returns to the theme's own, choices kept")
 check(ns.db.char.themeCrystalEffect == "mage", "choices survive Lite+ off")
 
--- The Paladin effects follow the Paladin preview's Development Mode gate.
+-- Approved Paladin effects are public in Lite+; the full artwork stays gated.
 E:SetLitePlus(true); E:SetCrystalChoice("paladin")
 ns.db.global.enableDevelopmentMode = false
-check(E:GetCrystalEffect() == "none", "Paladin effect off outside Development Mode")
+check(E:GetCrystalEffect() == "paladin", "Paladin Light in Lite+ outside Development Mode")
+check(E:SetOrbChoice("paladin") and E:GetOrbEffect() == "paladin", "Paladin orb Light outside Development Mode")
+check(not E:SetTheme("paladin"), "full Paladin artwork remains a Development Mode preview")
+seen, orb = drawn()
+check(orb and seen["paladin:crystal"] and seen["paladin:orb"], "both public Lite+ Light effects dispatched")
 ns.db.global.enableDevelopmentMode = true
 check(E:GetCrystalEffect() == "paladin", "Paladin effect in Development Mode")
 

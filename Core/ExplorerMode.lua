@@ -735,7 +735,11 @@ ExplorerMode.OnEvent = function(self, event, ...)
 		end
 
 	elseif (event == "CURSOR_CHANGED") then
+		-- This, power and health fire far more often than their answer changes: only
+		-- a changed answer can change whether frames fade, so nothing else is redone.
+		local was = self.busyCursor
 		self:CheckCursor()
+		if (self.busyCursor == was) then return end
 
 	elseif (event == "PLAYER_TARGET_CHANGED") then
 		self:CheckTarget()
@@ -776,10 +780,14 @@ ExplorerMode.OnEvent = function(self, event, ...)
 
 	elseif (event == "UNIT_POWER_FREQUENT")
 		or (event == "UNIT_DISPLAYPOWER") then
+			local was = self.lowPower
 			self:CheckPower()
+			if (self.lowPower == was) then return end
 
 	elseif (event == "UNIT_HEALTH_FREQUENT") or (event == "UNIT_HEALTH") then
+		local was = self.lowHealth
 		self:CheckHealth()
+		if (self.lowHealth == was) then return end
 
 	--elseif (event == "UNIT_AURA") then
 		--self:CheckAuras()
@@ -810,7 +818,8 @@ ExplorerMode.EnableExplorerMode = function(self)
 	self:RegisterUnitEvent("UNIT_HEALTH", "OnEvent", "player")
 	self:RegisterUnitEvent("UNIT_POWER_FREQUENT", "OnEvent", "player")
 	self:RegisterUnitEvent("UNIT_DISPLAYPOWER", "OnEvent", "player")
-	self:RegisterUnitEvent("UNIT_AURA", "OnEvent", "player", "vehicle")
+	-- No UNIT_AURA: nothing reads auras (CheckAuras is gone), and every aura change in
+	-- combat ran the whole settings pass for nothing.
 
 	self:RegisterEvent("PLAYER_FOCUS_CHANGED", "OnEvent")
 	self:RegisterEvent("UPDATE_OVERRIDE_ACTIONBAR", "OnEvent")
@@ -850,7 +859,6 @@ ExplorerMode.DisableExplorerMode = function(self)
 	self:UnregisterEvent("UNIT_HEALTH", "OnEvent", "player")
 	self:UnregisterEvent("UNIT_POWER_FREQUENT", "OnEvent", "player")
 	self:UnregisterEvent("UNIT_DISPLAYPOWER", "OnEvent", "player")
-	self:UnregisterEvent("UNIT_AURA", "OnEvent", "player", "vehicle")
 
 	self:UnregisterEvent("PLAYER_FOCUS_CHANGED", "OnEvent")
 	self:UnregisterEvent("UPDATE_OVERRIDE_ACTIONBAR", "OnEvent")

@@ -1,0 +1,46 @@
+{
+  "generator": "built-in image_gen",
+  "liveValidated": false,
+  "icons": {
+    "azerite": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourceSha256": "6889f0585f8e63de07514092908d1f28c1b8d0fb6e44bdb783c08218a0111f81",
+      "sha256": "fcab3dadbb159b10fd1a919c597985dae1f1b84c13e02d019945c0adf0e07d79"
+    },
+    "legacy": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourceSha256": "b85b107f7079821529b0a0629aa2a39e5e5c7e7d1541861b70b521463bdbe0d4",
+      "sha256": "76aa11a2edbe2c00b332b2ae53d468c6401cb5fe18e688acc8a2191ce21c6bac"
+    },
+    "hunter": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourceSha256": "2e2e22c8fb83f951a86ddd420ec0d59165b64cfebff61e52c8d5f3a7e067dad3",
+      "sha256": "c71a23c0d7c0337825e079b0ac6aedaec86be308e2648068c0dd6b526d08a148"
+    },
+    "mage": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourceSha256": "76a5ab835838b80e209381bb2e5cf8e1248fd640db77f32653ac2dad9c6f5d87",
+      "sha256": "d871c928ea4c68f04e40ec835d4476833fb1539a148340cba705ef1b41b828f5"
+    },
+    "paladin": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourceSha256": "8452fe36bdeda066571b5f024c81bc3215461a537a791b76a512d08aabed7fc1",
+      "sha256": "0a9330cc103b4890f059013c4c286c943e0542dfaaa9058094cf4b89a054afc9"
+    }
+  }
+}

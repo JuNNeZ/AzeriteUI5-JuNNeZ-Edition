@@ -1,125 +1,248 @@
-# Paladin development preview
+# Paladin — Ashbringer / Silver Hand
 
-Generated transparent artwork for the main AzeriteUI theme. The reference is the
-maintainer's selected Ashbringer health casing and compact Judgment lion castbar,
-with the existing AzeriteUI crystal silhouette, health fills and icon masks.
+## Golden Light animation - 2026-10-15
+
+Current direction: slow golden energy waves with continuous winding threads,
+plus six independent floating/pulsing light spheres on a foreground layer.
+`generated-sheet-waves.png` / `prompt-waves.txt` supply the wave atlas;
+`generated-sphere.png` / `prompt-sphere.txt` supply the separate neutral sprite,
+tinted golden at runtime. Both were made with built-in image_gen. Earlier
+detailed/electrical and simple/cartoon source sheets and prompts remain for history.
+
+`holy-energy.tga` is one shared 1024x1024 RGBA atlas for all specializations,
+used inside both the crystal and mana orb. Its 64 frames form a 32-second
+loop with adjacent-frame crossfade and additive blending. The existing Holy
+light strength setting controls both; zero stops the playback callbacks.
+`holy-sphere.tga` is a 64x64 RGBA sprite. Each of the six foreground spheres
+has its own seeded path and pulse, on a separate 48-second drift period. Wave
+wrap and mana updates retain sphere phase. Both layers share the native mask.
+Native crystal/ice alpha and LibOrb's fill clip plus native circular alpha
+bound the light without reading resource values. Casings, fill geometry,
+resource colours and saved anchors are unchanged. Existing facet/orb pulses
+remain underneath the new moving Light layer.
+
+Rebuild: `python Tools/Build-PaladinLightAtlas.py`. Built-in image_gen source,
+exact prompt, hashes and isolated full/half/low-fill previews are retained in
+`Docs/Research_Assets/Paladin/HolyLight-2026-10-15/`. The exporter only resizes
+the complete source sheet and sphere to runtime dimensions and converts to TGA.
+The GIF preview spans 96 seconds so both periods wrap together continuously.
+This effect has its own
+builder and source manifest, separate from the casing rebuild below.
+The preview omits casings and is not a live WoW screenshot. Retail and Forever
+still need `/reload`, partial/empty mana, ice, strength, Lite+ switching,
+combat and BugSack checks.
+
+Approved 2026-10-14 from the combined concept and tooltip study. Ashbringer
+health rails and separate sun-disc blade ends; Silver Hand silver/gold buttons,
+portraits, compact casings, low cradle, orb glass and tooltip borders. A separate
+closed-libram head joins the native player cast bar.
 
 ## Access
 
-Enable Development Mode, reload, then use `/azpaladin on`. The command reloads
-the UI outside combat. `/azpaladin off` restores the standard theme; `status`
-reports the current gate. The preference is per character. SaiyaRatt is excluded.
+With the Paladin artwork theme active, `/az -> Unit Frames -> Player ->
+Crystal/Orb Color Source` additionally offers **Light colored**. It colours both
+mana fills warm gold (1, .84, .35), independently of the animated Light effect.
+Default, Enhanced Colors and Class Color remain available. A saved Light choice
+is dormant outside Paladin: native default crystal/orb colours return, and the
+choice is retained for switching back. Light uses the neutral crystal surface
+instead of baked-blue ice art, without rewriting the saved ice/seasonal choice;
+another colour source restores that choice. No art geometry or anchors change.
 
-## Texture contracts
+The approved Light effect is available without Development Mode: `/az -> Themes`,
+enable Lite+, then select Paladin for Crystal effect and/or Orb effect. Holy
+light strength appears while either effect is selected and controls both layers.
+Changes apply live outside combat; Lite+ off returns to the selected theme's own
+effects. Casing and ornament controls stay with the theme that owns them.
 
-- `health-case` and `lion-cast`: colored foreground casings, transparent openings.
-  Registration uses measured source apertures in `Core/PaladinTheme.lua`.
-- Revision 3 shortens their plain center runs instead of stretching the end
-  ornaments to the native player meter aspect. Boss frames retain their native
-  112x11 meter; that aspect differs slightly from the player's 385x40.
-- `plate-case`: decorative material on the existing nameplate background layer.
-- `portrait-case`, `action-ring`, `minimap-ring`, `crystal-holder`, `orb-case`:
-  colored material artwork registered to the existing texture canvases.
-- `seal`, `light-body`, `light-strands`, `orb-light`, `orb-strands`: neutral
-  functional textures. Mana gets its warm color at runtime; strands stay white.
-- `health-glow`, `crystal-holder-glow`, `orb-case-glow`: white alpha silhouettes
-  for runtime threat tinting. They contain no gold pigment.
-- `action-ring`, `utility-cog`, `compact-case`, `utility-edge`: restrained edits
-  registered to the original action border, cog, compact casing and eight-cell
-  tooltip atlas. Output dimensions and alpha channels match the originals exactly.
-  Focus and target-of-target retain their original sizes, anchors and highlights.
-- `minimap-ring`, `portrait-case`, `portrait-case-low`, `plate-case`, `seal`:
-  simple cartoon-like edits using exact original dimensions and alpha. Portrait
-  high/low variants retain separate original masks. Nameplate material occupies
-  the native background, without a separate foreground casing. Holy Power uses dedicated aligned casing/fill canvases and a wider arc.
-- The crystal holder uses the original 177px painted width on its 256px padded
-  canvas; the detailed lion's extra height is retained without stretching.
+Enable Development Mode, `/reload`, then select Paladin under `/az -> Themes`
+or use `/azpaladin on` outside combat. `/azpaladin off` restores AzeriteUI;
+`status` reports the gate; `preview` opens synthetic bar tests. Theme switching
+reloads; health/cast ornament placement and light strength redraw live.
 
-The crystal's light clips to the native StatusBar texture. The orb uses LibOrb's
-existing native clipping and rotating body layers, with a separate pulsing white
-layer. No addon calculation of mana percentages is added. This is layered texture
-animation, not a fluid simulation.
+## Contract
 
-Mana uses Holy Light before the saved enhanced/class crystal color mode is
-applied. Saved preferences are not changed, and resume when the preview is off.
+All 34 casing variants use native filenames and canvas sizes. Thirty-two keep
+byte-identical native alpha. The two crystal holders use the approved concept
+silhouette, uniformly scaled within the original painted width (177px), as
+requested after live review; their source aspect ratio is retained. No bar, text, portrait, resource, class-power, scale, texcoord or saved
+anchor geometry is changed by the theme. The old 373px health width, enlarged
+castbar, shifted text and widened Holy Power layout have been removed.
+
+Functional fills/masks/glass/glows and semantic colours remain shared. The
+fifth Holy Power diamond retains its native glyph/casing; four round plates
+use Silver Hand material. Native resource colours and seasonal/ice choice are
+preserved. Lite+ retains three neutral Holy Light effect textures.
+
+Backdrops contain textured neutral empty surfaces. Separate `*-over` rails
+follow the actual native backdrop and stay outside the fill contour. Relic
+and libram use shared engine slots, changing only non-interactive artwork.
+Compact/group/boss meters and critters have no weapon ornaments. The relic's
+white halo follows native threat visibility and vertex colour. Native cast
+shield remains; ordinary front lip follows native backdrop visibility.
+
+The north ornament backs the existing compass N; its letter, rotation and
+anchor remain native. Other themes/layouts have their separate gates.
+
+
+## Concept holder rebuild - 2026-10-14
+
+Supersedes the native-stencil crystal splits described below. Both crystal
+holders now use one complete new painting based on the approved Resources-row
+holder: two gold clamps, connected segmented silver base, dark outer bevel.
+Uniform contain fitting preserves the source aspect and never exceeds the
+original 177px painted width; no native alpha stencil chops the new shapes.
+The holder's open alpha aperture is its foreground; the obsolete duplicate
+backing is no longer created. Resource fill/colours/ice and all layout anchors
+stay native. Core crystal facet light remains subtle. These two casings skip
+the general palette grade to retain the new concept painting's material.
+Sources, before files, fit records and approved-reference comparison are in
+Rebuild-2026-10-14/Concept-Cradle. Offline checked; live confirmation owed.
 
 ## Rebuild and review
 
-Run `python Tools/Build-PaladinAssets.py`, then `python Tools/Build-PaladinSheet.py`
-from the addon root (Pillow required). Original generated PNGs and the exact
-built-in image_gen prompt scripts are retained locally in
-`Docs/Research_Assets/Paladin/Production/`. The final bar correction prompts
-supersede the first bar designs. `manifest.json` records source/output hashes.
-Revision 2 sources and built-in generation prompts are retained in
-`Docs/Research_Assets/Paladin/Revision2/`. Run `python Tools/Build-PaladinComparison.py`
-for the original-versus-revised geometry comparison.
-Revision 3 sources and exact built-in image_gen prompts are in
-`Docs/Research_Assets/Paladin/Revision3/`. `Build-PaladinSheet.py` now publishes
-the complete matched-scale comparison from `Build-PaladinFullComparison.py`.
-It accounts for every exported texture and labels newly added light layers.
+`python Tools/Build-PaladinDropIn.py --install`; the familiar
+`Tools/Build-PaladinAssets.py` forwards to this exporter. Sources, exact
+image_gen prompts, layouts, inventory, hashes and review pages are retained in
+`Docs/Research_Assets/Paladin/Rebuild-2026-10-14`. Production paintings are
+generated individually against native templates, except the literal HUD
+crystal-holder cutout explicitly requested after the screenshot comparison.
 
-The generated sheet shows actual textures and offline fill examples, not a WoW
-screenshot. Source PNGs and internal docs are excluded from release packaging.
+Run `python Tools/Check-ThemeAssetStyle.py Paladin` and
+`python Tools/Check-PaladinDropIn.py` to verify the installed artwork.
+Run `python Tools/Build-PaladinDropInReview.py` to rebuild the review sheets.
+60 runtime textures: 34 casings, two crystal foreground lips, ten cycle variants,
+seven front rails, three ornaments, one white relic halo and three retained
+neutral effect layers. No geometry failures or missing casing variants.
 
-## Verification
+Remaining look advice concerns six native soft-alpha fringes and point-plate
+inner shading, cradle lighting and the intentionally brighter sacred endcap.
+Functional alpha/glass are preserved rather than reshaped.
+Historical Revision2–5 files describe retired art. Offline checks do not prove
+live fit; see `Docs/Paladin Theme Coverage.md` for the Retail/Forever battery.
 
-`Tools/Harness/paladin_theme_harness.lua` exercises layout isolation, runtime
-palette preservation, dev/profile gates, command behavior and clip ownership.
-It includes the real namespace finalization and the player color resolver's
-default/enhanced/class modes. The normal nameplate harness also passes with the
-feature disabled.
+## Scoped concept correction — 2026-10-14
 
-**Live Retail and Forever verification remains required.** Check player, target,
-boss and alternate-player portraits; health at full/partial/empty; absorbs and
-threat; player casts and channels; the stacked nameplate pair and idle plates;
-all five seals; crystal/orb at empty/partial/full mana; icon cooldowns/highlights;
-the minimap, gear and options/menu borders. Verify scaling, Edit Mode and a
-main-profile/SaiyaRatt round trip. Record BugSack errors and screenshots.
+The two crystal cradles are repainted as clearer Silver Hand silver/gold.
+Four main health casing variants retain their paintings with stronger concept
+material lighting. A new opaque Ashbringer attachment shoulder overlaps the
+bar termination inside the original ornament canvas and shared anchor. Its
+texture draws on OVERLAY above the rails, native health and prediction.
+The Paladin bag icon comes from `Assets/ThemeBagIcons/paladin.tga`; the other
+four selectable themes have independent icons in that folder. Tooltips,
+buttons, cast heads, orb casings and layouts are outside this correction.
 
-## Revision 4: assembled coverage
+## Small-bar fitting and crystal layers — 2026-10-14
 
-The package now contains 29 RGBA textures. Separate health-portrait and
-health-wide casings fit 385x37 and 533x40 meters; critters retain their original
-compact casing geometry. Their threat silhouettes follow the same dimensions.
-Pet, party, raid, arena and mirror-timer casings share the restrained compact
-material. Circular group portraits, vehicle exit, utility plates and the status
-wheel now have matching registered material. Fourteen secondary exports have
-pixel-identical original alpha channels and canvas sizes.
+After live screenshot review, cast_back, cast_back_spiked, cast_back_wooden
+and both hp_critter_case variants are repainted and registered by their inner
+lip/fill footprint. Matching the outer alpha alone was insufficient. Native
+bar dimensions, contour textures, prediction and saved positions are unchanged.
+Small-bar foreground clearance covers the actual cast/boss/party/raid/pet/
+focus/ToT/arena/mirror families rather than only the player cast.
 
-Player and alternate-player mana use the holy palette. During this preview,
-Wrath and Winter Veil ice artwork is bypassed so it cannot force baked blue;
-those saved choices resume when the preview is disabled. Other units retain
-resource colors. Main health percentage and cast text have ornament clearance.
+Crystal cradles now have a full backing below the fill and separate -front
+lips above it. The lifted case no longer carries opaque grey backing over the
+crystal. The split follows the existing case rectangle and hides for Mage
+Lite+ or inactive Paladin. Native crystal colours, ice, fills and anchors stay
+shared. Five fresh built-in image_gen sources/prompts, masks and review:
+Docs/Research_Assets/Paladin/Rebuild-2026-10-14/Fill-Correction.
+Retail/Forever rendering after reload still requires live confirmation.
 
-Revision4 contains retained generated sources, exact prompts, the exported
-production layouts and both final comparison sheets. To regenerate assemblies:
+## Palette correction — 2026-10-14
 
-    lua Tools/Harness/paladin_theme_harness.lua . Docs/Research_Assets/Paladin/Revision4/layouts.json
-    python Tools/Build-PaladinAssembly.py
+Buttons (three shapes), both crystal cradles and all health casing families now
+share a colour-only metal finish. PaladinPalette.py normalizes silver midtones
+and gold warmth while retaining each painting's luminance variation and polished
+highlights. Finishing runs after registration/lighting and before restoring
+functional pixels; it does not generate new artwork or change alpha/geometry.
+Fourteen casing variants and nine derived fronts are affected. Original source
+PNGs, native glass, fill recesses, soft shadows, other artwork and runtime Lua
+remain unchanged. Before/after proof: python Tools/Check-PaladinPalette.py;
+review and original TGAs: Rebuild-2026-10-14/Palette-Correction.
 
-See Docs/Paladin Theme Coverage.md for coverage and the outstanding live battery.
+Minimap follow-up: the ring, one-/two-bar status casings and north ornament now
+share that finish too. This adds four RGB-only changes; no map mask, compass
+letter/rotation, XP/reputation fill, alpha or runtime layout is changed.
 
-## Revision 5: painted bounds and sacred seals
+## Five crystal casings - live comparison
 
-Current exports: 35 textures. Revision5 supersedes the earlier bar registration
-and Holy Power treatment. Health casings now follow each original texture's
-painted body, not its padded height; low/mid and small-boss variants are separate.
-The remade lion castbar has symmetric pointed ends and a matching empty cavity.
-Dedicated holy-case and holy-fill layers replace round Holy Power plates while
-using a wider arc with 20% larger seals and preserving existing activation logic. The old seal
-star export is retained for reference but is no longer assigned at runtime.
+After /reload, use /az -> Themes -> Paladin -> Next crystal casing (1/5).
+The button cycles 1-5, wraps to 1 and saves paladinCrystalCase per character.
+It redraws tracked player/alternate/preview casing textures without reloading;
+resource size, fill, colour and saved anchors are unchanged. Use out of combat.
+With a Mage Lite+ crystal, the button is disabled because that effect owns its case.
+Five new source paintings are exported at both native tiers (ten additional TGAs).
+Each keeps its source aspect and stays inside the original 177px painted width.
+Their inner rail is seated against the native crystal bottom to avoid a gap.
+Review: Rebuild-2026-10-14/CradleVariants/Assemblies.png; sources: Sources/CradleVariants.
 
-Build-PaladinSheet.py and Build-PaladinAssembly.py now publish Revision5. Export
-layouts to Revision5/layouts.json with the harness before rebuilding assemblies.
-Theme harness: 163 checks passed, offline only. See the Revision5 README and
-Docs/Paladin Theme Coverage.md for /reload acceptance checks.
+## Measured concept cutout - 2026-10-14
 
-## Live screenshot follow-up: endpoints and seal size
+Candidate 1 now uses the literal HUD holder cut from the approved concept,
+with unchanged RGB and a traced transparent cavity, as explicitly requested.
+It is registered to the native crystal by the concept crystal landmarks at
+one uniform rendered scale. The painted result is 134.6x53.6 rendered pixels
+at the screenshot's native scale, inside the original 136.9px width limit;
+the previous shallow candidate was approximately 132x33 in the live screenshot.
+No native resource geometry, anchors or colours change. Existing shallow
+choices default once to measured candidate 1 after /reload; explicit later
+cycling choices remain per-character (paladinCrystalCaseRevision = 2).
+Compare all four original screenshots with concept and the separately labelled
+reconstruction: Rebuild-2026-10-14/Measured-Cradle/Comparison.png. Rebuild the
+cutout/comparison with Tools/Build-PaladinCrystalFitReview.py. Live acceptance
+of this new cutout remains owed.
 
-The main player meter is now 373 pixels wide (12 fewer); target and alternate
-portrait meters retain their widths. Main blade openings and threat outlines
-are inset into the native angled fill. Pixel sampling found no uncovered
-aperture pixels for cap, portrait, low/mid and world-boss variants. Holy Power
-casings and fills are both 20% larger, on a wider arc. Current comparison sheets
-were rebuilt from the updated layouts. These are offline results; /reload and
-live scaling, resource changes and prediction checks remain required.
+## Approved crystal retained / literal concept frames - 2026-10-15
+
+The maintainer accepted the measured crystal holder live. All 14 crystal/casing
+TGAs remain byte-identical to approved-crystal-lock.json. The approved follow-up
+uses literal concept rails, portrait, relic and libram via PaladinConceptFrames.py.
+Covered rail/tip sections are reconstructed from unobscured concept samples, with
+no baked relic or book. Functional meter geometry and native backdrop/portrait
+glass alpha remain intact; separate front rails have native fill clearance.
+Health relic defaults to 130% of the shared slot to match concept height; saved
+sizes are respected. It draws above native healing and absorb prediction.
+
+Health Endcap -> None and Cast Bar -> Endcap -> None are independent controls
+under /az -> Themes -> Paladin. Changes apply out of combat without reload.
+Concept-Frames/Comparison.png is an offline reconstruction, including ornaments
+off, not a new WoW screenshot. New frame art still needs live /reload review.
+
+## Current correction: OG contour and one approved holder - 2026-10-15
+
+Supersedes the earlier five-choice and rectangular-front sections. Retired
+crystal choices and cycle control are removed. Only the approved canonical
+holder remains; its two tier textures and foreground aliases retain their
+exact approved hashes. Historical research candidates are not shipped or selected.
+
+All four long health casings now use OG foreground contour/alpha, including
+the lower endpoint dip, with concept silver/gold wrapped around that contour.
+Native fill/prediction, frame sizes, anchors and mirroring are unchanged.
+Endcaps remain separate, with health/prediction below. Endcap None exposes the
+complete OG-shaped casing on player and target. Cast, portrait, endcap and
+Paladin Light artwork are outside this correction.
+
+Review: Research_Assets/Paladin/Rebuild-2026-10-14/Contour-Repair/Comparison.png
+(relative to Docs). Installed-art checks catch the previous flat rectangle.
+After /reload, check endcap None on both sides, then restore it; verify native
+dip at full/partial/empty health. This repair remains offline-verified.
+
+## HD signature art and threat fitting - 2026-10-15
+
+Supersedes the small concept-cutout endcap/portrait sources. Two 1254x1254
+built-in image_gen paintings add crisp faceted silver/gold material; endcap
+has an opaque stepped lower-left socket. Native export canvases, source
+aspect for the relic, saved ornament placement, native portrait alpha and
+glass remain fixed. Only relic/portrait art changes; the approved crystal,
+OG health dip, fill/prediction and Light artwork remain byte-identical.
+
+Threat halos derive from final silhouettes, anchored to actual casing/border
+regions. The relic halo stays behind the entire health assembly, separately
+hidden by None and synchronized to native show/colour/alpha updates. Native
+threat logic is unchanged. New checks reject mismatched anchors, interior
+halo placement and disabled-halo resurrection. Rendering remains offline-only.
+
+Review and exact built-in prompts: Docs/Research_Assets/Paladin/Rebuild-2026-10-14/
+HD-Repair (paths from repository root). Production sources: Sources/HD there.
+After /reload, check actual threat on/off, endcap None/restore, join, model
+aperture, user scales/anchors and combat on Retail and Forever.

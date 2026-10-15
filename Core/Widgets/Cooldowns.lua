@@ -44,6 +44,98 @@ local IsSafeNumber = function(value)
 	return type(value) == "number" and (not issecretvalue or not issecretvalue(value))
 end
 
+-- Timer text is written only when what it shows changes: the countdown moves once
+-- a second (ten times in its last second), the timer runs every frame.
+local SetTimeText = function(info, timeLeft)
+	local text = info.Time
+	if (not text) then return end
+	local fmt, value, suffix = AbbreviateTime(timeLeft)
+	if (fmt == info.textFmt and value == info.textValue and suffix == info.textSuffix) then return end
+	info.textFmt, info.textValue, info.textSuffix = fmt, value, suffix
+	text:SetFormattedText(fmt, value, suffix)
+end
+
+local ClearTimeText = function(info)
+	local text = info.Time
+	if (not text) then return end
+	if (info.textFmt == "") then return end
+	info.textFmt, info.textValue, info.textSuffix = "", nil, nil
+	text:SetText("")
+end
+
+-- A cooldown with no visible bar only has text to keep current, and that text
+-- never needs more than ten updates a second. Bars stay on every frame.
+local TEXT_INTERVAL = .1
+
+-- One cooldown, one tick.
+local Tick = function(cooldown, info, now)
+	local timeLeft
+	local duration = info.duration
+	timeLeft = nil
+	if (info.durationObject and info.durationObject.EvaluateRemainingTime) then
+		local ok, remaining = API.TryCall(info.durationObject.EvaluateRemainingTime, info.durationObject)
+		if (ok and IsSafeNumber(remaining)) then
+			timeLeft = remaining
+			info.remaining = remaining
+			info.lastTick = now
+		else
+			local isZero = false
+			if (info.durationObject.IsZero) then
+				local okZero, zero = API.TryCall(info.durationObject.IsZero, info.durationObject)
+				if (okZero and type(zero) == "boolean" and zero) then
+					isZero = true
+				end
+			end
+			if (isZero) then
+				timeLeft = 0
+				info.remaining = 0
+			elseif (IsSafeNumber(info.remaining)) then
+				local lastTick = IsSafeNumber(info.lastTick) and info.lastTick or now
+				local delta = now - lastTick
+				if (delta < 0) then
+					delta = 0
+				end
+				timeLeft = info.remaining - delta
+				if (timeLeft < 0) then
+					timeLeft = 0
+				end
+				info.remaining = timeLeft
+				info.lastTick = now
+			elseif (IsSafeNumber(info.expiration)) then
+				timeLeft = info.expiration - now
+				if (IsSafeNumber(timeLeft) and timeLeft > 0) then
+					info.remaining = timeLeft
+					info.lastTick = now
+				end
+			end
+		end
+	elseif (IsSafeNumber(info.expiration)) then
+		timeLeft = info.expiration - now
+	end
+
+	-- Don't show bars and texts for cooldowns
+	-- shorter than the global cooldown. Their spirals is enough.
+	if (IsSafeNumber(timeLeft) and timeLeft > 0) and ((IsSafeNumber(duration) and duration > 1.5) or info.durationObject) then
+		if (info.Bar) and (info.Bar:IsVisible()) then
+			if (IsSafeNumber(duration) and duration > 0) then
+				info.Bar:SetValue(timeLeft)
+			end
+		end
+		SetTimeText(info, timeLeft)
+	elseif (timeLeft == nil and info.durationObject) then
+		-- Keep the previous visual state when remaining time is temporarily
+		-- inaccessible due secret-value reads in combat.
+	else
+		if (info.Bar) then
+			info.Bar:Hide()
+			info.Bar:SetMinMaxValues(0, 1, true)
+			info.Bar:SetValue(1, true)
+		end
+		ClearTimeText(info)
+		Active[cooldown] = nil
+	end
+end
+
 -- Local Timer Frame
 local Timer = CreateFrame("Frame"); Timer:Hide()
 Timer:SetScript("OnUpdate", function(self, elapsed)
@@ -53,78 +145,14 @@ Timer:SetScript("OnUpdate", function(self, elapsed)
 	end
 	self.elapsed = .01
 
-	local timeLeft
 	local now = GetTime()
 
 	-- Parse and update the active cooldowns.
 	for cooldown,info in next,Active do
-		local duration = info.duration
-		timeLeft = nil
-		if (info.durationObject and info.durationObject.EvaluateRemainingTime) then
-			local ok, remaining = API.TryCall(info.durationObject.EvaluateRemainingTime, info.durationObject)
-			if (ok and IsSafeNumber(remaining)) then
-				timeLeft = remaining
-				info.remaining = remaining
-				info.lastTick = now
-			else
-				local isZero = false
-				if (info.durationObject.IsZero) then
-					local okZero, zero = API.TryCall(info.durationObject.IsZero, info.durationObject)
-					if (okZero and type(zero) == "boolean" and zero) then
-						isZero = true
-					end
-				end
-				if (isZero) then
-					timeLeft = 0
-					info.remaining = 0
-				elseif (IsSafeNumber(info.remaining)) then
-					local lastTick = IsSafeNumber(info.lastTick) and info.lastTick or now
-					local delta = now - lastTick
-					if (delta < 0) then
-						delta = 0
-					end
-					timeLeft = info.remaining - delta
-					if (timeLeft < 0) then
-						timeLeft = 0
-					end
-					info.remaining = timeLeft
-					info.lastTick = now
-				elseif (IsSafeNumber(info.expiration)) then
-					timeLeft = info.expiration - now
-					if (IsSafeNumber(timeLeft) and timeLeft > 0) then
-						info.remaining = timeLeft
-						info.lastTick = now
-					end
-				end
-			end
-		elseif (IsSafeNumber(info.expiration)) then
-			timeLeft = info.expiration - now
-		end
-
-		-- Don't show bars and texts for cooldowns
-		-- shorter than the global cooldown. Their spirals is enough.
-		if (IsSafeNumber(timeLeft) and timeLeft > 0) and ((IsSafeNumber(duration) and duration > 1.5) or info.durationObject) then
-			if (info.Bar) and (info.Bar:IsVisible()) then
-				if (IsSafeNumber(duration) and duration > 0) then
-					info.Bar:SetValue(timeLeft)
-				end
-			end
-			if (info.Time) then
-				info.Time:SetFormattedText(AbbreviateTime(timeLeft))
-			end
-		elseif (timeLeft == nil and info.durationObject) then
-			-- Keep the previous visual state when remaining time is temporarily
-			-- inaccessible due secret-value reads in combat.
-		else
-			if (info.Bar) then
-				info.Bar:Hide()
-				info.Bar:SetMinMaxValues(0, 1, true)
-				info.Bar:SetValue(1, true)
-			end
-			if (info.Time) then
-				info.Time:SetText("")
-			end
-			Active[cooldown] = nil
+		local bar = info.Bar
+		if ((bar and bar:IsVisible()) or not info.nextTick or now >= info.nextTick) then
+			info.nextTick = now + TEXT_INTERVAL
+			Tick(cooldown, info, now)
 		end
 	end
 
@@ -186,12 +214,11 @@ Cooldown.SetCooldown = function(self, start, duration)
 			info.Bar:SetValue(1, true)
 		end
 	end
-	if (info.Time) then
-		if (safeDuration > 0 and IsSafeNumber(timeLeft) and timeLeft > 0) then
-			info.Time:SetFormattedText(AbbreviateTime(timeLeft))
-		else
-			info.Time:SetText("")
-		end
+	info.textFmt, info.nextTick = nil, nil
+	if (safeDuration > 0 and IsSafeNumber(timeLeft) and timeLeft > 0) then
+		SetTimeText(info, timeLeft)
+	else
+		ClearTimeText(info)
 	end
 
 	Active[self] = info
@@ -238,12 +265,11 @@ Cooldown.SetCooldownFromDurationObject = function(self, durationObject)
 			info.Bar:SetValue(1, true)
 		end
 	end
-	if (info.Time) then
-		if (remaining and remaining > 0) then
-			info.Time:SetFormattedText(AbbreviateTime(remaining))
-		elseif (not info.durationObject) then
-			info.Time:SetText("")
-		end
+	info.textFmt, info.nextTick = nil, nil
+	if (remaining and remaining > 0) then
+		SetTimeText(info, remaining)
+	elseif (not info.durationObject) then
+		ClearTimeText(info)
 	end
 
 	Active[self] = info
@@ -307,9 +333,7 @@ Cooldown.Hide = function(self)
 		info.Bar:SetMinMaxValues(0, 1, true)
 		info.Bar:SetValue(1, true)
 	end
-	if info.Time then
-		info.Time:SetText("")
-	end
+	ClearTimeText(info)
 	info.shown = nil
 	self._isshown = nil
 	self:Clear()

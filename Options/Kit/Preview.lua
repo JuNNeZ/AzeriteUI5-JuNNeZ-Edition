@@ -471,6 +471,12 @@ local policies = {
 			members = FEEDBACK_FRAMES,
 			explain = L["Applies to combat text on unit frames."]
 		},
+		-- Eased bars: the frames with health and power bars glide; castbars only on pushback.
+		smoothBars = healthPolicy,
+		smoothCastbars = {
+			kind = "explain",
+			explain = L["Applies to castbars on unit frames."]
+		},
 		showIncomingHeals = healthPolicy,
 		showOverhealIndicator = healthPolicy,
 		showDamageAbsorbs = healthPolicy,

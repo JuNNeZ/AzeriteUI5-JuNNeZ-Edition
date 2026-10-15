@@ -627,7 +627,7 @@ ActionBarMod.CreateAnchors = function(self)
 		local defaultPos = defaults.profile.bars[i].savedPosition
 		local pos = self.db.profile.bars[i].savedPosition
 
-		local anchor = ns:GetModule("MovableFramesManager"):RequestAnchor()
+		local anchor = ns:GetModule("MovableFramesManager"):RequestAnchor("ActionBars.bar" .. tostring(i))
 		anchor:SetAnchorPointLocked(pos.lockAnchorPoint)
 		anchor:SetScalable(true)
 

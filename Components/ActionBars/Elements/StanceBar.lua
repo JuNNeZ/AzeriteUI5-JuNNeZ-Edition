@@ -511,7 +511,7 @@ StanceBarMod.CreateAnchor = function(self)
 	local defaults = self:GetDefaults().profile
 	local config = self.db.profile
 
-	local anchor = ns:GetModule("MovableFramesManager"):RequestAnchor()
+	local anchor = ns:GetModule("MovableFramesManager"):RequestAnchor(self:GetName())
 	anchor:SetAnchorPointLocked(config.savedPosition.lockAnchorPoint)
 	anchor:SetScalable(true)
 	anchor:SetDefaultScale(ns.API.GetEffectiveScale())

@@ -767,18 +767,94 @@ local HasSafeNumericRange = function(minValue, maxValue)
 	return IsSafeGreaterThan(maxValue, minValue)
 end
 
-local SetStatusBarValuesCompat = function(element, minValue, maxValue, value, forced)
+-- Events that change a value on the same unit: an eased bar may glide on these.
+-- Anything else (OnShow, RefreshUnit, a roster or target change, oUF's OnUpdate
+-- polling for ToT) may mean another unit in the frame, and snaps.
+local EASE_EVENTS = {
+	ForceUpdate = true,
+	UNIT_HEALTH = true, UNIT_MAXHEALTH = true,
+	UNIT_ABSORB_AMOUNT_CHANGED = true, UNIT_HEAL_ABSORB_AMOUNT_CHANGED = true, UNIT_HEAL_PREDICTION = true,
+	UNIT_POWER_FREQUENT = true, UNIT_POWER_UPDATE = true, UNIT_MAXPOWER = true
+}
+
+-- Whether this write must snap: the frame's first value, another unit (a readable
+-- GUID that changed), or an event that is not a plain value change. The cached
+-- values' own `forced` reset is separate and unchanged.
+local ShouldSnap = function(element, event, guidChanged)
+	if (guidChanged or not element.__AzeriteUI_HasValue) then return true end
+	return not EASE_EVENTS[event]
+end
+
+--- /azsmooth trace: one chat line per health write on one unit (off by default, session
+-- only): the event, whether it eased or snapped and why, and which way health went when
+-- it is readable. API.SmoothTrace is nil (off) or the unit token to follow.
+API.TraceSmooth = function(element, unit, event, snap, guidChanged, rawCur, rawCurSafe, what)
+	local trace = API.SmoothTrace
+	if (not trace or trace ~= unit) then return end
+	local reason = ""
+	if (snap) then
+		reason = guidChanged and " (another unit)" or (not element.__AzeriteUI_HasValue) and " (first value)" or " (event)"
+	end
+	local delta = ""
+	if (rawCurSafe) then
+		local last = element.__AzeriteUI_TraceLast
+		if (type(last) == "number") then
+			local d = rawCur - last
+			delta = (d > 0 and "  up +" .. d) or (d < 0 and "  down " .. d) or "  same"
+		end
+		element.__AzeriteUI_TraceLast = rawCur
+	else
+		delta = "  (secret)"
+	end
+	local eased = (not snap) and element.smoothing ~= nil and element.smoothing ~= ((Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate) or 0)
+	print(string.format("|cffE5B226[azsmooth]|r %s %s %s: %s%s%s", unit, what or "health", tostring(event),
+		eased and "|cff00ff00eased|r" or "|cffff4040snap|r", reason, delta))
+end
+
+local SetStatusBarValuesCompat = function(element, minValue, maxValue, value, forced, snap)
 	if (not element) then
 		return
 	end
 	local smoothing = element.smoothing
+	-- A fresh set (the frame's first value, another unit) snaps, as Blizzard's own bars
+	-- do, so an eased bar never slides from the previous unit's value. A ForceUpdate on
+	-- the same unit is a plain change and may ease: Player power and absorb events call
+	-- it on every tick. Callers without `snap` fall back to `forced`.
+	if (snap == nil) then snap = forced end
+	-- A snap holds for a moment. On a target change the first write snaps, but the shaped
+	-- fill can only read a stale percent then (the values are secret); the ForceUpdate
+	-- that follows in the same frame has the right one and, as a plain update, glided
+	-- from the old target's health to the new one's. Everything this soon after a snap
+	-- snaps too.
+	local now = GetTime and GetTime() or nil
+	if (snap) then
+		element.__AzeriteUI_SnapUntil = now and (now + .15) or nil
+	elseif (now and element.__AzeriteUI_SnapUntil and now < element.__AzeriteUI_SnapUntil) then
+		snap = true
+	end
+	if (smoothing ~= nil and snap) then
+		smoothing = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate) or 0
+	end
+	element.__AzeriteUI_LastInterpolation = smoothing
+	-- GetTime is fixed within a frame: shaped fills (Target) ease only on the write
+	-- of this frame, never on a later redraw that would inherit an old glide.
+	element.__AzeriteUI_LastWriteTime = GetTime and GetTime() or nil
+	element.__AzeriteUI_HasValue = true
 
 	-- Bounds and value are applied as separate guarded steps. Wrapping both in
 	-- one guard let a failure of the first leave the bar with new bounds and a
 	-- stale value, silently and repeatedly.
 	-- TryCall probes the modern signature silently because the legacy fallback
 	-- is a real handled branch, not a fault; the fallback itself reports.
-	if (not API.TryCall(element.SetMinMaxValues, element, minValue, maxValue)) then
+	-- SetMinMaxValues takes an interpolation too, Immediate by default. Called on every
+	-- write without it, it snapped an eased bar mid-glide, so a heal (which arrives with
+	-- bursts of absorb and heal-prediction ForceUpdates) barely glided while one hit did.
+	-- The same interpolation as the value; an unchanged range then changes nothing.
+	local rangeSet
+	if (smoothing ~= nil) then
+		rangeSet = API.TryCall(element.SetMinMaxValues, element, minValue, maxValue, smoothing)
+	end
+	if (not rangeSet and not API.TryCall(element.SetMinMaxValues, element, minValue, maxValue)) then
 		API.SafeCall("StatusBar.SetMinMaxValues", element.SetMinMaxValues, element, minValue, maxValue, forced)
 	end
 
@@ -1382,6 +1458,15 @@ API.UpdateHealth = function(self, event, unit)
 
 	local connected = UnitIsConnected(unit)
 	local forced = (event == "ForceUpdate") or (event == "RefreshUnit") or (event == "GROUP_ROSTER_UPDATE")
+	local guidChanged = false
+	do
+		local guid = UnitGUID(unit)
+		local previousGuid = element.__AzeriteUI_SnapGuid
+		if (type(guid) == "string" and not IsSecretValue(guid)) then
+			guidChanged = (previousGuid ~= nil and guid ~= previousGuid)
+			element.__AzeriteUI_SnapGuid = guid
+		end
+	end
 	if (not forced) then
 		local guid = UnitGUID(unit)
 		local previousGuid = element.guid
@@ -1401,6 +1486,7 @@ API.UpdateHealth = function(self, event, unit)
 			element.safePercent = nil
 		end
 	end
+	local snap = ShouldSnap(element, event, guidChanged)
 
 	local rawCur = UnitHealth(unit)
 	local rawMax = UnitHealthMax(unit)
@@ -1470,11 +1556,12 @@ API.UpdateHealth = function(self, event, unit)
 		writeCur = writeMax
 	end
 
-	SetStatusBarValuesCompat(element, 0, writeMax, writeCur, forced)
+	if (API.SmoothTrace) then API.TraceSmooth(element, unit, event, snap, guidChanged, rawCur, rawCurSafe, "health") end
+	SetStatusBarValuesCompat(element, 0, writeMax, writeCur, forced, snap)
 	local display = element.Display
 	local managedDisplay = (element.__AzeriteUI_ManageDisplayInOverride == true)
 	if (display and (not managedDisplay)) then
-		SetStatusBarValuesCompat(display, 0, writeMax, writeCur, forced)
+		SetStatusBarValuesCompat(display, 0, writeMax, writeCur, forced, snap)
 		if (display.GetParent and display:GetParent() ~= element) then
 			display:SetParent(element)
 		end
@@ -1493,7 +1580,7 @@ API.UpdateHealth = function(self, event, unit)
 	elseif (display and managedDisplay) then
 		-- Some unit styles (target flip-lab) manage display geometry/visibility locally.
 		-- Keep values synced here, but do not force parent/points/show state each update.
-		SetStatusBarValuesCompat(display, 0, writeMax, writeCur, forced)
+		SetStatusBarValuesCompat(display, 0, writeMax, writeCur, forced, snap)
 	end
 
 	-- WoW12 secret-value path:
@@ -1569,7 +1656,7 @@ API.UpdateHealth = function(self, event, unit)
 
 	local preview = element.Preview
 	if (preview) then
-		SetStatusBarValuesCompat(preview, writeMin, writeMax, connected and writeCur or writeMax, forced)
+		SetStatusBarValuesCompat(preview, writeMin, writeMax, connected and writeCur or writeMax, forced, snap)
 	end
 
 	--[[ Callback: Health:PostUpdate(unit, cur, max)
@@ -1655,6 +1742,12 @@ API.UpdatePower = function(self, event, unit)
 
 	local guid = UnitGUID(unit)
 	local forced = (event == "ForceUpdate") or (event == "RefreshUnit") or (event == "GROUP_ROSTER_UPDATE")
+	local guidChanged = false
+	if (type(guid) == "string" and not IsSecretValue(guid)) then
+		guidChanged = (element.__AzeriteUI_SnapGuid ~= nil and guid ~= element.__AzeriteUI_SnapGuid)
+		element.__AzeriteUI_SnapGuid = guid
+	end
+	local snap = ShouldSnap(element, event, guidChanged)
 	if (not forced) then
 		local previousGuid = element.guid
 		local guidIsSecret = (type(guid) == "string") and IsSecretValue(guid)
@@ -1714,7 +1807,8 @@ API.UpdatePower = function(self, event, unit)
 		writeCur = writeMax
 	end
 
-	SetStatusBarValuesCompat(element, writeMin, writeMax, writeCur, forced)
+	if (API.SmoothTrace) then API.TraceSmooth(element, unit, event, snap, guidChanged, rawCur, rawCurSafe, "power") end
+	SetStatusBarValuesCompat(element, writeMin, writeMax, writeCur, forced, snap)
 
 	if ((not rawCurSafe) and UnitIsConnected(unit)) then
 		local postMirrorPercent = NormalizePercent100(GetSecretPercentFromBar(element))

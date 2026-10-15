@@ -348,3 +348,36 @@ Legacy compact HUD: `lua Tools/Harness/legacy_hud_harness.lua .` loads real layo
 Edit Mode movers (Elune): `Tools/Run-Elune.ps1 -Script Tools/Harness/editmode_mover_callback_harness.lua` models
 `EventRegistry`'s `EditMode.Enter`/`Exit` callbacks (secure event-key barrier, `securecallfunction`) and checks that
 Blizzard's Edit Mode path stays secure while our movers show and hide.
+
+Mover anchoring (`Docs/Mover Anchoring Plan.md`): `lua Tools/Harness/mover_anchoring_harness.lua .` checks
+`Core/API/Anchoring.lua` against SetPoint's rules (every point round-trips, links, offsets, cycles, chain order).
+`lua Tools/Harness/mover_links_harness.lua .` loads the real `Core/MovableFrameManager.lua` on frames that keep
+their real size and point (not `stubs.lua`, whose constant geometry would hide this): followers, chains, refused
+loops, the real OnDragStop, rescale, combat wait, disabled targets, per-HUD links, a saved loop, and the `/lock`
+window's anchoring rows. The `PROPAGATING` guard is an efficiency guard; removing it changes no result.
+
+Frame settings panel (`Options/Kit/FramePanel.lua`): `lua Tools/Harness/frame_panel_harness.lua . Tools/Harness [Forever]`
+builds the real option pages and checks every quick-settings path, that each key is a real mover (found by
+following `Components/Components.xml` includes), five rows at most, sections that exist, and the page's own hide
+rules (Day and Night only on Forever, bars 6-8 only on Retail, Player Alternate hidden while Player is on).
+`panel_harness.lua`'s "Frame settings panel" section builds, opens, refreshes and closes the window on the Kit stubs.
+
+Layout copy: `lua Tools/Harness/layout_copy_harness.lua .` runs `Core/API/Layout.lua` on an AceDB-shaped table.
+
+Raid25/Raid40 merge: `lua Tools/Harness/raid_merge_harness.lua . [old Raid25.lua] [old Raid40.lua]` loads
+`Components/UnitFrames/Units/RaidLarge.lua`; given the pre-merge files (`git show 9292b5f:Components/UnitFrames/Units/Raid25.lua`,
+same for Raid40) it compares defaults, header attributes, header sizes and every button placement with them.
+
+Smoother combat: `lua Tools/Harness/smooth_combat_harness.lua .` runs the real cooldown timer at 144 fps on a moved
+clock (text written only on change, text-only cooldowns at 10 a second, bars every tick, tenths in the last second)
+and counts Explorer Mode's settings passes per event. Run it on a folder holding the HEAD files to see what changed.
+
+Eased bars: `lua Tools/Harness/smooth_bars_harness.lua .` loads the real UnitFrame.lua (smoothing switch, list of
+bars, /azsmooth) and Functions.lua (API.UpdateHealth/UpdatePower: plain updates ease, forced ones snap). The bar
+stub only has real StatusBar methods: an addon field like DisableSmoothing must read nil, as in the game.
+
+World map canvas taint (Elune): `Tools/Run-Elune.ps1 -Script Tools/Harness/worldmap_canvas_taint_probe.lua`. Models the
+map scroll container's scale fields in Blizzard's read-then-write order: an addon call to `OnFrameSizeChanged` leaves
+`currentScale` tainted, Blizzard's own rebuilds and `OnUpdate` keep it tainted (until /reload), and `AcquirePin` is then
+insecure before `SetPropagateMouseClicks`. Also shows `securecall`/`pcall` from addon code and addon "scrub" writes do not
+clean it. 12 checks; case 2 (5.26.0) against case 4 (fix) is the mutation pair. No frames: live combat map opening is owed.

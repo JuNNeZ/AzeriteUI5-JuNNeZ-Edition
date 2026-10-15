@@ -907,6 +907,7 @@ local style = function(self, unit, id)
 	--------------------------------------------
 	local health = self:CreateBar()
 	if (health.SetForceNative) then health:SetForceNative(true) end
+	health:DisableSmoothing(false) -- Eases while /az -> Unit Frames -> Smooth health and power is on (UnitFrame.lua).
 	health:SetFrameLevel(health:GetFrameLevel() + 2)
 	health.colorClass = PlayerFrameAltMod.db.profile.useClassColor
 	health.colorHealth = true
@@ -958,7 +959,7 @@ local style = function(self, unit, id)
 	--------------------------------------------
 	local castbar = self:CreateBar()
 	castbar:SetFrameLevel(self:GetFrameLevel() + 5)
-	castbar:DisableSmoothing(true)
+	castbar:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
 
 	self.Castbar = castbar
 

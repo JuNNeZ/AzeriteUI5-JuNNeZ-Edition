@@ -147,6 +147,11 @@ print("Client option gates: " .. (forever and "Forever" or "Retail") .. " passed
 
 -- Themes page: a theme dropdown, Lite+, and only the settings in use.
 local themes = assert(options.args.Themes, "Themes page built")
+local resourceColour = assert(units.args.player.args.crystalOrbColorMode)
+local resourceInfo = { "Unit Frames", "player", "crystalOrbColorMode" }
+local resourceProfile = ns:GetModule("PlayerFrame").db.profile
+local previousColour = resourceProfile.crystalOrbColorMode
+assert(not resourceColour.values().light, "Light resource colour is specific to Paladin artwork")
 for _, key in ipairs({ "theme", "litePlus", "effects", "hunter", "paladin", "mageTheme", "mage" }) do assert(themes.args[key], "Themes entry: " .. key) end
 local themeSelect = themes.args.theme
 assert(themeSelect.get() == "hunter", "the dropdown shows the theme in use")
@@ -159,6 +164,25 @@ assert(mageEndcap.values().school and mageEndcap.values().dragonwrath and mageEn
 assert(themes.args.effects.hidden(), "Lite+ effects hidden until Lite+ is on")
 ns.db.char.themeLitePlus = true; ns.db.global.enableDevelopmentMode = true; ns.db.char.themeOrbEffect = "paladin"
 assert(not themes.args.effects.hidden() and not themes.args.paladin.hidden(), "Lite+ shows the effects and the settings of the Paladin orb")
+assert(themes.args.paladin.args.endcap.hidden() and themes.args.paladin.args.castEndcapScale.hidden(),
+	"Lite+ holy light never offers Paladin ornament placement on Hunter")
+ns.HunterTheme.IsActive = function() return false end
+ns.PaladinTheme.IsActive = function() return true end
+assert(resourceColour.values().light, "Paladin offers Light beside the existing resource palettes")
+for _, mode in ipairs({"default", "enhanced", "classColor", "light"}) do
+	assert(resourceColour.values()[mode], "resource palette retained: "..mode)
+	resourceColour.set(resourceInfo, mode)
+	assert(resourceColour.get(resourceInfo) == mode, "resource palette round-trips: "..mode)
+end
+assert(not themes.args.paladin.hidden() and not themes.args.paladin.args.endcap.hidden()
+	and not themes.args.paladin.args.castEndcapScale.hidden(), "Paladin theme exposes its own health and cast ornament controls")
+assert(themes.args.paladin.args.endcap.values.ashbringer and themes.args.paladin.args.endcap.values.none,
+	"Paladin offers Ashbringer or none")
+ns.HunterTheme.IsActive = function() return true end
+ns.PaladinTheme.IsActive = function() return false end
+assert(not resourceColour.values().light and resourceColour.get(resourceInfo) == "default"
+	and resourceProfile.crystalOrbColorMode == "light", "Light becomes dormant on another theme without erasing the choice")
+resourceProfile.crystalOrbColorMode = previousColour
 local crystalValues = themes.args.effects.args.crystal.values()
 assert(crystalValues.theme and crystalValues.mage and crystalValues.paladin and crystalValues.none, "crystal effect choices")
 assert(themes.args.effects.args.crystal.sorting()[1] == "theme", "the theme's own first")

@@ -24,6 +24,7 @@ local Load = function(opts)
 	NewFrame = function(kind, name)
 		local f = { kind = kind, name = name, attributes = {}, scripts = {}, points = {} }
 		local methods = {
+			SetTexture = function(self, value) self.texture = value end,
 			GetName = function(self) return self.name end,
 			SetAttribute = function(self, k, v) self.attributes[k] = v end,
 			GetAttribute = function(self, k) return self.attributes[k] end,
@@ -102,6 +103,11 @@ local Load = function(opts)
 		return module
 	end
 	function ns:GetModule() return module end
+	if (opts.theme) then
+		ns.ThemeEffects = { GetTheme = function() return opts.theme end }
+		local engine = assert(loadfile(root .. "/Core/ThemeEngine.lua"))
+		setfenv(engine, env); engine("AzeriteUI", ns)
+	end
 
 	local chunk = assert(loadfile(root .. "/Components/ActionBars/Elements/MicroMenu.lua"))
 	setfenv(chunk, env)
@@ -172,6 +178,14 @@ do
 	local m = Load({ backpack = false })
 	local b = m.bagButton
 	check(b and b.attributes.type == nil and b.scripts.OnClick ~= nil, "falls back to opening the bags itself")
+end
+
+for _, key in ipairs({ "azerite", "legacy", "hunter", "mage", "paladin" }) do
+	local m = Load({ theme = key, profile = { enabled = false } })
+	local b = m.bagButton
+	check(b.Icon.texture:find("ThemeBagIcons\\"..key..".tga", 1, true), "real bag button theme icon: "..key)
+	check(b.attributes.macrotext == "/click MainMenuBarBackpackButton" and not b.scripts.OnClick,
+		"themed bag preserves secure click: "..key)
 end
 
 print(string.format("bag_button_harness: %d passed, %d failed", passed, failed))

@@ -54,6 +54,8 @@ def check(path):
                 if iou < .97: fails.append(f'fill contour differs from the original (overlap {iou:.2f}); a themed fill changes material only')
         return fails, notes
     over = name.endswith('-over'); base = name[:-5] if over else name
+    concept_cradle = path.parent.name == 'Paladin' and name in ('pw_crystal_case', 'pw_crystal_case_low')
+    intact_portrait = path.parent.name == 'Paladin' and name in ('portrait_frame_hi','portrait_frame_lo')
     mask_path = TEMPLATES / (base + '-fill.png')
     if mask_path.exists() and (ASSETS / (base + '.tga')).exists():
         m = np.asarray(Image.open(mask_path)) > 128
@@ -61,7 +63,18 @@ def check(path):
         if m.shape == alpha.shape:
             cov = (alpha[m] > 200).mean() * 100; ocov = (oalpha[m] > 200).mean() * 100
             semi = ((alpha[m] > 8) & (alpha[m] <= 200)).mean() * 100; osemi = ((oalpha[m] > 8) & (oalpha[m] <= 200)).mean() * 100
-            if over:
+            if concept_cradle:
+                # Maintainer's 2026-10-14 concept rebuild keeps its own open-U
+                # alpha within native width. Test actual fill clearance rather
+                # than requiring the discarded holder's inner shadow pixels.
+                from PaladinFillContracts import crystal_overlap
+                if crystal_overlap(name, im.getchannel('A')) > .20:
+                    fails.append('concept holder hides more than 20% of the crystal opening')
+                native_box = Image.open(original).convert('RGBA').getchannel('A').point(lambda v: 255 if v > 128 else 0).getbbox()
+                box = im.getchannel('A').point(lambda v: 255 if v > 128 else 0).getbbox()
+                if box[0] < native_box[0] or box[2] > native_box[2]:
+                    fails.append('concept holder is wider than the native holder')
+            elif over:
                 if cov > 20: fails.append(f'over layer hides {cov:.0f}% of the fill (limit 20%)')
             elif ocov > 97:   # back layer: sits behind the fill
                 if cov < 97: fails.append(f'back layer is open under {100 - cov:.0f}% of the fill; the empty bar would show through')
@@ -82,7 +95,13 @@ def check(path):
             painted = im.getchannel('A').point(lambda v: 255 if v > 128 else 0).getbbox()
             tol = (max(3, round(w * .04)), max(3, round(h * .04)))
             off = [painted[i] - spec['painted'][i] for i in range(4)]
-            if any(abs(off[i]) > tol[i % 2] for i in range(4)):
+            if intact_portrait:
+                # Explicit maintainer correction: keep the approved HD border
+                # intact, rather than radially warping it into native alpha.
+                native = spec['painted']
+                if painted[0]<native[0] or painted[2]>native[2] or abs(painted[1]-native[1])>1 or abs(painted[3]-native[3])>1:
+                    fails.append('intact portrait exceeds native width or changes native painted height')
+            elif any(abs(off[i]) > tol[i % 2] for i in range(4)):
                 fails.append(f'painted bounds {list(painted)} differ from original {spec["painted"]} by {off} px (tolerance {tol[0]} x, {tol[1]} y)')
             found = hole(im)
             if 'opening' in spec:

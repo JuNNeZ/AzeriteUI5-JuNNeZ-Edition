@@ -688,6 +688,108 @@ local UpdateTargetBarSpark = function(element, percentOverride)
 	spark:Show()
 end
 
+-- Eased target health (/az -> Unit Frames -> Smooth health and power).
+--
+-- The shaped fill's width and its crop must move together, or the art is stretched
+-- while the bar glides. Both now come from one hidden helper bar the size of the health
+-- bar, with its fill direction: it is handed the percent with the health write's
+-- interpolation, the fill is anchored to the helper's texture (its width), and for a
+-- short window after each change the helper's GetInterpolatedValue crops the fill.
+-- (A first 1x1 helper finished its easing at once while the health region was still
+-- gliding: the art stretched, then jumped into place.) The interpolated value is secret
+-- whenever the percent is (SecretReturnsForAspect BarValue): it is never compared, only
+-- handed to SetTexCoord, which takes secret arguments. Forced updates snap both.
+local TARGET_CROP_FOLLOW_TIME = 1
+local INTERPOLATION_IMMEDIATE = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate) or 0
+local INTERPOLATION_EASED = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut) or 1
+
+local FollowTargetHealthCrop = function(driver, elapsed)
+	driver.followLeft = (driver.followLeft or 0) - elapsed
+	local fill = driver.fill
+	if (driver.followLeft <= 0) then
+		driver:SetScript("OnUpdate", nil)
+		if (fill) then API.TryCall(fill.SetTexCoord, fill, driver.cropTarget, 0, 0, 1) end
+		return
+	end
+	local ok, value = API.TryCall(driver.GetInterpolatedValue, driver)
+	if (ok and fill) then
+		API.TryCall(fill.SetTexCoord, fill, value, 0, 0, 1)
+	end
+end
+
+local GetTargetHealthCropDriver = function(health)
+	local driver = health.__AzeriteUI_CropDriver
+	if (driver) then return driver end
+	driver = CreateFrame("StatusBar", nil, health)
+	driver:SetAllPoints(health)
+	driver:SetStatusBarTexture([[Interface\Buttons\WHITE8x8]])
+	-- Invisible, but its texture's region is the fill's width (geometry ignores alpha).
+	local driverTexture = driver:GetStatusBarTexture()
+	if (driverTexture) then driverTexture:SetAlpha(0) end
+	driver:SetMinMaxValues(0, 1)
+	driver:SetValue(1)
+	health.__AzeriteUI_CropDriver = driver
+	-- Turning easing off finishes the crop at once.
+	health.__AzeriteUI_OnSmoothingChanged = function(element, on)
+		if (on) then return end
+		local cropDriver = element.__AzeriteUI_CropDriver
+		if (not cropDriver) then return end
+		cropDriver:SetScript("OnUpdate", nil)
+		API.TryCall(cropDriver.SetToTargetValue, cropDriver)
+		if (cropDriver.fill) then API.TryCall(cropDriver.fill.SetTexCoord, cropDriver.fill, cropDriver.cropTarget, 0, 0, 1) end
+	end
+	return driver
+end
+
+-- The crop for this percent: straight away, or eased from where it is now. The fill is
+-- anchored to the helper's texture, so its width moves with the same easing as its crop.
+local SetTargetHealthCrop = function(health, fakeFill, crop)
+	local driver = GetTargetHealthCropDriver(health)
+	-- Only a health write made this frame may glide. Redraws from elsewhere (a texture
+	-- or tier refresh on a target change) snap: they used to inherit the last write's
+	-- easing and slid from the old target's health to the new one's.
+	local eased = (health.__AzeriteUI_LastInterpolation == INTERPOLATION_EASED)
+		and GetTime and health.__AzeriteUI_LastWriteTime == GetTime()
+	if (API.SmoothTrace == "target") then
+		print(string.format("|cffE5B226[azsmooth]|r target shaped fill: %s", eased and "|cff00ff00eased|r"
+			or (health.__AzeriteUI_LastInterpolation == INTERPOLATION_EASED and "|cffff4040snap|r (redraw, no write this frame)" or "|cffff4040snap|r")))
+	end
+	-- Same fill direction as the health bar (its growth can be flipped in the options).
+	if (health.GetOrientation) then
+		local okO, orientation = API.TryCall(health.GetOrientation, health)
+		if (okO and orientation) then driver:SetOrientation(orientation) end
+	end
+	if (health.GetReverseFill and driver.SetReverseFill) then
+		local okR, reverse = API.TryCall(health.GetReverseFill, health)
+		if (okR) then driver:SetReverseFill(reverse and true or false) end
+	end
+	local driverTexture = driver:GetStatusBarTexture()
+	if (driverTexture and driver.anchoredFill ~= fakeFill) then
+		fakeFill:ClearAllPoints()
+		fakeFill:SetAllPoints(driverTexture)
+		driver.anchoredFill = fakeFill
+	end
+	-- The helper runs 0..1; a readable percent given as 0..100 is brought into range.
+	-- A secret one comes from UnitHealthPercent's ZeroToOne curve and is never touched.
+	if (type(crop) == "number" and not (issecretvalue and issecretvalue(crop)) and crop > 1) then
+		crop = crop / 100
+	end
+	driver.fill = fakeFill
+	driver.cropTarget = crop
+	API.TryCall(driver.SetValue, driver, crop, eased and INTERPOLATION_EASED or INTERPOLATION_IMMEDIATE)
+	if (eased) then
+		driver.followLeft = TARGET_CROP_FOLLOW_TIME
+		driver:SetScript("OnUpdate", FollowTargetHealthCrop)
+		local ok, value = API.TryCall(driver.GetInterpolatedValue, driver)
+		if (ok and API.TryCall(fakeFill.SetTexCoord, fakeFill, value, 0, 0, 1)) then
+			return
+		end
+	else
+		driver:SetScript("OnUpdate", nil)
+	end
+	fakeFill:SetTexCoord(crop, 0, 0, 1)
+end
+
 ApplyTargetSimpleHealthFakeFillByPercent = function(health, percent)
 	if (not health) then
 		return false
@@ -698,18 +800,12 @@ ApplyTargetSimpleHealthFakeFillByPercent = function(health, percent)
 		return false
 	end
 
-	local nativeTexture = health.GetStatusBarTexture and health:GetStatusBarTexture()
-
-	fakeFill:ClearAllPoints()
-	if (nativeTexture) then
-		fakeFill:SetAllPoints(nativeTexture)
-	else
-		fakeFill:SetAllPoints(health)
-	end
+	-- Anchored by SetTargetHealthCrop to the helper bar's texture, whose region is the
+	-- health percent's own width (the native region did the same before easing).
 	if (percent == nil) then
-		fakeFill:SetTexCoord(1, 0, 0, 1)
+		SetTargetHealthCrop(health, fakeFill, 1)
 	else
-		fakeFill:SetTexCoord(percent, 0, 0, 1)
+		SetTargetHealthCrop(health, fakeFill, percent)
 	end
 	if (fakeFill.SetVertexColor) then
 		local r, g, b = health:GetStatusBarColor()
@@ -882,8 +978,10 @@ local ApplyTargetSimpleCastFakeFillByPercent = function(cast, percent)
 	if (not fakeFill) then
 		return false
 	end
-	local nativeTexture = cast.GetStatusBarTexture and cast:GetStatusBarTexture()
-	local anchorFrame = nativeTexture or cast
+	-- The whole bar, not the statusbar texture: a timer-driven bar has already narrowed
+	-- that texture's region to the cast's progress, and the width below multiplies by
+	-- the percent again, which squeezed and stretched the art.
+	local anchorFrame = cast
 	local growth = GetTargetCastVisualGrowth(cast)
 	-- This path repoints the FakeFill onto its own anchors, so the overlay path's
 	-- "already anchored to the statusbar texture" cache has to be invalidated or
@@ -1182,14 +1280,10 @@ local ShouldPreferTimerDriverForTargetCast = function(cast)
 	if (not cast or not cast.__owner) then
 		return true
 	end
-	local unit = cast.__owner.unit
-	if (type(unit) ~= "string" or unit == "") then
-		return true
-	end
-	-- Self target historically behaved best on explicit/duration percent path.
-	if (ns.API.SafeUnitIsUnit(unit, "player")) then
-		return false
-	end
+	-- Every target, yourself included, uses the timer with the cropped overlay
+	-- (castBarCropMode "overlay"). Self target used to take the percent path from
+	-- before the overlay existed; on a timer-driven bar that path stretched the art
+	-- (maintainer report 2026-10-14: targeting yourself stretched, the player frame filled).
 	return true
 end
 
@@ -3015,6 +3109,8 @@ local UnitFrame_UpdateTextures = function(self)
 		else
 			fakeFill:SetAllPoints(health)
 		end
+		-- SyncTargetHealthVisualState below re-anchors it to the crop helper (SetTargetHealthCrop).
+		if (health.__AzeriteUI_CropDriver) then health.__AzeriteUI_CropDriver.anchoredFill = nil end
 		fakeFill:SetTexture(db.HealthBarTexture)
 		fakeFill:SetTexCoord(GetTargetFillTexCoords(nil))
 		fakeFill:SetAlpha(1)
@@ -3440,7 +3536,10 @@ local style = function(self, unit, id)
 	local health = self:CreateBar()
 	if (health.SetForceNative) then health:SetForceNative(false) end
 	health:SetFrameLevel(health:GetFrameLevel() + 2)
-	health:DisableSmoothing(true) -- Keep native region immediate for fake-fill crop parity
+	-- Eases while the switch is on; the shaped fill follows through a helper bar
+	-- (SetTargetHealthCrop). Off, the region and crop snap together as they always did.
+	health:DisableSmoothing(false)
+	GetTargetHealthCropDriver(health) -- made with the frame, not on the first update in combat
 	health.predictThreshold = .01
 	health.colorDisconnected = true
 	health.colorTapping = true

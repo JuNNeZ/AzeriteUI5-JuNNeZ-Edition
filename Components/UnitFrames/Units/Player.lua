@@ -425,7 +425,7 @@ PlayerFrameMod.CreateAuraAnchors = function(self)
 		return
 	end
 
-	local anchor = manager:RequestAnchor()
+	local anchor = manager:RequestAnchor(self:GetName() .. ".debuffs")
 	local savedPosition = profile.debuffsSavedPosition
 	local defaultPosition = defaultsProfile and defaultsProfile.debuffsSavedPosition
 	anchor:SetScalable(false)
@@ -486,7 +486,7 @@ PlayerFrameMod.CreateSecondaryManaAnchor = function(self)
 		return
 	end
 
-	local anchor = manager:RequestAnchor()
+	local anchor = manager:RequestAnchor(self:GetName() .. ".secondaryMana")
 	local savedPosition = profile.secondaryManaSavedPosition
 	local defaultPosition = defaultsProfile and defaultsProfile.secondaryManaSavedPosition
 	local width, height = self.frame.SecondaryManaCrystal:GetSize()
@@ -2128,6 +2128,10 @@ local ResolvePlayerPowerBaseColor = function(config, profile, token)
 	local themeColor = ns.ThemeEngine and ns.ThemeEngine:GetPowerColor(token)
 	if (themeColor) then defaultColor = themeColor end
 	local colorMode = profile and profile.crystalOrbColorMode or "default"
+	if (colorMode == "light" and ns.PaladinTheme) then
+		local light = ns.PaladinTheme:GetLightPowerColor(token)
+		if (light) then return light end
+	end
 	if (colorMode == "classColor" or colorMode == "class") then
 		return ResolvePlayerPowerColorFromTable(Colors and Colors.class, playerClass, defaultColor)
 	end
@@ -2371,6 +2375,9 @@ local UpdateManaOrbColor = function(element)
 	local profile = PlayerFrameMod and PlayerFrameMod.db and PlayerFrameMod.db.profile
 	local colorMode = profile and profile.crystalOrbColorMode or "default"
 	local color
+	-- A stored Light choice is dormant on another theme. Keep the orb's own
+	-- Default mana palette there, just as before Light was selected.
+	if (colorMode == "light" and not (ns.PaladinTheme and ns.PaladinTheme:GetLightPowerColor(token))) then colorMode = "default" end
 	if (token == "MANA" and colorMode == "default" and not (ns.ThemeEngine and ns.ThemeEngine:GetPowerColor(token))) then
 		color = config and config.PowerOrbColors and config.PowerOrbColors.MANA
 	else
@@ -3314,7 +3321,7 @@ local style = function(self, unit)
 	local health = self:CreateBar()
 	if (health.SetForceNative) then health:SetForceNative(true) end
 	health:SetFrameLevel(health:GetFrameLevel() + 2)
-	health:DisableSmoothing(false) -- Interpolated fill (ExponentialEaseOut) for less stepped health motion
+	health:DisableSmoothing(false) -- Eases while /az -> Unit Frames -> Smooth health and power is on (UnitFrame.lua).
 	-- WoW12 safe: no gradients, use oUF color paths.
 	health.colorSmooth = false
 	health.colorClass = PlayerFrameMod.db.profile.useClassColor
@@ -3376,7 +3383,7 @@ local style = function(self, unit)
 	--------------------------------------------
 	local castbar = self:CreateBar()
 	castbar:SetFrameLevel(self:GetFrameLevel() + 5)
-	castbar:DisableSmoothing(true)
+	castbar:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
 
 	self.Castbar = castbar
 
@@ -3514,7 +3521,7 @@ local style = function(self, unit)
 		end
 		return UnitPowerType(unitToken)
 	end
-	power.smoothing = nil
+	power:DisableSmoothing(false) -- Eases while /az -> Unit Frames -> Smooth health and power is on (UnitFrame.lua).
 	power.__AzeriteUI_DisableTexturePercentMirror = true
 	power.__AzeriteUI_KeepMirrorPercentOnNoSample = true
 	-- Seed safe numeric values

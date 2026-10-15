@@ -60,7 +60,7 @@ end
 Module.CreateAnchor = function(self, label, watchVariables, colorGroup)
 	if (self.anchor) then return self.anchor end
 
-	local anchor = ns:GetModule("MovableFramesManager"):RequestAnchor()
+	local anchor = ns:GetModule("MovableFramesManager"):RequestAnchor(self:GetName())
 	anchor:SetScalable(true)
 	anchor:SetSize(2,2)
 

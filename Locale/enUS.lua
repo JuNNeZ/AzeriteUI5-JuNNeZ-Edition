@@ -1214,3 +1214,41 @@ L["How large the cast bar's ornaments are drawn. They grow and shrink around the
 L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = true
 L["Moves the cast bar's ornaments up or down."] = true
 L["Reset cast bar endcap size and position"] = true
+
+-- Mover anchoring (/lock)
+L["Anchor To"] = true
+L["Keeps this frame beside another AzeriteUI frame and moves it when that frame moves. Dragging it changes the distance. Shift-click resets it and removes the anchor."] = true
+L["Not anchored"] = true
+L["This frame's point"] = true
+L["Point on the other frame"] = true
+L["Distance X"] = true
+L["Distance Y"] = true
+L["Distance between the two points. 0 puts them on top of each other."] = true
+L["More settings"] = true
+-- Layout copy (/lock)
+L["Copy layout from"] = true
+L["Copies frame positions, anchors and AzeriteUI Scale from another profile into this one. Every other setting stays as it is. The interface reloads."] = true
+L["Copy the layout from %s into this profile? The interface reloads."] = true
+-- Smooth bars (Unit Frames, Debug tools)
+L["Smooth health and power"] = true
+L["Health and power bars glide to each new value instead of jumping. A new target or group member still shows at once."] = true
+L["Smooth castbar pushback"] = true
+L["When a cast is pushed back, the bar slides to its new place instead of jumping. A new cast always starts at once."] = true
+L["Smooth bars"] = true
+L["All on"] = true
+L["All off"] = true
+L["Flip both"] = true
+L["Switch eased bars while you fight to compare them side by side. The same two settings as on the Unit Frames page; /azsmooth [on|off] [bars|cast] does it from chat."] = true
+L["Health and power: %s   Castbar pushback: %s"] = true
+L["Applies to castbars on unit frames."] = true
+
+-- Smooth bars preview (Debug tools)
+L["Smooth bars preview"] = true
+L["Both bars get the same hits and heals, big and small, every 1.4 seconds."] = true
+L["Eased"] = true
+L["Snaps"] = true
+L["Toggle preview"] = true
+
+-- Paladin Light resource palette
+L["Light colored"] = true
+L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = true

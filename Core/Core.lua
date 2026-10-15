@@ -25,7 +25,7 @@
 
 --]]
 
--- GLOBALS: CreateFrame, EnableAddOn, DisableAddOn, ReloadUI
+-- GLOBALS: CreateFrame, EnableAddOn, DisableAddOn, InCombatLockdown, ReloadUI
 
 local Addon, ns = ...
 
@@ -146,6 +146,23 @@ ns.CopyProfile = function(self, sourceProfileKey)
 			return
 		end
 	end
+end
+
+--- Copies another profile's layout (frame positions, mover links and AzeriteUI Scale)
+-- into the current profile, leaving every other setting alone, then reloads so each
+-- module places its frames from the copied positions. Refused in combat.
+-- See API.CopyLayout (Core/API/Layout.lua).
+ns.CopyLayout = function(self, sourceProfileKey)
+	if (InCombatLockdown()) then return false end
+	local currentProfileKey = self.db:GetCurrentProfile()
+	if (sourceProfileKey == currentProfileKey or not self:ProfileExists(sourceProfileKey)) then return false end
+	local children = self.db.children
+	ns.API.CopyLayout(self.db.sv, sourceProfileKey, currentProfileKey, function(name)
+		local child = children and children[name]
+		return child and child.profile
+	end)
+	ReloadUI()
+	return true
 end
 
 ns.DeleteProfile = function(self, targetProfileKey)

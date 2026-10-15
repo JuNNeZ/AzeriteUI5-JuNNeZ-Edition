@@ -94,8 +94,8 @@ end
 local Resolve = function(own, choice)
 	local effect = own
 	if (Effects:IsLitePlus() and choice ~= "theme") then effect = choice end
-	-- The Paladin art is a Development Mode preview, its effects with it.
-	if (effect == "paladin" and not DevMode()) then effect = "none" end
+	-- The approved Paladin Light effect is available independently through
+	-- Lite+. The complete Paladin theme keeps its own Development Mode gate.
 	return effect
 end
 
@@ -141,7 +141,8 @@ Effects.SetTheme = function(self, theme)
 	char.paladinPreview = theme == "paladin"
 	char.magePreview = theme == "mage"
 	if (self:NeedsReload(theme)) then
-		ReloadUI()
+		local reload = C_UI and C_UI.Reload or _G.ReloadUI
+		if (type(reload) == "function") then reload() end
 		return true
 	end
 	return self:Refresh()
@@ -231,6 +232,7 @@ Effects.StyleCrystal = function(self, power, texturePath, coords, casePath, allo
 	if (paladin) then
 		if (effect == "paladin") then paladin:ApplyCrystalEffect(power, texturePath, coords)
 		else paladin:ClearCrystalEffect(power) end
+		if (paladin.StyleCrystal) then paladin:StyleCrystal(power, casePath, useMage) end
 	end
 	LiftCap(power, power.Case)
 end

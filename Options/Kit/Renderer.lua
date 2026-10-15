@@ -825,6 +825,10 @@ Renderer.CreatePage = function(self, content)
 						or Controls.CreateInput(content)
 				end
 
+				-- A narrow page lays each row out stacked (Controls SetStacked);
+				-- pooled controls are put back to rows on every other page.
+				if (control.SetStacked) then control:SetStacked(self.stacked) end
+
 				local ok, err = pcall(Bind, control, entry.option, options, entry.path, self, entry)
 				if (not ok) then
 					control:SetLabel(entry.kind .. " (failed)")

@@ -31,6 +31,7 @@ UnitPowerPercent = function() return secret(50) end
 UnitHealthPercent = nil
 UnitIsConnected = function() return power.connected end
 UnitGUID = function() return "Player-1" end
+GetTime = function() return 100 end -- the snap hold (SetStatusBarValuesCompat) does arithmetic on it
 CurveConstants = nil
 
 local ns = { oUF = { isRetail = true }, Colors = {}, API = {} }

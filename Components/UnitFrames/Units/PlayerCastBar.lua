@@ -392,7 +392,7 @@ local style = function(self, unit)
 	cast:SetStatusBarColor(unpack(Colors.cast))
 	cast:SetOrientation(db.CastBarOrientation)
 	cast:SetSparkMap(db.CastBarSparkMap)
-	cast:DisableSmoothing(true)
+	cast:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
 	cast.timeToHold = db.CastBarTimeToHoldFailed
 
 	local castBackdrop = cast:CreateTexture(nil, "BORDER", nil, -2)

@@ -90,6 +90,101 @@ local function Watch()
 		if (state ~= last) then last = state; panel.page:Refresh() end
 	end)
 end
+-- Smooth bars preview: two copies of the player's health bar (the max-level art,
+-- hp_cap_bar in hp_cap_case) taking the same hits and heals, one eased and one snapping,
+-- so the difference can be judged without a fight. Plain StatusBars, nothing secret,
+-- nothing secure; built on first use and stopped while hidden.
+local smoothPreview
+local PREVIEW_SCALE = .6
+local PREVIEW_STEPS = { 100, 38, 52, 12, 90, 70, 100, 5, 100, 82, 76, 100 }
+local function SmoothPreviewRow(parent, text, y)
+	local GetMedia = ns.API.GetMedia
+	local row = CreateFrame("Frame", nil, parent)
+	row:SetSize(716 * PREVIEW_SCALE, 188 * PREVIEW_SCALE)
+	row:SetPoint("TOP", parent, "TOP", 0, y)
+	local label = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	label:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -2)
+	label:SetText(text)
+	local bar = CreateFrame("StatusBar", nil, row)
+	bar:SetSize(385 * PREVIEW_SCALE, 40 * PREVIEW_SCALE)
+	-- Where the player frame puts the bar inside its case: (148, 27) against (-17, -48).
+	bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", (148 + 17) * PREVIEW_SCALE, (27 + 48) * PREVIEW_SCALE)
+	bar:SetStatusBarTexture(GetMedia("hp_cap_bar"))
+	local health = ns.Colors and ns.Colors.health
+	if (health) then bar:SetStatusBarColor(health[1], health[2], health[3]) end
+	bar:SetMinMaxValues(0, 100)
+	bar:SetValue(100)
+	local case = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+	case:SetAllPoints(row)
+	case:SetTexture(GetMedia("hp_cap_case"))
+	local ui = ns.Colors and ns.Colors.ui
+	if (ui) then case:SetVertexColor(ui[1], ui[2], ui[3]) end
+	local value = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	value:SetPoint("RIGHT", bar, "RIGHT", -8, 0)
+	row.bar, row.value = bar, value
+	return row
+end
+
+local function ToggleSmoothPreview()
+	if (smoothPreview) then
+		smoothPreview:SetShown(not smoothPreview:IsShown())
+		return
+	end
+	local frame = CreateFrame("Frame", ns.Prefix .. "SmoothBarsPreview", UIParent, ns.BackdropTemplate)
+	frame:SetSize(716 * PREVIEW_SCALE + 40, 188 * PREVIEW_SCALE * 2 + 90)
+	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
+	frame:SetFrameStrata("DIALOG")
+	frame:SetClampedToScreen(true)
+	frame:EnableMouse(true)
+	frame:SetMovable(true)
+	frame:RegisterForDrag("LeftButton")
+	frame:SetScript("OnDragStart", frame.StartMoving)
+	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+	if (Kit and Kit.WindowFill) then
+		frame:SetBackdrop(Kit.WindowFill)
+		local c = Kit.WindowColor or {}
+		frame:SetBackdropColor(c[1] or .05, c[2] or .04, c[3] or .03, 1)
+		local outset = Kit.WindowOutset
+		local casing = CreateFrame("Frame", nil, frame, ns.BackdropTemplate)
+		casing:SetPoint("TOPLEFT", frame, "TOPLEFT", -outset.left, outset.top)
+		casing:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", outset.right, -outset.bottom)
+		casing:SetBackdrop(Kit.WindowCasing)
+		casing:SetFrameLevel(frame:GetFrameLevel() + 20)
+		casing:EnableMouse(false)
+	end
+	UISpecialFrames[#UISpecialFrames + 1] = frame:GetName()
+	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	title:SetPoint("TOP", frame, "TOP", 0, -14)
+	title:SetText(L["Smooth bars preview"])
+	local note = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	note:SetPoint("TOP", title, "BOTTOM", 0, -4)
+	note:SetText(L["Both bars get the same hits and heals, big and small, every 1.4 seconds."])
+	local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+	close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
+	local eased = SmoothPreviewRow(frame, L["Eased"], -46)
+	local snaps = SmoothPreviewRow(frame, L["Snaps"], -46 - 188 * PREVIEW_SCALE)
+	local EASED = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut) or 1
+	local IMMEDIATE = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate) or 0
+	local step, ticker = 0, nil
+	local function Next()
+		step = step % #PREVIEW_STEPS + 1
+		local v = PREVIEW_STEPS[step]
+		pcall(eased.bar.SetValue, eased.bar, v, EASED)
+		pcall(snaps.bar.SetValue, snaps.bar, v, IMMEDIATE)
+		eased.value:SetFormattedText("%d%%", v)
+		snaps.value:SetFormattedText("%d%%", v)
+	end
+	frame:SetScript("OnShow", function()
+		if (not ticker and C_Timer and C_Timer.NewTicker) then ticker = C_Timer.NewTicker(1.4, Next) end
+	end)
+	frame:SetScript("OnHide", function()
+		if (ticker) then ticker:Cancel(); ticker = nil end
+	end)
+	smoothPreview = frame
+	frame:Hide()
+	frame:Show()
+end
+
 local function GenerateOptions()
 	local cooldown = { type = "group", name = L["Cooldown tests"], order = 1, args = {} }
 	local a = cooldown.args
@@ -182,7 +277,37 @@ local function GenerateOptions()
 		scale = Action("Scale status", 5, "scale"), reset = Action("Reset unit frame scales", 6, "scale reset"),
 		unit = Input("Secret test unit", 7, "secret"), secret = DynamicAction("Run secret test", 8, "secrettest", "secret")
 	} }
+	-- Eased bars, switched while you fight (UnitFrame.lua). Not tied to Development Mode:
+	-- these are the same two player settings as on the Unit Frames page.
+	local function SmoothState(kind)
+		return ns.UnitFrame and ns.UnitFrame.IsSmoothingEnabled(kind) and "|cff00ff00ON|r" or "|cffff4040OFF|r"
+	end
+	local function SetSmooth(kind, enabled)
+		if (ns.UnitFrame) then ns.UnitFrame.SetSmoothingEnabled(kind, enabled) end
+	end
+	local smooth = { type = "group", name = L["Smooth bars"], order = 6, args = {
+		hint = { type = "description", order = 1, name = L["Switch eased bars while you fight to compare them side by side. The same two settings as on the Unit Frames page; /azsmooth [on|off] [bars|cast] does it from chat."] },
+		state = { type = "description", order = 2, fontSize = "medium", name = function()
+			return string.format(L["Health and power: %s   Castbar pushback: %s"], SmoothState("bars"), SmoothState("castbars"))
+		end },
+		bars = Immediate({ type = "toggle", order = 3, width = "full", name = L["Smooth health and power"],
+			get = function() return ns.UnitFrame and ns.UnitFrame.IsSmoothingEnabled("bars") end,
+			set = function(_, value) SetSmooth("bars", value) end }),
+		cast = Immediate({ type = "toggle", order = 4, width = "full", name = L["Smooth castbar pushback"],
+			get = function() return ns.UnitFrame and ns.UnitFrame.IsSmoothingEnabled("castbars") end,
+			set = function(_, value) SetSmooth("castbars", value) end }),
+		allOn = Immediate({ type = "execute", order = 5, name = L["All on"], func = function() SetSmooth(nil, true) end }),
+		allOff = Immediate({ type = "execute", order = 6, name = L["All off"], func = function() SetSmooth(nil, false) end }),
+		flip = Immediate({ type = "execute", order = 7, name = L["Flip both"], desc = "/azsmooth",
+			func = function()
+				local on = ns.UnitFrame and ns.UnitFrame.IsSmoothingEnabled("bars")
+				SetSmooth(nil, not on)
+			end }),
+		preview = Immediate({ type = "execute", order = 8, name = L["Toggle preview"],
+			desc = L["Both bars get the same hits and heals, big and small, every 1.4 seconds."],
+			func = function() ToggleSmoothPreview() end })
+	} }
 	return { name = L["Debug tools"], type = "group", desc = L["Maintainer tests and diagnostics. Select a section in the sidebar; nothing starts automatically."],
-		args = { cooldown = cooldown, health = health, keys = keys, raid = raid, utilities = utilities } }
+		args = { cooldown = cooldown, health = health, keys = keys, raid = raid, utilities = utilities, smooth = smooth } }
 end
 Options:AddGroup(L["Debug tools"], GenerateOptions, -2900, "other")

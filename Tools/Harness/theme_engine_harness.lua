@@ -25,6 +25,14 @@ check(Engine:GetConfig("PlayerFrame", original) == original, "stock GetConfig ha
 check(Engine:UseIceCrystal(true) == true and Engine:UseIceCrystal(false) == false, "stock UseIceCrystal follows the request")
 check(Engine:GetNameplateCastOffset(5) == 5, "stock cast offset unchanged")
 check(Engine:ResolveMedia("x") == nil and Engine:StyleHealth({}) == nil, "stock media and styling: nothing")
+check(Engine:GetBagIcon():find("ThemeBagIcons\\azerite.tga", 1, true), "default bag icon")
+for _, key in ipairs({ "azerite", "legacy", "hunter", "mage", "paladin" }) do
+	ns.ThemeEffects = { GetTheme = function() return key end }
+	check(Engine:GetBagIcon():find("ThemeBagIcons\\"..key..".tga", 1, true), "bag icon for "..key)
+end
+ns.ThemeEffects = { GetTheme = function() return "unknown" end }
+check(Engine:GetBagIcon():find("azerite.tga", 1, true), "unknown bag identity falls back")
+ns.ThemeEffects = nil
 
 -- Priority: the lower number wins when two are active; hooks reach only it.
 local function Theme(name, active)
@@ -132,5 +140,13 @@ combat = false
 module:ProfileChanged()
 check(reloads == 1 and not module.events.PLAYER_REGEN_ENABLED, "and reloads after")
 
+local oldUI, oldReload = C_UI, ReloadUI
+local modernReloads = 0
+C_UI = { Reload = function() modernReloads = modernReloads + 1 end }
+ReloadUI = function() error("modern client must not call removed legacy reload") end
+check(Engine:Reload() and modernReloads == 1, "modern C_UI.Reload preferred")
+C_UI, ReloadUI = nil, nil
+check(not Engine:Reload(), "missing reload API does not call nil")
+C_UI, ReloadUI = oldUI, oldReload
 print(string.format("Theme engine: %d checks, %d failures (offline only).", checks, failures))
 if (failures > 0) then os.exit(1) end

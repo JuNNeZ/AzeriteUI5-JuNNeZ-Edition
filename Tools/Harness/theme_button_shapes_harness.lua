@@ -33,7 +33,7 @@ for _, name in ipairs({ "ActionButton", "PetActionButton", "StanceButton", "Extr
 ns.db = { global = { enableDevelopmentMode = true }, char = {} }
 for _, theme in ipairs({ "azerite", "mage", "hunter", "paladin" }) do
 	ns.db.char = { magePreview = theme == "mage", hunterPreview = theme == "hunter", paladinPreview = theme == "paladin" }
-	local folder = theme == "mage" and "Mage" or theme == "hunter" and "Hunter" or nil
+	local folder = theme == "mage" and "Mage" or theme == "hunter" and "Hunter" or theme == "paladin" and "Paladin" or nil
 	for name, original in pairs(originals) do
 		local base = ns.GetConfig(name)
 		for _, shape in ipairs({ "square", "rounded" }) do
@@ -65,7 +65,7 @@ ns.db.char = { hunterPreview = true }
 for _, name in ipairs({ "actionbutton-border-square", "actionbutton-border-square-rounded" }) do
 	check(ns.MageTheme:ResolveOwnMedia(name) == asset(name, "Mage"), "dormant Mage own border")
 	check(ns.HunterTheme:ResolveOwnMedia(name) == asset(name, "Hunter"), "Hunter own border")
-	check(ns.PaladinTheme:ResolveOwnMedia(name) == nil, "Paladin fallback")
+	check(ns.PaladinTheme:ResolveOwnMedia(name) == asset(name, "Paladin"), "Paladin own border")
 end
 ns.LegacyHUD = { IsActive = function() return true end }
 for name, base in pairs(originals) do

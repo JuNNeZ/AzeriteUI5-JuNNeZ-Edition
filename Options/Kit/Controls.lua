@@ -140,7 +140,8 @@ Controls.MeasureText = MeasureText
 -- the modified gem, the revert button, and an empty area on the right for
 -- whatever the control itself puts there.
 local CreateRow = function(parent, kind)
-	local control = { kind = kind }
+	-- stacked starts false, so a normal page's SetStacked(false) changes nothing.
+	local control = { kind = kind, stacked = false }
 
 	local frame = CreateFrame("Frame", nil, parent)
 	frame:SetHeight(ROW_HEIGHT)
@@ -300,6 +301,7 @@ local CreateRow = function(parent, kind)
 	-- Told how wide the page is, so the help line can be measured before it is
 	-- drawn. Called by the page on every layout, including after a resize.
 	control.Measure = function(self, width)
+		if (self.stacked) then return self:MeasureStacked(width) end
 		self.textWidth = max(MIN_TEXT_WIDTH,
 			(width or 0) - PAD_LEFT - PAD_RIGHT - CONTROL_WIDTH - LABEL_GAP)
 
@@ -315,6 +317,7 @@ local CreateRow = function(parent, kind)
 	end
 
 	control.GetHeight = function(self)
+		if (self.stacked) then return self.stackedHeight or (ROW_HEIGHT + ROW_HEIGHT) end
 		if (not self.hasHelp) then return ROW_HEIGHT end
 
 		-- Before a page has measured it, one line, which is what it always was.
@@ -329,6 +332,65 @@ local CreateRow = function(parent, kind)
 	textArea:SetPoint("BOTTOMRIGHT", area, "BOTTOMLEFT", -2, 0)
 	textArea:EnableMouse(true)
 	control.textArea = textArea
+
+	--------------------------------------------------------------
+	-- Stacked: for a narrow page (the frame settings panel)
+	--------------------------------------------------------------
+	-- Beside a 216px control a narrow page leaves the label a few dozen pixels, and
+	-- it was cut to "Show..." with the help clipped after a word. Stacked, the label
+	-- and the whole help line take the page's full width and wrap, and the control
+	-- sits on its own line below them, right-aligned, the way Edit Mode's own
+	-- settings dialog lays a setting out. The page asks for it (Renderer page.stacked).
+	control.SetStacked = function(self, stacked)
+		stacked = stacked and true or false
+		-- The multiline field lays its label out itself.
+		if (self.multiline or self.stacked == stacked) then return end
+		self.stacked = stacked
+		local label, help, area = self.label, self.help, self.area
+		label:ClearAllPoints()
+		area:ClearAllPoints()
+		textArea:ClearAllPoints()
+		label:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT, -9)
+		if (stacked) then
+			label:SetPoint("RIGHT", frame, "RIGHT", -PAD_RIGHT, 0)
+			label:SetWordWrap(true)
+			help:SetPoint("RIGHT", frame, "RIGHT", -PAD_RIGHT, 0)
+			if (help.SetMaxLines) then help:SetMaxLines(0) end
+			area:SetWidth(CONTROL_WIDTH)
+			area:SetHeight(ROW_HEIGHT)
+			area:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -PAD_RIGHT, 0)
+			textArea:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+			textArea:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, ROW_HEIGHT)
+		else
+			label:SetHeight(14)
+			label:SetWordWrap(false)
+			label:SetPoint("RIGHT", area, "LEFT", -LABEL_GAP, 0)
+			help:SetPoint("RIGHT", area, "LEFT", -LABEL_GAP, 0)
+			if (help.SetMaxLines) then help:SetMaxLines(HELP_MAX_LINES) end
+			area:SetWidth(CONTROL_WIDTH)
+			area:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD_RIGHT, 0)
+			area:SetPoint("BOTTOM", frame, "BOTTOM", 0, 0)
+			textArea:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+			textArea:SetPoint("BOTTOMRIGHT", area, "BOTTOMLEFT", -2, 0)
+		end
+		self.stackedHeight = nil
+		self.frame:SetHeight(self:GetHeight())
+	end
+
+	-- The whole label and help, wrapped to the page's width, then the control's line.
+	control.MeasureStacked = function(self, width)
+		self.textWidth = max(MIN_TEXT_WIDTH, (width or 0) - PAD_LEFT - PAD_RIGHT)
+		local labelHeight = max(14, MeasureText(GetFont(13), self.labelText, self.textWidth))
+		self.label:SetHeight(labelHeight)
+		local helpHeight = 0
+		if (self.hasHelp) then
+			helpHeight = max(HELP_LINE, MeasureText(GetFont(11), self.shownHelp or self.helpText, self.textWidth))
+		end
+		self.helpHeight = helpHeight
+		self.stackedHeight = 9 + labelHeight + (helpHeight > 0 and (3 + helpHeight) or 0) + 4 + ROW_HEIGHT
+		self.frame:SetHeight(self.stackedHeight)
+		return self.stackedHeight
+	end
 
 	textArea:SetScript("OnEnter", function()
 		hover:Show()

@@ -362,7 +362,7 @@ MicroMenu.SpawnBagButton = function(self)
 	local icon = button:CreateTexture(nil, "BACKGROUND", nil, 1)
 	icon:SetSize(BAG_BUTTON_ICON_SIZE, BAG_BUTTON_ICON_SIZE)
 	icon:SetPoint("CENTER")
-	icon:SetTexture(BAG_BUTTON_ICON)
+	icon:SetTexture(ns.ThemeEngine and ns.ThemeEngine:GetBagIcon() or BAG_BUTTON_ICON)
 	icon:SetMask(GetMedia("actionbutton-mask-circular"))
 
 	local highlight = button:CreateTexture(nil, "HIGHLIGHT")

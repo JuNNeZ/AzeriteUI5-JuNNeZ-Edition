@@ -1,250 +1,276 @@
--- Optional artwork preview. Saved per character, enabled only in development
--- mode, and rebuilt on reload. Gameplay colors/values stay with their owners.
-local _, ns = ...
+-- Ashbringer / Silver Hand: native-sized casings and separate ornaments.
+-- Functional fills, masks, geometry, fonts and saved anchors remain shared.
+local Addon, ns = ...
 local Engine = ns.ThemeEngine
 local Theme = ns:NewModule("PaladinTheme", "AceConsole-3.0", "LibMoreEvents-1.0")
 ns.PaladinTheme = Theme
--- Components ask the engine (ThemeEngine.lua), which hands each hook to the one
--- theme in use; Hunter and Mage win over this preview when several are switched on.
 Engine:Register(Theme, 30)
-
 local path = Engine:MediaPath("Paladin")
-local media = {
-	["actionbutton-border"] = "action-ring",
-	["minimap-border"] = "minimap-ring",
-	["portrait_frame_hi"] = "portrait-case",
-	["portrait_frame_lo"] = "portrait-case-low",
-	["party_portrait_border"] = "party-case",
-	["point_plate"] = "utility-plate",
-	["icon_exit_flight"] = "vehicle-exit",
-	["minimap-onebar-backdrop"] = "status-backdrop",
-	["cast_back"] = "compact-case",
-	["hp_critter_case"] = "critter-case",
-	["nameplate_backdrop"] = "plate-case",
-	["pw_crystal_case"] = "crystal-holder",
-	["pw_crystal_case_low"] = "crystal-holder",
-	["pw_crystal_case_glow"] = "crystal-holder-glow",
-	["orb_case_hi"] = "orb-case",
-	["orb_case_low"] = "orb-case",
-	["orb_case_glow"] = "orb-case-glow",
-	["border-tooltip"] = "utility-edge",
-	["config_button"] = "utility-cog",
-	["config_button_bright"] = "utility-cog"
-}
+local media = {}
+for _, name in ipairs({
+	"hp_cap_case", "hp_mid_case", "hp_low_case", "hp_boss_case", "hp_critter_case", "hp_critter_case_hi",
+	"cast_back", "cast_back_spiked", "cast_back_wooden", "nameplate_backdrop",
+	"pw_crystal_case", "pw_crystal_case_low", "orb_case_hi", "orb_case_low", "orb-border",
+	"portrait_frame_hi", "portrait_frame_lo", "party_portrait_border", "actionbutton-border",
+	"actionbutton-border-square", "actionbutton-border-square-rounded",
+	"minimap-border", "minimap-onebar-backdrop", "minimap-twobars-backdrop", "point_plate",
+	"config_button", "config_button_bright", "icon_exit_flight", "options-box",
+	"border-tooltip", "border-aura", "better-blizzard-border-small-alternate",
+	"options-casing-round", "options-well-round"
+}) do media[name] = true end
+Theme.Media = media
+local over = { hp_cap_case = true, hp_mid_case = true, hp_low_case = true, hp_boss_case = true,
+	cast_back = true, cast_back_spiked = true, cast_back_wooden = true }
+local healthBars = setmetatable({}, { __mode = "k" })
+local castBars = setmetatable({}, { __mode = "k" })
+local healthSlot, castSlot = Engine.OrnamentSlots.Health, Engine.OrnamentSlots.CastHead
+local healthSettings = Engine:NewEndcapSettings({ prefix = "paladin", choices = { ashbringer = true, none = true },
+	default = "ashbringer", clearDefault = true, defaultScale = 1.3,
+	refresh = function() Theme:RefreshOrnaments() end })
+healthSettings.Install(Theme)
+local castSettings = Engine:NewEndcapSettings({ prefix = "paladinCast", name = "CastEndcap",
+	choices = { libram = true, none = true }, default = "libram", clearDefault = true,
+	refresh = function() Theme:RefreshOrnaments() end })
+castSettings.Install(Theme)
 
 Theme.IsActive = function(self)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return false end
 	if (ns.MageTheme and ns.MageTheme:IsActive()) then return false end
 	local db = ns.db
-	if (not db or not db.global or not db.char or not db.global.enableDevelopmentMode or not db.char.paladinPreview) then return false end
-	return Engine:IsMainLayout()
+	return db and db.global and db.char and db.global.enableDevelopmentMode
+		and db.char.paladinPreview and Engine:IsMainLayout() or false
 end
-
--- The golden mana crystal replaces the ice one.
+-- Existing palettes stay native; Light is an explicit, opt-in mana source.
+local LIGHT_POWER_COLOR = { 1, .84, .35 }
+Theme.GetLightPowerColor = function(self, token)
+	if (self:IsActive() and token == "MANA") then return LIGHT_POWER_COLOR end
+end
 Theme.UseIceCrystal = function(self, requested)
-	return requested and not self:IsActive()
+	local player = ns.GetModule and ns:GetModule("PlayerFrame", true)
+	local profile = player and player.db and player.db.profile
+	-- The ice artwork has baked blue pigment. An explicit Light colour uses
+	-- the neutral faceted surface; the saved ice/seasonal preference is kept.
+	if (profile and profile.crystalOrbColorMode == "light" and self:IsActive()) then return false end
+	return requested
 end
-
--- Called with the sanitized resource token from the player power renderer.
--- Preview-only mana styling takes precedence over saved crystal color modes.
-Theme.GetPowerColor = function(self, token)
-	if (self:IsActive() and token == "MANA") then return { 1, .78, .28 } end
-end
-
+Theme.GetPowerColor = function(self, token) end
 Theme.ResolveMedia = function(self, name)
-	if (self:IsActive() and media[name]) then return path(media[name]) end
+	if (self:IsActive() and media[name]) then return path(name) end
 end
-
--- This theme's file for a native name whether or not the theme is active, for
--- elements that let the player pick a skin of their own (CooldownManager.lua).
-Theme.ResolveOwnMedia = function(self, name)
-	if (media[name]) then return path(media[name]) end
-end
-
--- Some skins store media at file-load time, before AceDB is initialized.
+Theme.ResolveOwnMedia = function(self, name) if (media[name]) then return path(name) end end
 Theme.ResolvePath = function(self, original)
 	local name = Engine.AssetName(original)
 	return (name and self:ResolveMedia(name)) or original
 end
-
--- Remapped decorative textures lose their material tint (ThemeEngine.lua); after
--- that, these are material tints too, never class, reaction, threat or cast-state
--- colors.
-local replaceOptions = {
-	resolve = function(name) return media[name] and path(media[name]) end,
-	after = function(t)
-		for _, prefix in ipairs({ "ButtonBorder", "ExtraButtonBorder", "PortraitBorder", "PowerBarForeground", "ManaOrbForeground" }) do
-			if (t[prefix.."Color"]) then t[prefix.."Color"] = { 1, 1, 1, 1 } end
-		end
-		if (t.ManaOrbForegroundTexture) then
-			-- The lion casing replaces the old rim/plinth; keep the independent glass.
-			t.ManaOrbRimColor = { 1, 1, 1, 0 }
-			t.ManaOrbArtworkColor = { 1, 1, 1, 0 }
-		end
-	end
-}
-
--- Lazily copy resolved layouts: source tables and other profiles are untouched.
-local BuildConfig = function(name, original)
+local replaceOptions = { resolve = function(name) return Theme:ResolveMedia(name) end }
+local CachedConfig = Engine:NewConfigCache(function(name, original)
 	local config = Engine:CopyLayout(original)
 	Engine:ReplaceMedia(config, replaceOptions)
-	if (name == "PlayerFrame") then
-		config.PowerOrbColors.MANA = { 1, .78, .28 }
-		for _, tier in ipairs({ "Novice", "Hardened", "Seasoned" }) do
-			config[tier].HealthBarSize[1] = 373
-		end
-		config.PowerBarColors.MANA = { 1, .78, .28 }
-	elseif (name == "PlayerCastBar") then
-		config.CastBarSize = { config.CastBarSize[1]*2.25, config.CastBarSize[2]*2.25 }
-		config.CastBarTextPosition[3] = config.CastBarTextPosition[3]*2.25
-	elseif (name == "PlayerFrameAlternate") then
-		config.PowerBarColors.MANA = { 1, .78, .28 }
-	elseif (name == "ToTFrame" or name == "FocusFrame") then
-		config.HealthBackdropTexture = path("compact-case")
-		config.HealthBackdropColor = { 1, 1, 1 }
-	elseif (name == "PlayerClassPower" and ns.PlayerClass == "PALADIN") then
-		config.ClassPowerCaseColor = { .55, .55, .55 }
-		config.ClassPowerSlotColor = { .08, .07, .1, 1 }
-		config.ClassPowerSlotOffset = 0
-		local centers = { {88,164}, {57,126}, {44,84}, {57,42}, {88,4} }
-		for i, point in ipairs(config.ClassPowerLayouts.ComboPoints) do
-			local size = (i == 5 and 44 or 40)*1.56
-			-- Widen the arc for larger seals; fill and case retain one pixel grid.
-			point.Position = { "TOPLEFT", centers[i][1]-size/2, -centers[i][2]+size/2 }
-			point.Size = { size, size }
-			point.BackdropSize = { size, size }
-			point.BackdropTexture = path("holy-case")
-			point.Texture = path("holy-fill")
-			point.PointRotation = 0
-		end
-	end
-	if (name == "PlayerFrame" or name == "PlayerFrameAlternate" or name == "TargetFrame") then
-		local target = name == "TargetFrame"
-		config.HealthPercentagePosition = { target and "LEFT" or "RIGHT", target and 160 or -160, 4 }
-		config.HealthPercentageJustifyH = target and "LEFT" or "RIGHT"
-		config.CastBarValuePosition = { target and "LEFT" or "RIGHT", target and 160 or -160, 4 }
-		config.CastBarTextSize = { 150, 37 }
-		if (config.Critter) then
-			config.Critter.HealthPercentagePosition = { "CENTER", 0, 0 }
-			config.Critter.CastBarValuePosition = { "CENTER", 0, 0 }
-		end
-	end
+	-- One material tint for the newly painted class-power plates; activation,
+	-- glyphs, per-resource colours and every point's original geometry are kept.
+	if (name == "PlayerClassPower") then config.ClassPowerCaseColor = { 1, 1, 1 } end
 	return config
-end
-local CachedConfig = Engine:NewConfigCache(BuildConfig)
-
+end)
 Theme.GetConfig = function(self, name, original)
 	if (not self:IsActive()) then return original end
 	return CachedConfig(name, original)
 end
 
-local NewCasing = function(bar)
-	local frame = CreateFrame("Frame", nil, bar)
-	frame:SetAllPoints(bar)
-	frame:SetFrameLevel(bar:GetFrameLevel() + 3)
-	frame:EnableMouse(false)
-	frame.Art = frame:CreateTexture(nil, "ARTWORK")
-	bar.PaladinCasing = frame
+local ArtFrame = function(bar, key, level, layer)
+	local frame = bar[key]
+	if (not frame) then
+		frame = CreateFrame("Frame", nil, bar)
+		frame:SetAllPoints(bar)
+		frame:EnableMouse(false)
+		frame.Art = frame:CreateTexture(nil, layer or "ARTWORK")
+		bar[key] = frame
+	end
+	frame:SetFrameLevel(bar:GetFrameLevel() + level)
 	return frame
 end
-
--- Source pixels describe the opening, not a new health shape or value range.
--- The original statusbar/absorb/cast-overlay silhouette is retained underneath.
-local FitCasing = function(bar, art, width, height, left, top, right, bottom, flip, fillTop, fillBottom)
-	local w, h = bar:GetWidth(), bar:GetHeight()
-	local paintedHeight = h*((fillBottom or 1)-(fillTop or 0))
-	local x = flip and (width-right) or left
-	art:ClearAllPoints()
-	art:SetPoint("TOPLEFT", bar, "TOPLEFT", -x*w/(right-left), top*paintedHeight/(bottom-top)-h*(fillTop or 0))
-	art:SetSize(width*w/(right-left), height*paintedHeight/(bottom-top))
-	art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-end
-
--- Inset the opening into the opaque native fill, including its angled tips.
-local HealthGeometry = function(bar, db)
-	local w, h = bar:GetWidth(), bar:GetHeight()
-	if (w < h*2) then return end -- critter: retain its original compact silhouette
-	local texture = db and db.HealthBarTexture or ""
-	if (texture:find("hp_lowmid_bar", 1, true)) then return "health-lowmid", 2043, 1786, 2/64, 52/64 end
-	if (w/h > 12) then return "health-wide", 2671, 2414, 2/64, 48/64 end
-	if (w < 200) then return "health-small", 1821, 1494, 1/32, 1 end
-	if (math.abs(w/h - 385/37) < .05) then return "health-portrait", 2141, 1884, 3/128, 100/128 end
-	return "health-case", 2011, 1754, 3/128, 100/128
-end
-
-Theme.StyleHealth = function(self, owner, db, flip)
-	if (not self:IsActive()) then return end
-	local bar = owner.Health
-	local material, width, right, fillTop, fillBottom = HealthGeometry(bar, db)
-	bar.PaladinHealthGeometry = material and { material, width, right, fillTop, fillBottom } or nil
-	bar.PaladinCompact = not material
-	if (not material) then
-		if (bar.PaladinCasing) then bar.PaladinCasing:SetShown(false) end
-		if (bar.PaladinEmpty) then bar.PaladinEmpty:SetAlpha(0) end
-		bar.Backdrop:SetAlpha(1)
+-- Front rails follow the actual native backdrop rectangle, including user
+-- scaling. No texture fit coordinates, new bar size or layout offsets.
+local CasingOver = function(bar, nativePath, flip)
+	local name = type(nativePath) == "string" and nativePath:match("[\\/]Paladin[\\/]([^\\/]+)%.tga$")
+	if (not name or not over[name] or not bar.Backdrop) then
+		if (bar.PaladinRails) then bar.PaladinRails:SetShown(false) end
 		return
 	end
-	local frame = bar.PaladinCasing or NewCasing(bar)
+	local frame = ArtFrame(bar, "PaladinRails", 1)
+	frame.Art:SetTexture(path(name.."-over"))
+	frame.Art:SetAllPoints(bar.Backdrop)
+	frame.Art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
 	frame:SetShown(true)
-	frame.Art:SetTexture(path(material))
-	FitCasing(bar, frame.Art, width, 724, material == "health-small" and 82 or 62, 306, right, 436, flip, fillTop, fillBottom)
-	-- The old casing includes a dark cavity. Supply that cavity on its own, so
-	-- the generated transparent opening is readable when the bar is empty.
-	local empty = bar.PaladinEmpty
-	if (not empty) then
-		empty = bar:CreateTexture(nil, "BACKGROUND", nil, -2)
-		empty:SetAllPoints(bar)
-		empty:SetVertexColor(.11, .12, .14, 1)
-		bar.PaladinEmpty = empty
-	end
-	empty:SetTexture(db.HealthBarTexture)
-	empty:SetAlpha(1)
-	empty:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-	bar.Backdrop:SetAlpha(0)
 end
-
+local HealthTerminal = function(bar, enabled)
+	local name = bar.PaladinCaseName
+	if (not name or not name:match("^hp_.*_case$") or not over[name] or not bar.Backdrop) then return end
+	local terminal = name..(enabled and "-capped" or "")
+	bar.Backdrop:SetTexture(path(terminal))
+	if (bar.PaladinRails) then bar.PaladinRails.Art:SetTexture(path(terminal.."-over")) end
+	if (bar.PaladinThreat) then bar.PaladinThreat:SetTexture(path(terminal.."-glow")) end
+end
+local HealthEndcap = function(bar, flip)
+	-- Opaque endcap is a front attachment: fill/prediction remain underneath.
+	local frame = ArtFrame(bar, "PaladinOrnaments", 4, "OVERLAY")
+	healthBars[bar] = flip and true or false
+	local enabled = healthSettings.GetKey() ~= "none"
+	HealthTerminal(bar, enabled)
+	frame:SetShown(enabled)
+	if (frame.Threat) then
+		if (enabled) then frame.Threat:SetShown(frame.ThreatSource:IsShown()) else frame.Threat:Hide() end
+	end
+	if (not enabled) then return end
+	local unit = bar:GetHeight()/healthSlot.reference
+	local dx, dy = healthSettings.GetOffset()
+	local x = healthSlot.x*unit + dx
+	frame.Art:SetTexture(path("ornament-ashbringer"))
+	frame.Art:ClearAllPoints()
+	frame.Art:SetSize(healthSlot.size*unit*healthSettings.GetScale(), healthSlot.size*unit*healthSettings.GetScale())
+	frame.Art:SetPoint("CENTER", bar, flip and "LEFT" or "RIGHT", flip and -x or x, healthSlot.y*unit + dy)
+	frame.Art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+	if (frame.Threat) then
+		frame.Threat:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+		frame.Threat:SetAlpha(frame.ThreatSource:GetAlpha())
+	end
+end
+Theme.StyleHealth = function(self, owner, db, flip)
+	if (not self:IsActive() or not owner or not owner.Health or not db) then return end
+	local bar = owner.Health
+	bar.PaladinCaseName = type(db.HealthBackdropTexture) == "string"
+		and db.HealthBackdropTexture:match("[\\/]Paladin[\\/]([^\\/]+)%.tga$")
+	bar.PaladinPortraitCaseName = type(db.PortraitBorderTexture) == "string"
+		and db.PortraitBorderTexture:match("[\\/]Paladin[\\/]([^\\/]+)%.tga$")
+	CasingOver(bar, db.HealthBackdropTexture, flip)
+	-- Compact/group/boss meters and critters have no weapon ornament.
+	local compact = (type(db.HealthBarTexture) == "string" and db.HealthBarTexture:find("cast_bar", 1, true))
+		or bar:GetWidth() < bar:GetHeight()*2
+	if (compact) then
+		healthBars[bar] = nil
+		if (bar.PaladinOrnaments) then bar.PaladinOrnaments:SetShown(false) end
+		return
+	end
+	HealthEndcap(bar, flip)
+end
 Theme.StyleThreat = function(self, owner, flip)
-	if (not self:IsActive()) then return end
-	local threat = owner.ThreatIndicator
-	local art = threat and threat.textures and threat.textures.Health
-	local geometry = owner.Health.PaladinHealthGeometry
-	local material, width, right, fillTop, fillBottom
-	if (geometry) then material, width, right, fillTop, fillBottom = unpack(geometry) end
-	if (art and material) then
-		art:SetTexture(path(material == "health-case" and "health-glow" or material.."-glow"))
-		FitCasing(owner.Health, art, width, 724, material == "health-small" and 82 or 62, 306, right, 436, flip, fillTop, fillBottom)
+	if (not self:IsActive() or not owner) then return end
+	local frame = owner.Health and owner.Health.PaladinOrnaments
+	local indicator = owner.ThreatIndicator
+	local native = indicator and indicator.textures and indicator.textures.Health
+	local bar = owner.Health
+	local name = bar and bar.PaladinCaseName
+	if (native and bar and bar.Backdrop and name and name:match("^hp_.*_case$") and over[name]) then
+		-- The native threat anchors use older padding. Follow the actual art
+		-- rectangle and its final silhouette, without reading any threat value.
+		native:ClearAllPoints()
+		native:SetAllPoints(bar.Backdrop)
+		bar.PaladinThreat = native
+		local capped = healthBars[bar] ~= nil and healthSettings.GetKey() ~= "none"
+		native:SetTexture(path(name..(capped and "-capped" or "").."-glow"))
+		native:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
 	end
+	local portraitGlow = indicator and indicator.textures and indicator.textures.Portrait
+	local portrait = owner.Portrait and owner.Portrait.Border
+	local portraitName = bar and bar.PaladinPortraitCaseName
+	if (portraitGlow and portrait and (portraitName == "portrait_frame_hi" or portraitName == "portrait_frame_lo")) then
+		portraitGlow:ClearAllPoints()
+		portraitGlow:SetAllPoints(portrait)
+		portraitGlow:SetTexture(path(portraitName.."-glow"))
+	end
+	if (not frame or not native) then return end
+	local glow = frame.Threat
+	if (not glow) then
+		-- Keep the halo behind the entire health assembly, not above its fill
+		-- inside the foreground endcap frame. That avoids a lit internal seam.
+		glow = (native:GetParent() or frame):CreateTexture(nil, "BACKGROUND", nil, -3)
+		glow:SetAllPoints(frame.Art)
+		glow:SetBlendMode("ADD")
+		frame.Threat, frame.ThreatSource = glow, native
+		local SetShown = function(shown)
+			if (healthSettings.GetKey() == "none") then glow:Hide() else glow:SetShown(shown) end
+		end
+		hooksecurefunc(native, "Show", function() SetShown(true) end)
+		hooksecurefunc(native, "Hide", function() SetShown(false) end)
+		hooksecurefunc(native, "SetShown", function(_, shown) SetShown(shown) end)
+		hooksecurefunc(native, "SetAlpha", function(_, alpha) glow:SetAlpha(alpha) end)
+		hooksecurefunc(native, "SetVertexColor", function(_, ...) glow:SetVertexColor(...) end)
+	end
+	glow:SetTexture(path("ornament-ashbringer-glow"))
+	glow:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+	-- Already-active threat needs its colour immediately, before the next hook.
+	-- Widget channels are forwarded directly, never compared or calculated.
+	glow:SetVertexColor(native:GetVertexColor())
+	glow:SetAlpha(native:GetAlpha())
+	if (healthSettings.GetKey() == "none") then glow:Hide() else glow:SetShown(native:IsShown()) end
 end
-
+local CastHead = function(cast)
+	local frame = ArtFrame(cast, "PaladinCastHead", 3)
+	castBars[cast] = true
+	local enabled = castSettings.GetKey() ~= "none"
+	frame:SetShown(enabled)
+	if (not enabled) then return end
+	local dx, dy = castSettings.GetOffset()
+	local size = castSlot.size*castSettings.GetScale()
+	frame.Art:SetTexture(path("cast-head-libram"))
+	frame.Art:ClearAllPoints()
+	frame.Art:SetSize(size, size)
+	frame.Art:SetPoint("CENTER", cast, "LEFT", castSlot.x - dx, castSlot.y + dy)
+	frame:SetShown(true)
+end
 Theme.StyleCastbar = function(self, cast)
-	if (not self:IsActive()) then return end
-	local frame = cast.PaladinCasing or NewCasing(cast)
-	frame.Art:SetTexture(path("lion-cast"))
-	FitCasing(cast, frame.Art, 2018, 724, 342, 288, 1739, 421, false, 1/32, 1)
-	-- The legacy shield is a bar-sized border, not a standalone icon.
-	-- Cast_Update retains the existing protected-cast color cue.
-	cast.Shield:SetAlpha(0)
-	cast.Backdrop:SetAlpha(0)
-	local empty = cast.PaladinEmpty or cast:CreateTexture(nil, "BACKGROUND")
-	cast.PaladinEmpty = empty
-	empty:SetAllPoints(cast)
-	empty:SetTexture(ns.API.GetMedia("cast_bar"))
-	empty:SetVertexColor(.06, .05, .09, .95)
+	if (not self:IsActive() or not cast) then return end
+	-- Match the standalone player's existing casing; native shield/protected
+	-- cast cue is retained. The front lip tracks its native backdrop visibility.
+	CasingOver(cast, path("cast_back"), false)
+	if (cast.Backdrop and cast.PaladinRails and not cast.PaladinRails.visibilityHooked) then
+		local frame = cast.PaladinRails
+		frame.visibilityHooked = true
+		hooksecurefunc(cast.Backdrop, "Show", function() frame:SetShown(true) end)
+		hooksecurefunc(cast.Backdrop, "Hide", function() frame:SetShown(false) end)
+		hooksecurefunc(cast.Backdrop, "SetShown", function(_, shown) frame:SetShown(shown) end)
+	end
+	if (cast.PaladinRails and cast.Backdrop) then cast.PaladinRails:SetShown(cast.Backdrop:IsShown()) end
+	CastHead(cast)
 end
-
 Theme.StyleNameplate = function(self, owner)
 	if (not self:IsActive()) then return end
 	for _, bar in ipairs({ owner.Health, owner.Castbar }) do
-		-- Material replaces the original BACKGROUND texture at its original
-		-- size and anchors. No foreground ornament may cover the live meter.
-		bar.Backdrop:SetTexture(path("plate-case"))
+		if (bar and bar.Backdrop) then
+			bar.Backdrop:SetTexture(path("nameplate_backdrop"))
+			bar.Backdrop:SetVertexColor(1, 1, 1)
+		end
 	end
 end
+Theme.StyleUtilityButton = function(self, button)
+	if (not self:IsActive()) then return end
+	button.Texture:SetTexture(path("config_button")); button.Texture:SetVertexColor(1, 1, 1)
+	button.Highlight:SetTexture(path("config_button_bright")); button.Highlight:SetVertexColor(1, 1, 1)
+end
+-- A quiet silver/gold backing at the native compass north anchor. The native
+-- N font string, compass rotation and radius are retained.
+Theme.StyleCompass = function(self, compass)
+	if (not self:IsActive() or not compass or not compass.north) then return end
+	local art = compass.PaladinNorth
+	if (not art) then
+		art = compass:CreateTexture(nil, "BACKGROUND")
+		compass.PaladinNorth = art
+	end
+	art:SetTexture(path("minimap-north"))
+	art:SetSize(Engine.OrnamentSlots.North.size, Engine.OrnamentSlots.North.size)
+	art:SetPoint("CENTER", compass.north, "CENTER", 0, 0)
+end
+--- Reapplies the shared ornament slots after a live placement change.
+Theme.RefreshOrnaments = function(self)
+	if (not self:IsActive()) then return end
+	for bar, flip in pairs(healthBars) do HealthEndcap(bar, flip) end
+	for cast in pairs(castBars) do CastHead(cast) end
+	if (ns.ThemeBarPreview) then ns.ThemeBarPreview:Refresh() end
+end
 
-local AddLight = function(parent, anchor, name, maskPath, coords)
+local AddLight = function(parent, anchor, name, maskPath, coords, materialPath)
 	local texture = parent:CreateTexture(nil, "ARTWORK", nil, 1)
 	texture:SetAllPoints(anchor)
-	texture:SetTexture(path(name))
+	texture:SetTexture(materialPath or path(name))
 	if (maskPath) then
 		local mask = parent:CreateMaskTexture()
 		mask:SetAllPoints(anchor)
@@ -257,9 +283,10 @@ local AddLight = function(parent, anchor, name, maskPath, coords)
 	return texture
 end
 
-local Pulse = function(texture)
+local Pulse = function(texture, low, high)
+	low, high = low or .3, high or .65
 	local group = texture:CreateAnimationGroup()
-	for i, values in ipairs({ { .3, .65, 4 }, { .65, .3, 5 } }) do
+	for i, values in ipairs({ { low, high, 4 }, { high, low, 5 } }) do
 		local alpha = group:CreateAnimation("Alpha")
 		alpha:SetFromAlpha(values[1])
 		alpha:SetToAlpha(values[2])
@@ -273,6 +300,75 @@ end
 -- Holy light strength, 0 to 1 (0 hides it). Multiplies the pulse through the
 -- light's own frame, so the animation keeps running untouched underneath.
 local lights = setmetatable({}, { __mode = "k" })
+-- Foreground light spheres have their own 48-second drift, independent of the
+-- 32-second waves. Their positions use only our fixed frame dimensions/time;
+-- the native mask and fill clip bound them without inspecting mana.
+local UpdateLightSpheres = function(content, elapsed)
+	content.SphereTime = ((content.SphereTime or 0) + elapsed)%48
+	local phase = content.SphereTime*math.pi*2/48
+	local anchor = content.LightAnchor
+	local width, height = anchor:GetWidth(), anchor:GetHeight()
+	local unit = math.min(width, height)
+	for i, art in ipairs(content.Spheres) do
+		local seed = i*2.399963
+		local x = .5 + .26*math.sin(phase+seed) + .08*math.sin(2*phase-seed)
+		local y = .5 + .30*math.cos(phase+seed*.7) + .08*math.sin(2*phase+seed)
+		local pulse = .5 + .5*math.sin(phase*(6+i)+seed)
+		local size = unit*(.055+.01*(i%3))*(.85+.3*pulse)
+		art:ClearAllPoints()
+		art:SetPoint("CENTER", anchor, "BOTTOMLEFT", x*width, y*height)
+		art:SetSize(size, size)
+		art:SetAlpha(.32+.38*pulse*pulse)
+	end
+end
+-- One 8x8 sheet for every specialization, shared by crystal and orb. Like the
+-- Mage flow, two permanently bound samples crossfade; only local time and UVs
+-- change during playback. Half-texel insets keep neighbouring cells out.
+local LightCoords = function(texture, index)
+	local x, y = index%8, math.floor(index/8)
+	texture:SetTexCoord((x*128 + .5)/1024, ((x+1)*128 - .5)/1024,
+		(y*128 + .5)/1024, ((y+1)*128 - .5)/1024)
+end
+local UpdateLight = function(content, elapsed)
+	content.Time = ((content.Time or 0) + elapsed)%32
+	local phase = content.Time*2
+	local index = math.floor(phase)
+	if (content.Index ~= index) then
+		content.Index = index
+		LightCoords(content.Flow, index)
+		LightCoords(content.FlowNext, (index+1)%64)
+	end
+	local blend = phase-index
+	content.Flow:SetAlpha(.65*(1-blend))
+	content.FlowNext:SetAlpha(.65*blend)
+	UpdateLightSpheres(content, elapsed)
+end
+local AddFlow = function(content, anchor, maskPath)
+	local mask = content:CreateMaskTexture()
+	mask:SetAllPoints(anchor)
+	mask:SetTexture(maskPath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	content.FlowMask = mask
+	for _, key in ipairs({ "Flow", "FlowNext" }) do
+		local art = content:CreateTexture(nil, "ARTWORK", nil, 2)
+		art:SetAllPoints(anchor)
+		art:SetTexture(path("holy-energy"))
+		art:SetBlendMode("ADD")
+		art:AddMaskTexture(mask)
+		content[key] = art
+	end
+	-- Separate additive foreground sprites: no particles are baked into the
+	-- waves. All six share the current native/ice/circular silhouette mask.
+	content.LightAnchor, content.Spheres = anchor, {}
+	for i = 1, 6 do
+		local art = content:CreateTexture(nil, "ARTWORK", nil, 3)
+		art:SetTexture(path("holy-sphere"))
+		art:SetBlendMode("ADD")
+		art:SetVertexColor(1, .84, .35)
+		art:AddMaskTexture(mask)
+		content.Spheres[i] = art
+	end
+	UpdateLight(content, 0)
+end
 local LightStrength = function()
 	local value = tonumber(ns.db and ns.db.char and ns.db.char.paladinLight)
 	if (not value or value ~= value) then return 1 end
@@ -283,6 +379,7 @@ local ApplyLight = function(content)
 	local strength = LightStrength()
 	content:SetAlpha(strength)
 	content:SetShown(strength > 0)
+	content:SetScript("OnUpdate", strength > 0 and UpdateLight or nil)
 end
 
 Theme.GetLightStrength = function(self) return LightStrength() end
@@ -302,6 +399,7 @@ end
 local HideLight = function(content)
 	if (not content) then return end
 	lights[content] = nil
+	content:SetScript("OnUpdate", nil)
 	content:SetShown(false)
 end
 
@@ -312,6 +410,7 @@ end
 Theme.ApplyCrystalEffect = function(self, power, texturePath, coords)
 	if (not power.PaladinLight) then
 		local clip = CreateFrame("Frame", nil, power)
+		clip:EnableMouse(false)
 		clip:SetFrameLevel(power:GetFrameLevel() + 1)
 		clip:SetClipsChildren(true)
 		clip:SetPoint("BOTTOMLEFT", power, "BOTTOMLEFT")
@@ -319,18 +418,42 @@ Theme.ApplyCrystalEffect = function(self, power, texturePath, coords)
 		clip:SetPoint("TOP", power:GetStatusBarTexture(), "TOP")
 		-- Textures must belong to a child of the clipping frame.
 		local content = CreateFrame("Frame", nil, clip)
+		content:EnableMouse(false)
 		content:SetAllPoints(power)
-		content.Strands = AddLight(content, power, "light-strands", texturePath, coords)
-		Pulse(content.Strands)
+		content.Strands = AddLight(content, power, nil, texturePath, nil, texturePath)
+		-- Reuse the native faceted surface at low opacity. Broad light ribbons
+		-- wash across its planes and make the crystal look rounded.
+		Pulse(content.Strands, .04, .10)
+		AddFlow(content, power, texturePath)
 		power.PaladinLight = content
 	end
 	ApplyLight(power.PaladinLight)
-	local mask = power.PaladinLight.Strands.Mask
+	local facets = power.PaladinLight.Strands
+	facets:SetTexture(texturePath)
+	-- Native StatusBar rendering uses this texture's full canvas. Legacy crop
+	-- metadata would enlarge only the light and misalign its facet planes.
+	facets:SetTexCoord(0, 1, 0, 1)
+	local mask = facets.Mask
 	mask:SetTexture(texturePath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-	mask:SetTexCoord(unpack(coords or { 0, 1, 0, 1 }))
+	mask:SetTexCoord(0, 1, 0, 1)
+	power.PaladinLight.FlowMask:SetTexture(texturePath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	power.PaladinLight.FlowMask:SetTexCoord(0, 1, 0, 1)
 end
 
 Theme.ClearCrystalEffect = function(self, power) HideLight(power.PaladinLight) end
+
+-- Complete concept holder: its transparent cavity reveals the native crystal.
+-- Keep the uncut clamps and silver rail above the fill at the existing rectangle.
+Theme.StyleCrystal = function(self, power, casePath, useMage)
+	if (power and power.PaladinCradleBack) then power.PaladinCradleBack:Hide() end
+	local case = power and power.Case
+	local name = type(casePath) == "string" and casePath:match("[\\/]Paladin[\\/]([^\\/]+)%.tga$")
+	if (not self:IsActive() or useMage or not case
+		or (name ~= "pw_crystal_case" and name ~= "pw_crystal_case_low")) then
+		return
+	end
+	case:SetTexture(path(name))
+end
 
 --- Orb effect "paladin". Clearing it leaves the fill texture to Player.lua,
 --- which sets the layout's own straight after.
@@ -338,10 +461,14 @@ Theme.ApplyOrbEffect = function(self, orb)
 	orb:SetStatusBarTexture(path("orb-light"), path("orb-light"))
 	if (not orb.PaladinLight) then
 		local content = CreateFrame("Frame", nil, orb:GetOverlay())
+		content:EnableMouse(false)
 		content:SetAllPoints(orb)
 		content:SetFrameLevel(orb:GetOverlay():GetFrameLevel() + 2)
 		content.Strands = AddLight(content, orb, "orb-strands")
 		Pulse(content.Strands)
+		-- GetOverlay is LibOrb's native fill clip; the shared round fill alpha
+		-- additionally bounds the sheet to the orb silhouette at every level.
+		AddFlow(content, orb, "Interface\\AddOns\\"..Addon.."\\Assets\\orb2.tga")
 		orb.PaladinLight = content
 	end
 	ApplyLight(orb.PaladinLight)
@@ -350,20 +477,10 @@ end
 
 Theme.ClearOrbEffect = function(self, orb) HideLight(orb.PaladinLight) end
 
-Theme.StyleUtilityButton = function(self, button)
-	if (not self:IsActive()) then return end
-	-- Registered to the original cog canvas; retain its existing size/anchors.
-	button.Texture:SetTexture(path("utility-cog"))
-	button.Texture:SetVertexColor(1, 1, 1)
-	button.Highlight:SetTexture(path("utility-cog"))
-	button.Highlight:SetVertexColor(1, 1, 1)
-	button.Highlight:SetBlendMode("ADD")
-	button.Highlight:SetAlpha(.25)
-end
-
 Theme.Command = function(self, input)
 	if (not ns.db.global.enableDevelopmentMode) then return end
 	local arg = (input or ""):lower():match("^%s*(.-)%s*$")
+	if (arg == "preview" and ns.ThemeBarPreview) then ns.ThemeBarPreview:Show(); return end
 	if (arg == "status") then
 		self:Print(self:IsActive() and "Paladin preview: on." or "Paladin preview: off (requires the main theme and development mode).")
 		return
@@ -380,7 +497,7 @@ Theme.Command = function(self, input)
 	local enabled = arg == "on" or ((arg == "" or arg == "toggle") and not ns.db.char.paladinPreview)
 	if (enabled) then ns.db.char.legacyHUD = false; ns.db.char.hunterPreview, ns.db.char.magePreview = false, false end -- explicit Paladin choice leaves Hunter and Mage
 	ns.db.char.paladinPreview = enabled and true or false
-	ReloadUI()
+	Engine:Reload()
 end
 
 Theme.OnInitialize = function(self)
@@ -392,5 +509,7 @@ Theme.ProfileChanged = Engine.ProfileChanged
 Theme.OnEnable = function(self)
 	-- Chosen at load; a profile switching it on or off reloads (ThemeEngine.lua).
 	Engine:WatchProfile(self)
-	if (self.loadedActive) then Engine:StyleOptionsKit(path("utility-edge")) end
+	if (self.loadedActive) then
+		Engine:StyleOptionsKit(path("border-tooltip"), path("border-aura"), path("options-casing-round"), path("options-well-round"))
+	end
 end

@@ -68,7 +68,7 @@ check(not theme:IsActive(), "safe before database")
 for _, entry in ipairs({
 	{ ns.MageTheme, "Mage/actionbutton-border" },
 	{ ns.HunterTheme, "Hunter/actionbutton-border" },
-	{ ns.PaladinTheme, "Paladin/action-ring" }
+	{ ns.PaladinTheme, "Paladin/actionbutton-border" }
 }) do
 	local own, relative = entry[1], entry[2]
 	local expected = "Interface\\AddOns\\AzeriteUI5_JuNNeZ_Edition\\Assets\\" .. relative:gsub("/", "\\") .. ".tga"
@@ -92,7 +92,7 @@ check(theme:IsActive() and reloads == 1 and ns.db.char.magePreview, "on reloads 
 theme.loadedActive = true
 check(ns.ThemeEffects:GetTheme() == "mage", "Theme effects see the Mage theme")
 check(not ns.PaladinTheme:IsActive(), "Paladin stands aside")
-check(ns.PaladinTheme:ResolveOwnMedia("actionbutton-border"):find("\\Paladin\\action-ring.tga", 1, true),
+check(ns.PaladinTheme:ResolveOwnMedia("actionbutton-border"):find("\\Paladin\\actionbutton-border.tga", 1, true),
 	"Paladin own media does not delegate to active Mage")
 check(ns.HunterTheme:ResolveOwnMedia("actionbutton-border"):find("\\Hunter\\actionbutton-border.tga", 1, true),
 	"Hunter own media does not follow active Mage")

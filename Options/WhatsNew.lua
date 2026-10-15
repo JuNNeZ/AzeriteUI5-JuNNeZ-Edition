@@ -41,6 +41,27 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.27.0-JuNNeZ",
+		items = {
+			{
+				text = "Anchor frames to each other, and left-click a mover for its settings. Copy a layout from another profile.",
+				run = OpenMovers,
+				label = "Open /lock"
+			},
+			{
+				text = "Health, power and cast pushback glide instead of jumping. Switch it off if you prefer.",
+				page = L["Unit Frames"]
+			},
+			{
+				text = "Lite+ offers Paladin Light for the crystal and orb, without Development Mode.",
+				page = "Themes"
+			},
+			{
+				text = "No more blocked-action errors from the world map in combat."
+			}
+		}
+	},
+	{
 		version = "5.26.0-JuNNeZ",
 		items = {
 			{

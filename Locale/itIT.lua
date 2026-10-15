@@ -1215,3 +1215,41 @@ L["How large the cast bar's ornaments are drawn. They grow and shrink around the
 L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "Allontana gli ornamenti della barra degli incantesimi dalle estremità della barra, o li sposta sopra di essa."
 L["Moves the cast bar's ornaments up or down."] = "Sposta gli ornamenti della barra degli incantesimi in su o in giù."
 L["Reset cast bar endcap size and position"] = "Ripristina dimensione e posizione del terminale della barra degli incantesimi"
+
+-- Mover anchoring (/lock)
+L["Anchor To"] = "Ancora a"
+L["Keeps this frame beside another AzeriteUI frame and moves it when that frame moves. Dragging it changes the distance. Shift-click resets it and removes the anchor."] = "Tiene questo riquadro accanto a un altro riquadro di AzeriteUI e lo sposta quando quello si muove. Trascinarlo cambia la distanza. Maiusc-clic lo ripristina e rimuove l'ancoraggio."
+L["Not anchored"] = "Non ancorato"
+L["This frame's point"] = "Punto di questo riquadro"
+L["Point on the other frame"] = "Punto dell'altro riquadro"
+L["Distance X"] = "Distanza X"
+L["Distance Y"] = "Distanza Y"
+L["Distance between the two points. 0 puts them on top of each other."] = "Distanza tra i due punti. 0 li sovrappone."
+L["More settings"] = "Altre impostazioni"
+-- Layout copy (/lock)
+L["Copy layout from"] = "Copia disposizione da"
+L["Copies frame positions, anchors and AzeriteUI Scale from another profile into this one. Every other setting stays as it is. The interface reloads."] = "Copia le posizioni dei riquadri, gli ancoraggi e la scala di AzeriteUI da un altro profilo in questo. Le altre impostazioni restano invariate. L'interfaccia viene ricaricata."
+L["Copy the layout from %s into this profile? The interface reloads."] = "Copiare la disposizione da %s in questo profilo? L'interfaccia viene ricaricata."
+-- Smooth bars (Unit Frames, Debug tools)
+L["Smooth health and power"] = "Fluidifica salute e potere"
+L["Health and power bars glide to each new value instead of jumping. A new target or group member still shows at once."] = "Le barre di salute e potere scorrono fino al nuovo valore invece di saltare. Un nuovo bersaglio o membro del gruppo appare subito."
+L["Smooth castbar pushback"] = "Fluidifica il ritardo del lancio"
+L["When a cast is pushed back, the bar slides to its new place instead of jumping. A new cast always starts at once."] = "Quando un lancio viene ritardato, la barra scorre nella nuova posizione invece di saltare. Un nuovo lancio parte sempre subito."
+L["Smooth bars"] = "Barre fluide"
+L["All on"] = "Tutto attivo"
+L["All off"] = "Tutto disattivo"
+L["Flip both"] = "Inverti entrambi"
+L["Switch eased bars while you fight to compare them side by side. The same two settings as on the Unit Frames page; /azsmooth [on|off] [bars|cast] does it from chat."] = "Cambia le barre fluide mentre combatti per confrontarle. Le stesse due impostazioni della pagina Riquadri unità; /azsmooth [on|off] [bars|cast] lo fa dalla chat."
+L["Health and power: %s   Castbar pushback: %s"] = "Salute e potere: %s   Ritardo del lancio: %s"
+L["Applies to castbars on unit frames."] = "Si applica alle barre di lancio dei riquadri unità."
+
+-- Smooth bars preview (Debug tools)
+L["Smooth bars preview"] = "Anteprima barre fluide"
+L["Both bars get the same hits and heals, big and small, every 1.4 seconds."] = "Entrambe le barre ricevono gli stessi colpi e cure, grandi e piccoli, ogni 1,4 secondi."
+L["Eased"] = "Fluida"
+L["Snaps"] = "Salta"
+L["Toggle preview"] = "Mostra/nascondi anteprima"
+
+-- Paladin Light resource palette
+L["Light colored"] = "Colore della Luce"
+L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = "Scegli il colore del cristallo del potere e del globo di mana. Colore della Luce usa una Luce dorata."

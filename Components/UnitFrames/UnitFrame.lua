@@ -52,6 +52,9 @@ local defaults = { profile = ns:Merge({
 	colorCastSpellTextByState = false,
 	auraTimerColors = true,
 	showCombatFeedback = true,
+	-- Engine-eased bars (Enum.StatusBarInterpolation), see ns.UnitFrame.SetSmoothingEnabled.
+	smoothBars = true, -- health and power
+	smoothCastbars = true, -- castbar pushback
 	-- Group Indicators (GroupIndicators.lua): Sated and corner aura dots on party and raid frames.
 	groupSated = false,
 	groupCorners = false,
@@ -66,6 +69,38 @@ local defaults = { profile = ns:Merge({
 	targetPowerValueAlpha = nil,
 	disableHealComm = nil -- TODO: purge it
 }, ns.MovableModulePrototype.defaults) }
+
+-- Engine-eased bars
+---------------------------------------------------
+-- Health and power are secret in combat, so no addon can animate them in Lua any more.
+-- The engine can: SetValue and SetTimerDuration take an interpolation. A bar whose
+-- style asks for it (DisableSmoothing(false)) is listed here and eases while its
+-- switch is on; forced updates still snap (Functions.lua SetStatusBarValuesCompat).
+local IMMEDIATE = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate) or 0
+local EASED = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut) or 1
+local SmoothBars = setmetatable({}, { __mode = "k" })
+
+-- "bars" (health, power) or "castbars" (pushback).
+local IsSmoothingEnabled = function(kind)
+	local module = ns:GetModule("UnitFrames", true)
+	local profile = module and module.db and module.db.profile
+	if (kind == "castbars") then
+		return not (profile and profile.smoothCastbars == false)
+	end
+	return not (profile and profile.smoothBars == false)
+end
+
+local ApplySmoothing = function(bar)
+	local on = bar.__AzeriteUI_WantsSmoothing and IsSmoothingEnabled(bar.__AzeriteUI_SmoothKind) and true or false
+	bar.smoothing = on and EASED or IMMEDIATE
+	if (not on and bar.SetToTargetValue) then
+		-- Finish any easing now, so turning it off shows the plain bar at once.
+		API.TryCall(bar.SetToTargetValue, bar)
+	end
+	if (bar.__AzeriteUI_OnSmoothingChanged) then
+		bar:__AzeriteUI_OnSmoothingChanged(on)
+	end
+end
 
 -- UnitFrame Callbacks
 ---------------------------------------------------
@@ -108,13 +143,18 @@ local UnitFrame_CreateBar = function(self, name, parent, ...)
 	bar.GetGrowth = bar.GetGrowth or function(element)
 		return element.__AzeriteUI_Growth or "RIGHT"
 	end
-	bar.DisableSmoothing = bar.DisableSmoothing or function(element, disabled)
-		-- Enum.StatusBarInterpolation only has Immediate = 0 and ExponentialEaseOut = 1.
-		-- There is no Linear member; reading one returned nil and made both branches
-		-- resolve to Immediate, which silently discarded the argument.
-		local immediate = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate) or 0
-		local smoothed = (Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut) or 1
-		element.smoothing = disabled and immediate or smoothed
+	-- DisableSmoothing(false[, "castbars"]) lets the bar ease while its switch is on;
+	-- DisableSmoothing(true) keeps it Immediate. Enum.StatusBarInterpolation only has
+	-- Immediate = 0 and ExponentialEaseOut = 1 (there is no Linear member).
+	bar.DisableSmoothing = bar.DisableSmoothing or function(element, disabled, kind)
+		element.__AzeriteUI_WantsSmoothing = (not disabled) and true or nil
+		element.__AzeriteUI_SmoothKind = kind or element.__AzeriteUI_SmoothKind or "bars"
+		if (element.__AzeriteUI_WantsSmoothing) then
+			SmoothBars[element] = true
+		else
+			SmoothBars[element] = nil
+		end
+		ApplySmoothing(element)
 	end
 	bar.SetSparkMap = bar.SetSparkMap or function(element, map)
 		element.sparkMap = map
@@ -257,6 +297,33 @@ ns.UnitFrame.ShouldColorAuraTimers = function()
 	local module = ns:GetModule("UnitFrames", true)
 	local profile = module and module.db and module.db.profile
 	return not (profile and profile.auraTimerColors == false)
+end
+
+--- Whether eased bars are on: kind "bars" (health and power) or "castbars" (pushback).
+ns.UnitFrame.IsSmoothingEnabled = function(kind)
+	return IsSmoothingEnabled(kind)
+end
+
+--- Turns eased bars on or off at once, in or out of combat (only the interpolation
+-- argument changes; nothing secure is touched). kind is "bars", "castbars" or nil for both.
+ns.UnitFrame.SetSmoothingEnabled = function(kind, enabled)
+	local module = ns:GetModule("UnitFrames", true)
+	local profile = module and module.db and module.db.profile
+	if (not profile) then return end
+	if (kind == nil or kind == "bars") then profile.smoothBars = enabled and true or false end
+	if (kind == nil or kind == "castbars") then profile.smoothCastbars = enabled and true or false end
+	for bar in next, SmoothBars do
+		if (kind == nil or bar.__AzeriteUI_SmoothKind == kind) then
+			ApplySmoothing(bar)
+		end
+	end
+end
+
+-- Re-applies the saved switches to every listed bar (profile changes).
+ns.UnitFrame.RefreshSmoothing = function()
+	for bar in next, SmoothBars do
+		ApplySmoothing(bar)
+	end
 end
 
 -- Whether hits, heals and misses flash as text on the unit frames
@@ -550,6 +617,43 @@ UnitFrameMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateSettings")
 end
 
+-- /azsmooth [on|off] [bars|cast]: flip eased bars mid-fight for a side-by-side look.
+local SmoothSlash = function(input)
+	local words = {}
+	for word in string.gmatch(string.lower(input or ""), "%S+") do words[#words + 1] = word end
+	-- /azsmooth trace [unit|off]: one chat line per health/power write on that unit.
+	if (words[1] == "trace") then
+		local unit = words[2] or "target"
+		if (unit == "off" or (API.SmoothTrace == unit and not words[2])) then
+			API.SmoothTrace = nil
+			ns:Print("Smooth bars trace: off.")
+		else
+			API.SmoothTrace = unit
+			ns:Print(string.format("Smooth bars trace: %s. /azsmooth trace off to stop.", unit))
+		end
+		return
+	end
+	local state, kind
+	for _, word in ipairs(words) do
+		if (word == "on" or word == "off") then state = word end
+		if (word == "bars" or word == "bar" or word == "health" or word == "power") then kind = "bars" end
+		if (word == "cast" or word == "castbar" or word == "castbars") then kind = "castbars" end
+	end
+	local current = IsSmoothingEnabled(kind or "bars")
+	local enabled
+	if (state == "on") then enabled = true elseif (state == "off") then enabled = false else enabled = not current end
+	ns.UnitFrame.SetSmoothingEnabled(kind, enabled)
+	ns:Print(string.format("Smooth bars: health/power %s, castbar pushback %s.",
+		IsSmoothingEnabled("bars") and "|cff00ff00on|r" or "|cffff4040off|r",
+		IsSmoothingEnabled("castbars") and "|cff00ff00on|r" or "|cffff4040off|r"))
+end
+
 UnitFrameMod.OnInitialize = function(self)
 	self.db = ns.db:RegisterNamespace("UnitFrames", defaults)
+	self.db.RegisterCallback(self, "OnProfileChanged", function() ns.UnitFrame.RefreshSmoothing() end)
+	self.db.RegisterCallback(self, "OnProfileCopied", function() ns.UnitFrame.RefreshSmoothing() end)
+	self.db.RegisterCallback(self, "OnProfileReset", function() ns.UnitFrame.RefreshSmoothing() end)
+	if (ns.RegisterChatCommand) then
+		ns:RegisterChatCommand("azsmooth", SmoothSlash)
+	end
 end

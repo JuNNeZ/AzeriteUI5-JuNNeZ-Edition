@@ -386,12 +386,11 @@ local style = function(self, unit)
 	health:SetSize(unpack(db.HealthBarSize))
 	health:SetStatusBarTexture(db.HealthBarTexture)
 	health:SetTexCoord(GetBossNativeFillTexCoords())
-	health:DisableSmoothing(true)
+	health:DisableSmoothing(false) -- Eases while /az -> Unit Frames -> Smooth health and power is on (UnitFrame.lua).
 	health.__AzeriteUI_UseProductionNativeFill = true
 	health.__AzeriteUI_KeepMirrorPercentOnNoSample = false
 	health.__AzeriteUI_UseValueMirrorTexCoord = false
-	health:SetOrientation("HORIZONTAL")
-	health:SetReverseFill(false)
+	health:SetOrientation(db.HealthBarOrientation)
 	health:SetFlippedHorizontally(false)
 	health.__AzeriteUI_BaseTexCoordLeft = nil
 	health.__AzeriteUI_BaseTexCoordRight = nil
@@ -431,8 +430,7 @@ local style = function(self, unit)
 	healthPreview:SetStatusBarTexture(db.HealthBarTexture)
 	healthPreview.__AzeriteUI_UseValueMirrorTexCoord = false
 	healthPreview:SetTexCoord(GetBossNativeFillTexCoords())
-	healthPreview:SetOrientation("HORIZONTAL")
-	healthPreview:SetReverseFill(false)
+	healthPreview:SetOrientation(db.HealthBarOrientation)
 	healthPreview:SetFlippedHorizontally(false)
 	healthPreview:SetSparkTexture("")
 		healthPreview:SetAlpha(0)
@@ -466,7 +464,7 @@ local style = function(self, unit)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
 	ApplyBossBarFillRule(castbar, db.HealthBarOrientation)
 	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
-	castbar:DisableSmoothing(true)
+	castbar:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
 
 	self.Castbar = castbar
 

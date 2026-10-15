@@ -310,6 +310,7 @@ local style = function(self, unit)
 	-- Health
 	--------------------------------------------
 	local health = self:CreateBar()
+	health:DisableSmoothing(false) -- Eases while /az -> Unit Frames -> Smooth health and power is on (UnitFrame.lua).
 	health:SetFrameLevel(health:GetFrameLevel() + 2)
 	health:SetPoint(unpack(db.HealthBarPosition))
 	health:SetSize(unpack(db.HealthBarSize))
@@ -380,7 +381,7 @@ local style = function(self, unit)
 	castbar:SetSparkMap(db.HealthBarSparkMap)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
 	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
-	castbar:DisableSmoothing(true)
+	castbar:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
 
 	self.Castbar = castbar
 

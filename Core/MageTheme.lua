@@ -29,9 +29,9 @@ Theme.Media = media
 -- Ornament slots from the manifest, in layout units: the health endcap sits on
 -- the bar's outer end, sized against the Seasoned meter's 40px height; the
 -- cast head on the cast bar's left end; the school badge on the crystal case.
-local ENDCAP_SLOT = { size = 88, x = 14, y = 0, reference = 40 }
-local CAST_HEAD_SLOT = { size = 48, x = -26, y = 0 }
-local BADGE_SLOT = { size = 32, yFraction = .06 }
+local ENDCAP_SLOT = Engine.OrnamentSlots.Health
+local CAST_HEAD_SLOT = Engine.OrnamentSlots.CastHead
+local BADGE_SLOT = Engine.OrnamentSlots.ResourceBadge
 local BADGES = { arcane = "badge-eye", fire = "badge-fire", frost = "badge-frost" }
 -- Each school's suggested staff, used by the "school" endcap choice.
 local SCHOOL_ENDCAPS = { arcane = "aluneth", fire = "felomelorn", frost = "ebonchill" }

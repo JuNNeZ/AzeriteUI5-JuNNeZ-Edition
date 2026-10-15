@@ -1215,3 +1215,41 @@ L["How large the cast bar's ornaments are drawn. They grow and shrink around the
 L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "Отодвигает украшения индикатора заклинаний от концов полосы или заводит их на неё."
 L["Moves the cast bar's ornaments up or down."] = "Сдвигает украшения индикатора заклинаний вверх или вниз."
 L["Reset cast bar endcap size and position"] = "Сбросить размер и положение наконечника индикатора заклинаний"
+
+-- Mover anchoring (/lock)
+L["Anchor To"] = "Привязать к"
+L["Keeps this frame beside another AzeriteUI frame and moves it when that frame moves. Dragging it changes the distance. Shift-click resets it and removes the anchor."] = "Держит эту рамку рядом с другой рамкой AzeriteUI и перемещает её вместе с ней. Перетаскивание меняет расстояние. Shift-щелчок сбрасывает её и снимает привязку."
+L["Not anchored"] = "Не привязано"
+L["This frame's point"] = "Точка этой рамки"
+L["Point on the other frame"] = "Точка другой рамки"
+L["Distance X"] = "Расстояние X"
+L["Distance Y"] = "Расстояние Y"
+L["Distance between the two points. 0 puts them on top of each other."] = "Расстояние между двумя точками. 0 совмещает их."
+L["More settings"] = "Другие настройки"
+-- Layout copy (/lock)
+L["Copy layout from"] = "Копировать расположение из"
+L["Copies frame positions, anchors and AzeriteUI Scale from another profile into this one. Every other setting stays as it is. The interface reloads."] = "Копирует положения рамок, привязки и масштаб AzeriteUI из другого профиля в этот. Остальные настройки не меняются. Интерфейс перезагрузится."
+L["Copy the layout from %s into this profile? The interface reloads."] = "Скопировать расположение из %s в этот профиль? Интерфейс перезагрузится."
+-- Smooth bars (Unit Frames, Debug tools)
+L["Smooth health and power"] = "Плавное здоровье и ресурс"
+L["Health and power bars glide to each new value instead of jumping. A new target or group member still shows at once."] = "Полосы здоровья и ресурса плавно переходят к новому значению вместо скачка. Новая цель или участник группы показываются сразу."
+L["Smooth castbar pushback"] = "Плавная задержка заклинания"
+L["When a cast is pushed back, the bar slides to its new place instead of jumping. A new cast always starts at once."] = "Когда заклинание задерживается, полоса плавно смещается вместо скачка. Новое заклинание всегда начинается сразу."
+L["Smooth bars"] = "Плавные полосы"
+L["All on"] = "Всё вкл."
+L["All off"] = "Всё выкл."
+L["Flip both"] = "Переключить оба"
+L["Switch eased bars while you fight to compare them side by side. The same two settings as on the Unit Frames page; /azsmooth [on|off] [bars|cast] does it from chat."] = "Переключайте плавные полосы в бою, чтобы сравнить их. Те же две настройки, что на странице рамок юнитов; /azsmooth [on|off] [bars|cast] работает из чата."
+L["Health and power: %s   Castbar pushback: %s"] = "Здоровье и ресурс: %s   Задержка заклинания: %s"
+L["Applies to castbars on unit frames."] = "Относится к полосам заклинаний на рамках юнитов."
+
+-- Smooth bars preview (Debug tools)
+L["Smooth bars preview"] = "Предпросмотр плавных полос"
+L["Both bars get the same hits and heals, big and small, every 1.4 seconds."] = "Обе полосы получают одинаковые удары и исцеления, большие и малые, каждые 1,4 секунды."
+L["Eased"] = "Плавно"
+L["Snaps"] = "Скачком"
+L["Toggle preview"] = "Показать/скрыть предпросмотр"
+
+-- Paladin Light resource palette
+L["Light colored"] = "Цвет Света"
+L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = "Выберите цвет кристалла ресурса и сферы маны. Цвет Света использует золотистый Свет."

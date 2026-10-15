@@ -48,6 +48,15 @@ local Addon, ns = ...
 local Engine = {}
 ns.ThemeEngine = Engine
 
+-- Fixed ornament slots, in native layout units. New drop-in themes use these
+-- shared boxes; material and artwork never choose a second layout.
+Engine.OrnamentSlots = {
+	Health = { size = 88, x = 14, y = 0, reference = 40 },
+	CastHead = { size = 48, x = -26, y = 0 },
+	ResourceBadge = { size = 32, yFraction = .06 },
+	North = { size = 32 }
+}
+
 local themes = {}
 
 --- Adds a theme. `priority` orders themes that are active at once; lower wins.
@@ -66,6 +75,21 @@ end
 
 Engine.GetThemes = function(self)
 	return themes
+end
+
+-- One bag icon per selectable theme; Lite+ effects do not change its identity.
+Engine.GetBagIcon = function(self)
+	local key = ns.ThemeEffects and ns.ThemeEffects:GetTheme() or "azerite"
+	local icons = { azerite = true, legacy = true, hunter = true, mage = true, paladin = true }
+	if (not icons[key]) then key = "azerite" end
+	return "Interface\\AddOns\\" .. Addon .. "\\Assets\\ThemeBagIcons\\" .. key .. ".tga"
+end
+
+--- Uses the current reload API; older clients may expose the legacy global.
+Engine.Reload = function(self)
+	local reload = C_UI and C_UI.Reload or _G.ReloadUI
+	if (type(reload) == "function") then reload(); return true end
+	return false
 end
 
 --[[ Dispatch ]]--
@@ -185,7 +209,8 @@ end
 --- The endcap choice, size and nudge a theme stores per character, as
 --- ns.db.char.<prefix>Endcap, <prefix>EndcapScale, <prefix>EndcapX/Y.
 --- options: prefix, choices (key -> true; nil for size and nudge only), default,
---- clearDefault (store nil for the default instead of the key), refresh (called
+--- clearDefault (store nil for the default instead of the key), defaultScale,
+--- refresh (called
 --- after every change), name (the theme methods' infix, "Endcap" by default; a
 --- cast bar set uses "CastEndcap": GetCastEndcapScale, SetCastEndcapOffset, ...).
 Engine.NewEndcapSettings = function(self, options)
@@ -202,7 +227,7 @@ Engine.NewEndcapSettings = function(self, options)
 	settings.GetScale = function()
 		local char = Char()
 		local scale = tonumber(char and char[prefix .. "EndcapScale"])
-		return (scale and scale >= .5 and scale <= 2) and scale or 1
+		return (scale and scale >= .5 and scale <= 2) and scale or options.defaultScale or 1
 	end
 	settings.GetOffset = function()
 		local char = Char()
@@ -223,7 +248,7 @@ Engine.NewEndcapSettings = function(self, options)
 	settings.SetScale = function(scale)
 		scale = tonumber(scale)
 		if (not scale or scale < .5 or scale > 2 or InCombatLockdown()) then return false end
-		Char()[prefix .. "EndcapScale"] = scale ~= 1 and scale or nil
+		Char()[prefix .. "EndcapScale"] = scale ~= (options.defaultScale or 1) and scale or nil
 		return Changed()
 	end
 	settings.SetOffset = function(x, y)
@@ -270,7 +295,7 @@ Engine.ProfileChanged = function(theme)
 			theme:RegisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
 		else
 			theme:UnregisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
-			ReloadUI()
+			Engine:Reload()
 		end
 	else
 		theme:UnregisterEvent("PLAYER_REGEN_ENABLED", "ProfileChanged")
@@ -287,11 +312,13 @@ Engine.WatchProfile = function(self, theme)
 end
 
 --- The options window's borders in the active theme's metal (Options/Kit).
-Engine.StyleOptionsKit = function(self, edgeFile, insetFile)
+Engine.StyleOptionsKit = function(self, edgeFile, insetFile, roundedEdgeFile, roundedInsetFile)
 	local kit = ns.OptionsKit
 	if (not kit) then return end
 	for _, key in ipairs({ "WindowBackdrop", "WindowCasing", "ButtonBackdrop" }) do
 		if (kit[key]) then kit[key].edgeFile = edgeFile end
 	end
 	if (insetFile and kit.InsetBackdrop) then kit.InsetBackdrop.edgeFile = insetFile end
+	if (roundedEdgeFile and kit.Look and kit.Look.CasingBackdrop) then kit.Look.CasingBackdrop.edgeFile = roundedEdgeFile end
+	if (roundedInsetFile and kit.Look and kit.Look.InsetBackdrop) then kit.Look.InsetBackdrop.edgeFile = roundedInsetFile end
 end

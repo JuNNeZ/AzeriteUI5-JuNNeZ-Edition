@@ -28,6 +28,13 @@ local _, ns = ...
 
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
+-- Settings that may change in combat skip the options queue (Options/Kit/Combat.lua).
+local Immediate = function(option)
+	local Kit = ns.OptionsKit
+	if (Kit and Kit.Combat) then Kit.Combat:AllowImmediate(option) end
+	return option
+end
+
 local Options = ns:GetModule("Options")
 local HasColorPicker = ns.API.IsAddOnEnabled("AzUI_Color_Picker")
 
@@ -194,7 +201,27 @@ local GenerateOptions = function()
 				hidden = isdisabled,
 				set = setter,
 				get = function(info) return getmodule().db.profile.showCombatFeedback ~= false end
-			}
+			},
+			-- Engine-eased bars (UnitFrame.lua ns.UnitFrame.SetSmoothingEnabled). Only the
+			-- interpolation argument changes, so both apply at once, in combat too.
+			smoothBars = Immediate({
+				name = L["Smooth health and power"],
+				desc = L["Health and power bars glide to each new value instead of jumping. A new target or group member still shows at once."],
+				order = 60,
+				type = "toggle", width = "full",
+				hidden = isdisabled,
+				set = function(info, val) if (ns.UnitFrame) then ns.UnitFrame.SetSmoothingEnabled("bars", val) end end,
+				get = function(info) return ns.UnitFrame and ns.UnitFrame.IsSmoothingEnabled("bars") or false end
+			}),
+			smoothCastbars = Immediate({
+				name = L["Smooth castbar pushback"],
+				desc = L["When a cast is pushed back, the bar slides to its new place instead of jumping. A new cast always starts at once."],
+				order = 61,
+				type = "toggle", width = "full",
+				hidden = isdisabled,
+				set = function(info, val) if (ns.UnitFrame) then ns.UnitFrame.SetSmoothingEnabled("castbars", val) end end,
+				get = function(info) return ns.UnitFrame and ns.UnitFrame.IsSmoothingEnabled("castbars") or false end
+			})
 		}
 	}
 
@@ -247,16 +274,26 @@ local GenerateOptions = function()
 		}
 		suboptions.args.crystalOrbColorMode = {
 			name = L["Crystal/Orb Color Source"],
-			desc = L["Choose stock AzeriteUI power colors, enhanced token-based power colors, or your class color."],
+			desc = function()
+				if (ns.PaladinTheme and ns.PaladinTheme:IsActive()) then
+					return L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."]
+				end
+				return L["Choose stock AzeriteUI power colors, enhanced token-based power colors, or your class color."]
+			end,
 			order = 20, type = "select", width = "full", hidden = isdisabled,
-			values = {
-				default = L["Default"],
-				enhanced = L["Enhanced Colors"],
-				classColor = L["Class Color"]
-			},
+			values = function()
+				local values = {
+					default = L["Default"],
+					enhanced = L["Enhanced Colors"],
+					classColor = L["Class Color"]
+				}
+				if (ns.PaladinTheme and ns.PaladinTheme:IsActive()) then values.light = L["Light colored"] end
+				return values
+			end,
 			set = setter,
 			get = function(info)
 				local mode = getter(info)
+				if (mode == "light" and ns.PaladinTheme and ns.PaladinTheme:IsActive()) then return "light" end
 				if (mode == "classColor" or mode == "class") then
 					return "classColor"
 				end

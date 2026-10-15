@@ -4,6 +4,15 @@ Run from the addon root with Pillow installed. Source PNGs are retained locally
 under Docs/Research_Assets/Paladin/Production; the resulting TGAs ship in Assets.
 """
 from pathlib import Path
+import runpy
+import sys
+
+# The approved native-contract rebuild supersedes the old aperture-fitting
+# exporter below. Keep this familiar entry point from recreating legacy art.
+if (Path(__file__).resolve().parent.parent / 'Docs/Research_Assets/Paladin/Rebuild-2026-10-14/Sources').is_dir():
+    sys.argv = [str(Path(__file__).with_name('Build-PaladinDropIn.py')), '--install']
+    runpy.run_path(sys.argv[0], run_name='__main__')
+    raise SystemExit(0)
 import hashlib
 import json
 from PIL import Image, ImageChops, ImageFilter, ImageDraw

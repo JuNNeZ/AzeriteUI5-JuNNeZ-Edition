@@ -294,10 +294,14 @@ local function CastStart(self, event, unit)
 	end
 
 	if(duration) then
-		local ok = pcall(element.SetTimerDuration, element, duration, element.smoothing, direction)
+		-- AzeriteUI: a new cast is a fresh set and starts where it starts; only CastUpdate
+		-- (pushback, a channel cut short) uses element.smoothing, as Blizzard's own timer
+		-- bars do (Blizzard_CustomAuraButton.lua, GetStatusBarInterpolationForUpdateMode).
+		local startInterpolation = Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate
+		local ok = pcall(element.SetTimerDuration, element, duration, startInterpolation, direction)
 		if(not ok and element.SetTimerDuration and type(startTime) == 'number' and type(endTime) == 'number'
 			and (not issecretvalue or (not issecretvalue(startTime) and not issecretvalue(endTime)))) then
-			pcall(element.SetTimerDuration, element, math.max((endTime - startTime) / 1000, 0), element.smoothing, direction)
+			pcall(element.SetTimerDuration, element, math.max((endTime - startTime) / 1000, 0), startInterpolation, direction)
 		end
 	end
 

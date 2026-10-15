@@ -34,6 +34,7 @@
 	<Script file="Kit\Panel.lua"/>
 	<Script file="WhatsNew.lua"/>
 	<Script file="Kit\WhatsNew.lua"/>
+	<Script file="Kit\FramePanel.lua"/>
 	<Script file="Kit\Gallery.lua"/>
 	<Script file="Kit\Widgets.lua"/>
 	<Script file="Kit\Window.lua"/>

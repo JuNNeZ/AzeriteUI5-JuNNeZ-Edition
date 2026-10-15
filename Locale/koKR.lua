@@ -1215,3 +1215,41 @@ L["How large the cast bar's ornaments are drawn. They grow and shrink around the
 L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."] = "시전바 장식을 바의 끝에서 바깥으로 밀거나 바 위로 들여옵니다."
 L["Moves the cast bar's ornaments up or down."] = "시전바 장식을 위나 아래로 옮깁니다."
 L["Reset cast bar endcap size and position"] = "시전바 끝장식 크기와 위치 초기화"
+
+-- Mover anchoring (/lock)
+L["Anchor To"] = "고정 대상"
+L["Keeps this frame beside another AzeriteUI frame and moves it when that frame moves. Dragging it changes the distance. Shift-click resets it and removes the anchor."] = "이 프레임을 다른 AzeriteUI 프레임 옆에 두고, 그 프레임이 움직이면 함께 움직입니다. 끌어서 거리를 바꿀 수 있습니다. Shift-클릭하면 초기화되고 고정이 해제됩니다."
+L["Not anchored"] = "고정 안 함"
+L["This frame's point"] = "이 프레임의 기준점"
+L["Point on the other frame"] = "다른 프레임의 기준점"
+L["Distance X"] = "거리 X"
+L["Distance Y"] = "거리 Y"
+L["Distance between the two points. 0 puts them on top of each other."] = "두 기준점 사이의 거리입니다. 0이면 겹칩니다."
+L["More settings"] = "추가 설정"
+-- Layout copy (/lock)
+L["Copy layout from"] = "레이아웃 복사 원본"
+L["Copies frame positions, anchors and AzeriteUI Scale from another profile into this one. Every other setting stays as it is. The interface reloads."] = "다른 프로필의 프레임 위치, 고정 및 AzeriteUI 크기를 이 프로필로 복사합니다. 다른 설정은 그대로 유지됩니다. 인터페이스가 다시 불러와집니다."
+L["Copy the layout from %s into this profile? The interface reloads."] = "%s의 레이아웃을 이 프로필로 복사할까요? 인터페이스가 다시 불러와집니다."
+-- Smooth bars (Unit Frames, Debug tools)
+L["Smooth health and power"] = "생명력과 자원 부드럽게"
+L["Health and power bars glide to each new value instead of jumping. A new target or group member still shows at once."] = "생명력과 자원 바가 튀지 않고 새 값으로 부드럽게 이동합니다. 새 대상이나 파티원은 바로 표시됩니다."
+L["Smooth castbar pushback"] = "시전 지연 부드럽게"
+L["When a cast is pushed back, the bar slides to its new place instead of jumping. A new cast always starts at once."] = "시전이 밀리면 바가 튀지 않고 새 위치로 부드럽게 이동합니다. 새 시전은 항상 바로 시작합니다."
+L["Smooth bars"] = "부드러운 바"
+L["All on"] = "모두 켜기"
+L["All off"] = "모두 끄기"
+L["Flip both"] = "둘 다 전환"
+L["Switch eased bars while you fight to compare them side by side. The same two settings as on the Unit Frames page; /azsmooth [on|off] [bars|cast] does it from chat."] = "전투 중에 부드러운 바를 켜고 꺼서 비교합니다. 유닛 프레임 페이지의 두 설정과 같으며, 채팅에서는 /azsmooth [on|off] [bars|cast]를 사용합니다."
+L["Health and power: %s   Castbar pushback: %s"] = "생명력과 자원: %s   시전 지연: %s"
+L["Applies to castbars on unit frames."] = "유닛 프레임의 시전 바에 적용됩니다."
+
+-- Smooth bars preview (Debug tools)
+L["Smooth bars preview"] = "부드러운 바 미리보기"
+L["Both bars get the same hits and heals, big and small, every 1.4 seconds."] = "두 바는 1.4초마다 크고 작은 같은 피해와 치유를 받습니다."
+L["Eased"] = "부드럽게"
+L["Snaps"] = "즉시"
+L["Toggle preview"] = "미리보기 켜기/끄기"
+
+-- Paladin Light resource palette
+L["Light colored"] = "빛의 색"
+L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = "자원 수정과 마나 구슬의 색상을 선택합니다. 빛의 색은 황금빛을 사용합니다."

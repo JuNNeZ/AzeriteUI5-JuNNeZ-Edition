@@ -113,7 +113,10 @@ local ApplyStyledMaximizedState = function()
 	-- layout itself; an attribute written by an addon taints UIParent's panel
 	-- manager, and the next map opened in combat had its quest pins blocked
 	-- (ADDON_ACTION_BLOCKED on Button:SetPassThroughButtons).
-	WorldMapFrame:OnFrameSizeChanged()
+	-- No OnFrameSizeChanged here either. Called from addon code it rebuilt the canvas zoom
+	-- levels and every pin under our taint, and hovering an area POI then hit secret tooltip
+	-- widget sizes (LayoutFrame.lua:491). Blizzard's Maximize calls it after our size hook,
+	-- and SetMapID rebuilds the canvas on every map change.
 	WorldMapFrame.NavBar:Hide()
 	WorldMapFrame.BorderFrame:SetAlpha(0)
 	WorldMapFrameBg:Hide()
@@ -249,9 +252,12 @@ local ApplyOverlayFrameState = function(self, enabled)
 end
 
 local RestoreBlizzardState = function(self)
-	if (not self.Styled) then
+	-- Only undo what we applied. With the module off at login there is nothing to restore, and
+	-- calling SynchronizeDisplayState from addon code would taint UIParent's panel manager.
+	if (not self.Styled or not self.StyleApplied) then
 		return
 	end
+	self.StyleApplied = nil
 	if (self.originalBlackoutTexture and WorldMapFrame.BlackoutFrame and WorldMapFrame.BlackoutFrame.Blackout) then
 		WorldMapFrame.BlackoutFrame.Blackout:SetTexture(self.originalBlackoutTexture)
 	end
@@ -301,6 +307,7 @@ WorldMapMod.UpdateSettings = function(self)
 		return
 	end
 	if (self.db.profile.enabled) then
+		self.StyleApplied = true
 		if (not InCombatLockdown()) then
 			WorldMapFrame:EnableMouse(false)
 			SetCVarValue("miniWorldMap", 0)

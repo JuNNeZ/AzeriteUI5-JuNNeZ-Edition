@@ -924,7 +924,7 @@ local style = function(self, unit)
 	health:SetSize(unpack(db.HealthBarSize))
 	health:SetStatusBarTexture(db.HealthBarTexture)
 	health:SetTexCoord(GetArenaNativeFillTexCoords())
-	health:DisableSmoothing(true)
+	health:DisableSmoothing(false) -- Eases while /az -> Unit Frames -> Smooth health and power is on (UnitFrame.lua).
 	health.__AzeriteUI_UseProductionNativeFill = true
 	health.__AzeriteUI_KeepMirrorPercentOnNoSample = false
 	health.__AzeriteUI_UseValueMirrorTexCoord = false
@@ -1006,7 +1006,7 @@ local style = function(self, unit)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
 	ApplyArenaBarFillRule(castbar, db.HealthBarOrientation)
 	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
-	castbar:DisableSmoothing(true)
+	castbar:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
 
 	self.Castbar = castbar
 
