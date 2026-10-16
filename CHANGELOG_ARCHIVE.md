@@ -3,6 +3,246 @@
 Released entries rotated out of [CHANGELOG.md](CHANGELOG.md) to keep the published release description under the 125000 character limit GitHub enforces on release bodies. Newest first.
 
 
+## 5.9.0-JuNNeZ (2026-09-22) - A Solid Window, a Combat Queue and Settings That Ask First
+
+### Highlights
+
+- **The options window is solid, and its border is where a border should be.** The background is fully opaque at 100% and thins out smoothly on the slider, which now moves a percent at a time rather than in five-percent notches. The sculpted edge is drawn the way AzeriteUI draws its own tooltips - same art, same weight, untinted - and it sits above everything the window holds, so no part of the header, list or footer is drawn over it any more.
+- **Settings changed in combat now really do wait for combat to end.** The footer has promised this for several releases while the change went through immediately. It is a queue now: the setting keeps the value you chose, the row is marked, the footer counts what is waiting, and everything is applied the moment you leave combat - even if you closed the window in the meantime. The window's own appearance settings still apply at once, because they change nothing the game protects.
+- **Deleting a profile asks first.** Delete Profile, Reset and importing settings each destroyed or overwrote something on a single click in the new window, with nothing asked. All three now confirm first, as they always did in the old dialog.
+- **A setting that refuses a value says why.** Naming a new profile with an empty or duplicate name used to do nothing at all. The row now explains the refusal where its help text sits, and clears it as soon as the setting accepts what you typed.
+- **The window can be driven from the keyboard.** Click the search box and press Tab to start: Tab and Shift-Tab move between settings, the arrows move within the list, Left and Right change a value, Enter does what a click does, typing searches, and Escape hands the keyboard back. Nothing is captured until you ask for it, so your movement and action keys keep working while the window is merely open.
+- **Panel Scale no longer fights the cursor.** Dragging it rescaled the window under your mouse, so the slider slid away from the cursor and the value ran off. It now applies when you let go, while the slider itself still follows the cursor.
+
+### Development
+
+- **Measured the border art instead of guessing at it.** The sculpted rim sits one to ten pixels into a side edge and eleven to nineteen into the top or bottom, which is why the old drawing let the background show past it. The casing now hangs outside the window by the same offsets the addon's tooltips use, with the fill tucked underneath, and the offline checks compare the panel's numbers against the tooltip's own layout data so the two cannot drift apart. The window's fill was also moved off Blizzard's tooltip background texture, whose opacity is not ours to control, onto one that takes exactly the alpha the slider asks for.
+- **Built the confirmation and refusal handling against the Ace3 library's own source** rather than from an idea of how those fields work, because a text string in either of them means something different from what it looks like. Two cases deliberately fail safe: a confirmation the panel cannot work out is still asked, and a question that cannot be shown changes nothing.
+- **Added the three control types no setting in this addon uses yet** - a colour swatch that opens the game's own picker, a keybinding button, and a multi-choice setting drawn as one toggle per option - together with a page to test them on, which appears only with Development Mode enabled. Adding any of these to a real settings page will now draw a working control instead of a blank space.
+- **Extended the offline checks to 527 for the panel and 186 deliberately broken versions**, covering the border's layering, the combat queue, the keyboard, confirmations and refusals, the new control types and slider dragging. Five separate faults in the test scaffolding itself were found and fixed along the way, including one that had made every slider drag untestable. None of this emulates rendering, taint or protected execution in the game.
+
+### Access and known limits
+
+- Tested in game on Retail, over a written checklist covering the window, the combat queue, confirmations, the keyboard, previews and a regression sweep. **Not yet tested on Forever**, and the new control types have not been exercised in game since the page for them was added.
+- A change queued during combat is not saved anywhere until it is applied, so reloading the interface mid-combat discards it.
+- Typing to search works while the keyboard is being used to walk the window, which is also when letters stop reaching the game, exactly as they do when any text box has focus. Press Escape to hand the keyboard back.
+- Each theme still wears the same bronze casing; per-theme, per-class and per-race window art remains deferred.
+
+## 5.8.0-JuNNeZ (2026-09-22) - Quick Start, Truer Previews and Chattynator
+
+### Highlights
+
+- **Chattynator's editbox position setting works again.** AzeriteUI re-anchored the chat input line under its own chat window on every login and reload, overriding Chattynator's choice to put it at the top. With Chattynator enabled, AzeriteUI now leaves chat alone, as it already does for Prat, ls_Glass and BigInputBox. That also stops AzeriteUI from fading out the chat menu, channel and voice buttons Chattynator places in its own button bar, and from blanking and resizing the editbox artwork that Chattynator's Blizzard skin uses.
+- **`/az` now opens on Quick Start.** A new first page in the Setup band gathers ten of the settings that change the most, from Explorer Mode and the action bars to nameplates, incoming heals and chat fading. Each one is still on its own page as well, and settings your client or character cannot use are left out.
+- **Everything you have changed, in one list.** When any setting differs from its default, the header count (for example "349 settings, 12 changed") becomes a link. Click it to see every changed setting grouped by page and section; resetting one removes it from the list, and clicking the count again takes you back. The change markers and the count now update as soon as you change something, not the next time the panel opens.
+- **Live previews glow the frames a setting actually changes.** Settings shared between frames used to flash the player frame. Incoming heal and absorb settings now glow every visible health bar, Color Cast Spell Text By State glows the target frame and nameplates, and page-wide action bar settings such as Hide Hotkeys glow every bar. Explorer Mode's timing and conditions glow the elements it fades, and nameplate size settings pick a plate of the right kind. When several frames glow, the footer counts them.
+- **When nothing on screen can show a change, the footer says why.** Show Blizzard Raid Bar explains that the bar only appears in a party or raid, and Cast action keybinds on key down explains that it changes key presses rather than looks. Tooltip, world map, game menu and bag settings are outlined only while that window is open; otherwise the footer asks you to open it.
+
+### Development
+
+- **Audited every setting for what it changes on screen, not where it is saved.** A setting records which profile stores it. For shared unit frame, action bar and Explorer Mode settings, that pointed the preview at one representative frame. The audit produced a table giving each such setting an exact frame, a family of frames or an explanation. A setting added later without an entry previews nothing rather than the player frame. Nameplate previews read only the flags the nameplate code already sanitises, never protected unit data.
+- **Built pages gathered from settings on other pages.** Quick Start and the changed list draw each row from the setting's real location, with its own control, change marker and reset, and gather again on every refresh, so a reset setting drops out at once. Only the page that changed is recounted, so dragging a slider does not recount the whole panel.
+- **Extended the offline checks.** The panel checks now cover the preview table (failing if an entry names a setting that no longer exists or drifts from Explorer Mode's own list), explanations fitting the footer at the smallest window, both new pages against the real Retail and Forever option tables, and live counts. Deliberately broken versions confirm the checks catch regressions. A new check covers the chat addon exclusion. None of this emulates rendering or protected execution in WoW.
+
+### Access and known limits
+
+- Everything in this release is verified against source and offline checks only; nothing is confirmed in game yet. The Quick Start selection may still change.
+- With Chattynator enabled, AzeriteUI's Chat options (fading and message timing) no longer apply and are left out of Quick Start; use Chattynator's own settings. Explorer Mode's chat fading does not reach Chattynator windows.
+- Chattynator's social (Quick Join) button may still be hidden, because AzeriteUI hides Blizzard's micro buttons by default. Turning on **Action Bars -> Micro Menu -> Show Blizzard's Micro Menu** should bring it back; this is untested.
+
+
+## 5.7.2-JuNNeZ (2026-09-22) - Forever Combo Points, Take Two
+
+### Highlights
+
+- **Forever Rogues and Druids now actually see their combo points.** Forever hands combo points to addons as hidden ("secret") values, even out of combat, and AzeriteUI read them as zero, so the display never appeared. The game now fills the points directly: filled points are bright, empty sockets half-faded, the display is hidden with no points, and a full set still fades after combat unless **Unit Frames -> Class Power -> Show Full Class Power Out of Combat** is on. Retail is unchanged.
+
+### Development
+
+- A player's `/dump` showed 5.7.1 had the cause wrong: the count was correct but secret, not zero. Each point now takes the secret value through its own range, and visibility comes from Blizzard's curve-based percent API, so addon code never reads or compares the number.
+- Added an offline test that runs the real class power code against a stand-in secret value that fails on any arithmetic or comparison, plus deliberate-break checks proving each part of the fix is covered and Retail keeps its old path.
+
+### Access and known limits
+
+- Verified offline only; not yet confirmed in game.
+- With Class Power Click-Through turned off, the invisible zero-point display still blocks clicks in its area.
+
+
+## 5.7.1-JuNNeZ (2026-09-21) - Forever Combo Points
+
+### Highlights
+
+- **Forever Rogues and Druids now see their combo points.** Forever keeps classic combo points on the target, and the display was reading them the Retail way, so it always saw zero and stayed hidden. It now reads the points on your current target and updates when you change target. Retail is unchanged.
+
+### Access and known limits
+
+- Fixed from Blizzard's Forever interface source and a player report; not yet confirmed in game.
+
+
+## 5.7.0-JuNNeZ (2026-09-21) - New Options, Predictions and Forever Fixes
+
+### Highlights
+
+- **The new options panel now opens with `/az`.** It includes search, grouped navigation, changed-setting markers and individual resets. `/az new` remains an alias, `/az classic` keeps the previous skinned window, and `/az legacy` opens stock Ace3.
+- **Changed frame settings briefly identify their live frame with a golden glow.** The preview never moves, resizes, shows or hides the target. When no usable frame exists, the panel explains that in its footer instead of drawing a simulated frame.
+- **Incoming heals and absorbs now use shaped overlays that fit AzeriteUI health bars.** Under `/az` -> Unit Frames -> Incoming Heals and Absorbs, incoming heals, overheal cues, damage absorbs and healing absorbs can be controlled independently. Damage absorbs can show their total size or follow current health and incoming healing.
+- **Forever Druids can see combo points without a specific rank of Shred.** Cat Form's Energy now gates the display on Forever, while Retail keeps its existing Shred requirement.
+- **Forever's day/night indicator has two artwork themes.** Right-click the minimap indicator to choose between the existing Sky scenes and the supplied Sun & Moon artwork, alongside its saved distance control.
+- **Forever nameplate interrupt colors recognize classic spell IDs and ranks.** Pummel, Kick, Silence, Earth Shock, Counterspell and pet Spell Lock use a Forever-specific resolver; Retail remains unchanged.
+
+### Development
+
+- **Moved the custom panel from preview to the normal settings route while preserving both fallbacks.** Opening, closing and refreshing cover the new panel, retained window and stock dialog. The live-frame resolver handles numbered action bars, Explorer Mode elements, shared unit-frame settings and active AzeriteUI nameplates, with mutation-tested failure paths.
+- **Built an addon-owned health-prediction renderer around Blizzard's native measurement widgets.** Fixed shaped artwork is revealed by masks while oUF retains event and lifecycle ownership, avoiding addon arithmetic on protected unit values. Separate caches preserve existing numeric absorb text and target-layout behavior.
+- **Expanded client-specific regression coverage.** The panel, prediction geometry, Diel themes, real Retail and Forever option tables, client capability gates and deliberately broken variants are checked offline. Those checks do not emulate protected execution or GPU rendering in WoW.
+
+### Access and known limits
+
+- The retained options window remains at `/az classic`; deleting it is deferred by maintainer choice.
+- Some policy settings do not own one visible frame. `Show Blizzard Raid Bar` and `Color Cast Spell Text By State`, for example, currently glow the player frame as the shared Unit Frames representative. More precise targets or explanatory previews are planned.
+- Health-prediction rendering received live iteration for shield proportions, but the final overheal option, all frame families, combat behavior and Forever rendering still need broader in-game coverage.
+- The Forever Druid combo-point gate and classic interrupt resolver pass offline checks but still need live class/rank testing. Forever action dragging, custom flyouts and Clique click-casting remain unavailable.
+
+
+## 5.6.0-JuNNeZ (2026-09-20) - Forever and the New Options Panel
+
+### Highlights
+
+- **Try the new options panel with `/az new`.** Search across settings, browse grouped pages and sections, and see which supported settings differ from their defaults, with individual reset controls.
+- **Make the panel your own.** Open `/az new` -> Settings -> Appearance for themes, background opacity, scale and position reset. Settings -> Changelog shows recent release notes in game.
+- **Forever action bars and group frames work around the beta's broken secure execution.** Adds fallback paths for bar paging, visibility, player aura switching and party/raid frame setup, and avoids the startup probe that generated a Blizzard error.
+- **Forever's cog-wheel menu respects character unlocks** and uses a compatible open/close path. The objective tracker also uses the beta-compatible visibility path.
+- **A day/night indicator for the Forever minimap.** Drag it around the ring, right-click to adjust its distance, or turn it off under `/az` -> Minimap -> Day and Night Indicator to restore Blizzard's indicator.
+
+### Development
+
+- **Built the new panel's controls and layout system around the existing settings.** The preview draws its own sliders, switches, menus and pages while sharing the same settings tables and profiles with the classic dialog. The layout work also handles wrapped help text and recalculates page spacing when the window is resized.
+- **Traced Forever's startup errors to Blizzard's secure execution and developed alternate paths.** Bar paging and visibility use Blizzard's native state drivers, while group-frame setup requested during combat waits until combat ends. Retail retains its existing secure path; the Forever workaround has the limitations listed below.
+- **Developed and refined the minimap's day/night presentation.** New sun and moon artwork sits in an AzeriteUI housing, with saved placement, distance adjustment, tooltips and an option to restore Blizzard's indicator.
+- **Added regression checks for the panel and both clients.** Tests exercise the real settings tables, navigation, controls, compatibility gates and day/night behavior. Deliberately broken versions were also tested to confirm that the checks detect regressions; these offline checks do not replace in-game testing.
+
+### Access and known limits
+
+- `/az` keeps the existing window; `/az classic` opens the stock Ace3 dialog. The new panel is an opt-in preview; later panel phases, including migration of `/az`, are deferred. Change frame settings outside combat.
+- On the current Forever beta, action drag-and-drop, custom flyouts and Clique click-casting remain unavailable. Newly created group frames during combat finish setup after combat ends.
+- Offline checks passed for both clients. Live `/reload`, combat and visual regression testing of this combined release is still needed.
+
+
+## 5.5.0-JuNNeZ (2026-09-19) - Retail and Forever
+
+### Highlights
+
+- **One download for Retail and WoW Forever.** Adds the Forever beta load entry alongside Retail 12.1, with automatic client detection.
+- **Settings match your client.** Forever omits arena frames, archaeology, the vehicle-seat display, specialization inspection and Retail-only class resources. Rogue and Druid combo points remain available. Unsupported settings are hidden in `/az`.
+- **The cog-wheel menu follows the client.** Forever includes its Spellbook, Talents and Legacy buttons, while entries disabled by the game are omitted.
+- **Shared UI compatibility fixes** keep modern aura safety, keybinding and dropdown behavior active on Forever despite its lower interface number.
+
+Forever support is new and has passed offline checks; in-game beta testing is still needed.
+
+
+## 5.4.13-JuNNeZ (2026-09-17) - Friendly Names Closer to Their Heads
+
+### Fixed
+
+- **Friendly player names sit just above the character again.** With names only turned on, player
+  names floated well above heads, as if the hidden health bar and castbar still took up room. They
+  now sit just over the head, and a bigger Friendly name size (%) makes the name grow upwards
+  instead of down over the character.
+  `/az` -> Nameplates -> Friendly Players -> Use names only for friendly players.
+- **Mailbox and other object names no longer show up oversized.** They could appear at the larger
+  friendly player name size when their nameplate had last shown a friendly player's name.
+
+
+## 5.4.12-JuNNeZ (2026-09-15) - An Aura Toggle for Raid Frames (5)
+
+### Added
+
+- **Raid Frames (5) can now hide their aura row.** Since 5.4.11 the buffs you can apply and the
+  debuffs you can dispel stay on these frames through combat, with no way to turn them off. Show
+  Auras is on by default, so nothing changes unless you switch it off. Blizzard's boss mechanic icons
+  in the middle of the health bar still show either way.
+  `/az` -> Unit Frame Settings -> Raid Frames (5) -> Show Auras.
+
+
+## 5.4.11-JuNNeZ (2026-09-14) - Party Auras That Last Through Combat
+
+### Fixed
+
+- **Party frame auras no longer vanish the moment combat starts.** Heal-over-time spells such as
+  Rejuvenation, Regrowth and Lifebloom, along with the other buffs and debuffs on your party members,
+  disappeared from the party frames as soon as a fight began and came back once it ended. The game no
+  longer lets addons read aura data during combat, so the party aura row now uses the same
+  game-driven aura display as the player and target frames, which keeps updating mid fight. Your own
+  buffs are drawn first.
+- **Raid Frames (5) get the same fix.** They show the buffs you can apply and the debuffs you can
+  dispel, in and out of combat.
+- **"Player / Self Buffs" and "Other Temporary Buffs" now split by who cast the buff.** With only
+  "Player / Self Buffs" on, buffs other players put on you no longer slip in; with only "Other
+  Temporary Buffs" on, those buffs now show instead of being hidden.
+  `/az` -> Unit Frame Settings -> Player -> Player Aura Row, with Use AzeriteUI Stock Behavior off.
+
+### Changed
+
+- **The Party Aura Row options now pick from the game's own aura categories.** Stock behavior shows
+  your own castable buffs, dispellable, boss and other debuffs, and externals and raid buffs from
+  other players. The custom toggles switch those categories on and off as before. "Show Short Helpful
+  Buffs" on its own keeps your buffs to under a minute and "Show Other Short Debuffs" keeps other
+  debuffs to about five minutes; stacks no longer count as short, and other players' buffs are no
+  longer dimmed. `/az` -> Unit Frame Settings -> Party Frames -> Party Aura Row.
+
+### Known limitations
+
+- The dispellable-debuff glow around a party frame and the priority-debuff icon in its middle still
+  read aura data the old way, so they go blank during combat.
+- Where the game keeps aura data secret, in dungeons and raids, changing Aura Size or Debuff Size %
+  only reaches aura icons drawn after the change.
+
+### Internal
+
+- `/azdebug aurasnapshot party|raid5` and `/azdebug unitmenu [trace on|off]`, for the combat aura
+  and raid right-click menu reports.
+
+
+## 5.4.10-JuNNeZ (2026-09-13) - When Another Addon Styles the Game Menu
+
+### Added
+
+- **AzeriteUI now asks what to do when another addon restyles the game menu too.** The menu you
+  open with Escape could end up with two addons' looks stacked on top of each other. If W2UI,
+  GW2 UI, FeelUI, DiabolicUI3, AddOnSkins or ConsolePort's menu is styling it as well, AzeriteUI
+  asks the first time you open the menu in a session:
+  - **AzeriteUI** keeps AzeriteUI's look and turns the other addon off for this character.
+  - **The other addon's name** keeps its look and turns AzeriteUI's game menu style off.
+  - **Blizzard** turns both off and gives you the plain game menu.
+  - **Decide Later** changes nothing, and neither does pressing Escape.
+
+  Every choice reloads the interface. AzeriteUI and Blizzard switch the whole other addon off, not
+  just its game menu, and you can turn it back on from the AddOns list. If you want AzeriteUI's menu
+  but the rest of the other addon, some of these addons can switch their own game menu styling off
+  in their settings instead - AzeriteUI does not ask while that is off.
+- **Change the game menu style whenever you like.** `/az` -> Game Menu -> Game Menu Style lists the
+  same choices and asks before reloading.
+
+
+## 5.4.9-JuNNeZ (2026-09-12) - A Dismount Button You Can Place
+
+### Added
+
+- **The dismount button can now have a position of its own.** The round exit icon that shows up
+  while you are mounted, in a vehicle or on a taxi normally rides the upper left of the minimap
+  ring. Turn this on and it comes off the map, so you can put it anywhere on screen - useful if you
+  have moved the minimap, replaced it with another addon's, or turned this one's minimap off
+  entirely and been left with a button floating where the map used to be. Switch it back off and the
+  button returns to the ring.
+  `/az` -> Action Bars -> Dismount Button -> Use a custom position, then `/lock` to drag it into
+  place and the mouse wheel over it to resize it.
+- **A dismount button you have placed yourself no longer hides with the minimap.** Auto-hide takes
+  the button along only while it is still sitting on the map ring, which was the point of hiding it
+  in 5.4.8. Once it is somewhere else on screen it stays visible and clickable in arenas,
+  battlegrounds and anywhere else the map hides itself - so you keep your click to dismount or to
+  leave a battleground vehicle.
+
+
 ## 5.4.8-JuNNeZ (2026-09-09) - The Dismount Button and the Empty Slots
 
 ### Fixed
