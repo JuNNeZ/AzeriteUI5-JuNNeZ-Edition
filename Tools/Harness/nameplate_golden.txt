@@ -2137,6 +2137,33 @@ Plate15 (friendly minion)
   native auras shown@1 unit=nameplate15 enabled=true pt=CENTER>Auras:CENTER(0,0)
   power shown@0; prediction hidden@0
   softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
+== dead mobs
+Plate16 (dead mob)
+  unit=nil obj=nil npc=nil prd=nil widgetsOnly=nil canAttack=nil
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.804,0.18,0.141 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=1,0.937,0.663; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate16 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
+Plate17 (dead player)
+  unit=nil obj=nil npc=nil prd=nil widgetsOnly=nil canAttack=nil
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.898,0.612,0.431 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate17 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
 == your target's floating name
   cvars UnitNameFocused=1
 == the game's Nameplate Size followed

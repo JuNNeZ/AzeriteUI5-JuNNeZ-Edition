@@ -180,7 +180,7 @@ do
 	check(b and b.attributes.type == nil and b.scripts.OnClick ~= nil, "falls back to opening the bags itself")
 end
 
-for _, key in ipairs({ "azerite", "legacy", "hunter", "mage", "paladin" }) do
+for _, key in ipairs({ "azerite", "legacy", "hunter", "mage", "paladin", "druid" }) do
 	local m = Load({ theme = key, profile = { enabled = false } })
 	local b = m.bagButton
 	check(b.Icon.texture:find("ThemeBagIcons\\"..key..".tga", 1, true), "real bag button theme icon: "..key)

@@ -326,6 +326,7 @@ local NamePlate_OnHide = function(self)
 	self.isFriendlyAssistableNPC = nil
 	self.isMinion = nil
 	self.nameplateShowsWidgetsOnly = nil
+	self.__AzeriteUI_Dead = nil
 	if (self.Castbar) then
 		ns.API.ClearInterruptCastBarRefresh(self.Castbar)
 		NamePlate_ClearInterruptState(self.Castbar)

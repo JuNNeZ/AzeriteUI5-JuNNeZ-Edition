@@ -232,6 +232,11 @@ HUD.GetConfig = function(self, name, original)
 			-- Here it sits on the left casing, clear of the bars and text.
 			config.GroupRolePosition, config.GroupRoleSize = { "LEFT", -34, 0 }, { 28, 28 }
 			config.GroupRoleBackdropSize, config.GroupRoleIconSize = { 54, 54 }, { 24, 24 }
+			-- Leader and phase above the bar's top left (the raid marker has the top
+			-- right); the portrait threat glow is already blanked by Bars().
+			config.LeaderIndicatorPosition, config.LeaderIndicatorSize = { "TOPLEFT", 4, 12 }, { 18, 18 }
+			config.PhaseIndicatorPosition, config.PhaseIndicatorSize = { "TOPLEFT", 24, 12 }, { 18, 18 }
+			config.SummonIndicatorPosition, config.SummonIndicatorSize = { "CENTER", 0, 0 }, { 28, 28 }
 		elseif (config.GroupRolePosition and name == "RaidFrames") then
 			-- Azerite's plate hangs 25px outside the raid frame, which on Legacy's
 			-- 76px bars is the next frame's casing. 3.x showed the bare icon; here
@@ -450,9 +455,10 @@ HUD.Command = function(self, input)
 	local enabled = command == "legacy"
 	local char = ns.db and ns.db.char
 	if (not char) then return false end
-	local changed = (char.legacyHUD == true) ~= enabled or (not enabled and (char.hunterPreview or char.magePreview or char.paladinPreview))
+	local changed = (char.legacyHUD == true) ~= enabled or (not enabled and (char.hunterPreview or char.magePreview or char.paladinPreview or char.druidPreview))
 	char.legacyHUD = enabled
 	char.hunterPreview, char.magePreview, char.paladinPreview = false, false, false
+	char.druidPreview = false
 	if (changed) then Reload() end
 	return true
 end

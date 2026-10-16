@@ -153,6 +153,33 @@ ns.RegisterConfig("PartyFrames", {
 	GroupRoleHealerTexture = GetMedia("grouprole-icons-heal"),
 	GroupRoleTankTexture = GetMedia("grouprole-icons-tank"),
 
+	-- Leader / Assistant, Summon, Phase, Threat (FixLog 2026-10-16)
+	-----------------------------------------
+	-- The party-indicator-* textures are TEMPORARY placeholders from
+	-- Tools/Build-PartyIndicatorPlaceholders.py; the brief for the final art is
+	-- Docs/Party Indicator Icons Brief.md. Same names and sizes, no code change.
+	-- Leader and assistant share the role plate's top right edge (never both).
+	LeaderIndicatorPosition = { "TOP", 24, -4 },
+	LeaderIndicatorSize = { 22, 22 },
+	LeaderIndicatorTexture = GetMedia("party-indicator-leader"),
+	AssistantIndicatorTexture = GetMedia("party-indicator-assistant"),
+	-- Over the portrait, like the ready check and resurrect icons. White art,
+	-- tinted per status.
+	SummonIndicatorPosition = { "CENTER", 0, -7 + 10 },
+	SummonIndicatorSize = { 32, 32 },
+	SummonIndicatorTexture = GetMedia("party-indicator-summon"),
+	SummonPendingColor = { 180/255, 120/255, 255/255 },
+	SummonAcceptedColor = { 80/255, 220/255, 80/255 },
+	SummonDeclinedColor = { 220/255, 60/255, 60/255 },
+	-- On the portrait ring's lower right.
+	PhaseIndicatorPosition = { "CENTER", 32, -26 },
+	PhaseIndicatorSize = { 22, 22 },
+	PhaseIndicatorTexture = GetMedia("party-indicator-phase"),
+	-- A glow behind the portrait border, coloured by Colors.threat. Same box as the border.
+	PortraitThreatPosition = { "BOTTOM", 0, -38 },
+	PortraitThreatSize = { 194, 194 },
+	PortraitThreatTexture = GetMedia("party_portrait_threat"),
+
 	-- Combat Feedback Text
 	-----------------------------------------
 	CombatFeedbackAnchorElement = "Portrait",

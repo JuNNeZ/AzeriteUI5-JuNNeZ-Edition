@@ -67,6 +67,11 @@ local Label = function(key)
 	if (key == "hunter") then return ClassName("HUNTER", "Hunter") end
 	if (key == "paladin") then return ClassName("PALADIN", "Paladin") end
 	if (key == "mage") then return ClassName("MAGE", "Mage") end
+	if (key == "druid") then return ClassName("DRUID", "Druid") end
+	if (key == "moonwell") then return "Moonwell+" end
+	if (key == "wildheart") then return "Wildheart" end
+	if (key == "moonvein") then return "Moonvein" end
+	if (key == "dreamsap") then return "Dreamsap" end
 	if (key == "theme") then return L["The theme's own"] end
 	return _G.NONE or "None"
 end
@@ -327,6 +332,60 @@ local GeneratePaladin = function(order)
 	}
 end
 
+local GenerateDruid = function(order)
+	local Druid = ns.DruidTheme
+	if (not Druid) then return end
+	return {
+		name = WIP("druid", Label("druid")), order = order, type = "group", inline = true,
+		hidden = function()
+			return Theme() ~= "druid" and Effects():GetCrystalEffect() ~= "druid" and Effects():GetOrbEffect() ~= "druid"
+		end,
+		args = {
+			crystal = { name = L["Crystal effect"].." - "..L["Energy strength"], order = 1,
+				type = "range", width = "full", min = 0, max = 1, step = .05, isPercent = true,
+				hidden = function() return Effects():GetCrystalEffect() ~= "druid" end,
+				get = function() return Druid:GetEffectStrength("Crystal") end,
+				set = function(_, value) Druid:SetEffectStrength("Crystal", value) end },
+			orb = { name = L["Orb effect"].." - "..L["Energy strength"], order = 2,
+				type = "range", width = "full", min = 0, max = 1, step = .05, isPercent = true,
+				hidden = function() return Effects():GetOrbEffect() ~= "druid" end,
+				get = function() return Druid:GetEffectStrength("Orb") end,
+				set = function(_, value) Druid:SetEffectStrength("Orb", value) end }
+		}
+	}
+end
+
+local GenerateMoonwell = function(order)
+	local Slosh = ns.MoonwellSlosh
+	if (not Slosh) then return end
+	return {
+		name = "Moonwell+ (WIP)", order = order, type = "group", inline = true,
+		hidden = function() return Effects():GetOrbEffect() ~= "moonwell" end,
+		args = {
+			strength = { name = L["Energy strength"], order = 1, type = "range", width = "full",
+				min = 0, max = 1, step = .05, isPercent = true,
+				get = function() return Slosh:GetStrength() end,
+				set = function(_, value) Slosh:SetStrength(value) end }
+		}
+	}
+end
+
+local GenerateWildheart = function(order, flavour)
+	flavour=flavour or "wildheart"
+	local Crystal = ns.WildheartCrystal
+	if (not Crystal) then return end
+	return {
+		name = Label(flavour).." (WIP)", order = order, type = "group", inline = true,
+		hidden = function() return Effects():GetCrystalEffect() ~= flavour end,
+		args = {
+			strength = { name = L["Energy strength"], order = 1, type = "range", width = "full",
+				min = 0, max = 1, step = .05, isPercent = true,
+				get = function() return Crystal:GetStrength(flavour) end,
+				set = function(_, value) Crystal:SetStrength(value, flavour) end }
+		}
+	}
+end
+
 local GenerateMage = function(order)
 	local Mage = ns.MageCrystalPreview
 	if (not Mage) then return end
@@ -472,6 +531,11 @@ local GenerateOptions = function()
 			},
 			hunter = GenerateHunter(10),
 			paladin = GeneratePaladin(20),
+			druid = GenerateDruid(22),
+			moonwell = GenerateMoonwell(23),
+			wildheart = GenerateWildheart(24),
+			moonvein = GenerateWildheart(24.1, "moonvein"),
+			dreamsap = GenerateWildheart(24.2, "dreamsap"),
 			mageTheme = GenerateMageTheme(25),
 			mage = GenerateMage(30),
 			tests = GenerateTests()

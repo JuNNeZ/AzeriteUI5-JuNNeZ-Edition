@@ -147,13 +147,13 @@
     },
     {
       "path": "Assets/Mage/orb_case_hi.tga",
-      "sha256": "21bc456e796f8c6eb2296b3796e7fdf925251fd4e9f2ba3a584a72c0f8f7b90d",
-      "bytes": 262162
+      "sha256": "9d242ff877f553d4529e61c169c8f2bc87133f49112a60160233211b649b77b9",
+      "bytes": 262188
     },
     {
       "path": "Assets/Mage/orb_case_low.tga",
-      "sha256": "ba875a28b912c7082bc1725985572672ac48c6016845a5fb45fe694833d8e37f",
-      "bytes": 262162
+      "sha256": "6942655cde12006a8bcf2913ec78246fd5fdc96039512aa08fc22fef4f89ec83",
+      "bytes": 262188
     },
     {
       "path": "Assets/Mage/ornament-aluneth-glow.tga",

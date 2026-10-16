@@ -1,0 +1,2049 @@
+{
+  "theme": "Druid - Roots beneath the Moon",
+  "status": "Installed Druid WIP art and Lite+ effects; live validation pending",
+  "concept": "../concept-sheet-v2.png",
+  "conceptSha256": "79a4a1dd854241ca62a7c31468da0b11411a1cbea0334cbe97afc995619b1e37",
+  "casings": {
+    "hp_cap_case": {
+      "source": "hp_cap_case.png",
+      "canvas": [
+        1024,
+        256
+      ],
+      "registration": {
+        "scale": 0.3973509933774834,
+        "offset": [
+          217,
+          68
+        ],
+        "size": [
+          589,
+          120
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0005517789352873665,
+        "missingNativeSurfaceFraction": 0.09375373461339283
+      }
+    },
+    "hp_mid_case": {
+      "source": "hp_mid_case.png",
+      "canvas": [
+        1024,
+        256
+      ],
+      "registration": {
+        "scale": 0.48470209339774556,
+        "offset": [
+          211,
+          78
+        ],
+        "size": [
+          602,
+          104
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.02480658234066069
+      }
+    },
+    "hp_low_case": {
+      "source": "hp_mid_case.png",
+      "canvas": [
+        1024,
+        256
+      ],
+      "registration": {
+        "scale": 0.48470209339774556,
+        "offset": [
+          211,
+          78
+        ],
+        "size": [
+          602,
+          104
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.0252760736196319
+      }
+    },
+    "hp_boss_case": {
+      "source": "hp_boss_case.png",
+      "canvas": [
+        1024,
+        256
+      ],
+      "registration": {
+        "scale": 0.43956043956043955,
+        "offset": [
+          94,
+          69
+        ],
+        "size": [
+          837,
+          120
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 4.5929849809391124e-05,
+        "missingNativeSurfaceFraction": 0.06009499161002247
+      }
+    },
+    "hp_critter_case": {
+      "source": "hp_critter_case_hi.png",
+      "canvas": [
+        128,
+        128
+      ],
+      "registration": {
+        "scale": 0.09978991596638656,
+        "offset": [
+          17,
+          29
+        ],
+        "size": [
+          95,
+          80
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.08427152317880794
+      }
+    },
+    "hp_critter_case_hi": {
+      "source": "hp_critter_case_hi.png",
+      "canvas": [
+        128,
+        128
+      ],
+      "registration": {
+        "scale": 0.11029411764705882,
+        "offset": [
+          14,
+          24
+        ],
+        "size": [
+          105,
+          88
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.040222319730876116
+      }
+    },
+    "cast_back": {
+      "source": "cast_back.png",
+      "canvas": [
+        256,
+        128
+      ],
+      "registration": {
+        "scale": 1.0,
+        "offset": [
+          33,
+          39
+        ],
+        "size": [
+          184,
+          48
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.01328680713998121,
+        "construction": "uniform source rail height; two shortened plain runs; both whole tips and centre bud retained"
+      }
+    },
+    "cast_back_spiked": {
+      "source": "cast_back_spiked.png",
+      "canvas": [
+        256,
+        128
+      ],
+      "registration": {
+        "scale": 1.0,
+        "offset": [
+          34,
+          28
+        ],
+        "size": [
+          183,
+          59
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.08762480294272201,
+        "construction": "uniform source rail height; two shortened plain runs; both whole tips and centre bud retained"
+      }
+    },
+    "cast_back_wooden": {
+      "source": "cast_back.png",
+      "canvas": [
+        256,
+        128
+      ],
+      "registration": {
+        "scale": 1.0,
+        "offset": [
+          34,
+          39
+        ],
+        "size": [
+          183,
+          48
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.014278017241379311,
+        "construction": "uniform source rail height; two shortened plain runs; both whole tips and centre bud retained"
+      }
+    },
+    "pw_crystal_case": {
+      "source": "pw_crystal_case.png",
+      "canvas": [
+        256,
+        128
+      ],
+      "registration": {
+        "scale": 0.12938596491228072,
+        "offset": [
+          39,
+          29
+        ],
+        "size": [
+          177,
+          62
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.20661025067858854
+      }
+    },
+    "pw_crystal_case_low": {
+      "source": "pw_crystal_case.png",
+      "canvas": [
+        256,
+        128
+      ],
+      "registration": {
+        "scale": 0.12938596491228072,
+        "offset": [
+          39,
+          28
+        ],
+        "size": [
+          177,
+          62
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.171740569159497
+      }
+    },
+    "orb_case_hi": {
+      "source": "orb_case_hi.png",
+      "canvas": [
+        256,
+        256
+      ],
+      "registration": {
+        "scale": 0.20845624385447395,
+        "offset": [
+          30,
+          13
+        ],
+        "size": [
+          195,
+          212
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.08236868517898963
+      }
+    },
+    "orb_case_low": {
+      "source": "orb_case_hi.png",
+      "canvas": [
+        256,
+        256
+      ],
+      "registration": {
+        "scale": 0.20747295968534907,
+        "offset": [
+          30,
+          14
+        ],
+        "size": [
+          194,
+          211
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.07591093117408906
+      }
+    },
+    "orb-border": {
+      "source": "minimap-border.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "registration": {
+        "scale": 0.45429362880886426,
+        "offset": [
+          92,
+          92
+        ],
+        "size": [
+          327,
+          328
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.11836939651237104,
+        "missingNativeSurfaceFraction": 0.07930348258706468
+      }
+    },
+    "portrait_frame_hi": {
+      "source": "portrait_frame_hi.png",
+      "canvas": [
+        256,
+        256
+      ],
+      "registration": {
+        "scale": 0.18830525272547077,
+        "offset": [
+          45,
+          37
+        ],
+        "size": [
+          164,
+          190
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil"
+      }
+    },
+    "portrait_frame_lo": {
+      "source": "portrait_frame_hi.png",
+      "canvas": [
+        256,
+        256
+      ],
+      "registration": {
+        "scale": 0.18929633300297324,
+        "offset": [
+          44,
+          37
+        ],
+        "size": [
+          164,
+          191
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil"
+      }
+    },
+    "party_portrait_border": {
+      "source": "party_portrait_border.png",
+      "canvas": [
+        256,
+        256
+      ],
+      "registration": {
+        "scale": 0.2119487908961593,
+        "offset": [
+          53,
+          53
+        ],
+        "size": [
+          149,
+          148
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.0693865093091871
+      }
+    },
+    "actionbutton-border": {
+      "source": "actionbutton-border.png",
+      "canvas": [
+        256,
+        256
+      ],
+      "registration": {
+        "scale": 0.21996615905245348,
+        "offset": [
+          63,
+          64
+        ],
+        "size": [
+          130,
+          129
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.14957055214723927
+      }
+    },
+    "actionbutton-border-square": {
+      "source": "actionbutton-border-square.png",
+      "canvas": [
+        256,
+        256
+      ],
+      "registration": {
+        "scale": 0.20747422680412372,
+        "offset": [
+          48,
+          48
+        ],
+        "size": [
+          161,
+          161
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.12271186440677966
+      }
+    },
+    "actionbutton-border-square-rounded": {
+      "source": "actionbutton-border-square-rounded.png",
+      "canvas": [
+        256,
+        256
+      ],
+      "registration": {
+        "scale": 0.20492866407263294,
+        "offset": [
+          49,
+          55
+        ],
+        "size": [
+          158,
+          152
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.14705882352941177
+      }
+    },
+    "minimap-border": {
+      "source": "minimap-border.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "registration": {
+        "scale": 0.4155124653739612,
+        "offset": [
+          108,
+          106
+        ],
+        "size": [
+          299,
+          300
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.07813355908570291
+      }
+    },
+    "point_plate": {
+      "source": "point_plate.png",
+      "canvas": [
+        128,
+        128
+      ],
+      "registration": {
+        "scale": 0.11049723756906077,
+        "offset": [
+          34,
+          34
+        ],
+        "size": [
+          60,
+          60
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.0
+      }
+    },
+    "config_button": {
+      "source": "config_button.png",
+      "canvas": [
+        128,
+        128
+      ],
+      "registration": {
+        "scale": 0.11764705882352941,
+        "offset": [
+          33,
+          35
+        ],
+        "size": [
+          62,
+          60
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.0
+      }
+    },
+    "config_button_bright": {
+      "source": "config_button.png",
+      "canvas": [
+        128,
+        128
+      ],
+      "registration": {
+        "scale": 0.11385199240986717,
+        "offset": [
+          34,
+          35
+        ],
+        "size": [
+          60,
+          59
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.001219016659894352
+      }
+    },
+    "icon_exit_flight": {
+      "source": "icon_exit_flight.png",
+      "canvas": [
+        128,
+        128
+      ],
+      "registration": {
+        "scale": 0.11553784860557768,
+        "offset": [
+          37,
+          35
+        ],
+        "size": [
+          55,
+          58
+        ],
+        "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+        "paintOutsideNativeFraction": 0.0030354131534569982,
+        "missingNativeSurfaceFraction": 0.007100591715976331
+      }
+    },
+    "border-tooltip": {
+      "source": "border-tooltip.png",
+      "canvas": [
+        512,
+        64
+      ],
+      "registration": {
+        "policy": "eight independent cells with exact native alpha",
+        "cells": [
+          {
+            "scale": 0.18823529411764706,
+            "offset": [
+              6,
+              5
+            ],
+            "size": [
+              16,
+              59
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.24776785714285715
+          },
+          {
+            "scale": 0.1951219512195122,
+            "offset": [
+              42,
+              3
+            ],
+            "size": [
+              16,
+              61
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.14285714285714285
+          },
+          {
+            "scale": 0.18292682926829268,
+            "offset": [
+              23,
+              7
+            ],
+            "size": [
+              15,
+              57
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.24879807692307693
+          },
+          {
+            "scale": 0.2057877813504823,
+            "offset": [
+              26,
+              0
+            ],
+            "size": [
+              16,
+              64
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.14166666666666666
+          },
+          {
+            "scale": 0.19626168224299065,
+            "offset": [
+              12,
+              22
+            ],
+            "size": [
+              45,
+              42
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.03914590747330961,
+            "missingNativeSurfaceFraction": 0.3393782383419689
+          },
+          {
+            "scale": 0.2048780487804878,
+            "offset": [
+              6,
+              22
+            ],
+            "size": [
+              48,
+              42
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0011376564277588168,
+            "missingNativeSurfaceFraction": 0.2627484874675886
+          },
+          {
+            "scale": 0.22279792746113988,
+            "offset": [
+              6,
+              0
+            ],
+            "size": [
+              58,
+              43
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.07875894988066826
+          },
+          {
+            "scale": 0.2277992277992278,
+            "offset": [
+              0,
+              1
+            ],
+            "size": [
+              59,
+              42
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.06613545816733067
+          }
+        ]
+      }
+    },
+    "border-aura": {
+      "source": "border-tooltip.png",
+      "canvas": [
+        256,
+        32
+      ],
+      "registration": {
+        "policy": "eight independent cells with exact native alpha",
+        "cells": [
+          {
+            "scale": 0.10289389067524116,
+            "offset": [
+              15,
+              0
+            ],
+            "size": [
+              9,
+              32
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.22916666666666666
+          },
+          {
+            "scale": 0.10289389067524116,
+            "offset": [
+              8,
+              0
+            ],
+            "size": [
+              8,
+              32
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.2465277777777778
+          },
+          {
+            "scale": 0.10289389067524116,
+            "offset": [
+              16,
+              0
+            ],
+            "size": [
+              8,
+              32
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.3020833333333333
+          },
+          {
+            "scale": 0.10289389067524116,
+            "offset": [
+              8,
+              0
+            ],
+            "size": [
+              8,
+              32
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.2534722222222222
+          },
+          {
+            "scale": 0.0735930735930736,
+            "offset": [
+              15,
+              16
+            ],
+            "size": [
+              17,
+              16
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.35555555555555557
+          },
+          {
+            "scale": 0.07327586206896551,
+            "offset": [
+              0,
+              17
+            ],
+            "size": [
+              17,
+              15
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.4266666666666667
+          },
+          {
+            "scale": 0.06563706563706563,
+            "offset": [
+              15,
+              4
+            ],
+            "size": [
+              17,
+              13
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.4888888888888889
+          },
+          {
+            "scale": 0.06563706563706563,
+            "offset": [
+              0,
+              5
+            ],
+            "size": [
+              17,
+              12
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.48444444444444446
+          }
+        ]
+      }
+    },
+    "better-blizzard-border-small-alternate": {
+      "source": "border-tooltip.png",
+      "canvas": [
+        512,
+        64
+      ],
+      "registration": {
+        "policy": "eight independent cells with exact native alpha",
+        "cells": [
+          {
+            "scale": 0.1411764705882353,
+            "offset": [
+              40,
+              20
+            ],
+            "size": [
+              12,
+              44
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.33203125
+          },
+          {
+            "scale": 0.14634146341463414,
+            "offset": [
+              12,
+              18
+            ],
+            "size": [
+              12,
+              46
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.28125
+          },
+          {
+            "scale": 0.14634146341463414,
+            "offset": [
+              40,
+              18
+            ],
+            "size": [
+              12,
+              46
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.29296875
+          },
+          {
+            "scale": 0.1518987341772152,
+            "offset": [
+              12,
+              17
+            ],
+            "size": [
+              12,
+              47
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0,
+            "missingNativeSurfaceFraction": 0.267578125
+          },
+          {
+            "scale": 0.1038961038961039,
+            "offset": [
+              40,
+              42
+            ],
+            "size": [
+              24,
+              22
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.14537444933920704,
+            "missingNativeSurfaceFraction": 0.35563380281690143
+          },
+          {
+            "scale": 0.10344827586206896,
+            "offset": [
+              0,
+              43
+            ],
+            "size": [
+              24,
+              21
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.0966183574879227,
+            "missingNativeSurfaceFraction": 0.3908450704225352
+          },
+          {
+            "scale": 0.09266409266409266,
+            "offset": [
+              40,
+              6
+            ],
+            "size": [
+              24,
+              18
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.23214285714285715,
+            "missingNativeSurfaceFraction": 0.6091549295774648
+          },
+          {
+            "scale": 0.09266409266409266,
+            "offset": [
+              0,
+              7
+            ],
+            "size": [
+              24,
+              17
+            ],
+            "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+            "paintOutsideNativeFraction": 0.2937853107344633,
+            "missingNativeSurfaceFraction": 0.6724137931034483
+          }
+        ]
+      }
+    }
+  },
+  "shared": {
+    "nameplate_backdrop": "neutral backing only, no outer frame",
+    "minimap-onebar-backdrop": "shared functional XP/status ring",
+    "minimap-twobars-backdrop": "shared functional XP/status ring",
+    "options-box": "shared neutral control fill/mask"
+  },
+  "inventory": {
+    "Assets/actionbutton-backdrop-square-rounded.tga": {
+      "sha256": "9f8b52f5425caaaca59914c9430a49434cc58106ca287d75734aa5e8a16b7778",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-backdrop-square.tga": {
+      "sha256": "a5af18fd439e700f82bbaf84ad16edee6ccd9fea976a25fb36406138339fbf4e",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-backdrop.tga": {
+      "sha256": "41ca5f0885a333f219ed2a4b452df78610d2c283abe30c481b1aa622307df846",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-border-square-rounded.tga": {
+      "sha256": "70e73f8a643a2c82262dfcc8768a7b7b3126e15ba934f6affb02b5de41e2ee1e",
+      "disposition": "repaint staged"
+    },
+    "Assets/actionbutton-border-square.tga": {
+      "sha256": "fd17a7b0f48903f00583875b2f8b6626120f155e89ef49500167c81e5e75e491",
+      "disposition": "repaint staged"
+    },
+    "Assets/actionbutton-border.tga": {
+      "sha256": "8c2cbc2af6b368127c55b98ce1b21c3b4b87627778c180a351195a20ffde6be6",
+      "disposition": "repaint staged"
+    },
+    "Assets/actionbutton-glow-white.tga": {
+      "sha256": "7444eacf5249616eb675d9aed9e6973ab5afceac767ede0edd2f67b3d0b58ce3",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-mask-circular.tga": {
+      "sha256": "b796600d2c0369f27e98a776bea65c367116f1d074b039e80a205803cd4a2da1",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-mask-square-rounded.tga": {
+      "sha256": "b497f2dc0c83acedb030784f2bf2f3740f687d3bf721bb7d3669a7c7361c7f4a",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-mask-square.tga": {
+      "sha256": "edc88d91ec094fc0b92762888ea2919c58bd4c821887c3b3047c5f18ce187153",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-glow-medium.tga": {
+      "sha256": "5d772247856d32c87fb5de9dd2aa32cf1f530e2ee720d3dd22a23c9a40a6fb63",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-glow-thick.tga": {
+      "sha256": "938272e585cdb62de65421a0d94214314aca71cf598baf658ad9f588419dca68",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-glow-thin.tga": {
+      "sha256": "d58b3cef1c7fd3c169e06282293b16012dbaef9aed5ac7f9b0d0ff026d95dcf2",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-outline-medium.tga": {
+      "sha256": "791697283eb094550e7fa58c2d111eaee38fd36b5d55bb4cef7d57ce9cf48325",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-outline-thick.tga": {
+      "sha256": "4629e37f0474f95ee47b5e1094947b74a6baabaa20044e893ceb0ab971bd3a4b",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-outline-thin.tga": {
+      "sha256": "a267e9068527bbccc0c0b42bd6696a23a8b8fddcec48fcf5a9f7298600ce871c",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-square-glow-medium.tga": {
+      "sha256": "5ce170f209bdbedf72556ae622c59e9a628fd7f1b5cb7fb6dcdd644be6ff2217",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-square-glow-thick.tga": {
+      "sha256": "cff549789ae6df8a890d7855897d8f72ec40258a67db6f70ed9d249158f6fc00",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-square-glow-thin.tga": {
+      "sha256": "f7a5150e33ff511879d459275cbbb7b3fd34c3b8f47f18ea44ba89021c32d245",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-square-outline-medium.tga": {
+      "sha256": "6c0103c3da1e388a3d0dc75cb8f3bc3a10eed76f0ce75f6ea9651531a3367cf7",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-square-outline-thick.tga": {
+      "sha256": "2e0dac7340dec1bb6bd3b7608722db7a807b104ffa64e65076c3568e6cecee69",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-proc-square-outline-thin.tga": {
+      "sha256": "4bfe66a627da8df10814cb32d53d144f02d26202d0c298845d90c277c39cc1dc",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-spellhighlight-square-rounded.tga": {
+      "sha256": "1a33cc4a451479190e21f4a630889b729696120405f73395e78c40329c2164d8",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-spellhighlight-square.tga": {
+      "sha256": "25834c84b9ad77d4c894a2df230b44522bb9fb71ea6a80507e5e42bc6b88753c",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/actionbutton-spellhighlight.tga": {
+      "sha256": "23594bb642ccc90c05f56f5d37176b07f1794e9d3a90deec7e36b68c0f20657a",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/bar-progress.tga": {
+      "sha256": "e2b85afe0d1dbdc4f52ffb8089e5dfde8ad2a78f40eb53ef9e343a79158eeee2",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/bar-small.tga": {
+      "sha256": "103e62f7d1bfea572d7c7339babc8ab72892554ebf52503323cafb4c7dad44cc",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/better-blizzard-border-small-alternate.tga": {
+      "sha256": "aca0a9a57024663023cb72f4109868f911b667ed90c3cb0566cd36c6fd3e71a9",
+      "disposition": "repaint staged"
+    },
+    "Assets/blank.tga": {
+      "sha256": "4c37301881aa33176bb2a967875bb7dceb5c76791754b98e8eb6334de3d0a619",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/border-aura.tga": {
+      "sha256": "6e24970aa04f97669169542842d2fdb7d9ba47f77f35abaf4686665e9793767f",
+      "disposition": "repaint staged"
+    },
+    "Assets/border-glow.tga": {
+      "sha256": "82d623f863965fa4564e74624ffc88782713b22dbac878ca0630712f05dd0ab9",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/border-tooltip.tga": {
+      "sha256": "f99611ade73ba1059cabec070a067d1b27a2a57d24431248f436c4b6310cac13",
+      "disposition": "repaint staged"
+    },
+    "Assets/cast_back.tga": {
+      "sha256": "2cade7ed198ec804bffc5e5a17e93dc1cc1025e82faa44b99993308a4c89e36d",
+      "disposition": "repaint staged"
+    },
+    "Assets/cast_back_outline.tga": {
+      "sha256": "38fbb5184a4eec598dccc720f65c36345f227540007d5da64a3b6dfe1578f397",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/cast_back_spiked.tga": {
+      "sha256": "80fa7a87de00456a017ce6d41f5ef038c4d7d694dcc77b65b2c570323a75faa0",
+      "disposition": "repaint staged"
+    },
+    "Assets/cast_back_wooden.tga": {
+      "sha256": "8a8781320b4be3395c1e293dfe7c058e5c32fd530272449493c0075539d5abb8",
+      "disposition": "repaint staged"
+    },
+    "Assets/cast_bar-absorb.tga": {
+      "sha256": "989acbba07df746ea5764f90e7ee6a69976429158f094e63028690bb9faa5ff1",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/cast_bar-healabsorb.tga": {
+      "sha256": "6eb7441e395cab5446b650f63709edbee865223aff4e261d6acd76f67c4df5c8",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/cast_bar.tga": {
+      "sha256": "5efa3d4416d6b9cf4b93a9c40841fc175a207af1e1ca651dfc1e7bf99c8129f8",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/config_button.tga": {
+      "sha256": "c4960955b6c582a8c9cc80f3daed75462db9b7ee2efae1c5ddbef3a24767134a",
+      "disposition": "repaint staged"
+    },
+    "Assets/config_button_bright.tga": {
+      "sha256": "b0983b402bb3b54244af26ac478f85429ab4fb930cee9bd5f630d48c8fdf5e9f",
+      "disposition": "repaint staged"
+    },
+    "Assets/GoldpawKapow.tga": {
+      "sha256": "da6543ad331ef8ff3df96aefb494a0c8fd3942243abd1558993b642647976834",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/group-finder-eye-blue.tga": {
+      "sha256": "b5a2ce3baf5be9a84503d8651148d3228f479e07ec79fea7666a3d2f952dfce2",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/group-finder-eye-green.tga": {
+      "sha256": "7bdf6805c5e25bd50a3bb2644e00cf7bd1bc53e78b6023e38938c0a1c4b6d24d",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/group-finder-eye-orange.tga": {
+      "sha256": "d5c80dcee14754899244b7710bb13527616db2f01ca211bb8a8c67783bc8f62c",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/group-finder-eye-purple.tga": {
+      "sha256": "a13ff08c05876557b8bb6f6668af16229b7a1c400a214e96950f747bb7425cad",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/group-finder-eye-red.tga": {
+      "sha256": "8f4931988b9c0b4a8f6de90b895ecc5fc30d8beac2a35d05ff5ec60592fe6014",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/grouprole-icons-dps.tga": {
+      "sha256": "8264905f04ca80b4f89b7c23262ecdec9ec7b92d6233f99961007ebc88e4ea1e",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/grouprole-icons-heal.tga": {
+      "sha256": "0b7d3d1d877d30c12d5559936ebc4cfc3afacd92a6ea1a0fb22ed6d31399f400",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/grouprole-icons-tank.tga": {
+      "sha256": "7e9969400ab799eddb6753dc688edc08bf7f78762fed33ff76982ef99ed32e33",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_boss_bar-absorb.tga": {
+      "sha256": "2d985b5a66431cdbdb798ff11018d1ff0edf34cc7110c311f8e5664b8ee9a31b",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_boss_bar-healabsorb.tga": {
+      "sha256": "166eb9a878f2b0a7e65fb849d28f16ae54154e31a0d27d39ebf96b876d5b800f",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_boss_bar.tga": {
+      "sha256": "42370df0ab884b7e3d5d0c1fcdb661db0bcb6f9152d19ad1c72d8d3a86d935b9",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_boss_bar_mirror.tga": {
+      "sha256": "ee89cb6ba5da4078e75f884f0e4247912d5a01df3f9699f3d529e94e2ebc6f22",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_boss_case.tga": {
+      "sha256": "83a55223de3fd2ef54e318dc5a270dd3da4515a5b5b8e34c40ecd43bce57ab82",
+      "disposition": "repaint staged"
+    },
+    "Assets/hp_boss_case_glow.tga": {
+      "sha256": "895e6d16505fb8be4668f7fd3a4702ce9065c2dd0bb38775c89b2b77fb7498f1",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_cap_bar-absorb.tga": {
+      "sha256": "f7cda4d72c54437a549c57b29f6988153b1a99ff0d28af8a5f6774fd4caaad85",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_cap_bar-healabsorb.tga": {
+      "sha256": "19df0e5d232bc3a34b78388d8534a052518ad4aa1d8acd5b97e0bfcf50ea3ebb",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_cap_bar.tga": {
+      "sha256": "1c980fa1543ef11d6d157d5454b26fadf623388a4782b1a8ce295b6b30c6f067",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_cap_bar_highlight.tga": {
+      "sha256": "135f94a8d90c419ed37966f38ef65c755e1e4da16b1454110e0f49d4a7bc0170",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_cap_bar_mirror.tga": {
+      "sha256": "a898ed142db1e9b7bd440a3b6e94c5dee08f4816117df9fdd8df3cd9f330005b",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_cap_case.tga": {
+      "sha256": "855e7a472da166b7ca93242e3d420453920ff728b912def5f11a6bf2ae2c1bda",
+      "disposition": "repaint staged"
+    },
+    "Assets/hp_cap_case_glow.tga": {
+      "sha256": "e7632efde364ab3d03e2e867702c3dd69c106399b863a2c96e0e888134b62518",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_critter_bar-absorb.tga": {
+      "sha256": "773dd3ebebbc0541bee78f5c9f0d147ec645583d23eff9e4c923a17d59fc29f8",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_critter_bar-healabsorb.tga": {
+      "sha256": "ba4d6c468832e21425cdea4b88378d7d5f90c9622ac6eb1e4f9c39779909f2d0",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_critter_bar.tga": {
+      "sha256": "773e0ba9f41bc3d772979d7aee4cc779833ded181359b4ba5840030cf1ba0a67",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_critter_case.tga": {
+      "sha256": "4c7fedab2876af2a34a4427649baefb5982beb8e8ffd3f9ea79588423cd3d7f4",
+      "disposition": "repaint staged"
+    },
+    "Assets/hp_critter_case_glow.tga": {
+      "sha256": "1e00c536e765c9c7cffa51f3412f263ee1eeb3139ff93c6d60f2bf41a7fc6310",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_critter_case_hi.tga": {
+      "sha256": "40cca00420a82bad9c21db85beabf7abd6c558a421f4c5bedbfeaf84e28bfe3b",
+      "disposition": "repaint staged"
+    },
+    "Assets/hp_low_case.tga": {
+      "sha256": "b683386a5d7b9328a7d5a2cad8d0cf2450627024b67e82f19ff389222baa50ef",
+      "disposition": "repaint staged"
+    },
+    "Assets/hp_low_case_glow.tga": {
+      "sha256": "85cb56afb798e8287f29140bc35ac196e5fafc1ee2d137e7d043fea1d4d18d83",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_lowmid_bar-absorb.tga": {
+      "sha256": "0caa9b4dc8746ee821f08686f69f95d67f2a2639ed7d4a566fad30f62470c4c7",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_lowmid_bar-healabsorb.tga": {
+      "sha256": "fef5b2bf50e356b06944338b8e3bf5714291d6a4c1983f45865ef75e813f4782",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_lowmid_bar.tga": {
+      "sha256": "54837b931f7f098c95053342f6b4a16649d3f9576545f3abc6c1ad3d5c86532d",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/hp_mid_case.tga": {
+      "sha256": "28425d8f6c1d6a08f878df9a234a085fc7846fadef22e430ada9f985c746f240",
+      "disposition": "repaint staged"
+    },
+    "Assets/hp_mid_case_glow.tga": {
+      "sha256": "b3b307074b2eec246a3d3be01e307f9c18f71459b2a91ae04d19029a4962decd",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon-combat.tga": {
+      "sha256": "b181c90cbbb5c3d11dcd084cab511bfebd5726a972fd70ef222559fa831e6acd",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon-heart-blue.tga": {
+      "sha256": "9649bb3a5460ec25ca4705364897756107639a0d62100b3fcf0ca843f6581762",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon-heart-green.tga": {
+      "sha256": "fa157d4008478d22e542045e5aa97f73fb1e578c494b1787946401bd8309555d",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon-heart-red.tga": {
+      "sha256": "9a907962d0d9fe6197418aa682162606bf0d99e8354e40d2d23e036f42db9567",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_badges_alliance.tga": {
+      "sha256": "6bbd4db7abdd05ee3de09da3ac43a21fdb94fc3defdf9d9122b05142bbea8d6a",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_badges_boss.tga": {
+      "sha256": "1ec3a79605b20d529c845079c2d69f12e3e47bfbb65f3adffc1efe6575c7559c",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_badges_horde.tga": {
+      "sha256": "0a813569b6eddb769b688806307e7527bf05730bb5613ed1ba3dbb208c21971a",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_classification_boss.tga": {
+      "sha256": "611047bde9b80cc8c45a4e0518bf309c5025b4130c24fee5cf2db5971ce8797c",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_classification_elite.tga": {
+      "sha256": "8768acbf55fd745cc9c17c8adcd5fad8e3ba40e6b210f9016d89e076af2c2736",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_classification_generic.tga": {
+      "sha256": "586b698b06f5e16f8c4e82544588a87c27cc898af3263b0ff3ee44c2c9ca71bd",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_classification_rare.tga": {
+      "sha256": "2e657b57943312e0e662d9f88bcec65f41583514fc0a9b7aaa8b4f6f3d148f8b",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_exit_flight.tga": {
+      "sha256": "f9623748bf97207a46c6d173001bf73dca83301f440f1cc44f31d7cea2309d90",
+      "disposition": "repaint staged"
+    },
+    "Assets/icon_skull.tga": {
+      "sha256": "5c45659442b8214754346663c62075ab6148ab5ef99a05e1a674bf81a566e442",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_skull_dead.tga": {
+      "sha256": "9d2dfccbe25133d30f22e2ac19bfa763bb1150da07809d53a78bb0a024c32db6",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_target_blue.tga": {
+      "sha256": "3ff869f123a819ab752c2dafca27919a7a2c0ce78a3a8a0632dbfee62866500e",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_target_green.tga": {
+      "sha256": "daf230cd99d62251c543dd3a006e913043a760d569a9146ea8d8b1d4a371ad94",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/icon_target_red.tga": {
+      "sha256": "be270bfb8e1fcb2a43dcd4a93ba29c0252f4f9944c0017ac75accdb7340c4664",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/IconAlert-Circle.tga": {
+      "sha256": "6ad80fb66c393580901dccdc9330d000d06cd01c01938c88beecf3299a749ee0",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/IconAlertAnts-Circle.tga": {
+      "sha256": "495d47977135df6227a01c6e0bc395422970b4dc974f250199e29cd69fc4d7f3",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/JuNNeZKapow.tga": {
+      "sha256": "7541d667d5d996c595488df448efd6d5702307b9633e7fdde4ea3b97c0b4683b",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-bars-single.tga": {
+      "sha256": "19a2a3cf1ec7ce10bf23e5759edc1b5a4f5eb7f3823799c5385d67e945c83053",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-bars-two-inner.tga": {
+      "sha256": "a38aeb19a44d3345871a52d19d88bb0f3aaa168eceffb6bf2dadc7597e53765a",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-bars-two-outer.tga": {
+      "sha256": "6b08b22a97116e768fef84f6794146962761d1bd2dad0786f00fd705f6a20a8f",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-border.tga": {
+      "sha256": "db8607fd5ba9b9269f7392bf3d7242f1d839f68885571c8bfe9c3ff7343d9831",
+      "disposition": "repaint staged"
+    },
+    "Assets/minimap-diel-day-celestial.tga": {
+      "sha256": "1c46b9ef7559079add6fe9614b78cd442c562e1161cc3367ab3fa17d9d59270e",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-diel-day-sky.tga": {
+      "sha256": "978b2107e6c8a856d485035f4d32293f80e65cb25d82339d201a2104737a00d5",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-diel-night-celestial.tga": {
+      "sha256": "557fae05d69027d396f5ed51c8fd01639e050e4192c3ee8075f51756274cfea8",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-diel-night-sky.tga": {
+      "sha256": "bab6fda20a32f397d6e533ba8570d7b2620d75964c156518931f3f767143bcd3",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-mask-opaque.tga": {
+      "sha256": "deab976130cc17b18ad4a432072a88f337efe007626f5356018a79165eb2b1c1",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-mask-transparent.tga": {
+      "sha256": "d41e8d2bdf63e7ed74a140db160c85e4899338c28c3d2868807b185cbfd57a2c",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/minimap-onebar-backdrop.tga": {
+      "sha256": "a77c7b49c0f4345929a4a3a627e86d7d0b2eaffae0812bcad66adab70828d19f",
+      "disposition": "shared functional XP/status ring"
+    },
+    "Assets/minimap-twobars-backdrop.tga": {
+      "sha256": "d7630f866e637eddd45e8f5359695e6f83f32ad1e88e947ed9338a0a3edf6fe9",
+      "disposition": "shared functional XP/status ring"
+    },
+    "Assets/nameplate_backdrop.tga": {
+      "sha256": "46b84a5817570430b50469e25b368721da02f054b6aeecffceb6eb20b5316e06",
+      "disposition": "neutral backing only, no outer frame"
+    },
+    "Assets/nameplate_bar-absorb.tga": {
+      "sha256": "19d78f0b9977d5226aabef55002e950e60e8c65ec064e818ed347be0c6ce7e81",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/nameplate_bar-healabsorb.tga": {
+      "sha256": "8171b96e4f6e5fd7ddafecbe9fdc3338f17ec3954415846c0b28dda268318036",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/nameplate_bar.tga": {
+      "sha256": "e7811214ba7988da12a4e4aac8285e3bc00fb1c9b69092631fd2c4b909eff14b",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/nameplate_glow.tga": {
+      "sha256": "7c8b5659b2badb48f8559bf0386cc5dffed50f455821dfc63a12d15d4e8feb5f",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/nameplate_outline.tga": {
+      "sha256": "630371eee38d56bebe0eda29eaa898b69f24af4ba66751a6a688d5806df224c9",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-box.tga": {
+      "sha256": "28c5008cc4150a394ccc4848163df1faa7fc108d5d206332a4ab6bd68e6e5c74",
+      "disposition": "shared neutral control fill/mask"
+    },
+    "Assets/options-casing-round.tga": {
+      "sha256": "8459812e7d00a78ae32f11bf8baf1b7878263b5a266f1c20fa981c8ca8b0faaf",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-check.tga": {
+      "sha256": "7b0919ebee38afbd6b9c056e477ef6f947bd10ef70b72682288c14c4b594a89b",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-close-bright.tga": {
+      "sha256": "78262eecc917f143358c82e3f944678a5947757314f993a22954686531b6c3b1",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-close.tga": {
+      "sha256": "21369de620a5342a013d5d59661624082bd7864a483568bfd5e21dd583cc79a6",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-glyphs.tga": {
+      "sha256": "4c7569308a65c243119cc6573f02f832f9d4704e774ba34c4f437ea7dfcf88c6",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-pages.tga": {
+      "sha256": "b4f2483625faac748fee59a357f0d9347c4cdebfd0db2dc7e8ada9551835dfd4",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-round6-fill.tga": {
+      "sha256": "479b293b355148ee3990de70a5776c367014efe8268f4aac6ce2e2e2e20650c2",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-sections.tga": {
+      "sha256": "dabdc9fc87b207895f1143c9ba5345241bd4cfe4c826ad8a8032149e51b72aef",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-shadow.tga": {
+      "sha256": "3a709617332b5a7061338006af5e15496856a7fe4870b40150fc157390aa6fb5",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/options-well-round.tga": {
+      "sha256": "8b1c4b30ccf94a13cf0efa3c5acadca81c5febed85f7176210d97b2fa60df04a",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/orb-art2.tga": {
+      "sha256": "365f88dc2a3043705bdbffe60f364ad53c9ca1012662fdb53477fc8a5cbc32a6",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/orb-backdrop2.tga": {
+      "sha256": "67528534f2eec18aca21ce524a54189631f9a29ed0a14f834c80cb69e0306e53",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/orb-border.tga": {
+      "sha256": "c933a56b1e89513b9d3309dca33537c55d1b76bd5db55242e611eec2cb7e3af0",
+      "disposition": "repaint staged"
+    },
+    "Assets/orb-glass.tga": {
+      "sha256": "14105d9a76ac812c87d6e13847c8f4768c5284a1378c2d91e9268268e9851ef9",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/orb1.tga": {
+      "sha256": "495addb4a8213aba284ed0bde5e849b0cbcf6a6c3e6ad3e07f53dfd56cca6bd3",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/orb2.tga": {
+      "sha256": "2d46944af030c3461e80b59ff1927d27e39facebbfae9a8fefbe8dad43063ae3",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/orb3.tga": {
+      "sha256": "e1c5e09ddbe25fc25ccaab9860ee7205bcbd6713b45522174f03dddd3349c019",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/orb4.tga": {
+      "sha256": "a240258da4782f40aac22fbad0e9d22324fd673538fac825199950a784f39989",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/orb_case_glow.tga": {
+      "sha256": "5c628be43a18a2b060895a6d9ad60f78982e71dd399f40963b7cbb560d061d15",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/orb_case_hi.tga": {
+      "sha256": "912ad83deb1a5d7ab38499144bc32daaa45ebd5b4ba48548704ac584f675b7a5",
+      "disposition": "repaint staged"
+    },
+    "Assets/orb_case_low.tga": {
+      "sha256": "bda2be4e396f2a90a5a180b0bf2bcd29e7096ee54a95759455de490bab35e862",
+      "disposition": "repaint staged"
+    },
+    "Assets/party_mana.tga": {
+      "sha256": "6bf4d40c10d4c9415fdb676064954b0280c8afc0ecb0d7f89fc4c6258ddb8c15",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/party_portrait_back.tga": {
+      "sha256": "d06ffbb2fd813b5449a9372ef35f4f8438096c6bf8fd86af688d48aa0ccdcc3f",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/party_portrait_border.tga": {
+      "sha256": "c42345169c304024af2d301c1579469fda90b77b5d09d10327e39b95a582c505",
+      "disposition": "repaint staged"
+    },
+    "Assets/partyrole_dps.tga": {
+      "sha256": "c595760cfd2d938512109122ee1a5b220cb9587049131259cad39607761d085f",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/partyrole_heal.tga": {
+      "sha256": "c5670af17424d6249ff5f6ed959493a6ea43b3adf324f96f23694c943503201c",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/partyrole_tank.tga": {
+      "sha256": "e7f67602b1a7d2ee323a88ab286d4715c3562839368a646b8041bef436f8c484",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/plus.tga": {
+      "sha256": "c70864be04d708ca98906308e2189aa8d0cb5753114cf4ab1ee0f025771213ab",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_block.tga": {
+      "sha256": "ac62e25c68056a179b87a11094e30dae77216ddd30240350bedae6d3461b0e22",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_crystal.tga": {
+      "sha256": "84c74860c58441ebab4464b1cd904faf35dc081fe4b9a913f81fabc7d1d39b92",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_diamond.tga": {
+      "sha256": "72e89f6d956cb37c8734f3c9be76cd21fb12c9d56e84095c753bf161c54bf388",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_dk_block.tga": {
+      "sha256": "1d582485dea7c4fb315e0d2ce8b3dfa88f7b0bd1757c049b21aff6e38fb443c3",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_gem.tga": {
+      "sha256": "3748f3d249e142fb9ee0b7bc58526901c7f37528be4507e8e56980753ae6b718",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_hearth.tga": {
+      "sha256": "fc4e67807b59cf6868d362b7bf704a6ed570d417005c8f0e79744ab4dd11034c",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_plate.tga": {
+      "sha256": "d240be92f3abbfdc020d7df1981cbff74b1b27949e7ce4fc8d24502aa67aa3d9",
+      "disposition": "repaint staged"
+    },
+    "Assets/point_rune1.tga": {
+      "sha256": "6e2a8dd80a75de7c297708fc4d9533685e351b02dd46803a8efbde6ebf5a249d",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_rune2.tga": {
+      "sha256": "dbd52a36d85ebb658667dcaada0499ad71ebab0aa9a1f69f8e574be281c8db87",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_rune3.tga": {
+      "sha256": "e5ad7ef2b6346adbe44917242db1fbdcef29512f76f4c730702827e3734ac59b",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/point_rune4.tga": {
+      "sha256": "a964d3a67f197bb8c8d719c2796c74dea3d3efc71733564b19514769143799b2",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/portrait_frame_glow.tga": {
+      "sha256": "f4d898dec061130a22fde72562da48b33fcb48bcaf5ba8dab23305e993fa2c6a",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/portrait_frame_hi.tga": {
+      "sha256": "ddc8b7b561f8fdc3f7c22b5d9a78891bf20841d72a2c877640b5d10508fb8c1d",
+      "disposition": "repaint staged"
+    },
+    "Assets/portrait_frame_lo.tga": {
+      "sha256": "6609976e6085537dd4f870d403a87d8efeb7c08aba9883c36c801ee9cc8a46a9",
+      "disposition": "repaint staged"
+    },
+    "Assets/power-bar-back.tga": {
+      "sha256": "ca35da4a2e145b2cb985581b580db753762eb3c8754039f526d0648f59c84b79",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power-bar-front.tga": {
+      "sha256": "6fa269290f89489730c0838e55d6d6d664f1dc619a1a22325f330e5fac720ab1",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power-crystal-ice-back.tga": {
+      "sha256": "087dfe8901b91f6094a0da84fc97d4a6b2a8d7faf64224b593ac777b13a999ee",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power-crystal-ice-front.tga": {
+      "sha256": "e0f2514fc0d93c882ce816fa2c2de0935db85a6b959db72123e75c33c1689270",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power-crystal-ice-icon.tga": {
+      "sha256": "da005a7158601efed6f56b74873757a84944d7dfe8723f868fc1a19857ec4378",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power_bar_glow.tga": {
+      "sha256": "dd36ab47240cbe85ef70f995db04f29b68281afc67c8df8e25d7488086556656",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power_crystal_back.tga": {
+      "sha256": "392a461e46d0e2f3dec9e1c423487c675cb86c3ffd307568b436628647532ca9",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power_crystal_front.tga": {
+      "sha256": "ee5613ae0cd63e7dd11c54a2471b4ceb98606290fcf31e84c600e18e3284eb37",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power_crystal_glow.tga": {
+      "sha256": "b66a9167b7587c974fe89ea5add4423835bc9bcb1f1f281a869ce9282969661f",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power_crystal_small_back.tga": {
+      "sha256": "8ec7976fb76a99c61805728c174221d0240efc5ba9436b11036bc757cf92de23",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/power_crystal_small_front.tga": {
+      "sha256": "94589ab4f58d9b0a7b1048c6c8764211df72ef18f5cf348e6862ea2ed723fef4",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/pw_crystal_case.tga": {
+      "sha256": "52b601a7a079d8d0d8e9a43511c5263c5a6fcd60f4ac796e4e8183d06636eb4c",
+      "disposition": "repaint staged"
+    },
+    "Assets/pw_crystal_case_glow.tga": {
+      "sha256": "a4925ffd9ce6b532acd282c9dfb82583e16280023cfc5dd504652ec18cf60881",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/pw_crystal_case_low.tga": {
+      "sha256": "aebf1bb25d7970b039b17bb50d5c3767de4a6dade9c0d111101e065c6cd5162a",
+      "disposition": "repaint staged"
+    },
+    "Assets/raid_target_icons.tga": {
+      "sha256": "d6ea9f98c9fe5b1701b3729a6ebb3bdd631196ffeca9c35dcd822c58dbccf799",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/raid_target_icons_small.tga": {
+      "sha256": "00f4e5877588c462b25dcbcb69701bbc90c96373ec7282f487e1da7b9a1cc042",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/seasonal_winterveil_crystal.tga": {
+      "sha256": "bc5e9fbae1b1b0bca93aa7fe16eb30213acbf8457e0f811421b44288c14a8ba5",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/seasonal_winterveil_orb.tga": {
+      "sha256": "22ea309581dfc33286dbf75a07ac327d1679fd88cc5814675e6d8c25eb40a60c",
+      "disposition": "shared functional/semantic/other media"
+    },
+    "Assets/shade-circle.tga": {
+      "sha256": "3f88a6d882c44267e331a7daa6fa98769eabb428849efbe4a59d62cda7c1de51",
+      "disposition": "shared functional/semantic/other media"
+    }
+  },
+  "checks": {
+    "actionbutton-border-square-rounded": {
+      "failures": [],
+      "lookNotes": [
+        "lit from below (top 0.21, bottom 0.22)"
+      ],
+      "sha256": "2fc1b67c1aefcaa9db966807b9752b57fff4655566ae2be6dc2e06da0179b9eb"
+    },
+    "actionbutton-border-square": {
+      "failures": [],
+      "lookNotes": [
+        "lit from below (top 0.20, bottom 0.20)"
+      ],
+      "sha256": "7becb1e21c9a6bd6030e04d3bece0e6d994efebae6c384a278abf194dc4f16b7"
+    },
+    "actionbutton-border": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "5f44386f6612593c76b9505ae83b4b150e88130e79c03b0a2a39ac0a7e35f653"
+    },
+    "better-blizzard-border-small-alternate": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "174b06b14a8dc81539d5f55baa3c9f01d3c977dac198f612fa14c136b95ed0f2"
+    },
+    "border-aura": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "e569cba05c934eda178e6375b89c16cf4e5f9b22940a75665715e456f3a691a7"
+    },
+    "border-tooltip": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "87e802dfb8b57afc7fdbbcb054d7290f448d5cd7aa4ea191a8375fdf4a0c36d1"
+    },
+    "cast-head-moon": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "e025e642a5644e796da1f7258d32f3947c89c9013b262238127a5f3e2c91b338"
+    },
+    "cast-head-moonlight": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "7a41113c30baaf54e3013a6fe4fe0660b1babf89d9bd7beb9d31ebbeeff01a3f"
+    },
+    "cast_back-over": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "baf92fa70bef9dca74b09d51ba5bd113698d8fb2fe74704ff77aeae806f96fe5"
+    },
+    "cast_back": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "411115d885c7e3f5fb7af9d701bc765906c7580f1f779192fe6b6241daa48132"
+    },
+    "cast_back_spiked-over": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "cea611d3c212a91a4106a2670838bfd006f062d6fd130e79202236baf4cc7d09"
+    },
+    "cast_back_spiked": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "fd93a3e580f423f4fb63ed0be6b91e9b47245eb0c10a093a1b59617a401a3918"
+    },
+    "cast_back_wooden-over": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "ef84853afa43d7f41e9d782b5d0cf8cd89788e907994e4f6360705e6edf18320"
+    },
+    "cast_back_wooden": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "f46875d96350a8806a706c8f8347c05d5ae6e9eed9f7e7d1887d219622505058"
+    },
+    "config_button": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "7472a59f40fd3ba7ef97f4e49b28b37d94a1177d0bf2b234e4b0400a78e97f4f"
+    },
+    "config_button_bright": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "d856d39c9f9fc3c214eeab3a551bcbb2a842bf34ca60cebfc478cb141abc6f69"
+    },
+    "crystal-assembly-glow": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "4cb78954ef2ad3ffbfbeb1fcb8288c24a39aee2ab7c6d4a5fc7cda153f1746be"
+    },
+    "crystal-roots-back": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "a1db4dc5c598f7840dfdc7c4a89699d8ebb445c57301a19451d95043deaff05f"
+    },
+    "crystal-roots-front": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "543bad7bc92eed9bdcb766114333172f16a7674986c57009421b203cdc9fa913"
+    },
+    "hp_boss_case-over": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "a3dc26e704125df9974994343520ab6fee3cd881839566327b71a3bbc1af902a"
+    },
+    "hp_boss_case": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "7c341b196775a6e986e1e0d62688f658e3f077005aab01b05170e739cf968201"
+    },
+    "hp_cap_case-over": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "d0e35ff5677e88d2413cadc9b581261934e6284f2c3bc0de6373aac3ffce666d"
+    },
+    "hp_cap_case": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "de2be8c0676acb56d3ac6134260d0c4bec8b5d2fe4be4d03b2cfaa93d48e46e0"
+    },
+    "hp_critter_case-over": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "9a7f3c462f64e159bdbcf16de108ec7b76be3ef17772fb795fbf6b5220340034"
+    },
+    "hp_critter_case": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "48ee315e673fe3d9fd7c260180395d466d4661543099c5a361f21a7cff6981aa"
+    },
+    "hp_critter_case_hi-over": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "1b29238304656333b43fdf319bc727f11308e252c5650cb6bacce32337b9a30d"
+    },
+    "hp_critter_case_hi": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "1231607115038ea3fc9dec46452f495e3677d5615828bd66fbc8409e6190678e"
+    },
+    "hp_low_case-over": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "ec5be12bfd2c2844c6b23d570af99c8002be26a41d99dbab3c08c7b3de127d95"
+    },
+    "hp_low_case": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "09ae6dbd0a7f120b07115391bb8d2f713172f4a78c048cfcc4b465bd23d9a4da"
+    },
+    "hp_mid_case-over": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "cb8ac5ed51a01599b89ef45899a4458883b1080d265f7d21ac2944bf20444f6e"
+    },
+    "hp_mid_case": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "0949e7086f68cbb9708aafb0d4f3929fc3f26fbc063ecb3fb2d7e0cdf8a9b30a"
+    },
+    "icon_exit_flight": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "9bcd1c3e8cf7476773e5af155106ed5181ac41d12dc9a76c45190c4b802c510c"
+    },
+    "minimap-border": {
+      "failures": [],
+      "lookNotes": [
+        "lit from below (top 0.21, bottom 0.21)"
+      ],
+      "sha256": "b0a4e428a42ea986415d5a17bedea65305dbcf865d9055211847cd6fb8301d78"
+    },
+    "minimap-north": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "220ca8c84901a857d561557481070e3a804fd54c5aec7b4856a8989abfec2462"
+    },
+    "orb-border": {
+      "failures": [],
+      "lookNotes": [
+        "no baked grounding shadow (soft fringe 3.4 px, original 8-17)"
+      ],
+      "sha256": "7ccc19a17bbcea2bbe08370f0fd6fae9205f70f6ed57e033e88873b587f8a168"
+    },
+    "orb_case_hi": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "9152dd20370751c343358f10ad001a73ca0f2ba345c932cf222396f02003ed7b"
+    },
+    "orb_case_low": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "0064b58c0cceaf3e01813bc027865a0bce66b5fbbd0673b51c7cdabcde9e4074"
+    },
+    "ornament-antler-glow": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "6cedde306f08a325b410e5b4d765d3794a90e6ce8702f630520bdf21689f76f8"
+    },
+    "ornament-antler": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "57bdf15330de7a0a8a3ea7b436ed4a6ff0e5781087a1a0e977e5ad1a1fb5edeb"
+    },
+    "party_portrait_border": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "dfe87a2cdafaa54ab023ac5c47a2ee26a9e2ba530cf3d14b79f8d10d870a61f4"
+    },
+    "point_plate": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "bb46eddb1650d8d1b3e926009fbd57145ba75ff618b392bd7ecb4106746317a0"
+    },
+    "portrait_frame_hi-glow": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "2ce07e298f939ab708bdc95d84db93248f6f2653671af6554a1deeac759b863c"
+    },
+    "portrait_frame_hi": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "85f8b7ec9769ea9b54f67e73997b0a4c51ce39efcc9051d2086d516039d7e5c0"
+    },
+    "portrait_frame_lo-glow": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "13acc308113bab72f1aca82f5ffa268c4b533c3ec14cf5226ffd2d8559891802"
+    },
+    "portrait_frame_lo": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "b882ec3af2f9489bc07e737f6ab1da9de45ad371ce0422b59e6261d6b841d99a"
+    },
+    "pw_crystal_case": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "e8a4a483b42d556e2a814bd463b64eecbd436cb4d20a4b60acc2fd90b7543ece"
+    },
+    "pw_crystal_case_low": {
+      "failures": [],
+      "lookNotes": [],
+      "sha256": "195d1cd683318e479a3a281edd77f1f4ee80207ecb3b6962ab8b18986704bcad"
+    }
+  },
+  "nativeLayoutChanges": false,
+  "liveValidated": false,
+  "sources": {
+    "actionbutton-border-square-rounded.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "79c4e798b067c31a4efcb4f8e28efb528e768f4a13e4ea29d191e66f15c0f8ed"
+    },
+    "actionbutton-border-square.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "1a52e19292400f1c3ddeee2cc84f60c501e1e58226787eb95aeb7fb448876b48"
+    },
+    "actionbutton-border.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "571648541925aaccd7fe47e920ffb9add509204125638deb4730bd2f1e356bb4"
+    },
+    "border-tooltip.png": {
+      "canvas": [
+        2170,
+        725
+      ],
+      "sha256": "c901f86062910e3feae1732e6bd791b755ea89ff5e56c1212bde02959562a354"
+    },
+    "cast-head-moon.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "ab1c117798e3eaf7ede53c5d516606d65de3a16c1a8f5741e839a3a1a95903c4"
+    },
+    "cast_back.png": {
+      "canvas": [
+        1774,
+        887
+      ],
+      "sha256": "a3d8f870d2a2355c5750eda9fa70257e03a3f9297158f0ac9d79ec27caf9e935"
+    },
+    "cast_back_spiked.png": {
+      "canvas": [
+        1774,
+        887
+      ],
+      "sha256": "302180a475ee1f64eb4efa3592e4c102781c92390a7334634e97ca004cee9a18"
+    },
+    "config_button.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "5726486506ec5f7da897cdda50a362ab3c84210cd0c65207da2e97b735cc8bd9"
+    },
+    "crystal-root-cap-final.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "07f6f22328fe0e4fea7395465b18fc86b9415d81124b44c8e5c2a68f418517a3"
+    },
+    "crystal-root-cap-v1.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "62a4bc37f113405fd1932eb14ff027df6033283e9502a6745fbf8e42b378d58e"
+    },
+    "crystal-root-cap.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "b014be5a03e63663d5cc2faa6e60809424680abdee9705d9bef1c2734129b3c5"
+    },
+    "hp_boss_case.png": {
+      "canvas": [
+        2170,
+        725
+      ],
+      "sha256": "ab552ea723684e4a424d8348f57420bec883b202d156bc1cbaa79fa488db3d78"
+    },
+    "hp_cap_case.png": {
+      "canvas": [
+        2170,
+        725
+      ],
+      "sha256": "839dfe01a52e04842aaaff2ee50fc2fccb9b8c6cbe8f8b49ada541d922840062"
+    },
+    "hp_critter_case_hi.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "fa70eb5e3efb2ed29492ddf55b35d4899b8ad04ed5f2c0eb0466898b2819cd7d"
+    },
+    "hp_mid_case.png": {
+      "canvas": [
+        2170,
+        725
+      ],
+      "sha256": "fceac5070014dcb13247e1eb89d372366d3bb044e4019f41401127f39cb9c476"
+    },
+    "icon_exit_flight.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "5e728d39df75ccfae66050dc223532544da616b2a1acaca55c3f5a6d37517034"
+    },
+    "minimap-border.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "1ad70abdebc99aa472da05d98131622e8aa82b2165f2ed2eaa2274ba7c8c29cd"
+    },
+    "minimap-north.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "0eb639e3e8135fedcfa916809a48c3e32ef07fbd77be39c1b9a371104229d8f2"
+    },
+    "orb_case_hi.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "9dba878373318d2daad5d82bcc79a56efa565743fd79a675dbded29e5deb6e1b"
+    },
+    "ornament-antler.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "cd07ea4d0be4d73d4b8450e8b4c8fb7c3da1a66dad98bd76d438aad95d5e50a1"
+    },
+    "party_portrait_border.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "ad7db41228e6ddf360f3ec5a8cce1f46bf15d579f5c796a3a58c7c8c0e6cfe64"
+    },
+    "point_plate.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "a976bb1bdd8739210f041df7c28d9678106fe67d178c188a7ec04093f04f3bce"
+    },
+    "portrait_frame_hi.png": {
+      "canvas": [
+        1254,
+        1254
+      ],
+      "sha256": "9802835d4f6529bb7323429c1e276d527c83f1cc0925b97bae51f69634992668"
+    },
+    "pw_crystal_case.png": {
+      "canvas": [
+        1774,
+        887
+      ],
+      "sha256": "82d5a7ad091494d76901e69200292921712663e7338df077dbd7d863215fd2f0"
+    }
+  },
+  "effects": {
+    "orb-moonwell.tga": {
+      "canvas": [
+        512,
+        512
+      ],
+      "sha256": "44fc0bae6fd14767a75a934e385ea9bd0f0e50df9ae0e8f54ea3500f6297274c"
+    },
+    "dreamlight.tga": {
+      "canvas": [
+        512,
+        512
+      ],
+      "sha256": "c84e5aafdfef92b4637f1c034a1f56558c39952737d03f6269fbc0d58b834dfc"
+    }
+  }
+}

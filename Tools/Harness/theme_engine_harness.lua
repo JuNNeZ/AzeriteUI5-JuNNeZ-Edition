@@ -26,7 +26,7 @@ check(Engine:UseIceCrystal(true) == true and Engine:UseIceCrystal(false) == fals
 check(Engine:GetNameplateCastOffset(5) == 5, "stock cast offset unchanged")
 check(Engine:ResolveMedia("x") == nil and Engine:StyleHealth({}) == nil, "stock media and styling: nothing")
 check(Engine:GetBagIcon():find("ThemeBagIcons\\azerite.tga", 1, true), "default bag icon")
-for _, key in ipairs({ "azerite", "legacy", "hunter", "mage", "paladin" }) do
+for _, key in ipairs({ "azerite", "legacy", "hunter", "mage", "paladin", "druid" }) do
 	ns.ThemeEffects = { GetTheme = function() return key end }
 	check(Engine:GetBagIcon():find("ThemeBagIcons\\"..key..".tga", 1, true), "bag icon for "..key)
 end

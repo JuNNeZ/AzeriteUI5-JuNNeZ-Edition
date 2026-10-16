@@ -10,6 +10,33 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.28.0-JuNNeZ (2026-10-16) - Druid Theme for Testing, Party Frames That Keep Up in Combat
+
+### Highlights
+
+- **Party health bars keep their class colour.** After a party member cast a spell (or shifted into bear form), their health bar could stay washed out for the rest of the session. A druid's orange then looked like a warrior's tan. The white "casting" layer on the bar now goes away when the cast ends. This also fixes cast bars elsewhere that stayed on screen after a cast. Thanks to Dcryfm for the report and screenshot.
+- **The dispel glow and the debuff icon work in combat.** In dungeons and raids, the game hides details of debuffs from addons, and the party frame's "you can dispel this" glow and the important-debuff icon in the middle of the frame went blank, right when they were needed. Both now ask the game directly what *you* can remove, which is right for every class, spec and talent. The colour shows the debuff type. Hovering the icon shows the right debuff. Setting: `/az -> Unit Frames -> Party Frames -> Glow Frame For Dispellable Debuffs`.
+- **New on party frames:** a crown for the group leader (a star for raid assistants), an icon for an incoming summon (purple while pending, green when accepted, red when declined), a mark for a member in another phase or War Mode, and a glow around the portrait when a member is tanking or has pulled aggro. They also appear under the Legacy theme.
+- **The Druid theme is open for testing.** Pick **Druid (WIP)** under `/az -> Themes`: dark bark, moss and aged bronze casings, roots growing around the power crystal, a Moonwell mana orb, Dreamlight in the crystal and a Druid bag icon. Feedback on Discord is very welcome.
+- **Four new Lite+ effects** under `/az -> Themes -> Lite+`, each with its own strength setting. For the orb, **Moonwell+ (WIP)** is moonlit water that sloshes as you move, and harder in combat, mounted or flying. For the crystal, **Wildheart**, **Moonvein** and **Dreamsap** are jade, blue-violet and golden energy that keeps moving, with a faint glow even when the crystal is empty.
+- **Dead mobs lose their nameplate on WoW Forever.** A killed mob's plate used to stay over the corpse with "Dead" on it. Looting and skinning the corpse still work.
+
+### Development
+
+- **Cast bar fix.** The stuck cast layer was traced in the oUF cast bar. When a cast starts it remembers an ID, but the game does not always send that ID when the cast stops, so the bar never learned the cast had ended. The bar now asks the game whether the unit is still casting. A test reproduces casts and channels without the ID, and fails with the old code.
+- **Party frame audit.** Incoming heals, absorbs and heal absorbs were already drawn on party frames and nameplates on both clients. The dispel glow and the debuff icon read debuff details that Retail 12 can hide in combat, and they used a hand-made per-spec dispel list that was also wrong for WoW Forever. They now use the game's own "what can I dispel" filter and its debuff colour curve, and pass hidden values straight to the textures. A new test feeds them hidden values and fails on five deliberate mistakes.
+- **New indicator art.** Leader, assistant, summon, phase and the threat glow were drawn to match the existing role icons. The threat glow is traced from the portrait ring itself and stays outside it, so it never covers the portrait. A brief and a mockup for the art are in the repository.
+- **Druid theme and the new effects.** The Druid art is built on the original casings, so frames keep their size and place. The crystal roots were refitted after a first look in game. The effects only paint over the game's own crystal and orb fill, and never read your mana or power.
+- **Glass orbs in the themes.** Orbs in the Hunter, Mage, Paladin and Druid themes had a black hole and an overbright reflection. The glass is now copied from the original orb with the right tint, and a check stops it from breaking again.
+
+### Access and known limits
+
+- Everything in this release was checked offline only. Nothing has been tested in game yet, on Retail or WoW Forever.
+- The Druid theme and Moonwell+ are marked WIP: expect rough edges, and on WoW Forever their art has not been checked at all. Switching to or from a theme reloads the interface. How much the new effects cost in frame rate has not been measured.
+- The dispel glow now lights only for debuffs you can remove yourself. It used to also light for debuffs someone else in the group could remove.
+- The debuff colours in combat come from the game's colour curve. Whether every debuff type gets the right colour still has to be confirmed in game.
+
+
 ## 5.27.1-JuNNeZ (2026-10-15) - Paladin Theme for Testing, Anchored Frames Stay Put, Reset Layout in /lock
 
 ### Highlights

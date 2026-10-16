@@ -10,10 +10,10 @@ ns.ThemeEffects = Effects
 
 -- In dropdown order.
 local THEMES = { "azerite", "legacy", "hunter", "paladin", "mage" }
-local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage" }
-local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none" }
-local CRYSTAL_EFFECTS = { "none", "paladin", "mage" }
-local ORB_EFFECTS = { "none", "paladin", "hunter" }
+local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage", druid = "druid" }
+local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none", druid = "druid" }
+local CRYSTAL_EFFECTS = { "none", "paladin", "mage", "druid", "moonvein", "dreamsap", "wildheart" }
+local ORB_EFFECTS = { "none", "paladin", "hunter", "druid", "moonwell" }
 
 local Contains = function(list, value)
 	for _, entry in ipairs(list) do if (entry == value) then return true end end
@@ -37,6 +37,7 @@ Effects.IsMainLayout = function(self) return MainLayout() end
 Effects.GetThemes = function(self)
 	local list = {}
 	for _, key in ipairs(THEMES) do list[#list + 1] = key end
+	if (ns.DruidTheme) then list[#list + 1] = "druid" end
 	-- Legacy needs its module; it writes the same switch /go does (Core/LegacyHUD.lua).
 	if (not ns.LegacyHUD) then
 		for index, key in ipairs(list) do
@@ -46,7 +47,7 @@ Effects.GetThemes = function(self)
 	return list
 end
 
---- The theme in use: "azerite", "legacy", "hunter", "paladin" or "mage".
+--- The theme in use: "azerite", "legacy", "hunter", "paladin", "mage" or "druid".
 Effects.GetTheme = function(self)
 	local char = Char()
 	if (not char or not MainLayout()) then return "azerite" end
@@ -54,6 +55,7 @@ Effects.GetTheme = function(self)
 	if (ns.HunterTheme and ns.HunterTheme:IsActive()) then return "hunter" end
 	if (ns.MageTheme and ns.MageTheme:IsActive()) then return "mage" end
 	if (ns.PaladinTheme and ns.PaladinTheme:IsActive()) then return "paladin" end
+	if (ns.DruidTheme and ns.DruidTheme:IsActive()) then return "druid" end
 	return "azerite"
 end
 
@@ -63,6 +65,7 @@ Effects.NeedsReload = function(self, theme)
 	for key, module in pairs({ hunter = ns.HunterTheme, paladin = ns.PaladinTheme, mage = ns.MageTheme }) do
 		if ((module.loadedActive or false) ~= (theme == key)) then return true end
 	end
+	if (ns.DruidTheme and (ns.DruidTheme.loadedActive or false) ~= (theme == "druid")) then return true end
 	return false
 end
 
@@ -88,19 +91,17 @@ end
 local Resolve = function(own, choice)
 	local effect = own
 	if (Effects:IsLitePlus() and choice ~= "theme") then effect = choice end
-	-- The approved Paladin Light effect is available independently through
-	-- Lite+. The complete Paladin theme keeps its own Development Mode gate.
 	return effect
 end
 
---- The effect drawn in the power crystal: "none", "paladin" or "mage".
+--- The effect drawn in the power crystal, including optional Lite+ materials.
 Effects.GetCrystalEffect = function(self)
 	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return "none" end
 	if (not Char() or not MainLayout()) then return "none" end
 	return Resolve(THEME_CRYSTAL[self:GetTheme()], self:GetCrystalChoice())
 end
 
---- The effect drawn in the mana orb: "none", "paladin" or "hunter".
+--- The effect drawn in the mana orb: "none", "paladin", "hunter", "druid" or "moonwell".
 Effects.GetOrbEffect = function(self)
 	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return "none" end
 	if (not Char() or not MainLayout()) then return "none" end
@@ -134,6 +135,7 @@ Effects.SetTheme = function(self, theme)
 	char.hunterPreview = theme == "hunter"
 	char.paladinPreview = theme == "paladin"
 	char.magePreview = theme == "mage"
+	char.druidPreview = theme == "druid"
 	if (self:NeedsReload(theme)) then
 		local reload = C_UI and C_UI.Reload or _G.ReloadUI
 		if (type(reload) == "function") then reload() end
@@ -177,7 +179,8 @@ end
 local CAP_LEVEL_ABOVE_HEALTH = 4
 
 local CapsInFront = function()
-	return (ns.HunterTheme and ns.HunterTheme:IsActive()) or (ns.PaladinTheme and ns.PaladinTheme:IsActive()) or false
+	return (ns.HunterTheme and ns.HunterTheme:IsActive()) or (ns.PaladinTheme and ns.PaladinTheme:IsActive())
+		or (ns.DruidTheme and ns.DruidTheme:IsActive()) or false
 end
 
 local CapLevel = function(element)
@@ -228,6 +231,17 @@ Effects.StyleCrystal = function(self, power, texturePath, coords, casePath, allo
 		else paladin:ClearCrystalEffect(power) end
 		if (paladin.StyleCrystal) then paladin:StyleCrystal(power, casePath, useMage) end
 	end
+	local druid = ns.DruidTheme
+	if (druid) then
+		if (effect == "druid") then druid:ApplyCrystalEffect(power, texturePath)
+		else druid:ClearCrystalEffect(power) end
+		druid:StyleCrystal(power, useMage)
+	end
+	local wildheart = ns.WildheartCrystal
+	if (wildheart) then
+		if (effect == "wildheart" or effect == "moonvein" or effect == "dreamsap") then wildheart:Apply(power, texturePath, effect)
+		else wildheart:Clear(power) end
+	end
 	LiftCap(power, power.Case)
 end
 
@@ -236,11 +250,19 @@ end
 Effects.StyleOrb = function(self, orb)
 	LiftCap(orb, orb.Case)
 	local effect = self:GetOrbEffect()
+	local slosh = ns.MoonwellSlosh
+	if (slosh and effect ~= "moonwell") then slosh:Clear(orb) end
+	local druid = ns.DruidTheme
+	if (druid) then
+		if (effect ~= "druid") then druid:ClearOrbEffect(orb) end
+	end
 	local paladin, hunter = ns.PaladinTheme, ns.HunterTheme
 	if (paladin) then
 		if (effect == "paladin") then return paladin:ApplyOrbEffect(orb) end
 		paladin:ClearOrbEffect(orb)
 	end
+	if (effect == "moonwell" and slosh) then return slosh:Apply(orb) end
+	if (effect == "druid" and druid) then return druid:ApplyOrbEffect(orb) end
 	if (effect == "hunter" and hunter) then return hunter:ApplyOrbEffect(orb) end
 	return false
 end

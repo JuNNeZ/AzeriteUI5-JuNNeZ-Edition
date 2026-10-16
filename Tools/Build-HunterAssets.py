@@ -6,6 +6,7 @@ Generated casing silhouettes replace the old artwork; halos follow the new alpha
 Every original root TGA receives an explicit inventory disposition.
 """
 from pathlib import Path
+from ThemeOrbGlass import restore_glass
 import hashlib
 import json
 from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageDraw, ImageOps
@@ -175,6 +176,7 @@ def build():
                 alpha=result.getchannel('A'); result=ImageOps.grayscale(result).convert('RGBA'); result.putalpha(alpha)
             if name == 'config_button_bright':
                 alpha = result.getchannel('A'); result = ImageEnhance.Brightness(result).enhance(1.3); result.putalpha(alpha)
+            result = restore_glass(result, ROOT, name)
             result.save(OUT/original_path.name, compression=None)
             manifest['originals'][name] = {'disposition':'hunter material', 'source':key,
                 'path':'Assets/Hunter/'+original_path.name, 'size':list(result.size),

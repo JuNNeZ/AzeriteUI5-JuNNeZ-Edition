@@ -1,4 +1,4 @@
-"""Export original generated bag paintings for the five selectable themes.
+"""Export original generated bag paintings for the six selectable themes.
 
 Only the icon changes; the live button keeps its native circular mask and size.
 """
@@ -10,12 +10,12 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = Path(__file__).resolve().parent.parent
 WORK = ROOT/'Docs/Research_Assets/ThemeBagIcons-2026-10-14'
 OUT = ROOT/'Assets/ThemeBagIcons'
-KEYS = ('azerite', 'legacy', 'hunter', 'mage', 'paladin')
+KEYS = ('azerite', 'legacy', 'hunter', 'mage', 'paladin', 'druid')
 
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    sheet = Image.new('RGBA', (1000,300), '#14161a')
+    sheet = Image.new('RGBA', (1200,300), '#14161a')
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.truetype('C:/Windows/Fonts/segoeui.ttf', 18)
     manifest = {'generator': 'built-in image_gen', 'liveValidated': False, 'icons': {}}
@@ -45,7 +45,7 @@ def main():
     draw.text((20,270), 'Offline art review: enlarged / native 28px circular mask. Click route and anchors unchanged.', font=font, fill='#c4beac')
     sheet.convert('RGB').save(WORK/'Review.png')
     (OUT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n', encoding='utf-8')
-    print('Five themed bag icons exported and TGA roundtrips checked (offline only).')
+    print('Six themed bag icons exported and TGA roundtrips checked (offline only).')
 
 
 if __name__ == '__main__':

@@ -129,8 +129,25 @@ local function EmitInterruptEventDebug(element, reason, eventName, unit, rawNotI
 		tostring(shield and shield.IsShown and shield:IsShown()))
 end
 
+-- AzeriteUI: castBarID is optional in every cast event (Retail and Forever). CastStart
+-- stores castBarID or castGUID, but the stop/fail events only pass castBarID, so a cast
+-- without one never matched and its bar stayed up at full for good (party health went
+-- white-washed after any cast). Treat a stop the IDs cannot confirm as real once the
+-- unit has no cast or channel left.
+local function IsCastOver(unit)
+	return not UnitCastingInfo(unit) and not UnitChannelInfo(unit)
+end
+
+local function IsCurrentCast(element, castID, unit)
+	if(castID and element.castID == castID) then
+		return true
+	end
+	return IsCastOver(unit)
+end
+
 local function resetAttributes(self)
 	self.castID = nil
+	self.__AzeriteUI_CastUnit = nil
 	self.casting = nil
 	self.channeling = nil
 	self.empowering = nil
@@ -279,6 +296,8 @@ local function CastStart(self, event, unit)
 	element.notInterruptible = NormalizeNotInterruptible(element, notInterruptible)
 	element.holdTime = 0
 	element.castID = castID
+	element.__AzeriteUI_CastUnit = unit
+	element.__AzeriteUI_CastOverCheck = 0
 	element.spellID = spellID
 	element.spellName = text
 	EmitInterruptEventDebug(element, 'start', event, unit, notInterruptible)
@@ -466,7 +485,7 @@ local function CastStop(self, event, unit, _, _, ...)
 		interruptedBy, castID = ...
 	end
 
-	if(not element:IsShown() or not castID or element.castID ~= castID) then
+	if(not element:IsShown() or not IsCurrentCast(element, castID, unit)) then
 		return
 	end
 
@@ -522,7 +541,7 @@ local function CastFail(self, event, unit, _, _, ...)
 		castID = ...
 	end
 
-	if(not element:IsShown() or not castID or element.castID ~= castID) then
+	if(not element:IsShown() or not IsCurrentCast(element, castID, unit)) then
 		return
 	end
 
@@ -585,6 +604,21 @@ end
 
 local function onUpdate(self, elapsed)
 	if(self.casting or self.channeling or self.empowering) then
+		-- AzeriteUI: backstop for a stop event that never matched (see IsCastOver).
+		-- Only the player's cast times are readable, so other units are asked directly.
+		local castUnit = self.__AzeriteUI_CastUnit
+		if(castUnit) then
+			self.__AzeriteUI_CastOverCheck = (self.__AzeriteUI_CastOverCheck or 0) + elapsed
+			if(self.__AzeriteUI_CastOverCheck >= .5) then
+				self.__AzeriteUI_CastOverCheck = 0
+				if(IsCastOver(castUnit)) then
+					resetAttributes(self)
+					self:Hide()
+					return
+				end
+			end
+		end
+
 		local fallbackRemaining
 		if(type(self.startTime) == 'number' and type(self.endTime) == 'number'
 			and (not issecretvalue or (not issecretvalue(self.startTime) and not issecretvalue(self.endTime)))) then

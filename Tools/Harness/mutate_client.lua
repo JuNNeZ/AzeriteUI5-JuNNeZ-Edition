@@ -220,7 +220,7 @@ local cases = {
 	{"nameplate execute health as it is", "Components/UnitFrames/NamePlates/Elements.lua",
 		"UnitHealthPercent, self.unit, false, curve", "UnitHealthPercent, self.unit, true, curve", "nameplate_harness.lua"},
 	{"nameplate execute tint on health updates", "Components/UnitFrames/NamePlates/Elements.lua",
-		"\t\tpredict:ForceUpdate()\n\tend\n\tUpdateExecuteZone(element.__owner)", "\t\tpredict:ForceUpdate()\n\tend",
+		"\t\tpredict:ForceUpdate()\n\tend\n\tUpdateExecuteZone(owner)", "\t\tpredict:ForceUpdate()\n\tend",
 		"nameplate_harness.lua"},
 	{"nameplate execute hidden tint left alone", "Components/UnitFrames/NamePlates/Elements.lua",
 		"\tif (not marker or not marker.isShown) then\n\t\treturn\n\tend\n\tlocal alpha = 0",

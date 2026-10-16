@@ -197,9 +197,25 @@ local IsHiddenMinion = function(self)
 	return (self.isMinion and IsTargetOnly("minions") and not IsSelected(self)) and true or false
 end
 
+-- A dead NPC. Retail drops a plate when its unit dies; Forever keeps it, and Blizzard's own plate only
+-- greys it (CompactUnitFrame.lua:656, 863), so ours drew an empty bar reading "Dead" over the corpse
+-- (FixLog 2026-10-16). Players keep theirs. A secret answer counts as alive.
+local IsDeadNPC = function(self)
+	local unit = self and self.unit
+	if (not self or self.isPlayerUnit or not UnitIsDead or not IsSafeUnitToken(unit)) then
+		return false
+	end
+	local dead = UnitIsDead(unit)
+	return ((not IsSecretValue(dead)) and dead == true) and true or false
+end
+
 local ShouldShowNamePlateForBlizzardVisibility = function(self)
 	if (not self or self.isPRD) then
 		return true
+	end
+
+	if (IsDeadNPC(self)) then
+		return false
 	end
 
 	if ((not IsShownByBlizzard("showAll")) and (not self.inCombat)) then
@@ -647,6 +663,7 @@ NP.SetNameColorForUnit = SetNameColorForUnit
 NP.AnchorStandardNamePlateCastBar = AnchorStandardNamePlateCastBar
 NP.AnchorStandardNamePlateName = AnchorStandardNamePlateName
 NP.ShouldShowNamePlateForBlizzardVisibility = ShouldShowNamePlateForBlizzardVisibility
+NP.IsDeadNPC = IsDeadNPC
 NP.IsFightingSomeoneElse = IsFightingSomeoneElse
 NP.IsFightingYou = IsFightingYou
 NP.ApplyNamePlateAlpha = ApplyNamePlateAlpha

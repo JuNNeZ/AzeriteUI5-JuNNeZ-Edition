@@ -204,11 +204,19 @@ end
 -- Forceupdate health prediction on health updates,
 -- to assure our smoothed elements are properly aligned.
 local Health_PostUpdate = function(element, unit, cur, max)
-	local predict = element.__owner.HealthPrediction
+	local owner = element.__owner
+	local predict = owner.HealthPrediction
 	if (predict) then
 		predict:ForceUpdate()
 	end
-	UpdateExecuteZone(element.__owner)
+	UpdateExecuteZone(owner)
+	-- A death (or a resurrection) decides whether the plate shows at all (NP.IsDeadNPC), and none of
+	-- the plate's own events fire on one; its health does. Layout.lua loads later, hence the lookup.
+	local dead = NP.IsDeadNPC(owner)
+	if (dead ~= (owner.__AzeriteUI_Dead or false)) then
+		owner.__AzeriteUI_Dead = dead
+		NP.NamePlate_PostUpdateElements(owner, "UNIT_HEALTH", unit)
+	end
 end
 
 local Health_UpdateColor = function(self, event, unit)

@@ -236,6 +236,50 @@ do
 	check(bar.timer and near(bar.timer.endTime, 503), "and the timer is the client's", bar.timer and bar.timer.endTime)
 end
 
+--------------------------------------------------------------------------------
+-- A cast with no castBarID ends (Dcryfm's party health bars, FixLog 2026-10-16)
+--------------------------------------------------------------------------------
+-- castBarID is optional in the payload and the info returns. CastStart then keeps the cast GUID,
+-- but the stop events pass only castBarID (nil), so the bar used to stay up at full for good.
+do
+	local W, bar, Fire, Frame = Load({ unit = "party1" })
+	W.now = 600
+	W.cast = { name = "Healing Touch", startTime = 600, endTime = 602, firstStart = 600, firstEnd = 602 }
+	Fire("UNIT_SPELLCAST_START", "Cast-1", 5185, nil)
+	check(bar.shown and bar.casting, "a party cast without a cast bar ID shows")
+	Frame(1)
+	check(bar.shown, "and stays up while the unit is still casting")
+	Fire("UNIT_SPELLCAST_FAILED", "Cast-9", 774, nil)
+	check(bar.shown and bar.casting, "a failed attempt at another spell mid-cast changes nothing")
+	W.cast = nil
+	Fire("UNIT_SPELLCAST_STOP", "Cast-1", 5185, nil)
+	Frame(0)
+	check(not bar.shown, "the stop without a cast bar ID hides the bar")
+end
+do
+	local W, bar, Fire, Frame = Load({ unit = "party1" })
+	W.now = 700
+	W.channel = { name = "Tranquility", startTime = 700, endTime = 708, firstStart = 700, firstEnd = 708 }
+	Fire("UNIT_SPELLCAST_CHANNEL_START", "Cast-2", 740, nil)
+	check(bar.shown and bar.channeling, "a party channel without a cast bar ID shows")
+	W.channel = nil
+	Fire("UNIT_SPELLCAST_CHANNEL_STOP", "Cast-2", 740, nil, nil)
+	Frame(0)
+	check(not bar.shown, "the channel stop without a cast bar ID hides the bar")
+end
+do
+	local W, bar, Fire, Frame = Load({ unit = "party1" })
+	W.now = 800
+	W.cast = { name = "Wrath", startTime = 800, endTime = 801.5, firstStart = 800, firstEnd = 801.5, castBarID = CAST_BAR_ID }
+	Fire("UNIT_SPELLCAST_START", "Cast-3", 5176, CAST_BAR_ID)
+	Frame(.6)
+	check(bar.shown, "the backstop leaves a running cast alone")
+	-- The stop never arrives (lost, or the frame changed units): the backstop hides it.
+	W.cast = nil
+	Frame(.6)
+	check(not bar.shown, "a cast that ended without a matching stop is hidden within half a second")
+end
+
 print(string.format("Castbar pushback: %d checks, %d failures", checks, failures))
 -- Raised rather than os.exit, so mutate_client.lua can run this inside a pcall.
 if (failures > 0) then error("castbar pushback harness failed", 0) end

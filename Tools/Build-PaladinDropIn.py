@@ -13,6 +13,7 @@ import hashlib
 import json
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
+from ThemeOrbGlass import restore_glass
 from PaladinFillContracts import mask as fitted_mask, clearance_mask, crystal_rects, LAYOUTS, write_guides
 from PaladinPalette import CASES as PALETTE_CASES, grade as grade_metal
 from PaladinPalette import ORNAMENTS as PALETTE_ORNAMENTS
@@ -255,7 +256,7 @@ def export_casing(name):
         # Only its housing is repainted; retain its native red pixels exactly.
         arrow = (original[:, :, 0] > original[:, :, 1]*1.4) & (original[:, :, 0] > 45)
         pixels[arrow, :3] = original[arrow, :3]
-    result = Image.fromarray(pixels, 'RGBA')
+    result = restore_glass(Image.fromarray(pixels, 'RGBA'), ROOT, name)
     assert result.getchannel('A').tobytes() == native.getchannel('A').tobytes(), name
     save(name, result)
     if name in BACK:

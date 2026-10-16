@@ -2005,5 +2005,86 @@ end
 
 API.UpdateAdditionalPower = API.UpdateManaOrb
 
+-- Debuffs the player can remove
+--------------------------------------------
+-- The game decides: "HARMFUL|RAID" is the harmful auras the player can dispel
+-- (AuraUtil.AuraFilters.Raid), right for every class, spec, talent and client, so no
+-- table of ours goes stale. Aura fields may be secret in combat: they are only checked
+-- with issecretvalue, and colours that cannot be read come from the game's dispel
+-- colour curve, to be handed straight to a widget (Retail and Forever both have it).
+local DISPEL_FILTER = "HARMFUL|RAID"
+local DISPEL_PRIORITY = { Magic = 4, Curse = 3, Disease = 2, Poison = 1 }
+-- Spell dispel type IDs, the curve's x: 1 Magic, 2 Curse, 3 Disease, 4 Poison.
+local DISPEL_CURVE_POINTS = { [0] = "none", "Magic", "Curse", "Disease", "Poison", "none" }
+local dispelColorCurve
+
+local GetDispelColorCurve = function()
+	if (dispelColorCurve ~= nil) then
+		return dispelColorCurve or nil
+	end
+	dispelColorCurve = false
+	local step = Enum and Enum.LuaCurveType and Enum.LuaCurveType.Step
+	if (C_CurveUtil and C_CurveUtil.CreateColorCurve and step and Colors.debuff) then
+		local curve = C_CurveUtil.CreateColorCurve()
+		curve:SetType(step)
+		for x = 0, #DISPEL_CURVE_POINTS do
+			local color = Colors.debuff[DISPEL_CURVE_POINTS[x]] or Colors.debuff.none
+			curve:AddPoint(x, { r = color[1], g = color[2], b = color[3], a = 1 })
+		end
+		dispelColorCurve = curve
+	end
+	return dispelColorCurve or nil
+end
+
+-- Returns the auraInstanceID and AuraData of the debuff on `unit` the player can
+-- dispel, Magic first when the types can be read, else the first one; nil if none.
+API.GetPlayerDispellableDebuff = function(unit)
+	local auras = C_UnitAuras
+	if (type(unit) ~= "string" or not auras or not auras.GetUnitAuraInstanceIDs or not auras.GetAuraDataByAuraInstanceID) then
+		return nil
+	end
+	local ok, ids = API.TryCall(auras.GetUnitAuraInstanceIDs, unit, DISPEL_FILTER)
+	if (not ok or type(ids) ~= "table") then
+		return nil
+	end
+	local bestID, bestData, bestPriority
+	for _, auraInstanceID in ipairs(ids) do
+		if (type(auraInstanceID) == "number" and not IsSecretValue(auraInstanceID)) then
+			local okData, auraData = API.TryCall(auras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
+			if (okData and type(auraData) == "table") then
+				local dispelName = auraData.dispelName
+				local priority = 0
+				if (not IsSecretValue(dispelName) and DISPEL_PRIORITY[dispelName]) then
+					priority = DISPEL_PRIORITY[dispelName]
+				end
+				if (not bestPriority or priority > bestPriority) then
+					bestID, bestData, bestPriority = auraInstanceID, auraData, priority
+				end
+			end
+		end
+	end
+	return bestID, bestData
+end
+
+-- The debuff type colour of an aura as r, g, b. Readable types use Colors.debuff;
+-- a secret type goes through the game's colour curve, and those numbers may be
+-- secret: pass them only to widget setters (SetVertexColor, SetBackdropBorderColor).
+API.GetDebuffTypeColor = function(unit, auraInstanceID, auraData)
+	local dispelName = auraData and auraData.dispelName
+	if (not IsSecretValue(dispelName)) then
+		local color = (dispelName and Colors.debuff[dispelName]) or Colors.debuff.none
+		return color[1], color[2], color[3]
+	end
+	local curve = GetDispelColorCurve()
+	if (curve and auraInstanceID and C_UnitAuras and C_UnitAuras.GetAuraDispelTypeColor) then
+		local ok, color = API.TryCall(C_UnitAuras.GetAuraDispelTypeColor, unit, auraInstanceID, curve)
+		if (ok and color and color.GetRGB) then
+			return color:GetRGB()
+		end
+	end
+	local color = Colors.debuff.none
+	return color[1], color[2], color[3]
+end
+
 
 

@@ -450,57 +450,19 @@ local ApplyPartyAuraLayout = function(frame)
 	end
 end
 
+-- The glow's colour for a debuff the player can dispel, or nil. The game's own filter
+-- decides what is dispellable (API.GetPlayerDispellableDebuff), and the colour may be
+-- secret, so it only ever goes to SetVertexColor. The old per-spec table and secret
+-- dispel names left the glow dark in combat (FixLog 2026-10-16).
 local GetDispellableDebuffColor = function(frame)
-	if (not frame or not frame.unit or not frame.PriorityDebuff or not frame.PriorityDebuff.dispelTypes) then
+	if (not frame or not frame.unit or not API.GetPlayerDispellableDebuff) then
 		return nil
 	end
-
-	local bestColor
-	local bestPriority = -1
-	local bestType
-	local unit = frame.unit
-	local dispelTypes = frame.PriorityDebuff.dispelTypes
-
-	for index = 1, 40 do
-		local auraData = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and C_UnitAuras.GetAuraDataByIndex(unit, index, "HARMFUL")
-		if (not auraData) then
-			break
-		end
-
-		local auraInstanceID = auraData.auraInstanceID
-		local dispelName = (issecretvalue and issecretvalue(auraData.dispelName)) and nil or auraData.dispelName
-		local canDispelType = dispelName and dispelTypes[dispelName]
-		local isRaidPlayerDispellable = false
-		if (auraInstanceID and C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID) then
-			local ok, filtered = API.TryCall(C_UnitAuras.IsAuraFilteredOutByInstanceID, unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE")
-			if (ok and not (issecretvalue and issecretvalue(filtered))) then
-				isRaidPlayerDispellable = (filtered == false)
-			end
-		end
-
-		if (canDispelType or isRaidPlayerDispellable) then
-			local priority = 0
-			if (dispelName == "Magic") then
-				priority = 4
-			elseif (dispelName == "Curse") then
-				priority = 3
-			elseif (dispelName == "Disease") then
-				priority = 2
-			elseif (dispelName == "Poison") then
-				priority = 1
-			end
-			if (priority > bestPriority) then
-				bestPriority = priority
-				bestType = dispelName
-			end
-		end
+	local auraInstanceID, auraData = API.GetPlayerDispellableDebuff(frame.unit)
+	if (not auraInstanceID) then
+		return nil
 	end
-
-	if (bestType and Colors.debuff[bestType]) then
-		bestColor = Colors.debuff[bestType]
-	end
-
-	return bestColor
+	return API.GetDebuffTypeColor(frame.unit, auraInstanceID, auraData)
 end
 
 local AuraHighlight_Update = function(self, event, unit, ...)
@@ -517,9 +479,9 @@ local AuraHighlight_Update = function(self, event, unit, ...)
 		return
 	end
 
-	local color = GetDispellableDebuffColor(self)
-	if (color) then
-		element:SetVertexColor(color[1], color[2], color[3], .95)
+	local r, g, b = GetDispellableDebuffColor(self)
+	if (r) then
+		element:SetVertexColor(r, g, b, .95)
 		element:Show()
 	else
 		element:Hide()
@@ -911,10 +873,16 @@ local Portrait_PostUpdate = function(element, unit, hasStateChanged)
 end
 
 -- Update the border color of priority debuffs.
-local PriorityDebuff_PostUpdate = function(element, event, isVisible, name, icon, count, debuffType, duration, expirationTime, spellID, isBoss, isCustom)
+-- debuffType is nil when the game keeps it secret; the aura instance then gives the
+-- colour through the dispel curve (values for the widget only).
+local PriorityDebuff_PostUpdate = function(element, event, isVisible, name, icon, count, debuffType, duration, expirationTime, spellID, isBoss, isCustom, auraInstanceID, auraData)
 	if (isVisible) then
-		local color = debuffType and Colors.debuff[debuffType] or Colors.debuff.none
-		element.border:SetBackdropBorderColor(color[1], color[2], color[3])
+		if (debuffType or not auraInstanceID) then
+			local color = debuffType and Colors.debuff[debuffType] or Colors.debuff.none
+			element.border:SetBackdropBorderColor(color[1], color[2], color[3])
+		else
+			element.border:SetBackdropBorderColor(API.GetDebuffTypeColor(element.__owner.unit, auraInstanceID, auraData))
+		end
 	end
 end
 
@@ -934,6 +902,23 @@ local TargetHighlight_Update = function(self, event, unit, ...)
 	else
 		element:Hide()
 	end
+end
+
+-- oUF sets Blizzard's own leader/guide and summon art on every update; put ours back.
+local LeaderIndicator_PostUpdate = function(element)
+	element:SetTexture(element.azeriteTexture)
+	element:SetTexCoord(0, 1, 0, 1)
+end
+
+local SUMMON_PENDING = Enum and Enum.SummonStatus and Enum.SummonStatus.Pending or 1
+local SUMMON_ACCEPTED = Enum and Enum.SummonStatus and Enum.SummonStatus.Accepted or 2
+
+local SummonIndicator_PostUpdate = function(element, status)
+	element:SetTexture(element.azeriteTexture)
+	local color = (status == SUMMON_PENDING and element.colorPending)
+		or (status == SUMMON_ACCEPTED and element.colorAccepted)
+		or element.colorDeclined
+	element:SetVertexColor(color[1], color[2], color[3])
 end
 
 -- The member's Mythic+ rating in the frame's top right corner, opposite the raid
@@ -1312,6 +1297,71 @@ local style = function(self, unit)
 
     self.GroupRoleIndicator = groupRoleIndicator
 	self.GroupRoleIndicator.Override = GroupRoleIndicator_Override
+
+	-- Leader / Assistant
+	--------------------------------------------
+	-- On the role plate's edge, so a level above the plate's frame.
+	local leaderIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, 3)
+	leaderIndicator:SetSize(unpack(db.LeaderIndicatorSize))
+	leaderIndicator:SetPoint(unpack(db.LeaderIndicatorPosition))
+	leaderIndicator.azeriteTexture = db.LeaderIndicatorTexture
+	leaderIndicator:SetTexture(db.LeaderIndicatorTexture)
+	leaderIndicator:Hide()
+
+	self.LeaderIndicator = leaderIndicator
+	self.LeaderIndicator.PostUpdate = LeaderIndicator_PostUpdate
+
+	local assistantIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, 3)
+	assistantIndicator:SetSize(unpack(db.LeaderIndicatorSize))
+	assistantIndicator:SetPoint(unpack(db.LeaderIndicatorPosition))
+	assistantIndicator:SetTexture(db.AssistantIndicatorTexture)
+	assistantIndicator:Hide()
+
+	self.AssistantIndicator = assistantIndicator
+
+	-- Summon Indicator
+	--------------------------------------------
+	local summonIndicator = overlay:CreateTexture(nil, "OVERLAY", nil, 6)
+	summonIndicator:SetSize(unpack(db.SummonIndicatorSize))
+	summonIndicator:SetPoint(unpack(db.SummonIndicatorPosition))
+	summonIndicator.azeriteTexture = db.SummonIndicatorTexture
+	summonIndicator.colorPending = db.SummonPendingColor
+	summonIndicator.colorAccepted = db.SummonAcceptedColor
+	summonIndicator.colorDeclined = db.SummonDeclinedColor
+	summonIndicator:Hide()
+
+	self.SummonIndicator = summonIndicator
+	self.SummonIndicator.PostUpdate = SummonIndicator_PostUpdate
+
+	-- Phase Indicator
+	--------------------------------------------
+	-- No mouse: a mouse-enabled child would eat clicks (and click casts) on the
+	-- unit button under it. The reason is still in the unit tooltip.
+	local phaseIndicator = CreateFrame("Frame", nil, overlay)
+	phaseIndicator:SetSize(unpack(db.PhaseIndicatorSize))
+	phaseIndicator:SetPoint(unpack(db.PhaseIndicatorPosition))
+	phaseIndicator:EnableMouse(false)
+	phaseIndicator:Hide()
+
+	local phaseIcon = phaseIndicator:CreateTexture(nil, "OVERLAY", nil, 3)
+	phaseIcon:SetAllPoints()
+	phaseIcon:SetTexture(db.PhaseIndicatorTexture)
+	phaseIndicator.Icon = phaseIcon
+
+	self.PhaseIndicator = phaseIndicator
+
+	-- Threat Indicator
+	--------------------------------------------
+	-- Glows behind the portrait border while the member is tanking or has pulled
+	-- aggro (oUF colours it from Colors.threat). Legacy blanks the texture (no
+	-- portrait) and draws its own threat border from this element's Show/Hide.
+	local threatIndicator = portraitOverlayFrame:CreateTexture(nil, "BACKGROUND", nil, -2)
+	threatIndicator:SetPoint(unpack(db.PortraitThreatPosition))
+	threatIndicator:SetSize(unpack(db.PortraitThreatSize))
+	threatIndicator:SetTexture(db.PortraitThreatTexture)
+	threatIndicator:Hide()
+
+	self.ThreatIndicator = threatIndicator
 
 	-- CombatFeedback Text
 	--------------------------------------------

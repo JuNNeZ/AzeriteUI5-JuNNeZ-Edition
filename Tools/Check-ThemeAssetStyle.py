@@ -48,6 +48,14 @@ def check(path):
     px = rgb[solid]; mx = px.max(1); mn = px.min(1)
     sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0)
     original = ASSETS / path.name
+    if name in ('orb_case_hi', 'orb_case_low') and original.exists() and path.parent != ASSETS:
+        native = np.asarray(Image.open(original).convert('RGBA'))
+        aperture = np.asarray(Image.open(TEMPLATES/(name+'-fill.png')).convert('L')) > 0
+        if native.shape == a.shape:
+            expected = native.copy()
+            expected[aperture, :3] = np.rint(native[aperture, :3].astype(float)*192/255).astype('uint8')
+            if not np.array_equal(a[aperture], expected[aperture]):
+                fails.append('native orb glass/specular or stock rendered brightness changed')
     if any(k in name for k in NEUTRAL):
         if sat.mean() > .04: fails.append(f'functional layer carries pigment (mean saturation {sat.mean():.2f}); must be greyscale')
         if any(k in name for k in WHITE) and np.percentile(lum[alpha > 8], 5) < .97: fails.append('glow/outline is not pure white')

@@ -56,6 +56,9 @@
 	<Script file="HunterTheme.lua"/>
 	<Script file="MageCrystalPreview.lua"/>
 	<Script file="MageTheme.lua"/>
+	<Script file="DruidTheme.lua"/>
+	<Script file="MoonwellSlosh.lua"/>
+	<Script file="WildheartCrystal.lua"/>
 	<Script file="ThemeEffects.lua"/>
 	<Script file="ThemeBarPreview.lua"/>
 

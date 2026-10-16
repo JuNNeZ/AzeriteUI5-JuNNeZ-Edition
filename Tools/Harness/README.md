@@ -1,5 +1,22 @@
 # Offline harnesses for the options panel and client compatibility
 
+Wildheart Lite+ crystal: `lua Tools/Harness/wildheart_crystal_harness.lua . mutations`
+loads the real module and dispatcher against recording widgets. Checks cover
+native clipping/masks, no resource or fill geometry reads, draw order, activity
+transitions, combat ticking/settings refusal, cleanup, strength, ice refresh
+plus dynamic mist UVs, curved pulse travel with intersecting masks, decaying
+movement impulses, faster active flow and seven rejected mutants. Current magic
+has a full-silhouette dim layer plus a fill-clipped bright layer; checks cover
+their separate parents, drawing above the material body, complementary intensity, same phase, material-only
+fill clip, zero-strength cleanup and rejection of a clipped ambient parent.
+`samples <output.json> [wildheart|moonvein|dreamsap]` exports real Lua layer
+samples and palettes for `Tools/Render-WildheartDemo.py --compare` or
+`--flavour <key>`; `--persistent-compare --flavour <key>` renders the retained
+old clip against new magic at 100/50/10/0%. Tests also cover all three Lite+ choices, independent
+strengths, distinct motion and hiding/restoring Wildheart's branch/seed layers.
+Renderer is an offline approximation;
+client rendering, taint and performance remain live checks in Assets/Druid/README.md.
+
 The custom options panel draws itself, so these are the only thing between a change and a broken
 window. They run under plain Lua 5.1 against the addon's **real** option tables, with the WoW API
 stubbed in `stubs.lua`.
@@ -26,7 +43,8 @@ lua Tools/Harness/nameplate_harness.lua    .               # nameplates: named c
 lua Tools/Harness/player_aura_enchant_harness.lua .        # weapon enchants in the player aura row, 12.1.0 and 12.1.5/Forever
 lua Tools/Harness/flyout_harness.lua       .               # LibActionButton flyout discovery, both clients
 lua Tools/Harness/tooltip_compare_harness.lua .            # compare tooltips: borders and the Equipped tab
-lua Tools/Harness/castbar_pushback_harness.lua .           # oUF castbar: the player's bar steps back on pushback
+lua Tools/Harness/castbar_pushback_harness.lua .           # oUF castbar: pushback, and stops without a castBarID hide the bar
+lua Tools/Harness/party_dispel_harness.lua .               # party dispel glow + priority debuff with secret aura fields
 lua Tools/Harness/mythicplus_harness.lua   .               # Mythic+ timer, forces, end card, keystone, Great Vault
 lua Tools/Harness/whatsnew_harness.lua     .               # What's New popup: when it shows, Got it, combat, buttons
 lua Tools/Harness/unit_tier_harness.lua    .               # Novice/Hardened/Seasoned tiers and critters, any client or language
@@ -388,3 +406,7 @@ map scroll container's scale fields in Blizzard's read-then-write order: an addo
 `currentScale` tainted, Blizzard's own rebuilds and `OnUpdate` keep it tainted (until /reload), and `AcquirePin` is then
 insecure before `SetPropagateMouseClicks`. Also shows `securecall`/`pcall` from addon code and addon "scrub" writes do not
 clean it. 12 checks; case 2 (5.26.0) against case 4 (fix) is the mutation pair. No frames: live combat map opening is owed.
+
+Druid theme and Lite+: `lua Tools/Harness/druid_theme_harness.lua . mutations` runs the real engine, Druid module and effects dispatcher against recording widgets. It rejects native resource reads/resizing, checks Moonwell fill ownership, native clipping, root layers, cleanup, strength and mirrored/threat art. Three in-memory mutants must fail for the intended reason. Client rendering remains a live check.
+
+Moonwell+ reactive orb: `lua Tools/Harness/moonwell_slosh_harness.lua . mutations` loads the real effect and Lite+ dispatcher. Native resource getters and clip geometry reads throw; checks cover native clipping anchors, 32 columns, palette, quiet/moving/combat/mounted/flying, secret/missing optional state APIs, combat ticking, throttling, hidden/clear cleanup, strength, resizing and four rejected mutants. `geometry <output.json>` writes actual column dips for offline review. WoW clipping/taint/performance remain live tests in Assets/Druid/README.md.

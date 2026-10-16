@@ -41,6 +41,14 @@
       ],
       "sourceSha256": "8452fe36bdeda066571b5f024c81bc3215461a537a791b76a512d08aabed7fc1",
       "sha256": "0a9330cc103b4890f059013c4c286c943e0542dfaaa9058094cf4b89a054afc9"
+    },
+    "druid": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourceSha256": "5709fc2a4891a702e0c4f24d75184e372efa097cb426c99e6ffe711e8d95684a",
+      "sha256": "ba2fbe673b062b4bc8c53e6c514cf601f4054d3c8388af44e15e385934f8c031"
     }
   }
 }

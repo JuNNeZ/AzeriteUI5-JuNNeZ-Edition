@@ -2140,6 +2140,37 @@ do
 	Fire("PLAYER_TARGET_CHANGED")
 	Step("minions only for your target")
 
+	-- Dead mobs (FixLog 2026-10-16): Forever keeps a dead unit's plate, and ours drew an empty bar reading
+	-- "Dead" over the corpse. The plate's own events do not fire on a death; its health update does.
+	Unit("nameplate16", { name = "Webwood Venomfang", guid = creature(1986), canAttack = true, reaction = 2 })
+	Unit("nameplate17", { name = "Fallen Paladin", guid = "Player-1-0000ABCD", canAttack = true, reaction = 2,
+		isPlayer = true, playerControlled = true })
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate16")
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate17")
+	Flush()
+	P[16].__label, P[17].__label = "dead mob", "dead player"
+	check(not Hidden(P[16]) and P[16].Health.__shown, "a living mob shows its plate and bar")
+	W.units.nameplate16.dead, W.units.nameplate17.dead = true, true
+	P[16].Health.PostUpdate(P[16].Health, P[16].unit)
+	P[17].Health.PostUpdate(P[17].Health, P[17].unit)
+	check(Hidden(P[16]) and not P[16].Health.__shown, "a mob's plate hides when its health says it died")
+	check(not Hidden(P[17]), "a dead player keeps the plate")
+	W.alias.target = "nameplate16"
+	Fire("PLAYER_TARGET_CHANGED")
+	check(Hidden(P[16]), "targeting the corpse does not bring the plate back")
+	W.alias.target = savedTarget
+	Fire("PLAYER_TARGET_CHANGED")
+	W.units.nameplate16.secret = { dead = true }
+	P[16].Health.PostUpdate(P[16].Health, P[16].unit)
+	check(not Hidden(P[16]), "a death answer that is secret hides nothing")
+	W.units.nameplate16.secret = nil
+	W.units.nameplate16.dead = false
+	P[16].Health.PostUpdate(P[16].Health, P[16].unit)
+	check(not Hidden(P[16]) and P[16].Health.__shown, "brought back to life, the mob's plate and bar return")
+	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate16")
+	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate17")
+	Step("dead mobs")
+
 	-- Your target's floating name (FixLog 2026-09-26): the game's UnitNameFocused, passed through. Turning it
 	-- off hid a corpse's name live. It is a name the engine draws, so no plate follows it.
 	check(M:IsShownSettingSupported("targetName") and M:GetShownSetting("targetName") == true,

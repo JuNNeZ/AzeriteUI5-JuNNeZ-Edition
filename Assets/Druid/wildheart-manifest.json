@@ -1,0 +1,17 @@
+{
+  "source": "Docs/Research_Assets/Druid/Wildheart-2026-10-16/veins-source.png",
+  "sourceSha256": "059e7b926c232107fb44c5ca9534d39471d9dc3e47f6d7e5c2880b5cc2da9909",
+  "texture": "Assets/Druid/wildheart-veins.tga",
+  "sha256": "913390e8d095854b58515a599501afa1e23361c27f59159d7aa697949e60306b",
+  "canvas": [
+    512,
+    512
+  ],
+  "bytes": 1048620,
+  "shared": [
+    "native crystal material/mask",
+    "Druid/dreamlight.tga",
+    "Paladin/holy-sphere.tga"
+  ],
+  "liveValidated": false
+}

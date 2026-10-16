@@ -41,6 +41,23 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.28.0-JuNNeZ",
+		items = {
+			{
+				text = "The Druid theme is open for testing, with four new Lite+ effects. Feedback welcome!",
+				page = "Themes"
+			},
+			{
+				text = "Party health bars keep their class colour after a cast, and the dispel glow works in combat.",
+				page = L["Group Frames"],
+				section = L["Party Frames"]
+			},
+			{
+				text = "Party frames now show the leader, incoming summons, members in another phase and who has aggro."
+			}
+		}
+	},
+	{
 		version = "5.27.1-JuNNeZ",
 		items = {
 			{

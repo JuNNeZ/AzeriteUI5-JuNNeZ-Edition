@@ -53,11 +53,13 @@ combat filter on                           calls=609   plates=11
 combat filter off                          calls=1308  plates=11
 the interrupt resolver asked               calls=0     plates=0
 stacking passed through                    calls=786   plates=11
-execute marker on                          calls=672   plates=11
-the elite drops below a fifth of its health calls=6     plates=1
-threshold set by hand, then automatic again calls=1922  plates=11
-the class decides the threshold            calls=128   plates=4
-a marked plate reused for a friendly unit  calls=1387  plates=11
+execute marker on                          calls=688   plates=11
+the elite drops below a fifth of its health calls=9     plates=1
+threshold set by hand, then automatic again calls=1947  plates=11
+the class decides the threshold            calls=152   plates=4
+a marked plate reused for a friendly unit  calls=1413  plates=11
+execute marker: only enemies you are fighting calls=1230  plates=11
+execute marker: lead and colours           calls=3098  plates=11
 execute marker off                         calls=615   plates=11
 a vendor and a follower companion appear   calls=412   plates=2
 friendly NPCs sized by their own setting   calls=1460  plates=13
@@ -67,7 +69,8 @@ the game's visibility settings followed    calls=3913  plates=13
 the visibility settings passed through     calls=1436  plates=13
 friendly plates only for your target       calls=4092  plates=13
 minions only for your target               calls=4664  plates=15
+dead mobs                                  calls=636   plates=3
 your target's floating name                calls=1064  plates=13
 the game's Nameplate Size followed         calls=2326  plates=13
-the driver's size and CVars                calls=2400  plates=13
+the driver's size and CVars                calls=3424  plates=13
 switch nameplates off                      calls=0     plates=0

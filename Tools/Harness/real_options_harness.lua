@@ -75,6 +75,16 @@ ns.MageTheme = setmetatable({
 	IsActive = function() return false end,
 	GetEndcapChoices = function() return { school = true, aluneth = true, felomelorn = true, ebonchill = true, atiesh = true, dragonwrath = true, none = true } end
 }, moduleStubMT)
+local druidStrengthWrite
+ns.DruidTheme = setmetatable({
+ loadedActive = false, IsActive = function() return false end,
+ GetEffectStrength = function() return 1 end,
+ SetEffectStrength = function(_, kind, value) druidStrengthWrite = {kind, value} end
+}, moduleStubMT)
+local moonwellWrite
+ns.MoonwellSlosh = { GetStrength = function() return .8 end, SetStrength = function(_, value) moonwellWrite = value end }
+local wildheartWrite
+ns.WildheartCrystal = { GetStrength = function() return .7 end, SetStrength = function(_, value, flavour) wildheartWrite = {value,flavour} end }
 ns.MageCrystalPreview = setmetatable({ IsActive = function() return false end }, moduleStubMT)
 ns.db = ns.db or {}
 ns.db.char = ns.db.char or {}
@@ -152,7 +162,7 @@ local resourceInfo = { "Unit Frames", "player", "crystalOrbColorMode" }
 local resourceProfile = ns:GetModule("PlayerFrame").db.profile
 local previousColour = resourceProfile.crystalOrbColorMode
 assert(not resourceColour.values().light, "Light resource colour is specific to Paladin artwork")
-for _, key in ipairs({ "theme", "litePlus", "effects", "hunter", "paladin", "mageTheme", "mage" }) do assert(themes.args[key], "Themes entry: " .. key) end
+for _, key in ipairs({ "theme", "litePlus", "effects", "hunter", "paladin", "mageTheme", "mage", "druid" }) do assert(themes.args[key], "Themes entry: " .. key) end
 local themeSelect = themes.args.theme
 assert(themeSelect.get() == "hunter", "the dropdown shows the theme in use")
 assert(themeSelect.values().mage and themeSelect.values().paladin, "Mage and Paladin offered without Development Mode")
@@ -184,8 +194,44 @@ assert(not resourceColour.values().light and resourceColour.get(resourceInfo) ==
 	and resourceProfile.crystalOrbColorMode == "light", "Light becomes dormant on another theme without erasing the choice")
 resourceProfile.crystalOrbColorMode = previousColour
 local crystalValues = themes.args.effects.args.crystal.values()
-assert(crystalValues.theme and crystalValues.mage and crystalValues.paladin and crystalValues.none, "crystal effect choices")
+assert(crystalValues.theme and crystalValues.mage and crystalValues.paladin and crystalValues.druid and crystalValues.none, "crystal effect choices")
 assert(themes.args.effects.args.crystal.sorting()[1] == "theme", "the theme's own first")
+assert(themeSelect.values().druid, "Druid theme offered")
+assert(crystalValues.wildheart == "Wildheart (WIP)", "Wildheart label")
+assert(themes.args.wildheart.hidden(), "Wildheart controls hidden until selected")
+ns.db.char.themeCrystalEffect = "wildheart"
+assert(not themes.args.wildheart.hidden() and themes.args.wildheart.args.strength.get() == .7, "Wildheart controls selected")
+themes.args.wildheart.args.strength.set(nil, .55)
+assert(wildheartWrite[1] == .55 and wildheartWrite[2] == "wildheart", "Wildheart strength setter")
+for _,key in ipairs({"moonvein","dreamsap"}) do
+	assert(crystalValues[key] and themes.args[key].hidden(), "flavour label and hidden controls")
+	ns.db.char.themeCrystalEffect = key
+	assert(not themes.args[key].hidden() and themes.args.wildheart.hidden(), "only selected flavour controls show")
+	assert(themes.args[key].args.strength.get() == .7, "flavour strength getter")
+	themes.args[key].args.strength.set(nil,.35)
+	assert(wildheartWrite[1] == .35 and wildheartWrite[2] == key, "flavour strength setter")
+end
+ns.db.char.themeCrystalEffect = nil
+assert(themes.args.effects.args.orb.values().moonwell:find("Moonwell+", 1, true), "reactive orb has its own label")
+assert(themes.args.moonwell.hidden(), "reactive controls hidden until selected")
+ns.db.char.themeOrbEffect = "moonwell"
+assert(not themes.args.moonwell.hidden(), "reactive controls exposed through Lite+")
+assert(themes.args.moonwell.args.strength.get() == .8, "reactive strength getter")
+themes.args.moonwell.args.strength.set(nil, .6)
+assert(moonwellWrite == .6, "reactive strength setter")
+ns.db.char.themeOrbEffect = "paladin"
+assert(themes.args.effects.args.orb.values().druid, "Moonwell offered through Lite+")
+local druid = themes.args.druid
+assert(druid.hidden(), "Druid settings hidden without its effects")
+ns.db.char.themeCrystalEffect = "druid"
+assert(not druid.hidden() and not druid.args.crystal.hidden() and druid.args.orb.hidden(), "Dreamlight alone exposes its strength")
+ns.db.char.themeOrbEffect = "druid"
+assert(not druid.args.orb.hidden() and druid.args.orb.get() == 1, "Moonwell strength visible")
+for _, pair in ipairs({{"crystal", "Crystal"}, {"orb", "Orb"}}) do
+ druid.args[pair[1]].set(nil, .45)
+ assert(druidStrengthWrite[1] == pair[2] and druidStrengthWrite[2] == .45, "independent Druid strength dispatch")
+end
+ns.db.char.themeCrystalEffect = nil
 ns.db.char.themeLitePlus, ns.db.char.themeOrbEffect, ns.db.global.enableDevelopmentMode = nil, nil, nil
 local endcap = themes.args.hunter.args.endcap
 local values = endcap.values()
@@ -198,7 +244,7 @@ local variants=tests.args.kind.values()
 assert(variants.playerLo and variants.playerMid and variants.playerHi and variants.targetBoss and variants.crystalLo and variants.orbHi,'tier and resource test choices')
 assert(themes.args.mage.args.school.values.auto,'automatic specialization choice')
 assert(themes.args.mage.args.strength and themes.args.mage.args.particles,'independent effect controls')
-print("Themes page passed, including shared tests and relevant Mage effect controls")
+print("Themes page passed, including shared tests and Mage and Druid effect controls")
 
 local bars = assert(options.args.ActionBars or options.args["Action Bars"])
 for id = 1, 8 do

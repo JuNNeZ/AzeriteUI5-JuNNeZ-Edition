@@ -1,7 +1,7 @@
 # Theme bag icons
 
-Original built-in image_gen paintings for the five selectable themes:
-AzeriteUI, Legacy, Hunter, Mage and Paladin. All are 256x256 uncompressed
+Original built-in image_gen paintings for the six selectable themes:
+AzeriteUI, Legacy, Hunter, Mage, Paladin and Druid. All are 256x256 uncompressed
 32-bit alpha TGA. The button keeps its existing size, circular mask, ring,
 anchors, count, tooltip, hover and secure backpack click.
 
@@ -14,5 +14,5 @@ Rebuild: python Tools/Build-ThemeBagIcons.py. Review.png shows enlarged art
 and the actual native circular mask at 28px. manifest.json records source and
 installed hashes; TGA roundtrips are checked by the builder.
 
-Live Retail/Forever remains unverified. After reload, switch across all five
+Live Retail/Forever remains unverified. After reload, switch across all six
 themes and verify bag toggle, cursor-item drop, free-slot count and hover.

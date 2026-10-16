@@ -216,6 +216,11 @@ local DispelTypesByClass = {
 local function UpdateTooltip(element)
 	if(GameTooltip:IsForbidden()) then return end
 
+	-- AzeriteUI: SetUnitAura takes an aura index, not the spellID it was handed here.
+	if (element.auraInstanceID and GameTooltip.SetUnitDebuffByAuraInstanceID) then
+		GameTooltip:SetUnitDebuffByAuraInstanceID(element.__owner.unit, element.auraInstanceID)
+		return
+	end
 	GameTooltip:SetUnitAura(element.__owner.unit, element.spellID, 'HARMFUL')
 end
 
@@ -281,6 +286,85 @@ local function UnregisterAllDebuffs(element)
 	self.customDebuffs = nil
 end
 
+-- AzeriteUI: the scan by aura instance, for clients with C_UnitAuras instance queries
+-- (Retail 12 and Forever). The index loop below gave up at the first aura with a secret
+-- field, which in combat was usually the first aura, so the icon stayed empty. Here a
+-- secret field only means that aura cannot rank by it: boss and custom need readable
+-- values, "dispellable" comes from the game's filter (ns.API.GetPlayerDispellableDebuff),
+-- and icon and stack text are handed to the widgets unread.
+local NativeAuras = _G.C_UnitAuras
+local CanScanByInstance = NativeAuras and NativeAuras.GetUnitAuraInstanceIDs and NativeAuras.GetAuraDataByAuraInstanceID and true or false
+
+local function Readable(value)
+	if (value == nil or (IsSecret and IsSecret(value))) then return nil end
+	return value
+end
+
+local function ScanByInstance(self, element, unit, canDispel)
+	if (element.forceShow) then
+		return nil -- the test icon below
+	end
+	local API = ns.API
+	local bestID, bestData, bestPriority, bestIsBoss, bestIsCustom = nil, nil, -1, nil, nil
+
+	local ok, ids = pcall(NativeAuras.GetUnitAuraInstanceIDs, unit, 'HARMFUL')
+	if (ok and type(ids) == 'table') then
+		for _, auraInstanceID in ipairs(ids) do
+			if (Readable(auraInstanceID)) then
+				local okData, auraData = pcall(NativeAuras.GetAuraDataByAuraInstanceID, unit, auraInstanceID)
+				if (okData and type(auraData) == 'table') then
+					local spellID = Readable(auraData.spellId)
+					if (not (spellID and self.blacklistedDebuffs and self.blacklistedDebuffs[spellID])) then
+						if (Readable(auraData.isBossAura) == true and DispellPriority.Boss > bestPriority) then
+							bestID, bestData, bestPriority, bestIsBoss, bestIsCustom = auraInstanceID, auraData, DispellPriority.Boss, true, nil
+						end
+						local custom = spellID and self.customDebuffs and self.customDebuffs[spellID]
+						if (custom and custom > bestPriority) then
+							bestID, bestData, bestPriority, bestIsBoss, bestIsCustom = auraInstanceID, auraData, custom, nil, true
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if (canDispel and API and API.GetPlayerDispellableDebuff) then
+		local auraInstanceID, auraData = API.GetPlayerDispellableDebuff(unit)
+		if (auraInstanceID) then
+			local priority = DispellPriority[Readable(auraData and auraData.dispelName) or ''] or 1
+			if (priority > bestPriority) then
+				bestID, bestData, bestPriority, bestIsBoss, bestIsCustom = auraInstanceID, auraData, priority, nil, nil
+			end
+		end
+	end
+
+	if (bestID) then
+		element.auraInstanceID = bestID
+		element.spellID = Readable(bestData.spellId)
+		if (element.icon) then element.icon:SetTexture(bestData.icon) end
+		if (element.count) then
+			local count = ''
+			if (NativeAuras.GetAuraApplicationDisplayCount) then
+				local okCount, text = pcall(NativeAuras.GetAuraApplicationDisplayCount, unit, bestID, 2)
+				if (okCount and text ~= nil) then count = text end
+			end
+			element.count:SetText(count)
+		end
+		element:Show()
+	else
+		element.auraInstanceID = nil
+		element.spellID = nil
+		element:Hide()
+	end
+
+	if (element.PostUpdate) then
+		local data = bestData or {}
+		element:PostUpdate('UNIT_AURA', bestID ~= nil, Readable(data.name), data.icon, nil,
+			Readable(data.dispelName), nil, nil, Readable(data.spellId), bestIsBoss, bestIsCustom, bestID, bestData)
+	end
+	return true
+end
+
 local function Update(self, event, unit)
 	if(type(unit) ~= "string" or (IsSecret and IsSecret(unit)) or unit ~= self.unit) then return end
 
@@ -294,7 +378,7 @@ local function Update(self, event, unit)
 			return nil
 		end
 		if (IsSecret and (_name and IsSecret(_name) or _spellID and IsSecret(_spellID) or _debuffType and IsSecret(_debuffType))) then
-			return nil
+			return false -- unreadable: skip this aura, keep scanning
 		end
 		return _name, _icon, _count, _debuffType, _duration, _expirationTime, _unitCaster, _spellID, _isBossDebuff
 	end
@@ -318,6 +402,10 @@ local function Update(self, event, unit)
 		element:PreUpdate(unit,event)
 	end
 
+	if (CanScanByInstance and ScanByInstance(self, element, unit, canDispel)) then
+		return
+	end
+
 	-- Scan auras for dispellable or priority debuffs
 	local name, icon, count, debuffType, duration, expirationTime, spellID, isBoss, isCustom
 	local priority = -1
@@ -325,9 +413,9 @@ local function Update(self, event, unit)
 	for i = 1,40 do
 		local _name, _icon, _count, _debuffType, _duration, _expirationTime, _unitCaster, _spellID, _isBossDebuff = SafeUnitAuraHarmful(unit, i)
 
-		if (not _name) then break end
+		if (_name == nil) then break end
 
-		local isBlacklisted = self.blacklistedDebuffs and self.blacklistedDebuffs[_spellID]
+		local isBlacklisted = (not _name) or (self.blacklistedDebuffs and self.blacklistedDebuffs[_spellID])
 		if(not isBlacklisted) then
 
 			if(_isBossDebuff) then
