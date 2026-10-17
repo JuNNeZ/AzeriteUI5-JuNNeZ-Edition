@@ -125,6 +125,7 @@ local defaults = { profile = ns:Merge({
 	-- Mana orb art. The orb ships four interchangeable fill textures and three
 	-- decorative layers; only orb2 and the case were ever wired up.
 	manaOrbTexture = "clouds",
+	flowingMana = false,
 	manaOrbGlass = true,
 	manaOrbRim = false,
 	manaOrbPedestal = false,
@@ -2392,7 +2393,19 @@ local UpdateManaOrbColor = function(element)
 	end
 end
 
+local SetManaOrbFillTexture
 local Mana_PostUpdate = function(element, unit, cur, min, max)
+	-- displayType is set by UpdateManaOrb before this callback. Restyle only
+	-- when the mana gate changes, including shapeshift/vehicle changes in combat.
+	local effects = ns.ThemeEffects
+	if (effects and SetManaOrbFillTexture) then
+		local profile = PlayerFrameMod.db and PlayerFrameMod.db.profile
+		local flowing = effects:ShouldFlowMana(element, profile and profile.flowingMana)
+		local layout = element.__AzeriteUI_OrbFillLayout
+		if (layout and (element.__AzeriteUI_FlowingMana == true) ~= flowing) then
+			SetManaOrbFillTexture(element, layout)
+		end
+	end
 	UpdateManaOrbColor(element)
 	UpdatePlayerElementValueText(element)
 	local displayPercent = element.__AzeriteUI_DisplayPercent
@@ -2459,8 +2472,12 @@ local MANA_ORB_TEXTURES = {
 	sphere = "orb4"
 }
 
-local SetManaOrbFillTexture = function(mana, db)
-	if (ns.ThemeEffects and ns.ThemeEffects:StyleOrb(mana)) then return end
+SetManaOrbFillTexture = function(mana, db)
+	-- Preserve the actual tier/variant layout for resource changes between
+	-- UpdateSettings calls; the root PlayerFrame config is not a fill layout.
+	mana.__AzeriteUI_OrbFillLayout = db
+	local profile = PlayerFrameMod.db and PlayerFrameMod.db.profile
+	if (ns.ThemeEffects and ns.ThemeEffects:StyleOrb(mana, profile and profile.flowingMana)) then return end
 	local style = PlayerFrameMod.db and PlayerFrameMod.db.profile and PlayerFrameMod.db.profile.manaOrbTexture
 	local asset = MANA_ORB_TEXTURES[style]
 	if (asset and asset ~= "orb2" and ns.API and ns.API.GetMedia) then
@@ -3653,7 +3670,9 @@ local style = function(self, unit)
 	local mana = self:CreateOrb(self:GetName().."ManaOrb")
 	mana:SetFrameLevel(self:GetFrameLevel() - 2)
 	mana.frequentUpdates = true
-	mana.smoothing = nil
+	-- Listed with the other eased bars, so /azsmooth and /az -> Unit Frames switch it too
+	-- (ns.API.UpdateManaOrb passes mana.smoothing to the orb's native bar).
+	ns.UnitFrame.SetBarSmoothing(mana, true)
 	mana.displayAltPower = true
 	mana.colorPower = false
 	mana.__owner = self

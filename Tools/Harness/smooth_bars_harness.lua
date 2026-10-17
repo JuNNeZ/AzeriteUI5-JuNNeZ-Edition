@@ -306,6 +306,39 @@ if (loaded and rawget(API, "UpdateHealth")) then
 		pcall(API.UpdatePower, powerOwner, "ForceUpdate", "party1")
 		check(power.writes[#power.writes] == IMMEDIATE, "a new unit's power snaps")
 	end
+
+	-- The player's mana orb (Neil, FixLog 2026-10-17). LibOrb passes a number on to its
+	-- native bar as the interpolation and snaps on true; it used to be given true always.
+	if (rawget(API, "UpdateManaOrb")) then
+		_G.UnitIsDeadOrGhost = function() return false end
+		guid = "Player-4"
+		local orb = NewBar()
+		ns.UnitFrame.SetBarSmoothing(orb, true)
+		local orbOwner = { unit = "player", ManaOrb = orb }
+		local displayType = 0
+		orb.GetDisplayPowerType = function() return displayType end
+		unitHealth = 80
+		local okO, eO = pcall(API.UpdateManaOrb, orbOwner, "StyleInit", "player")
+		check(okO, "UpdateManaOrb runs", eO)
+		check(orb.writes[#orb.writes] == true, "the orb's first value snaps", orb.writes[#orb.writes])
+		unitHealth = 70
+		pcall(API.UpdateManaOrb, orbOwner, "UNIT_POWER_FREQUENT", "player")
+		check(orb.writes[#orb.writes] == EASED, "a plain mana change eases the orb", orb.writes[#orb.writes])
+		pcall(API.UpdateManaOrb, orbOwner, "ForceUpdate", "player")
+		check(orb.writes[#orb.writes] == true, "a ForceUpdate snaps the orb")
+		pcall(API.UpdateManaOrb, orbOwner, "PLAYER_ENTERING_WORLD", "player")
+		check(orb.writes[#orb.writes] == true, "an event that is not a value change snaps the orb")
+		displayType = 3
+		pcall(API.UpdateManaOrb, orbOwner, "UNIT_POWER_UPDATE", "player")
+		check(orb.writes[#orb.writes] == true, "a new power type (a form) snaps the orb", orb.writes[#orb.writes])
+		ns.UnitFrame.SetSmoothingEnabled("bars", false)
+		unitHealth = 60
+		pcall(API.UpdateManaOrb, orbOwner, "UNIT_POWER_FREQUENT", "player")
+		-- Immediate (0) is handed to the native bar as is; in Lua 0 is truthy, so LibOrb snaps too.
+		local last = orb.writes[#orb.writes]
+		check(last == true or last == IMMEDIATE, "switch off: the orb snaps", last)
+		ns.UnitFrame.SetSmoothingEnabled("bars", true)
+	end
 end
 
 print(string.format("smooth bars: %d checks, %d failures", checks, failures))

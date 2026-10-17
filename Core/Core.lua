@@ -348,6 +348,12 @@ ns.ApplySaiyaRattPreset = function(self)
 		PlayerFrameAlternate.db.profile.enabled = true
 	end
 
+	-- One player frame at a time (Options/OptionsPages/UnitFrames.lua UsePlayerFrame).
+	local PlayerFrameParty = self:GetModule("PlayerFrameParty", true)
+	if (PlayerFrameParty and PlayerFrameParty.db and PlayerFrameParty.db.profile) then
+		PlayerFrameParty.db.profile.enabled = false
+	end
+
 	local Minimap = self:GetModule("Minimap", true)
 	if (Minimap and Minimap.db and Minimap.db.profile) then
 		Minimap.db.profile.theme = "Azerite"

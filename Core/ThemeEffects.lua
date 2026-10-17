@@ -108,6 +108,15 @@ Effects.GetOrbEffect = function(self)
 	return Resolve(THEME_ORB[self:GetTheme()], self:GetOrbChoice())
 end
 
+-- Gate on the orb's actual displayed resource, not class or colour aliases.
+-- Unknown/secret display types never acquire the generic mana override.
+Effects.ShouldFlowMana = function(self, orb, enabled)
+	if (enabled ~= true or not orb) then return false end
+	local powerType = orb.displayType
+	if (issecretvalue and issecretvalue(powerType)) then return false end
+	return type(powerType) == "number" and powerType == 0
+end
+
 --- Redraws the player's crystal and orb. Safe outside combat only.
 Effects.Refresh = function(self)
 	if (InCombatLockdown()) then return false end
@@ -247,11 +256,14 @@ end
 
 --- Called by Player.lua before it sets the orb's fill. True when an effect
 --- has set the fill itself.
-Effects.StyleOrb = function(self, orb)
+Effects.StyleOrb = function(self, orb, flowingMana)
 	LiftCap(orb, orb.Case)
 	local effect = self:GetOrbEffect()
+	local flowing = self:ShouldFlowMana(orb, flowingMana)
+	orb.__AzeriteUI_FlowingMana = flowing
+	if (flowing) then effect = "flowing" end
 	local slosh = ns.MoonwellSlosh
-	if (slosh and effect ~= "moonwell") then slosh:Clear(orb) end
+	if (slosh and effect ~= "moonwell" and effect ~= "flowing") then slosh:Clear(orb) end
 	local druid = ns.DruidTheme
 	if (druid) then
 		if (effect ~= "druid") then druid:ClearOrbEffect(orb) end
@@ -261,6 +273,7 @@ Effects.StyleOrb = function(self, orb)
 		if (effect == "paladin") then return paladin:ApplyOrbEffect(orb) end
 		paladin:ClearOrbEffect(orb)
 	end
+	if (effect == "flowing" and slosh) then return slosh:Apply(orb, true) end
 	if (effect == "moonwell" and slosh) then return slosh:Apply(orb) end
 	if (effect == "druid" and druid) then return druid:ApplyOrbEffect(orb) end
 	if (effect == "hunter" and hunter) then return hunter:ApplyOrbEffect(orb) end

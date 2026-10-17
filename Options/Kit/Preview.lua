@@ -381,7 +381,7 @@ local AURA_SORT_FRAMES = Members("TargetFrame", "PartyFrames", "RaidFrame5", "Ar
 local CAST_TEXT_FRAMES = Members("TargetFrame", "NamePlates")
 
 -- Every module whose frames carry a CombatFeedback text.
-local FEEDBACK_FRAMES = Members("PlayerFrame", "PlayerFrameAlternate", "TargetFrame", "PartyFrames",
+local FEEDBACK_FRAMES = Members("PlayerFrame", "PlayerFrameAlternate", "PlayerFrameParty", "TargetFrame", "PartyFrames",
 	"RaidFrame5", "RaidFrame25", "RaidFrame40", "BossFrames", "ArenaFrames")
 
 -- The four group frame modules GroupIndicators.lua attaches to.
@@ -394,7 +394,7 @@ local groupIndicatorPolicy = {
 }
 
 -- Every module that builds a health prediction element.
-local HEALTH_FRAMES = Members("PlayerFrame", "PlayerFrameAlternate", "TargetFrame", "ToTFrame",
+local HEALTH_FRAMES = Members("PlayerFrame", "PlayerFrameAlternate", "PlayerFrameParty", "TargetFrame", "ToTFrame",
 	"FocusFrame", "PetFrame", "PartyFrames", "RaidFrame5", "RaidFrame25", "RaidFrame40",
 	"BossFrames", "ArenaFrames", "NamePlates")
 

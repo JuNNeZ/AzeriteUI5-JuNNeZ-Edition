@@ -970,7 +970,11 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 	UnitFrame_PostUpdate(self)
 end
 
-local style = function(self, unit)
+-- asPlayer: the player's own frame in party style (PlayerParty.lua, "Use Party Frame as
+-- Player Frame"). It is not a header child, so it leaves out what only a group member
+-- needs (aura row, range fade, Mythic+ rating) and stays out of this module's Units,
+-- whose updates read the party profile; PlayerFrameParty drives it instead.
+local style = function(self, unit, asPlayer)
 
 	local db = ns.GetConfig("PartyFrames")
 
@@ -978,7 +982,9 @@ local style = function(self, unit)
 	ns.UnitFrame.InitializeUnitFrame(self)
 	ns.UnitFrame.RegisterGroupClicks(self)
 	ns.UnitFrames[self] = true -- add to global registry
-	Units[self] = true -- add to local registry
+	if (not asPlayer) then
+		Units[self] = true -- add to local registry
+	end
 
 	-- Overlay for icons and text
 	--------------------------------------------
@@ -1009,12 +1015,14 @@ local style = function(self, unit)
 	self.Health.Override = ns.API.UpdateHealth
 	self.Health.PostUpdate = Health_PostUpdate
 	self.Health.PostUpdateColor = Health_PostUpdateColor
-	self:HookScript("OnEnter", function(frame)
-		UpdateMouseoverHealthColor(frame, PartyFrameMod.db and PartyFrameMod.db.profile or defaults.profile, true)
-	end)
-	self:HookScript("OnLeave", function(frame)
-		UpdateMouseoverHealthColor(frame, PartyFrameMod.db and PartyFrameMod.db.profile or defaults.profile, false)
-	end)
+	if (not asPlayer) then
+		self:HookScript("OnEnter", function(frame)
+			UpdateMouseoverHealthColor(frame, PartyFrameMod.db and PartyFrameMod.db.profile or defaults.profile, true)
+		end)
+		self:HookScript("OnLeave", function(frame)
+			UpdateMouseoverHealthColor(frame, PartyFrameMod.db and PartyFrameMod.db.profile or defaults.profile, false)
+		end)
+	end
 
 	local healthOverlay = CreateFrame("Frame", nil, health)
 	healthOverlay:SetFrameLevel(overlay:GetFrameLevel())
@@ -1254,13 +1262,15 @@ local style = function(self, unit)
 
 	-- Mythic+ Rating
 	--------------------------------------------
-	local rating = overlay:CreateFontString(nil, "OVERLAY", nil, 2)
-	rating:SetFontObject(GetFont(12, true))
-	rating:SetJustifyH("RIGHT")
-	rating:SetPoint("TOPRIGHT", self, "TOPRIGHT", -18, -14)
-	rating:Hide()
+	if (not asPlayer) then
+		local rating = overlay:CreateFontString(nil, "OVERLAY", nil, 2)
+		rating:SetFontObject(GetFont(12, true))
+		rating:SetJustifyH("RIGHT")
+		rating:SetPoint("TOPRIGHT", self, "TOPRIGHT", -18, -14)
+		rating:Hide()
 
-	self.MythicPlusRating = rating
+		self.MythicPlusRating = rating
+	end
 
 	-- Ressurection Indicator
 	--------------------------------------------
@@ -1392,6 +1402,16 @@ local style = function(self, unit)
 	auraHighlight:Hide()
 
 	self.AuraHighlight = auraHighlight
+
+	if (asPlayer) then
+		-- The player's buffs and debuffs stay in the Auras module's rows.
+		self.PostUpdate = UnitFrame_PostUpdate
+		self:RegisterEvent("PLAYER_ENTERING_WORLD", UnitFrame_OnEvent, true)
+		self:RegisterEvent("PLAYER_TARGET_CHANGED", UnitFrame_OnEvent, true)
+		self:RegisterEvent("PLAYER_FOCUS_CHANGED", UnitFrame_OnEvent, true)
+		self:RegisterEvent("UNIT_AURA", UnitFrame_OnEvent)
+		return
+	end
 
 	-- Auras
 	--------------------------------------------
@@ -1921,6 +1941,11 @@ PartyFrameMod.DisableBlizzard = function(self)
 	end
 	
 	oUF:DisableBlizzard("party")
+end
+
+--- The party style for the player's own frame (PlayerParty.lua), as an oUF style.
+PartyFrameMod.StylePlayer = function(frame, unit)
+	return style(frame, unit, true)
 end
 
 PartyFrameMod.CreateUnitFrames = function(self)

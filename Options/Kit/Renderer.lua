@@ -12,11 +12,9 @@
 -- binds the control's value to the option's get and set, and stacks the results
 -- down a scrolling column.
 --
--- One level of nesting is flattened deliberately. AceConfigDialog would render a
--- page's sub-groups as a row of tabs; the roadmap artifact instead runs them down
--- one page as titled sections, which is why `childGroups = "tab"` is ignored here
--- and a sub-group becomes a heading followed by its rows. The real table is only
--- two deep, so one level covers all of it.
+-- Collection describes every available setting. Presentation is separate: long
+-- pages can fold their sections, and explicitly chosen groups can use tabs,
+-- without removing settings from search, Quick Start or Changed.
 local Addon, ns = ...
 
 local Kit = ns.OptionsKit
@@ -27,6 +25,7 @@ if (not Config or not Controls) then return end
 -- Lua API
 local ipairs, pairs = ipairs, pairs
 local table_sort = table.sort
+local table_concat = table.concat
 local max = math.max
 local pcall = pcall
 local string_format = string.format
@@ -38,6 +37,17 @@ local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
 local Renderer = {}
 Kit.Renderer = Renderer
 
+-- Kept outside the AceConfig table: the registry rejects unknown option keys.
+-- The framework supplies childGroups="tab" to every root page, so root tabs
+-- must be explicitly requested here. Nested groups can use childGroups="tab".
+local navigation = setmetatable({}, { __mode = "k" })
+Renderer.SectionThreshold = 16
+Renderer.SetNavigation = function(self, group, mode)
+	if (type(group) ~= "table") then return end
+	if (mode ~= "flat" and mode ~= "sections" and mode ~= "tabs") then return end
+	navigation[group] = mode
+end
+
 local APP = Addon
 
 --------------------------------------------------------------------------
@@ -47,6 +57,31 @@ local Copy = function(path)
 	local out = {}
 	for i = 1, #path do out[i] = path[i] end
 	return out
+end
+
+local PathKey = function(path)
+	local parts = {}
+	for i, value in ipairs(path or {}) do
+		local text = tostring(value)
+		parts[i] = type(value) .. ":" .. #text .. ":" .. text
+	end
+	return table_concat(parts, "/")
+end
+
+local SamePath = function(a, b)
+	if (not a or not b or #a ~= #b) then return false end
+	for i = 1, #a do if (a[i] ~= b[i]) then return false end end
+	return true
+end
+
+local VisiblePath = function(options, path)
+	local prefix = {}
+	for i = 1, #path do
+		prefix[i] = path[i]
+		local option = Config.GetGroup(options, prefix)
+		if (type(option) ~= "table" or Config.IsHidden(option, options, prefix, APP)) then return false end
+	end
+	return true
 end
 
 local AsString = function(value, fallback)
@@ -528,9 +563,7 @@ Collect = function(group, options, path, out, depth)
 		local kind = option.type
 
 		if (kind == "group") then
-			-- Only one level is flattened. Anything deeper would run the page on
-			-- forever, and the real table never goes there.
-			if (depth == 0 or IsInline(option)) then
+			do
 				-- A sub-group is a place you might want to jump to. The `header`
 				-- entries inside one are punctuation within it, not destinations:
 				-- Action Bars has twelve of the former and thirty-two of the two
@@ -540,6 +573,7 @@ Collect = function(group, options, path, out, depth)
 					major = true,
 					-- The option key names the section's icon (Look.SetSectionIcon).
 					key = key,
+					path = Copy(childPath),
 					label = AsString(Config.GetName(option, options, childPath, APP), key)
 				}
 				Collect(option, options, childPath, out, depth + 1)
@@ -550,6 +584,7 @@ Collect = function(group, options, path, out, depth)
 		if (kind == "header") then
 			out[#out + 1] = {
 				kind = "header",
+				path = Copy(childPath),
 				label = AsString(Config.GetName(option, options, childPath, APP), "")
 			}
 			return
@@ -558,6 +593,7 @@ Collect = function(group, options, path, out, depth)
 		if (kind == "description") then
 			out[#out + 1] = {
 				kind = "description",
+				path = Copy(childPath),
 				label = AsString(Config.GetName(option, options, childPath, APP), "")
 			}
 			return
@@ -637,12 +673,317 @@ Renderer.Collect = function(self, group, options, path)
 end
 
 --------------------------------------------------------------------------
+-- Presentation tree (never written into options or a saved profile)
+--------------------------------------------------------------------------
+local BuildTree
+BuildTree = function(page, group, options, path, depth)
+	local node = {
+		kind = "group", option = group, path = Copy(path),
+		id = "group:" .. PathKey(path), key = path[#path],
+		label = AsString(Config.GetName(group, options, path, APP), path[#path] or ""),
+		items = {}, count = 0
+	}
+	local current
+	Config.ForEachChild(group, options, path, APP, function(key, option, childPath)
+		local item
+		if (option.type == "header") then
+			current = {
+				kind = "section", path = Copy(childPath), key = key,
+				id = "section:" .. PathKey(childPath), items = {}, count = 0,
+				label = AsString(Config.GetName(option, options, childPath, APP), "")
+			}
+			node.items[#node.items + 1] = current
+			return
+		elseif (option.type == "group") then
+			-- A real subgroup is a sibling of a preceding header's run. Only
+			-- the options hierarchy makes one group the child of another.
+			current = nil
+			item = BuildTree(page, option, options, childPath, depth + 1)
+		else
+			local rows = {}
+			-- Reuse the structural collector's control/type rules for one leaf.
+			local holder = { args = { [key] = option } }
+			Collect(holder, options, Copy(node.path), rows, 0)
+			item = { kind = "rows", path = Copy(childPath), rows = rows, count = 0 }
+			for _, row in ipairs(rows) do
+				if (row.option) then item.count = item.count + 1 end
+			end
+		end
+		local owner = current or node
+		owner.items[#owner.items + 1] = item
+		owner.count = owner.count + item.count
+		if (current) then node.count = node.count + item.count end
+	end)
+
+	node.mode = navigation[group]
+		or ((depth > 0 and group.childGroups == "tab") and "tabs")
+		or (node.count >= Renderer.SectionThreshold and "sections" or "flat")
+	local first
+	node.tabs = {}
+	for _, item in ipairs(node.items) do
+		if ((item.kind == "group" or item.kind == "section")
+			and item.count > 0 and item.label ~= "") then
+			item.collapsible = node.mode == "sections"
+			item.tabbed = node.mode == "tabs"
+				and (item.kind == "section" or not IsInline(item.option))
+			if (item.collapsible) then
+				if (page.sectionState[item.id] == nil) then
+					page.sectionState[item.id] = not first
+				end
+				first = first or item.id
+			end
+			if (item.tabbed) then node.tabs[#node.tabs + 1] = item end
+		end
+	end
+	if (#node.tabs > 0) then
+		local selected = page.activeTabs[node.id]
+		local found
+		for _, tab in ipairs(node.tabs) do if (tab.id == selected) then found = true end end
+		if (not found) then page.activeTabs[node.id] = node.tabs[1].id end
+	end
+	return node
+end
+
+local DisplayTree
+DisplayTree = function(page, node, out, root)
+	if (node.kind == "rows") then
+		for _, row in ipairs(node.rows) do out[#out + 1] = row end
+		return
+	end
+	if (not root) then
+		local closed = node.collapsible and not page.sectionState[node.id] or false
+		out[#out + 1] = {
+			kind = "header", key = node.key, label = node.label, path = node.path,
+			major = node.kind == "group" or node.collapsible or node.tabbed,
+			node = node, closed = closed, collapsible = node.collapsible
+		}
+		if (closed) then return end
+	end
+	local tabsShown
+	for _, item in ipairs(node.items) do
+		if (item.tabbed) then
+			if (not tabsShown) then
+				out[#out + 1] = { kind = "tabs", node = node }
+				tabsShown = true
+			end
+			if (page.activeTabs[node.id] == item.id) then DisplayTree(page, item, out) end
+		else
+			DisplayTree(page, item, out)
+		end
+	end
+end
+
+-- Revealing a leaf follows the presentation tree, including header-delimited
+-- sections whose paths are siblings of their leaves rather than ancestors.
+local RevealTree
+RevealTree = function(page, node, path)
+	if (SamePath(node.path, path)) then
+		if (node.kind == "rows" and #node.rows == 0) then return false end
+		if (node.collapsible) then page.sectionState[node.id] = true end
+		return true
+	end
+	for _, child in ipairs(node.items or {}) do
+		if (RevealTree(page, child, path)) then
+			if (child.collapsible) then page.sectionState[child.id] = true end
+			if (child.tabbed) then page.activeTabs[node.id] = child.id end
+			return true
+		end
+	end
+	return false
+end
+
+--------------------------------------------------------------------------
 -- A page
 --------------------------------------------------------------------------
 -- Owns a scroll child, the controls inside it, and the job of refreshing them
 -- when a value changes somewhere else in the table.
 Renderer.CreatePage = function(self, content)
-	local page = { content = content, controls = {}, pool = {} }
+	local page = {
+		content = content, controls = {}, pool = {},
+		sectionState = {}, activeTabs = {}, tabs = {}, renderGeneration = 0
+	}
+
+	local Changed = function()
+		page:Refresh()
+		if (type(page.OnStructureChanged) == "function") then page:OnStructureChanged() end
+	end
+
+	local CreateTabs = function()
+		local control = { kind = "tabs", navigation = true, buttons = {}, height = 34 }
+		control.frame = CreateFrame("Frame", nil, content)
+		local focusEdge = control.frame:CreateTexture(nil, "ARTWORK")
+		focusEdge:SetTexture(Kit.GetMedia("plain"))
+		focusEdge:SetWidth(2)
+		focusEdge:SetPoint("TOPLEFT", control.frame, "TOPLEFT", 0, -2)
+		focusEdge:SetPoint("BOTTOMLEFT", control.frame, "BOTTOMLEFT", 0, 2)
+		focusEdge:Hide()
+		control.SetFocused = function(self, focused)
+			self.focused = focused and true or false
+			focusEdge:SetVertexColor(unpack(Kit.TextSelected))
+			focusEdge:SetShown(self.focused)
+		end
+		control.Nudge = function(self, delta)
+			local tabs = self.node and self.node.tabs
+			if (not tabs or #tabs < 2) then return false end
+			local at = 1
+			for index, tab in ipairs(tabs) do
+				if (page.activeTabs[self.node.id] == tab.id) then at = index end
+			end
+			at = ((at - 1 + delta) % #tabs) + 1
+			page.activeTabs[self.node.id] = tabs[at].id
+			Changed()
+			return true
+		end
+		control.Activate = function(self) return self:Nudge(1) end
+		control.SetCallback = function() end
+		control.SetOnRevert = function() end
+		control.SetModified = function() end
+		control.SetPending = function() end
+		control.GetHeight = function(self) return self.height end
+		control.Restyle = function(self)
+			for _, button in ipairs(self.buttons) do
+				local color = button.selected and Kit.TextSelected or Kit.TextNormal
+				button.text:SetTextColor(unpack(color))
+				button.highlight:SetVertexColor(Kit.TextSelected[1], Kit.TextSelected[2], Kit.TextSelected[3], .12)
+				button.highlight:SetShown(button.selected and true or false)
+				button.edge:SetVertexColor(Kit.TextSelected[1], Kit.TextSelected[2], Kit.TextSelected[3], 1)
+				button.edge:SetShown(button.selected and true or false)
+			end
+		end
+		control.SetNode = function(self, node)
+			self.node = node
+			for index, tab in ipairs(node.tabs) do
+				local button = self.buttons[index]
+				if (not button) then
+					button = CreateFrame("Button", nil, self.frame)
+					local highlight = button:CreateTexture(nil, "BACKGROUND")
+					highlight:SetTexture(Kit.GetMedia("plain"))
+					highlight:SetAllPoints()
+					button.highlight = highlight
+					local edge = button:CreateTexture(nil, "ARTWORK")
+					edge:SetTexture(Kit.GetMedia("plain"))
+					edge:SetHeight(2)
+					edge:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 2, 0)
+					edge:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 0)
+					button.edge = edge
+					local label = button:CreateFontString(nil, "OVERLAY")
+					label:SetFontObject(Kit.GetFont(12, true))
+					label:SetPoint("LEFT", button, "LEFT", 10, 0)
+					label:SetPoint("RIGHT", button, "RIGHT", -10, 0)
+					label:SetJustifyH("CENTER")
+					label:SetWordWrap(false)
+					button.text = label
+					button:SetScript("OnClick", function(self_)
+						page.activeTabs[self_.groupID] = self_.tabID
+						Changed()
+					end)
+					button:SetScript("OnEnter", function(self_)
+						self_.highlight:Show()
+						self_.text:SetTextColor(unpack(Kit.TextHighlight))
+					end)
+					button:SetScript("OnLeave", function(self_)
+						self_.highlight:SetShown(self_.selected and true or false)
+						self_.text:SetTextColor(unpack(self_.selected and Kit.TextSelected or Kit.TextNormal))
+					end)
+					self.buttons[index] = button
+				end
+				button.groupID, button.tabID = node.id, tab.id
+				button.selected = page.activeTabs[node.id] == tab.id
+				button.text:SetText(tab.label)
+				button:Show()
+				page.tabs[#page.tabs + 1] = {
+					path = Copy(tab.path), groupPath = Copy(node.path), label = tab.label,
+					selected = button.selected, button = button
+				}
+			end
+			for index = #node.tabs + 1, #self.buttons do self.buttons[index]:Hide() end
+			self:Restyle()
+		end
+		control.Measure = function(self, width)
+			local available = max(90, (width or 0) - 16)
+			local x, y = 0, 0
+			for index = 1, #self.node.tabs do
+				local button = self.buttons[index]
+				local measured = button.text:GetUnboundedStringWidth()
+				if (type(measured) ~= "number") then measured = 90 end
+				local buttonWidth = math.min(available, max(90, measured + 24))
+				if (x > 0 and x + buttonWidth > available) then x, y = 0, y + 30 end
+				button:ClearAllPoints()
+				button:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 8 + x, -y - 2)
+				button:SetSize(buttonWidth, 26)
+				x = x + buttonWidth + 4
+			end
+			self.height = y + 34
+		end
+		return control
+	end
+
+	local SetHeader = function(control, entry)
+		control.closed, control.collapsible = entry.closed, entry.collapsible
+		control.navigation = entry.collapsible and true or false
+		control.rule:SetPoint("RIGHT", control.frame, "RIGHT", entry.collapsible and -32 or -12, 0)
+		if (not entry.collapsible) then
+			if (control.button) then control.button:Hide() end
+			return
+		end
+		if (not control.button) then
+			local button = CreateFrame("Button", nil, control.frame)
+			button:SetAllPoints(control.frame)
+			local marker = button:CreateFontString(nil, "OVERLAY")
+			marker:SetFontObject(Kit.GetFont(12, true))
+			marker:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -12, 8)
+			button.marker = marker
+			button:SetScript("OnEnter", function()
+				control.label:SetTextColor(unpack(Kit.TextHighlight))
+				marker:SetTextColor(unpack(Kit.TextHighlight))
+			end)
+			button:SetScript("OnLeave", function()
+				control:Restyle()
+			end)
+			control.button = button
+			local restyle = control.Restyle
+			control.Restyle = function(self)
+				restyle(self)
+				self.button.marker:SetTextColor(unpack(self.focused and Kit.TextHighlight or Kit.TextSelected))
+			end
+		end
+		control.button.marker:SetText(entry.closed and "+" or "-")
+		control.button.marker:SetTextColor(unpack(Kit.TextSelected))
+		control.button:SetScript("OnClick", function()
+			page.sectionState[entry.node.id] = not page.sectionState[entry.node.id]
+			Changed()
+		end)
+		control.Activate = function(self)
+			local click = self.button:GetScript("OnClick")
+			if (not click) then return false end
+			click(self.button)
+			return true
+		end
+		control.Nudge = function(_, delta)
+			page.sectionState[entry.node.id] = delta > 0
+			Changed()
+			return true
+		end
+		if (not control.SetFocused) then
+			control.SetFocused = function(self, focused)
+				self.focused = focused and true or false
+				self.button.marker:SetTextColor(unpack(self.focused and Kit.TextHighlight or Kit.TextSelected))
+			end
+		end
+		control.button:Show()
+	end
+
+	-- An explicit keyboard mark supersedes a timed search mark on the same row.
+	-- Wrapping only this presentation method does not touch the option binding.
+	local TrackFocus = function(control)
+		if (not control.SetFocused or control.rendererFocusWrapped) then return end
+		local setFocused = control.SetFocused
+		control.SetFocused = function(self, focused, source)
+			if (source ~= "search") then self.searchHighlight = nil end
+			return setFocused(self, focused)
+		end
+		control.rendererFocusWrapped = true
+	end
 
 	-- Controls are kept and reused between pages rather than rebuilt, because a
 	-- page of sixty rows is a lot of frames to make twice.
@@ -663,7 +1004,9 @@ Renderer.CreatePage = function(self, content)
 
 		local control = table.remove(pool)
 		if (not control) then
-			if (kind == "select") then
+			if (kind == "tabs") then
+				control = CreateTabs()
+			elseif (kind == "select") then
 				control = wantsStrip and Controls.CreateSegmented(content)
 					or Controls.CreateDropdown(content)
 			elseif (kind == "input" and wantsStrip) then
@@ -678,6 +1021,12 @@ Renderer.CreatePage = function(self, content)
 	local Release = function(control)
 		control.frame:Hide()
 		control.major = nil
+		control.path = nil
+		if (control.SetFocused) then control:SetFocused(false) end
+		if (control.button) then
+			control.button:Hide()
+			control.button:SetScript("OnClick", nil)
+		end
 		control:SetCallback(nil)
 		control:SetOnRevert(nil)
 		control:SetModified(false)
@@ -689,6 +1038,9 @@ Renderer.CreatePage = function(self, content)
 	end
 
 	page.Clear = function(self)
+		if (Controls.CloseDropdown) then Controls.CloseDropdown() end
+		self.renderGeneration = self.renderGeneration + 1
+		self.tabs = {}
 		for i = #self.controls, 1, -1 do
 			Release(self.controls[i])
 			self.controls[i] = nil
@@ -713,13 +1065,24 @@ Renderer.CreatePage = function(self, content)
 		for i = #self.layout, 1, -1 do self.layout[i] = nil end
 
 		local offset = 0
+		self.pathOffsets = {}
 		for i, control in ipairs(self.controls) do
 			if (control.kind == "header" and control.major) then
 				self.sections[#self.sections + 1] = {
 					label = control.GetLabel and control:GetLabel() or control.label:GetText(),
 					key = control.key,
-					offset = offset
+					offset = offset,
+					path = control.path and Copy(control.path),
+					closed = control.closed and true or false,
+					collapsible = control.collapsible and true or false,
+					header = control
 				}
+			end
+			if (control.path) then
+				local key = PathKey(control.path)
+				if (not self.pathOffsets[key]) then
+					self.pathOffsets[key] = { offset = offset, index = i, control = control }
+				end
 			end
 
 			if (control.Measure) then control:Measure(width) end
@@ -760,13 +1123,17 @@ Renderer.CreatePage = function(self, content)
 		self.options, self.path, self.collect = options, path, nil
 
 		local group = Config.GetGroup(options, path)
-		if (not group) then
+		if (type(group) ~= "table" or not VisiblePath(options, path)) then
+			self.navigationTree = nil
 			self:Clear()
 			self:Layout()
 			return 0
 		end
 
-		return self:Render(options, Renderer:Collect(group, options, path))
+		self.navigationTree = BuildTree(self, group, options, path, 0)
+		local entries = {}
+		DisplayTree(self, self.navigationTree, entries, true)
+		return self:Render(options, entries)
 	end
 
 	-- Draws rows gathered elsewhere, from settings that may sit on different
@@ -776,6 +1143,7 @@ Renderer.CreatePage = function(self, content)
 	-- it stops qualifying. A collector that fails says so on the page.
 	page.ShowList = function(self, options, collect)
 		self.options, self.path, self.collect = options, nil, collect
+		self.navigationTree = nil
 
 		local ok, entries = pcall(collect)
 		if (not ok or type(entries) ~= "table") then
@@ -796,6 +1164,11 @@ Renderer.CreatePage = function(self, content)
 				control.major = entry.major and true or false
 				control.key = entry.key
 				if (control.SetIcon) then control:SetIcon(entry.major and entry.key or nil) end
+				SetHeader(control, entry)
+
+			elseif (entry.kind == "tabs") then
+				control = Acquire("tabs")
+				control:SetNode(entry.node)
 
 			elseif (entry.kind == "description") then
 				control = Acquire("description")
@@ -836,6 +1209,8 @@ Renderer.CreatePage = function(self, content)
 				end
 			end
 
+			control.path = entry.path and Copy(entry.path) or nil
+			TrackFocus(control)
 			self.controls[#self.controls + 1] = control
 		end
 
@@ -854,6 +1229,44 @@ Renderer.CreatePage = function(self, content)
 
 	page.GetSections = function(self)
 		return self.sections or {}
+	end
+
+	page.GetTabs = function(self)
+		return self.tabs or {}
+	end
+
+	page.GetPathOffset = function(self, path)
+		local found = self.pathOffsets and self.pathOffsets[PathKey(path)]
+		if (found) then return found.offset, found.index, found.control end
+	end
+
+	page.RevealPath = function(self, path)
+		if (not self.options or not self.path or type(path) ~= "table") then return false end
+		if (not VisiblePath(self.options, self.path)) then return false end
+		local group = Config.GetGroup(self.options, self.path)
+		if (type(group) ~= "table") then return false end
+		local tree = BuildTree(self, group, self.options, self.path, 0)
+		if (not RevealTree(self, tree, path)) then return false end
+		self:Show(self.options, self.path)
+		return true
+	end
+
+	page.HighlightPath = function(self, path)
+		local _, _, control = self:GetPathOffset(path)
+		if (not control or not control.SetFocused) then return false end
+		local marker = {}
+		control.searchHighlight = marker
+		control:SetFocused(true, "search")
+		local generation = self.renderGeneration
+		if (C_Timer and C_Timer.After) then
+			C_Timer.After(2.4, function()
+				if (self.renderGeneration == generation and control.searchHighlight == marker) then
+					control.searchHighlight = nil
+					control:SetFocused(false, "search")
+				end
+			end)
+		end
+		return true
 	end
 
 	return page

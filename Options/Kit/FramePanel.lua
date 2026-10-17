@@ -122,6 +122,15 @@ FramePanel.Settings = {
 			{ "Unit Frames", "playerAlternate", "showName" }
 		}
 	},
+	["PlayerFrameParty"] = {
+		section = { "Unit Frames", "playerParty" },
+		rows = {
+			{ "Unit Frames", "playerParty", "enabled" },
+			{ "Unit Frames", "playerParty", "showPortrait" },
+			{ "Unit Frames", "playerParty", "useClassColor" },
+			{ "Explorer Mode", "fadePlayerFrame" }
+		}
+	},
 	["PetFrame"] = {
 		section = { "Unit Frames", "pet" },
 		rows = {
@@ -607,13 +616,6 @@ FramePanel.OpenMore = function(self)
 	local spec = current and self.Settings[current:GetKey() or ""]
 	local panel = Kit.Panel
 	if (not spec or not spec.section or not panel) then return end
-	local options = GetOptions()
-	local label
-	if (spec.section[2] and options) then
-		local group = Config.GetGroup(options, spec.section)
-		local ok, name = pcall(Config.GetName, group, options, spec.section, APP)
-		if (ok and type(name) == "string") then label = name end
-	end
 
 	-- The full settings take over: this panel closes, and Blizzard's Edit Mode closes
 	-- too when it is open, out of combat only. Through its own close path (the X and
@@ -632,5 +634,5 @@ FramePanel.OpenMore = function(self)
 	end
 
 	if (panel.SetTab) then panel:SetTab("options") end
-	panel:OpenSection(spec.section[1], label)
+	panel:OpenSection(spec.section[1], spec.section)
 end

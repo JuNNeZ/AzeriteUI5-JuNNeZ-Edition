@@ -200,6 +200,30 @@ Panel.railScroll:SetHeight(RAIL_VIEWPORT)
 -- that drew the changelog on top of itself.
 Panel.page.content:SetWidth(PAGE_WIDTH)
 
+-- The existing control, geometry and keyboard batteries exercise the complete
+-- page. Open its current tab's folds as a person would, instead of silently
+-- losing coverage when a later section starts closed. The focused navigation
+-- harness separately exercises production defaults, closed folds, inactive
+-- tabs, search results and the full paths used to reach them.
+local SelectExpandedPage = Panel.SelectPage
+Panel.SelectPage = function(self, key)
+	local result = SelectExpandedPage(self, key)
+	for pass = 1, 200 do
+		local button
+		for _, entry in ipairs(self.page:GetSections()) do
+			if entry.closed and entry.header and entry.header.button then
+				button = entry.header.button
+				break
+			end
+		end
+		if not button then return result end
+		local click = button:GetScript("OnClick")
+		if not click then error("a closed section has no click handler") end
+		click(button)
+	end
+	error("options sections did not settle after 200 clicks")
+end
+
 --------------------------------------------------------------------------
 section("Rendering every page")
 --------------------------------------------------------------------------
@@ -211,11 +235,18 @@ for _, entry in ipairs(Panel.pages or {}) do
 
 	if ok2 then
 		local controls = Panel.page:GetControls()
+		local invalidPaths = {}
 		totalControls = totalControls + #controls
 		for _, c in ipairs(controls) do
 			local kind = c.segmented and "segmented" or c.kind
 			byKind[kind] = (byKind[kind] or 0) + 1
+			if c.kind ~= "header" and c.kind ~= "description" and c.kind ~= "tabs"
+				and (type(c.path) ~= "table" or type(Config.GetGroup(options, c.path)) ~= "table") then
+				invalidPaths[#invalidPaths + 1] = c.path and table.concat(c.path, ".") or c.labelText or c.kind
+			end
 		end
+		check(#invalidPaths == 0, "rendered controls keep real option paths: " .. entry.name,
+			table.concat(invalidPaths, ", "))
 		-- A page that draws nothing is a page somebody cannot configure.
 		check(#controls > 0, "page is not empty: " .. entry.name, #controls)
 	end

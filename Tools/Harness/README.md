@@ -29,6 +29,8 @@ From the addon root, with `lua.exe` 5.1 on the machine (`C:\Program Files (x86)\
 
 ```sh
 lua Tools/Harness/panel_harness.lua        . Tools/Harness   # the window
+lua Tools/Harness/options_navigation_harness.lua . Tools/Harness # tabs, folds, exact search targets
+lua Tools/Harness/options_navigation_harness.lua . Tools/Harness Forever # client visibility and navigation
 lua Tools/Harness/kit_harness.lua          . Tools/Harness   # art, themes, controls
 lua Tools/Harness/config_diff_harness.lua  . Tools/Harness   # Config vs the Ace3 library
 lua Tools/Harness/real_options_harness.lua . Tools/Harness   # the real table, end to end
@@ -65,6 +67,16 @@ lua Tools/Harness/debug_loader_harness.lua .               # the load-on-demand 
 lua Tools/Harness/theme_engine_harness.lua .               # theme engine: dispatch, media swap, endcap settings
 lua Tools/Harness/aura_brightness_harness.lua .            # TODO 5.1: the brightness toggle in and out of raids
 ```
+
+`options_navigation_harness.lua` drives the real Config, Renderer and Panel with
+nested tabs, closed sections and repeated section names. It follows search
+results through every ancestor to the exact row, checks that the row is visible
+and marked without capturing movement keys, and verifies that Changed/defaults
+retain settings in closed branches. It also checks automatic folding on long
+pages, ordinary short pages, full-path mover links, legacy section-label links
+and stale deferred scrolls. Navigation state never writes a profile value.
+Widget measurements are offline approximations; live layout and `/reload`
+checks remain in `Docs/Options Panel Test Battery.md`.
 
 `player_aura_enchant_harness.lua` loads the real `PlayerAuraContainers.lua` against a fake aura
 container whose item-enchantment calls check their inputs the way `Blizzard_CustomAuraContainer.lua`
@@ -378,8 +390,15 @@ window's anchoring rows. The `PROPAGATING` guard is an efficiency guard; removin
 Frame settings panel (`Options/Kit/FramePanel.lua`): `lua Tools/Harness/frame_panel_harness.lua . Tools/Harness [Forever]`
 builds the real option pages and checks every quick-settings path, that each key is a real mover (found by
 following `Components/Components.xml` includes), five rows at most, sections that exist, and the page's own hide
-rules (Day and Night only on Forever, bars 6-8 only on Retail, Player Alternate hidden while Player is on).
+rules (Day and Night only on Forever, bars 6-8 only on Retail; Player Alternate and Player (Party Style) listed
+with only their switch while Player is on), and that the three player frame switches leave one on at a time.
 `panel_harness.lua`'s "Frame settings panel" section builds, opens, refreshes and closes the window on the Kit stubs.
+
+Player as a party frame (`Components/UnitFrames/Units/PlayerParty.lua`): `lua Tools/Harness/player_party_harness.lua .`
+loads the real module and party layout against a recording frame: spawned once, the portrait switch shrinks the
+frame to its bar and moves role, leader, raid marker, ready check/summon/resurrect and combat text onto it and back,
+nothing is laid out in combat, Legacy keeps its own layout, another player frame on keeps it off at start-up, Color
+by Class. Four mutants in `mutate_client.lua`. Party.lua's style itself is not run; the look is a live check.
 
 Layout copy: `lua Tools/Harness/layout_copy_harness.lua .` runs `Core/API/Layout.lua` on an AceDB-shaped table, both `CopyLayout` and `ResetLayout` (the `/lock` window's Reset layout).
 
@@ -409,4 +428,4 @@ clean it. 12 checks; case 2 (5.26.0) against case 4 (fix) is the mutation pair. 
 
 Druid theme and Lite+: `lua Tools/Harness/druid_theme_harness.lua . mutations` runs the real engine, Druid module and effects dispatcher against recording widgets. It rejects native resource reads/resizing, checks Moonwell fill ownership, native clipping, root layers, cleanup, strength and mirrored/threat art. Three in-memory mutants must fail for the intended reason. Client rendering remains a live check.
 
-Moonwell+ reactive orb: `lua Tools/Harness/moonwell_slosh_harness.lua . mutations` loads the real effect and Lite+ dispatcher. Native resource getters and clip geometry reads throw; checks cover native clipping anchors, 32 columns, palette, quiet/moving/combat/mounted/flying, secret/missing optional state APIs, combat ticking, throttling, hidden/clear cleanup, strength, resizing and four rejected mutants. `geometry <output.json>` writes actual column dips for offline review. WoW clipping/taint/performance remain live tests in Assets/Druid/README.md.
+Moonwell+ reactive orb: `lua Tools/Harness/moonwell_slosh_harness.lua . mutations` loads the real effect and Lite+ dispatcher. Native resource getters and clip geometry reads throw; checks cover native clipping anchors, 32 columns, palette, quiet/moving/combat/mounted/flying, secret/missing optional state APIs, combat ticking, throttling, hidden/clear cleanup, strength, resizing and seven rejected mutants. It also executes the actual Player.lua material setter/PostUpdate callback: Flowing mana defaults off, gates on displayed mana across classes, preserves tier layout/material and palette, overrides/restores Lite+ without changing its choice, ignores Moonwell's separate strength, and switches resource identity in combat without per-update rebuilds. `geometry <output.json>` writes actual column dips for offline review. WoW clipping/taint/performance remain live tests in Assets/Druid/README.md and Docs/Flowing Mana.md.

@@ -1963,11 +1963,16 @@ API.UpdateManaOrb = function(self, event, unit)
 		safeCur = safeMax
 	end
 
+	-- LibOrb hands a number to its native bar as the interpolation, true snaps. The orb eases
+	-- while /az -> Unit Frames -> Smooth health and power is on (Neil); forced updates, a new
+	-- power type (form, vehicle) and events that are not a plain value change snap.
+	local ease = not forced and displayType == element.displayType and EASE_EVENTS[event]
+	local interpolation = (ease and type(element.smoothing) == "number") and element.smoothing or true
 	element:SetMinMaxValues(min, max, true)
 	if (UnitIsConnected(unit)) then
-		element:SetValue(cur, true)
+		element:SetValue(cur, interpolation)
 	else
-		element:SetValue(max, true)
+		element:SetValue(max, interpolation)
 	end
 
 

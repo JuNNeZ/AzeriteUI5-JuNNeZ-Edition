@@ -56,7 +56,7 @@ local edge=widget(orb)
 function orb:GetOverlay() return edge end
 function orb:GetStatusBarColor() return .2,.4,.8 end
 function orb:SetStatusBarColor(...) self.color={...} end
-function orb:SetStatusBarTexture(...) self.materialCount=select("#",...); self.materials={...} end
+function orb:SetStatusBarTexture(...) self.materialWrites=(self.materialWrites or 0)+1;self.materialCount=select("#",...); self.materials={...} end
 check(E:GetOrbEffect()=="moonwell", "new effect resolves through Lite+")
 check(E:SetOrbChoice("druid") and E:GetOrbEffect()=="druid", "ordinary Moonwell retained")
 E:SetOrbChoice("moonwell")
@@ -154,6 +154,67 @@ check(M:SetStrength(.4) and E:StyleOrb(orb) and frame.Strength==.4, "strength pe
 check(not M:SetStrength(0/0), "NaN rejected")
 orb.width,orb.height=180,180;E:StyleOrb(orb)
 check(frame.Columns[32].Clip.points.BOTTOMRIGHT[3]==180, "owned columns follow resized widget")
+
+-- General flowing mana: actual resource identity, independent of class/Lite+.
+E:SetOrbChoice("none")
+orb.displayType=nil;check(not E:ShouldFlowMana(orb,true),"unknown resource does not flow")
+orb.displayType=secret;check(not E:ShouldFlowMana(orb,true),"secret resource does not flow")
+orb.displayType="MANA";check(not E:ShouldFlowMana(orb,true),"resource requires plain numeric identity")
+for _,powerType in ipairs({1,2,3,6,9,19}) do
+	orb.displayType=powerType;check(not E:ShouldFlowMana(orb,true),"non-mana resource does not flow")
+end
+orb.displayType=0
+check(not E:ShouldFlowMana(orb,false) and not E:ShouldFlowMana(orb,nil),"flowing mana defaults off")
+M:SetStrength(0)
+for _,class in ipairs({"DRUID","EVOKER","MAGE","MONK","PALADIN","PRIEST","SHAMAN","WARLOCK","HUNTER"}) do
+	ns.PlayerClass=class
+	check(E:StyleOrb(orb,true) and frame.FlowingMana and frame.Strength==1,"flowing mana works for every mana class independently of Moonwell strength")
+end
+orb:SetStatusBarColor(.6,.3,.9)
+check(frame.Columns[1].Rim.color[1]==.6 and frame.Columns[1].Rim.color[2]==.3,"generic rim follows selected palette")
+E:SetOrbChoice("paladin")
+check(E:StyleOrb(orb,true) and frame.Enabled,"flowing mana overrides chosen Lite+ fill")
+check(E:StyleOrb(orb,false) and not frame.Enabled,"turning off restores chosen Lite+ fill")
+E:SetOrbChoice("moonwell");M:SetStrength(1);E:StyleOrb(orb)
+check(not frame.FlowingMana and frame.Columns[1].Rim.color[1]==.52,"Moonwell retains lunar rim")
+
+-- Execute the real local material setter and PostUpdate callback from Player.lua.
+local input=assert(io.open(root.."/Components/UnitFrames/Units/Player.lua"));local playerSource=input:read('*a');input:close()
+check(playerSource:find('flowingMana = false',1,true),"real player default is off")
+local material=assert(playerSource:match('SetManaOrbFillTexture = function.-\nend'))
+local post=assert(playerSource:match('local Mana_PostUpdate = function.-\nend'))
+local profile={flowingMana=false,manaOrbTexture="clouds"}
+local db={ManaOrbTexture={"nativeA","nativeB"}}
+ns.API={GetMedia=function(asset) return "media/"..asset end}
+ns.GetConfig=function() return {Seasoned=db,ManaOrbTexture="wrong root material"} end
+local build=assert(loadstring('return function(ns, PlayerFrameMod)\n'..
+	'local SetManaOrbFillTexture\nlocal UpdateManaOrbColor=function(e) e:SetStatusBarColor(.6,.3,.9) end\n'..
+	'local UpdatePlayerElementValueText=function() end\nlocal GetPlayerElementVisualPercent=function() end\n'..
+	'local GetPlayerElementDisplayValue=function() end\n'..
+	'local MANA_ORB_TEXTURES={clouds="orb2",galaxy="orb1",moon="orb3",sphere="orb4"}\n'..
+	material..'\n'..post..'\nreturn SetManaOrbFillTexture,Mana_PostUpdate\nend'))()
+local setMaterial,postUpdate=build(ns,{db={profile=profile}})
+E:SetOrbChoice("none");setMaterial(orb,db)
+check(not frame.Enabled and orb.materials[1]=="nativeA" and orb.materials[2]=="nativeB","off restores real configured material")
+check(orb.__AzeriteUI_OrbFillLayout==db,"actual tier layout retained for resource changes")
+profile.flowingMana=true;setMaterial(orb,db)
+check(frame.Enabled and orb.__AzeriteUI_FlowingMana,"player toggle reaches material dispatcher")
+local writes=orb.materialWrites
+postUpdate(orb,"player",50,0,100)
+check(orb.materialWrites==writes,"ordinary mana updates do not rebuild material")
+combat=true;orb.displayType=3;postUpdate(orb,"player",50,0,100)
+check(not frame.Enabled and orb.materials[1]=="nativeA","resource switch restores normal fill in combat")
+orb.displayType=0;postUpdate(orb,"player",50,0,100)
+check(frame.Enabled and frame.Running and frame.Columns[1].Rim.color[1]==.6,"return to mana starts flow and forwards palette in combat")
+orb.displayType=secret;postUpdate(orb,"player",50,0,100)
+check(not frame.Enabled,"unknown secret identity clears generic override")
+combat=false;orb.displayType=0;profile.flowingMana=false;profile.manaOrbTexture="galaxy";setMaterial(orb,db)
+check(not frame.Enabled and orb.materials[1]=="media/orb1","selected native material restored when toggle disabled")
+E:SetOrbChoice("paladin");profile.flowingMana=true;setMaterial(orb,db)
+check(frame.Enabled,"generic override precedes Paladin effect")
+profile.flowingMana=false;setMaterial(orb,db)
+check(not frame.Enabled and E:GetOrbChoice()=="paladin","Lite+ choice retained and restored")
+E:SetOrbChoice("moonwell");E:StyleOrb(orb)
 if (arg[2]=="geometry") then
 	M:SetStrength(1);E:StyleOrb(orb);combat=true;event("PLAYER_REGEN_DISABLED");tick(2.5)
  local out=assert(io.open(assert(arg[3], "geometry output path required"),"w"))
@@ -173,11 +234,17 @@ if (arg[2]=="mutations") then
 		{"mounted ignored", 'ReadState(IsMounted, frame.Mounted or false)', 'false', "mounted uses exactly the combat target"},
 		{"clip overshoot", 'frame.OrbWidth*(i-1)/COLUMNS, -dip', 'frame.OrbWidth*(i-1)/COLUMNS, dip', "wave never rises above native clip"},
 		{"callback leak", 'frame:SetScript("OnUpdate", nil)', '-- removed cleanup', "hidden effect stops callbacks and events"}
+		,{"generic inherits zero strength", 'flowingMana and 1 or Strength()', 'Strength()', "flowing mana works for every mana class independently of Moonwell strength"}
+		,{"generic rim loses palette", 'if (frame.FlowingMana) then column.Rim:SetVertexColor(...)', 'if (false) then column.Rim:SetVertexColor(...)', "generic rim follows selected palette"}
+		,{"resource gate omitted", 'return type(powerType) == "number" and powerType == 0', 'return true', "unknown resource does not flow", "Core/ThemeEffects.lua"}
 	}
 	for _,m in ipairs(mutants) do
-		local pos=assert(source:find(m[2],1,true),m[1].." target missing")
-		local changed=source:sub(1,pos-1)..m[3]..source:sub(pos+#m[2])
-		loadfile=function(path) if path==root.."/Core/MoonwellSlosh.lua" then return loadstring(changed) end;return originalLoad(path) end
+		local target=root.."/"..(m[5] or "Core/MoonwellSlosh.lua")
+		local current=source
+		if m[5] then local f=assert(io.open(target));current=f:read('*a');f:close() end
+		local pos=assert(current:find(m[2],1,true),m[1].." target missing")
+		local changed=current:sub(1,pos-1)..m[3]..current:sub(pos+#m[2])
+		loadfile=function(path) if path==target then return loadstring(changed) end;return originalLoad(path) end
 		arg[2]=nil
 		local ok,err=pcall(assert(originalLoad(root.."/Tools/Harness/moonwell_slosh_harness.lua")))
 		loadfile=originalLoad

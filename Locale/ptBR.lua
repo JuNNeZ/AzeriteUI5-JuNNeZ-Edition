@@ -1256,3 +1256,20 @@ L["Toggle preview"] = "Mostrar/ocultar prévia"
 -- Paladin Light resource palette
 L["Light colored"] = "Cor da Luz"
 L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = "Escolha a cor do cristal de poder e do orbe de mana. Cor da Luz usa uma Luz dourada."
+
+-- Flowing mana (player style)
+L["Flowing mana"] = "Mana fluida"
+L["Animate the mana inside the orb with flowing water and gentle waves. Uses your selected resource color and temporarily replaces the theme or Lite+ orb effect while the orb shows mana."] = "Anima a mana no orbe com água em movimento e ondas suaves. Usa a cor de recurso selecionada e substitui temporariamente o efeito do orbe do tema ou do Lite+ enquanto o orbe exibe mana."
+
+-- Options section labels
+L["Crystal & Mana Orb"] = "Cristal e Orbe de Mana"
+L["Text"] = "Texto"
+L["Buffs"] = "Bônus"
+L["Debuffs"] = "Penalidades"
+
+-- Player (Party Style): Use Party Frame as Player Frame
+L["Player (Party Style)"] = "Jogador (estilo de grupo)"
+L["Use Party Frame as Player Frame"] = "Usar o quadro de grupo como quadro do jogador"
+L["Show yourself as a small party frame: the party health bar with a thin power line and the cast overlay. Turns off Player and Player Alternate, and with them the mana orb, the power crystal and the auras by the player frame."] = "Mostra você como um pequeno quadro de grupo: a barra de vida do grupo com uma linha fina de recurso e a sobreposição de lançamento. Desativa Jogador e Jogador alternativo e, com eles, o orbe de mana, o cristal de recurso e as auras junto ao quadro do jogador."
+L["Show Portrait"] = "Mostrar retrato"
+L["Show the round portrait above the health bar. Without it the frame is just the bar."] = "Mostra o retrato redondo acima da barra de vida. Sem ele, o quadro é só a barra."

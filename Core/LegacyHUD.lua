@@ -355,7 +355,7 @@ end
 --- Finishes native unit styles; oUF keeps updating health/power/casts/auras.
 HUD.StyleUnit = function(self, frame)
 	if (not self:IsActive() or not frame.Health or frame.isNamePlate or frame.LegacyBorder) then return end
-	local styles = { Player = true, Target = true, Pet = true, ToT = true, Focus = true, Party = true, Raid5 = true, Raid25 = true, Raid40 = true, Boss = true, Arena = true }
+	local styles = { Player = true, Target = true, Pet = true, ToT = true, Focus = true, Party = true, PlayerParty = true, Raid5 = true, Raid25 = true, Raid40 = true, Boss = true, Arena = true }
 	local style = type(frame.style) == "string" and frame.style:sub(#ns.Prefix + 1)
 	if (not styles[style]) then return end
 	frame.LegacyBorder = UnitBorder(frame)

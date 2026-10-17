@@ -41,6 +41,24 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.29.0-JuNNeZ",
+		items = {
+			{
+				text = "Use the small party frame as your player frame, with or without its portrait.",
+				page = L["Unit Frames"],
+				section = L["Player (Party Style)"]
+			},
+			{
+				text = "Another fix for party health bars that stayed white-washed after a cast.",
+			},
+			{
+				text = "The mana orb glides to each new value, and Flowing mana fills it with moving water.",
+				page = L["Unit Frames"],
+				section = L["Player"]
+			}
+		}
+	},
+	{
 		version = "5.28.0-JuNNeZ",
 		items = {
 			{

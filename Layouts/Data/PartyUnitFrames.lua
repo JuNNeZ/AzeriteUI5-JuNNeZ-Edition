@@ -180,6 +180,23 @@ ns.RegisterConfig("PartyFrames", {
 	PortraitThreatSize = { 194, 194 },
 	PortraitThreatTexture = GetMedia("party_portrait_threat"),
 
+	-- The player's own frame in party style with its portrait off (PlayerParty.lua):
+	-- only the bar is left, so the frame shrinks to it and the badges that hung from
+	-- the portrait move onto the bar. Points are { point, health bar point, x, y }.
+	-----------------------------------------
+	PlayerCompactSize = { 130, 44 },
+	PlayerCompactGroupRolePosition = { "RIGHT", "LEFT", -6, 0 },
+	PlayerCompactGroupRoleSize = { 28, 28 },
+	PlayerCompactGroupRoleBackdropSize = { 54, 54 },
+	PlayerCompactGroupRoleIconSize = { 24, 24 },
+	PlayerCompactLeaderPosition = { "BOTTOMLEFT", "TOPLEFT", -2, 6 },
+	PlayerCompactLeaderSize = { 18, 18 },
+	PlayerCompactRaidTargetPosition = { "BOTTOMRIGHT", "TOPRIGHT", 2, 4 },
+	PlayerCompactRaidTargetSize = { 22, 22 },
+	PlayerCompactIconPosition = { "CENTER", "CENTER", 0, 0 }, -- ready check, resurrect, summon
+	PlayerCompactIconSize = { 28, 28 },
+	PlayerCompactCombatFeedbackPosition = { "BOTTOM", "TOP", 0, 10 },
+
 	-- Combat Feedback Text
 	-----------------------------------------
 	CombatFeedbackAnchorElement = "Portrait",

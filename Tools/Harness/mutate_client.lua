@@ -510,6 +510,22 @@ local cases = {
 	{"castbar pushback moves an empowered cast", "Libs/oUF/elements/castbar.lua",
 		"if(not element.empowering and type(endTime) == 'number'", "if(type(endTime) == 'number'",
 		"castbar_pushback_harness.lua"},
+	-- The timer backstop (Dcryfm on 5.28.0, FixLog 2026-10-17).
+	{"castbar timer backstop removed", "Libs/oUF/elements/castbar.lua",
+		"if(not self.empowering and IsTimerSpent(self)) then", "if(false) then", "castbar_pushback_harness.lua"},
+	{"castbar timer backstop without grace", "Libs/oUF/elements/castbar.lua",
+		"self.__AzeriteUI_TimerSpentChecks >= 2", "self.__AzeriteUI_TimerSpentChecks >= 1", "castbar_pushback_harness.lua"},
+	-- The party-style player frame (FixLog 2026-10-17).
+	{"player party spawned twice", "Components/UnitFrames/Units/PlayerParty.lua",
+		"\tif (self.frame) then return end\n\n\tlocal party", "\tlocal party", "player_party_harness.lua"},
+	{"player party resized in combat", "Components/UnitFrames/Units/PlayerParty.lua",
+		"\tif (InCombatLockdown()) then\n\t\tself.layoutPending = true", "\tif (false) then\n\t\tself.layoutPending = true",
+		"player_party_harness.lua"},
+	{"player party compact under Legacy", "Components/UnitFrames/Units/PlayerParty.lua",
+		"local compact = (not IsLegacy()) and (", "local compact = (", "player_party_harness.lua"},
+	{"player party portrait model left running", "Components/UnitFrames/Units/PlayerParty.lua",
+		"\t\t\tif (frame:IsElementEnabled(\"Portrait\")) then frame:DisableElement(\"Portrait\") end\n", "",
+		"player_party_harness.lua"},
 	-- Mythic+ and the Great Vault (FixLog 2026-09-26).
 	{"mythicplus +3 mark", "Components/Misc/MythicPlus.lua",
 		"local PLUS_THREE = .6", "local PLUS_THREE = .65", "mythicplus_harness.lua"},

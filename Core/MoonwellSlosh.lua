@@ -96,7 +96,11 @@ local Start = function(frame)
 	Paint(frame)
 end
 local Color = function(frame, ...)
-	for _, column in ipairs(frame.Columns) do column.Water:SetVertexColor(...) end
+	for _, column in ipairs(frame.Columns) do
+		column.Water:SetVertexColor(...)
+		if (frame.FlowingMana) then column.Rim:SetVertexColor(...)
+		else column.Rim:SetVertexColor(.52, .85, 1) end
+	end
 end
 
 local Create = function(orb)
@@ -149,11 +153,13 @@ Slosh.Clear = function(self, orb)
 	Stop(frame)
 	frame:Hide()
 end
-Slosh.Apply = function(self, orb)
-	local strength = Strength()
+Slosh.Apply = function(self, orb, flowingMana)
+	-- The general player toggle does not inherit Moonwell+'s own strength.
+	local strength = flowingMana and 1 or Strength()
 	if (strength == 0) then self:Clear(orb); return false end
 	local frame = orb.MoonwellSlosh
 	if (not frame) then frame = Create(orb); orb.MoonwellSlosh = frame end
+	frame.FlowingMana = flowingMana == true
 	frame.Strength = strength
 	frame:SetAlpha(strength)
 	-- These are the fixed widget dimensions, never the native clip's height.

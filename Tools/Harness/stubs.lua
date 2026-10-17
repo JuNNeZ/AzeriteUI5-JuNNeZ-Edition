@@ -215,6 +215,18 @@ function makeFontString()
 	fs.SetWordWrap = function(self, on) rawset(self, "wraps", on and true or false) return self end
 	fs.SetMaxLines = function(self, n) rawset(self, "maxLines", n) return self end
 
+	-- The tab strip measures its labels before assigning button widths. Use the
+	-- same approximate glyph width as the wrapping model, independent of bounds.
+	fs.GetUnboundedStringWidth = function(self)
+		local text = tostring(rawget(self, "textValue") or "")
+		text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+		local longest = 0
+		for line in (text .. "\n"):gmatch("(.-)\n") do
+			longest = math.max(longest, #line * CHAR_W)
+		end
+		return longest
+	end
+
 	-- Text that wraps is taller than text that does not, and how much taller
 	-- depends on the width it was given. A flat 12 for everything meant a
 	-- paragraph of two hundred characters and a paragraph of ten measured the

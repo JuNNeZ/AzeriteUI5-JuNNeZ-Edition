@@ -372,6 +372,10 @@ local GenerateOptions = function()
 		}
 	}
 
+	-- These three main sections make a short tab strip without moving option keys.
+	local renderer = ns.OptionsKit and ns.OptionsKit.Renderer
+	if (renderer and renderer.SetNavigation) then renderer:SetNavigation(options, "tabs") end
+
 	return options
 end
 

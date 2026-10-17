@@ -1257,3 +1257,20 @@ L["Toggle preview"] = "切换预览"
 -- Paladin Light resource palette
 L["Light colored"] = "圣光色"
 L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = "选择能量水晶和法力宝珠的颜色。圣光色使用金色圣光。"
+
+-- Flowing mana (player style)
+L["Flowing mana"] = "流动法力"
+L["Animate the mana inside the orb with flowing water and gentle waves. Uses your selected resource color and temporarily replaces the theme or Lite+ orb effect while the orb shows mana."] = "用流动的水和轻柔波浪表现球体内的法力。使用所选资源颜色，并在球体显示法力时临时替换主题或 Lite+ 的球体效果。"
+
+-- Options section labels
+L["Crystal & Mana Orb"] = "水晶与法力宝珠"
+L["Text"] = "文字"
+L["Buffs"] = "增益"
+L["Debuffs"] = "减益"
+
+-- Player (Party Style): Use Party Frame as Player Frame
+L["Player (Party Style)"] = "玩家（小队样式）"
+L["Use Party Frame as Player Frame"] = "使用小队框体作为玩家框体"
+L["Show yourself as a small party frame: the party health bar with a thin power line and the cast overlay. Turns off Player and Player Alternate, and with them the mana orb, the power crystal and the auras by the player frame."] = "以小型小队框体显示你自己：小队生命条、一条细能量线和施法覆盖层。会关闭玩家和玩家备用，同时也会关闭法力球、能量水晶和玩家框体旁的光环。"
+L["Show Portrait"] = "显示头像"
+L["Show the round portrait above the health bar. Without it the frame is just the bar."] = "在生命条上方显示圆形头像。关闭后框体只剩生命条。"

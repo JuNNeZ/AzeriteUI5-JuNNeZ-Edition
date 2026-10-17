@@ -38,6 +38,25 @@ end
 local Options = ns:GetModule("Options")
 local HasColorPicker = ns.API.IsAddOnEnabled("AzUI_Color_Picker")
 
+-- Player, Player Alternate and Player (Party Style) take the same place: one at a time.
+-- All three pages stay listed; an inactive one shows only its switch (isdisabled).
+local PLAYER_FRAME_MODULES = { "PlayerFrame", "PlayerFrameAlternate", "PlayerFrameParty" }
+local UsePlayerFrame = function(chosen)
+	for _, name in ipairs(PLAYER_FRAME_MODULES) do
+		local module = ns:GetModule(name, true)
+		if (module and module.db and module.db.profile) then
+			local on = (name == chosen)
+			module.db.profile.enabled = on
+			if (on and module.Enable and not module:IsEnabled()) then
+				module:Enable()
+			end
+			if (module.frame) then
+				module:UpdateSettings()
+			end
+		end
+	end
+end
+
 -- WoW API
 -- GetSpecialization is deprecated in favour of C_SpecializationInfo.GetSpecialization.
 -- Shadowed as a file local so every call site below, and the type() guards around
@@ -231,38 +250,14 @@ local GenerateOptions = function()
 
 	do
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("PlayerFrame")
-		suboptions.hidden = function(info)
-			-- If devmode isn't enabled, this doesn't apply.
-			if (not ns.db.global.enableDevelopmentMode) then return end
 
-			-- Not hidden if self is enabled.
-			local playerFrame = ns:GetModule("PlayerFrame", true)
-			if (playerFrame and playerFrame.db and playerFrame.db.profile and playerFrame.db.profile.enabled) then
-				return
-			end
-
-			-- Hidden if self is disabled and alternate frame is enabled.
-			local playerFrameAlt = ns:GetModule("PlayerFrameAlternate", true)
-			if playerFrameAlt then
-				if (playerFrameAlt:IsEnabled() and playerFrameAlt.db and playerFrameAlt.db.profile and playerFrameAlt.db.profile.enabled) then
-					return  true
-				end
-			end
-
-		end
-
+		-- On turns the other two player frames off; off leaves no player frame.
 		suboptions.args.enabled.set = function(info, val)
 			if (val) then
-				local playerFrameAlt = ns:GetModule("PlayerFrameAlternate", true)
-				if (playerFrameAlt and playerFrameAlt.db and playerFrameAlt.db.profile) then
-					playerFrameAlt.db.profile.enabled = false
-					playerFrameAlt:UpdateSettings()
-				end
+				UsePlayerFrame("PlayerFrame")
+			else
+				setter(info, val)
 			end
-			if (val and module and module.Enable and (not module:IsEnabled())) then
-				module:Enable()
-			end
-			setter(info, val)
 		end
 
 		suboptions.name = L["Player"]
@@ -270,7 +265,7 @@ local GenerateOptions = function()
 
 
 		suboptions.args.colorHeader = {
-			name = L["Style"], order = 10, type = "header", hidden = isdisabled
+			name = L["Crystal & Mana Orb"], order = 100, type = "header", hidden = isdisabled
 		}
 		suboptions.args.crystalOrbColorMode = {
 			name = L["Crystal/Orb Color Source"],
@@ -280,7 +275,7 @@ local GenerateOptions = function()
 				end
 				return L["Choose stock AzeriteUI power colors, enhanced token-based power colors, or your class color."]
 			end,
-			order = 20, type = "select", width = "full", hidden = isdisabled,
+			order = 120, type = "select", width = "full", hidden = isdisabled,
 			values = function()
 				local values = {
 					default = L["Default"],
@@ -304,6 +299,11 @@ local GenerateOptions = function()
 				return "default"
 			end
 		}
+		suboptions.args.flowingMana = {
+			name = L["Flowing mana"],
+			desc = L["Animate the mana inside the orb with flowing water and gentle waves. Uses your selected resource color and temporarily replaces the theme or Lite+ orb effect while the orb shows mana."],
+			order = 145, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		suboptions.args.legacyCenterWithoutTarget = {
 			name = L["Center Without a Target"],
 			desc = L["Legacy HUD: move the player frame to the middle of the screen while you have no target, and back beside the target frame when you pick one. It slides out of combat and jumps in combat."],
@@ -314,12 +314,12 @@ local GenerateOptions = function()
 		}
 
 		suboptions.args.elementHeader = {
-			name = L["Frame Elements"], order = 100, type = "header", hidden = isdisabled
+			name = L["General"], order = 10, type = "header", hidden = isdisabled
 		}
 		suboptions.args.showAuras = {
 			name = L["Show Auras"],
 			desc = L["Toggle whether to show auras on this unit frame."],
-			order = 200, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 302, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		local playerAuraSettingsDisabled = function(info)
 			return isdisabled(info) or not getoption(info, "showAuras")
@@ -331,48 +331,50 @@ local GenerateOptions = function()
 		end
 		suboptions.args.playerAuraSettingsHeader = {
 			name = L["Player Aura Row"],
-			order = 210, type = "header", hidden = isdisabled
+			order = 300, type = "header", hidden = isdisabled
 		}
 		suboptions.args.playerAuraSettingsDescription = {
 			name = L["These settings control the Blizzard-managed Retail aura row attached to the player frame. Custom categories use only native Retail 12.1 filters that remain safe in combat; the main top-right aura header is unaffected."],
-			order = 211, type = "description", width = "full", hidden = isdisabled
+			order = 301, type = "description", width = "full", hidden = isdisabled
 		}
 		suboptions.args.playerAuraUseStockBehavior = {
 			name = L["Use AzeriteUI Stock Behavior"],
 			desc = L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."],
-			order = 211.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 303, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
 		}
 		suboptions.args.playerAuraDebuffsOnly = {
 			name = L["Show Debuffs Only"],
 			desc = L["Hide helpful effects from the attached player aura row and show only harmful effects on you."],
-			order = 211.52, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 304, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
 		}
 		suboptions.args.playerAuraAlwaysBright = {
 			name = L["Always Show Full Brightness"],
 			desc = L["Render all visible player-row aura icons at full brightness. Use this if you prefer no dimmed aura icons."],
-			order = 211.55, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 362, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
 		}
 		-- Weapon enchants are not auras, so none of the buff categories below can include them.
 		suboptions.args.playerAuraShowWeaponEnchants = {
 			name = L["Show Weapon Enchants"],
 			desc = L["Show temporary weapon enchants, such as Shaman imbues, poisons and oils, in the attached player aura row."],
-			order = 211.56, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 321, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = function(info)
 				return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraDebuffsOnly")
 			end
 		}
 		suboptions.args.playerAuraWhatToShowHeader = {
-			name = L["Custom Buff Categories"],
-			order = 212.5, type = "header", hidden = isdisabled,
-			disabled = playerAuraCustomSettingsDisabled
+			name = L["Buffs"],
+			order = 320, type = "header", hidden = isdisabled
+		}
+		suboptions.args.playerAuraDebuffsHeader = {
+			name = L["Debuffs"], order = 340, type = "header", hidden = isdisabled
 		}
 		suboptions.args.playerAuraShowDebuffs = {
 			name = L["Show Debuffs"],
 			desc = L["Include harmful effects in the attached row when Show Debuffs Only and Separate Player Debuff Row are disabled."],
-			order = 212, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 341, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = function(info)
 				return playerAuraSettingsDisabled(info) or getoption(info, "playerAuraDebuffsOnly") or getoption(info, "playerAuraSeparateDebuffs")
 			end
@@ -380,43 +382,43 @@ local GenerateOptions = function()
 		suboptions.args.playerAuraShowImportantAuras = {
 			name = L["Show Important Buffs"],
 			desc = L["Show buffs from AzeriteUI's maintained priority spell list."],
-			order = 213, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 322, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
 		}
 		suboptions.args.playerAuraShowRaidAuras = {
 			name = L["Show Raid-Relevant Buffs"],
 			desc = L["Show buffs Blizzard marks as boss or role auras."],
-			order = 214, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 323, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
 		}
 		suboptions.args.playerAuraShowImportantStealable = {
 			name = L["Stealable Buffs"],
 			desc = L["Show helpful effects Blizzard marks as stealable."],
-			order = 215, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 324, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
 		}
 		suboptions.args.playerAuraShowShortCombatPlayerBuffs = {
 			name = L["Player / Self Buffs"],
 			desc = L["Show personal combat auras and remaining temporary buffs cast by you or your pet."],
-			order = 216, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 325, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
 		}
 		suboptions.args.playerAuraShowNameplateAuras = {
 			name = L["Nameplate-Highlighted Buffs"],
 			desc = L["Show helpful effects Blizzard also marks for nameplate display."],
-			order = 217, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 326, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
 		}
 		suboptions.args.playerAuraShowShortBuffsInCombat = {
 			name = L["Other Temporary Buffs"],
 			desc = L["Show remaining temporary buffs from other sources. This native duration filter stays consistent in and out of combat."],
-			order = 218, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 327, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraCustomSettingsDisabled
 		}
 		suboptions.args.playerAuraMaxDuration = {
 			name = L["Maximum Temporary Duration"],
 			desc = L["Set the maximum original duration for the remaining temporary-buff group."],
-			order = 219, type = "range", width = "full", min = 30, max = 3600, step = 30, hidden = isdisabled,
+			order = 329, type = "range", width = "full", min = 30, max = 3600, step = 30, hidden = isdisabled,
 			disabled = function(info)
 				return playerAuraCustomSettingsDisabled(info)
 					or getoption(info, "playerAuraShowLongUtilityBuffs")
@@ -441,20 +443,20 @@ local GenerateOptions = function()
 		suboptions.args.playerAuraShowLongUtilityBuffs = {
 			name = L["Show Long Utility Buffs"],
 			desc = L["Extend the temporary-buff group to include long-duration and permanent utility buffs. Usually leave this off so those remain in the main aura header only."],
-			order = 220, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 328, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = function(info)
 				return playerAuraCustomSettingsDisabled(info)
 					or (not getoption(info, "playerAuraShowShortCombatPlayerBuffs") and not getoption(info, "playerAuraShowShortBuffsInCombat"))
 			end
 		}
 		suboptions.args.playerAuraLayoutHeader = {
-			name = L["Display & Feedback"],
-			order = 299, type = "header", hidden = isdisabled
+			name = L["Aura Layout"],
+			order = 360, type = "header", hidden = isdisabled
 		}
 		suboptions.args.playerAuraMaxShown = {
 			name = L["Auras Shown"],
 			desc = L["Set the maximum number of slots in the attached player aura row. When buffs and debuffs share the row, Retail-safe group budgets divide these slots between them; use the separate debuff row to devote every attached slot to buffs."],
-			order = 299.025, type = "range", width = "full", min = 1, max = 32, step = 1, hidden = isdisabled,
+			order = 361, type = "range", width = "full", min = 1, max = 32, step = 1, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled,
 			set = function(info, val)
 				setoption(info, "playerAuraMaxShown", val)
@@ -476,13 +478,13 @@ local GenerateOptions = function()
 		suboptions.args.playerAuraSeparateDebuffs = {
 			name = L["Separate Player Debuff Row"],
 			desc = L["Keep the normal player aura row attached to the frame. When enabled, harmful auras are filtered out of that row and shown in a separate movable debuff layer instead. When disabled, the debuff layer stays hidden but can still be positioned with /lock."],
-			order = 299.05, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 342, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = playerAuraSettingsDisabled
 		}
 		suboptions.args.playerAuraSeparateDebuffsMax = {
 			name = L["Separate Debuffs Shown"],
 			desc = L["Set how many debuffs can appear on the separate player debuff row."],
-			order = 299.1, type = "range", width = "full", min = 1, max = 20, step = 1, hidden = isdisabled,
+			order = 343, type = "range", width = "full", min = 1, max = 20, step = 1, hidden = isdisabled,
 			disabled = function(info)
 				return playerAuraSettingsDisabled(info) or not getoption(info, "playerAuraSeparateDebuffs")
 			end,
@@ -506,28 +508,31 @@ local GenerateOptions = function()
 		suboptions.args.showCastbar = {
 			name = L["Show Castbar"],
 			desc = L["Toggle whether to show overlay castbars on this unit frame."],
-			order = 300, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 20, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
+		suboptions.args.textHeader = {
+			name = L["Text"], order = 200, type = "header", hidden = isdisabled
 		}
 		suboptions.args.showHealthPercent = {
 			name = L["Show Health Percent"],
 			desc = L["Show current health percent next to player health value text."],
-			order = 325, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 210, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showPowerValue = {
 			name = L["Show Power Text"],
 			desc = L["Show current power text on the player power widget."],
-			order = 350, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 220, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.powerValueCombatDriven = {
 			name = L["Show In Combat Only"],
 			desc = L["Only show power text while you are in combat."],
-			order = 350.05, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 240, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = function(info) return not getoption(info, "showPowerValue") end
 		}
 		suboptions.args.powerValueTextScale = {
 			name = L["Power Text Size %"],
 			desc = L["Resize power value text shown inside the Power Crystal and Mana Orb."],
-			order = 350.075, type = "range", width = "full", min = 50, max = 200, step = 1, hidden = isdisabled,
+			order = 250, type = "range", width = "full", min = 50, max = 200, step = 1, hidden = isdisabled,
 			set = function(info, val)
 				setoption(info, "powerValueTextScale", val)
 			end,
@@ -549,7 +554,7 @@ local GenerateOptions = function()
 		suboptions.args.playerPowerValueAlpha = {
 			name = L["Power Value Alpha %"],
 			desc = L["Set alpha for player-side power value text, including the player frame, mana orb, and alternate player frame."],
-			order = 350.08, type = "range", width = "full", min = 0, max = 100, step = 1, hidden = isdisabled,
+			order = 260, type = "range", width = "full", min = 0, max = 100, step = 1, hidden = isdisabled,
 			set = function(info, val)
 				local unitFrameModule = ns:GetModule("UnitFrames", true)
 				if (unitFrameModule and unitFrameModule.db and unitFrameModule.db.profile) then
@@ -579,7 +584,7 @@ local GenerateOptions = function()
 		suboptions.args.PowerValueFormat = {
 			name = L["Power Text Style"],
 			desc = L["Choose how power text is displayed."],
-			order = 350.1, type = "select", width = "full", hidden = isdisabled,
+			order = 230, type = "select", width = "full", hidden = isdisabled,
 			values = {
 				short = L["Short Number"],
 				full = L["Full Number"],
@@ -602,7 +607,7 @@ local GenerateOptions = function()
 		suboptions.args.powerOrbMode = {
 			name = L["Player Power Style"],
 			desc = L["Choose how your player power widget is shown."],
-			order = 430, type = "select", width = "full", hidden = isdisabled,
+			order = 110, type = "select", width = "full", hidden = isdisabled,
 			values = {
 				orbV2 = "Automatic (By Resource)",
 				orbV2Always = "Mana Orb Only",
@@ -629,7 +634,7 @@ local GenerateOptions = function()
 		suboptions.args.useWrathCrystal = {
 			name = L["Use Ice Crystal Art"],
 			desc = L["Use the Ice Crystal artwork when Power Crystal style is active."],
-			order = 450, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 130, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		-- The orb ships four interchangeable fill textures and three decorative
 		-- layers. Only the clouds fill and the case were ever wired up; the glass
@@ -638,7 +643,7 @@ local GenerateOptions = function()
 		suboptions.args.manaOrbTexture = {
 			name = L["Mana Orb Texture"],
 			desc = L["Choose which artwork fills the Mana Orb."],
-			order = 460, type = "select", width = "full", hidden = isdisabled,
+			order = 140, type = "select", width = "full", hidden = isdisabled,
 			values = {
 				clouds = "Clouds",
 				galaxy = "Galaxy",
@@ -660,17 +665,17 @@ local GenerateOptions = function()
 		suboptions.args.manaOrbGlass = {
 			name = L["Mana Orb Glass"],
 			desc = L["Draw the glass dome over the Mana Orb."],
-			order = 462, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 150, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.manaOrbRim = {
 			name = L["Mana Orb Rim"],
 			desc = L["Draw a heavy ring around the edge of the Mana Orb."],
-			order = 464, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 160, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.manaOrbPedestal = {
 			name = L["Mana Orb Pedestal"],
 			desc = L["Draw the sculpted plinth beneath the Mana Orb."],
-			order = 466, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 170, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.pvpIndicatorHeader = {
 			name = L["PvP Badge"],
@@ -714,6 +719,9 @@ local GenerateOptions = function()
 				module:UpdateSettings()
 			end
 		}
+		-- Flat option keys keep search links, defaults and preview policies stable.
+		local renderer = ns.OptionsKit and ns.OptionsKit.Renderer
+		if (renderer and renderer.SetNavigation) then renderer:SetNavigation(suboptions, "sections") end
 		options.args.player = suboptions
 	end
 
@@ -725,36 +733,10 @@ local GenerateOptions = function()
 
 			local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("PlayerFrameAlternate")
 			if (suboptions and suboptions.args) then
-			suboptions.hidden = function(info)
-				-- Keep this discoverable outside devmode,
-				-- but hide while the main player frame is active.
-				local playerFrame = ns:GetModule("PlayerFrame", true)
-				if (playerFrame and playerFrame.db and playerFrame.db.profile and playerFrame.db.profile.enabled) then
-					return true
-				end
-			end
-
+			-- Always listed (it used to show only once Player was off). On turns the
+			-- other two player frames off; off brings the standard Player back.
 			suboptions.args.enabled.set = function(info, val)
-				if (val) then
-					local playerFrame = ns:GetModule("PlayerFrame", true)
-					if (playerFrame and playerFrame.db and playerFrame.db.profile) then
-						playerFrame.db.profile.enabled = false
-						playerFrame:UpdateSettings()
-					end
-				else
-					local playerFrame = ns:GetModule("PlayerFrame", true)
-					if (playerFrame and playerFrame.db and playerFrame.db.profile) then
-						playerFrame.db.profile.enabled = true
-						if (playerFrame.Enable and (not playerFrame:IsEnabled())) then
-							playerFrame:Enable()
-						end
-						playerFrame:UpdateSettings()
-					end
-				end
-				if (val and module and module.Enable and (not module:IsEnabled())) then
-					module:Enable()
-				end
-				setter(info, val)
+				UsePlayerFrame(val and "PlayerFrameAlternate" or "PlayerFrame")
 			end
 
 			suboptions.name = L["Player Alternate"]
@@ -806,6 +788,38 @@ local GenerateOptions = function()
 		end
 	end
 
+	-- Player (Party Style): the party frame as the player frame (PlayerParty.lua)
+	do
+		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("PlayerFrameParty")
+		if (module and suboptions and suboptions.args) then
+			suboptions.name = L["Player (Party Style)"]
+			suboptions.order = 106
+
+			suboptions.args.enabled.name = L["Use Party Frame as Player Frame"]
+			suboptions.args.enabled.desc = L["Show yourself as a small party frame: the party health bar with a thin power line and the cast overlay. Turns off Player and Player Alternate, and with them the mana orb, the power crystal and the auras by the player frame."]
+			-- Off brings the standard Player back.
+			suboptions.args.enabled.set = function(info, val)
+				UsePlayerFrame(val and "PlayerFrameParty" or "PlayerFrame")
+			end
+
+			suboptions.args.elementHeader = {
+				name = L["Elements"], order = 100, type = "header", hidden = isdisabled
+			}
+			suboptions.args.showPortrait = {
+				name = L["Show Portrait"],
+				desc = L["Show the round portrait above the health bar. Without it the frame is just the bar."],
+				order = 110, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			}
+			suboptions.args.useClassColor = {
+				name = L["Color by Class"],
+				desc = L["Toggle whether to color health by player class."],
+				order = 120, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			}
+
+			options.args.playerParty = suboptions
+		end
+	end
+
 	-- Pet
 	do
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("PetFrame")
@@ -827,17 +841,17 @@ local GenerateOptions = function()
 		suboptions.args.showAuras = {
 			name = L["Show Auras"],
 			desc = L["Toggle whether to show auras on this unit frame."],
-			order = 20, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 31, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showCastbar = {
 			name = L["Show Castbar"],
 			desc = L["Toggle whether to show overlay castbars on this unit frame."],
-			order = 25, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 11, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.colorCastBarByInterruptState = {
 			name = L["Color Entire Target Castbar By State"],
 			desc = L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."],
-			order = 26, type = "toggle", width = "full",
+			order = 12, type = "toggle", width = "full",
 			hidden = function(info)
 				return true
 			end,
@@ -850,30 +864,33 @@ local GenerateOptions = function()
 				return not getoption(info, "showCastbar")
 			end
 		}
+		suboptions.args.textHeader = {
+			name = L["Text"], order = 20, type = "header", hidden = isdisabled
+		}
 		suboptions.args.showName = {
 			name = L["Show Unit Name"],
 			desc = L["Toggle whether to show the name of the unit."],
-			order = 30, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 21, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showRaidTargetIcons = {
 			name = L["Show Target Markers"],
 			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
-			order = 30.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 13, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showHealthPercent = {
 			name = L["Show Health Percent"],
 			desc = L["Show current target health percent next to target health value text."],
-			order = 31, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 22, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showPowerValue = {
 			name = L["Show Power Value"],
 			desc = L["Toggle whether to show current power text on the target power bar."],
-			order = 32, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 23, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.PowerValueFormat = {
 			name = L["Power Text Format"],
 			desc = L["Choose how target power text is formatted."],
-			order = 32.1, type = "select", width = "full", hidden = isdisabled,
+			order = 24, type = "select", width = "full", hidden = isdisabled,
 			values = {
 				short = L["Short Number"],
 				full = L["Full Number"],
@@ -896,7 +913,7 @@ local GenerateOptions = function()
 		suboptions.args.targetPowerValueAlpha = {
 			name = L["Power Value Alpha %"],
 			desc = L["Set alpha for target power value text."],
-			order = 32.15, type = "range", width = "full", min = 0, max = 100, step = 1, hidden = isdisabled,
+			order = 25, type = "range", width = "full", min = 0, max = 100, step = 1, hidden = isdisabled,
 			set = function(info, val)
 				local unitFrameModule = ns:GetModule("UnitFrames", true)
 				if (unitFrameModule and unitFrameModule.db and unitFrameModule.db.profile) then
@@ -987,12 +1004,12 @@ local GenerateOptions = function()
 		}
 		suboptions.args.auraLayoutHeader = {
 			name = L["Aura Layout"],
-			order = 35, type = "header", hidden = isdisabled
+			order = 30, type = "header", hidden = isdisabled
 		}
 		suboptions.args.AurasMaxCols = {
 			name = L["Auras Per Row"],
 			desc = L["How many aura icons are shown on each row. Set to 0 for automatic wrapping from frame width."],
-			order = 35.1, type = "range", width = "full", min = 0, max = 20, step = 1,
+			order = 32, type = "range", width = "full", min = 0, max = 20, step = 1,
 			hidden = isdisabled,
 			disabled = targetAuraDisabled,
 			set = targetAuraSetter,
@@ -1006,7 +1023,7 @@ local GenerateOptions = function()
 		}
 		suboptions.args.AuraSize = {
 			name = L["Aura Size"],
-			order = 35.2, type = "range", width = "full", min = 12, max = 80, step = 1,
+			order = 33, type = "range", width = "full", min = 12, max = 80, step = 1,
 			hidden = isdisabled,
 			disabled = targetAuraDisabled,
 			set = targetAuraSetter,
@@ -1020,7 +1037,7 @@ local GenerateOptions = function()
 		}
 		suboptions.args.AurasSpacingX = {
 			name = L["Aura Padding X"],
-			order = 35.3, type = "range", width = "full", min = -20, max = 40, step = 1,
+			order = 34, type = "range", width = "full", min = -20, max = 40, step = 1,
 			hidden = isdisabled,
 			disabled = targetAuraDisabled,
 			set = targetAuraSetter,
@@ -1034,7 +1051,7 @@ local GenerateOptions = function()
 		}
 		suboptions.args.AurasSpacingY = {
 			name = L["Aura Padding Y"],
-			order = 35.4, type = "range", width = "full", min = -20, max = 40, step = 1,
+			order = 35, type = "range", width = "full", min = -20, max = 40, step = 1,
 			hidden = isdisabled,
 			disabled = targetAuraDisabled,
 			set = targetAuraSetter,
@@ -1048,7 +1065,7 @@ local GenerateOptions = function()
 		}
 		suboptions.args.AurasGrowthX = {
 			name = L["Aura Growth X"],
-			order = 35.5, type = "select", width = "full",
+			order = 36, type = "select", width = "full",
 			hidden = isdisabled,
 			disabled = targetAuraDisabled,
 			values = targetAuraGrowthXValues,
@@ -1059,7 +1076,7 @@ local GenerateOptions = function()
 		}
 		suboptions.args.AurasGrowthY = {
 			name = L["Aura Growth Y"],
-			order = 35.6, type = "select", width = "full",
+			order = 37, type = "select", width = "full",
 			hidden = isdisabled,
 			disabled = targetAuraDisabled,
 			values = targetAuraGrowthYValues,
@@ -1070,7 +1087,7 @@ local GenerateOptions = function()
 		}
 		suboptions.args.AurasInitialAnchor = {
 			name = L["Aura Initial Anchor"],
-			order = 35.7, type = "select", width = "full",
+			order = 38, type = "select", width = "full",
 			hidden = isdisabled,
 			disabled = targetAuraDisabled,
 			values = targetAuraAnchorValues,
@@ -1284,9 +1301,11 @@ local GenerateOptions = function()
 		}
 	end
 
+	-- Keep each group-frame section in its own order range so aura, colour and
+	-- visibility controls cannot interleave when rendered as foldable sections.
 	-- Party Frames
 	do
-		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("PartyFrames"))
+		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(200, GenerateSubOptions("PartyFrames"))
 		local partyAuraConfig = ns.GetConfig("PartyFrames") or {}
 		local partyAuraGrowthXValues = {
 			LEFT = "Left",
@@ -1299,7 +1318,7 @@ local GenerateOptions = function()
 		suboptions.name = L["Party Frames"]
 		suboptions.order = 150
 		AddPlayerVisibilityOptions(suboptions, setter, getter, isdisabled, 2)
-		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 5)
+		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 30)
 		suboptions.args.elementHeader = {
 			name = L["Frame Elements"], order = 10, type = "header", hidden = isdisabled
 		}
@@ -1308,25 +1327,25 @@ local GenerateOptions = function()
 			desc = L["Show each party member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."],
 			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
 		}
-		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 20, scope = "party" })
+		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 50, scope = "party" })
 		suboptions.args.showAuras = {
 			name = L["Show Auras"],
 			desc = L["Toggle whether to show auras on this unit frame."],
-			order = 40, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 102, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showRaidTargetIcons = {
 			name = L["Show Target Markers"],
 			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
-			order = 41, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 14, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		-- Retail only: Forever has no Mythic+ rating.
 		suboptions.args.showMythicPlusRating = {
 			name = L["Show Mythic+ rating"],
 			desc = L["Show each party member's Mythic+ rating for this season in the top right corner of their frame."],
-			order = 41.5, type = "toggle", width = "full", set = setter, get = getter,
+			order = 15, type = "toggle", width = "full", set = setter, get = getter,
 			hidden = function(info) return (not ns.IsRetailContent) or isdisabled(info) end
 		}
-		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 42)
+		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 17)
 		local partyAuraSettingsDisabled = function(info)
 			return isdisabled(info) or not getoption(info, "showAuras")
 		end
@@ -1338,77 +1357,77 @@ local GenerateOptions = function()
 		end
 		suboptions.args.partyAuraHeader = {
 			name = L["Party Aura Row"],
-			order = 50, type = "header", hidden = isdisabled
+			order = 100, type = "header", hidden = isdisabled
 		}
 		suboptions.args.partyAuraDescription = {
 			name = L["Control which auras appear on party frames, when they appear, how they grow, and how dispellable debuffs are emphasized."],
-			order = 51, type = "description", width = "full", hidden = isdisabled
+			order = 101, type = "description", width = "full", hidden = isdisabled
 		}
 		suboptions.args.partyAuraUseStockBehavior = {
 			name = L["Use AzeriteUI Stock Behavior"],
 			desc = L["Use the original AzeriteUI party-frame aura behavior. Turn this off if you want to build your own filter from the custom categories below."],
-			order = 60, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 103, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraSettingsDisabled
 		}
 		suboptions.args.partyAuraWhatToShowHeader = {
 			name = L["What To Show"],
-			order = 61, type = "header", hidden = isdisabled,
+			order = 110, type = "header", hidden = isdisabled,
 			disabled = partyAuraCustomSettingsDisabled
 		}
 		suboptions.args.partyAuraShowDispellableDebuffs = {
 			name = L["Show Dispellable Debuffs"],
 			desc = L["Show debuffs you can remove from party members. Examples: Magic, Curse, Disease and Poison effects your class/spec can dispel."],
-			order = 110, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 111, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraCustomSettingsDisabled
 		}
 		suboptions.args.partyAuraOnlyDispellableDebuffs = {
 			name = L["Only Show Dispellable Debuffs"],
 			desc = L["Hide non-dispellable harmful auras from the party aura row unless they are boss or important mechanics."],
-			order = 120, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 112, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraCustomSettingsDisabled
 		}
 		suboptions.args.partyAuraShowBossAndImportantDebuffs = {
 			name = L["Show Boss and Important Debuffs"],
 			desc = L["Keep encounter-critical or Blizzard-marked important debuffs visible even if they are not dispellable."],
-			order = 130, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 113, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraCustomSettingsDisabled
 		}
 		suboptions.args.partyAuraShowOtherDebuffs = {
 			name = L["Show Other Short Debuffs"],
 			desc = L["Show other short harmful effects that are likely relevant in combat, even if they are not dispellable."],
-			order = 140, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 114, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraCustomSettingsDisabled
 		}
 		suboptions.args.partyAuraShowHelpfulExternals = {
 			name = L["Show Helpful Externals"],
 			desc = L["Show helpful externals and defensive cooldowns on party members. Examples: Blessing of Sacrifice, Ironbark and Pain Suppression."],
-			order = 150, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 115, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraCustomSettingsDisabled
 		}
 		suboptions.args.partyAuraShowHelpfulRaidBuffs = {
 			name = L["Show Helpful Raid Buffs"],
 			desc = L["Show raid-relevant or Blizzard-flagged helpful buffs on party members."],
-			order = 160, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 116, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraCustomSettingsDisabled
 		}
 		suboptions.args.partyAuraShowHelpfulShortBuffs = {
 			name = L["Show Short Helpful Buffs"],
 			desc = L["Show short player-applied buffs with duration or stacks. Examples: Renewing Mist, Earth Shield-style maintenance buffs, and similar short upkeep effects."],
-			order = 170, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 117, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraCustomSettingsDisabled
 		}
 		suboptions.args.partyAuraLayoutHeader = {
 			name = L["Layout & Highlighting"],
-			order = 180, type = "header", hidden = isdisabled
+			order = 130, type = "header", hidden = isdisabled
 		}
 		suboptions.args.partyAuraLayoutDescription = {
 			name = L["Adjust the size and growth of party-frame auras, and how removable debuffs are emphasized."],
-			order = 181, type = "description", width = "full", hidden = isdisabled
+			order = 131, type = "description", width = "full", hidden = isdisabled
 		}
 		suboptions.args.AuraSize = {
 			name = L["Aura Size"],
 			desc = L["Resize party aura buttons."],
-			order = 190, type = "range", width = "full", min = 18, max = 42, step = 1, hidden = isdisabled,
+			order = 132, type = "range", width = "full", min = 18, max = 42, step = 1, hidden = isdisabled,
 			set = setter,
 			get = function(info)
 				local value = getoption(info, "AuraSize")
@@ -1422,7 +1441,7 @@ local GenerateOptions = function()
 		suboptions.args.AurasMaxCols = {
 			name = L["Auras Per Row"],
 			desc = L["How many aura icons are shown on each row. Set to 0 for automatic wrapping from frame width."],
-			order = 195, type = "range", width = "full", min = 0, max = 6, step = 1, hidden = isdisabled,
+			order = 133, type = "range", width = "full", min = 0, max = 6, step = 1, hidden = isdisabled,
 			set = setter,
 			get = function(info)
 				local value = getoption(info, "AurasMaxCols")
@@ -1436,7 +1455,7 @@ local GenerateOptions = function()
 		suboptions.args.partyAuraDebuffScale = {
 			name = L["Debuff Size %"],
 			desc = L["Scale harmful party auras relative to normal buffs. Use this if you want dispellable debuffs to stand out more."],
-			order = 200, type = "range", width = "full", min = 75, max = 150, step = 1, hidden = isdisabled,
+			order = 134, type = "range", width = "full", min = 75, max = 150, step = 1, hidden = isdisabled,
 			set = setter,
 			get = function(info)
 				local value = getoption(info, "partyAuraDebuffScale")
@@ -1455,7 +1474,7 @@ local GenerateOptions = function()
 		suboptions.args.AurasGrowthX = {
 			name = L["Aura Growth X"],
 			desc = L["Choose whether party auras grow left or right."],
-			order = 210, type = "select", width = "full", hidden = isdisabled,
+			order = 135, type = "select", width = "full", hidden = isdisabled,
 			values = partyAuraGrowthXValues,
 			set = setter,
 			get = function(info)
@@ -1466,7 +1485,7 @@ local GenerateOptions = function()
 		suboptions.args.AurasGrowthY = {
 			name = L["Aura Growth Y"],
 			desc = L["Choose whether party auras grow up or down."],
-			order = 220, type = "select", width = "full", hidden = isdisabled,
+			order = 136, type = "select", width = "full", hidden = isdisabled,
 			values = partyAuraGrowthYValues,
 			set = setter,
 			get = function(info)
@@ -1477,7 +1496,7 @@ local GenerateOptions = function()
 		suboptions.args.partyAuraGlowDispellableDebuffs = {
 			name = L["Glow Frame For Dispellable Debuffs"],
 			desc = L["Highlight the affected party frame using the debuff type color when a removable debuff is active."],
-			order = 230, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
+			order = 137, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = partyAuraLayoutDisabled
 		}
 		options.args.party = suboptions
@@ -1485,53 +1504,59 @@ local GenerateOptions = function()
 
 	-- Raid Frames (5)
 	do
-		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame5"))
+		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(200, GenerateSubOptions("RaidFrame5"))
 		suboptions.name = L["Raid Frames"] .. " (5)"
+		suboptions.args.elementHeader = {
+			name = L["Frame Elements"], order = 10, type = "header", hidden = isdisabled
+		}
 		suboptions.order = 160
 		AddPlayerVisibilityOptions(suboptions, setter, getter, isdisabled, 2)
-		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 5)
-		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "1-5 raid health bars" })
+		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 30)
+		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 50, scope = "raid", countLabel = "1-5 raid health bars" })
 		suboptions.args.usePortraitSpecIcons = {
 			name = L["Show Specialization Icons"],
 			desc = L["Show each raid member's specialization icon in place of their portrait. A member's specialization can only be read by inspecting them, so it stays a portrait until they are close enough and visible."],
-			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
+			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
 		}
-		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
+		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 17)
 		suboptions.args.showAuras = {
 			name = L["Show Auras"],
 			desc = L["Toggle whether to show auras on this unit frame."],
-			order = 54, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 13, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.showRaidTargetIcons = {
 			name = L["Show Target Markers"],
 			desc = L["Show the raid target icon - skull, cross, star and so on - on this unit frame."],
-			order = 55, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 14, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		options.args.raid5 = suboptions
 	end
 
 	-- Raid Frames (25)
 	do
-		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame25"))
+		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(200, GenerateSubOptions("RaidFrame25"))
 		suboptions.name = L["Raid Frames"] .. " (25)"
+		suboptions.args.elementHeader = {
+			name = L["Frame Elements"], order = 10, type = "header", hidden = isdisabled
+		}
 		suboptions.order = 161
-		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 5)
-		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "6-25 raid health bars" })
+		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 30)
+		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 50, scope = "raid", countLabel = "6-25 raid health bars" })
 		suboptions.args.useSpecIcons = {
 			name = L["Show Specialization Icons"],
 			desc = L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."],
-			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
+			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
 		}
-		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
+		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 17)
 		suboptions.args.showPriorityDebuff = {
 			name = L["Show Big Debuff"],
 			desc = L["Toggle whether to show the large priority debuff icon on 11-25 raid frames."],
-			order = 60, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 13, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.priorityDebuffScale = {
 			name = L["Big Debuff Size %"],
 			desc = L["Resize the large priority debuff icon on 11-25 raid frames."],
-			order = 70, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
+			order = 14, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
 			set = setter,
 			get = function(info)
 				local value = getoption(info, "priorityDebuffScale")
@@ -1552,26 +1577,29 @@ local GenerateOptions = function()
 
 	-- Raid Frames (40)
 	do
-		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(50, GenerateSubOptions("RaidFrame40"))
+		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(200, GenerateSubOptions("RaidFrame40"))
 		suboptions.name = L["Raid Frames"] .. " (40)"
+		suboptions.args.elementHeader = {
+			name = L["Frame Elements"], order = 10, type = "header", hidden = isdisabled
+		}
 		suboptions.order = 162
-		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 5)
-		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 10, scope = "raid", countLabel = "26-40 raid health bars" })
+		AddGroupSortingOptions(suboptions, setter, getter, isdisabled, 30)
+		AddHealthColorOptions(suboptions, setter, getter, getoption, isdisabled, { order = 50, scope = "raid", countLabel = "26-40 raid health bars" })
 		suboptions.args.useSpecIcons = {
 			name = L["Show Specialization Icons"],
 			desc = L["Show each raid member's specialization icon on the role badge beside their health bar, including damage dealers, who normally have no badge. A member's specialization can only be read by inspecting them, so it stays the plain role icon until they are close enough and visible."],
-			order = 45, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
+			order = 12, type = "toggle", width = "full", set = setter, get = getter, hidden = function(info) return ns.IsForever or isdisabled(info) end
 		}
-		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 50)
+		AddRangeIndicatorOptions(suboptions, setter, getter, getoption, isdisabled, 17)
 		suboptions.args.showPriorityDebuff = {
 			name = L["Show Big Debuff"],
 			desc = L["Toggle whether to show the large priority debuff icon on 26-40 raid frames."],
-			order = 60, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 13, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.priorityDebuffScale = {
 			name = L["Big Debuff Size %"],
 			desc = L["Resize the large priority debuff icon on 26-40 raid frames."],
-			order = 70, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
+			order = 14, type = "range", width = "full", min = 25, max = 100, step = 1, hidden = isdisabled,
 			set = setter,
 			get = function(info)
 				local value = getoption(info, "priorityDebuffScale")

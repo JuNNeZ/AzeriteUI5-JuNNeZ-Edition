@@ -16,6 +16,7 @@
 	<Script file="UnitFrames\ArenaFrames.lua"/>
 	<Script file="UnitFrames\BossFrames.lua"/>
 	<Script file="UnitFrames\PartyFrames.lua"/>
+	<Script file="UnitFrames\PlayerFrameParty.lua"/>
 	<Script file="UnitFrames\Raid5Frames.lua"/>
 	<Script file="UnitFrames\Raid25Frames.lua"/>
 	<Script file="UnitFrames\Raid40Frames.lua"/>

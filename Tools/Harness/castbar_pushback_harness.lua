@@ -280,6 +280,50 @@ do
 	check(not bar.shown, "a cast that ended without a matching stop is hidden within half a second")
 end
 
+--------------------------------------------------------------------------------
+-- The client still answers a cast after it ended (Dcryfm on 5.28.0, FixLog 2026-10-17)
+--------------------------------------------------------------------------------
+-- No stop arrives and UnitCastingInfo goes on returning the cast, so IsCastOver never fires.
+-- The bar's own timer has run out; past its end on two checks in a row, it hides.
+do
+	local W, bar, Fire, Frame = Load({ unit = "party1" })
+	W.now = 900
+	W.cast = { name = "Steady Shot", startTime = 900, endTime = 901, firstStart = 900, firstEnd = 901 }
+	Fire("UNIT_SPELLCAST_START", "Cast-4", 56641, nil)
+	for _ = 1, 3 do Frame(.25) end -- 900.75: running
+	check(bar.shown, "the timer backstop leaves a running cast alone")
+	for _ = 1, 2 do Frame(.25) end -- 901.25: first check past the end
+	check(bar.shown, "one check past the end is not enough (a late stop still lands)")
+	for _ = 1, 4 do Frame(.25) end -- 902.25
+	check(not bar.shown and not bar.casting, "a cast the client keeps answering is hidden once its timer is spent")
+end
+do
+	-- A stop .3 s after the end, as with latency: the bar is still up when it lands.
+	local W, bar, Fire, Frame = Load({ unit = "party1" })
+	W.now = 1000
+	W.cast = { name = "Wrath", startTime = 1000, endTime = 1001, firstStart = 1000, firstEnd = 1001 }
+	Fire("UNIT_SPELLCAST_START", "Cast-5", 5176, nil)
+	for _ = 1, 13 do Frame(.1) end -- 1001.3
+	check(bar.shown and bar.casting, "a stop arriving shortly after the end is not pre-empted")
+	W.cast = nil
+	Fire("UNIT_SPELLCAST_STOP", "Cast-5", 5176, nil)
+	check(not bar.casting, "and the stop itself ends the cast")
+end
+do
+	-- Pushed back past its first end: the new timer counts, not the old one.
+	local W, bar, Fire, Frame = Load({ unit = "party1" })
+	W.now = 1100
+	-- With a cast bar ID: without one, CastUpdate cannot match the delay and keeps the old timer.
+	W.cast = { name = "Healing Touch", startTime = 1100, endTime = 1101, firstStart = 1100, firstEnd = 1101, castBarID = CAST_BAR_ID }
+	Fire("UNIT_SPELLCAST_START", "Cast-6", 5185, CAST_BAR_ID)
+	Frame(.5)
+	W.cast.startTime, W.cast.endTime = 1101, 1102
+	W.cast.firstStart, W.cast.firstEnd = 1101, 1102
+	Fire("UNIT_SPELLCAST_DELAYED", "Cast-6", 5185, CAST_BAR_ID)
+	for _ = 1, 6 do Frame(.25) end -- 1102: past the first end by a second
+	check(bar.shown and bar.casting, "a pushed-back cast is not hidden at its first end")
+end
+
 print(string.format("Castbar pushback: %d checks, %d failures", checks, failures))
 -- Raised rather than os.exit, so mutate_client.lua can run this inside a pcall.
 if (failures > 0) then error("castbar pushback harness failed", 0) end

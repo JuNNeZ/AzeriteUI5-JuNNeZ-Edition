@@ -90,6 +90,11 @@ load("Options/Options.lua")
 local Kit = ns.OptionsKit
 local Options = realModules["Options"]
 
+-- A default profile: Player on, the other two player frames off (one at a time).
+ns:GetModule("PlayerFrame").db.profile.enabled = true
+ns:GetModule("PlayerFrameAlternate").db.profile.enabled = false
+ns:GetModule("PlayerFrameParty").db.profile.enabled = false
+
 -- Components an option page builds from directly (Tools/Harness/option_components.lua).
 dofile((arg[2] or ".") .. "/option_components.lua")(load, ns)
 
@@ -219,7 +224,42 @@ check(count >= 30, "settings for every frame with options", count)
 -- Frames whose rows nothing hides under these stubs: all five must come through.
 check(drawn["ActionBars.bar1"] == 5 and drawn.TargetFrame == 5 and drawn.PartyFrames == 5 and drawn.Tooltips == 5,
 	"bar 1, Target, Party and Tooltips draw all five", tostring(drawn["ActionBars.bar1"]) .. "," .. tostring(drawn.TargetFrame))
-check(drawn.PlayerFrameAlternate == 0, "Player Alternate stays hidden while the Player frame is on, as on /az")
+-- The three player frames are always listed; while Player is on, the other two show only
+-- their switch (FixLog 2026-10-17: Alternate used to be hidden until Player was off).
+check(drawn.PlayerFrameAlternate == 1, "Player Alternate shows its switch while the Player frame is on", drawn.PlayerFrameAlternate)
+-- Its switch, and Explorer Mode's player fade, which is shared and never hidden.
+check(drawn.PlayerFrameParty == 2, "Player (Party Style) shows its switch while the Player frame is on", drawn.PlayerFrameParty)
+
+-- One player frame at a time, through the real switches (UnitFrames.lua UsePlayerFrame).
+do
+	local profiles = {
+		PlayerFrame = ns:GetModule("PlayerFrame").db.profile,
+		PlayerFrameAlternate = ns:GetModule("PlayerFrameAlternate").db.profile,
+		PlayerFrameParty = ns:GetModule("PlayerFrameParty").db.profile
+	}
+	local function state()
+		return string.format("%s/%s/%s", tostring(profiles.PlayerFrame.enabled),
+			tostring(profiles.PlayerFrameAlternate.enabled), tostring(profiles.PlayerFrameParty.enabled))
+	end
+	local function switch(page, val)
+		local path = { "Unit Frames", page, "enabled" }
+		local option = Kit.Config.GetGroup(options, path)
+		option.set({ "Unit Frames", page, "enabled" }, val)
+	end
+	switch("playerParty", true)
+	check(state() == "false/false/true", "Use Party Frame as Player Frame turns Player and Alternate off", state())
+	switch("playerAlternate", true)
+	check(state() == "false/true/false", "Alternate on turns the party style off", state())
+	switch("playerParty", true)
+	switch("playerParty", false)
+	check(state() == "true/false/false", "party style off brings Player back", state())
+	switch("playerAlternate", true)
+	switch("player", true)
+	check(state() == "true/false/false", "Player on turns Alternate off", state())
+	switch("player", false)
+	check(state() == "false/false/false", "Player off leaves no player frame, as before", state())
+	switch("player", true)
+end
 check(forever and drawn.Minimap == 5 or (not forever and drawn.Minimap == 4), "Day and Night only on Forever", drawn.Minimap)
 check(forever and drawn["ActionBars.bar6"] == 0 or (not forever and drawn["ActionBars.bar6"] == 5), "bar 6 only where it exists",
 	drawn["ActionBars.bar6"])

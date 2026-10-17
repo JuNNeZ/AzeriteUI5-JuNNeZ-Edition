@@ -1,5 +1,12 @@
 # Druid - Roots beneath the Moon (WIP)
 
+Flowing mana is also available independently of themes under /az -> Unit Frames
+-> Player -> Style (default off). It reuses Moonwell+'s water and motion only
+while the orb shows mana, with the selected resource colour on water AND rim.
+It temporarily overrides the theme/Lite+ fill and restores it when disabled or
+the orb displays another resource. It does not inherit Moonwell+'s strength;
+Moonwell+ keeps its separate lunar rim. See Docs/Flowing Mana.md for validation.
+
 ## Persistent crystal magic (current Moonvein/Dreamsap/Wildheart, 2026-10-16)
 
 The native resource fill/body still drops. Magic now has a full-silhouette

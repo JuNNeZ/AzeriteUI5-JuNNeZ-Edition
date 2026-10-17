@@ -458,6 +458,10 @@ local Section_Row = function(index)
 	row.text = text
 
 	row:SetScript("OnClick", function(self)
+		if (self.path) then
+			Panel:RevealPath(self.path, false)
+			return
+		end
 		if (contentScroll and self.offset) then
 			-- Remembered before the scroll, because the scroll fires the update
 			-- that reads it. A page stops at the end of its content, so the last
@@ -628,6 +632,7 @@ Panel.BuildRail = function(self)
 							-- starts, `railOffset` is where its row sits in
 							-- the rail.
 							sub.offset = section.offset
+							sub.path = section.path
 							sub.railOffset = offset
 							sub.label = section.label
 							sub.text:SetText(section.label)
@@ -782,8 +787,9 @@ local FocusStops = function()
 	end
 
 	for i, control in ipairs((page and page:GetControls()) or {}) do
-		-- A heading is not a stop: there is nothing to do to one.
-		if (control.frame:IsShown() and control.kind ~= "header" and control.kind ~= "description") then
+		-- A foldable heading and a tab can be activated just like a setting.
+		if (control.frame:IsShown() and control.kind ~= "description"
+			and (control.kind ~= "header" or control.navigation)) then
 			stops[#stops + 1] = { kind = "control", index = i }
 		end
 	end
@@ -1227,6 +1233,8 @@ Panel.SelectPage = function(self, key)
 	if (not options or not key) then return end
 	if (self.selecting) then return end
 	self.selecting = true
+	self.navigationSerial = (self.navigationSerial or 0) + 1
+	self:ClearKeyboardFocus()
 
 	-- A page and a set of results cannot both own the content area.
 	self:HideResults()
@@ -1308,11 +1316,53 @@ Panel.SelectPage = function(self, key)
 	self.selecting = nil
 end
 
--- Opens the page a search result sits on. There is no tab strip to select any
--- more, because sub-groups are drawn down the page as sections.
+-- Opens every enclosing tab/section before using the real option path to
+-- locate the row. Presentation state never changes the option's hidden rule.
+Panel.RevealPath = function(self, path, highlight)
+	if (type(path) ~= "table" or #path == 0 or self.selected ~= path[1]
+		or not page or not page.RevealPath) then return false end
+	local stored = {}
+	for i = 1, #path do stored[i] = path[i] end
+	path = stored
+	self:ClearKeyboardFocus()
+	if (not page:RevealPath(path)) then return false end
+
+	self.navigationSerial = (self.navigationSerial or 0) + 1
+	local serial = self.navigationSerial
+	self:BuildRail()
+	self.requestedSection = nil
+
+	local ScrollToPath = function()
+		if (self.navigationSerial ~= serial or self.selected ~= path[1] or self.searching) then return end
+		local offset = page:GetPathOffset(path)
+		if (type(offset) ~= "number") then return end
+		for i, row in ipairs(self.sectionRows or {}) do
+			if (row:IsShown() and row.offset and row.offset <= offset) then
+				self.requestedSection = i
+			end
+		end
+		contentScroll:UpdateScrollChildRect()
+		local range = contentScroll:GetVerticalScrollRange() or 0
+		contentScroll:SetVerticalScroll(min(range, max(0, offset)))
+		self:UpdateActiveSection()
+	end
+	ScrollToPath()
+	-- The native scroll range can settle a frame after the new rows are laid out.
+	C_Timer.After(0, function()
+		if (self:IsShown()) then ScrollToPath() end
+	end)
+	if (highlight ~= false and page.HighlightPath) then page:HighlightPath(path) end
+	return true
+end
+
+-- Used by search and links, with the full setting path retained.
 Panel.GoTo = function(self, path)
-	if (type(path) ~= "table" or #path == 0) then return end
+	if (type(path) ~= "table" or #path == 0) then return false end
+	local options = GetOptions()
+	local group = options and Config.GetGroup(options, { path[1] })
+	if (type(group) ~= "table" or Config.IsHidden(group, options, { path[1] }, APP)) then return false end
 	self:SelectPage(path[1])
+	return self:RevealPath(path)
 end
 
 -- Replaces the page with the matches, and leaves the rail alone. That is what
@@ -1404,7 +1454,7 @@ Panel.OpenResult = function(self, row)
 	end
 
 	self:HideResults()
-	self:SelectPage(row.path[1])
+	return self:GoTo(row.path)
 end
 
 Panel.HideResults = function(self)
@@ -1856,8 +1906,8 @@ local Build = function()
 	search:SetScript("OnEnterPressed", function(self)
 		local first = resultRows[1]
 		if (Panel.searching and first and first:IsShown()) then
-			Panel:OpenResult(first)
 			Panel:ClearKeyboardFocus()
+			Panel:OpenResult(first)
 			return
 		end
 		self:ClearFocus()
@@ -2106,6 +2156,16 @@ local Build = function()
 
 	page = Renderer:CreatePage(pageContent)
 	page.OnChanged = function(_, path) Panel:OnSettingChanged(path) end
+	page.OnStructureChanged = function()
+		if (Kit.Controls and Kit.Controls.CloseDropdown) then Kit.Controls.CloseDropdown() end
+		Panel.navigationSerial = (Panel.navigationSerial or 0) + 1
+		Panel:ClearKeyboardFocus()
+		Panel.requestedSection = nil
+		Panel:BuildRail()
+		local range = contentScroll:GetVerticalScrollRange() or 0
+		contentScroll:SetVerticalScroll(min(range, contentScroll:GetVerticalScroll() or 0))
+		Panel:UpdateActiveSection()
+	end
 	Panel.page = page
 
 	-- Both scroll frames are on the panel as well as in these upvalues, so the
@@ -2252,17 +2312,26 @@ Panel.Open = function(self, key)
 	return true
 end
 
--- Opens a page and scrolls to one of its sections, by the heading drawn for it.
--- The scroll is the section row's own click, a frame later, so the page has
--- laid itself out and the row knows where its section starts. A heading the
--- page does not have leaves you at the top of the page.
+-- A full path is unambiguous, including nested sections with the same name.
+-- Existing What's New links can keep using a heading label; resolve those from
+-- the complete structure so even an inactive tab can be opened.
 Panel.OpenSection = function(self, key, label)
 	if (not self:Open(key)) then return false end
+	if (type(label) == "table") then return self:RevealPath(label, false) end
 	if (type(label) ~= "string" or label == "") then return true end
 
 	local wanted = string_lower(label)
+	local options = GetOptions()
+	local group = options and Config.GetGroup(options, { key })
+	for _, entry in ipairs(Renderer:Collect(group, options, { key })) do
+		if (entry.kind == "header" and entry.path and type(entry.label) == "string"
+			and string_lower(entry.label) == wanted) then
+			return self:RevealPath(entry.path, false)
+		end
+	end
+	local serial = self.navigationSerial
 	C_Timer.After(0, function()
-		if (not self:IsShown() or self.selected ~= key) then return end
+		if (not self:IsShown() or self.selected ~= key or self.navigationSerial ~= serial) then return end
 		for _, row in ipairs(self.sectionRows or {}) do
 			if (row:IsShown() and type(row.label) == "string" and string_lower(row.label) == wanted) then
 				local click = row:GetScript("OnClick")

@@ -1256,3 +1256,20 @@ L["Toggle preview"] = "Показать/скрыть предпросмотр"
 -- Paladin Light resource palette
 L["Light colored"] = "Цвет Света"
 L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = "Выберите цвет кристалла ресурса и сферы маны. Цвет Света использует золотистый Свет."
+
+-- Flowing mana (player style)
+L["Flowing mana"] = "Текучая мана"
+L["Animate the mana inside the orb with flowing water and gentle waves. Uses your selected resource color and temporarily replaces the theme or Lite+ orb effect while the orb shows mana."] = "Анимирует ману внутри сферы струящейся водой и мягкими волнами. Использует выбранный цвет ресурса и временно заменяет эффект сферы темы или Lite+, пока сфера показывает ману."
+
+-- Options section labels
+L["Crystal & Mana Orb"] = "Кристалл и сфера маны"
+L["Text"] = "Текст"
+L["Buffs"] = "Положительные эффекты"
+L["Debuffs"] = "Отрицательные эффекты"
+
+-- Player (Party Style): Use Party Frame as Player Frame
+L["Player (Party Style)"] = "Игрок (стиль группы)"
+L["Use Party Frame as Player Frame"] = "Использовать рамку группы как рамку игрока"
+L["Show yourself as a small party frame: the party health bar with a thin power line and the cast overlay. Turns off Player and Player Alternate, and with them the mana orb, the power crystal and the auras by the player frame."] = "Показывает вас маленькой рамкой группы: полоса здоровья группы с тонкой линией ресурса и наложением заклинания. Отключает Игрока и Альтернативного игрока, а вместе с ними сферу маны, кристалл ресурса и ауры у рамки игрока."
+L["Show Portrait"] = "Показывать портрет"
+L["Show the round portrait above the health bar. Without it the frame is just the bar."] = "Показывает круглый портрет над полосой здоровья. Без него рамка состоит только из полосы."

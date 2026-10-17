@@ -160,6 +160,13 @@ local themes = assert(options.args.Themes, "Themes page built")
 local resourceColour = assert(units.args.player.args.crystalOrbColorMode)
 local resourceInfo = { "Unit Frames", "player", "crystalOrbColorMode" }
 local resourceProfile = ns:GetModule("PlayerFrame").db.profile
+local flowOption=assert(units.args.player.args.flowingMana,"Flowing mana toggle")
+local flowInfo={"Unit Frames","player","flowingMana"}
+resourceProfile.flowingMana=false
+assert(flowOption.type=="toggle" and flowOption.get(flowInfo)==false,"Flowing mana default off")
+flowOption.set(flowInfo,true)
+assert(resourceProfile.flowingMana==true and flowOption.get(flowInfo)==true,"Flowing mana profile setting")
+flowOption.set(flowInfo,false)
 local previousColour = resourceProfile.crystalOrbColorMode
 assert(not resourceColour.values().light, "Light resource colour is specific to Paladin artwork")
 for _, key in ipairs({ "theme", "litePlus", "effects", "hunter", "paladin", "mageTheme", "mage", "druid" }) do assert(themes.args[key], "Themes entry: " .. key) end

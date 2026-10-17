@@ -1255,3 +1255,20 @@ L["Toggle preview"] = true
 -- Paladin Light resource palette
 L["Light colored"] = true
 L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = true
+
+-- Flowing mana (player style)
+L["Flowing mana"] = true
+L["Animate the mana inside the orb with flowing water and gentle waves. Uses your selected resource color and temporarily replaces the theme or Lite+ orb effect while the orb shows mana."] = true
+
+-- Options section labels
+L["Crystal & Mana Orb"] = true
+L["Text"] = true
+L["Buffs"] = true
+L["Debuffs"] = true
+
+-- Player (Party Style): Use Party Frame as Player Frame
+L["Player (Party Style)"] = true
+L["Use Party Frame as Player Frame"] = true
+L["Show yourself as a small party frame: the party health bar with a thin power line and the cast overlay. Turns off Player and Player Alternate, and with them the mana orb, the power crystal and the auras by the player frame."] = true
+L["Show Portrait"] = true
+L["Show the round portrait above the health bar. Without it the frame is just the bar."] = true

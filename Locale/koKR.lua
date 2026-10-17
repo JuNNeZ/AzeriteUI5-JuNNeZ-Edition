@@ -1256,3 +1256,20 @@ L["Toggle preview"] = "미리보기 켜기/끄기"
 -- Paladin Light resource palette
 L["Light colored"] = "빛의 색"
 L["Choose the color of the power crystal and mana orb. Light colored uses golden Light."] = "자원 수정과 마나 구슬의 색상을 선택합니다. 빛의 색은 황금빛을 사용합니다."
+
+-- Flowing mana (player style)
+L["Flowing mana"] = "흐르는 마나"
+L["Animate the mana inside the orb with flowing water and gentle waves. Uses your selected resource color and temporarily replaces the theme or Lite+ orb effect while the orb shows mana."] = "구슬 안의 마나를 흐르는 물과 잔잔한 파도로 표현합니다. 선택한 자원 색상을 사용하며, 구슬에 마나가 표시되는 동안 테마 또는 Lite+ 구슬 효과를 일시적으로 대체합니다."
+
+-- Options section labels
+L["Crystal & Mana Orb"] = "수정 및 마나 구슬"
+L["Text"] = "텍스트"
+L["Buffs"] = "강화 효과"
+L["Debuffs"] = "약화 효과"
+
+-- Player (Party Style): Use Party Frame as Player Frame
+L["Player (Party Style)"] = "플레이어 (파티 스타일)"
+L["Use Party Frame as Player Frame"] = "파티 프레임을 플레이어 프레임으로 사용"
+L["Show yourself as a small party frame: the party health bar with a thin power line and the cast overlay. Turns off Player and Player Alternate, and with them the mana orb, the power crystal and the auras by the player frame."] = "자신을 작은 파티 프레임으로 표시합니다: 파티 생명력 바와 얇은 자원 선, 시전 오버레이. 플레이어와 플레이어 대체를 끄며, 그와 함께 마나 구슬, 자원 수정, 플레이어 프레임 옆의 오라도 사라집니다."
+L["Show Portrait"] = "초상화 표시"
+L["Show the round portrait above the health bar. Without it the frame is just the bar."] = "생명력 바 위에 둥근 초상화를 표시합니다. 끄면 프레임은 바만 남습니다."

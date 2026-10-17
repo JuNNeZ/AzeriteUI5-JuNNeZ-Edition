@@ -137,6 +137,7 @@ ExplorerMode.UpdateSettings = function(self, forceRefresh)
 			StanceBar = { moduleName = "StanceBar" },
 			PlayerFrame = { moduleName = "PlayerFrame" },
 			PlayerFrameAlternate = { moduleName = "PlayerFrameAlternate" },
+			PlayerFrameParty = { moduleName = "PlayerFrameParty" },
 			PlayerClassPowerFrame = { moduleName = "PlayerClassPowerFrame" },
 			PetFrame = { moduleName = "PetFrame" },
 			FocusFrame = { moduleName = "FocusFrame" },
@@ -291,6 +292,22 @@ ExplorerMode.UpdateSettings = function(self, forceRefresh)
 			else
 				LFF:UnregisterFrameForFading(playerFrame)
 				LFF:UnregisterFrameForFading(playerFrame.Portrait)
+			end
+		end
+	end
+
+	-- The party-style player frame fades with the player frame. Its portrait model is a
+	-- child of the frame, and the portrait alpha fix follows the frame's alpha.
+	local PlayerFramePartyInfo = modulesInfo.PlayerFrameParty
+	local PlayerFrameParty = PlayerFramePartyInfo.module
+	if (PlayerFrameParty) then
+		local fade = not forced and PlayerFramePartyInfo.enabled and db.enabled and db.fadePlayerFrame
+		local playerFrame = PlayerFrameParty:GetFrame()
+		if (playerFrame) then
+			if (fade) then
+				LFF:RegisterFrameForFading(playerFrame, self:GetName())
+			else
+				LFF:UnregisterFrameForFading(playerFrame)
 			end
 		end
 	end
@@ -467,6 +484,13 @@ ExplorerMode.CheckHealth = function(self)
 	local playerFrameAlternate = ns:GetModule("PlayerFrameAlternate", true)
 	if (playerFrameAlternate and playerFrameAlternate.IsEnabled and playerFrameAlternate:IsEnabled() and playerFrameAlternate.GetFrame) then
 		frame = playerFrameAlternate:GetFrame()
+	end
+	if (not frame) then
+		local playerFrameParty = ns:GetModule("PlayerFrameParty", true)
+		local profile = playerFrameParty and playerFrameParty.db and playerFrameParty.db.profile
+		if (profile and profile.enabled and playerFrameParty:IsEnabled() and playerFrameParty.GetFrame) then
+			frame = playerFrameParty:GetFrame()
+		end
 	end
 	if (not frame) then
 		local playerFrame = ns:GetModule("PlayerFrame", true)

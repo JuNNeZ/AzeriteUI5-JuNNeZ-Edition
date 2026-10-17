@@ -138,6 +138,22 @@ local function IsCastOver(unit)
 	return not UnitCastingInfo(unit) and not UnitChannelInfo(unit)
 end
 
+-- AzeriteUI: the bar's own timer has run out. Dcryfm's party bars (hunter, and a druid after a
+-- loading screen) stayed white at full on 5.28.0, so the client went on answering a cast for the
+-- unit after it ended; the timer does not depend on that answer. False when unreadable or secret.
+local function IsTimerSpent(element)
+	local ok, timer = pcall(element.GetTimerDuration, element)
+	local kind = type(timer)
+	if(not ok or (kind ~= 'table' and kind ~= 'userdata') or not timer.GetRemainingDuration) then
+		return false
+	end
+	local okRemaining, remaining = pcall(timer.GetRemainingDuration, timer)
+	if(not okRemaining or type(remaining) ~= 'number' or (issecretvalue and issecretvalue(remaining))) then
+		return false
+	end
+	return remaining <= 0
+end
+
 local function IsCurrentCast(element, castID, unit)
 	if(castID and element.castID == castID) then
 		return true
@@ -298,6 +314,7 @@ local function CastStart(self, event, unit)
 	element.castID = castID
 	element.__AzeriteUI_CastUnit = unit
 	element.__AzeriteUI_CastOverCheck = 0
+	element.__AzeriteUI_TimerSpentChecks = 0
 	element.spellID = spellID
 	element.spellName = text
 	EmitInterruptEventDebug(element, 'start', event, unit, notInterruptible)
@@ -615,6 +632,18 @@ local function onUpdate(self, elapsed)
 					resetAttributes(self)
 					self:Hide()
 					return
+				end
+				-- Past its end on two checks in a row (.5 to 1 s): a late stop is not cut off.
+				-- Empowered casts can hold at max beyond the timer, so they are left out.
+				if(not self.empowering and IsTimerSpent(self)) then
+					self.__AzeriteUI_TimerSpentChecks = (self.__AzeriteUI_TimerSpentChecks or 0) + 1
+					if(self.__AzeriteUI_TimerSpentChecks >= 2) then
+						resetAttributes(self)
+						self:Hide()
+						return
+					end
+				else
+					self.__AzeriteUI_TimerSpentChecks = 0
 				end
 			end
 		end
