@@ -1840,5 +1840,627 @@
       "path": "Assets/Hunter/orb-group-glow.tga",
       "sha256": "07c5d7e88071bbc6ebb3e3f127076761aaa47bd78f0013150cddbcd6a4e2bfac"
     }
+  },
+  "releaseAssets": {
+    "version": "5.30.0-JuNNeZ",
+    "liveValidated": false,
+    "files": {
+      "Assets/Hunter/cast-head-fitted.tga": {
+        "sha256": "92077601ecc8bdb170ee7b995d00e12f27fdf6eeaf4b5829da17e63cc49113ca",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/cast_back-capped.tga": {
+        "sha256": "0fdf8c13bb9d38279c59ea9a08816bcc5f8bb76fdcd1b565e480c4952d26d87c",
+        "bytes": 131116,
+        "size": [
+          256,
+          128
+        ]
+      },
+      "Assets/Hunter/cast_back_spiked-capped.tga": {
+        "sha256": "0fdf8c13bb9d38279c59ea9a08816bcc5f8bb76fdcd1b565e480c4952d26d87c",
+        "bytes": 131116,
+        "size": [
+          256,
+          128
+        ]
+      },
+      "Assets/Hunter/endcap-raeshalare-fitted-glow.tga": {
+        "sha256": "82c9f1e94640289bf5b67a4251ad1856b45933f4c72da66ae3eda9711a7abc60",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/endcap-raeshalare-fitted.tga": {
+        "sha256": "931b0d9bfa1b3ff11ae1fb6f4b5ca42793e53c1e9ee1c82b29773e7d0a6e37b9",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/endcap-talonclaw-fitted-glow.tga": {
+        "sha256": "6d1bb69bc43123898729d70c769daa6caa27a143b7975c2c5b002931d22d27ad",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/endcap-talonclaw-fitted.tga": {
+        "sha256": "6218d1aa8c343ee24790db80e92803ee4c91f259b95e448d07258ebac875b705",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/endcap-thasdorah-fitted-glow.tga": {
+        "sha256": "7b3bbcc1fdc437bf322ac3ab0b6157f2c62dbca5708055fabfe2bea1d4d8f2e9",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/endcap-thasdorah-fitted.tga": {
+        "sha256": "4fba5bdc709c327da85ba00ab1bead4bd845c6d8ca8104014f40925e30625d60",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/endcap-thoridal-fitted-glow.tga": {
+        "sha256": "4c07b104a23d276b8bc1c09aa284649d71217064696d19d331f084eaa77d94b7",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/endcap-thoridal-fitted.tga": {
+        "sha256": "7b1dc27adc7c0c7588a007b435a7d1ddbcc523192b04b92fa4928bc03a713223",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/endcap-titanstrike-fitted-glow.tga": {
+        "sha256": "32d45012886d530558adacd6c4970b76fc2b7b16884ef21ae8d64a0b922b648c",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/endcap-titanstrike-fitted.tga": {
+        "sha256": "c85dd6417a20bcef9793ae1280d7b21f69a22ea7eebac9d15b16c7b911427a31",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_boss_case-fitted-capped-glow.tga": {
+        "sha256": "524fc04155b3149a823ab8718a9c9f15fffa0bcad0571b09923584988e77ff48",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_boss_case-fitted-capped-over.tga": {
+        "sha256": "3947a0a91f782b2e2355304308f85aefeacb7ce1357610e22340590d3484124e",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_boss_case-fitted-capped.tga": {
+        "sha256": "2ce37905686487ecc78061bc1f676eb3f5099a4af427ef7cb6254e09f26dd14d",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_boss_case-fitted-glow.tga": {
+        "sha256": "7d00510c47d3b83f60e587576381f2e190087bec34c8bddb8e0b826d20116520",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_boss_case-fitted-over.tga": {
+        "sha256": "15373028eed258f31eb399bb9a33100badb2468d66e353aee6b3c56522e094bb",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_boss_case-fitted.tga": {
+        "sha256": "9b3f85b7265ca4206a1f1a3e3454adc5a933112e7b08c7fa4aff7c4b0e112836",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_cap_case-fitted-capped-glow.tga": {
+        "sha256": "bbd650c19f0fa6678de43fd42b309b0468c630114d7ce79deffa8dc49d311f78",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_cap_case-fitted-capped-over.tga": {
+        "sha256": "acc57e022dc97fffba00ad6b33271988ed4f57abbc8e6dc33b988618368e3021",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_cap_case-fitted-capped.tga": {
+        "sha256": "88022594284bc1cb89feb05e236617af275e20ca1b9f482b7474c79b5a88641c",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_cap_case-fitted-glow.tga": {
+        "sha256": "43c95826d6d95c9b4e2d72139b2eaf2eca7a341554fb0d077bca0d9a8d131d9b",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_cap_case-fitted-over.tga": {
+        "sha256": "6c34bf819740bf8f8b469bdd998e3c4f759b0898da6bb6696df06c110a464378",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_cap_case-fitted.tga": {
+        "sha256": "f32daa8ddccfb52a7fbb1be822d70294aa5311a50bf1b8d3cf5821431884ff32",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_low_case-fitted-capped-glow.tga": {
+        "sha256": "b3f25a551588eeb8d0ba7cb522ddaf6831a2bd408b011fba7222bac781eb9353",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_low_case-fitted-capped-over.tga": {
+        "sha256": "3401d6410ea60fe088507a40fc0bfa819129facee0407a746e08b2447b1502e7",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_low_case-fitted-capped.tga": {
+        "sha256": "db08859297b7342c6cb3c1c5ab2bd8333a1c087f580929e592fd8cb7ba169272",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_low_case-fitted-glow.tga": {
+        "sha256": "9062f60e8465fbc0aaa130ba15ddf10d7f441b6ee0f2a97ca7ba5c1e9113e91a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_low_case-fitted-over.tga": {
+        "sha256": "c50d95a98c8df2f14837f563058cdc1949a5a0832d54502124807009d2f19293",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_low_case-fitted.tga": {
+        "sha256": "05127f11fa8971f91d40175292ce0cd13f593f023564805e670183504cc69d99",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_mid_case-fitted-capped-glow.tga": {
+        "sha256": "b3f25a551588eeb8d0ba7cb522ddaf6831a2bd408b011fba7222bac781eb9353",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_mid_case-fitted-capped-over.tga": {
+        "sha256": "3401d6410ea60fe088507a40fc0bfa819129facee0407a746e08b2447b1502e7",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_mid_case-fitted-capped.tga": {
+        "sha256": "83cbd7a95c6ec49f2c8265d025c826eee1917c49740ecbfbe14fcfdb850ef265",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_mid_case-fitted-glow.tga": {
+        "sha256": "9062f60e8465fbc0aaa130ba15ddf10d7f441b6ee0f2a97ca7ba5c1e9113e91a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_mid_case-fitted-over.tga": {
+        "sha256": "c50d95a98c8df2f14837f563058cdc1949a5a0832d54502124807009d2f19293",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/hp_mid_case-fitted.tga": {
+        "sha256": "f1c381c691694775ba3193082b15d0a249f6ebdbccdc988a7cadc453f7385e54",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-raeshalare-hp_boss_case-glow.tga": {
+        "sha256": "f078ea1469a9fc0c43721ba0a7312c676a7a48916509f497532a13025f0d69b4",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-raeshalare-hp_boss_case.tga": {
+        "sha256": "04b4b23efaca963fe3773a961f6814ff2630c0050df814ed032e96b8343f929c",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-raeshalare-hp_cap_case-glow.tga": {
+        "sha256": "dbd58d29df83055d54ab9b1c644c3fe57d4c956c7caffc12b59af0bedcf2c073",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-raeshalare-hp_cap_case.tga": {
+        "sha256": "1566b1c6b365fd597cf7eb3509b8ff06545e467e83a9ebf2c400ee692f8b6324",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-raeshalare-hp_low_case-glow.tga": {
+        "sha256": "91c5430dc0c3e8a3041dd7659981025ce18d4ab147e8b0a1223286506b1b4a32",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-raeshalare-hp_low_case.tga": {
+        "sha256": "941dab9b926094c3f863db39a908ba2c42045e8d1d54e74a850403758f3d6afd",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-raeshalare-hp_mid_case-glow.tga": {
+        "sha256": "91c5430dc0c3e8a3041dd7659981025ce18d4ab147e8b0a1223286506b1b4a32",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-raeshalare-hp_mid_case.tga": {
+        "sha256": "941dab9b926094c3f863db39a908ba2c42045e8d1d54e74a850403758f3d6afd",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-talonclaw-hp_boss_case-glow.tga": {
+        "sha256": "744e9c48017d5e776f58cb8025f8219af83d0a5d8a67e06e9f18edac43389f4a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-talonclaw-hp_boss_case.tga": {
+        "sha256": "6a4501dafafe543ceae4dd3ce4d34feb2bc1efad1e71fa67faa84b58c898aad6",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-talonclaw-hp_cap_case-glow.tga": {
+        "sha256": "5ed5cd5054a2ba5d0f5cbfb534f5c9544aca72f7eb6c5773d329121a0a4292c4",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-talonclaw-hp_cap_case.tga": {
+        "sha256": "e58e2c40af68af7cf3c4acdef72dd4dc0cb3e7502b5e64c43cb227824d8b0921",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-talonclaw-hp_low_case-glow.tga": {
+        "sha256": "511502a7b5317edbbfcda0a573cd2e7dcaaced4886fdcd6311a8243f2b6edee4",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-talonclaw-hp_low_case.tga": {
+        "sha256": "00301de42e0faea6b63e765d9dfb7c3899ed10c46abea25edd5f8e05c9c166ae",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-talonclaw-hp_mid_case-glow.tga": {
+        "sha256": "511502a7b5317edbbfcda0a573cd2e7dcaaced4886fdcd6311a8243f2b6edee4",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-talonclaw-hp_mid_case.tga": {
+        "sha256": "00301de42e0faea6b63e765d9dfb7c3899ed10c46abea25edd5f8e05c9c166ae",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thasdorah-hp_boss_case-glow.tga": {
+        "sha256": "f0bbf2a1c8d20681e029b3768abe1a64d104dc795a2b42bd7ef33539af49a73e",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thasdorah-hp_boss_case.tga": {
+        "sha256": "d5889ecb2158f486c1c6037f088f42e327d2758aee5cf895285634471172201a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thasdorah-hp_cap_case-glow.tga": {
+        "sha256": "b04ecdafde377828ae0d8df547f4987ef5439bb0395a6426dafd18dedaac5274",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thasdorah-hp_cap_case.tga": {
+        "sha256": "0f1a83c714f73cfe7b780260b5429c465e6abe026091639abf8abd9e1887d860",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thasdorah-hp_low_case-glow.tga": {
+        "sha256": "b5d1e4ebfa3b1128d637e741ddb326687a6ab5a99d952f437a68ca895fe82cf6",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thasdorah-hp_low_case.tga": {
+        "sha256": "1b2cd963ef35579be1be385d2e7397b2c39ee28db3544d4fcb89b4f627ac26c2",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thasdorah-hp_mid_case-glow.tga": {
+        "sha256": "b5d1e4ebfa3b1128d637e741ddb326687a6ab5a99d952f437a68ca895fe82cf6",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thasdorah-hp_mid_case.tga": {
+        "sha256": "1b2cd963ef35579be1be385d2e7397b2c39ee28db3544d4fcb89b4f627ac26c2",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thoridal-hp_boss_case-glow.tga": {
+        "sha256": "243273f7e50e6e2d061cc3f1bf05757c2480ba4d0b2a0ab8b0ddba469d373845",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thoridal-hp_boss_case.tga": {
+        "sha256": "55af6a11b554bfecfba309fbc599a4de84e5945179606f59a0d9f75324abb20a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thoridal-hp_cap_case-glow.tga": {
+        "sha256": "ca6133ba75043a7401a520c15fbcdb85cb08091e8f033db0bb945c0286bcae63",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thoridal-hp_cap_case.tga": {
+        "sha256": "45d4198412560d39adf58f07e14efecaf06528d09cf789e54d07ab672e908e31",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thoridal-hp_low_case-glow.tga": {
+        "sha256": "990fd852d47c95f9725bb55d9a1f867dd8ae14fcee9c0ec0a6eab1635c74af33",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thoridal-hp_low_case.tga": {
+        "sha256": "7965d8cfea8968b30b29d4014cb4d9769f37accbb4ccb8d7e9b1663ba48bf730",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thoridal-hp_mid_case-glow.tga": {
+        "sha256": "990fd852d47c95f9725bb55d9a1f867dd8ae14fcee9c0ec0a6eab1635c74af33",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-thoridal-hp_mid_case.tga": {
+        "sha256": "7965d8cfea8968b30b29d4014cb4d9769f37accbb4ccb8d7e9b1663ba48bf730",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-titanstrike-hp_boss_case-glow.tga": {
+        "sha256": "c52031ec40eb0d88c510b6f6b94144ae281420cb62a4c1e02bf5ddbf4b2afd79",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-titanstrike-hp_boss_case.tga": {
+        "sha256": "fb4f5dfc7683f21705d293af00bbedfd1ac0d099248a471775c11d01bb3fca3f",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-titanstrike-hp_cap_case-glow.tga": {
+        "sha256": "cc17ef26c15bb23cb614f96124404afcf5bfaa3f305389545c95f0146ce74e9e",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-titanstrike-hp_cap_case.tga": {
+        "sha256": "2090d0a4e9af84b4a82d0d4cf7541771468d0857209e7e9fc79a41dd04598c64",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-titanstrike-hp_low_case-glow.tga": {
+        "sha256": "0deeae40ead83e537a8040c5b2b148d5a1e1a25c4999837011b105993cb04cac",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-titanstrike-hp_low_case.tga": {
+        "sha256": "cbfc532e0c8c9997ce2d61189f43e792a9da8b0ce2abc38546a2b316d5b07bf8",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-titanstrike-hp_mid_case-glow.tga": {
+        "sha256": "0deeae40ead83e537a8040c5b2b148d5a1e1a25c4999837011b105993cb04cac",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Hunter/ornament-titanstrike-hp_mid_case.tga": {
+        "sha256": "cbfc532e0c8c9997ce2d61189f43e792a9da8b0ce2abc38546a2b316d5b07bf8",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      }
+    }
   }
 }

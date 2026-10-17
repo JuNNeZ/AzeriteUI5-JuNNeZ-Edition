@@ -2103,5 +2103,203 @@
     "orb-strands"
   ],
   "missingSources": [],
-  "liveValidated": false
+  "liveValidated": false,
+  "releaseAssets": {
+    "version": "5.30.0-JuNNeZ",
+    "liveValidated": false,
+    "files": {
+      "Assets/Paladin/ornament-argent-hp_boss_case-glow.tga": {
+        "sha256": "32c2d6f477398eff8c7ed84ec58495b15b1367b32f7d29e5996cd2a14ded456a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-argent-hp_boss_case.tga": {
+        "sha256": "47befae3b3060a930148c752d54d3dd688f515c2b0f3b17905953aff0ba4f27b",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-argent-hp_cap_case-glow.tga": {
+        "sha256": "aaf326c539f50957f2757bc0aaa919e523065ac4b9a5d478c442c463d767c27a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-argent-hp_cap_case.tga": {
+        "sha256": "0ceb4fe044ad485f052de52dce26491a492c39bcf96bd561328a78b2d0c4919b",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-argent-hp_low_case-glow.tga": {
+        "sha256": "927882b6dae7cf0c6ef58992b47087590e180aa68ad786ef78bbff99b41c0aa3",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-argent-hp_low_case.tga": {
+        "sha256": "11febe0fff3ac5698b61101a1850c0bbe7ef66bdc857a8f9d09e855b29e51073",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-argent-hp_mid_case-glow.tga": {
+        "sha256": "927882b6dae7cf0c6ef58992b47087590e180aa68ad786ef78bbff99b41c0aa3",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-argent-hp_mid_case.tga": {
+        "sha256": "11febe0fff3ac5698b61101a1850c0bbe7ef66bdc857a8f9d09e855b29e51073",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-ashbringer-hp_boss_case-glow.tga": {
+        "sha256": "81e7e5f947ffe31192afa82fd7d778017225cdc974f066a4089894fb43b197af",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-ashbringer-hp_boss_case.tga": {
+        "sha256": "432b91b555a48441fb20b0f25516653b954b420bf3bd75f5fd46277cfa012d1a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-ashbringer-hp_cap_case-glow.tga": {
+        "sha256": "e115fde6bdce953483729abc1ce6eae80cfb60b417f2e9582a23b0580b7f77fc",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-ashbringer-hp_cap_case.tga": {
+        "sha256": "1aac0f0873b1ffc746051d86a0feba8d613f20bd49b8da76d26b28583805555c",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-ashbringer-hp_low_case-glow.tga": {
+        "sha256": "c5c47a769e56f629d81c709a9ebf865d2fe51dbb6c6e98a53b04f5f21756f2eb",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-ashbringer-hp_low_case.tga": {
+        "sha256": "546775826b8a1639501c47c4636472df972b0a69e2e0ca60e5683e264542affa",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-ashbringer-hp_mid_case-glow.tga": {
+        "sha256": "c5c47a769e56f629d81c709a9ebf865d2fe51dbb6c6e98a53b04f5f21756f2eb",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-ashbringer-hp_mid_case.tga": {
+        "sha256": "546775826b8a1639501c47c4636472df972b0a69e2e0ca60e5683e264542affa",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-silverhand-hp_boss_case-glow.tga": {
+        "sha256": "dfc79590e8707bc58e3638cd2159e2ee5b8bc4e3c6227e5724dbfacacfc4f0c6",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-silverhand-hp_boss_case.tga": {
+        "sha256": "4f52c95642f453931c50c41707c0d0b85cebc1de3dc4987b5e6157d2bb08d7c5",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-silverhand-hp_cap_case-glow.tga": {
+        "sha256": "5fd8581dc6a60998ec80ccc7b98c59829117800ccbcd0cad4e71a245981817de",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-silverhand-hp_cap_case.tga": {
+        "sha256": "87cd833b7120613bb08bc84407a4863060ce81df5ba96f83eb630e484fdff9d0",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-silverhand-hp_low_case-glow.tga": {
+        "sha256": "5b020c8621803fe0a3d7560e65fc9a93cd0ab6ce4bb153e11ce34f34e4e72aa3",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-silverhand-hp_low_case.tga": {
+        "sha256": "99189ab97613790f1bd8614a5e7f3ab23d57ff2ca0783be0c0c88bf010470075",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-silverhand-hp_mid_case-glow.tga": {
+        "sha256": "5b020c8621803fe0a3d7560e65fc9a93cd0ab6ce4bb153e11ce34f34e4e72aa3",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Paladin/ornament-silverhand-hp_mid_case.tga": {
+        "sha256": "99189ab97613790f1bd8614a5e7f3ab23d57ff2ca0783be0c0c88bf010470075",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      }
+    }
+  }
 }

@@ -57,6 +57,92 @@ Engine.OrnamentSlots = {
 	North = { size = 32 }
 }
 
+-- Fitted cast boots contain their own solid socket. Unlike the old detached
+-- emblems, the socket overlaps the left termination. Paladin's established
+-- slot/art pairing is retained; health uses the same slot as Paladin.
+Engine.FittedCastSlot = { size = 48, x = -8, y = 0 }
+
+--- Full-casing ornaments share the backdrop's measured dip, including mirrors.
+--- Scale around that point so changing size cannot create a second lower tip.
+Engine.PlaceAlignedHealthEndcap = function(self, art, backdrop, dip, flip, ratio, dx, dy)
+	if (not art or not backdrop or not dip) then return false end
+	local width, height = backdrop:GetWidth(), backdrop:GetHeight()
+	local x = flip and 1-dip[1] or dip[1]
+	art:ClearAllPoints()
+	art:SetSize(width*ratio, height*ratio)
+	art:SetPoint("TOPLEFT", backdrop, "TOPLEFT",
+		(1-ratio)*x*width + (flip and -dx or dx), -(1-ratio)*dip[2]*height + dy)
+	art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+	return true
+end
+
+--- Draw a measured full-casing cap while retaining the complete original dip.
+Engine.StyleAlignedHealthEndcap = function(self, frame, art, bar, path, key, dips, flip, scale, dx, dy)
+	local assembly = bar.ThemeEndcapAssembly
+	local name = assembly and assembly.name:gsub("%-fitted$", "")
+	local dip = name and dips[name]
+	local enabled = key ~= "none" and dip ~= nil
+	self:SetEndcapTerminal(bar, false)
+	frame.EndcapShown = enabled
+	frame:SetShown(enabled)
+	if (frame.Threat) then frame.Threat:SetShown(enabled and frame.ThreatSource:IsShown()) end
+	if (not enabled) then return end
+	local texture = "ornament-"..key.."-"..name
+	frame.EndcapTextureName = texture
+	art:SetTexture(path(texture))
+	self:PlaceAlignedHealthEndcap(art, bar.Backdrop, dip, flip, scale/1.3, dx, dy)
+	if (frame.Threat) then
+		frame.Threat:SetTexture(path(texture.."-glow"))
+		frame.Threat:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+	end
+end
+
+--- Select the mounting shoulder or complete bare terminal, including its halo.
+--- The theme registers only its own decorative regions; fills stay untouched.
+Engine.SetEndcapTerminal = function(self, bar, enabled)
+	local assembly = bar.ThemeEndcapAssembly
+	if (not assembly) then return end
+	local name = assembly.name..(enabled and "-capped" or "")
+	assembly.back:SetTexture(assembly.path(name))
+	if (assembly.front) then assembly.front:SetTexture(assembly.path(name.."-over")) end
+	if (assembly.threat) then
+		assembly.threat:SetTexture(enabled and assembly.path(name.."-glow")
+			or assembly.bareThreat or assembly.path(assembly.glow))
+	end
+end
+
+Engine.SetCastEndcapTerminal = function(self, cast, path, enabled, front, shieldFront)
+	local suffix = enabled and "-capped" or ""
+	if (cast.Backdrop) then cast.Backdrop:SetTexture(path("cast_back"..suffix)) end
+	if (cast.Shield) then cast.Shield:SetTexture(path("cast_back_spiked"..suffix)) end
+	if (front) then front:SetTexture(path("cast_back"..suffix.."-over")) end
+	if (shieldFront) then shieldFront:SetTexture(path("cast_back_spiked"..suffix.."-over")) end
+end
+
+--- A neutral boot halo follows only the addon's native threat texture. Place
+--- it behind the complete assembly so no additive seam lights the health fill.
+Engine.StyleEndcapThreat = function(self, frame, art, native, texture, flip)
+	if (not frame or not native) then return end
+	local glow = frame.Threat
+	if (not glow) then
+		glow = native:GetParent():CreateTexture(nil, "BACKGROUND", nil, -3)
+		glow:SetAllPoints(art)
+		glow:SetBlendMode("ADD")
+		frame.Threat, frame.ThreatSource = glow, native
+		local SetShown = function(shown) glow:SetShown(shown and frame.EndcapShown == true) end
+		hooksecurefunc(native, "Show", function() SetShown(true) end)
+		hooksecurefunc(native, "Hide", function() SetShown(false) end)
+		hooksecurefunc(native, "SetShown", function(_, shown) SetShown(shown) end)
+		hooksecurefunc(native, "SetAlpha", function(_, alpha) glow:SetAlpha(alpha) end)
+		hooksecurefunc(native, "SetVertexColor", function(_, ...) glow:SetVertexColor(...) end)
+	end
+	glow:SetTexture(texture)
+	glow:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+	glow:SetVertexColor(native:GetVertexColor())
+	glow:SetAlpha(native:GetAlpha())
+	glow:SetShown(frame.EndcapShown == true and native:IsShown())
+end
+
 local themes = {}
 
 --- Adds a theme. `priority` orders themes that are active at once; lower wins.

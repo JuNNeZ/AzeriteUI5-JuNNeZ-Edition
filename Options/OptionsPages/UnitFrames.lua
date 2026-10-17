@@ -301,7 +301,7 @@ local GenerateOptions = function()
 		}
 		suboptions.args.flowingMana = {
 			name = L["Flowing mana"],
-			desc = L["Animate the mana inside the orb with flowing water and gentle waves. Uses your selected resource color and temporarily replaces the theme or Lite+ orb effect while the orb shows mana."],
+			desc = L["Add gentle waves to the selected orb material and theme or Lite+ effects while the orb shows mana. Keeps your selected resource color."],
 			order = 145, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
 		suboptions.args.legacyCenterWithoutTarget = {

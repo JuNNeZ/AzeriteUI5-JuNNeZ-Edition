@@ -129,19 +129,28 @@ local AddCastEndcap = function(theme, args)
 		type = "execute",
 		func = function() theme:ResetCastEndcapPlacement() end
 	}
-	-- Lite+ may expose Paladin light settings on another theme; its ornament
-	-- controls belong only to Paladin's own casings.
-	if (theme == ns.PaladinTheme) then
+	-- Lite+ lends effects only. Each installed theme has an independent cast
+	-- boot choice, including None, on its own complete themed casing.
+	local key = theme == ns.PaladinTheme and "paladin" or theme == ns.HunterTheme and "hunter"
+		or theme == ns.MageTheme and "mage" or theme == ns.DruidTheme and "druid"
+	local labels = { libram = "Libram", eagle = "Talonclaw", atiesh = "Atiesh", moon = L["The theme's own"] }
+	if (key and theme.GetCastEndcapChoices) then
+		local values, sorting = {}, {}
+		for choice in pairs(theme:GetCastEndcapChoices()) do
+			values[choice] = choice == "none" and (_G.NONE or "None") or labels[choice]
+			if (choice ~= "none") then sorting[#sorting+1] = choice end
+		end
+		table.sort(sorting); sorting[#sorting+1] = "none"
 		args.castEndcap = {
 			name = L["Endcap"], order = 10.5, type = "select",
-			values = { libram = "Libram", none = _G.NONE or "None" },
-			sorting = { "libram", "none" },
-			hidden = function() return Theme() ~= "paladin" end,
+			values = values, sorting = sorting,
+			hidden = function() return Theme() ~= key end,
 			get = function() return theme:GetCastEndcap() end,
 			set = function(_, value) theme:SetCastEndcap(value) end
 		}
 		for _, key in ipairs({ "castHeader", "castEndcapScale", "castEndcapX", "castEndcapY", "resetCastEndcap" }) do
-			args[key].hidden = function() return Theme() ~= "paladin" end
+			local control = args[key]
+			control.hidden = args.castEndcap.hidden
 		end
 	end
 	return args
@@ -173,7 +182,6 @@ local GenerateHunter = function(order)
 			},
 			endcapScale = {
 				name = L["Endcap size"],
-				desc = L["How large the endcaps are drawn. They grow and shrink around their own centre, so they stay where they are."],
 				order = 2,
 				type = "range", width = "full",
 				min = .5, max = 2, step = .05, isPercent = true,
@@ -236,7 +244,6 @@ local GenerateMageTheme = function(order)
 			},
 			endcapScale = {
 				name = L["Endcap size"],
-				desc = L["How large the endcaps are drawn. They grow and shrink around their own centre, so they stay where they are."],
 				order = 2,
 				type = "range", width = "full",
 				min = .5, max = 2, step = .05, isPercent = true,
@@ -289,8 +296,8 @@ local GeneratePaladin = function(order)
 			endcap = {
 				name = L["Endcap"], desc = L["The ornament at the outer end of the health bars."],
 				order = 2, type = "select", width = "full",
-				values = { ashbringer = "Ashbringer", none = _G.NONE or "None" },
-				sorting = { "ashbringer", "none" },
+				values = { ashbringer = "Ashbringer", silverhand = "Silver Hand", argent = "Argent Crusade", none = _G.NONE or "None" },
+				sorting = { "ashbringer", "silverhand", "argent", "none" },
 				hidden = function() return Theme() ~= "paladin" end,
 				get = function() return Paladin:GetEndcap() end,
 				set = function(_, value) Paladin:SetEndcap(value) end
@@ -340,7 +347,29 @@ local GenerateDruid = function(order)
 		hidden = function()
 			return Theme() ~= "druid" and Effects():GetCrystalEffect() ~= "druid" and Effects():GetOrbEffect() ~= "druid"
 		end,
-		args = {
+		args = AddCastEndcap(Druid, {
+			endcap = { name = L["Endcap"], order = 3, type = "select", width = "full",
+				values = { antler = "Wildheart", bear = "Guardian", owl = "Moonkin", none = _G.NONE or "None" },
+				sorting = { "antler", "bear", "owl", "none" },
+				hidden = function() return Theme() ~= "druid" end,
+				get = function() return Druid:GetEndcap() end,
+				set = function(_, value) Druid:SetEndcap(value) end },
+			endcapScale = { name = L["Endcap size"], order = 4, type = "range", width = "full",
+				min = .5, max = 2, step = .05, isPercent = true,
+				hidden = function() return Theme() ~= "druid" end,
+				get = function() return Druid:GetEndcapScale() end,
+				set = function(_, value) Druid:SetEndcapScale(value) end },
+			endcapX = { name = L["X Offset"], order = 5, type = "range", width = "full", min = -60, max = 60, step = 1,
+				hidden = function() return Theme() ~= "druid" end,
+				get = function() return (Druid:GetEndcapOffset()) end,
+				set = function(_, value) Druid:SetEndcapOffset(value, nil) end },
+			endcapY = { name = L["Y Offset"], order = 6, type = "range", width = "full", min = -60, max = 60, step = 1,
+				hidden = function() return Theme() ~= "druid" end,
+				get = function() return select(2, Druid:GetEndcapOffset()) end,
+				set = function(_, value) Druid:SetEndcapOffset(nil, value) end },
+			resetEndcap = { name = L["Reset endcap size and position"], order = 7, type = "execute",
+				hidden = function() return Theme() ~= "druid" end,
+				func = function() Druid:ResetEndcapPlacement() end },
 			crystal = { name = L["Crystal effect"].." - "..L["Energy strength"], order = 1,
 				type = "range", width = "full", min = 0, max = 1, step = .05, isPercent = true,
 				hidden = function() return Effects():GetCrystalEffect() ~= "druid" end,
@@ -351,7 +380,7 @@ local GenerateDruid = function(order)
 				hidden = function() return Effects():GetOrbEffect() ~= "druid" end,
 				get = function() return Druid:GetEffectStrength("Orb") end,
 				set = function(_, value) Druid:SetEffectStrength("Orb", value) end }
-		}
+		})
 	}
 end
 

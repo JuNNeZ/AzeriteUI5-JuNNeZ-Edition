@@ -168,6 +168,11 @@ local function widget(parent)
 	function w:ClearAllPoints() self.points = {} end
 	function w:SetSize(x, y) self.width, self.height = x, y end
 	function w:GetWidth() return self.width end
+	function w:GetParent() return self.parent end
+	function w:GetTexture() return self.texture end
+	function w:GetAlpha() return self.alpha or 1 end
+	function w:GetVertexColor() return unpack(self.color or {1,1,1}) end
+	function w:IsShown() return self.shown end
 	function w:GetHeight() return self.height end
 	function w:SetFrameLevel(v) self.level = v end
 	function w:GetFrameLevel() return self.level end
@@ -190,22 +195,30 @@ env.hooksecurefunc = function(object, key, callback)
 	object[key] = function(...) before(...); callback(...) end
 end
 
-local owner = widget(); owner.Health = widget(owner)
+local owner = widget(); owner.Health = widget(owner); owner.Health.Backdrop = widget(owner.Health)
+owner.Health.Backdrop:SetSize(716,188)
 local seasoned = ns.GetConfig("PlayerFrame").Seasoned
 ns.ThemeEngine:StyleHealth(owner, seasoned, false)
 local frame = owner.Health.MageOrnaments
 local art = frame and frame.Art
-check(art and art.texture:find("ornament-aluneth.tga", 1, true), "Arcane follows Aluneth by default (through the theme engine)")
-check(art.width == 88 and art.points.CENTER[2] == "RIGHT" and art.points.CENTER[3] == 14 and art.points.CENTER[4] == 0, "manifest endcap slot on a 40px bar")
+check(art and art.texture:find("ornament-aluneth-hp_cap_case.tga", 1, true), "Arcane follows aligned Aluneth by default")
+check(owner.Health.MageRails.Art.allPoints == owner.Health.Backdrop, "new Mage front follows native casing rectangle")
+check(owner.Health.MageRails.level > owner.Health.level and owner.Health.MageRails.level < frame.level, "front rails above fill and below whole endplate")
+local dipX,dipY=753.5/1024,187/256
+local function point(flip)
+	local p=art.points.TOPLEFT
+	return p[3]+(flip and 1-dipX or dipX)*art.width, -p[4]+dipY*art.height
+end
+check(art.width==716 and art.height==188 and art.points.TOPLEFT[1]==owner.Health.Backdrop,"endcap uses actual casing canvas")
 check(frame.level > owner.Health.level and frame.mouse == false, "ornament above the bar, not interactive")
-check(theme:SetEndcapScale(1.5) and art.width == 132 and art.points.CENTER[3] == 14, "size grows in place, live")
-check(theme:SetEndcapOffset(6, -2) and art.points.CENTER[3] == 20 and art.points.CENTER[4] == -2, "offset live")
+check(theme:SetEndcapScale(1.5) and math.abs(point(false)-716*dipX)<1e-8,"size grows around the fixed dip")
+check(theme:SetEndcapOffset(6, -2) and math.abs(point(false)-716*dipX-6)<1e-8,"outward offset live")
 ns.ThemeEngine:StyleHealth(owner, seasoned, true)
-check(art.points.CENTER[2] == "LEFT" and art.points.CENTER[3] == -20 and art.coords[1] == 1, "mirrored target endcap")
-check(theme:ResetEndcapPlacement() and art.width == 88 and art.points.CENTER[3] == -14, "reset")
+check(math.abs(point(true)-716*(1-dipX)+6)<1e-8 and art.coords[1]==1,"mirrored target preserves dip anchor and outward offset")
+check(theme:ResetEndcapPlacement() and art.width==716 and art.points.TOPLEFT[3]==0,"reset restores aligned casing")
 ns.db.char.mageCrystalSchool = "fire"; theme:RefreshOrnaments()
-check(art.texture:find("ornament-felomelorn.tga", 1, true), "Fire follows Felo'melorn")
-check(theme:SetEndcap("dragonwrath") and art.texture:find("ornament-dragonwrath.tga", 1, true) and reloads == 1, "fixed staff, live")
+check(art.texture:find("ornament-felomelorn-hp_cap_case.tga", 1, true), "Fire follows Felo'melorn")
+check(theme:SetEndcap("dragonwrath") and art.texture:find("ornament-dragonwrath-hp_cap_case.tga", 1, true) and reloads == 1, "fixed staff, live")
 check(theme:SetEndcap("none") and not frame.shown, "no endcap")
 check(not theme:SetEndcap("bogus") and theme:GetEndcap() == "none", "unknown staff refused")
 theme:SetEndcap("school")
@@ -224,21 +237,32 @@ owner.ThreatIndicator = { textures = { Health = widget(owner) }, isShown = false
 local native = owner.ThreatIndicator.textures.Health
 ns.ThemeEngine:StyleThreat(owner, false)
 local glow = frame.Threat
-check(glow and glow.texture:find("ornament-felomelorn-glow", 1, true) and glow.allPoints == art, "staff glow on the staff")
+check(glow and glow.texture:find("ornament-felomelorn-hp_cap_case-glow", 1, true) and glow.allPoints == art, "staff glow on the aligned staff")
 native:Show(); check(glow.shown, "glow follows show")
 native:SetVertexColor(.9, .2, .1); check(glow.color[1] == .9, "threat colour forwarded")
 native:Hide(); check(not glow.shown, "glow follows hide")
-theme:SetEndcap("atiesh"); check(glow.texture:find("ornament-atiesh-glow", 1, true), "glow follows a live staff change")
+theme:SetEndcap("atiesh"); check(glow.texture:find("ornament-atiesh-hp_cap_case-glow", 1, true), "glow follows a live staff change")
 
 -- Cast head and school badge.
 local cast = widget(owner)
 ns.ThemeEngine:StyleCastbar(cast)
-check(cast.MageCastHead.Art.texture:find("cast-head-atiesh.tga", 1, true) and cast.MageCastHead.Art.points.CENTER[3] == -26, "Atiesh cast head on the left")
-check(cast.MageCastHead.Art.width == 48 and cast.MageCastHead.Art.points.CENTER[3] + 24 < 0, "cast head stays outside the functional fill")
+check(cast.MageCastHead.Art.texture:find("cast-head-fitted.tga", 1, true) and cast.MageCastHead.Art.points.CENTER[3] == -8, "Atiesh cast head on the left")
+check(cast.MageCastHead.Art.width == 48 and cast.MageCastHead.Art.points.CENTER[3] + 24 > 0, "cast boot overlaps the casing termination")
 local head = cast.MageCastHead.Art
-check(theme:SetCastEndcapScale(1.5) and head.width == 72 and head.points.CENTER[3] == -26, "cast head grows in place, live")
-check(theme:SetCastEndcapOffset(5, 3) and head.points.CENTER[3] == -31 and head.points.CENTER[4] == 3, "cast head moves outward, live")
-check(theme:ResetCastEndcapPlacement() and head.width == 48 and head.points.CENTER[3] == -26 and ns.db.char.mageCastEndcapX == nil, "cast head reset")
+check(theme:SetEndcap("none") and not owner.Health.Backdrop.texture:find("-capped",1,true),"None restores complete Mage health casing")
+check(owner.Health.MageRails.Art.texture:find("hp_cap_case-over.tga",1,true), "None restores complete Mage foreground dip")
+check(cast.MageCastHead.shown,"health None leaves cast boot alone")
+check(theme:SetCastEndcap("none") and not cast.MageCastHead.shown,"Mage cast boot can be disabled")
+theme:SetEndcap("school");check(not cast.MageCastHead.shown,"staff choice cannot resurrect disabled cast boot")
+check(not owner.Health.Backdrop.texture:find("-capped",1,true),"Mage enabled preserves the complete casing")
+check(owner.Health.MageRails.Art.texture:find("hp_cap_case-over.tga",1,true), "whole Mage dip stays underneath the aligned endplate")
+native:SetAlpha(.3);check(glow.alpha==.3,"Mage threat alpha follows source")
+theme:SetEndcap("none");native:SetShown(true);check(not glow.shown,"Mage disabled halo cannot return")
+theme:SetEndcap("school");theme:SetCastEndcap("atiesh")
+
+check(theme:SetCastEndcapScale(1.5) and head.width == 72 and head.points.CENTER[3] == -8, "cast head grows in place, live")
+check(theme:SetCastEndcapOffset(5, 3) and head.points.CENTER[3] == -13 and head.points.CENTER[4] == 3, "cast head moves outward, live")
+check(theme:ResetCastEndcapPlacement() and head.width == 48 and head.points.CENTER[3] == -8 and ns.db.char.mageCastEndcapX == nil, "cast head reset")
 local pet = widget(); pet.Health = widget(pet); pet.Health:SetSize(112, 11)
 theme:StylePet(pet)
 local seal = pet.Health.MagePetBadge

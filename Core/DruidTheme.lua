@@ -16,6 +16,19 @@ for _, name in ipairs({
 	"border-tooltip", "border-aura", "better-blizzard-border-small-alternate"
 }) do media[name] = true end
 Theme.Media = media
+local healthBars = setmetatable({}, { __mode = "k" })
+local castBars = setmetatable({}, { __mode = "k" })
+local healthDips = { hp_cap_case = {750/1024,187/256}, hp_mid_case = {758.5/1024,181/256},
+	hp_low_case = {758.5/1024,181/256}, hp_boss_case = {869/1024,188/256} }
+local healthSettings = Engine:NewEndcapSettings({ prefix = "druid", choices = { antler = true, bear = true, owl = true, none = true },
+	default = "antler", clearDefault = true,
+	defaultScale = 1.3,
+	refresh = function() Theme:RefreshEndcaps() end })
+healthSettings.Install(Theme)
+local castSettings = Engine:NewEndcapSettings({ prefix = "druidCast", name = "CastEndcap",
+	choices = { moon = true, none = true }, default = "moon", clearDefault = true,
+	refresh = function() Theme:RefreshEndcaps() end })
+castSettings.Install(Theme)
 
 Theme.IsActive = function(self)
 	if (not ns.db or not ns.db.char or not ns.db.char.druidPreview or not Engine:IsMainLayout()) then return false end
@@ -64,27 +77,50 @@ local Rails = function(bar, texture, flip, anchor)
 		hooksecurefunc(anchor, "SetShown", function(_, shown) frame:SetShown(shown) end)
 	end
 end
+local HealthEndcap = function(bar, flip)
+	local assembly = bar.ThemeEndcapAssembly
+	local name = assembly and assembly.name
+	local enabled = healthSettings.GetKey() ~= "none" and healthDips[name] ~= nil
+	-- Both states use the same complete casing; the cap covers its existing dip.
+	Engine:SetEndcapTerminal(bar, false)
+	local frame = ArtFrame(bar, "DruidEndcap", 4)
+	frame.EndcapShown = enabled
+	frame:SetShown(enabled)
+	if (frame.Threat) then frame.Threat:SetShown(enabled and frame.ThreatSource:IsShown()) end
+	if (not enabled) then return end
+	local dx, dy = healthSettings.GetOffset()
+	local art = "ornament-"..healthSettings.GetKey().."-"..name
+	frame.Art:SetTexture(path(art))
+	Engine:PlaceAlignedHealthEndcap(frame.Art, bar.Backdrop, healthDips[name], flip,
+		healthSettings.GetScale()/1.3, dx, dy)
+	if (frame.Threat) then
+		frame.Threat:SetTexture(path(art.."-glow"))
+		frame.Threat:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+	end
+end
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive() or not owner.Health or not db) then return end
 	local bar = owner.Health
 	Rails(bar, db.HealthBackdropTexture, flip, bar.Backdrop)
 	local compact = type(db.HealthBarTexture) ~= "string" or db.HealthBarTexture:find("cast_bar", 1, true)
 		or bar:GetWidth() < bar:GetHeight()*2
+	bar.ThemeEndcapAssembly = nil
 	if (compact) then
+		healthBars[bar] = nil
 		if (bar.DruidEndcap) then bar.DruidEndcap:Hide() end
+		if (bar.DruidEndcap) then bar.DruidEndcap.EndcapShown = false end
 		if (bar.DruidEndcap and bar.DruidEndcap.Threat) then bar.DruidEndcap.Threat:Hide() end
 		return
 	end
-	local slot = Engine.OrnamentSlots.Health
-	local unit = bar:GetHeight()/slot.reference
-	local frame = ArtFrame(bar, "DruidEndcap", 4)
-	frame.Art:SetTexture(path("ornament-antler"))
-	frame.Art:ClearAllPoints()
-	frame.Art:SetSize(slot.size*unit, slot.size*unit)
-	frame.Art:SetPoint("CENTER", bar, flip and "LEFT" or "RIGHT", (flip and -slot.x or slot.x)*unit, slot.y*unit)
-	frame.Art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-	frame:Show()
-	if (frame.Threat) then frame.Threat:SetShown(frame.ThreatSource:IsShown()) end
+	local name = type(db.HealthBackdropTexture) == "string" and
+		(db.HealthBackdropTexture:match("[\\/]Druid[\\/]([^\\/]+)%.tga$") or Engine.AssetName(db.HealthBackdropTexture))
+	if (name and media[name] and bar.Backdrop) then
+		bar.ThemeEndcapAssembly = { name = name, path = path, back = bar.Backdrop,
+			front = bar.DruidRails and bar.DruidRails.Art, glow = name.."-glow", threat = bar.DruidThreat,
+			bareThreat = path(name.."-glow") }
+	end
+	healthBars[bar] = flip and true or false
+	HealthEndcap(bar, flip)
 end
 Theme.StyleCastbar = function(self, cast)
 	if (not self:IsActive()) then return end
@@ -97,17 +133,29 @@ Theme.StyleCastbar = function(self, cast)
 		hooksecurefunc(cast.Backdrop, "SetShown", function(_, shown) cast.Shield:SetShown(not shown) end)
 	end
 	if (cast.Backdrop and cast.Shield) then cast.Shield:SetShown(not cast.Backdrop:IsShown()) end
-	local slot = Engine.OrnamentSlots.CastHead
+	castBars[cast] = true
+	Engine:SetCastEndcapTerminal(cast, path, castSettings.GetKey() ~= "none",
+		cast.DruidRails and cast.DruidRails.Art, cast.DruidShieldRails and cast.DruidShieldRails.Art)
+	local slot = Engine.FittedCastSlot
 	local frame = ArtFrame(cast, "DruidCastHead", 3)
-	frame.Art:SetTexture(path("cast-head-moon"))
+	frame:SetShown(castSettings.GetKey() ~= "none")
+	if (castSettings.GetKey() == "none") then return end
+	local dx, dy = castSettings.GetOffset()
+	frame.Art:SetTexture(path("cast-head-fitted"))
 	frame.Art:ClearAllPoints()
-	frame.Art:SetSize(slot.size, slot.size)
-	frame.Art:SetPoint("CENTER", cast, "LEFT", slot.x, slot.y)
+	frame.Art:SetSize(slot.size*castSettings.GetScale(), slot.size*castSettings.GetScale())
+	frame.Art:SetPoint("CENTER", cast, "LEFT", slot.x - dx, slot.y + dy)
 	if (not frame.Light) then frame.Light = frame:CreateTexture(nil, "OVERLAY") end
 	frame.Light:SetAllPoints(frame.Art)
-	frame.Light:SetTexture(path("cast-head-moonlight"))
+	frame.Light:SetTexture(path("cast-head-fitted-light"))
 	frame.Light:SetVertexColor(.59, .75, 1)
 	frame.Light:SetBlendMode("ADD")
+end
+Theme.RefreshEndcaps = function(self)
+	if (not self:IsActive()) then return end
+	for bar, flip in pairs(healthBars) do HealthEndcap(bar, flip) end
+	for cast in pairs(castBars) do self:StyleCastbar(cast) end
+	if (ns.ThemeBarPreview) then ns.ThemeBarPreview:Refresh() end
 end
 Theme.StyleCrystal = function(self, power, useMage)
 	if (not self:IsActive() or useMage) then
@@ -165,23 +213,20 @@ Theme.StyleThreat = function(self, owner, flip)
 	end
 	local frame = owner.Health and owner.Health.DruidEndcap
 	local native = textures.Health
-	if (not frame or not native) then return end
-	if (not frame.Threat) then
-		local glow = native:GetParent():CreateTexture(nil, "BACKGROUND", nil, -3)
-		glow:SetAllPoints(frame.Art); glow:SetBlendMode("ADD")
-		local Show = function(shown) glow:SetShown(shown and frame:IsShown()) end
-		hooksecurefunc(native, "Show", function() Show(true) end)
-		hooksecurefunc(native, "Hide", function() Show(false) end)
-		hooksecurefunc(native, "SetShown", function(_, shown) Show(shown) end)
-		hooksecurefunc(native, "SetAlpha", function(_, value) glow:SetAlpha(value) end)
-		hooksecurefunc(native, "SetVertexColor", function(_, ...) glow:SetVertexColor(...) end)
-		frame.Threat, frame.ThreatSource = glow, native
+	if (native and owner.Health.ThemeEndcapAssembly) then
+		local bar = owner.Health
+		bar.DruidThreat = native
+		bar.DruidBareThreat = path(bar.ThemeEndcapAssembly.name.."-glow")
+		bar.ThemeEndcapAssembly.threat = native
+		bar.ThemeEndcapAssembly.bareThreat = bar.DruidBareThreat
+		native:ClearAllPoints(); native:SetAllPoints(bar.Backdrop)
+		native:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+		Engine:SetEndcapTerminal(bar, false)
 	end
-	frame.Threat:SetTexture(path("ornament-antler-glow"))
-	frame.Threat:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-	frame.Threat:SetVertexColor(native:GetVertexColor())
-	frame.Threat:SetAlpha(native:GetAlpha())
-	frame.Threat:SetShown(native:IsShown() and frame:IsShown())
+	if (not frame or not native or not owner.Health.ThemeEndcapAssembly) then return end
+	local key = healthSettings.GetKey()
+	local art = "ornament-"..(key == "none" and "antler" or key).."-"..owner.Health.ThemeEndcapAssembly.name
+	Engine:StyleEndcapThreat(frame, frame.Art, native, path(art.."-glow"), flip)
 end
 
 -- Effect animation uses elapsed time only. The engine owns the resource clip;

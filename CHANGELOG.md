@@ -10,6 +10,28 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.30.0-JuNNeZ (2026-10-17) - Fitted Class Endcaps, Flowing Mana Keeps Your Orb
+
+### Highlights
+
+- **Endcaps fit the health bar's ending.** Hunter, Mage, Paladin and Druid health ornaments now meet the casing at its existing lower point, including on mirrored target bars. Resizing an endcap keeps that joining point in place. Pick **None** for the complete themed casing without an ornament; adjust size and offsets under `/az -> Themes`.
+- **More Druid and Paladin choices.** Druid now offers **Wildheart**, **Guardian** and **Moonkin**, with size, X/Y offsets and reset controls. Paladin adds **Silver Hand** and **Argent Crusade** alongside Ashbringer. Hunter keeps all five weapon choices; Mage keeps all five relics and its automatic school choice.
+- **Cast endcaps have their own switch.** Hunter, Mage and Druid have refitted cast-bar ornaments, with an independent **None** choice and their own size and position settings under `/az -> Themes`. Hunter's cast ornament no longer changes with its health-bar weapon. Paladin keeps its separate libram controls.
+- **Flowing mana keeps your chosen orb.** The switch under `/az -> Unit Frames -> Player -> Crystal & Mana Orb` now adds waves to the selected material and theme or Lite+ effect instead of replacing them with water. The thin bright surface line is removed. Standalone Moonwell+ keeps its lunar rim.
+
+### Development
+
+- **Rebuilt Hunter, Mage and Druid health artwork and cast ornaments** from whole paintings fitted to the native bars. Health and prediction keep their functional shapes, and saved frame anchors stay in place. Mage gains a matching foreground casing over the fill.
+- **A shared endcap fitting method** measures each casing's lowest point and uses it as the ornament's scaling pivot. Each bar tier has matching art and a neutral threat halo that follows the game's existing threat display. Offline checks cover mirrored bars, sizes and offsets, intact bare casings, source hashes and the actual options on both clients.
+- **Flowing mana now shapes the selected painting's surface** while its existing animations keep running underneath. It reuses the bounded slosh renderer without reading hidden resource values or creating a separate effect player for every wave strip. Regression checks cover material retention, effect switching and removal of the bright rim.
+
+### Access and known limits
+
+- These changes have been checked offline only. Retail and WoW Forever still need `/reload`, rendering, combat, Edit Mode and BugSack checks; performance has not been measured in game.
+- The class themes remain WIP. If you previously adjusted an endcap, use **Reset endcap size and position** before judging its new default fit. Existing saved choices and offsets are retained.
+- Hunter's wider artwork audit still has pre-existing findings outside this endcap correction.
+
+
 ## 5.29.0-JuNNeZ (2026-10-17) - Party Frame as Player Frame, a Gliding Mana Orb, Clearer Party Bars
 
 ### Highlights

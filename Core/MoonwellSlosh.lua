@@ -1,10 +1,11 @@
--- Moonwell+: an opt-in Lite+ material. Native LibOrb owns the resource level;
--- this module reads only our fixed orb dimensions, elapsed time and player state.
+-- Moonwell+ material and a shared slosh edge for the selected orb painting.
+-- Native LibOrb owns the level; only fixed dimensions/time/player state are read.
 local Addon, ns = ...
 local Slosh = {}
 ns.MoonwellSlosh = Slosh
 local WATER = "Interface\\AddOns\\"..Addon.."\\Assets\\Druid\\orb-moonwell.tga"
 local MASK = "Interface\\AddOns\\"..Addon.."\\Assets\\orb2.tga"
+local BACKDROP = "Interface\\AddOns\\"..Addon.."\\Assets\\orb-backdrop2.tga"
 local COLUMNS, STEP = 32, 1/30
 local EVENTS = {
 	"PLAYER_STARTED_MOVING", "PLAYER_STOPPED_MOVING", "PLAYER_REGEN_DISABLED",
@@ -65,9 +66,16 @@ local Paint = function(frame)
 		-- The unmodified native parent clip therefore guarantees an empty orb
 		-- cannot acquire water, without any resource/secret value comparisons.
 		local dip = math.max(0, amplitude*(1+wave))
-		column.Clip:SetPoint("TOPLEFT", frame.Edge, "TOPLEFT", frame.OrbWidth*(i-1)/COLUMNS, -dip)
-		column.Water:SetTexCoord(u, u+.95, v, v+.95)
-		column.Rim:SetAlpha((.35+.2*frame.Activity))
+		if (frame.FlowingMana) then
+			-- Restore just the shallow trough to the actual empty-orb backdrop.
+			-- The chosen LibOrb layers and theme particles keep animating below;
+			-- no duplicated effect players or native texture replacement is needed.
+			column.Clip:SetPoint("BOTTOMRIGHT", frame.Edge, "TOPLEFT", frame.OrbWidth*i/COLUMNS, -dip)
+		else
+			column.Clip:SetPoint("TOPLEFT", frame.Edge, "TOPLEFT", frame.OrbWidth*(i-1)/COLUMNS, -dip)
+			column.Water:SetTexCoord(u, u+.95, v, v+.95)
+		end
+		column.Rim:SetAlpha(frame.FlowingMana and 0 or (.35+.2*frame.Activity))
 	end
 end
 local Update = function(frame, elapsed)
@@ -97,9 +105,15 @@ local Start = function(frame)
 end
 local Color = function(frame, ...)
 	for _, column in ipairs(frame.Columns) do
-		column.Water:SetVertexColor(...)
-		if (frame.FlowingMana) then column.Rim:SetVertexColor(...)
-		else column.Rim:SetVertexColor(.52, .85, 1) end
+		if (frame.FlowingMana) then
+			local backdrop = frame.Orb.Backdrop
+			if (backdrop) then column.Water:SetVertexColor(backdrop:GetVertexColor())
+			else column.Water:SetVertexColor(1, 1, 1, 1) end
+			column.Rim:SetVertexColor(...)
+		else
+			column.Water:SetVertexColor(...)
+			column.Rim:SetVertexColor(.52, .85, 1)
+		end
 	end
 end
 
@@ -135,7 +149,7 @@ local Create = function(orb)
 		rim:SetPoint("TOPRIGHT", clip, "TOPRIGHT")
 		rim:SetHeight(.8)
 		rim:AddMaskTexture(mask)
-		frame.Columns[i] = { Clip = clip, Water = water, Rim = rim, Mask = mask }
+		frame.Columns[i] = { Clip = clip, Content = content, Water = water, Rim = rim, Mask = mask }
 	end
 	frame:SetScript("OnEvent", SampleState)
 	frame:SetScript("OnHide", Stop)
@@ -162,18 +176,52 @@ Slosh.Apply = function(self, orb, flowingMana)
 	frame.FlowingMana = flowingMana == true
 	frame.Strength = strength
 	frame:SetAlpha(strength)
+	-- Above native/Druid/Paladin paint, below the orb's existing glass/case.
+	frame:SetFrameLevel(orb:GetOverlay():GetFrameLevel() + (frame.FlowingMana and 2 or 1))
 	-- These are the fixed widget dimensions, never the native clip's height.
 	frame.OrbWidth, frame.OrbHeight = orb:GetWidth(), orb:GetHeight()
 	for i, column in ipairs(frame.Columns) do
-		column.Clip:SetPoint("BOTTOMRIGHT", orb, "BOTTOMLEFT", frame.OrbWidth*i/COLUMNS, 0)
+		column.Clip:SetFrameLevel(frame:GetFrameLevel())
+		column.Content:SetFrameLevel(frame:GetFrameLevel())
+		column.Water:ClearAllPoints()
+		if (frame.FlowingMana) then
+			local backdrop = orb.Backdrop
+			column.Clip:SetPoint("TOPLEFT", frame.Edge, "TOPLEFT", frame.OrbWidth*(i-1)/COLUMNS, 0)
+			column.Water:SetTexture(backdrop and backdrop:GetTexture() or BACKDROP)
+			if (backdrop) then column.Water:SetAllPoints(backdrop)
+			else
+				-- First construction precedes Player.lua's optional art textures.
+				column.Water:SetPoint("CENTER", orb, "CENTER")
+				column.Water:SetSize(frame.OrbWidth*180/103, frame.OrbHeight*180/103)
+			end
+			column.Water:SetTexCoord(0, 1, 0, 1)
+			column.Water:SetAlpha(1)
+		else
+			column.Clip:SetPoint("BOTTOMRIGHT", orb, "BOTTOMLEFT", frame.OrbWidth*i/COLUMNS, 0)
+			column.Water:SetTexture(WATER)
+			column.Water:SetAllPoints(orb)
+			column.Water:SetAlpha(.88)
+		end
+		column.Rim:ClearAllPoints()
+		local left = frame.FlowingMana and "BOTTOMLEFT" or "TOPLEFT"
+		local right = frame.FlowingMana and "BOTTOMRIGHT" or "TOPRIGHT"
+		column.Rim:SetPoint(left, column.Clip, left)
+		column.Rim:SetPoint(right, column.Clip, right)
 	end
 	Color(frame, orb:GetStatusBarColor())
-	-- Native levels/animations stay intact, but their straight-edged painting
-	-- stands aside. Returning false on exit lets Player.lua restore its material.
-	orb:SetStatusBarTexture(nil, nil)
+	-- Standalone Moonwell+ owns its water painting; generic slosh leaves the
+	-- selected LibOrb material and all of its native animation groups intact.
+	if (not frame.FlowingMana) then orb:SetStatusBarTexture(nil, nil) end
 	frame.Enabled = true
 	frame:Show()
 	Start(frame)
 	Paint(frame)
 	return true
+end
+
+Slosh.ApplyMoonwell = function(self, orb, flowingMana)
+	-- Moonwell+ remains a selectable water material in its own right. Generic
+	-- Flowing mana supplies its edge, without borrowing Moonwell+'s strength.
+	if (flowingMana) then orb:SetStatusBarTexture(WATER, WATER) end
+	return self:Apply(orb, flowingMana)
 end

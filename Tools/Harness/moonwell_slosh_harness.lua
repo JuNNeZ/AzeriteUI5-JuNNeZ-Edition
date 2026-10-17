@@ -17,14 +17,18 @@ local function widget(parent)
 	function w:SetFrameLevel(v) self.level=v end
 	function w:EnableMouse(v) self.mouse=v end
 	function w:SetAllPoints(v) self.anchor=v end
+	function w:ClearAllPoints() self.points={};self.anchor=nil end
 	function w:SetPoint(point, ...) assert(not self.nativeOrb, "native orb moved"); self.points[point]={...} end
+	function w:SetSize(x,y) assert(not self.nativeOrb, "native orb resized");self.width,self.height=x,y end
 	function w:SetHeight(v) assert(not self.nativeOrb, "native orb resized"); self.height=v end
 	function w:GetHeight() assert(self.nativeOrb, "native clip height read"); return self.height end
 	function w:GetWidth() assert(self.nativeOrb, "native clip width read"); return self.width end
 	function w:SetClipsChildren(v) self.clips=v end
 	function w:SetTexture(v) self.texture=v end
+	function w:GetTexture() return self.texture end
 	function w:SetTexCoord(...) self.coords={...} end
 	function w:SetVertexColor(...) self.color={...} end
+	function w:GetVertexColor() return unpack(self.color or {1,1,1,1}) end
 	function w:SetBlendMode(v) self.blend=v end
 	function w:SetAlpha(v) self.alpha=v end
 	function w:AddMaskTexture(v) self.mask=v end
@@ -168,15 +172,59 @@ check(not E:ShouldFlowMana(orb,false) and not E:ShouldFlowMana(orb,nil),"flowing
 M:SetStrength(0)
 for _,class in ipairs({"DRUID","EVOKER","MAGE","MONK","PALADIN","PRIEST","SHAMAN","WARLOCK","HUNTER"}) do
 	ns.PlayerClass=class
-	check(E:StyleOrb(orb,true) and frame.FlowingMana and frame.Strength==1,"flowing mana works for every mana class independently of Moonwell strength")
+	check(not E:StyleOrb(orb,true) and frame.FlowingMana and frame.Strength==1,"flowing mana works for every mana class independently of Moonwell strength")
 end
 orb:SetStatusBarColor(.6,.3,.9)
 check(frame.Columns[1].Rim.color[1]==.6 and frame.Columns[1].Rim.color[2]==.3,"generic rim follows selected palette")
 E:SetOrbChoice("paladin")
-check(E:StyleOrb(orb,true) and frame.Enabled,"flowing mana overrides chosen Lite+ fill")
+check(E:StyleOrb(orb,true) and frame.Enabled,"flowing mana coexists with chosen Lite+ fill")
 check(E:StyleOrb(orb,false) and not frame.Enabled,"turning off restores chosen Lite+ fill")
 E:SetOrbChoice("moonwell");M:SetStrength(1);E:StyleOrb(orb)
 check(not frame.FlowingMana and frame.Columns[1].Rim.color[1]==.52,"Moonwell retains lunar rim")
+
+-- Regression: the general toggle adds slosh to the selected effect, not water
+-- in place of that effect. The selected material must still reach LibOrb.
+ns.PaladinTheme.ApplyOrbEffect=function(_, target)
+	target:SetStatusBarTexture("paladin-light", "paladin-light")
+	return true
+end
+E:SetOrbChoice("paladin");E:StyleOrb(orb,true)
+check(orb.materials[1]=="paladin-light", "flowing keeps chosen Paladin material")
+check(frame.Columns[1].Clip.level==frame.level and frame.Columns[1].Content.level==frame.level,
+	"trough paint has an explicit shared level below native glass")
+local phaseBefore=frame.Time
+tick(.5)
+check(frame.Time~=phaseBefore,"preserved-material slosh still animates")
+for _,col in ipairs(frame.Columns) do
+	check(col.Rim.alpha==0, "Flowing mana has no added surface glow after animation")
+	check(col.Clip.points.TOPLEFT[1]==edge and col.Clip.points.TOPLEFT[4]==0,
+		"flowing trough begins at native edge")
+	check(col.Clip.points.BOTTOMRIGHT[1]==edge and col.Clip.points.BOTTOMRIGHT[4]<=0,
+		"flowing trough only covers below native edge")
+	check(col.Rim.points.BOTTOMLEFT and col.Rim.points.BOTTOMLEFT[1]==col.Clip and col.Rim.points.BOTTOMLEFT[2]=="BOTTOMLEFT"
+		and not col.Rim.points.TOPLEFT, "flowing rim stays inside trough clip at dipped edge")
+	check(col.Water.alpha==1 and col.Water.texture:find("orb-backdrop2.tga",1,true),
+		"trough restores opaque actual empty-orb material")
+	for _,fill in ipairs({0,.01,.25,.5,1}) do
+		local visible=math.min(103*fill,-col.Clip.points.BOTTOMRIGHT[4])
+		check(visible>=0 and visible<=103*fill and (fill~=0 or visible==0),
+			"trough coverage stays within native fill, empty stays empty")
+	end
+end
+orb.Backdrop=widget(orb);orb.Backdrop:SetTexture("chosen-empty-backdrop");orb.Backdrop:SetVertexColor(.8,.9,1,1)
+E:StyleOrb(orb,true)
+check(frame.Columns[1].Water.anchor==orb.Backdrop and frame.Columns[1].Water.texture=="chosen-empty-backdrop",
+	"trough follows actual backdrop geometry and texture")
+orb:SetStatusBarColor(.2,.6,.7)
+check(frame.Columns[1].Water.color[1]==.8 and frame.Columns[1].Rim.color[1]==.2,
+	"palette changes tint rim without tinting empty backdrop")
+E:SetOrbChoice("moonwell");E:StyleOrb(orb,true)
+check(orb.materials[1]:find("orb-moonwell.tga",1,true) and frame.FlowingMana,
+	"selected Moonwell material also keeps its paint with generic slosh")
+E:StyleOrb(orb,false)
+check(not frame.FlowingMana and frame.Columns[1].Water.anchor==orb and frame.Columns[1].Water.alpha==.88,
+	"standalone Moonwell restores its own columns after generic slosh")
+check(frame.Columns[1].Rim.alpha>0, "standalone Moonwell restores its lunar rim after Flowing mana")
 
 -- Execute the real local material setter and PostUpdate callback from Player.lua.
 local input=assert(io.open(root.."/Components/UnitFrames/Units/Player.lua"));local playerSource=input:read('*a');input:close()
@@ -199,6 +247,7 @@ check(not frame.Enabled and orb.materials[1]=="nativeA" and orb.materials[2]=="n
 check(orb.__AzeriteUI_OrbFillLayout==db,"actual tier layout retained for resource changes")
 profile.flowingMana=true;setMaterial(orb,db)
 check(frame.Enabled and orb.__AzeriteUI_FlowingMana,"player toggle reaches material dispatcher")
+check(orb.materials[1]=="nativeA" and orb.materials[2]=="nativeB", "flowing preserves actual tier material")
 local writes=orb.materialWrites
 postUpdate(orb,"player",50,0,100)
 check(orb.materialWrites==writes,"ordinary mana updates do not rebuild material")
@@ -210,8 +259,14 @@ orb.displayType=secret;postUpdate(orb,"player",50,0,100)
 check(not frame.Enabled,"unknown secret identity clears generic override")
 combat=false;orb.displayType=0;profile.flowingMana=false;profile.manaOrbTexture="galaxy";setMaterial(orb,db)
 check(not frame.Enabled and orb.materials[1]=="media/orb1","selected native material restored when toggle disabled")
+for _,style in ipairs({"galaxy","moon","sphere"}) do
+	profile.manaOrbTexture=style;profile.flowingMana=true;setMaterial(orb,db)
+	local expected=({galaxy="orb1",moon="orb3",sphere="orb4"})[style]
+	check(frame.Enabled and orb.materials[1]=="media/"..expected,
+		"flowing preserves selected native material: "..style)
+end
 E:SetOrbChoice("paladin");profile.flowingMana=true;setMaterial(orb,db)
-check(frame.Enabled,"generic override precedes Paladin effect")
+check(frame.Enabled and orb.materials[1]=="paladin-light","slosh preserves selected Paladin effect")
 profile.flowingMana=false;setMaterial(orb,db)
 check(not frame.Enabled and E:GetOrbChoice()=="paladin","Lite+ choice retained and restored")
 E:SetOrbChoice("moonwell");E:StyleOrb(orb)
@@ -235,8 +290,11 @@ if (arg[2]=="mutations") then
 		{"clip overshoot", 'frame.OrbWidth*(i-1)/COLUMNS, -dip', 'frame.OrbWidth*(i-1)/COLUMNS, dip', "wave never rises above native clip"},
 		{"callback leak", 'frame:SetScript("OnUpdate", nil)', '-- removed cleanup', "hidden effect stops callbacks and events"}
 		,{"generic inherits zero strength", 'flowingMana and 1 or Strength()', 'Strength()', "flowing mana works for every mana class independently of Moonwell strength"}
-		,{"generic rim loses palette", 'if (frame.FlowingMana) then column.Rim:SetVertexColor(...)', 'if (false) then column.Rim:SetVertexColor(...)', "generic rim follows selected palette"}
+		,{"generic rim loses palette", 'column.Rim:SetVertexColor(...)', 'column.Rim:SetVertexColor(1,1,1)', "generic rim follows selected palette"}
 		,{"resource gate omitted", 'return type(powerType) == "number" and powerType == 0', 'return true', "unknown resource does not flow", "Core/ThemeEffects.lua"}
+		,{"flowing erases selected painting", 'if (not frame.FlowingMana) then orb:SetStatusBarTexture(nil, nil) end', 'orb:SetStatusBarTexture(nil, nil)', "flowing keeps chosen Paladin material"}
+		,{"flowing replaces selected effect", 'local slosh = ns.MoonwellSlosh', 'if (flowing) then effect = "none" end; local slosh = ns.MoonwellSlosh', "flowing mana coexists with chosen Lite+ fill", "Core/ThemeEffects.lua"}
+		,{"flowing rim outside clip", 'local left = frame.FlowingMana and "BOTTOMLEFT" or "TOPLEFT"', 'local left = "TOPLEFT"', "flowing rim stays inside trough clip at dipped edge"}
 	}
 	for _,m in ipairs(mutants) do
 		local target=root.."/"..(m[5] or "Core/MoonwellSlosh.lua")

@@ -264,6 +264,7 @@ local function widget(parent)
 	function w:SetPoint(point, ...) self.points[point] = { ... } end
 	function w:ClearAllPoints() self.points = {} end
 	function w:SetSize(x, y) self.width, self.height = x, y end
+	function w:SetHeight(v) self.height=v end
 	function w:GetWidth() return self.width end
 	function w:GetHeight() return self.height end
 	function w:SetFrameLevel(v) self.level = v end
@@ -274,6 +275,9 @@ local function widget(parent)
 	function w:SetTexture(value) self.texture = value end
 	function w:GetTexture() return self.texture end
 	function w:IsShown() return self.shown end
+	function w:IsVisible() return self.shown end
+	function w:RegisterEvent(event) self.events=self.events or {};self.events[event]=true end
+	function w:UnregisterAllEvents() self.events={} end
 	function w:Show() self.shown = true end
 	function w:Hide() self.shown = false end
 	function w:SetTexCoord(...) self.coords = { ... } end
@@ -338,11 +342,11 @@ local nativeBackdrop = owner.Health.Backdrop
 nativeBackdrop:SetSize(716, 210)
 theme:StyleHealth(owner, themed.Seasoned, false)
 check(owner.Health.Backdrop == nativeBackdrop and nativeBackdrop.alpha == nil, "native casing remains present")
-check(owner.Health.PaladinRails.Art.texture:find("hp_cap_case-capped-over", 1, true), "separate capped foreground rails")
+check(owner.Health.PaladinRails.Art.texture:find("hp_cap_case-over", 1, true), "separate complete foreground rails")
 check(owner.Health.PaladinRails.Art.allPoints == nativeBackdrop, "front rails follow actual native backdrop")
 check(owner.Health.PaladinOrnaments.Art.texture:find("ornament-ashbringer", 1, true), "separate Ashbringer ornament")
-check(owner.Health.PaladinOrnaments.Art.width == ns.ThemeEngine.OrnamentSlots.Health.size*theme:GetEndcapScale(),
-	"shared health ornament box follows current theme scale")
+check(owner.Health.PaladinOrnaments.Art.width == nativeBackdrop.width*theme:GetEndcapScale()/1.3,
+	"aligned ornament follows actual casing scale")
 check(owner.Health.PaladinOrnaments.level > owner.Health.level + 3,
 	"relic stays above native healing and absorb prediction frames")
 check(theme:GetEndcapScale() == 1.3, "measured default relic size")
@@ -357,13 +361,14 @@ local count = widgetCount
 theme:StyleHealth(owner, themed.Seasoned, true)
 check(widgetCount == count, "health restyle reuses frames")
 check(owner.Health.PaladinRails.Art.coords[1] == 1, "target rails mirrored")
-check(owner.Health.PaladinOrnaments.Art.points.CENTER[2] == "LEFT", "target relic at free end away from portrait")
+check(owner.Health.PaladinOrnaments.Art.points.TOPLEFT[1] == nativeBackdrop and owner.Health.PaladinOrnaments.Art.coords[1]==1,
+	"target relic and casing mirror together")
 check(owner.Health.width == 385 and owner.Health.height == 40, "health frame size unchanged")
 local threat = widget(owner)
 threat:SetVertexColor(.1, .8, .2, .6)
 owner.ThreatIndicator = { textures = { Health = threat }, isShown = true }
 theme:StyleThreat(owner, true)
-check(threat.allPoints == nativeBackdrop and threat.texture:find("hp_cap_case-capped-glow",1,true),
+check(threat.allPoints == nativeBackdrop and threat.texture:find("hp_cap_case-glow",1,true),
 	"health threat uses final casing silhouette at the actual backdrop")
 check(threat.coords[1] == 1, "target health threat mirrors with casing")
 check(owner.Health.PaladinOrnaments.Threat.parent == threat.parent,
@@ -403,9 +408,12 @@ check(nativeBackdrop.texture:find(owner.Health.PaladinCaseName..".tga",1,true)
     and owner.Health.PaladinRails.Art.texture:find(owner.Health.PaladinCaseName.."-over.tga",1,true)
     and threat.texture:find(owner.Health.PaladinCaseName.."-glow.tga",1,true), "None restores complete bare casing, dip and matching threat")
 check(theme:SetEndcap("ashbringer") and owner.Health.PaladinOrnaments.shown, "Ashbringer returns without reload")
-check(nativeBackdrop.texture:find("-capped.tga",1,true)
-    and owner.Health.PaladinRails.Art.texture:find("-capped-over.tga",1,true)
-    and threat.texture:find("-capped-glow.tga",1,true), "enabled relic restores mounting shoulder and matching threat together")
+check(not nativeBackdrop.texture:find("-capped.tga",1,true)
+    and not owner.Health.PaladinRails.Art.texture:find("-capped-over.tga",1,true)
+    and not threat.texture:find("-capped-glow.tga",1,true), "enabled relic keeps complete original dip and matching threat")
+check(theme:SetEndcap("silverhand") and owner.Health.PaladinOrnaments.Art.texture:find("ornament-silverhand-",1,true),"Silver Hand live choice")
+check(theme:SetEndcap("argent") and owner.Health.PaladinOrnaments.Threat.texture:find("ornament-argent-",1,true),"Argent live choice updates halo")
+theme:SetEndcap("ashbringer")
 owner.Health:SetSize(40,36)
 theme:StyleHealth(owner, { HealthBackdropTexture = theme:ResolveOwnMedia("hp_critter_case") }, true)
 check(not owner.Health.PaladinOrnaments.shown and not owner.Health.PaladinRails.shown, "critter has no blade ornament or misplaced long rails")
@@ -414,7 +422,7 @@ threat:Show()
 check(not owner.Health.PaladinOrnaments.Threat.shown, "compact threat events cannot resurrect the old relic halo")
 owner.Health:SetSize(533,40)
 theme:StyleHealth(owner, { HealthBackdropTexture = theme:ResolveOwnMedia("hp_boss_case") }, true)
-check(owner.Health.PaladinRails.Art.texture:find("hp_boss_case-capped-over", 1, true), "boss casing foreground follows native variant")
+check(owner.Health.PaladinRails.Art.texture:find("hp_boss_case-over", 1, true), "boss casing foreground keeps complete native variant")
 owner.Health:SetSize(385,37)
 theme:StyleHealth(owner, themed.Seasoned, false)
 check(owner.Health.PaladinRails.Art.allPoints == nativeBackdrop, "alternate player casing uses native backdrop rectangle")
@@ -546,6 +554,36 @@ local orb = widget(owner)
 check(theme:ApplyOrbEffect(orb) and orb.fillPaths[1]:find("orb-light",1,true), "orb uses theme texture")
 check(orb.PaladinLight.parent == orb:GetOverlay(), "orb uses existing native clipping")
 local orbContent = orb.PaladinLight
+do
+	-- Real Paladin drawing + real slosh dispatch: keep the single light player
+	-- and all six sphere sprites while the troughs cover its upper edge.
+	load("Core/MoonwellSlosh.lua")
+	orb.displayType=0
+	orb:SetSize(103,103)
+	function orb:GetStatusBarColor() return 1,.84,.35 end
+	function orb:SetStatusBarColor(...) self.color={...} end
+	local glassFrame=widget(orb);glassFrame:SetFrameLevel(orb:GetFrameLevel()+4)
+	orb.Glass=widget(glassFrame)
+	local priorTime=orbContent.Time
+	check(ns.ThemeEffects:StyleOrb(orb,true) and orb.fillPaths[1]:find("orb-light",1,true),
+		"Flowing mana preserves actual Paladin fill")
+	local slosh=orb.MoonwellSlosh
+	check(orb.PaladinLight==orbContent and orbContent.shown and #orbContent.Spheres==6,
+		"Flowing mana retains one live Paladin player and its six spheres")
+	check(orbContent.Time==priorTime and orbContent.level<slosh.level and slosh.level<glassFrame.level,
+		"Paladin paint below slosh troughs, native glass above, phase retained")
+	local sphereX=orbContent.Spheres[1].points.CENTER[3]
+	orbContent.scripts.OnUpdate(orbContent,.5);slosh.scripts.OnUpdate(slosh,.5)
+	check(orbContent.Time~=priorTime and orbContent.Spheres[1].points.CENTER[3]~=sphereX and slosh.Time>0,
+		"actual Paladin waves and spheres keep moving with slosh")
+	local allocated=widgetCount
+	ns.ThemeEffects:StyleOrb(orb,false);ns.ThemeEffects:StyleOrb(orb,true)
+	check(widgetCount==allocated and orb.PaladinLight==orbContent,
+		"flow toggle reuses Paladin and slosh without per-column light copies")
+	ns.ThemeEffects:StyleOrb(orb,false)
+	check(not slosh.Enabled and orbContent.shown and orb.fillPaths[1]:find("orb-light",1,true),
+		"flow off removes only surface deformation, preserves Paladin paint")
+end
 check(content.Flow.texture:find("holy-energy.tga", 1, true)
     and content.Flow.texture == orbContent.Flow.texture
     and content.FlowNext.texture == content.Flow.texture, "crystal and orb share one permanently bound sheet")

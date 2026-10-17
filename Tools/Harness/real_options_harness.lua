@@ -69,18 +69,22 @@ ns.HunterTheme = setmetatable({
 	IsActive = function() return true end,
 	GetEndcapChoices = function() return { thasdorah = true, talonclaw = true, titanstrike = true, thoridal = true, raeshalare = true, none = true } end
 }, moduleStubMT)
+ns.HunterTheme.GetCastEndcapChoices = function() return { eagle = true, none = true } end
 ns.PaladinTheme = setmetatable({ loadedActive = false, IsActive = function() return false end }, moduleStubMT)
+ns.PaladinTheme.GetCastEndcapChoices = function() return { libram = true, none = true } end
 ns.MageTheme = setmetatable({
 	loadedActive = false,
 	IsActive = function() return false end,
 	GetEndcapChoices = function() return { school = true, aluneth = true, felomelorn = true, ebonchill = true, atiesh = true, dragonwrath = true, none = true } end
 }, moduleStubMT)
+ns.MageTheme.GetCastEndcapChoices = function() return { atiesh = true, none = true } end
 local druidStrengthWrite
 ns.DruidTheme = setmetatable({
  loadedActive = false, IsActive = function() return false end,
  GetEffectStrength = function() return 1 end,
  SetEffectStrength = function(_, kind, value) druidStrengthWrite = {kind, value} end
 }, moduleStubMT)
+ns.DruidTheme.GetCastEndcapChoices = function() return { moon = true, none = true } end
 local moonwellWrite
 ns.MoonwellSlosh = { GetStrength = function() return .8 end, SetStrength = function(_, value) moonwellWrite = value end }
 local wildheartWrite
@@ -244,6 +248,18 @@ local endcap = themes.args.hunter.args.endcap
 local values = endcap.values()
 assert(values.thasdorah and values.none and endcap.sorting[1] == "thasdorah", "endcap choices and order")
 assert(endcap.confirm == nil, "a new endcap applies without a reload")
+for _,key in ipairs({"hunter","paladin","mageTheme","druid"}) do
+	local args=themes.args[key].args
+	assert(args.castEndcap.values.none and #args.castEndcap.sorting==2,"independent cast None: "..key)
+	assert(args.castEndcap.get and args.castEndcap.set,"cast choice closures: "..key)
+end
+assert(themes.args.druid.args.endcap.values.none,"Druid health None exposed")
+assert(themes.args.druid.args.endcap.values.antler and themes.args.druid.args.endcap.values.bear
+	and themes.args.druid.args.endcap.values.owl and #themes.args.druid.args.endcap.sorting==4,
+	"three Druid variants plus None")
+assert(themes.args.paladin.args.endcap.values.silverhand and themes.args.paladin.args.endcap.values.argent
+	and #themes.args.paladin.args.endcap.sorting==4,"three Paladin variants plus None")
+assert(themes.args.druid.args.endcap.hidden(),"Druid boots not lent through Lite+ on Hunter")
 
 local tests=assert(themes.args.tests,'shared theme tests section')
 for _,key in ipairs({'kind','fill','animate','protected','show','close'}) do assert(tests.args[key],'test control '..key) end

@@ -1259,7 +1259,7 @@ L["Choose the color of the power crystal and mana orb. Light colored uses golden
 
 -- Flowing mana (player style)
 L["Flowing mana"] = "Mana fluido"
-L["Animate the mana inside the orb with flowing water and gentle waves. Uses your selected resource color and temporarily replaces the theme or Lite+ orb effect while the orb shows mana."] = "Anima il mana nella sfera con acqua corrente e onde delicate. Usa il colore della risorsa selezionato e sostituisce temporaneamente l’effetto della sfera del tema o di Lite+ quando la sfera mostra mana."
+L["Add gentle waves to the selected orb material and theme or Lite+ effects while the orb shows mana. Keeps your selected resource color."] = "Aggiunge onde delicate al materiale della sfera selezionato e agli effetti del tema o di Lite+ mentre la sfera mostra mana. Mantiene il colore della risorsa selezionato."
 
 -- Options section labels
 L["Crystal & Mana Orb"] = "Cristallo e Globo del Mana"

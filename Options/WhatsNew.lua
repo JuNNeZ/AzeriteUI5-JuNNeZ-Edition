@@ -41,6 +41,24 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.30.0-JuNNeZ",
+		items = {
+			{
+				text = "Class endcaps now meet the health casing's lower point and resize around that join.",
+				page = "Themes"
+			},
+			{
+				text = "Druid gains Wildheart, Guardian and Moonkin endcaps; Paladin adds Silver Hand and Argent Crusade.",
+				page = "Themes"
+			},
+			{
+				text = "Flowing mana keeps your selected orb material and effects, with the bright surface line removed.",
+				page = L["Unit Frames"],
+				section = L["Player"]
+			}
+		}
+	},
+	{
 		version = "5.29.0-JuNNeZ",
 		items = {
 			{

@@ -261,21 +261,23 @@ Effects.StyleOrb = function(self, orb, flowingMana)
 	local effect = self:GetOrbEffect()
 	local flowing = self:ShouldFlowMana(orb, flowingMana)
 	orb.__AzeriteUI_FlowingMana = flowing
-	if (flowing) then effect = "flowing" end
 	local slosh = ns.MoonwellSlosh
-	if (slosh and effect ~= "moonwell" and effect ~= "flowing") then slosh:Clear(orb) end
+	if (slosh and effect ~= "moonwell" and not flowing) then slosh:Clear(orb) end
 	local druid = ns.DruidTheme
 	if (druid) then
 		if (effect ~= "druid") then druid:ClearOrbEffect(orb) end
 	end
 	local paladin, hunter = ns.PaladinTheme, ns.HunterTheme
+	local claimed = false
 	if (paladin) then
-		if (effect == "paladin") then return paladin:ApplyOrbEffect(orb) end
-		paladin:ClearOrbEffect(orb)
+		if (effect == "paladin") then claimed = paladin:ApplyOrbEffect(orb)
+		else paladin:ClearOrbEffect(orb) end
 	end
-	if (effect == "flowing" and slosh) then return slosh:Apply(orb, true) end
-	if (effect == "moonwell" and slosh) then return slosh:Apply(orb) end
-	if (effect == "druid" and druid) then return druid:ApplyOrbEffect(orb) end
-	if (effect == "hunter" and hunter) then return hunter:ApplyOrbEffect(orb) end
-	return false
+	if (effect == "moonwell" and slosh) then return slosh:ApplyMoonwell(orb, flowing) end
+	if (effect == "druid" and druid) then claimed = druid:ApplyOrbEffect(orb) end
+	if (effect == "hunter" and hunter) then claimed = hunter:ApplyOrbEffect(orb) end
+	-- Shape the selected painting's edge, including its own overlays. When no
+	-- theme claims the fill, Player.lua still installs the chosen native material.
+	if (flowing and slosh) then slosh:Apply(orb, true) end
+	return claimed
 end

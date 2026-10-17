@@ -63,7 +63,7 @@ local themed=ns.GetConfig("PlayerFrame")
 check(themed~=original and themed==ns.GetConfig("PlayerFrame"),"cached independent layout")
 for _,tier in ipairs({"Novice","Hardened","Seasoned"}) do
  check(themed[tier].HealthBarSize[1]==original[tier].HealthBarSize[1],"original width")
- check(themed[tier].HealthBarTexture:find("Hunter",1,true),"opening-matched themed fill")
+ check(themed[tier].HealthBarTexture==original[tier].HealthBarTexture,"native dipped fill contour retained")
  check(themed[tier].HealthBackdropTexture:find("Hunter",1,true),"hunter casing")
  check(themed[tier].HealthThreatTexture:find("Hunter",1,true),"new neutral Hunter threat silhouette")
 end
@@ -114,6 +114,10 @@ local function widget(parent)
 	function w:ClearAllPoints() self.points = {} end
 	function w:SetSize(x, y) self.width, self.height = x, y end
 	function w:GetWidth() return self.width end
+	function w:GetParent() return self.parent end
+	function w:GetAlpha() return self.alpha or 1 end
+	function w:GetVertexColor() return unpack(self.color or {1,1,1}) end
+	function w:IsShown() return self.shown end
 	function w:GetHeight() return self.height end
 	function w:SetFrameLevel(v) self.level = v end
 	function w:GetFrameLevel() return self.level end
@@ -156,26 +160,33 @@ env.hooksecurefunc=function(object,key,callback)
  object[key]=function(...) before(...);callback(...) end
 end
 local owner=widget();owner.Health=widget(owner);owner.Health.Backdrop=widget(owner)
+owner.Health.Backdrop:SetSize(716,188)
 ns.db.char.hunterEndcap="thasdorah"
 theme:StyleHealth(owner,original.Seasoned,false)
-check(owner.Health.HunterOrnaments.Tip.texture:find("endcap-thasdorah",1,true),"endcap art")
+check(owner.Health.HunterOrnaments.Tip.texture:find("ornament-thasdorah-hp_cap_case",1,true),"aligned endcap art")
 local tip=owner.Health.HunterOrnaments.Tip
-local tipSize,tipX=tip.width,tip.points.CENTER[3]
+local tipSize=tip.width
+local dipX,dipY=760.5/1024,187/256
+local function point(flip)
+ local p=tip.points.TOPLEFT
+ return p[3]+(flip and 1-dipX or dipX)*tip.width,-p[4]+dipY*tip.height
+end
+local tipX=point(false)
 ns.db.char.hunterEndcapScale=1.5;theme:StyleHealth(owner,original.Seasoned,false)
-check(tip.width==tipSize*1.5,"endcap scale applied")
-check(tip.points.CENTER[3]==tipX and tip.points.CENTER[4]==0,"scaled endcap keeps its centre")
+check(tip.width==tipSize*1.5/1.3,"endcap scale applied")
+check(math.abs(point(false)-tipX)<1e-8,"scaled endcap keeps its dip")
 ns.db.char.hunterEndcapScale=9;theme:StyleHealth(owner,original.Seasoned,false)
 check(tip.width==tipSize,"bad saved scale falls back to 1")
 ns.db.char.hunterEndcapScale=nil
-check(theme:SetEndcapScale(2) and tip.width==tipSize*2,"scale applies live without restyle")
-check(theme:SetEndcapOffset(5,-3) and tip.points.CENTER[3]==tipX+5 and tip.points.CENTER[4]==-3,"offset applies live")
+check(theme:SetEndcapScale(2) and tip.width==tipSize*2/1.3,"scale applies live without restyle")
+check(theme:SetEndcapOffset(5,-3) and math.abs(point(false)-tipX-5)<1e-8,"offset applies live from dip")
 check(theme:SetEndcapOffset(nil,500) and select(2,theme:GetEndcapOffset())==60,"offset clamped")
 theme:StyleHealth(owner,original.Seasoned,true)
-check(tip.points.CENTER[2]=="LEFT" and tip.points.CENTER[3]==-(tipX+5),"mirrored offset moves outward")
+check(math.abs(point(true)-716*(1-dipX)+5)<1e-8,"mirrored offset moves outward")
 check(not theme:SetEndcapScale(3) and theme:GetEndcapScale()==2,"out of range scale refused")
 check(theme:ResetEndcapPlacement() and ns.db.char.hunterEndcapScale==nil and ns.db.char.hunterEndcapX==nil and ns.db.char.hunterEndcapY==nil,"reset placement")
 theme:StyleHealth(owner,original.Seasoned,false)
-check(tip.width==tipSize and tip.points.CENTER[3]==tipX,"reset restores size and place")
+check(tip.width==tipSize and math.abs(point(false)-tipX)<1e-8,"reset restores size and dip")
 local count=widgetCount
 theme:StyleHealth(owner,original.Seasoned,true)
 check(widgetCount==count,"reuse ornaments")
@@ -187,31 +198,47 @@ owner.Health:SetSize(533,40);theme:StyleHealth(owner,{},true)
 check(owner.Health.HunterOrnaments.shown,"restore after critter")
 local cast=widget(owner);cast.Shield=widget(cast);cast:SetSize(252,24.75)
 theme:StyleCastbar(cast)
-check(cast.Shield.alpha==0 and cast.HunterOrnaments.Eagle,"eagle casing without shield artifact")
-local castTip,eagle=cast.HunterOrnaments.Tip,cast.HunterOrnaments.Eagle
-check(castTip.width==58 and eagle.width==58 and castTip.points.CENTER[3]==21 and eagle.points.CENTER[3]==-21,"eagle mirrors the cast tip, unscaled")
-check(theme:SetCastEndcapScale(1.5) and castTip.width==87 and eagle.width==87 and castTip.points.CENTER[3]==21 and eagle.points.CENTER[3]==-21,"cast endcaps grow in place, live")
-check(theme:SetCastEndcapOffset(4,-2) and castTip.points.CENTER[3]==25 and eagle.points.CENTER[3]==-25 and eagle.points.CENTER[4]==-2 and castTip.points.CENTER[4]==-2,"cast endcaps move outward, live")
-check(theme:GetEndcapScale()==1 and theme:GetEndcapOffset()==0,"health endcap untouched by the cast settings")
-check(theme:ResetCastEndcapPlacement() and ns.db.char.hunterCastEndcapScale==nil and ns.db.char.hunterCastEndcapX==nil and castTip.width==58,"cast endcap reset")
-owner.Castbar=cast;cast.Backdrop=widget(cast);cast.shown=false
+check(cast.Shield.alpha==0 and cast.HunterOrnaments.Tip,"eagle casing without shield artifact")
+local castTip,eagle=cast.HunterOrnaments.Tip,cast.HunterOrnaments.Tip
+check(castTip.width==48 and castTip.points.CENTER[3]==-8,"eagle mirrors the cast tip, unscaled")
+check(theme:SetCastEndcapScale(1.5) and castTip.width==72 and castTip.points.CENTER[3]==-8,"cast endcaps grow in place, live")
+check(theme:SetCastEndcapOffset(4,-2) and castTip.points.CENTER[3]==-12 and eagle.points.CENTER[4]==-2 and castTip.points.CENTER[4]==-2,"cast endcaps move outward, live")
+check(theme:GetEndcapScale()==1.3 and theme:GetEndcapOffset()==0,"health endcap untouched by the cast settings")
+check(theme:ResetCastEndcapPlacement() and ns.db.char.hunterCastEndcapScale==nil and ns.db.char.hunterCastEndcapX==nil and castTip.width==48,"cast endcap reset")
+cast.Backdrop=widget(cast); theme:StyleCastbar(cast)
+local castTexture=castTip.texture
+check(theme:SetEndcap("none") and not owner.Health.HunterOrnaments.shown,"health None hides the complete boot")
+check(not owner.Health.Backdrop.texture:find("-capped",1,true),"health None restores closed dipped terminal")
+check(cast.HunterOrnaments.shown and castTip.texture==castTexture,"health None does not hide or change cast boot")
+check(theme:SetCastEndcap("none") and not cast.HunterOrnaments.shown,"cast None independently hides boot")
+check(cast.Backdrop.texture:find("cast_back.tga",1,true),"cast None restores complete themed casing")
+check(theme:SetEndcap("thoridal") and not cast.HunterOrnaments.shown,"health choice cannot restore disabled cast boot")
+check(not owner.Health.Backdrop.texture:find("-capped",1,true),"enabled cap retains complete original dip")
+theme:SetCastEndcap("eagle"); theme:SetEndcap("thasdorah")
+check(castTip.texture==castTexture,"cast head remains its own eagle when weapon changes")
+owner.Castbar=cast;cast.shown=false
 theme:StyleNameplate(owner)
 check(not cast.shown,"idle plate remains hidden")
 owner.ThreatIndicator={textures={Health=widget(owner)},isShown=false}
 theme:StyleThreat(owner,true)
 local native=owner.ThreatIndicator.textures.Health
 check(native.texture:find("Hunter",1,true),"whole casing has new threat art")
-check(native.width==owner.Health.HunterCasing.Art.width and native.points.TOPLEFT[3]==owner.Health.HunterCasing.Art.points.TOPLEFT[3],"threat and casing share exact geometry")
+check(native.allPoints==owner.Health.Backdrop and owner.Health.HunterCasing.Art.allPoints==owner.Health.Backdrop,"threat and front follow native backdrop geometry")
 local orb=widget();check(theme:ApplyOrbEffect(orb) and orb.fillPaths[1]:find("orb-focus",1,true),"faceted orb uses native clipping")
 local halo=owner.Health.HunterOrnaments.Threat
 native:Show();check(halo.shown,"threat halo follows show")
 native:SetVertexColor(.7,.2,.1);check(halo.color[1]==.7 and halo.color[3]==.1,"native threat color forwarded")
 native:Hide();check(not halo.shown,"threat halo follows hide")
 local count=widgetCount;theme:StyleThreat(owner,true);check(widgetCount==count,"no duplicate threat texture")
-ns.db.char.hunterEndcap="none";theme:StyleThreat(owner,true);check(halo.alpha==0,"no halo for disabled ornament")
+native:SetAlpha(.35);check(halo.alpha==.35,"threat alpha forwarded without unit reads")
+theme:SetEndcap("none");native:SetShown(true)
+check(not halo.shown,"native SetShown cannot resurrect disabled boot halo")
+check(halo.parent==native.parent,"boot halo is behind complete assembly, outside foreground frame")
+theme:SetEndcap("thasdorah");native:SetAlpha(1);native:Hide()
+ns.db.char.hunterEndcap="none";theme:StyleThreat(owner,true);check(not halo.shown,"no halo for disabled ornament")
 r=reloads;check(theme:SetEndcap("talonclaw") and reloads==r,"endcap art changes live")
-check(owner.Health.HunterOrnaments.Tip.texture:find("endcap-talonclaw",1,true) and owner.Health.HunterOrnaments.Tip.alpha==1,"live endcap art redrawn")
-check(halo.texture:find("endcap-talonclaw-glow",1,true) and halo.alpha==1,"threat glow follows a live endcap change")
+check(owner.Health.HunterOrnaments.Tip.texture:find("ornament-talonclaw-",1,true) and owner.Health.HunterOrnaments.Tip.alpha==1,"live endcap art redrawn")
+check(halo.texture:find("ornament-talonclaw-hp_cap_case-glow",1,true) and halo.alpha==1,"threat glow follows a live endcap change")
 check(not theme:SetEndcap("bogus") and ns.db.char.hunterEndcap=="talonclaw","unknown endcap refused")
 owner.Overlay=widget(owner);theme:StylePet(owner)
 local portrait=owner.Portrait

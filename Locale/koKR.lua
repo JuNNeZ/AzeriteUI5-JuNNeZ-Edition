@@ -1259,7 +1259,7 @@ L["Choose the color of the power crystal and mana orb. Light colored uses golden
 
 -- Flowing mana (player style)
 L["Flowing mana"] = "흐르는 마나"
-L["Animate the mana inside the orb with flowing water and gentle waves. Uses your selected resource color and temporarily replaces the theme or Lite+ orb effect while the orb shows mana."] = "구슬 안의 마나를 흐르는 물과 잔잔한 파도로 표현합니다. 선택한 자원 색상을 사용하며, 구슬에 마나가 표시되는 동안 테마 또는 Lite+ 구슬 효과를 일시적으로 대체합니다."
+L["Add gentle waves to the selected orb material and theme or Lite+ effects while the orb shows mana. Keeps your selected resource color."] = "구슬에 마나가 표시되는 동안 선택한 구슬 재질과 테마 또는 Lite+ 효과에 잔잔한 파도를 추가합니다. 선택한 자원 색상을 유지합니다."
 
 -- Options section labels
 L["Crystal & Mana Orb"] = "수정 및 마나 구슬"

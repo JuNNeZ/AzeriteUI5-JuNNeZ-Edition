@@ -23,8 +23,10 @@ local over = { hp_cap_case = true, hp_mid_case = true, hp_low_case = true, hp_bo
 	cast_back = true, cast_back_spiked = true, cast_back_wooden = true }
 local healthBars = setmetatable({}, { __mode = "k" })
 local castBars = setmetatable({}, { __mode = "k" })
-local healthSlot, castSlot = Engine.OrnamentSlots.Health, Engine.OrnamentSlots.CastHead
-local healthSettings = Engine:NewEndcapSettings({ prefix = "paladin", choices = { ashbringer = true, none = true },
+local castSlot = Engine.OrnamentSlots.CastHead
+local healthDips = { hp_cap_case = {757.5/1024,187/256}, hp_mid_case = {757.5/1024,190/256},
+	hp_low_case = {757.5/1024,190/256}, hp_boss_case = {876/1024,185/256} }
+local healthSettings = Engine:NewEndcapSettings({ prefix = "paladin", choices = { ashbringer = true, silverhand = true, argent = true, none = true },
 	default = "ashbringer", clearDefault = true, defaultScale = 1.3,
 	refresh = function() Theme:RefreshOrnaments() end })
 healthSettings.Install(Theme)
@@ -102,37 +104,13 @@ local CasingOver = function(bar, nativePath, flip)
 	frame.Art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
 	frame:SetShown(true)
 end
-local HealthTerminal = function(bar, enabled)
-	local name = bar.PaladinCaseName
-	if (not name or not name:match("^hp_.*_case$") or not over[name] or not bar.Backdrop) then return end
-	local terminal = name..(enabled and "-capped" or "")
-	bar.Backdrop:SetTexture(path(terminal))
-	if (bar.PaladinRails) then bar.PaladinRails.Art:SetTexture(path(terminal.."-over")) end
-	if (bar.PaladinThreat) then bar.PaladinThreat:SetTexture(path(terminal.."-glow")) end
-end
 local HealthEndcap = function(bar, flip)
 	-- Opaque endcap is a front attachment: fill/prediction remain underneath.
 	local frame = ArtFrame(bar, "PaladinOrnaments", 4, "OVERLAY")
 	healthBars[bar] = flip and true or false
-	local enabled = healthSettings.GetKey() ~= "none"
-	HealthTerminal(bar, enabled)
-	frame:SetShown(enabled)
-	if (frame.Threat) then
-		if (enabled) then frame.Threat:SetShown(frame.ThreatSource:IsShown()) else frame.Threat:Hide() end
-	end
-	if (not enabled) then return end
-	local unit = bar:GetHeight()/healthSlot.reference
 	local dx, dy = healthSettings.GetOffset()
-	local x = healthSlot.x*unit + dx
-	frame.Art:SetTexture(path("ornament-ashbringer"))
-	frame.Art:ClearAllPoints()
-	frame.Art:SetSize(healthSlot.size*unit*healthSettings.GetScale(), healthSlot.size*unit*healthSettings.GetScale())
-	frame.Art:SetPoint("CENTER", bar, flip and "LEFT" or "RIGHT", flip and -x or x, healthSlot.y*unit + dy)
-	frame.Art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-	if (frame.Threat) then
-		frame.Threat:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-		frame.Threat:SetAlpha(frame.ThreatSource:GetAlpha())
-	end
+	Engine:StyleAlignedHealthEndcap(frame, frame.Art, bar, path, healthSettings.GetKey(),
+		healthDips, flip, healthSettings.GetScale(), dx, dy)
 end
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive() or not owner or not owner.Health or not db) then return end
@@ -142,6 +120,10 @@ Theme.StyleHealth = function(self, owner, db, flip)
 	bar.PaladinPortraitCaseName = type(db.PortraitBorderTexture) == "string"
 		and db.PortraitBorderTexture:match("[\\/]Paladin[\\/]([^\\/]+)%.tga$")
 	CasingOver(bar, db.HealthBackdropTexture, flip)
+	local name = bar.PaladinCaseName
+	bar.ThemeEndcapAssembly = healthDips[name] and bar.Backdrop
+		and { name = name, path = path, back = bar.Backdrop, front = bar.PaladinRails and bar.PaladinRails.Art,
+			bareThreat = path(name.."-glow"), glow = name.."-glow", threat = bar.PaladinThreat } or nil
 	-- Compact/group/boss meters and critters have no weapon ornament.
 	local compact = (type(db.HealthBarTexture) == "string" and db.HealthBarTexture:find("cast_bar", 1, true))
 		or bar:GetWidth() < bar:GetHeight()*2
@@ -168,8 +150,8 @@ Theme.StyleThreat = function(self, owner, flip)
 		native:ClearAllPoints()
 		native:SetAllPoints(bar.Backdrop)
 		bar.PaladinThreat = native
-		local capped = healthBars[bar] ~= nil and healthSettings.GetKey() ~= "none"
-		native:SetTexture(path(name..(capped and "-capped" or "").."-glow"))
+		native:SetTexture(path(name.."-glow"))
+		if (bar.ThemeEndcapAssembly) then bar.ThemeEndcapAssembly.threat = native end
 		native:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
 	end
 	local portraitGlow = indicator and indicator.textures and indicator.textures.Portrait
@@ -198,7 +180,8 @@ Theme.StyleThreat = function(self, owner, flip)
 		hooksecurefunc(native, "SetAlpha", function(_, alpha) glow:SetAlpha(alpha) end)
 		hooksecurefunc(native, "SetVertexColor", function(_, ...) glow:SetVertexColor(...) end)
 	end
-	glow:SetTexture(path("ornament-ashbringer-glow"))
+	local key = healthSettings.GetKey()
+	glow:SetTexture(path("ornament-"..(key == "none" and "ashbringer" or key).."-"..name.."-glow"))
 	glow:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
 	-- Already-active threat needs its colour immediately, before the next hook.
 	-- Widget channels are forwarded directly, never compared or calculated.
@@ -484,7 +467,8 @@ Theme.ApplyOrbEffect = function(self, orb)
 		local content = CreateFrame("Frame", nil, orb:GetOverlay())
 		content:EnableMouse(false)
 		content:SetAllPoints(orb)
-		content:SetFrameLevel(orb:GetOverlay():GetFrameLevel() + 2)
+		-- Leave the next level for the shared slosh edge, below native glass.
+		content:SetFrameLevel(orb:GetOverlay():GetFrameLevel() + 1)
 		content.Strands = AddLight(content, orb, "orb-strands")
 		Pulse(content.Strands)
 		-- GetOverlay is LibOrb's native fill clip; the shared round fill alpha

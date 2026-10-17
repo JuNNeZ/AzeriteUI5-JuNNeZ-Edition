@@ -1716,22 +1716,22 @@
     "hp_boss_case-over": {
       "failures": [],
       "lookNotes": [],
-      "sha256": "a3dc26e704125df9974994343520ab6fee3cd881839566327b71a3bbc1af902a"
+      "sha256": "3b866eeaed9eee2b52b6880d5d0b91b7f4836f39de24b3e57a245ea8d5a9538e"
     },
     "hp_boss_case": {
       "failures": [],
       "lookNotes": [],
-      "sha256": "7c341b196775a6e986e1e0d62688f658e3f077005aab01b05170e739cf968201"
+      "sha256": "2799fab827b4034c51b26a40e5fc15904f0662c3ac17c965ca7b5c01e130820b"
     },
     "hp_cap_case-over": {
       "failures": [],
       "lookNotes": [],
-      "sha256": "d0e35ff5677e88d2413cadc9b581261934e6284f2c3bc0de6373aac3ffce666d"
+      "sha256": "e21d6baa09a142af1f06662c2bafb30be01cff7cf9cd52d4e49bd5abd39d3894"
     },
     "hp_cap_case": {
       "failures": [],
       "lookNotes": [],
-      "sha256": "de2be8c0676acb56d3ac6134260d0c4bec8b5d2fe4be4d03b2cfaa93d48e46e0"
+      "sha256": "3f023779a3622be6c59b383fc458dffea2c56e75a365b665f9234c52c91dd997"
     },
     "hp_critter_case-over": {
       "failures": [],
@@ -1756,22 +1756,22 @@
     "hp_low_case-over": {
       "failures": [],
       "lookNotes": [],
-      "sha256": "ec5be12bfd2c2844c6b23d570af99c8002be26a41d99dbab3c08c7b3de127d95"
+      "sha256": "ac2272070aaf663a9587324fe39c4f374175f905291e0002b44a0bb57d2f8df4"
     },
     "hp_low_case": {
       "failures": [],
       "lookNotes": [],
-      "sha256": "09ae6dbd0a7f120b07115391bb8d2f713172f4a78c048cfcc4b465bd23d9a4da"
+      "sha256": "bac824ab2044e87567519f0aedb7f653e7fcedc025177000de7e76d4c96ba60f"
     },
     "hp_mid_case-over": {
       "failures": [],
       "lookNotes": [],
-      "sha256": "cb8ac5ed51a01599b89ef45899a4458883b1080d265f7d21ac2944bf20444f6e"
+      "sha256": "ac2272070aaf663a9587324fe39c4f374175f905291e0002b44a0bb57d2f8df4"
     },
     "hp_mid_case": {
       "failures": [],
       "lookNotes": [],
-      "sha256": "0949e7086f68cbb9708aafb0d4f3929fc3f26fbc063ecb3fb2d7e0cdf8a9b30a"
+      "sha256": "7dcf0e6db7bec22bb29228760fb0a41c1bac06ea84872393ee0ad36ce3794e83"
     },
     "icon_exit_flight": {
       "failures": [],
@@ -2044,6 +2044,460 @@
         512
       ],
       "sha256": "c84e5aafdfef92b4637f1c034a1f56558c39952737d03f6269fbc0d58b834dfc"
+    }
+  },
+  "releaseAssets": {
+    "version": "5.30.0-JuNNeZ",
+    "liveValidated": false,
+    "files": {
+      "Assets/Druid/cast-head-fitted-light.tga": {
+        "sha256": "8f9a0d491019f807bf9406cfdab4aaa4e40e9f8da1f895c3c2992fee0c1b0fbd",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Druid/cast-head-fitted.tga": {
+        "sha256": "63872349efaf0471036d9910474ba31da2e7babaeb39cc4420165d459267b12a",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Druid/cast_back-capped-over.tga": {
+        "sha256": "1cf020bf9329796b29ab0e912ce2833f815fcb6db6b83a232eac381a0a448556",
+        "bytes": 131116,
+        "size": [
+          256,
+          128
+        ]
+      },
+      "Assets/Druid/cast_back-capped.tga": {
+        "sha256": "15c6552dd3984e1f2ffb0493443d9d8c73da74f5639e1df2c7d595afa3bb497d",
+        "bytes": 131116,
+        "size": [
+          256,
+          128
+        ]
+      },
+      "Assets/Druid/cast_back_spiked-capped-over.tga": {
+        "sha256": "8696d7df3ec91913b79dfdcc98f2f73358e35a81da0357ee3b0c45fa242b4eee",
+        "bytes": 131116,
+        "size": [
+          256,
+          128
+        ]
+      },
+      "Assets/Druid/cast_back_spiked-capped.tga": {
+        "sha256": "29b1b6c47e866cd656280347263c705db5240459158f784480d4fa40a381701b",
+        "bytes": 131116,
+        "size": [
+          256,
+          128
+        ]
+      },
+      "Assets/Druid/hp_boss_case-capped-glow.tga": {
+        "sha256": "28b65eb5cc4eb9cb81dcf823c2614fe41a4184229fbad836c7c4bc8c68303902",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_boss_case-capped-over.tga": {
+        "sha256": "d7ac5f9a305c4cb7b5d504fae262301b4d579c3146446a40ad8d1616c78fdf79",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_boss_case-capped.tga": {
+        "sha256": "d4ab5f61262556d14fc0a929bc6b1ceaf3cb9fac43e0e499ba6af7eb13c6dd16",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_boss_case-glow.tga": {
+        "sha256": "4ee092c4a794100351e6a0bca9302d2dc8af613106e07445a2a4f77a42f11826",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_boss_case-over.tga": {
+        "sha256": "3b866eeaed9eee2b52b6880d5d0b91b7f4836f39de24b3e57a245ea8d5a9538e",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_boss_case.tga": {
+        "sha256": "2799fab827b4034c51b26a40e5fc15904f0662c3ac17c965ca7b5c01e130820b",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_cap_case-capped-glow.tga": {
+        "sha256": "9a0dbc29ce6a3cdc0aa240a1874070d85977174fb940d7584e62ee1e04958549",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_cap_case-capped-over.tga": {
+        "sha256": "9bc464671cbc23b24f49fb92a75fa2ad1fc70b77d80b5f2db9824b0c26aaafc6",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_cap_case-capped.tga": {
+        "sha256": "3375accbbf5b406bfb1ef4395b31ae9bbad51629dd144f3fd064e28232fc166e",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_cap_case-glow.tga": {
+        "sha256": "9aabe50f2743f4bd08fcccadb642d9eef56d849f2d80064fc0a5f4ed1b437029",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_cap_case-over.tga": {
+        "sha256": "e21d6baa09a142af1f06662c2bafb30be01cff7cf9cd52d4e49bd5abd39d3894",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_cap_case.tga": {
+        "sha256": "3f023779a3622be6c59b383fc458dffea2c56e75a365b665f9234c52c91dd997",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_low_case-capped-glow.tga": {
+        "sha256": "32a1fe9bf2995aa4fe63dc5c6171528b31e9c4dada88e1fcf8f6b54fb4001996",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_low_case-capped-over.tga": {
+        "sha256": "9895d0a8b1154a73af5dfdaf9035b1fc8513478e42acf2f4a1dcabcb52ba4896",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_low_case-capped.tga": {
+        "sha256": "f71c0b3fbf1cd66b77ea8698487f7d61ff5745aa2e17f06fd881eebbfdc26328",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_low_case-glow.tga": {
+        "sha256": "45e8362e235089674a106bb243d3342fad84736e87d7acf9114a1b4ea8b58bb8",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_low_case-over.tga": {
+        "sha256": "ac2272070aaf663a9587324fe39c4f374175f905291e0002b44a0bb57d2f8df4",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_low_case.tga": {
+        "sha256": "bac824ab2044e87567519f0aedb7f653e7fcedc025177000de7e76d4c96ba60f",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_mid_case-capped-glow.tga": {
+        "sha256": "32a1fe9bf2995aa4fe63dc5c6171528b31e9c4dada88e1fcf8f6b54fb4001996",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_mid_case-capped-over.tga": {
+        "sha256": "9895d0a8b1154a73af5dfdaf9035b1fc8513478e42acf2f4a1dcabcb52ba4896",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_mid_case-capped.tga": {
+        "sha256": "9e34268e471b6ff76e88105127cf76ff48766a9a8cb71f38486addfa09992a4c",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_mid_case-glow.tga": {
+        "sha256": "45e8362e235089674a106bb243d3342fad84736e87d7acf9114a1b4ea8b58bb8",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_mid_case-over.tga": {
+        "sha256": "ac2272070aaf663a9587324fe39c4f374175f905291e0002b44a0bb57d2f8df4",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/hp_mid_case.tga": {
+        "sha256": "7dcf0e6db7bec22bb29228760fb0a41c1bac06ea84872393ee0ad36ce3794e83",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-fitted-glow.tga": {
+        "sha256": "9703176139f6cd2813ac397138c871ac2b030f6393301e4703e936a3a6e41dd1",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-fitted.tga": {
+        "sha256": "3abd4c595dfe56c74a63c8f169f5eef126d92ed344103bb3eeb4079e15e6352b",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-hp_boss_case-glow.tga": {
+        "sha256": "f4722d8b5988232859a8499a17bba7d288e484f136ca6eec2cfb0769e3bcbff4",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-hp_boss_case.tga": {
+        "sha256": "8826b25bbfebdfa31cd40ef0dee2d56026dfac5405fee650ba552ce77a0886ff",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-hp_cap_case-glow.tga": {
+        "sha256": "77a7443408741c551f09e12d8ad10eabaf5b5b593d9480b05d7597b1f71da8ac",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-hp_cap_case.tga": {
+        "sha256": "fec6c3b7c42f27ab5b53fa1ebc35421e8b9999628b12417775df809898b438e2",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-hp_low_case-glow.tga": {
+        "sha256": "a69ad8a8618bc8f1394c73b10ad58257be8f7a72b7e8211b216ae27a4cb800bd",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-hp_low_case.tga": {
+        "sha256": "3990cb5df64ae1c0cd2e1a3ee374ecfb9881ec69efb4030e8503139c174d4672",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-hp_mid_case-glow.tga": {
+        "sha256": "a69ad8a8618bc8f1394c73b10ad58257be8f7a72b7e8211b216ae27a4cb800bd",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-antler-hp_mid_case.tga": {
+        "sha256": "3990cb5df64ae1c0cd2e1a3ee374ecfb9881ec69efb4030e8503139c174d4672",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-bear-hp_boss_case-glow.tga": {
+        "sha256": "7735f14384aa22f677957ccc046f587df9cd00dcd46ef2dd308d3286cfbd4fdf",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-bear-hp_boss_case.tga": {
+        "sha256": "5b616d9649ee6e1ab436a9e4485c133685e9d482312a83e47ffc1fbecaa7dc41",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-bear-hp_cap_case-glow.tga": {
+        "sha256": "8d61067a7ee3c3be91193310799846e25d5088f7a14c5c5353cef03c5846d7b7",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-bear-hp_cap_case.tga": {
+        "sha256": "88cbe350f4815344c9defaf6d6137ba965f40fa9baf86dfc876c10959a3f18e6",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-bear-hp_low_case-glow.tga": {
+        "sha256": "ee05dace1b9c5aab7cb4899cb2dfda3fd42c049feb5b97027725cc8544e6b762",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-bear-hp_low_case.tga": {
+        "sha256": "4d80da994a408b2c6805b977b2f4d0c43668a13f845c5194f97612fa517d3a73",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-bear-hp_mid_case-glow.tga": {
+        "sha256": "ee05dace1b9c5aab7cb4899cb2dfda3fd42c049feb5b97027725cc8544e6b762",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-bear-hp_mid_case.tga": {
+        "sha256": "4d80da994a408b2c6805b977b2f4d0c43668a13f845c5194f97612fa517d3a73",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-owl-hp_boss_case-glow.tga": {
+        "sha256": "ec1443a5a33c994bb6f35e835ca41d88894fa7f9bfa6321dcfad90311b84a0d6",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-owl-hp_boss_case.tga": {
+        "sha256": "b2c83e96d2bc906736e77f187af2b5ce8018829b0f1f58ab52d6ac16bcd30551",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-owl-hp_cap_case-glow.tga": {
+        "sha256": "62c66aef465e6e1a1566f6e0080d0ae91afd1bdc2ad03bf527febbc3c920198b",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-owl-hp_cap_case.tga": {
+        "sha256": "a598a850238b536aefa929ca43553e4f9e0634aab5e48533fa9a6dccf195baae",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-owl-hp_low_case-glow.tga": {
+        "sha256": "0af0795a7ec79c6b6ab64cca68e0285c4c57b24fac24a801420ce30f125d4522",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-owl-hp_low_case.tga": {
+        "sha256": "b4b45d8eaf0619ced7053adabb9707d772c8598ddedfe3833a58e1b2433aefa8",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-owl-hp_mid_case-glow.tga": {
+        "sha256": "0af0795a7ec79c6b6ab64cca68e0285c4c57b24fac24a801420ce30f125d4522",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Druid/ornament-owl-hp_mid_case.tga": {
+        "sha256": "b4b45d8eaf0619ced7053adabb9707d772c8598ddedfe3833a58e1b2433aefa8",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      }
     }
   }
 }

@@ -77,13 +77,13 @@
     },
     {
       "path": "Assets/Mage/hp_boss_case.tga",
-      "sha256": "4e8e059398a3eabf8fc36d22a3e2f8b334ad9212882f92a0616ef6cf0475185a",
-      "bytes": 1048594
+      "sha256": "130954524a882208c65123a44f95e9fd0dd80dbfdc40d2bb0f5ff83d41681af9",
+      "bytes": 1048620
     },
     {
       "path": "Assets/Mage/hp_cap_case.tga",
-      "sha256": "1d5f6b252b5796f351f132aeff5d0804cab0d9ef0046ccfa0ae220cf9a3e61f2",
-      "bytes": 1048594
+      "sha256": "6c8073bf2b8b1335191017d67f38e0cb194666153334974ea51374721b9446a9",
+      "bytes": 1048620
     },
     {
       "path": "Assets/Mage/hp_critter_case.tga",
@@ -97,13 +97,13 @@
     },
     {
       "path": "Assets/Mage/hp_low_case.tga",
-      "sha256": "b9262fe2c8811096a687ce61b6a66577baa440a45208178f2f6976953e8180ac",
-      "bytes": 1048594
+      "sha256": "e0e886a00d892f225c70d339f5454501ca2e8f26205f412e87be1aa5c9b537fa",
+      "bytes": 1048620
     },
     {
       "path": "Assets/Mage/hp_mid_case.tga",
-      "sha256": "01e547ae994e5507477137d8bd512c892d0fc5be0d89a835d1bf1ea44057d640",
-      "bytes": 1048594
+      "sha256": "5e669316a148936ecf19f09a55799e9812a747c1f17316cfc1c704a2a0837b5d",
+      "bytes": 1048620
     },
     {
       "path": "Assets/Mage/icon_exit_flight.tga",
@@ -283,6 +283,660 @@
     "north": {
       "size": 32,
       "anchor": "CENTER / compass north"
+    }
+  },
+  "releaseAssets": {
+    "version": "5.30.0-JuNNeZ",
+    "liveValidated": false,
+    "files": {
+      "Assets/Mage/cast-head-fitted.tga": {
+        "sha256": "3dc4541ad556c09aa8c864282945c9c4ce21f7427d6ef7c11826195291bb3423",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/cast_back-capped.tga": {
+        "sha256": "95800cabc1468536d8a2259c80556c57a66792f101d8fc76645eb496193afae1",
+        "bytes": 131116,
+        "size": [
+          256,
+          128
+        ]
+      },
+      "Assets/Mage/cast_back_spiked-capped.tga": {
+        "sha256": "2b27d4b2a7ba1e72974c458b208d56075c26125efd0c82722e63126b3c500376",
+        "bytes": 131116,
+        "size": [
+          256,
+          128
+        ]
+      },
+      "Assets/Mage/hp_boss_case-capped-glow.tga": {
+        "sha256": "499debde03b3854facad0ff300e982db741bed1192e433860b6bcf6f08784e18",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_boss_case-capped-over.tga": {
+        "sha256": "03971e2576c81a5fc643b154572e3854f2cb9a049d3e1c778556076bb21665d9",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_boss_case-capped.tga": {
+        "sha256": "3cfb3d451adeab6e7c4e7e987bc1de32a70dba88082ed55f5eb543b9c4c9722a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_boss_case-fitted-glow.tga": {
+        "sha256": "7a30e5a841ac8235695cee0f6977d9f4a3ad587e7a2b1b0df27d0154ae604e8f",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_boss_case-glow.tga": {
+        "sha256": "7a30e5a841ac8235695cee0f6977d9f4a3ad587e7a2b1b0df27d0154ae604e8f",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_boss_case-over.tga": {
+        "sha256": "4726943176f46aedafc5f67bfc419323fa39c9e0e5d83a486a6a234684db31b0",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_boss_case.tga": {
+        "sha256": "130954524a882208c65123a44f95e9fd0dd80dbfdc40d2bb0f5ff83d41681af9",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_cap_case-capped-glow.tga": {
+        "sha256": "aca8727f3bb2a7abe25550235cf796dc609eea9ce96fe4cf61cd4dc5b920483a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_cap_case-capped-over.tga": {
+        "sha256": "26f719b79ee71738e9545bc6c1b42bcf4db4ea1a16e3274f8917f528fa1da251",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_cap_case-capped.tga": {
+        "sha256": "96ca0254826a29e27513233a59bf6befaec7d5f4d1ee1f8cd61cda018e1a4f8a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_cap_case-fitted-glow.tga": {
+        "sha256": "c65da8280fea734c630ccb46e67f402e4060b9e28e590e31876ac430347a01b0",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_cap_case-glow.tga": {
+        "sha256": "c65da8280fea734c630ccb46e67f402e4060b9e28e590e31876ac430347a01b0",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_cap_case-over.tga": {
+        "sha256": "0f76a5c461220058e3b7917a1c2a814fe0378f0d11eb13ab1e5f8f5b667be816",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_cap_case.tga": {
+        "sha256": "6c8073bf2b8b1335191017d67f38e0cb194666153334974ea51374721b9446a9",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_low_case-capped-glow.tga": {
+        "sha256": "41e525cd0de30f63ed1d909a83907c76e7c73eb8a29eba2d966d002777ba7871",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_low_case-capped-over.tga": {
+        "sha256": "e1b04fb8d21047357628692d7f8e0518aaaf23a0b452a26254fa8a008f524f13",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_low_case-capped.tga": {
+        "sha256": "fe1f376023118812b95e021d2d93307c591a7e3d13d5e60397211636961d2c13",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_low_case-fitted-glow.tga": {
+        "sha256": "248d3b58b02701ae918b16c8599263a4222f72bfaf27f347fbb7ea9f7d2b10d2",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_low_case-glow.tga": {
+        "sha256": "248d3b58b02701ae918b16c8599263a4222f72bfaf27f347fbb7ea9f7d2b10d2",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_low_case-over.tga": {
+        "sha256": "44babae6ef80a9e373cddfcb8cf95a9bfcc6b2276a7344a30ee484cd6d490286",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_low_case.tga": {
+        "sha256": "e0e886a00d892f225c70d339f5454501ca2e8f26205f412e87be1aa5c9b537fa",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_mid_case-capped-glow.tga": {
+        "sha256": "41e525cd0de30f63ed1d909a83907c76e7c73eb8a29eba2d966d002777ba7871",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_mid_case-capped-over.tga": {
+        "sha256": "e1b04fb8d21047357628692d7f8e0518aaaf23a0b452a26254fa8a008f524f13",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_mid_case-capped.tga": {
+        "sha256": "03b51985a992e7ce2e422dd82119b14a788830138f92d818af3ea73c9084916b",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_mid_case-fitted-glow.tga": {
+        "sha256": "248d3b58b02701ae918b16c8599263a4222f72bfaf27f347fbb7ea9f7d2b10d2",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_mid_case-glow.tga": {
+        "sha256": "248d3b58b02701ae918b16c8599263a4222f72bfaf27f347fbb7ea9f7d2b10d2",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_mid_case-over.tga": {
+        "sha256": "44babae6ef80a9e373cddfcb8cf95a9bfcc6b2276a7344a30ee484cd6d490286",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/hp_mid_case.tga": {
+        "sha256": "5e669316a148936ecf19f09a55799e9812a747c1f17316cfc1c704a2a0837b5d",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-fitted-glow.tga": {
+        "sha256": "3a2881d4c01eeb096a8f7d90667d2e88beed72ae81955007b8351b8a3e35eb44",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-fitted.tga": {
+        "sha256": "3fe568458cbec2bafd2dc96a99f92610be59d325ee99cb9064e11bf0f5d8946f",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-hp_boss_case-glow.tga": {
+        "sha256": "72d61eb2b53dab2f44acbafa9992a1b1c3b86b5cbb0fb125f7753bf204249e3e",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-hp_boss_case.tga": {
+        "sha256": "e73b38546dbbdfc05969cce3d93ba2e5864daf6872566e6278db4c37ecbd6cf3",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-hp_cap_case-glow.tga": {
+        "sha256": "a9fee297e41cc5c25b46d4e193569aec87381154c2d0ac4a26015c051e74b148",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-hp_cap_case.tga": {
+        "sha256": "0308555564278841d946eef96feb49c172b7d20a679eb079d7f73ad17019b32f",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-hp_low_case-glow.tga": {
+        "sha256": "1a2a49b5312a298876c68d73935bc507b3ac6e2b74aef4d1de8e130e3fea2ced",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-hp_low_case.tga": {
+        "sha256": "1529eed550c2da1ff76fd6053c29bb98db871cbb0c15220a1e6846b8241fdd96",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-hp_mid_case-glow.tga": {
+        "sha256": "1a2a49b5312a298876c68d73935bc507b3ac6e2b74aef4d1de8e130e3fea2ced",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-aluneth-hp_mid_case.tga": {
+        "sha256": "1529eed550c2da1ff76fd6053c29bb98db871cbb0c15220a1e6846b8241fdd96",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-fitted-glow.tga": {
+        "sha256": "70ba9de2a5effd43ec28f1325ba333565af0a931a22ef20c33693745abf687d1",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-fitted.tga": {
+        "sha256": "a01e6579fe990000fe079c42f032d0be1f60008a0b3f640ae0eb834cd513e347",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-hp_boss_case-glow.tga": {
+        "sha256": "5053789a7262e67033da562c0ff7d2a2befead098cfd96ee6e185316d216b9d8",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-hp_boss_case.tga": {
+        "sha256": "3e566cf015dce940ef08385c94a101ec7d9e15d15438a1fff8a5f86fb8d973f1",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-hp_cap_case-glow.tga": {
+        "sha256": "5f960fbc5de42abde538ac89a0584957025fb17ff89b20d5be9da011eb24682d",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-hp_cap_case.tga": {
+        "sha256": "f079d38c9d8ac1a1a6a9d8bf35cac872c31b38e0a318b43f582482b579ac5458",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-hp_low_case-glow.tga": {
+        "sha256": "f2bc34e20c5f4b6312ff4ccfd0d6cac6e93e19486e85573967e5a52c1f8416f9",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-hp_low_case.tga": {
+        "sha256": "077777b16cafc76e8869fa7e18423ba2eb2e35bff5a4d5c974238fa9fef2718f",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-hp_mid_case-glow.tga": {
+        "sha256": "f2bc34e20c5f4b6312ff4ccfd0d6cac6e93e19486e85573967e5a52c1f8416f9",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-atiesh-hp_mid_case.tga": {
+        "sha256": "077777b16cafc76e8869fa7e18423ba2eb2e35bff5a4d5c974238fa9fef2718f",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-fitted-glow.tga": {
+        "sha256": "2a18d270ac5980ba8330667166e13abe4c6b21ecf7cdb3b93b435d4f7372591e",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-fitted.tga": {
+        "sha256": "5ebe525bf3750075c1aace31c6bd91dede4f9ee95a050b1a5e23e99f19f8a9ec",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-hp_boss_case-glow.tga": {
+        "sha256": "9ae832db0168aa051459e0f955361d43b9f17275419ed26f46cb00705a1e0bbb",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-hp_boss_case.tga": {
+        "sha256": "facc2316d175efa99ce5a77aa2a3bb4de791b3af46e7800a52dba7e66597ea64",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-hp_cap_case-glow.tga": {
+        "sha256": "e3462bf49db9ff848ab562a97561713f08ea4584d9b2a51bacb2a69bf6e8700b",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-hp_cap_case.tga": {
+        "sha256": "418cd03a492247ff787938f0a1568de1d6d5516e40004f803d5e6db59fa0ae8b",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-hp_low_case-glow.tga": {
+        "sha256": "62d6c290758fb42215fe1442270aa18feaef61b21ebe4b9582df3c5686825013",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-hp_low_case.tga": {
+        "sha256": "fb814afe83e307790550678256636f1eb932c87b3b1398ff29a7b077ac66227a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-hp_mid_case-glow.tga": {
+        "sha256": "62d6c290758fb42215fe1442270aa18feaef61b21ebe4b9582df3c5686825013",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-dragonwrath-hp_mid_case.tga": {
+        "sha256": "fb814afe83e307790550678256636f1eb932c87b3b1398ff29a7b077ac66227a",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-fitted-glow.tga": {
+        "sha256": "ce797901ddf3db3b672f2a7cf6d582c5b804a116c4b1ea103a0c75300315931a",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-fitted.tga": {
+        "sha256": "c63cc34084fd181fd69855ceb35e40694916dfabb1f6a9c28e81ff6cbf412cde",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-hp_boss_case-glow.tga": {
+        "sha256": "1e7f57c6f5c043a5e80e970d1d526ca18f94c21b2c3a63e8c527cce3afa83327",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-hp_boss_case.tga": {
+        "sha256": "0c308f5e4ea1950bcb3c9cd8eb2f609793ac62f52cca54fd0a7f24fb48553946",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-hp_cap_case-glow.tga": {
+        "sha256": "3b0a5f493d9302fa8bcc0e627fe3e79b67125f455e7ada708ac4eecf4b9203d3",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-hp_cap_case.tga": {
+        "sha256": "41a7c2c55352b4c7b22911628fffb11e5c5974d8cce937a7810ca70269eafbeb",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-hp_low_case-glow.tga": {
+        "sha256": "7d9f86a81991f0c84eb60c3d831e88b17a1b3bdf08e803dd3650d94188d228b2",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-hp_low_case.tga": {
+        "sha256": "144bb6282a9b2dfd83260f20132bbcdf6d34f9bd3534a14a6d6cf055bdc5f4db",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-hp_mid_case-glow.tga": {
+        "sha256": "7d9f86a81991f0c84eb60c3d831e88b17a1b3bdf08e803dd3650d94188d228b2",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-ebonchill-hp_mid_case.tga": {
+        "sha256": "144bb6282a9b2dfd83260f20132bbcdf6d34f9bd3534a14a6d6cf055bdc5f4db",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-fitted-glow.tga": {
+        "sha256": "f6fea809866a08a6fe8e8b445af1ae3cd950567dfa3d6c4ec702dd3818d3a501",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-fitted.tga": {
+        "sha256": "712c50a2739f395425804df5a3d47d88690ff674bbeb3c1d1b6cd2b23ad79c3f",
+        "bytes": 262188,
+        "size": [
+          256,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-hp_boss_case-glow.tga": {
+        "sha256": "e9964203f87b09a2a820b603b1091192bc0210480decb3029db794a33bce7fed",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-hp_boss_case.tga": {
+        "sha256": "ca96ca000049b155a08b88ea355faae2a677021032b3d489ebb43debcdb66a60",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-hp_cap_case-glow.tga": {
+        "sha256": "a18c0aec48f252139610039bbd1dbc6d6eb3f5effe87011812c2759aea98ceae",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-hp_cap_case.tga": {
+        "sha256": "40d5411b557d5d5842e0de07187c6eb1d41929d7f32d438ef2aa854182ef0812",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-hp_low_case-glow.tga": {
+        "sha256": "00579c79411b6b97b6569c379b45a52a0501b4cff8c0583217b0d23d22e0030e",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-hp_low_case.tga": {
+        "sha256": "1a35445dcc7bccb8b83fadbbf8cfa6831527cae419ad97c72b8dc2bc5a792585",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-hp_mid_case-glow.tga": {
+        "sha256": "00579c79411b6b97b6569c379b45a52a0501b4cff8c0583217b0d23d22e0030e",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      },
+      "Assets/Mage/ornament-felomelorn-hp_mid_case.tga": {
+        "sha256": "1a35445dcc7bccb8b83fadbbf8cfa6831527cae419ad97c72b8dc2bc5a792585",
+        "bytes": 1048620,
+        "size": [
+          1024,
+          256
+        ]
+      }
     }
   }
 }

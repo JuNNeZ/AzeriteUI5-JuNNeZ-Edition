@@ -26,16 +26,16 @@ for _, name in ipairs({
 }) do media[name] = true end
 Theme.Media = media
 
--- Ornament slots from the manifest, in layout units: the health endcap sits on
--- the bar's outer end, sized against the Seasoned meter's 40px height; the
--- cast head on the cast bar's left end; the school badge on the crystal case.
-local ENDCAP_SLOT = Engine.OrnamentSlots.Health
-local CAST_HEAD_SLOT = Engine.OrnamentSlots.CastHead
+-- Health ornaments follow the measured casing dip. Cast and badge retain
+-- their shared slots on the cast bar's left end and the crystal case.
+local CAST_HEAD_SLOT = Engine.FittedCastSlot
 local BADGE_SLOT = Engine.OrnamentSlots.ResourceBadge
 local BADGES = { arcane = "badge-eye", fire = "badge-fire", frost = "badge-frost" }
 -- Each school's suggested staff, used by the "school" endcap choice.
 local SCHOOL_ENDCAPS = { arcane = "aluneth", fire = "felomelorn", frost = "ebonchill" }
 local endcaps = { school = true, aluneth = true, felomelorn = true, ebonchill = true, atiesh = true, dragonwrath = true, none = true }
+local healthDips = { hp_cap_case = {753.5/1024,187/256}, hp_mid_case = {761/1024,181/256},
+	hp_low_case = {761/1024,181/256}, hp_boss_case = {872.5/1024,188/256} }
 
 local Char = function() return ns.db and ns.db.char end
 
@@ -48,6 +48,7 @@ end
 -- nudge, per character. Every change redraws the ornaments at once.
 local endcapSettings = Engine:NewEndcapSettings({
 	prefix = "mage", choices = endcaps, default = "school", clearDefault = true,
+	defaultScale = 1.3,
 	refresh = function() Theme:RefreshOrnaments() end
 })
 endcapSettings.Install(Theme)
@@ -55,6 +56,7 @@ local EndcapKey, EndcapScale, EndcapOffset = endcapSettings.GetKey, endcapSettin
 -- The cast head's own size and nudge; X is outward, to the left.
 local castSettings = Engine:NewEndcapSettings({
 	prefix = "mageCast", name = "CastEndcap",
+	choices = { atiesh = true, none = true }, default = "atiesh", clearDefault = true,
 	refresh = function() Theme:RefreshOrnaments() end
 })
 castSettings.Install(Theme)
@@ -64,7 +66,7 @@ local EndcapArt = function()
 	local key = EndcapKey()
 	if (key == "none") then return end
 	if (key == "school") then key = SCHOOL_ENDCAPS[School()] or "aluneth" end
-	return "ornament-"..key
+	return "ornament-"..key.."-fitted"
 end
 
 -- Every styled bar and crystal, so ornament changes apply without a reload.
@@ -122,7 +124,7 @@ local OrnamentFrame = function(bar, key)
 		frame.Art = frame:CreateTexture(nil, "ARTWORK")
 		bar[key] = frame
 	end
-	frame:SetFrameLevel(bar:GetFrameLevel() + 3)
+	frame:SetFrameLevel(bar:GetFrameLevel() + 4)
 	return frame
 end
 
@@ -132,30 +134,44 @@ local Endcap = function(bar, flip)
 	local art = EndcapArt()
 	-- Critters keep their own native casing, never a compressed long endcap.
 	local compact = bar:GetWidth() < bar:GetHeight()*2
-	frame:SetShown(art ~= nil and not compact)
-	if (not art or compact) then return end
-	local unit = bar:GetHeight()/ENDCAP_SLOT.reference
-	local size = ENDCAP_SLOT.size*unit*EndcapScale()
 	local dx, dy = EndcapOffset()
-	-- Centre-anchored on the bar's outer end, so a size change grows it in place.
-	local x = ENDCAP_SLOT.x*unit + dx
-	frame.Art:SetTexture(path(art))
-	frame.Art:ClearAllPoints()
-	frame.Art:SetSize(size, size)
-	frame.Art:SetPoint("CENTER", bar, flip and "LEFT" or "RIGHT", flip and -x or x, ENDCAP_SLOT.y*unit + dy)
-	frame.Art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-	if (frame.Threat) then
-		frame.Threat:SetTexture(path(art.."-glow"))
-		frame.Threat:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-	end
+	local key = art and art:match("^ornament%-(.-)%-fitted$") or "none"
+	Engine:StyleAlignedHealthEndcap(frame, frame.Art, bar, path, compact and "none" or key,
+		healthDips, flip, EndcapScale(), dx, dy)
 end
 
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive()) then return end
 	local bar = owner.Health
+	local name = db and type(db.HealthBackdropTexture) == "string" and
+		(db.HealthBackdropTexture:match("[\\/]Mage[\\/]([^\\/]+)%.tga$") or Engine.AssetName(db.HealthBackdropTexture))
+	local longCase = name == "hp_cap_case" or name == "hp_mid_case" or name == "hp_low_case" or name == "hp_boss_case"
+	-- Whole painted rails follow the same native backdrop as Paladin's front
+	-- layer. Fill and prediction remain below; None restores the complete dip.
+	local rails = bar.MageRails
+	if (longCase and bar.Backdrop) then
+		if (not rails) then
+			rails = CreateFrame("Frame", nil, bar)
+			rails:EnableMouse(false)
+			rails.Art = rails:CreateTexture(nil, "ARTWORK")
+			bar.MageRails = rails
+		end
+		rails:SetFrameLevel(bar:GetFrameLevel() + 1)
+		rails.Art:SetTexture(path(name.."-over"))
+		rails.Art:SetAllPoints(bar.Backdrop)
+		rails.Art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+		rails:Show()
+	elseif (rails) then rails:Hide() end
+	bar.ThemeEndcapAssembly = longCase and bar.Backdrop
+		and { name = name, path = path, back = bar.Backdrop, glow = name.."-fitted-glow", threat = bar.MageThreat,
+			bareThreat = path(name.."-glow"), front = rails and rails.Art } or nil
 	-- Compact bars share the cast casing and have no endcap slot.
 	if (db and type(db.HealthBarTexture) == "string" and db.HealthBarTexture:find("cast_bar", 1, true)) then
 		if (bar.MageOrnaments) then bar.MageOrnaments:Hide() end
+		if (bar.MageOrnaments) then
+			bar.MageOrnaments.EndcapShown = false
+			if (bar.MageOrnaments.Threat) then bar.MageOrnaments.Threat:Hide() end
+		end
 		endcapBars[bar] = nil
 		return
 	end
@@ -168,24 +184,21 @@ Theme.StyleThreat = function(self, owner, flip)
 	if (not self:IsActive()) then return end
 	local indicator = owner.ThreatIndicator
 	local native = indicator and indicator.textures and indicator.textures.Health
-	local frame = owner.Health and owner.Health.MageOrnaments
-	if (not native or not frame) then return end
-	local glow = frame.Threat
-	if (not glow) then
-		glow = frame:CreateTexture(nil, "BACKGROUND")
-		glow:SetAllPoints(frame.Art)
-		glow:SetBlendMode("ADD")
-		glow:Hide()
-		frame.Threat = glow
-		hooksecurefunc(native, "Show", function() glow:Show() end)
-		hooksecurefunc(native, "Hide", function() glow:Hide() end)
-		hooksecurefunc(native, "SetVertexColor", function(_, ...) glow:SetVertexColor(...) end)
+	if (native and owner.Health.ThemeEndcapAssembly) then
+		owner.Health.MageBareThreat = path(owner.Health.ThemeEndcapAssembly.name.."-glow")
+		owner.Health.MageThreat = native
+		owner.Health.ThemeEndcapAssembly.threat = native
+		owner.Health.ThemeEndcapAssembly.bareThreat = owner.Health.MageBareThreat
+		native:ClearAllPoints(); native:SetAllPoints(owner.Health.Backdrop)
+		native:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
+		Engine:SetEndcapTerminal(owner.Health, false)
 	end
-	local art = EndcapArt()
-	if (art) then glow:SetTexture(path(art.."-glow")) end
-	glow:SetAlpha(art and 1 or 0)
-	glow:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-	glow:SetShown(indicator.isShown and true or false)
+	local frame = owner.Health and owner.Health.MageOrnaments
+	if (not native or not frame or not owner.Health.ThemeEndcapAssembly) then return end
+	local art = EndcapArt() or "ornament-aluneth-fitted"
+	local key = art:match("^ornament%-(.-)%-fitted$")
+	Engine:StyleEndcapThreat(frame, frame.Art, native,
+		path("ornament-"..key.."-"..owner.Health.ThemeEndcapAssembly.name.."-glow"), flip)
 end
 
 -- Atiesh on the player cast bar's left end. The native casing, shield and
@@ -193,9 +206,12 @@ end
 local CastHead = function(cast)
 	local frame = OrnamentFrame(cast, "MageCastHead")
 	castBars[cast] = true
+	Engine:SetCastEndcapTerminal(cast, path, castSettings.GetKey() ~= "none")
+	frame:SetShown(castSettings.GetKey() ~= "none")
+	if (castSettings.GetKey() == "none") then return end
 	local size = CAST_HEAD_SLOT.size*castSettings.GetScale()
 	local dx, dy = castSettings.GetOffset()
-	frame.Art:SetTexture(path("cast-head-atiesh"))
+	frame.Art:SetTexture(path("cast-head-fitted"))
 	frame.Art:ClearAllPoints()
 	frame.Art:SetSize(size, size)
 	-- Centre-anchored, so a size change grows it in place.

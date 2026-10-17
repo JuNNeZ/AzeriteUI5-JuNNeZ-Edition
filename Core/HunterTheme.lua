@@ -6,6 +6,8 @@ local Theme = ns:NewModule("HunterTheme", "AceConsole-3.0", "LibMoreEvents-1.0")
 ns.HunterTheme = Theme
 Engine:Register(Theme, 10)
 local endcaps = { thasdorah = true, talonclaw = true, titanstrike = true, thoridal = true, raeshalare = true, none = true }
+local healthDips = { hp_cap_case = {760.5/1024,187/256}, hp_mid_case = {767.5/1024,181/256},
+	hp_low_case = {767.5/1024,181/256}, hp_boss_case = {879.5/1024,188/256} }
 local path = Engine:MediaPath("Hunter")
 -- Every styled bar, so endcap changes apply without a reload.
 local endcapBars = setmetatable({}, { __mode = "k" })
@@ -14,13 +16,15 @@ local endcapBars = setmetatable({}, { __mode = "k" })
 -- player's endcap mirrored.
 local endcapSettings = Engine:NewEndcapSettings({
 	prefix = "hunter", choices = endcaps, default = "thasdorah",
+	defaultScale = 1.3,
 	refresh = function() Theme:RefreshEndcaps() end
 })
 endcapSettings.Install(Theme)
 local EndcapKey, EndcapScale, EndcapOffset = endcapSettings.GetKey, endcapSettings.GetScale, endcapSettings.GetOffset
--- The cast bar's tip and eagle have a size and nudge of their own (same bow).
+-- The cast boot is independent of the chosen health weapon.
 local castSettings = Engine:NewEndcapSettings({
 	prefix = "hunterCast", name = "CastEndcap",
+	choices = { eagle = true, none = true }, default = "eagle", clearDefault = true,
 	refresh = function() Theme:RefreshEndcaps() end
 })
 castSettings.Install(Theme)
@@ -32,7 +36,17 @@ Theme.IsActive = function(self)
 end
 
 Theme.ResolveMedia = function(self, name)
+	if (type(name) ~= "string") then return end
 	if (name == "minimap-onebar-backdrop" or name == "minimap-twobars-backdrop") then return end
+	-- Long health uses native fill/prediction contours and a native dipped
+	-- casing, re-materialed in the retained Hunter painting. Critter/pet stay
+	-- on their existing connected assemblies.
+	if (self:IsActive()) then
+		if (name:match("^hp_cap_bar") or name:match("^hp_lowmid_bar") or name:match("^hp_boss_bar")) then return end
+		if (name == "hp_cap_case" or name == "hp_mid_case" or name == "hp_low_case" or name == "hp_boss_case") then
+			return path(name.."-fitted")
+		end
+	end
 	if (self:IsActive() and ns.HunterMedia and ns.HunterMedia[name]) then return path(name) end
 end
 
@@ -119,50 +133,51 @@ Theme.GetPowerColor = function(self, token)
 end
 
 local Endcap = function(bar, flip, cast)
-	local key = EndcapKey()
+	local key = cast and castSettings.GetKey() or EndcapKey()
 	local frame = bar.HunterOrnaments
 	if (not frame) then
 		frame = CreateFrame("Frame", nil, bar)
 		frame:SetAllPoints(bar)
-		frame:SetFrameLevel(bar:GetFrameLevel() + 3)
+		frame:SetFrameLevel(bar:GetFrameLevel() + 4)
 		frame:EnableMouse(false)
-		frame.Tip = frame:CreateTexture(nil, "ARTWORK")
+		frame.Tip = frame:CreateTexture(nil, "OVERLAY")
 		bar.HunterOrnaments = frame
 	end
 	endcapBars[bar] = { flip = flip, cast = cast }
 	-- Critters get their own native casing, never a compressed long endcap.
-	local compact = bar:GetWidth() < bar:GetHeight()*2
-	frame:SetShown(not compact)
-	if (compact) then return end
-	local base = math.min(cast and 58 or 48, bar:GetHeight()*(cast and 2.35 or 1.2))
+	local compact = not cast and (bar:GetWidth() < bar:GetHeight()*2 or bar.HunterCompact)
+	if (not cast) then
+		local dx, dy = EndcapOffset()
+		Engine:StyleAlignedHealthEndcap(frame, frame.Tip, bar, path, compact and "none" or key,
+			healthDips, flip, EndcapScale(), dx, dy)
+		frame.Tip:SetAlpha(1)
+		return
+	end
+	local enabled = key ~= "none" and not compact
+	frame.EndcapShown = enabled and true or false
+	frame:SetShown(enabled)
+	if (not cast) then Engine:SetEndcapTerminal(bar, enabled) end
+	if (cast) then Engine:SetCastEndcapTerminal(bar, path, enabled) end
+	if (frame.Threat) then frame.Threat:SetShown(enabled and frame.ThreatSource:IsShown()) end
+	if (not enabled) then return end
+	local slot = cast and Engine.FittedCastSlot or Engine.OrnamentSlots.Health
+	local unit = cast and 1 or bar:GetHeight()/slot.reference
+	local base = slot.size*unit
 	local size = base*(cast and castSettings.GetScale() or EndcapScale())
 	local dx, dy
 	if (cast) then dx, dy = castSettings.GetOffset() else dx, dy = EndcapOffset() end
 	local art = frame.Tip
-	art:SetTexture(path("endcap-"..(key == "none" and "thasdorah" or key)))
-	art:SetAlpha(key == "none" and 0 or 1)
+	art:SetTexture(path(cast and "cast-head-fitted" or "endcap-"..key.."-fitted"))
+	art:SetAlpha(1)
 	art:ClearAllPoints()
 	art:SetSize(size,size)
-	-- Most of the ornament is outside the meter, so no fill/value is covered.
-	-- Mirrored target ornaments are at the outer LEFT, away from the portrait.
-	-- Anchored by the centre the unscaled art had (its inner edge 8px over the
-	-- bar's end), so a size change grows it in place instead of pushing it out.
-	local x = base/2 - 8 + dx
-	art:SetPoint("CENTER", bar, flip and "LEFT" or "RIGHT", flip and -x or x, dy)
+	-- The solid socket covers the termination, above health and prediction.
+	local x = slot.x*unit + (cast and -dx or dx)
+	art:SetPoint("CENTER", bar, (cast or flip) and "LEFT" or "RIGHT", flip and -x or x, slot.y*unit + dy)
 	art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0,1)
 	-- The threat glow follows the endcap's art; StyleThreat creates it.
 	if (frame.Threat) then
-		frame.Threat:SetTexture(path("endcap-"..(key == "none" and "thasdorah" or key).."-glow"))
-		frame.Threat:SetAlpha(key == "none" and 0 or 1)
-	end
-	if (cast) then
-		local eagle = frame.Eagle or frame:CreateTexture(nil,"ARTWORK")
-		frame.Eagle = eagle
-		eagle:SetTexture(path("eagle")); eagle:ClearAllPoints()
-		eagle:SetSize(size,size)
-		-- Mirror of the tip: centred where its unscaled art sat (inner edge 8px
-		-- over the bar's left end), X outward to the left.
-		eagle:SetPoint("CENTER",bar,"LEFT",-x,dy)
+		frame.Threat:SetTexture(path("endcap-"..key.."-fitted-glow"))
 	end
 end
 
@@ -185,11 +200,13 @@ end
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive()) then return end
 	local bar = owner.Health
-	Endcap(bar,flip,false)
 	local compact = db.HealthBarTexture and db.HealthBarTexture:find("cast_bar",1,true)
+	bar.HunterCompact = compact and true or false
 	local critter = bar:GetWidth()<bar:GetHeight()*2
 	bar.HunterHealthGeometry = nil
+	bar.ThemeEndcapAssembly = nil
 	if (compact) then
+		Endcap(bar,flip,false)
 		if (bar.HunterCasing) then bar.HunterCasing:Hide(); bar.HunterEmpty:SetAlpha(0) end
 		bar.Backdrop:SetAlpha(1)
 		return
@@ -198,7 +215,10 @@ Theme.StyleHealth = function(self, owner, db, flip)
 	local top,bottom = 3/128,100/128
 	if (texture:find("hp_lowmid_bar",1,true)) then top,bottom = 2/64,52/64
 	elseif (texture:find("hp_boss_bar",1,true)) then top,bottom = 2/64,48/64 end
-	local name = critter and "hp_critter_case" or (texture:find("hp_boss_bar",1,true) and "hp_boss_case" or "hp_cap_case")
+	local name = critter and "hp_critter_case" or (type(db.HealthBackdropTexture) == "string"
+		and db.HealthBackdropTexture:match("[\\/]Hunter[\\/]([^\\/]+)%.tga$")) or Engine.AssetName(db.HealthBackdropTexture)
+	if (not name or not name:match("^hp_")) then name = "hp_cap_case-fitted" end
+	if (not critter and not name:find("-fitted",1,true)) then name = name.."-fitted" end
 	if (critter) then top,bottom = 0,1 end
 	local casing = bar.HunterCasing
 	if (not casing) then
@@ -208,11 +228,24 @@ Theme.StyleHealth = function(self, owner, db, flip)
 		bar.HunterEmpty = bar:CreateTexture(nil,"BACKGROUND",nil,-2)
 		bar.HunterEmpty:SetAllPoints(bar); bar.HunterEmpty:SetVertexColor(.09,.08,.11,1)
 	end
-	casing:Show(); casing.Art:SetTexture(path(name)); Fit(bar,casing.Art,flip,top,bottom,critter)
+	casing:Show()
+	if (critter) then
+		casing.Art:SetTexture(path(name)); Fit(bar,casing.Art,flip,top,bottom,true)
+	else
+		casing.Art:SetTexture(path(name.."-over"))
+		casing.Art:ClearAllPoints(); casing.Art:SetAllPoints(bar.Backdrop)
+		casing.Art:SetTexCoord(flip and 1 or 0,flip and 0 or 1,0,1)
+	end
 	bar.HunterEmpty:SetTexture(texture); bar.HunterEmpty:SetAlpha(1)
 	bar.HunterEmpty:SetTexCoord(flip and 1 or 0,flip and 0 or 1,0,1)
-	bar.Backdrop:SetAlpha(0)
+	bar.Backdrop:SetAlpha(critter and 0 or 1)
+	bar.HunterEmpty:SetAlpha(critter and 1 or 0)
 	bar.HunterHealthGeometry = {name,top,bottom,critter}
+	if (not critter) then
+		bar.ThemeEndcapAssembly = { name = name, path = path, back = bar.Backdrop, front = casing.Art,
+			glow = name.."-glow", threat = bar.HunterThreat, bareThreat = path(name.."-glow") }
+	end
+	Endcap(bar,flip,false)
 end
 
 Theme.StyleThreat = function(self, owner, flip)
@@ -225,8 +258,18 @@ Theme.StyleThreat = function(self, owner, flip)
 	end
 	local geometry = owner.Health.HunterHealthGeometry
 	if (native and geometry) then
-		native:SetTexture(path(geometry[1].."_glow"))
-		Fit(owner.Health,native,flip,geometry[2],geometry[3],geometry[4])
+		native:SetTexture(path(geometry[1]..(geometry[4] and "_glow" or "-glow")))
+		if (geometry[4]) then
+			Fit(owner.Health,native,flip,geometry[2],geometry[3],true)
+		else
+			native:ClearAllPoints(); native:SetAllPoints(owner.Health.Backdrop)
+			native:SetTexCoord(flip and 1 or 0,flip and 0 or 1,0,1)
+		end
+		owner.Health.HunterThreat = native
+		if (owner.Health.ThemeEndcapAssembly) then
+			owner.Health.ThemeEndcapAssembly.threat = native
+			Engine:SetEndcapTerminal(owner.Health, false)
+		end
 	end
 	local textures = indicator and indicator.textures
 	local power = owner.Power
@@ -245,25 +288,11 @@ Theme.StyleThreat = function(self, owner, flip)
 		art:SetPoint("CENTER",orb.Case,"CENTER")
 	end
 	local ornaments = owner.Health.HunterOrnaments
-	if (not native or not ornaments) then return end
-	local glow = ornaments.Threat
-	if (not glow) then
-		glow = ornaments:CreateTexture(nil, "BACKGROUND")
-		glow:SetAllPoints(ornaments.Tip)
-		glow:SetBlendMode("ADD")
-		glow:Hide()
-		ornaments.Threat = glow
-		-- Follow only our own native threat texture. The existing element owns
-		-- visibility and color; no unit threat values are queried or compared.
-		hooksecurefunc(native, "Show", function() glow:Show() end)
-		hooksecurefunc(native, "Hide", function() glow:Hide() end)
-		hooksecurefunc(native, "SetVertexColor", function(_, ...) glow:SetVertexColor(...) end)
-	end
+	if (not native or not ornaments or not owner.Health.ThemeEndcapAssembly) then return end
 	local key = EndcapKey()
-	glow:SetTexture(path("endcap-"..(key == "none" and "thasdorah" or key).."-glow"))
-	glow:SetAlpha(key == "none" and 0 or 1)
-	glow:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
-	glow:SetShown(indicator.isShown and true or false)
+	local name = owner.Health.ThemeEndcapAssembly.name:gsub("%-fitted$", "")
+	Engine:StyleEndcapThreat(ornaments, ornaments.Tip, native,
+		path("ornament-"..(key == "none" and "thasdorah" or key).."-"..name.."-glow"), flip)
 end
 
 -- Layout half of the crystal: the Hunter case fits the 196px resource
@@ -387,7 +416,7 @@ Theme.Command = function(self, input)
 		return
 	end
 	if (command == "endcapscale") then
-		local scale = option == "reset" and 1 or tonumber(option)
+		local scale = option == "reset" and 1.3 or tonumber(option)
 		if (not scale or scale < .5 or scale > 2) then
 			self:Print("/azhunter endcapscale [0.5-2|reset] (currently "..EndcapScale()..")")
 			return

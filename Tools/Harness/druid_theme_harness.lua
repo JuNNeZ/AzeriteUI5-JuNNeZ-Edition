@@ -14,6 +14,7 @@ local function widget(parent)
 	function w:SetPoint(...) self.points[#self.points+1]={...} end
 	function w:ClearAllPoints() self.points={} end
 	function w:SetSize(x,y) assert(not self.fixedGeometry,"native resource resized"); self.width,self.height=x,y end
+	function w:SetHeight(v) assert(not self.fixedGeometry,"native resource resized");self.height=v end
 	function w:GetWidth() return self.width or 385 end
 	function w:GetHeight() return self.height or 40 end
 	function w:EnableMouse(v) self.mouse=v end
@@ -34,6 +35,9 @@ local function widget(parent)
 	function w:Hide() self.shown=false end
 	function w:SetShown(v) self.shown=v end
 	function w:IsShown() return self.shown end
+	function w:IsVisible() return self.shown end
+	function w:RegisterEvent(event) self.events=self.events or {};self.events[event]=true end
+	function w:UnregisterAllEvents() self.events={} end
 	function w:GetValue() error("secret resource value must not be read") end
 	function w:GetMinMaxValues() error("secret resource range must not be read") end
 	return w
@@ -106,17 +110,36 @@ check(orb.DruidMoonwell.alpha==.4,"orb reflection strength applies")
 combat=true
 check(not T:SetEffectStrength("Orb",.8) and T:GetEffectStrength("Orb")==.4,"combat refuses settings write")
 combat=false
-local hp=owner.Health; hp.Backdrop=widget(hp)
+local hp=owner.Health; hp.Backdrop=widget(hp);hp.Backdrop.width,hp.Backdrop.height=716,188
 local db={HealthBackdropTexture="x\\Druid\\hp_cap_case.tga",HealthBarTexture="hp_cap_bar"}
 T:StyleHealth(owner,db,false)
-check(hp.DruidEndcap and hp.DruidEndcap.Art.points[1][3]=="RIGHT","player endcap in shared outer slot")
+check(hp.DruidEndcap and hp.DruidEndcap.Art.points[1][2]==hp.Backdrop,"player endcap follows actual casing rectangle")
+check(hp.DruidEndcap.Art.width==716 and hp.DruidEndcap.Art.height==188,"approved default uses exact full casing canvas")
 T:StyleHealth(owner,db,true)
-check(hp.DruidEndcap.Art.points[1][3]=="LEFT" and hp.DruidEndcap.Art.coords[1]==1,"target endcap mirrored away from portrait")
+check(hp.DruidEndcap.Art.points[1][3]=="TOPLEFT" and hp.DruidEndcap.Art.coords[1]==1,"target cap and casing share mirrored canvas")
 owner.ThreatIndicator={textures={Health=widget(hp),PowerBar=widget(power),PowerBackdrop=widget(power)}}
 owner.ThreatIndicator.textures.Health:SetVertexColor(.7,.2,.1)
 T:StyleThreat(owner,true)
 check(hp.DruidEndcap.Threat.color[1]==.7,"endcap threat colour forwarded")
 check(owner.ThreatIndicator.textures.PowerBar.anchor==power and owner.ThreatIndicator.textures.PowerBackdrop.alpha==0,"threat follows whole root assembly without old short holder")
+
+local cast=widget(owner);cast.Backdrop=widget(cast);cast.Shield=widget(cast);cast.width,cast.height=112,11
+T:StyleCastbar(cast)
+check(T:SetEndcap("none") and not hp.DruidEndcap.shown and cast.DruidCastHead.shown,"Druid health and cast None are independent")
+check(hp.Backdrop.texture:find("hp_cap_case.tga",1,true) and hp.DruidRails.Art.texture:find("hp_cap_case-over",1,true),"Druid bare casing and front restored")
+check(T:SetCastEndcap("none") and not cast.DruidCastHead.shown,"Druid cast boot None")
+check(cast.Backdrop.texture:find("cast_back.tga",1,true),"Druid cast None keeps complete bark casing")
+T:SetEndcap("antler");check(not cast.DruidCastHead.shown,"Druid health restore leaves cast off")
+check(hp.Backdrop.texture:find("hp_cap_case.tga",1,true),"Druid enabled retains complete original dip")
+check(T:SetEndcap("bear") and hp.DruidEndcap.Art.texture:find("ornament-bear-hp_cap_case",1,true),"bear option selects approved aligned art")
+check(hp.DruidEndcap.Threat.texture:find("ornament-bear-hp_cap_case-glow",1,true),"bear option updates halo too")
+check(T:SetEndcap("owl") and hp.DruidEndcap.Art.texture:find("ornament-owl-hp_cap_case",1,true),"owl option selects approved aligned art")
+T:SetEndcap("none");owner.ThreatIndicator.textures.Health:SetShown(true)
+check(not hp.DruidEndcap.Threat.shown,"Druid None prevents threat halo resurrection")
+T:SetEndcap("antler");T:SetCastEndcap("moon")
+local endWidth=hp.DruidEndcap.Art.width
+T:SetEndcapScale(1.5);check(hp.DruidEndcap.Art.width>endWidth,"Druid boot live size control")
+T:ResetEndcapPlacement()
 db.HealthBarTexture="cast_bar"; T:StyleHealth(owner,db,false)
 check(not hp.DruidEndcap.shown,"compact transition hides old endcap")
 check(not hp.DruidEndcap.Threat.shown,"compact transition hides old endcap threat")
@@ -126,6 +149,24 @@ check(not power.DruidRootFront.shown and power.Case.alpha==1,"leaving Druid rest
 E:SetLitePlus(true); E:SetCrystalChoice("druid"); E:SetOrbChoice("druid")
 E:StyleCrystal(power,"native-crystal",nil,"case"); E:StyleOrb(orb)
 check(flow.shown and orb.DruidMoonwell.shown and not power.DruidRootFront.shown,"Druid Lite+ on AzeriteUI without importing its roots")
+
+do
+	assert(loadfile(root.."/Core/MoonwellSlosh.lua"))("AzeriteUI5_JuNNeZ_Edition",ns)
+	orb.width,orb.height,orb.displayType=103,103,0
+	function orb:GetStatusBarColor() return .2,.5,.8 end
+	function orb:SetStatusBarColor(...) self.color={...} end
+	local wisps=orb.DruidMoonwell
+	local phase=wisps.Time
+	check(E:StyleOrb(orb,true) and orb.materials[1]:find("orb-moonwell.tga",1,true),
+		"Flowing mana preserves actual Druid Moonwell material")
+	check(orb.DruidMoonwell==wisps and wisps.shown and wisps.Time==phase,
+		"Flowing mana keeps Druid wisps and phase")
+	local slosh=orb.MoonwellSlosh
+	wisps.scripts.OnUpdate(wisps,.5);slosh.scripts.OnUpdate(slosh,.5)
+	check(wisps.Time~=phase and slosh.Time>0,"actual Druid wisps and slosh both animate")
+	E:StyleOrb(orb,false)
+	check(not slosh.Enabled and wisps.shown,"flow off leaves the chosen Druid effect running")
+end
 
 if arg[2]=="mutations" then
 	local file=assert(io.open(root.."/Core/DruidTheme.lua")); local source=file:read("*a"); file:close()
