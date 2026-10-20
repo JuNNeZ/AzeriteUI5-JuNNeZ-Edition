@@ -148,6 +148,7 @@ function UnitClassification(u) return field(u, "classification") or "normal" end
 function UnitCreatureType(u) return field(u, "creatureType") end
 function UnitEffectiveLevel(u) return field(u, "level") or 80 end
 function UnitIsDead(u) return field(u, "dead") or false end
+function UnitIsGameObject(u) return field(u, "gameObject") or false end
 function UnitIsConnected(u) local v = field(u, "connected"); if (v == nil) then return true end return v end
 function UnitIsTapDenied(u) return field(u, "tapDenied") or false end
 function UnitClass(u)
@@ -2327,6 +2328,21 @@ check(P[10].isObjectPlate == true, "a listed decorative NPC is an object plate")
 check(P[4].isFriendlyAssistableNPC == true, "a listed trainer is a friendly NPC")
 check(P[8].isPRD == true, "the player's own plate is the personal resource display")
 check(P[9].canAttack == false and P[9].canAssist == false, "a plate whose hostility is secret is not assumed hostile or friendly")
+do
+	-- Dcryfm's Forever chest: no readable GUID, answering friendly and assistable. UnitIsGameObject decides.
+	local classify = ns.NamePlatesPrivate.NamePlate_Classify
+	W.units.probeobj = { token = "probeobj", name = "Battered Chest", isFriend = true, canAssist = true, reaction = 5, gameObject = true }
+	local probe = {}
+	classify(probe, "probeobj")
+	check(probe.isObjectPlate == true and not probe.isFriendlyAssistableNPC,
+		"a unit the game calls a game object is an object plate without a readable GUID")
+	W.units.probeobj.gameObject = nil
+	W.units.probeobj.secret = { gameObject = true }
+	probe = {}
+	classify(probe, "probeobj")
+	check(not probe.isObjectPlate, "a secret UnitIsGameObject answer does not make a plate an object")
+	W.units.probeobj = nil
+end
 check(P[6].Name.__shown and not P[6].Health.__shown, "a soft-targeted object shows its name and no health bar")
 check(P[6].SoftTargetFrame.__alpha == 1 and P[6].SoftTargetFrame.__ignore == true,
 	"a soft-targeted object keeps Blizzard's interact icon visible")

@@ -10,6 +10,17 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.30.1-JuNNeZ (2026-10-20) - No Health Bars on Gathering Nodes and Chests
+
+### Highlights
+
+- **Objects no longer get a health bar.** On WoW Forever, some gathering nodes, chests and other interactable objects drew an AzeriteUI nameplate health bar, with a chest reading "Dead" and a bank chair at full health. These plates now ask the game whether the unit is an object, as Blizzard's own nameplates do, and show only the name and interact icon when you mouse over or soft-target them. Thanks to Dcryfm for the report.
+
+### Access and known limits
+
+- Checked offline only; not yet confirmed in game. AzeriteUI still keeps object plates hidden until you mouse over or soft-target them, so names that another addon turns on for every node will not show through AzeriteUI's plates.
+
+
 ## 5.30.0-JuNNeZ (2026-10-17) - Fitted Class Endcaps, Flowing Mana Keeps Your Orb
 
 ### Highlights

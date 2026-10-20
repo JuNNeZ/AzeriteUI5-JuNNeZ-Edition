@@ -129,7 +129,12 @@ local NamePlate_Classify = function(plate, unit)
 	plate.canAssist = (canAssist == true)
 	plate.isPlayerUnit = isPlayerUnit and true or nil
 
-	local guidLooksLikeObject = (guidType == "GameObject") or (guidType == "AreaTrigger")
+	-- The game's own answer comes first: Blizzard's plate hides an object's health bar on it
+	-- (Blizzard_NamePlateHealthBar.lua, IsGameObject). Without it, a node or chest whose GUID did not read
+	-- as "GameObject" fell through to a friendly NPC and drew a bar, "Dead" at 0 (Forever, FixLog 2026-10-20).
+	local isGameObject = UnitIsGameObject and UnitIsGameObject(unit)
+	isGameObject = ((not IsSecretValue(isGameObject)) and isGameObject == true) and true or false
+	local guidLooksLikeObject = isGameObject or (guidType == "GameObject") or (guidType == "AreaTrigger")
 	local passiveWorldObjectLike = ((canAttack == false) and (canAssist == false) and (not isPlayerUnit) and (not playerControlled))
 	local isCompanionLikeGuidType = (guidType == "Pet") or (guidType == "Creature") or (guidType == "Vehicle")
 	local forceShowFriendlyNPC = (type(npcID) == "string") and AlwaysShowFriendlyNPCByID[npcID] and true or false
