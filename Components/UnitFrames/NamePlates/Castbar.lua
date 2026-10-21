@@ -358,17 +358,127 @@ Castbar_RefreshInterruptVisuals = function(element)
 	end
 end
 
+-- Who a cast is aimed at, and whether it matters. The game may hand back the target's
+-- name and class, PlayerIsSpellTarget and IsSpellImportant as secret values (12.1;
+-- the same APIs on Forever), so nothing here tests or compares them: they go straight
+-- into SetText, SetTextColor and SetAlphaFromBoolean, which accept secrets from addon
+-- code. Blizzard's CastingBarFrame (UpdateTargetNameText, UpdateHighlightImportantCast,
+-- UpdateHighlightWhenCastTarget) reads the same calls.
+local NamePlate_ClearCastTargetVisuals = function(element)
+	if (not element) then
+		return
+	end
+	if (element.TargetText) then
+		element.TargetText:SetText("")
+	end
+	if (element.ImportantGlow) then
+		element.ImportantGlow:SetAlpha(0)
+	end
+	if (element.TargetedGlow) then
+		element.TargetedGlow:SetAlpha(0)
+	end
+end
+
+local IsSecretOrType = function(value, valueType)
+	return IsSecretValue(value) or type(value) == valueType
+end
+
+local NamePlate_ApplyCastTargetName = function(element, unit)
+	local text = element.TargetText
+	if (not text or type(UnitSpellTargetName) ~= "function") then
+		return
+	end
+
+	-- Not documented as secret; Blizzard tests it the same way.
+	if (type(UnitShouldDisplaySpellTargetName) == "function") then
+		local okShow, show = API.TryCall(UnitShouldDisplaySpellTargetName, unit)
+		if (not okShow or (not IsSecretValue(show) and show ~= true)) then
+			return
+		end
+	end
+
+	local okName, name = API.TryCall(UnitSpellTargetName, unit)
+	if (not okName or not IsSecretOrType(name, "string")) then
+		return
+	end
+	text:SetText(name)
+
+	local db = ns.GetConfig("NamePlates")
+	local base = db and (db.CastBarTargetColor or db.CastBarNameColor)
+	if (type(base) == "table") then
+		text:SetTextColor(base[1], base[2], base[3], base[4] or 1)
+	end
+	if (type(UnitSpellTargetClass) ~= "function" or not (C_ClassColor and C_ClassColor.GetClassColor)) then
+		return
+	end
+	local okClass, classFile = API.TryCall(UnitSpellTargetClass, unit)
+	if (not okClass or not IsSecretOrType(classFile, "string")) then
+		return
+	end
+	-- A secret class yields a colour object with secret components; GetRGB and
+	-- SetTextColor take those, and a failure leaves the base colour in place.
+	API.TryCall(function()
+		local color = C_ClassColor.GetClassColor(classFile)
+		if (color) then
+			local r, g, b = color:GetRGB()
+			text:SetTextColor(r, g, b, 1)
+		end
+	end)
+end
+
+local NamePlate_UpdateCastTargetVisuals = function(element, unit)
+	NamePlate_ClearCastTargetVisuals(element)
+
+	local owner = element and element.__owner
+	unit = unit or (owner and owner.unit)
+	if (not owner or owner.isPRD or owner.isObjectPlate) then
+		return
+	end
+	if (type(unit) ~= "string" or not unit:match("^nameplate%d+$")) then
+		return
+	end
+
+	local mod = NP.NamePlatesMod
+	local profile = mod and mod.db and mod.db.profile
+	if (not profile) then
+		return
+	end
+
+	if (profile.castTargetName) then
+		NamePlate_ApplyCastTargetName(element, unit)
+	end
+
+	if (profile.castTargetedGlow and element.TargetedGlow and type(PlayerIsSpellTarget) == "function") then
+		local ok, targeted = API.TryCall(PlayerIsSpellTarget, unit)
+		if (ok and IsSecretOrType(targeted, "boolean")) then
+			API.TryCall(element.TargetedGlow.SetAlphaFromBoolean, element.TargetedGlow, targeted, 255, 0)
+		end
+	end
+
+	if (profile.castImportantGlow and element.ImportantGlow and C_Spell and type(C_Spell.IsSpellImportant) == "function") then
+		local spellID = element.spellID
+		if (IsSecretOrType(spellID, "number")) then
+			local ok, important = API.TryCall(C_Spell.IsSpellImportant, spellID)
+			if (ok and IsSecretOrType(important, "boolean")) then
+				API.TryCall(element.ImportantGlow.SetAlphaFromBoolean, element.ImportantGlow, important, 255, 0)
+			end
+		end
+	end
+end
+
 local Castbar_PostCastVisual = function(element, unit)
 	element.__AzeriteUI_InterruptCastState = nil
 	element.__AzeriteUI_LastInterruptColorUpdate = nil
 	NamePlate_UpdateInterruptWatcher(element, unit or (element.__owner and element.__owner.unit))
 	ns.API.UpdateInterruptCastBarRefresh(element, Castbar_RefreshInterruptVisuals, "nameplate_postcast")
+	NamePlate_UpdateCastTargetVisuals(element, unit)
 	NamePlate_PostUpdateHoverElements(element.__owner)
 end
 
 local Castbar_PostCastUpdate = function(element, unit)
 	NamePlate_UpdateInterruptWatcher(element, unit or (element.__owner and element.__owner.unit))
 	ns.API.UpdateInterruptCastBarRefresh(element, Castbar_RefreshInterruptVisuals, "nameplate_update")
+	NamePlate_UpdateCastTargetVisuals(element, unit)
 	NamePlate_PostUpdateHoverElements(element.__owner)
 end
 
@@ -380,12 +490,14 @@ local Castbar_PostStop = function(element, unit)
 	ns.API.ClearInterruptCastBarRefresh(element)
 	NamePlate_ClearInterruptState(element)
 	NamePlate_ResetCastbarVisuals(element)
+	NamePlate_ClearCastTargetVisuals(element)
 	NamePlate_PostUpdateHoverElements(element.__owner)
 end
 
 local Castbar_PostFail = function(element, _)
 	ns.API.ClearInterruptCastBarRefresh(element)
 	NamePlate_ClearInterruptState(element)
+	NamePlate_ClearCastTargetVisuals(element)
 	local r, g, b = Colors.red[1], Colors.red[2], Colors.red[3]
 	if (element.Text) then
 		element.Text:SetTextColor(r, g, b, 1)
@@ -399,6 +511,8 @@ local Castbar_PostFail = function(element, _)
 end
 
 NP.NamePlate_ResetCastbarVisuals = NamePlate_ResetCastbarVisuals
+NP.NamePlate_ClearCastTargetVisuals = NamePlate_ClearCastTargetVisuals
+NP.NamePlate_UpdateCastTargetVisuals = NamePlate_UpdateCastTargetVisuals
 NP.NamePlate_ClearInterruptState = NamePlate_ClearInterruptState
 NP.NamePlate_UpdateInterruptWatcher = NamePlate_UpdateInterruptWatcher
 NP.NamePlate_ClearInterruptWatcher = NamePlate_ClearInterruptWatcher

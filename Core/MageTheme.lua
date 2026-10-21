@@ -48,7 +48,7 @@ end
 -- nudge, per character. Every change redraws the ornaments at once.
 local endcapSettings = Engine:NewEndcapSettings({
 	prefix = "mage", choices = endcaps, default = "school", clearDefault = true,
-	defaultScale = 1.3,
+	defaultScale = 1.7, defaultY = -18, -- maintainer's SavedVariables fit; existing art
 	refresh = function() Theme:RefreshOrnaments() end
 })
 endcapSettings.Install(Theme)

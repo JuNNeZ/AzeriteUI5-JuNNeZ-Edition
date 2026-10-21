@@ -50,8 +50,9 @@ local function updateArenaPreparationElements(self, event, elementName, specID)
 			-- if(element.colorPower and elementName == 'Power') then
 				-- FIXME: no idea if we can get power type here without the unit
 			if(element.colorClass) then
-				local _, _, _, _, _, class = GetSpecializationInfoByID(specID)
-				color = self.colors.class[class]
+				-- AzeriteUI: specID is nil when 12.1.5 hides the opponent's spec.
+				local class = specID and select(6, GetSpecializationInfoByID(specID))
+				color = class and self.colors.class[class]
 			elseif(element.colorReaction) then
 				color = self.colors.reaction[2]
 			elseif(element.colorSmooth and self.colors.health:GetCurve()) then
@@ -126,7 +127,14 @@ local function updateArenaPreparation(self, event)
 		end
 
 		local specID = GetArenaOpponentSpec(id)
-		if(specID) then
+		-- AzeriteUI: 12.1.5 returns the spec as a secret value, which cannot be tested
+		-- or indexed. A secret still means an opponent is there, so show the frame and
+		-- hand the elements nil instead of the spec.
+		local hiddenSpec = issecretvalue and issecretvalue(specID)
+		if(hiddenSpec) then
+			specID = nil
+		end
+		if(hiddenSpec or specID) then
 			if(self:IsEnabled()) then
 				-- disable the unit watch so we can forcefully show the object ourselves
 				self:Disable()

@@ -209,13 +209,13 @@ local function point(flip)
 	local p=art.points.TOPLEFT
 	return p[3]+(flip and 1-dipX or dipX)*art.width, -p[4]+dipY*art.height
 end
-check(art.width==716 and art.height==188 and art.points.TOPLEFT[1]==owner.Health.Backdrop,"endcap uses actual casing canvas")
+check(math.abs(art.width-716*1.7/1.3)<1e-8 and math.abs(art.height-188*1.7/1.3)<1e-8 and art.points.TOPLEFT[1]==owner.Health.Backdrop,"endcap uses actual casing canvas at saved-variable default scale")
 check(frame.level > owner.Health.level and frame.mouse == false, "ornament above the bar, not interactive")
 check(theme:SetEndcapScale(1.5) and math.abs(point(false)-716*dipX)<1e-8,"size grows around the fixed dip")
 check(theme:SetEndcapOffset(6, -2) and math.abs(point(false)-716*dipX-6)<1e-8,"outward offset live")
 ns.ThemeEngine:StyleHealth(owner, seasoned, true)
 check(math.abs(point(true)-716*(1-dipX)+6)<1e-8 and art.coords[1]==1,"mirrored target preserves dip anchor and outward offset")
-check(theme:ResetEndcapPlacement() and art.width==716 and art.points.TOPLEFT[3]==0,"reset restores aligned casing")
+check(theme:ResetEndcapPlacement() and math.abs(art.width-716*1.7/1.3)<1e-8 and math.abs(point(true)-716*(1-dipX))<1e-8 and select(2,theme:GetEndcapOffset())==-18,"reset restores live default size and offset")
 ns.db.char.mageCrystalSchool = "fire"; theme:RefreshOrnaments()
 check(art.texture:find("ornament-felomelorn-hp_cap_case.tga", 1, true), "Fire follows Felo'melorn")
 check(theme:SetEndcap("dragonwrath") and art.texture:find("ornament-dragonwrath-hp_cap_case.tga", 1, true) and reloads == 1, "fixed staff, live")

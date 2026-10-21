@@ -1,7 +1,7 @@
 -- License: LICENSE.txt
 
 local MAJOR_VERSION = "LibActionButton-1.0-GE"
-local MINOR_VERSION = 80 -- Action queries through C_ActionBar; unit range checks keep their unit
+local MINOR_VERSION = 81 -- Pet state refreshes buttons; item macros no longer glow for a stray spell
 
 -- Whether secure handler snippets compile on this client.
 --
@@ -1819,6 +1819,27 @@ function InitializeEventHandler()
 
 	lib.eventFrame:RegisterEvent("LOSS_OF_CONTROL_ADDED")
 	lib.eventFrame:RegisterEvent("LOSS_OF_CONTROL_UPDATE")
+
+	-- Pet summon, dismiss, flags and auras can change which actions are usable.
+	-- Upstream (a3ea742) registers these on the main frame and batches through its
+	-- dirty flags. This fork has no batching, and pet auras change often in combat,
+	-- so a private frame folds each burst into one refresh on the next frame.
+	local petEventFrame = lib.petEventFrame or CreateFrame("Frame")
+	lib.petEventFrame = petEventFrame
+	petEventFrame:RegisterEvent("PET_BAR_UPDATE")
+	petEventFrame:RegisterUnitEvent("UNIT_FLAGS", "pet")
+	petEventFrame:RegisterUnitEvent("UNIT_AURA", "pet")
+	petEventFrame:SetScript("OnEvent", function(self)
+		if self.pending then return end
+		self.pending = true
+		C_Timer.After(0, function()
+			self.pending = nil
+			for button in next, ActiveButtons do
+				UpdateUsable(button)
+				UpdateButtonState(button)
+			end
+		end)
+	end)
 
 	if WoWRetail then
 		lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_SENT")
@@ -3767,6 +3788,10 @@ Action.GetSpellId               = function(self)
 	elseif actionType == "macro" then
 		if subType == "spell" then
 			return ResolveActionSpellID(self._state_action, id)
+		elseif subType == "item" then
+			-- An item macro's id is not a spell or macro index (upstream issue #4), so
+			-- looking it up could light the button for an unrelated spell's proc.
+			return nil
 		else
 			return ResolveOverrideSpellID(GetMacroSpell(id))
 		end

@@ -83,6 +83,12 @@ local defaults = { profile = ns:Merge({
 	executeLineColor = { 1, 1, 1, .85 },
 	executeZoneColor = { 1, .15, .05, .35 },
 	showNameAlways = false,
+	-- Forever's UnitName returns a surname instead of a realm as its second result.
+	friendlyPlayerNameFormat = "first",
+	enemyPlayerNameFormat = "first",
+	abbreviateNPCNames = false,
+	-- Empty rules inherit the previous global choices; context overrides inherit the defaults.
+	nameFormats = {},
 	threatColorPreset = "azerite",
 	healthValuePlacement = "below",
 	hideFriendlyPlayerHealthBar = false,
@@ -111,6 +117,13 @@ local defaults = { profile = ns:Merge({
 		arena = { minAlpha = 1, occludedAlpha = .45, maxDistance = 60 }
 	},
 	castBarOffsetY = 0,
+	-- Enemy castbars (Castbar.lua, NamePlate_UpdateCastTargetVisuals): who the cast is aimed at,
+	-- a glow when it is aimed at you, and a glow for casts the game marks important.
+	castTargetName = true,
+	castTargetedGlow = true,
+	castImportantGlow = true,
+	-- A mark beside units that belong to one of your active quests (Elements.lua, QuestMarker_Update).
+	showQuestMarker = true,
 	raidTargetSize = 28,
 	-- Over the unit's head or at its feet: the game's nameplateOtherAtBase, written with the driver's CVars.
 	platePosition = "head",
@@ -532,6 +545,108 @@ end
 
 local CONTENT_DEFAULTS = defaults.profile.contentSettings
 
+-- Name contexts are independent of distance/alpha contexts, so adding cities does not change CVars.
+local NAME_CONTEXTS = { "default", "city", "world", "dungeon", "mythicplus", "raid", "battleground", "arena" }
+local NAME_KINDS = { friendlyPlayer = true, enemyPlayer = true, friendlyNPC = true, enemyNPC = true }
+local IsPlayerNameKind = function(kind)
+	return kind == "friendlyPlayer" or kind == "enemyPlayer"
+end
+local IsNameFormat = function(kind, mode)
+	return mode == "current" or mode == "full" or mode == "initial"
+		or (mode == "first" and ns.IsForever and IsPlayerNameKind(kind))
+end
+local IsNameContext = function(context)
+	for _, key in ipairs(NAME_CONTEXTS) do if (key == context) then return true end end
+	return false
+end
+
+local ResolveNameContext = function()
+	local content = GetCurrentContentType()
+	if (content ~= "world") then return content end
+	if (not C_Map or not C_Map.GetBestMapForUnit or not C_Map.IsCityMap) then return "world" end
+	local mapID = C_Map.GetBestMapForUnit("player")
+	-- A city interior may have its own map. Bound the parent walk, including malformed cycles.
+	for _ = 1, 8 do
+		if (IsSecretValue(mapID) or type(mapID) ~= "number" or mapID <= 0) then break end
+		local city = C_Map.IsCityMap(mapID)
+		if (not IsSecretValue(city) and city == true) then return "city" end
+		if (not C_Map.GetMapInfo) then break end
+		local info = C_Map.GetMapInfo(mapID)
+		mapID = info and info.parentMapID
+	end
+	return "world"
+end
+
+NamePlatesMod.GetCurrentNameContext = function(self)
+	if (not self.nameContext) then self.nameContext = ResolveNameContext() end
+	return self.nameContext
+end
+NamePlatesMod.GetNameContexts = function() return NAME_CONTEXTS end
+NamePlatesMod.GetEditedNameContext = function(self) return self.editedNameContext or "default" end
+NamePlatesMod.SetEditedNameContext = function(self, context)
+	if (IsNameContext(context)) then self.editedNameContext = context end
+end
+NamePlatesMod.GetNameFormat = function(self, kind, context)
+	context = context or self:GetEditedNameContext()
+	local profile = self.db and self.db.profile or {}
+	local formats = profile.nameFormats
+	local rules = type(formats) == "table" and formats[context]
+	local mode = type(rules) == "table" and rules[kind]
+	if (IsNameFormat(kind, mode)) then return mode end
+	if (context ~= "default") then return "inherit" end
+	-- Preserve the choices made before the common Retail/Forever controls existed.
+	if (ns.IsForever and IsPlayerNameKind(kind)) then
+		local old = profile[kind .. "NameFormat"]
+		return (old == "full" or old == "initial") and old or "first"
+	end
+	return (not IsPlayerNameKind(kind) and profile.abbreviateNPCNames) and "initial" or "current"
+end
+NamePlatesMod.SetNameFormat = function(self, kind, mode)
+	local context = self:GetEditedNameContext()
+	if (not NAME_KINDS[kind] or not self.db or not self.db.profile) then return end
+	if (not IsNameFormat(kind, mode) and not (mode == "inherit" and context ~= "default")) then return end
+	local profile = self.db.profile
+	if (type(profile.nameFormats) ~= "table") then profile.nameFormats = {} end
+	if (type(profile.nameFormats[context]) ~= "table") then profile.nameFormats[context] = {} end
+	profile.nameFormats[context][kind] = (mode ~= "inherit") and mode or nil
+	self:UpdateSettings()
+end
+
+local GetNamePlateDisplayName = function(unit)
+	if (not IsSafeUnitToken(unit)) then return nil end
+	local name, surname = UnitName(unit)
+	if (IsSecretValue(name) or type(name) ~= "string" or name == "") then return nil end
+	local isPlayer = UnitIsPlayer(unit)
+	if (IsSecretValue(isPlayer)) then return nil end
+	local hostile = IsHostileNamePlate({ unit = unit })
+	local kind = isPlayer and (hostile and "enemyPlayer" or "friendlyPlayer")
+		or (hostile and "enemyNPC" or "friendlyNPC")
+	local mode = NamePlatesMod:GetNameFormat(kind, NamePlatesMod:GetCurrentNameContext())
+	if (mode == "inherit") then mode = NamePlatesMod:GetNameFormat(kind, "default") end
+	if (mode == "current") then return nil end
+	-- Only Camelot's second result is a surname. Retail's second result is a realm.
+	if (ns.IsForever and isPlayer) then
+		if (NameUtil and NameUtil.SplitPlayerNameIntoParts) then
+			local first, last = NameUtil.SplitPlayerNameIntoParts(name)
+			if (type(first) == "string" and first ~= "" and type(last) == "string" and last ~= "") then
+				name, surname = first, last
+			end
+		end
+		if (mode == "first") then return name end
+		if (IsSecretValue(surname) or type(surname) ~= "string" or surname == "") then return name end
+		if (mode == "initial") then return string.utf8sub(name, 1, 1) .. ". " .. surname end
+		return name .. " " .. surname
+	end
+	return mode == "initial" and API.AbbreviateName(name) or name
+end
+
+oUF.Tags.Events[prefix("*:NamePlateName")] = "UNIT_NAME_UPDATE UNIT_FACTION"
+oUF.Tags.Methods[prefix("*:NamePlateName")] = function(unit, realUnit)
+	local name = GetNamePlateDisplayName(unit)
+	if (name ~= nil) then return name end
+	return oUF.Tags.Methods[prefix("*:Name")](unit, realUnit, 24)
+end
+
 local ClampNumber = function(value, low, high, fallback)
 	if (type(value) ~= "number") then
 		return fallback
@@ -823,6 +938,7 @@ NP.GetExecuteMarkerStyle = GetExecuteMarkerStyle
 NP.GetExecuteLeadCurve = GetExecuteLeadCurve
 NP.CONTENT_TYPES = CONTENT_TYPES
 NP.GetCurrentContentType = GetCurrentContentType
+NP.ResolveNameContext = ResolveNameContext
 NP.GetContentSetting = GetContentSetting
 NP.GetNamePlateCastBarOffsetSetting = GetNamePlateCastBarOffsetSetting
 NP.GetNamePlateRaidTargetSize = GetNamePlateRaidTargetSize

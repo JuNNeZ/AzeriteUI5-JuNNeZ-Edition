@@ -2091,5 +2091,24 @@ API.GetDebuffTypeColor = function(unit, auraInstanceID, auraData)
 	return color[1], color[2], color[3]
 end
 
+-- Shows `texture` in the debuff type colour while `unit` has a debuff the player can
+-- dispel, and hides it otherwise; returns whether it is shown. Only the readable
+-- auraInstanceID decides: the colour may be secret and is never tested, since a
+-- boolean test on a secret raises. Used by the party and raid frame glows.
+API.UpdateDispelHighlight = function(texture, unit, alpha)
+	if (not texture) then
+		return false
+	end
+	local auraInstanceID, auraData = API.GetPlayerDispellableDebuff(unit)
+	if (not auraInstanceID) then
+		texture:Hide()
+		return false
+	end
+	local r, g, b = API.GetDebuffTypeColor(unit, auraInstanceID, auraData)
+	texture:SetVertexColor(r, g, b, alpha or .95)
+	texture:Show()
+	return true
+end
+
 
 

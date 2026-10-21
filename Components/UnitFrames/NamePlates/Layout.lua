@@ -57,6 +57,7 @@ local Classification_Update = NP.Classification_Update
 local NamePlate_PostUpdatePositions = NP.NamePlate_PostUpdatePositions
 local NamePlate_PostUpdateHoverElements = NP.NamePlate_PostUpdateHoverElements
 local UpdateExecuteMarker = NP.UpdateExecuteMarker
+local QuestMarker_Update = NP.QuestMarker_Update
 local NamePlate_ResetCastbarVisuals = NP.NamePlate_ResetCastbarVisuals
 local NamePlate_ClearInterruptState = NP.NamePlate_ClearInterruptState
 local NamePlate_UpdateInterruptWatcher = NP.NamePlate_UpdateInterruptWatcher
@@ -76,6 +77,9 @@ local RefreshActiveNamePlates = function(settingsChanged)
 		end
 		if (plate.UpdateAllElements) then
 			plate:UpdateAllElements("ForceUpdate")
+		end
+		if (settingsChanged and not plate.isPRD and not plate.isObjectPlate and plate.Name and plate.Name.UpdateTag) then
+			plate.Name:UpdateTag()
 		end
 	end
 end
@@ -292,6 +296,8 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 			self.RaidTargetIndicator:ForceUpdate()
 		end
 	end
+	-- After the raid marker, whose spot it shares (Elements.lua).
+	QuestMarker_Update(self)
 
 	ApplyNamePlateScale(self)
 	Classification_Update(self, event, unit, ...)
@@ -336,6 +342,9 @@ local NamePlate_OnHide = function(self)
 
 	if (self.RaidTargetIndicator) then
 		self.RaidTargetIndicator:Hide()
+	end
+	if (self.QuestMarker) then
+		self.QuestMarker:Hide()
 	end
 	if (self.Name) then
 		self.Name:SetText("")

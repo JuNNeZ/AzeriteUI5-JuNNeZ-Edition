@@ -28,6 +28,8 @@ local healthDips = { hp_cap_case = {757.5/1024,187/256}, hp_mid_case = {757.5/10
 	hp_low_case = {757.5/1024,190/256}, hp_boss_case = {876/1024,185/256} }
 local healthSettings = Engine:NewEndcapSettings({ prefix = "paladin", choices = { ashbringer = true, silverhand = true, argent = true, none = true },
 	default = "ashbringer", clearDefault = true, defaultScale = 1.3,
+	-- Maintainer's screenshot (Ashbringer) and SavedVariables (Silver Hand).
+	placements = { ashbringer = { scale = 1.70, y = -17 }, silverhand = { scale = 1.65, y = -17 } },
 	refresh = function() Theme:RefreshOrnaments() end })
 healthSettings.Install(Theme)
 local castSettings = Engine:NewEndcapSettings({ prefix = "paladinCast", name = "CastEndcap",

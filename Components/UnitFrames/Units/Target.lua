@@ -3844,12 +3844,14 @@ local style = function(self, unit, id)
 	end
 	local healthPerc = healthPercParent:CreateFontString(nil, "OVERLAY", nil, 1)
 	do
+		-- Themes move the text from this anchor; reading it back is secret.
 		local point = db.HealthPercentagePosition
 		if (healthPercAnchor) then
-			healthPerc:SetPoint(point[1], healthPercAnchor, point[1], point[2], point[3])
+			healthPerc.LayoutPoint = { point[1], healthPercAnchor, point[1], point[2], point[3] }
 		else
-			healthPerc:SetPoint(unpack(point))
+			healthPerc.LayoutPoint = point
 		end
+		healthPerc:SetPoint(unpack(healthPerc.LayoutPoint))
 	end
 	healthPerc:SetFontObject(db.HealthPercentageFont)
 	healthPerc:SetTextColor(unpack(db.HealthPercentageColor))
@@ -4230,6 +4232,9 @@ local HideBlizzardComboPoints = function()
 end
 
 TargetFrameMod.CreateUnitFrames = function(self)
+	-- The WoW11 start-up builds the frame and then calls Enable, whose OnEnable
+	-- builds it again: spawn once, or a second, unanchored copy keeps handling events.
+	if (self.frame) then return end
 
 	local unit, name = "target", "Target"
 

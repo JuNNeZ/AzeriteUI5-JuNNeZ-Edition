@@ -157,6 +157,35 @@ for _, key in ipairs({"party", "raid5", "raid25", "raid40"}) do
 end
 local minimap = assert(options.args.Minimap)
 assert((minimap.args.autoHide.args.autoHideInArenas.hidden == true) == forever, "arena auto-hide visibility")
+-- Forever's own swing timer switch on the Cast Bar page (FixLog 2026-10-20): Forever only, needs the
+-- CVar, writes showSwingTimer out of combat and never in it.
+do
+	local swing = assert(units.args.castbar and units.args.castbar.args.showSwingTimer, "swing timer switch built")
+	local cvars = { showSwingTimer = "0" }
+	local savedCVar, savedCombat = C_CVar, InCombatLockdown
+	local inCombat = false
+	C_CVar = {
+		GetCVar = function(name) return cvars[name] end,
+		GetCVarBool = function(name) return cvars[name] == "1" end,
+		SetCVar = function(name, value) cvars[name] = value end
+	}
+	InCombatLockdown = function() return inCombat end
+	assert(swing.hidden() == (not forever), "swing timer switch only on Forever")
+	if (forever) then
+		swing.set(nil, true)
+		assert(cvars.showSwingTimer == "1" and swing.get() == true, "switch writes and reads showSwingTimer")
+		inCombat = true
+		assert(swing.disabled() == true, "switch disabled in combat")
+		swing.set(nil, false)
+		assert(cvars.showSwingTimer == "1", "no CVar write in combat")
+		inCombat = false
+		swing.set(nil, false)
+		assert(cvars.showSwingTimer == "0" and swing.get() == false, "switch turns the timer off")
+		cvars.showSwingTimer = nil
+		assert(swing.hidden() == true and swing.get() == false, "hidden on a Forever build without the CVar")
+	end
+	C_CVar, InCombatLockdown = savedCVar, savedCombat
+end
 print("Client option gates: " .. (forever and "Forever" or "Retail") .. " passed")
 
 -- Themes page: a theme dropdown, Lite+, and only the settings in use.

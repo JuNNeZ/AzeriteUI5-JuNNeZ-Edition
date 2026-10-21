@@ -62,6 +62,8 @@ ns.RegisterConfig("PetFrame", {
 	HealthBarTexture = GetMedia("cast_bar"),
 	HealthBarOrientation = "RIGHT",
 	HealthBarSparkMap = barSparkMap,
+	PetExperienceSize = { 112, 3 }, -- Forever hunters: pet XP under the health bar (Pet.lua)
+	PetExperienceOffset = { 0, -9 },
 	HealthAbsorbColor = { 1, 1, 1, .5 },
 	HealthCastOverlayColor = { 1, 1, 1, .5 },
 

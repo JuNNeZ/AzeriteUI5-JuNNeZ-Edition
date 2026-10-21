@@ -82,35 +82,40 @@ local function UpdateTotem(self, event, slot)
 	--]]
 	if(element.PreUpdate) then element:PreUpdate(slot) end
 
+	-- AzeriteUI: upstream oUF 14 (484dc79, 12d025f, f9747e7). GetTotemInfo is
+	-- SecretWhenTotemSlotSecret on 12.x, so nothing here tests its answers: the
+	-- widget's alpha follows haveTotem, the icon goes straight to SetTexture, and
+	-- the cooldown takes GetTotemDuration's duration object (nil when empty).
 	local totem = element[TOTEM_PRIORITIES[slot]]
-	local haveTotem, name, start, duration, icon = GetTotemInfo(slot)
-	if(haveTotem and duration > 0) then
-		if(totem.Icon) then
-			totem.Icon:SetTexture(icon)
-		end
+	local haveTotem, name, _, _, icon = GetTotemInfo(slot)
+	local duration = GetTotemDuration and GetTotemDuration(slot)
 
-		if(totem.Cooldown) then
-			totem.Cooldown:SetCooldown(start, duration)
-		end
+	totem:SetAlphaFromBoolean(haveTotem, 1, 0)
 
-		totem:Show()
-	else
-		totem:Hide()
+	if(totem.Icon) then
+		totem.Icon:SetTexture(icon)
 	end
 
-	--[[ Callback: Totems:PostUpdate(slot, haveTotem, name, start, duration, icon)
+	if(totem.Cooldown) then
+		if(duration ~= nil) then
+			totem.Cooldown:SetCooldownFromDurationObject(duration)
+		else
+			totem.Cooldown:Clear()
+		end
+	end
+
+	--[[ Callback: Totems:PostUpdate(slot, haveTotem, name, icon, duration)
 	Called after the element has been updated.
 
 	* self      - the Totems element
 	* slot      - the slot of the updated totem (number)
-	* haveTotem - indicates if a totem is present in the given slot (boolean)
-	* name      - the name of the totem (string)
-	* start     - the value of `GetTime()` when the totem was created (number)
-	* duration  - the total duration for which the totem should last (number)
-	* icon      - the totem's icon (Texture)
+	* haveTotem - indicates if a totem is present in the given slot (boolean, may be secret)
+	* name      - the name of the totem (string, may be secret)
+	* icon      - the totem's icon (Texture, may be secret)
+	* duration  - totem duration (DurationObject or nil)
 	--]]
 	if(element.PostUpdate) then
-		return element:PostUpdate(slot, haveTotem, name, start, duration, icon)
+		return element:PostUpdate(slot, haveTotem, name, icon, duration)
 	end
 end
 
@@ -144,6 +149,7 @@ local function Enable(self)
 		for i = 1, #element do
 			local totem = element[TOTEM_PRIORITIES[i]]
 			totem:SetID(i)
+			totem:Show() -- AzeriteUI: visibility is the alpha set in UpdateTotem
 
 			if(totem:IsMouseEnabled()) then
 				totem:SetScript('OnEnter', OnEnter)

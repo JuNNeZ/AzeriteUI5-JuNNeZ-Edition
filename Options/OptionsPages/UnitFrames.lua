@@ -826,6 +826,13 @@ local GenerateOptions = function()
 		if (suboptions and suboptions.args) then
 			suboptions.name = L["Pet"]
 			suboptions.order = 110
+			-- Forever hunters only: Pet.lua builds the bar for nobody else.
+			suboptions.args.showPetExperience = {
+				name = L["Show Pet Experience"],
+				desc = L["Shows your hunter pet's experience as a thin bar under the pet frame while it can still gain levels."],
+				order = 10, type = "toggle", width = "full", set = setter, get = getter,
+				hidden = function(info) return not (ns.IsForever and ns.PlayerClass == "HUNTER") or isdisabled(info) end
+			}
 			options.args.pet = suboptions
 		end
 	end
@@ -1572,6 +1579,11 @@ local GenerateOptions = function()
 			end,
 			disabled = function(info) return not getoption(info, "showPriorityDebuff") end
 		}
+		suboptions.args.glowDispellableDebuffs = {
+			name = L["Glow Frame For Dispellable Debuffs"],
+			desc = L["Highlight the affected raid frame using the debuff type color while it has a debuff you can remove."],
+			order = 15, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		options.args.raid25 = suboptions
 	end
 
@@ -1615,6 +1627,11 @@ local GenerateOptions = function()
 			end,
 			disabled = function(info) return not getoption(info, "showPriorityDebuff") end
 		}
+		suboptions.args.glowDispellableDebuffs = {
+			name = L["Glow Frame For Dispellable Debuffs"],
+			desc = L["Highlight the affected raid frame using the debuff type color while it has a debuff you can remove."],
+			order = 15, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		options.args.raid40 = suboptions
 	end
 
@@ -1654,7 +1671,39 @@ local GenerateOptions = function()
 				desc = L["Shows the red +time right of the cast bar when taking damage pushes your cast back."],
 				order = 10, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 			}
+			-- Forever ships its own swing timer (Blizzard_SwingTimer, AllowLoadGameType camelot), shown by
+			-- the showSwingTimer CVar like Blizzard's Options -> Combat checkbox. Its three bars are Edit Mode
+			-- systems laid out by Blizzard's bottom-frame manager, so AzeriteUI only switches them on and
+			-- leaves placement to Edit Mode: moving them from addon code would mean writing Edit Mode state.
+			local HasSwingTimerCVar = function()
+				return ns.IsForever and C_CVar and C_CVar.GetCVar and C_CVar.GetCVar("showSwingTimer") ~= nil
+			end
+			suboptions.args.showSwingTimer = {
+				name = L["Show the game's swing timer"],
+				desc = L["Turns on WoW Forever's own main hand, off hand and ranged swing timers, the same switch as Options -> Combat -> Enable Swing Timer. Place them in Edit Mode. Cannot be changed in combat."],
+				order = 20, type = "toggle", width = "full",
+				hidden = function() return not HasSwingTimerCVar() end,
+				disabled = function() return InCombatLockdown() end,
+				set = function(info, val)
+					if (InCombatLockdown() or not HasSwingTimerCVar()) then return end
+					C_CVar.SetCVar("showSwingTimer", val and "1" or "0")
+				end,
+				get = function(info)
+					return HasSwingTimerCVar() and C_CVar.GetCVarBool("showSwingTimer") or false
+				end
+			}
 			options.args.castbar = suboptions
+		end
+	end
+
+	-- Player Totems (Retail only; the module does not exist elsewhere, so the group stays hidden)
+	do
+		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("PlayerTotemsFrame")
+		if (suboptions and suboptions.args) then
+			suboptions.name = L["Totems"]
+			suboptions.order = 205
+			suboptions.args.enabled.desc = L["Shows your totems, statues, ghoul and other totem-slot summons with their time left. Move them with /lock."]
+			options.args.totems = suboptions
 		end
 	end
 

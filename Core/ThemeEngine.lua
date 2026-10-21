@@ -295,7 +295,8 @@ end
 --- The endcap choice, size and nudge a theme stores per character, as
 --- ns.db.char.<prefix>Endcap, <prefix>EndcapScale, <prefix>EndcapX/Y.
 --- options: prefix, choices (key -> true; nil for size and nudge only), default,
---- clearDefault (store nil for the default instead of the key), defaultScale,
+--- clearDefault (store nil for the default instead of the key), defaultScale/X/Y,
+--- placements (optional key -> { scale, x, y } defaults; saved values win),
 --- refresh (called
 --- after every change), name (the theme methods' infix, "Endcap" by default; a
 --- cast bar set uses "CastEndcap": GetCastEndcapScale, SetCastEndcapOffset, ...).
@@ -310,15 +311,21 @@ Engine.NewEndcapSettings = function(self, options)
 		local key = char and char[prefix .. "Endcap"] or default
 		return choices[key] and key or default
 	end
+	local Defaults = function()
+		local placement = options.placements and options.placements[settings.GetKey()]
+		return placement and placement.scale or options.defaultScale or 1,
+			placement and placement.x or options.defaultX or 0, placement and placement.y or options.defaultY or 0
+	end
 	settings.GetScale = function()
 		local char = Char()
 		local scale = tonumber(char and char[prefix .. "EndcapScale"])
-		return (scale and scale >= .5 and scale <= 2) and scale or options.defaultScale or 1
+		return (scale and scale >= .5 and scale <= 2) and scale or (Defaults())
 	end
 	settings.GetOffset = function()
 		local char = Char()
-		return Clamp(char and char[prefix .. "EndcapX"], -OFFSET_LIMIT, OFFSET_LIMIT) or 0,
-			Clamp(char and char[prefix .. "EndcapY"], -OFFSET_LIMIT, OFFSET_LIMIT) or 0
+		local _, x, y = Defaults()
+		return Clamp(char and char[prefix .. "EndcapX"], -OFFSET_LIMIT, OFFSET_LIMIT) or x,
+			Clamp(char and char[prefix .. "EndcapY"], -OFFSET_LIMIT, OFFSET_LIMIT) or y
 	end
 	local Changed = function()
 		if (options.refresh) then options.refresh() end
@@ -334,7 +341,7 @@ Engine.NewEndcapSettings = function(self, options)
 	settings.SetScale = function(scale)
 		scale = tonumber(scale)
 		if (not scale or scale < .5 or scale > 2 or InCombatLockdown()) then return false end
-		Char()[prefix .. "EndcapScale"] = scale ~= (options.defaultScale or 1) and scale or nil
+		Char()[prefix .. "EndcapScale"] = scale ~= (Defaults()) and scale or nil
 		return Changed()
 	end
 	settings.SetOffset = function(x, y)
@@ -343,8 +350,9 @@ Engine.NewEndcapSettings = function(self, options)
 		x = Clamp(x, -OFFSET_LIMIT, OFFSET_LIMIT) or oldX
 		y = Clamp(y, -OFFSET_LIMIT, OFFSET_LIMIT) or oldY
 		local char = Char()
-		char[prefix .. "EndcapX"] = x ~= 0 and x or nil
-		char[prefix .. "EndcapY"] = y ~= 0 and y or nil
+		local _, defaultX, defaultY = Defaults()
+		char[prefix .. "EndcapX"] = x ~= defaultX and x or nil
+		char[prefix .. "EndcapY"] = y ~= defaultY and y or nil
 		return Changed()
 	end
 	settings.Reset = function()

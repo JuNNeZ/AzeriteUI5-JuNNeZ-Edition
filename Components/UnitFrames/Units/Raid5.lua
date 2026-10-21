@@ -1254,6 +1254,9 @@ RaidFrame5Mod.GetHeaderSize = function(self)
 end
 
 RaidFrame5Mod.CreateUnitFrames = function(self)
+	-- The WoW11 start-up builds the frame and then calls Enable, whose OnEnable
+	-- builds it again: spawn once, or a second, unanchored copy keeps handling events.
+	if (self.frame) then return end
 
 	local unit, name = "raid", "Raid5"
 

@@ -3473,11 +3473,9 @@ local style = function(self, unit)
 	-- Health Percentage
 	--------------------------------------------
 	local healthPerc = healthValue:GetParent():CreateFontString(nil, "OVERLAY")
-	if (config.HealthPercentagePosition) then
-		healthPerc:SetPoint(unpack(config.HealthPercentagePosition))
-	else
-		healthPerc:SetPoint("LEFT", healthValue, "RIGHT", 18, 0)
-	end
+	-- Themes move the text from this anchor; reading it back is secret.
+	healthPerc.LayoutPoint = config.HealthPercentagePosition or { "LEFT", healthValue, "RIGHT", 18, 0 }
+	healthPerc:SetPoint(unpack(healthPerc.LayoutPoint))
 	healthPerc:SetFontObject(config.HealthPercentageFont or config.HealthValueFont)
 	local healthPercColor = config.HealthPercentageColor or config.HealthValueColor or { 1, 1, 1, 1 }
 	healthPerc:SetTextColor(healthPercColor[1], healthPercColor[2], healthPercColor[3], healthPercColor[4] or 1)
@@ -3976,6 +3974,9 @@ local style = function(self, unit)
 end
 
 PlayerFrameMod.CreateUnitFrames = function(self)
+	-- The WoW11 start-up builds the frame and then calls Enable, whose OnEnable
+	-- builds it again: spawn once, or a second, unanchored copy keeps handling events.
+	if (self.frame) then return end
 
 	local unit, name = "player", "Player"
 

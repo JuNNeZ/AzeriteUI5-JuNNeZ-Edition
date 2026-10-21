@@ -47,6 +47,11 @@ lua Tools/Harness/flyout_harness.lua       .               # LibActionButton fly
 lua Tools/Harness/tooltip_compare_harness.lua .            # compare tooltips: borders and the Equipped tab
 lua Tools/Harness/castbar_pushback_harness.lua .           # oUF castbar: pushback, and stops without a castBarID hide the bar
 lua Tools/Harness/party_dispel_harness.lua .               # party dispel glow + priority debuff with secret aura fields
+lua Tools/Harness/castbar_target_harness.lua .             # nameplate cast target name, aimed-at-you and important glows
+lua Tools/Harness/quest_marker_harness.lua .               # nameplate quest marker: when it shows, hides and asks
+lua Tools/Harness/totems_harness.lua .                     # Retail totem row: secret-safe totem element, module shape
+lua Tools/Harness/masterlooter_harness.lua .               # Forever master looter icon on 6-40 raid frames
+lua Tools/Harness/pet_experience_harness.lua .             # Forever hunter pet XP bar under the pet frame
 lua Tools/Harness/mythicplus_harness.lua   .               # Mythic+ timer, forces, end card, keystone, Great Vault
 lua Tools/Harness/whatsnew_harness.lua     .               # What's New popup: when it shows, Got it, combat, buttons
 lua Tools/Harness/unit_tier_harness.lua    .               # Novice/Hardened/Seasoned tiers and critters, any client or language

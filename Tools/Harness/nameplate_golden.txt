@@ -182,7 +182,7 @@ Plate6 (object)
   health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
-  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
   native auras none
   power shown@0; prediction hidden@0
@@ -331,7 +331,7 @@ Plate6 (object)
   health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
-  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
   native auras none
   power shown@0; prediction hidden@0
@@ -566,7 +566,7 @@ Plate6 (object)
   health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
-  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
   native auras none
   power shown@0; prediction hidden@0
@@ -1355,7 +1355,7 @@ Plate6 (object)
   health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
-  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
   native auras none
   power shown@0; prediction hidden@0
@@ -1502,7 +1502,7 @@ Plate6 (object)
   health hidden@0 color=0.961,0,0.176 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop hidden@1
   value hidden@1 pt=CENTER>-:CENTER(0,-18)
   cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,-1)
-  badge hidden@1 tex=nil; highlight shown@1 color=0.725,1,0.714; threat hidden@1
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=nil hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,40)
   native auras none
   power shown@0; prediction hidden@0

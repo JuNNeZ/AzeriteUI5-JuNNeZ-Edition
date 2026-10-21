@@ -22,6 +22,7 @@
 	<Script file="Units\Player.lua"/>
 	<Script file="Units\PlayerAlternate.lua"/>
 	<Script file="Units\PlayerCastBar.lua"/>
+	<Script file="Units\PlayerTotems.lua"/>
 	<Script file="Units\PlayerClassPower.lua"/>
 	<Script file="Units\Pet.lua"/>
 	<Script file="Units\Target.lua"/>

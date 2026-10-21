@@ -349,11 +349,11 @@ check(owner.Health.PaladinOrnaments.Art.width == nativeBackdrop.width*theme:GetE
 	"aligned ornament follows actual casing scale")
 check(owner.Health.PaladinOrnaments.level > owner.Health.level + 3,
 	"relic stays above native healing and absorb prediction frames")
-check(theme:GetEndcapScale() == 1.3, "measured default relic size")
+check(theme:GetEndcapScale() == 1.7 and select(2, theme:GetEndcapOffset()) == -17, "maintainer's live Ashbringer defaults")
 check(theme:SetEndcapScale(1) and theme:GetEndcapScale() == 1,
 	"explicit 100 percent remains distinct from measured default")
 theme:ResetEndcapPlacement()
-check(theme:GetEndcapScale() == 1.3, "reset restores measured relic size")
+check(theme:GetEndcapScale() == 1.7 and select(2, theme:GetEndcapOffset()) == -17, "reset restores live relic size and offset")
 check(owner.Health.PaladinOrnaments.level > owner.Health.PaladinRails.level
 	and owner.Health.PaladinOrnaments.Art.layer == "OVERLAY", "endcap covers termination above rails and native fill")
 check(not owner.Health.PaladinEmpty, "no substitute health empty surface")
@@ -727,6 +727,7 @@ do
     load("Components/UnitFrames/Units/Boss.lua")
     for _, enabled in ipairs({ false, true }) do
         ns.db.char.paladinPreview = enabled
+        bossModule.frame = nil -- CreateUnitFrames builds once per module
         bossModule:CreateUnitFrames()
         local frame = bossModule.frame.units[1]
         check(frame.Health:GetReverseFill(), "boss health fills from right on "..tostring(enabled))
@@ -815,6 +816,10 @@ do
     ns.db.char.paladinPreview = true
     ns.GetModule, env.LibStub = savedModule, savedStub
 end
+theme:SetEndcap("silverhand"); theme:ResetEndcapPlacement()
+check(theme:GetEndcapScale()==1.65 and theme:GetEndcapOffset()==0 and select(2,theme:GetEndcapOffset())==-17,"SavedVariables Silver Hand defaults")
+theme:SetEndcap("argent"); theme:ResetEndcapPlacement()
+check(theme:GetEndcapScale()==1.3 and select(2,theme:GetEndcapOffset())==0,"unmeasured Argent defaults retained")
 print("Paladin theme: "..checks.." checks passed (offline only)")
 
 -- Optional source-driven layout export for the offline assembly renderer.

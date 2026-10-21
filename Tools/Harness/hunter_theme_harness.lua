@@ -173,12 +173,12 @@ local function point(flip)
 end
 local tipX=point(false)
 ns.db.char.hunterEndcapScale=1.5;theme:StyleHealth(owner,original.Seasoned,false)
-check(tip.width==tipSize*1.5/1.3,"endcap scale applied")
+check(math.abs(tip.width-tipSize*1.5/1.8)<1e-8,"endcap scale applied")
 check(math.abs(point(false)-tipX)<1e-8,"scaled endcap keeps its dip")
 ns.db.char.hunterEndcapScale=9;theme:StyleHealth(owner,original.Seasoned,false)
 check(tip.width==tipSize,"bad saved scale falls back to 1")
 ns.db.char.hunterEndcapScale=nil
-check(theme:SetEndcapScale(2) and tip.width==tipSize*2/1.3,"scale applies live without restyle")
+check(theme:SetEndcapScale(2) and math.abs(tip.width-tipSize*2/1.8)<1e-8,"scale applies live without restyle")
 check(theme:SetEndcapOffset(5,-3) and math.abs(point(false)-tipX-5)<1e-8,"offset applies live from dip")
 check(theme:SetEndcapOffset(nil,500) and select(2,theme:GetEndcapOffset())==60,"offset clamped")
 theme:StyleHealth(owner,original.Seasoned,true)
@@ -203,7 +203,7 @@ local castTip,eagle=cast.HunterOrnaments.Tip,cast.HunterOrnaments.Tip
 check(castTip.width==48 and castTip.points.CENTER[3]==-8,"eagle mirrors the cast tip, unscaled")
 check(theme:SetCastEndcapScale(1.5) and castTip.width==72 and castTip.points.CENTER[3]==-8,"cast endcaps grow in place, live")
 check(theme:SetCastEndcapOffset(4,-2) and castTip.points.CENTER[3]==-12 and eagle.points.CENTER[4]==-2 and castTip.points.CENTER[4]==-2,"cast endcaps move outward, live")
-check(theme:GetEndcapScale()==1.3 and theme:GetEndcapOffset()==0,"health endcap untouched by the cast settings")
+check(theme:GetEndcapScale()==1.8 and theme:GetEndcapOffset()==0 and select(2,theme:GetEndcapOffset())==-13,"health endcap untouched by the cast settings")
 check(theme:ResetCastEndcapPlacement() and ns.db.char.hunterCastEndcapScale==nil and ns.db.char.hunterCastEndcapX==nil and castTip.width==48,"cast endcap reset")
 cast.Backdrop=widget(cast); theme:StyleCastbar(cast)
 local castTexture=castTip.texture
@@ -292,6 +292,10 @@ local baseY=tonumber(playerSource:match("POWER_CRYSTAL_BASELINE_OFFSET_Y = (%-?%
 check(baseX and baseY,"Player.lua crystal baseline offsets found")
 check(player.PowerBarPosition[2]+baseX+player.PowerBackdropSize[1]/2==81,"crystal viewport keeps the stock center X")
 check(player.PowerBarPosition[3]+baseY+player.PowerBackdropSize[2]/2==108,"crystal viewport keeps the stock center Y")
+for key, expected in pairs({ thasdorah={1.8,-13}, talonclaw={1.65,-13}, titanstrike={1.7,-19}, thoridal={1.7,-14}, raeshalare={1.7,-14} }) do
+	theme:SetEndcap(key); theme:ResetEndcapPlacement()
+	check(theme:GetEndcapScale()==expected[1] and theme:GetEndcapOffset()==0 and select(2,theme:GetEndcapOffset())==expected[2],"live defaults for "..key)
+end
 print("Hunter theme: "..checks.." checks passed (offline only)")
 -- Optional source-driven layout export for the offline assembly renderer.
 if (arg[2]) then

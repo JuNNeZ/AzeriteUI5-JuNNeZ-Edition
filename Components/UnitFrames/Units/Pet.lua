@@ -34,7 +34,9 @@ local unpack = unpack
 local string_gsub = string.gsub
 
 
-local defaults = { profile = ns:Merge({}, ns.MovableModulePrototype.defaults) }
+local defaults = { profile = ns:Merge({
+	showPetExperience = true -- Forever hunters: a thin XP bar under the pet's health
+}, ns.MovableModulePrototype.defaults) }
 
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
@@ -272,8 +274,41 @@ local PetHappiness_UpdateBadge = function(indicator)
 	badge:SetVertexColor(unpack(color or { .6, .6, .6 }))
 end
 
+-- Hunter pet experience (Forever). Blizzard shows it only in Character -> Pet and the
+-- stable (Camelot PaperDollFrame_SetPetLevel); this puts it under the pet's health.
+-- Shown while the pet can still level, the same rule as Blizzard's (XP needed > 0).
+local PetExperience_Update = function(self)
+	local bar = self.PetExperience
+	if (not bar) then return end
+	local profile = PetFrameMod.db and PetFrameMod.db.profile
+	local hasUI, isHunterPet
+	if (HasPetUI) then
+		hasUI, isHunterPet = HasPetUI()
+	end
+	if ((profile and profile.showPetExperience == false) or not hasUI or not isHunterPet or not GetPetExperience) then
+		bar:Hide()
+		return
+	end
+	local cur, max = GetPetExperience()
+	if (issecretvalue and (issecretvalue(cur) or issecretvalue(max))) then
+		-- Never compared: the bar takes them as they are.
+		bar:SetMinMaxValues(0, max)
+		bar:SetValue(cur)
+		bar:Show()
+		return
+	end
+	if (type(cur) ~= "number" or type(max) ~= "number" or max <= 0) then
+		bar:Hide()
+		return
+	end
+	bar:SetMinMaxValues(0, max)
+	bar:SetValue(cur < max and cur or max)
+	bar:Show()
+end
+
 local UnitFrame_PostUpdate = function(self, event)
 	TargetHighlight_Update(self, event)
+	PetExperience_Update(self)
 	if (self.PetHappiness) then
 		self.PetHappiness:UpdateHappiness()
 	end
@@ -288,6 +323,9 @@ local UnitFrame_OnEvent = function(self, event, unit, ...)
 
 	elseif (event == "PLAYER_FOCUS_CHANGED") then
 		TargetHighlight_Update(self, event)
+
+	elseif (event == "UNIT_PET_EXPERIENCE" or event == "UNIT_PET") then
+		PetExperience_Update(self)
 	end
 end
 
@@ -477,6 +515,27 @@ local style = function(self, unit)
 		end
 	end
 
+	-- Hunter pet experience (Forever)
+	--------------------------------------------
+	if (ns.IsForever and ns.PlayerClass == "HUNTER") then
+		local experience = CreateFrame("StatusBar", nil, self)
+		experience:SetFrameLevel(health:GetFrameLevel())
+		experience:SetPoint("TOP", health, "BOTTOM", unpack(db.PetExperienceOffset or { 0, -9 }))
+		experience:SetSize(unpack(db.PetExperienceSize or { 112, 3 }))
+		experience:SetStatusBarTexture(db.HealthBarTexture)
+		experience:SetStatusBarColor(unpack(ns.Colors.xp))
+		experience:SetMinMaxValues(0, 1)
+		experience:SetValue(0)
+		experience:Hide()
+
+		local experienceBackground = experience:CreateTexture(nil, "BACKGROUND", nil, -1)
+		experienceBackground:SetPoint("TOPLEFT", -1, 1)
+		experienceBackground:SetPoint("BOTTOMRIGHT", 1, -1)
+		experienceBackground:SetColorTexture(0, 0, 0, .75)
+
+		self.PetExperience = experience
+	end
+
 	-- The theme in use, if it dresses the pet frame (Hunter's casing, Mage's seal).
 	if (ns.ThemeEngine) then ns.ThemeEngine:StylePet(self) end
 
@@ -502,10 +561,24 @@ local style = function(self, unit)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", UnitFrame_OnEvent, true)
 	self:RegisterEvent("PLAYER_TARGET_CHANGED", UnitFrame_OnEvent, true)
 	self:RegisterEvent("PLAYER_FOCUS_CHANGED", UnitFrame_OnEvent, true)
+	if (self.PetExperience) then
+		self:RegisterEvent("UNIT_PET_EXPERIENCE", UnitFrame_OnEvent, true)
+		self:RegisterEvent("UNIT_PET", UnitFrame_OnEvent, true)
+	end
 
 end
 
+-- Settings refresh (UnitFrameModule.UpdateSettings calls this while enabled).
+PetFrameMod.Update = function(self)
+	if (self.frame) then
+		PetExperience_Update(self.frame)
+	end
+end
+
 PetFrameMod.CreateUnitFrames = function(self)
+	-- The WoW11 start-up builds the frame and then calls Enable, whose OnEnable
+	-- builds it again: spawn once, or a second, unanchored copy keeps handling events.
+	if (self.frame) then return end
 
 	local unit, name = "pet", "Pet"
 

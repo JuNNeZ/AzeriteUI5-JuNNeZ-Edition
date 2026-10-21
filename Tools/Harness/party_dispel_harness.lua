@@ -101,6 +101,42 @@ do
 end
 
 --------------------------------------------------------------------------------
+-- The shared glow (party and 6-40 raid frames, FixLog 2026-10-20)
+--------------------------------------------------------------------------------
+do
+	check(type(API.UpdateDispelHighlight) == "function", "API.UpdateDispelHighlight exists")
+	local function Glow()
+		local t = { shown = nil }
+		function t:Show() self.shown = true end
+		function t:Hide() self.shown = false end
+		function t:SetVertexColor(r, g, b, a) self.color = { r, g, b, a } end
+		return t
+	end
+
+	Reset()
+	W.auras[12] = { auraInstanceID = 12, dispelName = secret("Magic") }
+	W.filters["HARMFUL|RAID"] = { 12 }
+	local glow = Glow()
+	local ok, shown = pcall(API.UpdateDispelHighlight, glow, "raid7", .95)
+	check(ok and shown == true and glow.shown == true, "secret type: glow shown", shown)
+	check(glow.color and issecretvalue(glow.color[1]) and glow.color[4] == .95, "secret colour handed to the texture unread")
+
+	-- The colour must never decide visibility: plain Lua cannot make `if (r)` raise
+	-- on a secret, so prove the decision ignores r by handing back no colour at all.
+	local realColor = API.GetDebuffTypeColor
+	API.GetDebuffTypeColor = function() return nil, nil, nil end
+	glow = Glow()
+	API.UpdateDispelHighlight(glow, "raid7")
+	check(glow.shown == true, "visibility follows the aura ID, not the colour")
+	API.GetDebuffTypeColor = realColor
+
+	Reset()
+	glow = Glow(); glow.shown = true
+	check(API.UpdateDispelHighlight(glow, "raid7") == false and glow.shown == false, "nothing dispellable: hidden")
+	check(API.UpdateDispelHighlight(nil, "raid7") == false, "no texture: no error")
+end
+
+--------------------------------------------------------------------------------
 -- The priority debuff plugin
 --------------------------------------------------------------------------------
 local function LoadPlugin()

@@ -61,6 +61,12 @@ ns.ActionButton.Create = function(id, name, header, buttonConfig)
 	-- LAB's default handlers are sufficient.
 	ns.ActionButton.UpdateMouseoverCast(button)
 
+	-- Let the secure template honour the self-cast and focus-cast modifiers from
+	-- the game's settings, as Blizzard's own action buttons do (ActionButton.lua,
+	-- both clients). Without these the modifier key does nothing on our bars.
+	button:SetAttribute("checkselfcast", true)
+	button:SetAttribute("checkfocuscast", true)
+
 	ns.ActionButtons[button] = true
 
 	return button

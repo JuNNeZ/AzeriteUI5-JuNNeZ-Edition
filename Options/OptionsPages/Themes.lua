@@ -68,6 +68,7 @@ local Label = function(key)
 	if (key == "paladin") then return ClassName("PALADIN", "Paladin") end
 	if (key == "mage") then return ClassName("MAGE", "Mage") end
 	if (key == "druid") then return ClassName("DRUID", "Druid") end
+	if (key == "warrior") then return ClassName("WARRIOR", "Warrior") end
 	if (key == "moonwell") then return "Moonwell+" end
 	if (key == "wildheart") then return "Wildheart" end
 	if (key == "moonvein") then return "Moonvein" end
@@ -133,7 +134,8 @@ local AddCastEndcap = function(theme, args)
 	-- boot choice, including None, on its own complete themed casing.
 	local key = theme == ns.PaladinTheme and "paladin" or theme == ns.HunterTheme and "hunter"
 		or theme == ns.MageTheme and "mage" or theme == ns.DruidTheme and "druid"
-	local labels = { libram = "Libram", eagle = "Talonclaw", atiesh = "Atiesh", moon = L["The theme's own"] }
+		or theme == ns.WarriorTheme and "warrior"
+	local labels = { libram = "Libram", eagle = "Talonclaw", atiesh = "Atiesh", moon = L["The theme's own"], valarjar = "Valarjar" }
 	if (key and theme.GetCastEndcapChoices) then
 		local values, sorting = {}, {}
 		for choice in pairs(theme:GetCastEndcapChoices()) do
@@ -384,6 +386,35 @@ local GenerateDruid = function(order)
 	}
 end
 
+local GenerateWarrior = function(order)
+	local Warrior = ns.WarriorTheme
+	if (not Warrior) then return end
+	return {
+		name = WIP("warrior", Label("warrior")), order = order, type = "group", inline = true,
+		hidden = function() return Theme() ~= "warrior" end,
+		args = AddCastEndcap(Warrior, {
+			endcap = { name = L["Endcap"], desc = L["The ornament at the outer end of the health bars."],
+				order = 1, type = "select", width = "full",
+				values = { stromkar = "Strom'kar", warswords = "Warswords", wrath = "Wrath Rivet", none = _G.NONE or "None" },
+				sorting = { "stromkar", "warswords", "wrath", "none" },
+				get = function() return Warrior:GetEndcap() end,
+				set = function(_, value) Warrior:SetEndcap(value) end },
+			endcapScale = { name = L["Endcap size"], order = 2, type = "range", width = "full",
+				min = .5, max = 2, step = .05, isPercent = true,
+				get = function() return Warrior:GetEndcapScale() end,
+				set = function(_, value) Warrior:SetEndcapScale(value) end },
+			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return (Warrior:GetEndcapOffset()) end,
+				set = function(_, value) Warrior:SetEndcapOffset(value, nil) end },
+			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return select(2, Warrior:GetEndcapOffset()) end,
+				set = function(_, value) Warrior:SetEndcapOffset(nil, value) end },
+			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
+				func = function() Warrior:ResetEndcapPlacement() end }
+		})
+	}
+end
+
 local GenerateMoonwell = function(order)
 	local Slosh = ns.MoonwellSlosh
 	if (not Slosh) then return end
@@ -561,6 +592,7 @@ local GenerateOptions = function()
 			hunter = GenerateHunter(10),
 			paladin = GeneratePaladin(20),
 			druid = GenerateDruid(22),
+			warrior = GenerateWarrior(26),
 			moonwell = GenerateMoonwell(23),
 			wildheart = GenerateWildheart(24),
 			moonvein = GenerateWildheart(24.1, "moonvein"),

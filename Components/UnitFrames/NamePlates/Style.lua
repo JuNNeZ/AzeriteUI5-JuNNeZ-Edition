@@ -45,8 +45,10 @@ local Power_PostUpdate = NP.Power_PostUpdate
 local AnchorNamePlateRaidTarget = NP.AnchorNamePlateRaidTarget
 local NamePlate_ApplyHealthValueLayout = NP.NamePlate_ApplyHealthValueLayout
 local Auras_PostUpdate = NP.Auras_PostUpdate
+local QuestMarker_Update = NP.QuestMarker_Update
 local NamePlate_ResetCastbarVisuals = NP.NamePlate_ResetCastbarVisuals
 local NamePlate_ClearInterruptState = NP.NamePlate_ClearInterruptState
+local NamePlate_ClearCastTargetVisuals = NP.NamePlate_ClearCastTargetVisuals
 local Castbar_PostCastVisual = NP.Castbar_PostCastVisual
 local Castbar_PostCastUpdate = NP.Castbar_PostCastUpdate
 local Castbar_PostStop = NP.Castbar_PostStop
@@ -200,6 +202,7 @@ local style = function(self, unit, id)
 		ns.API.ClearInterruptCastBarRefresh(element)
 		NamePlate_ClearInterruptState(element)
 		NamePlate_ResetCastbarVisuals(element)
+		NamePlate_ClearCastTargetVisuals(element)
 	end)
 
 	local castBackdrop = castbar:CreateTexture(nil, "BACKGROUND", nil, -1)
@@ -221,6 +224,37 @@ local style = function(self, unit, id)
 	end
 
 	self.Castbar.Text = castText
+
+	-- Cast target and highlights. Filled per cast by Castbar.lua
+	-- (NamePlate_UpdateCastTargetVisuals) from values the game may hide; they
+	-- only ever go straight into SetText, SetTextColor and SetAlphaFromBoolean.
+	local castTarget = castbar:CreateFontString(nil, "OVERLAY", nil, 1)
+	castTarget:SetPoint("TOP", castText, "BOTTOM", 0, db.CastBarTargetOffsetY or -1)
+	castTarget:SetJustifyH("CENTER")
+	castTarget:SetFontObject(db.CastBarTargetFont or db.CastBarNameFont)
+	castTarget:SetTextColor(unpack(db.CastBarTargetColor or db.CastBarNameColor))
+	if (castTarget.SetWordWrap) then
+		castTarget:SetWordWrap(false)
+	end
+	self.Castbar.TargetText = castTarget
+
+	local glowSize = db.CastBarGlowSize or { 98, 28 }
+	local glowTexture = db.CastBarGlowTexture or db.ThreatTexture
+	local importantGlow = castbar:CreateTexture(nil, "BACKGROUND", nil, -3)
+	importantGlow:SetPoint(unpack(db.CastBarGlowPosition or { "CENTER", 0, 0 }))
+	importantGlow:SetSize(unpack(glowSize))
+	importantGlow:SetTexture(glowTexture)
+	importantGlow:SetVertexColor(unpack(db.CastBarImportantGlowColor or { 251/255, 120/255, 29/255, 1 }))
+	importantGlow:SetAlpha(0)
+	self.Castbar.ImportantGlow = importantGlow
+
+	local targetedGlow = castbar:CreateTexture(nil, "BACKGROUND", nil, -2)
+	targetedGlow:SetPoint(unpack(db.CastBarGlowPosition or { "CENTER", 0, 0 }))
+	targetedGlow:SetSize(unpack(glowSize))
+	targetedGlow:SetTexture(glowTexture)
+	targetedGlow:SetVertexColor(unpack(db.CastBarTargetedGlowColor or { 1, 64/255, 64/255, 1 }))
+	targetedGlow:SetAlpha(0)
+	self.Castbar.TargetedGlow = targetedGlow
 
 	-- Health Value
 	--------------------------------------------
@@ -286,7 +320,7 @@ local style = function(self, unit, id)
 	if (name.SetWordWrap) then
 		name:SetWordWrap(false)
 	end
-	self:Tag(name, prefix("[*:Name(24,nil,nil,nil)]")) -- maxChars, showLevel, showLevelLast, showFull
+	self:Tag(name, prefix("[*:NamePlateName]"))
 
 	self.Name = name
 
@@ -310,6 +344,20 @@ local style = function(self, unit, id)
 
 	self.RaidTargetIndicator = raidTarget
 	AnchorNamePlateRaidTarget(self)
+
+	-- Quest Marker (Elements.lua, QuestMarker_Update). Blizzard's own quest atlas, on
+	-- Retail and Forever alike; it gives way to the raid marker in the same spot.
+	local questMarker = healthOverlay:CreateTexture(nil, "OVERLAY", nil, 1)
+	local qPoint, qRelative, qX, qY = unpack(db.QuestMarkerPosition or { "RIGHT", "LEFT", -4, 0 })
+	questMarker:SetPoint(qPoint, health, qRelative, qX, qY)
+	questMarker:SetSize(unpack(db.QuestMarkerSize or { 20, 20 }))
+	questMarker:SetAtlas(db.QuestMarkerAtlas or "questnormal")
+	questMarker:Hide()
+
+	self.QuestMarker = questMarker
+	self.RaidTargetIndicator.PostUpdate = function(element)
+		QuestMarker_Update(element.__owner)
+	end
 
 	-- Classification Badge
 	--------------------------------------------

@@ -344,11 +344,26 @@ local ApplyNamePlateAlpha = function(self)
 	end
 end
 
+-- NodeSight (Forever) puts its sparkles on the soft-interact object's plate and, while any sparkles are
+-- on and "Keep the game's icons" is not ticked, hides Blizzard's object plates (its Sparkles.lua, Update).
+-- It also widens soft interact to every object within 30 yards, so ours would follow the nearest node
+-- around with its name and icon. NodeSightDB exists only when NodeSight is loaded.
+local IsNodeSightHidingObjectPlates = function()
+	local db = _G.NodeSightDB
+	if (type(db) ~= "table") then
+		return false
+	end
+	return (db.herbs == true or db.ore == true or db.others == true) and db.gameIcons ~= true
+end
+
 local ShouldShowObjectPlateOverlay = function(self)
 	if (not self or not self.isObjectPlate or self.isPRD) then
 		return false
 	end
-	return (self.isSoftTarget or self.isMouseOver or self.isTarget) and true or false
+	if (self.isMouseOver or self.isTarget) then
+		return true
+	end
+	return (self.isSoftTarget and not IsNodeSightHidingObjectPlates()) and true or false
 end
 
 local ApplyObjectPlateVisualState = function(self)
@@ -377,6 +392,8 @@ local ApplyObjectPlateVisualState = function(self)
 		self.HealthPrediction:Hide()
 	end
 	if (self.Classification) then self.Classification:Hide() end
+	-- The selection outline is the health bar's shape; with no bar it read as an empty one.
+	if (self.TargetHighlight) then self.TargetHighlight:Hide() end
 	if (self.ThreatIndicator) then self.ThreatIndicator:Hide() end
 	if (self.RaidTargetIndicator) then self.RaidTargetIndicator:Hide() end
 	if (self.Castbar) then

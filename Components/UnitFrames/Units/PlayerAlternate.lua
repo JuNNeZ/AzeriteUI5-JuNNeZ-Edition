@@ -1014,7 +1014,9 @@ local style = function(self, unit, id)
 	-- Health Percentage
 	--------------------------------------------
 	local healthPerc = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
-	healthPerc:SetPoint(unpack(db.HealthPercentagePosition))
+	-- Themes move the text from this anchor; reading it back is secret.
+	healthPerc.LayoutPoint = db.HealthPercentagePosition
+	healthPerc:SetPoint(unpack(healthPerc.LayoutPoint))
 	healthPerc:SetFontObject(db.HealthPercentageFont)
 	healthPerc:SetTextColor(unpack(db.HealthPercentageColor))
 	healthPerc:SetJustifyH(db.HealthPercentageJustifyH)
@@ -1295,6 +1297,9 @@ local style = function(self, unit, id)
 end
 
 PlayerFrameAltMod.CreateUnitFrames = function(self)
+	-- The WoW11 start-up builds the frame and then calls Enable, whose OnEnable
+	-- builds it again: spawn once, or a second, unanchored copy keeps handling events.
+	if (self.frame) then return end
 
 	local unit, name = "player", "PlayerAlternate"
 

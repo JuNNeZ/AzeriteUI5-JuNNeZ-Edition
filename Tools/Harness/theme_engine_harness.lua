@@ -126,6 +126,23 @@ check(castHolder:SetCastEndcapScale(1.5) and ns.db.char.testCastEndcapScale == 1
 check(castHolder:SetCastEndcapOffset(-5, 2) and castHolder:ResetCastEndcapPlacement() and ns.db.char.testCastEndcapX == nil and ns.db.char.testCastEndcapScale == nil, "named reset")
 
 -- Profile change: reload only when the theme flips, deferred in combat.
+-- Per-motif defaults must follow selection/reset without overwriting saved nudges.
+local placed = Engine:NewEndcapSettings({ prefix = "placed", choices = { a = true, b = true }, default = "a",
+	defaultScale = 1.3, placements = { a = { scale = 1.8, y = -13 }, b = { scale = 1.65, y = -19 } } })
+check(placed.GetScale() == 1.8 and select(2, placed.GetOffset()) == -13, "motif defaults")
+placed.SetKey("b")
+check(placed.GetScale() == 1.65 and select(2, placed.GetOffset()) == -19, "unsaved placement follows choice")
+placed.SetOffset(nil, 0)
+check(ns.db.char.placedEndcapY == 0 and select(2, placed.GetOffset()) == 0, "explicit zero overrides nonzero default")
+placed.SetScale(1.4); placed.SetOffset(2, nil); placed.SetKey("a")
+check(placed.GetScale() == 1.4 and placed.GetOffset() == 2 and select(2, placed.GetOffset()) == 0, "saved placement survives choice change")
+placed.Reset()
+check(placed.GetScale() == 1.8 and placed.GetOffset() == 0 and select(2, placed.GetOffset()) == -13, "reset restores selected motif defaults")
+placed.SetScale(1.8); placed.SetOffset(0, -13)
+check(ns.db.char.placedEndcapScale == nil and ns.db.char.placedEndcapX == nil and ns.db.char.placedEndcapY == nil, "setting defaults clears overrides")
+ns.db.char.placedEndcapScale = 1.3; ns.db.char.placedEndcapX = 0; ns.db.char.placedEndcapY = 7
+check(placed.GetScale() == 1.3 and select(2, placed.GetOffset()) == 7, "preexisting explicit values win")
+
 local module = { loadedActive = false, active = false, events = {} }
 module.IsActive = function(self) return self.active end
 module.RegisterEvent = function(self, event) self.events[event] = true end

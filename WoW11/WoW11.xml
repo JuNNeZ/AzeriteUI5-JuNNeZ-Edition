@@ -9,6 +9,7 @@
 	<Script file="UnitFrames\PlayerFrame.lua"/>
 	<Script file="UnitFrames\PlayerFrameAlternate.lua"/>
 	<Script file="UnitFrames\PlayerCastBarFrame.lua"/>
+	<Script file="UnitFrames\PlayerTotemsFrame.lua"/>
 	<Script file="UnitFrames\PetFrame.lua"/>
 	<Script file="UnitFrames\FocusFrame.lua"/>
 	<Script file="UnitFrames\TargetFrame.lua"/>

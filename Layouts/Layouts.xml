@@ -16,6 +16,7 @@
 	<Script file="Data\PetActionButton.lua"/>
 	<Script file="Data\PetUnitFrame.lua"/>
 	<Script file="Data\PlayerCastBar.lua"/>
+	<Script file="Data\PlayerTotems.lua"/>
 	<Script file="Data\PlayerClassPower.lua"/>
 	<Script file="Data\PlayerUnitFrame.lua"/>
 	<Script file="Data\PlayerUnitFrameAlternate.lua"/>

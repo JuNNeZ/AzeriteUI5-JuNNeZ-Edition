@@ -450,21 +450,11 @@ local ApplyPartyAuraLayout = function(frame)
 	end
 end
 
--- The glow's colour for a debuff the player can dispel, or nil. The game's own filter
--- decides what is dispellable (API.GetPlayerDispellableDebuff), and the colour may be
--- secret, so it only ever goes to SetVertexColor. The old per-spec table and secret
--- dispel names left the glow dark in combat (FixLog 2026-10-16).
-local GetDispellableDebuffColor = function(frame)
-	if (not frame or not frame.unit or not API.GetPlayerDispellableDebuff) then
-		return nil
-	end
-	local auraInstanceID, auraData = API.GetPlayerDispellableDebuff(frame.unit)
-	if (not auraInstanceID) then
-		return nil
-	end
-	return API.GetDebuffTypeColor(frame.unit, auraInstanceID, auraData)
-end
-
+-- The game's own filter decides what is dispellable (API.GetPlayerDispellableDebuff),
+-- and the colour may be secret, so it only ever goes to SetVertexColor. The old
+-- per-spec table and secret dispel names left the glow dark in combat (FixLog
+-- 2026-10-16); testing that colour with `if (r)` would raise on a secret (FixLog
+-- 2026-10-20), so API.UpdateDispelHighlight decides on the aura ID alone.
 local AuraHighlight_Update = function(self, event, unit, ...)
 	if (unit and unit ~= self.unit) then return end
 
@@ -479,13 +469,11 @@ local AuraHighlight_Update = function(self, event, unit, ...)
 		return
 	end
 
-	local r, g, b = GetDispellableDebuffColor(self)
-	if (r) then
-		element:SetVertexColor(r, g, b, .95)
-		element:Show()
-	else
+	if (not self.unit) then
 		element:Hide()
+		return
 	end
+	API.UpdateDispelHighlight(element, self.unit, .95)
 end
 
 local HasPartyDisplayText = function(value)

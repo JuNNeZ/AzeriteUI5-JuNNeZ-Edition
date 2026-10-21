@@ -1272,3 +1272,42 @@ L["Use Party Frame as Player Frame"] = true
 L["Show yourself as a small party frame: the party health bar with a thin power line and the cast overlay. Turns off Player and Player Alternate, and with them the mana orb, the power crystal and the auras by the player frame."] = true
 L["Show Portrait"] = true
 L["Show the round portrait above the health bar. Without it the frame is just the bar."] = true
+
+-- Forever player surnames and NPC name abbreviations
+L["Player names (Forever)"] = true
+L["Friendly player names"] = true
+L["Enemy player names"] = true
+L["Choose how player first names and surnames appear on nameplates."] = true
+L["First name only"] = true
+L["Full name"] = true
+L["Initial and surname"] = true
+L["Abbreviate NPC names"] = true
+L["Shorten NPC names to initials and the last word, for example Marshal Dughan becomes M. Dughan."] = true
+
+-- Common nameplate rules and context overrides
+L["Names"] = true
+L["Name rules"] = true
+L["Default rules"] = true
+L["City"] = true
+L["Current display"] = true
+L["Abbreviated name"] = true
+L["Use default rules"] = true
+L["Friendly NPC names"] = true
+L["Enemy NPC names"] = true
+L["Choose default name rules or override them for one kind of content. Each unit type can inherit the defaults."] = true
+L["Enemy castbars"] = true
+L["Show who the cast is aimed at"] = true
+L["The name of the cast's target under the spell name, in their class colour. The game decides which casts show a name."] = true
+L["Glow when a cast is aimed at you"] = true
+L["A red glow behind the castbar while that enemy is casting at you."] = true
+L["Glow on important casts"] = true
+L["An ember glow behind the castbar for casts the game marks as important, such as those that are deadly if not interrupted."] = true
+L["Mark quest units"] = true
+L["A quest mark beside the health bar on units that belong to one of your active quests. A raid marker takes its place when one is set."] = true
+L["Show the game's swing timer"] = true
+L["Turns on WoW Forever's own main hand, off hand and ranged swing timers, the same switch as Options -> Combat -> Enable Swing Timer. Place them in Edit Mode. Cannot be changed in combat."] = true
+L["Totems"] = true
+L["Shows your totems, statues, ghoul and other totem-slot summons with their time left. Move them with /lock."] = true
+L["Highlight the affected raid frame using the debuff type color while it has a debuff you can remove."] = true
+L["Show Pet Experience"] = true
+L["Shows your hunter pet's experience as a thin bar under the pet frame while it can still gain levels."] = true

@@ -183,7 +183,7 @@ local cases = {
 	{"nameplate Mythic+ detected", "Components/UnitFrames/NamePlates/Settings.lua",
 		"\t\treturn \"mythicplus\"\n", "\t\treturn \"dungeon\"\n", "nameplate_harness.lua"},
 	{"nameplate key events", "Components/UnitFrames/NamePlates/Module.lua",
-		"\t\t-- A key starting or ending turns a dungeon into Mythic+ and back without a loading screen.\n\t\tApplyNamePlateDriverSettings(self)",
+		"\t\t-- A key starting or ending turns a dungeon into Mythic+ and back without a loading screen.\n\t\tself:UpdateNameContext()\n\t\tApplyNamePlateDriverSettings(self)",
 		"", "nameplate_harness.lua"},
 	{"nameplate distance migration", "Components/UnitFrames/NamePlates/Module.lua",
 		"\t\t\t\tself.db.profile.contentSettings[contentType].maxDistance = distance\n", "", "nameplate_harness.lua"},

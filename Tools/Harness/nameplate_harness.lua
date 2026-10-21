@@ -366,6 +366,7 @@ function Region:EnableMouse() end
 function Region:SetClipsChildren(v) self.__clips = v end
 -- Textures and fontstrings
 function Region:SetTexture(t) count(self, "SetTexture"); self.__texture = t end
+function Region:SetAtlas(a) count(self, "SetAtlas"); self.__atlas = a end
 function Region:GetTexture() return self.__texture end
 function Region:SetTexCoord(...) count(self, "SetTexCoord"); self.__texcoord = { ... } end
 function Region:GetTexCoord() local t = self.__texcoord or { 0, 1, 0, 1 }; return t[1], t[2], t[3], t[4] end
@@ -663,6 +664,7 @@ end
 
 local style
 local ns_oUF = {
+	Tags = { Events = {}, Methods = {} },
 	RegisterStyle = function(_, name, fn) style = fn end,
 	SetActiveStyle = function() end,
 	RegisterInitCallback = function() end,
@@ -1135,6 +1137,31 @@ W.alias.softinteract = "nameplate6"
 Fire("PLAYER_SOFT_ENEMY_CHANGED")
 Fire("PLAYER_SOFT_INTERACT_CHANGED")
 Tick()
+check(P[6].Name.__shown and not P[6].TargetHighlight.__shown,
+	"a soft-targeted object shows its name and no bar-shaped outline (NodeSight report, FixLog 2026-10-21)")
+do
+	-- NodeSight's sparkles on, "Keep the game's icons" off: it hides Blizzard's object plates, ours stand down.
+	local function Retarget()
+		W.alias.softinteract = nil
+		Fire("PLAYER_SOFT_INTERACT_CHANGED")
+		W.alias.softinteract = "nameplate6"
+		Fire("PLAYER_SOFT_INTERACT_CHANGED")
+	end
+	_G.NodeSightDB = { herbs = false, ore = true, others = false, gameIcons = false }
+	Retarget()
+	check(not P[6].Name.__shown, "with NodeSight sparkles on, a soft-targeted object shows no name or icon")
+	W.alias.mouseover = "nameplate6"
+	Fire("UPDATE_MOUSEOVER_UNIT")
+	check(P[6].Name.__shown, "with NodeSight sparkles on, hovering an object still shows its name")
+	W.alias.mouseover = nil
+	Tick()
+	_G.NodeSightDB.gameIcons = true
+	Retarget()
+	check(P[6].Name.__shown, "with NodeSight's \"Keep the game's icons\" ticked, a soft-targeted object shows its name")
+	_G.NodeSightDB = nil
+	Retarget()
+	Tick()
+end
 Step("soft-target the ore vein")
 
 W.alias.focus = "nameplate3"
@@ -1333,7 +1360,9 @@ Step("enemy plates hidden and back while the cast ends")
 
 W.instance = { true, "party" }
 Fire("PLAYER_ENTERING_WORLD", false, false)
-check(Touched() == 0, "a zone change writes CVars and lays out no plate", Touched())
+local zoneLayouts = 0
+for _, methods in pairs(W.methodsByPlate) do zoneLayouts = zoneLayouts + (methods.UpdateAllElements or 0) end
+check(zoneLayouts == 0, "a zone change refreshes names without laying out plates", zoneLayouts)
 Step("zone into a dungeon")
 W.instance = { true, "arena" }
 Fire("PLAYER_ENTERING_WORLD", false, false)
@@ -2325,9 +2354,6 @@ local function first(f) return f.__points[1] end
 -- the state it depends on.
 check(P[6].isObjectPlate == true, "an ore vein is an object plate")
 check(P[10].isObjectPlate == true, "a listed decorative NPC is an object plate")
-check(P[4].isFriendlyAssistableNPC == true, "a listed trainer is a friendly NPC")
-check(P[8].isPRD == true, "the player's own plate is the personal resource display")
-check(P[9].canAttack == false and P[9].canAssist == false, "a plate whose hostility is secret is not assumed hostile or friendly")
 do
 	-- Dcryfm's Forever chest: no readable GUID, answering friendly and assistable. UnitIsGameObject decides.
 	local classify = ns.NamePlatesPrivate.NamePlate_Classify
@@ -2343,6 +2369,9 @@ do
 	check(not probe.isObjectPlate, "a secret UnitIsGameObject answer does not make a plate an object")
 	W.units.probeobj = nil
 end
+check(P[4].isFriendlyAssistableNPC == true, "a listed trainer is a friendly NPC")
+check(P[8].isPRD == true, "the player's own plate is the personal resource display")
+check(P[9].canAttack == false and P[9].canAssist == false, "a plate whose hostility is secret is not assumed hostile or friendly")
 check(P[6].Name.__shown and not P[6].Health.__shown, "a soft-targeted object shows its name and no health bar")
 check(P[6].SoftTargetFrame.__alpha == 1 and P[6].SoftTargetFrame.__ignore == true,
 	"a soft-targeted object keeps Blizzard's interact icon visible")

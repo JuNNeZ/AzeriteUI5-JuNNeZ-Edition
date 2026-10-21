@@ -10,8 +10,8 @@ ns.ThemeEffects = Effects
 
 -- In dropdown order.
 local THEMES = { "azerite", "legacy", "hunter", "paladin", "mage" }
-local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage", druid = "druid" }
-local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none", druid = "druid" }
+local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage", druid = "druid", warrior = "none" }
+local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none", druid = "druid", warrior = "none" }
 local CRYSTAL_EFFECTS = { "none", "paladin", "mage", "druid", "moonvein", "dreamsap", "wildheart" }
 local ORB_EFFECTS = { "none", "paladin", "hunter", "druid", "moonwell" }
 
@@ -38,6 +38,7 @@ Effects.GetThemes = function(self)
 	local list = {}
 	for _, key in ipairs(THEMES) do list[#list + 1] = key end
 	if (ns.DruidTheme) then list[#list + 1] = "druid" end
+	if (ns.WarriorTheme) then list[#list + 1] = "warrior" end
 	-- Legacy needs its module; it writes the same switch /go does (Core/LegacyHUD.lua).
 	if (not ns.LegacyHUD) then
 		for index, key in ipairs(list) do
@@ -47,7 +48,7 @@ Effects.GetThemes = function(self)
 	return list
 end
 
---- The theme in use: "azerite", "legacy", "hunter", "paladin", "mage" or "druid".
+--- The theme in use: AzeriteUI, Legacy or an installed class theme.
 Effects.GetTheme = function(self)
 	local char = Char()
 	if (not char or not MainLayout()) then return "azerite" end
@@ -56,6 +57,7 @@ Effects.GetTheme = function(self)
 	if (ns.MageTheme and ns.MageTheme:IsActive()) then return "mage" end
 	if (ns.PaladinTheme and ns.PaladinTheme:IsActive()) then return "paladin" end
 	if (ns.DruidTheme and ns.DruidTheme:IsActive()) then return "druid" end
+	if (ns.WarriorTheme and ns.WarriorTheme:IsActive()) then return "warrior" end
 	return "azerite"
 end
 
@@ -66,6 +68,7 @@ Effects.NeedsReload = function(self, theme)
 		if ((module.loadedActive or false) ~= (theme == key)) then return true end
 	end
 	if (ns.DruidTheme and (ns.DruidTheme.loadedActive or false) ~= (theme == "druid")) then return true end
+	if (ns.WarriorTheme and (ns.WarriorTheme.loadedActive or false) ~= (theme == "warrior")) then return true end
 	return false
 end
 
@@ -145,6 +148,7 @@ Effects.SetTheme = function(self, theme)
 	char.paladinPreview = theme == "paladin"
 	char.magePreview = theme == "mage"
 	char.druidPreview = theme == "druid"
+	char.warriorPreview = theme == "warrior"
 	if (self:NeedsReload(theme)) then
 		local reload = C_UI and C_UI.Reload or _G.ReloadUI
 		if (type(reload) == "function") then reload() end
@@ -189,7 +193,8 @@ local CAP_LEVEL_ABOVE_HEALTH = 4
 
 local CapsInFront = function()
 	return (ns.HunterTheme and ns.HunterTheme:IsActive()) or (ns.PaladinTheme and ns.PaladinTheme:IsActive())
-		or (ns.DruidTheme and ns.DruidTheme:IsActive()) or false
+		or (ns.DruidTheme and ns.DruidTheme:IsActive())
+		or (ns.WarriorTheme and ns.WarriorTheme:IsActive()) or false
 end
 
 local CapLevel = function(element)

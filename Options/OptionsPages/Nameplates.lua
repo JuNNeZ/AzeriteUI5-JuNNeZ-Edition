@@ -189,6 +189,27 @@ local IsStackingHidden = function(info)
 	return not (module and module.IsStackingSupported and module:IsStackingSupported())
 end
 
+local NameFormatOption = function(kind, label, order)
+	local player = kind == "friendlyPlayer" or kind == "enemyPlayer"
+	return {
+		name = label, order = order, type = "select", width = "full",
+		values = function()
+			local values = { current = L["Current display"], full = L["Full name"], initial = L["Abbreviated name"] }
+			if (ns.IsForever and player) then values.first = L["First name only"] end
+			if (getmodule():GetEditedNameContext() ~= "default") then values.inherit = L["Use default rules"] end
+			return values
+		end,
+		sorting = function()
+			local keys = { "current", "full", "initial" }
+			if (ns.IsForever and player) then table.insert(keys, 2, "first") end
+			if (getmodule():GetEditedNameContext() ~= "default") then table.insert(keys, 1, "inherit") end
+			return keys
+		end,
+		set = function(info, value) getmodule():SetNameFormat(kind, value) end,
+		get = function() return getmodule():GetNameFormat(kind) end
+	}
+end
+
 local GenerateOptions = function()
 	if (not getmodule()) then return end
 
@@ -237,6 +258,15 @@ local GenerateOptions = function()
 						name = L["Always show names"],
 						desc = L["Keep unit names visible even when the plate is not hovered or targeted."],
 						order = 1,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					-- Elements.lua, QuestMarker_Update; the module refreshes all plates on set.
+					showQuestMarker = {
+						name = L["Mark quest units"],
+						desc = L["A quest mark beside the health bar on units that belong to one of your active quests. A raid marker takes its place when one is set."],
+						order = 1.2,
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter
@@ -303,6 +333,31 @@ local GenerateOptions = function()
 						set = function(info, val) getmodule():SetTargetOnly("minions", val) end,
 						get = function(info) return getmodule():GetTargetOnly("minions") end
 					}
+				}
+			},
+			names = {
+				name = L["Names"],
+				order = 1.1,
+				type = "group", inline = true,
+				hidden = isdisabled,
+				args = {
+					nameRulesDescription = {
+						name = L["Choose default name rules or override them for one kind of content. Each unit type can inherit the defaults."],
+						order = 0, type = "description", width = "full"
+					},
+					editedNameContext = {
+						name = L["Name rules"], order = 1, type = "select", width = "full",
+						values = { default = L["Default rules"], city = L["City"], world = L["Open world"],
+							dungeon = L["Dungeon"], mythicplus = L["Mythic+"], raid = L["Raid"],
+							battleground = L["Battleground"], arena = L["Arena"] },
+						sorting = function() return getmodule():GetNameContexts() end,
+						set = function(info, value) getmodule():SetEditedNameContext(value) end,
+						get = function() return getmodule():GetEditedNameContext() end
+					},
+					friendlyPlayer = NameFormatOption("friendlyPlayer", L["Friendly player names"], 2),
+					enemyPlayer = NameFormatOption("enemyPlayer", L["Enemy player names"], 3),
+					friendlyNPC = NameFormatOption("friendlyNPC", L["Friendly NPC names"], 4),
+					enemyNPC = NameFormatOption("enemyNPC", L["Enemy NPC names"], 5)
 				}
 			},
 			-- The kinds of aura a plate shows: groups of the native aura display, see
@@ -684,6 +739,40 @@ local GenerateOptions = function()
 						name = L["In dungeons and raids the game draws friendly nameplates itself and addons cannot change them. Their size follows the game's own nameplate Size setting."],
 						order = 4,
 						type = "description", width = "full"
+					}
+				}
+			},
+			-- Castbar.lua, NamePlate_UpdateCastTargetVisuals.
+			enemyCastbars = {
+				name = L["Enemy castbars"],
+				order = 3.5,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					castTargetName = {
+						name = L["Show who the cast is aimed at"],
+						desc = L["The name of the cast's target under the spell name, in their class colour. The game decides which casts show a name."],
+						order = 1,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					castTargetedGlow = {
+						name = L["Glow when a cast is aimed at you"],
+						desc = L["A red glow behind the castbar while that enemy is casting at you."],
+						order = 2,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					castImportantGlow = {
+						name = L["Glow on important casts"],
+						desc = L["An ember glow behind the castbar for casts the game marks as important, such as those that are deadly if not interrupted."],
+						order = 3,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
 					}
 				}
 			},

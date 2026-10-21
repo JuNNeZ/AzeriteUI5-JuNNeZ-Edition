@@ -10,6 +10,33 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.31.0-JuNNeZ (2026-10-21) - Warrior Theme, Smarter Enemy Castbars, Totem Timers
+
+### Highlights
+
+- **Warrior theme (WIP).** Pick **Warrior** under `/az -> Themes`, or type `/azwarrior on`. It reskins the casings, orb, crystal, minimap ring and other frame art in Skyhold iron and Valarjar leather. The health bars get your choice of **Strom'kar**, **Warswords** or **Wrath Rivet** as an endcap, or **None**, and the cast bar gets a Valarjar head. Each has its own size, X/Y and reset controls. The health percent moves clear of the endcap.
+- **Enemy castbars tell you more.** Enemy nameplate castbars now show who the spell is aimed at, in that player's class colour. A red glow means the cast is aimed at you, and an ember glow marks casts the game flags as important. Each has its own switch under `/az -> Nameplates -> Enemy castbars`.
+- **Quest marks and name rules on nameplates.** Units that belong to one of your active quests get a quest mark beside the health bar (`/az -> Nameplates -> Visibility -> Mark quest units`). It makes way for a raid marker. The new **Names** section sets how friendly and enemy players and NPCs are named: as now, full, or abbreviated ("M. Dughan"). On WoW Forever you can also show players by first name only. Separate rules can apply in cities, the open world, dungeons, Mythic+, raids, battlegrounds and arenas.
+- **Totem, statue and ghoul timers on Retail.** Hiding Blizzard's player frame also took away its totem bar, so a Shaman's totems, a Monk's statue and other totem-slot summons had no icon or timer. A small row of icons with countdowns now sits above the cast bar. Move it with `/lock` ("Totems") and turn it off under `/az -> Unit Frames -> Totems`.
+- **Group frames and WoW Forever extras.** The 6-25 and 26-40 raid frames glow in the debuff's colour when you can dispel it, like party frames, with a switch for each raid size. On WoW Forever, raid frames show the master looter, hunters get a thin pet experience bar under the pet frame, and `/az -> Unit Frames -> Cast Bar -> Show the game's swing timer` turns on Forever's own swing timer.
+- **Works with NodeSight, and no outline on objects.** With NodeSight's sparkles turned on, the nearest gathering node got AzeriteUI's name, interact icon and a green outline the size of a health bar. AzeriteUI now stands back on its own, as NodeSight already makes Blizzard's plates do: the sparkles show, and hovering a node still shows its name. Tick NodeSight's "Keep the game's icons" to have the name and icon back. Object plates no longer draw the bar-shaped outline at all. Thanks to Dcryfm for the report.
+- **Fixes.** The game's self-cast and focus-cast modifier keys now work on AzeriteUI's action bars. Arena preparation frames no longer error on the hidden opponent spec in 12.1.5. Unit frames are no longer built twice at login. Hunter, Mage and Paladin endcaps have per-weapon default sizes and positions measured in game; **Reset endcap size and position** applies them and keeps your own nudges until you do.
+
+### Development
+
+- **The Warrior theme was produced and fitted to the same standard as the other class themes.** 77 textures cover thirty native casings, meter layers, three endcap paintings across four health-bar tiers, a cast head and threat halos. Each endcap fully covers the end of the casing without growing past an agreed size limit. Leather wraps and rivets that cross the fill stay in front of it. Later rounds repainted the caps, fitted the cast head to its socket at 100%, quieted the iron rails and replaced the minimap ring with one painting centred on its rim. Every step has numerical checks plus a separate visual review of complete bars at 1x and 2x. The health percent fix reads the anchor each frame recorded, because the game hides the text's own position while it shows a protected health value.
+- **Castbar, quest-mark and totem features were built around 12.1's hidden values.** A cast's target, whether you are its target, and whether the spell is important all reach AzeriteUI as values it is not allowed to read. They go straight to the text, colour and glow widgets untouched. The totem element follows upstream oUF 14, which hands Blizzard's own duration object to the timer, and an empty slot clears its countdown. Dedicated tests feed these features protected values that raise an error if compared, and cover the quest mark giving way to raid markers.
+- **A peer UI audit turned into fixes.** Comparing AzeriteUI with other UI packs found the missing self-cast attributes, the arena spec error, the double unit frame build, a tutorial acknowledgement error and a latent party dispel glow error with secret debuff colours. The party and raid glows now share one safe helper. It also brought library updates: ChatThrottleLib 32 ignores secret chat text, LibRangeCheck 38 uses the Classic tables on Forever, and LibActionButton refreshes bar state after pet summons, folded into one update per burst.
+- **Nameplate name rules** check the zone context only when you change zones, not on every name update, and use the game's city-map data with a fallback. On Forever, a player's surname comes from the game's own second name result.
+
+### Access and known limits
+
+- Offline tests only, apart from the Warrior health percent fix, which the maintainer confirmed in game. Everything else still needs Retail and WoW Forever checks after `/reload`: the Warrior art, castbar glows in dungeons, quest marks, the totem row, raid glows, the Forever additions and NodeSight together with AzeriteUI.
+- The Warrior theme is WIP. After switching to it, use **Reset endcap size and position** under `/az -> Themes` to get its default fit.
+- Totem icons do not take the mouse: no tooltip and no right-click to dismiss. The Forever swing timer bars are placed in Edit Mode, and their first position follows Blizzard's main bar. Turning NodeSight's sparkles on or off reaches AzeriteUI's plates at the next soft-target change.
+- Whether the game keeps a quest mark after an objective is complete, and whether Forever fills in cast targets, still needs checking in game.
+
+
 ## 5.30.1-JuNNeZ (2026-10-20) - No Health Bars on Gathering Nodes and Chests
 
 ### Highlights

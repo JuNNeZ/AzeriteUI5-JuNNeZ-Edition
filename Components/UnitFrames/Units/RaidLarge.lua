@@ -92,6 +92,7 @@ local CreateRaidModule = function(spec)
 		useSpecIcons = false,
 		showPriorityDebuff = true,
 		priorityDebuffScale = 100,
+		glowDispellableDebuffs = true, -- tint the frame by debuff type while you can dispel it
 		useClassColors = true,
 		useBlizzardHealthColors = false,
 		useClassColorOnMouseoverOnly = false,
@@ -736,11 +737,31 @@ local CreateRaidModule = function(spec)
 		end
 	end
 
+	-- The party glow (Party.lua AuraHighlight_Update) on 6-40 raid frames: the game's
+	-- dispel filter decides, and the possibly secret colour is never tested.
+	local DispelHighlight_Update = function(self)
+		local element = self.DispelHighlight
+		if (not element) then return end
+		local profile = RaidMod.db and RaidMod.db.profile or defaults.profile
+		if (profile.glowDispellableDebuffs == false or not self.unit) then
+			element:Hide()
+			return
+		end
+		ns.API.UpdateDispelHighlight(element, self.unit, .95)
+	end
+
 	local UnitFrame_PostUpdate = function(self)
 		TargetHighlight_Update(self)
+		DispelHighlight_Update(self)
 	end
 
 	local UnitFrame_OnEvent = function(self, event, unit, ...)
+		if (event == "UNIT_AURA") then
+			if (unit == self.unit) then
+				DispelHighlight_Update(self)
+			end
+			return
+		end
 		UnitFrame_PostUpdate(self)
 	end
 
@@ -1029,6 +1050,15 @@ local CreateRaidModule = function(spec)
 
 		self.TargetHighlight = targetHighlight
 
+		-- Dispel glow, the same art one sublevel below the target outline.
+		local dispelHighlight = healthOverlay:CreateTexture(nil, "BACKGROUND", nil, -3)
+		dispelHighlight:SetPoint(unpack(db.TargetHighlightPosition))
+		dispelHighlight:SetSize(unpack(db.TargetHighlightSize))
+		dispelHighlight:SetTexture(db.TargetHighlightTexture)
+		dispelHighlight:Hide()
+
+		self.DispelHighlight = dispelHighlight
+
 		-- Unit Name
 		--------------------------------------------
 		local name = overlay:CreateFontString(nil, "OVERLAY", nil, 1)
@@ -1079,6 +1109,7 @@ local CreateRaidModule = function(spec)
 		-- Register events to handle additional texture updates.
 		self:RegisterEvent("PLAYER_ENTERING_WORLD", UnitFrame_OnEvent, true)
 		self:RegisterEvent("PLAYER_TARGET_CHANGED", UnitFrame_OnEvent, true)
+		self:RegisterEvent("UNIT_AURA", UnitFrame_OnEvent)
 
 	end
 
@@ -1501,6 +1532,7 @@ local CreateRaidModule = function(spec)
 				frame:SetAlpha(1)
 			end
 			frame:UpdateAllElements("RefreshUnit")
+			DispelHighlight_Update(frame)
 		end
 	end
 
@@ -1510,6 +1542,9 @@ local CreateRaidModule = function(spec)
 	end
 
 	RaidMod.CreateUnitFrames = function(self)
+		-- The WoW11 start-up builds the frame and then calls Enable, whose OnEnable
+		-- builds it again: spawn once, or a second, unanchored copy keeps handling events.
+		if (self.frame) then return end
 
 		local name = spec.headerName
 

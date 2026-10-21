@@ -49,7 +49,9 @@ BlizzTutorials.DisableHelpTip = function(self)
 		local pool = HelpTip.framePool
 		if (not pool or not pool.EnumerateActive) then return end
 		for frame in pool:EnumerateActive() do
-			if (frame.Acknowledge) then
+			-- A tip that is closing has already cleared its info, and Acknowledge
+			-- reads info.cvar (HelpTip.lua HandleAcknowledge). ElvUI guards the same way.
+			if (frame.info and frame.Acknowledge) then
 				frame:Acknowledge()
 			end
 		end

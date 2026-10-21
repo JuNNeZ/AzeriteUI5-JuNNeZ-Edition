@@ -41,6 +41,29 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.31.0-JuNNeZ",
+		items = {
+			{
+				text = "Warrior theme (WIP): Skyhold iron, Valarjar leather and three weapon endcaps.",
+				page = "Themes"
+			},
+			{
+				text = "Enemy castbars show who a cast is aimed at, and glow for casts at you and important ones.",
+				page = L["Nameplates"],
+				section = L["Enemy castbars"]
+			},
+			{
+				text = "Quest marks on nameplates, and new rules for how names are shown.",
+				page = L["Nameplates"],
+				section = L["Names"]
+			},
+			{
+				text = "Raid frames glow for debuffs you can dispel; Retail adds totem and statue timers above the cast bar.",
+				page = L["Group Frames"]
+			}
+		}
+	},
+	{
 		version = "5.30.0-JuNNeZ",
 		items = {
 			{

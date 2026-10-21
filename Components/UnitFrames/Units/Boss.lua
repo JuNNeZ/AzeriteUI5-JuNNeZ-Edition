@@ -483,11 +483,9 @@ local style = function(self, unit)
 	-- Health Percentage
 	--------------------------------------------
 	local healthPerc = healthValue:GetParent():CreateFontString(nil, "OVERLAY", nil, 1)
-	if (db.HealthPercentagePosition) then
-		healthPerc:SetPoint(unpack(db.HealthPercentagePosition))
-	else
-		healthPerc:SetPoint("LEFT", healthValue, "RIGHT", 18, 0)
-	end
+	-- Themes move the text from this anchor; reading it back is secret.
+	healthPerc.LayoutPoint = db.HealthPercentagePosition or { "LEFT", healthValue, "RIGHT", 18, 0 }
+	healthPerc:SetPoint(unpack(healthPerc.LayoutPoint))
 	healthPerc:SetFontObject(db.HealthPercentageFont or db.HealthValueFont)
 	local healthPercColor = db.HealthPercentageColor or db.HealthValueColor or { 1, 1, 1, 1 }
 	healthPerc:SetTextColor(healthPercColor[1], healthPercColor[2], healthPercColor[3], healthPercColor[4] or 1)
@@ -610,6 +608,9 @@ GroupHeader.IsEnabled = function(self)
 end
 
 BossFrameMod.CreateUnitFrames = function(self)
+	-- The WoW11 start-up builds the frame and then calls Enable, whose OnEnable
+	-- builds it again: spawn once, or a second, unanchored copy keeps handling events.
+	if (self.frame) then return end
 
 	local unit, name = "boss", "Boss"
 

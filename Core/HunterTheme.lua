@@ -17,6 +17,14 @@ local endcapBars = setmetatable({}, { __mode = "k" })
 local endcapSettings = Engine:NewEndcapSettings({
 	prefix = "hunter", choices = endcaps, default = "thasdorah",
 	defaultScale = 1.3,
+	-- Maintainer's live fit, 2026-10-18. Keep the existing paintings.
+	placements = {
+		thasdorah = { scale = 1.80, y = -13 },
+		talonclaw = { scale = 1.65, y = -13 },
+		titanstrike = { scale = 1.70, y = -19 },
+		thoridal = { scale = 1.70, y = -14 },
+		raeshalare = { scale = 1.70, y = -14 }
+	},
 	refresh = function() Theme:RefreshEndcaps() end
 })
 endcapSettings.Install(Theme)

@@ -107,6 +107,19 @@ ns.RegisterConfig("NamePlates", {
 	CastBarNameFont = GetFont(12, true),
 	CastBarNameColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .5 },
 
+	-- Who the cast is aimed at, under the spell name, in the target's class colour.
+	CastBarTargetOffsetY = -1,
+	CastBarTargetFont = GetFont(11, true),
+	CastBarTargetColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .85 },
+
+	-- Glows behind the castbar: an important cast, and a cast aimed at you.
+	-- Same art as the threat glow, a little larger than the bar.
+	CastBarGlowPosition = { "CENTER", 0, 0 },
+	CastBarGlowSize = { 98, 28 },
+	CastBarGlowTexture = GetMedia("nameplate_glow"),
+	CastBarImportantGlowColor = { 251/255, 120/255, 29/255, 1 },
+	CastBarTargetedGlowColor = { 1, 64/255, 64/255, 1 },
+
 	-- PRD Power Bar
 	-----------------------------------------
 	PowerBarPosition = { "TOP", 0, -20 },
@@ -161,6 +174,12 @@ ns.RegisterConfig("NamePlates", {
 	RaidTargetPosition = { "RIGHT", "LEFT", -6, 0 },
 	RaidTargetNameOnlyOffsetY = 4, -- above the name, on a friendly name-only plate
 	RaidTargetTexture = GetMedia("raid_target_icons"),
+
+	-- Quest Marker: where the raid marker goes, which it gives way to.
+	-----------------------------------------
+	QuestMarkerPosition = { "RIGHT", "LEFT", -4, 0 },
+	QuestMarkerSize = { 20, 20 },
+	QuestMarkerAtlas = "questnormal",
 
 	-- Target Highlight
 	-----------------------------------------

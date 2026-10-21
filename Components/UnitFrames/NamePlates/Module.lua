@@ -74,6 +74,7 @@ local IsFightingSomeoneElse = NP.IsFightingSomeoneElse
 local ApplyNamePlateAlpha = NP.ApplyNamePlateAlpha
 local CONTENT_TYPES = NP.CONTENT_TYPES
 local GetCurrentContentType = NP.GetCurrentContentType
+local ResolveNameContext = NP.ResolveNameContext
 local GetContentSetting = NP.GetContentSetting
 local UpdateExecuteMarker = NP.UpdateExecuteMarker
 
@@ -383,9 +384,14 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 		return self:OnCombatStart(event)
 	elseif (event == "UPDATE_MOUSEOVER_UNIT") then
 		return UpdateMouseOver()
+	elseif (event == "ZONE_CHANGED" or event == "ZONE_CHANGED_INDOORS" or event == "ZONE_CHANGED_NEW_AREA") then
+		return self:UpdateNameContext()
+	elseif (event == "QUEST_LOG_UPDATE") then
+		return self:ScheduleQuestMarkerRefresh()
 	end
 	if (event == "PLAYER_ENTERING_WORLD") then
 		local isInitialLogin, isReloadingUi = ...
+		self:UpdateNameContext()
 		ApplyFriendlyNameOnlyCVars()
 		ApplyNamePlateDriverSettings(self)
 		-- The zone decides only the alpha CVars, which the driver has just written. A real zone change
@@ -396,6 +402,7 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 		end
 	elseif (event == "CHALLENGE_MODE_START" or event == "CHALLENGE_MODE_RESET" or event == "CHALLENGE_MODE_COMPLETED") then
 		-- A key starting or ending turns a dungeon into Mythic+ and back without a loading screen.
+		self:UpdateNameContext()
 		ApplyNamePlateDriverSettings(self)
 	elseif (event == "UI_SCALE_CHANGED") then
 		ApplyNamePlateDriverSettings(self)
@@ -436,6 +443,32 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 				self.HideBlizzardNamePlateVisual(unit)
 			end
 		end
+	end
+end
+
+-- The quest log fires in bursts (every objective tick, accept, turn-in); one pass over the
+-- active plates on the next frame covers each burst. Only the quest marks are touched.
+NamePlatesMod.ScheduleQuestMarkerRefresh = function(self)
+	if (self.questMarkerRefreshPending or not self.db or not self.db.profile.showQuestMarker) then
+		return
+	end
+	self.questMarkerRefreshPending = true
+	C_Timer.After(0, function()
+		self.questMarkerRefreshPending = nil
+		local update = NP.QuestMarker_Update
+		for plate in next, ns.ActiveNamePlates do
+			update(plate)
+		end
+	end)
+end
+
+-- Only the names change when crossing a city boundary; do not relayout bars or write CVars.
+NamePlatesMod.UpdateNameContext = function(self)
+	local context = ResolveNameContext()
+	if (context == self.nameContext) then return end
+	self.nameContext = context
+	for plate in next, ns.ActiveNamePlates do
+		if (not plate.isPRD and not plate.isObjectPlate and plate.Name and plate.Name.UpdateTag) then plate.Name:UpdateTag() end
 	end
 end
 
@@ -545,6 +578,7 @@ NamePlatesMod.OnInitialize = function(self)
 end
 
 NamePlatesMod.OnEnable = function(self)
+	self.nameContext = ResolveNameContext()
 	if (ns.NameplateInterruptDB and ns.NameplateInterruptDB.SeedFromPlater) then
 		ns.NameplateInterruptDB.SeedFromPlater()
 	end
@@ -562,6 +596,9 @@ NamePlatesMod.OnEnable = function(self)
 	ApplyNamePlateDriverSettings(self)
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
+	self:RegisterEvent("ZONE_CHANGED", "OnEvent")
+	self:RegisterEvent("ZONE_CHANGED_INDOORS", "OnEvent")
+	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnEvent")
 	self:RegisterEvent("PLAYER_TARGET_CHANGED", "OnEvent")
@@ -581,6 +618,9 @@ NamePlatesMod.OnEnable = function(self)
 	self:UpdateCombatFilterTimer()
 	self:UpdateExecuteTimer()
 	self:RegisterEvent("NAME_PLATE_UNIT_ADDED", "OnEvent")
+	-- Quest marks (Elements.lua, QuestMarker_Update). QUEST_LOG_UPDATE follows every objective,
+	-- accept and turn-in, so the unit-filtered UNIT_QUEST_LOG_CHANGED would only add duplicates.
+	self:RegisterEvent("QUEST_LOG_UPDATE", "OnEvent")
 
 	-- A spec, talent or spell change can move the execute threshold; only the markers follow it.
 	if (ns.API.RegisterExecuteThresholdCallback and not self.executeThresholdCallback) then

@@ -359,7 +359,8 @@ local TargetHighlight_Update = function(self, event, unit, ...)
 	if (unit and unit ~= self.unit) then return end
 
 	local element = self.TargetHighlight
-	if (ShouldUseFriendlyPlayerNameOnly(self)) then
+	-- Object plates have no bar for the outline to frame (Blizzard draws neither on objects).
+	if (self.isObjectPlate or ShouldUseFriendlyPlayerNameOnly(self)) then
 		return element:Hide()
 	end
 
@@ -579,6 +580,36 @@ local Auras_PostUpdate = function(element, unit)
 	NamePlate_PostUpdatePositions(element.__owner)
 end
 
+-- Quest Marker
+--------------------------------------------
+-- A mark beside the health bar on units that belong to one of your active quests, from
+-- C_QuestLog.UnitIsRelatedToActiveQuest (both clients; not documented as secret, and a
+-- secret answer hides the mark). It sits where the raid marker goes and steps aside
+-- while a raid marker is shown. Updated when a plate is set up, when its raid marker
+-- changes, and when the quest log changes (Module.lua).
+local QuestMarker_Update = function(self)
+	local marker = self and self.QuestMarker
+	if (not marker) then
+		return
+	end
+
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local unit = self.unit
+	local show = profile and profile.showQuestMarker
+		and type(unit) == "string" and unit:match("^nameplate%d+$")
+		and not self.isPRD and not self.isObjectPlate and not self.nameplateShowsWidgetsOnly
+		and not ShouldUseFriendlyPlayerNameOnly(self)
+		and not (self.RaidTargetIndicator and self.RaidTargetIndicator:IsShown())
+		and C_QuestLog and type(C_QuestLog.UnitIsRelatedToActiveQuest) == "function"
+
+	if (show) then
+		local ok, related = API.TryCall(C_QuestLog.UnitIsRelatedToActiveQuest, unit)
+		show = ok and IsSafeTrue(related)
+	end
+
+	marker:SetShown(show and true or false)
+end
+
 NP.UpdateExecuteMarker = UpdateExecuteMarker
 NP.Health_PostUpdate = Health_PostUpdate
 NP.Health_UpdateColor = Health_UpdateColor
@@ -591,3 +622,4 @@ NP.NamePlate_PostUpdatePositions = NamePlate_PostUpdatePositions
 NP.NamePlate_ApplyHealthValueLayout = NamePlate_ApplyHealthValueLayout
 NP.NamePlate_PostUpdateHoverElements = NamePlate_PostUpdateHoverElements
 NP.Auras_PostUpdate = Auras_PostUpdate
+NP.QuestMarker_Update = QuestMarker_Update
