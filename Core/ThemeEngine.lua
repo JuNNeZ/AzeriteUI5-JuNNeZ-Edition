@@ -76,8 +76,68 @@ Engine.PlaceAlignedHealthEndcap = function(self, art, backdrop, dip, flip, ratio
 	return true
 end
 
+local LeftEdge = function(position, width, ownerWidth)
+	local point, x = position[1], position[2] or 0
+	if (point:find("LEFT", 1, true)) then return x end
+	if (point:find("RIGHT", 1, true)) then return ownerWidth + x - width end
+	return (ownerWidth - width)/2 + x
+end
+-- The percent text holds a secret health value, which makes its read-back
+-- anchor secret too. Unit files record the anchor they set as LayoutPoint.
+local PercentPoint = function(percent)
+	local layout = percent.LayoutPoint
+	if (type(layout) == "table" and type(layout[1]) == "string") then
+		if (type(layout[2]) == "number") then
+			return { layout[1], percent:GetParent(), layout[1], layout[2], layout[3] }
+		end
+		return { layout[1], layout[2] or percent:GetParent(), layout[3] or layout[1], layout[4], layout[5] }
+	end
+	local point, relativeTo, relativePoint, x, y = percent:GetPoint()
+	if (issecretvalue and (issecretvalue(point) or issecretvalue(relativeTo)
+		or issecretvalue(relativePoint) or issecretvalue(x) or issecretvalue(y))) then return {} end
+	return { point, relativeTo, relativePoint, x, y }
+end
+
+--- Keep the health percent clear of a measured cap. Each theme's StyleHealth
+--- sets bar.ThemeTextOwner/ThemeTextLayout (the frame and its layout). `edges` holds the cap
+--- texture's leftmost painted pixel (of 1024) per casing name, for the chosen
+--- cap; nil, or `enabled` false, puts the text back on its layout anchor.
+--- Centered critter labels and custom non-edge anchors keep their own layout.
+Engine.PlaceHealthPercent = function(self, bar, flip, enabled, dips, edges, scale, dx)
+	local percent, db, owner = bar.Percent, bar.ThemeTextLayout, bar.ThemeTextOwner
+	if (not percent or not db or not owner) then return end
+	if (bar.ThemePercent ~= percent) then
+		bar.ThemePercent = percent
+		bar.ThemePercentPoint = PercentPoint(percent)
+	end
+	local point = bar.ThemePercentPoint
+	if (not point[1]) then return end
+	local x = point[4] or 0
+	local assembly = bar.ThemeEndcapAssembly
+	local name = assembly and assembly.name:gsub("%-fitted$", "")
+	local edge, dip = edges and name and edges[name], dips and name and dips[name]
+	if (enabled and edge and dip and bar.Backdrop and point[1] == (flip and "LEFT" or "RIGHT")) then
+		local ratio = scale/1.3
+		local width = bar.Backdrop:GetWidth()
+		local capEdge = dip[1] + ratio*(edge/1024 - dip[1])
+		local ownerWidth = owner:GetWidth()
+		local casingLeft = LeftEdge(db.HealthBackdropPosition, width, ownerWidth)
+		local healthLeft = LeftEdge(db.HealthBarPosition, bar:GetWidth(), ownerWidth)
+		if (flip) then
+			local capRight = casingLeft + (1-capEdge)*width - dx
+			x = x + math.max(0, capRight + 8 - (healthLeft + x))
+		else
+			local capLeft = casingLeft + capEdge*width + dx
+			x = x + math.min(0, capLeft - 8 - (healthLeft + bar:GetWidth() + x))
+		end
+	end
+	percent:ClearAllPoints()
+	percent:SetPoint(point[1], point[2], point[3], x, point[5] or 0)
+end
+
 --- Draw a measured full-casing cap while retaining the complete original dip.
-Engine.StyleAlignedHealthEndcap = function(self, frame, art, bar, path, key, dips, flip, scale, dx, dy)
+--- `edges` ([key][casing] = leftmost painted pixel) keeps the health percent clear.
+Engine.StyleAlignedHealthEndcap = function(self, frame, art, bar, path, key, dips, flip, scale, dx, dy, edges)
 	local assembly = bar.ThemeEndcapAssembly
 	local name = assembly and assembly.name:gsub("%-fitted$", "")
 	local dip = name and dips[name]
@@ -86,6 +146,7 @@ Engine.StyleAlignedHealthEndcap = function(self, frame, art, bar, path, key, dip
 	frame.EndcapShown = enabled
 	frame:SetShown(enabled)
 	if (frame.Threat) then frame.Threat:SetShown(enabled and frame.ThreatSource:IsShown()) end
+	self:PlaceHealthPercent(bar, flip, enabled, dips, edges and edges[key], scale, dx)
 	if (not enabled) then return end
 	local texture = "ornament-"..key.."-"..name
 	frame.EndcapTextureName = texture
@@ -202,7 +263,6 @@ for hook, stock in pairs(STOCK) do
 		if (stock) then return stock(...) end
 	end
 end
-
 --[[ Shared parts ]]--
 
 --- Path to a file in Assets\<folder>, as a function of the file's name.

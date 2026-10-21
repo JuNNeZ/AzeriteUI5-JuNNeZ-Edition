@@ -8,6 +8,14 @@ Engine:Register(Theme, 10)
 local endcaps = { thasdorah = true, talonclaw = true, titanstrike = true, thoridal = true, raeshalare = true, none = true }
 local healthDips = { hp_cap_case = {760.5/1024,187/256}, hp_mid_case = {767.5/1024,181/256},
 	hp_low_case = {767.5/1024,181/256}, hp_boss_case = {879.5/1024,188/256} }
+-- Leftmost painted pixel of each health ornament, so the percent text stays clear.
+local capTextEdges = {
+	thasdorah = { hp_cap_case = 715, hp_mid_case = 726, hp_low_case = 726, hp_boss_case = 834 },
+	talonclaw = { hp_cap_case = 710, hp_mid_case = 720, hp_low_case = 720, hp_boss_case = 830 },
+	titanstrike = { hp_cap_case = 709, hp_mid_case = 720, hp_low_case = 720, hp_boss_case = 829 },
+	thoridal = { hp_cap_case = 710, hp_mid_case = 720, hp_low_case = 720, hp_boss_case = 829 },
+	raeshalare = { hp_cap_case = 716, hp_mid_case = 726, hp_low_case = 726, hp_boss_case = 836 }
+}
 local path = Engine:MediaPath("Hunter")
 -- Every styled bar, so endcap changes apply without a reload.
 local endcapBars = setmetatable({}, { __mode = "k" })
@@ -157,7 +165,7 @@ local Endcap = function(bar, flip, cast)
 	if (not cast) then
 		local dx, dy = EndcapOffset()
 		Engine:StyleAlignedHealthEndcap(frame, frame.Tip, bar, path, compact and "none" or key,
-			healthDips, flip, EndcapScale(), dx, dy)
+			healthDips, flip, EndcapScale(), dx, dy, capTextEdges)
 		frame.Tip:SetAlpha(1)
 		return
 	end
@@ -208,6 +216,7 @@ end
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive()) then return end
 	local bar = owner.Health
+	bar.ThemeTextOwner, bar.ThemeTextLayout = owner, db
 	local compact = db.HealthBarTexture and db.HealthBarTexture:find("cast_bar",1,true)
 	bar.HunterCompact = compact and true or false
 	local critter = bar:GetWidth()<bar:GetHeight()*2

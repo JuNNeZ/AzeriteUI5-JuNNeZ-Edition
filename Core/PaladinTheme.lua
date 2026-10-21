@@ -26,6 +26,12 @@ local castBars = setmetatable({}, { __mode = "k" })
 local castSlot = Engine.OrnamentSlots.CastHead
 local healthDips = { hp_cap_case = {757.5/1024,187/256}, hp_mid_case = {757.5/1024,190/256},
 	hp_low_case = {757.5/1024,190/256}, hp_boss_case = {876/1024,185/256} }
+-- Leftmost painted pixel of each health ornament, so the percent text stays clear.
+local capTextEdges = {
+	ashbringer = { hp_cap_case = 711, hp_mid_case = 715, hp_low_case = 715, hp_boss_case = 830 },
+	silverhand = { hp_cap_case = 700, hp_mid_case = 704, hp_low_case = 704, hp_boss_case = 820 },
+	argent = { hp_cap_case = 710, hp_mid_case = 712, hp_low_case = 712, hp_boss_case = 829 }
+}
 local healthSettings = Engine:NewEndcapSettings({ prefix = "paladin", choices = { ashbringer = true, silverhand = true, argent = true, none = true },
 	default = "ashbringer", clearDefault = true, defaultScale = 1.3,
 	-- Maintainer's screenshot (Ashbringer) and SavedVariables (Silver Hand).
@@ -112,12 +118,13 @@ local HealthEndcap = function(bar, flip)
 	healthBars[bar] = flip and true or false
 	local dx, dy = healthSettings.GetOffset()
 	Engine:StyleAlignedHealthEndcap(frame, frame.Art, bar, path, healthSettings.GetKey(),
-		healthDips, flip, healthSettings.GetScale(), dx, dy)
+		healthDips, flip, healthSettings.GetScale(), dx, dy, capTextEdges)
 end
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive() or not owner or not owner.Health or not db) then return end
 	local bar = owner.Health
-	bar.PaladinCaseName = type(db.HealthBackdropTexture) == "string"
+	bar.ThemeTextOwner, bar.ThemeTextLayout = owner, db
+	bar.PaladinCaseName =type(db.HealthBackdropTexture) == "string"
 		and db.HealthBackdropTexture:match("[\\/]Paladin[\\/]([^\\/]+)%.tga$")
 	bar.PaladinPortraitCaseName = type(db.PortraitBorderTexture) == "string"
 		and db.PortraitBorderTexture:match("[\\/]Paladin[\\/]([^\\/]+)%.tga$")
@@ -131,6 +138,7 @@ Theme.StyleHealth = function(self, owner, db, flip)
 		or bar:GetWidth() < bar:GetHeight()*2
 	if (compact) then
 		healthBars[bar] = nil
+		Engine:PlaceHealthPercent(bar, flip, false)
 		if (bar.PaladinOrnaments) then
 			bar.PaladinOrnaments:SetShown(false)
 			if (bar.PaladinOrnaments.Threat) then bar.PaladinOrnaments.Threat:Hide() end

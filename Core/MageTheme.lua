@@ -36,6 +36,14 @@ local SCHOOL_ENDCAPS = { arcane = "aluneth", fire = "felomelorn", frost = "ebonc
 local endcaps = { school = true, aluneth = true, felomelorn = true, ebonchill = true, atiesh = true, dragonwrath = true, none = true }
 local healthDips = { hp_cap_case = {753.5/1024,187/256}, hp_mid_case = {761/1024,181/256},
 	hp_low_case = {761/1024,181/256}, hp_boss_case = {872.5/1024,188/256} }
+-- Leftmost painted pixel of each staff, so the health percent text stays clear.
+local capTextEdges = {
+	aluneth = { hp_cap_case = 704, hp_mid_case = 715, hp_low_case = 715, hp_boss_case = 824 },
+	atiesh = { hp_cap_case = 702, hp_mid_case = 713, hp_low_case = 713, hp_boss_case = 822 },
+	dragonwrath = { hp_cap_case = 700, hp_mid_case = 712, hp_low_case = 712, hp_boss_case = 820 },
+	ebonchill = { hp_cap_case = 694, hp_mid_case = 706, hp_low_case = 706, hp_boss_case = 814 },
+	felomelorn = { hp_cap_case = 697, hp_mid_case = 708, hp_low_case = 708, hp_boss_case = 818 }
+}
 
 local Char = function() return ns.db and ns.db.char end
 
@@ -137,12 +145,13 @@ local Endcap = function(bar, flip)
 	local dx, dy = EndcapOffset()
 	local key = art and art:match("^ornament%-(.-)%-fitted$") or "none"
 	Engine:StyleAlignedHealthEndcap(frame, frame.Art, bar, path, compact and "none" or key,
-		healthDips, flip, EndcapScale(), dx, dy)
+		healthDips, flip, EndcapScale(), dx, dy, capTextEdges)
 end
 
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive()) then return end
 	local bar = owner.Health
+	bar.ThemeTextOwner, bar.ThemeTextLayout = owner, db
 	local name = db and type(db.HealthBackdropTexture) == "string" and
 		(db.HealthBackdropTexture:match("[\\/]Mage[\\/]([^\\/]+)%.tga$") or Engine.AssetName(db.HealthBackdropTexture))
 	local longCase = name == "hp_cap_case" or name == "hp_mid_case" or name == "hp_low_case" or name == "hp_boss_case"
@@ -168,6 +177,7 @@ Theme.StyleHealth = function(self, owner, db, flip)
 	-- Compact bars share the cast casing and have no endcap slot.
 	if (db and type(db.HealthBarTexture) == "string" and db.HealthBarTexture:find("cast_bar", 1, true)) then
 		if (bar.MageOrnaments) then bar.MageOrnaments:Hide() end
+		Engine:PlaceHealthPercent(bar, flip, false)
 		if (bar.MageOrnaments) then
 			bar.MageOrnaments.EndcapShown = false
 			if (bar.MageOrnaments.Threat) then bar.MageOrnaments.Threat:Hide() end

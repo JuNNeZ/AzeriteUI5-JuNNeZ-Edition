@@ -92,76 +92,22 @@ local capTextEdges = {
 	warswords = { hp_cap_case = 705, hp_mid_case = 718, hp_low_case = 718, hp_boss_case = 824 },
 	wrath = { hp_cap_case = 705, hp_mid_case = 719, hp_low_case = 719, hp_boss_case = 824 }
 }
-local LeftEdge = function(position, width, ownerWidth)
-	local point, x = position[1], position[2] or 0
-	if (point:find("LEFT", 1, true)) then return x end
-	if (point:find("RIGHT", 1, true)) then return ownerWidth + x - width end
-	return (ownerWidth - width)/2 + x
-end
--- The percent text holds a secret health value, which makes its read-back
--- anchor secret too. Unit files record the anchor they set as LayoutPoint.
-local PercentPoint = function(percent)
-	local layout = percent.LayoutPoint
-	if (type(layout) == "table" and type(layout[1]) == "string") then
-		if (type(layout[2]) == "number") then
-			return { layout[1], percent:GetParent(), layout[1], layout[2], layout[3] }
-		end
-		return { layout[1], layout[2] or percent:GetParent(), layout[3] or layout[1], layout[4], layout[5] }
-	end
-	local point, relativeTo, relativePoint, x, y = percent:GetPoint()
-	if (issecretvalue and (issecretvalue(point) or issecretvalue(relativeTo)
-		or issecretvalue(relativePoint) or issecretvalue(x) or issecretvalue(y))) then return {} end
-	return { point, relativeTo, relativePoint, x, y }
-end
-local HealthPercent = function(bar, flip, enabled)
-	local percent, db, owner = bar.Percent, bar.WarriorTextLayout, bar.WarriorTextOwner
-	if (not percent or not db or not owner) then return end
-	if (bar.WarriorPercent ~= percent) then
-		bar.WarriorPercent = percent
-		bar.WarriorPercentPoint = PercentPoint(percent)
-	end
-	local point = bar.WarriorPercentPoint
-	if (not point[1]) then return end
-	local x = point[4] or 0
-	local name = bar.ThemeEndcapAssembly and bar.ThemeEndcapAssembly.name
-	local edges = capTextEdges[healthSettings.GetKey()]
-	-- Centered critter labels and custom non-edge anchors keep their own layout.
-	if (enabled and edges and edges[name] and point[1] == (flip and "LEFT" or "RIGHT")) then
-		local ratio = healthSettings.GetScale()/1.3
-		local dx = healthSettings.GetOffset()
-		local width = bar.Backdrop:GetWidth()
-		local edge = dips[name][1] + ratio*(edges[name]/1024 - dips[name][1])
-		local ownerWidth = owner:GetWidth()
-		local casingLeft = LeftEdge(db.HealthBackdropPosition, width, ownerWidth)
-		local healthLeft = LeftEdge(db.HealthBarPosition, bar:GetWidth(), ownerWidth)
-		if (flip) then
-			local capRight = casingLeft + (1-edge)*width - dx
-			x = x + math.max(0, capRight + 8 - (healthLeft + x))
-		else
-			local capLeft = casingLeft + edge*width + dx
-			x = x + math.min(0, capLeft - 8 - (healthLeft + bar:GetWidth() + x))
-		end
-	end
-	percent:ClearAllPoints()
-	percent:SetPoint(point[1], point[2], point[3], x, point[5] or 0)
-end
 local HealthEndcap = function(bar, flip)
 	local frame = ArtFrame(bar, "WarriorEndcap", 4)
 	local dx, dy = healthSettings.GetOffset()
 	Engine:StyleAlignedHealthEndcap(frame, frame.Art, bar, path, healthSettings.GetKey(), dips,
-		flip, healthSettings.GetScale(), dx, dy)
-	HealthPercent(bar, flip, frame.EndcapShown)
+		flip, healthSettings.GetScale(), dx, dy, capTextEdges)
 end
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive() or not owner or not owner.Health or not db) then return end
 	local bar, name = owner.Health, AssetName(db.HealthBackdropTexture)
-	bar.WarriorTextOwner, bar.WarriorTextLayout = owner, db
+	bar.ThemeTextOwner, bar.ThemeTextLayout = owner, db
 	Rails(bar, name, flip, bar.Backdrop, "WarriorRails")
 	local longCase = dips[name] and bar.Backdrop and bar:GetWidth() >= bar:GetHeight()*2
 	bar.ThemeEndcapAssembly = longCase and { name = name, path = path, back = bar.Backdrop,
 		front = bar.WarriorRails.Art, glow = name.."-glow", threat = bar.WarriorThreat, bareThreat = path(name.."-glow") } or nil
 	if (not longCase) then
-		HealthPercent(bar, flip, false)
+		Engine:PlaceHealthPercent(bar, flip, false)
 		healthBars[bar] = nil
 		if (bar.WarriorEndcap) then
 			bar.WarriorEndcap.EndcapShown = false

@@ -10,6 +10,21 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.31.1-JuNNeZ (2026-10-21) - Health Percent Clear of Every Endcap
+
+### Highlights
+
+- **The health percent is readable in every class theme.** In the Hunter, Mage, Paladin and Druid themes, the player and target health percentage sat under the weapon, staff, relic or antler endcap. It now moves just clear of the cap, as it already did in the Warrior theme, and follows the cap when you change its size or position under `/az -> Themes`. With the endcap set to None it returns to its usual place. Screen resolution made no difference: 1080p and 4K were equally affected.
+
+### Development
+
+- **One shared placement for every theme.** The Warrior theme's text placement moved into the theme engine, and each theme now gives it the measured left edge of every endcap painting for each health-bar size. Tests check the gap on player and target at each theme's default endcap size, and that None and small bars put the text back. Each new check was confirmed to fail without the fix.
+
+### Access and known limits
+
+- Checked offline only; not yet confirmed in game.
+
+
 ## 5.31.0-JuNNeZ (2026-10-21) - Warrior Theme, Smarter Enemy Castbars, Totem Timers
 
 ### Highlights

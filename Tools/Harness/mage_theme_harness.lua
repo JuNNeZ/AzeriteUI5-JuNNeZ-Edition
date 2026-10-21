@@ -304,4 +304,27 @@ ns.db.char.hunterPreview = false
 combat = true; local r = reloads; theme:Command("off"); check(reloads == r and theme:IsActive(), "combat refuses")
 combat = false; theme:Command("off"); check(not ns.db.char.magePreview and reloads == r + 1, "off reloads out of the Mage theme")
 
+-- The percentage clears the painted staff at its live default size (1.7), both directions.
+ns.db.char.magePreview = true
+for _,flip in ipairs({false,true}) do
+	local side=flip and "LEFT" or "RIGHT"
+	local textOwner=widget();textOwner.width=flip and 550 or 560
+	local textBar=widget(textOwner);textOwner.Health=textBar;textBar.Backdrop=widget(textBar);textBar.Backdrop:SetSize(716,188)
+	textBar.Percent=widget(textBar);textBar.Percent.LayoutPoint={side,flip and 27 or -27,4}
+	local textDB={HealthBackdropTexture=theme:ResolveOwnMedia("hp_cap_case"),HealthBarTexture="hp_cap_bar.tga",
+		HealthBarPosition=flip and {"TOPRIGHT",-140,-66} or {"BOTTOMLEFT",148,27},
+		HealthBackdropPosition=flip and {"TOPRIGHT",23.5,8.5} or {"BOTTOMLEFT",-17,-48}}
+	theme:SetEndcap("aluneth");theme:ResetEndcapPlacement();ns.ThemeEngine:StyleHealth(textOwner,textDB,flip)
+	local p=textBar.Percent.points[side]
+	local dip=753.5/1024
+	local frac=dip+1.7/1.3*(704/1024-dip)
+	local capEdge=(flip and -142.5 or -17)+(flip and 1-frac or frac)*716
+	check(p and p[1]==textBar and p[4]==4,"Mage percent keeps its anchor frame and baseline")
+	check(math.abs(math.abs((flip and 25 or 148+385)+p[3]-capEdge)-8)<1e-8,"Mage percent sits eight units clear of the staff")
+	theme:SetEndcap("none")
+	check(textBar.Percent.points[side][3]==(flip and 27 or -27),"Mage None restores the layout percent position")
+	theme:SetEndcap("aluneth");textDB.HealthBarTexture="cast_bar.tga";ns.ThemeEngine:StyleHealth(textOwner,textDB,flip)
+	check(textBar.Percent.points[side][3]==(flip and 27 or -27),"Mage compact bar restores the layout percent position")
+end
+theme:SetEndcap("school"); ns.db.char.magePreview = nil
 print("Mage theme: "..checks.." checks passed (offline only)")

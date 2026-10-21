@@ -20,6 +20,12 @@ local healthBars = setmetatable({}, { __mode = "k" })
 local castBars = setmetatable({}, { __mode = "k" })
 local healthDips = { hp_cap_case = {750/1024,187/256}, hp_mid_case = {758.5/1024,181/256},
 	hp_low_case = {758.5/1024,181/256}, hp_boss_case = {869/1024,188/256} }
+-- Leftmost painted pixel of each health ornament, so the percent text stays clear.
+local capTextEdges = {
+	antler = { hp_cap_case = 700, hp_mid_case = 713, hp_low_case = 713, hp_boss_case = 820 },
+	bear = { hp_cap_case = 688, hp_mid_case = 700, hp_low_case = 700, hp_boss_case = 808 },
+	owl = { hp_cap_case = 698, hp_mid_case = 710, hp_low_case = 710, hp_boss_case = 818 }
+}
 local healthSettings = Engine:NewEndcapSettings({ prefix = "druid", choices = { antler = true, bear = true, owl = true, none = true },
 	default = "antler", clearDefault = true,
 	defaultScale = 1.3,
@@ -87,8 +93,10 @@ local HealthEndcap = function(bar, flip)
 	frame.EndcapShown = enabled
 	frame:SetShown(enabled)
 	if (frame.Threat) then frame.Threat:SetShown(enabled and frame.ThreatSource:IsShown()) end
-	if (not enabled) then return end
 	local dx, dy = healthSettings.GetOffset()
+	Engine:PlaceHealthPercent(bar, flip, enabled, healthDips, capTextEdges[healthSettings.GetKey()],
+		healthSettings.GetScale(), dx)
+	if (not enabled) then return end
 	local art = "ornament-"..healthSettings.GetKey().."-"..name
 	frame.Art:SetTexture(path(art))
 	Engine:PlaceAlignedHealthEndcap(frame.Art, bar.Backdrop, healthDips[name], flip,
@@ -101,12 +109,14 @@ end
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive() or not owner.Health or not db) then return end
 	local bar = owner.Health
+	bar.ThemeTextOwner, bar.ThemeTextLayout = owner, db
 	Rails(bar, db.HealthBackdropTexture, flip, bar.Backdrop)
 	local compact = type(db.HealthBarTexture) ~= "string" or db.HealthBarTexture:find("cast_bar", 1, true)
 		or bar:GetWidth() < bar:GetHeight()*2
 	bar.ThemeEndcapAssembly = nil
 	if (compact) then
 		healthBars[bar] = nil
+		Engine:PlaceHealthPercent(bar, flip, false)
 		if (bar.DruidEndcap) then bar.DruidEndcap:Hide() end
 		if (bar.DruidEndcap) then bar.DruidEndcap.EndcapShown = false end
 		if (bar.DruidEndcap and bar.DruidEndcap.Threat) then bar.DruidEndcap.Threat:Hide() end

@@ -143,6 +143,29 @@ T:ResetEndcapPlacement()
 db.HealthBarTexture="cast_bar"; T:StyleHealth(owner,db,false)
 check(not hp.DruidEndcap.shown,"compact transition hides old endcap")
 check(not hp.DruidEndcap.Threat.shown,"compact transition hides old endcap threat")
+-- The percentage clears the painted cap body in both directions (shared with Warrior).
+for _,flip in ipairs({false,true}) do
+	local textOwner=widget();textOwner.width=flip and 550 or 560
+	local textBar=widget(textOwner);textOwner.Health=textBar;textBar.width,textBar.height=385,40
+	textBar.Backdrop=widget(textOwner);textBar.Backdrop.width,textBar.Backdrop.height=716,188
+	textBar.Percent=widget(textBar);textBar.Percent.LayoutPoint=flip and {"LEFT",27,4} or {"RIGHT",-27,4}
+	local textDB={HealthBackdropTexture="x\\Druid\\hp_cap_case.tga",HealthBarTexture="hp_cap_bar",
+		HealthBarPosition=flip and {"TOPRIGHT",-140,-66} or {"BOTTOMLEFT",148,27},
+		HealthBackdropPosition=flip and {"TOPRIGHT",23.5,8.5} or {"BOTTOMLEFT",-17,-48}}
+	T:SetEndcap("antler");T:StyleHealth(textOwner,textDB,flip)
+	local textPoint=textBar.Percent.points[1]
+	local healthLeft,casingLeft=flip and 25 or 148,flip and -142.5 or -17
+	local capEdge=casingLeft+(flip and 1-700/1024 or 700/1024)*716
+	check(math.abs(math.abs(healthLeft+(flip and 0 or 385)+textPoint[4]-capEdge)-8)<1e-8,"Druid percent sits eight units clear of the antler")
+	check(textPoint[2]==textBar and textPoint[5]==4,"Druid percent keeps its anchor frame and baseline")
+	T:SetEndcap("bear")
+	check((flip and textBar.Percent.points[1][4]>textPoint[4]) or (not flip and textBar.Percent.points[1][4]<textPoint[4]),"wider bear cap reserves more room")
+	T:SetEndcap("none")
+	check(textBar.Percent.points[1][4]==(flip and 27 or -27),"Druid None restores the layout percent position")
+	T:SetEndcap("antler");textDB.HealthBarTexture="cast_bar";T:StyleHealth(textOwner,textDB,flip)
+	check(textBar.Percent.points[1][4]==(flip and 27 or -27),"Druid compact bar restores the layout percent position")
+end
+T:SetEndcap("antler")
 E:SetTheme("azerite"); T.loadedActive=false
 E:StyleCrystal(power,"native-crystal",nil,"case")
 check(not power.DruidRootFront.shown and power.Case.alpha==1,"leaving Druid restores normal casing")
