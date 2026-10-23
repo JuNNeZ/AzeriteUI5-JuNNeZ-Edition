@@ -41,6 +41,7 @@ local FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = NP.FRIENDLY_NAME_ONLY_NAME_OFFSET_Y
 local NAMEPLATE_CASTBAR_BASELINE_OFFSET = NP.NAMEPLATE_CASTBAR_BASELINE_OFFSET
 local IsSecretValue = NP.IsSecretValue
 local IsSafeUnitToken = NP.IsSafeUnitToken
+local GetCVarBoolIfSupported = NP.GetCVarBoolIfSupported
 local ShouldUseFriendlyPlayerNameOnly = NP.ShouldUseFriendlyPlayerNameOnly
 local GetValidatedProfileScale = NP.GetValidatedProfileScale
 local IsHostileNamePlate = NP.IsHostileNamePlate
@@ -366,6 +367,26 @@ local ShouldShowObjectPlateOverlay = function(self)
 	return (self.isSoftTarget and not IsNodeSightHidingObjectPlates()) and true or false
 end
 
+-- Whether a shown object plate draws its name, as Blizzard's does (CompactUnitFrame.lua ShouldShowName with
+-- displayNameByPlayerNameRules): the game's Names settings (UnitShouldDisplayName), "always show names"
+-- (nameplateForceShowUnitName, which Forever does not apply to game objects), or the target with
+-- UnitNameFocused. Objects named only with AzeriteUI on (Luciful, FixLog 2026-10-23). A missing or secret
+-- answer shows the name, as before.
+local ShouldShowObjectPlateName = function(self)
+	local unit = self and self.unit
+	if (type(UnitShouldDisplayName) ~= "function" or not IsSafeUnitToken(unit)) then
+		return true
+	end
+	local shouldDisplay = UnitShouldDisplayName(unit)
+	if (IsSecretValue(shouldDisplay) or shouldDisplay == true) then
+		return true
+	end
+	if (ns.IsRetail and GetCVarBoolIfSupported("nameplateForceShowUnitName", false)) then
+		return true
+	end
+	return (self.isTarget and GetCVarBoolIfSupported("UnitNameFocused", false)) and true or false
+end
+
 local ApplyObjectPlateVisualState = function(self)
 	if (not self) then
 		return
@@ -375,7 +396,7 @@ local ApplyObjectPlateVisualState = function(self)
 	self.__AzeriteUI_AlphaHidden = nil
 	ApplyNamePlateAlpha(self)
 	if (self.Name) then
-		self.Name:Show()
+		self.Name:SetShown(ShouldShowObjectPlateName(self))
 	end
 	if (self.Health) then
 		self.Health:SetAlpha(0)
@@ -685,6 +706,7 @@ NP.IsFightingSomeoneElse = IsFightingSomeoneElse
 NP.IsFightingYou = IsFightingYou
 NP.ApplyNamePlateAlpha = ApplyNamePlateAlpha
 NP.ShouldShowObjectPlateOverlay = ShouldShowObjectPlateOverlay
+NP.ShouldShowObjectPlateName = ShouldShowObjectPlateName
 NP.ApplyObjectPlateVisualState = ApplyObjectPlateVisualState
 NP.ApplyHiddenNamePlateVisualState = ApplyHiddenNamePlateVisualState
 NP.SetNamePlateAurasShown = SetNamePlateAurasShown

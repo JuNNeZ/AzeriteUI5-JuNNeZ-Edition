@@ -150,6 +150,8 @@ function UnitCreatureType(u) return field(u, "creatureType") end
 function UnitEffectiveLevel(u) return field(u, "level") or 80 end
 function UnitIsDead(u) return field(u, "dead") or false end
 function UnitIsGameObject(u) return field(u, "gameObject") or false end
+-- The game's Names settings; a unit without the field is named, as with the game's defaults.
+function UnitShouldDisplayName(u) local v = field(u, "displayName"); if (v == nil) then return true end return v end
 function UnitIsConnected(u) local v = field(u, "connected"); if (v == nil) then return true end return v end
 function UnitIsTapDenied(u) return field(u, "tapDenied") or false end
 function UnitClass(u)
@@ -1161,6 +1163,22 @@ do
 	Retarget()
 	check(P[6].Name.__shown, "with NodeSight's \"Keep the game's icons\" ticked, a soft-targeted object shows its name")
 	_G.NodeSightDB = nil
+	Retarget()
+	Tick()
+	-- The game's Names settings name no objects: Blizzard's plate shows none, ours neither (Luciful, FixLog 2026-10-23).
+	W.units.nameplate6.displayName = false
+	Retarget()
+	check(not P[6].Name.__shown, "with the game naming no objects, a soft-targeted object shows no name")
+	W.alias.mouseover = "nameplate6"
+	Fire("UPDATE_MOUSEOVER_UNIT")
+	check(not P[6].Name.__shown, "with the game naming no objects, hovering an object shows no name")
+	W.alias.mouseover = nil
+	Tick()
+	W.cvars.nameplateForceShowUnitName = "1"
+	Retarget()
+	check(P[6].Name.__shown, "Retail's \"always show names\" names a soft-targeted object, as Blizzard's plate does")
+	W.cvars.nameplateForceShowUnitName = nil
+	W.units.nameplate6.displayName = nil
 	Retarget()
 	Tick()
 	-- Forever answers UnitExists false for a game object, and UnitIsVisible may be false too: oUF then

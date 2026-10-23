@@ -10,6 +10,21 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.31.4-JuNNeZ (2026-10-23) - Object Names Follow the Game's Settings
+
+### Highlights
+
+- **Interactable objects are only named when the game would name them.** Nodes, chests and other objects showed their name on hover or when you were close enough to interact, even when the game's own name settings hide object names, so the names appeared only with AzeriteUI enabled. Names now follow the same game settings as the default nameplates, including "always show names" on Retail. The interact icon still shows. Thanks to Luciful for the report.
+
+### Development
+
+- **Object plates now ask the game the same question Blizzard's plates do** before drawing a name, on both Retail and WoW Forever. If the game gives no answer, the name still shows as before. The nameplate tests cover hovering and interacting with an object when the game names no objects, and Retail's "always show names".
+
+### Access and known limits
+
+- Checked offline only. In-game confirmation is still owed on Retail and WoW Forever, including with NodeSight installed.
+
+
 ## 5.31.3-JuNNeZ (2026-10-23) - Clearer Light Options and Missing Icons
 
 ### Highlights

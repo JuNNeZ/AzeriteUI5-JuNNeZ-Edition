@@ -48,6 +48,7 @@ local SetNameColorForUnit = NP.SetNameColorForUnit
 local GetTargetLikeNameLift = NP.GetTargetLikeNameLift
 local AnchorStandardNamePlateName = NP.AnchorStandardNamePlateName
 local ShouldShowObjectPlateOverlay = NP.ShouldShowObjectPlateOverlay
+local ShouldShowObjectPlateName = NP.ShouldShowObjectPlateName
 local GetNamePlateExecuteThreshold = NP.GetNamePlateExecuteThreshold
 local GetExecuteMarkerStyle = NP.GetExecuteMarkerStyle
 local GetExecuteLeadCurve = NP.GetExecuteLeadCurve
@@ -509,7 +510,7 @@ local NamePlate_PostUpdateHoverElements = function(self)
 				end
 			end
 			if (self.Name) then
-				self.Name:Show()
+				self.Name:SetShown(ShouldShowObjectPlateName(self))
 			end
 		elseif (self.Name) then
 			self.Name:Hide()
