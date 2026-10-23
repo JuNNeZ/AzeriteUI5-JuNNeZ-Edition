@@ -1204,7 +1204,10 @@ Panel.UpdateActiveSection = function(self)
 		row.edge:SetShown(row.active)
 		row.highlight:SetShown(row.active)
 		row.text:SetTextColor(unpack(row.active and accent or Kit.TextNormal))
-		if (row.icon) then row.icon:SetVertexColor(unpack(row.active and accent or Kit.TextDisabled)) end
+		if (row.icon) then
+			local idle = Kit.GetTheme() == "light" and Kit.TextNormal or Kit.TextDisabled
+			row.icon:SetVertexColor(unpack(row.active and accent or idle))
+		end
 	end
 
 	-- The rail is on the far left and long pages are read on the right, so the

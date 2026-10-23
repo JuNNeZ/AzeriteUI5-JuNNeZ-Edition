@@ -2259,6 +2259,28 @@ do
 		end
 	end
 	check(#missing == 0, "every section icon names a real cell", table.concat(missing, ", "))
+	-- Exercise the same texture instances through repeated theme switches.
+	-- This catches an atlas that only changes when a page is reopened.
+	do
+		local theme = Kit.GetTheme()
+		local page, section = {}, {}
+		for _, texture in ipairs({ page, section }) do
+			function texture:SetTexture(file) self.file = file end
+			function texture:SetTexCoord(...) self.coords = { ... } end
+		end
+		Look.SetPageIcon(page, "Themes")
+		Look.SetSectionIcon(section, "mageTheme")
+		local coords = section.coords
+		for _, key in ipairs({ "light", "dark", "light", "azerite" }) do
+			Kit.SetTheme(key)
+			local suffix = key == "light" and "-light" or ""
+			check(page.file == Kit.GetMedia("options-pages" .. suffix)
+				and section.file == Kit.GetMedia("options-sections" .. suffix),
+				"existing page and section icons use the " .. key .. " atlas")
+			check(section.coords == coords, "theme switch preserves icon coordinates: " .. key)
+		end
+		Kit.SetTheme(theme)
+	end
 	check(Look.SectionIconFor("bar7") == "actionbar" and Look.SectionIconFor("someNewThing") == nil,
 		"numbered bars share a motif, and an unknown section gets none")
 	if (Panel.rounded and Look.PageIconsAvailable) then

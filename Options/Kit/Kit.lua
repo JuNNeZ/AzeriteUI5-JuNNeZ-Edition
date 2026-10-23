@@ -29,7 +29,7 @@ local unpack = unpack
 
 local tostring = tostring
 
--- GLOBALS: CreateFrame, UnitClass
+-- GLOBALS: CreateFrame, CreateFont, UnitClass
 -- GLOBALS: StaticPopupDialogs, StaticPopup_Show
 
 local API = ns.API
@@ -367,10 +367,10 @@ local themes = {
 	-- lights only the surfaces inside it: light content, dark frame.
 	light = {
 		order = 3,
-		accent = { .42, .31, .04 },
-		text = { .12, .12, .14 },
+		accent = { .36, .25, .03 },
+		text = { .09, .09, .11 },
 		bright = { 0, 0, 0 },
-		muted = { .40, .40, .43 },
+		muted = { .30, .30, .33 },
 		warning = { .60, .10, .08 },
 		border = { .26, .25, .23, .95 },
 		window = { .88, .88, .90, .97 },
@@ -394,6 +394,19 @@ local themeLabels = {
 }
 
 local currentTheme = "azerite"
+
+-- Owned font copies keep live theme changes local to options. FontStrings
+-- already using one update in place; no HUD font object is ever modified.
+local optionFonts, fontCount = {}, 0
+local StyleFont = function(font, source)
+	font:CopyFontObject(source)
+	if (currentTheme == "light") then
+		local file, height = source:GetFont()
+		font:SetFont(file, height, "")
+		font:SetShadowColor(0, 0, 0, 0)
+		font:SetShadowOffset(0, 0)
+	end
+end
 
 -- How solid the panel is drawn.
 --
@@ -435,6 +448,8 @@ Kit.SetTheme = function(key)
 		key, theme = "azerite", themes.azerite
 	end
 	currentTheme = key
+	for source, font in pairs(optionFonts) do StyleFont(font, source) end
+	if (Kit.Look and Kit.Look.RefreshIcons) then Kit.Look.RefreshIcons() end
 
 	local base = theme.inherit and themes[theme.inherit] or theme
 	local accent = theme.classAccent and GetClassAccent() or (theme.accent or base.accent)
@@ -643,14 +658,10 @@ end
 --------------------------------------------------------------------------
 -- Fonts
 --------------------------------------------------------------------------
--- FontStyles.xml defines plain, un-outlined faces at sizes 11 and 12 only.
--- Everything from 13 upwards exists in the outlined set alone.
---
--- This matters because Assets.lua's font cache answers *any* size with a bare
--- CreateFont() object when the named global is missing (Core/API/Assets.lua:42-58).
--- That object has no font file, and setting text on it throws
--- "FontString:SetText(): Font not set" rather than failing quietly. So every
--- request the kit makes is checked, and stepped down to a face that exists.
+-- Assets.lua's font cache can answer an undefined size with an unconfigured
+-- CreateFont() object (Core/API/Assets.lua). Check the source before copying it,
+-- and fall back to a configured face rather than surfacing "Font not set".
+-- Copies retain the source's locale-specific file and resolved height.
 local FontExists = function(font)
 	if (not font or not font.GetFont) then return false end
 
@@ -658,7 +669,7 @@ local FontExists = function(font)
 	return (ok and file) and true or false
 end
 
-Kit.GetFont = function(size, outline, type)
+local ResolveFont = function(size, outline, type)
 	local font = GetFont(size, outline, type)
 	if (FontExists(font)) then return font end
 
@@ -678,6 +689,21 @@ Kit.GetFont = function(size, outline, type)
 	end
 
 	return _G.GameFontNormal
+end
+
+Kit.GetFont = function(size, outline, fontType)
+	local source = ResolveFont(size, outline, fontType)
+	if (not FontExists(source)) then return source end
+	local file, height = source:GetFont()
+	if (type(file) ~= "string" or type(height) ~= "number") then return source end
+	local font = optionFonts[source]
+	if (not font) then
+		fontCount = fontCount + 1
+		font = CreateFont(Addon .. "OptionsFont" .. fontCount)
+		StyleFont(font, source)
+		optionFonts[source] = font
+	end
+	return font
 end
 
 Kit.GetMedia = GetMedia

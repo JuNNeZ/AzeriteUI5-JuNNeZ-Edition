@@ -78,6 +78,8 @@ ns.MageTheme = setmetatable({
 	GetEndcapChoices = function() return { school = true, aluneth = true, felomelorn = true, ebonchill = true, atiesh = true, dragonwrath = true, none = true } end
 }, moduleStubMT)
 ns.MageTheme.GetCastEndcapChoices = function() return { atiesh = true, none = true } end
+ns.WarriorTheme = setmetatable({ loadedActive = false, IsActive = function() return false end }, moduleStubMT)
+ns.WarriorTheme.GetCastEndcapChoices = function() return { valarjar = true, none = true } end
 local druidStrengthWrite
 ns.DruidTheme = setmetatable({
  loadedActive = false, IsActive = function() return false end,
@@ -139,6 +141,39 @@ local options = Options:GetOptionsObject()
 if not options then
 	print("\nNo options table was produced.")
 	os.exit(1)
+end
+
+-- All real navigation destinations, including hidden theme sections and the
+-- Settings tab, need a motif. Checking the source tables catches gaps that a
+-- single visible page (or the currently selected theme) cannot expose.
+load("Options/Kit/Look.lua")
+load("Options/Kit/PanelOptions.lua")
+do
+	local Look = Kit.Look
+	local destinations = 0
+	local function icons(group, path, depth)
+		for key, entry in pairs(group.args or {}) do
+			if type(entry) == "table" and (entry.type == "group" or entry.type == "header") then
+				local here = path .. "/" .. key
+				if depth == 0 then
+					assert(Look.PageIconFor(key) ~= "generic", "missing page icon: " .. here)
+				else
+					local texture = {}
+					function texture:SetTexture(file) self.file = file end
+					function texture:SetTexCoord(left, right, top, bottom)
+						assert(left >= 0 and left < right and right <= 1
+							and top >= 0 and top < bottom and bottom <= 1, "icon outside atlas: " .. here)
+					end
+					assert(Look.SetSectionIcon(texture, key), "missing section icon: " .. here)
+				end
+				destinations = destinations + 1
+				if entry.type == "group" then icons(entry, here, depth + 1) end
+			end
+		end
+	end
+	icons(options, "Options", 0)
+	icons(Kit.PanelOptions.GetTable(), "Settings", 0)
+	print("Icon coverage: " .. destinations .. " real page, group and header destinations passed")
 end
 
 -- Inspect the actual option closures, including profiles imported from Retail.

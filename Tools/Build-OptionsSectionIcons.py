@@ -4,7 +4,7 @@ and on each section's heading.
 python Tools/Build-OptionsSectionIcons.py [--preview path.png]
 
 The same 32-unit grid, rim, shadow, greyscale and checks as the page icons
-(Tools/Build-OptionsPageIcons.py, imported, not copied), on a second 8x4 sheet:
+(Tools/Build-OptionsPageIcons.py, imported, not copied), on a second 8x8 sheet:
 Assets/options-sections.tga. Which section gets which cell is decided in
 Options/Kit/Look.lua (SECTION_ICONS); several sections share a motif (all eight
 action bars, the three raid sizes), so the sheet stays small and the icons mean
@@ -28,7 +28,8 @@ KEYS = (
     "player target tot focus pet boss arena castbar "
     "classpower heal party raid corners actionbar stance proc "
     "assist bell eye eyeslash resize droplet funnel gate "
-    "friendly gear wrench horseshoe clock key"
+    "friendly gear wrench horseshoe clock key "
+    "hunter paladin mage druid warrior crystal orb leaf moon totem smooth text sort anchor export import shield"
 ).split()
 
 ALMOND = [(5.5, 16), (10, 11), (16, 9), (22, 11), (26.5, 16), (22, 21), (16, 23), (10, 21)]
@@ -170,6 +171,71 @@ def motif(key):
         g.line([(16, 16), (26, 16)], width=3)
         g.line([(22, 16), (22, 21)], width=2.5)
         g.line([(26, 16), (26, 20)], width=2.5)
+    elif key == "hunter":
+        g.arc((2, 5, 26, 27), -80, 80, width=2.5)
+        g.line([(16, 5), (16, 27)], width=2)
+        g.line([(5, 16), (27, 16)], width=2.5)
+        g.line([(23, 12), (27, 16), (23, 20)], width=2)
+    elif key == "paladin":
+        g.line([(16, 12), (16, 26)], width=3.5)
+        g.box((7, 8, 25, 16), radius=1.5, fill=True)
+        for x, y in [(8, 6), (16, 5), (24, 6)]:
+            g.line([(x, y), (x, y + 2)], width=1.8)
+    elif key == "mage":
+        g.line([(10, 26), (20, 10)], width=3)
+        g.polygon([(21, 5), (26, 10), (21, 15), (16, 10)], width=2)
+    elif key == "druid":
+        g.polygon([(6, 24), (7, 14), (15, 7), (27, 5), (25, 17), (18, 25), (9, 26)], width=2.5)
+        g.line([(5, 26.5), (22, 11)], width=2.5)
+        g.line([(12, 21), (12, 15)], width=2)
+    elif key == "warrior":
+        g.line([(7, 26), (23, 7)], width=3.5)
+        g.polygon([(13, 6), (23, 7), (28, 15), (22, 21), (18, 13), (10, 11)], fill=True)
+    elif key == "crystal":
+        g.polygon([(16, 5), (25, 11), (23, 22), (16, 26.5), (9, 22), (7, 11)], width=2.5)
+        g.line([(16, 6), (12, 13), (16, 26), (20, 13), (16, 6)], width=1.8)
+        g.line([(8, 12), (24, 12)], width=1.8)
+    elif key == "orb":
+        g.circle((5, 5, 27, 27), width=2.5)
+        g.arc((10, 9, 22, 23), 185, 270, width=2.5)
+        g.line([(8, 22), (24, 22)], width=2)
+    elif key == "leaf":
+        g.polygon([(7, 22), (9, 12), (26, 5), (24, 21), (16, 26)], fill=True)
+        g.d.line([(8*S, 25*S), (22*S, 11*S)], fill=0, width=2*S)
+    elif key == "moon":
+        g.circle((5, 4, 27, 28), fill=True)
+        g.d.ellipse((13*S, 2*S, 31*S, 23*S), fill=0)
+    elif key == "totem":
+        g.box((12, 5, 20, 27), radius=1, width=2.5)
+        g.polygon([(5, 9), (27, 9), (23, 15), (9, 15)], width=2)
+        g.line([(8, 27), (24, 27)], width=2.5)
+        g.circle((14.5, 18, 17.5, 21), fill=True)
+    elif key == "smooth":
+        g.line([(5, 6), (5, 26), (27, 26)], width=2)
+        g.line([(8, 22), (11, 21), (14, 17), (18, 11), (21, 9), (26, 8)], width=2.5)
+    elif key == "text":
+        for y, end in [(7, 26), (16, 22), (25, 18)]:
+            g.line([(6, y), (end, y)], width=2.5)
+    elif key == "sort":
+        for y, end in [(7, 18), (16, 22), (25, 26)]:
+            g.line([(12, y), (end, y)], width=2.5)
+        g.line([(7, 6), (7, 25)], width=2)
+        g.line([(4.5, 22), (7, 25), (9.5, 22)], width=2)
+    elif key == "anchor":
+        g.circle((13, 4, 19, 10), width=2)
+        g.line([(16, 10), (16, 27)], width=2.5)
+        g.line([(10, 14), (22, 14)], width=2)
+        g.arc((6, 9, 26, 27), 0, 180, width=2.5)
+        g.line([(6, 18), (6, 22)], width=2)
+        g.line([(26, 18), (26, 22)], width=2)
+    elif key in ("export", "import"):
+        g.line([(7, 19), (7, 27), (25, 27), (25, 19)], width=2.5)
+        g.line([(16, 5), (16, 21)], width=2.5)
+        tip, back = (5, 10) if key == "export" else (21, 16)
+        g.line([(11, back), (16, tip), (21, back)], width=2.5)
+    elif key == "shield":
+        g.polygon([(16, 5), (26, 8), (24, 21), (16, 26.5), (8, 21), (6, 8)], width=2.5)
+        g.line([(16, 9), (16, 21)], width=2.5)
     else:
         raise ValueError(key)
     fitted = Image.new("L", g.mask.size)
@@ -183,15 +249,22 @@ def main():
     args = parser.parse_args()
     # validate() and preview() read KEYS and motif from their own module.
     pages.KEYS, pages.motif = KEYS, motif
-    atlas = Image.new("RGBA", (512, 256))
+    atlas = Image.new("RGBA", (512, 512))
+    light_atlas = Image.new("RGBA", atlas.size)
     for i, key in enumerate(KEYS):
-        atlas.paste(render(motif(key)), (i % 8 * 64, i // 8 * 64))
+        mask = motif(key)
+        atlas.paste(render(mask), (i % 8 * 64, i // 8 * 64))
+        light_atlas.paste(render(mask, light=True), (i % 8 * 64, i // 8 * 64))
     path = HERE.parent / "Assets" / "options-sections.tga"
     atlas.save(path, compression=None)
-    pages.validate(atlas, path)
+    pages.validate(atlas, path, rows=8)
     print("Wrote:", path)
+    light_path = HERE.parent / "Assets" / "options-sections-light.tga"
+    light_atlas.save(light_path, compression=None)
+    pages.validate(light_atlas, light_path, rows=8)
+    print("Wrote:", light_path)
     if args.preview:
-        pages.preview(atlas, args.preview)
+        pages.preview(atlas, args.preview, light_atlas)
 
 
 if __name__ == "__main__":

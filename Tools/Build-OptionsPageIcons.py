@@ -199,7 +199,12 @@ def motif(key):
     return fitted
 
 
-def render(mask):
+def render(mask, light=False):
+    if light:
+        # Light uses a clean, tintable silhouette. A black rim and blurred
+        # shadow collapse into the dark body when multiplied by its ink colour.
+        white = Image.new("L", mask.size, 255)
+        return Image.merge("RGBA", (white, white, white, mask)).resize((64, 64), Image.Resampling.LANCZOS)
     rim = mask.filter(ImageFilter.MaxFilter(2 * 10 + 1))  # 2.5px rim at 64
     shifted = Image.new("L", mask.size)
     shifted.paste(rim, (0, S))  # 2px down at 64, without wrapping
@@ -223,10 +228,11 @@ def render(mask):
     return out.resize((64, 64), Image.Resampling.LANCZOS)
 
 
-def validate(atlas, path):
-    assert atlas.size == (512, 256) and atlas.mode == "RGBA"
+def validate(atlas, path, rows=4):
+    assert atlas.size == (512, rows * 64) and atlas.mode == "RGBA"
     assert all(r == g == b for r, g, b, a in atlas.getdata()), "non-grey pixels"
-    for i in range(32):
+    assert len(KEYS) <= 8 * rows, "atlas capacity exceeded"
+    for i in range(8 * rows):
         cell = atlas.crop((i % 8 * 64, i // 8 * 64, i % 8 * 64 + 64, i // 8 * 64 + 64))
         alpha = cell.getchannel("A")
         if i >= len(KEYS):
@@ -241,14 +247,14 @@ def validate(atlas, path):
     assert header[2] == 2 and header[16] == 32 and header[17] & 15 == 8, "TGA must be uncompressed RGBA"
     with Image.open(path) as reopened:
         assert reopened.convert("RGBA").tobytes() == atlas.tobytes(), "TGA roundtrip"
-    print(f"PASS: 512x256 RGBA, uncompressed TGA, greyscale, {len(KEYS)} safe cells, {32 - len(KEYS)} transparent reserves, exact roundtrip")
+    print(f"PASS: 512x{rows * 64} RGBA, uncompressed TGA, greyscale, {len(KEYS)} safe cells, {8 * rows - len(KEYS)} transparent reserves, exact roundtrip")
 
 
-def preview(atlas, path):
+def preview(atlas, path, light_atlas=None):
     themes = [
         ("Azerite", (5, 5, 5), (196, 196, 196), (229, 178, 38)),
         ("Dark", (3, 3, 4), (199, 199, 204), (158, 189, 219)),
-        ("Light", (247, 247, 250), (31, 31, 36), (107, 79, 10)),
+        ("Light", (247, 247, 250), (23, 23, 28), (92, 64, 8)),
         ("Class / Mage", (5, 5, 5), (196, 196, 196), (63, 199, 235)),
     ]
     height = 88 + len(KEYS)*32 + 20
@@ -262,7 +268,8 @@ def preview(atlas, path):
         d.text((x0+18, 54), label, fill=ink)
         for i, key in enumerate(KEYS):
             y = 88+i*32
-            cell = atlas.crop((i%8*64, i//8*64, i%8*64+64, i//8*64+64))
+            source_atlas = light_atlas if t == 2 and light_atlas is not None else atlas
+            cell = source_atlas.crop((i%8*64, i//8*64, i%8*64+64, i//8*64+64))
             def tint(color, size):
                 r, g, b, a = cell.split()
                 return Image.merge("RGBA", (r.point(lambda v: round(v*color[0]/255)),
@@ -283,14 +290,21 @@ def main():
     parser.add_argument("--preview", type=Path)
     args = parser.parse_args()
     atlas = Image.new("RGBA", (512, 256))
+    light_atlas = Image.new("RGBA", atlas.size)
     for i, key in enumerate(KEYS):
-        atlas.paste(render(motif(key)), (i%8*64, i//8*64))
+        mask = motif(key)
+        atlas.paste(render(mask), (i%8*64, i//8*64))
+        light_atlas.paste(render(mask, light=True), (i%8*64, i//8*64))
     path = ROOT / "Assets" / "options-pages.tga"
     atlas.save(path, compression=None)
     validate(atlas, path)
     print("Wrote:", path)
+    light_path = ROOT / "Assets" / "options-pages-light.tga"
+    light_atlas.save(light_path, compression=None)
+    validate(light_atlas, light_path)
+    print("Wrote:", light_path)
     if args.preview:
-        preview(atlas, args.preview)
+        preview(atlas, args.preview, light_atlas)
 
 
 if __name__ == "__main__":

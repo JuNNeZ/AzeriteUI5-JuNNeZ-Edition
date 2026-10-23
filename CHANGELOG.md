@@ -10,6 +10,22 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.31.3-JuNNeZ (2026-10-23) - Clearer Light Options and Missing Icons
+
+### Highlights
+
+- **Light options are easier to read.** Under `/az -> Settings -> Appearance`, Light now uses clean text without the dark shadow or outline, sharper page and section icons, and stronger contrast for labels and help text. Changing themes updates fonts and icons in the open window. Text sizes, layout and your settings stay the same.
+- **The missing options icons are filled in.** Class themes and Lite+ effects, Player (Party Style), Totems, enemy castbars, Names and Smooth bars now have matching navigation icons. Header-based sections and the Settings tab also have their missing icons, using the same recolourable style as the rest of the window.
+
+### Development
+
+- **Light has its own rendering of the shared artwork.** The icon shapes are preserved, with the thick dark rim and blurred shadow removed for light backgrounds. Options use their own font copies, so the cleaner Light style never changes the HUD's fonts. Tests cover icon coverage on both clients and repeated theme switches on existing text and icons.
+
+### Access and known limits
+
+- Checked offline on Retail and WoW Forever option tables. In-game text, icon sharpness and theme switching still need confirmation after `/reload`, including at small and large Panel Scale settings.
+
+
 ## 5.31.2-JuNNeZ (2026-10-23) - Panel Scale on First Open, No Bars on Forever Objects
 
 ### Highlights

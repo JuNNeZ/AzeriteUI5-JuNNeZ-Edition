@@ -46,6 +46,18 @@ Kit.Look = Look
 
 local GetMedia = Kit.GetMedia
 
+-- Remember the sheet, not the current theme, so pooled and already visible
+-- icons switch instantly along with the text. Texcoords stay the same.
+local iconTextures = setmetatable({}, { __mode = "k" })
+local SetIconTexture = function(texture, sheet)
+	iconTextures[texture] = sheet
+	texture:SetTexture(GetMedia(sheet .. (Kit.GetTheme() == "light" and "-light" or "")))
+end
+
+Look.RefreshIcons = function()
+	for texture, sheet in pairs(iconTextures) do SetIconTexture(texture, sheet) end
+end
+
 Look.DEFAULT = "rounded"
 
 -- Original greyscale page art, built by Tools/Build-OptionsPageIcons.py.
@@ -252,17 +264,19 @@ end
 -- Section icons
 --------------------------------------------------------------------------
 -- options-sections.tga, built by Tools/Build-OptionsSectionIcons.py: the same
--- 8x4 sheet of 64px cells, for the sections a page lists in the rail and heads
+-- 8x8 sheet of 64px cells, for the sections a page lists in the rail and heads
 -- on the page. Known by the section's key in the option table, never by its
--- localised name. Several sections share a motif, and a section with no motif
--- that means something gets none: icons are for finding your way, not for every
--- line, so no setting carries one and there is no generic fallback here.
-local SECTION_COLS, SECTION_ROWS = 8, 4
+-- localised name. Several sections share a motif. Icons are for finding your
+-- way, not for individual settings; unknown sections have no generic fallback.
+local SECTION_COLS, SECTION_ROWS = 8, 8
 local sectionCells = {
 	player = 0, target = 1, tot = 2, focus = 3, pet = 4, boss = 5, arena = 6, castbar = 7,
 	classpower = 8, heal = 9, party = 10, raid = 11, corners = 12, actionbar = 13, stance = 14, proc = 15,
 	assist = 16, bell = 17, eye = 18, eyeslash = 19, resize = 20, droplet = 21, funnel = 22, gate = 23,
-	friendly = 24, gear = 25, wrench = 26, horseshoe = 27, clock = 28, key = 29
+	friendly = 24, gear = 25, wrench = 26, horseshoe = 27, clock = 28, key = 29,
+	hunter = 30, paladin = 31, mage = 32, druid = 33, warrior = 34, crystal = 35,
+	orb = 36, leaf = 37, moon = 38, totem = 39, smooth = 40, text = 41,
+	sort = 42, anchor = 43, export = 44, import = 45, shield = 46
 }
 Look.SectionIconCells = sectionCells
 
@@ -278,7 +292,25 @@ local SECTION_ICONS = {
 	size = "resize", colors = "droplet", auraFilters = "funnel", contentSettings = "gate",
 	friendlyPlayers = "friendly", stacking = "gear", advanced = "wrench", utilities = "wrench",
 	dismountbutton = "horseshoe", cooldown = "clock", keys = "key",
-	threshold = "page:executerange", nameplates = "page:nameplates"
+	threshold = "page:executerange", nameplates = "page:nameplates",
+	playerParty = "party", totems = "totem", enemyCastbars = "castbar", names = "text",
+	hunter = "hunter", paladin = "paladin", mageTheme = "mage", druid = "druid", warrior = "warrior",
+	effects = "proc", mage = "crystal", wildheart = "leaf", moonvein = "moon",
+	dreamsap = "droplet", moonwell = "orb", tests = "castbar", smooth = "smooth",
+	elementHeader = "page:unitframes", elementsHeader = "page:widgets",
+	healthColorsHeader = "droplet", colorHeader = "droplet", themeHeader = "page:themes",
+	partyAuraLayoutHeader = "page:auras", partyAuraHeader = "page:auras",
+	partyAuraWhatToShowHeader = "funnel", cornerHeader = "corners",
+	visibilityHeader = "eye", sortingHeader = "sort", layoutHeader = "page:actionbars",
+	anchorHeader = "anchor", castHeader = "castbar", windowHeader = "page:appearance",
+	explorermodesituationsheader = "eye", explorermodedelayheader = "clock",
+	explorermodeframeheader = "eyeslash", exportHeader = "export", importHeader = "import",
+	pvpIndicatorHeader = "arena", playerAuraDebuffsHeader = "page:auras",
+	playerAuraWhatToShowHeader = "page:auras", playerAuraLayoutHeader = "page:auras",
+	playerAuraSettingsHeader = "page:auras", auraLayoutHeader = "page:auras",
+	textHeader = "text", textureHeader = "page:themes", bindHeader = "key",
+	multiHeader = "page:tracker", reloadHeader = "shield", fadingHeader = "eyeslash",
+	newprofileheader = "page:profiles", header = "eye"
 }
 Look.SectionIcons = SECTION_ICONS
 
@@ -286,6 +318,8 @@ Look.SectionIcons = SECTION_ICONS
 Look.SectionIconFor = function(key)
 	if (type(key) ~= "string") then return end
 	if (key:match("^bar%d+$")) then return "actionbar" end
+	if (key:match("^slot%d+$")) then return "page:aurasounds" end
+	if (key:match("^release%d+$") or key:match("^kind%d+$")) then return "page:changelog" end
 	return SECTION_ICONS[key]
 end
 
@@ -300,14 +334,14 @@ Look.SetSectionIcon = function(texture, key)
 		local cell = cells[pageIcon]
 		if (not cell) then return false end
 		local col, row = cell % COLS, (cell - cell % COLS) / COLS
-		texture:SetTexture(GetMedia("options-pages"))
+		SetIconTexture(texture, "options-pages")
 		texture:SetTexCoord(col / COLS, (col + 1) / COLS, row / ROWS, (row + 1) / ROWS)
 		return true
 	end
 	local cell = sectionCells[icon]
 	if (not cell) then return false end
 	local col, row = cell % SECTION_COLS, (cell - cell % SECTION_COLS) / SECTION_COLS
-	texture:SetTexture(GetMedia("options-sections"))
+	SetIconTexture(texture, "options-sections")
 	texture:SetTexCoord(col / SECTION_COLS, (col + 1) / SECTION_COLS, row / SECTION_ROWS, (row + 1) / SECTION_ROWS)
 	return true
 end
@@ -316,7 +350,7 @@ end
 -- alone, while the art has not shipped.
 Look.SetPageIcon = function(texture, key)
 	if (not Look.PageIconsAvailable or not texture) then return false end
-	texture:SetTexture(GetMedia("options-pages"))
+	SetIconTexture(texture, "options-pages")
 	texture:SetTexCoord(Look.GetPageIconCoords(key))
 	return true
 end

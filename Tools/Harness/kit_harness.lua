@@ -254,6 +254,24 @@ do
 end
 
 local fontCache = {}
+local createdFonts = {}
+function CreateFont(name)
+	local font = makeStub({ name = name })
+	font.SetFont = function(self, file, height, flags)
+		self.file, self.fontHeight, self.flags = file, height, flags
+		self.hasFont = file ~= nil
+	end
+	font.GetFont = function(self) return self.file, self.fontHeight, self.flags end
+	font.SetShadowColor = function(self, r, g, b, a) self.shadowAlpha = a end
+	font.SetShadowOffset = function(self, x, y) self.shadowX, self.shadowY = x, y end
+	font.CopyFontObject = function(self, source)
+		self:SetFont(source:GetFont())
+		self.shadowAlpha, self.shadowX, self.shadowY = source.shadowAlpha, source.shadowX, source.shadowY
+	end
+	createdFonts[#createdFonts + 1] = font
+	return font
+end
+
 local function getFont(size, outline, fontType)
 	local namedType = (fontType and fontType ~= "Normal") and fontType or ""
 	local namedStyle = outline and "Outline" or ""
@@ -267,6 +285,7 @@ local function getFont(size, outline, fontType)
 			return "Fonts\FRIZQT__.TTF", size, namedStyle
 		end
 		font.name = globalName
+		font.shadowAlpha, font.shadowX, font.shadowY = outline and 0 or 1, 1, -1
 		fontCache[globalName] = font
 	end
 	return fontCache[globalName]
@@ -396,6 +415,32 @@ do
 	good:SetFontObject(Kit.GetFont(99))
 	local ok = pcall(good.SetText, good, "x")
 	check(ok, "a font from Kit.GetFont sets text cleanly")
+end
+
+-- Fonts already bound to a widget must follow live theme changes without
+-- mutating the source HUD font or allocating another copy on every switch.
+do
+	local source = ns.API.GetFont(13, true)
+	local outlined, plain = Kit.GetFont(13, true), Kit.GetFont(12)
+	local text = makeFontString()
+	text:SetFontObject(outlined)
+	local before = #createdFonts
+	check(outlined ~= source, "options owns its font copy")
+	for _, theme in ipairs({ "light", "dark", "light", "azerite" }) do
+		Kit.SetTheme(theme)
+		local file, height, flags = text:GetFontObject():GetFont()
+		check(file == "Fonts\FRIZQT__.TTF" and height == 13,
+			"font file and height retained on " .. theme)
+		check(flags == (theme == "light" and "" or "Outline"), "outline follows " .. theme)
+		check(plain.shadowAlpha == (theme == "light" and 0 or 1)
+			and plain.shadowX == (theme == "light" and 0 or 1)
+			and plain.shadowY == (theme == "light" and 0 or -1), "plain shadow follows " .. theme)
+		check(Kit.GetFont(13, true) == outlined and text:GetFontObject() == outlined,
+			"bound font identity retained on " .. theme)
+	end
+	local _, _, flags = source:GetFont()
+	check(flags == "Outline" and source.shadowX == 1, "HUD source font unchanged")
+	check(#createdFonts == before, "theme switching reuses owned fonts")
 end
 
 --------------------------------------------------------------------------
@@ -587,6 +632,9 @@ for _, key in ipairs(order) do
 	check(body >= 4.5, key .. ": body text is readable on its own window", string.format("%.1f", body))
 	check(accent >= 3.0, key .. ": accent is readable on its own window", string.format("%.1f", accent))
 	check(muted >= 2.0, key .. ": muted text is still visible", string.format("%.1f", muted))
+	if key == "light" then
+		check(muted >= 4.5, "Light help text has normal-text contrast", string.format("%.1f", muted))
+	end
 end
 Kit.SetTheme("azerite")
 
