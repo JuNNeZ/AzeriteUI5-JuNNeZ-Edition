@@ -126,6 +126,7 @@ local function field(token, key)
 end
 
 function UnitExists(u) return resolve(u) ~= nil end
+function UnitIsVisible(u) return resolve(u) ~= nil end
 function UnitIsUnit(a, b)
 	local ra, rb = resolve(a), resolve(b)
 	return (ra ~= nil and ra == rb) and true or false
@@ -657,7 +658,8 @@ function Plate:UpdateElement(name, event)
 end
 function Plate:UpdateAllElements(event)
 	count(self, "UpdateAllElements")
-	if (not self.unit or not UnitExists(self.unit)) then return end
+	-- As oUF: Libs/oUF/private.lua unitExists.
+	if (not self.unit or not (UnitExists(self.unit) or UnitIsVisible(self.unit))) then return end
 	for _, name in ipairs(ELEMENTS) do self:UpdateElement(name, event) end
 	if (self.PostUpdate) then self:PostUpdate(event) end
 end
@@ -1161,6 +1163,22 @@ do
 	_G.NodeSightDB = nil
 	Retarget()
 	Tick()
+	-- Forever answers UnitExists false for a game object, and UnitIsVisible may be false too: oUF then
+	-- skips UpdateAllElements on ADDED. The reused plate still shows the last creature's bar and value
+	-- (stale state set by hand here); it must be laid out as an object anyway (FixLog 2026-10-23).
+	local unitExists, unitIsVisible = UnitExists, UnitIsVisible
+	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate6")
+	P[6].Health:Show()
+	P[6].Health.Value:Show()
+	UnitExists = function(u) return u ~= "nameplate6" and unitExists(u) end
+	UnitIsVisible = function(u) return u ~= "nameplate6" and unitIsVisible(u) end
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate6")
+	Retarget()
+	Tick()
+	UnitExists, UnitIsVisible = unitExists, unitIsVisible
+	check(P[6].isObjectPlate == true and not P[6].Health.__shown and not P[6].Health.Value.__shown,
+		"an object plate added while its unit neither exists nor is visible is laid out as an object (FixLog 2026-10-23)",
+		tostring(P[6].isObjectPlate) .. " health=" .. tostring(P[6].Health.__shown))
 end
 Step("soft-target the ore vein")
 

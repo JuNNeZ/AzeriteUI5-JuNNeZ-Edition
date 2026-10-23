@@ -3944,6 +3944,7 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /azdebug unitmenu trace [on|off|toggle]|r")
 	print("|cfff0f0f0  /azdebug nameplates [unit]|r")
 	print("|cfff0f0f0  /azdebug snapshot [unit]|r")
+	print("|cfff0f0f0  /azdebug playerframe|r  (is the player frame shown, faded, off screen, art gone)")
 	print("|cfff0f0f0  /azdebug blizzard enable|r")
 	print("|cfff0f0f0  /azdebug scale|r  (print scale status)")
 	print("|cfff0f0f0  /azdebug scale nameplates [unit]|r")
@@ -3959,6 +3960,54 @@ local function PrintDebugHelp()
 	print("|cfff0f0f0  /aztest <set> on|off|toggle|r")
 	print("|cfff0f0f0  /aztest list|r")
 end
+
+-- Where the player frame is and why it might not be seen: hidden, faded, off screen, on the wrong
+-- unit, a hidden parent, or its art gone (Luciful, gone after a release, FixLog 2026-10-23).
+local function DumpPlayerFrameState()
+	local function S(value) return SecretSafeText(value) end
+	local function Region(label, region)
+		if (not region) then
+			print("|cfff0f0f0", "  " .. label .. ": none")
+			return
+		end
+		local texture = region.GetTexture and region:GetTexture()
+		print("|cfff0f0f0", string_format("  %s: shown=%s visible=%s alpha=%s texture=%s", label,
+			S(region:IsShown()), S(region.IsVisible and region:IsVisible()), S(region:GetAlpha()), S(texture)))
+	end
+
+	print("|cff33ff99", "AzeriteUI player frame:")
+	print("|cfff0f0f0", string_format("  dead=%s ghost=%s combat=%s", S(UnitIsDead("player")),
+		S(UnitIsGhost("player")), S(InCombatLockdown())))
+	for _, name in ipairs({ "PlayerFrame", "PlayerFrameAlternate", "PlayerFrameParty" }) do
+		local mod = ns:GetModule(name, true)
+		local frame = mod and mod.GetFrame and mod:GetFrame()
+		local profile = mod and mod.db and mod.db.profile
+		print("|cfff0f0f0", string_format("  %s: module=%s enabled=%s frame=%s", name,
+			S(mod and mod:IsEnabled()), S(profile and profile.enabled), frame and (frame:GetName() or "unnamed") or "none"))
+		if (frame and profile and profile.enabled) then
+			local x, y = frame:GetCenter()
+			print("|cfff0f0f0", string_format("  frame: shown=%s visible=%s alpha=%s effectiveAlpha=%s scale=%s center=%s,%s screen=%s,%s",
+				S(frame:IsShown()), S(frame:IsVisible()), S(frame:GetAlpha()),
+				S(frame.GetEffectiveAlpha and frame:GetEffectiveAlpha()), S(frame:GetScale()), S(x), S(y),
+				S(UIParent:GetWidth()), S(UIParent:GetHeight())))
+			print("|cfff0f0f0", string_format("  unit: attribute=%s frame=%s points=%s enabledFlag=%s",
+				S(frame:GetAttribute("unit")), S(frame.unit), S(frame:GetNumPoints()),
+				S(frame.IsEnabled and frame:IsEnabled())))
+			local parent, depth = frame:GetParent(), 0
+			while (parent and depth < 4) do
+				print("|cfff0f0f0", string_format("  parent%d: %s shown=%s alpha=%s", depth + 1,
+					S(parent.GetName and parent:GetName() or "unnamed"), S(parent:IsShown()), S(parent:GetAlpha())))
+				parent, depth = parent:GetParent(), depth + 1
+			end
+			Region("health", frame.Health)
+			Region("health casing", frame.Health and frame.Health.Backdrop)
+			Region("power", frame.Power)
+			Region("mana orb", frame.ManaOrb)
+		end
+	end
+end
+
+local NamePlateScriptTrace
 
 local function PrintNamePlateCastDebug(token)
 	token = type(token) == "string" and token:lower() or nil
@@ -3977,11 +4026,33 @@ local function PrintNamePlateCastDebug(token)
 		return tostring(value)
 	end
 
+	-- Counts each plate's OnHide/OnShow from the first run on, to see whether a plate that keeps its
+	-- unit is shown again through OnShow (FixLog 2026-10-23).
+	NamePlateScriptTrace = NamePlateScriptTrace or {}
+	for frame in next, ns.NamePlates or {} do
+		if (not NamePlateScriptTrace[frame] and frame.HookScript) then
+			local trace = { hides = 0, shows = 0 }
+			NamePlateScriptTrace[frame] = trace
+			frame:HookScript("OnHide", function() trace.hides = trace.hides + 1 end)
+			frame:HookScript("OnShow", function(f)
+				trace.shows = trace.shows + 1
+				trace.lastShowActive = ns.ActiveNamePlates[f] and true or false
+			end)
+		end
+	end
+
 	print("|cff33ff99", "AzeriteUI nameplate cast debug:")
 	local found = false
 	for frame in next, ns.ActiveNamePlates do
 		local unit = frame and frame.unit
-		if (type(unit) == "string" and ((not token) or unit:lower() == token)) then
+		-- A token such as softinteract, target or mouseover matches the plate showing that unit.
+		-- Not gated on UnitExists, which Forever answers false for a game object.
+		local matches = type(unit) == "string" and ((not token) or unit:lower() == token)
+		if (not matches and type(unit) == "string" and token) then
+			local okSame, same = API.TryCall(UnitIsUnit, unit, token)
+			matches = okSame and same == true and not IsSecretDebugValue(same)
+		end
+		if (matches) then
 			found = true
 			local castbar = frame.Castbar
 			local castName, _, _, _, _, _, castID, castNotInterruptible, castSpellID = UnitCastingInfo(unit)
@@ -4042,6 +4113,29 @@ local function PrintNamePlateCastDebug(token)
 				SafeDebugString(castbar and castbar.notInterruptible),
 				SafeDebugString(eventNotInterruptible),
 				SafeDebugString(blizzProtected)))
+
+			-- What the plate was classified as, and whether its bar is up (Classification.lua).
+			local guid = UnitGUID(unit)
+			local guidType = (type(guid) == "string" and not IsSecretDebugValue(guid)) and guid:match("^([^-]+)-") or guid
+			local health = frame.Health
+			print("|cfff0f0f0", string_format(
+				"  class: key=%s object=%s friendlyNPC=%s widgetsOnly=%s guidType=%s isGameObject=%s healthShown=%s healthAlpha=%s valueShown=%s plateAlpha=%s",
+				SafeDebugString(frame.__AzeriteUI_ClassKey),
+				SafeDebugString(frame.isObjectPlate),
+				SafeDebugString(frame.isFriendlyAssistableNPC),
+				SafeDebugString(frame.nameplateShowsWidgetsOnly),
+				SafeDebugString(guidType),
+				SafeDebugString(UnitIsGameObject and UnitIsGameObject(unit)),
+				SafeDebugString(health and health:IsShown()),
+				SafeDebugString(health and health:GetAlpha()),
+				SafeDebugString(health and health.Value and health.Value:IsShown()),
+				SafeDebugString(frame:GetAlpha())))
+			local trace = NamePlateScriptTrace[frame]
+			if (trace) then
+				print("|cfff0f0f0", string_format("  trace since first run: hides=%d shows=%d lastShowActive=%s target=%s softInteract=%s",
+					trace.hides, trace.shows, SafeDebugString(trace.lastShowActive),
+					SafeDebugString(frame.isTarget), SafeDebugString(frame.isSoftInteract)))
+			end
 		end
 	end
 	if (not found) then
@@ -5246,6 +5340,9 @@ Debugging.DebugMenu = function(self, input)
 	if (cmd == "snapshot") then
 		local unit = rest:match("^(%S+)")
 		return DumpUnitSnapshot(unit)
+	end
+	if (cmd == "playerframe") then
+		return DumpPlayerFrameState()
 	end
 	if (cmd == "blizzard") then
 		local sub = rest:match("^(%S+)")

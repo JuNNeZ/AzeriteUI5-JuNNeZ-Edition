@@ -3,7 +3,7 @@
 ## Title: |cff4488bbAzerite|r |cfffafafaUI|r |cff00ff00JuNNeZ Edition|r Debug Tools
 ## Notes: /azdebug, its probes and the test menus. AzeriteUI loads this only when one is used.
 ## IconTexture: Interface\Addons\AzeriteUI5_JuNNeZ_Edition\Assets\power-crystal-ice-icon.tga
-## Version: 5.31.1-JuNNeZ
+## Version: 5.31.2-JuNNeZ
 ## Author: JuNNeZ
 ## Dependencies: AzeriteUI5_JuNNeZ_Edition
 ## LoadOnDemand: 1

@@ -111,6 +111,15 @@ local callback = function(self, event, unit)
 		ns.NamePlates[self] = true
 		ns.ActiveNamePlates[self] = true
 
+		-- oUF lays the plate out right after this callback, unless its unit neither exists nor is visible
+		-- (UpdateAllElements, unitExists in Libs/oUF/private.lua). Forever answers UnitExists false for a
+		-- game object, and then nothing laid the plate out: it kept the last unit's health bar and value
+		-- and was drawn as an NPC (FixLog 2026-10-23). Lay that one out here; the classifier reads
+		-- UnitGUID and UnitIsGameObject, which do answer.
+		if (not (UnitExists(unit) or UnitIsVisible(unit))) then
+			NamePlate_PostUpdate(self, event, unit)
+		end
+
 		-- oUF lays the plate out right after this callback. See NamePlate_NeedsSecondPass.
 		if (C_Timer and C_Timer.After) then
 			C_Timer.After(0, function()

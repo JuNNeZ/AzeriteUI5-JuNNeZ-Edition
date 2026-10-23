@@ -223,6 +223,36 @@ local SavePosition = function()
 	geometry.width, geometry.height = frame:GetWidth(), frame:GetHeight()
 end
 
+-- The clamp keeps the window on the screen only while it fits. Scaled up, the
+-- saved size can be taller than the screen, and the footer ends up below it.
+-- Shrinks to fit and moves back on screen. Not saved, so the size comes back
+-- at a smaller scale.
+local FitToScreen = function()
+	if (not frame) then return end
+
+	local scale = frame:GetScale()
+	local outset = Kit.WindowOutset
+	local screenW, screenH = UIParent:GetWidth() / scale, UIParent:GetHeight() / scale
+	local maxW = screenW - outset.left - outset.right
+	local maxH = screenH - outset.top - outset.bottom
+
+	local width, height = frame:GetWidth(), frame:GetHeight()
+	if (width > maxW or height > maxH) then
+		width, height = min(width, maxW), min(height, maxH)
+		frame:SetSize(width, height)
+	end
+
+	local left, top = frame:GetLeft(), frame:GetTop()
+	if (not left or not top) then return end
+
+	local fitLeft = max(outset.left, min(left, screenW - outset.right - width))
+	local fitTop = min(screenH - outset.top, max(top, height + outset.bottom))
+	if (fitLeft ~= left or fitTop ~= top) then
+		frame:ClearAllPoints()
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", fitLeft, fitTop)
+	end
+end
+
 --------------------------------------------------------------------------
 -- Rail
 --------------------------------------------------------------------------
@@ -1649,6 +1679,7 @@ Panel.SetPanelScale = function(self, value)
 
 	if (frame) then
 		frame:SetScale(value)
+		FitToScreen()
 	end
 	return value
 end
@@ -2260,6 +2291,10 @@ local Build = function()
 		Panel:UpdateCombatNotice()
 	end)
 
+	-- Open loads the theme before the first build, when there is no frame yet
+	-- to scale. Scale before positioning: the saved offsets are in this scale.
+	Panel:SetPanelScale(Panel:GetPanelScale())
+
 	-- Position last, so nothing above depends on the size it lands at.
 	local geometry = GetGeometry()
 	if (geometry) then
@@ -2271,6 +2306,7 @@ local Build = function()
 				geometry.relativePoint or geometry.point, geometry.x, geometry.y)
 		end
 	end
+	FitToScreen()
 
 	return frame
 end

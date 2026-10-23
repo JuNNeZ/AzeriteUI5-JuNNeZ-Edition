@@ -10,6 +10,24 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.31.2-JuNNeZ (2026-10-23) - Panel Scale on First Open, No Bars on Forever Objects
+
+### Highlights
+
+- **Panel Scale works the first time you open the options window.** `/az -> Settings -> Window -> Panel Scale` was only applied from the second time you opened the window after a login or `/reload`; the first time it always opened at 100%. It now opens at your scale straight away, in the place you left it. Thanks to BrickHigh (Firo) for the report and for pinpointing the cause.
+- **The options window always fits on the screen.** At a large Panel Scale the window could be taller than the screen, leaving the bottom row and some tabs out of reach. It now shrinks to fit and moves back on screen when needed. Your saved size returns at a smaller scale.
+- **No more health bars on benches, barrels and other objects on WoW Forever.** Some objects, often with NodeSight installed, still drew a green health bar with a random number under the name. The number was the health of an NPC whose nameplate had been reused. These plates are now set up as objects every time. Thanks to Dcryfm and Luciful for the reports and readouts.
+
+### Development
+
+- **Tracking down the object bars took several live readouts.** Three plausible fixes passed the offline tests and failed in game before the cause was found. Forever says object units do not exist, and when the game also reports them as not visible, the nameplate library skips its whole update. The reused plate then kept the previous creature's bar and value. AzeriteUI now sets such a plate up itself. The nameplate tests now copy the library's real check and cover a reused plate that still shows an old bar.
+- **New debug readouts** (debug companion only): `/azdebug nameplates` shows how each plate was classified and how often it was hidden and shown, and `/azdebug playerframe` reports the player frame's state, for a separate report of the player frame disappearing after release (not yet explained).
+
+### Access and known limits
+
+- The first-open scale is confirmed in game on Retail; the fit to screen and the Forever object fix are checked offline only.
+
+
 ## 5.31.1-JuNNeZ (2026-10-21) - Health Percent Clear of Every Endcap
 
 ### Highlights
