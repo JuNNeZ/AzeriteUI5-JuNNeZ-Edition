@@ -16,6 +16,8 @@ local function client(interface, project, marker, secretAPI)
 	env._G = env
 	env.WOW_PROJECT_MAINLINE = 1
 	env.WOW_PROJECT_ID = project
+	-- Forever defines its own project constant, 18, and nothing else does (Camelot/ProjectConstants.lua).
+	env.WOW_PROJECT_CAMELOT = (project == 18) and 18 or nil
 	env.GetBuildInfo = function() return "1.60.1", "69913", "Sep 2026", interface end
 	env.C_AddOns = { GetAddOnMetadata = function(_, key)
 		if key == "X-AzeriteUI-Client" then return marker end
@@ -33,6 +35,9 @@ for _, case in ipairs({
 	{16001, 1, nil, true, true},
 	{120100, 1, "Forever", true, true},
 	{16002, 1, "Forever", true, true},
+	-- The real Forever client: project 18. With the TOC marker, and without it (FixLog 2026-10-23).
+	{16001, 18, "Forever", true, true},
+	{16001, 18, nil, true, true},
 	{11508, 2, nil, false, false}
 }) do
 	local env, ns = client(case[1], case[2], case[3], true)

@@ -1396,12 +1396,9 @@ end
 
 PlayerFrameAltMod.OnEnable = function(self)
 
-	-- Disable Blizzard player alternate power bar only on WoW10; in WoW11 allow it.
-	if (ns.WoW10 and PlayerPowerBarAlt) then
-		PlayerPowerBarAlt:UnregisterEvent("UNIT_POWER_BAR_SHOW")
-		PlayerPowerBarAlt:UnregisterEvent("UNIT_POWER_BAR_HIDE")
-		PlayerPowerBarAlt:UnregisterEvent("PLAYER_ENTERING_WORLD")
-	end
+	-- Blizzard's PlayerPowerBarAlt is left to Blizzard (Components/Misc/SanityBarFix.lua keeps its events);
+	-- SaiyaRatt hides it itself (HideSaiyaRattBlizzardAltPowerBar). The old "only on WoW10" unregister ran
+	-- on both clients, since WoW10 is WoW11, and raced SanityBarFix at login (FixLog 2026-10-23).
 	HideSaiyaRattBlizzardAltPowerBar()
 
 	self:CreateUnitFrames()

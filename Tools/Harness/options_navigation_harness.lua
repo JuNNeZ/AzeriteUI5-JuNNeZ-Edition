@@ -7,7 +7,8 @@ local root, scratch = arg[1] or ".", arg[2] or "Tools/Harness"
 local S = dofile(scratch .. "/stubs.lua")
 local ns, Addon = S.ns, S.Addon
 if arg[3] == "Forever" then
-	ns.IsRetail, ns.IsRetailContent, ns.IsMainline = false, false, false
+	-- As Core/Client.lua sets Forever: the modern engine (IsRetail, IsMainline), not Retail content.
+	ns.IsRetail, ns.IsRetailContent, ns.IsMainline = true, false, true
 	ns.IsForever = true
 end
 

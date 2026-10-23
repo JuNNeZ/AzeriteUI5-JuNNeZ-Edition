@@ -484,6 +484,23 @@ end
 NamePlatesMod.SetShownSetting = function(self, kind, enabled)
 	SetVisibilitySetting(self, kind, enabled)
 end
+-- On a CVAR_UPDATE (Module.lua): with friendlyNPCsFollowFriendlyPlayers on, a change to the game's Friendly
+-- players setting is copied to its Friendly NPCs one. Retail and Forever's Shift+V and Ctrl+V switch only
+-- friendly players (Bindings_Standard.xml, Bindings_Camelot.xml); Mists' switch NPCs as well.
+NamePlatesMod.FollowFriendlyPlayers = function(self, name)
+	local profile = self.db and self.db.profile
+	if (not profile or not profile.friendlyNPCsFollowFriendlyPlayers) then
+		return
+	end
+	local friendlyPlayers = GetVisibilityCVarName("friendlyPlayers")
+	if (not friendlyPlayers or type(name) ~= "string" or name:lower() ~= friendlyPlayers:lower()) then
+		return
+	end
+	local shown = self:GetShownSetting("friendlyPlayers")
+	if (type(shown) == "boolean" and self:GetShownSetting("friendlyNPCs") ~= shown) then
+		self:SetShownSetting("friendlyNPCs", shown)
+	end
+end
 NamePlatesMod.IsStackingSupported = function(self)
 	return IsNamePlateStackingSupported()
 end

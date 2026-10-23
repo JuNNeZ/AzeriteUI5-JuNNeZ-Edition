@@ -198,7 +198,8 @@ local GenerateOptions = function()
 				get = getter
 			},
 			-- Built into each native aura button when it is created, so the change asks
-			-- for a reload. Retail only: the native aura rows do not exist on Forever.
+			-- for a reload. Both clients: Forever has the native aura rows too (ns.IsRetail is the engine,
+			-- true there; Blizzard_AuraContainer's SetDurationText and C_CurveUtil exist on Forever).
 			auraTimerColors = {
 				name = L["Color Aura Timers"],
 				desc = L["Aura countdowns on unit frames and nameplates turn yellow, orange and red as they run out. Turn this off to keep them white."],
@@ -1696,7 +1697,7 @@ local GenerateOptions = function()
 		end
 	end
 
-	-- Player Totems (Retail only; the module does not exist elsewhere, so the group stays hidden)
+	-- Player Totems (Retail and Forever; the module does not exist elsewhere, so the group stays hidden)
 	do
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateSubOptions("PlayerTotemsFrame")
 		if (suboptions and suboptions.args) then

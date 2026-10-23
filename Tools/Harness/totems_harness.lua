@@ -119,8 +119,8 @@ element.disable(owner)
 check(blizzEvents.PLAYER_TOTEM_UPDATE == true, "disable gives the events back to TotemFrame")
 check(owner.Totems[1].shown == false, "disable hides the widgets")
 
--- The module: Retail only, four mouse-disabled icons.
-local function LoadModule(retail)
+-- The module: Retail and Forever (both mainline), four mouse-disabled icons.
+local function LoadModule(retail, mainline)
 	local created, spawnedStyle
 	local frames = {}
 	local function Frame(kind)
@@ -146,6 +146,8 @@ local function LoadModule(retail)
 	LibStub = function() return { GetLocale = function() return setmetatable({}, { __index = function(_, k) return k end }) end } end
 	local mns = {
 		IsRetailContent = retail,
+		IsForever = (not retail) and mainline ~= false,
+		IsMainline = mainline ~= false,
 		Prefix = "AzeriteUI",
 		API = { GetFont = function() return {} end, GetEffectiveScale = function() return 1 end },
 		MovableModulePrototype = { defaults = { enabled = true }, OnEnable = function() end },
@@ -174,7 +176,10 @@ local function LoadModule(retail)
 	return created
 end
 
-check(LoadModule(false) == nil, "no totems module on Forever")
+-- Forever loads Blizzard's TotemFrame and oUF hides it with PlayerFrame, as on Retail (FixLog 2026-10-23).
+local forever = LoadModule(false)
+check(forever and forever.name == "PlayerTotemsFrame", "Forever creates PlayerTotemsFrame too")
+check(LoadModule(false, false) == nil, "no totems module on a client without the modern engine")
 local mod = LoadModule(true)
 check(mod and mod.name == "PlayerTotemsFrame", "Retail creates PlayerTotemsFrame")
 mod:OnEnable()

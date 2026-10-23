@@ -2038,6 +2038,7 @@ Plate12 (vendor)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
 == the game's visibility settings followed
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowFriendlyNpcs=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
   state target=false soft=false focus=false mouse=false combat=false

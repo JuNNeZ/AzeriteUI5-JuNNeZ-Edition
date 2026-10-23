@@ -4103,13 +4103,9 @@ end
 PlayerFrameMod.OnEnable = function(self)
 	NormalizePowerOffsetBaseline(self)
 
-	-- Disable Blizzard player alternate power bar only on WoW10,
-	-- in WoW11 let Blizzard show it (some encounters/tutorials rely on it).
-	if (ns.WoW10 and PlayerPowerBarAlt) then
-		PlayerPowerBarAlt:UnregisterEvent("UNIT_POWER_BAR_SHOW")
-		PlayerPowerBarAlt:UnregisterEvent("UNIT_POWER_BAR_HIDE")
-		PlayerPowerBarAlt:UnregisterEvent("PLAYER_ENTERING_WORLD")
-	end
+	-- Blizzard's PlayerPowerBarAlt is left to Blizzard (some encounters and tutorials rely on it):
+	-- Components/Misc/SanityBarFix.lua keeps its events. This used to unregister them "only on WoW10",
+	-- but WoW10 is WoW11 on both clients, so it raced SanityBarFix at login (FixLog 2026-10-23).
 
 	self:CreateUnitFrames()
 	self:CreateAnchor(HUD_EDIT_MODE_PLAYER_FRAME_LABEL or PLAYER)

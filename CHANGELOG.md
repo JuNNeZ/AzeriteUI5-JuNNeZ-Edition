@@ -10,6 +10,29 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.32.0-JuNNeZ (2026-10-23) - Object Names Your Way, NPC Plates on the V Keys, and a Forever Sweep
+
+### Highlights
+
+- **Show object names, if you want them.** Since 5.31.4, gathering nodes, chests and other objects only show a name when the game's own settings ask for one, which usually means never. If you liked having them, `/az -> Nameplates -> Visibility -> Show object names` brings them back on mouseover, as your interact target or as your target. It is off by default.
+- **Friendly NPC plates can follow the V keys.** On Retail and WoW Forever, Shift+V and Ctrl+V only switch friendly *player* plates, so vendors and quest givers stayed up. Tick `/az -> Nameplates -> Game settings -> Friendly NPCs follow Friendly players` and the NPC plates switch with them, as they do on Mists of Pandaria Classic. V (enemies) is unchanged.
+- **WoW Forever: object names really are hidden now.** On Forever, 5.31.4 still named every object, because the "always show names" setting was applied to objects there, which the default plates never do. Thanks to Dcryfm and Luciful for the reports and readouts.
+- **WoW Forever: totem timers.** Shamans and anyone with totem-slot summons get the totem row above the cast bar with countdowns, as on Retail. Forever's own totem bar only casts totems and never showed their time left.
+- **WoW Forever: crowd control and roots on auras.** Polymorph, Sap, Fear, Entangling Roots, Shackle Undead, interrupts, immunities and the rest are now recognised by the ranks Forever actually uses, including Forever's new spells such as Chastise, Confounding Flash, Counterattack and the spider pet's Web.
+- **Smaller fixes on both clients.** On Forever, the execute marker waits until you have learned Execute or Hammer of Wrath, and the Retail-only "Show while skyriding" bar option is gone. On both clients, the minimap's tracking button is styled again, Bartender4 keeps its queue eye, and Blizzard's alternate power bar (used by some encounters and quests) no longer risks missing its first appearance after login.
+
+### Development
+
+- **A sweep for one kind of mistake.** The object-name bug came from a flag that means "the modern engine" (true on Retail and Forever) being used as "Retail only". Every place in the addon that checks which client it runs on was reviewed against Blizzard's own Retail and Forever interface code, and each claimed problem was checked again by hand before fixing. That found the missing Forever totems, the skyriding option and a minimap override that had quietly replaced the real one. It also made Forever detection fall back on Forever's own project ID, not only the TOC marker.
+- **Forever spell data from Forever itself.** The aura lists and execute ranks were checked against Forever's own game tables (spells, spell effects and what each class can learn), not Classic Era lists or memory. That showed that Forever adds new class spells and lacks a few Classic ones, and that Forever's Shadow Word: Death has no health limit, so it is not an execute.
+- **Tests that run as Forever.** Several offline tests had been "pretending" to be Forever with flags the real client never has, so they passed while the bugs were there. They now use Forever's real flags, and the options tests can run as either client. New tests cover the aura lists and execute ranks per client.
+
+### Access and known limits
+
+- **Confirmed in game on the WoW Forever stress test:** hidden object names, Show object names, and Friendly NPCs follow Friendly players with the V keys.
+- **Checked offline only:** Forever totem timers (and whether they overlap Forever's own totem bar), crowd control on Forever auras, the Forever execute marker, the minimap tracking button and Bartender4 queue eye, and the alternate power bar after login.
+
+
 ## 5.31.4-JuNNeZ (2026-10-23) - Object Names Follow the Game's Settings
 
 ### Highlights

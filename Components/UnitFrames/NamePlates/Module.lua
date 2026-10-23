@@ -424,6 +424,7 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 			ApplyNamePlateDriverSettings(self)
 			RefreshActiveNamePlates()
 		elseif (IsVisibilityManagedCVar(name)) then
+			self:FollowFriendlyPlayers(name)
 			RefreshActiveNamePlates()
 			-- In an instance, showing friendly players widens the plate size (CVars.lua, GetDriverSize).
 			ApplyNamePlateDriverSize(self)

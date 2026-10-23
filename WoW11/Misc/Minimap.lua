@@ -65,40 +65,5 @@ MinimapMod.DelayedEnable = function(self)
 	end
 end
 
-MinimapMod.InitializeObjectTables = function(self)
-
-	-- Minimap objects available for restyling.
-	----------------------------------------------------
-	self.Objects.Addons = AddonCompartmentFrame
-	self.Objects.BorderTop = MinimapCluster.BorderTop
-	self.Objects.Calendar = GameTimeFrame
-	self.Objects.Clock = TimeManagerClockButton
-	self.Objects.Compass = MinimapCompassTexture
-	self.Objects.Crafting = MinimapCluster.IndicatorFrame.CraftingOrderFrame
-	self.Objects.Difficulty = MinimapCluster.InstanceDifficulty
-	self.Objects.Expansion = ExpansionLandingPageMinimapButton
-	self.Objects.Eye = QueueStatusButton
-	self.Objects.Mail = MinimapCluster.IndicatorFrame.MailFrame
-	self.Objects.Tracking = MinimapCluster.Tracking
-	self.Objects.Zone = MinimapCluster.ZoneTextButton
-	self.Objects.ZoomIn = Minimap.ZoomIn
-	self.Objects.ZoomOut = Minimap.ZoomOut
-
-	-- Object parents when using blizzard theme.
-	----------------------------------------------------
-	self.ObjectOwners.Addons = MinimapCluster
-	self.ObjectOwners.BorderTop = MinimapCluster
-	self.ObjectOwners.Calendar = MinimapCluster
-	self.ObjectOwners.Clock = MinimapCluster
-	self.ObjectOwners.Compass = MinimapBackdrop
-	self.ObjectOwners.Crafting = MinimapCluster.IndicatorFrame
-	self.ObjectOwners.Difficulty = MinimapCluster
-	self.ObjectOwners.Expansion = MinimapBackdrop
-	self.ObjectOwners.Eye = MicroButtonAndBagsBar
-	self.ObjectOwners.Mail = MinimapCluster.IndicatorFrame
-	self.ObjectOwners.Tracking = MinimapCluster
-	self.ObjectOwners.Zone = MinimapCluster
-	self.ObjectOwners.ZoomIn = Minimap
-	self.ObjectOwners.ZoomOut = Minimap
-
-end
+-- The object tables come from Components/Misc/Minimap.lua alone. A copy here replaced them on both clients
+-- (this file loads later) and dropped the Bartender4 queue-eye guard and MicroMenuContainer (FixLog 2026-10-23).

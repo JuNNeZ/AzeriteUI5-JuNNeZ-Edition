@@ -1174,9 +1174,22 @@ do
 	check(not P[6].Name.__shown, "with the game naming no objects, hovering an object shows no name")
 	W.alias.mouseover = nil
 	Tick()
+	W.profile.showObjectNames = true
+	Retarget()
+	check(P[6].Name.__shown, "with Show object names ticked, an object the game does not name shows its name")
+	W.profile.showObjectNames = false
+	Retarget()
+	check(not P[6].Name.__shown, "and unticked, it follows the game again")
 	W.cvars.nameplateForceShowUnitName = "1"
 	Retarget()
 	check(P[6].Name.__shown, "Retail's \"always show names\" names a soft-targeted object, as Blizzard's plate does")
+	-- Forever's ns.IsRetail is true too; its "always show names" skips game objects (stress test, FixLog 2026-10-23).
+	ns.IsForever = true
+	W.units.nameplate6.gameObject = true
+	Retarget()
+	check(not P[6].Name.__shown, "on Forever, \"always show names\" does not name a game object, as Blizzard's plate does not")
+	ns.IsForever = false
+	W.units.nameplate6.gameObject = nil
 	W.cvars.nameplateForceShowUnitName = nil
 	W.units.nameplate6.displayName = nil
 	Retarget()
@@ -2051,6 +2064,41 @@ do
 	W.cvars.nameplateShowFriendlyPlayers, W.cvars.nameplateShowFriendlyNpcs = "1", "1"
 	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
 	check(not Hidden(P[12]), "back on the new names")
+	-- Friendly NPCs follow Friendly players: Shift+V and Ctrl+V switch NPC plates too, as on Mists.
+	W.cvars.nameplateShowFriendlyPlayers = "0"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	check(W.cvars.nameplateShowFriendlyNpcs == "1" and not Hidden(P[12]),
+		"with Friendly NPCs follow Friendly players off, switching friendly players leaves NPCs alone")
+	W.cvars.nameplateShowFriendlyPlayers = "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	W.profile.friendlyNPCsFollowFriendlyPlayers = true
+	check(W.cvars.nameplateShowFriendlyNpcs == "1", "ticking it changes nothing by itself")
+	W.cvars.nameplateShowFriendlyPlayers = "0"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	check(W.cvars.nameplateShowFriendlyNpcs == "0" and Hidden(P[12]) and Hidden(P[5]),
+		"with it on, friendly players switched off by the game's keys take friendly NPCs with them", W.cvars.nameplateShowFriendlyNpcs)
+	W.cvars.nameplateShowFriendlyPlayers = "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	check(W.cvars.nameplateShowFriendlyNpcs == "1" and not Hidden(P[12]) and not Hidden(P[5]), "and switched on, bring them back")
+	W.cvars.nameplateShowEnemies = "0"
+	Fire("CVAR_UPDATE", "nameplateShowEnemies")
+	check(W.cvars.nameplateShowFriendlyNpcs == "1", "enemies switched by V leave friendly NPCs alone")
+	W.cvars.nameplateShowEnemies = "1"
+	Fire("CVAR_UPDATE", "nameplateShowEnemies")
+	W.combat = true
+	Fire("PLAYER_REGEN_DISABLED")
+	W.cvars.nameplateShowFriendlyPlayers = "0"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	check(W.cvars.nameplateShowFriendlyNpcs == "1", "in combat, following waits")
+	W.combat = false
+	Fire("PLAYER_REGEN_ENABLED")
+	check(W.cvars.nameplateShowFriendlyNpcs == "0", "and follows when combat ends", W.cvars.nameplateShowFriendlyNpcs)
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	W.cvars.nameplateShowFriendlyPlayers = "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	W.profile.friendlyNPCsFollowFriendlyPlayers = false
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	check(W.cvars.nameplateShowFriendlyNpcs == "1" and not Hidden(P[12]), "everything back on")
 	Step("the game's visibility settings followed")
 
 	-- The same settings passed through the options page, as stacking is.

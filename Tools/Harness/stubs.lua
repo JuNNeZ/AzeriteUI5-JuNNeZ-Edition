@@ -404,7 +404,8 @@ C_AddOns.GetAddOnInfo = function() return "Addon", "Addon", "", true, "" end
 C_AddOns.GetNumAddOns = function() return 0 end
 C_UIWidgetManager = setmetatable({}, { __index = function() return function() end end })
 C_Timer = { After = function() end, NewTicker = function() return makeStub() end }
-C_CVar = { GetCVar = function() return "0" end, SetCVar = function() end }
+-- GetCVarBool too: Forever's swing timer switch reads it (Options/OptionsPages/UnitFrames.lua).
+C_CVar = { GetCVar = function() return "0" end, GetCVarBool = function() return false end, SetCVar = function() end }
 function GetCVar() return "0" end
 function GetCVarBool() return false end
 function SetCVar() end
@@ -525,13 +526,17 @@ LibStub = setmetatable({}, {
 local fontObject = makeStub()
 local modules = {}
 
+-- AZERITE_CLIENT=Forever runs any harness built on these stubs as Forever, with the flags Core/Client.lua
+-- sets there: the modern engine (IsRetail, IsMainline) but not Retail content. Default: Retail.
+local HARNESS_FOREVER = os and os.getenv and os.getenv("AZERITE_CLIENT") == "Forever"
+
 local ns = {
 	Prefix = "Azerite",
 	BackdropTemplate = "BackdropTemplate",
 	IsRetail = true,
 	IsMainline = true,
-	IsRetailContent = true,
-	IsForever = false,
+	IsRetailContent = not HARNESS_FOREVER,
+	IsForever = HARNESS_FOREVER and true or false,
 	API = {
 		IsAddOnEnabled = function() return false end,
 		IsAddOnAvailable = function() return false end,

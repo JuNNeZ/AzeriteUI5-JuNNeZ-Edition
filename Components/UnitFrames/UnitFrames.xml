@@ -14,6 +14,7 @@
 	<Script file="RangeFade.lua"/>
 
 	<Script file="Auras\AuraData.lua"/>
+	<Script file="Auras\AuraData_Forever.lua"/>
 	<Script file="Auras\AuraFilters.lua"/>
 	<Script file="Auras\AuraSorting.lua"/>
 	<Script file="Auras\AuraStyling.lua"/>

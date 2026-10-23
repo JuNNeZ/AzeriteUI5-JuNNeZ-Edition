@@ -1662,7 +1662,8 @@ MinimapMod.InitializeObjectTables = function(self)
 		Skins.Azerite.Elements.AzeriteEye = nil
 	end
 	Objects.Mail = MinimapCluster.IndicatorFrame.MailFrame
-	Objects.Tracking = MinimapCluster.TrackingFrame
+	-- Both clients name it Tracking (Blizzard_Minimap/Mainline/Minimap.xml); TrackingFrame is the old name.
+	Objects.Tracking = MinimapCluster.Tracking or MinimapCluster.TrackingFrame
 	Objects.Zone = MinimapCluster.ZoneTextButton
 	Objects.ZoomIn = Minimap.ZoomIn
 	Objects.ZoomOut = Minimap.ZoomOut

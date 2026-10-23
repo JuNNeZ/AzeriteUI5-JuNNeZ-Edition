@@ -12,7 +12,7 @@ autoMT = { __index = function(t, k)
 	if k == nil then return nil end
 	local v = setmetatable({}, autoMT); rawset(t, k, v); return v
 end }
-local dataFields = { db = true, defaults = true, settings = true }
+local dataFields = { db = true, defaults = true, settings = true, bars = true }
 local moduleStubMT = { __index = function(t, k)
 	local v
 	if dataFields[k] then v = setmetatable({}, autoMT)
@@ -34,6 +34,10 @@ for _, f in ipairs({
 	"Options/Kit/Renderer.lua", "Options/Kit/Panel.lua", "Options/Kit/Gallery.lua",
 	"Options/Kit/Widgets.lua", "Options/Kit/Window.lua", "Options/Options.lua",
 }) do load(f) end
+
+-- The real modules pages build from (GroupIndicators, AuraSounds), as panel_harness loads them. Without
+-- them the AuraSounds page met an auto-stub module and stopped the probe ("'for' limit must be a number").
+dofile(SP .. "/option_components.lua")(load, ns)
 
 local xml = io.open(root .. "/Options/Options.xml"):read("*a")
 for file in xml:gmatch('<Script file="OptionsPages\\([%w_]+%.lua)"/>') do

@@ -215,7 +215,7 @@ function module:UpdateSettings() self.updates = (self.updates or 0) + 1 end
 local optionsModule = { AddGroup = function(self, _, generator) self.options = generator() end }
 function ns:GetModule(name) return name == "Options" and optionsModule or name == "ActionBars" and module or nil end
 function ns:Fire() end
-ns.IsRetail = true
+ns.IsRetail, ns.IsRetailContent = true, true
 env.GetNumShapeshiftForms = function() return 0 end
 env.CreateFrame = function() return {RegisterEvent=function() end,SetScript=function() end} end
 load("Options/OptionsPages/ActionBars.lua", ns, env)
@@ -266,8 +266,10 @@ end
 local toggle = options.args.bar2.args.showWhileSkyriding
 toggle.set({"bar2","showWhileSkyriding"}, true)
 check(module.db.profile.bars[2].visibility.dragon and module.db.profile.bars[2].visibility.mounted, "skyriding writes its own setting")
-ns.IsRetail = false
+-- Forever as Core/Client.lua sets it: the modern engine (IsRetail true), not Retail content.
+ns.IsRetail, ns.IsForever, ns.IsRetailContent = true, true, false
 check(toggle.hidden({"bar2","showWhileSkyriding"}), "Forever has no skyriding toggle")
+ns.IsForever, ns.IsRetailContent = false, true
 
 -- Evaluate the generated driver's first matching condition, including precedence.
 for _, snippets in ipairs({true,false}) do

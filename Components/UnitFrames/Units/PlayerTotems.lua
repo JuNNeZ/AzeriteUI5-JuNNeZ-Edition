@@ -29,10 +29,11 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local oUF = ns.oUF
 
 -- Totems, statues and the ghoul sit in Blizzard's TotemFrame, which is parented
--- to the PlayerFrame oUF hides, so on Retail they had no display at all. Forever
--- keeps Blizzard's own totem bar (Components/ActionBars/Compatibility/HideBlizzard.lua
--- leaves it shown), so this is Retail only.
-if (not ns.IsRetailContent) then return end
+-- to the PlayerFrame oUF hides, so they had no display at all. Forever loads the
+-- same TotemFrame (Blizzard_UnitFrame.toc, mainline) and loses it the same way.
+-- The totem bar HideBlizzard.lua leaves shown on Forever is MultiCastActionBarFrame:
+-- it casts totems and shows their spell cooldowns, not the time a totem has left.
+if (not ns.IsMainline) then return end
 
 local TotemsMod = ns:NewModule("PlayerTotemsFrame", ns.UnitFrameModule, "LibMoreEvents-1.0")
 

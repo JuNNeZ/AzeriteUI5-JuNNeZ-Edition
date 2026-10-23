@@ -41,6 +41,26 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.32.0-JuNNeZ",
+		items = {
+			{
+				text = "Show object names: nodes and chests can name themselves again; off by default, as the game does.",
+				page = L["Nameplates"],
+				section = L["Visibility"]
+			},
+			{
+				text = "Friendly NPCs follow Friendly players: Shift+V and Ctrl+V can hide NPC plates too.",
+				page = L["Nameplates"],
+				section = L["Game settings"]
+			},
+			{
+				text = "WoW Forever: totem timers above the cast bar, and crowd control and roots marked on auras.",
+				page = L["Unit Frames"],
+				section = L["Totems"]
+			}
+		}
+	},
+	{
 		version = "5.31.0-JuNNeZ",
 		items = {
 			{

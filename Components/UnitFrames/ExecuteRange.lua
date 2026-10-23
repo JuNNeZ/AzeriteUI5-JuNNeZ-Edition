@@ -55,10 +55,14 @@ local RETAIL_EXECUTES = {
 	}
 }
 
--- Forever: classic content. Unverified in game.
+-- Forever: each is learned in ranks, so it counts once any rank is known: before that a warrior or paladin
+-- has no execute, and Hammer of Wrath is learned late. Checked against Forever's spell tables (wago.tools,
+-- 1.60.1.70532): these are every trainer rank, both read "Only usable on enemies that have 20% or less
+-- health". Forever's priest Shadow Word: Death has no health limit, Kill Shot is not a learnable hunter
+-- spell, and Drain Soul and Shadowburn have no execute part, so none belong here. Unverified in game.
 local FOREVER_EXECUTES = {
-	WARRIOR = { { threshold = .2 } }, -- Execute
-	PALADIN = { { threshold = .2 } } -- Hammer of Wrath
+	WARRIOR = { { threshold = .2, spells = { 5308, 20658, 20660, 20661, 20662 } } }, -- Execute
+	PALADIN = { { threshold = .2, spells = { 24275, 24274, 24239 } } } -- Hammer of Wrath
 }
 
 local GetClassFile = function()
@@ -77,8 +81,22 @@ local Resolve = function()
 	end
 	local specID = PlayerUtil and PlayerUtil.GetCurrentSpecID and PlayerUtil.GetCurrentSpecID() or nil
 	local isKnown = API.IsSpellKnownAnywhere
+	-- An entry's spells are ranks of one ability: any one of them known will do.
+	local knowsAny = function(spells)
+		if (not isKnown) then
+			return false
+		end
+		for _, spellID in ipairs(spells) do
+			if (isKnown(spellID)) then
+				return true
+			end
+		end
+		return false
+	end
 	for _, entry in ipairs(entries) do
-		if ((not entry.spec or entry.spec == specID) and (not entry.spell or (isKnown and isKnown(entry.spell)))) then
+		if ((not entry.spec or entry.spec == specID)
+			and (not entry.spell or (isKnown and isKnown(entry.spell)))
+			and (not entry.spells or knowsAny(entry.spells))) then
 			return entry.threshold
 		end
 	end

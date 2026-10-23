@@ -371,8 +371,14 @@ end
 -- displayNameByPlayerNameRules): the game's Names settings (UnitShouldDisplayName), "always show names"
 -- (nameplateForceShowUnitName, which Forever does not apply to game objects), or the target with
 -- UnitNameFocused. Objects named only with AzeriteUI on (Luciful, FixLog 2026-10-23). A missing or secret
--- answer shows the name, as before.
+-- answer shows the name, as before. ns.IsRetail is also true on Forever (Core/Client.lua), so Forever is
+-- told apart by ns.IsForever. The player's own "Show object names" (profile showObjectNames) names every
+-- shown object plate, the game's rules aside: there is no game setting for object names.
 local ShouldShowObjectPlateName = function(self)
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	if (profile and profile.showObjectNames) then
+		return true
+	end
 	local unit = self and self.unit
 	if (type(UnitShouldDisplayName) ~= "function" or not IsSafeUnitToken(unit)) then
 		return true
@@ -381,8 +387,11 @@ local ShouldShowObjectPlateName = function(self)
 	if (IsSecretValue(shouldDisplay) or shouldDisplay == true) then
 		return true
 	end
-	if (ns.IsRetail and GetCVarBoolIfSupported("nameplateForceShowUnitName", false)) then
-		return true
+	if (GetCVarBoolIfSupported("nameplateForceShowUnitName", false)) then
+		local isGameObject = ns.IsForever and UnitIsGameObject and UnitIsGameObject(unit)
+		if (IsSecretValue(isGameObject) or isGameObject ~= true) then
+			return true
+		end
 	end
 	return (self.isTarget and GetCVarBoolIfSupported("UnitNameFocused", false)) and true or false
 end

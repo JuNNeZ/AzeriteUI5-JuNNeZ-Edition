@@ -28,7 +28,7 @@ local _, ns = ...
 
 if (not ns.WoW11) then return end
 
--- Retail only: Components/UnitFrames/Units/PlayerTotems.lua creates no module elsewhere.
+-- Retail and Forever: Components/UnitFrames/Units/PlayerTotems.lua creates no module elsewhere.
 local TotemsMod = ns:GetModule("PlayerTotemsFrame", true)
 if (not TotemsMod) then return end
 

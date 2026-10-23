@@ -83,6 +83,9 @@ local defaults = { profile = ns:Merge({
 	executeLineColor = { 1, 1, 1, .85 },
 	executeZoneColor = { 1, .15, .05, .35 },
 	showNameAlways = false,
+	-- Objects (nodes, chests) name themselves whenever their plate shows, whatever the game's name rules say
+	-- (Visibility.lua, ShouldShowObjectPlateName). Off: as Blizzard's plates, since 5.31.4.
+	showObjectNames = false,
 	-- Forever's UnitName returns a surname instead of a realm as its second result.
 	friendlyPlayerNameFormat = "first",
 	enemyPlayerNameFormat = "first",
@@ -98,6 +101,9 @@ local defaults = { profile = ns:Merge({
 	friendlyPlayersTargetOnly = false,
 	-- Players' pets, totems and guardians, friendly or enemy, only for your target (since 2026-09-26).
 	minionsTargetOnly = false,
+	-- The game's Friendly NPCs setting follows its Friendly players one, so Shift+V and Ctrl+V switch NPC
+	-- plates too, as the Mists key bindings do (CVars.lua, FollowFriendlyPlayers). Off: the game's own keys.
+	friendlyNPCsFollowFriendlyPlayers = false,
 	friendlyNameOnlyFontScale = 2.5,
 	friendlyNameOnlyTargetScale = false,
 	showBlizzardWidgets = false,

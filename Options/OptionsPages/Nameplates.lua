@@ -262,6 +262,15 @@ local GenerateOptions = function()
 						set = setter,
 						get = getter
 					},
+					-- NamePlates/Visibility.lua, ShouldShowObjectPlateName. Off follows the game's name rules.
+					showObjectNames = {
+						name = L["Show object names"],
+						desc = L["Gathering nodes, chests and other objects show their name whenever their nameplate shows: on mouseover, as your interact target or as your target. Off, they follow the game's own name settings, as the default nameplates do, which usually name no objects."],
+						order = 1.1,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
 					-- Elements.lua, QuestMarker_Update; the module refreshes all plates on set.
 					showQuestMarker = {
 						name = L["Mark quest units"],
@@ -466,6 +475,21 @@ local GenerateOptions = function()
 						L["The game draws the name of the unit you target over it even when your other name settings would not, such as a corpse you loot or skin. Untick to hide it; a unit with a nameplate shows its name there. Blizzard's Options do not offer this one."], .5),
 					showFriendlyNPCs = ShownToggle("friendlyNPCs", L["Friendly NPCs"],
 						L["Nameplates of friendly NPCs, such as vendors and quest givers."], .4),
+					-- Stored in our profile, not the game's: copies later Friendly players changes to Friendly
+					-- NPCs (NamePlates/CVars.lua, FollowFriendlyPlayers). Ticking it changes nothing by itself.
+					friendlyNPCsFollowFriendlyPlayers = {
+						name = L["Friendly NPCs follow Friendly players"],
+						desc = L["When Friendly players is switched, by Shift+V, Ctrl+V or here, Friendly NPCs switches with it, as the key bindings do on Mists of Pandaria Classic."],
+						order = .45,
+						type = "toggle", width = "full",
+						hidden = function(info)
+							local module = getmodule()
+							return not (module and module.IsShownSettingSupported
+								and module:IsShownSettingSupported("friendlyNPCs") and module:IsShownSettingSupported("friendlyPlayers"))
+						end,
+						set = setter,
+						get = getter
+					},
 					stackEnemyPlates = {
 						name = L["Stack enemy nameplates"],
 						desc = L["Enemy nameplates move apart so they do not overlap."],

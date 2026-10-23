@@ -55,7 +55,7 @@ local methods = { ["test:Name"] = function(unit, realUnit, maxChars)
 end }
 local optionsModule = { AddGroup = function(_, _, generate) generated = generate end }
 local ns = {
-	Prefix = "test", IsForever = forever, IsRetail = not forever, API = {},
+	Prefix = "test", IsForever = forever, IsRetail = true, IsMainline = true, IsRetailContent = not forever, API = {},
 	oUF = { Tags = { Events = {}, Methods = methods } },
 	MovableModulePrototype = { defaults = {} },
 	NewModule = function() return module end,

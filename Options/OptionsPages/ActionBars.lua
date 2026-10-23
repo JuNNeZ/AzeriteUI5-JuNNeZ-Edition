@@ -195,7 +195,8 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				order = 5,
 				type = "toggle", width = "full",
 				hidden = function(info)
-					return not ns.IsRetail or isdisabled(info) or tonumber(string_match(info[#info - 1], "(%d+)")) == 1
+					-- Retail content: ns.IsRetail is also true on Forever, which has no skyriding.
+					return not ns.IsRetailContent or isdisabled(info) or tonumber(string_match(info[#info - 1], "(%d+)")) == 1
 				end,
 				set = function(info, val) setvisibility(info, "dragon", val) end,
 				get = function(info) return getvisibility(info, "dragon") end

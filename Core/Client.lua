@@ -5,7 +5,11 @@ local Addon, ns = ...
 local interface = select(4, GetBuildInfo())
 local metadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
 local mainline = WOW_PROJECT_MAINLINE ~= nil and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
+-- Forever's own project ID is 18, not Mainline's 1 (Blizzard_ProjectConstants/Camelot/ProjectConstants.lua,
+-- loaded for camelot only), so without the TOC marker the interface range alone never matched there.
+local camelot = WOW_PROJECT_CAMELOT ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
 local forever = (metadata and metadata(Addon, "X-AzeriteUI-Client") == "Forever")
+	 or camelot
 	 or (mainline and interface >= 16000 and interface < 17000)
 
 ns.Private.IsForever = forever and true or false
