@@ -10,6 +10,21 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.32.1-JuNNeZ (2026-10-24) - Queue Eye Without Blocked Actions
+
+### Highlights
+
+- **No more "AzeriteUI tried to call a protected function" from the queue eye.** While you were in a queue, a change of action bar in combat (a vehicle, a quest or encounter bar, a form change) made Blizzard move the queue eye, and AzeriteUI's attempt to put it straight back on the minimap was blocked. It now waits until combat ends, so for the rest of that fight the eye can sit where Blizzard put it, near the bottom right of the screen. Thanks to the player who sent the BugGrabber report.
+
+### Development
+
+- **Compared with other UIs first.** ElvUI, FeelUI, GW2 UI, DiabolicUI, Bartender4 and Dominos all move the queue eye too, and none of them waits out combat. From ElvUI we took the check that skips the move when the eye is already in place.
+
+### Access and known limits
+
+- **Checked offline only.** The fix has not yet been confirmed in game.
+
+
 ## 5.32.0-JuNNeZ (2026-10-23) - Object Names Your Way, NPC Plates on the V Keys, and a Forever Sweep
 
 ### Highlights

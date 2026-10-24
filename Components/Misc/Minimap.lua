@@ -434,6 +434,7 @@ local ObjectOwners = {}
 local queueStatusCustomEnabled
 local queueStatusHooksInstalled
 local queueStatusUpdating
+local queueStatusPending
 
 MinimapMod.Elements = Elements
 MinimapMod.Objects = Objects
@@ -441,6 +442,23 @@ MinimapMod.ObjectOwners = ObjectOwners
 
 local UpdateQueueStatusPlacement = function(button)
 	if (not queueStatusCustomEnabled or not button or queueStatusUpdating) then return end
+
+	-- Blizzard re-anchors the eye from secure paths in combat (action bar
+	-- transition -> MicroMenuContainer -> QueueStatusButton:UpdatePosition),
+	-- and the button is protected then. Put it back once combat drops.
+	if (InCombatLockdown()) then
+		queueStatusPending = button
+		return
+	end
+	queueStatusPending = nil
+
+	-- Already in place: nothing to do (ElvUI's QueueStatusReposition does the same).
+	if (button:GetParent() == Minimap and button:GetNumPoints() == 1) then
+		local point, relativeTo, relativePoint, x, y = button:GetPoint(1)
+		if (point == "CENTER" and relativeTo == Minimap and relativePoint == "CENTER" and x == 82 and y == 82) then
+			return
+		end
+	end
 
 	queueStatusUpdating = true
 	if (button:GetParent() ~= Minimap) then
@@ -474,6 +492,7 @@ end
 
 local DisableQueueStatusPlacement = function(button)
 	queueStatusCustomEnabled = nil
+	queueStatusPending = nil
 	if (not button) then return end
 
 	local owner = ObjectOwners.Eye or UIParent
@@ -1723,6 +1742,9 @@ MinimapMod.OnEvent = function(self, event, ...)
 		end
 		if (self.autoHideMouseNeeded) then
 			self:UpdateAutoHideMouse()
+		end
+		if (queueStatusPending) then
+			UpdateQueueStatusPlacement(queueStatusPending)
 		end
 	elseif (event == "DIEL_CYCLE_CHANGED") then
 		self:UpdateDiel(...)
