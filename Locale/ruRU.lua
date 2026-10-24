@@ -786,6 +786,8 @@ L["Nothing matches that."] = "Ничего не найдено."
 
 L["Day and Night Indicator"] = "Индикатор дня и ночи"
 L["Show Forever's day and night cycle on the edge of the minimap, where you can drag it around the ring and right-click it to set its distance from the map. When disabled, Blizzard's own indicator on the minimap cluster is shown instead."] = "Показывает цикл дня и ночи Forever на краю мини-карты: его можно перетаскивать по кольцу, а правым кликом задать расстояние от карты. Если выключено, вместо него показывается стандартный индикатор Blizzard у мини-карты."
+L["Hide Day and Night Indicator"] = "Скрыть индикатор дня и ночи"
+L["Hide the day and night indicator on the minimap completely, both AzeriteUI's and Blizzard's own."] = "Полностью скрывает индикатор дня и ночи у мини-карты: и индикатор AzeriteUI, и стандартный индикатор Blizzard."
 L["Daytime"] = "День"
 L["Nighttime"] = "Ночь"
 L["Distance"] = "Расстояние"

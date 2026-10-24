@@ -10,6 +10,22 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.33.0-JuNNeZ (2026-10-24) - Hide the Day and Night Indicator
+
+### Highlights
+
+- **WoW Forever: hide the day and night icon on the minimap.** Until now, turning off `/az -> Minimap -> Day and Night Indicator` only swapped AzeriteUI's icon for Blizzard's. The new `/az -> Minimap -> Hide Day and Night Indicator` removes both, so the minimap ring stays clear. It is off by default, and the Day and Night Indicator switch is greyed out while the icon is hidden.
+
+### Development
+
+- **Hidden without breaking Blizzard's icon.** Blizzard's own indicator is made invisible rather than removed, so Edit Mode and the day/night change keep working underneath, and switching the option off brings back whichever icon you had chosen. The offline test for the indicator now covers hiding, including when the game cannot say whether it is day or night.
+
+### Access and known limits
+
+- **Forever only**, as Retail has no day and night cycle. Checked offline only; not yet confirmed in game.
+- The switch is on the Minimap options page only, not in the frame settings that open when you click the minimap in `/lock`.
+
+
 ## 5.32.2-JuNNeZ (2026-10-24) - World Map Without Blocked Actions
 
 ### Highlights

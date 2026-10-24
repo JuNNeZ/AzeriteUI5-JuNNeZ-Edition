@@ -219,12 +219,33 @@ local GenerateOptions = function()
 				hidden = function(info)
 					return isdisabled(info) or not ns.IsForever
 				end,
+				-- Which indicator shows means nothing while neither does.
+				disabled = function(info)
+					return getmodule().db.profile.dielHidden
+				end,
 				set = function(info, val)
 					getmodule().db.profile.dielEnabled = val
 					getmodule():UpdateDiel()
 				end,
 				get = function(info)
 					return getmodule().db.profile.dielEnabled
+				end
+			},
+			dielHidden = {
+				name = L["Hide Day and Night Indicator"],
+				desc = L["Hide the day and night indicator on the minimap completely, both AzeriteUI's and Blizzard's own."],
+				order = 7.5,
+				type = "toggle",
+				width = "full",
+				hidden = function(info)
+					return isdisabled(info) or not ns.IsForever
+				end,
+				set = function(info, val)
+					getmodule().db.profile.dielHidden = val
+					getmodule():UpdateDiel()
+				end,
+				get = function(info)
+					return getmodule().db.profile.dielHidden
 				end
 			},
 			autoHide = {

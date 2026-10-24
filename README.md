@@ -446,7 +446,7 @@ The top-right aura display (your buffs and debuffs), separate from unit frame au
 
 ### Minimap
 
-- **Day and Night Indicator (Forever)** — drag it around the minimap, right-click to adjust its distance, or turn it off under `/az` -> Minimap -> Day and Night Indicator to restore Blizzard's own indicator.
+- **Day and Night Indicator (Forever)** — drag it around the minimap, right-click to adjust its distance, or turn it off under `/az` -> Minimap -> Day and Night Indicator to restore Blizzard's own indicator, or tick `/az` -> Minimap -> Hide Day and Night Indicator to hide both.
 - **Enable/Disable** — when disabled, the minimap is untouched by AzeriteUI
 - **Hide AddOn Text** — hide the custom "AddOns" label
 - **Hide Clock Text** — hide the AzeriteUI clock display

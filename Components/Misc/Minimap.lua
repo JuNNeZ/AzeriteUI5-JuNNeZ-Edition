@@ -166,6 +166,16 @@ MinimapMod.IsDielEnabled = function(self)
 	return not (db and db.dielEnabled == false)
 end
 
+-- Whether the player wants no indicator at all, ours or Blizzard's. This wins
+-- over IsDielEnabled: hidden means both are gone, whichever one would show.
+MinimapMod.IsDielHidden = function(self)
+	if (not ns.IsForever) then return false end
+
+	local db = self.db and self.db.profile
+
+	return db and db.dielHidden == true or false
+end
+
 MinimapMod.PositionDiel = function(self)
 	local frame = self.dielFrame
 	if (not frame) then return end
@@ -205,6 +215,15 @@ MinimapMod.UpdateDiel = function(self, isDayTime)
 	if (not frame) then return end
 
 	local nativeDiel = MinimapCluster and MinimapCluster.DielFrame
+
+	-- Hidden is the same fade we use when ours is up, only with nothing in its
+	-- place, so Blizzard's frame stays alive for Edit Mode and the cycle event.
+	if (self:IsDielHidden()) then
+		frame.isDayTime = nil
+		frame:Hide()
+		if (nativeDiel) then nativeDiel:SetAlpha(0) end
+		return
+	end
 
 	-- Match Forever's native initialization/event contract. false means night,
 	-- so only a non-boolean is missing data worth querying the client over.
@@ -402,6 +421,7 @@ local defaults = { profile = ns:Merge({
 	autoHideInDungeons = false,
 	autoHideInRaids = false,
 	dielEnabled = true,
+	dielHidden = false,
 	dielAngle = half_pi,
 	dielDistanceOffset = DIEL_DISTANCE_OFFSET,
 	dielTheme = DIEL_THEME_SKY,

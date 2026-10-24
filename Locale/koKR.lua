@@ -786,6 +786,8 @@ L["Nothing matches that."] = "일치하는 항목이 없습니다."
 
 L["Day and Night Indicator"] = "낮과 밤 표시기"
 L["Show Forever's day and night cycle on the edge of the minimap, where you can drag it around the ring and right-click it to set its distance from the map. When disabled, Blizzard's own indicator on the minimap cluster is shown instead."] = "Forever의 낮과 밤 주기를 미니맵 가장자리에 표시합니다. 고리를 따라 끌어 옮길 수 있고, 우클릭하여 지도와의 거리를 설정할 수 있습니다. 끄면 미니맵에 블리자드 기본 표시기가 대신 표시됩니다."
+L["Hide Day and Night Indicator"] = "낮과 밤 표시기 숨기기"
+L["Hide the day and night indicator on the minimap completely, both AzeriteUI's and Blizzard's own."] = "미니맵의 낮과 밤 표시기를 완전히 숨깁니다. AzeriteUI 표시기와 블리자드 기본 표시기 모두 숨겨집니다."
 L["Daytime"] = "낮"
 L["Nighttime"] = "밤"
 L["Distance"] = "거리"

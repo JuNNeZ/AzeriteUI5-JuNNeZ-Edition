@@ -786,6 +786,8 @@ L["Nothing matches that."] = "Aucun résultat."
 
 L["Day and Night Indicator"] = "Indicateur jour/nuit"
 L["Show Forever's day and night cycle on the edge of the minimap, where you can drag it around the ring and right-click it to set its distance from the map. When disabled, Blizzard's own indicator on the minimap cluster is shown instead."] = "Affiche le cycle jour/nuit de Forever au bord de la minicarte, où vous pouvez le faire glisser le long de l'anneau et faire un clic droit pour régler sa distance à la carte. Désactivé, l'indicateur de Blizzard sur la minicarte est affiché à la place."
+L["Hide Day and Night Indicator"] = "Masquer l'indicateur jour/nuit"
+L["Hide the day and night indicator on the minimap completely, both AzeriteUI's and Blizzard's own."] = "Masque complètement l'indicateur jour/nuit de la minicarte, celui d'AzeriteUI comme celui de Blizzard."
 L["Daytime"] = "Jour"
 L["Nighttime"] = "Nuit"
 L["Distance"] = "Distance"

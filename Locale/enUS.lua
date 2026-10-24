@@ -785,6 +785,8 @@ L["Nothing matches that."] = true
 
 L["Day and Night Indicator"] = true
 L["Show Forever's day and night cycle on the edge of the minimap, where you can drag it around the ring and right-click it to set its distance from the map. When disabled, Blizzard's own indicator on the minimap cluster is shown instead."] = true
+L["Hide Day and Night Indicator"] = true
+L["Hide the day and night indicator on the minimap completely, both AzeriteUI's and Blizzard's own."] = true
 L["Daytime"] = true
 L["Nighttime"] = true
 L["Distance"] = true

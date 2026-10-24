@@ -786,6 +786,8 @@ L["Nothing matches that."] = "沒有相符的項目。"
 
 L["Day and Night Indicator"] = "晝夜指示器"
 L["Show Forever's day and night cycle on the edge of the minimap, where you can drag it around the ring and right-click it to set its distance from the map. When disabled, Blizzard's own indicator on the minimap cluster is shown instead."] = "在小地圖邊緣顯示Forever的晝夜循環，可沿著圓環拖動，右鍵點擊可設定它與地圖的距離。停用時，將改為顯示暴雪內建的小地圖指示器。"
+L["Hide Day and Night Indicator"] = "隱藏晝夜指示器"
+L["Hide the day and night indicator on the minimap completely, both AzeriteUI's and Blizzard's own."] = "完全隱藏小地圖上的晝夜指示器，包括AzeriteUI的和暴雪內建的。"
 L["Daytime"] = "白天"
 L["Nighttime"] = "夜晚"
 L["Distance"] = "距離"

@@ -155,8 +155,9 @@ local chunk = assert(loadstring(slice, "@Diel block"))
 setfenv(chunk, env)
 chunk()
 
-check("block defines the four entry points",
+check("block defines the five entry points",
 	type(MinimapMod.IsDielEnabled) == "function"
+	and type(MinimapMod.IsDielHidden) == "function"
 	and type(MinimapMod.PositionDiel) == "function"
 	and type(MinimapMod.UpdateDiel) == "function"
 	and type(MinimapMod.CreateDiel) == "function")
@@ -251,6 +252,37 @@ check("turning the option off gives the native frame back", nativeDiel:GetAlpha(
 MinimapMod.db.profile.dielEnabled = true
 MinimapMod:UpdateDiel()
 check("turning it back on restores ours", frame.shown == true and nativeDiel:GetAlpha() == 0)
+
+--------------------------------------------------------------------------
+-- Hide Day and Night Indicator: neither ours nor Blizzard's.
+--------------------------------------------------------------------------
+check("not hidden by default", MinimapMod:IsDielHidden() == false)
+
+MinimapMod.db.profile.dielHidden = true
+MinimapMod:UpdateDiel()
+check("hiding hides ours", frame.shown == false)
+check("hiding keeps the native frame faded", nativeDiel:GetAlpha() == 0)
+
+MinimapMod.db.profile.dielEnabled = false
+MinimapMod:UpdateDiel()
+check("hiding wins over handing back to Blizzard", frame.shown == false and nativeDiel:GetAlpha() == 0)
+
+client.isDayTime = nil
+MinimapMod:UpdateDiel(nil)
+check("hiding wins over an unknown state", nativeDiel:GetAlpha() == 0)
+client.isDayTime = true
+
+client.isForever = false
+check("Retail is never hidden", MinimapMod:IsDielHidden() == false)
+client.isForever = true
+
+MinimapMod.db.profile.dielHidden = false
+MinimapMod:UpdateDiel()
+check("unhiding with ours off gives Blizzard's back", frame.shown == false and nativeDiel:GetAlpha() == 1)
+
+MinimapMod.db.profile.dielEnabled = true
+MinimapMod:UpdateDiel()
+check("unhiding with ours on restores ours", frame.shown == true and nativeDiel:GetAlpha() == 0)
 
 --------------------------------------------------------------------------
 -- The tooltip names the state it is actually showing.
