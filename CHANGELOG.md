@@ -10,6 +10,23 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.32.2-JuNNeZ (2026-10-24) - World Map Without Blocked Actions
+
+### Highlights
+
+- **No more "AzeriteUI tried to call a protected function" when you open the world map in combat.** AzeriteUI centres the large world map. With some addon combinations the game protects the map during combat and blocks that move. AzeriteUI now leaves the map where the game puts it, near the top of the screen, and centres it when combat ends. Without such an addon nothing changes, and the map still centres in combat. Thanks to the player who sent the BugGrabber report.
+- **Turning the World Map option on or off no longer shrinks the open map twice.**
+
+### Development
+
+- **Every map move and resize checked, not only the one in the report.** Opening, maximizing, minimizing with the quest log, changing the UI scale and switching the option on or off all wait out combat when the map is protected, then apply what they skipped. A resize of an open map waits until the map closes, so the map is never drawn at the wrong size.
+- **A new offline test** loads the real module against a world map that follows Blizzard's own code for opening, maximizing and closing, and fails whenever a call would be blocked in combat.
+
+### Access and known limits
+
+- **Checked offline only.** The fix has not yet been confirmed in game. Which addon protects the map in combat is still unknown.
+
+
 ## 5.32.1-JuNNeZ (2026-10-24) - Queue Eye Without Blocked Actions
 
 ### Highlights

@@ -18,7 +18,9 @@ local defaults = { profile = {
 
 -- Lua API
 local ipairs = ipairs
+local next = next
 local pairs = pairs
+local pcall = pcall
 local select = select
 local string_format = string.format
 local string_gsub = string.gsub
@@ -28,6 +30,7 @@ local CreateFrame = CreateFrame
 local GetBestMapForUnit = C_Map and C_Map.GetBestMapForUnit
 local GetPlayerMapPosition = C_Map and C_Map.GetPlayerMapPosition
 local InCombatLockdown = InCombatLockdown
+local issecretvalue = issecretvalue
 
 -- WoW API
 -- SetCVar is deprecated in favour of C_CVar.SetCVar, which expects a string
@@ -55,6 +58,39 @@ local L = {
 local IsWorldMapEnabled = function()
 	return WorldMapMod and WorldMapMod.db and WorldMapMod.db.profile and WorldMapMod.db.profile.enabled
 end
+
+-- True while moving, sizing, reparenting or showing this frame would be blocked.
+-- Stock Blizzard never protects the map, but another addon's secure frame under or
+-- anchored to it does, and then our hooks' calls on it are blocked in combat. Protection
+-- spreads to parents, not children, so each frame is asked on its own. Fails closed: an
+-- unreadable or secret IsProtected answer counts as protected.
+local IsLocked = function(frame)
+	if (not InCombatLockdown()) then
+		return false
+	end
+	local ok, isProtected = pcall(frame.IsProtected, frame)
+	if (not ok) or (issecretvalue and issecretvalue(isProtected)) then
+		return true
+	end
+	return isProtected and true or false
+end
+
+local IsMapLocked = function()
+	return IsLocked(WorldMapFrame)
+end
+
+-- Protected calls skipped while the map was locked, replayed by FlushPending.
+-- settings: UpdateSettings; style: the restricted half of ApplyStyled*State;
+-- size: our maximized size; anchor: our maximized position.
+local pending = {}
+
+local QueuePending = function(what)
+	pending[what] = true
+	WorldMapMod:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+end
+
+-- The size Blizzard's UpdateMaximizedSize last gave the map, before our shrink.
+local stockWidth, stockHeight
 
 local GetFormattedCoordinates = function(x, y)
 	return string_gsub(string_format("|cfff0f0f0%.2f|r", x * 100), "%.(.+)", "|cffa0a0a0.%1|r"),
@@ -106,9 +142,26 @@ local Coords_OnUpdate = function(self, elapsed)
 	self.elapsed = 0
 end
 
+-- The protected calls of each style wait out a locked frame; alpha, the background
+-- texture and our own frames are safe in combat and always applied.
 local ApplyStyledMaximizedState = function()
-	WorldMapFrame:SetParent(UIParent)
-	WorldMapFrame:SetScale(1)
+	if (IsMapLocked()) then
+		QueuePending("style")
+	else
+		WorldMapFrame:SetParent(UIParent)
+		WorldMapFrame:SetScale(1)
+	end
+	if (IsLocked(WorldMapFrame.NavBar)) then
+		QueuePending("style")
+	else
+		WorldMapFrame.NavBar:Hide()
+	end
+	if (IsLocked(WorldMapFrameCloseButton)) then
+		QueuePending("style")
+	else
+		WorldMapFrameCloseButton:ClearAllPoints()
+		WorldMapFrameCloseButton:SetPoint("TOPLEFT", 4, -70)
+	end
 	-- No SetUIPanelAttribute here. Blizzard sets the maximized map's panel
 	-- layout itself; an attribute written by an addon taints UIParent's panel
 	-- manager, and the next map opened in combat had its quest pins blocked
@@ -117,11 +170,8 @@ local ApplyStyledMaximizedState = function()
 	-- levels and every pin under our taint, and hovering an area POI then hit secret tooltip
 	-- widget sizes (LayoutFrame.lua:491). Blizzard's Maximize calls it after our size hook,
 	-- and SetMapID rebuilds the canvas on every map change.
-	WorldMapFrame.NavBar:Hide()
 	WorldMapFrame.BorderFrame:SetAlpha(0)
 	WorldMapFrameBg:Hide()
-	WorldMapFrameCloseButton:ClearAllPoints()
-	WorldMapFrameCloseButton:SetPoint("TOPLEFT", 4, -70)
 	WorldMapFrame.AzeriteBackdrop:Show()
 	WorldMapFrame.AzeriteBorder:Show()
 	WorldMapFrame.AzeriteCoords:Show()
@@ -129,17 +179,46 @@ end
 
 local ApplyStyledMinimizedState = function()
 	if (not WorldMapFrame:IsMaximized()) then
-		WorldMapFrame:ClearAllPoints()
-		WorldMapFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 16, -94)
-		WorldMapFrame.NavBar:Show()
+		if (IsMapLocked()) then
+			QueuePending("style")
+		else
+			WorldMapFrame:ClearAllPoints()
+			WorldMapFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 16, -94)
+		end
+		if (IsLocked(WorldMapFrame.NavBar)) then
+			QueuePending("style")
+		else
+			WorldMapFrame.NavBar:Show()
+		end
+		if (IsLocked(WorldMapFrameCloseButton)) then
+			QueuePending("style")
+		else
+			WorldMapFrameCloseButton:ClearAllPoints()
+			WorldMapFrameCloseButton:SetPoint("TOPRIGHT", 5, 5)
+		end
 		WorldMapFrame.BorderFrame:SetAlpha(1)
 		WorldMapFrameBg:Show()
-		WorldMapFrameCloseButton:ClearAllPoints()
-		WorldMapFrameCloseButton:SetPoint("TOPRIGHT", 5, 5)
 		WorldMapFrame.AzeriteBackdrop:Hide()
 		WorldMapFrame.AzeriteBorder:Hide()
 		WorldMapFrame.AzeriteCoords:Hide()
 	end
+end
+
+local SetMaximizedPosition = function()
+	WorldMapFrame:ClearAllPoints()
+	WorldMapFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 30)
+end
+
+-- Shrinks from the size Blizzard last set, not the current one, so running it
+-- again (a replay, or UpdateSettings on an already styled map) never compounds.
+local SetMaximizedSize = function()
+	local width, height = stockWidth, stockHeight
+	if (not width or not height) then
+		width, height = WorldMapFrame:GetSize()
+	end
+	local scale = CalculateScale()
+	local magicNumber = (1 - scale) * 100
+	WorldMapFrame:SetSize((width * scale) - (magicNumber + 2), (height * scale) - 2)
 end
 
 local WorldMapFrame_SyncState = function()
@@ -147,22 +226,33 @@ local WorldMapFrame_SyncState = function()
 		return
 	end
 	if (WorldMapFrame:IsMaximized()) then
-		WorldMapFrame:ClearAllPoints()
-		WorldMapFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 30)
+		-- Blizzard has already placed the map at its own TOP anchor; ours follows after combat,
+		-- and not while the map is still at Blizzard's full size (centred, it would reach past the top).
+		if (IsMapLocked() or pending.size) then
+			QueuePending("anchor")
+			return
+		end
+		pending.anchor = nil
+		SetMaximizedPosition()
 	end
 end
 
 local WorldMapFrame_UpdateMaximizedSize = function()
-	if (not IsWorldMapEnabled()) then
-		return
-	end
 	if (not WorldMapFrame:IsMaximized()) then
 		return
 	end
-	local width, height = WorldMapFrame:GetSize()
-	local scale = CalculateScale()
-	local magicNumber = (1 - scale) * 100
-	WorldMapFrame:SetSize((width * scale) - (magicNumber + 2), (height * scale) - 2)
+	-- Blizzard has just sized the map. Reading it is safe, and it is recorded
+	-- even with the module off so switching it on later starts from this size.
+	stockWidth, stockHeight = WorldMapFrame:GetSize()
+	if (not IsWorldMapEnabled()) then
+		return
+	end
+	if (IsMapLocked()) then
+		QueuePending("size")
+		return
+	end
+	pending.size = nil
+	SetMaximizedSize()
 end
 
 local WorldMapFrame_Maximize = function()
@@ -306,6 +396,13 @@ WorldMapMod.UpdateSettings = function(self)
 	if (not self.Styled or not self.db or not self.db.profile) then
 		return
 	end
+	-- Switching off calls Blizzard's map and panel code, and styling a locked map is blocked.
+	-- /az classic and /az legacy reach this in combat (the /az panel queues its own writes).
+	if (InCombatLockdown() and (not self.db.profile.enabled or IsMapLocked())) then
+		QueuePending("settings")
+		return
+	end
+	pending.settings = nil
 	if (self.db.profile.enabled) then
 		self.StyleApplied = true
 		if (not InCombatLockdown()) then
@@ -327,13 +424,62 @@ WorldMapMod.UpdateSettings = function(self)
 		end
 		ApplyOverlayFrameState(self, true)
 		if (WorldMapFrame:IsMaximized()) then
-			WorldMapFrame_UpdateMaximizedSize()
+			pending.size = nil
+			SetMaximizedSize()
 			ApplyStyledMaximizedState()
 		else
 			ApplyStyledMinimizedState()
 		end
 	else
 		RestoreBlizzardState(self)
+	end
+end
+
+-- Replays what a locked map skipped with our own setters; it never calls Blizzard's map
+-- or panel methods itself (FixLog 2026-10-14/15). A pending UpdateSettings that switches
+-- the module off still runs RestoreBlizzardState, as switching it off out of combat does.
+local FlushPending = function()
+	if (not next(pending)) then
+		WorldMapMod:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
+		return
+	end
+	if (IsMapLocked()) then
+		return
+	end
+	-- In combat it queues itself again when it still must wait.
+	if (pending.settings) then
+		WorldMapMod:UpdateSettings()
+	end
+	if (not IsWorldMapEnabled()) then
+		pending.style, pending.size, pending.anchor = nil, nil, nil
+	end
+	local isMaximized = WorldMapFrame:IsMaximized()
+	if (pending.style) then
+		pending.style = nil
+		if (isMaximized) then
+			ApplyStyledMaximizedState()
+		else
+			ApplyStyledMinimizedState()
+		end
+	end
+	-- Resizing an open map leaves its canvas built for the old size, so a pending
+	-- size waits for WorldMapOnHide; the next open rebuilds the canvas at ours.
+	if (pending.size and not WorldMapFrame:IsShown()) then
+		pending.size = nil
+		if (isMaximized) then
+			SetMaximizedSize()
+		end
+	end
+	-- Not on a map still at Blizzard's full size: centred, it would reach past the top edge.
+	-- A hidden map is placed by our SynchronizeDisplayState hook when it opens.
+	if (pending.anchor and not pending.size) then
+		pending.anchor = nil
+		if (isMaximized and WorldMapFrame:IsShown()) then
+			SetMaximizedPosition()
+		end
+	end
+	if (not next(pending)) then
+		WorldMapMod:UnregisterEvent("PLAYER_REGEN_ENABLED", "OnEvent")
 	end
 end
 
@@ -404,6 +550,9 @@ WorldMapMod.SetUpMap = function(self)
 	self:SecureHook(WorldMapFrame, "Minimize", WorldMapFrame_Minimize)
 	self:SecureHook(WorldMapFrame, "SynchronizeDisplayState", WorldMapFrame_SyncState)
 	self:SecureHook(WorldMapFrame, "UpdateMaximizedSize", WorldMapFrame_UpdateMaximizedSize)
+	if (EventRegistry) then
+		EventRegistry:RegisterCallback("WorldMapOnHide", FlushPending, self)
+	end
 
 	self.Styled = true
 	self:UpdateSettings()
@@ -420,6 +569,8 @@ WorldMapMod.OnEvent = function(self, event, ...)
 		if (IsWorldMapEnabled() and not InCombatLockdown()) then
 			SetCVarValue("miniWorldMap", 0)
 		end
+	elseif (event == "PLAYER_REGEN_ENABLED") then
+		FlushPending()
 	end
 end
 
