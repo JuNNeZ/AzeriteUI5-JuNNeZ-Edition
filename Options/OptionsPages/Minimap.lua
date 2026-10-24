@@ -248,6 +248,24 @@ local GenerateOptions = function()
 					return getmodule().db.profile.dielHidden
 				end
 			},
+			hideEventButton = {
+				name = L["Hide Activity Button"],
+				desc = L["Hide the Activity button the China realms add to the left of the minimap."],
+				order = 7.6,
+				type = "toggle",
+				width = "full",
+				-- Only the China client has this button.
+				hidden = function(info)
+					return isdisabled(info) or not getmodule():HasEventButton()
+				end,
+				set = function(info, val)
+					getmodule().db.profile.hideEventButton = val
+					getmodule():UpdateEventButton()
+				end,
+				get = function(info)
+					return getmodule().db.profile.hideEventButton
+				end
+			},
 			autoHide = {
 				name = L["Auto-Hide"],
 				order = 8,

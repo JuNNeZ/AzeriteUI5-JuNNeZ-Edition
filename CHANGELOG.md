@@ -10,6 +10,21 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.34.0-JuNNeZ (2026-10-24) - Hide the Activity Button
+
+### Highlights
+
+- **WoW Forever, China realms: hide the Activity button on the minimap.** The clock button on the left of the minimap (活动) opens Blizzard's event web page. Tick `/az -> Minimap -> Hide Activity Button` to remove it; untick it to bring it back where it was. It is off by default and only listed on the China client. Thanks to Dcryfm for the request and the /fstack.
+
+### Development
+
+- **Built from Blizzard's own code and other UIs.** Forever's minimap code shows the button only while there is an event link, which in practice means the China realms. ElvUI, QUI, EKMinimap, RealUI and EllesmereUI were checked first; AzeriteUI hides it the way ElvUI does, by moving it into a hidden frame, so Blizzard showing it again for a new event does not bring it back. A new offline test covers hiding, restoring, other regions and combat.
+
+### Access and known limits
+
+- **China realms on WoW Forever only.** The same hiding was confirmed in game on a China client with a one-line test command; the switch itself has not yet been tried there.
+
+
 ## 5.33.0-JuNNeZ (2026-10-24) - Hide the Day and Night Indicator
 
 ### Highlights

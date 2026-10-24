@@ -56,7 +56,7 @@ local GetCVarBool = (C_CVar and C_CVar.GetCVarBool) or GetCVarBool
 -- GLOBALS: GetPlayerFacing, GetRealZoneText
 -- GLOBALS: ExpansionLandingPageMinimapButton, GarrisonLandingPageMinimapButton, MinimapZoneTextButton, MiniMapWorldMapButton, TimeManagerClockButton, QueueStatusButton
 -- GLOBALS: InCombatLockdown, IsInInstance, IsResting, HasNewMail, PlaySound, ToggleDropDownMenu
--- GLOBALS: C_DateAndTime, GetCursorPosition
+-- GLOBALS: C_DateAndTime, GetCursorPosition, GetCurrentRegionName
 -- GLOBALS: MinimapZoomIn, MinimapZoomOut, Minimap_OnClick
 -- GLOBALS: Minimap, MinimapBackdrop, MinimapCluster, MinimapBorder, MinimapBorderTop, MicroMenuContainer, MinimapCompassTexture, MiniMapInstanceDifficulty, MiniMapTracking
 -- GLOBALS: MenuUtil
@@ -410,6 +410,54 @@ local IsVehicleExitButtonAttached = function()
 	return not (db and db.useCustomPosition)
 end
 
+-- The China client's Activity button
+---------------------------------------------------------
+-- MinimapBackdrop.ExternalEventURLButton is Forever's (Blizzard_Minimap/Shared/
+-- ExternalEventURLMinimapButton.lua, not in the Retail source): a plain clock
+-- button that opens an event web page through C_ExternalEventURL. Its Refresh()
+-- shows it only while CanShow() and HasURL(), which in practice means the China
+-- realms. We leave it where Blizzard puts it unless asked to hide it, and hiding
+-- means moving it into our hidden frame, as ElvUI's hideExternalEvent does:
+-- Refresh() calls SetShown on every EXTERNAL_EVENT_URL_CHANGED, but nothing in
+-- Blizzard's code reparents it, and ApplyExternalEventURLButtonAnchor only
+-- re-sets its points, which a reparent keeps.
+local GetEventButton = function()
+	return MinimapBackdrop and MinimapBackdrop.ExternalEventURLButton
+end
+
+-- Only the China client has the button, and only there is the option offered.
+MinimapMod.HasEventButton = function(self)
+	if (type(GetCurrentRegionName) ~= "function" or GetCurrentRegionName() ~= "CN") then return false end
+
+	return GetEventButton() ~= nil
+end
+
+MinimapMod.UpdateEventButton = function(self)
+	if (not self:HasEventButton()) then return end
+
+	local button = GetEventButton()
+	local db = self.db and self.db.profile
+	local hide = db and db.enabled and db.hideEventButton and true or false
+
+	-- It is a plain button in Blizzard's source, but should a later build make it
+	-- protected, it cannot be reparented in combat. Wait for PLAYER_REGEN_ENABLED.
+	if (InCombatLockdown() and button:IsProtected()) then
+		self.eventButtonPending = true
+		return
+	end
+	self.eventButtonPending = nil
+
+	if (hide) then
+		if (not self.eventButtonParent) then
+			self.eventButtonParent = button:GetParent()
+		end
+		button:SetParent(UIHider)
+	elseif (self.eventButtonParent) then
+		button:SetParent(self.eventButtonParent)
+		self.eventButtonParent = nil
+	end
+end
+
 local defaults = { profile = ns:Merge({
 	enabled = true,
 	theme = "Azerite",
@@ -425,6 +473,7 @@ local defaults = { profile = ns:Merge({
 	dielAngle = half_pi,
 	dielDistanceOffset = DIEL_DISTANCE_OFFSET,
 	dielTheme = DIEL_THEME_SKY,
+	hideEventButton = false,
 	textVisibilityMigrated = false
 }, ns.MovableModulePrototype.defaults) }
 
@@ -1667,6 +1716,8 @@ MinimapMod.UpdateSettings = function(self)
 	self:UpdateAddonCompartmentVisibility()
 	self:UpdateClockVisibility()
 	self:UpdateAutoHide()
+	-- Before the enabled check, so switching the minimap off gives the button back.
+	self:UpdateEventButton()
 	if (not self.db.profile.enabled) then return end
 
 	-- Just update theme and settings
@@ -1765,6 +1816,9 @@ MinimapMod.OnEvent = function(self, event, ...)
 		end
 		if (queueStatusPending) then
 			UpdateQueueStatusPlacement(queueStatusPending)
+		end
+		if (self.eventButtonPending) then
+			self:UpdateEventButton()
 		end
 	elseif (event == "DIEL_CYCLE_CHANGED") then
 		self:UpdateDiel(...)

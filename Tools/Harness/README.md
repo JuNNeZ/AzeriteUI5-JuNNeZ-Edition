@@ -37,6 +37,7 @@ lua Tools/Harness/real_options_harness.lua . Tools/Harness   # the real table, e
 lua Tools/Harness/real_options_harness.lua . Tools/Harness Forever # unavailable settings hidden
 lua Tools/Harness/client_harness.lua      .                # Retail/Forever detection, APIs, modules, menus
 lua Tools/Harness/diel_harness.lua        .                # the Forever day and night indicator
+lua Tools/Harness/event_button_harness.lua .              # Hide Activity Button (China Forever)
 lua Tools/Harness/combo_points_harness.lua .               # Forever secret combo points
 lua Tools/Harness/chat_guard_harness.lua   .               # chat module stays out of chat replacements
 lua Tools/Harness/tracker_harness.lua      .               # Hide the Blizzard Tracker, Retail and Forever
