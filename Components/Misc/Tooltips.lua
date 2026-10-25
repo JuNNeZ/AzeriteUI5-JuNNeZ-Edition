@@ -365,55 +365,36 @@ local RestoreBlizzardTooltipBackdrop = function(tooltip)
 	PlaceCompareHeader(tooltip)
 end
 
-local ManagedTooltipState = setmetatable({}, { __mode = "k" })
 local CompareLayoutHooked = setmetatable({}, { __mode = "k" })
 
 -- What the compare hook and the aura tooltip style last did, for /azdebug tooltips.
 local Trace = { joins = 0, compare = {}, held = {} }
 
-local IsManagedTooltip = function(tooltip)
+-- SharedTooltip_SetBackdropStyle also serves addon-owned tooltips. Accept those
+-- without a name allowlist, but keep menus and embedded/restricted frames out.
+local CanStyleTooltip = function(tooltip, embedded)
 	if (not tooltip) or (tooltip.IsForbidden and tooltip:IsForbidden()) then
 		return false
 	end
-
-	local cached = ManagedTooltipState[tooltip]
-	if (cached ~= nil) then
-		return cached
+	if (IsSecretValue(embedded) or IsSecretValue(tooltip.IsEmbedded)) then
+		return false
 	end
+	if (embedded or tooltip.IsEmbedded) then return false end
 
-	local managed = tooltip == _G.GameTooltip
-		or tooltip == _G.ShoppingTooltip1
-		or tooltip == _G.ShoppingTooltip2
-		or tooltip == _G.ItemRefTooltip
-		or tooltip == _G.ItemRefShoppingTooltip1
-		or tooltip == _G.ItemRefShoppingTooltip2
-		or tooltip == _G.EmbeddedItemTooltip
-		or tooltip == _G.FriendsTooltip
-		or tooltip == _G.WarCampaignTooltip
-		or tooltip == _G.ReputationParagonTooltip
-		or tooltip == _G.QuickKeybindTooltip
-		or tooltip == _G.GameNoHeaderTooltip
-		or tooltip == _G.GameSmallHeaderTooltip
-		or tooltip == (_G.QuestScrollFrame and _G.QuestScrollFrame.StoryTooltip)
-		or tooltip == (_G.QuestScrollFrame and _G.QuestScrollFrame.CampaignTooltip)
-		or tooltip == _G.NarciGameTooltip
-
-	if (not managed and tooltip.GetName) then
+	if (tooltip.GetName) then
 		local tooltipName = tooltip:GetName()
-		if (tooltipName and (
+		if (IsSecretValue(tooltipName)) then return false end
+		if (type(tooltipName) == "string" and (
 			string_match(tooltipName, "^DropDownList%d+")
 			or string_match(tooltipName, "^L_DropDownList%d+")
+			or string_match(tooltipName, "^Lib_DropDownList%d+")
 			or string_match(tooltipName, "MenuBackdrop$")
 			or string_match(tooltipName, "Backdrop$") and string_find(tooltipName, "DropDown")
 		)) then
-			managed = false
-		elseif (tooltipName and string_match(tooltipName, "^UIWidgetBaseItemEmbeddedTooltip%d+$")) then
-			managed = true
+			return false
 		end
 	end
-
-	ManagedTooltipState[tooltip] = managed and true or false
-	return managed
+	return true
 end
 
 
@@ -446,10 +427,9 @@ Tooltips.GenerateDefaults = function(self)
 	return defaults
 end
 
-Tooltips.UpdateBackdropTheme = function(self, tooltip)
+Tooltips.UpdateBackdropTheme = function(self, tooltip, style, embedded)
 	if (self:IsDisabled()) then return end
-	if (not tooltip) or (tooltip.IsEmbedded) or (tooltip:IsForbidden()) then return end
-	if (not IsManagedTooltip(tooltip)) then return end
+	if (not CanStyleTooltip(tooltip, embedded)) then return end
 	-- WoW12: use safe geometry helper to get a clean (non-secret) width.
 	-- Skip styling if the tooltip has zero size (e.g. not yet laid out).
 	local width = ns.GetSafeWidth and ns.GetSafeWidth(tooltip) or (tooltip.GetWidth and tooltip:GetWidth() or 0)
@@ -763,6 +743,12 @@ Tooltips.UpdateTooltipThemes = function(self, event, ...)
 		_G.QuestScrollFrame and _G.QuestScrollFrame.CampaignTooltip,
 		_G.NarciGameTooltip
 	} do
+		self:UpdateBackdropTheme(tooltip)
+	end
+
+	-- Include addon tooltips discovered by the shared backdrop hook on theme changes
+	-- and after re-enabling styling. No OnShow/size hooks or frame enumeration.
+	for tooltip in next, Backdrops do
 		self:UpdateBackdropTheme(tooltip)
 	end
 
@@ -1568,22 +1554,7 @@ Tooltips.UpdateSettings = function(self)
 		if (self._stylingActive ~= false) then
 			if (self.RemoveHooks) then self:RemoveHooks() end
 
-			for _,tt in next,{
-				_G.GameTooltip,
-				_G.ShoppingTooltip1,
-				_G.ShoppingTooltip2,
-				_G.ItemRefTooltip,
-				_G.ItemRefShoppingTooltip1,
-				_G.ItemRefShoppingTooltip2,
-				_G.FriendsTooltip,
-				_G.WarCampaignTooltip,
-				_G.EmbeddedItemTooltip,
-				_G.ReputationParagonTooltip,
-				_G.QuickKeybindTooltip,
-				_G.QuestScrollFrame and _G.QuestScrollFrame.StoryTooltip,
-				_G.QuestScrollFrame and _G.QuestScrollFrame.CampaignTooltip,
-				_G.NarciGameTooltip
-			} do
+			for tt in next, Backdrops do
 				-- Also forgets the style signature, so switching back on restyles in
 				-- full instead of taking UpdateBackdropTheme's nothing-changed return.
 				RestoreBlizzardTooltipBackdrop(tt)

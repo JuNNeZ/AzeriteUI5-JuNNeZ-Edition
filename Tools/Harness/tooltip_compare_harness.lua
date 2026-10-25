@@ -1047,6 +1047,75 @@ do
 	CheckErrors(label)
 end
 
+-- Addon tooltips entering through Blizzard's shared backdrop helper, including
+-- unnamed/late-created ones. These checks model lifecycle, not live taint safety.
+do
+	for _, theme in ipairs({ "Azerite", "Classic" }) do
+		local module, env, style, themes = Load({ theme = theme, side = "right" })
+		local function NewTip(name)
+			local tip = NewFrame(name, env.UIParent)
+			tip.width, tip.height = 280, 120
+			tip.NineSlice = NewFrame(nil, tip)
+			tip:SetPoint("TOPLEFT", env.UIParent, "TOPLEFT", 40, -50)
+			return tip
+		end
+		local tips = { NewTip("ThirdPartyMapTooltip"), NewTip(nil) }
+		for _, tip in ipairs(tips) do
+			env.SharedTooltip_SetBackdropStyle(tip)
+			check(tip.__backdrop and tip.__backdrop.shown and tip.__backdrop.backdrop == style.backdrop,
+				theme .. ": addon tooltip receives the theme")
+			check(#tip.points == 1 and tip.points[1].x == 40 and tip.points[1].y == -50 and tip.scale == 1,
+				theme .. ": addon tooltip placement and scale retained")
+			check(not tip.scripts.OnShow and not tip.scripts.OnSizeChanged,
+				theme .. ": no tooltip show or size script installed")
+		end
+		for _, name in ipairs({ "DropDownList1", "L_DropDownList2", "Lib_DropDownList1", "AddonMenuBackdrop", "DropDownCustomBackdrop" }) do
+			local tip = NewTip(name)
+			env.SharedTooltip_SetBackdropStyle(tip)
+			check(not tip.__backdrop and tip.NineSlice.parent == tip, theme .. ": menu excluded: " .. name)
+		end
+		for _, kind in ipairs({ "forbidden", "embedded flag", "embedded argument", "secret width", "zero width", "secret name", "secret embedded" }) do
+			local tip = NewTip("ExcludedTooltip")
+			if kind == "forbidden" then tip.IsForbidden = function() return true end
+			elseif kind == "embedded flag" then tip.IsEmbedded = true
+			elseif kind == "secret width" then tip.width = SecretValue(280)
+			elseif kind == "zero width" then tip.width = 0
+			elseif kind == "secret name" then tip.name = SECRET
+			elseif kind == "secret embedded" then tip.IsEmbedded = SECRET end
+			env.SharedTooltip_SetBackdropStyle(tip, nil, kind == "embedded argument")
+			check(not tip.__backdrop and tip.NineSlice.parent == tip, theme .. ": excluded: " .. kind)
+		end
+		local late = NewTip("InitiallyEmptyTooltip")
+		late.width = 0
+		env.SharedTooltip_SetBackdropStyle(late)
+		late.width = 280
+		env.SharedTooltip_SetBackdropStyle(late)
+		check(late.__backdrop and late.__backdrop.shown, theme .. ": empty tooltip retried on next backdrop call")
+		local other = theme == "Azerite" and "Classic" or "Azerite"
+		module.db.profile.theme = other
+		module:UpdateSettings()
+		for _, tip in ipairs(tips) do
+			check(tip.__backdrop.backdrop == themes[other].backdropStyle.backdrop, theme .. ": discovered tooltip follows theme change")
+		end
+		module.db.profile.disableAzeriteUITooltips = true
+		module:UpdateSettings()
+		for _, tip in ipairs(tips) do
+			check(not tip.__backdrop.shown and tip.NineSlice.parent == tip, theme .. ": discovered tooltip restored on disable")
+		end
+		local off = NewTip("TooltipCreatedWhileDisabled")
+		env.SharedTooltip_SetBackdropStyle(off)
+		check(not off.__backdrop, theme .. ": new tooltip untouched while disabled")
+		module.db.profile.disableAzeriteUITooltips = false
+		module:UpdateSettings()
+		for _, tip in ipairs(tips) do
+			check(tip.__backdrop.shown and tip.NineSlice.parent ~= tip, theme .. ": discovered tooltip restyled on enable")
+		end
+		env.SharedTooltip_SetBackdropStyle(off)
+		check(off.__backdrop and off.__backdrop.shown, theme .. ": tooltip created while disabled can be discovered later")
+		CheckErrors(theme .. ": shared addon tooltip styling")
+	end
+end
+
 print(string.format("Tooltip compare: %d checks, %d failures", checks, failures))
 -- Raised rather than os.exit, so mutate_client.lua can run this inside a pcall.
 if (failures > 0) then error("tooltip compare harness failed", 0) end

@@ -10,6 +10,21 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.34.1-JuNNeZ (2026-10-25) - More Consistent Tooltip Borders
+
+### Highlights
+
+- **More addon tooltips use the AzeriteUI border**, including world-map icon tooltips that use Blizzard's shared tooltip styling. Previously, only a fixed list of known tooltips received the skin. Thanks to Luciful for the report.
+
+### Development
+
+- **Broader coverage with exceptions for sensitive frames.** Compared other UIs' approaches before extending the existing styling hook. Embedded tooltips, forbidden frames and dropdown menus remain excluded. Offline tests cover addon tooltips appearing later, theme changes and restoring their original border when AzeriteUI tooltip styling is switched off.
+
+### Access and known limits
+
+- **Checked offline only; in-game rendering and taint checks on Retail and Forever are still needed.** Addons that draw their own tooltips without Blizzard's shared styling may still need separate support. MapNotes coverage has not yet been confirmed in game.
+
+
 ## 5.34.0-JuNNeZ (2026-10-24) - Hide the Activity Button
 
 ### Highlights
