@@ -10,6 +10,18 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.35.1-JuNNeZ (2026-10-31) - Blizzard Raid Bar Stays Hidden
+
+### Highlights
+
+- **Blizzard's raid bar stays hidden when you turn it off.** With **Show Blizzard Raid Bar** off at `/az -> Group Frames`, the bar could come back on every map change while your group was listed in the Premade Group Finder, until you switched the option on and off again. It now stays hidden, and the option is the only thing that decides. Thanks to Luciful for the report.
+
+### Access and known limits
+
+- If the game shows the bar during combat, it stays visible until combat ends, because it cannot be hidden safely before then.
+- Checked offline only so far, not yet confirmed in game.
+
+
 ## 5.35.0-JuNNeZ (2026-10-31) - Raid Panel, Rogue and Shaman
 
 ### Highlights

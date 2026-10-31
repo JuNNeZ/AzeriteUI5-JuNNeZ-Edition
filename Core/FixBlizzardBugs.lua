@@ -81,7 +81,7 @@ local function SetBlizzardRaidBarVisible(visible)
 	end
 end
 
-local function ShouldShowBlizzardRaidBar()
+local function IsBlizzardRaidBarEnabled()
 	-- Read toggle from UnitFrames module profile (matches what the options UI writes)
 	local enabled = nil
 	if ns.GetModuleProfileValue then
@@ -93,8 +93,12 @@ local function ShouldShowBlizzardRaidBar()
 			enabled = unitFrames.db.profile.showBlizzardRaidBar
 		end
 	end
+	return enabled and true or false
+end
+
+local function ShouldShowBlizzardRaidBar()
 	-- Only show when toggle is on AND in a party or raid (stock behavior)
-	if (not enabled) then
+	if (not IsBlizzardRaidBarEnabled()) then
 		return false
 	end
 	return (IsInGroup() or IsInRaid()) and true or false
@@ -731,6 +735,13 @@ local function HookRaidManagerHiddenMode()
 	if (manager and manager.HookScript and not quarantineHooked[manager]) then
 		quarantineHooked[manager] = true
 		manager:HookScript("OnShow", function()
+			-- Blizzard's CompactRaidFrameManager_UpdateShown re-shows the bar for any group
+			-- on its own events (PLAYER_ENTERING_WORLD, GROUP_ROSTER_UPDATE), and may run
+			-- after our handler for the same event. Only the switch decides here: with it
+			-- on, Blizzard's own rules stand, Edit Mode's solo preview included.
+			if (not IsBlizzardRaidBarEnabled()) then
+				SetBlizzardRaidBarVisible(false)
+			end
 			ScheduleAzeriteRaidPanelMirror()
 		end)
 	end
