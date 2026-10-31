@@ -65,6 +65,7 @@
 	<Script file="OptionsPages\UnitFrames.lua"/>
 	<Script file="OptionsPages\HealthPrediction.lua"/>
 	<Script file="OptionsPages\GroupIndicators.lua"/>
+	<Script file="OptionsPages\RaidTools.lua"/>
 	<Script file="OptionsPages\AuraSounds.lua"/>
 
 </Ui>

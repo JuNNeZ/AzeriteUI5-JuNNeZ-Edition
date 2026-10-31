@@ -69,6 +69,8 @@ local Label = function(key)
 	if (key == "mage") then return ClassName("MAGE", "Mage") end
 	if (key == "druid") then return ClassName("DRUID", "Druid") end
 	if (key == "warrior") then return ClassName("WARRIOR", "Warrior") end
+	if (key == "rogue") then return ClassName("ROGUE", "Rogue") end
+	if (key == "shaman") then return ClassName("SHAMAN", "Shaman") end
 	if (key == "moonwell") then return "Moonwell+" end
 	if (key == "wildheart") then return "Wildheart" end
 	if (key == "moonvein") then return "Moonvein" end
@@ -135,7 +137,9 @@ local AddCastEndcap = function(theme, args)
 	local key = theme == ns.PaladinTheme and "paladin" or theme == ns.HunterTheme and "hunter"
 		or theme == ns.MageTheme and "mage" or theme == ns.DruidTheme and "druid"
 		or theme == ns.WarriorTheme and "warrior"
-	local labels = { libram = "Libram", eagle = "Talonclaw", atiesh = "Atiesh", moon = L["The theme's own"], valarjar = "Valarjar" }
+		or theme == ns.RogueTheme and "rogue"
+		or theme == ns.ShamanTheme and "shaman"
+	local labels = { libram = "Libram", eagle = "Talonclaw", atiesh = "Atiesh", moon = L["The theme's own"], valarjar = "Valarjar", venom = "Venom Vial", totem = "Ancestral Totem" }
 	if (key and theme.GetCastEndcapChoices) then
 		local values, sorting = {}, {}
 		for choice in pairs(theme:GetCastEndcapChoices()) do
@@ -415,6 +419,64 @@ local GenerateWarrior = function(order)
 	}
 end
 
+local GenerateRogue = function(order)
+	local Rogue = ns.RogueTheme
+	if (not Rogue) then return end
+	return {
+		name = WIP("rogue", Label("rogue")), order = order, type = "group", inline = true,
+		hidden = function() return Theme() ~= "rogue" end,
+		args = AddCastEndcap(Rogue, {
+			endcap = { name = L["Endcap"], desc = L["The ornament at the outer end of the health bars."],
+				order = 1, type = "select", width = "full",
+				values = { twinguard = "Twin Guard", serrated = "Serrated", venom = "Venom Vial", none = _G.NONE or "None" },
+				sorting = { "twinguard", "serrated", "venom", "none" },
+				get = function() return Rogue:GetEndcap() end,
+				set = function(_, value) Rogue:SetEndcap(value) end },
+			endcapScale = { name = L["Endcap size"], order = 2, type = "range", width = "full",
+				min = .5, max = 2, step = .05, isPercent = true,
+				get = function() return Rogue:GetEndcapScale() end,
+				set = function(_, value) Rogue:SetEndcapScale(value) end },
+			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return (Rogue:GetEndcapOffset()) end,
+				set = function(_, value) Rogue:SetEndcapOffset(value, nil) end },
+			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return select(2, Rogue:GetEndcapOffset()) end,
+				set = function(_, value) Rogue:SetEndcapOffset(nil, value) end },
+			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
+				func = function() Rogue:ResetEndcapPlacement() end }
+		})
+	}
+end
+
+local GenerateShaman = function(order)
+	local Shaman = ns.ShamanTheme
+	if (not Shaman) then return end
+	return {
+		name = WIP("shaman", Label("shaman")), order = order, type = "group", inline = true,
+		hidden = function() return Theme() ~= "shaman" end,
+		args = AddCastEndcap(Shaman, {
+			endcap = { name = L["Endcap"], desc = L["The ornament at the outer end of the health bars."],
+				order = 1, type = "select", width = "full",
+				values = { maelstrom = "Maelstrom", tides = "Tides", lava = "Lava Totem", none = _G.NONE or "None" },
+				sorting = { "maelstrom", "tides", "lava", "none" },
+				get = function() return Shaman:GetEndcap() end,
+				set = function(_, value) Shaman:SetEndcap(value) end },
+			endcapScale = { name = L["Endcap size"], order = 2, type = "range", width = "full",
+				min = .5, max = 2, step = .05, isPercent = true,
+				get = function() return Shaman:GetEndcapScale() end,
+				set = function(_, value) Shaman:SetEndcapScale(value) end },
+			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return (Shaman:GetEndcapOffset()) end,
+				set = function(_, value) Shaman:SetEndcapOffset(value, nil) end },
+			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return select(2, Shaman:GetEndcapOffset()) end,
+				set = function(_, value) Shaman:SetEndcapOffset(nil, value) end },
+			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
+				func = function() Shaman:ResetEndcapPlacement() end }
+		})
+	}
+end
+
 local GenerateMoonwell = function(order)
 	local Slosh = ns.MoonwellSlosh
 	if (not Slosh) then return end
@@ -560,6 +622,14 @@ local GenerateOptions = function()
 				set = function(info, val) Effects():SetLitePlus(val) end,
 				get = function(info) return Effects():IsLitePlus() end
 			},
+			halloween = {
+				name = L["Hide Halloween decorations"],
+				desc = L["Hide the seasonal decorations for this character until next Halloween. Available only during the event."],
+				order = 3.5, type = "toggle", width = "full",
+				hidden = function() return not ns.Halloween or not ns.Halloween:GetSeasonYear() end,
+				get = function() return ns.Halloween:IsHidden() end,
+				set = function(_, value) ns.Halloween:SetHidden(value) end
+			},
 			effects = {
 				name = "Lite+",
 				order = 4,
@@ -593,6 +663,8 @@ local GenerateOptions = function()
 			paladin = GeneratePaladin(20),
 			druid = GenerateDruid(22),
 			warrior = GenerateWarrior(26),
+			rogue = GenerateRogue(27),
+			shaman = GenerateShaman(28),
 			moonwell = GenerateMoonwell(23),
 			wildheart = GenerateWildheart(24),
 			moonvein = GenerateWildheart(24.1, "moonvein"),

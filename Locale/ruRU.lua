@@ -1320,3 +1320,61 @@ L["Shows your totems, statues, ghoul and other totem-slot summons with their tim
 L["Highlight the affected raid frame using the debuff type color while it has a debuff you can remove."] = "Подсвечивает рамку участника рейда цветом типа эффекта, пока на нём есть отрицательный эффект, который вы можете снять."
 L["Show Pet Experience"] = "Показывать опыт питомца"
 L["Shows your hunter pet's experience as a thin bar under the pet frame while it can still gain levels."] = "Показывает опыт питомца охотника тонкой полосой под рамкой питомца, пока он ещё может повышать уровень."
+
+-- AzeriteUI marker toolbar.
+L["Marker toolbar"] = "Панель меток"
+L["Left-click: target marker. Right-click: clear. Shift: ground markers."] = "ЛКМ: метка цели. ПКМ: убрать. Shift: метки на земле."
+L["Clear all markers"] = "Убрать все метки"
+L["Click to fold or unfold. Move with /lock. Folding waits until combat ends."] = "Нажмите, чтобы свернуть или развернуть. Перемещение: /lock. Сворачивание применяется после боя."
+L["Appears in parties and for raid leaders or assistants. Left-click: target marker. Right-click: clear. Hold Shift for ground markers. Move with /lock."] = "Появляется в группе, а в рейде — у лидера и помощников. ЛКМ: метка цели. ПКМ: убрать. Удерживайте Shift для меток на земле. Перемещение: /lock."
+L["Fold toolbar"] = "Свернуть панель"
+L["Preview marker toolbar"] = "Предпросмотр панели меток"
+L["Toggle a preview with inactive marker buttons. Also available with /azmarkers."] = "Показать или скрыть предпросмотр с неактивными кнопками. Также доступно через /azmarkers."
+
+-- Full raid/party panel.
+L["Raid / Party panel"] = "Панель рейда и группы"
+L["Raid groups"] = "Группы рейда"
+L["Markers"] = "Метки"
+L["Left-click: set. Right-click: clear. Shift: switch marker type."] = "ЛКМ: поставить. ПКМ: убрать. Shift: сменить тип метки."
+L["Countdown: 10s"] = "Отсчёт: 10 с"
+L["All assist"] = "Все помощники"
+L["Party / Raid"] = "Группа / Рейд"
+L["Ping permissions"] = "Разрешения сигналов"
+L["Hide raid frames"] = "Скрыть рамки"
+L["Show raid frames"] = "Показать рамки"
+L["Leave your current group?"] = "Покинуть текущую группу?"
+L["Group overview, raid group filters, markers and leader tools. Move with /lock. Administrative actions are unavailable in combat."] = "Обзор группы, фильтры рейда, метки и инструменты лидера. Перемещение: /lock. Управление недоступно в бою."
+L["Fold panel"] = "Свернуть панель"
+L["Preview raid panel"] = "Предпросмотр панели"
+L["Preview"] = "Предпросмотр"
+L["Filter AzeriteUI's large raid frames. Changes made in combat apply afterward."] = "Фильтр больших рамок рейда AzeriteUI. Изменения в бою применяются после его окончания."
+L["Ground"] = "Земля"
+L["Ready check"] = "Готовность"
+L["Role check"] = "Проверка ролей"
+L["Difficulty"] = "Сложность"
+L["Leave group"] = "Покинуть группу"
+L["Leave instance group"] = "Покинуть группу подземелья"
+
+-- Independent target markers lite.
+L["Target markers lite"] = "Метки целей Lite"
+L["Left-click: target marker. Right-click: clear. Move with /lock."] = "ЛКМ: метка цели. ПКМ: убрать. Перемещение: /lock."
+L["A separate movable target-marker bar. Works with the full AzUI panel switched off. Use Show Blizzard Raid Bar on this page to keep or hide Blizzard's panel. Move with /lock."] = "Отдельная перемещаемая панель меток целей. Работает при отключённой полной панели AzUI. Настройка показа рейдовой панели Blizzard на этой странице позволяет оставить или скрыть её. Перемещение: /lock."
+L["Preview the inactive lite bar with /azmarkerlite. Enable it first."] = "Предпросмотр неактивной панели Lite: /azmarkerlite. Сначала включите её."
+
+-- Target markers lite favorites and layouts.
+L["Clear target marker"] = "Убрать метку цели"
+L["Click: clear target. Shift-click: clear all markers."] = "Клик: убрать метку цели. Shift-клик: убрать все метки."
+L["Two rows"] = "Два ряда"
+L["Hidden"] = "Скрыто"
+L["Marker slot %d"] = "Место метки %d"
+L["Choose markers in display order. Hidden removes a slot; choosing a marker already in use swaps the two slots."] = "Выберите порядок меток. Скрыто убирает место; выбор уже используемой метки меняет два места местами."
+L["Click the clear button to remove only your target's marker. Shift-click it to clear all markers."] = "Кнопка очистки убирает только метку вашей цели. Shift-клик убирает все метки."
+
+-- Lite target/world clear controls.
+L["Click: clear all target markers. Shift-click: clear all ground markers."] = "Щелчок: убрать все метки целей. Shift-щелчок: убрать все метки на земле."
+
+L["Hide frames"] = "Скрыть рамки"
+
+L["Show frames"] = "Показать рамки"
+
+L["Leave instance"] = "Покинуть подзем."

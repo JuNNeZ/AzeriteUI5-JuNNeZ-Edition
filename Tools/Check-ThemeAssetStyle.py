@@ -7,8 +7,9 @@ original, so it cannot be used without theme-specific layout code. They are
 measured against Docs/Theme Asset Geometry.json (Tools/Export-ThemeGeometry.py).
 "look" lines are advice on painting and are not failures.
 
-Measures exported TGAs only. It is not a substitute for the fitting checklist
-or live checks.
+check(path) measures exported TGAs only. The CLI also requires source integrity;
+--geometry-only is an explicit diagnostic. Neither substitutes for visual/live
+checks or the production installer gate.
 """
 from pathlib import Path
 import json, sys
@@ -167,5 +168,16 @@ def main():
         bad += bool(fails); advised += bool(notes)
     missing = [n for n in SPEC if not (folder / (n + '.tga')).exists()]
     print(f'{sys.argv[1]}: {len(files)} textures, {bad} not drop-in, {advised} with look notes; {len(missing)} original casings not replaced')
+    source_failed = False
+    if '--geometry-only' in sys.argv:
+        print('DIAGNOSTIC ONLY: source integrity/production acceptance not checked')
+    else:
+        from ThemeSourceIntegrity import verify_pack
+        try:
+            verify_pack(folder)
+        except (ValueError, KeyError, OSError) as error:
+            source_failed = True
+            print('SOURCE FAIL:', error)
+    return 1 if bad or source_failed or not files else 0
 
-if __name__ == '__main__': main()
+if __name__ == '__main__': raise SystemExit(main())

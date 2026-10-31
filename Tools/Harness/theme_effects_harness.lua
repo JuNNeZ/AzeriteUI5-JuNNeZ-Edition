@@ -13,6 +13,10 @@ local reloads, refreshes, combat = 0, 0, false
 C_UI = { Reload = function() reloads = reloads + 1 end }
 ReloadUI = function() error("theme dropdown must use modern reload API") end
 InCombatLockdown = function() return combat end
+hooksecurefunc = function(object, key, callback)
+	local original = object[key]
+	object[key] = function(...) local result = original(...); callback(...); return result end
+end
 
 local ns = { db = { global = {}, char = {} } }
 local variant
@@ -135,9 +139,11 @@ local function widget(parent)
 	function w:GetParent() return self.parent end
 	function w:SetParent(p) self.parent = p end
 	function w:SetFrameLevel(v) self.level = v end
+	function w:SetFixedFrameLevel(v) self.fixedFrameLevel = v end
 	function w:GetFrameLevel() return self.level end
 	function w:SetAllPoints(a) self.allPoints = a end
 	function w:EnableMouse(v) self.mouse = v end
+	function w:SetScript(key, callback) self[key] = callback end
 	function w:IsShown() return self.shown end
 	return w
 end
@@ -160,6 +166,8 @@ style()
 check(power.Case.parent == power.ThemeCapFrame and power.ThemeCapFrame.level == 12, "Paladin crystal case above the health casing")
 check(orbFrame.Case.parent == orbFrame.ThemeCapFrame and orbFrame.ThemeCapFrame.level == 12, "Paladin orb case above the health casing")
 check(power.ThemeCapFrame.parent == power and power.ThemeCapFrame.allPoints == power and power.ThemeCapFrame.mouse == false, "cap frame follows the element, no mouse")
+check(power.ThemeCapFrame.fixedFrameLevel and orbFrame.ThemeCapFrame.fixedFrameLevel,
+	"crystal and orb cases opt out of parent frame-level propagation")
 local capFrame = power.ThemeCapFrame
 unit.Health.level = 10; style()
 check(power.ThemeCapFrame == capFrame and capFrame.level == 14, "cap frame reused and kept above a moved health bar")
@@ -168,6 +176,7 @@ check(capFrame.level == 14 and power.Case.parent == capFrame, "Hunter caps in fr
 local foreground = widget(power); power.MageCrystalCaseFrame = foreground; power.Case.parent = foreground
 style()
 check(power.Case.parent == foreground and foreground.level == 14, "the Mage crystal's own case frame is lifted instead")
+check(foreground.fixedFrameLevel, "Lite+ Mage case also retains its health-relative foreground level")
 
 -- Legacy in the theme list (2026-10-13): always offered, chosen like /go legacy.
 ns.LegacyHUD = { IsActive = function() return ns.db.char.legacyHUD == true and not variant end }

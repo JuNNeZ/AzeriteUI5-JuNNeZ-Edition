@@ -1,5 +1,13 @@
 # Class asset workflow
 
+**Mandatory 2026-10-29 source-integrity gate:** Read
+`Docs/Theme Source Integrity.md`. Native dimensions do not permit stencilling a
+new painting to old alpha, propagating RGB or erasing paint with fill masks.
+Prove intact source fit and exact declared source-to-export RGBA before review.
+`ThemeSourceIntegrity.py` blocks production installs with missing/stale source,
+numeric, maintainer visual or representative live evidence. Retained Rogue
+clipping/aperture fixtures must fail. `--geometry-only` never authorizes install.
+
 The maintainer-approved production sequence is documented locally in
 `Docs/Theme Asset Production Workflow.md`. Read that, the Theme Asset Style Key,
 the Theme Asset Fitting Checklist and the latest accepted concept before art.

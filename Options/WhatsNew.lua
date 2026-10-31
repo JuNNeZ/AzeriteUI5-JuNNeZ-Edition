@@ -41,6 +41,28 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.35.0-JuNNeZ",
+		items = {
+			{
+				text = "A raid and party panel of our own: groups, markers, ready check and leader tools.",
+				page = L["Group Frames"],
+				section = L["Raid / Party panel"]
+			},
+			{
+				text = "Target markers lite: a small separate marker bar you arrange yourself; off by default.",
+				page = L["Group Frames"],
+				section = L["Target markers lite"]
+			},
+			{
+				text = "Rogue and Shaman themes (WIP): early previews, still being repainted.",
+				page = "Themes"
+			},
+			{
+				text = "Something extra."
+			}
+		}
+	},
+	{
 		version = "5.32.0-JuNNeZ",
 		items = {
 			{

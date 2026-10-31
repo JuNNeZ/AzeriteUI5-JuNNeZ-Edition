@@ -10,6 +10,29 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.35.0-JuNNeZ (2026-10-31) - Raid Panel, Rogue and Shaman
+
+### Highlights
+
+- **A raid and party panel of AzeriteUI's own.** It shows member and role counts, raid group filters for AzeriteUI's large raid frames, target and ground markers, ready check, role check, a 10-second countdown, all assist, party/raid conversion, difficulty and ping permission menus, and leave buttons. It is on by default for grouped players, sits folded out at the left edge and moves with `/lock`. Settings are at `/az -> Group Frames -> Raid / Party panel`; `/azraidtools` previews it. Actions you have no rights for are disabled. Thanks to Luciful for the request.
+- **Target markers lite: a small separate marker bar.** Off by default, and it works with the full panel switched off. Choose which markers it shows and in what order, as a row, a column or two rows. Left-click sets a marker, Shift-click sets a ground marker and the clear button removes all target markers, or all ground markers with Shift. Settings are at `/az -> Group Frames -> Target markers lite`; `/azmarkerlite` previews it once enabled.
+- **Rogue theme (WIP): Venom & Steel.** Choose it at `/az -> Themes` or with `/azrogue on`. Health endcaps are Twin Guard, Serrated, Venom Vial or None, with a separate Venom Vial or None choice for the cast bar.
+- **Shaman theme (WIP).** Choose it at `/az -> Themes` or with `/azshaman on`. Health endcaps are Maelstrom, Tides, Lava Totem or None, with a separate Ancestral Totem or None choice for the cast bar.
+- **Something extra.**
+
+### Development
+
+- **The raid panel keeps Blizzard's panel out of it.** Markers use the game's own secure button actions, with no custom secure code and no changes to Blizzard's raid panel. Changes made in combat wait until it ends, and group administration is never replayed automatically. New steel and gold panel artwork was painted to match the toolbar, and all ten languages are translated.
+- **Theme work focused on fit.** Both themes went through repeated in-game review and repainting of their casings, buttons and crystal holders, and the shared art checks now also verify source images and how crystal casings seat. Both also work with Lite+ crystal and orb mixes.
+- **Crystal and orb casings stay in front.** Live testing showed the game lowering these casings during resource updates, so they now return to the correct layer afterwards, waiting for combat to end if needed.
+
+### Access and known limits
+
+- **Rogue and Shaman are unfinished previews.** Rogue's art still fails our own fit checks and its latest repair has not yet been seen in game. Some Shaman endcaps are earlier paintings that were never approved as final. Expect visible seams and further repainting.
+- **The raid panel's look has had in-game review, but real marker clicks, administration actions and taint checks are not yet confirmed in game.** Target markers lite and everything on WoW Forever have been checked offline only.
+- If you prefer Blizzard's own tools, switch the panel off on its options page.
+
+
 ## 5.34.1-JuNNeZ (2026-10-25) - More Consistent Tooltip Borders
 
 ### Highlights

@@ -7,6 +7,24 @@ return function(load, ns)
 	ns.Prefix = ns.Prefix or "AzeriteUI"
 	ns.oUF = ns.oUF or { RegisterInitCallback = function() end }
 
+	-- Marker toolbar defaults must be real, or Group Frames silently omits the section.
+	ns.MovableModulePrototype = ns.MovableModulePrototype or { defaults = {} }
+	ns.API.GetEffectiveScale = ns.API.GetEffectiveScale or function() return 1 end
+	load("Components/Misc/RaidTools.lua")
+	load("Components/Misc/RaidToolsActions.lua")
+	local raidTools = ns:GetModule("RaidTools", true)
+	if (raidTools) then
+		raidTools.db = raidTools:GenerateDefaults()
+		raidTools.GetProfileDefaults = function(self) return self:GenerateDefaults().profile end
+	end
+
+	load("Components/Misc/TargetMarkersLite.lua")
+	local lite = ns:GetModule("TargetMarkersLite", true)
+	if (lite) then
+		lite.db = lite:GenerateDefaults()
+		lite.GetProfileDefaults = function(self) return self:GenerateDefaults().profile end
+	end
+
 	-- Group Indicators page: corner list, class suggestions, spell parser.
 	load("Components/UnitFrames/GroupIndicators.lua")
 

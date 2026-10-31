@@ -1321,3 +1321,61 @@ L["Shows your totems, statues, ghoul and other totem-slot summons with their tim
 L["Highlight the affected raid frame using the debuff type color while it has a debuff you can remove."] = "当团队成员身上有你可以驱散的减益效果时，用减益类型颜色高亮其团队框体。"
 L["Show Pet Experience"] = "显示宠物经验"
 L["Shows your hunter pet's experience as a thin bar under the pet frame while it can still gain levels."] = "当你的猎人宠物仍可升级时，在宠物框体下方以细条显示其经验。"
+
+-- AzeriteUI marker toolbar.
+L["Marker toolbar"] = "标记工具栏"
+L["Left-click: target marker. Right-click: clear. Shift: ground markers."] = "左键：目标标记。右键：清除。Shift：地面标记。"
+L["Clear all markers"] = "清除所有标记"
+L["Click to fold or unfold. Move with /lock. Folding waits until combat ends."] = "点击折叠或展开。使用 /lock 移动。战斗结束后应用折叠设置。"
+L["Appears in parties and for raid leaders or assistants. Left-click: target marker. Right-click: clear. Hold Shift for ground markers. Move with /lock."] = "在小队中显示；在团队中仅对团长或助理显示。左键：目标标记。右键：清除。按住 Shift 使用地面标记。使用 /lock 移动。"
+L["Fold toolbar"] = "折叠工具栏"
+L["Preview marker toolbar"] = "预览标记工具栏"
+L["Toggle a preview with inactive marker buttons. Also available with /azmarkers."] = "切换预览，预览中的标记按钮不可用。也可使用 /azmarkers。"
+
+-- Full raid/party panel.
+L["Raid / Party panel"] = "团队/小队面板"
+L["Raid groups"] = "团队小组"
+L["Markers"] = "标记"
+L["Left-click: set. Right-click: clear. Shift: switch marker type."] = "左键：设置。右键：清除。Shift：切换标记类型。"
+L["Countdown: 10s"] = "倒计时：10秒"
+L["All assist"] = "全员助理"
+L["Party / Raid"] = "小队/团队"
+L["Ping permissions"] = "信号权限"
+L["Hide raid frames"] = "隐藏团队框体"
+L["Show raid frames"] = "显示团队框体"
+L["Leave your current group?"] = "离开当前队伍？"
+L["Group overview, raid group filters, markers and leader tools. Move with /lock. Administrative actions are unavailable in combat."] = "队伍概览、团队小组过滤、标记和队长工具。使用 /lock 移动。战斗中无法执行管理操作。"
+L["Fold panel"] = "折叠面板"
+L["Preview raid panel"] = "预览团队面板"
+L["Preview"] = "预览"
+L["Filter AzeriteUI's large raid frames. Changes made in combat apply afterward."] = "过滤 AzeriteUI 的大型团队框体。战斗中的更改将在战斗后应用。"
+L["Ground"] = "地面"
+L["Ready check"] = "就位确认"
+L["Role check"] = "职责确认"
+L["Difficulty"] = "难度"
+L["Leave group"] = "离开队伍"
+L["Leave instance group"] = "离开副本队伍"
+
+-- Independent target markers lite.
+L["Target markers lite"] = "轻量目标标记"
+L["Left-click: target marker. Right-click: clear. Move with /lock."] = "左键：目标标记。右键：清除。使用 /lock 移动。"
+L["A separate movable target-marker bar. Works with the full AzUI panel switched off. Use Show Blizzard Raid Bar on this page to keep or hide Blizzard's panel. Move with /lock."] = "独立且可移动的目标标记栏，关闭完整 AzUI 面板后仍可使用。在此页面使用显示暴雪团队栏选项保留或隐藏暴雪面板。使用 /lock 移动。"
+L["Preview the inactive lite bar with /azmarkerlite. Enable it first."] = "使用 /azmarkerlite 预览不响应操作的轻量标记栏。请先启用。"
+
+-- Target markers lite favorites and layouts.
+L["Clear target marker"] = "清除目标标记"
+L["Click: clear target. Shift-click: clear all markers."] = "点击：清除目标标记。Shift点击：清除所有标记。"
+L["Two rows"] = "两行"
+L["Hidden"] = "隐藏"
+L["Marker slot %d"] = "标记位置 %d"
+L["Choose markers in display order. Hidden removes a slot; choosing a marker already in use swaps the two slots."] = "按显示顺序选择标记。隐藏会移除该位置；选择已使用的标记会交换两个位置。"
+L["Click the clear button to remove only your target's marker. Shift-click it to clear all markers."] = "清除按钮只移除当前目标的标记。Shift点击可清除所有标记。"
+
+-- Lite target/world clear controls.
+L["Click: clear all target markers. Shift-click: clear all ground markers."] = "点击：清除所有目标标记。Shift点击：清除所有世界标记。"
+
+L["Hide frames"] = "隐藏框体"
+
+L["Show frames"] = "显示框体"
+
+L["Leave instance"] = "离开副本"

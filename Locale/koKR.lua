@@ -1320,3 +1320,61 @@ L["Shows your totems, statues, ghoul and other totem-slot summons with their tim
 L["Highlight the affected raid frame using the debuff type color while it has a debuff you can remove."] = "제거할 수 있는 약화 효과가 있는 동안 해당 공격대 프레임을 약화 효과 유형 색으로 강조합니다."
 L["Show Pet Experience"] = "소환수 경험치 표시"
 L["Shows your hunter pet's experience as a thin bar under the pet frame while it can still gain levels."] = "사냥꾼 소환수가 아직 레벨을 올릴 수 있는 동안 소환수 프레임 아래에 얇은 막대로 경험치를 표시합니다."
+
+-- AzeriteUI marker toolbar.
+L["Marker toolbar"] = "징표 도구 모음"
+L["Left-click: target marker. Right-click: clear. Shift: ground markers."] = "왼쪽 클릭: 대상 징표. 오른쪽 클릭: 지우기. Shift: 지면 징표."
+L["Clear all markers"] = "모든 징표 지우기"
+L["Click to fold or unfold. Move with /lock. Folding waits until combat ends."] = "클릭하여 접거나 펼칩니다. /lock으로 이동합니다. 전투가 끝나면 접기가 적용됩니다."
+L["Appears in parties and for raid leaders or assistants. Left-click: target marker. Right-click: clear. Hold Shift for ground markers. Move with /lock."] = "파티 및 공격대장이나 부공격대장일 때 표시됩니다. 왼쪽 클릭: 대상 징표. 오른쪽 클릭: 지우기. Shift를 누르면 지면 징표를 사용합니다. /lock으로 이동합니다."
+L["Fold toolbar"] = "도구 모음 접기"
+L["Preview marker toolbar"] = "징표 도구 모음 미리 보기"
+L["Toggle a preview with inactive marker buttons. Also available with /azmarkers."] = "비활성 징표 버튼으로 미리 보기를 켜거나 끕니다. /azmarkers로도 사용할 수 있습니다."
+
+-- Full raid/party panel.
+L["Raid / Party panel"] = "공격대 / 파티 패널"
+L["Raid groups"] = "공격대 그룹"
+L["Markers"] = "징표"
+L["Left-click: set. Right-click: clear. Shift: switch marker type."] = "왼쪽 클릭: 설정. 오른쪽 클릭: 지우기. Shift: 징표 종류 전환."
+L["Countdown: 10s"] = "초읽기: 10초"
+L["All assist"] = "모두 부공대장"
+L["Party / Raid"] = "파티 / 공격대"
+L["Ping permissions"] = "핑 권한"
+L["Hide raid frames"] = "공격대 창 숨기기"
+L["Show raid frames"] = "공격대 창 표시"
+L["Leave your current group?"] = "현재 그룹을 떠나시겠습니까?"
+L["Group overview, raid group filters, markers and leader tools. Move with /lock. Administrative actions are unavailable in combat."] = "그룹 요약, 공격대 그룹 필터, 징표 및 공대장 도구입니다. /lock으로 이동합니다. 전투 중에는 관리 기능을 사용할 수 없습니다."
+L["Fold panel"] = "패널 접기"
+L["Preview raid panel"] = "공격대 패널 미리 보기"
+L["Preview"] = "미리 보기"
+L["Filter AzeriteUI's large raid frames. Changes made in combat apply afterward."] = "AzeriteUI의 대형 공격대 창을 필터링합니다. 전투 중 변경 사항은 전투 후 적용됩니다."
+L["Ground"] = "지면"
+L["Ready check"] = "준비 확인"
+L["Role check"] = "역할 확인"
+L["Difficulty"] = "난이도"
+L["Leave group"] = "그룹 떠나기"
+L["Leave instance group"] = "인스턴스 그룹 떠나기"
+
+-- Independent target markers lite.
+L["Target markers lite"] = "대상 징표 Lite"
+L["Left-click: target marker. Right-click: clear. Move with /lock."] = "왼쪽 클릭: 대상 징표. 오른쪽 클릭: 지우기. /lock으로 이동합니다."
+L["A separate movable target-marker bar. Works with the full AzUI panel switched off. Use Show Blizzard Raid Bar on this page to keep or hide Blizzard's panel. Move with /lock."] = "별도로 이동할 수 있는 대상 징표 모음입니다. 전체 AzUI 패널을 꺼도 작동합니다. 이 페이지의 블리자드 공격대 모음 표시 설정으로 블리자드 패널을 유지하거나 숨길 수 있습니다. /lock으로 이동합니다."
+L["Preview the inactive lite bar with /azmarkerlite. Enable it first."] = "/azmarkerlite로 비활성 Lite 모음을 미리 봅니다. 먼저 활성화하세요."
+
+-- Target markers lite favorites and layouts.
+L["Clear target marker"] = "대상 징표 지우기"
+L["Click: clear target. Shift-click: clear all markers."] = "클릭: 대상 징표 지우기. Shift 클릭: 모든 징표 지우기."
+L["Two rows"] = "두 줄"
+L["Hidden"] = "숨김"
+L["Marker slot %d"] = "징표 칸 %d"
+L["Choose markers in display order. Hidden removes a slot; choosing a marker already in use swaps the two slots."] = "표시 순서대로 징표를 선택하세요. 숨김은 해당 칸을 없애며, 이미 사용 중인 징표를 선택하면 두 칸의 위치가 바뀝니다."
+L["Click the clear button to remove only your target's marker. Shift-click it to clear all markers."] = "지우기 버튼은 대상의 징표만 지웁니다. Shift 클릭하면 모든 징표를 지웁니다."
+
+-- Lite target/world clear controls.
+L["Click: clear all target markers. Shift-click: clear all ground markers."] = "클릭: 모든 대상 징표 제거. Shift-클릭: 모든 바닥 징표 제거."
+
+L["Hide frames"] = "프레임 숨김"
+
+L["Show frames"] = "프레임 표시"
+
+L["Leave instance"] = "인스턴스 나가기"

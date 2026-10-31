@@ -1,0 +1,12 @@
+{
+  "job": "TODO",
+  "status": "candidate-not-approved",
+  "prompt": "TODO exact prompt",
+  "generatorAndVersion": "TODO",
+  "inputs": [{"path": "TODO portable relative path", "sha256": "TODO"}],
+  "originalOutput": {"path": "TODO", "sha256": "TODO"},
+  "edits": [],
+  "approvedConceptSha256": "TODO",
+  "approval": {"status": "not-approved", "reviewer": null, "date": null},
+  "notes": "Retain actual referenced files, not only machine-specific paths."
+}

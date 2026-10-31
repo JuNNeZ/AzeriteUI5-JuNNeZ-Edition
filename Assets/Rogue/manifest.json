@@ -1,0 +1,2824 @@
+{
+  "theme": "Rogue - Venom & Steel",
+  "runtimeInstalled": true,
+  "liveValidated": false,
+  "nativeLayoutChanges": false,
+  "assets": {
+    "actionbutton-border-square-rounded": {
+      "path": "Assets/Rogue/actionbutton-border-square-rounded.tga",
+      "sha256": "06b54eeb77576afd7c04a5f976337af1e2e3b54d374724fc6084ef9a6173da92",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border-square": {
+      "path": "Assets/Rogue/actionbutton-border-square.tga",
+      "sha256": "0683fa13378bbc0067e4bf288724bedf9939d7692380f02b2340f4ee2794b3b9",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border": {
+      "path": "Assets/Rogue/actionbutton-border.tga",
+      "sha256": "e41e2834925d7459096931e5630c9e9839df1c93fe8eb83da1c944d8161884af",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "better-blizzard-border-small-alternate": {
+      "path": "Assets/Rogue/better-blizzard-border-small-alternate.tga",
+      "sha256": "68559d33ebde3eb8ccea8af7a4f924fb29887af0bc1559bfb7af2f4e798cf5d1",
+      "canvas": [
+        512,
+        64
+      ]
+    },
+    "border-aura": {
+      "path": "Assets/Rogue/border-aura.tga",
+      "sha256": "7351c94e1c7a5ecbe806473daaee04468b690da39376f745df9a72c552ab3ff8",
+      "canvas": [
+        256,
+        32
+      ]
+    },
+    "border-tooltip": {
+      "path": "Assets/Rogue/border-tooltip.tga",
+      "sha256": "efd475923ca95ebd97c43faba4610a65791bf427387a69c806b22398da82e4d1",
+      "canvas": [
+        512,
+        64
+      ]
+    },
+    "cast-head-glow": {
+      "path": "Assets/Rogue/cast-head-glow.tga",
+      "sha256": "b17cde21427eccbfb9f9f1383402d06afbb0ed92cce1997d38328107e7aa2fca",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "cast-head": {
+      "path": "Assets/Rogue/cast-head.tga",
+      "sha256": "494fb4f4cbccb664de593608571d5352695db6c22f09d88e847d691bd46cf1a4",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "cast_back-over": {
+      "path": "Assets/Rogue/cast_back-over.tga",
+      "sha256": "ee6264c03bc068232d120f1583bd56f4da5720d618348c4ed4f7fc4e2b4df302",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back": {
+      "path": "Assets/Rogue/cast_back.tga",
+      "sha256": "f966d7320f3ddd6fc649446e95dc2e5413c471abca8d6d3f64f9efc8f7b3b38a",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_spiked-over": {
+      "path": "Assets/Rogue/cast_back_spiked-over.tga",
+      "sha256": "5b88f29826e7bd7d8b53d6a51a934451912abeddd55339ecace440e84f2b1b0a",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_spiked": {
+      "path": "Assets/Rogue/cast_back_spiked.tga",
+      "sha256": "e656b3485be3961607d10a7abf3696145784c3cbb832690997a7d8d45c3127c7",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_wooden-over": {
+      "path": "Assets/Rogue/cast_back_wooden-over.tga",
+      "sha256": "62b86f0d5390901d3fbb4736efb2d336ba59e8f0ccff131c7dfccdecc6f1534a",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_wooden": {
+      "path": "Assets/Rogue/cast_back_wooden.tga",
+      "sha256": "1d7b6faaf562ff7cd197d77356abf4c3699a30f83904df5362ce3624d7949bb7",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "config_button": {
+      "path": "Assets/Rogue/config_button.tga",
+      "sha256": "fe5df298ded958da794ce59c4d2af230d90328fc6d31fa75207e382b38526674",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "config_button_bright": {
+      "path": "Assets/Rogue/config_button_bright.tga",
+      "sha256": "515fcf5bab22c12a82dc6b8341be4bba6405d2ce4c1ede405400b42447e5ba0e",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "crystal-assembly-glow": {
+      "path": "Assets/Rogue/crystal-assembly-glow.tga",
+      "sha256": "6d17d30e12ccb95e6054db34831d44c33e00e7817005c9227aa9cfcc5edbbb40",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "crystal-assembly-low-glow": {
+      "path": "Assets/Rogue/crystal-assembly-low-glow.tga",
+      "sha256": "4e2751d5438834883ad42d3ca3f25881b12c199b1f023ca32054bf0851ccc38e",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "crystal-assembly-low-wrath-glow": {
+      "path": "Assets/Rogue/crystal-assembly-low-wrath-glow.tga",
+      "sha256": "f5da2be7fbe70107e1316701757f9865c4a53cf47ac3bb695ae126c3282095fb",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "crystal-assembly-wrath-glow": {
+      "path": "Assets/Rogue/crystal-assembly-wrath-glow.tga",
+      "sha256": "c5542ff29b9c986ea23f939fc0e706c0282c3831a33dd738882b9e5c41d0aa39",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "hp_boss_case-glow": {
+      "path": "Assets/Rogue/hp_boss_case-glow.tga",
+      "sha256": "34882fe1887a29e9cbb7840c60a9f8374388f90b03762a5dff5ef80b46e5d6f6",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case-over": {
+      "path": "Assets/Rogue/hp_boss_case-over.tga",
+      "sha256": "4c5ad0e97b821ef6a0fafd596ede9e4882a9bf9dccc131d7a8fbe993438f995e",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case": {
+      "path": "Assets/Rogue/hp_boss_case.tga",
+      "sha256": "a6b6bb87de508bb289977d40cf1e3bb953dc80521ad17f1e38496abbdddea0cd",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case-glow": {
+      "path": "Assets/Rogue/hp_cap_case-glow.tga",
+      "sha256": "b87b270abbdbf4cde21b6e61dca8f238a99ea5374879e45d6fc33e85b545143c",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case-over": {
+      "path": "Assets/Rogue/hp_cap_case-over.tga",
+      "sha256": "01857904878790860a245df1ab42db77ff28984020c1549e29aa1eaa52005bfc",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case": {
+      "path": "Assets/Rogue/hp_cap_case.tga",
+      "sha256": "17dc2f321c1a8e958c9e10f299234c728245936a9a75b6da9ec16ef9039b1903",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_critter_case-over": {
+      "path": "Assets/Rogue/hp_critter_case-over.tga",
+      "sha256": "0f38138d6daeaa8b07ce58c8a6152f8fbbba6f4a5cb9653694c639fad7a9f77b",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_critter_case": {
+      "path": "Assets/Rogue/hp_critter_case.tga",
+      "sha256": "4336eb8b536340db52e688cdd446ba7786ed8fae1af44aae1c34a1fedf719e62",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_critter_case_hi-over": {
+      "path": "Assets/Rogue/hp_critter_case_hi-over.tga",
+      "sha256": "e280f1282b4176fd449bc3006d0cf2f4b644f7357f0d0f3452b8519f3a0ba3cb",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_critter_case_hi": {
+      "path": "Assets/Rogue/hp_critter_case_hi.tga",
+      "sha256": "01128ca36b95d1de9e96dc14cfc58a78a3d1bde568e033d4d8b8a886438cb526",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_low_case-glow": {
+      "path": "Assets/Rogue/hp_low_case-glow.tga",
+      "sha256": "a6d0c338452c8d0278d78fcdd22366787832c0e07dc8cc71bbfc2eddf8e3517a",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case-over": {
+      "path": "Assets/Rogue/hp_low_case-over.tga",
+      "sha256": "d8510b75c2562f9cea5cdabb7e391d39fc5e5f8f8e86f7fdd57665f6da71de81",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case": {
+      "path": "Assets/Rogue/hp_low_case.tga",
+      "sha256": "3fadcccb65ff0d5f1c9280627c1893239dc151aed7aba55acca35ede351d8b40",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-glow": {
+      "path": "Assets/Rogue/hp_mid_case-glow.tga",
+      "sha256": "453ceaeecf7385c0225eb95867033195c58bbe0a8d7d25588b79bfaf5dfc150d",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-over": {
+      "path": "Assets/Rogue/hp_mid_case-over.tga",
+      "sha256": "6801b8cadcc45d20b735b84fcb74f6f9aae76caa1f0da3a51fe16a951a98e6f9",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case": {
+      "path": "Assets/Rogue/hp_mid_case.tga",
+      "sha256": "bbb45ca76e821c3568e72984e0005196e20cc53468a7d863188244729f67f3d5",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "icon_exit_flight": {
+      "path": "Assets/Rogue/icon_exit_flight.tga",
+      "sha256": "589845d62cb1c4af04d6b93e4198c2b35bf8a4aef2a8a929c04843d1fefd7891",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "minimap-border": {
+      "path": "Assets/Rogue/minimap-border.tga",
+      "sha256": "3e7f5e74916a2825d8c89e88f2ce6557d7456b7de6a25bb88eff6bfa2a731743",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "orb-border": {
+      "path": "Assets/Rogue/orb-border.tga",
+      "sha256": "e3718e5f713358c66d7ffa2d28e6139a2d5821d4bfcc74d2441dd799cc0fc297",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "orb_case_hi-glow": {
+      "path": "Assets/Rogue/orb_case_hi-glow.tga",
+      "sha256": "15046dc82c548b17a18bfd1d6738ef27c2d623ea3cd9c3a298ac5c3c65fc9535",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb_case_hi": {
+      "path": "Assets/Rogue/orb_case_hi.tga",
+      "sha256": "929d65c4b1a89da28a04924c092c6dacd9b0f6a49b4259f2d4c100d91e1b5631",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb_case_low-glow": {
+      "path": "Assets/Rogue/orb_case_low-glow.tga",
+      "sha256": "25fd6af40c81ff629cd5648d70db4a4a3dbb79220a61793248204bd29cbaa04f",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb_case_low": {
+      "path": "Assets/Rogue/orb_case_low.tga",
+      "sha256": "3fd7ce901ab52782fd94aaddc0bdf263e1bd9a49825588cba55875eff8367588",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "ornament-serrated-hp_boss_case-glow": {
+      "path": "Assets/Rogue/ornament-serrated-hp_boss_case-glow.tga",
+      "sha256": "b128e9e3b9d152b784de13bc5ca27fcfb4fafc7a5a39fa3dec9e3db51b382a4b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-serrated-hp_boss_case": {
+      "path": "Assets/Rogue/ornament-serrated-hp_boss_case.tga",
+      "sha256": "fcbf60c88d8a0668a62be98d789f917b37b5854a21f35ad7395b89ded52b7ffa",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-serrated-hp_cap_case-glow": {
+      "path": "Assets/Rogue/ornament-serrated-hp_cap_case-glow.tga",
+      "sha256": "c7befb44a829e91cbe18cc77a1c491f66f3d0d879faa240eb5f74b7632aa06d0",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-serrated-hp_cap_case": {
+      "path": "Assets/Rogue/ornament-serrated-hp_cap_case.tga",
+      "sha256": "cc37aaef22fa1fa295ce22d0b21d2e1178b105dd8e8c5e23764c6bf5d12cc89b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-serrated-hp_low_case-glow": {
+      "path": "Assets/Rogue/ornament-serrated-hp_low_case-glow.tga",
+      "sha256": "5745e8b4cd0757fd54d6678f8c33d9975e101f1a2e578003b5d2f93ebd032423",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-serrated-hp_low_case": {
+      "path": "Assets/Rogue/ornament-serrated-hp_low_case.tga",
+      "sha256": "7406c204e579eb3eb8f9e411097a427e7390ac06ca1e2fe28b5e6f31d398b890",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-serrated-hp_mid_case-glow": {
+      "path": "Assets/Rogue/ornament-serrated-hp_mid_case-glow.tga",
+      "sha256": "7bbfc713bc011bd8fbfb779f86788badc0e7723689d4ba9de3d3c90c8c203687",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-serrated-hp_mid_case": {
+      "path": "Assets/Rogue/ornament-serrated-hp_mid_case.tga",
+      "sha256": "a89697ecf7469e7cbd1ca1023a5f9aa9eac4176dbf0bc307bd6e6b4cca51245b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-twinguard-hp_boss_case-glow": {
+      "path": "Assets/Rogue/ornament-twinguard-hp_boss_case-glow.tga",
+      "sha256": "07709f044f666a54c0879ff642aa71328f61978956db0bc5eca105a758b30d93",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-twinguard-hp_boss_case": {
+      "path": "Assets/Rogue/ornament-twinguard-hp_boss_case.tga",
+      "sha256": "7a05e9cafb226ea887dd211eae70712316c2dc5ae095c029c02f1cf365579a3c",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-twinguard-hp_cap_case-glow": {
+      "path": "Assets/Rogue/ornament-twinguard-hp_cap_case-glow.tga",
+      "sha256": "a2f69110432b082e99f2fad99226bc2691eb411d2e151bbbba754d869b03ea6a",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-twinguard-hp_cap_case": {
+      "path": "Assets/Rogue/ornament-twinguard-hp_cap_case.tga",
+      "sha256": "07e67594cdd8d200b7fb055af5c733d686650ad35a7f3b80000d675659beeee3",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-twinguard-hp_low_case-glow": {
+      "path": "Assets/Rogue/ornament-twinguard-hp_low_case-glow.tga",
+      "sha256": "17b942ce5242e771ae7c007be67046f7f3b2f40293e941cd675776dfa2c942d9",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-twinguard-hp_low_case": {
+      "path": "Assets/Rogue/ornament-twinguard-hp_low_case.tga",
+      "sha256": "c9e3acd77df27c793f50da46ac6b66b8008998f2b54db4c88463e8d772b84127",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-twinguard-hp_mid_case-glow": {
+      "path": "Assets/Rogue/ornament-twinguard-hp_mid_case-glow.tga",
+      "sha256": "3775c6ccf186e62e368f765b7eb8ea317a138e112ddeb54d59e29120b629d020",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-twinguard-hp_mid_case": {
+      "path": "Assets/Rogue/ornament-twinguard-hp_mid_case.tga",
+      "sha256": "dad932f7eedc7454e3c716e102964cce6b09cfb9b64540c9db44c667cedd0b01",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-venom-hp_boss_case-glow": {
+      "path": "Assets/Rogue/ornament-venom-hp_boss_case-glow.tga",
+      "sha256": "4aaddb7d1431d5f2bb0380ce1eea8b178e12126b4d2eaf9db4ed6bdfaf312eda",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-venom-hp_boss_case": {
+      "path": "Assets/Rogue/ornament-venom-hp_boss_case.tga",
+      "sha256": "62d9393595a47c210cfc6d307ce1d77a352d48a847b623ab2203234f8b19fffc",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-venom-hp_cap_case-glow": {
+      "path": "Assets/Rogue/ornament-venom-hp_cap_case-glow.tga",
+      "sha256": "98132b987f4a98e5b87097c2c52e3dc3e47e2a2bdc04346f243ae1102d6d7d29",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-venom-hp_cap_case": {
+      "path": "Assets/Rogue/ornament-venom-hp_cap_case.tga",
+      "sha256": "5ea32c2102c9034113b47e66ec4ed5bcb03985daba9894be18996bf5990cb448",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-venom-hp_low_case-glow": {
+      "path": "Assets/Rogue/ornament-venom-hp_low_case-glow.tga",
+      "sha256": "49673ad8147c916f11910a7f2c4a85857e2d8ff832338ca40df842cd7d42713a",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-venom-hp_low_case": {
+      "path": "Assets/Rogue/ornament-venom-hp_low_case.tga",
+      "sha256": "e19dcdb7bfe6c11363fc45f221ea6186498bfe9ef17f9cbc6fa72d15a886d317",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-venom-hp_mid_case-glow": {
+      "path": "Assets/Rogue/ornament-venom-hp_mid_case-glow.tga",
+      "sha256": "49673ad8147c916f11910a7f2c4a85857e2d8ff832338ca40df842cd7d42713a",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-venom-hp_mid_case": {
+      "path": "Assets/Rogue/ornament-venom-hp_mid_case.tga",
+      "sha256": "e19dcdb7bfe6c11363fc45f221ea6186498bfe9ef17f9cbc6fa72d15a886d317",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "party_portrait_border": {
+      "path": "Assets/Rogue/party_portrait_border.tga",
+      "sha256": "de187538c9dab9e1ce534517541efb3909b085f09bf764dca130e8c4bdaf38d6",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "point_plate": {
+      "path": "Assets/Rogue/point_plate.tga",
+      "sha256": "cb093baca8c67daffdb3269fc2341ed51ff663b7ae172c2ff33b910cb2d6e90a",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "portrait_frame_hi-glow": {
+      "path": "Assets/Rogue/portrait_frame_hi-glow.tga",
+      "sha256": "4b9a9decbb98865cd90c9b1a4c1f77493e05ef2f831738aea3d72ba896199914",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "portrait_frame_hi": {
+      "path": "Assets/Rogue/portrait_frame_hi.tga",
+      "sha256": "0e3bd2e7519342fcb0489a1694f47f706bece69354a2fc0b3401adeb7ab8c903",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "portrait_frame_lo-glow": {
+      "path": "Assets/Rogue/portrait_frame_lo-glow.tga",
+      "sha256": "c7304d9608d1d7ccd34c4b07628bf1d79359ba8cb3e55274b85b3338f85ec496",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "portrait_frame_lo": {
+      "path": "Assets/Rogue/portrait_frame_lo.tga",
+      "sha256": "1ba484462d2b253495a2496a6d7b59fc00d8080225c9892169cc1a20711b70fd",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "pw_crystal_case-glow": {
+      "path": "Assets/Rogue/pw_crystal_case-glow.tga",
+      "sha256": "da5f307d01993400aee7d74fc5b1e5bd98cc0cbad4098b41b1d1559d5ea22bca",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case": {
+      "path": "Assets/Rogue/pw_crystal_case.tga",
+      "sha256": "d5d1c071bde2e74279d834acb04dd478bad742b327038e6d8ebec820ba7ddd93",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case_low-glow": {
+      "path": "Assets/Rogue/pw_crystal_case_low-glow.tga",
+      "sha256": "bb7bed63a4807dc4020757001fd0983449ff874f97462621d3598eff4dd23d1f",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case_low": {
+      "path": "Assets/Rogue/pw_crystal_case_low.tga",
+      "sha256": "27f46a8f178a433e06ab7289131574e2576dc04398d980706c3e323ef793919f",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case-seat": {
+      "path": "Assets/Rogue/pw_crystal_case-seat.tga",
+      "sha256": "02884e0095d74eee915bbe40def20ca5f205b4d74afb5d5137c4f90b3b019ea1",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case-seat-wrath": {
+      "path": "Assets/Rogue/pw_crystal_case-seat-wrath.tga",
+      "sha256": "85b228280588fce7b4fe4593fedf1db9f8fe3468a1b701c687f188e2e2d12030",
+      "canvas": [
+        256,
+        128
+      ]
+    }
+  },
+  "casings": [
+    "actionbutton-border",
+    "actionbutton-border-square",
+    "actionbutton-border-square-rounded",
+    "better-blizzard-border-small-alternate",
+    "border-aura",
+    "border-tooltip",
+    "cast_back",
+    "cast_back_spiked",
+    "cast_back_wooden",
+    "config_button",
+    "config_button_bright",
+    "hp_boss_case",
+    "hp_cap_case",
+    "hp_critter_case",
+    "hp_critter_case_hi",
+    "hp_low_case",
+    "hp_mid_case",
+    "icon_exit_flight",
+    "minimap-border",
+    "orb-border",
+    "orb_case_hi",
+    "orb_case_low",
+    "party_portrait_border",
+    "point_plate",
+    "portrait_frame_hi",
+    "portrait_frame_lo",
+    "pw_crystal_case",
+    "pw_crystal_case_low"
+  ],
+  "shared": {
+    "nameplate_backdrop": "shared neutral backing, no ornamental frame",
+    "minimap-onebar-backdrop": "shared functional XP/status ring",
+    "minimap-twobars-backdrop": "shared functional XP/status ring",
+    "options-box": "shared options control/state art"
+  },
+  "healthEndcaps": {
+    "venom": {
+      "hp_cap_case": {
+        "dip": [
+          754.0,
+          187
+        ],
+        "normalizedDip": [
+          0.736328125,
+          0.73046875
+        ],
+        "capPoint": [
+          754.5,
+          187
+        ],
+        "maxNativePixelError": 0.5,
+        "fillCovered": 0.14263639095162467,
+        "uniformScale": 0.14270152505446623,
+        "offset": [
+          706,
+          57
+        ],
+        "wholePainting": true,
+        "terminalPixels": 5345,
+        "terminalCoveredFraction": 0.9919550982226379,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_cap_case",
+        "height": 131,
+        "bounds": [
+          706,
+          57,
+          821,
+          188
+        ],
+        "approvedEnvelope": [
+          692,
+          52,
+          822,
+          188
+        ],
+        "combinedFillCovered": 0.14263639095162467,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "source": "venom-vial.png",
+        "sourceSha256": "78e3c80b5cc1215aa5aa0c672afaa31b8d68db1e839e427a75d079099254f1da",
+        "rotationDegrees": 0
+      },
+      "hp_mid_case": {
+        "dip": [
+          757.0,
+          181
+        ],
+        "normalizedDip": [
+          0.7392578125,
+          0.70703125
+        ],
+        "capPoint": [
+          757.0,
+          181
+        ],
+        "maxNativePixelError": 0.0,
+        "fillCovered": 0.1304066583293803,
+        "uniformScale": 0.13592233009708737,
+        "offset": [
+          708,
+          56
+        ],
+        "wholePainting": true,
+        "terminalPixels": 4462,
+        "terminalCoveredFraction": 0.9955177050649933,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_mid_case",
+        "height": 126,
+        "bounds": [
+          708,
+          56,
+          819,
+          182
+        ],
+        "approvedEnvelope": [
+          698,
+          56,
+          820,
+          182
+        ],
+        "combinedFillCovered": 0.1304066583293803,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "source": "venom-vial.png",
+        "sourceSha256": "78e3c80b5cc1215aa5aa0c672afaa31b8d68db1e839e427a75d079099254f1da",
+        "rotationDegrees": 2
+      },
+      "hp_low_case": {
+        "dip": [
+          756.5,
+          181
+        ],
+        "normalizedDip": [
+          0.73876953125,
+          0.70703125
+        ],
+        "capPoint": [
+          757.0,
+          181
+        ],
+        "maxNativePixelError": 0.5,
+        "fillCovered": 0.1304066583293803,
+        "uniformScale": 0.13592233009708737,
+        "offset": [
+          708,
+          56
+        ],
+        "wholePainting": true,
+        "terminalPixels": 4471,
+        "terminalCoveredFraction": 0.9955267278013867,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_low_case",
+        "height": 126,
+        "bounds": [
+          708,
+          56,
+          819,
+          182
+        ],
+        "approvedEnvelope": [
+          698,
+          56,
+          819,
+          182
+        ],
+        "combinedFillCovered": 0.1304066583293803,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "source": "venom-vial.png",
+        "sourceSha256": "78e3c80b5cc1215aa5aa0c672afaa31b8d68db1e839e427a75d079099254f1da",
+        "rotationDegrees": 2
+      },
+      "hp_boss_case": {
+        "dip": [
+          872.5,
+          188
+        ],
+        "normalizedDip": [
+          0.85205078125,
+          0.734375
+        ],
+        "capPoint": [
+          872.5,
+          188
+        ],
+        "maxNativePixelError": 0.0,
+        "fillCovered": 0.09725850618488559,
+        "uniformScale": 0.14270152505446623,
+        "offset": [
+          824,
+          58
+        ],
+        "wholePainting": true,
+        "terminalPixels": 5670,
+        "terminalCoveredFraction": 0.9920634920634921,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_boss_case",
+        "height": 131,
+        "bounds": [
+          824,
+          58,
+          939,
+          189
+        ],
+        "approvedEnvelope": [
+          811,
+          56,
+          940,
+          189
+        ],
+        "combinedFillCovered": 0.09725850618488559,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "source": "venom-vial.png",
+        "sourceSha256": "78e3c80b5cc1215aa5aa0c672afaa31b8d68db1e839e427a75d079099254f1da",
+        "rotationDegrees": 0
+      }
+    },
+    "twinguard": {
+      "hp_cap_case": {
+        "dip": [
+          754.0,
+          187
+        ],
+        "normalizedDip": [
+          0.736328125,
+          0.73046875
+        ],
+        "capPoint": [
+          753.5,
+          187
+        ],
+        "maxNativePixelError": 0.5,
+        "fillCovered": 0.12417907885135425,
+        "uniformScale": 0.13654618473895583,
+        "offset": [
+          716,
+          52
+        ],
+        "wholePainting": true,
+        "terminalPixels": 5345,
+        "terminalCoveredFraction": 0.9891487371375117,
+        "exposedTerminalPixelsBeyondAA": 6,
+        "edgeToleranceSourcePixels": 1,
+        "approvedTerminalExposurePixels": 6,
+        "case": "hp_cap_case",
+        "height": 136,
+        "bounds": [
+          716,
+          52,
+          820,
+          188
+        ],
+        "approvedEnvelope": [
+          692,
+          52,
+          822,
+          188
+        ],
+        "combinedFillCovered": 0.12417907885135425,
+        "frozenTerminalExposedPixels": 6,
+        "source": "twin-guard-fixed-v2.png",
+        "maintainerApprovedExposurePixels": 6,
+        "sourceSha256": "028f23d5f52673a7ba970f232db0796269a8fb40dfca7c3ad687f1c0b6dfdee5"
+      },
+      "hp_mid_case": {
+        "dip": [
+          757.0,
+          181
+        ],
+        "normalizedDip": [
+          0.7392578125,
+          0.70703125
+        ],
+        "capPoint": [
+          757.0,
+          181
+        ],
+        "maxNativePixelError": 0.0,
+        "fillCovered": 0.1390314373194187,
+        "uniformScale": 1.0,
+        "offset": [
+          705,
+          56
+        ],
+        "wholePainting": true,
+        "terminalPixels": 4462,
+        "terminalCoveredFraction": 1.0,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_mid_case",
+        "height": 126,
+        "bounds": [
+          705,
+          56,
+          819,
+          182
+        ],
+        "approvedEnvelope": [
+          698,
+          56,
+          820,
+          182
+        ],
+        "combinedFillCovered": 0.1390314373194187,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "originalRegistration": {
+          "uniformScale": 0.13680781758957655,
+          "offset": [
+            705,
+            56
+          ],
+          "sourcePaintedBounds": [
+            236,
+            145,
+            1067,
+            1066
+          ]
+        },
+        "bodyAddedPixels": 108,
+        "mountingBodyOnly": true,
+        "originalOpaqueFeaturesUnchanged": true,
+        "source": "Script-Edited/twinguard-hp_mid_case.png",
+        "sourceEditingApprovalSha256": "5102e1dda204f9f45df60de2901edfbe91ca316e8885b576a01169338b43307c",
+        "sourceSha256": "75c7f1de490f7ff8aa1fde3ca7bb7dd5fe74de440c8e053ba189e3b579c6a40a",
+        "bodyEditMaskSha256": "3b891d09dddbe3b64b52fa78232a86f064d934d0654575fe7b5326de04821803"
+      },
+      "hp_low_case": {
+        "dip": [
+          756.5,
+          181
+        ],
+        "normalizedDip": [
+          0.73876953125,
+          0.70703125
+        ],
+        "capPoint": [
+          756.0,
+          181
+        ],
+        "maxNativePixelError": 0.5,
+        "fillCovered": 0.14088576480227694,
+        "uniformScale": 1.0,
+        "offset": [
+          704,
+          56
+        ],
+        "wholePainting": true,
+        "terminalPixels": 4471,
+        "terminalCoveredFraction": 1.0,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_low_case",
+        "height": 126,
+        "bounds": [
+          704,
+          56,
+          818,
+          182
+        ],
+        "approvedEnvelope": [
+          698,
+          56,
+          819,
+          182
+        ],
+        "combinedFillCovered": 0.14088576480227694,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "originalRegistration": {
+          "uniformScale": 0.13680781758957655,
+          "offset": [
+            704,
+            56
+          ],
+          "sourcePaintedBounds": [
+            236,
+            145,
+            1067,
+            1066
+          ]
+        },
+        "bodyAddedPixels": 121,
+        "mountingBodyOnly": true,
+        "originalOpaqueFeaturesUnchanged": true,
+        "source": "Script-Edited/twinguard-hp_low_case.png",
+        "sourceEditingApprovalSha256": "5102e1dda204f9f45df60de2901edfbe91ca316e8885b576a01169338b43307c",
+        "sourceSha256": "c904cb0d069e516e89601b08b3fa80fea3ada844356bca05b6b25f477d8084e6",
+        "bodyEditMaskSha256": "3e5335e6cfb64103a4f7dd0b8f81a8c2258606add91967a38b716dc6e40076cc"
+      },
+      "hp_boss_case": {
+        "dip": [
+          872.5,
+          188
+        ],
+        "normalizedDip": [
+          0.85205078125,
+          0.734375
+        ],
+        "capPoint": [
+          873.0,
+          188
+        ],
+        "maxNativePixelError": 0.5,
+        "fillCovered": 0.1050014163860124,
+        "uniformScale": 1.0,
+        "offset": [
+          818,
+          56
+        ],
+        "wholePainting": true,
+        "terminalPixels": 5670,
+        "terminalCoveredFraction": 1.0,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_boss_case",
+        "height": 133,
+        "bounds": [
+          818,
+          56,
+          938,
+          189
+        ],
+        "approvedEnvelope": [
+          811,
+          56,
+          940,
+          189
+        ],
+        "combinedFillCovered": 0.1050014163860124,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "originalRegistration": {
+          "uniformScale": 0.1444082519001086,
+          "offset": [
+            818,
+            56
+          ],
+          "sourcePaintedBounds": [
+            236,
+            145,
+            1067,
+            1066
+          ]
+        },
+        "bodyAddedPixels": 140,
+        "mountingBodyOnly": true,
+        "originalOpaqueFeaturesUnchanged": true,
+        "source": "Script-Edited/twinguard-hp_boss_case.png",
+        "sourceEditingApprovalSha256": "5102e1dda204f9f45df60de2901edfbe91ca316e8885b576a01169338b43307c",
+        "sourceSha256": "52b100043bac34ce976fc4ac68a6317537335aeb4fe691fac14fab666e6d1fa2",
+        "bodyEditMaskSha256": "5e328cb67cd7f27642e39d25346ccdf9bcf8a9d44eff4d510f1af0153b9de6d2"
+      }
+    },
+    "serrated": {
+      "hp_cap_case": {
+        "dip": [
+          754.0,
+          187
+        ],
+        "normalizedDip": [
+          0.736328125,
+          0.73046875
+        ],
+        "capPoint": [
+          754.0,
+          187
+        ],
+        "maxNativePixelError": 0.0,
+        "fillCovered": 0.14079065974159763,
+        "uniformScale": 1.0,
+        "offset": [
+          707,
+          67
+        ],
+        "wholePainting": true,
+        "terminalPixels": 5345,
+        "terminalCoveredFraction": 1.0,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_cap_case",
+        "height": 121,
+        "bounds": [
+          707,
+          67,
+          815,
+          188
+        ],
+        "approvedEnvelope": [
+          692,
+          52,
+          822,
+          188
+        ],
+        "combinedFillCovered": 0.14079065974159763,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "originalRegistration": {
+          "uniformScale": 0.12604166666666666,
+          "offset": [
+            707,
+            67
+          ],
+          "sourcePaintedBounds": [
+            180,
+            121,
+            1034,
+            1081
+          ]
+        },
+        "bodyAddedPixels": 913,
+        "mountingBodyOnly": true,
+        "originalOpaqueFeaturesUnchanged": true,
+        "source": "Script-Edited/serrated-hp_cap_case.png",
+        "sourceEditingApprovalSha256": "5102e1dda204f9f45df60de2901edfbe91ca316e8885b576a01169338b43307c",
+        "sourceSha256": "e59b15e5ba0af51471df893cd58a1df514196676f1c99ca122384aca0df8da87",
+        "bodyEditMaskSha256": "acf9491bf6448c9ec0153b27d863d2ff8be2bdddcc38f78856a063e9178f227f"
+      },
+      "hp_mid_case": {
+        "dip": [
+          757.0,
+          181
+        ],
+        "normalizedDip": [
+          0.7392578125,
+          0.70703125
+        ],
+        "capPoint": [
+          757.0,
+          181
+        ],
+        "maxNativePixelError": 0.0,
+        "fillCovered": 0.12975979990512743,
+        "uniformScale": 1.0,
+        "offset": [
+          710,
+          61
+        ],
+        "wholePainting": true,
+        "terminalPixels": 4462,
+        "terminalCoveredFraction": 1.0,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_mid_case",
+        "height": 121,
+        "bounds": [
+          710,
+          61,
+          818,
+          182
+        ],
+        "approvedEnvelope": [
+          698,
+          56,
+          820,
+          182
+        ],
+        "combinedFillCovered": 0.12975979990512743,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "originalRegistration": {
+          "uniformScale": 0.12604166666666666,
+          "offset": [
+            710,
+            61
+          ],
+          "sourcePaintedBounds": [
+            180,
+            121,
+            1034,
+            1081
+          ]
+        },
+        "bodyAddedPixels": 283,
+        "mountingBodyOnly": true,
+        "originalOpaqueFeaturesUnchanged": true,
+        "source": "Script-Edited/serrated-hp_mid_case.png",
+        "sourceEditingApprovalSha256": "5102e1dda204f9f45df60de2901edfbe91ca316e8885b576a01169338b43307c",
+        "sourceSha256": "226a850a900e71de5f0dacb2ced1a498ae8058cc6ef36fcc7469e4df9bc7d72f",
+        "bodyEditMaskSha256": "da103217a32642d3c944768fcac3de14955bef9d44e136f12d229026dc549837"
+      },
+      "hp_low_case": {
+        "dip": [
+          756.5,
+          181
+        ],
+        "normalizedDip": [
+          0.73876953125,
+          0.70703125
+        ],
+        "capPoint": [
+          757.0,
+          181
+        ],
+        "maxNativePixelError": 0.5,
+        "fillCovered": 0.12975979990512743,
+        "uniformScale": 1.0,
+        "offset": [
+          710,
+          61
+        ],
+        "wholePainting": true,
+        "terminalPixels": 4471,
+        "terminalCoveredFraction": 1.0,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_low_case",
+        "height": 121,
+        "bounds": [
+          710,
+          61,
+          818,
+          182
+        ],
+        "approvedEnvelope": [
+          698,
+          56,
+          819,
+          182
+        ],
+        "combinedFillCovered": 0.12975979990512743,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "originalRegistration": {
+          "uniformScale": 0.12604166666666666,
+          "offset": [
+            710,
+            61
+          ],
+          "sourcePaintedBounds": [
+            180,
+            121,
+            1034,
+            1081
+          ]
+        },
+        "bodyAddedPixels": 284,
+        "mountingBodyOnly": true,
+        "originalOpaqueFeaturesUnchanged": true,
+        "source": "Script-Edited/serrated-hp_low_case.png",
+        "sourceEditingApprovalSha256": "5102e1dda204f9f45df60de2901edfbe91ca316e8885b576a01169338b43307c",
+        "sourceSha256": "9157db2d866550388ff5a6fa3f4c0a2fa17c812f82fd0aaa697ebc5f5f31e9b1",
+        "bodyEditMaskSha256": "27d2e448d4dac03e18d603ae90da385753b1ab44a2f223dd0042fbb9fe85e2c6"
+      },
+      "hp_boss_case": {
+        "dip": [
+          872.5,
+          188
+        ],
+        "normalizedDip": [
+          0.85205078125,
+          0.734375
+        ],
+        "capPoint": [
+          873.0,
+          188
+        ],
+        "maxNativePixelError": 0.5,
+        "fillCovered": 0.09467753611784331,
+        "uniformScale": 1.0,
+        "offset": [
+          826,
+          68
+        ],
+        "wholePainting": true,
+        "terminalPixels": 5670,
+        "terminalCoveredFraction": 1.0,
+        "exposedTerminalPixelsBeyondAA": 0,
+        "edgeToleranceSourcePixels": 1,
+        "case": "hp_boss_case",
+        "height": 121,
+        "bounds": [
+          826,
+          68,
+          934,
+          189
+        ],
+        "approvedEnvelope": [
+          811,
+          56,
+          940,
+          189
+        ],
+        "combinedFillCovered": 0.09467753611784331,
+        "frozenTerminalExposedPixels": 0,
+        "maintainerApprovedExposurePixels": 0,
+        "originalRegistration": {
+          "uniformScale": 0.12604166666666666,
+          "offset": [
+            826,
+            68
+          ],
+          "sourcePaintedBounds": [
+            180,
+            121,
+            1034,
+            1081
+          ]
+        },
+        "bodyAddedPixels": 940,
+        "mountingBodyOnly": true,
+        "originalOpaqueFeaturesUnchanged": true,
+        "source": "Script-Edited/serrated-hp_boss_case.png",
+        "sourceEditingApprovalSha256": "5102e1dda204f9f45df60de2901edfbe91ca316e8885b576a01169338b43307c",
+        "sourceSha256": "4c01f0d5bf27ef3f2a66d30a037199af2ebe46a0005c05343f49a07681170d01",
+        "bodyEditMaskSha256": "39d8e1689b81b7da3c7681a634f3978eef752367a64781a1a26be4a50127c152"
+      }
+    }
+  },
+  "cast": {
+    "assets": {
+      "cast_back": {
+        "sha256": "f966d7320f3ddd6fc649446e95dc2e5413c471abca8d6d3f64f9efc8f7b3b38a",
+        "lookNotes": []
+      },
+      "cast_back-over": {
+        "sha256": "ee6264c03bc068232d120f1583bd56f4da5720d618348c4ed4f7fc4e2b4df302",
+        "lookNotes": []
+      },
+      "cast_back_spiked": {
+        "sha256": "e656b3485be3961607d10a7abf3696145784c3cbb832690997a7d8d45c3127c7",
+        "lookNotes": []
+      },
+      "cast_back_spiked-over": {
+        "sha256": "5b88f29826e7bd7d8b53d6a51a934451912abeddd55339ecace440e84f2b1b0a",
+        "lookNotes": []
+      },
+      "cast_back_wooden": {
+        "sha256": "1d7b6faaf562ff7cd197d77356abf4c3699a30f83904df5362ce3624d7949bb7",
+        "lookNotes": []
+      },
+      "cast_back_wooden-over": {
+        "sha256": "62b86f0d5390901d3fbb4736efb2d336ba59e8f0ccff131c7dfccdecc6f1534a",
+        "lookNotes": []
+      },
+      "cast-head": {
+        "sha256": "494fb4f4cbccb664de593608571d5352695db6c22f09d88e847d691bd46cf1a4",
+        "lookNotes": []
+      },
+      "cast-head-glow": {
+        "sha256": "b17cde21427eccbfb9f9f1383402d06afbb0ed92cce1997d38328107e7aa2fca",
+        "lookNotes": []
+      }
+    },
+    "head": {
+      "scale": 0.2484472049689441,
+      "offset": [
+        70,
+        8
+      ],
+      "size": [
+        116,
+        240
+      ],
+      "policy": "whole painting, uniform scale, no warp or native-alpha stencil",
+      "sourceRegistrationX": -1
+    },
+    "paintedBounds": [
+      69,
+      8,
+      185,
+      248
+    ],
+    "socketCoverage": {
+      "cast_back": {
+        "requiredPixels": 5397,
+        "exposedPixels": 0
+      },
+      "cast_back_spiked": {
+        "requiredPixels": 5230,
+        "exposedPixels": 0
+      }
+    },
+    "casings": {
+      "cast_back": {
+        "scale": 1.0,
+        "offset": [
+          33,
+          39
+        ],
+        "size": [
+          184,
+          48
+        ],
+        "policy": "whole painting uniformly registered; exact native casing alpha, measured edge RGB extension and shared recess/glass",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.31888337135954903,
+        "construction": "uniform rail height; two plain runs shortened; native cast silhouette",
+        "missingVisibleMetalFraction": 0.046755516714004804,
+        "proposedPaintOverGlassPixels": 0,
+        "explicitBridgePixels": 0,
+        "bridgeMaskSha256": "0148f7d705ea1e8a6e152a187b659a36e207d15c7ed4ec01e730df581688f6c6",
+        "registeredPaintSha256": "417cd06d54da0e9024a91b373565bc534f9236f7cbb75033194b3b1ec6d1c6e3"
+      },
+      "cast_back_spiked": {
+        "scale": 1.0,
+        "offset": [
+          34,
+          28
+        ],
+        "size": [
+          183,
+          59
+        ],
+        "policy": "whole painting uniformly registered; exact native casing alpha, measured edge RGB extension and shared recess/glass",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.2820546505517604,
+        "construction": "uniform rail height; two plain runs shortened; native cast silhouette",
+        "missingVisibleMetalFraction": 0.06395103419164204,
+        "proposedPaintOverGlassPixels": 0,
+        "explicitBridgePixels": 0,
+        "bridgeMaskSha256": "0148f7d705ea1e8a6e152a187b659a36e207d15c7ed4ec01e730df581688f6c6",
+        "registeredPaintSha256": "b066df20743b0d418371f26f27a061eb371715d30a796d948ddebd6713983092"
+      },
+      "cast_back_wooden": {
+        "scale": 1.0,
+        "offset": [
+          34,
+          39
+        ],
+        "size": [
+          183,
+          48
+        ],
+        "policy": "whole painting uniformly registered; exact native casing alpha, measured edge RGB extension and shared recess/glass",
+        "paintOutsideNativeFraction": 0.0,
+        "missingNativeSurfaceFraction": 0.3212553879310345,
+        "construction": "uniform rail height; two plain runs shortened; native cast silhouette",
+        "missingVisibleMetalFraction": 0.04901098901098901,
+        "proposedPaintOverGlassPixels": 0,
+        "explicitBridgePixels": 0,
+        "bridgeMaskSha256": "0148f7d705ea1e8a6e152a187b659a36e207d15c7ed4ec01e730df581688f6c6",
+        "registeredPaintSha256": "73e24e1038f81eeac046182e48732940f79a3caa89a402f66c774a833e6308db"
+      }
+    },
+    "runtimeInstalled": false,
+    "liveValidated": false
+  },
+  "checks": {
+    "actionbutton-border-square-rounded": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "actionbutton-border-square": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "actionbutton-border": {
+      "failures": [],
+      "scope": "Current fit-closure source replay and static fit only; live unconfirmed"
+    },
+    "better-blizzard-border-small-alternate": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "border-aura": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "border-tooltip": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "cast-head-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "cast-head": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "cast_back-over": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "cast_back": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "cast_back_spiked-over": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "cast_back_spiked": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "cast_back_wooden-over": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "cast_back_wooden": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "config_button": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "config_button_bright": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "crystal-assembly-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "crystal-assembly-low-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "crystal-assembly-low-wrath-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "crystal-assembly-wrath-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_boss_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_boss_case-over": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_boss_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_cap_case-glow": {
+      "failures": [],
+      "scope": "Current fit-closure source replay and static fit only; live unconfirmed"
+    },
+    "hp_cap_case-over": {
+      "failures": [],
+      "scope": "Current fit-closure source replay and static fit only; live unconfirmed"
+    },
+    "hp_cap_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_critter_case-over": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_critter_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_critter_case_hi-over": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_critter_case_hi": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_low_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_low_case-over": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_low_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_mid_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_mid_case-over": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "hp_mid_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "icon_exit_flight": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "minimap-border": {
+      "failures": [
+        "opening [155, 155, 362, 353] differs from original [145, 144, 372, 371] (tolerance 8 px); band thickness changes"
+      ],
+      "lookNotes": [
+        "V3 WIP live preview; production acceptance absent"
+      ]
+    },
+    "orb-border": {
+      "failures": [],
+      "lookNotes": [
+        "no baked grounding shadow (soft fringe 3.4 px, original 8-17)"
+      ]
+    },
+    "orb_case_hi-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "orb_case_hi": {
+      "failures": [],
+      "lookNotes": [
+        "lit from below (top 0.18, bottom 0.19)"
+      ]
+    },
+    "orb_case_low-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "orb_case_low": {
+      "failures": [],
+      "lookNotes": [
+        "lit from below (top 0.17, bottom 0.19)"
+      ]
+    },
+    "ornament-serrated-hp_boss_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-serrated-hp_boss_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-serrated-hp_cap_case-glow": {
+      "failures": [],
+      "scope": "Current fit-closure source replay and static fit only; live unconfirmed"
+    },
+    "ornament-serrated-hp_cap_case": {
+      "failures": [],
+      "scope": "Current fit-closure source replay and static fit only; live unconfirmed"
+    },
+    "ornament-serrated-hp_low_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-serrated-hp_low_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-serrated-hp_mid_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-serrated-hp_mid_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-twinguard-hp_boss_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-twinguard-hp_boss_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-twinguard-hp_cap_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-twinguard-hp_cap_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-twinguard-hp_low_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-twinguard-hp_low_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-twinguard-hp_mid_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-twinguard-hp_mid_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-venom-hp_boss_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-venom-hp_boss_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-venom-hp_cap_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-venom-hp_cap_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-venom-hp_low_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-venom-hp_low_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-venom-hp_mid_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "ornament-venom-hp_mid_case": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "party_portrait_border": {
+      "failures": [],
+      "lookNotes": [
+        "lit from below (top 0.18, bottom 0.19)"
+      ]
+    },
+    "point_plate": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "portrait_frame_hi-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "portrait_frame_hi": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "portrait_frame_lo-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "portrait_frame_lo": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "pw_crystal_case-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "pw_crystal_case": {
+      "failures": [
+        "SOURCE APERTURE: undeclared solid paint covers functional fill"
+      ],
+      "lookNotes": [
+        "V3 WIP live preview; production acceptance absent"
+      ]
+    },
+    "pw_crystal_case_low-glow": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "pw_crystal_case_low": {
+      "failures": [],
+      "lookNotes": []
+    },
+    "pw_crystal_case-seat": {
+      "failures": [],
+      "scope": "Current fit-closure source replay and static fit only; live unconfirmed"
+    },
+    "pw_crystal_case-seat-wrath": {
+      "failures": [],
+      "scope": "Current fit-closure source replay and static fit only; live unconfirmed"
+    }
+  },
+  "resourceHalos": {
+    "assets": {
+      "crystal-assembly-glow": {
+        "path": "Assets_Draft/Rogue/crystal-assembly-glow.tga",
+        "canvas": [
+          512,
+          512
+        ],
+        "sha256": "6d17d30e12ccb95e6054db34831d44c33e00e7817005c9227aa9cfcc5edbbb40"
+      },
+      "crystal-assembly-wrath-glow": {
+        "path": "Assets_Draft/Rogue/crystal-assembly-wrath-glow.tga",
+        "canvas": [
+          512,
+          512
+        ],
+        "sha256": "c5542ff29b9c986ea23f939fc0e706c0282c3831a33dd738882b9e5c41d0aa39"
+      },
+      "crystal-assembly-low-glow": {
+        "path": "Assets_Draft/Rogue/crystal-assembly-low-glow.tga",
+        "canvas": [
+          512,
+          512
+        ],
+        "sha256": "4e2751d5438834883ad42d3ca3f25881b12c199b1f023ca32054bf0851ccc38e"
+      },
+      "crystal-assembly-low-wrath-glow": {
+        "path": "Assets_Draft/Rogue/crystal-assembly-low-wrath-glow.tga",
+        "canvas": [
+          512,
+          512
+        ],
+        "sha256": "f5da2be7fbe70107e1316701757f9865c4a53cf47ac3bb695ae126c3282095fb"
+      }
+    },
+    "contracts": {
+      "crystal-assembly-glow": {
+        "drawRect": [
+          -98.0,
+          -98.0,
+          392,
+          392
+        ],
+        "nativeResourceRect": [
+          0,
+          0,
+          196,
+          196
+        ],
+        "holderRect": [
+          6.0,
+          121.0,
+          198,
+          98
+        ],
+        "canvas": [
+          512,
+          512
+        ],
+        "nativeFill": "Interface\\AddOns\\AzeriteUI5_JuNNeZ_Edition\\Assets\\power_crystal_front.tga",
+        "silhouette": "whole native crystal plus Rogue cradle"
+      },
+      "crystal-assembly-wrath-glow": {
+        "drawRect": [
+          -98.0,
+          -98.0,
+          392,
+          392
+        ],
+        "nativeResourceRect": [
+          0,
+          0,
+          196,
+          196
+        ],
+        "holderRect": [
+          6.0,
+          121.0,
+          198,
+          98
+        ],
+        "canvas": [
+          512,
+          512
+        ],
+        "nativeFill": "Interface\\AddOns\\AzeriteUI5_JuNNeZ_Edition\\Assets\\power-crystal-ice-front.tga",
+        "silhouette": "whole native crystal plus Rogue cradle"
+      },
+      "crystal-assembly-low-glow": {
+        "drawRect": [
+          -98.0,
+          -98.0,
+          392,
+          392
+        ],
+        "nativeResourceRect": [
+          0,
+          0,
+          196,
+          196
+        ],
+        "holderRect": [
+          6.0,
+          121.0,
+          198,
+          98
+        ],
+        "canvas": [
+          512,
+          512
+        ],
+        "nativeFill": "Interface\\AddOns\\AzeriteUI5_JuNNeZ_Edition\\Assets\\power_crystal_front.tga",
+        "silhouette": "whole native crystal plus Rogue cradle"
+      },
+      "crystal-assembly-low-wrath-glow": {
+        "drawRect": [
+          -98.0,
+          -98.0,
+          392,
+          392
+        ],
+        "nativeResourceRect": [
+          0,
+          0,
+          196,
+          196
+        ],
+        "holderRect": [
+          6.0,
+          121.0,
+          198,
+          98
+        ],
+        "canvas": [
+          512,
+          512
+        ],
+        "nativeFill": "Interface\\AddOns\\AzeriteUI5_JuNNeZ_Edition\\Assets\\power-crystal-ice-front.tga",
+        "silhouette": "whole native crystal plus Rogue cradle"
+      }
+    }
+  },
+  "conceptSha256": "6507ef84a4f9230f45d38c8e49c4b4f74767f546bcd52ed462d56a76d4c49b18",
+  "terminalAndFootprintContractSha256": "6ab028ee0f60919c340161f0cf1cd40d96496963076907cfa92c9cb25f47065d",
+  "maintainerApprovedExposure": {
+    "date": "2026-10-26",
+    "maintainerReply": "De 6 pixels er okay",
+    "scope": "Twin Guard fixed-v2, hp_cap_case at painted height 136, zero rotation; these six source pixels only, mirrored with the casing",
+    "source": "Sources/twin-guard-fixed-v2.png",
+    "case": "hp_cap_case",
+    "height": 136,
+    "pixels": [
+      [
+        718,
+        169
+      ],
+      [
+        718,
+        170
+      ],
+      [
+        719,
+        170
+      ],
+      [
+        720,
+        170
+      ],
+      [
+        721,
+        171
+      ],
+      [
+        723,
+        172
+      ]
+    ],
+    "otherTiersOrMotifsAuthorized": false,
+    "terminalMaskRemainsUnchanged": true
+  },
+  "controlledEditing": {
+    "approvalSha256": "5102e1dda204f9f45df60de2901edfbe91ca316e8885b576a01169338b43307c",
+    "serratedComponent": {
+      "originalSource": "Sources/serrated-v2.png",
+      "originalSha256": "0a24d58ccfe099bef547a7fef1f197341663c5c13d7283370dc3792f366b86cf",
+      "bladeMaskSha256": "13294182629f6c4c4e9ef7efc628c11869f1521d04725fc9b8e1e1997752b486",
+      "wholeBladeRGBAUnchanged": true,
+      "bladeTranslationSourcePixels": [
+        -120,
+        -35
+      ],
+      "bladeOccludedByOriginalMount": true,
+      "transparentRGBZeroed": true
+    },
+    "originalTwinSourceSha256": "25759a04e00592cf509b9c3db50269dc194e48cdef19947831569aff4069f77f",
+    "originalTerminalMasksUnchanged": true,
+    "runtimeGeometryChanged": false
+  },
+  "sources": {
+    "Sources/actionbutton-border.json": "719bafef4874a53e6d518ca152ad5c155976a78adb752604d42a13e709e5bcf3",
+    "Sources/actionbutton-border.png": "0d90f9cac7815edac4b2cbbf0cde48cfed983f5da1fb2d81e76a9fb1edeaf9a7",
+    "Sources/border-tooltip.json": "62932c798c99fd9a028a671a128ce2a40bc0a10c233d18732aadd1d98b3f9042",
+    "Sources/border-tooltip.png": "adc8219d13498b24bca07a19cf93667d67dc988087bb947fd263518f5f51087a",
+    "Sources/cast-head.json": "4a3524560a9c87725d2e55bcda946ce0ad675be7bfb1615146a0ddae48f0ccfe",
+    "Sources/cast-head.png": "69c9c4e10a2313ac0433ff96d679f34ec99ec29e88b17ff7d57152a1b9d6b7ac",
+    "Sources/cast_back.json": "a920fb1dfdafb873ecc66a9333c784e4b84235777ef3b57e94d49849969c559f",
+    "Sources/cast_back.png": "b16ad65a0d19ff91b864216c4f7d2e2e7ac8b4c758c2e2ad1654e58e5129783a",
+    "Sources/cast_back_spiked.json": "e9749336a1d3aee18022c47a7dfb8f8cac01e03f880c65348737c19b1d3cc760",
+    "Sources/cast_back_spiked.png": "b5ebf84de50956794d74c4c641712c21553e93f1393232d632b507d6177613f9",
+    "Sources/config_button.json": "e21c8c13195e85e1e27bf752acc9a524c63f231bad3b94b44d7fb31f7c8ba013",
+    "Sources/config_button.png": "902b219f5096031e80bd13bdffe47b91a6fc13e33f44b81a642cd6172095294b",
+    "Sources/hp_cap_case.json": "98aca2c914a8c209cc1a20adf8e8f3ba7035df476050a63b169d658bce243ef5",
+    "Sources/hp_cap_case.png": "55ff414e52b6582171845a773379e2848f64ea539251e4f9c88981a4bbc3a7ec",
+    "Sources/hp_critter_case_hi.json": "f6ff78653342d4feb2a02109ad5a6e6993fa05df7c6025b24ae61a099b0cfa65",
+    "Sources/hp_critter_case_hi.png": "f7fc6466d5ffe8c66f9300403eb216dffa37bb3c91d1de9ed138d1e5703eed8f",
+    "Sources/icon_exit_flight.json": "495000be357925fb69e031005de12f649934bac68e37e8a350d5ac659c74de05",
+    "Sources/icon_exit_flight.png": "5d47ad9e4860e02c711d15dc5937a27d338b1c69a4abe261520af9c38684d6c9",
+    "Sources/minimap-border.json": "55844e5cc017b16f4a729b9ea1ff4eb95b5d3a962cc86bfb8a850e514d5e00fb",
+    "Sources/minimap-border.png": "047271b264fb5769e08380e5ea41f66fbfcb6b05575f262efbadb4ce57e377f3",
+    "Sources/orb_case_hi.json": "53d2f859a25b53ef577e057b5249b0816fb1c9085ecf4b8755c1f08939ac4a73",
+    "Sources/orb_case_hi.png": "c7d5f32da04332f8115e77a64d72201f8b5212a98146e5832cad993a269912e4",
+    "Sources/party_portrait_border.json": "b2e95fb12db0fc2c874ea066ecfe1f25edbef849d5941216c9b8d36eb1ea1bd5",
+    "Sources/party_portrait_border.png": "82f555d9343060e7b6df14d510c912fb7d194b68ae06a6fb8f12b62a39c4b6a8",
+    "Sources/point_plate.json": "d464d0d99ee265b34d6a54048fd0a14d8a97cdbba6da0bd07c02a7b9760892cd",
+    "Sources/point_plate.png": "5f77be0c6dc80a5c108881d5680723c4f508d699ba6513a0e78383e31554b190",
+    "Sources/portrait_frame_hi-v2.json": "86d2a5ff8e05c141ce63b3592f0e8fdbe4508e39ad9fc44de35dbcaa5fd92572",
+    "Sources/portrait_frame_hi-v2.png": "8d38ec438e99513a4cc9fc4ddeac7c0628dfe1236fa3909967462a79c0fc5b50",
+    "Sources/portrait_frame_hi.json": "d40c6acb7d2be3d37b15e986be2cd58924032292ff341572bc0de9c92be14ab6",
+    "Sources/portrait_frame_hi.png": "560280076c2dae678bea0fed65035e88f8881ec4fd83231966b562e8416d16df",
+    "Sources/pw_crystal_case.json": "00ac767132e9f0756f9d3d35268d1a9b084c62c6922a6ce46e1674c327d3b8e9",
+    "Sources/pw_crystal_case.png": "80e08f6a0deae9c2e20fb86b43c40efc83ec92eaa9cda60bdf27afa23fb64be0",
+    "Sources/serrated-v2.json": "d51fa289eb1ffb052eba083ea012b981da2d6554df3d1ff15f951d7004a286fc",
+    "Sources/serrated-v2.png": "0a24d58ccfe099bef547a7fef1f197341663c5c13d7283370dc3792f366b86cf",
+    "Sources/serrated.json": "ab019519616924c7affb91a11fc1bb46abcf89c32e8ac22ce3243515765f98cb",
+    "Sources/serrated.png": "8f9ab5b0d4039208d556024742bf5941a9c65efec42e69019884271893e751c0",
+    "Sources/twin-guard-fixed-v2.json": "7030bb3bf50aa54073cb26c4ea4f7bb57d120eea047ff00f3df5d2735af9e92a",
+    "Sources/twin-guard-fixed-v2.png": "028f23d5f52673a7ba970f232db0796269a8fb40dfca7c3ad687f1c0b6dfdee5",
+    "Sources/twin-guard-fixed.json": "078b5b42677bf4362f8bb818f795922e1e45e77a73af0eecc9d9ab7d0d8ac672",
+    "Sources/twin-guard-fixed.png": "441cb1503e44a73f723f37b4991e47d16d762576f202a5daf800fb91484fd6c1",
+    "Sources/twin-guard-tiers-v2.json": "7504a82281446d5794b740c2f12e0a36b51b0c8caf8d8d3cde59bcd985d63026",
+    "Sources/twin-guard-tiers-v2.png": "25759a04e00592cf509b9c3db50269dc194e48cdef19947831569aff4069f77f",
+    "Sources/twin-guard-tiers.json": "1b17bbf47913e5561c8f2ffbbc7ba835a56e215fa3cd6bb4b33c4f923bf2bb93",
+    "Sources/twin-guard-tiers.png": "f1ab875f110ff3745fc0732f6f13ba21d605ac468595a2177ab3b4c4d614a556",
+    "Sources/twin-guard-v2.json": "1a3aaaaa084c5b3623e6166c8ee5ca5d41664b88ff5cbf671b258f06c2277ccb",
+    "Sources/twin-guard-v2.png": "ef9a7488dfdfd1e7de8b806128abbc9ad3db74b8f920910dd4228504430149ca",
+    "Sources/twin-guard.json": "99f636b7a3cd594f3f9bf742b080ff3dc039c3fbe51e85af29489c2f635865f7",
+    "Sources/twin-guard.png": "d1c18e91a89e2e1fdf35628dcdceccf04de209a825005237e2153ad33bab3d56",
+    "Sources/venom-vial.json": "1480633d0cd63ea4bc2cd33795558250abd3118b4c880381b2c4507ddd47a6b0",
+    "Sources/venom-vial.png": "78e3c80b5cc1215aa5aa0c672afaa31b8d68db1e839e427a75d079099254f1da",
+    "Script-Edited/serrated-blade-mask.png": "13294182629f6c4c4e9ef7efc628c11869f1521d04725fc9b8e1e1997752b486",
+    "Script-Edited/serrated-complete-blade.png": "1db11a766bf38b90a4bb1eaa0b2977c7dff5f4d09e13ca88f38563811ab5b59d",
+    "Script-Edited/serrated-composed-source.png": "fb25d53003e63a08ba7ce959c701a2878cec1f310d24d96a953f9c61452b8d8e",
+    "Script-Edited/serrated-hp_boss_case-body-edit-mask.png": "39d8e1689b81b7da3c7681a634f3978eef752367a64781a1a26be4a50127c152",
+    "Script-Edited/serrated-hp_boss_case.png": "4c01f0d5bf27ef3f2a66d30a037199af2ebe46a0005c05343f49a07681170d01",
+    "Script-Edited/serrated-hp_cap_case-body-edit-mask.png": "acf9491bf6448c9ec0153b27d863d2ff8be2bdddcc38f78856a063e9178f227f",
+    "Script-Edited/serrated-hp_cap_case.png": "e59b15e5ba0af51471df893cd58a1df514196676f1c99ca122384aca0df8da87",
+    "Script-Edited/serrated-hp_low_case-body-edit-mask.png": "27d2e448d4dac03e18d603ae90da385753b1ab44a2f223dd0042fbb9fe85e2c6",
+    "Script-Edited/serrated-hp_low_case.png": "9157db2d866550388ff5a6fa3f4c0a2fa17c812f82fd0aaa697ebc5f5f31e9b1",
+    "Script-Edited/serrated-hp_mid_case-body-edit-mask.png": "da103217a32642d3c944768fcac3de14955bef9d44e136f12d229026dc549837",
+    "Script-Edited/serrated-hp_mid_case.png": "226a850a900e71de5f0dacb2ced1a498ae8058cc6ef36fcc7469e4df9bc7d72f",
+    "Script-Edited/serrated-original-mount.png": "405f6bee25c2a02adf0d2f2f3d70f74e5994f4e2331a45108b2a0f127abb55f0",
+    "Script-Edited/twinguard-hp_boss_case-body-edit-mask.png": "5e328cb67cd7f27642e39d25346ccdf9bcf8a9d44eff4d510f1af0153b9de6d2",
+    "Script-Edited/twinguard-hp_boss_case.png": "52b100043bac34ce976fc4ac68a6317537335aeb4fe691fac14fab666e6d1fa2",
+    "Script-Edited/twinguard-hp_low_case-body-edit-mask.png": "3e5335e6cfb64103a4f7dd0b8f81a8c2258606add91967a38b716dc6e40076cc",
+    "Script-Edited/twinguard-hp_low_case.png": "c904cb0d069e516e89601b08b3fa80fea3ada844356bca05b6b25f477d8084e6",
+    "Script-Edited/twinguard-hp_mid_case-body-edit-mask.png": "3b891d09dddbe3b64b52fa78232a86f064d934d0654575fe7b5326de04821803",
+    "Script-Edited/twinguard-hp_mid_case.png": "75c7f1de490f7ff8aa1fde3ca7bb7dd5fe74de440c8e053ba189e3b579c6a40a"
+  },
+  "generationProvenance": {
+    "actionbutton-border": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. One newly painted production UI asset for AzeriteUI Rogue Venom & Steel. Image 1 is approved material/class design authority, image 2 is exact native geometry and image 3 its bounds guide. One ROUND action-button border ONLY. Segmented dark faceted charcoal steel with subtle bright chipped bevels and four tiny olive brass/leather joins spaced around the ring, following the concept's round buttons. Keep exact outer/inner ring proportions and native band thickness. Empty transparent centre. No icon, spiral or coloured proc glyph; native functional button icons are separate. Preserve template silhouette, relative position, opening and painted bounds exactly. Large hand-painted facets, top-lit restrained dark metal, not a hue shift of old pixels. Entire object with margins, frontal orthographic game UI. True transparent exterior AND empty aperture. No labels, guide colors, text, shadow or glow. One object only.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-65e07e62-e441-4663-930a-b9edad44da4b.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/actionbutton-border.png",
+        "Docs/Research_Assets/Templates/actionbutton-border-guide.png"
+      ]
+    },
+    "border-tooltip": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Repaint this exact UI border texture atlas for Rogue Venom & Steel with newly painted charcoal faceted steel and narrow restrained olive-brass joins. Keep EXACT native layout of SIX SEPARATE OBJECT GROUPS in a single horizontal row on transparent background: FOUR thin vertical edge strips at the left, then one inverted U bracket (paired top left/right corners connected by a horizontal top), then one upright U bracket (paired bottom left/right corners connected by bottom). Same positions/proportions as native atlas reference. Four strips and two paired-corner groups must stay separate with clear transparent gaps between all six groups. Do not draw a full closed frame or a panel. Native corner shapes and strip widths must stay. Minimal readable faceted bevels, top lighting, dark material, no baked glow/shadow/text/labels or guide colours. This atlas is one production asset; not a concept sheet. Image 1 is concept material authority; 2 native atlas; 3 geometry guide.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-08df269b-4fba-463c-b8b7-5cfb0e748ac8.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/border-tooltip.png",
+        "Docs/Research_Assets/Templates/border-tooltip-guide.png"
+      ]
+    },
+    "cast-head": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. Paint ONLY the opaque gray silhouette in image 1, preserving its whole contour, exact framing and transparent exterior. This is a measured upright Rogue poison-vial CAST HEAD including compact opaque mounting ears needed to cover both normal/protected native sockets. Image 2 is the approved Venom & Steel concept: use its small castbar poison vial with dark faceted steel, olive leather loops, tiny brass cap/rivets, and readable green venom glass. One upright small vial held in a coherent dark olive-steel mount, top lit. The full gray mounting body MUST remain opaque, including its left socket ears; do not reduce it to a skinny glass tube or leave holes. Keep top and bottom ends centered vertically in the existing silhouette, no dangling low ornament. Actual painted alpha must remain balanced around the canvas horizontal centre at 50% height. No bar, knives, shield, text, guide colors, shadow or glow. True transparent background. Whole production sprite, broad facets readable at 30px height.",
+      "originalPath": "C:/Users/Jonas/.codex/generated_images/01a178b9-bfcf-7051-88f6-426e5eef11dd/exec-8c7e5a2e-e5d5-4340-b57c-cd1a8a13053a.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/cast-vial-fixed-template.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png"
+      ]
+    },
+    "cast_back": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Paint ONE horizontal empty Rogue castbar casing as an isolated game UI texture on true transparent background. Reference 1 is the approved Venom & Steel concept, reference 2 is native cast casing geometry, reference 3 its guide. Preserve the long hexagonal outline, opening location, rail thickness, complete tips and aspect of the native template. Newly painted dark faceted charcoal steel, subtle scratched silver bevels, restrained olive leather/brass clasps at both ends, a couple of small warm brass rivets. Opening empty transparent; no fill, poison vial or blade: cast head is a separate asset. Broad top-lit slabs and readable joins at tiny gameplay size. No text, no guides, no glow or shadow, no background. One complete casing only with margin, normal frontal UI view, not a whole screen. Keep source rail height generous enough for native fitting; do not make a thin line.",
+      "originalPath": "C:/Users/Jonas/.codex/generated_images/01a178b9-bfcf-7051-88f6-426e5eef11dd/exec-253a5884-50dd-4ac0-8862-23d5776968aa.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/cast_back.png",
+        "Docs/Research_Assets/Templates/cast_back-guide.png"
+      ]
+    },
+    "cast_back_spiked": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. New standalone AzeriteUI Rogue Venom & Steel UI production painting. Image 1: approved concept for class materials and joins. Image 2: exact native geometry template. Image 3: bounds/aperture guide. ONE complete protected-cast casing. Match the native object's WIDTH TO HEIGHT ratio 3.1:1 INCLUDING the small centre-top spike (not a very long thin 6:1 bar). Keep exact long hexagon opening, pointed left/right tips and central triangular upper stud. Complete top and bottom rails in charcoal faceted steel, two small olive-brass/leather end clasps with rivets. No vial, separate ornaments or fill. Upper stud is one small dark steel rogue tooth. Preserve each end intact and the central stud, with enough straight undecorated rail runs between. Newly painted low-poly facets with top lighting, restrained very dark metal, olive leather and brass, recognisable materials at small gameplay size. Keep exact silhouette, opening, position and band thickness. True transparent exterior and aperture, no shadow, no glow, no labels or guide colors. Single object with margin, frontal orthographic UI asset.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-116d2974-8e99-4756-a173-15e3bd4410aa.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/cast_back_spiked.png",
+        "Docs/Research_Assets/Templates/cast_back_spiked-guide.png"
+      ]
+    },
+    "config_button": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. One tiny round utility configuration button casing for Rogue Venom & Steel. Follow native template geometry exactly: round dark faceted steel ring around an olive-brass inset, restrained olive leather/brass joins, broad top-lit bevels readable at tiny size. Native small cog glyph remains functional: keep a simple small pale neutral cog in the center, no text, no giant mechanical additions, no vial. New hand-painted material. Transparent exterior, no shadow/glow/background. Image 1 approved concept, image 2 native template, image 3 guide.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-9b39d040-15e2-49c1-bfe9-4588b11449ad.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/config_button.png",
+        "Docs/Research_Assets/Templates/config_button-guide.png"
+      ]
+    },
+    "hp_cap_case": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Asset: ONE standalone production health-bar casing for AzeriteUI Rogue Venom & Steel. Image 1 is the approved Rogue concept, used ONLY for material and art identity. Image 2 is the native geometry template and image 3 is its bounds guide; keep the exact proportions and opening of images 2/3. Newly paint the complete intact horizontal long hexagonal casing, open transparent meter aperture, not a filled bar. Charcoal hand-cut steel slabs with broad low-poly facets, fine scratched steel bevels, two restrained olive brass/leather joins and tiny warm brass rivets; top lit, very dark metal readable at game size. Keep the three native small upper studs, complete left end and the entire pointed/dipped right termination, one lowest right mounting toe. No knives or poison bottles in this painting: those are separate removable foreground ornaments. Preserve EXACT native silhouette, horizontal aspect ratio and rail thickness, no enlargement of opening, no redesign. Two small olive leather wraps are confined to the upper and lower rails, never covering the transparent meter aperture. Newly painted surfaces, not tinting original pixels. Transparent background AND genuinely transparent empty inner aperture. No glass, resource fill, text, labels, guide colours, glow, shadow or other objects. Show the complete casing as one straight horizontal object, enough margin, no clipping. Prefer wide output canvas to preserve reference geometry.",
+      "originalPath": "C:/Users/Jonas/.codex/generated_images/01a178b9-bfcf-7051-88f6-426e5eef11dd/exec-b3ef3fc3-5c75-48e4-a735-43e96e1993df.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/hp_cap_case.png",
+        "Docs/Research_Assets/Templates/hp_cap_case-guide.png"
+      ]
+    },
+    "hp_critter_case_hi": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. New standalone AzeriteUI Rogue Venom & Steel UI production painting. Image 1: approved concept for class materials and joins. Image 2: exact native geometry template. Image 3: bounds/aperture guide. ONE small compact hexagonal critter health casing matching the template. Broad dark faceted steel with tiny olive/brass corner clasps, restrained Rogue joinery. Keep exact compact hexagonal border, pointed ends, central functional meter aperture fully transparent. No resource crystal, portrait, health fill, large ornament or vial. Native outline shape and thickness must remain. Newly painted low-poly facets with top lighting, restrained very dark metal, olive leather and brass, recognisable materials at small gameplay size. Keep exact silhouette, opening, position and band thickness. True transparent exterior and aperture, no shadow, no glow, no labels or guide colors. Single object with margin, frontal orthographic UI asset.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-59570be4-5951-49e9-8dd8-395314d60f2a.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/hp_critter_case_hi.png",
+        "Docs/Research_Assets/Templates/hp_critter_case_hi-guide.png"
+      ]
+    },
+    "icon_exit_flight": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. One small square Rogue utility exit-flight icon. Native geometry and shape unchanged: dark faceted charcoal steel small U/square casing with restrained olive-brass fittings; retain the clear downward RED arrow semantic glyph at exactly its native position and size. Do not recolour or redesign arrow. Broad top-lit painted slabs and minimal rivets matching Rogue concept. Transparent exterior, no text, glow or shadow. Image 1 approved concept; 2 native template; 3 guide.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-df428af6-b546-432d-96b6-51b620d51e86.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/icon_exit_flight.png",
+        "Docs/Research_Assets/Templates/icon_exit_flight-guide.png"
+      ]
+    },
+    "minimap-border": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. New standalone AzeriteUI Rogue Venom & Steel UI production painting. Image 1: approved concept for class materials and joins. Image 2: exact native geometry template. Image 3: bounds/aperture guide. ONE thin circular minimap ring. Segmented charcoal steel with silver worn bevels and FOUR narrow olive leather/brass straps, following the approved concept ring. Preserve exact circle, outer bounds, ring width and transparent aperture. No map, north arrow or large jewels; north indicator is a separate native semantic asset. No inward lip, no radial black stripe or spokes inside the ring. Whole circular painting. Newly painted low-poly facets with top lighting, restrained very dark metal, olive leather and brass, recognisable materials at small gameplay size. Keep exact silhouette, opening, position and band thickness. True transparent exterior and aperture, no shadow, no glow, no labels or guide colors. Single object with margin, frontal orthographic UI asset.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-90340978-2b7b-484a-a313-60ef7a408809.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/minimap-border.png",
+        "Docs/Research_Assets/Templates/minimap-border-guide.png"
+      ]
+    },
+    "orb_case_hi": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. One newly painted production UI asset for AzeriteUI Rogue Venom & Steel. Image 1 is approved material/class design authority, image 2 is exact native geometry and image 3 its bounds guide. The ROUND resource orb casing ONLY, open empty circular aperture. Segmented dark faceted steel ring with two restrained olive leather/brass bindings. Replace the native diamond top cap with a tiny upright Rogue poison vial of the same height/width inside the top cap's exact bounds; retain the small bottom-right base foot. Preserve exact ring thickness, outer shape and circular aperture; no inward metal lips over the resource. No orb fill, blue liquid or glass: native functional glass is restored by export. Preserve template silhouette, relative position, opening and painted bounds exactly. Large hand-painted facets, top-lit restrained dark metal, not a hue shift of old pixels. Entire object with margins, frontal orthographic game UI. True transparent exterior AND empty aperture. No labels, guide colors, text, shadow or glow. One object only.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-11e80027-0d87-47d4-892d-fea0e16f8c94.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/orb_case_hi.png",
+        "Docs/Research_Assets/Templates/orb_case_hi-guide.png"
+      ]
+    },
+    "party_portrait_border": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. New standalone AzeriteUI Rogue Venom & Steel UI production painting. Image 1: approved concept for class materials and joins. Image 2: exact native geometry template. Image 3: bounds/aperture guide. ONE compact round group portrait border. Broad dark faceted steel slabs, two olive leather/brass small clasps at diagonal positions, subtle warm rivets, modest scratched bevels. Preserve exact native circle, native ring thickness and transparent centre. No portrait, no icon, no weapon protrusions. Newly painted low-poly facets with top lighting, restrained very dark metal, olive leather and brass, recognisable materials at small gameplay size. Keep exact silhouette, opening, position and band thickness. True transparent exterior and aperture, no shadow, no glow, no labels or guide colors. Single object with margin, frontal orthographic UI asset.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-26f0e336-5aa0-42f2-a51c-433f02492432.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/party_portrait_border.png",
+        "Docs/Research_Assets/Templates/party_portrait_border-guide.png"
+      ]
+    },
+    "point_plate": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. New standalone AzeriteUI Rogue Venom & Steel UI production painting. Image 1: approved concept for class materials and joins. Image 2: exact native geometry template. Image 3: bounds/aperture guide. ONE very small round class-power socket/backplate matching the native template's round contour and shaded inner recess. New dark faceted charcoal steel with a slim olive brass join, readable broad bevels. Keep neutral dark inner recess without glyphs; the functional combo-point icon is drawn separately. Do not add coloured energy, large vial, crystal, weapon or text. Newly painted low-poly facets with top lighting, restrained very dark metal, olive leather and brass, recognisable materials at small gameplay size. Keep exact silhouette, opening, position and band thickness. True transparent exterior and aperture, no shadow, no glow, no labels or guide colors. Single object with margin, frontal orthographic UI asset.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-c32f540c-7213-4efa-92a5-657700e32716.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/point_plate.png",
+        "Docs/Research_Assets/Templates/point_plate-guide.png"
+      ]
+    },
+    "portrait_frame_hi-v2": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. Image 1 is the Rogue hex portrait border edit target. Keep its whole outer contour, bottom rail, vertical side rails, olive/brass clasps, bevel planes, materials and exact framing. Change ONLY the TOP INNER edge of the aperture: the current opening reaches too high, so make both upper diagonal metal rails materially THICKER TOWARDS THE INSIDE. Lower the uppermost inner aperture vertex by about 7 percent of the total painted height, from 15 percent down to 22 percent below the top outer vertex. Repaint the upper sloping inner walls with coherent dark faceted steel; no added plate. The native guide in image 2 marks the required aperture: its TOP at 77/256 and bottom at 184/256, versus outer top 37/256 and bottom 227/256. Preserve the whole border painting, not a new screen or model. This must be a precise geometry edit to upper inside band thickness, not a uniform resize or warped portrait. Transparent exterior and aperture, no glass or portrait, shadow, glow or labels. Image 3 remains approved material design authority.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-daec1997-118d-4045-b534-51f99f18fcd9.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/Sources/portrait_frame_hi.png",
+        "Docs/Research_Assets/Templates/portrait_frame_hi-guide.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png"
+      ]
+    },
+    "portrait_frame_hi": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. One newly painted production UI asset for AzeriteUI Rogue Venom & Steel. Image 1 is approved material/class design authority, image 2 is exact native geometry and image 3 its bounds guide. One intact HEXAGON portrait border ONLY. Dark faceted charcoal steel slabs with two slim olive-brass clasps/rivets as in the concept. Exact native hexagon shape, width, height and inner opening; no radial warping, shield or jewel face. Empty transparent portrait opening; native glass restored separately. Keep the top and bottom vertices and broad slab facets. Preserve template silhouette, relative position, opening and painted bounds exactly. Large hand-painted facets, top-lit restrained dark metal, not a hue shift of old pixels. Entire object with margins, frontal orthographic game UI. True transparent exterior AND empty aperture. No labels, guide colors, text, shadow or glow. One object only.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-69fb5874-106f-40a2-b35c-ae6669253f67.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/portrait_frame_hi.png",
+        "Docs/Research_Assets/Templates/portrait_frame_hi-guide.png"
+      ]
+    },
+    "pw_crystal_case": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. One newly painted production UI asset for AzeriteUI Rogue Venom & Steel. Image 1 is approved material/class design authority, image 2 is exact native geometry and image 3 its bounds guide. The short OPEN-TOP U-shaped power crystal cradle ONLY. Keep two small cradle jaws and the low horizontal base, no tall crystal surround or resource crystal. Dark charcoal faceted steel, olive leather wrapped left jaw, small brass rivets. On the right jaw integrate the concept's SMALL upright green venom vial, within the original right jaw's painted bounds, not dangling below or outside. The resource opening above the base stays empty transparent. Keep recognisable Rogue vial/cradle joinery at native width. Preserve template silhouette, relative position, opening and painted bounds exactly. Large hand-painted facets, top-lit restrained dark metal, not a hue shift of old pixels. Entire object with margins, frontal orthographic game UI. True transparent exterior AND empty aperture. No labels, guide colors, text, shadow or glow. One object only.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-4beceaec-8de1-4c86-9bab-dd73ef141c2b.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Templates/pw_crystal_case.png",
+        "Docs/Research_Assets/Templates/pw_crystal_case-guide.png"
+      ]
+    },
+    "serrated-v2": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. IMAGE 1 is the fixed silhouette PAINTING TARGET, not a loose reference. Paint exactly inside its opaque grey shape. Image 2 is the approved Rogue concept authority. Image 3 is the previous Serrated material painting ONLY, whose incorrect low blade point must NOT be copied. Create the Serrated endcap with a solid dark steel/olive leather mounting body, small brass rivets and recognisable serrated assassin blade on the RIGHT. CRITICAL: The SINGLE actual lowest point is a DARK mounting toe LEFT OF CENTRE, at about 42 percent of the painted width, precisely the low point in image 1. Make it a short flat dark steel toe about 6 percent of total width. The serrated silver blade MUST END at least 12 percent of total height ABOVE this toe; absolutely no lower silver blade tip below or beside the mounting toe. The broad LEFT shoulder stays fully opaque and has the exact template position, not a narrower shield. Preserve full opaque lower-left heel down to the dark toe. Use large coherent hand-painted facets, charcoal steel, olive leather, narrow silver blade edge and warm brass pins matching concept. No venom vial, no round shield, no separate mounting plate. Same silhouette and framing as image 1, fully opaque throughout body. True transparent exterior, no text, guides, glow or shadow.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-fa2fa8d0-47f5-424e-85d3-cae5d31d63e2.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/serrated-fixed-template.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Rogue/Sources/serrated.png"
+      ]
+    },
+    "serrated": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. Image 1 is the exact filled silhouette EDIT TARGET. Paint its entire opaque gray region as one coherent Rogue health endcap; do not shrink the mounting body's left shoulder or diagonal lower heel, do not carve holes or replace the toe. The broad left shoulder is opaque and reaches all the way to the template edge: preserve it. Image 2 is the approved Rogue Venom & Steel concept, final material/motif authority. SERRATED: the approved alternative endcap shown bottom right of the concept, a short angular jagged steel knife guard with a few clear serrated teeth at the outer right, dark olive leather mounting wrap and small warm brass rivets. This motif has serrated blade identity; no poison vial and no round shield or medallion. Blade/teeth fit inside the provided silhouette and the single toe belongs to the solid mounting heel. Newly hand-painted top-lit broad facets in dark charcoal steel, olive leather wraps, narrow scratched silver bevels, small warm brass rivets. Avoid a generic shield plaque; read as a functional weapon/vial terminal clasp like the concept. Entire object, exactly the target framing and silhouette, true transparent exterior, fully opaque interior mount. No healthbar, text, glow, shadow, guide colors or other objects. The silhouette already includes required body margin for all native tiers: do NOT draw a narrower floating motif inside it.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-37c5d071-83a6-4e9c-934b-71bca1d955dc.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/serrated-fixed-template.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png"
+      ]
+    },
+    "twin-guard-fixed-v2": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. IMAGE 1 is the EXACT EDIT TARGET: a flat filled mounting silhouette on transparent background. Paint its gray opaque interior and keep ALL gray silhouette pixels opaque. It already contains the precise mounting shoulder, lower heel and single bottom toe; NEVER erode/shrink its left, top or bottom edges. Image 2 is the approved Rogue concept and final design authority. Image 3 is only a previous material painting to reuse its dark faceted steel, olive leather, brass rivets, twin knife guards and venom vial visual language, not its contour. Produce one coherent newly painted Twin Guard ornament INSIDE image 1's exact silhouette and framing. The shoulder is a horizontal opaque ledge at upper-left which continues into the solid diagonal top ridge; preserve its full breadth. The full lower-left diagonal heel is dark painted steel/leather all the way to the single lowest toe exactly as the template, no narrow pointed replacement toe and no central holes. The upper curved silver knife stays within the top-right sweep, lower knife within lower-right body; small green poison vial strapped to right side. Do not turn it into a generic heraldic shield. Paint the mounting body as a leather-wrapped terminal clasp with broad dark planar facets, retaining the actual guard motif in the concept. Most important: recolour/paint the template silhouette, don't draw a smaller floating object inside it. Do not change the exterior shape, position, height, width, toe, or framing. Whole object, true transparent outside background, no shadow/glow/text/UI bar. Alpha opaque throughout the entire filled template interior, no internal cutouts. Preserve the small extra body margin in this updated template; it is required to cover the socket.",
+      "originalPath": "C:/Users/Jonas/.codex/generated_images/01a178b9-bfcf-7051-88f6-426e5eef11dd/exec-6802a42f-c259-4ad1-b9a2-799ec5ceada7.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/fixed-silhouette-body-margin.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Rogue/Sources/twin-guard-fixed.png"
+      ],
+      "methodApproval": "contour-method-approval.json",
+      "targetedBodyMarginSourcePixels": 3
+    },
+    "twin-guard-fixed": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. IMAGE 1 IS THE EDIT TARGET: an exact flat gray silhouette for ONE production Rogue Twin Guard endcap. Repaint ONLY its opaque gray interior as the finished object; preserve its ENTIRE exterior alpha silhouette and occupied pixel positions, its straight left shoulder, solid broad body, sloped top ridge, upper-right curved dagger guard, lower-left heel and SINGLE lowest mounting toe. The mounting body fills the whole silhouette. Do not shrink the left shoulder, carve holes, extend tips, rotate, change shape or reposition the object. Image 2 is the approved Rogue Venom & Steel concept DESIGN AUTHORITY (Twin Guard shown bottom right): charcoal faceted steel, olive leather wrapping, restrained warm brass rivets, paired swept silver knife guards and one little poison vial fastened at the right edge. Paint that Rogue construction coherently INSIDE the exact target shape, with upper blade inside the upper sweep and lower blade ending exactly at the existing bottom toe; small vial painted on the broad right side. The left shoulder is opaque olive leather and dark steel, not empty space. Keep the broad sloping top ridge solidly painted from the straight left edge to the upper dagger mount. At the lower left keep opaque material all the way along the complete diagonal heel to the existing toe. No generic shield plaque, no extra backing plate or layered mounting shoulders. Broad hand-painted facets, light from above, dark restrained materials, readable small bevels. No healthbar, no text, no coloured guides, no glow or shadow. True transparent exterior background, same framing as target. This is painting an already approved fixed geometry, not inventing a new silhouette.",
+      "originalPath": "C:/Users/Jonas/.codex/generated_images/01a178b9-bfcf-7051-88f6-426e5eef11dd/exec-b4e44436-e84c-4d36-a654-28420e0e63f1.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/proposed-fixed-silhouette.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png"
+      ],
+      "methodApproval": "contour-method-approval.json"
+    },
+    "twin-guard-tiers-v2": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. Image 1 is the EDIT TARGET, the whole Rogue Twin Guard. Image 2 is a source-space diagnostic: MAGENTA marks exactly where the mounting body lacks opaque paint across the three native sizes. Image 3 is the approved concept authority. Repaint the existing mounting body/heel ONLY so it contains all magenta areas in image 2: raise/extend the short top-left metal shoulder slightly, and broaden the existing lower diagonal mounting heel on its RIGHT descending slope through the bottom toe. The single lowest mounting TOE needs a small FLAT dark steel bottom edge about 6 percent of total object width, rather than a needle point. The flat toe is one coherent lowest mounting toe, not an extra foot or second tip. Keep the single toe left of centre, same overall height; lower decorative blade must terminate ABOVE the mounting toe. Preserve the complete two knife guards, venom vial, olive leather wraps/rivets, dark steel material and their relative shapes and size. No new shield plaque, no stacked back plate, no resizing or rotating the whole object. Merge the added material smoothly into the existing body facets; magenta is a required opaque-material guide, never output it. True transparent exterior; object alone, same framing, no text, glow, bar or shadow.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-d2ea0336-cdaa-4229-b3ef-8db54a9f02ec.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/Sources/twin-guard-tiers.png",
+        "Docs/Research_Assets/Rogue/twin-guard-tiers-edit-guide.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png"
+      ]
+    },
+    "twin-guard-tiers": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. Image 1 is the exact filled silhouette EDIT TARGET. Paint its entire opaque gray region as one coherent Rogue health endcap; do not shrink the mounting body's left shoulder or diagonal lower heel, do not carve holes or replace the toe. The broad left shoulder is opaque and reaches all the way to the template edge: preserve it. Image 2 is the approved Rogue Venom & Steel concept, final material/motif authority. TWIN GUARD: two swept short assassin knife guards, small restrained venom vial at the right, olive leather terminal wrap. Upper knife in top-right sweep; lower knife follows the lower-right bevel and does NOT descend below the template's single toe. Preserve the solid wide left mounting shoulder; this is the same concept motif adapted to native compact/boss mounting bodies. Newly hand-painted top-lit broad facets in dark charcoal steel, olive leather wraps, narrow scratched silver bevels, small warm brass rivets. Avoid a generic shield plaque; read as a functional weapon/vial terminal clasp like the concept. Entire object, exactly the target framing and silhouette, true transparent exterior, fully opaque interior mount. No healthbar, text, glow, shadow, guide colors or other objects. The silhouette already includes required body margin for all native tiers: do NOT draw a narrower floating motif inside it.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-80023bb0-396e-4a47-89e7-06aff649d9a1.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/twin-guard-tiers-fixed-template.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png"
+      ]
+    },
+    "twin-guard-v2": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. Image 1 is the EDIT TARGET, a newly painted Rogue Twin Guard sprite. Image 2 is its FAILED MOUNTING DIAGNOSTIC ONLY: magenta pixels show the exact bare terminal left exposed after fitting, cyan bounds are immutable. Image 3 remains the approved concept design authority. Modify image 1's MOUNTING BODY/HEEL ONLY to cover the COMPLETE magenta region illustrated in image 2. Preserve the paired curved knife guards, their orientation, the small poison vial, olive/brass materials and overall height; do not add an extra shield plate. Extend the existing opaque leather and dark metal mounting body LEFT about 15 percent of the total height, with its top-left shoulder raised to about 20 percent down from the upper blade tip. The body must form a solid long sloping upper ridge all the way to the knife's upper mounting point, a straight opaque left mounting edge, and a broad lower-left heel sloping down into the SAME ONE lowest bottom toe. The lower-left heel needs opaque material across the full magenta descending diagonal, no notch or missing corner. Keep the lowest toe in its existing absolute position; no second spike or point below it. Do not extend right, top or bottom beyond the existing total limits. New total painted aspect should be roughly 0.78 width to 1 height. Keep the entire body opaque except outer transparent background, no central holes exposing the casing. Keep recognisable sharp Rogue twin daggers and venom vial, broad painted facets, not a generic shield shape. Output ONLY the complete edited isolated sprite on true transparent background, upright frontal view with margin. No magenta, cyan, guides, lettering, casing/healthbar, shadow or glow. This is a precise mounting-art repair, not a redesigned new motif.",
+      "originalPath": "C:/Users/Jonas/.codex/generated_images/01a178b9-bfcf-7051-88f6-426e5eef11dd/exec-cb6e1417-7cef-48d7-8485-8c3875c1cda2.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/Sources/twin-guard.png",
+        "Docs/Research_Assets/Rogue/twin-guard-failure-guide.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png"
+      ],
+      "designAuthority": "approved-concept.png; rejected v1 only as editing target"
+    },
+    "twin-guard": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Paint ONE new standalone removable health endcap for AzeriteUI Rogue, called TWIN GUARD. Image 1 is the approved visual design: use the Twin Guard endcap pictured at bottom-right, two slim swept steel knife guards, dark olive leather mount, tiny warm brass rivets and a small green poison vial secured at its right edge. Image 2 is ONLY a frozen mounting geometry guide. The magenta area must be entirely hidden by opaque painted mounting body; cyan is the maximum external footprint. Do NOT output this guide, text, coloured overlays, rail or filled bar. Create an isolated intact endcap painting on true transparent background. IMPORTANT SHAPE: compact tall slim body, broad opaque mounting heel on the lower LEFT, diagonally rising top ridge to an upper-right blade tip; one SINGLE actual lowest point left of centre, formed where the down-sweeping lower knife meets the mounting toe. The lower knife may not extend below the mounting toe or form a separate bottom spike. The mounting body covers the whole magenta silhouette including its upper-right point and descending inboard lower heel; no holes exposing that casing. Keep a recognisable pair of assassin dagger guards, sharp silver bevels and restrained small venom vial, not a generic shield/plaque or a fat disc. One coherent construction without an extra backing plate or stacked mounting shapes. Whole silhouette aspect approximately 0.95 width to 1 height; toe about 48 percent of painted width. Broad large hand-painted facets, light from above, charcoal steel and olive leather, low contrast except blade edges. No bar inlet extensions, no health fill, no red, no text, no glow, no drop shadow. Entire object visible with margin, upright frontal orthographic UI sprite. Make a newly painted production asset, do not crop/enlarge the concept pixels.",
+      "originalPath": "C:/Users/Jonas/.codex/generated_images/01a178b9-bfcf-7051-88f6-426e5eef11dd/exec-6a70155e-3102-41f5-ad79-5b7afd661d73.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/approved-concept.png",
+        "Docs/Research_Assets/Rogue/twin-guard-guide.png"
+      ]
+    },
+    "venom-vial": {
+      "tool": "built-in image_gen",
+      "prompt": "Use case: precise-object-edit. Image 1 is the exact filled silhouette EDIT TARGET. Paint its entire opaque gray region as one coherent Rogue health endcap; do not shrink the mounting body's left shoulder or diagonal lower heel, do not carve holes or replace the toe. The broad left shoulder is opaque and reaches all the way to the template edge: preserve it. Image 2 is the approved Rogue Venom & Steel concept, final material/motif authority. VENOM VIAL: the approved rightmost alternative endcap in the concept, one upright small bright green poison bottle in dark steel and olive leather clamps with a brass stopper. The main identity is the vial, not a knife. Paint the broad underlying mounting body as a coherent angled terminal clasp; put green glass on the right half of the object. No swords/blades or heraldic shield. Preserve a single solid lower mounting toe and full left shoulder. Newly hand-painted top-lit broad facets in dark charcoal steel, olive leather wraps, narrow scratched silver bevels, small warm brass rivets. Avoid a generic shield plaque; read as a functional weapon/vial terminal clasp like the concept. Entire object, exactly the target framing and silhouette, true transparent exterior, fully opaque interior mount. No healthbar, text, glow, shadow, guide colors or other objects. The silhouette already includes required body margin for all native tiers: do NOT draw a narrower floating motif inside it.",
+      "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a178b9-bfcf-7051-88f6-426e5eef11dd\\exec-d8716b0d-05bd-4cb7-bbf2-9a6c7e25f9b4.png",
+      "inputs": [
+        "Docs/Research_Assets/Rogue/venom-vial-fixed-template.png",
+        "Docs/Research_Assets/Rogue/approved-concept.png"
+      ]
+    }
+  },
+  "inventory": {
+    "actionbutton-backdrop-square-rounded.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-backdrop-square.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-backdrop.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-border-square-rounded.tga": "pending newly painted Rogue casing",
+    "actionbutton-border-square.tga": "pending newly painted Rogue casing",
+    "actionbutton-border.tga": "Fit closure WIP; source checked, client review pending",
+    "actionbutton-glow-white.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-mask-circular.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-mask-square-rounded.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-mask-square.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-glow-medium.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-glow-thick.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-glow-thin.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-outline-medium.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-outline-thick.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-outline-thin.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-square-glow-medium.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-square-glow-thick.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-square-glow-thin.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-square-outline-medium.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-square-outline-thick.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-proc-square-outline-thin.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-spellhighlight-square-rounded.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-spellhighlight-square.tga": "shared functional, semantic, effect or unrelated media",
+    "actionbutton-spellhighlight.tga": "shared functional, semantic, effect or unrelated media",
+    "bar-progress.tga": "shared functional, semantic, effect or unrelated media",
+    "bar-small.tga": "shared functional, semantic, effect or unrelated media",
+    "better-blizzard-border-small-alternate.tga": "pending newly painted Rogue casing",
+    "blank.tga": "shared functional, semantic, effect or unrelated media",
+    "border-aura.tga": "pending newly painted Rogue casing",
+    "border-glow.tga": "shared functional, semantic, effect or unrelated media",
+    "border-tooltip.tga": "pending newly painted Rogue casing",
+    "cast_back.tga": "pending newly painted Rogue casing",
+    "cast_back_outline.tga": "shared functional, semantic, effect or unrelated media",
+    "cast_back_spiked.tga": "pending newly painted Rogue casing",
+    "cast_back_wooden.tga": "pending newly painted Rogue casing",
+    "cast_bar-absorb.tga": "shared functional, semantic, effect or unrelated media",
+    "cast_bar-healabsorb.tga": "shared functional, semantic, effect or unrelated media",
+    "cast_bar.tga": "shared functional, semantic, effect or unrelated media",
+    "config_button.tga": "pending newly painted Rogue casing",
+    "config_button_bright.tga": "pending newly painted Rogue casing",
+    "GoldpawKapow.tga": "shared functional, semantic, effect or unrelated media",
+    "group-finder-eye-blue.tga": "shared functional, semantic, effect or unrelated media",
+    "group-finder-eye-green.tga": "shared functional, semantic, effect or unrelated media",
+    "group-finder-eye-orange.tga": "shared functional, semantic, effect or unrelated media",
+    "group-finder-eye-purple.tga": "shared functional, semantic, effect or unrelated media",
+    "group-finder-eye-red.tga": "shared functional, semantic, effect or unrelated media",
+    "grouprole-icons-dps.tga": "shared functional, semantic, effect or unrelated media",
+    "grouprole-icons-heal.tga": "shared functional, semantic, effect or unrelated media",
+    "grouprole-icons-tank.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_boss_bar-absorb.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_boss_bar-healabsorb.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_boss_bar.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_boss_bar_mirror.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_boss_case.tga": "pending newly painted Rogue casing",
+    "hp_boss_case_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_cap_bar-absorb.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_cap_bar-healabsorb.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_cap_bar.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_cap_bar_highlight.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_cap_bar_mirror.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_cap_case.tga": "pending newly painted Rogue casing",
+    "hp_cap_case_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_critter_bar-absorb.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_critter_bar-healabsorb.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_critter_bar.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_critter_case.tga": "pending newly painted Rogue casing",
+    "hp_critter_case_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_critter_case_hi.tga": "pending newly painted Rogue casing",
+    "hp_lowmid_bar-absorb.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_lowmid_bar-healabsorb.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_lowmid_bar.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_low_case.tga": "pending newly painted Rogue casing",
+    "hp_low_case_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_mid_case.tga": "pending newly painted Rogue casing",
+    "hp_mid_case_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "icon-combat.tga": "shared functional, semantic, effect or unrelated media",
+    "icon-heart-blue.tga": "shared functional, semantic, effect or unrelated media",
+    "icon-heart-green.tga": "shared functional, semantic, effect or unrelated media",
+    "icon-heart-red.tga": "shared functional, semantic, effect or unrelated media",
+    "IconAlert-Circle.tga": "shared functional, semantic, effect or unrelated media",
+    "IconAlertAnts-Circle.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_badges_alliance.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_badges_boss.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_badges_horde.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_classification_boss.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_classification_elite.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_classification_generic.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_classification_rare.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_exit_flight.tga": "pending newly painted Rogue casing",
+    "icon_skull.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_skull_dead.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_target_blue.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_target_green.tga": "shared functional, semantic, effect or unrelated media",
+    "icon_target_red.tga": "shared functional, semantic, effect or unrelated media",
+    "JuNNeZKapow.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-bars-single.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-bars-two-inner.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-bars-two-outer.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-border.tga": "concept-family V3 WIP; known fit failures; live review pending",
+    "minimap-diel-day-celestial.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-diel-day-sky.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-diel-night-celestial.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-diel-night-sky.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-mask-opaque.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-mask-transparent.tga": "shared functional, semantic, effect or unrelated media",
+    "minimap-onebar-backdrop.tga": "intentionally shared functional backing/state art",
+    "minimap-twobars-backdrop.tga": "intentionally shared functional backing/state art",
+    "nameplate_backdrop.tga": "intentionally shared functional backing/state art",
+    "nameplate_bar-absorb.tga": "shared functional, semantic, effect or unrelated media",
+    "nameplate_bar-healabsorb.tga": "shared functional, semantic, effect or unrelated media",
+    "nameplate_bar.tga": "shared functional, semantic, effect or unrelated media",
+    "nameplate_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "nameplate_outline.tga": "shared functional, semantic, effect or unrelated media",
+    "options-box.tga": "intentionally shared functional backing/state art",
+    "options-casing-round.tga": "shared functional, semantic, effect or unrelated media",
+    "options-check.tga": "shared functional, semantic, effect or unrelated media",
+    "options-close-bright.tga": "shared functional, semantic, effect or unrelated media",
+    "options-close.tga": "shared functional, semantic, effect or unrelated media",
+    "options-glyphs.tga": "shared functional, semantic, effect or unrelated media",
+    "options-pages-light.tga": "shared functional, semantic, effect or unrelated media",
+    "options-pages.tga": "shared functional, semantic, effect or unrelated media",
+    "options-round6-fill.tga": "shared functional, semantic, effect or unrelated media",
+    "options-sections-light.tga": "shared functional, semantic, effect or unrelated media",
+    "options-sections.tga": "shared functional, semantic, effect or unrelated media",
+    "options-shadow.tga": "shared functional, semantic, effect or unrelated media",
+    "options-well-round.tga": "shared functional, semantic, effect or unrelated media",
+    "orb-art2.tga": "shared functional, semantic, effect or unrelated media",
+    "orb-backdrop2.tga": "shared functional, semantic, effect or unrelated media",
+    "orb-border.tga": "pending newly painted Rogue casing",
+    "orb-glass.tga": "shared functional, semantic, effect or unrelated media",
+    "orb1.tga": "shared functional, semantic, effect or unrelated media",
+    "orb2.tga": "shared functional, semantic, effect or unrelated media",
+    "orb3.tga": "shared functional, semantic, effect or unrelated media",
+    "orb4.tga": "shared functional, semantic, effect or unrelated media",
+    "orb_case_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "orb_case_hi.tga": "pending newly painted Rogue casing",
+    "orb_case_low.tga": "pending newly painted Rogue casing",
+    "party-indicator-assistant.tga": "shared functional, semantic, effect or unrelated media",
+    "party-indicator-leader.tga": "shared functional, semantic, effect or unrelated media",
+    "party-indicator-phase.tga": "shared functional, semantic, effect or unrelated media",
+    "party-indicator-summon.tga": "shared functional, semantic, effect or unrelated media",
+    "partyrole_dps.tga": "shared functional, semantic, effect or unrelated media",
+    "partyrole_heal.tga": "shared functional, semantic, effect or unrelated media",
+    "partyrole_tank.tga": "shared functional, semantic, effect or unrelated media",
+    "party_mana.tga": "shared functional, semantic, effect or unrelated media",
+    "party_portrait_back.tga": "shared functional, semantic, effect or unrelated media",
+    "party_portrait_border.tga": "pending newly painted Rogue casing",
+    "party_portrait_threat.tga": "shared functional, semantic, effect or unrelated media",
+    "plus.tga": "shared functional, semantic, effect or unrelated media",
+    "point_block.tga": "shared functional, semantic, effect or unrelated media",
+    "point_crystal.tga": "shared functional, semantic, effect or unrelated media",
+    "point_diamond.tga": "shared functional, semantic, effect or unrelated media",
+    "point_dk_block.tga": "shared functional, semantic, effect or unrelated media",
+    "point_gem.tga": "shared functional, semantic, effect or unrelated media",
+    "point_hearth.tga": "shared functional, semantic, effect or unrelated media",
+    "point_plate.tga": "pending newly painted Rogue casing",
+    "point_rune1.tga": "shared functional, semantic, effect or unrelated media",
+    "point_rune2.tga": "shared functional, semantic, effect or unrelated media",
+    "point_rune3.tga": "shared functional, semantic, effect or unrelated media",
+    "point_rune4.tga": "shared functional, semantic, effect or unrelated media",
+    "portrait_frame_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "portrait_frame_hi.tga": "pending newly painted Rogue casing",
+    "portrait_frame_lo.tga": "pending newly painted Rogue casing",
+    "power-bar-back.tga": "shared functional, semantic, effect or unrelated media",
+    "power-bar-front.tga": "shared functional, semantic, effect or unrelated media",
+    "power-crystal-ice-back.tga": "shared functional, semantic, effect or unrelated media",
+    "power-crystal-ice-front.tga": "shared functional, semantic, effect or unrelated media",
+    "power-crystal-ice-icon.tga": "shared functional, semantic, effect or unrelated media",
+    "power_bar_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "power_crystal_back.tga": "shared functional, semantic, effect or unrelated media",
+    "power_crystal_front.tga": "shared functional, semantic, effect or unrelated media",
+    "power_crystal_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "power_crystal_small_back.tga": "shared functional, semantic, effect or unrelated media",
+    "power_crystal_small_front.tga": "shared functional, semantic, effect or unrelated media",
+    "pw_crystal_case.tga": "concept-family V3 WIP; known fit failures; live review pending",
+    "pw_crystal_case_glow.tga": "shared functional, semantic, effect or unrelated media",
+    "pw_crystal_case_low.tga": "pending newly painted Rogue casing",
+    "raid_target_icons.tga": "shared functional, semantic, effect or unrelated media",
+    "raid_target_icons_small.tga": "shared functional, semantic, effect or unrelated media",
+    "seasonal_winterveil_crystal.tga": "shared functional, semantic, effect or unrelated media",
+    "seasonal_winterveil_orb.tga": "shared functional, semantic, effect or unrelated media",
+    "shade-circle.tga": "shared functional, semantic, effect or unrelated media",
+    "hp_cap_case-over.tga": "Fit closure WIP; source checked, client review pending",
+    "hp_cap_case-glow.tga": "Fit closure WIP; source checked, client review pending",
+    "ornament-serrated-hp_cap_case.tga": "Fit closure WIP; source checked, client review pending",
+    "ornament-serrated-hp_cap_case-glow.tga": "Fit closure WIP; source checked, client review pending",
+    "pw_crystal_case-seat.tga": "Fit closure WIP; source checked, client review pending",
+    "pw_crystal_case-seat-wrath.tga": "Fit closure WIP; source checked, client review pending"
+  },
+  "status": "Rogue fit closure WIP installed; awaiting WoW reload and visual feedback",
+  "visualRepair": {
+    "path": "Docs/Research_Assets/Rogue/Live-Repair-2026-10-28/registration.json",
+    "sha256": "c2ab5f5f5334b671c9f316dc2602156a0ad2a641f355b9687aa468e60ba0c7ef",
+    "scope": [
+      "hp_cap_case",
+      "hp_cap_case-over",
+      "hp_mid_case",
+      "hp_mid_case-over",
+      "hp_low_case",
+      "hp_low_case-over",
+      "hp_boss_case",
+      "hp_boss_case-over",
+      "pw_crystal_case",
+      "pw_crystal_case_low",
+      "minimap-border"
+    ],
+    "sources": {
+      "rail-paint.png": "0f7f5a582310b938b3411fa4e771576b9311baf91f4419468747657668e8f4d7",
+      "rail-paint.json": "82bc5ff6feb31a90ccb8cf497ae868317ce18ad0711310f307e950dc20520f94"
+    },
+    "buttonTint": "native grey retained by RogueTheme; icons and alpha unchanged",
+    "liveValidated": false
+  },
+  "sourceManifestSha256": "06e0b251f0070f18af9cec7cd0705b332409e630de6dd3e72296324336b63760",
+  "productionAccepted": false,
+  "representativeLivePreview": {
+    "status": "Rogue fit closure WIP installed; awaiting WoW reload and visual feedback",
+    "clientDate": "2026-10-31",
+    "installedAtHostTime": "2026-10-31T14:03:39.812951+01:00",
+    "backup": "Docs/Research_Assets/Rogue/Fit-Closure-2026-10-31/Live-Preview-20261031-140338-00932b83/Before",
+    "authorization": {
+      "livePreviewAuthorized": true,
+      "priorLiveInstruction": "Fedt, gør dem live.",
+      "userContinuation": "Forsæt.",
+      "scopeBasis": "Continuation of the current three reported fit corrections after concrete joint before/after review, within the existing live-preview request.",
+      "scope": [
+        "Six existing TGAs replaced",
+        "One ice floor TGA added",
+        "Forward existing chosen fill path and select matching cosmetic floor only",
+        "Update installed manifest and preserve backup"
+      ],
+      "installerSha256": "20cd48f6b22a8fed087ba7b15317fa79444b1432248903e3406f9b9753f7cbab",
+      "reviewManifest": {
+        "path": "Docs/Research_Assets/Rogue/Fit-Closure-2026-10-31/review-manifest.json",
+        "sha256": "f9ce38c3b54e2ee7b73e10ba05f7b675812a5882803b3ae3d2c0d46067758c6d"
+      },
+      "maintainerVisualApproved": false,
+      "representativeLiveApproved": false,
+      "productionAccepted": false
+    },
+    "sourceGate": {
+      "sourceIntegritySha256": "b5b1d8cce3fd5487c436e7fe977ab0cdb1fea5adfa04a8c5803d0774a0cc1a99",
+      "assetManifestSha256": "06e0b251f0070f18af9cec7cd0705b332409e630de6dd3e72296324336b63760",
+      "paintingsChecked": 5
+    },
+    "sourceReplay": {
+      "ownPaintingMorphReplayed": true,
+      "functionalButtonGlassUnchanged": true,
+      "floorWholeUniformPlacementReplayed": true,
+      "nativeAlphaStencilRgbExtrusionOrErasure": false
+    },
+    "candidateNumericalPassed": true,
+    "productionAccepted": false,
+    "representativeLiveApproved": false,
+    "liveReloadPerformed": false,
+    "liveRetailValidated": false,
+    "liveForeverValidated": false,
+    "nativeLayoutChanges": false,
+    "runtimeLuaChanged": true,
+    "runtimeChange": "Existing normal/ice fill path selects matching cosmetic floor only.",
+    "scope": {
+      "replacedTextures": 6,
+      "addedTextures": 1,
+      "runtimeFiles": [
+        "Core/RogueTheme.lua",
+        "Core/ThemeEffects.lua"
+      ]
+    },
+    "files": {
+      "Core/RogueTheme.lua": {
+        "beforeSha256": "26811a4b44a96d29b8087272f76e5ad5c99564d7a3e3eb922dae6a548612baf5",
+        "installedSha256": "9522369efb340ef92d7baaf00b387487e4c289919bd0d56ca7ecfaf173d6a29d"
+      },
+      "Core/ThemeEffects.lua": {
+        "beforeSha256": "e12467a2362604fdcbb97a893eb0bfdd8dbfe0be72b09f2e074ebd4dec9bad49",
+        "installedSha256": "8a82b383f2997665d767da15df74ead72d434d3172b686a32643819066fd043a"
+      },
+      "Assets/Rogue/actionbutton-border.tga": {
+        "beforeSha256": "f60bb4aeb8e03d6cdc4fe530a946a096186e55def749781b8ebb15b4472c3311",
+        "installedSha256": "e41e2834925d7459096931e5630c9e9839df1c93fe8eb83da1c944d8161884af"
+      },
+      "Assets/Rogue/hp_cap_case-glow.tga": {
+        "beforeSha256": "db47c5bbf4f130f71f3b731434d42fa35e8186c0116dab92b44df2242667d9b2",
+        "installedSha256": "b87b270abbdbf4cde21b6e61dca8f238a99ea5374879e45d6fc33e85b545143c"
+      },
+      "Assets/Rogue/hp_cap_case-over.tga": {
+        "beforeSha256": "67e5d111c829c2142f494c76b7edf157467ed5715b127d64f740ac0944b9e437",
+        "installedSha256": "01857904878790860a245df1ab42db77ff28984020c1549e29aa1eaa52005bfc"
+      },
+      "Assets/Rogue/ornament-serrated-hp_cap_case.tga": {
+        "beforeSha256": "ef64030d8ae1ed2558a2057418dab9b8b6a47a6d16bffee1836b02db84854ea4",
+        "installedSha256": "cc37aaef22fa1fa295ce22d0b21d2e1178b105dd8e8c5e23764c6bf5d12cc89b"
+      },
+      "Assets/Rogue/ornament-serrated-hp_cap_case-glow.tga": {
+        "beforeSha256": "718a427dfa3737bcbbb4af2cc1990cbd947571eded9d74eaaa72da0e73a65d40",
+        "installedSha256": "c7befb44a829e91cbe18cc77a1c491f66f3d0d879faa240eb5f74b7632aa06d0"
+      },
+      "Assets/Rogue/pw_crystal_case-seat.tga": {
+        "beforeSha256": "63025d795c2071a896e2b69a88376e6d2edcf7448025d35a4d73dcd9aa7f50bf",
+        "installedSha256": "02884e0095d74eee915bbe40def20ca5f205b4d74afb5d5137c4f90b3b019ea1"
+      },
+      "Assets/Rogue/pw_crystal_case-seat-wrath.tga": {
+        "beforeSha256": null,
+        "installedSha256": "85b228280588fce7b4fe4593fedf1db9f8fe3468a1b701c687f188e2e2d12030"
+      }
+    },
+    "remaining": [
+      "WoW effective-scale sampling and dynamic icon/cooldown/proc rendering.",
+      "Normal/ice changing, partial resources and all cap/saved-nudge combinations in client.",
+      "Existing minimap/other tiers and outer crystal jaw contacts unchanged by this revision.",
+      "No representative live or whole-pack production approval."
+    ]
+  },
+  "supplementalRuntimeMedia": [
+    "pw_crystal_case-seat"
+  ],
+  "numericalPassed": false,
+  "sourceOverrides": {
+    "hp_cap_case-over": {
+      "paintingSource": {
+        "path": "Docs/Research_Assets/Rogue/Concept-Family-2026-10-31/Sources/v3-hp_cap_case-over-source.png",
+        "sha256": "eb6392584a03ac5f98e3d232d5195dbf8e7a85b4a095912091ae5976190ba525"
+      },
+      "transform": {
+        "crop": [
+          40,
+          41,
+          1540,
+          337
+        ],
+        "scale": 0.40281501340482573,
+        "offset": [
+          210,
+          71
+        ]
+      },
+      "native": {
+        "path": "Assets/hp_cap_case.tga",
+        "sha256": "855e7a472da166b7ca93242e3d420453920ff728b912def5f11a6bf2ae2c1bda"
+      },
+      "functionalMask": {
+        "path": "Docs/Research_Assets/Templates/hp_cap_case-fill.png",
+        "sha256": "d101703f966f03ee023aea55ac859c052443c9f251db843f28192cb40615d755"
+      },
+      "completeSource": {
+        "path": "Docs/Research_Assets/Rogue/Concept-Family-2026-10-31/Sources/v3-hp_cap_case-over-complete-native-source.png",
+        "sha256": "fe78f263eadff52e3b546642e117067b702e251dc12e0a8ca4298cb45262d405"
+      }
+    },
+    "pw_crystal_case": {
+      "paintingSource": {
+        "path": "Docs/Research_Assets/Rogue/Concept-Family-2026-10-31/Sources/v3-pw_crystal_case-source.png",
+        "sha256": "df8969718da4333c9a7d095647fb57b95d2507bc96f7230f8e86e1aa28efe5f6"
+      },
+      "transform": {
+        "crop": [
+          48,
+          49,
+          821,
+          357
+        ],
+        "scale": 0.23289473684210527,
+        "offset": [
+          38,
+          25
+        ]
+      },
+      "native": {
+        "path": "Assets/pw_crystal_case.tga",
+        "sha256": "52b601a7a079d8d0d8e9a43511c5263c5a6fcd60f4ac796e4e8183d06636eb4c"
+      },
+      "functionalMask": {
+        "path": "Docs/Research_Assets/Templates/pw_crystal_case-fill.png",
+        "sha256": "98c5cdc08d79f967d8a33df2f58d98c6d50c65d46dd56d4a5fbd438dce6a72b6"
+      },
+      "completeSource": {
+        "path": "Docs/Research_Assets/Rogue/Concept-Family-2026-10-31/Sources/v3-pw_crystal_case-complete-native-source.png",
+        "sha256": "e3bb75caa98572727a9e8a3f7d4c615730783e7f86bfadfb8e4fbe958b316a1b"
+      }
+    },
+    "actionbutton-border": {
+      "paintingSource": {
+        "path": "Docs/Research_Assets/Rogue/Concept-Family-2026-10-31/Sources/v3-actionbutton-border-source.png",
+        "sha256": "dd7b314c7052bf43a07737f5e74d9d5d998a1d735c2d5007a97c328b3cc96d00"
+      },
+      "transform": {
+        "crop": [
+          43,
+          43,
+          357,
+          354
+        ],
+        "scale": 0.4304635761589404,
+        "offset": [
+          60,
+          61
+        ]
+      },
+      "native": {
+        "path": "Assets/actionbutton-border.tga",
+        "sha256": "8c2cbc2af6b368127c55b98ce1b21c3b4b87627778c180a351195a20ffde6be6"
+      },
+      "functionalMask": {
+        "path": "Docs/Research_Assets/Templates/actionbutton-border-fill.png",
+        "sha256": "2df4b83ec4acf7d89199f4bffb223a18e40ab43e731ece5cb726a410ea46f804"
+      },
+      "completeSource": {
+        "path": "Docs/Research_Assets/Rogue/Concept-Family-2026-10-31/Sources/v3-actionbutton-border-complete-native-source.png",
+        "sha256": "b35761f223435e16b50ce789daba136c44bc93da68be115603eee4fb3d3e4631"
+      }
+    },
+    "minimap-border": {
+      "paintingSource": {
+        "path": "Docs/Research_Assets/Rogue/Concept-Family-2026-10-31/Sources/v3-minimap-border-source.png",
+        "sha256": "92d17031f9de7ad8487ad98560708e35b0aa10ca51a9a27e6e29c79e0f76068b"
+      },
+      "transform": {
+        "crop": [
+          33,
+          33,
+          388,
+          375
+        ],
+        "scale": 0.8571428571428571,
+        "offset": [
+          105,
+          108
+        ]
+      },
+      "native": {
+        "path": "Assets/minimap-border.tga",
+        "sha256": "db8607fd5ba9b9269f7392bf3d7242f1d839f68885571c8bfe9c3ff7343d9831"
+      },
+      "functionalMask": null,
+      "completeSource": {
+        "path": "Docs/Research_Assets/Rogue/Concept-Family-2026-10-31/Sources/v3-minimap-border-complete-native-source.png",
+        "sha256": "59df4f59c38df7fc5cd0b2c524e685b2a4f04e86921c82e8628789ba0bf79b43"
+      }
+    }
+  },
+  "metadataScope": "Earlier base-pack/sourceOverrides/visualRepair entries are historical. Current seven fit-closure exports and two minimal Lua changes are bound in fitClosure and representativeLivePreview. Whole-pack production acceptance remains absent.",
+  "historicalPreviewChecks": [
+    {
+      "revision": "before-fit-closure",
+      "checks": {
+        "ornament-serrated-hp_cap_case": {
+          "failures": [],
+          "lookNotes": []
+        },
+        "actionbutton-border": {
+          "failures": [],
+          "lookNotes": [
+            "V3 WIP live preview; production acceptance absent"
+          ]
+        },
+        "ornament-serrated-hp_cap_case-glow": {
+          "failures": [],
+          "lookNotes": []
+        },
+        "pw_crystal_case-seat": null,
+        "pw_crystal_case-seat-wrath": null,
+        "hp_cap_case-glow": {
+          "failures": [],
+          "lookNotes": []
+        },
+        "hp_cap_case-over": {
+          "failures": [
+            "over layer hides 22% of the fill (limit 20%)",
+            "SOURCE APERTURE: undeclared solid paint covers functional fill",
+            "Original terminal paint missing beyond AA: 2382"
+          ],
+          "lookNotes": [
+            "V3 WIP live preview; production acceptance absent"
+          ]
+        }
+      }
+    }
+  ],
+  "fitClosure": {
+    "sourceProofSha256": "b5b1d8cce3fd5487c436e7fe977ab0cdb1fea5adfa04a8c5803d0774a0cc1a99",
+    "reviewManifest": {
+      "path": "Docs/Research_Assets/Rogue/Fit-Closure-2026-10-31/review-manifest.json",
+      "sha256": "f9ce38c3b54e2ee7b73e10ba05f7b675812a5882803b3ae3d2c0d46067758c6d"
+    },
+    "candidateNumericalPassed": true
+  }
+}

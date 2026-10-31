@@ -1,0 +1,6 @@
+{
+  "nameplate_backdrop": "Native neutral backing; functional bar size is shared.",
+  "minimap-onebar-backdrop": "Native minimap status-bar backdrop intentionally shared.",
+  "minimap-twobars-backdrop": "Native minimap status-bar backdrop intentionally shared.",
+  "options-box": "Native options control intentionally shared."
+}

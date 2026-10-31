@@ -1,0 +1,844 @@
+{
+  "status": "Maintainer-requested in-game WIP; production acceptance pending",
+  "assets": {
+    "actionbutton-border-square-rounded": {
+      "sha256": "7c0b13725f2a203c6609f67ee0a9c6a1d9ece567476203a6bfd50482570fedd0",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border-square": {
+      "sha256": "0e109f188dbf7bf27ec9f97becc7ec5edee95561885ae956697f7c97098945c8",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border": {
+      "sha256": "d2d8cf57a66a56fa4c4d7a91c0f1565293d5d8fb2d9f66a67cb0ba9ad887e070",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "better-blizzard-border-small-alternate": {
+      "sha256": "729938ba4ce085d8f433e1e3c83489be7d2eb603e10087627949111ba6302ddb",
+      "canvas": [
+        512,
+        64
+      ]
+    },
+    "border-aura": {
+      "sha256": "879a2a13639dcd2048077261016539d78f48633367bdd4d7906c3d4fead02160",
+      "canvas": [
+        256,
+        32
+      ]
+    },
+    "border-tooltip": {
+      "sha256": "6cfc8ebc44c3823dcb9bd981b325984f3eb5193759c6409c31e5a4100e4d0136",
+      "canvas": [
+        512,
+        64
+      ]
+    },
+    "cast-head-glow": {
+      "sha256": "21d7f66341b8eb5d91f6b45bd47246cba10e590081c26ab99c620cc31269fc5c",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "cast-head": {
+      "sha256": "2b5c644a3322f52798558dbd1e9616d33455c3dd5f8f9376147cb0a6f5626511",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "cast_back-over": {
+      "sha256": "5408d8c525e63485a7dc0a358e304eeb1a14e441e8c80766c86883e801c5339d",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back": {
+      "sha256": "a402aa98ec7e9e5cf5adc66639839bf0fd66d7907d1d63fcf95f6096cc32f473",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_spiked-over": {
+      "sha256": "5dce71fc4ec69742f8783c86cd783874d735bf93919083007988faa46cce6fd6",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_spiked": {
+      "sha256": "4123920823030172ca20fa9d5a10f123fbe75bd02e89f22551d5747668a602d9",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_wooden-over": {
+      "sha256": "e88ab608212fd30e556eaeda6ecae9bb62e8b01c4cdbdea7f35dc0021f49ad68",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_wooden": {
+      "sha256": "fc8f79819ee9bf0149f1d117f31771961e127887f2428850481f39a900f8795f",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "config_button": {
+      "sha256": "1f4ee8b12acf32b0a25aea827ce7b73f3c439c535dc1087f08aa0a70a67e70bd",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "config_button_bright": {
+      "sha256": "f6b54e58af335af58f3585faa4bb693bcd442732b805c5eb0bb3cbdd02cf3994",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "crystal-assembly-glow": {
+      "sha256": "1021086b18968ce90750b63ceef772f534d09318823261502ac9281374cd8105",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "crystal-assembly-low-glow": {
+      "sha256": "1021086b18968ce90750b63ceef772f534d09318823261502ac9281374cd8105",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "crystal-assembly-low-wrath-glow": {
+      "sha256": "5a648340c6318850d235ed75208df8bc5e21def4a3cccb5b1403d672041e5478",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "crystal-assembly-wrath-glow": {
+      "sha256": "5a648340c6318850d235ed75208df8bc5e21def4a3cccb5b1403d672041e5478",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "hp_boss_case-glow": {
+      "sha256": "34882fe1887a29e9cbb7840c60a9f8374388f90b03762a5dff5ef80b46e5d6f6",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case-over": {
+      "sha256": "7299436b1fc97819aec6f75f7e13f3179f9135d8ce7fb124bb5f8f598673fd9d",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case": {
+      "sha256": "415e09def1e498cfd5003212c2ddf77efedcc69f67d3c1bcd55eb44202897946",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case-glow": {
+      "sha256": "db47c5bbf4f130f71f3b731434d42fa35e8186c0116dab92b44df2242667d9b2",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case-over": {
+      "sha256": "bc87bd80c17d110a09db2ba21ba92f55ead44f56f99038f88bdbf689ef3c4c41",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case": {
+      "sha256": "c74cc7e1c562d6a8be5dd87a3aca704012e225f36d418245e63c940e3a21df69",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_critter_case-over": {
+      "sha256": "8ab5a9f0a6c6687e5e4e1b87d970740d07e2da2ac69242a4ec7d353a2ee66c6e",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_critter_case": {
+      "sha256": "30f2884b3a3d2701782342218eb5877f7658923554118e39545163cb00a85255",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_critter_case_hi-over": {
+      "sha256": "c20914f83decdd2f38643627c5ef652c8e2c65f7ccacaf1381b422e041d2d57d",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_critter_case_hi": {
+      "sha256": "c7bb1dc9574f382c73030c062a9665da37caee723e9ae90ea6fdd679485cd812",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_low_case-glow": {
+      "sha256": "a6d0c338452c8d0278d78fcdd22366787832c0e07dc8cc71bbfc2eddf8e3517a",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case-over": {
+      "sha256": "47218f156bbac33714b77de42f10e65416229d29b9d49d952f7ff80c00fa99f0",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case": {
+      "sha256": "328714a11a997231e1be93328b4209aecc9262ec16f8b0047dbde5a4fbe2c14a",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-glow": {
+      "sha256": "453ceaeecf7385c0225eb95867033195c58bbe0a8d7d25588b79bfaf5dfc150d",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-over": {
+      "sha256": "fdec2a701451ec56824e1dd6b11f9964fea687102d702640dcc9700df88905c7",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case": {
+      "sha256": "25f80bafbc075356fe77d837982b7298c42e4d88f9b855eb822c56d23c0b17cd",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "icon_exit_flight": {
+      "sha256": "dbaf6df2e157e762998d17bf3268ea378bdd2f3855830cc117216d4384c8b373",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "minimap-border": {
+      "sha256": "f2ad0d7aca388043a906235f5e1d44dafb36bb1c5620e8d3aabc6edefd0b34a8",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "orb-border": {
+      "sha256": "9e3bccfd5db42a6b5e1b41ede3920da175898f267bc43636ef1486f3e3ec56fb",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "orb_case_hi-glow": {
+      "sha256": "15046dc82c548b17a18bfd1d6738ef27c2d623ea3cd9c3a298ac5c3c65fc9535",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb_case_hi": {
+      "sha256": "101966a2f66bcbb1f0253411f6b7a8d57e7ea46b64189029dcb5c606b018de28",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb_case_low-glow": {
+      "sha256": "25fd6af40c81ff629cd5648d70db4a4a3dbb79220a61793248204bd29cbaa04f",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb_case_low": {
+      "sha256": "c091d2b312602827267c146cfe02d7a2170fbc0c3118409f16ba9e5a31481f45",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "ornament-lava-hp_boss_case-glow": {
+      "sha256": "7bf1200d73b78b296a53e3c83adf420de5d9aa9a6bc94473a1d012ea05a70c4b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-lava-hp_boss_case": {
+      "sha256": "c2f0ba71e9d5049cf4ad717198a79b1111514125e66fdee2ffa8f7b3b19dbdb0",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-lava-hp_cap_case-glow": {
+      "sha256": "95b25ad2c459ca34433f6dfbb7c436200502bc74f60ba2b1f8e4db2ea1e3cd26",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-lava-hp_cap_case": {
+      "sha256": "80527ca8b955be9be13051595c4e3915211796c3cefc72d672e460d78818c74b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-lava-hp_low_case-glow": {
+      "sha256": "3820356046e11eb3a320ed7caa39271305129f3158ea9460fb8b3463b4f9bc32",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-lava-hp_low_case": {
+      "sha256": "8acda55966185a03813d01278d40647fdd4c151769402d87903c69790e02fd48",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-lava-hp_mid_case-glow": {
+      "sha256": "3820356046e11eb3a320ed7caa39271305129f3158ea9460fb8b3463b4f9bc32",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-lava-hp_mid_case": {
+      "sha256": "8acda55966185a03813d01278d40647fdd4c151769402d87903c69790e02fd48",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-maelstrom-hp_boss_case-glow": {
+      "sha256": "e0d35d05735674c05ab21e81512b12ad142a951c289c576be7ad0ea98707603b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-maelstrom-hp_boss_case": {
+      "sha256": "14e4526add97edb9d78d2368978941983f89e1634e7416fadc79dcf6ef509fe3",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-maelstrom-hp_cap_case-glow": {
+      "sha256": "8c3e3ca669d8f364eb21dbbbec5d5ea0c4f302eef303b22ee30e81c29e04fb54",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-maelstrom-hp_cap_case": {
+      "sha256": "3fe0431ce4a6aa43aa932265af192dc785dd9f7067d9b6007dbb8afdde029633",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-maelstrom-hp_low_case-glow": {
+      "sha256": "262939be62131cd3472ba21a2640f17a28a2f3f54d49a867f7fd98608d0bd5bb",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-maelstrom-hp_low_case": {
+      "sha256": "feb9c841bf0d87788f27de4169f420704873914ec1fa3f22b750eb613a521616",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-maelstrom-hp_mid_case-glow": {
+      "sha256": "986e6fdc01d31fa2d6fe9bb5239e2193b90ae36d9a1ae8b90355408ed5ad53d8",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-maelstrom-hp_mid_case": {
+      "sha256": "c1f228ab2f39b64fc89c6920a79525e2d8d5b06c9ebbf53e4740e2b81e7f1d49",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-tides-hp_boss_case-glow": {
+      "sha256": "6beefac17a5b17f6949f83a37c2b7453fb2c43780419fd8052118a4d65d3c2e6",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-tides-hp_boss_case": {
+      "sha256": "ce3ae1d16314fd8e28ed5da0c17631f250c90c7b23443958218c31fcfa1524fa",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-tides-hp_cap_case-glow": {
+      "sha256": "48a2227144370725e83f38cf0e3dbbaaeaf4d0fe677f77aedb397c4233bc825f",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-tides-hp_cap_case": {
+      "sha256": "683c8ee1ed6d1f6e9c0156165c5c3cdc26902fb33217871d34e969c728dd0762",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-tides-hp_low_case-glow": {
+      "sha256": "0679251158fa1ce0328e4e57b2a81f10a1467d830d2f50269aa802466362b77c",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-tides-hp_low_case": {
+      "sha256": "4b5b9d720fb8c9e00e68a44f85f5e3e6d9d5457e513d51001e6409fdbae8006a",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-tides-hp_mid_case-glow": {
+      "sha256": "0679251158fa1ce0328e4e57b2a81f10a1467d830d2f50269aa802466362b77c",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-tides-hp_mid_case": {
+      "sha256": "4b5b9d720fb8c9e00e68a44f85f5e3e6d9d5457e513d51001e6409fdbae8006a",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "party_portrait_border": {
+      "sha256": "4b15a172566c4f7e3c60c96928971aa12a67c6a2cc4daf465d362a345d5a2bb4",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "point_plate": {
+      "sha256": "80a04456d1cc93099569d7531eccc880cc53780982de2b721bdf72ba5cadedc0",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "portrait_frame_hi-glow": {
+      "sha256": "320d08c2c6cfe2b0015527486cc700c6625336088460f3f60fb68e577365e650",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "portrait_frame_hi": {
+      "sha256": "02bafbc1bb1032de958ea6fc8e25f5137e8769fb2a38302446923161ae10fb2c",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "portrait_frame_lo-glow": {
+      "sha256": "43d2bca220471e542050418c1f53108f0fa38fba57adfae45addef6cbff9ac14",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "portrait_frame_lo": {
+      "sha256": "74cb53b8d637be5161cbff4167f83c0b61375a5037e7b5534da235142dd6b930",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "pw_crystal_case-glow": {
+      "sha256": "7554f91509a2049ad9b631fa10f7a0fd0df2877a96ebd693e1899ea030b0ea14",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case": {
+      "sha256": "ac6b913203dd3998cdefe1bb20659207f37db3fded0d9e4c2828156faab317d1",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case_low-glow": {
+      "sha256": "7554f91509a2049ad9b631fa10f7a0fd0df2877a96ebd693e1899ea030b0ea14",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case_low": {
+      "sha256": "ac6b913203dd3998cdefe1bb20659207f37db3fded0d9e4c2828156faab317d1",
+      "canvas": [
+        256,
+        128
+      ]
+    }
+  },
+  "sources": {
+    "Docs/Research_Assets/Shaman/Rejected/tides-hp_cap_case-unmodified-ai-diagnostic.png": "7ac2918f1e93cf300b191f28ef38fd8a5cccb559bc4c8dcf436856fe72ff38ad",
+    "Docs/Research_Assets/Shaman/Rejected/tides-hp_mid_case-unmodified-ai-diagnostic.png": "e61e2374e20dd55c1c648e4e2a4b0c872a65eb8bb56c5b3f2c030ee16711635b",
+    "Docs/Research_Assets/Shaman/Rejected/tides-hp_low_case-unmodified-ai-diagnostic.png": "e61e2374e20dd55c1c648e4e2a4b0c872a65eb8bb56c5b3f2c030ee16711635b",
+    "Docs/Research_Assets/Shaman/Rejected/tides-hp_boss_case-unmodified-ai-diagnostic.png": "a182ff90f1ee59fc01a39c74026c96ed7152e8d87168e3219351c4586a58c6b5",
+    "Docs/Research_Assets/Shaman/Rejected/lava-hp_cap_case-unmodified-ai-diagnostic.png": "8cd855170d946c8e0398a62ec68332c949cb157720bc0c93211a7cad75e480e2",
+    "Docs/Research_Assets/Shaman/Rejected/lava-hp_mid_case-unmodified-ai-diagnostic.png": "e47dbd1298cab81c4efa9a15c9b0065a32fb2084f5b4cd29b81e4f327e4c9912",
+    "Docs/Research_Assets/Shaman/Rejected/lava-hp_low_case-unmodified-ai-diagnostic.png": "e47dbd1298cab81c4efa9a15c9b0065a32fb2084f5b4cd29b81e4f327e4c9912",
+    "Docs/Research_Assets/Shaman/Rejected/lava-hp_boss_case-unmodified-ai-diagnostic.png": "6b96d0b5a872396520181a3bdec34aa3ae560db47e1fb9a9bbeb66995af67685",
+    "Docs/Research_Assets/Shaman/Sources/pw_crystal_case.png": "d2f35935b2a8452224ca1d805f94dd8afb8e9251f0171b5dd9dcc51c4733ad2d",
+    "Docs/Research_Assets/Shaman/Crystal-Shape-2026-10-29/holder-inner-fit.png": "618d3138e88ae119245f39369dc6e591cb238d6caa8311c7ebf66e8d3e4c065a",
+    "Docs/Research_Assets/Shaman/Crystal-Weight-2026-10-30/holder-weight-source.png": "74ace50fa939aaf941042e04003d401fbae9fb81af09d9a62b2675e3c9d0c128"
+  },
+  "healthEndcaps": {
+    "maelstrom": {
+      "accepted": true,
+      "fits": {
+        "hp_cap_case": {
+          "dip": [
+            754.0,
+            187
+          ],
+          "normalizedDip": [
+            0.736328125,
+            0.73046875
+          ],
+          "capPoint": [
+            754.0,
+            187
+          ],
+          "maxNativePixelError": 0.0,
+          "fillCovered": 0.1523801347813023,
+          "uniformScale": 0.12596899224806202,
+          "offset": [
+            699,
+            58
+          ],
+          "wholePainting": true,
+          "terminalPixels": 5080,
+          "terminalCoveredFraction": 0.9954724409448819,
+          "exposedTerminalPixelsBeyondAA": 0,
+          "edgeToleranceSourcePixels": 1,
+          "bounds": [
+            699,
+            58,
+            817,
+            188
+          ],
+          "approvedEnvelope": [
+            692,
+            52,
+            822,
+            188
+          ],
+          "height": 130,
+          "rotationDegrees": 0,
+          "combinedFillCovered": 0.1523801347813023,
+          "sourceSha256": "4ac0a432fba4114fe1a2efb69885d14cb8d01e2a8221d3c1436818b49c5af809",
+          "approvedTerminalExposurePixels": 0
+        },
+        "hp_mid_case": {
+          "dip": [
+            757.0,
+            181
+          ],
+          "normalizedDip": [
+            0.7392578125,
+            0.70703125
+          ],
+          "capPoint": [
+            757.5,
+            181
+          ],
+          "maxNativePixelError": 0.5,
+          "fillCovered": 0.1368321186769589,
+          "uniformScale": 0.1218568665377176,
+          "offset": [
+            704,
+            56
+          ],
+          "wholePainting": true,
+          "terminalPixels": 4324,
+          "terminalCoveredFraction": 0.990518038852914,
+          "exposedTerminalPixelsBeyondAA": 4,
+          "edgeToleranceSourcePixels": 1,
+          "approvedTerminalExposurePixels": 4,
+          "bounds": [
+            704,
+            56,
+            818,
+            182
+          ],
+          "approvedEnvelope": [
+            698,
+            56,
+            820,
+            182
+          ],
+          "height": 126,
+          "rotationDegrees": 0.5,
+          "combinedFillCovered": 0.1368321186769589,
+          "sourceSha256": "4ac0a432fba4114fe1a2efb69885d14cb8d01e2a8221d3c1436818b49c5af809"
+        },
+        "hp_low_case": {
+          "dip": [
+            756.5,
+            181
+          ],
+          "normalizedDip": [
+            0.73876953125,
+            0.70703125
+          ],
+          "capPoint": [
+            757.0,
+            181
+          ],
+          "maxNativePixelError": 0.5,
+          "fillCovered": 0.13290784423649143,
+          "uniformScale": 0.1201923076923077,
+          "offset": [
+            706,
+            57
+          ],
+          "wholePainting": true,
+          "terminalPixels": 4333,
+          "terminalCoveredFraction": 0.986845141933995,
+          "exposedTerminalPixelsBeyondAA": 7,
+          "edgeToleranceSourcePixels": 1,
+          "approvedTerminalExposurePixels": 7,
+          "bounds": [
+            706,
+            57,
+            819,
+            182
+          ],
+          "approvedEnvelope": [
+            698,
+            56,
+            819,
+            182
+          ],
+          "height": 125,
+          "rotationDegrees": -2,
+          "combinedFillCovered": 0.13290784423649143,
+          "sourceSha256": "4ac0a432fba4114fe1a2efb69885d14cb8d01e2a8221d3c1436818b49c5af809"
+        },
+        "hp_boss_case": {
+          "dip": [
+            872.5,
+            188
+          ],
+          "normalizedDip": [
+            0.85205078125,
+            0.734375
+          ],
+          "capPoint": [
+            873.0,
+            188
+          ],
+          "maxNativePixelError": 0.5,
+          "fillCovered": 0.10289257498977054,
+          "uniformScale": 0.12596899224806202,
+          "offset": [
+            818,
+            59
+          ],
+          "wholePainting": true,
+          "terminalPixels": 5476,
+          "terminalCoveredFraction": 0.9943389335281227,
+          "exposedTerminalPixelsBeyondAA": 0,
+          "edgeToleranceSourcePixels": 1,
+          "bounds": [
+            818,
+            59,
+            936,
+            189
+          ],
+          "approvedEnvelope": [
+            811,
+            56,
+            940,
+            189
+          ],
+          "height": 130,
+          "rotationDegrees": 0,
+          "combinedFillCovered": 0.10289257498977054,
+          "sourceSha256": "4ac0a432fba4114fe1a2efb69885d14cb8d01e2a8221d3c1436818b49c5af809",
+          "approvedTerminalExposurePixels": 0
+        }
+      },
+      "rejected": {},
+      "source": "ornament-maelstrom-v2.png",
+      "sourceSha256": "4ac0a432fba4114fe1a2efb69885d14cb8d01e2a8221d3c1436818b49c5af809"
+    },
+    "tides": {
+      "accepted": false,
+      "status": "Live review only; prior fit/visual rejection retained",
+      "fits": {
+        "hp_cap_case": {
+          "bounds": [
+            692,
+            54,
+            817,
+            188
+          ]
+        },
+        "hp_mid_case": {
+          "bounds": [
+            702,
+            60,
+            816,
+            182
+          ]
+        },
+        "hp_low_case": {
+          "bounds": [
+            702,
+            60,
+            816,
+            182
+          ]
+        },
+        "hp_boss_case": {
+          "bounds": [
+            813,
+            56,
+            937,
+            189
+          ]
+        }
+      }
+    },
+    "lava": {
+      "accepted": false,
+      "status": "Live review only; prior fit/visual rejection retained",
+      "fits": {
+        "hp_cap_case": {
+          "bounds": [
+            692,
+            53,
+            812,
+            188
+          ]
+        },
+        "hp_mid_case": {
+          "bounds": [
+            702,
+            57,
+            813,
+            182
+          ]
+        },
+        "hp_low_case": {
+          "bounds": [
+            702,
+            57,
+            813,
+            182
+          ]
+        },
+        "hp_boss_case": {
+          "bounds": [
+            813,
+            56,
+            931,
+            189
+          ]
+        }
+      }
+    }
+  },
+  "crystal": "Heavier whole AI painting, native 256x128 density; WIP live review only",
+  "integratedTidesStudyInstalled": false,
+  "liveRetailValidated": false,
+  "liveForeverValidated": false,
+  "crystalOffset": [
+    137,
+    -13
+  ],
+  "crystalRegistration": {
+    "source": "Docs/Research_Assets/Shaman/Crystal-Weight-2026-10-30/holder-weight-source.png",
+    "sourceSha256": "74ace50fa939aaf941042e04003d401fbae9fb81af09d9a62b2675e3c9d0c128",
+    "uniformScale": 0.11784511784511785,
+    "resizedCanvas": [
+      209,
+      105
+    ],
+    "offset": [
+      20,
+      5
+    ],
+    "canvas": [
+      256,
+      128
+    ],
+    "policy": "whole source own alpha at native density; uniform scale and translation only"
+  },
+  "runtimeInstalled": true,
+  "sourceManifestSha256": "2f8ed1aacbb92cc1bbbca4b37c2cdcdfd8d36e2d999a60fa6bd19b2bf70e77b4",
+  "sourceApertureStatus": "Production gate fails at gripping horns; retained source-check.json; no bridge approval claimed"
+}

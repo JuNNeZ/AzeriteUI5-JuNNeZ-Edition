@@ -1320,3 +1320,61 @@ L["Shows your totems, statues, ghoul and other totem-slot summons with their tim
 L["Highlight the affected raid frame using the debuff type color while it has a debuff you can remove."] = "Destaca o quadro de raide afetado com a cor do tipo de penalidade enquanto ele tiver uma penalidade que você pode remover."
 L["Show Pet Experience"] = "Mostrar experiência do ajudante"
 L["Shows your hunter pet's experience as a thin bar under the pet frame while it can still gain levels."] = "Mostra a experiência do seu ajudante de caçador como uma barra fina sob o quadro do ajudante enquanto ele ainda puder subir de nível."
+
+-- AzeriteUI marker toolbar.
+L["Marker toolbar"] = "Barra de marcadores"
+L["Left-click: target marker. Right-click: clear. Shift: ground markers."] = "Clique esquerdo: marcar alvo. Clique direito: limpar. Shift: marcadores de chão."
+L["Clear all markers"] = "Limpar todos os marcadores"
+L["Click to fold or unfold. Move with /lock. Folding waits until combat ends."] = "Clique para recolher ou expandir. Mova com /lock. O recolhimento aguarda o fim do combate."
+L["Appears in parties and for raid leaders or assistants. Left-click: target marker. Right-click: clear. Hold Shift for ground markers. Move with /lock."] = "Aparece em grupos e para líderes ou assistentes de raide. Clique esquerdo: marcar alvo. Clique direito: limpar. Segure Shift para marcadores de chão. Mova com /lock."
+L["Fold toolbar"] = "Recolher barra"
+L["Preview marker toolbar"] = "Prévia dos marcadores"
+L["Toggle a preview with inactive marker buttons. Also available with /azmarkers."] = "Alterna uma prévia com botões inativos. Também disponível com /azmarkers."
+
+-- Full raid/party panel.
+L["Raid / Party panel"] = "Painel de raide e grupo"
+L["Raid groups"] = "Grupos de raide"
+L["Markers"] = "Marcadores"
+L["Left-click: set. Right-click: clear. Shift: switch marker type."] = "Clique esquerdo: colocar. Clique direito: limpar. Shift: trocar tipo de marcador."
+L["Countdown: 10s"] = "Contagem: 10 s"
+L["All assist"] = "Todos assistentes"
+L["Party / Raid"] = "Grupo / Raide"
+L["Ping permissions"] = "Permissões de pings"
+L["Hide raid frames"] = "Ocultar quadros"
+L["Show raid frames"] = "Mostrar quadros"
+L["Leave your current group?"] = "Sair do grupo atual?"
+L["Group overview, raid group filters, markers and leader tools. Move with /lock. Administrative actions are unavailable in combat."] = "Resumo, filtros de raide, marcadores e ferramentas de líder. Mova com /lock. Administração indisponível em combate."
+L["Fold panel"] = "Recolher painel"
+L["Preview raid panel"] = "Prévia do painel"
+L["Preview"] = "Prévia"
+L["Filter AzeriteUI's large raid frames. Changes made in combat apply afterward."] = "Filtra os quadros grandes de raide do AzeriteUI. Alterações em combate são aplicadas depois."
+L["Ground"] = "Chão"
+L["Ready check"] = "Verificar prontos"
+L["Role check"] = "Verificar funções"
+L["Difficulty"] = "Dificuldade"
+L["Leave group"] = "Sair do grupo"
+L["Leave instance group"] = "Sair do grupo da instância"
+
+-- Independent target markers lite.
+L["Target markers lite"] = "Marcadores de alvo Lite"
+L["Left-click: target marker. Right-click: clear. Move with /lock."] = "Clique esquerdo: marcar alvo. Clique direito: limpar. Mova com /lock."
+L["A separate movable target-marker bar. Works with the full AzUI panel switched off. Use Show Blizzard Raid Bar on this page to keep or hide Blizzard's panel. Move with /lock."] = "Barra independente e móvel de marcadores de alvo. Funciona com o painel completo do AzUI desligado. Use Mostrar barra de raide da Blizzard nesta página para manter ou ocultar o painel da Blizzard. Mova com /lock."
+L["Preview the inactive lite bar with /azmarkerlite. Enable it first."] = "Prévia da barra Lite inativa com /azmarkerlite. Ative-a primeiro."
+
+-- Target markers lite favorites and layouts.
+L["Clear target marker"] = "Limpar marcador do alvo"
+L["Click: clear target. Shift-click: clear all markers."] = "Clique: limpar marcador do alvo. Shift-clique: limpar todos os marcadores."
+L["Two rows"] = "Duas linhas"
+L["Hidden"] = "Oculto"
+L["Marker slot %d"] = "Posição de marcador %d"
+L["Choose markers in display order. Hidden removes a slot; choosing a marker already in use swaps the two slots."] = "Escolha os marcadores na ordem de exibição. Oculto remove uma posição; escolher um marcador já usado troca as duas posições."
+L["Click the clear button to remove only your target's marker. Shift-click it to clear all markers."] = "O botão de limpar remove apenas o marcador do alvo. Shift-clique limpa todos os marcadores."
+
+-- Lite target/world clear controls.
+L["Click: clear all target markers. Shift-click: clear all ground markers."] = "Clique: remover todos os marcadores de alvo. Shift-clique: remover todos os marcadores de chão."
+
+L["Hide frames"] = "Ocultar quadros"
+
+L["Show frames"] = "Exibir quadros"
+
+L["Leave instance"] = "Sair da instância"

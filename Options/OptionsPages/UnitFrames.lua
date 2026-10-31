@@ -1938,6 +1938,8 @@ local Build = function()
 	end
 	-- The frames first, then what is drawn on all of them.
 	if (group.args.groupIndicators) then group.args.groupIndicators.order = 200 end
+	if (Options.GenerateRaidToolsOptions) then group.args.raidTools = Options:GenerateRaidToolsOptions() end
+	if (Options.GenerateTargetMarkersLiteOptions) then group.args.targetMarkersLite = Options:GenerateTargetMarkersLiteOptions() end
 	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
 		ns.OptionsKit.Defaults.Bind(group, "UnitFrames")
 	end

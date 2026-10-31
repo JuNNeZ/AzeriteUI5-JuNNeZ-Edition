@@ -16,6 +16,9 @@
 	<Script file="MirrorTimers.lua"/>
 	<Script file="QuestTimers.lua"/>
 	<Script file="RaidBossEmotes.lua"/>
+	<Script file="RaidTools.lua"/>
+	<Script file="RaidToolsActions.lua"/>
+	<Script file="TargetMarkersLite.lua"/>
 	<Script file="RaidWarnings.lua"/>
 	<Script file="Tooltips.lua"/>
 	<Script file="TrackerWoW11.lua"/>

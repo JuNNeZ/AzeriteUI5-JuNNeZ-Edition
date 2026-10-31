@@ -514,6 +514,11 @@ local function GetRaidModule(name)
 end
 
 local function GetCompactRaidHiddenMode()
+	local tools = GetRaidModule("RaidTools")
+	if (tools and tools.GetRaidHiddenMode) then
+		local hidden = tools:GetRaidHiddenMode()
+		if (hidden ~= nil) then return hidden end
+	end
 	if (not ShouldShowBlizzardRaidBar()) then
 		return false
 	end
@@ -614,6 +619,11 @@ local function GetCompactRaidGroupFilterFromButtons()
 end
 
 local function GetCompactRaidGroupFilter()
+	local tools = GetRaidModule("RaidTools")
+	if (tools and tools.GetRaidGroupFilter) then
+		local filter = tools:GetRaidGroupFilter()
+		if (filter) then return filter end
+	end
 	if (GetCompactRaidHiddenMode()) then
 		return "0"
 	end

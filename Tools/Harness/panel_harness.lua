@@ -143,6 +143,23 @@ Options:GenerateOptionsMenu()
 local options = Options:GetOptionsObject()
 check(options ~= nil, "the real options table is built")
 
+do
+	local toolbar
+	for _, page in pairs(options.args) do
+		if (type(page) == "table" and page.args and page.args.raidTools) then toolbar = page.args.raidTools end
+	end
+	check(toolbar and toolbar.args.enabled and toolbar.args.collapsed and toolbar.args.preview,
+		"Group Frames includes the real marker-toolbar controls")
+	check(toolbar and ns.OptionsKit.Defaults.GetBinding(toolbar) == "RaidTools",
+		"marker-toolbar controls preserve their own module binding")
+	local lite
+	for _, page in pairs(options.args) do
+		if (type(page) == "table" and page.args and page.args.targetMarkersLite) then lite = page.args.targetMarkersLite end
+	end
+	check(lite and lite.args.enabled and lite.args.preview, "Group Frames includes Target markers lite")
+	check(lite and ns.OptionsKit.Defaults.GetBinding(lite) == "TargetMarkersLite", "lite owns its defaults binding")
+end
+
 local Kit = ns.OptionsKit
 local Panel, Renderer, Config = Kit.Panel, Kit.Renderer, Kit.Config
 check(Panel ~= nil, "Kit.Panel exists")

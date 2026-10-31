@@ -10,8 +10,8 @@ ns.ThemeEffects = Effects
 
 -- In dropdown order.
 local THEMES = { "azerite", "legacy", "hunter", "paladin", "mage" }
-local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage", druid = "druid", warrior = "none" }
-local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none", druid = "druid", warrior = "none" }
+local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage", druid = "druid", warrior = "none", rogue = "none", shaman = "none" }
+local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none", druid = "druid", warrior = "none", rogue = "none", shaman = "none" }
 local CRYSTAL_EFFECTS = { "none", "paladin", "mage", "druid", "moonvein", "dreamsap", "wildheart" }
 local ORB_EFFECTS = { "none", "paladin", "hunter", "druid", "moonwell" }
 
@@ -39,6 +39,8 @@ Effects.GetThemes = function(self)
 	for _, key in ipairs(THEMES) do list[#list + 1] = key end
 	if (ns.DruidTheme) then list[#list + 1] = "druid" end
 	if (ns.WarriorTheme) then list[#list + 1] = "warrior" end
+	if (ns.RogueTheme) then list[#list + 1] = "rogue" end
+	if (ns.ShamanTheme) then list[#list + 1] = "shaman" end
 	-- Legacy needs its module; it writes the same switch /go does (Core/LegacyHUD.lua).
 	if (not ns.LegacyHUD) then
 		for index, key in ipairs(list) do
@@ -58,6 +60,8 @@ Effects.GetTheme = function(self)
 	if (ns.PaladinTheme and ns.PaladinTheme:IsActive()) then return "paladin" end
 	if (ns.DruidTheme and ns.DruidTheme:IsActive()) then return "druid" end
 	if (ns.WarriorTheme and ns.WarriorTheme:IsActive()) then return "warrior" end
+	if (ns.RogueTheme and ns.RogueTheme:IsActive()) then return "rogue" end
+	if (ns.ShamanTheme and ns.ShamanTheme:IsActive()) then return "shaman" end
 	return "azerite"
 end
 
@@ -69,6 +73,8 @@ Effects.NeedsReload = function(self, theme)
 	end
 	if (ns.DruidTheme and (ns.DruidTheme.loadedActive or false) ~= (theme == "druid")) then return true end
 	if (ns.WarriorTheme and (ns.WarriorTheme.loadedActive or false) ~= (theme == "warrior")) then return true end
+	if (ns.RogueTheme and (ns.RogueTheme.loadedActive or false) ~= (theme == "rogue")) then return true end
+	if (ns.ShamanTheme and (ns.ShamanTheme.loadedActive or false) ~= (theme == "shaman")) then return true end
 	return false
 end
 
@@ -149,6 +155,8 @@ Effects.SetTheme = function(self, theme)
 	char.magePreview = theme == "mage"
 	char.druidPreview = theme == "druid"
 	char.warriorPreview = theme == "warrior"
+	char.roguePreview = theme == "rogue"
+	char.shamanPreview = theme == "shaman"
 	if (self:NeedsReload(theme)) then
 		local reload = C_UI and C_UI.Reload or _G.ReloadUI
 		if (type(reload) == "function") then reload() end
@@ -194,13 +202,54 @@ local CAP_LEVEL_ABOVE_HEALTH = 4
 local CapsInFront = function()
 	return (ns.HunterTheme and ns.HunterTheme:IsActive()) or (ns.PaladinTheme and ns.PaladinTheme:IsActive())
 		or (ns.DruidTheme and ns.DruidTheme:IsActive())
-		or (ns.WarriorTheme and ns.WarriorTheme:IsActive()) or false
+		or (ns.WarriorTheme and ns.WarriorTheme:IsActive())
+		or (ns.RogueTheme and ns.RogueTheme:IsActive())
+		or (ns.ShamanTheme and ns.ShamanTheme:IsActive()) or false
 end
 
 local CapLevel = function(element)
 	local owner = element.GetParent and element:GetParent()
 	local health = owner and owner.Health
 	return health and health:GetFrameLevel() + CAP_LEVEL_ABOVE_HEALTH
+end
+
+local KeepCapLevel = function(element, texture, frame)
+	if (frame.ThemeCapLevelSync) then frame.ThemeCapLevelSync(); return end
+	local owner = element:GetParent()
+	local sync = function()
+		if (not CapsInFront() or texture:GetParent() ~= frame) then return end
+		local level = CapLevel(element)
+		if (not level or frame:GetFrameLevel() == level) then return end
+		-- These decorative frames can inherit protection from their unit frame.
+		if (InCombatLockdown()) then frame:RegisterEvent("PLAYER_REGEN_ENABLED"); return end
+		frame:SetFrameLevel(level)
+	end
+	frame.ThemeCapLevelSync = sync
+	frame:SetScript("OnEvent", function(_, event)
+		if (event == "PLAYER_REGEN_ENABLED") then
+			frame:UnregisterEvent(event)
+			sync()
+		end
+	end)
+	-- FixedFrameLevel alone did not survive the live resource-level updates.
+	-- Reconcile after explicit changes; owner changes also propagate to Health.
+	for _, source in ipairs({ element, owner.Health, owner }) do
+		hooksecurefunc(source, "SetFrameLevel", sync)
+	end
+	if (ns.ShamanTheme and ns.ShamanTheme:IsActive()) then
+		-- Live Shaman: native propagation leaves cap=4 / health=7 / rails=8
+		-- without invoking any hooked Lua setter. Reconcile the visible case
+		-- after that propagation too; hidden resource parents stop OnUpdate.
+		local elapsedSinceCheck = 0
+		frame:SetScript("OnUpdate", function(_, elapsed)
+			elapsedSinceCheck = elapsedSinceCheck + elapsed
+			if (elapsedSinceCheck < .1) then return end
+			elapsedSinceCheck = 0
+			if (InCombatLockdown()) then return end
+			sync()
+		end)
+	end
+	sync()
 end
 
 local LiftCap = function(element, texture)
@@ -210,7 +259,9 @@ local LiftCap = function(element, texture)
 	-- The Mage crystal already lifts its case into a frame of its own.
 	local mage = element.MageCrystalCaseFrame
 	if (mage and mage:IsShown() and texture:GetParent() == mage) then
+		if (mage.SetFixedFrameLevel) then mage:SetFixedFrameLevel(true) end
 		mage:SetFrameLevel(level)
+		KeepCapLevel(element, texture, mage)
 		return
 	end
 	local frame = element.ThemeCapFrame
@@ -220,8 +271,12 @@ local LiftCap = function(element, texture)
 		frame:EnableMouse(false)
 		element.ThemeCapFrame = frame
 	end
+	-- Player visibility updates lower the power/orb parents after styling.
+	-- Keep their decorative cases at the health-relative foreground level.
+	if (frame.SetFixedFrameLevel) then frame:SetFixedFrameLevel(true) end
 	frame:SetFrameLevel(level)
 	if (texture:GetParent() ~= frame) then texture:SetParent(frame) end
+	KeepCapLevel(element, texture, frame)
 end
 
 Effects.CapsInFront = function(self) return CapsInFront() end
@@ -256,6 +311,8 @@ Effects.StyleCrystal = function(self, power, texturePath, coords, casePath, allo
 		if (effect == "wildheart" or effect == "moonvein" or effect == "dreamsap") then wildheart:Apply(power, texturePath, effect)
 		else wildheart:Clear(power) end
 	end
+	local rogue = ns.RogueTheme
+	if (rogue and rogue.StyleCrystal) then rogue:StyleCrystal(power, casePath, useMage, texturePath) end
 	LiftCap(power, power.Case)
 end
 

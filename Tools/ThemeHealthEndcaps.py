@@ -44,7 +44,7 @@ def terminal_coverage(casing, cap):
             'exposedTerminalPixelsBeyondAA':int(exposed.sum()),'edgeToleranceSourcePixels':1}
 
 
-def align(source, casing, height, fill_mask):
+def align(source, casing, height, fill_mask, approved_terminal_exposure=None):
     """Uniformly downsample the whole object, then translate its toe to the dip."""
     source = source.convert('RGBA')
     box = source.getchannel('A').point(lambda a: 255 if a > 128 else 0).getbbox()
@@ -75,7 +75,17 @@ def align(source, casing, height, fill_mask):
     assert not solid[ty + 1:].any(), 'second lower point'
     assert covered <= .20, 'cap hides more than 20 percent of the functional fill'
     terminal = terminal_coverage(casing, cap)
-    assert terminal['exposedTerminalPixelsBeyondAA']==0, 'cap leaves terminal metal exposed: '+str(terminal)
+    if approved_terminal_exposure is None:
+        assert terminal['exposedTerminalPixelsBeyondAA']==0, 'cap leaves terminal metal exposed: '+str(terminal)
+    else:
+        # A maintainer may approve a specific observed defect. Match its exact
+        # pixels; never turn that exception into a larger numeric tolerance.
+        required = np.asarray(terminal_mask(casing)) > 0
+        opaque = np.asarray(cap)[:, :, 3] >= 240
+        expanded = np.asarray(Image.fromarray(opaque.astype('uint8')*255).filter(ImageFilter.MaxFilter(3))) > 0
+        expected = np.asarray(approved_terminal_exposure.convert('L')) > 128
+        assert expected.shape == required.shape and np.array_equal(required & ~expanded, expected), 'terminal exposure differs from the explicitly approved pixel mask'
+        terminal['approvedTerminalExposurePixels'] = int(expected.sum())
     return cap, {'dip': [tx, ty], 'normalizedDip': [tx/casing.width, ty/casing.height],
                  'capPoint': [px, py], 'maxNativePixelError': abs(px-tx),
                  'fillCovered': covered, 'uniformScale': factor,

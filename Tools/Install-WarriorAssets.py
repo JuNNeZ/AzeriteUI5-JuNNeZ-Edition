@@ -36,6 +36,8 @@ if defaults_path.exists():
 
 
 def main():
+    from ThemeSourceIntegrity import require_production
+    require_production(DRAFT)
     manifest_path = DRAFT/'manifest.json'
     manifest = json.loads(manifest_path.read_text())
     digest = sha(manifest_path)

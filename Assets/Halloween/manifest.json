@@ -1,0 +1,239 @@
+{
+  "source_sha256": "3892ada8eb04b5fbaca2d2b4330c7aede0ad1aa064314f361bd5d2d63661563b",
+  "sprites": {
+    "pumpkin": {
+      "quadrant": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "alpha_bounds": [
+        25,
+        15,
+        627,
+        627
+      ],
+      "scale": 0.19607843137254902,
+      "size": [
+        118,
+        120
+      ],
+      "offset": [
+        5,
+        4
+      ],
+      "sha256": "44acfd8e859bf25f622bc66bc9968823eacee24562c370e52ce31797987f76ae"
+    },
+    "bats": {
+      "quadrant": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "alpha_bounds": [
+        0,
+        38,
+        607,
+        627
+      ],
+      "scale": 0.19769357495881384,
+      "size": [
+        120,
+        116
+      ],
+      "offset": [
+        4,
+        6
+      ],
+      "sha256": "b0280330d49ecb35e0de15d2a5f1a6288100456a659c15f25bdc733acbf95586"
+    },
+    "web": {
+      "quadrant": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "alpha_bounds": [
+        29,
+        0,
+        627,
+        627
+      ],
+      "scale": 0.19138755980861244,
+      "size": [
+        114,
+        120
+      ],
+      "offset": [
+        7,
+        4
+      ],
+      "sha256": "8359aa16756c916c920b417d22ab718f73bdb4929dbf4226486fecb48e109867"
+    },
+    "web-spider": {
+      "quadrant": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "alpha_bounds": [
+        0,
+        0,
+        617,
+        613
+      ],
+      "scale": 0.19448946515397084,
+      "size": [
+        120,
+        119
+      ],
+      "offset": [
+        4,
+        4
+      ],
+      "sha256": "274e5c221ca213396dc815c7da304262a1e5256f1d7f6f2345d4073a9c4f1702"
+    },
+    "horseman-head": {
+      "source_sha256": "02c3afe79cbf5950f29a403f6e8b4e3663a86c413c9ed8fa5c48077a4bab2632",
+      "alpha_bounds": [
+        0,
+        9,
+        1222,
+        1254
+      ],
+      "scale": 0.1927710843373494,
+      "size": [
+        236,
+        240
+      ],
+      "offset": [
+        10,
+        8
+      ],
+      "sha256": "fd4edb6d86d4a26af9fae39b6768f4392b456fc2c11c9f1b9a4833343513d150"
+    },
+    "horseman-face": {
+      "source_sha256": "f5e80e2e4a4a98d8678538df2009bfd6769eaba288942d643ac5405f34ff34d7",
+      "quadrant": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "alpha_bounds": [
+        17,
+        0,
+        627,
+        625
+      ],
+      "scale": 0.3968,
+      "size": [
+        242,
+        248
+      ],
+      "offset": [
+        7,
+        4
+      ],
+      "sha256": "14735832d286e6c089a02bd1247509bffd2ca7f2d024e99ce67eb3af503422d6"
+    },
+    "soul-light": {
+      "source_sha256": "f5e80e2e4a4a98d8678538df2009bfd6769eaba288942d643ac5405f34ff34d7",
+      "quadrant": [
+        627,
+        0,
+        1254,
+        627
+      ],
+      "alpha_bounds": [
+        0,
+        39,
+        627,
+        623
+      ],
+      "scale": 0.19138755980861244,
+      "size": [
+        120,
+        112
+      ],
+      "offset": [
+        4,
+        8
+      ],
+      "sha256": "a1d1fbf92fa80a8ef24ff647d19b0de2b36ed6a2e2912784e7da5c3261f8b854"
+    },
+    "autumn-leaf": {
+      "source_sha256": "f5e80e2e4a4a98d8678538df2009bfd6769eaba288942d643ac5405f34ff34d7",
+      "quadrant": [
+        0,
+        627,
+        627,
+        1254
+      ],
+      "alpha_bounds": [
+        0,
+        13,
+        625,
+        627
+      ],
+      "scale": 0.192,
+      "size": [
+        120,
+        118
+      ],
+      "offset": [
+        4,
+        5
+      ],
+      "sha256": "2f70c91a5e23c6af39a1e75487628034f02196c996a1471b31961789d080628c"
+    },
+    "spider": {
+      "source_sha256": "f5e80e2e4a4a98d8678538df2009bfd6769eaba288942d643ac5405f34ff34d7",
+      "quadrant": [
+        627,
+        627,
+        1254,
+        1254
+      ],
+      "alpha_bounds": [
+        17,
+        5,
+        597,
+        579
+      ],
+      "scale": 0.09655172413793103,
+      "size": [
+        56,
+        55
+      ],
+      "offset": [
+        4,
+        4
+      ],
+      "sha256": "c6689c4dd02ab2779198104a66f8e6f77f692f550d961f5547330d05f753e764"
+    },
+    "horseman-face-v2": {
+      "source_sha256": "9e3408c38e5f5d5c4c0553aa41d5c1c2ce1060048ba9158e6a56b9eaaaea3f50",
+      "alpha_bounds": [
+        0,
+        17,
+        1253,
+        1254
+      ],
+      "scale": 0.19792498004788509,
+      "size": [
+        248,
+        245
+      ],
+      "offset": [
+        4,
+        5
+      ],
+      "sha256": "ee7b077159da50df29c6ab6faadac8c8a5556a46c018dbce9efd53875d4e5fac"
+    }
+  }
+}

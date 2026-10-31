@@ -1319,3 +1319,61 @@ L["Shows your totems, statues, ghoul and other totem-slot summons with their tim
 L["Highlight the affected raid frame using the debuff type color while it has a debuff you can remove."] = true
 L["Show Pet Experience"] = true
 L["Shows your hunter pet's experience as a thin bar under the pet frame while it can still gain levels."] = true
+
+-- AzeriteUI marker toolbar.
+L["Marker toolbar"] = true
+L["Left-click: target marker. Right-click: clear. Shift: ground markers."] = true
+L["Clear all markers"] = true
+L["Click to fold or unfold. Move with /lock. Folding waits until combat ends."] = true
+L["Appears in parties and for raid leaders or assistants. Left-click: target marker. Right-click: clear. Hold Shift for ground markers. Move with /lock."] = true
+L["Fold toolbar"] = true
+L["Preview marker toolbar"] = true
+L["Toggle a preview with inactive marker buttons. Also available with /azmarkers."] = true
+
+-- Full raid/party panel.
+L["Raid / Party panel"] = true
+L["Raid groups"] = true
+L["Markers"] = true
+L["Left-click: set. Right-click: clear. Shift: switch marker type."] = true
+L["Countdown: 10s"] = true
+L["All assist"] = true
+L["Party / Raid"] = true
+L["Ping permissions"] = true
+L["Hide raid frames"] = true
+L["Show raid frames"] = true
+L["Leave your current group?"] = true
+L["Group overview, raid group filters, markers and leader tools. Move with /lock. Administrative actions are unavailable in combat."] = true
+L["Fold panel"] = true
+L["Preview raid panel"] = true
+L["Preview"] = true
+L["Filter AzeriteUI's large raid frames. Changes made in combat apply afterward."] = true
+L["Ground"] = true
+L["Ready check"] = true
+L["Role check"] = true
+L["Difficulty"] = true
+L["Leave group"] = true
+L["Leave instance group"] = true
+
+-- Independent target markers lite.
+L["Target markers lite"] = true
+L["Left-click: target marker. Right-click: clear. Move with /lock."] = true
+L["A separate movable target-marker bar. Works with the full AzUI panel switched off. Use Show Blizzard Raid Bar on this page to keep or hide Blizzard's panel. Move with /lock."] = true
+L["Preview the inactive lite bar with /azmarkerlite. Enable it first."] = true
+
+-- Target markers lite favorites and layouts.
+L["Clear target marker"] = true
+L["Click: clear target. Shift-click: clear all markers."] = true
+L["Two rows"] = true
+L["Hidden"] = true
+L["Marker slot %d"] = true
+L["Choose markers in display order. Hidden removes a slot; choosing a marker already in use swaps the two slots."] = true
+L["Click the clear button to remove only your target's marker. Shift-click it to clear all markers."] = true
+
+-- Lite target/world clear controls.
+L["Click: clear all target markers. Shift-click: clear all ground markers."] = true
+
+L["Hide frames"] = true
+
+L["Show frames"] = true
+
+L["Leave instance"] = true

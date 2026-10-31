@@ -455,11 +455,13 @@ HUD.Command = function(self, input)
 	local enabled = command == "legacy"
 	local char = ns.db and ns.db.char
 	if (not char) then return false end
-	local changed = (char.legacyHUD == true) ~= enabled or (not enabled and (char.hunterPreview or char.magePreview or char.paladinPreview or char.druidPreview or char.warriorPreview))
+	local changed = (char.legacyHUD == true) ~= enabled or (not enabled and (char.hunterPreview or char.magePreview or char.paladinPreview or char.druidPreview or char.warriorPreview or char.roguePreview or char.shamanPreview))
 	char.legacyHUD = enabled
 	char.hunterPreview, char.magePreview, char.paladinPreview = false, false, false
 	char.druidPreview = false
 	char.warriorPreview = false
+	char.roguePreview = false
+	char.shamanPreview = false
 	if (changed) then Reload() end
 	return true
 end
