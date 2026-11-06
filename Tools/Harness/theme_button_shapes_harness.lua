@@ -20,6 +20,10 @@ load("Core/PaladinTheme.lua")
 load("Core/HunterMedia.lua")
 load("Core/HunterTheme.lua")
 load("Core/MageTheme.lua")
+load("Core/DruidTheme.lua")
+load("Core/WarriorTheme.lua")
+load("Core/RogueTheme.lua")
+load("Core/ShamanTheme.lua")
 ns.Colors = { ui = { .75,.75,.75 }, quest = { gray = {.6,.6,.6} }, normal = {.9,.8,.5}, highlight = {.9,.8,.5} }
 load("Layouts/Layouts.lua")
 for _, name in ipairs({ "ActionButton", "PetActionButton", "StanceButton", "ExtraActionButton" }) do
@@ -60,6 +64,45 @@ for _, theme in ipairs({ "azerite", "mage", "hunter", "paladin" }) do
 		check(ns.API.GetShapedButtonConfig(base, "circle") == base, "circle keeps theme config")
 	end
 end
+-- Hex uses our original generated border on stock and intact class paintings.
+for _, theme in ipairs({ "azerite", "hunter", "mage", "paladin", "druid", "warrior", "rogue", "shaman" }) do
+	ns.db.char = {}
+	if theme ~= "azerite" then ns.db.char[theme.."Preview"] = true end
+	local active = ns.ThemeEngine:GetActive()
+	check((active ~= nil) == (theme ~= "azerite"), "real theme selection: "..theme)
+	for name, original in pairs(originals) do
+		local base = ns.GetConfig(name)
+		local shaped = ns.API.GetShapedButtonConfig(base, "hex")
+		local extra = name == "ExtraActionButton"
+		local prefix = extra and "ExtraButton" or "Button"
+		local own = active and active:ResolveOwnMedia("portrait_frame_hi")
+		local folder = own and own:match("[\\/]Assets[\\/]([^\\/]+)[\\/]portrait_frame_hi%.tga$")
+		local expected = folder and asset("HexButtons\\"..folder.."\\border") or asset("actionbutton-border-hex")
+		check(shaped[prefix.."BorderTexture"] == expected, "whole hex class painting: "..theme..name)
+		check(shaped[extra and "ExtraButtonMask" or "ButtonMaskTexture"] == asset("actionbutton-mask-hex"), "hex cooldown and icon mask")
+		check(shaped[prefix.."Size"] == base[prefix.."Size"], "hex keeps cells and layout")
+		local scale = base[prefix.."Size"][1]/64
+		check(shaped[prefix.."BorderSize"][1] == 96*scale and shaped[prefix.."IconSize"][1] == 50*scale, "hex frame unchanged; icon fits painted opening")
+		local color, originalColor = shaped[prefix.."BorderColor"], base[prefix.."BorderColor"]
+		check(color == originalColor, "hex uses native tint; no blanket reflection dimming")
+		if (arg[2] == "export" and name == "ActionButton") then
+			for _, shape in ipairs({"circle", "square", "rounded", "hex"}) do
+				local cfg = ns.API.GetShapedButtonConfig(base, shape)
+				local a, b = cfg.ButtonBorderColor, cfg.ButtonBackdropColor
+				print(table.concat({"REVIEW", theme, shape, cfg.ButtonBorderTexture, cfg.ButtonBorderSize[1], a[1],a[2],a[3],
+					cfg.ButtonMaskTexture, cfg.ButtonIconSize[1], cfg.ButtonBackdropTexture, cfg.ButtonBackdropSize[1], b[1],b[2],b[3]}, "|"))
+			end
+		end
+		if extra then
+			check(shaped.ExtraButtonCooldownSize[1] == shaped.ExtraButtonIconSize[1], "extra cooldown fits hex icon")
+		else
+			check(shaped.ButtonHighlightShape == "hex", "hex custom proc and assisted styles")
+		end
+		local f = assert(io.open(root.."/"..expected:match("Assets\\.*$"):gsub("\\", "/"), "rb")); f:close()
+		check(original[prefix.."BorderTexture"] == asset("actionbutton-border"), "hex never mutates source layout")
+	end
+end
+check(ns.API.IsButtonShape("hex") and not ns.API.IsButtonShape("bogus"), "shape validation")
 -- Explicit dormant CD skins never borrow an active interface theme.
 ns.db.char = { hunterPreview = true }
 for _, name in ipairs({ "actionbutton-border-square", "actionbutton-border-square-rounded" }) do
@@ -69,7 +112,7 @@ for _, name in ipairs({ "actionbutton-border-square", "actionbutton-border-squar
 end
 ns.LegacyHUD = { IsActive = function() return true end }
 for name, base in pairs(originals) do
-	for _, shape in ipairs({ "square", "rounded" }) do
+	for _, shape in ipairs({ "square", "rounded", "hex" }) do
 		check(ns.API.GetShapedButtonConfig(base, shape) == base, "Legacy ignores shapes: " .. name)
 	end
 end

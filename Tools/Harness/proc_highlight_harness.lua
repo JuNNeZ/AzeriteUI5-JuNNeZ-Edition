@@ -134,6 +134,19 @@ check(not preview.alert:IsVisible() and #env.UISpecialFrames == 1, "preview clos
 
 -- The assisted combat suggestion: the same styling with settings of its own.
 local A = ns.ActionBarAssistedHighlight
+for _, provider in ipairs({ H, A }) do
+	local hexDB = { ButtonSpellHighlightSize = {80,80}, ButtonSpellHighlightPosition = {"CENTER",0,0},
+		ButtonSpellHighlightTexture = "hex-original", ButtonHighlightShape = "hex" }
+	local hex = provider.Create(object(), hexDB)
+	for _, style in ipairs({ "outline", "glow", "both" }) do
+		for _, width in ipairs({ "thin", "medium", "thick" }) do
+			provider.Apply(hex, { [provider.keys.style] = style, [provider.keys.thickness] = width })
+			check(hex.ring.texture == "actionbutton-proc-hex-outline-"..width, "hex contour for every style")
+			check(hex.halo.texture == "actionbutton-proc-hex-glow-"..width, "hex halo for every width")
+			check(not hex:IsShown(), "hex restyle does not activate alerts")
+		end
+	end
+end
 check(A and A ~= H and A.defaults.assistedHighlightStyle == "current", "assisted highlight has its own module and defaults")
 for key in pairs(A.defaults) do check(H.defaults[key] == nil, "assisted keys do not overlap proc keys: "..key) end
 local adb = { ButtonSpellHighlightSize = {134,134}, ButtonSpellHighlightPosition = {"CENTER",0,0},
@@ -220,6 +233,8 @@ env.GetNumShapeshiftForms = function() return 0 end
 env.CreateFrame = function() return {RegisterEvent=function() end,SetScript=function() end} end
 load("Options/OptionsPages/ActionBars.lua", ns, env)
 local options = optionsModule.options
+local shape = options.args.bar1.args.buttonShape
+check(shape.values.hex == "Hex", "Hex offered on real action-bar dropdown")
 local proc = options.args.procHighlight.args
 for _, key in ipairs({"procHighlightStyle","procHighlightThickness","procHighlightColorSource","procHighlightOpacity"}) do
 	check(proc[key].get({"procHighlight",key}) == H.defaults[key], "option defaults: "..key)
@@ -272,6 +287,8 @@ check(toggle.hidden({"bar2","showWhileSkyriding"}), "Forever has no skyriding to
 ns.IsForever, ns.IsRetailContent = false, true
 
 -- Evaluate the generated driver's first matching condition, including precedence.
+shape.set({"bar1", "buttonShape"}, "hex")
+check(module.db.profile.bars[1].buttonShape == "hex", "Hex saved per bar")
 for _, snippets in ipairs({true,false}) do
 	local drivers = {}
 	local visenv = setmetatable({InCombatLockdown=function() return false end, LibStub=function() return {} end,

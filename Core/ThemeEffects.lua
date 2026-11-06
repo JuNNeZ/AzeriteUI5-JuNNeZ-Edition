@@ -12,12 +12,22 @@ ns.ThemeEffects = Effects
 local THEMES = { "azerite", "legacy", "hunter", "paladin", "mage" }
 local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage", druid = "druid", warrior = "none", rogue = "none", shaman = "none" }
 local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none", druid = "druid", warrior = "none", rogue = "none", shaman = "none" }
-local CRYSTAL_EFFECTS = { "none", "paladin", "mage", "druid", "moonvein", "dreamsap", "wildheart" }
-local ORB_EFFECTS = { "none", "paladin", "hunter", "druid", "moonwell" }
+local CRYSTAL_EFFECTS = { "none", "paladin", "hunter", "mage", "druid", "moonvein", "dreamsap", "wildheart",
+	"forge", "valarjar", "battleheart", "venom", "shadow", "nightblood", "tides", "magma", "storm" }
+local ORB_EFFECTS = { "none", "paladin", "hunter", "mage", "druid", "moonwell", "moonvein", "dreamsap", "wildheart",
+	"forge", "valarjar", "battleheart", "venom", "shadow", "nightblood", "tides", "magma", "storm" }
 
 local Contains = function(list, value)
 	for _, entry in ipairs(list) do if (entry == value) then return true end end
 	return false
+end
+
+-- Resource-only packs are available independently of full casing themes.
+if (ns.ClassResourceEffects) then
+	for _, key in ipairs(ns.ClassResourceEffects:GetKeys()) do
+		if (not Contains(CRYSTAL_EFFECTS, key)) then CRYSTAL_EFFECTS[#CRYSTAL_EFFECTS+1] = key end
+		if (not Contains(ORB_EFFECTS, key)) then ORB_EFFECTS[#ORB_EFFECTS+1] = key end
+	end
 end
 
 local Char = function() return ns.db and ns.db.char end
@@ -110,7 +120,7 @@ Effects.GetCrystalEffect = function(self)
 	return Resolve(THEME_CRYSTAL[self:GetTheme()], self:GetCrystalChoice())
 end
 
---- The effect drawn in the mana orb: "none", "paladin", "hunter", "druid" or "moonwell".
+--- The selected native, class or Lite+ material drawn in the mana orb.
 Effects.GetOrbEffect = function(self)
 	if (ns.LegacyHUD and ns.LegacyHUD:IsActive()) then return "none" end
 	if (not Char() or not MainLayout()) then return "none" end
@@ -285,11 +295,21 @@ Effects.CapsInFront = function(self) return CapsInFront() end
 --- the Mage crystal has only ever been drawn on the main player crystal).
 Effects.StyleCrystal = function(self, power, texturePath, coords, casePath, allowMage)
 	local effect = self:GetCrystalEffect()
+	local materials = ns.ClassResourceEffects
+	if (materials) then
+		if (materials:GetInfo(effect)) then materials:ApplyCrystal(power, effect, texturePath)
+		else materials:Clear(power) end
+	end
 	local mage = ns.MageCrystalPreview
 	local useMage = effect == "mage" and allowMage ~= false and mage
 	-- The Mage crystal brings its own case, so the Hunter case geometry
 	-- stands aside for it, as it always has.
 	if (not useMage and ns.HunterTheme) then ns.HunterTheme:StyleCrystal(power) end
+	local hunter = ns.HunterTheme
+	if (hunter and hunter.ApplyCrystalEffect) then
+		if (effect == "hunter") then hunter:ApplyCrystalEffect(power, texturePath)
+		else hunter:ClearCrystalEffect(power) end
+	end
 	-- The Mage theme's school badge belongs to the main player crystal.
 	if (ns.MageTheme and allowMage ~= false) then ns.MageTheme:StyleCrystal(power) end
 	-- Mage tidies up after itself when it is not the effect.
@@ -321,6 +341,14 @@ end
 Effects.StyleOrb = function(self, orb, flowingMana)
 	LiftCap(orb, orb.Case)
 	local effect = self:GetOrbEffect()
+	local materials = ns.ClassResourceEffects
+	local useMaterial = materials and materials:GetInfo(effect)
+	if (materials and not useMaterial) then materials:Clear(orb) end
+	local wildheart = ns.WildheartCrystal
+	local useWildheart = effect == "wildheart" or effect == "moonvein" or effect == "dreamsap"
+	if (wildheart and not useWildheart) then wildheart:Clear(orb) end
+	local mage = ns.MageCrystalPreview
+	if (mage and mage.ClearOrbEffect and effect ~= "mage") then mage:ClearOrbEffect(orb) end
 	local flowing = self:ShouldFlowMana(orb, flowingMana)
 	orb.__AzeriteUI_FlowingMana = flowing
 	local slosh = ns.MoonwellSlosh
@@ -338,6 +366,9 @@ Effects.StyleOrb = function(self, orb, flowingMana)
 	if (effect == "moonwell" and slosh) then return slosh:ApplyMoonwell(orb, flowing) end
 	if (effect == "druid" and druid) then claimed = druid:ApplyOrbEffect(orb) end
 	if (effect == "hunter" and hunter) then claimed = hunter:ApplyOrbEffect(orb) end
+	if (effect == "mage" and mage and mage.ApplyOrbEffect) then claimed = mage:ApplyOrbEffect(orb) end
+	if (useWildheart and wildheart) then claimed = wildheart:ApplyOrb(orb, effect) end
+	if (useMaterial) then claimed = materials:ApplyOrb(orb, effect) end
 	-- Shape the selected painting's edge, including its own overlays. When no
 	-- theme claims the fill, Player.lua still installs the chosen native material.
 	if (flowing and slosh) then slosh:Apply(orb, true) end

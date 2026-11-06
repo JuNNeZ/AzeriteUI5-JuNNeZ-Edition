@@ -122,8 +122,9 @@ local ShapeOption = function(name, desc, order, hidden, get, set)
 			["circle"] = L["Circle (intended design)"],
 			["rounded"] = L["Rounded"],
 			["square"] = L["Square"],
+			["hex"] = "Hex",
 		},
-		sorting = { "circle", "rounded", "square" },
+		sorting = { "circle", "rounded", "square", "hex" },
 		set = function(info, val)
 			if (get(info) == val) then return end
 			set(info, val)

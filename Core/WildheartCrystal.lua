@@ -1,5 +1,5 @@
--- Druid Lite+ material family. Wildheart's public module/setting stay compatible.
--- The native StatusBar owns fill height; never read resource values/geometry.
+-- Druid Lite+ crystal/orb materials. Existing crystal settings stay compatible.
+-- Native StatusBar/LibOrb owns fill height; never read resource values/geometry.
 local Addon, ns = ...
 local Effect = {}
 ns.WildheartCrystal = Effect
@@ -45,17 +45,17 @@ local MistCoords = function(coords, angle, x, y, rx, ry)
 	coords[5],coords[6]=x+rx*c+ry*s,y+rx*s-ry*c
 	coords[7],coords[8]=x+rx*c-ry*s,y+rx*s+ry*c
 end
-local Strength = function(flavour)
-	local key=(FLAVOURS[flavour] and flavour or "wildheart").."Strength"
+local Strength = function(flavour, orb)
+	local key=(FLAVOURS[flavour] and flavour or "wildheart")..(orb and "OrbStrength" or "Strength")
 	local v = tonumber(ns.db and ns.db.char and ns.db.char[key])
 	return v and v==v and math.max(0,math.min(1,v)) or 1
 end
-Effect.GetStrength = function(self, flavour) return Strength(flavour) end
-Effect.SetStrength = function(self, value, flavour)
+Effect.GetStrength = function(self, flavour, orb) return Strength(flavour, orb) end
+Effect.SetStrength = function(self, value, flavour, orb)
 	value=tonumber(value)
 	if (not value or value~=value or InCombatLockdown()) then return false end
 	value=math.max(0,math.min(1,value))
-	local key=(FLAVOURS[flavour] and flavour or "wildheart").."Strength"
+	local key=(FLAVOURS[flavour] and flavour or "wildheart")..(orb and "OrbStrength" or "Strength")
 	ns.db.char[key]=value~=1 and value or nil
 	return ns.ThemeEffects:Refresh()
 end
@@ -200,31 +200,44 @@ local Start = function(frame)
 	for _,event in ipairs(EVENTS) do frame:RegisterEvent(event) end
 	frame:SetScript("OnUpdate",Update)
 end
-local Create = function(power)
-	-- The animation owner stays full-height even at zero resource.
-	local frame=CreateFrame("Frame",nil,power)
+local Create = function(power, orb)
+	-- Full-canvas animation; orb descendants also inherit LibOrb's fill clip.
+	local parent=orb and power:GetOverlay() or power
+	local level=parent:GetFrameLevel()
+	local frame=CreateFrame("Frame",nil,parent)
 	frame:EnableMouse(false);frame:SetAllPoints(power)
-	frame:SetFrameLevel(power:GetFrameLevel()+1)
+	frame:SetFrameLevel(level+1)
 	local ambient=CreateFrame("Frame",nil,frame)
 	ambient:EnableMouse(false);ambient:SetAllPoints(power)
 	-- Both ADD groups must draw after the BLEND body, otherwise it would
 	-- paint over the ambient contribution in the filled portion.
-	ambient:SetFrameLevel(power:GetFrameLevel()+3)
+	ambient:SetFrameLevel(level+3)
 	ambient:SetAlpha(Effect.EmptyEnergy)
 	local clip=CreateFrame("Frame",nil,frame)
 	clip:EnableMouse(false);clip:SetClipsChildren(true)
-	clip:SetFrameLevel(power:GetFrameLevel()+2)
+	clip:SetFrameLevel(level+2)
 	clip:SetPoint("BOTTOMLEFT",power,"BOTTOMLEFT")
 	clip:SetPoint("BOTTOMRIGHT",power,"BOTTOMRIGHT")
-	clip:SetPoint("TOP",power:GetStatusBarTexture(),"TOP")
+	if orb then clip:SetPoint("TOP",parent,"TOP")
+	else clip:SetPoint("TOP",power:GetStatusBarTexture(),"TOP") end
 	local fill=CreateFrame("Frame",nil,clip)
 	fill:EnableMouse(false);fill:SetAllPoints(power)
-	fill:SetFrameLevel(power:GetFrameLevel()+2)
+	fill:SetFrameLevel(level+2)
 	local bright=CreateFrame("Frame",nil,fill)
 	bright:EnableMouse(false);bright:SetAllPoints(power)
-	bright:SetFrameLevel(power:GetFrameLevel()+3)
+	bright:SetFrameLevel(level+3)
 	bright:SetAlpha(1-Effect.EmptyEnergy)
 	frame.Clip,frame.Power,frame.Fill,frame.Ambient,frame.Bright=clip,power,fill,ambient,bright
+	-- Unlike the crystal's faint empty imprint, orb light must disappear at
+	-- zero mana. The native LibOrb overlay clips every descendant, including
+	-- ambient light. Keep paint below the shared Flowing mana trough (level +2).
+	if orb then
+		frame:SetFrameLevel(level)
+		clip:SetFrameLevel(level)
+		fill:SetFrameLevel(level)
+		ambient:SetFrameLevel(level+1)
+		bright:SetFrameLevel(level+1)
+	end
 	frame.Moving,frame.Combat,frame.Mounted,frame.Flying=false,false,false,false
 	frame.Time,frame.Pending,frame.Poll,frame.Activity,frame.Impulse=0,0,0,.22,0
 	frame.Sample=NewSample()
@@ -267,11 +280,11 @@ Effect.Clear = function(self, power)
 	if not frame then return end
 	frame.Enabled=false;Stop(frame);frame:Hide();frame.Clip:Hide()
 end
-Effect.Apply = function(self, power, texture, flavour)
+local Apply = function(self, power, texture, flavour, orb)
 	flavour=FLAVOURS[flavour] and flavour or "wildheart"
-	if Strength(flavour)==0 then self:Clear(power);return end
+	if Strength(flavour, orb)==0 then self:Clear(power);return false end
 	local frame=power.Wildheart
-	if not frame then frame=Create(power);power.Wildheart=frame end
+	if not frame then frame=Create(power, orb);power.Wildheart=frame end
 	frame.Flavour=flavour
 	frame.Width,frame.Height=power:GetWidth(),power:GetHeight()
 	local palette=FLAVOURS[flavour]
@@ -292,6 +305,16 @@ Effect.Apply = function(self, power, texture, flavour)
 	paletteParts(frame);paletteParts(frame.AmbientParts)
 	frame.Body:SetTexture(texture)
 	frame.Mask:SetTexture(texture,"CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE")
-	frame:SetAlpha(Strength(flavour))
+	frame:SetAlpha(Strength(flavour, orb))
 	frame.Enabled=true;frame.Clip:Show();frame:Show();Start(frame);Paint(frame)
+	return true
+end
+Effect.Apply = function(self, power, texture, flavour)
+	return Apply(self, power, texture, flavour, false)
+end
+Effect.ApplyOrb = function(self, orb, flavour)
+	if not Apply(self, orb, PREFIX.."orb2.tga", flavour, true) then return false end
+	-- The masked body supplies the material; native LibOrb still owns its clip.
+	orb:SetStatusBarTexture(nil, nil)
+	return true
 end

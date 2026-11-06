@@ -303,6 +303,9 @@ local TooltipBackdropSignature = setmetatable({}, { __mode = "k" })
 local TooltipBackdropLastUpdate = setmetatable({}, { __mode = "k" })
 local StatusBarThemeSignature = setmetatable({}, { __mode = "k" })
 local StatusBarText = setmetatable({}, { __mode = "k" })
+local StatusBarTextureInUse = setmetatable({}, { __mode = "k" })
+local StatusBarTextureHooked = setmetatable({}, { __mode = "k" })
+local RestoringStatusBarTexture
 
 local GetTooltipStatusBar = function()
 	if (GameTooltipStatusBar) then
@@ -346,10 +349,54 @@ local PlaceCompareHeader = function(tooltip, backdropStyle)
 	header:SetPoint("BOTTOMLEFT", tooltip, "TOPLEFT", 0, backdropStyle and backdropStyle.compareHeaderOffsetY or -1)
 end
 
+-- TacoTip (0.9.1, main.lua getOrCreateBackdropFrame) lays a border-only frame,
+-- tooltip.TacoTipBackdropFrame, over every tooltip that has a NineSlice and leaves
+-- the background to NineSlice. We park NineSlice, so that border stood alone inside
+-- ours. TacoTip never sets the frame's alpha or shown state, so we fade it while we
+-- style the tooltip. Without a NineSlice TacoTip's frame is the tooltip itself: left alone.
+local TacoTipRetryPending = setmetatable({}, { __mode = "k" })
+local tacoTipEnabled
+
+local SetTacoTipBorderShown = function(tooltip, shown)
+	local frame = tooltip and tooltip.TacoTipBackdropFrame
+	if (type(frame) ~= "table" or frame == tooltip or type(frame.SetAlpha) ~= "function") then
+		return false
+	end
+	if (frame.IsForbidden and frame:IsForbidden()) then
+		return false
+	end
+	frame:SetAlpha(shown and 1 or 0)
+	return true
+end
+
+local IsTacoTipEnabled = function()
+	if (tacoTipEnabled == nil) then
+		tacoTipEnabled = (API.IsAddOnEnabled and API.IsAddOnEnabled("TacoTip")) and true or false
+	end
+	return tacoTipEnabled
+end
+
+-- Both addons style from TooltipDataProcessor post-calls and we load first, so on a
+-- tooltip's first render TacoTip makes its frame after this pass. While TacoTip is
+-- enabled, look once more on the next frame, if we still style the tooltip then.
+local HideTacoTipBorder = function(tooltip)
+	if (SetTacoTipBorderShown(tooltip, false)) then return end
+	if (TacoTipRetryPending[tooltip] or not IsTacoTipEnabled()) then return end
+	if (not C_Timer or not C_Timer.After) then return end
+	TacoTipRetryPending[tooltip] = true
+	C_Timer.After(0, function()
+		TacoTipRetryPending[tooltip] = nil
+		if (TooltipBackdropSignature[tooltip] and not Tooltips:IsDisabled()) then
+			SetTacoTipBorderShown(tooltip, false)
+		end
+	end)
+end
+
 local RestoreBlizzardTooltipBackdrop = function(tooltip)
 	if (not tooltip) or tooltip:IsForbidden() then
 		return
 	end
+	SetTacoTipBorderShown(tooltip, true)
 	local secretBackdrop = rawget(Backdrops, tooltip)
 	if (secretBackdrop and secretBackdrop.Hide) then
 		secretBackdrop:Hide()
@@ -459,6 +506,7 @@ Tooltips.UpdateBackdropTheme = function(self, tooltip, style, embedded)
 		if (not backdropFrame:IsShown()) then
 			backdropFrame:Show()
 		end
+		HideTacoTipBorder(tooltip)
 
 		-- While merchant windows are open Blizzard will spam SharedTooltip_SetBackdropStyle();
 		-- if nothing changed there's no need to keep doing work here.
@@ -604,6 +652,7 @@ Tooltips.UpdateBackdropTheme = function(self, tooltip, style, embedded)
 	if (not backdrop:IsShown()) then
 		backdrop:Show()
 	end
+	HideTacoTipBorder(tooltip)
 
 	-- Optional: nameplate-only transparency for unit tooltips (skip when ConsolePort is active)
 	if (wantsTransparency and isPlate) then
@@ -628,6 +677,8 @@ Tooltips.UpdateStatusBarTheme = function(self)
 	local sig = (self._cachedThemeKey or '?') .. ':' .. (db.texture or '?') .. ':' .. (db.height or '?') .. ':' .. (db.offsetLeft or 0) .. ':' .. (db.offsetRight or 0)
 	if (StatusBarThemeSignature[bar] == sig) then return end
 	local texture = (type(db.texture) == "string" and db.texture ~= "") and db.texture or "Interface/TargetingFrame/UI-StatusBar"
+	-- Before the call below, which the texture hook further down sees too.
+	StatusBarTextureInUse[bar] = texture
 	local ok = API.SafeCall("Tooltips.ApplyStatusBarTheme", function()
 		bar:SetStatusBarTexture(texture)
 		bar:ClearAllPoints()
@@ -637,7 +688,22 @@ Tooltips.UpdateStatusBarTheme = function(self)
 	end)
 	if (not ok) then
 		StatusBarThemeSignature[bar] = nil
+		StatusBarTextureInUse[bar] = nil
 		return
+	end
+
+	-- TacoTip sets its own texture on this bar on every unit render (main.lua, its
+	-- "status-bar" stage), over ours. While we style the tooltips, ours goes back on.
+	if (not StatusBarTextureHooked[bar]) then
+		StatusBarTextureHooked[bar] = true
+		hooksecurefunc(bar, "SetStatusBarTexture", function(statusBar, newTexture)
+			if (RestoringStatusBarTexture) or (not Tooltips._stylingActive) or Tooltips:IsDisabled() then return end
+			local wanted = StatusBarTextureInUse[statusBar]
+			if (not wanted) or (newTexture == wanted) then return end
+			RestoringStatusBarTexture = true
+			API.SafeCall("Tooltips.Bar.KeepTexture", statusBar.SetStatusBarTexture, statusBar, wanted)
+			RestoringStatusBarTexture = nil
+		end)
 	end
 
 	if (not self:IsHooked(bar, "OnShow")) then
@@ -1568,6 +1634,9 @@ Tooltips.UpdateSettings = function(self)
 				bar:SetPoint("TOPRIGHT", gtt, "BOTTOMRIGHT", 0, 0)
 				bar:SetHeight(8)
 				bar:SetStatusBarTexture("Interface/TargetingFrame/UI-StatusBar")
+				-- Re-enabling restyles the bar in full instead of taking the signature's early return.
+				StatusBarThemeSignature[bar] = nil
+				StatusBarTextureInUse[bar] = nil
 				local text = StatusBarText[bar]
 				if (text) then text:Hide() end
 			end

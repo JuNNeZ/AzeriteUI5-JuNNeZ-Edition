@@ -58,6 +58,7 @@ local function New(spec)
 		alert.halo:SetAllPoints()
 		alert.halo:SetBlendMode("ADD")
 		alert.legacyTexture = spec.legacyTexture(db)
+		alert.shape = db.ButtonHighlightShape
 		alert.SetTexture = function(self, texture) self.ring:SetTexture(texture) end
 		alert.SetVertexColor = function(self, r, g, b, a)
 			self.ring:SetVertexColor(r, g, b, a or defaultOpacity)
@@ -86,8 +87,9 @@ local function New(spec)
 		end
 		local opacity = channel(profile[key.opacity], defaultOpacity)
 		local legacy = style == "current" and (spec.keepArt or source == spec.base)
-		alert:SetTexture(legacy and alert.legacyTexture or GetMedia("actionbutton-proc-outline-"..(style == "current" and "thin" or thickness)))
-		alert.halo:SetTexture(GetMedia("actionbutton-proc-glow-"..thickness))
+		local prefix = alert.shape == "hex" and "actionbutton-proc-hex-" or "actionbutton-proc-"
+		alert:SetTexture(legacy and alert.legacyTexture or GetMedia(prefix.."outline-"..(style == "current" and "thin" or thickness)))
+		alert.halo:SetTexture(GetMedia(prefix.."glow-"..thickness))
 		alert:SetVertexColor(channel(color[1], base[1]), channel(color[2], base[2]), channel(color[3], base[3]), opacity)
 		alert.ring:SetShown(style == "current" or style == "outline" or style == "both")
 		alert.halo:SetShown(style == "glow" or style == "both")

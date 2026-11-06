@@ -1,7 +1,7 @@
 -- License: LICENSE.txt
 
 local MAJOR_VERSION = "LibActionButton-1.0-GE"
-local MINOR_VERSION = 81 -- Pet state refreshes buttons; item macros no longer glow for a stray spell
+local MINOR_VERSION = 82 -- lib:IsGridShown, so host alpha restores keep empty slots visible mid-drag
 
 -- Whether secure handler snippets compile on this client.
 --
@@ -2186,6 +2186,13 @@ function HideGrid()
 			end
 		end
 	end
+end
+
+-- True while the game has asked for empty slots to be shown (ACTIONBAR_SHOWGRID:
+-- something placeable is on the cursor). Hosts that restore button alpha on their
+-- own must ask this, or they hide the empty slots in the middle of a drag.
+function lib:IsGridShown()
+	return gridCounter > 0
 end
 
 function UpdateGrid(self)

@@ -41,6 +41,25 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.36.0-JuNNeZ",
+		items = {
+			{
+				text = "Hex action buttons: a new button shape, with a painted rim for each class theme.",
+				page = L["Action Bars"]
+			},
+			{
+				text = "Lite+ crystal and orb effects for every class (WIP), each with its own strength.",
+				page = "Themes"
+			},
+			{
+				text = "Legacy: the player mana bar no longer disappears in combat."
+			},
+			{
+				text = "TacoTip no longer draws a second tooltip border, and Forever's minimap tracking menu works again."
+			},
+		}
+	},
+	{
 		version = "5.35.0-JuNNeZ",
 		items = {
 			{

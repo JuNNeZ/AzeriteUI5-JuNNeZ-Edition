@@ -10,6 +10,30 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.36.0-JuNNeZ (2026-11-06) - Hex Buttons and Lite+ for Every Class
+
+### Highlights
+
+- **Hex action buttons.** A new **Hex** choice joins Circle, Rounded and Square under `/az -> Action Bars -> Action Bar N -> Button Shape`, on the pet and stance bars, and for extra buttons under Extra Button Shape. Each class theme has its own painted hex rim (Hunter wood, Mage obsidian, Paladin silver and gold, Druid bark, Warrior leather, Rogue steel, Shaman copper), and the plain theme has dark gunmetal. Reload after choosing it. Circle stays the default, and Legacy ignores the shape.
+- **Lite+ crystal and orb effects for every class (WIP).** New animated materials at `/az -> Themes -> Lite+`, three per class: Warrior (Forge, Valarjar, Battleheart), Rogue (Venom, Shadow, Nightblood), Shaman (Tides, Magma, Storm), Death Knight, Demon Hunter, Priest, Warlock, Monk and Evoker. Hunter now has a crystal effect, Mage has an orb effect, and Druid's Wildheart, Moonvein and Dreamsap also work on the orb. Each one has its own strength slider for the crystal and the orb, and they react to moving, mounting and combat.
+- **Legacy: the mana bar no longer disappears in combat.** Under the Legacy HUD, the player's mana bar vanished as soon as combat started and often stayed gone afterwards. It now stays visible. This affected every mana user, on Retail and Forever. Thanks to Kgaa316 for the report.
+- **Empty action slots show while you drag an action off a bar.** With Show empty buttons off, the empty slots appeared when you dragged a spell out of the spellbook, but not when you picked an action up off a bar. Now they appear for both.
+- **WoW Forever fixes.** Right-clicking the minimap no longer raises an error, and its tracking menu opens again. Class power click-through should now let clicks pass through even when a click-casting addon such as Clique turns the mouse back on.
+- **TacoTip tooltips: no second border.** With TacoTip enabled, a grey inner border sat inside our tooltip border and squeezed the health bar. It is hidden while AzeriteUI styles the tooltip and comes back when you turn our styling off. Our health bar texture is kept as well.
+
+### Development
+
+- **Original hex artwork, painted to one shared size.** The rims were painted for this release around a mathematical hex guide, with each class theme's existing materials as references. They are not taken from another skin. Every rim was then measured to the same height and a border thickness within about one pixel, and the build fails before replacing any art that misses those limits. Icon size was reduced after feedback that the first version looked too zoomed in.
+- **A shared engine for the new Lite+ materials.** One provider drives all the new class materials. It draws inside the game's own resource fill and mask, so it never reads your power values, and it follows secret combat values without breaking. Effects that are hidden or set to zero stop updating entirely. Previews of each effect were rendered from the real Lua code at full, half and empty resource before shipping.
+- **Root causes, not workarounds.** The Legacy fix stops a layering change meant for the Azerite orb from running under Legacy. The empty-slot fix asks the action button library whether a drag is in progress before hiding a slot. The Forever minimap fix gives our hidden tracking button the parts Forever's updated Blizzard code now expects.
+
+### Access and known limits
+
+- **All of this is checked offline only.** Hex buttons, the new Lite+ effects and the fixes still need to be confirmed in game on Retail and Forever.
+- **The new Lite+ effects are previews (WIP)** and may still be repainted. Hex rims are painted separately per theme, so light and reflections differ slightly between them.
+- The class power click-through cause on Forever is not yet proven in game. If clicks are still caught, please send a `/fstack` screenshot.
+
+
 ## 5.35.1-JuNNeZ (2026-10-31) - Blizzard Raid Bar Stays Hidden
 
 ### Highlights

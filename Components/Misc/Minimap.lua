@@ -810,6 +810,17 @@ local function EnsureTrackingProxy()
 	proxy:SetAlpha(0)
 	proxy:EnableMouse(false)
 
+	-- The proxy skips MiniMapTrackingButtonTemplate, so give it the regions the
+	-- template would. Forever 1.60.1 (70755+) runs ButtonStateBehaviorMixin.OnLoad
+	-- first, and OnButtonStateChanged indexes StateTexture and AddTexture
+	-- (Blizzard_Minimap/Camelot/MinimapTrackingButton.lua), which also compares the
+	-- template's add-alpha KeyValues once the menu is open. The proxy is alpha 0.
+	proxy.StateTexture = proxy.StateTexture or proxy:CreateTexture(nil, "ARTWORK")
+	proxy.AddTexture = proxy.AddTexture or proxy:CreateTexture(nil, "ARTWORK")
+	proxy.AddTexture:Hide()
+	proxy.mouseoverAddAlpha = proxy.mouseoverAddAlpha or 0.1
+	proxy.mousedownAddAlpha = proxy.mousedownAddAlpha or 0.2
+
 	Mixin(proxy, trackingMixin)
 	if (proxy.OnLoad) then
 		API.SafeCall("Minimap.trackingProxy.OnLoad", proxy.OnLoad, proxy)

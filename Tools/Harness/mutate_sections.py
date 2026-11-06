@@ -5,7 +5,7 @@
 # is decoration.
 import subprocess, sys, os, shutil, re
 
-ADDON = r"C:\Program Files (x86)\World of Warcraft\_retail_\Interface\AddOns\AzeriteUI5_JuNNeZ_Edition"
+ADDON = r"C:\dev\AzeriteUI5_JuNNeZ_Edition"
 SP = os.path.dirname(os.path.abspath(__file__))
 LUA = r"C:\Program Files (x86)\Lua\5.1\lua.exe"
 

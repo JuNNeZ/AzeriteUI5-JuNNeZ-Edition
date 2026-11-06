@@ -1759,7 +1759,10 @@ local UpdateManaOrbVisibility = function(frame, unit)
 	if (element.Percent) then
 		element.Percent:Hide()
 	end
-	if (frame and frame.Power and frame.ManaOrb) then
+	-- Legacy keeps the bar above the frame (LegacyHUD:RefreshUnit, +2): the frame's own
+	-- dark power slot covers the same strip, so this shuffle hid Legacy mana on every
+	-- power update, i.e. from the first combat tick until the next unit restyle.
+	if (frame and frame.Power and frame.ManaOrb and not (ns.LegacyHUD and ns.LegacyHUD:IsActive())) then
 		local baseLevel = frame:GetFrameLevel() - 2
 		frame.Power:SetFrameLevel(baseLevel + 1)
 		frame.ManaOrb:SetFrameLevel(baseLevel)

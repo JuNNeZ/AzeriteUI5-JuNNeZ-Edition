@@ -110,6 +110,15 @@ end
 -- the cell, so neighbours never overlap. Smaller cells (pet, stance) scale the
 -- same proportions.
 local BUTTON_SHAPES = {
+	hex = {
+		mask = "actionbutton-mask-hex",
+		backdrop = "actionbutton-backdrop-hex",
+		border = "actionbutton-border-hex",
+		highlight = "actionbutton-spellhighlight-hex",
+		-- Keep the measured outer frame; fit the icon to our painted opening.
+		-- The former 63px icon hid too much of the image beneath the metal.
+		deco = 96, icon = 50, glow = 96
+	},
 	square = {
 		mask = "actionbutton-mask-square",
 		backdrop = "actionbutton-backdrop-square",
@@ -131,6 +140,9 @@ local IsButtonShape = function(shape)
 	return BUTTON_SHAPES[shape] ~= nil
 end
 
+local HEX_CLASS_BORDERS = { Hunter = true, Mage = true, Paladin = true, Druid = true,
+	Warrior = true, Rogue = true, Shaman = true }
+
 --- Returns db unchanged for the circle, and under the Legacy HUD (which has its
 --- own rounded buttons); otherwise a copy with the shape's art swapped in.
 --- Takes the Button* configs and the extra button's ExtraButton* config.
@@ -144,11 +156,24 @@ local GetShapedButtonConfig = function(db, shape)
 	local c = {}
 	for k,v in next,db do c[k] = v end
 	local scale = cell[1] / 64
-	local icon, deco, glow = 60 * scale, s.deco * scale, 117.5 * scale
+	local icon, deco, glow = (s.icon or 60) * scale, s.deco * scale, (s.glow or 117.5) * scale
+	-- Existing whole hex portrait paintings supply each class's materials and
+	-- motifs. Reuse them intact; no new casing pixels or theme layout changes.
+	local border = GetMedia(s.border)
+	local theme = shape == "hex" and ns.ThemeEngine and ns.ThemeEngine:GetActive()
+	local themedBorder = theme and theme.ResolveOwnMedia and theme:ResolveOwnMedia("portrait_frame_hi")
+	if (themedBorder) then
+		local folder = themedBorder:match("[\\/]Assets[\\/]([^\\/]+)[\\/]portrait_frame_hi%.tga$")
+		border = folder and HEX_CLASS_BORDERS[folder] and GetMedia("HexButtons\\"..folder.."\\border") or themedBorder
+	end
+	-- Repainted stock metal keeps bright reflections at the native tint.
+	-- Class paintings retain the same material/tint as their action buttons.
+	local borderColor = extra and db.ExtraButtonBorderColor or db.ButtonBorderColor
 	local bind, count = { "TOPLEFT", 8 * scale, -8 * scale }, { "BOTTOMRIGHT", -7 * scale, 7 * scale }
 	if (extra) then
 		c.ExtraButtonMask = GetMedia(s.mask)
-		c.ExtraButtonBorderTexture = GetMedia(s.border)
+		c.ExtraButtonBorderTexture = border
+		c.ExtraButtonBorderColor = borderColor
 		c.ExtraButtonBorderSize = { deco, deco }
 		c.ExtraButtonIconSize = { icon, icon }
 		c.ExtraButtonCooldownSize = { icon, icon }
@@ -159,10 +184,12 @@ local GetShapedButtonConfig = function(db, shape)
 	c.ButtonMaskTexture = GetMedia(s.mask)
 	c.ButtonBackdropTexture = GetMedia(s.backdrop)
 	c.ButtonBackdropSize = { deco, deco }
-	c.ButtonBorderTexture = GetMedia(s.border)
+	c.ButtonBorderTexture = border
+	c.ButtonBorderColor = borderColor
 	c.ButtonBorderSize = { deco, deco }
 	c.ButtonSpellHighlightTexture = GetMedia(s.highlight)
 	c.ButtonSpellHighlightSize = { glow, glow }
+	if (shape == "hex") then c.ButtonHighlightShape = "hex" end
 	if (db.ButtonAssistedHighlightTexture) then
 		c.ButtonAssistedHighlightTexture = GetMedia(s.highlight)
 	end

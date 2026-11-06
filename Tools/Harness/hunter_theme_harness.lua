@@ -107,7 +107,7 @@ theme:Command("endcapscale reset");check(ns.db.char.hunterEndcapScale==nil,"endc
 local widgetCount = 0
 local function widget(parent)
 	widgetCount = widgetCount + 1
-	local w = { parent = parent, points = {}, children = {}, shown = true, level = 2, width = 385, height = 40 }
+	local w = { parent = parent, points = {}, children = {}, scripts = {}, shown = true, level = 2, width = 385, height = 40 }
 	if parent then parent.children[#parent.children+1] = w end
 	function w:SetAllPoints(anchor) self.allPoints = anchor end
 	function w:SetPoint(point, ...) self.points[point] = { ... } end
@@ -115,6 +115,7 @@ local function widget(parent)
 	function w:SetSize(x, y) self.width, self.height = x, y end
 	function w:GetWidth() return self.width end
 	function w:GetParent() return self.parent end
+	function w:SetParent(parent) self.parent = parent end
 	function w:GetAlpha() return self.alpha or 1 end
 	function w:GetVertexColor() return unpack(self.color or {1,1,1}) end
 	function w:IsShown() return self.shown end
@@ -133,6 +134,7 @@ local function widget(parent)
  function w:Show() self.shown=true end
  function w:Hide() self.shown=false end
 	function w:SetClipsChildren(value) self.clips = value end
+	function w:SetScript(key, callback) self.scripts[key] = callback end
 	function w:AddMaskTexture(mask) self.mask = mask end
 	function w:CreateTexture() return widget(self) end
 	function w:CreateMaskTexture() return widget(self) end
@@ -315,7 +317,49 @@ for _,flip in ipairs({false,true}) do
 	check(textBar.Percent.points[side][3]==(flip and 27 or -27),"Hunter None restores the layout percent position")
 end
 theme:SetEndcap("thasdorah")
+-- Real Lite+ crystal dispatch with the existing focus material.
+function ns:GetModule() end
+load("Core/ThemeEffects.lua")
+ns.db.char.themeLitePlus=true;ns.db.char.themeCrystalEffect="hunter"
+ns.ThemeEffects:StyleCrystal(resource,"native-fill",nil,"native-case",false)
+local focus=resource.HunterFocus
+check(focus and focus.Clip.clips and focus.Clip.points.TOP[1]==resource.fill,"focus follows native crystal fill")
+check(focus.Mask.texture=="native-fill" and focus.Mask.allPoints==resource,"focus retains native silhouette")
+check(#focus.Layers==2 and focus.Layers[1].texture:find('orb-focus.tga',1,true),"crystal borrows actual Hunter orb material")
+check(focus.Body.texture==focus.Layers[1].texture and focus.Body.mask==focus.Mask and focus.Body.alpha==.80,"focus has a clipped amber material body beneath the light")
+focus.scripts.OnUpdate(focus,1)
+local phase=focus.Time
+ns.ThemeEffects:StyleCrystal(resource,"ice-fill",nil,"native-case",false)
+check(resource.HunterFocus==focus and focus.Time==phase and focus.Mask.texture=="ice-fill","focus restyle preserves phase and updates ice mask")
+check(theme:SetCrystalStrength(.4),"focus strength saved")
+theme:ApplyCrystalEffect(resource,"ice-fill")
+check(focus.alpha==.4,"focus strength applied")
+theme:SetCrystalStrength(0);theme:ApplyCrystalEffect(resource,"ice-fill")
+check(not focus.Enabled and not focus.shown and not focus.scripts.OnUpdate,"zero focus strength stops callback")
+theme:SetCrystalStrength(1);theme:ApplyCrystalEffect(resource,"ice-fill")
+focus.scripts.OnHide(focus);check(not focus.scripts.OnUpdate,"hidden focus stops animation")
+focus.scripts.OnShow(focus);check(focus.scripts.OnUpdate,"selected focus resumes on show")
+combat=true;check(not theme:SetCrystalStrength(.5) and theme:GetCrystalStrength()==1,"combat refuses focus settings")
+combat=false
+ns.ThemeEffects:SetCrystalChoice("none");ns.ThemeEffects:StyleCrystal(resource,"native-fill",nil,"native-case",false)
+check(not focus.Enabled and not focus.scripts.OnUpdate,"switching crystal effect clears focus")
+focus.scripts.OnShow(focus);check(not focus.scripts.OnUpdate,"cleared focus cannot restart")
 print("Hunter theme: "..checks.." checks passed (offline only)")
+if arg[2] == "samples" then
+	local export = assert(loadfile(root.."/Tools/Harness/liteplus_preview_export.lua"))()
+	local samples = {fps=10,seconds=8,theme="Hunter",variants={}}
+	ns.db.char.themeCrystalEffect="hunter";ns.db.char.hunterCrystalStrength=nil
+	theme:ApplyCrystalEffect(resource,ns.API.GetMedia("power_crystal_front"))
+	focus.Time=0;focus.scripts.OnUpdate(focus,0)
+	local frames = {}
+	for i=1,80 do
+		frames[i]=export.Frame(focus,196,196)
+		focus.scripts.OnUpdate(focus,.1)
+	end
+	samples.variants[1]={name="Focus",crystal=frames,orbMaterial=orb.fillPaths[1]}
+	export.Write(assert(arg[3]),samples)
+	return
+end
 -- Optional source-driven layout export for the offline assembly renderer.
 if (arg[2]) then
 	local function quote(s) return '"'..s:gsub('\\','\\\\'):gsub('"','\\"'):gsub('\n','\\n'):gsub('\r','\\r')..'"' end

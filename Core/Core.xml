@@ -62,6 +62,7 @@
 	<Script file="ShamanTheme.lua"/>
 	<Script file="MoonwellSlosh.lua"/>
 	<Script file="WildheartCrystal.lua"/>
+	<Script file="ClassResourceEffects.lua"/>
 	<Script file="ThemeEffects.lua"/>
 	<Script file="HalloweenEffects.lua"/>
 	<Script file="Halloween.lua"/>

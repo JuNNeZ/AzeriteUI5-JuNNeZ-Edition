@@ -18,13 +18,17 @@ local function widget(parent)
 	function w:SetAllPoints(v) self.anchor=v end
 	function w:SetParent(v) self.parent=v end
 	function w:SetPoint(p,...) assert(not self.native,"native frame moved");self.points[p]={...} end
+	function w:ClearAllPoints() self.points={} end
+	function w:SetHeight(v) self.height=v end
 	function w:SetSize(a,b) assert(not self.native,"native frame resized");self.width,self.height=a,b end
 	function w:GetHeight() assert(self.native,"native fill geometry read");return 196 end
 	function w:GetWidth() assert(self.native,"native fill geometry read");return 196 end
 	function w:SetClipsChildren(v) self.clips=v end
 	function w:SetTexture(v) assert(not self.native,"native fill retextured");self.texture=v end
+	function w:GetTexture() return self.texture end
 	function w:SetTexCoord(...) self.coords={...} end
 	function w:SetVertexColor(...) self.color={...} end
+	function w:GetVertexColor() return unpack(self.color or {1,1,1,1}) end
 	function w:SetBlendMode(v) self.blend=v end
 	function w:SetAlpha(v) self.alpha=v end
 	function w:AddMaskTexture(v) self.masks=self.masks or {};self.masks[#self.masks+1]=v;self.mask=self.masks[1] end
@@ -175,6 +179,80 @@ check(not f.Enabled,"zero flavour strength hides overlay")
 E:SetCrystalChoice("dreamsap");E:StyleCrystal(power,"normal")
 check(f.Enabled and f.alpha==1,"zero strength does not leak across flavours")
 M:SetStrength(1,"moonvein");E:SetCrystalChoice("wildheart");E:StyleCrystal(power,"normal")
+
+-- Orb variants use the actual dispatcher and native clipping parent. No
+-- crystal API or resource geometry is available on this recording orb.
+hooksecurefunc=function(object,key,fn)
+	local old=object[key]
+	object[key]=function(...) local result=old(...);fn(...);return result end
+end
+assert(loadfile(root.."/Core/MoonwellSlosh.lua"))("Test",ns)
+local orb=widget();orb.native=true;orb.displayType=0
+local edge=widget(orb)
+function orb:GetOverlay() return edge end
+function orb:GetStatusBarTexture() error("orb is not a crystal statusbar") end
+function orb:GetStatusBarColor() return .2,.4,.8 end
+function orb:SetStatusBarColor(...) self.color={...} end
+function orb:SetStatusBarTexture(...) self.materials={...} end
+local orbFrame
+for _,flavour in ipairs({"wildheart","moonvein","dreamsap"}) do
+	check(E:SetOrbChoice(flavour) and E:GetOrbEffect()==flavour,"orb flavour selectable")
+	check(E:StyleOrb(orb,true),"orb flavour claims fill with Flowing mana")
+	local current=orb.Wildheart
+	check(not orbFrame or orbFrame==current,"orb flavours reuse bounded frame tree")
+	orbFrame=current
+	check(current.parent==edge and current.Clip.points.TOP[1]==edge,"orb light clipped by native mana level")
+	check(current.Mask.texture:find('orb2.tga',1,true) and current.Mask.anchor==orb,"orb circular mask retains native canvas")
+	check(current.Flavour==flavour and current.Body.color[1]==M:GetFlavour(flavour).body[1],"orb material identity applied")
+	check(current.Bright.level<orb.MoonwellSlosh.level and current.Ambient.level<orb.MoonwellSlosh.level,"Flowing mana trough covers every light layer")
+	check(orb.materials[1]==nil and orb.materials[2]==nil,"native flat painting yields to masked material")
+	local phase=current.Time
+	current.scripts.OnUpdate(current,.1)
+	check(current.Time~=phase,"orb flavour animates")
+	check(M:SetStrength(.3,flavour,true),"orb strength saved")
+	E:StyleOrb(orb,false)
+	check(current.alpha==.3 and M:GetStrength(flavour,true)==.3 and not orb.MoonwellSlosh.Enabled,"orb strength applies independently of flow")
+	check(power.Wildheart.Enabled and M:GetStrength()==.4,"orb does not change crystal strength or animation")
+	M:SetStrength(0,flavour,true)
+	check(not E:StyleOrb(orb) and not current.Enabled and not current.scripts.OnUpdate and not next(current.events),"zero orb strength releases fill and callbacks")
+	M:SetStrength(1,flavour,true);E:StyleOrb(orb)
+end
+for _,choice in ipairs({"none","moonwell","druid","paladin","hunter"}) do
+	E:SetOrbChoice(choice);E:StyleOrb(orb)
+	check(not orbFrame.Enabled and not orbFrame.shown and not orbFrame.scripts.OnUpdate and not next(orbFrame.events),"switching orb family stops old effect")
+	orbFrame.scripts.OnShow(orbFrame)
+	check(not orbFrame.scripts.OnUpdate,"cleared orb cannot restart on show")
+	E:SetOrbChoice("wildheart");E:StyleOrb(orb)
+end
+combat=true
+check(not M:SetStrength(.5,"wildheart",true) and M:GetStrength("wildheart",true)==1,"combat refuses orb settings write")
+orbFrame.scripts.OnUpdate(orbFrame,.1)
+combat=false
+E:SetLitePlus(false);E:StyleOrb(orb)
+check(not orbFrame.Enabled,"disabling Lite+ restores theme fill")
+E:SetLitePlus(true);E:StyleOrb(orb)
+check(orb.Wildheart==orbFrame and orbFrame.Enabled,"enabling Lite+ restores saved orb choice")
+do
+	local generate
+	local previous=ns.GetModule
+	local options={AddGroup=function(_,_,factory) generate=factory end}
+	ns.GetModule=function(_,name) if name=="Options" then return options end end
+	LibStub=function() return {GetLocale=function() return setmetatable({},{__index=function(_,key) return key end}) end} end
+	assert(loadfile(root.."/Options/OptionsPages/Themes.lua"))("Test",ns)
+	local args=generate().args
+	for _,flavour in ipairs({"wildheart","moonvein","dreamsap"}) do
+		E:SetCrystalChoice("none");E:SetOrbChoice(flavour)
+		local group=args[flavour]
+		check(not group.hidden() and group.args.strength.hidden() and not group.args.orbStrength.hidden(),"orb-only settings visible without crystal effect")
+		group.args.orbStrength.set(nil,.65)
+		check(group.args.orbStrength.get()==.65,"orb slider saves actual orb strength")
+		E:SetCrystalChoice(flavour);E:SetOrbChoice("none")
+		check(not group.hidden() and not group.args.strength.hidden() and group.args.orbStrength.hidden(),"crystal-only settings retain independent visibility")
+		E:SetCrystalChoice("none")
+		check(group.hidden(),"unused material settings hidden")
+	end
+	ns.GetModule=previous
+end
 if arg[2]=="samples" then
 	local out=assert(io.open(assert(arg[3]),"w"))
 	local flavour=arg[4] or "wildheart"
@@ -211,7 +289,9 @@ if arg[2]=="mutations" then
 		,{'stationary mist','parts.Mist[i]:SetTexCoord(unpack(mist.coords))','parts.Mist[i]:SetTexCoord(0,1,0,1)','runtime UVs follow sampler'}
 		,{'pulse mask removed','art:AddMaskTexture(frame.VeinMask)','-- vein mask removed','pulses intersect native and vein masks'}
 		,{'ambient clipped','frame.Clip,frame.Power,frame.Fill,frame.Ambient,frame.Bright=clip,power,fill,ambient,bright','frame.Clip,frame.Power,frame.Fill,frame.Ambient,frame.Bright=clip,power,fill,ambient,bright\n\tambient:SetParent(clip)','ambient follows full crystal independently of fill'}
-		,{'ambient behind body','ambient:SetFrameLevel(power:GetFrameLevel()+3)','ambient:SetFrameLevel(power:GetFrameLevel()+1)','both light groups draw above material body'}
+		,{'ambient behind body','ambient:SetFrameLevel(level+3)','ambient:SetFrameLevel(level+1)','both light groups draw above material body'}
+		,{'orb loses native clip','local parent=orb and power:GetOverlay() or power','local parent=power','orb light clipped by native mana level'}
+		,{'orb covers flowing trough','bright:SetFrameLevel(level+1)','bright:SetFrameLevel(level+3)','Flowing mana trough covers every light layer'}
 	}) do
 		local p=assert(source:find(m[2],1,true),m[1]);local changed=source:sub(1,p-1)..m[3]..source:sub(p+#m[2])
 		loadfile=function(path) if path==root.."/Core/WildheartCrystal.lua" then return loadstring(changed) end;return original(path) end

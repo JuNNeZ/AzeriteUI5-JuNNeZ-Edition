@@ -418,6 +418,60 @@ local SyncClassPowerClickBlocker = function(classpower, blocker)
 	blocker:SetFrameLevel(math.max(10, classpower:GetFrameLevel() + 100))
 end
 
+-- The class power frame never takes the mouse itself: "click-through" off is the
+-- blocker's job. oUF lists every unit frame in ClickCastFrames, and Clique then calls
+-- RegisterForClicks and EnableMouseWheel(true) on each after we turned the mouse off,
+-- so this unit button (unit "player") took clicks meant for the frames behind it
+-- (Forever, FixLog 2026-11-05). Whoever turns the mouse back on, it goes off again.
+-- The unit button is protected: in combat that waits for PLAYER_REGEN_ENABLED.
+local mouseOffFrames = setmetatable({}, { __mode = "k" })
+local mouseOffPending = setmetatable({}, { __mode = "k" })
+local mouseOffQueue
+local applyingMouseOff
+
+local TurnMouseOff
+TurnMouseOff = function(frame)
+	if (InCombatLockdown()) then
+		mouseOffPending[frame] = true
+		if (not mouseOffQueue) then
+			mouseOffQueue = CreateFrame("Frame")
+			mouseOffQueue:SetScript("OnEvent", function(queue)
+				if (InCombatLockdown()) then return end
+				queue:UnregisterEvent("PLAYER_REGEN_ENABLED")
+				for pending in next, mouseOffPending do
+					mouseOffPending[pending] = nil
+					TurnMouseOff(pending)
+				end
+			end)
+		end
+		mouseOffQueue:RegisterEvent("PLAYER_REGEN_ENABLED")
+		return
+	end
+	applyingMouseOff = true
+	frame:EnableMouse(false)
+	if (frame.SetMouseClickEnabled) then frame:SetMouseClickEnabled(false) end
+	if (frame.SetMouseMotionEnabled) then frame:SetMouseMotionEnabled(false) end
+	if (frame.EnableMouseWheel) then frame:EnableMouseWheel(false) end
+	applyingMouseOff = nil
+end
+
+local KeepMouseOff = function(frame)
+	if (not frame) then return end
+	if (not mouseOffFrames[frame]) then
+		mouseOffFrames[frame] = true
+		local reassert = function(target)
+			if (applyingMouseOff) then return end
+			TurnMouseOff(target)
+		end
+		for _, method in ipairs({ "RegisterForClicks", "EnableMouse", "SetMouseClickEnabled", "EnableMouseWheel" }) do
+			if (type(frame[method]) == "function") then
+				hooksecurefunc(frame, method, reassert)
+			end
+		end
+	end
+	TurnMouseOff(frame)
+end
+
 local ApplyClassPowerClickThrough = function(self)
 	if (not self or not self.frame) then
 		return
@@ -1312,13 +1366,8 @@ ClassPowerMod.CreateUnitFrames = function(self)
 	oUF:SetActiveStyle(ns.Prefix..name)
 
 	self.frame = ns.UnitFrame.Spawn(unit, ns.Prefix.."UnitFrame"..name)
-	self.frame:EnableMouse(false)
-	if (self.frame.SetMouseClickEnabled) then
-		self.frame:SetMouseClickEnabled(false)
-	end
-	if (self.frame.SetMouseMotionEnabled) then
-		self.frame:SetMouseMotionEnabled(false)
-	end
+	KeepMouseOff(self.frame)
+	KeepMouseOff(self.frame.ClassPower)
 
 	SyncClassPowerFrameLevel(self)
 end

@@ -332,6 +332,74 @@ Theme.ApplyOrbEffect = function(self, orb)
 	return true
 end
 
+-- The same focus material inside the native crystal, independently of its
+-- casing. Only our texture UVs/time move; the native fill owns the clip.
+local UpdateFocus = function(frame, elapsed)
+	frame.Time = ((frame.Time or 0) + elapsed)%24
+	local phase = frame.Time*math.pi/12
+	for i, art in ipairs(frame.Layers) do
+		local x = .04 + .025*math.sin(phase+i*2)
+		local y = .04 + .025*math.cos(phase+i*2)
+		art:SetTexCoord(x, x+.90, y, y+.90)
+		art:SetAlpha(.20+.08*math.sin(phase+i*math.pi))
+	end
+end
+Theme.GetCrystalStrength = function(self)
+	local value = tonumber(ns.db and ns.db.char and ns.db.char.hunterCrystalStrength)
+	return value and value == value and math.max(0, math.min(1, value)) or 1
+end
+Theme.SetCrystalStrength = function(self, value)
+	value = tonumber(value)
+	if (not value or value ~= value or InCombatLockdown() or not ns.db or not ns.db.char) then return false end
+	value = math.max(0, math.min(1, value))
+	ns.db.char.hunterCrystalStrength = value ~= 1 and value or nil
+	return ns.ThemeEffects:Refresh()
+end
+Theme.ClearCrystalEffect = function(self, power)
+	local frame = power.HunterFocus
+	if (not frame) then return end
+	frame.Enabled = false
+	frame:SetScript("OnUpdate", nil)
+	frame:Hide(); frame.Clip:Hide()
+end
+Theme.ApplyCrystalEffect = function(self, power, texturePath)
+	if (self:GetCrystalStrength() == 0) then self:ClearCrystalEffect(power); return end
+	local frame = power.HunterFocus
+	if (not frame) then
+		local clip = CreateFrame("Frame", nil, power)
+		clip:EnableMouse(false); clip:SetClipsChildren(true)
+		clip:SetFrameLevel(power:GetFrameLevel()+1)
+		clip:SetPoint("BOTTOMLEFT", power, "BOTTOMLEFT")
+		clip:SetPoint("BOTTOMRIGHT", power, "BOTTOMRIGHT")
+		clip:SetPoint("TOP", power:GetStatusBarTexture(), "TOP")
+		frame = CreateFrame("Frame", nil, clip)
+		frame:EnableMouse(false); frame:SetAllPoints(power)
+		frame.Clip, frame.Layers = clip, {}
+		frame.Mask = frame:CreateMaskTexture()
+		frame.Mask:SetAllPoints(power)
+		-- Carry the focus material itself, rather than only adding amber light
+		-- over a blue mana fill (which reads as a violet crystal).
+		frame.Body = frame:CreateTexture(nil, "ARTWORK", nil, 0)
+		frame.Body:SetAllPoints(power); frame.Body:SetTexture(path("orb-focus"))
+		frame.Body:SetVertexColor(1, .62, .12); frame.Body:SetAlpha(.80)
+		frame.Body:AddMaskTexture(frame.Mask)
+		for i = 1, 2 do
+			local art = frame:CreateTexture(nil, "ARTWORK", nil, i)
+			art:SetAllPoints(power); art:SetTexture(path("orb-focus"))
+			art:SetBlendMode("ADD"); art:SetVertexColor(1, .62, .12)
+			art:AddMaskTexture(frame.Mask); frame.Layers[i] = art
+		end
+		frame:SetScript("OnHide", function(owner) owner:SetScript("OnUpdate", nil) end)
+		frame:SetScript("OnShow", function(owner) if (owner.Enabled) then owner:SetScript("OnUpdate", UpdateFocus) end end)
+		power.HunterFocus = frame
+	end
+	frame.Mask:SetTexture(texturePath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	frame:SetAlpha(self:GetCrystalStrength())
+	frame.Enabled = true
+	frame.Clip:Show(); frame:Show(); frame:SetScript("OnUpdate", UpdateFocus)
+	UpdateFocus(frame, 0)
+end
+
 Theme.StyleCastbar = function(self, cast)
 	if (not self:IsActive()) then return end
 	Endcap(cast,false,true)

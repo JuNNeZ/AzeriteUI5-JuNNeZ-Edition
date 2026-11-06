@@ -10,6 +10,7 @@ local function obj()
 	function o:GetWidth() return self.width or 196 end
 	function o:GetHeight() return self.height or 196 end
 	function o:SetSize(w,h) self.width,self.height=w,h end
+	function o:SetHeight(h) self.height=h end
 	function o:SetAllPoints(anchor) self.anchor = anchor end
 	function o:SetPoint(...) self.points[#self.points+1] = {...} end
 	function o:ClearAllPoints() self.points = {} end
@@ -20,8 +21,10 @@ local function obj()
 	function o:CreateTexture() local art=obj(); self.textures[#self.textures+1]=art; return art end
 	function o:CreateMaskTexture() return obj() end
 	function o:SetTexture(path) self.path = path; self.textureWrites=(self.textureWrites or 0)+1 end
+	function o:GetTexture() return self.path end
 	function o:SetTexCoord(...) self.coords={...} end
 	function o:SetVertexColor(...) self.color={...} end
+	function o:GetVertexColor() return unpack(self.color or {1,1,1,1}) end
 	function o:AddMaskTexture(mask) self.mask=mask end
 	function o:SetAlpha(alpha) self.alpha=alpha end
 	function o:SetBlendMode(mode) self.blend=mode end
@@ -29,6 +32,9 @@ local function obj()
 	function o:Show() self.shown=true end
 	function o:Hide() self.shown=false end
 	function o:SetScript(key, script) self.scripts[key]=script end
+	function o:IsVisible() return self.shown end
+	function o:RegisterEvent(event) self.events=self.events or {};self.events[event]=true end
+	function o:UnregisterAllEvents() self.events={} end
 	return o
 end
 local frames, reloads, combat, variant = {}, 0, false, ''
@@ -363,4 +369,111 @@ check(power.Case.path=='Mage/pw_crystal_case_low.tga','low cap uses full Mage pa
 module:StyleCrystal(power,'original.tga',crop,'pw_crystal_case.tga')
 check(power.Case.path=='Mage/pw_crystal_case.tga','normal cap uses full Mage palette')
 
-print('PASS: '..checks..' Mage crystal command/render checks')
+-- Real school effects on an orb-only Lite+ selection. Native resource APIs
+-- are deliberately unavailable: the LibOrb clipping parent owns the level.
+local effects=ns.ThemeEffects
+ns.MageTheme=nil
+effects:SetCrystalChoice('none');effects:SetOrbChoice('mage');effects:SetLitePlus(true)
+local orb=obj();orb.width,orb.height=103,103;orb.displayType=0
+local nativeClip=obj();nativeClip.level=4
+function orb:GetOverlay() return nativeClip end
+function orb:SetStatusBarTexture(...) self.materials={...} end
+function orb:GetStatusBarColor() return .2,.4,.8 end
+function orb:SetStatusBarColor(...) self.color={...} end
+function orb:GetValue() error('orb resource read') end
+function orb:GetMinMaxValues() error('orb resource range read') end
+local orbArt
+for _,school in ipairs({'arcane','fire','frost'}) do
+	module:Command(school);module:Command('flow');module:SetSchoolSpeed(1,school)
+	check(not module:IsActive() and effects:GetCrystalChoice()=='none','orb school controls do not enable Mage crystal')
+	check(effects:StyleOrb(orb),'Mage orb claims material')
+	local current=orb.MageOrbArt
+	check(not orbArt or current==orbArt,'schools reuse orb frame')
+	orbArt=current
+	check(current.parent==nativeClip and current.Mask.anchor==orb and current.Mask.path:find('orb2.tga',1,true),'all Mage orb energy uses native circular clip and mask')
+	check(current:GetFrameLevel()==nativeClip:GetFrameLevel()+1,'Mage orb stays below Flowing mana trough')
+	check(current.Flow.path:find(school..'-energy.tga',1,true) and current.Flow.path==current.FlowNext.path,'orb reuses approved school atlas')
+	check(current.Body.mask==current.Mask and current.Body.path:find('orb2.tga',1,true) and current.Body.alpha>0,'school body retains native circular material and clip')
+	check(#current.Embers==8 and current.Embers[1].Core.mask==current.Mask,'orb particles share circular mask')
+	local writes=current.Flow.textureWrites
+	for tick=1,128 do
+		current.scripts.OnUpdate(current,1/16)
+		check(current.Flow.textureWrites==writes,'orb animation never swaps atlas file')
+		check(current.Flow.coords[1]>=0 and current.Flow.coords[2]<=1 and current.Flow.coords[3]>=0 and current.Flow.coords[4]<=1,'orb atlas stays in bounds')
+	end
+	check(current.Index==0,'orb atlas loop wraps')
+	current.scripts.OnUpdate(current,.25);local phase=current.Time
+	effects:StyleOrb(orb)
+	check(current.Time==phase and current.Flow.textureWrites==writes,'orb restyles preserve phase and file binding')
+	module:SetEffectStrength(.3,true);effects:StyleOrb(orb)
+	check(near(current.Flow.alpha+current.FlowNext.alpha,.3) and module:GetEffectStrength()==.7,'orb strength independent of crystal')
+	module:Command('static');effects:StyleOrb(orb)
+	check(not current.scripts.OnUpdate and not current.Flow.shown and not current.Embers[1].Core.shown and current.Pattern.alpha>0,'orb static mode stops flow and particles')
+	module:Command('flow');effects:StyleOrb(orb)
+	current.scripts.OnHide(current);check(not current.scripts.OnUpdate,'hidden orb stops callback')
+	current.scripts.OnShow(current);check(current.scripts.OnUpdate,'selected orb resumes on show')
+	module:SetEffectStrength(0,true)
+	check(not effects:StyleOrb(orb) and not current.Enabled and not current.scripts.OnUpdate,'zero orb strength returns fill ownership')
+	module:SetEffectStrength(.7,true)
+end
+hooksecurefunc=function(object,key,callback)
+	local old=object[key]
+	object[key]=function(...) local result=old(...);callback(...);return result end
+end
+assert(loadfile((arg[1] or '.')..'/Core/MoonwellSlosh.lua'))('AzeriteUI5_JuNNeZ_Edition',ns)
+check(effects:StyleOrb(orb,true) and orb.MoonwellSlosh.Enabled and orb.MageOrbArt.Enabled,'actual Mage and Flowing mana run together')
+check(orb.MoonwellSlosh.FlowingMana and orb.MoonwellSlosh.level>orbArt.level,'actual trough draws over Mage energy and particles')
+local orbPhase=orbArt.Time
+orbArt.scripts.OnUpdate(orbArt,.1);orb.MoonwellSlosh.scripts.OnUpdate(orb.MoonwellSlosh,.1)
+check(orbArt.Time~=orbPhase and orb.MoonwellSlosh.Time>0,'both actual animations advance')
+effects:StyleOrb(orb,false)
+check(orbArt.Enabled and not orb.MoonwellSlosh.Enabled,'Flowing mana off preserves Mage school effect')
+effects:StyleOrb(orb);effects:SetOrbChoice('none');effects:StyleOrb(orb)
+check(not orbArt.shown and not orbArt.Enabled and not orbArt.scripts.OnUpdate,'leaving Mage clears orb animation')
+orbArt.scripts.OnShow(orbArt);check(not orbArt.scripts.OnUpdate,'cleared Mage orb cannot restart')
+combat=true;module:SetEffectStrength(.5,true)
+check(module:GetEffectStrength(true)==.7,'combat refuses orb strength writes')
+combat=false
+do
+	local factory
+	local oldGetModule=ns.GetModule
+	local options={AddGroup=function(_,_,build) factory=build end}
+	ns.GetModule=function(_,name) if name=='Options' then return options end end
+	LibStub=function() return {GetLocale=function() return setmetatable({},{__index=function(_,key) return key end}) end} end
+	assert(loadfile((arg[1] or '.')..'/Options/OptionsPages/Themes.lua'))('AzeriteUI5_JuNNeZ_Edition',ns)
+	local group=factory().args.mage
+	effects:SetOrbChoice('mage');effects:SetCrystalChoice('none')
+	check(not group.hidden() and group.args.strength.hidden() and not group.args.orbStrength.hidden(),'Mage orb-only controls visible without crystal')
+	group.args.school.set(nil,'frost')
+	check(module:GetSchool()=='frost' and effects:GetCrystalChoice()=='none','actual orb school dropdown keeps crystal off')
+	group.args.orbStrength.set(nil,.45)
+	check(group.args.orbStrength.get()==.45 and module:GetEffectStrength()==.7,'actual orb strength slider is independent')
+	effects:SetOrbChoice('none')
+	check(group.hidden(),'unused Mage controls hidden')
+	ns.GetModule=oldGetModule
+end
+print('PASS: '..checks..' Mage crystal/orb command/render checks')
+if arg[2] == 'samples' then
+	local export=assert(loadfile((arg[1] or '.')..'/Tools/Harness/liteplus_preview_export.lua'))()
+	local samples={fps=10,seconds=8,theme='Mage',variants={}}
+	effects:SetCrystalChoice('mage');effects:SetOrbChoice('mage')
+	module:SetEffectStrength(.7);module:SetEffectStrength(.7,true);module:SetParticles(true)
+	for _,school in ipairs({'arcane','fire','frost'}) do
+		module:Command(school);module:Command('flow');module:SetSchoolSpeed(1,school)
+		module:StyleCrystal(power,'Interface\\AddOns\\AzeriteUI5_JuNNeZ_Edition\\Assets\\power_crystal_front.tga',{0,1,0,1},'pw_crystal_case.tga')
+		module:ApplyOrbEffect(orb)
+		local crystal,orbFrame=power.MageCrystalArt,orb.MageOrbArt
+		crystal.Time,crystal.Index,orbFrame.Time,orbFrame.Index=0,-1,0,-1
+		for _,frame in ipairs({crystal,orbFrame}) do
+			for i,ember in ipairs(frame.Embers) do ember.Life=(i*.381966)%1 end
+			frame.scripts.OnUpdate(frame,0)
+		end
+		local c,o={},{}
+		for i=1,80 do
+			c[i]=export.Frame(crystal,196,196);o[i]=export.Frame(orbFrame,103,103)
+			crystal.scripts.OnUpdate(crystal,.1);orbFrame.scripts.OnUpdate(orbFrame,.1)
+		end
+		samples.variants[#samples.variants+1]={name=school,crystal=c,orb=o}
+	end
+	export.Write(assert(arg[3]),samples)
+end

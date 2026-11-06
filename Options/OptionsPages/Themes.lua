@@ -75,6 +75,12 @@ local Label = function(key)
 	if (key == "wildheart") then return "Wildheart" end
 	if (key == "moonvein") then return "Moonvein" end
 	if (key == "dreamsap") then return "Dreamsap" end
+	local materialNames = { forge="Warrior - Forge", valarjar="Warrior - Valarjar", battleheart="Warrior - Battleheart",
+		venom="Rogue - Venom", shadow="Rogue - Shadow", nightblood="Rogue - Nightblood",
+		tides="Shaman - Tides", magma="Shaman - Magma", storm="Shaman - Storm" }
+	if (materialNames[key]) then return materialNames[key] end
+	local material = ns.ClassResourceEffects and ns.ClassResourceEffects:GetInfo(key)
+	if (material and material.label) then return material.label end
 	if (key == "theme") then return L["The theme's own"] end
 	return _G.NONE or "None"
 end
@@ -281,6 +287,21 @@ local GenerateMageTheme = function(order)
 				func = function() Mage:ResetEndcapPlacement() end
 			}
 		})
+	}
+end
+
+local GenerateHunterCrystal = function(order)
+	local Hunter = ns.HunterTheme
+	if (not Hunter or not Hunter.GetCrystalStrength) then return end
+	return {
+		name = Label("hunter").." - "..L["Crystal effect"], order = order, type = "group", inline = true,
+		hidden = function() return Effects():GetCrystalEffect() ~= "hunter" end,
+		args = {
+			strength = { name = L["Energy strength"], order = 1, type = "range", width = "full",
+				min = 0, max = 1, step = .05, isPercent = true,
+				get = function() return Hunter:GetCrystalStrength() end,
+				set = function(_, value) Hunter:SetCrystalStrength(value) end }
+		}
 	}
 end
 
@@ -498,12 +519,18 @@ local GenerateWildheart = function(order, flavour)
 	if (not Crystal) then return end
 	return {
 		name = Label(flavour).." (WIP)", order = order, type = "group", inline = true,
-		hidden = function() return Effects():GetCrystalEffect() ~= flavour end,
+		hidden = function() return Effects():GetCrystalEffect() ~= flavour and Effects():GetOrbEffect() ~= flavour end,
 		args = {
-			strength = { name = L["Energy strength"], order = 1, type = "range", width = "full",
+			strength = { name = L["Crystal effect"].." - "..L["Energy strength"], order = 1, type = "range", width = "full",
+				hidden = function() return Effects():GetCrystalEffect() ~= flavour end,
 				min = 0, max = 1, step = .05, isPercent = true,
 				get = function() return Crystal:GetStrength(flavour) end,
-				set = function(_, value) Crystal:SetStrength(value, flavour) end }
+				set = function(_, value) Crystal:SetStrength(value, flavour) end },
+			orbStrength = { name = L["Orb effect"].." - "..L["Energy strength"], order = 2, type = "range", width = "full",
+				hidden = function() return Effects():GetOrbEffect() ~= flavour end,
+				min = 0, max = 1, step = .05, isPercent = true,
+				get = function() return Crystal:GetStrength(flavour, true) end,
+				set = function(_, value) Crystal:SetStrength(value, flavour, true) end }
 		}
 	}
 end
@@ -512,11 +539,11 @@ local GenerateMage = function(order)
 	local Mage = ns.MageCrystalPreview
 	if (not Mage) then return end
 	return {
-		name = L["Mage crystal"].." (WIP)",
+		name = Label("mage").." (WIP)",
 		order = order,
 		type = "group",
 		inline = true,
-		hidden = function() return not Mage:IsActive() end,
+		hidden = function() return not Mage:IsActive() and Effects():GetOrbEffect() ~= "mage" end,
 		args = {
 			school = {
 				name = L["School"],
@@ -544,8 +571,12 @@ local GenerateMage = function(order)
 				set = function(info, val) Mage:Command(val and "flow" or "static") end,
 				get = function(info) return ns.db.char.mageCrystalFlow ~= false end
 			},
-			strength = {name=L["Energy strength"],order=2.1,type="range",width="full",min=0,max=1,step=.05,isPercent=true,
+			strength = {name=L["Crystal effect"].." - "..L["Energy strength"],order=2.1,type="range",width="full",min=0,max=1,step=.05,isPercent=true,
+				hidden=function() return not Mage:IsActive() end,
 				get=function() return Mage:GetEffectStrength() end,set=function(_,v) Mage:SetEffectStrength(v) end},
+			orbStrength = {name=L["Orb effect"].." - "..L["Energy strength"],order=2.15,type="range",width="full",min=0,max=1,step=.05,isPercent=true,
+				hidden=function() return Effects():GetOrbEffect() ~= "mage" end,
+				get=function() return Mage:GetEffectStrength(true) end,set=function(_,v) Mage:SetEffectStrength(v,true) end},
 			particles = {name=L["Energy particles"],order=2.2,type="toggle",width="full",
 				disabled=function() return not Mage.EnergyAvailable or ns.db.char.mageCrystalFlow==false end,
 				get=function() return ns.db.char.mageCrystalParticles~=false end,set=function(_,v) Mage:SetParticles(v) end},
@@ -561,6 +592,24 @@ local GenerateMage = function(order)
 			}
 		}
 	}
+end
+
+local GenerateMaterial = function(order, key)
+	local Materials = ns.ClassResourceEffects
+	if (not Materials) then return end
+	local args = {}
+	for index, kind in ipairs({"Crystal", "Orb"}) do
+		local getEffect = kind == "Crystal" and "GetCrystalEffect" or "GetOrbEffect"
+		local label = kind == "Crystal" and L["Crystal effect"] or L["Orb effect"]
+		args[kind] = { name = label.." - "..L["Energy strength"], order = index,
+			type = "range", width = "full", min = 0, max = 1, step = .05, isPercent = true,
+			hidden = function() return Effects()[getEffect](Effects()) ~= key end,
+			get = function() return Materials:GetStrength(key, kind) end,
+			set = function(_, value) Materials:SetStrength(key, kind, value) end }
+	end
+	return { name = Label(key).." (WIP)", order = order, type = "group", inline = true,
+		hidden = function() return Effects():GetCrystalEffect() ~= key and Effects():GetOrbEffect() ~= key end,
+		args = args }
 end
 
 local GenerateTests = function()
@@ -660,6 +709,7 @@ local GenerateOptions = function()
 				}
 			},
 			hunter = GenerateHunter(10),
+			hunterCrystal = GenerateHunterCrystal(11),
 			paladin = GeneratePaladin(20),
 			druid = GenerateDruid(22),
 			warrior = GenerateWarrior(26),
@@ -671,9 +721,23 @@ local GenerateOptions = function()
 			dreamsap = GenerateWildheart(24.2, "dreamsap"),
 			mageTheme = GenerateMageTheme(25),
 			mage = GenerateMage(30),
+			forge = GenerateMaterial(31, "forge"),
+			valarjar = GenerateMaterial(31.1, "valarjar"),
+			battleheart = GenerateMaterial(31.2, "battleheart"),
+			venom = GenerateMaterial(32, "venom"),
+			shadow = GenerateMaterial(32.1, "shadow"),
+			nightblood = GenerateMaterial(32.2, "nightblood"),
+			tides = GenerateMaterial(33, "tides"),
+			magma = GenerateMaterial(33.1, "magma"),
+			storm = GenerateMaterial(33.2, "storm"),
 			tests = GenerateTests()
 		}
 	}
+	if (ns.ClassResourceEffects) then
+		for index, key in ipairs(ns.ClassResourceEffects:GetKeys()) do
+			if (not options.args[key]) then options.args[key] = GenerateMaterial(34+index/100, key) end
+		end
+	end
 	return options
 end
 

@@ -23,14 +23,14 @@ local function ClampSpeed(value)
 	return math.max(.1, math.min(2, value))
 end
 
-function Preview:GetEffectStrength()
-	local value=tonumber(ns.db.char.mageCrystalStrength)
+function Preview:GetEffectStrength(orb)
+	local value=tonumber(ns.db.char[orb and "mageOrbStrength" or "mageCrystalStrength"])
 	return value and value==value and math.max(0,math.min(1,value)) or .7
 end
-function Preview:SetEffectStrength(value)
+function Preview:SetEffectStrength(value, orb)
 	if (InCombatLockdown()) then return end
 	value=tonumber(value);if (not value or value~=value) then return end
-	ns.db.char.mageCrystalStrength=math.max(0,math.min(1,value))
+	ns.db.char[orb and "mageOrbStrength" or "mageCrystalStrength"]=math.max(0,math.min(1,value))
 	if (ns.ThemeEffects) then ns.ThemeEffects:Refresh() end
 end
 function Preview:SetParticles(enabled)
@@ -192,7 +192,7 @@ local function UpdateFlow(frame)
 		SetFlowFrame(frame, frame.Flow, index)
 		SetFlowFrame(frame, frame.FlowNext, (index + 1) % ENERGY.frames)
 	end
-	local strength = Preview:GetEffectStrength()
+	local strength = Preview:GetEffectStrength(frame.IsOrb)
 	frame.Flow:SetAlpha(strength * (1 - blend))
 	frame.FlowNext:SetAlpha(strength * blend)
 end
@@ -259,7 +259,7 @@ local function UpdateEmbers(content, elapsed)
 				art:SetPoint("CENTER", anchor, "BOTTOMLEFT", x * width, y * height)
 				art:SetSize(ember.Size * scale * (halo and 2.4 or 1),
 					ember.Size * scale * (halo and 1.8 or 1.2))
-				art:SetAlpha(math.min(1, fade * shimmer * ember.Opacity * (halo and .3 or 1) * Preview:GetEffectStrength()/.7))
+				art:SetAlpha(math.min(1, fade * shimmer * ember.Opacity * (halo and .3 or 1) * Preview:GetEffectStrength(content.IsOrb)/.7))
 			end
 		end
 	end
@@ -382,6 +382,85 @@ function Preview:StyleCrystal(power, texturePath, coords, casePath)
 	content:Show()
 end
 
+-- The approved school energy inside a circular resource. Only the centre of
+-- the atlas is sampled, so a crystal-shaped baked contour is never imported.
+local UpdateOrb = function(frame, elapsed)
+	frame.Time = ((frame.Time or 0) + elapsed*Preview:GetSchoolSpeed(frame.School))%8
+	UpdateEmbers(frame, elapsed)
+	UpdateFlow(frame)
+end
+function Preview:ClearOrbEffect(orb)
+	local frame = orb.MageOrbArt
+	if (not frame) then return end
+	frame.Enabled = false
+	frame:SetScript("OnUpdate", nil)
+	frame:Hide()
+end
+function Preview:ApplyOrbEffect(orb)
+	local strength = self:GetEffectStrength(true)
+	if (strength == 0) then self:ClearOrbEffect(orb); return false end
+	local frame = orb.MageOrbArt
+	if (not frame) then
+		frame = CreateFrame("Frame", nil, orb:GetOverlay())
+		frame:EnableMouse(false); frame:SetAllPoints(orb)
+		frame.IsOrb = true
+		frame.Mask = frame:CreateMaskTexture()
+		frame.Mask:SetAllPoints(orb)
+		frame.Mask:SetTexture("Interface\\AddOns\\"..Addon.."\\Assets\\orb2.tga", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		frame.Body = frame:CreateTexture(nil, "ARTWORK", nil, 0)
+		frame.Body:SetAllPoints(orb)
+		frame.Body:SetTexture("Interface\\AddOns\\"..Addon.."\\Assets\\orb2.tga")
+		frame.Body:AddMaskTexture(frame.Mask)
+		for _, key in ipairs({ "Pattern", "Flow", "FlowNext" }) do
+			local art = frame:CreateTexture(nil, "ARTWORK", nil, 1)
+			art:SetAllPoints(orb); art:SetBlendMode("ADD"); art:AddMaskTexture(frame.Mask)
+			frame[key] = art
+		end
+		frame.Coords = { .30, .70, .28, .72 }
+		frame:SetScript("OnHide", function(owner) owner:SetScript("OnUpdate", nil) end)
+		frame:SetScript("OnShow", function(owner)
+			if (owner.Enabled and owner.Energy) then owner:SetScript("OnUpdate", UpdateOrb) end
+		end)
+		orb.MageOrbArt = frame
+	end
+	-- Below Flowing mana's level +2 trough and the orb's existing glass.
+	frame:SetFrameLevel(orb:GetOverlay():GetFrameLevel()+1)
+	local school = self:GetSchool()
+	local animated = ns.db.char.mageCrystalFlow ~= false and self.EnergyAvailable == true
+	if (frame.School ~= school or frame.Energy ~= animated) then frame.Time, frame.Index = 0, 0 end
+	frame.Time, frame.Index = frame.Time or 0, frame.Index or 0
+	frame.Energy, frame.School = animated, school
+	-- Keep each school legible over blue mana without changing native colours.
+	-- The owned material disappears with the selected effect at zero strength.
+	frame.Body:SetVertexColor(unpack(schools[school]))
+	frame.Body:SetAlpha(math.min(1, .80*strength/.7))
+	frame.Pattern:SetTexture(Path("crystal-"..school.."-pattern"))
+	frame.Pattern:SetTexCoord(unpack(frame.Coords))
+	frame.Pattern:SetVertexColor(unpack(schools[school]))
+	frame.Pattern:SetAlpha((animated and .12 or .65)*strength/.7)
+	if (animated) then
+		EnsureEmbers(frame, orb)
+		for i, ember in ipairs(frame.Embers) do
+			if (school == "fire") then
+				ember.Core:SetVertexColor(1, i > 4 and .8 or .42, i > 4 and .3 or .06)
+				ember.Glow:SetVertexColor(1, .38, .04)
+			elseif (school == "frost") then
+				ember.Core:SetVertexColor(.65, .9, 1); ember.Glow:SetVertexColor(.2, .65, 1)
+			else
+				ember.Core:SetVertexColor(.88, .65, 1); ember.Glow:SetVertexColor(.65, .25, 1)
+			end
+		end
+	end
+	PrepareEnergyPages(frame, orb, school, animated)
+	SetFlowFrame(frame, frame.Flow, frame.Index)
+	SetFlowFrame(frame, frame.FlowNext, (frame.Index+1)%ENERGY.frames)
+	UpdateFlow(frame); UpdateEmbers(frame, 0)
+	frame.Enabled = true
+	frame:Show(); frame:SetScript("OnUpdate", animated and UpdateOrb or nil)
+	orb:SetStatusBarTexture("Interface\\AddOns\\"..Addon.."\\Assets\\orb2.tga", "Interface\\AddOns\\"..Addon.."\\Assets\\orb2.tga")
+	return true
+end
+
 function Preview:Command(input)
 	local arg = (input or ""):lower():match("^%s*(.-)%s*$")
 	if (arg == "speed") then self:ShowSpeedControls(); return end
@@ -412,6 +491,13 @@ function Preview:Command(input)
 	if (arg == "static" or arg == "flow") then ns.db.char.mageCrystalFlow = arg == "flow" end
 	if (arg == "flow" and not self.EnergyAvailable) then
 		self:Print("The moving energy is a work in progress and not in this release; the crystal stays static.")
+	end
+	-- Changing shared school/flow controls for an orb-only Lite+ selection
+	-- must not also select the Mage crystal.
+	if (not self:IsActive() and effects:GetOrbEffect() == "mage"
+		and (schools[arg] or arg == "auto" or arg == "static" or arg == "flow")) then
+		effects:Refresh()
+		return
 	end
 	-- Everything here is drawn per crystal, so nothing reloads. The crystal is
 	-- the Mage theme's own effect; on any other theme it is a Lite+ choice.

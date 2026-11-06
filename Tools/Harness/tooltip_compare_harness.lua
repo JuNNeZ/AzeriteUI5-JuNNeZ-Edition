@@ -404,7 +404,7 @@ local function Load(options)
 		GameTooltip[method] = function() end
 	end
 	local bar = NewFrame(nil, GameTooltip)
-	function bar:SetStatusBarTexture() end
+	function bar:SetStatusBarTexture(texture) self.texture = texture end
 	function bar:SetHeight() end
 	function bar:SetStatusBarColor() end
 	bar.fontStrings = {}
@@ -518,7 +518,8 @@ local function Load(options)
 		API = {
 			GetFont = function() end, GetMedia = function(name) return name end,
 			GetUnitColor = function() return { colorCode = "|cff00ff00" } end,
-			AbbreviateNumber = tostring, AbbreviateNumberBalanced = tostring
+			AbbreviateNumber = tostring, AbbreviateNumberBalanced = tostring,
+			IsAddOnEnabled = function(name) return options.tacoTip and name == "TacoTip" or false end
 		},
 		Colors = {
 			offwhite = { 1, 1, 1 }, quest = { gray = { colorCode = "" } },
@@ -1114,6 +1115,82 @@ do
 		check(off.__backdrop and off.__backdrop.shown, theme .. ": tooltip created while disabled can be discovered later")
 		CheckErrors(theme .. ": shared addon tooltip styling")
 	end
+end
+
+-- TacoTip (0.9.1, main.lua getOrCreateBackdropFrame) lays a border-only frame,
+-- tooltip.TacoTipBackdropFrame, over each tooltip that has a NineSlice; without one that frame is
+-- the tooltip itself. Its unit render sets its own texture on the tooltip health bar. Both addons
+-- style from TooltipDataProcessor post-calls and AzeriteUI loads first, so on a first render the
+-- frame appears after our pass (FixLog 2026-11-05).
+do
+	local module, env = Load({ theme = "Azerite", tacoTip = true })
+	local tip = env.GameTooltip
+	-- The disable branch reads the global name, as the live client has it.
+	env.GameTooltipStatusBar = tip.StatusBar
+	check(#world.timers == 1, "TacoTip: styling at load queues one retry", #world.timers)
+	RunTimers()
+	env.SharedTooltip_SetBackdropStyle(tip)
+	check(#world.timers == 1, "TacoTip: one retry queued while its frame does not exist yet", #world.timers)
+	env.SharedTooltip_SetBackdropStyle(tip)
+	check(#world.timers == 1, "TacoTip: no second retry while one is pending", #world.timers)
+	local taco = NewFrame(nil, tip)
+	tip.TacoTipBackdropFrame = taco
+	RunTimers()
+	check(taco.alpha == 0, "TacoTip: border faded on the next frame after a first render", taco.alpha)
+	taco.alpha = nil
+	env.SharedTooltip_SetBackdropStyle(tip)
+	check(taco.alpha == 0, "TacoTip: border faded on a later render", taco.alpha)
+	check(#world.timers == 0, "TacoTip: no retry once the frame is found", #world.timers)
+
+	module.db.profile.disableAzeriteUITooltips = true
+	module:UpdateSettings()
+	check(taco.alpha == 1, "TacoTip: border given back when styling is switched off", taco.alpha)
+	env.SharedTooltip_SetBackdropStyle(tip)
+	check(taco.alpha == 1, "TacoTip: border left alone while styling is off", taco.alpha)
+	module.db.profile.disableAzeriteUITooltips = false
+	module:UpdateSettings()
+	check(taco.alpha == 0, "TacoTip: border faded again when styling is switched back on", taco.alpha)
+
+	-- A retry that lands after styling was switched off must not fade the border.
+	local late = NewFrame("LateTacoTooltip", env.UIParent)
+	late.width, late.height, late.NineSlice = 200, 100, NewFrame(nil, late)
+	env.SharedTooltip_SetBackdropStyle(late)
+	late.TacoTipBackdropFrame = NewFrame(nil, late)
+	module.db.profile.disableAzeriteUITooltips = true
+	module:UpdateSettings()
+	RunTimers()
+	check(late.TacoTipBackdropFrame.alpha ~= 0, "TacoTip: pending retry skipped after styling is switched off", late.TacoTipBackdropFrame.alpha)
+	module.db.profile.disableAzeriteUITooltips = false
+	module:UpdateSettings()
+
+	-- No NineSlice: TacoTip's frame is the tooltip itself, which is never faded.
+	local legacy = NewFrame("LegacyTacoTooltip", env.UIParent)
+	legacy.width, legacy.height = 200, 100
+	legacy.TacoTipBackdropFrame = legacy
+	env.SharedTooltip_SetBackdropStyle(legacy)
+	RunTimers()
+	check(legacy.alpha == nil, "TacoTip: a tooltip that is its own TacoTip frame keeps its alpha", legacy.alpha)
+
+	local bar = tip.StatusBar
+	check(bar.texture == "bar-progress", "TacoTip: our bar texture applied", bar.texture)
+	bar:SetStatusBarTexture("Interface\TargetingFrame\UI-TargetingFrame-BarFill")
+	check(bar.texture == "bar-progress", "TacoTip: our bar texture put back after another addon's", bar.texture)
+	module.db.profile.disableAzeriteUITooltips = true
+	module:UpdateSettings()
+	check(bar.texture == "Interface/TargetingFrame/UI-StatusBar", "TacoTip: Blizzard's bar texture back when styling is off", bar.texture)
+	bar:SetStatusBarTexture("Interface\TargetingFrame\UI-TargetingFrame-BarFill")
+	check(bar.texture == "Interface\TargetingFrame\UI-TargetingFrame-BarFill", "TacoTip: another addon's bar texture kept while styling is off", bar.texture)
+	module.db.profile.disableAzeriteUITooltips = false
+	module:UpdateSettings()
+	check(bar.texture == "bar-progress", "TacoTip: our bar texture back when styling is switched on again", bar.texture)
+	CheckErrors("TacoTip")
+end
+
+do
+	local _, env = Load({ theme = "Azerite" })
+	world.timers = {}
+	env.SharedTooltip_SetBackdropStyle(env.GameTooltip)
+	check(#world.timers == 0, "TacoTip: no retry when TacoTip is not enabled", #world.timers)
 end
 
 print(string.format("Tooltip compare: %d checks, %d failures", checks, failures))

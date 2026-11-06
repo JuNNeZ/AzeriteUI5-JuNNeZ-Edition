@@ -54,6 +54,7 @@ local ActionBar = setmetatable({}, { __index = ButtonBar })
 local ActionBar_MT = { __index = ActionBar }
 
 local LFF = LibStub("LibFadingFrames-1.0")
+local LAB = LibStub("LibActionButton-1.0-GE", true)
 
 local playerClass = ns.PlayerClass
 local ACTION_BAR_FRAME_LEVEL = 100
@@ -226,10 +227,16 @@ end
 -- restores alpha in bulk has to ask the button what its alpha should be rather
 -- than assume full opacity. Forcing every button to 1 is what left empty slots
 -- sitting at full brightness on a bar whose real buttons had faded away.
+--
+-- The grid is also on while an action is being dragged. Dragging off a bar empties
+-- the source slot, ACTIONBAR_SLOT_CHANGED runs UpdateFading, and without this check
+-- the restore hid every empty slot again mid-drag (a drag from the spellbook changes
+-- no slot, which is why only that one showed the empty buttons).
 local GetRestingAlpha = function(button)
 	local config = button.config
 	if (config and config.showGrid) then return 1 end
 	if (button.HasAction and button:HasAction()) then return 1 end
+	if (LAB and LAB.IsGridShown and LAB:IsGridShown()) then return 1 end
 	return 0
 end
 

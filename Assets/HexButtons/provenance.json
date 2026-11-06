@@ -1,0 +1,928 @@
+{
+  "schema": 2,
+  "assets": {
+    "actionbutton-border-hex.tga": {
+      "sha256": "564a503b68fb149604e1d83ddbbab3aef35fd0652fc72c3634cc8bd2bed15ca7",
+      "source": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-source.png",
+      "sourceSha256": "0cb9fe9a5fa370c542ba3ad21ef695f071c8eacbb11b4af2a4032c96a08a28f0",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 238,
+        "offset": [
+          9,
+          7
+        ],
+        "sourceSolidBounds": [
+          203,
+          138,
+          1050,
+          1130
+        ]
+      },
+      "construction": "whole painting; uniform scale and translation; original RGBA/alpha"
+    },
+    "HexButtons/Hunter/border.tga": {
+      "sha256": "ce7aac610e4383ac21a9d20ba557e4ad6944db4a7a430f505db2503a889befea",
+      "source": "Assets_Draft/HexButtons-Uniform-2026-11-06/Hunter-source.png",
+      "sourceSha256": "a10a3627cc698bd5d44b367e1bc855ba14cbbb481b9eaef63f2b7b142ddc910a",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 236,
+        "offset": [
+          10,
+          8
+        ],
+        "sourceSolidBounds": [
+          202,
+          134,
+          1051,
+          1133
+        ]
+      },
+      "construction": "whole painting; uniform scale and translation; original RGBA/alpha"
+    },
+    "HexButtons/Mage/border.tga": {
+      "sha256": "c5f1107b1a165ce22725f3081cdbc2b35ab17105addfa2b57ef57feb62e7bcc4",
+      "source": "Assets_Draft/HexButtons-Uniform-2026-11-06/Mage-source.png",
+      "sourceSha256": "450a77e019c87778921a9c12689e9dede873aeae8c056fe4059290f49caf3f0d",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 224,
+        "offset": [
+          16,
+          15
+        ],
+        "sourceSolidBounds": [
+          188,
+          105,
+          1067,
+          1158
+        ]
+      },
+      "construction": "whole painting; uniform scale and translation; original RGBA/alpha"
+    },
+    "HexButtons/Paladin/border.tga": {
+      "sha256": "dd0c7f90288190a03d3e399c4e64a529fbec506a7821d1a8c313e2111e61d87e",
+      "source": "Assets_Draft/HexButtons-Uniform-2026-11-06/Paladin-source.png",
+      "sourceSha256": "2a1047ecc632e80894ed16272653dbf51917c234fe82b1337bb84453a25678e6",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 228,
+        "offset": [
+          14,
+          13
+        ],
+        "sourceSolidBounds": [
+          188,
+          113,
+          1065,
+          1147
+        ]
+      },
+      "construction": "whole painting; uniform scale and translation; original RGBA/alpha"
+    },
+    "HexButtons/Druid/border.tga": {
+      "sha256": "d557b71d60a04452e41c1eb600f8d73dc34455e1fe782582a9ef963d71ea5f74",
+      "source": "Assets_Draft/HexButtons-Uniform-2026-11-06/Druid-source.png",
+      "sourceSha256": "f9bcce00fb8b533afc01dc4c8daf4197730fda64a4e2a2366d57c8b86f64da9e",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 237,
+        "offset": [
+          9,
+          8
+        ],
+        "sourceSolidBounds": [
+          202,
+          135,
+          1052,
+          1131
+        ]
+      },
+      "construction": "whole painting; uniform scale and translation; original RGBA/alpha"
+    },
+    "HexButtons/Warrior/border.tga": {
+      "sha256": "fc252c2a565fb8b069f7922213125fee9525106012ed83b56649e422ca82bdbd",
+      "source": "Assets_Draft/HexButtons-Uniform-2026-11-06/Warrior-source.png",
+      "sourceSha256": "9d1100b81813c88b04211130cc4352fef2779436dd6a11985651602bc0a4a05e",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 236,
+        "offset": [
+          10,
+          9
+        ],
+        "sourceSolidBounds": [
+          202,
+          134,
+          1051,
+          1131
+        ]
+      },
+      "construction": "whole painting; uniform scale and translation; original RGBA/alpha"
+    },
+    "HexButtons/Rogue/border.tga": {
+      "sha256": "8bdf2dbb04d8322bdf6ad857020b5eb1fa35d32471b9c10a133a0bdd1451d3d3",
+      "source": "Assets_Draft/HexButtons-Uniform-2026-11-06/Rogue-source.png",
+      "sourceSha256": "489a50178a38c8d6d25734d82fae567627824bc9c3c08bed391de0c1b40d0342",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 227,
+        "offset": [
+          14,
+          14
+        ],
+        "sourceSolidBounds": [
+          188,
+          110,
+          1066,
+          1148
+        ]
+      },
+      "construction": "whole painting; uniform scale and translation; original RGBA/alpha"
+    },
+    "HexButtons/Shaman/border.tga": {
+      "sha256": "689f40c8aaa0ac3f5907ccb33f03cb89a707ae05f3776dab523594ba94b241e9",
+      "source": "Assets_Draft/HexButtons-Uniform-2026-11-06/Shaman-source.png",
+      "sourceSha256": "bb363bb53f2b7bc5b007ddfa121cbd2ff031fe30099896babcc0767b8073dc88",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 225,
+        "offset": [
+          15,
+          14
+        ],
+        "sourceSolidBounds": [
+          190,
+          107,
+          1067,
+          1157
+        ]
+      },
+      "construction": "whole painting; uniform scale and translation; original RGBA/alpha"
+    },
+    "actionbutton-mask-hex.tga": {
+      "sha256": "7c84327402505e7a9363a62eeb81e8aaf401046ca18e5f89dda6ff4ef80cb405",
+      "source": "Tools/Build-HexButtonAssets.py",
+      "construction": "procedural neutral functional geometry"
+    },
+    "actionbutton-backdrop-hex.tga": {
+      "sha256": "4fbc2a5044e594ff17ef6400fecf4ebb52729255f8628c751a20042e3c0960bb",
+      "source": "Tools/Build-HexButtonAssets.py",
+      "construction": "procedural neutral functional geometry"
+    },
+    "actionbutton-proc-hex-outline-thin.tga": {
+      "sha256": "efc0f1ad0c798611377632316087e669b0a7d1f4e2e6555b69839ca88dc2bff9",
+      "source": "Tools/Build-HexButtonAssets.py",
+      "construction": "procedural neutral functional geometry"
+    },
+    "actionbutton-proc-hex-glow-thin.tga": {
+      "sha256": "6f306a04bae5256c5763ed4300f2facf927706a002def658c658eb764afd64fe",
+      "source": "Tools/Build-HexButtonAssets.py",
+      "construction": "procedural neutral functional geometry"
+    },
+    "actionbutton-proc-hex-outline-medium.tga": {
+      "sha256": "977bdbae033ad5d3dc5089c357731489bda2c635fc217cc3f71224af33818b04",
+      "source": "Tools/Build-HexButtonAssets.py",
+      "construction": "procedural neutral functional geometry"
+    },
+    "actionbutton-proc-hex-glow-medium.tga": {
+      "sha256": "9280e1ff4910f2f1bffafde3cfe2934821130d2bb5de603b49b9d5c6071e7f9f",
+      "source": "Tools/Build-HexButtonAssets.py",
+      "construction": "procedural neutral functional geometry"
+    },
+    "actionbutton-proc-hex-outline-thick.tga": {
+      "sha256": "87d93094bd3074c25219bb567fc79832d38ac92b79a74bb5c4bdbe44e9a0f4ac",
+      "source": "Tools/Build-HexButtonAssets.py",
+      "construction": "procedural neutral functional geometry"
+    },
+    "actionbutton-proc-hex-glow-thick.tga": {
+      "sha256": "15303d233ddedf7b78716a7c859d0ea4883b88794c024e7a64e4069df761ede0",
+      "source": "Tools/Build-HexButtonAssets.py",
+      "construction": "procedural neutral functional geometry"
+    },
+    "actionbutton-spellhighlight-hex.tga": {
+      "sha256": "977bdbae033ad5d3dc5089c357731489bda2c635fc217cc3f71224af33818b04",
+      "source": "Tools/Build-HexButtonAssets.py",
+      "construction": "procedural neutral functional geometry"
+    }
+  },
+  "generation": {
+    "schema": 2,
+    "sources": {
+      "Stock": {
+        "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-source.png",
+        "sha256": "0cb9fe9a5fa370c542ba3ad21ef695f071c8eacbb11b4af2a4032c96a08a28f0",
+        "prompt": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-prompt.txt",
+        "promptSha256": "fd65d05cce6c46a65eab43898e9f4669c3efdca1e6d3ce7913e46219e327a850",
+        "tool": "image_gen.imagegen",
+        "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a1b0df-9dd7-7ab2-adc8-cffb73136977\\exec-8694b53d-f09f-48fe-82e7-901c9cfd3704.png",
+        "inputImages": [
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/geometry-guide.png",
+            "sha256": "00bd56093fdffe6f32c90f39cc8f90f8a34e56110691b90658140bce8481c14d",
+            "role": "geometry target"
+          },
+          {
+            "path": "Assets_Draft/HexButtons-Gloss-2026-11-06/border-source.png",
+            "sha256": "c10466dd1330d2c395653170f57663807d2a8d405437f9a807f408b151d34b8e",
+            "role": "material reference only"
+          }
+        ]
+      },
+      "Hunter": {
+        "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Hunter-source.png",
+        "sha256": "a10a3627cc698bd5d44b367e1bc855ba14cbbb481b9eaef63f2b7b142ddc910a",
+        "prompt": "Assets_Draft/HexButtons-Uniform-2026-11-06/Hunter-prompt.txt",
+        "promptSha256": "6d93e2ab45ce4b696604eca2dd5e09264b092b7bde2cebfba063e999fc791d75",
+        "tool": "image_gen.imagegen",
+        "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a1b0df-9dd7-7ab2-adc8-cffb73136977\\exec-c81cc327-5cf9-484d-aea0-a2bd5a2feea2.png",
+        "inputImages": [
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-source.png",
+            "sha256": "0cb9fe9a5fa370c542ba3ad21ef695f071c8eacbb11b4af2a4032c96a08a28f0",
+            "role": "geometry target"
+          },
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Hunter-material-reference.png",
+            "sha256": "ebbe85f9cbebf20a2fb84069f5fd9a22abe5cf87c3cb474f6964e97b7d8ba701",
+            "role": "material reference only"
+          }
+        ]
+      },
+      "Mage": {
+        "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Mage-source.png",
+        "sha256": "450a77e019c87778921a9c12689e9dede873aeae8c056fe4059290f49caf3f0d",
+        "prompt": "Assets_Draft/HexButtons-Uniform-2026-11-06/Mage-prompt.txt",
+        "promptSha256": "56ff4cfab5145986fa094ab290e7f5b1e39191b9562ce85cdaefff0a7d183729",
+        "tool": "image_gen.imagegen",
+        "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a1b0df-9dd7-7ab2-adc8-cffb73136977\\exec-3489bd1f-3728-4f03-af21-fa0821836a22.png",
+        "inputImages": [
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-source.png",
+            "sha256": "0cb9fe9a5fa370c542ba3ad21ef695f071c8eacbb11b4af2a4032c96a08a28f0",
+            "role": "geometry target"
+          },
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Mage-material-reference.png",
+            "sha256": "20937a2878c0e2edfa5b152fff64cfbdef63349482f04fc4886f7e893f99f910",
+            "role": "material reference only"
+          }
+        ]
+      },
+      "Paladin": {
+        "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Paladin-source.png",
+        "sha256": "2a1047ecc632e80894ed16272653dbf51917c234fe82b1337bb84453a25678e6",
+        "prompt": "Assets_Draft/HexButtons-Uniform-2026-11-06/Paladin-prompt.txt",
+        "promptSha256": "5038646767d042a51f28779b024b301f20aeb597594e20d6e56c164ef651da63",
+        "tool": "image_gen.imagegen",
+        "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a1b0df-9dd7-7ab2-adc8-cffb73136977\\exec-6abc4bbe-44a3-4071-b909-0336b1d9a505.png",
+        "inputImages": [
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-source.png",
+            "sha256": "0cb9fe9a5fa370c542ba3ad21ef695f071c8eacbb11b4af2a4032c96a08a28f0",
+            "role": "geometry target"
+          },
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Paladin-material-reference.png",
+            "sha256": "4ddcd497db81ca9629ef4091d52961ea9dda50185a347eaddb99b987bbdbed3b",
+            "role": "material reference only"
+          }
+        ]
+      },
+      "Druid": {
+        "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Druid-source.png",
+        "sha256": "f9bcce00fb8b533afc01dc4c8daf4197730fda64a4e2a2366d57c8b86f64da9e",
+        "prompt": "Assets_Draft/HexButtons-Uniform-2026-11-06/Druid-prompt.txt",
+        "promptSha256": "14662e4a3e729d4715350074305a1eb30a24dc6e396c42decfb9dd4d11324331",
+        "tool": "image_gen.imagegen",
+        "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a1b0df-9dd7-7ab2-adc8-cffb73136977\\exec-e0c6b7cd-7801-493f-a00a-8b0c6090a500.png",
+        "inputImages": [
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-source.png",
+            "sha256": "0cb9fe9a5fa370c542ba3ad21ef695f071c8eacbb11b4af2a4032c96a08a28f0",
+            "role": "geometry target"
+          },
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Druid-material-reference.png",
+            "sha256": "cb96e003d2c3ba8c90920ac3c1b79ea43491a13a37be984d15e5b070e326189a",
+            "role": "material reference only"
+          }
+        ]
+      },
+      "Warrior": {
+        "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Warrior-source.png",
+        "sha256": "9d1100b81813c88b04211130cc4352fef2779436dd6a11985651602bc0a4a05e",
+        "prompt": "Assets_Draft/HexButtons-Uniform-2026-11-06/Warrior-prompt.txt",
+        "promptSha256": "6ac9279189b8b9b164ff5e0d48bd6196b738e3b3647b19f9734ce006b8c22d76",
+        "tool": "image_gen.imagegen",
+        "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a1b0df-9dd7-7ab2-adc8-cffb73136977\\exec-a5752baf-de59-4107-996c-44928ed19ab2.png",
+        "inputImages": [
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-source.png",
+            "sha256": "0cb9fe9a5fa370c542ba3ad21ef695f071c8eacbb11b4af2a4032c96a08a28f0",
+            "role": "geometry target"
+          },
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Warrior-material-reference.png",
+            "sha256": "15d593121685f1a004374fe4881d421425160adad254c3681d065f90fa627b66",
+            "role": "material reference only"
+          }
+        ]
+      },
+      "Rogue": {
+        "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Rogue-source.png",
+        "sha256": "489a50178a38c8d6d25734d82fae567627824bc9c3c08bed391de0c1b40d0342",
+        "prompt": "Assets_Draft/HexButtons-Uniform-2026-11-06/Rogue-prompt.txt",
+        "promptSha256": "1435cb9e0ca2638995985176743d0647ceb8d163287c41fe6fab2b466814b12e",
+        "tool": "image_gen.imagegen",
+        "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a1b0df-9dd7-7ab2-adc8-cffb73136977\\exec-99180891-7dae-4251-82e2-744eac2dbf8d.png",
+        "inputImages": [
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-source.png",
+            "sha256": "0cb9fe9a5fa370c542ba3ad21ef695f071c8eacbb11b4af2a4032c96a08a28f0",
+            "role": "geometry target"
+          },
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Rogue-material-reference.png",
+            "sha256": "54e079bf6b39a65e0fa6ae9236208171991da8f8a1cb4ed448359747a51611f2",
+            "role": "material reference only"
+          }
+        ]
+      },
+      "Shaman": {
+        "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Shaman-source.png",
+        "sha256": "bb363bb53f2b7bc5b007ddfa121cbd2ff031fe30099896babcc0767b8073dc88",
+        "prompt": "Assets_Draft/HexButtons-Uniform-2026-11-06/Shaman-prompt.txt",
+        "promptSha256": "b2d4e801ecc4ddc52ca22f38ffc6d288be869fd78ee9100c3f4949c5501bee1c",
+        "tool": "image_gen.imagegen",
+        "originalPath": "C:\\Users\\Jonas\\.codex\\generated_images\\01a1b0df-9dd7-7ab2-adc8-cffb73136977\\exec-707dd186-0abb-426c-af37-8fa74cc1e316.png",
+        "inputImages": [
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Stock-source.png",
+            "sha256": "0cb9fe9a5fa370c542ba3ad21ef695f071c8eacbb11b4af2a4032c96a08a28f0",
+            "role": "geometry target"
+          },
+          {
+            "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Shaman-material-reference.png",
+            "sha256": "be39be77ce61c1e8941b3584d70e0c0bcf0310bccf8c19f466332145f9957531",
+            "role": "material reference only"
+          }
+        ]
+      }
+    },
+    "status": "Original source paintings; common-thickness candidate, offline and live approval separate."
+  },
+  "classBorders": {
+    "Hunter": {
+      "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Hunter-source.png",
+      "sha256": "a10a3627cc698bd5d44b367e1bc855ba14cbbb481b9eaef63f2b7b142ddc910a",
+      "export": "HexButtons/Hunter/border.tga",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 236,
+        "offset": [
+          10,
+          8
+        ],
+        "sourceSolidBounds": [
+          202,
+          134,
+          1051,
+          1133
+        ]
+      }
+    },
+    "Mage": {
+      "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Mage-source.png",
+      "sha256": "450a77e019c87778921a9c12689e9dede873aeae8c056fe4059290f49caf3f0d",
+      "export": "HexButtons/Mage/border.tga",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 224,
+        "offset": [
+          16,
+          15
+        ],
+        "sourceSolidBounds": [
+          188,
+          105,
+          1067,
+          1158
+        ]
+      }
+    },
+    "Paladin": {
+      "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Paladin-source.png",
+      "sha256": "2a1047ecc632e80894ed16272653dbf51917c234fe82b1337bb84453a25678e6",
+      "export": "HexButtons/Paladin/border.tga",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 228,
+        "offset": [
+          14,
+          13
+        ],
+        "sourceSolidBounds": [
+          188,
+          113,
+          1065,
+          1147
+        ]
+      }
+    },
+    "Druid": {
+      "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Druid-source.png",
+      "sha256": "f9bcce00fb8b533afc01dc4c8daf4197730fda64a4e2a2366d57c8b86f64da9e",
+      "export": "HexButtons/Druid/border.tga",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 237,
+        "offset": [
+          9,
+          8
+        ],
+        "sourceSolidBounds": [
+          202,
+          135,
+          1052,
+          1131
+        ]
+      }
+    },
+    "Warrior": {
+      "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Warrior-source.png",
+      "sha256": "9d1100b81813c88b04211130cc4352fef2779436dd6a11985651602bc0a4a05e",
+      "export": "HexButtons/Warrior/border.tga",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 236,
+        "offset": [
+          10,
+          9
+        ],
+        "sourceSolidBounds": [
+          202,
+          134,
+          1051,
+          1131
+        ]
+      }
+    },
+    "Rogue": {
+      "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Rogue-source.png",
+      "sha256": "489a50178a38c8d6d25734d82fae567627824bc9c3c08bed391de0c1b40d0342",
+      "export": "HexButtons/Rogue/border.tga",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 227,
+        "offset": [
+          14,
+          14
+        ],
+        "sourceSolidBounds": [
+          188,
+          110,
+          1066,
+          1148
+        ]
+      }
+    },
+    "Shaman": {
+      "path": "Assets_Draft/HexButtons-Uniform-2026-11-06/Shaman-source.png",
+      "sha256": "bb363bb53f2b7bc5b007ddfa121cbd2ff031fe30099896babcc0767b8073dc88",
+      "export": "HexButtons/Shaman/border.tga",
+      "transform": {
+        "sourceSize": [
+          1254,
+          1254
+        ],
+        "size": 225,
+        "offset": [
+          15,
+          14
+        ],
+        "sourceSolidBounds": [
+          190,
+          107,
+          1067,
+          1157
+        ]
+      }
+    }
+  },
+  "geometry": {
+    "Stock": {
+      "width": 60.0,
+      "height": 70.125,
+      "inner": [
+        21.0,
+        23.34375,
+        20.34375,
+        23.25,
+        20.34375,
+        23.34375,
+        21.09375,
+        24.09375,
+        21.0,
+        24.375,
+        21.0,
+        24.0
+      ],
+      "outer": [
+        29.90625,
+        33.75,
+        29.8125,
+        34.875,
+        29.8125,
+        33.75,
+        30.0,
+        34.5,
+        30.28125,
+        35.25,
+        30.28125,
+        34.40625
+      ],
+      "thickness": [
+        8.90625,
+        10.40625,
+        9.46875,
+        11.625,
+        9.46875,
+        10.40625,
+        8.90625,
+        10.40625,
+        9.28125,
+        10.875,
+        9.28125,
+        10.40625
+      ]
+    },
+    "Hunter": {
+      "width": 60.0,
+      "height": 70.125,
+      "inner": [
+        20.71875,
+        22.5,
+        20.34375,
+        23.71875,
+        20.34375,
+        22.59375,
+        20.625,
+        23.4375,
+        20.8125,
+        24.09375,
+        20.8125,
+        23.4375
+      ],
+      "outer": [
+        29.90625,
+        33.75,
+        29.8125,
+        34.875,
+        29.8125,
+        33.75,
+        30.0,
+        33.75,
+        29.90625,
+        35.25,
+        29.90625,
+        33.75
+      ],
+      "thickness": [
+        9.1875,
+        11.25,
+        9.46875,
+        11.15625,
+        9.46875,
+        11.15625,
+        9.375,
+        10.3125,
+        9.09375,
+        11.15625,
+        9.09375,
+        10.3125
+      ]
+    },
+    "Mage": {
+      "width": 58.5,
+      "height": 70.125,
+      "inner": [
+        20.25,
+        22.59375,
+        19.96875,
+        22.96875,
+        19.59375,
+        22.5,
+        20.34375,
+        22.59375,
+        19.96875,
+        23.34375,
+        19.96875,
+        22.5
+      ],
+      "outer": [
+        29.15625,
+        33.28125,
+        29.8125,
+        34.875,
+        29.8125,
+        33.75,
+        29.25,
+        33.0,
+        29.4375,
+        35.25,
+        29.8125,
+        33.28125
+      ],
+      "thickness": [
+        8.90625,
+        10.6875,
+        9.84375,
+        11.90625,
+        10.21875,
+        11.25,
+        8.90625,
+        10.40625,
+        9.46875,
+        11.90625,
+        9.84375,
+        10.78125
+      ]
+    },
+    "Paladin": {
+      "width": 59.25,
+      "height": 70.125,
+      "inner": [
+        20.71875,
+        22.5,
+        19.5,
+        22.96875,
+        19.96875,
+        22.59375,
+        20.625,
+        23.25,
+        20.4375,
+        24.09375,
+        20.34375,
+        22.96875
+      ],
+      "outer": [
+        29.625,
+        33.75,
+        29.8125,
+        34.875,
+        29.8125,
+        33.75,
+        29.53125,
+        33.28125,
+        29.8125,
+        35.25,
+        29.8125,
+        33.28125
+      ],
+      "thickness": [
+        8.90625,
+        11.25,
+        10.3125,
+        11.90625,
+        9.84375,
+        11.15625,
+        8.90625,
+        10.03125,
+        9.375,
+        11.15625,
+        9.46875,
+        10.3125
+      ]
+    },
+    "Druid": {
+      "width": 60.375,
+      "height": 70.125,
+      "inner": [
+        20.71875,
+        23.34375,
+        20.34375,
+        23.71875,
+        20.4375,
+        23.34375,
+        21.09375,
+        23.90625,
+        20.8125,
+        24.09375,
+        20.4375,
+        23.25
+      ],
+      "outer": [
+        29.90625,
+        33.75,
+        29.8125,
+        34.875,
+        30.0,
+        34.125,
+        30.0,
+        34.125,
+        29.90625,
+        35.25,
+        29.8125,
+        33.75
+      ],
+      "thickness": [
+        9.1875,
+        10.40625,
+        9.46875,
+        11.15625,
+        9.5625,
+        10.78125,
+        8.90625,
+        10.21875,
+        9.09375,
+        11.15625,
+        9.375,
+        10.5
+      ]
+    },
+    "Warrior": {
+      "width": 60.0,
+      "height": 70.125,
+      "inner": [
+        20.71875,
+        23.34375,
+        20.4375,
+        23.71875,
+        20.8125,
+        23.34375,
+        20.625,
+        23.25,
+        20.4375,
+        24.09375,
+        20.34375,
+        23.25
+      ],
+      "outer": [
+        29.90625,
+        33.75,
+        29.8125,
+        34.875,
+        30.0,
+        34.125,
+        30.0,
+        33.65625,
+        29.8125,
+        34.78125,
+        29.8125,
+        33.65625
+      ],
+      "thickness": [
+        9.1875,
+        10.40625,
+        9.375,
+        11.15625,
+        9.1875,
+        10.78125,
+        9.375,
+        10.40625,
+        9.375,
+        10.6875,
+        9.46875,
+        10.40625
+      ]
+    },
+    "Rogue": {
+      "width": 59.625,
+      "height": 70.125,
+      "inner": [
+        20.71875,
+        22.96875,
+        19.96875,
+        23.25,
+        20.4375,
+        23.34375,
+        21.09375,
+        23.25,
+        20.4375,
+        23.625,
+        20.34375,
+        22.96875
+      ],
+      "outer": [
+        29.625,
+        33.75,
+        29.4375,
+        34.875,
+        30.0,
+        33.75,
+        30.0,
+        33.65625,
+        29.8125,
+        35.25,
+        29.4375,
+        33.28125
+      ],
+      "thickness": [
+        8.90625,
+        10.78125,
+        9.46875,
+        11.625,
+        9.5625,
+        10.40625,
+        8.90625,
+        10.40625,
+        9.375,
+        11.625,
+        9.09375,
+        10.3125
+      ]
+    },
+    "Shaman": {
+      "width": 58.875,
+      "height": 70.125,
+      "inner": [
+        19.96875,
+        22.125,
+        19.5,
+        22.5,
+        19.59375,
+        22.5,
+        20.34375,
+        23.25,
+        20.4375,
+        23.625,
+        20.4375,
+        22.96875
+      ],
+      "outer": [
+        28.875,
+        33.28125,
+        29.4375,
+        34.875,
+        29.8125,
+        33.28125,
+        29.53125,
+        33.28125,
+        29.8125,
+        35.25,
+        29.4375,
+        32.90625
+      ],
+      "thickness": [
+        8.90625,
+        11.15625,
+        9.9375,
+        12.375,
+        10.21875,
+        10.78125,
+        9.1875,
+        10.03125,
+        9.375,
+        11.625,
+        9.0,
+        9.9375
+      ]
+    }
+  },
+  "thirdPartyMediaInputs": [],
+  "status": "Original common-thickness paintings; own geometry guide, own material references. Local opt-in review; maintainer/live/release approval pending."
+}

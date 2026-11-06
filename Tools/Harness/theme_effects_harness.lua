@@ -72,7 +72,7 @@ check(seen["hunter:case"] and seen["mage:crystal"], "Hunter case and Mage always
 -- Mage rebuilds the layouts with its own casings: a reload each way.
 check(E:SetTheme("mage") and reloads == 1 and ns.db.char.magePreview, "AzeriteUI to Mage reloads")
 ns.MageTheme.loadedActive = true
-check(E:GetTheme() == "mage" and E:GetCrystalEffect() == "mage" and E:GetOrbEffect() == "none", "Mage theme draws the Mage crystal")
+check(E:GetTheme() == "mage" and E:GetCrystalEffect() == "mage" and E:GetOrbEffect() == "none", "Mage keeps its approved default effects")
 seen = drawn()
 check(seen["mage:crystal"] and seen["mage:badge"] and not seen["hunter:case"], "the Mage crystal brings its own case and badge")
 local redraws = refreshes
@@ -88,7 +88,7 @@ check(E:NeedsReload("hunter") and E:NeedsReload("mage") and not E:NeedsReload("a
 E:SetTheme("hunter")
 check(reloads == 3 and ns.db.char.hunterPreview and not ns.db.char.magePreview, "switching to Hunter reloads")
 ns.HunterTheme.loadedActive = true
-check(E:GetTheme() == "hunter" and E:GetOrbEffect() == "hunter" and E:GetCrystalEffect() == "none", "Hunter brings its orb")
+check(E:GetTheme() == "hunter" and E:GetOrbEffect() == "hunter" and E:GetCrystalEffect() == "none", "Hunter keeps its approved default effects")
 seen, orb = drawn()
 check(orb and seen["hunter:orb"] and seen["hunter:case"], "Hunter orb and case drawn")
 check(E:NeedsReload("mage") and E:NeedsReload("azerite"), "leaving a built Hunter layout reloads")
@@ -102,7 +102,7 @@ check(E:SetOrbChoice("paladin") and E:GetOrbEffect() == "paladin", "Paladin orb 
 check(reloads == before, "Lite+ changes never reload")
 seen, orb = drawn()
 check(orb and seen["paladin:orb"] and not seen["hunter:orb"] and seen["mage:crystal"] and not seen["hunter:case"], "picked effects drawn instead of the theme's")
-check(not E:SetCrystalChoice("hunter") and E:GetCrystalChoice() == "mage", "an effect a crystal does not have is refused")
+check(not E:SetCrystalChoice("bogus") and E:GetCrystalChoice() == "mage", "an unknown crystal effect is refused")
 check(E:SetOrbChoice("none") and E:GetOrbEffect() == "none", "Lite+ can switch an effect off")
 check(E:SetLitePlus(false) and E:GetCrystalEffect() == "none" and E:GetOrbEffect() == "hunter", "Lite+ off returns to the theme's own, choices kept")
 check(ns.db.char.themeCrystalEffect == "mage", "choices survive Lite+ off")
