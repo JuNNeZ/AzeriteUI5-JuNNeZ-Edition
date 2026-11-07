@@ -41,6 +41,34 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.37.0-JuNNeZ",
+		items = {
+			{
+				text = "Tank mode: threat colours for tanks, the name of who a loose mob attacks, and a lost-aggro sound.",
+				page = L["Nameplates"],
+				section = L["Tank mode"]
+			},
+			{
+				text = "Threat percent beside your target's name while in a group.",
+				page = L["Unit Frames"],
+				section = L["Target"]
+			},
+			{
+				text = "Friendly NPCs can show names only, with their title such as <Innkeeper>.",
+				page = L["Nameplates"],
+				section = L["Friendly NPCs"]
+			},
+			{
+				text = "Class colour switches for enemy and friendly players, and class colours in PvP.",
+				page = L["Nameplates"],
+				section = L["Colors"]
+			},
+			{
+				text = "Stance bar clicks cast the form once, and Import's Accept works after pasting."
+			},
+		}
+	},
+	{
 		version = "5.36.0-JuNNeZ",
 		items = {
 			{

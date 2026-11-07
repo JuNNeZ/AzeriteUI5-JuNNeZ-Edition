@@ -890,6 +890,12 @@ local GenerateOptions = function()
 			desc = L["Show current target health percent next to target health value text."],
 			order = 22, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
 		}
+		-- Target.lua, ThreatPercent_Update.
+		suboptions.args.showThreatPercent = {
+			name = L["Show Threat Percent"],
+			desc = L["In a group, show your threat on the target beside its name: 100% while you are tanking it, otherwise your share of the tank's threat. You pull it at 110% in melee range and 130% at range."],
+			order = 22.5, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+		}
 		suboptions.args.showPowerValue = {
 			name = L["Show Power Value"],
 			desc = L["Toggle whether to show current power text on the target power bar."],

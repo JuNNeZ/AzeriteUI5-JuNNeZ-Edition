@@ -144,6 +144,10 @@ ns.RegisterConfig("TargetFrame", {
 	NameFont = GetFont(18, true),
 	NameColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .75 },
 
+	-- Threat percent, left of the name (Target.lua, ThreatPercent_Update).
+	ThreatPercentOffset = { -10, 0 },
+	ThreatPercentFont = GetFont(14, true),
+
 	-- Portrait
 	-----------------------------------------
 	PortraitPosition = { "TOPRIGHT", -40, -31 },

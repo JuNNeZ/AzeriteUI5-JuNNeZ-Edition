@@ -1996,6 +1996,90 @@ Plate13 (follower)
   native auras shown@1 unit=nameplate13 enabled=true pt=CENTER>Auras:CENTER(0,0)
   power hidden@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== names only for friendly NPCs
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=2.276
+  name shown@1 text="Treni" color=0.251,0.514,0.149 pt=BOTTOM>BlizzPlate:BOTTOM(0,0) scale=2.5
+  health hidden@0 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar hidden@0; backdrop hidden@0
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=BOTTOM>Name:TOP(0,4); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras hidden@1 unit=nameplate4 enabled=false pt=CENTER>Auras:CENTER(0,0)
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=2.276
+  name shown@1 text="Late Arrival" color=0.251,0.514,0.149 pt=BOTTOM>BlizzPlate:BOTTOM(0,0) scale=2.5
+  health hidden@0 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar hidden@0; backdrop hidden@0
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=BOTTOM>Name:TOP(0,4); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power hidden@0; prediction hidden@0
+  execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate12 (vendor)
+  unit=nameplate12 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=2.276
+  name shown@1 text="Innkeeper Allison" color=0.251,0.514,0.149 pt=BOTTOM>FontString:TOP(0,0) scale=2.5
+  health hidden@0 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar hidden@0; backdrop hidden@0
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@0 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=BOTTOM>Name:TOP(0,4); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras hidden@1 unit=nameplate12 enabled=false pt=CENTER>Auras:CENTER(0,0)
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+== names only for friendly NPCs, off again
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate4 (friendly NPC)
+  unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Treni" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate11 (late arrival)
+  unit=nameplate11 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Late Arrival" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras none
+  power hidden@0; prediction hidden@0
+  execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate12 (vendor)
+  unit=nameplate12 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name shown@1 text="Innkeeper Allison" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate12 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power hidden@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == friendly NPC plates switched off in the game
 Plate4 (friendly NPC)
   unit=nameplate4 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
@@ -2008,7 +2092,7 @@ Plate4 (friendly NPC)
   badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
-  power shown@0; prediction hidden@0
+  power hidden@0; prediction hidden@0
   softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
 Plate11 (late arrival)
   unit=nameplate11 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
@@ -2021,7 +2105,7 @@ Plate11 (late arrival)
   badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras none
-  power shown@0; prediction hidden@0
+  power hidden@0; prediction hidden@0
   execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
   softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
 Plate12 (vendor)
@@ -2035,7 +2119,7 @@ Plate12 (vendor)
   badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate12 enabled=true pt=CENTER>Auras:CENTER(0,0)
-  power shown@0; prediction hidden@0
+  power hidden@0; prediction hidden@0
   softTarget parent=Plate ignore=false alpha=0 pt=BOTTOM>Name:TOP(0,0); widgets shown@0 ignore=false
 == the game's visibility settings followed
   cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowFriendlyNpcs=1 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15
@@ -2050,7 +2134,7 @@ Plate4 (friendly NPC)
   badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
-  power shown@0; prediction hidden@0
+  power hidden@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 Plate11 (late arrival)
   unit=nameplate11 obj=nil npc=true prd=false widgetsOnly=false canAttack=false
@@ -2063,7 +2147,7 @@ Plate11 (late arrival)
   badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=true shown@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras none
-  power shown@0; prediction hidden@0
+  power hidden@0; prediction hidden@0
   execute line hidden@1 pt=CENTER>Health:LEFT(18.4,0); zone hidden@secret:0 w=18.4 tex=0.055,0.233 pt=TOPLEFT>Health:TOPLEFT(0,0)
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 Plate12 (vendor)
@@ -2078,7 +2162,7 @@ Plate12 (vendor)
   badge hidden@1 tex=nil; highlight hidden@1 color=0.725,1,0.714; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate12 enabled=true pt=CENTER>Auras:CENTER(0,0)
-  power shown@0; prediction hidden@0
+  power hidden@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == the visibility settings passed through
   cvars nameplateShowFriendlyNpcs=1
@@ -2095,7 +2179,7 @@ Plate4 (friendly NPC)
   badge hidden@1 tex=nil; highlight hidden@1 color=1,0.937,0.663; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate4 enabled=true pt=CENTER>Auras:CENTER(0,0)
-  power shown@0; prediction hidden@0
+  power hidden@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 Plate5 (friendly player)
   unit=nameplate5 obj=nil npc=false prd=false widgetsOnly=false canAttack=false
@@ -2163,6 +2247,48 @@ Plate17 (dead player)
   badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate17 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
+== class colours
+  cvars nameplateMaxAlpha=1 nameplateMaxAlphaDistance=10 nameplateMaxDistance=40 nameplateMaxScale=1 nameplateMaxScaleDistance=10 nameplateMinAlpha=0.4 nameplateMinAlphaDistance=5 nameplateMinScale=1 nameplateMinScaleDistance=5 nameplateOccludedAlphaMult=0.15 nameplateOtherAtBase=0 nameplatePlayerMaxDistance=40 nameplateSelectedAlpha=1 nameplateSelectedScale=1 nameplateShowDebuffsOnFriendly=0 nameplateShowOnlyNameForFriendlyPlayerUnits=0 nameplateSimplifiedScale=1 nameplateTargetBehindMaxDistance=15 nameplateUseClassColorForFriendlyPlayerUnitNames=0
+Plate18 (?)
+  unit=nil obj=nil npc=nil prd=nil widgetsOnly=nil canAttack=nil
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.412,0.8,0.941 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate18 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
+Plate19 (?)
+  unit=nil obj=nil npc=nil prd=nil widgetsOnly=nil canAttack=nil
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=1.138
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0.251,0.514,0.149 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate19 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power hidden@0; prediction hidden@0
+  softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
+== tank mode
+Plate20 (?)
+  unit=nil obj=nil npc=nil prd=nil widgetsOnly=nil canAttack=nil
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0,0.447,0.698 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate20 enabled=true pt=CENTER>Auras:CENTER(0,0)
   power shown@0; prediction hidden@0
   softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
 == your target's floating name

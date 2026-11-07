@@ -77,6 +77,7 @@ local GetCurrentContentType = NP.GetCurrentContentType
 local ResolveNameContext = NP.ResolveNameContext
 local GetContentSetting = NP.GetContentSetting
 local UpdateExecuteMarker = NP.UpdateExecuteMarker
+local IsTankModeActive = NP.IsTankModeActive
 
 local callback = function(self, event, unit)
 	if (event == "NAME_PLATE_UNIT_ADDED") then
@@ -159,6 +160,12 @@ local callback = function(self, event, unit)
 		self.isSoftInteract = nil
 		self.isObjectPlate = nil
 		self.nameplateShowsWidgetsOnly = nil
+		-- A reused frame must not carry the last unit's tank state into a lost-aggro sound.
+		self.__AzeriteUI_TankState = nil
+		if (self.TankTarget) then
+			self.TankTarget:SetText("")
+			self.TankTarget:Hide()
+		end
 
 		if (self.RaidTargetIndicator) then
 			self.RaidTargetIndicator:Hide()
@@ -385,8 +392,28 @@ NamePlatesMod.OnCombatStart = function(self, event)
 	end
 end
 
+-- Tank mode follows your role, form and group (Visibility.lua, IsTankModeActive), and the co-tank
+-- colour the group's roles. A form change recolours only when it switched tank mode; a group or role
+-- change always does, since another member's role may have changed. Only the health colours are
+-- redone (the threat state, target names and lost-aggro tracking ride on them).
+NamePlatesMod.OnTankContextChanged = function(self, event)
+	local active = IsTankModeActive() and true or false
+	if (event == "UPDATE_SHAPESHIFT_FORM" and active == (self.tankModeActive or false)) then
+		return
+	end
+	self.tankModeActive = active
+	for plate in next, ns.ActiveNamePlates do
+		local health = plate.Health
+		if (health and health.UpdateColor and plate.unit) then
+			health.UpdateColor(plate, event, plate.unit)
+		end
+	end
+end
+
 NamePlatesMod.OnEvent = function(self, event, ...)
-	if (event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_FOCUS_CHANGED"
+	if (event == "UPDATE_SHAPESHIFT_FORM" or event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ROLES_ASSIGNED") then
+		return self:OnTankContextChanged(event)
+	elseif (event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_FOCUS_CHANGED"
 		or event == "PLAYER_SOFT_ENEMY_CHANGED" or event == "PLAYER_SOFT_INTERACT_CHANGED") then
 		return self:OnSelectionChanged(event)
 	elseif (event == "PLAYER_REGEN_DISABLED") then
@@ -631,6 +658,13 @@ NamePlatesMod.OnEnable = function(self)
 	-- Quest marks (Elements.lua, QuestMarker_Update). QUEST_LOG_UPDATE follows every objective,
 	-- accept and turn-in, so the unit-filtered UNIT_QUEST_LOG_CHANGED would only add duplicates.
 	self:RegisterEvent("QUEST_LOG_UPDATE", "OnEvent")
+	-- Tank mode (OnTankContextChanged). Only events the client has: registering an unknown one raises.
+	for _, event in next, { "UPDATE_SHAPESHIFT_FORM", "GROUP_ROSTER_UPDATE", "PLAYER_ROLES_ASSIGNED" } do
+		if (not (C_EventUtils and C_EventUtils.IsEventValid) or C_EventUtils.IsEventValid(event)) then
+			self:RegisterEvent(event, "OnEvent")
+		end
+	end
+	self.tankModeActive = IsTankModeActive() and true or false
 
 	-- A spec, talent or spell change can move the execute threshold; only the markers follow it.
 	if (ns.API.RegisterExecuteThresholdCallback and not self.executeThresholdCallback) then

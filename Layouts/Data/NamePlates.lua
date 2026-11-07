@@ -112,6 +112,12 @@ ns.RegisterConfig("NamePlates", {
 	CastBarTargetFont = GetFont(11, true),
 	CastBarTargetColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .85 },
 
+	-- Tank mode: who a mob you do not hold is hitting, under the health value (hidden while casting,
+	-- where the cast target sits). Class colour for players, this colour for anything else.
+	TankTargetPosition = { "TOP", "BOTTOM", 0, -13 },
+	TankTargetFont = GetFont(11, true),
+	TankTargetColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .85 },
+
 	-- Glows behind the castbar: an important cast, and a cast aimed at you.
 	-- Same art as the threat glow, a little larger than the bar.
 	CastBarGlowPosition = { "CENTER", 0, 0 },
@@ -137,6 +143,7 @@ ns.RegisterConfig("NamePlates", {
 	NameJustifyH = "CENTER",
 	NameJustifyV = "MIDDLE",
 	NameFont = GetFont(12,true),
+	NameTitleFont = GetFont(11,true), -- a friendly NPC's title; 11 is the smallest outlined size FontStyles.xml defines
 	NameColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .5 },
 
 	-- Auras

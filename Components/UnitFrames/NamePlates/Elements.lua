@@ -40,6 +40,7 @@ local GetNamePlateRaidTargetSize = NP.GetNamePlateRaidTargetSize
 local GetThreatColor = NP.GetThreatColor
 local IsSafeTrue = NP.IsSafeTrue
 local IsSafeFalse = NP.IsSafeFalse
+local IsSecretValue = NP.IsSecretValue
 local GetSafeColorByKey = NP.GetSafeColorByKey
 local GetNamePlateWidgetLift = NP.GetNamePlateWidgetLift
 local AnchorStandardNamePlateHealthBar = NP.AnchorStandardNamePlateHealthBar
@@ -54,6 +55,9 @@ local GetExecuteMarkerStyle = NP.GetExecuteMarkerStyle
 local GetExecuteLeadCurve = NP.GetExecuteLeadCurve
 local IsFightingYou = NP.IsFightingYou
 local GetNamePlateBarLayout = NP.GetNamePlateBarLayout
+local GetTankThreatState = NP.GetTankThreatState
+local GetTankThreatColor = NP.GetTankThreatColor
+local SafeUnitMatches = NP.SafeUnitMatches
 
 -- Execute Marker
 --------------------------------------------
@@ -220,6 +224,67 @@ local Health_PostUpdate = function(element, unit, cur, max)
 	end
 end
 
+-- Tank mode extras (Visibility.lua, GetTankThreatState)
+--------------------------------------------
+-- The name of whoever a mob you do not hold is hitting, under its plate, in their class colour. The
+-- name and class may be secret; they only go into SetText and, through C_ClassColor, SetTextColor.
+-- Hidden while the castbar shows: its own cast target sits in the same place.
+local TankTarget_Update = function(self)
+	local text = self and self.TankTarget
+	if (not text) then
+		return
+	end
+	local state = self.__AzeriteUI_TankState
+	local profile = NamePlatesMod.db and NamePlatesMod.db.profile
+	local castbar = self.Castbar
+	local unit = self.unit
+	if (profile and profile.tankTargetNames and (state == "lost" or state == "cotank")
+		and type(unit) == "string" and not (castbar and castbar:IsShown())) then
+		local target = unit .. "target"
+		if (IsSafeTrue(UnitExists(target)) and not SafeUnitMatches(target, "player")) then
+			local name = UnitName(target)
+			if (IsSecretValue(name) or type(name) == "string") then
+				text:SetText(name)
+				local base = ns.GetConfig("NamePlates").TankTargetColor
+				text:SetTextColor(base[1], base[2], base[3], base[4] or 1)
+				if (IsSafeTrue(UnitIsPlayer(target)) and C_ClassColor and C_ClassColor.GetClassColor) then
+					API.TryCall(function()
+						local _, class = UnitClass(target)
+						local color = C_ClassColor.GetClassColor(class)
+						if (color) then
+							local r, g, b = color:GetRGB()
+							text:SetTextColor(r, g, b, 1)
+						end
+					end)
+				end
+				text:Show()
+				return
+			end
+		end
+	end
+	text:Hide()
+end
+
+-- Stores the plate's tank state and, when a mob you held went to someone who is not a tank, plays
+-- the lost-aggro sound if it is on (once per LOST_AGGRO_SOUND_INTERVAL for all plates together).
+local LOST_AGGRO_SOUND_INTERVAL = 2
+local lastLostAggroSound
+local TankThreat_Update = function(self, state)
+	local previous = self.__AzeriteUI_TankState
+	self.__AzeriteUI_TankState = state or nil
+	if (state == "lost" and (previous == "held" or previous == "slipping")) then
+		local profile = NamePlatesMod.db and NamePlatesMod.db.profile
+		if (profile and profile.tankLostAggroSound and type(PlaySound) == "function") then
+			local now = GetTime()
+			if (not lastLostAggroSound or now - lastLostAggroSound >= LOST_AGGRO_SOUND_INTERVAL) then
+				lastLostAggroSound = now
+				PlaySound(SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959, "Master")
+			end
+		end
+	end
+	TankTarget_Update(self)
+end
+
 local Health_UpdateColor = function(self, event, unit)
 	if(not unit or self.unit ~= unit) then return end
 	local element = self.Health
@@ -228,16 +293,33 @@ local Health_UpdateColor = function(self, event, unit)
 	local isPlayer = UnitIsPlayer(unit)
 	local threatColor
 	if (element.colorThreat and IsSafeFalse(isPlayerControlled)) then
-		threatColor = GetThreatColor(self, UnitThreatSituation("player", unit))
+		local status = UnitThreatSituation("player", unit)
+		-- Tank mode decides alone when it applies; held on the default preset is no threat colour.
+		local tankState = GetTankThreatState(self, status)
+		TankThreat_Update(self, tankState)
+		if (tankState ~= nil) then
+			threatColor = tankState and GetTankThreatColor(tankState) or nil
+		else
+			threatColor = GetThreatColor(self, status)
+		end
+	else
+		TankThreat_Update(self, nil)
 	end
+	local canAttack = UnitCanAttack("player", unit)
 	local classHostilityAllowed = self.isPRD
 		or not element.colorClassHostileOnly
-		or IsSafeTrue(UnitCanAttack("player", unit))
-	local useClassColor = classHostilityAllowed and (
-		(element.colorClass and IsSafeTrue(isPlayer))
-		or (element.colorClassNPC and IsSafeFalse(isPlayer))
-		or (element.colorClassPet and IsSafeTrue(isPlayerControlled) and IsSafeFalse(isPlayer))
-	)
+		or IsSafeTrue(canAttack)
+	-- Players follow the per-side switches on the Nameplates page (Class colors).
+	local profile = NamePlatesMod.db and NamePlatesMod.db.profile
+	local playerClassAllowed = self.isPRD
+		or not element.colorClassHostileOnly
+		or (IsSafeTrue(canAttack) and not (profile and profile.classColorEnemyPlayers == false))
+		or (IsSafeFalse(canAttack) and profile and profile.classColorFriendlyPlayers)
+	local useClassColor = (element.colorClass and IsSafeTrue(isPlayer) and playerClassAllowed)
+		or (classHostilityAllowed and (
+			(element.colorClassNPC and IsSafeFalse(isPlayer))
+			or (element.colorClassPet and IsSafeTrue(isPlayerControlled) and IsSafeFalse(isPlayer))
+		))
 
 	local r, g, b, color
 	if (element.colorDisconnected and IsSafeFalse(isConnected)) then
@@ -248,7 +330,26 @@ local Health_UpdateColor = function(self, event, unit)
 		color = threatColor
 	elseif (useClassColor) then
 		local _, class = UnitClass(unit)
-		color = GetSafeColorByKey(self.colors.class, class, self.colors.health)
+		if (IsSecretValue(class)) then
+			-- UnitClass is SecretWhenUnitIdentityRestricted (PvP). C_ClassColor takes secret
+			-- arguments from addons and its colour goes straight to the widgets, as Plater and
+			-- Platynator do; no test or arithmetic on it below.
+			local classColor = C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class)
+			if (type(classColor) == "table") then
+				local sr, sg, sb = classColor.r, classColor.g, classColor.b
+				element:SetStatusBarColor(sr, sg, sb)
+				if (element.bg) then
+					element.bg:SetVertexColor(sr, sg, sb)
+				end
+				if (element.PostUpdateColor) then
+					element:PostUpdateColor(unit, sr, sg, sb)
+				end
+				return
+			end
+			color = self.colors.health
+		else
+			color = GetSafeColorByKey(self.colors.class, class, self.colors.health)
+		end
 	elseif (element.colorReaction) then
 		local reaction = UnitReaction(unit, "player")
 		color = GetSafeColorByKey(self.colors.reaction, reaction, self.colors.health)
@@ -294,7 +395,10 @@ end
 -- Update the health preview color on health color updates.
 local Health_PostUpdateColor = function(element, unit, r, g, b)
 	local preview = element.Preview
-	if (preview and g) then
+	if (preview and IsSecretValue(g)) then
+		-- A secret class colour (Health_UpdateColor) cannot be darkened here.
+		preview:SetStatusBarColor(r, g, b)
+	elseif (preview and g) then
 		preview:SetStatusBarColor(r * .7, g * .7, b * .7)
 	end
 end
@@ -614,6 +718,7 @@ end
 NP.UpdateExecuteMarker = UpdateExecuteMarker
 NP.Health_PostUpdate = Health_PostUpdate
 NP.Health_UpdateColor = Health_UpdateColor
+NP.TankTarget_Update = TankTarget_Update
 NP.Health_PostUpdateColor = Health_PostUpdateColor
 NP.Power_PostUpdate = Power_PostUpdate
 NP.TargetHighlight_Update = TargetHighlight_Update

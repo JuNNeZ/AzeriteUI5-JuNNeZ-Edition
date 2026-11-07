@@ -1855,14 +1855,35 @@ Controls.CreateMultiline = function(parent)
 	Kit.SetGlyph(acceptIcon, "check")
 	control.acceptIcon = acceptIcon
 
-	local Commit = function()
-		control.committed = edit:GetText()
+	-- Hands the field's text to the option without touching focus. The page
+	-- refreshes after it, so controls that depend on this text (the import
+	-- page's Accept button) see it. Pasting alone used to leave it waiting for
+	-- the small tick, and Accept stayed disabled.
+	local Push = function()
+		local text = edit:GetText()
 		accept:Hide()
+		if (text == (control.committed or "")) then return end
+		control.committed = text
+		control:Fire(text)
+	end
+
+	local Commit = function()
 		edit:ClearFocus()
-		control:Fire(control.committed)
+		Push()
 	end
 
 	accept:SetScript("OnClick", Commit)
+
+	-- One push per pause rather than per keystroke: a paste is one change, and
+	-- typing commits once the user stops.
+	local pushSerial = 0
+	local SchedulePush = function()
+		pushSerial = pushSerial + 1
+		local serial = pushSerial
+		C_Timer.After(.4, function()
+			if (serial == pushSerial and control.frame:IsVisible()) then Push() end
+		end)
+	end
 
 	control.SetNumLines = function(self, lines)
 		self.lines = max(3, tonumber(lines) or 4)
@@ -1876,6 +1897,12 @@ Controls.CreateMultiline = function(parent)
 
 	control.SetValue = function(self, text)
 		self.committed = text or ""
+		-- The refresh after a push hands the same text back; leave the caret
+		-- and scroll where the user has them.
+		if (edit:GetText() == self.committed) then
+			accept:Hide()
+			return
+		end
 		edit:SetText(self.committed)
 		edit:SetCursorPosition(0)
 		self.scroll:SetVerticalScroll(0)
@@ -1932,10 +1959,14 @@ Controls.CreateMultiline = function(parent)
 	edit:SetScript("OnTextChanged", function(self, userInput)
 		if (userInput) then
 			accept:SetShown(self:GetText() ~= (control.committed or ""))
+			if (not control.disabled) then SchedulePush() end
 		end
 	end)
 	edit:SetScript("OnEditFocusGained", function() control:Restyle() end)
-	edit:SetScript("OnEditFocusLost", function() control:Restyle() end)
+	edit:SetScript("OnEditFocusLost", function()
+		control:Restyle()
+		if (not control.disabled) then Push() end
+	end)
 
 	control:SetNumLines(4)
 	control:SetValue("")

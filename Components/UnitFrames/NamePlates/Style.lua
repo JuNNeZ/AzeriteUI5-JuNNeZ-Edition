@@ -57,6 +57,17 @@ local NamePlate_PostUpdateElements = NP.NamePlate_PostUpdateElements
 local NamePlate_PostUpdate = NP.NamePlate_PostUpdate
 local NamePlate_OnHide = NP.NamePlate_OnHide
 local NamePlate_OnEvent = NP.NamePlate_OnEvent
+local TankTarget_Update = NP.TankTarget_Update
+
+local TankTarget_OnEvent = function(self, event, unit)
+	if (issecretvalue(unit)) then
+		unit = nil
+	end
+	if (unit and unit ~= self.unit) then
+		return
+	end
+	TankTarget_Update(self)
+end
 
 --[[
 	Mirror UIParent's alpha onto our nameplates, so they fade out when Immersion
@@ -270,6 +281,21 @@ local style = function(self, unit, id)
 	self.Health.Value = healthValue
 	NamePlate_ApplyHealthValueLayout(self)
 
+	-- Tank mode: who a mob you do not hold is hitting (Elements.lua, TankTarget_Update). Out of the
+	-- castbar's way: it hides while the castbar shows and comes back when it hides.
+	local tankTarget = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
+	local ttPoint, ttRelative, ttX, ttY = unpack(db.TankTargetPosition or { "TOP", "BOTTOM", 0, -13 })
+	tankTarget:SetPoint(ttPoint, health, ttRelative, ttX, ttY)
+	tankTarget:SetFontObject(db.TankTargetFont or db.CastBarTargetFont or db.CastBarNameFont)
+	tankTarget:SetJustifyH("CENTER")
+	if (tankTarget.SetWordWrap) then
+		tankTarget:SetWordWrap(false)
+	end
+	tankTarget:Hide()
+	self.TankTarget = tankTarget
+	castbar:HookScript("OnShow", function(element) TankTarget_Update(element.__owner or self) end)
+	castbar:HookScript("OnHide", function(element) TankTarget_Update(element.__owner or self) end)
+
 	-- Power
 	--------------------------------------------
 	local power = CreateFrame("StatusBar", nil, self)
@@ -323,6 +349,20 @@ local style = function(self, unit, id)
 	self:Tag(name, prefix("[*:NamePlateName]"))
 
 	self.Name = name
+
+	-- A friendly NPC's title under its name-only name, such as <Innkeeper>. Set and shown only by
+	-- UpdateFriendlyNPCTitle (Visibility.lua); hidden everywhere else.
+	local nameTitle = self:CreateFontString(nil, "OVERLAY", nil, 1)
+	nameTitle:SetFontObject(db.NameTitleFont or db.NameFont)
+	nameTitle:SetTextColor(unpack(db.NameColor))
+	nameTitle:SetJustifyH(db.NameJustifyH)
+	nameTitle:SetJustifyV(db.NameJustifyV)
+	if (nameTitle.SetWordWrap) then
+		nameTitle:SetWordWrap(false)
+	end
+	nameTitle:Hide()
+
+	self.NameTitle = nameTitle
 
 	-- Target Highlight
 	--------------------------------------------
@@ -422,6 +462,9 @@ local style = function(self, unit, id)
 	-- change used to be caught only by the full relayouts those events caused; it has its own now.
 	self:RegisterEvent("UNIT_CLASSIFICATION_CHANGED", NamePlate_OnEvent)
 	self:RegisterEvent("UNIT_FACTION", NamePlate_OnEvent)
+	-- A mob switching targets changes only the tank-mode target name; its threat colour follows
+	-- UNIT_THREAT_LIST_UPDATE (oUF's health element).
+	self:RegisterEvent("UNIT_TARGET", TankTarget_OnEvent)
 
 	if (not uiParentAlphaHooked) then
 		uiParentAlphaHooked = true

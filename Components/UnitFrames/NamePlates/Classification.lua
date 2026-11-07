@@ -127,6 +127,8 @@ local NamePlate_Classify = function(plate, unit)
 
 	plate.canAttack = (canAttack == true)
 	plate.canAssist = (canAssist == true)
+	-- Keys the NPC title cache (Visibility.lua, GetFriendlyNPCTitle); nil for a secret GUID.
+	plate.npcID = (type(npcID) == "string" and npcID ~= "") and npcID or nil
 	plate.isPlayerUnit = isPlayerUnit and true or nil
 
 	-- The game's own answer comes first: Blizzard's plate hides an object's health bar on it

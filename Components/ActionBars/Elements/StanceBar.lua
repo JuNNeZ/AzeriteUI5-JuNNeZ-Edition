@@ -354,6 +354,20 @@ StanceBar.Disable = function(self)
 	self:Hide()
 end
 
+-- Blizzard's StanceButtonMixin_OnClick ignores `down` and casts the form on every click it
+-- receives (Blizzard_ActionBar/Shared/StanceBar.lua registers only "AnyUp"). The shared
+-- ButtonBar config registers both transitions for LAB buttons, which made one click cast the
+-- form on press and cancel it on release (Discord: bear form enters and exits). Register
+-- exactly one transition here, chosen by the cast-on-key-down setting.
+StanceBar.UpdateButtonConfig = function(self)
+	if (InCombatLockdown()) then return end
+	local clickOnDown = self.config.clickOnDown and true or false
+	for id,button in next,self.buttons do
+		button.config.clickOnDown = clickOnDown
+		button:RegisterForClicks(clickOnDown and "AnyDown" or "AnyUp")
+	end
+end
+
 StanceBar.Update = function(self)
 	if (InCombatLockdown()) then
 		self:UpdateFading()

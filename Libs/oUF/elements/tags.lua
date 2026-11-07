@@ -316,7 +316,11 @@ local tagStrings = {
 
 	['raidcolor'] = [[function(u)
 		local _, class = UnitClass(u)
-		if(class) then
+		if(issecretvalue and issecretvalue(class)) then
+			-- AzeriteUI: as upstream oUF (c5ff6e4, issue #873): a secret class asks C_ClassColor.
+			local color = C_ClassColor and C_ClassColor.GetClassColor(class)
+			return color and color:GenerateHexColorMarkup()
+		elseif(class) then
 			return _COLORS.class[class]:GenerateHexColorMarkup()
 		else
 			local id = u:match('arena(%d)$')

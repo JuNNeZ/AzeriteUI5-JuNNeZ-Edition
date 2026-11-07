@@ -10,6 +10,32 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.37.0-JuNNeZ (2026-11-07) - Tank Tools and Friendly NPC Names
+
+### Highlights
+
+- **Names only for friendly NPCs, with their title.** Turn on **Use names only for friendly NPCs** at `/az -> Nameplates -> Friendly NPCs` and friendly NPC nameplates show just their name in green, without a health bar. **Show NPC titles** (on by default) adds the line under the name, such as `<Innkeeper>` or `<Flight Master>`. The name size follows the friendly name size sliders under Friendly Players.
+- **Tank mode for nameplates.** While you tank, threat colours mean something for a tank: mobs you hold stay calm, a mob about to be pulled from you warns, a mob someone else has stands out, and a mob held by another tank has its own blue. A mob you do not hold shows the name of the player it is attacking under its health bar, and an optional sound warns you when you lose a mob to someone who is not a tank. By default it turns on in a group when you have the Tank role or a tank specialization, or are in Bear Form, Dire Bear Form or Defensive Stance. Settings are at `/az -> Nameplates -> Tank mode`.
+- **Threat percent on the target frame.** In a group, your threat on the target shows beside its name: 100% while you are tanking it, otherwise your share of the tank's threat. Switch it at `/az -> Unit Frames -> Target -> Show Threat Percent`.
+- **Class colours for player nameplates, now with switches.** **Class colors for enemy players** (on, as before) and **Class colors for friendly players** (new, off) are at `/az -> Nameplates -> Colors`. Players whose class the game hides in PvP are now class coloured too, on nameplates and on the target, focus, target of target, party and raid frames.
+- **Stance bar: one click, one form.** Clicking a form on the stance bar could enter it and leave it again straight away, because the click cast on both press and release. It now casts once, for clicks and for stance keybinds. Thanks to mariuschiarel for the report.
+- **Import: Accept works after pasting.** At `/az -> Export & Import`, the Accept button stayed disabled after you pasted a settings string. It now enables a moment after you paste.
+
+### Development
+
+- **Threat read the way the game allows.** Tank mode and the threat percent read the game's threat and role answers, which can be secret values in restricted content. Each answer is checked before it is used, and the features simply stand down when the game hides them, falling back to the plain threat colours. The offline tests feed them hidden threat, hidden roles and hidden names to prove nothing breaks.
+- **Hidden PvP classes, done as other nameplate addons do.** When the game hides a player's class, AzeriteUI now hands it to the game's own class colour lookup instead of giving up, the same approach Plater and Platynator use. The bundled unit frame library got the same fix that upstream oUF made. Hidden classes therefore get Blizzard's class colours, a slightly different shade from AzeriteUI's.
+- **NPC titles come from the tooltip.** No game function returns an NPC's title, so it is read from the second line of the NPC's tooltip, skipping the level line, and remembered per NPC for the session.
+
+### Access and known limits
+
+- **Confirmed in game on WoW Forever:** names only for friendly NPCs and their titles. Not yet checked on Retail.
+- **Checked offline only:** tank mode, threat percent, the class colour switches and hidden PvP classes, the stance bar fix and the Import fix.
+- Tank mode, mob target names and threat percent stay off where the game keeps threat information secret.
+- In dungeons and raids the game draws friendly nameplates itself, so names only for friendly NPCs does not apply there.
+- Name-only NPCs do not show the quest marker, as with name-only players.
+
+
 ## 5.36.0-JuNNeZ (2026-11-06) - Hex Buttons and Lite+ for Every Class
 
 ### Highlights

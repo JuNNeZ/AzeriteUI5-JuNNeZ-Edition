@@ -71,6 +71,13 @@ local defaults = { profile = ns:Merge({
 	-- Enemies fighting someone outside your group fade (Visibility.lua, IsFightingSomeoneElse).
 	combatFilter = false,
 	combatFilterAlpha = .35,
+	-- Tank mode (Visibility.lua, GetTankThreatState; since 2026-11-07). "auto": in a group with the Tank
+	-- role, a tank spec, or a tank form; "always"; "off" keeps the one palette for every role.
+	threatTankMode = "auto",
+	-- In tank mode, who a mob you do not hold is hitting, under its plate (Elements.lua, TankTarget_Update).
+	tankTargetNames = true,
+	-- In tank mode, a sound when a mob you held goes to someone who is not a tank. Off by default.
+	tankLostAggroSound = false,
 	-- The execute range on enemy plates (Elements.lua, ExecuteMarker_Update). 0 follows the class.
 	executeMarker = false,
 	executeThreshold = 0,
@@ -95,6 +102,14 @@ local defaults = { profile = ns:Merge({
 	threatColorPreset = "azerite",
 	healthValuePlacement = "below",
 	hideFriendlyPlayerHealthBar = false,
+	-- Friendly NPCs as names only, as friendly players above (ShouldUseFriendlyPlayerNameOnly), with their
+	-- title under the name, such as <Innkeeper>, read from the NPC's tooltip (Visibility.lua, since 2026-11-07).
+	friendlyNPCNameOnly = false,
+	showFriendlyNPCTitle = true,
+	-- Player health bars in class colour, per side (Elements.lua, Health_UpdateColor). Enemy on is the
+	-- behaviour before 2026-11-07; friendly is new and off. Secret classes (PvP) go through C_ClassColor.
+	classColorEnemyPlayers = true,
+	classColorFriendlyPlayers = false,
 	-- Friendly plates drawn only for your target and soft target, per kind (Visibility.lua,
 	-- ShouldShowNamePlateForBlizzardVisibility). The game's setting for the kind stays on, so the plates exist.
 	friendlyNPCsTargetOnly = false,
@@ -177,6 +192,45 @@ local GetThreatColor = function(self, status)
 		return palette[status]
 	end
 	return self.colors and self.colors.threat and self.colors.threat[status]
+end
+
+-- Tank mode's colours, per preset: held (you hold it; false keeps the plate's reaction colour, so
+-- held mobs look like any enemy), slipping (you hold it, someone is about to pull), lost (someone
+-- else has it), cotank (another group tank holds it). The colour-blind presets keep Okabe-Ito
+-- colours, held included, since their reaction red is not one of them.
+local tankThreatColorPresets = {
+	azerite = {
+		held = false,
+		slipping = { 249/255, 188/255, 55/255 },
+		lost = { 255/255, 64/255, 217/255 },
+		cotank = { 86/255, 140/255, 233/255 }
+	},
+	blueOrange = {
+		held = { 0/255, 114/255, 178/255 },
+		slipping = { 230/255, 159/255, 0/255 },
+		lost = { 213/255, 94/255, 0/255 },
+		cotank = { 86/255, 180/255, 233/255 }
+	},
+	tealPurple = {
+		held = { 0/255, 158/255, 115/255 },
+		slipping = { 240/255, 228/255, 66/255 },
+		lost = { 204/255, 121/255, 167/255 },
+		cotank = { 86/255, 180/255, 233/255 }
+	},
+	highContrast = {
+		held = { 148/255, 148/255, 148/255 },
+		slipping = { 0/255, 114/255, 178/255 },
+		lost = { 245/255, 245/255, 245/255 },
+		cotank = { 204/255, 121/255, 167/255 }
+	}
+}
+tankThreatColorPresets.deepYellow = tankThreatColorPresets.azerite
+
+-- The colour for a tank state, or nil for none (held on the default preset).
+local GetTankThreatColor = function(state)
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local palette = tankThreatColorPresets[profile and profile.threatColorPreset or "azerite"] or tankThreatColorPresets.azerite
+	return palette[state] or nil
 end
 
 local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
@@ -338,14 +392,26 @@ local IsPlayerForDisplay = function(unit)
 	return (not IsSecretValue(treatAsPlayer)) and treatAsPlayer == true
 end
 
+local IsFriendlyNPCNameOnlyEnabled = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return profile and profile.friendlyNPCNameOnly and true or false
+end
+
+-- A plate drawn as its name only: a friendly player (hideFriendlyPlayerHealthBar) or, since 2026-11-07, a
+-- friendly NPC (friendlyNPCNameOnly). The name is older than the NPC half; every name-only path asks this.
+-- isFriendlyAssistableNPC comes from NamePlate_Classify (Classification.lua): no players, pets or objects.
 local ShouldUseFriendlyPlayerNameOnly = function(self)
-	if (not IsFriendlyPlayerNameOnlyEnabled()) then
-		return false
-	end
 	if (not self or self.isPRD or self.isObjectPlate) then
 		return false
 	end
 	local unit = self.unit
+	if (self.isFriendlyAssistableNPC and IsFriendlyNPCNameOnlyEnabled() and IsSafeUnitToken(unit)
+		and not IsPlayerForDisplay(unit)) then
+		return true
+	end
+	if (not IsFriendlyPlayerNameOnlyEnabled()) then
+		return false
+	end
 	if (not IsPlayerForDisplay(unit)) then
 		return false
 	end
@@ -902,6 +968,7 @@ ns.NamePlatesPrivate = NP
 NP.NamePlatesMod = NamePlatesMod
 NP.defaults = defaults
 NP.GetThreatColor = GetThreatColor
+NP.GetTankThreatColor = GetTankThreatColor
 NP.FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT
 NP.FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT
 NP.FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = FRIENDLY_NAME_ONLY_NAME_OFFSET_Y
@@ -932,6 +999,7 @@ NP.IsSafeUnitToken = IsSafeUnitToken
 NP.SafeUnitMatches = SafeUnitMatches
 NP.GetNamePlateBarLayout = GetNamePlateBarLayout
 NP.IsFriendlyPlayerNameOnlyEnabled = IsFriendlyPlayerNameOnlyEnabled
+NP.IsFriendlyNPCNameOnlyEnabled = IsFriendlyNPCNameOnlyEnabled
 NP.IsPlayerForDisplay = IsPlayerForDisplay
 NP.ShouldUseFriendlyPlayerNameOnly = ShouldUseFriendlyPlayerNameOnly
 NP.GetValidatedProfileScale = GetValidatedProfileScale

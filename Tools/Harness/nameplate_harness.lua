@@ -144,6 +144,20 @@ function UnitIsPlayer(u) return field(u, "isPlayer") or false end
 function UnitTreatAsPlayerForDisplay(u) return field(u, "treatAsPlayer") or false end
 function UnitPlayerControlled(u) return field(u, "playerControlled") or false end
 function UnitIsMinion(u) return field(u, "minion") or false end
+-- A unit's tooltip as its record's `tooltip` lines (C_TooltipInfo.GetUnit): line 1 the name. A secret
+-- `tooltip` answers a secret second line, as an NPC's tooltip may in combat.
+LEVEL = LEVEL or "Level"
+C_TooltipInfo = { GetUnit = function(u)
+	local lines = field(u, "tooltip")
+	if (lines == nil) then return nil end
+	if (lines == SECRET) then
+		return { lines = { { leftText = "x", type = 2 }, { leftText = SECRET, type = 0 } } }
+	end
+	local data = { lines = {} }
+	for i, text in ipairs(lines) do data.lines[i] = { leftText = text, type = (i == 1) and 2 or 0 } end
+	W.tooltipReads = (W.tooltipReads or 0) + 1
+	return data
+end }
 function UnitIsTrivial(u) return field(u, "trivial") or false end
 function UnitClassification(u) return field(u, "classification") or "normal" end
 function UnitCreatureType(u) return field(u, "creatureType") end
@@ -166,6 +180,8 @@ function UnitThreatSituation(a, b)
 	if (rec and rec.threatBy) then
 		local status = rec.threatBy[a]
 		if (status == "secret") then return SECRET end
+		-- As the client hands one out: type() says "number", comparing it raises.
+		if (status == "secretnumber") then return SecretValue(3) end
 		return status
 	end
 	return field(b or a, "threat")
@@ -2013,6 +2029,56 @@ do
 	M:UpdateSettings()
 	Step("names only, the companion included")
 
+	-- Names only for friendly NPCs, with the title from the tooltip's second line (Visibility.lua,
+	-- GetFriendlyNPCTitle). Treni (P[4]) has only a level line, so no title.
+	W.units.nameplate12.tooltip = { "Innkeeper Allison", "Innkeeper", "Level 30" }
+	W.units.nameplate4.tooltip = { "Treni", "Level 80 Humanoid" }
+	W.profile.friendlyNPCNameOnly = true
+	M:UpdateSettings()
+	Step("names only for friendly NPCs")
+	check(not P[12].Health.__shown and P[12].Name.__shown, "a name-only NPC shows a name and no health bar")
+	check(P[13].Health.__shown and P[5].Health.__shown, "and leaves players and the companion their bars")
+	check(P[12].NameTitle.__shown and P[12].NameTitle:GetText() == "<Innkeeper>", "the innkeeper shows its title",
+		P[12].NameTitle:GetText())
+	do
+		local anchor = P[12].Name.__points[1]
+		check(anchor and anchor[1] == "BOTTOM" and anchor[2] == P[12].NameTitle and anchor[3] == "TOP",
+			"the name sits on its title")
+		local titleAnchor = P[12].NameTitle.__points[1]
+		check(titleAnchor and titleAnchor[1] == "BOTTOM" and titleAnchor[2] == P[12].blizzPlate,
+			"and the title on the bottom edge of Blizzard's plate")
+		anchor = P[4].Name.__points[1]
+		check(not P[4].NameTitle.__shown and anchor and anchor[2] == P[4].blizzPlate,
+			"an NPC whose second line is its level has no title, its name on the plate's edge",
+			tostring(P[4].NameTitle.__shown) .. " " .. tostring(P[4].NameTitle:GetText()) .. " "
+			.. tostring(anchor and anchor[1]) .. " " .. tostring(anchor and anchor[2] == P[4].NameTitle)
+			.. " friendlyNPC=" .. tostring(P[4].isFriendlyAssistableNPC) .. " health=" .. tostring(P[4].Health.__shown))
+	end
+	check(P[12].Name.__textColor and math.abs(P[12].Name.__textColor[2] - ns.Colors.reaction[5][2]) < 1e-6,
+		"a name-only NPC is drawn in its reaction colour, not its class colour")
+	local reads = W.tooltipReads
+	M:UpdateSettings()
+	check(W.tooltipReads == reads, "titles are cached per NPC ID", W.tooltipReads - reads)
+
+	W.profile.showFriendlyNPCTitle = false
+	M:UpdateSettings()
+	check(not P[12].NameTitle.__shown and P[12].Name.__points[1][2] == P[12].blizzPlate,
+		"Show NPC titles off hides the title and puts the name back on the plate's edge")
+	W.profile.showFriendlyNPCTitle = true
+
+	W.units.nameplate10.tooltip = SECRET
+	W.units.nameplate10.isFriend = true
+	M:UpdateSettings()
+	check(not P[10].NameTitle.__shown, "a secret tooltip line gives no title")
+
+	W.profile.friendlyNPCNameOnly = false
+	M:UpdateSettings()
+	check(P[12].Health.__shown and not P[12].NameTitle.__shown and P[12].Name.__points[1][2] ~= P[12].NameTitle,
+		"turned off, the NPC has its bar back and no title")
+	W.units.nameplate12.tooltip, W.units.nameplate4.tooltip, W.units.nameplate10.tooltip = nil, nil, nil
+	W.units.nameplate10.isFriend = nil
+	Step("names only for friendly NPCs, off again")
+
 	-- The game's visibility settings by the names Retail 12.1 has, the event naming them as it does.
 	W.cvars.nameplateShowFriendlyNpcs = "0"
 	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
@@ -2284,6 +2350,261 @@ do
 	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate16")
 	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate17")
 	Step("dead mobs")
+
+	-- Class colours per side (FixLog 2026-11-07). UnitClass is SecretWhenUnitIdentityRestricted, so in PvP
+	-- the class can be secret; the colour then comes from C_ClassColor (secret arguments allowed, as
+	-- Plater and Platynator use it) and goes to the bar untouched.
+	local savedClassColor = C_ClassColor
+	local classColorAsked
+	C_ClassColor = { GetClassColor = function(class)
+		classColorAsked = class
+		return { r = SecretValue(.25), g = SecretValue(.78), b = SecretValue(.92) }
+	end }
+	Unit("nameplate18", { name = "Arena Mage", guid = "Player-1-0018", canAttack = true, reaction = 2,
+		isPlayer = true, playerControlled = true, class = "MAGE", className = "Mage", classID = 8 })
+	Unit("nameplate19", { name = "Ally Mage", guid = "Player-1-0019", canAssist = true, isFriend = true, reaction = 5,
+		isPlayer = true, playerControlled = true, class = "MAGE", className = "Mage", classID = 8 })
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate18")
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate19")
+	Flush()
+	local function PlateOf(token)
+		for _, f in ipairs(plateOrder) do if (f.unit == token) then return f end end
+	end
+	local enemy, ally = PlateOf("nameplate18"), PlateOf("nameplate19")
+	local function BarR(f) local c = f.Health.__barColor; return c and Reveal(c[1]) end
+	local function Recolor(f) f.Health.UpdateColor(f, "ForceUpdate", f.unit) end
+	check(enemy and ally, "two player plates for the class colour checks")
+	if (enemy and ally) then
+		local mageR = round(enemy.colors.class.MAGE[1])
+		Recolor(enemy); Recolor(ally)
+		check(round(BarR(enemy)) == mageR, "an enemy player is class coloured by default", BarR(enemy))
+		check(round(BarR(ally)) ~= mageR, "a friendly player is not, by default", BarR(ally))
+		W.profile.classColorFriendlyPlayers = true
+		Recolor(ally)
+		check(round(BarR(ally)) == mageR, "Class colors for friendly players colours a friendly player", BarR(ally))
+		W.profile.classColorFriendlyPlayers = false
+		W.profile.classColorEnemyPlayers = false
+		Recolor(enemy)
+		check(round(BarR(enemy)) ~= mageR, "Class colors for enemy players off leaves the reaction colour", BarR(enemy))
+		W.profile.classColorEnemyPlayers = true
+		W.units.nameplate18.secret = { class = true }
+		local savedUnitClass = UnitClass
+		UnitClass = function(u)
+			local rec = resolve(u)
+			if (rec and rec.secret and rec.secret.class) then return SECRET, SECRET, SECRET end
+			return savedUnitClass(u)
+		end
+		local ok, err = pcall(Recolor, enemy)
+		check(ok, "a secret class colours the bar without raising", err)
+		check(classColorAsked == SECRET and IsSecretNumber(enemy.Health.__barColor[1]) and round(BarR(enemy)) == round(.25),
+			"a secret class takes C_ClassColor's colour, passed to the bar untouched", BarR(enemy))
+		-- Friendly players as names only colour the name by class (Visibility.lua, SetNameColorForUnit).
+		W.profile.hideFriendlyPlayerHealthBar = true
+		M:UpdateSettings()
+		local nameColor = ally.Name.__textColor
+		check(nameColor and round(Reveal(nameColor[1])) == mageR, "a names-only friendly player's name is class coloured",
+			nameColor and Reveal(nameColor[1]))
+		W.units.nameplate19.secret = { class = true }
+		ok, err = pcall(M.UpdateSettings, M)
+		check(ok, "a names-only friendly player with a secret class refreshes without raising", err)
+		nameColor = ally.Name.__textColor
+		check(nameColor and IsSecretNumber(nameColor[1]) and round(Reveal(nameColor[1])) == round(.25),
+			"and the name takes C_ClassColor's colour untouched", nameColor and Reveal(nameColor[1]))
+		W.units.nameplate19.secret = nil
+		W.profile.hideFriendlyPlayerHealthBar = false
+		UnitClass = savedUnitClass
+		W.units.nameplate18.secret = nil
+		M:UpdateSettings()
+		Recolor(enemy)
+		W.profile.classColorFriendlyPlayers = false
+	end
+	C_ClassColor = savedClassColor
+	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate18")
+	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate19")
+	-- The refreshes above settle on the next frame; keep them in this step's snapshot.
+	Flush()
+	Step("class colours")
+
+	-- Tank mode (FixLog 2026-11-07): held/slipping/lost/co-tank colours, the loose mob's target name,
+	-- the lost-aggro sound, and the fall-backs (no group, secret threat, off, always).
+	do
+		local saved = { UnitGroupRolesAssigned = UnitGroupRolesAssigned, GetShapeshiftFormID = GetShapeshiftFormID,
+			GetPartyAssignment = GetPartyAssignment, PlaySound = PlaySound, SOUNDKIT = SOUNDKIT }
+		local roles, form, sounds, lastSoundAt = {}, nil, {}, 0
+		UnitGroupRolesAssigned = function(u) local rec = resolve(u); return rec and roles[rec.token] or "NONE" end
+		GetShapeshiftFormID = function() return form end
+		GetPartyAssignment = function() return nil end
+		PlaySound = function(id, channel)
+			sounds[#sounds + 1] = tostring(id) .. ":" .. tostring(channel)
+			lastSoundAt = W.time
+		end
+		SOUNDKIT = { RAID_WARNING = 8959 }
+
+		W.party = 2
+		W.units.party1 = { token = "party1", name = "Shieldwall", guid = "Player-1-0201", isPlayer = true, reaction = 5,
+			class = "WARRIOR", classID = 1 }
+		W.units.party2 = { token = "party2", name = "Healbot", guid = "Player-1-0202", isPlayer = true, reaction = 5,
+			class = "PRIEST", className = "Priest", classID = 5 }
+		local mob = Unit("nameplate20", { name = "Defias Pillager", guid = creature(1020), canAttack = true, reaction = 2,
+			affectingCombat = true, threatBy = { player = 3 } })
+		Fire("NAME_PLATE_UNIT_ADDED", "nameplate20")
+		Flush()
+		local plate
+		for _, f in ipairs(plateOrder) do if (f.unit == "nameplate20") then plate = f end end
+		check(plate and plate.TankTarget, "an enemy plate has the tank-mode target name")
+		if (plate) then
+			-- Each update a few seconds on, so the sound's two-second throttle never hides a wrong sound.
+			local function Recolor()
+				W.time = W.time + 5
+				plate.Health.UpdateColor(plate, "UNIT_THREAT_LIST_UPDATE", plate.unit)
+			end
+			local function BarRGB()
+				local c = plate.Health.__barColor
+				return c and string.format("%d,%d,%d", math.floor(Reveal(c[1]) * 255 + .5), math.floor(Reveal(c[2]) * 255 + .5),
+					math.floor(Reveal(c[3]) * 255 + .5)) or "-"
+			end
+
+			Recolor()
+			check(plate.__AzeriteUI_TankState == nil, "no tank role or form: no tank mode, the shared threat colours", plate.__AzeriteUI_TankState)
+
+			form = 5 -- Bear Form
+			M:OnTankContextChanged("UPDATE_SHAPESHIFT_FORM")
+			check(M.tankModeActive == true and plate.__AzeriteUI_TankState == "held", "Bear Form in a group is tank mode: a mob you hold is held",
+				plate.__AzeriteUI_TankState)
+			check(BarRGB() == "205,46,36", "held keeps the reaction colour on the default preset", BarRGB())
+			check(not plate.TankTarget:IsShown(), "no target name on a mob you hold")
+
+			mob.threatBy.player = 2
+			Recolor()
+			check(plate.__AzeriteUI_TankState == "slipping" and BarRGB() == "249,188,55", "about to be pulled: the slipping colour", BarRGB())
+
+			W.profile.tankLostAggroSound = true
+			mob.threatBy.player, mob.threatBy.party2 = 0, 3
+			W.alias.nameplate20target = "party2"
+			Recolor()
+			check(plate.__AzeriteUI_TankState == "lost" and BarRGB() == "255,64,217", "the healer has it: the lost colour", BarRGB())
+			check(#sounds == 1 and sounds[1] == "8959:Master", "losing a mob you held plays the warning once", table.concat(sounds, " "))
+			check(plate.TankTarget:IsShown() and plate.TankTarget.__text == "Healbot", "the lost mob names who it is hitting",
+				tostring(plate.TankTarget.__text))
+			Recolor()
+			check(#sounds == 1, "staying lost plays nothing more", #sounds)
+			-- Two mobs lost at once (a second loss within two seconds) sound once.
+			mob.threatBy.player = 3
+			Recolor()
+			mob.threatBy.player = 0
+			W.time = lastSoundAt + 1
+			plate.Health.UpdateColor(plate, "UNIT_THREAT_LIST_UPDATE", plate.unit)
+			check(#sounds == 1 and plate.__AzeriteUI_TankState == "lost", "a second loss within two seconds stays quiet", #sounds)
+
+			plate.Castbar:Show()
+			check(not plate.TankTarget:IsShown(), "the target name gives way to the castbar")
+			plate.Castbar:Hide()
+			check(plate.TankTarget:IsShown(), "and comes back when the castbar hides")
+
+			W.profile.tankTargetNames = false
+			Recolor()
+			check(not plate.TankTarget:IsShown(), "Show who loose mobs are attacking off hides the name")
+			W.profile.tankTargetNames = true
+
+			-- Secret identity (UnitClass is SecretWhenUnitIdentityRestricted; UnitIsUnit
+			-- SecretWhenUnitComparisonRestricted; the name treated as possibly secret): the name and
+			-- class colour go to the widget untouched, nothing compares them.
+			local savedUnitClass, savedUnitIsUnit, savedClassColor = UnitClass, UnitIsUnit, C_ClassColor
+			local classAsked
+			W.units.party2.secret = { name = true }
+			UnitClass = function(u) if (resolve(u) == W.units.party2) then return SECRET, SECRET, SECRET end return savedUnitClass(u) end
+			UnitIsUnit = function() return SECRET end
+			C_ClassColor = { GetClassColor = function(class)
+				classAsked = class
+				return { GetRGB = function() return SecretValue(.9), SecretValue(.9), SecretValue(.9) end }
+			end }
+			W.alias.nameplate20target = "party2"
+			local okSecret, errSecret = pcall(Recolor)
+			check(okSecret, "a secret name, class and unit comparison raise nothing", errSecret)
+			check(plate.TankTarget:IsShown() and plate.TankTarget.__text == SECRET, "a secret name still goes to the text",
+				tostring(plate.TankTarget.__text))
+			local tc = plate.TankTarget.__textColor
+			check(classAsked == SECRET and tc and IsSecretNumber(tc[1]), "a secret class's colour goes to the text untouched",
+				tc and tostring(tc[1]))
+			W.units.party2.secret = nil
+			UnitClass, UnitIsUnit, C_ClassColor = savedUnitClass, savedUnitIsUnit, savedClassColor
+			Recolor()
+
+			roles.party1 = "TANK"
+			mob.threatBy.party1, mob.threatBy.party2 = 3, 1
+			W.alias.nameplate20target = "party1"
+			M:OnTankContextChanged("PLAYER_ROLES_ASSIGNED")
+			check(plate.__AzeriteUI_TankState == "cotank" and BarRGB() == "86,140,233", "another group tank has it: the co-tank colour", BarRGB())
+
+			-- A secret role (UnitGroupRolesAssigned is SecretWhenUnitIdentityRestricted) or a secret
+			-- answer for the other tank is no evidence of a co-tank: the mob reads as lost, never raises.
+			roles.party1 = SECRET
+			local okRole, errRole = pcall(Recolor)
+			check(okRole and plate.__AzeriteUI_TankState == "lost", "a secret role is not taken as a tank", errRole or plate.__AzeriteUI_TankState)
+			roles.party1 = "TANK"
+			mob.threatBy.party1 = "secretnumber"
+			local okThreat, errThreat = pcall(Recolor)
+			check(okThreat and plate.__AzeriteUI_TankState == "lost", "a secret threat answer for the other tank is skipped",
+				errThreat or plate.__AzeriteUI_TankState)
+			roles.player = SECRET
+			local okOwn, errOwn = pcall(M.OnTankContextChanged, M, "PLAYER_ROLES_ASSIGNED")
+			check(okOwn and M.tankModeActive == true, "your own role secret: Bear Form still decides, nothing raises", errOwn)
+			roles.player = nil
+			mob.threatBy.party1 = 3
+			Recolor()
+
+			mob.threatBy.player, mob.threatBy.party1 = 3, 0
+			Recolor()
+			mob.threatBy.player, mob.threatBy.party1 = 0, 3
+			Recolor()
+			check(#sounds == 1, "a mob passed to the co-tank plays no warning", #sounds)
+
+			mob.threatBy.player, mob.threatBy.party1, mob.threatBy.party2 = nil, nil, 1
+			Recolor()
+			check(plate.__AzeriteUI_TankState == "lost", "a mob on the healer with you not on its table at all is lost", plate.__AzeriteUI_TankState)
+			check(#sounds == 1, "a mob you never held plays no warning when it goes loose", #sounds)
+			mob.affectingCombat = false
+			Recolor()
+			check(not plate.__AzeriteUI_TankState and BarRGB() == "205,46,36", "out of combat with you not on its table: no tank colour",
+				BarRGB())
+			mob.affectingCombat = true
+
+			mob.threatBy.player = "secret"
+			local ok, err = pcall(Recolor)
+			check(ok and plate.__AzeriteUI_TankState == nil, "a secret threat answer leaves the plate to the shared colours", err)
+			mob.threatBy.player = "secretnumber"
+			ok, err = pcall(Recolor)
+			check(ok and plate.__AzeriteUI_TankState == nil, "and so does a secret number, which compares only by raising", err)
+			mob.threatBy.player = 3
+
+			W.party = nil
+			M:OnTankContextChanged("GROUP_ROSTER_UPDATE")
+			check(M.tankModeActive == false and plate.__AzeriteUI_TankState == nil, "solo, automatic tank mode is off")
+			W.profile.threatTankMode = "always"
+			Recolor()
+			check(plate.__AzeriteUI_TankState == "held", "Always: tank mode solo too")
+			W.profile.threatTankMode = "off"
+			W.party = 2
+			Recolor()
+			check(plate.__AzeriteUI_TankState == nil, "Off: never tank mode")
+			W.profile.threatTankMode = "auto"
+
+			W.profile.threatColorPreset = "blueOrange"
+			Recolor()
+			check(BarRGB() == "0,114,178", "a colour-blind preset gives held its own colour", BarRGB())
+			W.profile.threatColorPreset = "azerite"
+
+			Fire("NAME_PLATE_UNIT_REMOVED", "nameplate20")
+			check(plate.__AzeriteUI_TankState == nil and not plate.TankTarget:IsShown(), "a removed plate forgets its tank state")
+		end
+		W.profile.tankLostAggroSound = false
+		W.alias.nameplate20target = nil
+		W.party, W.units.party1, W.units.party2 = nil, nil, nil
+		for k, v in pairs(saved) do _G[k] = v end
+		M:OnTankContextChanged("GROUP_ROSTER_UPDATE")
+		Flush()
+	end
+	Step("tank mode")
 
 	-- Your target's floating name (FixLog 2026-09-26): the game's UnitNameFocused, passed through. Turning it
 	-- off hid a corpse's name live. It is a name the engine draws, so no plate follows it.

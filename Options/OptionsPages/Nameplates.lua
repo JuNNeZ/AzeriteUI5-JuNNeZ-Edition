@@ -85,6 +85,11 @@ local getoption = function(info,option)
 	return module.db.profile[option]
 end
 
+-- The name size sliders apply to name-only friendly players and name-only friendly NPCs.
+local IsNameOnlyOff = function(info)
+	return not (getoption(info, "hideFriendlyPlayerHealthBar") or getoption(info, "friendlyNPCNameOnly"))
+end
+
 local NormalizeAdditiveTargetScaleToSlider = function(scale, default)
 	if (type(scale) ~= "number") then
 		scale = default
@@ -743,7 +748,7 @@ local GenerateOptions = function()
 						order = 2,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
-						disabled = function(info) return not getoption(info, "hideFriendlyPlayerHealthBar") end,
+						disabled = IsNameOnlyOff,
 						set = SetScaledOption("friendlyNameOnlyFontScale", FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT),
 						get = GetScaledOption("friendlyNameOnlyFontScale", FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT)
 					},
@@ -753,7 +758,7 @@ local GenerateOptions = function()
 						order = 3,
 						type = "range", width = "full",
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,
-						disabled = function(info) return not getoption(info, "hideFriendlyPlayerHealthBar") end,
+						disabled = IsNameOnlyOff,
 						set = SetFriendlyNameOnlyTargetOption(),
 						get = GetFriendlyNameOnlyTargetOption()
 					},
@@ -762,6 +767,39 @@ local GenerateOptions = function()
 					instanceNote = {
 						name = L["In dungeons and raids the game draws friendly nameplates itself and addons cannot change them. Their size follows the game's own nameplate Size setting."],
 						order = 4,
+						type = "description", width = "full"
+					}
+				}
+			},
+			-- Name-only friendly NPCs share the name sizes above (NamePlates/Settings.lua,
+			-- ShouldUseFriendlyPlayerNameOnly); the title comes from Visibility.lua, GetFriendlyNPCTitle.
+			friendlyNPCNames = {
+				name = L["Friendly NPCs"],
+				order = 3.2,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					friendlyNPCNameOnly = {
+						name = L["Use names only for friendly NPCs"],
+						desc = L["Friendly NPC nameplates show only their name and hide the health bar. The name size follows the friendly name size setting."],
+						order = 1,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					showFriendlyNPCTitle = {
+						name = L["Show NPC titles"],
+						desc = L["The title under the name, such as <Innkeeper> or <Flight Master>, as the game shows it in the NPC's tooltip."],
+						order = 2,
+						type = "toggle", width = "full",
+						disabled = function(info) return not getoption(info, "friendlyNPCNameOnly") end,
+						set = setter,
+						get = getter
+					},
+					instanceNote = {
+						name = L["In dungeons and raids the game draws friendly nameplates itself and addons cannot change them. Their size follows the game's own nameplate Size setting."],
+						order = 3,
 						type = "description", width = "full"
 					}
 				}
@@ -794,6 +832,58 @@ local GenerateOptions = function()
 						name = L["Glow on important casts"],
 						desc = L["An ember glow behind the castbar for casts the game marks as important, such as those that are deadly if not interrupted."],
 						order = 3,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					}
+				}
+			},
+			-- Tank mode (NamePlates/Visibility.lua, GetTankThreatState; Elements.lua, TankThreat_Update).
+			tank = {
+				name = L["Tank mode"],
+				order = 4.5,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					tankDescription = {
+						name = L["Threat colors for tanks: mobs you hold stay calm, a mob about to be pulled from you warns, a mob someone else has stands out, and a mob another tank holds has its own color. The colors follow Enemy Threat Colors."],
+						order = 1,
+						type = "description",
+						width = "full"
+					},
+					threatTankMode = {
+						name = L["Tank mode"],
+						desc = L["Automatic: in a group, when you have the Tank role, a tank specialization, or are in Bear Form, Dire Bear Form or Defensive Stance."],
+						order = 2,
+						type = "select", width = "full",
+						values = {
+							auto = L["Automatic"],
+							always = L["Always"],
+							off = L["Off"]
+						},
+						sorting = { "auto", "always", "off" },
+						set = setter,
+						get = function(info)
+							local value = getter(info)
+							if (value == "always" or value == "off") then
+								return value
+							end
+							return "auto"
+						end
+					},
+					tankTargetNames = {
+						name = L["Show who loose mobs are attacking"],
+						desc = L["In tank mode, a mob you do not hold shows the name of the player it is attacking under its health bar."],
+						order = 3,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					tankLostAggroSound = {
+						name = L["Sound when you lose a mob"],
+						desc = L["In tank mode, plays a warning sound when a mob you held goes to someone who is not a tank."],
+						order = 4,
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter
@@ -833,6 +923,23 @@ local GenerateOptions = function()
 						order = 2,
 						type = "description",
 						width = "full"
+					},
+					-- Elements.lua, Health_UpdateColor.
+					classColorEnemyPlayers = {
+						name = L["Class colors for enemy players"],
+						desc = L["Enemy player health bars use the player's class color, in PvP too."],
+						order = 3,
+						type = "toggle", width = "full",
+						set = setter,
+						get = function(info) return getter(info) ~= false end
+					},
+					classColorFriendlyPlayers = {
+						name = L["Class colors for friendly players"],
+						desc = L["Friendly player health bars use the player's class color. Not used while friendly players show names only."],
+						order = 4,
+						type = "toggle", width = "full",
+						set = setter,
+						get = function(info) return getter(info) and true or false end
 					}
 				}
 			},

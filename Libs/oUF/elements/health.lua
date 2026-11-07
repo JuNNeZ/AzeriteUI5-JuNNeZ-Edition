@@ -128,10 +128,13 @@ local function ExtractColorRGB(color)
 		return
 	end
 
+	-- AzeriteUI: a colour with secret components (C_ClassColor for a secret class, a curve colour) comes
+	-- back with `secret` true, for the caller to hand to a widget untested. Colours are ColorMixins
+	-- or {r,g,b} arrays; only the mixin path can carry secrets.
 	if(type(color.GetRGB) == 'function') then
 		local r, g, b = color:GetRGB()
 		if(issecretvalue and (issecretvalue(r) or issecretvalue(g) or issecretvalue(b))) then
-			return
+			return r, g, b, true
 		end
 		return r, g, b
 	end
@@ -140,7 +143,7 @@ local function ExtractColorRGB(color)
 	local g = color.g or color[2]
 	local b = color.b or color[3]
 	if(issecretvalue and (issecretvalue(r) or issecretvalue(g) or issecretvalue(b))) then
-		return
+		return r, g, b, true
 	end
 	if(type(r) == 'number' and type(g) == 'number' and type(b) == 'number') then
 		return r, g, b
@@ -173,7 +176,15 @@ local function UpdateColor(self, event, unit)
 		color = threatColor
 	elseif(useClassColor) then
 		local _, class = UnitClass(unit)
-		color = GetSafeColorByKey(self.colors.class, class, self.colors.health)
+		if(IsSecretValue(class)) then
+			-- AzeriteUI: UnitClass is SecretWhenUnitIdentityRestricted (PvP). Upstream oUF (c5ff6e4,
+			-- oUF issue #873) asks C_ClassColor, which takes secret arguments; its colour has secret
+			-- components and goes to the texture as is. Custom class colours cannot apply here.
+			local classColor = C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class)
+			color = (type(classColor) == 'table') and classColor or self.colors.health
+		else
+			color = GetSafeColorByKey(self.colors.class, class, self.colors.health)
+		end
 	elseif(element.colorSelection) then
 		local selection = unitSelectionType(unit, element.considerSelectionInCombatHostile)
 		color = GetSafeColorByKey(self.colors.selection, selection, self.colors.health)
@@ -191,8 +202,11 @@ local function UpdateColor(self, event, unit)
 	end
 
 	if(color) then
-		local r, g, b = ExtractColorRGB(color)
-		if(r and g and b) then
+		local r, g, b, secret = ExtractColorRGB(color)
+		if(secret) then
+			-- No test on secret components; the texture takes them.
+			element:GetStatusBarTexture():SetVertexColor(r, g, b)
+		elseif(r and g and b) then
 			element:GetStatusBarTexture():SetVertexColor(r, g, b)
 		end
 	end

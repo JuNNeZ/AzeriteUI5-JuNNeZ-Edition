@@ -41,6 +41,7 @@ local FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = NP.FRIENDLY_NAME_ONLY_NAME_OFFSET_Y
 local NAMEPLATE_CASTBAR_BASELINE_OFFSET = NP.NAMEPLATE_CASTBAR_BASELINE_OFFSET
 local IsSecretValue = NP.IsSecretValue
 local IsSafeUnitToken = NP.IsSafeUnitToken
+local SafeUnitMatches = NP.SafeUnitMatches
 local GetCVarBoolIfSupported = NP.GetCVarBoolIfSupported
 local ShouldUseFriendlyPlayerNameOnly = NP.ShouldUseFriendlyPlayerNameOnly
 local GetValidatedProfileScale = NP.GetValidatedProfileScale
@@ -131,9 +132,33 @@ local SetNameColorForUnit = function(self, db)
 	end
 	if (ShouldUseFriendlyPlayerNameOnly(self)) then
 		local unit = self.unit
+		-- NPCs have classes too (an innkeeper can be a warrior), so a name-only NPC takes its reaction
+		-- colour, as Blizzard's name-only NPCs do. Its title follows the name's colour.
+		if (self.isFriendlyAssistableNPC) then
+			local reaction = IsSafeUnitToken(unit) and UnitReaction("player", unit) or nil
+			local colors = self.colors and self.colors.reaction
+			local color = (type(reaction) == "number" and not IsSecretValue(reaction) and colors) and colors[reaction] or nil
+			local r, g, b
+			if (type(color) == "table" and type(color[1]) == "number") then
+				r, g, b = color[1], color[2], color[3]
+			else
+				r, g, b = db.NameColor[1], db.NameColor[2], db.NameColor[3]
+			end
+			if (self.NameTitle) then
+				self.NameTitle:SetTextColor(r, g, b, .8)
+			end
+			return self.Name:SetTextColor(r, g, b, 1)
+		end
 		if (IsSafeUnitToken(unit)) then
 			local _, class = UnitClass(unit)
-			if (type(class) == "string" and (not IsSecretValue(class)) and self.colors and self.colors.class and self.colors.class[class]) then
+			if (IsSecretValue(class)) then
+				-- PvP: as Health_UpdateColor (Elements.lua), C_ClassColor takes the secret class and
+				-- SetTextColor takes the colour it hands back.
+				local color = C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class)
+				if (type(color) == "table") then
+					return self.Name:SetTextColor(color.r, color.g, color.b, 1)
+				end
+			elseif (type(class) == "string" and self.colors and self.colors.class and self.colors.class[class]) then
 				local color = self.colors.class[class]
 				return self.Name:SetTextColor(color[1], color[2], color[3], 1)
 			end
@@ -315,6 +340,124 @@ local IsFightingYou = function(self)
 	return IsOnThreatTable("player", unit) or IsOnThreatTable("pet", unit)
 end
 
+--[[
+	Tank mode (2026-11-07). Threat colours for whoever is tanking: a mob you hold (status 3) is quiet,
+	one you hold while someone is about to pull it (2) warns, and one you do not hold is loud, unless
+	another group tank holds it. A mob fighting your group with you not on its threat table at all
+	(the one hitting your healer) counts as lost. "auto" needs a group and one of: the Tank role
+	(UnitGroupRolesAssigned), a Retail tank spec, Bear Form (5), Dire Bear Form (8) or Defensive
+	Stance (18). A secret threat answer leaves the plate to the ordinary colours.
+]]
+local TANK_FORMS = { [5] = true, [8] = true, [18] = true }
+
+local IsSafeRole = function(role, wanted)
+	return (not IsSecretValue(role)) and role == wanted
+end
+
+local IsPlayerTankRole = function()
+	if (type(UnitGroupRolesAssigned) == "function" and IsSafeRole(UnitGroupRolesAssigned("player"), "TANK")) then
+		return true
+	end
+	if (ns.IsRetailContent and type(GetSpecialization) == "function" and type(GetSpecializationRole) == "function") then
+		local spec = GetSpecialization()
+		if ((not IsSecretValue(spec)) and type(spec) == "number" and IsSafeRole(GetSpecializationRole(spec), "TANK")) then
+			return true
+		end
+	end
+	if (type(GetShapeshiftFormID) == "function") then
+		local form = GetShapeshiftFormID()
+		if ((not IsSecretValue(form)) and type(form) == "number" and TANK_FORMS[form]) then
+			return true
+		end
+	end
+	return false
+end
+
+local IsTankModeActive = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local mode = profile and profile.threatTankMode or "auto"
+	if (mode == "off") then
+		return false
+	elseif (mode == "always") then
+		return true
+	end
+	if (not (IsInGroup and IsInGroup())) then
+		return false
+	end
+	return IsPlayerTankRole()
+end
+
+-- A group member marked as a tank: the Tank role, or the raid's Main Tank assignment (Classic raids).
+local IsGroupTank = function(member)
+	if (type(UnitGroupRolesAssigned) == "function" and IsSafeRole(UnitGroupRolesAssigned(member), "TANK")) then
+		return true
+	end
+	if (type(GetPartyAssignment) == "function") then
+		local ok, assigned = API.TryCall(GetPartyAssignment, "MAINTANK", member)
+		if (ok and (not IsSecretValue(assigned)) and assigned) then
+			return true
+		end
+	end
+	return false
+end
+
+-- True when a group tank other than you is tanking the unit (status 2 or 3 on their side).
+local IsHeldByOtherTank = function(unit, units, count)
+	for index = 1, count do
+		local member = units[index]
+		if (UnitExists(member) and not SafeUnitMatches(member, "player")) then
+			local status = UnitThreatSituation(member, unit)
+			if ((not IsSecretValue(status)) and type(status) == "number" and status >= 2 and IsGroupTank(member)) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- The plate's tank state: nil outside tank mode (or for anything but an enemy NPC, or a secret
+-- answer), false for an enemy fighting no one in your group, else "held", "slipping", "cotank" or "lost".
+local GetTankThreatState = function(self, status)
+	local unit = self and self.unit
+	if (not IsSafeUnitToken(unit) or self.isPRD or self.isObjectPlate or not IsHostileNamePlate(self)) then
+		return nil
+	end
+	if (IsSecretValue(status) or IsDeadNPC(self) or not IsTankModeActive()) then
+		return nil
+	end
+	if (status == 3) then
+		return "held"
+	elseif (status == 2) then
+		return "slipping"
+	end
+	local inRaid = IsInRaid and IsInRaid()
+	local inGroup = inRaid or (IsInGroup and IsInGroup())
+	local units, pets, count
+	if (inRaid) then
+		local members = GetNumGroupMembers and GetNumGroupMembers() or 0
+		units, pets, count = RAID_UNITS, RAID_PETS, members < 40 and members or 40
+	elseif (inGroup) then
+		local members = GetNumSubgroupMembers and GetNumSubgroupMembers() or 0
+		units, pets, count = PARTY_UNITS, PARTY_PETS, members < 4 and members or 4
+	end
+	if (status == nil) then
+		-- Not on your table: only a mob in combat with your group (or your pet) is lost to you.
+		local inCombat = UnitAffectingCombat(unit)
+		if (IsSecretValue(inCombat) or inCombat ~= true) then
+			return false
+		end
+		local fightingGroup = IsOnThreatTable("pet", unit)
+			or (units and IsOnGroupThreatTable(unit, units, pets, count))
+		if (not fightingGroup) then
+			return false
+		end
+	end
+	if (units and IsHeldByOtherTank(unit, units, count)) then
+		return "cotank"
+	end
+	return "lost"
+end
+
 local GetCombatFilterAlpha = function()
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
 	local value = profile and profile.combatFilterAlpha
@@ -453,6 +596,7 @@ local ApplyHiddenNamePlateVisualState = function(self)
 	self.__AzeriteUI_AlphaHidden = true
 	self:SetAlpha(0)
 	if (self.Name) then self.Name:Hide() end
+	if (self.NameTitle) then self.NameTitle:Hide() end
 	if (self.Health) then
 		self.Health:Hide()
 		if (self.Health.Backdrop) then
@@ -576,10 +720,97 @@ local ApplyFriendlyNameOnlyNameAnchor = function(self, db, enabled)
 		self.__AzeriteUI_NameOnlyAnchorApplied = true
 		return
 	end
+	if (self.NameTitle) then
+		self.NameTitle:Hide()
+	end
+	self.__AzeriteUI_NameOnTitle = nil
 	if (self.__AzeriteUI_NameOnlyAnchorApplied) then
 		self.Name:ClearAllPoints()
 		self.Name:SetPoint(unpack(db.NamePosition))
 		self.__AzeriteUI_NameOnlyAnchorApplied = nil
+	end
+end
+
+-- A friendly NPC's title, such as "Innkeeper". No API returns it: it is the second line of the unit's
+-- tooltip (C_TooltipInfo.GetUnit), unless that line is the level line ("Level 80", which every NPC
+-- without a title has there) or a pet's owner. A secret line, or tooltip data not loaded yet, gives
+-- nothing and is not cached, so the next layout asks again. Cached per NPC ID for the session: false
+-- means "has no title".
+local LEVEL_TEXT = type(LEVEL) == "string" and LEVEL ~= "" and LEVEL or nil
+local OWNER_LINE_TYPE = Enum and Enum.TooltipDataLineType and Enum.TooltipDataLineType.UnitOwner or 16
+local npcTitleCache = {}
+
+local ReadTooltipNPCTitle = function(unit)
+	local data = C_TooltipInfo.GetUnit(unit)
+	if (IsSecretValue(data) or type(data) ~= "table") then
+		return nil
+	end
+	local lines = data.lines
+	if (IsSecretValue(lines) or type(lines) ~= "table") then
+		return nil
+	end
+	local line = lines[2]
+	if (IsSecretValue(line) or type(line) ~= "table") then
+		return nil
+	end
+	local text, lineType = line.leftText, line.type
+	if (IsSecretValue(text) or IsSecretValue(lineType) or type(text) ~= "string") then
+		return nil
+	end
+	if (text == "" or lineType == OWNER_LINE_TYPE or (LEVEL_TEXT and text:find(LEVEL_TEXT, 1, true))) then
+		return false
+	end
+	return text
+end
+
+local GetFriendlyNPCTitle = function(self)
+	local unit = self and self.unit
+	if (not IsSafeUnitToken(unit) or not C_TooltipInfo or type(C_TooltipInfo.GetUnit) ~= "function") then
+		return nil
+	end
+	local npcID = self.npcID
+	local cached = npcID and npcTitleCache[npcID]
+	if (cached ~= nil) then
+		return cached or nil
+	end
+	local ok, title = API.TryCall(ReadTooltipNPCTitle, unit)
+	if (not ok or title == nil) then
+		return nil
+	end
+	if (npcID) then
+		npcTitleCache[npcID] = title
+	end
+	return title or nil
+end
+
+-- The title line of a name-only friendly NPC (showFriendlyNPCTitle): on the spot the name-only name
+-- would take, with the name moved on top of it. Called after ApplyFriendlyNameOnlyNameAnchor.
+local UpdateFriendlyNPCTitle = function(self, db)
+	local title = self and self.NameTitle
+	if (not title or not self.Name) then
+		return
+	end
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local text = profile and profile.showFriendlyNPCTitle and self.isFriendlyAssistableNPC and GetFriendlyNPCTitle(self) or nil
+	if (not text) then
+		title:Hide()
+		if (self.__AzeriteUI_NameOnTitle) then
+			self.__AzeriteUI_NameOnTitle = nil
+			self.__AzeriteUI_NameOnlyAnchorApplied = nil
+			ApplyFriendlyNameOnlyNameAnchor(self, db, true)
+		end
+		return
+	end
+	local _, x = unpack(db.NamePosition or { "TOP", 0, 16 })
+	title:SetText("<" .. text .. ">")
+	title:SetScale(self.Name:GetScale())
+	title:ClearAllPoints()
+	title:SetPoint("BOTTOM", self:GetParent() or self, "BOTTOM", x, FRIENDLY_NAME_ONLY_NAME_OFFSET_Y)
+	title:Show()
+	if (not self.__AzeriteUI_NameOnTitle) then
+		self.Name:ClearAllPoints()
+		self.Name:SetPoint("BOTTOM", title, "TOP", 0, 0)
+		self.__AzeriteUI_NameOnTitle = true
 	end
 end
 
@@ -668,6 +899,9 @@ local ApplyFriendlyNameOnlyVisualState = function(self, enabled)
 		if (self.Name) then
 			self.Name:Show()
 		end
+		-- Last, and guarded: until 2026-11-07 it ran before the bars were hidden, and its "Font not set"
+		-- error (NameTitleFont was a 10 px font FontStyles.xml does not define) left every titled NPC its bar.
+		API.SafeCall("NamePlates.UpdateFriendlyNPCTitle", UpdateFriendlyNPCTitle, self, db)
 		return
 	end
 	local db = ns.GetConfig("NamePlates")
@@ -713,6 +947,8 @@ NP.ShouldShowNamePlateForBlizzardVisibility = ShouldShowNamePlateForBlizzardVisi
 NP.IsDeadNPC = IsDeadNPC
 NP.IsFightingSomeoneElse = IsFightingSomeoneElse
 NP.IsFightingYou = IsFightingYou
+NP.IsTankModeActive = IsTankModeActive
+NP.GetTankThreatState = GetTankThreatState
 NP.ApplyNamePlateAlpha = ApplyNamePlateAlpha
 NP.ShouldShowObjectPlateOverlay = ShouldShowObjectPlateOverlay
 NP.ShouldShowObjectPlateName = ShouldShowObjectPlateName
@@ -722,6 +958,8 @@ NP.SetNamePlateAurasShown = SetNamePlateAurasShown
 NP.ApplyFriendlyNameOnlyNameAnchor = ApplyFriendlyNameOnlyNameAnchor
 NP.ApplyFriendlyNameOnlyFontScale = ApplyFriendlyNameOnlyFontScale
 NP.ApplyFriendlyNameOnlyVisualState = ApplyFriendlyNameOnlyVisualState
+NP.GetFriendlyNPCTitle = GetFriendlyNPCTitle
+NP.UpdateFriendlyNPCTitle = UpdateFriendlyNPCTitle
 
 -- For the options page: friendly NPCs, friendly players or minions ("friendlyNPCs", "friendlyPlayers",
 -- "minions") only for your target. Each needs the game's settings for its kind on (TARGET_ONLY_NEEDS), so

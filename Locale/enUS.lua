@@ -507,6 +507,14 @@ L["Use Class Colors"] = true
 L["Use Command Bindings for Hold Cast"] = true
 L["Use Ice Crystal Art"] = true
 L["Use names only for friendly players"] = true
+L["Class colors for enemy players"] = true
+L["Enemy player health bars use the player's class color, in PvP too."] = true
+L["Class colors for friendly players"] = true
+L["Friendly player health bars use the player's class color. Not used while friendly players show names only."] = true
+L["Use names only for friendly NPCs"] = true
+L["Friendly NPC nameplates show only their name and hide the health bar. The name size follows the friendly name size setting."] = true
+L["Show NPC titles"] = true
+L["The title under the name, such as <Innkeeper> or <Flight Master>, as the game shows it in the NPC's tooltip."] = true
 L["Use the Ice Crystal artwork when Power Crystal style is active."] = true
 L["Use the original AzeriteUI party-frame aura behavior. Turn this off if you want to build your own filter from the custom categories below."] = true
 L["Use AzeriteUI's default player-row filtering and mixed bright/dim aura styling. Turn this off if you want to build your own filter from the custom categories below."] = true
@@ -1377,3 +1385,15 @@ L["Hide frames"] = true
 L["Show frames"] = true
 
 L["Leave instance"] = true
+
+-- Tank tools (nameplate tank mode, target threat percent).
+L["Tank mode"] = true
+L["Threat colors for tanks: mobs you hold stay calm, a mob about to be pulled from you warns, a mob someone else has stands out, and a mob another tank holds has its own color. The colors follow Enemy Threat Colors."] = true
+L["Automatic: in a group, when you have the Tank role, a tank specialization, or are in Bear Form, Dire Bear Form or Defensive Stance."] = true
+L["Always"] = true
+L["Show who loose mobs are attacking"] = true
+L["In tank mode, a mob you do not hold shows the name of the player it is attacking under its health bar."] = true
+L["Sound when you lose a mob"] = true
+L["In tank mode, plays a warning sound when a mob you held goes to someone who is not a tank."] = true
+L["Show Threat Percent"] = true
+L["In a group, show your threat on the target beside its name: 100% while you are tanking it, otherwise your share of the tank's threat. You pull it at 110% in melee range and 130% at range."] = true

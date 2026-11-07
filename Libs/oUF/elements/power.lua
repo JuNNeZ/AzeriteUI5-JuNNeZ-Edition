@@ -113,7 +113,8 @@ local function ExtractColorRGB(color)
 	end
 	local r, g, b = color:GetRGB()
 	if(IsSecretValue(r) or IsSecretValue(g) or IsSecretValue(b)) then
-		return
+		-- AzeriteUI: secret components come back flagged, for the caller to pass on untested.
+		return r, g, b, true
 	end
 	return r, g, b
 end
@@ -196,7 +197,13 @@ local function UpdateColor(self, event, unit)
 		end
 	elseif(useClassColor) then
 		local _, class = UnitClass(unit)
-		color = GetSafeColorByKey(self.colors.class, class, fallbackColor)
+		if(IsSecretValue(class)) then
+			-- AzeriteUI: as health.lua (upstream oUF c5ff6e4, issue #873).
+			local classColor = C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class)
+			color = (type(classColor) == 'table') and classColor or fallbackColor
+		else
+			color = GetSafeColorByKey(self.colors.class, class, fallbackColor)
+		end
 	elseif(element.colorSelection) then
 		local selection = unitSelectionType(unit, element.considerSelectionInCombatHostile)
 		color = GetSafeColorByKey(self.colors.selection, selection, fallbackColor)
@@ -217,8 +224,13 @@ local function UpdateColor(self, event, unit)
 		if(b) then
 			element:GetStatusBarTexture():SetVertexColor(r, g, b)
 		elseif(color) then
-			r, g, b = ExtractColorRGB(color)
-			if(b) then
+			local secret
+			r, g, b, secret = ExtractColorRGB(color)
+			if(secret) then
+				element:GetStatusBarTexture():SetVertexColor(r, g, b)
+				-- PostUpdateColor below gets alt values only for non-standard powers; keep them out.
+				r, g, b = nil, nil, nil
+			elseif(b) then
 				element:GetStatusBarTexture():SetVertexColor(r, g, b)
 			end
 		end

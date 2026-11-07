@@ -63,6 +63,9 @@ local defaults = { profile = ns:Merge({
 	showName = true,
 	showRaidTargetIcons = true,
 	showHealthPercent = true,
+	-- Your threat on the target as a share of the tank's, beside the name, in a group and in combat
+	-- (ThreatPercent_Update; since 2026-11-07).
+	showThreatPercent = true,
 	showPowerValue = true,
 	PowerValueFormat = "short",
 	aurasBelowFrame = false,
@@ -1735,7 +1738,14 @@ local Health_PostUpdateColor = function(element, unit, colorOrR, g, b)
 		r, g, b = colorOrR:GetRGB()
 	end
 
-	if (type(r) == "number" and type(g) == "number" and type(b) == "number") then
+	if (issecretvalue and (issecretvalue(r) or issecretvalue(g) or issecretvalue(b))) then
+		-- A secret class colour (oUF health.lua, PvP): widgets take it, it cannot be darkened.
+		preview:SetStatusBarColor(r, g, b)
+		local fakeFill = element.FakeFill
+		if (fakeFill and fakeFill.SetVertexColor) then
+			fakeFill:SetVertexColor(r, g, b, 1)
+		end
+	elseif (type(r) == "number" and type(g) == "number" and type(b) == "number") then
 		preview:SetStatusBarColor(r * .7, g * .7, b * .7)
 		local fakeFill = element.FakeFill
 		if (fakeFill and fakeFill.SetVertexColor) then
@@ -3470,8 +3480,46 @@ local UnitFrame_UpdateTextures = function(self)
 	ns:Fire("UnitFrame_Target_Updated", unit, key)
 end
 
+-- Threat percent (2026-11-07). UnitDetailedThreatSituation's scaled share: 100 while you are tanking,
+-- else your share of the tank's threat (you pull at 110 in melee range, 130 at range). Shown in a
+-- group, on an enemy NPC whose threat table you are on, coloured by your threat status. The values
+-- may be secret (SecretWhenUnitThreatValuesRestricted); then nothing is shown.
+local ThreatPercent_Update = function(self)
+	local text = self and self.ThreatPercent
+	if (not text) then
+		return
+	end
+	local profile = TargetFrameMod.db and TargetFrameMod.db.profile
+	if (not profile or not profile.showThreatPercent or not (IsInGroup and IsInGroup())
+		or type(UnitDetailedThreatSituation) ~= "function" or not UnitExists("target")) then
+		return text:Hide()
+	end
+	local canAttack, playerControlled = UnitCanAttack("player", "target"), UnitPlayerControlled("target")
+	if (issecretvalue(canAttack) or issecretvalue(playerControlled) or not canAttack or playerControlled) then
+		return text:Hide()
+	end
+	local _, status, scaled = UnitDetailedThreatSituation("player", "target")
+	if (issecretvalue(status) or issecretvalue(scaled) or type(status) ~= "number" or type(scaled) ~= "number") then
+		return text:Hide()
+	end
+	text:SetFormattedText("%d%%", math_floor(scaled + .5))
+	local color = Colors.threat and Colors.threat[status]
+	if (color) then
+		text:SetTextColor(color[1], color[2], color[3], .85)
+	end
+	text:Show()
+end
+
+local ThreatPercent_OnEvent = function(self, event, unit)
+	if (event == "UNIT_THREAT_LIST_UPDATE" and unit ~= "target") then
+		return
+	end
+	ThreatPercent_Update(self)
+end
+
 local UnitFrame_PostUpdate = function(self)
 	UnitFrame_UpdateTextures(self)
+	ThreatPercent_Update(self)
 	TargetFrameMod:UpdateExecuteMarker()
 	if (self.Health and self.Health.ForceUpdate) then
 		self.Health:ForceUpdate()
@@ -4117,6 +4165,15 @@ local style = function(self, unit, id)
 
 	self.Name = name
 
+	-- Threat percent, left of the name (ThreatPercent_Update). The name is right-aligned and sized
+	-- by its text, so this follows it on every style.
+	local threatPercent = self:CreateFontString(nil, "OVERLAY", nil, 1)
+	threatPercent:SetPoint("RIGHT", name, "LEFT", unpack(db.ThreatPercentOffset or { -10, 0 }))
+	threatPercent:SetFontObject(db.ThreatPercentFont or db.NameFont)
+	threatPercent:SetJustifyH("RIGHT")
+	threatPercent:Hide()
+	self.ThreatPercent = threatPercent
+
 	-- Auras
 	--------------------------------------------
 	local auras = CreateFrame("Frame", nil, self)
@@ -4208,6 +4265,12 @@ local style = function(self, unit, id)
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", UnitFrame_OnEvent, true)
 	self:RegisterEvent("PLAYER_REGEN_DISABLED", UnitFrame_OnEvent, true)
 	self:RegisterEvent("UNIT_ABSORB_AMOUNT_CHANGED", UnitFrame_OnEvent)
+	-- Threat percent. The situation event names the unit whose situation changed (usually you), so it
+	-- is taken for every unit; the list event is the target's own.
+	self:RegisterEvent("UNIT_THREAT_LIST_UPDATE", ThreatPercent_OnEvent)
+	self:RegisterEvent("UNIT_THREAT_SITUATION_UPDATE", ThreatPercent_OnEvent, true)
+	self:RegisterEvent("GROUP_ROSTER_UPDATE", ThreatPercent_OnEvent, true)
+	self:RegisterEvent("PLAYER_REGEN_ENABLED", ThreatPercent_OnEvent, true)
 
 	-- Toggle name size based on ToT frame.
 	ns.RegisterCallback(self, "UnitFrame_ToT_Updated", Name_PostUpdate)
@@ -4260,6 +4323,7 @@ end
 
 TargetFrameMod.Update = function(self)
 	UpdateTargetPowerValueText(self.frame)
+	ThreatPercent_Update(self.frame)
 	UpdateTargetHealthPercentTag(self.frame)
 	ApplyTargetAuraLayout(self.frame, self.frame.currentStyle)
 

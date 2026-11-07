@@ -392,6 +392,13 @@ HUD.StyleUnit = function(self, frame)
 	-- The name tag cuts by character count; wider glyphs (CJK) still overran
 	-- the narrow raid bars and wrapped onto the status text. One line only.
 	if (frame.Name and frame.Name.SetWordWrap) then frame.Name:SetWordWrap(false) end
+	-- The target's threat percent (Target.lua) sits left of a name sized by its text; this name is
+	-- left-aligned at a fixed width, so the percent goes above the frame's top right corner instead.
+	if (frame.ThreatPercent) then
+		frame.ThreatPercent:ClearAllPoints()
+		frame.ThreatPercent:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -4, 2)
+		frame.ThreatPercent:SetFontObject(ns.API.GetFont(12, true))
+	end
 	if (style == "Player" and frame.CombatIndicator and frame.CombatIndicator.SetTexCoord) then
 		frame.CombatIndicator:SetTexCoord(.5, 1, 0, .5)
 	end
