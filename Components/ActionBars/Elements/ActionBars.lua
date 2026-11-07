@@ -1001,6 +1001,74 @@ ActionBarMod.OnAnchorEvent = function(self, event, ...)
 	end
 end
 
+-- Blizzard's Quick Keybind Mode only reaches buttons built on QuickKeybindButtonTemplate:
+-- their OnEnter hands a commandName to QuickKeybindFrame:SetSelected. Ours are LibActionButton
+-- buttons, so hovering them did nothing. Calling SetSelected ourselves would write addon values
+-- into QuickKeybindFrame and KeybindListener, which Blizzard's OnKeyDown reads on its way to
+-- HideUIPanel and SettingsPanel:Open, so we leave Blizzard's frames alone. Instead, while the mode
+-- is open, we run LibKeyBound's binding mode, which already binds every one of our buttons to
+-- its Blizzard binding name (keyBoundTarget). Blizzard's OK and Cancel save or reload the whole
+-- binding set, so our bindings follow them.
+local QUICKBIND_BINDER_STRATA = "FULLSCREEN_DIALOG"
+
+ActionBarMod.OnQuickKeybindShow = function(self)
+	local KeyBound = LibStub("LibKeyBound-1.0", true)
+	if (not KeyBound or not KeyBound.Binder or not KeyBound.events) then return end
+	-- /kb already running, or combat (LibKeyBound refuses to bind then): leave it as it is.
+	if (KeyBound:IsShown() or InCombatLockdown()) then return end
+
+	-- LibKeyBound:Activate without its dialog: Blizzard's window has the same buttons.
+	KeyBound.enabled = true
+	if (not KeyBound.frame) then
+		KeyBound.frame = KeyBound.Binder:Create()
+	end
+	-- Blizzard's window is a DIALOG toplevel frame that takes keyboard input too; the binder
+	-- has to sit above it to get the key pressed over our button first.
+	self.quickKeybindStrata = KeyBound.frame:GetFrameStrata()
+	KeyBound.frame:SetFrameStrata(QUICKBIND_BINDER_STRATA)
+	KeyBound:Set(nil)
+	KeyBound.events:Fire("LIBKEYBOUND_ENABLED")
+
+	self.quickKeybindOwnsKeyBound = true
+end
+
+ActionBarMod.OnQuickKeybindHide = function(self)
+	if (not self.quickKeybindOwnsKeyBound) then return end
+	self.quickKeybindOwnsKeyBound = nil
+
+	local KeyBound = LibStub("LibKeyBound-1.0", true)
+	if (not KeyBound) then return end
+	if (KeyBound:IsShown()) then
+		KeyBound:Deactivate()
+	end
+	if (KeyBound.frame and self.quickKeybindStrata) then
+		KeyBound.frame:SetFrameStrata(self.quickKeybindStrata)
+	end
+	self.quickKeybindStrata = nil
+end
+
+ActionBarMod.HookQuickKeybindMode = function(self)
+	if (self.quickKeybindHooked) then return true end
+	local frame = _G.QuickKeybindFrame
+	if (not frame or not frame.HookScript) then return end
+
+	frame:HookScript("OnShow", function() self:OnQuickKeybindShow() end)
+	frame:HookScript("OnHide", function() self:OnQuickKeybindHide() end)
+	self.quickKeybindHooked = true
+
+	if (frame:IsShown()) then
+		self:OnQuickKeybindShow()
+	end
+	return true
+end
+
+ActionBarMod.OnQuickKeybindAddOnLoaded = function(self, event, addon)
+	if (addon ~= "Blizzard_QuickKeybind") then return end
+	if (self:HookQuickKeybindMode()) then
+		self:UnregisterEvent("ADDON_LOADED", "OnQuickKeybindAddOnLoaded")
+	end
+end
+
 ActionBarMod.OnEnable = function(self)
 
 	self:CreateBars()
@@ -1029,6 +1097,11 @@ ActionBarMod.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_REGEN_DISABLED", "UpdateBindings")
 	if (ns.API.IsEventAvailable("HOUSE_EDITOR_MODE_CHANGED")) then
 		self:RegisterEvent("HOUSE_EDITOR_MODE_CHANGED", "OnHouseEditorModeChanged")
+	end
+
+	-- Blizzard_QuickKeybind loads with Blizzard_ActionBar; wait for it if a client loads it later.
+	if (not self:HookQuickKeybindMode()) then
+		self:RegisterEvent("ADDON_LOADED", "OnQuickKeybindAddOnLoaded")
 	end
 
 	self:UpdateSettings()

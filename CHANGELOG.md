@@ -10,6 +10,22 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.37.1-JuNNeZ (2026-11-07) - Quick Keybind Mode on AzeriteUI Bars
+
+### Highlights
+
+- **Blizzard's Quick Keybind Mode works on AzeriteUI's action bars.** Open it from the Game Menu at `Options -> Keybindings -> Quick Keybind Mode`, hover one of our action buttons and press a key, mouse button or mouse wheel to bind it. Escape clears the button's binding. Blizzard's **Okay** keeps the new bindings and **Cancel** undoes them, as for Blizzard's own bars. Before, hovering our buttons in this mode did nothing.
+
+### Development
+
+- **Built on the binding tool the bars already use.** Blizzard's mode only reacts to Blizzard-built buttons, and wiring our buttons into it directly would let addon code interfere with Blizzard's keybinding and settings windows. Instead, while Blizzard's window is open, AzeriteUI runs the same binding mode as `/kb`, without its own window, and gives it the key pressed over our buttons first. Blizzard's windows are left untouched.
+
+### Access and known limits
+
+- Covers action bars 1-8. The pet and stance bars are not covered yet. They also cannot be bound with `/kb`, so use the game's Keybindings list for those.
+- Checked offline only so far, not yet confirmed in game.
+
+
 ## 5.37.0-JuNNeZ (2026-11-07) - Tank Tools and Friendly NPC Names
 
 ### Highlights
