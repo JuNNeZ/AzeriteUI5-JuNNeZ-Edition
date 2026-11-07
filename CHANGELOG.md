@@ -10,6 +10,21 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.37.3-JuNNeZ (2026-11-07) - Druid Mana Crystal on Forever
+
+### Highlights
+
+- **Druids on WoW Forever see their mana in Bear and Cat Form again.** The small secondary mana crystal beside the player power crystal never appeared on Forever. It now shows while you are shapeshifted and your mana is below full, and fades out at full mana, as on Retail. It can still be moved with `/lock` ("Player Secondary Mana Crystal").
+
+### Development
+
+- **Forever's own resource pairs.** The crystal followed Blizzard's list of which resources come with a second mana bar. Forever ships Retail's list (Astral Power, Insanity, Maelstrom), and none of those exist in Forever's classic content, so the crystal was always hidden. On Forever, AzeriteUI now pairs a Druid's Rage and Energy with mana itself. Retail still uses Blizzard's list.
+
+### Access and known limits
+
+- Confirmed in game on Forever in Bear Form, including moving it with `/lock`. Cat Form uses the same path but has not been checked in game yet.
+
+
 ## 5.37.2-JuNNeZ (2026-11-07) - Bag Addon Fixes and Readable Mana Text
 
 ### Highlights

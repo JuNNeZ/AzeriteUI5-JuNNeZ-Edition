@@ -1303,7 +1303,21 @@ local GetSafePlayerPrimaryPowerType = function(unit)
 	return powerType
 end
 
+-- Forever ships Retail's ALT_POWER_BAR_PAIR_DISPLAY_INFO, whose Lunar Power,
+-- Insanity and Maelstrom pairs never occur in classic content. The classic
+-- pair is a druid in Cat (Energy) or Bear (Rage) Form, which keeps its mana.
+local POWER_TYPE_RAGE = (Enum and Enum.PowerType and Enum.PowerType.Rage) or 1
+local POWER_TYPE_ENERGY = (Enum and Enum.PowerType and Enum.PowerType.Energy) or 3
+local CLASSIC_ADDITIONAL_MANA_PAIRS = {
+	DRUID = { [POWER_TYPE_RAGE] = true, [POWER_TYPE_ENERGY] = true }
+}
+
 local PlayerHasAdditionalManaPower = function(unit)
+	if (not ns.IsRetailContent) then
+		local classPairs = CLASSIC_ADDITIONAL_MANA_PAIRS[playerClass]
+		local primaryPowerType = classPairs and GetSafePlayerPrimaryPowerType(unit)
+		return primaryPowerType and classPairs[primaryPowerType] or false
+	end
 	local classDisplayInfo = ALT_POWER_BAR_PAIR_DISPLAY_INFO and ALT_POWER_BAR_PAIR_DISPLAY_INFO[playerClass]
 	if (type(classDisplayInfo) ~= "table") then
 		return false
