@@ -10,6 +10,23 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.37.2-JuNNeZ (2026-11-07) - Bag Addon Fixes and Readable Mana Text
+
+### Highlights
+
+- **W2UI's bag button shows again.** With W2UI's **Bag Buttons** module on, its backpack button and bag slots were invisible while AzeriteUI was enabled. AzeriteUI now leaves them to W2UI. AzeriteUI's own bag button (`/az -> Action Bars -> Micro Menu -> Show Bag Button`) still works beside it and opens W2UI's bags. Thanks to Luciful for the report.
+- **No more invisible bag tooltips in the lower right.** With BetterBags, Baganator, AdiBags, ArkInventory, Bagnon, Combuctor or W2UI Bags, Blizzard's hidden bag slots still caught the mouse and showed bag tooltips over empty screen. They are now hidden properly.
+- **Mana and power values above Lite+ effects.** With a Lite+ orb or crystal effect on (`/az -> Themes`), the effect was drawn over the mana or power value. The numbers now sit on top.
+
+### Development
+
+- **Read from the other addons' newest source.** W2UI 3.0.10 builds its bag bar from Blizzard's own bag bar, backpack button and bag slots, which AzeriteUI had been hiding. AzeriteUI now asks W2UI whether that module is on and stands aside while it is. The other six bag addons were checked the same way: none of them uses Blizzard's bag slots, so hiding the slots costs them nothing.
+
+### Access and known limits
+
+- Checked offline only so far, not yet confirmed in game.
+
+
 ## 5.37.1-JuNNeZ (2026-11-07) - Quick Keybind Mode on AzeriteUI Bars
 
 ### Highlights

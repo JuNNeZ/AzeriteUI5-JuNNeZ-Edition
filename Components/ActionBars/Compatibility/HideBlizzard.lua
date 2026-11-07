@@ -375,6 +375,46 @@ local BAG_BUTTON_NAMES = {
 	"BagBarExpandToggle"
 }
 
+-- The bag slots normally leave the hidden BagsBar: Containers.lua moves them into
+-- Blizzard's backpack window. With these bag addons (Containers.lua's skip list,
+-- less Bartender4) it stands down, so the slots stay on BagsBar, invisible through
+-- its alpha but still taking the mouse (tooltips over the screen's lower right).
+-- None of them shows these slots in its own window (newest sources, 2026-11-07):
+-- Baganator and BetterBags only post-hook their OnClick, BagBrother (Bagnon,
+-- Combuctor) only sets their checked highlight, AdiBags and ArkInventory never
+-- touch them. Hiding the slots costs them nothing, as with the backpack button.
+local BAG_SLOT_NAMES = {
+	"CharacterBag0Slot",
+	"CharacterBag1Slot",
+	"CharacterBag2Slot",
+	"CharacterBag3Slot",
+	"CharacterReagentBag0Slot",
+	"KeyRingButton"
+}
+
+local BAG_ADDONS_LEAVING_SLOTS = {
+	"AdiBags",
+	"ArkInventory",
+	"Baganator",
+	"Bagnon",
+	"BetterBags",
+	"Combuctor",
+	-- W2UI_Bags/Core.lua hides Blizzard's container frames for its own window.
+	"W2UI_Bags"
+}
+
+-- W2UI's Bag Buttons module shows BagsBar, the backpack button, the expand toggle
+-- and the bag slots as its own bag bar, so none of them may be faded or hidden
+-- while it is on. Asked once: quarantine hooks stay for the session, and W2UI only
+-- changes that module on a reload.
+local w2uiOwnsBagBar
+local IsBagBarOwnedByW2UI = function()
+	if (w2uiOwnsBagBar == nil) then
+		w2uiOwnsBagBar = ns.API.IsW2UIBagBarEnabled and ns.API.IsW2UIBagBarEnabled() or false
+	end
+	return w2uiOwnsBagBar
+end
+
 local BLIZZARD_ACTION_BAR_ADDONS = {
 	Blizzard_ActionBar = true,
 	Blizzard_MainMenuBarBagButtons = true,
@@ -461,12 +501,27 @@ local suppressBagControl = function(frame)
 end
 
 local suppressNamedBagControls = function()
+	if (IsBagBarOwnedByW2UI()) then return end
 	for _, frameName in ipairs(BAG_BUTTON_NAMES) do
 		-- Bartender reparents the native backpack button into its own bag bar.
 		-- Leave that shared button untouched when Bartender owns the bar.
 		if (frameName ~= "MainMenuBarBackpackButton" or not ns.API.IsAddOnEnabled("Bartender4")) then
 			suppressBagControl(_G[frameName])
 		end
+	end
+
+	-- Bartender4 shows these slots on its own bag bar.
+	if (ns.API.IsAddOnEnabled("Bartender4")) then return end
+	local slotsLeftBehind = false
+	for _, addon in ipairs(BAG_ADDONS_LEAVING_SLOTS) do
+		if (ns.API.IsAddOnEnabled(addon)) then
+			slotsLeftBehind = true
+			break
+		end
+	end
+	if (not slotsLeftBehind) then return end
+	for _, frameName in ipairs(BAG_SLOT_NAMES) do
+		suppressBagControl(_G[frameName])
 	end
 end
 
@@ -487,7 +542,11 @@ end
 
 BlizzardABDisabler.HideBlizzard = function(self)
 
-	quarantineNamedFrames(HIDDEN_FRAME_NAMES)
+	for _, frameName in ipairs(HIDDEN_FRAME_NAMES) do
+		if (frameName ~= "BagsBar" or not IsBagBarOwnedByW2UI()) then
+			quarantineFrame(_G[frameName])
+		end
+	end
 
 	-- In TWW 11.0+, hide the gryphons (EndCaps) on MainActionBar
 	-- On Forever each gryphon is its own Edit Mode system

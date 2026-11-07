@@ -178,6 +178,21 @@ style()
 check(power.Case.parent == foreground and foreground.level == 14, "the Mage crystal's own case frame is lifted instead")
 check(foreground.fixedFrameLevel, "Lite+ Mage case also retains its health-relative foreground level")
 
+-- Value texts above every Lite+ painting (2026-11-07: the orb material frame,
+-- overlay +1 = orb +5, covered the mana value on the case frame at orb +4).
+local orbCase = widget(orbFrame); orbCase.level = orbFrame.level + 4
+orbFrame.Value, orbFrame.Percent = widget(orbCase), widget(orbCase)
+power.Value = widget(power)
+style()
+local orbText, powerText = orbFrame.ThemeValueTextFrame, power.ThemeValueTextFrame
+check(orbText and orbFrame.Value.parent == orbText and orbFrame.Percent.parent == orbText, "orb value and percent moved to the text frame")
+check(orbText.parent == orbFrame and orbText.level == orbFrame.level + 8 and orbText.mouse == false, "orb text frame is a mouse-less child above the effects (+8)")
+check(orbText.level > orbFrame.level + 6, "orb text frame above the material (+5) and Flowing mana (+6)")
+check(powerText and power.Value.parent == powerText and powerText.level > power.level + 2, "crystal value above the crystal material (+2)")
+style()
+check(orbFrame.ThemeValueTextFrame == orbText and power.ThemeValueTextFrame == powerText, "text frames reused on restyle")
+orbFrame.Value, orbFrame.Percent, power.Value = nil, nil, nil
+
 -- Legacy in the theme list (2026-10-13): always offered, chosen like /go legacy.
 ns.LegacyHUD = { IsActive = function() return ns.db.char.legacyHUD == true and not variant end }
 ns.db.char.paladinPreview, ns.db.char.hunterPreview, ns.db.char.magePreview = false, false, false

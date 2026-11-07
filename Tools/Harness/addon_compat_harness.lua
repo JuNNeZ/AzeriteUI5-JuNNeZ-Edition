@@ -447,5 +447,46 @@ do
 	for k, v in pairs(saved) do _G[k] = v end
 end
 
+---------------------------------------------------------------------------
+-- 5. W2UI's bag bar (Core/API/Addons.lua IsW2UIBagBarEnabled)
+--    W2UI 3.0.10 BagBar.lua restyles Blizzard's BagsBar and backpack button, so
+--    HideBlizzard.lua and Containers.lua leave them alone while its "bags" module
+--    is on. W2UI's own IsModuleSettingEnabled answers first, then W2UIDB, then the
+--    module default (on).
+---------------------------------------------------------------------------
+do
+	local saved = {}
+	for _, k in ipairs({ "UnitName", "GetNumAddOns", "GetAddOnInfo", "GetAddOnEnableState", "W2UI", "W2UIDB" }) do saved[k] = _G[k] end
+
+	local installed = {}
+	_G.UnitName = function() return "Tester" end
+	_G.GetNumAddOns = function() return #installed end
+	_G.GetAddOnInfo = function(i) return installed[i], "", "", true end
+	_G.GetAddOnEnableState = function() return 2 end
+
+	local ns = { API = {} }
+	assert(loadfile(root .. "/Core/API/Addons.lua"))("AzeriteUI5_JuNNeZ_Edition", ns)
+	local IsOn = ns.API.IsW2UIBagBarEnabled
+
+	installed = {}
+	_G.W2UI, _G.W2UIDB = nil, nil
+	check(IsOn() == false, "W2UI not installed: Blizzard's bag bar stays ours to hide")
+
+	installed = { "W2UI" }
+	check(IsOn() == true, "W2UI enabled, no settings read yet: its bags module defaults to on")
+	_G.W2UIDB = { modules = { bags = { enabled = false } } }
+	check(IsOn() == false, "W2UIDB says the bags module is off")
+	_G.W2UIDB = { modules = { bags = { enabled = true } } }
+	check(IsOn() == true, "W2UIDB says the bags module is on")
+
+	local asked
+	_G.W2UI = { IsModuleSettingEnabled = function(self, key) asked = key return false end }
+	check(IsOn() == false and asked == "bags", "W2UI's own module check wins over W2UIDB")
+	_G.W2UI = { IsModuleSettingEnabled = function() error("boom") end }
+	check(IsOn() == true, "an erroring W2UI check falls back to W2UIDB")
+
+	for k, v in pairs(saved) do _G[k] = v end
+end
+
 print(string.format("addon_compat_harness: %d passed, %d failed", passed, failed))
 if (failed > 0) then os.exit(1) end

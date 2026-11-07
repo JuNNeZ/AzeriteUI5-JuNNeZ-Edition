@@ -289,6 +289,30 @@ local LiftCap = function(element, texture)
 	KeepCapLevel(element, texture, frame)
 end
 
+-- Lite+ paintings sit on frames above the resource's own case frame (orb:
+-- clip +1, overlay +4, effects +5/+6; crystal: clip +1, effect +2), so the
+-- value and percent texts, created on the orb case frame (+4) or the crystal
+-- itself, were drawn underneath them. The texts move to one holder above
+-- every effect. It is a child of the resource, so the player frame's level
+-- shuffle (UpdateManaOrbVisibility) keeps the offset. Only the parent changes:
+-- anchors, fonts, tags, alpha and Show/Hide stay as Player.lua set them.
+local TEXT_LEVEL_ABOVE_RESOURCE = 8
+
+local LiftValueText = function(element)
+	if (not element or (not element.Value and not element.Percent)) then return end
+	local holder = element.ThemeValueTextFrame
+	if (not holder) then
+		holder = CreateFrame("Frame", nil, element)
+		holder:SetAllPoints(element)
+		holder:EnableMouse(false)
+		holder:SetFrameLevel(element:GetFrameLevel() + TEXT_LEVEL_ABOVE_RESOURCE)
+		element.ThemeValueTextFrame = holder
+	end
+	for _, text in ipairs({ element.Value, element.Percent }) do
+		if (text and text.GetParent and text:GetParent() ~= holder) then text:SetParent(holder) end
+	end
+end
+
 Effects.CapsInFront = function(self) return CapsInFront() end
 
 --- Called by Player.lua (and PlayerAlternate.lua with allowMage false, as
@@ -334,12 +358,14 @@ Effects.StyleCrystal = function(self, power, texturePath, coords, casePath, allo
 	local rogue = ns.RogueTheme
 	if (rogue and rogue.StyleCrystal) then rogue:StyleCrystal(power, casePath, useMage, texturePath) end
 	LiftCap(power, power.Case)
+	LiftValueText(power)
 end
 
 --- Called by Player.lua before it sets the orb's fill. True when an effect
 --- has set the fill itself.
 Effects.StyleOrb = function(self, orb, flowingMana)
 	LiftCap(orb, orb.Case)
+	LiftValueText(orb)
 	local effect = self:GetOrbEffect()
 	local materials = ns.ClassResourceEffects
 	local useMaterial = materials and materials:GetInfo(effect)

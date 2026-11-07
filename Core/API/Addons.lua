@@ -80,6 +80,23 @@ local IsAddOnLoadable = function(target, ignoreLoD)
 	end
 end
 
+-- W2UI's "Bag Buttons" module (W2UI/Modules/Interface/BagBar.lua, 3.0.10) is no
+-- frame of its own: it restyles and moves Blizzard's BagsBar, backpack button,
+-- expand toggle and bag slots. While it is on, those frames are W2UI's to show.
+-- The module is on by default and needs a reload to change, so one answer per
+-- session holds. Ask after login, once W2UI's saved variables are in.
+local IsW2UIBagBarEnabled = function()
+	if (not IsAddOnEnabled("W2UI")) then return false end
+	local W2UI = _G.W2UI
+	if (type(W2UI) == "table" and type(W2UI.IsModuleSettingEnabled) == "function") then
+		local ok, enabled = pcall(W2UI.IsModuleSettingEnabled, W2UI, "bags")
+		if (ok) then return enabled and true or false end
+	end
+	local modules = type(_G.W2UIDB) == "table" and _G.W2UIDB.modules
+	local config = type(modules) == "table" and modules.bags
+	return not (type(config) == "table" and config.enabled == false)
+end
+
 -- The title from the addon's TOC, which is the name the player knows it by in
 -- the addon list. Falls back to the folder name.
 local GetAddOnTitle = function(addon)
@@ -163,3 +180,4 @@ API.ShowAddonConflictPrompt = ShowAddonConflictPrompt
 API.IsAddOnLoadable = IsAddOnLoadable
 API.IsAddOnEnabled = IsAddOnEnabled
 API.IsAddOnAvailable = IsAddOnAvailable
+API.IsW2UIBagBarEnabled = IsW2UIBagBarEnabled

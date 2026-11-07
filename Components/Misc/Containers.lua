@@ -47,9 +47,13 @@ Containers.AquireBagButtons = function(self)
 	-- Don't interfere with known bag addons. Baganator (834) and BetterBags hide
 	-- Blizzard's backpack frames, so moving the bag slots into them only hides the
 	-- slots with them; neither addon uses those slots for its own window.
-	for _,addon in next,{ "AdiBags", "ArkInventory", "Baganator", "Bagnon", "Bartender4", "BetterBags", "Combuctor" } do
+	-- W2UI_Bags hides Blizzard's container frames the same way.
+	for _,addon in next,{ "AdiBags", "ArkInventory", "Baganator", "Bagnon", "Bartender4", "BetterBags", "Combuctor", "W2UI_Bags" } do
 		if (ns.API.IsAddOnEnabled(addon)) then return end
 	end
+
+	-- W2UI's Bag Buttons module keeps these slots on BagsBar as its own bag bar.
+	if (ns.API.IsW2UIBagBarEnabled and ns.API.IsW2UIBagBarEnabled()) then return end
 
 	-- Attempt to hook the bag bar to the bags
 	-- Retrieve the first slot button and the backpack
