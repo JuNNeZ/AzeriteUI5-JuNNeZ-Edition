@@ -53,11 +53,12 @@ lua Tools/Harness/quest_marker_harness.lua .               # nameplate quest mar
 lua Tools/Harness/merchant_harness.lua     .               # auto sell junk / auto repair (waits for the sale's money) / fast loot
 lua Tools/Harness/layer_harness.lua        .               # Forever layer on the info bar: GUID zone UID, two-in-a-row, skips
 lua Tools/Harness/quest_item_button_harness.lua .          # Quest Item Button: quest pick, combat-safe swap, borrowed extra action key, rival
-lua Tools/Harness/totems_harness.lua .                     # Retail totem row: secret-safe totem element, timerless slots hidden, module shape
+lua Tools/Harness/totems_harness.lua .                     # Retail/Forever: timerless slots, pooled secret visibility, stale-pool fallback
 lua Tools/Harness/game_menu_conflict_harness.lua .         # game menu style prompt: asked once per rival, Both for Console Port, GUID addon key
 lua Tools/Harness/party_aura_options_harness.lua .         # party aura row: What To Show switches -> native groups, dispellable-only mode
 lua Tools/Harness/explorer_options_harness.lua .           # Explorer Mode switches greyed out only when they cannot act
-lua Tools/Harness/party_aura_filter_harness.lua .          # party scanning filter: Short/Raid switches, own HoTs (RAID_IN_COMBAT) vs castable buffs, boss auras, secret timing
+lua Tools/Harness/party_aura_filter_harness.lua .          # party scanning filter: own HoTs, boss/role auras, dispellable by you (HARMFUL|RAID), secret timing
+lua Tools/Harness/options_disabled_reason_harness.lua .  # translated disabled reasons, renderer refresh, AceConfig validation
 lua Tools/Harness/legacy_player_options_harness.lua . Tools/Harness   # Player options the Legacy HUD cannot use are hidden (page and frame panel); [Forever]
 lua Tools/Harness/xp_bar_harness.lua .                     # XP/reputation ring: ExperienceBarDisabled game rule, renown/max-level/expansion refresh events
 lua Tools/Harness/masterlooter_harness.lua .               # Forever master looter icon on 6-40 raid frames
@@ -227,8 +228,10 @@ strata, Blizzard's Edit Mode or a real cycle transition.
 ClassPower element, the real PlayerClassPower style and the real layout data against
 a secret stand-in that reports as a number but throws on any arithmetic, ordering
 comparison or indexing - Forever returns combo points that way even out of combat.
-Its curve and StatusBar model Blizzard's documented Step and clamp behavior; they
-are not the client. `mutate_client.lua` carries its mutations.
+Its StatusBar clamp and mask textures model the target-count gate pattern; they
+are not the client. Player power and target count can disagree. Checks cover the
+case, fill and slot backing, including zero/full-set hiding and plain-count cleanup.
+`mutate_client.lua` carries its mutations.
 
 For client-aware API, UI-source, TOC/XML, and Forever game-data checks, use
 [Hated WoW MCP](https://github.com/RdyGaming/hated-wow-mcp) with `flavor: "forever"`.

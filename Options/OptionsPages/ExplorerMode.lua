@@ -380,6 +380,22 @@ local GenerateOptions = function()
 	local renderer = ns.OptionsKit and ns.OptionsKit.Renderer
 	if (renderer and renderer.SetNavigation) then renderer:SetNavigation(options, "tabs") end
 
+	-- Why the rows that can be greyed out while shown are greyed out. Kept beside
+	-- the table, not in it: AceConfigRegistry refuses unknown keys
+	-- (Options/Kit/Config.lua SetDisabledDesc). Every other row here is hidden,
+	-- not greyed, while Explorer Mode is off. FixLog 2026-11-13.
+	local config = ns.OptionsKit and ns.OptionsKit.Config
+	if (config and config.SetDisabledDesc) then
+		local args = options.args
+		config.SetDisabledDesc(args.fadeInMythicPlus,
+			string.format(L["Unavailable while \"%s\" keeps your interface visible."], L["While in an instance"]))
+		-- Its help line already says this; the reason keeps the same plain form as
+		-- every other greyed-out row and stays on screen in place of it.
+		config.SetDisabledDesc(args.fadeWithDeadTarget,
+			L["Unavailable while neither friendly nor hostile targets keep your interface visible."])
+		config.SetDisabledDesc(args.fadeThresholdManaInForms, L["Only Druids use this."])
+	end
+
 	return options
 end
 

@@ -132,6 +132,13 @@ local GetTargetComboPoints = ns.IsForever and _G.GetComboPoints or nil
 
 local function GetComboPoints(unit)
 	if(GetTargetComboPoints) then
+		-- AzeriteUI: no target, no points, as Forever's Camelot ComboFrame and TargetBoundComboPointBar
+		-- show. A plain 0 also lets PostUpdate hide the element instead of masking a secret zero
+		-- (FixLog 2026-11-13). A secret answer is never tested; the count decides then.
+		local hasTarget = UnitExists and UnitExists('target')
+		if(UnitExists and not (IsSecretValue and IsSecretValue(hasTarget)) and not hasTarget) then
+			return 0
+		end
 		return GetTargetComboPoints(unit, 'target') or 0
 	end
 	return UnitPower(unit, POWER_ID_COMBO_POINTS), GetUnitChargedPowerPoints and GetUnitChargedPowerPoints(unit)

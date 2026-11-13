@@ -1,15 +1,76 @@
 -- MIT License. Copyright (c) 2026 Jonas "JuNNeZ" Andersen.
 -- Register an opt-in Details skin; Details owns applying and saving it.
 local _, ns = ...
-local Skin = ns:NewModule("DetailsSkin", "LibMoreEvents-1.0")
+local Skin = ns:NewModule("DetailsSkin", "LibMoreEvents-1.0", "AceConsole-3.0")
 local SKIN_NAME = "AzeriteUI Forged (Preview)"
 local Art = ns.DetailsSkinArt
 local borders = setmetatable({}, { __mode = "k" })
 local rowMasks = setmetatable({}, { __mode = "k" })
+local titles = setmetatable({}, { __mode = "k" })
+local titleHooks = setmetatable({}, { __mode = "k" })
+local valueOwners = setmetatable({}, { __mode = "k" })
+local valueHooks = setmetatable({}, { __mode = "k" })
 local TOOLBAR_KEYS = { "modo_selecao", "segmento", "atributo", "report", "reset", "fechar" }
-Skin.Style = { idleIcons = .08, hoverIcons = .85 }
+Skin.Style = { idleIcons = .08, hoverIcons = .85, valueInset = 21 }
 local function IsOurSkin(instance)
 	return instance.skin == SKIN_NAME or instance.skin == "AzeriteUI Minimal" or instance.skin == "AzeriteUI"
+end
+
+Skin.UpdateTitle = function(instance)
+	local label = instance.GetTitleBarFontString and instance:GetTitleBarFontString()
+	local text = label and (label.widget or label)
+	if (not text) then return end
+	if (titleHooks[text] == "updating") then return end
+	local original = titles[instance]
+	if (not IsOurSkin(instance)) then
+		if (original and original.text == text) then text:SetJustifyH(original.justify) end
+		titles[instance] = nil
+		return
+	end
+	local parent = instance.baseframe and instance.baseframe.titleBar
+	if (not parent) then return end
+	if (not original or original.text ~= text) then
+		titles[instance] = { text = text, justify = text:GetJustifyH() }
+	end
+	if (not titleHooks[text]) then
+		titleHooks[text] = true
+		-- Native drag scripts set this point directly, bypassing AttributeMenu.
+		hooksecurefunc(text, "SetPoint", function() Skin.UpdateTitle(instance) end)
+	end
+	titleHooks[text] = "updating"
+	text:ClearAllPoints()
+	text:SetPoint("CENTER", parent, "CENTER", 0, 0)
+	text:SetWidth(0) -- Native auto-sized text, not Details' asymmetric toolbar budget.
+	text:SetJustifyH("CENTER")
+	titleHooks[text] = true
+end
+
+Skin.UpdateRowTextLayout = function(instance)
+	if (not IsOurSkin(instance) or not instance.SetBarTextAnchorOffset) then return end
+	local row = instance.row_info
+	if (row) then
+		row.textR_show_data = { true, false, false }
+		row.textR_custom_text = "{data1}"
+	end
+	local anchor = row and row.texts and row.texts[4] and row.texts[4].anchor
+	if (anchor and anchor.x ~= -Skin.Style.valueInset) then
+		-- The native setter persists the offset and re-anchors both FontString sets,
+		-- including inverted bars and rows in an already-selected saved skin.
+		instance:SetBarTextAnchorOffset(4, Skin.Style.valueInset)
+	end
+end
+
+local function AnchorValue(instance, row, text)
+	if (not IsOurSkin(instance) or valueHooks[text] == "updating") then return end
+	local settings = instance.row_info
+	local anchor = settings and settings.texts and settings.texts[4] and settings.texts[4].anchor
+	local y = (settings and settings.text_yoffset or 0) + (anchor and anchor.y or 0)
+	local point = instance.bars_inverted and "LEFT" or "RIGHT"
+	local x = instance.bars_inverted and Skin.Style.valueInset or -Skin.Style.valueInset
+	valueHooks[text] = "updating"
+	text:ClearAllPoints()
+	text:SetPoint(point, row.statusbar, point, x, y)
+	valueHooks[text] = true
 end
 
 -- Only our decorative child changes. Details continues to own bounds, input,
@@ -36,6 +97,21 @@ Skin.UpdateBorder = function(instance)
 end
 
 Skin.UpdateRow = function(instance, row)
+	for _, index in ipairs({ 4, 14 }) do
+		local text = row["lineText" .. index]
+		if (text) then
+			valueOwners[text] = instance
+			if (IsOurSkin(instance) and text.SetPoint and text.ClearAllPoints) then
+				if (not valueHooks[text]) then
+					valueHooks[text] = true
+					hooksecurefunc(text, "SetPoint", function() AnchorValue(instance, row, text) end)
+				end
+				-- Modern ResolveAnchor replaces anchor.x with alignment_space * 0
+				-- for column 4. Correct only our two visible native FontStrings.
+				AnchorValue(instance, row, text)
+			end
+		end
+	end
 	local mask = rowMasks[row]
 	local active = IsOurSkin(instance)
 	if (not active) then
@@ -54,8 +130,8 @@ Skin.UpdateRow = function(instance, row)
 		or not row.textura.AddMaskTexture or not row.background.AddMaskTexture) then return end
 	-- NEWROW fires after construction, before a later full settings pass. Supply
 	-- the actual paint as well as its mask so late rows never retain blank textures.
-	row.textura:SetTexture(ns.API.GetMedia("Details\\fill"))
-	row.background:SetTexture(ns.API.GetMedia("Details\\fill"))
+	row.textura:SetTexture(ns.API.GetMedia("Details\\fill-tile"))
+	row.background:SetTexture(ns.API.GetMedia("Details\\fill-tile"))
 	row.overlayTexture:SetTexture(ns.API.GetMedia("Details\\casing"))
 	local settings = instance.row_info
 	if (settings) then
@@ -67,8 +143,8 @@ Skin.UpdateRow = function(instance, row)
 	if (not mask) then
 		mask = row.statusbar:CreateMaskTexture(nil, "BACKGROUND")
 		mask:SetAllPoints(row.statusbar)
-		mask:SetTexture(ns.API.GetMedia("Details\\row-mask"), "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-		mask:SetTexCoord(unpack(Art.casing))
+		mask:SetTexture(ns.API.GetMedia("Details\\row-mask-native"), "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		mask:SetTexCoord(0, 1, 0, 1)
 		rowMasks[row] = mask
 	end
 	if (not mask.attached) then
@@ -77,8 +153,10 @@ Skin.UpdateRow = function(instance, row)
 		mask.attached = true
 	end
 	-- Texture coordinates are art registration only. Never inspect a row's value.
-	row.textura:SetTexCoord(unpack(Art.fill))
-	row.background:SetTexCoord(unpack(Art.fill))
+	-- Native StatusBars own/refresh their fill UVs. A margin-free material tile
+	-- makes both default UVs and native progress UVs valid; never crop the fill.
+	row.textura:SetTexCoord(0, 1, 0, 1)
+	row.background:SetTexCoord(0, 1, 0, 1)
 	row.overlayTexture:SetTexCoord(unpack(Art.casing))
 end
 
@@ -119,7 +197,7 @@ Skin.TryInstall = function(self)
 	-- Clone Details' own atlas geometry, never its live instances or profile.
 	local skin = Copy(base)
 	skin.author = "JuNNeZ"
-	skin.version = "4.0"
+	skin.version = "4.5"
 	skin.desc = "Approved AzeriteUI artwork: forged header, faceted fills and angled row casings. Live preview."
 	skin.file = ns.API.GetMedia("blank") -- Keep atlas anchors, replace its visible chrome.
 	skin.no_cache = true -- Assets require AzeriteUI; do not cache an orphan skin.
@@ -131,7 +209,7 @@ Skin.TryInstall = function(self)
 	local fontFile = font and font:GetFont()
 	if (not fontFile) then return end
 	media:Register("font", "AzeriteUI Details", fontFile)
-	media:Register("statusbar", "AzeriteUI Details", ns.API.GetMedia("Details\\fill"))
+	media:Register("statusbar", "AzeriteUI Details", ns.API.GetMedia("Details\\fill-tile"))
 	media:Register("statusbar", "AzeriteUI Details Casing", ns.API.GetMedia("Details\\casing"))
 	media:Register("background", "AzeriteUI Clear", ns.API.GetMedia("blank"))
 
@@ -161,7 +239,7 @@ Skin.TryInstall = function(self)
 	props.use_multi_fontstrings = false
 	local row = props.row_info
 	row.texture = "AzeriteUI Details"
-	row.texture_file = ns.API.GetMedia("Details\\fill")
+	row.texture_file = ns.API.GetMedia("Details\\fill-tile")
 	row.texture_background = "AzeriteUI Details"
 	row.texture_background_file = row.texture_file
 	row.texture_custom = ""
@@ -178,11 +256,16 @@ Skin.TryInstall = function(self)
 	row.textL_outline, row.textR_outline = false, false
 	row.textL_outline_small, row.textR_outline_small = true, true
 	row.textL_show_number = false
-	row.textR_show_data = { false, true, false } -- Rate only; names retain their space.
+	row.textR_show_data = { true, false, false } -- Primary amount only; names retain their space.
 	row.textR_enable_custom_text = true
-	row.textR_custom_text = "{data2}" -- Details formats the rate, including combat secrets.
+	row.textR_custom_text = "{data1}" -- Details formats the primary amount for the selected view.
 	row.show_percent = false
 	row.no_icon = true
+	-- Minimalistic enables spec icons. ChangeSkin calls SetBarSpecIconSettings,
+	-- which sets no_icon=false again if this inherited switch remains enabled.
+	row.use_spec_icons = false
+	row.icon_file = ""
+	row.start_after_icon = false
 	-- Current Details has per-column anchors; use the meter itself when icons are off.
 	row.texts = {
 		{ anchor = { point = "left", relativeTo = "statusbar", relativePoint = "left", x = 9, y = 0 } },
@@ -190,7 +273,7 @@ Skin.TryInstall = function(self)
 		-- Style the auxiliary columns out, including their shadows; do not read values.
 		{ color = { byClass = false, fixed = { 1, 1, 1, 0 } }, shadow = { color = { 0, 0, 0, 0 } } },
 		{ color = { byClass = false, fixed = { 1, 1, 1, 0 } }, shadow = { color = { 0, 0, 0, 0 } } },
-		{ anchor = { point = "right", relativeTo = "statusbar", relativePoint = "right", x = -9, y = 0 } }
+		{ anchor = { point = "right", relativeTo = "statusbar", relativePoint = "right", x = -Skin.Style.valueInset, y = 0 } }
 	}
 	row.space = { left = 2, right = 2, between = 3 }
 	skin.micro_frames.font = "AzeriteUI Details"
@@ -201,18 +284,37 @@ Skin.TryInstall = function(self)
 	-- required for the owned border and hover treatment, including skin cleanup.
 	if (not self.hooked and type(details.ChangeSkin) == "function"
 		and type(details.SetAutoHideMenu) == "function" and type(details.SetIconAlpha) == "function"
-		and type(details.SetBarSettings) == "function" and type(details.CreateEventListener) == "function") then
+		and type(details.SetBarSettings) == "function" and type(details.CreateEventListener) == "function"
+		and type(details.AttributeMenu) == "function" and type(details.RefreshAttributeTextSize) == "function") then
 		hooksecurefunc(details, "ChangeSkin", function(instance)
 			Skin.UpdateBorder(instance)
 			Skin.UpdateToolbar(instance)
 			Skin.UpdateRows(instance)
+			Skin.UpdateTitle(instance)
+			Skin.UpdateRowTextLayout(instance)
 		end)
 		hooksecurefunc(details, "SetAutoHideMenu", Skin.UpdateToolbar)
 		hooksecurefunc(details, "SetIconAlpha", Skin.UpdateToolbar)
-		hooksecurefunc(details, "SetBarSettings", Skin.UpdateRows)
+		hooksecurefunc(details, "SetBarSettings", function(instance)
+			Skin.UpdateRowTextLayout(instance)
+			Skin.UpdateRows(instance)
+		end)
+		hooksecurefunc(details, "AttributeMenu", Skin.UpdateTitle)
+		hooksecurefunc(details, "RefreshAttributeTextSize", Skin.UpdateTitle)
+		if (type(details.SimpleFormat) == "function") then
+			hooksecurefunc(details, "SimpleFormat", function(_, _, _, text, total)
+				local instance = valueOwners[text]
+				if (instance and IsOurSkin(instance)) then
+					-- Native meter ignores legacy column flags. Forward its already
+					-- formatted primary amount verbatim; never inspect combat secrets.
+					text:SetText(total)
+				end
+			end)
+		end
 		self.listener = details:CreateEventListener()
 		self.listener:RegisterEvent("DETAILS_INSTANCE_NEWROW", function(_, instance, row)
 			Skin.UpdateRow(instance, row)
+			Skin.UpdateRowTextLayout(instance)
 		end)
 		self.hooked = true
 	end
@@ -231,5 +333,45 @@ Skin.OnInitialize = function(self)
 	-- Both addon load orders, including Details loaded on demand after login.
 	self:RegisterEvent("ADDON_LOADED", "TryInstall")
 	self:RegisterEvent("PLAYER_LOGIN", "TryInstall")
+	self:RegisterChatCommand("azdetails", "Inspect")
 	self:TryInstall()
+end
+
+local function SafeText(value)
+	if (issecretvalue and issecretvalue(value)) then return "<secret>" end
+	return tostring(value)
+end
+local function Describe(texture)
+	if (not texture) then return "missing" end
+	local parts = { SafeText(texture:GetTexture()) }
+	for _, value in ipairs({ texture:GetTexCoord() }) do parts[#parts+1] = SafeText(value) end
+	return table.concat(parts, " ")
+end
+
+-- Maintainer-operated, read-only graphics probe. No unit names or secret
+-- arithmetic; every native coordinate/colour/value is individually guarded.
+Skin.Inspect = function(self)
+	local details = _G.Details
+	self:Print("Forged graphics probe 4.2")
+	for index, instance in ipairs(details and details.tabela_instancias or {}) do
+		if (IsOurSkin(instance)) then
+			self:Print("window " .. index .. " skin=" .. instance.skin)
+			local row = instance.barras and instance.barras[1]
+			if (row and row.textura) then
+				self:Print("fill: " .. Describe(row.textura))
+				self:Print("background: " .. Describe(row.background))
+				self:Print("casing: " .. Describe(row.overlayTexture))
+				self:Print("mask: " .. Describe(rowMasks[row]))
+				local colours = { row.textura:GetVertexColor() }
+				for i, value in ipairs(colours) do colours[i] = SafeText(value) end
+				self:Print("fill RGBA: " .. table.concat(colours, " "))
+				local bar = row.statusbar
+				if (bar) then
+					local minimum, maximum = bar:GetMinMaxValues()
+					self:Print("native bar: " .. Describe(bar:GetStatusBarTexture()))
+					self:Print("value/min/max: " .. SafeText(bar:GetValue()) .. "/" .. SafeText(minimum) .. "/" .. SafeText(maximum))
+				end
+			end
+		end
+	end
 end

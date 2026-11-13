@@ -35,6 +35,19 @@ local Immediate = function(option)
 	return option
 end
 
+-- Why a greyed-out row is greyed out: a string, or function(info) returning one.
+-- Kept beside the option like Immediate, because AceConfigRegistry refuses
+-- unknown keys (Options/Kit/Config.lua SetDisabledDesc). FixLog 2026-11-13.
+local DisabledDesc = function(option, reason)
+	local Kit = ns.OptionsKit
+	if (option and Kit and Kit.Config and Kit.Config.SetDisabledDesc) then
+		Kit.Config.SetDisabledDesc(option, reason)
+	end
+	return option
+end
+local IsOnReason = function(name) return string.format(L["Unavailable while \"%s\" is on."], name) end
+local IsOffReason = function(name) return string.format(L["Unavailable while \"%s\" is off."], name) end
+
 local Options = ns:GetModule("Options")
 local HasColorPicker = ns.API.IsAddOnEnabled("AzUI_Color_Picker")
 
@@ -1263,6 +1276,7 @@ local GenerateOptions = function()
 			end,
 			disabled = function(info) return not getoption(info, "useRangeIndicator") end
 		}
+		DisabledDesc(suboptions.args.rangeIndicatorRange, IsOffReason(L["Use Range Indicator"]))
 	end
 
 	local AddPlayerVisibilityOptions = function(suboptions, setter, getter, isdisabled, order)
@@ -1328,6 +1342,9 @@ local GenerateOptions = function()
 			order = order + 30, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
 			disabled = disabled
 		}
+		local classColorsOff = IsOffReason(L["Use Class Colors"])
+		DisabledDesc(suboptions.args.useBlizzardHealthColors, classColorsOff)
+		DisabledDesc(suboptions.args.useClassColorOnMouseoverOnly, classColorsOff)
 	end
 
 	-- Keep each group-frame section in its own order range so aura, colour and
@@ -1534,6 +1551,30 @@ local GenerateOptions = function()
 			-- so it must stay switchable with Show Auras off.
 			disabled = isdisabled
 		}
+
+		-- Why each party aura row is greyed out, in the order its `disabled` asks:
+		-- the row off, then stock behaviour, then dispellable-only, which greys
+		-- only "Show Other Short Debuffs". A row disabled by none of these (the
+		-- module off) is hidden, not greyed. FixLog 2026-11-13.
+		local partyAuraReason = function(info)
+			if (not getoption(info, "showAuras")) then
+				return IsOffReason(L["Show Auras"])
+			end
+			if (getoption(info, "partyAuraUseStockBehavior")) then
+				return IsOnReason(L["Use AzeriteUI Stock Behavior"])
+			end
+			if (getoption(info, "partyAuraOnlyDispellableDebuffs")) then
+				return IsOnReason(L["Only Show Dispellable Debuffs"])
+			end
+		end
+		for _, key in ipairs({
+			"partyAuraUseStockBehavior", "partyAuraShowDispellableDebuffs", "partyAuraOnlyDispellableDebuffs",
+			"partyAuraShowBossAndImportantDebuffs", "partyAuraShowOtherDebuffs", "partyAuraShowHelpfulExternals",
+			"partyAuraShowHelpfulRaidBuffs", "partyAuraShowHelpfulShortBuffs",
+			"AuraSize", "AurasMaxCols", "partyAuraDebuffScale", "AurasGrowthX", "AurasGrowthY"
+		}) do
+			DisabledDesc(suboptions.args[key], partyAuraReason)
+		end
 		options.args.party = suboptions
 	end
 

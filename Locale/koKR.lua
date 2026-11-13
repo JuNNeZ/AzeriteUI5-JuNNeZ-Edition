@@ -1466,3 +1466,11 @@ L["Show the quest in the tooltip"] = "툴팁에 퀘스트 표시"
 L["Let Masque skin the buttons"] = "Masque로 버튼 스킨 적용"
 L["Hand the action, pet and stance buttons to Masque, so its skins replace AzeriteUI's own button art. Pick the skin in Masque's settings under AzeriteUI. Button shapes do not apply while this is on. Changing this asks you to reload."] = "행동 단축 버튼, 소환수 버튼, 태세 버튼을 Masque에 넘겨 AzeriteUI 자체 버튼 그래픽 대신 Masque 스킨을 사용합니다. 스킨은 Masque 설정의 AzeriteUI 항목에서 고르세요. 켜져 있는 동안에는 버튼 모양 설정이 적용되지 않습니다. 변경하면 UI를 다시 불러올지 묻습니다."
 L["Masque takes over the buttons, or hands them back, when the interface loads. Reload now?"] = "인터페이스를 불러올 때 Masque가 버튼을 넘겨받거나 되돌려 줍니다. 지금 다시 불러올까요?"
+
+-- Why a greyed-out option is greyed out (Options/Kit/Config.lua SetDisabledDesc).
+L["Unavailable while \"%s\" is on."] = "'%s' 설정이 켜져 있는 동안 사용할 수 없습니다."
+L["Unavailable while \"%s\" is off."] = "'%s' 설정이 꺼져 있는 동안 사용할 수 없습니다."
+L["Unavailable while ConsolePort is enabled."] = "ConsolePort가 활성화된 동안 사용할 수 없습니다."
+L["Unavailable while \"%s\" keeps your interface visible."] = "'%s' 설정이 인터페이스를 표시하는 동안 사용할 수 없습니다."
+L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = "우호적 대상과 적대적 대상 모두 인터페이스를 표시하지 않는 동안 사용할 수 없습니다."
+L["Only Druids use this."] = "드루이드 전용입니다."

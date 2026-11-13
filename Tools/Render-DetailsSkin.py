@@ -55,7 +55,7 @@ def panel(settings, hovered=False, count=5):
         draw.text(at, value, font=font(row["font_size"]), fill=color, anchor=anchor)
 
     title_color = tuple(round(v * 255) for v in p["attribute_text"]["text_color"])
-    text((offset + 16, offset + 10), "Damage Done", title_color)
+    text((offset + width / 2, offset + title_height / 2), "Damage Done", title_color, anchor="mm")
     alpha = style["hoverIcons"] if hovered else style["idleIcons"]
     # Toolbar glyphs are schematic; live Details supplies its own six icons.
     for i in range(6):
@@ -69,9 +69,9 @@ def panel(settings, hovered=False, count=5):
         ("Nymera", "96.1K", .771, (.67, .83, .45)),
         ("Veyrin", "82.7K", .664, (.58, .51, .79)),
     ]
-    material = art("fill")
+    material = Image.open(ART / "fill-tile.tga").convert("RGBA")
     casing = art("casing")
-    aperture = art("row-mask", "casing").getchannel("A")
+    aperture = Image.open(ART / "row-mask-native.tga").getchannel("A")
     text_color = tuple(round(v * 255) for v in row["fixed_text_color"])
     for i, (name, value, proportion, color) in enumerate(samples[:count]):
         x, y = offset + 2, offset + title_height + 3 + i * stride
@@ -89,7 +89,7 @@ def panel(settings, hovered=False, count=5):
         image.alpha_composite(bar, (x, y))
         image.alpha_composite(casing.resize((row_width, row["height"]), Image.Resampling.LANCZOS), (x, y))
         text((x + 9, y + 4), name, text_color)
-        text((x + row_width - 9, y + 4), value, text_color, anchor="ra")
+        text((x + row_width + row["texts"][3]["anchor"]["x"], y + 4), value, text_color, anchor="ra")
     return image
 
 

@@ -1465,3 +1465,11 @@ L["Show the quest in the tooltip"] = true
 L["Let Masque skin the buttons"] = true
 L["Hand the action, pet and stance buttons to Masque, so its skins replace AzeriteUI's own button art. Pick the skin in Masque's settings under AzeriteUI. Button shapes do not apply while this is on. Changing this asks you to reload."] = true
 L["Masque takes over the buttons, or hands them back, when the interface loads. Reload now?"] = true
+
+-- Why a greyed-out option is greyed out (Options/Kit/Config.lua SetDisabledDesc).
+L["Unavailable while \"%s\" is on."] = true
+L["Unavailable while \"%s\" is off."] = true
+L["Unavailable while ConsolePort is enabled."] = true
+L["Unavailable while \"%s\" keeps your interface visible."] = true
+L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = true
+L["Only Druids use this."] = true

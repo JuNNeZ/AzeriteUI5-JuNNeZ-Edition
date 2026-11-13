@@ -41,6 +41,15 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.39.0-JuNNeZ",
+		items = {
+			{ text = "Greyed-out settings now explain which setting or addon makes them unavailable.", page = L["Tooltips"] },
+			{ text = "Party dispel filters follow what you can remove, with boss and role aura handling.", page = L["Group Frames"], section = L["Party Frames"] },
+			{ text = "Totem visibility follows Blizzard's combat display, with a fallback for competing addons.", page = L["Unit Frames"], section = L["Totems"] },
+			{ text = "Forever combo points follow the target; Details Forged gains repaired fills and text." },
+		}
+	},
+	{
 		version = "5.38.0-JuNNeZ",
 		items = {
 			{ text = "Death Knight, Priest and Warlock themes are available as WIP previews.", page = "Themes" },

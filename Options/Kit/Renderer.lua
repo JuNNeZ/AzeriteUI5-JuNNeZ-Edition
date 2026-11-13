@@ -368,10 +368,21 @@ local Bind = function(control, option, options, path, page, entry)
 
 	-- The artifact puts the description under the label as a plain line rather
 	-- than inside a tooltip nobody hovers to find.
-	local desc = Config.GetDesc(option, options, path, APP)
-	control:SetHelp(AsString(desc, nil))
+	local help = AsString(Config.GetDesc(option, options, path, APP), nil)
 
 	local disabled = Config.IsDisabled(option, options, bound, APP)
+
+	-- A greyed-out row says why in place of its help line, like a refusal does
+	-- (Controls SetError): it is what you need to read right now, the help line
+	-- holds two lines at most, and every refresh re-reads both, so the usual
+	-- line comes back the moment the row is usable. A reason that cannot be
+	-- worked out leaves the help line alone. FixLog 2026-11-13.
+	if (disabled) then
+		local ok, reason = pcall(Config.GetDisabledDesc, option, options, bound, APP)
+		if (ok and reason) then help = reason end
+	end
+
+	control:SetHelp(help)
 	control:SetDisabled(disabled and true or false)
 
 	-- The row's kind, not the option's: one multiselect is drawn as a run of

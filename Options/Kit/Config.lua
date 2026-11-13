@@ -27,6 +27,7 @@ local Addon, ns = ...
 local error = error
 local ipairs, pairs = ipairs, pairs
 local select = select
+local setmetatable = setmetatable
 local string_format = string.format
 local table_sort = table.sort
 local tinsert = table.insert
@@ -230,6 +231,56 @@ Config.IsDisabled = function(option, options, path, appName)
 		return disabled
 	end
 	return GetMember("disabled", option, options, path, appName)
+end
+
+--------------------------------------------------------------------------
+-- Why a row is greyed out
+--------------------------------------------------------------------------
+-- A greyed-out row that does not say why reads as broken. KkthnxUI
+-- (Config/GUI/Widgets.lua dependsOn), GW2_UI (Settings/settingsUtils.lua) and
+-- EllesmereUI (disabledTooltip) all name the reason, so the panel does too.
+-- FixLog 2026-11-13.
+--
+-- The reason is kept here, keyed by the option's own table, and not as a
+-- `disabledDesc` field on it: AceConfigRegistry validates the options table
+-- (AceConfigRegistry-3.0.lua:239, "unknown parameter") whenever /az classic or
+-- /az legacy asks for it, so an unknown key would break both windows. Same
+-- reason as Defaults.Bind and Renderer:SetNavigation.
+--
+-- A reason is a string, or a function(info) returning one, like `desc`. It is
+-- inherited from parent groups the way `disabled` is, deepest one winning.
+local disabledDescs = setmetatable({}, { __mode = "k" })
+
+-- Returns the option, so a page can wrap a table literal in place.
+Config.SetDisabledDesc = function(option, reason)
+	if (type(option) == "table") then
+		disabledDescs[option] = reason
+	end
+	return option
+end
+
+-- The reason for a greyed-out row, or nil. Only asked when the row is
+-- disabled; it says nothing about whether it is.
+Config.GetDisabledDesc = function(option, options, path, appName)
+	local reason = disabledDescs[option]
+	if (reason == nil) then
+		local group = options
+		reason = disabledDescs[group]
+		for i = 1, #path do
+			group = GetSubOption(group, path[i])
+			if (not group) then break end
+			if (disabledDescs[group] ~= nil) then
+				reason = disabledDescs[group]
+			end
+		end
+	end
+
+	if (type(reason) == "function") then
+		reason = reason((BuildInfo(options, path, appName, option)))
+	end
+	if (type(reason) == "string" and reason ~= "") then
+		return reason
+	end
 end
 
 -- Reads a value. Extra arguments are passed through, which multiselect needs.

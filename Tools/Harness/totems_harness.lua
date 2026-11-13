@@ -4,6 +4,10 @@
 -- SetAlphaFromBoolean, the icon straight to SetTexture, the timer through
 -- SetCooldownFromDurationObject, and an empty slot clears its cooldown. The module builds
 -- four mouse-disabled icons and exists only on Retail content.
+-- Secret slots (FixLog 2026-11-13): Blizzard's TotemFrame keeps its events, the element
+-- post-hooks TotemFrame:Update once and, only for a slot whose answers are secret, hands
+-- the pooled button's IsShown() to SetAlphaFromBoolean (GW2_UI totemBar.lua). It never
+-- writes to the pool or its buttons. Taint of that hook: .research/tmp/elune/totems_pool_taint_probe.lua.
 -- Offline only: whether the ghoul, statues and mushrooms really fill totem slots, and how
 -- the row looks at the default position, are live checks.
 -- Run: lua.exe Tools/Harness/totems_harness.lua <addon root>
@@ -25,6 +29,7 @@ for _, m in ipairs({ "__lt", "__le", "__add", "__sub", "__mul", "__div", "__mod"
 end
 local function secret(v) return setmetatable({ value = v }, secretMeta) end
 issecretvalue = function(v) return getmetatable(v) == secretMeta end
+table.wipe = table.wipe or function(t) for k in pairs(t) do t[k] = nil end return t end
 
 -- Game state per slot.
 local slots = {}
@@ -38,11 +43,47 @@ GetTotemDuration = function(slot) return durations[slot] end
 UnitClassBase = function() return "DEATHKNIGHT" end
 STANDARD_TOTEM_PRIORITIES = { 1, 2, 3, 4 }
 SHAMAN_TOTEM_PRIORITIES = { 2, 1, 3, 4 }
-local blizzEvents = {}
+-- Blizzard's TotemFrame (Blizzard_UnitFrame/Mainline/TotemFrame.lua): OnLoad registers these
+-- events, Update fills totemPool. Its pooled buttons are read-only for us: any write raises.
+local blizzEvents = { PLAYER_TOTEM_UPDATE = true, PLAYER_ENTERING_WORLD = true, UPDATE_SHAPESHIFT_FORM = true, PLAYER_TALENT_UPDATE = true }
+local blizzWrites = 0
+local poolActive = {}
+local function PooledButton(slot, shown)
+	return setmetatable({}, {
+		__index = { slot = slot, IsShown = function() return shown end },
+		__newindex = function() blizzWrites = blizzWrites + 1 end,
+	})
+end
+local blizzUpdates = 0
 TotemFrame = {
+	IsEventRegistered = function(_, e) return blizzEvents[e] == true end,
 	UnregisterEvent = function(_, e) blizzEvents[e] = false end,
 	RegisterEvent = function(_, e) blizzEvents[e] = true end,
+	Update = function() blizzUpdates = blizzUpdates + 1 end,
+	totemPool = setmetatable({}, {
+		-- The real totemPool is a secure proxy (Pools.lua CreateSecureFramePool); its
+		-- EnumerateActive returns SecureMap:Enumerate's (Iterator, nil, nil), mirrored here.
+		__index = { EnumerateActive = function()
+			return function(_, key) return next(poolActive, key) end, nil, nil
+		end },
+		__newindex = function() blizzWrites = blizzWrites + 1 end,
+	}),
 }
+local hooks = {}
+hooksecurefunc = function(t, name, f)
+	hooks[#hooks + 1] = { t = t, name = name }
+	local orig = t[name]
+	t[name] = function(...) local r = orig(...); f(...); return r end
+end
+-- What the game does on PLAYER_TOTEM_UPDATE: Blizzard's untainted Update, then our post-hook.
+local function BlizzardTotemUpdate(...)
+	poolActive = {}
+	for i = 1, select("#", ...), 2 do
+		local slot, shown = select(i, ...)
+		poolActive[PooledButton(slot, shown)] = true
+	end
+	TotemFrame:Update()
+end
 GameTooltip = { IsForbidden = function() return false end }
 
 local function Widget()
@@ -86,7 +127,14 @@ for i = 1, 4 do
 	check(owner.Totems[i].id == i, "slot " .. i .. " keeps its id")
 end
 check(events.PLAYER_TOTEM_UPDATE ~= nil, "listens for PLAYER_TOTEM_UPDATE")
-check(blizzEvents.PLAYER_TOTEM_UPDATE == false, "Blizzard's TotemFrame stops updating")
+local keepsAll = true
+for _, e in ipairs({ "PLAYER_TOTEM_UPDATE", "PLAYER_ENTERING_WORLD", "UPDATE_SHAPESHIFT_FORM", "PLAYER_TALENT_UPDATE" }) do
+	if (blizzEvents[e] ~= true) then keepsAll = false end
+end
+check(keepsAll, "Blizzard's TotemFrame keeps its events (its pooled buttons sort secret slots)")
+check(#hooks == 1 and hooks[1].t == TotemFrame and hooks[1].name == "Update", "post-hooks TotemFrame:Update once", #hooks)
+element.enable(owner)
+check(#hooks == 1, "enabling again does not hook twice", #hooks)
 
 -- Secret slot: nothing may be tested in Lua.
 -- A duration object as GetTotemDuration hands it out (never nil on 12.x).
@@ -153,6 +201,65 @@ check(t2.alphaArg == haveS2, "fully secret slot follows haveTotem")
 slots[2] = nil; durations[2] = Duration(0, false)
 element.update(owner, "ForceUpdate")
 
+-- Secret slots once Blizzard's TotemFrame has sorted them (GW2_UI totemBar.lua, FixLog 2026-11-13).
+-- Its Update acquires a button only for haveTotem and shows it only while duration > 0.
+local haveS4 = secret(true)
+slots[4] = { have = haveS4, name = secret(""), start = secret(0), duration = secret(0), icon = secret(0) }
+durations[4] = Duration(0, true)
+local t4 = owner.Totems[4]
+local hiddenS = secret(false)
+ok, err = pcall(BlizzardTotemUpdate, 4, hiddenS)
+check(ok, "post-hook survives secret pooled answers", err)
+check(t4.alphaArg == hiddenS and t4.alphaOn == 1 and t4.alphaOff == 0, "secret slot follows its pooled button's IsShown (hidden), not haveTotem")
+ok, err = pcall(BlizzardTotemUpdate, 4, false)
+check(ok and t4.alphaArg == false, "secret slot hidden when its pooled button is not shown", err)
+
+durations[4] = Duration(30, true)
+slots[4].duration = secret(30)
+local shownS = secret(true)
+ok, err = pcall(BlizzardTotemUpdate, 4, shownS)
+check(ok and t4.alphaArg == shownS, "secret slot shown when its pooled button is shown", err)
+check(t4.Cooldown.duration == durations[4], "secret shown slot keeps its timer")
+
+-- Taken (secretly) but Blizzard acquired no button: haveTotem was false. Both handlers run,
+-- as in the game, so this does not pass merely because nothing refreshed the slot.
+ok, err = pcall(BlizzardTotemUpdate)
+ok, err = ok and pcall(events.PLAYER_TOTEM_UPDATE, owner, "PLAYER_TOTEM_UPDATE", 4)
+check(ok and t4.alpha == 0 and t4.alphaArg == nil, "secret slot without a pooled button hidden", err)
+check(t4.Cooldown.cleared == true, "secret slot without a pooled button clears its timer")
+check(blizzWrites == 0, "nothing written to Blizzard's pool or buttons", blizzWrites)
+
+-- Our own event path uses the last pooled answers too.
+ok, err = pcall(BlizzardTotemUpdate, 4, shownS)
+ok, err = pcall(events.PLAYER_TOTEM_UPDATE, owner, "PLAYER_TOTEM_UPDATE", 4)
+check(ok and t4.alphaArg == shownS, "event path reads the pooled answer for a secret slot", err)
+
+-- Readable slots keep today's rule whatever the pool says.
+BlizzardTotemUpdate()
+TotemFrame:UnregisterEvent("PLAYER_TOTEM_UPDATE")
+ok, err = pcall(events.PLAYER_TOTEM_UPDATE, owner, "PLAYER_TOTEM_UPDATE", 4)
+check(ok and t4.alphaArg == haveS4, "stopped Blizzard updates discard an empty pooled snapshot", err)
+check(t4.Cooldown.duration == durations[4], "stale pool cannot clear a new secret totem's timer")
+TotemFrame:RegisterEvent("PLAYER_TOTEM_UPDATE")
+events.PLAYER_TOTEM_UPDATE(owner, "PLAYER_TOTEM_UPDATE", 4)
+check(t4.alphaArg == haveS4, "registering events alone does not revive the stale snapshot")
+BlizzardTotemUpdate(4, shownS)
+check(t4.alphaArg == shownS, "a fresh Blizzard update restores pooled visibility")
+
+-- Readable slots keep today's rule whatever the pool says.
+slots[4] = { have = true, name = "Statue", start = 5, duration = 60, icon = 627607 }
+durations[4] = Duration(60, false)
+ok, err = pcall(BlizzardTotemUpdate, 4, false)
+ok, err = ok and pcall(events.PLAYER_TOTEM_UPDATE, owner, "PLAYER_TOTEM_UPDATE", 4)
+check(ok and t4.alphaArg == true, "readable live slot follows haveTotem, not the pool", err)
+slots[4] = { have = true, name = "", start = 0, duration = 0, icon = nil }
+durations[4] = Duration(0, false)
+ok, err = pcall(BlizzardTotemUpdate, 4, true)
+ok, err = ok and pcall(events.PLAYER_TOTEM_UPDATE, owner, "PLAYER_TOTEM_UPDATE", 4)
+check(ok and t4.alpha == 0, "readable timerless slot stays hidden even if the pool shows it", err)
+slots[4] = nil; durations[4] = Duration(0, false)
+BlizzardTotemUpdate()
+
 -- A plain (non-secret) slot through the event path.
 slots[3] = { have = true, name = "Statue", start = 5, duration = 900, icon = 627607 }
 dur = Duration(900, false)
@@ -162,8 +269,13 @@ check(ok, "event path updates one slot", err)
 check(owner.Totems[3].alphaArg == true and owner.Totems[3].Cooldown.duration == dur, "slot 3 shown with its timer")
 
 element.disable(owner)
-check(blizzEvents.PLAYER_TOTEM_UPDATE == true, "disable gives the events back to TotemFrame")
+check(blizzEvents.PLAYER_TOTEM_UPDATE == true, "TotemFrame still has its events after disable")
 check(owner.Totems[1].shown == false, "disable hides the widgets")
+slots[4] = { have = secret(true), name = secret(""), start = secret(0), duration = secret(9), icon = secret(0) }
+durations[4] = Duration(9, true)
+owner.Totems[4].alphaArg = "untouched"
+BlizzardTotemUpdate(4, secret(true))
+check(owner.Totems[4].alphaArg == "untouched", "a disabled element is no longer refreshed by the post-hook")
 
 -- The module: Retail and Forever (both mainline), four mouse-disabled icons.
 local function LoadModule(retail, mainline)

@@ -70,6 +70,50 @@ local function OnLeave()
 	GameTooltip:Hide()
 end
 
+-- AzeriteUI: Blizzard's own pooled totem buttons, read after its TotemFrame:Update
+-- (GW2_UI Games/Shared/Mainbar/totemBar.lua does the same). In combat GetTotemInfo is
+-- SecretWhenTotemSlotSecret, so this element cannot tell a timerless taken slot from a
+-- live one. Blizzard's untainted TotemFrameMixin:Update can: it acquires a button for
+-- each slot with haveTotem and shows it only while duration > 0
+-- (Blizzard_UnitFrame/Mainline/TotemFrame.lua, identical on Forever). TotemFrame stays
+-- hidden with the PlayerFrame oUF reparents, but it still runs. We only read the pool
+-- and the buttons from a post-hook and never write to them. totemPool is Blizzard's secure
+-- pool proxy on both clients (Pools.lua: CreateFramePool = CreateSecureFramePool), so
+-- EnumerateActive walks a SecureMap through securecallfunction; it is shared with addon
+-- code by design (GW2_UI makes the same call). FixLog 2026-11-13.
+local pooledHas = {}     -- [slot] = true when Blizzard holds an active button for it
+local pooledShown = {}   -- [slot] = that button's IsShown() (may be secret: widget setters only)
+local pooledKnown = false
+local pooledElements = {}
+local pooledHooked = false
+
+local function OnTotemFrameUpdate(frame)
+	local pool = frame and frame.totemPool
+	if(not pool or type(pool.EnumerateActive) ~= 'function') then return end
+
+	table.wipe(pooledHas)
+	table.wipe(pooledShown)
+	for button in pool:EnumerateActive() do
+		local slot = button and button.slot
+		if(not (issecretvalue and issecretvalue(slot)) and type(slot) == 'number') then
+			pooledHas[slot] = true
+			pooledShown[slot] = button:IsShown()
+		end
+	end
+	pooledKnown = true
+
+	for element in next, pooledElements do
+		element:ForceUpdate()
+	end
+end
+
+local function HookTotemFrame()
+	if(pooledHooked) then return end
+	if(not (TotemFrame and type(TotemFrame.Update) == 'function' and TotemFrame.totemPool and hooksecurefunc)) then return end
+	pooledHooked = true
+	hooksecurefunc(TotemFrame, 'Update', OnTotemFrameUpdate)
+end
+
 local function UpdateTotem(self, event, slot)
 	local element = self.Totems
 	if(slot > #element) then return end
@@ -93,17 +137,33 @@ local function UpdateTotem(self, event, slot)
 	-- AzeriteUI: Blizzard's TotemFrame shows a slot only while haveTotem AND
 	-- duration > 0 (TotemButtonMixin:Update). The game can report a slot as taken
 	-- with a zero duration and no icon, which drew an empty bordered square here
-	-- (Avo's Hunter, FixLog 2026-11-13). Only readable answers can rule a slot out;
-	-- a secret one keeps following haveTotem.
-	local isEmpty = false
-	if(rawDuration ~= nil and not (issecretvalue and issecretvalue(rawDuration))) then
+	-- (Avo's Hunter, FixLog 2026-11-13). Readable answers decide here. When both
+	-- are secret, Blizzard's pooled button for the slot decides (see
+	-- OnTotemFrameUpdate); until TotemFrame has updated once, haveTotem does.
+	local isEmpty, isSecret = false, false
+	if(not (issecretvalue and issecretvalue(rawDuration)) and rawDuration ~= nil) then
 		isEmpty = (rawDuration <= 0)
 	elseif(duration ~= nil and duration.HasSecretValues and not duration:HasSecretValues()) then
 		isEmpty = duration:IsZero()
+	else
+		isSecret = (issecretvalue and issecretvalue(rawDuration)) and true or false
+	end
+
+	-- Another addon may stop Blizzard's updates after our first snapshot. Discard
+	-- it until a fresh Update runs; otherwise a new secret totem could stay hidden.
+	if(pooledKnown and not (TotemFrame and TotemFrame.IsEventRegistered
+		and TotemFrame:IsEventRegistered('PLAYER_TOTEM_UPDATE'))) then
+		pooledKnown = false
+	end
+	-- No active Blizzard button means haveTotem was false for the slot.
+	if(isSecret and pooledKnown and not pooledHas[slot]) then
+		isEmpty = true
 	end
 
 	if(isEmpty) then
 		totem:SetAlpha(0)
+	elseif(isSecret and pooledKnown) then
+		totem:SetAlphaFromBoolean(pooledShown[slot], 1, 0)
 	else
 		totem:SetAlphaFromBoolean(haveTotem, 1, 0)
 	end
@@ -184,10 +244,14 @@ local function Enable(self)
 
 		self:RegisterEvent('PLAYER_TOTEM_UPDATE', Path, true)
 
-		TotemFrame:UnregisterEvent('PLAYER_TOTEM_UPDATE')
-		TotemFrame:UnregisterEvent('PLAYER_ENTERING_WORLD')
-		TotemFrame:UnregisterEvent('UPDATE_SHAPESHIFT_FORM')
-		TotemFrame:UnregisterEvent('PLAYER_TALENT_UPDATE')
+		-- AzeriteUI: upstream unregisters TotemFrame's events here. We leave them
+		-- registered so Blizzard's TotemFrame:Update keeps sorting secret slots for
+		-- us (OnTotemFrameUpdate). It cannot show: oUF reparents PlayerFrame, its
+		-- parent, to a hidden frame (blizzard.lua handleFrame). FixLog 2026-11-13.
+		-- Update also runs PlayerFrame_AdjustAttachments, re-anchoring Blizzard's
+		-- attached cast bar (suppressed by PlayerCastBar.lua); verify its position live.
+		pooledElements[element] = true
+		HookTotemFrame()
 
 		return true
 	end
@@ -200,10 +264,7 @@ local function Disable(self)
 			element[i]:Hide()
 		end
 
-		TotemFrame:RegisterEvent('PLAYER_TOTEM_UPDATE')
-		TotemFrame:RegisterEvent('PLAYER_ENTERING_WORLD')
-		TotemFrame:RegisterEvent('UPDATE_SHAPESHIFT_FORM')
-		TotemFrame:RegisterEvent('PLAYER_TALENT_UPDATE')
+		pooledElements[element] = nil
 
 		self:UnregisterEvent('PLAYER_TOTEM_UPDATE', Path)
 	end

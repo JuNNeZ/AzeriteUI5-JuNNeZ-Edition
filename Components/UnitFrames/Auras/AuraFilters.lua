@@ -140,6 +140,20 @@ local IsImportantAura = function(unit, data, isHarmful)
 		or HasAuraToken(unit, auraInstanceID, baseFilter, "EXTERNAL_DEFENSIVE")
 end
 
+-- Blizzard files role auras with boss auras: AuraUtil.ProcessAura tests
+-- (aura.isBossAura or AuraUtil.IsRoleAura(aura)), and IsRoleAura is
+-- isTankRoleAura or isHealerRoleAura or isDPSRoleAura (Blizzard_FrameXMLUtil/AuraUtil.lua,
+-- 12.1.5 and Forever). Our native rows use the container's isBossOrRoleAura the same way.
+-- Each field goes through SafeBool, so a secret flag counts as not set, as VuhDo's
+-- VUHDO_getAuraConditionBool guards each with issecretvalue (FixLog 2026-11-13).
+local IsBossOrRoleAura = function(data)
+	if (not data) then
+		return false
+	end
+	return SafeBool(data.isBossAura) or SafeBool(data.isTankRoleAura)
+		or SafeBool(data.isHealerRoleAura) or SafeBool(data.isDPSRoleAura)
+end
+
 local HasDisplayIdentity = function(button)
 	return (button and (button.spellID ~= nil or button.spell ~= nil)) and true or false
 end
@@ -261,7 +275,10 @@ ns.AuraFilters.TargetAuraFilter = function(button, unit, data)
 		return true
 	end
 
-	if (SafeBool(data.isBossAura)) then -- AuraData's field (AuraUtil.ProcessAura); isBossDebuff never existed (FixLog 2026-11-13)
+	-- AuraData's field is isBossAura (AuraUtil.ProcessAura); isBossDebuff never existed.
+	-- Role auras count too, as in the native target row's isBossOrRoleAura buff group
+	-- (PlayerAuraContainers.lua helpfulBossOptions) (FixLog 2026-11-13).
+	if (IsBossOrRoleAura(data)) then
 		return true
 	end
 
@@ -319,19 +336,22 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 	local canDispelType = button.dispelName and dispelTypes and dispelTypes[button.dispelName]
 
 	local harmfulRaid = false
-	local harmfulRaidDispellable = false
 	local helpfulPlayerRaid = false
 	local helpfulExternal = false
 	local helpfulRaidCombat = false
 	if (auraInstanceID) then
 		harmfulRaid = SafeIsAuraFilteredOut(unit, auraInstanceID, "HARMFUL|RAID") == false
-		harmfulRaidDispellable = SafeIsAuraFilteredOut(unit, auraInstanceID, "HARMFUL|RAID_PLAYER_DISPELLABLE") == false
 		helpfulPlayerRaid = SafeIsAuraFilteredOut(unit, auraInstanceID, "HELPFUL|PLAYER|RAID") == false
 		helpfulExternal = SafeIsAuraFilteredOut(unit, auraInstanceID, "HELPFUL|EXTERNAL_DEFENSIVE") == false
 		helpfulRaidCombat = HasAuraToken(unit, auraInstanceID, "HELPFUL", "RAID_IN_COMBAT")
 	end
 
-	local isPlayerDispellable = (harmfulRaidDispellable or canDispelType) and true or false
+	-- "Dispellable by you" is HARMFUL|RAID ("harmful auras the player can dispel").
+	-- RAID_PLAYER_DISPELLABLE is "someone in the player's raid can dispel", so the
+	-- switch ("your class/spec") showed debuffs only a groupmate could remove
+	-- (AuraUtil.AuraFilters, 12.1.5 and Forever). Same filter as our dispel glow
+	-- (Functions.lua DISPEL_FILTER), QUI's BY_ME_FILTER and ElvUI (FixLog 2026-11-13).
+	local isPlayerDispellable = (harmfulRaid or canDispelType) and true or false
 	button.isRaidPlayerDispellable = isPlayerDispellable
 	local hasStacks = (applications > 1) or HasDisplayedApplications(unit, data)
 	local shortHelpful = ((not button.noDuration and duration < 61) or IsShortRemainingAura(button.timeLeft) or hasStacks) and true or false
@@ -371,7 +391,9 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 	-- Retail and Forever); isBossDebuff never existed, so this check never fired (FixLog
 	-- 2026-11-13). Boss auras follow the switches as on the native row: debuffs the boss
 	-- switch, buffs the raid buffs switch. Off, they are judged like any other aura.
-	if (SafeBool(data.isBossAura)) then
+	-- Role auras ride with them, as in ProcessAura and the native row's boss groups
+	-- (isBossOrRoleAura, PlayerAuraContainers.lua).
+	if (IsBossOrRoleAura(data)) then
 		if (useStockBehavior or (isHarmful and showBossAndImportantDebuffs) or ((not isHarmful) and showHelpfulRaidBuffs)) then
 			return true
 		end

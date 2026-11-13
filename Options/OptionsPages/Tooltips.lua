@@ -61,6 +61,33 @@ local consoleportActive = function()
 	return ns.API and (ns.API.IsAddOnEnabled and (ns.API.IsAddOnEnabled("ConsolePort") or ns.API.IsAddOnEnabled("ConsolePort_Bar")))
 end
 
+-- Why a greyed-out row is greyed out. The Kit keeps it beside the option, not
+-- in it, because AceConfigRegistry refuses unknown keys (Options/Kit/Config.lua
+-- SetDisabledDesc). Each reason names what greys that row, in the order its
+-- `disabled` asks: ConsolePort first, since it also locks "Do not style
+-- tooltips" itself. FixLog 2026-11-13.
+local DisabledDesc = function(option, reason)
+	local Config = ns.OptionsKit and ns.OptionsKit.Config
+	if (option and Config and Config.SetDisabledDesc) then
+		Config.SetDisabledDesc(option, reason)
+	end
+	return option
+end
+
+local Reason = function(byConsolePort, byStyling, byAnchor)
+	return function(info)
+		if (byConsolePort and consoleportActive()) then
+			return L["Unavailable while ConsolePort is enabled."]
+		end
+		if (byStyling and stylingOff(info)) then
+			return string.format(L["Unavailable while \"%s\" is on."], L["Do not style tooltips"])
+		end
+		if (byAnchor and not getoption(info, "anchor")) then
+			return string.format(L["Unavailable while \"%s\" is off."], L["Enable Anchoring"])
+		end
+	end
+end
+
 local GenerateOptions = function()
 	if (not getmodule()) then return end
 
@@ -205,6 +232,16 @@ local GenerateOptions = function()
 			}
 		}
 	}
+
+	local args = options.args
+	DisabledDesc(args.theme, Reason(true, true))
+	DisabledDesc(args.disableAzeriteUITooltips, Reason(true))
+	DisabledDesc(args.nameplateUnitTransparency, Reason(true, true))
+	DisabledDesc(args.showItemID, Reason(false, true))
+	DisabledDesc(args.showSpellID, Reason(false, true))
+	DisabledDesc(args.showMythicPlusRating, Reason(false, true))
+	DisabledDesc(args.anchor, Reason(true, true))
+	DisabledDesc(args.anchorToCursor, Reason(true, true, true))
 
 	return options
 end

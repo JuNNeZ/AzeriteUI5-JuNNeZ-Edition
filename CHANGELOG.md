@@ -10,6 +10,29 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.39.0-JuNNeZ (2026-11-13) - Clearer Settings, Totems and Combo Points
+
+### Highlights
+
+- **Greyed-out settings explain why.** At `/az -> Tooltips`, `/az -> Explorer Mode` and the affected Unit Frames controls, the help line names the setting or addon that makes a control unavailable. The explanation updates as you change settings and is translated in all ten supported languages.
+- **Party dispel filters follow what you can remove.** At `/az -> Group Frames -> Party Frames`, **Only Show Dispellable Debuffs** no longer includes effects that only another group member can dispel on the scanning fallback. Boss and role-marked auras follow the party switches, and role-marked target auras match the native target row.
+- **Totem visibility follows Blizzard's combat display.** Secret totem slots use Blizzard's own button visibility to distinguish real timers from empty squares. If another addon stops Blizzard's totem updates, AzeriteUI falls back to the slot's own presence instead of hiding new totems from old data.
+- **Forever combo points follow the current target.** Rogue and cat Druid point visibility now uses the same target count as the fills, even when the player's power value disagrees. Clearing the target hides the display, and **Show Full Class Power Out of Combat** still controls full-set visibility at `/az -> Unit Frames -> Class Power`.
+- **Details Forged fills and text repaired.** The **AzeriteUI Forged (Preview)** skin in Details' skin selector uses a material and mask that work with native bar progress, removes inherited spec icons, centres its title and gives values more clearance from the right edge. Damage Done shows the primary total; DPS views retain their primary rate.
+
+### Development
+
+- Replaced Forever's player-power visibility curves with target-count-fed masks. Regression checks cover the first layout after reload, target switches, empty slot backings, full-set fading and returning to readable counts without inspecting secret values.
+- Compared the totem pool with Blizzard's secure pool implementation and tested the read-only post-hook in Elune. Added fallback checks for addons that unregister Blizzard's updates. This tests a reduced Lua security model rather than the game engine.
+- Reworked the Details fill into a source-verified material tile and a separate full-coordinate functional mask. Integration checks run installed Details formatting and row layout code, including skin switching, title dragging and forwarding already formatted secret values unchanged.
+- Kept disabled explanations outside the settings tables so the custom panel and both older options dialogs remain compatible. Offline checks cover reason precedence, refresh, translations and the real Retail/Forever option pages.
+
+### Access and known limits
+
+- New totem, combo-point, aura and settings behaviour is verified offline; in-game combat, taint, visuals and click-through still need maintainer confirmation on Retail and Forever.
+- Details' repaired fill was confirmed in game during development. The final title placement, primary-value selection, resizing and skin-switching changes still need live review; Forged remains a preview.
+- On Forever, lit secret combo points retain a half-opacity dark slot rim; their lit casing and fill remain bright. The complete mutation suite still stops at an unrelated outdated nameplate test pattern; the targeted regressions pass.
+
 ## 5.38.0-JuNNeZ (2026-11-13) - Class Themes, Quest Items and Threat Roles
 
 ### Highlights

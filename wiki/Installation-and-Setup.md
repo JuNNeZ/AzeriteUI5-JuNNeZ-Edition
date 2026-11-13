@@ -12,7 +12,7 @@
 3. Restart the game, or `/reload` if it was already running.
 
 The folder name matters. If the zip extracts to something like
-`AzeriteUI5_JuNNeZ_Edition-5.38.0`, rename it.
+`AzeriteUI5_JuNNeZ_Edition-5.39.0`, rename it.
 
 ## Requirements
 

@@ -1466,3 +1466,11 @@ L["Show the quest in the tooltip"] = "Mostra la missione nel tooltip"
 L["Let Masque skin the buttons"] = "Lascia che Masque personalizzi i pulsanti"
 L["Hand the action, pet and stance buttons to Masque, so its skins replace AzeriteUI's own button art. Pick the skin in Masque's settings under AzeriteUI. Button shapes do not apply while this is on. Changing this asks you to reload."] = "Affida a Masque i pulsanti azione, del famiglio e di postura, così le sue skin sostituiscono la grafica dei pulsanti di AzeriteUI. Scegli la skin nelle impostazioni di Masque, sotto AzeriteUI. Le forme dei pulsanti non si applicano finché è attiva. Modificarla chiede di ricaricare."
 L["Masque takes over the buttons, or hands them back, when the interface loads. Reload now?"] = "Masque prende in carico i pulsanti, o li restituisce, al caricamento dell'interfaccia. Ricaricare ora?"
+
+-- Why a greyed-out option is greyed out (Options/Kit/Config.lua SetDisabledDesc).
+L["Unavailable while \"%s\" is on."] = "Non disponibile finché «%s» è attivo."
+L["Unavailable while \"%s\" is off."] = "Non disponibile finché «%s» è disattivato."
+L["Unavailable while ConsolePort is enabled."] = "Non disponibile finché ConsolePort è attivo."
+L["Unavailable while \"%s\" keeps your interface visible."] = "Non disponibile finché «%s» mantiene visibile la tua interfaccia."
+L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = "Non disponibile finché né i bersagli amichevoli né quelli ostili mantengono visibile la tua interfaccia."
+L["Only Druids use this."] = "Solo per i druidi."

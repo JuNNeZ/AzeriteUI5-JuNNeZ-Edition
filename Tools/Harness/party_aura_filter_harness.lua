@@ -8,6 +8,8 @@
 -- self-cast HoTs"). With "Show Short Helpful Buffs" off your own raid buffs are the
 -- castable ones without RAID_IN_COMBAT: Fortitude stays, your HoTs go, as on the
 -- native row's own group (party_aura_options_harness.lua).
+-- Also: "dispellable by you" (HARMFUL|RAID, not the group-wide RAID_PLAYER_DISPELLABLE),
+-- boss and role auras in the party and target filters.
 -- Offline only: which real spells carry which flags is a live check.
 -- Run: lua.exe Tools/Harness/party_aura_filter_harness.lua <addon root>
 local root = arg[1] or "."
@@ -208,6 +210,111 @@ SetBoss(false, true, false)
 check(Shows(bossBuff) == false, "boss buff does not follow the boss debuff switch", Shows(bossBuff))
 SetBoss(true, false, false)
 check(Shows(bossDebuff) == true and Shows(bossBuff) == true, "stock shows boss auras")
+
+-- Role auras (FixLog 2026-11-13): Blizzard files them with boss auras
+-- (AuraUtil.ProcessAura: aura.isBossAura or AuraUtil.IsRoleAura(aura); IsRoleAura is
+-- isTankRoleAura or isHealerRoleAura or isDPSRoleAura), as our native rows do through
+-- isBossOrRoleAura. Each field is read secret-safe; a secret flag counts as not set.
+local function RoleAura(harmful, field, value)
+	local data = BossAura(harmful)
+	data.isBossAura = nil
+	data.name = harmful and "Tank Mechanic" or "Healer Mechanic"
+	data[field] = value
+	return data
+end
+local tankDebuff = RoleAura(true, "isTankRoleAura", true)
+local healerBuff = RoleAura(false, "isHealerRoleAura", true)
+local dpsDebuff = RoleAura(true, "isDPSRoleAura", true)
+local secretRoleDebuff = RoleAura(true, "isTankRoleAura", secret(true))
+SetBoss(false, true, false)
+check(Shows(tankDebuff) == true, "tank role debuff shows with Show Boss and Important Debuffs on", Shows(tankDebuff))
+check(Shows(dpsDebuff) == true, "DPS role debuff shows with Show Boss and Important Debuffs on", Shows(dpsDebuff))
+check(Shows(healerBuff) == false, "role buff does not follow the boss debuff switch", Shows(healerBuff))
+check(Shows(secretRoleDebuff) == false, "secret role flag counts as not set (no error)", Shows(secretRoleDebuff))
+SetBoss(false, false, false)
+check(Shows(tankDebuff) == false, "role debuff hidden with every harmful switch off", Shows(tankDebuff))
+SetBoss(false, false, true)
+check(Shows(healerBuff) == true, "role buff shows with Show Helpful Raid Buffs on", Shows(healerBuff))
+SetBoss(true, false, false)
+check(Shows(tankDebuff) == true and Shows(healerBuff) == true, "stock shows role auras")
+
+-- The target filter shows boss auras outright; role auras now too, as on the native
+-- target row (PlayerAuraContainers.lua helpfulBossOptions, isBossOrRoleAura = true).
+-- A permanent friendly buff that is neither would be hidden there.
+local TargetAuraFilter = assert(ns.AuraFilters.TargetAuraFilter, "TargetAuraFilter missing")
+local function TargetShows(data)
+	local ok, result = pcall(TargetAuraFilter, {}, "target", data)
+	if (not ok) then return "error: " .. tostring(result) end
+	return result and true or false
+end
+local function PermanentBuff(field, value)
+	nextID = nextID + 1
+	AURAS[nextID] = { harmful = false, tokens = {} }
+	local data = {
+		auraInstanceID = nextID, isHarmfulAura = false, name = "Permanent", spellId = 910000 + nextID,
+		duration = 0, expirationTime = 0, applications = 0, canApplyAura = false, sourceUnit = "boss1",
+	}
+	if (field) then data[field] = value end
+	return data
+end
+check(TargetShows(PermanentBuff()) == false, "target: a plain permanent buff is hidden (control)", TargetShows(PermanentBuff()))
+check(TargetShows(PermanentBuff("isBossAura", true)) == true, "target: boss buff shows")
+check(TargetShows(PermanentBuff("isTankRoleAura", true)) == true, "target: tank role buff shows", TargetShows(PermanentBuff("isTankRoleAura", true)))
+check(TargetShows(PermanentBuff("isHealerRoleAura", true)) == true, "target: healer role buff shows")
+check(TargetShows(PermanentBuff("isTankRoleAura", secret(true))) == false, "target: secret role flag counts as not set (no error)",
+	TargetShows(PermanentBuff("isTankRoleAura", secret(true))))
+
+-- "Dispellable by you" (FixLog 2026-11-13). HARMFUL|RAID is "harmful auras the player
+-- can dispel"; RAID_PLAYER_DISPELLABLE is "someone in the player's raid can dispel"
+-- (AuraUtil.AuraFilters, 12.1.5 and Forever). The switch says "your class/spec", as
+-- our dispel glow (Functions.lua DISPEL_FILTER = "HARMFUL|RAID"), QUI and ElvUI read it.
+local function Debuff(tokens, dispelName)
+	nextID = nextID + 1
+	local set = {}
+	for _, token in ipairs(tokens) do set[token] = true end
+	AURAS[nextID] = { harmful = true, tokens = set }
+	return {
+		auraInstanceID = nextID, isHarmfulAura = true, name = "Curse " .. nextID, spellId = 920000 + nextID,
+		duration = 600, expirationTime = NOW + 599, applications = 0, canApplyAura = false,
+		sourceUnit = "boss1", dispelName = dispelName,
+	}
+end
+-- You can dispel it: the client answers both RAID and RAID_PLAYER_DISPELLABLE.
+local yourDispel = Debuff({ "RAID", "RAID_PLAYER_DISPELLABLE" }, "Magic")
+-- Only a groupmate can dispel it.
+local groupDispel = Debuff({ "RAID_PLAYER_DISPELLABLE" }, "Curse")
+local function SetDispel(only)
+	profile.partyAuraUseStockBehavior = false
+	profile.partyAuraShowDispellableDebuffs = true
+	profile.partyAuraOnlyDispellableDebuffs = only
+	profile.partyAuraShowBossAndImportantDebuffs = false
+	profile.partyAuraShowOtherDebuffs = false
+end
+local function Flag(data)
+	local button = {}
+	pcall(PartyAuraFilter, button, "party1", data)
+	return button.isRaidPlayerDispellable
+end
+for _, mode in ipairs({ { "readable", function(d) return d end }, { "secret timing", SecretTiming } }) do
+	local label, As = mode[1], mode[2]
+	for _, only in ipairs({ false, true }) do
+		SetDispel(only)
+		local tag = label .. (only and ", only dispellable" or ", dispellable on") .. ": "
+		check(Shows(As(yourDispel)) == true, tag .. "a debuff you can dispel shows", Shows(As(yourDispel)))
+		check(Shows(As(groupDispel)) == false, tag .. "a debuff only a groupmate can dispel is hidden", Shows(As(groupDispel)))
+	end
+	check(Flag(As(yourDispel)) == true, label .. ": isRaidPlayerDispellable set for your dispel", Flag(As(yourDispel)))
+	check(Flag(As(groupDispel)) == false, label .. ": isRaidPlayerDispellable not set for a groupmate's dispel", Flag(As(groupDispel)))
+end
+-- The owner frame's dispel types still count (canDispelType), unchanged.
+SetDispel(true)
+do
+	local owner = { PriorityDebuff = { dispelTypes = { Curse = true } } }
+	local parent = { __owner = owner }
+	local button = { GetParent = function() return parent end }
+	local ok, result = pcall(PartyAuraFilter, button, "party1", groupDispel)
+	check(ok and result == true, "only dispellable: the owner's dispel types still show a matching debuff", result)
+end
 
 print(("Party aura filter: %d checks, %d failures"):format(checks, failures))
 os.exit(failures == 0 and 0 or 1)

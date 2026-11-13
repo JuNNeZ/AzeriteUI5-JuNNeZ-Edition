@@ -654,45 +654,131 @@ local ClassPower_PostUpdateColor = function(element, r, g, b)
 	-- oUF callback for color updates (not actively used for SoulFragmentsPoints)
 end
 
--- Forever hands out combo points as secret values, even out of combat. Addon code may neither
--- compare the count nor pass it to Curve:Evaluate, but UnitPowerPercent evaluates a curve against
--- it inside the client and SetAlpha accepts the secret result. One step curve per point keeps the
--- usual rules: hidden at zero, empty socket at half alpha, filled at full, and a full set fading
--- out of combat unless the player chose to keep it.
-local POWER_ID_COMBO_POINTS = (Enum and Enum.PowerType and Enum.PowerType.ComboPoints) or 4
-local SecretPointCurves = {}
+-- Forever hands out combo points as secret values, even out of combat, and keeps them on the
+-- target: oUF fills each point from GetComboPoints("player", "target") with a [i - 1, i] range.
+-- Addon code may not compare that count, so the client decides what shows through "gates", as
+-- EllesmereUI does (EllesmereUIUnitFrames/EUI_UnitFrames_ForeverExtras.lua, UF_ComboGate): a
+-- hidden StatusBar fed the same secret count, with a mask riding its fill's right edge. A full
+-- gate lays the mask over the point's art, an empty one parks it a full width beside it; an
+-- inverse gate does the opposite. Until FixLog 2026-11-13 the alpha came from
+-- UnitPowerPercent("player"), which can lag the target's count (EllesmereUI measured it after a
+-- target swap), so the player's power is not read here at all. Visibility follows the plain path:
+-- nothing at zero, empty sockets at half alpha, filled points at full, and a full set fading out
+-- of combat unless the player chose to keep it.
+-- The dark slot rim stays at half alpha on lit secret points; only the case has a bright copy.
+local GATE_TEXTURE = [[Interface\Buttons\WHITE8x8]]
 
-local GetSecretPointAlpha = function(index, max, fadeWhenFull)
-	if (not UnitPowerPercent or not C_CurveUtil or not C_CurveUtil.CreateCurve
-	or not Enum or not Enum.LuaCurveType or not Enum.LuaCurveType.Step) then
-		return 1
+local CreateSecretGate = function(point, inverse)
+	if (not point.CreateMaskTexture) then return end
+	local gate = CreateFrame("StatusBar", nil, point)
+	gate:SetStatusBarTexture(GATE_TEXTURE)
+	local fill = gate:GetStatusBarTexture()
+	if (not fill or not gate.CreateMaskTexture) then return end
+	fill:SetAlpha(0)
+	gate:SetMinMaxValues(0, 1)
+	gate:SetValue(0)
+	gate:SetPoint("CENTER", point, "CENTER", 0, 0)
+	local mask = gate:CreateMaskTexture()
+	mask:SetTexture(GATE_TEXTURE, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	if (inverse) then
+		mask:SetPoint("LEFT", fill, "RIGHT", 0, 0)
+	else
+		mask:SetPoint("RIGHT", fill, "RIGHT", 0, 0)
+	end
+	gate.mask = mask
+	return gate
+end
+
+-- Per point: "any" (count >= 1) shows the socket, "lit" (count >= index) shows a full-alpha copy
+-- of the case over the half-alpha one, "open" (count < max, or always unless fading) lets a full
+-- set fade out of combat. Built once, on the first secret count; false when the client lacks masks.
+local GetSecretGates = function(point)
+	local gates = point.__AzeriteUI_Gates
+	if (gates ~= nil) then
+		return gates or nil
+	end
+	local any, lit, open = CreateSecretGate(point), CreateSecretGate(point), CreateSecretGate(point, true)
+	local litCase = any and lit and open and point.case and point:CreateTexture(nil, "BACKGROUND")
+	if (not litCase) then
+		point.__AzeriteUI_Gates = false
+		return
+	end
+	litCase:SetPoint("CENTER")
+	litCase:Hide()
+	gates = { any = any, lit = lit, open = open, litCase = litCase }
+	point.__AzeriteUI_Gates = gates
+	return gates
+end
+
+local SetSecretGatesActive = function(point, gates, active)
+	if (gates.active == active) then return end
+	gates.active = active
+
+	local method = active and "AddMaskTexture" or "RemoveMaskTexture"
+	local fill, case, slot, litCase = point:GetStatusBarTexture(), point.case, point.slot, gates.litCase
+	for _, region in ipairs({ case or false, slot or false }) do
+		if (region) then
+			region[method](region, gates.any.mask)
+			region:SetAlpha(active and .5 or 1)
+		end
+	end
+	litCase[method](litCase, gates.lit.mask)
+	for _, region in ipairs({ fill or false, case or false, slot or false, litCase }) do
+		if (region) then
+			region[method](region, gates.open.mask)
+		end
+	end
+	litCase:SetShown(active)
+end
+
+-- Back to a plain count: the numeric path below owns the point again.
+local ClearSecretPoint = function(point)
+	local gates = point.__AzeriteUI_Gates
+	if (gates) then
+		SetSecretGatesActive(point, gates, false)
+	end
+end
+
+local UpdateSecretPoint = function(point, index, cur, max, fadeWhenFull)
+	-- The fill already follows the target's count (oUF). Every rule here does too.
+	point:SetAlpha(1)
+	local gates = GetSecretGates(point)
+	if (not gates) then
+		-- No mask support: fail open, as the curve path did without its API.
+		return
+	end
+	SetSecretGatesActive(point, gates, true)
+
+	-- Each gate and its mask must cover the art: the case, and the slot around the bar.
+	local case, litCase = point.case, gates.litCase
+	local offset = ns.GetConfig("PlayerClassPower").ClassPowerSlotOffset or 0
+	local pointWidth, pointHeight = point:GetSize()
+	local caseWidth, caseHeight = case:GetSize()
+	local side = math.max(caseWidth or 0, caseHeight or 0,
+		(pointWidth or 0) + 2 * offset, (pointHeight or 0) + 2 * offset) + 4
+	for _, gate in ipairs({ gates.any, gates.lit, gates.open }) do
+		gate:SetSize(side, side)
+		gate.mask:SetSize(side, side)
 	end
 
-	local key = index .. ":" .. max .. (fadeWhenFull and ":fade" or "")
-	local curve = SecretPointCurves[key]
-	if (not curve) then
-		-- The input is count / max. Each step sits half a point below its count,
-		-- so client float rounding cannot put a whole count on the wrong side.
-		curve = C_CurveUtil.CreateCurve()
-		curve:SetType(Enum.LuaCurveType.Step)
-		curve:AddPoint(0, 0)
-		if (index > 1) then
-			curve:AddPoint(.5 / max, .5)
-		end
-		if (not fadeWhenFull or index < max) then
-			curve:AddPoint((index - .5) / max, 1)
-		end
-		if (fadeWhenFull) then
-			curve:AddPoint((max - .5) / max, 0)
-		end
-		SecretPointCurves[key] = curve
-	end
+	-- The bright copy follows the case, whatever the layout or theme gave it.
+	litCase:SetTexture(case:GetTexture())
+	litCase:SetSize(caseWidth or 0, caseHeight or 0)
+	litCase:SetRotation(case:GetRotation() or 0)
+	litCase:SetVertexColor(case:GetVertexColor())
+	litCase:SetDrawLayer(case:GetDrawLayer())
 
-	local ok, alpha = API.TryCall(UnitPowerPercent, "player", POWER_ID_COMBO_POINTS, false, curve)
-	if (not ok or type(alpha) ~= "number") then
-		return 1
+	gates.any:SetMinMaxValues(0, 1)
+	gates.lit:SetMinMaxValues(index - 1, index)
+	if (fadeWhenFull) then
+		gates.open:SetMinMaxValues(max - 1, max)
+	else
+		-- The count never passes max, so this gate stays empty and its inverse mask open.
+		gates.open:SetMinMaxValues(max, max + 1)
 	end
-	return alpha
+	gates.any:SetValue(cur)
+	gates.lit:SetValue(cur)
+	gates.open:SetValue(cur)
 end
 
 -- Update classpower layout and textures.
@@ -836,6 +922,9 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 
 	for i = 1, #element do
 		local point = element[i]
+		if (not isSecretCur and point.__AzeriteUI_Gates) then
+			ClearSecretPoint(point)
+		end
 		if (point:IsShown()) then
 			local value = point:GetValue()
 			local _, pmax = point:GetMinMaxValues()
@@ -1033,7 +1122,8 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 					end
 				end
 			elseif (isSecretCur) then
-				point:SetAlpha(GetSecretPointAlpha(i, max, not element.inCombat and not showFullOutOfCombat))
+				-- Gated after the layout below: the gates and the bright copy are sized from the
+				-- point's art, which a first update or a style change has not applied yet.
 			elseif (element.inCombat) then
 				point:SetAlpha((cur == max) and 1 or (value < pmax) and .5 or 1)
 			else
@@ -1098,6 +1188,19 @@ local ClassPower_PostUpdate = function(element, cur, max, hasMaxChanged, powerTy
 		end
 
 		element.style = style
+	end
+
+	-- Secret counts (Forever): gate each shown point now that its size and art are final.
+	-- On the first secret update after /reload or a style change (Rogue 5 to 6/7) the loop
+	-- above ran before the layout, so the gates came out a few pixels wide (FixLog 2026-11-13).
+	if (isSecretCur and style ~= "SoulFragmentsPoints") then
+		local fadeWhenFull = (not element.inCombat and not showFullOutOfCombat)
+		for i = 1, #element do
+			local point = element[i]
+			if (point and point:IsShown()) then
+				UpdateSecretPoint(point, i, cur, max, fadeWhenFull)
+			end
+		end
 	end
 
 	if (element.ClickBlocker and element.ClickBlocker.__AzeriteUI_BlockClicks) then

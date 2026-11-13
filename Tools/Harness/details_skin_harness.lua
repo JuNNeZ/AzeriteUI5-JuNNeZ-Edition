@@ -7,6 +7,9 @@ local function texture(parent, layer)
 	function t:SetTexture(value) self.file = value end
 	function t:SetVertexColor(...) self.color = { ... } end
 	function t:SetTexCoord(...) self.uv = { ... } end
+	function t:GetTexture() return self.file end
+	function t:GetTexCoord() return unpack(self.uv or {0, 1, 0, 1}) end
+	function t:GetVertexColor() return unpack(self.color or {1, 1, 1, 1}) end
 	function t:Show() self.shown = true end
 	function t:Hide() self.shown = false end
 	function t:AddMaskTexture(mask) self.masks[mask] = true end
@@ -42,6 +45,7 @@ local ns = { API = {} }
 function ns:NewModule() return module end
 function module:RegisterEvent(event, method) events[event] = method end
 function module:UnregisterEvent(event) events[event] = nil end
+function module:RegisterChatCommand(command, method) self.chatCommand = { command, method } end
 function ns.API.GetFont()
 	return { GetFont = function() return "Fonts\\FRIZQT__.TTF", 12, "OUTLINE" end }
 end
@@ -77,6 +81,31 @@ function Details:ChangeSkin(name) self.skin = name or self.skin end
 function Details:SetAutoHideMenu() end
 function Details:SetIconAlpha() end
 function Details:SetBarSettings() end
+function Details:SimpleFormat(_, _, text, _, rate) text:SetText(rate) end
+if (arg[1]) then
+	local file = assert(io.open(arg[1]:gsub("skins%.lua$", "util.lua"), "r"))
+	local source = file:read("*a")
+	file:close()
+	local formatter = assert(source:match("(function Details:SimpleFormat[%s%S]-)\n\t%-%-%-@class adaptersettings"))
+	assert(loadstring("local Details = _G.Details\n" .. formatter))()
+end
+Details.righttext_simple_formatting = { enabled = false, use_alignment = true }
+local titleText = { justify = "LEFT" }
+function titleText:ClearAllPoints() self.point = nil end
+function titleText:SetPoint(...) self.point = { ... } end
+function titleText:SetWidth(width) self.width = width end
+function titleText:GetJustifyH() return self.justify end
+function titleText:SetJustifyH(value) self.justify = value end
+function Details:GetTitleBarFontString() return { widget = titleText } end
+function Details:AttributeMenu()
+	titleText:SetPoint("LEFT", self.baseframe.titleBar, "LEFT", 16, 0)
+	self:RefreshAttributeTextSize()
+end
+function Details:RefreshAttributeTextSize() titleText:SetWidth(180) end
+function Details:SetBarTextAnchorOffset(index, offset)
+	self.row_info.texts[index].anchor.x = -offset
+	self.offsetUpdates = (self.offsetUpdates or 0) + 1
+end
 local rowEvent
 function Details:CreateEventListener()
 	return { RegisterEvent = function(_, event, callback)
@@ -96,18 +125,29 @@ assert(instances.combat.damage == 42, "combat data changed")
 assert(skin.no_cache and not skin.is_cached_skin, "must not cache asset dependencies")
 assert(not skin.skin_options and not skin.callback, "base actions leaked")
 assert(skin.instance_cprops.row_info.texture == "AzeriteUI Details")
-assert(registered["statusbar:AzeriteUI Details"] == ns.API.GetMedia("Details\\fill"))
+assert(registered["statusbar:AzeriteUI Details"] == ns.API.GetMedia("Details\\fill-tile"))
 assert(registered["statusbar:AzeriteUI Details Casing"] == ns.API.GetMedia("Details\\casing"))
 assert(registered["font:AzeriteUI Details"] == "Fonts\\FRIZQT__.TTF")
 assert(not events.ADDON_LOADED and not events.PLAYER_LOGIN, "listeners not released")
-assert(hooks == 4 and rowEvent, "missing lifecycle hooks")
+assert(hooks == 7 and rowEvent, "missing lifecycle hooks")
 -- The real Details registry does not call callbacks; test the post-hook path.
 local window = setmetatable({ baseframe = { titleBar = titleBar, fullWindowFrame = {}, cabecalho = {} } }, { __index = Details })
+window.row_info = { texts = { {}, {}, {}, { anchor = { x = -9 } } } }
 local button = { SetAlpha = function(self, value) self.alpha = value end }
 window.baseframe.cabecalho.report = button
 window:ChangeSkin("Existing")
 assert(#frames == 0, "must not decorate other skins")
 window:ChangeSkin("AzeriteUI Minimal")
+assert(titleText.point[1] == "CENTER" and titleText.point[2] == titleBar and titleText.width == 0)
+assert(titleText.justify == "CENTER")
+assert(window.row_info.texts[4].anchor.x == -21 and window.offsetUpdates == 1,
+	"existing saved selections need a 12px inward shift")
+window:AttributeMenu()
+assert(titleText.point[1] == "CENTER" and titleText.width == 0, "menu rebuild must retain centering")
+window:RefreshAttributeTextSize()
+assert(titleText.width == 0, "hover/resize must not restore asymmetric title width")
+titleText:SetPoint("BOTTOMLEFT", titleBar, "BOTTOMRIGHT", 8, 1)
+assert(titleText.point[1] == "CENTER", "native drag point must not displace the title")
 assert(#frames == 1 and frames[1].shown and frames[1].layer == "BACKGROUND")
 assert(frames[1].parent == window.baseframe.titleBar, "must frame only the header")
 assert(frames[1].file == ns.API.GetMedia("Details\\header"))
@@ -121,7 +161,12 @@ window:SetIconAlpha()
 assert(button.alpha == module.Style.idleIcons)
 window:ChangeSkin("AzeriteUI Minimal")
 assert(#frames == 1, "reapplying must reuse the border")
+assert(window.offsetUpdates == 1, "text inset must not accumulate")
 window:ChangeSkin("Existing")
+window:AttributeMenu()
+assert(titleText.justify == "LEFT" and titleText.point[1] == "LEFT" and titleText.width == 180,
+	"other skins must recover native title layout")
+assert(window.offsetUpdates == 1, "other skins must not receive our text inset")
 assert(not frames[1].shown, "switching away must hide the border")
 button.alpha = .6
 window:SetAutoHideMenu()
@@ -133,19 +178,38 @@ Details.skins.AzeriteUI = nil
 Details.skins["AzeriteUI Minimal"] = nil
 module:OnInitialize()
 assert(Details.skins.AzeriteUI and Details.skins["AzeriteUI Minimal"] and not events.ADDON_LOADED)
-assert(hooks == 4, "registration must not duplicate hooks")
+assert(hooks == 8, "registration must not duplicate hooks, including the title hook")
 assert(Details.skins["AzeriteUI Forged (Preview)"], "new artwork preset must be selectable")
 local row = { statusbar = {}, textura = texture(), background = texture(), overlayTexture = texture() }
+local function fontString()
+	return {
+		SetText = function(self, value) self.value = value end,
+		ClearAllPoints = function(self) self.point = nil end,
+		SetPoint = function(self, ...) self.point = { ... } end,
+	}
+end
+row.lineText2, row.lineText3, row.lineText4 = fontString(), fontString(), fontString()
+row.lineText14 = fontString()
 function row.statusbar:CreateMaskTexture() self.mask = texture(self); return self.mask end
 window.barras = { row }
 window:SetBarSettings()
+assert(row.lineText4.point[4] == -21 and row.lineText14.point[4] == -21,
+	"both visible native texts must actually move inward")
+row.lineText4:SetPoint("RIGHT", row.statusbar, "RIGHT", 0, 0)
+assert(row.lineText4.point[4] == -21, "native zero-offset re-anchor must retain our inset")
 local mask = row.statusbar.mask
-assert(mask.file == ns.API.GetMedia("Details\\row-mask"))
+assert(mask.file == ns.API.GetMedia("Details\\row-mask-native"))
+assert(mask.uv[1] == 0 and mask.uv[2] == 1 and mask.uv[3] == 0 and mask.uv[4] == 1,
+	"native mask must not depend on cropped texture coordinates")
 assert(row.textura.masks[mask] and row.background.masks[mask] and mask.attached)
 assert(row.overlayTexture.uv[3] == ns.DetailsSkinArt.casing[3])
+assert(row.textura.uv[1] == 0 and row.textura.uv[2] == 1 and row.textura.uv[3] == 0 and row.textura.uv[4] == 1,
+	"native fill updates must not depend on custom cropped UVs")
 window:SetBarSettings()
 assert(row.statusbar.mask == mask, "mask must be reused")
 window:ChangeSkin("Existing")
+row.lineText4:SetPoint("RIGHT", row.statusbar, "RIGHT", 0, 0)
+assert(row.lineText4.point[4] == 0, "other skins must retain their actual native anchor")
 assert(not mask.attached and not row.textura.masks[mask] and not row.background.masks[mask])
 assert(row.textura.uv[3] == 0 and row.overlayTexture.uv[4] == 1, "other skins need default UVs")
 window:ChangeSkin("AzeriteUI Forged (Preview)")
@@ -154,15 +218,37 @@ local newRow = { statusbar = {}, textura = texture(), background = texture(), ov
 newRow.statusbar.CreateMaskTexture = row.statusbar.CreateMaskTexture
 rowEvent("DETAILS_INSTANCE_NEWROW", window, newRow)
 assert(newRow.statusbar.mask.attached, "rows created later must receive the art mask")
-assert(newRow.textura.file == ns.API.GetMedia("Details\\fill"))
+assert(newRow.textura.file == ns.API.GetMedia("Details\\fill-tile"))
 assert(newRow.overlayTexture.file == ns.API.GetMedia("Details\\casing"), "later rows need paint, not only a mask")
+assert(module.chatCommand[1] == "azdetails")
+local secret = setmetatable({}, { __tostring = function() error("secret was formatted") end })
+Details:SimpleFormat(row.lineText2, row.lineText3, row.lineText4, secret, "8.6K/s", nil, 2)
+assert(row.lineText4.value == secret, "native primary amount must pass through without inspection")
+Details:SimpleFormat(row.lineText2, row.lineText3, row.lineText14, "10K", "8.6K/s", nil, 2)
+assert(row.lineText14.value == "10K", "parallel text set must show the primary amount")
+window:ChangeSkin("Existing")
+Details:SimpleFormat(row.lineText2, row.lineText3, row.lineText4, "10K", "8.6K/s", nil, 2)
+assert(row.lineText4.value == "8.6K/s", "other skins must retain native formatting")
+window:ChangeSkin("AzeriteUI Forged (Preview)")
+function issecretvalue(value) return value == secret end
+local printed = {}
+function module:Print(text) printed[#printed+1] = text end
+Details.tabela_instancias = { window }
+row.textura.uv[1] = secret
+row.textura.color = { secret, 1, 1, 1 }
+function row.statusbar:GetValue() return secret end
+function row.statusbar:GetMinMaxValues() return 0, secret end
+function row.statusbar:GetStatusBarTexture() return row.textura end
+module:Inspect()
+assert(table.concat(printed, "\n"):find("<secret>", 1, true), "graphics probe must guard native secrets")
+issecretvalue = nil
 assert(skin.instance_cprops.bg_alpha == 0, "empty body must be transparent")
 assert(skin.instance_cprops.backdrop_texture == "AzeriteUI Clear")
 assert(registered["background:AzeriteUI Clear"] == ns.API.GetMedia("blank"))
 assert(skin.instance_cprops.row_info.no_icon and not skin.instance_cprops.row_info.textL_show_number)
 assert(not skin.instance_cprops.attribute_text.show_timer)
 assert(not skin.instance_cprops.use_multi_fontstrings)
-assert(skin.instance_cprops.row_info.textR_custom_text == "{data2}")
+assert(skin.instance_cprops.row_info.textR_custom_text == "{data1}")
 -- Execute the actual installed ChangeSkin settings branch (before frame rendering).
 -- This reproduces the screenshot's stale .86 background on a same-name reload.
 if (arg[1]) then
@@ -196,8 +282,30 @@ if (arg[1]) then
 	saved:ChangeSkin("AzeriteUI Minimal")
 	assert(saved.bg_alpha == 0 and saved.backdrop_texture == "AzeriteUI Clear")
 	assert(not saved.row_info.textL_show_number and not saved.use_multi_fontstrings)
-	assert(saved.row_info.textR_custom_text == "{data2}" and not saved.attribute_text.show_timer)
+	assert(saved.row_info.textR_custom_text == "{data1}" and not saved.attribute_text.show_timer)
 	assert(saved.libwindow.x == 77 and saved.libwindow.y == 88 and saved.window_scale == 1.2)
+	-- Reproduce the real post-preset setter which our earlier harness omitted.
+	-- Minimalistic's use_spec_icons=true silently undoes no_icon=true here.
+	local specSetter = assert(source:match("(function Details:SetBarSpecIconSettings%([%s%S]-)\nfunction Details:SetBarArenaRoleIconSettings"))
+	local specChunk = assert(loadstring(specSetter))
+	setfenv(specChunk, setmetatable({ Details = native }, { __index = _G }))
+	specChunk()
+	function native:TrackSpecsNow() end
+	function native:GetAllInstances() return { saved } end
+	function native:ResetSpecCache() end
+	function native:InstanceReset() end
+	function native:InstanceRefreshRows() end
+	function native:ReajustaGump() end
+	function native:IsEnabled() return true end
+	saved.row_info.use_spec_icons = true
+	saved.row_info.no_icon = true
+	saved:SetBarSpecIconSettings()
+	assert(saved.row_info.no_icon == false, "native setter must reproduce the reported icon bug")
+	saved.row_info.use_spec_icons = skin.instance_cprops.row_info.use_spec_icons
+	saved.row_info.no_icon = skin.instance_cprops.row_info.no_icon
+	saved:SetBarSpecIconSettings()
+	assert(saved.row_info.no_icon and not saved.row_info.use_spec_icons,
+		"corrected preset must survive the native spec-icon setter")
 	-- Run the installed text migration/style code, including the parallel fontstrings.
 	local function deploy(target, defaults)
 		for key, value in pairs(defaults) do
@@ -231,6 +339,26 @@ if (arg[1]) then
 		assert(row["lineText" .. index].alpha == 0 and row["lineText" .. index].shadowAlpha == 0)
 	end
 	assert(row.lineText1.alpha == 1 and row.lineText4.alpha == 1)
+	-- Execute the modern branch omitted by earlier mocked setter checks.
+	framework.IsAddonApocalypseWow = function() return true end
+	native.righttext_simple_formatting = { alignment_space = 40 }
+	saved.row_info.text_yoffset = 0
+	local actualRow = { statusbar = {} }
+	for _, index in ipairs({4, 14}) do
+		actualRow["lineText" .. index] = fontString()
+	end
+	local _, _, _, x = rowNS.RowTexts.ResolveAnchor(saved, actualRow, 4)
+	assert(x == 0, "modern Details must reproduce the ignored saved x-offset")
+	module.UpdateRow(saved, actualRow)
+	rowNS.RowTexts.ApplyAnchors(saved, actualRow)
+	assert(actualRow.lineText4.point[4] == -21 and actualRow.lineText14.point[4] == -21,
+		"actual modern anchor pass must retain both corrected visible texts")
+	saved.bars_inverted = true
+	rowNS.RowTexts.ApplyAnchors(saved, actualRow)
+	assert(actualRow.lineText4.point[1] == "LEFT" and actualRow.lineText4.point[4] == 21)
+	saved.skin = "Minimalistic"
+	rowNS.RowTexts.ApplyAnchors(saved, actualRow)
+	assert(actualRow.lineText4.point[4] == 0, "other skins must keep modern anchor behavior")
 end
 -- Export the actual registered settings for the offline assembled preview.
 if (arg[2]) then

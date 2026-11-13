@@ -2,7 +2,10 @@
 -- ClassPower element, the real PlayerClassPower style/PostUpdate and the real layout data with a
 -- strict secret stand-in: type() says "number", issecretvalue() says true, and any arithmetic,
 -- ordering comparison, concatenation or indexing throws. No claim of live WoW execution: the
--- curve and StatusBar below model Blizzard's documented behavior, they are not the client.
+-- StatusBar and mask textures below model Blizzard's documented behavior, they are not the client.
+-- The masks follow EllesmereUI's Forever combo gate (EUI_UnitFrames_ForeverExtras.lua, UF_ComboGate):
+-- a mask the gate's size riding its fill's right edge covers the art only while the gate is full.
+-- FixLog 2026-11-13: points follow the target's count even when the player's power disagrees.
 -- lua Tools/Harness/combo_points_harness.lua .
 local root = arg[1] or "."
 local checks = 0
@@ -37,8 +40,9 @@ local function reveal(value)
 end
 
 -- Widgets: only what the element and style touch, with real state -------------
+local noMasks = false
 local function Widget(kind)
-	local w = { kind = kind, shown = true, alpha = 1, min = 0, max = 1, value = 0 }
+	local w = { kind = kind, shown = true, alpha = 1, min = 0, max = 1, value = 0, masks = {}, w = 0, h = 0 }
 	function w:Show() self.shown = true end
 	function w:Hide() self.shown = false end
 	function w:SetShown(show) self.shown = show and true or false end
@@ -57,9 +61,29 @@ local function Widget(kind)
 	function w:IsObjectType(objectType) return objectType == "StatusBar" and kind == "StatusBar" end
 	function w:GetStatusBarTexture()
 		self.texture = self.texture or Widget("Texture")
+		self.texture.owner = self
 		return self.texture
 	end
 	function w:CreateTexture() return Widget("Texture") end
+	function w:SetSize(width, height) self.w, self.h = width, height end
+	function w:GetSize() return self.w, self.h end
+	function w:SetPoint(point, relativeTo, relativePoint) self.anchor = { point, relativeTo, relativePoint } end
+	function w:SetTexture(file) self.file = file end
+	function w:GetTexture() return self.file end
+	function w:SetRotation(rotation) self.rotation = rotation end
+	function w:GetRotation() return self.rotation or 0 end
+	function w:SetVertexColor(r, g, b, a) self.color = { r, g, b, a } end
+	function w:GetVertexColor() return unpack(self.color or { 1, 1, 1, 1 }) end
+	function w:SetDrawLayer(layer, sublevel) self.layer, self.sublevel = layer, sublevel end
+	function w:GetDrawLayer() return self.layer or "ARTWORK", self.sublevel or 0 end
+	function w:AddMaskTexture(mask)
+		assert(mask.kind == "MaskTexture", "AddMaskTexture needs a mask")
+		self.masks[mask] = true
+	end
+	function w:RemoveMaskTexture(mask) self.masks[mask] = nil end
+	if (not noMasks) then
+		function w:CreateMaskTexture() return Widget("MaskTexture") end
+	end
 	function w:GetParent() return self.parent end
 	function w:GetFrameLevel() return 1 end
 	-- The drawn fill: a StatusBar clamps its value into [min, max].
@@ -80,9 +104,17 @@ end
 
 -- Client ---------------------------------------------------------------------
 local count, max, plain = 0, secret(5), false
+-- The player's power can lag or disagree with the target's count; nil means it agrees.
+local playerCount, targetExists = nil, true
+local function wrap(value)
+	if plain then return value end
+	return secret(value)
+end
 local function current()
-	if plain then return count end
-	return secret(count)
+	return wrap(count)
+end
+local function playerPower()
+	return wrap(playerCount or count)
 end
 local env = setmetatable({}, { __index = _G })
 env._G = env
@@ -96,10 +128,16 @@ env.UnitClassBase = function() return "ROGUE" end
 env.UnitIsUnit = function(a, b) return a == b end
 env.UnitHasVehicleUI = function() return false end
 env.UnitPowerType = function() return 3 end
-env.UnitPower = function() return current() end
+env.UnitPower = function() return playerPower() end
+env.UnitExists = function(unit)
+	if unit == "target" then return targetExists end
+	return true
+end
 env.UnitPowerMax = function() return max end
 env.GetComboPoints = function(unit, target)
 	assert(unit == "player" and target == "target", "classic target-bound combo points")
+	-- The client keeps no points without a target.
+	if not targetExists then return wrap(0) end
 	return current()
 end
 env.C_SpellBook = { IsSpellKnown = function() return true end }
@@ -127,7 +165,7 @@ env.UnitPowerPercent = function(unit, powerType, unmodified, curve)
 	assert(unit == "player" and powerType == 4 and unmodified == false, "UnitPowerPercent arguments")
 	-- The client computes the fraction in floating point; land just under the exact value so
 	-- a threshold placed exactly on a whole count would be caught misreading it.
-	return secret(curve:Evaluate((count / 5) * (1 - 1e-6)))
+	return secret(curve:Evaluate(((playerCount or count) / 5) * (1 - 1e-6)))
 end
 env.CreateFrame = function(kind, _, parent)
 	local widget = Widget(kind)
@@ -140,9 +178,9 @@ env.hooksecurefunc = function() end
 env.LibStub = function() return { GetLocale = function() return setmetatable({}, { __index = function(_, k) return k end }) end } end
 
 -- Addon namespace and the frame the real style builds --------------------------
-local ns, module, style, frame, cp
+local ns, module, style, frame, cp, configs
 local function build(forever)
-	local configs = {}
+	configs = {}
 	module, style = {}, nil
 	ns = { IsForever = forever, IsMainline = true, IsRetailContent = not forever, PlayerClass = "ROGUE",
 		Prefix = "AzeriteUI_", Colors = setmetatable({}, { __index = function() return { 1, 1, 1 } end }),
@@ -204,9 +242,53 @@ local function combat(inCombat)
 	local event = inCombat and "PLAYER_REGEN_DISABLED" or "PLAYER_REGEN_ENABLED"
 	return frame.events[event](frame, event)
 end
+-- A mask is open when its gate is full (mask on the fill's right edge) or, for an inverse
+-- mask (left edge on the fill's right edge), when the gate is empty. Counts are whole, so a
+-- half-full gate means a wrong range.
+local function maskOpen(mask)
+	local fill = mask.anchor and mask.anchor[2]
+	local gate = fill and fill.owner
+	assert(gate and gate.kind == "StatusBar", "mask rides a gate's fill")
+	assert(mask.w == gate.w and mask.h == gate.h and gate.w > 0, "mask is the gate's size")
+	local f = gate:Fill()
+	assert(f == 0 or f == 1, "gate half full")
+	if mask.anchor[1] == "RIGHT" and mask.anchor[3] == "RIGHT" then return f == 1 end
+	if mask.anchor[1] == "LEFT" and mask.anchor[3] == "RIGHT" then return f == 0 end
+	error("unknown mask anchor")
+end
+local function drawn(region)
+	if not region or not region.shown then return 0 end
+	for mask in pairs(region.masks) do
+		if not maskOpen(mask) then return 0 end
+	end
+	return reveal(region.alpha)
+end
+-- What each point shows: its alpha times its brightest visible case (the half-alpha socket
+-- or the full-alpha copy over a filled point).
 local function alphas()
 	local out = {}
-	for i = 1, 5 do out[i] = cp[i].shown and reveal(cp[i].alpha) or "hidden" end
+	for i = 1, 5 do
+		local point = cp[i]
+		local gates = point.__AzeriteUI_Gates
+		local case = math.max(drawn(point.case), drawn(gates and gates.litCase))
+		out[i] = point.shown and (reveal(point.alpha) * case) or "hidden"
+	end
+	return table.concat(out, ",")
+end
+-- The fill as drawn: the client's clamp, then the point's masks.
+local function drawnFills()
+	local out = {}
+	for i = 1, 5 do
+		local fill = cp[i]:GetStatusBarTexture()
+		out[i] = (drawn(fill) > 0) and cp[i]:Fill() or 0
+	end
+	return table.concat(out, ",")
+end
+local function slotAlphas()
+	local out = {}
+	for i = 1, 5 do
+		out[i] = cp[i].shown and reveal(cp[i].alpha) * drawn(cp[i].slot) or 0
+	end
 	return table.concat(out, ",")
 end
 local function fills()
@@ -220,6 +302,7 @@ update()
 check(cp.__max == 5, "secret max falls back to five points")
 check(cp:IsShown(), "secret count keeps the element up; alpha decides visibility")
 check(alphas() == "0,0,0,0,0", "zero points invisible: " .. alphas())
+check(slotAlphas() == "0,0,0,0,0", "zero points hide slot backings: " .. slotAlphas())
 check(not cp[6].shown, "only five points")
 
 -- Stealth opener: one point.
@@ -227,6 +310,7 @@ count = 1
 update()
 check(fills() == "1,0,0,0,0", "one point filled by the client: " .. fills())
 check(alphas() == "1,0.5,0.5,0.5,0.5", "filled point and empty sockets: " .. alphas())
+check(slotAlphas() == "0.5,0.5,0.5,0.5,0.5", "secret sockets retain half-alpha backings: " .. slotAlphas())
 check(isSecret(cp[1].value) and cp[3].min == 2 and cp[3].max == 3, "points clamp the secret themselves")
 
 count = 3
@@ -239,6 +323,7 @@ count = 5
 update()
 check(fills() == "1,1,1,1,1", "five points: " .. fills())
 check(alphas() == "0,0,0,0,0", "full set fades out of combat: " .. alphas())
+check(slotAlphas() == "0,0,0,0,0", "full set hides slot backings out of combat: " .. slotAlphas())
 
 -- ...unless the player keeps it, and it always stays up in combat.
 module.db.profile.showFullOutOfCombat = true
@@ -271,18 +356,90 @@ count = 0
 update()
 check(not cp:IsShown(), "plain zero still hides the element")
 
--- Without the curve API the display fails open rather than disappearing.
-plain, count = false, 2
-env.UnitPowerPercent = nil
+-- Target-bound (FixLog 2026-11-13): the player's power may lag the target's count, and the
+-- points follow the target. Out of combat, secret counts.
+plain = false
+count, playerCount = 3, 0
 update()
-check(cp:IsShown() and alphas() == "1,1,1,1,1", "no curve API: points stay visible: " .. alphas())
+check(fills() == "1,1,1,0,0", "target's three points fill: " .. fills())
+check(alphas() == "1,1,1,0.5,0.5", "player power lagging at zero: " .. alphas())
+local gates = cp[1].__AzeriteUI_Gates
+check(gates and gates.any.w >= cp[1].case.w and gates.any.h >= cp[1].case.h
+	and gates.lit.w >= cp[1].w + 2 * (configs.PlayerClassPower.ClassPowerSlotOffset or 0),
+	"gates cover the point's art")
+count, playerCount = 2, 5
+update()
+check(alphas() == "1,1,0.5,0.5,0.5", "player power ahead at five, target two, no fade: " .. alphas())
+count, playerCount = 5, 1
+update()
+check(alphas() == "0,0,0,0,0" and drawnFills() == "0,0,0,0,0",
+	"target's full set fades out of combat, fill too: " .. alphas() .. " / " .. drawnFills())
+combat(true)
+count, playerCount = 4, 0
+update()
+check(alphas() == "1,1,1,1,0.5" and drawnFills() == "1,1,1,1,0", "four in combat, player at zero: " .. alphas())
+-- Points moved to a new target: the target change refreshes, and the count read is the target's.
+count, playerCount = 1, 4
+frame.events.PLAYER_TARGET_CHANGED(frame, "PLAYER_TARGET_CHANGED")
+check(alphas() == "1,0.5,0.5,0.5,0.5", "new target's one point: " .. alphas())
+-- No target: nothing lit, whatever the player's power says.
+targetExists, playerCount = false, 3
+frame.events.PLAYER_TARGET_CHANGED(frame, "PLAYER_TARGET_CHANGED")
+check(fills() == "0,0,0,0,0", "no target fills nothing: " .. fills())
+check(not cp:IsShown(), "no target hides the element")
+targetExists, playerCount = true, nil
+combat(false)
+
+-- Plain again: the masks and the bright copy step aside for the numeric path.
+plain, count, max = true, 3, 5
+update()
+check(not next(cp[1].case.masks) and not next(cp[1]:GetStatusBarTexture().masks)
+	and reveal(cp[1].case.alpha) == 1 and not cp[1].__AzeriteUI_Gates.litCase.shown,
+	"plain count clears the gates")
+check(alphas() == "1,1,1,0.5,0.5", "plain count after secret: " .. alphas())
+check(not next(cp[1].slot.masks) and slotAlphas() == "1,1,1,0.5,0.5", "plain count restores slot backing opacity")
+
+-- First secret update on a fresh element (/reload with a target holding points): no style has
+-- been laid out yet, so the gates must be sized after the layout, not from the unsized points.
+plain, count, max, playerCount = false, 3, secret(5), 0
+-- build() enables the element, and its ForceUpdate is that first update: check before any other.
+build(true)
+local fresh = true
+for i = 1, 3 do
+	local point, g = cp[i], cp[i].__AzeriteUI_Gates
+	local offset = configs.PlayerClassPower.ClassPowerSlotOffset or 0
+	fresh = fresh and g and point.case.w > 0
+		and g.any.w >= point.case.w and g.any.h >= point.case.h
+		and g.lit.w >= point.w + 2 * offset and g.open.w >= point.case.w
+		and g.litCase.file ~= nil and g.litCase.file == point.case.file
+		and g.litCase.w == point.case.w and g.litCase.h == point.case.h
+end
+check(fresh, "first secret update: gates and bright copy match the laid-out art")
+check(alphas() == "1,1,1,0.5,0.5", "first secret update shows three points: " .. alphas())
+playerCount = nil
+
+-- Without mask support the display fails open rather than disappearing.
+noMasks = true
+build(true)
+plain, count, max = false, 2, secret(5)
+update()
+check(cp:IsShown() and alphas() == "1,1,1,1,1", "no mask API: points stay visible: " .. alphas())
+noMasks = false
 
 -- Retail keeps its cached fallback: a secret count must not reach the points or PostUpdate.
 env.UnitPowerPercent = function() error("Retail must not take the Forever curve path") end
+env.GetComboPoints = function() error("Retail combo points are the player's power") end
 plain, count, max = false, 3, 5
 build(false)
 update()
 check(not isSecret(cp[1].value) and cp[3].min == 0 and cp[3].max == 1, "Retail points never take a secret")
 check(not cp:IsShown(), "Retail secret count keeps the cached zero")
+check(cp[1].__AzeriteUI_Gates == nil, "Retail builds no gates")
+-- Retail combo points are the player's: no target does not clear them.
+plain, count, targetExists = true, 2, false
+update()
+check(cp:IsShown() and fills() == "1,1,0,0,0" and alphas() == "1,1,0.5,0.5,0.5",
+	"Retail plain points ignore the target: " .. alphas())
+targetExists = true
 
 print("Combo points: " .. checks .. " checks passed")
