@@ -161,8 +161,11 @@ local GetShapedButtonConfig = function(db, shape)
 	-- motifs. Reuse them intact; no new casing pixels or theme layout changes.
 	local border = GetMedia(s.border)
 	local theme = shape == "hex" and ns.ThemeEngine and ns.ThemeEngine:GetActive()
+	local ownHex = theme and theme.ResolveOwnMedia and theme:ResolveOwnMedia("actionbutton-border-hex")
 	local themedBorder = theme and theme.ResolveOwnMedia and theme:ResolveOwnMedia("portrait_frame_hi")
-	if (themedBorder) then
+	if (ownHex) then
+		border = ownHex
+	elseif (themedBorder) then
 		local folder = themedBorder:match("[\\/]Assets[\\/]([^\\/]+)[\\/]portrait_frame_hi%.tga$")
 		border = folder and HEX_CLASS_BORDERS[folder] and GetMedia("HexButtons\\"..folder.."\\border") or themedBorder
 	end

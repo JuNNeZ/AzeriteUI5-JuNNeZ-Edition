@@ -26,7 +26,7 @@
 --]]
 -- Nameplates, 5 of 10: the element callbacks: health colour, power, outline, badge, name and health text, positions.
 -- Loaded after Visibility.lua; see Settings.lua for how these files share their locals.
-local _, ns = ...
+local Addon, ns = ...
 
 local NP = ns.NamePlatesPrivate
 if (not NP) then return end
@@ -57,6 +57,10 @@ local IsFightingYou = NP.IsFightingYou
 local GetNamePlateBarLayout = NP.GetNamePlateBarLayout
 local GetTankThreatState = NP.GetTankThreatState
 local GetTankThreatColor = NP.GetTankThreatColor
+local GetRoleThreatState = NP.GetRoleThreatState
+local GetRoleThreatColor = NP.GetRoleThreatColor
+local IsThreatScopeActive = NP.IsThreatScopeActive
+local GetTankThreatPercent = NP.GetTankThreatPercent
 local SafeUnitMatches = NP.SafeUnitMatches
 
 -- Execute Marker
@@ -226,7 +230,8 @@ end
 
 -- Tank mode extras (Visibility.lua, GetTankThreatState)
 --------------------------------------------
--- The name of whoever a mob you do not hold is hitting, under its plate, in their class colour. The
+-- The name of whoever a mob you do not hold is hitting, under its plate, in their class colour: in
+-- tank mode a lost or co-tanked mob, in healer mode a loose one. The
 -- name and class may be secret; they only go into SetText and, through C_ClassColor, SetTextColor.
 -- Hidden while the castbar shows: its own cast target sits in the same place.
 local TankTarget_Update = function(self)
@@ -238,7 +243,7 @@ local TankTarget_Update = function(self)
 	local profile = NamePlatesMod.db and NamePlatesMod.db.profile
 	local castbar = self.Castbar
 	local unit = self.unit
-	if (profile and profile.tankTargetNames and (state == "lost" or state == "cotank")
+	if (profile and profile.tankTargetNames and (state == "lost" or state == "cotank" or self.__AzeriteUI_RoleState == "loose")
 		and type(unit) == "string" and not (castbar and castbar:IsShown())) then
 		local target = unit .. "target"
 		if (IsSafeTrue(UnitExists(target)) and not SafeUnitMatches(target, "player")) then
@@ -265,24 +270,272 @@ local TankTarget_Update = function(self)
 	text:Hide()
 end
 
--- Stores the plate's tank state and, when a mob you held went to someone who is not a tank, plays
--- the lost-aggro sound if it is on (once per LOST_AGGRO_SOUND_INTERVAL for all plates together).
-local LOST_AGGRO_SOUND_INTERVAL = 2
-local lastLostAggroSound
+-- Threat alerts (2026-11-08)
+--------------------------------------------
+-- Three alerts: "lost" (tank mode: a mob you held went to someone who is not a tank), "close" (healer
+-- and DPS: your threat reached the warning or you are above the tank) and "aggro" (healer and DPS: a
+-- mob turned on you). Each has its own switch and sound; the effects (sound, screen edge flash,
+-- nameplate pulse, text in the middle of the screen) are shared. An alert fires at most once per
+-- THREAT_ALERT_INTERVAL for all plates together, and only where the threat roles work
+-- (Visibility.lua, IsThreatScopeActive). Names go to SetText only, so a secret one is fine.
+local THREAT_ALERT_INTERVAL = 2
+local THREAT_ALERTS = {
+	lost = { switch = "tankLostAggroSound", file = "tankLostAggroSoundFile", sound = "RAID_WARNING", soundID = 8959,
+		text = "Mob lost", nameOf = "target" },
+	close = { switch = "threatWarnSound", file = "threatWarnSoundFile", sound = "UI_RAID_BOSS_WHISPER_WARNING", soundID = 37666,
+		text = "Threat close", nameOf = "unit" },
+	aggro = { switch = "threatAggroSound", file = "threatAggroSoundFile", sound = "RAID_WARNING", soundID = 8959,
+		text = "Aggro!", nameOf = "unit" }
+}
+local THREAT_ALERT_FALLBACK_COLOR = { 1, .25, .25 }
+local lastThreatAlert = {}
+
+local localeTable
+local GetLocaleText = function(key)
+	if (localeTable == nil) then
+		local lib = LibStub and LibStub("AceLocale-3.0", true)
+		localeTable = lib and lib:GetLocale(Addon, true) or false
+	end
+	return localeTable and localeTable[key] or key
+end
+
+local GetAlertColor = function(kind)
+	local color
+	if (kind == "lost") then
+		color = GetTankThreatColor("lost")
+	else
+		color = GetRoleThreatColor(kind)
+	end
+	return color or THREAT_ALERT_FALLBACK_COLOR
+end
+
+-- Plays an alert's sound: "Default" (or nothing chosen) is the game's own warning, anything else a
+-- LibSharedMedia sound by name, falling back to the game's when the name is not registered.
+-- For the options page too, which plays a sound as it is chosen.
+local PlayThreatAlertSound = function(kind, choice)
+	local alert = THREAT_ALERTS[kind]
+	if (not alert) then
+		return
+	end
+	if (type(choice) == "string" and choice ~= "" and choice ~= "Default" and type(PlaySoundFile) == "function") then
+		local lsm = LibStub and LibStub("LibSharedMedia-3.0", true)
+		local file = lsm and lsm:Fetch("sound", choice, true)
+		if (type(file) == "string" or type(file) == "number") then
+			PlaySoundFile(file, "Master")
+			return
+		end
+	end
+	if (type(PlaySound) == "function") then
+		PlaySound(SOUNDKIT and SOUNDKIT[alert.sound] or alert.soundID, "Master")
+	end
+end
+
+-- One frame fades every effect: up for the first quarter, down for the rest, then hidden.
+local fadingEffects = {}
+local effectFader
+local StartEffectFade = function(region, duration, peak)
+	if (not region) then
+		return
+	end
+	if (not effectFader) then
+		effectFader = CreateFrame("Frame")
+		effectFader:Hide()
+		effectFader:SetScript("OnUpdate", function(frame)
+			local now = GetTime()
+			for faded, fade in next, fadingEffects do
+				local progress = (now - fade.start) / fade.duration
+				if (progress >= 1) then
+					fadingEffects[faded] = nil
+					faded:SetAlpha(0)
+					faded:Hide()
+				else
+					local level = progress < .25 and (progress / .25) or ((1 - progress) / .75)
+					faded:SetAlpha(level * fade.peak)
+				end
+			end
+			if (not next(fadingEffects)) then
+				frame:Hide()
+			end
+		end)
+	end
+	fadingEffects[region] = { start = GetTime(), duration = duration, peak = peak }
+	region:SetAlpha(0)
+	region:Show()
+	effectFader:Show()
+end
+
+-- The screen edge flash: the game's low health edge, over everything, never taking the mouse.
+local screenFlash
+local FlashScreenEdge = function()
+	if (not screenFlash) then
+		screenFlash = CreateFrame("Frame", nil, UIParent)
+		screenFlash:SetAllPoints(UIParent)
+		screenFlash:SetFrameStrata("FULLSCREEN_DIALOG")
+		if (screenFlash.EnableMouse) then
+			screenFlash:EnableMouse(false)
+		end
+		local texture = screenFlash:CreateTexture(nil, "BACKGROUND")
+		texture:SetAllPoints(screenFlash)
+		texture:SetTexture([[Interface\FullScreenTextures\LowHealth]])
+		texture:SetBlendMode("ADD")
+		screenFlash.Texture = texture
+		screenFlash:Hide()
+	end
+	StartEffectFade(screenFlash, .8, 1)
+end
+
+-- The text in the middle of the screen: what happened, and under it the mob's name or, for a lost
+-- mob, who it went to.
+local alertText
+local ShowAlertText = function(kind, name)
+	if (not alertText) then
+		local db = ns.GetConfig("NamePlates")
+		alertText = CreateFrame("Frame", nil, UIParent)
+		alertText:SetSize(400, 60)
+		alertText:SetPoint(unpack(db.ThreatAlertTextPosition or { "CENTER", UIParent, "CENTER", 0, 180 }))
+		alertText:SetFrameStrata("HIGH")
+		local message = alertText:CreateFontString(nil, "OVERLAY")
+		message:SetFontObject(db.ThreatAlertTextFont or API.GetFont(26, true))
+		message:SetPoint("TOP", alertText, "TOP", 0, 0)
+		local who = alertText:CreateFontString(nil, "OVERLAY")
+		who:SetFontObject(db.ThreatAlertNameFont or API.GetFont(16, true))
+		who:SetPoint("TOP", message, "BOTTOM", 0, -2)
+		alertText.Message, alertText.Name = message, who
+		alertText:Hide()
+	end
+	local color = GetAlertColor(kind)
+	alertText.Message:SetText(GetLocaleText(THREAT_ALERTS[kind].text))
+	alertText.Message:SetTextColor(color[1], color[2], color[3], 1)
+	alertText.Name:SetText(name or "")
+	StartEffectFade(alertText, 2, 1)
+end
+
+-- The plate's own glow, in the alert's colour (Style.lua makes it, behind the health bar).
+local PulsePlate = function(self, kind)
+	local pulse = self and self.ThreatPulse
+	if (not pulse) then
+		return
+	end
+	local color = GetAlertColor(kind)
+	pulse:SetVertexColor(color[1], color[2], color[3], 1)
+	StartEffectFade(pulse, 1, 1)
+end
+
+local GetAlertName = function(self, kind)
+	local unit = self and self.unit
+	if (type(unit) ~= "string") then
+		return nil
+	end
+	if (THREAT_ALERTS[kind].nameOf == "target") then
+		unit = unit .. "target"
+	end
+	if (not IsSafeTrue(UnitExists(unit))) then
+		return nil
+	end
+	local name = UnitName(unit)
+	if (IsSecretValue(name) or type(name) == "string") then
+		return name
+	end
+end
+
+local FireThreatAlert = function(self, kind)
+	local alert = THREAT_ALERTS[kind]
+	local profile = NamePlatesMod.db and NamePlatesMod.db.profile
+	if (not alert or not profile or not profile[alert.switch] or not IsThreatScopeActive()) then
+		return
+	end
+	local now = GetTime()
+	if (lastThreatAlert[kind] and now - lastThreatAlert[kind] < THREAT_ALERT_INTERVAL) then
+		return
+	end
+	lastThreatAlert[kind] = now
+	if (profile.threatAlertSoundOn ~= false) then
+		PlayThreatAlertSound(kind, profile[alert.file])
+	end
+	if (profile.threatAlertFlash) then
+		FlashScreenEdge()
+	end
+	if (profile.threatAlertPulse) then
+		PulsePlate(self, kind)
+	end
+	if (profile.threatAlertText) then
+		ShowAlertText(kind, GetAlertName(self, kind))
+	end
+end
+
+-- Stores the plate's tank state and its threat percent (Visibility.lua, GetTankThreatPercent: the
+-- group's highest on a mob you hold, yours on a lost one), and, when a mob you held went to someone
+-- who is not a tank, fires the lost alert. The percent asks the whole group, so at most once per
+-- TANK_PERCENT_INTERVAL per plate (twice that in a raid) unless the state changed.
+local TANK_PERCENT_INTERVAL = .5
 local TankThreat_Update = function(self, state)
 	local previous = self.__AzeriteUI_TankState
 	self.__AzeriteUI_TankState = state or nil
 	if (state == "lost" and (previous == "held" or previous == "slipping")) then
-		local profile = NamePlatesMod.db and NamePlatesMod.db.profile
-		if (profile and profile.tankLostAggroSound and type(PlaySound) == "function") then
-			local now = GetTime()
-			if (not lastLostAggroSound or now - lastLostAggroSound >= LOST_AGGRO_SOUND_INTERVAL) then
-				lastLostAggroSound = now
-				PlaySound(SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959, "Master")
-			end
+		FireThreatAlert(self, "lost")
+	end
+	if (state) then
+		local now = GetTime()
+		local interval = (IsInRaid and IsInRaid()) and TANK_PERCENT_INTERVAL * 2 or TANK_PERCENT_INTERVAL
+		if (state ~= previous or not self.__AzeriteUI_TankPercentAt or now - self.__AzeriteUI_TankPercentAt >= interval) then
+			self.__AzeriteUI_TankPercentAt = now
+			self.__AzeriteUI_TankPercent = GetTankThreatPercent(self, state)
 		end
+	else
+		self.__AzeriteUI_TankPercent, self.__AzeriteUI_TankPercentAt = nil, nil
 	end
 	TankTarget_Update(self)
+end
+
+-- Healer and DPS mode extras (Visibility.lua, GetRoleThreatState)
+--------------------------------------------
+-- Your threat on the mob inside the bar's right end, in the state's colour, only where the threat
+-- roles work (IsThreatScopeActive; solo it is mostly 100% on you) and only while the castbar is not
+-- up. The percent is a plain number: GetRoleThreatState hands out nil for a secret one.
+local ThreatPercent_Update = function(self)
+	local text = self and self.ThreatPercent
+	if (not text) then
+		return
+	end
+	local profile = NamePlatesMod.db and NamePlatesMod.db.profile
+	local state, percent = self.__AzeriteUI_RoleState, self.__AzeriteUI_RolePercent
+	local GetColor = GetRoleThreatColor
+	if (not state) then
+		-- Tank mode: the group's highest on a mob you hold, yours on a lost one.
+		state, percent, GetColor = self.__AzeriteUI_TankState, self.__AzeriteUI_TankPercent, GetTankThreatColor
+	end
+	local castbar = self.Castbar
+	if (profile and profile.threatPercentPlates and state and type(percent) == "number"
+		and IsThreatScopeActive() and not (castbar and castbar:IsShown())) then
+		if (percent < 0) then
+			percent = 0
+		elseif (percent > 999) then
+			percent = 999
+		end
+		text:SetText(string.format("%d%%", math.floor(percent + .5)))
+		local color = GetColor(state) or ns.GetConfig("NamePlates").ThreatPercentColor
+		text:SetTextColor(color[1], color[2], color[3], color[4] or 1)
+		text:Show()
+		return
+	end
+	text:Hide()
+end
+
+-- Stores the plate's healer/DPS state and fires the two alerts (FireThreatAlert): close when your
+-- threat on a mob comes close (close or pulling, from a calmer state), aggro when a mob turns on you.
+local ROLE_CALM_STATES = { safe = true, loose = true }
+local RoleThreat_Update = function(self, state, percent)
+	local previous = self.__AzeriteUI_RoleState
+	self.__AzeriteUI_RoleState = state or nil
+	self.__AzeriteUI_RolePercent = state and percent or nil
+	if (state and state ~= previous) then
+		if (state == "aggro") then
+			FireThreatAlert(self, "aggro")
+		elseif ((state == "close" or state == "pulling") and (not previous or ROLE_CALM_STATES[previous])) then
+			FireThreatAlert(self, "close")
+		end
+	end
+	-- The target name follows in TankThreat_Update and the percent after it, both from Health_UpdateColor.
 end
 
 local Health_UpdateColor = function(self, event, unit)
@@ -296,14 +549,25 @@ local Health_UpdateColor = function(self, event, unit)
 		local status = UnitThreatSituation("player", unit)
 		-- Tank mode decides alone when it applies; held on the default preset is no threat colour.
 		local tankState = GetTankThreatState(self, status)
+		local roleState, rolePercent
+		if (tankState == nil) then
+			roleState, rolePercent = GetRoleThreatState(self, status)
+		end
+		-- The role state first: the target name reads it when tank mode's update redraws it.
+		RoleThreat_Update(self, roleState, rolePercent)
 		TankThreat_Update(self, tankState)
+		ThreatPercent_Update(self)
 		if (tankState ~= nil) then
 			threatColor = tankState and GetTankThreatColor(tankState) or nil
+		elseif (roleState ~= nil) then
+			threatColor = roleState and GetRoleThreatColor(roleState) or nil
 		else
 			threatColor = GetThreatColor(self, status)
 		end
 	else
+		RoleThreat_Update(self, nil)
 		TankThreat_Update(self, nil)
+		ThreatPercent_Update(self)
 	end
 	local canAttack = UnitCanAttack("player", unit)
 	local classHostilityAllowed = self.isPRD
@@ -692,6 +956,85 @@ end
 -- secret answer hides the mark). It sits where the raid marker goes and steps aside
 -- while a raid marker is shown. Updated when a plate is set up, when its raid marker
 -- changes, and when the quest log changes (Module.lua).
+-- Quest progress ("3/10" or "40%") beside the mark (showQuestProgress). No API ties a unit to an
+-- objective; the unit's tooltip lists the objectives it counts toward, as QuestObjective lines
+-- (Enum.TooltipDataLineType, 8 on Retail and Forever alike). The first unfinished one is shown.
+-- Any secret table, line or text gives nothing, so the mark shows alone. The number is read out
+-- of the line's text: "x/y" first, then "y%", both written with digits in every locale.
+local QUEST_OBJECTIVE_LINE_TYPE = Enum and Enum.TooltipDataLineType and Enum.TooltipDataLineType.QuestObjective or 8
+
+local ParseQuestProgress = function(text)
+	local have, need = text:match("(%d+)%s*/%s*(%d+)")
+	have, need = tonumber(have), tonumber(need)
+	if (have and need and need > 0) then
+		return have < need and (have .. "/" .. need) or false
+	end
+	local percent = tonumber(text:match("(%d+)%s*%%"))
+	if (percent) then
+		return percent < 100 and (percent .. "%") or false
+	end
+	return nil
+end
+
+-- Returns the first unfinished objective's progress ("3/10"), false when the unit has objective lines
+-- and every one is finished, or nil when nothing can be told: no objective lines, a secret table, line
+-- or text, or an objective without a number that the game does not mark completed. Only false lets
+-- the mark hide (hideFinishedQuestMarker); anything uncertain keeps it.
+local ReadQuestProgress = function(unit)
+	local data = C_TooltipInfo.GetUnit(unit)
+	if (IsSecretValue(data) or type(data) ~= "table") then
+		return nil
+	end
+	local lines = data.lines
+	if (IsSecretValue(lines) or type(lines) ~= "table") then
+		return nil
+	end
+	local finished, unknown
+	for i = 1, #lines do
+		local line = lines[i]
+		if (IsSecretValue(line) or type(line) ~= "table") then
+			unknown = true
+		else
+			local lineType, text, completed = line.type, line.leftText, line.completed
+			if (IsSecretValue(lineType)) then
+				unknown = true
+			elseif (lineType == QUEST_OBJECTIVE_LINE_TYPE) then
+				if (not IsSecretValue(completed) and completed == true) then
+					finished = true
+				elseif (IsSecretValue(text) or type(text) ~= "string") then
+					unknown = true
+				else
+					local progress = ParseQuestProgress(text)
+					if (progress) then
+						return progress
+					elseif (progress == false) then
+						finished = true
+					else
+						unknown = true
+					end
+				end
+			end
+		end
+	end
+	if (finished and not unknown) then
+		return false
+	end
+	return nil
+end
+
+local SetQuestProgressText = function(self, progress)
+	local text = self and self.QuestProgress
+	if (not text) then
+		return
+	end
+	if (type(progress) == "string") then
+		text:SetText(progress)
+		text:Show()
+	else
+		text:Hide()
+	end
+end
+
 local QuestMarker_Update = function(self)
 	local marker = self and self.QuestMarker
 	if (not marker) then
@@ -712,13 +1055,34 @@ local QuestMarker_Update = function(self)
 		show = ok and IsSafeTrue(related)
 	end
 
+	-- The tooltip is read only for a shown mark, and only when one of the two options needs it.
+	local progress
+	if (show and (profile.showQuestProgress or profile.hideFinishedQuestMarker)
+		and C_TooltipInfo and type(C_TooltipInfo.GetUnit) == "function") then
+		local ok, value = API.TryCall(ReadQuestProgress, unit)
+		if (ok) then
+			progress = value
+		end
+		if (progress == false and profile.hideFinishedQuestMarker) then
+			show = false
+		end
+	end
+
 	marker:SetShown(show and true or false)
+	SetQuestProgressText(self, show and profile.showQuestProgress and progress or nil)
 end
 
 NP.UpdateExecuteMarker = UpdateExecuteMarker
 NP.Health_PostUpdate = Health_PostUpdate
 NP.Health_UpdateColor = Health_UpdateColor
 NP.TankTarget_Update = TankTarget_Update
+NP.ThreatPercent_Update = ThreatPercent_Update
+NP.PlayThreatAlertSound = PlayThreatAlertSound
+
+-- For the options page: play an alert's sound ("lost", "close", "aggro") as it is chosen.
+NamePlatesMod.PlayThreatAlertSound = function(self, kind, choice)
+	PlayThreatAlertSound(kind, choice)
+end
 NP.Health_PostUpdateColor = Health_PostUpdateColor
 NP.Power_PostUpdate = Power_PostUpdate
 NP.TargetHighlight_Update = TargetHighlight_Update
@@ -729,3 +1093,4 @@ NP.NamePlate_ApplyHealthValueLayout = NamePlate_ApplyHealthValueLayout
 NP.NamePlate_PostUpdateHoverElements = NamePlate_PostUpdateHoverElements
 NP.Auras_PostUpdate = Auras_PostUpdate
 NP.QuestMarker_Update = QuestMarker_Update
+NP.ParseQuestProgress = ParseQuestProgress

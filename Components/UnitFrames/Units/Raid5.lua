@@ -894,7 +894,7 @@ local style = function(self, unit)
 	auras.buffFilter = nil
 	auras.debuffFilter = nil
 
-	if (ns:GetModule("UnitFrames").db.global.disableAuraSorting) then
+	if (ns:GetModule("UnitFrames").db.profile.disableAuraSorting) then
 		auras.PreSetPosition = ns.AuraSorts.Alternate -- only in classic
 		auras.SortAuras = ns.AuraSorts.AlternateFuncton -- only in retail
 	else

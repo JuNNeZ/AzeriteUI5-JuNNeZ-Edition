@@ -1,5 +1,13 @@
 # Class asset workflow
 
+**Maintainer delivery requirement (2026-11-07):** A requested theme must also
+be installed and selectable in-game for review, rather than delivered only as
+disk artwork. Wire the theme loader, Themes selector and enable command and
+verify the actual client addon paths. When the maintainer authorizes a WIP
+preview before production gates pass, label it explicitly, preserve failed
+evidence and report live validation separately. A selectable preview does not
+constitute production or visual acceptance.
+
 **Mandatory 2026-10-29 source-integrity gate:** Read
 `Docs/Theme Source Integrity.md`. Native dimensions do not permit stencilling a
 new painting to old alpha, propagating RGB or erasing paint with fill masks.

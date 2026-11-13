@@ -587,6 +587,11 @@ do
 		self:RegisterEvent('SPELLS_CHANGED', ColorPath, true)
 		if(GetTargetComboPoints) then
 			self:RegisterEvent('PLAYER_TARGET_CHANGED', TargetChangedPath, true)
+			-- AzeriteUI: Forever's TargetBoundComboPointBar also listens here: moving points
+			-- to a new target keeps the same count, so no power event fires (FixLog 2026-11-13).
+			if(ns.API and ns.API.IsEventAvailable and ns.API.IsEventAvailable('COMBO_TARGET_CHANGED')) then
+				self:RegisterEvent('COMBO_TARGET_CHANGED', TargetChangedPath, true)
+			end
 		end
 
 		self.ClassPower.__isEnabled = true
@@ -606,6 +611,9 @@ do
 		self:UnregisterEvent('UNIT_POWER_POINT_CHARGE', Path)
 		self:UnregisterEvent('SPELLS_CHANGED', ColorPath)
 		self:UnregisterEvent('PLAYER_TARGET_CHANGED', TargetChangedPath)
+		if(GetTargetComboPoints and ns.API and ns.API.IsEventAvailable and ns.API.IsEventAvailable('COMBO_TARGET_CHANGED')) then
+			self:UnregisterEvent('COMBO_TARGET_CHANGED', TargetChangedPath)
+		end
 
 		if(not unregisterOnly) then
 			local element = self.ClassPower

@@ -261,7 +261,7 @@ ns.AuraFilters.TargetAuraFilter = function(button, unit, data)
 		return true
 	end
 
-	if (SafeBool(data.isBossDebuff)) then
+	if (SafeBool(data.isBossAura)) then -- AuraData's field (AuraUtil.ProcessAura); isBossDebuff never existed (FixLog 2026-11-13)
 		return true
 	end
 
@@ -348,6 +348,13 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 	local allowOtherDebuff = showOtherDebuffs and ((button.isPlayer or canApplyAura) and ((not button.noDuration and duration <= 301) or IsShortRemainingAura(button.timeLeft) or hasStacks))
 	local allowHelpfulExternal = showHelpfulExternals and helpfulExternal
 	local allowHelpfulRaid = showHelpfulRaidBuffs and (helpfulPlayerRaid or helpfulRaidCombat or isImportant)
+	if (allowHelpfulRaid and button.isPlayer and not showHelpfulShortBuffs) then
+		-- With "Show Short Helpful Buffs" off your own raid buffs are the ones you can
+		-- cast (HELPFUL|PLAYER|RAID) minus RAID_IN_COMBAT, the flag that puts your HoTs
+		-- on raid frames (AuraUtil.AuraFilters), as on the native row's own group
+		-- (ownSkipRaidInCombat, Party.lua). Tokens, not durations, so it holds in combat.
+		allowHelpfulRaid = helpfulPlayerRaid and not helpfulRaidCombat
+	end
 	local allowHelpfulShort = showHelpfulShortBuffs and button.isPlayer and canApplyAura and shortHelpful
 
 	-- Hide blacklisted auras.
@@ -360,8 +367,14 @@ ns.AuraFilters.PartyAuraFilter = function(button, unit, data)
 		return true
 	end
 
-	if (SafeBool(data.isBossDebuff)) then
-		return true
+	-- AuraData names the field isBossAura (Blizzard_FrameXMLUtil/AuraUtil.lua ProcessAura,
+	-- Retail and Forever); isBossDebuff never existed, so this check never fired (FixLog
+	-- 2026-11-13). Boss auras follow the switches as on the native row: debuffs the boss
+	-- switch, buffs the raid buffs switch. Off, they are judged like any other aura.
+	if (SafeBool(data.isBossAura)) then
+		if (useStockBehavior or (isHarmful and showBossAndImportantDebuffs) or ((not isHarmful) and showHelpfulRaidBuffs)) then
+			return true
+		end
 	end
 
 	if (CannotEvaluateAura(unit, data, isHarmful)) then
@@ -460,7 +473,7 @@ ns.AuraFilters.NameplateAuraFilter = function(button, unit, data)
 		return true
 	end
 
-	if (SafeBool(data.isBossDebuff)) then
+	if (SafeBool(data.isBossAura)) then -- AuraData's field (AuraUtil.ProcessAura); isBossDebuff never existed (FixLog 2026-11-13)
 		return true
 	elseif (SafeBool(data.isStealable)) then
 		return true

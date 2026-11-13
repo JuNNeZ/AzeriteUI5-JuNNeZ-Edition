@@ -227,6 +227,9 @@ end
 -- One bag icon per selectable theme; Lite+ effects do not change its identity.
 Engine.GetBagIcon = function(self)
 	local key = ns.ThemeEffects and ns.ThemeEffects:GetTheme() or "azerite"
+	if (key == "deathknight") then return "Interface\\AddOns\\" .. Addon .. "\\Assets\\DeathKnight\\bag-icon.tga" end
+	if (key == "priest") then return "Interface\\AddOns\\" .. Addon .. "\\Assets\\Priest\\bag-icon.tga" end
+	if (key == "warlock") then return "Interface\\AddOns\\" .. Addon .. "\\Assets\\Warlock\\bag-icon.tga" end
 	local icons = { azerite = true, legacy = true, hunter = true, mage = true, paladin = true, druid = true }
 	if (not icons[key]) then key = "azerite" end
 	return "Interface\\AddOns\\" .. Addon .. "\\Assets\\ThemeBagIcons\\" .. key .. ".tga"

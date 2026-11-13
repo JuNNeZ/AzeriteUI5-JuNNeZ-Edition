@@ -60,6 +60,10 @@ local function Load(options)
 	function element:GetStatusBarTexture() return true end
 	function element:GetOrientation() return "HORIZONTAL" end
 	function element:GetReverseFill() return false end
+	if (options.noTimer) then
+		-- The engine timer cannot be read back (the player's bar is drawn by SetValue every frame).
+		element.SetTimerDuration, element.GetTimerDuration = nil, nil
+	end
 
 	local frame = { unit = options.unit or "player", Castbar = element, events = {} }
 	function frame:RegisterEvent(event, method) self.events[event] = method end
@@ -122,7 +126,7 @@ local function Load(options)
 		W.now = W.now + (elapsed or 0)
 		element.OnUpdateScript(element, elapsed or 0)
 	end
-	return W, element, Fire, Frame
+	return W, element, Fire, Frame, frame
 end
 
 -- The payload of every cast event carries the cast bar ID fourth (castGUID, spellID, castBarID).
@@ -322,6 +326,51 @@ do
 	Fire("UNIT_SPELLCAST_DELAYED", "Cast-6", 5185, CAST_BAR_ID)
 	for _ = 1, 6 do Frame(.25) end -- 1102: past the first end by a second
 	check(bar.shown and bar.casting, "a pushed-back cast is not hidden at its first end")
+end
+
+--------------------------------------------------------------------------------
+-- The player's own party frame stays white (maintainer on 5.37.x, FixLog 2026-11-08)
+--------------------------------------------------------------------------------
+-- The client goes on answering the player's cast and the engine timer cannot be read, so neither
+-- earlier backstop fires. The player's readable end time does: past it on two checks, it hides.
+do
+	local W, bar, Fire, Frame = Load({ noTimer = true })
+	W.now = 1200
+	W.cast = { name = "Wrath", startTime = 1200, endTime = 1201.5, firstStart = 1200, firstEnd = 1201.5 }
+	Fire("UNIT_SPELLCAST_START", "Cast-7", 5176, nil)
+	for _ = 1, 5 do Frame(.25) end -- 1201.25: running
+	check(bar.shown and bar.casting, "the player's running cast is left alone without a timer")
+	for _ = 1, 2 do Frame(.25) end -- 1201.75: first check past the end
+	check(bar.shown, "one check past the player's end time is not enough")
+	for _ = 1, 4 do Frame(.25) end -- 1202.75
+	check(not bar.shown and not bar.casting, "a player cast the client keeps answering hides after its end time")
+end
+do
+	-- Another unit without a readable timer is not judged by the player's times.
+	local W, bar, Fire, Frame = Load({ unit = "party1", noTimer = true })
+	W.now = 1300
+	W.cast = { name = "Wrath", startTime = 1300, endTime = 1301, firstStart = 1300, firstEnd = 1301 }
+	Fire("UNIT_SPELLCAST_START", "Cast-8", 5176, nil)
+	for _ = 1, 12 do Frame(.25) end -- 1303
+	check(bar.shown and bar.casting, "a party unit's cast is never cut by the player end-time check")
+end
+do
+	-- A header button that showed the player, then a party member: the old times are dropped.
+	local W, bar, Fire, Frame, frame = Load()
+	W.now = 1400
+	W.cast = { name = "Wrath", startTime = 1400, endTime = 1401, firstStart = 1400, firstEnd = 1401, castBarID = CAST_BAR_ID }
+	Fire("UNIT_SPELLCAST_START", "Cast-9", 5176, CAST_BAR_ID)
+	W.cast = nil
+	Fire("UNIT_SPELLCAST_STOP", "Cast-9", 5176, CAST_BAR_ID)
+	Frame(0)
+	frame.unit = "party1"
+	W.now = 1410
+	W.cast = { name = "Healing Touch", startTime = 1410, endTime = 1413, firstStart = 1410, firstEnd = 1413 }
+	Fire("UNIT_SPELLCAST_START", "Cast-10", 5185, nil)
+	check(bar.startTime == nil and bar.endTime == nil, "the player's old times are cleared for another unit's cast", bar.endTime)
+	bar.value = 0
+	Frame(.1)
+	check(bar.value ~= bar.max, "another unit's cast is not drawn full from the player's old times", bar.value)
 end
 
 print(string.format("Castbar pushback: %d checks, %d failures", checks, failures))

@@ -8,6 +8,8 @@
 
 	<Script file="Durability.lua"/>
 	<Script file="BugSack.lua"/>
+	<Script file="DetailsArt.lua"/>
+	<Script file="Details.lua"/>
 	<Script file="ErrorsFrame.lua"/>
 	<Script file="GameMenu.lua"/>
 	<Script file="Info.lua"/>

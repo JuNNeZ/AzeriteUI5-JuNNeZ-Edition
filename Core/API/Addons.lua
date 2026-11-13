@@ -31,14 +31,38 @@ ns.API = API
 -- Lua API
 local string_lower = string.lower
 
--- GLOBALS: UnitName, GetAddOnEnableState, GetAddOnInfo, GetNumAddOns
+-- GLOBALS: UnitName, UnitGUID, issecretvalue, C_AddOns, GetAddOnEnableState, GetAddOnInfo, GetNumAddOns
 
-local PLAYER_NAME = UnitName("player")
+-- The character key for per-character addon state. Blizzard's addon list on
+-- Retail 12.1.5 and Forever keys characters by the player GUID
+-- (Blizzard_AddOnList/AddonList.lua UpdateDefaultAddOnCharacter), and so does
+-- Console Port for its modules. The name is a fallback only. FixLog 2026-11-13.
+-- Read at call time: files that ask at load time may run before the GUID is known.
+local GetAddOnCharacter = function()
+	local guid = _G.UnitGUID and _G.UnitGUID("player")
+	if (guid ~= nil and not (_G.issecretvalue and _G.issecretvalue(guid)) and type(guid) == "string" and guid ~= "") then
+		return guid
+	end
+	return UnitName("player")
+end
+
+-- This character's enable state for an addon (index or name), under the same key
+-- Blizzard's addon list writes. Falls back to the old name-keyed read.
+local IsEnabledForCharacter = function(index)
+	local addons = _G.C_AddOns
+	if (addons and addons.GetAddOnEnableState) then
+		local ok, state = pcall(addons.GetAddOnEnableState, index, GetAddOnCharacter())
+		if (ok and type(state) == "number") then
+			return state > 0
+		end
+	end
+	return not(_G.GetAddOnEnableState(UnitName("player"), index) == 0)
+end
 
 -- Proxy for the Blizzard method, which also includes the 'enabled' flag.
 local GetAddOnInfo = function(index)
 	local name, title, notes, loadable, reason, security = _G.GetAddOnInfo(index)
-	local enabled = not(_G.GetAddOnEnableState(PLAYER_NAME, index) == 0)
+	local enabled = IsEnabledForCharacter(index)
 	return name, title, notes, enabled, loadable, reason, security
 end
 
@@ -134,7 +158,7 @@ local ShowAddonConflictPrompt = function(opts)
 			data.OnChoose(choice)
 		end
 		if (choice == "azeriteui") then
-			_G.C_AddOns.DisableAddOn(data.rival, UnitName("player"))
+			_G.C_AddOns.DisableAddOn(data.rival, GetAddOnCharacter())
 			ReloadUI()
 		elseif (choice == "both") then
 			ReloadUI()
@@ -176,6 +200,7 @@ end
 ---------------------------------------------------------
 API.GetAddOnInfo = GetAddOnInfo
 API.GetAddOnTitle = GetAddOnTitle
+API.GetAddOnCharacter = GetAddOnCharacter
 API.ShowAddonConflictPrompt = ShowAddonConflictPrompt
 API.IsAddOnLoadable = IsAddOnLoadable
 API.IsAddOnEnabled = IsAddOnEnabled

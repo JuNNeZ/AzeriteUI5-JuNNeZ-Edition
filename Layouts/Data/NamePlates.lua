@@ -118,6 +118,19 @@ ns.RegisterConfig("NamePlates", {
 	TankTargetFont = GetFont(11, true),
 	TankTargetColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .85 },
 
+	-- Healer and DPS mode: your threat, inside the bar's right end (hidden while casting). The state's
+	-- colour, or this one for a state without its own (safe on the default preset).
+	ThreatPercentPosition = { "RIGHT", "RIGHT", -6, 0 },
+	ThreatPercentFont = GetFont(11, true),
+	ThreatPercentColor = { Colors.highlight[1], Colors.highlight[2], Colors.highlight[3], .85 },
+
+	-- Threat alerts: the plate's pulse (the castbar glow's art, a little larger than the bar), and the
+	-- text in the middle of the screen with the name under it.
+	ThreatPulseSize = { 102, 32 },
+	ThreatAlertTextPosition = { "CENTER", "UIParent", "CENTER", 0, 180 },
+	ThreatAlertTextFont = GetFont(26, true),
+	ThreatAlertNameFont = GetFont(16, true),
+
 	-- Glows behind the castbar: an important cast, and a cast aimed at you.
 	-- Same art as the threat glow, a little larger than the bar.
 	CastBarGlowPosition = { "CENTER", 0, 0 },
@@ -187,6 +200,10 @@ ns.RegisterConfig("NamePlates", {
 	QuestMarkerPosition = { "RIGHT", "LEFT", -4, 0 },
 	QuestMarkerSize = { 20, 20 },
 	QuestMarkerAtlas = "questnormal",
+	-- Quest progress ("3/10"): left of the mark (text point, mark point, x, y).
+	QuestProgressPosition = { "RIGHT", "LEFT", 0, 0 },
+	QuestProgressFont = GetFont(11, true),
+	QuestProgressColor = { 1, .82, 0 },
 
 	-- Target Highlight
 	-----------------------------------------

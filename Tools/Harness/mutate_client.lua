@@ -523,7 +523,12 @@ local cases = {
 		"castbar_pushback_harness.lua"},
 	-- The timer backstop (Dcryfm on 5.28.0, FixLog 2026-10-17).
 	{"castbar timer backstop removed", "Libs/oUF/elements/castbar.lua",
-		"if(not self.empowering and IsTimerSpent(self)) then", "if(false) then", "castbar_pushback_harness.lua"},
+		"if(not self.empowering and (IsTimerSpent(self) or IsPlayerCastPast(self, castUnit))) then", "if(false) then", "castbar_pushback_harness.lua"},
+	-- The player's own party frame stayed white (FixLog 2026-11-08).
+	{"castbar player end-time backstop removed", "Libs/oUF/elements/castbar.lua",
+		"(IsTimerSpent(self) or IsPlayerCastPast(self, castUnit))", "IsTimerSpent(self)", "castbar_pushback_harness.lua"},
+	{"castbar keeps the player's times for another unit", "Libs/oUF/elements/castbar.lua",
+		"\t\telement.startTime = nil\n\t\telement.endTime = nil\n", "", "castbar_pushback_harness.lua"},
 	{"castbar timer backstop without grace", "Libs/oUF/elements/castbar.lua",
 		"self.__AzeriteUI_TimerSpentChecks >= 2", "self.__AzeriteUI_TimerSpentChecks >= 1", "castbar_pushback_harness.lua"},
 	-- The party-style player frame (FixLog 2026-10-17).

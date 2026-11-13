@@ -802,6 +802,36 @@ local GenerateOptions = function()
 				7, nil, getter, function(info, val)
 					getmodule().db.profile.extraButtonShape = val
 				end),
+			-- Components/ActionBars/Compatibility/Masque.lua. Listed only while Masque is
+			-- loaded; read once per session, so a change offers a reload.
+			masque = {
+				name = L["Let Masque skin the buttons"],
+				desc = L["Hand the action, pet and stance buttons to Masque, so its skins replace AzeriteUI's own button art. Pick the skin in Masque's settings under AzeriteUI. Button shapes do not apply while this is on. Changing this asks you to reload."],
+				order = 8,
+				type = "toggle", width = "full",
+				hidden = function(info)
+					return not (ns.ActionBarMasque and ns.ActionBarMasque.IsAvailable())
+				end,
+				set = function(info, val)
+					if ((getter(info) and true or false) == (val and true or false)) then return end
+					getmodule().db.profile.masque = val and true or false
+					local key = "AZERITEUI_ACTIONBAR_MASQUE_RELOAD"
+					if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
+						StaticPopupDialogs[key] = {
+							text = L["Masque takes over the buttons, or hands them back, when the interface loads. Reload now?"],
+							button1 = L["Reload UI"],
+							button2 = _G.CANCEL or "Cancel",
+							OnAccept = function() ReloadUI() end,
+							timeout = 0,
+							whileDead = true,
+							hideOnEscape = true,
+							preferredIndex = 3
+						}
+					end
+					if (StaticPopup_Show) then StaticPopup_Show(key) end
+				end,
+				get = getter
+			},
 		}
 	}
 
@@ -987,6 +1017,64 @@ local GenerateOptions = function()
 
 	-- The micro menu has its own page (OptionsPages/MicroMenu.lua) and the dismount
 	-- button, which follows the minimap, sits on the Minimap page.
+
+	-- Quest Item Button (Elements/QuestItemButton.lua), its own module and mover.
+	local quest = ns:GetModule("QuestItemButton", true)
+	if (quest and quest.db) then
+		local qget = function(info) return quest.db.profile[info[#info]] end
+		local qset = function(info, val) quest.db.profile[info[#info]] = val; quest:UpdateSettings() end
+		local qoff = function() return not quest.db.profile.enabled or quest:IsStandingDown() end
+		options.args.questItemButton = {
+			name = L["Quest Item Button"], order = 72, type = "group",
+			args = {
+				description = {
+					name = L["One button for the usable item of your nearest quest, styled as the extra action button. Move it with /lock. Bind it with Keybind Mode on this page, or leave it unbound to use your Extra Action Button key while no extra action is up."],
+					type = "description", fontSize = "medium", order = 0
+				},
+				rival = {
+					name = function() return string_format(L["%s is enabled, so this button stays off until you choose which of the two to use."], ns.API.GetAddOnTitle("ExtraQuestButton")) end,
+					type = "description", fontSize = "medium", order = 0.5,
+					hidden = function() return not quest:IsStandingDown() end
+				},
+				chooseAgain = {
+					name = L["Choose again"], type = "execute", order = 0.6,
+					hidden = function() return not quest:HasRival() end,
+					func = function() quest:PromptRivalChoice() end
+				},
+				enabled = {
+					name = L["Enable"], type = "toggle", order = 1, width = "full",
+					disabled = function() return quest:IsStandingDown() end,
+					get = qget, set = qset
+				},
+				trackedOnly = {
+					name = L["Only tracked quests"],
+					desc = L["Only offer items for quests you track, world quests and bonus objectives. Off, any quest in your log with an objective on this map counts."],
+					type = "toggle", order = 2, width = "full", disabled = qoff, get = qget, set = qset
+				},
+				zoneOnly = {
+					name = L["Only quests in this zone"], type = "toggle", order = 3, width = "full",
+					disabled = qoff, get = qget, set = qset
+				},
+				maxDistance = {
+					name = L["Maximum distance (yards)"], type = "range", order = 4, width = "full",
+					min = 25, max = 5000, softMax = 2000, step = 25,
+					disabled = qoff, get = qget, set = qset
+				},
+				useExtraActionKey = {
+					name = L["Use the Extra Action Button key"],
+					desc = L["While the button has no key of its own, it borrows the key bound to the Extra Action Button. A Blizzard extra action takes the key back for as long as it is up."],
+					type = "toggle", order = 5, width = "full", disabled = qoff, get = qget, set = qset
+				},
+				showQuestInTooltip = {
+					name = L["Show the quest in the tooltip"], type = "toggle", order = 6, width = "full",
+					disabled = qoff, get = qget, set = qset
+				}
+			}
+		}
+		if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+			ns.OptionsKit.Defaults.Bind(options.args.questItemButton, "QuestItemButton")
+		end
+	end
 
 	return options
 end

@@ -2771,8 +2771,13 @@ local function StartChargeCooldown(parent, chargeStart, chargeDuration, chargeMo
 	CooldownFrame_Set(parent.chargeCooldown, chargeStart, chargeDuration, true, true, chargeModRate)
 
 	-- update charge cooldown skin when masque is used
-	if Masque and Masque.UpdateCharge then
-		Masque:UpdateCharge(parent)
+	-- AzeriteUI loads before Masque (alphabetical, no OptionalDep), so the file-load
+	-- lookup above is nil there; ask again, only for buttons handed to Masque.
+	if parent.MasqueSkinned then
+		Masque = Masque or LibStub("Masque", true)
+		if Masque and Masque.UpdateCharge then
+			Masque:UpdateCharge(parent)
+		end
 	end
 end
 

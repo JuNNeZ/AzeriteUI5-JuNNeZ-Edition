@@ -44,7 +44,7 @@ def terminal_coverage(casing, cap):
             'exposedTerminalPixelsBeyondAA':int(exposed.sum()),'edgeToleranceSourcePixels':1}
 
 
-def align(source, casing, height, fill_mask, approved_terminal_exposure=None):
+def align(source, casing, height, fill_mask, approved_terminal_exposure=None, source_transform=None):
     """Uniformly downsample the whole object, then translate its toe to the dip."""
     source = source.convert('RGBA')
     box = source.getchannel('A').point(lambda a: 255 if a > 128 else 0).getbbox()
@@ -57,10 +57,20 @@ def align(source, casing, height, fill_mask, approved_terminal_exposure=None):
     low_columns = np.flatnonzero(solid_source[-max(2, round(painting.height*.03)):].any(axis=0))
     assert len(np.split(low_columns, np.flatnonzero(np.diff(low_columns)>2)+1)) == 1, 'two adjacent lower tips; correct the source painting'
     factor = height / painting.height
-    painting = painting.resize((round(painting.width * factor), height), Image.Resampling.LANCZOS)
+    if source_transform is not None:
+        # New source-integrity packs retain translucent contour pixels as well
+        # as the solid silhouette. Validate the EXACT whole-source replay that
+        # will render, without replacing it with a second alpha128 crop/phase.
+        from ThemeSourceIntegrity import whole_painting
+        assert abs(source_transform['scale']-factor) < 1e-12, 'declared scale differs from cap height'
+        painting = whole_painting(source, source_transform, casing.size)
+    else:
+        painting = painting.resize((round(painting.width * factor), height), Image.Resampling.LANCZOS)
     tx, ty = lowest_point(casing)
     ax, ay = lowest_point(painting)
     x, y = round(tx - ax), ty - ay
+    if source_transform is not None:
+        assert x == 0 and y == 0, 'declared whole-source registration misses mounting toe'
     if min(x, y) < 0 or x + painting.width > casing.width or y + painting.height > casing.height:
         raise ValueError('Whole cap does not fit the native canvas')
     cap = Image.new('RGBA', casing.size)

@@ -44,14 +44,19 @@ local unpack = unpack
 local GetFont = ns.API.GetFont
 local GetMedia = ns.API.GetMedia
 local IsAddOnEnabled = ns.API.IsAddOnEnabled
+-- The player GUID, the key Blizzard's addon list and Console Port use (Core/API/Addons.lua).
+local GetAddOnCharacter = ns.API.GetAddOnCharacter
 local UIHider = ns.Hider
 
 local defaults = {
 	-- Per character rather than per profile: the choice can turn another addon
 	-- off, and addons are enabled and disabled per character.
 	--   owner: nil or "azeriteui" styles the menu, "blizzard" leaves it alone,
-	--          and "other" leaves it to the addon in `rival` while that is enabled.
-	--   rival: folder name of the other addon the choice was made about.
+	--          "other" leaves it to the addon in `rival` while that is enabled,
+	--          and "both" styles it while `rival` keeps running (rivals that can
+	--          share the menu only, see RIVALS).
+	--   rival: folder name of the other addon the choice was made about. Once a
+	--          character has answered about a rival, it is not asked again.
 	char = {},
 	profile = {
 		-- An AzeriteUI button in the menu, under Blizzard's Options. Independent of the style.
@@ -180,10 +185,32 @@ local function HasChildWithKey(key)
 	return false
 end
 
+-- Console Port's Menu module carries the cursor's item, spell and unit menus as
+-- well, and replaces the game menu only while its own "Game Menu" setting
+-- (gameMenuEnable) is on (ConsolePort_Menu/View/Menu.lua OnFrameShown, 3.3.13).
+-- Read through its public ConsolePort:GetData(); an older build without that
+-- path falls back to the module's frame.
+local function IsConsolePortGameMenuOn()
+	local consolePort = _G.ConsolePort
+	if (type(consolePort) == "table" and type(consolePort.GetData) == "function") then
+		local ok, db = pcall(consolePort.GetData, consolePort)
+		if (ok and type(db) == "table") then
+			local okValue, value = pcall(db, "Settings/gameMenuEnable")
+			if (okValue and type(value) == "boolean") then
+				return value
+			end
+		end
+	end
+	return _G.ConsolePortMenu ~= nil
+end
+
 -- Addons known to restyle the game menu, each paired with a check that its style
 -- is really on the frame. Most of them style the menu only behind a setting of
 -- their own, so an enabled addon is not a clash by itself. The markers are read
 -- from each addon's source, see FixLog.md 2026-09-13.
+-- canShare: the two styles can sit on the menu together, so "both" is offered.
+-- Console Port draws its own frame behind the menu instead of restyling the
+-- buttons, and turning its module off would take the cursor menus with it.
 -- Left out on purpose: ElvUI, KkthnxUI and TukUI, since Core/Conflicts.lua shuts
 -- AzeriteUI down when one of those is enabled, and UnhaltedUnitFrames, which only
 -- adds a button to the menu.
@@ -192,7 +219,7 @@ local RIVALS = {
 	{ addon = "DiabolicUI3", IsStyling = function() return GameMenuFrame.diabolicSkinned and true or false end },
 	{ addon = "FeelUI", IsStyling = function() return HasChildWithKey("BorderBackdrop") end },
 	{ addon = "AddOnSkins", IsStyling = function() return GameMenuFrame.template ~= nil end },
-	{ addon = "ConsolePort_Menu", IsStyling = function() return _G.ConsolePortMenu ~= nil end },
+	{ addon = "ConsolePort_Menu", IsStyling = IsConsolePortGameMenuOn, canShare = true },
 	-- A named CreateFont is registered as a global, and W2UI only creates this one
 	-- inside its styling pass, after its own Game Menu module toggle is checked.
 	{ addon = "W2UI", IsStyling = function() return _G.W2UIGameMenuNormalFont ~= nil end }
@@ -204,6 +231,28 @@ local function FindStylingRival()
 			return rival.addon
 		end
 	end
+end
+
+local function CanShareWith(addon)
+	for _, rival in ipairs(RIVALS) do
+		if (rival.addon == addon) then
+			return rival.canShare and true or false
+		end
+	end
+	return false
+end
+
+-- Whether `addon` is on for this character. Loaded counts, and so does this
+-- character's enable state (read by GUID in Core/API/Addons.lua), so a
+-- load-on-demand module that has not loaded yet at login still counts.
+local function IsRivalEnabled(addon)
+	if (type(addon) ~= "string") then
+		return false
+	end
+	if (C_AddOns.IsAddOnLoaded(addon)) then
+		return true
+	end
+	return IsAddOnEnabled(addon) and true or false
 end
 
 -- The title from the addon's TOC, which is the name the player knows it by in
@@ -230,29 +279,33 @@ GameMenuSkin.ShouldSkin = function(self)
 	if (char.owner == "blizzard") then
 		return false
 	end
-	if (char.owner == "other" and char.rival and IsAddOnEnabled(char.rival)) then
+	if (char.owner == "other" and char.rival and IsRivalEnabled(char.rival)) then
 		return false
 	end
 	return true
 end
 
 -- The other addon a style choice is about: the one caught styling the menu this
--- session, or the one this character already handed the menu to.
+-- session, or the one this character already handed or shares the menu with.
 GameMenuSkin.GetRival = function(self)
 	if (self.detectedRival) then
 		return self.detectedRival
 	end
 	local char = self.db.char
-	if (char.owner == "other" and char.rival and IsAddOnEnabled(char.rival)) then
+	if ((char.owner == "other" or char.owner == "both") and char.rival and IsRivalEnabled(char.rival)) then
 		return char.rival
 	end
 end
 
 GameMenuSkin.GetStyle = function(self)
+	local char = self.db.char
+	if (char.owner == "both" and char.rival and CanShareWith(char.rival) and IsRivalEnabled(char.rival)) then
+		return "both"
+	end
 	if (self:ShouldSkin()) then
 		return "azeriteui"
 	end
-	return self.db.char.owner
+	return char.owner
 end
 
 GameMenuSkin.GetStyleChoices = function(self)
@@ -262,23 +315,33 @@ GameMenuSkin.GetStyleChoices = function(self)
 	}
 	local rival = self:GetRival()
 	if (rival) then
-		choices.other = GetAddOnTitle(rival)
+		local title = GetAddOnTitle(rival)
+		choices.other = title
+		if (CanShareWith(rival)) then
+			choices.both = string_format(L["AzeriteUI and %s"], title)
+		end
 	end
 	return choices
+end
+
+-- True when this character already answered the question about `rival`.
+GameMenuSkin.HasAnsweredAbout = function(self, rival)
+	local char = self.db.char
+	return (rival ~= nil and char.owner ~= nil and char.rival == rival) and true or false
 end
 
 -- Saves the choice and reloads. The style strips Blizzard's art in ways that
 -- cannot be put back mid session, and a disabled addon only unloads on reload.
 -- Choosing AzeriteUI or Blizzard over a rival turns the rival off for this
--- character only, the same call Blizzard's addon list makes with one character
--- selected.
+-- character only, under the GUID key Blizzard's addon list uses. "Both" and the
+-- other addon's own style turn nothing off.
 GameMenuSkin.ApplyStyle = function(self, owner, rival)
 	local char = self.db.char
 	char.owner = owner
 	char.rival = rival
 
-	if (rival and owner ~= "other") then
-		C_AddOns.DisableAddOn(rival, UnitName("player"))
+	if (rival and owner ~= "other" and owner ~= "both") then
+		C_AddOns.DisableAddOn(rival, GetAddOnCharacter())
 	end
 
 	ReloadUI()
@@ -299,9 +362,11 @@ GameMenuSkin.ShowConflictPrompt = function(self, rival)
 			-- Four outcomes need Blizzard's per button callbacks. Without this flag
 			-- StaticPopup_OnClick sends buttons two and four to the same OnCancel.
 			selectCallbackByIndex = true,
-			OnButton1 = function(dialog, data) GameMenuSkin:ApplyStyle("azeriteui", data) end,
-			OnButton2 = function(dialog, data) GameMenuSkin:ApplyStyle("other", data) end,
-			OnButton3 = function(dialog, data) GameMenuSkin:ApplyStyle("blizzard", data) end,
+			OnButton1 = function(dialog, data) GameMenuSkin:ApplyStyle("azeriteui", data.rival) end,
+			OnButton2 = function(dialog, data) GameMenuSkin:ApplyStyle("other", data.rival) end,
+			-- Blizzard's popup has four buttons, so the third is "Both" for a rival that
+			-- can share the menu; Blizzard's own menu stays on the options page then.
+			OnButton3 = function(dialog, data) GameMenuSkin:ApplyStyle(data.third, data.rival) end,
 			OnButton4 = function(dialog, data) end,
 			-- No OnCancel on purpose. Escape runs it, and this popup sits on top of a
 			-- menu the player most likely just opened with Escape. Without one, Escape
@@ -313,14 +378,20 @@ GameMenuSkin.ShowConflictPrompt = function(self, rival)
 		}
 	end
 
-	-- The second button carries the other addon's name, so it is set on every show.
+	-- The second and third buttons depend on the other addon, so they are set on every show.
 	local title = GetAddOnTitle(rival)
+	local canShare = CanShareWith(rival)
 	StaticPopupDialogs[key].button2 = title
+	StaticPopupDialogs[key].button3 = canShare and L["Both"] or L["Blizzard"]
 
 	local text = string_format(L["%s is restyling the game menu too, and the two styles clash. Which game menu do you want to keep?"], title)
-		.. "|n|n" .. string_format(L["Picking AzeriteUI or Blizzard turns %s off for this character. The interface reloads to apply your choice."], title)
+	if (canShare) then
+		text = text .. "|n|n" .. string_format(L["Picking AzeriteUI turns %s off for this character. Both keeps the two running. The interface reloads to apply your choice."], title)
+	else
+		text = text .. "|n|n" .. string_format(L["Picking AzeriteUI or Blizzard turns %s off for this character. The interface reloads to apply your choice."], title)
+	end
 
-	StaticPopup_Show(key, text, nil, rival)
+	StaticPopup_Show(key, text, nil, { rival = rival, third = canShare and "both" or "blizzard" })
 end
 
 -- Called from the options page. Nothing changes until the player accepts the
@@ -331,7 +402,10 @@ GameMenuSkin.PromptStyleChange = function(self, owner)
 	end
 
 	local rival = self:GetRival()
-	if (owner == "other" and not rival) then
+	if ((owner == "other" or owner == "both") and not rival) then
+		return
+	end
+	if (owner == "both" and not CanShareWith(rival)) then
 		return
 	end
 
@@ -354,7 +428,7 @@ GameMenuSkin.PromptStyleChange = function(self, owner)
 	end
 
 	local text
-	if (rival and owner ~= "other") then
+	if (rival and owner ~= "other" and owner ~= "both") then
 		text = string_format(L["This turns %s off for this character and reloads the interface."], GetAddOnTitle(rival))
 	else
 		text = L["The game menu style changes when the interface reloads."]
@@ -374,9 +448,12 @@ GameMenuSkin.CheckForRival = function(self)
 	end
 
 	-- Remembered for the options page either way, but it is only a clash while
-	-- our style is on the frame too. Asked at most once per session.
+	-- our style is on the frame too. Asked at most once per session, and never
+	-- again once this character has answered about this addon: an answer that did
+	-- not take (an addon that turns itself back on) is changed on the options page,
+	-- not by asking every session (SaiyaRatt, FixLog 2026-11-13).
 	self.detectedRival = rival
-	if (self.skinning) then
+	if (self.skinning and not self:HasAnsweredAbout(rival)) then
 		self:ShowConflictPrompt(rival)
 	end
 end

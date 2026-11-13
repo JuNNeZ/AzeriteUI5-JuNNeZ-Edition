@@ -52,7 +52,8 @@ local function Widget()
 	function w:Hide() self.shown = false end
 	function w:IsMouseEnabled() return self.mouse and true or false end
 	function w:SetScript(k, f) self[k] = f end
-	function w:SetAlphaFromBoolean(v, a, b) self.alphaArg = v; self.alphaOn, self.alphaOff = a, b end
+	function w:SetAlphaFromBoolean(v, a, b) self.alphaArg = v; self.alphaOn, self.alphaOff = a, b; self.alpha = nil end
+	function w:SetAlpha(a) self.alpha = a; self.alphaArg = nil end
 	w.Icon = { SetTexture = function(self, t) self.texture = t end }
 	w.Cooldown = {
 		SetCooldownFromDurationObject = function(self, d) self.duration = d; self.cleared = false end,
@@ -88,7 +89,18 @@ check(events.PLAYER_TOTEM_UPDATE ~= nil, "listens for PLAYER_TOTEM_UPDATE")
 check(blizzEvents.PLAYER_TOTEM_UPDATE == false, "Blizzard's TotemFrame stops updating")
 
 -- Secret slot: nothing may be tested in Lua.
-local dur = { kind = "DurationObject" }
+-- A duration object as GetTotemDuration hands it out (never nil on 12.x).
+local function Duration(seconds, isSecret)
+	return {
+		kind = "DurationObject",
+		HasSecretValues = function() return isSecret and true or false end,
+		IsZero = function()
+			if (isSecret) then error("IsZero read on a secret duration") end
+			return seconds <= 0
+		end,
+	}
+end
+local dur = Duration(60, true)
 local haveS, nameS, iconS = secret(true), secret("Raise Dead"), secret(1100170)
 slots[1] = { have = haveS, name = nameS, start = secret(100), duration = secret(60), icon = iconS }
 durations[1] = dur
@@ -105,11 +117,45 @@ check(post[1] and post[1].have == haveS and post[1].name == nameS and post[1].ic
 slots[1] = nil; durations[1] = nil
 ok, err = pcall(element.update, owner, "ForceUpdate")
 check(ok, "update survives an empty slot", err)
-check(t1.alphaArg == false, "empty slot alpha off")
+check(t1.alphaArg == false or t1.alpha == 0, "empty slot alpha off")
 check(t1.Cooldown.cleared == true and t1.Cooldown.duration == nil, "empty slot clears the timer")
+
+-- The real API never answers nil: an empty slot still gets a zero duration object.
+slots[1] = nil; durations[1] = Duration(0, false)
+ok, err = pcall(element.update, owner, "ForceUpdate")
+check(ok, "update survives an empty slot with a zero duration object", err)
+check(t1.alphaArg == false or t1.alpha == 0, "empty slot with zero duration object hidden")
+check(t1.Cooldown.cleared == true, "empty slot with zero duration object clears the timer")
+
+-- Taken but timerless (Blizzard's TotemFrame hides it: duration > 0 only). Avo's empty squares.
+slots[2] = { have = true, name = "", start = 0, duration = 0, icon = nil }
+durations[2] = Duration(0, false)
+ok, err = pcall(element.update, owner, "ForceUpdate")
+check(ok, "update survives a timerless taken slot", err)
+local t2 = owner.Totems[2]
+check(t2.alpha == 0 and t2.alphaArg == nil, "timerless taken slot hidden, as Blizzard's TotemFrame does")
+check(t2.Cooldown.cleared == true, "timerless taken slot has no timer")
+
+-- Same, but only the duration object is readable.
+slots[2] = { have = true, name = "", start = 0, duration = secret(0), icon = nil }
+durations[2] = Duration(0, false)
+ok, err = pcall(element.update, owner, "ForceUpdate")
+check(ok, "update survives a secret raw duration with a readable object", err)
+check(t2.alpha == 0, "readable zero duration object hides the slot")
+
+-- A secret timerless slot cannot be ruled out: it keeps following haveTotem.
+local haveS2 = secret(true)
+slots[2] = { have = haveS2, name = secret(""), start = secret(0), duration = secret(0), icon = secret(0) }
+durations[2] = Duration(0, true)
+ok, err = pcall(element.update, owner, "ForceUpdate")
+check(ok, "update survives a fully secret timerless slot", err)
+check(t2.alphaArg == haveS2, "fully secret slot follows haveTotem")
+slots[2] = nil; durations[2] = Duration(0, false)
+element.update(owner, "ForceUpdate")
 
 -- A plain (non-secret) slot through the event path.
 slots[3] = { have = true, name = "Statue", start = 5, duration = 900, icon = 627607 }
+dur = Duration(900, false)
 durations[3] = dur
 ok, err = pcall(events.PLAYER_TOTEM_UPDATE, owner, "PLAYER_TOTEM_UPDATE", 3)
 check(ok, "event path updates one slot", err)

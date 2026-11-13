@@ -45,6 +45,7 @@ local unpack = unpack
 -- GLOBALS: UnitLevel, UnitSex, UnitXP, UnitXPMax
 -- GLOBALS: IsResting, IsPlayerAtEffectiveMaxLevel, IsXPUserDisabled
 -- GLOBALS: GetNumFactions, GetWatchedFactionInfo, GetRestState, GetTimeToWellRested, GetXPExhaustion, GetText
+-- GLOBALS: C_GameRules, Enum, issecretvalue
 -- GLOBALS: COMBAT_XP_GAIN, EXHAUST_TOOLTIP1, EXHAUST_TOOLTIP2, EXHAUST_TOOLTIP4, UNIT_LEVEL_TEMPLATE
 
 -- Addon API
@@ -71,6 +72,32 @@ local get = function(...)
 	end
 	return unpack(args)
 end
+
+-- Blizzard also hides its XP bar under a game rule, besides the level cap and turned off XP
+-- (GameRulesUtil.CanShowExperienceBar in Blizzard_SharedXML/GameRulesUtil.lua, the same on
+-- Forever). The rule's answer is a plain bool in GameRulesDocumentation.lua, but an
+-- unreadable one keeps the bar as it was rather than hiding it on a guess.
+local IsExperienceBarRuleActive = function()
+	if (not (C_GameRules and C_GameRules.IsGameRuleActive and Enum and Enum.GameRule and Enum.GameRule.ExperienceBarDisabled)) then
+		return false
+	end
+	local isActive = C_GameRules.IsGameRuleActive(Enum.GameRule.ExperienceBarDisabled)
+	if (issecretvalue and issecretvalue(isActive)) then
+		return false
+	end
+	return isActive == true
+end
+
+-- Blizzard's tracking manager refreshes on these too (RegisterEvents in
+-- Blizzard_ActionBar/Mainline/StatusTrackingManagerOverrides.lua, and Forever's
+-- Blizzard_StatusTrackingBar copy). Without the first, a tracked renown faction could keep
+-- its old "Renown N" label until the next UPDATE_FACTION; the other two move the level cap
+-- that hides the XP bar. Each is registered only where the client has it.
+local AVAILABLE_ONLY_EVENTS = {
+	"MAJOR_FACTION_RENOWN_LEVEL_CHANGED",
+	"PLAYER_MAX_LEVEL_UPDATE",
+	"UPDATE_EXPANSION_LEVEL"
+}
 
 -- Full clear of any cancelled fade-ins
 local Button_Clear = function(button)
@@ -500,7 +527,7 @@ StatusBars.UpdateBars = function(self, event, ...)
 		end
 	else
 
-		if (ns.API.IsPlayerAtEffectiveMaxLevel() or IsXPUserDisabled()) then
+		if (ns.API.IsPlayerAtEffectiveMaxLevel() or IsXPUserDisabled() or IsExperienceBarRuleActive()) then
 			bar.currentType = nil
 			bar:Hide()
 			bonus:Hide()
@@ -700,6 +727,15 @@ StatusBars.OnEnable = function(self)
 	self:RegisterEvent("PLAYER_UPDATE_RESTING", "UpdateBars")
 	self:RegisterEvent("UPDATE_EXHAUSTION", "UpdateBars")
 	self:RegisterEvent("UPDATE_FACTION", "UpdateBars")
+
+	local isEventAvailable = ns.API.IsEventAvailable
+	if (isEventAvailable) then
+		for _, event in ipairs(AVAILABLE_ONLY_EVENTS) do
+			if (isEventAvailable(event)) then
+				self:RegisterEvent(event, "UpdateBars")
+			end
+		end
+	end
 
 	--self:SecureHook(Minimap, "SetScale", "UpdateScale")
 end

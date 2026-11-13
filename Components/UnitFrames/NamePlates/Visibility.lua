@@ -348,43 +348,211 @@ end
 	(UnitGroupRolesAssigned), a Retail tank spec, Bear Form (5), Dire Bear Form (8) or Defensive
 	Stance (18). A secret threat answer leaves the plate to the ordinary colours.
 ]]
+-- Form IDs from Forever's SpellShapeshiftForm table (wago.tools wowf 1.60.1.70862): 5 Bear Form, 8 Dire
+-- Bear Form, 18 Defensive Stance.
 local TANK_FORMS = { [5] = true, [8] = true, [18] = true }
+
+--[[
+	Threat roles (2026-11-08). One resolver for tank, healer and DPS mode. Tank wins: the Tank group role,
+	a Retail tank spec, a tank form or (Classic content) Righteous Fury. Then the group role decides, then
+	a Retail spec, then (Classic content, where the spec role always says damager; ThreatClassic2 notes
+	the same) the talent tree with the most points. Anything else is DPS.
+]]
+local THREAT_ROLE_MODES = { auto = true, tank = true, healer = true, dps = true, off = true }
+-- Yesterday's setting, read when the new one was never stored (AceDB keeps only changed values).
+local LEGACY_TANK_MODES = { always = "tank", off = "off", auto = "auto" }
+
+-- Forever's talent trees, by the tree's background name (Plater's table, libs/DF/fw.lua) and, should
+-- the name be missing, by the tree's place in the classic order. Only classes with a healer or tank tree.
+local TALENT_BACKGROUND_ROLES = {
+	DruidRestoration = "HEALER", PaladinHoly = "HEALER", PaladinProtection = "TANK",
+	PriestDiscipline = "HEALER", PriestHoly = "HEALER", ShamanRestoration = "HEALER"
+}
+local TALENT_TREE_ROLES = {
+	DRUID = { "DAMAGER", "DAMAGER", "HEALER" },
+	PALADIN = { "HEALER", "TANK", "DAMAGER" },
+	PRIEST = { "HEALER", "HEALER", "DAMAGER" },
+	SHAMAN = { "DAMAGER", "DAMAGER", "HEALER" }
+}
+-- A tree needs this many points before it says anything (Plater uses the same floor).
+local TALENT_ROLE_MIN_POINTS = 4
+-- Forever IDs checked on wago.tools (wowf 1.60.1.70862); 407627 is the Season of Discovery rune version.
+local RIGHTEOUS_FURY = { 25780, 407627 }
+
+local talentRole -- nil: not read since the last talent change; false: no role from the talents
+local righteousFury = false -- read out of combat only (Forever restricts aura data in combat)
 
 local IsSafeRole = function(role, wanted)
 	return (not IsSecretValue(role)) and role == wanted
 end
 
-local IsPlayerTankRole = function()
-	if (type(UnitGroupRolesAssigned) == "function" and IsSafeRole(UnitGroupRolesAssigned("player"), "TANK")) then
+local GetPlayerClassToken = function()
+	if (type(UnitClass) ~= "function") then
+		return nil
+	end
+	local _, class = UnitClass("player")
+	if (IsSecretValue(class) or type(class) ~= "string") then
+		return nil
+	end
+	return class
+end
+
+-- The role of the talent tree with the most points, or nil. Cached until ResetThreatRoleCache.
+local GetTalentTreeRole = function()
+	if (talentRole ~= nil) then
+		return talentRole or nil
+	end
+	talentRole = false
+	local trees = TALENT_TREE_ROLES[GetPlayerClassToken() or ""]
+	local info = C_SpecializationInfo and C_SpecializationInfo.GetSpecializationInfo
+	if (not trees or type(info) ~= "function") then
+		return nil
+	end
+	local bestRole, bestPoints = nil, 0
+	for index = 1, #trees do
+		local ok, _, _, _, _, _, _, points, background = API.TryCall(info, index)
+		if (ok and (not IsSecretValue(points)) and type(points) == "number" and points > bestPoints) then
+			local role = (not IsSecretValue(background)) and type(background) == "string" and TALENT_BACKGROUND_ROLES[background]
+			bestRole, bestPoints = role or trees[index], points
+		end
+	end
+	if (bestRole and bestPoints >= TALENT_ROLE_MIN_POINTS) then
+		talentRole = bestRole
+	end
+	return talentRole or nil
+end
+
+-- Reads Righteous Fury again when the player is out of combat; returns true when it changed.
+local UpdateRighteousFury = function()
+	if (ns.IsRetailContent or GetPlayerClassToken() ~= "PALADIN") then
+		return false
+	end
+	local inCombat = UnitAffectingCombat and UnitAffectingCombat("player")
+	if (IsSecretValue(inCombat) or inCombat == true) then
+		return false
+	end
+	local getAura = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
+	local found = false
+	if (type(getAura) == "function") then
+		for _, spellID in ipairs(RIGHTEOUS_FURY) do
+			local ok, aura = API.TryCall(getAura, spellID)
+			if (ok and aura ~= nil and not IsSecretValue(aura)) then
+				found = true
+				break
+			end
+		end
+	end
+	local changed = found ~= righteousFury
+	righteousFury = found
+	return changed
+end
+
+-- Talents, spec or the class changed: read the talent trees again on the next question.
+local ResetThreatRoleCache = function()
+	talentRole = nil
+end
+
+local GetSpecRole = function()
+	if (not ns.IsRetailContent or type(GetSpecialization) ~= "function" or type(GetSpecializationRole) ~= "function") then
+		return nil
+	end
+	local spec = GetSpecialization()
+	if (IsSecretValue(spec) or type(spec) ~= "number") then
+		return nil
+	end
+	local role = GetSpecializationRole(spec)
+	if (IsSecretValue(role) or type(role) ~= "string") then
+		return nil
+	end
+	return role
+end
+
+local IsInTankForm = function()
+	if (type(GetShapeshiftFormID) ~= "function") then
+		return false
+	end
+	local form = GetShapeshiftFormID()
+	return ((not IsSecretValue(form)) and type(form) == "number" and TANK_FORMS[form]) and true or false
+end
+
+-- "tank", "healer" or "dps", whatever the group or the setting.
+local GetPlayerThreatRole = function()
+	local assigned = type(UnitGroupRolesAssigned) == "function" and UnitGroupRolesAssigned("player") or nil
+	if (IsSecretValue(assigned) or type(assigned) ~= "string") then
+		assigned = "NONE"
+	end
+	local specRole = GetSpecRole()
+	if (assigned == "TANK" or specRole == "TANK" or IsInTankForm() or righteousFury) then
+		return "tank"
+	end
+	if (assigned == "HEALER") then
+		return "healer"
+	elseif (assigned == "DAMAGER") then
+		return "dps"
+	end
+	local guess = specRole
+	if (not ns.IsRetailContent) then
+		guess = GetTalentTreeRole()
+	end
+	if (guess == "TANK") then
+		return "tank"
+	elseif (guess == "HEALER") then
+		return "healer"
+	end
+	return "dps"
+end
+
+local GetThreatRoleSetting = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	if (not profile) then
+		return "auto"
+	end
+	local mode = rawget(profile, "threatRole")
+	if (mode == nil) then
+		mode = LEGACY_TANK_MODES[rawget(profile, "threatTankMode") or ""] or profile.threatRole
+	end
+	return THREAT_ROLE_MODES[mode] and mode or "auto"
+end
+
+-- Where the threat roles work (threatRoleScope, since 2026-11-08): "group" (party or raid, the
+-- default and the behaviour before), "instance" (dungeons and raids: instance types party and raid,
+-- solo or not) or "always". Decides where Automatic picks a role, and where the threat percent and
+-- the alerts work; a role picked by hand colours plates everywhere.
+local THREAT_SCOPES = { group = true, instance = true, always = true }
+local IsThreatScopeActive = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local scope = profile and profile.threatRoleScope
+	if (not THREAT_SCOPES[scope]) then
+		scope = "group"
+	end
+	if (scope == "always") then
 		return true
-	end
-	if (ns.IsRetailContent and type(GetSpecialization) == "function" and type(GetSpecializationRole) == "function") then
-		local spec = GetSpecialization()
-		if ((not IsSecretValue(spec)) and type(spec) == "number" and IsSafeRole(GetSpecializationRole(spec), "TANK")) then
-			return true
+	elseif (scope == "instance") then
+		if (type(IsInInstance) ~= "function") then
+			return false
 		end
+		local inInstance, instanceType = IsInInstance()
+		return (inInstance == true and (instanceType == "party" or instanceType == "raid")) and true or false
 	end
-	if (type(GetShapeshiftFormID) == "function") then
-		local form = GetShapeshiftFormID()
-		if ((not IsSecretValue(form)) and type(form) == "number" and TANK_FORMS[form]) then
-			return true
-		end
+	return (IsInGroup and IsInGroup()) and true or false
+end
+
+-- The threat role in use: "tank", "healer", "dps", or nil for the shared palette.
+local GetActiveThreatRole = function()
+	local mode = GetThreatRoleSetting()
+	if (mode == "off") then
+		return nil
+	elseif (mode ~= "auto") then
+		return mode
 	end
-	return false
+	if (not IsThreatScopeActive()) then
+		return nil
+	end
+	return GetPlayerThreatRole()
 end
 
 local IsTankModeActive = function()
-	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
-	local mode = profile and profile.threatTankMode or "auto"
-	if (mode == "off") then
-		return false
-	elseif (mode == "always") then
-		return true
-	end
-	if (not (IsInGroup and IsInGroup())) then
-		return false
-	end
-	return IsPlayerTankRole()
+	return GetActiveThreatRole() == "tank"
 end
 
 -- A group member marked as a tank: the Tank role, or the raid's Main Tank assignment (Classic raids).
@@ -456,6 +624,135 @@ local GetTankThreatState = function(self, status)
 		return "cotank"
 	end
 	return "lost"
+end
+
+-- The group's units for the current group, or nil solo.
+local GetGroupUnits = function()
+	if (IsInRaid and IsInRaid()) then
+		local members = GetNumGroupMembers and GetNumGroupMembers() or 0
+		return RAID_UNITS, RAID_PETS, members < 40 and members or 40
+	elseif (IsInGroup and IsInGroup()) then
+		local members = GetNumSubgroupMembers and GetNumSubgroupMembers() or 0
+		return PARTY_UNITS, PARTY_PETS, members < 4 and members or 4
+	end
+end
+
+-- True when a group member other than you, who is not a tank, is tanking the unit (status 2 or 3).
+-- Pets are left out: a pet holding a mob is doing its job.
+local IsHeldByNonTank = function(unit, units, count)
+	for index = 1, count do
+		local member = units[index]
+		if (UnitExists(member) and not SafeUnitMatches(member, "player")) then
+			local status = UnitThreatSituation(member, unit)
+			if ((not IsSecretValue(status)) and type(status) == "number" and status >= 2 and not IsGroupTank(member)) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- Your threat on the unit as a share of what pulls it (UnitDetailedThreatSituation's scaled percent,
+-- 100 = you pull it), or nil when the client has no answer or a secret one (bosses can be secret).
+local GetScaledThreatPercent = function(unit)
+	if (type(UnitDetailedThreatSituation) ~= "function") then
+		return nil
+	end
+	local ok, _, _, scaled = API.TryCall(UnitDetailedThreatSituation, "player", unit)
+	if (not ok or IsSecretValue(scaled) or type(scaled) ~= "number") then
+		return nil
+	end
+	return scaled
+end
+
+--[[
+	Tank mode's threat percent (2026-11-08). On a mob you hold (held or slipping): the highest scaled
+	threat of anyone else in your group, pets included outside raids, which is how close someone is to
+	pulling it from you (100 = they pull it). On a mob you lost: your own, how close you are to taking it
+	back. Nil for any other state, solo, or when every answer is secret. A raid asks up to 40 members,
+	so Elements.lua asks at most once per TANK_PERCENT_INTERVAL per plate (twice as long in a raid).
+]]
+local GetTankThreatPercent = function(self, state)
+	local unit = self and self.unit
+	if (not IsSafeUnitToken(unit) or type(UnitDetailedThreatSituation) ~= "function") then
+		return nil
+	end
+	if (state == "lost") then
+		return GetScaledThreatPercent(unit)
+	elseif (state ~= "held" and state ~= "slipping") then
+		return nil
+	end
+	local units, pets, count = GetGroupUnits()
+	if (not units) then
+		return nil
+	end
+	local withPets = not (IsInRaid and IsInRaid())
+	local best
+	for index = 1, count do
+		for pass = 1, withPets and 2 or 1 do
+			local member = (pass == 1) and units[index] or pets[index]
+			if (UnitExists(member) and not SafeUnitMatches(member, "player")) then
+				local _, _, scaled = UnitDetailedThreatSituation(member, unit)
+				if ((not IsSecretValue(scaled)) and type(scaled) == "number" and (not best or scaled > best)) then
+					best = scaled
+				end
+			end
+		end
+	end
+	return best
+end
+
+local THREAT_WARN_PERCENT_DEFAULT = 80
+local GetThreatWarnPercent = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local value = profile and profile.threatWarnPercent
+	if (type(value) ~= "number" or value < 1 or value > 100) then
+		return THREAT_WARN_PERCENT_DEFAULT
+	end
+	return value
+end
+
+--[[
+	Healer and DPS mode (2026-11-08). The reverse of tank mode: a mob the tank holds is quiet ("safe"),
+	your threat reaching the warning share of what pulls it warns ("close"), being above the tank but
+	not yet its target warns harder ("pulling", status 1), and a mob on you is loud ("aggro", 2 or 3).
+	As a healer, a mob a group member who is not a tank holds has its own colour ("loose"), so you see
+	who needs saving. Returns the state and your scaled threat percent (nil when unknown):
+	nil outside these modes (or for anything but an enemy NPC, or a secret answer), false for a mob
+	you are not fighting.
+]]
+local GetRoleThreatState = function(self, status)
+	local unit = self and self.unit
+	if (not IsSafeUnitToken(unit) or self.isPRD or self.isObjectPlate or not IsHostileNamePlate(self)) then
+		return nil
+	end
+	if (IsSecretValue(status) or IsDeadNPC(self)) then
+		return nil
+	end
+	local role = GetActiveThreatRole()
+	if (role ~= "healer" and role ~= "dps") then
+		return nil
+	end
+	local percent = (status ~= nil) and GetScaledThreatPercent(unit) or nil
+	if (status == 3 or status == 2) then
+		return "aggro", percent
+	elseif (status == 1) then
+		return "pulling", percent
+	end
+	if (role == "healer") then
+		local inCombat = UnitAffectingCombat(unit)
+		local units, _, count = GetGroupUnits()
+		if (units and (not IsSecretValue(inCombat)) and inCombat == true and IsHeldByNonTank(unit, units, count)) then
+			return "loose", percent
+		end
+	end
+	if (status == 0) then
+		if (percent and percent >= GetThreatWarnPercent()) then
+			return "close", percent
+		end
+		return "safe", percent
+	end
+	return false
 end
 
 local GetCombatFilterAlpha = function()
@@ -893,9 +1190,9 @@ local ApplyFriendlyNameOnlyVisualState = function(self, enabled)
 		if (self.Classification) then
 			self.Classification:Hide()
 		end
-		if (self.RaidTargetIndicator) then
-			self.RaidTargetIndicator:Hide()
-		end
+		-- The raid marker stays: oUF shows it when the unit has one, and AnchorNamePlateRaidTarget
+		-- (Elements.lua) puts it above the name. Hiding it here, after NamePlate_PostUpdate's
+		-- ForceUpdate, left every name-only player and NPC without its marker (2026-11-07).
 		if (self.Name) then
 			self.Name:Show()
 		end
@@ -949,6 +1246,12 @@ NP.IsFightingSomeoneElse = IsFightingSomeoneElse
 NP.IsFightingYou = IsFightingYou
 NP.IsTankModeActive = IsTankModeActive
 NP.GetTankThreatState = GetTankThreatState
+NP.GetActiveThreatRole = GetActiveThreatRole
+NP.IsThreatScopeActive = IsThreatScopeActive
+NP.GetRoleThreatState = GetRoleThreatState
+NP.GetTankThreatPercent = GetTankThreatPercent
+NP.UpdateRighteousFury = UpdateRighteousFury
+NP.ResetThreatRoleCache = ResetThreatRoleCache
 NP.ApplyNamePlateAlpha = ApplyNamePlateAlpha
 NP.ShouldShowObjectPlateOverlay = ShouldShowObjectPlateOverlay
 NP.ShouldShowObjectPlateName = ShouldShowObjectPlateName
@@ -960,6 +1263,15 @@ NP.ApplyFriendlyNameOnlyFontScale = ApplyFriendlyNameOnlyFontScale
 NP.ApplyFriendlyNameOnlyVisualState = ApplyFriendlyNameOnlyVisualState
 NP.GetFriendlyNPCTitle = GetFriendlyNPCTitle
 NP.UpdateFriendlyNPCTitle = UpdateFriendlyNPCTitle
+
+-- For the options page: the threat role setting as it is read (yesterday's tank mode setting included),
+-- and the role the automatic setting would pick for you now, group or not ("tank", "healer", "dps").
+NamePlatesMod.GetThreatRoleSetting = function(self)
+	return GetThreatRoleSetting()
+end
+NamePlatesMod.GetDetectedThreatRole = function(self)
+	return GetPlayerThreatRole()
+end
 
 -- For the options page: friendly NPCs, friendly players or minions ("friendlyNPCs", "friendlyPlayers",
 -- "minions") only for your target. Each needs the game's settings for its kind on (TARGET_ONLY_NEEDS), so

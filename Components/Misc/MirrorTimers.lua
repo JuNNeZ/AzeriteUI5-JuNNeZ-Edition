@@ -192,7 +192,9 @@ MirrorTimers.ClearTimer = function(self, timer)
 
 	for i,timerID in next,self.activeTimersIndexed do
 		if (timerID == timer) then
-			self.activeTimersIndexed[i] = nil
+			-- Removed, not set to nil: a hole stops UpdateLayout's ipairs and the next
+			-- SetupTimer's # count, so a timer after it was never laid out (FixLog 2026-11-13).
+			table_remove(self.activeTimersIndexed, i)
 			break
 		end
 	end
@@ -261,10 +263,9 @@ MirrorTimers.OnEvent = function(self, event, ...)
 	elseif (event == "MIRROR_TIMER_PAUSE") then
 		local timer, paused = ...
 
-		local activeTimer =	self:GetActiveTimer(timer)
-		if (activeTimer) then
-			self:PauseTimer(activeTimer, paused)
-		end
+		-- PauseTimer looks the frame up by the timer's name itself; handing it the
+		-- frame found nothing, so a pause never applied (FixLog 2026-11-13).
+		self:PauseTimer(timer, paused)
 	end
 end
 

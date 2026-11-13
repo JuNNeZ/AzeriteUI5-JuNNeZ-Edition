@@ -346,6 +346,9 @@ local NamePlate_OnHide = function(self)
 	if (self.QuestMarker) then
 		self.QuestMarker:Hide()
 	end
+	if (self.QuestProgress) then
+		self.QuestProgress:Hide()
+	end
 	if (self.Name) then
 		self.Name:SetText("")
 		self.Name:Hide()

@@ -71,13 +71,33 @@ local defaults = { profile = ns:Merge({
 	-- Enemies fighting someone outside your group fade (Visibility.lua, IsFightingSomeoneElse).
 	combatFilter = false,
 	combatFilterAlpha = .35,
-	-- Tank mode (Visibility.lua, GetTankThreatState; since 2026-11-07). "auto": in a group with the Tank
-	-- role, a tank spec, or a tank form; "always"; "off" keeps the one palette for every role.
-	threatTankMode = "auto",
-	-- In tank mode, who a mob you do not hold is hitting, under its plate (Elements.lua, TankTarget_Update).
+	-- Threat roles (Visibility.lua, GetActiveThreatRole; since 2026-11-08, replacing 2026-11-07's
+	-- threatTankMode, whose stored "always"/"off" are still read when this is unset). "auto": in a group,
+	-- tank, healer or DPS from your role, spec, talents or form; "tank", "healer", "dps" force one, solo
+	-- too; "off" keeps the one palette for every role.
+	threatRole = "auto",
+	-- In tank and healer mode, who a mob you do not hold is hitting, under its plate (Elements.lua, TankTarget_Update).
 	tankTargetNames = true,
 	-- In tank mode, a sound when a mob you held goes to someone who is not a tank. Off by default.
 	tankLostAggroSound = false,
+	-- Healer and DPS mode (Visibility.lua, GetRoleThreatState; Elements.lua, RoleThreat_Update): your
+	-- threat in the bar, the share of pulling threat that warns, and two sounds (group only, off by default).
+	threatPercentPlates = true,
+	threatWarnPercent = 80,
+	threatWarnSound = false,
+	threatAggroSound = false,
+	-- Where the roles work (Visibility.lua, IsThreatScopeActive): "group", "instance" or "always".
+	threatRoleScope = "group",
+	-- The three alerts' sounds: "Default" is the game's warning, anything else a LibSharedMedia name.
+	tankLostAggroSoundFile = "Default",
+	threatWarnSoundFile = "Default",
+	threatAggroSoundFile = "Default",
+	-- What an alert does (Elements.lua, FireThreatAlert): its sound, a screen edge flash, a nameplate
+	-- pulse, a text in the middle of the screen. Sound only by default, as before.
+	threatAlertSoundOn = true,
+	threatAlertFlash = false,
+	threatAlertPulse = false,
+	threatAlertText = false,
 	-- The execute range on enemy plates (Elements.lua, ExecuteMarker_Update). 0 follows the class.
 	executeMarker = false,
 	executeThreshold = 0,
@@ -145,6 +165,10 @@ local defaults = { profile = ns:Merge({
 	castImportantGlow = true,
 	-- A mark beside units that belong to one of your active quests (Elements.lua, QuestMarker_Update).
 	showQuestMarker = true,
+	-- The unit's next unfinished objective ("3/10") beside that mark (Elements.lua, QuestProgress_Update).
+	showQuestProgress = true,
+	-- Hide that mark once the tooltip shows every objective on the unit finished (Elements.lua).
+	hideFinishedQuestMarker = true,
 	raidTargetSize = 28,
 	-- Over the unit's head or at its feet: the game's nameplateOtherAtBase, written with the driver's CVars.
 	platePosition = "head",
@@ -230,6 +254,49 @@ tankThreatColorPresets.deepYellow = tankThreatColorPresets.azerite
 local GetTankThreatColor = function(state)
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
 	local palette = tankThreatColorPresets[profile and profile.threatColorPreset or "azerite"] or tankThreatColorPresets.azerite
+	return palette[state] or nil
+end
+
+-- Healer and DPS mode's colours, per preset (since 2026-11-08): safe (the tank holds it; false keeps
+-- the reaction colour, as tank mode's held), close (your threat at the warning share), pulling (above
+-- the tank, not yet pulled), aggro (it is on you), loose (healer: a group member who is not a tank has
+-- it). Aggro shares tank mode's "lost" colour: on any role it means "this one is wrong".
+local roleThreatColorPresets = {
+	azerite = {
+		safe = false,
+		close = { 249/255, 188/255, 55/255 },
+		pulling = { 255/255, 128/255, 32/255 },
+		aggro = { 255/255, 64/255, 217/255 },
+		loose = { 64/255, 200/255, 255/255 }
+	},
+	blueOrange = {
+		safe = { 0/255, 114/255, 178/255 },
+		close = { 240/255, 228/255, 66/255 },
+		pulling = { 230/255, 159/255, 0/255 },
+		aggro = { 213/255, 94/255, 0/255 },
+		loose = { 204/255, 121/255, 167/255 }
+	},
+	tealPurple = {
+		safe = { 0/255, 158/255, 115/255 },
+		close = { 240/255, 228/255, 66/255 },
+		pulling = { 230/255, 159/255, 0/255 },
+		aggro = { 204/255, 121/255, 167/255 },
+		loose = { 86/255, 180/255, 233/255 }
+	},
+	highContrast = {
+		safe = { 148/255, 148/255, 148/255 },
+		close = { 0/255, 114/255, 178/255 },
+		pulling = { 204/255, 121/255, 167/255 },
+		aggro = { 245/255, 245/255, 245/255 },
+		loose = { 230/255, 159/255, 0/255 }
+	}
+}
+roleThreatColorPresets.deepYellow = roleThreatColorPresets.azerite
+
+-- The colour for a healer/DPS state, or nil for none (safe on the default preset).
+local GetRoleThreatColor = function(state)
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local palette = roleThreatColorPresets[profile and profile.threatColorPreset or "azerite"] or roleThreatColorPresets.azerite
 	return palette[state] or nil
 end
 
@@ -969,6 +1036,7 @@ NP.NamePlatesMod = NamePlatesMod
 NP.defaults = defaults
 NP.GetThreatColor = GetThreatColor
 NP.GetTankThreatColor = GetTankThreatColor
+NP.GetRoleThreatColor = GetRoleThreatColor
 NP.FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT
 NP.FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT
 NP.FRIENDLY_NAME_ONLY_NAME_OFFSET_Y = FRIENDLY_NAME_ONLY_NAME_OFFSET_Y

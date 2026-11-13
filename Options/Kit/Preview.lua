@@ -500,6 +500,8 @@ local policies = {
 		assistedHighlightColorSource = barFamily,
 		assistedHighlightColor = barFamily,
 		assistedHighlightOpacity = barFamily,
+		-- Applies on reload, to every action, pet and stance button.
+		masque = barFamily,
 		-- Applies on reload; the buttons only exist while an extra or zone ability is up.
 		extraButtonShape = {
 			kind = "exact",

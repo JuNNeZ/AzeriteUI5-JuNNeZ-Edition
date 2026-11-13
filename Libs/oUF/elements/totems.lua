@@ -87,17 +87,33 @@ local function UpdateTotem(self, event, slot)
 	-- widget's alpha follows haveTotem, the icon goes straight to SetTexture, and
 	-- the cooldown takes GetTotemDuration's duration object (nil when empty).
 	local totem = element[TOTEM_PRIORITIES[slot]]
-	local haveTotem, name, _, _, icon = GetTotemInfo(slot)
+	local haveTotem, name, _, rawDuration, icon = GetTotemInfo(slot)
 	local duration = GetTotemDuration and GetTotemDuration(slot)
 
-	totem:SetAlphaFromBoolean(haveTotem, 1, 0)
+	-- AzeriteUI: Blizzard's TotemFrame shows a slot only while haveTotem AND
+	-- duration > 0 (TotemButtonMixin:Update). The game can report a slot as taken
+	-- with a zero duration and no icon, which drew an empty bordered square here
+	-- (Avo's Hunter, FixLog 2026-11-13). Only readable answers can rule a slot out;
+	-- a secret one keeps following haveTotem.
+	local isEmpty = false
+	if(rawDuration ~= nil and not (issecretvalue and issecretvalue(rawDuration))) then
+		isEmpty = (rawDuration <= 0)
+	elseif(duration ~= nil and duration.HasSecretValues and not duration:HasSecretValues()) then
+		isEmpty = duration:IsZero()
+	end
+
+	if(isEmpty) then
+		totem:SetAlpha(0)
+	else
+		totem:SetAlphaFromBoolean(haveTotem, 1, 0)
+	end
 
 	if(totem.Icon) then
 		totem.Icon:SetTexture(icon)
 	end
 
 	if(totem.Cooldown) then
-		if(duration ~= nil) then
+		if(duration ~= nil and not isEmpty) then
 			totem.Cooldown:SetCooldownFromDurationObject(duration)
 		else
 			totem.Cooldown:Clear()

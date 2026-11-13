@@ -77,7 +77,9 @@ local GetCurrentContentType = NP.GetCurrentContentType
 local ResolveNameContext = NP.ResolveNameContext
 local GetContentSetting = NP.GetContentSetting
 local UpdateExecuteMarker = NP.UpdateExecuteMarker
-local IsTankModeActive = NP.IsTankModeActive
+local GetActiveThreatRole = NP.GetActiveThreatRole
+local UpdateRighteousFury = NP.UpdateRighteousFury
+local ResetThreatRoleCache = NP.ResetThreatRoleCache
 
 local callback = function(self, event, unit)
 	if (event == "NAME_PLATE_UNIT_ADDED") then
@@ -162,9 +164,22 @@ local callback = function(self, event, unit)
 		self.nameplateShowsWidgetsOnly = nil
 		-- A reused frame must not carry the last unit's tank state into a lost-aggro sound.
 		self.__AzeriteUI_TankState = nil
+		-- Nor the healer/DPS state into a warning or aggro sound.
+		self.__AzeriteUI_RoleState = nil
+		self.__AzeriteUI_RolePercent = nil
+		self.__AzeriteUI_TankPercent = nil
+		self.__AzeriteUI_TankPercentAt = nil
 		if (self.TankTarget) then
 			self.TankTarget:SetText("")
 			self.TankTarget:Hide()
+		end
+		if (self.ThreatPercent) then
+			self.ThreatPercent:SetText("")
+			self.ThreatPercent:Hide()
+		end
+		if (self.ThreatPulse) then
+			self.ThreatPulse:SetAlpha(0)
+			self.ThreatPulse:Hide()
 		end
 
 		if (self.RaidTargetIndicator) then
@@ -392,16 +407,23 @@ NamePlatesMod.OnCombatStart = function(self, event)
 	end
 end
 
--- Tank mode follows your role, form and group (Visibility.lua, IsTankModeActive), and the co-tank
--- colour the group's roles. A form change recolours only when it switched tank mode; a group or role
--- change always does, since another member's role may have changed. Only the health colours are
--- redone (the threat state, target names and lost-aggro tracking ride on them).
-NamePlatesMod.OnTankContextChanged = function(self, event)
-	local active = IsTankModeActive() and true or false
-	if (event == "UPDATE_SHAPESHIFT_FORM" and active == (self.tankModeActive or false)) then
+-- The threat role follows your role, spec, talents, form, Righteous Fury and group (Visibility.lua,
+-- GetActiveThreatRole), and the co-tank and loose colours the group's roles. A form, talent or aura
+-- change recolours only when it switched the role; a group or role change always does, since another
+-- member's role may have changed. Only the health colours are redone (the threat states, target names,
+-- threat percent and the sounds' tracking ride on them).
+local SELF_ONLY_ROLE_EVENTS = {
+	UPDATE_SHAPESHIFT_FORM = true, UNIT_AURA = true, PLAYER_REGEN_ENABLED = true,
+	CHARACTER_POINTS_CHANGED = true, PLAYER_TALENT_UPDATE = true,
+	ACTIVE_TALENT_GROUP_CHANGED = true, PLAYER_SPECIALIZATION_CHANGED = true
+}
+NamePlatesMod.OnThreatRoleContextChanged = function(self, event)
+	local role = GetActiveThreatRole() or false
+	if (SELF_ONLY_ROLE_EVENTS[event] and role == (self.threatRoleActive or false)) then
 		return
 	end
-	self.tankModeActive = active
+	self.threatRoleActive = role
+	self.tankModeActive = role == "tank"
 	for plate in next, ns.ActiveNamePlates do
 		local health = plate.Health
 		if (health and health.UpdateColor and plate.unit) then
@@ -412,7 +434,11 @@ end
 
 NamePlatesMod.OnEvent = function(self, event, ...)
 	if (event == "UPDATE_SHAPESHIFT_FORM" or event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ROLES_ASSIGNED") then
-		return self:OnTankContextChanged(event)
+		return self:OnThreatRoleContextChanged(event)
+	elseif (event == "CHARACTER_POINTS_CHANGED" or event == "PLAYER_TALENT_UPDATE"
+		or event == "ACTIVE_TALENT_GROUP_CHANGED" or event == "PLAYER_SPECIALIZATION_CHANGED") then
+		ResetThreatRoleCache()
+		return self:OnThreatRoleContextChanged(event)
 	elseif (event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_FOCUS_CHANGED"
 		or event == "PLAYER_SOFT_ENEMY_CHANGED" or event == "PLAYER_SOFT_INTERACT_CHANGED") then
 		return self:OnSelectionChanged(event)
@@ -428,6 +454,8 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 	if (event == "PLAYER_ENTERING_WORLD") then
 		local isInitialLogin, isReloadingUi = ...
 		self:UpdateNameContext()
+		-- "Only in dungeons and raids" (Visibility.lua, IsThreatScopeActive) changes with the zone.
+		self:OnThreatRoleContextChanged(event)
 		ApplyFriendlyNameOnlyCVars()
 		ApplyNamePlateDriverSettings(self)
 		-- The zone decides only the alpha CVars, which the driver has just written. A real zone change
@@ -658,13 +686,33 @@ NamePlatesMod.OnEnable = function(self)
 	-- Quest marks (Elements.lua, QuestMarker_Update). QUEST_LOG_UPDATE follows every objective,
 	-- accept and turn-in, so the unit-filtered UNIT_QUEST_LOG_CHANGED would only add duplicates.
 	self:RegisterEvent("QUEST_LOG_UPDATE", "OnEvent")
-	-- Tank mode (OnTankContextChanged). Only events the client has: registering an unknown one raises.
-	for _, event in next, { "UPDATE_SHAPESHIFT_FORM", "GROUP_ROSTER_UPDATE", "PLAYER_ROLES_ASSIGNED" } do
+	-- Threat roles (OnThreatRoleContextChanged). Only events the client has: registering an unknown one raises.
+	for _, event in next, { "UPDATE_SHAPESHIFT_FORM", "GROUP_ROSTER_UPDATE", "PLAYER_ROLES_ASSIGNED",
+		"CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED", "PLAYER_SPECIALIZATION_CHANGED" } do
 		if (not (C_EventUtils and C_EventUtils.IsEventValid) or C_EventUtils.IsEventValid(event)) then
 			self:RegisterEvent(event, "OnEvent")
 		end
 	end
-	self.tankModeActive = IsTankModeActive() and true or false
+	-- Righteous Fury, Classic content Paladins only: the player's own auras on a private frame (the
+	-- module's UNIT_AURA would be every unit's), read out of combat and once more as combat ends.
+	if (not ns.IsRetailContent and not self.righteousFuryFrame) then
+		local _, class = UnitClass("player")
+		if (class == "PALADIN" and CreateFrame) then
+			local frame = CreateFrame("Frame")
+			frame:RegisterUnitEvent("UNIT_AURA", "player")
+			frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+			frame:SetScript("OnEvent", function(_, event)
+				if (UpdateRighteousFury() and self:IsEnabled()) then
+					self:OnThreatRoleContextChanged(event)
+				end
+			end)
+			self.righteousFuryFrame = frame
+		end
+	end
+	UpdateRighteousFury()
+	local role = GetActiveThreatRole() or false
+	self.threatRoleActive = role
+	self.tankModeActive = role == "tank"
 
 	-- A spec, talent or spell change can move the execute threshold; only the markers follow it.
 	if (ns.API.RegisterExecuteThresholdCallback and not self.executeThresholdCallback) then

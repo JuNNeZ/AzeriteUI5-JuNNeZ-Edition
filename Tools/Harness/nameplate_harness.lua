@@ -374,6 +374,8 @@ function Region:GetFrameLevel() return self.__level end
 function Region:SetParent(p) count(self, "SetParent"); self.__parentRegion = p end
 function Region:GetParent() return self.__parentRegion end
 function Region:SetScript(name, fn) self.__scripts[name] = fn end
+function Region:SetFrameStrata(strata) self.__strata = strata end
+function Region:SetBlendMode(mode) self.__blendMode = mode end
 function Region:GetScript(name) return self.__scripts[name] end
 function Region:HookScript(name, fn)
 	local old = self.__scripts[name]
@@ -831,7 +833,7 @@ ns.AuraFilters = { NameplateAuraFilter = function() return true end }
 ns.AuraStyles = { CreateSmallButton = function() end, NameplatePostUpdateButton = function() end }
 ns.AuraSorts = { Default = function() end, DefaultFunction = function() end, Alternate = function() end, AlternateFuncton = function() end }
 ns.UnitFrame = { ShouldColorCastSpellTextByState = function() return W.colorSpellText and true or false end }
-local unitFramesModule = { db = { global = { disableAuraSorting = false } } }
+local unitFramesModule = { db = { profile = { disableAuraSorting = false } } } -- the option writes the profile (FixLog 2026-11-13)
 ns.GetModule = function(_, name) return name == "UnitFrames" and unitFramesModule or nil end
 ns.NewModule = function(_, name)
 	local m = { __events = {}, __enabled = true, __name = name }
@@ -1342,6 +1344,13 @@ do
 	check(anchor and anchor[1] == "BOTTOM" and anchor[2] == P[5].Name and anchor[3] == "TOP",
 		"a name-only player's raid marker sits above the name, not beside a hidden bar")
 end
+-- The name-only state used to hide the marker after oUF had shown it (2026-11-07).
+W.units.nameplate5.raidTarget = 3
+P[5]:UpdateAllElements("RAID_TARGET_UPDATE")
+check(P[5].RaidTargetIndicator.__shown and not P[5].Health.__shown,
+	"a marked name-only player shows its raid marker", P[5].RaidTargetIndicator.__shown)
+W.units.nameplate5.raidTarget = nil
+P[5]:UpdateAllElements("RAID_TARGET_UPDATE")
 
 W.profile.showBlizzardWidgets = true
 P[7].WidgetContainer.numWidgetsShowing = 1
@@ -2468,7 +2477,7 @@ do
 			check(plate.__AzeriteUI_TankState == nil, "no tank role or form: no tank mode, the shared threat colours", plate.__AzeriteUI_TankState)
 
 			form = 5 -- Bear Form
-			M:OnTankContextChanged("UPDATE_SHAPESHIFT_FORM")
+			M:OnThreatRoleContextChanged("UPDATE_SHAPESHIFT_FORM")
 			check(M.tankModeActive == true and plate.__AzeriteUI_TankState == "held", "Bear Form in a group is tank mode: a mob you hold is held",
 				plate.__AzeriteUI_TankState)
 			check(BarRGB() == "205,46,36", "held keeps the reaction colour on the default preset", BarRGB())
@@ -2533,7 +2542,7 @@ do
 			roles.party1 = "TANK"
 			mob.threatBy.party1, mob.threatBy.party2 = 3, 1
 			W.alias.nameplate20target = "party1"
-			M:OnTankContextChanged("PLAYER_ROLES_ASSIGNED")
+			M:OnThreatRoleContextChanged("PLAYER_ROLES_ASSIGNED")
 			check(plate.__AzeriteUI_TankState == "cotank" and BarRGB() == "86,140,233", "another group tank has it: the co-tank colour", BarRGB())
 
 			-- A secret role (UnitGroupRolesAssigned is SecretWhenUnitIdentityRestricted) or a secret
@@ -2547,7 +2556,7 @@ do
 			check(okThreat and plate.__AzeriteUI_TankState == "lost", "a secret threat answer for the other tank is skipped",
 				errThreat or plate.__AzeriteUI_TankState)
 			roles.player = SECRET
-			local okOwn, errOwn = pcall(M.OnTankContextChanged, M, "PLAYER_ROLES_ASSIGNED")
+			local okOwn, errOwn = pcall(M.OnThreatRoleContextChanged, M, "PLAYER_ROLES_ASSIGNED")
 			check(okOwn and M.tankModeActive == true, "your own role secret: Bear Form still decides, nothing raises", errOwn)
 			roles.player = nil
 			mob.threatBy.party1 = 3
@@ -2578,16 +2587,16 @@ do
 			mob.threatBy.player = 3
 
 			W.party = nil
-			M:OnTankContextChanged("GROUP_ROSTER_UPDATE")
+			M:OnThreatRoleContextChanged("GROUP_ROSTER_UPDATE")
 			check(M.tankModeActive == false and plate.__AzeriteUI_TankState == nil, "solo, automatic tank mode is off")
-			W.profile.threatTankMode = "always"
+			W.profile.threatRole = "tank"
 			Recolor()
-			check(plate.__AzeriteUI_TankState == "held", "Always: tank mode solo too")
-			W.profile.threatTankMode = "off"
+			check(plate.__AzeriteUI_TankState == "held", "Tank: tank mode solo too")
+			W.profile.threatRole = "off"
 			W.party = 2
 			Recolor()
 			check(plate.__AzeriteUI_TankState == nil, "Off: never tank mode")
-			W.profile.threatTankMode = "auto"
+			W.profile.threatRole = "auto"
 
 			W.profile.threatColorPreset = "blueOrange"
 			Recolor()
@@ -2601,10 +2610,469 @@ do
 		W.alias.nameplate20target = nil
 		W.party, W.units.party1, W.units.party2 = nil, nil, nil
 		for k, v in pairs(saved) do _G[k] = v end
-		M:OnTankContextChanged("GROUP_ROSTER_UPDATE")
+		M:OnThreatRoleContextChanged("GROUP_ROSTER_UPDATE")
 		Flush()
 	end
 	Step("tank mode")
+
+	-- Healer and DPS mode (FixLog 2026-11-08): the role resolver (group role, Retail spec, Forever talent
+	-- trees, Righteous Fury, yesterday's setting), the safe/close/pulling/aggro/loose colours, the threat
+	-- percent text, the two sounds and their throttle, and every secret answer.
+	do
+		local NPP = ns.NamePlatesPrivate
+		local saved = { UnitGroupRolesAssigned = UnitGroupRolesAssigned, GetShapeshiftFormID = GetShapeshiftFormID,
+			GetPartyAssignment = GetPartyAssignment, PlaySound = PlaySound, SOUNDKIT = SOUNDKIT,
+			UnitDetailedThreatSituation = UnitDetailedThreatSituation, C_SpecializationInfo = C_SpecializationInfo,
+			C_UnitAuras = C_UnitAuras, GetSpecialization = GetSpecialization, GetSpecializationRole = GetSpecializationRole }
+		local savedRetailContent, savedClass = ns.IsRetailContent, W.units.player.class
+		local roles, sounds, lastSoundAt = {}, {}, 0
+		UnitGroupRolesAssigned = function(u) local rec = resolve(u); return rec and roles[rec.token] or "NONE" end
+		GetShapeshiftFormID = function() return nil end
+		GetPartyAssignment = function() return nil end
+		PlaySound = function(id, channel)
+			sounds[#sounds + 1] = tostring(id) .. ":" .. tostring(channel)
+			lastSoundAt = W.time
+		end
+		SOUNDKIT = { RAID_WARNING = 8959, UI_RAID_BOSS_WHISPER_WARNING = 37666 }
+		-- The scaled percent per member (`threatPct`), "secret" for a secret number.
+		UnitDetailedThreatSituation = function(a, b)
+			local rec = b and resolve(b)
+			local pct = rec and rec.threatPct and rec.threatPct[a]
+			if (pct == nil) then return nil end
+			local status = UnitThreatSituation(a, b)
+			return status == 3, status, pct == "secret" and SecretValue(90) or pct, pct, 1000
+		end
+		local trees = {}
+		C_SpecializationInfo = { GetSpecializationInfo = function(index)
+			local tree = trees[index]
+			if (not tree) then return 0 end
+			return index, "Tree" .. index, "", 0, "DAMAGER", 1, tree.points, tree.background, 0, true
+		end }
+		ns.IsRetailContent = false
+
+		W.party = 2
+		W.units.party1 = { token = "party1", name = "Shieldwall", guid = "Player-1-0301", isPlayer = true, reaction = 5,
+			class = "WARRIOR", classID = 1 }
+		W.units.party2 = { token = "party2", name = "Stabby", guid = "Player-1-0302", isPlayer = true, reaction = 5,
+			class = "ROGUE", className = "Rogue", classID = 4 }
+		roles.party1 = "TANK"
+		local mob = Unit("nameplate21", { name = "Defias Trapper", guid = creature(1021), canAttack = true, reaction = 2,
+			affectingCombat = true, threatBy = { player = 0, party1 = 3 }, threatPct = { player = 40 } })
+		Fire("NAME_PLATE_UNIT_ADDED", "nameplate21")
+		Flush()
+		local plate
+		for _, f in ipairs(plateOrder) do if (f.unit == "nameplate21") then plate = f end end
+		check(plate and plate.ThreatPercent, "an enemy plate has the threat percent text")
+		if (plate) then
+			local function Recolor()
+				W.time = W.time + 5
+				plate.Health.UpdateColor(plate, "UNIT_THREAT_LIST_UPDATE", plate.unit)
+			end
+			local function BarRGB()
+				local c = plate.Health.__barColor
+				return c and string.format("%d,%d,%d", math.floor(Reveal(c[1]) * 255 + .5), math.floor(Reveal(c[2]) * 255 + .5),
+					math.floor(Reveal(c[3]) * 255 + .5)) or "-"
+			end
+			local text = plate.ThreatPercent
+
+			M:OnThreatRoleContextChanged("GROUP_ROSTER_UPDATE")
+			check(M.threatRoleActive == "dps" and M.tankModeActive == false, "in a group with no role, form or talents: DPS mode",
+				tostring(M.threatRoleActive))
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "safe" and plate.__AzeriteUI_TankState == nil, "the tank holds it: safe, no tank state",
+				tostring(plate.__AzeriteUI_RoleState))
+			check(BarRGB() == "205,46,36", "safe keeps the reaction colour on the default preset", BarRGB())
+			check(text:IsShown() and text.__text == "40%", "your threat shows in the bar", tostring(text.__text))
+
+			W.profile.threatWarnSound, W.profile.threatAggroSound = true, true
+			mob.threatPct.player = 85
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "close" and BarRGB() == "249,188,55", "at the warning share: the close colour", BarRGB())
+			check(#sounds == 1 and sounds[1] == "37666:Master", "coming close plays the warning", table.concat(sounds, " "))
+			check(text.__text == "85%", "the percent follows", tostring(text.__text))
+			mob.threatBy.player = 1
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "pulling" and BarRGB() == "255,128,32", "above the tank: the pulling colour", BarRGB())
+			check(#sounds == 1, "close to pulling plays no second warning", #sounds)
+			mob.threatBy.player, mob.threatBy.party1, mob.threatPct.player = 3, 1, 100
+			W.alias.nameplate21target = "player"
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "aggro" and BarRGB() == "255,64,217", "it is on you: the aggro colour", BarRGB())
+			check(#sounds == 2 and sounds[2] == "8959:Master", "a mob turning on you plays the aggro sound", table.concat(sounds, " "))
+			check(not plate.TankTarget:IsShown(), "DPS mode names no one under the bar")
+			Recolor()
+			check(#sounds == 2, "staying on you plays nothing more", #sounds)
+			mob.threatBy.player, mob.threatBy.party1, mob.threatPct.player = 0, 3, 40
+			Recolor()
+			mob.threatBy.player = 3
+			W.time = lastSoundAt + 1
+			plate.Health.UpdateColor(plate, "UNIT_THREAT_LIST_UPDATE", plate.unit)
+			check(#sounds == 2 and plate.__AzeriteUI_RoleState == "aggro", "a second aggro within two seconds stays quiet", #sounds)
+			mob.threatBy.player, mob.threatBy.party1 = 0, 3
+
+			W.profile.threatWarnPercent = 90
+			mob.threatPct.player = 85
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "safe", "a higher warning share keeps 85% safe", tostring(plate.__AzeriteUI_RoleState))
+			W.profile.threatWarnPercent = "junk"
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "close", "a broken warning share falls back to 80%", tostring(plate.__AzeriteUI_RoleState))
+			W.profile.threatWarnPercent = 80
+
+			mob.threatPct.player = "secret"
+			local ok, err = pcall(Recolor)
+			check(ok and plate.__AzeriteUI_RoleState == "safe" and not text:IsShown(),
+				"a secret percent: the state from the status alone, no text, nothing raises", err or tostring(plate.__AzeriteUI_RoleState))
+			mob.threatPct.player = nil
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "safe" and not text:IsShown(), "no detailed answer at all: no text")
+			mob.threatPct.player = 40
+			mob.threatBy.player = "secretnumber"
+			ok, err = pcall(Recolor)
+			check(ok and plate.__AzeriteUI_RoleState == nil, "a secret status leaves the plate to the shared colours", err)
+			mob.threatBy.player = 0
+			Recolor()
+
+			plate.Castbar:Show()
+			check(not text:IsShown(), "the percent gives way to the castbar")
+			plate.Castbar:Hide()
+			check(text:IsShown(), "and comes back when the castbar hides")
+			W.profile.threatPercentPlates = false
+			Recolor()
+			check(not text:IsShown(), "Show Threat Percent off hides it")
+			W.profile.threatPercentPlates = true
+
+			mob.threatBy.player, mob.threatBy.party1, mob.threatPct.player = nil, 3, nil
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == nil and BarRGB() == "205,46,36", "not on your table: no DPS colour",
+				tostring(plate.__AzeriteUI_RoleState))
+			mob.threatBy.player, mob.threatPct.player = 0, 40
+
+			-- Healer: the group role, then a mob on a group member who is not a tank.
+			roles.player = "HEALER"
+			M:OnThreatRoleContextChanged("PLAYER_ROLES_ASSIGNED")
+			check(M.threatRoleActive == "healer", "the Healer role: healer mode", tostring(M.threatRoleActive))
+			mob.threatBy.party1, mob.threatBy.party2 = 0, 3
+			W.alias.nameplate21target = "party2"
+			local soundsBefore = #sounds
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "loose" and BarRGB() == "64,200,255", "a mob on the rogue: the loose colour", BarRGB())
+			check(plate.TankTarget:IsShown() and plate.TankTarget.__text == "Stabby", "and the name of who it hits",
+				tostring(plate.TankTarget.__text))
+			check(#sounds == soundsBefore, "a loose mob plays no sound", #sounds)
+			W.profile.tankTargetNames = false
+			Recolor()
+			check(not plate.TankTarget:IsShown(), "Show who loose mobs are attacking off hides the healer's name too")
+			W.profile.tankTargetNames = true
+			mob.threatBy.player, mob.threatPct.player = nil, nil
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "loose", "loose when you are not on its table at all", tostring(plate.__AzeriteUI_RoleState))
+			mob.affectingCombat = false
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == nil, "out of combat it is not loose", tostring(plate.__AzeriteUI_RoleState))
+			mob.affectingCombat = true
+			mob.threatBy.player, mob.threatPct.player = 0, 40
+			mob.threatBy.party2 = "secretnumber"
+			ok, err = pcall(Recolor)
+			check(ok and plate.__AzeriteUI_RoleState == "safe", "a secret answer for the rogue is no evidence of a loose mob",
+				err or tostring(plate.__AzeriteUI_RoleState))
+			mob.threatBy.party2 = 3
+			mob.threatBy.party1, mob.threatBy.party2 = 3, 0
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "safe" and not plate.TankTarget:IsShown(), "back on the tank: safe, no name")
+			mob.threatBy.party1, mob.threatBy.party2 = 0, 3
+			W.profile.threatRole = "dps"
+			M:OnThreatRoleContextChanged("SETTING")
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "safe", "DPS (forced) does not colour loose mobs", tostring(plate.__AzeriteUI_RoleState))
+			W.profile.threatRole = "auto"
+			roles.player = nil
+
+			-- Forever talents: the tree with the most points, by background name or by place.
+			W.units.player.class = "PRIEST"
+			trees[1], trees[2], trees[3] = { points = 5, background = "PriestDiscipline" }, { points = 31, background = "PriestHoly" },
+				{ points = 0, background = "PriestShadow" }
+			M:OnEvent("CHARACTER_POINTS_CHANGED")
+			check(M.threatRoleActive == "healer", "Forever: a Holy priest by talents is a healer", tostring(M.threatRoleActive))
+			check(M:GetDetectedThreatRole() == "healer", "the options page reads the detected role")
+			trees[2].points, trees[3].points = 0, 31
+			M:OnEvent("CHARACTER_POINTS_CHANGED")
+			check(M.threatRoleActive == "dps", "Forever: a Shadow priest by talents is DPS", tostring(M.threatRoleActive))
+			trees[1], trees[2], trees[3] = { points = 0 }, { points = 31 }, { points = 0 }
+			M:OnEvent("PLAYER_TALENT_UPDATE")
+			check(M.threatRoleActive == "healer", "no background name: the tree's place decides", tostring(M.threatRoleActive))
+			trees[2].points = 3
+			M:OnEvent("CHARACTER_POINTS_CHANGED")
+			check(M.threatRoleActive == "dps", "too few points say nothing: DPS", tostring(M.threatRoleActive))
+			trees[2].points = SecretValue(31)
+			ok, err = pcall(M.OnEvent, M, "CHARACTER_POINTS_CHANGED")
+			check(ok and M.threatRoleActive == "dps", "secret talent points are skipped", err)
+			trees[2].points = 31
+			M:OnEvent("CHARACTER_POINTS_CHANGED")
+			roles.player = "DAMAGER"
+			M:OnThreatRoleContextChanged("PLAYER_ROLES_ASSIGNED")
+			check(M.threatRoleActive == "dps", "a chosen group role beats the talents", tostring(M.threatRoleActive))
+			roles.player = SECRET
+			ok, err = pcall(M.OnThreatRoleContextChanged, M, "PLAYER_ROLES_ASSIGNED")
+			check(ok and M.threatRoleActive == "healer", "a secret own role: the talents decide, nothing raises", err)
+			roles.player = nil
+
+			-- Retail: the spec role, never the talent trees.
+			ns.IsRetailContent = true
+			GetSpecialization = function() return 2 end
+			local specRole = "HEALER"
+			GetSpecializationRole = function() return specRole end
+			trees[2].points = 0
+			M:OnEvent("PLAYER_SPECIALIZATION_CHANGED")
+			check(M.threatRoleActive == "healer", "Retail: a healer spec is healer mode", tostring(M.threatRoleActive))
+			specRole = "TANK"
+			M:OnEvent("PLAYER_SPECIALIZATION_CHANGED")
+			check(M.threatRoleActive == "tank", "Retail: a tank spec is tank mode", tostring(M.threatRoleActive))
+			specRole = SECRET
+			ok, err = pcall(M.OnEvent, M, "PLAYER_SPECIALIZATION_CHANGED")
+			check(ok and M.threatRoleActive == "dps", "a secret spec role: DPS, nothing raises", err)
+			GetSpecialization, GetSpecializationRole = saved.GetSpecialization, saved.GetSpecializationRole
+			ns.IsRetailContent = false
+
+			-- Righteous Fury (Forever Paladin): read out of combat only, then it is a tank.
+			W.units.player.class = "PALADIN"
+			trees[1], trees[2], trees[3] = { points = 31, background = "PaladinHoly" }, { points = 0 }, { points = 0 }
+			M:OnEvent("CHARACTER_POINTS_CHANGED")
+			check(M.threatRoleActive == "healer", "a Holy paladin by talents is a healer", tostring(M.threatRoleActive))
+			C_UnitAuras = { GetPlayerAuraBySpellID = function(id) return id == 25780 and {} or nil end }
+			W.units.player.affectingCombat = true
+			check(NPP.UpdateRighteousFury() == false, "in combat Righteous Fury is not read")
+			W.units.player.affectingCombat = false
+			check(NPP.UpdateRighteousFury() == true, "out of combat it is")
+			M:OnThreatRoleContextChanged("UNIT_AURA")
+			check(M.threatRoleActive == "tank", "Righteous Fury is tanking", tostring(M.threatRoleActive))
+			C_UnitAuras = { GetPlayerAuraBySpellID = function() return nil end }
+			check(NPP.UpdateRighteousFury() == true, "and dropping it is read too")
+			M:OnThreatRoleContextChanged("UNIT_AURA")
+			check(M.threatRoleActive == "healer", "without it the talents decide again", tostring(M.threatRoleActive))
+			W.units.player.class = savedClass
+			for index = 1, 3 do trees[index] = nil end
+			M:OnEvent("CHARACTER_POINTS_CHANGED")
+
+			-- Yesterday's setting, stored before threatRole existed.
+			W.profile.threatRole = nil
+			W.profile.threatTankMode = "always"
+			check(M:GetThreatRoleSetting() == "tank", "a stored Always tank mode reads as Tank")
+			W.profile.threatTankMode = "off"
+			check(M:GetThreatRoleSetting() == "off", "a stored Off reads as Off")
+			W.profile.threatRole = "healer"
+			check(M:GetThreatRoleSetting() == "healer", "the new setting wins once stored")
+			W.profile.threatRole, W.profile.threatTankMode = "auto", nil
+
+			-- Alerts (2026-11-08): a chosen LibSharedMedia sound, the fallback, the shared effects, the
+			-- sound switch, and the name under the text (secret allowed).
+			do
+				local soundFiles, lsmAsked = {}, nil
+				local savedLibStub, savedPlaySoundFile = LibStub, PlaySoundFile
+				PlaySoundFile = function(file, channel) soundFiles[#soundFiles + 1] = tostring(file) .. ":" .. tostring(channel) end
+				local lsm = { Fetch = function(_, kind, name)
+					lsmAsked = kind
+					return name == "Air Horn" and "Sound\\AirHorn.ogg" or nil
+				end }
+				local locale = setmetatable({ ["Aggro!"] = "Aggro (localized)" }, { __index = function(_, k) return k end })
+				LibStub = function(name)
+					if (name == "LibSharedMedia-3.0") then return lsm end
+					if (name == "AceLocale-3.0") then return { GetLocale = function() return locale end } end
+				end
+				W.profile.threatAggroSound = true
+				W.profile.threatAggroSoundFile = "Air Horn"
+				W.profile.threatAlertFlash, W.profile.threatAlertPulse, W.profile.threatAlertText = true, true, true
+				mob.threatBy.player, mob.threatBy.party1, mob.threatPct.player = 0, 3, 40
+				Recolor()
+				local soundsBefore = #sounds
+				mob.threatBy.player = 3
+				Recolor()
+				check(lsmAsked == "sound" and soundFiles[#soundFiles] == "Sound\\AirHorn.ogg:Master" and #sounds == soundsBefore,
+					"a chosen LibSharedMedia sound plays instead of the game's", table.concat(soundFiles, " "))
+				local pulse = plate.ThreatPulse
+				local pc = pulse and pulse.__vertex
+				check(pulse and pulse:IsShown() and pc and string.format("%d,%d,%d", math.floor(pc[1] * 255 + .5), math.floor(pc[2] * 255 + .5),
+					math.floor(pc[3] * 255 + .5)) == "255,64,217", "the plate pulses in the aggro colour", pc and tostring(pc[1]))
+				local flashFrame, textFrame
+				for _, f in ipairs(W.frames) do
+					if (f.__strata == "FULLSCREEN_DIALOG") then flashFrame = f end
+					if (f.__strata == "HIGH" and f.Message) then textFrame = f end
+				end
+				check(flashFrame and flashFrame:IsShown() and flashFrame.Texture and flashFrame.Texture.__blendMode == "ADD",
+					"the screen edge flashes")
+				check(textFrame and textFrame:IsShown() and textFrame.Message.__text == "Aggro (localized)" and textFrame.Name.__text == "Defias Trapper",
+					"the text names what happened, localized, and the mob", textFrame and tostring(textFrame.Message.__text))
+				-- The fade runs on one frame's OnUpdate and hides every effect when it is over.
+				local fader
+				for _, f in ipairs(W.frames) do if (f.__scripts.OnUpdate and f:IsShown()) then fader = f end end
+				W.time = W.time + 3
+				if (fader) then fader.__scripts.OnUpdate(fader, .1) end
+				check(fader and pulse and flashFrame and textFrame and not pulse:IsShown() and not flashFrame:IsShown()
+					and not textFrame:IsShown() and not fader:IsShown(), "the fade hides the effects and stops itself")
+				W.profile.threatAggroSoundFile = "Not Registered"
+				mob.threatBy.player = 0
+				Recolor()
+				mob.threatBy.player = 3
+				Recolor()
+				check(sounds[#sounds] == "8959:Master" and #sounds == soundsBefore + 1, "an unknown sound name falls back to the game's",
+					table.concat(sounds, " "))
+				W.profile.threatAlertSoundOn = false
+				mob.threatBy.player = 0
+				Recolor()
+				mob.threatBy.player = 3
+				local filesBefore, gameBefore = #soundFiles, #sounds
+				Recolor()
+				check(#sounds == gameBefore and #soundFiles == filesBefore and textFrame and textFrame:IsShown(),
+					"Play the sound off: the other effects still run, silently")
+				W.profile.threatAlertSoundOn = true
+				-- A secret mob name still goes to the text.
+				mob.secret = { name = true }
+				mob.threatBy.player = 0
+				Recolor()
+				mob.threatBy.player = 3
+				local okName, errName = pcall(Recolor)
+				check(okName and textFrame and textFrame.Name.__text == SECRET, "a secret mob name goes to the text untouched",
+					errName or tostring(textFrame and textFrame.Name.__text))
+				mob.secret = nil
+				Fire("NAME_PLATE_UNIT_REMOVED", "nameplate21")
+				check(pulse and not pulse:IsShown(), "a removed plate drops its pulse")
+				Fire("NAME_PLATE_UNIT_ADDED", "nameplate21")
+				Flush()
+				W.profile.threatAlertFlash, W.profile.threatAlertPulse, W.profile.threatAlertText = false, false, false
+				W.profile.threatAggroSoundFile = "Default"
+				-- The options page plays a sound as it is chosen.
+				M:PlayThreatAlertSound("close", "Default")
+				check(sounds[#sounds] == "37666:Master", "the options page previews an alert's sound", sounds[#sounds])
+				LibStub, PlaySoundFile = savedLibStub, savedPlaySoundFile
+			end
+
+			-- Where the roles work: only in a group, only in dungeons and raids, or always.
+			do
+				local savedInstance = W.instance
+				W.party = nil
+				W.profile.threatRole = "auto"
+				W.profile.threatRoleScope = "instance"
+				W.instance = { true, "party" }
+				M:OnThreatRoleContextChanged("PLAYER_ENTERING_WORLD")
+				check(M.threatRoleActive == "dps", "Only in dungeons and raids: solo in a dungeon picks a role", tostring(M.threatRoleActive))
+				mob.threatBy.player, mob.threatPct.player = 0, 40
+				Recolor()
+				check(text:IsShown() and text.__text == "40%", "and shows the percent there")
+				W.instance = { false, "none" }
+				W.party = 2
+				M:OnThreatRoleContextChanged("PLAYER_ENTERING_WORLD")
+				check(M.threatRoleActive == false, "in a group outside an instance it does not", tostring(M.threatRoleActive))
+				W.instance = { true, "pvp" }
+				M:OnThreatRoleContextChanged("PLAYER_ENTERING_WORLD")
+				check(M.threatRoleActive == false, "a battleground is not a dungeon or raid", tostring(M.threatRoleActive))
+				W.party = nil
+				W.instance = { false, "none" }
+				W.profile.threatRoleScope = "always"
+				M:OnThreatRoleContextChanged("SETTING")
+				Recolor()
+				check(M.threatRoleActive == "dps" and text:IsShown(), "Always: solo out in the world too", tostring(M.threatRoleActive))
+				W.profile.threatRoleScope = "junk"
+				M:OnThreatRoleContextChanged("SETTING")
+				check(M.threatRoleActive == false, "an unknown choice is Only in a group", tostring(M.threatRoleActive))
+				W.profile.threatRoleScope = "group"
+				W.instance = savedInstance
+				W.party = 2
+				M:OnThreatRoleContextChanged("GROUP_ROSTER_UPDATE")
+			end
+
+			-- Tank mode's percent: the group's highest on a mob you hold (secret answers skipped), yours on
+			-- a lost one, asked at most twice a second per plate.
+			do
+				W.profile.threatRole = "tank"
+				W.party = 2
+				M:OnThreatRoleContextChanged("SETTING")
+				mob.threatBy.player, mob.threatBy.party1, mob.threatBy.party2 = 3, 0, 1
+				mob.threatPct.player, mob.threatPct.party1, mob.threatPct.party2 = 100, "secret", 70
+				local ok, err = pcall(Recolor)
+				check(ok and plate.__AzeriteUI_TankState == "held" and text:IsShown() and text.__text == "70%",
+					"tank: a mob you hold shows the group's highest threat, a secret one skipped", err or tostring(text.__text))
+				local tc = text.__textColor
+				check(tc and tc[1] > .9 and tc[2] > .9 and tc[3] > .9,
+					"held has no colour of its own on the default preset: the text's own colour", tc and tostring(tc[3]))
+				mob.threatPct.party2 = 95
+				W.time = W.time + .2
+				plate.Health.UpdateColor(plate, "UNIT_THREAT_LIST_UPDATE", plate.unit)
+				check(text.__text == "70%", "within half a second the group is not asked again", tostring(text.__text))
+				W.time = W.time + 1
+				plate.Health.UpdateColor(plate, "UNIT_THREAT_LIST_UPDATE", plate.unit)
+				check(text.__text == "95%", "after it, it is", tostring(text.__text))
+				mob.threatBy.player, mob.threatPct.party2 = 2, 80
+				W.time = W.time + .1
+				plate.Health.UpdateColor(plate, "UNIT_THREAT_LIST_UPDATE", plate.unit)
+				tc = text.__textColor
+				check(plate.__AzeriteUI_TankState == "slipping" and text.__text == "80%" and tc and math.floor(tc[3] * 255 + .5) == 55,
+					"a state change asks at once, in the slipping colour", tostring(text.__text))
+				mob.threatBy.player, mob.threatBy.party2, mob.threatPct.player = 0, 3, 60
+				W.alias.nameplate21target = "party2"
+				Recolor()
+				check(plate.__AzeriteUI_TankState == "lost" and text.__text == "60%", "a lost mob shows your own threat, to win it back",
+					tostring(text.__text))
+				mob.threatPct.player = "secret"
+				ok, err = pcall(Recolor)
+				check(ok and not text:IsShown(), "your own threat secret: no text", err)
+				W.party = nil
+				mob.threatBy.player, mob.threatPct.player = 3, 100
+				Recolor()
+				check(plate.__AzeriteUI_TankState == "held" and not text:IsShown(), "solo: no percent")
+				W.party = 2
+				mob.threatPct.party1, mob.threatPct.party2 = nil, nil
+				mob.threatBy.party1, mob.threatBy.party2 = 3, 0
+				W.profile.threatRole = "auto"
+				W.alias.nameplate21target = nil
+				M:OnThreatRoleContextChanged("SETTING")
+			end
+
+			-- Solo: automatic is off; a forced DPS mode colours but shows no percent and plays nothing.
+			W.party = nil
+			M:OnThreatRoleContextChanged("GROUP_ROSTER_UPDATE")
+			Recolor()
+			check(M.threatRoleActive == false and plate.__AzeriteUI_RoleState == nil and not text:IsShown(),
+				"solo, automatic is off", tostring(M.threatRoleActive))
+			W.profile.threatRole = "dps"
+			mob.threatBy.player, mob.threatPct.player = 0, 40
+			Recolor()
+			mob.threatBy.player = 3
+			local before = #sounds
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == "aggro" and not text:IsShown() and #sounds == before,
+				"DPS solo: colour only, no percent, no sound", tostring(plate.__AzeriteUI_RoleState))
+			W.profile.threatRole = "off"
+			Recolor()
+			check(plate.__AzeriteUI_RoleState == nil, "Off: no role colours")
+			W.profile.threatRole = "auto"
+			W.party = 2
+
+			W.profile.threatColorPreset = "blueOrange"
+			mob.threatBy.player, mob.threatBy.party1 = 0, 3
+			M:OnThreatRoleContextChanged("GROUP_ROSTER_UPDATE")
+			Recolor()
+			check(BarRGB() == "0,114,178", "a colour-blind preset gives safe its own colour", BarRGB())
+			W.profile.threatColorPreset = "azerite"
+
+			Fire("NAME_PLATE_UNIT_REMOVED", "nameplate21")
+			check(plate.__AzeriteUI_RoleState == nil and plate.__AzeriteUI_RolePercent == nil and not text:IsShown(),
+				"a removed plate forgets its role state")
+		end
+		W.profile.threatWarnSound, W.profile.threatAggroSound = false, false
+		W.alias.nameplate21target = nil
+		W.party, W.units.party1, W.units.party2 = nil, nil, nil
+		W.units.player.affectingCombat = nil
+		ns.IsRetailContent = savedRetailContent
+		-- By name: pairs() would skip the globals that were nil before and leave the stubs behind.
+		for _, k in ipairs({ "UnitGroupRolesAssigned", "GetShapeshiftFormID", "GetPartyAssignment", "PlaySound", "SOUNDKIT",
+			"UnitDetailedThreatSituation", "C_SpecializationInfo", "C_UnitAuras", "GetSpecialization", "GetSpecializationRole" }) do
+			_G[k] = saved[k]
+		end
+		M:OnEvent("CHARACTER_POINTS_CHANGED")
+		M:OnThreatRoleContextChanged("GROUP_ROSTER_UPDATE")
+		Flush()
+	end
+	Step("healer and DPS mode")
 
 	-- Your target's floating name (FixLog 2026-09-26): the game's UnitNameFocused, passed through. Turning it
 	-- off hid a corpse's name live. It is a name the engine draws, so no plate follows it.

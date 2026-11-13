@@ -316,14 +316,25 @@ local GetPartyNativeAuraOptions = function(profile)
 	local showShortBuffs = Show("partyAuraShowHelpfulShortBuffs")
 
 	return {
-		-- Your own castable buffs, HoTs included, drawn ahead of everything else.
+		-- Your own castable buffs, HoTs included, drawn ahead of everything else. With
+		-- "Show Helpful Raid Buffs" on and "Show Short Helpful Buffs" off the group
+		-- leaves out your RAID_IN_COMBAT auras, the flag that puts your HoTs on raid
+		-- frames ("Combine with Player & Helpful to return self-cast HoTs", while RAID
+		-- alone is any buff you can apply, AuraUtil.AuraFilters): Fortitude-style raid
+		-- buffs stay, Renewing Mist-style upkeep goes (FixLog 2026-11-13). Short alone
+		-- caps the group at 60 seconds; both on take all of yours.
 		showOwn = showRaidBuffs or showShortBuffs,
 		ownMaxDuration = (showShortBuffs and not showRaidBuffs) and PARTY_SHORT_HELPFUL_DURATION or nil,
-		-- "Only Show Dispellable Debuffs" keeps boss mechanics, as its description
-		-- promises, and leaves the narrowing to Blizzard's own dispellable-only mode.
-		showDispel = onlyDispellable or Show("partyAuraShowDispellableDebuffs"),
-		showBoss = onlyDispellable or Show("partyAuraShowBossAndImportantDebuffs"),
-		showOther = onlyDispellable or Show("partyAuraShowOtherDebuffs"),
+		ownSkipRaidInCombat = (showRaidBuffs and not showShortBuffs) and true or false,
+		-- "Only Show Dispellable Debuffs" leaves the narrowing to Blizzard's own
+		-- dispellable-only mode, which files your dispellable non-boss debuffs as
+		-- Debuff, not Dispel (AuraUtil.ProcessAura, NonBossRaidDebuff), so they come
+		-- through the "other" group there. Each switch still has the last word: with
+		-- Show Dispellable Debuffs off the row carries no dispellables in either mode,
+		-- and the centre priority icon keeps showing them (Neil, FixLog 2026-11-13).
+		showDispel = Show("partyAuraShowDispellableDebuffs"),
+		showBoss = Show("partyAuraShowBossAndImportantDebuffs"),
+		showOther = (onlyDispellable and Show("partyAuraShowDispellableDebuffs")) or ((not onlyDispellable) and Show("partyAuraShowOtherDebuffs")),
 		otherMaxDuration = (not stock and not onlyDispellable) and PARTY_SHORT_HARMFUL_DURATION or nil,
 		onlyDispellable = onlyDispellable,
 		showExternal = Show("partyAuraShowHelpfulExternals"),
@@ -1419,7 +1430,7 @@ local style = function(self, unit, asPlayer)
 	auras.CustomFilter = ns.AuraFilters.PartyAuraFilter -- classic
 	auras.FilterAura = ns.AuraFilters.PartyAuraFilter -- retail
 
-	if (ns:GetModule("UnitFrames").db.global.disableAuraSorting) then
+	if (ns:GetModule("UnitFrames").db.profile.disableAuraSorting) then
 		auras.PreSetPosition = ns.AuraSorts.Alternate -- only in classic
 		auras.SortAuras = ns.AuraSorts.AlternateFuncton -- only in retail
 	else

@@ -85,6 +85,43 @@ local getoption = function(info,option)
 	return module.db.profile[option]
 end
 
+-- A threat alert's sound (NamePlates/Elements.lua, PlayThreatAlertSound): "Default" for the game's
+-- warning, or any sound LibSharedMedia knows. Choosing one plays it. Off while its alert or
+-- "Play the sound" is off.
+local threatAlertSoundOption = function(kind, switch, order)
+	return {
+		name = L["Alert sound"],
+		desc = L["The sound for this alert. Default is the game's own warning; sounds from LibSharedMedia (DBM, BigWigs, WeakAuras or SharedMedia packs) are listed too. Choosing one plays it."],
+		order = order,
+		type = "select", width = "full",
+		values = function()
+			local values = { Default = L["Default"] }
+			local lsm = LibStub("LibSharedMedia-3.0", true)
+			if (lsm) then
+				for _, name in ipairs(lsm:List("sound") or {}) do
+					if (name ~= "Default") then
+						values[name] = name
+					end
+				end
+			end
+			return values
+		end,
+		disabled = function(info)
+			return not getoption(info, switch) or getoption(info, "threatAlertSoundOn") == false
+		end,
+		set = function(info, val)
+			setter(info, val)
+			local module = getmodule()
+			if (module and module.PlayThreatAlertSound) then
+				module:PlayThreatAlertSound(kind, val)
+			end
+		end,
+		get = function(info)
+			return getter(info) or "Default"
+		end
+	}
+end
+
 -- The name size sliders apply to name-only friendly players and name-only friendly NPCs.
 local IsNameOnlyOff = function(info)
 	return not (getoption(info, "hideFriendlyPlayerHealthBar") or getoption(info, "friendlyNPCNameOnly"))
@@ -282,6 +319,26 @@ local GenerateOptions = function()
 						desc = L["A quest mark beside the health bar on units that belong to one of your active quests. A raid marker takes its place when one is set."],
 						order = 1.2,
 						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					-- Elements.lua, QuestProgress_Update: read from the unit's tooltip, shown with the mark.
+					showQuestProgress = {
+						name = L["Show quest progress"],
+						desc = L["Beside the quest mark, how far you are with that unit's objective, such as 3/10. Read from the unit's tooltip, so it is left out where the game keeps that hidden, such as in some instances."],
+						order = 1.21,
+						type = "toggle", width = "full",
+						disabled = function(info) return not getoption(info, "showQuestMarker") end,
+						set = setter,
+						get = getter
+					},
+					-- Elements.lua, QuestMarker_Update: only when the tooltip proves every objective done.
+					hideFinishedQuestMarker = {
+						name = L["Hide the mark when done"],
+						desc = L["Remove the quest mark from units whose objectives you have already finished, such as wolves once you have all ten. When the game does not say, the mark stays."],
+						order = 1.22,
+						type = "toggle", width = "full",
+						disabled = function(info) return not getoption(info, "showQuestMarker") end,
 						set = setter,
 						get = getter
 					},
@@ -838,52 +895,170 @@ local GenerateOptions = function()
 					}
 				}
 			},
-			-- Tank mode (NamePlates/Visibility.lua, GetTankThreatState; Elements.lua, TankThreat_Update).
+			-- Threat roles (NamePlates/Visibility.lua, GetActiveThreatRole, GetTankThreatState,
+			-- GetRoleThreatState; Elements.lua, TankThreat_Update, RoleThreat_Update).
 			tank = {
-				name = L["Tank mode"],
+				name = L["Threat roles"],
 				order = 4.5,
 				type = "group",
 				inline = true,
 				hidden = isdisabled,
 				args = {
 					tankDescription = {
-						name = L["Threat colors for tanks: mobs you hold stay calm, a mob about to be pulled from you warns, a mob someone else has stands out, and a mob another tank holds has its own color. The colors follow Enemy Threat Colors."],
+						name = L["Threat colors and warnings for your role. Tank: mobs you hold stay calm, a mob about to be pulled from you warns, a mob someone else has stands out, and a mob another tank holds has its own color. Healer and DPS: mobs the tank holds stay calm, your threat closing in on the tank's warns, and a mob on you stands out; as a healer, a mob hitting someone who is not a tank has its own color. The colors follow Enemy Threat Colors."],
 						order = 1,
 						type = "description",
 						width = "full"
 					},
-					threatTankMode = {
-						name = L["Tank mode"],
-						desc = L["Automatic: in a group, when you have the Tank role, a tank specialization, or are in Bear Form, Dire Bear Form or Defensive Stance."],
+					threatRole = {
+						name = L["Threat role"],
+						desc = L["Automatic: from your group role, specialization or talents, where the setting below allows it. Bear Form, Dire Bear Form, Defensive Stance and Righteous Fury count as tanking."],
 						order = 2,
 						type = "select", width = "full",
 						values = {
 							auto = L["Automatic"],
-							always = L["Always"],
+							tank = L["Tank"],
+							healer = L["Healer"],
+							dps = L["DPS"],
 							off = L["Off"]
 						},
-						sorting = { "auto", "always", "off" },
-						set = setter,
+						sorting = { "auto", "tank", "healer", "dps", "off" },
+						set = function(info, val)
+							setter(info, val)
+							local module = getmodule()
+							if (module and module.OnThreatRoleContextChanged) then
+								module:OnThreatRoleContextChanged("SETTING")
+							end
+						end,
+						get = function(info)
+							local module = getmodule()
+							return module and module.GetThreatRoleSetting and module:GetThreatRoleSetting() or "auto"
+						end
+					},
+					threatRoleDetected = {
+						name = function()
+							local module = getmodule()
+							local role = module and module.GetDetectedThreatRole and module:GetDetectedThreatRole()
+							local names = { tank = L["Tank"], healer = L["Healer"], dps = L["DPS"] }
+							return string.format(L["Automatic picks for you now: %s"], names[role] or L["DPS"])
+						end,
+						order = 2.5,
+						type = "description",
+						width = "full"
+					},
+					threatRoleScope = {
+						name = L["Works in"],
+						desc = L["Where Automatic picks a role, and where the threat percent and the alerts work. A role picked by hand colors the nameplates everywhere."],
+						order = 2.7,
+						type = "select", width = "full",
+						values = {
+							group = L["Only in a group"],
+							instance = L["Only in dungeons and raids"],
+							always = L["Always, solo too"]
+						},
+						sorting = { "group", "instance", "always" },
+						set = function(info, val)
+							setter(info, val)
+							local module = getmodule()
+							if (module and module.OnThreatRoleContextChanged) then
+								module:OnThreatRoleContextChanged("SETTING")
+							end
+						end,
 						get = function(info)
 							local value = getter(info)
-							if (value == "always" or value == "off") then
+							if (value == "instance" or value == "always") then
 								return value
 							end
-							return "auto"
+							return "group"
 						end
 					},
 					tankTargetNames = {
 						name = L["Show who loose mobs are attacking"],
-						desc = L["In tank mode, a mob you do not hold shows the name of the player it is attacking under its health bar."],
+						desc = L["In tank and healer mode, a mob you do not hold, or one hitting someone who is not a tank, shows the name of the player it is attacking under its health bar."],
 						order = 3,
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter
 					},
+					threatPercentPlates = {
+						name = L["Show Threat Percent"],
+						desc = L["Shows a threat percent inside each mob's health bar. Healer and DPS: your own threat on it. Tank: on a mob you hold, the highest threat of anyone else in your group, so you see who is about to pull it; on a mob you lost, your own, to win it back. At 100% it changes hands."],
+						order = 5,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					threatWarnPercent = {
+						name = L["Threat warning"],
+						desc = L["In healer and DPS mode, a mob gets the warning color once your threat on it reaches this share of what pulls it. 100% is where you pull it."],
+						order = 6,
+						type = "range", width = "full",
+						min = 50, max = 100, step = 5,
+						set = setter,
+						get = getter
+					},
+					-- The three alerts, each with its own sound (NamePlates/Elements.lua, FireThreatAlert).
 					tankLostAggroSound = {
-						name = L["Sound when you lose a mob"],
-						desc = L["In tank mode, plays a warning sound when a mob you held goes to someone who is not a tank."],
-						order = 4,
+						name = L["Alert when you lose a mob"],
+						desc = L["In tank mode, alerts you when a mob you held goes to someone who is not a tank."],
+						order = 10,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					tankLostAggroSoundFile = threatAlertSoundOption("lost", "tankLostAggroSound", 10.5),
+					threatWarnSound = {
+						name = L["Alert when your threat gets close"],
+						desc = L["In healer and DPS mode, alerts you when your threat on a mob reaches the warning or you are about to pull it."],
+						order = 11,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					threatWarnSoundFile = threatAlertSoundOption("close", "threatWarnSound", 11.5),
+					threatAggroSound = {
+						name = L["Alert when a mob turns on you"],
+						desc = L["In healer and DPS mode, alerts you when a mob starts attacking you."],
+						order = 12,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					threatAggroSoundFile = threatAlertSoundOption("aggro", "threatAggroSound", 12.5),
+					-- What every alert does.
+					threatAlertEffects = {
+						name = L["What an alert does"],
+						order = 20,
+						type = "description", fontSize = "medium", width = "full"
+					},
+					threatAlertSoundOn = {
+						name = L["Play the sound"],
+						desc = L["Alerts play the sound chosen for them."],
+						order = 21,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					threatAlertFlash = {
+						name = L["Flash the screen edge"],
+						desc = L["Alerts flash a red edge around the screen, like the game's low health warning."],
+						order = 22,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					threatAlertPulse = {
+						name = L["Pulse the nameplate"],
+						desc = L["Alerts make the mob's nameplate glow for a moment in the alert's color."],
+						order = 23,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					threatAlertText = {
+						name = L["Show a text warning"],
+						desc = L["Alerts show a short warning in the middle of the screen, with the mob's name, or for a lost mob the name of who it went to."],
+						order = 24,
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter

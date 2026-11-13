@@ -10,8 +10,8 @@ ns.ThemeEffects = Effects
 
 -- In dropdown order.
 local THEMES = { "azerite", "legacy", "hunter", "paladin", "mage" }
-local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage", druid = "druid", warrior = "none", rogue = "none", shaman = "none" }
-local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none", druid = "druid", warrior = "none", rogue = "none", shaman = "none" }
+local THEME_CRYSTAL = { azerite = "none", hunter = "none", paladin = "paladin", mage = "mage", druid = "druid", warrior = "none", rogue = "none", shaman = "none", deathknight = "rime", priest = "sanctum", warlock = "affliction" }
+local THEME_ORB = { azerite = "none", hunter = "hunter", paladin = "paladin", mage = "none", druid = "druid", warrior = "none", rogue = "none", shaman = "none", deathknight = "rime", priest = "sanctum", warlock = "affliction" }
 local CRYSTAL_EFFECTS = { "none", "paladin", "hunter", "mage", "druid", "moonvein", "dreamsap", "wildheart",
 	"forge", "valarjar", "battleheart", "venom", "shadow", "nightblood", "tides", "magma", "storm" }
 local ORB_EFFECTS = { "none", "paladin", "hunter", "mage", "druid", "moonwell", "moonvein", "dreamsap", "wildheart",
@@ -51,6 +51,9 @@ Effects.GetThemes = function(self)
 	if (ns.WarriorTheme) then list[#list + 1] = "warrior" end
 	if (ns.RogueTheme) then list[#list + 1] = "rogue" end
 	if (ns.ShamanTheme) then list[#list + 1] = "shaman" end
+	if (ns.DeathKnightTheme) then list[#list + 1] = "deathknight" end
+	if (ns.PriestTheme) then list[#list + 1] = "priest" end
+	if (ns.WarlockTheme) then list[#list + 1] = "warlock" end
 	-- Legacy needs its module; it writes the same switch /go does (Core/LegacyHUD.lua).
 	if (not ns.LegacyHUD) then
 		for index, key in ipairs(list) do
@@ -72,6 +75,9 @@ Effects.GetTheme = function(self)
 	if (ns.WarriorTheme and ns.WarriorTheme:IsActive()) then return "warrior" end
 	if (ns.RogueTheme and ns.RogueTheme:IsActive()) then return "rogue" end
 	if (ns.ShamanTheme and ns.ShamanTheme:IsActive()) then return "shaman" end
+	if (ns.DeathKnightTheme and ns.DeathKnightTheme:IsActive()) then return "deathknight" end
+	if (ns.PriestTheme and ns.PriestTheme:IsActive()) then return "priest" end
+	if (ns.WarlockTheme and ns.WarlockTheme:IsActive()) then return "warlock" end
 	return "azerite"
 end
 
@@ -85,6 +91,9 @@ Effects.NeedsReload = function(self, theme)
 	if (ns.WarriorTheme and (ns.WarriorTheme.loadedActive or false) ~= (theme == "warrior")) then return true end
 	if (ns.RogueTheme and (ns.RogueTheme.loadedActive or false) ~= (theme == "rogue")) then return true end
 	if (ns.ShamanTheme and (ns.ShamanTheme.loadedActive or false) ~= (theme == "shaman")) then return true end
+	if (ns.DeathKnightTheme and (ns.DeathKnightTheme.loadedActive or false) ~= (theme == "deathknight")) then return true end
+	if (ns.PriestTheme and (ns.PriestTheme.loadedActive or false) ~= (theme == "priest")) then return true end
+	if (ns.WarlockTheme and (ns.WarlockTheme.loadedActive or false) ~= (theme == "warlock")) then return true end
 	return false
 end
 
@@ -167,6 +176,9 @@ Effects.SetTheme = function(self, theme)
 	char.warriorPreview = theme == "warrior"
 	char.roguePreview = theme == "rogue"
 	char.shamanPreview = theme == "shaman"
+	char.deathknightPreview = theme == "deathknight"
+	char.priestPreview = theme == "priest"
+	char.warlockPreview = theme == "warlock"
 	if (self:NeedsReload(theme)) then
 		local reload = C_UI and C_UI.Reload or _G.ReloadUI
 		if (type(reload) == "function") then reload() end
@@ -214,7 +226,10 @@ local CapsInFront = function()
 		or (ns.DruidTheme and ns.DruidTheme:IsActive())
 		or (ns.WarriorTheme and ns.WarriorTheme:IsActive())
 		or (ns.RogueTheme and ns.RogueTheme:IsActive())
-		or (ns.ShamanTheme and ns.ShamanTheme:IsActive()) or false
+		or (ns.ShamanTheme and ns.ShamanTheme:IsActive())
+		or (ns.DeathKnightTheme and ns.DeathKnightTheme:IsActive())
+		or (ns.PriestTheme and ns.PriestTheme:IsActive())
+		or (ns.WarlockTheme and ns.WarlockTheme:IsActive()) or false
 end
 
 local CapLevel = function(element)
@@ -246,7 +261,8 @@ local KeepCapLevel = function(element, texture, frame)
 	for _, source in ipairs({ element, owner.Health, owner }) do
 		hooksecurefunc(source, "SetFrameLevel", sync)
 	end
-	if (ns.ShamanTheme and ns.ShamanTheme:IsActive()) then
+	if ((ns.ShamanTheme and ns.ShamanTheme:IsActive()) or (ns.DeathKnightTheme and ns.DeathKnightTheme:IsActive())
+		or (ns.PriestTheme and ns.PriestTheme:IsActive()) or (ns.WarlockTheme and ns.WarlockTheme:IsActive())) then
 		-- Live Shaman: native propagation leaves cap=4 / health=7 / rails=8
 		-- without invoking any hooked Lua setter. Reconcile the visible case
 		-- after that propagation too; hidden resource parents stop OnUpdate.
@@ -359,6 +375,9 @@ Effects.StyleCrystal = function(self, power, texturePath, coords, casePath, allo
 	if (rogue and rogue.StyleCrystal) then rogue:StyleCrystal(power, casePath, useMage, texturePath) end
 	LiftCap(power, power.Case)
 	LiftValueText(power)
+	if (ns.DeathKnightTheme) then ns.DeathKnightTheme:StyleCrystal(power) end
+	if (ns.PriestTheme) then ns.PriestTheme:StyleCrystal(power) end
+	if (ns.WarlockTheme) then ns.WarlockTheme:StyleCrystal(power) end
 end
 
 --- Called by Player.lua before it sets the orb's fill. True when an effect
@@ -366,6 +385,9 @@ end
 Effects.StyleOrb = function(self, orb, flowingMana)
 	LiftCap(orb, orb.Case)
 	LiftValueText(orb)
+	if (ns.DeathKnightTheme) then ns.DeathKnightTheme:StyleOrb(orb) end
+	if (ns.PriestTheme) then ns.PriestTheme:StyleOrb(orb) end
+	if (ns.WarlockTheme) then ns.WarlockTheme:StyleOrb(orb) end
 	local effect = self:GetOrbEffect()
 	local materials = ns.ClassResourceEffects
 	local useMaterial = materials and materials:GetInfo(effect)

@@ -58,6 +58,7 @@ local NamePlate_PostUpdate = NP.NamePlate_PostUpdate
 local NamePlate_OnHide = NP.NamePlate_OnHide
 local NamePlate_OnEvent = NP.NamePlate_OnEvent
 local TankTarget_Update = NP.TankTarget_Update
+local ThreatPercent_Update = NP.ThreatPercent_Update
 
 local TankTarget_OnEvent = function(self, event, unit)
 	if (issecretvalue(unit)) then
@@ -293,8 +294,35 @@ local style = function(self, unit, id)
 	end
 	tankTarget:Hide()
 	self.TankTarget = tankTarget
-	castbar:HookScript("OnShow", function(element) TankTarget_Update(element.__owner or self) end)
-	castbar:HookScript("OnHide", function(element) TankTarget_Update(element.__owner or self) end)
+
+	-- Healer and DPS mode: your threat inside the bar's right end (Elements.lua, ThreatPercent_Update).
+	-- It gives way to the castbar as the target name does.
+	local threatPercent = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
+	local tpPoint, tpRelative, tpX, tpY = unpack(db.ThreatPercentPosition or { "RIGHT", "RIGHT", -6, 0 })
+	threatPercent:SetPoint(tpPoint, health, tpRelative, tpX, tpY)
+	threatPercent:SetFontObject(db.ThreatPercentFont or db.TankTargetFont or db.CastBarTargetFont)
+	threatPercent:SetJustifyH("RIGHT")
+	threatPercent:Hide()
+	self.ThreatPercent = threatPercent
+
+	-- Threat alerts: the plate's pulse (Elements.lua, PulsePlate), the castbar glows' art behind the
+	-- health bar, tinted per alert and faded in and out.
+	local pulse = health:CreateTexture(nil, "BACKGROUND", nil, -4)
+	pulse:SetPoint("CENTER", health, "CENTER", 0, 0)
+	pulse:SetSize(unpack(db.ThreatPulseSize or db.CastBarGlowSize or { 98, 28 }))
+	pulse:SetTexture(db.CastBarGlowTexture or db.ThreatTexture)
+	pulse:SetAlpha(0)
+	pulse:Hide()
+	self.ThreatPulse = pulse
+
+	castbar:HookScript("OnShow", function(element)
+		TankTarget_Update(element.__owner or self)
+		ThreatPercent_Update(element.__owner or self)
+	end)
+	castbar:HookScript("OnHide", function(element)
+		TankTarget_Update(element.__owner or self)
+		ThreatPercent_Update(element.__owner or self)
+	end)
 
 	-- Power
 	--------------------------------------------
@@ -395,6 +423,22 @@ local style = function(self, unit, id)
 	questMarker:Hide()
 
 	self.QuestMarker = questMarker
+
+	-- Quest progress ("3/10") left of the mark (Elements.lua, QuestProgress_Update); shown only with it.
+	local questProgress = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
+	local qpPoint, qpRelative, qpX, qpY = unpack(db.QuestProgressPosition or { "RIGHT", "LEFT", 0, 0 })
+	questProgress:SetPoint(qpPoint, questMarker, qpRelative, qpX, qpY)
+	questProgress:SetFontObject(db.QuestProgressFont or db.CastBarTargetFont or db.CastBarNameFont)
+	questProgress:SetJustifyH("RIGHT")
+	if (questProgress.SetWordWrap) then
+		questProgress:SetWordWrap(false)
+	end
+	if (db.QuestProgressColor) then
+		questProgress:SetTextColor(unpack(db.QuestProgressColor))
+	end
+	questProgress:Hide()
+	self.QuestProgress = questProgress
+
 	self.RaidTargetIndicator.PostUpdate = function(element)
 		QuestMarker_Update(element.__owner)
 	end
@@ -444,7 +488,7 @@ local style = function(self, unit, id)
 	auras.CreateButton = ns.AuraStyles.CreateSmallButton
 	auras.PostUpdateButton = ns.AuraStyles.NameplatePostUpdateButton
 
-	if (ns:GetModule("UnitFrames").db.global.disableAuraSorting) then
+	if (ns:GetModule("UnitFrames").db.profile.disableAuraSorting) then
 		auras.SortAuras = ns.AuraSorts.AlternateFuncton
 	else
 		auras.SortAuras = ns.AuraSorts.DefaultFunction

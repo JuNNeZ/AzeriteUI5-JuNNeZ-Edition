@@ -33,7 +33,7 @@ local Durability = ns:NewModule("Durability", ns.MovableModulePrototype, "LibMor
 -- Lua API
 local pairs, unpack = pairs, unpack
 
--- GLOBALS: C_PaperDollInfo, DurabilityFrame, GetInventoryAlertStatus, UIParent
+-- GLOBALS: C_PaperDollInfo, DurabilityFrame, GetInventoryAlertStatus, UIParent, C_GameRules, Enum
 
 -- Addon API
 local UIHider = ns.Hider
@@ -273,7 +273,12 @@ Durability.UpdateWidget = function(self, forced)
 	local noVehicleSeat = not VehicleSeatIndicator or not VehicleSeatIndicator:IsShown()
 	local noArenaEnemies = not ArenaEnemyFramesContainer or not ArenaEnemyFramesContainer:IsShown()
 
-	if (numAlerts > 0 and noVehicleSeat and noArenaEnemies) or (forced) then
+	-- Blizzard's DurabilityFrameMixin:SetAlerts shows nothing while repairs are
+	-- disabled by a game rule (Retail 12.1.5 and Forever). FixLog 2026-11-13.
+	local repairDisabled = C_GameRules and C_GameRules.IsGameRuleActive and Enum and Enum.GameRule
+		and Enum.GameRule.RepairArmorDisabled and C_GameRules.IsGameRuleActive(Enum.GameRule.RepairArmorDisabled)
+
+	if (numAlerts > 0 and noVehicleSeat and noArenaEnemies and not repairDisabled) or (forced) then
 		frame:Show()
 	else
 		frame:Hide()
@@ -293,6 +298,13 @@ Durability.OnEnable = function(self)
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEvent")
 	self:RegisterEvent("UPDATE_INVENTORY_ALERTS", "OnEvent")
+
+	-- The vehicle seat indicator calls DurabilityFrame:SetAlerts when it loads and
+	-- unloads, and no event fires then; without this, a warning hidden by a vehicle
+	-- stayed hidden after leaving it (FixLog 2026-11-13). A post-hook only reads.
+	if (DurabilityFrame and type(DurabilityFrame.SetAlerts) == "function" and not self:IsHooked(DurabilityFrame, "SetAlerts")) then
+		self:SecureHook(DurabilityFrame, "SetAlerts", function() self:UpdateWidget() end)
+	end
 
 	ns.MovableModulePrototype.OnEnable(self)
 end

@@ -66,6 +66,7 @@ local defaults = { profile = ns:Merge({
 	enableZone = true,
 	enableResting = true,
 	enableGreatVault = true,
+	enableLayer = true, -- Forever only: the layer number after the zone name (Info.ReadLayer)
 
 	useHalfClock = GetCurrentRegionName() == "US",
 	useServerTime = false,
@@ -531,7 +532,126 @@ Info.UpdateZone = function(self)
 	else
 		zoneName:SetTextColor(Colors.normal[1], Colors.normal[2], Colors.normal[3], a)
 	end
-	zoneName:SetText(minimapZoneName)
+	local layer = self:GetShownLayer()
+	if (layer) then
+		zoneName:SetFormattedText("%s |cff888888%s|r", minimapZoneName, string_format(L["Layer %d"], layer))
+	else
+		zoneName:SetText(minimapZoneName)
+	end
+end
+
+-- Layer
+--------------------------------------------
+-- Forever splits a busy zone into layers. The layer is the zone UID field of every creature GUID
+-- (Creature-0-server-instance-ZONEUID-npc-spawn), read from units the game already shows you:
+-- mouseover, target and nameplates, outside combat and instances. Players, pets, companions and
+-- units in another phase say nothing about your layer and are skipped. One unit can mislead (a
+-- straggler from the next zone, one seen around a loading screen), so a new value is taken only
+-- when two different creatures in a row show it. Forgotten on every loading screen and zone
+-- change. The technique and the two-in-a-row rule come from Wowdee's Layer.lua (MIT; FixLog
+-- 2026-11-07). Read-only: nothing is sent, nothing changes your layer.
+Info.LayerFromGUID = function(guid)
+	if (type(guid) ~= "string" or (issecretvalue and issecretvalue(guid))) then
+		return nil
+	end
+	local id = tonumber(guid:match("^Creature%-[^-]*%-[^-]*%-[^-]*%-([^-]*)%-"))
+	if (not id or id == 0) then
+		return nil
+	end
+	return id
+end
+
+Info.IsLayerAvailable = function(self)
+	return not ns.IsRetailContent and self.db and self.db.profile.enableLayer and true or false
+end
+
+Info.GetShownLayer = function(self)
+	if (not self:IsLayerAvailable() or (IsInInstance and IsInInstance())) then
+		return nil
+	end
+	return self.layer
+end
+
+Info.ForgetLayer = function(self)
+	self.layer, self.layerCandidate, self.layerCandidateGUID = nil, nil, nil
+	self:UpdateZone()
+end
+
+local IsSafeTrue = function(value)
+	if (issecretvalue and issecretvalue(value)) then
+		return false
+	end
+	return value and true or false
+end
+
+local IsOtherPhase = function(unit)
+	if (not UnitPhaseReason) then
+		return false
+	end
+	local reason = UnitPhaseReason(unit)
+	if (issecretvalue and issecretvalue(reason)) then
+		return true -- unknown: do not trust this unit
+	end
+	return reason ~= nil
+end
+
+-- True, or a secret answer: either way this unit is not trusted for the layer.
+local IsTrueOrUnknown = function(func, unit)
+	if (type(func) ~= "function") then
+		return false
+	end
+	local value = func(unit)
+	if (issecretvalue and issecretvalue(value)) then
+		return true
+	end
+	return value and true or false
+end
+
+local IsLayerlessUnit = function(unit)
+	return IsOtherPhase(unit)
+		or IsTrueOrUnknown(UnitIsPlayer, unit)
+		or IsTrueOrUnknown(UnitPlayerControlled, unit)
+		or IsTrueOrUnknown(UnitIsOtherPlayersPet, unit)
+		or IsTrueOrUnknown(UnitIsBattlePetCompanion, unit)
+end
+
+Info.ReadLayer = function(self, unit)
+	if (not self:IsLayerAvailable() or type(unit) ~= "string") then
+		return
+	end
+	if (InCombatLockdown() or (IsInInstance and IsInInstance())) then
+		return
+	end
+	if (not UnitExists or not IsSafeTrue(UnitExists(unit)) or IsLayerlessUnit(unit)) then
+		return
+	end
+	local guid = UnitGUID and UnitGUID(unit)
+	local id = Info.LayerFromGUID(guid)
+	if (not id) then
+		return
+	end
+	if (id == self.layer) then
+		self.layerCandidate, self.layerCandidateGUID = nil, nil -- a stray never adds up across the current value
+	elseif (id == self.layerCandidate) then
+		if (guid ~= self.layerCandidateGUID) then -- the same creature read twice does not count twice
+			self.layer, self.layerCandidate, self.layerCandidateGUID = id, nil, nil
+			self:UpdateZone()
+		end
+	else
+		self.layerCandidate, self.layerCandidateGUID = id, guid
+	end
+end
+
+Info.OnLayerEvent = function(self, event, unit)
+	if (event == "UPDATE_MOUSEOVER_UNIT") then
+		self:ReadLayer("mouseover")
+	elseif (event == "PLAYER_TARGET_CHANGED") then
+		self:ReadLayer("target")
+	elseif (event == "NAME_PLATE_UNIT_ADDED") then
+		self:ReadLayer(unit)
+	else -- PLAYER_ENTERING_WORLD, ZONE_CHANGED_NEW_AREA: layers are per zone and a loading screen can move you
+		self:ForgetLayer()
+	end
 end
 
 Info.UpdateGreatVault = function(self)
@@ -586,6 +706,14 @@ Info.OnEnable = function(self)
 	self:RegisterEvent("ZONE_CHANGED", "UpdateZone")
 	self:RegisterEvent("ZONE_CHANGED_INDOORS", "UpdateZone")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "UpdateZone")
+
+	-- Forever layers (Info.ReadLayer). Registered whether or not the switch is on; ReadLayer asks it.
+	if (not ns.IsRetailContent) then
+		for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA", "UPDATE_MOUSEOVER_UNIT",
+			"PLAYER_TARGET_CHANGED", "NAME_PLATE_UNIT_ADDED" }) do
+			self:RegisterEvent(event, "OnLayerEvent")
+		end
+	end
 
 	if (ns.IsRetailContent and C_WeeklyRewards) then
 		self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateGreatVault")

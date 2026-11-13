@@ -1,0 +1,3141 @@
+{
+  "schema": 1,
+  "theme": "Warlock",
+  "installationMode": "user-authorized complete WIP preview",
+  "authorization": "Fint, g\u00f8r temaerne f\u00e6rdige; approved concepts and Druid maximum retained",
+  "productionAccepted": false,
+  "maintainerFullPackVisualApproved": false,
+  "liveRetailValidated": false,
+  "liveForeverValidated": false,
+  "assets": {
+    "hp_cap_case-over": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_cap_case.tga",
+          "sha256": "ca9c395774bdf6475dd3678554eebe2ce172325cfd72dbc972b810a33b60649f",
+          "canvas": [
+            1024,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/hp_cap_case-repaint-v1.png",
+            "sha256": "494aae3f17725e3064a046c241660675a91892288e26873c7c09cbfa090c808f"
+          },
+          "transform": {
+            "crop": [
+              437,
+              220,
+              1724,
+              493
+            ],
+            "scale": 0.47619047619047616,
+            "offset": [
+              200,
+              58
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_cap_case-over.tga",
+        "sha256": "ca9c395774bdf6475dd3678554eebe2ce172325cfd72dbc972b810a33b60649f"
+      },
+      "path": "Assets/Warlock/hp_cap_case-over.tga",
+      "sha256": "ca9c395774bdf6475dd3678554eebe2ce172325cfd72dbc972b810a33b60649f",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_cap_case.tga",
+          "sha256": "ca9c395774bdf6475dd3678554eebe2ce172325cfd72dbc972b810a33b60649f",
+          "canvas": [
+            1024,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/hp_cap_case-repaint-v1.png",
+            "sha256": "494aae3f17725e3064a046c241660675a91892288e26873c7c09cbfa090c808f"
+          },
+          "transform": {
+            "crop": [
+              437,
+              220,
+              1724,
+              493
+            ],
+            "scale": 0.47619047619047616,
+            "offset": [
+              200,
+              58
+            ]
+          }
+        },
+        "construction": "native-functional-recess",
+        "native": {
+          "path": "Assets/hp_cap_case.tga",
+          "sha256": "855e7a472da166b7ca93242e3d420453920ff728b912def5f11a6bf2ae2c1bda"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_cap_case-clearance-e73c58ea6372.png",
+          "sha256": "d101703f966f03ee023aea55ac859c052443c9f251db843f28192cb40615d755",
+          "native": {
+            "path": "Assets/hp_cap_case.tga",
+            "sha256": "855e7a472da166b7ca93242e3d420453920ff728b912def5f11a6bf2ae2c1bda"
+          },
+          "bounds": [
+            236,
+            99,
+            787,
+            154
+          ]
+        },
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_cap_case.tga",
+        "sha256": "17dc2f321c1a8e958c9e10f299234c728245936a9a75b6da9ec16ef9039b1903"
+      },
+      "path": "Assets/Warlock/hp_cap_case.tga",
+      "sha256": "17dc2f321c1a8e958c9e10f299234c728245936a9a75b6da9ec16ef9039b1903",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-over": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_mid_case.tga",
+          "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b",
+          "canvas": [
+            1024,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/hp_mid_case-repaint-v1.png",
+            "sha256": "d61977b2fd1098e461180a3c4ed0aebefe6cca85dd0b5be138ea9127124ff32f"
+          },
+          "transform": {
+            "crop": [
+              411,
+              239,
+              1732,
+              477
+            ],
+            "scale": 0.47478991596638653,
+            "offset": [
+              189,
+              69
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_mid_case-over.tga",
+        "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b"
+      },
+      "path": "Assets/Warlock/hp_mid_case-over.tga",
+      "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_mid_case.tga",
+          "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b",
+          "canvas": [
+            1024,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/hp_mid_case-repaint-v1.png",
+            "sha256": "d61977b2fd1098e461180a3c4ed0aebefe6cca85dd0b5be138ea9127124ff32f"
+          },
+          "transform": {
+            "crop": [
+              411,
+              239,
+              1732,
+              477
+            ],
+            "scale": 0.47478991596638653,
+            "offset": [
+              189,
+              69
+            ]
+          }
+        },
+        "construction": "native-functional-recess",
+        "native": {
+          "path": "Assets/hp_mid_case.tga",
+          "sha256": "28425d8f6c1d6a08f878df9a234a085fc7846fadef22e430ada9f985c746f240"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_mid_case-clearance-6d55dec0616d.png",
+          "sha256": "43641ff80b95d93335cedf1ebacca6e20575218a0d13e11eee9f2fd43920e228",
+          "native": {
+            "path": "Assets/hp_mid_case.tga",
+            "sha256": "28425d8f6c1d6a08f878df9a234a085fc7846fadef22e430ada9f985c746f240"
+          },
+          "bounds": [
+            236,
+            103,
+            787,
+            154
+          ]
+        },
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_mid_case.tga",
+        "sha256": "8499dc043a1426001b52e3e8cb4ec41468dca1e25209ab85197c76ca818705be"
+      },
+      "path": "Assets/Warlock/hp_mid_case.tga",
+      "sha256": "8499dc043a1426001b52e3e8cb4ec41468dca1e25209ab85197c76ca818705be",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case-over": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_low_case.tga",
+          "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b",
+          "canvas": [
+            1024,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/hp_mid_case-repaint-v1.png",
+            "sha256": "d61977b2fd1098e461180a3c4ed0aebefe6cca85dd0b5be138ea9127124ff32f"
+          },
+          "transform": {
+            "crop": [
+              411,
+              239,
+              1732,
+              477
+            ],
+            "scale": 0.47478991596638653,
+            "offset": [
+              189,
+              69
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_low_case-over.tga",
+        "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b"
+      },
+      "path": "Assets/Warlock/hp_low_case-over.tga",
+      "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_low_case.tga",
+          "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b",
+          "canvas": [
+            1024,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/hp_mid_case-repaint-v1.png",
+            "sha256": "d61977b2fd1098e461180a3c4ed0aebefe6cca85dd0b5be138ea9127124ff32f"
+          },
+          "transform": {
+            "crop": [
+              411,
+              239,
+              1732,
+              477
+            ],
+            "scale": 0.47478991596638653,
+            "offset": [
+              189,
+              69
+            ]
+          }
+        },
+        "construction": "native-functional-recess",
+        "native": {
+          "path": "Assets/hp_low_case.tga",
+          "sha256": "b683386a5d7b9328a7d5a2cad8d0cf2450627024b67e82f19ff389222baa50ef"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_low_case-clearance-6d55dec0616d.png",
+          "sha256": "43641ff80b95d93335cedf1ebacca6e20575218a0d13e11eee9f2fd43920e228",
+          "native": {
+            "path": "Assets/hp_low_case.tga",
+            "sha256": "b683386a5d7b9328a7d5a2cad8d0cf2450627024b67e82f19ff389222baa50ef"
+          },
+          "bounds": [
+            236,
+            103,
+            787,
+            154
+          ]
+        },
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_low_case.tga",
+        "sha256": "914b058db9e7fb39fe16963a17f737157ea0deee6af8f591b828f38e2dd88359"
+      },
+      "path": "Assets/Warlock/hp_low_case.tga",
+      "sha256": "914b058db9e7fb39fe16963a17f737157ea0deee6af8f591b828f38e2dd88359",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case-over": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_boss_case.tga",
+          "sha256": "b341dee0a8a50d883842fae2a332d2bbc09cc5e0d39674af2c7c53ea4cb5cafc",
+          "canvas": [
+            1024,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/hp_boss_case-repaint-v1.png",
+            "sha256": "05e9099cb2105bec27f69b8541b8b069d81215fab5c27fb201fe087ccf9b88a6"
+          },
+          "transform": {
+            "crop": [
+              122,
+              222,
+              1986,
+              494
+            ],
+            "scale": 0.4654411764705882,
+            "offset": [
+              67,
+              63
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_boss_case-over.tga",
+        "sha256": "b341dee0a8a50d883842fae2a332d2bbc09cc5e0d39674af2c7c53ea4cb5cafc"
+      },
+      "path": "Assets/Warlock/hp_boss_case-over.tga",
+      "sha256": "b341dee0a8a50d883842fae2a332d2bbc09cc5e0d39674af2c7c53ea4cb5cafc",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_boss_case.tga",
+          "sha256": "b341dee0a8a50d883842fae2a332d2bbc09cc5e0d39674af2c7c53ea4cb5cafc",
+          "canvas": [
+            1024,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/hp_boss_case-repaint-v1.png",
+            "sha256": "05e9099cb2105bec27f69b8541b8b069d81215fab5c27fb201fe087ccf9b88a6"
+          },
+          "transform": {
+            "crop": [
+              122,
+              222,
+              1986,
+              494
+            ],
+            "scale": 0.4654411764705882,
+            "offset": [
+              67,
+              63
+            ]
+          }
+        },
+        "construction": "native-functional-recess",
+        "native": {
+          "path": "Assets/hp_boss_case.tga",
+          "sha256": "83a55223de3fd2ef54e318dc5a270dd3da4515a5b5b8e34c40ecd43bce57ab82"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_boss_case-clearance-b43f2fd91201.png",
+          "sha256": "070d5e3b03bace2d3b0d7b00f98af96a70234daf8c1a3bb33e95ad49c156b32c",
+          "native": {
+            "path": "Assets/hp_boss_case.tga",
+            "sha256": "83a55223de3fd2ef54e318dc5a270dd3da4515a5b5b8e34c40ecd43bce57ab82"
+          },
+          "bounds": [
+            120,
+            102,
+            904,
+            155
+          ]
+        },
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_boss_case.tga",
+        "sha256": "b6489567ff58742c47661ceb42837d9a4ab5869a17e66ce69f1622661cda9ee6"
+      },
+      "path": "Assets/Warlock/hp_boss_case.tga",
+      "sha256": "b6489567ff58742c47661ceb42837d9a4ab5869a17e66ce69f1622661cda9ee6",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_critter_case": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_critter_case.tga",
+          "sha256": "a5851d9a664ebe81ad39ee75eefc19fde83adc8d656f37a049ed19cda5123c04",
+          "canvas": [
+            128,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/hp_critter_case-v2.png",
+            "sha256": "4babe80bb7172b10ef2bd645a761fa490941bbea7c4e88d90248b5baa08e1378"
+          },
+          "transform": {
+            "crop": [
+              170,
+              228,
+              1086,
+              1023
+            ],
+            "scale": 0.10378787878787879,
+            "offset": [
+              17,
+              21
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/hp_critter_case.tga",
+          "sha256": "4c7fedab2876af2a34a4427649baefb5982beb8e8ffd3f9ea79588423cd3d7f4"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_critter_case-clearance-6cb2b9a6bd54.png",
+          "sha256": "6845de7263e3434db7683e7d54c6e25b18391943e2cee2f35d3b2970ae90f7ca",
+          "native": {
+            "path": "Assets/hp_critter_case.tga",
+            "sha256": "4c7fedab2876af2a34a4427649baefb5982beb8e8ffd3f9ea79588423cd3d7f4"
+          },
+          "bounds": [
+            40,
+            42,
+            89,
+            87
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_critter_case.tga",
+        "sha256": "166bfd0072f1d0ab05185dd696e012ea784959aed377502553168da170523f90"
+      },
+      "path": "Assets/Warlock/hp_critter_case.tga",
+      "sha256": "166bfd0072f1d0ab05185dd696e012ea784959aed377502553168da170523f90",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_critter_case_hi": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/hp_critter_case_hi.tga",
+          "sha256": "0c29b173697f1fe88663050873c0c8415293a4a944058e96ccc69adcef0d4988",
+          "canvas": [
+            128,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/hp_critter_case_hi.png",
+            "sha256": "0d969d9805ccdefebd69511b944d7c8f6b271c6962a0f9754fd50789d90186c2"
+          },
+          "transform": {
+            "crop": [
+              156,
+              182,
+              1123,
+              1062
+            ],
+            "scale": 0.10808656036446469,
+            "offset": [
+              14,
+              17
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/hp_critter_case_hi.tga",
+          "sha256": "40cca00420a82bad9c21db85beabf7abd6c558a421f4c5bedbfeaf84e28bfe3b"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_critter_case_hi-clearance-6cb2b9a6bd54.png",
+          "sha256": "6845de7263e3434db7683e7d54c6e25b18391943e2cee2f35d3b2970ae90f7ca",
+          "native": {
+            "path": "Assets/hp_critter_case_hi.tga",
+            "sha256": "40cca00420a82bad9c21db85beabf7abd6c558a421f4c5bedbfeaf84e28bfe3b"
+          },
+          "bounds": [
+            40,
+            42,
+            89,
+            87
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/hp_critter_case_hi.tga",
+        "sha256": "71d53e580823492a5606b4e2f51112a1b0eb9517a1e0eaf94301197d4c7a6f46"
+      },
+      "path": "Assets/Warlock/hp_critter_case_hi.tga",
+      "sha256": "71d53e580823492a5606b4e2f51112a1b0eb9517a1e0eaf94301197d4c7a6f46",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "cast_back-over": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/cast_back.tga",
+          "sha256": "025eeced5fe1052655f00e7eba3545f45043506986bafe47bbfe070666339dfd",
+          "canvas": [
+            256,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/cast_back-v2.png",
+            "sha256": "42efe175b5188f487caeee67d0ca3de451219cd848e09663ae65afa1fd89ed9e"
+          },
+          "transform": {
+            "crop": [
+              225,
+              246,
+              1508,
+              591
+            ],
+            "scale": 0.14314868804664724,
+            "offset": [
+              33,
+              36
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/cast_back-over.tga",
+        "sha256": "025eeced5fe1052655f00e7eba3545f45043506986bafe47bbfe070666339dfd"
+      },
+      "path": "Assets/Warlock/cast_back-over.tga",
+      "sha256": "025eeced5fe1052655f00e7eba3545f45043506986bafe47bbfe070666339dfd",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/cast_back.tga",
+          "sha256": "025eeced5fe1052655f00e7eba3545f45043506986bafe47bbfe070666339dfd",
+          "canvas": [
+            256,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/cast_back-v2.png",
+            "sha256": "42efe175b5188f487caeee67d0ca3de451219cd848e09663ae65afa1fd89ed9e"
+          },
+          "transform": {
+            "crop": [
+              225,
+              246,
+              1508,
+              591
+            ],
+            "scale": 0.14314868804664724,
+            "offset": [
+              33,
+              36
+            ]
+          }
+        },
+        "construction": "native-functional-recess",
+        "native": {
+          "path": "Assets/cast_back.tga",
+          "sha256": "2cade7ed198ec804bffc5e5a17e93dc1cc1025e82faa44b99993308a4c89e36d"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/cast_back-clearance-46ca54dd1ece.png",
+          "sha256": "180b41be7a1213013e6c228a5acbe570323d3068bdeb6d49c04c1c8f0d9c1be5",
+          "native": {
+            "path": "Assets/cast_back.tga",
+            "sha256": "2cade7ed198ec804bffc5e5a17e93dc1cc1025e82faa44b99993308a4c89e36d"
+          },
+          "bounds": [
+            52,
+            51,
+            201,
+            71
+          ]
+        },
+        "path": "Assets_Draft/Warlock/FullSet/Composed/cast_back.tga",
+        "sha256": "ebb101736aeeb35dee16e3544083d0a27c5fcb3e54d6980c9f24e27ac18051a5"
+      },
+      "path": "Assets/Warlock/cast_back.tga",
+      "sha256": "ebb101736aeeb35dee16e3544083d0a27c5fcb3e54d6980c9f24e27ac18051a5",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_spiked-over": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/cast_back_spiked.tga",
+          "sha256": "a664c8d782774d77b3d239f97a289f8d1f366619bb437653dbdac256d834e35f",
+          "canvas": [
+            256,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/cast_back_spiked-v2.png",
+            "sha256": "236999d1449bafcc47b6ec9ee38203f058f61fe47eecf00ae19304ec812b3aed"
+          },
+          "transform": {
+            "crop": [
+              237,
+              191,
+              1533,
+              593
+            ],
+            "scale": 0.141,
+            "offset": [
+              34,
+              27
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/cast_back_spiked-over.tga",
+        "sha256": "a664c8d782774d77b3d239f97a289f8d1f366619bb437653dbdac256d834e35f"
+      },
+      "path": "Assets/Warlock/cast_back_spiked-over.tga",
+      "sha256": "a664c8d782774d77b3d239f97a289f8d1f366619bb437653dbdac256d834e35f",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_spiked": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/cast_back_spiked.tga",
+          "sha256": "a664c8d782774d77b3d239f97a289f8d1f366619bb437653dbdac256d834e35f",
+          "canvas": [
+            256,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/cast_back_spiked-v2.png",
+            "sha256": "236999d1449bafcc47b6ec9ee38203f058f61fe47eecf00ae19304ec812b3aed"
+          },
+          "transform": {
+            "crop": [
+              237,
+              191,
+              1533,
+              593
+            ],
+            "scale": 0.141,
+            "offset": [
+              34,
+              27
+            ]
+          }
+        },
+        "construction": "native-functional-recess",
+        "native": {
+          "path": "Assets/cast_back_spiked.tga",
+          "sha256": "80fa7a87de00456a017ce6d41f5ef038c4d7d694dcc77b65b2c570323a75faa0"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/cast_back_spiked-clearance-46ca54dd1ece.png",
+          "sha256": "180b41be7a1213013e6c228a5acbe570323d3068bdeb6d49c04c1c8f0d9c1be5",
+          "native": {
+            "path": "Assets/cast_back_spiked.tga",
+            "sha256": "80fa7a87de00456a017ce6d41f5ef038c4d7d694dcc77b65b2c570323a75faa0"
+          },
+          "bounds": [
+            52,
+            51,
+            201,
+            71
+          ]
+        },
+        "path": "Assets_Draft/Warlock/FullSet/Composed/cast_back_spiked.tga",
+        "sha256": "ebb101736aeeb35dee16e3544083d0a27c5fcb3e54d6980c9f24e27ac18051a5"
+      },
+      "path": "Assets/Warlock/cast_back_spiked.tga",
+      "sha256": "ebb101736aeeb35dee16e3544083d0a27c5fcb3e54d6980c9f24e27ac18051a5",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_wooden-over": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/cast_back_wooden.tga",
+          "sha256": "3237c9a877dad974c336b27b812dd35ea63e6dc54ceabc57f883beea54996000",
+          "canvas": [
+            256,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/cast_back_wooden-v2.png",
+            "sha256": "091aa5d95d53408f39532d8ab07da345a4e1542608b069fbdf12364113ca7f09"
+          },
+          "transform": {
+            "crop": [
+              239,
+              241,
+              1535,
+              604
+            ],
+            "scale": 0.1409972299168975,
+            "offset": [
+              34,
+              36
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/cast_back_wooden-over.tga",
+        "sha256": "3237c9a877dad974c336b27b812dd35ea63e6dc54ceabc57f883beea54996000"
+      },
+      "path": "Assets/Warlock/cast_back_wooden-over.tga",
+      "sha256": "3237c9a877dad974c336b27b812dd35ea63e6dc54ceabc57f883beea54996000",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_wooden": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/cast_back_wooden.tga",
+          "sha256": "3237c9a877dad974c336b27b812dd35ea63e6dc54ceabc57f883beea54996000",
+          "canvas": [
+            256,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/cast_back_wooden-v2.png",
+            "sha256": "091aa5d95d53408f39532d8ab07da345a4e1542608b069fbdf12364113ca7f09"
+          },
+          "transform": {
+            "crop": [
+              239,
+              241,
+              1535,
+              604
+            ],
+            "scale": 0.1409972299168975,
+            "offset": [
+              34,
+              36
+            ]
+          }
+        },
+        "construction": "native-functional-recess",
+        "native": {
+          "path": "Assets/cast_back_wooden.tga",
+          "sha256": "8a8781320b4be3395c1e293dfe7c058e5c32fd530272449493c0075539d5abb8"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/cast_back_wooden-clearance-46ca54dd1ece.png",
+          "sha256": "180b41be7a1213013e6c228a5acbe570323d3068bdeb6d49c04c1c8f0d9c1be5",
+          "native": {
+            "path": "Assets/cast_back_wooden.tga",
+            "sha256": "8a8781320b4be3395c1e293dfe7c058e5c32fd530272449493c0075539d5abb8"
+          },
+          "bounds": [
+            52,
+            51,
+            201,
+            71
+          ]
+        },
+        "path": "Assets_Draft/Warlock/FullSet/Composed/cast_back_wooden.tga",
+        "sha256": "78bd3cc1c0f9e55eff579cd499dee462824fdb184e18b57a64d0e3cd3ddc6e0c"
+      },
+      "path": "Assets/Warlock/cast_back_wooden.tga",
+      "sha256": "78bd3cc1c0f9e55eff579cd499dee462824fdb184e18b57a64d0e3cd3ddc6e0c",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/pw_crystal_case.tga",
+          "sha256": "e80849e35d0dfa4a86ac3fea22925c24af074ac2def47324c40d22759268de09",
+          "canvas": [
+            256,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/pw_crystal_case-native-repaint-v1.png",
+            "sha256": "850e5e083660198c2b39add5952c5b8edce39cfc8caca144d0411115517bdbc6"
+          },
+          "transform": {
+            "crop": [
+              280,
+              139,
+              1492,
+              604
+            ],
+            "scale": 0.1518279569892473,
+            "offset": [
+              35,
+              16
+            ]
+          },
+          "bridge": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/pw_crystal_case-bridge-mask.png",
+            "sha256": "57f05601dc252562ec405bad36d1f2d234b4ec9553035dd5f00aeca1c1a4c75d"
+          },
+          "bridgeApproval": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/pw_crystal_case-bridge-approval.json",
+            "sha256": "0f1c951d4603daa76bc85187623236b879a4f6bde97f653bb49387753cf5e9a3"
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/pw_crystal_case.tga",
+          "sha256": "52b601a7a079d8d0d8e9a43511c5263c5a6fcd60f4ac796e4e8183d06636eb4c"
+        },
+        "field": {
+          "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/pw_crystal_case-proposed-native-pane.png",
+          "sha256": "38cb82cb1af64cd527e576b117689cb4b359a3045251181323eab94a5abbe9a2",
+          "native": {
+            "path": "Assets/pw_crystal_case.tga",
+            "sha256": "52b601a7a079d8d0d8e9a43511c5263c5a6fcd60f4ac796e4e8183d06636eb4c"
+          },
+          "bounds": [
+            13,
+            0,
+            242,
+            117
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/pw_crystal_case.tga",
+        "sha256": "d1369d21bbce72898a5f645b8172f39d0b8f81d90af2dd10665c899b9660cfa4"
+      },
+      "path": "Assets/Warlock/pw_crystal_case.tga",
+      "sha256": "d1369d21bbce72898a5f645b8172f39d0b8f81d90af2dd10665c899b9660cfa4",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case_low": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/pw_crystal_case_low.tga",
+          "sha256": "4d8866ef7cdd3b975a9390bdef1b1686ec25556fbcd8f06844d438dc2c3f83aa",
+          "canvas": [
+            256,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/pw_crystal_case-native-repaint-v1.png",
+            "sha256": "850e5e083660198c2b39add5952c5b8edce39cfc8caca144d0411115517bdbc6"
+          },
+          "transform": {
+            "crop": [
+              280,
+              139,
+              1492,
+              604
+            ],
+            "scale": 0.1539784946236559,
+            "offset": [
+              35,
+              18
+            ]
+          },
+          "bridge": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/pw_crystal_case_low-bridge-mask.png",
+            "sha256": "a6c2a63c8a31b1c5e4a766bf0ee12090385f5b3e7f0c2916adb05f8131d26786"
+          },
+          "bridgeApproval": {
+            "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/pw_crystal_case_low-bridge-approval.json",
+            "sha256": "94ff88181e203fd22c3c6ad827bf7dd0475f8497f5050d7c8215e0141c1a7135"
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/pw_crystal_case_low.tga",
+          "sha256": "aebf1bb25d7970b039b17bb50d5c3767de4a6dade9c0d111101e065c6cd5162a"
+        },
+        "field": {
+          "path": "Assets_Draft/Warlock/FullSet/Review/GapRepair/pw_crystal_case_low-proposed-native-pane.png",
+          "sha256": "24fd3b1e64ff8e6e87db0ff7369dd6813c1334d70da7277a1b18fe7e58c73448",
+          "native": {
+            "path": "Assets/pw_crystal_case_low.tga",
+            "sha256": "aebf1bb25d7970b039b17bb50d5c3767de4a6dade9c0d111101e065c6cd5162a"
+          },
+          "bounds": [
+            32,
+            0,
+            229,
+            106
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/pw_crystal_case_low.tga",
+        "sha256": "7a29bd0bf19290d11a374998d1b865f73116a3a1c109746f22eff03bdc6c8724"
+      },
+      "path": "Assets/Warlock/pw_crystal_case_low.tga",
+      "sha256": "7a29bd0bf19290d11a374998d1b865f73116a3a1c109746f22eff03bdc6c8724",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "orb_case_hi": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/orb_case_hi.tga",
+          "sha256": "42e3e0fd110a9eac7eb7fc03db6b7233832adda2e7d878618b99ca2fdb227aa0",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/orb_case_hi-v3.png",
+            "sha256": "b7431e8b27f36f48714191a01f7c07f7e0557cedf3f57903955438d235c21e80"
+          },
+          "transform": {
+            "crop": [
+              154,
+              68,
+              1091,
+              1090
+            ],
+            "scale": 0.2203921568627451,
+            "offset": [
+              25,
+              7
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/orb_case_hi.tga",
+          "sha256": "912ad83deb1a5d7ab38499144bc32daaa45ebd5b4ba48548704ac584f675b7a5"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/orb_case_hi-native-pane-4eee6f8e7fb7.png",
+          "sha256": "ff0a8effae0c2555f7cec09baa8efe51e92113b0902f90bddf64b1f5b8455c6f",
+          "native": {
+            "path": "Assets/orb_case_hi.tga",
+            "sha256": "912ad83deb1a5d7ab38499144bc32daaa45ebd5b4ba48548704ac584f675b7a5"
+          },
+          "bounds": [
+            58,
+            58,
+            198,
+            198
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/orb_case_hi.tga",
+        "sha256": "b14c0822acfbd604966ecbe96fbaff77c5369ba3d0b35fde5dabdac9e88c2efa"
+      },
+      "path": "Assets/Warlock/orb_case_hi.tga",
+      "sha256": "b14c0822acfbd604966ecbe96fbaff77c5369ba3d0b35fde5dabdac9e88c2efa",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb_case_low": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/orb_case_low.tga",
+          "sha256": "42e3e0fd110a9eac7eb7fc03db6b7233832adda2e7d878618b99ca2fdb227aa0",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/orb_case_low-v2.png",
+            "sha256": "b7431e8b27f36f48714191a01f7c07f7e0557cedf3f57903955438d235c21e80"
+          },
+          "transform": {
+            "crop": [
+              154,
+              68,
+              1091,
+              1090
+            ],
+            "scale": 0.2203921568627451,
+            "offset": [
+              25,
+              7
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/orb_case_low.tga",
+          "sha256": "bda2be4e396f2a90a5a180b0bf2bcd29e7096ee54a95759455de490bab35e862"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/orb_case_low-native-pane-4eee6f8e7fb7.png",
+          "sha256": "ff0a8effae0c2555f7cec09baa8efe51e92113b0902f90bddf64b1f5b8455c6f",
+          "native": {
+            "path": "Assets/orb_case_low.tga",
+            "sha256": "bda2be4e396f2a90a5a180b0bf2bcd29e7096ee54a95759455de490bab35e862"
+          },
+          "bounds": [
+            58,
+            58,
+            198,
+            198
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/orb_case_low.tga",
+        "sha256": "b28cf50b8a8559d8d9f4b4cc2f6e125ec606a1f6aae478300ed465c6792f1328"
+      },
+      "path": "Assets/Warlock/orb_case_low.tga",
+      "sha256": "b28cf50b8a8559d8d9f4b4cc2f6e125ec606a1f6aae478300ed465c6792f1328",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb-border": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/orb-border.tga",
+          "sha256": "c30a3e2cb0cd61d7192a42547ddd61f8db42e3b46f1f9a03837151102d4dff14",
+          "canvas": [
+            512,
+            512
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/orb-border.png",
+            "sha256": "3a3e1a74cf2c18fa6c2ea9dfaf9d88ecc3ddbcc99a4afaab57951186b7485a93"
+          },
+          "transform": {
+            "crop": [
+              215,
+              223,
+              1032,
+              1034
+            ],
+            "scale": 0.4019607843137255,
+            "offset": [
+              92,
+              93
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/orb-border.tga",
+          "sha256": "c933a56b1e89513b9d3309dca33537c55d1b76bd5db55242e611eec2cb7e3af0"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/orb-border-native-pane-a5aa3aadb1be.png",
+          "sha256": "9f22bb524ff3381100005e9dee3828a56452c26fec2e6d9be2896cf70fc8a16f",
+          "native": {
+            "path": "Assets/orb-border.tga",
+            "sha256": "c933a56b1e89513b9d3309dca33537c55d1b76bd5db55242e611eec2cb7e3af0"
+          },
+          "bounds": [
+            113,
+            113,
+            399,
+            399
+          ]
+        },
+        "nativeTint": 1,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/orb-border.tga",
+        "sha256": "5495a62cc480a0a3f76a55da13696a4b4f2a85a9ca91fe76abaeaffede7d6cdd"
+      },
+      "path": "Assets/Warlock/orb-border.tga",
+      "sha256": "5495a62cc480a0a3f76a55da13696a4b4f2a85a9ca91fe76abaeaffede7d6cdd",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "portrait_frame_hi": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/portrait_frame_hi.tga",
+          "sha256": "69758600f680f5d6297d119cc3f672857b37e91ee77496abd21b434e7bfb8b0a",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/portrait_frame_hi.png",
+            "sha256": "5397edb7fa4cba7600ca7147544a104939f9369d48c2a403cc1b3f40df2ce14d"
+          },
+          "transform": {
+            "crop": [
+              196,
+              168,
+              1018,
+              1130
+            ],
+            "scale": 0.19791666666666666,
+            "offset": [
+              46,
+              37
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/portrait_frame_hi.tga",
+          "sha256": "ddc8b7b561f8fdc3f7c22b5d9a78891bf20841d72a2c877640b5d10508fb8c1d"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/portrait_frame_hi-native-pane-2e13a425f2f3.png",
+          "sha256": "31dd9a9016141073b7de18b93c775e85a879135e0086347ed7b065aa3bb31b6a",
+          "native": {
+            "path": "Assets/portrait_frame_hi.tga",
+            "sha256": "ddc8b7b561f8fdc3f7c22b5d9a78891bf20841d72a2c877640b5d10508fb8c1d"
+          },
+          "bounds": [
+            67,
+            70,
+            186,
+            194
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/portrait_frame_hi.tga",
+        "sha256": "104ae92adba8ba218b38e56be70691c14a5a8e912ca9f5e9fa0c0121a49f9de7"
+      },
+      "path": "Assets/Warlock/portrait_frame_hi.tga",
+      "sha256": "104ae92adba8ba218b38e56be70691c14a5a8e912ca9f5e9fa0c0121a49f9de7",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "portrait_frame_lo": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/portrait_frame_lo.tga",
+          "sha256": "4b542fca15184ca03a1e460a341a9806237cec79d9badbf199f64406a0346aa2",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/portrait_frame_lo.png",
+            "sha256": "dac528f80e27d8c91436ac79736b339d7c7fc359c4a66c9093fd5db3295c626b"
+          },
+          "transform": {
+            "crop": [
+              203,
+              177,
+              1034,
+              1121
+            ],
+            "scale": 0.20276008492569003,
+            "offset": [
+              42,
+              37
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/portrait_frame_lo.tga",
+          "sha256": "6609976e6085537dd4f870d403a87d8efeb7c08aba9883c36c801ee9cc8a46a9"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/portrait_frame_lo-native-pane-d0edfea9684e.png",
+          "sha256": "9e59a094438c87eb87034cfb740c3704948710cce8c109d7c9af0a7ea436a3fd",
+          "native": {
+            "path": "Assets/portrait_frame_lo.tga",
+            "sha256": "6609976e6085537dd4f870d403a87d8efeb7c08aba9883c36c801ee9cc8a46a9"
+          },
+          "bounds": [
+            67,
+            69,
+            186,
+            194
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/portrait_frame_lo.tga",
+        "sha256": "99e5807497508c294f717f0e06ed2a718aba88e6bfc7948bbd911ac2cad5cd90"
+      },
+      "path": "Assets/Warlock/portrait_frame_lo.tga",
+      "sha256": "99e5807497508c294f717f0e06ed2a718aba88e6bfc7948bbd911ac2cad5cd90",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "party_portrait_border": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/party_portrait_border.tga",
+          "sha256": "5d7ed7ce0229e4f39dc1561efadcab0985303e8c6f702e798d664692a9659256",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/party_portrait_border.png",
+            "sha256": "a090daeeea274189d5f6a20395099bb3308ca182e7c389a1ee993841ff44468d"
+          },
+          "transform": {
+            "crop": [
+              274,
+              264,
+              973,
+              970
+            ],
+            "scale": 0.21134751773049645,
+            "offset": [
+              54,
+              52
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/party_portrait_border.tga",
+          "sha256": "c42345169c304024af2d301c1579469fda90b77b5d09d10327e39b95a582c505"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/party_portrait_border-native-pane-0f6e2d0aac49.png",
+          "sha256": "f072afddd1063cfaece4116de870ca061dd1cf1e455eb6023211926a64f196c1",
+          "native": {
+            "path": "Assets/party_portrait_border.tga",
+            "sha256": "c42345169c304024af2d301c1579469fda90b77b5d09d10327e39b95a582c505"
+          },
+          "bounds": [
+            81,
+            80,
+            175,
+            174
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/party_portrait_border.tga",
+        "sha256": "156e3615436cee30b864d63c8cd9c984b05f3a2d20386004e93c1edc1d2ad78f"
+      },
+      "path": "Assets/Warlock/party_portrait_border.tga",
+      "sha256": "156e3615436cee30b864d63c8cd9c984b05f3a2d20386004e93c1edc1d2ad78f",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/actionbutton-border.tga",
+          "sha256": "1e81f407482463f6da2e64264a449e820b330a9995a21972123bdb9e381ededf",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/actionbutton-border.png",
+            "sha256": "1acd15f4035b0f683f2a671e02c4a8302f32c1d392916893082ba282c36fbd3d"
+          },
+          "transform": {
+            "crop": [
+              329,
+              325,
+              924,
+              925
+            ],
+            "scale": 0.2160535117056856,
+            "offset": [
+              63,
+              63
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/actionbutton-border.tga",
+          "sha256": "8c2cbc2af6b368127c55b98ce1b21c3b4b87627778c180a351195a20ffde6be6"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/actionbutton-border-native-pane-9dc2b68460f2.png",
+          "sha256": "bd83dbca66454281f81823880991dcf0c9b4a1311f9fc60d37015d67dde37993",
+          "native": {
+            "path": "Assets/actionbutton-border.tga",
+            "sha256": "8c2cbc2af6b368127c55b98ce1b21c3b4b87627778c180a351195a20ffde6be6"
+          },
+          "bounds": [
+            89,
+            89,
+            167,
+            167
+          ]
+        },
+        "nativeTint": 1,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/actionbutton-border.tga",
+        "sha256": "b77b0b0b8e424173561a6246494512d891cafa244a0b1896adb5e5f27de203fd"
+      },
+      "path": "Assets/Warlock/actionbutton-border.tga",
+      "sha256": "b77b0b0b8e424173561a6246494512d891cafa244a0b1896adb5e5f27de203fd",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border-square": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/actionbutton-border-square.tga",
+          "sha256": "43658958cfb10af90b26cfb4584993012cc5c3adc7c4423d5bb2f43e303590a5",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/actionbutton-border-square-v7.png",
+            "sha256": "f27ad7623df34c768216325c7570668f6cb02b838f8dd1dfaf304203990edc09"
+          },
+          "transform": {
+            "crop": [
+              217,
+              193,
+              1036,
+              1026
+            ],
+            "scale": 0.20940892641737033,
+            "offset": [
+              42,
+              41
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/actionbutton-border-square.tga",
+          "sha256": "fd17a7b0f48903f00583875b2f8b6626120f155e89ef49500167c81e5e75e491"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/actionbutton-border-square-native-pane-ceda3c454a4f.png",
+          "sha256": "19006ebe399faa49f6f0c40a1588a24bff30080a26711b2fcd9f91efb7641590",
+          "native": {
+            "path": "Assets/actionbutton-border-square.tga",
+            "sha256": "fd17a7b0f48903f00583875b2f8b6626120f155e89ef49500167c81e5e75e491"
+          },
+          "bounds": [
+            55,
+            55,
+            201,
+            201
+          ]
+        },
+        "nativeTint": 1,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/actionbutton-border-square.tga",
+        "sha256": "5c748e5f76df98bf70160af96e41a20310c059277e9b5d2677af09b5bb11771a"
+      },
+      "path": "Assets/Warlock/actionbutton-border-square.tga",
+      "sha256": "5c748e5f76df98bf70160af96e41a20310c059277e9b5d2677af09b5bb11771a",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border-square-rounded": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/actionbutton-border-square-rounded.tga",
+          "sha256": "a0d8d3d7b456a0d9119d69be7d1075b00629156e2b26c431e7586c709cfd949e",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Revisions/actionbutton-border-square-rounded-v3.png",
+            "sha256": "498cb9f914469e7a57e3b58206de5912ca1364f14a4c48d77c00d51a794733bd"
+          },
+          "transform": {
+            "crop": [
+              218,
+              202,
+              1037,
+              1032
+            ],
+            "scale": 0.21195652173913043,
+            "offset": [
+              41,
+              39
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/actionbutton-border-square-rounded.tga",
+          "sha256": "70e73f8a643a2c82262dfcc8768a7b7b3126e15ba934f6affb02b5de41e2ee1e"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/actionbutton-border-square-rounded-native-pane-01737c1fb2fd.png",
+          "sha256": "5631362d758ad3feeb55e3ce5fed567137f169e9a4754cb3f859365d87d9519b",
+          "native": {
+            "path": "Assets/actionbutton-border-square-rounded.tga",
+            "sha256": "70e73f8a643a2c82262dfcc8768a7b7b3126e15ba934f6affb02b5de41e2ee1e"
+          },
+          "bounds": [
+            53,
+            53,
+            203,
+            203
+          ]
+        },
+        "nativeTint": 1,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/actionbutton-border-square-rounded.tga",
+        "sha256": "95344c735aaaaa644392ee67ba56123f257f9203c8293d2151d2c2e5798a86e4"
+      },
+      "path": "Assets/Warlock/actionbutton-border-square-rounded.tga",
+      "sha256": "95344c735aaaaa644392ee67ba56123f257f9203c8293d2151d2c2e5798a86e4",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "minimap-border": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/minimap-border.tga",
+          "sha256": "cb05ca321626b7a267a222e684d4de2afb3fcb86eb766fd27a7e855b846cac23",
+          "canvas": [
+            512,
+            512
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/minimap-border.png",
+            "sha256": "2b7e93cdb9947ce59d9ca06490cce0b28b26b015b78e7643333839124b841f1e"
+          },
+          "transform": {
+            "crop": [
+              262,
+              260,
+              987,
+              985
+            ],
+            "scale": 0.4143646408839779,
+            "offset": [
+              107,
+              106
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/minimap-border.tga",
+          "sha256": "db8607fd5ba9b9269f7392bf3d7242f1d839f68885571c8bfe9c3ff7343d9831"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/minimap-border-native-pane-4ba684f8d6c8.png",
+          "sha256": "903c11dd1a4083b8fe5485d503cb8e2eb1841d9d9af6d435c93dfc4e46a24e51",
+          "native": {
+            "path": "Assets/minimap-border.tga",
+            "sha256": "db8607fd5ba9b9269f7392bf3d7242f1d839f68885571c8bfe9c3ff7343d9831"
+          },
+          "bounds": [
+            131,
+            129,
+            384,
+            382
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/minimap-border.tga",
+        "sha256": "beaaf4358054e4028ed0e69f2ad8d6a1bad1c3a31fc7ba11ac58b8b45d546975"
+      },
+      "path": "Assets/Warlock/minimap-border.tga",
+      "sha256": "beaaf4358054e4028ed0e69f2ad8d6a1bad1c3a31fc7ba11ac58b8b45d546975",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "minimap-onebar-backdrop": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/minimap-onebar-backdrop.tga",
+          "sha256": "af763887153a6ca31452201e22bb13c0a35343769f795cf39503865e94a3633d",
+          "canvas": [
+            512,
+            512
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/minimap-onebar-backdrop.png",
+            "sha256": "787a414aa2b6b5bda24c4fd6239fef738e6194544162d1f2d9b0bd2c28ba368b"
+          },
+          "transform": {
+            "crop": [
+              175,
+              165,
+              1074,
+              1077
+            ],
+            "scale": 0.2816281628162816,
+            "offset": [
+              130,
+              127
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/minimap-onebar-backdrop.tga",
+        "sha256": "af763887153a6ca31452201e22bb13c0a35343769f795cf39503865e94a3633d"
+      },
+      "path": "Assets/Warlock/minimap-onebar-backdrop.tga",
+      "sha256": "af763887153a6ca31452201e22bb13c0a35343769f795cf39503865e94a3633d",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "minimap-twobars-backdrop": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/minimap-twobars-backdrop.tga",
+          "sha256": "6bab0ad596c82e894825d6b171ff91ed8c27918091cc0d8bf25cdda850a554e9",
+          "canvas": [
+            512,
+            512
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/minimap-twobars-backdrop.png",
+            "sha256": "f29f091369b60648e3f36bd40c1d37c118afb06890e8cd951d43d5aae9689c2c"
+          },
+          "transform": {
+            "crop": [
+              107,
+              79,
+              1141,
+              1121
+            ],
+            "scale": 0.24615384615384617,
+            "offset": [
+              129,
+              128
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/minimap-twobars-backdrop.tga",
+        "sha256": "6bab0ad596c82e894825d6b171ff91ed8c27918091cc0d8bf25cdda850a554e9"
+      },
+      "path": "Assets/Warlock/minimap-twobars-backdrop.tga",
+      "sha256": "6bab0ad596c82e894825d6b171ff91ed8c27918091cc0d8bf25cdda850a554e9",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "point_plate": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/point_plate.tga",
+          "sha256": "0324d5571409a9782507f68833b777c0941919e7ded3d1b65f77b0d3036e6918",
+          "canvas": [
+            128,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/point_plate.png",
+            "sha256": "0bf6da6e1ce11e7c96e7d905512890cce6b6c0a789e3b3ce392c57341a1f7bec"
+          },
+          "transform": {
+            "crop": [
+              351,
+              353,
+              902,
+              901
+            ],
+            "scale": 0.1092896174863388,
+            "offset": [
+              34,
+              34
+            ]
+          }
+        },
+        "construction": "native-under-whole-painting",
+        "native": {
+          "path": "Assets/point_plate.tga",
+          "sha256": "d240be92f3abbfdc020d7df1981cbff74b1b27949e7ce4fc8d24502aa67aa3d9"
+        },
+        "field": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/point_plate-native-pane-652632f86e03.png",
+          "sha256": "36b14b7960b40deb1c44311c75823d73a6e4dda2ee71cd4d481288e3faa383b3",
+          "native": {
+            "path": "Assets/point_plate.tga",
+            "sha256": "d240be92f3abbfdc020d7df1981cbff74b1b27949e7ce4fc8d24502aa67aa3d9"
+          },
+          "bounds": [
+            46,
+            46,
+            83,
+            83
+          ]
+        },
+        "nativeTint": 0.7529411764705882,
+        "path": "Assets_Draft/Warlock/FullSet/Composed/point_plate.tga",
+        "sha256": "e1e460d76ad7f85042e55da5b02e33ab7a7f98aa1bbe033cece7a17e36c4e262"
+      },
+      "path": "Assets/Warlock/point_plate.tga",
+      "sha256": "e1e460d76ad7f85042e55da5b02e33ab7a7f98aa1bbe033cece7a17e36c4e262",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "config_button": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/config_button.tga",
+          "sha256": "054f5db8f0bc41561b786d760e518c927265e4548f6cc49f3a1dadc18267b2ce",
+          "canvas": [
+            128,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/config_button.png",
+            "sha256": "4aa8fa8c31b9ce154f91a24b47c19f4042ea2383fb4a918975b412d5c0000881"
+          },
+          "transform": {
+            "crop": [
+              356,
+              355,
+              895,
+              893
+            ],
+            "scale": 0.1154562383612663,
+            "offset": [
+              33,
+              33
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/config_button.tga",
+        "sha256": "054f5db8f0bc41561b786d760e518c927265e4548f6cc49f3a1dadc18267b2ce"
+      },
+      "path": "Assets/Warlock/config_button.tga",
+      "sha256": "054f5db8f0bc41561b786d760e518c927265e4548f6cc49f3a1dadc18267b2ce",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "config_button_bright": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/config_button_bright.tga",
+          "sha256": "afe7a33afc816e5871ba806cfe04d6eb06c708797a76ea6eee5c8bfac29afd6d",
+          "canvas": [
+            128,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/config_button_bright.png",
+            "sha256": "ff8c99ef765b6966f4b6044674207214b62df1044f31f7b24a8ce9ff7ecdef1a"
+          },
+          "transform": {
+            "crop": [
+              285,
+              299,
+              961,
+              970
+            ],
+            "scale": 0.08888888888888889,
+            "offset": [
+              34,
+              34
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/config_button_bright.tga",
+        "sha256": "afe7a33afc816e5871ba806cfe04d6eb06c708797a76ea6eee5c8bfac29afd6d"
+      },
+      "path": "Assets/Warlock/config_button_bright.tga",
+      "sha256": "afe7a33afc816e5871ba806cfe04d6eb06c708797a76ea6eee5c8bfac29afd6d",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "icon_exit_flight": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/icon_exit_flight.tga",
+          "sha256": "ee2cd0969ad4eb67938edb9ede44a0f0e4eab2508e01f5cc0603896affb20fd5",
+          "canvas": [
+            128,
+            128
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/icon_exit_flight.png",
+            "sha256": "7222bf1ba287d64ee10df849d32f3585a2701af4d2da67c357f3b0a8a2154108"
+          },
+          "transform": {
+            "crop": [
+              390,
+              389,
+              864,
+              894
+            ],
+            "scale": 0.11530815109343936,
+            "offset": [
+              37,
+              35
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/icon_exit_flight.tga",
+        "sha256": "ee2cd0969ad4eb67938edb9ede44a0f0e4eab2508e01f5cc0603896affb20fd5"
+      },
+      "path": "Assets/Warlock/icon_exit_flight.tga",
+      "sha256": "ee2cd0969ad4eb67938edb9ede44a0f0e4eab2508e01f5cc0603896affb20fd5",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "border-tooltip": {
+      "construction": "intact-corner-rail-atlas-1",
+      "atlas": {
+        "source": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/border-tooltip.tga",
+          "sha256": "a9177e8b6044f3e5ff2ec5b757b23f0a8ebcb3ac75d34bd21d1c1127ec9684b5"
+        },
+        "export": {
+          "path": "Assets_Draft/Warlock/FullSet/BorderAtlases/border-tooltip.tga",
+          "sha256": "8e00859e20fc4dc1d12faa52ceb558aab8f3b74dac3438573ac028c35ff49be1"
+        },
+        "construction": "intact corner bodies and exact repeated rail exits",
+        "recipes": [
+          {
+            "cell": 4,
+            "wholeCornerCrop": [
+              258,
+              21,
+              318,
+              64
+            ],
+            "offset": [
+              4,
+              20
+            ],
+            "verticalRailExitRow": 40,
+            "horizontalRailExitColumn": 57,
+            "nativeRailShift": [
+              4,
+              20
+            ]
+          },
+          {
+            "cell": 5,
+            "wholeCornerCrop": [
+              317,
+              21,
+              376,
+              64
+            ],
+            "offset": [
+              0,
+              20
+            ],
+            "verticalRailExitRow": 40,
+            "horizontalRailExitColumn": 2,
+            "nativeRailShift": [
+              -5,
+              20
+            ]
+          },
+          {
+            "cell": 6,
+            "wholeCornerCrop": [
+              384,
+              2,
+              443,
+              44
+            ],
+            "offset": [
+              5,
+              0
+            ],
+            "verticalRailExitRow": 2,
+            "horizontalRailExitColumn": 56,
+            "nativeRailShift": [
+              4,
+              -22
+            ]
+          },
+          {
+            "cell": 7,
+            "wholeCornerCrop": [
+              440,
+              2,
+              499,
+              44
+            ],
+            "offset": [
+              0,
+              0
+            ],
+            "verticalRailExitRow": 2,
+            "horizontalRailExitColumn": 2,
+            "nativeRailShift": [
+              -5,
+              -22
+            ]
+          }
+        ],
+        "joinFailures": [],
+        "rejectedRawJoinFailures": [
+          {
+            "edge": 0,
+            "emptyRepeatRows": 1
+          },
+          {
+            "edge": 1,
+            "emptyRepeatRows": 1
+          },
+          {
+            "edge": 2,
+            "emptyRepeatRows": 1
+          },
+          {
+            "edge": 3,
+            "emptyRepeatRows": 1
+          },
+          {
+            "corner": 4,
+            "edge": 0,
+            "delta": 10.0
+          },
+          {
+            "corner": 5,
+            "edge": 1,
+            "delta": 8.0
+          },
+          {
+            "corner": 6,
+            "edge": 0,
+            "delta": 13.0
+          },
+          {
+            "corner": 7,
+            "edge": 1,
+            "delta": 12.0
+          },
+          {
+            "corner": 4,
+            "edge": 2,
+            "delta": 3.0
+          },
+          {
+            "corner": 5,
+            "edge": 2,
+            "delta": 3.0
+          },
+          {
+            "corner": 6,
+            "edge": 3,
+            "delta": 3.0
+          },
+          {
+            "corner": 7,
+            "edge": 3,
+            "delta": 3.0
+          }
+        ],
+        "nativeRailAuthority": {
+          "path": "Assets/border-tooltip.tga",
+          "sha256": "f99611ade73ba1059cabec070a067d1b27a2a57d24431248f436c4b6310cac13"
+        }
+      },
+      "path": "Assets/Warlock/border-tooltip.tga",
+      "sha256": "8e00859e20fc4dc1d12faa52ceb558aab8f3b74dac3438573ac028c35ff49be1",
+      "canvas": [
+        512,
+        64
+      ]
+    },
+    "border-aura": {
+      "construction": "intact-corner-rail-atlas-1",
+      "atlas": {
+        "source": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/border-aura.tga",
+          "sha256": "d8f7e2b0c7038c2de995add8a09131d1675fd0460ff51150b52d7001fb30a977"
+        },
+        "export": {
+          "path": "Assets_Draft/Warlock/FullSet/BorderAtlases/border-aura.tga",
+          "sha256": "e3d1656c857388ada25e1f7fefb42723e04bf85c34cd8bf9efe0373376d55515"
+        },
+        "construction": "intact corner bodies and exact repeated rail exits",
+        "recipes": [
+          {
+            "cell": 4,
+            "wholeCornerCrop": [
+              141,
+              14,
+              159,
+              32
+            ],
+            "offset": [
+              14,
+              14
+            ],
+            "verticalRailExitRow": 15,
+            "horizontalRailExitColumn": 15,
+            "nativeRailShift": [
+              14,
+              14
+            ]
+          },
+          {
+            "cell": 5,
+            "wholeCornerCrop": [
+              159,
+              14,
+              177,
+              32
+            ],
+            "offset": [
+              0,
+              14
+            ],
+            "verticalRailExitRow": 15,
+            "horizontalRailExitColumn": 2,
+            "nativeRailShift": [
+              -14,
+              14
+            ]
+          },
+          {
+            "cell": 6,
+            "wholeCornerCrop": [
+              204,
+              1,
+              223,
+              20
+            ],
+            "offset": [
+              13,
+              0
+            ],
+            "verticalRailExitRow": 2,
+            "horizontalRailExitColumn": 16,
+            "nativeRailShift": [
+              13,
+              -13
+            ]
+          },
+          {
+            "cell": 7,
+            "wholeCornerCrop": [
+              223,
+              1,
+              241,
+              20
+            ],
+            "offset": [
+              0,
+              0
+            ],
+            "verticalRailExitRow": 2,
+            "horizontalRailExitColumn": 2,
+            "nativeRailShift": [
+              -14,
+              -13
+            ]
+          }
+        ],
+        "joinFailures": [],
+        "rejectedRawJoinFailures": [
+          {
+            "corner": 5,
+            "edge": 1,
+            "delta": 4.0
+          },
+          {
+            "corner": 6,
+            "edge": 0,
+            "delta": 4.0
+          },
+          {
+            "corner": 7,
+            "edge": 1,
+            "delta": 4.0
+          },
+          {
+            "corner": 6,
+            "edge": 3,
+            "delta": 4.0
+          },
+          {
+            "corner": 7,
+            "edge": 3,
+            "delta": 4.0
+          }
+        ],
+        "nativeRailAuthority": {
+          "path": "Assets/border-aura.tga",
+          "sha256": "6e24970aa04f97669169542842d2fdb7d9ba47f77f35abaf4686665e9793767f"
+        }
+      },
+      "path": "Assets/Warlock/border-aura.tga",
+      "sha256": "e3d1656c857388ada25e1f7fefb42723e04bf85c34cd8bf9efe0373376d55515",
+      "canvas": [
+        256,
+        32
+      ]
+    },
+    "better-blizzard-border-small-alternate": {
+      "construction": "intact-corner-rail-atlas-1",
+      "atlas": {
+        "source": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/better-blizzard-border-small-alternate.tga",
+          "sha256": "98f0fb01269aa58ee8bc56f7001c65868930929b4745325296f66b4ecf1f7de7"
+        },
+        "export": {
+          "path": "Assets_Draft/Warlock/FullSet/BorderAtlases/better-blizzard-border-small-alternate.tga",
+          "sha256": "fce409c51a474733b1d0318e1c901a3d52815a97b87a2ccc00fae3694401545f"
+        },
+        "construction": "intact corner bodies and exact repeated rail exits",
+        "recipes": [
+          {
+            "cell": 4,
+            "wholeCornerCrop": [
+              291,
+              31,
+              321,
+              64
+            ],
+            "offset": [
+              0,
+              0
+            ],
+            "verticalRailExitRow": 30,
+            "horizontalRailExitColumn": 27
+          },
+          {
+            "cell": 5,
+            "wholeCornerCrop": [
+              317,
+              31,
+              347,
+              64
+            ],
+            "offset": [
+              34,
+              0
+            ],
+            "verticalRailExitRow": 30,
+            "horizontalRailExitColumn": 2
+          },
+          {
+            "cell": 6,
+            "wholeCornerCrop": [
+              420,
+              0,
+              448,
+              30
+            ],
+            "offset": [
+              1,
+              34
+            ],
+            "verticalRailExitRow": 2,
+            "horizontalRailExitColumn": 25
+          },
+          {
+            "cell": 7,
+            "wholeCornerCrop": [
+              444,
+              0,
+              473,
+              30
+            ],
+            "offset": [
+              35,
+              34
+            ],
+            "verticalRailExitRow": 2,
+            "horizontalRailExitColumn": 2
+          }
+        ],
+        "joinFailures": [],
+        "rejectedRawJoinFailures": [
+          {
+            "corner": 4,
+            "edge": 0,
+            "delta": 5.0
+          },
+          {
+            "corner": 6,
+            "edge": 0,
+            "delta": 6.0
+          },
+          {
+            "corner": 4,
+            "edge": 2,
+            "delta": 7.0
+          },
+          {
+            "corner": 5,
+            "edge": 2,
+            "delta": 7.0
+          },
+          {
+            "corner": 6,
+            "edge": 3,
+            "delta": 5.0
+          },
+          {
+            "corner": 7,
+            "edge": 3,
+            "delta": 5.0
+          }
+        ]
+      },
+      "path": "Assets/Warlock/better-blizzard-border-small-alternate.tga",
+      "sha256": "fce409c51a474733b1d0318e1c901a3d52815a97b87a2ccc00fae3694401545f",
+      "canvas": [
+        512,
+        64
+      ]
+    },
+    "actionbutton-border-hex": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/actionbutton-border-hex.tga",
+          "sha256": "a7fdc9e227fb14ffc40141c2eec513a61af6d904d20804b454fe46b8e8d1d724",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/actionbutton-border-hex.png",
+            "sha256": "ec9b0b663b9cfe7ce6def49c2eac474dc0a8d4de11c15b6f5196729bd4365e5a"
+          },
+          "transform": {
+            "crop": [
+              166,
+              73,
+              1060,
+              1147
+            ],
+            "scale": 0.17537313432835822,
+            "offset": [
+              50,
+              33
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/actionbutton-border-hex.tga",
+        "sha256": "a7fdc9e227fb14ffc40141c2eec513a61af6d904d20804b454fe46b8e8d1d724"
+      },
+      "path": "Assets/Warlock/actionbutton-border-hex.tga",
+      "sha256": "a7fdc9e227fb14ffc40141c2eec513a61af6d904d20804b454fe46b8e8d1d724",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "cast-head": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/cast-head.tga",
+          "sha256": "df7b748c57062f4370f691036b25860c8dc2047ea690d93748794d87e2209f3c",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/cast-head.png",
+            "sha256": "c9c873bc637a9718af19e9dd417efc34ffbd019e2169c7dfa8659b1c5581a392"
+          },
+          "transform": {
+            "crop": [
+              111,
+              81,
+              1141,
+              1154
+            ],
+            "scale": 0.22429906542056074,
+            "offset": [
+              12,
+              7
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/cast-head.tga",
+        "sha256": "df7b748c57062f4370f691036b25860c8dc2047ea690d93748794d87e2209f3c"
+      },
+      "path": "Assets/Warlock/cast-head.tga",
+      "sha256": "df7b748c57062f4370f691036b25860c8dc2047ea690d93748794d87e2209f3c",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "resource-badge": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/resource-badge.tga",
+          "sha256": "f3a940faf3edf79d22b89f8e6e5860324d7eb279c4c32158b898e029f63062aa",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/resource-badge.png",
+            "sha256": "ad0213b8f25a489a9449cd3f7bd38cea66cd1f567e7c6a49812c7d1a8897212e"
+          },
+          "transform": {
+            "crop": [
+              292,
+              253,
+              962,
+              1036
+            ],
+            "scale": 0.3072983354673495,
+            "offset": [
+              25,
+              8
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/resource-badge.tga",
+        "sha256": "f3a940faf3edf79d22b89f8e6e5860324d7eb279c4c32158b898e029f63062aa"
+      },
+      "path": "Assets/Warlock/resource-badge.tga",
+      "sha256": "f3a940faf3edf79d22b89f8e6e5860324d7eb279c4c32158b898e029f63062aa",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "minimap-north": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/minimap-north.tga",
+          "sha256": "3f695557ef1f675b55c1d18ad50301f857546a0d21e8a9b15a563ea4a19369e5",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/minimap-north.png",
+            "sha256": "0fae7f5f2025f7298e5caac2ef25fb928247403dd6e30cbeaddb9a4ca52e5725"
+          },
+          "transform": {
+            "crop": [
+              435,
+              106,
+              818,
+              1105
+            ],
+            "scale": 0.24096385542168675,
+            "offset": [
+              82,
+              8
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/minimap-north.tga",
+        "sha256": "3f695557ef1f675b55c1d18ad50301f857546a0d21e8a9b15a563ea4a19369e5"
+      },
+      "path": "Assets/Warlock/minimap-north.tga",
+      "sha256": "3f695557ef1f675b55c1d18ad50301f857546a0d21e8a9b15a563ea4a19369e5",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "bag-icon": {
+      "construction": "verified-native-underlay-composition-1",
+      "candidate": {
+        "painting": {
+          "path": "Assets_Draft/Warlock/FullSet/Exports/bag-icon.tga",
+          "sha256": "e441895ac479898c8edd1ee6a06f3ed77b50203bb89e1e5af70c8c21549f526f",
+          "canvas": [
+            256,
+            256
+          ],
+          "role": "whole-painting",
+          "source": {
+            "path": "Assets_Draft/Warlock/FullSet/Sources/bag-icon.png",
+            "sha256": "5487ac16eb97b51020198fff3b55667676badb415f6d4264cc86ea6f0d8c79c0"
+          },
+          "transform": {
+            "crop": [
+              181,
+              236,
+              1087,
+              1026
+            ],
+            "scale": 0.26578073089701,
+            "offset": [
+              8,
+              23
+            ]
+          }
+        },
+        "construction": "whole-painting",
+        "path": "Assets_Draft/Warlock/FullSet/Composed/bag-icon.tga",
+        "sha256": "e441895ac479898c8edd1ee6a06f3ed77b50203bb89e1e5af70c8c21549f526f"
+      },
+      "path": "Assets/Warlock/bag-icon.tga",
+      "sha256": "e441895ac479898c8edd1ee6a06f3ed77b50203bb89e1e5af70c8c21549f526f",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "ornament-ulthalesh-hp_cap_case": {
+      "construction": "whole-source-cap-1",
+      "fit": {
+        "source": {
+          "path": "Assets_Draft/Warlock/Sources/health-endcap-ulthalesh-v5.png",
+          "sha256": "5a4762b0ddbdd771be24ce2811841e772a732af8c957a6bdce1665c9c23bb780"
+        },
+        "frozenTerminal": {
+          "painting": {
+            "path": "Assets_Draft/Warlock/FullSet/Composed/hp_cap_case-over.tga",
+            "sha256": "ca9c395774bdf6475dd3678554eebe2ce172325cfd72dbc972b810a33b60649f"
+          },
+          "mask": {
+            "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_cap_case-painted-terminal-ca9c395774bd.png",
+            "sha256": "7a8e2c118525ed7fd217a64492f830e74b88bc61e7c463c647cbd07281cdc329"
+          },
+          "toe": [
+            754.0,
+            187
+          ]
+        },
+        "export": {
+          "path": "Assets_Draft/Warlock/FullSet/Endcaps/ornament-ulthalesh-hp_cap_case.tga",
+          "sha256": "c4ea3ed4cbef8f3e03be3b6399c4ea2416e1ac08408ba0be4844ad6ce94f25c8"
+        },
+        "best": {
+          "height": 127.3,
+          "transform": {
+            "crop": [
+              177,
+              55,
+              1073,
+              1159
+            ],
+            "scale": 0.11551724137931034,
+            "offset": [
+              718,
+              60
+            ]
+          },
+          "bounds": [
+            718,
+            60,
+            822,
+            188
+          ],
+          "approvedFootprint": [
+            692.0,
+            52,
+            822.0,
+            188
+          ],
+          "paintedTerminal": {
+            "terminalPixels": 5247,
+            "terminalCoveredFraction": 0.9504478749761769,
+            "exposedTerminalPixelsBeyondAA": 103,
+            "edgeToleranceSourcePixels": 1
+          },
+          "nativeTerminal": {
+            "terminalPixels": 8152,
+            "terminalCoveredFraction": 0.9000245338567223,
+            "exposedTerminalPixelsBeyondAA": 585,
+            "edgeToleranceSourcePixels": 1
+          },
+          "combinedFillOcclusion": 0.09906854959866077,
+          "numericPassed": false,
+          "error": "cap leaves terminal metal exposed: {'terminalPixels': 5247, 'terminalCoveredFraction': 0.9504478749761769, 'exposedTerminalPixelsBeyondAA': 103, 'edgeToleranceSourcePixels': 1}"
+        },
+        "trials": [
+          {
+            "height": 127.3,
+            "transform": {
+              "crop": [
+                177,
+                55,
+                1073,
+                1159
+              ],
+              "scale": 0.11551724137931034,
+              "offset": [
+                718,
+                60
+              ]
+            },
+            "bounds": [
+              718,
+              60,
+              822,
+              188
+            ],
+            "approvedFootprint": [
+              692.0,
+              52,
+              822.0,
+              188
+            ],
+            "paintedTerminal": {
+              "terminalPixels": 5247,
+              "terminalCoveredFraction": 0.9504478749761769,
+              "exposedTerminalPixelsBeyondAA": 103,
+              "edgeToleranceSourcePixels": 1
+            },
+            "nativeTerminal": {
+              "terminalPixels": 8152,
+              "terminalCoveredFraction": 0.9000245338567223,
+              "exposedTerminalPixelsBeyondAA": 585,
+              "edgeToleranceSourcePixels": 1
+            },
+            "combinedFillOcclusion": 0.09906854959866077,
+            "numericPassed": false,
+            "error": "cap leaves terminal metal exposed: {'terminalPixels': 5247, 'terminalCoveredFraction': 0.9504478749761769, 'exposedTerminalPixelsBeyondAA': 103, 'edgeToleranceSourcePixels': 1}"
+          }
+        ],
+        "previousFrozenTerminal": {
+          "painting": {
+            "path": "Assets_Draft/Warlock/FullSet/Composed/hp_cap_case-over.tga",
+            "sha256": "2a5a9ef6b4adb0e0335211092d4f9c08f2c1c898c0142812dd396f3ca47f781c"
+          },
+          "mask": {
+            "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_cap_case-painted-terminal-2a5a9ef6b4ad.png",
+            "sha256": "629f5b61964f58ad187b8fc207e13c40e63dffafb100675a7c6774b5160e149d"
+          },
+          "toe": [
+            754.0,
+            187
+          ]
+        }
+      },
+      "path": "Assets/Warlock/ornament-ulthalesh-hp_cap_case.tga",
+      "sha256": "c4ea3ed4cbef8f3e03be3b6399c4ea2416e1ac08408ba0be4844ad6ce94f25c8",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-ulthalesh-hp_mid_case": {
+      "construction": "whole-source-cap-1",
+      "fit": {
+        "source": {
+          "path": "Assets_Draft/Warlock/FullSet/TierCapSources/ulthalesh-v1.png",
+          "sha256": "7c8e12b63beba6b0b27d67b606e0f8df7205955d726943bbc922eae666a3f0cb"
+        },
+        "frozenTerminal": {
+          "painting": {
+            "path": "Assets_Draft/Warlock/FullSet/Composed/hp_mid_case-over.tga",
+            "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b"
+          },
+          "mask": {
+            "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_mid_case-painted-terminal-8acea3fe084e.png",
+            "sha256": "9e31f2fe75ff2e8034a7d72ad95468d7c49ef39b1cd580ffa5123acd6d51fde1"
+          },
+          "toe": [
+            756.5,
+            181
+          ]
+        },
+        "export": {
+          "path": "Assets_Draft/Warlock/FullSet/Endcaps/ornament-ulthalesh-hp_mid_case.tga",
+          "sha256": "d8fdc041ca89ce23c7eb383d9e473df7c20e206d8e9ff348d78dfc5de253bb06"
+        },
+        "best": {
+          "height": 125.6,
+          "transform": {
+            "crop": [
+              164,
+              51,
+              1062,
+              1209
+            ],
+            "scale": 0.10865051903114187,
+            "offset": [
+              721,
+              56
+            ]
+          },
+          "bounds": [
+            721,
+            56,
+            819,
+            182
+          ],
+          "approvedFootprint": [
+            698.5,
+            56,
+            819.5,
+            182
+          ],
+          "paintedTerminal": {
+            "terminalPixels": 4496,
+            "terminalCoveredFraction": 0.9721975088967971,
+            "exposedTerminalPixelsBeyondAA": 74,
+            "edgeToleranceSourcePixels": 1
+          },
+          "nativeTerminal": {
+            "terminalPixels": 6568,
+            "terminalCoveredFraction": 0.9649817295980512,
+            "exposedTerminalPixelsBeyondAA": 130,
+            "edgeToleranceSourcePixels": 1
+          },
+          "combinedFillOcclusion": 0.08775712622364051,
+          "numericPassed": false,
+          "error": "cap leaves terminal metal exposed: {'terminalPixels': 4496, 'terminalCoveredFraction': 0.9721975088967971, 'exposedTerminalPixelsBeyondAA': 74, 'edgeToleranceSourcePixels': 1}"
+        },
+        "trials": [
+          {
+            "height": 125.6,
+            "transform": {
+              "crop": [
+                164,
+                51,
+                1062,
+                1209
+              ],
+              "scale": 0.10865051903114187,
+              "offset": [
+                721,
+                56
+              ]
+            },
+            "bounds": [
+              721,
+              56,
+              819,
+              182
+            ],
+            "approvedFootprint": [
+              698.5,
+              56,
+              819.5,
+              182
+            ],
+            "paintedTerminal": {
+              "terminalPixels": 4496,
+              "terminalCoveredFraction": 0.9721975088967971,
+              "exposedTerminalPixelsBeyondAA": 74,
+              "edgeToleranceSourcePixels": 1
+            },
+            "nativeTerminal": {
+              "terminalPixels": 6568,
+              "terminalCoveredFraction": 0.9649817295980512,
+              "exposedTerminalPixelsBeyondAA": 130,
+              "edgeToleranceSourcePixels": 1
+            },
+            "combinedFillOcclusion": 0.08775712622364051,
+            "numericPassed": false,
+            "error": "cap leaves terminal metal exposed: {'terminalPixels': 4496, 'terminalCoveredFraction': 0.9721975088967971, 'exposedTerminalPixelsBeyondAA': 74, 'edgeToleranceSourcePixels': 1}"
+          }
+        ],
+        "previousFrozenTerminal": {
+          "painting": {
+            "path": "Assets_Draft/Warlock/FullSet/Composed/hp_mid_case-over.tga",
+            "sha256": "f03a952fcef286731ec99ad2f279fdc64fe5b4ab5b398eeda9858a971edad525"
+          },
+          "mask": {
+            "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_mid_case-painted-terminal-f03a952fcef2.png",
+            "sha256": "c718bdda9b8cf5f0527cfd9349d96b7ce0c1562356ee3d629fe1452702f95830"
+          },
+          "toe": [
+            757.0,
+            181
+          ]
+        }
+      },
+      "path": "Assets/Warlock/ornament-ulthalesh-hp_mid_case.tga",
+      "sha256": "d8fdc041ca89ce23c7eb383d9e473df7c20e206d8e9ff348d78dfc5de253bb06",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-ulthalesh-hp_low_case": {
+      "construction": "whole-source-cap-1",
+      "fit": {
+        "source": {
+          "path": "Assets_Draft/Warlock/FullSet/TierCapSources/ulthalesh-v1.png",
+          "sha256": "7c8e12b63beba6b0b27d67b606e0f8df7205955d726943bbc922eae666a3f0cb"
+        },
+        "frozenTerminal": {
+          "painting": {
+            "path": "Assets_Draft/Warlock/FullSet/Composed/hp_low_case-over.tga",
+            "sha256": "8acea3fe084eaba4375ee78b7c4c5eaffaa89123aa893bf0526014453717d71b"
+          },
+          "mask": {
+            "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_low_case-painted-terminal-8acea3fe084e.png",
+            "sha256": "9e31f2fe75ff2e8034a7d72ad95468d7c49ef39b1cd580ffa5123acd6d51fde1"
+          },
+          "toe": [
+            756.5,
+            181
+          ]
+        },
+        "export": {
+          "path": "Assets_Draft/Warlock/FullSet/Endcaps/ornament-ulthalesh-hp_low_case.tga",
+          "sha256": "e1c9e73854d201efe5fe8fe70e08ae104aa6bacc3456c23af1cf470b42f6f42d"
+        },
+        "best": {
+          "height": 123.0,
+          "transform": {
+            "crop": [
+              164,
+              51,
+              1062,
+              1209
+            ],
+            "scale": 0.10640138408304499,
+            "offset": [
+              721,
+              59
+            ]
+          },
+          "bounds": [
+            721,
+            59,
+            817,
+            182
+          ],
+          "approvedFootprint": [
+            698.0,
+            56,
+            819.0,
+            182
+          ],
+          "paintedTerminal": {
+            "terminalPixels": 4496,
+            "terminalCoveredFraction": 0.9735320284697508,
+            "exposedTerminalPixelsBeyondAA": 68,
+            "edgeToleranceSourcePixels": 1
+          },
+          "nativeTerminal": {
+            "terminalPixels": 6577,
+            "terminalCoveredFraction": 0.9667021438345751,
+            "exposedTerminalPixelsBeyondAA": 115,
+            "edgeToleranceSourcePixels": 1
+          },
+          "combinedFillOcclusion": 0.08831773685799302,
+          "numericPassed": false,
+          "error": "cap leaves terminal metal exposed: {'terminalPixels': 4496, 'terminalCoveredFraction': 0.9735320284697508, 'exposedTerminalPixelsBeyondAA': 68, 'edgeToleranceSourcePixels': 1}"
+        },
+        "trials": [
+          {
+            "height": 123.0,
+            "transform": {
+              "crop": [
+                164,
+                51,
+                1062,
+                1209
+              ],
+              "scale": 0.10640138408304499,
+              "offset": [
+                721,
+                59
+              ]
+            },
+            "bounds": [
+              721,
+              59,
+              817,
+              182
+            ],
+            "approvedFootprint": [
+              698.0,
+              56,
+              819.0,
+              182
+            ],
+            "paintedTerminal": {
+              "terminalPixels": 4496,
+              "terminalCoveredFraction": 0.9735320284697508,
+              "exposedTerminalPixelsBeyondAA": 68,
+              "edgeToleranceSourcePixels": 1
+            },
+            "nativeTerminal": {
+              "terminalPixels": 6577,
+              "terminalCoveredFraction": 0.9667021438345751,
+              "exposedTerminalPixelsBeyondAA": 115,
+              "edgeToleranceSourcePixels": 1
+            },
+            "combinedFillOcclusion": 0.08831773685799302,
+            "numericPassed": false,
+            "error": "cap leaves terminal metal exposed: {'terminalPixels': 4496, 'terminalCoveredFraction': 0.9735320284697508, 'exposedTerminalPixelsBeyondAA': 68, 'edgeToleranceSourcePixels': 1}"
+          }
+        ],
+        "previousFrozenTerminal": {
+          "painting": {
+            "path": "Assets_Draft/Warlock/FullSet/Composed/hp_low_case-over.tga",
+            "sha256": "652092e75b86453027c8d98e2239db79752257ddd4bacc1102a51a8bcc276cb2"
+          },
+          "mask": {
+            "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_low_case-painted-terminal-652092e75b86.png",
+            "sha256": "2786e4ec2c68d9ca2874f04c111d0e838e2575aadef487da2e2dc4cfa0909181"
+          },
+          "toe": [
+            756.0,
+            181
+          ]
+        }
+      },
+      "path": "Assets/Warlock/ornament-ulthalesh-hp_low_case.tga",
+      "sha256": "e1c9e73854d201efe5fe8fe70e08ae104aa6bacc3456c23af1cf470b42f6f42d",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-ulthalesh-hp_boss_case": {
+      "construction": "whole-source-cap-1",
+      "fit": {
+        "source": {
+          "path": "Assets_Draft/Warlock/FullSet/TierCapSources/ulthalesh-v1.png",
+          "sha256": "7c8e12b63beba6b0b27d67b606e0f8df7205955d726943bbc922eae666a3f0cb"
+        },
+        "frozenTerminal": {
+          "painting": {
+            "path": "Assets_Draft/Warlock/FullSet/Composed/hp_boss_case-over.tga",
+            "sha256": "b341dee0a8a50d883842fae2a332d2bbc09cc5e0d39674af2c7c53ea4cb5cafc"
+          },
+          "mask": {
+            "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_boss_case-painted-terminal-b341dee0a8a5.png",
+            "sha256": "7c830f3057e590ec6ffe22801372a04ccb67b14214657b5b0f3ad1f735493999"
+          },
+          "toe": [
+            873.0,
+            188
+          ]
+        },
+        "export": {
+          "path": "Assets_Draft/Warlock/FullSet/Endcaps/ornament-ulthalesh-hp_boss_case.tga",
+          "sha256": "e3d0ac2acfa4e2f60deee6d9465f1ead3e0d0804b386f4be415c52ed57f1e5a8"
+        },
+        "best": {
+          "height": 129.4,
+          "transform": {
+            "crop": [
+              164,
+              51,
+              1062,
+              1209
+            ],
+            "scale": 0.11193771626297579,
+            "offset": [
+              836,
+              59
+            ]
+          },
+          "bounds": [
+            836,
+            59,
+            937,
+            189
+          ],
+          "approvedFootprint": [
+            811.5,
+            56,
+            939.5,
+            189
+          ],
+          "paintedTerminal": {
+            "terminalPixels": 5114,
+            "terminalCoveredFraction": 0.9943292921392256,
+            "exposedTerminalPixelsBeyondAA": 6,
+            "edgeToleranceSourcePixels": 1
+          },
+          "nativeTerminal": {
+            "terminalPixels": 8268,
+            "terminalCoveredFraction": 0.9066279632317368,
+            "exposedTerminalPixelsBeyondAA": 565,
+            "edgeToleranceSourcePixels": 1
+          },
+          "combinedFillOcclusion": 0.06871045922382046,
+          "numericPassed": false,
+          "error": "cap leaves terminal metal exposed: {'terminalPixels': 5114, 'terminalCoveredFraction': 0.9943292921392256, 'exposedTerminalPixelsBeyondAA': 6, 'edgeToleranceSourcePixels': 1}"
+        },
+        "trials": [
+          {
+            "height": 129.4,
+            "transform": {
+              "crop": [
+                164,
+                51,
+                1062,
+                1209
+              ],
+              "scale": 0.11193771626297579,
+              "offset": [
+                836,
+                59
+              ]
+            },
+            "bounds": [
+              836,
+              59,
+              937,
+              189
+            ],
+            "approvedFootprint": [
+              811.5,
+              56,
+              939.5,
+              189
+            ],
+            "paintedTerminal": {
+              "terminalPixels": 5114,
+              "terminalCoveredFraction": 0.9943292921392256,
+              "exposedTerminalPixelsBeyondAA": 6,
+              "edgeToleranceSourcePixels": 1
+            },
+            "nativeTerminal": {
+              "terminalPixels": 8268,
+              "terminalCoveredFraction": 0.9066279632317368,
+              "exposedTerminalPixelsBeyondAA": 565,
+              "edgeToleranceSourcePixels": 1
+            },
+            "combinedFillOcclusion": 0.06871045922382046,
+            "numericPassed": false,
+            "error": "cap leaves terminal metal exposed: {'terminalPixels': 5114, 'terminalCoveredFraction': 0.9943292921392256, 'exposedTerminalPixelsBeyondAA': 6, 'edgeToleranceSourcePixels': 1}"
+          }
+        ],
+        "previousFrozenTerminal": {
+          "painting": {
+            "path": "Assets_Draft/Warlock/FullSet/Composed/hp_boss_case-over.tga",
+            "sha256": "35e8e8f08424b12c4e32f2338626fce2a4ed7ac3bdfe194cb8ea819dd1b988f4"
+          },
+          "mask": {
+            "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/hp_boss_case-painted-terminal-35e8e8f08424.png",
+            "sha256": "10d4434747b9202ff9ba78a12fed109d0f774535477e0163c78d6a4e288f24cb"
+          },
+          "toe": [
+            873.0,
+            188
+          ]
+        }
+      },
+      "path": "Assets/Warlock/ornament-ulthalesh-hp_boss_case.tga",
+      "sha256": "e3d0ac2acfa4e2f60deee6d9465f1ead3e0d0804b386f4be415c52ed57f1e5a8",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case-glow": {
+      "construction": "neutral-whole-assembly-halo-1",
+      "painting": "hp_cap_case-over",
+      "path": "Assets/Warlock/hp_cap_case-glow.tga",
+      "sha256": "438ae8233ec15245411a60a514598b4a65d043e8407408148403709e0d529cef",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-glow": {
+      "construction": "neutral-whole-assembly-halo-1",
+      "painting": "hp_mid_case-over",
+      "path": "Assets/Warlock/hp_mid_case-glow.tga",
+      "sha256": "ea358d6a09ea0008f1f1924aecf0c5cc9d768d78459c8cf5d9c4d33653981eba",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case-glow": {
+      "construction": "neutral-whole-assembly-halo-1",
+      "painting": "hp_low_case-over",
+      "path": "Assets/Warlock/hp_low_case-glow.tga",
+      "sha256": "ea358d6a09ea0008f1f1924aecf0c5cc9d768d78459c8cf5d9c4d33653981eba",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case-glow": {
+      "construction": "neutral-whole-assembly-halo-1",
+      "painting": "hp_boss_case-over",
+      "path": "Assets/Warlock/hp_boss_case-glow.tga",
+      "sha256": "772199c00b77ce9396352a49df7505e85683ab29d7ff785d8033b4e02a824c06",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-ulthalesh-hp_cap_case-glow": {
+      "construction": "neutral-whole-assembly-halo-1",
+      "painting": "ornament-ulthalesh-hp_cap_case",
+      "path": "Assets/Warlock/ornament-ulthalesh-hp_cap_case-glow.tga",
+      "sha256": "8bd6e0610c0b0231f799059654808591eefb902146db40a01a1680d1fe0aa4f7",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-ulthalesh-hp_mid_case-glow": {
+      "construction": "neutral-whole-assembly-halo-1",
+      "painting": "ornament-ulthalesh-hp_mid_case",
+      "path": "Assets/Warlock/ornament-ulthalesh-hp_mid_case-glow.tga",
+      "sha256": "deea353f602b36faf9b1b9e57391494451ecf126297bd624f026b75d2e61605d",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-ulthalesh-hp_low_case-glow": {
+      "construction": "neutral-whole-assembly-halo-1",
+      "painting": "ornament-ulthalesh-hp_low_case",
+      "path": "Assets/Warlock/ornament-ulthalesh-hp_low_case-glow.tga",
+      "sha256": "7c9dd63fbd6c3ceb6a795d842a26e7cfb044cf19c2817e0380c0062187c91f41",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-ulthalesh-hp_boss_case-glow": {
+      "construction": "neutral-whole-assembly-halo-1",
+      "painting": "ornament-ulthalesh-hp_boss_case",
+      "path": "Assets/Warlock/ornament-ulthalesh-hp_boss_case-glow.tga",
+      "sha256": "dbfddbd45e48fcf0c548910c0b83791e20cf5d5f708c8b9d8f774806a00c9894",
+      "canvas": [
+        1024,
+        256
+      ]
+    }
+  },
+  "runtimeData": {
+    "path": "Core/WarlockThemeData.lua",
+    "sha256": "ce3d2b06b01d852aa87d403f727b6c23291c2d5b55f15c31d449e4454c53259d"
+  },
+  "evidence": {
+    "sourceReplayPassed": true,
+    "functionalFailures": [],
+    "numericPassed": true,
+    "strictNumericPassed": false,
+    "strictFunctionalFailures": [
+      "hp_boss_case: SOURCE APERTURE: undeclared solid paint covers functional fill",
+      "hp_cap_case endcap: cap leaves terminal metal exposed: {'terminalPixels': 5247, 'terminalCoveredFraction': 0.9504478749761769, 'exposedTerminalPixelsBeyondAA': 103, 'edgeToleranceSourcePixels': 1}",
+      "hp_mid_case endcap: cap leaves terminal metal exposed: {'terminalPixels': 4496, 'terminalCoveredFraction': 0.9721975088967971, 'exposedTerminalPixelsBeyondAA': 74, 'edgeToleranceSourcePixels': 1}",
+      "hp_low_case endcap: cap leaves terminal metal exposed: {'terminalPixels': 4496, 'terminalCoveredFraction': 0.9735320284697508, 'exposedTerminalPixelsBeyondAA': 68, 'edgeToleranceSourcePixels': 1}",
+      "hp_boss_case endcap: cap leaves terminal metal exposed: {'terminalPixels': 5114, 'terminalCoveredFraction': 0.9943292921392256, 'exposedTerminalPixelsBeyondAA': 6, 'edgeToleranceSourcePixels': 1}"
+    ],
+    "maintainerFitTolerance": {
+      "record": {
+        "path": "Docs/Research_Assets/Warlock/FullSet/maintainer-fit-tolerance.json",
+        "sha256": "7d6966d96e72589eea4f2b01a532fe32df9972a14abe5e0e13bc0dfc56b2808d"
+      },
+      "schema": 1,
+      "theme": "Warlock",
+      "authorization": "Hvis det er inden for 10px, s\u00e5 g\u00e5r det nok forresten.",
+      "maximumDeviationPx": 10,
+      "pixelSpace": "native exported texture pixels",
+      "numericAcceptedUnderMaintainerTolerance": true,
+      "metrics": {
+        "hp_cap_case": {
+          "maximumTerminalEdgeDeviationPx": 6.324555320336759,
+          "strictExposedPixels": 103,
+          "exactExposedMaskSha256": "5cce773c9aa65f2d018cec437cdb31a8639dcea3e7b897aefb8d0a5d825e9155"
+        },
+        "hp_mid_case": {
+          "maximumTerminalEdgeDeviationPx": 7.0710678118654755,
+          "strictExposedPixels": 74,
+          "exactExposedMaskSha256": "f1ad66561d36dc762a9b6f846782b3ce7646bdc91ecac319a8a273cca0a7c86a"
+        },
+        "hp_low_case": {
+          "maximumTerminalEdgeDeviationPx": 7.0710678118654755,
+          "strictExposedPixels": 68,
+          "exactExposedMaskSha256": "c73214aff76af21d1f03ec61752072fa4f708ce485db1c834d7f3bda6f758a55"
+        },
+        "hp_boss_case": {
+          "maximumTerminalEdgeDeviationPx": 2.8284271247461903,
+          "strictExposedPixels": 6,
+          "exactExposedMaskSha256": "4cc9df138539f8967a6b216e7b30db65e17133a20e3f7029cc5804f34e52da74"
+        },
+        "bossOpening": {
+          "solidIntrusionPixels": 74,
+          "maximumEdgeDeviationPx": 4.47213595499958
+        },
+        "orb_case_hi": {
+          "changedNativeGlassPixels": 0,
+          "maximumConnectedDefectSpanPx": 0,
+          "rgbUnchanged": true,
+          "maximumAlphaDelta255": 0
+        },
+        "orb_case_low": {
+          "changedNativeGlassPixels": 0,
+          "maximumConnectedDefectSpanPx": 0,
+          "rgbUnchanged": true,
+          "maximumAlphaDelta255": 0
+        }
+      },
+      "allowedFailurePrefixes": [
+        "hp_cap_case endcap: cap leaves terminal metal exposed:",
+        "hp_mid_case endcap: cap leaves terminal metal exposed:",
+        "hp_low_case endcap: cap leaves terminal metal exposed:",
+        "hp_boss_case endcap: cap leaves terminal metal exposed:",
+        "hp_boss_case: SOURCE APERTURE: undeclared solid paint covers functional fill",
+        "orb_case_hi: composed RGBA changes exact native glass",
+        "orb_case_low: composed RGBA changes exact native glass"
+      ],
+      "bindings": {
+        "sourceManifest": {
+          "path": "Assets_Draft/Warlock/FullSet/manifest.json",
+          "sha256": "bc922d33bca4b176845315c95184bf2f71260541f014bba7e472c52306cf9d23"
+        },
+        "composedManifest": {
+          "path": "Assets_Draft/Warlock/FullSet/Composed/manifest.json",
+          "sha256": "af9c69a3432b1370e12ee9b78ee0209ea906a8687af8abbe79a04a78ff18174b"
+        },
+        "capReport": {
+          "path": "Assets_Draft/Warlock/FullSet/Endcaps/fit-report.json",
+          "sha256": "fb2c300a7d539ba2e23162cf87f1d7335aee938ca62ec9d0d4e9533b3b3fe342"
+        },
+        "functionalContracts": {
+          "path": "Docs/Research_Assets/Warlock/FullSet/Contracts/functional-fields.json",
+          "sha256": "814313af270fe3f8868c1df3a43360345a662708858506e69210b913f3de46e8"
+        }
+      },
+      "liveRetailValidated": false,
+      "liveForeverValidated": false
+    },
+    "composedManifest": {
+      "path": "Assets_Draft/Warlock/FullSet/Composed/manifest.json",
+      "sha256": "af9c69a3432b1370e12ee9b78ee0209ea906a8687af8abbe79a04a78ff18174b"
+    },
+    "capReport": {
+      "path": "Assets_Draft/Warlock/FullSet/Endcaps/fit-report.json",
+      "sha256": "fb2c300a7d539ba2e23162cf87f1d7335aee938ca62ec9d0d4e9533b3b3fe342"
+    },
+    "borderManifest": {
+      "path": "Assets_Draft/Warlock/FullSet/BorderAtlases/manifest.json",
+      "sha256": "5343086e0dbe10157f5570737ea6d1c4efab74658d3c4994b568dea8afeb2e3b"
+    },
+    "footprints": {
+      "path": "Docs/Research_Assets/Warlock/Contracts/approved-footprints.json",
+      "sha256": "9f7cfa23889e9b254b29099a62608188249d4bf3cd7aa336000341ba0c0fe113"
+    },
+    "castSockets": {
+      "path": "Assets_Draft/Warlock/FullSet/Review/CastSockets/fit-report.json",
+      "sha256": "4e175859c4a276109ebb4d821ac31a76f2b11f68b4975866408ce508f0d904c0"
+    }
+  }
+}

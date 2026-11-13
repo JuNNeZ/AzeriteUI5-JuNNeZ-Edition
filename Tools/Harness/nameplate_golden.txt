@@ -1690,6 +1690,19 @@ Plate2 (hostile)
   native auras shown@1 unit=nameplate2 enabled=true pt=CENTER>Auras:CENTER(0,0)
   power shown@0; prediction hidden@0
   softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
+Plate3 (neutral rare)
+  unit=nameplate3 obj=nil npc=false prd=false widgetsOnly=false canAttack=true
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name shown@1 text="Wandering Boar" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=1,0.502,0.125 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge shown@1 tex=Assets\icon_classification_rare.tga; highlight hidden@1 color=0.565,0.765,1; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate3 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=Plate ignore=true alpha=1 pt=BOTTOM>Name:TOP(0,0); widgets shown@1 ignore=false
 == the interrupt resolver asked
 == stacking passed through
 Plate1 (hostile elite)
@@ -2289,6 +2302,20 @@ Plate20 (?)
   badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
   raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
   native auras shown@1 unit=nameplate20 enabled=true pt=CENTER>Auras:CENTER(0,0)
+  power shown@0; prediction hidden@0
+  softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
+== healer and DPS mode
+Plate21 (?)
+  unit=nil obj=nil npc=nil prd=nil widgetsOnly=nil canAttack=nil
+  state target=false soft=false focus=false mouse=false combat=false
+  frame shown@1 ignore=false scale=0.939
+  name hidden@1 text="" color=0.98,0.98,0.98 pt=TOP>-:TOP(0,16) scale=1
+  health shown@1 color=0,0.447,0.698 orient=LEFT tex=0.055,0.945 pt=TOP>-:TOP(0,-1); bar shown@1; backdrop shown@1
+  value hidden@1 pt=CENTER>-:CENTER(0,-18)
+  cast hidden@1 color=0.898,0.698,0.149 tex=0.898,0.698,0.149 text=0.98,0.98,0.98 pt=TOP>Health:BOTTOM(0,7)
+  badge hidden@1 tex=nil; highlight hidden@1 color=-; threat hidden@1
+  raid enabled=true hidden@1 size=28 pt=RIGHT>Health:LEFT(-6,0); auras enabled=nil hidden@1 pt=BOTTOM>-:BOTTOM(0,56)
+  native auras shown@1 unit=nameplate21 enabled=true pt=CENTER>Auras:CENTER(0,0)
   power shown@0; prediction hidden@0
   softTarget parent=BlizzPlate ignore=false alpha=1 pt=-; widgets shown@1 ignore=false
 == your target's floating name

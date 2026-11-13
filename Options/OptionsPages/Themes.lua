@@ -71,6 +71,9 @@ local Label = function(key)
 	if (key == "warrior") then return ClassName("WARRIOR", "Warrior") end
 	if (key == "rogue") then return ClassName("ROGUE", "Rogue") end
 	if (key == "shaman") then return ClassName("SHAMAN", "Shaman") end
+	if (key == "deathknight") then return ClassName("DEATHKNIGHT", "Death Knight") end
+	if (key == "priest") then return ClassName("PRIEST", "Priest") end
+	if (key == "warlock") then return ClassName("WARLOCK", "Warlock") end
 	if (key == "moonwell") then return "Moonwell+" end
 	if (key == "wildheart") then return "Wildheart" end
 	if (key == "moonvein") then return "Moonvein" end
@@ -145,7 +148,10 @@ local AddCastEndcap = function(theme, args)
 		or theme == ns.WarriorTheme and "warrior"
 		or theme == ns.RogueTheme and "rogue"
 		or theme == ns.ShamanTheme and "shaman"
-	local labels = { libram = "Libram", eagle = "Talonclaw", atiesh = "Atiesh", moon = L["The theme's own"], valarjar = "Valarjar", venom = "Venom Vial", totem = "Ancestral Totem" }
+		or theme == ns.DeathKnightTheme and "deathknight"
+		or theme == ns.PriestTheme and "priest"
+		or theme == ns.WarlockTheme and "warlock"
+	local labels = { libram = "Libram", eagle = "Talonclaw", atiesh = "Atiesh", moon = L["The theme's own"], valarjar = "Valarjar", venom = "Venom Vial", totem = "Ancestral Totem", maw = "Maw of the Damned", wrath = "Light's Wrath", thalkiel = "Thal'kiel" }
 	if (key and theme.GetCastEndcapChoices) then
 		local values, sorting = {}, {}
 		for choice in pairs(theme:GetCastEndcapChoices()) do
@@ -498,6 +504,62 @@ local GenerateShaman = function(order)
 	}
 end
 
+local GenerateDeathKnight = function(order)
+	local DeathKnight = ns.DeathKnightTheme
+	if (not DeathKnight) then return end
+	return {
+		name = WIP("deathknight", Label("deathknight")), order = order, type = "group", inline = true,
+		hidden = function() return Theme() ~= "deathknight" end,
+		args = AddCastEndcap(DeathKnight, {
+			endcap = { name = L["Endcap"], desc = L["The ornament at the outer end of the health bars."],
+				order = 1, type = "select", width = "full",
+				values = { frost = "Icebringer / Frostreaper", unholy = "Apocalypse", none = _G.NONE or "None" },
+				sorting = { "frost", "unholy", "none" },
+				get = function() return DeathKnight:GetEndcap() end,
+				set = function(_, value) DeathKnight:SetEndcap(value) end },
+			endcapScale = { name = L["Endcap size"], order = 2, type = "range", width = "full",
+				min = .5, max = 2, step = .05, isPercent = true,
+				get = function() return DeathKnight:GetEndcapScale() end,
+				set = function(_, value) DeathKnight:SetEndcapScale(value) end },
+			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return (DeathKnight:GetEndcapOffset()) end,
+				set = function(_, value) DeathKnight:SetEndcapOffset(value, nil) end },
+			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return select(2, DeathKnight:GetEndcapOffset()) end,
+				set = function(_, value) DeathKnight:SetEndcapOffset(nil, value) end },
+			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
+				func = function() DeathKnight:ResetEndcapPlacement() end }
+		})
+	}
+end
+
+local GenerateRelicTheme = function(order, key, module, cap, label)
+	if (not module) then return end
+	return {
+		name = WIP(key, Label(key)), order = order, type = "group", inline = true,
+		hidden = function() return Theme() ~= key end,
+		args = AddCastEndcap(module, {
+			endcap = { name = L["Endcap"], desc = L["The ornament at the outer end of the health bars."],
+				order = 1, type = "select", width = "full",
+				values = { [cap] = label, none = _G.NONE or "None" }, sorting = { cap, "none" },
+				get = function() return module:GetEndcap() end,
+				set = function(_, value) module:SetEndcap(value) end },
+			endcapScale = { name = L["Endcap size"], order = 2, type = "range", width = "full",
+				min = .5, max = 2, step = .05, isPercent = true,
+				get = function() return module:GetEndcapScale() end,
+				set = function(_, value) module:SetEndcapScale(value) end },
+			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return (module:GetEndcapOffset()) end,
+				set = function(_, value) module:SetEndcapOffset(value, nil) end },
+			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+				get = function() return select(2, module:GetEndcapOffset()) end,
+				set = function(_, value) module:SetEndcapOffset(nil, value) end },
+			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
+				func = function() module:ResetEndcapPlacement() end }
+		})
+	}
+end
+
 local GenerateMoonwell = function(order)
 	local Slosh = ns.MoonwellSlosh
 	if (not Slosh) then return end
@@ -715,6 +777,9 @@ local GenerateOptions = function()
 			warrior = GenerateWarrior(26),
 			rogue = GenerateRogue(27),
 			shaman = GenerateShaman(28),
+			deathknight = GenerateDeathKnight(29),
+			priest = GenerateRelicTheme(30, "priest", ns.PriestTheme, "tuure", "T'uure"),
+			warlock = GenerateRelicTheme(31, "warlock", ns.WarlockTheme, "ulthalesh", "Ulthalesh"),
 			moonwell = GenerateMoonwell(23),
 			wildheart = GenerateWildheart(24),
 			moonvein = GenerateWildheart(24.1, "moonvein"),

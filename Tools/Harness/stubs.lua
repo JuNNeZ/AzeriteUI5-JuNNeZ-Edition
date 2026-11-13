@@ -540,6 +540,7 @@ local ns = {
 	API = {
 		IsAddOnEnabled = function() return false end,
 		IsAddOnAvailable = function() return false end,
+		GetAddOnTitle = function(addon) return addon end,
 		GetFont = function() return fontObject end,
 		GetMedia = function(name, ext)
 			return string.format([[Interface\AddOns\Test\Assets\%s.%s]], name, ext or "tga")

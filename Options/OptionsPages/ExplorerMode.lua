@@ -244,11 +244,15 @@ local GenerateOptions = function()
 			},
 			-- Separate from instances, so a player who lets the interface fade in
 			-- dungeons still keeps it during a key. Retail only, like Mythic+ itself.
+			-- A key is always inside an instance, so "While in an instance" already keeps
+			-- the interface up and this switch could change nothing. "While in a group"
+			-- does not grey it out: a key can be run solo, and then it is not a group.
 			fadeInMythicPlus = {
 				name = L["During a Mythic+ key"],
 				desc = L["Keep your interface visible while a Mythic+ key is running, even if you let it fade in other instances."],
 				type = "toggle", width = "full",
-				set = setterReverse, get = getterReverse, disabled = isdisabled,
+				set = setterReverse, get = getterReverse,
+				disabled = function(info) return isdisabled(info) or (not getoption(info, "fadeInInstances")) end,
 				hidden = function(info) return (not ns.IsRetailContent) or isdisabled(info) end,
 				order = 35.5
 			},
@@ -268,7 +272,7 @@ local GenerateOptions = function()
 			},
 			fadeWithDeadTarget = {
 				name = L["While having a dead target"],
-				desc = L["Keep your interface visible while you have a dead target selected. Unavailable while both friendly and hostile targets already keep it visible."],
+				desc = L["Keep your interface visible while you have a dead target selected. Unavailable while neither friendly nor hostile targets keep it visible."],
 				type = "toggle", width = "full",
 				set = setterReverse, get = getterReverse, disabled = function(info) return isdisabled(info) or (getoption(info, "fadeWithFriendlyTarget") and getoption(info, "fadeWithHostileTarget")) end,
 				hidden = isdisabled,

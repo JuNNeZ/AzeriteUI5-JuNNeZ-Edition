@@ -60,6 +60,12 @@
 	<Script file="WarriorTheme.lua"/>
 	<Script file="RogueTheme.lua"/>
 	<Script file="ShamanTheme.lua"/>
+	<Script file="DeathKnightThemeData.lua"/>
+	<Script file="DeathKnightTheme.lua"/>
+	<Script file="PriestThemeData.lua"/>
+	<Script file="PriestTheme.lua"/>
+	<Script file="WarlockThemeData.lua"/>
+	<Script file="WarlockTheme.lua"/>
 	<Script file="MoonwellSlosh.lua"/>
 	<Script file="WildheartCrystal.lua"/>
 	<Script file="ClassResourceEffects.lua"/>

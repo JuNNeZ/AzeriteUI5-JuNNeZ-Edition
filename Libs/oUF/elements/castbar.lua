@@ -154,6 +154,21 @@ local function IsTimerSpent(element)
 	return remaining <= 0
 end
 
+-- AzeriteUI: the player's own cast is past its stored end time. Only the player's times are
+-- readable, and onUpdate draws the player's bar from them, so the engine timer may not be
+-- readable after that. The maintainer's own party frame stayed white at full on 5.37.x,
+-- including after death (FixLog 2026-11-08). False for other units and for secret times.
+local function IsPlayerCastPast(element, unit)
+	if(unit ~= 'player') then
+		return false
+	end
+	local endTime = element.endTime
+	if(type(endTime) ~= 'number' or (issecretvalue and issecretvalue(endTime))) then
+		return false
+	end
+	return GetTime() >= endTime
+end
+
 local function IsCurrentCast(element, castID, unit)
 	if(castID and element.castID == castID) then
 		return true
@@ -327,6 +342,11 @@ local function CastStart(self, event, unit)
 		else
 			element.endTime = endTime / 1000
 		end
+	else
+		-- AzeriteUI: a header button can show the player and later another unit. Times left from
+		-- the player's last cast would make onUpdate draw this cast from them, full at once.
+		element.startTime = nil
+		element.endTime = nil
 	end
 
 	if(duration) then
@@ -635,7 +655,7 @@ local function onUpdate(self, elapsed)
 				end
 				-- Past its end on two checks in a row (.5 to 1 s): a late stop is not cut off.
 				-- Empowered casts can hold at max beyond the timer, so they are left out.
-				if(not self.empowering and IsTimerSpent(self)) then
+				if(not self.empowering and (IsTimerSpent(self) or IsPlayerCastPast(self, castUnit))) then
 					self.__AzeriteUI_TimerSpentChecks = (self.__AzeriteUI_TimerSpentChecks or 0) + 1
 					if(self.__AzeriteUI_TimerSpentChecks >= 2) then
 						resetAttributes(self)

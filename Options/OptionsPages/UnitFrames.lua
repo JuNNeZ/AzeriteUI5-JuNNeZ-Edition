@@ -38,6 +38,13 @@ end
 local Options = ns:GetModule("Options")
 local HasColorPicker = ns.API.IsAddOnEnabled("AzUI_Color_Picker")
 
+-- The Legacy HUD (Core/LegacyHUD.lua) draws the player power as a flat bar and the
+-- player frames without portraits, so settings that only reach the orb, the crystal
+-- art or the portrait do nothing there. Same check as ActionBars.lua's ShapeOption.
+local IsLegacyHUD = function()
+	return (ns.LegacyHUD and ns.LegacyHUD:IsActive()) and true or false
+end
+
 -- Player, Player Alternate and Player (Party Style) take the same place: one at a time.
 -- All three pages stay listed; an inactive one shows only its switch (isdisabled).
 local PLAYER_FRAME_MODULES = { "PlayerFrame", "PlayerFrameAlternate", "PlayerFrameParty" }
@@ -264,6 +271,12 @@ local GenerateOptions = function()
 		suboptions.name = L["Player"]
 		suboptions.order = 100
 
+		-- Legacy shows neither the orb (LegacyHUD.lua sets its alpha to 0) nor the Ice
+		-- Crystal (Player.lua UsePlayerIceCrystal), and its power widget ignores the
+		-- style choice (Player.lua ResolvePlayerPowerWidgetVisibility).
+		local hiddenUnderLegacy = function(info)
+			return IsLegacyHUD() or isdisabled(info)
+		end
 
 		suboptions.args.colorHeader = {
 			name = L["Crystal & Mana Orb"], order = 100, type = "header", hidden = isdisabled
@@ -303,7 +316,7 @@ local GenerateOptions = function()
 		suboptions.args.flowingMana = {
 			name = L["Flowing mana"],
 			desc = L["Add gentle waves to the selected orb material and theme or Lite+ effects while the orb shows mana. Keeps your selected resource color."],
-			order = 145, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 145, type = "toggle", width = "full", set = setter, get = getter, hidden = hiddenUnderLegacy
 		}
 		suboptions.args.legacyCenterWithoutTarget = {
 			name = L["Center Without a Target"],
@@ -608,7 +621,7 @@ local GenerateOptions = function()
 		suboptions.args.powerOrbMode = {
 			name = L["Player Power Style"],
 			desc = L["Choose how your player power widget is shown."],
-			order = 110, type = "select", width = "full", hidden = isdisabled,
+			order = 110, type = "select", width = "full", hidden = hiddenUnderLegacy,
 			values = {
 				orbV2 = "Automatic (By Resource)",
 				orbV2Always = "Mana Orb Only",
@@ -635,7 +648,7 @@ local GenerateOptions = function()
 		suboptions.args.useWrathCrystal = {
 			name = L["Use Ice Crystal Art"],
 			desc = L["Use the Ice Crystal artwork when Power Crystal style is active."],
-			order = 130, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 130, type = "toggle", width = "full", set = setter, get = getter, hidden = hiddenUnderLegacy
 		}
 		-- The orb ships four interchangeable fill textures and three decorative
 		-- layers. Only the clouds fill and the case were ever wired up; the glass
@@ -644,7 +657,7 @@ local GenerateOptions = function()
 		suboptions.args.manaOrbTexture = {
 			name = L["Mana Orb Texture"],
 			desc = L["Choose which artwork fills the Mana Orb."],
-			order = 140, type = "select", width = "full", hidden = isdisabled,
+			order = 140, type = "select", width = "full", hidden = hiddenUnderLegacy,
 			values = {
 				clouds = "Clouds",
 				galaxy = "Galaxy",
@@ -666,17 +679,17 @@ local GenerateOptions = function()
 		suboptions.args.manaOrbGlass = {
 			name = L["Mana Orb Glass"],
 			desc = L["Draw the glass dome over the Mana Orb."],
-			order = 150, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 150, type = "toggle", width = "full", set = setter, get = getter, hidden = hiddenUnderLegacy
 		}
 		suboptions.args.manaOrbRim = {
 			name = L["Mana Orb Rim"],
 			desc = L["Draw a heavy ring around the edge of the Mana Orb."],
-			order = 160, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 160, type = "toggle", width = "full", set = setter, get = getter, hidden = hiddenUnderLegacy
 		}
 		suboptions.args.manaOrbPedestal = {
 			name = L["Mana Orb Pedestal"],
 			desc = L["Draw the sculpted plinth beneath the Mana Orb."],
-			order = 170, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+			order = 170, type = "toggle", width = "full", set = setter, get = getter, hidden = hiddenUnderLegacy
 		}
 		suboptions.args.pvpIndicatorHeader = {
 			name = L["PvP Badge"],
@@ -809,7 +822,9 @@ local GenerateOptions = function()
 			suboptions.args.showPortrait = {
 				name = L["Show Portrait"],
 				desc = L["Show the round portrait above the health bar. Without it the frame is just the bar."],
-				order = 110, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled
+				order = 110, type = "toggle", width = "full", set = setter, get = getter,
+				-- Legacy keeps the full party layout and hides the portrait itself (PlayerParty.lua UpdateLayout).
+				hidden = function(info) return IsLegacyHUD() or isdisabled(info) end
 			}
 			suboptions.args.useClassColor = {
 				name = L["Color by Class"],
@@ -1410,7 +1425,11 @@ local GenerateOptions = function()
 			name = L["Show Other Short Debuffs"],
 			desc = L["Show other short harmful effects that are likely relevant in combat, even if they are not dispellable."],
 			order = 114, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = partyAuraCustomSettingsDisabled
+			-- Blizzard's dispellable-only mode drops other debuffs itself; the dispellable
+			-- switch governs that group then (Party.lua GetPartyNativeAuraOptions).
+			disabled = function(info)
+				return partyAuraCustomSettingsDisabled(info) or getoption(info, "partyAuraOnlyDispellableDebuffs")
+			end
 		}
 		suboptions.args.partyAuraShowHelpfulExternals = {
 			name = L["Show Helpful Externals"],
@@ -1511,7 +1530,9 @@ local GenerateOptions = function()
 			name = L["Glow Frame For Dispellable Debuffs"],
 			desc = L["Highlight the affected party frame using the debuff type color when a removable debuff is active."],
 			order = 137, type = "toggle", width = "full", set = setter, get = getter, hidden = isdisabled,
-			disabled = partyAuraLayoutDisabled
+			-- The glow runs whether the aura row is shown or not (Party.lua AuraHighlight_Update),
+			-- so it must stay switchable with Show Auras off.
+			disabled = isdisabled
 		}
 		options.args.party = suboptions
 	end
@@ -1862,6 +1883,9 @@ local GenerateOptions = function()
 							return not IsSpecMatch(SPEC_ENHANCEMENT)
 						end
 					}
+					-- Stays under the Legacy HUD: it drops the swap bar (PlayerClassPower.lua
+					-- ShouldUseElementalSwapBar), but its power bar is the crystal element, whose
+					-- GetDisplayPower (Player.lua) still picks Maelstrom or Mana from this.
 					suboptions.args.elementalMaelstromDisplayMode = {
 						name = L["Elemental Crystal/Bar Resource Split"],
 						desc = L["Choose which resource is shown in the Power Crystal; the other is shown in the secondary bar."],

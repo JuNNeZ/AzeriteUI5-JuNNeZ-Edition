@@ -103,6 +103,7 @@ local defaults = { profile = ns:Merge({
 	dimWhenInactive = false,
 	showEmptyButtons = false, -- whether slots without an action stay visible as empty buttons
 	extraButtonShape = "circle", -- extra action and zone ability buttons, applied on reload
+	masque = false, -- hand the action, pet and stance buttons to Masque; applied on reload (Compatibility/Masque.lua)
 	hideElements = {
 		macro = true,
 		hotkey = false,
@@ -288,6 +289,10 @@ local style = function(self, shape)
 	local m = db.ButtonMaskTexture
 	local b = "" -- GetMedia("blank")
 
+	-- Masque owns the art layers when the player handed it the buttons
+	-- (Compatibility/Masque.lua); everything that is not art is still styled here.
+	local masque = ns.ActionBarMasque and ns.ActionBarMasque.IsActive()
+
 	self:SetAttribute("buttonlock", true)
 	self:SetAttribute("buttonLock", true)
 	self:SetSize(unpack(db.ButtonSize))
@@ -297,54 +302,56 @@ local style = function(self, shape)
 	-- New 3.4.1 checked texture keeps being reset.
 	--hooksecurefunc(self, "SetChecked", function() self:GetCheckedTexture():Hide() end)
 
-	-- Custom slot texture
-	self.backdrop = self:CreateTexture(nil, "BACKGROUND", nil, -7)
-	self.backdrop:SetSize(unpack(db.ButtonBackdropSize))
-	self.backdrop:SetPoint(unpack(db.ButtonBackdropPosition))
-	self.backdrop:SetTexture(db.ButtonBackdropTexture)
-	self.backdrop:SetVertexColor(unpack(db.ButtonBackdropColor))
+	if (not masque) then
+		-- Custom slot texture
+		self.backdrop = self:CreateTexture(nil, "BACKGROUND", nil, -7)
+		self.backdrop:SetSize(unpack(db.ButtonBackdropSize))
+		self.backdrop:SetPoint(unpack(db.ButtonBackdropPosition))
+		self.backdrop:SetTexture(db.ButtonBackdropTexture)
+		self.backdrop:SetVertexColor(unpack(db.ButtonBackdropColor))
 
-	-- Icon
-	self.icon:SetDrawLayer("BACKGROUND", 1)
-	self.icon:ClearAllPoints()
-	self.icon:SetPoint(unpack(db.ButtonIconPosition))
-	self.icon:SetSize(unpack(db.ButtonIconSize))
-	self.icon:SetMask(m)
+		-- Icon
+		self.icon:SetDrawLayer("BACKGROUND", 1)
+		self.icon:ClearAllPoints()
+		self.icon:SetPoint(unpack(db.ButtonIconPosition))
+		self.icon:SetSize(unpack(db.ButtonIconSize))
+		self.icon:SetMask(m)
 
-	-- Keep default/LAB normal border textures hidden.
-	-- The swapped LAB can re-apply normal atlases during updates.
-	if (self.NormalTexture) then
-		self.NormalTexture:SetTexture(nil)
-		if (self.NormalTexture.SetAtlas) then
-			self.NormalTexture:SetAtlas(nil)
+		-- Keep default/LAB normal border textures hidden.
+		-- The swapped LAB can re-apply normal atlases during updates.
+		if (self.NormalTexture) then
+			self.NormalTexture:SetTexture(nil)
+			if (self.NormalTexture.SetAtlas) then
+				self.NormalTexture:SetAtlas(nil)
+			end
+			self.NormalTexture:Hide()
 		end
-		self.NormalTexture:Hide()
+
+		self:GetPushedTexture():SetTexture(m)
+		self:GetPushedTexture():SetVertexColor(1, 1, 1, .2)
+		self:GetPushedTexture():SetAllPoints(self.icon)
+		self:GetPushedTexture():SetBlendMode("ADD")
+		self:GetPushedTexture():SetDrawLayer("OVERLAY", 2)
+
+		self:GetCheckedTexture():SetTexture(m)
+		self:GetCheckedTexture():SetVertexColor(1, .82, .1, .2)
+		self:GetCheckedTexture():SetAllPoints(self.icon)
+		self:GetCheckedTexture():SetBlendMode("ADD")
+		self:GetCheckedTexture():SetDrawLayer("OVERLAY", 1)
+
+		self:GetHighlightTexture():SetTexture(m)
+		self:GetHighlightTexture():SetVertexColor(1, 1, 1, .2)
+		self:GetHighlightTexture():SetAllPoints(self.icon)
+		self:GetHighlightTexture():SetBlendMode("ADD")
+		self:GetHighlightTexture():SetDrawLayer("HIGHLIGHT")
+
+		-- Autoattack flash
+		self.Flash:SetDrawLayer("OVERLAY", 2)
+		self.Flash:SetAllPoints(self.icon)
+		self.Flash:SetVertexColor(1, 0, 0, .25)
+		self.Flash:SetTexture(m)
+		self.Flash:Hide()
 	end
-
-	self:GetPushedTexture():SetTexture(m)
-	self:GetPushedTexture():SetVertexColor(1, 1, 1, .2)
-	self:GetPushedTexture():SetAllPoints(self.icon)
-	self:GetPushedTexture():SetBlendMode("ADD")
-	self:GetPushedTexture():SetDrawLayer("OVERLAY", 2)
-
-	self:GetCheckedTexture():SetTexture(m)
-	self:GetCheckedTexture():SetVertexColor(1, .82, .1, .2)
-	self:GetCheckedTexture():SetAllPoints(self.icon)
-	self:GetCheckedTexture():SetBlendMode("ADD")
-	self:GetCheckedTexture():SetDrawLayer("OVERLAY", 1)
-
-	self:GetHighlightTexture():SetTexture(m)
-	self:GetHighlightTexture():SetVertexColor(1, 1, 1, .2)
-	self:GetHighlightTexture():SetAllPoints(self.icon)
-	self:GetHighlightTexture():SetBlendMode("ADD")
-	self:GetHighlightTexture():SetDrawLayer("HIGHLIGHT")
-
-	-- Autoattack flash
-	self.Flash:SetDrawLayer("OVERLAY", 2)
-	self.Flash:SetAllPoints(self.icon)
-	self.Flash:SetVertexColor(1, 0, 0, .25)
-	self.Flash:SetTexture(m)
-	self.Flash:Hide()
 
 	-- Button cooldown frame
 	-- ToDo: Make all this more streamlined through the back-end
@@ -352,16 +359,18 @@ local style = function(self, shape)
 	-- Runtime cooldown progression comes from LibActionButton's UpdateCooldown/event flow.
 	-- If cooldowns stop updating in combat, debug LAB first, not this style block.
 	self.cooldown:SetFrameLevel(self:GetFrameLevel() + 1)
-	self.cooldown:ClearAllPoints()
-	self.cooldown:SetAllPoints(self.icon)
-	self.cooldown:SetUseCircularEdge(true)
-	self.cooldown:SetReverse(false)
-	self.cooldown:SetSwipeTexture(m)
-	self.cooldown:SetDrawSwipe(true)
-	self.cooldown:SetBlingTexture(b, 0, 0, 0, 0)
-	self.cooldown:SetDrawBling(false)
-	self.cooldown:SetEdgeTexture(b)
-	self.cooldown:SetDrawEdge(false)
+	if (not masque) then
+		self.cooldown:ClearAllPoints()
+		self.cooldown:SetAllPoints(self.icon)
+		self.cooldown:SetUseCircularEdge(true)
+		self.cooldown:SetReverse(false)
+		self.cooldown:SetSwipeTexture(m)
+		self.cooldown:SetDrawSwipe(true)
+		self.cooldown:SetBlingTexture(b, 0, 0, 0, 0)
+		self.cooldown:SetDrawBling(false)
+		self.cooldown:SetEdgeTexture(b)
+		self.cooldown:SetDrawEdge(false)
+	end
 	-- Retail duration objects can remain secret to addon code while Blizzard's
 	-- cooldown widget can still render their countdown safely.
 	local nativeCooldownCount = ns.IsRetail and self.cooldown.GetCountdownFontString and self.cooldown:GetCountdownFontString()
@@ -396,12 +405,15 @@ local style = function(self, shape)
 	self.OverlayFrame:SetFrameLevel(self:GetFrameLevel() + 3)
 	self.OverlayFrame:SetAllPoints()
 
-	-- Icon Border
-	self.IconBorder = self.OverlayFrame:CreateTexture(nil, "BORDER", nil, 1)
-	self.IconBorder:SetPoint(unpack(db.ButtonBorderPosition))
-	self.IconBorder:SetSize(unpack(db.ButtonBorderSize))
-	self.IconBorder:SetTexture(db.ButtonBorderTexture)
-	self.IconBorder:SetVertexColor(unpack(db.ButtonBorderColor))
+	-- Icon Border. Not made for Masque: it would take a texture named IconBorder
+	-- as its own item-quality border region (Masque Skins/Regions.lua).
+	if (not masque) then
+		self.IconBorder = self.OverlayFrame:CreateTexture(nil, "BORDER", nil, 1)
+		self.IconBorder:SetPoint(unpack(db.ButtonBorderPosition))
+		self.IconBorder:SetSize(unpack(db.ButtonBorderSize))
+		self.IconBorder:SetTexture(db.ButtonBorderTexture)
+		self.IconBorder:SetVertexColor(unpack(db.ButtonBorderColor))
+	end
 
 	-- Blizzard Spell Activation / MaxDps (addon) / SpellActivationOverlay (addon for Wrath/Classic Era)
 	self.CustomSpellActivationAlert = ns.ActionBarProcHighlight.Create(self.OverlayFrame, db)
@@ -447,15 +459,7 @@ local style = function(self, shape)
 		RegisterCooldown(self.cooldown, self.cooldownCount)
 	end
 
-	-- ToDo: Handle this in the back-end
-	-- Keep these hooks visual-only; they intentionally avoid touching timing state.
-	hooksecurefunc(self.cooldown, "SetSwipeTexture", function(c,t) if t ~= m then c:SetSwipeTexture(m) end end)
-	hooksecurefunc(self.cooldown, "SetBlingTexture", function(c,t) if t ~= b then c:SetBlingTexture(b,0,0,0,0) end end)
-	hooksecurefunc(self.cooldown, "SetEdgeTexture", function(c,t) if t ~= b then c:SetEdgeTexture(b) end end)
-	--hooksecurefunc(self.cooldown, "SetSwipeColor", function(c,r,g,b,a) if not a or a>.76 then c:SetSwipeColor(r,g,b,.75) end end)
-	hooksecurefunc(self.cooldown, "SetDrawSwipe", function(c,h) if not h then c:SetDrawSwipe(true) end end)
-	hooksecurefunc(self.cooldown, "SetDrawBling", function(c,h) if h then c:SetDrawBling(false) end end)
-	hooksecurefunc(self.cooldown, "SetDrawEdge", function(c,h) if h then c:SetDrawEdge(false) end end)
+	-- The countdown numbers stay ours under Masque too; it does not draw them.
 	hooksecurefunc(self.cooldown, "SetHideCountdownNumbers", function(c,h)
 		if (useNativeCooldownCount and h) then
 			c:SetHideCountdownNumbers(false)
@@ -463,31 +467,43 @@ local style = function(self, shape)
 			c:SetHideCountdownNumbers(true)
 		end
 	end)
-	hooksecurefunc(self.cooldown, "SetCooldown", function(c) c:SetAlpha(.75) end)
-	hooksecurefunc(self, "SetNormalTexture", function(button, texture)
-		if (texture and texture ~= "") then
-			local normalTexture = button:GetNormalTexture()
-			if (normalTexture) then
-				normalTexture:SetTexture(nil)
-				if (normalTexture.SetAtlas) then
-					normalTexture:SetAtlas(nil)
+
+	if (not masque) then
+		-- ToDo: Handle this in the back-end
+		-- Keep these hooks visual-only; they intentionally avoid touching timing state.
+		hooksecurefunc(self.cooldown, "SetSwipeTexture", function(c,t) if t ~= m then c:SetSwipeTexture(m) end end)
+		hooksecurefunc(self.cooldown, "SetBlingTexture", function(c,t) if t ~= b then c:SetBlingTexture(b,0,0,0,0) end end)
+		hooksecurefunc(self.cooldown, "SetEdgeTexture", function(c,t) if t ~= b then c:SetEdgeTexture(b) end end)
+		--hooksecurefunc(self.cooldown, "SetSwipeColor", function(c,r,g,b,a) if not a or a>.76 then c:SetSwipeColor(r,g,b,.75) end end)
+		hooksecurefunc(self.cooldown, "SetDrawSwipe", function(c,h) if not h then c:SetDrawSwipe(true) end end)
+		hooksecurefunc(self.cooldown, "SetDrawBling", function(c,h) if h then c:SetDrawBling(false) end end)
+		hooksecurefunc(self.cooldown, "SetDrawEdge", function(c,h) if h then c:SetDrawEdge(false) end end)
+		hooksecurefunc(self.cooldown, "SetCooldown", function(c) c:SetAlpha(.75) end)
+		hooksecurefunc(self, "SetNormalTexture", function(button, texture)
+			if (texture and texture ~= "") then
+				local normalTexture = button:GetNormalTexture()
+				if (normalTexture) then
+					normalTexture:SetTexture(nil)
+					if (normalTexture.SetAtlas) then
+						normalTexture:SetAtlas(nil)
+					end
+					normalTexture:Hide()
 				end
-				normalTexture:Hide()
 			end
-		end
-	end)
-	hooksecurefunc(self, "SetNormalAtlas", function(button, atlas)
-		if (atlas and atlas ~= "") then
-			local normalTexture = button:GetNormalTexture()
-			if (normalTexture) then
-				normalTexture:SetTexture(nil)
-				if (normalTexture.SetAtlas) then
-					normalTexture:SetAtlas(nil)
+		end)
+		hooksecurefunc(self, "SetNormalAtlas", function(button, atlas)
+			if (atlas and atlas ~= "") then
+				local normalTexture = button:GetNormalTexture()
+				if (normalTexture) then
+					normalTexture:SetTexture(nil)
+					if (normalTexture.SetAtlas) then
+						normalTexture:SetAtlas(nil)
+					end
+					normalTexture:Hide()
 				end
-				normalTexture:Hide()
 			end
-		end
-	end)
+		end)
+	end
 
 	local buttonConfig = self.config or {}
 
@@ -546,9 +562,15 @@ ActionBarMod.CreateBars = function(self)
 		bar.buttonWidth, bar.buttonHeight = unpack(ns.GetConfig("ActionButton").ButtonSize)
 		bar.defaults = self:GetDefaults().profile.bars[i]
 
+		local masque = ns.ActionBarMasque and ns.ActionBarMasque.IsActive()
 		for id,button in next,bar.buttons do
 			style(button, self:GetButtonShape(i))
-			if (ns.LegacyHUD) then ns.LegacyHUD:StyleButton(button) end
+			if (masque) then
+				-- Named after our bar numbers, which /az and /lock use as well.
+				ns.ActionBarMasque.AddButton(button, "Action Bar "..i, "Action")
+			elseif (ns.LegacyHUD) then
+				ns.LegacyHUD:StyleButton(button)
+			end
 			self.buttons[button] = true
 		end
 

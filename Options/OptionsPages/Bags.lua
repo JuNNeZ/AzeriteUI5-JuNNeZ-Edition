@@ -96,6 +96,52 @@ local GenerateOptions = function()
 		}
 	end
 
+	-- Containers.lua, OnMerchantShow. Both off by default.
+	local module = getmodule()
+	if (module.CanSellJunk and module.CanSellJunk()) then
+		options.args.autoSellJunk = {
+			name = L["Sell junk automatically"],
+			desc = L["When you open a merchant, sell every grey item in your bags, as Blizzard's own Sell All Junk button does, without asking."],
+			order = 10,
+			type = "toggle", width = "full",
+			set = setter,
+			get = getter
+		}
+	end
+	if (module.CanRepair and module.CanRepair()) then
+		options.args.autoRepair = {
+			name = L["Repair automatically"],
+			desc = L["When you open a merchant who can repair, repair all your gear."],
+			order = 11,
+			type = "toggle", width = "full",
+			set = setter,
+			get = getter
+		}
+		if (module.CanGuildRepair and module.CanGuildRepair()) then
+			options.args.autoRepairGuild = {
+				name = L["Use guild bank funds first"],
+				desc = L["Pay for the repair from the guild bank when your guild allows it and has enough. Otherwise your own money is used."],
+				order = 12,
+				type = "toggle", width = "full",
+				disabled = function() return not getmodule().db.profile.autoRepair end,
+				set = setter,
+				get = getter
+			}
+		end
+	end
+
+	-- Containers.lua, OnLootReady. Off by default.
+	if (module.CanFastLoot and module.CanFastLoot()) then
+		options.args.fastLoot = {
+			name = L["Fast loot"],
+			desc = L["Take everything the moment the loot window opens, whenever the game would auto loot. Hold your auto loot key to loot by hand as usual."],
+			order = 20,
+			type = "toggle", width = "full",
+			set = setter,
+			get = getter
+		}
+	end
+
 	return options
 end
 

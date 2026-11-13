@@ -1378,8 +1378,11 @@ end
 
 	ProcessAura gives each aura exactly one class, so the ProcessAura groups never share
 	an aura. The two token groups stay off the boss groups through isBossOrRoleAura, and
-	off the player's own group through a negated PLAYER token while that group shows;
-	the raid-flagged group also leaves externals to theirs. PLAYER has to be a token: the
+	off the player's own group through a negated PLAYER token: the externals group while
+	that group takes all of yours, the raid-flagged group always (your HoTs carry its
+	flag); the raid-flagged group also leaves externals to theirs. With ownSkipRaidInCombat
+	the own group drops your RAID_IN_COMBAT auras (HoTs) and, while externals show, your
+	externals, which then go to the externals group instead. PLAYER has to be a token: the
 	isFromPlayerOrPlayerPet aura field means cast by any player, which is how Blizzard's
 	TargetFrameAuraContainer reads it, and GW2_UI and VuhDo split on the token for the
 	same reason. Without negation support an aura can land in two groups, never in none.
@@ -1402,7 +1405,10 @@ local GROUP_FRAME_AURA_GROUPS = {
 	{ key = GROUP_HELPFUL_OWN, filter = "HELPFUL", isHarmful = false, shownField = "showOwn" },
 	{ key = GROUP_HARMFUL_DISPEL, filter = "HARMFUL", isHarmful = true, shownField = "showDispel" },
 	{ key = GROUP_HARMFUL_BOSS, filter = "HARMFUL", isHarmful = true, shownField = "showBoss" },
-	{ key = GROUP_HELPFUL_BOSS, filter = "HELPFUL", isHarmful = false, shownField = "showBoss" },
+	-- Helpful boss/role auras are buffs: they follow "Show Helpful Raid Buffs" ("raid-relevant
+	-- or Blizzard-flagged helpful buffs"), as the scanning filter files them, not the boss
+	-- debuff switch (FixLog 2026-11-13).
+	{ key = GROUP_HELPFUL_BOSS, filter = "HELPFUL", isHarmful = false, shownField = "showRaid" },
 	{ key = GROUP_HARMFUL_OTHER, filter = "HARMFUL", isHarmful = true, shownField = "showOther" },
 	{ key = GROUP_HELPFUL_EXTERNAL, filter = EXTERNAL_GROUP_FILTER, isHarmful = false, shownField = "showExternal" },
 	{ key = GROUP_HELPFUL_RAID, filter = RAID_GROUP_FILTER, isHarmful = false, shownField = "showRaid" }
@@ -1426,7 +1432,7 @@ end
 
 local GROUP_FRAME_CONFIG_FIELDS = {
 	"size", "harmfulSize", "spacingX", "spacingY", "initialAnchor", "growthX", "growthY", "maxAuras",
-	"showOwn", "ownMaxDuration", "showDispel", "showBoss", "showOther", "otherMaxDuration",
+	"showOwn", "ownMaxDuration", "ownSkipRaidInCombat", "showDispel", "showBoss", "showOther", "otherMaxDuration",
 	"onlyDispellable", "showExternal", "showRaid"
 }
 
@@ -1454,11 +1460,26 @@ local function WithExcludedTokens(filterString, ...)
 end
 
 local function GetGroupFilterString(group, config)
-	local ownToken = config.showOwn and "PLAYER" or nil
-	if (group.key == GROUP_HELPFUL_EXTERNAL) then
+	-- The own group takes every buff of yours unless it is skipping your HoTs, and
+	-- then it hands your externals to the externals group rather than lose them there.
+	local ownTakesAll = config.showOwn and not config.ownSkipRaidInCombat
+	local ownToken = ownTakesAll and "PLAYER" or nil
+	if (group.key == GROUP_HELPFUL_OWN) then
+		if (config.showOwn and config.ownSkipRaidInCombat) then
+			-- RAID_IN_COMBAT is the flag that puts your HoTs on raid frames, RAID alone
+			-- any buff you can apply (AuraUtil.AuraFilters), so this keeps Fortitude-style
+			-- raid buffs and drops HoTs. A client without negation shows them all.
+			return WithExcludedTokens(group.filter, "RAID_IN_COMBAT", config.showExternal and "EXTERNAL_DEFENSIVE" or nil)
+		end
+		return group.filter
+	elseif (group.key == GROUP_HELPFUL_EXTERNAL) then
 		return WithExcludedTokens(EXTERNAL_GROUP_FILTER, ownToken)
 	elseif (group.key == GROUP_HELPFUL_RAID) then
-		return WithExcludedTokens(RAID_GROUP_FILTER, ownToken, config.showExternal and "EXTERNAL_DEFENSIVE" or nil)
+		-- Never yours, even with your own group off: RAID_IN_COMBAT is the flag that puts
+		-- your HoTs on raid frames ("Combine with Player & Helpful to return self-cast
+		-- HoTs", AuraUtil.AuraFilters), so taking yours here would bring back every HoT
+		-- "Show Short Helpful Buffs" was switched off to hide.
+		return WithExcludedTokens(RAID_GROUP_FILTER, "PLAYER", config.showExternal and "EXTERNAL_DEFENSIVE" or nil)
 	end
 	return group.filter
 end
@@ -1526,6 +1547,7 @@ local function BuildGroupFrameConfig(options)
 		maxAuras = options.maxAuras or 0,
 		showOwn = options.showOwn ~= false,
 		ownMaxDuration = options.ownMaxDuration,
+		ownSkipRaidInCombat = options.ownSkipRaidInCombat == true,
 		showDispel = options.showDispel ~= false,
 		showBoss = options.showBoss ~= false,
 		showOther = options.showOther ~= false,

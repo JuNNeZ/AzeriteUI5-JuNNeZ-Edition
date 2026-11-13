@@ -398,7 +398,7 @@ end
 ---------------------------------------------------------------------------
 do
 	local saved = {}
-	for _, k in ipairs({ "StaticPopupDialogs", "StaticPopup_Show", "C_AddOns", "UnitName", "ReloadUI", "LibStub" }) do saved[k] = _G[k] end
+	for _, k in ipairs({ "StaticPopupDialogs", "StaticPopup_Show", "C_AddOns", "UnitName", "UnitGUID", "ReloadUI", "LibStub" }) do saved[k] = _G[k] end
 
 	local shown, disabled, reloads, chosen
 	_G.StaticPopupDialogs = {}
@@ -408,6 +408,8 @@ do
 		DisableAddOn = function(name, character) disabled = { name = name, character = character } end
 	}
 	_G.UnitName = function() return "Tester" end
+	-- Blizzard's addon list keys characters by GUID (FixLog 2026-11-13).
+	_G.UnitGUID = function(u) return u == "player" and "Player-1-00000001" or nil end
 	_G.ReloadUI = function() reloads = reloads + 1 end
 	_G.LibStub = function() return { GetLocale = function() return setmetatable({}, { __index = function(_, k) return k end }) end } end
 
@@ -430,7 +432,7 @@ do
 	check(shown.key == "AZERITEUI_ADDON_CONFLICT_TEST", "popup keyed by the caller")
 	check(dialog.button1 == "AzeriteUI" and dialog.button2 == "ArcUI Title" and dialog.button3 == "Both (unsupported)" and dialog.button4 == "Decide Later", "buttons: AzeriteUI, the other addon, both, later")
 	check(type(shown.text) == "string" and shown.text:find("ArcUI Title", 1, true) and shown.text:find("Feature", 1, true), "the question names the addon and the feature")
-	check(chosen == "azeriteui" and disabled and disabled.name == "ArcUI" and disabled.character == "Tester" and reloads == 1, "AzeriteUI: the other addon off for this character, then reload")
+	check(chosen == "azeriteui" and disabled and disabled.name == "ArcUI" and disabled.character == "Player-1-00000001" and reloads == 1, "AzeriteUI: the other addon off for this character (by GUID), then reload")
 	check(dialog.OnCancel == nil and dialog.hideOnEscape, "Escape decides nothing")
 
 	click(2)
@@ -484,6 +486,45 @@ do
 	check(IsOn() == false and asked == "bags", "W2UI's own module check wins over W2UIDB")
 	_G.W2UI = { IsModuleSettingEnabled = function() error("boom") end }
 	check(IsOn() == true, "an erroring W2UI check falls back to W2UIDB")
+
+	for k, v in pairs(saved) do _G[k] = v end
+end
+
+---------------------------------------------------------------------------
+-- 6. IsAddOnEnabled reads this character's state by GUID (FixLog 2026-11-13):
+--    Blizzard's addon list on Retail 12.1.5 and Forever writes per-character state
+--    under UnitGUID("player"); the name is a fallback for a client without it.
+---------------------------------------------------------------------------
+do
+	local saved = {}
+	for _, k in ipairs({ "UnitName", "UnitGUID", "GetNumAddOns", "GetAddOnInfo", "GetAddOnEnableState", "C_AddOns" }) do saved[k] = _G[k] end
+
+	local GUID = "Player-1-00000002"
+	local installed = { "ConsolePort_Bar", "Quartz" }
+	local byGuid, byName = {}, {}
+	_G.UnitName = function() return "Tester" end
+	_G.UnitGUID = function(u) return u == "player" and GUID or nil end
+	_G.GetNumAddOns = function() return #installed end
+	_G.GetAddOnInfo = function(i) return installed[i], "", "", true end
+	_G.GetAddOnEnableState = function(character, i) return (character == "Tester" and byName[installed[i]]) and 2 or 0 end
+	_G.C_AddOns = { GetAddOnEnableState = function(i, character)
+		if (character == "Tester") then return byName[installed[i]] and 2 or 0 end
+		return (character == GUID and byGuid[installed[i]]) and 1 or 0
+	end }
+
+	local ns = { API = {} }
+	assert(loadfile(root .. "/Core/API/Addons.lua"))("AzeriteUI5_JuNNeZ_Edition", ns)
+	local IsEnabled = ns.API.IsAddOnEnabled
+
+	byGuid.ConsolePort_Bar, byName.ConsolePort_Bar = nil, true
+	check(not IsEnabled("ConsolePort_Bar"), "turned off for this character in the addon list (GUID): not enabled, whatever the name says")
+	byGuid.Quartz, byName.Quartz = true, nil
+	check(IsEnabled("Quartz") == true, "turned on for this character (GUID): enabled")
+	check(ns.API.GetAddOnCharacter() == GUID, "the character key is the player GUID")
+
+	_G.UnitGUID = function() return nil end
+	byName.ConsolePort_Bar = true
+	check(IsEnabled("ConsolePort_Bar") == true, "no GUID yet: falls back to the name")
 
 	for k, v in pairs(saved) do _G[k] = v end
 end

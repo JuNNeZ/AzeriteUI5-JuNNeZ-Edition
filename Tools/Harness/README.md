@@ -49,8 +49,17 @@ lua Tools/Harness/tooltip_compare_harness.lua .            # compare tooltips: b
 lua Tools/Harness/castbar_pushback_harness.lua .           # oUF castbar: pushback, and stops without a castBarID hide the bar
 lua Tools/Harness/party_dispel_harness.lua .               # party dispel glow + priority debuff with secret aura fields
 lua Tools/Harness/castbar_target_harness.lua .             # nameplate cast target name, aimed-at-you and important glows
-lua Tools/Harness/quest_marker_harness.lua .               # nameplate quest marker: when it shows, hides and asks
-lua Tools/Harness/totems_harness.lua .                     # Retail totem row: secret-safe totem element, module shape
+lua Tools/Harness/quest_marker_harness.lua .               # nameplate quest marker: when it shows, hides and asks; progress text, hide when done
+lua Tools/Harness/merchant_harness.lua     .               # auto sell junk / auto repair (waits for the sale's money) / fast loot
+lua Tools/Harness/layer_harness.lua        .               # Forever layer on the info bar: GUID zone UID, two-in-a-row, skips
+lua Tools/Harness/quest_item_button_harness.lua .          # Quest Item Button: quest pick, combat-safe swap, borrowed extra action key, rival
+lua Tools/Harness/totems_harness.lua .                     # Retail totem row: secret-safe totem element, timerless slots hidden, module shape
+lua Tools/Harness/game_menu_conflict_harness.lua .         # game menu style prompt: asked once per rival, Both for Console Port, GUID addon key
+lua Tools/Harness/party_aura_options_harness.lua .         # party aura row: What To Show switches -> native groups, dispellable-only mode
+lua Tools/Harness/explorer_options_harness.lua .           # Explorer Mode switches greyed out only when they cannot act
+lua Tools/Harness/party_aura_filter_harness.lua .          # party scanning filter: Short/Raid switches, own HoTs (RAID_IN_COMBAT) vs castable buffs, boss auras, secret timing
+lua Tools/Harness/legacy_player_options_harness.lua . Tools/Harness   # Player options the Legacy HUD cannot use are hidden (page and frame panel); [Forever]
+lua Tools/Harness/xp_bar_harness.lua .                     # XP/reputation ring: ExperienceBarDisabled game rule, renown/max-level/expansion refresh events
 lua Tools/Harness/masterlooter_harness.lua .               # Forever master looter icon on 6-40 raid frames
 lua Tools/Harness/pet_experience_harness.lua .             # Forever hunter pet XP bar under the pet frame
 lua Tools/Harness/mythicplus_harness.lua   .               # Mythic+ timer, forces, end card, keystone, Great Vault
@@ -60,6 +69,7 @@ lua Tools/Harness/addon_compat_harness.lua .               # ConsolePort icons, 
 lua Tools/Harness/bag_button_harness.lua   .               # the bag button beside the cog: secure route, switch, free slots
 lua Tools/Harness/worldmap_combat_harness.lua .            # world map with a protected map in combat: nothing blocked, replay after combat/hide
 lua Tools/Harness/proc_highlight_harness.lua .             # proc styles, preview/reset, riding visibility combinations
+lua Tools/Harness/masque_harness.lua       .               # Masque switch (once per session), groups, action/pet/stance styles off and on, LAB charge skin
 lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/dropdown, restore, keybinds, Explorer fade proxies, rival addon choice
 lua Tools/Harness/target_execute_harness.lua .             # target tiers, mirrored crops, shared threshold, secrets, off/on
 lua Tools/Harness/target_health_crop_harness.lua .         # target shaped fill: eased crop helper, scale, spark on its edge

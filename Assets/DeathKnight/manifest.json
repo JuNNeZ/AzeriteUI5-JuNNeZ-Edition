@@ -1,0 +1,1038 @@
+{
+  "schema": 1,
+  "installationMode": "explicitly authorized WIP live preview, 2026-11-07",
+  "productionAccepted": false,
+  "sourceCandidateManifestSha256": "7d3fd45cce448124b030839ea260603232afb305577f1f8714bb1b0ec8a72929",
+  "sourceFitReportSha256": "c0eebfe723e45344b7939540d4a0e7dd3134012813fa6e9e0fb858621ddb1f8f",
+  "approvedFootprintsSha256": "54a203252622bd741d4c75b5839b87d5faa6428f832102ae676441b4683bcb21",
+  "runtimeDataSha256": "34891cbb9e24a8463fbd6a243f4eb6b2b57d2ff7e981f9548232e87566aa1576",
+  "assets": {
+    "hp_cap_case": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_cap_case.tga",
+      "candidateSha256": "77595b9623ae6a1bb3d3de93842791bb829de3d0dfd3068b6957f53786f06c07",
+      "construction": "exact native functional recess; complete painting in separate foreground",
+      "nativeSha256": "855e7a472da166b7ca93242e3d420453920ff728b912def5f11a6bf2ae2c1bda",
+      "fillMaskSha256": "d101703f966f03ee023aea55ac859c052443c9f251db843f28192cb40615d755",
+      "sha256": "17dc2f321c1a8e958c9e10f299234c728245936a9a75b6da9ec16ef9039b1903",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case-over": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_cap_case.tga",
+      "candidateSha256": "77595b9623ae6a1bb3d3de93842791bb829de3d0dfd3068b6957f53786f06c07",
+      "construction": "unchanged whole candidate",
+      "sha256": "77595b9623ae6a1bb3d3de93842791bb829de3d0dfd3068b6957f53786f06c07",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_mid_case.tga",
+      "candidateSha256": "f821d73a9dd42a37a35e5a16164aa365bd8a8299c3a2b44be3741694a6cb09eb",
+      "construction": "exact native functional recess; complete painting in separate foreground",
+      "nativeSha256": "28425d8f6c1d6a08f878df9a234a085fc7846fadef22e430ada9f985c746f240",
+      "fillMaskSha256": "43641ff80b95d93335cedf1ebacca6e20575218a0d13e11eee9f2fd43920e228",
+      "sha256": "8499dc043a1426001b52e3e8cb4ec41468dca1e25209ab85197c76ca818705be",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-over": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_mid_case.tga",
+      "candidateSha256": "f821d73a9dd42a37a35e5a16164aa365bd8a8299c3a2b44be3741694a6cb09eb",
+      "construction": "unchanged whole candidate",
+      "sha256": "f821d73a9dd42a37a35e5a16164aa365bd8a8299c3a2b44be3741694a6cb09eb",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_low_case.tga",
+      "candidateSha256": "20ca2f1ecf1f4ad49ff6033e37fdec731cf0a6814d226046fe7036e74f392f82",
+      "construction": "exact native functional recess; complete painting in separate foreground",
+      "nativeSha256": "b683386a5d7b9328a7d5a2cad8d0cf2450627024b67e82f19ff389222baa50ef",
+      "fillMaskSha256": "43641ff80b95d93335cedf1ebacca6e20575218a0d13e11eee9f2fd43920e228",
+      "sha256": "914b058db9e7fb39fe16963a17f737157ea0deee6af8f591b828f38e2dd88359",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case-over": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_low_case.tga",
+      "candidateSha256": "20ca2f1ecf1f4ad49ff6033e37fdec731cf0a6814d226046fe7036e74f392f82",
+      "construction": "unchanged whole candidate",
+      "sha256": "20ca2f1ecf1f4ad49ff6033e37fdec731cf0a6814d226046fe7036e74f392f82",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_boss_case.tga",
+      "candidateSha256": "d05f9460f938e25ab4ab1fdeac1e2d6cecb95f5c797142a937e579921755e7eb",
+      "construction": "exact native functional recess; complete painting in separate foreground",
+      "nativeSha256": "83a55223de3fd2ef54e318dc5a270dd3da4515a5b5b8e34c40ecd43bce57ab82",
+      "fillMaskSha256": "070d5e3b03bace2d3b0d7b00f98af96a70234daf8c1a3bb33e95ad49c156b32c",
+      "sha256": "b6489567ff58742c47661ceb42837d9a4ab5869a17e66ce69f1622661cda9ee6",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case-over": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_boss_case.tga",
+      "candidateSha256": "d05f9460f938e25ab4ab1fdeac1e2d6cecb95f5c797142a937e579921755e7eb",
+      "construction": "unchanged whole candidate",
+      "sha256": "d05f9460f938e25ab4ab1fdeac1e2d6cecb95f5c797142a937e579921755e7eb",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_critter_case": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_critter_case.tga",
+      "candidateSha256": "9d2429990138a6961b331a2a75ed132ec58a703061881a649807af892be10093",
+      "construction": "unchanged whole candidate",
+      "sha256": "9d2429990138a6961b331a2a75ed132ec58a703061881a649807af892be10093",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "hp_critter_case_hi": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_critter_case_hi.tga",
+      "candidateSha256": "c9dcf5f04fff13b682d8289f09e47cc6fb968e12598adb0e0d42561656a5855a",
+      "construction": "unchanged whole candidate",
+      "sha256": "c9dcf5f04fff13b682d8289f09e47cc6fb968e12598adb0e0d42561656a5855a",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "cast_back": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/cast_back.tga",
+      "candidateSha256": "e0d470ebabcbe27e2c9f9240026459fa8170b23e61f0519c4fec69bb313501c2",
+      "construction": "exact native functional recess; complete painting in separate foreground",
+      "nativeSha256": "2cade7ed198ec804bffc5e5a17e93dc1cc1025e82faa44b99993308a4c89e36d",
+      "fillMaskSha256": "268e50e06dfea4d8f1e8d6fa2f38d32e3268049106b2654910f7a7cec357189a",
+      "sha256": "d6ef5a46ac62f77512c10c1bec0e5f70ace1ebb04a0e482b4c3543c783bd787c",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back-over": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/cast_back.tga",
+      "candidateSha256": "e0d470ebabcbe27e2c9f9240026459fa8170b23e61f0519c4fec69bb313501c2",
+      "construction": "unchanged whole candidate",
+      "sha256": "e0d470ebabcbe27e2c9f9240026459fa8170b23e61f0519c4fec69bb313501c2",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_spiked": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/cast_back_spiked.tga",
+      "candidateSha256": "da748589798d8f49904c7984494cf0ecb5dfc272074809eb82dda5246bdf40f4",
+      "construction": "exact native functional recess; complete painting in separate foreground",
+      "nativeSha256": "80fa7a87de00456a017ce6d41f5ef038c4d7d694dcc77b65b2c570323a75faa0",
+      "fillMaskSha256": "268e50e06dfea4d8f1e8d6fa2f38d32e3268049106b2654910f7a7cec357189a",
+      "sha256": "d6ef5a46ac62f77512c10c1bec0e5f70ace1ebb04a0e482b4c3543c783bd787c",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_spiked-over": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/cast_back_spiked.tga",
+      "candidateSha256": "da748589798d8f49904c7984494cf0ecb5dfc272074809eb82dda5246bdf40f4",
+      "construction": "unchanged whole candidate",
+      "sha256": "da748589798d8f49904c7984494cf0ecb5dfc272074809eb82dda5246bdf40f4",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_wooden": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/cast_back_wooden.tga",
+      "candidateSha256": "0ce87e455362fc4d57e777f91a0984f383b126c235617cece8b5d15d97e71e58",
+      "construction": "exact native functional recess; complete painting in separate foreground",
+      "nativeSha256": "8a8781320b4be3395c1e293dfe7c058e5c32fd530272449493c0075539d5abb8",
+      "fillMaskSha256": "268e50e06dfea4d8f1e8d6fa2f38d32e3268049106b2654910f7a7cec357189a",
+      "sha256": "22aa53c7cc042ec42304d4c4761d57bb4752b16c25efec8b8ce40cf427738612",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "cast_back_wooden-over": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/cast_back_wooden.tga",
+      "candidateSha256": "0ce87e455362fc4d57e777f91a0984f383b126c235617cece8b5d15d97e71e58",
+      "construction": "unchanged whole candidate",
+      "sha256": "0ce87e455362fc4d57e777f91a0984f383b126c235617cece8b5d15d97e71e58",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/pw_crystal_case.tga",
+      "candidateSha256": "36701a26d49edfb9d2e3422d5895e067aff62d4307663e92dded7f2e582249c2",
+      "construction": "native functional glass/shading under unchanged whole painting",
+      "nativeSha256": "52b601a7a079d8d0d8e9a43511c5263c5a6fcd60f4ac796e4e8183d06636eb4c",
+      "fillMaskSha256": "98c5cdc08d79f967d8a33df2f58d98c6d50c65d46dd56d4a5fbd438dce6a72b6",
+      "sha256": "cc8605ed7b65edbea21493a6e6fc4d79f9b7e68df53b6d06b9e7da96a18afb07",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "pw_crystal_case_low": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/pw_crystal_case_low.tga",
+      "candidateSha256": "4d089dee8c8ff41ec88be344411c854fe70fb12fc9ccd9b661089a1e19b1847e",
+      "construction": "native functional glass/shading under unchanged whole painting",
+      "nativeSha256": "aebf1bb25d7970b039b17bb50d5c3767de4a6dade9c0d111101e065c6cd5162a",
+      "fillMaskSha256": "98c5cdc08d79f967d8a33df2f58d98c6d50c65d46dd56d4a5fbd438dce6a72b6",
+      "sha256": "58d9182aaae325c19fd46fe70b25bf5f059cbabd268458dccbce724a31d76507",
+      "canvas": [
+        256,
+        128
+      ]
+    },
+    "orb_case_hi": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/orb_case_hi.tga",
+      "candidateSha256": "c176edefa18564435bf7b4d62688b08fb89e02a4e7dcaa2ed99f3312dd9b92bb",
+      "construction": "native functional glass/shading under unchanged whole painting",
+      "nativeSha256": "912ad83deb1a5d7ab38499144bc32daaa45ebd5b4ba48548704ac584f675b7a5",
+      "fillMaskSha256": "5b391a188dcaef1e5ebbdfab82778049cab4f6191f49eef8b68e9619db902277",
+      "sha256": "01e5fa10b66e5db8ccf9a32c584ba7fe309d58e65efbcf42d930eaae6a9f64b8",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb_case_low": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/orb_case_low.tga",
+      "candidateSha256": "21b04d9c213a796b95db2bd3cfe9468d28fb0b061d5d491e9c644d0a23a3d2d8",
+      "construction": "native functional glass/shading under unchanged whole painting",
+      "nativeSha256": "bda2be4e396f2a90a5a180b0bf2bcd29e7096ee54a95759455de490bab35e862",
+      "fillMaskSha256": "5b391a188dcaef1e5ebbdfab82778049cab4f6191f49eef8b68e9619db902277",
+      "sha256": "da6e1a359a1ed879c455af638ad76c4d6ecd09821f9a4121ea215e090765eff7",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "orb-border": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/orb-border.tga",
+      "candidateSha256": "df619896090c3a7ffc159956f35c0628f2be0130bbb937d11f0991d3b1cecf4b",
+      "construction": "unchanged whole candidate",
+      "sha256": "df619896090c3a7ffc159956f35c0628f2be0130bbb937d11f0991d3b1cecf4b",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "portrait_frame_hi": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/portrait_frame_hi.tga",
+      "candidateSha256": "c4dfcbea71eb7626f5ba959dd527b445a860c9c10928b0fc075089c143e358d1",
+      "construction": "unchanged whole candidate",
+      "sha256": "c4dfcbea71eb7626f5ba959dd527b445a860c9c10928b0fc075089c143e358d1",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "portrait_frame_lo": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/portrait_frame_lo.tga",
+      "candidateSha256": "59e3f8e7e3880f14368d3d69242d9acd11891c4fa96088fcb3703792f7ccbd62",
+      "construction": "unchanged whole candidate",
+      "sha256": "59e3f8e7e3880f14368d3d69242d9acd11891c4fa96088fcb3703792f7ccbd62",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "party_portrait_border": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/party_portrait_border.tga",
+      "candidateSha256": "f5c6b3617a04f9a68d8c6d7ba6a0b1db9baf8a7efa5747de209cf7cfa4b0c97e",
+      "construction": "unchanged whole candidate",
+      "sha256": "f5c6b3617a04f9a68d8c6d7ba6a0b1db9baf8a7efa5747de209cf7cfa4b0c97e",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/actionbutton-border.tga",
+      "candidateSha256": "a5a3b0216c3a90a9c1ba695ca5677ef9142065074cd02317a7c7a0c2f65a4c7e",
+      "construction": "native functional glass/shading under unchanged whole painting",
+      "nativeSha256": "8c2cbc2af6b368127c55b98ce1b21c3b4b87627778c180a351195a20ffde6be6",
+      "fillMaskSha256": "2df4b83ec4acf7d89199f4bffb223a18e40ab43e731ece5cb726a410ea46f804",
+      "sha256": "42f7e875cec7f004637752733e7cf6cd98a0705fc76c7c27ea2e7b9c804df804",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border-square": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/actionbutton-border-square.tga",
+      "candidateSha256": "57f593158cef89667142334abdb5c60749984c86364ff194bde296abc8f515b7",
+      "construction": "native functional glass/shading under unchanged whole painting",
+      "nativeSha256": "fd17a7b0f48903f00583875b2f8b6626120f155e89ef49500167c81e5e75e491",
+      "fillMaskSha256": "fcc5dd7b3ef1ab039c221ac8d403c02df5dbada36c45d595a8be0fd04e376fca",
+      "sha256": "7b56c7426b3d83cb44af878fa819f3389066d9f180eff49070a7d15228752c21",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "actionbutton-border-square-rounded": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/actionbutton-border-square-rounded.tga",
+      "candidateSha256": "055924841dc1a46bfffbe47a5587713e9370096fe9c817ac5b8375143f939f23",
+      "construction": "native functional glass/shading under unchanged whole painting",
+      "nativeSha256": "70e73f8a643a2c82262dfcc8768a7b7b3126e15ba934f6affb02b5de41e2ee1e",
+      "fillMaskSha256": "d0f19a6b00376af598572361d27aa4c4c88ed2eefac38bd87db2422234c94033",
+      "sha256": "f13ae96bb59960a392b404a2b2eb61b34fbdfe1a9aa400a3a96fd4cfa63c0473",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "minimap-border": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/minimap-border.tga",
+      "candidateSha256": "75b96a4f4d3e21ba681dbb82984b117a38dd09333c4e9b6a856c9c733720067f",
+      "construction": "unchanged whole candidate",
+      "sha256": "75b96a4f4d3e21ba681dbb82984b117a38dd09333c4e9b6a856c9c733720067f",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "minimap-onebar-backdrop": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/minimap-onebar-backdrop.tga",
+      "candidateSha256": "a5750e33805a8be6109bf10386d333036a3c7131e6dca17a5b1c5fec726e8129",
+      "construction": "unchanged whole candidate",
+      "sha256": "a5750e33805a8be6109bf10386d333036a3c7131e6dca17a5b1c5fec726e8129",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "minimap-twobars-backdrop": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/minimap-twobars-backdrop.tga",
+      "candidateSha256": "d1e16329bb0a7cd1931b2ab536660ec589c1be228b548442a6fe2a5795bec252",
+      "construction": "unchanged whole candidate",
+      "sha256": "d1e16329bb0a7cd1931b2ab536660ec589c1be228b548442a6fe2a5795bec252",
+      "canvas": [
+        512,
+        512
+      ]
+    },
+    "point_plate": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/point_plate.tga",
+      "candidateSha256": "31bfa9481992ca4fa1b852d74b5eb5ecd4c26f518f16feb842b2667ba6fa3a16",
+      "construction": "unchanged whole candidate",
+      "sha256": "31bfa9481992ca4fa1b852d74b5eb5ecd4c26f518f16feb842b2667ba6fa3a16",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "config_button": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/config_button.tga",
+      "candidateSha256": "d24f1eab2909e4d18fdbdf45d5a08c812d6b0d84499395d4a8dc8f8d6cea245e",
+      "construction": "unchanged whole candidate",
+      "sha256": "d24f1eab2909e4d18fdbdf45d5a08c812d6b0d84499395d4a8dc8f8d6cea245e",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "config_button_bright": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/config_button_bright.tga",
+      "candidateSha256": "21bf728c57fc7699300b4bdc87d787ddda16168f9c12cc161ebf2dfe2d08a1bc",
+      "construction": "unchanged whole candidate",
+      "sha256": "21bf728c57fc7699300b4bdc87d787ddda16168f9c12cc161ebf2dfe2d08a1bc",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "icon_exit_flight": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/icon_exit_flight.tga",
+      "candidateSha256": "3deaa998bde23b40300ddf1828fa5dbfa00d61f5bb8d3ef849164c419cbc6630",
+      "construction": "unchanged whole candidate",
+      "sha256": "3deaa998bde23b40300ddf1828fa5dbfa00d61f5bb8d3ef849164c419cbc6630",
+      "canvas": [
+        128,
+        128
+      ]
+    },
+    "options-box": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/options-box.tga",
+      "candidateSha256": "e4bd3a9075640b5989594ae338f2de782d802dfb98bc4cd93a976feb4ca55ec7",
+      "construction": "unchanged whole candidate",
+      "sha256": "e4bd3a9075640b5989594ae338f2de782d802dfb98bc4cd93a976feb4ca55ec7",
+      "canvas": [
+        64,
+        64
+      ]
+    },
+    "border-tooltip": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/border-tooltip.tga",
+      "candidateSha256": "2add30be15d031cdba57b8f0bf2f3c64d3d6ab789f2b84be595c7cfe43f501aa",
+      "construction": "DK tooltip eight-cell packing v1",
+      "patches": [
+        {
+          "cell": 0,
+          "crop": [
+            7,
+            10,
+            71,
+            54
+          ],
+          "turn": 0
+        },
+        {
+          "cell": 1,
+          "crop": [
+            63,
+            10,
+            127,
+            54
+          ],
+          "turn": 0
+        },
+        {
+          "cell": 2,
+          "crop": [
+            294,
+            0,
+            346,
+            64
+          ],
+          "turn": 90
+        },
+        {
+          "cell": 3,
+          "crop": [
+            406,
+            0,
+            458,
+            64
+          ],
+          "turn": 90
+        },
+        {
+          "cell": 4,
+          "crop": [
+            250,
+            0,
+            314,
+            64
+          ],
+          "turn": 0
+        },
+        {
+          "cell": 5,
+          "crop": [
+            314,
+            0,
+            378,
+            64
+          ],
+          "turn": 0
+        },
+        {
+          "cell": 6,
+          "crop": [
+            378,
+            0,
+            442,
+            64
+          ],
+          "turn": 0
+        },
+        {
+          "cell": 7,
+          "crop": [
+            442,
+            0,
+            506,
+            64
+          ],
+          "turn": 0
+        }
+      ],
+      "sha256": "ba15ea60bc795508455ba4375edb28689e321e395ed0417086af6f8f5049ff0c",
+      "canvas": [
+        512,
+        64
+      ]
+    },
+    "border-aura": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/border-aura.tga",
+      "candidateSha256": "38b5315e2008a4125b81e92c8d55fa403def35ef82d31f8a0fcc9b58e19be298",
+      "construction": "unchanged whole candidate",
+      "sha256": "38b5315e2008a4125b81e92c8d55fa403def35ef82d31f8a0fcc9b58e19be298",
+      "canvas": [
+        256,
+        32
+      ]
+    },
+    "better-blizzard-border-small-alternate": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/better-blizzard-border-small-alternate.tga",
+      "candidateSha256": "e05b62b14cf1ee04ca99c1d72750b6b9123c2ec71d8eab9f634c42947f2c37a9",
+      "construction": "unchanged whole candidate",
+      "sha256": "e05b62b14cf1ee04ca99c1d72750b6b9123c2ec71d8eab9f634c42947f2c37a9",
+      "canvas": [
+        512,
+        64
+      ]
+    },
+    "actionbutton-border-hex": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/actionbutton-border-hex.tga",
+      "candidateSha256": "2a290f1e396c4da50874f44328743d4d08a12147fcc52e95dd6d951d68e68d84",
+      "construction": "unchanged whole candidate",
+      "sha256": "2a290f1e396c4da50874f44328743d4d08a12147fcc52e95dd6d951d68e68d84",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "bag-icon": {
+      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/bag-icon.tga",
+      "candidateSha256": "a29747152a9027a0471c308f9c6e02048710bc0fc2a653804c60f5e35d5a20f1",
+      "construction": "unchanged whole candidate",
+      "sha256": "a29747152a9027a0471c308f9c6e02048710bc0fc2a653804c60f5e35d5a20f1",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "ornament-frost-hp_cap_case": {
+      "source": "Assets_Draft/DeathKnight/FullSet/Revisions/health-endcap-frost-v2.png",
+      "sourceSha256": "8475d56ed466ae3c0e1db0d4d09db028d25f76503a964643f8e1a5042fdfa8d6",
+      "transform": {
+        "crop": [
+          176,
+          136,
+          1074,
+          1099
+        ],
+        "scale": 0.140625,
+        "offset": [
+          692,
+          53
+        ]
+      },
+      "construction": "whole painting, bounded WIP registration",
+      "sha256": "1df2bff1c48b5365798a81453ece1203a96d60e64724400295d682129750807b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-unholy-hp_cap_case": {
+      "source": "Assets_Draft/DeathKnight/Sources/health-endcap-unholy.png",
+      "sourceSha256": "93565dc4fd0230adf4be0b9b85f1c0034d8100ed188039b5d26e886cca90e2af",
+      "transform": {
+        "crop": [
+          116,
+          323,
+          1146,
+          905
+        ],
+        "scale": 0.08793103448275862,
+        "offset": [
+          692,
+          137
+        ]
+      },
+      "construction": "whole painting, bounded WIP registration",
+      "sha256": "84db694048339969eb8b4f0d941fc49967da72484cd7718571e67099b2beb7a5",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-frost-hp_mid_case": {
+      "source": "Assets_Draft/DeathKnight/FullSet/Revisions/health-endcap-frost-v2.png",
+      "sourceSha256": "8475d56ed466ae3c0e1db0d4d09db028d25f76503a964643f8e1a5042fdfa8d6",
+      "transform": {
+        "crop": [
+          176,
+          136,
+          1074,
+          1099
+        ],
+        "scale": 0.13020833333333334,
+        "offset": [
+          699,
+          57
+        ]
+      },
+      "construction": "whole painting, bounded WIP registration",
+      "sha256": "a7f9e022861c960fedac771a35bdc971998d55328678e4b21a71d0f1866bb762",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-unholy-hp_mid_case": {
+      "source": "Assets_Draft/DeathKnight/Sources/health-endcap-unholy.png",
+      "sourceSha256": "93565dc4fd0230adf4be0b9b85f1c0034d8100ed188039b5d26e886cca90e2af",
+      "transform": {
+        "crop": [
+          116,
+          323,
+          1146,
+          905
+        ],
+        "scale": 0.08103448275862069,
+        "offset": [
+          700,
+          135
+        ]
+      },
+      "construction": "whole painting, bounded WIP registration",
+      "sha256": "6c94800d661fbcadfad82826b1d3fd8583f35c3836ebbebdf3ed4d2b99f6373f",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-frost-hp_low_case": {
+      "source": "Assets_Draft/DeathKnight/FullSet/Revisions/health-endcap-frost-v2.png",
+      "sourceSha256": "8475d56ed466ae3c0e1db0d4d09db028d25f76503a964643f8e1a5042fdfa8d6",
+      "transform": {
+        "crop": [
+          176,
+          136,
+          1074,
+          1099
+        ],
+        "scale": 0.13125,
+        "offset": [
+          698,
+          56
+        ]
+      },
+      "construction": "whole painting, bounded WIP registration",
+      "sha256": "82b0188644c3525d298e6f6e2f4d062db97648a2fcbb4cca1a6808fd8cc84f31",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-unholy-hp_low_case": {
+      "source": "Assets_Draft/DeathKnight/Sources/health-endcap-unholy.png",
+      "sourceSha256": "93565dc4fd0230adf4be0b9b85f1c0034d8100ed188039b5d26e886cca90e2af",
+      "transform": {
+        "crop": [
+          116,
+          323,
+          1146,
+          905
+        ],
+        "scale": 0.08275862068965517,
+        "offset": [
+          698,
+          134
+        ]
+      },
+      "construction": "whole painting, bounded WIP registration",
+      "sha256": "944dd981d45d9964c2c0000aae43d016ccf45cbaccb657bbffce408bcda2dd3f",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-frost-hp_boss_case": {
+      "source": "Assets_Draft/DeathKnight/FullSet/Revisions/health-endcap-frost-v2.png",
+      "sourceSha256": "8475d56ed466ae3c0e1db0d4d09db028d25f76503a964643f8e1a5042fdfa8d6",
+      "transform": {
+        "crop": [
+          176,
+          136,
+          1074,
+          1099
+        ],
+        "scale": 0.1375,
+        "offset": [
+          812,
+          57
+        ]
+      },
+      "construction": "whole painting, bounded WIP registration",
+      "sha256": "61cb66d42041eb4ce66e05df9125df285ef52641b3f75535a706a56a16c7927d",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-unholy-hp_boss_case": {
+      "source": "Assets_Draft/DeathKnight/Sources/health-endcap-unholy.png",
+      "sourceSha256": "93565dc4fd0230adf4be0b9b85f1c0034d8100ed188039b5d26e886cca90e2af",
+      "transform": {
+        "crop": [
+          116,
+          323,
+          1146,
+          905
+        ],
+        "scale": 0.08620689655172414,
+        "offset": [
+          812,
+          139
+        ]
+      },
+      "construction": "whole painting, bounded WIP registration",
+      "sha256": "1213cf99639932c29eb344303363bf98026f1b8b3c1716c053127c52da6a3fb4",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "cast-head": {
+      "source": "Assets_Draft/DeathKnight/Sources/cast-head-blood.png",
+      "sourceSha256": "fbaf70115288ae7bd4427eab527ffa1b0ef9e892de9fd6a4ba7263cb7187efcc",
+      "transform": {
+        "crop": [
+          188,
+          276,
+          1026,
+          983
+        ],
+        "scale": 0.2863961813842482,
+        "offset": [
+          8,
+          27
+        ]
+      },
+      "construction": "whole painting in shared square slot",
+      "sha256": "17955afeeceeb48c1f7b1bead4cb2b95f6ea1080754632049c20eb4a41269848",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "resource-badge": {
+      "source": "Assets_Draft/DeathKnight/Sources/resource-badge.png",
+      "sourceSha256": "cf3fee10f3faa90291c8dbe80aaf35435b5ec16f8a525689a8d538430c784a15",
+      "transform": {
+        "crop": [
+          255,
+          211,
+          999,
+          1072
+        ],
+        "scale": 0.2787456445993031,
+        "offset": [
+          24,
+          8
+        ]
+      },
+      "construction": "whole painting in shared square slot",
+      "sha256": "524a4539b3a8e213bc0e6db5d93089e386913c0086472dc5ce093f16eaa4c140",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "minimap-north": {
+      "source": "Assets_Draft/DeathKnight/Sources/minimap-north.png",
+      "sourceSha256": "f0fb0e47bf8928ab46b7b8089b1e3535c5ce29a6981bddb9d465ebf4aaf7a799",
+      "transform": {
+        "crop": [
+          462,
+          308,
+          792,
+          850
+        ],
+        "scale": 0.44280442804428044,
+        "offset": [
+          55,
+          8
+        ]
+      },
+      "construction": "whole painting in shared square slot",
+      "sha256": "ce71f4cf8e5177006cff0049316e9fdb6cf39a5854fa8ad6a03d982b1357229e",
+      "canvas": [
+        256,
+        256
+      ]
+    },
+    "hp_cap_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "hp_cap_case-over",
+      "sha256": "4da5581b6cd391e92b824f3a12d9cc3d0e5f55a0765196f7447b6b9c48bf8eea",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "hp_mid_case-over",
+      "sha256": "c321da834527567255a39d9047d264b7949ea13ead7ec02e5d655037ee0825af",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "hp_low_case-over",
+      "sha256": "3d167c3d67f3bda4a3ac471fadc2eb83ae1907a8ac3926539d8970b946aebab7",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_boss_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "hp_boss_case-over",
+      "sha256": "a304051901d3a55755f8e74ffb654e8b425db746cb7e4033253fbb39f861aebf",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-frost-hp_cap_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "ornament-frost-hp_cap_case",
+      "sha256": "464e9e509bce351af3b8f3c09f662fa6fd9c61d02fbac8ab1523f7d4454ce317",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-unholy-hp_cap_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "ornament-unholy-hp_cap_case",
+      "sha256": "e842535432ca89d80818bc454f859ca29980e0e6cd968de00c2a912de4bc714b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-frost-hp_mid_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "ornament-frost-hp_mid_case",
+      "sha256": "10f818c03e55759fbe8db5f27bacdfcfe8653efc13b81d2a130c07dcfe32ff82",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-unholy-hp_mid_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "ornament-unholy-hp_mid_case",
+      "sha256": "8d517fe7b191552371f35d5290692fe91d5527339505340392d23fc07560c707",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-frost-hp_low_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "ornament-frost-hp_low_case",
+      "sha256": "352d5c3983287923b196f418841b15f72b90292edb57b8376f2a0933198fa275",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-unholy-hp_low_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "ornament-unholy-hp_low_case",
+      "sha256": "44ec8a227844116ebcc2e8cca56d1d0697ed0ca88a94a2b31efa5a16fef6eeef",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-frost-hp_boss_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "ornament-frost-hp_boss_case",
+      "sha256": "c753a49ec7a1cdcaa8e16e260b0efeccf6c454c8513724ddd42ed4300722b728",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "ornament-unholy-hp_boss_case-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "ornament-unholy-hp_boss_case",
+      "sha256": "f9d105e82862d1b060b127fc3c7229c53ca3b495a4cb6bea5ebf6034e3824282",
+      "canvas": [
+        1024,
+        256
+      ]
+    }
+  },
+  "capDiagnostics": {
+    "ornament-frost-hp_cap_case": {
+      "bounds": [
+        692,
+        53,
+        818,
+        188
+      ],
+      "footprint": [
+        692.0,
+        52,
+        822.0,
+        188
+      ],
+      "accepted": false,
+      "terminalPixels": 8152,
+      "terminalCoveredFraction": 0.9358439646712463,
+      "exposedTerminalPixelsBeyondAA": 371,
+      "edgeToleranceSourcePixels": 1
+    },
+    "ornament-unholy-hp_cap_case": {
+      "bounds": [
+        692,
+        137,
+        783,
+        188
+      ],
+      "footprint": [
+        692.0,
+        52,
+        822.0,
+        188
+      ],
+      "accepted": false,
+      "terminalPixels": 8152,
+      "terminalCoveredFraction": 0.22779685966633956,
+      "exposedTerminalPixelsBeyondAA": 6123,
+      "edgeToleranceSourcePixels": 1
+    },
+    "ornament-frost-hp_mid_case": {
+      "bounds": [
+        699,
+        57,
+        816,
+        182
+      ],
+      "footprint": [
+        698.5,
+        56,
+        819.5,
+        182
+      ],
+      "accepted": false,
+      "terminalPixels": 6568,
+      "terminalCoveredFraction": 0.9345310596833131,
+      "exposedTerminalPixelsBeyondAA": 286,
+      "edgeToleranceSourcePixels": 1
+    },
+    "ornament-unholy-hp_mid_case": {
+      "bounds": [
+        700,
+        135,
+        783,
+        182
+      ],
+      "footprint": [
+        698.5,
+        56,
+        819.5,
+        182
+      ],
+      "accepted": false,
+      "terminalPixels": 6568,
+      "terminalCoveredFraction": 0.21604750304506698,
+      "exposedTerminalPixelsBeyondAA": 4990,
+      "edgeToleranceSourcePixels": 1
+    },
+    "ornament-frost-hp_low_case": {
+      "bounds": [
+        698,
+        56,
+        816,
+        182
+      ],
+      "footprint": [
+        698.0,
+        56,
+        819.0,
+        182
+      ],
+      "accepted": false,
+      "terminalPixels": 6577,
+      "terminalCoveredFraction": 0.9359890527596169,
+      "exposedTerminalPixelsBeyondAA": 267,
+      "edgeToleranceSourcePixels": 1
+    },
+    "ornament-unholy-hp_low_case": {
+      "bounds": [
+        698,
+        134,
+        783,
+        182
+      ],
+      "footprint": [
+        698.0,
+        56,
+        819.0,
+        182
+      ],
+      "accepted": false,
+      "terminalPixels": 6577,
+      "terminalCoveredFraction": 0.22152957275353505,
+      "exposedTerminalPixelsBeyondAA": 4952,
+      "edgeToleranceSourcePixels": 1
+    },
+    "ornament-frost-hp_boss_case": {
+      "bounds": [
+        812,
+        57,
+        935,
+        189
+      ],
+      "footprint": [
+        811.5,
+        56,
+        939.5,
+        189
+      ],
+      "accepted": false,
+      "terminalPixels": 8268,
+      "terminalCoveredFraction": 0.9195694242864054,
+      "exposedTerminalPixelsBeyondAA": 480,
+      "edgeToleranceSourcePixels": 1
+    },
+    "ornament-unholy-hp_boss_case": {
+      "bounds": [
+        812,
+        139,
+        901,
+        189
+      ],
+      "footprint": [
+        811.5,
+        56,
+        939.5,
+        189
+      ],
+      "accepted": false,
+      "terminalPixels": 8268,
+      "terminalCoveredFraction": 0.21976294146105466,
+      "exposedTerminalPixelsBeyondAA": 6280,
+      "edgeToleranceSourcePixels": 1
+    }
+  },
+  "liveRetailValidated": false,
+  "liveForeverValidated": false
+}

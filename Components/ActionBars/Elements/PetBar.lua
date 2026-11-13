@@ -108,7 +108,7 @@ PetBarMod.GenerateDefaults = function(self)
 end
 
 local onEnter = function(self)
-	self.icon.darken:SetAlpha(0)
+	if (self.icon.darken) then self.icon.darken:SetAlpha(0) end
 	-- Obey tooltip options if the tooltip module is enabled.
 	local tooltips = ns:GetModule("Tooltips", true)
 	if (tooltips and tooltips:IsEnabled() and tooltips.db.profile.hideInCombat and tooltips.db.profile.hideActionBarTooltipsInCombat and InCombatLockdown()) then
@@ -120,7 +120,7 @@ local onEnter = function(self)
 end
 
 local onLeave = function(self)
-	self.icon.darken:SetAlpha(.1)
+	if (self.icon.darken) then self.icon.darken:SetAlpha(.1) end
 	if (self.OnLeave) then
 		self:OnLeave()
 	end
@@ -130,12 +130,19 @@ local style = function(button, shape)
 
 	local db = ns.API.GetShapedButtonConfig(ns.GetConfig("PetActionButton"), shape)
 
+	-- Masque owns the art layers when the player handed it the buttons
+	-- (Compatibility/Masque.lua): the template's normal, checked and highlight
+	-- textures stay for it to skin, and none of our art is drawn.
+	local masque = ns.ActionBarMasque and ns.ActionBarMasque.IsActive()
+
 	-- Clean up the button template
-	for _,i in next,{ --[["AutoCastShine",]] "Border", "Name", "NewActionTexture", "NormalTexture", "SpellHighlightAnim", "SpellHighlightTexture",
-		--[[ WoW10 ]] "CheckedTexture", "HighlightTexture", "BottomDivider", "RightDivider", "SlotArt", "SlotBackground" } do
+	local templateParts = masque
+		and { "Name", "NewActionTexture", "SpellHighlightAnim", "SpellHighlightTexture", "BottomDivider", "RightDivider" }
+		or { --[["AutoCastShine",]] "Border", "Name", "NewActionTexture", "NormalTexture", "SpellHighlightAnim", "SpellHighlightTexture",
+			--[[ WoW10 ]] "CheckedTexture", "HighlightTexture", "BottomDivider", "RightDivider", "SlotArt", "SlotBackground" }
+	for _,i in next,templateParts do
 		if (button[i] and button[i].Stop) then button[i]:Stop() elseif button[i] then button[i]:SetParent(UIHider) end
 	end
-
 
 	local m = db.ButtonMaskTexture
 	local b = "" -- GetMedia("blank")
@@ -144,46 +151,49 @@ local style = function(button, shape)
 	button:SetAttribute("buttonLock", true)
 	button:SetSize(unpack(db.ButtonSize))
 	button:SetHitRectInsets(unpack(db.ButtonHitRects))
-	button:SetNormalTexture("")
-	button:SetHighlightTexture("")
-	button:SetCheckedTexture("")
-	button:GetHighlightTexture():Hide()
-	button:GetCheckedTexture():Hide()
 
-	-- New 3.4.1 checked texture keeps being reset.
-	hooksecurefunc(button, "SetChecked", function() button:GetCheckedTexture():Hide() end)
-
-	-- Custom slot texture
-	local backdrop = button:CreateTexture(nil, "BACKGROUND", nil, -7)
-	backdrop:SetSize(unpack(db.ButtonBackdropSize))
-	backdrop:SetPoint(unpack(db.ButtonBackdropPosition))
-	backdrop:SetTexture(db.ButtonBackdropTexture)
-	backdrop:SetVertexColor(unpack(db.ButtonBackdropColor))
-	button.backdrop = backdrop
-
-	-- Icon
 	local icon = button.icon
-	icon:SetDrawLayer("BACKGROUND", 1)
-	icon:ClearAllPoints()
-	icon:SetPoint(unpack(db.ButtonIconPosition))
-	icon:SetSize(unpack(db.ButtonIconSize))
+	if (not masque) then
+		button:SetNormalTexture("")
+		button:SetHighlightTexture("")
+		button:SetCheckedTexture("")
+		button:GetHighlightTexture():Hide()
+		button:GetCheckedTexture():Hide()
 
-	local i = 1
-	while button.icon:GetMaskTexture(i) do
-		button.icon:RemoveMaskTexture(button.icon:GetMaskTexture(i))
-		i = i + 1
-	end
-	if (button.IconMask) then
-		icon:RemoveMaskTexture(button.IconMask)
-	end
-	icon:SetMask(m)
+		-- New 3.4.1 checked texture keeps being reset.
+		hooksecurefunc(button, "SetChecked", function() button:GetCheckedTexture():Hide() end)
 
-	-- Custom icon darkener
-	local darken = button:CreateTexture(nil, "BACKGROUND", nil, 2)
-	darken:SetAllPoints(button.icon)
-	darken:SetTexture(m)
-	darken:SetVertexColor(0, 0, 0, .1)
-	button.icon.darken = darken
+		-- Custom slot texture
+		local backdrop = button:CreateTexture(nil, "BACKGROUND", nil, -7)
+		backdrop:SetSize(unpack(db.ButtonBackdropSize))
+		backdrop:SetPoint(unpack(db.ButtonBackdropPosition))
+		backdrop:SetTexture(db.ButtonBackdropTexture)
+		backdrop:SetVertexColor(unpack(db.ButtonBackdropColor))
+		button.backdrop = backdrop
+
+		-- Icon
+		icon:SetDrawLayer("BACKGROUND", 1)
+		icon:ClearAllPoints()
+		icon:SetPoint(unpack(db.ButtonIconPosition))
+		icon:SetSize(unpack(db.ButtonIconSize))
+
+		local i = 1
+		while button.icon:GetMaskTexture(i) do
+			button.icon:RemoveMaskTexture(button.icon:GetMaskTexture(i))
+			i = i + 1
+		end
+		if (button.IconMask) then
+			icon:RemoveMaskTexture(button.IconMask)
+		end
+		icon:SetMask(m)
+
+		-- Custom icon darkener
+		local darken = button:CreateTexture(nil, "BACKGROUND", nil, 2)
+		darken:SetAllPoints(button.icon)
+		darken:SetTexture(m)
+		darken:SetVertexColor(0, 0, 0, .1)
+		button.icon.darken = darken
+	end
 
 	button.OnEnter = button:GetScript("OnEnter")
 	button.OnLeave = button:GetScript("OnLeave")
@@ -191,42 +201,48 @@ local style = function(button, shape)
 	button:SetScript("OnEnter", onEnter)
 	button:SetScript("OnLeave", onLeave)
 
-	-- Some crap WoW10 border I can't figure out how to remove right now.
-	button:DisableDrawLayer("ARTWORK")
+	if (not masque) then
+		-- Some crap WoW10 border I can't figure out how to remove right now.
+		-- Not under Masque: the template's normal texture, which it skins, is drawn
+		-- in this layer too.
+		button:DisableDrawLayer("ARTWORK")
 
-	-- Button is pushed
-	-- Responds to mouse and keybinds
-	-- if we allow blizzard to handle it.
-	local pushedTexture = button:CreateTexture(nil, "OVERLAY", nil, 1)
-	pushedTexture:SetVertexColor(1, 1, 1, .05)
-	pushedTexture:SetTexture(m)
-	pushedTexture:SetAllPoints(button.icon)
-	button.pushedTexture = pushedTexture
+		-- Button is pushed
+		-- Responds to mouse and keybinds
+		-- if we allow blizzard to handle it.
+		local pushedTexture = button:CreateTexture(nil, "OVERLAY", nil, 1)
+		pushedTexture:SetVertexColor(1, 1, 1, .05)
+		pushedTexture:SetTexture(m)
+		pushedTexture:SetAllPoints(button.icon)
+		button.pushedTexture = pushedTexture
 
-	button:SetPushedTexture(button.pushedTexture)
-	button:GetPushedTexture():SetBlendMode("ADD")
-	button:GetPushedTexture():SetDrawLayer("OVERLAY", 1)
+		button:SetPushedTexture(button.pushedTexture)
+		button:GetPushedTexture():SetBlendMode("ADD")
+		button:GetPushedTexture():SetDrawLayer("OVERLAY", 1)
 
-	-- Autoattack flash
-	local flash = button.Flash
-	flash:SetDrawLayer("OVERLAY", 2)
-	flash:SetAllPoints(icon)
-	flash:SetVertexColor(1, 0, 0, .25)
-	flash:SetTexture(m)
-	flash:Hide()
+		-- Autoattack flash
+		local flash = button.Flash
+		flash:SetDrawLayer("OVERLAY", 2)
+		flash:SetAllPoints(icon)
+		flash:SetVertexColor(1, 0, 0, .25)
+		flash:SetTexture(m)
+		flash:Hide()
+	end
 
 	-- Button cooldown frame
 	local cooldown = button.cooldown
 	cooldown:SetFrameLevel(button:GetFrameLevel() + 1)
-	cooldown:ClearAllPoints()
-	cooldown:SetAllPoints(button.icon)
-	cooldown:SetReverse(false)
-	cooldown:SetSwipeTexture(m)
-	cooldown:SetDrawSwipe(true)
-	cooldown:SetBlingTexture(b, 0, 0, 0, 0)
-	cooldown:SetDrawBling(false)
-	cooldown:SetEdgeTexture(b)
-	cooldown:SetDrawEdge(false)
+	if (not masque) then
+		cooldown:ClearAllPoints()
+		cooldown:SetAllPoints(button.icon)
+		cooldown:SetReverse(false)
+		cooldown:SetSwipeTexture(m)
+		cooldown:SetDrawSwipe(true)
+		cooldown:SetBlingTexture(b, 0, 0, 0, 0)
+		cooldown:SetDrawBling(false)
+		cooldown:SetEdgeTexture(b)
+		cooldown:SetDrawEdge(false)
+	end
 	cooldown:SetHideCountdownNumbers(false)
 
 	-- Custom overlay frame
@@ -235,12 +251,14 @@ local style = function(button, shape)
 	overlay:SetAllPoints()
 	button.overlay = overlay
 
-	local border = overlay:CreateTexture(nil, "BORDER", nil, 1)
-	border:SetPoint(unpack(db.ButtonBorderPosition))
-	border:SetSize(unpack(db.ButtonBorderSize))
-	border:SetTexture(db.ButtonBorderTexture)
-	border:SetVertexColor(unpack(db.ButtonBorderColor))
-	button.iconBorder = border
+	if (not masque) then
+		local border = overlay:CreateTexture(nil, "BORDER", nil, 1)
+		border:SetPoint(unpack(db.ButtonBorderPosition))
+		border:SetSize(unpack(db.ButtonBorderSize))
+		border:SetTexture(db.ButtonBorderTexture)
+		border:SetVertexColor(unpack(db.ButtonBorderColor))
+		button.iconBorder = border
+	end
 
 	-- Custom spell highlight
 	local spellHighlight = overlay:CreateTexture(nil, "ARTWORK", nil, -7)
@@ -280,25 +298,34 @@ local style = function(button, shape)
 	hotkey:SetFontObject(db.ButtonKeybindFont)
 	hotkey:SetTextColor(unpack(db.ButtonKeybindColor))
 
-	-- Todo: Adjust size of this.
-	local autoCastable = button.AutoCastable
-	if (autoCastable) then
-		autoCastable:SetParent(overlay)
-		autoCastable:ClearAllPoints()
-		autoCastable:SetPoint("TOPLEFT", -db.ButtonAutoCastableOffset, db.ButtonAutoCastableOffset)
-		autoCastable:SetPoint("BOTTOMRIGHT", db.ButtonAutoCastableOffset, -db.ButtonAutoCastableOffset)
-	end
+	-- The autocast ring and shine are sized to our casing; Masque sizes its own.
+	if (not masque) then
+		-- Todo: Adjust size of this.
+		local autoCastable = button.AutoCastable
+		if (autoCastable) then
+			autoCastable:SetParent(overlay)
+			autoCastable:ClearAllPoints()
+			autoCastable:SetPoint("TOPLEFT", -db.ButtonAutoCastableOffset, db.ButtonAutoCastableOffset)
+			autoCastable:SetPoint("BOTTOMRIGHT", db.ButtonAutoCastableOffset, -db.ButtonAutoCastableOffset)
+		end
 
-	-- Todo: Check if I should add a round texture here
-	local autoCastShine = button.AutoCastShine
-	if (autoCastShine) then
-		autoCastShine:SetParent(overlay)
-		autoCastShine:ClearAllPoints()
-		autoCastShine:SetPoint("TOPLEFT", -db.ButtonAutoCastShineOffset, db.ButtonAutoCastShineOffset)
-		autoCastShine:SetPoint("BOTTOMRIGHT", db.ButtonAutoCastShineOffset, -db.ButtonAutoCastShineOffset)
+		-- Todo: Check if I should add a round texture here
+		local autoCastShine = button.AutoCastShine
+		if (autoCastShine) then
+			autoCastShine:SetParent(overlay)
+			autoCastShine:ClearAllPoints()
+			autoCastShine:SetPoint("TOPLEFT", -db.ButtonAutoCastShineOffset, db.ButtonAutoCastShineOffset)
+			autoCastShine:SetPoint("BOTTOMRIGHT", db.ButtonAutoCastShineOffset, -db.ButtonAutoCastShineOffset)
+		end
 	end
 
 	RegisterCooldown(button.cooldown, button.cooldownCount)
+
+	hooksecurefunc(cooldown, "SetHideCountdownNumbers", function(c,h) if h then c:SetHideCountdownNumbers(false) end end)
+
+	if (masque) then
+		return button
+	end
 
 	hooksecurefunc(cooldown, "SetSwipeTexture", function(c,t) if t ~= m then c:SetSwipeTexture(m) end end)
 	hooksecurefunc(cooldown, "SetBlingTexture", function(c,t) if t ~= b then c:SetBlingTexture(b,0,0,0,0) end end)
@@ -307,15 +334,14 @@ local style = function(button, shape)
 	hooksecurefunc(cooldown, "SetDrawSwipe", function(c,h) if not h then c:SetDrawSwipe(true) end end)
 	hooksecurefunc(cooldown, "SetDrawBling", function(c,h) if h then c:SetDrawBling(false) end end)
 	hooksecurefunc(cooldown, "SetDrawEdge", function(c,h) if h then c:SetDrawEdge(false) end end)
-	hooksecurefunc(cooldown, "SetHideCountdownNumbers", function(c,h) if h then c:SetHideCountdownNumbers(false) end end)
 	hooksecurefunc(cooldown, "SetCooldown", function(c) c:SetAlpha(.75) end)
 
 	hooksecurefunc(button, "SetNormalTexture", function(b,...) if(...~="")then b:SetNormalTexture("") end end)
 	hooksecurefunc(button, "SetHighlightTexture", function(b,...) if(...~="")then b:SetHighlightTexture("") end end)
 	hooksecurefunc(button, "SetCheckedTexture", function(b,...) if(...~="")then b:SetCheckedTexture("") end end)
 
-	-- Disable masque for our buttons,
-	-- they are not compatible.
+	-- Without the Masque switch these buttons stay out of Masque: our art and its
+	-- skins fight over the same textures. Compatibility/Masque.lua hands them over.
 	button.AddToMasque = noop
 	button.AddToButtonFacade = noop
 	button.LBFSkinned = nil
@@ -530,7 +556,11 @@ PetBarMod.CreateBar = function(self)
 
 	for id= 1,NUM_PET_ACTION_SLOTS do
 		local button = style(bar:CreateButton(), self.db.profile.buttonShape)
-		if (ns.LegacyHUD) then ns.LegacyHUD:StyleButton(button) end
+		if (ns.ActionBarMasque and ns.ActionBarMasque.IsActive()) then
+			ns.ActionBarMasque.AddButton(button, "Pet Bar", "Pet")
+		elseif (ns.LegacyHUD) then
+			ns.LegacyHUD:StyleButton(button)
+		end
 	end
 
 	self.bar = bar

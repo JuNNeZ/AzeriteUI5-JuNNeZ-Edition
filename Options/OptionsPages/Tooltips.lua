@@ -50,6 +50,13 @@ local getoption = function(info,option)
 	return getmodule().db.profile[option]
 end
 
+-- "Do not style tooltips" turns off every tooltip feature but Hide in Combat:
+-- the ID lines, the Mythic+ rating and the anchoring all return early on
+-- Tooltips:IsDisabled() (Components/Misc/Tooltips.lua). FixLog 2026-11-13.
+local stylingOff = function(info)
+	return getoption(info, "disableAzeriteUITooltips") and true or false
+end
+
 local consoleportActive = function()
 	return ns.API and (ns.API.IsAddOnEnabled and (ns.API.IsAddOnEnabled("ConsolePort") or ns.API.IsAddOnEnabled("ConsolePort_Bar")))
 end
@@ -77,7 +84,7 @@ local GenerateOptions = function()
 				},
 				set = setter,
 				get = getter,
-				disabled = function() return consoleportActive() end
+				disabled = function(info) return stylingOff(info) or consoleportActive() end
 			},
 			disableAzeriteUITooltips = {
 				name = L["Do not style tooltips"],
@@ -95,7 +102,7 @@ local GenerateOptions = function()
 				type = "toggle", width = "full",
 				set = setter,
 				get = getter,
-				disabled = function() return consoleportActive() end
+				disabled = function(info) return stylingOff(info) or consoleportActive() end
 			},
 			consolePortInfo = {
 				name = function()
@@ -149,6 +156,7 @@ local GenerateOptions = function()
 				desc = L["Toggle whether to add itemID to item tooltips or not."],
 				order = 20,
 				type = "toggle", width = "full",
+				disabled = stylingOff,
 				set = setter,
 				get = getter
 			},
@@ -157,6 +165,7 @@ local GenerateOptions = function()
 				desc = L["Toggle whether to add spellIDs and auraIDs in tooltips containing actions, spells or auras."],
 				order = 21,
 				type = "toggle", width = "full",
+				disabled = stylingOff,
 				set = setter,
 				get = getter
 			},
@@ -167,6 +176,7 @@ local GenerateOptions = function()
 				order = 22,
 				type = "toggle", width = "full",
 				hidden = function() return not ns.IsRetailContent end,
+				disabled = stylingOff,
 				set = setter,
 				get = getter
 			},
@@ -182,14 +192,14 @@ local GenerateOptions = function()
 				type = "toggle", width = "full",
 				set = setter,
 				get = getter,
-				disabled = function() return consoleportActive() end
+				disabled = function(info) return stylingOff(info) or consoleportActive() end
 			},
 			anchorToCursor = {
 				name = L["Anchor to Cursor"],
 				desc = L["Anchor tooltips that normally would appear in the default tooltip location to your cursor instead."],
 				order = 31,
 				type = "toggle", width = "full",
-				disabled = function(info) return consoleportActive() or not getoption(info, "anchor") end,
+				disabled = function(info) return stylingOff(info) or consoleportActive() or not getoption(info, "anchor") end,
 				set = setter,
 				get = getter
 			}

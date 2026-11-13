@@ -41,12 +41,22 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.38.0-JuNNeZ",
+		items = {
+			{ text = "Death Knight, Priest and Warlock themes are available as WIP previews.", page = "Themes" },
+			{ text = "A quest item button with its own binding, quest filters and AzeriteUI artwork.", page = L["Action Bars"], section = L["Quest Item Button"] },
+			{ text = "Healer and DPS threat roles, tank percentages and optional sound or visual warnings.", page = L["Nameplates"], section = L["Threat roles"] },
+			{ text = "Let Masque skin action, pet and stance buttons; reload after enabling it.", page = L["Action Bars"] },
+			{ text = "Optional auto sell junk, auto repair and fast loot, all off by default.", page = L["Bags"] },
+		}
+	},
+	{
 		version = "5.37.0-JuNNeZ",
 		items = {
 			{
 				text = "Tank mode: threat colours for tanks, the name of who a loose mob attacks, and a lost-aggro sound.",
 				page = L["Nameplates"],
-				section = L["Tank mode"]
+				section = L["Threat roles"]
 			},
 			{
 				text = "Threat percent beside your target's name while in a group.",

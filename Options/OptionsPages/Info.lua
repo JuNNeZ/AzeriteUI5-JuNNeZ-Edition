@@ -98,6 +98,16 @@ local GenerateOptions = function()
 				hidden = function(info) return not ns.IsRetailContent or isdisabled(info) end,
 				set = setter,
 				get = getter
+			},
+			-- Components/Misc/Info.lua, ReadLayer. Forever only; Retail has no layers.
+			enableLayer = {
+				name = L["Show your layer"],
+				desc = L["After the zone name, which layer (copy of the zone) you are on. It is read from creatures you mouse over, target or see nameplates for, so it shows once you have seen two of them; not in instances or in combat."],
+				order = 31,
+				type = "toggle", width = "full",
+				hidden = function(info) return ns.IsRetailContent or isdisabled(info) end,
+				set = setter,
+				get = getter
 			}
 			-- TODO:
 			-- Information block settings:
