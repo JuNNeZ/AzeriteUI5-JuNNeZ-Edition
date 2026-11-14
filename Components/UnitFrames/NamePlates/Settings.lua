@@ -60,6 +60,9 @@ local defaults = { profile = ns:Merge({
 	enabled = true,
 	showAuras = true,
 	showAurasOnTargetOnly = true,
+	-- Forever's target-bound Rogue/Druid combo points (ComboPoints.lua).
+	showComboPoints = false,
+	comboPointScale = 1,
 	-- The kinds of aura a plate shows (Aura filters; PlayerAuraContainers.lua, CreateForNamePlate).
 	auraCrowdControl = true,
 	auraOwnDebuffs = true,

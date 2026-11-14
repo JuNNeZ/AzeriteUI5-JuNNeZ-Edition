@@ -5,7 +5,9 @@
 -- "local QUICKBIND_BINDER_STRATA" and "ActionBarMod.OnEnable"), against a stub
 -- QuickKeybindFrame, and checks that opening Blizzard's mode turns on LibKeyBound
 -- without its dialog, that a key pressed over one of our buttons binds its
--- keyBoundTarget, and that closing the mode puts everything back.
+-- keyBoundTarget, and that closing the mode puts everything back. Also loads
+-- the real pet/stance prototypes and styled hover handlers to cover their
+-- command bindings, Escape cleanup, immediate labels and combat guards.
 --
 -- What it cannot cover: real keyboard dispatch order between the binder and
 -- Blizzard's frame (that is why the binder's strata is raised; the check only
@@ -14,6 +16,7 @@
 -- Usage: lua.exe Tools/Harness/quickkeybind_harness.lua [addon root]
 
 local root = (arg and arg[1]) or "."
+local forever = os.getenv("AZERITE_CLIENT") == "Forever"
 
 local passed, failed = 0, 0
 local function check(ok, label)
@@ -32,7 +35,8 @@ local combat = false
 function InCombatLockdown() return combat end
 function IsLoggedIn() return true end
 function PlaySound() end
-function GetBuildInfo() return "12.1.5", "1", "d", 120105 end
+function GetBuildInfo() return forever and "1.60.1" or "12.1.5", "1", "d", forever and 16001 or 120105 end
+C_XMLUtil = { GetTemplateInfo = function() return {} end }
 function GetScreenWidth() return 1920 end
 function GetBindingText(key) return tostring(key) end
 function IsModifierKeyDown() return false end
@@ -40,8 +44,6 @@ function IsShiftKeyDown() return false end
 function IsControlKeyDown() return false end
 function IsAltKeyDown() return false end
 function GetCurrentBindingSet() return 1 end
-function SaveBindings() end
-function LoadBindings() end
 function format(...) return string.format(...) end
 getglobal = function(name) return _G[name] end
 SOUNDKIT = {}
@@ -63,6 +65,15 @@ function GetBindingKey(action)
 	return unpack(keys)
 end
 function GetBindingAction(key) return bindings[key] or "" end
+local savedBindings = {}
+function SaveBindings()
+	savedBindings = {}
+	for key, action in pairs(bindings) do savedBindings[key] = action end
+end
+function LoadBindings()
+	for key in pairs(bindings) do bindings[key] = nil end
+	for key, action in pairs(savedBindings) do bindings[key] = action end
+end
 
 local frameMethods = {}
 frameMethods.__index = frameMethods
@@ -248,6 +259,111 @@ ActionBarMod:HookQuickKeybindMode()
 check(KeyBound:IsShown(), "already-open mode picked up when hooking")
 QuickKeybindFrame:Hide()
 check(not KeyBound:IsShown(), "and released on close")
+
+----------------------------------------------------------------
+-- 6. Real pet/stance adapters and the styled hover handlers
+----------------------------------------------------------------
+libs["LibActionButton-1.0-GE"] = {
+	PickHotkey = function(...) return (...) end,
+	IsGamePadKey = function() return false end,
+}
+local ns = { IsRetail = true }
+function ns:GetModule() return nil end
+assert(loadfile(root .. "/Components/ActionBars/Prototypes/PetButton.lua"))("AzeriteUI", ns)
+assert(loadfile(root .. "/Components/ActionBars/Prototypes/StanceButton.lua"))("AzeriteUI", ns)
+
+local function styledHover(path)
+	local file = assert(io.open(root .. "/" .. path, "rb"))
+	local text = file:read("*a")
+	file:close()
+	local from = assert(text:find("local onEnter = function", 1, true))
+	local to = assert(text:find("local onLeave = function", from, true))
+	local hover = assert(loadstring(text:sub(from, to - 1) .. "\nreturn onEnter", "@" .. path))
+	setfenv(hover, setmetatable({ KeyBound = KeyBound, ns = ns }, { __index = _G }))
+	return hover()
+end
+
+for _, case in ipairs({
+	{ "pet", ns.PetButton, "PetBar", "BONUSACTIONBUTTON", 3 },
+	{ "stance", ns.StanceButton, "StanceBar", "SHAPESHIFTBUTTON", 2 },
+}) do
+	local label, prototype, bar, commandPrefix, id = unpack(case)
+	local slot = CreateFrame("CheckButton", "Azerite" .. bar .. "Button" .. id)
+	for method, value in pairs(prototype) do slot[method] = value end
+	slot.id = id
+	slot.GetID = function(self) return self.id end
+	slot.parent = { config = {} }
+	slot.icon = {}
+	slot.HotKey = slot:CreateFontString()
+	slot.hotkey = slot.HotKey
+	local nativeTooltipCalls = 0
+	slot.OnEnter = function() nativeTooltipCalls = nativeTooltipCalls + 1 end
+	slot.hover = styledHover("Components/ActionBars/Elements/" .. bar .. ".lua")
+	local barFile = assert(io.open(root .. "/Components/ActionBars/Elements/" .. bar .. ".lua", "rb"))
+	local barSource = barFile:read("*a")
+	barFile:close()
+	local moduleName = bar .. "Mod"
+	local updateStart = assert(barSource:find(moduleName .. ".UpdateBindings = function", 1, true))
+	local updateEnd = assert(barSource:find("\nend", updateStart, true)) + 3
+	local module = { bar = { buttons = { slot }, IsEnabled = function() return true end, UpdateBindings = function() end } }
+	local update = assert(loadstring(barSource:sub(updateStart, updateEnd), "=" .. bar .. " bindings"))
+	setfenv(update, setmetatable({ [moduleName] = module }, { __index = _G }))
+	update()
+	local command = commandPrefix .. id
+	local legacy = "CLICK " .. slot:GetName() .. ":LeftButton"
+	local function press(key) KeyBound.frame:GetScript("OnKeyDown")(KeyBound.frame, key) end
+
+	slot.hover(slot)
+	check(nativeTooltipCalls == 1 and not KeyBound.frame:IsShown(), label .. " normal hover keeps tooltip without binder")
+	SetBinding("F1", command)
+	SetBinding("F2", command)
+	SetBinding("F3", legacy)
+	SetBinding("F4", "ACTIONBUTTON9")
+	KeyBound:Activate()
+	slot.hover(slot)
+	check(KeyBound.frame.button == slot and KeyBound.frame:IsShown(), label .. " styled hover joins /kb")
+	check(nativeTooltipCalls == 1, label .. " native tooltip cannot overwrite binding help")
+	local text = slot:GetBindings()
+	check(text:find("F1", 1, true) and text:find("F2", 1, true) and text:find("F3", 1, true), label .. " help lists command and legacy bindings")
+	press("ESCAPE")
+	check(not bindings.F1 and not bindings.F2 and not bindings.F3 and bindings.F4 == "ACTIONBUTTON9", label .. " Escape clears every slot key and leaves other actions")
+	press("F5")
+	check(bindings.F5 == command, label .. " /kb binds the native command")
+	check(slot.HotKey.text == "F5", label .. " hotkey label refreshes immediately")
+	combat = true
+	KeyBound:PLAYER_REGEN_DISABLED()
+	slot.hover(slot)
+	slot:SetKey("F6")
+	slot:ClearBindings()
+	check(not KeyBound.frame:IsShown() and not bindings.F6 and bindings.F5 == command, label .. " combat prevents hover binding and direct changes")
+	combat = false
+	KeyBound:Deactivate()
+	SaveBindings()
+
+	QuickKeybindFrame:Show()
+	slot.hover(slot)
+	check(KeyBound.frame.button == slot and KeyBound.frame:GetFrameStrata() == "FULLSCREEN_DIALOG", label .. " joins Quick Keybind bridge")
+	press("F7")
+	check(bindings.F7 == command, label .. " Quick Keybind uses native command")
+	-- Blizzard's CancelBinding calls LoadBindings before hiding its window.
+	slot:ClearBindings()
+	check(slot:GetHotkey() == nil, label .. " changed set can clear the saved key")
+	LoadBindings(GetCurrentBindingSet())
+	module:UpdateBindings() -- UPDATE_BINDINGS after the saved set is restored.
+	QuickKeybindFrame:Hide()
+	check(not bindings.F7 and bindings.F5 == command, label .. " Cancel restores saved command bindings")
+	check(slot.HotKey.text == "F5", label .. " restored bindings refresh the visible label")
+	QuickKeybindFrame:Show()
+	slot.hover(slot)
+	press("F8")
+	-- Blizzard's Okay commits the current set through KeybindListener.
+	SaveBindings(GetCurrentBindingSet())
+	QuickKeybindFrame:Hide()
+	LoadBindings(GetCurrentBindingSet())
+	check(bindings.F8 == command, label .. " Okay saves command bindings")
+	slot:ClearBindings()
+	check(slot:GetBindings() == "", label .. " no bindings remain after clear")
+end
 
 print(string.format("quickkeybind harness: %d passed, %d failed", passed, failed))
 if (failed > 0) then os.exit(1) end

@@ -750,7 +750,7 @@ L["Reset Position and Size"] = true
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = true
 L["About"] = true
 L["Changelog"] = true
-L["The %d most recent releases. Everything older is in CHANGELOG.md."] = true
+L["The %d most recent releases. Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md."] = true
 L["The release notes are not available in this build."] = true
 L["%s - this setting needs a %s control, which this panel cannot draw yet."] = true
 
@@ -1473,3 +1473,9 @@ L["Unavailable while ConsolePort is enabled."] = true
 L["Unavailable while \"%s\" keeps your interface visible."] = true
 L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = true
 L["Only Druids use this."] = true
+
+-- Forever nameplate combo points.
+L["Show target-bound combo points on enemy nameplates on Forever, including mobs you are not targeting. For Rogues and Druids in Cat Form. Your current target also shows empty sockets."] = true
+
+L["Combo point size (%)"] = true
+L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = true

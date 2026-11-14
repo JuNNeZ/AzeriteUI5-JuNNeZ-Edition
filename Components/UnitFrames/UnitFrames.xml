@@ -41,6 +41,7 @@
 	<Script file="NamePlates\Classification.lua"/>
 	<Script file="NamePlates\CVars.lua"/>
 	<Script file="NamePlates\Visibility.lua"/>
+	<Script file="NamePlates\ComboPoints.lua"/>
 	<Script file="NamePlates\Elements.lua"/>
 	<Script file="NamePlates\Castbar.lua"/>
 	<Script file="NamePlates\Layout.lua"/>

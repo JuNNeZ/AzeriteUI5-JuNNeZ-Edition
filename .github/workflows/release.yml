@@ -83,6 +83,10 @@ jobs:
         shell: pwsh
         run: ./Tools/BuildClientTOC.ps1 -Check
 
+      - name: Validate release notes length
+        shell: pwsh
+        run: ./Tools/Check-ReleaseNotes.ps1
+
       - name: Validate CurseForge client versions
         shell: bash
         run: |

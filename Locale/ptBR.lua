@@ -751,7 +751,7 @@ L["Reset Position and Size"] = "Redefinir posição e tamanho"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "Coloca a janela de volta no centro da tela com o tamanho original. Útil se ela foi arrastada para um lugar inalcançável."
 L["About"] = "Sobre"
 L["Changelog"] = "Registro de alterações"
-L["The %d most recent releases. Everything older is in CHANGELOG.md."] = "As %d versões mais recentes. Tudo o que é mais antigo está em CHANGELOG.md."
+L["The %d most recent releases. Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md."] = "As %d versões mais recentes. As versões anteriores estão em CHANGELOG.md e CHANGELOG_ARCHIVE.md."
 L["The release notes are not available in this build."] = "As notas de versão não estão disponíveis nesta compilação."
 L["%s - this setting needs a %s control, which this panel cannot draw yet."] = "%s - esta configuração precisa de um controle %s, que este painel ainda não consegue desenhar."
 
@@ -1474,3 +1474,9 @@ L["Unavailable while ConsolePort is enabled."] = "Indisponível enquanto o Conso
 L["Unavailable while \"%s\" keeps your interface visible."] = "Indisponível enquanto “%s” mantiver sua interface visível."
 L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = "Indisponível enquanto nem alvos amigáveis nem hostis mantiverem sua interface visível."
 L["Only Druids use this."] = "Somente para druidas."
+
+-- Forever nameplate combo points.
+L["Show target-bound combo points on enemy nameplates on Forever, including mobs you are not targeting. For Rogues and Druids in Cat Form. Your current target also shows empty sockets."] = "Mostra os pontos de combo vinculados ao alvo nas placas inimigas do Forever, incluindo inimigos que não são seu alvo atual. Para Ladinos e Druidas em Forma de Felino. Seu alvo atual também mostra os espaços vazios."
+
+L["Combo point size (%)"] = "Tamanho dos pontos de combo (%)"
+L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "Ajusta o tamanho dos cristais e espaços dos pontos de combo nas placas de nome. Nomes e auras se movem para abrir espaço. 100% é o tamanho original."

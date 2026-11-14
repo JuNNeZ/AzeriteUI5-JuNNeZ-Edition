@@ -127,7 +127,7 @@ local cases = {
 		"L[\"Options\"] = \"Параметры интерфейса\"", "locale_harness.lua"},
 	-- Nameplates (Phase 0). Each break is one of the behaviours the overhaul must keep.
 	{"nameplate object overlay", "Components/UnitFrames/NamePlates/Visibility.lua",
-		"return (self.isSoftTarget or self.isMouseOver or self.isTarget) and true or false",
+		"return (self.isSoftTarget and not IsNodeSightHidingObjectPlates()) and true or false",
 		"return false", "nameplate_harness.lua"},
 	{"nameplate name-only anchor", "Components/UnitFrames/NamePlates/Visibility.lua",
 		"self.Name:SetPoint(\"BOTTOM\", self:GetParent() or self, \"BOTTOM\", x, FRIENDLY_NAME_ONLY_NAME_OFFSET_Y)",

@@ -751,7 +751,7 @@ L["Reset Position and Size"] = "위치와 크기 초기화"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "창을 원래 크기로 화면 중앙에 되돌립니다. 닿을 수 없는 곳으로 끌려갔을 때 유용합니다."
 L["About"] = "정보"
 L["Changelog"] = "변경 내역"
-L["The %d most recent releases. Everything older is in CHANGELOG.md."] = "최근 릴리스 %d개입니다. 이전 내용은 CHANGELOG.md에 있습니다."
+L["The %d most recent releases. Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md."] = "최근 릴리스 %d개입니다. 이전 릴리스는 CHANGELOG.md와 CHANGELOG_ARCHIVE.md에 있습니다."
 L["The release notes are not available in this build."] = "이 빌드에는 릴리스 노트가 없습니다."
 L["%s - this setting needs a %s control, which this panel cannot draw yet."] = "%s - 이 설정에는 %s 컨트롤이 필요하지만 이 창은 아직 그릴 수 없습니다."
 
@@ -1474,3 +1474,9 @@ L["Unavailable while ConsolePort is enabled."] = "ConsolePort가 활성화된 �
 L["Unavailable while \"%s\" keeps your interface visible."] = "'%s' 설정이 인터페이스를 표시하는 동안 사용할 수 없습니다."
 L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = "우호적 대상과 적대적 대상 모두 인터페이스를 표시하지 않는 동안 사용할 수 없습니다."
 L["Only Druids use this."] = "드루이드 전용입니다."
+
+-- Forever nameplate combo points.
+L["Show target-bound combo points on enemy nameplates on Forever, including mobs you are not targeting. For Rogues and Druids in Cat Form. Your current target also shows empty sockets."] = "Forever에서 현재 대상으로 선택하지 않은 적을 포함하여 적 이름표에 대상에 귀속된 연계 점수를 표시합니다. 도적과 표범 변신 중인 드루이드에게 적용됩니다. 현재 대상에는 빈 칸도 표시됩니다."
+
+L["Combo point size (%)"] = "연계 점수 크기 (%)"
+L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "이름표의 연계 점수 수정과 홈 크기를 조절합니다. 이름과 오라는 공간을 확보하도록 이동합니다. 100%는 원래 크기입니다."

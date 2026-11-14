@@ -369,6 +369,30 @@ local GenerateOptions = function()
 						set = setter,
 						get = getter
 					},
+					showComboPoints = {
+						name = L["Show Combo Points"],
+						desc = L["Show target-bound combo points on enemy nameplates on Forever, including mobs you are not targeting. For Rogues and Druids in Cat Form. Your current target also shows empty sockets."],
+						order = 2.5,
+						type = "toggle", width = "full",
+						hidden = function() return not ns.IsForever end,
+						set = setter,
+						get = getter
+					},
+					comboPointScale = {
+						name = L["Combo point size (%)"],
+						desc = L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."],
+						order = 2.6,
+						type = "range", width = "full",
+						min = 50, max = 300, step = 5,
+						hidden = function() return not ns.IsForever end,
+						disabled = function(info) return not getoption(info, "showComboPoints") end,
+						set = function(info, value) setter(info, value / 100) end,
+						get = function(info)
+							local scale = getter(info)
+							if (type(scale) ~= "number") then scale = 1 end
+							return math.floor(math.max(.5, math.min(3, scale)) * 100 + .5)
+						end
+					},
 					showAurasOnTargetOnly = {
 						name = L["Only show auras on your target"],
 						desc = L["Reduce clutter by only showing nameplate auras on your current target."],

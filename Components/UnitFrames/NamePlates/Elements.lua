@@ -815,7 +815,8 @@ local NamePlate_PostUpdatePositions = function(self)
 		AnchorStandardNamePlateHealthBar(self)
 		AnchorStandardNamePlateName(self)
 		local hasName = ShouldUseFriendlyPlayerNameOnly(self) or NamePlatesMod.db.profile.showNameAlways or (self.isMouseOver or self.isSoftTarget or self.isTarget or self.inCombat) or false
-		local nameOffset = hasName and (select(2, name:GetFont()) + auras.spacing + GetTargetLikeNameLift(self) + GetNamePlateWidgetLift(self)) or 0
+		local comboLift = NP.GetComboPointNameLift and NP.GetComboPointNameLift(self) or 0
+		local nameOffset = hasName and (select(2, name:GetFont()) + auras.spacing + GetTargetLikeNameLift(self) + GetNamePlateWidgetLift(self) + comboLift) or 0
 
 		if (hasName ~= auras.usingNameOffset or nameOffset ~= auras.nameOffset or auras.usingNameOffset == nil) then
 			if (hasName) then

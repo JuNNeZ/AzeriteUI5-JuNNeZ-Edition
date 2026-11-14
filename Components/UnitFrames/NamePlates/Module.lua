@@ -133,6 +133,7 @@ local callback = function(self, event, unit)
 		end
 
 	elseif (event == "NAME_PLATE_UNIT_REMOVED") then
+		if (NP.ClearComboPoints) then NP.ClearComboPoints(self) end
 
 		if (self.WidgetContainer) then
 			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
@@ -307,6 +308,7 @@ NamePlatesMod.UpdateExecuteTimer = function(self)
 end
 
 NamePlatesMod.UpdateSettings = function(self)
+	if (NP.ConfigureComboPoints) then NP.ConfigureComboPoints() end
 	-- The target shares this threshold even when another addon owns the plates.
 	local target = ns:GetModule("TargetFrame", true)
 	if (target and target.UpdateExecuteMarker) then target:UpdateExecuteMarker() end
@@ -642,7 +644,12 @@ NamePlatesMod.OnInitialize = function(self)
 	self:HookNamePlates()
 end
 
+NamePlatesMod.OnDisable = function(self)
+	if (NP.ConfigureComboPoints) then NP.ConfigureComboPoints() end
+end
+
 NamePlatesMod.OnEnable = function(self)
+	if (NP.ConfigureComboPoints) then NP.ConfigureComboPoints() end
 	self.nameContext = ResolveNameContext()
 	if (ns.NameplateInterruptDB and ns.NameplateInterruptDB.SeedFromPlater) then
 		ns.NameplateInterruptDB.SeedFromPlater()

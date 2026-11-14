@@ -39,6 +39,7 @@ lua Tools/Harness/client_harness.lua      .                # Retail/Forever dete
 lua Tools/Harness/diel_harness.lua        .                # the Forever day and night indicator
 lua Tools/Harness/event_button_harness.lua .              # Hide Activity Button (China Forever)
 lua Tools/Harness/combo_points_harness.lua .               # Forever secret combo points
+lua Tools/Harness/nameplate_combo_harness.lua .            # Forever per-mob combo points: secret masks, transfers, recycling, live size slider and layout
 lua Tools/Harness/chat_guard_harness.lua   .               # chat module stays out of chat replacements
 lua Tools/Harness/tracker_harness.lua      .               # Hide the Blizzard Tracker, Retail and Forever
 lua Tools/Harness/locale_harness.lua       .               # all ten locales: parity, specifiers, widths
@@ -73,6 +74,7 @@ lua Tools/Harness/proc_highlight_harness.lua .             # proc styles, previe
 lua Tools/Harness/masque_harness.lua       .               # Masque switch (once per session), groups, action/pet/stance styles off and on, LAB charge skin
 lua Tools/Harness/cooldown_manager_harness.lua .           # styling, own skins/dropdown, restore, keybinds, Explorer fade proxies, rival addon choice
 lua Tools/Harness/target_execute_harness.lua .             # target tiers, mirrored crops, shared threshold, secrets, off/on
+lua Tools/Harness/target_castbar_harness.lua .             # native fallback geometry, timer transitions, fresh interrupt flags and unknown-state colour
 lua Tools/Harness/target_health_crop_harness.lua .         # target shaped fill: eased crop helper, scale, spark on its edge
 lua Tools/Harness/cdready_menu_harness.lua .               # real debug page, row layout, immediate probe vs queued repairs
 lua Tools/Harness/cdready_harness.lua .                    # opt-in probe, secrets, callbacks, polling and cleanup

@@ -64,6 +64,11 @@ does not automatically belong here merely because its implementation is technica
   The in-game generator supports these sections without special handling. Avoid
   tables and nested lists inside entries, which do not retain their structure there.
 - Regenerate `Options/Changelog.lua` with `lua Tools/BuildChangelog.lua`.
+- Run `./Tools/Check-ReleaseNotes.ps1` before packaging. Both release paths
+  enforce a 120000-character budget before copying or uploading files, leaving
+  headroom below GitHub's previously encountered 125000-character body limit.
+  Rotate older complete entries into `CHANGELOG_ARCHIVE.md`, newest first;
+  preserve their text and retain at least the 12 releases used by the game panel.
 - Inspect the generated top entry for wording, section order and version. Run its
   Lua syntax check and the existing panel harness when changing generated content.
 - Editorial revisions to a published entry keep the release version and date.

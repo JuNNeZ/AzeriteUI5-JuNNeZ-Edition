@@ -751,7 +751,7 @@ L["Reset Position and Size"] = "Position und Größe zurücksetzen"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "Setzt das Fenster in Originalgröße zurück in die Bildschirmmitte. Nützlich, wenn es an eine unerreichbare Stelle gezogen wurde."
 L["About"] = "Über"
 L["Changelog"] = "Änderungsprotokoll"
-L["The %d most recent releases. Everything older is in CHANGELOG.md."] = "Die %d neuesten Versionen. Alles Ältere steht in CHANGELOG.md."
+L["The %d most recent releases. Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md."] = "Die %d neuesten Versionen. Ältere Versionen stehen in CHANGELOG.md und CHANGELOG_ARCHIVE.md."
 L["The release notes are not available in this build."] = "Die Versionshinweise sind in diesem Build nicht verfügbar."
 L["%s - this setting needs a %s control, which this panel cannot draw yet."] = "%s – diese Einstellung braucht ein Steuerelement vom Typ %s, das dieses Fenster noch nicht zeichnen kann."
 
@@ -1474,3 +1474,9 @@ L["Unavailable while ConsolePort is enabled."] = "Nicht verfügbar, solange Cons
 L["Unavailable while \"%s\" keeps your interface visible."] = "Nicht verfügbar, solange „%s“ deine Oberfläche sichtbar hält."
 L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = "Nicht verfügbar, solange weder freundliche noch feindliche Ziele deine Oberfläche sichtbar halten."
 L["Only Druids use this."] = "Nur für Druiden."
+
+-- Forever nameplate combo points.
+L["Show target-bound combo points on enemy nameplates on Forever, including mobs you are not targeting. For Rogues and Druids in Cat Form. Your current target also shows empty sockets."] = "Zeigt zielgebundene Combopunkte auf gegnerischen Namensbalken in Forever, auch auf Gegnern, die du nicht im Ziel hast. Für Schurken und Druiden in Katzengestalt. Dein aktuelles Ziel zeigt auch leere Sockel."
+
+L["Combo point size (%)"] = "Combopunktgröße (%)"
+L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "Skaliert die Combopunkt-Kristalle und Sockel auf Namensbalken. Namen und Auren werden verschoben, um Platz zu schaffen. 100% ist die ursprüngliche Größe."

@@ -189,7 +189,8 @@ local AnchorStandardNamePlateName = function(self)
 	local db = ns.GetConfig("NamePlates")
 	local point, x, y = unpack(db.NamePosition)
 	self.Name:ClearAllPoints()
-	self.Name:SetPoint(point, x, y + GetTargetLikeNameLift(self) + GetNamePlateWidgetLift(self))
+	local comboLift = NP.GetComboPointNameLift and NP.GetComboPointNameLift(self) or 0
+	self.Name:SetPoint(point, x, y + GetTargetLikeNameLift(self) + GetNamePlateWidgetLift(self) + comboLift)
 end
 
 -- Friendly NPCs, friendly players or minions only for your target (off by default). Neither client has

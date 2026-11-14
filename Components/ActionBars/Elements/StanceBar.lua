@@ -34,6 +34,7 @@ local StanceBarMod = ns:NewModule("StanceBar", "LibMoreEvents-1.0", "LibFadingFr
 
 local LFF = LibStub("LibFadingFrames-1.0")
 local LAB = LibStub("LibActionButton-1.0-GE")
+local KeyBound = LibStub("LibKeyBound-1.0", true)
 
 local ButtonBar = ns.ButtonBar.prototype
 
@@ -108,6 +109,10 @@ end
 
 local onEnter = function(self)
 	if (self.icon.darken) then self.icon.darken:SetAlpha(0) end
+	if (KeyBound and KeyBound:IsShown() and not InCombatLockdown()) then
+		KeyBound:Set(self)
+		return
+	end
 	-- Obey tooltip options if the tooltip module is enabled.
 	local tooltips = ns:GetModule("Tooltips", true)
 	if (tooltips and tooltips:IsEnabled() and tooltips.db.profile.hideInCombat and tooltips.db.profile.hideActionBarTooltipsInCombat and InCombatLockdown()) then
@@ -613,6 +618,7 @@ StanceBarMod.UpdateBindings = function(self)
 
 	if (self.bar:IsEnabled()) then
 		self.bar:UpdateBindings()
+		for _, button in next,self.bar.buttons do button:UpdateHotkeys() end
 	end
 end
 

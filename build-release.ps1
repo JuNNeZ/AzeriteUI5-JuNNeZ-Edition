@@ -47,6 +47,7 @@ if (-not (Select-String -LiteralPath $WhatsNewPath -SimpleMatch "version = `"$Ve
 
 $DateStamp = Get-Date -Format "dd-MM-yyyy"
 & (Join-Path $PSScriptRoot 'Tools\BuildClientTOC.ps1') -Check
+& (Join-Path $PSScriptRoot 'Tools\Check-ReleaseNotes.ps1')
 $ArchiveName = "AzeriteUI-$Version-Retail-Forever-$DateStamp.zip"
 
 # Runtime roots copied into the release. WoW11 contains the modern-client

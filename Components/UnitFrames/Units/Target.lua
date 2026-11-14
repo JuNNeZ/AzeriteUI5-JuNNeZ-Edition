@@ -1030,6 +1030,22 @@ end
 
 local GetTargetCastVisualGrowth
 
+local GetTargetCastCropDriver = function(cast)
+	local driver = cast.__AzeriteUI_CastCropDriver
+	if (not driver) then
+		-- Created with the frame style, before combat. Only the native texture's
+		-- region drives the fallback geometry; no timer or health value is changed.
+		driver = CreateFrame("StatusBar", nil, cast)
+		driver:SetAllPoints(cast)
+		driver:SetStatusBarTexture([[Interface\Buttons\WHITE8X8]])
+		driver:SetMinMaxValues(0, 1)
+		driver:SetOrientation("HORIZONTAL")
+		driver:GetStatusBarTexture():SetAlpha(0)
+		cast.__AzeriteUI_CastCropDriver = driver
+	end
+	return driver
+end
+
 local ApplyTargetSimpleCastFakeFillByPercent = function(cast, percent)
 	if (not cast) then
 		return false
@@ -1038,25 +1054,13 @@ local ApplyTargetSimpleCastFakeFillByPercent = function(cast, percent)
 	if (not fakeFill) then
 		return false
 	end
-	-- The whole bar, not the statusbar texture: a timer-driven bar has already narrowed
-	-- that texture's region to the cast's progress, and the width below multiplies by
-	-- the percent again, which squeezed and stretched the art.
-	local anchorFrame = cast
-	local growth = GetTargetCastVisualGrowth(cast)
-	-- This path repoints the FakeFill onto its own anchors, so the overlay path's
-	-- "already anchored to the statusbar texture" cache has to be invalidated or
-	-- it will not re-anchor when the two paths alternate.
-	cast.__AzeriteUI_FakeFillFollowsTexture = nil
-	fakeFill:ClearAllPoints()
-	if (anchorFrame) then
-		fakeFill:SetPoint("TOP", anchorFrame, "TOP")
-		fakeFill:SetPoint("BOTTOM", anchorFrame, "BOTTOM")
+	if ((issecretvalue and issecretvalue(percent)) or (percent ~= nil and not IsSafeNumber(percent))) then
+		return false
 	end
 	if (percent == nil) then
-		if (anchorFrame) then
-			fakeFill:SetPoint("LEFT", anchorFrame, "LEFT")
-			fakeFill:SetPoint("RIGHT", anchorFrame, "RIGHT")
-		end
+		cast.__AzeriteUI_FakeFillFollowsTexture = nil
+		fakeFill:ClearAllPoints()
+		fakeFill:SetAllPoints(cast)
 		fakeFill:SetTexCoord(1, 0, 0, 1)
 		fakeFill:Show()
 		return true
@@ -1070,35 +1074,25 @@ local ApplyTargetSimpleCastFakeFillByPercent = function(cast, percent)
 		fakeFill:Hide()
 		return true
 	end
-	local width
-	if (anchorFrame and anchorFrame.GetWidth) then
-		local anchorWidth = anchorFrame:GetWidth()
-		if (IsSafeNumber(anchorWidth) and anchorWidth > 0) then
-			width = anchorWidth
-		end
+	local driver = cast.__AzeriteUI_CastCropDriver
+	if (not driver) then return false end
+	local growth = GetTargetCastVisualGrowth(cast)
+	local reverse = growth == "LEFT"
+	if (driver.__AzeriteUI_ReverseFill ~= reverse) then
+		driver:SetReverseFill(reverse)
+		driver.__AzeriteUI_ReverseFill = reverse
 	end
-	if ((type(width) ~= "number" or width <= 0) and cast.GetWidth) then
-		local castWidth = cast:GetWidth()
-		if (IsSafeNumber(castWidth) and castWidth > 0) then
-			width = castWidth
-		end
+	driver:SetValue(percent)
+	local texture = driver:GetStatusBarTexture()
+	if (cast.__AzeriteUI_FakeFillFollowsTexture ~= texture) then
+		fakeFill:ClearAllPoints()
+		fakeFill:SetAllPoints(texture)
+		cast.__AzeriteUI_FakeFillFollowsTexture = texture
 	end
-	if (type(width) == "number" and width > 0) then
-		if (growth == "LEFT") then
-			fakeFill:SetPoint("RIGHT", anchorFrame, "RIGHT")
-			fakeFill:SetWidth(width * percent)
-			fakeFill:SetTexCoord(percent, 0, 0, 1)
-		else
-			fakeFill:SetPoint("LEFT", anchorFrame, "LEFT")
-			fakeFill:SetWidth(width * percent)
-			fakeFill:SetTexCoord(1, 1 - percent, 0, 1)
-		end
-	else
-		if (anchorFrame) then
-			fakeFill:SetPoint("LEFT", anchorFrame, "LEFT")
-			fakeFill:SetPoint("RIGHT", anchorFrame, "RIGHT")
-		end
+	if (reverse) then
 		fakeFill:SetTexCoord(percent, 0, 0, 1)
+	else
+		fakeFill:SetTexCoord(1, 1 - percent, 0, 1)
 	end
 	fakeFill:Show()
 	return true
@@ -2601,8 +2595,25 @@ local ShouldColorTargetSpellTextByState = function()
 end
 
 local ShouldColorTargetCastBarByInterruptState = function()
-	-- Temporarily disabled: target protected-cast state is still unreliable.
-	return false
+	return IsTargetCastBarInterruptColorEnabled()
+end
+
+local GetTargetCurrentNotInterruptible = function(cast)
+	local unit = cast.__owner and cast.__owner.unit
+	if (type(unit) ~= "string" or unit == "" or not (cast.casting or cast.channeling or cast.empowering)) then
+		return nil
+	end
+	local channel = cast.channeling or cast.empowering
+	local query = channel and UnitChannelInfo or UnitCastingInfo
+	if (type(query) ~= "function") then return nil end
+	-- SafeCallPacked retains pcall's success at index 1. Read the current raw
+	-- flag, never oUF's cached/default false for a secret previous cast.
+	local ok, results = API.SafeCallPacked("Target.CurrentCastInterruptible", query, unit)
+	if (not ok or not results) then return nil end
+	local flag = results[channel and 8 or 9]
+	if (type(flag) == "boolean" and not (issecretvalue and issecretvalue(flag))) then
+		return flag
+	end
 end
 
 local SetTargetCastBaseColor = function(element, color)
@@ -2632,8 +2643,12 @@ local Cast_RefreshInterruptVisuals = function(element)
 
 	local baseBarColor = element.color or baseTextColor
 	if (type(baseBarColor) == "table") then
+		local notInterruptible
 		if (ShouldColorTargetCastBarByInterruptState()) then
-			ns.API.ApplyInterruptCastBarColor(element, baseBarColor)
+			notInterruptible = GetTargetCurrentNotInterruptible(element)
+		end
+		if (type(notInterruptible) == "boolean") then
+			ns.API.ApplyInterruptCastBarColor(element, baseBarColor, nil, nil, notInterruptible)
 		else
 			SetTargetCastBaseColor(element, baseBarColor)
 		end
@@ -3756,6 +3771,7 @@ local style = function(self, unit, id)
 	castFakeFill:SetBlendMode("BLEND")
 	castFakeFill:SetAlpha(1)
 	self.Castbar.FakeFill = castFakeFill
+	GetTargetCastCropDriver(castbar)
 
 	ns.API.AttachScriptSafe(castbar, "OnMinMaxChanged", function(source, minValue, maxValue)
 		HideTargetNativeCastVisuals(source)

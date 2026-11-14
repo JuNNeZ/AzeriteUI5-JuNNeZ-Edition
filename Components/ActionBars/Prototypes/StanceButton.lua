@@ -30,10 +30,12 @@ local KeyBound = LibStub("LibKeyBound-1.0", true)
 local LAB = LibStub("LibActionButton-1.0-GE")
 
 -- GLOBALS: CreateFrame, CooldownFrame_Set
--- GLOBALS: GetBindingKey, GetShapeshiftFormInfo, GetShapeshiftFormCooldown
+-- GLOBALS: GetBindingKey, GetBindingText, SetBinding, InCombatLockdown, GetShapeshiftFormInfo, GetShapeshiftFormCooldown
 
 -- Lua API
+local ipairs = ipairs
 local next = next
+local select = select
 local string_format = string.format
 
 local StanceButton = {}
@@ -174,6 +176,34 @@ end
 StanceButton.GetHotkey = function(self)
 	local key = LAB.PickHotkey(GetBindingKey(string_format("SHAPESHIFTBUTTON%d", self:GetID()))) or LAB.PickHotkey(GetBindingKey("CLICK "..self:GetName()..":LeftButton"))
 	return key and KeyBound and GetShortKey(key)
+end
+
+StanceButton.GetBindings = function(self)
+	local keys = ""
+	for _, binding in ipairs({ string_format("SHAPESHIFTBUTTON%d", self:GetID()), "CLICK "..self:GetName()..":LeftButton" }) do
+		for i = 1, select("#", GetBindingKey(binding)) do
+			local key = select(i, GetBindingKey(binding))
+			if (keys ~= "") then keys = keys .. ", " end
+			keys = keys .. GetBindingText(key)
+		end
+	end
+	return keys
+end
+
+StanceButton.SetKey = function(self, key)
+	if (InCombatLockdown()) then return end
+	SetBinding(key, string_format("SHAPESHIFTBUTTON%d", self:GetID()))
+	self:UpdateHotkeys()
+end
+
+StanceButton.ClearBindings = function(self)
+	if (InCombatLockdown()) then return end
+	for _, binding in ipairs({ string_format("SHAPESHIFTBUTTON%d", self:GetID()), "CLICK "..self:GetName()..":LeftButton" }) do
+		while GetBindingKey(binding) do
+			SetBinding((GetBindingKey(binding)), nil)
+		end
+	end
+	self:UpdateHotkeys()
 end
 
 StanceButton.GetTexture = function(self)

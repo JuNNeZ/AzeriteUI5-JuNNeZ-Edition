@@ -554,13 +554,18 @@ local ShouldForceLockedNameplateInterruptState = function(castbar)
 	return IsCastMarkedNotInterruptible(castbar)
 end
 
-API.GetInterruptCastVisualState = function(castbar)
+-- Optional current-cast flag bypasses cached/probed state. Omitted by existing
+-- callers; target bars supply only a freshly read, non-secret boolean.
+API.GetInterruptCastVisualState = function(castbar, currentNotInterruptible)
 	local isActiveCast = castbar and (castbar.casting or castbar.channeling or castbar.empowering)
 	if (not isActiveCast) then
 		EmitInterruptDebug(castbar, "inactive", nil, nil, "base")
 		return "base"
 	end
-	if (ShouldForceLockedNameplateInterruptState(castbar)) then
+	if (IsSecretValue(currentNotInterruptible) or (currentNotInterruptible ~= nil and type(currentNotInterruptible) ~= "boolean")) then
+		return "base"
+	end
+	if (currentNotInterruptible == nil and ShouldForceLockedNameplateInterruptState(castbar)) then
 		EmitInterruptDebug(castbar, "locked_nameplate", nil, nil, "locked")
 		return "locked"
 	end
@@ -568,7 +573,10 @@ API.GetInterruptCastVisualState = function(castbar)
 		EmitInterruptDebug(castbar, "not_enemy", nil, nil, "base")
 		return "base"
 	end
-	local notInterruptible = IsCastMarkedNotInterruptible(castbar)
+	local notInterruptible = currentNotInterruptible
+	if (notInterruptible == nil) then
+		notInterruptible = IsCastMarkedNotInterruptible(castbar)
+	end
 	if (notInterruptible == true) then
 		EmitInterruptDebug(castbar, "locked", nil, nil, "locked")
 		return "locked"
@@ -593,8 +601,8 @@ API.GetInterruptCastVisualState = function(castbar)
 	return "unavailable"
 end
 
-API.GetInterruptCastColor = function(castbar, fallbackColor)
-	local state = API.GetInterruptCastVisualState(castbar)
+API.GetInterruptCastColor = function(castbar, fallbackColor, currentNotInterruptible)
+	local state = API.GetInterruptCastVisualState(castbar, currentNotInterruptible)
 	if (state == "primary-ready") then
 		return InterruptVisualColors.primaryReady, state
 	elseif (state == "unavailable") then
@@ -605,7 +613,7 @@ API.GetInterruptCastColor = function(castbar, fallbackColor)
 	return fallbackColor, state
 end
 
-API.ApplyInterruptCastBarColor = function(castbar, fallbackColor, alphaOverride, interval)
+API.ApplyInterruptCastBarColor = function(castbar, fallbackColor, alphaOverride, interval, currentNotInterruptible)
 	if (not castbar or not castbar.SetStatusBarColor) then
 		return nil
 	end
@@ -617,7 +625,7 @@ API.ApplyInterruptCastBarColor = function(castbar, fallbackColor, alphaOverride,
 		end
 		castbar.__AzeriteUI_LastInterruptColorUpdate = now
 	end
-	local color, state = API.GetInterruptCastColor(castbar, fallbackColor)
+	local color, state = API.GetInterruptCastColor(castbar, fallbackColor, currentNotInterruptible)
 	local alpha = alphaOverride
 	if (type(alpha) ~= "number" or IsSecretValue(alpha)) then
 		alpha = (type(color) == "table" and type(color[4]) == "number" and (not IsSecretValue(color[4]))) and color[4]

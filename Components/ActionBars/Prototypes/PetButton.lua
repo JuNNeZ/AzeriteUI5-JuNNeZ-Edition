@@ -30,12 +30,13 @@ local KeyBound = LibStub("LibKeyBound-1.0", true)
 local LAB = LibStub("LibActionButton-1.0-GE")
 
 -- Lua API
+local ipairs = ipairs
 local next = next
 local select = select
 local string_format = string.format
 
 -- GLOBALS: AutoCastShine_AutoCastStop, AutoCastShine_AutoCastStart
--- GLOBALS: IsModifiedClick, GetBindingKey, GetBindingText
+-- GLOBALS: IsModifiedClick, GetBindingKey, GetBindingText, SetBinding
 -- GLOBALS: PickupPetAction, GetPetActionInfo, GetPetActionsUsable, GetPetActionCooldown
 -- GLOBALS: CreateFrame, CooldownFrame_Set, InCombatLockdown, SetDesaturation
 -- GLOBALS: GameTooltip, GameTooltip_SetDefaultAnchor
@@ -323,6 +324,24 @@ PetButton.GetBindings = function(self)
 	end
 
 	return keys
+end
+
+-- Use the same commands as the game's Keybindings list and the bar's overrides.
+-- Also clear legacy click bindings so Escape really leaves the slot unbound.
+PetButton.SetKey = function(self, key)
+	if (InCombatLockdown()) then return end
+	SetBinding(key, string_format("BONUSACTIONBUTTON%d", self.id))
+	self:UpdateHotkeys()
+end
+
+PetButton.ClearBindings = function(self)
+	if (InCombatLockdown()) then return end
+	for _, binding in ipairs({ string_format("BONUSACTIONBUTTON%d", self.id), "CLICK "..self:GetName()..":LeftButton" }) do
+		while GetBindingKey(binding) do
+			SetBinding((GetBindingKey(binding)), nil)
+		end
+	end
+	self:UpdateHotkeys()
 end
 
 PetButton.OnEnter = function(self)

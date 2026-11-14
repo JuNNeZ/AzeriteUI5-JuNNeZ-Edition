@@ -41,6 +41,15 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.40.0-JuNNeZ",
+		items = {
+			{ text = "Forever Rogues and Cat Druids: optional combo points on each enemy nameplate.", page = L["Nameplates"], section = L["Visibility"] },
+			{ text = "Set Combo point size to 50-300%; names and auras leave room automatically.", page = L["Nameplates"], section = L["Visibility"] },
+			{ text = "Pet and stance buttons now support hover binding in /kb and Quick Keybind Mode.", page = L["Action Bars"] },
+			{ text = "Target castbar fallback fill and full-bar interrupt colours repaired.", page = L["Unit Frames"], section = L["Target"] },
+		}
+	},
+	{
 		version = "5.39.0-JuNNeZ",
 		items = {
 			{ text = "Greyed-out settings now explain which setting or addon makes them unavailable.", page = L["Tooltips"] },

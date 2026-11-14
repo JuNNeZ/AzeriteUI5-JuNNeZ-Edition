@@ -888,9 +888,7 @@ local GenerateOptions = function()
 			name = L["Color Entire Target Castbar By State"],
 			desc = L["Tint the full target castbar by interrupt/protected state. Disable to keep the bar on its normal cast color while spell text follows the shared Unit Frames setting."],
 			order = 12, type = "toggle", width = "full",
-			hidden = function(info)
-				return true
-			end,
+			hidden = isdisabled,
 			set = setter,
 			get = getter,
 			disabled = function(info)

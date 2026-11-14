@@ -751,7 +751,7 @@ L["Reset Position and Size"] = "Reimposta posizione e dimensioni"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "Riporta la finestra al centro dello schermo con le dimensioni originali. Utile se è stata trascinata in un punto irraggiungibile."
 L["About"] = "Informazioni"
 L["Changelog"] = "Registro modifiche"
-L["The %d most recent releases. Everything older is in CHANGELOG.md."] = "Le %d versioni più recenti. Tutto ciò che è più vecchio è in CHANGELOG.md."
+L["The %d most recent releases. Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md."] = "Le %d versioni più recenti. Le versioni precedenti sono in CHANGELOG.md e CHANGELOG_ARCHIVE.md."
 L["The release notes are not available in this build."] = "Le note di rilascio non sono disponibili in questa build."
 L["%s - this setting needs a %s control, which this panel cannot draw yet."] = "%s - questa impostazione richiede un controllo %s, che questo pannello non sa ancora disegnare."
 
@@ -1474,3 +1474,9 @@ L["Unavailable while ConsolePort is enabled."] = "Non disponibile finché Consol
 L["Unavailable while \"%s\" keeps your interface visible."] = "Non disponibile finché «%s» mantiene visibile la tua interfaccia."
 L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = "Non disponibile finché né i bersagli amichevoli né quelli ostili mantengono visibile la tua interfaccia."
 L["Only Druids use this."] = "Solo per i druidi."
+
+-- Forever nameplate combo points.
+L["Show target-bound combo points on enemy nameplates on Forever, including mobs you are not targeting. For Rogues and Druids in Cat Form. Your current target also shows empty sockets."] = "Mostra i punti combo legati al bersaglio sulle barre dei nomi nemici in Forever, anche per i nemici non selezionati. Per Ladri e Druidi in Forma Felina. Il bersaglio attuale mostra anche gli spazi vuoti."
+
+L["Combo point size (%)"] = "Dimensione punti combo (%)"
+L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "Ridimensiona i cristalli e gli spazi dei punti combo sulle barre dei nomi. Nomi e aure si spostano per lasciare spazio. 100% è la dimensione originale."

@@ -751,7 +751,7 @@ L["Reset Position and Size"] = "Сбросить положение и разм�
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "Возвращает окно в центр экрана с исходным размером. Полезно, если его утащили туда, куда не дотянуться."
 L["About"] = "О программе"
 L["Changelog"] = "Список изменений"
-L["The %d most recent releases. Everything older is in CHANGELOG.md."] = "Последние выпуски: %d. Всё более раннее — в CHANGELOG.md."
+L["The %d most recent releases. Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md."] = "Последние выпуски: %d. Более ранние выпуски — в CHANGELOG.md и CHANGELOG_ARCHIVE.md."
 L["The release notes are not available in this build."] = "Примечания к выпуску недоступны в этой сборке."
 L["%s - this setting needs a %s control, which this panel cannot draw yet."] = "%s — этой настройке нужен элемент %s, который это окно пока не умеет рисовать."
 
@@ -1474,3 +1474,9 @@ L["Unavailable while ConsolePort is enabled."] = "Недоступно, пока
 L["Unavailable while \"%s\" keeps your interface visible."] = "Недоступно, пока «%s» сохраняет интерфейс видимым."
 L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = "Недоступно, пока ни дружественные, ни враждебные цели не сохраняют интерфейс видимым."
 L["Only Druids use this."] = "Только для друидов."
+
+-- Forever nameplate combo points.
+L["Show target-bound combo points on enemy nameplates on Forever, including mobs you are not targeting. For Rogues and Druids in Cat Form. Your current target also shows empty sockets."] = "Показывает привязанные к цели очки серии приёмов на индикаторах имени врагов в Forever, включая невыбранных врагов. Для разбойников и друидов в облике кошки. У текущей цели также видны пустые ячейки."
+
+L["Combo point size (%)"] = "Размер очков серии приёмов (%)"
+L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "Изменяет размер кристаллов и ячеек очков серии приёмов на индикаторах имени. Имена и ауры смещаются, освобождая место. 100% — исходный размер."

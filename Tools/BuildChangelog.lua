@@ -168,7 +168,7 @@ end
 
 w("}")
 w("")
-w("-- Everything older is in CHANGELOG.md.")
+w("-- Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md.")
 w("ns.ChangelogTotal = ", tostring(#releases))
 w("")
 

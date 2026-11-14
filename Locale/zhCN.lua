@@ -752,7 +752,7 @@ L["Reset Position and Size"] = "重置位置和大小"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "将窗口以原始大小放回屏幕中央。当窗口被拖到无法触及的位置时很有用。"
 L["About"] = "关于"
 L["Changelog"] = "更新日志"
-L["The %d most recent releases. Everything older is in CHANGELOG.md."] = "最近的 %d 个版本。更早的内容见 CHANGELOG.md。"
+L["The %d most recent releases. Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md."] = "最近的 %d 个版本。较早版本见 CHANGELOG.md 和 CHANGELOG_ARCHIVE.md。"
 L["The release notes are not available in this build."] = "此版本中没有发布说明。"
 L["%s - this setting needs a %s control, which this panel cannot draw yet."] = "%s - 此设置需要 %s 控件，本面板暂时无法绘制。"
 
@@ -1475,3 +1475,9 @@ L["Unavailable while ConsolePort is enabled."] = "启用 ConsolePort 时不可�
 L["Unavailable while \"%s\" keeps your interface visible."] = "“%s”保持界面可见时不可用。"
 L["Unavailable while neither friendly nor hostile targets keep your interface visible."] = "友方和敌对目标都不保持界面可见时不可用。"
 L["Only Druids use this."] = "仅限德鲁伊。"
+
+-- Forever nameplate combo points.
+L["Show target-bound combo points on enemy nameplates on Forever, including mobs you are not targeting. For Rogues and Druids in Cat Form. Your current target also shows empty sockets."] = "在Forever中，在敌方姓名板上显示绑定于该目标的连击点，包括未被选中的敌人。适用于潜行者和猎豹形态的德鲁伊。当前目标还会显示空槽。"
+
+L["Combo point size (%)"] = "连击点大小 (%)"
+L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "调整姓名板上连击点水晶和插槽的大小。名称和光环会移动以留出空间。100%为原始大小。"

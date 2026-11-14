@@ -89,6 +89,7 @@ end
 -- Called on full updates and settings changes.
 local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 	if (unit and unit ~= self.unit) then return end
+	if (NP.UpdateComboPoints) then NP.UpdateComboPoints(self) end
 
 	local db = ns.GetConfig("NamePlates")
 	local showFriendlyPlayerNameOnly = ShouldUseFriendlyPlayerNameOnly(self)
@@ -320,6 +321,7 @@ local NamePlate_OnLeave = function(self, ...)
 end
 
 local NamePlate_OnHide = function(self)
+	if (NP.ClearComboPoints) then NP.ClearComboPoints(self) end
 	self.inCombat = nil
 	self.isFocus = nil
 	self.isTarget = nil

@@ -36,5 +36,5 @@ ns.Changelog = {
 	},
 }
 
--- Everything older is in CHANGELOG.md.
+-- Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md.
 ns.ChangelogTotal = 1

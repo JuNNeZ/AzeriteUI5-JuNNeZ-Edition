@@ -274,7 +274,7 @@ local Changelog = function()
 
 		if (total and total > shown) then
 			changelog.desc = string_format(
-				L["The %d most recent releases. Everything older is in CHANGELOG.md."], shown)
+				L["The %d most recent releases. Older releases are in CHANGELOG.md and CHANGELOG_ARCHIVE.md."], shown)
 		end
 	end
 	return changelog
