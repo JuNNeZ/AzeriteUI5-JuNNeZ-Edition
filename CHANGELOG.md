@@ -10,6 +10,16 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.41.1-JuNNeZ (2026-11-15) - Target Health Colour Fix in PvP
+
+### Highlights
+
+- **Target health colour fix for battlegrounds.** Secret class colours now go directly to the target preview texture, avoiding the status-bar colour setter implicated in the reported **Object did not allow secret** error. Ordinary target colours retain their existing shading.
+
+### Access and known limits
+
+- Verified offline with the real target colour callback, including mixed secret colour components and switching back to readable colours. Battleground combat and native rendering still need maintainer confirmation.
+
 ## 5.41.0-JuNNeZ (2026-11-15) - Separate Party Auras and Per-Bar Controls
 
 ### Highlights

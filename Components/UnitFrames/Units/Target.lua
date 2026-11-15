@@ -1733,8 +1733,12 @@ local Health_PostUpdateColor = function(element, unit, colorOrR, g, b)
 	end
 
 	if (issecretvalue and (issecretvalue(r) or issecretvalue(g) or issecretvalue(b))) then
-		-- A secret class colour (oUF health.lua, PvP): widgets take it, it cannot be darkened.
-		preview:SetStatusBarColor(r, g, b)
+		-- Match oUF's secret-colour texture path: the preview StatusBar can reject
+		-- secret RGB in PvP. Pass it untouched to the texture; never darken it.
+		local previewTexture = preview:GetStatusBarTexture()
+		if (previewTexture) then
+			previewTexture:SetVertexColor(r, g, b)
+		end
 		local fakeFill = element.FakeFill
 		if (fakeFill and fakeFill.SetVertexColor) then
 			fakeFill:SetVertexColor(r, g, b, 1)

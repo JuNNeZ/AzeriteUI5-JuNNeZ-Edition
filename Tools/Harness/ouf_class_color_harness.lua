@@ -127,6 +127,71 @@ C_ClassColor = { GetClassColor = function(class)
 	return Color(Secret(.25), Secret(.78), Secret(.92))
 end }
 
+-- Run the actual Target callback after oUF. The old test above only recorded
+-- PostUpdateColor's payload, so it missed the reported native preview rejection.
+local targetFile = assert(io.open(root .. "/Components/UnitFrames/Units/Target.lua", "rb"))
+local targetSource = targetFile:read("*a"); targetFile:close()
+local first = assert(targetSource:find("local Health_PostUpdateColor = function", 1, true))
+local last = assert(targetSource:find("-- Align our custom health prediction texture", first, true))
+local callbackSource = targetSource:sub(first, last - 1)
+if (arg[2] == "old-preview-setter") then
+	local a = assert(callbackSource:find("local previewTexture = preview:GetStatusBarTexture()", 1, true))
+	local b = assert(callbackSource:find("local fakeFill = element.FakeFill", a, true))
+	callbackSource = callbackSource:sub(1, a - 1) .. "preview:SetStatusBarColor(r, g, b)\n\t\t" .. callbackSource:sub(b)
+end
+local sparkUpdates = 0
+local callbackEnv = setmetatable({ UpdateTargetBarSpark = function() sparkUpdates = sparkUpdates + 1 end }, { __index = _G })
+local callbackChunk = assert(loadstring(callbackSource .. "\nreturn Health_PostUpdateColor"))
+setfenv(callbackChunk, callbackEnv)
+local targetCallback = callbackChunk()
+health.Preview = NewBar()
+local preview = health.Preview
+local previewSetterCalls = 0
+function preview:SetStatusBarColor(r, g, b)
+	previewSetterCalls = previewSetterCalls + 1
+	if (issecretvalue(r) or issecretvalue(g) or issecretvalue(b)) then
+		error("Object did not allow secret", 2)
+	end
+	self.texture:SetVertexColor(r, g, b)
+end
+health.FakeFill = NewBar().texture
+health.PostUpdateColor = targetCallback
+local secretClassColor = C_ClassColor.GetClassColor
+-- Every mixture catches checking only one component or doing partial darkening.
+for mask = 1, 7 do
+	local r = mask % 2 == 1 and Secret(.25) or .25
+	local g = math.floor(mask / 2) % 2 == 1 and Secret(.78) or .78
+	local b = math.floor(mask / 4) % 2 == 1 and Secret(.92) or .92
+	C_ClassColor.GetClassColor = function() return Color(r, g, b) end
+	unitClass = SecretString
+	local before = previewSetterCalls
+	ok, err = Recolor(hframe, "UNIT_CONNECTION")
+	check(ok, "target: secret colour mixture " .. mask .. " does not raise", err)
+	check(previewSetterCalls == before, "target: secret RGB bypasses preview status-bar setter " .. mask)
+	local pc, fc = preview.texture.color, health.FakeFill.color
+	check(pc and pc[1] == r and pc[2] == g and pc[3] == b,
+		"target: preview texture receives untouched RGB " .. mask)
+	check(fc and fc[1] == r and fc[2] == g and fc[3] == b,
+		"target: shaped fill receives untouched RGB " .. mask)
+end
+C_ClassColor.GetClassColor = secretClassColor
+unitClass = "MAGE"
+ok, err = Recolor(hframe, "UNIT_CONNECTION")
+check(ok and preview.texture.color[1] == .1 * .7 and preview.texture.color[2] == .2 * .7,
+	"target: secret-to-readable switch restores darkened preview", err)
+check(health.FakeFill.color[1] == .1, "target: readable shaped fill stays undarkened")
+targetCallback(health, "target", .8, .6, .4)
+check(preview.texture.color[1] == .8 * .7 and health.FakeFill.color[1] == .8,
+	"target: legacy RGB callback remains supported")
+preview.texture = nil
+preview.GetStatusBarTexture = function() return nil end
+ok, err = pcall(targetCallback, health, "target", Color(Secret(.2), Secret(.4), Secret(.6)))
+check(ok and IsSecretNumber(health.FakeFill.color[1]), "target: missing preview texture still colours shaped fill", err)
+check(sparkUpdates == 10, "target: colour updates still refresh the spark")
+health.Preview = nil
+ok, err = pcall(targetCallback, health, "target", Color(Secret(.2), Secret(.4), Secret(.6)))
+check(ok and sparkUpdates == 10, "target: absent preview retains early return", err)
+
 -- Power (no frame of ours colours power by class; kept in step with upstream)
 local power = NewBar()
 power.colorClass, power.colorDisconnected = true, true
