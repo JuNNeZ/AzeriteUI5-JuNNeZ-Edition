@@ -70,6 +70,8 @@ lua Tools/Harness/whatsnew_harness.lua     .               # What's New popup: w
 lua Tools/Harness/unit_tier_harness.lua    .               # Novice/Hardened/Seasoned tiers and critters, any client or language
 lua Tools/Harness/addon_compat_harness.lua .               # ConsolePort icons, gamepad glyphs without it, portraits under a DialogueUI fade, the addon conflict prompt
 lua Tools/Harness/gamepadui_compat_harness.lua .           # Forever native action-bar ownership, reload/profile gates and untouched native frames
+lua Tools/Harness/input_style_probe_harness.lua .         # isolated diagnostic: observation, explicit CVar experiments, reload recovery and cancellation
+lua Tools/Harness/input_style_harness.lua .               # automatic movement prompts: Yes/No, ownership round-trip through reload, combat and logical devices
 lua Tools/Harness/bag_button_harness.lua   .               # the bag button beside the cog: secure route, switch, free slots
 lua Tools/Harness/worldmap_combat_harness.lua .            # world map with a protected map in combat: nothing blocked, replay after combat/hide
 lua Tools/Harness/proc_highlight_harness.lua .             # proc styles, preview/reset, riding visibility combinations
@@ -109,18 +111,17 @@ that native bars, their buttons, endcaps and Edit Mode selections remain untouch
 while unrelated bag/status controls retain their existing suppression. Protected
 API entrypoints throw if replacement bars or bindings are created in native mode;
 both secure-snippet and fallback configurations run. Extra actions and vehicle
-exit retain native ownership. The real options generator covers the reload prompt,
-combat guards, conflict/capability explanations, switching off despite missing
-APIs, Defaults namespaces and the independent quest controls/keybind mode when
-the replacement ActionBars module is absent. These are offline ownership checks, not a live WoW
+exit retain native ownership. The real options generator verifies that the old
+native-bar and input-change configuration groups are absent, while the independent
+quest controls, Defaults namespace and keybind mode remain accessible when the
+replacement ActionBars module is absent. These are offline ownership checks, not a live WoW
 taint, key-dispatch or rendering certification.
 
 Run each negative control separately after the root argument; each must fail:
 `default-on`, `live-owner`, `early-owner`, `no-forever-gate`,
 `requires-native-frame`, `ignore-conflicts`, `no-late-observation`,
 `quarantine-native`, `binding-writes`, `actionbars-start`, `pet-start`,
-`stance-start`, `vehicle-start`, `extra-start`, `option-defaults`, `option-combat`,
-`popup-combat`, `option-inaccessible`. Mutations operate on loaded source
+`stance-start`, `vehicle-start`, `extra-start`, `option-inaccessible`. Mutations operate on loaded source
 in memory and fail if their anchor no longer matches.
 
 `quest_item_button_harness.lua` also checks that native ownership preserves the
@@ -265,6 +266,25 @@ Its StatusBar clamp and mask textures model the target-count gate pattern; they
 are not the client. Player power and target count can disagree. Checks cover the
 case, fill and slot backing, including zero/full-set hiding and plain-count cleanup.
 `mutate_client.lua` carries its mutations.
+
+`input_style_probe_harness.lua` loads the standalone
+[input probe](../Diagnostics/AzeriteUI_InputProbe/README.md), not an AzeriteUI runtime
+module. It checks that observation never changes the native style, that explicit
+click/timer experiments have bounded attempts, and that combat, cancellation,
+synchronous events and reload recovery do not trigger extra writes. The probe is
+not included in the production manifests or release package. Its manual results
+established on Forever 70938 that the explicit click changed style through a native
+reload, while the timer raised ADDON_ACTION_BLOCKED and only changed the saved CVar.
+Mocks cannot certify those client restrictions on another build.
+
+`input_style_harness.lua` exercises the production movement detector and the real
+Yes/No prompt. Events and timers may display a suggestion but must never write the
+CVar or reload. Yes saves the next session's bar ownership before changing the
+native style, then reloads; the current session's ownership remains fixed. Tests
+cover the complete Azerite/MnK to Blizzard/Gamepad round-trip, keyboard bindings,
+Movement versus Camera sticks, declined episodes, combat, external changes,
+GamePadReadySet, logical device IDs and startup reconciliation. In-game application
+and rendering still require the manual loop documented in the action-bar wiki.
 
 For client-aware API, UI-source, TOC/XML, and Forever game-data checks, use
 [Hated WoW MCP](https://github.com/RdyGaming/hated-wow-mcp) with `flavor: "forever"`.

@@ -275,27 +275,40 @@ Up to **8 action bars** (Retail) with per-bar configuration:
 
 #### Native controller bars on Forever
 
-In `/az` > Action Bars, **Use native controller bars** lets Blizzard manage the
-action, pet and stance bars, including `GamepadMainActionBarFrame`, while the rest
-of the AzeriteUI HUD stays active. The option is off by default and applies after
-`/reload` outside combat. While enabled, Blizzard also manages the bars when you
-switch back to keyboard/mouse; AzeriteUI does not take the bars back mid-session.
-Your AzeriteUI bar preferences and saved bindings are preserved.
+AzeriteUI automatically offers a **Yes/No prompt while you play**, without opening
+settings first. With AzeriteUI bars active, controller movement can offer Blizzard's
+native controller bars. With native bars active, keyboard movement or losing the
+last connected controller can offer the AzeriteUI keyboard/mouse bars again.
 
-Native extra-action and vehicle-exit controls are also left with Blizzard. The
-independent quest-item button keeps its own explicit binding, but does not borrow
-the Extra Action Button key while native bar compatibility is active.
+**Yes** saves the corresponding bar system and input style, then reloads the
+interface. **No** keeps the current bars. Other AzeriteUI HUD elements stay active,
+and returning to AzeriteUI restores your saved bar preferences and bindings.
+The prompt waits outside combat; moving a stick or pressing a movement key never
+changes bars or reloads by itself.
 
-Configure controller bindings through the game's native settings. ConsolePort
-(including ConsolePort_Bar) and Bartender4 take precedence: disable them and
-reload before enabling this mode. Clients without the required APIs keep their
-existing behavior. You can always turn a saved opt-in off from the Action Bars
-page, even if another bar addon or missing APIs prevented it from starting.
+This workflow uses only the on-screen Yes/No prompt. There are no native-bar or
+input-change configuration sections in the AzeriteUI menu.
 
-This integration still needs in-game validation on Forever, especially input
-switching during combat, pet/stance/possession actions, and Edit Mode. See the
+During a native-bar session Blizzard manages action, pet and stance bars, including
+`GamepadMainActionBarFrame`, plus extra-action and vehicle-exit controls. The
+independent quest-item button retains its own explicit binding without borrowing
+the Extra Action Button key. Configure native controller bindings in the game.
+Bar ownership changes only through a reload, never through protected frame
+transfers while playing.
+
+ConsolePort, ConsolePort_Bar and Bartender4 prevent this takeover.
+GamePadReadySet pauses the automatic prompts without disabling an already active
+native-bar session. Unsupported clients retain their existing behavior.
+
+On Forever 1.60.1 build 70938, a diagnostic click automatically reloaded into the
+requested style. A timer attempt raised `ADDON_ACTION_BLOCKED` while still saving
+the CVar and leaving the effective style unchanged. The automatic detector
+therefore only asks; the user's Yes click performs the change.
+
+The maintainer has tested and approved the normal controller-to-keyboard
+round trip through the automatic Yes/No prompts in game. See the
 [Action Bars guide](wiki/Action-Bars.md#native-controller-bars-on-forever) for the
-validation checklist.
+behavior and extended regression checklist.
 
 #### Global Settings
 

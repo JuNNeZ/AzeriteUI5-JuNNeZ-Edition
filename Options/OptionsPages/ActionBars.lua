@@ -722,98 +722,18 @@ local GenerateQuestItemButtonOptions = function()
 	return options
 end
 
-local GenerateGamepadUIOptions = function()
-	if (not ns.IsForever) then return end
-	local module = ns.GamepadUICompatibility
-	if (not module or not module.db or not module.db.profile) then return end
-
-	local enabled = function() return module.db.profile.enabled and true or false end
-	local blocked = function() return not module:IsAvailable() or module:GetConflict() ~= nil end
-	local options = {
-		name = L["Native controller bars (Forever)"],
-		type = "group", inline = true, order = -1,
-		args = {
-			description = {
-				name = L["Use Blizzard's action, pet and stance bars for both controller and keyboard/mouse. The rest of AzeriteUI stays active. Changes apply after reloading; your AzeriteUI bar settings and saved bindings are preserved."],
-				type = "description", fontSize = "medium", order = 0
-			},
-			enabled = {
-				name = L["Use native controller bars"],
-				type = "toggle", width = "full", order = 1,
-				get = enabled,
-				-- Always allow a saved opt-in to be removed when a rival addon or
-				-- missing client capability prevents the mode from starting.
-				disabled = function() return InCombatLockdown() or (not enabled() and blocked()) end,
-				set = function(info, val)
-					if (InCombatLockdown()) then return end
-					val = val and true or false
-					if (enabled() == val or (val and blocked())) then return end
-					module.db.profile.enabled = val
-					local key = "AZERITEUI_GAMEPADUI_RELOAD"
-					if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
-						StaticPopupDialogs[key] = {
-							text = L["The action bar system changes when the interface loads. Reload now?"],
-							button1 = L["Reload UI"],
-							button2 = _G.CANCEL or "Cancel",
-							OnAccept = function()
-								if (not InCombatLockdown()) then ReloadUI() end
-							end,
-							timeout = 0,
-							whileDead = true,
-							hideOnEscape = true,
-							preferredIndex = 3
-						}
-					end
-					if (StaticPopup_Show) then StaticPopup_Show(key) end
-				end
-			},
-			status = {
-				name = function()
-					if (module:IsActive()) then
-						return L["This session uses Blizzard's action bars. Configure their controller bindings in the game's settings."]
-					end
-					return L["Native controller bar compatibility is inactive this session."]
-				end,
-				type = "description", fontSize = "medium", order = 2
-			},
-			conflict = {
-				name = function()
-					return string_format(L["Native controller bars cannot be enabled while %s is enabled. Disable that addon and reload first."], module:GetConflict() or "")
-				end,
-				type = "description", fontSize = "medium", order = 3,
-				hidden = function() return not module:GetConflict() end
-			},
-			unavailable = {
-				name = L["This client does not expose the required native controller bar APIs."],
-				type = "description", fontSize = "medium", order = 4,
-				hidden = function() return module:IsAvailable() end
-			},
-			reload = {
-				name = L["Your selection will take effect after /reload outside combat."],
-				type = "description", fontSize = "medium", order = 5,
-				hidden = function() return not module:IsReloadPending() end
-			}
-		}
-	}
-	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
-		ns.OptionsKit.Defaults.Bind(options, "GamepadUICompatibility")
-	end
-	return options
-end
-
 local GenerateOptions = function()
-	local gamepadUI = GenerateGamepadUIOptions()
+	local nativeBars = ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive()
 	local questItemButton = GenerateQuestItemButtonOptions()
-	if (not getmodule() or (gamepadUI and ns.GamepadUICompatibility:IsActive())) then
-		-- Native mode deliberately leaves the replacement bars disabled. Keep
-		-- their switch and the independent quest button reachable.
-		if (gamepadUI or questItemButton) then
+	if (not getmodule() or nativeBars) then
+		-- Native ownership leaves the replacement bars disabled. The gameplay
+		-- prompt manages the handoff; keep the independent quest button reachable.
+		if (questItemButton) then
 			return {
 				name = L["Action Bar Settings"], type = "group",
 				args = {
-					gamepadUI = gamepadUI,
 					questItemButton = questItemButton,
-					keybindMode = questItemButton and GenerateKeybindModeOption() or nil
+					keybindMode = GenerateKeybindModeOption()
 				}
 			}
 		end
@@ -862,7 +782,6 @@ local GenerateOptions = function()
 		name = L["Action Bar Settings"],
 		type = "group", childGroups = "tree",
 		args = {
-			gamepadUI = gamepadUI,
 			questItemButton = questItemButton,
 			description = {
 				name = L["ActionBars are banks of hotkeys that allow you to quickly access abilities and inventory items. Here you can activate additional ActionBars and control their behaviors."],

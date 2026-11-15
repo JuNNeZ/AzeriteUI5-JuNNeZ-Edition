@@ -56,10 +56,7 @@ local mutants = {
 		"if (ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive()) then return self:Disable() end", "" },
 	["extra-start"] = { ELEMENTS .. "ExtraButtons.lua",
 		"if (ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive()) then return self:Disable() end", "" },
-	["option-defaults"] = { OPTIONS, 'Defaults.Bind(options, "GamepadUICompatibility")', 'Defaults.Bind(options, "ActionBars")' },
-	["option-combat"] = { OPTIONS, "if (InCombatLockdown()) then return end", "", "local GenerateGamepadUIOptions" },
-	["popup-combat"] = { OPTIONS, "if (not InCombatLockdown()) then ReloadUI() end", "ReloadUI()", "local GenerateGamepadUIOptions" },
-	["option-inaccessible"] = { OPTIONS, "if (gamepadUI or questItemButton) then", "if (false) then" }
+	["option-inaccessible"] = { OPTIONS, "if (questItemButton) then", "if (false) then" }
 }
 local function mutate(path, source)
 	local mutant = mutation and mutants[mutation]
@@ -400,36 +397,33 @@ local function optionsFor(world, mainModule, withQuest)
 end
 
 local function optionChecks()
+	local function checkRemovedGroups(page, label)
+		local found
+		local function visit(group)
+			for key, option in pairs(group and group.args or {}) do
+				if (key == "gamepadUI" or key == "inputStyle") then found = true end
+				if (type(option) == "table") then visit(option) end
+			end
+		end
+		visit(page)
+		check(not found, label .. " omits native-bar and input-style menu groups")
+	end
 	local world = newWorld()
 	start(world)
-	local page = optionsFor(world, true)
-	local group = assert(page.args.gamepadUI)
-	local toggle = group.args.enabled
+	local page = optionsFor(world, true, true)
+	checkRemovedGroups(page, "Azerite owner")
 	check(page.args.hideElementsHotkey ~= nil, "inactive ownership keeps ordinary action-bar options")
-	check(world.optionBindings[group] == "GamepadUICompatibility", "Defaults targets the compatibility namespace")
-	check(not toggle.get() and not toggle.disabled(), "available native mode can be opted into")
-	toggle.set({}, true)
-	check(toggle.get() and not world.coordinator:IsActive(), "option writes preference without changing live owner")
-	check(not group.args.reload.hidden() and world.popups == 1, "changed preference offers reload and displays pending state")
-	toggle.set({}, true)
-	check(world.popups == 1, "unchanged preference does not repeat reload prompt")
-	world.combat = true
-	check(toggle.disabled(), "native switch disabled during combat")
-	toggle.set({}, false)
-	check(toggle.get() and world.popups == 1, "direct setter cannot change native preference during combat")
-	local popup = assert(world.env.StaticPopupDialogs[world.popupKey])
-	popup.OnAccept()
-	check(world.reloads == 0, "popup acceptance after combat begins cannot reload")
-	world.combat = false
-	popup.OnAccept()
-	check(world.reloads == 1, "popup reloads when accepted outside combat")
-	toggle.set({}, false)
-	check(group.args.reload.hidden(), "reverting selection clears pending indication")
+	check(page.args.questItemButton ~= nil and page.args.keybindMode ~= nil, "Azerite owner keeps quest and keybind settings")
+	for _, namespace in pairs(world.optionBindings) do
+		check(namespace ~= "GamepadUICompatibility" and namespace ~= "InputStyle", "menu no longer binds removed preference namespaces")
+	end
+	check(world.popups == 0 and world.reloads == 0 and not world.coordinator:IsActive(), "opening ordinary options does not change ownership or reload")
 
 	world = newWorld({ enabled = true })
 	start(world)
 	page = optionsFor(world, false, true)
-	check(page and page.args.gamepadUI and not page.args.hideElementsHotkey, "active native settings remain reachable without replacement ActionBars module")
+	check(page and not page.args.hideElementsHotkey, "native quest settings remain reachable without replacement ActionBars module")
+	checkRemovedGroups(page, "Native owner without ActionBars module")
 	check(page.args.questItemButton ~= nil, "native page retains independent quest-item controls")
 	local quest = assert(page.args.questItemButton).args
 	quest.trackedOnly.set({ "trackedOnly" }, true)
@@ -444,36 +438,37 @@ local function optionChecks()
 	world.combat = false
 	page.args.keybindMode.func()
 	check(world.keybinds == 1 and world.closedOptions, "standalone quest keybind mode works without ActionBars")
-	page.args.gamepadUI.args.enabled.set({}, false)
-	check(world.coordinator:IsActive(), "turning native mode off keeps the active session intact")
+	check(world.coordinator:IsActive(), "independent quest and keybind options preserve native session ownership")
+	for _, style in ipairs({ 0, 1 }) do
+		world = newWorld({ enabled = true }); world.style = style; start(world)
+		page = optionsFor(world, true, true)
+		checkRemovedGroups(page, "Native style " .. style)
+		check(page.args.questItemButton ~= nil and page.args.keybindMode ~= nil and page.args.hideElementsHotkey == nil,
+			"native style " .. style .. " exposes only independent settings despite ActionBars module existing")
+	end
+	world = newWorld({ enabled = true }); start(world)
+	check(optionsFor(world, false, false) == nil, "native ownership without quest controls has no empty settings page")
 
 	for _, rival in ipairs({ "ConsolePort", "ConsolePort_Bar", "Bartender4" }) do
 		world = newWorld({ enabled = true, addons = { [rival] = true } })
 		start(world)
-		page = optionsFor(world, false)
-		group, toggle = page.args.gamepadUI, page.args.gamepadUI.args.enabled
-		check(not group.args.conflict.hidden() and group.args.conflict.name():find(rival, 1, true), "options explain rival " .. rival)
-		check(toggle.get() and not toggle.disabled(), "saved opt-in can be cleared with " .. rival)
-		toggle.set({}, false)
-		check(not toggle.get() and toggle.disabled(), "rival blocks new opt-in after clearing saved choice")
-		toggle.set({}, true)
-		check(not toggle.get() and world.popups == 1, "direct setter cannot bypass rival gate")
+		page = optionsFor(world, true, true)
+		checkRemovedGroups(page, rival .. " enabled")
+		check(not world.coordinator:IsActive() and page.args.hideElementsHotkey ~= nil, rival .. " retains existing runtime precedence and ordinary page")
 	end
 
 	world = newWorld({ enabled = true })
 	world.env.C_GamepadUI = nil
 	start(world)
-	page = optionsFor(world, false)
-	group, toggle = page.args.gamepadUI, page.args.gamepadUI.args.enabled
-	check(not group.args.unavailable.hidden() and not toggle.disabled(), "missing APIs still allow clearing saved choice")
-	toggle.set({}, false)
-	toggle.set({}, true)
-	check(not toggle.get() and toggle.disabled(), "missing APIs cannot be bypassed through option setter")
+	page = optionsFor(world, true, true)
+	checkRemovedGroups(page, "Missing native APIs")
+	check(not world.coordinator:IsActive() and page.args.hideElementsHotkey ~= nil, "missing native APIs retain ordinary action-bar options")
 
 	world = newWorld({ forever = false })
 	start(world)
 	page = optionsFor(world, true)
-	check(page.args.gamepadUI == nil and page.args.hideElementsHotkey ~= nil, "Retail keeps its existing page without Forever compatibility")
+	checkRemovedGroups(page, "Retail")
+	check(page.args.hideElementsHotkey ~= nil, "Retail keeps its ordinary action-bar options")
 end
 
 local function run(label, callback, ...)

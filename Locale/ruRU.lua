@@ -1,16 +1,12 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "ruRU")
 if (not L) then return end
-L["This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."] = "This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."
 
--- Forever native controller bar compatibility. English until translated.
-L["Native controller bars (Forever)"] = "Native controller bars (Forever)"
-L["Use Blizzard's action, pet and stance bars for both controller and keyboard/mouse. The rest of AzeriteUI stays active. Changes apply after reloading; your AzeriteUI bar settings and saved bindings are preserved."] = "Use Blizzard's action, pet and stance bars for both controller and keyboard/mouse. The rest of AzeriteUI stays active. Changes apply after reloading; your AzeriteUI bar settings and saved bindings are preserved."
-L["Use native controller bars"] = "Use native controller bars"
-L["The action bar system changes when the interface loads. Reload now?"] = "The action bar system changes when the interface loads. Reload now?"
-L["This session uses Blizzard's action bars. Configure their controller bindings in the game's settings."] = "This session uses Blizzard's action bars. Configure their controller bindings in the game's settings."
-L["Native controller bar compatibility is inactive this session."] = "Native controller bar compatibility is inactive this session."
-L["Native controller bars cannot be enabled while %s is enabled. Disable that addon and reload first."] = "Native controller bars cannot be enabled while %s is enabled. Disable that addon and reload first."
-L["This client does not expose the required native controller bar APIs."] = "This client does not expose the required native controller bar APIs."
+-- Forever input change prompts (explicit application only).
+L["Switch to Blizzard controller bars? The interface will reload. Other AzeriteUI elements stay active."] = "Переключиться на панели Blizzard для геймпада? Интерфейс будет перезагружен. Остальные элементы AzeriteUI останутся активны."
+L["Return to AzeriteUI action bars for keyboard/mouse? The interface will reload. Your saved bar settings will be restored."] = "Вернуться к панелям действий AzeriteUI для клавиатуры/мыши? Интерфейс будет перезагружен. Сохранённые настройки панелей будут восстановлены."
+L["The style change was not confirmed. No automatic retry will occur."] = "Смена режима не подтверждена. Автоматической повторной попытки не будет."
+
+L["This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."] = "This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."
 L["Your selection will take effect after /reload outside combat."] = "Your selection will take effect after /reload outside combat."
 
 L["<Ctrl and Right-Click to undo last change>"] = "<Ctrl и ПКМ для отмены последнего изменения>"
