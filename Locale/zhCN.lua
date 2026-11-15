@@ -1481,3 +1481,15 @@ L["Show target-bound combo points on enemy nameplates on Forever, including mobs
 
 L["Combo point size (%)"] = "连击点大小 (%)"
 L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "调整姓名板上连击点水晶和插槽的大小。名称和光环会移动以留出空间。100%为原始大小。"
+
+-- Party aura sizes and per-bar indicators.
+L["Show Range Indicator"] = "显示射程指示"
+L["Color buttons on this bar when their action is out of range. Unusable actions and low resource colors still apply."] = "当动作超出射程时，为此动作条上的按钮着色。无法使用的动作和资源不足的颜色仍然生效。"
+L["Show Item and Charge Counts"] = "显示物品数量和充能次数"
+L["Show item quantities and spell charge counts on this bar. Cooldown timers are unaffected."] = "在此动作条上显示物品数量和法术充能次数。冷却计时不受影响。"
+L["Show Portrait Debuff Icon"] = "显示头像减益图标"
+L["Show the priority debuff icon over the party portrait health bar. The dispellable debuff highlight is controlled separately."] = "在小队头像生命条上方显示优先减益图标。可驱散减益的高亮单独控制。"
+L["Buff Size"] = "增益大小"
+L["Resize helpful party auras. Buffs and debuffs occupy separate rows."] = "调整小队增益光环的大小。增益和减益分别显示在不同的行。"
+L["Debuff Size"] = "减益大小"
+L["Resize harmful party auras independently of buffs."] = "独立于增益调整小队减益光环的大小。"

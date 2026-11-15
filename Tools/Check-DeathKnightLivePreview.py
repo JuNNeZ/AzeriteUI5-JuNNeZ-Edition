@@ -8,7 +8,7 @@ import numpy as np
 from PIL import Image, ImageChops, ImageFilter
 
 from ThemeHealthEndcaps import lowest_point
-from ThemeSourceIntegrity import verify_pixels, whole_painting
+from ThemeSourceIntegrity import verify_pixels, whole_painting, verify_pack
 from DeathKnightTooltipAtlas import PATCHES, pack as pack_tooltip, joins as tooltip_joins
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -31,13 +31,27 @@ def main():
     assert manifest["runtimeDataSha256"] == sha(ROOT / "Core/DeathKnightThemeData.lua")
     assert manifest["approvedFootprintsSha256"] == sha(ROOT / "Docs/Research_Assets/DeathKnight/FullSet/Contracts/approved-footprints.json")
     assets = manifest["assets"]
+    if manifest.get("healthRailRepair"):
+        repair = manifest["healthRailRepair"]
+        gate = verify_pack(ROOT / repair["folder"])
+        for key in ("assetManifestSha256", "sourceIntegritySha256"):
+            assert repair[key] == gate[key], "Stale DK rail repair proof"
     assert {p.stem for p in OUT.glob("*.tga")} == set(assets), "Unlisted/missing runtime textures"
     for name, item in assets.items():
         target = OUT / (name + ".tga")
         assert sha(target) == item["sha256"], "Stale runtime texture: " + name
         actual = read(target)
         method = item["construction"]
-        if item.get("source"):
+        if method == 'deathknight-target-recess-1':
+            from DeathKnightRailSource import target_recess
+            expected = target_recess(name, ROOT)
+            proof = item['sourceProof']
+            native = ROOT / 'Assets' / (name.removesuffix('-target')+'.tga')
+            assert proof == {'role':method, 'source':{'path':native.relative_to(ROOT).as_posix(),'sha256':sha(native)}}
+        elif method == "deathknight-rail-grid-1":
+            from DeathKnightRailSource import replay
+            expected = replay(item["sourceProof"], name, ROOT)
+        elif item.get("source"):
             source = ROOT / item["source"]
             assert sha(source) == item["sourceSha256"]
             expected = whole_painting(read(source), item["transform"], actual.size)

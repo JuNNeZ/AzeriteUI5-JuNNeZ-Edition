@@ -41,6 +41,16 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.41.0-JuNNeZ",
+		items = {
+			{ text = "Party buffs and debuffs have separate areas and independent sizes.", page = L["Group Frames"], section = L["Party Frames"] },
+			{ text = "Hide the portrait debuff icon while keeping the dispellable-debuff highlight.", page = L["Group Frames"], section = L["Party Frames"] },
+			{ text = "Choose range colouring and item/charge count text separately for each action bar.", page = L["Action Bars"] },
+			{ text = "Hover nameplate aura icons to read their descriptions.", page = L["Nameplates"] },
+			{ text = "Death Knight health-casing fitting update; the complete theme remains WIP.", page = L["Themes"] },
+		}
+	},
+	{
 		version = "5.40.0-JuNNeZ",
 		items = {
 			{ text = "Forever Rogues and Cat Druids: optional combo points on each enemy nameplate.", page = L["Nameplates"], section = L["Visibility"] },

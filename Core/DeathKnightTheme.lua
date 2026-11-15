@@ -67,13 +67,13 @@ local ArtFrame = function(owner, key, level)
 	frame:SetFrameLevel(owner:GetFrameLevel() + level)
 	return frame
 end
-local Rails = function(bar, name, flip, anchor, key)
+local Rails = function(bar, name, flip, anchor, key, resolve)
 	if (not anchor or not fronts[name]) then
 		if (bar[key]) then bar[key]:Hide() end
 		return
 	end
 	local frame = ArtFrame(bar, key, 1)
-	frame.Art:SetTexture(path(name.."-over"))
+	frame.Art:SetTexture((resolve or path)(name.."-over"))
 	frame.Art:SetAllPoints(anchor)
 	frame.Art:SetTexCoord(flip and 1 or 0, flip and 0 or 1, 0, 1)
 	frame:SetShown(anchor:IsShown())
@@ -95,11 +95,22 @@ end
 Theme.StyleHealth = function(self, owner, db, flip)
 	if (not self:IsActive() or not owner or not owner.Health or not db) then return end
 	local bar, name = owner.Health, AssetName(db.HealthBackdropTexture)
+	local mediaPath = path
+	if (owner.unit == "target" and name and name ~= "hp_boss_case" and dips[name]) then
+		-- Same native rectangles and mounting toe; target fill has different UVs
+		-- and tier geometry, so its inner rail needs its own measured painting.
+		mediaPath = function(asset)
+			if (asset == name or asset == name.."-over" or asset == name.."-glow") then
+				return path(name.."-target"..asset:sub(#name + 1))
+			end
+			return path(asset)
+		end
+	end
 	bar.ThemeTextOwner, bar.ThemeTextLayout = owner, db
-	Rails(bar, name, flip, bar.Backdrop, "DeathKnightRails")
+	Rails(bar, name, flip, bar.Backdrop, "DeathKnightRails", mediaPath)
 	local longCase = dips[name] and bar.Backdrop and bar:GetWidth() >= bar:GetHeight()*2
-	bar.ThemeEndcapAssembly = longCase and { name = name, path = path, back = bar.Backdrop,
-		front = bar.DeathKnightRails.Art, glow = name.."-glow", threat = bar.DeathKnightThreat, bareThreat = path(name.."-glow") } or nil
+	bar.ThemeEndcapAssembly = longCase and { name = name, path = mediaPath, back = bar.Backdrop,
+		front = bar.DeathKnightRails.Art, glow = name.."-glow", threat = bar.DeathKnightThreat, bareThreat = mediaPath(name.."-glow") } or nil
 	if (not longCase) then
 		Engine:PlaceHealthPercent(bar, flip, false)
 		healthBars[bar] = nil

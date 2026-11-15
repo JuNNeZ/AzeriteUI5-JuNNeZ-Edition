@@ -1480,3 +1480,15 @@ L["Show target-bound combo points on enemy nameplates on Forever, including mobs
 
 L["Combo point size (%)"] = "Combopunktgröße (%)"
 L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "Skaliert die Combopunkt-Kristalle und Sockel auf Namensbalken. Namen und Auren werden verschoben, um Platz zu schaffen. 100% ist die ursprüngliche Größe."
+
+-- Party aura sizes and per-bar indicators.
+L["Show Range Indicator"] = "Reichweitenanzeige anzeigen"
+L["Color buttons on this bar when their action is out of range. Unusable actions and low resource colors still apply."] = "Färbt die Schaltflächen dieser Leiste, wenn ihre Aktion außer Reichweite ist. Farben für nicht nutzbare Aktionen und Ressourcenmangel gelten weiterhin."
+L["Show Item and Charge Counts"] = "Gegenstands- und Aufladungsanzahl anzeigen"
+L["Show item quantities and spell charge counts on this bar. Cooldown timers are unaffected."] = "Zeigt Gegenstandsmengen und Zauberaufladungen auf dieser Leiste. Abklingzeittimer bleiben unverändert."
+L["Show Portrait Debuff Icon"] = "Schwächungszaubersymbol im Porträt anzeigen"
+L["Show the priority debuff icon over the party portrait health bar. The dispellable debuff highlight is controlled separately."] = "Zeigt das priorisierte Schwächungszaubersymbol über dem Gesundheitsbalken des Gruppenporträts. Die Hervorhebung bannbarer Schwächungszauber wird separat gesteuert."
+L["Buff Size"] = "Stärkungszaubergröße"
+L["Resize helpful party auras. Buffs and debuffs occupy separate rows."] = "Ändert die Größe hilfreicher Gruppenauren. Stärkungs- und Schwächungszauber stehen in getrennten Reihen."
+L["Debuff Size"] = "Schwächungszaubergröße"
+L["Resize harmful party auras independently of buffs."] = "Ändert die Größe schädlicher Gruppenauren unabhängig von Stärkungszaubern."

@@ -96,6 +96,12 @@ castbar's ready-interrupt yellow, so the two never read as the same signal.
 
 - **Show Blizzard widgets** - encounter and objective widgets on plates.
 
+## Nameplate aura tooltips
+
+Hover a buff or debuff icon on a nameplate to read its description. The configured
+tooltip anchor is respected. The existing client restrictions still apply when
+aura information is hidden or secret.
+
 ## The personal aura header
 
 `/az` -> Auras. This is the top-right block of your own buffs and debuffs. It has no

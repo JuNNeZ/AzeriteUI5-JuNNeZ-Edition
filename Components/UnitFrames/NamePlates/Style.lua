@@ -472,6 +472,7 @@ local style = function(self, unit, id)
 	auras.spacing = db.AuraSpacing
 	auras.numTotal = db.AurasNumTotal
 	auras.disableMouse = db.AurasDisableMouse
+	auras.tooltipAnchor = db.AurasTooltipAnchor
 	auras.disableCooldown = db.AurasDisableCooldown
 	auras.onlyShowPlayer = db.AurasOnlyShowPlayer
 	auras.showStealableBuffs = db.AurasShowStealableBuffs

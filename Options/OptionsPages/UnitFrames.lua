@@ -1351,6 +1351,15 @@ local GenerateOptions = function()
 	do
 		local suboptions, module, setter, getter, setoption, getoption, isdisabled = GenerateGroupVisibilityOptions(200, GenerateSubOptions("PartyFrames"))
 		local partyAuraConfig = ns.GetConfig("PartyFrames") or {}
+		local InitialPartyDebuffSize = function(info)
+			local scale = getoption(info, "partyAuraDebuffScale")
+			local size = getoption(info, "AuraSize")
+			if (type(scale) ~= "number") then scale = 100 end
+			if (type(size) ~= "number") then
+				size = type(partyAuraConfig.AuraSize) == "number" and partyAuraConfig.AuraSize or 30
+			end
+			return math.floor(math.max(9, math.min(84, size * math.max(.5, math.min(2, scale / 100)))) + .5)
+		end
 		local partyAuraGrowthXValues = {
 			LEFT = "Left",
 			RIGHT = "Right"
@@ -1472,11 +1481,23 @@ local GenerateOptions = function()
 			name = L["Adjust the size and growth of party-frame auras, and how removable debuffs are emphasized."],
 			order = 131, type = "description", width = "full", hidden = isdisabled
 		}
+		suboptions.args.showPriorityDebuff = {
+			name = L["Show Portrait Debuff Icon"],
+			desc = L["Show the priority debuff icon over the party portrait health bar. The dispellable debuff highlight is controlled separately."],
+			order = 138, type = "toggle", width = "full", set = setter, get = getter,
+			hidden = isdisabled
+		}
 		suboptions.args.AuraSize = {
-			name = L["Aura Size"],
-			desc = L["Resize party aura buttons."],
+			name = L["Buff Size"],
+			desc = L["Resize helpful party auras. Buffs and debuffs occupy separate rows."],
 			order = 132, type = "range", width = "full", min = 18, max = 42, step = 1, hidden = isdisabled,
-			set = setter,
+			set = function(info, value)
+				-- Preserve the old effective debuff size before changing only buffs.
+				if (type(getoption(info, "partyAuraDebuffSize")) ~= "number") then
+					setoption(info, "partyAuraDebuffSize", InitialPartyDebuffSize(info), true)
+				end
+				setter(info, value)
+			end,
 			get = function(info)
 				local value = getoption(info, "AuraSize")
 				if (type(value) ~= "number") then
@@ -1500,22 +1521,17 @@ local GenerateOptions = function()
 			end,
 			disabled = partyAuraLayoutDisabled
 		}
-		suboptions.args.partyAuraDebuffScale = {
-			name = L["Debuff Size %"],
-			desc = L["Scale harmful party auras relative to normal buffs. Use this if you want dispellable debuffs to stand out more."],
-			order = 134, type = "range", width = "full", min = 75, max = 150, step = 1, hidden = isdisabled,
+		suboptions.args.partyAuraDebuffSize = {
+			name = L["Debuff Size"],
+			desc = L["Resize harmful party auras independently of buffs."],
+			order = 134, type = "range", width = "full", min = 9, max = 84, step = 1, hidden = isdisabled,
 			set = setter,
 			get = function(info)
-				local value = getoption(info, "partyAuraDebuffScale")
+				local value = getoption(info, "partyAuraDebuffSize")
 				if (type(value) ~= "number") then
-					return 100
+					value = InitialPartyDebuffSize(info)
 				end
-				if (value < 75) then
-					return 75
-				elseif (value > 150) then
-					return 150
-				end
-				return math.floor(value + .5)
+				return math.floor(math.max(9, math.min(84, value)) + .5)
 			end,
 			disabled = partyAuraLayoutDisabled
 		}
@@ -1569,7 +1585,7 @@ local GenerateOptions = function()
 			"partyAuraUseStockBehavior", "partyAuraShowDispellableDebuffs", "partyAuraOnlyDispellableDebuffs",
 			"partyAuraShowBossAndImportantDebuffs", "partyAuraShowOtherDebuffs", "partyAuraShowHelpfulExternals",
 			"partyAuraShowHelpfulRaidBuffs", "partyAuraShowHelpfulShortBuffs",
-			"AuraSize", "AurasMaxCols", "partyAuraDebuffScale", "AurasGrowthX", "AurasGrowthY"
+			"AuraSize", "AurasMaxCols", "partyAuraDebuffSize", "AurasGrowthX", "AurasGrowthY"
 		}) do
 			DisabledDesc(suboptions.args[key], partyAuraReason)
 		end

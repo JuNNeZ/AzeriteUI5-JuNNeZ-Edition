@@ -1480,3 +1480,15 @@ L["Show target-bound combo points on enemy nameplates on Forever, including mobs
 
 L["Combo point size (%)"] = "Tamaño de puntos de combo (%)"
 L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "Ajusta el tamaño de los cristales y casillas de puntos de combo en las placas de nombre. Los nombres y las auras se desplazan para dejar espacio. 100% es el tamaño original."
+
+-- Party aura sizes and per-bar indicators.
+L["Show Range Indicator"] = "Mostrar indicador de alcance"
+L["Color buttons on this bar when their action is out of range. Unusable actions and low resource colors still apply."] = "Colorea los botones de esta barra cuando su acción está fuera de alcance. Se mantienen los colores de acciones no utilizables y de falta de recursos."
+L["Show Item and Charge Counts"] = "Mostrar cantidades y cargas"
+L["Show item quantities and spell charge counts on this bar. Cooldown timers are unaffected."] = "Muestra las cantidades de objetos y las cargas de hechizos en esta barra. Los temporizadores de reutilización no cambian."
+L["Show Portrait Debuff Icon"] = "Mostrar perjuicio en el retrato"
+L["Show the priority debuff icon over the party portrait health bar. The dispellable debuff highlight is controlled separately."] = "Muestra el icono de perjuicio prioritario sobre la barra de salud del retrato de grupo. El resaltado de perjuicios disipables se controla por separado."
+L["Buff Size"] = "Tamaño de beneficios"
+L["Resize helpful party auras. Buffs and debuffs occupy separate rows."] = "Cambia el tamaño de las auras beneficiosas de grupo. Beneficios y perjuicios ocupan filas separadas."
+L["Debuff Size"] = "Tamaño de perjuicios"
+L["Resize harmful party auras independently of buffs."] = "Cambia el tamaño de los perjuicios de grupo independientemente de los beneficios."

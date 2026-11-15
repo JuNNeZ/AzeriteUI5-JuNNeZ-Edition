@@ -10,6 +10,28 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.41.0-JuNNeZ (2026-11-15) - Separate Party Auras and Per-Bar Controls
+
+### Highlights
+
+- **Separate party buffs and debuffs, with independent sizes.** At `/az -> Group Frames -> Party Frames -> Layout & Highlighting`, use **Buff Size** and **Debuff Size** to resize each type independently. Buffs and debuffs now occupy separate areas below the portrait, with their own wrapping. Existing size choices are preserved when upgrading. Thanks to Neil for the request.
+- **Hide the portrait debuff icon while keeping its highlight.** **Show Portrait Debuff Icon**, on the same party-frame page, controls the central priority-debuff icon independently of **Glow Frame For Dispellable Debuffs**. You can keep the coloured health-frame highlight without covering the portrait with an icon.
+- **Choose range colouring and count text per action bar.** Each bar at `/az -> Action Bars` now has **Show Range Indicator** and **Show Item and Charge Counts**, both on by default. Turn them off for just the selected bar. Cooldown timers remain visible; unusable-action and low-resource colours still apply when range colouring is off. The count switch controls both item quantities and spell charges.
+- **Hover nameplate auras for their description.** Buff and debuff icons on nameplates now accept mouseover and use the configured tooltip anchor. The existing tooltip restrictions still apply when the client hides aura information.
+- **Death Knight health-frame fitting update (WIP).** The theme at `/az -> Themes -> Death Knight` receives revised health casings and dedicated target variants, fitted around the different player, target and boss fill shapes. Frame placement and functional fill textures are preserved. This is a preview revision, not approval of the complete theme.
+
+### Development
+
+- Split the party's native aura display into disjoint helpful and harmful containers with separate clipping and sizing. Both follow group-member changes and visibility settings without inspecting secret combat aura data. The scanning fallback also separates the two types; old relative debuff sizes initialize the new independent setting.
+- Rebuilt Death Knight health rails from the retained original paintings through bounded resampling, with separate target geometry and matching threat halos. Added checks for gaps around the complete fill contour and at actual 1x/2x draw sizes, alongside source-replay checks that reject erased or substituted artwork. Endcap and complete-theme approval remain separate gates.
+- Translated the new controls into all ten supported languages. Offline regressions cover independent sizes, separate aura categories, roster reuse, portrait-icon/highlight independence, per-bar isolation and combat-deferred button updates, alongside the existing options and client checks.
+
+### Access and known limits
+
+- Verified offline only. Party layout, tall or vertically arranged groups, combat rendering, tooltips, bar paging, Legacy/Masque appearance and client taint still need maintainer testing on Retail and Forever. No AI-controlled WoW testing was performed.
+- Native party debuffs reserve their own area after the buff area, so they do not jump as buffs appear or disappear. Larger icons or extra rows can require more space between custom-positioned frames.
+- Death Knight remains a WIP preview. The revised health rails do not approve the endcaps, cast sockets or full theme, and do not establish live visual acceptance.
+
 ## 5.40.0-JuNNeZ (2026-11-14) - Forever Nameplate Combo Points and Binding Repairs
 
 ### Highlights

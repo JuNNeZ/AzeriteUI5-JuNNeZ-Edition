@@ -12,8 +12,9 @@ import numpy as np
 from PIL import Image, ImageChops, ImageFilter
 
 from ThemeHealthEndcaps import lowest_point, terminal_coverage
-from ThemeSourceIntegrity import whole_painting, verify_pixels
+from ThemeSourceIntegrity import whole_painting, verify_pixels, verify_pack
 from DeathKnightTooltipAtlas import PATCHES, pack as pack_tooltip, joins as tooltip_joins
+from DeathKnightRailSource import TARGET_CASES
 
 ROOT = Path(__file__).resolve().parent.parent
 DRAFT = ROOT / "Assets_Draft/DeathKnight/FullSet"
@@ -63,9 +64,20 @@ def square_slot(source):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live-preview", action="store_true")
+    parser.add_argument("--rail-repair", type=Path, help="Source-verified DK health-rail assembly folder")
     args = parser.parse_args()
     if not args.live_preview:
         parser.error("Explicit --live-preview authorization is required; production gates remain failed")
+    old = json.loads((OUT / "manifest.json").read_text()) if (OUT / "manifest.json").exists() else None
+    rail_folder = args.rail_repair
+    if rail_folder is None and old and old.get("healthRailRepair"):
+        rail_folder = ROOT / old["healthRailRepair"]["folder"]
+        for key, filename in (("assetManifestSha256", "manifest.json"), ("sourceIntegritySha256", "source-integrity.json")):
+            assert sha(rail_folder / filename) == old["healthRailRepair"][key], "Existing rail repair changed"
+    if rail_folder:
+        rail_folder = rail_folder.resolve()
+        assert rail_folder.is_relative_to(ROOT), "Rail repair must stay inside this checkout"
+    rail_gate = verify_pack(rail_folder) if rail_folder else None
     source_manifest = json.loads((DRAFT / "manifest.json").read_text())
     contracts = json.loads((DOC / "Contracts/approved-footprints.json").read_text())
     assert contracts["maintainerApproved"] is True
@@ -104,6 +116,13 @@ def main():
                 under[mask, :3] = np.rint(under[mask, :3].astype(float) * 192 / 255).astype("uint8")
             files[name] = Image.alpha_composite(Image.fromarray(under), painting)
             records[name].update(construction="native functional glass/shading under unchanged whole painting", nativeSha256=sha(native_path), fillMaskSha256=sha(fill_path))
+    if rail_folder:
+        proof = json.loads((rail_folder / "source-integrity.json").read_text())["paintings"]
+        assert set(proof) == {name + "-over" for name in LONG+TARGET_CASES} | set(TARGET_CASES), "Incomplete DK rail repair"
+        for name, item in proof.items():
+            assert item["role"] in ("deathknight-rail-grid-1", "deathknight-target-recess-1"), "Unexpected rail repair source type"
+            files[name] = read(rail_folder / (name + ".tga"))
+            records[name] = {"construction": item['role'], "sourceProof": item}
     dips, edges, fits = {}, {"frost": {}, "unholy": {}}, {}
     for name in LONG:
         contract = contracts["cases"][name]
@@ -126,7 +145,7 @@ def main():
         files[name], transform = square_slot(read(path))
         records[name] = {"source": path.relative_to(ROOT).as_posix(), "sourceSha256": sha(path), "transform": transform, "construction": "whole painting in shared square slot"}
     for name, image in list(files.items()):
-        if name in LONG or name.startswith("ornament-"):
+        if name in LONG+TARGET_CASES or name.startswith("ornament-"):
             painting = files.get(name + "-over", image)
             alpha = painting.getchannel("A")
             halo = ImageChops.subtract(alpha.filter(ImageFilter.MaxFilter(9)), alpha).filter(ImageFilter.GaussianBlur(3))
@@ -135,7 +154,6 @@ def main():
             files[name + "-glow"] = glow
             records[name + "-glow"] = {"construction": "neutral halo from complete painting alpha", "painting": name + "-over" if name + "-over" in files else name}
     # Preflight existing task-owned exports before any copy, retaining user edits.
-    old = json.loads((OUT / "manifest.json").read_text()) if (OUT / "manifest.json").exists() else None
     data_path = ROOT / "Core/DeathKnightThemeData.lua"
     if data_path.exists():
         assert old and sha(data_path) == old["runtimeDataSha256"], "Existing runtime data changed"
@@ -156,6 +174,9 @@ def main():
         "sourceCandidateManifestSha256": sha(DRAFT / "manifest.json"), "sourceFitReportSha256": sha(DRAFT / "fit-report.json"),
         "approvedFootprintsSha256": sha(DOC / "Contracts/approved-footprints.json"), "runtimeDataSha256": sha(data_path),
         "assets": records, "capDiagnostics": fits, "liveRetailValidated": False, "liveForeverValidated": False}
+    if rail_folder:
+        manifest["healthRailRepair"] = {"folder": rail_folder.resolve().relative_to(ROOT).as_posix(),
+            "assetManifestSha256": rail_gate["assetManifestSha256"], "sourceIntegritySha256": rail_gate["sourceIntegritySha256"]}
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     (DOC / "live-preview-install.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"Installed {len(files)} WIP textures, {len(media)} native media entries; RGBA roundtrips passed. Production gates retained as failed.")

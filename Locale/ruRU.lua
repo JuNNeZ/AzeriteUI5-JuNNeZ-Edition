@@ -1480,3 +1480,15 @@ L["Show target-bound combo points on enemy nameplates on Forever, including mobs
 
 L["Combo point size (%)"] = "Размер очков серии приёмов (%)"
 L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "Изменяет размер кристаллов и ячеек очков серии приёмов на индикаторах имени. Имена и ауры смещаются, освобождая место. 100% — исходный размер."
+
+-- Party aura sizes and per-bar indicators.
+L["Show Range Indicator"] = "Показывать индикатор дальности"
+L["Color buttons on this bar when their action is out of range. Unusable actions and low resource colors still apply."] = "Окрашивает кнопки этой панели, если цель вне радиуса действия. Цвета недоступных действий и нехватки ресурсов сохраняются."
+L["Show Item and Charge Counts"] = "Показывать количество и заряды"
+L["Show item quantities and spell charge counts on this bar. Cooldown timers are unaffected."] = "Показывает количество предметов и заряды заклинаний на этой панели. Таймеры восстановления не меняются."
+L["Show Portrait Debuff Icon"] = "Показывать отрицательный эффект на портрете"
+L["Show the priority debuff icon over the party portrait health bar. The dispellable debuff highlight is controlled separately."] = "Показывает значок приоритетного отрицательного эффекта поверх полосы здоровья портрета группы. Подсветка рассеиваемых эффектов настраивается отдельно."
+L["Buff Size"] = "Размер положительных эффектов"
+L["Resize helpful party auras. Buffs and debuffs occupy separate rows."] = "Изменяет размер положительных эффектов группы. Положительные и отрицательные эффекты занимают отдельные ряды."
+L["Debuff Size"] = "Размер отрицательных эффектов"
+L["Resize harmful party auras independently of buffs."] = "Изменяет размер отрицательных эффектов группы независимо от положительных."

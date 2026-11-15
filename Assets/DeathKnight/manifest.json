@@ -20,10 +20,26 @@
       ]
     },
     "hp_cap_case-over": {
-      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_cap_case.tga",
-      "candidateSha256": "77595b9623ae6a1bb3d3de93842791bb829de3d0dfd3068b6957f53786f06c07",
-      "construction": "unchanged whole candidate",
-      "sha256": "77595b9623ae6a1bb3d3de93842791bb829de3d0dfd3068b6957f53786f06c07",
+      "construction": "deathknight-rail-grid-1",
+      "sourceProof": {
+        "role": "deathknight-rail-grid-1",
+        "source": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/hp_cap_case-over.png",
+          "sha256": "9827ec38dcdf3f80610c68007747307ee733f68064731a59c817f747c2b86bb6"
+        },
+        "transform": {
+          "scale": 1,
+          "offset": [
+            0,
+            0
+          ]
+        },
+        "construction": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/recipe.json",
+          "sha256": "9361fc995e857f0221aacfaa6a26732531f5fdf0131822d8aca0d4438e3bfd23"
+        }
+      },
+      "sha256": "f5ba2818bed42a07a26c144790b1cdab370fff3271d7c01beb37059578c3d26b",
       "canvas": [
         1024,
         256
@@ -42,10 +58,26 @@
       ]
     },
     "hp_mid_case-over": {
-      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_mid_case.tga",
-      "candidateSha256": "f821d73a9dd42a37a35e5a16164aa365bd8a8299c3a2b44be3741694a6cb09eb",
-      "construction": "unchanged whole candidate",
-      "sha256": "f821d73a9dd42a37a35e5a16164aa365bd8a8299c3a2b44be3741694a6cb09eb",
+      "construction": "deathknight-rail-grid-1",
+      "sourceProof": {
+        "role": "deathknight-rail-grid-1",
+        "source": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/hp_mid_case-over.png",
+          "sha256": "a1a798d8283758abd54269821eb66355656485bb60889446bc070ded7aadd40c"
+        },
+        "transform": {
+          "scale": 1,
+          "offset": [
+            0,
+            0
+          ]
+        },
+        "construction": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/recipe.json",
+          "sha256": "9361fc995e857f0221aacfaa6a26732531f5fdf0131822d8aca0d4438e3bfd23"
+        }
+      },
+      "sha256": "5ae767754deb22dc1cfc3e403b366aa8d7a64c75091c8beeb6ac4255af7d8fbd",
       "canvas": [
         1024,
         256
@@ -64,10 +96,26 @@
       ]
     },
     "hp_low_case-over": {
-      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_low_case.tga",
-      "candidateSha256": "20ca2f1ecf1f4ad49ff6033e37fdec731cf0a6814d226046fe7036e74f392f82",
-      "construction": "unchanged whole candidate",
-      "sha256": "20ca2f1ecf1f4ad49ff6033e37fdec731cf0a6814d226046fe7036e74f392f82",
+      "construction": "deathknight-rail-grid-1",
+      "sourceProof": {
+        "role": "deathknight-rail-grid-1",
+        "source": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/hp_low_case-over.png",
+          "sha256": "2924d8f5ad12004ad72726b6b30e1428a0a9932c2c1b9a6dc2667178cd8791e4"
+        },
+        "transform": {
+          "scale": 1,
+          "offset": [
+            0,
+            0
+          ]
+        },
+        "construction": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/recipe.json",
+          "sha256": "9361fc995e857f0221aacfaa6a26732531f5fdf0131822d8aca0d4438e3bfd23"
+        }
+      },
+      "sha256": "1b59c31f0a1e0acb4d712dad232ff58f5aa4a9bcad00b77db72e7e2900b453fc",
       "canvas": [
         1024,
         256
@@ -86,10 +134,26 @@
       ]
     },
     "hp_boss_case-over": {
-      "candidate": "Assets_Draft/DeathKnight/FullSet/Exports/hp_boss_case.tga",
-      "candidateSha256": "d05f9460f938e25ab4ab1fdeac1e2d6cecb95f5c797142a937e579921755e7eb",
-      "construction": "unchanged whole candidate",
-      "sha256": "d05f9460f938e25ab4ab1fdeac1e2d6cecb95f5c797142a937e579921755e7eb",
+      "construction": "deathknight-rail-grid-1",
+      "sourceProof": {
+        "role": "deathknight-rail-grid-1",
+        "source": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/hp_boss_case-over.png",
+          "sha256": "73d88363f0e216b4821ecc0cb478ef90239cdb0438ddcdf8f8292a238b32e62f"
+        },
+        "transform": {
+          "scale": 1,
+          "offset": [
+            0,
+            0
+          ]
+        },
+        "construction": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/recipe.json",
+          "sha256": "9361fc995e857f0221aacfaa6a26732531f5fdf0131822d8aca0d4438e3bfd23"
+        }
+      },
+      "sha256": "bfa6fe8f8c241ddbb3e4b64b1b45de5c20ba6dabec16b459958dbf40b597f6af",
       "canvas": [
         1024,
         256
@@ -517,6 +581,129 @@
         256
       ]
     },
+    "hp_cap_case-target-over": {
+      "construction": "deathknight-rail-grid-1",
+      "sourceProof": {
+        "role": "deathknight-rail-grid-1",
+        "source": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/hp_cap_case-target-over.png",
+          "sha256": "b47db90ac890f5a8b1520fbe52ac26145dc75ecd17cca6d1440690d118e8d2de"
+        },
+        "transform": {
+          "scale": 1,
+          "offset": [
+            0,
+            0
+          ]
+        },
+        "construction": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/recipe.json",
+          "sha256": "9361fc995e857f0221aacfaa6a26732531f5fdf0131822d8aca0d4438e3bfd23"
+        }
+      },
+      "sha256": "97676e6d064d6de4c4a042decca0aff73b7ab012598a400d3ab34333588ee8b1",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-target-over": {
+      "construction": "deathknight-rail-grid-1",
+      "sourceProof": {
+        "role": "deathknight-rail-grid-1",
+        "source": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/hp_mid_case-target-over.png",
+          "sha256": "d00007343cdd4254d50ce1a0730b71ecdafac361263d2d9de4c27ba4b6cd38fe"
+        },
+        "transform": {
+          "scale": 1,
+          "offset": [
+            0,
+            0
+          ]
+        },
+        "construction": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/recipe.json",
+          "sha256": "9361fc995e857f0221aacfaa6a26732531f5fdf0131822d8aca0d4438e3bfd23"
+        }
+      },
+      "sha256": "7ba458107289bd18b1029996193598f299eb46f5b2e94be5a35f9b9098b3d732",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case-target-over": {
+      "construction": "deathknight-rail-grid-1",
+      "sourceProof": {
+        "role": "deathknight-rail-grid-1",
+        "source": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/hp_low_case-target-over.png",
+          "sha256": "c646343aaada1363e4caf108de3369616a5035a6802ee98ceb9d265ba9727b2b"
+        },
+        "transform": {
+          "scale": 1,
+          "offset": [
+            0,
+            0
+          ]
+        },
+        "construction": {
+          "path": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly/recipe.json",
+          "sha256": "9361fc995e857f0221aacfaa6a26732531f5fdf0131822d8aca0d4438e3bfd23"
+        }
+      },
+      "sha256": "b437771c4fb1cbb5023460e6122c1ee69b26c29dd8ab8671aa9821eaf910762b",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case-target": {
+      "construction": "deathknight-target-recess-1",
+      "sourceProof": {
+        "role": "deathknight-target-recess-1",
+        "source": {
+          "path": "Assets/hp_cap_case.tga",
+          "sha256": "855e7a472da166b7ca93242e3d420453920ff728b912def5f11a6bf2ae2c1bda"
+        }
+      },
+      "sha256": "bf1411a5c2b363a1ca2c80b99e63843d45dee70a8092550394a9b394d2767bc4",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-target": {
+      "construction": "deathknight-target-recess-1",
+      "sourceProof": {
+        "role": "deathknight-target-recess-1",
+        "source": {
+          "path": "Assets/hp_mid_case.tga",
+          "sha256": "28425d8f6c1d6a08f878df9a234a085fc7846fadef22e430ada9f985c746f240"
+        }
+      },
+      "sha256": "82d26780f71efa8a3b824fc74f6b6d442eef8f1f3295de43ce693701e258a3c0",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case-target": {
+      "construction": "deathknight-target-recess-1",
+      "sourceProof": {
+        "role": "deathknight-target-recess-1",
+        "source": {
+          "path": "Assets/hp_low_case.tga",
+          "sha256": "b683386a5d7b9328a7d5a2cad8d0cf2450627024b67e82f19ff389222baa50ef"
+        }
+      },
+      "sha256": "00deb74e8757a32fdaff63e26ebe2986139d4b88c5ecf04c803f4c216fd2d9e3",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
     "ornament-frost-hp_cap_case": {
       "source": "Assets_Draft/DeathKnight/FullSet/Revisions/health-endcap-frost-v2.png",
       "sourceSha256": "8475d56ed466ae3c0e1db0d4d09db028d25f76503a964643f8e1a5042fdfa8d6",
@@ -773,7 +960,7 @@
     "hp_cap_case-glow": {
       "construction": "neutral halo from complete painting alpha",
       "painting": "hp_cap_case-over",
-      "sha256": "4da5581b6cd391e92b824f3a12d9cc3d0e5f55a0765196f7447b6b9c48bf8eea",
+      "sha256": "6f0430e23e7ececa2fb83a73e8680369330c3e7189ff307b02613f0c0307381b",
       "canvas": [
         1024,
         256
@@ -782,7 +969,7 @@
     "hp_mid_case-glow": {
       "construction": "neutral halo from complete painting alpha",
       "painting": "hp_mid_case-over",
-      "sha256": "c321da834527567255a39d9047d264b7949ea13ead7ec02e5d655037ee0825af",
+      "sha256": "48e2daacd4588bb9c5ed886ccbd29b473d1346a16f08f9e1044e802b4afb4b83",
       "canvas": [
         1024,
         256
@@ -791,7 +978,7 @@
     "hp_low_case-glow": {
       "construction": "neutral halo from complete painting alpha",
       "painting": "hp_low_case-over",
-      "sha256": "3d167c3d67f3bda4a3ac471fadc2eb83ae1907a8ac3926539d8970b946aebab7",
+      "sha256": "555531aa26cbb150007d767625e12b0e955b4400678b135e2cf38e4ecf799425",
       "canvas": [
         1024,
         256
@@ -800,7 +987,34 @@
     "hp_boss_case-glow": {
       "construction": "neutral halo from complete painting alpha",
       "painting": "hp_boss_case-over",
-      "sha256": "a304051901d3a55755f8e74ffb654e8b425db746cb7e4033253fbb39f861aebf",
+      "sha256": "9daf702c1261e2f19e8a3924d587591a7624a8ee08b0bb4149a71175bdd35ca1",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_cap_case-target-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "hp_cap_case-target-over",
+      "sha256": "8b5bfaf846370f2a02fb8c20f49b7ccf5a3dce8e05f277b93c98bccce94c42a5",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_mid_case-target-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "hp_mid_case-target-over",
+      "sha256": "260653e85cd8dea76e4ffac3f40fe71807f073247a670569b554b4f209963561",
+      "canvas": [
+        1024,
+        256
+      ]
+    },
+    "hp_low_case-target-glow": {
+      "construction": "neutral halo from complete painting alpha",
+      "painting": "hp_low_case-target-over",
+      "sha256": "eb305f76082b19d6f85d82500361fccce71fa1eb15f7163c35139bf3c131fcbd",
       "canvas": [
         1024,
         256
@@ -1034,5 +1248,10 @@
     }
   },
   "liveRetailValidated": false,
-  "liveForeverValidated": false
+  "liveForeverValidated": false,
+  "healthRailRepair": {
+    "folder": "Assets_Draft/DeathKnight/Rail-Repair-2026-11-14/Assembly",
+    "assetManifestSha256": "369c8c2ba78bb0bc28ad8b70c2aa70060db182f2f7c868ced7252efe6f26ccd0",
+    "sourceIntegritySha256": "8587562a89651ddcff36b92e50f642f552831d2173d522e0f1127c87d165ef10"
+  }
 }

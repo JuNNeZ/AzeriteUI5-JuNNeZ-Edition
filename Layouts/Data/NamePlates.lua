@@ -166,7 +166,7 @@ ns.RegisterConfig("NamePlates", {
 	AuraSize = 26,
 	AuraSpacing = 4,
 	AurasNumTotal = 6,
-	AurasDisableMouse = true,
+	AurasDisableMouse = false,
 	AurasDisableCooldown = false,
 	AurasOnlyShowPlayer = false, -- handle this in the filter instead
 	AurasShowStealableBuffs = false,

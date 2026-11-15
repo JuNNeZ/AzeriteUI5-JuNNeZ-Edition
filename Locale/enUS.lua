@@ -1479,3 +1479,15 @@ L["Show target-bound combo points on enemy nameplates on Forever, including mobs
 
 L["Combo point size (%)"] = true
 L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = true
+
+-- Neil: separate party aura sizes and per-bar indicators (2026-11-15).
+L["Show Range Indicator"] = true
+L["Color buttons on this bar when their action is out of range. Unusable actions and low resource colors still apply."] = true
+L["Show Item and Charge Counts"] = true
+L["Show item quantities and spell charge counts on this bar. Cooldown timers are unaffected."] = true
+L["Show Portrait Debuff Icon"] = true
+L["Show the priority debuff icon over the party portrait health bar. The dispellable debuff highlight is controlled separately."] = true
+L["Buff Size"] = true
+L["Resize helpful party auras. Buffs and debuffs occupy separate rows."] = true
+L["Debuff Size"] = true
+L["Resize harmful party auras independently of buffs."] = true

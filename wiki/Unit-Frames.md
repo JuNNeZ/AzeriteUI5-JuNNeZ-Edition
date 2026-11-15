@@ -91,6 +91,13 @@ Player and Target expose full layout control: auras per row, size, padding, grow
 direction and initial anchor. Party frames add a dedicated aura row with dispellable
 debuff emphasis and an optional frame glow in the debuff-type color.
 
+At `/az -> Group Frames -> Party Frames -> Layout & Highlighting`, **Buff Size**
+and **Debuff Size** independently resize separate aura areas. **Show Portrait
+Debuff Icon** controls the central icon independently of **Glow Frame For
+Dispellable Debuffs**, so the coloured highlight can remain with the icon hidden.
+Native debuffs reserve space after the buff area; allow more space between
+custom-positioned frames when using larger icons or more rows.
+
 The player aura row has two modes. **Use AzeriteUI Stock Behavior** is the default
 mixed bright/dim styling. Turning it off unlocks custom categories built only from
 native Retail 12.1 filters that stay safe in combat:

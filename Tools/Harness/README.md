@@ -56,6 +56,7 @@ lua Tools/Harness/layer_harness.lua        .               # Forever layer on th
 lua Tools/Harness/quest_item_button_harness.lua .          # Quest Item Button: quest pick, combat-safe swap, borrowed extra action key, rival
 lua Tools/Harness/totems_harness.lua .                     # Retail/Forever: timerless slots, pooled secret visibility, stale-pool fallback
 lua Tools/Harness/game_menu_conflict_harness.lua .         # game menu style prompt: asked once per rival, Both for Console Port, GUID addon key
+lua Tools/Harness/neil_frame_options_harness.lua .         # independent party aura sizes/viewports, icon vs glow, per-bar range/count isolation
 lua Tools/Harness/party_aura_options_harness.lua .         # party aura row: What To Show switches -> native groups, dispellable-only mode
 lua Tools/Harness/explorer_options_harness.lua .           # Explorer Mode switches greyed out only when they cannot act
 lua Tools/Harness/party_aura_filter_harness.lua .          # party scanning filter: own HoTs, boss/role auras, dispellable by you (HARMFUL|RAID), secret timing

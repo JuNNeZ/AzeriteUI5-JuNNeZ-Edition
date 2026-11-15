@@ -1794,15 +1794,13 @@ end
 -- update, which is where a header button first learns its unit and where a roster
 -- change that handed its token to another player surfaces.
 ns.PlayerAuraContainers.UpdateGroupFrameUnit = function(frame, event)
-	local native = frame and frame.NativeAuras
-	if (not native or not native.SetDisplayUnit) then
-		return
-	end
-	if (native:SetDisplayUnit(frame.unit)) then
-		return
-	end
-	if (event) then
-		native:ForceUpdate()
+	if (not frame) then return end
+	for _, key in ipairs({ "NativeAuras", "NativeDebuffs" }) do
+		local native = frame[key]
+		if (native and native.SetDisplayUnit) then
+			local changed = native:SetDisplayUnit(frame.unit)
+			if (not changed and event) then native:ForceUpdate() end
+		end
 	end
 end
 

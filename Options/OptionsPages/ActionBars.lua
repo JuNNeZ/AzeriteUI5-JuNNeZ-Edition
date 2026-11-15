@@ -205,6 +205,18 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 			buttonShape = ShapeOption(L["Button Shape"],
 				L["Choose the shape of this bar's buttons. Circle is the intended AzeriteUI design. Square and Rounded are alternatives that keep the same spacing. Changing this asks you to reload."],
 				14, isdisabled, getter, setter),
+			showRangeIndicator = {
+				name = L["Show Range Indicator"],
+				desc = L["Color buttons on this bar when their action is out of range. Unusable actions and low resource colors still apply."],
+				order = 15, type = "toggle", width = "full", hidden = isdisabled,
+				set = setter, get = function(info) return getter(info) ~= false end
+			},
+			showButtonCount = {
+				name = L["Show Item and Charge Counts"],
+				desc = L["Show item quantities and spell charge counts on this bar. Cooldown timers are unaffected."],
+				order = 16, type = "toggle", width = "full", hidden = isdisabled,
+				set = setter, get = function(info) return getter(info) ~= false end
+			},
 			enableBarFading = {
 				name = L["Enable Bar Fading"],
 				desc = L["Toggle whether to enable the buttons of this action bar to fade out."],

@@ -74,6 +74,7 @@ local defaults = { profile = ns:Merge({
 	useInRaid40 = false, -- show in raid groups of 26-40 players
 
 	showAuras = true,
+	showPriorityDebuff = true,
 	showRaidTargetIcons = true,
 	showMythicPlusRating = false,
 	showPlayerInParty = false,
@@ -298,6 +299,15 @@ local GetPartyDebuffScale = function(profile)
 	return scale
 end
 
+-- Retain old relative sizing until the player chooses an independent debuff size.
+local GetPartyDebuffSize = function(profile, buffSize)
+	local size = profile and profile.partyAuraDebuffSize
+	if (type(size) ~= "number") then
+		size = buffSize * GetPartyDebuffScale(profile)
+	end
+	return math_floor(math_max(9, math_min(84, size)) + .5)
+end
+
 -- The native aura row cannot run PartyAuraFilter, which reads aura data in Lua that
 -- the client withholds during combat. It is built from categories the client sorts
 -- instead (CreateForGroupUnit in PlayerAuraContainers.lua), and the party options
@@ -415,6 +425,10 @@ local ApplyPartyAuraLayout = function(frame)
 	local profile = GetPartyAuraProfile()
 	local auras = frame.Auras
 	local auraSize = GetPartyAuraLayoutValue(profile, "AuraSize", config.AuraSize or 30)
+	local harmfulSize = GetPartyDebuffSize(profile, auraSize)
+	if (profile and type(profile.partyAuraDebuffSize) ~= "number") then
+		profile.partyAuraDebuffSize = harmfulSize
+	end
 	local spacingX = GetPartyAuraLayoutValue(profile, "AurasSpacingX", config.AurasSpacingX or config.AuraSpacing or 4)
 	local spacingY = GetPartyAuraLayoutValue(profile, "AurasSpacingY", config.AurasSpacingY or config.AuraSpacing or 4)
 	local growthX = GetPartyAuraLayoutValue(profile, "AurasGrowthX", config.AurasGrowthX or "RIGHT")
@@ -423,8 +437,10 @@ local ApplyPartyAuraLayout = function(frame)
 	local perRow = GetPartyAuraPerRow(config, profile)
 	local numTotal = config.AurasNumTotal or 6
 	local rows = math_max(1, math_ceil(numTotal / perRow))
-	local width = (perRow * auraSize) + ((perRow - 1) * spacingX)
-	local height = (rows * auraSize) + ((rows - 1) * spacingY)
+	local lineSize = math_max(auraSize, harmfulSize)
+	local width = (perRow * lineSize) + ((perRow - 1) * spacingX)
+	-- Independent native viewports each reserve enough rows for their own type.
+	local height = rows * (auraSize + harmfulSize + 2 * spacingY)
 
 	auras:SetSize(width, height)
 	auras.size = auraSize
@@ -435,29 +451,74 @@ local ApplyPartyAuraLayout = function(frame)
 	auras.spacingY = spacingY
 	auras.growthX = growthX
 	auras.growthY = growthY
+	auras.maxCols = perRow
+	auras.partyBuffSize = auraSize
+	auras.partyDebuffSize = harmfulSize
 	auras["spacing-x"] = spacingX
 	auras["spacing-y"] = spacingY
 	auras["growth-x"] = growthX
 	auras["growth-y"] = growthY
 
-	local native = frame.NativeAuras
-	if (native) then
-		local harmfulSize = math_floor(auraSize * GetPartyDebuffScale(profile) + .5)
-		-- A larger debuff makes its line taller, and the native row clips to its own
-		-- bounds, so the height is sized for the larger of the two.
-		local lineSize = math_max(auraSize, harmfulSize)
-		native:SetSize(width, (rows * lineSize) + ((rows - 1) * spacingY))
+	for _, key in ipairs({ "NativeAuras", "NativeDebuffs" }) do
+		local native = frame[key]
+		if (native) then
+			local harmful = key == "NativeDebuffs"
+			local size = harmful and harmfulSize or auraSize
+			local nativeWidth = perRow * size + (perRow - 1) * spacingX
+			local nativeHeight = rows * size + (rows - 1) * spacingY
+			native:SetSize(nativeWidth, nativeHeight)
+			native:ClearAllPoints()
+			if (harmful) then
+				local offset = rows * (auraSize + spacingY) + 6
+				native:SetPoint(initialAnchor, frame.NativeAuras, initialAnchor, 0, growthY == "DOWN" and -offset or offset)
+			else
+				native:SetPoint(unpack(config.AurasPosition))
+			end
+			local nativeOptions = GetPartyNativeAuraOptions(profile)
+			nativeOptions.size = auraSize
+			nativeOptions.harmfulSize = harmfulSize
+			nativeOptions.spacingX = spacingX
+			nativeOptions.spacingY = spacingY
+			nativeOptions.initialAnchor = initialAnchor
+			nativeOptions.growthX = growthX
+			nativeOptions.growthY = growthY
+			nativeOptions.maxAuras = numTotal
+			native:Configure(ns.PlayerAuraContainers.BuildGroupFrameConfig(nativeOptions))
+		end
+	end
+end
 
-		local nativeOptions = GetPartyNativeAuraOptions(profile)
-		nativeOptions.size = auraSize
-		nativeOptions.harmfulSize = harmfulSize
-		nativeOptions.spacingX = spacingX
-		nativeOptions.spacingY = spacingY
-		nativeOptions.initialAnchor = initialAnchor
-		nativeOptions.growthX = growthX
-		nativeOptions.growthY = growthY
-		nativeOptions.maxAuras = numTotal
-		native:Configure(ns.PlayerAuraContainers.BuildGroupFrameConfig(nativeOptions))
+-- Scanning fallback: reserve separate rows even when the chosen sort interleaves
+-- buffs and debuffs. Only addon-owned, non-secure aura buttons are positioned here.
+local PartyAura_SetPosition = function(element, from, to)
+	local buffs = 0
+	for i = 1, to do
+		local button = element[i]
+		if (button and button:IsShown() and not button.isHarmful) then buffs = buffs + 1 end
+	end
+	local cols = element.maxCols or 3
+	local buffSize, debuffSize = element.partyBuffSize, element.partyDebuffSize
+	local spacingX, spacingY = element.spacingX or 4, element.spacingY or 4
+	local buffRows = math_ceil(buffs / cols)
+	local debuffOffset = buffRows > 0 and (buffRows * (buffSize + spacingY) + 6) or 0
+	local helpful, harmful = 0, 0
+	local xSign = element.growthX == "LEFT" and -1 or 1
+	local ySign = element.growthY == "DOWN" and -1 or 1
+	for i = 1, to do
+		local button = element[i]
+		if (button and button:IsShown()) then
+			local isHarmful = button.isHarmful
+			local index = isHarmful and harmful or helpful
+			local size = isHarmful and debuffSize or buffSize
+			local offset = isHarmful and debuffOffset or 0
+			button:SetScale(1)
+			button:SetSize(size, size)
+			button:ClearAllPoints()
+			button:SetPoint(element.initialAnchor, element, element.initialAnchor,
+				(index % cols) * (size + spacingX) * xSign,
+				(offset + math_floor(index / cols) * (size + spacingY)) * ySign)
+			if (isHarmful) then harmful = harmful + 1 else helpful = helpful + 1 end
+		end
 	end
 end
 
@@ -1427,6 +1488,8 @@ local style = function(self, unit, asPlayer)
 	auras.allowCombatUpdates = true
 	auras.CreateButton = ns.AuraStyles.CreateButton
 	auras.PostUpdateButton = ns.AuraStyles.PartyPostUpdateButton
+	auras.SetPosition = PartyAura_SetPosition
+	auras.PostUpdate = function(element) PartyAura_SetPosition(element, 1, element.visibleButtons or #element) end
 	auras.CustomFilter = ns.AuraFilters.PartyAuraFilter -- classic
 	auras.FilterAura = ns.AuraFilters.PartyAuraFilter -- retail
 
@@ -1447,22 +1510,21 @@ local style = function(self, unit, asPlayer)
 	-- the player rows and the target frame already moved to it. UpdateUnits decides
 	-- which of the two draws; the scanning element stays as the fallback.
 	if (ns.PlayerAuraContainers and ns.PlayerAuraContainers.CreateForGroupUnit) then
-		local native = ns.PlayerAuraContainers.CreateForGroupUnit(self, unit, {
-			width = db.AurasSize[1],
-			height = db.AurasSize[2],
-			size = db.AuraSize,
-			spacing = db.AuraSpacing,
-			initialAnchor = db.AurasInitialAnchor,
-			growthX = db.AurasGrowthX,
-			growthY = db.AurasGrowthY,
-			maxAuras = db.AurasNumTotal,
-			disableMouse = db.AurasDisableMouse,
-			disableCooldown = db.AurasDisableCooldown,
-			tooltipAnchor = db.AurasTooltipAnchor
-		})
-		if (native) then
-			native:SetPoint(unpack(db.AurasPosition))
-			self.NativeAuras = native
+		local groups = ns.PlayerAuraContainers.GroupFrameGroup
+		local harmfulGroups = { [groups.HarmfulDispel] = true, [groups.HarmfulBoss] = true, [groups.HarmfulOther] = true }
+		for _, key in ipairs({ "NativeAuras", "NativeDebuffs" }) do
+			local groupKeys = {}
+			for _, groupKey in ipairs(ns.PlayerAuraContainers.GroupFrameKeys) do
+				if ((harmfulGroups[groupKey] == true) == (key == "NativeDebuffs")) then groupKeys[groupKey] = true end
+			end
+			self[key] = ns.PlayerAuraContainers.CreateForGroupUnit(self, unit, {
+				width = db.AurasSize[1], height = db.AurasSize[2],
+				size = db.AuraSize, spacing = db.AuraSpacing,
+				initialAnchor = db.AurasInitialAnchor, growthX = db.AurasGrowthX, growthY = db.AurasGrowthY,
+				maxAuras = db.AurasNumTotal, groupKeys = groupKeys,
+				disableMouse = db.AurasDisableMouse, disableCooldown = db.AurasDisableCooldown,
+				tooltipAnchor = db.AurasTooltipAnchor
+			})
 		end
 	end
 
@@ -1795,6 +1857,12 @@ PartyFrameMod.UpdateUnits = function(self)
 	if (not self.frame) then return end
 	for frame in next,Units do
 		ApplyHealthColorMode(frame, self.db.profile)
+		if (self.db.profile.showPriorityDebuff ~= false) then
+			frame:EnableElement("PriorityDebuff")
+		else
+			frame:DisableElement("PriorityDebuff")
+			frame.PriorityDebuff:Hide()
+		end
 		ApplyPartyAuraLayout(frame)
 		local native = frame.NativeAuras
 		if (self.db.profile.showAuras) then
@@ -1802,16 +1870,18 @@ PartyFrameMod.UpdateUnits = function(self)
 				-- Only one of the two may draw: the scanning element would duplicate the
 				-- native row out of combat and show nothing during it.
 				frame:DisableElement("Auras")
-				native:SetDisplayEnabled(true)
-				native:ForceUpdate()
+				for _, display in ipairs({ native, frame.NativeDebuffs }) do
+					display:SetDisplayEnabled(true)
+					display:ForceUpdate()
+				end
 			else
 				frame:EnableElement("Auras")
 				frame.Auras:ForceUpdate()
 			end
 		else
 			frame:DisableElement("Auras")
-			if (native) then
-				native:SetDisplayEnabled(false)
+			for _, key in ipairs({ "NativeAuras", "NativeDebuffs" }) do
+				if (frame[key]) then frame[key]:SetDisplayEnabled(false) end
 			end
 		end
 		if (self.db.profile.showRaidTargetIcons) then
@@ -1889,8 +1959,8 @@ PartyFrameMod.OnEvent = function(self, event, ...)
 
 	-- A native aura row switched on or off during combat only changed its alpha.
 	for frame in next,Units do
-		if (frame.NativeAuras) then
-			frame.NativeAuras:ApplyPendingShownState()
+		for _, key in ipairs({ "NativeAuras", "NativeDebuffs" }) do
+			if (frame[key]) then frame[key]:ApplyPendingShownState() end
 		end
 	end
 end

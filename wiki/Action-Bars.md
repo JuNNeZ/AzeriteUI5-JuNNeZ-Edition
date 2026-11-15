@@ -47,6 +47,8 @@ Each of the eight bars has its own:
 - **Only show on mouseover** - a faded bar stays hidden in combat until hovered
 - **Ignore clicks while faded** - a faded bar stops swallowing clicks
 - **Show while mounted**
+- **Show Range Indicator** - colour out-of-range actions on this bar; other usability colours remain active.
+- **Show Item and Charge Counts** - show item quantities and spell charges on this bar; cooldown timers are separate.
 
 ## Pet and stance bars
 

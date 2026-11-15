@@ -126,8 +126,15 @@ def verify_pack(folder, root=ROOT):
         source, actual = read(source_path), read(target)
         role = item.get('role', 'painting')
         base = name.removesuffix('-over')
+        if role in ('deathknight-rail-grid-1', 'deathknight-target-recess-1'):
+            base = base.removesuffix('-target')
         fill_path = root/'Docs/Research_Assets/Templates'/(base+'-fill.png')
-        if role in ('shared-native', 'functional-recess'):
+        if role == 'deathknight-target-recess-1':
+            from DeathKnightRailSource import target_recess
+            if set(item) != {'role','source'} or source_path != (root/'Assets'/(base+'.tga')).resolve():
+                raise ValueError('unsupported DK target recess proof')
+            expected = target_recess(name,root)
+        elif role in ('shared-native', 'functional-recess'):
             if source_path != (root/'Assets'/(base+'.tga')).resolve():
                 raise ValueError('functional exception must reference the exact shared native asset: '+name)
             expected = source
@@ -137,8 +144,12 @@ def verify_pack(folder, root=ROOT):
                 field = np.asarray(Image.open(fill_path).convert('L')) > 128
                 pixels = np.zeros_like(np.asarray(source)); pixels[field] = np.asarray(source)[field]
                 expected = Image.fromarray(pixels)
-        elif role == 'painting':
-            expected = whole_painting(source, item['transform'], actual.size)
+        elif role in ('painting', 'deathknight-rail-grid-1'):
+            if role == 'deathknight-rail-grid-1':
+                from DeathKnightRailSource import replay
+                expected = replay(item, name, root)
+            else:
+                expected = whole_painting(source, item['transform'], actual.size)
             bridge = None
             if item.get('bridge'):
                 bridge_path = checked_file(item['bridge'], root)
@@ -147,7 +158,14 @@ def verify_pack(folder, root=ROOT):
                     raise ValueError('bridge approval not bound to this source/mask')
                 bridge = Image.open(bridge_path)
             if fill_path.is_file():
-                aperture(expected, Image.open(fill_path), bridge)
+                if role == 'deathknight-rail-grid-1':
+                    from DeathKnightRailSource import validate_gap, fill_field, validate_projection
+                    measured_field = fill_field(name.removesuffix('-over'), root)
+                    aperture(expected, measured_field, bridge)
+                    validate_gap(expected, measured_field)
+                    validate_projection(expected, name.removesuffix('-over'), root)
+                else:
+                    aperture(expected, Image.open(fill_path), bridge)
             if base in ('hp_cap_case', 'hp_mid_case', 'hp_low_case', 'hp_boss_case'):
                 from ThemeHealthEndcaps import lowest_point
                 native = read(root/'Assets'/(base+'.tga'))

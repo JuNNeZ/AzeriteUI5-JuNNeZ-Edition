@@ -553,7 +553,8 @@ ActionBarMod.CreateBars = function(self)
 		local config = self.db.profile.bars[i]
 		config.clickOnDown = self.db.profile.clickOnDown
 		config.useCommandBindingsForHoldCast = self.db.profile.UseCommandBindingsForHoldCast ~= false
-		config.hideElements = self.db.profile.hideElements
+		config.hideElements = ns:Copy(self.db.profile.hideElements)
+		config.hideElements.count = config.showButtonCount == false
 		-- Read while the bar builds its buttons, so empty slots start out at
 		-- the right opacity rather than waiting for the first settings pass.
 		config.showEmptyButtons = self.db.profile.showEmptyButtons and true or false
@@ -920,7 +921,9 @@ ActionBarMod.UpdateSettings = function(self, event)
 		bar.config.useCommandBindingsForHoldCast = self.db.profile.UseCommandBindingsForHoldCast ~= false
 		bar.config.dimWhenResting = self.db.profile.dimWhenResting
 		bar.config.dimWhenInactive = self.db.profile.dimWhenInactive
-		bar.config.hideElements = self.db.profile.hideElements
+		-- Each bar owns its copy: hiding counts on one must not affect the others.
+		bar.config.hideElements = ns:Copy(self.db.profile.hideElements)
+		bar.config.hideElements.count = bar.config.showButtonCount == false
 		bar.config.showEmptyButtons = self.db.profile.showEmptyButtons and true or false
 
 		-- Copy select settings into each button's config table.
@@ -934,6 +937,7 @@ ActionBarMod.UpdateSettings = function(self, event)
 			button.config.dimWhenResting = bar.config.dimWhenResting
 			button.config.dimWhenInactive = bar.config.dimWhenInactive
 			button.config.hideElements = bar.config.hideElements
+			button.config.outOfRangeColoring = bar.config.showRangeIndicator == false and "none" or "button"
 			button.config.showGrid = bar.config.showEmptyButtons
 			button.config.tooltip = tooltipMode
 			button:UpdateConfig(button.config)

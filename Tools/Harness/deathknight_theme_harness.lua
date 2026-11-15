@@ -323,6 +323,17 @@ do
 	issecretvalue=oldSecret
 end
 T:SetEndcap("frost")
+owner.unit="target"
+db.HealthBackdropTexture="x\\Assets\\DeathKnight\\hp_cap_case.tga"
+T:StyleHealth(owner,db,true)
+check(hp.DeathKnightRails.Art.texture:find("hp_cap_case-target-over.tga",1,true),"target selects its own pixel-fitted inner rail")
+check(hp.Backdrop.texture:find("hp_cap_case-target.tga",1,true),"target selects its exact native functional recess")
+T:SetEndcap("none")
+check(hp.Backdrop.texture:find("hp_cap_case-target.tga",1,true),"target None retains target aperture")
+owner.unit=nil
+T:StyleHealth(owner,db,false)
+check(not hp.Backdrop.texture:find("-target",1,true),"player retains player geometry and artwork")
+T:SetEndcap("frost")
 before=reloads;combat=true
 check(not T:Command("off") and not T:Command("endcap unholy") and not T:Command("castendcap none"),"combat refuses slash writes")
 check(not T:SetEndcapScale(1.8) and not T:SetCastEndcapOffset(3,4) and reloads==before,"combat refuses placement writes and reload")

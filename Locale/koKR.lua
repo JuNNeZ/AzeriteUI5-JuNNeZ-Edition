@@ -1480,3 +1480,15 @@ L["Show target-bound combo points on enemy nameplates on Forever, including mobs
 
 L["Combo point size (%)"] = "연계 점수 크기 (%)"
 L["Scale the combo point crystals and sockets on nameplates. Names and auras move to leave room. 100% is the original size."] = "이름표의 연계 점수 수정과 홈 크기를 조절합니다. 이름과 오라는 공간을 확보하도록 이동합니다. 100%는 원래 크기입니다."
+
+-- Party aura sizes and per-bar indicators.
+L["Show Range Indicator"] = "사거리 표시"
+L["Color buttons on this bar when their action is out of range. Unusable actions and low resource colors still apply."] = "이 행동 단축바의 행동이 사거리를 벗어나면 버튼 색상을 변경합니다. 사용 불가 및 자원 부족 색상은 계속 적용됩니다."
+L["Show Item and Charge Counts"] = "아이템 수량 및 충전 횟수 표시"
+L["Show item quantities and spell charge counts on this bar. Cooldown timers are unaffected."] = "이 단축바에 아이템 수량과 주문 충전 횟수를 표시합니다. 재사용 대기시간 표시는 변경하지 않습니다."
+L["Show Portrait Debuff Icon"] = "초상화 약화 효과 아이콘 표시"
+L["Show the priority debuff icon over the party portrait health bar. The dispellable debuff highlight is controlled separately."] = "파티 초상화 생명력 바 위에 우선 약화 효과 아이콘을 표시합니다. 해제 가능한 약화 효과 강조는 별도로 설정합니다."
+L["Buff Size"] = "강화 효과 크기"
+L["Resize helpful party auras. Buffs and debuffs occupy separate rows."] = "파티 강화 효과 크기를 변경합니다. 강화 효과와 약화 효과는 서로 다른 줄에 표시됩니다."
+L["Debuff Size"] = "약화 효과 크기"
+L["Resize harmful party auras independently of buffs."] = "파티 약화 효과 크기를 강화 효과와 별도로 변경합니다."
