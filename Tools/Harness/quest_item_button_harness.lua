@@ -235,7 +235,15 @@ end
 function ns:GetModule() return nil end
 
 assert(loadfile(root .. "/Components/ActionBars/Elements/QuestItemData.lua"))("AzeriteUI", ns)
-assert(loadfile(root .. "/Components/ActionBars/Elements/QuestItemButton.lua"))("AzeriteUI", ns)
+ns.GamepadUICompatibility = { IsActive = function() return W.nativeBars == true end }
+local questSourceFile = assert(io.open(root .. "/Components/ActionBars/Elements/QuestItemButton.lua", "rb"))
+local questSource = questSourceFile:read("*a"); questSourceFile:close()
+if (arg[2] == "native-extra-key") then
+	local replacements
+	questSource, replacements = questSource:gsub("not nativeBars", "true")
+	assert(replacements == 2, "native-extra-key mutation must match hotkey and binding guards")
+end
+assert(loadstring(questSource, "@Components/ActionBars/Elements/QuestItemButton.lua"))("AzeriteUI", ns)
 
 local Finder = ns.QuestItemFinder
 local opts = function(o) o = o or {}; o.maxDistance = o.maxDistance or 1000; return o end
@@ -374,6 +382,25 @@ W.bindings["CLICK AzeriteUIQuestItemButton:LeftButton"] = { "F" }
 module:OnEvent("UPDATE_BINDINGS")
 check(button.attributes.usefallback == nil and next(button.overrides) == nil, "own key: extra action key not borrowed")
 check(button.HotKey.text == "F", "hotkey shows the own key")
+
+-- Native action-bar ownership must never borrow a keyboard or PAD extra-action
+-- binding. The independent quest button and its explicit binding remain usable.
+W.nativeBars = true
+W.bindings["CLICK AzeriteUIQuestItemButton:LeftButton"] = nil
+for _, extraKey in ipairs({ "Q", "PAD1" }) do
+	W.bindings.EXTRAACTIONBUTTON1 = { extraKey }
+	module:OnEvent("UPDATE_BINDINGS")
+	check(button.attributes.usefallback == nil and next(button.overrides) == nil,
+		"native bars: never borrows extra-action binding " .. extraKey)
+	check(button.HotKey.text == "", "native bars: no misleading borrowed hotkey " .. extraKey)
+	setState("extrabar", "on"); setState("extrabar", "off")
+	check(next(button.overrides) == nil, "native extra-action visibility cannot reactivate borrowing")
+end
+W.bindings["CLICK AzeriteUIQuestItemButton:LeftButton"] = { "F" }
+module:OnEvent("UPDATE_BINDINGS")
+check(button.HotKey.text == "F" and button.attributes.item == "item:5002", "native bars: explicit quest binding and item survive")
+check(module.db.profile.useExtraActionKey == true, "native bars: saved borrowing preference is preserved")
+W.nativeBars = false
 
 -- Disabled: empty and hidden.
 module.db.profile.enabled = false

@@ -438,7 +438,8 @@ QuestItem.GetHotkeyText = function(self)
 	local LAB = LibStub("LibActionButton-1.0-GE", true)
 	local pick = (LAB and LAB.PickHotkey) or function(key) return key end
 	local key = pick(GetBindingKey(self:GetClickBinding()))
-	if (not key and self.db.profile.useExtraActionKey) then
+	local nativeBars = ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive()
+	if (not key and self.db.profile.useExtraActionKey and not nativeBars) then
 		key = pick(GetBindingKey("EXTRAACTIONBUTTON1"))
 	end
 	if (not key) then return "" end
@@ -615,7 +616,10 @@ QuestItem.ApplyItem = function(self)
 	self.questID = itemID and self.pendingQuestID or nil
 
 	local enabled = self.db.profile.enabled
-	button:SetAttribute("usefallback", (enabled and self.db.profile.useExtraActionKey and not GetBindingKey(self:GetClickBinding())) and true or nil)
+	-- The native gamepad context may use this same physical key. Preserve an
+	-- explicit quest-item binding, but never borrow/override a native action key.
+	local nativeBars = ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive()
+	button:SetAttribute("usefallback", (enabled and self.db.profile.useExtraActionKey and not nativeBars and not GetBindingKey(self:GetClickBinding())) and true or nil)
 	button:SetAttribute("forceshow", (enabled and self.forceShow) and true or nil)
 	button:SetAttribute("item", (enabled and itemID) and ("item:"..itemID) or nil)
 

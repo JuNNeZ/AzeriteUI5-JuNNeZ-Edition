@@ -434,6 +434,7 @@ PetBar.UpdateFading = function(self)
 end
 
 PetBar.UpdateBindings = function(self)
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 	if (InCombatLockdown()) then return end
 	if (not next(self.buttons)) then return end
 
@@ -522,6 +523,7 @@ PetBar.UpdateVisibilityDriver = function(self)
 end
 
 PetBarMod.CreateBar = function(self)
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 	if (self.bar) then return end
 
 	local config = ns.GetConfig("PetActionButton")
@@ -668,6 +670,7 @@ end
 -- The whole refresh then counted against the key press, where BugSack caught a "script
 -- ran too long" (TODO 7.1). Requests are collected and served once, on the next frame.
 PetBarMod.QueuePetBarUpdate = function(self, updateState)
+	if (not self.bar) then return end
 	if (updateState) then
 		self.__AzeriteUI_PendingPetBarState = true
 	end
@@ -734,6 +737,7 @@ PetBarMod.UpdateEnabled = function(self)
 end
 
 PetBarMod.UpdateSettings = function(self)
+	if (not self.bar) then return end
 	if (InCombatLockdown()) then
 		self.needupdate = true
 		return
@@ -756,11 +760,13 @@ PetBarMod.UpdateSettings = function(self)
 end
 
 PetBarMod.RefreshConfig = function(self)
+	if (not self.bar) then return end
 	self.bar.config = self.db.profile
 	self:UpdateSettings()
 end
 
 PetBarMod.OnEvent = function(self, event, arg1)
+	if (not self.bar) then return end
 	if (event == "PLAYER_ENTERING_WORLD") then
 		self:UpdateSettings()
 
@@ -863,6 +869,8 @@ PetBarMod.OnAnchorEvent = function(self, event, ...)
 end
 
 PetBarMod.OnEnable = function(self)
+	-- Leave native pet/possess actions and their bindings with Blizzard until reload.
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 
 	self.db.profile.clickOnDown = ns:GetModule("ActionBars").db.profile.clickOnDown
 

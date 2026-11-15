@@ -69,6 +69,7 @@ lua Tools/Harness/mythicplus_harness.lua   .               # Mythic+ timer, forc
 lua Tools/Harness/whatsnew_harness.lua     .               # What's New popup: when it shows, Got it, combat, buttons
 lua Tools/Harness/unit_tier_harness.lua    .               # Novice/Hardened/Seasoned tiers and critters, any client or language
 lua Tools/Harness/addon_compat_harness.lua .               # ConsolePort icons, gamepad glyphs without it, portraits under a DialogueUI fade, the addon conflict prompt
+lua Tools/Harness/gamepadui_compat_harness.lua .           # Forever native action-bar ownership, reload/profile gates and untouched native frames
 lua Tools/Harness/bag_button_harness.lua   .               # the bag button beside the cog: secure route, switch, free slots
 lua Tools/Harness/worldmap_combat_harness.lua .            # world map with a protected map in combat: nothing blocked, replay after combat/hide
 lua Tools/Harness/proc_highlight_harness.lua .             # proc styles, preview/reset, riding visibility combinations
@@ -98,6 +99,35 @@ pages, ordinary short pages, full-path mover links, legacy section-label links
 and stale deferred scrolls. Navigation state never writes a profile value.
 Widget measurements are offline approximations; live layout and `/reload`
 checks remain in `Docs/Options Panel Test Battery.md`.
+
+`gamepadui_compat_harness.lua` loads the real Forever GamepadUI coordinator,
+Blizzard quarantine, action/pet/stance modules and action-bar binding prototype.
+It checks the character profile selected between initialization and enable,
+opt-in defaults, reload-only ownership, missing capabilities, rival addons, native
+frames loading late, and input transitions in combat. Recording frames prove
+that native bars, their buttons, endcaps and Edit Mode selections remain untouched
+while unrelated bag/status controls retain their existing suppression. Protected
+API entrypoints throw if replacement bars or bindings are created in native mode;
+both secure-snippet and fallback configurations run. Extra actions and vehicle
+exit retain native ownership. The real options generator covers the reload prompt,
+combat guards, conflict/capability explanations, switching off despite missing
+APIs, Defaults namespaces and the independent quest controls/keybind mode when
+the replacement ActionBars module is absent. These are offline ownership checks, not a live WoW
+taint, key-dispatch or rendering certification.
+
+Run each negative control separately after the root argument; each must fail:
+`default-on`, `live-owner`, `early-owner`, `no-forever-gate`,
+`requires-native-frame`, `ignore-conflicts`, `no-late-observation`,
+`quarantine-native`, `binding-writes`, `actionbars-start`, `pet-start`,
+`stance-start`, `vehicle-start`, `extra-start`, `option-defaults`, `option-combat`,
+`popup-combat`, `option-inaccessible`. Mutations operate on loaded source
+in memory and fail if their anchor no longer matches.
+
+`quest_item_button_harness.lua` also checks that native ownership preserves the
+independent quest button and its explicit binding, but never borrows keyboard or
+PAD bindings from the native extra-action button. The saved borrowing preference
+is retained for a later session. Run with `native-extra-key` after the root to
+remove those guards in memory; the regression checks must fail.
 
 `player_aura_enchant_harness.lua` loads the real `PlayerAuraContainers.lua` against a fake aura
 container whose item-enchantment calls check their inputs the way `Blizzard_CustomAuraContainer.lua`

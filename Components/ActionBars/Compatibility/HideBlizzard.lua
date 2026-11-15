@@ -26,6 +26,10 @@
 --]]
 local _, ns = ...
 
+local useNativeActionBars = function()
+	return ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive()
+end
+
 -- Blizzard's Edit Mode selection overlay ignores its parent's alpha and mouse state, so a
 -- bar we fade to nothing can still be highlighted and dragged in Edit Mode. The overlay
 -- is a plain child frame (not protected, not in the system registry), so hiding it from a
@@ -80,6 +84,9 @@ local EDIT_MODE_REPLACED = {
 -- An entry applies when it names no module, or any one of its modules is enabled and
 -- its own condition (if it has one) agrees.
 local isReplaced = function(entry)
+	if (useNativeActionBars() and (entry[1] == "MainMenuBarVehicleLeaveButton" or entry[1] == "ExtraAbilityContainer")) then
+		return false
+	end
 	if (not entry[2]) then return true end
 	for i = 2, #entry do
 		local module = ns:GetModule(entry[i], true)
@@ -111,7 +118,9 @@ local hideReplacedCheckboxes = function()
 	if (not container) then return end
 	for _, key in ipairs(EDIT_MODE_CHECKBOXES) do
 		local checkBox = container[key]
-		if (checkBox and checkBox.Hide) then checkBox:Hide() end
+		if (checkBox and checkBox.Hide and not (key == "VehicleLeaveButton" and useNativeActionBars())) then
+			checkBox:Hide()
+		end
 	end
 end
 
@@ -541,9 +550,13 @@ BlizzardABDisabler.NPE_LoadUI = function(self)
 end
 
 BlizzardABDisabler.HideBlizzard = function(self)
+	local nativeBars = useNativeActionBars()
 
 	for _, frameName in ipairs(HIDDEN_FRAME_NAMES) do
-		if (frameName ~= "BagsBar" or not IsBagBarOwnedByW2UI()) then
+		-- Keep both native UI styles operational for the entire session. In
+		-- particular PetActionBar must keep driving its gamepad visibility callback.
+		local replaced = not nativeBars or frameName == "BagsBar" or frameName == "StatusTrackingBarManager"
+		if (replaced and (frameName ~= "BagsBar" or not IsBagBarOwnedByW2UI())) then
 			quarantineFrame(_G[frameName])
 		end
 	end
@@ -553,7 +566,7 @@ BlizzardABDisabler.HideBlizzard = function(self)
 	-- (Blizzard_ActionBar/Camelot/MainMenuBarEndCaps.xml, EditModeMainActionBarEndCap*SystemTemplate),
 	-- with its own selection overlay that the main bar's does not cover.
 	local MainActionBar = _G.MainActionBar
-	if (MainActionBar and MainActionBar.EndCaps) then
+	if (not nativeBars and MainActionBar and MainActionBar.EndCaps) then
 		if (MainActionBar.EndCaps.LeftEndCap) then
 			MainActionBar.EndCaps.LeftEndCap:Hide()
 			ns.HideEditModeSelection(MainActionBar.EndCaps.LeftEndCap)
@@ -566,25 +579,27 @@ BlizzardABDisabler.HideBlizzard = function(self)
 
 	-- Keep Blizzard's secure buttons and event machinery alive, but make the
 	-- invisible buttons unable to intercept the AzeriteUI bars.
-	for i=1,12 do
-		quarantineFrame(_G["ActionButton" .. i])
-		quarantineFrame(_G["MultiBarBottomLeftButton" .. i])
-		quarantineFrame(_G["MultiBarBottomRightButton" .. i])
-		quarantineFrame(_G["MultiBarRightButton" .. i])
-		quarantineFrame(_G["MultiBarLeftButton" .. i])
-		quarantineFrame(_G["MultiBar5Button" .. i])
-		quarantineFrame(_G["MultiBar6Button" .. i])
-		quarantineFrame(_G["MultiBar7Button" .. i])
-	end
+	if (not nativeBars) then
+		for i=1,12 do
+			quarantineFrame(_G["ActionButton" .. i])
+			quarantineFrame(_G["MultiBarBottomLeftButton" .. i])
+			quarantineFrame(_G["MultiBarBottomRightButton" .. i])
+			quarantineFrame(_G["MultiBarRightButton" .. i])
+			quarantineFrame(_G["MultiBarLeftButton" .. i])
+			quarantineFrame(_G["MultiBar5Button" .. i])
+			quarantineFrame(_G["MultiBar6Button" .. i])
+			quarantineFrame(_G["MultiBar7Button" .. i])
+		end
 
-	-- Retail's stance, micro-menu and bag buttons can render independently of
-	-- their layout containers. Quarantine the actual click targets as well.
-	for i=1,10 do
-		quarantineFrame(_G["StanceButton" .. i])
-		quarantineFrame(_G["PetActionButton" .. i])
-	end
-	for i=1,2 do
-		quarantineFrame(_G["PossessButton" .. i])
+		-- Stance and pet buttons can render independently of their layout
+		-- containers. Quarantine the actual click targets as well.
+		for i=1,10 do
+			quarantineFrame(_G["StanceButton" .. i])
+			quarantineFrame(_G["PetActionButton" .. i])
+		end
+		for i=1,2 do
+			quarantineFrame(_G["PossessButton" .. i])
+		end
 	end
 	-- Leaving these alone is what gives the player Blizzard's bottom micro menu back.
 	-- The AzeriteUI cog wheel keeps working either way: its buttons are proxies that
@@ -595,9 +610,9 @@ BlizzardABDisabler.HideBlizzard = function(self)
 	end
 	suppressNamedBagControls()
 
-	if C_AddOns.IsAddOnLoaded("Blizzard_NewPlayerExperience") then
+	if not nativeBars and C_AddOns.IsAddOnLoaded("Blizzard_NewPlayerExperience") then
 		self:NPE_LoadUI()
-	elseif _G.NPE_LoadUI ~= nil and not self.npeHooked then
+	elseif not nativeBars and _G.NPE_LoadUI ~= nil and not self.npeHooked then
 		self:SecureHook("NPE_LoadUI")
 		self.npeHooked = true
 	end

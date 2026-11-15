@@ -2,6 +2,52 @@
 
 Eight main bars plus a pet bar and a stance bar. `/az` -> Action Bars.
 
+## Native controller bars on Forever
+
+**Use native controller bars** is off by default. Enable it in `/az` -> Action
+Bars, then accept the reload or run `/reload` outside combat. Blizzard takes over
+the action, pet and stance bars for both controller and keyboard/mouse, including
+its native `GamepadMainActionBarFrame`. The rest of the AzeriteUI HUD stays active.
+The selected bar system stays fixed until the next reload, including when you
+switch input devices in combat.
+
+Set controller bindings in the game's native settings. This mode preserves
+Blizzard's own action slots, modifiers, pages and pet/stance/possession handling;
+it does not translate the native controller slots onto AzeriteUI buttons. Saved
+bindings and AzeriteUI bar preferences are retained. Turn the option off and
+reload to restore the AzeriteUI bars with those preferences.
+
+Extra-action styling and the replacement vehicle-exit button also stand down.
+The independent quest-item button remains available with its own explicit
+binding; borrowing the Extra Action Button key is suspended for this session.
+
+The page remains available while AzeriteUI's bars are disabled. It shows the
+current session's state and any pending reload. ConsolePort (core or
+ConsolePort_Bar) and Bartender4 take precedence; disable the conflicting addon and
+reload before enabling this option. If the client lacks the required APIs, the
+integration stays inactive and existing bar behavior is preserved. A saved
+opt-in can still be turned off when either condition blocks activation.
+
+### Manual validation checklist
+
+The native controller integration requires in-game validation on Forever. Check:
+
+1. Enable the option and reload: Blizzard's bars appear without duplicate
+   AzeriteUI action, pet or stance bars; the rest of the HUD remains available.
+2. Use the native controller bindings, including modifiers and press/release
+   behavior. Confirm the intended action fires exactly once.
+3. Switch between controller and keyboard/mouse outside and during combat.
+   Blizzard continues to manage the bars, with no blocked-action errors.
+4. Test class forms/postures, pet commands and possession, both outside and
+   during combat. Confirm the displayed actions and bindings match.
+5. Check Edit Mode and reload/login persistence. Switch profiles and confirm
+   any change of bar system waits for a reload.
+6. Disable this option and reload: the prior AzeriteUI bar preferences return,
+   and saved bindings remain unchanged.
+7. Repeat with ConsolePort or Bartender4 enabled: the native compatibility
+   option reports the conflict, permits removing a saved opt-in, and does not
+   compete with the other bar addon.
+
 ## Global settings
 
 - **Hide Hotkeys** - remove keybind text from every action button, pet and stance bars included.

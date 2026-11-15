@@ -289,6 +289,7 @@ local SECTION_ICONS = {
 	party = "party", raid = "raid", raid5 = "raid", raid25 = "raid", raid40 = "raid",
 	groupIndicators = "corners", raidTools = "raid", targetMarkersLite = "raid",
 	rogue = "page:themes", shaman = "totem", stancebar = "stance", procHighlight = "proc",
+	gamepadUI = "page:actionbars",
 	assistedHighlight = "assist", questItemButton = "page:tracker", readyAlerts = "bell", visibility = "eye", autoHide = "eyeslash",
 	size = "resize", colors = "droplet", auraFilters = "funnel", contentSettings = "gate",
 	friendlyNPCNames = "friendly", tank = "shield", friendlyPlayers = "friendly", stacking = "gear", advanced = "wrench", utilities = "wrench",

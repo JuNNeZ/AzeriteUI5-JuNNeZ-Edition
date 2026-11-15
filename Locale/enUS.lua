@@ -1,4 +1,16 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "enUS", true, true)
+L["This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."] = true
+
+-- Forever native controller bar compatibility.
+L["Native controller bars (Forever)"] = true
+L["Use Blizzard's action, pet and stance bars for both controller and keyboard/mouse. The rest of AzeriteUI stays active. Changes apply after reloading; your AzeriteUI bar settings and saved bindings are preserved."] = true
+L["Use native controller bars"] = true
+L["The action bar system changes when the interface loads. Reload now?"] = true
+L["This session uses Blizzard's action bars. Configure their controller bindings in the game's settings."] = true
+L["Native controller bar compatibility is inactive this session."] = true
+L["Native controller bars cannot be enabled while %s is enabled. Disable that addon and reload first."] = true
+L["This client does not expose the required native controller bar APIs."] = true
+L["Your selection will take effect after /reload outside combat."] = true
 
 L["<Ctrl and Right-Click to undo last change>"] = true
 L["<Left-Click and drag to move>"] = true

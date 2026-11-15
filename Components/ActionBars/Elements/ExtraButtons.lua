@@ -268,13 +268,16 @@ end
 
 ExtraButtons.OnInitialize = function(self)
 	if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return self:Disable() end
+end
+
+ExtraButtons.OnEnable = function(self)
+	-- Ownership is selected after the parent addon activates the character's
+	-- profile. Install permanent styling hooks only after that decision.
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive()) then return self:Disable() end
 
 	if (ZoneAbilityFrame and ZoneAbilityFrame.UpdateDisplayedZoneAbilities) then
 		self:SecureHook(ZoneAbilityFrame, "UpdateDisplayedZoneAbilities", "UpdateZoneButtons")
 	end
-end
-
-ExtraButtons.OnEnable = function(self)
 	self:UpdateExtraButtons()
 	self:UpdateZoneButtons()
 	self:UpdateBindings()

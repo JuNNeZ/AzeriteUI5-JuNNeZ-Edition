@@ -273,6 +273,30 @@ with no portrait for the wheel to sit on. Every other frame still opens the whee
 
 Up to **8 action bars** (Retail) with per-bar configuration:
 
+#### Native controller bars on Forever
+
+In `/az` > Action Bars, **Use native controller bars** lets Blizzard manage the
+action, pet and stance bars, including `GamepadMainActionBarFrame`, while the rest
+of the AzeriteUI HUD stays active. The option is off by default and applies after
+`/reload` outside combat. While enabled, Blizzard also manages the bars when you
+switch back to keyboard/mouse; AzeriteUI does not take the bars back mid-session.
+Your AzeriteUI bar preferences and saved bindings are preserved.
+
+Native extra-action and vehicle-exit controls are also left with Blizzard. The
+independent quest-item button keeps its own explicit binding, but does not borrow
+the Extra Action Button key while native bar compatibility is active.
+
+Configure controller bindings through the game's native settings. ConsolePort
+(including ConsolePort_Bar) and Bartender4 take precedence: disable them and
+reload before enabling this mode. Clients without the required APIs keep their
+existing behavior. You can always turn a saved opt-in off from the Action Bars
+page, even if another bar addon or missing APIs prevented it from starting.
+
+This integration still needs in-game validation on Forever, especially input
+switching during combat, pet/stance/possession actions, and Edit Mode. See the
+[Action Bars guide](wiki/Action-Bars.md#native-controller-bars-on-forever) for the
+validation checklist.
+
 #### Global Settings
 
 - **Hide Hotkeys** — remove keybind text from all action buttons (also affects pet and stance bars)

@@ -482,6 +482,7 @@ StanceBar.UpdateFading = function(self)
 end
 
 StanceBar.UpdateBindings = function(self)
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 	if (InCombatLockdown()) then return end
 	if (not next(self.buttons)) then return end
 
@@ -511,6 +512,7 @@ StanceBar.UpdateBindings = function(self)
 end
 
 StanceBarMod.CreateBar = function(self)
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 	if (self.bar) then return end
 
 	local config = ns.GetConfig("StanceButton")
@@ -670,6 +672,7 @@ StanceBarMod.UpdateEnabled = function(self)
 end
 
 StanceBarMod.UpdateSettings = function(self)
+	if (not self.bar) then return end
 	if (InCombatLockdown()) then
 		self.needupdate = true
 		return
@@ -692,6 +695,7 @@ StanceBarMod.UpdateSettings = function(self)
 end
 
 StanceBarMod.RefreshConfig = function(self)
+	if (not self.bar) then return end
 	self.bar.config = self.db.profile
 	self:UpdateSettings()
 end
@@ -701,6 +705,7 @@ end
 -- bar, which out of combat also rebinds its keys and re-registers its fading. Requests are
 -- collected and served once, on the next frame, as the pet bar's are.
 StanceBarMod.QueueStanceBarUpdate = function(self, updateState)
+	if (not self.bar) then return end
 	if (updateState) then
 		self.__AzeriteUI_PendingStanceBarState = true
 	end
@@ -728,6 +733,7 @@ StanceBarMod.OnStanceBarUpdateTimer = function(self)
 end
 
 StanceBarMod.OnEvent = function(self, event, ...)
+	if (not self.bar) then return end
 	if (event == "UPDATE_SHAPESHIFT_COOLDOWN") then
 		self:QueueStanceBarUpdate()
 
@@ -813,6 +819,8 @@ StanceBarMod.OnAnchorEvent = function(self, event, ...)
 end
 
 StanceBarMod.OnEnable = function(self)
+	-- Native GamepadUI owns stance overrides; no replacement buttons are needed.
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 
 	self.db.profile.clickOnDown = ns:GetModule("ActionBars").db.profile.clickOnDown
 

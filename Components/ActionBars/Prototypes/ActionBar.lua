@@ -666,6 +666,7 @@ ActionBar.UpdateButtonLayout = function(self)
 end
 
 ActionBar.UpdateBindings = function(self)
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 	if (InCombatLockdown()) then return end
 	if (not next(self.buttons)) then return end
 
