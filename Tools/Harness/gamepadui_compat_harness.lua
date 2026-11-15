@@ -59,7 +59,7 @@ local mutants = {
 	["option-defaults"] = { OPTIONS, 'Defaults.Bind(options, "GamepadUICompatibility")', 'Defaults.Bind(options, "ActionBars")' },
 	["option-combat"] = { OPTIONS, "if (InCombatLockdown()) then return end", "", "local GenerateGamepadUIOptions" },
 	["popup-combat"] = { OPTIONS, "if (not InCombatLockdown()) then ReloadUI() end", "ReloadUI()", "local GenerateGamepadUIOptions" },
-	["option-inaccessible"] = { OPTIONS, "if (gamepadUI) then", "if (false) then" }
+	["option-inaccessible"] = { OPTIONS, "if (gamepadUI or questItemButton) then", "if (false) then" }
 }
 local function mutate(path, source)
 	local mutant = mutation and mutants[mutation]
