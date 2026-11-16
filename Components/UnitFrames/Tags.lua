@@ -1690,6 +1690,23 @@ Methods[prefix("*:Name")] = function(unit, realUnit, ...)
 	return name
 end
 
+-- The alternate player's crystal always shows the live amount, including zero.
+-- Keep secret payloads on the display path; bar caches may contain an old amount.
+Events[prefix("*:PlayerAlternatePower")] = "UNIT_POWER_FREQUENT UNIT_POWER_UPDATE UNIT_MAXPOWER UNIT_DISPLAYPOWER UNIT_POWER_BAR_SHOW UNIT_POWER_BAR_HIDE"
+Methods[prefix("*:PlayerAlternatePower")] = function(unit)
+	if (UnitIsDeadOrGhost(unit)) then return end
+	local _, powerType = GetFramePowerContext(_FRAME, unit)
+	local value = UnitPower(unit, powerType)
+	if (type(AbbreviateNumbers) == "function") then
+		local ok, formatted = API.TryCall(AbbreviateNumbers, value)
+		if (ok and formatted ~= nil) then
+			return formatted
+		end
+	end
+	-- oUF passes this directly to FontString:SetFormattedText, including secrets.
+	return value
+end
+
 Events[prefix("*:Power")] = "UNIT_POWER_FREQUENT UNIT_POWER_UPDATE UNIT_MAXPOWER UNIT_DISPLAYPOWER UNIT_POWER_BAR_SHOW UNIT_POWER_BAR_HIDE"
 Methods[prefix("*:Power")] = function(unit)
 	if (UnitIsDeadOrGhost(unit)) then
