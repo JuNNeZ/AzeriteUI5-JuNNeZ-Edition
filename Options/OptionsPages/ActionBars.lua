@@ -629,8 +629,116 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 	return options
 end
 
+-- The quest item button is independent of the replacement action bars. Keep
+-- its settings and binder reachable when another system owns those bars.
+local GenerateKeybindModeOption = function()
+	return {
+		name = L["Keybind Mode"],
+		desc = L["Hover any action button and press a key to bind it. Press Escape to clear the binding, and Enter or Escape outside a button to finish."],
+		order = 3,
+		type = "execute",
+		hidden = function() return not LibStub("LibKeyBound-1.0", true) end,
+		disabled = function() return InCombatLockdown() end,
+		func = function()
+			if (InCombatLockdown()) then return end
+			local KeyBound = LibStub("LibKeyBound-1.0", true)
+			if (not KeyBound) then return end
+			local options = ns:GetModule("Options", true)
+			if (options and options.CloseOptionsMenu) then
+				options:CloseOptionsMenu()
+			end
+			KeyBound:Toggle()
+		end
+	}
+end
+
+local GenerateQuestItemButtonOptions = function()
+	local quest = ns:GetModule("QuestItemButton", true)
+	if (not quest or not quest.db) then return end
+	local qget = function(info) return quest.db.profile[info[#info]] end
+	local qset = function(info, val) quest.db.profile[info[#info]] = val; quest:UpdateSettings() end
+	local qoff = function() return not quest.db.profile.enabled or quest:IsStandingDown() end
+	local nativeBars = function() return ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive() end
+	local options = {
+		name = L["Quest Item Button"], order = 72, type = "group",
+		args = {
+			description = {
+				name = function()
+					if (nativeBars()) then
+						return L["This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."]
+					end
+					return L["One button for the usable item of your nearest quest, styled as the extra action button. Move it with /lock. Bind it with Keybind Mode on this page, or leave it unbound to use your Extra Action Button key while no extra action is up."]
+				end,
+				type = "description", fontSize = "medium", order = 0
+			},
+			rival = {
+				name = function() return string_format(L["%s is enabled, so this button stays off until you choose which of the two to use."], ns.API.GetAddOnTitle("ExtraQuestButton")) end,
+				type = "description", fontSize = "medium", order = 0.5,
+				hidden = function() return not quest:IsStandingDown() end
+			},
+			chooseAgain = {
+				name = L["Choose again"], type = "execute", order = 0.6,
+				hidden = function() return not quest:HasRival() end,
+				func = function() quest:PromptRivalChoice() end
+			},
+			enabled = {
+				name = L["Enable"], type = "toggle", order = 1, width = "full",
+				disabled = function() return quest:IsStandingDown() end,
+				get = qget, set = qset
+			},
+			trackedOnly = {
+				name = L["Only tracked quests"],
+				desc = L["Only offer items for quests you track, world quests and bonus objectives. Off, any quest in your log with an objective on this map counts."],
+				type = "toggle", order = 2, width = "full", disabled = qoff, get = qget, set = qset
+			},
+			zoneOnly = {
+				name = L["Only quests in this zone"], type = "toggle", order = 3, width = "full",
+				disabled = qoff, get = qget, set = qset
+			},
+			maxDistance = {
+				name = L["Maximum distance (yards)"], type = "range", order = 4, width = "full",
+				min = 25, max = 5000, softMax = 2000, step = 25,
+				disabled = qoff, get = qget, set = qset
+			},
+			useExtraActionKey = {
+				name = L["Use the Extra Action Button key"],
+				desc = L["While the button has no key of its own, it borrows the key bound to the Extra Action Button. A Blizzard extra action takes the key back for as long as it is up."],
+				type = "toggle", order = 5, width = "full",
+				disabled = function() return qoff() or nativeBars() end,
+				get = qget,
+				set = function(info, val)
+					if (not nativeBars()) then qset(info, val) end
+				end
+			},
+			showQuestInTooltip = {
+				name = L["Show the quest in the tooltip"], type = "toggle", order = 6, width = "full",
+				disabled = qoff, get = qget, set = qset
+			}
+		}
+	}
+	if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+		ns.OptionsKit.Defaults.Bind(options, "QuestItemButton")
+	end
+	return options
+end
+
 local GenerateOptions = function()
-	if (not getmodule()) then return end
+	local nativeBars = ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive()
+	local questItemButton = GenerateQuestItemButtonOptions()
+	if (not getmodule() or nativeBars) then
+		-- Native ownership leaves the replacement bars disabled. The gameplay
+		-- prompt manages the handoff; keep the independent quest button reachable.
+		if (questItemButton) then
+			return {
+				name = L["Action Bar Settings"], type = "group",
+				args = {
+					questItemButton = questItemButton,
+					keybindMode = GenerateKeybindModeOption()
+				}
+			}
+		end
+		return
+	end
 
 	local setter = function(info,val)
 		local id = tonumber((string_match(info[#info - 1],"(%d+)")))
@@ -674,6 +782,7 @@ local GenerateOptions = function()
 		name = L["Action Bar Settings"],
 		type = "group", childGroups = "tree",
 		args = {
+			questItemButton = questItemButton,
 			description = {
 				name = L["ActionBars are banks of hotkeys that allow you to quickly access abilities and inventory items. Here you can activate additional ActionBars and control their behaviors."],
 				type = "description",
@@ -762,28 +871,7 @@ local GenerateOptions = function()
 					return value and true or false
 				end
 			},
-			-- The bars have carried LibKeyBound targets on every button for as
-			-- long as they have existed, and the library registers /kb itself,
-			-- so this button only surfaces behaviour that already shipped.
-			keybindMode = {
-				name = L["Keybind Mode"],
-				desc = L["Hover any action button and press a key to bind it. Press Escape to clear the binding, and Enter or Escape outside a button to finish."],
-				order = 3,
-				type = "execute",
-				hidden = function(info) return not LibStub("LibKeyBound-1.0", true) end,
-				disabled = function(info) return InCombatLockdown() end,
-				func = function(info)
-					local KeyBound = LibStub("LibKeyBound-1.0", true)
-					if (not KeyBound) then return end
-					-- The options window sits on top of the bars, so it has to
-					-- go away before there is anything to hover.
-					local options = ns:GetModule("Options", true)
-					if (options and options.CloseOptionsMenu) then
-						options:CloseOptionsMenu()
-					end
-					KeyBound:Toggle()
-				end
-			},
+			keybindMode = GenerateKeybindModeOption(),
 			showEmptyButtons = {
 				name = L["Show empty buttons"],
 				desc = L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."],
@@ -1029,64 +1117,6 @@ local GenerateOptions = function()
 
 	-- The micro menu has its own page (OptionsPages/MicroMenu.lua) and the dismount
 	-- button, which follows the minimap, sits on the Minimap page.
-
-	-- Quest Item Button (Elements/QuestItemButton.lua), its own module and mover.
-	local quest = ns:GetModule("QuestItemButton", true)
-	if (quest and quest.db) then
-		local qget = function(info) return quest.db.profile[info[#info]] end
-		local qset = function(info, val) quest.db.profile[info[#info]] = val; quest:UpdateSettings() end
-		local qoff = function() return not quest.db.profile.enabled or quest:IsStandingDown() end
-		options.args.questItemButton = {
-			name = L["Quest Item Button"], order = 72, type = "group",
-			args = {
-				description = {
-					name = L["One button for the usable item of your nearest quest, styled as the extra action button. Move it with /lock. Bind it with Keybind Mode on this page, or leave it unbound to use your Extra Action Button key while no extra action is up."],
-					type = "description", fontSize = "medium", order = 0
-				},
-				rival = {
-					name = function() return string_format(L["%s is enabled, so this button stays off until you choose which of the two to use."], ns.API.GetAddOnTitle("ExtraQuestButton")) end,
-					type = "description", fontSize = "medium", order = 0.5,
-					hidden = function() return not quest:IsStandingDown() end
-				},
-				chooseAgain = {
-					name = L["Choose again"], type = "execute", order = 0.6,
-					hidden = function() return not quest:HasRival() end,
-					func = function() quest:PromptRivalChoice() end
-				},
-				enabled = {
-					name = L["Enable"], type = "toggle", order = 1, width = "full",
-					disabled = function() return quest:IsStandingDown() end,
-					get = qget, set = qset
-				},
-				trackedOnly = {
-					name = L["Only tracked quests"],
-					desc = L["Only offer items for quests you track, world quests and bonus objectives. Off, any quest in your log with an objective on this map counts."],
-					type = "toggle", order = 2, width = "full", disabled = qoff, get = qget, set = qset
-				},
-				zoneOnly = {
-					name = L["Only quests in this zone"], type = "toggle", order = 3, width = "full",
-					disabled = qoff, get = qget, set = qset
-				},
-				maxDistance = {
-					name = L["Maximum distance (yards)"], type = "range", order = 4, width = "full",
-					min = 25, max = 5000, softMax = 2000, step = 25,
-					disabled = qoff, get = qget, set = qset
-				},
-				useExtraActionKey = {
-					name = L["Use the Extra Action Button key"],
-					desc = L["While the button has no key of its own, it borrows the key bound to the Extra Action Button. A Blizzard extra action takes the key back for as long as it is up."],
-					type = "toggle", order = 5, width = "full", disabled = qoff, get = qget, set = qset
-				},
-				showQuestInTooltip = {
-					name = L["Show the quest in the tooltip"], type = "toggle", order = 6, width = "full",
-					disabled = qoff, get = qget, set = qset
-				}
-			}
-		}
-		if (ns.OptionsKit and ns.OptionsKit.Defaults) then
-			ns.OptionsKit.Defaults.Bind(options.args.questItemButton, "QuestItemButton")
-		end
-	end
 
 	return options
 end

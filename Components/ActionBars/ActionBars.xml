@@ -1,6 +1,10 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
 
 	<!-- Compatibility -->
+	<!-- Decide session ownership before any module installs native-bar hooks. -->
+	<Script file="Compatibility\HandleGamepadUI.lua"/>
+	<Script file="Compatibility\InputStylePrompt.lua"/>
+	<Script file="Compatibility\HandleInputStyle.lua"/>
 	<Script file="Compatibility\HideBlizzard.lua"/>
 	<Script file="Compatibility\HandleBartender.lua"/>
 	<Script file="Compatibility\HandleConsolePort.lua"/>

@@ -76,4 +76,77 @@ power.cur, power.max = 0, 0
 UpdatePower(frame, "ForceUpdate", "party1")
 check(frame.Power.hi == 100, "zero max keeps the cached fallback")
 
-print("Power secret: " .. checks .. " checks passed (offline only).")
+-- Alternate player: exercise its real visibility callback inside UpdatePower,
+-- including the shared HidePowerTexts call that used to undo Value:Show().
+local function readSource(path)
+	local file = assert(io.open(root .. "/" .. path))
+	local source = file:read("*a")
+	file:close()
+	return source
+end
+local alternateSource = readSource("Components/UnitFrames/Units/PlayerAlternate.lua")
+local visibility = assert(alternateSource:match("local Power_UpdateVisibility = (function.-)\nend")) .. "\nend"
+local dead = false
+UnitIsDeadOrGhost = function() return dead end
+local postUpdate = assert(loadstring("local HideSaiyaRattBlizzardAltPowerBar = function() end\nreturn " .. visibility))()
+local function widget()
+	return {
+		Show = function(self) self.shown = true end,
+		Hide = function(self) self.shown = false end
+	}
+end
+frame = newFrame()
+frame.Power.Show, frame.Power.Hide = widget().Show, widget().Hide
+frame.Power.Value, frame.Power.Backdrop = widget(), widget()
+frame.Power.PostUpdate = postUpdate
+local function update(curValue, maxValue)
+	power.cur, power.max = curValue, maxValue
+	UpdatePower(frame, "UNIT_POWER_FREQUENT", "party1")
+end
+update(120000, 250000)
+check(frame.Power.Value.shown, "alternate value survives shared text hiding")
+update(5000, 250000)
+check(frame.Power.Value.shown, "alternate value stays visible after spending mana")
+update(0, 250000)
+check(frame.Power.shown and frame.Power.Value.shown, "zero mana keeps crystal and value visible")
+update(secret(5000), secret(250000))
+check(frame.Power.Value.shown, "restricted mana keeps value visible")
+dead = true
+update(0, 250000)
+check(not frame.Power.Value.shown, "dead player retains hidden value")
+dead = false
+update(250000, 250000)
+check(frame.Power.Value.shown, "value returns after resurrection")
+postUpdate(frame.Power, "party1", 0, 0, 0)
+check(not frame.Power.Value.shown, "no resource hides the crystal")
+
+local rangeRead = assert(alternateSource:match("local powerMin, powerMax = 0, 0.-\n\tend"))
+local readRange = assert(loadstring("return function(power) " .. rangeRead .. "\nreturn powerMin, powerMax end"))()
+local lo, hi = readRange({ GetMinMaxValues = function() return 0, 250000 end })
+check(lo == 0 and hi == 250000, "texture refresh preserves both range returns")
+
+-- Exercise the actual dedicated tag with a stale bar cache and live API values.
+local tagSource = readSource("Components/UnitFrames/Tags.lua")
+local tagBody = assert(tagSource:match('Methods%[prefix%("%*:PlayerAlternatePower"%)%] = (function.-)\nend')) .. "\nend"
+local tagFrame = { Power = { safeCur = 250000, displayType = 0 } }
+local formatterFails = false
+local formatter = function(value)
+	if formatterFails then error("formatter unavailable") end
+	if issecretvalue(value) then return value end
+	return tostring(value)
+end
+local tag = assert(loadstring("local API, AbbreviateNumbers, GetFramePowerContext, _FRAME = ...\nreturn " .. tagBody))(
+	ns.API, formatter, function(f) return f.Power, f.Power.displayType end, tagFrame)
+power.cur = 5000
+check(tag("party1") == "5000", "live amount wins over stale bar cache")
+power.cur = 0
+check(tag("party1") == "0", "tag renders zero")
+power.cur = 120000
+check(tag("party1") == "120000", "tag follows regeneration")
+power.cur = secret(5000)
+check(tag("party1") == power.cur, "secret payload reaches display without arithmetic")
+formatterFails = true
+check(tag("party1") == power.cur, "formatter failure preserves raw display payload")
+check(alternateSource:find('self:Tag(powerValue, prefix("[*:PlayerAlternatePower]"))', 1, true), "alternate crystal uses dedicated tag")
+
+print("Power secret and alternate player: " .. checks .. " checks passed (offline only).")

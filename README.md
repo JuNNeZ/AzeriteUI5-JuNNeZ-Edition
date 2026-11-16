@@ -273,6 +273,43 @@ with no portrait for the wheel to sit on. Every other frame still opens the whee
 
 Up to **8 action bars** (Retail) with per-bar configuration:
 
+#### Native controller bars on Forever
+
+AzeriteUI automatically offers a **Yes/No prompt while you play**, without opening
+settings first. With AzeriteUI bars active, controller movement can offer Blizzard's
+native controller bars. With native bars active, keyboard movement or losing the
+last connected controller can offer the AzeriteUI keyboard/mouse bars again.
+
+**Yes** saves the corresponding bar system and input style, then reloads the
+interface. **No** keeps the current bars. Other AzeriteUI HUD elements stay active,
+and returning to AzeriteUI restores your saved bar preferences and bindings.
+The prompt waits outside combat; moving a stick or pressing a movement key never
+changes bars or reloads by itself.
+
+This workflow uses only the on-screen Yes/No prompt. There are no native-bar or
+input-change configuration sections in the AzeriteUI menu.
+
+During a native-bar session Blizzard manages action, pet and stance bars, including
+`GamepadMainActionBarFrame`, plus extra-action and vehicle-exit controls. The
+independent quest-item button retains its own explicit binding without borrowing
+the Extra Action Button key. Configure native controller bindings in the game.
+Bar ownership changes only through a reload, never through protected frame
+transfers while playing.
+
+ConsolePort, ConsolePort_Bar and Bartender4 prevent this takeover.
+GamePadReadySet pauses the automatic prompts without disabling an already active
+native-bar session. Unsupported clients retain their existing behavior.
+
+On Forever 1.60.1 build 70938, a diagnostic click automatically reloaded into the
+requested style. A timer attempt raised `ADDON_ACTION_BLOCKED` while still saving
+the CVar and leaving the effective style unchanged. The automatic detector
+therefore only asks; the user's Yes click performs the change.
+
+The maintainer has tested and approved the normal controller-to-keyboard
+round trip through the automatic Yes/No prompts in game. See the
+[Action Bars guide](wiki/Action-Bars.md#native-controller-bars-on-forever) for the
+behavior and extended regression checklist.
+
 #### Global Settings
 
 - **Hide Hotkeys** — remove keybind text from all action buttons (also affects pet and stance bars)

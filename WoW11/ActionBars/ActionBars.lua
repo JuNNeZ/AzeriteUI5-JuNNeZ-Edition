@@ -61,6 +61,10 @@ ActionBarMod.DelayedEnable = function(self)
 	self.buttons = {}
 	self.anchors = {}
 
+	-- This delayed path replaces the shared initializer on WoW11 clients. Keep
+	-- its database available, while preserving the session's native bar ownership.
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
+
 	self:Enable()
 
 	ns:GetModule("PetBar"):Enable()

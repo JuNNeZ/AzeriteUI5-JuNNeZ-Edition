@@ -1,4 +1,11 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "enUS", true, true)
+L["This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."] = true
+
+-- Forever input change prompts (explicit application only).
+L["Switch to Blizzard controller bars? The interface will reload. Other AzeriteUI elements stay active."] = true
+L["Return to AzeriteUI action bars for keyboard/mouse? The interface will reload. Your saved bar settings will be restored."] = true
+L["The style change was not confirmed. No automatic retry will occur."] = true
+L["Your selection will take effect after /reload outside combat."] = true
 
 L["<Ctrl and Right-Click to undo last change>"] = true
 L["<Left-Click and drag to move>"] = true

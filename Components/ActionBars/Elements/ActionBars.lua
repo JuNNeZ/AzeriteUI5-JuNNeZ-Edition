@@ -546,6 +546,7 @@ local style = function(self, shape)
 end
 
 ActionBarMod.CreateBars = function(self)
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 	if (next(self.bars)) then return end
 
 	for i = 1,#BAR_TO_ID do
@@ -762,6 +763,7 @@ ActionBarMod.UpdateBarButtonCounts = function(self)
 end
 
 ActionBarMod.UpdateBindings = function(self, event)
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 	if (InCombatLockdown()) then
 		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateBindings")
 	end
@@ -887,6 +889,7 @@ ActionBarMod.UpdateEnabled = function(self, event)
 end
 
 ActionBarMod.UpdateSettings = function(self, event)
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 	if (InCombatLockdown()) then
 		return self:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateSettings")
 	end
@@ -1096,6 +1099,9 @@ ActionBarMod.OnQuickKeybindAddOnLoaded = function(self, event, addon)
 end
 
 ActionBarMod.OnEnable = function(self)
+	-- Ownership is fixed until reload. Keep the namespace available to options,
+	-- but do not build buttons, bindings, timers or Quick Keybind hooks for this session.
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility.IsActive()) then return end
 
 	self:CreateBars()
 

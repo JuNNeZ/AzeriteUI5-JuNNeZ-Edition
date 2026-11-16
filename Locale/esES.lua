@@ -1,6 +1,14 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "esES") or LibStub("AceLocale-3.0"):NewLocale((...), "esMX")
 if (not L) then return end
 
+-- Forever input change prompts (explicit application only).
+L["Switch to Blizzard controller bars? The interface will reload. Other AzeriteUI elements stay active."] = "¿Cambiar a las barras de Blizzard para mando? Se recargará la interfaz. Los demás elementos de AzeriteUI seguirán activos."
+L["Return to AzeriteUI action bars for keyboard/mouse? The interface will reload. Your saved bar settings will be restored."] = "¿Volver a las barras de acción de AzeriteUI para teclado/ratón? Se recargará la interfaz. Se restaurará la configuración guardada de tus barras."
+L["The style change was not confirmed. No automatic retry will occur."] = "No se ha confirmado el cambio de estilo. No se reintentará automáticamente."
+
+L["This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."] = "This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."
+L["Your selection will take effect after /reload outside combat."] = "Your selection will take effect after /reload outside combat."
+
 L["<Ctrl and Right-Click to undo last change>"] = "<Ctrl + clic derecho para deshacer el último cambio>"
 L["<Left-Click and drag to move>"] = "<Clic izquierdo y arrastrar para mover>"
 L["<MouseWheel to change scale>"] = "<Rueda del ratón para cambiar la escala>"

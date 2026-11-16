@@ -1,6 +1,14 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "deDE")
 if (not L) then return end
 
+-- Forever input change prompts (explicit application only).
+L["Switch to Blizzard controller bars? The interface will reload. Other AzeriteUI elements stay active."] = "Zu Blizzards Controller-Leisten wechseln? Die Oberfläche wird neu geladen. Andere AzeriteUI-Elemente bleiben aktiv."
+L["Return to AzeriteUI action bars for keyboard/mouse? The interface will reload. Your saved bar settings will be restored."] = "Zu AzeriteUIs Aktionsleisten für Tastatur/Maus zurückkehren? Die Oberfläche wird neu geladen. Deine gespeicherten Leisteneinstellungen werden wiederhergestellt."
+L["The style change was not confirmed. No automatic retry will occur."] = "Der Stilwechsel wurde nicht bestätigt. Es erfolgt kein automatischer Wiederholungsversuch."
+
+L["This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."] = "This button uses the item of your nearest quest. Move it with /lock and assign its own key with Keybind Mode. Native bars keep the Extra Action Button key; your saved choice to borrow that key applies again after disabling native bars and reloading."
+L["Your selection will take effect after /reload outside combat."] = "Your selection will take effect after /reload outside combat."
+
 L["<Ctrl and Right-Click to undo last change>"] = "<Strg + Rechtsklick zum Rückgängigmachen>"
 L["<Left-Click and drag to move>"] = "<Linksklick und ziehen zum Verschieben>"
 L["<MouseWheel to change scale>"] = "<Mausrad zum Ändern der Skalierung>"

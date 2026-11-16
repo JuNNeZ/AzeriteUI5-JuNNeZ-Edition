@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: AzeriteUI Input Probe (diagnostic)
+## Notes: Explicit, isolated input-style diagnostics. A requested test may reload the UI.
+## Author: AzeriteUI contributors
+## Version: 1
+## SavedVariables: AzeriteUI_InputProbeDB
+
+Probe.lua

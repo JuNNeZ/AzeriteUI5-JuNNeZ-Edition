@@ -217,6 +217,7 @@ VehicleExit.OnEvent = function(self, event, ...)
 end
 
 VehicleExit.OnEnable = function(self)
+	if (ns.GamepadUICompatibility and ns.GamepadUICompatibility:IsActive()) then return self:Disable() end
 
 	local config = ns.GetConfig("VehicleExitButton")
 

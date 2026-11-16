@@ -555,13 +555,12 @@ end
 -- Hide power crystal when no power exists.
 local Power_UpdateVisibility = function(element, unit, cur, min, max)
 	HideSaiyaRattBlizzardAltPowerBar()
-	-- Check if values are secret before comparison
-	if (issecretvalue and (issecretvalue(cur) or issecretvalue(max))) then
-		-- Can't determine visibility with secret values - assume visible
-		element:Show()
-		element.Backdrop:Show()
-		element.Value:Show()
-	elseif (UnitIsDeadOrGhost(unit) or max == 0 or cur == 0) then
+	-- An empty resource is still a valid resource. Only inspect a readable max.
+	local hasPower = (issecretvalue and issecretvalue(max)) or (type(max) == "number" and max > 0)
+	local showPower = not UnitIsDeadOrGhost(unit) and hasPower
+	-- UpdatePower applies HidePowerTexts after this callback.
+	element.__AzeriteUI_KeepValueVisible = showPower
+	if (not showPower) then
 		element:Hide()
 		element.Backdrop:Hide()
 		element.Value:Hide()
@@ -802,7 +801,10 @@ local UnitFrame_UpdateTextures = function(self)
 	end
 	Power_PostUpdateColor(power, self.unit)
 	local powerCur = power.GetValue and power:GetValue() or 0
-	local powerMin, powerMax = power.GetMinMaxValues and power:GetMinMaxValues() or 0, 0
+	local powerMin, powerMax = 0, 0
+	if (power.GetMinMaxValues) then
+		powerMin, powerMax = power:GetMinMaxValues()
+	end
 	Power_UpdateVisibility(power, self.unit, powerCur, powerMin, powerMax)
 
 	ns:Fire("UnitFrame_Target_Updated", unit, key)
@@ -1141,7 +1143,7 @@ local style = function(self, unit, id)
 	powerValue:SetJustifyV(db.PowerValueJustifyV)
 	powerValue:SetFontObject(db.PowerValueFont)
 	powerValue:SetTextColor(unpack(db.PowerValueColor))
-	self:Tag(powerValue, prefix("[*:Power]"))
+	self:Tag(powerValue, prefix("[*:PlayerAlternatePower]"))
 
 	self.Power.Value = powerValue
 
