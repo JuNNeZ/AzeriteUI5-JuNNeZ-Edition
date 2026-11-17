@@ -44,6 +44,7 @@
 local Addon, ns = ...
 
 local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
+local LFF = LibStub("LibFadingFrames-1.0")
 
 local QuestItem = ns:NewModule("QuestItemButton", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0")
 
@@ -73,6 +74,7 @@ local defaults = { profile = ns:Merge({
 	zoneOnly = false,
 	maxDistance = 1000,
 	useExtraActionKey = true,
+	onlyShowOnMouseover = false,
 	showQuestInTooltip = true
 }, ns.MovableModulePrototype.defaults) }
 
@@ -438,7 +440,8 @@ QuestItem.GetHotkeyText = function(self)
 	local LAB = LibStub("LibActionButton-1.0-GE", true)
 	local pick = (LAB and LAB.PickHotkey) or function(key) return key end
 	local key = pick(GetBindingKey(self:GetClickBinding()))
-	if (not key and self.db.profile.useExtraActionKey) then
+	local nativeBars = ns.NativeController and ns.NativeController.IsActive()
+	if (not key and self.db.profile.useExtraActionKey and not nativeBars) then
 		key = pick(GetBindingKey("EXTRAACTIONBUTTON1"))
 	end
 	if (not key) then return "" end
@@ -557,6 +560,16 @@ end
 
 -- Display
 --------------------------------------------
+QuestItem.UpdateFading = function(self)
+	local button = self.button
+	if (not button) then return end
+	if (self.db.profile.enabled and self.db.profile.onlyShowOnMouseover and not self.forceShow) then
+		LFF:RegisterFrameForFading(button, "QuestItemButton")
+	else
+		LFF:UnregisterFrameForFading(button)
+	end
+end
+
 QuestItem.UpdateCount = function(self)
 	local button = self.button
 	if (not button) then return end
@@ -608,6 +621,7 @@ QuestItem.ApplyItem = function(self)
 		return
 	end
 	self.applyPending = nil
+	self:UpdateFading()
 
 	local link = self.pendingLink
 	local itemID = link and GetItemIDFromLink(link)
@@ -615,7 +629,13 @@ QuestItem.ApplyItem = function(self)
 	self.questID = itemID and self.pendingQuestID or nil
 
 	local enabled = self.db.profile.enabled
-	button:SetAttribute("usefallback", (enabled and self.db.profile.useExtraActionKey and not GetBindingKey(self:GetClickBinding())) and true or nil)
+	-- Hover, range and checked-state handlers receive the button, not the module.
+	button.itemLink = enabled and self.itemLink or nil
+	button.questID = enabled and self.questID or nil
+	-- Native bars retain their extra-action keys. An explicit quest-item CLICK
+	-- binding stays usable without adding an override for a native action key.
+	local nativeBars = ns.NativeController and ns.NativeController.IsActive()
+	button:SetAttribute("usefallback", (enabled and self.db.profile.useExtraActionKey and not nativeBars and not GetBindingKey(self:GetClickBinding())) and true or nil)
 	button:SetAttribute("forceshow", (enabled and self.forceShow) and true or nil)
 	button:SetAttribute("item", (enabled and itemID) and ("item:"..itemID) or nil)
 

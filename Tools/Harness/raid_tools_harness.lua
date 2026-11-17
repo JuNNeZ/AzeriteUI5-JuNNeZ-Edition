@@ -111,6 +111,8 @@ SetDungeonDifficultyID=function(id) record("dungeonDifficulty",id) end
 StaticPopupDialogs={}
 local popup
 StaticPopup_Show=function(key,_,_,data) popup={key=key,data=data} end
+ns.API.PopupDialogs=StaticPopupDialogs
+ns.API.ShowPopup=function(...) return StaticPopup_Show(...) end
 
 -- Optional second argument loads an alternate RaidTools module for negative controls.
 local function load(relative)

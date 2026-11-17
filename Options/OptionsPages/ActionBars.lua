@@ -129,8 +129,8 @@ local ShapeOption = function(name, desc, order, hidden, get, set)
 			if (get(info) == val) then return end
 			set(info, val)
 			local key = "AZERITEUI_ACTIONBAR_SHAPE_RELOAD"
-			if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
-				StaticPopupDialogs[key] = {
+			if (ns.API.PopupDialogs and not ns.API.PopupDialogs[key]) then
+				ns.API.PopupDialogs[key] = {
 					text = L["Button shapes apply when the interface loads. Reload now?"],
 					button1 = L["Reload UI"],
 					button2 = _G.CANCEL or "Cancel",
@@ -141,7 +141,7 @@ local ShapeOption = function(name, desc, order, hidden, get, set)
 					preferredIndex = 3
 				}
 			end
-			if (StaticPopup_Show) then StaticPopup_Show(key) end
+			if (ns.API.ShowPopup) then ns.API.ShowPopup(key) end
 		end,
 		get = get
 	}
@@ -629,6 +629,102 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 	return options
 end
 
+local GenerateKeybindModeOption = function()
+	return {
+		name = L["Keybind Mode"],
+		desc = L["Hover any action button and press a key to bind it. Press Escape to clear the binding, and Enter or Escape outside a button to finish."],
+		order = 3,
+		type = "execute",
+		hidden = function(info) return not LibStub("LibKeyBound-1.0", true) end,
+		disabled = function(info) return InCombatLockdown() end,
+		func = function(info)
+			if InCombatLockdown() then return end
+			local KeyBound = LibStub("LibKeyBound-1.0", true)
+			if (not KeyBound) then return end
+			-- The options window sits on top of the bars, so it has to
+			-- go away before there is anything to hover.
+			local options = ns:GetModule("Options", true)
+			if (options and options.CloseOptionsMenu) then
+				options:CloseOptionsMenu()
+			end
+			KeyBound:Toggle()
+		end
+	}
+end
+
+-- Independent quest settings remain available when native bars own the action bars.
+local GenerateQuestItemButtonOptions = function()
+	local quest = ns:GetModule("QuestItemButton", true)
+	if (quest and quest.db) then
+		local qget = function(info) return quest.db.profile[info[#info]] end
+		local qset = function(info, val) quest.db.profile[info[#info]] = val; quest:UpdateSettings() end
+		local qoff = function() return not quest.db.profile.enabled or quest:IsStandingDown() end
+		local nativeBars = function() return ns.NativeController and ns.NativeController.IsActive() end
+		local group = {
+			name = L["Quest Item Button"], order = 72, type = "group",
+			args = {
+				description = {
+					name = function()
+						if nativeBars() then
+							return L["Native controller bars keep the Extra Action Button key. Assign this button its own key with Keybind Mode."]
+						end
+						return L["One button for the usable item of your nearest quest, styled as the extra action button. Move it with /lock. Bind it with Keybind Mode on this page, or leave it unbound to use your Extra Action Button key while no extra action is up."]
+					end,
+					type = "description", fontSize = "medium", order = 0
+				},
+				rival = {
+					name = function() return string_format(L["%s is enabled, so this button stays off until you choose which of the two to use."], ns.API.GetAddOnTitle("ExtraQuestButton")) end,
+					type = "description", fontSize = "medium", order = 0.5,
+					hidden = function() return not quest:IsStandingDown() end
+				},
+				chooseAgain = {
+					name = L["Choose again"], type = "execute", order = 0.6,
+					hidden = function() return not quest:HasRival() end,
+					func = function() quest:PromptRivalChoice() end
+				},
+				enabled = {
+					name = L["Enable"], type = "toggle", order = 1, width = "full",
+					disabled = function() return quest:IsStandingDown() end,
+					get = qget, set = qset
+				},
+				trackedOnly = {
+					name = L["Only tracked quests"],
+					desc = L["Only offer items for quests you track, world quests and bonus objectives. Off, any quest in your log with an objective on this map counts."],
+					type = "toggle", order = 2, width = "full", disabled = qoff, get = qget, set = qset
+				},
+				zoneOnly = {
+					name = L["Only quests in this zone"], type = "toggle", order = 3, width = "full",
+					disabled = qoff, get = qget, set = qset
+				},
+				maxDistance = {
+					name = L["Maximum distance (yards)"], type = "range", order = 4, width = "full",
+					min = 25, max = 5000, softMax = 2000, step = 25,
+					disabled = qoff, get = qget, set = qset
+				},
+				useExtraActionKey = {
+					name = L["Use the Extra Action Button key"],
+					desc = L["While the button has no key of its own, it borrows the key bound to the Extra Action Button. A Blizzard extra action takes the key back for as long as it is up."],
+					type = "toggle", order = 5, width = "full", get = qget,
+					disabled = function() return qoff() or nativeBars() end,
+					set = function(info, val) if not nativeBars() then qset(info, val) end end
+				},
+				showQuestInTooltip = {
+					name = L["Show the quest in the tooltip"], type = "toggle", order = 6, width = "full",
+					disabled = qoff, get = qget, set = qset
+				},
+				onlyShowOnMouseover = {
+					name = L["Only show on mouseover"], type = "toggle", order = 7, width = "full",
+					disabled = qoff, get = qget, set = qset
+				}
+			}
+		}
+		if (ns.OptionsKit and ns.OptionsKit.Defaults) then
+			ns.OptionsKit.Defaults.Bind(group, "QuestItemButton")
+		end
+		return group
+	end
+end
+
 local GenerateOptions = function()
 	if (not getmodule()) then return end
 
@@ -765,25 +861,7 @@ local GenerateOptions = function()
 			-- The bars have carried LibKeyBound targets on every button for as
 			-- long as they have existed, and the library registers /kb itself,
 			-- so this button only surfaces behaviour that already shipped.
-			keybindMode = {
-				name = L["Keybind Mode"],
-				desc = L["Hover any action button and press a key to bind it. Press Escape to clear the binding, and Enter or Escape outside a button to finish."],
-				order = 3,
-				type = "execute",
-				hidden = function(info) return not LibStub("LibKeyBound-1.0", true) end,
-				disabled = function(info) return InCombatLockdown() end,
-				func = function(info)
-					local KeyBound = LibStub("LibKeyBound-1.0", true)
-					if (not KeyBound) then return end
-					-- The options window sits on top of the bars, so it has to
-					-- go away before there is anything to hover.
-					local options = ns:GetModule("Options", true)
-					if (options and options.CloseOptionsMenu) then
-						options:CloseOptionsMenu()
-					end
-					KeyBound:Toggle()
-				end
-			},
+			keybindMode = GenerateKeybindModeOption(),
 			showEmptyButtons = {
 				name = L["Show empty buttons"],
 				desc = L["Show the empty slots on your action bars as blank buttons. Turn this off to show only the buttons you have actually put something on. Empty buttons fade with the rest of the bar when bar fading is enabled."],
@@ -828,8 +906,8 @@ local GenerateOptions = function()
 					if ((getter(info) and true or false) == (val and true or false)) then return end
 					getmodule().db.profile.masque = val and true or false
 					local key = "AZERITEUI_ACTIONBAR_MASQUE_RELOAD"
-					if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
-						StaticPopupDialogs[key] = {
+					if (ns.API.PopupDialogs and not ns.API.PopupDialogs[key]) then
+						ns.API.PopupDialogs[key] = {
 							text = L["Masque takes over the buttons, or hands them back, when the interface loads. Reload now?"],
 							button1 = L["Reload UI"],
 							button2 = _G.CANCEL or "Cancel",
@@ -840,7 +918,7 @@ local GenerateOptions = function()
 							preferredIndex = 3
 						}
 					end
-					if (StaticPopup_Show) then StaticPopup_Show(key) end
+					if (ns.API.ShowPopup) then ns.API.ShowPopup(key) end
 				end,
 				get = getter
 			},
@@ -1030,65 +1108,59 @@ local GenerateOptions = function()
 	-- The micro menu has its own page (OptionsPages/MicroMenu.lua) and the dismount
 	-- button, which follows the minimap, sits on the Minimap page.
 
-	-- Quest Item Button (Elements/QuestItemButton.lua), its own module and mover.
-	local quest = ns:GetModule("QuestItemButton", true)
-	if (quest and quest.db) then
-		local qget = function(info) return quest.db.profile[info[#info]] end
-		local qset = function(info, val) quest.db.profile[info[#info]] = val; quest:UpdateSettings() end
-		local qoff = function() return not quest.db.profile.enabled or quest:IsStandingDown() end
-		options.args.questItemButton = {
-			name = L["Quest Item Button"], order = 72, type = "group",
-			args = {
-				description = {
-					name = L["One button for the usable item of your nearest quest, styled as the extra action button. Move it with /lock. Bind it with Keybind Mode on this page, or leave it unbound to use your Extra Action Button key while no extra action is up."],
-					type = "description", fontSize = "medium", order = 0
-				},
-				rival = {
-					name = function() return string_format(L["%s is enabled, so this button stays off until you choose which of the two to use."], ns.API.GetAddOnTitle("ExtraQuestButton")) end,
-					type = "description", fontSize = "medium", order = 0.5,
-					hidden = function() return not quest:IsStandingDown() end
-				},
-				chooseAgain = {
-					name = L["Choose again"], type = "execute", order = 0.6,
-					hidden = function() return not quest:HasRival() end,
-					func = function() quest:PromptRivalChoice() end
-				},
-				enabled = {
-					name = L["Enable"], type = "toggle", order = 1, width = "full",
-					disabled = function() return quest:IsStandingDown() end,
-					get = qget, set = qset
-				},
-				trackedOnly = {
-					name = L["Only tracked quests"],
-					desc = L["Only offer items for quests you track, world quests and bonus objectives. Off, any quest in your log with an objective on this map counts."],
-					type = "toggle", order = 2, width = "full", disabled = qoff, get = qget, set = qset
-				},
-				zoneOnly = {
-					name = L["Only quests in this zone"], type = "toggle", order = 3, width = "full",
-					disabled = qoff, get = qget, set = qset
-				},
-				maxDistance = {
-					name = L["Maximum distance (yards)"], type = "range", order = 4, width = "full",
-					min = 25, max = 5000, softMax = 2000, step = 25,
-					disabled = qoff, get = qget, set = qset
-				},
-				useExtraActionKey = {
-					name = L["Use the Extra Action Button key"],
-					desc = L["While the button has no key of its own, it borrows the key bound to the Extra Action Button. A Blizzard extra action takes the key back for as long as it is up."],
-					type = "toggle", order = 5, width = "full", disabled = qoff, get = qget, set = qset
-				},
-				showQuestInTooltip = {
-					name = L["Show the quest in the tooltip"], type = "toggle", order = 6, width = "full",
-					disabled = qoff, get = qget, set = qset
-				}
-			}
-		}
-		if (ns.OptionsKit and ns.OptionsKit.Defaults) then
-			ns.OptionsKit.Defaults.Bind(options.args.questItemButton, "QuestItemButton")
-		end
-	end
-
 	return options
 end
 
-Options:AddGroup(L["Action Bars"], GenerateOptions, -9000, "bars", "ActionBars")
+Options:AddGroup(L["Action Bars"], function()
+	local options = GenerateOptions()
+	local quest = GenerateQuestItemButtonOptions()
+	if quest then
+		options = options or { name = L["Action Bar Settings"], type = "group", args = {} }
+		options.args.questItemButton = quest
+		options.args.keybindMode = options.args.keybindMode or GenerateKeybindModeOption()
+	end
+	if ns.IsForever then
+		options = options or { name = L["Action Bar Settings"], type = "group", args = {} }
+		options.args.nativeController = {
+			name = L["Native controller"], type = "group", order = .1,
+			args = {
+				description = {
+					type = "description", fontSize = "medium", order = 1,
+					name = function()
+						if not ns.NativeController.IsAvailable() then
+							return L["Native controller bars are unavailable on this client."]
+						end
+						local text = L["AzeriteUI automatically follows Blizzard's selected controller interface. Native mode keeps Blizzard's bars, party and raid targeting, menus and bag controls. Switch the game's interface mode and reload to return to your saved AzeriteUI layouts."]
+						local conflict = ns.NativeController.GetConflict()
+						if conflict then
+							return text .. "\n\n" .. string_format(L["%s controls the action bars. Disable it and reload to use Blizzard's controller bars."], ns.API.GetAddOnTitle(conflict))
+						end
+						return text
+					end
+				},
+				reload = {
+					name = L["Reload UI"], type = "execute", order = 2,
+					disabled = function() return InCombatLockdown() end,
+					func = function() if not InCombatLockdown() then ReloadUI() end end
+				}
+			}
+		}
+		-- Only exists in a native session with Blizzard's bars in charge
+		-- (Components/ActionBars/Elements/NativeGamepadSkin.lua). Textures and
+		-- alpha only, so it switches live, in or out of combat.
+		local skin = ns:GetModule("NativeGamepadSkin", true)
+		if skin and skin.db then
+			local args = options.args.nativeController.args
+			args.skinDescription = {
+				name = L["Draws AzeriteUI's backdrop and metal rings on Blizzard's controller buttons. Blizzard keeps their layout, pages and functions; move and scale the bars in Edit Mode."],
+				type = "description", fontSize = "medium", order = 3
+			}
+			args.skinEnabled = {
+				name = L["AzeriteUI button art"], type = "toggle", width = "full", order = 4,
+				get = function() return skin.db.profile.enabled end,
+				set = function(_, val) skin.db.profile.enabled = val; skin:UpdateSettings() end
+			}
+		end
+	end
+	return options
+end, -9000, "bars", "ActionBars")

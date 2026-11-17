@@ -30,7 +30,7 @@ local unpack = unpack
 local tostring = tostring
 
 -- GLOBALS: CreateFrame, CreateFont, UnitClass
--- GLOBALS: StaticPopupDialogs, StaticPopup_Show
+-- GLOBALS: ns.API.PopupDialogs, ns.API.ShowPopup
 
 local API = ns.API
 local GetFont = API.GetFont
@@ -528,26 +528,20 @@ Kit.SetTheme(currentTheme)
 -- read it: Delete Profile deleted, Reset reset, and Import overwrote the whole
 -- profile, each on one click with nothing asked. Stock Ace3 asks.
 --
--- Blizzard's own popup rather than one of ours, for three reasons: it is the
--- prompt this addon already uses for the reload after an import
--- (Options/Options.lua, PromptImportReload), it sits above the panel without
--- anything here having to reason about strata or focus, and a question that can
--- destroy a profile is not the place to debut a new widget.
---
--- Nothing is destroyed if the popup cannot be shown. All of Blizzard's popup
--- slots being taken is rare, but the answer to "I could not ask" is not "do it
--- anyway".
+-- The shared service isolates addon decisions from Forever's native popup
+-- bindings. Retail still uses Blizzard's popup. A missing/full service must
+-- never turn a request to confirm a destructive change into automatic consent.
 local CONFIRM_KEY = "AZERITEUI_OPTIONS_CONFIRM"
 
 Kit.Confirm = function(question, onAccept, onCancel)
 	if (type(onAccept) ~= "function") then return false end
 
-	if (not StaticPopupDialogs or not StaticPopup_Show) then
-		onAccept()
-		return true
+	if (not ns.API.PopupDialogs or not ns.API.ShowPopup) then
+		if (onCancel) then onCancel() end
+		return false
 	end
 
-	StaticPopupDialogs[CONFIRM_KEY] = {
+	ns.API.PopupDialogs[CONFIRM_KEY] = {
 		text = "%s",
 		button1 = _G.ACCEPT or "Accept",
 		button2 = _G.CANCEL or "Cancel",
@@ -559,7 +553,7 @@ Kit.Confirm = function(question, onAccept, onCancel)
 		preferredIndex = 3
 	}
 
-	local shown = StaticPopup_Show(CONFIRM_KEY, tostring(question or ""))
+	local shown = ns.API.ShowPopup(CONFIRM_KEY, tostring(question or ""))
 	if (not shown) then
 		ns:Print(L["There was no room to ask for confirmation. Nothing was changed."])
 		if (onCancel) then onCancel() end

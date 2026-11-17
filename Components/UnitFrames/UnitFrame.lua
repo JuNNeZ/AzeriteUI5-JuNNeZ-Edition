@@ -447,7 +447,29 @@ local disableProxy = function(frame)
 end
 
 -- Inherit from the default movable frame module prototype.
+local nativeGroupModules = { PartyFrames = true, RaidFrame5 = true, RaidFrame25 = true, RaidFrame40 = true }
+local function IsNativeGroupFrame(module)
+	local native = ns.NativeController
+	local name = module:GetName()
+	if (not native or nativeGroupModules[name] ~= true) then return false end
+	-- Direct D-pad party targeting needs only unit tokens, so the party frames
+	-- stay ours then; raid navigation always needs Blizzard's compact frames.
+	if (name == "PartyFrames" and native.UsesNativePartyFrames) then
+		return native.UsesNativePartyFrames() and true or false
+	end
+	return native.IsActive() and true or false
+end
+
 ns.UnitFrameModule = ns:Merge({
+	IsNativeGroupFrame = IsNativeGroupFrame,
+
+	OnInitialize = function(self)
+		-- Keep saved custom layouts and the shared Party style available; native
+		-- navigation requires Blizzard's actual visible party/raid containers.
+		ns.MovableModulePrototype.OnInitialize(self)
+		if (IsNativeGroupFrame(self)) then self:SetEnabledState(false) end
+	end,
+
 	OnEnabledEvent = function(self, event, ...)
 		if (event == "PLAYER_REGEN_ENABLED") then
 			if (InCombatLockdown()) then return end
@@ -457,6 +479,7 @@ ns.UnitFrameModule = ns:Merge({
 	end,
 
 	UpdateEnabled = function(self)
+		if (IsNativeGroupFrame(self)) then return end
 		if (InCombatLockdown()) then
 			return self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEnabledEvent")
 		end
@@ -482,6 +505,7 @@ ns.UnitFrameModule = ns:Merge({
 	end,
 
 	UpdateSettings = function(self)
+		if (IsNativeGroupFrame(self)) then return end
 		self:UpdateEnabled()
 
 		if (self.db.profile.enabled) then

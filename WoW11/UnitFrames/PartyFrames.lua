@@ -38,6 +38,7 @@ end
 PartyFrameMod.DelayedEnable = function(self)
 	self:UnregisterEvent("PLAYER_ENTERING_WORLD", "DelayedEnable")
 	ns.UnitFrameModule.OnInitialize(self)
+	if (self:IsNativeGroupFrame()) then return end
 	self:Enable()
 	self:Update()
 end

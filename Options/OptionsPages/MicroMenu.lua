@@ -28,6 +28,7 @@ local micromenusetting = function(key, fallback)
 end
 
 local GenerateMicroMenuOptions = function()
+	if (ns.NativeController and ns.NativeController.IsActive()) then return end
 	return {
 		name = L["Micro Menu"],
 		type = "group",

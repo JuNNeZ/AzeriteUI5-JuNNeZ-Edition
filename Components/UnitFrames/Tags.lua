@@ -1653,13 +1653,16 @@ Methods[prefix("*:Name")] = function(unit, realUnit, ...)
 	end
 
 	local maxChars, showLevel, showLevelLast, showFull = getargs(...)
+	-- Legacy owns this choice for its player, target and party frames. Keep
+	-- it on the frame so the target's small/full name retags also respect it.
+	if (frame and frame.LegacyShowLevel ~= nil) then showLevel = frame.LegacyShowLevel end
 	local levelTextLength, levelText, shouldShowLevel = 0, nil, nil
 	local fullName, fullLength = name, string_len(name) + (shouldShowLevel and levelTextLength or 0)
 	local abbreviatedLength
 
 	-- Create level text if requested.
 	if (showLevel) then
-		local level = UnitEffectiveLevel(levelUnit)
+		local level = API.GetSafeLevel(UnitEffectiveLevel(levelUnit))
 		if (level and level > 0) then
 			local _,_,_,colorCode = GetDifficultyColorByLevel(level)
 			levelText = colorCode .. level .. "|r"
@@ -1688,6 +1691,23 @@ Methods[prefix("*:Name")] = function(unit, realUnit, ...)
 	end
 
 	return name
+end
+
+-- The alternate player's crystal always shows the live amount, including zero.
+-- Keep secret payloads on the display path; bar caches may contain an old amount.
+Events[prefix("*:PlayerAlternatePower")] = "UNIT_POWER_FREQUENT UNIT_POWER_UPDATE UNIT_MAXPOWER UNIT_DISPLAYPOWER UNIT_POWER_BAR_SHOW UNIT_POWER_BAR_HIDE"
+Methods[prefix("*:PlayerAlternatePower")] = function(unit)
+	if (UnitIsDeadOrGhost(unit)) then return end
+	local _, powerType = GetFramePowerContext(_FRAME, unit)
+	local value = UnitPower(unit, powerType)
+	if (type(AbbreviateNumbers) == "function") then
+		local ok, formatted = API.TryCall(AbbreviateNumbers, value)
+		if (ok) then
+			return formatted
+		end
+	end
+	-- oUF passes this directly to FontString:SetFormattedText, including secrets.
+	return value
 end
 
 Events[prefix("*:Power")] = "UNIT_POWER_FREQUENT UNIT_POWER_UPDATE UNIT_MAXPOWER UNIT_DISPLAYPOWER UNIT_POWER_BAR_SHOW UNIT_POWER_BAR_HIDE"

@@ -93,6 +93,7 @@ local defaults = { profile = ns:Merge({
 	AurasGrowthY = "DOWN",
 	AurasInitialAnchor = "TOPLEFT",
 	partyAuraDebuffScale = 100,
+	partyAuraRowGap = 6,
 	partyAuraUseStockBehavior = true,
 	partyAuraShowDispellableDebuffs = true,
 	partyAuraOnlyDispellableDebuffs = false,
@@ -431,6 +432,8 @@ local ApplyPartyAuraLayout = function(frame)
 	end
 	local spacingX = GetPartyAuraLayoutValue(profile, "AurasSpacingX", config.AurasSpacingX or config.AuraSpacing or 4)
 	local spacingY = GetPartyAuraLayoutValue(profile, "AurasSpacingY", config.AurasSpacingY or config.AuraSpacing or 4)
+	local rowGap = GetPartyAuraLayoutValue(profile, "partyAuraRowGap", 6)
+	rowGap = type(rowGap) == "number" and math_max(0, math_min(160, rowGap)) or 6
 	local growthX = GetPartyAuraLayoutValue(profile, "AurasGrowthX", config.AurasGrowthX or "RIGHT")
 	local growthY = GetPartyAuraLayoutValue(profile, "AurasGrowthY", config.AurasGrowthY or "DOWN")
 	local initialAnchor = GetPartyAuraLayoutValue(profile, "AurasInitialAnchor", config.AurasInitialAnchor or "TOPLEFT")
@@ -454,6 +457,7 @@ local ApplyPartyAuraLayout = function(frame)
 	auras.maxCols = perRow
 	auras.partyBuffSize = auraSize
 	auras.partyDebuffSize = harmfulSize
+	auras.partyAuraRowGap = rowGap
 	auras["spacing-x"] = spacingX
 	auras["spacing-y"] = spacingY
 	auras["growth-x"] = growthX
@@ -469,7 +473,8 @@ local ApplyPartyAuraLayout = function(frame)
 			native:SetSize(nativeWidth, nativeHeight)
 			native:ClearAllPoints()
 			if (harmful) then
-				local offset = rows * (auraSize + spacingY) + 6
+				-- Start after one buff row. Extra room for wrapped buffs is adjustable.
+				local offset = auraSize + rowGap
 				native:SetPoint(initialAnchor, frame.NativeAuras, initialAnchor, 0, growthY == "DOWN" and -offset or offset)
 			else
 				native:SetPoint(unpack(config.AurasPosition))
@@ -500,7 +505,7 @@ local PartyAura_SetPosition = function(element, from, to)
 	local buffSize, debuffSize = element.partyBuffSize, element.partyDebuffSize
 	local spacingX, spacingY = element.spacingX or 4, element.spacingY or 4
 	local buffRows = math_ceil(buffs / cols)
-	local debuffOffset = buffRows > 0 and (buffRows * (buffSize + spacingY) + 6) or 0
+	local debuffOffset = buffRows > 0 and (buffRows * buffSize + (buffRows - 1) * spacingY + (element.partyAuraRowGap or 6)) or 0
 	local helpful, harmful = 0, 0
 	local xSign = element.growthX == "LEFT" and -1 or 1
 	local ySign = element.growthY == "DOWN" and -1 or 1
@@ -685,6 +690,11 @@ local Health_PostUpdateColor = function(element, unit, r, g, b)
 	if (preview and g) then
 		preview:SetStatusBarColor(r * .7, g * .7, b * .7)
 	end
+end
+
+-- This bar is only a health overlay; it has no failed/interrupted text to hold.
+local CastOverlay_Hide = function(element)
+	element:Hide()
 end
 
 -- Align our custom health prediction texture
@@ -914,6 +924,12 @@ local Portrait_PostUpdate = function(element, unit, hasStateChanged)
 			element.fallback2DTexture:SetDrawLayer("ARTWORK")
 			element.fallback2DTexture:SetAllPoints()
 			element.fallback2DTexture:SetTexCoord(.1, .9, .1, .9)
+			-- The border has transparent corners; a square fallback leaks through them.
+			local mask = element:CreateMaskTexture(nil, "ARTWORK")
+			mask:SetAllPoints(element)
+			mask:SetTexture(GetMedia("actionbutton-mask-circular"))
+			element.fallback2DTexture:AddMaskTexture(mask)
+			element.fallback2DMask = mask
 		end
 		SetPortraitTexture(element.fallback2DTexture, unit)
 		element.fallback2DTexture:Show()
@@ -1135,6 +1151,9 @@ local style = function(self, unit, asPlayer)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
 	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
 	castbar:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
+	castbar.PostCastStop = CastOverlay_Hide
+	castbar.PostCastFail = CastOverlay_Hide
+	castbar.PostCastInterrupted = CastOverlay_Hide
 
 	self.Castbar = castbar
 
@@ -1908,8 +1927,24 @@ PartyFrameMod.Update = function(self)
 	self:UpdateUnits()
 end
 
+-- Loading screens can leave the player's overlay showing its pre-zone cast.
+-- Re-read through oUF rather than changing class colours or guessing a duration.
+local RefreshPlayerCastOverlay = function()
+	for frame in next,Units do
+		if (frame.unit == "player" and frame.Castbar and frame.Castbar.ForceUpdate) then
+			frame.Castbar:ForceUpdate()
+		end
+	end
+end
+
 PartyFrameMod.OnEvent = function(self, event, ...)
 	if (event == "PLAYER_ENTERING_WORLD") then
+		RefreshPlayerCastOverlay()
+		-- Reconcile once more after the loading-screen event's API snapshot settles.
+		-- This must also run when secure header layout is deferred by combat.
+		if (C_Timer and C_Timer.After) then
+			C_Timer.After(1, RefreshPlayerCastOverlay)
+		end
 		if (InCombatLockdown()) then
 			-- UpdateHeader is what registers the visibility driver and rebuilds the
 			-- secure header, so the retry needs this flag to have anything to do.
@@ -1977,6 +2012,7 @@ PartyFrameMod.UpdateAnchorAndMouseForLock = function(self)
 end
 
 PartyFrameMod.DisableBlizzard = function(self)
+	if (self:IsNativeGroupFrame()) then return end
 	local profile = self.db and self.db.profile or defaults.profile
 	if (not (profile and profile.enabled)) then
 		return
@@ -2018,6 +2054,7 @@ PartyFrameMod.StylePlayer = function(frame, unit)
 end
 
 PartyFrameMod.CreateUnitFrames = function(self)
+	if (self:IsNativeGroupFrame()) then return end
 
 	local name = "Party"
 
@@ -2071,6 +2108,7 @@ PartyFrameMod.UpdatePortraits = function(self)
 end
 
 PartyFrameMod.UpdateSettings = function(self)
+	if (self:IsNativeGroupFrame()) then return end
 	MigrateShowPlayer(self.db and self.db.profile)
 
 	ns.UnitFrameModule.UpdateSettings(self)
@@ -2099,6 +2137,7 @@ PartyFrameMod.UpdateSettings = function(self)
 end
 
 PartyFrameMod.OnEnable = function(self)
+	if (self:IsNativeGroupFrame()) then return self:Disable() end
 
 	MigrateShowPlayer(self.db and self.db.profile)
 

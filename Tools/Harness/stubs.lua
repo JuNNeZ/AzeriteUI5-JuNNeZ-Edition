@@ -603,6 +603,13 @@ local ns = {
 	DecodeImport = function() return {} end
 }
 
+-- Generic panel tests retain the stock popup fixture. Dedicated popup tests
+-- load the real widget and verify Forever's isolated dialog path.
+ns.API.PopupDialogs = StaticPopupDialogs
+ns.API.ShowPopup = function(...) return StaticPopup_Show(...) end
+ns.NativeController = { IsActive = function() return false end,
+	IsAvailable = function() return ns.IsForever == true end,
+	GetConflict = function() return nil end }
 local Addon = "AzeriteUI5_JuNNeZ_Edition"
 
 local function load(relative)

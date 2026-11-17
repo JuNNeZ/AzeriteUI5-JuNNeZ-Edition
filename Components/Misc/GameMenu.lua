@@ -30,7 +30,7 @@ local GameMenuSkin = ns:NewModule("GameMenuSkin", "AceHook-3.0")
 
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
--- GLOBALS: C_AddOns, C_Timer, GameMenuFrame, ReloadUI, StaticPopupDialogs, StaticPopup_Show, UnitName
+-- GLOBALS: C_AddOns, C_Timer, GameMenuFrame, ReloadUI, ns.API.PopupDialogs, ns.API.ShowPopup, UnitName
 -- GLOBALS: GAMEMENU_OPTIONS, HideUIPanel, InCombatLockdown, PlaySound, SOUNDKIT
 
 -- Lua API
@@ -348,13 +348,13 @@ GameMenuSkin.ApplyStyle = function(self, owner, rival)
 end
 
 GameMenuSkin.ShowConflictPrompt = function(self, rival)
-	if (not StaticPopupDialogs or not StaticPopup_Show) then
+	if (not ns.API.PopupDialogs or not ns.API.ShowPopup) then
 		return
 	end
 
 	local key = "AZERITEUI_GAME_MENU_CONFLICT"
-	if (not StaticPopupDialogs[key]) then
-		StaticPopupDialogs[key] = {
+	if (not ns.API.PopupDialogs[key]) then
+		ns.API.PopupDialogs[key] = {
 			text = "%s",
 			button1 = "AzeriteUI",
 			button3 = L["Blizzard"],
@@ -381,8 +381,8 @@ GameMenuSkin.ShowConflictPrompt = function(self, rival)
 	-- The second and third buttons depend on the other addon, so they are set on every show.
 	local title = GetAddOnTitle(rival)
 	local canShare = CanShareWith(rival)
-	StaticPopupDialogs[key].button2 = title
-	StaticPopupDialogs[key].button3 = canShare and L["Both"] or L["Blizzard"]
+	ns.API.PopupDialogs[key].button2 = title
+	ns.API.PopupDialogs[key].button3 = canShare and L["Both"] or L["Blizzard"]
 
 	local text = string_format(L["%s is restyling the game menu too, and the two styles clash. Which game menu do you want to keep?"], title)
 	if (canShare) then
@@ -391,7 +391,7 @@ GameMenuSkin.ShowConflictPrompt = function(self, rival)
 		text = text .. "|n|n" .. string_format(L["Picking AzeriteUI or Blizzard turns %s off for this character. The interface reloads to apply your choice."], title)
 	end
 
-	StaticPopup_Show(key, text, nil, { rival = rival, third = canShare and "both" or "blizzard" })
+	ns.API.ShowPopup(key, text, nil, { rival = rival, third = canShare and "both" or "blizzard" })
 end
 
 -- Called from the options page. Nothing changes until the player accepts the
@@ -409,13 +409,13 @@ GameMenuSkin.PromptStyleChange = function(self, owner)
 		return
 	end
 
-	if (not StaticPopupDialogs or not StaticPopup_Show) then
+	if (not ns.API.PopupDialogs or not ns.API.ShowPopup) then
 		return
 	end
 
 	local key = "AZERITEUI_GAME_MENU_STYLE_RELOAD"
-	if (not StaticPopupDialogs[key]) then
-		StaticPopupDialogs[key] = {
+	if (not ns.API.PopupDialogs[key]) then
+		ns.API.PopupDialogs[key] = {
 			text = "%s",
 			button1 = L["Reload UI"],
 			button2 = CANCEL or "Cancel",
@@ -434,7 +434,7 @@ GameMenuSkin.PromptStyleChange = function(self, owner)
 		text = L["The game menu style changes when the interface reloads."]
 	end
 
-	StaticPopup_Show(key, text, nil, { owner = owner, rival = rival })
+	ns.API.ShowPopup(key, text, nil, { owner = owner, rival = rival })
 end
 
 GameMenuSkin.CheckForRival = function(self)

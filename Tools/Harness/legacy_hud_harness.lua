@@ -298,4 +298,64 @@ do
  run('home',true);check(moved and moved[2]=='$screen' and moved[4]==500 and moved[5]==250,'in combat the snippet jumps to the spot')
  run('center',false);check(called=='Slide:center','out of combat the snippet hands over to the slide')
 end
+-- Real name formatter, Legacy lifecycle and saved toggle. This models writes
+-- to owned text regions; it cannot establish in-client rendering or secrecy.
+do
+ CreateFrame=function(_,_,parent)local w=widget();w.parent=parent;return w end
+ function M:SetJustifyH(v)self.justifyH=v end
+ local level=30
+ UnitEffectiveLevel=function()return level end
+ UnitGUID=function()return 'Player-1' end
+ issecretvalue=function(value)return value==987654 end
+ ns.oUF.Tags={Events={},Methods={}}
+ ns.API.AbbreviateName=function(name)return name end
+ ns.API.GetDifficultyColorByLevel=function()return 1,1,0,'|cffffff00' end
+ load('Core/API/Frames.lua',ns)
+ load('Components/UnitFrames/Tags.lua',ns)
+ local nameTag=assert(ns.oUF.Tags.Methods[ns.Prefix..':Name'])
+ local function text(frame,showLevel)
+  _FRAME=frame
+  return nameTag('player',nil,'64',showLevel and 'true' or 'nil','nil','true')
+ end
+ local frames={}
+ ns.db.char.legacyShowLevels=nil
+ for _,style in ipairs({'Player','Target','Party','PlayerParty'}) do
+  local f=widget(style=='Party' and 198 or 316)
+  f.style=ns.Prefix..style;f.Health=widget();f.Power=widget();f.Name=widget()
+  f.Name.UpdateTag=function(name)name.text=text(f,style=='Target')end
+  if style=='Player' then f.Castbar={Text=widget()} end
+  ns.oUF.init(f);frames[#frames+1]=f
+  check(f.Name.text:find('30',1,true) and f.LegacyShowLevel==true,style..' shows the level by default')
+ end
+ local p=frames[1]
+ check(p.Castbar.Text.point[1]=='LEFT' and p.Castbar.Text.point[2]==p.Health and p.Castbar.Text.justifyH=='LEFT','player cast name uses the left health edge')
+ p.Castbar.Text:SetPoint('RIGHT');p.Castbar.Text:SetJustifyH('RIGHT');H:RefreshUnit(p)
+ check(p.Castbar.Text.point[1]=='LEFT' and p.Castbar.Text.justifyH=='LEFT','tier refresh retains left cast text')
+ local before=reloads
+ H:SetShowLevels(false)
+ check(ns.db.char.legacyShowLevels==false and reloads==before,'off is saved without a reload')
+ for i,f in ipairs(frames) do check(f.Name.text=='Player','level toggle immediately hides level on frame '..i) end
+ check(text(frames[2],true)=='Player','target full/small retags cannot bypass off')
+ H:SetShowLevels(true)
+ for i,f in ipairs(frames) do check(f.Name.text:find('30',1,true),'level toggle immediately restores frame '..i) end
+ for _,unavailable in ipairs({0,-1,987654,'unknown'}) do
+  level=unavailable
+  check(text(p,false)=='Player','unavailable or secret level leaves a readable name')
+ end
+ level=nil;check(text(p,false)=='Player','missing level leaves a readable name')
+ level=31;check(text(p,false):find('31',1,true),'name event picks up the current level')
+ local stockFrame={}
+ check(text(stockFrame,false)=='Player' and text(stockFrame,true):find('31',1,true),'unmarked styles retain their original tag choices')
+ local events=ns.oUF.Tags.Events[ns.Prefix..':Name']
+ check(events:find('UNIT_LEVEL',1,true) and events:find('PLAYER_LEVEL_UP',1,true) and events:find('GROUP_ROSTER_UPDATE',1,true),'name tag retains level and roster updates')
+ H:SetShowLevels(false)
+ local f=widget(198);f.style=ns.Prefix..'Party';f.Health=widget();f.Power=widget();f.Name=widget()
+ f.Name.UpdateTag=function(name)name.text=text(f,false)end
+ ns.oUF.init(f)
+ check(f.LegacyShowLevel==false and f.Name.text=='Player','later-spawned party frames respect the saved off choice')
+ ns.db.char.legacyHUD=false
+ local plain=widget(316);plain.style=ns.Prefix..'Player';plain.Health=widget();plain.Castbar={Text=widget()}
+ ns.oUF.init(plain)
+ check(plain.LegacyShowLevel==nil and not plain.Castbar.Text.point,'Azerite player cast and name remain untouched')
+end
 print('Legacy HUD: '..checks..' checks passed (real layouts and AceDB; offline only).')

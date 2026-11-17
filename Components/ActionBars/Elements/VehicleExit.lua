@@ -26,6 +26,8 @@
 --]]
 local _, ns = ...
 
+if (ns.NativeController and ns.NativeController.IsActive()) then return end
+
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local VehicleExit = ns:NewModule("VehicleExit", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0")

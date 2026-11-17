@@ -148,10 +148,10 @@ Tools.ShowPingMenu = function(self, button)
 end
 
 Tools.RequestLeave = function(self)
-    if (not self:CanPerformAction("leave") or not StaticPopupDialogs or not StaticPopup_Show) then return end
+    if (not self:CanPerformAction("leave") or not ns.API.PopupDialogs or not ns.API.ShowPopup) then return end
     local key = "AZERITEUI_RAIDTOOLS_LEAVE"
-    if (not StaticPopupDialogs[key]) then
-        StaticPopupDialogs[key] = {
+    if (not ns.API.PopupDialogs[key]) then
+        ns.API.PopupDialogs[key] = {
             text = L["Leave your current group?"], button1 = _G.YES, button2 = _G.NO,
             timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
             OnAccept = function(_, data)
@@ -162,7 +162,7 @@ Tools.RequestLeave = function(self)
             end
         }
     end
-    StaticPopup_Show(key, nil, nil, { module = self, serial = self.rosterSerial })
+    ns.API.ShowPopup(key, nil, nil, { module = self, serial = self.rosterSerial })
 end
 Tools.PerformAction = function(self, key, button)
     -- Every callback rechecks permissions, including callbacks from an already-open menu.

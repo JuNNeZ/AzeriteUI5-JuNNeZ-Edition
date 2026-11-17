@@ -723,6 +723,14 @@ local GenerateOptions = function()
 				set = function(info, val) Effects():SetTheme(val) end,
 				get = function(info) return Effects():GetTheme() end
 			},
+			legacyShowLevels = {
+				name = L["Show levels"],
+				desc = L["Show levels before player, target and party names in the Legacy theme."],
+				order = 3, type = "toggle", width = "full",
+				hidden = function() return Theme() ~= "legacy" end,
+				get = function() return ns.LegacyHUD:GetShowLevels() end,
+				set = function(_, value) ns.LegacyHUD:SetShowLevels(value) end
+			},
 			litePlus = {
 				name = "Lite+",
 				desc = L["Use the power crystal and mana orb effects of the other themes on the theme you are using. Only the settings of the effects you pick are shown."],

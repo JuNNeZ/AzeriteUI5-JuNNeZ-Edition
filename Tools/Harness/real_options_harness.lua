@@ -191,6 +191,46 @@ for _, key in ipairs({"party", "raid5", "raid25", "raid40"}) do
 	assert(option.hidden({"UnitFrames", key, "useSpecIcons"}) == forever, "specialization visibility: " .. key)
 end
 local minimap = assert(options.args.Minimap)
+if forever then
+	local callbacks, snapshots = {}, {}
+	local oldAddGroup, oldActive = Options.AddGroup, ns.NativeController.IsActive
+	for _, name in ipairs({ "PartyFrames", "RaidFrame5", "RaidFrame25", "RaidFrame40" }) do
+		local profile = ns:GetModule(name).db.profile
+		snapshots[name] = { profile = profile, enabled = rawget(profile, "enabled"), position = rawget(profile, "savedPosition") }
+		profile.enabled, profile.savedPosition = true, { "CENTER", 17, 23 }
+		snapshots[name].sentinel = profile.savedPosition
+	end
+	Options.AddGroup = function(_, name, generate) callbacks[name] = generate end
+	ns.NativeController.IsActive = function() return true end
+	load("Options/OptionsPages/UnitFrames.lua")
+	local nativeGroups = assert(callbacks["Group Frames"]())
+	local nativeUnits = assert(callbacks["Unit Frames"]())
+	for _, key in ipairs({ "party", "raid5", "raid25", "raid40", "showBlizzardRaidBar", "groupIndicators" }) do
+		assert(not nativeGroups.args[key] and not nativeUnits.args[key], "native group ownership omits inactive custom settings: " .. key)
+	end
+	assert(nativeGroups.args.description and nativeGroups.args.description.type == "description", "native group ownership is explained")
+	assert(nativeGroups.args.raidTools and nativeGroups.args.targetMarkersLite, "independent raid utilities remain reachable")
+	assert(nativeUnits.args.playerParty, "shared party-style player frame remains available")
+	-- Direct D-pad party targeting: party frames (and their indicators) stay
+	-- ours, raids stay Blizzard's (Core/NativeController.lua UsesNativePartyFrames).
+	ns.NativeController.UsesNativePartyFrames = function() return false end
+	load("Options/OptionsPages/UnitFrames.lua")
+	local partyGroups = assert(callbacks["Group Frames"]())
+	assert(partyGroups.args.party and partyGroups.args.groupIndicators, "party targeting keeps AzeriteUI party settings")
+	for _, key in ipairs({ "raid5", "raid25", "raid40", "showBlizzardRaidBar" }) do
+		assert(not partyGroups.args[key], "party targeting still omits native raid settings: " .. key)
+	end
+	assert(type(partyGroups.args.description.name) == "string" and partyGroups.args.description.name:find("Party targeting is on", 1, true),
+		"party targeting ownership is explained")
+	assert(nativeGroups.args.description.name:find("turn on party targeting", 1, true), "native party mode explains how to keep AzeriteUI party frames")
+	ns.NativeController.UsesNativePartyFrames = nil
+	for _, snapshot in pairs(snapshots) do
+		assert(snapshot.profile.enabled == true and snapshot.profile.savedPosition == snapshot.sentinel, "native options preserve saved custom group settings/layout")
+		snapshot.profile.enabled, snapshot.profile.savedPosition = snapshot.enabled, snapshot.position
+	end
+	Options.AddGroup, ns.NativeController.IsActive = oldAddGroup, oldActive
+	print("Native group option gates and saved layouts passed")
+end
 assert((minimap.args.autoHide.args.autoHideInArenas.hidden == true) == forever, "arena auto-hide visibility")
 -- Forever's own swing timer switch on the Cast Bar page (FixLog 2026-10-20): Forever only, needs the
 -- CVar, writes showSwingTimer out of combat and never in it.

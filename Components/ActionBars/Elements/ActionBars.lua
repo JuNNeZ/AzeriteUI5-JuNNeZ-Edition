@@ -26,6 +26,8 @@
 --]]
 local _, ns = ...
 
+if (ns.NativeController and ns.NativeController.IsActive()) then return end
+
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local LAB_Name = "LibActionButton-1.0-GE"

@@ -38,6 +38,7 @@ end
 RaidFrame40Mod.DelayedEnable = function(self)
 	self:UnregisterEvent("PLAYER_ENTERING_WORLD", "DelayedEnable")
 	ns.UnitFrameModule.OnInitialize(self)
+	if (self:IsNativeGroupFrame()) then return end
 	self:DisableBlizzard()
 	self:CreateUnitFrames()
 	self:CreateAnchor(RAID .. " (40)")

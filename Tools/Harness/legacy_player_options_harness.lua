@@ -52,7 +52,10 @@ end
 
 -- The switch every Legacy check in the options reads.
 local legacy = false
-ns.LegacyHUD = { IsActive = function() return legacy end }
+local levels = true
+ns.LegacyHUD = { IsActive = function() return legacy end,
+	GetShowLevels = function() return levels end,
+	SetShowLevels = function(_, value) levels = value end }
 
 -- UnitFrames.lua captures the spec lookup and spec IDs when it loads, so these go in first
 -- (the stubs would hand back the constant's own name).
@@ -157,6 +160,12 @@ check(PanelHas("PlayerFrame", "powerOrbMode"), "Azerite HUD frame panel offers P
 check(PanelHas("PlayerFrameParty", "showPortrait"), "Azerite HUD frame panel offers Show Portrait")
 
 legacy = true
+local levelsOption = assert(options.args.Themes.args.legacyShowLevels, "Legacy level toggle missing")
+check(not levelsOption.hidden() and levelsOption.get(), "Legacy shows the default-on level toggle")
+levelsOption.set(nil, false)
+check(not levelsOption.get(), "level toggle setter and getter agree when off")
+levelsOption.set(nil, true)
+check(levelsOption.get(), "level toggle setter and getter agree when on")
 for _, entry in ipairs(LEGACY_HIDDEN) do
 	check(Hidden(entry[1], entry[2]) == true, "Legacy HUD hides " .. entry[1] .. "." .. entry[2])
 end
@@ -186,6 +195,7 @@ end
 
 -- The existing switches still win: a player frame that is off hides its settings under either HUD.
 legacy = false
+check(levelsOption.hidden(), "other themes hide the Legacy level toggle")
 ns:GetModule("PlayerFrame").db.profile.enabled = false
 check(Hidden("player", "manaOrbTexture") == true, "Player off still hides Mana Orb Texture")
 ns:GetModule("PlayerFrame").db.profile.enabled = true

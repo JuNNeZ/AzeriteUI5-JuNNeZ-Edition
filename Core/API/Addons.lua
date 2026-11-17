@@ -143,7 +143,7 @@ end
 -- addon list makes with one character selected, and reloads. "both" reloads too.
 -- "other" reloads nothing; the caller applies it. Decide Later calls nothing.
 local ShowAddonConflictPrompt = function(opts)
-	if (not StaticPopupDialogs or not StaticPopup_Show) then
+	if (not ns.API.PopupDialogs or not ns.API.ShowPopup) then
 		return
 	end
 	if (type(opts) ~= "table" or type(opts.rival) ~= "string" or type(opts.key) ~= "string") then
@@ -165,8 +165,8 @@ local ShowAddonConflictPrompt = function(opts)
 		end
 	end
 
-	if (not StaticPopupDialogs[key]) then
-		StaticPopupDialogs[key] = {
+	if (not ns.API.PopupDialogs[key]) then
+		ns.API.PopupDialogs[key] = {
 			text = "%s",
 			button1 = "AzeriteUI",
 			button3 = L["Both (unsupported)"],
@@ -188,12 +188,12 @@ local ShowAddonConflictPrompt = function(opts)
 
 	-- The second button carries the other addon's name, so it is set on every show.
 	local title = GetAddOnTitle(opts.rival)
-	StaticPopupDialogs[key].button2 = title
+	ns.API.PopupDialogs[key].button2 = title
 
 	local text = string.format(L["%s and AzeriteUI both restyle the same part of the interface, and the two do not work together: %s. Which one do you want to use?"], title, opts.feature or "")
 		.. "|n|n" .. string.format(L["Picking AzeriteUI turns %s off for this character and reloads the interface. Both keeps the two running, which is not supported."], title)
 
-	StaticPopup_Show(key, text, nil, { rival = opts.rival, OnChoose = opts.OnChoose })
+	ns.API.ShowPopup(key, text, nil, { rival = opts.rival, OnChoose = opts.OnChoose })
 end
 
 -- Global API

@@ -36,6 +36,7 @@ local function frame(parent)
 end
 local Module
 local ns = {
+	GetModule = function() return Module end,
 	MovableModulePrototype = { defaults = {} },
 	Merge = function(_, a) return a end,
 	API = {

@@ -58,6 +58,22 @@ local GenerateOptions = function()
 		type = "group",
 		args = {}
 	}
+	options.args.useBlizzardBags = {
+		name = L["Use Blizzard's bag controls"],
+		desc = L["Keep Blizzard's bag bar and bag buttons in their original places instead of moving them into the bag window. Hides AzeriteUI's separate bag button. Applies after a reload."],
+		type = "toggle", width = "full", order = -2,
+		set = function(info, value) getmodule().db.profile.useBlizzardBags = value end,
+		disabled = function() return ns.NativeController and ns.NativeController.IsActive() or false end,
+		get = function()
+			return (ns.NativeController and ns.NativeController.IsActive())
+				or getmodule().db.profile.useBlizzardBags == true
+		end
+	}
+	options.args.reloadBags = {
+		name = L["Reload UI"], type = "execute", order = -1,
+		disabled = function() return InCombatLockdown() end,
+		func = function() if (not InCombatLockdown()) then ReloadUI() end end
+	}
 
 	if (C_Container.SetSortBagsRightToLeft) then
 		options.args["sort"] = {

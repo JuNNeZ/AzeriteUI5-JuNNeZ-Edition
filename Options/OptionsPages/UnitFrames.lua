@@ -1535,6 +1535,16 @@ local GenerateOptions = function()
 			end,
 			disabled = partyAuraLayoutDisabled
 		}
+		suboptions.args.partyAuraRowGap = {
+			name = L["Buff/Debuff Spacing"],
+			desc = L["Space between the first buff row and the debuff row. Increase this if buffs wrap onto more rows."],
+			order = 134.5, type = "range", width = "full", min = 0, max = 160, step = 1,
+			hidden = isdisabled, disabled = partyAuraLayoutDisabled, set = setter,
+			get = function(info)
+				local value = getoption(info, "partyAuraRowGap")
+				return type(value) == "number" and math.max(0, math.min(160, value)) or 6
+			end
+		}
 		suboptions.args.AurasGrowthX = {
 			name = L["Aura Growth X"],
 			desc = L["Choose whether party auras grow left or right."],
@@ -1585,7 +1595,7 @@ local GenerateOptions = function()
 			"partyAuraUseStockBehavior", "partyAuraShowDispellableDebuffs", "partyAuraOnlyDispellableDebuffs",
 			"partyAuraShowBossAndImportantDebuffs", "partyAuraShowOtherDebuffs", "partyAuraShowHelpfulExternals",
 			"partyAuraShowHelpfulRaidBuffs", "partyAuraShowHelpfulShortBuffs",
-			"AuraSize", "AurasMaxCols", "partyAuraDebuffSize", "AurasGrowthX", "AurasGrowthY"
+			"AuraSize", "AurasMaxCols", "partyAuraDebuffSize", "partyAuraRowGap", "AurasGrowthX", "AurasGrowthY"
 		}) do
 			DisabledDesc(suboptions.args[key], partyAuraReason)
 		end
@@ -2017,9 +2027,24 @@ local Build = function()
 		childGroups = "tree",
 		args = {}
 	}
+	local controller = ns.NativeController
+	local native = controller and controller.IsActive()
+	-- Direct D-pad party targeting needs no frames, so the party frames (and
+	-- what is drawn on them) stay ours then; raids always keep Blizzard's.
+	local nativeParty = native and (controller.UsesNativePartyFrames or controller.IsActive)()
+	local ownInNative = { party = true, groupIndicators = true }
 	for _, key in ipairs(GROUP_KEYS) do
-		group.args[key] = options.args[key]
+		if not native or (ownInNative[key] and not nativeParty) then group.args[key] = options.args[key] end
 		options.args[key] = nil
+	end
+	if native then
+		local text = L["AzeriteUI automatically follows Blizzard's selected controller interface. Native mode keeps Blizzard's bars, party and raid targeting, menus and bag controls. Switch the game's interface mode and reload to return to your saved AzeriteUI layouts."]
+		if nativeParty then
+			text = text .. "\n\n" .. L["To keep AzeriteUI party frames, turn on party targeting in Blizzard's controller settings and reload. The D-pad then targets party members directly."]
+		else
+			text = text .. "\n\n" .. L["Party targeting is on in Blizzard's controller settings, so the D-pad targets party members directly and your AzeriteUI party frames stay. Raids keep Blizzard's frames for raid navigation."]
+		end
+		group.args.description = { type = "description", fontSize = "medium", order = 0, name = text }
 	end
 	-- The frames first, then what is drawn on all of them.
 	if (group.args.groupIndicators) then group.args.groupIndicators.order = 200 end

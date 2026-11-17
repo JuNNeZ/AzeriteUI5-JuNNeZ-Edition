@@ -294,6 +294,7 @@ ns.PrintEditModeDiagnostics = function()
 		(manager:IsShown() and "" or "(open Edit Mode first; selections only show while it is open)"))
 end
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
+if (ns.NativeController and ns.NativeController.IsActive()) then return end
 
 local BlizzardABDisabler = ns:NewModule("BlizzardABDisabler", "LibMoreEvents-1.0", "AceHook-3.0")
 local quarantinedFrames = setmetatable({}, { __mode = "k" })
@@ -501,6 +502,7 @@ local suppressBagControl = function(frame)
 end
 
 local suppressNamedBagControls = function()
+	if (ns.ShouldUseBlizzardBags and ns.ShouldUseBlizzardBags()) then return end
 	if (IsBagBarOwnedByW2UI()) then return end
 	for _, frameName in ipairs(BAG_BUTTON_NAMES) do
 		-- Bartender reparents the native backpack button into its own bag bar.
@@ -543,7 +545,8 @@ end
 BlizzardABDisabler.HideBlizzard = function(self)
 
 	for _, frameName in ipairs(HIDDEN_FRAME_NAMES) do
-		if (frameName ~= "BagsBar" or not IsBagBarOwnedByW2UI()) then
+		if (frameName ~= "BagsBar" or not (IsBagBarOwnedByW2UI()
+			or (ns.ShouldUseBlizzardBags and ns.ShouldUseBlizzardBags()))) then
 			quarantineFrame(_G[frameName])
 		end
 	end
@@ -590,7 +593,13 @@ BlizzardABDisabler.HideBlizzard = function(self)
 	-- The AzeriteUI cog wheel keeps working either way: its buttons are proxies that
 	-- run "/click <MicroButtonName>" rather than reparented Blizzard buttons.
 	if (not (ns.ShouldShowBlizzardMicroMenu and ns.ShouldShowBlizzardMicroMenu())) then
-		quarantineNamedFrames(MICRO_MENU_FRAME_NAMES)
+		for _, frameName in ipairs(MICRO_MENU_FRAME_NAMES) do
+			-- Older clients share this parent with their native bag controls.
+			if (frameName ~= "MicroButtonAndBagsBar"
+				or not (ns.ShouldUseBlizzardBags and ns.ShouldUseBlizzardBags())) then
+				quarantineFrame(_G[frameName])
+			end
+		end
 		quarantineNamedFrames(MICRO_BUTTON_NAMES)
 	end
 	suppressNamedBagControls()

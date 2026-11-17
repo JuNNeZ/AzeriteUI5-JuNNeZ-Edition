@@ -35,6 +35,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local defaults = { profile = ns:Merge({
 	sort = "rtl",
 	insert = "ltr",
+	useBlizzardBags = false,
 	-- At a merchant (MERCHANT_SHOW). Off by default; bag addons usually do this already.
 	autoSellJunk = false,
 	autoRepair = false,
@@ -50,7 +51,21 @@ Containers.GenerateDefaults = function(self)
 	return defaults
 end
 
+-- Shared with HideBlizzard and MicroMenu. Freeze ownership for this session:
+-- their suppression hooks and our reparenting can only be undone by a reload.
+ns.ShouldUseBlizzardBags = function()
+	if (ns.NativeController and ns.NativeController.IsActive()) then return true end
+	local module = ns:GetModule("Containers", true)
+	local profile = module and module.db and module.db.profile
+	if (not profile) then return false end
+	if (module.__useBlizzardBags == nil) then
+		module.__useBlizzardBags = profile.useBlizzardBags == true
+	end
+	return module.__useBlizzardBags
+end
+
 Containers.AquireBagButtons = function(self)
+	if (ns.ShouldUseBlizzardBags()) then return end
 
 	-- Don't interfere with known bag addons. Baganator (834) and BetterBags hide
 	-- Blizzard's backpack frames, so moving the bag slots into them only hides the

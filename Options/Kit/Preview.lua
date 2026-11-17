@@ -592,6 +592,16 @@ local policies = {
 		explain = L["Open your bags to preview this."] } }
 }
 
+-- Forever only, like the setting: AzeriteUI art on Blizzard's native
+-- controller bars (Components/ActionBars/Elements/NativeGamepadSkin.lua).
+if (ns.IsForever) then
+	policies.ActionBars.skinEnabled = {
+		kind = "exact",
+		visibleOnly = true,
+		frame = function() return PreferContent(_G.GamepadMainActionBarFrame) end
+	}
+end
+
 Preview.Policies = policies
 
 local FindPolicy = function(moduleName, path)

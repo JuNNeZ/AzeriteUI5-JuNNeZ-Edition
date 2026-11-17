@@ -25,6 +25,7 @@
 
 --]]
 local _, ns = ...
+if (ns.NativeController and ns.NativeController.IsActive()) then return end
 if (not ns.API.IsAddOnEnabled("ConsolePort")) then return end
 
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end

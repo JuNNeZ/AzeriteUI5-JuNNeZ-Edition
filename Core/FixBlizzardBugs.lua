@@ -30,7 +30,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local API = ns.API
 
 -- GLOBALS: ChannelFrame
--- GLOBALS: StaticPopupDialogs, StaticPopup_Show, ReloadUI, CANCEL
+-- GLOBALS: ns.API.PopupDialogs, ns.API.ShowPopup, ReloadUI, CANCEL
 
 -- Don't call this prior to our own addon loading,
 -- or it'll completely mess up the loading order.
@@ -62,7 +62,12 @@ end
 local pendingRaidBarVisible = nil
 local pendingRaidGroupFilter = false
 
+local function UsesNativeGroupFrames()
+	return ns.NativeController ~= nil and ns.NativeController.IsActive() or false
+end
+
 local function SetBlizzardRaidBarVisible(visible)
+	if (UsesNativeGroupFrames()) then return end
 	local manager = _G.CompactRaidFrameManager
 	if (not manager or not manager.SetParent or not manager.Show or not manager.Hide or not manager.SetAlpha) then
 		return
@@ -204,7 +209,17 @@ local function IsModuleEnabled(name, defaultValue)
 	return defaultValue and true or false
 end
 
+-- Direct D-pad party targeting needs no frames, so a native session may keep
+-- AzeriteUI party frames (NativeController.UsesNativePartyFrames). Raid
+-- frames and the raid manager stay Blizzard's in every native session.
+local function UsesNativePartyFrames()
+	local native = ns.NativeController
+	if (not native) then return false end
+	return (native.UsesNativePartyFrames or native.IsActive)() and true or false
+end
+
 local function ShouldHandlePartyFrames()
+	if (UsesNativePartyFrames()) then return false end
 	-- RaidFrame5 replaces Blizzard's party frames in a 5 player group exactly as the
 	-- party module does, so either one being enabled means Blizzard's party frames -
 	-- and the "Party" title above them - have to be quarantined too.
@@ -212,6 +227,7 @@ local function ShouldHandlePartyFrames()
 end
 
 local function ShouldHandleRaidFrames()
+	if (UsesNativeGroupFrames()) then return false end
 	return IsModuleEnabled("RaidFrame5", true)
 		or IsModuleEnabled("RaidFrame25", true)
 		or IsModuleEnabled("RaidFrame40", true)
@@ -664,6 +680,7 @@ local function GetRaidModuleFrames(module)
 end
 
 local function ApplyAzeriteRaidGroupFilter()
+	if (UsesNativeGroupFrames()) then return end
 	if (InCombatLockdown and InCombatLockdown()) then
 		pendingRaidGroupFilter = true
 		return
@@ -691,6 +708,7 @@ local function ApplyAzeriteRaidGroupFilter()
 end
 
 local function ApplyAzeriteRaidGroupVisibility()
+	if (UsesNativeGroupFrames()) then return end
 	-- Only the true raid sized frames mirror the raid manager's hidden mode. The 5
 	-- player frames stand in for the party frames, and the manager reports hidden
 	-- wherever it does not exist at all - instanced PvP among them - which used to
@@ -723,6 +741,7 @@ local function ScheduleAzeriteRaidPanelMirror()
 end
 
 local function HookRaidManagerHiddenMode()
+	if (UsesNativeGroupFrames()) then return end
 	local toggle = _G.CompactRaidFrameManagerDisplayFrameHiddenModeToggle
 	if (toggle and toggle.HookScript and not quarantineHooked[toggle]) then
 		quarantineHooked[toggle] = true
@@ -1258,8 +1277,8 @@ local function PromptBlizzardFrameReload()
 	reloadPromptShown = true
 
 	local key = "AZERITEUI_RESTORE_BLIZZARD_GROUP_FRAMES"
-	if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
-		StaticPopupDialogs[key] = {
+	if (ns.API.PopupDialogs and not ns.API.PopupDialogs[key]) then
+		ns.API.PopupDialogs[key] = {
 			text = L["AzeriteUI hid Blizzard's group frames earlier this session and cannot bring them back on the fly."]
 				.. "|n|n" .. L["Reload the interface to get them working again."],
 			button1 = L["Reload UI"],
@@ -1271,8 +1290,8 @@ local function PromptBlizzardFrameReload()
 			preferredIndex = 3
 		}
 	end
-	if (StaticPopup_Show) then
-		StaticPopup_Show(key)
+	if (ns.API.ShowPopup) then
+		ns.API.ShowPopup(key)
 	end
 end
 

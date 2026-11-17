@@ -108,6 +108,8 @@ Experimental.ToggleBlips = function(self)
 end
 
 Experimental.SerializeOptions = function(self)
+	local bars = ns:GetModule("ActionBars", true)
+	if (not bars or not bars.db) then return end
 	if (not self.SerializedOutputWindow) then
 		local frame = CreateFrame("Frame", nil, UIParent)
 		frame:Hide()
@@ -139,7 +141,7 @@ Experimental.SerializeOptions = function(self)
 
 	local LibDeflate = LibStub("LibDeflate")
 
-	local serialized = self:Serialize(ns:GetModule("ActionBars").db.profile)
+	local serialized = self:Serialize(bars.db.profile)
 	local compressed = LibDeflate:CompressDeflate(serialized)
 	local encoded = LibDeflate:EncodeForPrint(compressed)
 

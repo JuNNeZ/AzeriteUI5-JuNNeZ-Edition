@@ -85,6 +85,8 @@ local function NewSession(world, saved)
 	local module
 	local ns = {
 		API = {
+			PopupDialogs = StaticPopupDialogs,
+			ShowPopup = function(...) return StaticPopup_Show(...) end,
 			GetFont = function() return {} end,
 			GetMedia = function() return "" end,
 			-- Core/API/Addons.lua reads this character's state by GUID.

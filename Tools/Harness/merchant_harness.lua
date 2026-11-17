@@ -56,6 +56,7 @@ end
 local prints = {}
 local Module
 local ns = {
+	GetModule = function() return Module end,
 	MovableModulePrototype = { defaults = { profile = { enabled = true } } },
 	Merge = function(_, a, b) for k, v in pairs(b) do if (a[k] == nil) then a[k] = v end end return a end,
 	NewModule = function(_, name)

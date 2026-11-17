@@ -39,6 +39,7 @@
 
 	<!-- Core -->
 	<Script file="Core.lua"/>
+	<Script file="NativeController.lua"/>
 	<Script file="ModulePrototype.lua"/>
 	<Script file="MovableFrameManager.lua"/>
 	<Script file="MovableFrameModulePrototype.lua"/>

@@ -30,7 +30,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
 
--- GLOBALS: Settings, StaticPopupDialogs, StaticPopup_Show, ReloadUI
+-- GLOBALS: Settings, ns.API.PopupDialogs, ns.API.ShowPopup, ReloadUI
 
 local Options = ns:NewModule("Options", "LibMoreEvents-1.0", "AceConsole-3.0", "AceHook-3.0")
 
@@ -147,8 +147,8 @@ local importStatus -- nil, "malformed" or "newer"
 -- the interface in a half-applied state.
 Options.PromptImportReload = function(self)
 	local key = "AZERITEUI_SETTINGS_IMPORT_RELOAD"
-	if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
-		StaticPopupDialogs[key] = {
+	if (ns.API.PopupDialogs and not ns.API.PopupDialogs[key]) then
+		ns.API.PopupDialogs[key] = {
 			text = L["Imported settings need a reload of the interface to take effect."],
 			button1 = L["Reload UI"],
 			button2 = _G.CANCEL or "Cancel",
@@ -159,8 +159,8 @@ Options.PromptImportReload = function(self)
 			preferredIndex = 3
 		}
 	end
-	if (StaticPopup_Show) then
-		StaticPopup_Show(key)
+	if (ns.API.ShowPopup) then
+		ns.API.ShowPopup(key)
 	end
 end
 

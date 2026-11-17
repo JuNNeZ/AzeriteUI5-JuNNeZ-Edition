@@ -26,6 +26,8 @@
 --]]
 local _, ns = ...
 
+if (ns.NativeController and ns.NativeController.IsActive()) then return end
+
 local MicroMenu = ns:NewModule("MicroMenu", "LibMoreEvents-1.0", "AceHook-3.0")
 
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
@@ -330,6 +332,7 @@ local BagButton_OnLeave = function(self)
 end
 
 MicroMenu.SpawnBagButton = function(self)
+	if (ns.ShouldUseBlizzardBags and ns.ShouldUseBlizzardBags()) then return end
 	local button = CreateFrame("Button", ns.Prefix.."BagButton", UIParent, "SecureActionButtonTemplate")
 	button:SetScale(ns.API.GetEffectiveScale())
 	button:SetSize(BAG_BUTTON_SIZE, BAG_BUTTON_SIZE)
@@ -624,8 +627,8 @@ MicroMenu.PromptReload = function(self)
 	self.reloadPromptShown = true
 
 	local key = "AZERITEUI_MICRO_MENU_RELOAD"
-	if (StaticPopupDialogs and not StaticPopupDialogs[key]) then
-		StaticPopupDialogs[key] = {
+	if (ns.API.PopupDialogs and not ns.API.PopupDialogs[key]) then
+		ns.API.PopupDialogs[key] = {
 			text = L["The micro menu is built when the interface loads, so this change needs a reload to take effect."],
 			button1 = L["Reload UI"],
 			button2 = CANCEL or "Cancel",
@@ -636,8 +639,8 @@ MicroMenu.PromptReload = function(self)
 			preferredIndex = 3
 		}
 	end
-	if (StaticPopup_Show) then
-		StaticPopup_Show(key)
+	if (ns.API.ShowPopup) then
+		ns.API.ShowPopup(key)
 	end
 end
 

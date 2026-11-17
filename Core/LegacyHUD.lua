@@ -4,7 +4,7 @@
 local Addon, ns = ...
 local HUD = ns:NewModule("LegacyHUD", "AceConsole-3.0", "LibMoreEvents-1.0")
 ns.LegacyHUD = HUD
-local baseDefaults, cache = {}, {}
+local baseDefaults, cache, levelFrames = {}, {}, {}
 local Reload = function()
 	if (C_UI and C_UI.Reload) then C_UI.Reload() elseif (ReloadUI) then ReloadUI() end
 end
@@ -58,6 +58,18 @@ HUD.IsActive = function(self)
 	if (not ns.db or not ns.db.char or ns.db.char.legacyHUD ~= true) then return false end
 	local variant = ns.GetActiveConfigVariant and ns:GetActiveConfigVariant()
 	return not variant or variant == ""
+end
+
+HUD.GetShowLevels = function(self)
+	return ns.db.char.legacyShowLevels ~= false
+end
+
+HUD.SetShowLevels = function(self, enabled)
+	ns.db.char.legacyShowLevels = enabled and true or false
+	for frame in pairs(levelFrames) do
+		frame.LegacyShowLevel = self:GetShowLevels()
+		if (frame.Name and frame.Name.UpdateTag) then frame.Name:UpdateTag() end
+	end
 end
 
 local function Copy(value, seen)
@@ -358,6 +370,10 @@ HUD.StyleUnit = function(self, frame)
 	local styles = { Player = true, Target = true, Pet = true, ToT = true, Focus = true, Party = true, PlayerParty = true, Raid5 = true, Raid25 = true, Raid40 = true, Boss = true, Arena = true }
 	local style = type(frame.style) == "string" and frame.style:sub(#ns.Prefix + 1)
 	if (not styles[style]) then return end
+	if (style == "Player" or style == "Target" or style == "Party" or style == "PlayerParty") then
+		levelFrames[frame] = true
+		frame.LegacyShowLevel = self:GetShowLevels()
+	end
 	frame.LegacyBorder = UnitBorder(frame)
 	local overlay = frame.Health:CreateTexture(nil, "OVERLAY", nil, -1)
 	-- Shade the native bar without changing its clipped fill or reading a value.
@@ -392,6 +408,7 @@ HUD.StyleUnit = function(self, frame)
 	-- The name tag cuts by character count; wider glyphs (CJK) still overran
 	-- the narrow raid bars and wrapped onto the status text. One line only.
 	if (frame.Name and frame.Name.SetWordWrap) then frame.Name:SetWordWrap(false) end
+	if (frame.LegacyShowLevel ~= nil and frame.Name and frame.Name.UpdateTag) then frame.Name:UpdateTag() end
 	-- The target's threat percent (Target.lua) sits left of a name sized by its text; this name is
 	-- left-aligned at a fixed width, so the percent goes above the frame's top right corner instead.
 	if (frame.ThreatPercent) then
@@ -492,6 +509,14 @@ HUD.RefreshUnit = function(self, frame)
 	self:StyleUnit(frame)
 	if (not frame.LegacyBorder) then return end
 	local health = frame.Health
+	-- The player style anchors its cast name like the health value. On the
+	-- compact bar it needs its own left edge, including after a tier refresh.
+	if (frame.style == ns.Prefix.."Player" and frame.Castbar and frame.Castbar.Text) then
+		local text = frame.Castbar.Text
+		text:ClearAllPoints()
+		text:SetPoint("LEFT", health, "LEFT", 10, 0)
+		text:SetJustifyH("LEFT")
+	end
 	if (health.Backdrop) then
 		health.Backdrop:ClearAllPoints()
 		health.Backdrop:SetAllPoints(health)

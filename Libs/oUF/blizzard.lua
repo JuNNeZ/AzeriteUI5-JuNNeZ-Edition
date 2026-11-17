@@ -56,6 +56,33 @@ hiddenParent:Hide()
 -- end
 
 local looseFrames = {}
+local menuOwners = {}
+
+-- Native Forever Y opens TargetFrame_OpenMenu(TargetFrame). Menu closes on the
+-- next update if that owner is hidden. Keep its native events/parent/visibility;
+-- suppress only art and mouse input, including the existing child hit regions.
+local function disableMenuOwnerMouse(frame)
+	if(InCombatLockdown() or frame:IsForbidden()) then return end
+	frame:EnableMouse(false)
+	for _, child in ipairs({frame:GetChildren()}) do
+		disableMenuOwnerMouse(child)
+	end
+end
+
+local function preserveMenuOwner(frame)
+	if(not frame or menuOwners[frame]) then return end
+	menuOwners[frame] = true
+	local settingAlpha = false
+	hooksecurefunc(frame, 'SetAlpha', function(self)
+		if(settingAlpha) then return end
+		settingAlpha = true
+		self:SetAlpha(0)
+		settingAlpha = false
+	end)
+	frame:SetAlpha(0)
+	if(ns.HideEditModeSelection) then ns.HideEditModeSelection(frame) end
+	if(not InCombatLockdown()) then disableMenuOwnerMouse(frame) end
+end
 
 local watcher = CreateFrame('Frame')
 watcher:RegisterEvent('PLAYER_REGEN_ENABLED')
@@ -65,6 +92,9 @@ watcher:SetScript('OnEvent', function()
 	end
 
 	table.wipe(looseFrames)
+	for frame in next, menuOwners do
+		disableMenuOwnerMouse(frame)
+	end
 end)
 
 local function resetParent(self, parent)
@@ -163,7 +193,11 @@ function oUF:DisableBlizzard(unit)
 	elseif(unit == 'pet') then
 		handleFrame(PetFrame)
 	elseif(unit == 'target') then
-		handleFrame(TargetFrame)
+		if(ns.IsForever) then
+			preserveMenuOwner(TargetFrame)
+		else
+			handleFrame(TargetFrame)
+		end
 	elseif(unit == 'focus') then
 		handleFrame(FocusFrame)
 	elseif(unit:match('boss%d?$')) then
@@ -186,6 +220,8 @@ function oUF:DisableBlizzard(unit)
 			end
 		end
 	elseif(unit:match('party%d?$')) then
+		local native = ns.NativeController
+		if(native and (native.UsesNativePartyFrames or native.IsActive)()) then return end
 		if(not isPartyHooked) then
 			isPartyHooked = true
 

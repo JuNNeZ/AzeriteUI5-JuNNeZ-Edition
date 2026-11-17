@@ -41,6 +41,16 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.42.0-JuNNeZ",
+		items = {
+			{ text = "New Guild Manager: members, main/alt links, crafting, history, follow-up and sharing. Also /azguild.", page = "GuildManager" },
+			{ text = "Chattynator users: show guild nicknames (and levels) in chat.", page = "GuildManager" },
+			{ text = "Forever controller mode keeps Blizzard's bars and functions, now with AzeriteUI button art.", page = L["Action Bars"] },
+			{ text = "Turn on party targeting in Blizzard's controller settings to keep AzeriteUI party frames.", page = L["Group Frames"] },
+			{ text = "Optional: leave the bag bar and backpack buttons to Blizzard.", page = L["Bags"] },
+		}
+	},
+	{
 		version = "5.41.0-JuNNeZ",
 		items = {
 			{ text = "Party buffs and debuffs have separate areas and independent sizes.", page = L["Group Frames"], section = L["Party Frames"] },

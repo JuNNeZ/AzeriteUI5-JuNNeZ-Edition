@@ -116,6 +116,14 @@ local function Load(options)
 	chunk("AzeriteUI", ns)
 	assert(registered and registered.name == "Castbar", "the castbar element did not register")
 	assert(registered.enable(frame, frame.unit), "the castbar element did not enable")
+	if (options.partyOverlay) then
+		local f = assert(io.open(root .. "/Components/UnitFrames/Units/Party.lua", "rb"))
+		local party = f:read("*a")
+		f:close()
+		local callback = assert(party:match("local CastOverlay_Hide = function%(element%)(.-)\nend"))
+		local hide = assert(loadstring("return function(element)" .. callback .. "\nend"))()
+		element.PostCastStop, element.PostCastFail, element.PostCastInterrupted = hide, hide, hide
+	end
 
 	local function Fire(event, ...)
 		local method = frame.events[event]
@@ -371,6 +379,29 @@ do
 	bar.value = 0
 	Frame(.1)
 	check(bar.value ~= bar.max, "another unit's cast is not drawn full from the player's old times", bar.value)
+end
+
+-- Party overlays must disappear on the event, even before another rendered frame.
+for _, event in ipairs({ "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED" }) do
+	local W, bar, Fire = Load({ partyOverlay = true })
+	W.now = 1500
+	W.cast = { name = "Wrath", startTime = 1500, endTime = 1502, firstStart = 1500, firstEnd = 1502 }
+	Fire("UNIT_SPELLCAST_START", "Cast-zone", 5176, nil)
+	W.cast = nil
+	Fire(event, "Cast-zone", 5176, nil)
+	check(not bar.shown, "party overlay hides immediately on " .. event)
+end
+do
+	local W, bar, Fire = Load({ partyOverlay = true })
+	W.now = 1600
+	W.cast = { name = "Wrath", startTime = 1600, endTime = 1602, firstStart = 1600, firstEnd = 1602 }
+	Fire("UNIT_SPELLCAST_START", "Cast-zone", 5176, nil)
+	W.cast = nil -- cast disappears during the loading screen, no stop event
+	bar:ForceUpdate()
+	check(not bar.shown and not bar.casting, "post-zone ForceUpdate clears a stale player overlay")
+	W.cast = { name = "Wrath", startTime = 1601, endTime = 1603, firstStart = 1601, firstEnd = 1603 }
+	bar:ForceUpdate()
+	check(bar.shown and bar.casting, "post-zone ForceUpdate retains a current player cast")
 end
 
 print(string.format("Castbar pushback: %d checks, %d failures", checks, failures))

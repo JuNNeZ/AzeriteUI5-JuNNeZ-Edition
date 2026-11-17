@@ -416,6 +416,8 @@ do
 	local ns = { API = {} }
 	assert(loadfile(root .. "/Core/API/Addons.lua"))("AzeriteUI5_JuNNeZ_Edition", ns)
 	local API = ns.API
+	API.PopupDialogs = StaticPopupDialogs
+	API.ShowPopup = function(...) return StaticPopup_Show(...) end
 
 	check(API.GetAddOnTitle("ArcUI") == "ArcUI Title" and API.GetAddOnTitle("Other") == "Other", "addon title from the TOC, else the folder")
 

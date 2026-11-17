@@ -75,6 +75,7 @@ local Load = function(opts)
 
 	local module
 	local ns = {
+		ShouldUseBlizzardBags = function() return opts.nativeBags == true end,
 		Prefix = "AzeriteUI",
 		HasSecureSnippets = true,
 		-- Core.lua makes ns a CallbackHandler target; MicroMenu listens for MFM_UIScaleChanged.
@@ -95,6 +96,8 @@ local Load = function(opts)
 		end },
 	}
 	function ns:NewModule(name)
+		ns.API.PopupDialogs = env.StaticPopupDialogs
+		ns.API.ShowPopup = function(...) return env.StaticPopup_Show(...) end
 		module = { name = name, events = {} }
 		function module:GetName() return self.name end
 		function module:RegisterEvent(event, handler) self.events[event] = handler end
@@ -186,6 +189,14 @@ for _, key in ipairs({ "azerite", "legacy", "hunter", "mage", "paladin", "druid"
 	check(b.Icon.texture:find("ThemeBagIcons\\"..key..".tga", 1, true), "real bag button theme icon: "..key)
 	check(b.attributes.macrotext == "/click MainMenuBarBackpackButton" and not b.scripts.OnClick,
 		"themed bag preserves secure click: "..key)
+end
+
+do
+	local m, world, Fire = Load({ nativeBags = true })
+	check(m.bagButton == nil, "native bag mode creates no extra bag proxy")
+	check(m.toggle ~= nil, "native bag mode keeps cog wheel")
+	check(pcall(Fire, "BAG_UPDATE_DELAYED") and pcall(Fire, "PLAYER_ENTERING_WORLD"),
+		"native bag mode events tolerate absent proxy")
 end
 
 print(string.format("bag_button_harness: %d passed, %d failed", passed, failed))

@@ -48,7 +48,17 @@ layout(frame)
 check(profile.partyAuraDebuffSize == 45, "old relative size migrated without changing appearance")
 check(frame.NativeAuras.w == 98 and frame.NativeDebuffs.w == 143, "each viewport fits exactly three differently sized icons")
 check(frame.NativeAuras.h == 64 and frame.NativeDebuffs.h == 94, "each viewport reserves its own two rows")
-check(frame.NativeDebuffs.point[5] == -74, "debuff viewport clears full buff viewport and border gap")
+check(frame.NativeDebuffs.point[5] == -36, "debuff viewport starts six pixels after first buff row")
+profile.partyAuraRowGap = 40
+layout(frame)
+check(frame.NativeDebuffs.point[5] == -70, "slider reserves extra room for wrapped buff rows")
+profile.partyAuraRowGap = -5
+layout(frame)
+check(frame.NativeDebuffs.point[5] == -30, "negative saved gap clamps to zero")
+profile.partyAuraRowGap = 999
+layout(frame)
+check(frame.NativeDebuffs.point[5] == -190, "oversized saved gap clamps to slider maximum")
+profile.partyAuraRowGap = nil
 profile.AuraSize = 18
 layout(frame)
 check(frame.NativeDebuffs.config.harmfulSize == 45, "changing buffs preserves migrated debuff size")
@@ -57,16 +67,24 @@ profile.AurasGrowthY = "UP"
 profile.AurasGrowthX = "LEFT"
 layout(frame)
 check(frame.NativeAuras.config.size == 18 and frame.NativeDebuffs.w == 80, "independent debuff resize")
-check(frame.NativeDebuffs.point[5] == 50, "upward growth separates viewports in the correct direction")
+check(frame.NativeDebuffs.point[5] == 24, "upward growth separates viewports in the correct direction")
 local auras = frame.Auras
 auras[1], auras[2], auras[3] = region(false), region(true), region(false)
 position(auras, 1, 3)
 check(auras[1].w == 18 and auras[2].w == 24, "fallback uses independent actual dimensions")
-check(auras[1].point[5] == 0 and auras[2].point[5] == 28, "fallback debuffs use a separate line with a border gap")
+check(auras[1].point[5] == 0 and auras[2].point[5] == 24, "fallback debuffs use a separate line with a border gap")
 check(auras[3].point[4] == -22, "fallback left growth retains separate buff columns")
 auras[1].isHarmful = true
 position(auras, 1, 3)
-check(auras[1].point[5] == 28 and auras[3].point[5] == 0, "same-count type replacement repositions correctly")
+check(auras[1].point[5] == 24 and auras[3].point[5] == 0, "same-count type replacement repositions correctly")
+profile.partyAuraRowGap = 40
+layout(frame)
+position(auras, 1, 3)
+check(auras[1].point[5] == 58, "fallback also applies the saved row gap")
+auras[3].isHarmful = true
+position(auras, 1, 3)
+check(auras[1].point[5] == 0, "fallback with no buffs leaves no empty buff rows")
+profile.partyAuraRowGap = nil
 
 local containers = read("Components/UnitFrames/Auras/PlayerAuraContainers.lua")
 ns.PlayerAuraContainers = {}

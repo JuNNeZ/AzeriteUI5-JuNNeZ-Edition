@@ -192,13 +192,20 @@ function UnregisterStateDriver() end
 local function setState(state, value) stateDrivers[state]:SetAttribute("state-" .. state, value) end
 UIParent = newFrame("UIParent")
 GameTooltip = newFrame("GameTooltip")
-function GameTooltip:IsForbidden() return false end
+function GameTooltip:IsForbidden() return W.tooltipForbidden or false end
+function GameTooltip:SetHyperlink(value) self.link = value; self.lines = {} end
+function GameTooltip:AddLine(value) self.lines[#self.lines + 1] = value end
+function GameTooltip_SetDefaultAnchor(tooltip, owner) tooltip.owner = owner end
 
 ----------------------------------------------------------------
 -- Addon namespace
 ----------------------------------------------------------------
 local libs = {
 	["AceLocale-3.0"] = { GetLocale = function() return setmetatable({}, { __index = function(_, k) return k end }) end },
+	["LibFadingFrames-1.0"] = {
+		RegisterFrameForFading = function(_, frame, group) frame.fadeGroup = group end,
+		UnregisterFrameForFading = function(_, frame) frame.fadeGroup = nil end,
+	},
 }
 LibStub = setmetatable({}, { __call = function(_, name) return libs[name] end })
 
@@ -233,6 +240,7 @@ function ns:NewModule(name)
 	return module
 end
 function ns:GetModule() return nil end
+ns.NativeController = { IsActive = function() return W.nativeBars == true end }
 
 assert(loadfile(root .. "/Components/ActionBars/Elements/QuestItemData.lua"))("AzeriteUI", ns)
 assert(loadfile(root .. "/Components/ActionBars/Elements/QuestItemButton.lua"))("AzeriteUI", ns)
@@ -348,6 +356,22 @@ check(button.shown == true, "shown with an item")
 check(button.overrides.Q == true, "borrows the extra action key")
 check(button.HotKey.text == "Q", "hotkey shows the borrowed key")
 
+GameTooltip:Hide()
+button.scripts.OnEnter(button)
+check(GameTooltip.shown and GameTooltip.owner == button and GameTooltip.link == link(5001), "hover shows the displayed item tooltip")
+check(GameTooltip.lines and GameTooltip.lines[2] == "Quest: Burn the Huts", "hover includes the selected quest title")
+button.scripts.OnLeave(button)
+check(not GameTooltip.shown, "leaving the button hides the tooltip")
+module.db.profile.showQuestInTooltip = false
+button.scripts.OnEnter(button)
+check(GameTooltip.shown and GameTooltip.lines and #GameTooltip.lines == 0, "quest text toggle leaves the item tooltip available")
+button.scripts.OnLeave(button)
+module.db.profile.showQuestInTooltip = true
+W.tooltipForbidden = true
+button.scripts.OnEnter(button)
+check(not GameTooltip.shown, "forbidden tooltip is not shown")
+W.tooltipForbidden = nil
+
 setState("extrabar", "on")
 check(button.overrides.Q == nil and button.shown == true, "extra action up: key handed back, button stays")
 setState("extrabar", "off")
@@ -363,11 +387,17 @@ W.bags[5002] = 1
 W.quests[2] = { id = 2, item = 5002, distSq = 1 }
 module:OnEvent("QUEST_LOG_UPDATE"); flush()
 check(button.attributes.item == "item:5001" and button.Icon.texture == "icon-5001", "nothing changes in combat")
+button.scripts.OnEnter(button)
+check(GameTooltip.link == link(5001), "combat tooltip stays with the usable item")
+button.scripts.OnLeave(button)
 module:OnEvent("UPDATE_BINDINGS"); module:OnKeyBoundEnabled(); module:OnKeyBoundDisabled(); flush()
 check(not W.combatWrites, "no protected attribute writes in combat (bindings, keybind mode)")
 W.combat = false
 module:OnEvent("PLAYER_REGEN_ENABLED"); flush()
 check(button.attributes.item == "item:5002" and button.Icon.texture == "icon-5002", "after combat icon and item change together")
+button.scripts.OnEnter(button)
+check(GameTooltip.link == link(5002), "tooltip follows the new item after combat")
+button.scripts.OnLeave(button)
 
 -- Own key: no borrowing.
 W.bindings["CLICK AzeriteUIQuestItemButton:LeftButton"] = { "F" }
@@ -375,10 +405,34 @@ module:OnEvent("UPDATE_BINDINGS")
 check(button.attributes.usefallback == nil and next(button.overrides) == nil, "own key: extra action key not borrowed")
 check(button.HotKey.text == "F", "hotkey shows the own key")
 
+-- Mouseover changes opacity ownership, never item visibility or key ownership.
+check(module:GenerateDefaults().profile.onlyShowOnMouseover == false, "mouseover defaults off")
+check(button.fadeGroup == nil, "default leaves the button unfaded")
+module.db.profile.onlyShowOnMouseover = true
+module:UpdateSettings(); flush()
+check(button.fadeGroup == "QuestItemButton" and button.shown and button.attributes.item == "item:5002",
+	"mouseover fading keeps the secure item shown in an independent fade group")
+check(button.HotKey.text == "F", "mouseover preserves the key")
+module:OnKeyBoundEnabled()
+check(button.fadeGroup == nil and button.shown, "binding mode suspends mouseover fading")
+module:OnKeyBoundDisabled()
+check(button.fadeGroup == "QuestItemButton", "leaving binding mode restores mouseover fading")
+W.combat = true
+module.db.profile.onlyShowOnMouseover = false
+module:UpdateSettings(); flush()
+check(button.fadeGroup == "QuestItemButton" and module.applyPending and not W.combatWrites,
+	"combat settings change waits without protected writes")
+W.combat = false
+module:OnEvent("PLAYER_REGEN_ENABLED"); flush()
+check(button.fadeGroup == nil and button.shown, "combat end applies mouseover off")
+module.db.profile.onlyShowOnMouseover = true
+module:UpdateSettings(); flush()
+
 -- Disabled: empty and hidden.
 module.db.profile.enabled = false
 module:UpdateSettings(); flush()
 check(button.attributes.item == nil and button.shown == false, "disabled: no item, hidden")
+check(button.fadeGroup == nil, "disabled removes mouseover fading")
 
 -- Binding mode shows the empty button with a placeholder.
 module.db.profile.enabled = true
@@ -386,6 +440,8 @@ W.quests = {}
 module:UpdateSettings(); flush()
 module:OnKeyBoundEnabled()
 check(button.shown == true and button.Icon.texture ~= nil, "keybind mode shows the button")
+button.scripts.OnEnter(button)
+check(not GameTooltip.shown, "empty binding placeholder has no item tooltip")
 module:OnKeyBoundDisabled()
 check(button.shown == false, "keybind mode off hides it again")
 
@@ -400,6 +456,65 @@ check(W.prompts == 1, "and asks which to use")
 module.db.char = { rival = "ExtraQuestButton", owner = "both" }
 module:OnEnable(); flush()
 check(module.button ~= nil and not module:IsStandingDown(), "both chosen: runs anyway")
+
+-- A fresh native-bar session keeps this independent module and explicit keys.
+reset()
+W.nativeBars = true
+module = nil
+assert(loadfile(root .. "/Components/ActionBars/Elements/QuestItemButton.lua"))("AzeriteUI", ns)
+check(module ~= nil, "native session creates independent quest module")
+if not module then os.exit(1) end
+module.db = { profile = { enabled = true, maxDistance = 1000, useExtraActionKey = true }, char = {} }
+W.bags[5001] = 1
+W.quests = { { id = 1, item = 5001, distSq = 100 } }
+module:OnEnable(); flush()
+button = module.button
+check(button ~= nil and module.anchor, "native bars retain quest button startup and mover")
+setState("visible", "show"); setState("extrabar", "off")
+for _, key in ipairs({ "Q", "PAD1" }) do
+	W.bindings.EXTRAACTIONBUTTON1 = { key }
+	module:OnEvent("UPDATE_BINDINGS")
+	check(not button.attributes.usefallback and next(button.overrides) == nil, "native bars never borrow " .. key)
+	check(button.HotKey.text == "", "native bars never display a borrowed key " .. key)
+	setState("extrabar", "on"); setState("extrabar", "off")
+	check(next(button.overrides) == nil, "native extra-action transitions cannot reactivate borrowing")
+end
+for _, key in ipairs({ "F", "SHIFT-PAD1" }) do
+	W.bindings["CLICK AzeriteUIQuestItemButton:LeftButton"] = { key }
+	module:OnEvent("UPDATE_BINDINGS")
+	check(button.HotKey.text == key and button.attributes.item == "item:5001", "native explicit quest binding survives: " .. key)
+	check(next(button.overrides) == nil, "explicit quest binding creates no extra-action override")
+end
+W.combat = true
+module:OnEvent("UPDATE_BINDINGS"); module:OnKeyBoundEnabled(); flush()
+check(not W.combatWrites and not button.attributes.usefallback, "native binding refresh never mutates attributes in combat")
+W.combat = false
+module:OnEvent("PLAYER_REGEN_ENABLED"); flush()
+check(module.db.profile.useExtraActionKey == true and next(button.overrides) == nil,
+	"native mode preserves borrowing preference without acquiring native keys")
+
+if arg[2] == "taint" then
+	-- Reduced Lua isolation test. Native frame restrictions and input priority
+	-- are not emulated; the actual ApplyItem and attribute snippet still run.
+	local native = { action = "GAMEPADACTIONBUTTON1", extra = "EXTRAACTIONBUTTON1" }
+	local key = W.bindings.EXTRAACTIONBUTTON1[1]
+	check(issecure(), "native quest probe starts secure")
+	securecall(function()
+		debug.setstacktaint("AzeriteUI5_JuNNeZ_Edition")
+		module:ApplyItem()
+	end)
+	check(issecure(), "native caller restored after quest update")
+	check(issecurevariable(native, "action") and issecurevariable(native, "extra"), "native binding sentinels remain secure")
+	check(issecurevariable(W.bindings.EXTRAACTIONBUTTON1, 1) and W.bindings.EXTRAACTIONBUTTON1[1] == key,
+		"native extra-action key is neither rewritten nor tainted")
+	check(not issecurevariable(button.attributes, "item"), "only owned quest attributes receive addon taint")
+	check(next(button.overrides) == nil, "tainted native quest refresh creates no override")
+	securecall(function()
+		debug.setstacktaint("AzeriteUI5_JuNNeZ_Edition")
+		native.extra = button.HotKey.text
+	end)
+	check(not issecurevariable(native, "extra"), "negative control detects a native binding-state write")
+end
 
 print(string.format("quest_item_button_harness: %d passed, %d failed", passed, failed))
 if (failed > 0) then os.exit(1) end

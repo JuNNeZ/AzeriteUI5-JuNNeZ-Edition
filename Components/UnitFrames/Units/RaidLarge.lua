@@ -1211,6 +1211,7 @@ local CreateRaidModule = function(spec)
 	end
 
 	RaidMod.DisableBlizzard = function(self)
+		if (self:IsNativeGroupFrame()) then return end
 		-- Leave Blizzard's frames alone when our replacement is switched off, otherwise
 		-- turning these frames off leaves the player with no group frame at all.
 		local profile = self.db and self.db.profile or defaults.profile
@@ -1542,6 +1543,7 @@ local CreateRaidModule = function(spec)
 	end
 
 	RaidMod.CreateUnitFrames = function(self)
+		if (self:IsNativeGroupFrame()) then return end
 		-- The WoW11 start-up builds the frame and then calls Enable, whose OnEnable
 		-- builds it again: spawn once, or a second, unanchored copy keeps handling events.
 		if (self.frame) then return end
@@ -1598,6 +1600,7 @@ local CreateRaidModule = function(spec)
 	end
 
 	RaidMod.UpdateSettings = function(self)
+		if (self:IsNativeGroupFrame()) then return end
 		ns.UnitFrameModule.UpdateSettings(self)
 
 		local profile = self.db and self.db.profile
@@ -1624,6 +1627,7 @@ local CreateRaidModule = function(spec)
 	end
 
 	RaidMod.OnEnable = function(self)
+		if (self:IsNativeGroupFrame()) then return self:Disable() end
 		-- Don't load Blizzard_CUFProfiles or Blizzard_CompactRaidFrames in WoW 12.0.0
 		-- They have buggy secret value handling that causes errors
 		-- LoadAddOn("Blizzard_CUFProfiles")

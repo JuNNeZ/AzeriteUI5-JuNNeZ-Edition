@@ -4,6 +4,20 @@
 	<Script file="ArcheologyBar.lua"/>
 	<Script file="Banners.lua"/>
 	<Script file="ChatFrames.lua"/>
+	<Script file="GuildManager.lua"/>
+	<Script file="GuildManagerData.lua"/>
+	<Script file="GuildManagerWindow.lua"/>
+	<Script file="GuildManagerHome.lua"/>
+	<Script file="GuildManagerHistory.lua"/>
+	<Script file="GuildManagerFollowUp.lua"/>
+	<Script file="GuildManagerFollowUpWindow.lua"/>
+	<Script file="GuildManagerActions.lua"/>
+	<Script file="GuildManagerActionsWindow.lua"/>
+	<Script file="GuildManagerDialogs.lua"/>
+	<Script file="GuildManagerSharing.lua"/>
+	<Script file="GuildManagerSharingWindow.lua"/>
+	<Script file="GuildManagerCrafting.lua"/>
+	<Script file="GuildManagerCraftingWindow.lua"/>
 	<Script file="Containers.lua"/>
 
 	<Script file="Durability.lua"/>
