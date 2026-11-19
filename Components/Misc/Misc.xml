@@ -1,6 +1,7 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
 
 	<Script file="AlertFrames.lua"/>
+	<Script file="LootRollSkin.lua"/>
 	<Script file="ArcheologyBar.lua"/>
 	<Script file="Banners.lua"/>
 	<Script file="ChatFrames.lua"/>

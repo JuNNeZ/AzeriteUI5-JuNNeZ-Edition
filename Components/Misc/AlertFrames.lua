@@ -29,10 +29,12 @@ local _, ns = ...
 local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local AlertFrames = ns:NewModule("AlertFrames", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0")
+AlertFrames.lootRollRowGap = 5
 
 -- GLOBALS: CreateFrame
 -- GLOBALS: AlertFrame, GroupLootContainer, UIParent, TalkingHeadFrame
 -- GLOBALS: UIPARENT_MANAGED_FRAME_POSITIONS
+-- GLOBALS: C_LootHistory, C_Timer, Enum, GameTooltip, GetActiveLootRollIDs, GetLootRollItemLink, issecretvalue
 
 -- Lua API
 local ipairs = ipairs
@@ -52,8 +54,181 @@ local points = {
 
 local defaults = { profile = ns:Merge({
 	useAutomaticGrowth = true,
-	growUpwards = false
+	growUpwards = false,
+	skinLootRolls = false,
+	lootRollClassTheme = false,
+	showLootRollChoices = false
 }, ns.MovableModulePrototype.defaults) }
+
+local rollStates = Enum and Enum.EncounterLootDropRollState
+local rollButtons = rollStates and {
+	NeedButton = { rollStates.NeedMainSpec, rollStates.NeedOffSpec },
+	GreedButton = { rollStates.Greed },
+	TransmogButton = { rollStates.Transmog },
+	PassButton = { rollStates.Pass }
+}
+local alternateRollButton = { GreedButton = "TransmogButton", TransmogButton = "GreedButton" }
+local rollBadges = {}
+local IsSecret = issecretvalue or function() return false end
+
+local IsReadable = function(value, valueType)
+	return not IsSecret(value) and type(value) == valueType
+end
+
+AlertFrames.CanShowLootRollChoices = function()
+	return rollButtons and C_LootHistory and C_LootHistory.GetAllEncounterInfos
+		and C_LootHistory.GetSortedDropsForEncounter and C_LootHistory.GetLootHistoryTime
+		and GetActiveLootRollIDs and GetLootRollItemLink
+end
+
+local UpdateRollBadge = function(frame, button, choice, alternate, alternateLabel)
+	local badge = rollBadges[button]
+	if (not badge and choice) then
+		local count = button:CreateFontString(nil, "OVERLAY", nil, 7)
+		count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+		count:SetFontObject(ns.API.GetFont(12, true))
+		count:SetTextColor(unpack(ns.Colors.highlight))
+		badge = { count = count }
+		rollBadges[button] = badge
+
+		button:HookScript("OnEnter", function(self)
+			if (not badge.names or IsSecret(frame.rollID) or badge.rollID ~= frame.rollID
+				or not GameTooltip:IsOwned(self)) then return end
+			for _, name in ipairs(badge.names) do
+				GameTooltip:AddLine(name, 1, 1, 1)
+			end
+			if (badge.alternateNames and #badge.alternateNames > 0 and badge.alternateLabel) then
+				GameTooltip:AddLine(badge.alternateLabel, unpack(ns.Colors.highlight))
+				for _, name in ipairs(badge.alternateNames) do
+					GameTooltip:AddLine(name, 1, 1, 1)
+				end
+			end
+			if (#badge.names > 0 or badge.alternateNames and #badge.alternateNames > 0) then
+				GameTooltip:Show()
+			end
+		end)
+	end
+	if (not badge) then return end
+
+	badge.rollID = choice and frame.rollID
+	badge.names = choice and choice.names
+	badge.alternateNames = alternate and alternate.names
+	badge.alternateLabel = alternateLabel
+	if (choice) then
+		badge.count:SetText(choice.count)
+		badge.count:Show()
+	else
+		badge.count:Hide()
+	end
+end
+
+local GetRollChoices = function(drop)
+	if (not drop or not IsReadable(drop.rollInfos, "table")) then return end
+	local choices, byState = {}, {}
+	for key, states in pairs(rollButtons) do
+		local choice = { count = 0, names = {} }
+		choices[key] = choice
+		for _, state in ipairs(states) do
+			byState[state] = choice
+		end
+	end
+	for _, roll in ipairs(drop.rollInfos) do
+		if (not IsReadable(roll, "table") or not IsReadable(roll.state, "number")) then return end
+		local choice = byState[roll.state]
+		if (choice) then
+			choice.count = choice.count + 1
+			if (IsReadable(roll.playerName, "string") and roll.playerName ~= "") then
+				choice.names[#choice.names + 1] = roll.playerName
+			end
+		end
+	end
+	return choices
+end
+
+AlertFrames.ApplyLootRollChoices = function(_, frame, choices)
+	local buttons = frame.LootButtonContainer or frame
+	for key in pairs(rollButtons) do
+		local button = buttons[key]
+		if (button) then
+			local choice = choices and button:IsShown() and choices[key]
+			-- Blizzard displays Greed or Transmog depending on the local player's eligibility.
+			local alternateKey = alternateRollButton[key]
+			local alternateButton = alternateKey and buttons[alternateKey]
+			local alternate = choice and alternateButton and not alternateButton:IsShown() and choices[alternateKey]
+			UpdateRollBadge(frame, button, choice, alternate, alternate and alternateButton.tooltipText)
+		end
+	end
+end
+
+local GetActiveDropsByLink = function(links)
+	local dropsByLink = {}
+	local now = C_LootHistory.GetLootHistoryTime()
+	local encounters = C_LootHistory.GetAllEncounterInfos()
+	if (not IsReadable(now, "number") or not IsReadable(encounters, "table")) then return dropsByLink end
+
+	for _, encounter in ipairs(encounters) do
+		if (not IsReadable(encounter, "table") or not IsReadable(encounter.encounterID, "number")) then return {} end
+		local drops = C_LootHistory.GetSortedDropsForEncounter(encounter.encounterID)
+		if (IsSecret(drops)) then return {} end
+		for _, drop in ipairs(drops or {}) do
+			if (not IsReadable(drop, "table") or not IsReadable(drop.itemHyperlink, "string")) then return {} end
+			local link = drop.itemHyperlink
+			if (links[link] == 1) then
+				if (not IsReadable(drop.startTime, "number") or not IsReadable(drop.duration, "number")
+					or IsSecret(drop.winner) or IsSecret(drop.allPassed)) then
+					dropsByLink[link] = false
+				elseif (not drop.winner and not drop.allPassed and now >= drop.startTime
+					and now < drop.startTime + drop.duration) then
+					-- History has no rollID. Any second live drop for this link makes the match ambiguous.
+					dropsByLink[link] = dropsByLink[link] == nil and drop or false
+				end
+			end
+		end
+	end
+	return dropsByLink
+end
+
+AlertFrames.RefreshLootRollChoices = function(self)
+	local container = GroupLootContainer
+	local frames = container.rollFrames
+	local links, rollLinks = {}, {}
+	local enabled = self.db.profile.showLootRollChoices and self:CanShowLootRollChoices()
+	local haveVisibleRoll = enabled and container:IsVisible() and next(frames) ~= nil
+	if (haveVisibleRoll) then
+		local activeRolls = GetActiveLootRollIDs()
+		if (IsReadable(activeRolls, "table")) then
+			for _, rollID in ipairs(activeRolls) do
+				if (not IsReadable(rollID, "number")) then
+					links = {}
+					break
+				end
+				local link = GetLootRollItemLink(rollID)
+				if (not IsReadable(link, "string") or link == "") then
+					links = {}
+					break
+				end
+				rollLinks[rollID] = link
+				links[link] = (links[link] or 0) + 1
+			end
+		end
+	end
+	local drops = next(links) and GetActiveDropsByLink(links) or {}
+	for _, frame in pairs(frames) do
+		local rollID = frame.rollID
+		local drop = frame:IsShown() and IsReadable(rollID, "number") and drops[rollLinks[rollID]]
+		self:ApplyLootRollChoices(frame, GetRollChoices(drop))
+	end
+end
+
+AlertFrames.QueueLootRollRefresh = function(self)
+	if (self.lootRollRefreshQueued or not self:CanShowLootRollChoices()
+		or (not self.db.profile.showLootRollChoices and not next(rollBadges))) then return end
+	self.lootRollRefreshQueued = true
+	C_Timer.After(0, function()
+		self.lootRollRefreshQueued = nil
+		self:RefreshLootRollChoices()
+	end)
+end
 
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
@@ -76,30 +251,52 @@ local GetPoints = function()
 	end
 end
 
+AlertFrames.PlaceLootRollStack = function(self, stack)
+	local point, relPoint, _, direction = GetPoints()
+	stack:ClearAllPoints()
+	stack:SetPoint(point, self.frame, relPoint, 0, ns.GetConfig("AlertFrames").AlertFramesPadding * direction)
+	return point, relPoint, direction
+end
+
 local GroupLootContainer_PostUpdate = function(self)
 	local config = ns.GetConfig("AlertFrames")
 	local point, relPoint, x, y = GetPoints()
 
 	local lastIdx = nil
+	local compactHeight, compactRows, rows = 0, 0, 0
+	local lastFrame
+	local compactGap = AlertFrames.lootRollRowGap
 	for i = 1, self.maxIndex do
 		local frame = self.rollFrames[i]
 		local prevFrame = self.rollFrames[i-1]
 		if (frame) then
+			local compact = AlertFrames:IsLootRollSkinned(frame)
 			frame:ClearAllPoints()
-			if (prevFrame and prevFrame ~= frame) then
+			if (compact and lastFrame) then
+				local gap = AlertFrames:IsLootRollSkinned(lastFrame) and compactGap or config.AlertFramesPadding
+				frame:SetPoint(point, lastFrame, relPoint, 0, gap * y)
+			elseif (prevFrame and prevFrame ~= frame) then
 				frame:SetPoint(point, prevFrame, relPoint, 0, config.AlertFramesPadding * y)
 			else
 				frame:SetPoint(point, self, point, 0, 0)
 			end
+			if (compact) then
+				compactRows = compactRows + 1
+				compactHeight = compactHeight + frame:GetHeight()
+			end
+			rows = rows + 1
+			lastFrame = frame
 			lastIdx = i
 		end
 	end
 	if (lastIdx) then
-		self:SetHeight(self.reservedSize * lastIdx)
+		self:SetHeight(compactRows == rows and compactHeight + (rows - 1) * compactGap or self.reservedSize * lastIdx)
 		self:Show()
 	else
 		self:Hide()
 	end
+	AlertFrames:QueueLootRollRefresh()
+	AlertFrames:UpdateLootRollLayoutPreviewVisibility()
 end
 
 local AlertSubSystem_AdjustAnchors = function(self, relativeAlert)
@@ -162,9 +359,6 @@ local AlertSubSystem_AdjustAllPositions = function()
 end
 
 local AlertFrame_PostUpdateAnchors = function()
-	local config = ns.GetConfig("AlertFrames")
-	local point, relPoint, x, y = GetPoints()
-
 	local AlertFrameHolder = _G[ns.Prefix.."AlertFrameHolder"]
 
 	AlertFrameHolder:ClearAllPoints()
@@ -173,8 +367,8 @@ local AlertFrame_PostUpdateAnchors = function()
 	AlertFrame:ClearAllPoints()
 	AlertFrame:SetAllPoints(AlertFrameHolder)
 
-	GroupLootContainer:ClearAllPoints()
-	GroupLootContainer:SetPoint(point, AlertFrameHolder, relPoint, 0, config.AlertFramesPadding * y)
+	AlertFrames:PlaceLootRollStack(GroupLootContainer)
+	AlertFrames:UpdateLootRollLayoutPreviewPosition()
 
 	if (GroupLootContainer:IsShown()) then
 		GroupLootContainer_PostUpdate(GroupLootContainer)
@@ -184,6 +378,7 @@ end
 AlertFrames.PostUpdatePositionAndScale = function(self)
 	AlertFrame_PostUpdateAnchors()
 	AlertSubSystem_AdjustAllPositions()
+	self:QueueLootRollRefresh()
 end
 
 AlertFrames.PrepareFrames = function(self)
@@ -216,8 +411,17 @@ end
 
 AlertFrames.OnEnable = function(self)
 	self:PrepareFrames()
+	self:PrepareLootRollSkin()
 	self:CreateAnchor(L["Alerts"])
 	self.anchor:SetScalable(false)
+	self:PrepareLootRollLayoutPreview()
 
 	ns.MovableModulePrototype.OnEnable(self)
+
+	if (self:CanShowLootRollChoices()) then
+		self:RegisterEvent("START_LOOT_ROLL", "QueueLootRollRefresh")
+		self:RegisterEvent("LOOT_HISTORY_UPDATE_DROP", "QueueLootRollRefresh")
+		self:RegisterEvent("LOOT_HISTORY_UPDATE_ENCOUNTER", "QueueLootRollRefresh")
+		self:RegisterEvent("LOOT_HISTORY_CLEAR_HISTORY", "QueueLootRollRefresh")
+	end
 end

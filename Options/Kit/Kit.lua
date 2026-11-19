@@ -393,6 +393,13 @@ local themeLabels = {
 	class = L["Class Color"]
 }
 
+-- HUD previews can use the saved window palette before Options has been opened.
+Kit.GetSavedWindowColor = function()
+	local settings = ns.db and ns.db.global
+	local theme = themes[settings and settings.optionsTheme] or themes.azerite
+	return unpack(theme.window or themes[theme.inherit].window)
+end
+
 local currentTheme = "azerite"
 
 -- Owned font copies keep live theme changes local to options. FontStrings

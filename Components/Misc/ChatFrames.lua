@@ -660,12 +660,15 @@ ChatFrames.OnInitialize = function(self)
 		end
 	end)
 
-	-- Add more font sizes.
-	for i = #CHAT_FONT_HEIGHTS, 1, -1 do
-		CHAT_FONT_HEIGHTS[i] = nil
-	end
-	for i,v in ipairs({ 12, 14, 16, 18, 20, 22, 24, 28, 32 }) do
-		CHAT_FONT_HEIGHTS[i] = v
+	-- Forever builds its controller tab menu from Blizzard's shared font list.
+	-- Keep the list secure even if the input style changes during this session.
+	if (not ns.IsForever) then
+		for i = #CHAT_FONT_HEIGHTS, 1, -1 do
+			CHAT_FONT_HEIGHTS[i] = nil
+		end
+		for i,v in ipairs({ 12, 14, 16, 18, 20, 22, 24, 28, 32 }) do
+			CHAT_FONT_HEIGHTS[i] = v
+		end
 	end
 end
 

@@ -44,9 +44,11 @@ check(#live == 0, "disabling removes real API wrapper")
 -- renderer. Font strings/pools below are offline widgets, not client objects.
 ChatTypeGroup, ChatFrameUtil = {}, {}
 addon.Display = {}
+addon.CallbackRegistry = { RegisterCallback = function() end }
 assert(loadfile(chatty .. "/Core/Messages.lua"))("Chattynator", addon)
 assert(loadfile(chatty .. "/Display/Main.lua"))("Chattynator", addon)
 assert(loadfile(chatty .. "/Display/ScrollingMessages.lua"))("Chattynator", addon)
+assert(loadfile(chatty .. "/Display/Tabs.lua"))("Chattynator", addon)
 CopyTable = function(source)
     local copy = {}; for key, value in pairs(source) do copy[key] = type(value) == "table" and CopyTable(value) or value end
     return copy
@@ -80,21 +82,47 @@ local function Raw(kind, metadata)
         typeInfo = { type = kind, event = "CHAT_MSG_" .. kind, player = metadata }, recordedBy = addon.Data.CharacterName,
         color = { r = 1, g = 1, b = 1 }, timestamp = 1794744000 }
 end
-monitor.messages = { Raw("SAY", { name = "Main Person" }), Raw("GUILD", { name = "Shortened metadata" }) }
+local secondSender = Raw("GUILD", { name = "Other Member" })
+secondSender.text = secondSender.text:gsub("Main Person", "Other Member"):gsub("hello$", "second guild message")
+monitor.messages = { Raw("SAY", { name = "Main Person" }), Raw("GUILD", { name = "Shortened metadata" }), secondSender }
 monitor.messageCount = #monitor.messages
 local original = monitor.messages[2].text
 module.db.profile.chatNicknames = true; module:UpdateSettings()
-local function Tab(index, guildOnly)
-    frame:SetTabSelectedAndFilter(index, function(message) return not guildOnly or message.typeInfo.type == "GUILD" end)
+local tabs = {
+    { invert = true, groups = {}, channels = {}, whispersTemp = {}, filters = {} },
+    { groups = { GUILD = true }, channels = {}, whispersTemp = {}, filters = {} }
+}
+local function Tab(index, ...)
+    local expected = { ... }
+    local filter = addon.Display.TabsBarMixin:GetFilter(tabs[index], "1_" .. index)
+    frame:SetTabSelectedAndFilter(index, filter)
     scroll:Render()
-    for _, line in ipairs(scroll.visibleLines) do check(line.text:find("Jonas", 1, true), "actual tab renderer retains nickname") end
+    check(#scroll.visibleLines == #expected, "actual tab renderer shows every matching message")
+    for _, snippet in ipairs(expected) do
+        local found = false
+        for _, line in ipairs(scroll.visibleLines) do
+            if line.text:find(snippet, 1, true) then found = true; break end
+        end
+        check(found, "actual tab renderer shows " .. snippet)
+    end
 end
-Tab(1, false); Tab(2, true); Tab(1, false)
+Tab(1, "[SAY]", "|cff69ccf0Jonas|r]|h: hello", "Other Member|r]|h: second guild message")
+Tab(2, "|cff69ccf0Jonas|r]|h: hello", "Other Member|r]|h: second guild message")
+Tab(1, "[SAY]", "|cff69ccf0Jonas|r]|h: hello", "Other Member|r]|h: second guild message")
 check(monitor.messages[2].text == original, "tab rendering does not mutate raw messages")
-monitor.messagesProcessed = {}; Tab(2, true); Tab(1, false)
+module.db.profile.chatNicknames = false; module:UpdateSettings()
+Tab(2, "Main Person|r]|h: hello", "Other Member|r]|h: second guild message")
+Tab(1, "[SAY]", "Main Person|r]|h: hello", "Other Member|r]|h: second guild message")
+check(monitor:GetMessageProcessed(2).text == original, "disabling nicknames restores the original cached guild message")
+module.db.profile.chatNicknames = true; module:UpdateSettings()
+Tab(2, "|cff69ccf0Jonas|r]|h: hello", "Other Member|r]|h: second guild message")
+module.db.global.characters["other member-testrealm"] = { name = "Other Member", nickname = "Other Nickname" }
+module:UpdateSettings()
+Tab(1, "[SAY]", "|cff69ccf0Jonas|r]|h: hello", "Other Nickname|r]|h: second guild message")
+Tab(2, "|cff69ccf0Jonas|r]|h: hello", "Other Nickname|r]|h: second guild message")
 check(errors == 0 and #monitor.liveModifiers == 1, "cache rebuild and repeated tab selection keep provider wrapper installed")
 monitor.messages = { Raw("GUILD", nil) }; monitor.messageCount = 1; monitor.messagesProcessed = {}
-Tab(2, true)
+Tab(2, "|cff69ccf0Jonas|r]|h: hello")
 check(scroll.visibleLines[1].text:find("Jonas", 1, true), "ordinary guild sender link works without historical player metadata")
 local system = { text = "Notice: |Hplayer:Main Person|h[Main Person]|h", typeInfo = { type = "SYSTEM", event = "CHAT_MSG_SYSTEM" } }
 local systemText = system.text; module:ModifyMessage(system)

@@ -10,6 +10,25 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.44.0-JuNNeZ (2026-11-19) - Group Loot Rolls and Solo Preview
+
+### Highlights
+
+- **See who rolled on group loot.** Enable **Show group loot roll choices** at `/az -> Bags` for counts on the roll buttons. Hover a button to see who chose it. When Transmog takes the Greed slot, its tooltip also lists Greed voters.
+- **Give the loot window an AzeriteUI skin.** Enable **Use AzeriteUI loot roll skin** at `/az -> Bags` and reload. The compact rows use your Options panel's appearance, with an optional **Use active class theme for loot rolls** switch for class-theme frame art.
+- **Try and place it solo.** **Preview loot rolls** under Bags opens two sample drops with timers and test votes. Use the **Alerts** mover in `/lock` or Edit Mode to see the stack at its saved position and move it.
+- **Forever controller chat settings.** Preserve Blizzard's chat font-size list to address the reported input lock when opening a chat tab's settings with Y.
+
+### Development
+
+- The roll display reads Blizzard's loot history and matches it to visible drops. Counts stay hidden when simultaneous identical drops cannot be distinguished reliably.
+- Added offline checks for loot-row reuse, layout preview placement, hover names, the native Forever chat settings path, and Chattynator's guild-tab filtering with nicknames enabled or disabled.
+
+### Access and known limits
+
+- The loot skin and roll counts apply to the mouse-and-keyboard loot window. The separate Forever controller loot window uses Blizzard's layout.
+- The maintainer exercised the solo preview on Forever during development. Offline checks cover both supported clients. Real group loot events and the Forever Y-menu fix still need live confirmation.
+
 ## 5.43.0-JuNNeZ (2026-11-19) - Clearer Party Bars and Guild Manager Improvements
 
 ### Highlights

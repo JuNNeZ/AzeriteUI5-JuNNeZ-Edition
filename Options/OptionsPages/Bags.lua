@@ -158,6 +158,51 @@ local GenerateOptions = function()
 		}
 	end
 
+	local alerts = ns:GetModule("AlertFrames", true)
+	if (alerts and alerts:IsEnabled() and alerts:CanSkinLootRolls()) then
+		options.args.skinLootRolls = {
+			name = L["Use AzeriteUI loot roll skin"],
+			desc = L["Use compact AzeriteUI loot roll windows for mouse and keyboard. Applies after a reload."],
+			order = 22,
+			type = "toggle", width = "full",
+			set = function(_, value) alerts.db.profile.skinLootRolls = value end,
+			get = function() return alerts.db.profile.skinLootRolls end
+		}
+		options.args.lootRollClassTheme = {
+			name = L["Use active class theme for loot rolls"],
+			desc = L["Use the active class theme's frame art for loot rolls when available."],
+			order = 23,
+			type = "toggle", width = "full",
+			set = function(_, value)
+				alerts.db.profile.lootRollClassTheme = value
+				alerts:UpdateLootRollSkinAppearance()
+			end,
+			get = function() return alerts.db.profile.lootRollClassTheme end
+		}
+	end
+	if (alerts and alerts:IsEnabled() and alerts:CanShowLootRollChoices()) then
+		options.args.showLootRollChoices = {
+			name = L["Show group loot roll choices"],
+			desc = L["Show counts on group loot roll buttons. Hover over a button to see who chose it."],
+			order = 21,
+			type = "toggle", width = "full",
+			set = function(_, value)
+				alerts.db.profile.showLootRollChoices = value
+				alerts:QueueLootRollRefresh()
+			end,
+			get = function() return alerts.db.profile.showLootRollChoices end
+		}
+		if (alerts:CanSkinLootRolls()) then
+			options.args.previewLootRolls = {
+				name = L["Preview loot rolls"],
+				desc = L["Try the AzeriteUI skin, countdowns and roll choices with sample loot."],
+				order = 24,
+				type = "execute", width = "full",
+				func = function() alerts:ToggleLootRollPreview() end
+			}
+		end
+	end
+
 	return options
 end
 

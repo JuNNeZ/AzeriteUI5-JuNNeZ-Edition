@@ -41,6 +41,14 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.44.0-JuNNeZ",
+		items = {
+			{ text = "Show group loot roll counts and hover over the buttons to see who chose them.", page = L["Bags"] },
+			{ text = "Try the optional loot skin and sample drops in Bags, including active class-theme art.", page = L["Bags"] },
+			{ text = "Move the loot stack with the Alerts mover in /lock or Edit Mode.", run = OpenMovers },
+		}
+	},
+	{
 		version = "5.43.0-JuNNeZ",
 		items = {
 			{ text = "Party cast overlays clear more reliably after casts and loading screens.", page = L["Group Frames"], section = L["Party Frames"] },
