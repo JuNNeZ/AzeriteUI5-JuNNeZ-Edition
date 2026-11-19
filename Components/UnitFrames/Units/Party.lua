@@ -1151,6 +1151,7 @@ local style = function(self, unit, asPlayer)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
 	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
 	castbar:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
+	castbar.requireCastTimer = true
 	castbar.PostCastStop = CastOverlay_Hide
 	castbar.PostCastFail = CastOverlay_Hide
 	castbar.PostCastInterrupted = CastOverlay_Hide
@@ -1927,11 +1928,11 @@ PartyFrameMod.Update = function(self)
 	self:UpdateUnits()
 end
 
--- Loading screens can leave the player's overlay showing its pre-zone cast.
--- Re-read through oUF rather than changing class colours or guessing a duration.
-local RefreshPlayerCastOverlay = function()
+-- Loading screens can leave an overlay showing a pre-zone cast.
+local RefreshPartyCastOverlays = function()
 	for frame in next,Units do
-		if (frame.unit == "player" and frame.Castbar and frame.Castbar.ForceUpdate) then
+		if (frame.unit and frame.Castbar and frame.Castbar.ForceUpdate
+			and (frame.unit == "player" or frame:IsVisible())) then
 			frame.Castbar:ForceUpdate()
 		end
 	end
@@ -1939,11 +1940,11 @@ end
 
 PartyFrameMod.OnEvent = function(self, event, ...)
 	if (event == "PLAYER_ENTERING_WORLD") then
-		RefreshPlayerCastOverlay()
+		RefreshPartyCastOverlays()
 		-- Reconcile once more after the loading-screen event's API snapshot settles.
 		-- This must also run when secure header layout is deferred by combat.
 		if (C_Timer and C_Timer.After) then
-			C_Timer.After(1, RefreshPlayerCastOverlay)
+			C_Timer.After(1, RefreshPartyCastOverlays)
 		end
 		if (InCombatLockdown()) then
 			-- UpdateHeader is what registers the visibility driver and rebuilds the

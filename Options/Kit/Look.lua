@@ -299,7 +299,7 @@ local SECTION_ICONS = {
 	hunter = "hunter", paladin = "paladin", mageTheme = "mage", druid = "druid", warrior = "warrior",
 	hunterCrystal = "crystal", deathknight = "page:themes", priest = "page:themes", warlock = "page:themes",
 	effects = "proc", mage = "crystal", wildheart = "leaf", moonvein = "moon",
-	dreamsap = "droplet", moonwell = "orb", tests = "castbar", smooth = "smooth",
+	dreamsap = "droplet", moonwell = "orb", tests = "castbar", smooth = "smooth", details = "page:themes",
 	elementHeader = "page:unitframes", elementsHeader = "page:widgets",
 	healthColorsHeader = "droplet", colorHeader = "droplet", themeHeader = "page:themes",
 	partyAuraLayoutHeader = "page:auras", partyAuraHeader = "page:auras",

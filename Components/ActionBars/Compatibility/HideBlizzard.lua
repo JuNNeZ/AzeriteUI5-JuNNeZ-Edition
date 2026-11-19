@@ -294,7 +294,7 @@ ns.PrintEditModeDiagnostics = function()
 		(manager:IsShown() and "" or "(open Edit Mode first; selections only show while it is open)"))
 end
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
-if (ns.NativeController and ns.NativeController.IsActive()) then return end
+local nativeController = ns.NativeController and ns.NativeController.IsActive()
 
 local BlizzardABDisabler = ns:NewModule("BlizzardABDisabler", "LibMoreEvents-1.0", "AceHook-3.0")
 local quarantinedFrames = setmetatable({}, { __mode = "k" })
@@ -418,6 +418,7 @@ end
 
 local BLIZZARD_ACTION_BAR_ADDONS = {
 	Blizzard_ActionBar = true,
+	Blizzard_StatusTrackingBar = true,
 	Blizzard_MainMenuBarBagButtons = true,
 	Blizzard_MicroMenu = true,
 	Blizzard_NewPlayerExperience = true
@@ -544,6 +545,15 @@ end
 
 BlizzardABDisabler.HideBlizzard = function(self)
 
+	-- The minimap status ring still replaces XP/reputation in native mode.
+	-- Preserve every native action/menu/bag control and group Edit Mode system.
+	if (nativeController) then
+		quarantineFrame(_G.StatusTrackingBarManager)
+		ns.HideEditModeSelection(_G.MainStatusTrackingBarContainer)
+		ns.HideEditModeSelection(_G.SecondaryStatusTrackingBarContainer)
+		return
+	end
+
 	for _, frameName in ipairs(HIDDEN_FRAME_NAMES) do
 		if (frameName ~= "BagsBar" or not (IsBagBarOwnedByW2UI()
 			or (ns.ShouldUseBlizzardBags and ns.ShouldUseBlizzardBags()))) then
@@ -636,9 +646,11 @@ BlizzardABDisabler.QueueHideBlizzard = function(self)
 end
 
 BlizzardABDisabler.OnBlizzardUIReady = function(self, event, addon)
-	ns.HideReplacedEditModeSelections()
-	ns.HideReplacedEditModeCheckboxes()
-	ns.HideReplacedEditModePreviews()
+	if (not nativeController) then
+		ns.HideReplacedEditModeSelections()
+		ns.HideReplacedEditModeCheckboxes()
+		ns.HideReplacedEditModePreviews()
+	end
 	if (event == "ADDON_LOADED" and not BLIZZARD_ACTION_BAR_ADDONS[addon]) then
 		return
 	end
@@ -655,9 +667,11 @@ BlizzardABDisabler.OnCombatEnd = function(self)
 end
 
 BlizzardABDisabler.OnEnable = function(self)
-	ns.HideReplacedEditModeSelections()
-	ns.HideReplacedEditModeCheckboxes()
-	ns.HideReplacedEditModePreviews()
+	if (not nativeController) then
+		ns.HideReplacedEditModeSelections()
+		ns.HideReplacedEditModeCheckboxes()
+		ns.HideReplacedEditModePreviews()
+	end
 	self:HideBlizzard()
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnBlizzardUIReady")
 	self:RegisterEvent("ADDON_LOADED", "OnBlizzardUIReady")

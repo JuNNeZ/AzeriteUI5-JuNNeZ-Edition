@@ -84,7 +84,7 @@ Guild.RefreshFollowUp = function(self)
     end
 end
 
-Guild.OpenFollowUp = function(self)
+Guild.OpenFollowUp = function(self, filter)
     if (not self.followUpWindow) then
         self.buildingFollowUp = true
         local window = UI.Page(ns.Prefix .. "GuildFollowUp", "followup", L["Officer follow-up"], 1120, 727, 131)
@@ -156,6 +156,9 @@ Guild.OpenFollowUp = function(self)
         self.buildingFollowUp = nil
     end
     local window = self.followUpWindow
+    if (filter == "attention") then
+        window.filterIndex, window.offset = 1, 0; window.search:SetText("")
+    end
     UI.Show(window)
     local _, guildKey = self:GetFollowUpStore()
     if (window.loaded and window.root == self.selectedRoot and window.guildKey == guildKey) then

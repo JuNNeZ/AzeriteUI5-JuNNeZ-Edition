@@ -192,13 +192,19 @@ for _, forever in ipairs({false, true}) do
 	local env, ns = client(forever and 16001 or 120100, 1, nil, true)
 	local module = {}
 	ns.NewModule = function() return module end
+	local guildClicks, combat, keyDown = 0, false, false
+	local guild = { ToggleWindow = function() guildClicks = guildClicks + 1 end }
+	ns.GetModule = function(_, name) if name == "GuildManager" then return guild end end
 	ns.Private.Prefix = "Test"
 	ns.Colors = { highlight = {}, offwhite = {}, gray = {}, ui = {1, 1, 1} }
 	ns.API.GetFont = function() end
 	ns.API.GetMedia = function() end
 	ns.API.GetEffectiveScale = function() return 1 end
-	env.LibStub = function() return { GetLocale = function() return {} end } end
-	env.InCombatLockdown = function() return false end
+	env.LibStub = function() return { GetLocale = function()
+		return setmetatable({}, { __index = function(_, key) return key end })
+	end } end
+	env.InCombatLockdown = function() return combat end
+	env.GetCVarBool = function() return keyDown end
 	env.RegisterStateDriver = function() end
 	local function frame(name)
 		local f = { name = name, scripts = {}, attributes = {} }
@@ -242,15 +248,39 @@ for _, forever in ipairs({false, true}) do
 	module:SpawnButtons()
 	module:UpdateButtons()
 	for _, button in ipairs(module.buttons) do
-		local name = button.ref:GetName()
-		check(expected[name], "native menu includes only available buttons: " .. name)
-		expected[name] = nil
-		if not button.nocombat then
-			check(button.attributes.macrotext == "/click " .. name, "menu click targets native button")
+		if not button.guildOverview then
+			local name = button.ref:GetName()
+			check(expected[name], "native menu includes only available buttons: " .. name)
+			expected[name] = nil
+			if not button.nocombat then
+				check(button.attributes.macrotext == "/click " .. name, "menu click targets native button")
+			end
 		end
 	end
 	check(next(expected) == nil, "every supported menu button retained")
 	check(module.toggle ~= nil, "cog created")
+	local overview
+	for index, button in ipairs(module.buttons) do
+		if button.guildOverview then
+			check(not overview, "only one guild overview entry")
+			overview = button
+			check(module.buttons[index - 1].ref == env.GuildMicroButton, "overview follows native guild entry")
+		end
+	end
+	check(overview and overview:IsEnabled(), "guild overview is usable without a native ref")
+	check(not overview.attributes.type and overview.nocombat, "overview uses an owned combat-guarded handler")
+	local click = overview:GetScript("OnClick")
+	click(overview, "LeftButton", true)
+	click(overview, "LeftButton", false)
+	check(guildClicks == 1, "key-up preference toggles overview exactly once")
+	keyDown = true
+	click(overview, "LeftButton", true)
+	click(overview, "LeftButton", false)
+	check(guildClicks == 2, "key-down preference toggles overview exactly once")
+	combat = true
+	click(overview, "LeftButton", true)
+	check(guildClicks == 2, "combat refuses overview click")
+	combat = false
 
 	-- Blizzard gates Talents, Legacy, Group Finder and the Shop on a level 1
 	-- character. `/click` on a disabled button does nothing, so the entry must grey

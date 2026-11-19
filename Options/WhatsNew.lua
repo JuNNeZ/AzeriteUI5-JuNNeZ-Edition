@@ -41,6 +41,14 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.43.0-JuNNeZ",
+		items = {
+			{ text = "Party cast overlays clear more reliably after casts and loading screens.", page = L["Group Frames"], section = L["Party Frames"] },
+			{ text = "Open Guild Manager from the cog menu, sort members and save or discard draft edits.", page = "GuildManager" },
+			{ text = "Apply AzeriteUI Forged (Preview) to Details windows from Themes.", page = L["Themes"], section = "Details" },
+		}
+	},
+	{
 		version = "5.42.0-JuNNeZ",
 		items = {
 			{ text = "New Guild Manager: members, main/alt links, crafting, history, follow-up and sharing. Also /azguild.", page = "GuildManager" },

@@ -342,6 +342,13 @@ methods.SetText = function(self, text)
 end
 methods.GetText = function(self) return self.text end
 methods.SetScript = function(self, event, callback) self.scripts[event] = callback end
+methods.HookScript = function(self, event, callback)
+    local previous = self.scripts[event]
+    self.scripts[event] = function(...)
+        if previous then previous(...) end
+        callback(...)
+    end
+end
 methods.SetShown = function(self, value)
     if self.shown ~= value then
         self.shown = value
@@ -394,6 +401,27 @@ ns.OptionsKit.Controls = { CreateScrollBar = function(scroll, parent)
     bar:Update()
     return bar
 end }
+-- Factory contract only; actual shared dropdown/pullout tests run separately.
+local dropdownOpen
+ns.OptionsKit.Controls.CloseDropdown = function() dropdownOpen = nil end
+ns.OptionsKit.Controls.IsDropdownOpen = function() return dropdownOpen ~= nil end
+ns.OptionsKit.Controls.CreateDropdown = function(parent)
+    local control = { frame = CreateFrame("Frame", nil, parent) }
+    for _, name in ipairs({ "label", "help", "rule", "textArea", "area", "box" }) do control[name] = widget(nil, control.frame, "Frame") end
+    control.text = control.box:CreateFontString()
+    control.box.kind = "Button"
+    control.box:SetBackdropColor(.065, .072, .085, 1); control.box:SetBackdropBorderColor(.32, .29, .23, 1)
+    control.text:SetPoint("TOPLEFT", 8, -7)
+    control.SetList = function(self, list, order) self.list, self.order = list, order; self.listUpdates = (self.listUpdates or 0)+1 end
+    control.SetValue = function(self, value)
+        self.value = value; self.text:SetWidth(self.frame:GetWidth()-28); self.text:SetText(self.list[value] or "")
+    end
+    control.GetValue = function(self) return self.value end
+    control.SetCallback = function(self, callback) self.callback = callback end
+    control.Fire = function(self, value) self.callback(self, value) end
+    control.Activate = function(self) dropdownOpen = self; return true end
+    return control
+end
 ns.OptionsKit.Confirm = function(_, callback) callback() end
 RAID_CLASS_COLORS = { MAGE = { r = .41, g = .8, b = .94 }, WARRIOR = { r = .78, g = .61, b = .43 } }
 assert(loadfile(root .. "/Components/Misc/GuildManagerWindow.lua"))("Test", ns)
@@ -877,6 +905,127 @@ module.nicknameLevels.scripts.OnClick()
 check(not guildOptions.args.nicknameLevels.get(), "guild level button updates the same options value")
 module.db.profile.chatNicknames = oldChatSetting; module:UpdateSettings()
 module:ToggleWindow()
+-- Workflow controls: exercise actual callbacks, not a duplicate save model.
+module:ToggleWindow(); module:ShowPage("members")
+module.filters, module.memberSort = {}, nil; module.search:SetText("")
+module:RefreshWindow()
+module.classFilter:Fire("WARRIOR")
+check(module.filters.class == "WARRIOR" and module.classFilter:GetValue() == "WARRIOR", "dropdown selects class directly without cycling")
+module.rankFilter:Fire("Veteran")
+check(module.filters.rank == "Veteran" and module.rankFilter:GetValue() == "Veteran", "rank dropdown retains a chosen rank")
+local listUpdates = module.classFilter.listUpdates
+module:RefreshWindow()
+check(module.classFilter.listUpdates == listUpdates, "ordinary refresh does not rebuild or close an open unchanged dropdown")
+module.classFilter:Activate(); module:OpenHome()
+check(not ns.OptionsKit.Controls.IsDropdownOpen(), "leaving members closes the shared dropdown")
+module:ShowPage("members"); module.classFilter:Fire(false); module.rankFilter:Fire(false)
+check(not module.filters.class and not module.filters.rank, "All clears the filter instead of becoming a character class")
+module.filters.rank = "Removed rank"; module:RefreshWindow()
+check(not module.filters.rank and module.rankFilter:GetValue() == false, "roster changes clear a vanished filter before computing rows")
+
+local savedMembers, savedCharacters = module.members, module.db.global.characters
+local function SortMember(name, level, rankIndex, online, order)
+    return { name = name .. "-TestRealm", rank = "Member", level = level, rankIndex = rankIndex,
+        online = online, note = "", lastOnline = order and { order = order, years = 0, months = 0,
+            days = math.floor(order/24), hours = order%24 } }
+end
+module.members = { ["alpha-testrealm"] = SortMember("Alpha", 40, 1, false, 192),
+    ["alt-testrealm"] = SortMember("Alt", 10, 2, false, 2),
+    ["beta-testrealm"] = SortMember("Beta", 60, 0, true),
+    ["delta-testrealm"] = SortMember("Delta", 20, 2, false, 24),
+    ["gamma-testrealm"] = SortMember("Gamma", nil, nil, false) }
+module.db.global.characters = { ["alpha-testrealm"] = { name = "Alpha-TestRealm", nickname = "Zulu", favorite = true },
+    ["alt-testrealm"] = { name = "Alt-TestRealm", main = "alpha-testrealm" } }
+local function Sorted(field, descending)
+    local rows = module:GetDisplayRows("", {}, {}, { field = field, descending = descending })
+    local keys = {}; for _, row in ipairs(rows) do keys[#keys+1] = row.key end
+    return table.concat(keys, ",")
+end
+check(Sorted("level", true) == "beta-testrealm,alpha-testrealm,delta-testrealm,gamma-testrealm", "level sort uses the main's displayed level and keeps unknown last")
+check(Sorted("level", false) == "delta-testrealm,alpha-testrealm,beta-testrealm,gamma-testrealm", "ascending level sort still keeps unknown last")
+check(Sorted("rank", false) == "beta-testrealm,alpha-testrealm,delta-testrealm,gamma-testrealm", "rank sort follows native zero-based rank order")
+check(Sorted("name", false) == "beta-testrealm,delta-testrealm,gamma-testrealm,alpha-testrealm", "name sort follows visible person nicknames rather than hidden character names")
+check(Sorted("lastOnline", false) == "beta-testrealm,alpha-testrealm,delta-testrealm,gamma-testrealm", "activity uses the most recent known alt and puts online people first")
+check(Sorted("lastOnline", true) == "delta-testrealm,alpha-testrealm,beta-testrealm,gamma-testrealm", "reverse activity still keeps unknown durations last")
+check(module:GetMemberSortValue({ level = secret }, "level") == nil
+    and module:GetMemberSortValue({ level = 0/0 }, "level") == nil, "secret/nonfinite level sort values stay unknown")
+local expandedSort = module:GetDisplayRows("", {}, { ["alpha-testrealm"] = true }, { field = "level", descending = false })
+check(expandedSort[2].kind == "person" and expandedSort[3].key == "alpha-testrealm" and expandedSort[4].key == "alt-testrealm", "expanded characters stay together and main stays first")
+module.members, module.db.global.characters = savedMembers, savedCharacters
+module:RefreshWindow()
+module.sortButtons.level.scripts.OnClick()
+check(module.memberSort.field == "level" and module.memberSort.descending, "level heading starts highest-first")
+module.sortButtons.level.scripts.OnClick()
+check(not module.memberSort.descending, "clicking the same heading reverses sorting")
+Click("Reset sort"); check(not module.memberSort, "reset restores favorites/online default order")
+
+local workflowMain
+for _, row in ipairs(module:GetRows("", true)) do if row.key == mainKey then workflowMain = row end end
+module:SelectCharacter(assert(workflowMain), module:GetPeople("", {})[1])
+local savedNickname, savedRevision = module.nickname:GetText(), module.identityRevision
+check(not module:HasCardChanges() and not module.saveIdentity:IsEnabled(), "fresh card has clean state and no redundant save")
+module.nickname:SetText("Unsaved card edit")
+check(module:HasCardChanges() and module.cardState:GetText() == "Unsaved changes" and module.saveIdentity:IsEnabled()
+    and module.discardIdentity:IsEnabled() and not module.undo:IsEnabled(), "typing marks draft and separates discard from saved-data Undo")
+module.expanded[mainKey] = true; module:RefreshWindow()
+local otherRow = FindGuildRow(altKey, "character")
+otherRow.scripts.OnClick(otherRow, "LeftButton")
+check(module.selected == mainKey and module.nickname:GetText() == "Unsaved card edit", "another row cannot silently overwrite an unsaved card")
+module:OpenHome(); module:ShowPage("members")
+check(module:HasCardChanges() and module.nickname:GetText() == "Unsaved card edit", "page navigation retains draft and dirty state")
+module.discardIdentity.scripts.OnClick()
+check(not module:HasCardChanges() and module.nickname:GetText() == savedNickname and module.identityRevision == savedRevision,
+    "discard restores saved fields without committing or adding Undo entries")
+module.favorite.scripts.OnClick()
+check(module:HasCardChanges(), "favorite belongs to the unsaved card state")
+module.discardIdentity.scripts.OnClick()
+module.privateNote:SetText("Uncommitted private draft")
+check(module:HasCardChanges() and module.privateNote:GetHeight() >= 55, "dirty tracking retains the existing multiline sizing hook")
+module.discardIdentity.scripts.OnClick()
+module.expanded[mainKey] = true; module:RefreshWindow()
+local altCard = FindGuildRow(altKey, "character")
+module:SelectCharacter(altCard.data.row, altCard.data.person)
+module.privateNote:SetText("Alt card draft")
+local personHeading = FindGuildRow(mainKey, "person")
+personHeading.scripts.OnClick(personHeading, "LeftButton")
+check(module.selected == altKey and module.privateNote:GetText() == "Alt card draft", "folding an alt's person preserves its selected dirty card")
+module.discardIdentity.scripts.OnClick()
+module:SelectCharacter(workflowMain, module:GetPeople("", {})[1])
+module.nickname:SetText("Saved workflow nickname"); module.saveIdentity.scripts.OnClick()
+check(module:Resolve("Main Person") == "Saved workflow nickname" and not module:HasCardChanges(), "save commits the draft and clears its status")
+module.undo.scripts.OnClick()
+check(module.nickname:GetText() == savedNickname and not module:HasCardChanges(), "saved-data Undo remains distinct from discarding an editor draft")
+local lostMembers, lostRecords = module.members, module.db.global.characters
+module.members, module.db.global.characters = {}, {}
+module.nickname:SetText("Draft for a removed selection"); module.discardIdentity.scripts.OnClick()
+check(not module.selected and module.character:GetText() == "" and not module:HasCardChanges(),
+    "discard can clear a vanished selection without trapping the editor in dirty state")
+module.members, module.db.global.characters = lostMembers, lostRecords
+module:SelectCharacter(workflowMain, module:GetPeople("", {})[1])
+
+roster[#roster+1] = { "Workflow Unnamed-TestRealm", "Initiate", 4, 20, "Mage", "City", "", "", false, 0, "MAGE" }
+module:RequestRoster()
+local store, scope = module:GetFollowUpStore()
+check(module:SaveFollowUpTask(mainKey, module.members[mainKey].name, "Dashboard due task", "", date("%Y-%m-%d"), scope, store.revision),
+    "overview fixture creates an actual locally due task")
+module:OpenHome()
+local missingPeople = module:GetPeople("", { inGuild = true, missing = true })
+local _, attentionCount = module:GetFollowUpItems("", "attention")
+check(#missingPeople > 0 and module.homeWindow.missing.label:GetText() == string.format("%d without nicknames", #missingPeople)
+    and attentionCount > 0 and module.homeWindow.attention.label:GetText() == string.format("%d need attention", attentionCount),
+    "overview counters use actual missing people and due follow-up items")
+module.homeWindow.online.scripts.OnClick()
+check(module.activePage == "members" and module.filters.online and module.filters.inGuild and module.search:GetText() == "", "online overview count opens a clean current-guild filter")
+module:OpenHome(); module.homeWindow.missing.scripts.OnClick()
+check(module.filters.missing and not module.filters.online and module.filters.inGuild, "missing-nickname count replaces prior filter rather than combining invisibly")
+module:OpenHome(); module.homeWindow.attention.scripts.OnClick()
+check(module.activePage == "followup" and follow.filterIndex == 1 and follow.search:GetText() == "", "attention overview count opens the due follow-up view")
+module:UndoFollowUp(); table.remove(roster); module:RequestRoster()
+module:ShowPage("members"); Click("Clear filters")
+check(not next(module.filters) and module.search:GetText() == "", "clear filters restores saved-character visibility as well as class/rank/search")
+check(module.navigation.home.y > module.navigation.history.y and module.navigation.history.y > module.navigation.backup.y,
+    "primary guild pages precede officer tools and data/sharing groups")
+module:ToggleWindow()
 if arg[2] then
     module:ToggleWindow()
     module:SaveIdentity("Main Person", "Junnez", "")
@@ -891,7 +1040,9 @@ if arg[2] then
     module.expanded[module:CharacterKey("Main Person")] = true
     module:ReloadCard(); module:RefreshWindow()
     module:ShowPage("members")
-    if arg[3] == "notes" then
+    if arg[3] == "dirty" then module.nickname:SetText("Junnez - draft")
+    elseif arg[3] == "level-sort" then module:SetMemberSort("level")
+    elseif arg[3] == "notes" then
         -- Keep this fixture's sample roster rather than requesting the stub's
         -- original two-member roster when opening the review.
         local request = module.RequestRoster; module.RequestRoster = function() end

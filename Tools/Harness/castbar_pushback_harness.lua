@@ -48,6 +48,7 @@ local function Load(options)
 	function element:SetMinMaxValues(min, max) self.min, self.max = min, max end
 	function element:SetValue(value) self.value = value end
 	function element:SetTimerDuration(duration, smoothing, direction)
+		if (W.rejectTimer) then error("timer rejected") end
 		W.timers = W.timers + 1
 		self.timer, self.timerDirection = duration, direction
 	end
@@ -83,6 +84,7 @@ local function Load(options)
 	-- The span the cast started with, whatever happened since.
 	local function StartedSpan(c)
 		if (not c) then return nil end
+		if (c.noDuration) then return nil end
 		return Duration(c.firstStart, c.firstEnd)
 	end
 
@@ -95,9 +97,9 @@ local function Load(options)
 		UnitCastingDuration = function() return StartedSpan(W.cast) end,
 		UnitChannelDuration = function() return StartedSpan(W.channel) end,
 		UnitEmpoweredChannelDuration = function() return StartedSpan(W.channel) end,
-		GetUnitEmpowerHoldAtMaxTime = function() return 0 end,
+		GetUnitEmpowerHoldAtMaxTime = function() return options.empowerHold or 0 end,
 		UnitEmpoweredStagePercentages = function() return nil end,
-		issecretvalue = function() return false end,
+		issecretvalue = function(value) return options.secretHold ~= nil and value == options.secretHold end,
 		C_DurationUtil = (not options.noDurationUtil) and { CreateDuration = function() return Duration(0, 0) end } or nil,
 		FAILED = "Failed", INTERRUPTED = "Interrupted",
 		_G = {},
@@ -122,6 +124,8 @@ local function Load(options)
 		f:close()
 		local callback = assert(party:match("local CastOverlay_Hide = function%(element%)(.-)\nend"))
 		local hide = assert(loadstring("return function(element)" .. callback .. "\nend"))()
+		assert(party:find("castbar.requireCastTimer = true", 1, true))
+		element.requireCastTimer = true
 		element.PostCastStop, element.PostCastFail, element.PostCastInterrupted = hide, hide, hide
 	end
 
@@ -402,6 +406,90 @@ do
 	W.cast = { name = "Wrath", startTime = 1601, endTime = 1603, firstStart = 1601, firstEnd = 1603 }
 	bar:ForceUpdate()
 	check(bar.shown and bar.casting, "post-zone ForceUpdate retains a current player cast")
+end
+
+-- A missed stop followed by a different type of cast must not leak flags or progress.
+do
+	local W, bar, Fire, Frame = Load({ partyOverlay = true, empowerHold = 1000 })
+	W.now = 1700
+	W.channel = { name = "Fire Breath", startTime = 1700, endTime = 1702, firstStart = 1700, firstEnd = 1702,
+		empowered = true, castBarID = CAST_BAR_ID }
+	Fire("UNIT_SPELLCAST_EMPOWER_START", "Cast-1", 357208, CAST_BAR_ID)
+	check(bar.endTime == 1703, "the player's empower includes the hold at max")
+	W.channel = nil
+	W.cast = { name = "Wrath", startTime = 1700, endTime = 1702, firstStart = 1700, firstEnd = 1702 }
+	Fire("UNIT_SPELLCAST_START", "Cast-1", 5176, nil)
+	check(bar.casting and not bar.channeling and not bar.empowering, "a new cast replaces the previous empower flags")
+	Fire("UNIT_SPELLCAST_EMPOWER_STOP", "Old-cast", 357208, true, nil, CAST_BAR_ID)
+	check(bar.shown and bar.casting, "a late empower stop does not remove the new cast")
+	W.cast.startTime, W.cast.endTime = 1700.5, 1702.5
+	Fire("UNIT_SPELLCAST_DELAYED", "Cast-1", 5176, nil)
+	check(bar.endTime == 1702.5, "a matching cast GUID supports pushback without a cast bar ID")
+	for _ = 1, 5 do Frame(.5) end
+	check(bar.shown, "the current cast survives its first expired check")
+	Frame(.5)
+	check(not bar.shown, "a missed empower stop cannot exempt the next cast from expiry")
+end
+do
+	local W, bar, Fire, Frame, frame = Load({ unit = "party1", partyOverlay = true })
+	W.now = 1800
+	W.cast = { name = "Wrath", startTime = 1800, endTime = 1802, firstStart = 1800, firstEnd = 1802 }
+	Fire("UNIT_SPELLCAST_START", "Cast-1", 5176, nil)
+	bar:SetValue(1)
+	W.cast.noDuration = true
+	bar:ForceUpdate()
+	check(not bar.shown and not bar.casting, "an unavailable timer cannot show the previous fill")
+	W.cast.noDuration = nil
+	bar:ForceUpdate()
+	check(bar.shown, "a later valid timer restores the overlay")
+	W.rejectTimer = true
+	bar:ForceUpdate()
+	check(not bar.shown, "a rejected timer cannot show the previous fill")
+	W.rejectTimer = false
+	bar:ForceUpdate()
+	frame.unit = "party2"
+	Frame(.5)
+	check(not bar.shown, "a recycled frame cannot keep the previous unit's cast")
+end
+do
+	local W, bar, Fire, Frame = Load({ partyOverlay = true, noTimer = true })
+	W.now = 1900
+	W.cast = { name = "Wrath", startTime = 1900, endTime = 1902, firstStart = 1900, firstEnd = 1902 }
+	bar:SetValue(1)
+	Fire("UNIT_SPELLCAST_START", "Cast-1", 5176, nil)
+	check(bar.shown and bar.value == 0, "player fallback starts with an empty overlay")
+	Frame(.5)
+	check(bar.value == .5, "the readable player timer advances the overlay")
+end
+
+-- Keep a real hold, but clear the light layer if the channel API stays stale.
+for _, unit in ipairs({ "player", "party1" }) do
+	local W, bar, Fire, Frame = Load({ unit = unit, partyOverlay = true, empowerHold = 1000 })
+	W.now = 2000
+	W.channel = { name = "Fire Breath", startTime = 2000, endTime = 2002, firstStart = 2000,
+		firstEnd = 2002, empowered = true, castBarID = CAST_BAR_ID }
+	Fire("UNIT_SPELLCAST_EMPOWER_START", "Cast-1", 357208, CAST_BAR_ID)
+	for _ = 1, 4 do Frame(.5) end
+	check(bar.shown, unit .. ": the overlay remains at the start of the hold")
+	W.channel.endTime = 2003
+	Fire("UNIT_SPELLCAST_EMPOWER_UPDATE", "Cast-1", 357208, CAST_BAR_ID)
+	for _ = 1, 4 do Frame(.5) end
+	check(bar.shown, unit .. ": the extended hold and first expiry check leave the overlay up")
+	Frame(.5)
+	check(not bar.shown and not bar.empowering, unit .. ": stale empower clears after its extended hold")
+end
+
+do
+	local W, bar, Fire, Frame = Load({ unit = "party1", partyOverlay = true, empowerHold = 987, secretHold = 987 })
+	W.now = 2100
+	W.channel = { name = "Fire Breath", startTime = 2100, endTime = 2102, firstStart = 2100,
+		firstEnd = 2102, empowered = true, castBarID = CAST_BAR_ID }
+	Fire("UNIT_SPELLCAST_EMPOWER_START", "Cast-1", 357208, CAST_BAR_ID)
+	for _ = 1, 8 do Frame(.5) end
+	check(bar.shown, "a secret empower hold cannot expire the overlay early")
+	W.channel = nil
+	Frame(.5)
+	check(not bar.shown, "an empower with secret hold still clears when its channel disappears")
 end
 
 print(string.format("Castbar pushback: %d checks, %d failures", checks, failures))

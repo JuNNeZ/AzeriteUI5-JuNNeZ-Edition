@@ -58,7 +58,11 @@ local function session(forever, preference, style, options)
 	check(saved.nativeControllerBars == preference, "legacy preference is neither applied nor rewritten")
 	if active then
 		local moduleCreations = 0
-		function ns:NewModule() moduleCreations = moduleCreations + 1; error("native ownership must precede module creation") end
+		function ns:NewModule(name)
+			moduleCreations = moduleCreations + 1
+			assert(name == "BlizzardABDisabler", "native ownership must precede replacement module creation")
+			return {} -- Status-only suppression has its own lifecycle regression harness.
+		end
 		function ns:GetModule() return nil end
 		local before = #world.frames
 		for _, path in ipairs({
@@ -72,7 +76,9 @@ local function session(forever, preference, style, options)
 			local ok, errorText = pcall(load, path)
 			check(ok, "native mode skips startup: " .. path .. (ok and "" or tostring(errorText)))
 		end
-		check(moduleCreations == 0 and #world.frames == before, "no bar modules, secure buttons or delayed initializer created")
+		local expectedModules = options.addons and options.addons.ConsolePort_Bar and 0 or 1
+		check(moduleCreations == expectedModules and #world.frames == before,
+			"only status suppression module; no replacement bars, secure buttons or delayed initializer created")
 		local generate
 		local options = { AddGroup = function(_, _, fn) generate = fn end }
 		local quest = { db = { profile = { enabled = true, useExtraActionKey = true } },

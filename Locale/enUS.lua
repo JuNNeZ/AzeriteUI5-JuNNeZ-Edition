@@ -1809,3 +1809,19 @@ L["Guild members"] = true
 -- Guild chat nickname levels.
 L["Show levels with nicknames"] = true
 L["Show the speaking character's known message-time level before their nickname, for example 60:Nickname. Unknown levels are omitted. Original-name channels keep Chattynator's own setting."] = true
+
+-- Guild Manager workflow controls.
+L["Guild"] = true
+L["Officer tools"] = true
+L["Data & sharing"] = true
+L["Unsaved changes"] = true
+L["No unsaved changes"] = true
+L["Discard changes"] = true
+L["Remove"] = true
+L["Save or discard changes before selecting another character."] = true
+L["Clear filters"] = true
+L["Reset sort"] = true
+L["Showing current guild people. Linked characters stay together; Clear filters shows all saved people."] = true
+L["%d online people"] = true
+L["%d without nicknames"] = true
+L["%d need attention"] = true

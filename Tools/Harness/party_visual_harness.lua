@@ -24,13 +24,14 @@ local function region()
 	return r
 end
 local queued, combat = {}, false
-local player, other = { unit = "player" }, { unit = "party1" }
-for _, frame in ipairs({ player, other }) do
+local player, other, hidden = { unit = "player" }, { unit = "party1", visible = true }, { unit = "party2" }
+for _, frame in ipairs({ player, other, hidden }) do
+	function frame:IsVisible() return self.visible end
 	frame.Castbar = { calls = 0, ForceUpdate = function(self) self.calls = self.calls + 1 end }
 end
 local module = { UpdateHeader = function() end, UpdateUnits = function() end }
 local env = setmetatable({
-	Units = { [player] = true, [other] = true }, PartyFrameMod = module,
+	Units = { [player] = true, [other] = true, [hidden] = true }, PartyFrameMod = module,
 	next = next, C_Timer = { After = function(_, fn) queued[#queued + 1] = fn end },
 	InCombatLockdown = function() return combat end,
 	UsePartySpecPortraits = function() return false end,
@@ -39,22 +40,26 @@ local env = setmetatable({
 	GetMedia = function(key) return key end,
 	SetPortraitTexture = function(texture, unit) texture.unit = unit end,
 }, { __index = _G })
-local chunk = assert(loadstring(slice("local RefreshPlayerCastOverlay = function", "PartyFrameMod.UpdateAnchorAndMouseForLock = function")
-	.. "\nreturn RefreshPlayerCastOverlay"))
+local chunk = assert(loadstring(slice("local RefreshPartyCastOverlays = function", "PartyFrameMod.UpdateAnchorAndMouseForLock = function")
+	.. "\nreturn RefreshPartyCastOverlays"))
 setfenv(chunk, env)
 local refresh = chunk()
 module:OnEvent("PLAYER_ENTERING_WORLD")
-check(player.Castbar.calls == 1 and other.Castbar.calls == 0, "only own overlay refreshed on entry")
+check(player.Castbar.calls == 1 and other.Castbar.calls == 1 and hidden.Castbar.calls == 0,
+	"own and visible party overlays refresh on entry")
 queued[1]()
-check(player.Castbar.calls == 2, "own overlay refreshed after snapshot settles")
+check(player.Castbar.calls == 2 and other.Castbar.calls == 2, "both overlays refresh after the snapshot settles")
 combat = true
 module:OnEvent("PLAYER_ENTERING_WORLD")
 check(module.needHeaderUpdate and player.Castbar.calls == 3, "combat defers layout but not overlay repair")
 queued[#queued]()
-check(player.Castbar.calls == 4, "delayed repair also runs in combat")
+check(player.Castbar.calls == 4 and other.Castbar.calls == 4, "delayed repair also runs in combat")
 player.unit = "party2"
 refresh()
-check(player.Castbar.calls == 4, "reused button for another member is left alone")
+check(player.Castbar.calls == 4, "a reused button with a hidden member is skipped")
+player.visible = true
+refresh()
+check(player.Castbar.calls == 5, "a visible reused button is reconciled for its new unit")
 
 chunk = assert(loadstring(slice("local Portrait_PostUpdate = function", "-- Update the border color of priority debuffs.")
 	.. "\nreturn Portrait_PostUpdate"))

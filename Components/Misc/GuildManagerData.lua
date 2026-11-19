@@ -102,9 +102,10 @@ Guild.GetPeople = function(self, search, filters)
     for _, person in pairs(groups) do
         local matches = search == "" or string.lower(person.label .. " " .. person.privateNote):find(search, 1, true)
         local classMatch, rankMatch, levelMatch = not filters.class, not filters.rank, not low
-        local linked = #person.rows > 1
+        local linked, inGuild = #person.rows > 1, false
         for _, row in ipairs(person.rows) do
             local member = row.member
+            inGuild = inGuild or not member.saved
             local record = self.db.global.characters[row.key]
             linked = linked or (record and record.main ~= nil)
             local text = table.concat({ member.name, member.rank or "", member.note or "", member.zone or "", member.className or "" }, " ")
@@ -114,7 +115,7 @@ Guild.GetPeople = function(self, search, filters)
             levelMatch = levelMatch or member.level and member.level > 0 and member.level >= low and member.level <= high
         end
         if (low) then matches = levelMatch end
-        if (matches and classMatch and rankMatch and (not filters.online or person.online > 0)
+        if (matches and classMatch and rankMatch and (not filters.inGuild or inGuild) and (not filters.online or person.online > 0)
             and (not filters.favorite or person.favorite) and (not filters.missing or not person.nickname)
             and (not filters.unlinked or not linked)) then
             table.sort(person.rows, function(a, b)
@@ -133,8 +134,47 @@ Guild.GetPeople = function(self, search, filters)
     return people
 end
 
-Guild.GetDisplayRows = function(self, search, filters, expanded)
+-- Unknown data always sorts last, in either direction. These are readable
+-- roster snapshots, not live unit queries. Keep the existing default ordering.
+Guild.GetMemberSortValue = function(self, member, field)
+    if (field == "name") then return string.lower(member.name or "") end
+    local value = field == "rank" and member.rankIndex or field == "level" and member.level
+        or field == "lastOnline" and (member.online and -1 or member.lastOnline and member.lastOnline.order)
+    if (issecretvalue and issecretvalue(value)) then return end
+    if (type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge) then return end
+    if (field == "level" and (value <= 0 or value%1 ~= 0)) then return end
+    return value
+end
+local function Before(aValue, bValue, aKey, bKey, descending)
+    if ((aValue == nil) ~= (bValue == nil)) then return aValue ~= nil end
+    if (aValue ~= bValue) then
+        if (descending) then return aValue > bValue end
+        return aValue < bValue
+    end
+    return aKey < bKey
+end
+Guild.GetDisplayRows = function(self, search, filters, expanded, sort)
     local people, rows, online, characters = self:GetPeople(search, filters), {}, 0, 0
+    local field = sort and sort.field
+    if (field == "name" or field == "rank" or field == "level" or field == "lastOnline") then
+        local function PersonValue(person)
+            if (field == "name") then return string.lower(person.label) end
+            if (field == "lastOnline") then
+                return self:GetMemberSortValue({ online = person.online > 0, lastOnline = person.lastOnline }, field)
+            end
+            return self:GetMemberSortValue(person.rows[1].member, field)
+        end
+        table.sort(people, function(a, b)
+            return Before(PersonValue(a), PersonValue(b), a.key, b.key, sort.descending)
+        end)
+        for _, person in ipairs(people) do
+            table.sort(person.rows, function(a, b)
+                if ((a.key == person.key) ~= (b.key == person.key)) then return a.key == person.key end
+                return Before(self:GetMemberSortValue(a.member, field), self:GetMemberSortValue(b.member, field),
+                    a.key, b.key, sort.descending)
+            end)
+        end
+    end
     for _, person in ipairs(people) do
         rows[#rows+1] = { kind = "person", key = person.key, person = person }
         online, characters = online+person.online, characters+#person.rows

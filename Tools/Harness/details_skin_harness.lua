@@ -249,6 +249,47 @@ assert(skin.instance_cprops.row_info.no_icon and not skin.instance_cprops.row_in
 assert(not skin.instance_cprops.attribute_text.show_timer)
 assert(not skin.instance_cprops.use_multi_fontstrings)
 assert(skin.instance_cprops.row_info.textR_custom_text == "{data1}")
+-- /az -> Themes -> Details: every built window gets the skin, and each gets its old one back.
+local combat = false
+function InCombatLockdown() return combat end
+ns.db = { global = {} }
+function Details:GetCurrentProfileName() return "Shared" end
+Details.default_skin_to_use = "Minimalistic"
+Details.skins.Existing, Details.skins.Gone = {}, {}
+local function builtWindow(skinName, id)
+	return setmetatable({ skin = skinName, meu_id = id, barras = {},
+		baseframe = { titleBar = titleBar, cabecalho = {} },
+		row_info = { texts = { {}, {}, {}, { anchor = { x = -9 } } } } }, { __index = Details })
+end
+local first, second, third = builtWindow("Existing", 1), builtWindow("Minimalistic", 2), builtWindow("Gone", 4)
+local unbuilt = { skin = "Existing", meu_id = 3, ChangeSkin = function() error("unbuilt windows are Details' to skin") end }
+Details.tabela_instancias = { first, second, unbuilt, third }
+assert(module.IsAvailable() and not module.IsApplied(), "no window wears the skin yet")
+combat = true
+assert(not module:SetApplied(true) and first.skin == "Existing", "never switch skins in combat")
+combat = false
+assert(module:SetApplied(true))
+assert(first.skin == "AzeriteUI Forged (Preview)" and second.skin == first.skin and third.skin == first.skin)
+assert(unbuilt.skin == "Existing" and module.IsApplied(), "applied means every built window")
+local previous = ns.db.global.detailsPreviousSkins.Shared
+assert(previous[1] == "Existing" and previous[2] == "Minimalistic" and previous[4] == "Gone",
+	"previous skins are kept per Details profile")
+module:SetApplied(true)
+assert(previous[1] == "Existing", "reapplying must not overwrite the remembered skin with ours")
+Details.skins.Gone = nil
+assert(module:SetApplied(false))
+assert(first.skin == "Existing" and second.skin == "Minimalistic", "off gives each window its old skin back")
+assert(third.skin == "Minimalistic", "a skin that no longer exists falls back to Details' default")
+assert(not module.IsApplied() and next(previous) == nil, "restored windows are forgotten")
+first.skin = "AzeriteUI"
+module:SetApplied(false)
+assert(first.skin == "Minimalistic", "old saved names count as ours and never restore to ours")
+local details = Details
+Details = nil
+assert(not module.IsAvailable() and not module.IsApplied() and not module:SetApplied(true), "Details is optional")
+Details = details
+Details.GetCurrentProfileName, Details.default_skin_to_use, Details.skins.Existing = nil, nil, nil
+InCombatLockdown = nil
 -- Execute the actual installed ChangeSkin settings branch (before frame rendering).
 -- This reproduces the screenshot's stale .86 background on a same-name reload.
 if (arg[1]) then
@@ -359,6 +400,40 @@ if (arg[1]) then
 	saved.skin = "Minimalistic"
 	rowNS.RowTexts.ApplyAnchors(saved, actualRow)
 	assert(actualRow.lineText4.point[4] == 0, "other skins must keep modern anchor behavior")
+end
+-- The real Themes page: its switch drives the module and says why it is greyed without Details.
+do
+	local page, reasons = nil, {}
+	local themeNS = { ThemeEffects = { GetTheme = function() return "azerite" end },
+		OptionsKit = { Config = { SetDisabledDesc = function(option, reason) reasons[option] = reason; return option end } } }
+	function themeNS:GetModule(name)
+		if (name == "Options") then
+			return { AddGroup = function(_, key, generate) assert(key == "Themes"); page = generate() end }
+		end
+		if (name == "DetailsSkin") then return module end
+	end
+	local L = setmetatable({}, { __index = function(_, key) return key end })
+	local libStub = LibStub
+	LibStub = function() return { GetLocale = function() return L end } end
+	assert(loadfile("Options/OptionsPages/Themes.lua"))("AzeriteUI5_JuNNeZ_Edition", themeNS)
+	LibStub = libStub
+	local toggle = assert(page and page.args.details and page.args.details.args.apply, "Themes page offers the Details switch")
+	function InCombatLockdown() return false end
+	assert(not toggle.disabled() and reasons[toggle]() == nil, "usable with Details, no greyed reason")
+	assert(type(toggle.confirm()) == "string", "warns that Details resets window appearance")
+	local window = builtWindow("Existing", 7)
+	Details.skins.Existing = {}
+	Details.tabela_instancias = { window }
+	assert(not toggle.get())
+	toggle.set(nil, true)
+	assert(toggle.get() and window.skin == "AzeriteUI Forged (Preview)", "switch applies the skin")
+	toggle.set(nil, false)
+	assert(not toggle.get() and window.skin == "Existing", "switch gives the old skin back")
+	local details = Details
+	Details = nil
+	assert(toggle.disabled() and reasons[toggle]() == "Requires the Details! Damage Meter addon.", "greyed with a reason")
+	Details = details
+	InCombatLockdown = nil
 end
 -- Export the actual registered settings for the offline assembled preview.
 if (arg[2]) then

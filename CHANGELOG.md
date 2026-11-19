@@ -10,6 +10,25 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.43.0-JuNNeZ (2026-11-19) - Clearer Party Bars and Guild Manager Improvements
+
+### Highlights
+
+- **Party cast overlays clear in more cases.** The light casting layer clears when a cast or channel ends, including after zoning and when a party slot changes occupants. A new cast starts with fresh progress. The party overlay also has a fallback for missed empower-stop events when the full hold time is readable.
+- **Forever controller XP bar.** Blizzard's extra XP bar stays hidden in native controller mode. XP is still shown on the AzeriteUI minimap ring, and Blizzard's native controller buttons keep their functions.
+- **Guild Manager is easier to navigate.** Open it from the cog menu, use `/azguild`, or go to `/az -> Guild & Nicknames`. Sort members by name, rank, level, or last online. The overview counters open filtered lists, and unsaved edits can be saved or discarded before changing members.
+- **Apply the Details skin from AzeriteUI.** Go to `/az -> Themes -> Details` to apply AzeriteUI Forged (Preview) to your Details windows. Turning the switch off restores the skin each window used before.
+
+### Development
+
+- Party overlays now clear stale cast state at start, stop, expiry and unit reassignment. Regression tests cover missed stop events, rejected timers and the full empower hold with late cast updates.
+- The Guild Manager keeps characters grouped under their main while sorting, preserves drafts when changing pages, and adds shared class and rank dropdowns with clear and reset controls.
+- The Details switch uses the meter's own skin selector. Details resets custom appearance settings when changing skins, so the switch asks for confirmation.
+
+### Access and known limits
+
+- Offline checks cover Retail and Forever. In-game checks are still pending for the party overlays, controller XP bar, Guild Manager changes and Details switch.
+
 ## 5.42.0-JuNNeZ (2026-11-17) - Guild Manager and Native Controller Support
 
 ### Highlights

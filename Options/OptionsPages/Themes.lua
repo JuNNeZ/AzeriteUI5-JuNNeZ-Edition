@@ -690,6 +690,31 @@ local GenerateTests = function()
 	}}
 end
 
+-- Components/Misc/Details.lua registers the skin in Details' own selector; this
+-- switch applies it to every Details window, or gives each one its old skin back.
+local GenerateDetails = function(order)
+	local Skin = ns:GetModule("DetailsSkin", true)
+	if (not Skin or not Skin.SetApplied) then return end
+	local toggle = {
+		name = L["Use the AzeriteUI skin on Details windows"],
+		desc = L["Gives every Details window the AzeriteUI Forged (Preview) skin through Details' own skin selector. Turning it off gives each window back the skin it had before."],
+		order = 1, type = "toggle", width = "full",
+		disabled = function() return InCombatLockdown() or not Skin.IsAvailable() end,
+		-- ChangeSkin resets a window's appearance to the preset (Details' own behaviour).
+		confirm = function() return L["Details resets a window's appearance settings when its skin changes. Window positions and meter data are kept. Continue?"] end,
+		get = function() return Skin.IsApplied() end,
+		set = function(_, value) Skin:SetApplied(value) end
+	}
+	local config = ns.OptionsKit and ns.OptionsKit.Config
+	if (config and config.SetDisabledDesc) then
+		-- Only the missing addon needs saying; combat greys the whole page.
+		config.SetDisabledDesc(toggle, function()
+			if (not Skin.IsAvailable()) then return L["Requires the Details! Damage Meter addon."] end
+		end)
+	end
+	return { name = "Details", order = order, type = "group", inline = true, args = { apply = toggle } }
+end
+
 local GenerateOptions = function()
 	if (not Effects()) then return end
 	local options = {
@@ -803,6 +828,7 @@ local GenerateOptions = function()
 			tides = GenerateMaterial(33, "tides"),
 			magma = GenerateMaterial(33.1, "magma"),
 			storm = GenerateMaterial(33.2, "storm"),
+			details = GenerateDetails(39),
 			tests = GenerateTests()
 		}
 	}

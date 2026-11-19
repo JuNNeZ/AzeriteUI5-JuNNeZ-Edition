@@ -129,13 +129,31 @@ local function EmitInterruptEventDebug(element, reason, eventName, unit, rawNotI
 		tostring(shield and shield.IsShown and shield:IsShown()))
 end
 
--- AzeriteUI: castBarID is optional in every cast event (Retail and Forever). CastStart
--- stores castBarID or castGUID, but the stop/fail events only pass castBarID, so a cast
--- without one never matched and its bar stayed up at full for good (party health went
--- white-washed after any cast). Treat a stop the IDs cannot confirm as real once the
--- unit has no cast or channel left.
+-- Restricted cast data can be present without being readable by Lua.
+local function HasCastValue(value)
+	return (issecretvalue and issecretvalue(value)) or value ~= nil
+end
+
+local function IsReadableNumber(value)
+	return type(value) == 'number' and not (issecretvalue and issecretvalue(value))
+end
+
+local function GetEmpowerEndTime(unit, endTime)
+	if(not IsReadableNumber(endTime)) then return end
+	local hold = GetUnitEmpowerHoldAtMaxTime(unit)
+	if(IsReadableNumber(hold) and hold >= 0) then
+		return (endTime + hold) / 1000
+	end
+end
+
 local function IsCastOver(unit)
-	return not UnitCastingInfo(unit) and not UnitChannelInfo(unit)
+	return not HasCastValue(UnitCastingInfo(unit)) and not HasCastValue(UnitChannelInfo(unit))
+end
+
+local function MatchesCastID(element, castID)
+	local current = element.castID
+	return not (issecretvalue and (issecretvalue(castID) or issecretvalue(current))) and castID ~= nil
+		and current == castID
 end
 
 -- AzeriteUI: the bar's own timer has run out. Dcryfm's party bars (hunter, and a druid after a
@@ -148,29 +166,31 @@ local function IsTimerSpent(element)
 		return false
 	end
 	local okRemaining, remaining = pcall(timer.GetRemainingDuration, timer)
-	if(not okRemaining or type(remaining) ~= 'number' or (issecretvalue and issecretvalue(remaining))) then
+	if(not okRemaining or not IsReadableNumber(remaining)) then
 		return false
 	end
 	return remaining <= 0
 end
 
--- AzeriteUI: the player's own cast is past its stored end time. Only the player's times are
--- readable, and onUpdate draws the player's bar from them, so the engine timer may not be
--- readable after that. The maintainer's own party frame stayed white at full on 5.37.x,
--- including after death (FixLog 2026-11-08). False for other units and for secret times.
-local function IsPlayerCastPast(element, unit)
-	if(unit ~= 'player') then
-		return false
+-- When Lua draws the player's progress, expire it by the same end time.
+-- The native widget may still carry a timer from before a pushback or refresh.
+local function IsCastTimerSpent(element, unit)
+	if(element.empowering) then
+		-- The widget's timer can expire before the hold at max. Only party
+		-- overlays with a known hold-adjusted deadline use the backstop.
+		local deadline = element.__AzeriteUI_EmpowerEndTime
+		return deadline ~= nil and GetTime() >= deadline
 	end
-	local endTime = element.endTime
-	if(type(endTime) ~= 'number' or (issecretvalue and issecretvalue(endTime))) then
-		return false
+	if(unit == 'player' and IsReadableNumber(element.endTime)) then
+		return GetTime() >= element.endTime
 	end
-	return GetTime() >= endTime
+	return IsTimerSpent(element)
 end
 
+-- A stop without a matching optional ID can finish the overlay once the unit
+-- has no cast or channel. A late stop for the previous cast leaves a new one up.
 local function IsCurrentCast(element, castID, unit)
-	if(castID and element.castID == castID) then
+	if(MatchesCastID(element, castID)) then
 		return true
 	end
 	return IsCastOver(unit)
@@ -182,6 +202,9 @@ local function resetAttributes(self)
 	self.casting = nil
 	self.channeling = nil
 	self.empowering = nil
+	self.startTime = nil
+	self.endTime = nil
+	self.__AzeriteUI_EmpowerEndTime = nil
 	self.notInterruptible = nil
 	self.__AzeriteUI_NotInterruptible = nil
 	self.spellID = nil
@@ -290,30 +313,38 @@ local function CastStart(self, event, unit)
 	if(not (element.ShouldShow or ShouldShow) (element, unit)) then
 		return
 	end
+	if(not unit) then
+		resetAttributes(element)
+		element:Hide()
+		return
+	end
 
 	local direction, duration = Enum.StatusBarTimerDirection.ElapsedTime
 	local castGUID, castBarID
 	local name, text, texture, startTime, endTime, isTradeSkill, _, notInterruptible, spellID
 	name, text, texture, startTime, endTime, isTradeSkill, castGUID, notInterruptible, spellID, castBarID = UnitCastingInfo(unit)
+	local casting = HasCastValue(name)
+	local empowering, channeling
 	local castID = castBarID or castGUID
-	if(name) then
-		element.casting = true
+	if(casting) then
 		duration = UnitCastingDuration(unit)
 	else
 		local isEmpowered
 		name, text, texture, startTime, endTime, isTradeSkill, notInterruptible, spellID, isEmpowered, _, castBarID = UnitChannelInfo(unit)
 		castID = castBarID
-		if(isEmpowered) then
-			element.empowering = true
-			duration = UnitEmpoweredChannelDuration(unit)
-		else
-			element.channeling = true
-			duration = UnitChannelDuration(unit)
-			direction = Enum.StatusBarTimerDirection.RemainingTime
+		if(HasCastValue(name)) then
+			if(isEmpowered) then
+				empowering = true
+				duration = UnitEmpoweredChannelDuration(unit)
+			else
+				channeling = true
+				duration = UnitChannelDuration(unit)
+				direction = Enum.StatusBarTimerDirection.RemainingTime
+			end
 		end
 	end
 
-	if(not name or (isTradeSkill and element.hideTradeSkills)) then
+	if(not HasCastValue(name) or (isTradeSkill and element.hideTradeSkills)) then
 		-- don't cancel hold time when we swap targets
 		if(not (event == 'PLAYER_TARGET_CHANGED' and element.holdTime and element.holdTime > 0)) then
 			resetAttributes(element)
@@ -323,6 +354,17 @@ local function CastStart(self, event, unit)
 		return
 	end
 
+	-- A start or refresh can supersede a cast whose stop event never arrived.
+	if(element.empowering and not empowering) then
+		for _, pip in next, element.Pips do
+			pip:Hide()
+		end
+	end
+	element.startTime = nil
+	element.endTime = nil
+	element.casting = casting or nil
+	element.channeling = channeling
+	element.empowering = empowering
 	element.delay = 0
 	element.notInterruptible = NormalizeNotInterruptible(element, notInterruptible)
 	element.holdTime = 0
@@ -334,34 +376,43 @@ local function CastStart(self, event, unit)
 	element.spellName = text
 	EmitInterruptEventDebug(element, 'start', event, unit, notInterruptible)
 
-	if(unit == 'player') then
-		-- we can only read these variables for players
+	local empowerEndTime
+	if(empowering and (unit == 'player' or element.requireCastTimer)) then
+		empowerEndTime = GetEmpowerEndTime(unit, endTime)
+	end
+	element.__AzeriteUI_EmpowerEndTime = element.requireCastTimer and empowerEndTime or nil
+
+	if(unit == 'player' and IsReadableNumber(startTime) and IsReadableNumber(endTime) and endTime > startTime) then
 		element.startTime = startTime / 1000
-		if(self.empowering) then
-			element.endTime = (endTime + GetUnitEmpowerHoldAtMaxTime(unit)) / 1000
-		else
-			element.endTime = endTime / 1000
-		end
-	else
-		-- AzeriteUI: a header button can show the player and later another unit. Times left from
-		-- the player's last cast would make onUpdate draw this cast from them, full at once.
-		element.startTime = nil
-		element.endTime = nil
+		element.endTime = empowerEndTime or endTime / 1000
 	end
 
-	if(duration) then
+	local timerSet
+	if(HasCastValue(duration)) then
 		-- AzeriteUI: a new cast is a fresh set and starts where it starts; only CastUpdate
 		-- (pushback, a channel cut short) uses element.smoothing, as Blizzard's own timer
 		-- bars do (Blizzard_CustomAuraButton.lua, GetStatusBarInterpolationForUpdateMode).
 		local startInterpolation = Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.Immediate
-		local ok = pcall(element.SetTimerDuration, element, duration, startInterpolation, direction)
-		if(not ok and element.SetTimerDuration and type(startTime) == 'number' and type(endTime) == 'number'
-			and (not issecretvalue or (not issecretvalue(startTime) and not issecretvalue(endTime)))) then
-			pcall(element.SetTimerDuration, element, math.max((endTime - startTime) / 1000, 0), startInterpolation, direction)
+		timerSet = pcall(element.SetTimerDuration, element, duration, startInterpolation, direction)
+		if(not timerSet and element.SetTimerDuration and IsReadableNumber(startTime) and IsReadableNumber(endTime)) then
+			timerSet = pcall(element.SetTimerDuration, element, math.max((endTime - startTime) / 1000, 0), startInterpolation, direction)
 		end
 	end
+	if(element.requireCastTimer and not timerSet) then
+		-- A decorative overlay must never display the previous cast's progress.
+		if(not element.startTime) then
+			resetAttributes(element)
+			element:Hide()
+			return
+		end
+		element:SetMinMaxValues(0, 1)
+		element:SetValue(0)
+	end
 
-	if(element.Icon) then element.Icon:SetTexture(texture or FALLBACK_ICON) end
+	if(element.Icon) then
+		if(not HasCastValue(texture)) then texture = FALLBACK_ICON end
+		element.Icon:SetTexture(texture)
+	end
 	-- Temporary: disable shield-driven interrupt visuals while isolating cast payload behavior.
 	-- if(element.Shield) then element.Shield:SetAlphaFromBoolean(element.notInterruptible, 1, 0) end
 	if(element.Spark) then element.Spark:Show() end
@@ -382,8 +433,8 @@ local function CastStart(self, event, unit)
 			safeZone:SetPoint(element:GetReverseFill() and (isHoriz and 'LEFT' or 'BOTTOM') or (isHoriz and 'RIGHT' or 'TOP'))
 		end
 
-		if(element.empowering and type(endTime) == 'number' and (not issecretvalue or not issecretvalue(endTime))) then
-			endTime = endTime + GetUnitEmpowerHoldAtMaxTime(unit)
+		if(empowerEndTime) then
+			endTime = empowerEndTime * 1000
 		end
 
 		local ratio = 0
@@ -424,13 +475,13 @@ local function CastStart(self, event, unit)
 	element:Show()
 end
 
-local function CastUpdate(self, event, unit, _, _, castID)
+local function CastUpdate(self, event, unit, castGUID, _, castID)
 	local element = self.Castbar
 	if(not (element.ShouldShow or ShouldShow) (element, unit)) then
 		return
 	end
 
-	if(not element:IsShown() or not castID or element.castID ~= castID) then
+	if(not element:IsShown() or element.__AzeriteUI_CastUnit ~= unit or not MatchesCastID(element, castID or castGUID)) then
 		return
 	end
 
@@ -448,9 +499,14 @@ local function CastUpdate(self, event, unit, _, _, castID)
 		end
 	end
 
-	if(not name) then return end
+	if(not HasCastValue(name)) then return end
 
-	if(unit == 'player') then
+	if(element.requireCastTimer and element.empowering and event == 'UNIT_SPELLCAST_EMPOWER_UPDATE') then
+		element.__AzeriteUI_EmpowerEndTime = GetEmpowerEndTime(unit, endTime)
+		element.__AzeriteUI_TimerSpentChecks = 0
+	end
+
+	if(unit == 'player' and element.startTime and IsReadableNumber(startTime)) then
 		-- we can only calculate delay for players
 		startTime = startTime / 1000
 
@@ -485,9 +541,9 @@ local function CastUpdate(self, event, unit, _, _, castID)
 		end
 	end
 
-	if(duration) then
+	if(HasCastValue(duration)) then
 		local ok = pcall(element.SetTimerDuration, element, duration, element.smoothing, direction)
-		if(not ok and type(startTime) == 'number') then
+		if(not ok and not (issecretvalue and issecretvalue(duration))) then
 			-- Keep timer text/bar valid when client APIs return mixed duration payloads.
 			local safeDuration = tonumber(duration)
 			if(type(safeDuration) == 'number') then
@@ -528,7 +584,8 @@ local function CastStop(self, event, unit, _, _, ...)
 
 	if(element.Spark) then element.Spark:Hide() end
 
-	if(interruptedBy) then
+	local interrupted = HasCastValue(interruptedBy)
+	if(interrupted) then
 		if(element.Text) then element.Text:SetText(INTERRUPTED) end
 
 		element.holdTime = element.timeToHold or 0
@@ -538,7 +595,7 @@ local function CastStop(self, event, unit, _, _, ...)
 		element:SetValue(1)
 	end
 
-	if(interruptedBy) then
+	if(interrupted) then
 		--[[ Callback: Castbar:PostCastInterrupted(unit, interruptedBy)
 		Called after the element has been updated when a spell cast or channel has stopped.
 
@@ -594,7 +651,7 @@ local function CastFail(self, event, unit, _, _, ...)
 	element:SetMinMaxValues(0, 1)
 	element:SetValue(1)
 
-	if(interruptedBy) then
+	if(HasCastValue(interruptedBy)) then
 		if(element.PostCastInterrupted) then
 			element:PostCastInterrupted(unit, interruptedBy)
 		end
@@ -648,14 +705,13 @@ local function onUpdate(self, elapsed)
 			self.__AzeriteUI_CastOverCheck = (self.__AzeriteUI_CastOverCheck or 0) + elapsed
 			if(self.__AzeriteUI_CastOverCheck >= .5) then
 				self.__AzeriteUI_CastOverCheck = 0
-				if(IsCastOver(castUnit)) then
+				if(self.__owner.unit ~= castUnit or IsCastOver(castUnit)) then
 					resetAttributes(self)
 					self:Hide()
 					return
 				end
 				-- Past its end on two checks in a row (.5 to 1 s): a late stop is not cut off.
-				-- Empowered casts can hold at max beyond the timer, so they are left out.
-				if(not self.empowering and (IsTimerSpent(self) or IsPlayerCastPast(self, castUnit))) then
+				if(IsCastTimerSpent(self, castUnit)) then
 					self.__AzeriteUI_TimerSpentChecks = (self.__AzeriteUI_TimerSpentChecks or 0) + 1
 					if(self.__AzeriteUI_TimerSpentChecks >= 2) then
 						resetAttributes(self)

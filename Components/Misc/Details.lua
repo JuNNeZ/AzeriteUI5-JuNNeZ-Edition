@@ -12,8 +12,11 @@ local valueOwners = setmetatable({}, { __mode = "k" })
 local valueHooks = setmetatable({}, { __mode = "k" })
 local TOOLBAR_KEYS = { "modo_selecao", "segmento", "atributo", "report", "reset", "fechar" }
 Skin.Style = { idleIcons = .08, hoverIcons = .85, valueInset = 21 }
+local function IsOurSkinName(name)
+	return name == SKIN_NAME or name == "AzeriteUI Minimal" or name == "AzeriteUI"
+end
 local function IsOurSkin(instance)
-	return instance.skin == SKIN_NAME or instance.skin == "AzeriteUI Minimal" or instance.skin == "AzeriteUI"
+	return IsOurSkinName(instance.skin)
 end
 
 Skin.UpdateTitle = function(instance)
@@ -327,6 +330,84 @@ Skin.TryInstall = function(self)
 		self:UnregisterEvent("ADDON_LOADED")
 		self:UnregisterEvent("PLAYER_LOGIN")
 	end
+end
+
+-- /az -> Themes -> Details. Details still owns every window and its saved skin:
+-- this only calls the public ChangeSkin, the path Details' own skin menu takes,
+-- out of combat. Each window's previous skin is kept account-wide per Details
+-- profile, as profiles can be shared by characters, so Off can give it back.
+local function Windows(details)
+	local list = type(details.GetAllInstances) == "function" and details:GetAllInstances() or details.tabela_instancias
+	local windows = {}
+	for _, instance in ipairs(type(list) == "table" and list or {}) do
+		-- Unbuilt windows have no frames; Details skins them when it builds them.
+		if (type(instance) == "table" and instance.baseframe and type(instance.ChangeSkin) == "function") then
+			windows[#windows + 1] = instance
+		end
+	end
+	return windows
+end
+
+local function PreviousSkins(details)
+	local global = ns.db and ns.db.global
+	if (type(global) ~= "table") then return end
+	local profile = type(details.GetCurrentProfileName) == "function" and details:GetCurrentProfileName()
+	profile = type(profile) == "string" and profile ~= "" and profile or "default"
+	global.detailsPreviousSkins = type(global.detailsPreviousSkins) == "table" and global.detailsPreviousSkins or {}
+	local saved = global.detailsPreviousSkins
+	saved[profile] = type(saved[profile]) == "table" and saved[profile] or {}
+	return saved[profile]
+end
+
+local function WindowID(instance)
+	local id = type(instance.GetId) == "function" and instance:GetId() or instance.meu_id
+	return type(id) == "number" and id or nil
+end
+
+-- The skin to give a window back: what it had, else Details' default for new windows.
+local function RestoreName(details, previous)
+	-- Not ipairs: a window with nothing remembered has a nil first entry.
+	local names = { previous, details.default_skin_to_use, "Minimalistic" }
+	for index = 1, 3 do
+		local name = names[index]
+		if (type(name) == "string" and not IsOurSkinName(name) and details.skins[name]) then return name end
+	end
+end
+
+Skin.IsAvailable = function()
+	local details = _G.Details
+	return type(details) == "table" and type(details.skins) == "table" and details.skins[SKIN_NAME] ~= nil
+end
+
+-- True when every built Details window wears one of our skin names.
+Skin.IsApplied = function()
+	if (not Skin.IsAvailable()) then return false end
+	local windows = Windows(_G.Details)
+	if (#windows == 0) then return false end
+	for _, instance in ipairs(windows) do
+		if (not IsOurSkin(instance)) then return false end
+	end
+	return true
+end
+
+Skin.SetApplied = function(self, enabled)
+	if (InCombatLockdown() or not Skin.IsAvailable()) then return false end
+	local details = _G.Details
+	local saved = PreviousSkins(details)
+	for _, instance in ipairs(Windows(details)) do
+		local id = WindowID(instance)
+		if (enabled and not IsOurSkin(instance)) then
+			if (saved and id and type(instance.skin) == "string") then saved[id] = instance.skin end
+			instance:ChangeSkin(SKIN_NAME)
+		elseif (not enabled and IsOurSkin(instance)) then
+			local name = RestoreName(details, saved and id and saved[id])
+			if (name) then
+				instance:ChangeSkin(name)
+				if (saved and id) then saved[id] = nil end
+			end
+		end
+	end
+	return true
 end
 
 Skin.OnInitialize = function(self)

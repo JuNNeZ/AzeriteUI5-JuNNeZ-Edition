@@ -85,6 +85,9 @@ end
 
 MicroMenu.SpawnButtons = function(self)
 
+	local guild = ns:GetModule("GuildManager", true)
+	local guildEntry = guild and guild.ToggleWindow and {}
+
 	local labels = {
 		CharacterMicroButton = CHARACTER_BUTTON,
 		ProfessionMicroButton = TRADE_SKILLS,
@@ -114,6 +117,7 @@ MicroMenu.SpawnButtons = function(self)
 		HousingMicroButton,
 		QuickJoinToastButton,
 		GuildMicroButton,
+		guildEntry,
 		LFDMicroButton,
 		CollectionsMicroButton,
 		EJMicroButton,
@@ -134,6 +138,9 @@ MicroMenu.SpawnButtons = function(self)
 					buttons[#buttons + 1] = QuickJoinToastButton
 				end
 				buttons[#buttons + 1] = info.button
+				if (info.button == GuildMicroButton and guildEntry) then
+					buttons[#buttons + 1] = guildEntry
+				end
 			end
 		end
 	end
@@ -160,7 +167,8 @@ MicroMenu.SpawnButtons = function(self)
 	for i,microButton in next,buttons do
 		if (microButton) then
 			local button = CreateFrame("Button", nil, bar, "SecureActionButtonTemplate")
-			button.ref = microButton
+			button.guildOverview = microButton == guildEntry
+			button.ref = not button.guildOverview and microButton or nil
 
 			button:RegisterForClicks("AnyUp", "AnyDown")
 
@@ -178,7 +186,16 @@ MicroMenu.SpawnButtons = function(self)
 			-- ShowUIPanel, which made Blizzard's own TextStatusBar refuse to compare
 			-- the player frame's secret health values (TextStatusBar.lua:110,
 			-- "execution tainted by AzeriteUI5_JuNNeZ_Edition").
-			if (microButton == MainMenuMicroButton) then
+			if (button.guildOverview) then
+				button.nocombat = true
+				button:SetScript("OnClick", function(_, _, down)
+					if (InCombatLockdown()) then return end
+					local castondown = GetCVarBool("ActionButtonUseKeyDown")
+					if (castondown and not down) or (not castondown and down) then return end
+					guild:ToggleWindow()
+					bar:Hide()
+				end)
+			elseif (microButton == MainMenuMicroButton) then
 				button.nocombat = true
 				button:SetScript("OnClick", function(self, button, down)
 					if (InCombatLockdown()) then return end
@@ -216,7 +233,8 @@ MicroMenu.SpawnButtons = function(self)
 
 			local text = button:CreateFontString(nil, "OVERLAY")
 			text:SetFontObject(GetFont(13,true))
-			text:SetText(labels[microButton:GetName()] or microButton.tooltipText or microButton:GetName())
+			text:SetText(button.guildOverview and L["Open guild overview"]
+				or labels[microButton:GetName()] or microButton.tooltipText or microButton:GetName())
 			text:SetJustifyH("CENTER")
 			text:SetJustifyV("MIDDLE")
 			text:SetPoint("CENTER")
@@ -552,7 +570,7 @@ MicroMenu.UpdateButtons = function(self)
 	for i,button in next,self.buttons do
 		RestoreGatedNativeButton(button.ref)
 
-		local usable = IsNativeButtonUsable(button.ref)
+		local usable = button.guildOverview or IsNativeButtonUsable(button.ref)
 
 		if (button.nocombat and self.incombat) then
 			usable = false

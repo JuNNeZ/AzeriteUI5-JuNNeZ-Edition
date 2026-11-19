@@ -7,6 +7,7 @@ local PAGE_SIZE = 15
 local MEDIA = "Interface\\AddOns\\" .. Addon .. "\\Assets\\Guild\\"
 local UI = {}
 Guild.UI = UI
+local CARD_FIELDS = { "character", "nickname", "main", "privateNote" }
 ---@class AzeriteGuildButtonTexture: Texture
 ---@field sliceLeft number
 ---@field sliceRight number
@@ -228,8 +229,78 @@ end
 UI.Icon = function(texture, class)
     if (class) then texture:SetAtlas("classicon-" .. class, false); texture:Show() else texture:Hide() end
 end
+UI.FilterDropdown = function(parent, x, y, width, callback)
+    local control = Kit.Controls.CreateDropdown(parent)
+    control.frame:SetPoint("TOPLEFT", x, y); control.frame:SetSize(width, 28)
+    control.label:Hide(); control.help:Hide(); control.rule:Hide(); control.textArea:Hide()
+    control.area:ClearAllPoints(); control.area:SetAllPoints(control.frame)
+    control.box:ClearAllPoints(); control.box:SetAllPoints(control.frame)
+    control:SetCallback(callback)
+    return control
+end
+Guild.RefreshFilterDropdown = function(self, field, control, caption)
+    local choices, list, order = self:GetFilterChoices(field), { [false] = caption .. ": " .. L["All"] }, { false }
+    local labels = field == "class" and rawget(_G, "LOCALIZED_CLASS_NAMES_MALE")
+    for _, value in ipairs(choices) do
+        list[value] = caption .. ": " .. (labels and labels[value] or value); order[#order+1] = value
+    end
+    if (self.filters[field] and not list[self.filters[field]]) then self.filters[field] = nil end
+    local signature = table.concat(choices, "\31")
+    if (signature ~= control.choiceSignature) then
+        control.choiceSignature = signature; control:SetList(list, order)
+    end
+    local value = self.filters[field] or false
+    if (control:GetValue() ~= value) then control:SetValue(value) end
+end
+Guild.ReadCardValues = function(self)
+    local values = { favorite = self.favoriteValue == true }
+    for _, field in ipairs(CARD_FIELDS) do values[field] = self[field]:GetText() end
+    return values
+end
+Guild.HasCardChanges = function(self)
+    if (self.loadingCard or not self.character) then return false end
+    local values, baseline = self:ReadCardValues(), self.cardBaseline or {}
+    for _, field in ipairs(CARD_FIELDS) do if (values[field] ~= (baseline[field] or "")) then return true end end
+    return values.favorite ~= (baseline.favorite == true)
+end
+Guild.RefreshCardState = function(self)
+    if (not self.saveIdentity or self.loadingCard) then return end
+    local dirty = self:HasCardChanges()
+    self.cardState:SetText(dirty and L["Unsaved changes"] or L["No unsaved changes"])
+    self.cardState:SetTextColor(dirty and 1 or .55, dirty and .8 or .55, dirty and .35 or .55)
+    self.saveIdentity:SetEnabled(dirty and self.character:GetText():find("%S") ~= nil)
+    self.discardIdentity:SetEnabled(dirty)
+    local key = self:CharacterKey(self.character:GetText())
+    self.removeIdentity:SetEnabled(not dirty and key ~= nil and self.db.global.characters[key] ~= nil)
+    self.undo:SetEnabled(not dirty and self.undoStack and #self.undoStack > 0 or false)
+end
+Guild.DiscardCard = function(self)
+    if (self.selected and self:ReloadCard()) then self.feedback:SetText("")
+    else
+        self.selected, self.selectedRoot = nil, nil
+        self.loadingCard = true
+        for _, field in ipairs(CARD_FIELDS) do self[field]:SetText("") end
+        self.favoriteValue = false; UI.Check(self.favorite, false, L["Favorite person"])
+        self.cardTitle:SetText(L["Select a person"]); self.cardIcon:Hide()
+        for _, label in ipairs({ self.cardSummary, self.cardRank, self.cardLastOnline, self.note }) do label:SetText("") end
+        self.noteValue = nil
+        self.cardBaseline, self.loadingCard = self:ReadCardValues(), nil
+    end
+    self.feedback:SetText(""); self:RefreshCardState()
+end
+Guild.SetMemberSort = function(self, field)
+    if (self.memberSort and self.memberSort.field == field) then self.memberSort.descending = not self.memberSort.descending
+    else self.memberSort = { field = field, descending = field == "level" } end
+    self.offset = 0; self:RefreshWindow()
+end
+Guild.OpenMemberFilter = function(self, field)
+    if (not self.frame) then self:CreateWindow() end
+    self.filters, self.offset = { inGuild = true, [field] = true }, 0
+    self.search:SetText(""); self:ShowPage("members")
+end
 
 Guild.SelectCharacter = function(self, row, person)
+    self.loadingCard = true
     self.selected = row.key
     self.selectedRoot = person and person.key or select(2, self:Resolve(row.member.name)) or row.key
     local record = self.db.global.characters[row.key]
@@ -245,6 +316,8 @@ Guild.SelectCharacter = function(self, row, person)
     self.cardLastOnline:SetText(L["Person last online"] .. ": " .. self:LastOnlineText(person and person.online > 0 or row.member.online, person and person.lastOnline or row.member.lastOnline))
     UI.Icon(self.cardIcon, row.member.class)
     self.note:SetText(row.member.note or ""); self.noteValue = row.member.note; self.feedback:SetText("")
+    self.cardBaseline, self.loadingCard = self:ReadCardValues(), nil
+    self:RefreshCardState()
     self:RefreshWindow()
 end
 Guild.LinkToSelectedMain = function(self, row)
@@ -257,15 +330,30 @@ Guild.LinkToSelectedMain = function(self, row)
 end
 Guild.RefreshWindow = function(self)
     if (not self.frame or not self.frame:IsShown() or self.buildingWindow) then return end
-    local rows, people, online, characters = self:GetDisplayRows(self.search:GetText(), self.filters, self.expanded)
+    self:RefreshFilterDropdown("class", self.classFilter, L["Class"])
+    self:RefreshFilterDropdown("rank", self.rankFilter, L["Rank"])
+    local rows, people, online, characters = self:GetDisplayRows(self.search:GetText(), self.filters, self.expanded, self.memberSort)
+    if (self.activePage ~= "members") then
+        -- Hidden member filters must not change another page's guild totals.
+        people, online, characters = #self:GetPeople("", { inGuild = true }), 0, 0
+        for _, member in pairs(self.members or {}) do
+            characters = characters+1
+            if (member.online) then online = online+1 end
+        end
+    end
     self.offset = math.max(0, math.min(self.offset or 0, math.max(0, #rows-PAGE_SIZE)))
     self.heading:SetText(self.ReadText(GetGuildInfo("player")) or L["Guild & Nicknames"])
     self.summary:SetText(string.format(L["%d people  /  %d characters  /  %d online"], people, characters, online))
     self.pageSummary:SetText(self.activePage == "followup" and self.followUpWindow and self.followUpWindow.summary:GetText() or "")
     self.count:SetText(string.format(L["%d to %d of %d rows"], #rows > 0 and self.offset+1 or 0, math.min(#rows, self.offset+PAGE_SIZE), #rows))
     for key, button in pairs(self.filterButtons) do UI.Check(button, self.filters[key], button.caption) end
-    self.classFilter.label:SetText(L["Class"] .. ": " .. (self.filters.class or L["All"]))
-    self.rankFilter.label:SetText(L["Rank"] .. ": " .. (self.filters.rank or L["All"]))
+    self.memberPage.help = self.filters.inGuild and L["Showing current guild people. Linked characters stay together; Clear filters shows all saved people."] or nil
+    if (self.activePage == "members") then self.pageHelp:SetText(self.memberPage.help or "") end
+    for field, button in pairs(self.sortButtons) do
+        local active = self.memberSort and self.memberSort.field == field
+        button.label:SetText(button.caption .. (active and (self.memberSort.descending and " v" or " ^") or ""))
+        button.label:SetTextColor(active and 1 or .7, active and .85 or .68, active and .4 or .6)
+    end
     UI.Check(self.chat, self.db.profile.chatNicknames, L["Chat nicknames"])
     UI.Check(self.nicknameLevels, self.db.profile.nicknameLevels, L["Show levels with nicknames"])
     self.nicknameLevels:SetEnabled(self.db.profile.chatNicknames == true)
@@ -281,22 +369,23 @@ Guild.RefreshWindow = function(self)
             local isPerson = item.kind == "person"
             button.icon:ClearAllPoints(); button.icon:SetPoint("TOPLEFT", isPerson and 24 or 40, -3)
             button.name:ClearAllPoints(); button.name:SetPoint("TOPLEFT", isPerson and 63 or 79, -6)
-            button.name:SetWidth(isPerson and 305 or 289)
+            button.name:SetWidth(isPerson and 245 or 229)
             button.arrow:SetText(isPerson and (self.expanded[person.key] and "-" or "+") or "")
             UI.Icon(button.icon, member.class)
             button.name:SetText(isPerson and person.label or member.name)
             button.favorite:SetShown(isPerson and person.favorite)
-            button.detail:SetText(isPerson and string.format(L["%d chars"], #person.rows)
-                or (item.key == person.key and L["Main"] or L["Alt"]) .. " / " .. (member.rank or ""))
+            button.detail:SetText(member.rank or "")
+            button.level:SetText(self:GetMemberSortValue(member, "level") or "?")
             local onlineNow = isPerson and person.online > 0 or member.online
-            button.status:SetText(isPerson and string.format(L["%d online"], person.online) or (member.online and L["Online"] or L["Offline"]))
+            button.status:SetText(isPerson and person.online > 0 and string.format(L["%d online"], person.online)
+                or self:LastOnlineText(onlineNow, isPerson and person.lastOnline or member.lastOnline))
             button.dot:SetTexCoord(onlineNow and 0 or .5, onlineNow and .5 or 1, 0, 1)
             button.background:SetColorTexture(onlineNow and .85 or .4, onlineNow and .65 or .4, onlineNow and .25 or .4,
                 self.selected == item.key and .18 or isPerson and .075 or .025)
             local color = member.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[member.class]
             if (onlineNow) then button.name:SetTextColor(color and color.r or .92, color and color.g or .88, color and color.b or .76)
             else button.name:SetTextColor(.52, .52, .52) end
-            for _, label in ipairs({ button.detail, button.status, button.arrow }) do
+            for _, label in ipairs({ button.detail, button.level, button.status, button.arrow }) do
                 label:SetTextColor(onlineNow and .92 or .48, onlineNow and .88 or .48, onlineNow and .76 or .48)
             end
             button.icon:SetDesaturated(not onlineNow); button.favorite:SetDesaturated(not onlineNow)
@@ -337,6 +426,7 @@ Guild.RefreshWindow = function(self)
     if (self.RefreshSharing) then self:RefreshSharing() end
     if (self.RefreshCrafting) then self:RefreshCrafting() end
     if (self.noteReview and self.noteReview:IsShown()) then self:RefreshNoteReview() end
+    self:RefreshCardState()
 end
 Guild.CycleFilter = function(self, field)
     local choices, nextValue = self:GetFilterChoices(field)
@@ -364,7 +454,11 @@ Guild.CreateWindow = function(self)
     rail:SetBackdrop(Kit.Look and Kit.Look.InsetBackdrop or Kit.InsetBackdrop)
     rail:SetBackdropColor(.035, .04, .05, 1); rail:SetBackdropBorderColor(.32, .29, .23, 1)
     self.navigation, self.pages = {}, {}
-    for index, entry in ipairs({
+    UI.Label(rail, L["Guild"], 12, -14, 150, 11)
+    UI.Label(rail, L["Officer tools"], 12, -166, 150, 11)
+    UI.Label(rail, L["Data & sharing"], 12, -356, 150, 11)
+    local navigationY = { home = 38, members = 76, crafting = 114, history = 190, followup = 228, notes = 266, actions = 304, backup = 380, sharing = 418 }
+    for _, entry in ipairs({
         { "home", L["Guild home"], L["Group Frames"], function() self:OpenHome() end },
         { "members", L["Guild members"], L["Unit Frames"], function() self:ShowPage("members") end },
         { "crafting", L["Guild crafting"], L["Bags"], function() self:OpenCrafting() end },
@@ -375,7 +469,7 @@ Guild.CreateWindow = function(self)
         { "sharing", L["Guild sharing"], "sharing", function() self:OpenSharing() end },
         { "actions", L["Guild actions"], L["Debug tools"], function() self:OpenGuildActions() end }
     }) do
-        local button = UI.QuietButton(rail, entry[2], 8, -14-(index-1)*44, 158, entry[4])
+        local button = UI.QuietButton(rail, entry[2], 8, -navigationY[entry[1]], 158, entry[4])
         button.label:ClearAllPoints(); button.label:SetPoint("TOPLEFT", 34, -7)
         button.label:SetWidth(116); button.label:SetJustifyH("LEFT")
         button.navigation, button.selected = true, entry[1] == "members"; button:RefreshArt()
@@ -395,6 +489,7 @@ Guild.CreateWindow = function(self)
     frame.pageKey, frame.pageTitle = "members", L["Guild members"]
     self.pages.members, self.activePage = frame, "members"
     frame:SetScript("OnHide", function()
+        Kit.Controls.CloseDropdown()
         for _, box in ipairs({ self.search, self.character, self.nickname, self.main, self.privateNote }) do box:ClearFocus() end
     end)
     local Button = UI.QuietButton
@@ -409,9 +504,24 @@ Guild.CreateWindow = function(self)
     end
     Filter("online", L["Online people"], 346, -150, 144); Filter("favorite", L["Favorites"], 500, -150, 156)
     Filter("missing", L["No nickname"], 24, -190, 148); Filter("unlinked", L["Without main/alt"], 182, -190, 154)
-    self.classFilter = Button(frame, "", 346, -190, 144, function() self:CycleFilter("class") end)
-    self.rankFilter = Button(frame, "", 500, -190, 156, function() self:CycleFilter("rank") end)
-    UI.Label(frame, L["Person / Character"], 72, -233, 300); UI.Label(frame, L["Characters / Rank"], 406, -233, 135)
+    local function FilterValue(field, _, value)
+        if (self.activePage ~= "members") then return end
+        self.filters[field], self.offset = value or nil, 0; self:RefreshWindow()
+    end
+    self.classFilter = UI.FilterDropdown(frame, 346, -190, 144, function(...) FilterValue("class", ...) end)
+    self.rankFilter = UI.FilterDropdown(frame, 500, -190, 156, function(...) FilterValue("rank", ...) end)
+    self.sortButtons = {}
+    for _, entry in ipairs({ { "name", "Name", 72, 244 }, { "rank", "Rank", 338, 96 },
+        { "level", "Level", 440, 48 }, { "lastOnline", "Last online", 498, 158 } }) do
+        local field, caption = entry[1], L[entry[2]]
+        local button = CreateFrame("Button", nil, frame)
+        button:SetPoint("TOPLEFT", entry[3], -226); button:SetSize(entry[4], 22)
+        button.label = UI.Label(button, caption, 0, -4, entry[4], 11)
+        button.caption = caption
+        button:SetHighlightTexture(ns.API.GetMedia("plain")); button:GetHighlightTexture():SetVertexColor(1, .85, .4, .08)
+        button:SetScript("OnClick", function() self:SetMemberSort(field) end)
+        self.sortButtons[field] = button
+    end
     self.rows = {}
     for index = 1, PAGE_SIZE do
         local row = CreateFrame("Button", nil, frame)
@@ -421,16 +531,24 @@ Guild.CreateWindow = function(self)
         row.icon = row:CreateTexture(nil, "ARTWORK"); row.icon:SetSize(18, 18); row.icon:SetPoint("TOPLEFT", 24, -3)
         row.favorite = row:CreateTexture(nil, "ARTWORK"); row.favorite:SetTexture(MEDIA .. "favorite.tga")
         row.favorite:SetSize(12, 12); row.favorite:SetPoint("TOPLEFT", 47, -6)
-        row.name = UI.Label(row, "", 63, -6, 305); row.detail = UI.Label(row, "", 382, -6, 125, 11)
-        row.dot = row:CreateTexture(nil, "ARTWORK"); row.dot:SetSize(20, 20); row.dot:SetPoint("TOPLEFT", 509, -2)
+        row.name = UI.Label(row, "", 63, -6, 245); row.detail = UI.Label(row, "", 318, -6, 92, 11)
+        row.level = UI.Label(row, "", 420, -6, 42, 11)
+        row.dot = row:CreateTexture(nil, "ARTWORK"); row.dot:SetSize(20, 20); row.dot:SetPoint("TOPLEFT", 462, -2)
         row.dot:SetTexture(MEDIA .. "status.tga")
-        row.status = UI.Label(row, "", 532, -6, 98, 11)
+        row.status = UI.Label(row, "", 486, -6, 144, 11)
         row:SetHighlightTexture(ns.API.GetMedia("plain")); row:GetHighlightTexture():SetVertexColor(1, .85, .5, .1)
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         row:SetScript("OnClick", function(button, mouse)
             local item = button.data
             if (not item) then return end
             local data = item.row or item.person.rows[1]
+            if (self:HasCardChanges()) then
+                if (mouse ~= "RightButton" and (data.key == self.selected or item.kind == "person" and item.person.key == self.selectedRoot)) then
+                    if (item.kind == "person") then self.expanded[item.person.key] = not self.expanded[item.person.key] end
+                    self:RefreshWindow()
+                else self.feedback:SetText(L["Save or discard changes before selecting another character."]) end
+                return
+            end
             if (mouse == "RightButton") then self:LinkToSelectedMain(data)
             else
                 if (item.kind == "person") then self.expanded[item.person.key] = not self.expanded[item.person.key] end
@@ -442,6 +560,8 @@ Guild.CreateWindow = function(self)
             local item = button.data; local data = item.row or item.person.rows[1]
             GameTooltip:SetOwner(button, "ANCHOR_RIGHT"); GameTooltip:AddLine(data.member.name)
             GameTooltip:AddLine(data.member.zone or "", 1, 1, 1)
+            if (item.kind == "character") then GameTooltip:AddLine(L[item.key == item.person.key and "Main" or "Alt"], 1, .85, .5) end
+            GameTooltip:AddLine(L["Rank"] .. ": " .. (data.member.rank or ""), 1, 1, 1)
             GameTooltip:AddLine(L["Last online"] .. ": " .. self:LastOnlineText(data.member.online, data.member.lastOnline), 1, 1, 1)
             GameTooltip:AddLine(L["Main character"] .. ": " .. item.person.name, 1, .85, .5, true)
             GameTooltip:AddLine(data.member.note or "", 1, 1, 1, true)
@@ -454,7 +574,13 @@ Guild.CreateWindow = function(self)
     frame:SetScript("OnMouseWheel", function(_, delta) self.offset = (self.offset or 0)-delta*3; self:RefreshWindow() end)
     self.previous = Button(frame, "<", 24, -652, 30, function() self.offset = (self.offset or 0)-PAGE_SIZE; self:RefreshWindow() end)
     self.next = Button(frame, ">", 62, -652, 30, function() self.offset = (self.offset or 0)+PAGE_SIZE; self:RefreshWindow() end)
-    self.count = UI.Label(frame, "", 106, -661, 380)
+    self.count = UI.Label(frame, "", 106, -661, 210)
+    Button(frame, L["Clear filters"], 322, -652, 104, function()
+        self.filters, self.offset = {}, 0; self.search:SetText(""); self:RefreshWindow()
+    end)
+    Button(frame, L["Reset sort"], 432, -652, 104, function()
+        self.memberSort, self.offset = nil, 0; self:RefreshWindow()
+    end)
     Button(frame, L["Refresh"], 546, -652, 110, function() self:RequestRoster() end)
     self.undo = Button(frame, L["Undo"], 24, -696, 92, function() self:UndoIdentity(); self:ReloadCard() end)
     self.chat = Button(frame, "", 134, -696, 178, function()
@@ -471,6 +597,7 @@ Guild.CreateWindow = function(self)
     UI.Rule(card, 18, -116, 376); UI.Rule(card, 18, -292, 376); UI.Rule(card, 18, -362, 376)
     self.cardIcon = card:CreateTexture(nil, "ARTWORK"); self.cardIcon:SetSize(32, 32); self.cardIcon:SetPoint("TOPLEFT", 18, -18); self.cardIcon:Hide()
     self.cardTitle = UI.Label(card, L["Select a person"], 60, -21, 332, 17)
+    self.cardState = UI.Label(card, "", 60, -44, 332, 11)
     self.cardSummary = UI.Label(card, "", 18, -65, 376); self.cardRank = UI.Label(card, "", 18, -88, 376)
     self.cardLastOnline = UI.Label(card, "", 18, -107, 376, 11)
     self.character = UI.Input(card, L["Character (Name-Realm)"], 18, -124, 376)
@@ -494,20 +621,26 @@ Guild.CreateWindow = function(self)
         elseif (-y+height > offset+privateScroll:GetHeight()) then privateScroll:SetVerticalScroll(-y+height-privateScroll:GetHeight()) end
     end)
     self.favorite = Button(card, L["Favorite person"], 18, -456, 186, function()
-        self.favoriteValue = not self.favoriteValue; UI.Check(self.favorite, self.favoriteValue, L["Favorite person"])
+        self.favoriteValue = not self.favoriteValue; UI.Check(self.favorite, self.favoriteValue, L["Favorite person"]); self:RefreshCardState()
     end)
     Button(card, L["Use note suggestion"], 214, -456, 180, function()
         local candidate = self:NoteCandidate(self.noteValue)
         if (candidate) then self.nickname:SetText(candidate); self.main:SetText("") end
         self.feedback:SetText(candidate and L["Review the nickname, then save."] or L["No name suggestion in this note."])
     end)
-    Button(card, L["Save identity"], 18, -498, 180, function() self:SaveCard() end, true)
-    Button(card, L["Remove local identity"], 208, -498, 186, function()
+    self.saveIdentity = Button(card, L["Save identity"], 18, -498, 130, function() self:SaveCard() end, true)
+    self.discardIdentity = Button(card, L["Discard changes"], 158, -498, 130, function() self:DiscardCard() end)
+    self.removeIdentity = Button(card, L["Remove"], 298, -498, 96, function()
         self:ForgetIdentity(self.character:GetText()); self:ReloadCard(); self.feedback:SetText(L["Local identity removed."])
     end)
     self.feedback = UI.Label(card, "", 18, -539, 376, 11, 2)
     self.whisper = Button(card, L["Whisper"], 18, -563, 180, function() self:ContactSelected(false) end)
     self.invite = Button(card, L["Invite to group"], 208, -563, 186, function() self:ContactSelected(true) end)
+    for _, field in ipairs(CARD_FIELDS) do
+        self[field]:HookScript("OnTextChanged", function() self:RefreshCardState() end)
+    end
+    self.cardBaseline = self:ReadCardValues()
+    self:RefreshCardState()
     shell:SetScript("OnShow", function()
         UI.FitToScreen(shell)
         local page = self.pages[self.activePage]
@@ -519,6 +652,7 @@ Guild.CreateWindow = function(self)
         self:RefreshWindow()
     end)
     shell:SetScript("OnHide", function()
+        Kit.Controls.CloseDropdown()
         for _, page in pairs(self.pages) do
             page:Hide()
             if (page.viewport) then page.viewport:Hide() end
@@ -532,9 +666,10 @@ end
 Guild.ReloadCard = function(self)
     if (not self.selected) then return end
     for _, person in ipairs(self:GetPeople("", {})) do
-        for _, row in ipairs(person.rows) do if (row.key == self.selected) then self:SelectCharacter(row, person); return end end
+        for _, row in ipairs(person.rows) do if (row.key == self.selected) then self:SelectCharacter(row, person); return true end end
     end
     self:RefreshWindow()
+    return false
 end
 Guild.SaveCard = function(self)
     local name, nickname, main, note = self.character:GetText(), self.nickname:GetText(), self.main:GetText(), self.privateNote:GetText()

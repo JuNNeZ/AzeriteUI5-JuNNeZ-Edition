@@ -926,6 +926,13 @@ drives("select", function(c)
 	-- An unordered list must still be deterministic.
 	c:SetList({ z = "Zeta", m = "Mid", a = "Alpha" })
 	check(c.order[1] == "a" and c.order[3] == "z", "dropdown sorts an unordered list by label")
+	c:SetList({ [false] = "All", MAGE = "Mage" }, { false, "MAGE" })
+	c:SetValue(false)
+	check(c:GetValue() == false and c.order[1] == false, "dropdown supports an explicit All sentinel before real values")
+	local picked
+	c:SetCallback(function(_, value) picked = value end)
+	c:Fire("MAGE")
+	check(picked == "MAGE", "dropdown selection passes its actual key through the shared callback")
 	c:SetDisabled(true) c:SetDisabled(false)
 end)
 
