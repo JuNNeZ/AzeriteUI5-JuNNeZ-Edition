@@ -80,8 +80,8 @@ Panel.PreviewMinWidth = (MIN_W - FOOTER_INSET * 2) / 2 - PREVIEW_LEFT + PREVIEW_
 -- putting the second among the first is how the theme picker ended up filed
 -- under Profiles.
 local TABS = {
-	{ key = "options", label = L["Options"] },
-	{ key = "settings", label = L["Settings"] }
+	{ key = "options", label = L["Options"], icon = "page:unitframes" },
+	{ key = "settings", label = L["Settings"], icon = "gear" }
 }
 
 -- The bands each tab's rail is grouped into, in the order they are shown.
@@ -1093,6 +1093,7 @@ Panel.UpdateTabs = function(self)
 		button.highlight:SetShown(button.selected)
 		button.edge:SetShown(button.selected)
 		button.text:SetTextColor(unpack(button.selected and Kit.TextSelected or Kit.TextNormal))
+		if (button.icon) then button.icon:SetVertexColor(unpack(button.selected and Kit.TextSelected or Kit.TextNormal)) end
 	end
 end
 
@@ -1622,6 +1623,7 @@ Panel.ApplyTheme = function(self)
 		button.highlight:SetVertexColor(accent[1], accent[2], accent[3], .16)
 		button.edge:SetVertexColor(accent[1], accent[2], accent[3], 1)
 		button.text:SetTextColor(unpack(button.selected and accent or Kit.TextNormal))
+		if (button.icon) then button.icon:SetVertexColor(unpack(button.selected and accent or Kit.TextNormal)) end
 	end
 
 	if (self.tabRule) then
@@ -2088,7 +2090,18 @@ local Build = function()
 
 		local text = button:CreateFontString(nil, "OVERLAY")
 		text:SetFontObject(Kit.GetFont(12, true))
-		text:SetPoint("CENTER", button, "CENTER", 0, 0)
+		if (Panel.rounded and Look.PageIconsAvailable) then
+			local icon = button:CreateTexture(nil, "ARTWORK")
+			icon:SetSize(14, 14)
+			icon:SetPoint("LEFT", button, "LEFT", 4, 0)
+			icon:SetShown(Look.SetOptionIcon(icon, info.icon))
+			button.icon = icon
+			text:SetPoint("LEFT", icon, "RIGHT", 2, 0)
+			text:SetPoint("RIGHT", button, "RIGHT", -3, 0)
+			text:SetWordWrap(false)
+		else
+			text:SetPoint("CENTER", button, "CENTER", 0, 0)
+		end
 		text:SetText(info.label)
 		button.text = text
 

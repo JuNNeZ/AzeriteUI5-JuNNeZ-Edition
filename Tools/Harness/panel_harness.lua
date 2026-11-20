@@ -1728,9 +1728,17 @@ do
 	Panel:SelectPage("appearance")
 
 	local kinds = {}
+	local rounded = STYLE == "rounded"
+	local settingIcons, windowIcon = 0, false
 	for _, control in ipairs(Panel.page:GetControls()) do
 		kinds[control.kind] = (kinds[control.kind] or 0) + 1
+		if control.settingIcon and control.settingIcon:IsShown() then settingIcons = settingIcons + 1 end
+		if control.key == "windowHeader" then windowIcon = control.icon:IsShown() end
 	end
+	check(settingIcons == (rounded and 5 or 0), "Appearance draws all five setting icons", settingIcons)
+	check(windowIcon == rounded, "Window header follows the panel's icon style")
+	check((settingsTab.icon and settingsTab.icon:IsShown() or false) == rounded,
+		"the Settings tab follows the panel's icon style")
 	check((kinds.select or 0) >= 1, "the theme picker is drawn", kinds.select)
 	check((kinds.range or 0) >= 1, "the opacity slider is drawn", kinds.range)
 	check((kinds.execute or 0) >= 1, "the reset button is drawn", kinds.execute)
@@ -1755,6 +1763,12 @@ do
 	-- Changelog
 	----------------------------------------------------------------
 	Panel:SelectPage("changelog")
+
+	local changelogIcons = 0
+	for _, control in ipairs(Panel.page:GetControls()) do
+		if control.settingIcon and control.settingIcon:IsShown() then changelogIcons = changelogIcons + 1 end
+	end
+	check(changelogIcons == (rounded and 1 or 0), "Changelog draws the What's New setting icon", changelogIcons)
 
 	local versions = Panel.page:GetSections()
 	check(#versions >= 5, "the changelog lists its releases in the rail", #versions)

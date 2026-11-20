@@ -1,6 +1,8 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "koKR")
 if (not L) then return end
 
+L["Group Loot"] = "파티 전리품"
+
 -- Legacy unit-frame levels.
 L["Show levels"] = "레벨 표시"
 L["Show levels before player, target and party names in the Legacy theme."] = "Legacy 테마에서 플레이어, 대상 및 파티원 이름 앞에 레벨을 표시합니다."

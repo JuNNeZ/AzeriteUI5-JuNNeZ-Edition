@@ -147,6 +147,7 @@ end
 -- Settings tab, need a motif. Checking the source tables catches gaps that a
 -- single visible page (or the currently selected theme) cannot expose.
 load("Options/Kit/Look.lua")
+load("Options/Changelog.lua")
 load("Options/Kit/PanelOptions.lua")
 do
 	local Look = Kit.Look

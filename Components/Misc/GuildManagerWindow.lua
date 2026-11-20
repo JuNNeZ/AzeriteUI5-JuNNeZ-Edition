@@ -222,7 +222,7 @@ Guild.ShowPage = function(self, key)
 end
 UI.Check = function(button, value, text)
     button.selected = value and true or false
-    button.label:ClearAllPoints(); button.label:SetPoint("TOPLEFT", 34, -7)
+    button.label:ClearAllPoints(); button.label:SetPoint("TOPLEFT", button.filterIcon and 28 or 34, -7)
     button.label:SetWidth(button:GetWidth()-52); button.label:SetText(text)
     button:RefreshArt()
 end
@@ -459,15 +459,15 @@ Guild.CreateWindow = function(self)
     UI.Label(rail, L["Data & sharing"], 12, -356, 150, 11)
     local navigationY = { home = 38, members = 76, crafting = 114, history = 190, followup = 228, notes = 266, actions = 304, backup = 380, sharing = 418 }
     for _, entry in ipairs({
-        { "home", L["Guild home"], L["Group Frames"], function() self:OpenHome() end },
-        { "members", L["Guild members"], L["Unit Frames"], function() self:ShowPage("members") end },
-        { "crafting", L["Guild crafting"], L["Bags"], function() self:OpenCrafting() end },
-        { "history", L["Guild history"], "changelog", function() self:OpenHistory() end },
-        { "followup", L["Officer follow-up"], "Objectives Tracker", function() self:OpenFollowUp() end },
-        { "notes", L["Review guild notes"], "Objectives Tracker", function() self:OpenNoteReview() end },
-        { "backup", L["Backup / Share"], "profiles", function() self:OpenBackup() end },
-        { "sharing", L["Guild sharing"], "sharing", function() self:OpenSharing() end },
-        { "actions", L["Guild actions"], L["Debug tools"], function() self:OpenGuildActions() end }
+        { "home", L["Guild home"], "page:groupframes", function() self:OpenHome() end },
+        { "members", L["Guild members"], "page:unitframes", function() self:ShowPage("members") end },
+        { "crafting", L["Guild crafting"], "page:bags", function() self:OpenCrafting() end },
+        { "history", L["Guild history"], "page:changelog", function() self:OpenHistory() end },
+        { "followup", L["Officer follow-up"], "clock", function() self:OpenFollowUp() end },
+        { "notes", L["Review guild notes"], "text", function() self:OpenNoteReview() end },
+        { "backup", L["Backup / Share"], "page:profiles", function() self:OpenBackup() end },
+        { "sharing", L["Guild sharing"], "page:sharing", function() self:OpenSharing() end },
+        { "actions", L["Guild actions"], "page:debug", function() self:OpenGuildActions() end }
     }) do
         local button = UI.QuietButton(rail, entry[2], 8, -navigationY[entry[1]], 158, entry[4])
         button.label:ClearAllPoints(); button.label:SetPoint("TOPLEFT", 34, -7)
@@ -477,9 +477,8 @@ Guild.CreateWindow = function(self)
         icon:SetSize(20, 20); icon:SetPoint("TOPLEFT", 8, -4)
         local look = Kit.Look
         -- Guild owns an opaque dark palette, including when options use Light.
-        if (look and look.GetPageIconCoords) then
-            icon:SetTexture(ns.API.GetMedia("options-pages")); icon:SetTexCoord(look.GetPageIconCoords(entry[3]))
-        end
+        icon:SetShown(look and look.SetOptionIcon(icon, entry[3], true) or false)
+        button.icon = icon
         self.navigation[entry[1]] = button
     end
     self.guildActions = self.navigation.actions
@@ -494,6 +493,13 @@ Guild.CreateWindow = function(self)
     end)
     local Button = UI.QuietButton
     self.search = UI.Input(frame, L["Search names, notes or levels (40-60)"], 24, -131, 310)
+    if (Kit.SetGlyph) then
+        local icon = self.search:CreateTexture(nil, "ARTWORK")
+        Kit.SetGlyph(icon, "search")
+        icon:SetSize(14, 14); icon:SetPoint("LEFT", self.search, "LEFT", 6, 0)
+        icon:SetVertexColor(.92, .88, .76)
+        self.search:SetTextInsets(24, 8, 5, 5)
+    end
     self.search:SetScript("OnTextChanged", function() self.offset = 0; self:RefreshWindow() end)
     self.filterButtons = {}
     local function Filter(key, text, x, y, width)
@@ -501,8 +507,25 @@ Guild.CreateWindow = function(self)
             self.filters[key] = not self.filters[key]; self.offset = 0; self:RefreshWindow()
         end)
         button.caption = text; self.filterButtons[key] = button
+        return button
     end
-    Filter("online", L["Online people"], 346, -150, 144); Filter("favorite", L["Favorites"], 500, -150, 156)
+    local online = Filter("online", L["Online people"], 346, -150, 144)
+    local favorite = Filter("favorite", L["Favorites"], 500, -150, 156)
+    local look = Kit.Look
+    if (look and look.PageIconsAvailable) then
+        for _, button in ipairs({ online, favorite }) do
+            local icon = button:CreateTexture(nil, "ARTWORK")
+            icon:SetSize(16, 16); icon:SetPoint("LEFT", button, "LEFT", 9, 0)
+            if (button == online) then
+                look.SetOptionIcon(icon, "player", true)
+                icon:SetVertexColor(.58, .87, .63)
+            else
+                icon:SetTexture(MEDIA .. "favorite.tga")
+            end
+            button.filterIcon = icon
+            button.check:ClearAllPoints(); button.check:SetPoint("RIGHT", button, "RIGHT", -7, 0)
+        end
+    end
     Filter("missing", L["No nickname"], 24, -190, 148); Filter("unlinked", L["Without main/alt"], 182, -190, 154)
     local function FilterValue(field, _, value)
         if (self.activePage ~= "members") then return end

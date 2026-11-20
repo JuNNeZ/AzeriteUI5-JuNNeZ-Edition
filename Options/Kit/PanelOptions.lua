@@ -69,6 +69,7 @@ local appearance = {
 	args = {
 		theme = {
 			name = L["Theme"],
+			settingIcon = "palette",
 			desc = L["Choose the colors the AzeriteUI options window is drawn with. Class Color follows the class of the character you are logged in on."],
 			type = "select", style = "dropdown",
 			order = 1,
@@ -93,6 +94,7 @@ local appearance = {
 		},
 		opacity = {
 			name = L["Background Opacity"],
+			settingIcon = "opacity",
 			desc = L["How solid the options window is drawn. This scales the opacity the chosen theme asks for; the borders keep their own, so the window never loses its edges."],
 			type = "range",
 			order = 2,
@@ -120,6 +122,7 @@ local appearance = {
 		-- the choice for the next reload.
 		windowStyle = {
 			name = L["Window Style"],
+			settingIcon = "window",
 			desc = L["How the window itself is drawn, in AzeriteUI's tooltip metal either way. Rounded rounds off its corners, adds a soft shadow and sets the rail in a well of its own; Classic keeps the square casing. The controls look the same in both. Changing it reloads the interface."],
 			type = "select", style = "dropdown",
 			order = 3,
@@ -149,6 +152,7 @@ local appearance = {
 		},
 		scale = {
 			name = L["Panel Scale"],
+			settingIcon = "resize",
 			desc = L["How large the options window is drawn, independently of the rest of the interface. Useful on a very high resolution display, where the window can otherwise be smaller than everything around it."],
 			type = "range",
 			order = 11,
@@ -168,6 +172,7 @@ local appearance = {
 		},
 		reset = {
 			name = L["Reset Position and Size"],
+			settingIcon = "reset",
 			desc = L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."],
 			type = "execute",
 			order = 11,
@@ -196,6 +201,7 @@ local BuildChangelog = function()
 	-- puts it above the first release.
 	args.whatsNew = {
 		name = L["Show What's New after updates"],
+		settingIcon = "bell",
 		desc = L["A few seconds after the first login on a new version, a short summary opens with buttons that take you to what changed. Type /az whatsnew to open it at any time."],
 		type = "toggle",
 		width = "full",

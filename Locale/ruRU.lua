@@ -1,6 +1,8 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "ruRU")
 if (not L) then return end
 
+L["Group Loot"] = "Групповая добыча"
+
 -- Legacy unit-frame levels.
 L["Show levels"] = "Показывать уровни"
 L["Show levels before player, target and party names in the Legacy theme."] = "Показывает уровни перед именами игрока, цели и участников группы в теме Legacy."

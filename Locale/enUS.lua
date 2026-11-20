@@ -1,5 +1,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "enUS", true, true)
 
+L["Group Loot"] = true
+
 -- Legacy unit-frame levels.
 L["Show levels"] = true
 L["Show levels before player, target and party names in the Legacy theme."] = true

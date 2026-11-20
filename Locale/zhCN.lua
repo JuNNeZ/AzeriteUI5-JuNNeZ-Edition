@@ -1,6 +1,8 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "zhCN")
 if (not L) then return end
 
+L["Group Loot"] = "队伍拾取"
+
 -- Legacy unit-frame levels.
 L["Show levels"] = "显示等级"
 L["Show levels before player, target and party names in the Legacy theme."] = "在 Legacy 主题中，于玩家、目标和队伍成员的姓名前显示等级。"

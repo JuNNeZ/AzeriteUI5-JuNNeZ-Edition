@@ -49,9 +49,9 @@ local GetMedia = Kit.GetMedia
 -- Remember the sheet, not the current theme, so pooled and already visible
 -- icons switch instantly along with the text. Texcoords stay the same.
 local iconTextures = setmetatable({}, { __mode = "k" })
-local SetIconTexture = function(texture, sheet)
-	iconTextures[texture] = sheet
-	texture:SetTexture(GetMedia(sheet .. (Kit.GetTheme() == "light" and "-light" or "")))
+local SetIconTexture = function(texture, sheet, fixedDark)
+	iconTextures[texture] = not fixedDark and sheet or nil
+	texture:SetTexture(GetMedia(sheet .. (not fixedDark and Kit.GetTheme() == "light" and "-light" or "")))
 end
 
 Look.RefreshIcons = function()
@@ -267,8 +267,8 @@ end
 -- options-sections.tga, built by Tools/Build-OptionsSectionIcons.py: the same
 -- 8x8 sheet of 64px cells, for the sections a page lists in the rail and heads
 -- on the page. Known by the section's key in the option table, never by its
--- localised name. Several sections share a motif. Icons are for finding your
--- way, not for individual settings; unknown sections have no generic fallback.
+-- localised name. Several sections and Settings controls reuse a motif.
+-- Unknown sections have no generic fallback.
 local SECTION_COLS, SECTION_ROWS = 8, 8
 local sectionCells = {
 	player = 0, target = 1, tot = 2, focus = 3, pet = 4, boss = 5, arena = 6, castbar = 7,
@@ -277,7 +277,8 @@ local sectionCells = {
 	friendly = 24, gear = 25, wrench = 26, horseshoe = 27, clock = 28, key = 29,
 	hunter = 30, paladin = 31, mage = 32, druid = 33, warrior = 34, crystal = 35,
 	orb = 36, leaf = 37, moon = 38, totem = 39, smooth = 40, text = 41,
-	sort = 42, anchor = 43, export = 44, import = 45, shield = 46
+	sort = 42, anchor = 43, export = 44, import = 45, shield = 46,
+	palette = 47, opacity = 48, window = 49, reset = 50, dice = 51
 }
 Look.SectionIconCells = sectionCells
 
@@ -313,7 +314,7 @@ local SECTION_ICONS = {
 	playerAuraSettingsHeader = "page:auras", auraLayoutHeader = "page:auras",
 	textHeader = "text", textureHeader = "page:themes", bindHeader = "key",
 	multiHeader = "page:tracker", reloadHeader = "shield", fadingHeader = "eyeslash",
-	newprofileheader = "page:profiles", header = "eye"
+	newprofileheader = "page:profiles", header = "eye", groupLootHeader = "dice"
 }
 Look.SectionIcons = SECTION_ICONS
 
@@ -326,27 +327,29 @@ Look.SectionIconFor = function(key)
 	return SECTION_ICONS[key]
 end
 
--- Points a texture at a section's icon. Answers false, and leaves the texture
--- alone, for a section without one or while the art has not shipped.
-Look.SetSectionIcon = function(texture, key)
+-- Points a texture at a named motif on either options sheet.
+Look.SetOptionIcon = function(texture, icon, fixedDark)
 	if (not Look.PageIconsAvailable or not texture) then return false end
-	local icon = Look.SectionIconFor(key)
-	if (not icon) then return false end
+	if (type(icon) ~= "string") then return false end
 	local pageIcon = icon:match("^page:(.+)$")
 	if (pageIcon) then
 		local cell = cells[pageIcon]
 		if (not cell) then return false end
 		local col, row = cell % COLS, (cell - cell % COLS) / COLS
-		SetIconTexture(texture, "options-pages")
+		SetIconTexture(texture, "options-pages", fixedDark)
 		texture:SetTexCoord(col / COLS, (col + 1) / COLS, row / ROWS, (row + 1) / ROWS)
 		return true
 	end
 	local cell = sectionCells[icon]
 	if (not cell) then return false end
 	local col, row = cell % SECTION_COLS, (cell - cell % SECTION_COLS) / SECTION_COLS
-	SetIconTexture(texture, "options-sections")
+	SetIconTexture(texture, "options-sections", fixedDark)
 	texture:SetTexCoord(col / SECTION_COLS, (col + 1) / SECTION_COLS, row / SECTION_ROWS, (row + 1) / SECTION_ROWS)
 	return true
+end
+
+Look.SetSectionIcon = function(texture, key)
+	return Look.SetOptionIcon(texture, Look.SectionIconFor(key))
 end
 
 -- Points a texture at a page's icon. Answers false, and leaves the texture

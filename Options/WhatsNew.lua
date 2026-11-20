@@ -39,7 +39,23 @@ local OpenMovers = function()
 	if (manager and manager.OpenMFMFrame) then manager:OpenMFMFrame() end
 end
 
+local OpenAppearance = function()
+	local panel = ns.OptionsKit and ns.OptionsKit.Panel
+	if (panel) then
+		panel:SetTab("settings")
+		panel:Open("appearance")
+	end
+end
+
 ns.WhatsNew = {
+	{
+		version = "5.45.0-JuNNeZ",
+		items = {
+			{ text = "Rounded Options adds icons to tabs, headings and appearance controls.", run = OpenAppearance },
+			{ text = "Guild Manager has clearer search, filters and officer navigation.", page = "GuildManager" },
+			{ text = "Find your loot roll settings under Bags > Group Loot.", page = L["Bags"], section = L["Group Loot"] },
+		}
+	},
 	{
 		version = "5.44.0-JuNNeZ",
 		items = {

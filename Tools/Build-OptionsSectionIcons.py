@@ -8,7 +8,7 @@ The same 32-unit grid, rim, shadow, greyscale and checks as the page icons
 Assets/options-sections.tga. Which section gets which cell is decided in
 Options/Kit/Look.lua (SECTION_ICONS); several sections share a motif (all eight
 action bars, the three raid sizes), so the sheet stays small and the icons mean
-something. Navigation only: no icon on a single setting.
+something. Settings also uses the same sheet for its control labels.
 """
 import argparse
 import importlib.util
@@ -29,7 +29,8 @@ KEYS = (
     "classpower heal party raid corners actionbar stance proc "
     "assist bell eye eyeslash resize droplet funnel gate "
     "friendly gear wrench horseshoe clock key "
-    "hunter paladin mage druid warrior crystal orb leaf moon totem smooth text sort anchor export import shield"
+    "hunter paladin mage druid warrior crystal orb leaf moon totem smooth text sort anchor export import shield "
+    "palette opacity window reset dice"
 ).split()
 
 ALMOND = [(5.5, 16), (10, 11), (16, 9), (22, 11), (26.5, 16), (22, 21), (16, 23), (10, 21)]
@@ -236,6 +237,24 @@ def motif(key):
     elif key == "shield":
         g.polygon([(16, 5), (26, 8), (24, 21), (16, 26.5), (8, 21), (6, 8)], width=2.5)
         g.line([(16, 9), (16, 21)], width=2.5)
+    elif key == "palette":
+        g.polygon([(16, 5), (23, 7), (27, 13), (26, 19), (20, 19),
+                   (17, 22), (18, 26), (11, 26), (5, 21), (5, 13), (9, 7)], fill=True)
+        for x, y in [(10, 13), (15, 10), (21, 12), (10, 19)]:
+            g.d.ellipse(tuple(round(v * S) for v in (x - 1.7, y - 1.7, x + 1.7, y + 1.7)), fill=0)
+    elif key == "opacity":
+        g.circle((5, 5, 27, 27), width=2.5)
+        g.d.pieslice((5*S, 5*S, 27*S, 27*S), 90, 270, fill=255)
+    elif key == "window":
+        g.box((5, 6, 27, 26), radius=4, width=2.5)
+        g.line([(6, 12), (26, 12)], width=2.5)
+    elif key == "reset":
+        g.arc((6, 6, 26, 26), 225, 525, width=3)
+        g.polygon([(5, 6), (5, 15), (14, 15)], fill=True)
+    elif key == "dice":
+        g.box((5, 5, 27, 27), radius=4, width=2.5)
+        for x, y in ((11, 11), (21, 11), (16, 16), (11, 21), (21, 21)):
+            g.circle((x - 1.8, y - 1.8, x + 1.8, y + 1.8), fill=True)
     else:
         raise ValueError(key)
     fitted = Image.new("L", g.mask.size)

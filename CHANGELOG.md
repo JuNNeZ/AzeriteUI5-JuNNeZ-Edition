@@ -10,6 +10,22 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.45.0-JuNNeZ (2026-11-20) - Options, Guild and Loot Navigation
+
+### Highlights
+
+- **Find your way around the Rounded options panel.** The Options and Settings tabs have distinct icons. Supported subheadings and nested tabs now show their own icons, as do the Appearance controls and What's New toggle under Settings.
+- **Spot Guild Manager controls at a glance.** Open `/azguild` to see the search icon, icons for the Online and Favorites filters, and distinct icons for officer follow-up and guild note review.
+- **Find loot roll controls together.** Under `/az -> Bags -> Group Loot`, find the available roll counts, skin settings and preview. The section title is available in all ten addon languages.
+
+### Development
+
+- Extended the shared icon sheets in Light and Dark. Guild Manager keeps icons drawn for its dark background when the options panel uses Light.
+
+### Access and known limits
+
+- Verified offline. Icon spacing, text fit, and theme switching still need in-game confirmation on Retail and Forever.
+
 ## 5.44.1-JuNNeZ (2026-11-20) - Player Aura and Party Layout Fixes
 
 ### Highlights

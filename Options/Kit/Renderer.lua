@@ -365,6 +365,7 @@ local Bind = function(control, option, options, path, page, entry)
 		or AsString(Config.GetName(option, options, path, APP), "")
 
 	control:SetLabel(label)
+	if (control.SetSettingIcon) then control:SetSettingIcon(option.settingIcon) end
 
 	-- The artifact puts the description under the label as a plain line rather
 	-- than inside a tooltip nobody hovers to find.
@@ -595,6 +596,7 @@ Collect = function(group, options, path, out, depth)
 		if (kind == "header") then
 			out[#out + 1] = {
 				kind = "header",
+				key = key,
 				path = Copy(childPath),
 				label = AsString(Config.GetName(option, options, childPath, APP), "")
 			}
@@ -855,6 +857,7 @@ Renderer.CreatePage = function(self, content)
 			for _, button in ipairs(self.buttons) do
 				local color = button.selected and Kit.TextSelected or Kit.TextNormal
 				button.text:SetTextColor(unpack(color))
+				if (button.icon) then button.icon:SetVertexColor(unpack(color)) end
 				button.highlight:SetVertexColor(Kit.TextSelected[1], Kit.TextSelected[2], Kit.TextSelected[3], .12)
 				button.highlight:SetShown(button.selected and true or false)
 				button.edge:SetVertexColor(Kit.TextSelected[1], Kit.TextSelected[2], Kit.TextSelected[3], 1)
@@ -884,6 +887,13 @@ Renderer.CreatePage = function(self, content)
 					label:SetJustifyH("CENTER")
 					label:SetWordWrap(false)
 					button.text = label
+					local Look = Kit.Look
+					if (Look and Look.IsRounded() and Look.PageIconsAvailable) then
+						local icon = button:CreateTexture(nil, "ARTWORK")
+						icon:SetSize(14, 14)
+						icon:SetPoint("LEFT", button, "LEFT", 6, 0)
+						button.icon = icon
+					end
 					button:SetScript("OnClick", function(self_)
 						page.activeTabs[self_.groupID] = self_.tabID
 						Changed()
@@ -901,6 +911,11 @@ Renderer.CreatePage = function(self, content)
 				button.groupID, button.tabID = node.id, tab.id
 				button.selected = page.activeTabs[node.id] == tab.id
 				button.text:SetText(tab.label)
+				if (button.icon) then
+					local shown = Kit.Look.SetSectionIcon(button.icon, tab.key)
+					button.icon:SetShown(shown)
+					button.text:SetPoint("LEFT", button, "LEFT", shown and 24 or 10, 0)
+				end
 				button:Show()
 				page.tabs[#page.tabs + 1] = {
 					path = Copy(tab.path), groupPath = Copy(node.path), label = tab.label,
@@ -917,7 +932,8 @@ Renderer.CreatePage = function(self, content)
 				local button = self.buttons[index]
 				local measured = button.text:GetUnboundedStringWidth()
 				if (type(measured) ~= "number") then measured = 90 end
-				local buttonWidth = math.min(available, max(90, measured + 24))
+				local iconInset = button.icon and button.icon:IsShown() and 14 or 0
+				local buttonWidth = math.min(available, max(90, measured + 24 + iconInset))
 				if (x > 0 and x + buttonWidth > available) then x, y = 0, y + 30 end
 				button:ClearAllPoints()
 				button:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 8 + x, -y - 2)
@@ -1174,7 +1190,7 @@ Renderer.CreatePage = function(self, content)
 				control:SetLabel(entry.label)
 				control.major = entry.major and true or false
 				control.key = entry.key
-				if (control.SetIcon) then control:SetIcon(entry.major and entry.key or nil) end
+				if (control.SetIcon) then control:SetIcon(entry.key) end
 				SetHeader(control, entry)
 
 			elseif (entry.kind == "tabs") then

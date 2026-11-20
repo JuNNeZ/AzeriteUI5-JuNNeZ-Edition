@@ -265,6 +265,26 @@ local CreateRow = function(parent, kind)
 		self.label:SetText(self.labelText)
 	end
 
+	control.SetSettingIcon = function(self, motif)
+		local Look = Kit.Look
+		local icon = self.settingIcon
+		if (motif and Look and Look.IsRounded() and not self.multiline) then
+			if (not icon) then
+				icon = frame:CreateTexture(nil, "ARTWORK")
+				icon:SetSize(16, 16)
+				icon:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT - 2, -8)
+				self.settingIcon = icon
+			end
+			icon:SetShown(Look.SetOptionIcon(icon, motif))
+		elseif (icon) then
+			icon:Hide()
+		end
+		if (icon) then
+			self.iconInset = icon:IsShown() and 18 or 0
+			self.label:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT + self.iconInset, -9)
+		end
+	end
+
 	-- What a setting said when it refused a value. An option can carry
 	-- `validate`, and a refusal has to be readable on the row that caused it -
 	-- the new profile name is rejected for a reason, and "nothing happened" is
@@ -303,7 +323,7 @@ local CreateRow = function(parent, kind)
 	control.Measure = function(self, width)
 		if (self.stacked) then return self:MeasureStacked(width) end
 		self.textWidth = max(MIN_TEXT_WIDTH,
-			(width or 0) - PAD_LEFT - PAD_RIGHT - CONTROL_WIDTH - LABEL_GAP)
+			(width or 0) - PAD_LEFT - PAD_RIGHT - CONTROL_WIDTH - LABEL_GAP - (self.iconInset or 0))
 
 		if (self.hasHelp) then
 			local lines = MeasureText(GetFont(11), self.shownHelp or self.helpText, self.textWidth)
@@ -350,7 +370,7 @@ local CreateRow = function(parent, kind)
 		label:ClearAllPoints()
 		area:ClearAllPoints()
 		textArea:ClearAllPoints()
-		label:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT, -9)
+		label:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT + (self.iconInset or 0), -9)
 		if (stacked) then
 			label:SetPoint("RIGHT", frame, "RIGHT", -PAD_RIGHT, 0)
 			label:SetWordWrap(true)
@@ -379,7 +399,7 @@ local CreateRow = function(parent, kind)
 
 	-- The whole label and help, wrapped to the page's width, then the control's line.
 	control.MeasureStacked = function(self, width)
-		self.textWidth = max(MIN_TEXT_WIDTH, (width or 0) - PAD_LEFT - PAD_RIGHT)
+		self.textWidth = max(MIN_TEXT_WIDTH, (width or 0) - PAD_LEFT - PAD_RIGHT - (self.iconInset or 0))
 		local labelHeight = max(14, MeasureText(GetFont(13), self.labelText, self.textWidth))
 		self.label:SetHeight(labelHeight)
 		local helpHeight = 0
@@ -487,6 +507,9 @@ local CreateRow = function(parent, kind)
 	control.Restyle = function(self)
 		SetTextColor(self.label, self.disabled and Kit.TextDisabled or Kit.TextNormal)
 		SetTextColor(self.help, self.errorText and Kit.TextWarning or Kit.TextDisabled)
+		if (self.settingIcon) then
+			self.settingIcon:SetVertexColor(unpack(self.disabled and Kit.TextDisabled or Kit.TextNormal))
+		end
 
 		local border = Kit.BorderIdle
 		self.rule:SetVertexColor(border[1], border[2], border[3], .35)

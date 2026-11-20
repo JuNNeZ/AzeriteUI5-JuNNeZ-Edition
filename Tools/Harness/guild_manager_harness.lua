@@ -391,7 +391,11 @@ LibStub = function(name)
 end
 ns.OptionsKit = { GetFont = function(size) return { size = size } end }
 ns.OptionsKit.GetMedia = ns.API.GetMedia
-ns.OptionsKit.GetTheme = function() return "azerite" end
+ns.OptionsKit.GetTheme = function() return "light" end
+ns.OptionsKit.SetGlyph = function(texture, name)
+    check(name == "search", "member search uses the shared search glyph")
+    texture:SetTexture(ns.API.GetMedia("options-glyphs"))
+end
 assert(loadfile(root .. "/Options/Kit/Look.lua"))("Test", ns)
 -- Minimal factory stand-in; the actual shared scrollbar is covered by kit_harness.
 ns.OptionsKit.Controls = { CreateScrollBar = function(scroll, parent)
@@ -446,6 +450,24 @@ check(module.frame.casing.backdrop == ns.OptionsKit.Look.CasingBackdrop and modu
 check(module.memberPage.parent == module.frame and module.memberPage.x == 200
     and module.memberPage.x+module.memberPage.w == module.frame.w, "member page fits beside navigation inside the shell")
 check(module.navigation.members.selected and not module.navigation.members.check:IsShown(), "navigation marks members without a toggle check")
+local followUpIcon = module.navigation.followup.icon
+local notesIcon = module.navigation.notes.icon
+ns.OptionsKit.Look.RefreshIcons()
+check(followUpIcon:IsShown() and notesIcon:IsShown()
+    and followUpIcon.texture == ns.API.GetMedia("options-sections") and notesIcon.texture == followUpIcon.texture
+    and table.concat(followUpIcon.uv, ",") ~= table.concat(notesIcon.uv, ","),
+    "follow-up and notes have distinct motifs on the dark sheet even with Light options")
+local searchGlyph
+for _, region in ipairs(frames) do
+    if (region.parent == module.search and region.texture == ns.API.GetMedia("options-glyphs")) then searchGlyph = region end
+end
+check(searchGlyph and searchGlyph.x + searchGlyph.w < module.search.insets[1], "search text clears the search glyph")
+for _, key in ipairs({ "online", "favorite" }) do
+    local button = module.filterButtons[key]
+    check(button.filterIcon.texture and button.label.x >= button.filterIcon.x + button.filterIcon.w
+        and button.label.x + button.label.w <= button.w + button.check.x - button.check.w,
+        "filter icon, label and selected check fit " .. key)
+end
 module.navigation.members.scripts.OnEnter(module.navigation.members)
 check(not module.navigation.members.check:IsShown(), "hovering active navigation cannot put a check over its page icon")
 module.navigation.members.scripts.OnLeave(module.navigation.members)

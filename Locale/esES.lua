@@ -1,6 +1,8 @@
 local L = LibStub("AceLocale-3.0"):NewLocale((...), "esES") or LibStub("AceLocale-3.0"):NewLocale((...), "esMX")
 if (not L) then return end
 
+L["Group Loot"] = "Botín de grupo"
+
 -- Legacy unit-frame levels.
 L["Show levels"] = "Mostrar niveles"
 L["Show levels before player, target and party names in the Legacy theme."] = "Muestra los niveles antes de los nombres del jugador, del objetivo y del grupo en el tema Legacy."

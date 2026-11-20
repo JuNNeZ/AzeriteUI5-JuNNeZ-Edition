@@ -159,7 +159,13 @@ local GenerateOptions = function()
 	end
 
 	local alerts = ns:GetModule("AlertFrames", true)
-	if (alerts and alerts:IsEnabled() and alerts:CanSkinLootRolls()) then
+	local active = alerts and alerts:IsEnabled()
+	local canSkin = active and alerts:CanSkinLootRolls()
+	local canCount = active and alerts:CanShowLootRollChoices()
+	if (canSkin or canCount) then
+		options.args.groupLootHeader = { name = L["Group Loot"], type = "header", order = 20.5 }
+	end
+	if (canSkin) then
 		options.args.skinLootRolls = {
 			name = L["Use AzeriteUI loot roll skin"],
 			desc = L["Use compact AzeriteUI loot roll windows for mouse and keyboard. Applies after a reload."],
@@ -180,7 +186,7 @@ local GenerateOptions = function()
 			get = function() return alerts.db.profile.lootRollClassTheme end
 		}
 	end
-	if (alerts and alerts:IsEnabled() and alerts:CanShowLootRollChoices()) then
+	if (canCount) then
 		options.args.showLootRollChoices = {
 			name = L["Show group loot roll choices"],
 			desc = L["Show counts on group loot roll buttons. Hover over a button to see who chose it."],
@@ -192,7 +198,7 @@ local GenerateOptions = function()
 			end,
 			get = function() return alerts.db.profile.showLootRollChoices end
 		}
-		if (alerts:CanSkinLootRolls()) then
+		if (canSkin) then
 			options.args.previewLootRolls = {
 				name = L["Preview loot rolls"],
 				desc = L["Try the AzeriteUI skin, countdowns and roll choices with sample loot."],
