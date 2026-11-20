@@ -49,7 +49,7 @@ end
 
 ns.WhatsNew = {
 	{
-		version = "5.47.0-JuNNeZ",
+		version = "5.47.1-JuNNeZ",
 		items = {
 			{ text = "Dim distant enemies and keep casting enemies visible.", page = L["Nameplates"], section = L["Fading"] },
 			{ text = "Highlight your specialization's auras or show selected spells once per plate.", page = L["Nameplates"], section = L["Aura filters"] },

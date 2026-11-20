@@ -10,6 +10,12 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.47.1-JuNNeZ (2026-11-20) - Addon List Title
+
+### Highlights
+
+- The addon list now shows Azerite UI 5.47 on Retail and Forever.
+
 ## 5.47.0-JuNNeZ (2026-11-20) - Nameplate Controls and Zygor Guide Readability
 
 ### Highlights
