@@ -1866,3 +1866,30 @@ L["The game draws your group's pets, totems and guardians with a health bar ther
 L["AzeriteUI outline on the game's names"] = true
 L["Gives the names the game draws on nameplates the outline and shadow of AzeriteUI's own nameplate names."] = true
 L["The game draws friendly nameplates in these places itself, and pets and NPCs always keep a health bar there. These options change the game's own settings while you are inside."] = true
+
+-- Nameplates: Platynator ideas (2026-11-20).
+L["Spells shown only once"] = true
+L["Spell IDs, separated by commas. Each is shown at most once on a nameplate, even when the unit has it more than once, such as 55078 for a Death Knight."] = true
+L["Highlighted auras for this specialization"] = true
+L["Spell IDs, separated by commas. Their icons get a gold border. Each specialization keeps its own list."] = true
+L["Fading"] = true
+L["Other enemies while you have a target"] = true
+L["How visible enemy nameplates other than your target are. `100%` leaves them as they are."] = true
+L["Enemies while you have no target"] = true
+L["How visible enemy nameplates are while you have no target. `100%` leaves them as they are."] = true
+L["Enemies out of range"] = true
+L["How visible enemy nameplates farther away than the range below are. `100%` turns the range check off."] = true
+L["Range (yards)"] = true
+L["The distance the range check above uses, as close as your spells and items allow it to measure."] = true
+L["Casting enemies at least"] = true
+L["Enemy nameplates that are casting stay at least this visible, whatever fades them. `0%` turns it off."] = true
+L["Casting nameplate size"] = true
+L["Nameplates grow or shrink by this much while their unit casts. `100%` leaves them as they are."] = true
+L["Stack by AzeriteUI's nameplate size"] = true
+L["Nameplates move apart by the size AzeriteUI draws them at, not by the size the game is told, which is wider in dungeons so the game's friendly names fit."] = true
+L["Stacking speed"] = true
+L["How fast overlapping nameplates slide apart. `0` leaves the game's own speed."] = true
+L["Show who interrupted"] = true
+L["The name of whoever interrupted the cast, in their class colour, while the castbar shows the interruption."] = true
+L["Show enemy forces per mob"] = true
+L["During a Mythic+ key, how much of the key's enemy forces each enemy is worth, inside its health bar."] = true

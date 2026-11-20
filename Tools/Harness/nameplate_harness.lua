@@ -397,6 +397,12 @@ function Region:SetVertexColorFromBoolean(v, yes, no)
 	self.__fromBoolean = { v, yes and yes.rgba, no and no.rgba }
 end
 function Region:SetText(t) count(self, "SetText"); self.__text = t end
+function Region:SetFormattedText(f, ...)
+	count(self, "SetFormattedText")
+	local args = { ... }
+	for i = 1, select("#", ...) do if (IsSecretNumber(args[i])) then args[i] = "<secret>" end end
+	self.__text = string.format(f, unpack(args, 1, select("#", ...)))
+end
 function Region:GetText() return self.__text end
 function Region:SetTextColor(r, g, b, a) count(self, "SetTextColor"); self.__textColor = { r, g, b, a } end
 function Region:SetFontObject(f) count(self, "SetFontObject"); self.__font = f end
@@ -3329,6 +3335,190 @@ do
 	M:UpdateSettings()
 	check(W.cvars.nameplateOtherAtBase == "0", "and over the head is 0", W.cvars.nameplateOtherAtBase)
 	Step("the driver's size and CVars")
+end
+
+-- After Platynator 548 (2026-11-20): stacking by our own frame, Mythic+ forces per mob, who interrupted,
+-- the alpha rules, and each aura once / highlighted auras. Every check puts back what it changed.
+do
+	local NPx = ns.NamePlatesPrivate
+	local Prof = W.profile
+	local hostile, other = P[1], P[2]
+
+	-- Stacking: the plate's own frame, or the game's plate frame again when turned off.
+	local base = hostile.blizzPlate
+	base.SetStackingBoundsFrame = function(self, frame) self.__bounds = frame end
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+	check(base.__bounds == hostile, "a plate stacks by its own frame", tostring(base.__bounds))
+	Prof.ownStackingBounds = false
+	W.module:UpdateSettings()
+	check(base.__bounds == base, "turned off, by the game's plate frame again", tostring(base.__bounds))
+	Prof.ownStackingBounds = true
+	W.module:UpdateSettings()
+	check(base.__bounds == hostile, "and back on", tostring(base.__bounds))
+	base.SetStackingBoundsFrame = nil
+
+	-- Stacking speed only reaches the game when set (a CVar this harness's client has).
+	W.cvars.nameplateMotionSpeed = "0.025"
+	Prof.stackMotionSpeed = .05
+	W.module:UpdateSettings()
+	check(W.cvars.nameplateMotionSpeed == "0.05", "the stacking speed is passed to the game", W.cvars.nameplateMotionSpeed)
+	Prof.stackMotionSpeed = 0
+	W.module:UpdateSettings()
+	W.cvars.nameplateMotionSpeed = nil
+
+	-- Mythic+ forces: only in an active key, only with the option, a secret percentage passed as it is.
+	local savedScenario = C_ScenarioInfo
+	local percent = 1.25
+	C_ScenarioInfo = { GetUnitCriteriaProgressValues = function() return 4, 320, percent end }
+	W.keyActive = true
+	NPx.UpdateMythicPlusForces(hostile)
+	check(not hostile.MythicPlusForces.__shown, "forces stay hidden with the option off")
+	Prof.showMythicPlusForces = true
+	NPx.UpdateMythicPlusForces(hostile)
+	check(hostile.MythicPlusForces.__shown and hostile.MythicPlusForces.__text == "1.25%",
+		"in a key, a mob shows what it is worth", hostile.MythicPlusForces.__text)
+	percent = SecretValue(2)
+	NPx.UpdateMythicPlusForces(hostile)
+	check(hostile.MythicPlusForces.__shown and hostile.MythicPlusForces.__text == "<secret>%",
+		"a secret percentage goes into the text untouched", hostile.MythicPlusForces.__text)
+	NPx.UpdateMythicPlusForces(P[5])
+	check(not P[5].MythicPlusForces.__shown, "friendly players show none")
+	W.keyActive = false
+	NPx.UpdateMythicPlusForces(hostile)
+	check(not hostile.MythicPlusForces.__shown, "and no key, no forces")
+	Prof.showMythicPlusForces = false
+	C_ScenarioInfo = savedScenario
+
+	-- Who interrupted: the name in the class colour on the cast target line, only with the option.
+	local savedName, savedInfo = UnitNameFromGUID, GetPlayerInfoByGUID
+	UnitNameFromGUID = function(guid) return guid == "Player-1-0005" and "Aelwyn" or nil end
+	GetPlayerInfoByGUID = function() return "Priest", "PRIEST" end
+	local castbar = hostile.Castbar
+	NPx.Castbar_PostInterrupted(castbar, "nameplate1", "Player-1-0005")
+	check(castbar.TargetText.__text ~= "Aelwyn", "the interrupter stays hidden with the option off")
+	Prof.showInterrupter = true
+	NPx.Castbar_PostInterrupted(castbar, "nameplate1", "Player-1-0005")
+	local priest = ns.Colors.class.PRIEST
+	check(castbar.TargetText.__text == "Aelwyn" and castbar.TargetText.__textColor[1] == priest[1],
+		"the interrupter is named in their class colour", castbar.TargetText.__text)
+	NPx.Castbar_PostInterrupted(castbar, "nameplate1", SECRET)
+	check(true, "a secret interrupter GUID raises nothing")
+	Prof.showInterrupter = false
+	castbar.TargetText:SetText("")
+	NPx.NamePlate_ResetCastbarVisuals(castbar)
+	UnitNameFromGUID, GetPlayerInfoByGUID = savedName, savedInfo
+
+	-- Alpha rules on enemy plates; the target is never faded.
+	local function Alpha(f) NPx.ApplyNamePlateAlpha(f); return f.__alpha end
+	local before = Alpha(other)
+	Prof.nonTargetAlpha = .5
+	check(math.abs(Alpha(other) - before * .5) < 1e-6, "other enemies fade while you have a target", Alpha(other))
+	check(Alpha(hostile) == before, "your target does not")
+	check(Alpha(P[5]) == before, "friendly plates do not")
+	local savedTarget = W.alias.target
+	W.alias.target = nil
+	Prof.noTargetAlpha = .25
+	check(math.abs(Alpha(other) - before * .25) < 1e-6, "with no target, the no-target alpha", Alpha(other))
+	W.alias.target = savedTarget
+	other.__AzeriteUI_OutOfRange = true
+	Prof.outOfRangeAlpha = .5
+	check(math.abs(Alpha(other) - before * .5 * .5) < 1e-6,
+		"out of range multiplies in", Alpha(other))
+	other.__AzeriteUI_Casting = true
+	Prof.castingAlpha = .9
+	check(math.abs(Alpha(other) - before * .9) < 1e-6, "a casting plate is raised to the casting floor", Alpha(other))
+	other.__AzeriteUI_Casting, other.__AzeriteUI_OutOfRange = nil, nil
+	Prof.nonTargetAlpha, Prof.noTargetAlpha, Prof.outOfRangeAlpha, Prof.castingAlpha = 1, 1, 1, 0
+	check(Alpha(other) == before, "all at their defaults, the plate is as it was", Alpha(other))
+
+	-- Casting scale.
+	local scaleBefore = (function() NPx.ApplyNamePlateScale(other); return other.__scale end)()
+	other.__AzeriteUI_Casting = true
+	Prof.castingScale = 1.2
+	NPx.ApplyNamePlateScale(other)
+	check(math.abs(other.__scale - scaleBefore * 1.2) < 1e-6, "a casting plate grows by the casting size", other.__scale)
+	Prof.castingScale = 1
+	other.__AzeriteUI_Casting = nil
+	NPx.ApplyNamePlateScale(other)
+
+	-- Range: LibRangeCheck's checker on a timer, only while the out-of-range alpha is below 1.
+	local savedLibStub = LibStub
+	local inRange = false
+	LibStub = function(name, silent)
+		if (name == "LibRangeCheck-3.0") then
+			return { GetHarmMaxChecker = function(_, yards) return function(unit) return unit ~= "nameplate2" or inRange end end }
+		end
+		return savedLibStub(name, silent)
+	end
+	Prof.outOfRangeAlpha = .5
+	W.module:UpdateRangeTimer()
+	check(other.__AzeriteUI_OutOfRange == true and not hostile.__AzeriteUI_OutOfRange,
+		"the range check marks an enemy beyond the range", tostring(other.__AzeriteUI_OutOfRange))
+	inRange = true
+	W.module:UpdateRange()
+	check(not other.__AzeriteUI_OutOfRange, "and clears it when it comes back")
+	Prof.outOfRangeAlpha = 1
+	W.module:UpdateRangeTimer()
+	check(not W.module.rangeTimer, "at 100% nothing polls range")
+	LibStub = savedLibStub
+
+	-- Each aura once (the one ending last stays; given back when off) and highlighted auras.
+	local element = {
+		allDebuffs = { [1] = { spellId = 55078, expirationTime = 10 }, [2] = { spellId = 55078, expirationTime = 20 },
+			[3] = { spellId = 999, expirationTime = 5 }, [4] = { spellId = SECRET, expirationTime = 5 } },
+		activeDebuffs = { [1] = true, [2] = true, [3] = true, [4] = true },
+		allBuffs = {}, activeBuffs = {}
+	}
+	-- The oUF element's path (a plate without a native container): only listed spells are held back.
+	NPx.Auras_DeduplicateInfo(element)
+	check(element.activeDebuffs[1] and element.activeDebuffs[2], "with no list nothing is held back")
+	Prof.auraOnceSpells = "55078"
+	NPx.Auras_DeduplicateInfo(element)
+	check(not element.activeDebuffs[1] and element.activeDebuffs[2] and element.activeDebuffs[3] and element.activeDebuffs[4],
+		"a listed spell twice: the one ending last stays; others and a secret one are left alone")
+	element.allDebuffs[2], element.activeDebuffs[2] = nil, nil
+	NPx.Auras_DeduplicateInfo(element)
+	check(element.activeDebuffs[1], "when it ends, the one held back shows again")
+	element.allDebuffs[2], element.activeDebuffs[2] = { spellId = 55078, expirationTime = 20 }, true
+	NPx.Auras_DeduplicateInfo(element)
+	Prof.auraOnceSpells = ""
+	NPx.Auras_DeduplicateInfo(element)
+	check(element.activeDebuffs[1] and element.activeDebuffs[2], "list cleared, everything held back is given back")
+
+	local key = NPx.GetAuraHighlightKey()
+	Prof.auraHighlights = { [key] = "55078, 123" }
+	local border = {}
+	local button = { Border = { SetBackdropBorderColor = function(_, r, g, b) border = { r, g, b } end } }
+	NPx.ApplyAuraHighlight(button, { spellId = 55078 })
+	check(border[1] == 1 and border[2] == .82, "a listed aura gets the gold border", tostring(border[1]))
+	border = {}
+	NPx.ApplyAuraHighlight(button, { spellId = 999 })
+	check(border[1] == nil, "an unlisted one does not")
+	NPx.ApplyAuraHighlight(button, { spellId = SECRET })
+	check(border[1] == nil, "a secret spell is left alone")
+
+	-- The native container, as Platynator does it: highlighted spells first in groups of their own (the
+	-- game matches the IDs, secret or not), each once-only spell in a group of one, both left out of the
+	-- other kinds. Cleared lists give the kinds their old exclusions and empty the extra groups.
+	Prof.auraOnceSpells = "999"
+	W.module:UpdateSettings()
+	local high, once, own = Group(hostile, "AzeritePlateHighlightHarmful"), Group(hostile, "AzeritePlateOnce1"),
+		Group(hostile, "AzeritePlateHarmfulOwn")
+	check(high and high.candidateFilters.includeSpellIDs[55078] and high.candidateFilters.includeSpellIDs[123]
+		and Shows(hostile, "AzeritePlateHighlightHarmful") and Shows(hostile, "AzeritePlateHighlightHelpful"),
+		"highlighted spells get groups of their own that show")
+	check(once and once.candidateFilters.includeSpellIDs[999] and once.maxFrameCount == 1,
+		"a once-only spell gets a group that shows one", once and once.maxFrameCount)
+	check(own and own.candidateFilters.excludeSpellIDs[55078] and own.candidateFilters.excludeSpellIDs[999],
+		"and the other kinds leave both out")
+	local order = table.concat(hostile.NativeAuras.container.__groupOrder, ",")
+	Prof.auraHighlights, Prof.auraOnceSpells = {}, ""
+	W.module:UpdateSettings()
+	own = Group(hostile, "AzeritePlateHarmfulOwn")
+	check(not Shows(hostile, "AzeritePlateHighlightHarmful") and not Shows(hostile, "AzeritePlateOnce1"),
+		"cleared, the extra groups show nothing", order)
+	check(own and not own.candidateFilters.excludeSpellIDs[55078] and not own.candidateFilters.excludeSpellIDs[999],
+		"and the kinds show those spells again")
 end
 
 -- Plays nice (Phase 9): another nameplate addon enabled, the module stands down at login and keeps

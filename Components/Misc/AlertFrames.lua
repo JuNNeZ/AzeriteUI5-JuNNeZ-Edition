@@ -342,19 +342,22 @@ local AlertSubSystem_AdjustQueuedAnchors = function(self, relativeAlert)
 	return relativeAlert
 end
 
-local AlertSubSystem_AdjustPosition = function(alertFrame, subSystem)
-	if (subSystem.alertFramePool) then --queued alert system
-		subSystem.AdjustAnchors = AlertSubSystem_AdjustQueuedAnchors
-	elseif (not subSystem.anchorFrame) then --simple alert system
-		subSystem.AdjustAnchors = AlertSubSystem_AdjustAnchors
-	elseif (subSystem.anchorFrame) then --anchor frame system
-		subSystem.AdjustAnchors = AlertSubSystem_AdjustAnchorsNonAlert
-	end
-end
-
 local AlertSubSystem_AdjustAllPositions = function()
-	for index,alertFrameSubSystem in ipairs(AlertFrame.alertFrameSubSystems) do
-		AlertSubSystem_AdjustPosition(AlertFrame, alertFrameSubSystem)
+	-- Blizzard calls each subsystem's AdjustAnchors from its own update path.
+	-- Apply our spacing after that pass without replacing any native method.
+	local relative = AlertFrame.baseAnchorFrame or AlertFrame
+	for _, system in ipairs(AlertFrame.alertFrameSubSystems) do
+		local frame
+		if (system.alertFramePool) then
+			frame = AlertSubSystem_AdjustQueuedAnchors(system, relative)
+		elseif (system.anchorFrame) then
+			frame = AlertSubSystem_AdjustAnchorsNonAlert(system, relative)
+		else
+			frame = AlertSubSystem_AdjustAnchors(system, relative)
+		end
+		if (frame ~= relative and (not frame.IsInDefaultPosition or frame:IsInDefaultPosition())) then
+			relative = frame
+		end
 	end
 end
 
@@ -367,6 +370,7 @@ local AlertFrame_PostUpdateAnchors = function()
 	AlertFrame:ClearAllPoints()
 	AlertFrame:SetAllPoints(AlertFrameHolder)
 
+	AlertSubSystem_AdjustAllPositions()
 	AlertFrames:PlaceLootRollStack(GroupLootContainer)
 	AlertFrames:UpdateLootRollLayoutPreviewPosition()
 
@@ -377,7 +381,6 @@ end
 
 AlertFrames.PostUpdatePositionAndScale = function(self)
 	AlertFrame_PostUpdateAnchors()
-	AlertSubSystem_AdjustAllPositions()
 	self:QueueLootRollRefresh()
 end
 
@@ -404,7 +407,6 @@ AlertFrames.PrepareFrames = function(self)
 		UIPARENT_MANAGED_FRAME_POSITIONS["GroupLootContainer"] = nil
 	end
 
-	self:SecureHook(AlertFrame, "AddAlertFrameSubSystem", AlertSubSystem_AdjustPosition)
 	self:SecureHook(AlertFrame, "UpdateAnchors", AlertFrame_PostUpdateAnchors)
 	self:SecureHook("GroupLootContainer_Update", GroupLootContainer_PostUpdate)
 end

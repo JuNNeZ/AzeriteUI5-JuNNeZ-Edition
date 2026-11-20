@@ -416,9 +416,19 @@ assert(layoutSecond.point[2] == layoutFirst and layoutSecond.point[5] == 5, "lay
 
 env._G.AzeriteUIAlertFrameHolder = alerts.frame
 env.AlertFrame = { ClearAllPoints = Noop, SetAllPoints = Noop, alertFrameSubSystems = {} }
+local firstAlert = env.CreateFrame("Frame", nil, env.UIParent)
+local nextAlert = env.CreateFrame("Frame", nil, env.UIParent)
+firstAlert:Show()
+nextAlert:Show()
+local nativeSystem = { AdjustAnchors = Noop, alertFrame = firstAlert }
+env.AlertFrame.alertFrameSubSystems = { nativeSystem, { anchorFrame = nextAlert, AdjustAnchors = Noop } }
 container.ClearAllPoints, container.SetPoint = frame.ClearAllPoints, frame.SetPoint
 alerts.db.profile.growUpwards = false
 alerts:PostUpdatePositionAndScale()
+assert(nativeSystem.AdjustAnchors == Noop and env.AlertFrame.alertFrameSubSystems[2].AdjustAnchors == Noop,
+	"native alert methods retain their original functions")
+assert(firstAlert.point[2] == env.AlertFrame and nextAlert.point[2] == firstAlert,
+	"custom layout chains visible alerts after the native pass")
 assert(layout.point[1] == container.point[1] and layout.point[2] == container.point[2]
 	and layout.point[5] == container.point[5] and layoutSecond.point[5] == -5, "layout preview uses the live stack anchors")
 mover:Hide()

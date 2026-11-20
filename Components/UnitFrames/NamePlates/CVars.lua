@@ -194,6 +194,12 @@ local GetDriverCVars = function()
 	values["nameplatePlayerMaxDistance"] = distance
 	values["nameplateOtherAtBase"] = GetPlatePositionCVarValue()
 	values["nameplateMinAlpha"], values["nameplateOccludedAlphaMult"] = GetZoneAlphaCVars()
+	-- How fast stacked plates slide apart (Platynator's STACK_MOTION_SPEED); 0 leaves the game's own.
+	local profile = GetInstanceProfile()
+	local motion = profile and tonumber(profile.stackMotionSpeed)
+	if (motion and motion > 0) then
+		values["nameplateMotionSpeed"] = motion
+	end
 	-- Only the ones this client has: oUF writes the table as it is (Libs/oUF/ouf.lua, updateDriver).
 	for key in next, values do
 		if (not CVarExists(key)) then
@@ -707,7 +713,6 @@ NP.ApplyPendingNamePlateStacking = ApplyPendingNamePlateStacking
 NP.ApplyPendingNamePlateVisibility = ApplyPendingNamePlateVisibility
 NP.ApplyInstanceCVars = ApplyInstanceCVars
 NP.ApplyGameNamePlateFont = ApplyGameNamePlateFont
-NP.IsFriendlyRestrictedInstance = IsFriendlyRestrictedInstance
 
 -- For the options page, which reads and writes the game's own setting through these.
 NamePlatesMod.IsShownSettingSupported = function(self, kind)

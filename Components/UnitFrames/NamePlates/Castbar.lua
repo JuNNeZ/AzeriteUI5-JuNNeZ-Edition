@@ -275,7 +275,7 @@ local NamePlate_GetBlizzardProtectedFallback = function(element)
 		return nil
 	end
 
-	local okPlate, plate = API.TryCall(C_NamePlate.GetNamePlateForUnit, unit, issecurefunc and issecurefunc())
+	local okPlate, plate = API.TryCall(C_NamePlate.GetNamePlateForUnit, unit, issecure and issecure() or false)
 	local unitFrame = okPlate and plate and (plate.UnitFrame or plate.unitFrame)
 	local blizzardCastbar = unitFrame and (unitFrame.castBar or unitFrame.CastBar or unitFrame.castbar or unitFrame.Castbar or unitFrame.CastingBarFrame)
 	local active = blizzardCastbar and (blizzardCastbar.casting or blizzardCastbar.channeling or blizzardCastbar.empowering)
@@ -510,6 +510,44 @@ local Castbar_PostFail = function(element, _)
 	NamePlate_PostUpdateHoverElements(element.__owner)
 end
 
+--[[
+	Who interrupted the cast (2026-11-20, after Platynator's CastInterrupterText): oUF hands over
+	UNIT_SPELLCAST_INTERRUPTED's interruptedBy GUID (Libs/oUF/elements/castbar.lua, PostCastInterrupted). Its
+	name and class may come back secret; they only go into SetText and SetTextColor, through C_ClassColor for a
+	secret class, as the cast target's name does. Shown on the cast target line while the bar holds.
+]]
+local Castbar_PostInterrupted = function(element, unit, interruptedBy)
+	Castbar_PostFail(element, unit)
+	local profile = NP.NamePlatesMod and NP.NamePlatesMod.db and NP.NamePlatesMod.db.profile
+	local text = element and element.TargetText
+	if (not (profile and profile.showInterrupter and text) or type(UnitNameFromGUID) ~= "function") then
+		return
+	end
+	if (not IsSecretValue(interruptedBy) and (type(interruptedBy) ~= "string" or interruptedBy == "")) then
+		return
+	end
+	local ok, name = pcall(UnitNameFromGUID, interruptedBy)
+	if (not ok or (not IsSecretValue(name) and type(name) ~= "string")) then
+		return
+	end
+	local r, g, b = 1, 1, 1
+	if (type(GetPlayerInfoByGUID) == "function") then
+		local found, _, class = pcall(GetPlayerInfoByGUID, interruptedBy)
+		if (found and IsSecretValue(class)) then
+			local color = C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class)
+			if (type(color) == "table") then
+				r, g, b = color.r, color.g, color.b
+			end
+		elseif (found and type(class) == "string" and Colors.class and Colors.class[class]) then
+			local color = Colors.class[class]
+			r, g, b = color[1], color[2], color[3]
+		end
+	end
+	text:SetText(name)
+	text:SetTextColor(r, g, b, 1)
+end
+
+NP.Castbar_PostInterrupted = Castbar_PostInterrupted
 NP.NamePlate_ResetCastbarVisuals = NamePlate_ResetCastbarVisuals
 NP.NamePlate_ClearCastTargetVisuals = NamePlate_ClearCastTargetVisuals
 NP.NamePlate_UpdateCastTargetVisuals = NamePlate_UpdateCastTargetVisuals

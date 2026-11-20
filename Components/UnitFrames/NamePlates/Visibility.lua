@@ -767,6 +767,44 @@ end
 
 -- A plate's own alpha, in one place: nothing while it is hidden, otherwise UIParent's (mirrored so an
 -- Immersion fade reaches the plates, see Style.lua), times the combat filter's fade.
+-- Platynator's alpha rules (2026-11-20, Display/Nameplate.lua UpdateVisual), for enemy plates only: other
+-- enemies while you have a target, every enemy while you have none, out of range; a casting plate is
+-- raised to at least castingAlpha. Each defaults to no change (1, or 0 for the casting floor).
+local GetAlphaSetting = function(key, default)
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local value = profile and tonumber(profile[key])
+	if (not value or value < 0 or value > 1) then
+		return default
+	end
+	return value
+end
+
+local HasTarget = function()
+	local exists = UnitExists("target")
+	return (not IsSecretValue(exists)) and exists == true
+end
+
+-- Whether any target-dependent rule is on, so a target change has to redo every plate's alpha.
+local UsesTargetAlpha = function()
+	return GetAlphaSetting("nonTargetAlpha", 1) ~= 1 or GetAlphaSetting("noTargetAlpha", 1) ~= 1
+end
+
+local GetRuleAlpha = function(self, exempt)
+	if (exempt) then
+		return 1
+	end
+	local usesTarget = UsesTargetAlpha()
+	local outOfRange = self.__AzeriteUI_OutOfRange and GetAlphaSetting("outOfRangeAlpha", 1) or 1
+	if ((not usesTarget and outOfRange == 1) or not IsHostileNamePlate(self)) then
+		return 1
+	end
+	local multiplier = outOfRange
+	if (usesTarget) then
+		multiplier = multiplier * (HasTarget() and GetAlphaSetting("nonTargetAlpha", 1) or GetAlphaSetting("noTargetAlpha", 1))
+	end
+	return multiplier
+end
+
 local ApplyNamePlateAlpha = function(self)
 	if (not self) then
 		return
@@ -774,10 +812,18 @@ local ApplyNamePlateAlpha = function(self)
 	local alpha = 0
 	if (not self.__AzeriteUI_AlphaHidden) then
 		alpha = UIParent:GetAlpha()
-		local faded = self.__AzeriteUI_CombatFaded
-			and not (self.isTarget or self.isFocus or self.isMouseOver or self.isSoftTarget or self.isPRD or self.isObjectPlate)
-		if (faded and not IsSecretValue(alpha)) then
-			alpha = alpha * GetCombatFilterAlpha()
+		local exempt = (self.isTarget or self.isFocus or self.isMouseOver or self.isSoftTarget or self.isPRD or self.isObjectPlate)
+			and true or false
+		local multiplier = (self.__AzeriteUI_CombatFaded and not exempt) and GetCombatFilterAlpha() or 1
+		multiplier = multiplier * GetRuleAlpha(self, exempt)
+		if (self.__AzeriteUI_Casting) then
+			local floor = GetAlphaSetting("castingAlpha", 0)
+			if (floor > multiplier) then
+				multiplier = floor
+			end
+		end
+		if (multiplier ~= 1 and not IsSecretValue(alpha)) then
+			alpha = alpha * multiplier
 		end
 	end
 	local current = self:GetAlpha()
@@ -1241,11 +1287,158 @@ NP.AnchorStandardNamePlateHealthBar = AnchorStandardNamePlateHealthBar
 NP.SetNameColorForUnit = SetNameColorForUnit
 NP.AnchorStandardNamePlateCastBar = AnchorStandardNamePlateCastBar
 NP.AnchorStandardNamePlateName = AnchorStandardNamePlateName
+--[[
+	Mythic+ enemy forces per mob (2026-11-20, after Platynator's MythicPlusForcesText): what killing this mob
+	adds to the key's forces, from C_ScenarioInfo.GetUnitCriteriaProgressValues (both clients). Its answers are
+	secret while the unit's identity is restricted (ScenarioInfoDocumentation.lua): a secret percentage goes
+	straight into SetFormattedText and is never compared or added up.
+]]
+local HideForcesText = function(text)
+	if (text:IsShown()) then
+		text:SetText("")
+		text:Hide()
+	end
+end
+
+local UpdateMythicPlusForces = function(self)
+	local text = self and self.MythicPlusForces
+	if (not text) then
+		return
+	end
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local scenario = C_ScenarioInfo and C_ScenarioInfo.GetUnitCriteriaProgressValues
+	local challenge = C_ChallengeMode and C_ChallengeMode.IsChallengeModeActive
+	local unit = self.unit
+	if (not (profile and profile.showMythicPlusForces and scenario and challenge) or not IsSafeUnitToken(unit)
+		or self.isPRD or self.isPlayerUnit or self.isObjectPlate or not challenge() or not IsHostileNamePlate(self)) then
+		return HideForcesText(text)
+	end
+	local ok, _, _, percent = pcall(scenario, unit)
+	if (not ok) then
+		return HideForcesText(text)
+	end
+	if (IsSecretValue(percent)) then
+		text:SetFormattedText("%s%%", percent)
+	elseif (type(percent) == "number" and percent > 0) then
+		text:SetFormattedText("%.2f%%", percent)
+	else
+		return HideForcesText(text)
+	end
+	text:Show()
+end
+
+--[[
+	Plate auras where a plate has no native container (the oUF element: the harness, a client without one).
+	The native container does the same with groups of its own (PlayerAuraContainers.lua, GetNamePlateGroups).
+	Once-only spells: of two or more of a listed spell, the one ending last stays (PostUpdateInfo, oUF
+	auras.lua, after the lists are built and before they are sorted; one held back is offered again on the
+	next pass). Highlighted spells, per specialization (or class where the client has none), get a gold
+	border. Secret spell IDs are left alone: only the native container can match those.
+]]
+local HIGHLIGHT_COLOR = { 1, .82, .1 }
+
+local GetAuraHighlightKey = function()
+	if (type(GetSpecialization) == "function" and type(GetSpecializationInfo) == "function") then
+		local index = GetSpecialization()
+		local specID = index and GetSpecializationInfo(index)
+		if (type(specID) == "number" and specID > 0) then
+			return tostring(specID)
+		end
+	end
+	local _, class = UnitClass("player")
+	return class or "NONE"
+end
+
+local GetAuraConfigSpells = function()
+	local config = NP.GetNamePlateAuraConfig and NP.GetNamePlateAuraConfig()
+	return config and config.highlightSpells, config and config.onceSpells
+end
+
+local ApplyAuraHighlight = function(button, data)
+	if (not button or not button.Border) then
+		return
+	end
+	local spellID = data and (data.spellId or data.spellID)
+	if (IsSecretValue(spellID) or type(spellID) ~= "number") then
+		return
+	end
+	local highlight = GetAuraConfigSpells()
+	if (not (highlight and highlight.set[spellID])) then
+		return
+	end
+	-- Past the styling's own colour cache (AuraStyling.lua, SetAuraBorderColor), so the next ordinary
+	-- colour is written again.
+	button.__AzeriteUI_AuraBorderRed, button.__AzeriteUI_AuraBorderGreen, button.__AzeriteUI_AuraBorderBlue = nil, nil, nil
+	button.Border:SetBackdropBorderColor(HIGHLIGHT_COLOR[1], HIGHLIGHT_COLOR[2], HIGHLIGHT_COLOR[3])
+end
+
+local GiveBack = function(all, active, held)
+	for auraInstanceID in next, held do
+		if (type(all) == "table" and all[auraInstanceID] and type(active) == "table") then
+			active[auraInstanceID] = true
+		end
+		held[auraInstanceID] = nil
+	end
+end
+
+local DeduplicateList = function(all, active, held, once)
+	if (type(all) ~= "table" or type(active) ~= "table") then
+		return
+	end
+	GiveBack(all, active, held)
+	local keep = {}
+	for auraInstanceID in next, active do
+		local data = all[auraInstanceID]
+		local spellID = data and (data.spellId or data.spellID)
+		if (type(spellID) == "number" and not IsSecretValue(spellID) and once[spellID]) then
+			local expiration = data.expirationTime
+			if (IsSecretValue(expiration) or type(expiration) ~= "number") then
+				expiration = 0
+			elseif (expiration == 0) then
+				expiration = math.huge
+			end
+			local kept = keep[spellID]
+			if (not kept) then
+				keep[spellID] = { id = auraInstanceID, expiration = expiration }
+			elseif (expiration > kept.expiration) then
+				active[kept.id], held[kept.id] = nil, true
+				kept.id, kept.expiration = auraInstanceID, expiration
+			else
+				active[auraInstanceID], held[auraInstanceID] = nil, true
+			end
+		end
+	end
+end
+
+local Auras_DeduplicateInfo = function(element)
+	element.__AzeriteUI_HeldBuffs = element.__AzeriteUI_HeldBuffs or {}
+	element.__AzeriteUI_HeldDebuffs = element.__AzeriteUI_HeldDebuffs or {}
+	local _, once = GetAuraConfigSpells()
+	if (not (once and next(once.set))) then
+		-- No list: give back anything held, once.
+		GiveBack(element.allBuffs, element.activeBuffs, element.__AzeriteUI_HeldBuffs)
+		GiveBack(element.allDebuffs, element.activeDebuffs, element.__AzeriteUI_HeldDebuffs)
+		return
+	end
+	DeduplicateList(element.allBuffs, element.activeBuffs, element.__AzeriteUI_HeldBuffs, once.set)
+	DeduplicateList(element.allDebuffs, element.activeDebuffs, element.__AzeriteUI_HeldDebuffs, once.set)
+end
+
+NP.UpdateMythicPlusForces = UpdateMythicPlusForces
+NP.ApplyAuraHighlight = ApplyAuraHighlight
+NP.Auras_DeduplicateInfo = Auras_DeduplicateInfo
+NP.GetAuraHighlightKey = GetAuraHighlightKey
+NP.UsesTargetAlpha = UsesTargetAlpha
+-- Whether a castbar showing or hiding changes the plate (castingAlpha floor or castingScale).
+NP.CastingChangesPlate = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local castingScale = profile and tonumber(profile.castingScale) or 1
+	return GetAlphaSetting("castingAlpha", 0) > 0 or (castingScale > 0 and castingScale ~= 1)
+end
 NP.ShouldShowNamePlateForBlizzardVisibility = ShouldShowNamePlateForBlizzardVisibility
 NP.IsDeadNPC = IsDeadNPC
 NP.IsFightingSomeoneElse = IsFightingSomeoneElse
 NP.IsFightingYou = IsFightingYou
-NP.IsTankModeActive = IsTankModeActive
 NP.GetTankThreatState = GetTankThreatState
 NP.GetActiveThreatRole = GetActiveThreatRole
 NP.IsThreatScopeActive = IsThreatScopeActive
@@ -1262,8 +1455,6 @@ NP.SetNamePlateAurasShown = SetNamePlateAurasShown
 NP.ApplyFriendlyNameOnlyNameAnchor = ApplyFriendlyNameOnlyNameAnchor
 NP.ApplyFriendlyNameOnlyFontScale = ApplyFriendlyNameOnlyFontScale
 NP.ApplyFriendlyNameOnlyVisualState = ApplyFriendlyNameOnlyVisualState
-NP.GetFriendlyNPCTitle = GetFriendlyNPCTitle
-NP.UpdateFriendlyNPCTitle = UpdateFriendlyNPCTitle
 
 -- For the options page: the threat role setting as it is read (yesterday's tank mode setting included),
 -- and the role the automatic setting would pick for you now, group or not ("tank", "healer", "dps").

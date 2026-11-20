@@ -49,6 +49,15 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.47.0-JuNNeZ",
+		items = {
+			{ text = "Dim distant enemies and keep casting enemies visible.", page = L["Nameplates"], section = L["Fading"] },
+			{ text = "Highlight your specialization's auras or show selected spells once per plate.", page = L["Nameplates"], section = L["Aura filters"] },
+			{ text = "Show each enemy's contribution to Mythic+ forces.", page = L["Nameplates"], section = L["Mythic+"] },
+			{ text = "See who interrupted an enemy cast.", page = L["Nameplates"], section = L["Enemy castbars"] },
+		}
+	},
+	{
 		version = "5.46.0-JuNNeZ",
 		items = {
 			{ text = "Choose how friendly nameplates look in dungeons, raids and delves.", page = L["Nameplates"], section = L["Dungeons and raids"] },

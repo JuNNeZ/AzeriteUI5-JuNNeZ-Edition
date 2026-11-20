@@ -7,7 +7,12 @@ local accents = {
 	["Field-Journal"] = { .82, .62, .34 }
 }
 local selected, viewer, art
-local steps, lines, originalAlpha = {}, {}, {}
+local steps, lines, backdropVisibility = {}, {}, {}
+local rowWax = {}
+local backdropPieces = {
+	"Center", "TopEdge", "BottomEdge", "LeftEdge", "RightEdge",
+	"TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner"
+}
 
 local function slice(parent, layer, left, right, top, bottom)
 	local texture = parent:CreateTexture(nil, layer)
@@ -15,16 +20,21 @@ local function slice(parent, layer, left, right, top, bottom)
 	return texture
 end
 
-local function buildArt(border)
+local function buildArt(border, scroll)
 	local textures = {}
 	local title = border.TitleBar
 	textures.header = slice(title, "BACKGROUND", 0, 256, 0, 32)
 	textures.header:SetAllPoints()
+	textures.panel = slice(border, "BORDER", 0, 256, 32, 64)
+	textures.panel:SetAllPoints()
 	textures.toolbar = slice(border.Toolbar, "BORDER", 0, 256, 0, 32)
 	textures.toolbar:SetAllPoints()
 	textures.toolbar:SetVertexColor(.72, .72, .72)
-	textures.body = slice(border.Back, "BORDER", 0, 256, 32, 64)
+	-- Keep the scroll surface for Forged. Glass and Journal have their own
+	-- larger surfaces, independent of Zygor's inset scroll viewport.
+	textures.body = slice(scroll, "BACKGROUND", 0, 256, 32, 64)
 	textures.body:SetAllPoints()
+	textures.paper = slice(border, "ARTWORK", 0, 256, 32, 64)
 	textures.rail = slice(title, "BORDER", 0, 256, 96, 112)
 	textures.rail:SetPoint("TOPLEFT")
 	textures.rail:SetPoint("TOPRIGHT")
@@ -45,45 +55,78 @@ local function buildArt(border)
 	return textures
 end
 
--- Only fade backdrop textures. Frame alpha would also fade text and controls.
-local function glass(region, opacity)
+local function layoutPaper(border)
+	local profile = _G.ZygorGuidesViewer.db and _G.ZygorGuidesViewer.db.profile
+	local paper = art.paper
+	paper:ClearAllPoints()
+	if profile and profile.resizeup then
+		paper:SetPoint("TOP", border, "TOP", 0, -1)
+		paper:SetPoint("BOTTOM", border.Toolbar, "TOP")
+	else
+		paper:SetPoint("TOP", border.Toolbar, "BOTTOM")
+		paper:SetPoint("BOTTOM", border, "BOTTOM", 0, 1)
+	end
+	-- Match the full window width even when the toolbar uses a skin inset.
+	paper:SetPoint("LEFT", border, "LEFT", 1, 0)
+	paper:SetPoint("RIGHT", border, "RIGHT", -1, 0)
+end
+
+-- Zygor repaints the backdrop's vertex colour as steps change. Suppress only
+-- the native fill, independently of its colour and the frame's children.
+local function suppressBackdrop(region, suppress)
 	if not region then return end
-	if selected == "Glass" then
-		if originalAlpha[region] == nil then originalAlpha[region] = region:GetAlpha() end
-		region:SetAlpha(originalAlpha[region] * opacity)
-	elseif originalAlpha[region] ~= nil then
-		region:SetAlpha(originalAlpha[region])
-		originalAlpha[region] = nil
+	if suppress then
+		if backdropVisibility[region] == nil then backdropVisibility[region] = region:IsShown() end
+		region:Hide()
+	elseif backdropVisibility[region] ~= nil then
+		region:SetShown(backdropVisibility[region])
+		backdropVisibility[region] = nil
 	end
 end
 
-local function updateLine(line)
+local function paintRow(back, r, g, b, a)
+	if not selected or not a then return end
+	local wax = rowWax[back]
+	local isQuest = a > 0 and r > .25 and r > 1.5 * g and r > 1.5 * b
+	local isJournal = selected == "Field-Journal"
+	if isJournal and isQuest then
+		-- The wax replaces the flat colour and sits below line.content.
+		back.Center:SetColorTexture(0, 0, 0, 0)
+	elseif isQuest and selected == "Glass" then
+		back.Center:SetColorTexture(.46, .23, .28, a * .6)
+	elseif isQuest then
+		back.Center:SetColorTexture(.42, .23, .15, a * .7)
+	else
+		back.Center:SetColorTexture(r, g, b, a * (isJournal and .22 or .45))
+	end
+	wax:SetShown(isJournal and isQuest)
+end
+
+local function updateJournalInk(line)
 	local state = lines[line]
-	-- Zygor paints objective states and completion flashes on its own back frame.
-	-- Put paper only behind uncoloured guide prose and directions.
-	local plain = selected == "Field-Journal" and line:IsShown() and
-		(line.tipgoal or (line.goal and (not line.back:IsShown() or
-			(line.anim_fade and line.anim_fade.a == 0 and not line.anim_fade:IsPlaying()))))
-	if plain then
+	if selected == "Field-Journal" and line:IsShown() then
 		if not state then
-			local paper = slice(line, "ARTWORK", 0, 256, 32, 64)
-			paper:SetTexture(directory .. "Field-Journal")
-			paper:SetAllPoints()
-			state = { paper = paper }
+			state = {}
 			lines[line] = state
 		end
 		if not state.color then state.color = { line.label:GetTextColor() } end
+		local wax = rowWax[line.back]
+		local onWax = wax and wax:IsShown()
+		local linkColor = onWax and "|cffffde9f" or "|cff123330"
 		-- Zygor embeds pale colours directly in tips and item links.
-		local text = line.label:GetText()
-		if not (issecretvalue and issecretvalue(text)) and text and text ~= state.ink then
-			local ink = text:gsub("|c%x%x%x%x%x%x%x%x", "|cff155453")
-			state.original, state.ink = text, ink
-			if ink ~= text then line.label:SetText(ink) end
+		local displayed = line.label:GetText()
+		if not (issecretvalue and issecretvalue(displayed)) and displayed then
+			local original = displayed == state.ink and state.original or displayed
+			local ink = original:gsub("|c%x%x%x%x%x%x%x%x", linkColor)
+			if ink ~= displayed then line.label:SetText(ink) end
+			state.original, state.ink = original, ink
 		end
-		state.paper:Show()
-		line.label:SetTextColor(.15, .09, .04, 1)
+		if onWax then
+			line.label:SetTextColor(1, 241/255, 220/255, 1)
+		else
+			line.label:SetTextColor(.15, .09, .04, 1)
+		end
 	elseif state and state.color then
-		state.paper:Hide()
 		local text = line.label:GetText()
 		if not (issecretvalue and issecretvalue(text)) and state.ink and text == state.ink and state.original ~= text then
 			line.label:SetText(state.original)
@@ -94,11 +137,34 @@ local function updateLine(line)
 	end
 end
 
-local function updateStep(step, restore)
-	glass(step.Center, .35)
-	if step.lines and (selected == "Field-Journal" or restore) then
-		for _, line in ipairs(step.lines) do updateLine(line) end
+local function updateLine(line)
+	local back = line.back
+	if back and back.Center and back.GetBackdropColor and back.SetBackdropColor then
+		local wax = rowWax[back]
+		if selected then
+			if not wax then
+				wax = back:CreateTexture(nil, "ARTWORK")
+				wax:SetTexture(directory .. "Journal-Wax")
+				wax:SetAllPoints(back)
+				rowWax[back] = wax
+				hooksecurefunc(back, "SetBackdropColor", function(_, ...)
+					local wasShown = wax:IsShown()
+					paintRow(back, ...)
+					if wax:IsShown() ~= wasShown then updateJournalInk(line) end
+				end)
+			end
+			paintRow(back, back:GetBackdropColor())
+		elseif wax then
+			wax:Hide()
+			back.Center:SetColorTexture(back:GetBackdropColor())
+		end
 	end
+	updateJournalInk(line)
+end
+
+local function updateStep(step)
+	suppressBackdrop(step.Center, selected ~= nil)
+	for _, line in ipairs(step.lines) do updateLine(line) end
 end
 
 local function watchStep(step)
@@ -108,6 +174,11 @@ local function watchStep(step)
 			hooksecurefunc(step, "Render", function()
 				if selected then updateStep(step) end
 			end)
+			if step.ApplySkin then
+				hooksecurefunc(step, "ApplySkin", function()
+					if selected then suppressBackdrop(step.Center, true) end
+				end)
+			end
 		end
 		updateStep(step)
 	end
@@ -146,32 +217,41 @@ local function updateTab()
 	stripe:Show()
 end
 
-local function paint(restore)
+local function paint()
 	if not viewer or (not selected and not art) then return end
 	local border = viewer.Border
-	if selected and not art then art = buildArt(border) end
+	if selected and not art then art = buildArt(border, viewer.Controls.Scroll) end
 	if art then
+		if selected == "Field-Journal" then layoutPaper(border) end
 		for key, texture in pairs(art) do
-			if selected then
+			local shown = selected ~= nil
+			if key == "body" then shown = selected == "Forged" end
+			if key == "paper" then shown = selected == "Field-Journal" end
+			if shown then
 				texture:SetTexture(directory .. selected)
 				texture:SetAlpha(selected == "Glass" and .55 or 1)
-				if key == "body" then
-					texture:SetAlpha(selected == "Glass" and .12 or 1)
-					-- Keep a dark ground beneath Zygor's coloured quest rows.
-					local shade = selected == "Field-Journal" and .18 or 1
+				if key == "panel" and selected == "Glass" then
+					texture:SetColorTexture(.05, .115, .15, .68)
+					texture:SetVertexColor(1, 1, 1)
+					texture:SetAlpha(1)
+				elseif key == "panel" then
+					local shade = selected == "Field-Journal" and .18 or .88
 					texture:SetVertexColor(shade, shade, shade)
 				end
 			end
-			texture:SetShown(selected ~= nil)
+			texture:SetShown(shown)
 		end
 	end
-	glass(border.Center, .52)
-	glass(border.Back.Center, .40)
+	local replaceCasing = selected == "Glass" or selected == "Field-Journal"
+	for _, key in ipairs(backdropPieces) do
+		suppressBackdrop(border[key], replaceCasing)
+		suppressBackdrop(border.Back[key], replaceCasing)
+	end
 	for _, step in ipairs(viewer.stepframes or {}) do
 		if not steps[step] then watchStep(step) end
 	end
 	-- Pooled steps can be inactive while changing skins.
-	for step in pairs(steps) do updateStep(step, restore == true) end
+	for step in pairs(steps) do updateStep(step) end
 	updateTab()
 end
 
@@ -179,10 +259,12 @@ function Skin:Refresh()
 	local zgv = _G.ZygorGuidesViewer
 	local frame = zgv and zgv.Frame
 	if not frame or not frame.Border or not frame.Border.TitleBar or
-		not frame.Border.Toolbar or not frame.Border.Back or not frame.ApplySkin or not frame.AddStep then return end
+		not frame.Border.Toolbar or not frame.Border.Back or not frame.Controls or not frame.Controls.Scroll
+		or not frame.ApplySkin or not frame.AddStep then return end
 	if viewer ~= frame then
 		viewer = frame
 		hooksecurefunc(frame, "ApplySkin", paint)
+		if frame.AlignFrame then hooksecurefunc(frame, "AlignFrame", paint) end
 		hooksecurefunc(frame, "AddStep", function()
 			if selected then watchStep(frame.stepframes[#frame.stepframes]) end
 		end)
@@ -191,7 +273,7 @@ function Skin:Refresh()
 	local previous = selected
 	local choice = ns.db.char.zygorSkin
 	selected = accents[choice] and choice or nil
-	if selected or previous then paint(previous == "Field-Journal") end
+	if selected or previous then paint() end
 end
 
 function Skin:SetChoice(choice)

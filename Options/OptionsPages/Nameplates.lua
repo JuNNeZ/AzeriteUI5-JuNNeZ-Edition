@@ -30,7 +30,6 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 
 local Options = ns:GetModule("Options")
 local FRIENDLY_NAME_ONLY_FONT_SCALE_DEFAULT = 2.5
-local FRIENDLY_NAME_ONLY_TARGET_SCALE_DEFAULT = 0.5
 local NAMEPLATE_SCALE_DEFAULT = 2
 local FRIENDLY_NAMEPLATE_SCALE_DEFAULT = .8
 local FRIENDLY_NPC_NAMEPLATE_SCALE_DEFAULT = .8
@@ -46,7 +45,7 @@ local CASTBAR_OFFSET_SLIDER_MAX = 30
 local RAID_TARGET_SIZE_DEFAULT = 28
 local RAID_TARGET_SIZE_SLIDER_MIN = 12
 local RAID_TARGET_SIZE_SLIDER_MAX = 64
-local TARGET_SLIDER_MIN = 1
+local TARGET_SLIDER_MIN = 5 -- below this the scale falls under Settings.lua NAMEPLATE_TARGET_SCALE_MIN (-.95) and is refused
 local TARGET_SLIDER_MAX = 500
 
 local getmodule = function()
@@ -452,7 +451,11 @@ local GenerateOptions = function()
 					friendlyPlayer = NameFormatOption("friendlyPlayer", L["Friendly player names"], 2),
 					enemyPlayer = NameFormatOption("enemyPlayer", L["Enemy player names"], 3),
 					friendlyNPC = NameFormatOption("friendlyNPC", L["Friendly NPC names"], 4),
-					enemyNPC = NameFormatOption("enemyNPC", L["Enemy NPC names"], 5)
+					enemyNPC = NameFormatOption("enemyNPC", L["Enemy NPC names"], 5),
+					showLevels = {
+						name = L["Show levels"], order = 6, type = "toggle", width = "full",
+						set = setter, get = getter
+					}
 				}
 			},
 			-- The kinds of aura a plate shows: groups of the native aura display, see
@@ -527,6 +530,111 @@ local GenerateOptions = function()
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter
+					},
+					-- NamePlates/Visibility.lua, Auras_DeduplicateInfo and ApplyAuraHighlight.
+					auraOnceSpells = {
+						name = L["Spells shown only once"],
+						desc = L["Spell IDs, separated by commas. Each is shown at most once on a nameplate, even when the unit has it more than once, such as 55078 for a Death Knight."],
+						order = 8,
+						type = "input", width = "full",
+						set = function(info, value)
+							local module = getmodule()
+							if (not module or not module.db) then return end
+							module.db.profile.auraOnceSpells = type(value) == "string" and value or ""
+							module:UpdateSettings()
+						end,
+						get = function(info)
+							local module = getmodule()
+							return module and module.db and module.db.profile.auraOnceSpells or ""
+						end
+					},
+					auraHighlights = {
+						name = L["Highlighted auras for this specialization"],
+						desc = L["Spell IDs, separated by commas. Their icons get a gold border. Each specialization keeps its own list."],
+						order = 9,
+						type = "input", width = "full",
+						set = function(info, value)
+							local module = getmodule()
+							local NP = ns.NamePlatesPrivate
+							if (not module or not module.db or not NP or not NP.GetAuraHighlightKey) then return end
+							local all = module.db.profile.auraHighlights
+							if (type(all) ~= "table") then all = {}; module.db.profile.auraHighlights = all end
+							value = type(value) == "string" and value:gsub("^%s+", ""):gsub("%s+$", "") or ""
+							all[NP.GetAuraHighlightKey()] = (value ~= "") and value or nil
+							module:UpdateSettings()
+						end,
+						get = function(info)
+							local module = getmodule()
+							local all = module and module.db and module.db.profile.auraHighlights
+							local NP = ns.NamePlatesPrivate
+							return (type(all) == "table" and NP and NP.GetAuraHighlightKey and all[NP.GetAuraHighlightKey()]) or ""
+						end
+					}
+				}
+			},
+			-- After Platynator's alpha rules (NamePlates/Visibility.lua, ApplyNamePlateAlpha; Module.lua,
+			-- UpdateRangeTimer). 100% leaves a plate as it was; target, focus and mouseover never fade.
+			fading = {
+				name = L["Fading"],
+				order = 1.3,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					nonTargetAlpha = {
+						name = L["Other enemies while you have a target"],
+						desc = L["How visible enemy nameplates other than your target are. `100%` leaves them as they are."],
+						order = 1,
+						type = "range", width = "full", isPercent = true,
+						min = 0, max = 1, step = .05,
+						set = setter,
+						get = getter
+					},
+					noTargetAlpha = {
+						name = L["Enemies while you have no target"],
+						desc = L["How visible enemy nameplates are while you have no target. `100%` leaves them as they are."],
+						order = 2,
+						type = "range", width = "full", isPercent = true,
+						min = 0, max = 1, step = .05,
+						set = setter,
+						get = getter
+					},
+					outOfRangeAlpha = {
+						name = L["Enemies out of range"],
+						desc = L["How visible enemy nameplates farther away than the range below are. `100%` turns the range check off."],
+						order = 3,
+						type = "range", width = "full", isPercent = true,
+						min = 0, max = 1, step = .05,
+						set = setter,
+						get = getter
+					},
+					rangeYards = {
+						name = L["Range (yards)"],
+						desc = L["The distance the range check above uses, as close as your spells and items allow it to measure."],
+						order = 4,
+						type = "range", width = "full",
+						min = 5, max = 60, step = 1,
+						disabled = function(info) return (tonumber(getoption(info, "outOfRangeAlpha")) or 1) >= 1 end,
+						set = setter,
+						get = getter
+					},
+					castingAlpha = {
+						name = L["Casting enemies at least"],
+						desc = L["Enemy nameplates that are casting stay at least this visible, whatever fades them. `0%` turns it off."],
+						order = 5,
+						type = "range", width = "full", isPercent = true,
+						min = 0, max = 1, step = .05,
+						set = setter,
+						get = getter
+					},
+					castingScale = {
+						name = L["Casting nameplate size"],
+						desc = L["Nameplates grow or shrink by this much while their unit casts. `100%` leaves them as they are."],
+						order = 6,
+						type = "range", width = "full", isPercent = true,
+						min = .5, max = 2, step = .05,
+						set = setter,
+						get = getter
 					}
 				}
 			},
@@ -599,6 +707,26 @@ local GenerateOptions = function()
 						hidden = IsStackingHidden,
 						set = function(info, val) getmodule():SetStacking("friendly", val) end,
 						get = function(info) return getmodule():GetStacking("friendly") end
+					},
+					-- Ours, not the game's (NamePlates/Module.lua, ApplyStackingBounds; CVars.lua, GetDriverCVars).
+					ownStackingBounds = {
+						name = L["Stack by AzeriteUI's nameplate size"],
+						desc = L["Nameplates move apart by the size AzeriteUI draws them at, not by the size the game is told, which is wider in dungeons so the game's friendly names fit."],
+						order = 3,
+						type = "toggle", width = "full",
+						hidden = isdisabled,
+						set = setter,
+						get = getter
+					},
+					stackMotionSpeed = {
+						name = L["Stacking speed"],
+						desc = L["How fast overlapping nameplates slide apart. `0` leaves the game's own speed."],
+						order = 4,
+						type = "range", width = "full",
+						min = 0, max = .1, step = .005,
+						hidden = isdisabled,
+						set = setter,
+						get = getter
 					}
 				}
 			},
@@ -975,6 +1103,33 @@ local GenerateOptions = function()
 						name = L["Glow on important casts"],
 						desc = L["An ember glow behind the castbar for casts the game marks as important, such as those that are deadly if not interrupted."],
 						order = 3,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					-- NamePlates/Castbar.lua, Castbar_PostInterrupted.
+					showInterrupter = {
+						name = L["Show who interrupted"],
+						desc = L["The name of whoever interrupted the cast, in their class colour, while the castbar shows the interruption."],
+						order = 4,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					}
+				}
+			},
+			-- NamePlates/Visibility.lua, UpdateMythicPlusForces.
+			mythicPlusForces = {
+				name = L["Mythic+"],
+				order = 3.6,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					showMythicPlusForces = {
+						name = L["Show enemy forces per mob"],
+						desc = L["During a Mythic+ key, how much of the key's enemy forces each enemy is worth, inside its health bar."],
+						order = 1,
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter

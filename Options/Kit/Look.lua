@@ -293,7 +293,7 @@ local SECTION_ICONS = {
 	rogue = "page:themes", shaman = "totem", stancebar = "stance", procHighlight = "proc",
 	assistedHighlight = "assist", questItemButton = "page:tracker", nativeController = "page:actionbars", readyAlerts = "bell", visibility = "eye", autoHide = "eyeslash",
 	size = "resize", colors = "droplet", auraFilters = "funnel", contentSettings = "gate",
-	friendlyNPCNames = "friendly", instanceFriendly = "gate", tank = "shield", friendlyPlayers = "friendly", stacking = "gear", advanced = "wrench", utilities = "wrench",
+	friendlyNPCNames = "friendly", instanceFriendly = "gate", fading = "eyeslash", mythicPlusForces = "page:mythicplus", tank = "shield", friendlyPlayers = "friendly", stacking = "gear", advanced = "wrench", utilities = "wrench",
 	dismountbutton = "horseshoe", cooldown = "clock", keys = "key", keysHeader = "key",
 	threshold = "page:executerange", nameplates = "page:nameplates",
 	playerParty = "party", totems = "totem", enemyCastbars = "castbar", names = "text",

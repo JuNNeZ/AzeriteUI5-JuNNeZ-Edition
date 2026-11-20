@@ -10,6 +10,26 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.47.0-JuNNeZ (2026-11-20) - Nameplate Controls and Zygor Guide Readability
+
+### Highlights
+
+- Enemy nameplates now stack according to their visible size, including in dungeons with wide friendly names. Under `/az -> Nameplates -> Game settings` you can switch stacking bounds and adjust how quickly plates move apart.
+- Under Nameplates -> Fading, dim other enemies while you have a target, enemies while you have no target, or enemies outside your chosen range. Set a minimum opacity or a different plate size for casting enemies.
+- Show each enemy's contribution to Mythic+ forces inside its health bar, show who interrupted a cast under Enemy castbars, or enable unit levels beside names under Names.
+- Under Nameplates -> Aura filters, choose spells to show only once per plate. Each specialization can also highlight its own list of spells with a gold border.
+- Zygor's Field Journal guide now fits the parchment to the scrolling steps and adds wax artwork to coloured rows. Glass uses a translucent panel. Switch between them under `/az -> Themes -> Zygor`.
+
+### Development
+
+- Nameplate aura lists feed the game's own aura filters so it can select spells during combat. Unit levels appear when the game provides a readable level.
+- Loot alerts now follow the AzeriteUI mover while Blizzard keeps control of its alert anchoring methods. This addresses a possible source of interference in a Forever party loot report.
+
+### Access and known limits
+
+- Visible-size stacking is enabled by default. The new fading, aura lists, forces and interrupter displays are opt-in. Range accuracy depends on the spells and items available to your character.
+- In-game checks are pending for combat nameplates, guide rendering and the reported Forever action-bar errors after a party roll.
+
 ## 5.46.0-JuNNeZ (2026-11-20) - Dungeon Nameplates, Zygor Skins and Guild Keys
 
 ### Highlights

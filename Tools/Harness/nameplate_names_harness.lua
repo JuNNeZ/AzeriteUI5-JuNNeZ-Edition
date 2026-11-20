@@ -68,6 +68,7 @@ local function load(relative)
 	return chunk("TestAddon", ns)
 end
 load("Core/API/Abbreviations.lua")
+load("Core/API/Frames.lua")
 load("Components/UnitFrames/NamePlates/Settings.lua")
 module.db = { profile = ns.NamePlatesPrivate.defaults.profile }
 local profile = module.db.profile
@@ -124,6 +125,9 @@ end
 -- Real options setter -> real settings refresh -> name tag on an already visible plate.
 load("Components/UnitFrames/NamePlates/Layout.lua")
 ns.NamePlatesPrivate.ApplyFriendlyNameOnlyCVars = function() end
+ns.NamePlatesPrivate.ApplyInstanceCVars = function() end
+ns.NamePlatesPrivate.ApplyGameNamePlateFont = function() end
+ns.NamePlatesPrivate.GetActiveThreatRole = function() return nil end
 ns.NamePlatesPrivate.ApplyNamePlateDriverSettings = function() end
 load("Components/UnitFrames/NamePlates/Module.lua")
 local layouts, textUpdates = 0, 0
@@ -147,6 +151,29 @@ eq(tag("friend"), forever and "Marshal Dughan" or "Marshal", "Retail realm never
 group.args.friendlyPlayer.set({}, "initial")
 eq(tag("friend"), forever and "M. Dughan" or "Marshal", "player initial")
 eq(plate.Name.text, forever and "M. Dughan" or "Marshal", "visible player name refresh")
+local levelOption, levelInfo = group.args.showLevels, { "names", "showLevels" }
+local displayName = plate.Name.text
+local level = 38
+function UnitEffectiveLevel() return level end
+eq(levelOption.get(levelInfo), false, "levels off by default")
+levelOption.set(levelInfo, true)
+eq(plate.Name.text, "38 " .. displayName, "toggle immediately prefixes the formatted name")
+eq(tag("npc"), "38 Marshal Dughan", "NPC level")
+_FRAME = { isObjectPlate = true }
+eq(tag("npc"), "Marshal Dughan", "object has no level")
+_FRAME = nil
+level = SECRET
+eq(tag("friend"), displayName, "secret level preserves name")
+level = -1
+eq(tag("friend"), displayName, "unknown level preserves name")
+level = 39
+units.npc[1] = SECRET
+eq(tag("npc"), SECRET, "secret name preserved with levels enabled")
+units.npc[1] = "Marshal Dughan"
+eq(tag("friend"), "39 " .. displayName, "updated unit level")
+eq(ns.oUF.Tags.Events["test:NamePlateName"]:find("UNIT_LEVEL", 1, true) ~= nil, true, "level-change event")
+levelOption.set(levelInfo, false)
+eq(plate.Name.text, displayName, "turning levels off restores the visible name")
 eq(tag("combined"), "M. Dughan", "multiword player abbreviation on both clients")
 group.args.friendlyNPC.set({}, "initial")
 eq(tag("npc"), "M. Dughan", "explicit NPC abbreviation on both clients")

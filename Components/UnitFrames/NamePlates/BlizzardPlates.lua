@@ -110,7 +110,7 @@ NamePlatesMod.HookNamePlates = function(self)
 			end
 
 			hooksecurefunc(UF, "SetAlpha", function(frame, alpha)
-				if (locked or frame:IsForbidden() or alpha == 0) then
+				if (locked or frame:IsForbidden() or (not (issecretvalue and issecretvalue(alpha)) and alpha == 0)) then
 					return
 				end
 				locked = true

@@ -615,7 +615,7 @@ local Health_UpdateColor = function(self, event, unit)
 			color = GetSafeColorByKey(self.colors.class, class, self.colors.health)
 		end
 	elseif (element.colorReaction) then
-		local reaction = UnitReaction(unit, "player")
+		local reaction = UnitReaction("player", unit)
 		color = GetSafeColorByKey(self.colors.reaction, reaction, self.colors.health)
 	elseif (element.colorSmooth) then
 		local gradient = element.smoothGradient or (self.colors and self.colors.smooth)
@@ -751,12 +751,16 @@ local Classification_Update = function(self, event, unit, ...)
 	local element = self.Classification
 	unit = unit or self.unit
 
-	if (UnitIsPlayer(unit) or not UnitCanAttack("player", unit)) then
+	-- NamePlate_Classify (Classification.lua) has resolved these, secret answers included, just before.
+	if (self.isPlayerUnit or not self.canAttack) then
 		return element:Hide()
 	end
 
 	local l = UnitEffectiveLevel(unit)
-	local c = (l and l < 1) and "worldboss" or UnitClassification(unit)
+	local c = (not IsSecretValue(l) and type(l) == "number" and l < 1) and "worldboss" or UnitClassification(unit)
+	if (IsSecretValue(c)) then
+		c = nil
+	end
 	if (c == "boss" or c == "worldboss") then
 		element:SetTexture(element.bossTexture)
 		element:Show()
@@ -1078,7 +1082,6 @@ NP.Health_PostUpdate = Health_PostUpdate
 NP.Health_UpdateColor = Health_UpdateColor
 NP.TankTarget_Update = TankTarget_Update
 NP.ThreatPercent_Update = ThreatPercent_Update
-NP.PlayThreatAlertSound = PlayThreatAlertSound
 
 -- For the options page: play an alert's sound ("lost", "close", "aggro") as it is chosen.
 NamePlatesMod.PlayThreatAlertSound = function(self, kind, choice)

@@ -83,10 +83,25 @@ local GetActiveThreatRole = NP.GetActiveThreatRole
 local UpdateRighteousFury = NP.UpdateRighteousFury
 local ResetThreatRoleCache = NP.ResetThreatRoleCache
 
+-- Each plate stacks by its own frame, not by the one plate size the game is given (2026-11-20, after
+-- Platynator 548: nameplate:SetStackingBoundsFrame, Retail 12 and Forever, not combat restricted). The
+-- dungeon options widen that size for the game's friendly names; with this, enemy plates still stack by
+-- what is drawn. Off: the game's own plate frame again.
+local ApplyStackingBounds = function(self)
+	local base = self and self.GetParent and self:GetParent()
+	if (not base or not base.SetStackingBoundsFrame) then
+		return
+	end
+	local profile = NamePlatesMod.db and NamePlatesMod.db.profile
+	local own = not (profile and profile.ownStackingBounds == false)
+	pcall(base.SetStackingBoundsFrame, base, own and self or base)
+end
+
 local callback = function(self, event, unit)
 	if (event == "NAME_PLATE_UNIT_ADDED") then
 
 		self.isPRD = SafeUnitMatches(unit, "player")
+		ApplyStackingBounds(self)
 
 		if (self.WidgetContainer) then
 			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
@@ -159,6 +174,12 @@ local callback = function(self, event, unit)
 		self.isPRD = nil
 		self.inCombat = nil
 		self.__AzeriteUI_CombatFaded = nil
+		self.__AzeriteUI_OutOfRange = nil
+		self.__AzeriteUI_Casting = nil
+		if (self.MythicPlusForces) then
+			self.MythicPlusForces:SetText("")
+			self.MythicPlusForces:Hide()
+		end
 		self.isFocus = nil
 		self.isTarget = nil
 		self.isSoftEnemy = nil
@@ -309,8 +330,56 @@ NamePlatesMod.UpdateExecuteTimer = function(self)
 	end
 end
 
+-- Out of range (2026-11-20, after Platynator's OUT_OF_RANGE_ALPHA): while that alpha is below 1, enemy
+-- plates are asked LibRangeCheck-3.0's harm checker for the chosen yards on a short timer, and only a plate
+-- whose answer changed is redrawn. A secret or missing answer counts as in range.
+local RANGE_INTERVAL = .25
+
+NamePlatesMod.UpdateRange = function(self)
+	local checker = self.rangeChecker
+	for plate in next, ns.ActiveNamePlates do
+		local out
+		if (checker and plate.unit and not plate.isPRD and not plate.isObjectPlate and NP.IsHostileNamePlate(plate)) then
+			local ok, inRange = pcall(checker, plate.unit)
+			out = (ok and not NP.IsSecretValue(inRange) and inRange == false) or nil
+		end
+		if ((out and true or false) ~= (plate.__AzeriteUI_OutOfRange and true or false)) then
+			plate.__AzeriteUI_OutOfRange = out
+			ApplyNamePlateAlpha(plate)
+		end
+	end
+end
+
+NamePlatesMod.UpdateRangeTimer = function(self)
+	local profile = self.db.profile
+	local alpha = tonumber(profile.outOfRangeAlpha) or 1
+	local lib = (alpha < 1 and self:IsEnabled() and LibStub) and LibStub("LibRangeCheck-3.0", true)
+	if (lib and lib.GetHarmMaxChecker) then
+		if (not self.rangeCallbackRegistered and lib.RegisterCallback and lib.CHECKERS_CHANGED) then
+			self.rangeCallbackRegistered = true
+			lib.RegisterCallback(self, lib.CHECKERS_CHANGED, function() self:UpdateRangeTimer() end)
+		end
+		local ok, checker = pcall(lib.GetHarmMaxChecker, lib, tonumber(profile.rangeYards) or 40)
+		self.rangeChecker = (ok and type(checker) == "function") and checker or nil
+	else
+		self.rangeChecker = nil
+	end
+	if (self.rangeChecker) then
+		if (not self.rangeTimer) then
+			self.rangeTimer = self:ScheduleRepeatingTimer(function() self:UpdateRange() end, RANGE_INTERVAL)
+		end
+		return self:UpdateRange()
+	end
+	if (self.rangeTimer) then
+		self:CancelTimer(self.rangeTimer)
+		self.rangeTimer = nil
+	end
+	self:UpdateRange()
+end
+
 NamePlatesMod.UpdateSettings = function(self)
 	if (NP.ConfigureComboPoints) then NP.ConfigureComboPoints() end
+	for plate in next, ns.NamePlates do ApplyStackingBounds(plate) end
 	-- The target shares this threshold even when another addon owns the plates.
 	local target = ns:GetModule("TargetFrame", true)
 	if (target and target.UpdateExecuteMarker) then target:UpdateExecuteMarker() end
@@ -331,6 +400,7 @@ NamePlatesMod.UpdateSettings = function(self)
 		RefreshActiveNamePlates(true)
 		self:UpdateCombatFilterTimer()
 		self:UpdateExecuteTimer()
+		self:UpdateRangeTimer()
 	end
 end
 
@@ -362,6 +432,12 @@ end
 -- after this event (Libs/oUF/ouf.lua:1003-1013); doing it here as well was the target plate's second
 -- layout.
 NamePlatesMod.OnSelectionChanged = function(self, event)
+	-- With a target alpha rule on (Visibility.lua), having a target or not changes every enemy plate.
+	if (event == "PLAYER_TARGET_CHANGED" and NP.UsesTargetAlpha and NP.UsesTargetAlpha()) then
+		for plate in next, ns.ActiveNamePlates do
+			ApplyNamePlateAlpha(plate)
+		end
+	end
 	for plate in next, ns.ActiveNamePlates do
 		local unit = plate.unit
 		if (event == "PLAYER_TARGET_CHANGED") then
@@ -443,6 +519,12 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 		return self:OnThreatRoleContextChanged(event)
 	elseif (event == "CHARACTER_POINTS_CHANGED" or event == "PLAYER_TALENT_UPDATE"
 		or event == "ACTIVE_TALENT_GROUP_CHANGED" or event == "PLAYER_SPECIALIZATION_CHANGED") then
+		-- Highlighted auras are kept per specialization (Settings.lua, GetNamePlateAuraConfig).
+		local highlights = self.db.profile.auraHighlights
+		if ((event == "ACTIVE_TALENT_GROUP_CHANGED" or event == "PLAYER_SPECIALIZATION_CHANGED")
+			and type(highlights) == "table" and next(highlights)) then
+			RefreshActiveNamePlates(true)
+		end
 		ResetThreatRoleCache()
 		return self:OnThreatRoleContextChanged(event)
 	elseif (event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_FOCUS_CHANGED"
@@ -478,6 +560,9 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 		-- A key starting or ending turns a dungeon into Mythic+ and back without a loading screen.
 		self:UpdateNameContext()
 		ApplyNamePlateDriverSettings(self)
+		if (NP.UpdateMythicPlusForces) then
+			for plate in next, ns.ActiveNamePlates do NP.UpdateMythicPlusForces(plate) end
+		end
 	elseif (event == "UI_SCALE_CHANGED") then
 		ApplyNamePlateDriverSettings(self)
 		RefreshActiveNamePlates()
@@ -700,6 +785,7 @@ NamePlatesMod.OnEnable = function(self)
 
 	self:UpdateCombatFilterTimer()
 	self:UpdateExecuteTimer()
+	self:UpdateRangeTimer()
 	self:RegisterEvent("NAME_PLATE_UNIT_ADDED", "OnEvent")
 	-- Quest marks (Elements.lua, QuestMarker_Update). QUEST_LOG_UPDATE follows every objective,
 	-- accept and turn-in, so the unit-filtered UNIT_QUEST_LOG_CHANGED would only add duplicates.

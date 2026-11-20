@@ -39,19 +39,10 @@ local API = ns.API
 -- Optimization made by Rui.
 
 -- Lua API
-local math_abs = math.abs
-local math_ceil = math.ceil
 local math_floor = math.floor
-local next = next
-local select = select
-local strsplit = strsplit
 local string_gsub = string.gsub
-local tostring = tostring
 local tonumber = tonumber
 local unpack = unpack
-
--- Addon API
-local Colors = ns.Colors
 
 ns.ActiveNamePlates = {}
 ns.NamePlates = {}
@@ -113,6 +104,7 @@ local defaults = { profile = ns:Merge({
 	executeLineColor = { 1, 1, 1, .85 },
 	executeZoneColor = { 1, .15, .05, .35 },
 	showNameAlways = false,
+	showLevels = false,
 	-- Objects (nodes, chests) name themselves whenever their plate shows, whatever the game's name rules say
 	-- (Visibility.lua, ShouldShowObjectPlateName). Off: as Blizzard's plates, since 5.31.4.
 	showObjectNames = false,
@@ -150,6 +142,29 @@ local defaults = { profile = ns:Merge({
 	instanceNameSize = 0,
 	instanceHideFriendlyMinions = false,
 	instanceFriendlyFont = false,
+	-- After Platynator 548 (2026-11-20). Each plate stacks by its own frame (SetStackingBoundsFrame), not by the
+	-- one plate size the game is given, which the dungeon options widen for the game's friendly names.
+	ownStackingBounds = true,
+	stackMotionSpeed = 0, -- 0 leaves the game's nameplateMotionSpeed alone
+	-- Mythic+ enemy forces per mob (C_ScenarioInfo.GetUnitCriteriaProgressValues), who interrupted a cast
+	-- (UNIT_SPELLCAST_INTERRUPTED's interruptedBy), and alpha rules: other enemies while you have a target,
+	-- every enemy while you have none, out of range (LibRangeCheck-3.0, rangeYards), and casting plates
+	-- (an alpha floor, 0 = none, and a scale). 1 leaves a plate as it was; mouseover, target and focus are
+	-- never faded.
+	showMythicPlusForces = false,
+	showInterrupter = false,
+	nonTargetAlpha = 1,
+	noTargetAlpha = 1,
+	outOfRangeAlpha = 1,
+	rangeYards = 40,
+	castingAlpha = 0,
+	castingScale = 1,
+	-- Plate auras, as Platynator builds them in the game's own aura container: spells shown at most once
+	-- (each its own group of one, e.g. 55078), and per-specialization spells shown first with a gold
+	-- border, keyed by specialization ID (or class on a client without specializations). Comma-separated
+	-- spell IDs; the game matches them itself, so it works on the secret aura data of combat.
+	auraOnceSpells = "",
+	auraHighlights = {},
 	friendlyNameOnlyFontScale = 2.5,
 	friendlyNameOnlyTargetScale = false,
 	showBlizzardWidgets = false,
@@ -340,7 +355,6 @@ local PROMOTED_FRIENDLY_NAMEPLATE_TARGET_SCALE_DEFAULT = -.65
 local PROMOTED_GLOBAL_NAMEPLATE_TARGET_SCALE_DEFAULT = .2
 local NAMEPLATE_TARGET_SCALE_MIN = -.95
 local NAMEPLATE_TARGET_SCALE_MAX = 4
-local GLOBAL_NAMEPLATE_UNIT_SCALE_DEFAULT = 1
 local GLOBAL_NAMEPLATE_SELECTED_SCALE_NEUTRAL = 1
 local GLOBAL_NAMEPLATE_MIN_SCALE = 1
 local GLOBAL_NAMEPLATE_MAX_SCALE = 1
@@ -383,17 +397,6 @@ end
 
 local IsSafeUnitToken = function(unit)
 	return type(unit) == "string" and (not IsSecretValue(unit)) and unit ~= ""
-end
-
-local SafeUnitName = function(unit)
-	if (not IsSafeUnitToken(unit)) then
-		return nil
-	end
-	local name = UnitName(unit)
-	if (type(name) == "string" and (not IsSecretValue(name)) and name ~= "") then
-		return name
-	end
-	return nil
 end
 
 local SafeUnitGUID = function(unit)
@@ -790,11 +793,18 @@ local GetNamePlateDisplayName = function(unit)
 	return mode == "initial" and API.AbbreviateName(name) or name
 end
 
-oUF.Tags.Events[prefix("*:NamePlateName")] = "UNIT_NAME_UPDATE UNIT_FACTION"
+oUF.Tags.Events[prefix("*:NamePlateName")] = "UNIT_NAME_UPDATE UNIT_FACTION UNIT_LEVEL PLAYER_LEVEL_UP"
 oUF.Tags.Methods[prefix("*:NamePlateName")] = function(unit, realUnit)
 	local name = GetNamePlateDisplayName(unit)
-	if (name ~= nil) then return name end
-	return oUF.Tags.Methods[prefix("*:Name")](unit, realUnit, 24)
+	if (name == nil) then name = oUF.Tags.Methods[prefix("*:Name")](unit, realUnit, 24) end
+	local profile = NamePlatesMod.db and NamePlatesMod.db.profile
+	if (profile and profile.showLevels and IsSafeUnitToken(unit)
+		and not (_FRAME and (_FRAME.isObjectPlate or _FRAME.isPRD))
+		and not IsSecretValue(name) and type(name) == "string" and name ~= "") then
+		local level = API.GetSafeLevel(UnitEffectiveLevel(unit))
+		if (level and level > 0) then return level .. " " .. name end
+	end
+	return name
 end
 
 local ClampNumber = function(value, low, high, fallback)
@@ -859,6 +869,29 @@ end
 local GetNamePlateAuraConfigVersion = function()
 	return auraConfigVersion
 end
+-- Comma-separated spell IDs as a set, the IDs in order (at most 16) and a key for comparing them.
+local ParseSpellIDs = function(text)
+	local set, list = {}, {}
+	if (type(text) == "string") then
+		for id in string.gmatch(text, "%d+") do
+			id = tonumber(id)
+			if (id and id > 0 and not set[id] and #list < 16) then
+				set[id] = true
+				list[#list + 1] = id
+			end
+		end
+	end
+	return { set = set, list = list, key = table.concat(list, ",") }
+end
+
+-- This specialization's highlighted spells (Visibility.lua, GetAuraHighlightKey).
+local GetAuraHighlightText = function(profile)
+	local all = profile and type(profile.auraHighlights) == "table" and profile.auraHighlights
+	local private = ns.NamePlatesPrivate
+	local key = private and private.GetAuraHighlightKey and private.GetAuraHighlightKey()
+	return all and key and all[key] or ""
+end
+
 local GetNamePlateAuraConfig = function()
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile or {}
 	local db = ns.GetConfig("NamePlates")
@@ -870,7 +903,10 @@ local GetNamePlateAuraConfig = function()
 		showOtherDebuffs = profile.auraOtherDebuffs ~= false,
 		showDispellableBuffs = profile.auraDispellableBuffs ~= false,
 		showImportantBuffs = profile.auraImportantBuffs ~= false,
-		showOwnBuffs = profile.auraOwnBuffs ~= false
+		showOwnBuffs = profile.auraOwnBuffs ~= false,
+		-- Platynator's highlights and once-only spells (PlayerAuraContainers.lua, GetNamePlateGroups).
+		highlightSpells = ParseSpellIDs(GetAuraHighlightText(profile)),
+		onceSpells = ParseSpellIDs(profile.auraOnceSpells)
 	}
 end
 
@@ -949,6 +985,14 @@ local GetEffectivePlateScale = function(self)
 			scale = scale * (1 + GetEnemyNamePlateTargetScaleSetting())
 		else
 			scale = scale * (1 + GetFriendlyNamePlateTargetScaleSetting())
+		end
+	end
+	-- A plate whose castbar shows (Style.lua castbar OnShow/OnHide), after Platynator's cast scale.
+	if (self and self.__AzeriteUI_Casting) then
+		local profile = NamePlatesMod.db and NamePlatesMod.db.profile
+		local castingScale = profile and tonumber(profile.castingScale)
+		if (castingScale and castingScale > 0 and castingScale ~= 1) then
+			scale = scale * castingScale
 		end
 	end
 	return scale
@@ -1078,7 +1122,6 @@ NP.IsSafeUnitToken = IsSafeUnitToken
 NP.SafeUnitMatches = SafeUnitMatches
 NP.GetNamePlateBarLayout = GetNamePlateBarLayout
 NP.IsFriendlyPlayerNameOnlyEnabled = IsFriendlyPlayerNameOnlyEnabled
-NP.IsFriendlyNPCNameOnlyEnabled = IsFriendlyNPCNameOnlyEnabled
 NP.IsPlayerForDisplay = IsPlayerForDisplay
 NP.ShouldUseFriendlyPlayerNameOnly = ShouldUseFriendlyPlayerNameOnly
 NP.GetValidatedProfileScale = GetValidatedProfileScale

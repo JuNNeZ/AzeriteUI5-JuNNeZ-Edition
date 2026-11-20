@@ -299,6 +299,8 @@ local NamePlate_PostUpdate = function(self, event, unit, ...)
 	end
 	-- After the raid marker, whose spot it shares (Elements.lua).
 	QuestMarker_Update(self)
+	-- Mythic+ forces this mob is worth (Visibility.lua), off by default.
+	if (NP.UpdateMythicPlusForces) then NP.UpdateMythicPlusForces(self) end
 
 	ApplyNamePlateScale(self)
 	Classification_Update(self, event, unit, ...)

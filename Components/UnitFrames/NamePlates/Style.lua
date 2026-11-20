@@ -208,7 +208,7 @@ local style = function(self, unit, id)
 	self.Castbar.PostCastUpdate = Castbar_PostCastUpdate
 	self.Castbar.PostCastStop = Castbar_PostStop
 	self.Castbar.PostCastFail = Castbar_PostFail
-	self.Castbar.PostCastInterrupted = Castbar_PostFail
+	self.Castbar.PostCastInterrupted = NP.Castbar_PostInterrupted or Castbar_PostFail
 	self.Castbar.PostCastInterruptible = Castbar_PostCastVisual
 	ns.API.AttachScriptSafe(self.Castbar, "OnHide", function(element)
 		ns.API.ClearInterruptCastBarRefresh(element)
@@ -315,13 +315,36 @@ local style = function(self, unit, id)
 	pulse:Hide()
 	self.ThreatPulse = pulse
 
+	-- Mythic+ forces this mob is worth, inside the bar's left end (Visibility.lua, UpdateMythicPlusForces).
+	local forces = healthOverlay:CreateFontString(nil, "OVERLAY", nil, 1)
+	forces:SetPoint("LEFT", health, "LEFT", 6, 0)
+	forces:SetFontObject(db.ThreatPercentFont or db.TankTargetFont or db.CastBarTargetFont)
+	forces:SetJustifyH("LEFT")
+	forces:Hide()
+	self.MythicPlusForces = forces
+
+	-- A casting plate may be raised and scaled (Settings.lua GetEffectivePlateScale, Visibility.lua
+	-- ApplyNamePlateAlpha); only redone when one of those options is on.
+	local SetCasting = function(owner, casting)
+		if (not owner) then
+			return
+		end
+		owner.__AzeriteUI_Casting = casting or nil
+		if (NP.CastingChangesPlate and NP.CastingChangesPlate()) then
+			ApplyNamePlateScale(owner)
+			ApplyNamePlateAlpha(owner)
+		end
+	end
+
 	castbar:HookScript("OnShow", function(element)
 		TankTarget_Update(element.__owner or self)
 		ThreatPercent_Update(element.__owner or self)
+		SetCasting(element.__owner or self, true)
 	end)
 	castbar:HookScript("OnHide", function(element)
 		TankTarget_Update(element.__owner or self)
 		ThreatPercent_Update(element.__owner or self)
+		SetCasting(element.__owner or self, false)
 	end)
 
 	-- Power
@@ -487,7 +510,12 @@ local style = function(self, unit, id)
 	auras.allowCombatUpdates = true
 	auras.FilterAura = ns.AuraFilters.NameplateAuraFilter
 	auras.CreateButton = ns.AuraStyles.CreateSmallButton
-	auras.PostUpdateButton = ns.AuraStyles.NameplatePostUpdateButton
+	auras.PostUpdateButton = function(element, button, unit, data, position)
+		ns.AuraStyles.NameplatePostUpdateButton(element, button, unit, data, position)
+		if (NP.ApplyAuraHighlight) then NP.ApplyAuraHighlight(button, data) end
+	end
+	-- Each aura once, when that option is on (Visibility.lua, Auras_DeduplicateInfo).
+	auras.PostUpdateInfo = NP.Auras_DeduplicateInfo
 
 	if (ns:GetModule("UnitFrames").db.profile.disableAuraSorting) then
 		auras.SortAuras = ns.AuraSorts.AlternateFuncton
