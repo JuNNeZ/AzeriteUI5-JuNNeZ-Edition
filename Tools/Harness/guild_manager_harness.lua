@@ -341,6 +341,8 @@ methods.SetText = function(self, text)
     if changed and self.scripts.OnTextChanged then self.scripts.OnTextChanged(self, false) end
 end
 methods.GetText = function(self) return self.text end
+methods.IsTruncated = function(self) return self.truncated == true end
+methods.SetMotionScriptsWhileDisabled = function(self, enabled) self.disabledMotion = enabled end
 methods.SetScript = function(self, event, callback) self.scripts[event] = callback end
 methods.HookScript = function(self, event, callback)
     local previous = self.scripts[event]
@@ -384,7 +386,15 @@ methods.GetHighlightTexture = function(self) return self.highlight end
 CreateFrame = function(kind, name, parent) return widget(name, parent or UIParent, kind) end
 UIParent = widget("UIParent", nil, "Frame")
 UISpecialFrames, tinsert = {}, table.insert
-GameTooltip = { IsForbidden = function() return false end, Hide = function() end }
+GameTooltip = {
+    IsForbidden = function() return false end,
+    SetOwner = function(self, owner) self.owner, self.body = owner, nil end,
+    IsOwned = function(self, owner) return self.owner == owner end,
+    SetText = function(self, text) self.title = text end,
+    AddLine = function(self, text) self.body = text end,
+    Show = function() end,
+    Hide = function(self) self.owner = nil end
+}
 LibStub = function(name)
     if (name == "AceSerializer-3.0") then return serializer end
     return { GetLocale = function() return setmetatable({}, { __index = function(_, key) return key end }) end }
@@ -450,6 +460,24 @@ check(module.frame.casing.backdrop == ns.OptionsKit.Look.CasingBackdrop and modu
 check(module.memberPage.parent == module.frame and module.memberPage.x == 200
     and module.memberPage.x+module.memberPage.w == module.frame.w, "member page fits beside navigation inside the shell")
 check(module.navigation.members.selected and not module.navigation.members.check:IsShown(), "navigation marks members without a toggle check")
+do
+    local remove, box = module.removeIdentity, module.rankFilter.box
+    remove:SetEnabled(false)
+    remove.scripts.OnEnter(remove)
+    check(remove.disabledMotion and GameTooltip:IsOwned(remove) and GameTooltip.title == "Remove"
+        and GameTooltip.body == "Remove local identity", "disabled Remove explains its action without enabling it")
+    local text = module.rankFilter.text
+    text:SetText("Rank: A long guild rank"); text.truncated = true
+    box.scripts.OnEnter(box)
+    check(GameTooltip:IsOwned(box) and GameTooltip.title == text:GetText(), "truncated dropdown uses the full current value")
+    remove.scripts.OnLeave(remove)
+    check(GameTooltip:IsOwned(box), "old button leave preserves a newer tooltip")
+    box.scripts.OnHide(box)
+    text.truncated = false; box.scripts.OnEnter(box)
+    check(not GameTooltip.owner, "hidden controls release their tooltip and fitting labels stay quiet")
+    module.rankFilter:SetValue(false)
+    check(remove.label.w == remove.w-16 and remove.label.fontSize == 11, "narrow flat button uses a compact font and inset")
+end
 local followUpIcon = module.navigation.followup.icon
 local notesIcon = module.navigation.notes.icon
 ns.OptionsKit.Look.RefreshIcons()
@@ -984,6 +1012,26 @@ Click("Reset sort"); check(not module.memberSort, "reset restores favorites/onli
 local workflowMain
 for _, row in ipairs(module:GetRows("", true)) do if row.key == mainKey then workflowMain = row end end
 module:SelectCharacter(assert(workflowMain), module:GetPeople("", {})[1])
+do
+    module.character:SetText("Valstad Hammerdin")
+    module.nickname:SetText("Adam")
+    module.main:SetText("Valstad Hammerdin")
+    Click(NOTES or "Guild note")
+    module.privateNote:SetText("Officer draft")
+    Click("Character")
+    check(module:HasCardChanges() and module.nickname:GetText() == "Adam"
+        and module.privateNote:GetText() == "Officer draft", "member tabs preserve the whole draft")
+    module.saveIdentity.scripts.OnClick()
+    local key = module:CharacterKey("Valstad Hammerdin")
+    local saved = module.db.global.characters[key]
+    check(saved and not saved.main and saved.nickname == "Adam" and saved.privateNote == "Officer draft",
+        "entering Valstad Hammerdin as his own main saves Adam without a self-link")
+    module:ReloadCard()
+    check(module.main:GetText() == "Valstad Hammerdin" and not module:HasCardChanges(),
+        "reopened main card displays its own name and is clean")
+    check(module:UndoIdentity() and not module.db.global.characters[key], "self-main save is one undo step")
+    module:SelectCharacter(workflowMain, module:GetPeople("", {})[1])
+end
 local savedNickname, savedRevision = module.nickname:GetText(), module.identityRevision
 check(not module:HasCardChanges() and not module.saveIdentity:IsEnabled(), "fresh card has clean state and no redundant save")
 module.nickname:SetText("Unsaved card edit")
@@ -1033,9 +1081,26 @@ check(module:SaveFollowUpTask(mainKey, module.members[mainKey].name, "Dashboard 
 module:OpenHome()
 local missingPeople = module:GetPeople("", { inGuild = true, missing = true })
 local _, attentionCount = module:GetFollowUpItems("", "attention")
-check(#missingPeople > 0 and module.homeWindow.missing.label:GetText() == string.format("%d without nicknames", #missingPeople)
-    and attentionCount > 0 and module.homeWindow.attention.label:GetText() == string.format("%d need attention", attentionCount),
+check(#missingPeople > 0 and module.homeWindow.missing.count:GetText() == tostring(#missingPeople)
+    and attentionCount > 0 and module.homeWindow.attention.count:GetText() == tostring(attentionCount),
     "overview counters use actual missing people and due follow-up items")
+do
+    local display, group = module.GetDisplayRows, module.GetPeople
+    local listCalls, groupCalls = 0, 0
+    module.GetDisplayRows = function(...) listCalls = listCalls+1; return display(...) end
+    module.GetPeople = function(...) groupCalls = groupCalls+1; return group(...) end
+    module:RefreshWindow()
+    check(listCalls == 0 and groupCalls == 1, "home refresh groups once and never builds hidden member rows")
+    module:OpenHistory()
+    check(listCalls == 0 and groupCalls == 1, "history refresh uses guild totals without building or sorting member lists")
+    module.GetDisplayRows, module.GetPeople = display, group
+    module:OpenHome()
+    local favorites = module:GetPeople("", { inGuild = true, favorite = true })
+    check(module.homeWindow.favorites.count:GetText() == tostring(#favorites), "favorites tile counts current guild people")
+    module.homeWindow.favorites.scripts.OnClick()
+    check(module.activePage == "members" and module.filters.inGuild and module.filters.favorite, "favorites tile opens its roster filter")
+    module:OpenHome()
+end
 module.homeWindow.online.scripts.OnClick()
 check(module.activePage == "members" and module.filters.online and module.filters.inGuild and module.search:GetText() == "", "online overview count opens a clean current-guild filter")
 module:OpenHome(); module.homeWindow.missing.scripts.OnClick()
@@ -1045,8 +1110,21 @@ check(module.activePage == "followup" and follow.filterIndex == 1 and follow.sea
 module:UndoFollowUp(); table.remove(roster); module:RequestRoster()
 module:ShowPage("members"); Click("Clear filters")
 check(not next(module.filters) and module.search:GetText() == "", "clear filters restores saved-character visibility as well as class/rank/search")
-check(module.navigation.home.y > module.navigation.history.y and module.navigation.history.y > module.navigation.backup.y,
-    "primary guild pages precede officer tools and data/sharing groups")
+do
+    module:OpenHome()
+    for index, target in ipairs({ "home", "history", "backup" }) do
+        local tab = module.guildTabs[index]
+        if index > 1 then module.navigation[target].open() end
+        check(tab.selected and module.navigation[target]:IsShown(), "direct page opens its section " .. target)
+        for _, button in pairs(module.navigation) do
+            check(button:IsShown() == (button.group == tab), "rail shows only active section pages")
+        end
+    end
+    local guildTab = module.guildTabs[1]
+    guildTab.scripts.OnClick(guildTab)
+    check(module.activePage == "home", "returning to a section restores its last page")
+    module:ShowPage("members")
+end
 module:ToggleWindow()
 if arg[2] then
     module:ToggleWindow()
@@ -1063,6 +1141,7 @@ if arg[2] then
     module:ReloadCard(); module:RefreshWindow()
     module:ShowPage("members")
     if arg[3] == "dirty" then module.nickname:SetText("Junnez - draft")
+    elseif arg[3] == "member-notes" then Click(NOTES or "Guild note")
     elseif arg[3] == "level-sort" then module:SetMemberSort("level")
     elseif arg[3] == "notes" then
         -- Keep this fixture's sample roster rather than requesting the stub's

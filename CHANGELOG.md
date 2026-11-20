@@ -10,6 +10,30 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.46.0-JuNNeZ (2026-11-20) - Dungeon Nameplates, Zygor Skins and Guild Keys
+
+### Highlights
+
+- **Choose how friendly nameplates look in dungeons, raids and delves.** In these places the game draws friendly nameplates itself. Under `/az -> Nameplates -> Dungeons and raids`, choose Never, Names only (players) or Always with health bars. You can also set their name size, hide your group's pets, totems and guardians there, and give the names AzeriteUI's outline and shadow. Your own game settings come back when you leave.
+- **Friendly names are no longer cut short in dungeons.** Long names such as first name plus surname on Forever could end in "...". The game now gets a wider plate there, also when only friendly NPCs are shown, such as follower dungeon companions.
+- **Skin Zygor's guide window.** Under `/az -> Themes -> Zygor`, pick Default, Forged, Glass or Field Journal. The choice is saved per character.
+- **Open the Guild Manager with J.** Under `/az -> Guild & Nicknames -> Keybindings`, let Blizzard's guild key open the guild overview instead, or set a key of your own. Turning it off gives J back to Blizzard.
+- **Guild Manager in your language.** All Guild Manager text is now translated in every supported language, Simplified Chinese included.
+- **Clearer member cards.** Character and notes share one draft and one Save button, a character can be saved as its own main, and the guild header has new artwork.
+
+### Development
+
+- Studied how Plater and Platynator handle the game's own friendly nameplates. The game's name-only mode only covers players, so pets and NPCs keep a health bar there. Built on the settings the game does read, and saved the player's values per character so a reload or logout inside an instance does not lose them.
+- Added Zygor skin artwork from the approved guide-window mockups. The skins follow Zygor's own header, toolbar and tabs and keep its coloured objective states.
+- The guild keys use temporary override bindings, so your saved key bindings are never changed. Changes made in combat apply after combat.
+
+### Access and known limits
+
+- Verified offline on Retail and Forever. Dungeon nameplates, the Zygor skins and the guild keys still need in-game confirmation.
+- In dungeons, pets and NPCs always keep the game's health bar; the game offers no names-only setting for them. AzeriteUI's nameplate font uses the game's own typeface, so the font option adds outline and shadow only.
+- The dungeon name size also changes AzeriteUI's own plates when "Use Blizzard overall scale" is on.
+- The Guild Manager translations other than English have not yet been reviewed by native speakers.
+
 ## 5.45.0-JuNNeZ (2026-11-20) - Options, Guild and Loot Navigation
 
 ### Highlights

@@ -147,16 +147,14 @@ Guild.UndoFollowUp = function(self)
     return true
 end
 
-Guild.GetFollowUpItems = function(self, search, filter)
+Guild.GetFollowUpItems = function(self, search, filter, guildPeople)
     local store, key = self:GetFollowUpStore()
     if (not key) then return {}, 0 end
     local people, items, attention = {}, {}, 0
     local today = date("%Y-%m-%d")
     search = string.lower(search or "")
-    for _, person in ipairs(self:GetPeople("", {})) do
-        local inGuild = false
-        for _, row in ipairs(person.rows) do if (not row.member.saved) then inGuild = true end end
-        if (inGuild) then people[person.key] = { name = person.name, label = person.label } end
+    for _, person in ipairs(guildPeople or self:GetPeople("", { inGuild = true })) do
+        people[person.key] = { name = person.name, label = person.label }
     end
     for root, person in pairs(store and store.people or {}) do
         people[root] = people[root] or { name = person.name, label = person.name }

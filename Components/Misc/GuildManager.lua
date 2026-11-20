@@ -1,7 +1,8 @@
 -- MIT License. Copyright (c) 2026 Jonas "JuNNeZ" Andersen.
-local _, ns = ...
+local Addon, ns = ...
 local Guild = ns:NewModule("GuildManager", "LibMoreEvents-1.0", "AceConsole-3.0")
 local defaults = { profile = { enabled = true, chatNicknames = false, nicknameLevels = false,
+    blizzardGuildKey = false, toggleKey = false,
     guildFormat = "nickname", groupFormat = "nickname", whisperFormat = "nickname", otherFormat = "nickname"
 }, global = { characters = {}, guildHistory = {}, followUps = {}, crafting = {} } }
 
@@ -273,7 +274,46 @@ Guild.UpdateSettings = function(self)
         api.AddModifier(self.modifier)
         self.chatAPI = api
     end
+    self:UpdateBindings()
     if (self.RefreshWindow) then self:RefreshWindow() end
+end
+
+-- Keys open the overview through override bindings owned by a plain button.
+-- Nothing here calls SetBinding: the player's saved bindings never change, and
+-- clearing the overrides hands Blizzard's guild key straight back.
+local function ValidKey(value)
+    value = Text(value)
+    if (value and value ~= "" and #value <= 64 and not value:find("[%s|%c]")) then return value end
+end
+Guild.UpdateBindings = function(self)
+    if (not CreateFrame or not ClearOverrideBindings or not SetOverrideBindingClick or not GetBindingKey) then return end
+    if (self.applyingBindings) then return end
+    -- Override bindings are protected in combat; apply when it ends.
+    if (InCombatLockdown()) then self.bindingsPending = true; return end
+    self.bindingsPending = nil
+    if (not self.toggleButton) then
+        if (not self.db or not (self.db.profile.blizzardGuildKey or ValidKey(self.db.profile.toggleKey))) then return end
+        self.toggleButtonName = (Addon or "AzeriteUI") .. "GuildManagerToggle"
+        self.toggleButton = CreateFrame("Button", self.toggleButtonName, UIParent)
+        self.toggleButton:SetScript("OnClick", function() self:ToggleWindow() end)
+    end
+    self.applyingBindings = true
+    local owner, name = self.toggleButton, self.toggleButtonName
+    ClearOverrideBindings(owner)
+    local profile = self.db and self.db.profile
+    if (profile and profile.enabled and not self.suspended) then
+        if (profile.blizzardGuildKey) then
+            -- Read after clearing, so these are the player's own keys.
+            local keys = { GetBindingKey("TOGGLEGUILDTAB") }
+            for _, key in ipairs(keys) do
+                key = ValidKey(key)
+                if (key) then SetOverrideBindingClick(owner, false, key, name) end
+            end
+        end
+        local key = ValidKey(profile.toggleKey)
+        if (key) then SetOverrideBindingClick(owner, false, key, name) end
+    end
+    self.applyingBindings = nil
 end
 
 Guild.RequestRoster = function(self)
@@ -310,7 +350,11 @@ Guild.OnEvent = function(self, event, addon, reloading)
         if (self.RefreshWindow) then self:RefreshWindow() end
     elseif (event == "GUILD_RANKS_UPDATE") then
         if (self.RefreshWindow) then self:RefreshWindow() end
+    elseif (event == "UPDATE_BINDINGS") then
+        -- The player may have moved Blizzard's guild key.
+        self:UpdateBindings()
     elseif (event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_REGEN_DISABLED") then
+        if (event == "PLAYER_REGEN_ENABLED" and self.bindingsPending) then self:UpdateBindings() end
         if (event == "PLAYER_REGEN_DISABLED" and self.CancelSharing) then self:CancelSharing() end
         if (event == "PLAYER_REGEN_DISABLED" and self.CancelCraftingQuery) then self:CancelCraftingQuery() end
         if (event == "PLAYER_REGEN_ENABLED" and self.guildDetailsPending) then
@@ -337,7 +381,7 @@ Guild.OnEnable = function(self)
     if (self.InitializeSharing) then self:InitializeSharing() end
     if (self.OnCraftingQuery) then self:RegisterEvent("GUILD_RECIPE_KNOWN_BY_MEMBERS", "OnCraftingQuery") end
     self:RegisterChatCommand("azguild", "ToggleWindow")
-    for _, event in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "PLAYER_GUILD_UPDATE", "GUILD_ROSTER_UPDATE", "GUILD_RANKS_UPDATE", "GUILD_MOTD", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED" }) do
+    for _, event in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "PLAYER_GUILD_UPDATE", "GUILD_ROSTER_UPDATE", "GUILD_RANKS_UPDATE", "GUILD_MOTD", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "UPDATE_BINDINGS" }) do
         self:RegisterEvent(event, "OnEvent")
     end
     self:RequestRoster()

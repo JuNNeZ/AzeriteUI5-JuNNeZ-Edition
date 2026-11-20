@@ -3132,32 +3132,78 @@ do
 	-- friendly player's name spans its width, so ours cut names to a character (FixLog 2026-10-11).
 	-- Blizzard's getters as on Retail 12.1 / Forever 1.60.1 (Blizzard_NamePlates.lua).
 	local savedInstance, savedFriends = W.instance, W.cvars.nameplateShowFriendlyPlayers
+	local savedFriendlyNPCs = W.cvars.nameplateShowFriendlyNpcs
+	W.cvars.nameplateShowFriendlyNpcs = "0"
 	NamePlateConstants = { STYLE_CVAR = "nameplateStyle" }
 	CVarCallbackRegistry = { GetCVarNumberOrDefault = function(_, name) return tonumber(W.cvars[name]) or 0 end }
 	NamePlateDriverFrame = {
 		GetNamePlateScale = function(_, style) return { horizontal = 1 } end,
-		GetNamePlateWidth = function(_, style, scale) return 190 * scale.horizontal end
+		GetNamePlateWidth = function(_, style, scale) return 230 * scale.horizontal end
 	}
 	W.cvars.nameplateShowFriendlyPlayers = "1"
 	W.instance = { true, "party" }
 	Fire("PLAYER_ENTERING_WORLD", false, false)
-	check(W.driver.plateWidth == 190 and W.driver.plateHeight == size[2],
+	check(W.driver.plateWidth == 230 and W.driver.plateHeight == size[2],
 		"in a dungeon with friendly players shown, the plate takes Blizzard's width, our height", W.driver.plateWidth)
 	W.cvars.nameplateShowFriendlyPlayers = "0"
 	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
 	check(W.driver.plateWidth == size[1], "hiding friendly players there gives our width back", W.driver.plateWidth)
 	W.cvars.nameplateShowFriendlyPlayers = "1"
 	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
-	check(W.driver.plateWidth == 190, "and showing them widens it again", W.driver.plateWidth)
+	check(W.driver.plateWidth == 230, "and showing them widens it again", W.driver.plateWidth)
+	-- Friendly NPCs are drawn the same way (follower dungeon companions); their names were cut too
+	-- (FixLog 2026-11-20).
+	W.cvars.nameplateShowFriendlyPlayers = "0"
+	W.cvars.nameplateShowFriendlyNpcs = "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
+	check(W.driver.plateWidth == 230, "with only friendly NPCs shown there, the plate keeps Blizzard's width",
+		W.driver.plateWidth)
+	W.cvars.nameplateShowFriendlyNpcs = "0"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	check(W.driver.plateWidth == size[1], "and with no friendly plates at all, ours", W.driver.plateWidth)
+	W.cvars.nameplateShowFriendlyNpcs = "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyNpcs")
+	check(W.driver.plateWidth == 230, "showing friendly NPCs alone widens it", W.driver.plateWidth)
+	W.cvars.nameplateShowFriendlyNpcs = "0"
+	W.cvars.nameplateShowFriendlyPlayers = "1"
+	Fire("CVAR_UPDATE", "nameplateShowFriendlyPlayers")
 	W.instance = { true, "arena" }
 	Fire("PLAYER_ENTERING_WORLD", false, false)
 	check(W.driver.plateWidth == size[1], "arenas keep our width", W.driver.plateWidth)
 	W.instance = { true, "raid" }
 	Fire("PLAYER_ENTERING_WORLD", false, false)
-	check(W.driver.plateWidth == 190, "raids widen like dungeons", W.driver.plateWidth)
+	check(W.driver.plateWidth == 230, "raids widen like dungeons", W.driver.plateWidth)
 	W.instance = { false, "none" }
 	Fire("PLAYER_ENTERING_WORLD", false, false)
 	check(W.driver.plateWidth == size[1], "outside, where the plates are ours, our width", W.driver.plateWidth)
+	-- Platynator's floor: 200 x the Size's horizontal scale, at most 250. Forever's own 190 cut long
+	-- first-and-surnames ("Lazuli Dreamw...", FixLog 2026-11-20).
+	local hScale = 1
+	NamePlateDriverFrame.GetNamePlateScale = function() return { horizontal = hScale } end
+	NamePlateDriverFrame.GetNamePlateWidth = function(_, _, scale) return 190 * scale.horizontal end
+	W.instance = { true, "party" }
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == 200, "Forever's 190 rises to Platynator's floor of 200", W.driver.plateWidth)
+	hScale = 1.6
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == 304, "a Blizzard width above the floor's 250 cap stays Blizzard's", W.driver.plateWidth)
+	NamePlateDriverFrame.GetNamePlateWidth = function() return 100 end
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == 250, "the floor stops at 250", W.driver.plateWidth)
+	NamePlateDriverFrame.GetNamePlateWidth = function(_, _, scale) return 230 * scale.horizontal end
+	hScale = 1
+	-- Delves are scenarios of difficulty 208, as Platynator counts them.
+	local savedGetInstanceInfo = GetInstanceInfo
+	local difficulty = 208
+	GetInstanceInfo = function() return "Delve", "scenario", difficulty end
+	W.instance = { true, "scenario" }
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == 230, "delves widen like dungeons", W.driver.plateWidth)
+	difficulty = 12
+	Fire("PLAYER_ENTERING_WORLD", false, false)
+	check(W.driver.plateWidth == size[1], "other scenarios keep our width", W.driver.plateWidth)
+	GetInstanceInfo = savedGetInstanceInfo
+	hScale = .3
 	NamePlateDriverFrame.GetNamePlateWidth = function() return size[1] - 10 end
 	W.instance = { true, "party" }
 	Fire("PLAYER_ENTERING_WORLD", false, false)
@@ -3166,7 +3212,103 @@ do
 	Fire("PLAYER_ENTERING_WORLD", false, false)
 	check(W.driver.plateWidth == size[1], "a client without Blizzard's getters keeps our width", W.driver.plateWidth)
 	W.instance, W.cvars.nameplateShowFriendlyPlayers = savedInstance, savedFriends
+	W.cvars.nameplateShowFriendlyNpcs = savedFriendlyNPCs
 	Fire("PLAYER_ENTERING_WORLD", false, false)
+
+	-- Friendly plates in dungeons, raids and delves (CVars.lua, ApplyInstanceCVars, after Platynator's
+	-- "Friendly in instances"): the game's settings on the way in, the player's own on the way out.
+	do
+		local P, C = W.profile, W.cvars
+		local saved = {
+			instance = W.instance, players = C.nameplateShowFriendlyPlayers, npcs = C.nameplateShowFriendlyNpcs,
+			size = C.nameplateSize, minions = C.nameplateShowFriendlyPlayerMinions,
+			nameOnly = C.nameplateShowOnlyNameForFriendlyPlayerUnits, classColor = C.nameplateUseClassColorForFriendlyPlayerUnitNames
+		}
+		C.nameplateShowFriendlyPlayers, C.nameplateShowFriendlyNpcs = "1", "1"
+		C.nameplateSize, C.nameplateShowFriendlyPlayerMinions = "2", "1"
+		P.instanceFriendlyMode, P.instanceNameSize, P.instanceHideFriendlyMinions = "never", 4, true
+		W.instance = { false, "none" }
+		Fire("PLAYER_ENTERING_WORLD", false, false)
+		check(C.nameplateShowFriendlyPlayers == "1" and C.nameplateSize == "2" and C.nameplateShowFriendlyPlayerMinions == "1",
+			"outside an instance the instance options leave the game's settings alone")
+		W.instance = { true, "party" }
+		Fire("PLAYER_ENTERING_WORLD", false, false)
+		check(C.nameplateShowFriendlyPlayers == "0" and C.nameplateShowFriendlyNpcs == "0",
+			"Never hides friendly players and NPCs in a dungeon", C.nameplateShowFriendlyPlayers .. C.nameplateShowFriendlyNpcs)
+		check(C.nameplateSize == "4", "the instance name size sets the game's Size there", C.nameplateSize)
+		check(C.nameplateShowFriendlyPlayerMinions == "0", "friendly minions hidden there", C.nameplateShowFriendlyPlayerMinions)
+		check(W.driver.plateWidth == size[1], "with no friendly plates shown, our width", W.driver.plateWidth)
+		-- A reload inside keeps the player's own values, not the instance ones.
+		Fire("PLAYER_ENTERING_WORLD", false, true)
+		P.instanceFriendlyMode = "nameOnly"
+		Fire("PLAYER_ENTERING_WORLD", false, false)
+		check(C.nameplateShowFriendlyPlayers == "1" and C.nameplateShowOnlyNameForFriendlyPlayerUnits == "1"
+			and C.nameplateUseClassColorForFriendlyPlayerUnitNames == "1",
+			"Names only shows friendly players as class-coloured names in a dungeon")
+		check(C.nameplateShowFriendlyNpcs == "1", "and gives friendly NPCs their own setting back", C.nameplateShowFriendlyNpcs)
+		P.instanceFriendlyMode = "always"
+		Fire("PLAYER_ENTERING_WORLD", false, false)
+		check(C.nameplateShowOnlyNameForFriendlyPlayerUnits == "0", "Always gives friendly players their bars there",
+			C.nameplateShowOnlyNameForFriendlyPlayerUnits)
+		W.combat = true
+		W.instance = { false, "none" }
+		Fire("PLAYER_ENTERING_WORLD", false, false)
+		check(C.nameplateSize == "4", "leaving in combat waits", C.nameplateSize)
+		W.combat = false
+		Fire("PLAYER_REGEN_ENABLED")
+		check(C.nameplateShowFriendlyPlayers == "1" and C.nameplateShowFriendlyNpcs == "1" and C.nameplateSize == "2"
+			and C.nameplateShowFriendlyPlayerMinions == "1",
+			"out of the instance the player's own settings come back", C.nameplateSize .. C.nameplateShowFriendlyPlayerMinions)
+		check(C.nameplateShowOnlyNameForFriendlyPlayerUnits == "0", "and the name-only setting follows the profile again")
+		W.instance = { true, "raid" }
+		Fire("PLAYER_ENTERING_WORLD", false, false)
+		P.instanceFriendlyMode, P.instanceNameSize, P.instanceHideFriendlyMinions = "default", 0, false
+		W.module:UpdateSettings()
+		check(C.nameplateShowFriendlyPlayers == "1" and C.nameplateSize == "2" and C.nameplateShowFriendlyPlayerMinions == "1",
+			"turning the options off inside gives the settings back at once")
+		check(not (W.module.instanceCVarBackup and next(W.module.instanceCVarBackup)), "and keeps nothing")
+
+		-- The game's nameplate fonts in our outline and shadow (Platynator's ChangeFont), and back.
+		local function Member(file, height, flags)
+			local m = { file = file, height = height, flags = flags }
+			function m:GetFont() return self.file, self.height, self.flags end
+			function m:SetFont(f, h, fl) self.file, self.height, self.flags = f, h, fl end
+			return m
+		end
+		local function Family(members)
+			local object = { members = members, shadow = { 0, 0, 0, 0 }, offset = { 0, 0 } }
+			function object:GetFontObjectForAlphabet(a) return self.members[a] end
+			function object:GetShadowColor() return unpack(self.shadow) end
+			function object:SetShadowColor(...) self.shadow = { ... } end
+			function object:GetShadowOffset() return unpack(self.offset) end
+			function object:SetShadowOffset(...) self.offset = { ... } end
+			return object
+		end
+		local plain = Family({ roman = Member("Fonts\\FRIZQT__.TTF", 9, "SLUG"), korean = Member("Fonts\\2002.TTF", 9, "SLUG") })
+		local ours = Family({ roman = Member("Fonts\\FRIZQT__.TTF", 12, "OUTLINE"), korean = Member("Fonts\\2002.TTF", 13, "OUTLINE") })
+		ours.shadow, ours.offset = { 0, 0, 0, .75 }, { 1, -1 }
+		local config = ns.GetConfig("NamePlates")
+		local savedNameFont = config.NameFont
+		config.NameFont, _G.SystemFont_NamePlate = ours, plain -- the code looks it up in _G, as in the client
+		P.instanceFriendlyFont = true
+		W.module:UpdateSettings()
+		check(plain.members.roman.flags == "OUTLINE" and plain.members.roman.height == 9
+			and plain.members.korean.file == "Fonts\\2002.TTF" and plain.members.korean.flags == "OUTLINE",
+			"the game's name font takes our outline per alphabet and keeps its height", plain.members.roman.flags)
+		check(plain.shadow[4] == .75 and plain.offset[1] == 1, "and our shadow")
+		P.instanceFriendlyFont = false
+		W.module:UpdateSettings()
+		check(plain.members.roman.flags == "SLUG" and plain.members.korean.flags == "SLUG" and plain.shadow[4] == 0,
+			"turned off, the game's font is as it was", plain.members.roman.flags)
+		config.NameFont, _G.SystemFont_NamePlate = savedNameFont, nil
+
+		W.instance = saved.instance
+		C.nameplateShowFriendlyPlayers, C.nameplateShowFriendlyNpcs = saved.players, saved.npcs
+		C.nameplateSize, C.nameplateShowFriendlyPlayerMinions = saved.size, saved.minions
+		C.nameplateShowOnlyNameForFriendlyPlayerUnits = saved.nameOnly
+		C.nameplateUseClassColorForFriendlyPlayerUnitNames = saved.classColor
+		Fire("PLAYER_ENTERING_WORLD", false, false)
+	end
 
 	-- The driver's own CVars.
 	check(W.cvars.nameplatePlayerMaxDistance == W.cvars.nameplateMaxDistance,

@@ -19,7 +19,19 @@ local function GenerateOptions()
                 desc = L["Show the speaking character's known message-time level before their nickname, for example 60:Nickname. Unknown levels are omitted. Original-name channels keep Chattynator's own setting."],
                 disabled = function() return not module.db.profile.chatNicknames end,
                 get = function() return module.db.profile.nicknameLevels == true end,
-                set = function(_, value) module.db.profile.nicknameLevels = value; module:UpdateSettings() end }
+                set = function(_, value) module.db.profile.nicknameLevels = value; module:UpdateSettings() end },
+            keysHeader = { name = L["Keybindings"], type = "header", order = 20 },
+            blizzardGuildKey = { name = L["Open with Blizzard's guild key"], type = "toggle", width = "full", order = 21,
+                desc = L["The keys bound to Blizzard's Guild & Communities window (J by default) open the guild overview instead. Your key bindings are not changed, and Blizzard's window stays available from the micro menu. Turn this off to give the keys back."],
+                get = function() return module.db.profile.blizzardGuildKey == true end,
+                set = function(_, value) module.db.profile.blizzardGuildKey = value == true; module:UpdateBindings() end },
+            toggleKey = { name = L["Guild overview key"], type = "keybinding", width = "full", order = 22,
+                desc = L["A key of your own that opens and closes the guild overview. Click, then press a key; Escape clears it. While set, it takes priority over that key's normal binding. Changes made in combat apply after combat."],
+                get = function() local key = module.db.profile.toggleKey; return type(key) == "string" and key or nil end,
+                set = function(_, value)
+                    module.db.profile.toggleKey = type(value) == "string" and value ~= "" and value or false
+                    module:UpdateBindings()
+                end }
         }
     }
     local formats = { nickname = L["Nickname only"], both = L["Nickname (character)"], original = L["Original character name"] }

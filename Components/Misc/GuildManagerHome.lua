@@ -39,31 +39,22 @@ local function TextPanel(parent, title, x, y, width, height)
     scroll:SetScript("OnMouseWheel", function(_, delta)
         scroll:SetVerticalScroll(math.max(0, math.min(scroll:GetVerticalScroll()-delta*30, scroll:GetVerticalScrollRange())))
     end)
-    return { text = text, child = child, scroll = scroll, height = height }
+    return { panel = panel, text = text, child = child, scroll = scroll, height = height }
 end
 
 Guild.RefreshHome = function(self)
     local home = self.homeWindow
     if (not home or not home:IsShown()) then return end
     local details = self.guildDetails or {}
-    home.title:SetText(details.name or L["Guild & Nicknames"])
-    local characters, online, people, onlinePeople, favorites, missing = 0, 0, 0, 0, 0, 0
+    local onlinePeople, favorites, missing = 0, 0, 0
     local ranks, rankNames, rankOrders = {}, {}, {}
-    for _, person in ipairs(self:GetPeople("", {})) do
-        local inGuild = false
-        for _, row in ipairs(person.rows) do
-            if (not row.member.saved) then inGuild = true end
-        end
-        if (inGuild) then
-            people = people+1
-            if (person.online > 0) then onlinePeople = onlinePeople+1 end
-            if (person.favorite) then favorites = favorites+1 end
-            if (not person.nickname) then missing = missing+1 end
-        end
+    local guildPeople = self:GetPeople("", { inGuild = true })
+    for _, person in ipairs(guildPeople) do
+        if (person.online > 0) then onlinePeople = onlinePeople+1 end
+        if (person.favorite) then favorites = favorites+1 end
+        if (not person.nickname) then missing = missing+1 end
     end
     for _, member in pairs(self.members or {}) do
-        characters = characters+1
-        if (member.online) then online = online+1 end
         local rank = member.rank ~= "" and member.rank or L["Unknown"]
         if (not ranks[rank]) then ranks[rank] = 0; rankNames[#rankNames+1] = rank end
         ranks[rank] = ranks[rank]+1
@@ -73,12 +64,11 @@ Guild.RefreshHome = function(self)
         if (rankOrders[a] ~= rankOrders[b]) then return rankOrders[a] < rankOrders[b] end
         return a < b
     end)
-    home.counts:SetText(string.format(L["%d people  /  %d characters  /  %d online"], people, characters, online))
-    home.people:SetText(string.format(L["%d online people  /  %d favorites"], onlinePeople, favorites))
-    local _, attention = self:GetFollowUpItems("", "attention")
-    home.online.label:SetText(string.format(L["%d online people"], onlinePeople))
-    home.missing.label:SetText(string.format(L["%d without nicknames"], missing))
-    home.attention.label:SetText(string.format(L["%d need attention"], attention))
+    local _, attention = self:GetFollowUpItems("", "attention", guildPeople)
+    home.online.count:SetText(tostring(onlinePeople))
+    home.favorites.count:SetText(tostring(favorites))
+    home.missing.count:SetText(tostring(missing))
+    home.attention.count:SetText(tostring(attention))
     local lines = {}
     for _, rank in ipairs(rankNames) do lines[#lines+1] = rank .. ": " .. ranks[rank] end
     for _, panel in ipairs({ home.motd, home.info, home.ranks }) do
@@ -102,21 +92,34 @@ Guild.OpenHome = function(self)
     if (not self.homeWindow) then
         local home = UI.Page(ns.Prefix .. "GuildHome", "home", L["Guild home"], 900, 596)
         self.homeWindow = home
-        home.emblem = home:CreateTexture(nil, "ARTWORK")
-        home.emblem:SetSize(64, 64); home.emblem:SetPoint("TOPLEFT", 46, -30)
-        home.title = UI.Label(home, "", 142, -36, 640, 22)
-        home.counts = UI.Label(home, "", 144, -72, 640, 13)
-        home.people = UI.Label(home, "", 26, -96, 810, 11)
-        home.online = UI.QuietButton(home, "", 26, -118, 260, function() self:OpenMemberFilter("online") end)
-        home.missing = UI.QuietButton(home, "", 296, -118, 260, function() self:OpenMemberFilter("missing") end)
-        home.attention = UI.QuietButton(home, "", 566, -118, 308, function() self:OpenFollowUp("attention") end)
-        home.motd = TextPanel(home, L["Guild message of the day"], 26, -174, 560, 90)
-        home.info = TextPanel(home, L["Guild information"], 26, -322, 560, 160)
-        home.ranks = TextPanel(home, L["Ranks"], 620, -174, 250, 308)
-        UI.Label(home, L["People are based on your main/alt links. Counts use the current guild roster."], 26, -550, 350, 11, 2)
-        UI.QuietButton(home, L["Guild crafting"], 400, -550, 170, function() self:OpenCrafting() end)
-        UI.QuietButton(home, L["Guild history"], 584, -550, 138, function() self:OpenHistory() end)
-        UI.QuietButton(home, L["Refresh"], 736, -550, 138, function() self:RequestRoster() end)
+        local function Shortcut(caption, x, iconKey, callback)
+            local button = UI.QuietButton(home, caption, x, -14, 208, callback)
+            button:SetHeight(74)
+            button.count = UI.Label(button, "", 14, -9, 144, 22)
+            button.label:ClearAllPoints(); button.label:SetPoint("TOPLEFT", 14, -42)
+            button.label:SetWidth(180); button.label:SetJustifyH("LEFT")
+            local icon = button:CreateTexture(nil, "ARTWORK")
+            icon:SetSize(20, 20); icon:SetPoint("TOPRIGHT", -14, -13)
+            local look = ns.OptionsKit.Look
+            if (iconKey == "favorite") then
+                icon:SetTexture("Interface\\AddOns\\" .. Addon .. "\\Assets\\Guild\\favorite.tga")
+            else
+                icon:SetShown(look and look.SetOptionIcon(icon, iconKey, true) or false)
+            end
+            return button
+        end
+        home.online = Shortcut(L["Online people"], 14, "player", function() self:OpenMemberFilter("online") end)
+        home.favorites = Shortcut(L["Favorites"], 235, "favorite", function() self:OpenMemberFilter("favorite") end)
+        home.missing = Shortcut(L["No nickname"], 456, "text", function() self:OpenMemberFilter("missing") end)
+        home.attention = Shortcut(L["Needs attention"], 677, "clock", function() self:OpenFollowUp("attention") end)
+        home.motd = TextPanel(home, L["Guild message of the day"], 26, -115, 560, 104)
+        home.info = TextPanel(home, L["Guild information"], 26, -286, 560, 166)
+        home.ranks = TextPanel(home, L["Ranks"], 620, -115, 250, 337)
+        home.emblem = home.ranks.panel:CreateTexture(nil, "ARTWORK")
+        home.emblem:SetSize(26, 26); home.emblem:SetPoint("TOPRIGHT", -14, -7)
+        UI.Rule(home, 26, -518, 848)
+        UI.Label(home, L["People are based on your main/alt links. Counts use the current guild roster."], 26, -547, 680, 11, 2)
+        UI.QuietButton(home, L["Refresh"], 736, -540, 138, function() self:RequestRoster() end)
     end
-    UI.Show(self.homeWindow); self:RequestRoster(); self:RefreshHome()
+    UI.Show(self.homeWindow); self:RequestRoster()
 end

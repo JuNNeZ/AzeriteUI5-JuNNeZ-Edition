@@ -103,8 +103,56 @@ local GetCVarBoolIfSupported = function(name, defaultValue)
 	return defaultValue
 end
 
+--[[
+	Friendly plates in dungeons, raids and delves (2026-11-20, after Platynator 548 and Plater). There the game
+	draws every friendly plate itself (ForbiddenNamePlateUnitFrameTemplate) and no addon can draw on one; all
+	that reaches them is the game's own settings. These options set those settings on the way in and give the
+	player's own values back on the way out (ApplyInstanceCVars), as Platynator's "Friendly in instances" does
+	(Display/Initialize.lua, UpdateInstanceShowState). Its name-only setting covers players only
+	(Blizzard_NamePlateUnitFrame.lua, UpdateShowOnlyName: IsFriend and IsPlayer); pets and NPCs keep a bar.
+]]
+local DELVE_DIFFICULTY_ID = 208 -- as Platynator counts delves (Display/Utilities.lua, IsInRelevantInstance)
+
+local IsFriendlyRestrictedInstance = function()
+	local inInstance, instanceType = IsInInstance()
+	if (not inInstance) then
+		return false
+	end
+	if (instanceType == "party" or instanceType == "raid") then
+		return true
+	end
+	if (instanceType == "scenario" and type(GetInstanceInfo) == "function") then
+		local _, _, difficultyID = GetInstanceInfo()
+		return difficultyID == DELVE_DIFFICULTY_ID
+	end
+	return false
+end
+
+local GetInstanceProfile = function()
+	return NamePlatesMod.db and NamePlatesMod.db.profile
+end
+
+-- "default" leaves the game's settings as the player has them.
+local GetInstanceFriendlyMode = function()
+	local profile = GetInstanceProfile()
+	local mode = profile and profile.instanceFriendlyMode
+	if (mode == "never" or mode == "nameOnly" or mode == "always") then
+		return mode
+	end
+	return "default"
+end
+
 local ApplyFriendlyNameOnlyCVars = function()
 	local enabled = IsFriendlyPlayerNameOnlyEnabled()
+	-- Only the game's plates read these in those instances, so the instance mode decides there.
+	if (IsFriendlyRestrictedInstance()) then
+		local mode = GetInstanceFriendlyMode()
+		if (mode == "nameOnly") then
+			enabled = true
+		elseif (mode == "always") then
+			enabled = false
+		end
+	end
 	SetCVarIfSupported("nameplateShowOnlyNameForFriendlyPlayerUnits", enabled and "1" or "0")
 	SetCVarIfSupported("nameplateUseClassColorForFriendlyPlayerUnitNames", enabled and "1" or "0")
 	-- Keep all nameplates at stable, readable scale regardless of distance.
@@ -156,31 +204,51 @@ local GetDriverCVars = function()
 end
 
 -- Blizzard's own plate width for its current Size and Style (Blizzard_NamePlates.lua, GetNamePlateWidth;
--- read-only getters on Retail 12.1 and Forever 1.60.1). nil if the client has no such getter.
+-- read-only getters on Retail 12.1 and Forever 1.60.1), and Platynator's floor for it: 200 x the Size's
+-- horizontal scale, at most 250 (Display/Initialize.lua, UpdateNamePlateSize). Forever's own is 190 x scale,
+-- which cut long first-and-surnames ("Lazuli Dreamw...", FixLog 2026-11-20). nil if the client has no getter.
+local PLATYNATOR_WIDTH_BASE, PLATYNATOR_WIDTH_CAP = 200, 250
 local GetBlizzardPlateWidth = function()
 	local driver = NamePlateDriverFrame
 	if (not driver or not driver.GetNamePlateWidth or not driver.GetNamePlateScale
 		or not NamePlateConstants or not CVarCallbackRegistry) then
 		return nil
 	end
-	local ok, width = pcall(function()
+	local ok, width, horizontal = pcall(function()
 		local style = CVarCallbackRegistry:GetCVarNumberOrDefault(NamePlateConstants.STYLE_CVAR)
-		return driver:GetNamePlateWidth(style, driver:GetNamePlateScale(style))
+		local scale = driver:GetNamePlateScale(style)
+		return driver:GetNamePlateWidth(style, scale), type(scale) == "table" and scale.horizontal or nil
 	end)
-	return (ok and type(width) == "number" and width > 0) and width or nil
+	if (not ok or type(width) ~= "number" or width <= 0) then
+		return nil
+	end
+	if (type(horizontal) == "number" and horizontal > 0) then
+		local floor = math.min(PLATYNATOR_WIDTH_CAP, PLATYNATOR_WIDTH_BASE * horizontal)
+		if (floor > width) then
+			width = floor
+		end
+	end
+	return width
 end
 
 -- The game has one plate size for every plate, and ours (the layout's Size) is what it gets. In
 -- dungeons and raids it draws friendly plates itself (ForbiddenNamePlateUnitFrameTemplate), inside that
 -- size: a name-only friendly player's name spans the plate's width less insets, so our 80px cut names
--- to one character and "..." (FixLog 2026-10-11). There, while friendly players' plates show, the width
--- is Blizzard's own; the height and our own plates (sized in Style.lua) stay as they are. A wider plate
--- only widens the box the game stacks overlapping plates by.
+-- to one character and "..." (FixLog 2026-10-11). There, while friendly plates show, the width is
+-- Blizzard's own; the height and our own plates (sized in Style.lua) stay as they are. A wider plate
+-- only widens the box the game stacks overlapping plates by. Friendly NPCs count too: they are drawn
+-- the same way (follower dungeon companions, escorts), and with only them shown their names were cut
+-- (FixLog 2026-11-20).
+local ShowsFriendlyPlates = function(self)
+	if (not self.GetShownSetting) then
+		return false
+	end
+	return (self:GetShownSetting("friendlyPlayers") or self:GetShownSetting("friendlyNPCs")) and true or false
+end
+
 local GetDriverSize = function(self, db)
 	local width, height = db.Size[1], db.Size[2]
-	local inInstance, instanceType = IsInInstance()
-	if (inInstance and (instanceType == "party" or instanceType == "raid")
-		and self.GetShownSetting and self:GetShownSetting("friendlyPlayers")) then
+	if (IsFriendlyRestrictedInstance() and ShowsFriendlyPlates(self)) then
 		local blizzard = GetBlizzardPlateWidth()
 		if (blizzard and blizzard > width) then
 			width = blizzard
@@ -189,7 +257,7 @@ local GetDriverSize = function(self, db)
 	return width, height
 end
 
--- Only the size, and only when it changes: showing or hiding friendly players' plates while in an
+-- Only the size, and only when it changes: showing or hiding friendly plates while in an
 -- instance (Module.lua, CVAR_UPDATE). oUF's SetSize stores plateWidth/plateHeight.
 local ApplyNamePlateDriverSize = function(self)
 	local driver = self and self.namePlateDriver
@@ -362,6 +430,11 @@ local VISIBILITY_CVARS = {
 	-- follow them here, the engine does.
 	enemyMinions = { "nameplateShowEnemyMinions" },
 	friendlyMinions = { "nameplateShowFriendlyPlayerMinions" },
+	-- Each kind of friendly minion on its own, under Friendly minions, as Platynator offers them
+	-- (Display/Initialize.lua, GetCVarsForNameplates). Retail 12 and Forever both have the three.
+	friendlyPets = { "nameplateShowFriendlyPlayerPets" },
+	friendlyTotems = { "nameplateShowFriendlyPlayerTotems" },
+	friendlyGuardians = { "nameplateShowFriendlyPlayerGuardians" },
 	-- Not a kind of plate: the name the engine draws over the unit you target when your other name settings
 	-- would not, such as a corpse you loot or skin (FixLog 2026-09-26, turning it off hid one live). Blizzard's
 	-- Options do not offer it; it is passed through the same way, and the plates do not follow it.
@@ -416,6 +489,173 @@ local ApplyPendingNamePlateVisibility = function(self)
 	end
 end
 
+-- What the instance options want of the game's settings where the game draws friendly plates
+-- (IsFriendlyRestrictedInstance); nothing anywhere else. The name-only pair is ApplyFriendlyNameOnlyCVars'.
+local INSTANCE_NAME_SIZE_MIN, INSTANCE_NAME_SIZE_MAX = 1, 5
+local GetInstanceCVarWishes = function()
+	local wishes = {}
+	local profile = GetInstanceProfile()
+	if (not profile or not IsFriendlyRestrictedInstance()) then
+		return wishes
+	end
+	local players = GetVisibilityCVarName("friendlyPlayers")
+	local npcs = GetVisibilityCVarName("friendlyNPCs")
+	local mode = GetInstanceFriendlyMode()
+	if (mode == "never") then
+		if (players) then wishes[players] = "0" end
+		if (npcs) then wishes[npcs] = "0" end
+	elseif (mode == "nameOnly") then
+		if (players) then wishes[players] = "1" end
+	elseif (mode == "always") then
+		if (players) then wishes[players] = "1" end
+		if (npcs) then wishes[npcs] = "1" end
+	end
+	-- The game's Size: the height of the names it draws there (Platynator's "Instances name only size").
+	local size = tonumber(profile.instanceNameSize)
+	if (size and size >= INSTANCE_NAME_SIZE_MIN and size <= INSTANCE_NAME_SIZE_MAX and CVarExists("nameplateSize")) then
+		wishes.nameplateSize = tostring(math.floor(size + .5))
+	end
+	-- The game's pets, totems and guardians keep a bar there; Plater turns them off outright.
+	if (profile.instanceHideFriendlyMinions) then
+		local minions = GetVisibilityCVarName("friendlyMinions")
+		if (minions) then wishes[minions] = "0" end
+	end
+	return wishes
+end
+
+local GetCVarString = function(name)
+	if (C_CVar and C_CVar.GetCVar) then
+		return C_CVar.GetCVar(name)
+	end
+	return type(GetCVar) == "function" and GetCVar(name) or nil
+end
+
+-- Sets what GetInstanceCVarWishes wants, keeping each setting's own value the first time, and gives that
+-- value back once it is no longer wanted (out of the instance, or the option turned off). The kept values
+-- live in db.char so a reload or logout inside an instance does not lose them. In combat this waits.
+local ApplyInstanceCVars = function(self)
+	if (not self) then
+		return
+	end
+	local store = (self.db and self.db.char) or self
+	local kept = type(store.instanceCVarBackup) == "table" and store.instanceCVarBackup or {}
+	local wishes = GetInstanceCVarWishes()
+	if (not next(wishes) and not next(kept)) then
+		self.pendingInstanceCVars = nil
+		return
+	end
+	if (InCombatLockdown()) then
+		self.pendingInstanceCVars = true
+		return
+	end
+	self.pendingInstanceCVars = nil
+	for name, value in next, kept do
+		if (wishes[name] == nil) then
+			SetCVarIfSupported(name, value)
+			kept[name] = nil
+		end
+	end
+	for name, value in next, wishes do
+		if (kept[name] == nil) then
+			kept[name] = GetCVarString(name)
+		end
+		if (GetCVarString(name) ~= value) then
+			SetCVarIfSupported(name, value)
+		end
+	end
+	store.instanceCVarBackup = next(kept) and kept or nil
+end
+
+--[[
+	The game's nameplate fonts in our style (Platynator's trick, Display/Initialize.lua ChangeFont): the
+	game's plates take their names from SystemFont_NamePlate and SystemFont_NamePlate_Outlined
+	(Blizzard_NamePlateUnitFrame.lua, both clients), font families with a member per alphabet. Each member
+	gets our name font's file, flags and shadow; its height stays, the game sets the text height itself
+	(ApplyFrameOptions). Ours uses the same faces as the game's, so what changes is the outline and shadow.
+	The originals are kept and put back when the option is turned off.
+]]
+local NAMEPLATE_FONT_NAMES = { "SystemFont_NamePlate", "SystemFont_NamePlate_Outlined" }
+local FONT_ALPHABETS = { "roman", "korean", "simplifiedchinese", "traditionalchinese", "russian" }
+local fontOriginals
+
+local ForEachFontMember = function(object, callback)
+	if (object.GetFontObjectForAlphabet) then
+		for _, alphabet in ipairs(FONT_ALPHABETS) do
+			local member = object:GetFontObjectForAlphabet(alphabet)
+			if (member and member.GetFont) then
+				callback(alphabet, member)
+			end
+		end
+	elseif (object.GetFont) then
+		callback("single", object)
+	end
+end
+
+local GetSourceMember = function(source, alphabet)
+	if (alphabet ~= "single" and source.GetFontObjectForAlphabet) then
+		return source:GetFontObjectForAlphabet(alphabet) or source
+	end
+	return source
+end
+
+local ApplyGameNamePlateFont = function()
+	local profile = GetInstanceProfile()
+	local wanted = profile and profile.instanceFriendlyFont and true or false
+	if (not wanted and not fontOriginals) then
+		return
+	end
+	local db = ns.GetConfig("NamePlates")
+	local source = db and db.NameFont
+	if (type(source) ~= "table" or not (source.GetFont or source.GetFontObjectForAlphabet)) then
+		source = nil
+	end
+	for _, name in ipairs(NAMEPLATE_FONT_NAMES) do
+		local object = _G[name]
+		if (type(object) == "table" or type(object) == "userdata") then
+			if (wanted and source) then
+				fontOriginals = fontOriginals or {}
+				local saved = fontOriginals[name]
+				if (not saved) then
+					saved = { members = {} }
+					if (object.GetShadowColor) then saved.shadow = { object:GetShadowColor() } end
+					if (object.GetShadowOffset) then saved.offset = { object:GetShadowOffset() } end
+					ForEachFontMember(object, function(alphabet, member)
+						saved.members[alphabet] = { member:GetFont() }
+					end)
+					fontOriginals[name] = saved
+				end
+				ForEachFontMember(object, function(alphabet, member)
+					local from = GetSourceMember(source, alphabet)
+					if (not from.GetFont) then
+						return
+					end
+					local file, _, flags = from:GetFont()
+					local original = saved.members[alphabet]
+					if (file and original and original[2]) then
+						API.SafeCall("NamePlates.GameFont.SetFont", member.SetFont, member, file, original[2], flags or "")
+					end
+				end)
+				if (object.SetShadowColor and source.GetShadowColor) then object:SetShadowColor(source:GetShadowColor()) end
+				if (object.SetShadowOffset and source.GetShadowOffset) then object:SetShadowOffset(source:GetShadowOffset()) end
+			elseif (fontOriginals and fontOriginals[name]) then
+				local saved = fontOriginals[name]
+				ForEachFontMember(object, function(alphabet, member)
+					local original = saved.members[alphabet]
+					if (original and original[1]) then
+						API.SafeCall("NamePlates.GameFont.Restore", member.SetFont, member, original[1], original[2], original[3] or "")
+					end
+				end)
+				if (saved.shadow and object.SetShadowColor) then object:SetShadowColor(unpack(saved.shadow)) end
+				if (saved.offset and object.SetShadowOffset) then object:SetShadowOffset(unpack(saved.offset)) end
+				fontOriginals[name] = nil
+			end
+		end
+	end
+	if (fontOriginals and not next(fontOriginals)) then
+		fontOriginals = nil
+	end
+end
+
 -- CVAR_UPDATE names a CVar the way the client registered it, and that is not ours to guess
 -- (nameplateShowFriendlyNpcs was nameplateShowFriendlyNPCs), so these compare in lower case.
 local LowerCaseSet = function(...)
@@ -465,6 +705,9 @@ NP.IsBlizzardScaleCVar = IsBlizzardScaleCVar
 NP.IsBlizzardPlateSizeCVar = IsBlizzardPlateSizeCVar
 NP.ApplyPendingNamePlateStacking = ApplyPendingNamePlateStacking
 NP.ApplyPendingNamePlateVisibility = ApplyPendingNamePlateVisibility
+NP.ApplyInstanceCVars = ApplyInstanceCVars
+NP.ApplyGameNamePlateFont = ApplyGameNamePlateFont
+NP.IsFriendlyRestrictedInstance = IsFriendlyRestrictedInstance
 
 -- For the options page, which reads and writes the game's own setting through these.
 NamePlatesMod.IsShownSettingSupported = function(self, kind)

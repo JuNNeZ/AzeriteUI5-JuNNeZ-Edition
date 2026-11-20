@@ -142,6 +142,14 @@ local defaults = { profile = ns:Merge({
 	-- The game's Friendly NPCs setting follows its Friendly players one, so Shift+V and Ctrl+V switch NPC
 	-- plates too, as the Mists key bindings do (CVars.lua, FollowFriendlyPlayers). Off: the game's own keys.
 	friendlyNPCsFollowFriendlyPlayers = false,
+	-- Dungeons, raids and delves, where the game draws friendly plates itself (CVars.lua, ApplyInstanceCVars,
+	-- since 2026-11-20, after Platynator and Plater): which friendly plates show there ("default" leaves the
+	-- game's settings alone; "never", "nameOnly" for players, "always"), the game's Size there (0 = leave it,
+	-- 1-5), its friendly minions hidden there, and the game's nameplate fonts in our outline and shadow.
+	instanceFriendlyMode = "default",
+	instanceNameSize = 0,
+	instanceHideFriendlyMinions = false,
+	instanceFriendlyFont = false,
 	friendlyNameOnlyFontScale = 2.5,
 	friendlyNameOnlyTargetScale = false,
 	showBlizzardWidgets = false,

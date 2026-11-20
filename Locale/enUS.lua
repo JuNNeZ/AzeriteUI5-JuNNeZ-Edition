@@ -1836,3 +1836,33 @@ L["Showing current guild people. Linked characters stay together; Clear filters 
 L["%d online people"] = true
 L["%d without nicknames"] = true
 L["%d need attention"] = true
+L["Show people with no main or alt linked."] = true
+L["Clear the search and show all saved people."] = true
+L["List favorites first, then online people."] = true
+-- Guild Manager keys.
+L["Open with Blizzard's guild key"] = true
+L["The keys bound to Blizzard's Guild & Communities window (J by default) open the guild overview instead. Your key bindings are not changed, and Blizzard's window stays available from the micro menu. Turn this off to give the keys back."] = true
+L["Guild overview key"] = true
+L["A key of your own that opens and closes the guild overview. Click, then press a key; Escape clears it. While set, it takes priority over that key's normal binding. Changes made in combat apply after combat."] = true
+
+-- Nameplates: friendly plates in dungeons, raids and delves (2026-11-20).
+L["Friendly pets"] = true
+L["Pets of players on your side. Needs Friendly minions."] = true
+L["Friendly totems"] = true
+L["Totems of players on your side. Needs Friendly minions."] = true
+L["Friendly guardians"] = true
+L["Guardians of players on your side. Needs Friendly minions."] = true
+L["Dungeons and raids"] = true
+L["Friendly nameplates"] = true
+L["Which friendly nameplates show in dungeons, raids and delves. Your own game settings come back when you leave."] = true
+L["Use the game's settings"] = true
+L["Never"] = true
+L["Names only (players)"] = true
+L["Always, with health bars"] = true
+L["Name size"] = true
+L["The game's nameplate Size in dungeons, raids and delves, which sets how large the names it draws there are. `0` leaves the game's setting alone."] = true
+L["Hide friendly pets and minions"] = true
+L["The game draws your group's pets, totems and guardians with a health bar there. Hides them in dungeons, raids and delves."] = true
+L["AzeriteUI outline on the game's names"] = true
+L["Gives the names the game draws on nameplates the outline and shadow of AzeriteUI's own nameplate names."] = true
+L["The game draws friendly nameplates in these places itself, and pets and NPCs always keep a health bar there. These options change the game's own settings while you are inside."] = true

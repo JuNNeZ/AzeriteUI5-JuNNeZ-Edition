@@ -58,6 +58,8 @@ local RefreshActiveNamePlates = NP.RefreshActiveNamePlates
 local GetDriverCVars = NP.GetDriverCVars
 local ApplyNamePlateDriverSettings = NP.ApplyNamePlateDriverSettings
 local ApplyNamePlateDriverSize = NP.ApplyNamePlateDriverSize
+local ApplyInstanceCVars = NP.ApplyInstanceCVars
+local ApplyGameNamePlateFont = NP.ApplyGameNamePlateFont
 local ApplyPendingNamePlateStacking = NP.ApplyPendingNamePlateStacking
 local ApplyPendingNamePlateVisibility = NP.ApplyPendingNamePlateVisibility
 local NamePlate_PostUpdateElements = NP.NamePlate_PostUpdateElements
@@ -323,6 +325,8 @@ NamePlatesMod.UpdateSettings = function(self)
 	elseif (isCurrentlyEnabled) then
 		-- Only while these plates are in charge; otherwise the CVars belong to whoever is.
 		ApplyFriendlyNameOnlyCVars()
+		ApplyInstanceCVars(self)
+		ApplyGameNamePlateFont()
 		ApplyNamePlateDriverSettings(self)
 		RefreshActiveNamePlates(true)
 		self:UpdateCombatFilterTimer()
@@ -458,7 +462,11 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 		self:UpdateNameContext()
 		-- "Only in dungeons and raids" (Visibility.lua, IsThreatScopeActive) changes with the zone.
 		self:OnThreatRoleContextChanged(event)
+		-- Friendly plates in dungeons, raids and delves are the game's: its settings on the way in, the
+		-- player's own on the way out (CVars.lua, ApplyInstanceCVars), then the plate size that follows them.
 		ApplyFriendlyNameOnlyCVars()
+		ApplyInstanceCVars(self)
+		ApplyGameNamePlateFont()
 		ApplyNamePlateDriverSettings(self)
 		-- The zone decides only the alpha CVars, which the driver has just written. A real zone change
 		-- removes and adds every plate around its loading screen anyway; login and reload lay out
@@ -483,13 +491,16 @@ NamePlatesMod.OnEvent = function(self, event, ...)
 		elseif (IsVisibilityManagedCVar(name)) then
 			self:FollowFriendlyPlayers(name)
 			RefreshActiveNamePlates()
-			-- In an instance, showing friendly players widens the plate size (CVars.lua, GetDriverSize).
+			-- In an instance, showing friendly plates widens the plate size (CVars.lua, GetDriverSize).
 			ApplyNamePlateDriverSize(self)
 		end
 		if (IsBlizzardPlateSizeCVar(name)) then
 			self:ScheduleDriverRefresh()
 		end
 	elseif (event == "PLAYER_REGEN_ENABLED") then
+		if (self.pendingInstanceCVars) then
+			ApplyInstanceCVars(self)
+		end
 		if (self.pendingDriverRefresh) then
 			ApplyNamePlateDriverSettings(self)
 		end

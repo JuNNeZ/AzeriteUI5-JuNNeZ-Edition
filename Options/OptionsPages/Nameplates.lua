@@ -557,6 +557,12 @@ local GenerateOptions = function()
 						L["Nameplates of players on your side."], .3),
 					showFriendlyMinions = ShownToggle("friendlyMinions", L["Friendly minions"],
 						L["Nameplates of the pets, totems and guardians of players on your side. Needs Friendly players."], .35),
+					showFriendlyPets = ShownToggle("friendlyPets", L["Friendly pets"],
+						L["Pets of players on your side. Needs Friendly minions."], .36),
+					showFriendlyTotems = ShownToggle("friendlyTotems", L["Friendly totems"],
+						L["Totems of players on your side. Needs Friendly minions."], .37),
+					showFriendlyGuardians = ShownToggle("friendlyGuardians", L["Friendly guardians"],
+						L["Guardians of players on your side. Needs Friendly minions."], .38),
 					showTargetName = ShownToggle("targetName", L["Your target's floating name"],
 						L["The game draws the name of the unit you target over it even when your other name settings would not, such as a corpse you loot or skin. Untick to hide it; a unit with a nameplate shows its name there. Blizzard's Options do not offer this one."], .5),
 					showFriendlyNPCs = ShownToggle("friendlyNPCs", L["Friendly NPCs"],
@@ -881,6 +887,62 @@ local GenerateOptions = function()
 					instanceNote = {
 						name = L["In dungeons and raids the game draws friendly nameplates itself and addons cannot change them. Their size follows the game's own nameplate Size setting."],
 						order = 3,
+						type = "description", width = "full"
+					}
+				}
+			},
+			-- Friendly plates where the game draws them itself (NamePlates/CVars.lua, ApplyInstanceCVars and
+			-- ApplyGameNamePlateFont). Only the game's own settings reach them there.
+			instanceFriendly = {
+				name = L["Dungeons and raids"],
+				order = 3.3,
+				type = "group",
+				inline = true,
+				hidden = isdisabled,
+				args = {
+					instanceFriendlyMode = {
+						name = L["Friendly nameplates"],
+						desc = L["Which friendly nameplates show in dungeons, raids and delves. Your own game settings come back when you leave."],
+						order = 1,
+						type = "select", width = "full",
+						values = {
+							default = L["Use the game's settings"],
+							never = L["Never"],
+							nameOnly = L["Names only (players)"],
+							always = L["Always, with health bars"]
+						},
+						sorting = { "default", "never", "nameOnly", "always" },
+						set = setter,
+						get = getter
+					},
+					instanceNameSize = {
+						name = L["Name size"],
+						desc = L["The game's nameplate Size in dungeons, raids and delves, which sets how large the names it draws there are. `0` leaves the game's setting alone."],
+						order = 2,
+						type = "range", width = "full",
+						min = 0, max = 5, step = 1,
+						set = setter,
+						get = getter
+					},
+					instanceHideFriendlyMinions = {
+						name = L["Hide friendly pets and minions"],
+						desc = L["The game draws your group's pets, totems and guardians with a health bar there. Hides them in dungeons, raids and delves."],
+						order = 3,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					instanceFriendlyFont = {
+						name = L["AzeriteUI outline on the game's names"],
+						desc = L["Gives the names the game draws on nameplates the outline and shadow of AzeriteUI's own nameplate names."],
+						order = 4,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					instanceNote = {
+						name = L["The game draws friendly nameplates in these places itself, and pets and NPCs always keep a health bar there. These options change the game's own settings while you are inside."],
+						order = 5,
 						type = "description", width = "full"
 					}
 				}

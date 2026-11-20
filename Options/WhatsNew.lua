@@ -49,6 +49,14 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.46.0-JuNNeZ",
+		items = {
+			{ text = "Choose how friendly nameplates look in dungeons, raids and delves.", page = L["Nameplates"], section = L["Dungeons and raids"] },
+			{ text = "Skin Zygor's guide window: Forged, Glass or Field Journal.", page = L["Themes"], section = "Zygor" },
+			{ text = "Let J open the guild overview, or pick a key of your own.", page = "GuildManager" },
+		}
+	},
+	{
 		version = "5.45.0-JuNNeZ",
 		items = {
 			{ text = "Rounded Options adds icons to tabs, headings and appearance controls.", run = OpenAppearance },

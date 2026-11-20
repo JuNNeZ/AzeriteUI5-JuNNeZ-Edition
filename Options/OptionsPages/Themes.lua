@@ -829,6 +829,17 @@ local GenerateOptions = function()
 			magma = GenerateMaterial(33.1, "magma"),
 			storm = GenerateMaterial(33.2, "storm"),
 			details = GenerateDetails(39),
+			zygor = {
+				name = "Zygor", order = 40, type = "group", inline = true,
+				args = { skin = {
+					name = L["Skin"], type = "select", order = 1,
+					values = { default = L["Default"], Forged = "Forged", Glass = "Glass", ["Field-Journal"] = "Field Journal" },
+					sorting = { "default", "Forged", "Glass", "Field-Journal" },
+					disabled = function() return InCombatLockdown() or not (_G.ZygorGuidesViewer and _G.ZygorGuidesViewer.Frame) end,
+					get = function() return ns.db.char.zygorSkin or "default" end,
+					set = function(_, choice) ns:GetModule("ZygorSkin"):SetChoice(choice) end
+				} }
+			},
 			tests = GenerateTests()
 		}
 	}

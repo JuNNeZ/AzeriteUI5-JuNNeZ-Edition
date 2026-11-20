@@ -48,10 +48,13 @@ end
 Guild.SavePersonCard = function(self, name, nickname, main, favorite, note)
     if (type(favorite) ~= "boolean" or not self.ReadText(note) or #note > 512
         or note:find("[|%z\1-\8\11-\31]")) then return false end
+    -- The editor accepts the character's own name as an explicit main.
+    local key = self:CharacterKey(name)
+    if (key and key == self:CharacterKey(main)) then main = "" end
     local _, previousRoot = self:Resolve(name)
     local records = self:SaveIdentity(name, nickname, main, true)
     if (type(records) ~= "table") then return false end
-    local root = self:CharacterKey(name)
+    local root = key
     while (records[root] and records[root].main) do root = records[root].main end
     -- Linking an alt must not erase the destination person's existing notes.
     if (root == previousRoot) then
