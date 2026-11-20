@@ -176,6 +176,28 @@ noMax.maxColumns = 8
 local w8 = r40:GetCalculatedHeaderSize(40)
 check(w == w8, "Raid40 without maxColumns uses its default 8, not 1", tostring(w) .. " vs " .. tostring(w8))
 
+local function ReadHeaderMaxColumns(_, _, ...)
+	for index = 1, select("#", ...), 2 do
+		local key, value = select(index, ...)
+		if (key == "maxColumns") then return value end
+	end
+end
+
+for _, raid in ipairs({ { r25, d25 }, { r40, d40 } }) do
+	local module, defaults = raid[1], raid[2]
+	local profile = Copy(defaults.profile)
+	profile.useInParties = true
+	profile.useInRaid5, profile.useInRaid10, profile.useInRaid25, profile.useInRaid40 = false, false, false, false
+	profile.maxColumns = 1
+	module.db = { profile = profile }
+	check(ReadHeaderMaxColumns(module:GetHeaderAttributes()) == 1, module:GetName() .. " keeps one column for parties only")
+	local width, height = module:GetHeaderSize()
+	local partyWidth, partyHeight = module:GetCalculatedHeaderSize(5)
+	check(width == partyWidth and height == partyHeight, module:GetName() .. " sizes the party-only header for five units")
+	profile[module == r25 and "useInRaid25" or "useInRaid40"] = nil
+	check(ReadHeaderMaxColumns(module:GetHeaderAttributes()) == 8, module:GetName() .. " inherits the default for an absent raid setting")
+end
+
 --------------------------------------------------------------------------
 -- Against the old files, when given.
 --------------------------------------------------------------------------

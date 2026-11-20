@@ -147,13 +147,21 @@ local CreateRaidModule = function(spec)
 		return "1,2,3,4,5,6,7,8"
 	end
 
+	local GetRaidVisibilitySetting = function(profile, fallback, key)
+		local value = profile[key]
+		if (value == nil) then
+			return fallback[key]
+		end
+		return value
+	end
+
 	local GetRequiredRaidCapacity = function(db, fallback)
 		local source = db or defaults.profile
 		fallback = fallback or defaults.profile
-		local useInRaid40 = (source.useInRaid40 ~= nil) and source.useInRaid40 or fallback.useInRaid40
-		local useInRaid25 = (source.useInRaid25 ~= nil) and source.useInRaid25 or fallback.useInRaid25
-		local useInRaid10 = (source.useInRaid10 ~= nil) and source.useInRaid10 or fallback.useInRaid10
-		local useInRaid5 = (source.useInRaid5 ~= nil) and source.useInRaid5 or fallback.useInRaid5
+		local useInRaid40 = GetRaidVisibilitySetting(source, fallback, "useInRaid40")
+		local useInRaid25 = GetRaidVisibilitySetting(source, fallback, "useInRaid25")
+		local useInRaid10 = GetRaidVisibilitySetting(source, fallback, "useInRaid10")
+		local useInRaid5 = GetRaidVisibilitySetting(source, fallback, "useInRaid5")
 		if (useInRaid40 or useInRaid25 or useInRaid10 or useInRaid5) then
 			return 40
 		end

@@ -449,7 +449,7 @@ local ApplyTargetAuraContainerLayout = function(element, layout, maxAuras, isBuf
 	element["growth-y"] = layout.growthY
 	element["max-cols"] = layout.maxCols
 	element.showBuffType = false
-	element.showDebuffType = isBuffContainer and false or true
+	element.showDebuffType = not isBuffContainer
 	if (isBuffContainer == nil) then
 		element.numTotal = maxAuras or 0
 		element.num = nil

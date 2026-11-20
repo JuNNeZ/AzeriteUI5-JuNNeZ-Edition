@@ -10,6 +10,18 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.44.1-JuNNeZ (2026-11-20) - Player Aura and Party Layout Fixes
+
+### Highlights
+
+- **Long utility buffs can appear in the player aura row again.** At `/az -> Unit Frames -> Player`, turn off **Use AzeriteUI Stock Behavior** and enable **Show Long Utility Buffs** to allow long and permanent buffs through the duration filter. The other aura filters still apply. Thanks to Boghir for the report.
+- **Debuffs no longer register right-click cancellation** in the top-right aura display or the native unit-frame aura rows. Buffs retain their existing right-click behavior. The fallback target aura layout applies debuff-type styling only where appropriate.
+- **Party-only Raid 25 and Raid 40 layouts respect their five-player footprint.** With party visibility enabled and all raid sizes disabled, these layouts can use a single column.
+
+### Access and known limits
+
+- Verified offline. Live aura visibility, right-click behavior, and party layouts still need confirmation on Retail and Forever.
+
 ## 5.44.0-JuNNeZ (2026-11-19) - Group Loot Rolls and Solo Preview
 
 ### Highlights

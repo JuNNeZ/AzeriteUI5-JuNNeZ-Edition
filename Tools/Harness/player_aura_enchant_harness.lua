@@ -127,7 +127,7 @@ function AuraContainer:UpdateAllAuras() self.__updates = self.__updates + 1 end
 function AuraContainer:SetFlowLayoutAnchorPoint() end
 function AuraContainer:SetFlowLayoutGrowthDirection() end
 function AuraContainer:SetFlowLayoutMaximumLineSize() end
-function AuraContainer:AddAuraGroup(key) self.__groups[key] = true end
+function AuraContainer:AddAuraGroup(key, _, options) self.__groups[key] = options end
 function AuraContainer:SetAuraGroupLayout() end
 function AuraContainer:SetAuraGroupFilterString() end
 function AuraContainer:SetAuraGroupCandidateFilters() end
@@ -610,6 +610,36 @@ do
 	container.SetAuraGroupLayout = function(_, _, layout) groupLayout = layout end
 	display:Configure(Config({ size = 22, spacingX = 4 }))
 	check(groupLayout and groupLayout.elementSpacing == 4 and groupLayout.groupSpacing == 0, "no extra gap between aura groups")
+end
+
+-- Long and permanent utility buffs need the duration filter to be absent.
+do
+	local display = NewDisplay("12.1.5", true)
+	local shortFilters
+	display.playerContainer.SetAuraGroupCandidateFilters = function(_, key, filters)
+		if (key == "AzeriteHelpfulShort") then
+			shortFilters = filters
+		end
+	end
+	display:Configure(Config({ useStockBehavior = false, maxDuration = 600 }))
+	check(shortFilters and shortFilters.maxDuration == 600, "custom temporary buffs use the configured duration limit")
+	display:Configure(Config({ useStockBehavior = false, showLong = true, maxDuration = 600 }))
+	check(shortFilters and shortFilters.maxDuration == nil, "long utility buffs remove the duration limit")
+	display:Configure(Config({ useStockBehavior = false, showLong = false, maxDuration = 600 }))
+	check(shortFilters and shortFilters.maxDuration == 600, "disabling long utility buffs restores the duration limit")
+	display:Configure(Config({ showLong = true }))
+	check(shortFilters and shortFilters.maxDuration == 300, "stock mode keeps its duration limit")
+end
+
+do
+	local display = NewDisplay("12.1.5", true)
+	local container = display.playerContainer
+	local debuff = setmetatable(NewRegion("Button", container), AuraButton)
+	local buff = setmetatable(NewRegion("Button", container), AuraButton)
+	container.__groups[HARMFUL_GROUP].initializeFrame(debuff)
+	container.__groups.AzeriteHelpfulShort.initializeFrame(buff)
+	check(debuff.__cancel == nil, "native debuff buttons do not register cancel clicks")
+	check(buff.__cancel == "RightButtonUp", "native buff buttons still register cancel clicks")
 end
 
 print(string.format("Player aura enchants: %d checks, %d failures", checks, failures))

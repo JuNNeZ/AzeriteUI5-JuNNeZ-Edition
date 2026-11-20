@@ -359,9 +359,15 @@ ns.AuraStyles.TargetPostUpdateButton = function(element, button, unit, data, pos
 	-- Icon Coloring
 	local nameplateShowAll = SafeBool(data.nameplateShowAll)
 	local nameplateShowPersonal = SafeBool(data.nameplateShowPersonal)
-	local isPlayerAura = (button.isPlayer ~= nil) and (button.isPlayer and true or false) or SafeBool(data.isPlayerAura)
+	local isPlayerAura = button.isPlayer
+	if (isPlayerAura == nil) then
+		isPlayerAura = SafeBool(data.isPlayerAura)
+	end
 	local canApplyAura = SafeBool(data.canApplyAura)
-	local isHarmful = (button.isHarmful ~= nil) and (button.isHarmful and true or false) or SafeBool(data.isHarmful)
+	local isHarmful = button.isHarmful
+	if (isHarmful == nil) then
+		isHarmful = SafeBool(data.isHarmful)
+	end
 	local spellId = GetAuraSpellID(data)
 	if (nameplateShowAll or (nameplateShowPersonal and isPlayerAura))
 	or (not isHarmful and isPlayerAura and canApplyAura) or (spellId and Spells[spellId]) then

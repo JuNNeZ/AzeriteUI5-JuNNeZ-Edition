@@ -480,14 +480,16 @@ local IsCastMarkedNotInterruptible = function(castbar)
 		end
 	end
 
-	if (castbar) then
-		castbar.__AzeriteUI_ProbedNotInterruptible = sawFalse and false or nil
-	end
-
 	if (sawFalse) then
+		if (castbar) then
+			castbar.__AzeriteUI_ProbedNotInterruptible = false
+		end
 		return false
 	end
 
+	if (castbar) then
+		castbar.__AzeriteUI_ProbedNotInterruptible = nil
+	end
 	return nil
 end
 

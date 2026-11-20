@@ -381,7 +381,7 @@ local function StyleAuraButton(button, isHarmful, options, subdued, styleState)
 	AddPandemicEdge(button, border, size)
 	ApplyAuraTextSize(button, size)
 
-	button:SetCancelAuraButtons(isHarmful and nil or "RightButtonUp")
+	button:SetCancelAuraButtons(not isHarmful and "RightButtonUp" or nil)
 	-- Do not add SetScript/HookScript handlers to CustomAuraButtonTemplate.
 	-- Blizzard must be able to pass secret visibility directly to SetShown().
 end
@@ -713,7 +713,7 @@ local function ApplyContainerLayout(container, config)
 		isStealable = false,
 		nameplateShowPersonal = false,
 		nameplateShowAll = false,
-		maxDuration = showLong and nil or maxDuration
+		maxDuration = (not showLong) and maxDuration or nil
 	}
 
 	local horizontal = GetFlowDirection(config.growthX == "LEFT" and "Left" or "Right", config.growthX == "LEFT" and -1 or 1)

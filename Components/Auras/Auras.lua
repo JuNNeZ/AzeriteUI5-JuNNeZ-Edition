@@ -214,7 +214,7 @@ local StyleAuraButton = function(button, filter)
 	if (warningDurationOptions) then
 		button:SetDurationText(warningTime, warningDurationOptions)
 	end
-	button:SetCancelAuraButtons(filter == "HARMFUL" and nil or "RightButtonUp")
+	button:SetCancelAuraButtons(filter ~= "HARMFUL" and "RightButtonUp" or nil)
 end
 
 local GetFlowDirection = function(direction, fallback)
