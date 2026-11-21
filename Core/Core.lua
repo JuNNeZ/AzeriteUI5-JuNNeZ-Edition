@@ -569,7 +569,9 @@ ns.OnEnable = function(self)
 end
 
 ns.OnInitialize = function(self)
-	self.db = LibStub("AceDB-3.0-GE"):New("AzeriteUI5_DB", defaults, self:GetDefaultProfile())
+	local defaultProfile = self:GetDefaultProfile()
+	local characterKey = self:GetCharacterSettingsKey(AzeriteUI5_DB, defaultProfile)
+	self.db = LibStub("AceDB-3.0-GE"):New("AzeriteUI5_DB", defaults, defaultProfile, characterKey)
 
 	-- -1 is the default, so no saved settings existed before this login. Read
 	-- before the reset below writes the current version over it.

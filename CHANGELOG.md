@@ -10,6 +10,16 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.47.2-JuNNeZ (2026-11-21) - Keep Character Settings on Forever
+
+### Highlights
+
+- Forever characters keep their AzeriteUI profile, theme choices and other character settings when the game hides or changes the realm name. AzeriteUI recovers identifiable older settings and keeps newer choices.
+
+### Access and known limits
+
+- The recovery runs when you log in. Older entries with ambiguous ownership stay in SavedVariables. Migration was verified offline with an affected Forever save and still needs in-game confirmation.
+
 ## 5.47.1-JuNNeZ (2026-11-20) - Addon List Title
 
 ### Highlights

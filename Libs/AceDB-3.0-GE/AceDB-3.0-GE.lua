@@ -41,7 +41,7 @@
 -- @class file
 -- @name AceDB-3.0.lua
 -- @release $Id: AceDB-3.0.lua 1306 2023-06-23 14:55:09Z nevcairiel $
-local ACEDB_MAJOR, ACEDB_MINOR = "AceDB-3.0-GE", 28 --[[ [GE-Fix] Based on AceDB-3.0.28 ]]
+local ACEDB_MAJOR, ACEDB_MINOR = "AceDB-3.0-GE", 29 --[[ [GE-Fix] Based on AceDB-3.0.28 ]]
 local AceDB = LibStub:NewLibrary(ACEDB_MAJOR, ACEDB_MINOR)
 
 if not AceDB then return end -- No upgrade needed
@@ -251,8 +251,8 @@ local preserve_keys = {
 	["children"] = true,
 }
 
-local realmKey = GetRealmName()
-local charKey = UnitName("player") .. " - " .. realmKey
+local realmKey = GetRealmName() or ""
+local defaultCharKey = UnitName("player") .. " - " .. realmKey
 local _, classKey = UnitClass("player")
 local _, raceKey = UnitRace("player")
 local factionKey = UnitFactionGroup("player")
@@ -264,8 +264,9 @@ local regionKey = regionTable[GetCurrentRegion()] or GetCurrentRegionName() or "
 local factionrealmregionKey = factionrealmKey .. " - " .. regionKey
 
 -- Actual database initialization function
-local function initdb(sv, defaults, defaultProfile, olddb, parent)
+local function initdb(sv, defaults, defaultProfile, olddb, parent, characterKey)
 	-- Generate the database keys for each section
+	local charKey = parent and parent.keys.char or characterKey or defaultCharKey
 
 	-- map "true" to our "Default" profile
 	if defaultProfile == true then defaultProfile = "Default" end
@@ -448,7 +449,7 @@ function DBObjectLib:SetProfile(name)
 	-- if the storage exists, save the new profile
 	-- this won't exist on namespaces.
 	if self.sv.profileKeys then
-		self.sv.profileKeys[charKey] = name
+		self.sv.profileKeys[self.keys.char] = name
 	end
 
 	-- populate to child namespaces
@@ -611,11 +612,12 @@ function DBObjectLib:ResetDB(defaultProfile)
 	end
 
 	local sv = self.sv
+	local characterKey = self.keys.char
 	for k,v in pairs(sv) do
 		sv[k] = nil
 	end
 
-	initdb(sv, self.defaults, defaultProfile, self)
+	initdb(sv, self.defaults, defaultProfile, self, nil, characterKey)
 
 	-- fix the child namespaces
 	if self.children then
@@ -696,13 +698,14 @@ end
 -- @param defaults A table of database defaults
 -- @param defaultProfile The name of the default profile. If not set, a character specific profile will be used as the default.
 -- You can also pass //true// to use a shared global profile called "Default".
+-- @param characterKey Optional character storage key for this database and its namespaces.
 -- @usage
 -- -- Create an empty DB using a character-specific default profile.
 -- self.db = LibStub("AceDB-3.0"):New("MyAddonDB")
 -- @usage
 -- -- Create a DB using defaults and using a shared default profile
 -- self.db = LibStub("AceDB-3.0"):New("MyAddonDB", defaults, true)
-function AceDB:New(tbl, defaults, defaultProfile)
+function AceDB:New(tbl, defaults, defaultProfile, characterKey)
 	if type(tbl) == "string" then
 		local name = tbl
 		tbl = _G[name]
@@ -724,7 +727,11 @@ function AceDB:New(tbl, defaults, defaultProfile)
 		error(("Usage: AceDB:New(tbl, defaults, defaultProfile): 'defaultProfile' - string or true expected, got %q."):format(type(defaultProfile)), 2)
 	end
 
-	return initdb(tbl, defaults, defaultProfile)
+	if characterKey ~= nil and (type(characterKey) ~= "string" or characterKey == "") then
+		error("Usage: AceDB:New(tbl, defaults, defaultProfile, characterKey): 'characterKey' - non-empty string expected.", 2)
+	end
+
+	return initdb(tbl, defaults, defaultProfile, nil, nil, characterKey)
 end
 
 -- upgrade existing databases
