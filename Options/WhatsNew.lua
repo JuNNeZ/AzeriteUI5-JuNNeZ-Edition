@@ -49,6 +49,15 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.49.0-JuNNeZ",
+		items = {
+			{ text = "See saved nicknames in player tooltips.", page = "GuildManager" },
+			{ text = "Get a chat line when a favorite comes online, and list inactive members.", page = "GuildManager" },
+			{ text = "Review guild notes: matching groups hidden, suggested notes ready to use.", page = "GuildManager" },
+			{ text = "Forever: merge old realm records into the live characters, with Undo.", page = "GuildManager" },
+		}
+	},
+	{
 		version = "5.48.0-JuNNeZ",
 		items = {
 			{ text = "Enable the optional Total RP 3 skin when TRP3 is loaded.", page = L["Themes"], section = "Total RP 3" },

@@ -1518,6 +1518,7 @@ L["Chat nicknames require Chattynator"] = true
 L["Chattynator connected"] = true
 L["Guild & Nicknames"] = true
 L["Guild note"] = true
+L["Edit guild note"] = true
 L["Invalid name, nickname or main/alt cycle."] = true
 L["Level"] = true
 L["Local identity removed."] = true
@@ -1573,6 +1574,7 @@ L["Invalid or oversized nickname backup."] = true
 L["Invalid private note."] = true
 L["Main"] = true
 L["Matching public notes"] = true
+L["%d already match"] = true
 L["Merge %d records and replace %d existing identities? You can undo this operation."] = true
 L["Nickname (character)"] = true
 L["Nickname backup and sharing"] = true
@@ -1820,6 +1822,8 @@ L["Guild members"] = true
 
 -- Guild chat nickname levels.
 L["Show levels with nicknames"] = true
+L["Nicknames in tooltips"] = true
+L["Add a line with the saved nickname to a player's tooltip. Protected names in combat are skipped."] = true
 L["Show the speaking character's known message-time level before their nickname, for example 60:Nickname. Unknown levels are omitted. Original-name channels keep Chattynator's own setting."] = true
 
 -- Guild Manager workflow controls.
@@ -1894,3 +1898,24 @@ L["Show who interrupted"] = true
 L["The name of whoever interrupted the cast, in their class colour, while the castbar shows the interruption."] = true
 L["Show enemy forces per mob"] = true
 L["During a Mythic+ key, how much of the key's enemy forces each enemy is worth, inside its health bar."] = true
+
+-- Guild Manager 5.48: inactivity, favorites, realm merge, note suggestion
+L["Inactive %d+ days"] = true
+L["Showing guild people whose characters have all been offline for %d days or more. Clear filters shows everyone."] = true
+L["%s is online."] = true
+L["%s is online (%s)."] = true
+L["Merge old realm records"] = true
+L["Merge %d old realm records"] = true
+L["Merge %d old realm records into the current characters? Current values are kept; %d differing values are discarded. Undo is available until you reload.\n%s"] = true
+L["%d old realm records merged. Undo is available."] = true
+L["Characters saved under their old realm before Forever hid realm names. Each is folded into the live character; values on the live character win."] = true
+L["+%d more"] = true
+L["Use suggested note"] = true
+L["Save a nickname for this person first."] = true
+L["The guild note already matches."] = true
+L["Review the note, then choose Review note change."] = true
+L["Fill in the note from your nickname and main/alt links. A main gets the nickname, an alt gets the nickname followed by - alt. Nothing is sent until you review and confirm."] = true
+L["Announce favorites coming online"] = true
+L["Print a chat line when a favorite person comes online on any of their characters. Nothing is announced at login or when you change guild."] = true
+L["Inactive after (days)"] = true
+L["Guild home counts people whose characters have all been offline at least this long. Characters with unknown last-online times never count."] = true

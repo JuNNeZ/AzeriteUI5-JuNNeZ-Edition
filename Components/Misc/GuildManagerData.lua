@@ -76,6 +76,20 @@ Guild.GetChatFormat = function(self, info)
     return (mode == "both" or mode == "original") and mode or "nickname"
 end
 
+-- Inactive means every character's relative last-online time is known and at
+-- least the configured number of days. Unknown durations never count.
+Guild.GetInactiveDays = function(self)
+    local days = tonumber(self.db.profile.inactiveDays)
+    return days and days >= 1 and math.floor(days) or 30
+end
+Guild.IsInactive = function(self, person)
+    if (person.online > 0 or not person.lastOnline) then return false end
+    for _, row in ipairs(person.rows) do
+        if (not row.member.saved and not row.member.lastOnline) then return false end
+    end
+    return person.lastOnline.order >= self:GetInactiveDays()*24
+end
+
 Guild.GetPeople = function(self, search, filters)
     filters, search = filters or {}, string.lower(search or "")
     local low, high = search:match("^%s*(%d+)%s*%-%s*(%d+)%s*$")
@@ -120,7 +134,7 @@ Guild.GetPeople = function(self, search, filters)
         if (low) then matches = levelMatch end
         if (matches and classMatch and rankMatch and (not filters.inGuild or inGuild) and (not filters.online or person.online > 0)
             and (not filters.favorite or person.favorite) and (not filters.missing or not person.nickname)
-            and (not filters.unlinked or not linked)) then
+            and (not filters.unlinked or not linked) and (not filters.inactive or inGuild and self:IsInactive(person))) then
             table.sort(person.rows, function(a, b)
                 if ((a.key == person.key) ~= (b.key == person.key)) then return a.key == person.key end
                 return a.key < b.key
@@ -210,31 +224,41 @@ local function Signature(self, members)
     return table.concat(parts, "\31")
 end
 
+local function IsUnclearNote(note)
+    local suffix = note:match("^%s*[^%s,;:/%(%)%-]+%s*(.-)%s*$")
+    if (not suffix or suffix == "") then return false end
+    -- Keep familiar roster tags such as "- H/A", "- S/L", "(main)" and "(alt)".
+    local tag = string.lower(suffix):gsub("^[-/]%s*", ""):gsub("^%((.-)%)$", "%1")
+    return tag ~= "main" and tag ~= "alt" and tag ~= "h/a" and tag ~= "s/l"
+end
+
 Guild.BuildNoteSuggestions = function(self)
     local grouped, proposals, skipped = {}, {}, 0
     for _, member in pairs(self.members or {}) do
         local nickname = self:NoteCandidate(member.note)
         if (nickname) then
             local id = string.lower(nickname)
-            grouped[id] = grouped[id] or { id = id, nickname = nickname, members = {} }
+            grouped[id] = grouped[id] or { id = id, members = {} }
             table.insert(grouped[id].members, member)
         elseif (member.note ~= "") then skipped = skipped+1 end
     end
+    local records, matching, owners = self.db.global.characters, 0, {}
     for _, proposal in pairs(grouped) do
         table.sort(proposal.members, function(a, b) return a.name < b.name end)
+        proposal.nickname = self:NoteCandidate(proposal.members[1].note)
         local roots, rootCount = {}, 0
         proposal.targets = {}
         for _, member in ipairs(proposal.members) do
             local key = self:CharacterKey(member.name)
             proposal.targets[#proposal.targets+1] = key
             local nickname, root = self:Resolve(member.name)
-            local record = self.db.global.characters[key]
+            local record = records[key]
             if (record and (record.main or record.nickname)) then
-                if (not roots[root]) then roots[root] = true; rootCount = rootCount+1 end
+                if (root and not roots[root]) then roots[root] = true; rootCount = rootCount+1 end
+                if (not root or not records[root]) then proposal.conflict = true end
                 if (nickname and string.lower(nickname) ~= proposal.id) then proposal.conflict = true end
             end
-            local suffix = member.note:match("^%s*[^%s,;:/%(%)%-]+(.*)$") or ""
-            if (suffix ~= "" and not suffix:match("^%s*$") and not suffix:match("^%s*[-/(]")) then proposal.ambiguous = true end
+            if (IsUnclearNote(member.note)) then proposal.ambiguous = true end
         end
         if (rootCount > 1) then proposal.conflict = true end
         proposal.main = proposal.targets[1]
@@ -246,11 +270,32 @@ Guild.BuildNoteSuggestions = function(self)
                 if (not found) then proposal.targets[#proposal.targets+1] = root end
             end
         end
-        proposal.signature = Signature(self, proposal.members)
-        proposals[#proposals+1] = proposal
+        local main = records[proposal.main]
+        local savedNickname = main and main.nickname
+        local alreadyMatched = savedNickname and string.lower(savedNickname) == proposal.id
+        if (alreadyMatched) then
+            proposal.nickname = savedNickname
+            for _, member in ipairs(proposal.members) do
+                local _, root = self:Resolve(member.name)
+                if (root ~= proposal.main) then alreadyMatched = false; break end
+            end
+        end
+        for _, key in ipairs(proposal.targets) do
+            local owner = owners[key]
+            if (owner) then proposal.conflict, owner.conflict = true, true else owners[key] = proposal end
+        end
+        if (alreadyMatched) then matching = matching+1
+        else
+            proposal.signature = Signature(self, proposal.members)
+            proposals[#proposals+1] = proposal
+        end
     end
-    table.sort(proposals, function(a, b) return a.id < b.id end)
-    return proposals, skipped
+    table.sort(proposals, function(a, b)
+        local aReview, bReview = a.conflict or a.ambiguous or false, b.conflict or b.ambiguous or false
+        if (aReview ~= bReview) then return not aReview end
+        return a.id < b.id
+    end)
+    return proposals, skipped, matching
 end
 
 Guild.ValidateRecords = function(self, input)
@@ -304,15 +349,21 @@ Guild.ApplyNoteSuggestions = function(self, proposals, selected)
             local target = records[proposal.main] or (self.members or {})[proposal.main]
             if (not target) then return false, "main" end
             records[proposal.main] = records[proposal.main] or { name = target.name }
-            records[proposal.main].main, records[proposal.main].nickname = nil, proposal.nickname
+            records[proposal.main].main, records[proposal.main].nickname = nil, current.nickname
             for _, member in ipairs(current.members) do
                 local key = self:CharacterKey(member.name)
-                if (key ~= proposal.main) then
+                local _, root = self:Resolve(member.name)
+                if (key ~= proposal.main and root ~= proposal.main) then
                     records[key] = records[key] or { name = member.name }
                     records[key].main, records[key].nickname = proposal.main, nil
                 end
             end
             count = count+1
+        end
+    end
+    for key, record in pairs(records) do
+        if (self:CharacterKey(record.name) ~= key) then
+            record.name = self:QualifiedRecordName(key, record.name)
         end
     end
     local valid = self:ValidateRecords(records)
@@ -321,11 +372,56 @@ Guild.ApplyNoteSuggestions = function(self, proposals, selected)
     return true, count
 end
 
+-- Folds each old-realm record found by FindRealmDuplicates into the live
+-- character's record. Values already on the live record win; the old one only
+-- fills gaps. Links to the old key follow it. Returns records, merged, conflicts.
+Guild.BuildRealmMerge = function(self)
+    local duplicates, records = self:FindRealmDuplicates(), self:CopyRecords()
+    local merged, conflicts, names = 0, 0, {}
+    for old, entry in pairs(duplicates) do
+        local source, target = records[old], records[entry.current]
+        if (not target) then
+            local member = (self.members or {})[entry.current]
+            target = { name = member.name }; records[entry.current] = target
+        end
+        local identified = target.nickname or target.main
+        if (not identified) then target.nickname, target.main = source.nickname, source.main
+        elseif ((source.nickname or source.main) and (source.nickname ~= target.nickname or source.main ~= target.main)) then
+            conflicts = conflicts+1
+        end
+        if (target.favorite == nil) then target.favorite = source.favorite end
+        if (not target.privateNote) then target.privateNote = source.privateNote
+        elseif (source.privateNote and source.privateNote ~= target.privateNote) then conflicts = conflicts+1 end
+        records[old] = nil
+        merged = merged+1
+        names[#names+1] = target.name:match("^([^-]+)") or target.name
+    end
+    for _, record in pairs(records) do
+        local entry = record.main and duplicates[record.main]
+        if (entry) then record.main = entry.current end
+    end
+    for key, record in pairs(records) do
+        if (record.main == key) then record.main = nil end
+    end
+    table.sort(names)
+    return records, merged, conflicts, names
+end
+
+Guild.MergeRealmDuplicates = function(self, expectedRevision)
+    if (expectedRevision ~= nil and expectedRevision ~= (self.identityRevision or 0)) then return false end
+    local records, merged = self:BuildRealmMerge()
+    if (merged == 0) then return false end
+    local valid = self:ValidateRecords(records)
+    if (not valid) then return false end
+    self:CommitRecords(valid, "merge")
+    return true, merged
+end
+
 Guild.ExportIdentities = function(self, includePrivate)
     local records = self:CopyRecords()
     for key, record in pairs(records) do
         -- Old records may have been entered without an explicit realm.
-        if (not record.name:find("-", 1, true)) then record.name = record.name .. "-" .. key:match("%-([^-]+)$") end
+        record.name = self:QualifiedRecordName(key, record.name)
         if (not includePrivate) then record.privateNote = nil end
     end
     local valid = self:ValidateRecords(records)

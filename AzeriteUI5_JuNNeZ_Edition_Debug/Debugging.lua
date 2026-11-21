@@ -4980,6 +4980,92 @@ end
 	"which addon tainted it" from a guess into an answer. Run it after the errors
 	have started, since a button can be clean until something touches it.
 ]]
+--[[
+	Forever's stance bar update reaches EditModeManagerFrame:UpdateBottomActionBarPositions,
+	which calls MainActionBar:ClearAllPoints() and then SetToLayoutAnchor -> SetPoint. A
+	BugSack export (5.48.0, build 71037) blocked only the SetPoint, so execution was secure
+	at ClearAllPoints and became tainted in between. The values read there are listed below
+	(Blizzard_EditMode/Shared/EditModeSystemTemplates.lua ClearFrameSnap,
+	EditModeManager.lua SetToLayoutAnchor/GetDefaultAnchor). Forever anchors MainActionBar
+	to MicroMenuContainer, so its snappedToFrame link is the first suspect. Read only.
+]]
+local EDIT_MODE_BOTTOM_BARS = {
+	"MainActionBar", "SecondaryStatusTrackingBarContainer", "MainStatusTrackingBarContainer",
+	"MultiBarBottomRight", "MultiBarBottomLeft", "StanceBar", "PetActionBar",
+	"PossessActionBar", "MainMenuBarVehicleLeaveButton", "MultiCastActionBarFrame",
+	"MicroMenuContainer", "QueueStatusButton"
+}
+local EDIT_MODE_FRAME_FIELDS = {
+	"snappedToFrame", "snappedFrames", "skipAutomaticPositioning", "system", "systemIndex",
+	"systemInfo", "ClearAllPoints", "SetPoint", "ClearAllPointsBase", "SetPointBase",
+	"RemoveSnappedFrame", "IsInDefaultPosition", "IsShown"
+}
+local EDIT_MODE_MANAGER_FIELDS = {
+	"layoutInfo", "overrideLayoutInfo", "editModeSystemAnchorDirty", "layoutApplyInProgress",
+	"GetActiveLayoutInfo", "GetDefaultAnchor", "SetToLayoutAnchor", "UpdateBottomActionBarPositions"
+}
+local EDIT_MODE_GLOBALS = {
+	"MainActionBar", "MicroMenuContainer", "EditModeManagerFrame", "EditModePresetLayoutManager",
+	"EditModeUtil", "ACTION_BARS_RELATIVE_TO_BASE_POSITIONING", "MAIN_ACTION_BAR_POINT",
+	"MAIN_ACTION_BAR_RELATIVE_TO", "MAIN_ACTION_BAR_RELATIVE_POINT", "MAIN_ACTION_BAR_OFFSET_X",
+	"MAIN_ACTION_BAR_OFFSET_Y", "CopyTable"
+}
+
+local function ReportEditModeTaint()
+	local found = 0
+	local report = function(label, secure, culprit)
+		if (secure == false) then
+			found = found + 1
+			local mine = (culprit == "AzeriteUI5_JuNNeZ_Edition")
+			print((mine and "|cffff4444  " or "|cffffcc00  ") .. label .. " <- " .. tostring(culprit or "<unknown>"))
+		end
+	end
+	local check = function(label, tbl, key)
+		local ok, secure, culprit = pcall(issecurevariable, tbl, key)
+		if (ok) then report(label .. "." .. key, secure, culprit) end
+	end
+
+	print("|cff33ff99", "Edit Mode bottom bar path (MainActionBar:SetPoint in combat):")
+	for _, name in ipairs(EDIT_MODE_GLOBALS) do
+		local ok, secure, culprit = pcall(issecurevariable, name)
+		if (ok) then report("_G." .. name, secure, culprit) end
+	end
+	for _, name in ipairs(EDIT_MODE_BOTTOM_BARS) do
+		local frame = _G[name]
+		if (type(frame) == "table") then
+			for _, key in ipairs(EDIT_MODE_FRAME_FIELDS) do
+				check(name, frame, key)
+			end
+			local snapped = rawget(frame, "snappedToFrame")
+			if (type(snapped) == "table") then
+				local snappedName = snapped.GetName and snapped:GetName() or "?"
+				print("|cfff0f0f0  " .. name .. " is snapped to " .. tostring(snappedName))
+				check(name .. ".snappedToFrame(" .. tostring(snappedName) .. ")", snapped, "snappedFrames")
+				check(name .. ".snappedToFrame(" .. tostring(snappedName) .. ")", snapped, "RemoveSnappedFrame")
+				local list = rawget(snapped, "snappedFrames")
+				if (type(list) == "table") then
+					check(tostring(snappedName) .. ".snappedFrames", list, frame)
+				end
+			end
+		end
+	end
+	local manager = _G.EditModeManagerFrame
+	if (type(manager) == "table") then
+		for _, key in ipairs(EDIT_MODE_MANAGER_FIELDS) do
+			check("EditModeManagerFrame", manager, key)
+		end
+		local okLayout, layout = pcall(manager.GetActiveLayoutInfo, manager)
+		if (okLayout and type(layout) == "table") then
+			check("activeLayout", layout, "layoutType")
+			check("activeLayout", layout, "layoutIndex")
+			check("activeLayout", layout, "interfaceStyle")
+		end
+	end
+	if (found == 0) then
+		print("|cff00ff00  No taint found on the Edit Mode fields this path reads.")
+	end
+end
+
 Debugging.PrintActionButtonTaintReport = function(self)
 	print("|cff33ff99", "AzeriteUI action button taint report:")
 
@@ -4987,6 +5073,8 @@ Debugging.PrintActionButtonTaintReport = function(self)
 		print("|cffff0000  issecurevariable is unavailable; cannot inspect taint.")
 		return
 	end
+
+	ReportEditModeTaint()
 
 	-- The fields Blizzard's own update path reads on these buttons. A tainted
 	-- value in any of them drags Blizzard's execution insecure when it is used.

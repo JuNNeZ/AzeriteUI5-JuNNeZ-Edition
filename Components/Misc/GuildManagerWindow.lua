@@ -358,7 +358,7 @@ end
 local PAGE_REFRESH = {
     home = "RefreshHome", history = "RefreshHistory", followup = "RefreshFollowUp",
     actions = "RefreshGuildActions", sharing = "RefreshSharing", crafting = "RefreshCrafting",
-    notes = "RefreshNoteReview"
+    notes = "RefreshNoteReview", backup = "RefreshBackup"
 }
 
 Guild.RefreshWindow = function(self)
@@ -369,7 +369,9 @@ Guild.RefreshWindow = function(self)
         self.noteValue = selected.note
         self.note:SetText(selected.note or "")
     end
-    self.guildActions:SetEnabled(selected and selected.guid and not InCombatLockdown() or false)
+    local canOpenActions = selected and selected.guid and not InCombatLockdown() or false
+    self.guildActions:SetEnabled(canOpenActions)
+    self.publicNoteAction:SetEnabled(canOpenActions)
     local available = selected and selected.online and not InCombatLockdown() or false
     self.whisper:SetEnabled(available and ChatFrameUtil and type(ChatFrameUtil.SendTell) == "function" or false)
     self.invite:SetEnabled(available and C_PartyInfo and type(C_PartyInfo.InviteUnit) == "function" or false)
@@ -395,7 +397,8 @@ Guild.RefreshWindow = function(self)
     self.summary:SetText(string.format(L["%d people  /  %d characters  /  %d online"], people, characters, online))
     self.count:SetText(string.format(L["%d to %d of %d rows"], #rows > 0 and self.offset+1 or 0, math.min(#rows, self.offset+PAGE_SIZE), #rows))
     for key, button in pairs(self.filterButtons) do UI.Check(button, self.filters[key], button.caption) end
-    self.memberPage.help = self.filters.inGuild and L["Showing current guild people. Linked characters stay together; Clear filters shows all saved people."] or nil
+    self.memberPage.help = self.filters.inactive and string.format(L["Showing guild people whose characters have all been offline for %d days or more. Clear filters shows everyone."], self:GetInactiveDays())
+        or self.filters.inGuild and L["Showing current guild people. Linked characters stay together; Clear filters shows all saved people."] or nil
     self.pageHelp:SetText(self.memberPage.help or "")
     for field, button in pairs(self.sortButtons) do
         local active = self.memberSort and self.memberSort.field == field
@@ -463,6 +466,58 @@ Guild.RefreshWindow = function(self)
     end
     self:RefreshCardState()
 end
+-- Everything needed to recognise a person without selecting them. Roster text
+-- is the readable snapshot from ReadRoster; nothing is queried here.
+local TOOLTIP_CHARACTERS = 8
+Guild.ShowRowTooltip = function(self, owner, item)
+    local person = item.person
+    local data = item.row or person.rows[1]
+    local member = data.member
+    local tip = GameTooltip
+    tip:SetOwner(owner, "ANCHOR_RIGHT")
+    local function Character(row)
+        local value = row.member
+        local color = value.online and value.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[value.class]
+        local shade = value.online and 1 or .55
+        local level = self:GetMemberSortValue(value, "level")
+        local right = (level and (L["Level"] .. " " .. level .. "  ") or "") .. self:LastOnlineText(value.online, value.lastOnline)
+        local name = value.name .. (row.key == person.key and #person.rows > 1 and (" (" .. L["Main"] .. ")") or "")
+        tip:AddDoubleLine(name, right, color and color.r or shade, color and color.g or shade, color and color.b or shade, shade, shade, shade)
+    end
+    if (item.kind == "person") then
+        tip:AddLine(person.label .. (person.favorite and ("  |cffffd200" .. L["Favorite person"] .. "|r") or ""))
+        if (person.nickname) then tip:AddLine(L["Main character"] .. ": " .. person.name, 1, .85, .5, true) end
+        tip:AddLine(string.format(L["%d characters, %d online"], #person.rows, person.online), 1, 1, 1)
+        if (person.online == 0) then
+            tip:AddLine(L["Person last online"] .. ": " .. self:LastOnlineText(false, person.lastOnline), 1, 1, 1)
+        end
+        tip:AddLine(" ")
+        for index = 1, math.min(#person.rows, TOOLTIP_CHARACTERS) do Character(person.rows[index]) end
+        if (#person.rows > TOOLTIP_CHARACTERS) then
+            tip:AddLine(string.format(L["+%d more"], #person.rows-TOOLTIP_CHARACTERS), .7, .7, .7)
+        end
+    else
+        tip:AddLine(member.name)
+        tip:AddLine(L[item.key == person.key and "Main" or "Alt"] .. ": " .. person.label, 1, .85, .5, true)
+        if ((member.zone or "") ~= "") then tip:AddLine(member.zone, 1, 1, 1) end
+        tip:AddLine(L["Rank"] .. ": " .. (member.rank or ""), 1, 1, 1)
+        tip:AddLine(L["Last online"] .. ": " .. self:LastOnlineText(member.online, member.lastOnline), 1, 1, 1)
+    end
+    if ((member.note or "") ~= "") then tip:AddLine(L["Guild note"] .. ": " .. member.note, 1, 1, 1, true) end
+    if (person.privateNote ~= "") then
+        local note = person.privateNote:gsub("%s+", " ")
+        if (#note > 120) then
+            -- Cut on a UTF-8 character start, never inside a character.
+            local cut = 117
+            while (cut > 1 and note:byte(cut+1) and note:byte(cut+1) >= 128 and note:byte(cut+1) < 192) do cut = cut-1 end
+            note = note:sub(1, cut) .. "..."
+        end
+        tip:AddLine(L["Private note (only you)"] .. ": " .. note, .75, .85, 1, true)
+    end
+    tip:AddLine(L["Right-click: link this alt to the selected main."], .8, .8, .8, true)
+    tip:Show()
+end
+
 Guild.CycleFilter = function(self, field)
     local choices, nextValue = self:GetFilterChoices(field)
     if (not self.filters[field]) then nextValue = choices[1]
@@ -669,15 +724,7 @@ Guild.CreateWindow = function(self)
         end)
         row:SetScript("OnEnter", function(button)
             if (not button.data or GameTooltip:IsForbidden()) then return end
-            local item = button.data; local data = item.row or item.person.rows[1]
-            GameTooltip:SetOwner(button, "ANCHOR_RIGHT"); GameTooltip:AddLine(data.member.name)
-            GameTooltip:AddLine(data.member.zone or "", 1, 1, 1)
-            if (item.kind == "character") then GameTooltip:AddLine(L[item.key == item.person.key and "Main" or "Alt"], 1, .85, .5) end
-            GameTooltip:AddLine(L["Rank"] .. ": " .. (data.member.rank or ""), 1, 1, 1)
-            GameTooltip:AddLine(L["Last online"] .. ": " .. self:LastOnlineText(data.member.online, data.member.lastOnline), 1, 1, 1)
-            GameTooltip:AddLine(L["Main character"] .. ": " .. item.person.name, 1, .85, .5, true)
-            GameTooltip:AddLine(data.member.note or "", 1, 1, 1, true)
-            GameTooltip:AddLine(L["Right-click: link this alt to the selected main."], .8, .8, .8, true); GameTooltip:Show()
+            self:ShowRowTooltip(button, button.data)
         end)
         row:SetScript("OnLeave", function() if (not GameTooltip:IsForbidden()) then GameTooltip:Hide() end end)
         self.rows[index] = row
@@ -740,16 +787,18 @@ Guild.CreateWindow = function(self)
         return tab
     end
     identityTab = CardTab(L["Character"], "page:unitframes", 18, false)
-    notesTab = CardTab(NOTES or L["Guild note"], "text", 210, true)
+    notesTab = CardTab(NOTES or L["Private note (only you)"], "text", 210, true)
     self.character = UI.Input(identity, L["Character (Name-Realm)"], 14, -18, 362)
-    self.nickname = UI.Input(identity, L["Nickname"], 14, -82, 362, 28, 48)
-    self.main = UI.Input(identity, L["Main character (optional)"], 14, -146, 362)
-    UI.Label(notes, L["Guild note"], 14, -18, 362)
-    self.note = UI.Label(notes, "", 14, -42, 362, 13, 3)
-    UI.Label(notes, L["Private note (only you)"], 14, -140, 362)
+    self.nickname = UI.Input(identity, L["Nickname"], 14, -71, 362, 28, 48)
+    self.main = UI.Input(identity, L["Main character (optional)"], 14, -124, 362)
+    UI.Label(identity, L["Guild note"], 14, -187, 170)
+    self.note = UI.Label(identity, "", 14, -215, 362, 13, 2)
+    self.publicNoteAction = Button(identity, L["Edit guild note"], 14, -250, 170, function() self:OpenGuildActions() end)
+    self.publicNoteAction:SetEnabled(false)
+    UI.Label(notes, L["Private note (only you)"], 14, -18, 362)
     local privateScroll = CreateFrame("ScrollFrame", nil, notes)
-    privateScroll:SetPoint("TOPLEFT", 14, -165); privateScroll:SetSize(344, 106); privateScroll:SetClipsChildren(true)
-    self.privateNote = UI.Input(privateScroll, "", 0, 19, 344, 106, 512)
+    privateScroll:SetPoint("TOPLEFT", 14, -43); privateScroll:SetSize(344, 228); privateScroll:SetClipsChildren(true)
+    self.privateNote = UI.Input(privateScroll, "", 0, 19, 344, 228, 512)
     self.privateNote:SetMultiLine(true); self.privateNote:SetJustifyV("TOP"); self.privateNote:SetScript("OnEnterPressed", nil)
     privateScroll:SetScrollChild(self.privateNote); privateScroll:EnableMouseWheel(true)
     UI.ScrollBar(privateScroll, card)
@@ -762,12 +811,12 @@ Guild.CreateWindow = function(self)
         if (-y < offset) then privateScroll:SetVerticalScroll(-y)
         elseif (-y+height > offset+privateScroll:GetHeight()) then privateScroll:SetVerticalScroll(-y+height-privateScroll:GetHeight()) end
     end)
-    self.favorite = Button(identity, L["Favorite person"], 14, -232, 362, function()
+    self.favorite = Button(identity, L["Favorite person"], 194, -178, 182, function()
         self.favoriteValue = not self.favoriteValue; UI.Check(self.favorite, self.favoriteValue, L["Favorite person"]); self:RefreshCardState()
     end)
-    Button(notes, L["Use note suggestion"], 14, -92, 362, function()
+    Button(identity, L["Use note suggestion"], 194, -250, 182, function()
         local candidate = self:NoteCandidate(self.noteValue)
-        if (candidate) then self.nickname:SetText(candidate); self.main:SetText(""); ShowNotes(false) end
+        if (candidate) then self.nickname:SetText(candidate); self.main:SetText("") end
         self.feedback:SetText(candidate and L["Review the nickname, then save."] or L["No name suggestion in this note."])
     end)
     ShowNotes(false)

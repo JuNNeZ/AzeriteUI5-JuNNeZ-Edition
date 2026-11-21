@@ -13,6 +13,7 @@ Guild.RefreshGuildActions = function(self)
     local current, reason = self:GetGuildActionState(window.key)
     local ready = current and window.baseline and not self.pendingGuildAction or false
     window.noteApply:SetEnabled(ready and current.canNote or false)
+    window.noteSuggest:SetEnabled(ready and current.canNote and self:SuggestPublicNote(window.key) ~= nil or false)
     window.rankCycle:SetEnabled(ready and #current.choices > 0 or false)
     local rankAllowed = false
     for _, choice in ipairs(current and current.choices or {}) do if (choice.order == window.rankOrder) then rankAllowed = true end end
@@ -62,6 +63,14 @@ Guild.OpenGuildActions = function(self, key)
         window.note = UI.Input(window, L["Public guild note (31 characters)"], 24, -141, 660, 30, 124)
         window.note:SetMaxLetters(31)
         window.noteApply = UI.QuietButton(window, L["Review note change"], 24, -209, 230, function() self:PreviewGuildAction("note") end, true)
+        window.noteSuggest = UI.QuietButton(window, L["Use suggested note"], 268, -209, 230, function()
+            local suggestion = self:SuggestPublicNote(window.key)
+            if (suggestion) then window.note:SetText(suggestion) end
+            window.feedback:SetText(not suggestion and L["Save a nickname for this person first."]
+                or window.baseline and suggestion == window.baseline.target.note and L["The guild note already matches."]
+                or L["Review the note, then choose Review note change."])
+        end)
+        window.noteSuggest.guildTooltipHelp = L["Fill in the note from your nickname and main/alt links. A main gets the nickname, an alt gets the nickname followed by - alt. Nothing is sent until you review and confirm."]
         window.rankCycle = UI.QuietButton(window, L["Choose rank"], 24, -278, 388, function()
             local current = self:GetGuildActionState(window.key)
             local choices = current and current.choices or {}

@@ -7,6 +7,7 @@
 	<Script file="ChatFrames.lua"/>
 	<Script file="GuildManager.lua"/>
 	<Script file="GuildManagerData.lua"/>
+	<Script file="GuildManagerTooltip.lua"/>
 	<Script file="GuildManagerWindow.lua"/>
 	<Script file="GuildManagerHome.lua"/>
 	<Script file="GuildManagerHistory.lua"/>

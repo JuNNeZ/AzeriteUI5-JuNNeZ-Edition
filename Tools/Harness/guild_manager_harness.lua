@@ -264,6 +264,44 @@ check(module:ApplyNoteSuggestions(proposals, selected), "reviewed note groups im
 check(module:Resolve("First") == "Shared" and module.db.global.characters["first-testrealm"].main == "second-testrealm", "reviewer selected main honored")
 check(not module:Resolve("Third"), "unchecked proposal remains untouched")
 check(#module.undoStack == math.min(20, undoCount+1), "batch creates one undo snapshot")
+local remaining, _, matching = module:BuildNoteSuggestions()
+check(#remaining == 1 and remaining[1].id == "being" and matching == 1, "a rescan omits groups that already match")
+module.members["second-testrealm"].note = "Different"
+module.members["third-testrealm"].note = "Being - free prose"
+module.members["fourth-testrealm"].note = "shared - S/L"
+local overlapping = {}
+for _, candidate in ipairs(module:BuildNoteSuggestions()) do overlapping[candidate.id] = candidate end
+check(overlapping.shared.conflict and overlapping.different.conflict, "groups with an overlapping main both require review")
+check(overlapping.being.ambiguous, "a dash before prose does not make the note a clear suggestion")
+module.members["second-testrealm"].note = "Shared"
+local additions = module:BuildNoteSuggestions()
+check(additions[1].id == "shared" and not additions[1].conflict and additions[1].nickname == "Shared",
+    "adding a new alt keeps existing nickname capitalization and sorts clear suggestions first")
+module.members["first-testrealm"].note = "shared - H/A"
+local lowered = module:BuildNoteSuggestions()
+check(lowered[1].id == "shared" and lowered[1].nickname == "Shared",
+    "the saved nickname wins over a differently capitalized note on the first-sorted member")
+module.members["first-testrealm"].note = "Shared - H/A"
+-- An alt linked through another alt keeps its own link when the group is applied.
+local function chars() return module.db.global.characters end
+chars()["fourth-testrealm"] = { name = "Fourth-TestRealm", main = "first-testrealm" }
+module.members["fifth-testrealm"] = { name = "Fifth-TestRealm", rank = "Member", note = "Shared", online = false }
+local chained, chainedPick = module:BuildNoteSuggestions(), {}
+for _, candidate in ipairs(chained) do if (candidate.id == "shared") then chainedPick.shared = true end end
+check(chainedPick.shared and module:ApplyNoteSuggestions(chained, chainedPick), "a group with an indirect alt link applies")
+check(chars()["fourth-testrealm"].main == "first-testrealm" and chars()["fifth-testrealm"].main == "second-testrealm",
+    "applying keeps the established alt-of-alt link and attaches the new alt to the main")
+check(module:UndoIdentity(), "undo the chained application")
+chars()["fourth-testrealm"], module.members["fifth-testrealm"] = nil, nil
+-- A main link to a forgotten record is never treated as a clear group.
+chars()["third-testrealm"] = { name = "Third-TestRealm", main = "ghost-testrealm" }
+module.members["third-testrealm"].note = "Ghost"
+local orphan
+for _, candidate in ipairs(module:BuildNoteSuggestions()) do if (candidate.id == "ghost") then orphan = candidate end end
+check(orphan and orphan.conflict, "a member whose saved main no longer exists requires review")
+chars()["third-testrealm"] = nil
+module.members["third-testrealm"].note = "being scammed..."
+module.members["fourth-testrealm"].note = "?"
 check(module:UndoIdentity() and not module:Resolve("First"), "one undo removes complete batch")
 module.members["first-testrealm"].note = "Different"
 check(not module:ApplyNoteSuggestions(proposals, selected), "stale note review rejected atomically")
@@ -450,6 +488,57 @@ assert(loadfile(root .. "/Components/Misc/GuildManagerSharing.lua"))("Test", ns)
 assert(loadfile(root .. "/Components/Misc/GuildManagerSharingWindow.lua"))("Test", ns)
 assert(loadfile(root .. "/Components/Misc/GuildManagerCrafting.lua"))("Test", ns)
 assert(loadfile(root .. "/Components/Misc/GuildManagerCraftingWindow.lua"))("Test", ns)
+
+-- Tooltip nicknames: one post-call, readable players only, never twice.
+do
+    local postCalls = {}
+    TooltipDataProcessor = { AddTooltipPostCall = function(kind, callback) postCalls[#postCalls+1] = { kind, callback } end }
+    Enum = Enum or {}; Enum.TooltipDataType = { Unit = 2 }
+    assert(loadfile(root .. "/Components/Misc/GuildManagerTooltip.lua"))("Test", ns)
+    module:HookTooltips(); module:HookTooltips()
+    check(#postCalls == 1 and postCalls[1][1] == 2, "tooltip nickname post-call registers once for unit tooltips")
+    local units = { mouseover = { true, "Tip Main" }, other = { true, "Tip Main", "OtherRealm" },
+        npc = { false, "Tip Main" }, hidden = { secret, "Tip Main" }, masked = { true, secret } }
+    UnitIsPlayer = function(unit) return units[unit][1] end
+    UnitName = function(unit) return units[unit][2], units[unit][3] end
+    local function Tip(unit)
+        local tip = { lines = 0, shown = 0 }
+        tip.GetName = function() return "AzTestTip" end
+        tip.NumLines = function(self) return self.lines end
+        tip.IsForbidden = function() return false end
+        tip.GetUnit = function() return "Name", unit end
+        tip.Show = function(self) self.shown = self.shown+1 end
+        tip.AddLine = function(self, text)
+            self.lines = self.lines+1
+            _G["AzTestTipTextLeft" .. self.lines] = { GetText = function() return text end }
+        end
+        tip:AddLine("Tip Main")
+        return tip
+    end
+    local function Run(unit) local tip = Tip(unit); postCalls[1][2](tip); return tip end
+    local wasSuspended = module.suspended; module.suspended = nil
+    check(module:SaveIdentity("Tip Main", "Tippy", ""), "save a tooltip test identity")
+    local tip = Run("mouseover")
+    check(tip.lines == 2 and _G.AzTestTipTextLeft2:GetText() == "Nickname: Tippy" and tip.shown == 1,
+        "a known player's tooltip gains one nickname line and is resized")
+    postCalls[1][2](tip)
+    check(tip.lines == 2, "a repeated post-call does not add the line twice")
+    check(Run("other").lines == 1, "a same-named player from another realm gets no nickname")
+    check(Run("npc").lines == 1 and Run("hidden").lines == 1 and Run("masked").lines == 1,
+        "NPCs, secret player flags and secret names are skipped")
+    module.db.profile.tooltipNicknames = false
+    check(Run("mouseover").lines == 1, "the setting turns the line off without unhooking")
+    module.db.profile.tooltipNicknames = true
+    module:SaveIdentity("Tip Main", "Tip Main", "")
+    check(Run("mouseover").lines == 1, "a nickname identical to the shown name adds nothing")
+    module:ForgetIdentity("Tip Main")
+    check(Run("mouseover").lines == 1, "an unknown player gets no line")
+    module:SaveIdentity("Tip Main", "Tippy", ""); module.suspended = true
+    check(Run("mouseover").lines == 1, "a disabled module adds nothing")
+    module.suspended = wasSuspended; module:ForgetIdentity("Tip Main")
+    TooltipDataProcessor, UnitIsPlayer, UnitName = nil, nil, nil
+    for index = 1, 2 do _G["AzTestTipTextLeft" .. index] = nil end
+end
 module.suspended = nil
 module:ToggleWindow()
 check(module.frame:IsShown(), "window opens")
@@ -677,6 +766,18 @@ C_GuildInfo.SetNote = function(guid, value, public) guildWrites[#guildWrites+1] 
 C_GuildInfo.SetGuildRankOrder = function(guid, value) guildWrites[#guildWrites+1] = { guid, value } end
 C_Timer = { After = function(_, callback) actionTimers[#actionTimers+1] = callback end }
 local altRow = module:GetRows("Alt Person", true)[1]
+module:ShowPage("members")
+module.expanded[mainKey] = true; module:RefreshWindow()
+local offlineNoteRow = FindGuildRow(altKey, "character")
+offlineNoteRow.scripts.OnClick(offlineNoteRow, "LeftButton")
+check(module.selected == altKey and not altRow.member.online and module.note:GetText() == altRow.member.note,
+    "clicking a live offline roster row selects its public note")
+check(module.note.parent == module.character.parent and module.publicNoteAction:IsEnabled(),
+    "public note and edit shortcut are available under Character for an offline member")
+module.publicNoteAction.scripts.OnClick()
+check(module.guildActionsWindow.baseline.target.guid == "Player-1-Alt" and module.guildActionsWindow.noteApply:IsEnabled(),
+    "the Character shortcut opens the permitted offline member note editor")
+module:ShowPage("members")
 module:SelectCharacter(altRow, module:GetPeople("", {})[1])
 module.character:SetText("Unsaved Different Person")
 module:OpenGuildActions()
@@ -904,6 +1005,14 @@ local noteRevision = module.identityRevision
 module:OpenHome(); module:OpenNoteReview(); oldNoteApproval()
 check(module.identityRevision == noteRevision and module.noteReview.selected[proposal.id],
     "note selections survive a page change but the pending note approval is invalidated")
+local delayedIndex = #roster+1
+roster[delayedIndex] = { "Delayed-TestRealm", "Member", 1, 24, "Mage", "City", "Delayed - S/L", "", false, nil, "MAGE" }
+module:OnEvent("GUILD_ROSTER_UPDATE")
+local foundDelayed
+for _, current in ipairs(module.noteReview.proposals) do if (current.id == "delayed") then foundDelayed = current end end
+check(foundDelayed and not foundDelayed.ambiguous and module.noteReview.selected[proposal.id],
+    "delayed roster response adds the new proposal and retains unchanged selections")
+roster[delayedIndex] = nil; module:RequestRoster()
 module.noteReview.apply.scripts.OnClick(); local oldGuildNoteApproval = approval
 local originalGuildInfo = GetGuildInfo
 GetGuildInfo = function() return "Different Guild" end
@@ -1016,7 +1125,7 @@ do
     module.character:SetText("Valstad Hammerdin")
     module.nickname:SetText("Adam")
     module.main:SetText("Valstad Hammerdin")
-    Click(NOTES or "Guild note")
+    Click(NOTES or "Private note (only you)")
     module.privateNote:SetText("Officer draft")
     Click("Character")
     check(module:HasCardChanges() and module.nickname:GetText() == "Adam"
@@ -1125,6 +1234,131 @@ do
     check(module.activePage == "home", "returning to a section restores its last page")
     module:ShowPage("members")
 end
+
+-- Inactive people, favorite arrivals, row tooltips and the public-note suggestion.
+do
+    local savedMembers, savedRecords, savedProfile = module.members, module.db.global.characters, module.db.profile.inactiveDays
+    local savedPrint, savedSuspended, savedGuild = module.Print, module.suspended, module.rosterGuild
+    module.suspended = nil
+    local printed = {}
+    module.Print = function(_, text) printed[#printed+1] = text end
+    local function Member(name, online, days, note)
+        return { name = name, rank = "Member", note = note or "", online = online, onlineKnown = true, class = "MAGE", level = 60,
+            lastOnline = days and { years = 0, months = 0, days = days, hours = 0, order = days*24 } or nil }
+    end
+    local function Fixture()
+        module.db.global.characters = {
+            ["old main-testrealm"] = { name = "Old Main-TestRealm", nickname = "Sleeper" },
+            ["old alt-testrealm"] = { name = "Old Alt-TestRealm", main = "old main-testrealm" },
+            ["half-testrealm"] = { name = "Half-TestRealm", nickname = "Half" },
+            ["half alt-testrealm"] = { name = "Half Alt-TestRealm", main = "half-testrealm" },
+            ["fav main-testrealm"] = { name = "Fav Main-TestRealm", nickname = "Buddy", favorite = true, privateNote = string.rep("\195\169", 80) },
+            ["fav alt-testrealm"] = { name = "Fav Alt-TestRealm", main = "fav main-testrealm" },
+        }
+        module.members = {
+            ["old main-testrealm"] = Member("Old Main-TestRealm", false, 40),
+            ["old alt-testrealm"] = Member("Old Alt-TestRealm", false, 31),
+            ["half-testrealm"] = Member("Half-TestRealm", false, 50),
+            ["half alt-testrealm"] = Member("Half Alt-TestRealm", false, nil),
+            ["recent-testrealm"] = Member("Recent-TestRealm", false, 3),
+            ["unknown-testrealm"] = Member("Unknown-TestRealm", false, nil),
+            ["fav main-testrealm"] = Member("Fav Main-TestRealm", false, 1, "Buddy"),
+            ["fav alt-testrealm"] = Member("Fav Alt-TestRealm", false, 1, "Buddy - alt"),
+        }
+    end
+    Fixture()
+    module.db.profile.inactiveDays = 30
+    local inactive = module:GetPeople("", { inGuild = true, inactive = true })
+    check(#inactive == 1 and inactive[1].key == "old main-testrealm",
+        "only people whose every character is known offline 30+ days are inactive; an unknown alt keeps a person out")
+    module.db.profile.inactiveDays = 35
+    check(#module:GetPeople("", { inactive = true }) == 0, "the most recent character decides against a higher threshold")
+    module.db.profile.inactiveDays = "bad"
+    check(module:GetInactiveDays() == 30, "an invalid saved threshold falls back to 30 days")
+    module.db.profile.inactiveDays = 30
+
+    local function Snapshot()
+        local copy = {}
+        for key, member in pairs(module.members) do
+            copy[key] = {}; for field, value in pairs(member) do copy[key][field] = value end
+        end
+        return copy
+    end
+    local previous = Snapshot()
+    module.members["fav alt-testrealm"].online = true
+    module:AnnounceFavorites(previous)
+    check(#printed == 1 and printed[1] == "Buddy is online (Fav Alt).", "a favorite arriving on an alt is announced with that character")
+    printed = {}
+    module.members["fav main-testrealm"].online = true
+    module:AnnounceFavorites(previous)
+    check(#printed == 1, "two characters of one favorite arriving together give one line")
+    printed = {}
+    previous = Snapshot(); previous["fav alt-testrealm"].online = false
+    module:AnnounceFavorites(previous)
+    check(#printed == 0, "a favorite already online on another character is not announced again")
+    previous["fav main-testrealm"].onlineKnown, previous["fav alt-testrealm"].onlineKnown = false, false
+    module:AnnounceFavorites(previous)
+    check(#printed == 0, "an unreadable earlier online state never announces")
+    previous = Snapshot(); previous["fav main-testrealm"].online, previous["fav alt-testrealm"].online = false, false
+    previous["fav alt-testrealm"] = nil
+    module.members["fav main-testrealm"].online = false
+    module:AnnounceFavorites(previous)
+    check(#printed == 0, "a character missing from the earlier roster is not an arrival")
+    module.members["old main-testrealm"].online = true
+    previous = Snapshot(); previous["old main-testrealm"].online = false
+    module:AnnounceFavorites(previous)
+    check(#printed == 0, "people who are not favorites are not announced")
+    module.members["fav main-testrealm"].online = true
+    previous["fav main-testrealm"].online = false; previous["fav alt-testrealm"].online = false
+    module.db.profile.favoriteAlerts = false
+    module:AnnounceFavorites(previous)
+    check(#printed == 0, "the setting turns announcements off")
+    module.db.profile.favoriteAlerts = true
+    -- Through ReadRoster: the real roster stub has Main Person online.
+    module.db.global.characters["main person-testrealm"] = { name = "Main Person-TestRealm", nickname = "M", favorite = true }
+    module.members, module.rosterGuild = { ["main person-testrealm"] = Member("Main Person-TestRealm", false, 1) }, "Test Guild"
+    module:ReadRoster()
+    check(#printed == 1 and printed[1] == "M is online (Main Person).", "a roster read announces a favorite who came online")
+    printed = {}
+    module.members, module.rosterGuild = { ["main person-testrealm"] = Member("Main Person-TestRealm", false, 1) }, "Other Guild"
+    module:ReadRoster()
+    check(#printed == 0, "the first roster of another guild announces nobody")
+    module.members = nil; module:ReadRoster()
+    check(#printed == 0, "the first roster after login announces nobody")
+
+    Fixture()
+    local lines = {}
+    local addLine, addDouble = GameTooltip.AddLine, GameTooltip.AddDoubleLine
+    GameTooltip.AddLine = function(self, text) lines[#lines+1] = text; addLine(self, text) end
+    GameTooltip.AddDoubleLine = function(_, left, right) lines[#lines+1] = left .. " | " .. right end
+    local buddy
+    for _, person in ipairs(module:GetPeople("", {})) do if (person.key == "fav main-testrealm") then buddy = person end end
+    module:ShowRowTooltip({}, { kind = "person", key = buddy.key, person = buddy })
+    local text, privateLine = table.concat(lines, "\n")
+    for _, line in ipairs(lines) do if (line:find("^Private note")) then privateLine = line end end
+    check(text:find("Buddy", 1, true) and text:find("Main character: Fav Main-TestRealm", 1, true)
+        and text:find("Fav Alt-TestRealm | Level 60", 1, true) and text:find("Fav Main-TestRealm (Main) |", 1, true)
+        and text:find("Guild note: Buddy", 1, true), "a person row lists nickname, main, each character and the guild note")
+    check(privateLine and privateLine:find("\195\169%.%.%.$"), "a long private note is shortened without splitting a character")
+    lines = {}
+    module:ShowRowTooltip({}, { kind = "character", key = "fav alt-testrealm", person = buddy, row = buddy.rows[2] })
+    check(table.concat(lines, "\n"):find("Alt: Buddy", 1, true), "a character row names the person it belongs to")
+    GameTooltip.AddLine, GameTooltip.AddDoubleLine = addLine, addDouble
+
+    check(module:SuggestPublicNote("fav main-testrealm") == "Buddy" and module:SuggestPublicNote("fav alt-testrealm") == "Buddy - alt"
+        and not module:SuggestPublicNote("recent-testrealm") and not module:SuggestPublicNote("missing-testrealm"),
+        "the suggested note is the nickname for a main and nickname - alt for an alt")
+    local _, _, matching = module:BuildNoteSuggestions()
+    local proposals = module:BuildNoteSuggestions()
+    local buddyProposal
+    for _, proposal in ipairs(proposals) do if (proposal.id == "buddy") then buddyProposal = proposal end end
+    check(matching >= 1 and not buddyProposal, "suggested notes read back as an already matching group")
+    module.db.global.characters["fav main-testrealm"].nickname = string.rep("a", 28)
+    check(module:SuggestPublicNote("fav alt-testrealm") == string.rep("a", 28), "a suggestion over 31 letters falls back to the nickname")
+
+    module.members, module.db.global.characters, module.db.profile.inactiveDays = savedMembers, savedRecords, savedProfile
+    module.Print, module.suspended, module.rosterGuild = savedPrint, savedSuspended, savedGuild
+end
 module:ToggleWindow()
 if arg[2] then
     module:ToggleWindow()
@@ -1141,7 +1375,7 @@ if arg[2] then
     module:ReloadCard(); module:RefreshWindow()
     module:ShowPage("members")
     if arg[3] == "dirty" then module.nickname:SetText("Junnez - draft")
-    elseif arg[3] == "member-notes" then Click(NOTES or "Guild note")
+    elseif arg[3] == "member-notes" then Click(NOTES or "Private note (only you)")
     elseif arg[3] == "level-sort" then module:SetMemberSort("level")
     elseif arg[3] == "notes" then
         -- Keep this fixture's sample roster rather than requesting the stub's

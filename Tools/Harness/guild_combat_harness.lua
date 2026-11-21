@@ -70,6 +70,51 @@ check(module.realm == "TestRealm" and module.members["main person-testrealm"], "
 check(module:GetGuildHistory() == state, "realm fallback keeps existing history and character keys")
 check(module:Resolve("Main Person") == "Saved main", "bare names resolve nicknames saved before the update")
 
+module.realm, module.realmAliases = "Forever", { forever = true }
+check(module:SaveIdentity("Main Person", "Current main", ""), "save the post-update identity under the local scope")
+module:RequestRoster()
+local rows = module:GetRows("", true)
+check(#rows == 1 and rows[1].key == "main person-forever" and rows[1].nickname == "Current main",
+    "the live member is listed once when both pre-layer and post-layer identities exist")
+local proposals = module:BuildNoteSuggestions()
+check(module:ApplyNoteSuggestions(proposals, { public = true }), "a bare pre-layer record cannot invalidate the current note scan")
+check(module.db.global.characters["main person-testrealm"].nickname == "Saved main"
+    and #module:GetRows("", true) == 1, "the scan retains the old nickname and the qualified historical record stays out of the roster")
+check(module:SaveIdentity("Main Person-UnrelatedRealm", "Independent character", ""), "save a distinct explicitly qualified character")
+check(#module:GetRows("", true) == 2, "an unrelated explicit same-name identity stays visible")
+
+-- Merging the old realm record into the live character (Backup page, Forever).
+local function records() return module.db.global.characters end
+check(module:SaveIdentity("Alt Two-TestRealm", "", "Main Person-TestRealm"), "an alt linked to the old-realm main")
+records()["main person-testrealm"].privateNote = "Old note"
+local liveNickname = records()["main person-forever"].nickname
+local duplicates = module:FindRealmDuplicates()
+check(duplicates["main person-testrealm"] and duplicates["main person-testrealm"].current == "main person-forever"
+    and duplicates["main person-testrealm"].hidden and not duplicates["main person-unrelatedrealm"]
+    and not duplicates["alt two-testrealm"], "only the provable old-realm record is a duplicate")
+local merged, count, conflicts = module:BuildRealmMerge()
+check(count == 1 and conflicts == 1 and not merged["main person-testrealm"]
+    and liveNickname and merged["main person-forever"].nickname == liveNickname and merged["main person-forever"].privateNote == "Old note"
+    and merged["alt two-testrealm"].main == "main person-forever" and merged["main person-unrelatedrealm"],
+    "the live value wins, the old record fills gaps and links follow it")
+check(records()["main person-testrealm"], "building the preview changes nothing")
+local revision = module.identityRevision or 0
+check(not module:MergeRealmDuplicates(revision+1), "a stale preview is refused")
+check(module:MergeRealmDuplicates(revision) and not records()["main person-testrealm"]
+    and module:Resolve("Alt Two-TestRealm") == liveNickname and not next(module:FindRealmDuplicates()),
+    "the merge commits once and leaves nothing to merge")
+check(module:UndoIdentity() and records()["main person-testrealm"].nickname == "Saved main", "one undo restores the old record")
+ns.IsForever = false
+check(not next(module:FindRealmDuplicates()), "Retail never reports realm duplicates, even for the same saved data")
+ns.IsForever = true
+module:ForgetIdentity("Main Person")
+merged, count, conflicts = module:BuildRealmMerge()
+check(count == 1 and conflicts == 0 and merged["main person-forever"].nickname == "Saved main"
+    and merged["main person-forever"].name == "Main Person", "without a live record the old identity moves to the live character")
+check(#module:GetRows("", true) == 4, "an unmerged old record without a live identity stays visible")
+check(module:UndoIdentity() and records()["main person-forever"].nickname == liveNickname, "undo the removal")
+module:ForgetIdentity("Alt Two-TestRealm"); records()["main person-testrealm"].privateNote = nil
+
 module.realm, module.realmAliases = nil, nil
 module.db.global.guildHistory["OtherRealm:test guild"] = { members = { ["main person-otherrealm"] = {} } }
 module:RequestRoster()

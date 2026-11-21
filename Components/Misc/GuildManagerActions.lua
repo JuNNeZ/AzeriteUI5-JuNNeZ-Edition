@@ -75,6 +75,20 @@ local function ValidNote(self, text)
     return letters <= 31
 end
 
+-- The public note your links imply: "Nickname" for a main, "Nickname - alt"
+-- for an alt. The note scan reads both back as the same clear group. Only a
+-- suggestion; writing still goes through the reviewed guild action.
+Guild.SuggestPublicNote = function(self, key)
+    local member = key and (self.members or {})[key]
+    if (not member) then return end
+    local nickname, root = self:Resolve(member.name)
+    nickname = self.ReadText(nickname)
+    if (not nickname or nickname == "") then return end
+    local suggestion = root and root ~= key and (nickname .. " - alt") or nickname
+    if (not ValidNote(self, suggestion)) then suggestion = nickname end
+    if (ValidNote(self, suggestion)) then return suggestion end
+end
+
 Guild.PrepareGuildAction = function(self, kind, base, value)
     if (self.pendingGuildAction) then return Fail(self, "Another guild change is awaiting a roster update.") end
     if (type(base) ~= "table" or not base.target) then return Fail(self, "Reload this character before preparing a guild change.") end

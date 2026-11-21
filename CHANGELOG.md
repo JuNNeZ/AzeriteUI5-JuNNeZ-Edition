@@ -10,6 +10,27 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.49.0-JuNNeZ (2026-11-21) - Guild Nicknames, Favorites and Note Review
+
+### Highlights
+
+- **Nicknames in tooltips.** A player's tooltip shows the nickname you saved for them. Turn it off under `/az -> Guild & Nicknames -> Nicknames in tooltips`. Names the game protects in combat are left alone.
+- **See who is around.** Get a chat line when a favorite person comes online on any character (`/az -> Guild & Nicknames -> Announce favorites coming online`). Guild home counts people inactive for 30 days or more (adjustable under `/az -> Guild & Nicknames`) and opens them as a list. Hovering a person in Members shows their characters, levels, last online, guild note and private note.
+- **Clearer guild note review.** Under `/azguild -> Officer tools -> Review guild notes`, groups that already match are counted and hidden, clear suggestions come first, and overlapping mains or free text after a dash are flagged for review. Adding an alt keeps the existing nickname's capitalization. The Character pane now shows the public guild note with an **Edit guild note** shortcut, also for offline members when you may edit their note. **Use suggested note** in Guild actions fills in the note from your links (the nickname for a main, `nickname - alt` for an alt) for you to review.
+- **One row per member on Forever.** A member saved both before and after realm names disappeared is listed once. **Merge old realm records** under `/azguild -> Data & sharing -> Backup / Share` folds those old entries into the live characters, with Undo.
+
+### Development
+
+- The Forever duplicate check behind the roster and the merge is now one shared rule, so a record is only merged when the roster would already treat it as the same character. Live values win, the old record only fills gaps, and a preview that has gone stale is refused.
+- Favorite alerts compare consecutive rosters and only count a readable change from offline to online, so logins, guild changes and partial rosters announce nobody.
+- Group loot and theme texts that were still English, and the new guild texts, are translated in all ten languages.
+- The guild regression harnesses gained checks for the merge, tooltips, alerts, inactivity and note suggestions, and a deliberate-breakage pass confirmed they catch the new failure cases.
+
+### Access and known limits
+
+- Verified offline. Tooltip lines, favorite alerts, the inactive list and the Forever merge still need in-game confirmation. Export a backup with private notes before merging old realm records.
+- With Total RP 3's tooltip enabled the nickname line goes to the hidden game tooltip and is not visible.
+
 ## 5.48.0-JuNNeZ (2026-11-21) - Total RP 3 Skin and Forever Fixes
 
 ### Highlights

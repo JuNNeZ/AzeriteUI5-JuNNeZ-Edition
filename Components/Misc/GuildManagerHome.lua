@@ -46,13 +46,14 @@ Guild.RefreshHome = function(self)
     local home = self.homeWindow
     if (not home or not home:IsShown()) then return end
     local details = self.guildDetails or {}
-    local onlinePeople, favorites, missing = 0, 0, 0
+    local onlinePeople, favorites, missing, inactive = 0, 0, 0, 0
     local ranks, rankNames, rankOrders = {}, {}, {}
     local guildPeople = self:GetPeople("", { inGuild = true })
     for _, person in ipairs(guildPeople) do
         if (person.online > 0) then onlinePeople = onlinePeople+1 end
         if (person.favorite) then favorites = favorites+1 end
         if (not person.nickname) then missing = missing+1 end
+        if (self:IsInactive(person)) then inactive = inactive+1 end
     end
     for _, member in pairs(self.members or {}) do
         local rank = member.rank ~= "" and member.rank or L["Unknown"]
@@ -69,6 +70,8 @@ Guild.RefreshHome = function(self)
     home.favorites.count:SetText(tostring(favorites))
     home.missing.count:SetText(tostring(missing))
     home.attention.count:SetText(tostring(attention))
+    home.inactive.count:SetText(tostring(inactive))
+    home.inactive.label:SetText(string.format(L["Inactive %d+ days"], self:GetInactiveDays()))
     local lines = {}
     for _, rank in ipairs(rankNames) do lines[#lines+1] = rank .. ": " .. ranks[rank] end
     for _, panel in ipairs({ home.motd, home.info, home.ranks }) do
@@ -93,11 +96,11 @@ Guild.OpenHome = function(self)
         local home = UI.Page(ns.Prefix .. "GuildHome", "home", L["Guild home"], 900, 596)
         self.homeWindow = home
         local function Shortcut(caption, x, iconKey, callback)
-            local button = UI.QuietButton(home, caption, x, -14, 208, callback)
+            local button = UI.QuietButton(home, caption, x, -14, 168, callback)
             button:SetHeight(74)
-            button.count = UI.Label(button, "", 14, -9, 144, 22)
+            button.count = UI.Label(button, "", 14, -9, 110, 22)
             button.label:ClearAllPoints(); button.label:SetPoint("TOPLEFT", 14, -42)
-            button.label:SetWidth(180); button.label:SetJustifyH("LEFT")
+            button.label:SetWidth(144); button.label:SetJustifyH("LEFT")
             local icon = button:CreateTexture(nil, "ARTWORK")
             icon:SetSize(20, 20); icon:SetPoint("TOPRIGHT", -14, -13)
             local look = ns.OptionsKit.Look
@@ -109,9 +112,10 @@ Guild.OpenHome = function(self)
             return button
         end
         home.online = Shortcut(L["Online people"], 14, "player", function() self:OpenMemberFilter("online") end)
-        home.favorites = Shortcut(L["Favorites"], 235, "favorite", function() self:OpenMemberFilter("favorite") end)
-        home.missing = Shortcut(L["No nickname"], 456, "text", function() self:OpenMemberFilter("missing") end)
-        home.attention = Shortcut(L["Needs attention"], 677, "clock", function() self:OpenFollowUp("attention") end)
+        home.favorites = Shortcut(L["Favorites"], 191, "favorite", function() self:OpenMemberFilter("favorite") end)
+        home.missing = Shortcut(L["No nickname"], 368, "text", function() self:OpenMemberFilter("missing") end)
+        home.inactive = Shortcut("", 545, "clock", function() self:OpenMemberFilter("inactive") end)
+        home.attention = Shortcut(L["Needs attention"], 722, "clock", function() self:OpenFollowUp("attention") end)
         home.motd = TextPanel(home, L["Guild message of the day"], 26, -115, 560, 104)
         home.info = TextPanel(home, L["Guild information"], 26, -286, 560, 166)
         home.ranks = TextPanel(home, L["Ranks"], 620, -115, 250, 337)

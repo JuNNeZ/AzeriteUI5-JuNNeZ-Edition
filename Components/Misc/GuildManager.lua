@@ -1,7 +1,7 @@
 -- MIT License. Copyright (c) 2026 Jonas "JuNNeZ" Andersen.
 local Addon, ns = ...
 local Guild = ns:NewModule("GuildManager", "LibMoreEvents-1.0", "AceConsole-3.0")
-local defaults = { profile = { enabled = true, chatNicknames = false, nicknameLevels = false,
+local defaults = { profile = { enabled = true, chatNicknames = false, nicknameLevels = false, tooltipNicknames = true, favoriteAlerts = true, inactiveDays = 30,
     blizzardGuildKey = false, toggleKey = false,
     guildFormat = "nickname", groupFormat = "nickname", whisperFormat = "nickname", otherFormat = "nickname"
 }, global = { characters = {}, guildHistory = {}, followUps = {}, crafting = {} } }
@@ -104,6 +104,12 @@ Guild.CharacterKey = function(self, name)
     return string.lower(character .. "-" .. realm)
 end
 
+Guild.QualifiedRecordName = function(self, key, name)
+    if (not Text(name) or name:find("-", 1, true)) then return name end
+    local realm = key:match("%-([^-]+)$")
+    return realm and name .. "-" .. realm or name
+end
+
 Guild.Resolve = function(self, name)
     local key = self:CharacterKey(name)
     if (not key) then return end
@@ -173,8 +179,10 @@ Guild.NoteCandidate = function(self, note)
 end
 
 Guild.ReadRoster = function(self)
+    local previous, previousGuild = self.members, self.rosterGuild
     self.members = {}
     self:ReadGuildDetails()
+    self.rosterGuild = IsInGuild() and Text(GetGuildInfo("player")) or nil
     if (not IsInGuild() or not GetNumGuildMembers or not GetGuildRosterInfo) then return end
     local count = GetNumGuildMembers()
     if ((issecretvalue and issecretvalue(count)) or type(count) ~= "number") then return end
@@ -187,11 +195,85 @@ Guild.ReadRoster = function(self)
                 zone = Text(zone) or "", class = Text(class), className = Text(className) or "",
                 level = not (issecretvalue and issecretvalue(level)) and type(level) == "number" and level or 0,
                 online = not (issecretvalue and issecretvalue(online)) and online == true,
+                onlineKnown = not (issecretvalue and issecretvalue(online)) and type(online) == "boolean",
                 observed = { rank = Text(rank), note = Text(note), level = Number(level) },
                 lastOnline = self:ReadLastOnline(index)
             }
         end
     end
+    if (previous and next(previous) and self.rosterGuild and self.rosterGuild == previousGuild) then
+        self:AnnounceFavorites(previous)
+    end
+end
+
+-- A favorite person coming online, on any of their characters. Only a readable
+-- offline -> online change of a character present in both rosters counts, so
+-- the first roster, partial rosters and guild changes never announce anyone.
+Guild.AnnounceFavorites = function(self, previous)
+    local profile = self.db.profile
+    if (self.suspended or not profile.enabled or not profile.favoriteAlerts) then return end
+    local records, wasOnline, arrivals = self.db.global.characters, {}, {}
+    for key, member in pairs(previous) do
+        if (member.online) then
+            local _, root = self:Resolve(member.name)
+            wasOnline[root or key] = true
+        end
+    end
+    for key, member in pairs(self.members) do
+        local before = previous[key]
+        if (member.online and member.onlineKnown and before and before.onlineKnown and not before.online) then
+            local nickname, root = self:Resolve(member.name)
+            root = root or key
+            local record = records[root]
+            if (record and record.favorite and not wasOnline[root] and not arrivals[root]) then
+                arrivals[root] = true
+                local character = member.name:match("^([^-]+)") or member.name
+                local label = nickname or (Text(record.name) or character):match("^([^-]+)")
+                local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
+                self:Print(label == character and string.format(L["%s is online."], label)
+                    or string.format(L["%s is online (%s)."], label, character))
+            end
+        end
+    end
+end
+
+-- Blank realms on Forever led to a second identity for bare names. Returns
+-- { [oldKey] = { current = liveKey, hidden = bool } } for saved records that
+-- are provably the same character as a live roster member: saved with the bare
+-- name, or listed under that key in this guild's earlier history. `hidden`
+-- (the roster shows only the live row) also needs a saved live identity.
+Guild.FindRealmDuplicates = function(self)
+    local found = {}
+    if (not ns.IsForever) then return found end
+    local members, records = self.members or {}, self.db.global.characters
+    local guildName = self.guildDetails and self.guildDetails.name
+    local previousMembers = {}
+    if (guildName and self.realm) then
+        guildName = string.lower(guildName)
+        for scope, history in pairs(self.db.global.guildHistory) do
+            local realm, guild = scope:match("^([^:]+):(.+)$")
+            if (guild == guildName and history.members and (RealmKey(realm) == "forever" or RealmKey(self.realm) == "forever")) then
+                previousMembers[#previousMembers+1] = history.members
+            end
+        end
+    end
+    for key, record in pairs(records) do
+        local name = Text(record.name)
+        if (not members[key] and name) then
+            local bareName = name:match("^([^-]+)")
+            local bareKey = self:CharacterKey(bareName)
+            local current = bareKey and members[bareKey]
+            if (current and bareKey ~= key and not current.name:find("-", 1, true)
+                and (key:match("%-forever$") or bareKey:match("%-forever$"))) then
+                local evidence = bareName == name
+                for _, history in ipairs(previousMembers) do
+                    if (history[key]) then evidence = true; break end
+                end
+                if (evidence) then found[key] = { current = bareKey, hidden = records[bareKey] ~= nil } end
+            end
+        end
+    end
+    return found
 end
 
 Guild.GetRows = function(self, search, offline)
@@ -207,10 +289,20 @@ Guild.GetRows = function(self, search, offline)
         if (search ~= "" and not string.lower(haystack):find(search, 1, true)) then return end
         rows[#rows+1] = { key = key, member = member, nickname = nickname, main = main }
     end
-    for key, member in pairs(self.members or {}) do included[key] = true; Add(key, member) end
+    local members, records = self.members or {}, self.db.global.characters
+    for key, member in pairs(members) do included[key] = true; Add(key, member) end
+    local duplicates = self:FindRealmDuplicates()
     -- Keep manually entered non-guild characters editable too.
-    for key, record in pairs(self.db.global.characters) do
-        if (not included[key] and Text(record.name)) then Add(key, { name = record.name, saved = true }) end
+    for key, record in pairs(records) do
+        if (not included[key] and Text(record.name)) then
+            local currentKey = self:CharacterKey(record.name)
+            -- Keep the saved record, but use the live row when it has its own identity.
+            local duplicate = duplicates[key]
+            if (not (duplicate and duplicate.hidden)) then
+                local name = currentKey == key and record.name or self:QualifiedRecordName(key, record.name)
+                Add(key, { name = name, saved = true })
+            end
+        end
     end
     table.sort(rows, function(a, b)
         local aOnline, bOnline = a.member.online == true, b.member.online == true
@@ -362,6 +454,10 @@ Guild.OnEvent = function(self, event, addon, reloading)
         local realmChanged = self:RefreshRealm()
         self:ReadRoster()
         self:CaptureGuildHistory()
+        if (self.noteReview and self.noteReview.awaitingRoster) then
+            self.noteReview.awaitingRoster = nil
+            self:ScanNoteReview(true)
+        end
         if (self.ObserveGuildAction) then self:ObserveGuildAction() end
         if (realmChanged) then self:UpdateSettings()
         elseif (self.RefreshWindow) then self:RefreshWindow() end
@@ -406,6 +502,7 @@ Guild.OnEnable = function(self)
     if (self.InitializeSharing) then self:InitializeSharing() end
     if (self.OnCraftingQuery) then self:RegisterEvent("GUILD_RECIPE_KNOWN_BY_MEMBERS", "OnCraftingQuery") end
     self:RegisterChatCommand("azguild", "ToggleWindow")
+    if (self.HookTooltips) then self:HookTooltips() end
     for _, event in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "PLAYER_GUILD_UPDATE", "GUILD_ROSTER_UPDATE", "GUILD_RANKS_UPDATE", "GUILD_MOTD", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "UPDATE_BINDINGS" }) do
         self:RegisterEvent(event, "OnEvent")
     end

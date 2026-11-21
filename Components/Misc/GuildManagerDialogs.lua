@@ -5,21 +5,45 @@ local L = LibStub("AceLocale-3.0"):GetLocale((...))
 local UI, Kit = Guild.UI, ns.OptionsKit
 local REVIEW_ROWS = 6
 
+Guild.ScanNoteReview = function(self, keepSelection)
+    local review = self.noteReview
+    local _, guildKey = self:GetGuildHistory()
+    local previous, selected = {}, {}
+    local sameGuild = review.guildKey == guildKey
+    if (keepSelection and sameGuild) then
+        for _, proposal in ipairs(review.proposals or {}) do previous[proposal.id] = proposal end
+    end
+    local proposals, skipped, matching = self:BuildNoteSuggestions()
+    local changed = not keepSelection or not sameGuild or #proposals ~= #(review.proposals or {})
+        or skipped ~= review.skipped or matching ~= review.matching
+    for _, proposal in ipairs(proposals) do
+        local old = previous[proposal.id]
+        if (old and old.signature == proposal.signature and old.conflict == proposal.conflict and old.ambiguous == proposal.ambiguous) then
+            proposal.main = old.main; selected[proposal.id] = review.selected[proposal.id]
+        else changed = true end
+    end
+    if (changed) then review.session = (review.session or 0)+1 end
+    review.guildKey = guildKey
+    review.proposals, review.skipped, review.matching = proposals, skipped, matching
+    review.selected = selected
+    if (not keepSelection or not sameGuild) then
+        review.offset = 0; review.feedback:SetText("")
+    end
+end
+
 Guild.RefreshNoteReview = function(self)
     local review = self.noteReview
     local _, guildKey = self:GetGuildHistory()
-    if (review.guildKey ~= guildKey) then
-        review.guildKey = guildKey; review.session = (review.session or 0)+1
-        review.proposals, review.skipped = self:BuildNoteSuggestions()
-        review.selected, review.offset = {}, 0
-    end
+    if (review.guildKey ~= guildKey) then self:ScanNoteReview() end
     local proposals = review.proposals
     review.offset = math.max(0, math.min(review.offset or 0, math.max(0, #proposals-REVIEW_ROWS)))
     local chosen, conflicts = 0, 0
     for _, proposal in ipairs(proposals) do
-        if (review.selected[proposal.id]) then chosen = chosen+1; if (proposal.conflict) then conflicts = conflicts+1 end end
+        if (review.selected[proposal.id]) then chosen = chosen+1 end
+        if (proposal.conflict) then conflicts = conflicts+1 end
     end
-    review.summary:SetText(string.format(L["%d suggestions, %d selected, %d conflicts, %d notes skipped"], #proposals, chosen, conflicts, review.skipped))
+    local summary = string.format(L["%d suggestions, %d selected, %d conflicts, %d notes skipped"], #proposals, chosen, conflicts, review.skipped)
+    review.summary:SetText(summary .. "  |  " .. string.format(L["%d already match"], review.matching))
     review.apply:SetEnabled(chosen > 0)
     for index, row in ipairs(review.rows) do
         local proposal = proposals[review.offset+index]
@@ -40,7 +64,6 @@ Guild.RefreshNoteReview = function(self)
 end
 
 Guild.OpenNoteReview = function(self, rescan)
-    self:RequestRoster()
     if (not self.noteReview) then
         local review = UI.Page(ns.Prefix .. "GuildNoteReview", "notes", L["Review guild notes"], 940, 680, 100, L["Choose people to import. Click Main to choose their main character. Existing identities may be replaced."])
         self.noteReview = review
@@ -99,11 +122,11 @@ Guild.OpenNoteReview = function(self, rescan)
                 local _, guildKey = self:GetGuildHistory()
                 if (not review:IsShown() or review.session ~= session or review.guildKey ~= guildKey) then return end
                 local ok = self:ApplyNoteSuggestions(proposals, selected)
-                review.feedback:SetText(ok and L["Selected identities imported. Undo is available."] or L["Selected groups overlap or have changed. Review and scan again."])
                 if (ok) then
-                    review.proposals, review.skipped = self:BuildNoteSuggestions(); review.selected = {}
+                    self:ScanNoteReview()
                     self:ReloadCard(); self:RefreshNoteReview()
                 end
+                review.feedback:SetText(ok and L["Selected identities imported. Undo is available."] or L["Selected groups overlap or have changed. Review and scan again."])
             end)
         end)
         review.apply.primary = true; review.apply:RefreshArt()
@@ -114,10 +137,9 @@ Guild.OpenNoteReview = function(self, rescan)
     local review = self.noteReview
     local _, guildKey = self:GetGuildHistory()
     if (rescan or not review.proposals or review.guildKey ~= guildKey) then
-        review.guildKey = guildKey
-        review.session = (review.session or 0)+1
-        review.proposals, review.skipped = self:BuildNoteSuggestions(); review.selected = {}; review.offset = 0
-        review.feedback:SetText("")
+        review.awaitingRoster = true
+        self:RequestRoster()
+        self:ScanNoteReview()
     end
     UI.Show(review); self:RefreshNoteReview()
 end
@@ -180,6 +202,24 @@ Guild.OpenBackup = function(self)
         end)
         window.apply.primary = true
         window.apply:SetEnabled(false)
+        -- Forever only: fold records left behind when realm names disappeared.
+        window.merge = UI.QuietButton(window, L["Merge old realm records"], 424, -454, 232, function()
+            local _, merged, conflicts, names = self:BuildRealmMerge()
+            if (merged == 0) then self:RefreshBackup(); return end
+            local shown = {}
+            for index = 1, math.min(8, #names) do shown[index] = names[index] end
+            if (#names > 8) then shown[#shown+1] = "..." end
+            local session, revision = window.session, self.identityRevision or 0
+            Kit.Confirm(string.format(L["Merge %d old realm records into the current characters? Current values are kept; %d differing values are discarded. Undo is available until you reload.\n%s"],
+                merged, conflicts, table.concat(shown, ", ")), function()
+                if (not window:IsShown() or window.session ~= session) then return end
+                local ok, count = self:MergeRealmDuplicates(revision)
+                window.feedback:SetText(ok and string.format(L["%d old realm records merged. Undo is available."], count)
+                    or L["Selected groups overlap or have changed. Review and scan again."])
+                self:ReloadCard(); self:RefreshBackup()
+            end)
+        end)
+        window.merge.guildTooltipHelp = L["Characters saved under their old realm before Forever hid realm names. Each is folded into the live character; values on the live character win."]
         window.feedback = UI.Label(window, "", 24, -505, 832, 12, 3)
         window:SetScript("OnHide", function()
             window.session = (window.session or 0)+1
@@ -187,5 +227,14 @@ Guild.OpenBackup = function(self)
         end)
         UI.Check(window.include, false, L["Include private notes"])
     end
-    UI.Show(self.backupWindow)
+    UI.Show(self.backupWindow); self:RefreshBackup()
+end
+
+Guild.RefreshBackup = function(self)
+    local window = self.backupWindow
+    if (not window or not window.merge) then return end
+    local _, merged = self:BuildRealmMerge()
+    window.merge:SetShown(ns.IsForever and true or false)
+    window.merge:SetEnabled(merged > 0)
+    window.merge.label:SetText(merged > 0 and string.format(L["Merge %d old realm records"], merged) or L["Merge old realm records"])
 end
