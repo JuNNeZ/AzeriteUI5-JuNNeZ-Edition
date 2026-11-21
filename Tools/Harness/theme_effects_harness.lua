@@ -213,4 +213,32 @@ variant = nil
 ns.LegacyHUD = nil
 check(not E:GetThemes()[2] or E:GetThemes()[2] ~= "legacy", "without the Legacy module it is not offered")
 
+-- Forever can reject the protected reload even outside combat.
+ns.IsForever = true
+LibStub = function()
+	return { GetLocale = function() return { ["Type /reload to apply the selected theme."] = "Type /reload to apply the selected theme." } end }
+end
+C_UI.Reload = function() error("Forever theme changes must not call protected reload") end
+ns.HunterTheme.loadedActive = true
+local beforeRefresh = refreshes
+check(E:SetTheme("mage") and E:GetSelectedTheme() == "mage" and ns.message:find("/reload", 1, true),
+	"Forever queues Mage and explains manual reload")
+check(E:GetTheme() == "hunter" and E:GetOrbEffect() == "hunter" and refreshes == beforeRefresh,
+	"the running Hunter layout and effects remain active")
+check(E:SetTheme("hunter") and not ns.db.char.pendingTheme and E:GetSelectedTheme() == "hunter",
+	"reselecting the running theme cancels the queued change")
+check(E:SetTheme("mage") and E:SetTheme("paladin") and E:GetSelectedTheme() == "paladin",
+	"the latest confirmed choice replaces the queued theme")
+combat = true
+check(not E:SetTheme("azerite") and E:GetSelectedTheme() == "paladin", "combat preserves the queued choice")
+combat = false
+E:ApplyPendingTheme()
+check(E:GetTheme() == "paladin" and not ns.db.char.pendingTheme and not ns.db.char.hunterPreview
+	and not ns.db.char.magePreview, "startup applies and clears only the last queued selection")
+E:ApplyPendingTheme()
+check(E:GetTheme() == "paladin", "startup with no queued change keeps the saved theme")
+ns.db.char.pendingTheme = "bogus"
+E:ApplyPendingTheme()
+check(E:GetTheme() == "paladin" and not ns.db.char.pendingTheme, "startup discards an invalid queued key")
+
 print("Theme effects: " .. checks .. " checks passed (offline only)")

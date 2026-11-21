@@ -1517,7 +1517,7 @@ local function GetGroupFrameCandidateFilters(groupKey, config, auraTypes)
 	}
 end
 
--- Spell ID sets are static, so they are left out.
+-- The caller tracks spell ID lists separately from these flags.
 local function GetCandidateFilterSignature(filters)
 	return table.concat({
 		tostring(filters.processedAuraType),
@@ -1839,19 +1839,22 @@ local PLATE_OWN_BUFF_MAX_DURATION = 30
 
 -- The spells the kinds below leave out: the hidden ones, plus the highlighted and once-only spells, which
 -- have groups of their own (GetNamePlateGroups). Rebuilt only when those lists change.
-local plateExcludedCache = { key = nil, set = nil }
-local function GetPlateExcludedSpells(config)
+local plateExcludedCaches = { harmful = {}, helpful = {} }
+local function GetPlateExcludedSpells(config, isHarmful)
 	local highlight = config.highlightSpells and config.highlightSpells.key or ""
-	local once = config.onceSpells and config.onceSpells.key or ""
+	local once = isHarmful and config.onceSpells and config.onceSpells.key or ""
 	if (highlight == "" and once == "") then
 		return HiddenAuras
 	end
 	local key = highlight .. "|" .. once
+	local plateExcludedCache = plateExcludedCaches[isHarmful and "harmful" or "helpful"]
 	if (plateExcludedCache.key ~= key) then
 		local set = {}
 		for id in next, HiddenAuras do set[id] = true end
 		for id in next, config.highlightSpells.set do set[id] = true end
-		for id in next, config.onceSpells.set do set[id] = true end
+		if (once ~= "") then
+			for id in next, config.onceSpells.set do set[id] = true end
+		end
 		plateExcludedCache.key, plateExcludedCache.set = key, set
 	end
 	return plateExcludedCache.set
@@ -1861,21 +1864,21 @@ local NAMEPLATE_AURA_GROUPS = {
 	{
 		key = "AzeritePlateCrowdControl", shownField = "showCrowdControl", isHarmful = true,
 		filter = "HARMFUL|CROWD_CONTROL|INCLUDE_NAME_PLATE_ONLY",
-		candidates = function(config) return { excludeSpellIDs = GetPlateExcludedSpells(config) } end
+		candidates = function(config) return { excludeSpellIDs = GetPlateExcludedSpells(config, true) } end
 	},
 	{
 		key = "AzeritePlateHarmfulOwn", shownField = "showOwnDebuffs", isHarmful = true,
 		filter = "HARMFUL|PLAYER|INCLUDE_NAME_PLATE_ONLY",
 		exclude = function(config) return config.showCrowdControl and "CROWD_CONTROL" or nil end,
 		candidates = function(config)
-			return { excludeSpellIDs = GetPlateExcludedSpells(config), nameplateShowPersonal = config.ownDebuffsBlizzardOnly or nil }
+			return { excludeSpellIDs = GetPlateExcludedSpells(config, true), nameplateShowPersonal = config.ownDebuffsBlizzardOnly or nil }
 		end
 	},
 	{
 		key = "AzeritePlateHarmfulOthers", shownField = "showOtherDebuffs", isHarmful = true,
 		filter = "HARMFUL|INCLUDE_NAME_PLATE_ONLY", requiresExclusion = true,
 		exclude = function(config) return "PLAYER", config.showCrowdControl and "CROWD_CONTROL" or nil end,
-		candidates = function(config) return { excludeSpellIDs = GetPlateExcludedSpells(config), nameplateShowAll = true } end
+		candidates = function(config) return { excludeSpellIDs = GetPlateExcludedSpells(config, true), nameplateShowAll = true } end
 	},
 	{
 		key = "AzeritePlateHelpfulDispellable", shownField = "showDispellableBuffs", isHarmful = false,
@@ -1904,7 +1907,7 @@ local NAMEPLATE_AURA_GROUPS = {
 -- spells first, in their own groups with a gold border, and each once-only spell in a group that shows
 -- one. The game matches the spell IDs itself (includeSpellIDs), so combat's secret aura data is no matter.
 local NAMEPLATE_HIGHLIGHT_BORDER = { 1, .82, .1 }
-local NAMEPLATE_ONCE_SLOTS = 8
+ns.PlayerAuraContainers.NamePlateOnceSlots = 8
 local EMPTY_SPELLS = { set = {}, list = {}, key = "" }
 
 local NAMEPLATE_CONFIG_FIELDS = {
@@ -1951,7 +1954,7 @@ local function GetNamePlateGroupFilter(group, config)
 	return filter
 end
 
--- Spell ID sets are static, so they are left out.
+-- The caller tracks spell ID lists separately from these flags.
 local function GetNamePlateCandidateSignature(filters)
 	return tostring(filters.nameplateShowPersonal) .. ":" .. tostring(filters.nameplateShowAll) .. ":" .. tostring(filters.maxDuration)
 end
@@ -1971,7 +1974,11 @@ local function GetNamePlateGroups(config)
 		for index, kind in ipairs({ { "AzeritePlateHighlightHarmful", "HARMFUL", true }, { "AzeritePlateHighlightHelpful", "HELPFUL", false } }) do
 			groups[#groups + 1] = {
 				key = kind[1], filter = kind[2], isHarmful = kind[3], highlight = true, layoutIndex = index / 10,
-				candidates = { includeSpellIDs = highlight.set }, signature = "include:" .. highlight.key,
+				candidates = {
+					includeSpellIDs = highlight.set,
+					excludeSpellIDs = kind[3] and once.set or nil
+				},
+				signature = "include:" .. highlight.key .. (kind[3] and "|" .. once.key or ""),
 				maxFrameCount = config.maxAuras
 			}
 		end
@@ -1987,9 +1994,13 @@ local function GetNamePlateGroups(config)
 		}
 		if (index == 1) then
 			for slot, spellID in ipairs(once.list) do
-				if (slot > NAMEPLATE_ONCE_SLOTS) then break end
+				if (slot > ns.PlayerAuraContainers.NamePlateOnceSlots) then break end
+				local highlighted = highlight.set[spellID]
 				groups[#groups + 1] = {
-					key = "AzeritePlateOnce" .. slot, filter = "HARMFUL", isHarmful = true, layoutIndex = 1 + slot / 100,
+					-- The frame initializer and layout belong to the group for its whole lifetime.
+					key = (highlighted and "AzeritePlateHighlightOnce" or "AzeritePlateOnce") .. slot,
+					filter = "HARMFUL", isHarmful = true, highlight = highlighted,
+					layoutIndex = (highlighted and .2 or 1) + slot / 100,
 					candidates = { includeSpellIDs = { [spellID] = true } }, signature = "include:" .. spellID,
 					maxFrameCount = 1
 				}

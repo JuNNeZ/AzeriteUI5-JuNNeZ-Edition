@@ -198,11 +198,13 @@ local rounded, panelFill = true, { .03, .03, .03, .95 }
 ns.OptionsKit = {
 	WindowOutset = { left = 10, right = 10, top = 18, bottom = 18 },
 	WindowCasing = { edgeFile = "Classic/options-edge", edgeSize = 32 },
+	InsetBackdrop = { edgeFile = "Classic/border-aura", edgeSize = 10 },
 	WindowCasingColor = { 1, 1, 1, 1 },
 	GetSavedWindowColor = function() return unpack(panelFill) end,
 	Look = {
 		IsRounded = function() return rounded end,
 		CasingBackdrop = { edgeFile = "Azerite/options-round", edgeSize = 32 },
+		InsetBackdrop = { edgeFile = "Azerite/options-well-round", edgeSize = 10 },
 		RoundTexture = function(texture) texture:SetTexture("options-round-fill") end
 	}
 }
@@ -213,18 +215,19 @@ ns.GetConfig = function(name)
 	return { AlertFramesSize = { 200, 40 }, AlertFramesPadding = 10 }
 end
 env._G = { GroupLootFrame1 = frame }
-local casings = {}
+local casings, casingCounts = {}, {}
 local function LocaleStub()
 	return { GetLocale = function() return setmetatable({}, { __index = function(_, key) return key end }) end }
 end
 env.LibStub = LocaleStub
 env.CreateFrame = function(_, _, parent)
 	local casing = Region()
-	casing.SetAllPoints = function() end
 	casing.SetBackdrop = function(self, config) self.backdrop = config end
 	casing.SetBackdropColor = function() end
 	casing.SetBackdropBorderColor = function(self, r) self.brass = r end
+	casing.EnableMouse = function(self, enabled) self.mouseEnabled = enabled end
 	casings[parent] = casing
+	casingCounts[parent] = (casingCounts[parent] or 0) + 1
 	return casing
 end
 setfenv(assert(loadfile(root .. "/Components/Misc/LootRollSkin.lua")), env)("AzeriteUI", ns)
@@ -253,12 +256,17 @@ assert(frame.Name.point[4] + 145 < 320 + need.point[4] - 32, "item name clears N
 assert(frame.Timer.height == 3 and frame.Timer.texture == "Azerite/cast" and frame.Timer.level > frame.level)
 assert(casings[frame].backdrop.edgeFile == "Azerite/options-round" and casings[frame].backdrop.edgeSize == 24
 	and not casings[frame].backdrop.bgFile and frame.BACKGROUND.texture == "options-round-fill")
-local function AssertBorderlessButton(button)
+local function AssertBorderedButton(button, edgeFile)
 	assert(button.width == 32 and button.height == 32 and button.BACKGROUND.allPoints == button)
-	assert(button.BACKGROUND.color and not button.ARTWORK and not casings[button])
+	assert(button.BACKGROUND.color and not button.ARTWORK)
+	local rim = assert(casings[button])
+	assert(casingCounts[button] == 1 and rim.mouseEnabled == false and rim.allPoints == button)
+	assert(rim.backdrop.edgeFile == edgeFile and rim.backdrop.edgeSize == 6 and not rim.backdrop.bgFile)
 	assert(button:GetNormalTexture().width == 20 and button:GetHighlightTexture().width == 20)
 end
-for _, button in ipairs({ need, greed, pass, transmog }) do AssertBorderlessButton(button) end
+for _, button in ipairs({ need, greed, pass, transmog }) do
+	AssertBorderedButton(button, "Azerite/options-well-round")
+end
 assert(need.point[4] < greed.point[4] and greed.point[4] < pass.point[4])
 assert(greed.point[4] == transmog.point[4], "alternate uses the same slot")
 frame.Timer:SetFrameLevel(frame:GetFrameLevel() - 1)
@@ -271,6 +279,7 @@ assert(casings[frame].backdrop.edgeFile == "Paladin/options-round" and frame.Tim
 	and frame.BACKGROUND.vertexColor[1] == panelFill[1], "show resolves panel and timer themes")
 alerts:PrepareLootRollSkin()
 assert(#need.scripts.OnEnter == 1, "the tooltip hook is installed once")
+AssertBorderedButton(need, "Azerite/options-well-round")
 drops[1].rollInfos[1] = { playerName = "Main", state = states.NeedMainSpec }
 Refresh()
 assert(Hover(need) == "Native tooltip, Main")
@@ -382,8 +391,8 @@ local sampleTimer = sampleOne.Timer.value
 window:OnUpdate(1)
 assert(sampleOne.Timer.value == sampleTimer - 1 and sampleOne.Timer.value > sampleTwo.Timer.value)
 local previewNeed = sampleOne.NeedButton
-AssertBorderlessButton(previewNeed)
-AssertBorderlessButton(sampleTwo.TransmogButton)
+AssertBorderedButton(previewNeed, "Classic/border-aura")
+AssertBorderedButton(sampleTwo.TransmogButton, "Classic/border-aura")
 previewNeed:OnClick()
 previewNeed:OnClick()
 sampleOne.GreedButton:OnClick()
@@ -409,6 +418,7 @@ local layout = window
 local layoutFirst, layoutSecond = unpack(layout.children)
 assert(layout ~= standalone and not layout.shown, "active rolls take priority over the layout preview")
 assert(layoutFirst.NeedButton.mouseEnabled == false and not layoutFirst.NeedButton.OnClick, "layout preview is passive")
+AssertBorderedButton(layoutFirst.NeedButton, "Classic/border-aura")
 container.rollFrames[1], container.rollFrames[3], container.maxIndex = nil, nil, 0
 updateContainer(container)
 assert(layout.shown and layout.point[2] == alerts.frame and layout.point[1] == "BOTTOM")

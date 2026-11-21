@@ -52,4 +52,38 @@ combat, inGuild = true, false; module:OnEvent("PLAYER_GUILD_UPDATE")
 check(not next(module.guildDetails) and not module.guildDetailsPending, "leaving guild clears metadata and pending queue in combat")
 combat = false; local previous = calls; module:OnEvent("PLAYER_REGEN_ENABLED")
 check(calls == previous, "no metadata replay after leaving guild")
+
+-- Forever Live Update 2 returns blank realm names and can send bare roster names.
+ns.IsForever, inGuild, guildName = true, true, "Test Guild"
+check(module:SaveIdentity("Main Person", "Saved main", ""), "save a nickname with the old realm")
+UnitName = function() return "Main Person" end
+local loggedIn = false
+IsLoggedIn = function() return loggedIn end
+GetRealmName = function() return "" end
+GetNormalizedRealmName = GetRealmName
+module.realm, module.realmAliases = nil, nil
+module:RefreshRealm()
+check(not module:CharacterKey("Main Person"), "waits for login before choosing a fallback realm")
+loggedIn = true
+module:RequestRoster()
+check(module.realm == "TestRealm" and module.members["main person-testrealm"], "blank realms reuse the saved guild scope for a known player")
+check(module:GetGuildHistory() == state, "realm fallback keeps existing history and character keys")
+check(module:Resolve("Main Person") == "Saved main", "bare names resolve nicknames saved before the update")
+
+module.realm, module.realmAliases = nil, nil
+module.db.global.guildHistory["OtherRealm:test guild"] = { members = { ["main person-otherrealm"] = {} } }
+module:RequestRoster()
+check(module.members["main person-forever"] and not module.members["main person-testrealm"], "ambiguous history uses a local scope instead of choosing a realm")
+check(module:CharacterKey("Main Person-OtherRealm") == "main person-otherrealm", "explicit other-realm identities stay distinct")
+
+module.realm, module.realmAliases = nil, nil
+module.db.global.guildHistory, module.db.global.characters = {}, {}
+module:RequestRoster()
+check(module.members["main person-forever"], "a fresh Forever installation reads a bare roster without realm APIs")
+check(module:SaveIdentity("Main Person", "Jonas", "") and module:Resolve("Main Person") == "Jonas", "local nickname saves and resolves for a bare Forever name")
+check(module:ValidateRecords(module.db.global.characters), "realm fallback identities pass backup validation")
+
+module.realm, module.realmAliases, ns.IsForever = nil, nil, false
+module:RequestRoster()
+check(not module:CharacterKey("Main Person") and not next(module.members), "blank realm does not collapse identities on Retail")
 print("Guild combat: " .. checks .. " checks passed")

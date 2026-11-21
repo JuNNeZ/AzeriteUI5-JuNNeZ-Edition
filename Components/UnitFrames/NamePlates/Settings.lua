@@ -869,15 +869,16 @@ end
 local GetNamePlateAuraConfigVersion = function()
 	return auraConfigVersion
 end
--- Comma-separated spell IDs as a set, the IDs in order (at most 16) and a key for comparing them.
-local ParseSpellIDs = function(text)
+-- Comma-separated spell IDs as a set, an ordered list and a key for comparing lists.
+local ParseSpellIDs = function(text, limit)
 	local set, list = {}, {}
 	if (type(text) == "string") then
 		for id in string.gmatch(text, "%d+") do
 			id = tonumber(id)
-			if (id and id > 0 and not set[id] and #list < 16) then
+			if (id and id > 0 and not set[id]) then
 				set[id] = true
 				list[#list + 1] = id
+				if (#list == limit) then break end
 			end
 		end
 	end
@@ -905,8 +906,8 @@ local GetNamePlateAuraConfig = function()
 		showImportantBuffs = profile.auraImportantBuffs ~= false,
 		showOwnBuffs = profile.auraOwnBuffs ~= false,
 		-- Platynator's highlights and once-only spells (PlayerAuraContainers.lua, GetNamePlateGroups).
-		highlightSpells = ParseSpellIDs(GetAuraHighlightText(profile)),
-		onceSpells = ParseSpellIDs(profile.auraOnceSpells)
+		highlightSpells = ParseSpellIDs(GetAuraHighlightText(profile), 16),
+		onceSpells = ParseSpellIDs(profile.auraOnceSpells, ns.PlayerAuraContainers and ns.PlayerAuraContainers.NamePlateOnceSlots or 8)
 	}
 end
 

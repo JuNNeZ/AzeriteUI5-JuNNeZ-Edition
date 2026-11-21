@@ -38,22 +38,7 @@ local IsSecretValue = NP.IsSecretValue
 local IsSafeUnitToken = NP.IsSafeUnitToken
 local IsPlayerForDisplay = NP.IsPlayerForDisplay
 
-local GetGuidType = function(unit)
-	if (type(unit) ~= "string" or IsSecretValue(unit) or unit == "") then
-		return nil
-	end
-	local guid = UnitGUID(unit)
-	if (type(guid) ~= "string" or IsSecretValue(guid) or guid == "") then
-		return nil
-	end
-	local guidType = guid:match("^([^-]+)-")
-	if (guidType and guidType ~= "") then
-		return guidType
-	end
-	return nil
-end
-
-local GetGuidAndNpcID = function(unit)
+local GetGuidTypeAndNpcID = function(unit)
 	if (not IsSafeUnitToken(unit)) then
 		return nil, nil
 	end
@@ -64,9 +49,9 @@ local GetGuidAndNpcID = function(unit)
 	local guidType = guid:match("^([^-]+)-")
 	if (guidType == "Creature" or guidType == "Vehicle" or guidType == "Pet") then
 		local _, _, _, _, _, npcID = strsplit("-", guid)
-		return guid, npcID
+		return guidType, npcID
 	end
-	return guid, nil
+	return guidType, nil
 end
 
 -- Hotfix exceptions from live diagnostics.
@@ -94,8 +79,7 @@ local NamePlate_Classify = function(plate, unit)
 	local isPlayerUnit = IsPlayerForDisplay(unit)
 	local playerControlled = UnitPlayerControlled(unit)
 	local reaction = UnitReaction("player", unit)
-	local guidType = GetGuidType(unit)
-	local _, npcID = GetGuidAndNpcID(unit)
+	local guidType, npcID = GetGuidTypeAndNpcID(unit)
 	if (issecretvalue and issecretvalue(canAttack)) then
 		canAttack = nil
 	end

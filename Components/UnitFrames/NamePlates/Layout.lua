@@ -223,22 +223,9 @@ local NamePlate_PostUpdateElements = function(self, event, unit, ...)
 		SetNamePlateAurasShown(self, profile.showAuras and (not profile.showAurasOnTargetOnly or self.isTarget),
 			event == "NAME_PLATE_UNIT_ADDED")
 
-		if (self.WidgetContainer) then
-			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
-				UpdateNamePlateWidgetContainer(self, true)
-
-				local widgetFrames = self.WidgetContainer.widgetFrames
-
-				if (widgetFrames) then
-					for _, frame in next, widgetFrames do
-						if (frame.Label) then
-							frame.Label:SetAlpha(0)
-						end
-					end
-				end
-			else
-				UpdateNamePlateWidgetContainer(self, false)
-			end
+		-- The driver already applies this before oUF's first layout on add.
+		if (event ~= "NAME_PLATE_UNIT_ADDED") then
+			UpdateNamePlateWidgetContainer(self, profile.showBlizzardWidgets)
 		end
 
 		if (self.isMouseOver or self.isTarget or self.isSoftTarget or self.inCombat) then

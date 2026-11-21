@@ -566,6 +566,7 @@ end
 ns.OnEnable = function(self)
 	self:EnsureBuiltinProfiles()
 	self.db:SetProfile(self.db.char.profile)
+	self.ThemeEffects:ApplyPendingTheme()
 end
 
 ns.OnInitialize = function(self)

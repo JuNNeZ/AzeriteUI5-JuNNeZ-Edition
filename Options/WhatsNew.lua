@@ -49,6 +49,15 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.48.0-JuNNeZ",
+		items = {
+			{ text = "Enable the optional Total RP 3 skin when TRP3 is loaded.", page = L["Themes"], section = "Total RP 3" },
+			{ text = "Forever: the guild roster can load when the game hides realm names.", page = "GuildManager" },
+			{ text = "Forever: confirm a new theme, then type /reload to apply it.", page = L["Themes"] },
+			{ text = "A highlighted debuff on the once-only list now shows as one gold icon.", page = L["Nameplates"], section = L["Aura filters"] },
+		}
+	},
+	{
 		version = "5.47.1-JuNNeZ",
 		items = {
 			{ text = "Dim distant enemies and keep casting enemies visible.", page = L["Nameplates"], section = L["Fading"] },

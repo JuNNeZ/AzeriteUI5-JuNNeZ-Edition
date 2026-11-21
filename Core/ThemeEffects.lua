@@ -4,7 +4,7 @@
 -- the pack's "originalLite"). Switching themes reloads, as every theme
 -- rebuilds the frame layouts; everything else is redrawn at once through the
 -- player frame's own UpdateSettings.
-local _, ns = ...
+local Addon, ns = ...
 local Effects = {}
 ns.ThemeEffects = Effects
 
@@ -160,14 +160,7 @@ Effects.Refresh = function(self)
 	return true
 end
 
---- Switches theme. Reloads only when the frame layouts must be rebuilt.
-Effects.SetTheme = function(self, theme)
-	local char = Char()
-	if (not char or not Contains(self:GetThemes(), theme) or InCombatLockdown()) then return false end
-	if (theme ~= "azerite" and not MainLayout()) then
-		ns:Print("Select the main AzeriteUI theme before choosing another.")
-		return false
-	end
+local SaveTheme = function(char, theme)
 	char.legacyHUD = theme == "legacy"
 	char.hunterPreview = theme == "hunter"
 	char.paladinPreview = theme == "paladin"
@@ -179,7 +172,44 @@ Effects.SetTheme = function(self, theme)
 	char.deathknightPreview = theme == "deathknight"
 	char.priestPreview = theme == "priest"
 	char.warlockPreview = theme == "warlock"
-	if (self:NeedsReload(theme)) then
+end
+
+--- What the picker displays. The rest of the UI still uses the loaded theme.
+Effects.GetSelectedTheme = function(self)
+	local char = Char()
+	return (ns.IsForever and char and MainLayout() and char.pendingTheme) or self:GetTheme()
+end
+
+--- Called at startup after the profile is selected and before frames are built.
+Effects.ApplyPendingTheme = function(self)
+	local char = Char()
+	local theme = ns.IsForever and char and char.pendingTheme
+	if (not theme) then return end
+	char.pendingTheme = nil
+	if (Contains(self:GetThemes(), theme) and (theme == "azerite" or MainLayout())) then
+		SaveTheme(char, theme)
+	end
+end
+
+--- Switches theme. Forever applies changes that rebuild layouts on manual reload.
+Effects.SetTheme = function(self, theme)
+	local char = Char()
+	if (not char or not Contains(self:GetThemes(), theme) or InCombatLockdown()) then return false end
+	if (theme ~= "azerite" and not MainLayout()) then
+		ns:Print("Select the main AzeriteUI theme before choosing another.")
+		return false
+	end
+	local needsReload = self:NeedsReload(theme)
+	if (ns.IsForever) then
+		char.pendingTheme = needsReload and theme or nil
+		if (needsReload) then
+			local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
+			ns:Print(L["Type /reload to apply the selected theme."])
+			return true
+		end
+	end
+	SaveTheme(char, theme)
+	if (needsReload) then
 		local reload = C_UI and C_UI.Reload or _G.ReloadUI
 		if (type(reload) == "function") then reload() end
 		return true

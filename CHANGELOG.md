@@ -10,6 +10,26 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.48.0-JuNNeZ (2026-11-21) - Total RP 3 Skin and Forever Fixes
+
+### Highlights
+
+- **Skin Total RP 3.** With TRP3 loaded, enable **Skin** under `/az -> Themes -> Total RP 3`. The optional skin covers the main window, controls, toolbar, target control, tooltips, and available map scan pins. The choice is saved per character.
+- **Recover the guild roster on Forever.** `/azguild` can show members when the game returns an empty realm name. It reconnects saved nicknames and guild history when it can identify a single matching history.
+- **Switch themes on Forever without the blocked reload dialog.** Confirm a different theme under `/az -> Themes`, then type `/reload` to apply it. Retail still reloads automatically.
+- **Clearer nameplate colours and aura lists.** Neutral NPCs identified by the game use yellow when threat colouring does not take priority. Debuffs on both the highlight and once-only lists show as a single gold-bordered icon. The once-only list supports eight debuffs, and helpful auras keep their normal filtering.
+- The optional group loot skin gives roll buttons a gold-toned bevel.
+
+### Development
+
+- The TRP3 skin follows the addon's own navigation and refreshes so reused controls pick up the current art. Tooltip styling preserves relationship colours, and shared dropdowns return to their original appearance when they are no longer being used by TRP3.
+- Nameplates now clear hover and soft-target state when removed. Their target fading and widget updates do less repeated work, and a deferred refresh checks that the plate is still active before updating it.
+
+### Access and known limits
+
+- The skin was developed against Total RP 3 3.5.5. TRP3: Extended and roleplay nameplates are outside the skin's scope.
+- Verified offline. Live skin rendering, Forever guild and theme behaviour, combat nameplates, and the group loot button art still need in-game confirmation.
+
 ## 5.47.2-JuNNeZ (2026-11-21) - Keep Character Settings on Forever
 
 ### Highlights

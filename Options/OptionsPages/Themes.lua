@@ -736,17 +736,24 @@ local GenerateOptions = function()
 			},
 			theme = {
 				name = L["Theme"],
-				desc = L["Which artwork AzeriteUI is drawn with. Switching theme reloads the interface."],
+				desc = ns.IsForever and L["Type /reload to apply the selected theme."]
+					or L["Which artwork AzeriteUI is drawn with. Switching theme reloads the interface."],
 				order = 2,
 				type = "select", width = "full",
 				values = function() return (List(Effects():GetThemes())) end,
 				sorting = function() return select(2, List(Effects():GetThemes())) end,
 				-- Asks only when the switch rebuilds the frame layouts.
 				confirm = function(info, value)
-					return Effects():NeedsReload(value) and L["Changing this reloads the interface."] or false
+					if (not Effects():NeedsReload(value)) then return false end
+					return ns.IsForever and L["Type /reload to apply the selected theme."] or L["Changing this reloads the interface."]
 				end,
 				set = function(info, val) Effects():SetTheme(val) end,
-				get = function(info) return Effects():GetTheme() end
+				get = function(info) return Effects():GetSelectedTheme() end
+			},
+			pendingTheme = {
+				name = L["Type /reload to apply the selected theme."],
+				order = 2.1, type = "description", fontSize = "medium",
+				hidden = function() return Effects():GetSelectedTheme() == Theme() end
 			},
 			legacyShowLevels = {
 				name = L["Show levels"],
@@ -838,6 +845,16 @@ local GenerateOptions = function()
 					disabled = function() return InCombatLockdown() or not (_G.ZygorGuidesViewer and _G.ZygorGuidesViewer.Frame) end,
 					get = function() return ns.db.char.zygorSkin or "default" end,
 					set = function(_, choice) ns:GetModule("ZygorSkin"):SetChoice(choice) end
+				} }
+			},
+			totalRP3 = {
+				name = "Total RP 3", order = 41, type = "group", inline = true,
+				hidden = function() return not _G.TRP3_MainFrame end,
+				args = { skin = {
+					name = L["Skin"], type = "toggle", order = 1,
+					disabled = InCombatLockdown,
+					get = function() return ns.db.char.totalRP3Skin == true end,
+					set = function(_, enabled) ns:GetModule("TRP3Skin"):SetEnabled(enabled) end
 				} }
 			},
 			tests = GenerateTests()

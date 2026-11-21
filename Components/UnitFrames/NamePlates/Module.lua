@@ -97,29 +97,14 @@ local ApplyStackingBounds = function(self)
 	pcall(base.SetStackingBoundsFrame, base, own and self or base)
 end
 
+local MOUSEOVER
 local callback = function(self, event, unit)
 	if (event == "NAME_PLATE_UNIT_ADDED") then
 
 		self.isPRD = SafeUnitMatches(unit, "player")
 		ApplyStackingBounds(self)
 
-		if (self.WidgetContainer) then
-			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
-				UpdateNamePlateWidgetContainer(self, true)
-
-				local widgetFrames = self.WidgetContainer.widgetFrames
-
-				if (widgetFrames) then
-					for _, frame in next, widgetFrames do
-						if (frame.Label) then
-							frame.Label:SetAlpha(0)
-						end
-					end
-				end
-			else
-				UpdateNamePlateWidgetContainer(self, false)
-			end
-		end
+		UpdateNamePlateWidgetContainer(self, NamePlatesMod.db.profile.showBlizzardWidgets)
 
 		if (self.SoftTargetFrame) then
 			self.SoftTargetFrame:SetIgnoreParentAlpha(true)
@@ -143,7 +128,7 @@ local callback = function(self, event, unit)
 		-- oUF lays the plate out right after this callback. See NamePlate_NeedsSecondPass.
 		if (C_Timer and C_Timer.After) then
 			C_Timer.After(0, function()
-				if (self and self.unit == unit and NamePlate_NeedsSecondPass(self, unit)) then
+				if (ns.ActiveNamePlates[self] and self.unit == unit and NamePlate_NeedsSecondPass(self, unit)) then
 					NamePlate_PostUpdate(self, "NAME_PLATE_UNIT_ADDED", unit)
 				end
 			end)
@@ -152,13 +137,12 @@ local callback = function(self, event, unit)
 	elseif (event == "NAME_PLATE_UNIT_REMOVED") then
 		if (NP.ClearComboPoints) then NP.ClearComboPoints(self) end
 
-		if (self.WidgetContainer) then
-			if (NamePlatesMod.db.profile.showBlizzardWidgets) then
-				UpdateNamePlateWidgetContainer(self, true)
-			else
-				UpdateNamePlateWidgetContainer(self, false)
-			end
+		UpdateNamePlateWidgetContainer(self, NamePlatesMod.db.profile.showBlizzardWidgets)
+		if (MOUSEOVER == self) then
+			MOUSEOVER = nil
 		end
+		self.isMouseOver = nil
+		self.isSoftTarget = nil
 
 		if (self.SoftTargetFrame) then
 			self.SoftTargetFrame:SetIgnoreParentAlpha(false)
@@ -221,7 +205,6 @@ end
 -- Mouseover. UPDATE_MOUSEOVER_UNIT says the cursor reached a unit; nothing says it left, so a short
 -- poll runs while a unit is under the cursor and stops when none is. (Two 20 Hz timers used to run
 -- for the whole session, one of them repeating what the soft-target events already do.)
-local MOUSEOVER
 local UpdateMouseOver
 UpdateMouseOver = function()
 	if (not UnitExists("mouseover")) then
@@ -432,18 +415,15 @@ end
 -- after this event (Libs/oUF/ouf.lua:1003-1013); doing it here as well was the target plate's second
 -- layout.
 NamePlatesMod.OnSelectionChanged = function(self, event)
-	-- With a target alpha rule on (Visibility.lua), having a target or not changes every enemy plate.
-	if (event == "PLAYER_TARGET_CHANGED" and NP.UsesTargetAlpha and NP.UsesTargetAlpha()) then
-		for plate in next, ns.ActiveNamePlates do
-			ApplyNamePlateAlpha(plate)
-		end
-	end
+	local refreshTargetAlpha = event == "PLAYER_TARGET_CHANGED" and NP.UsesTargetAlpha and NP.UsesTargetAlpha()
 	for plate in next, ns.ActiveNamePlates do
 		local unit = plate.unit
 		if (event == "PLAYER_TARGET_CHANGED") then
 			if (plate.isTarget and not SafeUnitMatches(unit, "target")) then
 				plate.isTarget = false
 				NamePlate_RefreshSelection(plate, event)
+			elseif (refreshTargetAlpha) then
+				ApplyNamePlateAlpha(plate)
 			end
 		elseif (event == "PLAYER_FOCUS_CHANGED") then
 			local isFocus = SafeUnitMatches(unit, "focus")
@@ -757,7 +737,6 @@ NamePlatesMod.OnEnable = function(self)
 	if (driver) then
 		driver:SetAddedCallback(callback)
 		driver:SetRemovedCallback(callback)
-		driver:SetTargetCallback(callback)
 		driver:SetCVars(GetDriverCVars())
 		self.namePlateDriver = driver
 	end

@@ -53,6 +53,14 @@ local function SkinRollButton(button, frame, slot)
 	local backdrop = button:CreateTexture(nil, "BACKGROUND", nil, -8)
 	backdrop:SetAllPoints(button)
 	backdrop:SetColorTexture(.14, .14, .15, .9)
+	local look = Kit.Look
+	local inset = look and look.IsRounded() and look.InsetBackdrop or Kit.InsetBackdrop
+	local rim = CreateFrame("Frame", nil, button, ns.BackdropTemplate)
+	rim:SetAllPoints(button)
+	rim:EnableMouse(false)
+	-- Use just the Options inset bevel, at a smaller scale for the roll buttons.
+	rim:SetBackdrop({ edgeFile = inset.edgeFile, edgeSize = 6 })
+	rim:SetBackdropBorderColor(.76, .65, .49, 1)
 	local highlight = button:GetHighlightTexture()
 	local function FitGlyph(texture)
 		if (not texture) then return end

@@ -19,13 +19,38 @@ local function RealmKey(value)
     value = Text(value)
     return value and string.lower((value:gsub("[%s%-]", "")))
 end
+local function SavedGuildRealm(self, guildName)
+    local playerName = UnitName and Text(UnitName("player"))
+    if (not guildName or not playerName or playerName == "") then return end
+    guildName, playerName = string.lower(guildName), string.lower(playerName)
+    local realm
+    for key, history in pairs(self.db.global.guildHistory) do
+        local scope, guild = key:match("^([^:]+):(.+)$")
+        if (guild == guildName and history.members and history.members[playerName .. "-" .. RealmKey(scope)]) then
+            if (realm and realm ~= scope) then return end
+            realm = scope
+        end
+    end
+    return realm
+end
 Guild.RefreshRealm = function(self)
     local previous, changed = self.realm, false
     local normalized = GetNormalizedRealmName and Text(GetNormalizedRealmName())
     local display = GetRealmName and Text(GetRealmName())
     -- Keep the first usable canonical realm stable for saved identities, while
     -- learning the current server's explicit normalized/display aliases.
-    if (not self.realm or self.realm == "") then self.realm = normalized and normalized ~= "" and normalized or display end
+    if (not self.realm or self.realm == "") then
+        if (normalized and normalized ~= "") then self.realm = normalized
+        elseif (display and display ~= "") then self.realm = display
+        elseif (ns.IsForever and self.db and (normalized == "" or display == "") and (not IsLoggedIn or IsLoggedIn())) then
+            -- Local identity scope for clients that no longer expose realm names.
+            local inGuild = IsInGuild()
+            local guildName = inGuild and Text(GetGuildInfo("player"))
+            if (not inGuild or guildName and guildName ~= "") then
+                self.realm = SavedGuildRealm(self, guildName) or "Forever"
+            end
+        end
+    end
     self.realmAliases = self.realmAliases or {}
     for _, value in ipairs({ normalized or "", display or "", self.realm or "" }) do
         local key = RealmKey(value)
@@ -367,8 +392,8 @@ Guild.OnEvent = function(self, event, addon, reloading)
 end
 
 Guild.OnInitialize = function(self)
-    self:RefreshRealm()
     self.db = ns.db:RegisterNamespace("GuildManager", defaults)
+    self:RefreshRealm()
     -- Personal names never travel with exported UI profiles.
     self:DisableSettingsExport()
     self.db.RegisterCallback(self, "OnProfileChanged", "UpdateSettings")

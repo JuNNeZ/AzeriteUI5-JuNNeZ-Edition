@@ -39,6 +39,7 @@
 	<Script file="TargetMarkersLite.lua"/>
 	<Script file="RaidWarnings.lua"/>
 	<Script file="Tooltips.lua"/>
+	<Script file="TRP3Skin.lua"/>
 	<Script file="TrackerWoW11.lua"/>
 	<Script file="Tutorials.lua"/>
 	<Script file="UIWidgetBelowMinimap.lua"/>

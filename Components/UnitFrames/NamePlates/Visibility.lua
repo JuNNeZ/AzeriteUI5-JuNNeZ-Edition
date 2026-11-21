@@ -62,23 +62,25 @@ local UpdateNamePlateWidgetContainer = function(self, shouldShow)
 	-- do not reparent or reanchor Blizzard's nameplate widget container.
 	-- Writing addon-owned layout state onto this frame taints later widget
 	-- layout passes, which can rethrow from Blizzard_SharedXML/LayoutFrame.
+	if (container.SetIgnoreParentAlpha) then
+		container:SetIgnoreParentAlpha(false)
+	end
 	if (shouldShow) then
-		if (container.SetIgnoreParentAlpha) then
-			container:SetIgnoreParentAlpha(false)
-		end
 		if (container.SetAlpha) then
 			container:SetAlpha(1)
 		end
 		if (container.Show) then
 			container:Show()
 		end
-	else
-		if (container.SetIgnoreParentAlpha) then
-			container:SetIgnoreParentAlpha(false)
+		if (container.widgetFrames) then
+			for _, frame in next, container.widgetFrames do
+				if (frame.Label) then
+					frame.Label:SetAlpha(0)
+				end
+			end
 		end
-		if (container.Hide) then
-			container:Hide()
-		end
+	elseif (container.Hide) then
+		container:Hide()
 	end
 end
 

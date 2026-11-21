@@ -140,6 +140,7 @@ function UnitReaction(a, b)
 	local u = (a == "player") and b or a
 	return field(u, "reaction")
 end
+function UnitSelectionType(u) return field(u, "selectionType") end
 function UnitIsPlayer(u) return field(u, "isPlayer") or false end
 function UnitTreatAsPlayerForDisplay(u) return field(u, "treatAsPlayer") or false end
 function UnitPlayerControlled(u) return field(u, "playerControlled") or false end
@@ -3511,11 +3512,24 @@ do
 		"a once-only spell gets a group that shows one", once and once.maxFrameCount)
 	check(own and own.candidateFilters.excludeSpellIDs[55078] and own.candidateFilters.excludeSpellIDs[999],
 		"and the other kinds leave both out")
+	Prof.auraOnceSpells = "55078,999,1001,1002,1003,1004,1005,1006,1007"
+	W.module:UpdateSettings()
+	local highlightedOnce = Group(hostile, "AzeritePlateHighlightOnce1")
+	check(highlightedOnce and highlightedOnce.maxFrameCount == 1
+		and highlightedOnce.candidateFilters.includeSpellIDs[55078]
+		and high.candidateFilters.excludeSpellIDs[55078] and not Shows(hostile, "AzeritePlateOnce1"),
+		"a harmful spell on both lists is routed to one highlighted slot")
+	check(Shows(hostile, "AzeritePlateOnce8") and not own.candidateFilters.excludeSpellIDs[1007],
+		"spells beyond the slot limit keep their ordinary aura filtering")
+	local helpful = Group(hostile, "AzeritePlateHelpfulImportant")
+	check(helpful and not helpful.candidateFilters.excludeSpellIDs[999],
+		"the harmful once-only groups do not filter helpful auras")
 	local order = table.concat(hostile.NativeAuras.container.__groupOrder, ",")
 	Prof.auraHighlights, Prof.auraOnceSpells = {}, ""
 	W.module:UpdateSettings()
 	own = Group(hostile, "AzeritePlateHarmfulOwn")
-	check(not Shows(hostile, "AzeritePlateHighlightHarmful") and not Shows(hostile, "AzeritePlateOnce1"),
+	check(not Shows(hostile, "AzeritePlateHighlightHarmful") and not Shows(hostile, "AzeritePlateOnce1")
+		and not Shows(hostile, "AzeritePlateHighlightOnce1"),
 		"cleared, the extra groups show nothing", order)
 	check(own and not own.candidateFilters.excludeSpellIDs[55078] and not own.candidateFilters.excludeSpellIDs[999],
 		"and the kinds show those spells again")
@@ -3585,6 +3599,30 @@ check(P[1].TargetHighlight.__shown, "the target's plate is outlined")
 check(P[1].__scale > P[2].__scale, "the target's plate is larger than another hostile's")
 check(not P[8].__enabled.RaidTargetIndicator and not P[8].__enabled.Auras and NativeOff(P[8]),
 	"the PRD has no raid marker and no auras")
+
+-- Check the health colour without changing the golden snapshots or metrics.
+do
+	local plate, mob = P[3], W.units.nameplate3
+	local function CheckColor(event, expected, label)
+		plate.Health.UpdateColor(plate, event, "nameplate3")
+		check(col(plate.Health.__barColor) == col(expected), label, col(plate.Health.__barColor))
+	end
+	local savedRole = W.profile.threatRole
+	W.profile.threatRole = "off"
+	mob.reaction, mob.selectionType = 2, 2
+	CheckColor("UNIT_FACTION", plate.colors.reaction[4], "a neutral selection uses yellow even with a hostile faction reaction")
+	mob.threat = 3
+	CheckColor("UNIT_THREAT_LIST_UPDATE", plate.colors.threat[3], "aggro takes precedence over the neutral selection colour")
+	mob.threat = nil
+	CheckColor("UNIT_THREAT_LIST_UPDATE", plate.colors.reaction[4], "yellow returns when the neutral mob drops aggro")
+	mob.selectionType = 0
+	CheckColor("UNIT_FACTION", plate.colors.reaction[2], "a hostile selection retains the hostile colour")
+	mob.selectionType = 2
+	mob.secret = { selectionType = true }
+	CheckColor("UNIT_FACTION", plate.colors.reaction[2], "a secret selection type leaves the faction reaction colour")
+	mob.reaction, mob.selectionType, mob.secret = 4, nil, nil
+	W.profile.threatRole = savedRole
+end
 
 -- The golden steps carry the castbar colours; these pin the four states by name.
 local function stepText(name)

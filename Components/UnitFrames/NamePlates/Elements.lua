@@ -616,6 +616,13 @@ local Health_UpdateColor = function(self, event, unit)
 		end
 	elseif (element.colorReaction) then
 		local reaction = UnitReaction("player", unit)
+		-- The game's neutral selection type (2) can differ from the faction reaction.
+		if (IsSafeFalse(isPlayerControlled) and IsSafeFalse(isPlayer) and UnitSelectionType) then
+			local selection = UnitSelectionType(unit)
+			if (not IsSecretValue(selection) and selection == 2) then
+				reaction = 4
+			end
+		end
 		color = GetSafeColorByKey(self.colors.reaction, reaction, self.colors.health)
 	elseif (element.colorSmooth) then
 		local gradient = element.smoothGradient or (self.colors and self.colors.smooth)

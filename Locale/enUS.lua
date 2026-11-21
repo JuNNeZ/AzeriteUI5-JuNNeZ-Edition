@@ -965,6 +965,7 @@ L["Vault"] = true
 L["Themes"] = true
 L["Class artwork drawn over AzeriteUI's own frames. One theme shows at a time, and every setting here is saved per character."] = true
 L["Changing this reloads the interface."] = true
+L["Type /reload to apply the selected theme."] = true
 L["Endcap"] = true
 L["Endcap size"] = true
 L["How large the endcaps are drawn. They grow and shrink around their own centre, so they stay where they are."] = true

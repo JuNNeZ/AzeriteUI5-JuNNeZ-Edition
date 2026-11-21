@@ -412,6 +412,13 @@ local RestoreBlizzardTooltipBackdrop = function(tooltip)
 	PlaceCompareHeader(tooltip)
 end
 
+-- Transfer the backdrop of a TRP3 tooltip if the generic hook styled it
+-- before the separate TRP3 skin was enabled.
+function Tooltips:ReleaseTRP3Backdrop(tooltip)
+	local backdrop = rawget(Backdrops, tooltip)
+	if backdrop and backdrop:IsShown() then RestoreBlizzardTooltipBackdrop(tooltip) end
+end
+
 local CompareLayoutHooked = setmetatable({}, { __mode = "k" })
 
 -- What the compare hook and the aura tooltip style last did, for /azdebug tooltips.
@@ -477,6 +484,8 @@ end
 Tooltips.UpdateBackdropTheme = function(self, tooltip, style, embedded)
 	if (self:IsDisabled()) then return end
 	if (not CanStyleTooltip(tooltip, embedded)) then return end
+	local trp3Skin = ns.TRP3TooltipSkin
+	if (trp3Skin and trp3Skin:OwnsTooltip(tooltip)) then return end
 	-- WoW12: use safe geometry helper to get a clean (non-secret) width.
 	-- Skip styling if the tooltip has zero size (e.g. not yet laid out).
 	local width = ns.GetSafeWidth and ns.GetSafeWidth(tooltip) or (tooltip.GetWidth and tooltip:GetWidth() or 0)
