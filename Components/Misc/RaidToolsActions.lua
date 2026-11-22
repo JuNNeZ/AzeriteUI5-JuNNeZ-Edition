@@ -183,7 +183,7 @@ Tools.PerformAction = function(self, key, button)
     elseif (key == "visibility") then self.db.profile.hideGroups = not self.db.profile.hideGroups; self:UpdateSettings()
     elseif (key == "settings") then
         local panel = ns.OptionsKit and ns.OptionsKit.Panel
-        if (panel and panel.OpenSection) then panel:OpenSection(L["Group Frames"], { L["Group Frames"], "raidTools" })
+        if (panel and panel.OpenSection) then panel:OpenSection("Group Frames", { "Group Frames", "raidTools" })
         else
             local options = ns:GetModule("Options", true)
             if (options and options.OpenOptionsMenu) then options:OpenOptionsMenu() end

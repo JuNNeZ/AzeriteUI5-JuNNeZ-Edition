@@ -32,7 +32,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
 local AceConfigRegistry = LibStub("AceConfigRegistry-3.0", true)
 
 -- Lua API
-local ipairs = ipairs
+local ipairs, pairs = ipairs, pairs
 local max, min = math.max, math.min
 local pcall = pcall
 local string_char = string.char
@@ -85,14 +85,16 @@ local TABS = {
 }
 
 -- The bands each tab's rail is grouped into, in the order they are shown.
+-- The keys are what Options:AddGroup names; only the labels are for reading
+-- (Docs/Options Navigation Review - 2026-11-22.md, step 3).
 local SECTIONS = {
-	{ key = "setup", label = L["Setup"] },
-	{ key = "frames", label = L["Frames"] },
+	{ key = "setup", label = L["Start"] },
+	{ key = "frames", label = L["Unit Frames"] },
 	{ key = "auras", label = L["Auras"] },
-	{ key = "bars", label = L["Bars"] },
-	{ key = "world", label = L["World"] },
+	{ key = "bars", label = L["Action Bars"] },
+	{ key = "world", label = L["Map and HUD"] },
 	{ key = "interface", label = L["Interface"] },
-	{ key = "other", label = L["General"] }
+	{ key = "other", label = L["Profiles and Tools"] }
 }
 
 local frame, rail, railScroll, railContent, contentScroll, pageContent, searchBox
@@ -149,6 +151,59 @@ local Resolve = function(value, fallback)
 	end
 	if (value ~= nil) then return value end
 	return fallback
+end
+
+-- A page by its key, or failing that by the name the rail shows for it. A key
+-- is the untranslated string Options:AddGroup registered; the name is accepted
+-- so that a link still written as L["Unit Frames"] lands on its page instead of
+-- falling back to the first one (Docs/Options Navigation Review - 2026-11-22.md,
+-- B1/B2). Unknown keys come back unchanged.
+local ResolvePageKey = function(options, key)
+	if (type(key) ~= "string" or type(options) ~= "table") then return key end
+	if (GetView(key) or Config.GetSubOption(options, key)) then return key end
+
+	local wanted = string_lower(key)
+	for pageKey, group in pairs(options.args or {}) do
+		if (type(group) == "table" and group.type == "group") then
+			local name = Resolve(group.name)
+			if (type(name) == "string" and string_lower(name) == wanted) then return pageKey end
+		end
+	end
+	-- A page folded into another one opens its host (Options.lua MergePages).
+	local module = (Panel.tab == "options") and ns:GetModule("Options", true)
+	local moved = module and module.GetMovedPage and module:GetMovedPage(key)
+	if (moved) then return moved[1] end
+	return key
+end
+Panel.ResolvePageKey = function(self, key)
+	return ResolvePageKey((GetOptions()), key)
+end
+
+-- Where a page folded into another one went (Options.lua MergePages), as
+-- { hostKey, sectionKey }, or nil.
+local MovedPage = function(key)
+	if (Panel.tab ~= "options" or type(key) ~= "string") then return end
+	local module = ns:GetModule("Options", true)
+	return module and module.GetMovedPage and module:GetMovedPage(key)
+end
+
+-- The same path with its page resolved, as a copy, so a caller's table is never
+-- rewritten under it. A path into a folded page gains its host and section:
+-- { "Info Bar", "useHalfClock" } becomes { "Minimap", "info", "useHalfClock" }.
+local ResolvePath = function(options, path)
+	if (type(path) ~= "table" or #path == 0) then return path end
+	local copy = {}
+	local moved = (not (type(options) == "table" and Config.GetSubOption(options, path[1]))) and MovedPage(path[1])
+	if (moved) then
+		copy[1], copy[2] = moved[1], moved[2]
+		for i = 2, #path do copy[#copy + 1] = path[i] end
+		return copy
+	end
+	local key = ResolvePageKey(options, path[1])
+	if (key == path[1]) then return path end
+	for i = 1, #path do copy[i] = path[i] end
+	copy[1] = key
+	return copy
 end
 
 --------------------------------------------------------------------------
@@ -1393,6 +1448,7 @@ end
 Panel.GoTo = function(self, path)
 	if (type(path) ~= "table" or #path == 0) then return false end
 	local options = GetOptions()
+	path = ResolvePath(options, path)
 	local group = options and Config.GetGroup(options, { path[1] })
 	if (type(group) ~= "table" or Config.IsHidden(group, options, { path[1] }, APP)) then return false end
 	self:SelectPage(path[1])
@@ -1516,6 +1572,17 @@ Panel.Refresh = function(self)
 	elseif (self.selected) then
 		self:SelectPage(self.selected)
 	end
+end
+
+-- Re-reads the open page's values where it stands, for a change made outside the window (the
+-- nameplate aura picker). Refresh selects the page again, which scrolls it back to the top.
+Panel.RefreshValues = function(self)
+	if (not frame or not frame:IsShown() or not page or not contentScroll) then return end
+	if (searchBox and searchBox:GetText() ~= "") then return end
+	local at = contentScroll:GetVerticalScroll() or 0
+	page:Refresh()
+	local range = contentScroll:GetVerticalScrollRange() or 0
+	contentScroll:SetVerticalScroll(min(range, max(0, at)))
 end
 
 -- The casing is a child of the window, so it starts one level above it and
@@ -2355,7 +2422,7 @@ Panel.Open = function(self, key)
 	-- same distance above it.
 	self:RaiseCasing()
 
-	key = key or self.selected
+	key = ResolvePageKey(options, key or self.selected)
 	if (not key or not (GetView(key) or Config.GetSubOption(options, key))) then
 		key = self.pages and self.pages[1] and self.pages[1].key
 	end
@@ -2369,11 +2436,17 @@ end
 -- the complete structure so even an inactive tab can be opened.
 Panel.OpenSection = function(self, key, label)
 	if (not self:Open(key)) then return false end
-	if (type(label) == "table") then return self:RevealPath(label, false) end
+	local options = GetOptions()
+	local moved = not (options and Config.GetSubOption(options, key)) and MovedPage(key)
+	key = ResolvePageKey(options, key)
+	if (type(label) == "table") then return self:RevealPath(ResolvePath(options, label), false) end
+	-- A link to a folded page lands on its section of the host.
+	if (moved and (type(label) ~= "string" or label == "")) then
+		return self:RevealPath({ moved[1], moved[2] }, false)
+	end
 	if (type(label) ~= "string" or label == "") then return true end
 
 	local wanted = string_lower(label)
-	local options = GetOptions()
 	local group = options and Config.GetGroup(options, { key })
 	for _, entry in ipairs(Renderer:Collect(group, options, { key })) do
 		if (entry.kind == "header" and entry.path and type(entry.label) == "string"

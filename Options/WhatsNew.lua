@@ -17,9 +17,12 @@
 --
 -- Each item:
 --   text    = one short line, plain English (the changelog is English too)
---   page    = the options page to open, as the key passed to Options:AddGroup
---             (most are localized: L["Action Bars"]; some are plain: "Auras")
+--   page    = the options page to open, as the key passed to Options:AddGroup:
+--             a plain string such as "Action Bars", never L["Action Bars"]; keys
+--             are not translated, so a localized one misses the page off English
+--             clients (locale_harness checks this file)
 --   section = optional, a section heading on that page, as it is drawn
+--             (localized, L["Aura Filters"], because the heading is)
 --   run     = optional, a function to call instead of opening a page
 --   label   = optional, the button text; defaults to "Show me"
 -- An item with neither page nor run gets no button.
@@ -49,6 +52,16 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.50.0-JuNNeZ",
+		items = {
+			{ text = "Choose nameplate auras from a list, with suggestions for your class.", page = "Nameplates", section = L["Aura Filters"] },
+			{ text = "Tanks: get a warning when your healer runs low on mana.", page = "Nameplates", section = L["Threat Roles"] },
+			{ text = "The options are regrouped, with Nameplates in five tabs.", page = "Nameplates" },
+			{ text = "Details, Zygor and Total RP 3 skins now share one page.", page = "AddOn Skins" },
+			{ text = "Show enemy players you cannot attack as names only.", page = "Nameplates", section = L["Friendly Players"] },
+		}
+	},
+	{
 		version = "5.49.0-JuNNeZ",
 		items = {
 			{ text = "See saved nicknames in player tooltips.", page = "GuildManager" },
@@ -60,26 +73,26 @@ ns.WhatsNew = {
 	{
 		version = "5.48.0-JuNNeZ",
 		items = {
-			{ text = "Enable the optional Total RP 3 skin when TRP3 is loaded.", page = L["Themes"], section = "Total RP 3" },
+			{ text = "Enable the optional Total RP 3 skin when TRP3 is loaded.", page = "AddOn Skins", section = "Total RP 3" },
 			{ text = "Forever: the guild roster can load when the game hides realm names.", page = "GuildManager" },
-			{ text = "Forever: confirm a new theme, then type /reload to apply it.", page = L["Themes"] },
-			{ text = "A highlighted debuff on the once-only list now shows as one gold icon.", page = L["Nameplates"], section = L["Aura filters"] },
+			{ text = "Forever: confirm a new theme, then type /reload to apply it.", page = "Themes" },
+			{ text = "A highlighted debuff on the once-only list now shows as one gold icon.", page = "Nameplates", section = L["Aura Filters"] },
 		}
 	},
 	{
 		version = "5.47.1-JuNNeZ",
 		items = {
-			{ text = "Dim distant enemies and keep casting enemies visible.", page = L["Nameplates"], section = L["Fading"] },
-			{ text = "Highlight your specialization's auras or show selected spells once per plate.", page = L["Nameplates"], section = L["Aura filters"] },
-			{ text = "Show each enemy's contribution to Mythic+ forces.", page = L["Nameplates"], section = L["Mythic+"] },
-			{ text = "See who interrupted an enemy cast.", page = L["Nameplates"], section = L["Enemy castbars"] },
+			{ text = "Dim distant enemies and keep casting enemies visible.", page = "Nameplates", section = L["Fading"] },
+			{ text = "Highlight your specialization's auras or show selected spells once per plate.", page = "Nameplates", section = L["Aura Filters"] },
+			{ text = "Show each enemy's contribution to Mythic+ forces.", page = "Nameplates", section = L["Mythic+"] },
+			{ text = "See who interrupted an enemy cast.", page = "Nameplates", section = L["Enemy Castbars"] },
 		}
 	},
 	{
 		version = "5.46.0-JuNNeZ",
 		items = {
-			{ text = "Choose how friendly nameplates look in dungeons, raids and delves.", page = L["Nameplates"], section = L["Dungeons and raids"] },
-			{ text = "Skin Zygor's guide window: Forged, Glass or Field Journal.", page = L["Themes"], section = "Zygor" },
+			{ text = "Choose how friendly nameplates look in dungeons, raids and delves.", page = "Nameplates", section = L["Dungeons and Raids"] },
+			{ text = "Skin Zygor's guide window: Forged, Glass or Field Journal.", page = "AddOn Skins", section = "Zygor" },
 			{ text = "Let J open the guild overview, or pick a key of your own.", page = "GuildManager" },
 		}
 	},
@@ -88,23 +101,23 @@ ns.WhatsNew = {
 		items = {
 			{ text = "Rounded Options adds icons to tabs, headings and appearance controls.", run = OpenAppearance },
 			{ text = "Guild Manager has clearer search, filters and officer navigation.", page = "GuildManager" },
-			{ text = "Find your loot roll settings under Bags > Group Loot.", page = L["Bags"], section = L["Group Loot"] },
+			{ text = "Find your loot roll settings under Bags > Group Loot.", page = "Bags", section = L["Group Loot"] },
 		}
 	},
 	{
 		version = "5.44.0-JuNNeZ",
 		items = {
-			{ text = "Show group loot roll counts and hover over the buttons to see who chose them.", page = L["Bags"] },
-			{ text = "Try the optional loot skin and sample drops in Bags, including active class-theme art.", page = L["Bags"] },
+			{ text = "Show group loot roll counts and hover over the buttons to see who chose them.", page = "Bags" },
+			{ text = "Try the optional loot skin and sample drops in Bags, including active class-theme art.", page = "Bags" },
 			{ text = "Move the loot stack with the Alerts mover in /lock or Edit Mode.", run = OpenMovers },
 		}
 	},
 	{
 		version = "5.43.0-JuNNeZ",
 		items = {
-			{ text = "Party cast overlays clear more reliably after casts and loading screens.", page = L["Group Frames"], section = L["Party Frames"] },
+			{ text = "Party cast overlays clear more reliably after casts and loading screens.", page = "Group Frames", section = L["Party Frames"] },
 			{ text = "Open Guild Manager from the cog menu, sort members and save or discard draft edits.", page = "GuildManager" },
-			{ text = "Apply AzeriteUI Forged (Preview) to Details windows from Themes.", page = L["Themes"], section = "Details" },
+			{ text = "Apply AzeriteUI Forged (Preview) to Details windows from Themes.", page = "AddOn Skins", section = "Details" },
 		}
 	},
 	{
@@ -112,36 +125,36 @@ ns.WhatsNew = {
 		items = {
 			{ text = "New Guild Manager: members, main/alt links, crafting, history, follow-up and sharing. Also /azguild.", page = "GuildManager" },
 			{ text = "Chattynator users: show guild nicknames (and levels) in chat.", page = "GuildManager" },
-			{ text = "Forever controller mode keeps Blizzard's bars and functions, now with AzeriteUI button art.", page = L["Action Bars"] },
-			{ text = "Turn on party targeting in Blizzard's controller settings to keep AzeriteUI party frames.", page = L["Group Frames"] },
-			{ text = "Optional: leave the bag bar and backpack buttons to Blizzard.", page = L["Bags"] },
+			{ text = "Forever controller mode keeps Blizzard's bars and functions, now with AzeriteUI button art.", page = "Action Bars" },
+			{ text = "Turn on party targeting in Blizzard's controller settings to keep AzeriteUI party frames.", page = "Group Frames" },
+			{ text = "Optional: leave the bag bar and backpack buttons to Blizzard.", page = "Bags" },
 		}
 	},
 	{
 		version = "5.41.0-JuNNeZ",
 		items = {
-			{ text = "Party buffs and debuffs have separate areas and independent sizes.", page = L["Group Frames"], section = L["Party Frames"] },
-			{ text = "Hide the portrait debuff icon while keeping the dispellable-debuff highlight.", page = L["Group Frames"], section = L["Party Frames"] },
-			{ text = "Choose range colouring and item/charge count text separately for each action bar.", page = L["Action Bars"] },
-			{ text = "Hover nameplate aura icons to read their descriptions.", page = L["Nameplates"] },
-			{ text = "Death Knight health-casing fitting update; the complete theme remains WIP.", page = L["Themes"] },
+			{ text = "Party buffs and debuffs have separate areas and independent sizes.", page = "Group Frames", section = L["Party Frames"] },
+			{ text = "Hide the portrait debuff icon while keeping the dispellable-debuff highlight.", page = "Group Frames", section = L["Party Frames"] },
+			{ text = "Choose range colouring and item/charge count text separately for each action bar.", page = "Action Bars" },
+			{ text = "Hover nameplate aura icons to read their descriptions.", page = "Nameplates" },
+			{ text = "Death Knight health-casing fitting update; the complete theme remains WIP.", page = "Themes" },
 		}
 	},
 	{
 		version = "5.40.0-JuNNeZ",
 		items = {
-			{ text = "Forever Rogues and Cat Druids: optional combo points on each enemy nameplate.", page = L["Nameplates"], section = L["Visibility"] },
-			{ text = "Set Combo point size to 50-300%; names and auras leave room automatically.", page = L["Nameplates"], section = L["Visibility"] },
-			{ text = "Pet and stance buttons now support hover binding in /kb and Quick Keybind Mode.", page = L["Action Bars"] },
-			{ text = "Target castbar fallback fill and full-bar interrupt colours repaired.", page = L["Unit Frames"], section = L["Target"] },
+			{ text = "Forever Rogues and Cat Druids: optional combo points on each enemy nameplate.", page = "Nameplates", section = L["Combo Points"] },
+			{ text = "Set Combo point size to 50-300%; names and auras leave room automatically.", page = "Nameplates", section = L["Combo Points"] },
+			{ text = "Pet and stance buttons now support hover binding in /kb and Quick Keybind Mode.", page = "Action Bars" },
+			{ text = "Target castbar fallback fill and full-bar interrupt colours repaired.", page = "Unit Frames", section = L["Target"] },
 		}
 	},
 	{
 		version = "5.39.0-JuNNeZ",
 		items = {
-			{ text = "Greyed-out settings now explain which setting or addon makes them unavailable.", page = L["Tooltips"] },
-			{ text = "Party dispel filters follow what you can remove, with boss and role aura handling.", page = L["Group Frames"], section = L["Party Frames"] },
-			{ text = "Totem visibility follows Blizzard's combat display, with a fallback for competing addons.", page = L["Unit Frames"], section = L["Totems"] },
+			{ text = "Greyed-out settings now explain which setting or addon makes them unavailable.", page = "Tooltips" },
+			{ text = "Party dispel filters follow what you can remove, with boss and role aura handling.", page = "Group Frames", section = L["Party Frames"] },
+			{ text = "Totem visibility follows Blizzard's combat display, with a fallback for competing addons.", page = "Unit Frames", section = L["Totems"] },
 			{ text = "Forever combo points follow the target; Details Forged gains repaired fills and text." },
 		}
 	},
@@ -149,10 +162,10 @@ ns.WhatsNew = {
 		version = "5.38.0-JuNNeZ",
 		items = {
 			{ text = "Death Knight, Priest and Warlock themes are available as WIP previews.", page = "Themes" },
-			{ text = "A quest item button with its own binding, quest filters and AzeriteUI artwork.", page = L["Action Bars"], section = L["Quest Item Button"] },
-			{ text = "Healer and DPS threat roles, tank percentages and optional sound or visual warnings.", page = L["Nameplates"], section = L["Threat roles"] },
-			{ text = "Let Masque skin action, pet and stance buttons; reload after enabling it.", page = L["Action Bars"] },
-			{ text = "Optional auto sell junk, auto repair and fast loot, all off by default.", page = L["Bags"] },
+			{ text = "A quest item button with its own binding, quest filters and AzeriteUI artwork.", page = "Action Bars", section = L["Quest Item Button"] },
+			{ text = "Healer and DPS threat roles, tank percentages and optional sound or visual warnings.", page = "Nameplates", section = L["Threat Roles"] },
+			{ text = "Let Masque skin action, pet and stance buttons; reload after enabling it.", page = "Action Bars" },
+			{ text = "Optional auto sell junk, auto repair and fast loot, all off by default.", page = "Bags" },
 		}
 	},
 	{
@@ -160,22 +173,22 @@ ns.WhatsNew = {
 		items = {
 			{
 				text = "Tank mode: threat colours for tanks, the name of who a loose mob attacks, and a lost-aggro sound.",
-				page = L["Nameplates"],
-				section = L["Threat roles"]
+				page = "Nameplates",
+				section = L["Threat Roles"]
 			},
 			{
 				text = "Threat percent beside your target's name while in a group.",
-				page = L["Unit Frames"],
+				page = "Unit Frames",
 				section = L["Target"]
 			},
 			{
 				text = "Friendly NPCs can show names only, with their title such as <Innkeeper>.",
-				page = L["Nameplates"],
+				page = "Nameplates",
 				section = L["Friendly NPCs"]
 			},
 			{
 				text = "Class colour switches for enemy and friendly players, and class colours in PvP.",
-				page = L["Nameplates"],
+				page = "Nameplates",
 				section = L["Colors"]
 			},
 			{
@@ -188,7 +201,7 @@ ns.WhatsNew = {
 		items = {
 			{
 				text = "Hex action buttons: a new button shape, with a painted rim for each class theme.",
-				page = L["Action Bars"]
+				page = "Action Bars"
 			},
 			{
 				text = "Lite+ crystal and orb effects for every class (WIP), each with its own strength.",
@@ -207,12 +220,12 @@ ns.WhatsNew = {
 		items = {
 			{
 				text = "A raid and party panel of our own: groups, markers, ready check and leader tools.",
-				page = L["Group Frames"],
+				page = "Group Frames",
 				section = L["Raid / Party panel"]
 			},
 			{
 				text = "Target markers lite: a small separate marker bar you arrange yourself; off by default.",
-				page = L["Group Frames"],
+				page = "Group Frames",
 				section = L["Target markers lite"]
 			},
 			{
@@ -229,17 +242,17 @@ ns.WhatsNew = {
 		items = {
 			{
 				text = "Show object names: nodes and chests can name themselves again; off by default, as the game does.",
-				page = L["Nameplates"],
-				section = L["Visibility"]
+				page = "Nameplates",
+				section = L["Names"]
 			},
 			{
 				text = "Friendly NPCs follow Friendly players: Shift+V and Ctrl+V can hide NPC plates too.",
-				page = L["Nameplates"],
-				section = L["Game settings"]
+				page = "Nameplates",
+				section = L["Game Settings"]
 			},
 			{
 				text = "WoW Forever: totem timers above the cast bar, and crowd control and roots marked on auras.",
-				page = L["Unit Frames"],
+				page = "Unit Frames",
 				section = L["Totems"]
 			}
 		}
@@ -253,17 +266,17 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Enemy castbars show who a cast is aimed at, and glow for casts at you and important ones.",
-				page = L["Nameplates"],
-				section = L["Enemy castbars"]
+				page = "Nameplates",
+				section = L["Enemy Castbars"]
 			},
 			{
 				text = "Quest marks on nameplates, and new rules for how names are shown.",
-				page = L["Nameplates"],
+				page = "Nameplates",
 				section = L["Names"]
 			},
 			{
 				text = "Raid frames glow for debuffs you can dispel; Retail adds totem and statue timers above the cast bar.",
-				page = L["Group Frames"]
+				page = "Group Frames"
 			}
 		}
 	},
@@ -280,7 +293,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Flowing mana keeps your selected orb material and effects, with the bright surface line removed.",
-				page = L["Unit Frames"],
+				page = "Unit Frames",
 				section = L["Player"]
 			}
 		}
@@ -290,7 +303,7 @@ ns.WhatsNew = {
 		items = {
 			{
 				text = "Use the small party frame as your player frame, with or without its portrait.",
-				page = L["Unit Frames"],
+				page = "Unit Frames",
 				section = L["Player (Party Style)"]
 			},
 			{
@@ -298,7 +311,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "The mana orb glides to each new value, and Flowing mana fills it with moving water.",
-				page = L["Unit Frames"],
+				page = "Unit Frames",
 				section = L["Player"]
 			}
 		}
@@ -312,7 +325,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Party health bars keep their class colour after a cast, and the dispel glow works in combat.",
-				page = L["Group Frames"],
+				page = "Group Frames",
 				section = L["Party Frames"]
 			},
 			{
@@ -347,7 +360,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Health, power and cast pushback glide instead of jumping. Switch it off if you prefer.",
-				page = L["Unit Frames"]
+				page = "Unit Frames"
 			},
 			{
 				text = "Lite+ offers Paladin Light for the crystal and orb, without Development Mode.",
@@ -363,8 +376,8 @@ ns.WhatsNew = {
 		items = {
 			{
 				text = "Hide the red pushback time beside your cast bar: Show Pushback Time.",
-				page = L["Unit Frames"],
-				section = L["Cast Bar"]
+				page = "Unit Frames",
+				section = L["Castbar"]
 			},
 			{
 				text = "Hunter and Mage themes: resize and move the cast bar's endcaps.",
@@ -377,16 +390,16 @@ ns.WhatsNew = {
 		items = {
 			{
 				text = "Execute range has its own page: only enemies you fight, a lead before your execute, your own colours.",
-				page = L["Execute range"]
+				page = "Execute range"
 			},
 			{
 				text = "Group frames can show who is Sated, and your buffs as dots in each frame's corners.",
-				page = L["Group Frames"],
+				page = "Group Frames",
 				section = L["Group Indicators"]
 			},
 			{
 				text = "Aura Sounds: hear a sound when a buff or debuff is gained, stacks or fades (Retail).",
-				page = L["Aura Sounds"]
+				page = "Aura Sounds"
 			},
 			{
 				text = "Combat text works in dungeons again. The options window has scroll bars and section icons."
@@ -398,12 +411,12 @@ ns.WhatsNew = {
 		items = {
 			{
 				text = "Style the Assisted Highlight again: style, thickness, colour and opacity, with a preview.",
-				page = L["Action Bars"],
+				page = "Action Bars",
 				section = L["Assisted Combat Highlight"]
 			},
 			{
 				text = "Party frames: choose how many auras per row, and party mana no longer looks full while a healer drinks.",
-				page = L["Group Frames"],
+				page = "Group Frames",
 				section = L["Party Frames"]
 			},
 			{
@@ -411,7 +424,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Legacy: the player frame can move to the centre while you have no target (Unit Frames -> Player).",
-				page = L["Unit Frames"],
+				page = "Unit Frames",
 				section = L["Player"]
 			}
 		}
@@ -440,7 +453,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Square and Rounded buttons wear the Mage or Hunter border with those themes.",
-				page = L["Action Bars"]
+				page = "Action Bars"
 			},
 			{
 				text = "Mythic+: battle rez charges under the timer, and Blizzard's end banner can be hidden.",
@@ -448,7 +461,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Show each party member's Mythic+ rating on their frame (off by default).",
-				page = L["Group Frames"],
+				page = "Group Frames",
 				section = L["Party Frames"]
 			}
 		}
@@ -461,7 +474,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Target auras no longer get cut off when they wrap onto more rows.",
-				page = L["Unit Frames"],
+				page = "Unit Frames",
 				section = L["Target"]
 			},
 			{
@@ -483,7 +496,7 @@ ns.WhatsNew = {
 			},
 			{
 				text = "Proc Highlight style and colour now work under the Legacy HUD.",
-				page = L["Action Bars"],
+				page = "Action Bars",
 				section = L["Proc Highlight"]
 			}
 		}

@@ -15,6 +15,7 @@
 		* PanelOptions.lua is the panel's own settings tab, and the changelog.
 		* Panel.lua is the new window itself, at /az (and the /az new alias).
 		* WhatsNew.lua is the hand-written popup notes; Kit\WhatsNew.lua draws them.
+		* AuraPicker.lua is the nameplate aura picker (Nameplates -> Aura filters).
 		* Gallery.lua shows the controls on their own, at /az gallery.
 		* Widgets.lua registers AceGUI widget types for the retained classic window.
 		* Window.lua owns the retained /az classic window, its rail and its search.
@@ -35,6 +36,7 @@
 	<Script file="WhatsNew.lua"/>
 	<Script file="Kit\WhatsNew.lua"/>
 	<Script file="Kit\FramePanel.lua"/>
+	<Script file="Kit\AuraPicker.lua"/>
 	<Script file="Kit\Gallery.lua"/>
 	<Script file="Kit\Widgets.lua"/>
 	<Script file="Kit\Window.lua"/>
@@ -63,6 +65,7 @@
 	<Script file="OptionsPages\Tooltips.lua"/>
 	<Script file="OptionsPages\Tracker.lua"/>
 	<Script file="OptionsPages\Themes.lua"/>
+	<Script file="OptionsPages\AddOnSkins.lua"/>
 	<Script file="OptionsPages\UnitFrames.lua"/>
 	<Script file="OptionsPages\HealthPrediction.lua"/>
 	<Script file="OptionsPages\GroupIndicators.lua"/>

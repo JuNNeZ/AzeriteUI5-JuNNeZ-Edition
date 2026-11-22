@@ -54,14 +54,17 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Bag Settings"],
+		name = L["Bags and Loot"],
 		type = "group",
 		args = {}
 	}
+	-- First on the page. A negative order sorts last, not first (Config.lua compareOptions), and
+	-- -2/-1 put these two under the Group Loot heading (Docs/Options Navigation Review -
+	-- 2026-11-22.md, B5).
 	options.args.useBlizzardBags = {
 		name = L["Use Blizzard's bag controls"],
 		desc = L["Keep Blizzard's bag bar and bag buttons in their original places instead of moving them into the bag window. Hides AzeriteUI's separate bag button. Applies after a reload."],
-		type = "toggle", width = "full", order = -2,
+		type = "toggle", width = "full", order = 0.1,
 		set = function(info, value) getmodule().db.profile.useBlizzardBags = value end,
 		disabled = function() return ns.NativeController and ns.NativeController.IsActive() or false end,
 		get = function()
@@ -70,20 +73,20 @@ local GenerateOptions = function()
 		end
 	}
 	options.args.reloadBags = {
-		name = L["Reload UI"], type = "execute", order = -1,
+		name = L["Reload UI"], type = "execute", order = 0.2,
 		disabled = function() return InCombatLockdown() end,
 		func = function() if (not InCombatLockdown()) then ReloadUI() end end
 	}
 
 	if (C_Container.SetSortBagsRightToLeft) then
 		options.args["sort"] = {
-			name = L["Sort Direction"],
+			name = L["Sort direction"],
 			desc = L["Choose in which direction items in your bags are sorted."],
 			type = "select", style = "dropdown",
 			order = 1,
 			values = {
-				["ltr"] = L["Left to Right"],
-				["rtl"] = L["Right to Left"]
+				["ltr"] = L["Left to right"],
+				["rtl"] = L["Right to left"]
 			},
 			set = setter,
 			get = getter
@@ -96,13 +99,13 @@ local GenerateOptions = function()
 
 	if (C_Container.SetInsertItemsLeftToRight) then
 		options.args["insert"] = {
-			name = L["Insert Point"],
+			name = L["Insert point"],
 			desc = L["Choose from which side new items are inserted into your bags."],
 			type = "select", style = "dropdown",
 			order = 3,
 			values = {
-				["rtl"] = L["Right to Left"],
-				["ltr"] = L["Left to Right"]
+				["rtl"] = L["Right to left"],
+				["ltr"] = L["Left to right"]
 			},
 			set = setter,
 			get = getter
@@ -212,4 +215,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Bags"], GenerateOptions, -5000, "interface", "Containers")
+Options:AddGroup("Bags", GenerateOptions, -5000, "interface", "Containers")

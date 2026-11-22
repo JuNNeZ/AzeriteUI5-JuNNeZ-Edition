@@ -363,7 +363,7 @@ local PAGE_REFRESH = {
 
 Guild.RefreshWindow = function(self)
     if (not self.frame or not self.frame:IsShown() or self.buildingWindow) then return end
-    self.heading:SetText(self.ReadText(GetGuildInfo("player")) or L["Guild & Nicknames"])
+    self.heading:SetText(self.ReadText(GetGuildInfo("player")) or L["Guild and Nicknames"])
     local selected = self.selected and (self.members or {})[self.selected]
     if (selected and self.noteValue ~= selected.note) then
         self.noteValue = selected.note

@@ -130,6 +130,21 @@ local GenerateDismountButtonOptions = function(order)
 	}
 end
 
+-- The day and night choice, read from the two stored switches. Its default is
+-- worked out the same way from the module's defaults (Options/Kit/Defaults.lua
+-- SetComputed), so it is marked and reverted like any other setting.
+local DielMode = function(profile)
+	if (profile.dielHidden) then return "none" end
+	return profile.dielEnabled and "azerite" or "blizzard"
+end
+local DielGet = function()
+	local module = ns:GetModule("Minimap", true)
+	return module and DielMode(module.db.profile) or "azerite"
+end
+if (ns.OptionsKit and ns.OptionsKit.Defaults and ns.OptionsKit.Defaults.SetComputed) then
+	ns.OptionsKit.Defaults.SetComputed(DielGet, DielMode)
+end
+
 local GenerateOptions = function()
 	if (not getmodule()) then return end
 
@@ -139,7 +154,7 @@ local GenerateOptions = function()
 		args = {
 			enabled = {
 				name = L["Enable"],
-				desc = L["Toggle whether to enable the Minimap or not."],
+				desc = L["Let AzeriteUI style and place the minimap."],
 				order = 1,
 				type = "toggle",
 				width = "full",
@@ -182,7 +197,7 @@ local GenerateOptions = function()
 				hidden = isdisabled
 			},
 			hideAddonText = {
-				name = L["Hide AddOn Text"],
+				name = L["Hide AddOn text"],
 				desc = L["Hide the custom AddOns label text next to the minimap button."],
 				order = 5,
 				type = "toggle",
@@ -196,7 +211,7 @@ local GenerateOptions = function()
 				end
 			},
 			hideClockText = {
-				name = L["Hide Clock Text"],
+				name = L["Hide clock text"],
 				desc = L["Hide the AzeriteUI clock text displayed near the minimap/info area."],
 				order = 6,
 				type = "toggle",
@@ -209,47 +224,30 @@ local GenerateOptions = function()
 					return getmodule().db.profile.hideClockText
 				end
 			},
-			dielEnabled = {
-				name = L["Day and Night Indicator"],
-				desc = L["Show Forever's day and night cycle on the edge of the minimap, where you can drag it around the ring and right-click it to set its distance from the map. When disabled, Blizzard's own indicator on the minimap cluster is shown instead."],
+			-- One choice over the two stored switches, dielEnabled and dielHidden, so nothing saved
+			-- changes (Docs/Options Navigation Review - 2026-11-22.md, step 7). Hidden wins over
+			-- enabled, as MinimapMod:IsDielHidden decides.
+			dielMode = {
+				name = L["Day and night indicator"],
+				desc = L["Which day and night indicator the minimap shows: AzeriteUI's on the edge of the map, which you can drag around the ring and right-click to set its distance, Blizzard's own on the minimap cluster, or none."],
 				order = 7,
-				type = "toggle",
-				width = "full",
+				type = "select", width = "full",
+				values = { azerite = L["AzeriteUI's"], blizzard = L["Blizzard's"], none = _G.NONE or "None" },
+				sorting = { "azerite", "blizzard", "none" },
 				-- Only Forever has a day and night cycle to indicate.
 				hidden = function(info)
 					return isdisabled(info) or not ns.IsForever
 				end,
-				-- Which indicator shows means nothing while neither does.
-				disabled = function(info)
-					return getmodule().db.profile.dielHidden
-				end,
 				set = function(info, val)
-					getmodule().db.profile.dielEnabled = val
+					local profile = getmodule().db.profile
+					profile.dielHidden = (val == "none")
+					if (val ~= "none") then profile.dielEnabled = (val == "azerite") end
 					getmodule():UpdateDiel()
 				end,
-				get = function(info)
-					return getmodule().db.profile.dielEnabled
-				end
-			},
-			dielHidden = {
-				name = L["Hide Day and Night Indicator"],
-				desc = L["Hide the day and night indicator on the minimap completely, both AzeriteUI's and Blizzard's own."],
-				order = 7.5,
-				type = "toggle",
-				width = "full",
-				hidden = function(info)
-					return isdisabled(info) or not ns.IsForever
-				end,
-				set = function(info, val)
-					getmodule().db.profile.dielHidden = val
-					getmodule():UpdateDiel()
-				end,
-				get = function(info)
-					return getmodule().db.profile.dielHidden
-				end
+				get = DielGet
 			},
 			hideEventButton = {
-				name = L["Hide Activity Button"],
+				name = L["Hide activity button"],
 				desc = L["Hide the Activity button the China realms add to the left of the minimap."],
 				order = 7.6,
 				type = "toggle",
@@ -274,7 +272,7 @@ local GenerateOptions = function()
 				hidden = isdisabled,
 				args = {
 					autoHideEnabled = {
-						name = L["Hide the Minimap Automatically"],
+						name = L["Hide the minimap automatically"],
 						desc = L["Hide the minimap while you are in the content selected below, and bring it back as soon as you leave it."],
 						order = 1,
 						type = "toggle",
@@ -304,21 +302,23 @@ local GenerateOptions = function()
 						L["Hide the minimap while you are in a dungeon."],
 						5, "autoHideInDungeons"),
 					autoHideInRaids = autoHideToggle(
-						L["Raid Instances"],
+						L["Raid instances"],
 						L["Hide the minimap while you are in a raid instance."],
 						6, "autoHideInRaids")
 				}
 			},
+			-- Above Auto-Hide, with the page's other rows; after it, the button read as
+			-- part of that section (Options Navigation Review 2026-11-22, B7).
 			space3 = {
 				name = "",
-				order = 9,
+				order = 7.8,
 				type = "description",
 				hidden = isdisabled
 			},
 			restoreBlizzard = {
-				name = L["Restore Blizzard Default"],
+				name = L["Restore Blizzard default"],
 				desc = L["Restore the default Blizzard minimap theme and positioning."],
-				order = 10,
+				order = 7.9,
 				type = "execute",
 				hidden = isdisabled,
 				func = function(info)
@@ -349,4 +349,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Minimap"], GenerateOptions, -3000, "world", "Minimap")
+Options:AddGroup("Minimap", GenerateOptions, -3000, "world", "Minimap")

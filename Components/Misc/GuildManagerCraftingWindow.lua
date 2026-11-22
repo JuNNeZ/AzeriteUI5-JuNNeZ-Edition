@@ -2,6 +2,7 @@
 local Addon, ns = ...
 local Guild = ns:GetModule("GuildManager")
 local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
+-- GLOBALS: YES, NO
 local UI, Kit, PAGE = Guild.UI, ns.OptionsKit, 9
 local SOURCE = { own = "Scanned on this account", import = "Imported text; owner unverified", blizzard = "Blizzard guild response" }
 local function Timestamp(value) return date("%Y-%m-%d %H:%M", value) end
@@ -141,7 +142,7 @@ Guild.OpenCraftingTransfer = function(self, row)
             local preview = self:PreviewCraftingImport(edit:GetText())
             window.preview = preview; window.apply:SetEnabled(preview ~= nil)
             window.feedback:SetText(preview and string.format(L["%s / %s: %d recipes. Existing list: %s. Ownership is unverified."],
-                preview.name, preview.snapshot.profession, preview.count, preview.replacing and L["Yes"] or L["No"])
+                preview.name, preview.snapshot.profession, preview.count, preview.replacing and (YES or "Yes") or (NO or "No"))
                 .. "\n" .. string.format(L["%d added, %d changed, %d removed. Reported scan: %s."],
                     preview.added, preview.changed, preview.removed, Timestamp(preview.snapshot.scanned))
                 or L["Invalid list, wrong guild/GUID, combat or unavailable data."])

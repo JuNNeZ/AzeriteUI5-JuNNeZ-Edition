@@ -1,0 +1,702 @@
+[
+{
+"spec": 250,
+"aura": 55078,
+"name": "Blood Plague",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 250,
+"aura": 434765,
+"name": "Reaper's Mark",
+"grant": 439843,
+"rec": "highlight"
+},
+{
+"spec": 251,
+"aura": 55095,
+"name": "Frost Fever",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 251,
+"aura": 51714,
+"name": "Razorice",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 251,
+"aura": 434765,
+"name": "Reaper's Mark",
+"grant": 439843,
+"rec": "highlight"
+},
+{
+"spec": 252,
+"aura": 191587,
+"name": "Virulent Plague",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 252,
+"aura": 1240996,
+"name": "Dread Plague",
+"grant": 77575,
+"rec": "once"
+},
+{
+"spec": 252,
+"aura": 1241521,
+"name": "Soul Reaper",
+"grant": 343294,
+"rec": null
+},
+{
+"spec": 577,
+"aura": 391191,
+"name": "Burning Wound",
+"grant": 391189,
+"rec": "once"
+},
+{
+"spec": 577,
+"aura": 320338,
+"name": "Essence Break",
+"grant": 258860,
+"rec": "highlight"
+},
+{
+"spec": 577,
+"aura": 204598,
+"name": "Sigil of Flame",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 577,
+"aura": 370969,
+"name": "The Hunt",
+"grant": 370965,
+"rec": null
+},
+{
+"spec": 581,
+"aura": 207771,
+"name": "Fiery Brand",
+"grant": 0,
+"rec": "highlight"
+},
+{
+"spec": 581,
+"aura": 247456,
+"name": "Frailty",
+"grant": 389958,
+"rec": null
+},
+{
+"spec": 581,
+"aura": 204598,
+"name": "Sigil of Flame",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 581,
+"aura": 207407,
+"name": "Soul Carver",
+"grant": 207407,
+"rec": null
+},
+{
+"spec": 1480,
+"aura": 1246168,
+"name": "The Hunt",
+"grant": 1246167,
+"rec": null
+},
+{
+"spec": 102,
+"aura": 164812,
+"name": "Moonfire",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 102,
+"aura": 164815,
+"name": "Sunfire",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 103,
+"aura": 155722,
+"name": "Rake",
+"grant": 1822,
+"rec": "once"
+},
+{
+"spec": 103,
+"aura": 1079,
+"name": "Rip",
+"grant": 1079,
+"rec": "once"
+},
+{
+"spec": 103,
+"aura": 405233,
+"name": "Thrash",
+"grant": 77758,
+"rec": null
+},
+{
+"spec": 103,
+"aura": 155625,
+"name": "Moonfire",
+"grant": 155580,
+"rec": null
+},
+{
+"spec": 103,
+"aura": 274838,
+"name": "Feral Frenzy",
+"grant": 274837,
+"rec": null
+},
+{
+"spec": 104,
+"aura": 192090,
+"name": "Thrash",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 104,
+"aura": 164812,
+"name": "Moonfire",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 105,
+"aura": 164812,
+"name": "Moonfire",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 105,
+"aura": 164815,
+"name": "Sunfire",
+"grant": 93402,
+"rec": "once"
+},
+{
+"spec": 1467,
+"aura": 357209,
+"name": "Fire Breath",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 1468,
+"aura": 357209,
+"name": "Fire Breath",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 1473,
+"aura": 357209,
+"name": "Fire Breath",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 253,
+"aura": 217200,
+"name": "Barbed Shot",
+"grant": 217200,
+"rec": null
+},
+{
+"spec": 253,
+"aura": 257284,
+"name": "Hunter's Mark",
+"grant": 0,
+"rec": "highlight"
+},
+{
+"spec": 254,
+"aura": 257284,
+"name": "Hunter's Mark",
+"grant": 0,
+"rec": "highlight"
+},
+{
+"spec": 254,
+"aura": 212431,
+"name": "Explosive Shot",
+"grant": 212431,
+"rec": null
+},
+{
+"spec": 255,
+"aura": 269747,
+"name": "Wildfire Bomb",
+"grant": 259495,
+"rec": null
+},
+{
+"spec": 255,
+"aura": 257284,
+"name": "Hunter's Mark",
+"grant": 0,
+"rec": "highlight"
+},
+{
+"spec": 62,
+"aura": 210824,
+"name": "Touch of the Magi",
+"grant": 321507,
+"rec": "highlight"
+},
+{
+"spec": 62,
+"aura": 114923,
+"name": "Nether Tempest",
+"grant": 444483,
+"rec": null
+},
+{
+"spec": 63,
+"aura": 12654,
+"name": "Ignite",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 63,
+"aura": 468655,
+"name": "Frostfire Bolt",
+"grant": 431044,
+"rec": null
+},
+{
+"spec": 64,
+"aura": 228358,
+"name": "Winter's Chill",
+"grant": 0,
+"rec": "highlight"
+},
+{
+"spec": 64,
+"aura": 468655,
+"name": "Frostfire Bolt",
+"grant": 431044,
+"rec": null
+},
+{
+"spec": 268,
+"aura": 123725,
+"name": "Breath of Fire",
+"grant": 115181,
+"rec": "once"
+},
+{
+"spec": 268,
+"aura": 121253,
+"name": "Keg Smash",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 269,
+"aura": 228287,
+"name": "Mark of the Crane",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 70,
+"aura": 197277,
+"name": "Judgment",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 70,
+"aura": 383346,
+"name": "Expurgation",
+"grant": 383344,
+"rec": "once"
+},
+{
+"spec": 70,
+"aura": 403695,
+"name": "Truth's Wake",
+"grant": 255937,
+"rec": null
+},
+{
+"spec": 256,
+"aura": 589,
+"name": "Shadow Word: Pain",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 256,
+"aura": 204213,
+"name": "Purge the Wicked",
+"grant": 1250218,
+"rec": "once"
+},
+{
+"spec": 257,
+"aura": 589,
+"name": "Shadow Word: Pain",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 257,
+"aura": 14914,
+"name": "Holy Fire",
+"grant": 14914,
+"rec": null
+},
+{
+"spec": 258,
+"aura": 589,
+"name": "Shadow Word: Pain",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 258,
+"aura": 34914,
+"name": "Vampiric Touch",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 258,
+"aura": 335467,
+"name": "Shadow Word: Madness",
+"grant": 335467,
+"rec": null
+},
+{
+"spec": 259,
+"aura": 703,
+"name": "Garrote",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 259,
+"aura": 1943,
+"name": "Rupture",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 259,
+"aura": 2818,
+"name": "Deadly Poison",
+"grant": 2823,
+"rec": null
+},
+{
+"spec": 259,
+"aura": 360194,
+"name": "Deathmark",
+"grant": 360194,
+"rec": "highlight"
+},
+{
+"spec": 259,
+"aura": 385627,
+"name": "Kingsbane",
+"grant": 385627,
+"rec": null
+},
+{
+"spec": 259,
+"aura": 383414,
+"name": "Amplifying Poison",
+"grant": 381664,
+"rec": null
+},
+{
+"spec": 261,
+"aura": 316220,
+"name": "Find Weakness",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 261,
+"aura": 426593,
+"name": "Goremaw's Bite",
+"grant": 426591,
+"rec": null
+},
+{
+"spec": 262,
+"aura": 188389,
+"name": "Flame Shock",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 262,
+"aura": 197209,
+"name": "Lightning Rod",
+"grant": 210689,
+"rec": null
+},
+{
+"spec": 263,
+"aura": 188389,
+"name": "Flame Shock",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 263,
+"aura": 334168,
+"name": "Lashing Flames",
+"grant": 334046,
+"rec": null
+},
+{
+"spec": 264,
+"aura": 188389,
+"name": "Flame Shock",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 265,
+"aura": 980,
+"name": "Agony",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 265,
+"aura": 146739,
+"name": "Corruption",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 265,
+"aura": 1259790,
+"name": "Unstable Affliction",
+"grant": 1259790,
+"rec": "once"
+},
+{
+"spec": 265,
+"aura": 63106,
+"name": "Siphon Life",
+"grant": 63106,
+"rec": null
+},
+{
+"spec": 265,
+"aura": 48181,
+"name": "Haunt",
+"grant": 48181,
+"rec": "highlight"
+},
+{
+"spec": 265,
+"aura": 205179,
+"name": "Phantom Singularity",
+"grant": 205179,
+"rec": null
+},
+{
+"spec": 265,
+"aura": 386997,
+"name": "Soul Rot",
+"grant": 386997,
+"rec": null
+},
+{
+"spec": 265,
+"aura": 27243,
+"name": "Seed of Corruption",
+"grant": 27243,
+"rec": null
+},
+{
+"spec": 265,
+"aura": 445474,
+"name": "Wither",
+"grant": 445465,
+"rec": "once"
+},
+{
+"spec": 266,
+"aura": 146739,
+"name": "Corruption",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 266,
+"aura": 460553,
+"name": "Doom",
+"grant": 460551,
+"rec": null
+},
+{
+"spec": 267,
+"aura": 157736,
+"name": "Immolate",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 267,
+"aura": 445474,
+"name": "Wither",
+"grant": 445465,
+"rec": "once"
+},
+{
+"spec": 267,
+"aura": 80240,
+"name": "Havoc",
+"grant": 80240,
+"rec": "highlight"
+},
+{
+"spec": 267,
+"aura": 265931,
+"name": "Conflagrate",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 267,
+"aura": 196414,
+"name": "Eradication",
+"grant": 196412,
+"rec": null
+},
+{
+"spec": 71,
+"aura": 262115,
+"name": "Deep Wounds",
+"grant": 0,
+"rec": "once"
+},
+{
+"spec": 71,
+"aura": 388539,
+"name": "Rend",
+"grant": 772,
+"rec": "once"
+},
+{
+"spec": 71,
+"aura": 208086,
+"name": "Colossus Smash",
+"grant": 167105,
+"rec": "highlight"
+},
+{
+"spec": 71,
+"aura": 397364,
+"name": "Thunderous Roar",
+"grant": 384318,
+"rec": null
+},
+{
+"spec": 71,
+"aura": 376080,
+"name": "Champion's Spear",
+"grant": 376079,
+"rec": null
+},
+{
+"spec": 72,
+"aura": 385060,
+"name": "Odyn's Fury",
+"grant": 385059,
+"rec": null
+},
+{
+"spec": 72,
+"aura": 397364,
+"name": "Thunderous Roar",
+"grant": 384318,
+"rec": null
+},
+{
+"spec": 72,
+"aura": 376080,
+"name": "Champion's Spear",
+"grant": 376079,
+"rec": null
+},
+{
+"spec": 73,
+"aura": 262115,
+"name": "Deep Wounds",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 73,
+"aura": 388539,
+"name": "Rend",
+"grant": 394062,
+"rec": null
+},
+{
+"spec": 73,
+"aura": 1160,
+"name": "Demoralizing Shout",
+"grant": 1160,
+"rec": "highlight"
+},
+{
+"spec": 73,
+"aura": 397364,
+"name": "Thunderous Roar",
+"grant": 384318,
+"rec": null
+},
+{
+"spec": 0,
+"aura": 113746,
+"name": "Mystic Touch",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 0,
+"aura": 1490,
+"name": "Chaos Brand",
+"grant": 0,
+"rec": null
+},
+{
+"spec": 0,
+"aura": 257284,
+"name": "Hunter's Mark",
+"grant": 0,
+"rec": null
+}
+]

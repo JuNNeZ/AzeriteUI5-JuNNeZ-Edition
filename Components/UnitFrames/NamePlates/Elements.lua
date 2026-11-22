@@ -285,7 +285,9 @@ local THREAT_ALERTS = {
 	close = { switch = "threatWarnSound", file = "threatWarnSoundFile", sound = "UI_RAID_BOSS_WHISPER_WARNING", soundID = 37666,
 		text = "Threat close", nameOf = "unit" },
 	aggro = { switch = "threatAggroSound", file = "threatAggroSoundFile", sound = "RAID_WARNING", soundID = 8959,
-		text = "Aggro!", nameOf = "unit" }
+		text = "Aggro!", nameOf = "unit" },
+	-- The tank mana warning's sound only (GroupMana.lua draws its own lines, never FireThreatAlert).
+	mana = { switch = "tankManaWarning", file = "tankManaSoundFile", sound = "UI_RAID_BOSS_WHISPER_WARNING", soundID = 37666 }
 }
 local THREAT_ALERT_FALLBACK_COLOR = { 1, .25, .25 }
 local lastThreatAlert = {}
@@ -615,14 +617,8 @@ local Health_UpdateColor = function(self, event, unit)
 			color = GetSafeColorByKey(self.colors.class, class, self.colors.health)
 		end
 	elseif (element.colorReaction) then
-		local reaction = UnitReaction("player", unit)
-		-- The game's neutral selection type (2) can differ from the faction reaction.
-		if (IsSafeFalse(isPlayerControlled) and IsSafeFalse(isPlayer) and UnitSelectionType) then
-			local selection = UnitSelectionType(unit)
-			if (not IsSecretValue(selection) and selection == 2) then
-				reaction = 4
-			end
-		end
+		-- The game's neutral selection type (2) can differ from the faction reaction (Settings.lua).
+		local reaction = NP.GetDisplayReaction(unit)
 		color = GetSafeColorByKey(self.colors.reaction, reaction, self.colors.health)
 	elseif (element.colorSmooth) then
 		local gradient = element.smoothGradient or (self.colors and self.colors.smooth)
@@ -1084,6 +1080,8 @@ local QuestMarker_Update = function(self)
 	SetQuestProgressText(self, show and profile.showQuestProgress and progress or nil)
 end
 
+NP.PlayThreatAlertSound = PlayThreatAlertSound
+NP.FlashScreenEdge = FlashScreenEdge
 NP.UpdateExecuteMarker = UpdateExecuteMarker
 NP.Health_PostUpdate = Health_PostUpdate
 NP.Health_UpdateColor = Health_UpdateColor

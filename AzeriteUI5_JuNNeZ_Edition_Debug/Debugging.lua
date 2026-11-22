@@ -2481,9 +2481,9 @@ end
 Debugging.ToggleDebugMenu = function(self)
 	local panel = ns.OptionsKit and ns.OptionsKit.Panel
 	if (not panel) then return end
-	local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
 	panel:SetTab("options")
-	return panel:Open(L["Debug tools"])
+	-- The page key, which is not translated (Options/Options.lua AddGroup).
+	return panel:Open("Debug tools")
 end
 Debugging.ToggleCooldownTestMenu = Debugging.ToggleDebugMenu
 

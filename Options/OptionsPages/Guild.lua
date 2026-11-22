@@ -6,7 +6,7 @@ local function GenerateOptions()
     local module = ns:GetModule("GuildManager", true)
     if (not module or not module.db) then return end
     local options = {
-        name = L["Guild & Nicknames"], type = "group",
+        name = L["Guild and Nicknames"], type = "group",
         args = {
             help = { name = L["Local nicknames and main/alt links. Guild actions require permission and confirmation. Open with /azguild."], type = "description", order = 1 },
             open = { name = L["Open guild overview"], type = "execute", order = 2,

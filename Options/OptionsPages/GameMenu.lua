@@ -32,7 +32,7 @@ local GenerateOptions = function()
 				fontSize = "medium"
 			},
 			style = {
-				name = L["Game Menu Style"],
+				name = L["Game menu style"],
 				desc = L["Choose which addon styles the game menu. Changing this reloads the interface."],
 				order = 2,
 				type = "select", style = "dropdown",
@@ -67,4 +67,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(GAME_MENU, GenerateOptions, -2400, "interface", "GameMenuSkin")
+Options:AddGroup("Game Menu", GenerateOptions, -2400, "interface", "GameMenuSkin")

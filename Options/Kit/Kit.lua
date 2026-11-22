@@ -390,7 +390,7 @@ local themeLabels = {
 	azerite = L["Azerite"],
 	dark = L["Dark"],
 	light = L["Light"],
-	class = L["Class Color"]
+	class = L["Class color"]
 }
 
 -- HUD previews can use the saved window palette before Options has been opened.

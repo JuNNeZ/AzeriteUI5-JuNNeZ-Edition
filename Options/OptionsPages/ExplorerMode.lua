@@ -58,6 +58,13 @@ local getterReverse = function(info)
 	return not getmodule().db.profile[info[#info]]
 end
 
+-- These switches show the opposite of what they store. The panel is told, so it
+-- compares and reverts their defaults the way they read (Options/Kit/Defaults.lua
+-- SetInverted; Options Navigation Review 2026-11-22, B3).
+if (ns.OptionsKit and ns.OptionsKit.Defaults and ns.OptionsKit.Defaults.SetInverted) then
+	ns.OptionsKit.Defaults.SetInverted(getterReverse)
+end
+
 local isdisabled = function(info)
 	return info[#info] ~= "enabled" and not getmodule().db.profile.enabled
 end
@@ -74,7 +81,7 @@ local GenerateOptions = function()
 		type = "group",
 		args = {
 			explorerermodedesc = {
-				name = L["The Explorer Mode is a collection of settings that affect primarily the actionbars and player unit frame,allowing them to fade out in various situations to get a more immersive experience."].."\n ",
+				name = L["Explorer Mode is a collection of settings that affect primarily the action bars and player unit frame, allowing them to fade out in various situations to get a more immersive experience."].."\n ",
 				type = "description",
 				fontSize = "medium",
 				order = 1
@@ -91,14 +98,14 @@ local GenerateOptions = function()
 				order = 9
 			},
 			explorermodedelayheader = {
-				name = L["When to start Explorer Mode"],
+				name = L["When to Start Explorer Mode"],
 				desc = "",
 				type = "header",
 				disabled = isdisabled, hidden = isdisabled,
 				order = 10
 			},
 			explorerermodedelaydesc = {
-				name = L["You can choose to have a delay before the Explorer Mode starts after loading screens."].."\n ",
+				name = L["You can choose to have a delay before Explorer Mode starts after loading screens."].."\n ",
 				type = "description",
 				fontSize = "medium",
 				disabled = isdisabled, hidden = isdisabled,
@@ -137,14 +144,14 @@ local GenerateOptions = function()
 				order = 19
 			},
 			explorermodesituationsheader = {
-				name = L["When to exit Explorer Mode"],
+				name = L["When to Exit Explorer Mode"],
 				desc = "",
 				type = "header",
 				disabled = isdisabled, hidden = isdisabled,
 				order = 20
 			},
 			explorermodesituationsdesc = {
-				name = L["Here you can select which situations should be considered unsafe and exit the Explorer Mode."].."\n ",
+				name = L["Here you can select which situations should be considered unsafe and exit Explorer Mode."].."\n ",
 				type = "description",
 				fontSize = "medium",
 				disabled = isdisabled, hidden = isdisabled,
@@ -165,8 +172,8 @@ local GenerateOptions = function()
 				order = 23
 			},
 			fadeThresholdHealth = {
-				name = L["Set the Low Health threshold"],
-				desc = L["Sets the threshold in a percentage of maximum health for when the Explorer Mode will exit."],
+				name = L["Set the low health threshold"],
+				desc = L["Sets the threshold in a percentage of maximum health for when Explorer Mode will exit."],
 				order = 24,
 				type = "range", width = "full", min = 30, max = 90, step = 5,
 				hidden = function(info) return isdisabled(info) or getoption(info, "fadeWithLowHealth") end,
@@ -186,8 +193,8 @@ local GenerateOptions = function()
 				order = 26
 			},
 			fadeThresholdMana = {
-				name = L["Set the Low Mana threshold"],
-				desc = L["Sets the threshold in a percentage of maximum mana for when the Explorer Mode will exit."],
+				name = L["Set the low mana threshold"],
+				desc = L["Sets the threshold in a percentage of maximum mana for when Explorer Mode will exit."],
 				order = 27,
 				type = "range", width = "full", min = 30, max = 90, step = 5,
 				hidden = function(info) return isdisabled(info) or getoption(info, "fadeWithLowMana") end,
@@ -200,8 +207,8 @@ local GenerateOptions = function()
 				order = 28
 			},
 			fadeThresholdManaInForms = {
-				name = L["Set the Low Mana while in a Druid from threshold"],
-				desc = L["Sets the threshold in a percentage of maximum mana for when the Explorer Mode will exit when in a Druid shapeshift form not currently having mana as the primary resource."],
+				name = L["Set the low mana threshold in Druid forms"],
+				desc = L["Sets the threshold in a percentage of maximum mana for when Explorer Mode will exit when in a Druid shapeshift form not currently having mana as the primary resource."],
 				order = 29,
 				type = "range", width = "full", min = 30, max = 90, step = 5,
 				disabled = function(info) return (playerClass ~= "DRUID") end,
@@ -216,7 +223,7 @@ local GenerateOptions = function()
 			},
 			--fadeThresholdEnergy = {
 			--	name = L["Set the Low Energy/Focus threshold"],
-			--	desc = L["Sets the threshold in a percentage of maximum energy or focus for when the Explorer Mode will exit."],
+			--	desc = L["Sets the threshold in a percentage of maximum energy or focus for when Explorer Mode will exit."],
 			--	order = 31,
 			--	type = "range", width = "full", min = 0, max = 100, step = 5,
 			--	hidden = function(info) return isdisabled(info) or getoption(info, "fadeWithLowMana") end,
@@ -304,63 +311,63 @@ local GenerateOptions = function()
 				order = 100
 			},
 			fadeActionBars = {
-				name = L["Fade ActionBars"],
+				name = L["Fade action bars"],
 				desc = L["Include your action bars in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 130
 			},
 			fadePetBar = {
-				name = L["Fade PetBar"],
+				name = L["Fade pet bar"],
 				desc = L["Include your pet bar in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 131
 			},
 			fadeStanceBar = {
-				name = L["Fade StanceBar"],
+				name = L["Fade stance bar"],
 				desc = L["Include your stance bar in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 132
 			},
 			fadePlayerFrame = {
-				name = L["Fade Player unit frame"],
+				name = L["Fade player unit frame"],
 				desc = L["Include your player unit frame in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 139
 			},
 			fadePlayerClassPower = {
-				name = L["Fade Player Class Power frame"],
+				name = L["Fade player class power frame"],
 				desc = L["Include your class power display, such as combo points or runes, in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 140
 			},
 			fadePetFrame = {
-				name = L["Fade Pet unit frame"],
+				name = L["Fade pet unit frame"],
 				desc = L["Include your pet unit frame in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 141
 			},
 			fadeFocusFrame = {
-				name = L["Fade Focus unit frame"],
+				name = L["Fade focus unit frame"],
 				desc = L["Include your focus unit frame in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 142
 			},
 			fadeTracker = {
-				name = L["Fade Objectives Tracker"],
+				name = L["Fade objectives tracker"],
 				desc = L["Include the objectives tracker in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
 				order = 150
 			},
 			fadeChatFrames = {
-				name = L["Fade Chat Windows"],
+				name = L["Fade chat windows"],
 				desc = L["Include your chat windows in what Explorer Mode fades out."],
 				type = "toggle", width = "full",
 				set = setter, get = getter, disabled = isdisabled, hidden = isdisabled,
@@ -399,4 +406,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Explorer Mode"], GenerateOptions, 9000, "interface", "ExplorerMode")
+Options:AddGroup("Explorer Mode", GenerateOptions, 9000, "setup", "ExplorerMode")

@@ -107,10 +107,10 @@ end
 -- theme's CastEndcap methods, ThemeEngine.lua). Added to a theme group's args.
 local AddCastEndcap = function(theme, args)
 	local limit = ns.ThemeEngine and ns.ThemeEngine.EndcapOffsetLimit or 60
-	args.castHeader = { name = L["Cast Bar"], order = 10, type = "header" }
+	args.castHeader = { name = L["Castbar"], order = 10, type = "header" }
 	args.castEndcapScale = {
-		name = L["Cast bar endcap size"],
-		desc = L["How large the cast bar's ornaments are drawn. They grow and shrink around their own centre."],
+		name = L["Castbar endcap size"],
+		desc = L["How large the castbar's ornaments are drawn. They grow and shrink around their own centre."],
 		order = 11,
 		type = "range", width = "full",
 		min = .5, max = 2, step = .05, isPercent = true,
@@ -118,8 +118,8 @@ local AddCastEndcap = function(theme, args)
 		get = function(info) return theme:GetCastEndcapScale() end
 	}
 	args.castEndcapX = {
-		name = L["X Offset"],
-		desc = L["Moves the cast bar's ornaments out from the ends of the bar, or in over it."],
+		name = L["X offset"],
+		desc = L["Moves the castbar's ornaments out from the ends of the bar, or in over it."],
 		order = 12,
 		type = "range", width = "full",
 		min = -limit, max = limit, step = 1,
@@ -127,8 +127,8 @@ local AddCastEndcap = function(theme, args)
 		get = function(info) return (theme:GetCastEndcapOffset()) end
 	}
 	args.castEndcapY = {
-		name = L["Y Offset"],
-		desc = L["Moves the cast bar's ornaments up or down."],
+		name = L["Y offset"],
+		desc = L["Moves the castbar's ornaments up or down."],
 		order = 13,
 		type = "range", width = "full",
 		min = -limit, max = limit, step = 1,
@@ -136,7 +136,7 @@ local AddCastEndcap = function(theme, args)
 		get = function(info) return select(2, theme:GetCastEndcapOffset()) end
 	}
 	args.resetCastEndcap = {
-		name = L["Reset cast bar endcap size and position"],
+		name = L["Reset castbar endcap size and position"],
 		order = 14,
 		type = "execute",
 		func = function() theme:ResetCastEndcapPlacement() end
@@ -207,7 +207,7 @@ local GenerateHunter = function(order)
 				get = function(info) return Hunter:GetEndcapScale() end
 			},
 			endcapX = {
-				name = L["X Offset"],
+				name = L["X offset"],
 				desc = L["Moves the endcaps out from the end of the bar, or in over it. The target's mirrored endcap moves the same way."],
 				order = 3,
 				type = "range", width = "full",
@@ -216,7 +216,7 @@ local GenerateHunter = function(order)
 				get = function(info) return (Hunter:GetEndcapOffset()) end
 			},
 			endcapY = {
-				name = L["Y Offset"],
+				name = L["Y offset"],
 				desc = L["Moves the endcaps up or down."],
 				order = 4,
 				type = "range", width = "full",
@@ -269,7 +269,7 @@ local GenerateMageTheme = function(order)
 				get = function(info) return Mage:GetEndcapScale() end
 			},
 			endcapX = {
-				name = L["X Offset"],
+				name = L["X offset"],
 				desc = L["Moves the endcaps out from the end of the bar, or in over it. The target's mirrored endcap moves the same way."],
 				order = 3,
 				type = "range", width = "full",
@@ -278,7 +278,7 @@ local GenerateMageTheme = function(order)
 				get = function(info) return (Mage:GetEndcapOffset()) end
 			},
 			endcapY = {
-				name = L["Y Offset"],
+				name = L["Y offset"],
 				desc = L["Moves the endcaps up or down."],
 				order = 4,
 				type = "range", width = "full",
@@ -343,13 +343,13 @@ local GeneratePaladin = function(order)
 				set = function(_, value) Paladin:SetEndcapScale(value) end
 			},
 			endcapX = {
-				name = L["X Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+				name = L["X offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
 				hidden = function() return Theme() ~= "paladin" end,
 				get = function() return (Paladin:GetEndcapOffset()) end,
 				set = function(_, value) Paladin:SetEndcapOffset(value, nil) end
 			},
 			endcapY = {
-				name = L["Y Offset"], order = 5, type = "range", width = "full", min = -60, max = 60, step = 1,
+				name = L["Y offset"], order = 5, type = "range", width = "full", min = -60, max = 60, step = 1,
 				hidden = function() return Theme() ~= "paladin" end,
 				get = function() return select(2, Paladin:GetEndcapOffset()) end,
 				set = function(_, value) Paladin:SetEndcapOffset(nil, value) end
@@ -392,11 +392,11 @@ local GenerateDruid = function(order)
 				hidden = function() return Theme() ~= "druid" end,
 				get = function() return Druid:GetEndcapScale() end,
 				set = function(_, value) Druid:SetEndcapScale(value) end },
-			endcapX = { name = L["X Offset"], order = 5, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapX = { name = L["X offset"], order = 5, type = "range", width = "full", min = -60, max = 60, step = 1,
 				hidden = function() return Theme() ~= "druid" end,
 				get = function() return (Druid:GetEndcapOffset()) end,
 				set = function(_, value) Druid:SetEndcapOffset(value, nil) end },
-			endcapY = { name = L["Y Offset"], order = 6, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapY = { name = L["Y offset"], order = 6, type = "range", width = "full", min = -60, max = 60, step = 1,
 				hidden = function() return Theme() ~= "druid" end,
 				get = function() return select(2, Druid:GetEndcapOffset()) end,
 				set = function(_, value) Druid:SetEndcapOffset(nil, value) end },
@@ -434,10 +434,10 @@ local GenerateWarrior = function(order)
 				min = .5, max = 2, step = .05, isPercent = true,
 				get = function() return Warrior:GetEndcapScale() end,
 				set = function(_, value) Warrior:SetEndcapScale(value) end },
-			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapX = { name = L["X offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return (Warrior:GetEndcapOffset()) end,
 				set = function(_, value) Warrior:SetEndcapOffset(value, nil) end },
-			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapY = { name = L["Y offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return select(2, Warrior:GetEndcapOffset()) end,
 				set = function(_, value) Warrior:SetEndcapOffset(nil, value) end },
 			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
@@ -463,10 +463,10 @@ local GenerateRogue = function(order)
 				min = .5, max = 2, step = .05, isPercent = true,
 				get = function() return Rogue:GetEndcapScale() end,
 				set = function(_, value) Rogue:SetEndcapScale(value) end },
-			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapX = { name = L["X offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return (Rogue:GetEndcapOffset()) end,
 				set = function(_, value) Rogue:SetEndcapOffset(value, nil) end },
-			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapY = { name = L["Y offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return select(2, Rogue:GetEndcapOffset()) end,
 				set = function(_, value) Rogue:SetEndcapOffset(nil, value) end },
 			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
@@ -492,10 +492,10 @@ local GenerateShaman = function(order)
 				min = .5, max = 2, step = .05, isPercent = true,
 				get = function() return Shaman:GetEndcapScale() end,
 				set = function(_, value) Shaman:SetEndcapScale(value) end },
-			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapX = { name = L["X offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return (Shaman:GetEndcapOffset()) end,
 				set = function(_, value) Shaman:SetEndcapOffset(value, nil) end },
-			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapY = { name = L["Y offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return select(2, Shaman:GetEndcapOffset()) end,
 				set = function(_, value) Shaman:SetEndcapOffset(nil, value) end },
 			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
@@ -521,10 +521,10 @@ local GenerateDeathKnight = function(order)
 				min = .5, max = 2, step = .05, isPercent = true,
 				get = function() return DeathKnight:GetEndcapScale() end,
 				set = function(_, value) DeathKnight:SetEndcapScale(value) end },
-			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapX = { name = L["X offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return (DeathKnight:GetEndcapOffset()) end,
 				set = function(_, value) DeathKnight:SetEndcapOffset(value, nil) end },
-			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapY = { name = L["Y offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return select(2, DeathKnight:GetEndcapOffset()) end,
 				set = function(_, value) DeathKnight:SetEndcapOffset(nil, value) end },
 			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
@@ -548,10 +548,10 @@ local GenerateRelicTheme = function(order, key, module, cap, label)
 				min = .5, max = 2, step = .05, isPercent = true,
 				get = function() return module:GetEndcapScale() end,
 				set = function(_, value) module:SetEndcapScale(value) end },
-			endcapX = { name = L["X Offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapX = { name = L["X offset"], order = 3, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return (module:GetEndcapOffset()) end,
 				set = function(_, value) module:SetEndcapOffset(value, nil) end },
-			endcapY = { name = L["Y Offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
+			endcapY = { name = L["Y offset"], order = 4, type = "range", width = "full", min = -60, max = 60, step = 1,
 				get = function() return select(2, module:GetEndcapOffset()) end,
 				set = function(_, value) module:SetEndcapOffset(nil, value) end },
 			resetEndcap = { name = L["Reset endcap size and position"], order = 5, type = "execute",
@@ -674,47 +674,6 @@ local GenerateMaterial = function(order, key)
 		args = args }
 end
 
-local GenerateTests = function()
-	local P=ns.ThemeBarPreview
-	if (not P) then return end
-	return {name=L["Bar tests"],type="group",inline=true,order=40,disabled=InCombatLockdown,args={
-		kind={name=L["Bar variant"],type="select",width="full",order=1,values=function() return P:GetChoices() end,
-			get=function() return P.kind end,set=function(_,v) P:Set("kind",v) end},
-		fill={name=L["Test fill"],type="range",width="full",order=2,min=0,max=1,step=.05,isPercent=true,
-			get=function() return P.fraction end,set=function(_,v) P:Set("fraction",v) end,disabled=function() return InCombatLockdown() or P.animate end},
-		animate={name=L["Cycle test fill"],type="toggle",width="full",order=3,get=function() return P.animate end,set=function(_,v) P:Set("animate",v) end},
-		protected={name=L["Protected cast"],type="toggle",width="full",order=4,hidden=function() return P.kind~="cast" end,
-			get=function() return P.protected end,set=function(_,v) P:Set("protected",v) end},
-		show={name=L["Open bar preview"],type="execute",order=5,func=function() P:Show() end},
-		close={name=L["Close bar preview"],type="execute",order=6,func=function() if (P.window) then P.window:Hide() end end}
-	}}
-end
-
--- Components/Misc/Details.lua registers the skin in Details' own selector; this
--- switch applies it to every Details window, or gives each one its old skin back.
-local GenerateDetails = function(order)
-	local Skin = ns:GetModule("DetailsSkin", true)
-	if (not Skin or not Skin.SetApplied) then return end
-	local toggle = {
-		name = L["Use the AzeriteUI skin on Details windows"],
-		desc = L["Gives every Details window the AzeriteUI Forged (Preview) skin through Details' own skin selector. Turning it off gives each window back the skin it had before."],
-		order = 1, type = "toggle", width = "full",
-		disabled = function() return InCombatLockdown() or not Skin.IsAvailable() end,
-		-- ChangeSkin resets a window's appearance to the preset (Details' own behaviour).
-		confirm = function() return L["Details resets a window's appearance settings when its skin changes. Window positions and meter data are kept. Continue?"] end,
-		get = function() return Skin.IsApplied() end,
-		set = function(_, value) Skin:SetApplied(value) end
-	}
-	local config = ns.OptionsKit and ns.OptionsKit.Config
-	if (config and config.SetDisabledDesc) then
-		-- Only the missing addon needs saying; combat greys the whole page.
-		config.SetDisabledDesc(toggle, function()
-			if (not Skin.IsAvailable()) then return L["Requires the Details! Damage Meter addon."] end
-		end)
-	end
-	return { name = "Details", order = order, type = "group", inline = true, args = { apply = toggle } }
-end
-
 local GenerateOptions = function()
 	if (not Effects()) then return end
 	local options = {
@@ -834,30 +793,7 @@ local GenerateOptions = function()
 			nightblood = GenerateMaterial(32.2, "nightblood"),
 			tides = GenerateMaterial(33, "tides"),
 			magma = GenerateMaterial(33.1, "magma"),
-			storm = GenerateMaterial(33.2, "storm"),
-			details = GenerateDetails(39),
-			zygor = {
-				name = "Zygor", order = 40, type = "group", inline = true,
-				args = { skin = {
-					name = L["Skin"], type = "select", order = 1,
-					values = { default = L["Default"], Forged = "Forged", Glass = "Glass", ["Field-Journal"] = "Field Journal" },
-					sorting = { "default", "Forged", "Glass", "Field-Journal" },
-					disabled = function() return InCombatLockdown() or not (_G.ZygorGuidesViewer and _G.ZygorGuidesViewer.Frame) end,
-					get = function() return ns.db.char.zygorSkin or "default" end,
-					set = function(_, choice) ns:GetModule("ZygorSkin"):SetChoice(choice) end
-				} }
-			},
-			totalRP3 = {
-				name = "Total RP 3", order = 41, type = "group", inline = true,
-				hidden = function() return not _G.TRP3_MainFrame end,
-				args = { skin = {
-					name = L["Skin"], type = "toggle", order = 1,
-					disabled = InCombatLockdown,
-					get = function() return ns.db.char.totalRP3Skin == true end,
-					set = function(_, enabled) ns:GetModule("TRP3Skin"):SetEnabled(enabled) end
-				} }
-			},
-			tests = GenerateTests()
+			storm = GenerateMaterial(33.2, "storm")
 		}
 	}
 	if (ns.ClassResourceEffects) then

@@ -51,24 +51,24 @@ function Options:GenerateGroupIndicatorsOptions()
 				hidden = NoContainers
 			},
 			groupCorners = {
-				name = L["Show Corner Dots"],
+				name = L["Show corner dots"],
 				type = "toggle", order = 22, width = "full", set = Set, get = Get,
 				hidden = NoContainers
 			},
 			groupCornerOnlyMine = {
-				name = L["Only Mine"],
+				name = L["Only mine"],
 				desc = L["Only show the listed buffs when you cast them."],
 				type = "toggle", order = 23, width = "full", set = Set, get = Get,
 				hidden = NoContainers, disabled = CornersOff
 			},
 			groupCornerSize = {
-				name = L["Dot Size"],
+				name = L["Dot size"],
 				type = "range", order = 24, min = 6, max = 20, step = 1, width = "full",
 				set = Set, get = Get,
 				hidden = NoContainers, disabled = CornersOff
 			},
 			suggestions = {
-				name = L["Use My Class's Suggestions"],
+				name = L["Use my class's suggestions"],
 				desc = L["Fills the corners with common buffs for your class. Replaces what is there."],
 				type = "execute", order = 25,
 				hidden = function()
@@ -91,8 +91,8 @@ function Options:GenerateGroupIndicatorsOptions()
 	}
 
 	local cornerNames = {
-		TOPLEFT = L["Top Left"], TOPRIGHT = L["Top Right"],
-		BOTTOMLEFT = L["Bottom Left"], BOTTOMRIGHT = L["Bottom Right"]
+		TOPLEFT = L["Top left"], TOPRIGHT = L["Top right"],
+		BOTTOMLEFT = L["Bottom left"], BOTTOMRIGHT = L["Bottom right"]
 	}
 	for index, corner in ipairs(indicators.Corners) do
 		options.args["groupCornerSpells" .. corner] = {

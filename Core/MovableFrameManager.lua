@@ -1580,18 +1580,18 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 		hidden = noselection
 	}
 	local pointValues = {
-		["TOPLEFT"] = L["Top-Left Corner"],
-		["TOP"] = L["Top Center"],
-		["TOPRIGHT"] = L["Top-Right Corner"],
-		["RIGHT"] = L["Middle Right Side"],
-		["BOTTOMRIGHT"] = L["Bottom-Right Corner"],
-		["BOTTOM"] = L["Bottom Center"],
-		["BOTTOMLEFT"] = L["Bottom-Left Corner"],
-		["LEFT"] = L["Middle Left Side"],
+		["TOPLEFT"] = L["Top-left corner"],
+		["TOP"] = L["Top center"],
+		["TOPRIGHT"] = L["Top-right corner"],
+		["RIGHT"] = L["Middle right side"],
+		["BOTTOMRIGHT"] = L["Bottom-right corner"],
+		["BOTTOM"] = L["Bottom center"],
+		["BOTTOMLEFT"] = L["Bottom-left corner"],
+		["LEFT"] = L["Middle left side"],
 		["CENTER"] = L["Center"]
 	}
 	options.args.point = {
-		name = L["Anchor Point"],
+		name = L["Anchor point"],
 		desc = L["Sets the anchor point."],
 		order = orderoffset + 110,
 		hidden = noselection,
@@ -1613,7 +1613,7 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 		name = "", order = orderoffset + 112, type = "description", hidden = noselection
 	}
 	options.args.offsetX = {
-		name = L["X Offset"],
+		name = L["X offset"],
 		desc = L["Sets the horizontal offset from your chosen anchor point. Positive values means right, negative values means left."],
 		order = orderoffset + 120,
 		type = "input",
@@ -1623,7 +1623,7 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 		get = getter
 	}
 	options.args.offsetY = {
-		name = L["Y Offset"],
+		name = L["Y offset"],
 		desc = L["Sets the vertical offset from your chosen anchor point. Positive values means up, negative values means down."],
 		order = orderoffset + 130,
 		type = "input",

@@ -61,7 +61,7 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Aura Header Settings"],
+		name = L["Player Auras"],
 		type = "group",
 		args = {
 			description = {
@@ -72,7 +72,7 @@ local GenerateOptions = function()
 			},
 			enabled = {
 				name = L["Enable"],
-				desc = L["Toggle whether to show the player aura buttons or not."],
+				desc = L["Show your buffs and debuffs in the top right corner of the screen."],
 				order = 2,
 				type = "toggle", width = "full",
 				set = setter,
@@ -92,7 +92,7 @@ local GenerateOptions = function()
 				hidden = isdisabled
 			},
 			enableAuraFading = {
-				name = L["Fade When Idle"],
+				name = L["Fade when idle"],
 				desc = L["Fade the top-right aura header when you are not interacting with it."],
 				order = 10,
 				type = "toggle", width = "full",
@@ -101,7 +101,7 @@ local GenerateOptions = function()
 				get = getter
 			},
 			enableModifier = {
-				name = L["Only Show With Modifier Key"],
+				name = L["Only show with modifier key"],
 				desc = L["Require a modifier key to reveal the top-right aura header."],
 				order = 20,
 				type = "toggle", width = "full",
@@ -110,7 +110,7 @@ local GenerateOptions = function()
 				get = getter
 			},
 			modifier = {
-				name = L["Required Modifier Key"],
+				name = L["Required modifier key"],
 				desc = L["Choose which key reveals the top-right aura header."],
 				order = 21,
 				hidden = isdisabled,
@@ -125,7 +125,7 @@ local GenerateOptions = function()
 				get = getter
 			},
 			ignoreTarget = {
-				name = L["Keep Visible While Targeting"],
+				name = L["Keep visible while targeting"],
 				desc = L["Keep the AzeriteUI top-right aura header visible even when you have a target. Turn this off if you want the target frame to take over that screen space."],
 				order = 22,
 				type = "toggle", width = "full",
@@ -150,20 +150,20 @@ local GenerateOptions = function()
 				hidden = isdisabled
 			},
 			anchorPoint = {
-				name = L["Anchor Point"],
+				name = L["Anchor point"],
 				desc = L["Sets the anchor point."],
 				order = 32,
 				hidden = isdisabled,
 				type = "select", style = "dropdown",
 				values = {
-					["TOPLEFT"] = L["Top-Left Corner"],
-					["TOP"] = L["Top Center"],
-					["TOPRIGHT"] = L["Top-Right Corner"],
-					["RIGHT"] = L["Middle Right Side"],
-					["BOTTOMRIGHT"] = L["Bottom-Right Corner"],
-					["BOTTOM"] = L["Bottom Center"],
-					["BOTTOMLEFT"] = L["Bottom-Left Corner"],
-					["LEFT"] = L["Middle Left Side"],
+					["TOPLEFT"] = L["Top-left corner"],
+					["TOP"] = L["Top center"],
+					["TOPRIGHT"] = L["Top-right corner"],
+					["RIGHT"] = L["Middle right side"],
+					["BOTTOMRIGHT"] = L["Bottom-right corner"],
+					["BOTTOM"] = L["Bottom center"],
+					["BOTTOMLEFT"] = L["Bottom-left corner"],
+					["LEFT"] = L["Middle left side"],
 					["CENTER"] = L["Center"]
 				},
 				set = setter,
@@ -174,7 +174,7 @@ local GenerateOptions = function()
 				hidden = isdisabled
 			},
 			growthX = {
-				name = L["Horizontal Growth"],
+				name = L["Horizontal growth"],
 				desc = L["Choose which horizontal direction the aura buttons should expand in."],
 				order = 41,
 				type = "select", style = "dropdown",
@@ -187,7 +187,7 @@ local GenerateOptions = function()
 				get = getter
 			},
 			growthY = {
-				name = L["Vertical Growth"],
+				name = L["Vertical growth"],
 				desc = L["Choose which vertical direction the aura buttons should expand in."],
 				order = 42,
 				type = "select", style = "dropdown",
@@ -203,7 +203,7 @@ local GenerateOptions = function()
 				name = "", order = 50, type = "description", hidden = isdisabled
 			},
 			paddingX = {
-				name = L["Horizontal Padding"],
+				name = L["Horizontal padding"],
 				desc = L["Sets the horizontal padding between your aura buttons."],
 				order = 51,
 				type = "range", width = "full", min = 0, max = 12, step = 1,
@@ -212,7 +212,7 @@ local GenerateOptions = function()
 				get = getter
 			},
 			paddingY = {
-				name = L["Vertical Padding"],
+				name = L["Vertical padding"],
 				desc = L["Sets the vertical padding between your aura buttons."],
 				order = 52,
 				type = "range", width = "full", min = 6, max = 18, step = 1,
@@ -221,7 +221,7 @@ local GenerateOptions = function()
 				get = getter
 			},
 			wrapAfter = {
-				name = L["Buttons Per Row"],
+				name = L["Buttons per row"],
 				desc = L["Sets the maximum number of aura buttons per row."],
 				order = 53,
 				type = "range", width = "full", min = 1, max = 16, step = 1,

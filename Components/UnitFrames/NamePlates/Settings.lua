@@ -82,6 +82,11 @@ local defaults = { profile = ns:Merge({
 	threatAggroSound = false,
 	-- Where the roles work (Visibility.lua, IsThreatScopeActive): "group", "instance" or "always".
 	threatRoleScope = "group",
+	-- In tank mode, lines in the middle of the screen while a healer is under 50% and 25% mana (GroupMana.lua).
+	-- "healers" (everyone using mana in a group without roles) or "mana" (healers and every mana user).
+	tankManaWarning = false,
+	tankManaWatch = "healers",
+	tankManaSoundFile = "Default",
 	-- The three alerts' sounds: "Default" is the game's warning, anything else a LibSharedMedia name.
 	tankLostAggroSoundFile = "Default",
 	threatWarnSoundFile = "Default",
@@ -121,6 +126,9 @@ local defaults = { profile = ns:Merge({
 	-- title under the name, such as <Innkeeper>, read from the NPC's tooltip (Visibility.lua, since 2026-11-07).
 	friendlyNPCNameOnly = false,
 	showFriendlyNPCTitle = true,
+	-- Enemy players you cannot attack, and their pets, as names only like friendly players (since 2026-11-22):
+	-- the other faction unflagged on a PvE realm. A player who can be attacked keeps the bar.
+	enemyPlayerNameOnly = false,
 	-- Player health bars in class colour, per side (Elements.lua, Health_UpdateColor). Enemy on is the
 	-- behaviour before 2026-11-07; friendly is new and off. Secret classes (PvP) go through C_ClassColor.
 	classColorEnemyPlayers = true,
@@ -385,6 +393,20 @@ local IsSafeFalse = function(value)
 	return not value
 end
 
+-- The reaction a plate is coloured by. Blizzard colours plates by UnitSelectionColor, and the game's
+-- neutral selection type (2) can differ from the faction reaction: a neutral NPC you cannot attack may
+-- answer a friendly UnitReaction and turned green. NPCs only; a secret answer keeps the faction reaction.
+local GetDisplayReaction = function(unit)
+	local reaction = UnitReaction("player", unit)
+	if (UnitSelectionType and IsSafeFalse(UnitPlayerControlled(unit)) and IsSafeFalse(UnitIsPlayer(unit))) then
+		local selection = UnitSelectionType(unit)
+		if (not IsSecretValue(selection) and selection == 2) then
+			return 4
+		end
+	end
+	return reaction
+end
+
 local GetSafeColorByKey = function(colors, key, fallback)
 	if (IsSecretValue(key)) then
 		return fallback
@@ -478,8 +500,35 @@ local IsFriendlyNPCNameOnlyEnabled = function()
 	return profile and profile.friendlyNPCNameOnly and true or false
 end
 
+local IsEnemyPlayerNameOnlyEnabled = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	return profile and profile.enemyPlayerNameOnly and true or false
+end
+
+-- A player, or a player's pet, totem or guardian (isMinion, Classification.lua), of the other side that you
+-- cannot attack: readable answers only, so a secret one (PvP) keeps the bar.
+local IsUnattackableEnemyPlayer = function(self, unit)
+	if (not IsSafeUnitToken(unit)) then
+		return false
+	end
+	if (not (self.isMinion or IsPlayerForDisplay(unit))) then
+		return false
+	end
+	local canAttack = UnitCanAttack("player", unit)
+	if (IsSecretValue(canAttack) or canAttack ~= false) then
+		return false
+	end
+	local isFriend = UnitIsFriend("player", unit)
+	if (IsSecretValue(isFriend) or isFriend ~= false) then
+		return false
+	end
+	local canAssist = UnitCanAssist("player", unit)
+	return (not IsSecretValue(canAssist)) and canAssist ~= true
+end
+
 -- A plate drawn as its name only: a friendly player (hideFriendlyPlayerHealthBar) or, since 2026-11-07, a
--- friendly NPC (friendlyNPCNameOnly). The name is older than the NPC half; every name-only path asks this.
+-- friendly NPC (friendlyNPCNameOnly), and since 2026-11-22 an enemy player or minion you cannot attack
+-- (enemyPlayerNameOnly). The name is older than the NPC half; every name-only path asks this.
 -- isFriendlyAssistableNPC comes from NamePlate_Classify (Classification.lua): no players, pets or objects.
 local ShouldUseFriendlyPlayerNameOnly = function(self)
 	if (not self or self.isPRD or self.isObjectPlate) then
@@ -488,6 +537,9 @@ local ShouldUseFriendlyPlayerNameOnly = function(self)
 	local unit = self.unit
 	if (self.isFriendlyAssistableNPC and IsFriendlyNPCNameOnlyEnabled() and IsSafeUnitToken(unit)
 		and not IsPlayerForDisplay(unit)) then
+		return true
+	end
+	if (IsEnemyPlayerNameOnlyEnabled() and IsUnattackableEnemyPlayer(self, unit)) then
 		return true
 	end
 	if (not IsFriendlyPlayerNameOnlyEnabled()) then
@@ -967,8 +1019,10 @@ local GetEffectivePlateScale = function(self)
 	local isHostile = IsHostileNamePlate(self)
 	local isTargetLike = (self and (self.isTarget or self.isSoftTarget)) and true or false
 	local isFriendlyNPC = self and self.isFriendlyAssistableNPC and true or false
+	local nameOnly = ShouldUseFriendlyPlayerNameOnly(self)
 
-	if (isHostile) then
+	-- A name-only enemy you cannot attack is sized as the friendly names it is drawn like.
+	if (isHostile and not nameOnly) then
 		scale = scale * GetEnemyNamePlateScaleSetting()
 	elseif (isFriendlyNPC) then
 		scale = scale * GetFriendlyNPCNamePlateScaleSetting()
@@ -976,7 +1030,7 @@ local GetEffectivePlateScale = function(self)
 		scale = scale * GetFriendlyNamePlateScaleSetting()
 	end
 
-	if (ShouldUseFriendlyPlayerNameOnly(self)) then
+	if (nameOnly) then
 		scale = scale * FRIENDLY_NAME_ONLY_SCALE_MULTIPLIER
 		if (isTargetLike) then
 			scale = scale * (1 + GetFriendlyNameOnlyTargetScale())
@@ -1030,7 +1084,7 @@ NamePlatesMod.GetDebugPlateScaleBreakdown = function(self, frame)
 	local isHostile = IsHostileNamePlate(frame)
 	local overallScale = IsUsingBlizzardGlobalScale() and GetBlizzardOverallScale() or GetNamePlateProfileScale()
 	local isFriendlyNPC = frame.isFriendlyAssistableNPC and true or false
-	local relationScale = isHostile and GetEnemyNamePlateScaleSetting()
+	local relationScale = (isHostile and not ShouldUseFriendlyPlayerNameOnly(frame)) and GetEnemyNamePlateScaleSetting()
 		or isFriendlyNPC and GetFriendlyNPCNamePlateScaleSetting()
 		or GetFriendlyNamePlateScaleSetting()
 	local targetScale = 0
@@ -1119,6 +1173,7 @@ NP.IsSecretValue = IsSecretValue
 NP.IsSafeTrue = IsSafeTrue
 NP.IsSafeFalse = IsSafeFalse
 NP.GetSafeColorByKey = GetSafeColorByKey
+NP.GetDisplayReaction = GetDisplayReaction
 NP.IsSafeUnitToken = IsSafeUnitToken
 NP.SafeUnitMatches = SafeUnitMatches
 NP.GetNamePlateBarLayout = GetNamePlateBarLayout

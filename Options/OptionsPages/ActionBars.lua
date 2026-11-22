@@ -162,7 +162,7 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 		args = {
 			enabled = {
 				name = L["Enable"],
-				desc = L["Toggle whether to enable this action bar or not."],
+				desc = L["Show this action bar."],
 				order = 1,
 				type = "toggle", width = "full",
 				set = setter,
@@ -202,24 +202,24 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				set = function(info, val) setvisibility(info, "dragon", val) end,
 				get = function(info) return getvisibility(info, "dragon") end
 			},
-			buttonShape = ShapeOption(L["Button Shape"],
+			buttonShape = ShapeOption(L["Button shape"],
 				L["Choose the shape of this bar's buttons. Circle is the intended AzeriteUI design. Square and Rounded are alternatives that keep the same spacing. Changing this asks you to reload."],
 				14, isdisabled, getter, setter),
 			showRangeIndicator = {
-				name = L["Show Range Indicator"],
+				name = L["Show range indicator"],
 				desc = L["Color buttons on this bar when their action is out of range. Unusable actions and low resource colors still apply."],
 				order = 15, type = "toggle", width = "full", hidden = isdisabled,
 				set = setter, get = function(info) return getter(info) ~= false end
 			},
 			showButtonCount = {
-				name = L["Show Item and Charge Counts"],
+				name = L["Show item and charge counts"],
 				desc = L["Show item quantities and spell charge counts on this bar. Cooldown timers are unaffected."],
 				order = 16, type = "toggle", width = "full", hidden = isdisabled,
 				set = setter, get = function(info) return getter(info) ~= false end
 			},
 			enableBarFading = {
-				name = L["Enable Bar Fading"],
-				desc = L["Toggle whether to enable the buttons of this action bar to fade out."],
+				name = L["Enable bar fading"],
+				desc = L["Let this bar's buttons fade out. The settings below choose when."],
 				order = 9,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -245,7 +245,7 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				get = getter
 			},
 			fadeFrom = {
-				name = L["Start Fading from"],
+				name = L["Start fading from"],
 				desc = L["Choose which button to start the fading from."],
 				order = 12,
 				type = "range", width = "full", min = 1, max = 12, step = 1,
@@ -276,20 +276,20 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				hidden = isdisabled
 			},
 			layout = {
-				name = L["Bar Layout"],
+				name = L["Bar layout"],
 				desc = L["Choose the action bar layout type."],
 				order = 20,
 				type = "select", style = "dropdown",
 				hidden = isdisabled,
 				values = {
-					["grid"] = L["Grid Layout"],
-					["zigzag"] = L["ZigZag Layout"],
+					["grid"] = L["Grid layout"],
+					["zigzag"] = L["Zigzag layout"],
 				},
 				set = setter,
 				get = getter
 			},
 			startAt = {
-				name = L["First ZigZag Button"],
+				name = L["First zigzag button"],
 				desc = L["Sets which button the zigzag pattern should begin at."],
 				order = 21,
 				type = "range", width = "full", min = 1, max = 12, step = 1,
@@ -307,7 +307,7 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				get = getter
 			},
 			padding = {
-				name = L["Button Padding"],
+				name = L["Button padding"],
 				desc = L["Sets the padding between buttons on the same line."],
 				order = 31,
 				type = "range", width = "full", min = 0, max = 16, step = 1,
@@ -316,7 +316,7 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				get = getter
 			},
 			breakpadding = {
-				name = L["Line Padding"],
+				name = L["Line padding"],
 				desc = L["Sets the padding between multiple lines of buttons."],
 				order = 32,
 				type = "range", width = "full", min = 0, max = 16, step = 1,
@@ -325,7 +325,7 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				get = getter
 			},
 			breakpoint = {
-				name = L["Line Break"],
+				name = L["Line break"],
 				desc = L["Sets when a new line of buttons should begin."],
 				order = 40,
 				type = "range", width = "full", min = 1, max = 12, step = 1,
@@ -334,14 +334,14 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				get = getter
 			},
 			growth = {
-				name = L["Initial Growth"],
+				name = L["Initial growth"],
 				desc = L["Choose whether the bar initially should expand horizontally or vertically."],
 				order = 50,
 				type = "select", style = "dropdown",
 				hidden = isdisabled,
 				values = {
-					["horizontal"] = L["Horizontal Layout"],
-					["vertical"] = L["Vertical Layout"],
+					["horizontal"] = L["Horizontal layout"],
+					["vertical"] = L["Vertical layout"],
 				},
 				set = setter,
 				get = getter
@@ -351,7 +351,7 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				hidden = isdisabled
 			},
 			growthHorizontal = {
-				name = L["Horizontal Growth"],
+				name = L["Horizontal growth"],
 				desc = L["Choose which horizontal direction the bar should expand in."],
 				order = 52,
 				type = "select", style = "dropdown",
@@ -364,7 +364,7 @@ local GenerateIndexedBarOptions = function(moduleName, displayName, order)
 				get = getter
 			},
 			growthVertical = {
-				name = L["Vertical Growth"],
+				name = L["Vertical growth"],
 				desc = L["Choose which vertical direction the bar should expand in."],
 				order = 53,
 				type = "select", style = "dropdown",
@@ -441,7 +441,7 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 		args = {
 			enabled = {
 				name = L["Enable"],
-				desc = L["Toggle whether to enable this action bar or not."],
+				desc = L["Show this action bar."],
 				order = 1,
 				type = "toggle", width = "full",
 				set = setter,
@@ -460,14 +460,14 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				fontSize = "medium",
 				hidden = isdisabled
 			},
-			buttonShape = ShapeOption(L["Button Shape"],
+			buttonShape = ShapeOption(L["Button shape"],
 				L["Choose the shape of this bar's buttons. Circle is the intended AzeriteUI design. Square and Rounded are alternatives that keep the same spacing. Changing this asks you to reload."],
 				14, isdisabled, getter, function(info, val)
 					getmodule().db.profile.buttonShape = val
 				end),
 			enableBarFading = {
-				name = L["Enable Bar Fading"],
-				desc = L["Toggle whether to enable the buttons of this action bar to fade out."],
+				name = L["Enable bar fading"],
+				desc = L["Let this bar's buttons fade out. The settings below choose when."],
 				order = 9,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
@@ -496,7 +496,7 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				get = getter
 			},
 			fadeFrom = {
-				name = L["Start Fading from"],
+				name = L["Start fading from"],
 				desc = L["Choose which button to start the fading from."],
 				order = 12,
 				type = "range", width = "full", min = 1, max = maxButtons or 12, step = 1,
@@ -518,20 +518,20 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				hidden = isdisabled
 			},
 			layout = {
-				name = L["Bar Layout"],
+				name = L["Bar layout"],
 				desc = L["Choose the action bar layout type."],
 				order = 20,
 				type = "select", style = "dropdown",
 				hidden = isdisabled,
 				values = {
-					["grid"] = L["Grid Layout"],
-					["zigzag"] = L["ZigZag Layout"],
+					["grid"] = L["Grid layout"],
+					["zigzag"] = L["Zigzag layout"],
 				},
 				set = setter,
 				get = getter
 			},
 			startAt = {
-				name = L["First ZigZag Button"],
+				name = L["First zigzag button"],
 				desc = L["Sets which button the zigzag pattern should begin at."],
 				order = 21,
 				type = "range", width = "full", min = 1, max = maxButtons or 12, step = 1,
@@ -549,7 +549,7 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				get = getter
 			},
 			padding = {
-				name = L["Button Padding"],
+				name = L["Button padding"],
 				desc = L["Sets the padding between buttons on the same line."],
 				order = 31,
 				type = "range", width = "full", min = 0, max = 16, step = 1,
@@ -558,7 +558,7 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				get = getter
 			},
 			breakpadding = {
-				name = L["Line Padding"],
+				name = L["Line padding"],
 				desc = L["Sets the padding between multiple lines of buttons."],
 				order = 32,
 				type = "range", width = "full", min = 0, max = 16, step = 1,
@@ -567,7 +567,7 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				get = getter
 			},
 			breakpoint = {
-				name = L["Line Break"],
+				name = L["Line break"],
 				desc = L["Sets when a new line of buttons should begin."],
 				order = 40,
 				type = "range", width = "full", min = 1, max = maxButtons or 12, step = 1,
@@ -576,14 +576,14 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				get = getter
 			},
 			growth = {
-				name = L["Initial Growth"],
+				name = L["Initial growth"],
 				desc = L["Choose whether the bar initially should expand horizontally or vertically."],
 				order = 50,
 				type = "select", style = "dropdown",
 				hidden = isdisabled,
 				values = {
-					["horizontal"] = L["Horizontal Layout"],
-					["vertical"] = L["Vertical Layout"],
+					["horizontal"] = L["Horizontal layout"],
+					["vertical"] = L["Vertical layout"],
 				},
 				set = setter,
 				get = getter
@@ -593,7 +593,7 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				hidden = isdisabled
 			},
 			growthHorizontal = {
-				name = L["Horizontal Growth"],
+				name = L["Horizontal growth"],
 				desc = L["Choose which horizontal direction the bar should expand in."],
 				order = 52,
 				type = "select", style = "dropdown",
@@ -606,7 +606,7 @@ local GenerateBarOptions = function(moduleName, displayName, order, maxButtons)
 				get = getter
 			},
 			growthVertical = {
-				name = L["Vertical Growth"],
+				name = L["Vertical growth"],
 				desc = L["Choose which vertical direction the bar should expand in."],
 				order = 53,
 				type = "select", style = "dropdown",
@@ -631,7 +631,7 @@ end
 
 local GenerateKeybindModeOption = function()
 	return {
-		name = L["Keybind Mode"],
+		name = L["Keybind mode"],
 		desc = L["Hover any action button and press a key to bind it. Press Escape to clear the binding, and Enter or Escape outside a button to finish."],
 		order = 3,
 		type = "execute",
@@ -702,7 +702,7 @@ local GenerateQuestItemButtonOptions = function()
 					disabled = qoff, get = qget, set = qset
 				},
 				useExtraActionKey = {
-					name = L["Use the Extra Action Button key"],
+					name = L["Use the extra action button key"],
 					desc = L["While the button has no key of its own, it borrows the key bound to the Extra Action Button. A Blizzard extra action takes the key back for as long as it is up."],
 					type = "toggle", order = 5, width = "full", get = qget,
 					disabled = function() return qoff() or nativeBars() end,
@@ -767,7 +767,7 @@ local GenerateOptions = function()
 	end
 
 	local options = {
-		name = L["Action Bar Settings"],
+		name = L["Action Bars"],
 		type = "group", childGroups = "tree",
 		args = {
 			description = {
@@ -777,7 +777,7 @@ local GenerateOptions = function()
 				order = 0
 			},
 			hideElementsHotkey = {
-				name = L["Hide Hotkeys"],
+				name = L["Hide hotkeys"],
 				desc = L["Hides Hotkeys from the actionbuttons."],
 				order = 1,
 				type = "toggle", width = "full",
@@ -830,7 +830,7 @@ local GenerateOptions = function()
 				end
 			},
 			useCommandBindingsForHoldCast = {
-				name = L["Use Command Bindings for Hold Cast"],
+				name = L["Use command bindings for hold cast"],
 				desc = L["Route keybinds through Blizzard action commands first, with click-binding fallback. Recommended for press-and-hold behavior."],
 				order = 2.1,
 				type = "toggle", width = "full",
@@ -887,7 +887,7 @@ local GenerateOptions = function()
 				set = setter,
 				get = getter
 			},
-			extraButtonShape = ShapeOption(L["Extra Button Shape"],
+			extraButtonShape = ShapeOption(L["Extra button shape"],
 				L["Choose the shape of the extra action and zone ability buttons. Circle is the intended AzeriteUI design. Changing this asks you to reload."],
 				7, nil, getter, function(info, val)
 					getmodule().db.profile.extraButtonShape = val
@@ -942,7 +942,7 @@ local GenerateOptions = function()
 				type = "description", fontSize = "medium", order = 0
 			},
 			procHighlightStyle = {
-				name = L["Highlight Style"], type = "select", order = 1,
+				name = L["Highlight style"], type = "select", order = 1,
 				values = { current = L["Current ring"], outline = L["Solid outline"], glow = L["Soft glow"], both = L["Outline + glow"], off = L["Off"] },
 				sorting = { "current", "outline", "glow", "both", "off" },
 				set = setter, get = getter
@@ -955,13 +955,13 @@ local GenerateOptions = function()
 				set = setter, get = getter
 			},
 			procHighlightColorSource = {
-				name = L["Colour source"], type = "select", order = 3,
-				values = { gold = L["Default gold"], class = L["Class Color"], custom = L["Custom colour"] },
+				name = L["Color source"], type = "select", order = 3,
+				values = { gold = L["Default gold"], class = L["Class color"], custom = L["Custom color"] },
 				sorting = { "gold", "class", "custom" },
 				disabled = procDisabled, set = setter, get = getter
 			},
 			procHighlightColor = {
-				name = L["Custom colour"], type = "color", order = 4,
+				name = L["Custom color"], type = "color", order = 4,
 				hidden = function() return getmodule().db.profile.procHighlightColorSource ~= "custom" end,
 				disabled = procDisabled,
 				get = function()
@@ -1011,7 +1011,7 @@ local GenerateOptions = function()
 				type = "description", fontSize = "medium", order = 0
 			},
 			assistedHighlightStyle = {
-				name = L["Highlight Style"], type = "select", order = 1,
+				name = L["Highlight style"], type = "select", order = 1,
 				values = { current = L["Current glow"], outline = L["Solid outline"], glow = L["Soft glow"], both = L["Outline + glow"], off = L["Off"] },
 				sorting = { "current", "outline", "glow", "both", "off" },
 				set = setter, get = getter
@@ -1024,13 +1024,13 @@ local GenerateOptions = function()
 				set = setter, get = getter
 			},
 			assistedHighlightColorSource = {
-				name = L["Colour source"], type = "select", order = 3,
-				values = { default = L["Default blue"], class = L["Class Color"], custom = L["Custom colour"] },
+				name = L["Color source"], type = "select", order = 3,
+				values = { default = L["Default blue"], class = L["Class color"], custom = L["Custom color"] },
 				sorting = { "default", "class", "custom" },
 				disabled = assistedDisabled, set = setter, get = getter
 			},
 			assistedHighlightColor = {
-				name = L["Custom colour"], type = "color", order = 4,
+				name = L["Custom color"], type = "color", order = 4,
 				hidden = function() return getmodule().db.profile.assistedHighlightColorSource ~= "custom" end,
 				disabled = assistedDisabled,
 				get = function()
@@ -1111,18 +1111,21 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Action Bars"], function()
+Options:AddGroup("Action Bars", function()
 	local options = GenerateOptions()
 	local quest = GenerateQuestItemButtonOptions()
 	if quest then
-		options = options or { name = L["Action Bar Settings"], type = "group", args = {} }
+		options = options or { name = L["Action Bars"], type = "group", args = {} }
 		options.args.questItemButton = quest
 		options.args.keybindMode = options.args.keybindMode or GenerateKeybindModeOption()
 	end
 	if ns.IsForever then
-		options = options or { name = L["Action Bar Settings"], type = "group", args = {} }
+		options = options or { name = L["Action Bars"], type = "group", args = {} }
+		-- First on the page, so the page's own rows after it need a heading of their own, or
+		-- they read as part of it (Options Navigation Review 2026-11-22, B7).
+		options.args.generalHeader = { name = L["General"], type = "header", order = .2 }
 		options.args.nativeController = {
-			name = L["Native controller"], type = "group", order = .1,
+			name = L["Native Controller"], type = "group", order = .1,
 			args = {
 				description = {
 					type = "description", fontSize = "medium", order = 1,

@@ -58,12 +58,12 @@ local GenerateOptions = function()
 	}
 
 	options.args.colorHeader = {
-		name = L["Colour"], type = "header", order = 1
+		name = L["Color"], type = "header", order = 1
 	}
 
 	options.args.tint = {
-		name = L["Colour With Alpha"],
-		desc = L["Opens the game's own colour picker. The swatch shows the colour as it is used on the left and opaque on the right."],
+		name = L["Color with alpha"],
+		desc = L["Opens the game's own color picker. The swatch shows the color as it is used on the left and opaque on the right."],
 		type = "color", hasAlpha = true,
 		order = 2,
 		get = function()
@@ -76,7 +76,7 @@ local GenerateOptions = function()
 	}
 
 	options.args.solid = {
-		name = L["Colour Without Alpha"],
+		name = L["Color without alpha"],
 		desc = L["The same control with no opacity to set, which is the more common shape."],
 		type = "color",
 		order = 3,
@@ -95,7 +95,7 @@ local GenerateOptions = function()
 	}
 
 	options.args.binding = {
-		name = L["A Keybinding"],
+		name = L["A keybinding"],
 		desc = L["Click, then press the combination you want. Escape clears it. This records the binding as text and binds nothing; a real setting decides what to do with it."],
 		type = "keybinding",
 		order = 11,
@@ -108,7 +108,7 @@ local GenerateOptions = function()
 	}
 
 	options.args.choices = {
-		name = L["Several Choices"],
+		name = L["Several choices"],
 		desc = L["One setting with a value per key, drawn as a toggle each. Each row reads and writes its own key."],
 		type = "multiselect",
 		order = 21,
@@ -132,7 +132,7 @@ local GenerateOptions = function()
 			end
 
 			return string.format(
-				L["Colour %.2f %.2f %.2f at %.0f%%. Keybinding %s. Chosen %s"],
+				L["Color %.2f %.2f %.2f at %.0f%%. Keybinding %s. Chosen %s"],
 				tint[1] or 0, tint[2] or 0, tint[3] or 0, (tint[4] or 1) * 100,
 				tostring(store.binding or L["Not bound"]),
 				#chosen > 0 and table.concat(chosen, ", ") or L["nothing"])
@@ -144,4 +144,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Control Types"], GenerateOptions, -3000, "other")
+Options:AddGroup("Control Types", GenerateOptions, -3000, "other")

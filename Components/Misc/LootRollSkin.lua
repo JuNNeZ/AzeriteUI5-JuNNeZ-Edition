@@ -6,7 +6,17 @@ local GetMedia, GetFont = ns.API.GetMedia, ns.API.GetFont
 local Kit = ns.OptionsKit
 local skinned = {}
 local rollButtonSlots = { NeedButton = 2, GreedButton = 1, TransmogButton = 1, PassButton = 0 }
-local rowWidth, rowHeight, rowGap = 320, 46, AlertFrames.lootRollRowGap
+local rowWidth, rowHeight, rowGap = 320, 54, AlertFrames.lootRollRowGap
+
+-- The timer is the player cast bar in miniature: Assets/cast_back.tga's hex casing
+-- around cast_bar.tga. The casing's tips must keep their shape on a much longer,
+-- thinner bar, so it is drawn as two end caps and a stretched middle. Numbers are
+-- texture pixels of the 256x128 casing; the bar rect is where PlayerCastBar's
+-- 112x11 bar lands inside its 193x93 casing.
+local CASING_W, CASING_H = 256, 128
+local CASING_BAR = { left = 52.4, right = 201, top = 58, bottom = 72.7 }
+local CASING_CUT = { left = 28, right = 224, top = 34, bottom = 94, capLeft = 70, capRight = 184 }
+local timerX, timerWidth, timerHeight, timerBottom = 59, 129, 5, 10
 
 local function Place(region, point, relative, x, y)
 	region:ClearAllPoints()
@@ -47,30 +57,71 @@ local function CreateCasing(frame)
 	end
 end
 
-local function SkinRollButton(button, frame, slot)
-	Place(button, "RIGHT", frame, -8 - 36 * slot, 0)
-	button:SetSize(32, 32)
-	local backdrop = button:CreateTexture(nil, "BACKGROUND", nil, -8)
-	backdrop:SetAllPoints(button)
-	backdrop:SetColorTexture(.14, .14, .15, .9)
+-- The Options inset bevel at roll-button size. Its line sits 3px inside the
+-- frame, so `outset` 3 would put the line on the owner's own edge.
+local function CreateRim(owner, outset, r, g, b)
 	local look = Kit.Look
 	local inset = look and look.IsRounded() and look.InsetBackdrop or Kit.InsetBackdrop
-	local rim = CreateFrame("Frame", nil, button, ns.BackdropTemplate)
-	rim:SetAllPoints(button)
+	local rim = CreateFrame("Frame", nil, owner, ns.BackdropTemplate)
+	rim:SetPoint("TOPLEFT", owner, "TOPLEFT", -outset, outset)
+	rim:SetPoint("BOTTOMRIGHT", owner, "BOTTOMRIGHT", outset, -outset)
+	rim:SetFrameLevel(owner:GetFrameLevel() + 1)
 	rim:EnableMouse(false)
-	-- Use just the Options inset bevel, at a smaller scale for the roll buttons.
 	rim:SetBackdrop({ edgeFile = inset.edgeFile, edgeSize = 6 })
-	rim:SetBackdropBorderColor(.76, .65, .49, 1)
+	rim:SetBackdropBorderColor(r, g, b, 1)
+	return rim
+end
+
+local function SkinRollButton(button, frame, slot)
+	-- Raised so the vote count fits under the cell, clear of its rim.
+	Place(button, "RIGHT", frame, -8 - 36 * slot, 5)
+	button:SetSize(32, 32)
+	local look = Kit.Look
+	local rounded = look and look.IsRounded()
+	-- The bevel's line sits 3px inside its frame; keep the cell's fill under it,
+	-- or the fill's own square edge shows outside the rim as a second border.
+	local backdrop = button:CreateTexture(nil, "BACKGROUND", nil, -8)
+	backdrop:SetPoint("TOPLEFT", button, "TOPLEFT", 3, -3)
+	backdrop:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -3, 3)
+	backdrop:SetColorTexture(1, 1, 1, 1)
+	if (rounded) then look.RoundTexture(backdrop) end
+	backdrop:SetVertexColor(.14, .14, .15, .9)
+	CreateRim(button, 0, .76, .65, .49)
 	local highlight = button:GetHighlightTexture()
+	-- Blizzard's roll art fills its whole 32px cell; 24px keeps it clear of the
+	-- rim's line 3px in. The vote count sits under the cell (AlertFrames.lua).
 	local function FitGlyph(texture)
 		if (not texture) then return end
 		Place(texture, "CENTER", button, 0, 0)
-		texture:SetSize(20, 20)
+		texture:SetSize(24, 24)
 	end
 	FitGlyph(button:GetNormalTexture())
 	FitGlyph(button:GetPushedTexture())
 	FitGlyph(highlight)
 	if (highlight) then highlight:SetAlpha(.65) end
+end
+
+local function CreateTimerCasing(frame, timer)
+	local scale = timerHeight / (CASING_BAR.bottom - CASING_BAR.top)
+	local cut, bar = CASING_CUT, CASING_BAR
+	local top, bottom = cut.top / CASING_H, cut.bottom / CASING_H
+	local height = (cut.bottom - cut.top) * scale
+	local y = (bar.top - cut.top) * scale
+	local function Part(left, right)
+		local texture = frame:CreateTexture(nil, "ARTWORK", nil, -2)
+		texture:SetTexture(GetMedia("cast_back"))
+		texture:SetTexCoord(left / CASING_W, right / CASING_W, top, bottom)
+		texture:SetVertexColor(unpack(ns.Colors.ui))
+		texture:SetSize((right - left) * scale, height)
+		return texture
+	end
+	local leftCap = Part(cut.left, cut.capLeft)
+	leftCap:SetPoint("TOPLEFT", timer, "TOPLEFT", -(bar.left - cut.left) * scale, y)
+	local rightCap = Part(cut.capRight, cut.right)
+	rightCap:SetPoint("TOPRIGHT", timer, "TOPRIGHT", (cut.right - bar.right) * scale, y)
+	local middle = Part(cut.capLeft, cut.capRight)
+	middle:SetPoint("TOPLEFT", leftCap, "TOPRIGHT")
+	middle:SetPoint("BOTTOMRIGHT", rightCap, "BOTTOMLEFT")
 end
 
 local function RaiseTimer(frame)
@@ -95,16 +146,17 @@ local function SkinLootRoll(frame)
 	name:SetSize(145, 28)
 	name:SetFontObject(GetFont(13, true))
 
-	Place(timer, "BOTTOMLEFT", frame, 51, 9)
-	timer:SetSize(145, 3)
-	timer.Background:SetColorTexture(.16, .14, .12, .92)
+	Place(timer, "BOTTOMLEFT", frame, timerX, timerBottom)
+	timer:SetSize(timerWidth, timerHeight)
+	timer.Background:SetColorTexture(0, 0, 0, .75)
+	CreateTimerCasing(frame, timer)
 	for key, slot in pairs(rollButtonSlots) do
 		SkinRollButton(buttons[key], frame, slot)
 	end
 	local function Refresh()
 		refreshCasing()
 		local cast = ns.GetConfig("PlayerCastBar")
-		timer:SetStatusBarTexture(cast.CastBarTexture)
+		timer:SetStatusBarTexture(GetMedia("cast_bar"))
 		timer:SetStatusBarColor(unpack(cast.CastBarColor))
 		RaiseTimer(frame)
 	end

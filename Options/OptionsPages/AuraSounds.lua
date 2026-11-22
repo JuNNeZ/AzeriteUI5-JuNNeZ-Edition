@@ -36,7 +36,7 @@ function Options:GenerateAuraSoundsOptions()
 				type = "description", order = 1, width = "full"
 			},
 			enabled = {
-				name = L["Enable Aura Sounds"],
+				name = L["Enable aura sounds"],
 				type = "toggle", order = 2, width = "full", set = Set, get = Get
 			},
 			noSounds = {
@@ -139,4 +139,4 @@ function Options:GenerateAuraSoundsOptions()
 	return options
 end
 
-Options:AddGroup(L["Aura Sounds"], function() return Options:GenerateAuraSoundsOptions() end, -5900, "auras", "AuraSounds")
+Options:AddGroup("Aura Sounds", function() return Options:GenerateAuraSoundsOptions() end, -5900, "auras", "AuraSounds")

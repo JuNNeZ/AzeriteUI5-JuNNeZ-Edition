@@ -5,7 +5,7 @@ local taint = mutation == "--taint"; if taint then mutation = nil end
 local checks, failures = 0, 0
 local function check(ok, label) checks=checks+1; if not ok then failures=failures+1; print("FAIL: "..label) end end
 local mutations = {
- ["wrong-panel"]={"AzeriteUI5_JuNNeZ_Edition_Debug/Debugging.lua",'panel:Open(L["Debug tools"])','panel:Open(L["Cooldown Manager"])'},
+ ["wrong-panel"]={"AzeriteUI5_JuNNeZ_Edition_Debug/Debugging.lua",'panel:Open("Debug tools")','panel:Open("Cooldown Manager")'},
  ["wrong-tab"]={"AzeriteUI5_JuNNeZ_Edition_Debug/Debugging.lua",'panel:SetTab("options")','panel:SetTab("settings")'},
  ["no-immediate"]={"Options/Kit/Combat.lua",'immediate[option] = true','immediate[option] = nil'},
  ["all-immediate"]={"Options/Kit/Combat.lua",'return true\nend\n\n-- The entry waiting','return false\nend\n\n-- The entry waiting'},

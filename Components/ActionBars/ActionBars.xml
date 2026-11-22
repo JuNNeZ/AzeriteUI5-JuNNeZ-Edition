@@ -5,6 +5,7 @@
 	<Script file="Compatibility\HandleBartender.lua"/>
 	<Script file="Compatibility\HandleConsolePort.lua"/>
 	<Script file="Compatibility\Masque.lua"/>
+	<Script file="Compatibility\MasqueSkins.lua"/>
 
 	<!-- Bar & Button Prototypes -->
 	<Script file="Prototypes\Bar.lua"/>

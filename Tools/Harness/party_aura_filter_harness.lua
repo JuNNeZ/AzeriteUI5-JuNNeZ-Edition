@@ -5,7 +5,7 @@
 -- The tokens (Blizzard_FrameXMLUtil/AuraUtil.lua AuraUtil.AuraFilters, 12.1.5 and
 -- Forever): RAID on a helpful aura is any buff you can apply, and RAID_IN_COMBAT is
 -- the flag that puts HoTs on raid frames ("Combine with Player & Helpful to return
--- self-cast HoTs"). With "Show Short Helpful Buffs" off your own raid buffs are the
+-- self-cast HoTs"). With "Show short helpful buffs" off your own raid buffs are the
 -- castable ones without RAID_IN_COMBAT: Fortitude stays, your HoTs go, as on the
 -- native row's own group (party_aura_options_harness.lua).
 -- Also: "dispellable by you" (HARMFUL|RAID, not the group-wide RAID_PLAYER_DISPELLABLE),

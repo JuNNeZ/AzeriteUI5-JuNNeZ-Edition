@@ -223,16 +223,16 @@ FramePanel.Settings = {
 			{ "Minimap", "enabled" },
 			{ "Minimap", "hideAddonText" },
 			{ "Minimap", "hideClockText" },
-			{ "Minimap", "dielEnabled" },
+			{ "Minimap", "dielMode" },
 			{ "Minimap", "autoHide", "autoHideEnabled" }
 		}
 	},
 	["Info"] = {
-		section = { "Info Bar" },
+		section = { "Minimap", "info" },
 		rows = {
-			{ "Info Bar", "useHalfClock" },
-			{ "Info Bar", "useServerTime" },
-			{ "Info Bar", "enableGreatVault" }
+			{ "Minimap", "info", "useHalfClock" },
+			{ "Minimap", "info", "useServerTime" },
+			{ "Minimap", "info", "enableGreatVault" }
 		}
 	},
 	["Auras"] = {
@@ -266,10 +266,9 @@ FramePanel.Settings = {
 		}
 	},
 	["UIWidgetTopCenter"] = {
-		section = { "Widgets" },
+		section = { "World Map", "widgets" },
 		rows = {
-			{ "Widgets", "alwaysShow" },
-			{ "Widgets", "hideWithTarget" }
+			{ "World Map", "widgets", "visibility" }
 		}
 	},
 	["VehicleExit"] = {

@@ -53,7 +53,7 @@ Options.GenerateTargetMarkersLiteOptions = function(self)
             },
             layout = {
                 name = L["Layout"], type = "select", order = 4, width = "full",
-                values = { horizontal = L["Horizontal Layout"], vertical = L["Vertical Layout"], twoRows = L["Two rows"] },
+                values = { horizontal = L["Horizontal layout"], vertical = L["Vertical layout"], twoRows = L["Two rows"] },
                 get = function() local _, layout = module:GetLayoutData(); return layout end,
                 set = function(_, value)
                     if (value ~= "horizontal" and value ~= "vertical" and value ~= "twoRows") then return end

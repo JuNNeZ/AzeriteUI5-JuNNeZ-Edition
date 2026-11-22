@@ -80,19 +80,26 @@ local Reason = function(byConsolePort, byStyling, byAnchor)
 			return L["Unavailable while ConsolePort is enabled."]
 		end
 		if (byStyling and stylingOff(info)) then
-			return string.format(L["Unavailable while \"%s\" is on."], L["Do not style tooltips"])
+			return string.format(L["Unavailable while \"%s\" is off."], L["Style tooltips"])
 		end
 		if (byAnchor and not getoption(info, "anchor")) then
-			return string.format(L["Unavailable while \"%s\" is off."], L["Enable Anchoring"])
+			return string.format(L["Unavailable while \"%s\" is off."], L["Enable anchoring"])
 		end
 	end
+end
+
+local StyledGet = function(info)
+	return not getter(info)
+end
+if (ns.OptionsKit and ns.OptionsKit.Defaults and ns.OptionsKit.Defaults.SetInverted) then
+	ns.OptionsKit.Defaults.SetInverted(StyledGet)
 end
 
 local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Tooltip Settings"],
+		name = L["Tooltips"],
 		type = "group",
 		args = {
 			themeHeader = {
@@ -101,7 +108,7 @@ local GenerateOptions = function()
 				type = "header", width = "full"
 			},
 			theme = {
-				name = L["Set Tooltip Theme (Experimental)"],
+				name = L["Set tooltip theme (experimental)"],
 				desc = L["Chooses theme for the Tooltips."],
 				order = 2,
 				type = "select", style = "dropdown",
@@ -113,13 +120,15 @@ local GenerateOptions = function()
 				get = getter,
 				disabled = function(info) return stylingOff(info) or consoleportActive() end
 			},
+			-- Stored the other way round as disableAzeriteUITooltips; the panel compares and
+			-- reverts it as it reads (Options Navigation Review 2026-11-22, step 7).
 			disableAzeriteUITooltips = {
-				name = L["Do not style tooltips"],
-				desc = L["Disable AzeriteUI tooltip skinning and hooks; let Blizzard or other addons handle tooltips."],
-				order = 3,
+				name = L["Style tooltips"],
+				desc = L["AzeriteUI skins the tooltips and adds its lines to them. Turn this off to let Blizzard or other addons handle tooltips."],
+				order = 1.5,
 				type = "toggle", width = "full",
-				set = setter,
-				get = getter,
+				set = function(info, val) setter(info, not val) end,
+				get = StyledGet,
 				disabled = function() return consoleportActive() end
 			},
 			nameplateUnitTransparency = {
@@ -148,7 +157,7 @@ local GenerateOptions = function()
 				type = "header", width = "full"
 			},
 			hideInCombat = {
-				name = L["Hide in Combat"],
+				name = L["Hide in combat"],
 				desc = L["Hide Tooltips while engaged in combat."],
 				order = 10,
 				type = "toggle", width = "full",
@@ -156,7 +165,7 @@ local GenerateOptions = function()
 				get = getter
 			},
 			hideActionBarTooltipsInCombat = {
-				name = L["Hide ActionBar Tooltips in Combat"],
+				name = L["Hide action bar tooltips in combat"],
 				desc = L["Hide ActionButton Tooltips while engaged in combat."],
 				order = 11,
 				type = "toggle", width = "full",
@@ -165,7 +174,7 @@ local GenerateOptions = function()
 				get = getter
 			},
 			hideUnitFrameTooltipsInCombat = {
-				name = L["Hide UnitFrame Tooltips in Combat"],
+				name = L["Hide unit frame tooltips in combat"],
 				desc = L["Hide UnitFrame Tooltips while engaged in combat. This refers to stationary unitframes in the user interface and does not affect units in the world."],
 				order = 12,
 				type = "toggle", width = "full",
@@ -180,7 +189,7 @@ local GenerateOptions = function()
 			},
 			showItemID = {
 				name = L["Show itemID"],
-				desc = L["Toggle whether to add itemID to item tooltips or not."],
+				desc = L["Add the item ID to item tooltips."],
 				order = 20,
 				type = "toggle", width = "full",
 				disabled = stylingOff,
@@ -189,7 +198,7 @@ local GenerateOptions = function()
 			},
 			showSpellID = {
 				name = L["Show spellID"],
-				desc = L["Toggle whether to add spellIDs and auraIDs in tooltips containing actions, spells or auras."],
+				desc = L["Add spell and aura IDs to tooltips for actions, spells and auras."],
 				order = 21,
 				type = "toggle", width = "full",
 				disabled = stylingOff,
@@ -213,8 +222,8 @@ local GenerateOptions = function()
 				type = "header", width = "full"
 			},
 			anchor = {
-				name = L["Enable Anchoring"],
-				desc = L["Control where the tooltips appear when put in the default position. Disable to let blizzard or other addons handle this."],
+				name = L["Enable anchoring"],
+				desc = L["Control where the tooltips appear when put in the default position. Disable to let Blizzard or other addons handle this."],
 				order = 30,
 				type = "toggle", width = "full",
 				set = setter,
@@ -222,7 +231,7 @@ local GenerateOptions = function()
 				disabled = function(info) return stylingOff(info) or consoleportActive() end
 			},
 			anchorToCursor = {
-				name = L["Anchor to Cursor"],
+				name = L["Anchor to cursor"],
 				desc = L["Anchor tooltips that normally would appear in the default tooltip location to your cursor instead."],
 				order = 31,
 				type = "toggle", width = "full",
@@ -246,4 +255,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Tooltips"], GenerateOptions, -2600, "interface", "Tooltips")
+Options:AddGroup("Tooltips", GenerateOptions, -2600, "interface", "Tooltips")

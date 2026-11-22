@@ -2072,6 +2072,14 @@ do
 	end
 	check(P[12].Name.__textColor and math.abs(P[12].Name.__textColor[2] - ns.Colors.reaction[5][2]) < 1e-6,
 		"a name-only NPC is drawn in its reaction colour, not its class colour")
+	-- A neutral NPC you cannot attack: friendly faction reaction, neutral selection type. Blizzard draws
+	-- it yellow (UnitSelectionColor); so do we, not green (NP.GetDisplayReaction).
+	W.units.nameplate12.selectionType = 2
+	M:UpdateSettings()
+	check(P[12].Name.__textColor and math.abs(P[12].Name.__textColor[2] - ns.Colors.reaction[4][2]) < 1e-6,
+		"a name-only NPC with a neutral selection type is yellow, not green")
+	W.units.nameplate12.selectionType = nil
+	M:UpdateSettings()
 	local reads = W.tooltipReads
 	M:UpdateSettings()
 	check(W.tooltipReads == reads, "titles are cached per NPC ID", W.tooltipReads - reads)
@@ -3336,6 +3344,57 @@ do
 	M:UpdateSettings()
 	check(W.cvars.nameplateOtherAtBase == "0", "and over the head is 0", W.cvars.nameplateOtherAtBase)
 	Step("the driver's size and CVars")
+end
+
+do
+	local function near(a, b) return rawtype(a) == "number" and rawtype(b) == "number" and math.abs(a - b) < 1e-6 end
+	local function Breakdown(f) return M:GetDebugPlateScaleBreakdown(f) end
+	-- Names only for enemy players you cannot attack (FixLog 2026-11-22): the other faction unflagged on a
+	-- PvE realm, and their pets, drawn as the friendly names. Added last, so the plate numbers the steps above use stay the same.
+	Unit("nameplate22", { name = "Malzug Shadowfiend", guid = "Player-1-0022", isPlayer = true, reaction = 4,
+		playerControlled = true, class = "HUNTER", className = "Hunter", classID = 3 })
+	Unit("nameplate23", { name = "Tangmon", guid = "Pet-0-1-2-3-3619-0000ABCD23", reaction = 4,
+		playerControlled = true, minion = true })
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate22")
+	Fire("NAME_PLATE_UNIT_ADDED", "nameplate23")
+	Flush()
+	local EP, EM = P[#P - 1], P[#P]
+	check(EP.unit == "nameplate22" and EM.unit == "nameplate23", "the two plates are the new units")
+	EP.__label, EM.__label = "unattackable enemy player", "unattackable enemy pet"
+	check(EP.Health.__shown and EM.Health.__shown, "enemy players you cannot attack keep their bars by default")
+	W.profile.enemyPlayerNameOnly = true
+	M:UpdateSettings()
+	check(not EP.Health.__shown and EP.Name.__shown, "turned on, an enemy player you cannot attack shows only a name")
+	check(not EM.Health.__shown and EM.Name.__shown, "and so does their pet")
+	check(P[5].Health.__shown and P[2].Health.__shown and P[12].Health.__shown,
+		"friendly players, attackable enemies and friendly NPCs keep their bars")
+	check(near(Breakdown(EP).relationScale, Breakdown(P[5]).relationScale),
+		"the name is sized as a friendly player's", Breakdown(EP).relationScale)
+	do
+		local hunter = ns.Colors.class.HUNTER
+		local color = EP.Name.__textColor
+		check(color and math.abs(color[1] - hunter[1]) < 1e-6 and math.abs(color[2] - hunter[2]) < 1e-6,
+			"the player's name is in class colour")
+		color = EM.Name.__textColor
+		check(color and math.abs(color[2] - ns.Colors.reaction[4][2]) < 1e-6, "the pet's in reaction colour")
+	end
+	-- Flagged for PvP: the game sends UNIT_FACTION and the bar comes back.
+	W.units.nameplate22.canAttack = true
+	Fire("UNIT_FACTION", "nameplate22")
+	check(EP.Health.__shown, "an enemy player you can attack gets the bar back")
+	W.units.nameplate22.canAttack = nil
+	W.units.nameplate22.secret = { canAttack = true }
+	Fire("UNIT_FACTION", "nameplate22")
+	check(EP.Health.__shown, "a secret answer keeps the bar")
+	W.units.nameplate22.secret = nil
+	Fire("UNIT_FACTION", "nameplate22")
+	check(not EP.Health.__shown, "and a readable one takes it away again")
+	W.profile.enemyPlayerNameOnly = false
+	M:UpdateSettings()
+	check(EP.Health.__shown and EM.Health.__shown, "turned off, both have their bars back")
+	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate22")
+	Fire("NAME_PLATE_UNIT_REMOVED", "nameplate23")
+	Step("names only for enemy players you cannot attack")
 end
 
 -- After Platynator 548 (2026-11-20): stacking by our own frame, Mythic+ forces per mob, who interrupted,

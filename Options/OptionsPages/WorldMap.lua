@@ -57,4 +57,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(WORLD_MAP, GenerateOptions, -2900, "world", "WorldMap")
+Options:AddGroup("World Map", GenerateOptions, -2900, "world", "WorldMap")

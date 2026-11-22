@@ -135,9 +135,11 @@ local SetNameColorForUnit = function(self, db)
 	if (ShouldUseFriendlyPlayerNameOnly(self)) then
 		local unit = self.unit
 		-- NPCs have classes too (an innkeeper can be a warrior), so a name-only NPC takes its reaction
-		-- colour, as Blizzard's name-only NPCs do. Its title follows the name's colour.
-		if (self.isFriendlyAssistableNPC) then
-			local reaction = IsSafeUnitToken(unit) and UnitReaction("player", unit) or nil
+		-- colour, as Blizzard's name-only NPCs do. Its title follows the name's colour. So does an enemy
+		-- player's pet (enemyPlayerNameOnly): isPlayerUnit comes from NamePlate_Classify.
+		if (self.isFriendlyAssistableNPC or not self.isPlayerUnit) then
+			-- Neutral NPCs you cannot attack stay yellow, as the bar does (NP.GetDisplayReaction).
+			local reaction = IsSafeUnitToken(unit) and NP.GetDisplayReaction(unit) or nil
 			local colors = self.colors and self.colors.reaction
 			local color = (type(reaction) == "number" and not IsSecretValue(reaction) and colors) and colors[reaction] or nil
 			local r, g, b

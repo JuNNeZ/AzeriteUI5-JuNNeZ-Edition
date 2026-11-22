@@ -114,8 +114,8 @@ local function scenario(class, forever)
 	env.LibStub = function() return { GetLocale = function() return setmetatable({}, { __index = function(_, key) return key end }) end } end
 	chunk = assert(loadfile(root .. "/Options/OptionsPages/Nameplates.lua"))
 	setfenv(chunk, env)("AzeriteUI", ns)
-	local toggle = assert(options.args.visibility.args.showComboPoints)
-	local size = assert(options.args.visibility.args.comboPointScale)
+	local toggle = assert(options.args.enemies.args.comboPoints.args.showComboPoints)
+	local size = assert(options.args.enemies.args.comboPoints.args.comboPointScale)
 	local sizeInfo = { "visibility", "comboPointScale" }
 	check(toggle.hidden() == (not forever), "actual option is Forever-only")
 	check(size.hidden() == (not forever) and size.disabled(sizeInfo), "size option follows client and enabled state")

@@ -366,13 +366,14 @@ assert(themes.args.paladin.args.endcap.values.silverhand and themes.args.paladin
 	and #themes.args.paladin.args.endcap.sorting==4,"three Paladin variants plus None")
 assert(themes.args.druid.args.endcap.hidden(),"Druid boots not lent through Lite+ on Hunter")
 
-local tests=assert(themes.args.tests,'shared theme tests section')
+-- The bar tests moved to Debug Tools (Options Navigation Review 2026-11-22, step 4).
+local tests=assert(options.args["Debug tools"] and options.args["Debug tools"].args.tests,'shared theme tests section on Debug Tools')
 for _,key in ipairs({'kind','fill','animate','protected','show','close'}) do assert(tests.args[key],'test control '..key) end
 local variants=tests.args.kind.values()
 assert(variants.playerLo and variants.playerMid and variants.playerHi and variants.targetBoss and variants.crystalLo and variants.orbHi,'tier and resource test choices')
 assert(themes.args.mage.args.school.values.auto,'automatic specialization choice')
 assert(themes.args.mage.args.strength and themes.args.mage.args.particles,'independent effect controls')
-print("Themes page passed, including shared tests and Mage and Druid effect controls")
+print("Themes page passed, with the shared tests on Debug Tools and Mage and Druid effect controls")
 
 local bars = assert(options.args.ActionBars or options.args["Action Bars"])
 for id = 1, 8 do

@@ -130,6 +130,9 @@ ns.RegisterConfig("NamePlates", {
 	ThreatAlertTextPosition = { "CENTER", "UIParent", "CENTER", 0, 180 },
 	ThreatAlertTextFont = GetFont(26, true),
 	ThreatAlertNameFont = GetFont(16, true),
+	-- The tank mana warning's lines (NamePlates/GroupMana.lua), just under the alert text.
+	TankManaWarningPosition = { "TOP", "UIParent", "CENTER", 0, 140 },
+	TankManaWarningFont = GetFont(18, true),
 
 	-- Glows behind the castbar: an important cast, and a cast aimed at you.
 	-- Same art as the threat glow, a little larger than the bar.

@@ -160,9 +160,110 @@ do
 	check(lite and ns.OptionsKit.Defaults.GetBinding(lite) == "TargetMarkersLite", "lite owns its defaults binding")
 end
 
+-- Every switch that shows the opposite of what its module stores is registered with
+-- Defaults.SetInverted; one that is not shows its default as changed, and Revert saves the
+-- opposite (review B3). Found by storing true and false under the switch's own key and reading
+-- the switch back, so a new inverted switch is caught without a list to keep up to date.
+do
+	local inverted, unregistered = {}, {}
+	local function WalkToggles(group, path)
+		local keys, byKey = ns.OptionsKit.Config.SortedKeys(group, options, { unpack(path) }, Addon)
+		for _, key in ipairs(keys) do
+			local child = byKey[key]
+			local childPath = { unpack(path) }
+			childPath[#childPath + 1] = key
+			if (child.type == "group") then
+				WalkToggles(child, childPath)
+			elseif (child.type == "toggle") then
+				local moduleName = ns.OptionsKit.Defaults.ModuleNameFor(options, childPath)
+				local module = moduleName and rawget(S.modules, moduleName)
+				local profile = module and type(module.db) == "table" and module.db.profile
+				if (type(profile) == "table") then
+					local saved = rawget(profile, key)
+					local function Read(stored)
+						rawset(profile, key, stored)
+						local read, value = pcall(ns.OptionsKit.Config.GetValue, child, options, childPath, Addon)
+						return read and value
+					end
+					if (Read(true) == false and Read(false) == true) then
+						local where = table.concat(childPath, ".")
+						inverted[#inverted + 1] = where
+						if (not ns.OptionsKit.Defaults.IsInverted(options, childPath)) then unregistered[#unregistered + 1] = where end
+					end
+					rawset(profile, key, saved)
+				end
+			end
+		end
+	end
+	WalkToggles(options, {})
+	check(#inverted >= 16, "inverted switches found in the real table", #inverted .. ": " .. table.concat(inverted, ", "))
+	check(#unregistered == 0, "every inverted switch is registered with Defaults.SetInverted", table.concat(unregistered, ", "))
+end
+
+-- Thin pages folded into a related one (Options.lua MergePages; Options Navigation Review
+-- 2026-11-22, step 4): each guest is a section of its host, keeps its own module binding, and
+-- the host keeps its own rows and module.
+do
+	local Defaults = ns.OptionsKit.Defaults
+	for _, case in ipairs({
+		{ "Info Bar", "Minimap", "info", "Info", { "useHalfClock" } },
+		{ "Objectives Tracker", "World Map", "tracker", "Tracker", { "enabled" } },
+		{ "Widgets", "World Map", "widgets", "UIWidgetTopCenter", { "alwaysShow" } },
+		{ "Game Menu", "Micro Menu", "gameMenu", "GameMenuSkin", { "enabled" } },
+	}) do
+		local guest, host, sub, moduleName, leaf = case[1], case[2], case[3], case[4], case[5]
+		local hostGroup = options.args[host]
+		check(options.args[guest] == nil and hostGroup and hostGroup.args[sub] and hostGroup.args[sub].type == "group",
+			guest .. " is a section of " .. host)
+		local path = { host, sub, leaf[1] }
+		check(Defaults.ModuleNameFor(options, path) == moduleName, guest .. " keeps its module binding",
+			tostring(Defaults.ModuleNameFor(options, path)))
+		local moved = S.modules.Options:GetMovedPage(guest)
+		check(moved and moved[1] == host and moved[2] == sub, guest .. " is recorded as moved")
+		check(hostGroup and hostGroup.args[sub].childGroups == nil, guest .. " draws as a section, not tabs")
+	end
+	check(Defaults.ModuleNameFor(options, { "Minimap", "enabled" }) == "Minimap", "the host keeps its own module")
+	check(options.args.sharing == nil and options.args.profiles.args.sharing, "Export and Import is a section of Profiles")
+	check(options.args["AddOn Skins"] and options.args["AddOn Skins"].args.details, "AddOn Skins holds the Details switch")
+	-- The bar tests need Core/ThemeBarPreview.lua, which real_options_harness loads and checks there.
+	if (ns.ThemeBarPreview) then
+		check(options.args["Debug tools"].args.tests, "the bar tests are on Debug Tools")
+	end
+end
+
 local Kit = ns.OptionsKit
 local Panel, Renderer, Config = Kit.Panel, Kit.Renderer, Kit.Config
 check(Panel ~= nil, "Kit.Panel exists")
+
+-- Every What's New button that names a section names a heading its page really has, so moving
+-- sections (step 4 merges, step 5 Nameplates tabs) cannot leave a button on the page's top.
+do
+	local ok = pcall(load, "Options/WhatsNew.lua")
+	local missing, linked = {}, 0
+	for _, entry in ipairs(ok and ns.WhatsNew or {}) do
+		for _, item in ipairs(entry.items or {}) do
+			local page = item.page and options.args[item.page]
+			if (type(page) == "table" and type(item.section) == "string") then
+				linked = linked + 1
+				-- The structure, hidden groups included: Zygor's section is hidden without Zygor.
+				local found = false
+				local function Walk(group)
+					for _, child in pairs(group.args or {}) do
+						if (type(child) == "table" and (child.type == "group" or child.type == "header")) then
+							local name = child.name
+							if (type(name) == "string" and name:lower() == item.section:lower()) then found = true end
+							if (child.type == "group") then Walk(child) end
+						end
+					end
+				end
+				Walk(page)
+				if (not found) then missing[#missing + 1] = item.page .. " > " .. item.section end
+			end
+		end
+	end
+	check(linked > 20, "What's New section links found", linked)
+	check(#missing == 0, "every What's New section link names a heading on its page", table.concat(missing, ", "))
+end
 check(Renderer ~= nil, "Kit.Renderer exists")
 
 --------------------------------------------------------------------------
@@ -330,7 +431,9 @@ check(labelled == stubbed, "a failed binding shows as a labelled row", labelled)
 -- Export and Import is unusable without its boxes, and they were skipped until
 -- there was a multiline control to draw them with.
 do
-	Panel:SelectPage("sharing")
+	-- A section of Profiles and Sharing since step 4 (Options.lua MergePages).
+	Panel:SelectPage("profiles")
+	Panel:RevealPath({ "profiles", "sharing" }, false)
 	local multiline = 0
 	for _, c in ipairs(Panel.page:GetControls()) do
 		if c.multiline then multiline = multiline + 1 end
@@ -397,7 +500,8 @@ end
 -- The profile and sharing pages hold no module settings of their own, so their
 -- settings are expected not to resolve. Every other page must.
 -- Debug holds session input and existing global flags, not profile settings.
-local expectedUnbound = { profiles = true, sharing = true, ["Debug tools"] = true }
+-- AddOn Skins reads other addons and per-character choices, not a profile.
+local expectedUnbound = { profiles = true, sharing = true, ["Debug tools"] = true, ["AddOn Skins"] = true }
 local surprises = {}
 for _, row in ipairs(byPage) do
 	if row.miss > 0 and not expectedUnbound[row.key] then
@@ -853,7 +957,7 @@ do
 	-- The two settings live feedback reported.
 	local raidBar = Frame(200, 300, false)
 	_G.CompactRaidFrameManager = raidBar
-	local hiddenBar = Request("UnitFrames:showBlizzardRaidBar", "Show Blizzard Raid Bar")
+	local hiddenBar = Request("UnitFrames:showBlizzardRaidBar", "Show Blizzard raid bar")
 	check(hiddenBar and #hiddenBar.targets == 0 and not Has(hiddenBar.targets, player),
 		"Show Blizzard Raid Bar no longer flashes the player frame")
 	check(hiddenBar and hiddenBar.explanation and hiddenBar.explanation:find("party or raid", 1, true),
@@ -862,7 +966,7 @@ do
 	check(Panel.previewText:GetText():find("party or raid", 1, true),
 		"the footer shows the explanation", Panel.previewText:GetText())
 	SetVisible(raidBar, true)
-	local shownBar = Request("UnitFrames:showBlizzardRaidBar", "Show Blizzard Raid Bar")
+	local shownBar = Request("UnitFrames:showBlizzardRaidBar", "Show Blizzard raid bar")
 	check(shownBar and shownBar.targets[1] == raidBar and #shownBar.targets == 1,
 		"a shown raid bar is Blizzard's raid frame manager itself")
 
@@ -893,17 +997,17 @@ do
 	SetVisible(target, true)
 
 	-- One label, a count in the footer, and no stale glow left behind.
-	local family = Request("UnitFrames:showIncomingHeals", "Show Incoming Heals")
+	local family = Request("UnitFrames:showIncomingHeals", "Show incoming heals")
 	local overlays, shown = Preview:GetOverlays(), 0
 	for _, overlay in ipairs(overlays) do if overlay:IsShown() then shown = shown + 1 end end
 	check(family and shown == #family.targets, "a family draws one glow per member",
 		string.format("%d glows, %d members", shown, family and #family.targets or -1))
-	check(overlays[1].label and overlays[1].label:GetText() == "Show Incoming Heals"
+	check(overlays[1].label and overlays[1].label:GetText() == "Show incoming heals"
 		and overlays[2] and overlays[2].label == nil,
 		"only the first glow of a family carries the label")
 	check(Panel.previewText:GetText():find("Previewing 5 frames", 1, true),
 		"the footer counts the frames a family setting reaches", Panel.previewText:GetText())
-	Request("UnitFrames:showBlizzardRaidBar", "Show Blizzard Raid Bar")
+	Request("UnitFrames:showBlizzardRaidBar", "Show Blizzard raid bar")
 	shown = 0
 	for _, overlay in ipairs(overlays) do if overlay:IsShown() then shown = shown + 1 end end
 	check(shown == 1, "a single-frame preview clears the rest of a family's glows", shown)
@@ -1118,11 +1222,11 @@ do
 	end
 	local chatRow = RailRow(chatPage)
 	check(chatRow and not chatRow.dot:IsShown(), "the Chat page starts without a gem")
-	local fade = Find(L["Fade Chat"])
+	local fade = Find(L["Fade chat"])
 	check(fade ~= nil, "Quick Start shows Fade Chat")
 	if fade then fade:Fire(true) end
 	check(chatRow and chatRow.dot:IsShown(), "a change on Quick Start lights its own page's gem at once")
-	fade = Find(L["Fade Chat"])
+	fade = Find(L["Fade chat"])
 	if fade and fade.onRevert then fade.onRevert(fade) end
 	check(chatRow and not chatRow.dot:IsShown(), "and putting it back puts the gem out")
 
@@ -1133,7 +1237,7 @@ do
 		if not unitsPage and Defaults.ModuleNameFor(options, { entry.key }) == "UnitFrames" then unitsPage = entry.key end
 	end
 	Panel:SelectPage(unitsPage)
-	local castText = Find(L["Color Cast Spell Text By State"])
+	local castText = Find(L["Color cast spell text by state"])
 	check(castText ~= nil, "Color Cast Spell Text By State is on the Unit Frames page")
 	if castText then castText:Fire(true) end
 	check((Panel.totalChanged or 0) == before + 2,
@@ -1148,7 +1252,7 @@ do
 	check(#ValueControls() == (Panel.totalChanged or 0),
 		"the Changed view holds exactly the settings the tally counts",
 		string.format("%d rows, %d counted", #ValueControls(), Panel.totalChanged or 0))
-	check(Find(L["Enable Explorer Mode"]) and Find(L["Color Cast Spell Text By State"]),
+	check(Find(L["Enable Explorer Mode"]) and Find(L["Color cast spell text by state"]),
 		"both changes are listed, from their different pages")
 	check(Panel.countButton:IsShown(), "the tally stays a link while the view is open")
 
@@ -1160,7 +1264,7 @@ do
 	check(Panel.pageDesc:GetText():find(tostring(before + 1), 1, true),
 		"the view's own description keeps count", Panel.pageDesc:GetText())
 
-	row = Find(L["Color Cast Spell Text By State"])
+	row = Find(L["Color cast spell text by state"])
 	if row and row.onRevert then row.onRevert(row) end
 	check((Panel.totalChanged or 0) == before, "both changes are put back", Panel.totalChanged)
 	check(Panel.countButton:IsShown(), "the way back stays open")
@@ -2315,7 +2419,7 @@ do
 	check(Look.SectionIconFor("bar7") == "actionbar" and Look.SectionIconFor("someNewThing") == nil,
 		"numbered bars share a motif, and an unknown section gets none")
 	if (Panel.rounded and Look.PageIconsAvailable) then
-		local unitFrames = L and L["Unit Frames"] or "Unit Frames"
+		local unitFrames = "Unit Frames"
 		Panel:SelectPage(unitFrames)
 		local withIcon, rows = {}, 0
 		for _, row in ipairs(Panel.sectionRows or {}) do
@@ -3451,7 +3555,7 @@ do
 		-- full width and puts the control on a line of its own; normal pages are untouched.
 		local Controls = Kit.Controls
 		local row = Controls.Create(UIParent, "toggle")
-		row:SetLabel("Show Health Percent")
+		row:SetLabel("Show health percent")
 		row:SetHelp("Toggle whether to show health percent on this unit frame.")
 		local normalHeight = row:Measure(600)
 		check(row.stacked == false, "a new row is not stacked")

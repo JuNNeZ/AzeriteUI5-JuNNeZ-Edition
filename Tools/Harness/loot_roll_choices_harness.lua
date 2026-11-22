@@ -27,6 +27,8 @@ local function Region()
 		SetAllPoints = function(self, relative) self.allPoints = relative end,
 		SetColorTexture = function(self, ...) self.color = { ... } end,
 		SetFontObject = function() end,
+		SetTextColor = function(self, ...) self.textColor = { ... } end,
+		GetTextColor = function(self) return unpack(self.textColor or { 1, 1, 1 }) end,
 		level = 10
 	}
 end
@@ -74,6 +76,7 @@ frame.CreateTexture = function(self, _, layer)
 	return texture
 end
 frame.Background, frame.Border, frame.Name, frame.IconFrame, frame.Timer = Region(), Region(), Region(), Region(), Region()
+frame.IconFrame.Icon, frame.IconFrame.Border = Region(), Region()
 frame.Timer.Background = { SetColorTexture = function() end }
 frame.Timer.SetStatusBarTexture = function(self, texture) self.texture = texture end
 frame.Timer.SetStatusBarColor = function() end
@@ -121,7 +124,7 @@ local ns = {
 	NewModule = function() return alerts end,
 	Merge = function(_, values) return values end,
 	MovableModulePrototype = {},
-	Colors = { highlight = { 1, .8, .5 } },
+	Colors = { highlight = { 1, .8, .5 }, ui = { .75, .75, .75 } },
 	API = { GetFont = function() return {} end, GetEffectiveScale = function() return 1 end }
 }
 setfenv(assert(loadfile(root .. "/Components/Misc/AlertFrames.lua")), env)("AzeriteUI", ns)
@@ -250,23 +253,26 @@ assert(classSkin and not classSkin.get(), "the Options look is the default")
 skin.set(nil, true)
 assert(skin.get() and not casings[frame], "cosmetic layout is applied on reload")
 alerts:PrepareLootRollSkin()
-assert(alerts:IsLootRollSkinned(frame) and frame.height == 46)
+assert(alerts:IsLootRollSkinned(frame) and frame.height == 54)
 assert(frame.Background.alpha == 0 and frame.Border.alpha == 0 and casings[frame])
 assert(frame.Name.point[4] + 145 < 320 + need.point[4] - 32, "item name clears Need hitbox")
-assert(frame.Timer.height == 3 and frame.Timer.texture == "Azerite/cast" and frame.Timer.level > frame.level)
+assert(frame.Timer.height == 5 and frame.Timer.texture == "Azerite/cast_bar" and frame.Timer.level > frame.level)
+assert(frame.ARTWORK and frame.ARTWORK.texture == "Azerite/cast_back", "timer sits in the cast bar casing")
 assert(casings[frame].backdrop.edgeFile == "Azerite/options-round" and casings[frame].backdrop.edgeSize == 24
 	and not casings[frame].backdrop.bgFile and frame.BACKGROUND.texture == "options-round-fill")
 local function AssertBorderedButton(button, edgeFile)
-	assert(button.width == 32 and button.height == 32 and button.BACKGROUND.allPoints == button)
+	assert(button.width == 32 and button.height == 32 and not button.BACKGROUND.allPoints)
+	assert(button.BACKGROUND.point[4] == -3 and button.BACKGROUND.point[5] == 3, "cell fill stays under the rim")
 	assert(button.BACKGROUND.color and not button.ARTWORK)
 	local rim = assert(casings[button])
-	assert(casingCounts[button] == 1 and rim.mouseEnabled == false and rim.allPoints == button)
+	assert(casingCounts[button] == 1 and rim.mouseEnabled == false and rim.point[4] == 0)
 	assert(rim.backdrop.edgeFile == edgeFile and rim.backdrop.edgeSize == 6 and not rim.backdrop.bgFile)
-	assert(button:GetNormalTexture().width == 20 and button:GetHighlightTexture().width == 20)
+	assert(button:GetNormalTexture().width == 24 and button:GetHighlightTexture().width == 24)
 end
 for _, button in ipairs({ need, greed, pass, transmog }) do
 	AssertBorderedButton(button, "Azerite/options-well-round")
 end
+assert(not casings[frame.IconFrame] and frame.IconFrame.Border.alpha == nil, "native quality frame kept")
 assert(need.point[4] < greed.point[4] and greed.point[4] < pass.point[4])
 assert(greed.point[4] == transmog.point[4], "alternate uses the same slot")
 frame.Timer:SetFrameLevel(frame:GetFrameLevel() - 1)
@@ -275,7 +281,7 @@ panelFill = { .88, .88, .90, .97 }
 ns.OptionsKit.Look.CasingBackdrop.edgeFile = "Paladin/options-round"
 frame.OnShow(frame)
 assert(frame.Timer.level > frame.level, "recycled native row restores timer layer")
-assert(casings[frame].backdrop.edgeFile == "Paladin/options-round" and frame.Timer.texture == "Paladin/cast"
+assert(casings[frame].backdrop.edgeFile == "Paladin/options-round" and frame.Timer.texture == "Paladin/cast_bar"
 	and frame.BACKGROUND.vertexColor[1] == panelFill[1], "show resolves panel and timer themes")
 alerts:PrepareLootRollSkin()
 assert(#need.scripts.OnEnter == 1, "the tooltip hook is installed once")
@@ -312,7 +318,7 @@ container.SetHeight = function(self, height) self.height = height end
 container.Show = function(self) self.shown = true end
 container.Hide = function(self) self.shown = false end
 updateContainer(container)
-assert(container.height == 97 and secondFrame.point[2] == frame and secondFrame.point[5] == -5,
+assert(container.height == 113 and secondFrame.point[2] == frame and secondFrame.point[5] == -5,
 	"compact stack reserves two rows and a single gap even when a roll was removed")
 alerts.db.profile.useAutomaticGrowth, alerts.db.profile.growUpwards = false, true
 updateContainer(container)
@@ -368,7 +374,7 @@ assert(preview and preview.type == "execute")
 rounded = false
 preview.func()
 local close, sampleOne, sampleTwo = unpack(window.children)
-assert(window.shown and sampleOne.height == frame.height and sampleTwo.point[5] - sampleOne.point[5] == -51)
+assert(window.shown and sampleOne.height == frame.height and sampleTwo.point[5] - sampleOne.point[5] == -59)
 assert(casings[sampleOne].backdrop.edgeFile == "Classic/options-edge", "preview also supports the classic panel casing")
 assert(close.point[2] == sampleOne and close.point[3] == "TOPRIGHT" and close.level > casings[sampleOne].level)
 assert(close.point[4] - close.width / 2 >= sampleOne.PassButton.point[4], "close clears the Pass hitbox")

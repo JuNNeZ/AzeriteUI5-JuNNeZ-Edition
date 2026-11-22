@@ -49,6 +49,19 @@ local getter = function(info)
 	return getmodule().db.profile[info[#info]]
 end
 
+-- The two clock switches show the opposite of what they store. The panel is
+-- told, so it compares and reverts their defaults the way they read
+-- (Options/Kit/Defaults.lua SetInverted; Options Navigation Review 2026-11-22, B3).
+local getterReverse = function(info)
+	return not getter(info)
+end
+local setterReverse = function(info, val)
+	setter(info, not val)
+end
+if (ns.OptionsKit and ns.OptionsKit.Defaults and ns.OptionsKit.Defaults.SetInverted) then
+	ns.OptionsKit.Defaults.SetInverted(getterReverse)
+end
+
 local isdisabled = function(info)
 	return info[#info] ~= "enabled" and not getmodule().db.profile.enabled
 end
@@ -57,7 +70,7 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Info/Clock Settings"],
+		name = L["Info Bar"],
 		type = "group",
 		args = {
 			description = {
@@ -72,22 +85,22 @@ local GenerateOptions = function()
 				name = L["Clock Settings"]
 			},
 			useHalfClock = {
-				name = L["24 Hour Mode"],
+				name = L["24 hour mode"],
 				desc = string_format(L["Enable to use a 24 hour clock, disable to show a 12 hour clock with %s/%s suffixes."], TIMEMANAGER_AM, TIMEMANAGER_PM),
 				order = 20,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
-				set = function(info,val) setter(info, not val) end,
-				get = function(info) return not getter(info) end
+				set = setterReverse,
+				get = getterReverse
 			},
 			useServerTime = {
-				name = L["Use Local Time"],
+				name = L["Use local time"],
 				desc = L["Set the clock to your computer's local time, disable to show the server time instead."],
 				order = 21,
 				type = "toggle", width = "full",
 				hidden = isdisabled,
-				set = function(info,val) setter(info, not val) end,
-				get = function(info) return not getter(info) end
+				set = setterReverse,
+				get = getterReverse
 			},
 			enableGreatVault = {
 				name = L["Show Great Vault progress"],

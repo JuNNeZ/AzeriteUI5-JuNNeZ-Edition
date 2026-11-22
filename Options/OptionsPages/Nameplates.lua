@@ -121,9 +121,11 @@ local threatAlertSoundOption = function(kind, switch, order)
 	}
 end
 
--- The name size sliders apply to name-only friendly players and name-only friendly NPCs.
+-- The name size sliders apply to every name-only plate: friendly players and NPCs, and enemy players
+-- you cannot attack.
 local IsNameOnlyOff = function(info)
-	return not (getoption(info, "hideFriendlyPlayerHealthBar") or getoption(info, "friendlyNPCNameOnly"))
+	return not (getoption(info, "hideFriendlyPlayerHealthBar") or getoption(info, "friendlyNPCNameOnly")
+		or getoption(info, "enemyPlayerNameOnly"))
 end
 
 local NormalizeAdditiveTargetScaleToSlider = function(scale, default)
@@ -255,12 +257,12 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Nameplate Settings"],
+		name = L["Nameplates"],
 		type = "group",
 		args = {
 			enabled = {
-				name = L["Enable Azerite Nameplates"],
-				desc = L["Toggle whether to use Azerite nameplates or Blizzard's default nameplates."],
+				name = L["Enable Azerite nameplates"],
+				desc = L["Use AzeriteUI's nameplates. Turn this off to keep Blizzard's own."],
 				order = 0,
 				type = "toggle", width = "full",
 				confirm = true,
@@ -282,6 +284,9 @@ local GenerateOptions = function()
 				width = "full",
 				hidden = function() return not GetConflictingAddOn() end
 			},
+			-- Its own heading: last on the page, the line read as part of Advanced
+			-- (Options Navigation Review 2026-11-22, B7).
+			creditHeader = { name = L["About"], order = 99, type = "header" },
 			credit = {
 				name = L["Optimization made by Rui"],
 				order = 100,
@@ -369,7 +374,7 @@ local GenerateOptions = function()
 						get = getter
 					},
 					showComboPoints = {
-						name = L["Show Combo Points"],
+						name = L["Show combo points"],
 						desc = L["Show target-bound combo points on enemy nameplates on Forever, including mobs you are not targeting. For Rogues and Druids in Cat Form. Your current target also shows empty sockets."],
 						order = 2.5,
 						type = "toggle", width = "full",
@@ -461,7 +466,7 @@ local GenerateOptions = function()
 			-- The kinds of aura a plate shows: groups of the native aura display, see
 			-- PlayerAuraContainers.lua, CreateForNamePlate. The keys are the module's profile keys.
 			auraFilters = {
-				name = L["Aura filters"],
+				name = L["Aura Filters"],
 				order = 1.2,
 				type = "group",
 				inline = true,
@@ -531,44 +536,64 @@ local GenerateOptions = function()
 						set = setter,
 						get = getter
 					},
-					-- NamePlates/Visibility.lua, Auras_DeduplicateInfo and ApplyAuraHighlight.
-					auraOnceSpells = {
-						name = L["Spells shown only once"],
-						desc = L["Spell IDs, separated by commas. Each is shown at most once on a nameplate, even when the unit has it more than once, such as 55078 for a Death Knight."],
+					-- The picker window (Options/Kit/AuraPicker.lua) edits the two lists below by spell.
+					auraPicker = {
+						name = L["Choose auras"],
+						desc = L["Pick which debuffs get a gold border and which are shown only once, from the ones seen on your targets and the ones already listed."],
 						order = 8,
-						type = "input", width = "full",
-						set = function(info, value)
-							local module = getmodule()
-							if (not module or not module.db) then return end
-							module.db.profile.auraOnceSpells = type(value) == "string" and value or ""
-							module:UpdateSettings()
-						end,
-						get = function(info)
-							local module = getmodule()
-							return module and module.db and module.db.profile.auraOnceSpells or ""
+						type = "execute", width = "full",
+						func = function()
+							local picker = ns.OptionsKit and ns.OptionsKit.AuraPicker
+							if (picker) then picker:Open() end
 						end
 					},
-					auraHighlights = {
-						name = L["Highlighted auras for this specialization"],
-						desc = L["Spell IDs, separated by commas. Their icons get a gold border. Each specialization keeps its own list."],
+					-- The manual fallback, folded closed (Renderer:SetStartClosed below).
+					auraManual = {
+						name = L["Spell IDs by Hand"],
 						order = 9,
-						type = "input", width = "full",
-						set = function(info, value)
-							local module = getmodule()
-							local NP = ns.NamePlatesPrivate
-							if (not module or not module.db or not NP or not NP.GetAuraHighlightKey) then return end
-							local all = module.db.profile.auraHighlights
-							if (type(all) ~= "table") then all = {}; module.db.profile.auraHighlights = all end
-							value = type(value) == "string" and value:gsub("^%s+", ""):gsub("%s+$", "") or ""
-							all[NP.GetAuraHighlightKey()] = (value ~= "") and value or nil
-							module:UpdateSettings()
-						end,
-						get = function(info)
-							local module = getmodule()
-							local all = module and module.db and module.db.profile.auraHighlights
-							local NP = ns.NamePlatesPrivate
-							return (type(all) == "table" and NP and NP.GetAuraHighlightKey and all[NP.GetAuraHighlightKey()]) or ""
-						end
+						type = "group",
+						inline = true,
+						args = {
+						-- NamePlates/Visibility.lua, Auras_DeduplicateInfo and ApplyAuraHighlight.
+						auraOnceSpells = {
+							name = L["Spells shown only once"],
+							desc = L["Spell IDs, separated by commas. Each is shown at most once on a nameplate, even when the unit has it more than once, such as 55078 for a Death Knight."],
+							order = 1,
+							type = "input", width = "full",
+							set = function(info, value)
+								local module = getmodule()
+								if (not module or not module.db) then return end
+								module.db.profile.auraOnceSpells = type(value) == "string" and value or ""
+								module:UpdateSettings()
+							end,
+							get = function(info)
+								local module = getmodule()
+								return module and module.db and module.db.profile.auraOnceSpells or ""
+							end
+						},
+						auraHighlights = {
+							name = L["Highlighted auras for this specialization"],
+							desc = L["Spell IDs, separated by commas. Their icons get a gold border. Each specialization keeps its own list."],
+							order = 2,
+							type = "input", width = "full",
+							set = function(info, value)
+								local module = getmodule()
+								local NP = ns.NamePlatesPrivate
+								if (not module or not module.db or not NP or not NP.GetAuraHighlightKey) then return end
+								local all = module.db.profile.auraHighlights
+								if (type(all) ~= "table") then all = {}; module.db.profile.auraHighlights = all end
+								value = type(value) == "string" and value:gsub("^%s+", ""):gsub("%s+$", "") or ""
+								all[NP.GetAuraHighlightKey()] = (value ~= "") and value or nil
+								module:UpdateSettings()
+							end,
+							get = function(info)
+								local module = getmodule()
+								local all = module and module.db and module.db.profile.auraHighlights
+								local NP = ns.NamePlatesPrivate
+								return (type(all) == "table" and NP and NP.GetAuraHighlightKey and all[NP.GetAuraHighlightKey()]) or ""
+							end
+						}
+						}
 					}
 				}
 			},
@@ -583,7 +608,7 @@ local GenerateOptions = function()
 				args = {
 					nonTargetAlpha = {
 						name = L["Other enemies while you have a target"],
-						desc = L["How visible enemy nameplates other than your target are. `100%` leaves them as they are."],
+						desc = L["How visible enemy nameplates other than your target are. 100% leaves them as they are."],
 						order = 1,
 						type = "range", width = "full", isPercent = true,
 						min = 0, max = 1, step = .05,
@@ -592,7 +617,7 @@ local GenerateOptions = function()
 					},
 					noTargetAlpha = {
 						name = L["Enemies while you have no target"],
-						desc = L["How visible enemy nameplates are while you have no target. `100%` leaves them as they are."],
+						desc = L["How visible enemy nameplates are while you have no target. 100% leaves them as they are."],
 						order = 2,
 						type = "range", width = "full", isPercent = true,
 						min = 0, max = 1, step = .05,
@@ -601,7 +626,7 @@ local GenerateOptions = function()
 					},
 					outOfRangeAlpha = {
 						name = L["Enemies out of range"],
-						desc = L["How visible enemy nameplates farther away than the range below are. `100%` turns the range check off."],
+						desc = L["How visible enemy nameplates farther away than the range below are. 100% turns the range check off."],
 						order = 3,
 						type = "range", width = "full", isPercent = true,
 						min = 0, max = 1, step = .05,
@@ -620,7 +645,7 @@ local GenerateOptions = function()
 					},
 					castingAlpha = {
 						name = L["Casting enemies at least"],
-						desc = L["Enemy nameplates that are casting stay at least this visible, whatever fades them. `0%` turns it off."],
+						desc = L["Enemy nameplates that are casting stay at least this visible, whatever fades them. 0% turns it off."],
 						order = 5,
 						type = "range", width = "full", isPercent = true,
 						min = 0, max = 1, step = .05,
@@ -629,7 +654,7 @@ local GenerateOptions = function()
 					},
 					castingScale = {
 						name = L["Casting nameplate size"],
-						desc = L["Nameplates grow or shrink by this much while their unit casts. `100%` leaves them as they are."],
+						desc = L["Nameplates grow or shrink by this much while their unit casts. 100% leaves them as they are."],
 						order = 6,
 						type = "range", width = "full", isPercent = true,
 						min = .5, max = 2, step = .05,
@@ -644,7 +669,7 @@ local GenerateOptions = function()
 			-- minion switches are here so what Minions only for your target turns on can be turned off, and
 			-- the target's floating name is here because Blizzard's Options have no switch for it.
 			stacking = {
-				name = L["Game settings"],
+				name = L["Game Settings"],
 				order = 1.4,
 				type = "group",
 				inline = true,
@@ -678,7 +703,7 @@ local GenerateOptions = function()
 					-- Stored in our profile, not the game's: copies later Friendly players changes to Friendly
 					-- NPCs (NamePlates/CVars.lua, FollowFriendlyPlayers). Ticking it changes nothing by itself.
 					friendlyNPCsFollowFriendlyPlayers = {
-						name = L["Friendly NPCs follow Friendly players"],
+						name = L["Friendly NPCs follow friendly players"],
 						desc = L["When Friendly players is switched, by Shift+V, Ctrl+V or here, Friendly NPCs switches with it, as the key bindings do on Mists of Pandaria Classic."],
 						order = .45,
 						type = "toggle", width = "full",
@@ -720,7 +745,7 @@ local GenerateOptions = function()
 					},
 					stackMotionSpeed = {
 						name = L["Stacking speed"],
-						desc = L["How fast overlapping nameplates slide apart. `0` leaves the game's own speed."],
+						desc = L["How fast overlapping nameplates slide apart. 0 leaves the game's own speed."],
 						order = 4,
 						type = "range", width = "full",
 						min = 0, max = .1, step = .005,
@@ -734,7 +759,7 @@ local GenerateOptions = function()
 			-- page's own state; the three settings below edit the kind it shows. The distance keeps
 			-- its old key, so its preview and default follow it.
 			contentSettings = {
-				name = L["Content settings"],
+				name = L["Content Settings"],
 				order = 1.6,
 				type = "group",
 				inline = true,
@@ -769,7 +794,7 @@ local GenerateOptions = function()
 					},
 					maxDistance = {
 						name = L["Maximum distance"],
-						desc = L["How far away nameplates can appear. `40` matches the current Rui retail baseline."],
+						desc = L["How far away nameplates can appear. 40 matches the current Rui retail baseline."],
 						order = 2,
 						type = "range", width = "full",
 						min = DISTANCE_SLIDER_MIN, max = DISTANCE_SLIDER_MAX, step = 1,
@@ -798,7 +823,7 @@ local GenerateOptions = function()
 			},
 			-- The combat filter: enemies nobody in your group is fighting fade.
 			otherFights = {
-				name = L["Other fights"],
+				name = L["Other Fights"],
 				order = 1.7,
 				type = "group",
 				inline = true,
@@ -824,10 +849,12 @@ local GenerateOptions = function()
 					}
 				}
 			},
-			-- The execute marker has its own page (OptionsPages/ExecuteRange.lua).
+			-- The execute marker has its own page (OptionsPages/ExecuteRange.lua). With the
+			-- page's intro, not after "Other fights", where it read as part of that section
+			-- (Options Navigation Review 2026-11-22, B7).
 			executeRangeMoved = {
-				name = L["The execute marker has its own page: Execute range."],
-				order = 1.8, type = "description", hidden = isdisabled
+				name = L["The execute marker has its own page: Execute Range."],
+				order = 0.6, type = "description", hidden = isdisabled
 			},
 			size = {
 				name = L["Size"],
@@ -846,7 +873,7 @@ local GenerateOptions = function()
 					},
 					nameplateScale = {
 						name = L["Overall size (%)"],
-						desc = L["The base size for AzeriteUI nameplates. `100%` is the intended default."],
+						desc = L["The base size for AzeriteUI nameplates. 100% is the intended default."],
 						order = 2,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -882,7 +909,7 @@ local GenerateOptions = function()
 					},
 					friendlyScale = {
 						name = L["Friendly/player size (%)"],
-						desc = L["The default size for friendly player nameplates. `100%` is the intended default."],
+						desc = L["The default size for friendly player nameplates. 100% is the intended default."],
 						order = 4,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -891,7 +918,7 @@ local GenerateOptions = function()
 					},
 					friendlyNPCScale = {
 						name = L["Friendly NPC size (%)"],
-						desc = L["The default size for friendly NPC nameplates. `100%` is the intended default."],
+						desc = L["The default size for friendly NPC nameplates. 100% is the intended default."],
 						order = 5,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -900,7 +927,7 @@ local GenerateOptions = function()
 					},
 					enemyScale = {
 						name = L["Enemy size (%)"],
-						desc = L["The default size for enemy nameplates. `100%` is the intended default."],
+						desc = L["The default size for enemy nameplates. 100% is the intended default."],
 						order = 6,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -918,7 +945,7 @@ local GenerateOptions = function()
 					},
 					nameplateTargetScale = {
 						name = L["Enemy target size (%)"],
-						desc = L["How much larger enemy plates become when targeted. `100%` is the intended default."],
+						desc = L["How much larger enemy plates become when targeted. 100% is the intended default."],
 						order = 8,
 						type = "range", width = "full",
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,
@@ -927,7 +954,7 @@ local GenerateOptions = function()
 					},
 					raidTargetSize = {
 						name = L["Target marker size"],
-						desc = L["Size of the raid target icon - skull, cross, star and so on - beside the nameplate's health bar. `28` is the intended default."],
+						desc = L["Size of the raid target icon - skull, cross, star and so on - beside the nameplate's health bar. 28 is the intended default."],
 						order = 9,
 						type = "range", width = "full",
 						min = RAID_TARGET_SIZE_SLIDER_MIN, max = RAID_TARGET_SIZE_SLIDER_MAX, step = 1,
@@ -957,9 +984,18 @@ local GenerateOptions = function()
 						set = setter,
 						get = getter
 					},
+					-- NamePlates/Settings.lua, IsUnattackableEnemyPlayer: the other faction unflagged, and their pets.
+					enemyPlayerNameOnly = {
+						name = L["Use names only for enemy players you cannot attack"],
+						desc = L["Players of the other faction who are not flagged for PvP, and their pets, look like friendly names. They get their health bar back as soon as you can attack them."],
+						order = 1.5,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
 					friendlyNameOnlyFontScale = {
 						name = L["Friendly name size (%)"],
-						desc = L["Text size for friendly player name-only plates. `100%` is the intended default."],
+						desc = L["Text size for friendly player name-only plates. 100% is the intended default."],
 						order = 2,
 						type = "range", width = "full",
 						min = SCALE_SLIDER_MIN, max = SCALE_SLIDER_MAX, step = 1,
@@ -969,7 +1005,7 @@ local GenerateOptions = function()
 					},
 					friendlyNameOnlyTargetScale = {
 						name = L["Friendly name target size (%)"],
-						desc = L["Optional override for friendly player name-only plates when targeted. Set this to `100%` to follow Friendly/player target size again."],
+						desc = L["Optional override for friendly player name-only plates when targeted. Set this to 100% to follow Friendly/player target size again."],
 						order = 3,
 						type = "range", width = "full",
 						min = TARGET_SLIDER_MIN, max = TARGET_SLIDER_MAX, step = 1,
@@ -1022,7 +1058,7 @@ local GenerateOptions = function()
 			-- Friendly plates where the game draws them itself (NamePlates/CVars.lua, ApplyInstanceCVars and
 			-- ApplyGameNamePlateFont). Only the game's own settings reach them there.
 			instanceFriendly = {
-				name = L["Dungeons and raids"],
+				name = L["Dungeons and Raids"],
 				order = 3.3,
 				type = "group",
 				inline = true,
@@ -1045,7 +1081,7 @@ local GenerateOptions = function()
 					},
 					instanceNameSize = {
 						name = L["Name size"],
-						desc = L["The game's nameplate Size in dungeons, raids and delves, which sets how large the names it draws there are. `0` leaves the game's setting alone."],
+						desc = L["The game's nameplate Size in dungeons, raids and delves, which sets how large the names it draws there are. 0 leaves the game's setting alone."],
 						order = 2,
 						type = "range", width = "full",
 						min = 0, max = 5, step = 1,
@@ -1077,7 +1113,7 @@ local GenerateOptions = function()
 			},
 			-- Castbar.lua, NamePlate_UpdateCastTargetVisuals.
 			enemyCastbars = {
-				name = L["Enemy castbars"],
+				name = L["Enemy Castbars"],
 				order = 3.5,
 				type = "group",
 				inline = true,
@@ -1085,7 +1121,7 @@ local GenerateOptions = function()
 				args = {
 					castTargetName = {
 						name = L["Show who the cast is aimed at"],
-						desc = L["The name of the cast's target under the spell name, in their class colour. The game decides which casts show a name."],
+						desc = L["The name of the cast's target under the spell name, in their class color. The game decides which casts show a name."],
 						order = 1,
 						type = "toggle", width = "full",
 						set = setter,
@@ -1110,7 +1146,7 @@ local GenerateOptions = function()
 					-- NamePlates/Castbar.lua, Castbar_PostInterrupted.
 					showInterrupter = {
 						name = L["Show who interrupted"],
-						desc = L["The name of whoever interrupted the cast, in their class colour, while the castbar shows the interruption."],
+						desc = L["The name of whoever interrupted the cast, in their class color, while the castbar shows the interruption."],
 						order = 4,
 						type = "toggle", width = "full",
 						set = setter,
@@ -1139,7 +1175,7 @@ local GenerateOptions = function()
 			-- Threat roles (NamePlates/Visibility.lua, GetActiveThreatRole, GetTankThreatState,
 			-- GetRoleThreatState; Elements.lua, TankThreat_Update, RoleThreat_Update).
 			tank = {
-				name = L["Threat roles"],
+				name = L["Threat Roles"],
 				order = 4.5,
 				type = "group",
 				inline = true,
@@ -1222,7 +1258,7 @@ local GenerateOptions = function()
 						get = getter
 					},
 					threatPercentPlates = {
-						name = L["Show Threat Percent"],
+						name = L["Show threat percent"],
 						desc = L["Shows a threat percent inside each mob's health bar. Healer and DPS: your own threat on it. Tank: on a mob you hold, the highest threat of anyone else in your group, so you see who is about to pull it; on a mob you lost, your own, to win it back. At 100% it changes hands."],
 						order = 5,
 						type = "toggle", width = "full",
@@ -1266,6 +1302,50 @@ local GenerateOptions = function()
 						get = getter
 					},
 					threatAggroSoundFile = threatAlertSoundOption("aggro", "threatAggroSound", 12.5),
+					-- Tank mode: healers' mana (NamePlates/GroupMana.lua).
+					tankManaWarning = {
+						name = L["Warn when your healer runs low on mana"],
+						desc = L["In tank mode, in a group: a yellow line in the middle of the screen while your healer is under 50% mana, and a red one under 25%, as a reminder to slow down. In combat the game hides other players' mana from addons, so there you get the line only; the sound plays when someone drops past a line while it can be read, usually as the pull ends."],
+						order = 13,
+						type = "toggle", width = "full",
+						set = function(info, val)
+							setter(info, val)
+							local module = getmodule()
+							if (module and module.ConfigureGroupMana) then module:ConfigureGroupMana() end
+						end,
+						get = getter
+					},
+					tankManaWatch = {
+						name = L["Whose mana"],
+						desc = L["Healers: group members with the Healer role, or everyone who uses mana when nobody has the role. Healers and mana users: casters such as mages and warlocks too. In a raid only healers are watched, five at most."],
+						order = 13.2,
+						type = "select", width = "full",
+						values = {
+							healers = L["Healers"],
+							mana = L["Healers and mana users"]
+						},
+						sorting = { "healers", "mana" },
+						disabled = function(info) return not getoption(info, "tankManaWarning") end,
+						set = function(info, val)
+							setter(info, val)
+							local module = getmodule()
+							if (module and module.ConfigureGroupMana) then module:ConfigureGroupMana() end
+						end,
+						get = function(info)
+							return getter(info) == "mana" and "mana" or "healers"
+						end
+					},
+					tankManaSoundFile = threatAlertSoundOption("mana", "tankManaWarning", 13.5),
+					tankManaPreview = {
+						name = L["Preview"],
+						desc = L["Shows a yellow and a red example line for a few seconds."],
+						order = 13.7,
+						type = "execute", width = "full",
+						func = function()
+							local module = getmodule()
+							if (module and module.PreviewGroupMana) then module:PreviewGroupMana() end
+						end
+					},
 					-- What every alert does.
 					threatAlertEffects = {
 						name = L["What an alert does"],
@@ -1314,16 +1394,16 @@ local GenerateOptions = function()
 				hidden = isdisabled,
 				args = {
 					threatColorPreset = {
-						name = L["Enemy Threat Colors"],
+						name = L["Enemy threat colors"],
 						desc = L["Choose a color-blind friendly preset for enemy nameplate threat colors."],
 						order = 1,
 						type = "select", width = "full",
 						values = {
 							azerite = L["AzeriteUI Classic"],
 							deepYellow = L["AzeriteUI deep yellow"],
-							blueOrange = L["Blue / Orange"],
-							tealPurple = L["Teal / Purple"],
-							highContrast = L["High Contrast"]
+							blueOrange = L["Blue / orange"],
+							tealPurple = L["Teal / purple"],
+							highContrast = L["High contrast"]
 						},
 						set = setter,
 						get = function(info)
@@ -1388,7 +1468,82 @@ local GenerateOptions = function()
 		}
 	end
 
+	-- The spell ID fields fold away under the picker button; their keys and paths stay searchable.
+	local renderer = ns.OptionsKit and ns.OptionsKit.Renderer
+	local auraFilters = options.args.auraFilters
+	if (renderer and renderer.SetNavigation and renderer.SetStartClosed and auraFilters) then
+		renderer:SetNavigation(auraFilters, "sections")
+		renderer:SetStartClosed(auraFilters.args.auraManual)
+	end
+
+	-- Five tabs instead of sixteen sections in one column (Docs/Options Navigation Review -
+	-- 2026-11-22.md, step 5). The groups above move as they are and a few rows leave the old
+	-- Visibility catch-all; every setting keeps its key, getter and module, only its path
+	-- gains a tab. Enable, the conflict note, the Execute Range pointer and the credit stay
+	-- above the tabs.
+	local args = options.args
+	local vis = args.visibility.args
+	local function Take(from, ...)
+		local out = {}
+		for i = 1, select("#", ...) do
+			local key = select(i, ...)
+			out[key] = from[key]
+			from[key] = nil
+		end
+		return out
+	end
+	local function Group(name, order, inner)
+		return { name = name, order = order, type = "group", inline = true, hidden = isdisabled, args = inner }
+	end
+	local function Tab(name, order, inner)
+		return { name = name, order = order, type = "group", hidden = isdisabled, args = inner }
+	end
+
+	-- Names gains the two rows that were in Visibility.
+	local nameRows = Take(vis, "showNameAlways", "showObjectNames")
+	nameRows.showNameAlways.order, nameRows.showObjectNames.order = 0.5, 0.6
+	args.names.args.showNameAlways, args.names.args.showObjectNames = nameRows.showNameAlways, nameRows.showObjectNames
+	local quest = Group(L["Quest Marks"], 1.15, Take(vis, "showQuestMarker", "showQuestProgress", "hideFinishedQuestMarker"))
+	local health = Group(L["Health Text"], 1.16, Take(vis, "healthValuePlacement"))
+	local combo = Group(L["Combo Points"], 3.7, Take(vis, "showComboPoints", "comboPointScale"))
+	local shown = Group(L["Show auras"], 1, Take(vis, "showAuras", "showAurasOnTargetOnly"))
+	-- What is left are the "only for your target" filters.
+	args.visibility.name = L["Only for Your Target"]
+
+	-- Advanced held the interrupt colour legend and the Blizzard widgets switch.
+	local advanced = args.advanced and args.advanced.args or {}
+	if (advanced.interruptLegend) then
+		advanced.interruptLegend.hidden = function() return not ns.IsRetail end
+		args.enemyCastbars.args.interruptLegend = advanced.interruptLegend
+	end
+	if (advanced.showBlizzardWidgets and args.stacking) then
+		advanced.showBlizzardWidgets.order = 100
+		args.stacking.args.showBlizzardWidgets = advanced.showBlizzardWidgets
+	end
+	args.advanced = nil
+
+	local tabs = {
+		general = Tab(L["General"], 1, { names = args.names, questMarks = quest, healthText = health,
+			size = args.size, colors = args.colors }),
+		friendly = Tab(L["Friendly"], 2, { friendlyPlayers = args.friendlyPlayers,
+			friendlyNPCNames = args.friendlyNPCNames, instanceFriendly = args.instanceFriendly }),
+		enemies = Tab(L["Enemies"], 3, { enemyCastbars = args.enemyCastbars, tank = args.tank,
+			mythicPlusForces = args.mythicPlusForces, comboPoints = combo }),
+		auras = Tab(L["Auras"], 4, { auraDisplay = shown, auraFilters = args.auraFilters }),
+		visibility = Tab(L["Visibility"], 5, { targetOnly = args.visibility, stacking = args.stacking,
+			contentSettings = args.contentSettings, fading = args.fading, otherFights = args.otherFights })
+	}
+	for _, key in ipairs({ "names", "size", "colors", "friendlyPlayers", "friendlyNPCNames", "instanceFriendly",
+		"enemyCastbars", "tank", "mythicPlusForces", "auraFilters", "visibility", "stacking", "contentSettings",
+		"fading", "otherFights" }) do
+		args[key] = nil
+	end
+	for key, tab in pairs(tabs) do args[key] = tab end
+	if (renderer and renderer.SetNavigation) then
+		renderer:SetNavigation(options, "tabs")
+	end
+
 	return options
 end
 
-Options:AddGroup(L["Nameplates"], GenerateOptions, -7000, "frames", "NamePlates")
+Options:AddGroup("Nameplates", GenerateOptions, -7000, "frames", "NamePlates")

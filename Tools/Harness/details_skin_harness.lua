@@ -401,23 +401,24 @@ if (arg[1]) then
 	rowNS.RowTexts.ApplyAnchors(saved, actualRow)
 	assert(actualRow.lineText4.point[4] == 0, "other skins must keep modern anchor behavior")
 end
--- The real Themes page: its switch drives the module and says why it is greyed without Details.
+-- The real AddOn Skins page (moved from Themes): its switch drives the module and says why it is
+-- greyed without Details.
 do
 	local page, reasons = nil, {}
 	local themeNS = { ThemeEffects = { GetTheme = function() return "azerite" end },
 		OptionsKit = { Config = { SetDisabledDesc = function(option, reason) reasons[option] = reason; return option end } } }
 	function themeNS:GetModule(name)
 		if (name == "Options") then
-			return { AddGroup = function(_, key, generate) assert(key == "Themes"); page = generate() end }
+			return { AddGroup = function(_, key, generate) assert(key == "AddOn Skins"); page = generate() end }
 		end
 		if (name == "DetailsSkin") then return module end
 	end
 	local L = setmetatable({}, { __index = function(_, key) return key end })
 	local libStub = LibStub
 	LibStub = function() return { GetLocale = function() return L end } end
-	assert(loadfile("Options/OptionsPages/Themes.lua"))("AzeriteUI5_JuNNeZ_Edition", themeNS)
+	assert(loadfile("Options/OptionsPages/AddOnSkins.lua"))("AzeriteUI5_JuNNeZ_Edition", themeNS)
 	LibStub = libStub
-	local toggle = assert(page and page.args.details and page.args.details.args.apply, "Themes page offers the Details switch")
+	local toggle = assert(page and page.args.details and page.args.details.args.apply, "AddOn Skins page offers the Details switch")
 	function InCombatLockdown() return false end
 	assert(not toggle.disabled() and reasons[toggle]() == nil, "usable with Details, no greyed reason")
 	assert(type(toggle.confirm()) == "string", "warns that Details resets window appearance")

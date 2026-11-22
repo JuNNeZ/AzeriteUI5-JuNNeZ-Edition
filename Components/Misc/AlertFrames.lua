@@ -85,8 +85,15 @@ local UpdateRollBadge = function(frame, button, choice, alternate, alternateLabe
 	local badge = rollBadges[button]
 	if (not badge and choice) then
 		local count = button:CreateFontString(nil, "OVERLAY", nil, 7)
-		count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
-		count:SetFontObject(ns.API.GetFont(12, true))
+		-- Skinned cells draw a rim, so the count goes under the cell instead of
+		-- on top of it (LootRollSkin.lua raises the cells to make room).
+		local skinned = AlertFrames.IsLootRollSkinned and AlertFrames:IsLootRollSkinned(frame)
+		if (skinned) then
+			count:SetPoint("TOPRIGHT", button, "BOTTOMRIGHT", -2, 0)
+		else
+			count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+		end
+		count:SetFontObject(ns.API.GetFont(skinned and 11 or 12, true))
 		count:SetTextColor(unpack(ns.Colors.highlight))
 		badge = { count = count }
 		rollBadges[button] = badge

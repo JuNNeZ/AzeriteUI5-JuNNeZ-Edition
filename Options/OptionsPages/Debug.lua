@@ -74,12 +74,12 @@ end
 -- state changes. No frame or timer exists until the page is first rendered.
 local watcher
 local function Watch()
-	if (watcher or not Kit.Panel or not Kit.Panel:IsShown() or Kit.Panel.selected ~= L["Debug tools"]) then return end
+	if (watcher or not Kit.Panel or not Kit.Panel:IsShown() or Kit.Panel.selected ~= "Debug tools") then return end
 	watcher = CreateFrame("Frame", nil, Kit.Panel and Kit.Panel.frame)
 	local elapsed, last = 0
 	watcher:SetScript("OnUpdate", function(_, dt)
 		local panel = Kit.Panel
-		if (not panel or not panel:IsShown() or panel.selected ~= L["Debug tools"] or panel.tab ~= "options") then return end
+		if (not panel or not panel:IsShown() or panel.selected ~= "Debug tools" or panel.tab ~= "options") then return end
 		elapsed = elapsed + dt
 		if (elapsed < .2) then return end
 		elapsed = 0
@@ -185,8 +185,27 @@ local function ToggleSmoothPreview()
 	frame:Show()
 end
 
+-- The bar tests, moved here from the Themes page (Docs/Options Navigation Review -
+-- 2026-11-22.md, step 4). They draw synthetic bars for checking theme art and stay
+-- usable without Development Mode, as they were.
+local GenerateTests = function()
+	local P=ns.ThemeBarPreview
+	if (not P) then return end
+	return {name=L["Bar Tests"],type="group",order=40,disabled=InCombatLockdown,args={
+		kind={name=L["Bar variant"],type="select",width="full",order=1,values=function() return P:GetChoices() end,
+			get=function() return P.kind end,set=function(_,v) P:Set("kind",v) end},
+		fill={name=L["Test fill"],type="range",width="full",order=2,min=0,max=1,step=.05,isPercent=true,
+			get=function() return P.fraction end,set=function(_,v) P:Set("fraction",v) end,disabled=function() return InCombatLockdown() or P.animate end},
+		animate={name=L["Cycle test fill"],type="toggle",width="full",order=3,get=function() return P.animate end,set=function(_,v) P:Set("animate",v) end},
+		protected={name=L["Protected cast"],type="toggle",width="full",order=4,hidden=function() return P.kind~="cast" end,
+			get=function() return P.protected end,set=function(_,v) P:Set("protected",v) end},
+		show={name=L["Open bar preview"],type="execute",order=5,func=function() P:Show() end},
+		close={name=L["Close bar preview"],type="execute",order=6,func=function() if (P.window) then P.window:Hide() end end}
+	}}
+end
+
 local function GenerateOptions()
-	local cooldown = { type = "group", name = L["Cooldown tests"], order = 1, args = {} }
+	local cooldown = { type = "group", name = L["Cooldown Tests"], order = 1, args = {} }
 	local a = cooldown.args
 	a.instructions = { type = "description", order = 1, name = function()
 		Watch()
@@ -234,7 +253,7 @@ local function GenerateOptions()
 		func = function() if (OOC()) then Probe("inspect") end end })
 	a.result = { type = "description", order = 11, name = L["Compare the source rows in _DebugLog (AzeriteUI), including action-slot and resolved-spell timers. A valid timer is shown during the real cooldown and hidden at recovery; a GCD-only change is not a pass."] }
 
-	local health = { type = "group", name = L["Health and unit frames"], order = 2, args = {
+	local health = { type = "group", name = L["Health and Unit Frames"], order = 2, args = {
 		health = Toggle("Health debug", 1, "health", function() return ns.API.DEBUG_HEALTH and true or false end),
 		chat = Toggle("Health debug chat", 2, "healthchat", function() return ns.API.DEBUG_HEALTH_CHAT and true or false end),
 		bars = Toggle("Statusbar/orb debug", 3, "bars", function() return _G.__AzeriteUI_DEBUG_BARS and true or false end),
@@ -266,8 +285,8 @@ local function GenerateOptions()
 		button = Input("Button name", 4, "button"), cooldown = DynamicAction("Inspect button cooldown", 5, "keys cooldown", "button"),
 		spell = Input("Spell ID", 6, "hold"), hold = DynamicAction("Hold test", 7, "keys holdtest", "hold")
 	} }
-	local raid = { type = "group", name = L["Raid utility bar"], order = 4, args = {
-		hint = { type = "description", order = 1, name = L["Solo force-show is a temporary debug override. The normal raid bar setting stays on the Unit Frames page. Reload if Blizzard already hid the bar." ] },
+	local raid = { type = "group", name = L["Raid Utility Bar"], order = 4, args = {
+		hint = { type = "description", order = 1, name = L["Solo force-show is a temporary debug override. The normal raid bar setting is on the Group Frames page. Reload if Blizzard already hid the bar." ] },
 		on = Action("Force on", 2, "raidbar on"), off = Action("Force off", 3, "raidbar off"),
 		toggle = Action("Toggle", 4, "raidbar toggle"), status = Action("Print status", 5, "raidbar status")
 	} }
@@ -285,7 +304,7 @@ local function GenerateOptions()
 	local function SetSmooth(kind, enabled)
 		if (ns.UnitFrame) then ns.UnitFrame.SetSmoothingEnabled(kind, enabled) end
 	end
-	local smooth = { type = "group", name = L["Smooth bars"], order = 6, args = {
+	local smooth = { type = "group", name = L["Smooth Bars"], order = 6, args = {
 		hint = { type = "description", order = 1, name = L["Switch eased bars while you fight to compare them side by side. The same two settings as on the Unit Frames page; /azsmooth [on|off] [bars|cast] does it from chat."] },
 		state = { type = "description", order = 2, fontSize = "medium", name = function()
 			return string.format(L["Health and power: %s   Castbar pushback: %s"], SmoothState("bars"), SmoothState("castbars"))
@@ -307,7 +326,8 @@ local function GenerateOptions()
 			desc = L["Both bars get the same hits and heals, big and small, every 1.4 seconds."],
 			func = function() ToggleSmoothPreview() end })
 	} }
-	return { name = L["Debug tools"], type = "group", desc = L["Maintainer tests and diagnostics. Select a section in the sidebar; nothing starts automatically."],
-		args = { cooldown = cooldown, health = health, keys = keys, raid = raid, utilities = utilities, smooth = smooth } }
+	return { name = L["Debug Tools"], type = "group", desc = L["Maintainer tests and diagnostics. Select a section in the sidebar; nothing starts automatically."],
+		args = { cooldown = cooldown, health = health, keys = keys, raid = raid, utilities = utilities, smooth = smooth,
+		tests = GenerateTests() } }
 end
-Options:AddGroup(L["Debug tools"], GenerateOptions, -2900, "other")
+Options:AddGroup("Debug tools", GenerateOptions, -2900, "other")

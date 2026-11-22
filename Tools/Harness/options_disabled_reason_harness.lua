@@ -11,7 +11,7 @@
 --   B  the renderer shows the reason while the row is disabled and the help line
 --      otherwise, on a page, after a live refresh, through inheritance and in a
 --      gathered list (Views, the frame settings panel use the same Bind)
---   C  "Prioritize Unit Frame Auras" writes UnitFrames db.profile.disableAuraSorting
+--   C  "Prioritize unit frame auras" writes UnitFrames db.profile.disableAuraSorting
 --      and every runtime reader reads that same profile key (source scan)
 --   D  the real Tooltips, Explorer Mode and Group Frames tables still pass the real
 --      AceConfigRegistry validator, which an option-table `disabledDesc` key fails
@@ -194,14 +194,14 @@ local function sweep(pagePath, group, profile, keys, withConsolePort, expect)
 end
 
 -- Tooltips: ConsolePort first (it also locks "Do not style tooltips"), then
--- styling off, then anchoring off for "Anchor to Cursor".
+-- styling off, then anchoring off for "Anchor to cursor".
 do
 	local seen = sweep({ "Tooltips" }, tooltips, profiles.Tooltips, { "disableAzeriteUITooltips", "anchor" }, true,
 		function(key, state, cp)
 			local byCP = (key ~= "showItemID" and key ~= "showSpellID" and key ~= "showMythicPlusRating")
 			if (byCP and cp) then return "Unavailable while ConsolePort is enabled." end
-			if (state.disableAzeriteUITooltips) then return ON:format("Do not style tooltips") end
-			if (key == "anchorToCursor" and not state.anchor) then return OFF:format("Enable Anchoring") end
+			if (state.disableAzeriteUITooltips) then return OFF:format("Style tooltips") end
+			if (key == "anchorToCursor" and not state.anchor) then return OFF:format("Enable anchoring") end
 		end)
 	for _, key in ipairs({ "theme", "disableAzeriteUITooltips", "nameplateUnitTransparency", "showItemID",
 		"showSpellID", "showMythicPlusRating", "anchor", "anchorToCursor" }) do
@@ -236,12 +236,12 @@ do
 			"useClassColors", "useRangeIndicator" }, false,
 		function(key, state)
 			if (key == "useBlizzardHealthColors" or key == "useClassColorOnMouseoverOnly") then
-				return OFF:format("Use Class Colors")
+				return OFF:format("Use class colors")
 			end
-			if (key == "rangeIndicatorRange") then return OFF:format("Use Range Indicator") end
-			if (not state.showAuras) then return OFF:format("Show Auras") end
-			if (state.partyAuraUseStockBehavior) then return ON:format("Use AzeriteUI Stock Behavior") end
-			if (state.partyAuraOnlyDispellableDebuffs) then return ON:format("Only Show Dispellable Debuffs") end
+			if (key == "rangeIndicatorRange") then return OFF:format("Use range indicator") end
+			if (not state.showAuras) then return OFF:format("Show auras") end
+			if (state.partyAuraUseStockBehavior) then return ON:format("Use AzeriteUI stock behavior") end
+			if (state.partyAuraOnlyDispellableDebuffs) then return ON:format("Only show dispellable debuffs") end
 		end)
 	for _, key in ipairs({ "partyAuraShowOtherDebuffs", "partyAuraShowDispellableDebuffs", "partyAuraUseStockBehavior",
 		"AuraSize", "useBlizzardHealthColors", "rangeIndicatorRange" }) do
@@ -253,7 +253,7 @@ do
 	local other = groupFrames.args.party.args.partyAuraShowOtherDebuffs
 	local path = { "Group Frames", "party", "partyAuraShowOtherDebuffs" }
 	check(Config.IsDisabled(other, options, path, Addon) and
-		Config.GetDisabledDesc(other, options, path, Addon) == ON:format("Only Show Dispellable Debuffs"),
+		Config.GetDisabledDesc(other, options, path, Addon) == ON:format("Only show dispellable debuffs"),
 		"Show Other Short Debuffs: greyed by dispellable-only, says so")
 	p.partyAuraOnlyDispellableDebuffs = false
 	check(not Config.IsDisabled(other, options, path, Addon), "Show Other Short Debuffs usable again")
@@ -336,13 +336,13 @@ do
 	-- The real Tooltips page, end to end.
 	profiles.Tooltips.disableAzeriteUITooltips = true
 	view:Show(options, { "Tooltips" })
-	check(helpOf(view, "showSpellID") == ON:format("Do not style tooltips"), "real page: reason while styling is off",
+	check(helpOf(view, "showSpellID") == OFF:format("Style tooltips"), "real page: reason while styling is off",
 		helpOf(view, "showSpellID"))
 	check(helpOf(view, "hideInCombat") == "Hide Tooltips while engaged in combat.", "real page: an unaffected row keeps its help")
 	profiles.Tooltips.disableAzeriteUITooltips = false
 	view:Refresh()
 	check(helpOf(view, "showSpellID") ==
-		"Toggle whether to add spellIDs and auraIDs in tooltips containing actions, spells or auras.",
+		"Add spell and aura IDs to tooltips for actions, spells and auras.",
 		"real page: help line back when styling is on", helpOf(view, "showSpellID"))
 end
 

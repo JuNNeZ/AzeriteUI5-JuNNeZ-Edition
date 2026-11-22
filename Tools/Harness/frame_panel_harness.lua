@@ -265,6 +265,61 @@ check(forever and drawn["ActionBars.bar6"] == 0 or (not forever and drawn["Actio
 	drawn["ActionBars.bar6"])
 check(#FramePanel:CollectSettings("AlertFrames", options) == 0, "a frame with no options gets Position only")
 
+-- What's New buttons open a page by its key (Options/WhatsNew.lua). Run under a translating locale
+-- (AZERITE_LOCALE=deDE) a button written as page = L["Themes"] misses its page, as five did
+-- (Docs/Options Navigation Review - 2026-11-22.md, B2). The paths above are the mover panel's (B1).
+do
+	load("Options/WhatsNew.lua")
+	local items, missing = 0, {}
+	for _, entry in ipairs(ns.WhatsNew or {}) do
+		for _, item in ipairs(entry.items or {}) do
+			if (item.page ~= nil) then
+				items = items + 1
+				-- Mythic+ has no page on Forever.
+				local absentHere = forever and item.page == "MythicPlus"
+				if (not absentHere and type(options.args[item.page]) ~= "table") then
+					missing[#missing + 1] = tostring(entry.version) .. ": " .. tostring(item.page)
+				end
+			end
+		end
+	end
+	check(items > 50, "What's New page buttons found", items)
+	check(#missing == 0, "every What's New button names a real page key", table.concat(missing, ", "))
+end
+
+-- Page structure, over every group of the real table, hidden or not. A negative order sorts last,
+-- not first (Config.lua compareOptions; review B5), so only Profiles, meant to be last, has one. A
+-- row with no heading of its own placed after a section is drawn under that section's heading and
+-- reads as part of it (review B7); an empty spacer line is not a row.
+do
+	local negatives, stragglers = {}, {}
+	local function WalkGroup(group, path)
+		local keys, byKey = Kit.Config.SortedKeys(group, options, { unpack(path) }, Addon)
+		local afterSection
+		for _, key in ipairs(keys) do
+			local child = byKey[key]
+			local childPath = { unpack(path) }
+			childPath[#childPath + 1] = key
+			local where = table.concat(childPath, ".")
+			if (type(child.order) == "number" and child.order < 0 and where ~= "profiles") then
+				negatives[#negatives + 1] = where
+			end
+			if (child.type == "group") then
+				afterSection = key
+				WalkGroup(child, childPath)
+			elseif (child.type == "header") then
+				afterSection = nil
+			elseif (afterSection and #path == 1
+				and not (child.type == "description" and (child.name == nil or child.name == ""))) then
+				stragglers[#stragglers + 1] = where .. " (after " .. afterSection .. ")"
+			end
+		end
+	end
+	WalkGroup(options, {})
+	check(#negatives == 0, "no setting has a negative order, which sorts it last", table.concat(negatives, ", "))
+	check(#stragglers == 0, "no page row without a heading follows a section", table.concat(stragglers, "; "))
+end
+
 -- The Position rows come from the /lock window's table, by name.
 local fake = { type = "group", args = {} }
 for _, key in ipairs(FramePanel.PositionRows) do

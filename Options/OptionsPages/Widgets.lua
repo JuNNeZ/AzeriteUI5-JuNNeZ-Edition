@@ -20,6 +20,20 @@ local getter = function(info)
   return getmodule().db.profile[info[#info]]
 end
 
+-- The widgets choice, read from the two stored switches; its default is worked
+-- out the same way (Options/Kit/Defaults.lua SetComputed).
+local VisibilityMode = function(profile)
+  if (profile.alwaysShow or not profile.hideWithTarget) then return "always" end
+  return "target"
+end
+local VisibilityGet = function()
+  local module = getmodule()
+  return module and VisibilityMode(module.db.profile) or "target"
+end
+if (ns.OptionsKit and ns.OptionsKit.Defaults and ns.OptionsKit.Defaults.SetComputed) then
+  ns.OptionsKit.Defaults.SetComputed(VisibilityGet, VisibilityMode)
+end
+
 local GenerateOptions = function()
   if (not getmodule()) then return end
   local options = {
@@ -37,22 +51,22 @@ local GenerateOptions = function()
         type = "description",
         fontSize = "medium"
       },
-      alwaysShow = {
-        name = L["Always show Top Center Widgets"],
-        desc = L["Keep the top center widgets visible even when you have a target."],
+      -- One choice over the two stored switches, so nothing saved changes (Docs/Options
+      -- Navigation Review - 2026-11-22.md, step 7). alwaysShow wins, as the module decides.
+      visibility = {
+        name = L["Show the top center widgets"],
+        desc = L["Always, or only while you have no target."],
         order = 10,
-        type = "toggle", width = "full",
-        set = setter,
-        get = getter
-      },
-      hideWithTarget = {
-        name = L["Hide with Target"],
-        desc = L["Hide the top center widgets whenever you have a target (disabled if Always Show is enabled)."],
-        order = 11,
-        type = "toggle", width = "full",
-        disabled = function(info) return getmodule().db.profile.alwaysShow end,
-        set = setter,
-        get = getter
+        type = "select", width = "full",
+        values = { always = L["Always"], target = L["Hide with a target"] },
+        sorting = { "always", "target" },
+        set = function(info, val)
+          local profile = getmodule().db.profile
+          profile.alwaysShow = (val == "always")
+          if (val == "target") then profile.hideWithTarget = true end
+          getmodule():OnEvent("PLAYER_TARGET_CHANGED")
+        end,
+        get = VisibilityGet
       }
     }
   }

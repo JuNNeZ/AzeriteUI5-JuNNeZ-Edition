@@ -79,6 +79,58 @@ Defaults.ModuleNameFor = function(options, path)
 end
 
 --------------------------------------------------------------------------
+-- Inverted switches
+--------------------------------------------------------------------------
+-- Some switches show the opposite of what they store: "24 Hour Mode" reads
+-- `not useHalfClock`. The default is what is stored, so comparing it with what
+-- the switch shows marked the default as changed, and Revert wrote the stored
+-- default through the inverting setter, which saved its opposite
+-- (Docs/Options Navigation Review - 2026-11-22.md, B3).
+--
+-- A page names the getter that inverts, once. Every option read through it,
+-- its own or inherited from a group, then has its boolean default turned the
+-- way the switch shows it. Keyed by the function, like Bind and for the same
+-- reason: an unknown key in an option table fails AceConfigRegistry.
+local inverted = setmetatable({}, { __mode = "k" })
+
+-- Returns the getter, so a page can wrap it where it is defined.
+Defaults.SetInverted = function(get)
+	if (type(get) == "function") then inverted[get] = true end
+	return get
+end
+
+-- The getter an option is read through, inherited the way Config resolves it.
+local GetterFor = function(options, path)
+	local group, get = options, options.get
+	for i = 1, #path do
+		group = Config.GetSubOption(group, path[i])
+		if (type(group) ~= "table") then break end
+		if (group.get ~= nil) then get = group.get end
+	end
+	return get
+end
+
+-- A choice shown over several stored settings, such as "Day and night
+-- indicator: AzeriteUI's / Blizzard's / None" over dielEnabled and dielHidden.
+-- Its own key is not in the profile, so its default is worked out from the
+-- module's defaults by `compute(defaults)`; IsModified and Revert then treat it
+-- like any other setting, and Revert writes the result through the choice's own
+-- setter (Docs/Options Navigation Review - 2026-11-22.md, step 7).
+local computed = setmetatable({}, { __mode = "k" })
+
+-- Returns the getter, like SetInverted.
+Defaults.SetComputed = function(get, compute)
+	if (type(get) == "function" and type(compute) == "function") then computed[get] = compute end
+	return get
+end
+
+Defaults.IsInverted = function(options, path)
+	if (type(options) ~= "table" or type(path) ~= "table") then return false end
+	local get = GetterFor(options, path)
+	return get ~= nil and inverted[get] == true
+end
+
+--------------------------------------------------------------------------
 -- Values
 --------------------------------------------------------------------------
 local ProfileDefaults = function(moduleName)
@@ -97,13 +149,27 @@ end
 --
 -- Returns nil when there is no binding, no module, or no default recorded, and
 -- the caller is expected to show no gem rather than assume anything.
+--
+-- An inverted switch gets its default as it is shown (see SetInverted): that is
+-- what IsModified compares with, and what Revert writes back through the
+-- switch's own setter, which inverts it again on the way into the profile.
 Defaults.Get = function(options, path)
 	if (type(path) ~= "table" or #path == 0) then return end
 
 	local defaults = ProfileDefaults(Defaults.ModuleNameFor(options, path))
 	if (not defaults) then return end
 
-	return defaults[path[#path]]
+	local compute = computed[GetterFor(options, path) or false]
+	if (compute) then
+		local ok, value = pcall(compute, defaults)
+		return ok and value or nil
+	end
+
+	local default = defaults[path[#path]]
+	if (type(default) == "boolean" and Defaults.IsInverted(options, path)) then
+		return not default
+	end
+	return default
 end
 
 -- Colours and positions are tables, so equality has to look inside one level.

@@ -132,12 +132,111 @@ for index = 2, #LOCALES do
 	end
 	check(#tooWide == 0, code .. " explanations fit the footer at the smallest window", table.concat(tooWide, " | "))
 
+	-- The rail's band headings are drawn in capitals on one line from 12 px in to 8 px short of
+	-- the rail's edge (Panel.lua BuildRail); capitals are counted a tenth wider.
+	local bandsBlock = panel:match("local SECTIONS = (%b{})") or ""
+	for key in bandsBlock:gmatch('label = L%["(.-)"%]') do
+		local value = values[key]
+		check(type(value) == "string" and Width(value:upper()) * 1.1 <= railW - 20,
+			code .. " band heading fits the rail: " .. key, tostring(value))
+	end
+
 	for _, key in ipairs({ "Options", "Settings" }) do
 		local value = values[key]
 		check(type(value) == "string" and Width(value) <= tabWidth,
 			code .. " tab label fits its tab: " .. key, tostring(value))
 	end
 end
+
+-- The code against enUS (Docs/Options Navigation Review - 2026-11-22.md, step 0b).
+-- enUS is a silent default locale (NewLocale(..., true, true)): a key the code asks for and no
+-- locale defines shows its own English text on every client, with nothing to say so. That is how
+-- the Guild Manager crafting preview said Yes and No in English everywhere. Keys are read with
+-- Lua's own string parser, so escapes such as \n compare as the locale files store them.
+-- Page keys and links to pages are plain strings, never L[...]: a translated page key differs per
+-- client, and every English path to it then missed the page off English clients (B1/B2).
+local function LiteralKeys(text)
+	local list, pos = {}, 1
+	while true do
+		local s, e, quote = text:find("%f[%w_]L%[%s*([\"'])", pos)
+		if (not s) then break end
+		local i = e + 1
+		while (i <= #text) do
+			local c = text:sub(i, i)
+			if (c == "\\") then i = i + 2
+			elseif (c == quote) then break
+			else i = i + 1 end
+		end
+		if (text:match("^%s*%]", i + 1)) then
+			local ok, key = pcall(assert(loadstring("return " .. text:sub(e, i))))
+			if (ok and type(key) == "string") then list[#list + 1] = key end
+		end
+		pos = i + 1
+	end
+	return list
+end
+
+local PAGE_LINKS = {
+	{ "Options:AddGroup%(%s*[^\"%s]", "AddGroup's page key" },
+	{ "page%s*=%s*L%[", "a What's New page" },
+	{ ":Open%(%s*L%[", "Panel:Open" },
+	{ ":OpenSection%(%s*L%[", "Panel:OpenSection" },
+	{ ":OpenSection%([^,\n]+,%s*{%s*L%[", "Panel:OpenSection path" },
+	{ ":GoTo%(%s*{%s*L%[", "Panel:GoTo" },
+	{ ":SelectPage%(%s*L%[", "Panel:SelectPage" }
+}
+
+-- The keys enUS knows: the ten files above, plus the topic files Locale.xml loads after them
+-- (Details.lua, Halloween.lua), which call NewLocale once per language themselves.
+local known = {}
+for key in pairs(enUS) do known[key] = true end
+local localeXml = ReadFile(root .. "/Locale/Locale.xml")
+local isMain = {}
+for _, code in ipairs(LOCALES) do isMain[code .. ".lua"] = true end
+local topicFiles = 0
+for file in localeXml:gmatch('<Script file="([^"]+)"') do
+	if (not isMain[file]) then
+		local recorder = setmetatable({}, { __newindex = function(_, key) known[key] = true end })
+		local sink = setmetatable({}, { __newindex = function() end })
+		local ace = { NewLocale = function(_, _, code) return (code == "enUS") and recorder or sink end }
+		local chunk = assert(loadfile(root .. "/Locale/" .. file))
+		setfenv(chunk, setmetatable({ LibStub = function() return ace end }, { __index = _G }))
+		chunk("AzeriteUI5_JuNNeZ_Edition")
+		topicFiles = topicFiles + 1
+	end
+end
+check(topicFiles >= 2, "the topic locale files in Locale.xml load", topicFiles)
+
+local listing = io.popen('git -C "' .. root .. '" ls-files --cached --others --exclude-standard -- "*.lua"')
+local scanned, used, unknown, translatedPages = 0, 0, {}, {}
+for file in (listing and listing:lines() or function() end) do
+	if (not file:find("^Libs/") and not file:find("^Locale/") and not file:find("^Tools/")
+		and not file:find("^%.research/") and not file:find("^Docs/")) then
+		local handle = io.open(root .. "/" .. file, "rb")
+		if (handle) then
+			local text = handle:read("*a")
+			handle:close()
+			scanned = scanned + 1
+			for _, key in ipairs(LiteralKeys(text)) do
+				used = used + 1
+				if (not known[key]) then unknown[#unknown + 1] = file .. ": " .. key:gsub("\n", "\\n") end
+			end
+			for _, rule in ipairs(PAGE_LINKS) do
+				local at = text:find(rule[1])
+				if (at) then
+					local line = select(2, text:sub(1, at):gsub("\n", "")) + 1
+					translatedPages[#translatedPages + 1] = string.format("%s:%d (%s)", file, line, rule[2])
+				end
+			end
+		end
+	end
+end
+if (listing) then listing:close() end
+check(scanned > 100 and used > 1000, "the addon's code can be scanned for L[...]",
+	string.format("%d files, %d uses", scanned, used))
+check(#unknown == 0, "every L[...] the code uses exists in enUS", table.concat(unknown, " | "))
+check(#translatedPages == 0, "page keys and links to pages are plain strings, not L[...]",
+	table.concat(translatedPages, " | "))
 
 print(string.format("Locales: %d checks, %d failures (enUS %d keys; %s)", checks, failures, enCount,
 	table.concat(counts, ", ")))

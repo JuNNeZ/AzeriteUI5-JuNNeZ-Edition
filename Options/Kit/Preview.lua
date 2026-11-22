@@ -531,6 +531,7 @@ local policies = {
 		friendlyNameOnlyTargetScale = Plates(friendlyPlayerTarget, L["Target a friendly player to preview this."]),
 		friendlyNPCNameOnly = Plates(IsFriendlyNPCPlate, L["No friendly NPC nameplate is visible to preview."]),
 		showFriendlyNPCTitle = Plates(IsFriendlyNPCPlate, L["No friendly NPC nameplate is visible to preview."]),
+		enemyPlayerNameOnly = Plates(IsEnemyPlate, L["No enemy nameplate is visible to preview."]),
 		maxDistance = {
 			kind = "explain",
 			explain = L["Changes how far away nameplates appear."]

@@ -116,7 +116,7 @@ local conditionalVisible = true
 local glow = group("Glow", { target = toggle("target", "Needle target", 50) }, 2)
 fill(glow.args, "glow", 18)
 local choices = group("Finish", {
-	color = group("Colour", { color = toggle("color", "Colour flag", 1) }, 1),
+	color = group("Color", { color = toggle("color", "Colour flag", 1) }, 1),
 	glow = glow
 }, 2)
 choices.childGroups = "tab"
@@ -145,12 +145,29 @@ local main = group("Navigation", {
 }, 1)
 main.args.client.hidden = function() return ns.IsForever end
 local short = group("Short", { tiny = toggle("tiny", "Tiny flag", 1) }, 2)
+-- A switch that shows the opposite of what it stores, as "24 hour mode" shows `not useHalfClock`
+-- (Docs/Options Navigation Review - 2026-11-22.md, B3). It does not count as a write below.
+values.stored, defaults.stored = false, false
+local inverted = group("Inverted", { stored = {
+	type = "toggle", name = "Inverted flag", order = 1,
+	get = Kit.Defaults.SetInverted(function() return not values.stored end),
+	set = function(_, value) values.stored = not value end
+} }, 4)
+-- A choice over two stored switches, as Day and night indicator is over dielEnabled and dielHidden
+-- (Defaults.SetComputed, review step 7). Its own key is not stored.
+values.onA, values.offB, defaults.onA, defaults.offB = true, false, true, false
+local function Mode(t) return t.offB and "none" or (t.onA and "a" or "b") end
+inverted.args.mode = {
+	type = "select", name = "Two-switch choice", order = 2, values = { a = "A", b = "B", none = "None" },
+	get = Kit.Defaults.SetComputed(function() return Mode(values) end, Mode),
+	set = function(_, value) values.offB = (value == "none"); if (value ~= "none") then values.onA = (value == "a") end end
+}
 local automatic = group("Automatic", {
 	first = group("First", {}, 1), second = group("Second", {}, 2)
 }, 3)
 fill(automatic.args.first.args, "autofirst", 12)
 fill(automatic.args.second.args, "autosecond", 12)
-local options = group("Harness", { main = main, short = short, automatic = automatic })
+local options = group("Harness", { main = main, short = short, automatic = automatic, inverted = inverted })
 
 -- Sidecars preserve the AceConfig schema, module bindings and saved values.
 Renderer:SetNavigation(main, "tabs")
@@ -277,6 +294,27 @@ if changedControl and changedControl.onRevert then changedControl.onRevert(chang
 check(values.target == false, "Changed reset writes the original full-path setting")
 check(Kit.Defaults.CountModified(options, { "main" }) == 0, "reset removes the hidden change from the tally")
 
+-- An inverted switch is compared and put back as it reads, not as it is stored (review B3).
+local storedPath = { "inverted", "stored" }
+check(Kit.Defaults.IsModified(options, storedPath, Config.GetValue(inverted.args.stored, options, storedPath, Addon)) == false,
+	"an inverted switch at its default is not marked changed")
+check(Kit.Defaults.CountModified(options, { "inverted" }) == 0, "the page tally leaves an inverted switch at its default out")
+values.stored = true
+check(Kit.Defaults.IsModified(options, storedPath, Config.GetValue(inverted.args.stored, options, storedPath, Addon)) == true,
+	"an inverted switch away from its default is marked changed")
+check(Kit.Defaults.Revert(options, storedPath) and values.stored == false,
+	"Revert puts the stored default back, not its opposite")
+check(Kit.Defaults.IsInverted(options, { "short", "tiny" }) == false, "an ordinary switch is not inverted")
+local modePath = { "inverted", "mode" }
+check(Kit.Defaults.Get(options, modePath) == "a", "a choice over two switches gets its default from theirs")
+check(Kit.Defaults.IsModified(options, modePath, Config.GetValue(inverted.args.mode, options, modePath, Addon)) == false,
+	"that choice at its default is not marked changed")
+inverted.args.mode.set(nil, "none")
+check(Kit.Defaults.IsModified(options, modePath, Config.GetValue(inverted.args.mode, options, modePath, Addon)) == true,
+	"that choice away from its default is marked changed")
+check(Kit.Defaults.Revert(options, modePath) and values.onA == true and values.offB == false,
+	"Revert writes both stored switches back")
+
 -- Search is rebuilt against current class/client visibility, independent of
 -- navigation state; stale paths must not make a hidden group available.
 conditionalVisible = false
@@ -315,6 +353,19 @@ check(Panel:OpenSection("automatic", "Second"), "legacy section label still open
 flushImmediate()
 check(controlAt({ "automatic", "second", "autosecond1" }) ~= nil,
 	"legacy label opens the requested collapsed section")
+
+-- A link naming a page as the rail shows it, the way What's New and the mover panel did with
+-- L["Unit Frames"] while page keys were translated, lands on that page, not on the first one
+-- (Docs/Options Navigation Review - 2026-11-22.md, B1/B2). The caller's path is not rewritten.
+check(Panel:OpenSection("Automatic", "Second") and Panel.selected == "automatic",
+	"a page named by its rail label opens that page")
+local named = {}
+for i = 1, #target do named[i] = target[i] end
+named[1] = "Navigation"
+check(Panel:OpenSection("Navigation", named) and Panel.selected == "main" and named[1] == "Navigation",
+	"a full path starting with the rail label opens its section, and is left as it was")
+check(Panel:GoTo(named) and Panel.selected == "main", "search links accept the rail label too")
+check(Panel:ResolvePageKey("no such page") == "no such page", "an unknown page key comes back unchanged")
 
 -- A delayed scroll from a search must not drag the next page away from its top.
 Panel:GoTo(target)

@@ -1,0 +1,259 @@
+[
+{
+"class": "WARRIOR",
+"aura": "Rend",
+"rec": "once"
+},
+{
+"class": "WARRIOR",
+"aura": "Mortal Strike",
+"grants": [
+"Mortal Strike"
+],
+"rec": "highlight"
+},
+{
+"class": "HUNTER",
+"aura": "Serpent Sting",
+"rec": "once"
+},
+{
+"class": "HUNTER",
+"aura": "Hunter's Mark",
+"rec": "highlight"
+},
+{
+"class": "HUNTER",
+"aura": "Immolation Trap",
+"rec": null
+},
+{
+"class": "HUNTER",
+"aura": "Scorpid Sting",
+"rec": null
+},
+{
+"class": "ROGUE",
+"aura": "Garrote",
+"rec": "once"
+},
+{
+"class": "ROGUE",
+"aura": "Rupture",
+"rec": "once"
+},
+{
+"class": "ROGUE",
+"aura": "Hemorrhage",
+"grants": [
+"Hemorrhage"
+],
+"rec": null
+},
+{
+"class": "ROGUE",
+"aura": "Death Mark",
+"rec": "highlight"
+},
+{
+"class": "PRIEST",
+"aura": "Shadow Word: Pain",
+"rec": "once"
+},
+{
+"class": "PRIEST",
+"aura": "Devouring Plague",
+"rec": "once"
+},
+{
+"class": "PRIEST",
+"aura": "Holy Fire",
+"rec": null
+},
+{
+"class": "PRIEST",
+"aura": "Vampiric Embrace",
+"grants": [
+"Vampiric Embrace"
+],
+"rec": null
+},
+{
+"class": "SHAMAN",
+"aura": "Flame Shock",
+"rec": "once"
+},
+{
+"class": "SHAMAN",
+"aura": "Stormstrike",
+"grants": [
+"Stormstrike"
+],
+"rec": "highlight"
+},
+{
+"class": "MAGE",
+"aura": "Pyroblast",
+"rec": null
+},
+{
+"class": "WARLOCK",
+"aura": "Corruption",
+"rec": "once"
+},
+{
+"class": "WARLOCK",
+"aura": "Bane of Agony",
+"rec": "once"
+},
+{
+"class": "WARLOCK",
+"aura": "Immolate",
+"rec": "once"
+},
+{
+"class": "WARLOCK",
+"aura": "Siphon Life",
+"grants": [
+"Siphon Life"
+],
+"rec": null
+},
+{
+"class": "WARLOCK",
+"aura": "Bane of Doom",
+"rec": "highlight"
+},
+{
+"class": "WARLOCK",
+"aura": "Wrack",
+"rec": null
+},
+{
+"class": "DRUID",
+"aura": "Moonfire",
+"rec": "once"
+},
+{
+"class": "DRUID",
+"aura": "Insect Swarm",
+"grants": [
+"Insect Swarm"
+],
+"rec": "once"
+},
+{
+"class": "DRUID",
+"aura": "Rake",
+"rec": "once"
+},
+{
+"class": "DRUID",
+"aura": "Rip",
+"rec": "once"
+},
+{
+"class": "DRUID",
+"aura": "Lacerate",
+"rec": null
+},
+{
+"class": "DRUID",
+"aura": "Pounce Bleed",
+"rec": null
+},
+{
+"class": "GROUP",
+"from": "WARRIOR",
+"aura": "Sunder Armor"
+},
+{
+"class": "GROUP",
+"from": "WARRIOR",
+"aura": "Demoralizing Shout"
+},
+{
+"class": "GROUP",
+"from": "DRUID",
+"aura": "Faerie Fire"
+},
+{
+"class": "GROUP",
+"from": "ROGUE",
+"aura": "Expose Armor"
+},
+{
+"class": "GROUP",
+"from": "WARLOCK",
+"aura": "Curse of Recklessness"
+},
+{
+"class": "GROUP",
+"from": "WARLOCK",
+"aura": "Curse of the Elements"
+},
+{
+"class": "GROUP",
+"from": "MAGE",
+"aura": "Fire Vulnerability"
+},
+{
+"class": "GROUP",
+"from": "MAGE",
+"aura": "Winter's Chill"
+},
+{
+"class": "GROUP",
+"from": "WARLOCK",
+"aura": "Shadow Vulnerability",
+"ids": [
+17794
+]
+},
+{
+"class": "GROUP",
+"from": "PALADIN",
+"aura": "Judgement of Wisdom",
+"ids": [
+20186,
+20354,
+20355
+]
+},
+{
+"class": "GROUP",
+"from": "PALADIN",
+"aura": "Judgement of Light",
+"ids": [
+20185,
+20344,
+20345,
+20346
+]
+},
+{
+"class": "GROUP",
+"from": "PALADIN",
+"aura": "Judgement of the Crusader",
+"ids": [
+20188,
+20300,
+20301,
+20302,
+20303
+]
+},
+{
+"class": "GROUP",
+"from": "PRIEST",
+"aura": "Shadow Weaving",
+"ids": [
+15258
+]
+},
+{
+"class": "GROUP",
+"from": "HUNTER",
+"aura": "Hunter's Mark"
+}
+]

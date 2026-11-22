@@ -87,12 +87,12 @@ function Options:GenerateExecuteRangeOptions()
 	end
 
 	local options = {
-		name = L["Execute range"],
+		name = L["Execute Range"],
 		type = "group",
 		args = {
 			description = {
 				name = L["A line across enemy health bars at your execute threshold. Once an enemy's health falls below it, the part of the bar below the line is tinted."]
-					.. " " .. L["Turn it on for nameplates, the target frame or both. The threshold, the lead and the colours apply to both."],
+					.. " " .. L["Turn it on for nameplates, the target frame or both. The threshold, the lead and the colors apply to both."],
 				order = 1, type = "description", fontSize = "medium"
 			},
 			nameplates = {
@@ -177,14 +177,14 @@ function Options:GenerateExecuteRangeOptions()
 				name = L["Colors"], order = 5, type = "group", inline = true,
 				args = {
 					executeCustomColors = {
-						name = L["Own colours"],
-						desc = L["Colour the line and the tint yourself. Also on the target frame."],
+						name = L["Own colors"],
+						desc = L["Color the line and the tint yourself. Also on the target frame."],
 						order = 1, type = "toggle", width = "full",
 						disabled = SharedOff,
 						set = Set, get = Get
 					},
 					executeLineColor = {
-						name = L["Line colour"],
+						name = L["Line color"],
 						order = 2, type = "color", hasAlpha = true,
 						disabled = function() return SharedOff() or not plates.db.profile.executeCustomColors end,
 						get = function(info) return unpack(Get(info) or { 1, 1, 1, .85 }) end,
@@ -192,7 +192,7 @@ function Options:GenerateExecuteRangeOptions()
 						set = function(info, r, g, b, a) Set(info, { r, g, b, a }) end
 					},
 					executeZoneColor = {
-						name = L["Tint colour"],
+						name = L["Tint color"],
 						order = 3, type = "color", hasAlpha = true,
 						disabled = function() return SharedOff() or not plates.db.profile.executeCustomColors end,
 						get = function(info) return unpack(Get(info) or { 1, .15, .05, .35 }) end,
@@ -211,4 +211,4 @@ function Options:GenerateExecuteRangeOptions()
 	return options
 end
 
-Options:AddGroup(L["Execute range"], function() return Options:GenerateExecuteRangeOptions() end, -6950, "frames", "NamePlates")
+Options:AddGroup("Execute range", function() return Options:GenerateExecuteRangeOptions() end, -6950, "frames", "NamePlates")

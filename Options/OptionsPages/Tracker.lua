@@ -56,7 +56,7 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Objectives Tracker Settings"],
+		name = L["Objectives Tracker"],
 		type = "group",
 		args = {
 			header = {
@@ -71,7 +71,7 @@ local GenerateOptions = function()
 				fontSize = "medium"
 			},
 			disableBlizzardTracker = {
-				name = L["Hide the Blizzard Tracker"],
+				name = L["Hide the Blizzard tracker"],
 				desc = L["Disable the Blizzard Tracker completely."],
 				order = 10,
 				type = "toggle", width = "full",

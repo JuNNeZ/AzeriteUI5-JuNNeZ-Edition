@@ -34,7 +34,6 @@ if (not Kit) then return end
 local L = LibStub("AceLocale-3.0"):GetLocale(Addon)
 
 -- Lua API
-local _G = _G
 local max = math.max
 local pairs = pairs
 local type = type
@@ -235,18 +234,17 @@ local IconFor = function(key)
 			["GuildManager"] = "groupframes",
 			["MythicPlus"] = "mythicplus", ["Themes"] = "themes",
 			["Objectives Tracker"] = "tracker", ["Widgets"] = "widgets",
-			[L["Action Bars"]] = "actionbars", [L["Bags"]] = "bags",
-			[L["Control Types"]] = "controltypes", [L["Cooldown Manager"]] = "cooldowns",
-			[L["Debug tools"]] = "debug", [L["Explorer Mode"]] = "explorer",
-			[L["Minimap"]] = "minimap", [L["Nameplates"]] = "nameplates",
-			[L["Tooltips"]] = "tooltips", [L["Unit Frames"]] = "unitframes",
-			[L["Group Frames"]] = "groupframes", [L["Aura Sounds"]] = "aurasounds",
-			[L["Micro Menu"]] = "micromenu", [L["Execute range"]] = "executerange"
+			-- Page keys are untranslated (Options/Options.lua AddGroup).
+			["Action Bars"] = "actionbars", ["Bags"] = "bags",
+			["Control Types"] = "controltypes", ["Cooldown Manager"] = "cooldowns",
+			["Debug tools"] = "debug", ["Explorer Mode"] = "explorer",
+			["Minimap"] = "minimap", ["Nameplates"] = "nameplates",
+			["Tooltips"] = "tooltips", ["Unit Frames"] = "unitframes",
+			["Group Frames"] = "groupframes", ["Aura Sounds"] = "aurasounds",
+			["Micro Menu"] = "micromenu", ["Execute range"] = "executerange",
+			["Game Menu"] = "gamemenu", ["World Map"] = "worldmap",
+			["AddOn Skins"] = "themes"
 		}
-		-- The keys OptionsPages/GameMenu.lua and WorldMap.lua register with.
-		byKey[_G.MAINMENU_BUTTON or "Game Menu"] = "gamemenu"
-		if (_G.GAME_MENU) then byKey[_G.GAME_MENU] = "gamemenu" end
-		if (_G.WORLD_MAP) then byKey[_G.WORLD_MAP] = "worldmap" end
 		if (views) then
 			if (views.QUICKSTART) then byKey[views.QUICKSTART] = "quickstart" end
 			if (views.CHANGED) then byKey[views.CHANGED] = "changed" end
@@ -292,7 +290,7 @@ local SECTION_ICONS = {
 	groupIndicators = "corners", raidTools = "raid", targetMarkersLite = "raid",
 	rogue = "page:themes", shaman = "totem", stancebar = "stance", procHighlight = "proc",
 	assistedHighlight = "assist", questItemButton = "page:tracker", nativeController = "page:actionbars", readyAlerts = "bell", visibility = "eye", autoHide = "eyeslash",
-	size = "resize", colors = "droplet", auraFilters = "funnel", contentSettings = "gate",
+	size = "resize", colors = "droplet", auraFilters = "funnel", auraManual = "text", contentSettings = "gate",
 	friendlyNPCNames = "friendly", instanceFriendly = "gate", fading = "eyeslash", mythicPlusForces = "page:mythicplus", tank = "shield", friendlyPlayers = "friendly", stacking = "gear", advanced = "wrench", utilities = "wrench",
 	dismountbutton = "horseshoe", cooldown = "clock", keys = "key", keysHeader = "key",
 	threshold = "page:executerange", nameplates = "page:nameplates",
@@ -309,6 +307,14 @@ local SECTION_ICONS = {
 	anchorHeader = "anchor", castHeader = "castbar", windowHeader = "page:appearance",
 	explorermodesituationsheader = "eye", explorermodedelayheader = "clock",
 	explorermodeframeheader = "eyeslash", exportHeader = "export", importHeader = "import",
+	-- Headings that keep a page's own rows apart from the section above (Options Navigation Review B7).
+	generalHeader = "gear", creditHeader = "page:changelog",
+	-- Pages folded into another page (Options.lua MergePages), and the AddOn Skins link.
+	info = "page:infobar", tracker = "page:tracker", widgets = "page:widgets", gameMenu = "page:gamemenu",
+	sharing = "page:sharing", masque = "page:actionbars",
+	-- The Nameplates tabs and the sections made for them (OptionsPages/Nameplates.lua, step 5).
+	general = "gear", friendly = "friendly", enemies = "arena", questMarks = "page:tracker", healthText = "heal",
+	comboPoints = "classpower", auraDisplay = "page:auras", targetOnly = "target", auras = "page:auras",
 	pvpIndicatorHeader = "arena", playerAuraDebuffsHeader = "page:auras",
 	playerAuraWhatToShowHeader = "page:auras", playerAuraLayoutHeader = "page:auras",
 	playerAuraSettingsHeader = "page:auras", auraLayoutHeader = "page:auras",

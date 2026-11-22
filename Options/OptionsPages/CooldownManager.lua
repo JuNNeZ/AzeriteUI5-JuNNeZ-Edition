@@ -160,7 +160,7 @@ local GenerateOptions = function()
 				end
 			},
 			readyAlerts = {
-				name = L["Cooldown-ready alerts"],
+				name = L["Cooldown-ready Alerts"],
 				order = 20, type = "group", inline = true,
 				args = {
 					description = {
@@ -213,4 +213,4 @@ local GenerateOptions = function()
 	return options
 end
 
-Options:AddGroup(L["Cooldown Manager"], GenerateOptions, -8900, "bars", "CooldownManager")
+Options:AddGroup("Cooldown Manager", GenerateOptions, -8900, "bars", "CooldownManager")

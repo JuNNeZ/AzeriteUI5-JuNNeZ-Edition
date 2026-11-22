@@ -58,7 +58,7 @@ local GenerateOptions = function()
 	if (not getmodule()) then return end
 
 	local options = {
-		name = L["Chat Window Settings"],
+		name = L["Chat"],
 		type = "group",
 		args = {
 			fadingHeader = {
@@ -73,15 +73,15 @@ local GenerateOptions = function()
 				fontSize = "medium"
 			},
 			fadeOnInActivity = {
-				name = L["Fade Chat"],
-				desc = L["Fade chat after a period of inactiviy."],
+				name = L["Fade chat"],
+				desc = L["Fade chat after a period of inactivity."],
 				order = 10,
 				type = "toggle", width = "full",
 				set = setter,
 				get = getter
 			},
 			timeVisible = {
-				name = L["Time Visible"],
+				name = L["Time visible"],
 				desc = L["Sets the time visible before initiating the fade."],
 				order = 11,
 				type = "range", width = "full", min = 5, max = 120, step = 1,
@@ -90,7 +90,7 @@ local GenerateOptions = function()
 				get = getter
 			},
 			timeFading = {
-				name = L["Time Fading"],
+				name = L["Time fading"],
 				desc = L["Sets the time spent fading before hiding the chat."],
 				order = 12,
 				type = "range", width = "full", min = 1, max = 5, step = 1,
@@ -110,15 +110,15 @@ local GenerateOptions = function()
 				fontSize = "medium"
 			},
 			clearOnReload = {
-				name = L["Clear Chat On Reload"],
-				desc = L["Keeps the chat window clear for a period after logging in or relaoding the user interface. Note that you can still show all chat if you hold down the SHIFT key while reloading or logging in."],
+				name = L["Clear chat on reload"],
+				desc = L["Keeps the chat window clear for a period after logging in or reloading the user interface. Note that you can still show all chat if you hold down the SHIFT key while reloading or logging in."],
 				order = 30,
 				type = "toggle", width = "full",
 				set = setter,
 				get = getter
 			},
 			timeClearing = {
-				name = L["Clear Delay"],
+				name = L["Clear delay"],
 				desc = L["Set how long chat stays blocked after login or reload before messages are allowed through."],
 				order = 31,
 				type = "range", width = "full", min = 1, max = 10, step = 1,

@@ -486,6 +486,8 @@ NamePlatesMod.OnThreatRoleContextChanged = function(self, event)
 	end
 	self.threatRoleActive = role
 	self.tankModeActive = role == "tank"
+	-- The tank mana warning follows tank mode and the group (GroupMana.lua).
+	if (NP.ConfigureGroupMana) then NP.ConfigureGroupMana() end
 	for plate in next, ns.ActiveNamePlates do
 		local health = plate.Health
 		if (health and health.UpdateColor and plate.unit) then
@@ -722,6 +724,7 @@ end
 
 NamePlatesMod.OnDisable = function(self)
 	if (NP.ConfigureComboPoints) then NP.ConfigureComboPoints() end
+	if (NP.ConfigureGroupMana) then NP.ConfigureGroupMana() end
 end
 
 NamePlatesMod.OnEnable = function(self)
@@ -796,6 +799,7 @@ NamePlatesMod.OnEnable = function(self)
 	local role = GetActiveThreatRole() or false
 	self.threatRoleActive = role
 	self.tankModeActive = role == "tank"
+	if (NP.ConfigureGroupMana) then NP.ConfigureGroupMana() end
 
 	-- A spec, talent or spell change can move the execute threshold; only the markers follow it.
 	if (ns.API.RegisterExecuteThresholdCallback and not self.executeThresholdCallback) then

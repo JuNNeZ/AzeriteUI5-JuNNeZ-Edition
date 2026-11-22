@@ -48,6 +48,14 @@ Renderer.SetNavigation = function(self, group, mode)
 	navigation[group] = mode
 end
 
+-- A folded section normally starts open when it is the page's first. A group marked here starts
+-- closed wherever it is: a fallback such as typing spell IDs by hand (Nameplates, Aura filters).
+-- Search and RevealPath still open it.
+local startClosed = setmetatable({}, { __mode = "k" })
+Renderer.SetStartClosed = function(self, group)
+	if (type(group) == "table") then startClosed[group] = true end
+end
+
 local APP = Addon
 
 --------------------------------------------------------------------------
@@ -740,10 +748,11 @@ BuildTree = function(page, group, options, path, depth)
 			item.tabbed = node.mode == "tabs"
 				and (item.kind == "section" or not IsInline(item.option))
 			if (item.collapsible) then
+				local closed = item.option and startClosed[item.option]
 				if (page.sectionState[item.id] == nil) then
-					page.sectionState[item.id] = not first
+					page.sectionState[item.id] = (not closed) and not first
 				end
-				first = first or item.id
+				if (not closed) then first = first or item.id end
 			end
 			if (item.tabbed) then node.tabs[#node.tabs + 1] = item end
 		end

@@ -499,7 +499,28 @@ local AceConfigDialog = {
 	end
 }
 
-local localeMT = { __index = function(t, k) return k end }
+-- AZERITE_LOCALE=deDE (any Locale/*.lua code) makes L translate as that client does; a key the
+-- locale lacks falls back to itself, like AceLocale's silent enUS default. Without it every L[...]
+-- is its own key, which hides code comparing a translated string with an English literal: the
+-- options page keys that broke the mover panel and What's New off English clients
+-- (Docs/Options Navigation Review - 2026-11-22.md, B1/B2).
+local HARNESS_LOCALE = os and os.getenv and os.getenv("AZERITE_LOCALE")
+local translations
+if (HARNESS_LOCALE and HARNESS_LOCALE ~= "" and HARNESS_LOCALE ~= "enUS") then
+	translations = {}
+	local sink = setmetatable({}, { __newindex = function(_, key, value)
+		if (type(value) == "string") then translations[key] = value end
+	end })
+	local chunk = assert(loadfile(root .. "/Locale/" .. HARNESS_LOCALE .. ".lua"))
+	setfenv(chunk, setmetatable({ LibStub = function() return { NewLocale = function() return sink end } end },
+		{ __index = _G }))
+	chunk("AzeriteUI5_JuNNeZ_Edition")
+end
+
+local localeMT = { __index = function(t, k)
+	if (translations and translations[k] ~= nil) then return translations[k] end
+	return k
+end }
 local AceLocale = {
 	GetLocale = function() return setmetatable({}, localeMT) end,
 	NewLocale = function() return setmetatable({}, localeMT) end

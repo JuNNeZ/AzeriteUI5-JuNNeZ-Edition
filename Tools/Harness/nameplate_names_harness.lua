@@ -138,7 +138,7 @@ module.UpdateSettings = function() ns.NamePlatesPrivate.RefreshActiveNamePlates(
 local L = setmetatable({}, { __index = function(_, key) return key end })
 function LibStub() return { GetLocale = function() return L end } end
 load("Options/OptionsPages/Nameplates.lua")
-local group = generated().args.names
+local group = generated().args.general.args.names
 eq(group.hidden({ "names" }), false, "common options visible")
 for _, kind in ipairs({ "friendlyPlayer", "enemyPlayer", "friendlyNPC", "enemyNPC" }) do
  local opt = group.args[kind]

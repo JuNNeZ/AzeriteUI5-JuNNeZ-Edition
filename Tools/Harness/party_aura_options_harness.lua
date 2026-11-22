@@ -1,11 +1,11 @@
 -- Party aura row option mapping (FixLog 2026-11-13, Neil). Slices the real
 -- GetPartyAuraSetting and GetPartyNativeAuraOptions out of
--- Components/UnitFrames/Units/Party.lua and checks how the "What To Show" switches
+-- Components/UnitFrames/Units/Party.lua and checks how the "What to Show" switches
 -- reach the native row's groups.
 -- Blizzard's dispellable-only mode (AuraUtil.ProcessAura, 12.1.5) files your
 -- dispellable non-boss debuffs as Debuff, so they arrive through the "other" group
 -- there, and the "dispel" group only carries boss dispellables.
--- Also the helpful switches: "Show Short Helpful Buffs" off with "Show Helpful Raid
+-- Also the helpful switches: "Show short helpful buffs" off with "Show Helpful Raid
 -- Buffs" on drops your own HoTs (RAID_IN_COMBAT) but keeps your other castable buffs,
 -- through the own and raid groups' filter strings (sliced out of
 -- Components/UnitFrames/Auras/PlayerAuraContainers.lua).
@@ -81,8 +81,8 @@ check(o.showDispel and o.showBoss and o.showOther, "no profile behaves as stock"
 
 -- Helpful switches (FixLog 2026-11-13). Your own buffs, HoTs included, live in the
 -- "own" group. RAID is any buff you can apply and RAID_IN_COMBAT the flag that puts
--- your HoTs on raid frames (AuraUtil.AuraFilters), so "Show Helpful Raid Buffs" alone
--- keeps the group but skips RAID_IN_COMBAT; "Show Short Helpful Buffs" alone caps it.
+-- your HoTs on raid frames (AuraUtil.AuraFilters), so "Show helpful raid buffs" alone
+-- keeps the group but skips RAID_IN_COMBAT; "Show short helpful buffs" alone caps it.
 local function Buffs(raid, short)
 	return Options({ partyAuraUseStockBehavior = false,
 		partyAuraShowHelpfulRaidBuffs = raid, partyAuraShowHelpfulShortBuffs = short })

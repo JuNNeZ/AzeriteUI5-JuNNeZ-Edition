@@ -22,21 +22,21 @@ function Options:GenerateHealthPredictionOptions()
 				type = "description", order = 1, width = "full"
 			},
 			showIncomingHeals = {
-				name = L["Show Incoming Heals"], desc = L["Show incoming healing after current health."],
+				name = L["Show incoming heals"], desc = L["Show incoming healing after current health."],
 				type = "toggle", order = 10, width = "full", set = Set, get = Get
 			},
 			showDamageAbsorbs = {
-				name = L["Show Damage Absorbs"], desc = L["Show shields with diagonal stripes using the selected display mode."],
+				name = L["Show damage absorbs"], desc = L["Show shields with diagonal stripes using the selected display mode."],
 				type = "toggle", order = 20, width = "full", set = Set, get = Get
 			},
 			showOverhealIndicator = {
-				name = L["Show Overheal Indicator"],
+				name = L["Show overheal indicator"],
 				desc = L["Show a green end marker when pending incoming healing exceeds missing health. Requires Show Incoming Heals. This is a prediction, not a record of healing already wasted."],
 				type = "toggle", order = 15, width = "full", set = Set,
 				get = function() return module.db.profile.showOverhealIndicator == true end
 			},
 			absorbDisplayMode = {
-				name = L["Absorb Display Mode"],
+				name = L["Absorb display mode"],
 				desc = L["Total shield shows the full amount from the bar's end, overlapping health when needed; a gap is possible at low health. Follow health starts after health and incoming heals, shows only what fits, and marks excess with an end stripe."],
 				type = "select", order = 25, width = "full",
 				values = { total = L["Total shield"], followHealth = L["Follow health"] },
@@ -46,7 +46,7 @@ function Options:GenerateHealthPredictionOptions()
 				end
 			},
 			showHealAbsorbs = {
-				name = L["Show Healing Absorbs"], desc = L["Show healing absorption extending back into current health, after accounting for incoming healing."],
+				name = L["Show healing absorbs"], desc = L["Show healing absorption extending back into current health, after accounting for incoming healing."],
 				type = "toggle", order = 30, width = "full", set = Set, get = Get
 			}
 		}

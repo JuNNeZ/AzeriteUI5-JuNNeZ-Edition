@@ -175,7 +175,7 @@ Options.GenerateProfileMenu = function(self)
 		order = -10000,
 		args = {
 			profiles = {
-				name = L["Settings Profile"],
+				name = L["Settings profile"],
 				desc = L["Choose your settings profile. This choice affects all settings including frame placement."],
 				type = "select",
 				style = "dropdown",
@@ -318,7 +318,7 @@ end
 -- profile page can spare above the settings tree.
 Options.GenerateSharingMenu = function(self)
 	return {
-		name = L["Export & Import"],
+		name = L["Export and Import"],
 		type = "group",
 		args = {
 			exportHeader = {
@@ -332,7 +332,7 @@ Options.GenerateSharingMenu = function(self)
 				order = 2
 			},
 			exportGenerate = {
-				name = L["Generate Export String"],
+				name = L["Generate export string"],
 				type = "execute",
 				order = 3,
 				func = function(info)
@@ -552,6 +552,13 @@ end
 -- options table because AceConfigRegistry validates that table, and an
 -- unknown key in it would be a risk for no gain. Pages that name no section
 -- fall to the end of the rail under a general heading.
+--
+-- `name` is the page's key in the options table, and it must be a plain,
+-- untranslated string ("Unit Frames", not L["Unit Frames"]). Paths are built
+-- from it by the mover panel, What's New, links and the harnesses; a translated
+-- key differs per client, and every English path then missed the page off
+-- English clients (Docs/Options Navigation Review - 2026-11-22.md, B1/B2).
+-- What the rail shows is the page group's own `name`, which is translated.
 Options.AddGroup = function(self, name, group, priority, section, moduleName)
 	if (not self.objects) then
 		self.objects = {}
@@ -570,6 +577,50 @@ end
 -- The rail section for a page, by the key it has in the options table.
 Options.GetSection = function(self, name)
 	return self.sections and self.sections[name]
+end
+
+-- Thin pages folded into a related one as sections of it (Docs/Options Navigation
+-- Review - 2026-11-22.md, step 4). The host keeps its key and its own rows, so
+-- links and mover paths into it are unchanged. A guest moves to host.args[sub]:
+-- its table moves, and with it the module binding Defaults keyed on that table,
+-- so each section still marks and reverts against its own module. A guest whose
+-- host was not built (its module is missing) stays a page of its own.
+local MERGES = {
+	{ host = "Minimap", label = L["Minimap and Info Bar"], guests = { { key = "Info Bar", sub = "info" } } },
+	{ host = "World Map", label = L["World Map and Objectives"], guests = {
+		{ key = "Objectives Tracker", sub = "tracker" }, { key = "Widgets", sub = "widgets" } } },
+	{ host = "Micro Menu", label = L["Menus"], guests = { { key = "Game Menu", sub = "gameMenu" } } },
+	{ host = "profiles", label = L["Profiles and Sharing"], guests = { { key = "sharing", sub = "sharing" } } }
+}
+
+Options.MergePages = function(self, options)
+	self.movedPages = {}
+	for _, merge in ipairs(MERGES) do
+		local host = options.args[merge.host]
+		if (type(host) == "table") then
+			local moved = false
+			for index, guest in ipairs(merge.guests) do
+				local group = options.args[guest.key]
+				if (type(group) == "table") then
+					-- After every row the host has of its own, or they would read as part of it.
+					group.order = 1000 + index
+					-- Pages get tab navigation; a section inside a page must not.
+					group.childGroups = nil
+					host.args = host.args or {}
+					host.args[guest.sub] = group
+					options.args[guest.key] = nil
+					self.movedPages[guest.key] = { merge.host, guest.sub }
+					moved = true
+				end
+			end
+			if (moved) then host.name = merge.label end
+		end
+	end
+end
+
+-- Where a folded page went, as { hostKey, sectionKey }, or nil.
+Options.GetMovedPage = function(self, key)
+	return self.movedPages and self.movedPages[key]
 end
 
 Options.GenerateOptionsMenu = function(self)
@@ -619,10 +670,12 @@ Options.GenerateOptionsMenu = function(self)
 	sharing.order = order
 	options.args.sharing = sharing
 
-	-- The two pages this module builds itself.
+	-- The two pages this module builds itself, under Profiles and Tools (Options Navigation Review 2026-11-22, step 3).
 	self.sections = self.sections or {}
-	self.sections.profiles = "setup"
-	self.sections.sharing = "setup"
+	self.sections.profiles = "other"
+	self.sections.sharing = "other"
+
+	self:MergePages(options)
 
 	self.options = options
 
