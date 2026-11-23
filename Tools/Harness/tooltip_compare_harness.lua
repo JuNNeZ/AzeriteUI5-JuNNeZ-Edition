@@ -474,6 +474,7 @@ local function Load(options)
 		GetTime = function() return 0 end,
 		C_Timer = { After = function(_, callback) table.insert(world.timers, callback) end },
 		IsModifiedClick = function() return world.modifier end,
+		GetCVarBool = function(name) return name == "alwaysCompareItems" and world.alwaysCompare or false end,
 		geterrorhandler = function() return function(message) table.insert(world.errors, message) end end,
 		print = function(...)
 			local parts = {}
@@ -834,6 +835,18 @@ do
 	Compare(env, false)
 	check(not env.ShoppingTooltip1.shown, label .. ": the compare tooltip is hidden")
 	check(JoinOffset(env.ShoppingTooltip1) == 0, label .. ": its join is not widened", JoinOffset(env.ShoppingTooltip1))
+	CheckErrors(label)
+
+	-- "Always compare items" on and no modifier (a controller has no Shift; Blizzard's gamepad
+	-- bag menu offers this setting instead): the compare tooltip stays, as Blizzard's
+	-- TooltipUtil.ShouldDoItemComparison would have it.
+	label = "Azerite, always compare without modifier"
+	module, env = Load({ theme = "Azerite", side = "right" })
+	world.modifier = false
+	world.alwaysCompare = true
+	Compare(env, false)
+	check(env.ShoppingTooltip1.shown, label .. ": the compare tooltip stays shown")
+	world.alwaysCompare = false
 	CheckErrors(label)
 end
 

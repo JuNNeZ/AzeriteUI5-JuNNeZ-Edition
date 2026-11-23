@@ -10,6 +10,16 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.50.1-JuNNeZ (2026-11-23) - Item Compare on Controllers
+
+### Highlights
+
+- **Item compare works without Shift.** AzeriteUI hid the compare tooltips unless Shift was held, even with the game's **Always compare items** setting on. It now follows that setting like the default UI. On a controller, open your backpack's menu and tick **Toggle item compare** to see your equipped gear next to the item you hover. Shift still works as before. Requested by Ranforius.
+
+### Access and known limits
+
+- Verified offline only; the compare-tooltip regression harness gained a case for the setting without Shift. Confirmation with a controller on Forever and with a mouse on Retail is still owed.
+
 ## 5.50.0-JuNNeZ (2026-11-22) - Aura Picker, Tank Mana Warning and Clearer Options
 
 ### Highlights

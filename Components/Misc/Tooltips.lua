@@ -1136,7 +1136,22 @@ local SuppressCompareTooltipWithoutModifier = function(compareTooltip)
 	end
 end
 
-local IsCompareModifierActive = function()
+-- Same rule as Blizzard's TooltipUtil.ShouldDoItemComparison: the COMPAREITEMS
+-- modifier, or the "alwaysCompareItems" setting. Controllers have no Shift key;
+-- Blizzard's gamepad bag menu offers that setting instead ("Toggle item compare"),
+-- so ignoring it hid every compare tooltip for gamepad players.
+-- owner: the tooltip being compared against (nil from a compare tooltip's OnShow).
+local IsCompareModifierActive = function(owner)
+	local util = _G.TooltipUtil
+	if (owner and util and type(util.ShouldDoItemComparison) == "function") then
+		local ok, result = pcall(util.ShouldDoItemComparison, owner)
+		if (ok) then
+			return result and true or false
+		end
+	end
+	if (type(GetCVarBool) == "function" and GetCVarBool("alwaysCompareItems")) then
+		return true
+	end
 	if (type(IsModifiedClick) ~= "function") then
 		return false
 	end
@@ -1195,7 +1210,7 @@ Tooltips.OnCompareItemShow = function(self, tooltip)
 	C_Timer.After(0, function()
 		if (self:IsDisabled()) then return end
 		if (not tooltip) or tooltip:IsForbidden() then return end
-		if (not IsCompareModifierActive()) then
+		if (not IsCompareModifierActive(tooltip)) then
 			for _, ct in ipairs(GetCompareTooltips(tooltip)) do
 				if (ct and not ct:IsForbidden()) then
 					SuppressCompareTooltipWithoutModifier(ct)
