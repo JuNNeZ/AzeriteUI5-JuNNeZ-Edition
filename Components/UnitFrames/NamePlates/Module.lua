@@ -498,6 +498,10 @@ end
 
 NamePlatesMod.OnEvent = function(self, event, ...)
 	if (event == "UPDATE_SHAPESHIFT_FORM" or event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ROLES_ASSIGNED") then
+		if (event == "GROUP_ROSTER_UPDATE") then
+			-- In an instance the plate width fits the group's longest name (CVars.lua, GetGroupNameWidth).
+			ApplyNamePlateDriverSize(self)
+		end
 		return self:OnThreatRoleContextChanged(event)
 	elseif (event == "CHARACTER_POINTS_CHANGED" or event == "PLAYER_TALENT_UPDATE"
 		or event == "ACTIVE_TALENT_GROUP_CHANGED" or event == "PLAYER_SPECIALIZATION_CHANGED") then

@@ -3207,6 +3207,50 @@ do
 	check(W.driver.plateWidth == 250, "the floor stops at 250", W.driver.plateWidth)
 	NamePlateDriverFrame.GetNamePlateWidth = function(_, _, scale) return 230 * scale.horizontal end
 	hScale = 1
+	-- The group's own names are measured in the game's nameplate font and the plate widened to fit the
+	-- longest ("Sakuran Featherst...", FixLog 2026-11-23). Text measures 6px a character at height 12.
+	do
+		local savedCreateFrame, savedUnitName, savedParty = CreateFrame, UnitName, W.party
+		local savedOptions, savedFont = NamePlateSetupOptions, _G.SystemFont_NamePlate
+		local roster = {}
+		_G.SystemFont_NamePlate = {}
+		NamePlateSetupOptions = { healthBarFontHeight = 12, insetWidth = 12 }
+		CreateFrame = function()
+			return {
+				Hide = function() end,
+				CreateFontString = function()
+					local fs = { height = 12, text = "" }
+					function fs:SetFontObject() end
+					function fs:SetTextHeight(h) self.height = h end
+					function fs:SetText(t) self.text = t end
+					function fs:GetUnboundedStringWidth() return #self.text * 6 * self.height / 12 end
+					return fs
+				end
+			}
+		end
+		UnitName = function(unit) return roster[unit] end
+		W.party = true
+		roster.party1 = "Sakuran Featherstorm"
+		Fire("GROUP_ROSTER_UPDATE")
+		check(W.driver.plateWidth == 230, "names that fit keep Blizzard's width", W.driver.plateWidth)
+		roster.party2 = string.rep("x", 40) -- 240 + 2 x 12 inset + 2 x 4 padding + 4 slack
+		Fire("GROUP_ROSTER_UPDATE")
+		check(W.driver.plateWidth == 276, "a longer name in the group widens the plate to fit it", W.driver.plateWidth)
+		roster.party3 = SECRET
+		Fire("GROUP_ROSTER_UPDATE")
+		check(W.driver.plateWidth == 276, "a secret name is skipped", W.driver.plateWidth)
+		roster.party3 = string.rep("x", 100)
+		Fire("GROUP_ROSTER_UPDATE")
+		check(W.driver.plateWidth == 400, "the measured width stops at 400", W.driver.plateWidth)
+		roster.party2, roster.party3 = nil, nil
+		Fire("GROUP_ROSTER_UPDATE")
+		check(W.driver.plateWidth == 230, "and narrows again when that member leaves", W.driver.plateWidth)
+		W.party = nil
+		Fire("GROUP_ROSTER_UPDATE")
+		check(W.driver.plateWidth == 230, "alone, Blizzard's width", W.driver.plateWidth)
+		CreateFrame, UnitName, W.party = savedCreateFrame, savedUnitName, savedParty
+		NamePlateSetupOptions, _G.SystemFont_NamePlate = savedOptions, savedFont
+	end
 	-- Delves are scenarios of difficulty 208, as Platynator counts them.
 	local savedGetInstanceInfo = GetInstanceInfo
 	local difficulty = 208

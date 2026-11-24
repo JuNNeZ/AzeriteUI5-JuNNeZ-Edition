@@ -10,6 +10,17 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.50.2-JuNNeZ (2026-11-24) - Whole Names in Dungeons
+
+### Highlights
+
+- **Your group's full names in dungeons.** A long party or raid member name on the game's friendly nameplates could still end in "..." (for example "Sakuran Featherst..."). AzeriteUI now measures your group's names in the game's own nameplate font and makes the plates wide enough for the longest one, with the realm when you show realm names. The width updates when someone joins or leaves; in combat it waits until combat ends.
+
+### Access and known limits
+
+- Only group members are measured. Friendly NPCs such as follower companions, and players outside your group, still use the previous width. A wider plate also gives enemy plates a wider stacking box.
+- Verified offline only, on Retail and Forever; the nameplate regression harness gained checks for long, secret and departing names. Confirmation in a dungeon with a long-named party member is still owed.
+
 ## 5.50.1-JuNNeZ (2026-11-23) - Item Compare on Controllers
 
 ### Highlights

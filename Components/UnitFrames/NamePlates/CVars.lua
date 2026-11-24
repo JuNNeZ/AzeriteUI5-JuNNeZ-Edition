@@ -252,12 +252,82 @@ local ShowsFriendlyPlates = function(self)
 	return (self:GetShownSetting("friendlyPlayers") or self:GetShownSetting("friendlyNPCs")) and true or false
 end
 
+-- The width the group's own names need on the game's plates, measured in the game's nameplate fonts at the
+-- height it gives them (Blizzard_NamePlateUnitFrame.lua: name:SetTextHeight(healthBarFontHeight), spanning the
+-- plate less insetWidth and 4px on each side). The scale-based floor above is a guess and still cut long
+-- names ("Sakuran Featherst...", FixLog 2026-11-23); this measures them. Out of combat only (the size is
+-- restricted then anyway); secret names are skipped. nil when there is nothing to measure.
+local NAME_MEASURE_FONTS = { "SystemFont_NamePlate_Outlined", "SystemFont_NamePlate" }
+local NAME_SIDE_PADDING, NAME_SLACK, NAME_WIDTH_CAP = 4, 4, 400
+local nameMeasurer
+
+local IsSecret = function(value)
+	return type(issecretvalue) == "function" and issecretvalue(value) and true or false
+end
+
+local GetGroupNameWidth = function()
+	if (type(CreateFrame) ~= "function" or type(UnitName) ~= "function") then
+		return nil
+	end
+	local prefix, count
+	if (type(IsInRaid) == "function" and IsInRaid()) then
+		prefix, count = "raid", 40
+	elseif (type(IsInGroup) == "function" and IsInGroup()) then
+		prefix, count = "party", 4
+	else
+		return nil
+	end
+	local options = type(NamePlateSetupOptions) == "table" and NamePlateSetupOptions or nil
+	local fontHeight = options and tonumber(options.healthBarFontHeight) or 12
+	local inset = options and tonumber(options.insetWidth) or 12
+	local showRealm = GetCVarBoolIfSupported("nameplateShowFriendlyRealmName", false)
+	if (not nameMeasurer) then
+		local holder = CreateFrame("Frame")
+		holder:Hide()
+		nameMeasurer = holder:CreateFontString(nil, "OVERLAY")
+	end
+	local widest
+	for index = 1, count do
+		local unit = prefix .. index
+		local name, realm = UnitName(unit)
+		if (type(name) == "string" and not IsSecret(name) and name ~= "" and not IsSecret(realm)) then
+			if (showRealm and type(realm) == "string" and realm ~= "") then
+				name = name .. "-" .. realm
+			end
+			for _, fontName in ipairs(NAME_MEASURE_FONTS) do
+				local font = _G[fontName]
+				if (font) then
+					nameMeasurer:SetFontObject(font)
+					if (nameMeasurer.SetTextHeight) then
+						nameMeasurer:SetTextHeight(fontHeight)
+					end
+					nameMeasurer:SetText(name)
+					local width = nameMeasurer.GetUnboundedStringWidth and nameMeasurer:GetUnboundedStringWidth()
+						or nameMeasurer:GetStringWidth()
+					if (type(width) == "number" and not IsSecret(width) and (not widest or width > widest)) then
+						widest = width
+					end
+				end
+			end
+		end
+	end
+	nameMeasurer:SetText("")
+	if (not widest) then
+		return nil
+	end
+	return math.min(NAME_WIDTH_CAP, math.ceil(widest + 2 * inset + 2 * NAME_SIDE_PADDING + NAME_SLACK))
+end
+
 local GetDriverSize = function(self, db)
 	local width, height = db.Size[1], db.Size[2]
 	if (IsFriendlyRestrictedInstance() and ShowsFriendlyPlates(self)) then
 		local blizzard = GetBlizzardPlateWidth()
 		if (blizzard and blizzard > width) then
 			width = blizzard
+		end
+		local names = not InCombatLockdown() and GetGroupNameWidth() or nil
+		if (names and names > width) then
+			width = names
 		end
 	end
 	return width, height
