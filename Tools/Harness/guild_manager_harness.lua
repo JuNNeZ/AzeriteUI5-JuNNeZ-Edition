@@ -122,10 +122,26 @@ local function LevelMessage(value, label, metadata)
 end
 check(LevelMessage(40):find("[40:Jonas]", 1, true), "metadata can add a level when Chattynator's level display is off")
 check(LevelMessage(nil, "40:Alt Person", "Alt Person-TestRealm"):find("[40:Jonas]", 1, true), "legacy metadata retains an existing readable level prefix")
-for _, value in ipairs({ secret, 0, -1, 1.5, math.huge, "40", 1000 }) do
-    check(LevelMessage(value):find("[Jonas]", 1, true), "unknown or invalid message level omitted safely")
+for _, value in ipairs({ secret, 0, -1, 1.5, math.huge, "40" }) do
+    check(LevelMessage(value):find("[40:Jonas]", 1, true), "unknown or invalid message level falls back to the speaker's roster level")
 end
-check(LevelMessage(60, "Alt Person", { name = "Main Person-TestRealm", level = 60 }):find("[Jonas]", 1, true), "mismatched metadata cannot attach the main's level to its alt")
+check(LevelMessage(38):find("[40:Jonas]", 1, true), "stale cached message level loses to a higher roster level")
+check(LevelMessage(60, "Alt Person", { name = "Main Person-TestRealm", level = 60 }):find("[40:Jonas]", 1, true), "mismatched metadata cannot attach the main's level to its alt")
+do
+    local members = module.members; module.members = {}
+    check(LevelMessage(1000):find("[Jonas]", 1, true), "out-of-range level without a roster row omitted safely")
+    check(LevelMessage(secret):find("[Jonas]", 1, true), "secret level without a roster row omitted safely")
+    module.members = members
+    local before, capture = requests, rawget(module, "CaptureGuildHistory")
+    module.CaptureGuildHistory = capture or function() end
+    module:OnEvent("GUILD_ROSTER_UPDATE", false)
+    check(requests == before, "roster not re-requested without the server's flag")
+    module:OnEvent("GUILD_ROSTER_UPDATE", true)
+    check(requests == before+1, "server-flagged roster change requested so levels stay current")
+    module:OnEvent("GUILD_ROSTER_UPDATE", true)
+    check(requests == before+1, "flagged roster requests are throttled")
+    module.CaptureGuildHistory = capture
+end
 module.db.profile.guildFormat = "both"
 local combined = Message("Alt Person-TestRealm", "|cff00ff0040:Alt Person|r")
 combined.typeInfo.type, combined.typeInfo.player.level = "GUILD", 40; active(combined)

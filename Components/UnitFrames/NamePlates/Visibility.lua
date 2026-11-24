@@ -945,6 +945,7 @@ local ApplyHiddenNamePlateVisualState = function(self)
 	self:SetAlpha(0)
 	if (self.Name) then self.Name:Hide() end
 	if (self.NameTitle) then self.NameTitle:Hide() end
+	if (self.NameOnlyHealth) then self.NameOnlyHealth.__active = nil; self.NameOnlyHealth:Hide() end
 	if (self.Health) then
 		self.Health:Hide()
 		if (self.Health.Backdrop) then
@@ -1071,6 +1072,7 @@ local ApplyFriendlyNameOnlyNameAnchor = function(self, db, enabled)
 	if (self.NameTitle) then
 		self.NameTitle:Hide()
 	end
+	if (self.NameOnlyHealth) then self.NameOnlyHealth.__active = nil; self.NameOnlyHealth:Hide() end
 	self.__AzeriteUI_NameOnTitle = nil
 	if (self.__AzeriteUI_NameOnlyAnchorApplied) then
 		self.Name:ClearAllPoints()
@@ -1131,15 +1133,174 @@ local GetFriendlyNPCTitle = function(self)
 	return title or nil
 end
 
--- The title line of a name-only friendly NPC (showFriendlyNPCTitle): on the spot the name-only name
--- would take, with the name moved on top of it. Called after ApplyFriendlyNameOnlyNameAnchor.
+-- A name-only player's guild (showFriendlyPlayerGuild), as Platynator's GuildText reads it. Not cached:
+-- GetGuildInfo answers from data the client already has, and is nil until it arrives (UNIT_NAME_UPDATE,
+-- Style.lua). A secret or empty answer shows nothing.
+local GetPlayerGuildTitle = function(self)
+	local unit = self and self.unit
+	if (not self.isPlayerUnit or not IsSafeUnitToken(unit) or type(GetGuildInfo) ~= "function") then
+		return nil
+	end
+	local ok, guild, _, _, realm = pcall(GetGuildInfo, unit)
+	if (not ok or IsSecretValue(guild) or type(guild) ~= "string" or guild == "") then
+		return nil
+	end
+	if (IsSecretValue(realm)) then
+		realm = nil
+	end
+	return guild, realm
+end
+
+-- Whether a guild is yours: same name and same guild realm (nil for your own realm), as Platynator
+-- compares them. A secret or missing answer of your own is "no".
+local IsOwnGuild = function(guild, realm)
+	local ok, own, _, _, ownRealm = pcall(GetGuildInfo, "player")
+	if (not ok or IsSecretValue(own) or IsSecretValue(ownRealm) or type(own) ~= "string") then
+		return false
+	end
+	return own == guild and ownRealm == realm
+end
+
+-- The guild chat colour, as the chat frame draws it; green where ChatTypeInfo has none.
+local GetOwnGuildColor = function()
+	local info = ChatTypeInfo and ChatTypeInfo.GUILD
+	if (type(info) == "table" and type(info.r) == "number") then
+		return info.r, info.g, info.b
+	end
+	return .25, 1, .25
+end
+
+-- Name-only health (nameOnlyHealthThreshold)
+--------------------------------------------
+-- A thin bar under a name-only player you can help, shown only below a share of health: for a healer
+-- who keeps friendly players as names. Health is secret in combat, so, as the execute zone does
+-- (Elements.lua), the bar's alpha is a step curve the client evaluates on UnitHealthPercent, handed
+-- straight to SetAlpha; the bar's values go straight into the StatusBar. Never read by addon logic.
+local nameOnlyHealthCurves = {}
+
+-- 1 below the threshold, 0 at or above it. False where the client has no curves.
+local GetNameOnlyHealthCurve = function(threshold)
+	local curve = nameOnlyHealthCurves[threshold]
+	if (curve == nil) then
+		curve = false
+		if (C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType and Enum.LuaCurveType.Step) then
+			curve = C_CurveUtil.CreateCurve()
+			curve:SetType(Enum.LuaCurveType.Step)
+			curve:AddPoint(0, 1)
+			curve:AddPoint(threshold, 0)
+		end
+		nameOnlyHealthCurves[threshold] = curve
+	end
+	return curve
+end
+
+local GetNameOnlyHealthThreshold = function()
+	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
+	local value = profile and profile.nameOnlyHealthThreshold
+	if (type(value) ~= "number" or value <= 0) then
+		return 0
+	end
+	return (value > 1) and 1 or value
+end
+
+-- Values and visibility. Runs on every health update of a plate whose bar is active (Health_PostUpdate).
+local UpdateNameOnlyHealth = function(self)
+	local bar = self and self.NameOnlyHealth
+	if (not bar or not bar.__active) then
+		return
+	end
+	local unit = self.unit
+	local threshold = GetNameOnlyHealthThreshold()
+	if (threshold <= 0 or not IsSafeUnitToken(unit)) then
+		bar:SetAlpha(0)
+		return
+	end
+	local okCur, cur = API.TryCall(UnitHealth, unit)
+	local okMax, max = API.TryCall(UnitHealthMax, unit)
+	if (okCur and okMax and type(cur) == "number" and type(max) == "number") then
+		bar:SetMinMaxValues(0, max)
+		bar:SetValue(cur)
+	end
+	local alpha = 0
+	local curve = GetNameOnlyHealthCurve(threshold)
+	if (curve and UnitHealthPercent) then
+		local ok, value = API.TryCall(UnitHealthPercent, unit, false, curve)
+		if (ok and type(value) == "number") then
+			alpha = value
+		end
+	elseif (okCur and okMax and not IsSecretValue(cur) and not IsSecretValue(max)
+		and type(cur) == "number" and type(max) == "number" and max > 0) then
+		alpha = (cur / max < threshold) and 1 or 0
+	end
+	bar:SetAlpha(alpha)
+end
+
+-- Whether a plate gets the bar: a name-only player you can help, with a threshold set.
+local WantsNameOnlyHealth = function(self)
+	if (GetNameOnlyHealthThreshold() <= 0 or not self.isPlayerUnit or not ShouldUseFriendlyPlayerNameOnly(self)) then
+		return false
+	end
+	local unit = self.unit
+	if (not IsSafeUnitToken(unit)) then
+		return false
+	end
+	local canAssist = UnitCanAssist("player", unit)
+	return (not IsSecretValue(canAssist)) and canAssist == true
+end
+
+-- Under the lowest line of the name-only stack (the guild/title line or the name). Hidden otherwise.
+local PlaceNameOnlyHealth = function(self)
+	local bar = self and self.NameOnlyHealth
+	if (not bar) then
+		return
+	end
+	if (not WantsNameOnlyHealth(self)) then
+		bar.__active = nil
+		bar:Hide()
+		return
+	end
+	local below = (self.NameTitle and self.NameTitle:IsShown()) and self.NameTitle or self.Name
+	bar:ClearAllPoints()
+	bar:SetPoint("TOP", below, "BOTTOM", 0, -1)
+	bar.__active = true
+	bar:Show()
+	UpdateNameOnlyHealth(self)
+end
+
+-- The title line of a name-only friendly NPC (showFriendlyNPCTitle), or of a name-only player's guild
+-- (showFriendlyPlayerGuild): on the spot the name-only name would take, with the name moved on top of it.
+-- Called after ApplyFriendlyNameOnlyNameAnchor. The health bar goes under whichever line is lowest.
+local UpdateFriendlyNPCTitleText
 local UpdateFriendlyNPCTitle = function(self, db)
+	UpdateFriendlyNPCTitleText(self, db)
+	PlaceNameOnlyHealth(self)
+end
+UpdateFriendlyNPCTitleText = function(self, db)
 	local title = self and self.NameTitle
 	if (not title or not self.Name) then
 		return
 	end
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
-	local text = profile and profile.showFriendlyNPCTitle and self.isFriendlyAssistableNPC and GetFriendlyNPCTitle(self) or nil
+	local text
+	if (self.isFriendlyAssistableNPC) then
+		text = profile and profile.showFriendlyNPCTitle and GetFriendlyNPCTitle(self) or nil
+	elseif (self.isPlayerUnit) then
+		local realm
+		if (profile and profile.showFriendlyPlayerGuild) then
+			text, realm = GetPlayerGuildTitle(self)
+		end
+		if (text) then
+			-- The name keeps its class colour; the guild line takes the plain name colour, dimmed, or the
+			-- guild chat colour for your own guild (highlightOwnGuild).
+			if (profile.highlightOwnGuild and IsOwnGuild(text, realm)) then
+				local r, g, b = GetOwnGuildColor()
+				title:SetTextColor(r, g, b, 1)
+			else
+				local color = db.NameColor or { 1, 1, 1 }
+				title:SetTextColor(color[1], color[2], color[3], .8)
+			end
+		end
+	end
 	if (not text) then
 		title:Hide()
 		if (self.__AzeriteUI_NameOnTitle) then
@@ -1457,6 +1618,8 @@ NP.ApplyObjectPlateVisualState = ApplyObjectPlateVisualState
 NP.ApplyHiddenNamePlateVisualState = ApplyHiddenNamePlateVisualState
 NP.SetNamePlateAurasShown = SetNamePlateAurasShown
 NP.ApplyFriendlyNameOnlyNameAnchor = ApplyFriendlyNameOnlyNameAnchor
+NP.UpdateFriendlyNPCTitle = UpdateFriendlyNPCTitle
+NP.UpdateNameOnlyHealth = UpdateNameOnlyHealth
 NP.ApplyFriendlyNameOnlyFontScale = ApplyFriendlyNameOnlyFontScale
 NP.ApplyFriendlyNameOnlyVisualState = ApplyFriendlyNameOnlyVisualState
 

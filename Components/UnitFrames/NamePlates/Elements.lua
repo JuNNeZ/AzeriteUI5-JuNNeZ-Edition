@@ -62,6 +62,7 @@ local GetRoleThreatColor = NP.GetRoleThreatColor
 local IsThreatScopeActive = NP.IsThreatScopeActive
 local GetTankThreatPercent = NP.GetTankThreatPercent
 local SafeUnitMatches = NP.SafeUnitMatches
+local UpdateNameOnlyHealth = NP.UpdateNameOnlyHealth
 
 -- Execute Marker
 --------------------------------------------
@@ -219,6 +220,7 @@ local Health_PostUpdate = function(element, unit, cur, max)
 		predict:ForceUpdate()
 	end
 	UpdateExecuteZone(owner)
+	UpdateNameOnlyHealth(owner)
 	-- A death (or a resurrection) decides whether the plate shows at all (NP.IsDeadNPC), and none of
 	-- the plate's own events fire on one; its health does. Layout.lua loads later, hence the lookup.
 	local dead = NP.IsDeadNPC(owner)
@@ -790,8 +792,8 @@ local AnchorNamePlateRaidTarget = function(self)
 	if (not raidTarget) then
 		return
 	end
-	local size = GetNamePlateRaidTargetSize()
 	local nameOnly = ShouldUseFriendlyPlayerNameOnly(self) and true or false
+	local size = GetNamePlateRaidTargetSize(nameOnly)
 	if (raidTarget.__AzeriteUI_Size == size and raidTarget.__AzeriteUI_NameOnly == nameOnly) then
 		return
 	end

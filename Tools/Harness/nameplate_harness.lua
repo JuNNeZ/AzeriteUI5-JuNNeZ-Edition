@@ -145,6 +145,8 @@ function UnitIsPlayer(u) return field(u, "isPlayer") or false end
 function UnitTreatAsPlayerForDisplay(u) return field(u, "treatAsPlayer") or false end
 function UnitPlayerControlled(u) return field(u, "playerControlled") or false end
 function UnitIsMinion(u) return field(u, "minion") or false end
+-- A player's guild as its record's `guild` (nil until the client has it; SECRET answers a secret).
+function GetGuildInfo(u) return field(u, "guild") end
 -- A unit's tooltip as its record's `tooltip` lines (C_TooltipInfo.GetUnit): line 1 the name. A secret
 -- `tooltip` answers a secret second line, as an NPC's tooltip may in combat.
 LEVEL = LEVEL or "Level"
@@ -393,6 +395,7 @@ function Region:GetTexture() return self.__texture end
 function Region:SetTexCoord(...) count(self, "SetTexCoord"); self.__texcoord = { ... } end
 function Region:GetTexCoord() local t = self.__texcoord or { 0, 1, 0, 1 }; return t[1], t[2], t[3], t[4] end
 function Region:SetVertexColor(r, g, b, a) count(self, "SetVertexColor"); self.__vertex = { r, g, b, a } end
+function Region:SetColorTexture(r, g, b, a) self.__colorTexture = { r, g, b, a } end
 function Region:SetVertexColorFromBoolean(v, yes, no)
 	count(self, "SetVertexColorFromBoolean")
 	self.__fromBoolean = { v, yes and yes.rgba, no and no.rgba }
@@ -2044,6 +2047,179 @@ do
 	W.profile.hideFriendlyPlayerHealthBar = false
 	M:UpdateSettings()
 	Step("names only, the companion included")
+
+	-- The guild under a name-only player's name (showFriendlyPlayerGuild, Visibility.lua UpdateFriendlyNPCTitle),
+	-- refreshed by UNIT_NAME_UPDATE when the guild arrives after the plate (Style.lua, GuildTitle_OnEvent).
+	W.units.nameplate5.guild = "Azeroth Guardians"
+	W.profile.hideFriendlyPlayerHealthBar = true
+	M:UpdateSettings()
+	check(not P[5].NameTitle.__shown, "guild names are off by default")
+	W.profile.showFriendlyPlayerGuild = true
+	M:UpdateSettings()
+	check(P[5].NameTitle.__shown and P[5].NameTitle:GetText() == "<Azeroth Guardians>",
+		"a name-only friendly player shows their guild", P[5].NameTitle:GetText())
+	do
+		local anchor = P[5].Name.__points[1]
+		check(anchor and anchor[1] == "BOTTOM" and anchor[2] == P[5].NameTitle, "with the name on top of it")
+	end
+	check(not P[13].NameTitle.__shown, "a player without a guild gets no line")
+	W.units.nameplate13.guild = "Late Arrivals"
+	Fire("UNIT_NAME_UPDATE", "nameplate13")
+	check(P[13].NameTitle.__shown and P[13].NameTitle:GetText() == "<Late Arrivals>",
+		"a guild that arrives later is shown on UNIT_NAME_UPDATE", P[13].NameTitle:GetText())
+	W.units.nameplate13.guild = nil
+	Fire("UNIT_NAME_UPDATE", "nameplate13")
+	check(not P[13].NameTitle.__shown and P[13].Name.__points[1][2] == P[13].blizzPlate,
+		"and leaving the guild hides it, the name back on the plate's edge")
+	W.units.nameplate5.guild = SECRET
+	M:UpdateSettings()
+	check(not P[5].NameTitle.__shown, "a secret guild shows nothing")
+	W.units.nameplate5.guild = "Azeroth Guardians"
+	W.profile.hideFriendlyPlayerHealthBar = false
+	M:UpdateSettings()
+	check(P[5].Health.__shown and not P[5].NameTitle.__shown, "a player with a health bar gets no guild line")
+	W.profile.showFriendlyPlayerGuild = nil
+	W.units.nameplate5.guild = nil
+	M:UpdateSettings()
+	Step("guild names under name-only players")
+
+	-- Your own guild in the guild chat colour (highlightOwnGuild), name and guild realm compared.
+	do
+		local savedChat = ChatTypeInfo
+		ChatTypeInfo = { GUILD = { r = .1, g = .9, b = .2 } }
+		W.profile.hideFriendlyPlayerHealthBar, W.profile.showFriendlyPlayerGuild = true, true
+		W.units.player.guild = "Azeroth Guardians"
+		W.units.nameplate5.guild = "Azeroth Guardians"
+		M:UpdateSettings()
+		local c = P[5].NameTitle.__textColor
+		check(c and math.abs(c[2] - .9) < 1e-6 and c[4] == 1, "your own guild is drawn in the guild chat colour",
+			c and c[2])
+		W.units.player.guild = "Other Guild"
+		M:UpdateSettings()
+		c = P[5].NameTitle.__textColor
+		check(c and math.abs(c[2] - .9) > 1e-6, "another guild keeps the name colour", c and c[2])
+		W.units.player.guild = "Azeroth Guardians"
+		W.profile.highlightOwnGuild = false
+		M:UpdateSettings()
+		c = P[5].NameTitle.__textColor
+		check(c and math.abs(c[2] - .9) > 1e-6, "and Highlight your own guild off leaves it plain", c and c[2])
+		W.profile.highlightOwnGuild = nil
+		W.units.player.guild, W.units.nameplate5.guild = nil, nil
+		W.profile.hideFriendlyPlayerHealthBar, W.profile.showFriendlyPlayerGuild = false, nil
+		ChatTypeInfo = savedChat
+		M:UpdateSettings()
+	end
+	Step("own guild highlighted")
+
+	-- The name tag: nicknames from the Guild Manager (showNicknames) and a star for friends (markFriends).
+	do
+		local method
+		for key, fn in pairs(ns.oUF.Tags.Methods) do
+			if (key:find("NamePlateName$")) then method = fn end
+		end
+		check(type(method) == "function", "the nameplate name tag is registered")
+		-- The shared name tag it falls back to lives in the unit frames, not in this harness.
+		local nameKey
+		for key in pairs(ns.oUF.Tags.Methods) do
+			if (key:find("NamePlateName$")) then nameKey = key:gsub("NamePlateName$", "Name") end
+		end
+		local savedNameTag = ns.oUF.Tags.Methods[nameKey]
+		ns.oUF.Tags.Methods[nameKey] = savedNameTag or function(unit) return UnitName(unit) end
+		local savedGetModule = ns.GetModule
+		local guildModule = { db = { profile = { enabled = true } } }
+		function guildModule:GetTooltipNickname(unit) return unit == "nameplate5" and "Ally" or nil end
+		ns.GetModule = function(_, name, silent)
+			if (name == "GuildManager") then return guildModule end
+			return savedGetModule(_, name, silent)
+		end
+		check(method("nameplate5") == "Aelwyn", "nicknames are off by default", method("nameplate5"))
+		W.profile.showNicknames = true
+		check(method("nameplate5") == "Ally", "Show nicknames puts the nickname in place of the name", method("nameplate5"))
+		guildModule.suspended = true
+		check(method("nameplate5") == "Aelwyn", "but not while the Guild Manager is suspended", method("nameplate5"))
+		guildModule.suspended = nil
+		guildModule.db.profile.enabled = false
+		check(method("nameplate5") == "Aelwyn", "or turned off", method("nameplate5"))
+		W.profile.showNicknames = nil
+		ns.GetModule = savedGetModule
+
+		local savedFriends, savedBNet = C_FriendList, C_BattleNet
+		local friends, bnet = {}, {}
+		C_FriendList = { IsFriend = function(guid) return friends[guid] and true or false end }
+		C_BattleNet = { GetGameAccountInfoByGUID = function(guid) return bnet[guid] end }
+		W.profile.markFriends = true
+		check(not method("nameplate5"):find("friendslist", 1, true), "a stranger gets no star", method("nameplate5"))
+		friends["Player-1-0005"] = true
+		check(method("nameplate5"):find("^|A:friendslist%-favorite") ~= nil, "a friend gets a star before the name",
+			method("nameplate5"))
+		friends["Player-1-0005"] = nil
+		bnet["Player-1-0005"] = { gameAccountID = 1 }
+		check(method("nameplate5"):find("^|A:friendslist%-favorite") ~= nil, "so does a Battle.net friend",
+			method("nameplate5"))
+		local savedGUID = W.units.nameplate5.guid
+		W.units.nameplate5.guid = SECRET
+		check(method("nameplate5") == "Aelwyn", "a secret GUID is never passed on: no star", method("nameplate5"))
+		W.units.nameplate5.guid = savedGUID
+		W.profile.markFriends = nil
+		check(method("nameplate5") == "Aelwyn", "Mark your friends off: no star", method("nameplate5"))
+		C_FriendList, C_BattleNet = savedFriends, savedBNet
+		ns.oUF.Tags.Methods[nameKey] = savedNameTag
+	end
+
+	-- A thin health bar under name-only players you can help, below a share of health
+	-- (nameOnlyHealthThreshold). Its alpha is the step curve's secret answer, never compared.
+	do
+		local savedHealth, savedMax = UnitHealth, UnitHealthMax
+		UnitHealth = function(u) return SecretValue(field(u, "hp") or 100) end
+		UnitHealthMax = function() return SecretValue(100) end
+		local bar = P[5].NameOnlyHealth
+		check(bar and not bar.__shown, "no name-only health bar by default")
+		W.profile.hideFriendlyPlayerHealthBar = true
+		W.profile.nameOnlyHealthThreshold = .5
+		W.units.nameplate5.healthPercent = .8
+		M:UpdateSettings()
+		check(bar.__shown and Reveal(bar.__alpha) == 0, "above the threshold the bar is placed but invisible",
+			tostring(bar.__shown) .. " " .. tostring(Reveal(bar.__alpha)))
+		local anchor = bar.__points[1]
+		check(anchor and anchor[1] == "TOP" and anchor[2] == P[5].Name and anchor[3] == "BOTTOM",
+			"under the name", anchor and tostring(anchor[2]))
+		W.units.nameplate5.healthPercent = .3
+		ns.NamePlatesPrivate.UpdateNameOnlyHealth(P[5])
+		check(Reveal(bar.__alpha) == 1, "below it the bar shows", Reveal(bar.__alpha))
+		check(IsSecretNumber(bar.__value) and IsSecretNumber(bar.__max), "and takes the secret values as they are")
+		check(W.healthPercentAsked and W.healthPercentAsked.unit == "nameplate5", "asked through UnitHealthPercent")
+		W.units.nameplate5.guild = "Azeroth Guardians"
+		W.profile.showFriendlyPlayerGuild = true
+		M:UpdateSettings()
+		anchor = bar.__points[1]
+		check(anchor and anchor[2] == P[5].NameTitle, "with a guild line, under the guild line")
+		W.units.nameplate5.guild, W.profile.showFriendlyPlayerGuild = nil, nil
+		W.profile.nameOnlyHealthThreshold = 0
+		M:UpdateSettings()
+		check(not bar.__shown, "0% hides it")
+		W.profile.nameOnlyHealthThreshold = .5
+		W.profile.hideFriendlyPlayerHealthBar = false
+		M:UpdateSettings()
+		check(not bar.__shown and P[5].Health.__shown, "a player with a health bar gets no extra bar")
+		W.profile.nameOnlyHealthThreshold = nil
+		W.units.nameplate5.healthPercent = nil
+		UnitHealth, UnitHealthMax = savedHealth, savedMax
+		M:UpdateSettings()
+	end
+
+	-- The raid marker above a name-only plate has its own size (raidTargetNameOnlySize, 0 = the marker size).
+	W.profile.hideFriendlyPlayerHealthBar = true
+	W.profile.raidTargetNameOnlySize = 44
+	M:UpdateSettings()
+	check(P[5].RaidTargetIndicator.__w == 44, "a name-only plate's marker takes its own size", P[5].RaidTargetIndicator.__w)
+	check(P[2].RaidTargetIndicator.__w == 28, "a plate with a bar keeps the marker size", P[2].RaidTargetIndicator.__w)
+	W.profile.raidTargetNameOnlySize = 0
+	M:UpdateSettings()
+	check(P[5].RaidTargetIndicator.__w == 28, "0 follows the marker size", P[5].RaidTargetIndicator.__w)
+	W.profile.raidTargetNameOnlySize = nil
+	W.profile.hideFriendlyPlayerHealthBar = false
+	M:UpdateSettings()
+	Step("nicknames, friends, name-only health and marker size")
 
 	-- Names only for friendly NPCs, with the title from the tooltip's second line (Visibility.lua,
 	-- GetFriendlyNPCTitle). Treni (P[4]) has only a level line, so no title.

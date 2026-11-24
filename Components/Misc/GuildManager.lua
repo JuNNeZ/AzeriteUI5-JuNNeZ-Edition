@@ -357,6 +357,15 @@ Guild.ModifyMessage = function(self, data)
                 local plain = label:gsub("^%[", ""):gsub("^|c%x%x%x%x%x%x%x%x", "")
                 level = Number(tonumber(plain:match("^(%d%d?%d?):")))
             end
+            -- The message level comes from the client's player cache, which keeps
+            -- an old level for players out of range. The speaking character's
+            -- roster row (and our own level) is fresher; levels only rise.
+            local member = self.members and self.members[linkKey]
+            local fresher = member and Number(member.level)
+            if (linkKey == self:CharacterKey(UnitName and Text(UnitName("player")))) then
+                fresher = math.max(fresher or 0, UnitLevel and Number(UnitLevel("player")) or 0)
+            end
+            if (fresher and fresher >= 1 and fresher%1 == 0 and (not level or fresher > level)) then level = fresher end
             -- Bounded display input, not a claim about either client's cap.
             if (level and level >= 1 and level < 1000 and level%1 == 0) then
                 displayName = string.format("%d:", level) .. displayName
@@ -451,6 +460,14 @@ Guild.OnEvent = function(self, event, addon, reloading)
         if (self.ObserveGuildAction) then self:ObserveGuildAction() end
         self:UpdateSettings()
     elseif (event == "GUILD_ROSTER_UPDATE") then
+        -- The server flags changed rows (levels, zones); Blizzard's frames only
+        -- ask for them while open, so ask here too (bounded, like the server).
+        local now = GetTime and GetTime() or 0
+        if (addon == true and IsInGuild() and C_GuildInfo and C_GuildInfo.GuildRoster
+            and (not self.rosterRequestedAt or now-self.rosterRequestedAt >= 10)) then
+            self.rosterRequestedAt = now
+            C_GuildInfo.GuildRoster()
+        end
         local realmChanged = self:RefreshRealm()
         self:ReadRoster()
         self:CaptureGuildHistory()

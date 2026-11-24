@@ -126,6 +126,20 @@ local defaults = { profile = ns:Merge({
 	-- title under the name, such as <Innkeeper>, read from the NPC's tooltip (Visibility.lua, since 2026-11-07).
 	friendlyNPCNameOnly = false,
 	showFriendlyNPCTitle = true,
+	-- A name-only player's guild under the name, such as <Azeroth Guardians>, from GetGuildInfo
+	-- (Visibility.lua, UpdateFriendlyNPCTitle, since 2026-11-24). Off: names only, as before.
+	showFriendlyPlayerGuild = false,
+	-- Your own guild's line in the guild chat colour (with showFriendlyPlayerGuild).
+	highlightOwnGuild = true,
+	-- The Guild Manager nickname in place of a player's name on their plate (GetNamePlateNickname).
+	showNicknames = false,
+	-- A star beside the name of your friends and Battle.net friends (Visibility.lua, IsPlayerFriend).
+	markFriends = false,
+	-- Name-only players: a small health bar under the name below this share of health (0 = never).
+	-- Visibility.lua, UpdateNameOnlyHealth; the answer is a step curve's, secret in combat.
+	nameOnlyHealthThreshold = 0,
+	-- Raid marker size on name-only plates; 0 follows raidTargetSize (Elements.lua, AnchorNamePlateRaidTarget).
+	raidTargetNameOnlySize = 0,
 	-- Enemy players you cannot attack, and their pets, as names only like friendly players (since 2026-11-22):
 	-- the other faction unflagged on a PvE realm. A player who can be attacked keeps the bar.
 	enemyPlayerNameOnly = false,
@@ -845,16 +859,64 @@ local GetNamePlateDisplayName = function(unit)
 	return mode == "initial" and API.AbbreviateName(name) or name
 end
 
-oUF.Tags.Events[prefix("*:NamePlateName")] = "UNIT_NAME_UPDATE UNIT_FACTION UNIT_LEVEL PLAYER_LEVEL_UP"
+-- A player's Guild Manager nickname (showNicknames), through the same read-only lookup its tooltips use
+-- (GuildManagerTooltip.lua, GetTooltipNickname: secret names skipped). nil when off, unknown or protected.
+local GetNamePlateNickname = function(unit)
+	local profile = NamePlatesMod.db and NamePlatesMod.db.profile
+	if (not (profile and profile.showNicknames) or not IsSafeUnitToken(unit)) then return nil end
+	local guild = ns:GetModule("GuildManager", true)
+	local guildProfile = guild and guild.db and guild.db.profile
+	if (not guildProfile or not guildProfile.enabled or guild.suspended or type(guild.GetTooltipNickname) ~= "function") then
+		return nil
+	end
+	local ok, nickname = pcall(guild.GetTooltipNickname, guild, unit)
+	if (ok and type(nickname) == "string" and not IsSecretValue(nickname) and nickname ~= "") then
+		return nickname
+	end
+	return nil
+end
+
+-- Your friend or Battle.net friend (markFriends). Both lookups take a GUID, and refuse a secret one from
+-- addon code (SecretArguments AllowedWhenUntainted); UnitGUID is secret while the unit's identity is
+-- protected, so then there is no star.
+local FRIEND_STAR = "|A:friendslist-favorite:0:0|a "
+local IsPlayerFriend = function(unit)
+	if (not IsSafeUnitToken(unit) or type(UnitGUID) ~= "function") then return false end
+	local isPlayer = UnitIsPlayer(unit)
+	if (IsSecretValue(isPlayer) or not isPlayer) then return false end
+	local okGUID, guid = pcall(UnitGUID, unit)
+	if (not okGUID or IsSecretValue(guid) or type(guid) ~= "string" or guid == "") then return false end
+	if (C_FriendList and type(C_FriendList.IsFriend) == "function") then
+		local ok, isFriend = pcall(C_FriendList.IsFriend, guid)
+		if (ok and not IsSecretValue(isFriend) and isFriend == true) then return true end
+	end
+	if (C_BattleNet and type(C_BattleNet.GetGameAccountInfoByGUID) == "function") then
+		local ok, info = pcall(C_BattleNet.GetGameAccountInfoByGUID, guid)
+		if (ok and type(info) == "table" and not IsSecretValue(info)) then return true end
+	end
+	return false
+end
+
+-- The friend lists change without any unit event; these reach every plate's name.
+if (type(oUF.Tags.SharedEvents) == "table") then
+	oUF.Tags.SharedEvents.FRIENDLIST_UPDATE = true
+	oUF.Tags.SharedEvents.BN_FRIEND_INFO_CHANGED = true
+end
+oUF.Tags.Events[prefix("*:NamePlateName")] = "UNIT_NAME_UPDATE UNIT_FACTION UNIT_LEVEL PLAYER_LEVEL_UP FRIENDLIST_UPDATE BN_FRIEND_INFO_CHANGED"
 oUF.Tags.Methods[prefix("*:NamePlateName")] = function(unit, realUnit)
-	local name = GetNamePlateDisplayName(unit)
+	local name = GetNamePlateNickname(unit) or GetNamePlateDisplayName(unit)
 	if (name == nil) then name = oUF.Tags.Methods[prefix("*:Name")](unit, realUnit, 24) end
 	local profile = NamePlatesMod.db and NamePlatesMod.db.profile
-	if (profile and profile.showLevels and IsSafeUnitToken(unit)
-		and not (_FRAME and (_FRAME.isObjectPlate or _FRAME.isPRD))
-		and not IsSecretValue(name) and type(name) == "string" and name ~= "") then
+	if (not profile or not IsSafeUnitToken(unit) or (_FRAME and (_FRAME.isObjectPlate or _FRAME.isPRD))
+		or IsSecretValue(name) or type(name) ~= "string" or name == "") then
+		return name
+	end
+	if (profile.showLevels) then
 		local level = API.GetSafeLevel(UnitEffectiveLevel(unit))
-		if (level and level > 0) then return level .. " " .. name end
+		if (level and level > 0) then name = level .. " " .. name end
+	end
+	if (profile.markFriends and IsPlayerFriend(unit)) then
+		name = FRIEND_STAR .. name
 	end
 	return name
 end
@@ -896,9 +958,14 @@ local GetNamePlateCastBarOffsetSetting = function()
 	return value
 end
 
-local GetNamePlateRaidTargetSize = function()
+-- nameOnly: the marker above a name-only plate's name, sized by raidTargetNameOnlySize unless that is 0.
+local GetNamePlateRaidTargetSize = function(nameOnly)
 	local profile = NamePlatesMod and NamePlatesMod.db and NamePlatesMod.db.profile
 	local value = profile and profile.raidTargetSize
+	local own = nameOnly and profile and profile.raidTargetNameOnlySize
+	if (type(own) == "number" and own > 0) then
+		value = own
+	end
 	if (type(value) ~= "number") then
 		return NAMEPLATE_RAID_TARGET_SIZE_DEFAULT
 	end

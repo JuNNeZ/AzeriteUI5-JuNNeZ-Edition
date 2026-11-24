@@ -10,6 +10,27 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.51.0-JuNNeZ (2026-11-24) - More on Name-Only Plates
+
+### Highlights
+
+- **Guild names under player names.** Players shown as names only can show their guild under the name, such as `<Azeroth Guardians>`. Your own guild can be drawn in the guild chat color. Turn on **Show guild names** and **Highlight your own guild** under `/az -> Nameplates -> Friendly -> Friendly Players`; they work when friendly players, or enemy players you cannot attack, are shown as names.
+- **Nicknames and friends on nameplates.** **Show nicknames** puts the nickname you gave a player in the Guild Manager (`/azguild`) in place of their name. **Mark your friends** adds a star before players on your friends list or Battle.net friends list. Both are off by default.
+- **Health under names when it matters.** **Show health below** adds a thin health bar under a name-only player while their health is under the percentage you choose, also in combat. 0% (the default) never shows it.
+- **Target marker size on names.** Plates shown as names only can use their own raid target icon size, set beside Target marker size. 0 keeps the current size.
+- **Nickname levels stay current in chat.** A guild member who levelled while out of range no longer shows their old level, like `[37:Saky]` after reaching 39. AzeriteUI now uses the newest level from your guild roster and asks the game to refresh the roster when it reports changes.
+
+### Development
+
+- Guild, friend and health information can be protected by the game. AzeriteUI reads them only when they are readable and otherwise leaves the line, star or bar out. The health bar's visibility is handed to the game as a percentage, as the execute marker does, so it works in combat without reading the value.
+- The nameplate regression harness gained checks for guild names, your own guild, nicknames, friend stars, protected names and health, and marker size. The Guild Manager harness gained checks for out-of-date levels and the roster refresh.
+
+### Access and known limits
+
+- In dungeons and raids the game draws friendly nameplates itself, so guild names, nicknames, stars and the health bar do not appear there.
+- A level shown on a line already in chat is not changed; the next line shows the new one.
+- Verified offline only, on Retail and Forever. In-game confirmation on both clients is still owed, including whether Forever supports the health bar.
+
 ## 5.50.2-JuNNeZ (2026-11-24) - Whole Names in Dungeons
 
 ### Highlights

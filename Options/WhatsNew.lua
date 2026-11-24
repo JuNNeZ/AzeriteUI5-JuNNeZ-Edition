@@ -52,6 +52,15 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.51.0-JuNNeZ",
+		items = {
+			{ text = "Show guild names under players shown as names, with your own guild highlighted.", page = "Nameplates", section = L["Friendly Players"] },
+			{ text = "Nameplates can show your Guild Manager nicknames and star your friends.", page = "Nameplates", section = L["Friendly Players"] },
+			{ text = "A thin health bar under name-only players when their health is low.", page = "Nameplates", section = L["Friendly Players"] },
+			{ text = "Guild chat nicknames now show members' current level." },
+		},
+	},
+	{
 		version = "5.50.0-JuNNeZ",
 		items = {
 			{ text = "Choose nameplate auras from a list, with suggestions for your class.", page = "Nameplates", section = L["Aura Filters"] },

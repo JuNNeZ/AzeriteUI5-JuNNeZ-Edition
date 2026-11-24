@@ -59,6 +59,8 @@ local NamePlate_OnHide = NP.NamePlate_OnHide
 local NamePlate_OnEvent = NP.NamePlate_OnEvent
 local TankTarget_Update = NP.TankTarget_Update
 local ThreatPercent_Update = NP.ThreatPercent_Update
+local UpdateFriendlyNPCTitle = NP.UpdateFriendlyNPCTitle
+local ShouldUseFriendlyPlayerNameOnly = NP.ShouldUseFriendlyPlayerNameOnly
 
 local TankTarget_OnEvent = function(self, event, unit)
 	if (issecretvalue(unit)) then
@@ -68,6 +70,25 @@ local TankTarget_OnEvent = function(self, event, unit)
 		return
 	end
 	TankTarget_Update(self)
+end
+
+-- A player's guild arrives after the plate (GetGuildInfo is nil until then) and changes on a guild
+-- join or leave; both fire UNIT_NAME_UPDATE. Only the name-only guild line needs it (showFriendlyPlayerGuild).
+local GuildTitle_OnEvent = function(self, event, unit)
+	if (issecretvalue(unit)) then
+		unit = nil
+	end
+	if (unit and unit ~= self.unit) then
+		return
+	end
+	if (not self.isPlayerUnit or not ShouldUseFriendlyPlayerNameOnly(self)) then
+		return
+	end
+	local profile = NP.NamePlatesMod and NP.NamePlatesMod.db and NP.NamePlatesMod.db.profile
+	if (not (profile and profile.showFriendlyPlayerGuild)) then
+		return
+	end
+	ns.API.SafeCall("NamePlates.UpdateFriendlyNPCTitle", UpdateFriendlyNPCTitle, self, ns.GetConfig("NamePlates"))
 end
 
 --[[
@@ -401,7 +422,7 @@ local style = function(self, unit, id)
 
 	self.Name = name
 
-	-- A friendly NPC's title under its name-only name, such as <Innkeeper>. Set and shown only by
+	-- A friendly NPC's title (<Innkeeper>) or a player's guild under its name-only name. Set and shown only by
 	-- UpdateFriendlyNPCTitle (Visibility.lua); hidden everywhere else.
 	local nameTitle = self:CreateFontString(nil, "OVERLAY", nil, 1)
 	nameTitle:SetFontObject(db.NameTitleFont or db.NameFont)
@@ -414,6 +435,26 @@ local style = function(self, unit, id)
 	nameTitle:Hide()
 
 	self.NameTitle = nameTitle
+
+	-- A name-only player's health under the name, below a share of health (nameOnlyHealthThreshold).
+	-- Placed, filled and faded only by Visibility.lua (PlaceNameOnlyHealth, UpdateNameOnlyHealth).
+	local nameOnlyHealth = CreateFrame("StatusBar", nil, self)
+	nameOnlyHealth:SetSize(db.NameOnlyHealthSize and db.NameOnlyHealthSize[1] or 60, db.NameOnlyHealthSize and db.NameOnlyHealthSize[2] or 4)
+	nameOnlyHealth:SetStatusBarTexture([[Interface\Buttons\WHITE8x8]])
+	local healthColor = ns.Colors and ns.Colors.health
+	if (type(healthColor) == "table" and type(healthColor[1]) == "number") then
+		nameOnlyHealth:SetStatusBarColor(healthColor[1], healthColor[2], healthColor[3])
+	end
+	nameOnlyHealth:SetMinMaxValues(0, 1)
+	nameOnlyHealth:SetValue(1)
+	local nameOnlyHealthBg = nameOnlyHealth:CreateTexture(nil, "BACKGROUND")
+	nameOnlyHealthBg:SetPoint("TOPLEFT", -1, 1)
+	nameOnlyHealthBg:SetPoint("BOTTOMRIGHT", 1, -1)
+	nameOnlyHealthBg:SetColorTexture(0, 0, 0, .75)
+	nameOnlyHealth:SetAlpha(0)
+	nameOnlyHealth:Hide()
+
+	self.NameOnlyHealth = nameOnlyHealth
 
 	-- Target Highlight
 	--------------------------------------------
@@ -538,6 +579,7 @@ local style = function(self, unit, id)
 	-- A mob switching targets changes only the tank-mode target name; its threat colour follows
 	-- UNIT_THREAT_LIST_UPDATE (oUF's health element).
 	self:RegisterEvent("UNIT_TARGET", TankTarget_OnEvent)
+	self:RegisterEvent("UNIT_NAME_UPDATE", GuildTitle_OnEvent)
 
 	if (not uiParentAlphaHooked) then
 		uiParentAlphaHooked = true

@@ -966,6 +966,19 @@ local GenerateOptions = function()
 							end
 							return value
 						end
+					},
+					-- NamePlates/Settings.lua, GetNamePlateRaidTargetSize(nameOnly).
+					raidTargetNameOnlySize = {
+						name = L["Target marker size on names"],
+						desc = L["Size of the raid target icon above plates shown as names only. 0 uses the target marker size above."],
+						order = 9.5,
+						type = "range", width = "full",
+						min = 0, max = RAID_TARGET_SIZE_SLIDER_MAX, step = 1,
+						set = setter,
+						get = function(info)
+							local value = getter(info)
+							return type(value) == "number" and value or 0
+						end
 					}
 				}
 			},
@@ -992,6 +1005,62 @@ local GenerateOptions = function()
 						type = "toggle", width = "full",
 						set = setter,
 						get = getter
+					},
+					-- NamePlates/Visibility.lua, UpdateFriendlyNPCTitle: the guild line of a name-only player.
+					showFriendlyPlayerGuild = {
+						name = L["Show guild names"],
+						desc = L["The player's guild under their name, such as <Azeroth Guardians>. Only for players shown as names."],
+						order = 1.7,
+						type = "toggle", width = "full",
+						disabled = function(info)
+							return not (getoption(info, "hideFriendlyPlayerHealthBar") or getoption(info, "enemyPlayerNameOnly"))
+						end,
+						set = setter,
+						get = getter
+					},
+					highlightOwnGuild = {
+						name = L["Highlight your own guild"],
+						desc = L["Your own guild's name is drawn in the guild chat color."],
+						order = 1.75,
+						type = "toggle", width = "full",
+						disabled = function(info)
+							return not getoption(info, "showFriendlyPlayerGuild")
+								or not (getoption(info, "hideFriendlyPlayerHealthBar") or getoption(info, "enemyPlayerNameOnly"))
+						end,
+						set = setter,
+						get = getter
+					},
+					-- NamePlates/Settings.lua, IsPlayerFriend: friends and Battle.net friends, in the name tag.
+					markFriends = {
+						name = L["Mark your friends"],
+						desc = L["A star before the name of players on your friends list or Battle.net friends list."],
+						order = 1.8,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					-- NamePlates/Settings.lua, GetNamePlateNickname: the Guild Manager's saved nicknames.
+					showNicknames = {
+						name = L["Show nicknames"],
+						desc = L["Players you gave a nickname in the Guild Manager (/azguild) show it in place of their name."],
+						order = 1.85,
+						type = "toggle", width = "full",
+						set = setter,
+						get = getter
+					},
+					-- NamePlates/Visibility.lua, PlaceNameOnlyHealth: a thin bar under name-only players you can help.
+					nameOnlyHealthThreshold = {
+						name = L["Show health below"],
+						desc = L["Players shown as names get a thin health bar under the name while their health is below this. 0% never shows it."],
+						order = 3.5,
+						type = "range", width = "full",
+						min = 0, max = 1, step = .05, isPercent = true,
+						disabled = function(info) return not getoption(info, "hideFriendlyPlayerHealthBar") end,
+						set = setter,
+						get = function(info)
+							local value = getter(info)
+							return type(value) == "number" and value or 0
+						end
 					},
 					friendlyNameOnlyFontScale = {
 						name = L["Friendly name size (%)"],
