@@ -40,12 +40,14 @@ local function Bar(owner,relative,db,prefix)
  bar.SetTexCoord=function(self,...) self:GetStatusBarTexture():SetTexCoord(...) end
  return bar
 end
-function Preview:Build(key)
+-- Builds one synthetic layout under parent and returns it unplaced; the bar tests
+-- window and the /lock ghosts (Core/MoverGhosts.lua) both use it.
+function Preview:Create(key,parent)
  local def=definitions[key];local config=def and ns.GetConfig(def[1]);if (not config) then return end
  local db=def[2] and config[def[2]] or config;if (not db) then return end
- local owner=CreateFrame("Frame",nil,self.window);owner:SetSize(unpack(db.UnitSize or config.Size or {560,180}))
- owner:SetPoint("CENTER",self.window,"CENTER",0,-15);owner:EnableMouse(false)
- local entry={owner=owner,bars={},db=db,kind=def[3]};self.entries[key]=entry
+ local owner=CreateFrame("Frame",nil,parent);owner:SetSize(unpack(db.UnitSize or config.Size or {560,180}))
+ owner:EnableMouse(false)
+ local entry={owner=owner,bars={},db=db,kind=def[3]}
  local kind=def[3]
  if (kind=="health" or kind=="plate") then
   local bar=Bar(owner,owner,db,"HealthBar");owner.Health=bar;entry.bars[1]=bar
@@ -81,6 +83,19 @@ function Preview:Build(key)
  end
  return entry
 end
+function Preview:Build(key)
+ local entry=self:Create(key,self.window);if (not entry) then return end
+ entry.owner:SetPoint("CENTER",self.window,"CENTER",0,-15);self.entries[key]=entry
+ return entry
+end
+-- The crystal and orb need the theme's effects applied once their bar exists.
+function Preview:StyleEntry(entry)
+ if (entry.power and ns.ThemeEffects) then
+  entry.power.Case:SetTexture(entry.db.PowerBarForegroundTexture)
+  ns.ThemeEffects:StyleCrystal(entry.power,entry.db.PowerBarTexture,entry.db.PowerBarTexCoord,entry.db.PowerBarForegroundTexture)
+ end
+ if (entry.orb and ns.ThemeEffects) then entry.orb:SetStatusBarTexture(unpack(entry.db.ManaOrbTexture));ns.ThemeEffects:StyleOrb(entry.orb) end
+end
 function Preview:Refresh()
  if (not self.window or not self.window:IsShown() or InCombatLockdown()) then return end
  self.entries=self.entries or {}
@@ -88,11 +103,7 @@ function Preview:Refresh()
  local entry=self.entries[self.kind] or self:Build(self.kind);if (not entry) then return end
  entry.owner:Show()
  for _,bar in ipairs(entry.bars) do bar:SetValue(self.fraction) end
- if (entry.power and ns.ThemeEffects) then
-  entry.power.Case:SetTexture(entry.db.PowerBarForegroundTexture)
-  ns.ThemeEffects:StyleCrystal(entry.power,entry.db.PowerBarTexture,entry.db.PowerBarTexCoord,entry.db.PowerBarForegroundTexture)
- end
- if (entry.orb and ns.ThemeEffects) then entry.orb:SetStatusBarTexture(unpack(entry.db.ManaOrbTexture));ns.ThemeEffects:StyleOrb(entry.orb) end
+ self:StyleEntry(entry)
  if (entry.cast) then entry.cast:SetStatusBarColor(unpack(self.protected and {.75,.18,.12,1} or entry.db.CastBarColor));entry.cast.Shield:SetShown(self.protected);entry.cast.Backdrop:SetShown(not self.protected or entry.cast.KeepBackdrop or false) end
  self.hint:SetText(self:GetChoices()[self.kind].." | "..math.floor(self.fraction*100+.5).."% | "..ns.ThemeEffects:GetTheme().." | Esc to close")
 end

@@ -52,6 +52,15 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.52.0-JuNNeZ",
+		items = {
+			{ text = "Empty frames such as your target show a preview while you move frames. The eye hides one.", run = OpenMovers },
+			{ text = "Alt-click a frame in /lock or Edit Mode to select the one behind it." },
+			{ text = "Frame names hide while you drag, so you can see the fit." },
+			{ text = "The info bar under the minimap hides with it on Auto-Hide.", page = "Minimap" },
+		},
+	},
+	{
 		version = "5.51.0-JuNNeZ",
 		items = {
 			{ text = "Show guild names under players shown as names, with your own guild highlighted.", page = "Nameplates", section = L["Friendly Players"] },

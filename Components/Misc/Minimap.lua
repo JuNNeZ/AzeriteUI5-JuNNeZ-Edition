@@ -1719,6 +1719,12 @@ MinimapMod.UpdateAutoHide = function(self)
 	-- position of its own somewhere else on screen.
 	self:UpdateVehicleExitAlpha()
 
+	-- The info bar (zone, resting, clock) sits under the map and goes with it.
+	local info = ns:GetModule("Info", true)
+	if (info and info.UpdateMinimapAutoHide) then
+		info:UpdateMinimapAutoHide()
+	end
+
 	self:UpdateAutoHideMouse()
 end
 

@@ -52,7 +52,6 @@ lua Tools/Harness/party_dispel_harness.lua .               # party dispel glow +
 lua Tools/Harness/castbar_target_harness.lua .             # nameplate cast target name, aimed-at-you and important glows
 lua Tools/Harness/quest_marker_harness.lua .               # nameplate quest marker: when it shows, hides and asks; progress text, hide when done
 lua Tools/Harness/merchant_harness.lua     .               # auto sell junk / auto repair (waits for the sale's money) / fast loot
-lua Tools/Harness/layer_harness.lua        .               # Forever layer on the info bar: GUID zone UID, two-in-a-row, skips
 lua Tools/Harness/quest_item_button_harness.lua .          # Quest Item Button: quest pick, combat-safe swap, borrowed extra action key, rival
 lua Tools/Harness/totems_harness.lua .                     # Retail/Forever: timerless slots, pooled secret visibility, stale-pool fallback
 lua Tools/Harness/game_menu_conflict_harness.lua .         # game menu style prompt: asked once per rival, Both for Console Port, GUID addon key

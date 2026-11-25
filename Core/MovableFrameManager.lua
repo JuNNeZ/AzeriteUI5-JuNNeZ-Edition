@@ -64,6 +64,7 @@ local GetMedia = ns.API.GetMedia
 local SCALE = UIParent:GetScale() -- current blizzard scale
 local CURRENT -- currently selected anchor frame
 local HOVERED -- currently mouseovered anchor frame
+local DRAGGING -- anchor being dragged; every mover's text hides meanwhile so the fit can be seen
 
 -- Outline frame for mouseover events.
 local OUTLINE = CreateFrame("Frame", nil, UIParent, ns.BackdropTemplate)
@@ -564,10 +565,20 @@ Anchor.UpdateText = function(self)
 			end
 			msg = msg .. Colors.green.colorCode.."\n"..L["<Shift-Click to reset to default>"].."|r"
 		end
+		if (not DRAGGING and self:IsOverlapped()) then
+			msg = msg .. Colors.green.colorCode.."\n"..L["<Alt-Click to select the frame behind>"].."|r"
+		end
 		self.Title:Hide()
 		self.Text:Show()
 	else
 		self.Title:Show()
+		self.Text:Hide()
+	end
+
+	-- While any mover is dragged, no mover shows its name or position text,
+	-- so the frames underneath (and how they line up) stay visible.
+	if (DRAGGING) then
+		self.Title:Hide()
 		self.Text:Hide()
 	end
 
@@ -880,6 +891,64 @@ Anchor.UpdateLinkOffset = function(self)
 	end
 end
 
+-- Stacked movers
+--------------------------------------
+-- Sort key for movers: their name, then their key, so the order never depends on frame levels.
+local GetSortName = function(anchor)
+	return anchor.Title:GetText() or anchor:GetKey() or ""
+end
+
+-- The shown movers under the mouse, in a fixed order.
+local GetAnchorsUnderMouse = function()
+	local list = {}
+	for anchor in next, AnchorData do
+		if (anchor:IsShown() and anchor:IsMouseOver()) then
+			list[#list + 1] = anchor
+		end
+	end
+	table_sort(list, function(a, b) return GetSortName(a) < GetSortName(b) end)
+	return list
+end
+
+-- A mover's rectangle in screen pixels; movers carry their own scales, so their
+-- GetRect values cannot be compared directly.
+local GetScreenRect = function(anchor)
+	local left, bottom, width, height = anchor:GetRect()
+	if (not left) then return end
+	local scale = anchor:GetEffectiveScale()
+	return left * scale, bottom * scale, width * scale, height * scale
+end
+
+-- 'true' if another shown mover overlaps this one.
+Anchor.IsOverlapped = function(self)
+	local left, bottom, width, height = GetScreenRect(self)
+	if (not left) then return end
+	for other in next, AnchorData do
+		if (other ~= self and other:IsShown()) then
+			local l, b, w, h = GetScreenRect(other)
+			if (l and l < left + width and left < l + w and b < bottom + height and bottom < b + h) then
+				return true
+			end
+		end
+	end
+end
+
+-- Alt-click: the next mover under the mouse after the selected one. When the selected
+-- mover is not there, the first one that is not the clicked (top) mover.
+local GetNextStackedAnchor = function(clicked)
+	local list = GetAnchorsUnderMouse()
+	if (#list < 2) then return clicked end
+	for i, anchor in ipairs(list) do
+		if (anchor == CURRENT) then
+			return list[i % #list + 1]
+		end
+	end
+	for _, anchor in ipairs(list) do
+		if (anchor ~= clicked) then return anchor end
+	end
+	return clicked
+end
+
 -- Anchor Script Handlers
 --------------------------------------
 Anchor.OnClick = function(self, button)
@@ -888,8 +957,21 @@ Anchor.OnClick = function(self, button)
 	end
 
 	if (button == "LeftButton") then
+		local cycling = IsAltKeyDown and IsAltKeyDown()
+		if (cycling) then
+			local target = GetNextStackedAnchor(self)
+			if (target ~= self) then
+				if (self ~= CURRENT) then self:OnLeave() end
+				self = target
+			end
+		end
+
 		if (CURRENT) then
 			CURRENT.isSelected = nil
+			-- Back to the normal level, so a frame chosen earlier no longer covers the rest.
+			if (CURRENT ~= self) then
+				CURRENT:SetFrameLevel(50)
+			end
 			CURRENT:OnLeave()
 		end
 		CURRENT = self
@@ -898,7 +980,7 @@ Anchor.OnClick = function(self, button)
 		self:OnEnter()
 		self:SetFrameLevel(60)
 
-		if (IsShiftKeyDown() and not self:IsInDefaultPosition()) then
+		if (not cycling and IsShiftKeyDown() and not self:IsInDefaultPosition()) then
 			-- Back to default means back to following nothing.
 			if (self:GetLink()) then
 				MovableFramesManager:SetAnchorLink(self, nil)
@@ -961,6 +1043,17 @@ Anchor.OnMouseWheel = function(self, delta)
 	MovableFramesManager:RefreshMFMFrame()
 end
 
+-- Shows or hides the text on every mover for the length of a drag.
+local SetDragging = function(anchor)
+	if (DRAGGING == anchor) then return end
+	DRAGGING = anchor
+	for other in next, AnchorData do
+		if (other:IsShown()) then
+			other:UpdateText()
+		end
+	end
+end
+
 Anchor.OnDragStart = function(self, button)
 	local anchorData = AnchorData[self]
 	if (not anchorData.isMovable) then return end
@@ -991,6 +1084,9 @@ Anchor.OnDragStart = function(self, button)
 
 	-- Treat the dragged frame as clicked.
 	if (CURRENT) then
+		if (CURRENT ~= self) then
+			CURRENT:SetFrameLevel(50)
+		end
 		CURRENT.isSelected = nil
 		CURRENT:OnLeave()
 	end
@@ -1008,6 +1104,8 @@ Anchor.OnDragStart = function(self, button)
 	self:SetScript("OnUpdate", self.OnUpdate)
 
 	anchorData.hasMoved = true
+
+	SetDragging(self)
 
 	MovableFramesManager:RefreshMFMFrame()
 end
@@ -1067,6 +1165,7 @@ Anchor.OnDragStop = function(self)
 	anchorData.isDragging = nil
 	anchorData.snapX, anchorData.snapY = nil, nil
 	HideGuides()
+	SetDragging(nil)
 
 	local point, x, y = getPosition(self.Overlay, (self:IsAnchorPointLocked() and self:GetPosition()))
 
@@ -1133,6 +1232,10 @@ Anchor.OnHide = function(self)
 	self:SetScript("OnUpdate", nil)
 	self.elapsed = 0
 	HideGuides()
+	-- Hidden mid-drag (Edit Mode or /lock closed): bring the text back on the rest.
+	if (DRAGGING == self) then
+		SetDragging(nil)
+	end
 end
 
 Anchor.OnUpdate = function(self, elapsed)
@@ -1508,6 +1611,17 @@ MovableFramesManager.GenerateMFMFrame = function(self)
 		desc = L["A dragged frame snaps to the screen's edges and center, to other frames, and to the Edit Mode grid when it is shown. Hold Alt while dragging to place it freely."],
 		get = function() return not (ns.db.profile.moverSnapping == false) end,
 		set = function(info, val) ns.db.profile.moverSnapping = val and true or false end
+	}
+	options.args.moverGhosts = {
+		type = "toggle", width = "full",
+		order = orderoffset + 43,
+		name = L["Show previews of empty frames"],
+		desc = L["Shows a faint example of each frame that is empty right now, such as the target frame without a target, so you can see how it will fit. The eye on a frame hides or shows its preview."],
+		get = function() return not (ns.db.profile.moverGhosts == false) end,
+		set = function(info, val)
+			ns.db.profile.moverGhosts = val and true or false
+			if (ns.MoverGhosts) then ns.MoverGhosts:RefreshAll() end
+		end
 	}
 	-- Another profile's frame positions, anchors and master scale, nothing else.
 	options.args.copyLayout = {

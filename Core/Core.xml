@@ -75,5 +75,6 @@
 	<Script file="HalloweenEffects.lua"/>
 	<Script file="Halloween.lua"/>
 	<Script file="ThemeBarPreview.lua"/>
+	<Script file="MoverGhosts.lua"/>
 
 </Ui>

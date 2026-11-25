@@ -10,6 +10,25 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.52.0-JuNNeZ (2026-11-25) - Previews When Moving Frames
+
+### Highlights
+
+- **See empty frames while you move them.** In `/lock` and Edit Mode, a frame that is empty right now, such as the target frame without a target, party frames when you are alone or the cast bar, shows a faint preview of how it will look in your theme, so you can see whether it fits. Other empty frames show a plain outline. The eye on each frame hides or shows its preview, and the choice is saved per profile. Turn them all off with **Show previews of empty frames** under `/lock -> Moving Frames`.
+- **Pick a frame hidden behind another.** Alt-click a frame in `/lock` or Edit Mode to select the next frame under the mouse; Alt-click again to go through the stack. When frames overlap, the selected one says so.
+- **Clearer dragging.** The names and coordinates over the frames hide while you drag one, so you can see the frames themselves. A frame you selected earlier no longer stays on top when you select another.
+- **The info bar hides with the minimap.** When the minimap is hidden by **Auto-Hide**, the zone, resting and clock line under it goes too and returns with the map.
+
+### Development
+
+- The frame previews reuse the bar tests' theme art, now built on any parent, and check every half second while the movers are open which frames are empty. They only draw over the movers and never touch the real frames, so they are safe in combat; new previews wait until combat ends.
+- A new regression harness covers when a frame counts as empty, the eye and the saved choice.
+
+### Access and known limits
+
+- **Forever: Show your layer is removed.** Since a server hotfix on 2026-11-20, Forever hides the layer in creature IDs (each creature reports a different value), so the info bar can no longer read it. A saved setting is ignored.
+- Confirmed in game by the maintainer.
+
 ## 5.51.0-JuNNeZ (2026-11-24) - More on Name-Only Plates
 
 ### Highlights

@@ -83,6 +83,9 @@ local defaults = {
 		-- to the screen, the grid and each other. See Core/MovableFrameManager.lua.
 		moversInEditMode = true,
 		moverSnapping = true,
+		-- Faint examples of empty frames under the movers, each hideable. See Core/MoverGhosts.lua.
+		moverGhosts = true,
+		moverGhostsHidden = {},
 		-- Master scale for every movable frame, baked into their saved scale and
 		-- position when changed. See API.GetFrameScaleMultiplier (Core/API/Scale.lua).
 		frameScale = 1
