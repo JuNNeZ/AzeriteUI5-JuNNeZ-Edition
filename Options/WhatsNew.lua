@@ -52,6 +52,16 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.53.0-JuNNeZ",
+		items = {
+			{ text = "Enemy Casts: a movable list of every enemy cast, with markers and who it hits. Off by default.", page = "Enemy Casts" },
+			{ text = "Out of combat, click a cast in the list to target its caster; your target's cast is outlined in gold.", page = "Enemy Casts" },
+			{ text = "/lock shows example casts for the list, and Preview shows them while you change it.", run = OpenMovers },
+			{ text = "Every castbar now has a spark, for casts, channels and empowered spells." },
+			{ text = "Choose the color and opacity of the cast overlay on unit frames.", page = "Unit Frames" },
+		},
+	},
+	{
 		version = "5.52.0-JuNNeZ",
 		items = {
 			{ text = "Empty frames such as your target show a preview while you move frames. The eye hides one.", run = OpenMovers },

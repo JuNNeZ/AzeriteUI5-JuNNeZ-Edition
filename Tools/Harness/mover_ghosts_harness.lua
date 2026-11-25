@@ -157,6 +157,24 @@ bar:Show()
 Ghosts:RefreshAll()
 check(not timersGhost:IsShown(), "holder with a visible child: placeholder hides")
 
+-- A module that draws its own ghost (EnemyCasts.BuildMoverGhost) gets that, not the placeholder.
+local casts = New(UIParent); casts:Hide()
+local drawnInto
+modules.EnemyCasts = { frame = casts, BuildMoverGhost = function(self, container) drawnInto = container; return true end }
+local castsAnchor = MakeAnchor("EnemyCasts", 260, 186)
+built = {}
+callbacks.MFM_AnchorShown(castsAnchor)
+local castsGhost = state(castsAnchor)
+check(castsGhost and castsGhost:IsShown() and drawnInto == castsGhost and #built == 0, "module's own ghost builder used")
+
+-- A builder that fails falls back to the placeholder instead of breaking the movers.
+local broken = New(UIParent); broken:Hide()
+modules.BrokenGhost = { frame = broken, BuildMoverGhost = function() error("boom") end }
+local brokenAnchor = MakeAnchor("BrokenGhost", 100, 40)
+callbacks.MFM_AnchorShown(brokenAnchor)
+check(state(brokenAnchor) and state(brokenAnchor):IsShown(), "failing ghost builder: placeholder instead")
+castsAnchor:Hide(); brokenAnchor:Hide()
+
 -- A module without a frame gets nothing.
 modules.NoFrame = {}
 check(not Ghosts:IsEmpty("NoFrame"), "module without a frame: no ghost")

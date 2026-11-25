@@ -871,6 +871,20 @@ local UpdateBarSpark = function(element, percentOverride)
 	if (percent == nil) then
 		percent = GetBarSparkPercent(element)
 	end
+	if (percent == nil and element:IsShown() and (element.casting or element.channeling or element.empowering)) then
+		-- Cast overlay on the native timer with no readable percent: ride the fill's edge.
+		local texture = element.GetStatusBarTexture and element:GetStatusBarTexture()
+		if (texture) then
+			local edgeGrowth = (element.GetGrowth and element:GetGrowth()) or element.__AzeriteUI_Growth or "RIGHT"
+			spark:ClearAllPoints()
+			spark:SetPoint("CENTER", texture, (edgeGrowth == "LEFT") and "LEFT"
+				or (edgeGrowth == "UP") and "TOP"
+				or (edgeGrowth == "DOWN") and "BOTTOM"
+				or "RIGHT", 0, 0)
+			spark:Show()
+			return
+		end
+	end
 	if (type(percent) ~= "number" or percent <= 0 or percent >= 1 or not element:IsShown()) then
 		spark:Hide()
 		return
@@ -3078,7 +3092,7 @@ local UnitFrame_UpdateTextures = function(self)
 	cast:SetPoint(unpack(db.HealthBarPosition))
 	cast:SetSize(unpack(db.HealthBarSize))
 	cast:SetStatusBarTexture(db.HealthBarTexture)
-	cast:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
+	ns.UnitFrame.ApplyCastOverlayColor(cast, db.HealthCastOverlayColor) -- /az -> Unit Frames -> castbar overlay color
 	cast:SetOrientation(db.HealthBarOrientation)
 	cast:SetSparkMap(db.HealthBarSparkMap)
 	UpdateBarSparkSize(cast)

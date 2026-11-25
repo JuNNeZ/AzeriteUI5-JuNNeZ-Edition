@@ -400,10 +400,11 @@ local style = function(self, unit)
 	castbar:SetAllPoints(health)
 	castbar:SetFrameLevel(self:GetFrameLevel() + 5)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
-	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
+	ns.UnitFrame.ApplyCastOverlayColor(castbar, db.HealthCastOverlayColor) -- /az -> Unit Frames -> castbar overlay color
 	castbar:Hide()
 
 	self.Castbar = castbar
+	ns.API.CreateCastBarSpark(castbar) -- rides the fill edge for every cast (Functions.lua)
 
 	-- Health Value
 	--------------------------------------------

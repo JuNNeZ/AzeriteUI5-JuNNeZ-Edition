@@ -380,6 +380,16 @@ local AURA_SORT_FRAMES = Members("TargetFrame", "PartyFrames", "RaidFrame5", "Ar
 -- The only two readers of ns.UnitFrame.ShouldColorCastSpellTextByState.
 local CAST_TEXT_FRAMES = Members("TargetFrame", "NamePlates")
 
+-- Every module whose frames carry a health-bar cast overlay (ns.UnitFrame.ApplyCastOverlayColor).
+local CAST_OVERLAY_FRAMES = Members("PlayerFrame", "PlayerFrameAlternate", "PlayerFrameParty", "TargetFrame",
+	"ToTFrame", "FocusFrame", "PetFrame", "PartyFrames", "RaidFrame5", "BossFrames", "ArenaFrames")
+
+local castOverlayPolicy = {
+	kind = "family",
+	members = CAST_OVERLAY_FRAMES,
+	explain = L["Applies to castbars on unit frames."]
+}
+
 -- Every module whose frames carry a CombatFeedback text.
 local FEEDBACK_FRAMES = Members("PlayerFrame", "PlayerFrameAlternate", "PlayerFrameParty", "TargetFrame", "PartyFrames",
 	"RaidFrame5", "RaidFrame25", "RaidFrame40", "BossFrames", "ArenaFrames")
@@ -448,6 +458,9 @@ local policies = {
 			members = CAST_TEXT_FRAMES,
 			explain = L["Applies to cast names on the target frame and nameplates."]
 		},
+		castOverlayCustomColor = castOverlayPolicy,
+		castOverlayColor = castOverlayPolicy,
+		castOverlayOpacity = castOverlayPolicy,
 		disableAuraSorting = {
 			kind = "family",
 			members = AURA_SORT_FRAMES,

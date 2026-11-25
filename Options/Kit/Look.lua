@@ -242,6 +242,7 @@ local IconFor = function(key)
 			["Tooltips"] = "tooltips", ["Unit Frames"] = "unitframes",
 			["Group Frames"] = "groupframes", ["Aura Sounds"] = "aurasounds",
 			["Micro Menu"] = "micromenu", ["Execute range"] = "executerange",
+			["Enemy Casts"] = "nameplates",
 			["Game Menu"] = "gamemenu", ["World Map"] = "worldmap",
 			["AddOn Skins"] = "themes"
 		}

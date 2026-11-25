@@ -226,6 +226,51 @@ local GenerateOptions = function()
 				set = setter,
 				get = getter
 			},
+			-- The cast overlay on the frames' health bars (ns.UnitFrame.GetCastOverlayColor).
+			-- Recoloured at once through RefreshCastOverlayColors, in combat too (colour only).
+			castOverlayCustomColor = {
+				name = L["Custom castbar overlay color"],
+				desc = L["Use your own color and opacity for the cast overlay on the unit frames' health bars. Off keeps each frame's own color."],
+				order = 31,
+				type = "toggle", width = "full",
+				hidden = isdisabled,
+				set = function(info, val)
+					getmodule().db.profile.castOverlayCustomColor = val and true or false
+					ns.UnitFrame.RefreshCastOverlayColors()
+				end,
+				get = getter
+			},
+			castOverlayColor = {
+				name = L["Color"],
+				desc = L["The color of the cast overlay."],
+				order = 32,
+				type = "color", hasAlpha = false,
+				hidden = isdisabled,
+				disabled = function() return not getmodule().db.profile.castOverlayCustomColor end,
+				get = function(info)
+					local color = getmodule().db.profile.castOverlayColor
+					if (type(color) ~= "table") then return 1, 1, 1 end
+					return color[1] or 1, color[2] or 1, color[3] or 1
+				end,
+				-- A new table each time, so the saved value never shares the defaults' table.
+				set = function(info, r, g, b)
+					getmodule().db.profile.castOverlayColor = { r, g, b }
+					ns.UnitFrame.RefreshCastOverlayColors()
+				end
+			},
+			castOverlayOpacity = {
+				name = L["Opacity"],
+				desc = L["How solid the cast overlay is. Lower lets more of the health bar show through."],
+				order = 33,
+				type = "range", width = "full", min = 0, max = 1, step = .05, isPercent = true,
+				hidden = isdisabled,
+				disabled = function() return not getmodule().db.profile.castOverlayCustomColor end,
+				set = function(info, val)
+					getmodule().db.profile.castOverlayOpacity = val
+					ns.UnitFrame.RefreshCastOverlayColors()
+				end,
+				get = getter
+			},
 			-- Built into each native aura button when it is created, so the change asks
 			-- for a reload. Both clients: Forever has the native aura rows too (ns.IsRetail is the engine,
 			-- true there; Blizzard_AuraContainer's SetDurationText and C_CurveUtil exist on Forever).

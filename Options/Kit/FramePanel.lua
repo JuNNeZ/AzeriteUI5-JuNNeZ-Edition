@@ -265,6 +265,16 @@ FramePanel.Settings = {
 			{ "MythicPlus", "showBattleRez" }
 		}
 	},
+	["EnemyCasts"] = {
+		section = { "Enemy Casts" },
+		rows = {
+			{ "Enemy Casts", "enabled" },
+			{ "Enemy Casts", "mode" },
+			{ "Enemy Casts", "maxRows" },
+			{ "Enemy Casts", "previewCasts" },
+			{ "Enemy Casts", "growUp" }
+		}
+	},
 	["UIWidgetTopCenter"] = {
 		section = { "World Map", "widgets" },
 		rows = {

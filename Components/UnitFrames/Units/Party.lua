@@ -1149,7 +1149,7 @@ local style = function(self, unit, asPlayer)
 	castbar:SetFrameLevel(self:GetFrameLevel() + 5)
 	castbar:SetSparkMap(db.HealthBarSparkMap)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
-	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
+	ns.UnitFrame.ApplyCastOverlayColor(castbar, db.HealthCastOverlayColor) -- /az -> Unit Frames -> castbar overlay color
 	castbar:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
 	castbar.requireCastTimer = true
 	castbar.PostCastStop = CastOverlay_Hide
@@ -1157,6 +1157,7 @@ local style = function(self, unit, asPlayer)
 	castbar.PostCastInterrupted = CastOverlay_Hide
 
 	self.Castbar = castbar
+	ns.API.CreateCastBarSpark(castbar) -- rides the fill edge for every cast (Functions.lua)
 
 	-- Health Value
 	--------------------------------------------

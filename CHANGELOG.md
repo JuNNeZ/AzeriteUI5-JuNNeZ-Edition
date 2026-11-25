@@ -10,6 +10,27 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.53.0-JuNNeZ (2026-11-25) - Enemy Casts and Castbar Sparks
+
+### Highlights
+
+- **See what every enemy is casting.** The new **Enemy Casts** list, a movable AzeriteUI castbar per caster, shows the spell and its time, the caster's raid marker, and who the spell is aimed at in their class color. Uninterruptible casts get the spiked casing and a grey fill, a cast aimed at you glows red, and your current target's cast has a gold outline. It lists your target, focus, bosses, arena opponents and every enemy with a nameplate, each once, or only your target. Out of combat, click a cast to target its caster. Turn it on under `/az -> Enemy Casts`; it is off by default.
+- **Set it up without waiting for a pull.** In `/lock` and Edit Mode the empty list shows example casts in the same size and spacing as a full one. **Preview casts** sets how many, and the **Preview** switch on the Enemy Casts page shows the examples where the list sits while you change its width, number of casts or direction.
+- **Every castbar has a spark.** Focus, party, arena, boss, pet, raid, target of target and the player cast bar, the alternate player frame and the nameplates now draw the spark on the moving edge of the cast, for every spell: casts, channels and empowered casts. Before, only the player and target frames had one, and it could disappear when the game kept the cast's progress hidden.
+- **Choose the cast overlay's color.** **Custom castbar overlay color**, with a color and **Opacity**, recolors the cast shown over the health bars of the unit frames at once, also in combat. Off keeps each frame's own color. Find it under `/az -> Unit Frames`.
+
+### Development
+
+- The spark rides the edge of the bar's own fill, so it follows casts whose times the game keeps secret without reading them. One shared helper now gives every castbar the same spark, and the player and target frames fall back to it when no readable percentage exists.
+- Enemy Casts was built around the game's protected values: spell names, icons, cast targets, raid markers and interrupt state are handed straight to the display and never read or compared. Clicking uses separate secure buttons that the game itself hides when combat starts, placed over the rows rather than attached to them, so the list keeps updating in combat. The rows reuse the player castbar, nameplate and aura art; the layout was checked against the rendered textures.
+- New regression harnesses cover the spark on every bar direction, and the list's sources, order, highlights, protected values, click buttons in and out of combat, previews and default position. Existing castbar, nameplate, options and locale harnesses were updated and pass.
+
+### Access and known limits
+
+- **Clicking a cast to target works out of combat only.** In combat the game lets no addon change what a click targets, and the list re-sorts as casts come and go, so in combat the list is display-only.
+- Enemies without a nameplate appear only as your target, focus, a boss or an arena opponent.
+- Verified offline only. In-game confirmation on Retail and Forever is still owed for the sparks, the overlay color, and the Enemy Casts list, its clicks and previews.
+
 ## 5.52.0-JuNNeZ (2026-11-25) - Previews When Moving Frames
 
 ### Highlights

@@ -715,6 +715,22 @@ local UpdateTargetBarSpark = function(element, percentOverride)
 	end
 
 	local percent = GetTargetBarSparkPercent(element, percentOverride)
+	if (percent == nil and (element.casting or element.channeling or element.empowering)) then
+		-- A cast with no readable percent yet (secret timer, fake fill still idle): ride the
+		-- native texture's edge. HideTargetNativeCastVisuals keeps that texture shown at
+		-- alpha 0 so its geometry still follows the cast.
+		local nativeTexture = element.GetStatusBarTexture and element:GetStatusBarTexture()
+		if (nativeTexture) then
+			spark:ClearAllPoints()
+			spark:SetPoint("CENTER", nativeTexture, (growth == "LEFT") and "LEFT"
+				or (growth == "UP") and "TOP"
+				or (growth == "DOWN") and "BOTTOM"
+				or "RIGHT", 0, 0)
+			spark:SetAlpha(1)
+			spark:Show()
+			return
+		end
+	end
 	if (type(percent) ~= "number" or percent <= 0 or percent >= 1) then
 		spark:Hide()
 		return
@@ -3038,6 +3054,30 @@ local PvPIndicator_Override = function(self, event, unit)
 end
 
 -- Update player frame based on player level.
+-- The cast overlay's colour lives in three places here: the bar's own colour, cast.color
+-- (Cast_RefreshInterruptVisuals' base) and the fake fill's alpha. Called by
+-- ns.UnitFrame.ApplyCastOverlayColor at layout time and on option changes.
+local ApplyTargetCastOverlayColor = function(cast, color)
+	if (type(color) ~= "table") then
+		return
+	end
+	cast.color = color
+	cast:SetStatusBarColor(color[1] or 1, color[2] or 1, color[3] or 1, color[4] or 1)
+	local alpha = color[4]
+	if (type(alpha) ~= "number" or (issecretvalue and issecretvalue(alpha))) then
+		alpha = 1
+	end
+	if (alpha < 0) then
+		alpha = 0
+	elseif (alpha > 1) then
+		alpha = 1
+	end
+	cast.__AzeriteUI_FakeConfiguredAlpha = alpha
+	if (cast:IsShown()) then
+		Cast_RefreshInterruptVisuals(cast)
+	end
+end
+
 local UnitFrame_UpdateTextures = function(self)
 	local unit = self.unit
 	if (not unit or not UnitExists(unit)) then
@@ -3369,7 +3409,6 @@ local UnitFrame_UpdateTextures = function(self)
 		castFakeFill:SetTexCoord(1, 0, 0, 1)
 		castFakeFill:SetAlpha(1)
 	end
-	cast:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
 	-- The castbar overlays the health bar, so it takes the health bar's own
 	-- declared fill direction. Every target style tier declares
 	-- HealthBarOrientation = "LEFT", and the shim turns that into
@@ -3387,16 +3426,8 @@ local UnitFrame_UpdateTextures = function(self)
 	-- either way the addon has no business pinning its texcoords, which is what
 	-- the old `SetFlippedHorizontally(false)` plus `SetTexCoord` pair did.
 	cast.__AzeriteUI_CastCropModeApplied = GetTargetCastCropMode()
-	local castColorAlpha = db.HealthCastOverlayColor and db.HealthCastOverlayColor[4]
-	if (type(castColorAlpha) ~= "number" or (issecretvalue and issecretvalue(castColorAlpha))) then
-		castColorAlpha = 1
-	end
-	if (castColorAlpha < 0) then
-		castColorAlpha = 0
-	elseif (castColorAlpha > 1) then
-		castColorAlpha = 1
-	end
-	cast.__AzeriteUI_FakeConfiguredAlpha = castColorAlpha
+	-- Colour and fake-fill alpha, from the layout or /az -> Unit Frames -> castbar overlay color.
+	ns.UnitFrame.ApplyCastOverlayColor(cast, db.HealthCastOverlayColor, ApplyTargetCastOverlayColor)
 	cast.__AzeriteUI_KeepMirrorPercentOnNoSample = false
 	cast.__AzeriteUI_CastFakePath = nil
 	cast.__AzeriteUI_CastFakePercent = nil
@@ -3849,7 +3880,7 @@ local style = function(self, unit, id)
 	castText.colorProtected = db.CastBarTextProtectedColor
 
 	self.Castbar.Text = castText
-	self.Castbar.color = db.HealthCastOverlayColor
+	self.Castbar.color = ns.UnitFrame.GetCastOverlayColor(db.HealthCastOverlayColor)
 	self.Castbar.PostCastInterruptible = Cast_PostCastInterruptible
 	self.Castbar.PostCastStart = Cast_PostUpdateVisual
 	self.Castbar.PostCastUpdate = Cast_PostUpdateVisual

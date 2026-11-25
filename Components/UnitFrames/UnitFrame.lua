@@ -50,6 +50,11 @@ local defaults = { profile = ns:Merge({
 	absorbDisplayMode = "total",
 	showHealAbsorbs = true,
 	colorCastSpellTextByState = false,
+	-- Cast overlay on the unit frames' health bars (ns.UnitFrame.GetCastOverlayColor).
+	-- Off keeps each frame's own colour and opacity from its layout.
+	castOverlayCustomColor = false,
+	castOverlayColor = { 1, 1, 1 },
+	castOverlayOpacity = .5,
 	auraTimerColors = true,
 	showCombatFeedback = true,
 	-- Engine-eased bars (Enum.StatusBarInterpolation), see ns.UnitFrame.SetSmoothingEnabled.
@@ -292,6 +297,67 @@ ns.UnitFrame.ShouldColorCastSpellTextByState = function()
 	local module = ns:GetModule("UnitFrames", true)
 	local profile = module and module.db and module.db.profile
 	return profile and profile.colorCastSpellTextByState == true or false
+end
+
+-- Cast overlay colour
+---------------------------------------------------
+-- The health bar's cast overlay on player, target, ToT, focus, party, raid5, arena, boss
+-- and pet. Every overlay registers here once with its layout colour, so the options page
+-- can recolour all of them at once (RefreshCastOverlayColors). A refresh function lets a
+-- unit with its own colour handling (Target's fake fill) take the colour itself.
+local CastOverlays = setmetatable({}, { __mode = "k" })
+
+local ClampUnit = function(value, fallback)
+	if (type(value) ~= "number" or (issecretvalue and issecretvalue(value))) then
+		return fallback
+	end
+	if (value < 0) then return 0 elseif (value > 1) then return 1 end
+	return value
+end
+
+--- The overlay colour as { r, g, b, a }: the user's custom colour and opacity when that
+-- option is on, otherwise the layout's own colour (returned as given).
+ns.UnitFrame.GetCastOverlayColor = function(default)
+	local module = ns:GetModule("UnitFrames", true)
+	local profile = module and module.db and module.db.profile
+	if (not profile or not profile.castOverlayCustomColor) then
+		return default
+	end
+	local color = type(profile.castOverlayColor) == "table" and profile.castOverlayColor or {}
+	local base = type(default) == "table" and default or {}
+	return {
+		ClampUnit(color[1], base[1] or 1),
+		ClampUnit(color[2], base[2] or 1),
+		ClampUnit(color[3], base[3] or 1),
+		ClampUnit(profile.castOverlayOpacity, base[4] or 1)
+	}
+end
+
+--- Colours a cast overlay and keeps it registered for later option changes.
+-- default is the layout's colour table; refresh(castbar, color) replaces the plain
+-- SetStatusBarColor for units that colour their overlay in more than one place.
+ns.UnitFrame.ApplyCastOverlayColor = function(castbar, default, refresh)
+	if (not castbar or not castbar.SetStatusBarColor) then
+		return
+	end
+	castbar.__AzeriteUI_CastOverlayDefault = default
+	CastOverlays[castbar] = refresh or true
+	local color = ns.UnitFrame.GetCastOverlayColor(default)
+	if (type(color) ~= "table") then
+		return
+	end
+	if (type(refresh) == "function") then
+		refresh(castbar, color)
+	else
+		castbar:SetStatusBarColor(color[1] or 1, color[2] or 1, color[3] or 1, color[4] or 1)
+	end
+end
+
+--- Re-applies the overlay colour to every registered castbar (option change, profile change).
+ns.UnitFrame.RefreshCastOverlayColors = function()
+	for castbar, refresh in next, CastOverlays do
+		ns.UnitFrame.ApplyCastOverlayColor(castbar, castbar.__AzeriteUI_CastOverlayDefault, refresh ~= true and refresh or nil)
+	end
 end
 
 -- Whether native aura countdowns turn yellow, orange and red as they run out.
@@ -558,6 +624,7 @@ ns.UnitFrameModule = ns:Merge({
 UnitFrameMod.UpdateSettings = function(self)
 	if (API.RefreshHealthPrediction) then API.RefreshHealthPrediction() end
 	if (ns.GroupIndicators) then ns.GroupIndicators.Refresh() end
+	ns.UnitFrame.RefreshCastOverlayColors()
 	local ApplyAuraSortSettings = function(frame, preSetPosition, sortFunction)
 		if (not frame) then
 			return

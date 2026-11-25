@@ -225,6 +225,7 @@ local style = function(self, unit, id)
 	castbar.timeToHold = db.CastBarTimeToHoldFailed
 
 	self.Castbar = castbar
+	ns.API.CreateCastBarSpark(castbar) -- rides the fill edge for every cast (Functions.lua)
 	self.Castbar.PostCastStart = Castbar_PostCastVisual
 	self.Castbar.PostCastUpdate = Castbar_PostCastUpdate
 	self.Castbar.PostCastStop = Castbar_PostStop

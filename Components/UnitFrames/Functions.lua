@@ -304,6 +304,69 @@ API.AttachPortraitAlphaFix = function(frame, portrait)
 	end
 end
 
+-- Castbar spark
+--------------------------------------------
+-- The edge the native fill grows towards, from the bar's own orientation and reverse fill.
+local GetCastBarSparkEdge = function(castbar)
+	local orientation = castbar.GetOrientation and castbar:GetOrientation()
+	local reverse = castbar.GetReverseFill and castbar:GetReverseFill()
+	if (orientation == "VERTICAL") then
+		return reverse and "BOTTOM" or "TOP", true
+	end
+	return reverse and "LEFT" or "RIGHT", false
+end
+
+-- Runs after oUF's Spark:Show() at every cast start, so orientation, reverse fill and size
+-- changes made by layout updates since the last cast are picked up.
+local CastBarSpark_OnShow = function(spark)
+	local castbar = spark.__AzeriteUI_Castbar
+	local texture = castbar and castbar.GetStatusBarTexture and castbar:GetStatusBarTexture()
+	if (not texture) then
+		return
+	end
+	local edge, vertical = GetCastBarSparkEdge(castbar)
+	local width, height = castbar:GetSize()
+	if (type(width) == "number" and type(height) == "number"
+		and not (issecretvalue and (issecretvalue(width) or issecretvalue(height)))
+		and width > 0 and height > 0) then
+		if (vertical) then
+			spark:SetSize(math.max(8, width - 2), 12)
+		else
+			spark:SetSize(12, math.max(8, height - 2))
+		end
+	end
+	if (spark.SetRotation) then
+		spark:SetRotation(vertical and (math.pi / 2) or 0)
+	end
+	spark:ClearAllPoints()
+	spark:SetPoint("CENTER", texture, edge, 0, 0)
+end
+
+--[[ API.CreateCastBarSpark(castbar)
+	Gives an oUF castbar the element's documented `.Spark`, riding the moving edge of the
+	native fill texture. It needs no readable percent, so it follows secret casts, channels
+	and empowered casts on the native timer as well as the player's readable casts.
+	oUF shows it at cast start and hides it on stop/fail. Returns the existing spark when
+	the castbar already has one, so it never replaces a unit's own spark.
+]]
+API.CreateCastBarSpark = function(castbar)
+	if (not castbar or not castbar.CreateTexture) then
+		return
+	end
+	if (castbar.Spark) then
+		return castbar.Spark
+	end
+	local spark = castbar:CreateTexture(nil, "OVERLAY", nil, 3)
+	spark:SetTexture([[Interface\CastingBar\UI-CastingBar-Spark]])
+	spark:SetBlendMode("ADD")
+	spark:SetVertexColor(1, .95, .8, .85)
+	spark:Hide()
+	spark.__AzeriteUI_Castbar = castbar
+	hooksecurefunc(spark, "Show", CastBarSpark_OnShow)
+	castbar.Spark = spark
+	return spark
+end
+
 local EmitInterruptDebug = function(castbar, reason, spellID, cooldownState, finalState)
 	if (not API.DEBUG_HEALTH_CHAT) then
 		return

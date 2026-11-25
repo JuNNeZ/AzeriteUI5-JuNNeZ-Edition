@@ -61,6 +61,7 @@
 	<Script file="OptionsPages\WorldMap.lua"/>
 	<Script file="OptionsPages\Nameplates.lua"/>
 	<Script file="OptionsPages\ExecuteRange.lua"/>
+	<Script file="OptionsPages\EnemyCasts.lua"/>
 	<Script file="OptionsPages\Widgets.lua"/>
 	<Script file="OptionsPages\Tooltips.lua"/>
 	<Script file="OptionsPages\Tracker.lua"/>

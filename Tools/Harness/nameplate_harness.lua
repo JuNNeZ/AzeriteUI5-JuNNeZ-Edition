@@ -862,6 +862,7 @@ ns.API.UpdateHealth = function() end
 ns.API.UpdatePower = function() end
 ns.API.BindStatusBarValueMirror = function() end
 ns.API.AttachScriptSafe = function(frame, script, fn) frame:HookScript(script, fn) end
+ns.API.CreateCastBarSpark = function(castbar) end -- Functions.lua; the spark is not under test here
 ns.API.UpdateInterruptCastBarRefresh = function(castbar, cb, reason)
 	if (not castbar) then return nil end
 	if (type(cb) == "function") then castbar.__AzeriteUI_InterruptRefreshCallback = cb end

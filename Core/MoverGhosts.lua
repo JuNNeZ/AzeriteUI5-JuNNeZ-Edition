@@ -9,8 +9,9 @@
 -- frame is empty right now (no target, no group, no cast, no timer) gets a
 -- faint example of that frame's art, so its place can be judged before the
 -- frame ever appears. Unit frames and the player castbar use the theme's own
--- art through the bar tests builder (Core/ThemeBarPreview.lua); every other
--- mover gets a plain placeholder.
+-- art through the bar tests builder (Core/ThemeBarPreview.lua); a module with
+-- `BuildMoverGhost(container)` draws its own (Components/Misc/EnemyCasts.lua);
+-- every other mover gets a plain placeholder.
 --
 -- A ghost is an insecure, mouse-disabled frame parented to the mover's overlay,
 -- so it moves with a drag and hides with the movers. No real frame is shown,
@@ -262,7 +263,13 @@ local BuildGhost = function(state, anchor, key)
 	local spec = UNIT_GHOSTS[key]
 	local builder = ns.ThemeBarPreview
 	local built
-	if (spec and builder and builder.Create) then
+	-- A module can draw its own example (EnemyCasts: rows of made-up casts).
+	local okModule, module = pcall(ns.GetModule, ns, key, true)
+	if (okModule and module and type(module.BuildMoverGhost) == "function") then
+		local okBuild, result = pcall(module.BuildMoverGhost, module, container)
+		built = okBuild and result and true or nil
+	end
+	if (not built and spec and builder and builder.Create) then
 		if (spec.grid) then
 			local width, height = overlay:GetSize()
 			built = BuildGrid(container, spec.kind, width or 0, height or 0)

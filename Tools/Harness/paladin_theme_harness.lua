@@ -721,9 +721,13 @@ do
     end
     env.CreateFrame = function(_, _, parent) return bossWidget(parent) end
     env.MAX_BOSS_FRAMES = 1
+    ns.API.CreateCastBarSpark = ns.API.CreateCastBarSpark or function() end -- Functions.lua; not under test
     ns.UnitFrame = { Spawn = function(unit)
         local frame = bossWidget(); bossStyle(frame, unit); return frame
-    end }
+    end,
+        -- UnitFrame.lua cast overlay colour; not under test here.
+        ApplyCastOverlayColor = function() end,
+        GetCastOverlayColor = function(default) return default end }
     load("Components/UnitFrames/Units/Boss.lua")
     for _, enabled in ipairs({ false, true }) do
         ns.db.char.paladinPreview = enabled

@@ -1005,10 +1005,11 @@ local style = function(self, unit)
 	castbar:SetSparkMap(db.HealthBarSparkMap)
 	castbar:SetStatusBarTexture(db.HealthBarTexture)
 	ApplyArenaBarFillRule(castbar, db.HealthBarOrientation)
-	castbar:SetStatusBarColor(unpack(db.HealthCastOverlayColor))
+	ns.UnitFrame.ApplyCastOverlayColor(castbar, db.HealthCastOverlayColor) -- /az -> Unit Frames -> castbar overlay color
 	castbar:DisableSmoothing(false, "castbars") -- Pushback eases while /az -> Unit Frames -> Smooth castbar pushback is on.
 
 	self.Castbar = castbar
+	ns.API.CreateCastBarSpark(castbar) -- rides the fill edge for every cast (Functions.lua)
 
 	-- Health Value
 	--------------------------------------------

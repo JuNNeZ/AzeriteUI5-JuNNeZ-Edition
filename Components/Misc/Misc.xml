@@ -31,6 +31,7 @@
 	<Script file="GameMenu.lua"/>
 	<Script file="Info.lua"/>
 	<Script file="MythicPlus.lua"/>
+	<Script file="EnemyCasts.lua"/>
 	<Script file="Minimap.lua"/>
 	<Script file="MirrorTimers.lua"/>
 	<Script file="QuestTimers.lua"/>

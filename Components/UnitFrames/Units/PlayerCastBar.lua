@@ -516,6 +516,7 @@ local style = function(self, unit)
 	--cast.PostCastFail = Cast_PostCastFail -- TODO: needs custom glow asset
 
 	self.Castbar = cast
+	ns.API.CreateCastBarSpark(cast) -- rides the fill edge for every cast (Functions.lua)
 
 end
 
