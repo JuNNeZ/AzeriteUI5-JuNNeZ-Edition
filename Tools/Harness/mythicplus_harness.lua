@@ -224,6 +224,9 @@ local function NewNamespace(retail)
 			events = {},
 			timers = {},
 			RegisterEvent = function(self, event, handler) self.events[event] = handler end,
+			UnregisterEvent = function(self, event) self.events[event] = nil end,
+			-- AceAddon's; `disabled` stands for a module turned off (Interface Parts).
+			IsEnabled = function(self) return not self.disabled end,
 			ScheduleRepeatingTimer = function(self, method) self.timers[#self.timers + 1] = method; return #self.timers end,
 			ScheduleTimer = function(self, fn) self.pending = fn; return "card" end,
 			CancelTimer = function() end,
@@ -535,6 +538,29 @@ check(banner.alpha == 0, "the completion banner is hidden as it is queued")
 M.db.profile.hideBlizzardBanner = false
 M:UpdateSettings()
 check(banner.alpha == 1, "and shown again when the switch is turned off")
+
+-- Turned off mid-session (/az -> Interface Parts, Core/Core.lua StopPartNow): Blizzard
+-- gets back what the panel held, and the hook that cannot be removed does nothing.
+do
+	local events = {}
+	for event, handler in pairs(M.events) do events[event] = handler end
+	M.db.profile.hideBlizzardBanner = true
+	bannerHook(banner)
+	M:SetTrackerHidden(true)
+	check(banner.alpha == 0 and ns.MythicPlusHidesTracker == true, "set up: banner and tracker held")
+	M:StopPart()
+	M.disabled = true
+	check(banner.alpha == 1, "StopPart gives the banner back")
+	check(ns.MythicPlusHidesTracker == nil, "and Blizzard's tracker")
+	check(next(M.events) == nil, "and drops every event it registered")
+	check(not M.frame:IsShown(), "and hides the panel")
+	bannerHook(banner)
+	check(banner.alpha == 1, "the banner hook does nothing while the panel is off")
+	M.disabled = nil
+	M.db.profile.hideBlizzardBanner = false
+	M:UpdateSettings()
+	for event, handler in pairs(events) do M.events[event] = handler end
+end
 env.hooksecurefunc, env.TopBannerManager_Show, env.ChallengeModeCompleteBanner = nil, nil, nil
 
 -- The forces section's criteria, back for the settings below.

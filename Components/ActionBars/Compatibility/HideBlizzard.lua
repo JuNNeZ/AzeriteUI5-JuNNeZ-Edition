@@ -46,12 +46,25 @@ ns.HideEditModeSelection = function(frame)
 	if (selection:IsShown()) then selection:Hide() end
 end
 
+-- Whether a part was turned off on /az -> Interface Parts (Core/Core.lua). Blizzard's
+-- own version of that part is then left alone, so turning ours off gives it back.
+local IsPartOff = function(name)
+	return (ns.IsPartDisabled and ns:IsPartDisabled(name)) and true or false
+end
+
+-- The chat part is also off while it stands down for a chat replacement, which then
+-- owns Blizzard's chat buttons (Chattynator moves QuickJoinToastButton into its bar).
+local IsChatPartOff = function()
+	return IsPartOff("ChatFrames") or (ns.GetPartStandDown and ns:GetPartStandDown("ChatFrames")) and true or false
+end
+
 -- Blizzard frames AzeriteUI replaces or hides outside the action bars. The module name
 -- (when set) must be enabled, otherwise the player still needs Blizzard's overlay.
 local EDIT_MODE_REPLACED = {
 	{ "PersonalResourceDisplayFrame" },
-	{ "MainStatusTrackingBarContainer" },
-	{ "SecondaryStatusTrackingBarContainer" },
+	-- Replaced by the minimap's experience ring unless that part is off.
+	{ "MainStatusTrackingBarContainer", when = function() return not IsPartOff("PlayerStatusBars") end },
+	{ "SecondaryStatusTrackingBarContainer", when = function() return not IsPartOff("PlayerStatusBars") end },
 	{ "CompactArenaFrame" },
 	{ "CompactRaidFrameContainer" },
 	{ "BuffFrame", "Auras" },
@@ -80,7 +93,7 @@ local EDIT_MODE_REPLACED = {
 -- An entry applies when it names no module, or any one of its modules is enabled and
 -- its own condition (if it has one) agrees.
 local isReplaced = function(entry)
-	if (not entry[2]) then return true end
+	if (not entry[2]) then return not entry.when or entry.when() and true or false end
 	for i = 2, #entry do
 		local module = ns:GetModule(entry[i], true)
 		if (module and module:IsEnabled()) then
@@ -109,9 +122,12 @@ local hideReplacedCheckboxes = function()
 	local manager = _G.EditModeManagerFrame
 	local container = manager and manager.AccountSettings and manager.AccountSettings.SettingsContainer
 	if (not container) then return end
+	-- Blizzard's leave button is ours to replace only while the dismount button runs.
+	local vehicleExit = ns:GetModule("VehicleExit", true)
+	local exitRunning = vehicleExit and vehicleExit:IsEnabled()
 	for _, key in ipairs(EDIT_MODE_CHECKBOXES) do
 		local checkBox = container[key]
-		if (checkBox and checkBox.Hide) then checkBox:Hide() end
+		if (checkBox and checkBox.Hide and (key ~= "VehicleLeaveButton" or exitRunning)) then checkBox:Hide() end
 	end
 end
 
@@ -476,12 +492,6 @@ local quarantineFrame = function(frame)
 	end
 end
 
-local quarantineNamedFrames = function(frameNames)
-	for _, frameName in ipairs(frameNames) do
-		quarantineFrame(_G[frameName])
-	end
-end
-
 local suppressBagControl = function(frame)
 	if (not frame) then return end
 
@@ -547,16 +557,21 @@ BlizzardABDisabler.HideBlizzard = function(self)
 
 	-- The minimap status ring still replaces XP/reputation in native mode.
 	-- Preserve every native action/menu/bag control and group Edit Mode system.
+	-- With the experience part off (Interface Parts), Blizzard's bar is the player's.
+	local keepStatusBars = IsPartOff("PlayerStatusBars")
 	if (nativeController) then
-		quarantineFrame(_G.StatusTrackingBarManager)
-		ns.HideEditModeSelection(_G.MainStatusTrackingBarContainer)
-		ns.HideEditModeSelection(_G.SecondaryStatusTrackingBarContainer)
+		if (not keepStatusBars) then
+			quarantineFrame(_G.StatusTrackingBarManager)
+			ns.HideEditModeSelection(_G.MainStatusTrackingBarContainer)
+			ns.HideEditModeSelection(_G.SecondaryStatusTrackingBarContainer)
+		end
 		return
 	end
 
 	for _, frameName in ipairs(HIDDEN_FRAME_NAMES) do
-		if (frameName ~= "BagsBar" or not (IsBagBarOwnedByW2UI()
-			or (ns.ShouldUseBlizzardBags and ns.ShouldUseBlizzardBags()))) then
+		if ((frameName ~= "BagsBar" or not (IsBagBarOwnedByW2UI()
+			or (ns.ShouldUseBlizzardBags and ns.ShouldUseBlizzardBags())))
+			and (frameName ~= "StatusTrackingBarManager" or not keepStatusBars)) then
 			quarantineFrame(_G[frameName])
 		end
 	end
@@ -610,7 +625,14 @@ BlizzardABDisabler.HideBlizzard = function(self)
 				quarantineFrame(_G[frameName])
 			end
 		end
-		quarantineNamedFrames(MICRO_BUTTON_NAMES)
+		-- QuickJoinToastButton is the chat's social button: Blizzard's (or the chat
+		-- replacement's) while the chat part is off.
+		local keepChatButton = IsChatPartOff()
+		for _, frameName in ipairs(MICRO_BUTTON_NAMES) do
+			if (frameName ~= "QuickJoinToastButton" or not keepChatButton) then
+				quarantineFrame(_G[frameName])
+			end
+		end
 	end
 	suppressNamedBagControls()
 

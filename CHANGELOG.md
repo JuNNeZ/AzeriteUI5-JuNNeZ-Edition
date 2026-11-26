@@ -10,6 +10,24 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.54.0-JuNNeZ (2026-11-26) - Interface Parts and Advanced Settings
+
+### Highlights
+
+- **Choose which parts of AzeriteUI to use.** Open `/az → Interface Parts` for one list of switches, grouped by area. Hover a switch to outline the matching frame when it is visible. Switches shared with another options page edit the same setting, and the page can show which addon a part has stepped aside for.
+- **See when a part needs a reload.** The Info Bar and the Mythic+ panel can be turned off immediately out of combat. Switches that need a reload say so. Turning off AzeriteUI's bags or experience and reputation bars restores Blizzard's controls after a reload.
+- **Keep everyday options easy to find.** `/az → Settings → Appearance → Show advanced settings` starts off. Turn it on for controls such as aura filters, theme offsets and nameplate threat tuning. Your saved values continue to apply either way. Search can open an advanced setting directly, and **Changed** can still show or revert it.
+
+### Development
+
+- Interface Parts reuses the original options and their profile bindings, so previews, changed markers and reverts refer to the same setting. The live stop paths clean up their own timers and movers, and the Mythic+ panel restores the Blizzard tracker and banner visibility it changed.
+- The main options window filters advanced rows at display time. Search, What's New links and mover links can reach them while the switch is off. The mover panel and classic dialogs keep their full controls.
+
+### Access and known limits
+
+- Part availability depends on the client and installed addons. Some switches need a reload, and the Blizzard replacement varies by part.
+- The maintainer confirmed the advanced settings switch in game. Interface Parts was checked offline. Live replacement and reload checks remain open on Retail and Forever.
+
 ## 5.53.0-JuNNeZ (2026-11-25) - Enemy Casts and Castbar Sparks
 
 ### Highlights

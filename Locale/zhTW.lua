@@ -765,6 +765,7 @@ L["How this window is drawn. These are kept outside your settings profiles, so s
 L["Window"] = "視窗"
 L["Panel Scale"] = "面板縮放"
 L["How large the options window is drawn, independently of the rest of the interface. Useful on a very high resolution display, where the window can otherwise be smaller than everything around it."] = "選項視窗的大小，與介面其他部分無關。在超高解析度螢幕上很有用，否則視窗可能比周圍的一切都小。"
+L["Show advanced settings"] = "顯示進階設定"
 L["Reset Position and Size"] = "重置位置和大小"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "將視窗以原始大小放回螢幕中央。當視窗被拖到無法觸及的位置時很有用。"
 L["About"] = "關於"
@@ -2025,3 +2026,13 @@ L["New casts are added above the first one instead of below."] = "新的施法�
 L["Preview casts"] = "預覽施法數"
 L["How many example casts the preview shows in /lock and Edit Mode while no enemy is casting, so you can see where a full list sits."] = "沒有敵人施法時，/lock 與編輯模式的預覽中顯示的範例施法數量，方便查看清單滿時的位置。"
 L["Shows example casts where the list sits, so every change shows at once. It turns off in combat and when this window closes."] = "在清單所在位置顯示範例施法，每項變更立即可見。進入戰鬥或關閉此視窗時關閉。"
+
+-- /az -> Interface Parts (Options/OptionsPages/InterfaceParts.lua).
+L["Interface Parts"] = "介面元件"
+L["Experience and reputation bars"] = "經驗與聲望條"
+L["Extra action buttons"] = "額外動作按鈕"
+L["Off also removes the Bags page and the group loot settings on it."] = "關閉後，背包頁面及其中的隊伍拾取設定也會一併移除。"
+L["Turn off any part of AzeriteUI you do not want. A part that is off is left to the game: where Blizzard has its own version, it shows as Blizzard made it. Hover a switch to see which part it is."] = "關閉任何你不需要的 AzeriteUI 元件。關閉的元件交還給遊戲：若暴雪有自己的版本，就按暴雪原樣顯示。將滑鼠停在開關上可查看對應的元件。"
+L["Most parts come back as soon as you turn them on. Turning a part off is immediate when it only uses AzeriteUI's own frames; one that changes Blizzard's frames needs a reload to give them back as Blizzard made them, and its switch says so. Parts with a page of their own use the same switch as on that page."] = "大多數元件在開啟後會立即恢復。只使用 AzeriteUI 自有框架的元件會立即關閉；會改動暴雪框架的元件需要重新載入介面才能按暴雪原樣還給你，其開關會註明。擁有獨立頁面的元件與該頁面使用同一個開關。"
+L["Takes effect after a reload."] = "重新載入介面後生效。"
+L["Off while %s is enabled: it does this job."] = "啟用 %s 時關閉：由它負責此功能。"

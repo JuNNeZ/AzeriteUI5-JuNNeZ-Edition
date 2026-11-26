@@ -88,9 +88,167 @@ local defaults = {
 		moverGhostsHidden = {},
 		-- Master scale for every movable frame, baked into their saved scale and
 		-- position when changed. See API.GetFrameScaleMultiplier (Core/API/Scale.lua).
-		frameScale = 1
+		frameScale = 1,
+		-- Parts turned off on /az -> Interface Parts, by module name: { [name] = true }.
+		-- Only names in ns.ToggleableParts are read. Applied at login (ApplyDisabledParts).
+		disabledParts = {}
 	}
 }
+
+-- The parts that /az -> Interface Parts (Options/OptionsPages/InterfaceParts.lua)
+-- turns off through disabledParts. Each does its work in OnEnable, so one that is
+-- never enabled leaves Blizzard's frames as Blizzard made them. Parts with a switch of
+-- their own (unit frames, action bars, nameplates, minimap, auras...) keep it; the
+-- page shows those same switches beside these.
+ns.ToggleableParts = {
+	"Tooltips", "ChatFrames", "Containers", "Tracker", "AlertFrames", "ErrorsFrame",
+	"PlayerStatusBars", "Durability", "VehicleSeat", "VehicleExit", "ExtraActionButtons",
+	"EncounterBar", "MirrorTimers", "Banners", "RaidBossEmotes", "RaidWarnings",
+	"UIWidgetTopCenter", "UIWidgetBelowMinimap", "ArcheologyBar", "Info", "MythicPlus"
+}
+
+-- Parts whose OnEnable finishes their setup by itself (a module's PostPartStart, if
+-- any, does the rest), so one that is off can be started mid-session. Left out, and
+-- so waiting for a reload: those that set up on PLAYER_ENTERING_WORLD or
+-- SETTINGS_LOADED (Tooltips, ChatFrames, Tracker, Durability), ExtraActionButtons,
+-- whose ZoneAbilityFrame hook is made in OnInitialize and was removed when the part
+-- was turned off, and the parts whose Blizzard version is given back while they are
+-- off and only hidden again at login (Containers: the bag bar, latched per session in
+-- ns.ShouldUseBlizzardBags; PlayerStatusBars: StatusTrackingBarManager, HideBlizzard.lua).
+local LIVE_START = {
+	AlertFrames = true, ErrorsFrame = true,
+	VehicleSeat = true, VehicleExit = true, EncounterBar = true, MirrorTimers = true,
+	Banners = true, RaidBossEmotes = true, RaidWarnings = true, UIWidgetTopCenter = true,
+	UIWidgetBelowMinimap = true, ArcheologyBar = true, MythicPlus = true, Info = true
+}
+
+-- Parts that can also be turned off mid-session: only their own frames, and a
+-- StopPart method that hides them, drops their events (LibMoreEvents has no
+-- OnEmbedDisable), disables their mover and gives back anything of Blizzard's they
+-- held. Every other part restyles or moves Blizzard's frames, which a reload undoes
+-- cleanly and a live stop could not.
+local LIVE_STOP = {
+	Info = true, MythicPlus = true
+}
+
+-- Addons a part stands down for by itself, by folder name. Each module file fills in
+-- its own list, before the check that returns early, so the list lives in one place.
+ns.PartStandDowns = ns.PartStandDowns or {}
+
+local toggleableParts = {}
+for _, name in ipairs(ns.ToggleableParts) do toggleableParts[name] = true end
+
+--- Whether this part can be turned off through disabledParts.
+ns.IsToggleablePart = function(self, name)
+	return toggleableParts[name] and true or false
+end
+
+--- The title of an enabled addon this part stands down for, or nil.
+ns.GetPartStandDown = function(self, name)
+	local list = ns.PartStandDowns[name]
+	local API = ns.API
+	if (type(list) ~= "table" or not API or not API.IsAddOnEnabled) then return end
+	for _, addon in ipairs(list) do
+		if (API.IsAddOnEnabled(addon)) then
+			return API.GetAddOnTitle and API.GetAddOnTitle(addon) or addon
+		end
+	end
+end
+
+--- Whether the user turned this part off in the current profile.
+--- @param name string module name from ns.ToggleableParts
+ns.IsPartDisabled = function(self, name)
+	local profile = self.db and self.db.profile
+	local disabled = profile and profile.disabledParts
+	return (toggleableParts[name] and type(disabled) == "table" and disabled[name]) and true or false
+end
+
+--- Stores whether a part is off. Turning off takes effect after a reload; turning on
+--- does too, unless ns:StartPartNow can start it.
+ns.SetPartDisabled = function(self, name, disabled)
+	local profile = self.db and self.db.profile
+	if (not profile or not toggleableParts[name]) then return end
+	if (type(profile.disabledParts) ~= "table") then profile.disabledParts = {} end
+	profile.disabledParts[name] = disabled and true or nil
+end
+
+-- AceAddon lets a module disable itself inside OnEnable: it then skips the rest of
+-- the enable and its mixins' OnEmbedDisable runs (AceHook unhooks anything hooked at
+-- initialize). Replacing OnEnable rather than only clearing the enabled state also
+-- catches the explicit :Enable() calls of Retail's delayed starts (WoW11/Misc/*.lua).
+local DisableOnEnable = function(module)
+	module:Disable()
+end
+
+ns.ApplyDisabledParts = function(self)
+	for _, name in ipairs(ns.ToggleableParts) do
+		local module = self:GetModule(name, true)
+		if (module) then
+			local off = self:IsPartDisabled(name)
+			-- Whether the part runs this session, as far as this switch is concerned.
+			module.partActive = not off
+			-- The enabled state is left alone on purpose: the module must pass through
+			-- Enable -> Disable for its OnEmbedDisable cleanup to run.
+			if (off) then
+				module.partOnEnable = module.OnEnable
+				module.OnEnable = DisableOnEnable
+			end
+		end
+	end
+end
+
+--- Whether a part that is off right now can be started without a reload.
+ns.CanStartPartNow = function(self, name)
+	local module = LIVE_START[name] and self:GetModule(name, true)
+	return (module and not module.partActive and module.partOnEnable and not InCombatLockdown()) and true or false
+end
+
+--- Starts a part that was off at login, out of combat, when its OnEnable allows it.
+--- Returns true when the part is running afterwards.
+ns.StartPartNow = function(self, name)
+	if (self:IsPartDisabled(name) or not self:CanStartPartNow(name)) then return false end
+	local module = self:GetModule(name, true)
+	module.OnEnable = module.partOnEnable
+	module.partOnEnable = nil
+	module:Enable()
+	-- An OnEnable may still refuse (PlayerStatusBars without the minimap).
+	module.partActive = module:IsEnabled() and true or false
+	-- What a login would have done after OnEnable (Info's resting icon), and the
+	-- mover a live stop disabled.
+	if (module.partActive and type(module.PostPartStart) == "function") then
+		module:PostPartStart()
+	end
+	return module.partActive
+end
+
+--- Whether a part that runs right now can be turned off without a reload.
+ns.CanStopPartNow = function(self, name)
+	local module = LIVE_STOP[name] and self:GetModule(name, true)
+	return (module and module.partActive and module:IsEnabled() and type(module.StopPart) == "function"
+		and not InCombatLockdown()) and true or false
+end
+
+--- Stops a running part, out of combat, when it holds only its own frames.
+--- Returns true when the part is off afterwards; it can be started again live.
+ns.StopPartNow = function(self, name)
+	if (not self:IsPartDisabled(name) or not self:CanStopPartNow(name)) then return false end
+	local module = self:GetModule(name, true)
+	module:StopPart()
+	-- AceHook unhooks and AceTimer cancels here, through their OnEmbedDisable.
+	module:Disable()
+	module.partActive = false
+	-- As if it had been off at login, so another module's :Enable() cannot bring it back.
+	module.partOnEnable = module.OnEnable
+	module.OnEnable = DisableOnEnable
+	return true
+end
+
+--- Whether a part's switch differs from what is running, so a reload is owed.
+ns.IsPartPending = function(self, name)
+	local module = self:GetModule(name, true)
+	if (not module or module.partActive == nil) then return false end
+	return module.partActive == self:IsPartDisabled(name)
+end
 
 local SAIYARATT_PROFILE_KEY = "SaiyaRatt"
 local BUILTIN_PROFILE_KEYS = {
@@ -569,6 +727,8 @@ end
 ns.OnEnable = function(self)
 	self:EnsureBuiltinProfiles()
 	self.db:SetProfile(self.db.char.profile)
+	-- Before any module enables: AceAddon enables the addon first, then its modules.
+	self:ApplyDisabledParts()
 	self.ThemeEffects:ApplyPendingTheme()
 end
 

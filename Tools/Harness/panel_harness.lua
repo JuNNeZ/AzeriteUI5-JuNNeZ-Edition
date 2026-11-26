@@ -501,7 +501,9 @@ end
 -- settings are expected not to resolve. Every other page must.
 -- Debug holds session input and existing global flags, not profile settings.
 -- AddOn Skins reads other addons and per-character choices, not a profile.
-local expectedUnbound = { profiles = true, sharing = true, ["Debug tools"] = true, ["AddOn Skins"] = true }
+-- Interface Parts writes the core profile's disabledParts (Core/Core.lua), not a module's.
+local expectedUnbound = { profiles = true, sharing = true, ["Debug tools"] = true, ["AddOn Skins"] = true,
+	["Interface Parts"] = true }
 local surprises = {}
 for _, row in ipairs(byPage) do
 	if row.miss > 0 and not expectedUnbound[row.key] then

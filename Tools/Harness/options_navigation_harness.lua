@@ -66,7 +66,7 @@ local function load(relative)
 	return chunk(Addon, ns)
 end
 for _, relative in ipairs({
-	"Options/Kit/Kit.lua", "Options/Kit/Look.lua", "Options/Kit/Config.lua",
+	"Options/Kit/Kit.lua", "Options/Kit/Look.lua", "Options/Kit/Config.lua", "Options/Kit/Advanced.lua",
 	"Options/Kit/Defaults.lua", "Options/Kit/Combat.lua", "Options/Kit/Controls.lua",
 	"Options/Kit/Renderer.lua", "Options/Kit/Views.lua", "Options/Kit/PanelOptions.lua",
 	"Options/Kit/Panel.lua"
@@ -441,6 +441,74 @@ check(keyboardTarget and keyboardTarget.focused and Panel.keyboardHost == keyboa
 	"search expiry cannot clear a later keyboard focus mark")
 Panel:ClearKeyboardFocus()
 check(values.target == false and writes == 1, "navigation keys never write the target setting")
+
+-- Main-window display filtering uses real option keys without changing the
+-- structural collectors or the client gates.
+do
+	local platePage = group("Nameplates", {
+		general = group("General", { enabled = toggle("enabled", "Enable plates", 1) }, 1),
+		visibility = group("Visibility", {
+			fading = group("Fading", {
+				nonTargetAlpha = toggle("nonTargetAlpha", "Needle advanced alpha", 1),
+				castingAlpha = toggle("castingAlpha", "Other advanced alpha", 2),
+				gated = toggle("gatedAlpha", "Retail advanced alpha", 3)
+			}, 1)
+		}, 2)
+	}, 5)
+	platePage.args.visibility.args.fading.args.gated.hidden = function() return ns.IsForever end
+	options.args.Nameplates = platePage
+	Renderer:SetNavigation(platePage, "tabs")
+	local alpha = { "Nameplates", "visibility", "fading", "nonTargetAlpha" }
+	local other = { "Nameplates", "visibility", "fading", "castingAlpha" }
+	local gated = { "Nameplates", "visibility", "fading", "gated" }
+	local visibility = { "Nameplates", "visibility" }
+	ns.db = ns.db or {}
+	ns.db.global = ns.db.global or {}
+	local switchPath = { "appearance", "showAdvanced" }
+	Panel:SelectPage("Nameplates")
+	check(not Kit.Advanced.IsEnabled() and not tabAt(visibility), "default view removes an all-advanced tab")
+	local link = Panel.page:GetControls()[1]
+	check(link and link.labelText == "Show advanced settings", "filtered page links to advanced settings")
+	if link then link:Fire(true) end
+	local switch = controlAt(switchPath)
+	check(Panel.tab == "settings" and switch ~= nil, "link reaches the window preference")
+	if switch then switch:Fire(true) end
+	check(ns.db.global.optionsShowAdvanced == true, "switch stores the account-wide setting")
+	Panel:SetTab("options")
+	check(tabAt(visibility) ~= nil, "switch shows advanced tabs immediately on return")
+	check(Panel:GoTo(gated) == (not ns.IsForever), "advanced mode respects the client gate")
+	values.nonTargetAlpha = true
+	Panel:SetTab("settings")
+	switch = controlAt(switchPath)
+	if switch then switch:Fire(false) end
+	Panel:SetTab("options")
+	check(not Kit.Advanced.IsEnabled() and not tabAt(visibility), "turning advanced off restores the basic view")
+	check(values.nonTargetAlpha == true, "turning advanced off preserves the saved value")
+
+	Panel:BuildRail()
+	Panel:SelectPage(Kit.Views.CHANGED)
+	local modified = controlAt(alpha)
+	check(modified and modified.onRevert, "Changed includes advanced settings while filtered")
+	if modified and modified.onRevert then modified.onRevert(modified) end
+	check(values.nonTargetAlpha == false, "Changed can revert an advanced setting")
+
+	local before = writes
+	Panel:ShowResults("Needle advanced alpha")
+	enter(Panel.searchBox)
+	flushImmediate()
+	check(controlAt(alpha) and not controlAt(other), "search reveals only the requested advanced control")
+	check(not Kit.Advanced.IsEnabled() and writes == before, "revealing a setting is presentation only")
+	check(Panel:OpenSection("Nameplates", "Fading") and controlAt(alpha) and controlAt(other),
+		"a section link can reveal an advanced group")
+	Panel:SelectPage("Nameplates")
+	check(not tabAt(visibility), "advanced reveal expires after leaving its visit")
+	check(Panel:GoTo(gated) == (not ns.IsForever), "temporary reveal respects the client gate")
+
+	local separate = Renderer:CreatePage(Panel.page.content)
+	separate:Show(options, { "Nameplates", "visibility" })
+	check(separate:GetPathOffset(alpha) ~= nil, "a renderer outside the main window has all its controls")
+	separate:Clear()
+end
 
 print(string.format("%d checks, %d failures (%s)", checks, failures, ns.IsForever and "Forever" or "Retail"))
 os.exit(failures == 0 and 0 or 1)

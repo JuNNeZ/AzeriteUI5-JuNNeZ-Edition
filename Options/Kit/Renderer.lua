@@ -82,6 +82,12 @@ local SamePath = function(a, b)
 	return true
 end
 
+local IsPrefix = function(prefix, path)
+	if (not prefix or not path or #prefix > #path) then return false end
+	for i = 1, #prefix do if (prefix[i] ~= path[i]) then return false end end
+	return true
+end
+
 local VisiblePath = function(options, path)
 	local prefix = {}
 	for i = 1, #path do
@@ -394,6 +400,26 @@ local Bind = function(control, option, options, path, page, entry)
 	control:SetHelp(help)
 	control:SetDisabled(disabled and true or false)
 
+	-- Hover outline, for rows that stand for a whole part of the interface: a
+	-- mirrored row outlines what its real setting would (entry.previewPath), an
+	-- option marked with Config.SetHoverModule outlines that module. Set on every
+	-- bind, since controls are pooled and a row without one must not keep the last one's.
+	control.onHover = nil
+	local hoverModule = Config.GetHoverModule and Config.GetHoverModule(option) or nil
+	local hoverPath = entry and entry.previewPath
+	if (hoverModule or hoverPath) then
+		control.onHover = function(entering)
+			local Preview = Kit.Preview
+			if (not Preview) then return end
+			if (not entering) then return Preview:Hide() end
+			if (hoverPath) then
+				Preview:Request(options, hoverPath, label)
+			else
+				Preview:RequestModule(hoverModule, label)
+			end
+		end
+	end
+
 	-- The row's kind, not the option's: one multiselect is drawn as a run of
 	-- toggles, and each of those rows is a toggle however the option describes
 	-- itself.
@@ -659,6 +685,30 @@ Collect = function(group, options, path, out, depth)
 
 			if (kind == "select" and option.style == "radio") then return end
 
+			-- A mirror is drawn as the real setting at its real path: same control,
+			-- gem, revert, combat hold and change count as on its own page. Its own
+			-- name is the row's label; the option's hidden decides whether it shows.
+			-- One leading nowhere drawable is left out rather than faked.
+			-- Views.EachSetting skips these, so nothing is gathered twice.
+			local mirror = Config.GetMirror and Config.GetMirror(option)
+			if (mirror) then
+				local real = Config.GetGroup(options, mirror)
+				if (type(real) ~= "table" or real.type == "group" or real.type == "header"
+					or real.type == "description" or real.type == "multiselect"
+					or (real.type == "select" and real.style == "radio")) then
+					return
+				end
+				out[#out + 1] = {
+					kind = real.type,
+					option = real,
+					path = Copy(mirror),
+					label = AsString(Config.GetName(option, options, childPath, APP), key),
+					mirrored = true,
+					previewPath = Copy(mirror)
+				}
+				return
+			end
+
 			out[#out + 1] = {
 				kind = kind,
 				option = option,
@@ -697,7 +747,7 @@ end
 -- Presentation tree (never written into options or a saved profile)
 --------------------------------------------------------------------------
 local BuildTree
-BuildTree = function(page, group, options, path, depth)
+BuildTree = function(page, group, options, path, depth, filter)
 	local node = {
 		kind = "group", option = group, path = Copy(path),
 		id = "group:" .. PathKey(path), key = path[#path],
@@ -715,11 +765,24 @@ BuildTree = function(page, group, options, path, depth)
 			}
 			node.items[#node.items + 1] = current
 			return
-		elseif (option.type == "group") then
+		end
+
+		if (option.type == "group") then current = nil end
+		local owner = current or node
+		local reveal = page.revealedAdvancedPath
+		if (filter and filter(options, childPath, option)
+			and not IsPrefix(reveal, childPath) and not IsPrefix(childPath, reveal)
+			and not (current and SamePath(current.path, reveal))) then
+			owner.filtered, node.filtered = true, true
+			return
+		end
+
+		if (option.type == "group") then
 			-- A real subgroup is a sibling of a preceding header's run. Only
 			-- the options hierarchy makes one group the child of another.
-			current = nil
-			item = BuildTree(page, option, options, childPath, depth + 1)
+			item = BuildTree(page, option, options, childPath, depth + 1, filter)
+			if (item.filtered) then node.filtered = true end
+			if (item.filtered and item.count == 0) then return end
 		else
 			local rows = {}
 			-- Reuse the structural collector's control/type rules for one leaf.
@@ -730,11 +793,18 @@ BuildTree = function(page, group, options, path, depth)
 				if (row.option) then item.count = item.count + 1 end
 			end
 		end
-		local owner = current or node
 		owner.items[#owner.items + 1] = item
 		owner.count = owner.count + item.count
 		if (current) then node.count = node.count + item.count end
 	end)
+
+	-- A heading may have only its explanatory text left after filtering.
+	for i = #node.items, 1, -1 do
+		local item = node.items[i]
+		if (item.kind == "section" and item.filtered and item.count == 0) then
+			table.remove(node.items, i)
+		end
+	end
 
 	node.mode = navigation[group]
 		or ((depth > 0 and group.childGroups == "tab") and "tabs")
@@ -1166,8 +1236,13 @@ Renderer.CreatePage = function(self, content)
 			return 0
 		end
 
-		self.navigationTree = BuildTree(self, group, options, path, 0)
+		local filter = self.advancedSettingsLink and Kit.Advanced and not Kit.Advanced.IsEnabled()
+			and Kit.Advanced.IsAdvanced or nil
+		self.navigationTree = BuildTree(self, group, options, path, 0, filter)
 		local entries = {}
+		if (self.navigationTree.filtered) then
+			entries[1] = { kind = "execute", action = self.advancedSettingsLink }
+		end
 		DisplayTree(self, self.navigationTree, entries, true)
 		return self:Render(options, entries)
 	end
@@ -1209,6 +1284,18 @@ Renderer.CreatePage = function(self, content)
 			elseif (entry.kind == "description") then
 				control = Acquire("description")
 				control:SetLabel(entry.label)
+
+			elseif (entry.action) then
+				control = Acquire("execute")
+				control:SetLabel(L["Show advanced settings"])
+				if (control.SetSettingIcon) then control:SetSettingIcon(nil) end
+				control:SetText(L["Settings"])
+				control:SetHelp("")
+				control:SetError(nil)
+				control:SetDisabled(false)
+				control:SetStacked(self.stacked)
+				control.onHover = nil
+				control:SetCallback(entry.action)
 
 			else
 				-- For a select this asks for a strip; for an input it asks for
@@ -1276,13 +1363,22 @@ Renderer.CreatePage = function(self, content)
 		if (found) then return found.offset, found.index, found.control end
 	end
 
-	page.RevealPath = function(self, path)
+	page.RevealPath = function(self, path, allowAdvanced)
 		if (not self.options or not self.path or type(path) ~= "table") then return false end
 		if (not VisiblePath(self.options, self.path)) then return false end
 		local group = Config.GetGroup(self.options, self.path)
 		if (type(group) ~= "table") then return false end
-		local tree = BuildTree(self, group, self.options, self.path, 0)
-		if (not RevealTree(self, tree, path)) then return false end
+		local filter = self.advancedSettingsLink and Kit.Advanced and not Kit.Advanced.IsEnabled()
+			and Kit.Advanced.IsAdvanced or nil
+		local previous = self.revealedAdvancedPath
+		if (filter and allowAdvanced and #path > #self.path) then
+			self.revealedAdvancedPath = path
+		end
+		local tree = BuildTree(self, group, self.options, self.path, 0, filter)
+		if (not RevealTree(self, tree, path)) then
+			self.revealedAdvancedPath = previous
+			return false
+		end
 		self:Show(self.options, self.path)
 		return true
 	end

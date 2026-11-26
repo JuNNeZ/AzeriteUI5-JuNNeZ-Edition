@@ -24,6 +24,7 @@
 	<Script file="Kit\Kit.lua"/>
 	<Script file="Kit\Look.lua"/>
 	<Script file="Kit\Config.lua"/>
+	<Script file="Kit\Advanced.lua"/>
 	<Script file="Kit\Defaults.lua"/>
 	<Script file="Kit\Combat.lua"/>
 	<Script file="Kit\Controls.lua"/>
@@ -67,6 +68,7 @@
 	<Script file="OptionsPages\Tracker.lua"/>
 	<Script file="OptionsPages\Themes.lua"/>
 	<Script file="OptionsPages\AddOnSkins.lua"/>
+	<Script file="OptionsPages\InterfaceParts.lua"/>
 	<Script file="OptionsPages\UnitFrames.lua"/>
 	<Script file="OptionsPages\HealthPrediction.lua"/>
 	<Script file="OptionsPages\GroupIndicators.lua"/>

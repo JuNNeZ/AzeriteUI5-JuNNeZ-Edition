@@ -765,6 +765,7 @@ L["How this window is drawn. These are kept outside your settings profiles, so s
 L["Window"] = "Janela"
 L["Panel Scale"] = "Escala do painel"
 L["How large the options window is drawn, independently of the rest of the interface. Useful on a very high resolution display, where the window can otherwise be smaller than everything around it."] = "O tamanho da janela de opções, independente do resto da interface. Útil em telas de resolução muito alta, onde a janela pode ficar menor que tudo ao redor."
+L["Show advanced settings"] = "Mostrar configurações avançadas"
 L["Reset Position and Size"] = "Redefinir posição e tamanho"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "Coloca a janela de volta no centro da tela com o tamanho original. Útil se ela foi arrastada para um lugar inalcançável."
 L["About"] = "Sobre"
@@ -2025,3 +2026,13 @@ L["New casts are added above the first one instead of below."] = "Novas conjura�
 L["Preview casts"] = "Conjurações de prévia"
 L["How many example casts the preview shows in /lock and Edit Mode while no enemy is casting, so you can see where a full list sits."] = "Quantas conjurações de exemplo a prévia mostra no /lock e no Modo de Edição enquanto nenhum inimigo conjura, para ver onde uma lista cheia fica."
 L["Shows example casts where the list sits, so every change shows at once. It turns off in combat and when this window closes."] = "Mostra conjurações de exemplo onde a lista fica, para ver cada mudança na hora. Desliga em combate e ao fechar esta janela."
+
+-- /az -> Interface Parts (Options/OptionsPages/InterfaceParts.lua).
+L["Interface Parts"] = "Partes da interface"
+L["Experience and reputation bars"] = "Barras de experiência e reputação"
+L["Extra action buttons"] = "Botões de ação extra"
+L["Off also removes the Bags page and the group loot settings on it."] = "Desligar também remove a página Bolsas e as configurações de saque em grupo nela."
+L["Turn off any part of AzeriteUI you do not want. A part that is off is left to the game: where Blizzard has its own version, it shows as Blizzard made it. Hover a switch to see which part it is."] = "Desligue qualquer parte do AzeriteUI que você não quiser. Uma parte desligada fica por conta do jogo: onde a Blizzard tem sua própria versão, ela aparece como a Blizzard a fez. Passe o mouse sobre um interruptor para ver qual parte é."
+L["Most parts come back as soon as you turn them on. Turning a part off is immediate when it only uses AzeriteUI's own frames; one that changes Blizzard's frames needs a reload to give them back as Blizzard made them, and its switch says so. Parts with a page of their own use the same switch as on that page."] = "A maioria das partes volta assim que você as liga. Desligar uma parte é imediato quando ela usa só quadros do próprio AzeriteUI; uma que altera quadros da Blizzard exige recarregar para devolvê-los como a Blizzard os fez, e seu interruptor avisa. Partes com página própria usam o mesmo interruptor dessa página."
+L["Takes effect after a reload."] = "Vale após recarregar."
+L["Off while %s is enabled: it does this job."] = "Desligado enquanto %s estiver ativado: ele faz esse trabalho."

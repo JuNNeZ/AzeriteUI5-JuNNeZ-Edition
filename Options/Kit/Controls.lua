@@ -874,8 +874,16 @@ Controls.CreateToggle = function(parent)
 	-- so there is nothing else either of them could mean.
 	control.Activate = Flip
 	control.Nudge = Flip
-	box:SetScript("OnEnter", function() control.hover:Show() end)
-	box:SetScript("OnLeave", function() control.hover:Hide() end)
+	-- control.onHover(true|false) is set per bind by the renderer (pooled controls),
+	-- for rows that outline their part while hovered (/az -> Interface Parts).
+	box:SetScript("OnEnter", function()
+		control.hover:Show()
+		if (control.onHover) then control.onHover(true) end
+	end)
+	box:SetScript("OnLeave", function()
+		control.hover:Hide()
+		if (control.onHover) then control.onHover(false) end
+	end)
 
 	control:SetValue(false)
 	return control

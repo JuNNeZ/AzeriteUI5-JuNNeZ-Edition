@@ -765,6 +765,7 @@ L["How this window is drawn. These are kept outside your settings profiles, so s
 L["Window"] = "Окно"
 L["Panel Scale"] = "Масштаб окна"
 L["How large the options window is drawn, independently of the rest of the interface. Useful on a very high resolution display, where the window can otherwise be smaller than everything around it."] = "Размер окна настроек независимо от остального интерфейса. Полезно на экранах с очень высоким разрешением, где иначе окно может оказаться меньше всего остального."
+L["Show advanced settings"] = "Показывать расширенные настройки"
 L["Reset Position and Size"] = "Сбросить положение и размер"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "Возвращает окно в центр экрана с исходным размером. Полезно, если его утащили туда, куда не дотянуться."
 L["About"] = "О программе"
@@ -2025,3 +2026,13 @@ L["New casts are added above the first one instead of below."] = "Новые з�
 L["Preview casts"] = "Заклинания в превью"
 L["How many example casts the preview shows in /lock and Edit Mode while no enemy is casting, so you can see where a full list sits."] = "Сколько примеров заклинаний показывает превью в /lock и режиме редактирования, пока враги ничего не читают, чтобы видеть, где окажется полный список."
 L["Shows example casts where the list sits, so every change shows at once. It turns off in combat and when this window closes."] = "Показывает примеры заклинаний на месте списка, чтобы каждое изменение было видно сразу. Выключается в бою и при закрытии этого окна."
+
+-- /az -> Interface Parts (Options/OptionsPages/InterfaceParts.lua).
+L["Interface Parts"] = "Части интерфейса"
+L["Experience and reputation bars"] = "Полосы опыта и репутации"
+L["Extra action buttons"] = "Дополнительные кнопки действий"
+L["Off also removes the Bags page and the group loot settings on it."] = "Отключение также убирает страницу «Сумки» и настройки групповой добычи на ней."
+L["Turn off any part of AzeriteUI you do not want. A part that is off is left to the game: where Blizzard has its own version, it shows as Blizzard made it. Hover a switch to see which part it is."] = "Отключите любую часть AzeriteUI, которая вам не нужна. Отключённая часть остаётся за игрой: если у Blizzard есть своя версия, она показывается так, как её сделала Blizzard. Наведите курсор на переключатель, чтобы увидеть, какая это часть."
+L["Most parts come back as soon as you turn them on. Turning a part off is immediate when it only uses AzeriteUI's own frames; one that changes Blizzard's frames needs a reload to give them back as Blizzard made them, and its switch says so. Parts with a page of their own use the same switch as on that page."] = "Большинство частей возвращаются сразу после включения. Отключение происходит сразу, если часть использует только собственные рамки AzeriteUI; часть, которая меняет рамки Blizzard, требует перезагрузки, чтобы вернуть их такими, как их сделала Blizzard, и её переключатель об этом сообщает. Части со своей страницей используют тот же переключатель, что и на этой странице."
+L["Takes effect after a reload."] = "Вступит в силу после перезагрузки."
+L["Off while %s is enabled: it does this job."] = "Отключено, пока включён %s: он выполняет эту задачу."

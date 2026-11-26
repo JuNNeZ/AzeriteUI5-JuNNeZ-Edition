@@ -1414,6 +1414,12 @@ MinimapMod.SetTheme = function(self, requestedTheme)
 	self:UpdateCustomElements()
 end
 
+--- Whether a theme of ours is on the minimap right now. Switching the minimap off
+--- leaves it there until a reload; the options page says so while this is true.
+MinimapMod.IsStyled = function(self)
+	return CURRENT_THEME ~= DEFAULT_THEME
+end
+
 -- Minimap Widget Settings
 --------------------------------------------
 -- Create our custom elements

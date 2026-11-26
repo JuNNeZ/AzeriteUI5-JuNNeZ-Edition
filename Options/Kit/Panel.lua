@@ -225,6 +225,8 @@ IndexGroup = function(group, options, path, trail)
 		end
 
 		if (option.type == "description") then return end
+		-- A mirror (Interface Parts) is found under its own page instead.
+		if (Config.GetMirror and Config.GetMirror(option)) then return end
 
 		local desc = Resolve(option.desc, nil)
 		if (type(desc) ~= "string") then desc = nil end
@@ -237,6 +239,7 @@ IndexGroup = function(group, options, path, trail)
 			trail = trail,
 			page = childPath[1],
 			path = stored,
+			option = option,
 			haystack = string_lower(name .. " " .. (desc or ""))
 		}
 	end)
@@ -544,7 +547,7 @@ local Section_Row = function(index)
 
 	row:SetScript("OnClick", function(self)
 		if (self.path) then
-			Panel:RevealPath(self.path, false)
+			Panel:RevealPath(self.path, false, false)
 			return
 		end
 		if (contentScroll and self.offset) then
@@ -1331,6 +1334,7 @@ Panel.SelectPage = function(self, key)
 	-- A page you are arriving at opens its drawer. Closing one is a thing you
 	-- do to the page you are on, and it should not follow you to the next.
 	self.selected = key
+	page.revealedAdvancedPath = nil
 	self.railClosed = nil
 	self.requestedSection = nil
 
@@ -1407,14 +1411,14 @@ end
 
 -- Opens every enclosing tab/section before using the real option path to
 -- locate the row. Presentation state never changes the option's hidden rule.
-Panel.RevealPath = function(self, path, highlight)
+Panel.RevealPath = function(self, path, highlight, allowAdvanced)
 	if (type(path) ~= "table" or #path == 0 or self.selected ~= path[1]
 		or not page or not page.RevealPath) then return false end
 	local stored = {}
 	for i = 1, #path do stored[i] = path[i] end
 	path = stored
 	self:ClearKeyboardFocus()
-	if (not page:RevealPath(path)) then return false end
+	if (not page:RevealPath(path, allowAdvanced ~= false)) then return false end
 
 	self.navigationSerial = (self.navigationSerial or 0) + 1
 	local serial = self.navigationSerial
@@ -1500,7 +1504,8 @@ Panel.ShowResults = function(self, query)
 				.. shown:sub(to + 1)
 		end
 		row.name:SetText(shown)
-		row.trail:SetText(entry.trail)
+		local advanced = Kit.Advanced and Kit.Advanced.IsAdvanced(options, entry.path, entry.option)
+		row.trail:SetText(advanced and (L["Advanced"] .. " · " .. entry.trail) or entry.trail)
 		row.go:Hide()
 		row.highlight:Hide()
 		row:Show()
@@ -2269,6 +2274,10 @@ local Build = function()
 	Panel.contentBar = contentBar
 
 	page = Renderer:CreatePage(pageContent)
+	page.advancedSettingsLink = function()
+		Panel:SetTab("settings")
+		Panel:GoTo({ "appearance", "showAdvanced" })
+	end
 	page.OnChanged = function(_, path) Panel:OnSettingChanged(path) end
 	page.OnStructureChanged = function()
 		if (Kit.Controls and Kit.Controls.CloseDropdown) then Kit.Controls.CloseDropdown() end

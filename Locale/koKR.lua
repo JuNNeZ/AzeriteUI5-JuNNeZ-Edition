@@ -765,6 +765,7 @@ L["How this window is drawn. These are kept outside your settings profiles, so s
 L["Window"] = "창"
 L["Panel Scale"] = "창 크기"
 L["How large the options window is drawn, independently of the rest of the interface. Useful on a very high resolution display, where the window can otherwise be smaller than everything around it."] = "인터페이스의 나머지 부분과 별개로 옵션 창의 크기를 정합니다. 해상도가 매우 높은 화면에서 창이 주변보다 작아 보일 때 유용합니다."
+L["Show advanced settings"] = "고급 설정 표시"
 L["Reset Position and Size"] = "위치와 크기 초기화"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "창을 원래 크기로 화면 중앙에 되돌립니다. 닿을 수 없는 곳으로 끌려갔을 때 유용합니다."
 L["About"] = "정보"
@@ -2025,3 +2026,13 @@ L["New casts are added above the first one instead of below."] = "새 시전을 
 L["Preview casts"] = "미리보기 시전 수"
 L["How many example casts the preview shows in /lock and Edit Mode while no enemy is casting, so you can see where a full list sits."] = "시전 중인 적이 없을 때 /lock과 편집 모드의 미리보기에 표시할 예시 시전 수입니다. 목록이 가득 찼을 때의 위치를 확인할 수 있습니다."
 L["Shows example casts where the list sits, so every change shows at once. It turns off in combat and when this window closes."] = "목록이 있는 자리에 예시 시전을 표시해 모든 변경을 바로 볼 수 있습니다. 전투가 시작되거나 이 창을 닫으면 꺼집니다."
+
+-- /az -> Interface Parts (Options/OptionsPages/InterfaceParts.lua).
+L["Interface Parts"] = "인터페이스 구성 요소"
+L["Experience and reputation bars"] = "경험치 및 평판 바"
+L["Extra action buttons"] = "추가 행동 단추"
+L["Off also removes the Bags page and the group loot settings on it."] = "끄면 가방 페이지와 그 안의 파티 전리품 설정도 사라집니다."
+L["Turn off any part of AzeriteUI you do not want. A part that is off is left to the game: where Blizzard has its own version, it shows as Blizzard made it. Hover a switch to see which part it is."] = "원하지 않는 AzeriteUI 구성 요소를 끌 수 있습니다. 끈 구성 요소는 게임에 맡겨집니다. 블리자드 기본 버전이 있으면 블리자드가 만든 그대로 표시됩니다. 스위치에 마우스를 올리면 어떤 구성 요소인지 표시됩니다."
+L["Most parts come back as soon as you turn them on. Turning a part off is immediate when it only uses AzeriteUI's own frames; one that changes Blizzard's frames needs a reload to give them back as Blizzard made them, and its switch says so. Parts with a page of their own use the same switch as on that page."] = "대부분의 구성 요소는 켜는 즉시 돌아옵니다. AzeriteUI 자체 프레임만 쓰는 구성 요소는 바로 꺼집니다. 블리자드 프레임을 바꾸는 구성 요소는 블리자드가 만든 그대로 되돌리려면 UI를 다시 불러와야 하며, 스위치에 그렇게 표시됩니다. 자체 페이지가 있는 구성 요소는 그 페이지와 같은 스위치를 사용합니다."
+L["Takes effect after a reload."] = "UI를 다시 불러온 후 적용됩니다."
+L["Off while %s is enabled: it does this job."] = "%s 애드온이 활성화된 동안 꺼져 있습니다. 해당 애드온이 이 역할을 합니다."

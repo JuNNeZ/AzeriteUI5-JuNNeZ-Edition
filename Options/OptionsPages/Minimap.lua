@@ -154,7 +154,16 @@ local GenerateOptions = function()
 		args = {
 			enabled = {
 				name = L["Enable"],
-				desc = L["Let AzeriteUI style and place the minimap."],
+				-- Off leaves our theme on the minimap until a reload (UpdateSettings stops
+				-- early); the help line says so while that is the case. Interface Parts
+				-- mirrors this switch, help line included.
+				desc = function()
+					local module = getmodule()
+					if (module and not module.db.profile.enabled and module.IsStyled and module:IsStyled()) then
+						return L["Takes effect after a reload."]
+					end
+					return L["Let AzeriteUI style and place the minimap."]
+				end,
 				order = 1,
 				type = "toggle",
 				width = "full",

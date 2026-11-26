@@ -159,6 +159,9 @@ end
 
 -- Re-reads every reason to hide the tracker. Alpha only, so safe in combat.
 Tracker.RefreshAlpha = function(self)
+	-- Turned off on /az -> Interface Parts: Blizzard's tracker is left alone,
+	-- MythicPlus's call included.
+	if (not self:IsEnabled()) then return end
 	UpdateTrackerAlpha()
 end
 

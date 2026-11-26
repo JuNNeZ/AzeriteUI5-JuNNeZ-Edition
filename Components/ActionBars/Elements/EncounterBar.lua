@@ -26,6 +26,10 @@
 --]]
 local _, ns = ...
 
+-- /az -> Interface Parts names the addon this part stands down for (Core/Core.lua).
+ns.PartStandDowns = ns.PartStandDowns or {}
+ns.PartStandDowns.EncounterBar = { "ConsolePort_Bar" }
+
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local EncounterBar = ns:NewModule("EncounterBar", ns.MovableModulePrototype, "LibMoreEvents-1.0", "AceHook-3.0")

@@ -413,7 +413,8 @@ end
 -- A plain, unprotected frame, so Hide/Show is safe in combat too.
 Info.UpdateMinimapAutoHide = function(self)
 	local frame = self.frame
-	if (not frame) then return end
+	-- Minimap.lua calls this; a bar turned off mid-session (StopPart) stays hidden.
+	if (not frame or not self:IsEnabled()) then return end
 
 	local minimap = ns:GetModule("Minimap", true)
 	local hidden = minimap and minimap.autoHidden and true or false
@@ -578,6 +579,9 @@ Info.UpdateSettings = function(self)
 	self:UpdateMinimapAutoHide()
 end
 
+-- Great Vault progress events, registered by OnEnable and dropped by StopPart.
+local VAULT_EVENTS = { "WEEKLY_REWARDS_UPDATE", "CHALLENGE_MODE_COMPLETED", "CHALLENGE_MODE_MAPS_UPDATE" }
+
 Info.OnEnable = function(self)
 	self.addonUsage = {}
 
@@ -603,12 +607,38 @@ Info.OnEnable = function(self)
 
 	if (ns.IsRetailContent and C_WeeklyRewards) then
 		self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateGreatVault")
-		for _, event in ipairs({ "WEEKLY_REWARDS_UPDATE", "CHALLENGE_MODE_COMPLETED", "CHALLENGE_MODE_MAPS_UPDATE" }) do
+		for _, event in ipairs(VAULT_EVENTS) do
 			if (ns.API.IsEventAvailable(event)) then
 				self:RegisterEvent(event, "UpdateGreatVault")
 			end
 		end
 	end
 
+end
+
+-- /az -> Interface Parts turns the bar off mid-session (Core/Core.lua StopPartNow):
+-- it is a frame of our own, so hiding it, dropping its events and disabling its mover
+-- undoes it. Disable then cancels the timers (AceTimer); their handles are cleared
+-- here so UpdateTimers starts them again on the next start.
+Info.StopPart = function(self)
+	self:UnregisterEvent("PLAYER_ENTERING_WORLD", "UpdateResting")
+	self:UnregisterEvent("PLAYER_UPDATE_RESTING", "UpdateResting")
+	self:UnregisterEvent("ZONE_CHANGED", "UpdateZone")
+	self:UnregisterEvent("ZONE_CHANGED_INDOORS", "UpdateZone")
+	self:UnregisterEvent("ZONE_CHANGED_NEW_AREA", "UpdateZone")
+	self:UnregisterEvent("PLAYER_ENTERING_WORLD", "UpdateGreatVault")
+	for _, event in ipairs(VAULT_EVENTS) do
+		self:UnregisterEvent(event, "UpdateGreatVault")
+	end
+	self.performanceTimer, self.clockTimer = nil, nil
+	if (self.frame) then self.frame:Hide() end
+	if (self.anchor) then self.anchor:Disable() end
+end
+
+-- After a start mid-session: OnEnable's UpdateSettings did the rest, the resting
+-- icon waits for an event, and a mover disabled by StopPart comes back.
+Info.PostPartStart = function(self)
+	if (self.anchor) then self.anchor:Enable() end
+	self:UpdateResting()
 end
 

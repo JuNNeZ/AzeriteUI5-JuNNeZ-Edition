@@ -762,9 +762,24 @@ local SetPanelStatus = function(text, found, hold)
 	end
 end
 
+local Show
+
 Preview.Request = function(self, options, path, label)
 	local targets, moduleName, kind, policy = self:ResolveTargets(options, path)
 	if (not moduleName) then return false end
+	return Show(self, targets, moduleName, kind, policy, path, label)
+end
+
+--- Outlines a module's own frame, for a row that names a part rather than one of
+--- its settings (/az -> Interface Parts, on hover). Same overlay and footer as a
+--- change; a part that is off has no frame and the footer says so.
+Preview.RequestModule = function(self, moduleName, label)
+	if (type(moduleName) ~= "string") then return false end
+	local target = ResolveNamed(moduleName, {})
+	return Show(self, { target }, moduleName, "exact", nil, {}, label)
+end
+
+Show = function(self, targets, moduleName, kind, policy, path, label)
 	local style = self.DefaultStyle
 
 	requestID = requestID + 1

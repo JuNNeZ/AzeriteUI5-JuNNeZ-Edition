@@ -40,6 +40,10 @@ local CHAT_REPLACEMENTS = {
 	"Chattynator"
 }
 
+-- /az -> Interface Parts names the addon the chat part stands down for (Core/Core.lua).
+ns.PartStandDowns = ns.PartStandDowns or {}
+ns.PartStandDowns.ChatFrames = CHAT_REPLACEMENTS
+
 local IsChatReplaced = function()
 	for _,addon in ipairs(CHAT_REPLACEMENTS) do
 		if (ns.API.IsAddOnEnabled(addon)) then

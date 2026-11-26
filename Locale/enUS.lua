@@ -773,6 +773,7 @@ L["How this window is drawn. These are kept outside your settings profiles, so s
 L["Window"] = true
 L["Panel Scale"] = true
 L["How large the options window is drawn, independently of the rest of the interface. Useful on a very high resolution display, where the window can otherwise be smaller than everything around it."] = true
+L["Show advanced settings"] = true
 L["Reset Position and Size"] = true
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = true
 L["About"] = true
@@ -2022,3 +2023,13 @@ L["New casts are added above the first one instead of below."] = true
 L["Preview casts"] = true
 L["How many example casts the preview shows in /lock and Edit Mode while no enemy is casting, so you can see where a full list sits."] = true
 L["Shows example casts where the list sits, so every change shows at once. It turns off in combat and when this window closes."] = true
+
+-- /az -> Interface Parts (Options/OptionsPages/InterfaceParts.lua).
+L["Interface Parts"] = true
+L["Experience and reputation bars"] = true
+L["Extra action buttons"] = true
+L["Off also removes the Bags page and the group loot settings on it."] = true
+L["Turn off any part of AzeriteUI you do not want. A part that is off is left to the game: where Blizzard has its own version, it shows as Blizzard made it. Hover a switch to see which part it is."] = true
+L["Most parts come back as soon as you turn them on. Turning a part off is immediate when it only uses AzeriteUI's own frames; one that changes Blizzard's frames needs a reload to give them back as Blizzard made them, and its switch says so. Parts with a page of their own use the same switch as on that page."] = true
+L["Takes effect after a reload."] = true
+L["Off while %s is enabled: it does this job."] = true

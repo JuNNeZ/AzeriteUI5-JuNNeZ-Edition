@@ -765,6 +765,7 @@ L["How this window is drawn. These are kept outside your settings profiles, so s
 L["Window"] = "Finestra"
 L["Panel Scale"] = "Scala del pannello"
 L["How large the options window is drawn, independently of the rest of the interface. Useful on a very high resolution display, where the window can otherwise be smaller than everything around it."] = "Quanto è grande la finestra delle opzioni, indipendentemente dal resto dell'interfaccia. Utile su schermi ad altissima risoluzione, dove altrimenti la finestra può risultare più piccola di tutto il resto."
+L["Show advanced settings"] = "Mostra impostazioni avanzate"
 L["Reset Position and Size"] = "Reimposta posizione e dimensioni"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "Riporta la finestra al centro dello schermo con le dimensioni originali. Utile se è stata trascinata in un punto irraggiungibile."
 L["About"] = "Informazioni"
@@ -2025,3 +2026,13 @@ L["New casts are added above the first one instead of below."] = "I nuovi lanci 
 L["Preview casts"] = "Lanci di anteprima"
 L["How many example casts the preview shows in /lock and Edit Mode while no enemy is casting, so you can see where a full list sits."] = "Quanti lanci di esempio mostra l'anteprima in /lock e in Modalità modifica mentre nessun nemico lancia, per vedere dove si trova un elenco pieno."
 L["Shows example casts where the list sits, so every change shows at once. It turns off in combat and when this window closes."] = "Mostra lanci di esempio dove si trova l'elenco, così ogni modifica si vede subito. Si spegne in combattimento e alla chiusura di questa finestra."
+
+-- /az -> Interface Parts (Options/OptionsPages/InterfaceParts.lua).
+L["Interface Parts"] = "Parti dell'interfaccia"
+L["Experience and reputation bars"] = "Barre di esperienza e reputazione"
+L["Extra action buttons"] = "Pulsanti azione extra"
+L["Off also removes the Bags page and the group loot settings on it."] = "Disattivarla rimuove anche la pagina Borse e le impostazioni del bottino di gruppo che contiene."
+L["Turn off any part of AzeriteUI you do not want. A part that is off is left to the game: where Blizzard has its own version, it shows as Blizzard made it. Hover a switch to see which part it is."] = "Disattiva qualsiasi parte di AzeriteUI che non vuoi. Una parte disattivata è lasciata al gioco: dove Blizzard ha una sua versione, appare come l'ha fatta Blizzard. Passa sopra un interruttore per vedere di quale parte si tratta."
+L["Most parts come back as soon as you turn them on. Turning a part off is immediate when it only uses AzeriteUI's own frames; one that changes Blizzard's frames needs a reload to give them back as Blizzard made them, and its switch says so. Parts with a page of their own use the same switch as on that page."] = "La maggior parte delle parti torna appena le attivi. Disattivare una parte è immediato se usa solo riquadri propri di AzeriteUI; una che modifica i riquadri di Blizzard richiede un ricaricamento per restituirli come li ha fatti Blizzard, e il suo interruttore lo indica. Le parti con una pagina propria usano lo stesso interruttore di quella pagina."
+L["Takes effect after a reload."] = "Si applica dopo un ricaricamento."
+L["Off while %s is enabled: it does this job."] = "Disattivato finché %s è attivo: svolge questo compito."

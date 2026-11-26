@@ -765,6 +765,7 @@ L["How this window is drawn. These are kept outside your settings profiles, so s
 L["Window"] = "Fenster"
 L["Panel Scale"] = "Fensterskalierung"
 L["How large the options window is drawn, independently of the rest of the interface. Useful on a very high resolution display, where the window can otherwise be smaller than everything around it."] = "Wie groß das Optionsfenster gezeichnet wird, unabhängig vom Rest der Oberfläche. Nützlich bei sehr hoher Auflösung, wo das Fenster sonst kleiner als alles um es herum sein kann."
+L["Show advanced settings"] = "Erweiterte Einstellungen anzeigen"
 L["Reset Position and Size"] = "Position und Größe zurücksetzen"
 L["Puts the window back in the middle of the screen at its original size. Useful if it has been dragged somewhere you cannot reach."] = "Setzt das Fenster in Originalgröße zurück in die Bildschirmmitte. Nützlich, wenn es an eine unerreichbare Stelle gezogen wurde."
 L["About"] = "Über"
@@ -2025,3 +2026,13 @@ L["New casts are added above the first one instead of below."] = "Neue Zauber we
 L["Preview casts"] = "Vorschau-Zauber"
 L["How many example casts the preview shows in /lock and Edit Mode while no enemy is casting, so you can see where a full list sits."] = "Wie viele Beispielzauber die Vorschau in /lock und im Bearbeitungsmodus zeigt, solange kein Feind zaubert, damit du siehst, wo eine volle Liste sitzt."
 L["Shows example casts where the list sits, so every change shows at once. It turns off in combat and when this window closes."] = "Zeigt Beispielzauber dort, wo die Liste sitzt, damit jede Änderung sofort sichtbar ist. Schaltet sich im Kampf und beim Schließen dieses Fensters aus."
+
+-- /az -> Interface Parts (Options/OptionsPages/InterfaceParts.lua).
+L["Interface Parts"] = "Oberflächenteile"
+L["Experience and reputation bars"] = "Erfahrungs- und Rufleisten"
+L["Extra action buttons"] = "Zusätzliche Aktionstasten"
+L["Off also removes the Bags page and the group loot settings on it."] = "Aus entfernt auch die Seite Taschen und die Gruppenbeute-Einstellungen darauf."
+L["Turn off any part of AzeriteUI you do not want. A part that is off is left to the game: where Blizzard has its own version, it shows as Blizzard made it. Hover a switch to see which part it is."] = "Schalte jeden Teil von AzeriteUI aus, den du nicht willst. Ein ausgeschalteter Teil bleibt dem Spiel überlassen: Wo Blizzard eine eigene Version hat, erscheint sie so, wie Blizzard sie gemacht hat. Fahre über einen Schalter, um zu sehen, welcher Teil es ist."
+L["Most parts come back as soon as you turn them on. Turning a part off is immediate when it only uses AzeriteUI's own frames; one that changes Blizzard's frames needs a reload to give them back as Blizzard made them, and its switch says so. Parts with a page of their own use the same switch as on that page."] = "Die meisten Teile kommen sofort zurück, wenn du sie einschaltest. Einen Teil auszuschalten wirkt sofort, wenn er nur eigene Fenster von AzeriteUI nutzt; einer, der Blizzards Fenster verändert, braucht ein Neuladen, um sie so zurückzugeben, wie Blizzard sie gemacht hat, und sein Schalter sagt das. Teile mit einer eigenen Seite nutzen denselben Schalter wie auf dieser Seite."
+L["Takes effect after a reload."] = "Wirkt nach einem Neuladen."
+L["Off while %s is enabled: it does this job."] = "Aus, solange %s aktiviert ist: Es übernimmt diese Aufgabe."

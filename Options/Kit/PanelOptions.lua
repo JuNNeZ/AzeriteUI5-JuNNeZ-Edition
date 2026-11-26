@@ -170,6 +170,19 @@ local appearance = {
 				if (Kit.Panel) then Kit.Panel:SetPanelScale(val) end
 			end
 		},
+		showAdvanced = {
+			name = L["Show advanced settings"],
+			type = "toggle",
+			order = 12,
+			get = function()
+				return Kit.Advanced and Kit.Advanced.IsEnabled() or false
+			end,
+			set = function(_, value)
+				if (ns.db and ns.db.global) then
+					ns.db.global.optionsShowAdvanced = value and true or nil
+				end
+			end
+		},
 		reset = {
 			name = L["Reset Position and Size"],
 			settingIcon = "reset",

@@ -87,7 +87,8 @@ local EachSetting = function(options, pages, callback)
 		if (type(group) == "table") then
 			local names = {}
 			for _, item in ipairs(Renderer:Collect(group, options, { pageKey })) do
-				if (item.option and item.kind ~= "execute") then
+				-- A mirrored row (Interface Parts) is the setting on its own page already.
+				if (item.option and item.kind ~= "execute" and not item.mirrored) then
 					local trail = entry.name
 					local sectionKey = #item.path > 2 and item.path[2] or nil
 					if (sectionKey) then

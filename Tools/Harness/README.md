@@ -457,3 +457,11 @@ colours, the loose mob's target name (and its giving way to the castbar), the lo
 secret threat, solo/Always/Off and a colour-blind preset. `lua Tools/Harness/target_threat_percent_harness.lua . [Forever]`
 drives the real `ThreatPercent_Update` from Target.lua through `TargetFrameMod.Update`'s closure: tanking, a share
 behind the tank, off the table, solo, player/friendly targets, secret values (never compared) and the switch.
+
+Interface Parts (FixLog 2026-11-26): `lua Tools/Harness/interface_parts_harness.lua` (no root argument; pass a
+mutated copy of Core.lua instead to watch it fail) boots `Core/Core.lua` on the real AceDB-GE, enables modules
+through the real AceAddon (with WoW's argument-passing xpcall) and checks that a part turned off never runs its
+OnEnable, at login or on an explicit `:Enable()`, still runs its mixins' OnEmbedDisable, that turning a part on
+starts it at once only where allowed and never in combat, and that the page passes AceConfigRegistry's validation.
+`frame_panel_harness.lua` checks the page's mirrors (other pages' switches) against the real options table, and that
+Changed and Quick Start skip them.

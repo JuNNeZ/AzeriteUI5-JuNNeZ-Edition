@@ -29,6 +29,11 @@ local _, ns = ...
 if (ns.NativeController and ns.NativeController.IsActive()) then return end
 if (not ns.IsRetail) then return end
 
+-- /az -> Interface Parts names the addon this part stands down for (Core/Core.lua).
+-- After the client checks: the part does not exist on the clients they return for.
+ns.PartStandDowns = ns.PartStandDowns or {}
+ns.PartStandDowns.ExtraActionButtons = { "ConsolePort_Bar" }
+
 if (ns.API.IsAddOnEnabled("ConsolePort_Bar")) then return end
 
 local ExtraButtons = ns:NewModule("ExtraActionButtons", "LibMoreEvents-1.0", "AceHook-3.0")

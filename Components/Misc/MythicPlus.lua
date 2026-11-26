@@ -738,7 +738,8 @@ end
 -- Only alpha we set ourselves is ever put back.
 MythicPlus.UpdateBlizzardBanner = function(self)
 	local banner = _G.ChallengeModeCompleteBanner
-	if (not banner or not banner.SetAlpha) then return end
+	-- The banner hook outlives a panel turned off mid-session (StopPart).
+	if (not banner or not banner.SetAlpha or not self:IsEnabled()) then return end
 
 	local db = self.db.profile
 	if (db.showCompletionCard and db.hideBlizzardBanner) then
@@ -949,25 +950,28 @@ MythicPlus.UpdateSettings = function(self)
 	self:UpdateBlizzardBanner()
 end
 
+-- Registered by OnEnable, dropped by StopPart.
+local EVENTS = {
+	"CHALLENGE_MODE_KEYSTONE_RECEPTABLE_OPEN",
+	"CHALLENGE_MODE_START",
+	"CHALLENGE_MODE_COMPLETED",
+	"CHALLENGE_MODE_RESET",
+	"CHALLENGE_MODE_DEATH_COUNT_UPDATED",
+	"WORLD_STATE_TIMER_START",
+	"WORLD_STATE_TIMER_STOP",
+	"SCENARIO_CRITERIA_UPDATE",
+	"SCENARIO_POI_UPDATE",
+	"SPELL_UPDATE_CHARGES",
+	"PLAYER_ENTERING_WORLD"
+}
+
 MythicPlus.OnEnable = function(self)
 	self:PrepareFrames()
 	self:CreateAnchor(L["Mythic+"])
 
 	ns.MovableModulePrototype.OnEnable(self)
 
-	for _, event in ipairs({
-		"CHALLENGE_MODE_KEYSTONE_RECEPTABLE_OPEN",
-		"CHALLENGE_MODE_START",
-		"CHALLENGE_MODE_COMPLETED",
-		"CHALLENGE_MODE_RESET",
-		"CHALLENGE_MODE_DEATH_COUNT_UPDATED",
-		"WORLD_STATE_TIMER_START",
-		"WORLD_STATE_TIMER_STOP",
-		"SCENARIO_CRITERIA_UPDATE",
-		"SCENARIO_POI_UPDATE",
-		"SPELL_UPDATE_CHARGES",
-		"PLAYER_ENTERING_WORLD"
-	}) do
+	for _, event in ipairs(EVENTS) do
 		if (ns.API.IsEventAvailable(event)) then
 			self:RegisterEvent(event, "OnEvent")
 		end
@@ -985,4 +989,30 @@ MythicPlus.OnEnable = function(self)
 	end
 
 	self:CheckTimers()
+end
+
+-- /az -> Interface Parts turns the panel off mid-session (Core/Core.lua StopPartNow).
+-- Our frames go, and Blizzard gets back what the panel held: the tracker's alpha
+-- (through the Tracker module) and the completion banner's alpha, only if we set it.
+-- Disable then cancels the timers (AceTimer); their handles are cleared here. The
+-- banner hook cannot be removed, so UpdateBlizzardBanner does nothing while off.
+MythicPlus.StopPart = function(self)
+	for _, event in ipairs(EVENTS) do
+		self:UnregisterEvent(event, "OnEvent")
+	end
+	self.ticker, self.cardTimer = nil, nil
+	if (self.frame) then self.frame:Hide() end
+	if (self.card) then self.card:Hide() end
+	self:SetTrackerHidden(false)
+	local banner = _G.ChallengeModeCompleteBanner
+	if (self.bannerHidden and banner and banner.SetAlpha) then
+		banner:SetAlpha(1)
+	end
+	self.bannerHidden = nil
+	if (self.anchor) then self.anchor:Disable() end
+end
+
+-- After a start mid-session: OnEnable did the rest (CheckTimers); the mover comes back.
+MythicPlus.PostPartStart = function(self)
+	if (self.anchor) then self.anchor:Enable() end
 end

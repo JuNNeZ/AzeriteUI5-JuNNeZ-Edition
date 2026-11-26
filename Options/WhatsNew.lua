@@ -52,6 +52,14 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.54.0-JuNNeZ",
+		items = {
+			{ text = "Use Interface Parts to choose which parts of AzeriteUI are active.", page = "Interface Parts" },
+			{ text = "Hover a part to find it on screen. Switches tell you when a reload is needed.", page = "Interface Parts" },
+			{ text = "Show advanced settings in Appearance to see all the tuning options.", run = OpenAppearance },
+		},
+	},
+	{
 		version = "5.53.0-JuNNeZ",
 		items = {
 			{ text = "Enemy Casts: a movable list of every enemy cast, with markers and who it hits. Off by default.", page = "Enemy Casts" },

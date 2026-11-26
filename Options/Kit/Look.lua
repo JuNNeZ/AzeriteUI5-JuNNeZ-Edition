@@ -244,7 +244,7 @@ local IconFor = function(key)
 			["Micro Menu"] = "micromenu", ["Execute range"] = "executerange",
 			["Enemy Casts"] = "nameplates",
 			["Game Menu"] = "gamemenu", ["World Map"] = "worldmap",
-			["AddOn Skins"] = "themes"
+			["AddOn Skins"] = "themes", ["Interface Parts"] = "widgets"
 		}
 		if (views) then
 			if (views.QUICKSTART) then byKey[views.QUICKSTART] = "quickstart" end

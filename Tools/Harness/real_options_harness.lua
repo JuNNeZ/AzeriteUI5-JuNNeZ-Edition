@@ -143,6 +143,63 @@ if not options then
 	os.exit(1)
 end
 
+load("Options/Kit/Config.lua")
+load("Options/Kit/Advanced.lua")
+do
+	local function expect(advanced, ...)
+		local path = { ... }
+		local diagnostic = table.concat(path, " > ")
+		local option = assert(Kit.Config.GetGroup(options, path), diagnostic)
+		assert(Kit.Advanced.IsAdvanced(options, path, option) == advanced, diagnostic)
+	end
+	expect(true, "Themes", "druid", "resetEndcap")
+	expect(true, "Explorer Mode", "delayOnLogin")
+	expect(true, "Unit Frames", "healthPrediction", "absorbDisplayMode")
+	expect(true, "Group Frames", "targetMarkersLite", "marker1")
+	expect(true, "Nameplates", "auras", "auraFilters", "auraPicker")
+	expect(true, "Nameplates", "general", "colors", "threatColorPreset")
+	expect(true, "Enemy Casts", "maxRows")
+	expect(true, "Auras", "paddingX")
+	expect(true, "Action Bars", "bar1", "padding")
+	expect(true, "Minimap", "dismountbutton", "useCustomPosition")
+	expect(true, "Chat", "timeVisible")
+	expect(true, "Bags", "sort")
+	expect(true, "Tooltips", "anchorToCursor")
+	expect(true, "GuildManager", "toggleKey")
+	expect(true, "MythicPlus", "autoSlotKeystone")
+	expect(false, "Themes", "druid", "endcap")
+	expect(false, "Explorer Mode", "fadeInCombat")
+	expect(false, "Unit Frames", "player", "powerOrbMode")
+	expect(false, "Unit Frames", "healthPrediction", "showIncomingHeals")
+	expect(false, "Group Frames", "party", "enabled")
+	expect(false, "Nameplates", "enabled")
+	expect(false, "Nameplates", "general", "size", "nameplateScale")
+	expect(false, "Nameplates", "friendly", "friendlyNPCNames", "friendlyNPCNameOnly")
+	expect(false, "Enemy Casts", "mode")
+	expect(false, "Auras", "wrapAfter")
+	expect(false, "Action Bars", "bar1", "layout")
+	expect(false, "Action Bars", "bar2", "enabled")
+	expect(false, "Action Bars", "dimWhenInactive")
+	expect(false, "Chat", "fadeOnInActivity")
+	if not forever then expect(true, "Cooldown Manager", "readyAlerts", "readySound") end
+
+	local profile = realModules.NamePlates.db.profile
+	local old = rawget(profile, "executeThreshold")
+	profile.executeThreshold = 0
+	expect(true, "Execute range", "threshold", "executeThreshold")
+	profile.executeThreshold = .35
+	expect(false, "Execute range", "threshold", "executeThreshold")
+	profile.executeThreshold = old
+	local plates = realModules.NamePlates
+	local oldContext = rawget(plates, "GetEditedNameContext")
+	plates.GetEditedNameContext = function() return "default" end
+	expect(true, "Nameplates", "general", "names", "editedNameContext")
+	plates.GetEditedNameContext = function() return "raid" end
+	expect(false, "Nameplates", "general", "names", "editedNameContext")
+	plates.GetEditedNameContext = oldContext
+	print("Advanced-settings rules passed")
+end
+
 -- All real navigation destinations, including hidden theme sections and the
 -- Settings tab, need a motif. Checking the source tables catches gaps that a
 -- single visible page (or the currently selected theme) cannot expose.

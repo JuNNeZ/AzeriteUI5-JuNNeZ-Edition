@@ -98,6 +98,21 @@ ns:GetModule("PlayerFrameParty").db.profile.enabled = false
 -- Components an option page builds from directly (Tools/Harness/option_components.lua).
 dofile((arg[2] or ".") .. "/option_components.lua")(load, ns)
 
+-- Interface Parts (Options/OptionsPages/InterfaceParts.lua) reads the core part API
+-- from Core/Core.lua, which is not loaded here. Chat stands down for Chattynator.
+do
+	local parts = { Tooltips = true, ChatFrames = true, Banners = true }
+	ns.ToggleableParts = { "Tooltips", "ChatFrames", "Banners" }
+	ns.IsToggleablePart = function(_, name) return parts[name] or false end
+	ns.IsPartDisabled = function() return false end
+	ns.SetPartDisabled = function() end
+	ns.StartPartNow = function() return false end
+	ns.IsPartPending = function() return false end
+	ns.GetPartStandDown = function(_, name) if (name == "ChatFrames") then return "Chattynator" end end
+	-- As in Options.xml: the kit's Config is in place before any page is generated.
+	if (not ns.OptionsKit.Config) then load("Options/Kit/Config.lua") end
+end
+
 -- Load every page listed in Options.xml, in its declared order.
 local xml = io.open(root .. "/Options/Options.xml"):read("*a")
 local pages, failedPages = {}, {}
@@ -328,6 +343,64 @@ end
 check(#FramePanel:CollectPosition(fake) == #FramePanel.PositionRows, "every Position row is collected")
 fake.args.anchorPoint.hidden = function() return true end
 check(#FramePanel:CollectPosition(fake) == #FramePanel.PositionRows - 1, "a hidden Position row is left out")
+
+-- Interface Parts: its mirrors are the real switches, drawn at their real paths.
+do
+	local Config, Renderer = Kit.Config, Kit.Renderer
+	if (not Kit.Views) then load("Options/Kit/Views.lua") end
+	local page = Config.GetGroup(options, { "Interface Parts" })
+	check(type(page) == "table" and page.type == "group", "Interface Parts page is built")
+	local areas = ns.InterfacePartsAreas or {}
+	local mirrors = 0
+	for _, area in ipairs(areas) do
+		for _, row in ipairs(area.rows) do
+			if (row.mirror) then
+				mirrors = mirrors + 1
+				local real = Config.GetGroup(options, row.mirror)
+				-- Forever lacks some pages and sections; there the row hides instead.
+				if (not forever) then
+					check(type(real) == "table" and real.type == "toggle",
+						"Interface Parts mirror reaches a real switch: " .. table.concat(row.mirror, "."), real and real.type)
+				end
+			end
+		end
+	end
+	check(mirrors >= 30, "Interface Parts mirrors the existing switches", mirrors)
+
+	local drawn, own, labels = 0, {}, {}
+	for _, item in ipairs(Renderer:Collect(page, options, { "Interface Parts" })) do
+		if (item.mirrored) then
+			drawn = drawn + 1
+			check(item.path[1] ~= "Interface Parts" and item.previewPath, "a mirrored row carries its real path: " .. table.concat(item.path, "."))
+			check(type(item.label) == "string" and item.label ~= "" and item.label ~= "Enable",
+				"a mirrored row is named for its part: " .. table.concat(item.path, "."), item.label)
+			labels[item.label] = (labels[item.label] or 0) + 1
+		elseif (item.option and item.kind == "toggle") then
+			own[item.path[#item.path]] = item
+		end
+	end
+	check(drawn >= (forever and 20 or 30), "the renderer draws the mirrors as real settings", drawn)
+	-- Two bars of one name would be ambiguous ("Enable" fell back to the same group name).
+	local twice = {}
+	for label, n in pairs(labels) do if (n > 1) then twice[#twice + 1] = label end end
+	check(#twice == 0, "every mirrored row has its own name", table.concat(twice, ", "))
+
+	local tooltips, chat
+	for _, item in pairs(own) do
+		if (Config.GetHoverModule(item.option) == "Tooltips") then tooltips = item end
+		if (item.option.name == "Chat") then chat = item end
+	end
+	check(tooltips, "a part's own switch outlines its module on hover")
+	check(chat and Config.IsDisabled(chat.option, options, chat.path, Addon), "a part that stands down is listed, greyed")
+	local reason = chat and Config.GetDisabledDesc(chat.option, options, chat.path, Addon)
+	check(type(reason) == "string" and reason:find("Chattynator", 1, true), "and names the addon it stands down for", reason)
+
+	local gathered = 0
+	Kit.Views.EachSetting(options, { { key = "Interface Parts", name = "Interface Parts" } }, function(item)
+		if (item.path[1] ~= "Interface Parts") then gathered = gathered + 1 end
+	end)
+	check(gathered == 0, "Changed and Quick Start skip the mirrors, so nothing counts twice", gathered)
+end
 
 print(string.format("Frame panel%s: %d checks, %d failures (%d frames)", forever and " (Forever)" or "", checks, failures, count))
 os.exit(failures == 0 and 0 or 1)

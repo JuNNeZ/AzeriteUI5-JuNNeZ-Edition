@@ -59,7 +59,10 @@ ns.ShouldUseBlizzardBags = function()
 	local profile = module and module.db and module.db.profile
 	if (not profile) then return false end
 	if (module.__useBlizzardBags == nil) then
+		-- With the bags part off (/az -> Interface Parts), Blizzard's bag controls are the
+		-- player's too. Latched with the rest, so that part waits for a reload both ways.
 		module.__useBlizzardBags = profile.useBlizzardBags == true
+			or (ns.IsPartDisabled and ns:IsPartDisabled("Containers")) and true or false
 	end
 	return module.__useBlizzardBags
 end

@@ -259,6 +259,34 @@ Config.SetDisabledDesc = function(option, reason)
 	return option
 end
 
+-- Two more marks kept beside the table for the same reason (an unknown key
+-- breaks /az classic and /az legacy), both used by /az -> Interface Parts:
+--   mirror        a real option path; the panel draws the row as that setting
+--                 at that path (Renderer Collect). The option's own get/set
+--                 must still work, for the classic windows.
+--   hover module  a module name; hovering the row outlines that module's frame
+--                 (Renderer Bind, Preview.RequestModule).
+local mirrors = setmetatable({}, { __mode = "k" })
+local hoverModules = setmetatable({}, { __mode = "k" })
+
+Config.SetMirror = function(option, path)
+	if (type(option) == "table" and type(path) == "table") then mirrors[option] = path end
+	return option
+end
+
+Config.GetMirror = function(option)
+	return type(option) == "table" and mirrors[option] or nil
+end
+
+Config.SetHoverModule = function(option, moduleName)
+	if (type(option) == "table" and type(moduleName) == "string") then hoverModules[option] = moduleName end
+	return option
+end
+
+Config.GetHoverModule = function(option)
+	return type(option) == "table" and hoverModules[option] or nil
+end
+
 -- The reason for a greyed-out row, or nil. Only asked when the row is
 -- disabled; it says nothing about whether it is.
 Config.GetDisabledDesc = function(option, options, path, appName)
