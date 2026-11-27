@@ -32,6 +32,8 @@ local Info = ns:NewModule("Info", ns.MovableModulePrototype, "LibMoreEvents-1.0"
 
 -- GLOBALS: CreateFrame, GameTooltip, GameTooltip_SetDefaultAnchor, InCombatLockdown, IsResting, ToggleCalendar
 -- GLOBALS: GetFramerate, GetLocalTime, GetMinimapZoneText, GetNetStats, GetServerTime, GetZonePVPInfo
+-- GLOBALS: C_TaxiMap, Enum, GetTaxiMapID, GetTime, SecondsToClock, UnitOnTaxi, hooksecurefunc, issecretvalue
+-- GLOBALS: TakeTaxiNode, TaxiRequestEarlyLanding
 -- GLOBALS: GetAddOnMemoryUsage, GetNumAddOns, GetAddOnInfo, UpdateAddOnMemoryUsage
 -- GLOBALS: TIMEMANAGER_TITLE, TIMEMANAGER_TOOLTIP_TITLE, TUTORIAL_TITLE30, FPS_ABBR, HOME, WORLD, INFO
 -- GLOBALS: TIMEMANAGER_TOOLTIP_LOCALTIME, TIMEMANAGER_TOOLTIP_REALMTIME, GAMETIME_TOOLTIP_TOGGLE_CALENDAR
@@ -66,6 +68,7 @@ local defaults = { profile = ns:Merge({
 	enableZone = true,
 	enableResting = true,
 	enableGreatVault = true,
+	showFlightTimer = false,
 
 	useHalfClock = GetCurrentRegionName() == "US",
 	useServerTime = false,
@@ -74,7 +77,7 @@ local defaults = { profile = ns:Merge({
 	hideWhenResting = false,
 	hideWhenMinimapIsHidden = true
 
-}, ns.MovableModulePrototype.defaults) }
+}, ns.MovableModulePrototype.defaults), char = { flightTimes = {} } }
 
 -- Generate module defaults on the fly
 -- to recalculate default values relying on
@@ -360,6 +363,18 @@ Info.PrepareFrames = function(self)
 	self.vault = vault
 	self.vaultFrame = vaultFrame
 
+	if (ns.IsForever) then
+		local flight = frame:CreateFontString(nil, "OVERLAY", nil, 1)
+		flight:SetFontObject(db.LatencyFont)
+		flight:SetTextColor(unpack(db.LatencyColor))
+		flight:SetPoint("RIGHT", latency, "LEFT", -10, 0)
+		flight:SetJustifyH("RIGHT")
+		flight:SetWidth(155)
+		flight:SetWordWrap(false)
+		flight:Hide()
+		self.flightText = flight
+	end
+
 	-- Resting Text
 	local resting = frame:CreateFontString(nil, "OVERLAY", nil, 1)
 	resting:SetFontObject(db.ZoneTextFont)
@@ -475,6 +490,124 @@ Info.UpdateClock = function(self)
 	end
 end
 
+Info.CanShowFlightTimer = function()
+	return ns.IsForever and type(UnitOnTaxi) == "function" and type(SecondsToClock) == "function"
+end
+
+Info.ReadTaxiMap = function(self)
+	self.taxiOrigin, self.taxiDestinations, self.taxiMapClosed = nil, nil, nil
+	self.pendingFlight = nil
+	local states = Enum and Enum.FlightPathState
+	if (not (states and GetTaxiMapID and C_TaxiMap and C_TaxiMap.GetAllTaxiNodes)) then return end
+	local mapID = GetTaxiMapID()
+	if ((issecretvalue and issecretvalue(mapID)) or type(mapID) ~= "number" or mapID <= 0) then return end
+	local nodes = C_TaxiMap.GetAllTaxiNodes(mapID)
+	if ((issecretvalue and issecretvalue(nodes)) or type(nodes) ~= "table") then return end
+	local destinations = {}
+	for _, node in ipairs(nodes) do
+		local id, state, slot, name = node.nodeID, node.state, node.slotIndex, node.name
+		if (not issecretvalue or not (issecretvalue(id) or issecretvalue(state) or issecretvalue(slot) or issecretvalue(name))) then
+			if (type(id) == "number" and id > 0) then
+				if (state == states.Current) then
+					self.taxiOrigin = id
+				elseif (state == states.Reachable and type(slot) == "number" and type(name) == "string" and name ~= "") then
+					destinations[slot] = { id = id, name = name }
+				end
+			end
+		end
+	end
+	self.taxiDestinations = destinations
+end
+
+Info.NoteTaxiMapClosed = function(self)
+	-- The native click may close the map before TakeTaxiNode's post-hook runs.
+	self.taxiMapClosed = GetTime()
+end
+
+Info.NoteTaxiDeparture = function(self, slot)
+	if (not self.flightTimerActive or self.flight or not self.taxiDestinations
+		or (issecretvalue and issecretvalue(slot)) or type(slot) ~= "number") then return end
+	local now = GetTime()
+	if (self.taxiMapClosed and now - self.taxiMapClosed > 2) then return end
+	local destination = self.taxiDestinations[slot]
+	if (not destination) then return end
+	local route = self.taxiOrigin and ("%d:%d"):format(self.taxiOrigin, destination.id)
+	self.pendingFlight = { route = route, name = destination.name, selected = now }
+end
+
+Info.NoteEarlyLanding = function(self)
+	local flight = self.flight or self.pendingFlight
+	if (flight) then flight.route = nil end
+end
+
+Info.UpdateFlightTimer = function(self)
+	if (not self.flightTimerActive) then return end
+	local now = GetTime()
+	local onTaxi = UnitOnTaxi("player")
+	if (issecretvalue and issecretvalue(onTaxi)) then return end
+	local pending = self.pendingFlight
+	if (pending and now - pending.selected > 8) then
+		self.pendingFlight, pending = nil, nil
+	end
+
+	if (not onTaxi) then
+		local flight = self.flight
+		if (flight) then
+			local elapsed = now - flight.started
+			if (flight.route and elapsed >= 5 and elapsed <= 1800) then
+				self.db.char.flightTimes[flight.route] = elapsed
+			end
+			self.flight = nil
+			self.flightText:Hide()
+		end
+		return
+	end
+
+	local flight = self.flight
+	if (not flight) then
+		flight = pending or {}
+		flight.started = now
+		self.flight, self.pendingFlight = flight, nil
+		self.taxiOrigin, self.taxiDestinations, self.taxiMapClosed = nil, nil, nil
+	end
+	local elapsed = now - flight.started
+	local estimate = flight.route and self.db.char.flightTimes[flight.route]
+	local time = type(estimate) == "number" and estimate > elapsed
+		and string_format(L["~%s left"], SecondsToClock(estimate - elapsed))
+		or SecondsToClock(elapsed)
+	self.flightText:SetFormattedText("%s  %s", time, flight.name or L["Flight"])
+	self.flightText:Show()
+end
+
+Info.StopFlightTimer = function(self)
+	if (not self.flightTimerActive) then return end
+	self.flightTimerActive = nil
+	self:UnregisterEvent("TAXIMAP_OPENED", "ReadTaxiMap")
+	self:UnregisterEvent("TAXIMAP_CLOSED", "NoteTaxiMapClosed")
+	self.taxiOrigin, self.taxiDestinations, self.taxiMapClosed = nil, nil, nil
+	self.flight, self.pendingFlight = nil, nil
+	self.flightText:Hide()
+end
+
+Info.SyncFlightTimer = function(self)
+	if (not (self.flightText and self:CanShowFlightTimer() and self.db.profile.showFlightTimer)) then
+		return self:StopFlightTimer()
+	end
+	if (self.flightTimerActive) then return end
+	self.flightTimerActive = true
+	self:RegisterEvent("TAXIMAP_OPENED", "ReadTaxiMap")
+	self:RegisterEvent("TAXIMAP_CLOSED", "NoteTaxiMapClosed")
+	if (not self.flightHooksInstalled and hooksecurefunc) then
+		self.flightHooksInstalled = true
+		if (type(TakeTaxiNode) == "function") then
+			hooksecurefunc("TakeTaxiNode", function(slot) self:NoteTaxiDeparture(slot) end)
+		end
+		if (type(TaxiRequestEarlyLanding) == "function") then
+			hooksecurefunc("TaxiRequestEarlyLanding", function() self:NoteEarlyLanding() end)
+		end
+	end
+end
+
 Info.UpdatePerformance = function(self)
 
 	local fps = GetFramerate()
@@ -496,6 +629,7 @@ Info.UpdatePerformance = function(self)
 		self.latency:SetText("")
 	end
 
+	if (self.flightTimerActive) then self:UpdateFlightTimer() end
 end
 
 Info.UpdateResting = function(self)
@@ -570,6 +704,7 @@ Info.UpdateGreatVault = function(self)
 end
 
 Info.UpdateSettings = function(self)
+	self:SyncFlightTimer()
 	self:UpdateGreatVault()
 	self:UpdateClock()
 	self:UpdateClockVisibility()
@@ -621,6 +756,7 @@ end
 -- undoes it. Disable then cancels the timers (AceTimer); their handles are cleared
 -- here so UpdateTimers starts them again on the next start.
 Info.StopPart = function(self)
+	self:StopFlightTimer()
 	self:UnregisterEvent("PLAYER_ENTERING_WORLD", "UpdateResting")
 	self:UnregisterEvent("PLAYER_UPDATE_RESTING", "UpdateResting")
 	self:UnregisterEvent("ZONE_CHANGED", "UpdateZone")

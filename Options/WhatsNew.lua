@@ -52,6 +52,15 @@ end
 
 ns.WhatsNew = {
 	{
+		version = "5.55.0-JuNNeZ",
+		items = {
+			{ text = "Forever: show your flight destination and learn travel times for each route.", page = "Info Bar" },
+			{ text = "Show session XP per hour and time to the next level in the XP ring tooltip.", page = "Minimap" },
+			{ text = "Hold Shift while opening a merchant to skip automatic junk sales and repairs.", page = "Bags" },
+			{ text = "Select public guild note drafts to copy them into Blizzard's roster.", page = "GuildManager" },
+		},
+	},
+	{
 		version = "5.54.0-JuNNeZ",
 		items = {
 			{ text = "Use Interface Parts to choose which parts of AzeriteUI are active.", page = "Interface Parts" },

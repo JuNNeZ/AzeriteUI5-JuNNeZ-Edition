@@ -12,7 +12,7 @@ Guild.RefreshGuildActions = function(self)
     if (not window or not window:IsShown() or self.buildingGuildActions) then return end
     local current, reason = self:GetGuildActionState(window.key)
     local ready = current and window.baseline and not self.pendingGuildAction or false
-    window.noteApply:SetEnabled(ready and current.canNote or false)
+    window.noteCopy:SetEnabled(ready and current.canNote or false)
     window.noteSuggest:SetEnabled(ready and current.canNote and self:SuggestPublicNote(window.key) ~= nil or false)
     window.rankCycle:SetEnabled(ready and #current.choices > 0 or false)
     local rankAllowed = false
@@ -26,18 +26,13 @@ Guild.RefreshGuildActions = function(self)
     end
 end
 
-Guild.PreviewGuildAction = function(self, kind)
+Guild.PreviewGuildRank = function(self)
     local window = self.guildActionsWindow
     if (not self.pendingGuildAction) then self.guildActionTarget = nil end
-    local value = kind == "note" and window.note:GetText() or window.rankOrder
-    local action, reason = self:PrepareGuildAction(kind, window.baseline, value)
+    local action, reason = self:PrepareGuildAction("rank", window.baseline, window.rankOrder)
     if (not action) then window.feedback:SetText(L[reason]); self:RefreshGuildActions(); return end
-    local before = kind == "note" and action.before or action.beforeName
-    local after = kind == "note" and action.after or action.afterName
-    if (before == "") then before = L["(empty)"] end
-    if (after == "") then after = L["(empty)"] end
     local question = string.format(L["Change %s for %s?\nBefore: %s\nAfter: %s\nThis changes guild data and cannot be undone with local Undo."],
-        kind == "note" and L["public guild note"] or L["guild rank"], Literal(action.name), Literal(before), Literal(after))
+        L["guild rank"], Literal(action.name), Literal(action.beforeName), Literal(action.afterName))
     local session, selected = window.session, self.selected
     local shown = Kit.Confirm(question, function()
         if (not window:IsShown() or window.session ~= session or window.key ~= action.key or self.selected ~= selected) then
@@ -62,15 +57,26 @@ Guild.OpenGuildActions = function(self, key)
         window.currentRank = UI.Label(window, "", 24, -97, 660, 13)
         window.note = UI.Input(window, L["Public guild note (31 characters)"], 24, -141, 660, 30, 124)
         window.note:SetMaxLetters(31)
-        window.noteApply = UI.QuietButton(window, L["Review note change"], 24, -209, 230, function() self:PreviewGuildAction("note") end, true)
+        window.noteCopy = UI.QuietButton(window, L["Select note to copy"], 24, -209, 230, function()
+            local draft, reason = self:PrepareGuildAction("note", window.baseline, window.note:GetText())
+            if (not draft) then window.feedback:SetText(L[reason]); return end
+            self.guildActionStatus, self.guildActionTarget = nil, nil
+            if (draft.after == "") then
+                window.feedback:SetText(L["Clear the public note in Blizzard's guild roster."])
+                return
+            end
+            window.note:SetFocus()
+            window.note:HighlightText()
+            window.feedback:SetText(L["Copy the selected text and paste it into the public note in Blizzard's guild roster."])
+        end, true)
         window.noteSuggest = UI.QuietButton(window, L["Use suggested note"], 268, -209, 230, function()
             local suggestion = self:SuggestPublicNote(window.key)
             if (suggestion) then window.note:SetText(suggestion) end
             window.feedback:SetText(not suggestion and L["Save a nickname for this person first."]
                 or window.baseline and suggestion == window.baseline.target.note and L["The guild note already matches."]
-                or L["Review the note, then choose Review note change."])
+                or L["Review the draft, then choose Select note to copy."])
         end)
-        window.noteSuggest.guildTooltipHelp = L["Fill in the note from your nickname and main/alt links. A main gets the nickname, an alt gets the nickname followed by - alt. Nothing is sent until you review and confirm."]
+        window.noteSuggest.guildTooltipHelp = L["Fill the draft from your nickname and main/alt links. A main gets the nickname, an alt gets the nickname followed by - alt."]
         window.rankCycle = UI.QuietButton(window, L["Choose rank"], 24, -278, 388, function()
             local current = self:GetGuildActionState(window.key)
             local choices = current and current.choices or {}
@@ -81,7 +87,7 @@ Guild.OpenGuildActions = function(self, key)
             window.rankOrder = choice.order; window.rankCycle.label:SetText(choice.name)
             self:RefreshGuildActions()
         end)
-        window.rankApply = UI.QuietButton(window, L["Review rank change"], 430, -278, 254, function() self:PreviewGuildAction("rank") end, true)
+        window.rankApply = UI.QuietButton(window, L["Review rank change"], 430, -278, 254, function() self:PreviewGuildRank() end, true)
         UI.Label(window, L["Only this character is changed. Alts and local nicknames are not edited."], 24, -328, 660, 12, 2)
         window.access = UI.Label(window, "", 24, -375, 660, 12, 2)
         window.feedback = UI.Label(window, "", 24, -425, 660, 12, 3)

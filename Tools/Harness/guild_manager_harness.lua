@@ -765,7 +765,7 @@ check(follow.taskTitle:GetText() == "Unfinished task draft", "schedule save pres
 follow.search:SetText("no matching task")
 check(not follow.rows[1]:IsShown(), "follow-up search redraws list")
 follow.search:SetText("")
--- Guild writes use explicit confirmation and fake native APIs, including offline targets.
+-- Note drafts stay local and rank writes use explicit confirmation.
 local approval, approvalText, guildWrites, actionTimers = nil, nil, {}, {}
 local confirm = ns.OptionsKit.Confirm
 local function QueueApproval(question, callback) approvalText, approval = question, callback; return true end
@@ -778,7 +778,7 @@ GuildControlGetNumRanks = function() return #actionRankNames end
 GuildControlGetRankName = function(index) return actionRankNames[index] end
 C_GuildInfo.GetGuildRankOrder = function(guid) return guid == "Player-1-Main" and 2 or actionRank end
 C_GuildInfo.IsGuildRankAssignmentAllowed = function() return true end
-C_GuildInfo.SetNote = function(guid, value, public) guildWrites[#guildWrites+1] = { guid, value, public } end
+C_GuildInfo.SetNote = function() error("addon may not write guild notes") end
 C_GuildInfo.SetGuildRankOrder = function(guid, value) guildWrites[#guildWrites+1] = { guid, value } end
 C_Timer = { After = function(_, callback) actionTimers[#actionTimers+1] = callback end }
 local altRow = module:GetRows("Alt Person", true)[1]
@@ -791,7 +791,7 @@ check(module.selected == altKey and not altRow.member.online and module.note:Get
 check(module.note.parent == module.character.parent and module.publicNoteAction:IsEnabled(),
     "public note and edit shortcut are available under Character for an offline member")
 module.publicNoteAction.scripts.OnClick()
-check(module.guildActionsWindow.baseline.target.guid == "Player-1-Alt" and module.guildActionsWindow.noteApply:IsEnabled(),
+check(module.guildActionsWindow.baseline.target.guid == "Player-1-Alt" and module.guildActionsWindow.noteCopy:IsEnabled(),
     "the Character shortcut opens the permitted offline member note editor")
 module:ShowPage("members")
 module:SelectCharacter(altRow, module:GetPeople("", {})[1])
@@ -799,43 +799,50 @@ module.character:SetText("Unsaved Different Person")
 module:OpenGuildActions()
 local actions = module.guildActionsWindow
 check(actions.baseline.target.guid == "Player-1-Alt" and actions.characterName:GetText() == "Alt Person-TestRealm", "guild actions bind actual selection rather than unsaved name edit")
-check(actions.noteApply:IsEnabled() and actions.note.maxLetters == 31, "offline member can use permitted note editor with native character limit")
-actions.note:SetText("Combat proposal"); actions.noteApply.scripts.OnClick()
-check(type(approval) == "function" and #guildWrites == 0, "guild note preview requires explicit confirmation callback")
-check(approvalText:find("Alt Person-TestRealm", 1, true) and approvalText:find("Before:", 1, true) and approvalText:find("After:", 1, true), "confirmation identifies actual character and before/after values")
+check(actions.noteCopy:IsEnabled() and actions.note.maxLetters == 31, "offline member can use permitted note editor with native character limit")
+local selectedDraft, focusedDraft
+actions.note.SetFocus = function(self) focusedDraft = self end
+actions.note.HighlightText = function(self) selectedDraft = self:GetText() end
+actions.note:SetText("UI public note"); actions.noteCopy.scripts.OnClick()
+check(focusedDraft == actions.note and selectedDraft == "UI public note" and not approval and #guildWrites == 0
+    and not module.pendingGuildAction and #actionTimers == 0, "note copy selects the draft locally without confirmation, write or pending state")
+check(actions.feedback:GetText():find("Blizzard's guild roster", 1, true), "note copy explains where to paste")
+actions.note:SetText(""); actions.noteCopy.scripts.OnClick()
+check(actions.feedback:GetText():find("Clear the public note", 1, true), "empty draft explains where to clear the note")
+roster[2][7] = "UI public note"; module:OnEvent("GUILD_ROSTER_UPDATE")
+check(module.note:GetText() == "UI public note", "external roster change updates main read-only note")
+actions.note:SetText("Stale note"); actions.noteCopy.scripts.OnClick()
+check(actions.feedback:GetText():find("The public note changed", 1, true), "stale draft asks to reload the character")
+module:OpenGuildActions(); actions.rankCycle.scripts.OnClick()
+check(actions.rankOrder == 3 and actions.rankApply:IsEnabled(), "rank cycle offers permitted destination")
+actions.rankApply.scripts.OnClick()
+check(type(approval) == "function" and #guildWrites == 0, "rank preview requires explicit confirmation callback")
+check(approvalText:find("Alt Person-TestRealm", 1, true) and approvalText:find("Before: Member", 1, true)
+    and approvalText:find("After: Veteran", 1, true), "rank confirmation identifies actual character and before/after values")
 combat = true; module:OnEvent("PLAYER_REGEN_DISABLED")
-check(not actions.noteApply:IsEnabled() and not actions.rankCycle:IsEnabled(), "combat disables guild change controls")
+check(not actions.noteCopy:IsEnabled() and not actions.rankCycle:IsEnabled(), "combat disables guild change controls")
 approval()
 check(#guildWrites == 0, "approval arriving in combat cannot call native write")
 combat = false; module:OnEvent("PLAYER_REGEN_ENABLED")
 check(#guildWrites == 0, "combat end never auto-executes a proposed write")
-module:OpenGuildActions(); actions.note:SetText("Unavailable confirmation")
 ns.OptionsKit.Confirm = function() return false end
-actions.noteApply.scripts.OnClick()
+actions.rankApply.scripts.OnClick()
 check(#guildWrites == 0 and actions.feedback:GetText():find("No guild change was sent", 1, true), "unavailable confirmation never becomes automatic consent")
 ns.OptionsKit.Confirm = QueueApproval
-module:OpenGuildActions(); actions.note:SetText("Stale window"); actions.noteApply.scripts.OnClick()
+actions.rankApply.scripts.OnClick()
 local staleApproval = approval; module:OpenGuildActions(); staleApproval()
 check(#guildWrites == 0, "reopening tool invalidates old confirmation")
-actions.note:SetText("Changed selection"); actions.noteApply.scripts.OnClick()
+actions.rankCycle.scripts.OnClick(); actions.rankApply.scripts.OnClick()
 local selectedKey = module.selected; module.selected = mainKey; approval(); module.selected = selectedKey
 check(#guildWrites == 0, "main selection change invalidates approval")
 local localUndoCount = #module.undoStack
-module:OpenGuildActions(); actions.note:SetText("UI public note"); actions.noteApply.scripts.OnClick(); approval()
-check(#guildWrites == 1 and guildWrites[1][1] == "Player-1-Alt" and guildWrites[1][3], "confirmed note request uses target GUID and public flag")
-check(not actions.noteApply:IsEnabled() and actions.feedback:GetText():find("waiting", 1, true), "write waits for observation instead of claiming immediate success")
-roster[2][7] = "UI public note"; module:OnEvent("GUILD_ROSTER_UPDATE")
-check(not module.pendingGuildAction and module.note:GetText() == "UI public note", "fresh roster observes note and updates main read-only note")
-module:OpenGuildActions(); actions.rankCycle.scripts.OnClick()
-check(actions.rankOrder == 3 and actions.rankApply:IsEnabled(), "rank cycle offers permitted destination")
-actions.rankApply.scripts.OnClick()
-check(#guildWrites == 1, "rank preview does not write")
-approval()
-check(#guildWrites == 2 and guildWrites[2][1] == "Player-1-Alt" and guildWrites[2][2] == 3, "rank write follows confirmation")
+actions.rankApply.scripts.OnClick(); approval()
+check(#guildWrites == 1 and guildWrites[1][1] == "Player-1-Alt" and guildWrites[1][2] == 3, "rank write follows confirmation")
+check(not actions.rankApply:IsEnabled() and actions.feedback:GetText():find("waiting", 1, true), "rank write waits for roster observation")
 actionRank, roster[2][2] = 3, "Veteran"; module:OnEvent("GUILD_ROSTER_UPDATE")
 check(not module.pendingGuildAction and actions.currentRank:GetText():find("Veteran", 1, true), "rank observation updates current-rank label")
 check(#module.undoStack == localUndoCount, "external guild writes never enter local identity Undo")
-module:OpenGuildActions(); actions.note:SetText("Do not send after closing"); actions.noteApply.scripts.OnClick()
+module:OpenGuildActions(); actions.rankCycle.scripts.OnClick(); actions.rankApply.scripts.OnClick()
 local closedApproval = approval
 for _, page in pairs(module.pages) do
     check(page == module.memberPage or page.viewport and page.host.parent == module.frame,
@@ -877,7 +884,7 @@ module:ToggleWindow()
 check(not module.frame:IsShown(), "window closes")
 check(not module.noteReview:IsShown() and not module.backupWindow:IsShown() and not module.homeWindow:IsShown() and not module.historyWindow:IsShown() and not follow:IsShown() and not actions:IsShown(), "closing main window hides its tools")
 closedApproval()
-check(#guildWrites == 2, "closing main window invalidates pending guild approval")
+check(#guildWrites == 1, "closing main window invalidates pending guild approval")
 -- Explicit sharing uses captured transport; no external addon messages.
 local shareWrites = {}
 GetTime = function() return 10 end
@@ -1035,7 +1042,7 @@ GetGuildInfo = function() return "Different Guild" end
 module:RequestRoster(); oldGuildNoteApproval()
 check(module.identityRevision == noteRevision and not next(module.noteReview.selected), "guild change clears cached note choices and invalidates their approval")
 GetGuildInfo = originalGuildInfo; module:RequestRoster()
-module:OpenGuildActions(); actions.note:SetText("Cancelled by page change"); actions.noteApply.scripts.OnClick()
+module:OpenGuildActions(); actions.rankCycle.scripts.OnClick(); actions.rankApply.scripts.OnClick()
 local oldActionApproval, writesBeforeSwitch = approval, #guildWrites
 module:OpenHome(); module:OpenGuildActions(); oldActionApproval()
 check(#guildWrites == writesBeforeSwitch, "leaving and reopening actions invalidates pending guild writes")

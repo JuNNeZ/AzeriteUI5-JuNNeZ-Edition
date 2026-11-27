@@ -39,7 +39,7 @@ Guild.GetGuildActionState = function(self, key)
         return nil, "Select a current guild character with a readable GUID."
     end
     local state = { target = target, actor = actor, guildKey = self.realm .. ":" .. string.lower(guildName), choices = {} }
-    state.canNote = type(C_GuildInfo.SetNote) == "function" and target.note ~= nil
+    state.canNote = target.note ~= nil
         and (target.guid == actor or Allowed(CanEditPublicNote))
     if (C_GuildInfo.GetGuildRankOrder and C_GuildInfo.SetGuildRankOrder and GuildControlGetNumRanks and GuildControlGetRankName) then
         state.actorRank = Integer(C_GuildInfo.GetGuildRankOrder(actor))
@@ -77,7 +77,7 @@ end
 
 -- The public note your links imply: "Nickname" for a main, "Nickname - alt"
 -- for an alt. The note scan reads both back as the same clear group. Only a
--- suggestion; writing still goes through the reviewed guild action.
+-- suggestion for the player to copy into Blizzard's guild roster.
 Guild.SuggestPublicNote = function(self, key)
     local member = key and (self.members or {})[key]
     if (not member) then return end
@@ -127,12 +127,7 @@ Guild.ApplyGuildAction = function(self, action)
     if (current.guildKey ~= action.guildKey or current.actor ~= action.actor or current.target.guid ~= action.guid) then
         return Fail(self, "The guild or character changed. Reload the character.")
     end
-    if (action.kind == "note") then
-        if (not current.canNote or current.target.note ~= action.before or not ValidNote(self, action.after)) then
-            return Fail(self, "The note or your permissions changed. Reload the character.")
-        end
-        C_GuildInfo.SetNote(action.guid, action.after, true)
-    elseif (action.kind == "rank") then
+    if (action.kind == "rank") then
         local choice = RankChoice(current, action.after)
         if (not choice or current.targetRank ~= action.before or current.actorRank ~= action.actorRank
             or choice.name ~= action.afterName or current.target.rank ~= action.beforeName) then
@@ -167,8 +162,7 @@ Guild.ObserveGuildAction = function(self)
     if (not current or current.guildKey ~= action.guildKey or current.target.guid ~= action.guid) then
         self.pendingGuildAction = nil; self.guildActionStatus = "The guild or character changed. Reload the character."; return
     end
-    local value = action.kind == "note" and current.target.note or current.targetRank
-    if (value == action.after) then
+    if (current.targetRank == action.after) then
         self.pendingGuildAction = nil; self.guildActionStatus = "The requested change is visible in the guild roster."
     end
 end

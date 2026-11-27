@@ -10,6 +10,26 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.55.0-JuNNeZ (2026-11-27) - Flight Timer and Session XP
+
+### Highlights
+
+- **Track your flight on Forever.** Enable **Show flight timer** under `/az → Info Bar` to see the destination and elapsed time. Once you have completed a route, later flights in the same direction can show an estimate of the time remaining.
+- **See how fast you are levelling.** Enable **Show session XP statistics** under `/az → Minimap`. After at least a minute and some XP earned, hover the Azerite XP ring to see XP per hour and the estimated time to your next level. Available on Retail and Forever.
+- **Skip merchant automation for a visit.** Hold Shift while opening a merchant to skip automatic junk sales and repairs. You can reopen the merchant normally to use your usual settings. See `/az → Bags`.
+- **Copy public guild note drafts.** In `/azguild`, open a member's Guild Actions and choose **Select note to copy**. Paste the draft in Blizzard's guild roster to apply it. Rank changes still use the existing review and confirmation.
+- **Find your settings again after enabling a part.** The Info Bar and Retail Mythic+ pages come back when you re-enable their parts through `/az → Interface Parts`.
+
+### Development
+
+- Flight estimates use the last completed trip for each character and direction. Requesting early landing preserves the recorded time. Session XP sampling carries XP gains through a level-up.
+- The Info Bar and Mythic+ settings follow the live state of their modules, so a page opened during a stop or start can safely refresh.
+
+### Access and known limits
+
+- The flight timer and session XP statistics are off by default. AzeriteUI's XP ring must be available for the XP tooltip.
+- Offline checks cover both clients' options and the new travel, guild and merchant behavior. In-game confirmation remains pending.
+
 ## 5.54.0-JuNNeZ (2026-11-26) - Interface Parts and Advanced Settings
 
 ### Highlights

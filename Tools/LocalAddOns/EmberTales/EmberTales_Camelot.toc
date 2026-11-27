@@ -1,0 +1,19 @@
+## Interface: 16001
+## Title: Ember Tales
+## Notes: Tell stories around the fire in World of Warcraft: Forever.
+## Version: 0.14.0
+## SavedVariablesPerCharacter: EmberTalesDB
+
+Stories.lua
+StoryVoices.lua
+Adventures.lua
+PersonalStories.lua
+CampfireStories.lua
+FamiliarFigures.lua
+WarcraftStories.lua
+Endings.lua
+Performance.lua
+ChatHints.lua
+Picker.lua
+ScriptPreview.lua
+EmberTales.lua

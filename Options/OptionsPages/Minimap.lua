@@ -233,6 +233,26 @@ local GenerateOptions = function()
 					return getmodule().db.profile.hideClockText
 				end
 			},
+			showXPStats = {
+				name = L["Show session XP statistics"],
+				desc = L["Show XP per hour and estimated time to the next level in the XP ring tooltip after at least one minute."],
+				order = 6.1,
+				type = "toggle", width = "full",
+				hidden = function(info)
+					local bars = ns:GetModule("PlayerStatusBars", true)
+					return isdisabled(info) or not (bars and bars:IsEnabled())
+				end,
+				set = function(_, value)
+					local module = getmodule()
+					local bars = ns:GetModule("PlayerStatusBars", true)
+					if (not (module and bars and bars:IsEnabled())) then return end
+					module.db.profile.showXPStats = value
+					bars:UpdateXPStats()
+				end,
+				get = function()
+					return getmodule().db.profile.showXPStats
+				end
+			},
 			-- One choice over the two stored switches, dielEnabled and dielHidden, so nothing saved
 			-- changes (Docs/Options Navigation Review - 2026-11-22.md, step 7). Hidden wins over
 			-- enabled, as MinimapMod:IsDielHidden decides.

@@ -131,6 +131,16 @@ end
 
 -- Build the real menu. This runs GenerateOptionsMenu, which also runs the
 -- dialogControl pass.
+local info = ns:GetModule("Info")
+local mythicPlus = ns:GetModule("MythicPlus")
+local infoRunning, mythicPlusRunning = false, false
+local infoUpdates, mythicPlusUpdates = 0, 0
+info.IsEnabled = function() return infoRunning end
+mythicPlus.IsEnabled = function() return mythicPlusRunning end
+info.db.profile = { enabled = true, useHalfClock = true, useServerTime = true, enableGreatVault = true }
+mythicPlus.db.profile = { showTimer = true, showBattleRez = true }
+info.UpdateSettings = function() infoUpdates = infoUpdates + 1 end
+mythicPlus.UpdateSettings = function() mythicPlusUpdates = mythicPlusUpdates + 1 end
 local ok, err = pcall(function() Options:GenerateOptionsMenu() end)
 if not ok then
 	print("\nGenerateOptionsMenu failed: " .. tostring(err))
@@ -145,6 +155,48 @@ end
 
 load("Options/Kit/Config.lua")
 load("Options/Kit/Advanced.lua")
+do
+	local Config = Kit.Config
+	local infoPath = { "Minimap", "info" }
+	local infoGroup = assert(Config.GetGroup(options, infoPath), "Info can start after login")
+	local clockPath = { "Minimap", "info", "useHalfClock" }
+	local clock = assert(Config.GetGroup(options, clockPath))
+	assert(Config.IsHidden(infoGroup, options, infoPath, Addon), "Info is hidden at login while off")
+	infoRunning = true
+	assert(not Config.IsHidden(infoGroup, options, infoPath, Addon), "Info appears after live start")
+	assert(not Config.IsHidden(clock, options, clockPath, Addon), "clock appears after live start")
+	assert(not clock.get(clockPath), "stored 12-hour mode inverts the 24-hour switch")
+	clock.set(clockPath, true)
+	assert(info.db.profile.useHalfClock == false and infoUpdates == 1, "clock updates through the running module")
+	infoRunning = false
+	assert(Config.IsHidden(infoGroup, options, infoPath, Addon), "Info is hidden after live stop")
+	assert(Config.IsHidden(clock, options, clockPath, Addon), "stale clock visibility callback is safe")
+	Config.ForEachChild(infoGroup, options, infoPath, Addon, function()
+		error("a cached Info section exposed a row while stopped")
+	end)
+	assert(clock.get(clockPath) == false, "stale clock getter is safe")
+	clock.set(clockPath, false)
+	infoRunning = true
+	assert(clock.get(clockPath) and infoUpdates == 1, "a stale clock write leaves the saved setting and frame alone")
+
+	local mythicPath = { "MythicPlus" }
+	local mythicGroup = assert(Config.GetGroup(options, mythicPath), "Mythic+ can start after login")
+	local battleRezPath = { "MythicPlus", "showBattleRez" }
+	local battleRez = assert(Config.GetGroup(options, battleRezPath))
+	assert(Config.IsHidden(mythicGroup, options, mythicPath, Addon), "Mythic+ is hidden at login while off")
+	mythicPlusRunning = true
+	assert(not Config.IsHidden(mythicGroup, options, mythicPath, Addon), "Mythic+ appears after live start")
+	assert(not battleRez.disabled(), "battle rez is available when the timer runs")
+	battleRez.set(battleRezPath, false)
+	assert(mythicPlus.db.profile.showBattleRez == false and mythicPlusUpdates == 1, "battle rez updates through the running module")
+	mythicPlusRunning = false
+	assert(Config.IsHidden(mythicGroup, options, mythicPath, Addon) and battleRez.disabled(), "stale Mythic+ callbacks are safe")
+	assert(battleRez.get(battleRezPath) == nil, "stale Mythic+ getter is safe")
+	battleRez.set(battleRezPath, true)
+	mythicPlusRunning = true
+	assert(battleRez.get(battleRezPath) == false and mythicPlusUpdates == 1, "a stale Mythic+ write leaves the saved setting and frame alone")
+	print("Live part option visibility and callbacks passed")
+end
 do
 	local function expect(advanced, ...)
 		local path = { ... }

@@ -32,6 +32,7 @@ C_MerchantFrame = {
 	SellAllJunkItems = function() Log("sell") end,
 }
 InCombatLockdown = function() return W.combat end
+IsShiftKeyDown = function() return W.shift == true end
 CanMerchantRepair = function() return W.canMerchantRepair end
 GetRepairAllCost = function() return W.cost, W.canRepair end
 RepairAllItems = function(guild) Log(guild and "repair-guild" or "repair-own") end
@@ -96,6 +97,9 @@ check(Module.events.MERCHANT_SHOW == "OnMerchantShow", "MERCHANT_SHOW registered
 check(Module.events.MERCHANT_CLOSED == "CancelPendingRepair", "MERCHANT_CLOSED cancels a waiting repair")
 
 check(Run() == "", "defaults: nothing happens")
+W.shift = true
+check(Run({ autoSellJunk = true, autoRepair = true }) == "", "Shift skips both merchant actions")
+W.shift = false
 check(Run({ autoSellJunk = true }) == "sell", "sell junk")
 check(prints[1] == "Sold %d junk items." or (prints[1] or ""):find("3"), "sale reported", prints[1])
 W.junk = 0
@@ -117,6 +121,14 @@ check(table.concat(W.log, ",") == "sell,repair-own", "the sale's money arrives: 
 check(Module.events.PLAYER_MONEY == nil, "PLAYER_MONEY released after the repair")
 FlushTimers()
 check(table.concat(W.log, ",") == "sell,repair-own", "the timer after the repair does nothing")
+Reset()
+
+Run({ autoSellJunk = true, autoRepair = true })
+W.shift = true
+Module:OnMerchantShow()
+FlushTimers()
+check(table.concat(W.log, ",") == "sell" and Module.events.PLAYER_MONEY == nil,
+	"Shift on a new merchant visit cancels the previous visit's waiting repair")
 Reset()
 
 Run({ autoSellJunk = true, autoRepair = true })

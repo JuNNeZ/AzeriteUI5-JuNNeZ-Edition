@@ -43,6 +43,7 @@ local unpack = unpack
 -- GLOBALS: CreateFrame
 -- GLOBALS: GameTooltip, GameTooltip_SetDefaultAnchor
 -- GLOBALS: UnitLevel, UnitSex, UnitXP, UnitXPMax
+-- GLOBALS: C_Timer, GetTime, SecondsToTime
 -- GLOBALS: IsResting, IsPlayerAtEffectiveMaxLevel, IsXPUserDisabled
 -- GLOBALS: GetNumFactions, GetWatchedFactionInfo, GetRestState, GetTimeToWellRested, GetXPExhaustion, GetText
 -- GLOBALS: C_GameRules, Enum, issecretvalue
@@ -244,6 +245,65 @@ local Button_UpdateFrame = function(button)
 
 end
 
+local function ReadXPStatsSample()
+	local level, xp, maximum = UnitLevel("player"), UnitXP("player"), UnitXPMax("player")
+	if (issecretvalue and (issecretvalue(level) or issecretvalue(xp) or issecretvalue(maximum))) then return end
+	if (type(level) == "number" and level > 0 and type(xp) == "number" and xp >= 0
+		and type(maximum) == "number" and maximum > 0 and xp <= maximum) then
+		return level, xp, maximum
+	end
+end
+
+local function XPStatsProfile()
+	local minimap = ns:GetModule("Minimap", true)
+	local profile = minimap and minimap.db and minimap.db.profile
+	return profile and profile.showXPStats and profile or nil
+end
+
+StatusBars.UpdateXPStats = function(self)
+	local profile = XPStatsProfile()
+	if (not profile) then
+		self.xpStats = nil
+		return
+	end
+	local level, xp, maximum = ReadXPStatsSample()
+	if (not level) then return end
+	local stats = self.xpStats
+	if (not stats or stats.profile ~= profile or level < stats.level or level > stats.level + 1) then
+		self.xpStats = { profile = profile, level = level, xp = xp, maximum = maximum, started = GetTime(), gained = 0 }
+		return
+	end
+	local gained = xp - stats.xp
+	-- Some level-ups expose the reset XP before the new level. Keep the last valid baseline.
+	if (level == stats.level and gained < 0) then return end
+	if (level > stats.level) then gained = gained + stats.maximum end
+	if (gained > 0) then stats.gained = stats.gained + gained end
+	stats.level, stats.xp, stats.maximum = level, xp, maximum
+end
+
+StatusBars.QueueXPStats = function(self)
+	if (self.xpStatsQueued or not XPStatsProfile()) then return end
+	-- XP and level updates can both fire for the same reward. Read the settled values together.
+	self.xpStatsQueued = true
+	C_Timer.After(0, function()
+		self.xpStatsQueued = nil
+		if (self:IsEnabled()) then self:UpdateXPStats() end
+	end)
+end
+
+StatusBars.AddXPStats = function(self, tooltip)
+	local stats = self.xpStats
+	if (not stats or stats.profile ~= XPStatsProfile()) then return end
+	local elapsed = GetTime() - stats.started
+	if (elapsed < 60 or stats.gained <= 0) then return end
+	local rate = stats.gained / elapsed
+	tooltip:AddDoubleLine(L["Session XP per hour"], AbbreviateNumber(math_floor(rate * 3600 + .5)))
+	local remaining = stats.maximum - stats.xp
+	if (remaining > 0) then
+		tooltip:AddDoubleLine(L["Estimated time to next level"], SecondsToTime(remaining / rate, false, false, 2, true))
+	end
+end
+
 local Button_UpdateTooltip = function(button)
 	if (GameTooltip:IsForbidden()) then return end
 
@@ -268,6 +328,7 @@ local Button_UpdateTooltip = function(button)
 			GameTooltip_SetDefaultAnchor(GameTooltip, button)
 			GameTooltip:AddDoubleLine(COMBAT_XP_GAIN, string_format(UNIT_LEVEL_TEMPLATE, UnitLevel("player")), r, g, b, unpack(Colors.gray))
 			GameTooltip:AddLine("\n"..tooltipText)
+			StatusBars:AddXPStats(GameTooltip)
 			GameTooltip:Show()
 		end
 
@@ -715,12 +776,17 @@ StatusBars.OnEnable = function(self)
 
 	self:CreateBars()
 	self:UpdateBars()
+	self.xpStats = nil
+	self:UpdateXPStats()
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateBars")
 	self:RegisterEvent("PLAYER_LOGIN", "UpdateBars")
 	self:RegisterEvent("PLAYER_ALIVE", "UpdateBars")
 	self:RegisterEvent("PLAYER_LEVEL_UP", "UpdateBars")
 	self:RegisterEvent("PLAYER_XP_UPDATE", "UpdateBars")
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", "QueueXPStats")
+	self:RegisterEvent("PLAYER_LEVEL_UP", "QueueXPStats")
+	self:RegisterEvent("PLAYER_XP_UPDATE", "QueueXPStats")
 	self:RegisterEvent("PLAYER_FLAGS_CHANGED", "UpdateBars")
 	self:RegisterEvent("DISABLE_XP_GAIN", "UpdateBars")
 	self:RegisterEvent("ENABLE_XP_GAIN", "UpdateBars")

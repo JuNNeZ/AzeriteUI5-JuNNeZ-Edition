@@ -148,6 +148,18 @@ local GenerateOptions = function()
 			}
 		end
 	end
+	if (options.args.autoSellJunk or options.args.autoRepair) then
+		options.args.merchantPause = {
+			name = L["Hold Shift while opening a merchant to skip automatic selling and repairs for that visit."],
+			order = 13,
+			type = "description", width = "full",
+			hidden = function()
+				local current = getmodule()
+				local profile = current and current.db.profile
+				return not (profile and (profile.autoSellJunk or profile.autoRepair))
+			end
+		}
+	end
 
 	-- Containers.lua, OnLootReady. Off by default.
 	if (module.CanFastLoot and module.CanFastLoot()) then

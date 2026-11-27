@@ -286,6 +286,7 @@ Containers.Repair = function(self)
 end
 
 Containers.OnMerchantShow = function(self)
+	self:CancelPendingRepair()
 	if (InCombatLockdown()) then
 		return
 	end
@@ -293,7 +294,8 @@ Containers.OnMerchantShow = function(self)
 	if (not profile) then
 		return
 	end
-	self:CancelPendingRepair()
+	-- Holding Shift at open skips this entire merchant visit, including delayed repair.
+	if (IsShiftKeyDown and IsShiftKeyDown()) then return end
 	-- Junk first: its gold can pay for the repair. The sale's money reaches GetMoney a moment later
 	-- (server round trip), so after a sale the repair waits for PLAYER_MONEY, at most REPAIR_WAIT
 	-- seconds, as Wowdee's automation does (FixLog 2026-11-07).

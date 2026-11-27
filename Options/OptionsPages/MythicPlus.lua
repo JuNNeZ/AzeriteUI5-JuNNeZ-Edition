@@ -33,26 +33,31 @@ local Options = ns:GetModule("Options")
 -- builds nothing on Forever.
 local getmodule = function()
 	local module = ns:GetModule("MythicPlus", true)
-	if (module and module:IsEnabled()) then
+	if (module and module:IsEnabled() and module.db and module.db.profile) then
 		return module
 	end
 end
 
 local setter = function(info,val)
-	getmodule().db.profile[info[#info]] = val
-	getmodule():UpdateSettings()
+	local module = getmodule()
+	if (not module) then return end
+	module.db.profile[info[#info]] = val
+	module:UpdateSettings()
 end
 
 local getter = function(info)
-	return getmodule().db.profile[info[#info]]
+	local module = getmodule()
+	if (module) then return module.db.profile[info[#info]] end
 end
 
 local GenerateOptions = function()
-	if (not getmodule()) then return end
+	-- This table survives live stops and starts from Interface Parts.
+	if (not ns:GetModule("MythicPlus", true)) then return end
 
 	local options = {
 		name = L["Mythic+"],
 		type = "group",
+		hidden = function() return not getmodule() end,
 		args = {
 			description = {
 				name = L["These settings control AzeriteUI's Mythic+ timer, the card shown when a key ends, and the Font of Power."],
@@ -81,7 +86,10 @@ local GenerateOptions = function()
 				desc = L["The group's battle resurrection charges under the key timer, with the time until the next one comes back."],
 				order = 10.2,
 				type = "toggle", width = "full",
-				disabled = function(info) return not getmodule().db.profile.showTimer end,
+				disabled = function()
+					local module = getmodule()
+					return not module or not module.db.profile.showTimer
+				end,
 				set = setter,
 				get = getter
 			},
@@ -122,7 +130,10 @@ local GenerateOptions = function()
 				desc = L["Show only the end-of-run card when a key ends, without Blizzard's banner above it. Blizzard still writes the result to chat."],
 				order = 12.1,
 				type = "toggle", width = "full",
-				disabled = function(info) return not getmodule().db.profile.showCompletionCard end,
+				disabled = function()
+					local module = getmodule()
+					return not module or not module.db.profile.showCompletionCard
+				end,
 				set = setter,
 				get = getter
 			},

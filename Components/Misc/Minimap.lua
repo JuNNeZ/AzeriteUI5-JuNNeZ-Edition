@@ -463,6 +463,7 @@ local defaults = { profile = ns:Merge({
 	theme = "Azerite",
 	hideAddonText = false,
 	hideClockText = false,
+	showXPStats = false,
 	autoHideEnabled = false,
 	autoHideInArenas = true,
 	autoHideInBattlegrounds = true,
