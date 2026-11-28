@@ -339,11 +339,17 @@ end
 
 local AlertSubSystem_AdjustQueuedAnchors = function(self, relativeAlert)
 	local config = ns.GetConfig("AlertFrames")
-	local point, relPoint, x, y = GetPoints()
+	local _, relPoint, _, y = GetPoints()
 
 	for alertFrame in self.alertFramePool:EnumerateActive() do
+		local offset = config.AlertFramesPadding * y
+		-- Blizzard replaces BOTTOM without clearing other points. A leftover TOP
+		-- can point back into the stack when the pool order changes.
+		if (y < 0) then
+			offset = offset - alertFrame:GetHeight()
+		end
 		alertFrame:ClearAllPoints()
-		alertFrame:SetPoint(point, relativeAlert, relPoint, 0, config.AlertFramesPadding * y)
+		alertFrame:SetPoint("BOTTOM", relativeAlert, relPoint, 0, offset)
 		relativeAlert = alertFrame
 	end
 	return relativeAlert

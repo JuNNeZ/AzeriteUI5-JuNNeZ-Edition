@@ -447,6 +447,72 @@ assert(firstAlert.point[2] == env.AlertFrame and nextAlert.point[2] == firstAler
 	"custom layout chains visible alerts after the native pass")
 assert(layout.point[1] == container.point[1] and layout.point[2] == container.point[2]
 	and layout.point[5] == container.point[5] and layoutSecond.point[5] == -5, "layout preview uses the live stack anchors")
+
+-- Blizzard's queue sets BOTTOM without clearing other points. Model reordering
+-- on acquire/release and reject any new anchor to a dependent frame.
+local function Toast(height)
+	local toast = Region()
+	toast.height = height
+	toast.anchors = {}
+	function toast:ClearAllPoints()
+		self.anchors = {}
+	end
+	function toast:SetPoint(point, relative, relativePoint, _, offset)
+		local function CheckDependency(frame)
+			assert(frame ~= self, "cannot anchor to a dependent toast")
+			for _, anchor in pairs(frame.anchors or {}) do
+				CheckDependency(anchor[1])
+			end
+		end
+		CheckDependency(relative)
+		self.anchors[point] = { relative, relativePoint, offset }
+	end
+	return toast
+end
+
+local toastA, toastB, toastC = Toast(20), Toast(32), Toast(44)
+local activeToasts = { toastA, toastB }
+local queue = { alertFramePool = { EnumerateActive = function()
+	local index = 0
+	return function()
+		index = index + 1
+		return activeToasts[index]
+	end
+end } }
+function queue:AdjustAnchors(relative)
+	for alert in self.alertFramePool:EnumerateActive() do
+		alert:SetPoint("BOTTOM", relative, "TOP", 0, 10)
+		relative = alert
+	end
+end
+local nativeAdjustAnchors = queue.AdjustAnchors
+env.AlertFrame.alertFrameSubSystems = { queue }
+local function UpdateToasts()
+	queue:AdjustAnchors(env.AlertFrame)
+	alerts:PostUpdatePositionAndScale()
+end
+local function AssertToast(toast, relative, relativePoint, offset)
+	local point, anchor = next(toast.anchors)
+	assert(point == "BOTTOM" and not next(toast.anchors, point)
+		and anchor[1] == relative and anchor[2] == relativePoint and anchor[3] == offset,
+		"toast must keep the native anchor point and respect its own height")
+end
+UpdateToasts()
+activeToasts = { toastC, toastB, toastA }
+UpdateToasts()
+AssertToast(toastC, env.AlertFrame, "BOTTOM", -54)
+AssertToast(toastB, toastC, "BOTTOM", -42)
+AssertToast(toastA, toastB, "BOTTOM", -30)
+toastC:ClearAllPoints()
+activeToasts = { toastA, toastB }
+UpdateToasts()
+AssertToast(toastB, toastA, "BOTTOM", -42)
+alerts.db.profile.growUpwards = true
+UpdateToasts()
+AssertToast(toastA, env.AlertFrame, "TOP", 10)
+AssertToast(toastB, toastA, "TOP", 10)
+assert(queue.AdjustAnchors == nativeAdjustAnchors)
+
 mover:Hide()
 mover:OnHideHook()
 assert(not layout.shown and not standalone.shown, "leaving layout hides only its preview")

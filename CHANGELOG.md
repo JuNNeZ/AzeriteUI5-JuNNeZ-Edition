@@ -10,6 +10,16 @@ Do not repeat older items from prior versions in newer entries.
 Writing workflow: [Tools/CHANGELOG_GUIDE.md](Tools/CHANGELOG_GUIDE.md). Lead with player benefits, then explain substantial development work and remaining limits.
 
 
+## 5.55.1-JuNNeZ (2026-11-28) - Loot Toast Stacking Fix
+
+### Highlights
+
+- Fixed a UI error that could occur when several loot or reward notifications stacked downward and a toast appeared or expired.
+
+### Access and known limits
+
+- Offline checks cover alerts stacking in both directions on Retail and Forever. In-game confirmation is pending.
+
 ## 5.55.0-JuNNeZ (2026-11-27) - Flight Timer and Session XP
 
 ### Highlights
